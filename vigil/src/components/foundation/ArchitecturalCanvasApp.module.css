@@ -99,6 +99,12 @@
   cursor: grabbing;
 }
 
+.selectedNode {
+  box-shadow:
+    0 0 0 2px rgba(59, 130, 246, 0.65),
+    0 8px 18px rgba(0, 0, 0, 0.35);
+}
+
 .tape {
   position: absolute;
   top: -12px;
@@ -475,6 +481,14 @@
   height: 1px;
   margin: 8px;
   background: rgba(255, 255, 255, 0.1);
+}
+
+.lassoRect {
+  position: fixed;
+  z-index: 120;
+  pointer-events: none;
+  border: 1px dashed rgba(59, 130, 246, 0.95);
+  background: rgba(59, 130, 246, 0.16);
 }
 
 .focusOverlay {
