@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm";
 
 import type { tryGetDb } from "@/src/db/index";
-import { itemLinks, items, spaces } from "@/src/db/schema";
+import { itemEmbeddings, itemLinks, items, spaces } from "@/src/db/schema";
 import type { CameraState } from "@/src/stores/canvas-types";
 import { defaultCamera } from "@/src/stores/canvas-types";
 
@@ -81,6 +81,52 @@ export async function searchItemsFTS(db: VigilDb, spaceId: string, query: string
     )
     .orderBy(desc(items.updatedAt))
     .limit(50);
+}
+
+/** Nearest items by pgvector cosine distance (`<=>`). Requires rows in `item_embeddings`. */
+export async function searchItemsSemantic(
+  db: VigilDb,
+  spaceId: string,
+  embedding: number[],
+  limit = 24,
+) {
+  if (embedding.length === 0) return [];
+  const literal = `'[${embedding.map((n) => Number(n)).join(",")}]'::vector`;
+  const rows = await db
+    .select()
+    .from(items)
+    .innerJoin(itemEmbeddings, eq(items.id, itemEmbeddings.itemId))
+    .where(eq(items.spaceId, spaceId))
+    .orderBy(sql`${itemEmbeddings.embedding} <=> ${sql.raw(literal)}`)
+    .limit(limit);
+  return rows.map((r) => r.items);
+}
+
+export async function searchItemsHybrid(
+  db: VigilDb,
+  spaceId: string,
+  query: string,
+  embedding: number[],
+  ftsLimit = 30,
+  semanticLimit = 24,
+) {
+  const [ftsRows, semRows] = await Promise.all([
+    searchItemsFTS(db, spaceId, query),
+    searchItemsSemantic(db, spaceId, embedding, semanticLimit),
+  ]);
+  const seen = new Set<string>();
+  const out: Awaited<ReturnType<typeof searchItemsFTS>> = [];
+  for (const row of ftsRows.slice(0, ftsLimit)) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    out.push(row);
+  }
+  for (const row of semRows) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    out.push(row);
+  }
+  return out;
 }
 
 export async function listLinksForItem(db: VigilDb, itemId: string) {

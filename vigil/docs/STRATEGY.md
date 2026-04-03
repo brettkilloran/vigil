@@ -27,7 +27,7 @@ This file is the **short bridge** between the repo today and the full product sp
 
 We **adopt the master plan as source of truth** for architecture and phases. The existing tldraw-based implementation is a **spike / prototype**: it validated Neon + API shape + UX ideas but **does not match** licensing and product goals.
 
-**Status:** Phases **1–4** are largely in-repo (canvas interactions, TipTap, FTS + Cmd+K, embeddings API, MCP). Remaining emphasis: **Phase 5+** (TTRPG depth, graph), **semantic search in UI**, **R2 presign** hardening, **performance culling**, and polish per master plan.
+**Status:** Phases **1–4** are largely in-repo (canvas interactions, TipTap, FTS + Cmd+K with **Keywords / Meaning / Both** via `/api/search?mode=`, embeddings API, MCP). Remaining emphasis: **Phase 5+** (TTRPG depth, graph), **R2 presign** hardening, **performance culling**, and polish per master plan.
 
 ## Phase map (use for roadmaps and todos)
 
