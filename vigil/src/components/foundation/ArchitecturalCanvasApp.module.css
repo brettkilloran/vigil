@@ -218,15 +218,6 @@
   min-height: 80px;
 }
 
-.messageBody {
-  min-height: auto;
-  padding: 24px;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .nodeBody h1 {
   font-size: 1.5em;
   font-weight: 600;

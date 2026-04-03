@@ -1,47 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowsOutSimple,
-  CheckCircle,
-  CheckSquare,
-  Code,
-  Crosshair,
-  CursorClick,
-  FileText,
-  HandGrabbing,
-  Image as ImageIcon,
-  ListBullets,
-  MagnifyingGlass,
-  Minus,
-  Plus,
-  TextB,
-  TextH,
-  TextItalic,
-} from "@phosphor-icons/react";
+import { CheckCircle } from "@phosphor-icons/react";
 
 import styles from "./ArchitecturalCanvasApp.module.css";
-
-type NodeTheme = "default" | "code" | "task" | "media";
-type CanvasTool = "select" | "pan";
+import { ArchitecturalBottomDock } from "@/src/components/foundation/ArchitecturalBottomDock";
+import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";
+import { ArchitecturalStatusBar } from "@/src/components/foundation/ArchitecturalStatusBar";
+import { ArchitecturalToolRail } from "@/src/components/foundation/ArchitecturalToolRail";
+import type {
+  CanvasNode,
+  CanvasTool,
+  NodeTheme,
+} from "@/src/components/foundation/architectural-types";
 
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 3;
 const ZOOM_BUTTON_STEP = 0.2;
 const WHEEL_ZOOM_SENSITIVITY = 0.0012;
 
-type CanvasNode = {
-  id: string;
-  title: string;
-  x: number;
-  y: number;
-  rotation: number;
-  width?: number;
-  theme: NodeTheme;
-  tapeRotation: number;
-  bodyHtml: string;
-  noHeader?: boolean;
-};
 
 const INITIAL_NODES: CanvasNode[] = [
   {
@@ -127,13 +104,6 @@ const INITIAL_NODES: CanvasNode[] = [
     `,
   },
 ];
-
-function themeClass(theme: NodeTheme): string {
-  if (theme === "code") return styles.themeCode;
-  if (theme === "task") return styles.themeTask;
-  if (theme === "media") return styles.themeMedia;
-  return styles.themeDefault;
-}
 
 export function ArchitecturalCanvasApp() {
   const [nodes, setNodes] = useState<CanvasNode[]>(INITIAL_NODES);
@@ -412,6 +382,7 @@ export function ArchitecturalCanvasApp() {
     const onMouseDown = (event: MouseEvent) => {
       if (focusOpen) return;
       if (activeTool === "pan" || spacePanRef.current) return;
+      if (event.button !== 0) return;
       const target = event.target as HTMLElement;
       const entity = target.closest<HTMLElement>(`[data-node-id]`);
       const inContent =
@@ -517,6 +488,22 @@ export function ArchitecturalCanvasApp() {
   const onViewportMouseDown = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       if (focusOpen) return;
+
+      // Middle mouse drag always pans (tool-agnostic), similar to design tools.
+      if (event.button === 1) {
+        event.preventDefault();
+        isPanningRef.current = true;
+        setIsPanning(true);
+        panStartRef.current = {
+          x: event.clientX - translateX,
+          y: event.clientY - translateY,
+        };
+        return;
+      }
+
+      // Left button drives select/lasso and normal pan-tool behavior.
+      if (event.button !== 0) return;
+
       const target = event.target as HTMLElement;
       const isViewport =
         activeTool === "pan" ||
@@ -639,178 +626,36 @@ export function ArchitecturalCanvasApp() {
           {nodes.map((node) => {
             const dragged = draggedNodeId === node.id;
             return (
-              <div
+              <ArchitecturalNodeCard
                 key={node.id}
-                data-node-id={node.id}
-                className={`${styles.entityNode} ${themeClass(node.theme)} ${
-                  dragged ? styles.dragging : ""
-                } ${selectedNodeIds.includes(node.id) ? styles.selectedNode : ""}`}
-                style={{
-                  left: `${node.x}px`,
-                  top: `${node.y}px`,
-                  width: node.width ? `${node.width}px` : undefined,
-                  transform: `rotate(${node.rotation}deg)`,
-                  zIndex: dragged ? maxZIndex : nodeZ.get(node.id),
-                }}
-              >
-                <div
-                  className={`${styles.tape} ${styles.tapeClear}`}
-                  style={{ transform: `translateX(-50%) rotate(${node.tapeRotation}deg)` }}
-                />
-
-                {!node.noHeader && (
-                  <div className={styles.nodeHeader}>
-                    <span className={styles.nodeTitle}>{node.title}</span>
-                    <div className={styles.nodeActions}>
-                      <button
-                        type="button"
-                        className={styles.nodeBtn}
-                        data-expand-btn="true"
-                        title="Focus Mode"
-                      >
-                        <ArrowsOutSimple size={16} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div
-                  className={`${styles.nodeBody} ${node.noHeader ? styles.messageBody : ""}`}
-                  contentEditable={activeTool === "select"}
-                  suppressContentEditableWarning
-                  spellCheck={false}
-                  dangerouslySetInnerHTML={{ __html: node.bodyHtml }}
-                  onInput={(event) =>
-                    updateNodeBody(node.id, (event.target as HTMLElement).innerHTML)
-                  }
-                />
-              </div>
+                node={node}
+                activeTool={activeTool}
+                dragged={dragged}
+                selected={selectedNodeIds.includes(node.id)}
+                zIndex={dragged ? maxZIndex : nodeZ.get(node.id)}
+                onBodyInput={updateNodeBody}
+                onExpand={openFocusMode}
+              />
             );
           })}
         </div>
       </div>
 
-      <div className={styles.statusWrap}>
-        <div className={styles.glassPanel}>
-          <div className={styles.statusLeft}>
-            <div className={styles.pulseDot} />
-            <span className={styles.monoTag}>ARCH_ENV</span>
-          </div>
-          <div className={styles.sep} />
-          <div className={styles.monoSmall}>
-            X:
-            <span className={styles.metric}>{centerWorldX}</span>{" "}
-            Y:
-            <span className={styles.metric}>{centerWorldY}</span>
-          </div>
-          <div className={styles.sep} />
-          <div className={styles.monoSmall}>
-            <MagnifyingGlass size={12} />
-            <span className={styles.metric}>{Math.round(scale * 100)}%</span>
-          </div>
-        </div>
-      </div>
+      <ArchitecturalStatusBar
+        centerWorldX={centerWorldX}
+        centerWorldY={centerWorldY}
+        scale={scale}
+      />
 
-      <div className={styles.bottomDock}>
-        <div className={styles.glassPanelDock}>
-          <div className={styles.formatToolbar}>
-            <button type="button" className={styles.btnIcon} title="Bold" onMouseDown={(e) => {
-              e.preventDefault();
-              runFormat("bold");
-            }}>
-              <TextB size={18} />
-            </button>
-            <button type="button" className={styles.btnIcon} title="Italic" onMouseDown={(e) => {
-              e.preventDefault();
-              runFormat("italic");
-            }}>
-              <TextItalic size={18} />
-            </button>
-            <div className={styles.sepSmall} />
-            <button
-              type="button"
-              className={styles.btnIcon}
-              title="List"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                runFormat("insertUnorderedList");
-              }}
-            >
-              <ListBullets size={18} />
-            </button>
-            <button
-              type="button"
-              className={styles.btnIcon}
-              title="Heading"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                runFormat("formatBlock", "H1");
-              }}
-            >
-              <TextH size={18} />
-            </button>
-          </div>
+      <ArchitecturalBottomDock onFormat={runFormat} onCreateNode={createNewNode} />
 
-          <div className={styles.addMenu}>
-            <button type="button" className={styles.addBtn} onClick={() => createNewNode("default")}>
-              <FileText size={16} /> Note
-            </button>
-            <button type="button" className={styles.addBtn} onClick={() => createNewNode("task")}>
-              <CheckSquare size={16} /> Task
-            </button>
-            <button type="button" className={styles.addBtn} onClick={() => createNewNode("code")}>
-              <Code size={16} /> Code
-            </button>
-            <button type="button" className={styles.addBtn} onClick={() => createNewNode("media")}>
-              <ImageIcon size={16} /> Media
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.sideTools}>
-        <button
-          type="button"
-          className={`${styles.btnIcon} ${activeTool === "select" ? styles.active : ""}`}
-          title="Select"
-          onClick={() => setActiveTool("select")}
-        >
-          <CursorClick size={18} />
-        </button>
-        <button
-          type="button"
-          className={`${styles.btnIcon} ${activeTool === "pan" ? styles.active : ""}`}
-          title="Pan Hand"
-          onClick={() => setActiveTool("pan")}
-        >
-          <HandGrabbing size={18} />
-        </button>
-        <div className={styles.sepVertical} />
-        <button
-          type="button"
-          className={styles.btnIcon}
-          title="Zoom In"
-          onClick={() => zoomBy(ZOOM_BUTTON_STEP)}
-        >
-          <Plus size={18} />
-        </button>
-        <button
-          type="button"
-          className={styles.btnIcon}
-          title="Zoom Out"
-          onClick={() => zoomBy(-ZOOM_BUTTON_STEP)}
-        >
-          <Minus size={18} />
-        </button>
-        <button
-          type="button"
-          className={styles.btnIcon}
-          title="Recenter"
-          onClick={recenterToOrigin}
-        >
-          <Crosshair size={18} />
-        </button>
-      </div>
+      <ArchitecturalToolRail
+        activeTool={activeTool}
+        onSetTool={setActiveTool}
+        onZoomIn={() => zoomBy(ZOOM_BUTTON_STEP)}
+        onZoomOut={() => zoomBy(-ZOOM_BUTTON_STEP)}
+        onRecenter={recenterToOrigin}
+      />
 
       {lassoRectScreen ? (
         <div
