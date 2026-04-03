@@ -19,6 +19,13 @@ The canvas is **custom DOM** (`src/components/canvas/`, `src/stores/canvas-store
 
 **Zustand:** Select **stable** store slices (e.g. `useCanvasStore((s) => s.items)`). Derive lists with `useMemo(() => Object.values(items), [items])`. Avoid selectors that return a **new array or object every call** (e.g. `Object.values(s.items)` inline in the selector)—that causes re-render loops and React 19 `getServerSnapshot` warnings.
 
+## Terminals (Cursor / agents)
+
+- **`npm run dev`** runs until you stop it. If an agent **backgrounds** the dev server, the IDE will show a shell “running” for tens of minutes — that is **normal**, not a hung build.
+- **Prefer `npm run check`** (lint + production build) to verify changes; it **exits** and avoids orphan dev servers.
+- **Do not** start multiple `next dev` processes for the same app (port conflicts, duplicate work). Only one dev server unless you intentionally use another port.
+- **`npm run mcp`** is **stdio-long-lived** by design when Cursor attaches to the MCP server.
+
 ## Licensing
 
 Do not strip or bypass third-party license UI for any dependency we add. Prefer **MIT** libraries per `docs/VIGIL_MASTER_PLAN.md`.

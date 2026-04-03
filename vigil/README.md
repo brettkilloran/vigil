@@ -23,10 +23,15 @@ Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 
 | Script | Purpose |
 |--------|---------|
-| `npm run dev` | Development server |
+| `npm run dev` | Development server (**runs until stopped** — not a stuck terminal) |
+| `npm run check` | `lint` + `build` (use this for quick verification; exits when done) |
 | `npm run build` | Production build |
 | `npm run db:push` | Push Drizzle schema to Neon |
-| `npm run mcp` | MCP stdio server (see `scripts/mcp-server.mjs`) |
+| `npm run mcp` | MCP stdio server (see `scripts/mcp-server.mjs`; long-lived when connected) |
+
+### “Background shell” running 20+ minutes?
+
+That is usually **`next dev`** (or a second copy started by mistake). Stop it from the terminal trashcan / **Ctrl+C**, or run **`npm run check`** instead when you only need to validate the project.
 
 ## Deploy on Vercel
 

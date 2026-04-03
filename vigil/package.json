@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "check": "npm run lint && npm run build",
     "start": "next start",
     "lint": "eslint",
     "db:push": "drizzle-kit push",
