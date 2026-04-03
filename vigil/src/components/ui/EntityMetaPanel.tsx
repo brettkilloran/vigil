@@ -1,5 +1,6 @@
 "use client";
 
+import { VIGIL_METADATA_LABEL } from "@/src/lib/vigil-ui-classes";
 import type { CanvasItem } from "@/src/stores/canvas-types";
 
 const FIELDS: Record<
@@ -10,12 +11,19 @@ const FIELDS: Record<
     { key: "race", label: "Race", kind: "text" },
     { key: "class", label: "Class / role", kind: "text" },
     { key: "pronouns", label: "Pronouns", kind: "text" },
+    { key: "allegiances", label: "Allegiances", kind: "text" },
   ],
   location: [
     { key: "region", label: "Region", kind: "text" },
     { key: "terrain", label: "Terrain", kind: "text" },
+    { key: "climate", label: "Climate", kind: "text" },
+    { key: "population", label: "Population", kind: "text" },
+    { key: "ruler", label: "Ruler", kind: "text" },
   ],
-  faction: [{ key: "alignment", label: "Alignment", kind: "text" }],
+  faction: [
+    { key: "alignment", label: "Alignment", kind: "text" },
+    { key: "goals", label: "Goals", kind: "text" },
+  ],
   event: [
     { key: "eventDate", label: "When", kind: "date" },
     { key: "era", label: "Era / arc", kind: "text" },
@@ -61,9 +69,7 @@ export function EntityMetaPanel({
             key={f.key}
             className="flex flex-col gap-0.5 text-[var(--vigil-label)]"
           >
-            <span className="text-[9px] uppercase tracking-wide text-[var(--vigil-muted)]">
-              {f.label}
-            </span>
+            <span className={VIGIL_METADATA_LABEL}>{f.label}</span>
             <input
               key={`${item.id}-${f.key}-${initial}`}
               type={f.kind === "date" ? "date" : "text"}

@@ -28,7 +28,7 @@ The canvas is **custom DOM** (`src/components/canvas/`, `src/stores/canvas-store
 
 ## MCP (`npm run mcp`)
 
-Tools: **`vigil_list_items`**, **`vigil_get_item`** (`item_id`), **`vigil_item_links`** (`item_id`), **`vigil_search`** (`q`, optional `mode`, optional `space_id`), **`vigil_graph`** (optional `space_id`). Defaults: **`VIGIL_DEFAULT_SPACE_ID`**, **`VIGIL_APP_URL`** (e.g. `http://localhost:3000`). The Next app must be running for HTTP calls to succeed. REST: **`GET /api/v1/items`** (list by `space_id`) and **`GET /api/v1/items/[itemId]`** (single item).
+Tools: **`vigil_list_items`**, **`vigil_get_item`**, **`vigil_item_links`**, **`vigil_title_mentions`** (FTS for an item’s title in a space), **`vigil_search`**, **`vigil_graph`**. Defaults: **`VIGIL_DEFAULT_SPACE_ID`**, **`VIGIL_APP_URL`** (e.g. `http://localhost:3000`). The Next app must be running for HTTP calls to succeed. REST: **`GET /api/v1/items`** (list by `space_id`) and **`GET /api/v1/items/[itemId]`** (single item).
 
 ## Playwright (`npm run test:e2e`)
 

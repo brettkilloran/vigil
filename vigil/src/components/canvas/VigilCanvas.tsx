@@ -340,11 +340,11 @@ export function VigilCanvas({
         >
           <div className="max-w-md rounded-2xl border border-[var(--vigil-border)]/70 bg-[var(--vigil-elevated)]/85 px-8 py-6 text-center shadow-lg shadow-black/[0.06] backdrop-blur-md dark:shadow-black/40">
             <p className="text-sm leading-relaxed text-[var(--vigil-muted)]">
-              This space is empty.{" "}
+              Start a note, drop in visuals, or organize your thoughts.{" "}
               <span className="font-semibold text-[var(--foreground)]">
                 Double-click
               </span>{" "}
-              to add a note, drop an image, or use the toolbar.
+              here to place a note, or use the toolbar.
             </p>
           </div>
         </div>

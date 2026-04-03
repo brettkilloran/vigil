@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 
+import { VIGIL_CHIP_BTN, VIGIL_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
 import { useCanvasStore } from "@/src/stores/canvas-store";
 import type { CanvasItem } from "@/src/stores/canvas-types";
 
@@ -39,27 +40,23 @@ export function TimelinePanel({
 
   return (
     <div
-      className="pointer-events-auto fixed bottom-3 left-1/2 z-[900] max-h-[min(40vh,320px)] w-[min(96vw,420px)] -translate-x-1/2 overflow-hidden rounded-lg border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] shadow-lg"
+      className={`pointer-events-auto fixed bottom-3 left-1/2 z-[900] max-h-[min(40vh,320px)] w-[min(96vw,420px)] -translate-x-1/2 overflow-hidden p-2.5 ${VIGIL_GLASS_PANEL}`}
       role="dialog"
       aria-label="Event timeline"
     >
-      <div className="flex items-center justify-between border-b border-[var(--vigil-border)] px-3 py-1.5">
-        <span className="text-xs font-medium text-[var(--vigil-label)]">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold tracking-tight text-[var(--vigil-label)]">
           Events (TTRPG)
         </span>
-        <button
-          type="button"
-          className="text-[11px] text-[var(--vigil-muted)] hover:text-[var(--foreground)]"
-          onClick={onClose}
-        >
+        <button type="button" className={VIGIL_CHIP_BTN} onClick={onClose}>
           Close
         </button>
       </div>
-      <ul className="max-h-[min(36vh,280px)] overflow-y-auto py-1 text-xs">
+      <ul className="max-h-[min(36vh,280px)] overflow-y-auto py-0.5 text-xs">
         {events.length === 0 ? (
-          <li className="px-3 py-2 text-[var(--vigil-muted)]">
-            No items tagged as <strong>Event</strong> with optional dates in
-            TTRPG metadata.
+          <li className="px-1 py-2 text-[var(--vigil-muted)]">
+            No items tagged as <strong>Event</strong> with optional dates in TTRPG
+            metadata.
           </li>
         ) : (
           events.map((it) => {
@@ -72,7 +69,7 @@ export function TimelinePanel({
               <li key={it.id}>
                 <button
                   type="button"
-                  className="flex w-full items-baseline gap-2 px-3 py-1.5 text-left hover:bg-black/5 dark:hover:bg-white/10"
+                  className="flex w-full items-baseline gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-black/[0.06] dark:hover:bg-white/[0.08]"
                   onClick={() => {
                     onSelectItem(it.id);
                     onClose();

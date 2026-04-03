@@ -15,7 +15,7 @@ const BASE =
 const SPACE = process.env.VIGIL_DEFAULT_SPACE_ID || "";
 
 const server = new Server(
-  { name: "vigil", version: "0.3.0" },
+  { name: "vigil", version: "0.4.0" },
   { capabilities: { tools: {} } },
 );
 
@@ -84,6 +84,22 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         type: "object",
         properties: {
           item_id: { type: "string", description: "UUID of the item" },
+        },
+        required: ["item_id"],
+      },
+    },
+    {
+      name: "vigil_title_mentions",
+      description:
+        "Full-text search in a space for the title of an item (≥3 chars). Surrogate for 'who mentions this entity?' without LLM. Uses GET /api/search mode=fts.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          item_id: { type: "string", description: "UUID of the item whose title is searched for" },
+          space_id: {
+            type: "string",
+            description: "Space UUID (omit if VIGIL_DEFAULT_SPACE_ID is set)",
+          },
         },
         required: ["item_id"],
       },
@@ -178,6 +194,50 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const res = await fetch(
       `${BASE}/api/items/${encodeURIComponent(itemId)}/links`,
     );
+    return { content: [{ type: "text", text: await res.text() }] };
+  }
+
+  if (name === "vigil_title_mentions") {
+    const itemId = String(args.item_id ?? "").trim();
+    const spaceId = args.space_id || SPACE;
+    if (!itemId) {
+      return {
+        content: [{ type: "text", text: "item_id is required" }],
+        isError: true,
+      };
+    }
+    if (!spaceId) {
+      return {
+        content: [
+          { type: "text", text: "Missing space_id and VIGIL_DEFAULT_SPACE_ID" },
+        ],
+        isError: true,
+      };
+    }
+    const itemRes = await fetch(
+      `${BASE}/api/v1/items/${encodeURIComponent(itemId)}`,
+    );
+    const itemJson = await itemRes.json();
+    const title = String(itemJson?.item?.title ?? "").trim();
+    if (title.length < 3) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              ok: true,
+              note: "Title too short for FTS (need ≥3 characters).",
+              items: [],
+            }),
+          },
+        ],
+      };
+    }
+    const url = new URL("/api/search", BASE);
+    url.searchParams.set("spaceId", String(spaceId));
+    url.searchParams.set("q", title.slice(0, 200));
+    url.searchParams.set("mode", "fts");
+    const res = await fetch(url);
     return { content: [{ type: "text", text: await res.text() }] };
   }
 

@@ -7,6 +7,7 @@ import {
   localOutgoingFromItem,
   type LocalLinkEndpoint,
 } from "@/src/lib/local-item-links";
+import { localItemsMentioningTitle } from "@/src/lib/local-title-mentions";
 import { VIGIL_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
 import { useCanvasStore } from "@/src/stores/canvas-store";
 
@@ -30,16 +31,18 @@ type Loaded =
   | { itemId: string; outgoing: RowOut[]; incoming: RowIn[]; err: null }
   | { itemId: string; outgoing: []; incoming: []; err: string };
 
+type LinkRow = Pick<Endpoint, "id" | "title" | "itemType">;
+
 const linkRowBtn =
   "w-full truncate rounded-lg px-1.5 py-1 text-left text-[var(--foreground)] transition-colors hover:bg-black/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vigil-snap)]/35 dark:hover:bg-white/[0.08]";
 
-function LinkEndpointList({
+function LinkRowList({
   label,
   rows,
   onPick,
 }: {
   label: string;
-  rows: LocalLinkEndpoint[];
+  rows: LinkRow[];
   onPick: (id: string) => void;
 }) {
   if (rows.length === 0) return null;
@@ -62,11 +65,39 @@ function LinkEndpointList({
   );
 }
 
+function WikiLinkSection({
+  localOutgoing,
+  localIncoming,
+  focusItem,
+}: {
+  localOutgoing: LocalLinkEndpoint[];
+  localIncoming: LocalLinkEndpoint[];
+  focusItem: (id: string) => void;
+}) {
+  const emptyWiki = localOutgoing.length === 0 && localIncoming.length === 0;
+  return (
+    <>
+      {emptyWiki ? (
+        <p className="text-[var(--vigil-muted)]">
+          No <code className="rounded bg-black/5 px-0.5 dark:bg-white/10">[[</code>{" "}
+          links in note content yet.
+        </p>
+      ) : (
+        <div className="space-y-2.5">
+          <LinkRowList label="To" rows={localOutgoing} onPick={focusItem} />
+          <LinkRowList label="From" rows={localIncoming} onPick={focusItem} />
+        </div>
+      )}
+    </>
+  );
+}
+
 export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
   const selectedIds = useCanvasStore((s) => s.selectedIds);
   const itemsRecord = useCanvasStore((s) => s.items);
   const itemId = selectedIds.length === 1 ? selectedIds[0]! : null;
   const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [cloudLoading, setCloudLoading] = useState(false);
 
   const selectedItem = itemId ? itemsRecord[itemId] : undefined;
 
@@ -79,6 +110,11 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
     if (!itemId || cloudMode) return [];
     return localIncomingToItem(itemId, itemsRecord);
   }, [itemId, itemsRecord, cloudMode]);
+
+  const titleMentions = useMemo((): LinkRow[] => {
+    if (!itemId || !selectedItem) return [];
+    return localItemsMentioningTitle(itemId, selectedItem.title, itemsRecord);
+  }, [itemId, selectedItem, itemsRecord]);
 
   const focusItem = useCallback((id: string) => {
     const st = useCanvasStore.getState();
@@ -94,32 +130,40 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
   }, []);
 
   useEffect(() => {
-    if (!itemId || !cloudMode) return;
+    if (!itemId || !cloudMode) {
+      setCloudLoading(false);
+      return;
+    }
     let cancelled = false;
+    setCloudLoading(true);
     void (async () => {
-      const res = await fetch(`/api/items/${itemId}/links`);
-      const data = (await res.json()) as {
-        ok?: boolean;
-        outgoing?: RowOut[];
-        incoming?: RowIn[];
-        error?: string;
-      };
-      if (cancelled) return;
-      if (!data.ok) {
-        setLoaded({
-          itemId,
-          outgoing: [],
-          incoming: [],
-          err: data.error ?? "Could not load links",
-        });
-        return;
+      try {
+        const res = await fetch(`/api/items/${itemId}/links`);
+        const data = (await res.json()) as {
+          ok?: boolean;
+          outgoing?: RowOut[];
+          incoming?: RowIn[];
+          error?: string;
+        };
+        if (cancelled) return;
+        if (!data.ok) {
+          setLoaded({
+            itemId,
+            outgoing: [],
+            incoming: [],
+            err: data.error ?? "Could not load links",
+          });
+        } else {
+          setLoaded({
+            itemId,
+            outgoing: data.outgoing ?? [],
+            incoming: data.incoming ?? [],
+            err: null,
+          });
+        }
+      } finally {
+        if (!cancelled) setCloudLoading(false);
       }
-      setLoaded({
-        itemId,
-        outgoing: data.outgoing ?? [],
-        incoming: data.incoming ?? [],
-        err: null,
-      });
     })();
     return () => {
       cancelled = true;
@@ -128,11 +172,27 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
 
   if (!itemId) return null;
 
-  const panelClass = `pointer-events-auto absolute right-3 top-3 z-[800] max-h-[min(70vh,440px)] w-[min(92vw,280px)] overflow-y-auto p-2.5 text-xs ${VIGIL_GLASS_PANEL}`;
+  const panelClass = `pointer-events-auto absolute right-3 top-3 z-[800] max-h-[min(78vh,520px)] w-[min(92vw,280px)] overflow-y-auto p-2.5 text-xs ${VIGIL_GLASS_PANEL}`;
+
+  const mentionsBlock =
+    selectedItem && selectedItem.title.trim().length >= 3 ? (
+      <div className="mt-3 border-t border-[var(--vigil-border)]/70 pt-2.5">
+        <p className="mb-1 text-[10px] leading-snug text-[var(--vigil-muted)]">
+          Other cards whose text or title contains{" "}
+          <span className="font-medium text-[var(--foreground)]">
+            {selectedItem.title.trim()}
+          </span>{" "}
+          (local heuristic, not LLM).
+        </p>
+        {titleMentions.length > 0 ? (
+          <LinkRowList label="Mentions" rows={titleMentions} onPick={focusItem} />
+        ) : (
+          <p className="text-[var(--vigil-muted)]">No matches on this canvas.</p>
+        )}
+      </div>
+    ) : null;
 
   if (!cloudMode) {
-    const emptyLocal =
-      localOutgoing.length === 0 && localIncoming.length === 0;
     return (
       <div className={panelClass}>
         <div className="mb-1.5 font-semibold tracking-tight text-[var(--vigil-label)]">
@@ -142,26 +202,12 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
           From TipTap <code className="rounded bg-black/5 px-0.5 dark:bg-white/10">[[</code>{" "}
           links on this canvas (local-only; not synced to Neon).
         </p>
-        {emptyLocal ? (
-          <p className="text-[var(--vigil-muted)]">
-            No links in note content yet. Type{" "}
-            <span className="font-medium text-[var(--foreground)]">[[</span> to link another
-            card.
-          </p>
-        ) : (
-          <div className="space-y-2.5">
-            <LinkEndpointList
-              label="To"
-              rows={localOutgoing}
-              onPick={focusItem}
-            />
-            <LinkEndpointList
-              label="From"
-              rows={localIncoming}
-              onPick={focusItem}
-            />
-          </div>
-        )}
+        <WikiLinkSection
+          localOutgoing={localOutgoing}
+          localIncoming={localIncoming}
+          focusItem={focusItem}
+        />
+        {mentionsBlock}
       </div>
     );
   }
@@ -181,7 +227,9 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
       <p className="mb-2 text-[10px] leading-snug text-[var(--vigil-muted)]">
         Server <code className="text-[9px]">item_links</code> plus wiki text on other notes.
       </p>
-      {err ? (
+      {cloudLoading && !inSync ? (
+        <p className="text-[var(--vigil-muted)]">Loading links…</p>
+      ) : err ? (
         <p className="text-red-600 dark:text-red-400">{err}</p>
       ) : empty ? (
         <p className="text-[var(--vigil-muted)]">
@@ -241,6 +289,7 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
           ) : null}
         </div>
       )}
+      {mentionsBlock}
     </div>
   );
 }

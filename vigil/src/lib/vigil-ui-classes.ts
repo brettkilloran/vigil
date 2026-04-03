@@ -12,3 +12,7 @@ export const VIGIL_EDITOR_TOOLBAR_BTN =
 
 export const VIGIL_EDITOR_TOOLBAR_BTN_ON =
   "border-[var(--vigil-border)] bg-black/[0.08] dark:bg-white/[0.12]";
+
+/** ALL-CAPS metadata labels (image detail, entity fields, etc.). */
+export const VIGIL_METADATA_LABEL =
+  "text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--vigil-muted)]";
