@@ -102,7 +102,7 @@ export function ArchitecturalCanvasApp({
   const [translateY, setTranslateY] = useState(0);
   const [maxZIndex, setMaxZIndex] = useState(100);
   const [isPanning, setIsPanning] = useState(false);
-  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
+  const [draggedNodeIds, setDraggedNodeIds] = useState<string[]>([]);
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
   const [spacePanning, setSpacePanning] = useState(false);
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
@@ -126,8 +126,8 @@ export function ArchitecturalCanvasApp({
   const parentDropRef = useRef<HTMLButtonElement | null>(null);
   const isPanningRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0 });
-  const draggedNodeRef = useRef<string | null>(null);
-  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const draggedNodeIdsRef = useRef<string[]>([]);
+  const dragOffsetsRef = useRef<Record<string, { x: number; y: number }>>({});
   const viewRef = useRef({ scale: 1, tx: 0, ty: 0 });
   const lassoStartRef = useRef<{ x: number; y: number } | null>(null);
   const spacePanRef = useRef(false);
@@ -334,7 +334,12 @@ export function ArchitecturalCanvasApp({
   );
 
   const moveEntityToSpace = useCallback(
-    (entityId: string, destinationSpaceId: string, fallbackSlot?: { x: number; y: number }) => {
+    (
+      entityId: string,
+      destinationSpaceId: string,
+      fallbackSlot?: { x: number; y: number },
+      options?: { forceDestinationSlot?: boolean },
+    ) => {
       setGraph((prev) => {
         if (!canMoveEntityToSpace(entityId, destinationSpaceId, prev)) return prev;
         const entity = prev.entities[entityId];
@@ -355,16 +360,15 @@ export function ArchitecturalCanvasApp({
           ...target,
           entityIds: [...target.entityIds, entityId],
         };
+        const forced = options?.forceDestinationSlot ?? false;
+        const destinationSlot = forced
+          ? fallbackSlot ?? entity.slots[destinationSpaceId] ?? { x: 0, y: 0 }
+          : entity.slots[destinationSpaceId] ?? fallbackSlot ?? { x: 0, y: 0 };
         next.entities[entityId] = {
           ...entity,
           slots: {
             ...entity.slots,
-            [destinationSpaceId]:
-              entity.slots[destinationSpaceId] ??
-              fallbackSlot ?? {
-                x: 0,
-                y: 0,
-              },
+            [destinationSpaceId]: destinationSlot,
           },
         };
         return next;
@@ -401,6 +405,28 @@ export function ArchitecturalCanvasApp({
     if (!parentSpaceId) return;
     enterSpace(parentSpaceId);
   }, [enterSpace, parentSpaceId]);
+
+  const getParentFolderExitSlot = useCallback(
+    (offsetIndex = 0) => {
+      if (!parentSpaceId) return null;
+      const parentSpace = graph.spaces[parentSpaceId];
+      if (!parentSpace) return null;
+      const ownerFolderId = parentSpace.entityIds.find((entityId) => {
+        const entity = graph.entities[entityId];
+        return entity?.kind === "folder" && entity.childSpaceId === activeSpaceId;
+      });
+      if (!ownerFolderId) return null;
+      const ownerFolder = graph.entities[ownerFolderId];
+      if (!ownerFolder || ownerFolder.kind !== "folder") return null;
+      const ownerSlot = ownerFolder.slots[parentSpaceId];
+      if (!ownerSlot) return null;
+      return {
+        x: ownerSlot.x + offsetIndex * 28,
+        y: ownerSlot.y + 260 + offsetIndex * 18,
+      };
+    },
+    [activeSpaceId, graph.entities, graph.spaces, parentSpaceId],
+  );
 
   const renameFolder = useCallback((entityId: string, title: string) => {
     setGraph((prev) => {
@@ -521,6 +547,8 @@ export function ArchitecturalCanvasApp({
 
   const updateDropTargets = useCallback(
     (draggedEntityId: string) => {
+      const draggedGroup =
+        draggedNodeIdsRef.current.length > 0 ? draggedNodeIdsRef.current : [draggedEntityId];
       const draggedEl = document.querySelector<HTMLElement>(`[data-node-id="${draggedEntityId}"]`);
       if (!draggedEl) return;
       const dragRect = draggedEl.getBoundingClientRect();
@@ -544,14 +572,15 @@ export function ArchitecturalCanvasApp({
           const destinationId = graph.spaces[folderEntity.childSpaceId]
             ? folderEntity.childSpaceId
             : folderEntity.childSpaceId;
-          if (!canMoveEntityToSpace(draggedEntityId, destinationId)) return;
+          if (!draggedGroup.every((id) => canMoveEntityToSpace(id, destinationId))) return;
           nextFolderId = folderId;
         },
       );
       setHoveredFolderId(nextFolderId);
 
       const parentTarget = parentDropRef.current;
-      const canDropToParent = !!parentSpaceId && canMoveEntityToSpace(draggedEntityId, parentSpaceId);
+      const canDropToParent =
+        !!parentSpaceId && draggedGroup.every((id) => canMoveEntityToSpace(id, parentSpaceId));
       if (!parentTarget || !canDropToParent) {
         setParentDropHovered(false);
         return;
@@ -568,12 +597,19 @@ export function ArchitecturalCanvasApp({
   );
 
   const handleDrop = useCallback(
-    (draggedEntityId: string) => {
+    (draggedEntityIds: string[]) => {
+      if (draggedEntityIds.length === 0) return;
       const center = centerCoords();
       const fallback = { x: center.x - 100, y: center.y - 80 };
 
       if (parentDropHovered && parentSpaceId) {
-        moveEntityToSpace(draggedEntityId, parentSpaceId, fallback);
+        draggedEntityIds.forEach((entityId, index) => {
+          const groupFallback = { x: fallback.x + index * 24, y: fallback.y + index * 12 };
+          const anchorBelowFolder = getParentFolderExitSlot(index) ?? groupFallback;
+          moveEntityToSpace(entityId, parentSpaceId, anchorBelowFolder, {
+            forceDestinationSlot: true,
+          });
+        });
         return;
       }
 
@@ -584,11 +620,15 @@ export function ArchitecturalCanvasApp({
         ? folderEntity.childSpaceId
         : ensureFolderChildSpace(hoveredFolderId);
       if (!childSpaceId) return;
-      moveEntityToSpace(draggedEntityId, childSpaceId, fallback);
+      draggedEntityIds.forEach((entityId, index) => {
+        const groupFallback = { x: fallback.x + index * 24, y: fallback.y + index * 12 };
+        moveEntityToSpace(entityId, childSpaceId, groupFallback);
+      });
     },
     [
       centerCoords,
       ensureFolderChildSpace,
+      getParentFolderExitSlot,
       graph.entities,
       graph.spaces,
       hoveredFolderId,
@@ -616,31 +656,36 @@ export function ArchitecturalCanvasApp({
         setTranslateY(event.clientY - panStartRef.current.y);
       }
 
-      const draggedNodeId = draggedNodeRef.current;
-      if (!draggedNodeId) return;
-      const x = (event.clientX - translateX) / scale - dragOffsetRef.current.x;
-      const y = (event.clientY - translateY) / scale - dragOffsetRef.current.y;
+      const draggedIds = draggedNodeIdsRef.current;
+      if (draggedIds.length === 0) return;
+      const mouseCanvasX = (event.clientX - translateX) / scale;
+      const mouseCanvasY = (event.clientY - translateY) / scale;
       setGraph((prev) => {
-        const entity = prev.entities[draggedNodeId];
-        if (!entity) return prev;
-        return {
-          ...prev,
-          entities: {
-            ...prev.entities,
-            [draggedNodeId]: {
-              ...entity,
-              slots: {
-                ...entity.slots,
-                [activeSpaceId]: {
-                  x,
-                  y,
-                },
+        const nextEntities = { ...prev.entities };
+        let changed = false;
+        draggedIds.forEach((id) => {
+          const entity = prev.entities[id];
+          const offset = dragOffsetsRef.current[id];
+          if (!entity || !offset) return;
+          changed = true;
+          nextEntities[id] = {
+            ...entity,
+            slots: {
+              ...entity.slots,
+              [activeSpaceId]: {
+                x: mouseCanvasX - offset.x,
+                y: mouseCanvasY - offset.y,
               },
             },
-          },
+          };
+        });
+        if (!changed) return prev;
+        return {
+          ...prev,
+          entities: nextEntities,
         };
       });
-      updateDropTargets(draggedNodeId);
+      updateDropTargets(draggedIds[0]);
     };
 
     const onMouseUp = () => {
@@ -675,11 +720,12 @@ export function ArchitecturalCanvasApp({
 
       isPanningRef.current = false;
       setIsPanning(false);
-      if (draggedNodeRef.current) {
-        handleDrop(draggedNodeRef.current);
+      if (draggedNodeIdsRef.current.length > 0) {
+        handleDrop(draggedNodeIdsRef.current);
       }
-      draggedNodeRef.current = null;
-      setDraggedNodeId(null);
+      draggedNodeIdsRef.current = [];
+      dragOffsetsRef.current = {};
+      setDraggedNodeIds([]);
       setHoveredFolderId(null);
       setParentDropHovered(false);
     };
@@ -712,18 +758,37 @@ export function ArchitecturalCanvasApp({
             setSelectedNodeIds((prev) =>
               prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId],
             );
+            return;
           } else {
-            setSelectedNodeIds([nodeId]);
+            const dragGroup =
+              selectedNodeIds.includes(nodeId) && selectedNodeIds.length > 1
+                ? [
+                    nodeId,
+                    ...selectedNodeIds.filter(
+                      (id) => id !== nodeId && visibleEntityIds.includes(id),
+                    ),
+                  ]
+                : [nodeId];
+            setSelectedNodeIds(dragGroup);
+            draggedNodeIdsRef.current = dragGroup;
+            setDraggedNodeIds(dragGroup);
+
+            const mouseCanvasX = (event.clientX - translateX) / scale;
+            const mouseCanvasY = (event.clientY - translateY) / scale;
+            const offsets: Record<string, { x: number; y: number }> = {};
+            dragGroup.forEach((id) => {
+              const dragEntity = graph.entities[id];
+              const slot = dragEntity?.slots[activeSpaceId];
+              if (!slot) return;
+              offsets[id] = {
+                x: mouseCanvasX - slot.x,
+                y: mouseCanvasY - slot.y,
+              };
+            });
+            dragOffsetsRef.current = offsets;
+            setMaxZIndex((prev) => prev + 1);
           }
         }
-        const rect = entity.getBoundingClientRect();
-        draggedNodeRef.current = entity.dataset.nodeId ?? null;
-        setDraggedNodeId(entity.dataset.nodeId ?? null);
-        dragOffsetRef.current = {
-          x: (event.clientX - rect.left) / scale,
-          y: (event.clientY - rect.top) / scale,
-        };
-        setMaxZIndex((prev) => prev + 1);
       }
 
       const taskCheckbox = target.closest(`.${styles.taskCheckbox}`);
@@ -774,7 +839,20 @@ export function ArchitecturalCanvasApp({
       document.removeEventListener("click", onClick);
       document.removeEventListener("dblclick", onDoubleClick);
     };
-  }, [activeTool, focusOpen, openFocusMode, openFolder, scale, updateNodeBody]);
+  }, [
+    activeSpaceId,
+    activeTool,
+    focusOpen,
+    graph.entities,
+    openFocusMode,
+    openFolder,
+    scale,
+    selectedNodeIds,
+    translateX,
+    translateY,
+    updateNodeBody,
+    visibleEntityIds,
+  ]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -799,6 +877,63 @@ export function ArchitecturalCanvasApp({
     };
   }, []);
 
+  const deleteEntitySelection = useCallback((entityIds: string[]) => {
+    if (entityIds.length === 0) return;
+    setGraph((prev) => {
+      const next = shallowCloneGraph(prev);
+      const entityIdsToDelete = new Set<string>();
+      const spaceIdsToDelete = new Set<string>();
+
+      const markEntity = (entityId: string) => {
+        if (entityIdsToDelete.has(entityId)) return;
+        const entity = next.entities[entityId];
+        if (!entity) return;
+        entityIdsToDelete.add(entityId);
+
+        if (entity.kind !== "folder") return;
+        const stack = [entity.childSpaceId];
+        while (stack.length > 0) {
+          const spaceId = stack.pop();
+          if (!spaceId || spaceIdsToDelete.has(spaceId)) continue;
+          const space = next.spaces[spaceId];
+          if (!space) continue;
+          spaceIdsToDelete.add(spaceId);
+          space.entityIds.forEach(markEntity);
+          Object.values(next.spaces).forEach((candidate) => {
+            if (candidate.parentSpaceId === spaceId) {
+              stack.push(candidate.id);
+            }
+          });
+        }
+      };
+
+      entityIds.forEach(markEntity);
+
+      Object.values(next.spaces).forEach((space) => {
+        next.spaces[space.id] = {
+          ...space,
+          entityIds: space.entityIds.filter((id) => !entityIdsToDelete.has(id)),
+        };
+      });
+
+      entityIdsToDelete.forEach((entityId) => {
+        delete next.entities[entityId];
+      });
+      spaceIdsToDelete.forEach((spaceId) => {
+        if (spaceId !== next.rootSpaceId) {
+          delete next.spaces[spaceId];
+        }
+      });
+      return next;
+    });
+
+    setSelectedNodeIds((prev) => prev.filter((id) => !entityIds.includes(id)));
+    if (activeNodeId && entityIds.includes(activeNodeId)) {
+      setFocusOpen(false);
+      setActiveNodeId(null);
+    }
+  }, [activeNodeId]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
@@ -810,10 +945,11 @@ export function ArchitecturalCanvasApp({
         return;
       }
 
-      if (draggedNodeRef.current || lassoStartRef.current || lassoRectScreen) {
+      if (draggedNodeIdsRef.current.length > 0 || lassoStartRef.current || lassoRectScreen) {
         event.preventDefault();
-        draggedNodeRef.current = null;
-        setDraggedNodeId(null);
+        draggedNodeIdsRef.current = [];
+        dragOffsetsRef.current = {};
+        setDraggedNodeIds([]);
         lassoStartRef.current = null;
         setLassoRectScreen(null);
         setHoveredFolderId(null);
@@ -830,6 +966,20 @@ export function ArchitecturalCanvasApp({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [closeFocusMode, focusOpen, goBack, lassoRectScreen, parentSpaceId]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const isDeleteKey = event.key === "Delete" || event.key === "Backspace";
+      if (!isDeleteKey) return;
+      if (isEditableTarget(event.target) || focusOpen) return;
+      if (selectedNodeIds.length === 0) return;
+      event.preventDefault();
+      deleteEntitySelection(selectedNodeIds);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [deleteEntitySelection, focusOpen, selectedNodeIds]);
 
   const onViewportMouseDown = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -914,7 +1064,7 @@ export function ArchitecturalCanvasApp({
       if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
         return;
       }
-      if (!(event.ctrlKey || event.metaKey)) return;
+      if (focusOpen) return;
 
       const key = event.key;
       if (key === "=" || key === "+" || key === "NumpadAdd") {
@@ -927,7 +1077,7 @@ export function ArchitecturalCanvasApp({
         zoomBy(-ZOOM_BUTTON_STEP);
         return;
       }
-      if (key === "0") {
+      if (key === "0" && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
         recenterToOrigin();
       }
@@ -935,7 +1085,7 @@ export function ArchitecturalCanvasApp({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [recenterToOrigin, zoomBy]);
+  }, [focusOpen, recenterToOrigin, zoomBy]);
 
   const runFormat = useCallback((command: string, value?: string) => {
     document.execCommand(command, false, value);
@@ -944,12 +1094,22 @@ export function ArchitecturalCanvasApp({
   const moveSelectionToParent = useCallback(() => {
     if (!parentSpaceId) return;
     const center = centerCoords();
-    const fallback = { x: center.x - 100, y: center.y - 80 };
-    selectedNodeIds.forEach((entityId) => {
+    selectedNodeIds.forEach((entityId, index) => {
       if (!visibleEntityIds.includes(entityId)) return;
-      moveEntityToSpace(entityId, parentSpaceId, fallback);
+      const fallback = { x: center.x - 100 + index * 24, y: center.y - 80 + index * 12 };
+      const anchorBelowFolder = getParentFolderExitSlot(index) ?? fallback;
+      moveEntityToSpace(entityId, parentSpaceId, anchorBelowFolder, {
+        forceDestinationSlot: true,
+      });
     });
-  }, [centerCoords, moveEntityToSpace, parentSpaceId, selectedNodeIds, visibleEntityIds]);
+  }, [
+    centerCoords,
+    getParentFolderExitSlot,
+    moveEntityToSpace,
+    parentSpaceId,
+    selectedNodeIds,
+    visibleEntityIds,
+  ]);
 
   useEffect(() => {
     setSelectedNodeIds((prev) => prev.filter((id) => visibleEntityIds.includes(id)));
@@ -987,7 +1147,10 @@ export function ArchitecturalCanvasApp({
         >
           {visibleEntities.map((entity) => {
             const slot = entity.slots[activeSpaceId] ?? { x: 0, y: 0 };
-            const dragged = draggedNodeId === entity.id;
+            const draggedIndex = draggedNodeIds.indexOf(entity.id);
+            const dragged = draggedIndex >= 0;
+            const dropPreview = dragged && !!hoveredFolderId;
+            const selected = selectedNodeIds.includes(entity.id);
             const folderCount =
               entity.kind === "folder"
                 ? graph.spaces[entity.childSpaceId]?.entityIds.length ?? 0
@@ -1001,8 +1164,8 @@ export function ArchitecturalCanvasApp({
                 style={{
                   left: `${slot.x}px`,
                   top: `${slot.y}px`,
-                  transform: `rotate(${entity.rotation}deg)`,
-                  zIndex: dragged ? maxZIndex : nodeZ.get(entity.id),
+                  transform: `rotate(${entity.rotation}deg) scale(${dropPreview ? 0.92 : 1})`,
+                  zIndex: dragged ? maxZIndex + draggedIndex : nodeZ.get(entity.id),
                 }}
               >
                 {entity.kind === "content" ? (
@@ -1015,7 +1178,7 @@ export function ArchitecturalCanvasApp({
                     bodyHtml={entity.bodyHtml}
                     activeTool={activeTool}
                     dragged={dragged}
-                    selected={selectedNodeIds.includes(entity.id)}
+                    selected={selected}
                     onBodyInput={updateNodeBody}
                     onExpand={openFocusMode}
                   />
@@ -1025,7 +1188,7 @@ export function ArchitecturalCanvasApp({
                     data-folder-id={entity.id}
                     className={`${styles.folderNode} ${
                       hoveredFolderId === entity.id ? styles.folderDragOver : ""
-                    }`}
+                    } ${selected ? styles.folderSelected : ""}`}
                   >
                     <div className={styles.folderTab}>
                       <Folder size={12} />

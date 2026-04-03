@@ -82,11 +82,12 @@
 
 .nodePlacement {
   position: absolute;
+  transition: transform 0.14s ease;
 }
 
 .folderNode {
   width: 340px;
-  height: 200px;
+  height: 228px;
   background: transparent;
   border-radius: 0;
   position: relative;
@@ -123,9 +124,9 @@
 
 .folderInterior {
   position: absolute;
-  top: 10px;
+  top: 12px;
   right: 10px;
-  bottom: 10px;
+  bottom: 12px;
   left: 10px;
   border: 1px dashed rgba(255, 255, 255, 0.12);
   border-radius: 2px;
@@ -152,11 +153,18 @@
   border-radius: 4px;
   transform-origin: bottom;
   transition: transform 0.25s ease;
-  padding: 20px;
+  padding: 20px 20px 24px;
 }
 
 .folderNode:hover .folderFront {
-  transform: rotateX(-4deg);
+  transform: translateY(4px);
+}
+
+.folderSelected .folderFront {
+  box-shadow:
+    0 0 0 3px rgba(10, 10, 12, 0.95),
+    0 0 0 7px rgba(59, 130, 246, 0.9),
+    0 12px 24px rgba(0, 0, 0, 0.45);
 }
 
 .folderTopRow {
@@ -208,7 +216,10 @@
 }
 
 .folderDragOver .folderFront {
-  transform: rotateX(-38deg);
+  transform: scale(1.035);
+  box-shadow:
+    0 0 0 1px rgba(59, 130, 246, 0.65),
+    0 14px 28px rgba(0, 0, 0, 0.5);
 }
 
 .folderDragOver .folderInterior {
@@ -219,6 +230,7 @@
 
 .folderDragOver .folderTab {
   color: var(--text-main);
+  transform: scale(1.03);
 }
 
 .entityNode {
@@ -231,7 +243,13 @@
   cursor: grab;
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.14s ease;
+}
+
+.entityNode:hover:not(.dragging) {
+  transform: translateY(4px);
 }
 
 .dragging {
@@ -243,7 +261,8 @@
 
 .selectedNode {
   box-shadow:
-    0 0 0 2px rgba(59, 130, 246, 0.65),
+    0 0 0 3px rgba(10, 10, 12, 0.95),
+    0 0 0 7px rgba(59, 130, 246, 0.9),
     0 8px 18px rgba(0, 0, 0, 0.35);
 }
 
