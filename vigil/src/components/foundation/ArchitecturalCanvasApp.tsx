@@ -24,6 +24,12 @@ import styles from "./ArchitecturalCanvasApp.module.css";
 
 type NodeTheme = "default" | "code" | "task" | "media";
 type TapeType = "masking" | "clear" | "dark";
+type CanvasTool = "select" | "pan";
+
+const MIN_ZOOM = 0.3;
+const MAX_ZOOM = 3;
+const ZOOM_BUTTON_STEP = 0.2;
+const WHEEL_ZOOM_SENSITIVITY = 0.0012;
 
 type CanvasNode = {
   id: string;
@@ -43,8 +49,8 @@ const INITIAL_NODES: CanvasNode[] = [
   {
     id: "node-1",
     title: "Project Thesis",
-    x: 4050,
-    y: 4050,
+    x: -300,
+    y: -320,
     rotation: -1,
     theme: "default",
     tape: "masking",
@@ -59,8 +65,8 @@ const INITIAL_NODES: CanvasNode[] = [
   {
     id: "node-2",
     title: "SYS // Configuration.js",
-    x: 4500,
-    y: 4150,
+    x: 140,
+    y: -210,
     rotation: 0.5,
     width: 420,
     theme: "code",
@@ -82,8 +88,8 @@ const INITIAL_NODES: CanvasNode[] = [
   {
     id: "node-3",
     title: "Immediate Actions",
-    x: 4600,
-    y: 4550,
+    x: 240,
+    y: 210,
     rotation: -2,
     width: 280,
     theme: "task",
@@ -111,8 +117,8 @@ const INITIAL_NODES: CanvasNode[] = [
   {
     id: "node-4",
     title: "Reference // Structural",
-    x: 4150,
-    y: 4650,
+    x: -200,
+    y: 310,
     rotation: 1,
     theme: "media",
     tape: "clear",
@@ -125,23 +131,6 @@ const INITIAL_NODES: CanvasNode[] = [
         Brutalist web design pattern reference. Note the heavy borders and lack of border-radius.
       </div>
     `,
-  },
-  {
-    id: "node-5",
-    title: "",
-    x: 4950,
-    y: 4200,
-    rotation: 4,
-    width: 200,
-    theme: "default",
-    tape: "masking",
-    tapeRotation: -4,
-    bodyHtml: `
-      <span style="font-size: 16px; font-weight: 500; color: #111;">
-        Double-click a card header to expand it.
-      </span>
-    `,
-    noHeader: true,
   },
 ];
 
@@ -162,14 +151,19 @@ export function ArchitecturalCanvasApp() {
   const [nodes, setNodes] = useState<CanvasNode[]>(INITIAL_NODES);
   const [scale, setScale] = useState(1);
   const [translateX, setTranslateX] = useState(() =>
-    typeof window === "undefined" ? -4000 : -4000 + window.innerWidth / 2 - 200,
+    typeof window === "undefined" ? 0 : window.innerWidth / 2,
   );
   const [translateY, setTranslateY] = useState(() =>
-    typeof window === "undefined" ? -4000 : -4000 + window.innerHeight / 2 - 300,
+    typeof window === "undefined" ? 0 : window.innerHeight / 2,
   );
   const [maxZIndex, setMaxZIndex] = useState(100);
   const [isPanning, setIsPanning] = useState(false);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
+  const [activeTool, setActiveTool] = useState<CanvasTool>("select");
+  const [viewportSize, setViewportSize] = useState(() => ({
+    width: typeof window === "undefined" ? 0 : window.innerWidth,
+    height: typeof window === "undefined" ? 0 : window.innerHeight,
+  }));
 
   const [focusOpen, setFocusOpen] = useState(false);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
@@ -182,6 +176,7 @@ export function ArchitecturalCanvasApp() {
   const panStartRef = useRef({ x: 0, y: 0 });
   const draggedNodeRef = useRef<string | null>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const viewRef = useRef({ scale: 1, tx: 0, ty: 0 });
 
   const nodeZ = useMemo(() => {
     const zMap = new Map<string, number>();
@@ -225,16 +220,58 @@ export function ArchitecturalCanvasApp() {
 
   const updateTransformFromMouse = useCallback(
     (nextScale: number, mouseX: number, mouseY: number) => {
-      const canvasX = (mouseX - translateX) / scale;
-      const canvasY = (mouseY - translateY) / scale;
+      const cur = viewRef.current;
+      const canvasX = (mouseX - cur.tx) / cur.scale;
+      const canvasY = (mouseY - cur.ty) / cur.scale;
       const nextTranslateX = mouseX - canvasX * nextScale;
       const nextTranslateY = mouseY - canvasY * nextScale;
       setScale(nextScale);
       setTranslateX(nextTranslateX);
       setTranslateY(nextTranslateY);
     },
-    [scale, translateX, translateY],
+    [],
   );
+
+  const zoomBy = useCallback(
+    (delta: number) => {
+      const viewport = viewportRef.current;
+      if (!viewport) return;
+      const rect = viewport.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const nextScale = Math.min(
+        Math.max(MIN_ZOOM, viewRef.current.scale + delta),
+        MAX_ZOOM,
+      );
+      updateTransformFromMouse(nextScale, centerX, centerY);
+    },
+    [updateTransformFromMouse],
+  );
+
+  const recenterToOrigin = useCallback(() => {
+    setTranslateX(window.innerWidth / 2);
+    setTranslateY(window.innerHeight / 2);
+    setScale(1);
+  }, []);
+
+  const normalizeWheelDelta = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    // deltaMode: 0=pixel, 1=line, 2=page. Normalize to pixels for stable zoom.
+    if (event.deltaMode === 1) return event.deltaY * 16;
+    if (event.deltaMode === 2) return event.deltaY * window.innerHeight;
+    return event.deltaY;
+  }, []);
+
+  useEffect(() => {
+    viewRef.current = { scale, tx: translateX, ty: translateY };
+  }, [scale, translateX, translateY]);
+
+  useEffect(() => {
+    const onResize = () => {
+      setViewportSize({ width: window.innerWidth, height: window.innerHeight });
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   const centerCoords = useCallback(() => {
     return {
@@ -345,6 +382,7 @@ export function ArchitecturalCanvasApp() {
   useEffect(() => {
     const onMouseDown = (event: MouseEvent) => {
       if (focusOpen) return;
+      if (activeTool === "pan") return;
       const target = event.target as HTMLElement;
       const entity = target.closest<HTMLElement>(`[data-node-id]`);
       const inContent =
@@ -401,13 +439,14 @@ export function ArchitecturalCanvasApp() {
       document.removeEventListener("click", onClick);
       document.removeEventListener("dblclick", onDoubleClick);
     };
-  }, [focusOpen, openFocusMode, scale, updateNodeBody]);
+  }, [activeTool, focusOpen, openFocusMode, scale, updateNodeBody]);
 
   const onViewportMouseDown = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       if (focusOpen) return;
       const target = event.target as HTMLElement;
       const isViewport =
+        activeTool === "pan" ||
         target === viewportRef.current ||
         target.tagName.toLowerCase() === "svg" ||
         target.tagName.toLowerCase() === "path";
@@ -419,16 +458,27 @@ export function ArchitecturalCanvasApp() {
         y: event.clientY - translateY,
       };
     },
-    [focusOpen, translateX, translateY],
+    [activeTool, focusOpen, translateX, translateY],
   );
 
   const onWheel = useCallback(
     (event: React.WheelEvent<HTMLDivElement>) => {
       if (focusOpen) return;
+      const target = event.target as HTMLElement;
+      const inEditable =
+        !!target.closest("input, textarea, select, [contenteditable='true']");
+
+      // Preserve native wheel behavior inside editors when user is not zooming.
+      if (inEditable && !(event.ctrlKey || event.metaKey)) return;
+
       event.preventDefault();
       if (event.ctrlKey || event.metaKey) {
-        const delta = event.deltaY > 0 ? -0.05 : 0.05;
-        const nextScale = Math.min(Math.max(0.3, scale + delta), 3);
+        const deltaPx = normalizeWheelDelta(event);
+        const factor = Math.exp(-deltaPx * WHEEL_ZOOM_SENSITIVITY);
+        const nextScale = Math.min(
+          Math.max(MIN_ZOOM, viewRef.current.scale * factor),
+          MAX_ZOOM,
+        );
         const rect = event.currentTarget.getBoundingClientRect();
         updateTransformFromMouse(nextScale, event.clientX - rect.left, event.clientY - rect.top);
       } else {
@@ -436,12 +486,45 @@ export function ArchitecturalCanvasApp() {
         setTranslateY((prev) => prev - event.deltaY);
       }
     },
-    [focusOpen, scale, updateTransformFromMouse],
+    [focusOpen, normalizeWheelDelta, updateTransformFromMouse],
   );
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      if (target?.isContentEditable) return;
+      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
+        return;
+      }
+      if (!(event.ctrlKey || event.metaKey)) return;
+
+      const key = event.key;
+      if (key === "=" || key === "+" || key === "NumpadAdd") {
+        event.preventDefault();
+        zoomBy(ZOOM_BUTTON_STEP);
+        return;
+      }
+      if (key === "-" || key === "_" || key === "NumpadSubtract") {
+        event.preventDefault();
+        zoomBy(-ZOOM_BUTTON_STEP);
+        return;
+      }
+      if (key === "0") {
+        event.preventDefault();
+        recenterToOrigin();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [recenterToOrigin, zoomBy]);
 
   const runFormat = useCallback((command: string, value?: string) => {
     document.execCommand(command, false, value);
   }, []);
+
+  const centerWorldX = Math.round((viewportSize.width / 2 - translateX) / scale);
+  const centerWorldY = Math.round((viewportSize.height / 2 - translateY) / scale);
 
   return (
     <div className={styles.shell}>
@@ -452,12 +535,12 @@ export function ArchitecturalCanvasApp() {
         onWheel={onWheel}
         style={{
           backgroundPosition: `${translateX}px ${translateY}px`,
-          cursor: isPanning ? "grabbing" : "grab",
+          cursor: isPanning ? "grabbing" : activeTool === "pan" ? "grab" : "grab",
         }}
       >
         <svg className={styles.connections} aria-hidden>
-          <path className={styles.link} d="M 4200 4100 C 4400 4100, 4300 4600, 4600 4600" />
-          <path className={styles.link} d="M 4700 4650 C 4800 4650, 4800 4300, 4950 4300" />
+          <path className={styles.link} d="M 30 -140 C 190 -140, 140 300, 250 300" />
+          <path className={styles.link} d="M 520 320 C 610 320, 590 -30, 150 -30" />
         </svg>
 
         <div
@@ -504,7 +587,7 @@ export function ArchitecturalCanvasApp() {
 
                 <div
                   className={`${styles.nodeBody} ${node.noHeader ? styles.messageBody : ""}`}
-                  contentEditable
+                  contentEditable={activeTool === "select"}
                   suppressContentEditableWarning
                   spellCheck={false}
                   dangerouslySetInnerHTML={{ __html: node.bodyHtml }}
@@ -526,8 +609,10 @@ export function ArchitecturalCanvasApp() {
           </div>
           <div className={styles.sep} />
           <div className={styles.monoSmall}>
-            X:<span className={styles.metric}>{Math.round(Math.abs(translateX))}</span> Y:
-            <span className={styles.metric}>{Math.round(Math.abs(translateY))}</span>
+            X:
+            <span className={styles.metric}>{centerWorldX}</span>{" "}
+            Y:
+            <span className={styles.metric}>{centerWorldY}</span>
           </div>
           <div className={styles.sep} />
           <div className={styles.monoSmall}>
@@ -595,10 +680,20 @@ export function ArchitecturalCanvasApp() {
       </div>
 
       <div className={styles.sideTools}>
-        <button type="button" className={`${styles.btnIcon} ${styles.active}`} title="Select">
+        <button
+          type="button"
+          className={`${styles.btnIcon} ${activeTool === "select" ? styles.active : ""}`}
+          title="Select"
+          onClick={() => setActiveTool("select")}
+        >
           <CursorClick size={18} />
         </button>
-        <button type="button" className={styles.btnIcon} title="Pan Hand">
+        <button
+          type="button"
+          className={`${styles.btnIcon} ${activeTool === "pan" ? styles.active : ""}`}
+          title="Pan Hand"
+          onClick={() => setActiveTool("pan")}
+        >
           <HandGrabbing size={18} />
         </button>
         <div className={styles.sepVertical} />
@@ -606,7 +701,7 @@ export function ArchitecturalCanvasApp() {
           type="button"
           className={styles.btnIcon}
           title="Zoom In"
-          onClick={() => setScale((prev) => Math.min(prev + 0.2, 3))}
+          onClick={() => zoomBy(ZOOM_BUTTON_STEP)}
         >
           <Plus size={18} />
         </button>
@@ -614,7 +709,7 @@ export function ArchitecturalCanvasApp() {
           type="button"
           className={styles.btnIcon}
           title="Zoom Out"
-          onClick={() => setScale((prev) => Math.max(prev - 0.2, 0.3))}
+          onClick={() => zoomBy(-ZOOM_BUTTON_STEP)}
         >
           <Minus size={18} />
         </button>
@@ -622,11 +717,7 @@ export function ArchitecturalCanvasApp() {
           type="button"
           className={styles.btnIcon}
           title="Recenter"
-          onClick={() => {
-            setTranslateX(-4000 + window.innerWidth / 2);
-            setTranslateY(-4000 + window.innerHeight / 2);
-            setScale(1);
-          }}
+          onClick={recenterToOrigin}
         >
           <Crosshair size={18} />
         </button>
