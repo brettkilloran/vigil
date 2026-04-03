@@ -330,6 +330,20 @@ export function VigilCanvas({
       }}
       onDoubleClick={onBgDoubleClick}
     >
+      {items.length === 0 && rect ? (
+        <div
+          className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center px-6"
+          aria-live="polite"
+        >
+          <p className="max-w-md text-center text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+            This space is empty.{" "}
+            <span className="font-medium text-neutral-800 dark:text-neutral-200">
+              Double-click
+            </span>{" "}
+            to add a note, drop an image, or use the toolbar.
+          </p>
+        </div>
+      ) : null}
       <div
         className="absolute left-0 top-0 h-full w-full origin-top-left will-change-transform"
         style={{

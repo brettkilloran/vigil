@@ -21,13 +21,15 @@ This file is the **short bridge** between the repo today and the full product sp
 | Cross-card links | TipTap `vigil:item:` links + **`/api/item-links/sync`**; link picker when note is active | **`[[` trigger** UX polish; graph views (Phase 5) |
 | Import / export | Toolbar **Export JSON** / **Import JSON**; cloud import creates items via API | Preferences, richer conflict rules |
 | PWA | **`public/sw.js`** + **`RegisterSw`** (prod register, minimal SW) | Offline caching strategy when needed |
+| R2 images | **Presigned PUT** at **`/api/upload/presign`** + env in `.env.local.example` | Bucket policy, CORS, optional image transforms |
+| Performance | **Viewport culling** (`visibleItems` in `VigilCanvas`), lazy **`img`** decoding | Broader memoization / virtualize if 500+ cards on screen |
 | License risk | Resolved (no tldraw) | **MIT-only** surface area |
 
 ## Strategic decision
 
 We **adopt the master plan as source of truth** for architecture and phases. The existing tldraw-based implementation is a **spike / prototype**: it validated Neon + API shape + UX ideas but **does not match** licensing and product goals.
 
-**Status:** Phases **1–4** are largely in-repo (canvas interactions, TipTap, FTS + Cmd+K with **Keywords / Meaning / Both** via `/api/search?mode=`, embeddings API, MCP). Remaining emphasis: **Phase 5+** (TTRPG depth, graph), **R2 presign** hardening, **performance culling**, and polish per master plan.
+**Status:** Phases **1–4** are largely in-repo (canvas interactions, TipTap, FTS + Cmd+K with **Keywords / Meaning / Both**, embeddings API, MCP, **R2 presign** upload path, **Alt+Shift** spatial selection). Remaining emphasis: **Phase 5+** (TTRPG depth, graph), **Phase 6–7** visual/typography polish, and heavier **perf** if canvas density grows.
 
 ## Phase map (use for roadmaps and todos)
 

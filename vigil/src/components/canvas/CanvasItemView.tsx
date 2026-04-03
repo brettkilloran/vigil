@@ -55,6 +55,8 @@ function ImageCard({ item }: { item: CanvasItem }) {
       alt={item.title}
       className="h-full w-full object-cover"
       draggable={false}
+      loading="lazy"
+      decoding="async"
     />
   );
 }
