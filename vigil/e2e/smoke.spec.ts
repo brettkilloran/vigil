@@ -1,7 +1,6 @@
 import { test, expect } from "@playwright/test";
 
 import { prepDemoSession } from "./fixtures/bootstrap";
-import { openCommandPalette } from "./fixtures/shortcuts";
 
 test.describe("VIGIL smoke", () => {
   test.beforeEach(async ({ page }) => {
@@ -11,35 +10,23 @@ test.describe("VIGIL smoke", () => {
   test("loads canvas shell and primary chrome", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.locator("[data-vigil-canvas]")).toBeVisible({
-      timeout: 30_000,
-    });
-    await expect(page.locator("[data-vigil-toolbar]")).toBeVisible();
-
-    const toolbar = page.locator("[data-vigil-toolbar]");
-    await expect(toolbar.getByRole("button", { name: "Note" })).toBeVisible();
-    await expect(toolbar.getByRole("button", { name: "Sticky" })).toBeVisible();
-
-    await expect(page.getByText("Local only")).toBeVisible();
-    await expect(
-      page.getByText("Start a note, drop in visuals", { exact: false }),
-    ).toBeVisible();
+    await expect(page.getByText("ARCH_ENV")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("button", { name: "Note" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Task" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Folder" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Select" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Pan Hand" })).toBeVisible();
   });
 
-  test("command palette opens from keyboard", async ({ page }) => {
+  test("creates a new note from dock", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("[data-vigil-canvas]")).toBeVisible({
-      timeout: 30_000,
-    });
-    await expect(page.getByText("Local only")).toBeVisible({ timeout: 15_000 });
-    await page.locator("[data-vigil-canvas]").click({
-      position: { x: 640, y: 400 },
-    });
+    await expect(page.getByText("ARCH_ENV")).toBeVisible({ timeout: 30_000 });
 
-    await openCommandPalette(page);
-    await expect(page.locator("[data-vigil-palette]")).toBeVisible();
-    await expect(
-      page.locator("[data-vigil-palette] input").first(),
-    ).toBeFocused();
+    const nodes = page.locator("[data-node-id]");
+    const beforeCount = await nodes.count();
+
+    await page.getByRole("button", { name: "Note" }).click();
+
+    await expect(nodes).toHaveCount(beforeCount + 1);
   });
 });

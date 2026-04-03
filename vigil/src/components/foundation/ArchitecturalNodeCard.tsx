@@ -8,6 +8,7 @@ import type {
   NodeTheme,
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
+import type { ButtonTone } from "@/src/components/ui/Button";
 import { Button } from "@/src/components/ui/Button";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 
@@ -43,11 +44,13 @@ export function ArchitecturalNodeHeader({
   title,
   showExpand = true,
   expandLabel = "Focus Mode",
+  buttonTone = "focus-light",
   onExpand,
 }: {
   title: ReactNode;
   showExpand?: boolean;
   expandLabel?: string;
+  buttonTone?: ButtonTone;
   onExpand?: () => void;
 }) {
   return (
@@ -58,7 +61,7 @@ export function ArchitecturalNodeHeader({
           <Button
             size="icon"
             variant="ghost"
-            tone="glass"
+            tone={buttonTone}
             className={styles.nodeBtn}
             data-expand-btn="true"
             title={expandLabel}
@@ -140,6 +143,7 @@ export function ArchitecturalNodeCard({
       <ArchitecturalNodeHeader
         title={title}
         showExpand={showExpandButton}
+        buttonTone={theme === "code" ? "focus-dark" : "focus-light"}
         onExpand={() => onExpand(id)}
       />
       <ArchitecturalNodeBody

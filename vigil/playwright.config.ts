@@ -12,7 +12,7 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./e2e",
-  testIgnore: process.env.CI ? "e2e/visual/**" : undefined,
+  testIgnore: process.env.CI ? "visual/**" : undefined,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

@@ -23,6 +23,9 @@ const MAX_ZOOM = 3;
 const ZOOM_BUTTON_STEP = 0.2;
 const WHEEL_ZOOM_SENSITIVITY = 0.0012;
 const UNIFIED_NODE_WIDTH = 340;
+const LAYOUT_COLUMNS = 4;
+const LAYOUT_COL_GAP = 380;
+const LAYOUT_ROW_GAP = 280;
 
 type ArchitecturalCanvasScenario = "default" | "nested" | "corrupt";
 
@@ -333,44 +336,91 @@ export function ArchitecturalCanvasApp({
     [graph],
   );
 
-  const moveEntityToSpace = useCallback(
+  const moveEntitiesToSpace = useCallback(
     (
-      entityId: string,
+      entityIds: string[],
       destinationSpaceId: string,
-      fallbackSlot?: { x: number; y: number },
-      options?: { forceDestinationSlot?: boolean },
+      options?: { anchor?: { x: number; y: number }; forceLayout?: boolean },
     ) => {
       setGraph((prev) => {
-        if (!canMoveEntityToSpace(entityId, destinationSpaceId, prev)) return prev;
-        const entity = prev.entities[entityId];
-        if (!entity) return prev;
+        const targetSpace = prev.spaces[destinationSpaceId];
+        if (!targetSpace) return prev;
+
+        const idsToMove = entityIds.filter(
+          (id, index) =>
+            entityIds.indexOf(id) === index &&
+            !!prev.entities[id] &&
+            canMoveEntityToSpace(id, destinationSpaceId, prev),
+        );
+        if (idsToMove.length === 0) return prev;
 
         const next = shallowCloneGraph(prev);
+        const movedSet = new Set(idsToMove);
+
         Object.values(next.spaces).forEach((space) => {
-          if (space.entityIds.includes(entityId)) {
+          if (space.entityIds.some((id) => movedSet.has(id))) {
             next.spaces[space.id] = {
               ...space,
-              entityIds: space.entityIds.filter((id) => id !== entityId),
+              entityIds: space.entityIds.filter((id) => !movedSet.has(id)),
             };
           }
         });
 
-        const target = next.spaces[destinationSpaceId];
+        const remainingDestinationIds = next.spaces[destinationSpaceId].entityIds;
         next.spaces[destinationSpaceId] = {
-          ...target,
-          entityIds: [...target.entityIds, entityId],
+          ...next.spaces[destinationSpaceId],
+          entityIds: [...remainingDestinationIds, ...idsToMove],
         };
-        const forced = options?.forceDestinationSlot ?? false;
-        const destinationSlot = forced
-          ? fallbackSlot ?? entity.slots[destinationSpaceId] ?? { x: 0, y: 0 }
-          : entity.slots[destinationSpaceId] ?? fallbackSlot ?? { x: 0, y: 0 };
-        next.entities[entityId] = {
-          ...entity,
-          slots: {
-            ...entity.slots,
-            [destinationSpaceId]: destinationSlot,
-          },
+
+        const anchor = options?.anchor ?? { x: 0, y: 0 };
+        const shouldForceLayout = options?.forceLayout ?? false;
+        const occupied = new Set<string>();
+
+        remainingDestinationIds.forEach((id) => {
+          const entity = next.entities[id];
+          const slot = entity?.slots[destinationSpaceId];
+          if (!slot) return;
+          const col = Math.round((slot.x - anchor.x) / LAYOUT_COL_GAP);
+          const row = Math.round((slot.y - anchor.y) / LAYOUT_ROW_GAP);
+          occupied.add(`${col}:${row}`);
+        });
+
+        const findNextSlot = (index: number) => {
+          let attempt = index;
+          while (attempt < index + 5000) {
+            const col = attempt % LAYOUT_COLUMNS;
+            const row = Math.floor(attempt / LAYOUT_COLUMNS);
+            const key = `${col}:${row}`;
+            if (!occupied.has(key)) {
+              occupied.add(key);
+              return {
+                x: anchor.x + col * LAYOUT_COL_GAP,
+                y: anchor.y + row * LAYOUT_ROW_GAP,
+              };
+            }
+            attempt += 1;
+          }
+          return {
+            x: anchor.x + index * 28,
+            y: anchor.y + index * 20,
+          };
         };
+
+        idsToMove.forEach((entityId, index) => {
+          const entity = next.entities[entityId];
+          if (!entity) return;
+          const existingSlot = entity.slots[destinationSpaceId];
+          const destinationSlot =
+            shouldForceLayout || !existingSlot ? findNextSlot(index) : existingSlot;
+          next.entities[entityId] = {
+            ...entity,
+            slots: {
+              ...entity.slots,
+              [destinationSpaceId]: destinationSlot,
+            },
+          };
+        });
+
         return next;
       });
     },
@@ -600,15 +650,13 @@ export function ArchitecturalCanvasApp({
     (draggedEntityIds: string[]) => {
       if (draggedEntityIds.length === 0) return;
       const center = centerCoords();
-      const fallback = { x: center.x - 100, y: center.y - 80 };
+      const fallback = { x: center.x - 180, y: center.y - 120 };
 
       if (parentDropHovered && parentSpaceId) {
-        draggedEntityIds.forEach((entityId, index) => {
-          const groupFallback = { x: fallback.x + index * 24, y: fallback.y + index * 12 };
-          const anchorBelowFolder = getParentFolderExitSlot(index) ?? groupFallback;
-          moveEntityToSpace(entityId, parentSpaceId, anchorBelowFolder, {
-            forceDestinationSlot: true,
-          });
+        const anchorBelowFolder = getParentFolderExitSlot(0) ?? fallback;
+        moveEntitiesToSpace(draggedEntityIds, parentSpaceId, {
+          anchor: anchorBelowFolder,
+          forceLayout: true,
         });
         return;
       }
@@ -620,9 +668,9 @@ export function ArchitecturalCanvasApp({
         ? folderEntity.childSpaceId
         : ensureFolderChildSpace(hoveredFolderId);
       if (!childSpaceId) return;
-      draggedEntityIds.forEach((entityId, index) => {
-        const groupFallback = { x: fallback.x + index * 24, y: fallback.y + index * 12 };
-        moveEntityToSpace(entityId, childSpaceId, groupFallback);
+      moveEntitiesToSpace(draggedEntityIds, childSpaceId, {
+        anchor: fallback,
+        forceLayout: true,
       });
     },
     [
@@ -632,7 +680,7 @@ export function ArchitecturalCanvasApp({
       graph.entities,
       graph.spaces,
       hoveredFolderId,
-      moveEntityToSpace,
+      moveEntitiesToSpace,
       parentDropHovered,
       parentSpaceId,
     ],
@@ -1094,18 +1142,18 @@ export function ArchitecturalCanvasApp({
   const moveSelectionToParent = useCallback(() => {
     if (!parentSpaceId) return;
     const center = centerCoords();
-    selectedNodeIds.forEach((entityId, index) => {
-      if (!visibleEntityIds.includes(entityId)) return;
-      const fallback = { x: center.x - 100 + index * 24, y: center.y - 80 + index * 12 };
-      const anchorBelowFolder = getParentFolderExitSlot(index) ?? fallback;
-      moveEntityToSpace(entityId, parentSpaceId, anchorBelowFolder, {
-        forceDestinationSlot: true,
-      });
+    const idsToMove = selectedNodeIds.filter((entityId) => visibleEntityIds.includes(entityId));
+    if (idsToMove.length === 0) return;
+    const fallback = { x: center.x - 180, y: center.y - 120 };
+    const anchorBelowFolder = getParentFolderExitSlot(0) ?? fallback;
+    moveEntitiesToSpace(idsToMove, parentSpaceId, {
+      anchor: anchorBelowFolder,
+      forceLayout: true,
     });
   }, [
     centerCoords,
     getParentFolderExitSlot,
-    moveEntityToSpace,
+    moveEntitiesToSpace,
     parentSpaceId,
     selectedNodeIds,
     visibleEntityIds,

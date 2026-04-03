@@ -170,6 +170,12 @@ This document outlines all currently defined design-system-related tokens.
 - `--cmp-button-focus-dark-fg-hover`
 - `--cmp-button-focus-dark-fg-active`
 
+### Context usage rule
+
+- Use `focus-light` for icon actions rendered on light card surfaces (default/task/media themes) to guarantee visible hover/active affordances.
+- Use `focus-dark` for icon actions rendered on dark card surfaces (code theme) to preserve contrast parity.
+- Avoid opacity-based overrides for contextual action buttons; rely on tone tokens for state legibility.
+
 ## 4) Compatibility + Legacy Global Tokens
 
 These still exist globally for compatibility and incremental migration.

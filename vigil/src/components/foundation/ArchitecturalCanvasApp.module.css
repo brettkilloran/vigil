@@ -157,7 +157,7 @@
 }
 
 .folderNode:hover .folderFront {
-  transform: translateY(4px);
+  transform: scale(1.012);
 }
 
 .folderSelected .folderFront {
@@ -216,10 +216,8 @@
 }
 
 .folderDragOver .folderFront {
-  transform: scale(1.035);
-  box-shadow:
-    0 0 0 1px rgba(59, 130, 246, 0.65),
-    0 14px 28px rgba(0, 0, 0, 0.5);
+  transform: rotateX(-38deg) scale(1.02);
+  box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.45);
 }
 
 .folderDragOver .folderInterior {
@@ -230,7 +228,6 @@
 
 .folderDragOver .folderTab {
   color: var(--text-main);
-  transform: scale(1.03);
 }
 
 .entityNode {
@@ -249,7 +246,7 @@
 }
 
 .entityNode:hover:not(.dragging) {
-  transform: translateY(4px);
+  transform: scale(1.012);
 }
 
 .dragging {
@@ -349,23 +346,12 @@
 }
 
 .nodeBtn {
-  background: transparent;
-  border: none;
-  opacity: 0.4;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: all 0.2s;
-  color: inherit;
+  transition: transform 0.16s ease;
 }
 
 .nodeBtn:hover {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.themeCode .nodeBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-0.5px);
 }
 
 .nodeBody {
