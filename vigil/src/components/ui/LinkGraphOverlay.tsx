@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { computeForceLayout } from "@/src/lib/graph-layout";
+import { VIGIL_CHIP_BTN, VIGIL_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
 
 type GraphNode = {
   id: string;
@@ -217,20 +218,22 @@ function LinkGraphInner({
   );
 
   return (
-    <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] shadow-xl">
-      <div className="flex items-center justify-between border-b border-[var(--vigil-border)] px-3 py-2">
-        <span className="text-sm font-medium text-[var(--vigil-label)]">
+    <div
+      className={`flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden ${VIGIL_GLASS_PANEL}`}
+    >
+      <div className="flex items-center justify-between border-b border-[var(--vigil-border)]/80 px-4 py-2.5">
+        <span className="text-sm font-semibold tracking-tight text-[var(--vigil-label)]">
           Link graph
         </span>
         <button
           type="button"
-          className="rounded px-2 py-1 text-xs text-[var(--vigil-muted)] hover:bg-black/5 dark:hover:bg-white/10"
+          className={VIGIL_CHIP_BTN}
           onClick={onClose}
         >
           Close
         </button>
       </div>
-      <div className="min-h-[min(70vh,520px)] flex-1 bg-neutral-100 dark:bg-neutral-900">
+      <div className="min-h-[min(70vh,520px)] flex-1 bg-[var(--vigil-canvas)]">
         {loading ? (
           <p className="p-4 text-sm text-[var(--vigil-muted)]">Loading…</p>
         ) : err ? (
@@ -272,7 +275,7 @@ export function LinkGraphOverlay({
 
   return (
     <div
-      className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px] dark:bg-black/60"
       role="dialog"
       aria-modal="true"
       aria-label="Link graph"
