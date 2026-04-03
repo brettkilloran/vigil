@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, type Transition } from "framer-motion";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
 import { NoteCard } from "@/src/components/canvas/NoteCard";
 import { ResizeHandles } from "@/src/components/canvas/ResizeHandles";
@@ -26,12 +26,16 @@ function ChecklistCard(props: {
     title?: string;
   }) => void;
   active: boolean;
+  peerItems: CanvasItem[];
+  cloudSyncLinks: boolean;
 }) {
   return (
     <NoteCard
       item={props.item}
       onPersist={props.onPersist}
       active={props.active}
+      peerItems={props.peerItems}
+      cloudSyncLinks={props.cloudSyncLinks}
     />
   );
 }
@@ -95,6 +99,13 @@ export function CanvasItemView({
   onOpenFolder?: (childSpaceId: string) => void;
 }) {
   const camera = useCanvasStore((s) => s.camera);
+  const itemsRecord = useCanvasStore((s) => s.items);
+  const spaceId = useCanvasStore((s) => s.spaceId);
+  const peerItems = useMemo(
+    () => Object.values(itemsRecord).filter((x) => x.id !== item.id),
+    [itemsRecord, item.id],
+  );
+  const cloudSyncLinks = !!spaceId;
   const selectedIds = useCanvasStore((s) => s.selectedIds);
   const dragging = useCanvasStore((s) => s.dragging);
   const resizing = useCanvasStore((s) => s.resizing);
@@ -165,7 +176,13 @@ export function CanvasItemView({
       break;
     case "checklist":
       body = (
-        <ChecklistCard item={item} onPersist={persistNote} active={active} />
+        <ChecklistCard
+          item={item}
+          onPersist={persistNote}
+          active={active}
+          peerItems={peerItems}
+          cloudSyncLinks={cloudSyncLinks}
+        />
       );
       break;
     case "image":
@@ -179,7 +196,13 @@ export function CanvasItemView({
       break;
     default:
       body = (
-        <NoteCard item={item} onPersist={persistNote} active={active} />
+        <NoteCard
+          item={item}
+          onPersist={persistNote}
+          active={active}
+          peerItems={peerItems}
+          cloudSyncLinks={cloudSyncLinks}
+        />
       );
   }
 

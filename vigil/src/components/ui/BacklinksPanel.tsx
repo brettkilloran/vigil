@@ -20,12 +20,14 @@ type RowIn = {
   from: Endpoint;
 };
 
+type Loaded =
+  | { itemId: string; outgoing: RowOut[]; incoming: RowIn[]; err: null }
+  | { itemId: string; outgoing: []; incoming: []; err: string };
+
 export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
   const selectedIds = useCanvasStore((s) => s.selectedIds);
   const itemId = selectedIds.length === 1 ? selectedIds[0]! : null;
-  const [outgoing, setOutgoing] = useState<RowOut[]>([]);
-  const [incoming, setIncoming] = useState<RowIn[]>([]);
-  const [err, setErr] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
 
   const focusItem = useCallback((id: string) => {
     const st = useCanvasStore.getState();
@@ -41,14 +43,8 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
   }, []);
 
   useEffect(() => {
-    if (!itemId || !cloudMode) {
-      setOutgoing([]);
-      setIncoming([]);
-      setErr(null);
-      return;
-    }
+    if (!itemId || !cloudMode) return;
     let cancelled = false;
-    setErr(null);
     void (async () => {
       const res = await fetch(`/api/items/${itemId}/links`);
       const data = (await res.json()) as {
@@ -59,13 +55,20 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
       };
       if (cancelled) return;
       if (!data.ok) {
-        setErr(data.error ?? "Could not load links");
-        setOutgoing([]);
-        setIncoming([]);
+        setLoaded({
+          itemId,
+          outgoing: [],
+          incoming: [],
+          err: data.error ?? "Could not load links",
+        });
         return;
       }
-      setOutgoing(data.outgoing ?? []);
-      setIncoming(data.incoming ?? []);
+      setLoaded({
+        itemId,
+        outgoing: data.outgoing ?? [],
+        incoming: data.incoming ?? [],
+        err: null,
+      });
     })();
     return () => {
       cancelled = true;
@@ -73,6 +76,11 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
   }, [cloudMode, itemId]);
 
   if (!itemId) return null;
+
+  const inSync = loaded?.itemId === itemId;
+  const outgoing = inSync ? loaded.outgoing : [];
+  const incoming = inSync ? loaded.incoming : [];
+  const err = inSync ? loaded.err : null;
 
   if (!cloudMode) {
     return (

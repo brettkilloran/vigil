@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import { BacklinksPanel } from "@/src/components/ui/BacklinksPanel";
 import { EntityTypeBar } from "@/src/components/canvas/EntityTypeBar";
@@ -89,6 +89,7 @@ export default function VigilApp() {
     new Map(),
   );
   const ctxScreenRef = useRef<{ x: number; y: number } | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const hydrate = useCanvasStore((s) => s.hydrate);
   const reset = useCanvasStore((s) => s.reset);
@@ -314,6 +315,103 @@ export default function VigilApp() {
     URL.revokeObjectURL(url);
   }, []);
 
+  const setCameraStore = useCanvasStore((s) => s.setCamera);
+
+  const onImportJsonFile = useCallback(
+    async (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file) return;
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(await file.text());
+      } catch {
+        window.alert("Invalid JSON file.");
+        return;
+      }
+      const o = parsed as { items?: unknown; camera?: unknown };
+      if (!Array.isArray(o.items)) {
+        window.alert('JSON must contain an "items" array.');
+        return;
+      }
+      const rawCam = o.camera;
+      const cam: CameraState =
+        rawCam &&
+        typeof rawCam === "object" &&
+        typeof (rawCam as CameraState).x === "number" &&
+        typeof (rawCam as CameraState).y === "number" &&
+        typeof (rawCam as CameraState).zoom === "number"
+          ? (rawCam as CameraState)
+          : defaultCamera();
+
+      const sid = useCanvasStore.getState().spaceId;
+      const rows = o.items as CanvasItem[];
+
+      if (!sid) {
+        const normalized = rows.map((it, i) => ({
+          ...it,
+          id:
+            typeof it.id === "string" && it.id.length > 10
+              ? it.id
+              : crypto.randomUUID(),
+          spaceId: "local" as const,
+          zIndex: typeof it.zIndex === "number" ? it.zIndex : i,
+        }));
+        hydrate({ spaceId: null, items: normalized, camera: cam });
+        saveLocalState(cam, normalized);
+        window.alert(`Imported ${normalized.length} items (local).`);
+        return;
+      }
+
+      if (
+        !window.confirm(
+          `Import ${rows.length} items as new rows in this space? vigil:item links in notes may point at old UUIDs unless this file came from the same database.`,
+        )
+      ) {
+        return;
+      }
+
+      let n = 0;
+      for (const raw of rows) {
+        const body: Record<string, unknown> = {
+          itemType: raw.itemType,
+          x: raw.x,
+          y: raw.y,
+          width: raw.width,
+          height: raw.height,
+          title: raw.title ?? "Item",
+          contentText: raw.contentText ?? "",
+          contentJson: raw.contentJson ?? undefined,
+          color: raw.color ?? undefined,
+          entityType: raw.entityType ?? undefined,
+          entityMeta: raw.entityMeta ?? undefined,
+        };
+        const iu = raw.imageUrl;
+        if (typeof iu === "string" && iu.length > 0 && !iu.startsWith("blob:")) {
+          body.imageUrl = iu;
+        }
+        const res = await fetch(`/api/spaces/${sid}/items`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = (await res.json()) as { ok?: boolean; item?: CanvasItem };
+        if (data.ok && data.item) {
+          putItem(data.item);
+          n++;
+        }
+      }
+      await fetch(`/api/spaces/${sid}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ camera: cam }),
+      });
+      setCameraStore(cam);
+      window.alert(`Imported ${n} items.`);
+    },
+    [hydrate, putItem, setCameraStore],
+  );
+
   const stackSelection = useCallback(async () => {
     const ids = useCanvasStore.getState().selectedIds;
     if (ids.length < 2) return;
@@ -504,6 +602,15 @@ export default function VigilApp() {
         })();
       }}
     >
+      <input
+        ref={importInputRef}
+        type="file"
+        accept="application/json,.json"
+        className="hidden"
+        aria-hidden
+        onChange={onImportJsonFile}
+      />
+
       <VigilCanvas
         onPatchItem={onPatchItem}
         onCreateItemAt={createItemAt}
@@ -604,6 +711,13 @@ export default function VigilApp() {
             onClick={exportJson}
           >
             Export JSON
+          </button>
+          <button
+            type="button"
+            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            onClick={() => importInputRef.current?.click()}
+          >
+            Import JSON
           </button>
           <button
             type="button"
