@@ -1,15 +1,18 @@
 "use client";
 
 import type { Editor } from "@tiptap/core";
+import Highlight from "@tiptap/extension-highlight";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
+import Underline from "@tiptap/extension-underline";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import { extractVigilItemLinkTargets } from "@/src/lib/extract-vigil-item-links";
+import { useModKeyHints } from "@/src/lib/mod-keys";
 import { getWikiLinkRangeFromState } from "@/src/lib/wiki-link-range";
 import type { CanvasItem } from "@/src/stores/canvas-types";
 
@@ -64,6 +67,111 @@ const linkExt = Link.configure({
   },
 });
 
+function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
+  const hints = useModKeyHints();
+  const [, bump] = useReducer((n: number) => n + 1, 0);
+
+  useEffect(() => {
+    if (!editor) return;
+    const u = () => bump();
+    editor.on("selectionUpdate", u);
+    editor.on("transaction", u);
+    return () => {
+      editor.off("selectionUpdate", u);
+      editor.off("transaction", u);
+    };
+  }, [editor]);
+
+  if (!editor) return null;
+
+  const btn =
+    "rounded px-1.5 py-0.5 text-[11px] font-medium text-[var(--foreground)] hover:bg-black/8 dark:hover:bg-white/10";
+  const on = "bg-black/12 dark:bg-white/15";
+
+  return (
+    <div
+      className="flex flex-wrap items-center gap-0.5 border-b border-black/5 px-2 py-1 dark:border-white/10"
+      onMouseDown={(e) => e.preventDefault()}
+    >
+      <button
+        type="button"
+        title={`Bold (${hints.bold})`}
+        className={`${btn} ${editor.isActive("bold") ? on : ""}`}
+        onClick={() => editor.chain().focus().toggleBold().run()}
+      >
+        B
+      </button>
+      <button
+        type="button"
+        title={`Italic (${hints.italic})`}
+        className={`${btn} italic ${editor.isActive("italic") ? on : ""}`}
+        onClick={() => editor.chain().focus().toggleItalic().run()}
+      >
+        I
+      </button>
+      <button
+        type="button"
+        title={`Underline (${hints.underline})`}
+        className={`${btn} underline ${editor.isActive("underline") ? on : ""}`}
+        onClick={() => editor.chain().focus().toggleUnderline().run()}
+      >
+        U
+      </button>
+      <button
+        type="button"
+        title="Strikethrough"
+        className={`${btn} line-through ${editor.isActive("strike") ? on : ""}`}
+        onClick={() => editor.chain().focus().toggleStrike().run()}
+      >
+        S
+      </button>
+      <button
+        type="button"
+        title="Inline code"
+        className={`${btn} font-mono text-[10px] ${editor.isActive("code") ? on : ""}`}
+        onClick={() => editor.chain().focus().toggleCode().run()}
+      >
+        {"</>"}
+      </button>
+      <button
+        type="button"
+        title="Highlight"
+        className={`${btn} ${editor.isActive("highlight") ? on : ""}`}
+        onClick={() => editor.chain().focus().toggleHighlight().run()}
+      >
+        Hi
+      </button>
+      <span className="mx-0.5 text-[var(--vigil-muted)]">|</span>
+      <button
+        type="button"
+        title="Heading 2"
+        className={`${btn} ${editor.isActive("heading", { level: 2 }) ? on : ""}`}
+        onClick={() =>
+          editor.chain().focus().toggleHeading({ level: 2 }).run()
+        }
+      >
+        H2
+      </button>
+      <button
+        type="button"
+        title="Bullet list"
+        className={`${btn} ${editor.isActive("bulletList") ? on : ""}`}
+        onClick={() => editor.chain().focus().toggleBulletList().run()}
+      >
+        • List
+      </button>
+      <button
+        type="button"
+        title="Numbered list"
+        className={`${btn} ${editor.isActive("orderedList") ? on : ""}`}
+        onClick={() => editor.chain().focus().toggleOrderedList().run()}
+      >
+        1. List
+      </button>
+    </div>
+  );
+}
+
 export function NoteCard({
   item,
   onPersist,
@@ -89,6 +197,14 @@ export function NoteCard({
   const extensions = useMemo(
     () => [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+      Underline,
+      Highlight.configure({
+        multicolor: false,
+        HTMLAttributes: {
+          class:
+            "rounded-sm bg-amber-200/90 px-0.5 dark:bg-amber-500/40",
+        },
+      }),
       Placeholder.configure({
         placeholder:
           "Write something… Type [[ to link another card, or use the picker above.",
@@ -285,6 +401,7 @@ export function NoteCard({
           ) : null}
         </div>
       ) : null}
+      {active ? <NoteFormatToolbar editor={editor} /> : null}
       <div className="min-h-0 flex-1 overflow-y-auto">
         <EditorContent editor={editor} />
       </div>

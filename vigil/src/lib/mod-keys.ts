@@ -34,12 +34,18 @@ export function useModKeyHints() {
             undo: "⌘Z",
             redo: "⇧⌘Z",
             stack: "⌘S",
+            bold: "⌘B",
+            italic: "⌘I",
+            underline: "⌘U",
           }
         : {
             search: "Ctrl+K",
             undo: "Ctrl+Z",
             redo: "Ctrl+Shift+Z",
             stack: "Ctrl+S",
+            bold: "Ctrl+B",
+            italic: "Ctrl+I",
+            underline: "Ctrl+U",
           },
     [apple],
   );

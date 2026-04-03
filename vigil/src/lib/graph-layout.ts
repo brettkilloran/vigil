@@ -22,12 +22,14 @@ type SimLink = SimulationLinkDatum<SimNode>;
 
 /**
  * d3-force layout in [0,width]×[0,height] (matches SVG viewBox).
+ * Pass `seed` to keep dragged or pinned positions between reheats.
  */
 export function computeForceLayout(
   nodes: GraphLayoutNode[],
   edges: GraphLayoutEdge[],
   width = 1000,
   height = 1000,
+  seed?: Map<string, { x: number; y: number }>,
 ): Map<string, { x: number; y: number }> {
   const cx = width / 2;
   const cy = height / 2;
@@ -35,17 +37,19 @@ export function computeForceLayout(
 
   if (nodes.length === 0) return out;
   if (nodes.length === 1) {
-    out.set(nodes[0]!.id, { x: cx, y: cy });
+    const s = seed?.get(nodes[0]!.id);
+    out.set(nodes[0]!.id, { x: s?.x ?? cx, y: s?.y ?? cy });
     return out;
   }
 
   const byId = new Map<string, SimNode>();
   const simNodes: SimNode[] = nodes.map((n, i) => {
     const a = (2 * Math.PI * i) / nodes.length;
+    const s = seed?.get(n.id);
     const sn: SimNode = {
       ...n,
-      x: cx + Math.cos(a) * 140,
-      y: cy + Math.sin(a) * 140,
+      x: s?.x ?? cx + Math.cos(a) * 140,
+      y: s?.y ?? cy + Math.sin(a) * 140,
     };
     byId.set(n.id, sn);
     return sn;
