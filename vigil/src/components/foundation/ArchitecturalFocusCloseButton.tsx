@@ -2,7 +2,7 @@
 
 import { CheckCircle } from "@phosphor-icons/react";
 
-import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
+import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
 
 export function ArchitecturalFocusCloseButton({
   label = "Done",
@@ -19,24 +19,16 @@ export function ArchitecturalFocusCloseButton({
   forceState?: "default" | "hover" | "active";
   onClick?: () => void;
 }) {
-  const stateClass =
-    forceState === "hover"
-      ? styles.focusCloseStateHover
-      : forceState === "active"
-        ? styles.focusCloseStateActive
-        : "";
-
   return (
-    <button
-      type="button"
-      className={`${styles.focusClose} ${
-        variant === "dark" ? styles.focusCloseDark : styles.focusCloseLight
-      } ${stateClass}`.trim()}
+    <ArchitecturalButton
+      size="pill"
+      tone={variant === "dark" ? "focus-dark" : "focus-light"}
+      forceState={forceState}
       disabled={disabled}
       onClick={onClick}
+      leadingIcon={showIcon ? <CheckCircle size={16} /> : undefined}
     >
-      {showIcon ? <CheckCircle size={16} /> : null}
       {label}
-    </button>
+    </ArchitecturalButton>
   );
 }

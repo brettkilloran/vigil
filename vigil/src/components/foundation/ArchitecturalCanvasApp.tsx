@@ -32,12 +32,8 @@ const INITIAL_NODES: CanvasNode[] = buildArchitecturalSeedNodes({
 export function ArchitecturalCanvasApp() {
   const [nodes, setNodes] = useState<CanvasNode[]>(INITIAL_NODES);
   const [scale, setScale] = useState(1);
-  const [translateX, setTranslateX] = useState(() =>
-    typeof window === "undefined" ? 0 : window.innerWidth / 2,
-  );
-  const [translateY, setTranslateY] = useState(() =>
-    typeof window === "undefined" ? 0 : window.innerHeight / 2,
-  );
+  const [translateX, setTranslateX] = useState(0);
+  const [translateY, setTranslateY] = useState(0);
   const [maxZIndex, setMaxZIndex] = useState(100);
   const [isPanning, setIsPanning] = useState(false);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
@@ -50,10 +46,7 @@ export function ArchitecturalCanvasApp() {
     x2: number;
     y2: number;
   } | null>(null);
-  const [viewportSize, setViewportSize] = useState(() => ({
-    width: typeof window === "undefined" ? 0 : window.innerWidth,
-    height: typeof window === "undefined" ? 0 : window.innerHeight,
-  }));
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
 
   const [focusOpen, setFocusOpen] = useState(false);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
@@ -158,6 +151,11 @@ export function ArchitecturalCanvasApp() {
   }, [scale, translateX, translateY]);
 
   useEffect(() => {
+    // Keep the first client render identical to server output, then center on origin.
+    setTranslateX(window.innerWidth / 2);
+    setTranslateY(window.innerHeight / 2);
+    setViewportSize({ width: window.innerWidth, height: window.innerHeight });
+
     const onResize = () => {
       setViewportSize({ width: window.innerWidth, height: window.innerHeight });
     };

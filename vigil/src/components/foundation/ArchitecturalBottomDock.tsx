@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 
+import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
 import type {
   DockCreateAction,
   DockFormatAction,
@@ -60,17 +61,18 @@ export function ArchitecturalFormatToolbar({
       {actions.map((action, index) => (
         <div key={action.id} style={{ display: "contents" }}>
           {index === 2 ? <div className={styles.sepSmall} /> : null}
-          <button
-            type="button"
-            className={styles.btnIcon}
+          <ArchitecturalButton
+            size="icon"
+            tone="glass"
             title={action.label}
+            aria-label={action.label}
             onMouseDown={(e) => {
               e.preventDefault();
               onFormat(action.command, action.value);
             }}
           >
             {formatIcon(action.command)}
-          </button>
+          </ArchitecturalButton>
         </div>
       ))}
     </div>
@@ -87,14 +89,16 @@ export function ArchitecturalCreateMenu({
   return (
     <div className={styles.addMenu}>
       {actions.map((action) => (
-        <button
+        <ArchitecturalButton
           key={action.id}
-          type="button"
-          className={styles.addBtn}
+          size="menu"
+          tone="menu"
           onClick={() => onCreateNode(action.nodeType)}
+          aria-label={action.label}
+          leadingIcon={createIcon(action.nodeType)}
         >
-          {createIcon(action.nodeType)} {action.label}
-        </button>
+          {action.label}
+        </ArchitecturalButton>
       ))}
     </div>
   );

@@ -9,6 +9,7 @@ import {
 } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 
+import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
 import type { CanvasTool } from "@/src/components/foundation/architectural-types";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 
@@ -24,14 +25,16 @@ export function ArchitecturalToolButton({
   onClick?: () => void;
 }) {
   return (
-    <button
-      type="button"
-      className={`${styles.btnIcon} ${active ? styles.active : ""}`}
+    <ArchitecturalButton
+      size="icon"
+      tone="glass"
+      active={active}
       title={label}
+      aria-label={label}
       onClick={onClick}
     >
       {icon}
-    </button>
+    </ArchitecturalButton>
   );
 }
 

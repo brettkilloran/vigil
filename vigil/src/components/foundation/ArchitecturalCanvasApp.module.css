@@ -404,54 +404,98 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-.btnIcon {
-  width: 36px;
-  height: 36px;
+.buttonRoot {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
-  color: var(--text-muted);
-  transition: all 0.15s ease;
-  background: transparent;
   border: none;
   cursor: pointer;
+  transition: all 0.15s ease;
+  background: transparent;
 }
 
-.btnIcon:hover {
+.buttonSizeIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+}
+
+.buttonSizeMenu {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  gap: 6px;
+}
+
+.buttonSizePill {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 8px;
+}
+
+.buttonToneGlass {
+  color: var(--text-muted);
+}
+
+.buttonToneGlass:hover,
+.buttonToneGlass.buttonStateHover {
   color: var(--text-main);
   background: rgba(255, 255, 255, 0.05);
 }
 
-.active {
+.buttonToneMenu {
+  color: var(--text-muted);
+}
+
+.buttonToneMenu:hover,
+.buttonToneMenu.buttonStateHover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+}
+
+.buttonToneFocusLight {
+  background: #f0f0f0;
+  color: #555;
+}
+
+.buttonToneFocusDark {
+  background: #333;
+  color: #fff;
+}
+
+.buttonToneFocusLight:hover,
+.buttonToneFocusLight.buttonStateHover {
+  background: #e0e0e0;
+  color: #111;
+}
+
+.buttonToneFocusDark:hover,
+.buttonToneFocusDark.buttonStateHover {
+  background: #444;
+  color: #fff;
+}
+
+.buttonActive {
   color: var(--bg-base);
   background: var(--text-main);
+}
+
+.buttonStateActive {
+  transform: translateY(0.5px);
+}
+
+.buttonRoot:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .addMenu {
   display: flex;
   gap: 4px;
   padding: 4px;
-}
-
-.addBtn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-muted);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.addBtn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-main);
 }
 
 .sideTools {
@@ -522,53 +566,6 @@
   font-size: 12px;
   color: #a1a1aa;
   font-family: var(--font-geist-mono), monospace;
-}
-
-.focusClose {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 20px;
-  background: #f0f0f0;
-  color: #555;
-  font-size: 13px;
-  font-weight: 500;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.focusCloseLight {
-  background: #f0f0f0;
-  color: #555;
-}
-
-.focusCloseDark {
-  background: #333;
-  color: #fff;
-}
-
-.focusClose:hover,
-.focusCloseStateHover {
-  background: #e0e0e0;
-  color: #111;
-}
-
-.focusCloseDark:hover,
-.focusCloseDark.focusCloseStateHover {
-  background: #444;
-  color: #fff;
-}
-
-.focusClose:active,
-.focusCloseStateActive {
-  transform: translateY(0.5px);
-}
-
-.focusClose:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 
 .focusContent {
