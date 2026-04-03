@@ -31,7 +31,9 @@ test.describe("VIGIL smoke", () => {
       timeout: 30_000,
     });
     await expect(page.getByText("Local only")).toBeVisible({ timeout: 15_000 });
-    await page.locator("[data-vigil-canvas]").click({ position: { x: 24, y: 24 } });
+    await page.locator("[data-vigil-canvas]").click({
+      position: { x: 640, y: 400 },
+    });
 
     await openCommandPalette(page);
     await expect(page.locator("[data-vigil-palette]")).toBeVisible();
