@@ -9,15 +9,39 @@ import {
   Tldraw,
 } from "tldraw";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 
 import { VigilNoteShapeUtil } from "@/src/canvas/VigilNoteShapeUtil";
 import { VigilStickyShapeUtil } from "@/src/canvas/VigilStickyShapeUtil";
 import { useSpringBetween } from "@/src/hooks/use-spring-between";
+import {
+  type VigilColorScheme,
+  useVigilThemeContext,
+} from "@/src/contexts/vigil-theme-context";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
 import { VIGIL_UI_SPRING, VIGIL_UI_SPRING_SOFT } from "@/src/lib/spring";
 
 const LS_KEY = "vigil-editor-snapshot";
+
+/** ~25MB — reference art / map imports */
+const MAX_ASSET_BYTES = 25 * 1024 * 1024;
+
+const toolbarBtn: CSSProperties = {
+  padding: "4px 10px",
+  borderRadius: 6,
+  border: "1px solid var(--vigil-btn-border)",
+  background: "var(--vigil-btn-bg)",
+  color: "var(--vigil-btn-fg)",
+  cursor: "pointer",
+  fontSize: 13,
+};
 
 type SyncMode = "loading" | "local" | "cloud";
 
@@ -29,6 +53,12 @@ type BootstrapPayload = {
   spaces: SpaceRow[];
 };
 
+function themeLabel(p: VigilColorScheme): string {
+  if (p === "system") return "Match OS";
+  if (p === "light") return "Light";
+  return "Dark";
+}
+
 function VigilToolbarMounted({
   editor,
   syncMode,
@@ -36,6 +66,10 @@ function VigilToolbarMounted({
   activeSpaceId,
   onSpaceChange,
   onNewSpace,
+  colorScheme,
+  onCycleTheme,
+  snapEnabled,
+  onToggleSnap,
 }: {
   editor: Editor;
   syncMode: SyncMode;
@@ -43,6 +77,10 @@ function VigilToolbarMounted({
   activeSpaceId: string | null;
   onSpaceChange: (spaceId: string) => void;
   onNewSpace: () => void;
+  colorScheme: VigilColorScheme;
+  onCycleTheme: () => void;
+  snapEnabled: boolean;
+  onToggleSnap: () => void;
 }) {
   const springY = useSpringBetween(0, -14, VIGIL_UI_SPRING);
   const springOpacity = useSpringBetween(1, 0, VIGIL_UI_SPRING_SOFT);
@@ -106,7 +144,7 @@ function VigilToolbarMounted({
       <span
         style={{
           fontSize: 12,
-          color: "#555",
+          color: "var(--vigil-muted)",
           fontFamily: "system-ui, sans-serif",
           userSelect: "none",
         }}
@@ -118,6 +156,35 @@ function VigilToolbarMounted({
       >
         {modeLabel}
       </span>
+      <span
+        style={{
+          fontSize: 11,
+          color: "var(--vigil-muted)",
+          fontFamily: "system-ui, sans-serif",
+          userSelect: "none",
+          maxWidth: 200,
+          lineHeight: 1.35,
+        }}
+        title="Images, videos, and other files tldraw supports"
+      >
+        Drop files on the canvas
+      </span>
+      <button
+        type="button"
+        onClick={onToggleSnap}
+        title="Snap selection to guides and nearby shapes when moving or resizing"
+        style={{ ...toolbarBtn, fontSize: 12 }}
+      >
+        Snap: {snapEnabled ? "on" : "off"}
+      </button>
+      <button
+        type="button"
+        onClick={onCycleTheme}
+        title="Cycle theme: system, light, dark"
+        style={{ ...toolbarBtn, fontSize: 12 }}
+      >
+        Theme: {themeLabel(colorScheme)}
+      </button>
       {syncMode === "cloud" && spaces.length > 0 && activeSpaceId ? (
         <>
           <label
@@ -127,7 +194,7 @@ function VigilToolbarMounted({
               gap: 6,
               fontSize: 12,
               fontFamily: "system-ui, sans-serif",
-              color: "#333",
+              color: "var(--vigil-label)",
             }}
           >
             <span style={{ userSelect: "none" }}>Space</span>
@@ -138,8 +205,10 @@ function VigilToolbarMounted({
                 fontSize: 13,
                 padding: "4px 8px",
                 borderRadius: 6,
-                border: "1px solid #ccc",
+                border: "1px solid var(--vigil-border)",
                 maxWidth: 220,
+                background: "var(--vigil-btn-bg)",
+                color: "var(--vigil-btn-fg)",
               }}
             >
               {spaces.map((s) => (
@@ -149,15 +218,15 @@ function VigilToolbarMounted({
               ))}
             </select>
           </label>
-          <button type="button" onClick={onNewSpace}>
+          <button type="button" onClick={onNewSpace} style={toolbarBtn}>
             New space
           </button>
         </>
       ) : null}
-      <button type="button" onClick={addNote}>
+      <button type="button" onClick={addNote} style={toolbarBtn}>
         VIGIL note
       </button>
-      <button type="button" onClick={addSticky}>
+      <button type="button" onClick={addSticky} style={toolbarBtn}>
         VIGIL sticky
       </button>
     </div>
@@ -165,6 +234,7 @@ function VigilToolbarMounted({
 }
 
 export default function VigilApp() {
+  const { preference, cyclePreference } = useVigilThemeContext();
   const router = useRouter();
   const searchParams = useSearchParams();
   const spaceFromUrl = searchParams.get("space");
@@ -174,6 +244,7 @@ export default function VigilApp() {
   const [syncMode, setSyncMode] = useState<SyncMode>("loading");
   const [spaces, setSpaces] = useState<SpaceRow[]>([]);
   const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null);
+  const [snapEnabled, setSnapEnabled] = useState(false);
   const spaceIdRef = useRef<string | null>(null);
 
   const shapeUtils = useMemo(
@@ -208,6 +279,23 @@ export default function VigilApp() {
       }
     })();
   }, [router]);
+
+  useEffect(() => {
+    if (!editor) return;
+    editor.user.updateUserPreferences({ colorScheme: preference });
+  }, [editor, preference]);
+
+  useEffect(() => {
+    if (!editor) return;
+    setSnapEnabled(editor.user.getIsSnapMode());
+  }, [editor]);
+
+  const onToggleSnap = useCallback(() => {
+    if (!editor) return;
+    const next = !editor.user.getIsSnapMode();
+    editor.user.updateUserPreferences({ isSnapMode: next });
+    setSnapEnabled(next);
+  }, [editor]);
 
   useEffect(() => {
     if (!editor) return;
@@ -302,7 +390,12 @@ export default function VigilApp() {
   }, [editor, validSpaceParam, spaceFromUrl, router]);
 
   return (
-    <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
+    <div
+      style={{ width: "100vw", height: "100vh", position: "relative" }}
+      onDragOver={(e) => {
+        e.preventDefault();
+      }}
+    >
       {editor ? (
         <VigilToolbarMounted
           editor={editor}
@@ -311,9 +404,18 @@ export default function VigilApp() {
           activeSpaceId={activeSpaceId}
           onSpaceChange={onSpaceChange}
           onNewSpace={onNewSpace}
+          colorScheme={preference}
+          onCycleTheme={cyclePreference}
+          snapEnabled={snapEnabled}
+          onToggleSnap={onToggleSnap}
         />
       ) : null}
-      <Tldraw shapeUtils={shapeUtils} onMount={(ed) => setEditor(ed)} />
+      <Tldraw
+        inferDarkMode={false}
+        maxAssetSize={MAX_ASSET_BYTES}
+        shapeUtils={shapeUtils}
+        onMount={(ed) => setEditor(ed)}
+      />
     </div>
   );
 }

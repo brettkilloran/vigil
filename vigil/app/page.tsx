@@ -1,9 +1,11 @@
 import { Suspense } from "react";
 
 import VigilApp from "./_components/VigilApp";
+import { VigilThemeProvider } from "@/src/contexts/vigil-theme-context";
 
 export default function Home() {
   return (
+    <VigilThemeProvider>
     <Suspense
       fallback={
         <div
@@ -14,7 +16,7 @@ export default function Home() {
             alignItems: "center",
             justifyContent: "center",
             fontFamily: "system-ui, sans-serif",
-            color: "#555",
+            color: "var(--vigil-muted, #555)",
           }}
         >
           Loading VIGIL…
@@ -23,5 +25,6 @@ export default function Home() {
     >
       <VigilApp />
     </Suspense>
+    </VigilThemeProvider>
   );
 }
