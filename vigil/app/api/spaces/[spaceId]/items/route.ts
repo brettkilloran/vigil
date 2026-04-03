@@ -18,6 +18,7 @@ const createBody = z.object({
   entityType: z.string().max(64).optional(),
   entityMeta: z.record(z.string(), z.any()).optional(),
   imageUrl: z.string().max(8192).optional(),
+  imageMeta: z.record(z.string(), z.any()).optional(),
 });
 
 export async function GET(
@@ -97,6 +98,7 @@ export async function POST(
       entityType: parsed.data.entityType ?? null,
       entityMeta: parsed.data.entityMeta ?? null,
       imageUrl: parsed.data.imageUrl ?? null,
+      imageMeta: parsed.data.imageMeta ?? null,
     })
     .returning();
 

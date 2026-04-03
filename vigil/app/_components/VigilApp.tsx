@@ -81,6 +81,7 @@ export default function VigilApp() {
     x: number;
     y: number;
   } | null>(null);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
 
   const cameraTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
@@ -90,6 +91,15 @@ export default function VigilApp() {
   );
   const ctxScreenRef = useRef<{ x: number; y: number } | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const uploadMessageTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+
+  const showUploadMessage = useCallback((text: string) => {
+    clearTimeout(uploadMessageTimer.current);
+    setUploadMessage(text);
+    uploadMessageTimer.current = setTimeout(() => setUploadMessage(null), 10_000);
+  }, []);
 
   const hydrate = useCanvasStore((s) => s.hydrate);
   const reset = useCanvasStore((s) => s.reset);
@@ -155,6 +165,10 @@ export default function VigilApp() {
     if (syncMode !== "cloud" || !sid) return;
     scheduleCameraPersist(sid, camera);
   }, [camera, scheduleCameraPersist, syncMode]);
+
+  useEffect(() => {
+    return () => clearTimeout(uploadMessageTimer.current);
+  }, []);
 
   useEffect(() => {
     if (syncMode !== "local") return;
@@ -559,31 +573,82 @@ export default function VigilApp() {
         const img = files.find((f) => f.type.startsWith("image/"));
         if (!img) return;
         const sid = useCanvasStore.getState().spaceId;
-        const url = URL.createObjectURL(img);
         const w = 320;
         const h = 240;
         const cam = useCanvasStore.getState().camera;
         const wx = (-cam.x + e.clientX) / cam.zoom - w / 2;
         const wy = (-cam.y + e.clientY) / cam.zoom - h / 2;
-        if (!sid) {
+        const zNext = Object.keys(useCanvasStore.getState().items).length + 1;
+        const title = img.name.slice(0, 255) || "Image";
+        const contentType = img.type || "application/octet-stream";
+
+        const putLocalPreview = () => {
+          const url = URL.createObjectURL(img);
           const item: CanvasItem = {
             id: crypto.randomUUID(),
-            spaceId: "local",
+            spaceId: sid ?? "local",
             itemType: "image",
             x: wx,
             y: wy,
             width: w,
             height: h,
-            zIndex: Object.keys(useCanvasStore.getState().items).length + 1,
-            title: img.name.slice(0, 255) || "Image",
+            zIndex: zNext,
+            title,
             contentText: "",
             imageUrl: url,
-            imageMeta: { filename: img.name },
+            imageMeta: { filename: img.name, localPreview: true },
           };
           putItem(item);
+        };
+
+        if (!sid) {
+          putLocalPreview();
           return;
         }
+
         void (async () => {
+          const pres = await fetch("/api/upload/presign", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contentType,
+              filename: img.name,
+              spaceId: sid,
+            }),
+          });
+          const presData = (await pres.json()) as {
+            ok?: boolean;
+            uploadUrl?: string;
+            publicUrl?: string;
+            key?: string;
+            error?: string;
+          };
+
+          if (!pres.ok || !presData.ok || !presData.uploadUrl || !presData.publicUrl) {
+            showUploadMessage(
+              presData.error ??
+                `Could not prepare image upload (HTTP ${pres.status}). Dropped a local-only preview — it will not sync or survive refresh.`,
+            );
+            putLocalPreview();
+            return;
+          }
+
+          const putRes = await fetch(presData.uploadUrl, {
+            method: "PUT",
+            body: img,
+            headers: { "Content-Type": contentType },
+          });
+          if (!putRes.ok) {
+            showUploadMessage(
+              `Upload to R2 failed (${putRes.status}). Dropped a local-only preview instead.`,
+            );
+            putLocalPreview();
+            return;
+          }
+
+          clearTimeout(uploadMessageTimer.current);
+          setUploadMessage(null);
+
           const res = await fetch(`/api/spaces/${sid}/items`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -593,12 +658,18 @@ export default function VigilApp() {
               y: wy,
               width: w,
               height: h,
-              title: img.name.slice(0, 255) || "Image",
-              imageUrl: url,
+              title,
+              imageUrl: presData.publicUrl,
+              imageMeta: { filename: img.name, key: presData.key },
             }),
           });
           const data = (await res.json()) as { ok?: boolean; item?: CanvasItem };
           if (data.ok && data.item) putItem(data.item);
+          else
+            showUploadMessage(
+              (data as { error?: string }).error ??
+                "Image uploaded but creating the canvas item failed.",
+            );
         })();
       }}
     >
@@ -734,6 +805,21 @@ export default function VigilApp() {
             Search (⌘K)
           </button>
         </div>
+        {uploadMessage ? (
+          <div className="pointer-events-auto flex max-w-[min(100vw-24px,640px)] items-start gap-2 rounded-md border border-amber-600/50 bg-amber-500/15 px-2.5 py-1.5 text-[11px] text-amber-950 dark:text-amber-100">
+            <span className="min-w-0 flex-1 leading-snug">{uploadMessage}</span>
+            <button
+              type="button"
+              className="shrink-0 rounded px-1.5 py-0.5 hover:bg-black/10 dark:hover:bg-white/10"
+              onClick={() => {
+                clearTimeout(uploadMessageTimer.current);
+                setUploadMessage(null);
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <CommandPalette
