@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
+import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 
 const patchBody = z.object({
@@ -101,6 +102,14 @@ export async function PATCH(
     .set(updates)
     .where(eq(items.id, itemId))
     .returning();
+
+  const contentDirty =
+    p.title !== undefined ||
+    p.contentText !== undefined ||
+    p.contentJson !== undefined;
+  if (contentDirty && row) {
+    scheduleItemEmbeddingRefresh(db, row);
+  }
 
   return Response.json({ ok: true, item: rowToCanvasItem(row!) });
 }

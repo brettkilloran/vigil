@@ -258,7 +258,8 @@ export function CommandPalette({
     {
       id: "semantic",
       label: "Meaning",
-      title: "Vector similarity (needs embeddings on items)",
+      title:
+        "Vector similarity (embeddings refresh when items are saved; needs OPENAI_API_KEY)",
       icon: <Sparkles className="size-3.5 shrink-0 opacity-90" aria-hidden />,
     },
     {
@@ -334,7 +335,7 @@ export function CommandPalette({
                 {spaceId &&
                 q.trim().length >= 2 &&
                 (searchMode === "semantic" || searchMode === "hybrid")
-                  ? "No matches. For Meaning/Both, add embeddings (POST /api/items/[id]/embed)."
+                  ? "No matches. For Meaning/Both, set OPENAI_API_KEY and save items (or POST /api/items/[id]/embed)."
                   : "No results"}
               </li>
             ) : (

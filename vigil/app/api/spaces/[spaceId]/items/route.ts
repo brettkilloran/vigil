@@ -2,8 +2,9 @@ import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
-import { assertSpaceExists, listItemsForSpace } from "@/src/lib/spaces";
+import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
+import { assertSpaceExists, listItemsForSpace } from "@/src/lib/spaces";
 
 const createBody = z.object({
   itemType: z.enum(["note", "sticky", "image", "checklist", "webclip", "folder"]),
@@ -111,6 +112,10 @@ export async function POST(
       imageMeta: parsed.data.imageMeta ?? null,
     })
     .returning();
+
+  if (row) {
+    scheduleItemEmbeddingRefresh(db, row);
+  }
 
   return Response.json({ ok: true, item: rowToCanvasItem(row!) });
 }

@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
-import OpenAI from "openai";
 
 import { tryGetDb } from "@/src/db/index";
-import { itemEmbeddings, items } from "@/src/db/schema";
+import { items } from "@/src/db/schema";
+import { refreshItemEmbedding } from "@/src/lib/item-embedding";
 
 export async function POST(
   _req: Request,
@@ -26,22 +26,11 @@ export async function POST(
     return Response.json({ ok: false, error: "No text to embed" }, { status: 400 });
   }
 
-  const openai = new OpenAI({ apiKey: key });
-  const emb = await openai.embeddings.create({
-    model: "text-embedding-3-small",
-    input: text.slice(0, 8000),
-  });
-  const vector = emb.data[0]?.embedding;
-  if (!vector) {
+  try {
+    await refreshItemEmbedding(db, row);
+  } catch {
     return Response.json({ ok: false, error: "Embedding failed" }, { status: 500 });
   }
 
-  await db.delete(itemEmbeddings).where(eq(itemEmbeddings.itemId, itemId));
-  await db.insert(itemEmbeddings).values({
-    itemId,
-    embedding: vector,
-    chunkText: text.slice(0, 2000),
-  });
-
-  return Response.json({ ok: true, dimensions: vector.length });
+  return Response.json({ ok: true, dimensions: 1536 });
 }
