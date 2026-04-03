@@ -6,6 +6,8 @@ import {
   createShapeId,
   defaultShapeUtils,
   type Editor,
+  exportAs,
+  serializeTldrawJson,
   Tldraw,
 } from "tldraw";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -70,6 +72,8 @@ function VigilToolbarMounted({
   onCycleTheme,
   snapEnabled,
   onToggleSnap,
+  onExportPng,
+  onExportTldr,
 }: {
   editor: Editor;
   syncMode: SyncMode;
@@ -81,6 +85,8 @@ function VigilToolbarMounted({
   onCycleTheme: () => void;
   snapEnabled: boolean;
   onToggleSnap: () => void;
+  onExportPng: () => void;
+  onExportTldr: () => void;
 }) {
   const springY = useSpringBetween(0, -14, VIGIL_UI_SPRING);
   const springOpacity = useSpringBetween(1, 0, VIGIL_UI_SPRING_SOFT);
@@ -229,6 +235,22 @@ function VigilToolbarMounted({
       <button type="button" onClick={addSticky} style={toolbarBtn}>
         VIGIL sticky
       </button>
+      <button
+        type="button"
+        onClick={onExportPng}
+        style={toolbarBtn}
+        title="Export selection as PNG, or the whole page if nothing is selected"
+      >
+        Export PNG
+      </button>
+      <button
+        type="button"
+        onClick={onExportTldr}
+        style={toolbarBtn}
+        title="Download the full canvas as a .tldr JSON file"
+      >
+        Save .tldr
+      </button>
     </div>
   );
 }
@@ -295,6 +317,46 @@ export default function VigilApp() {
     const next = !editor.user.getIsSnapMode();
     editor.user.updateUserPreferences({ isSnapMode: next });
     setSnapEnabled(next);
+  }, [editor]);
+
+  const onExportPng = useCallback(() => {
+    if (!editor) return;
+    void (async () => {
+      const selected = editor.getSelectedShapeIds();
+      const ids =
+        selected.length > 0 ? selected : [...editor.getCurrentPageShapeIds()];
+      if (ids.length === 0) {
+        window.alert("Nothing on this page to export.");
+        return;
+      }
+      try {
+        await exportAs(editor, ids, { format: "png", name: "vigil" });
+      } catch (e) {
+        window.alert(
+          e instanceof Error ? e.message : "Could not export PNG.",
+        );
+      }
+    })();
+  }, [editor]);
+
+  const onExportTldr = useCallback(() => {
+    if (!editor) return;
+    void (async () => {
+      try {
+        const json = await serializeTldrawJson(editor);
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `vigil-${new Date().toISOString().slice(0, 10)}.tldr`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        window.alert(
+          e instanceof Error ? e.message : "Could not save .tldr file.",
+        );
+      }
+    })();
   }, [editor]);
 
   useEffect(() => {
@@ -408,6 +470,8 @@ export default function VigilApp() {
           onCycleTheme={cyclePreference}
           snapEnabled={snapEnabled}
           onToggleSnap={onToggleSnap}
+          onExportPng={onExportPng}
+          onExportTldr={onExportTldr}
         />
       ) : null}
       <Tldraw
