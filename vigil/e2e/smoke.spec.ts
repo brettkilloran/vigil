@@ -21,7 +21,7 @@ test.describe("VIGIL smoke", () => {
 
     await expect(page.getByText("Local only")).toBeVisible();
     await expect(
-      page.getByText("This space is empty.", { exact: false }),
+      page.getByText("Start a note, drop in visuals", { exact: false }),
     ).toBeVisible();
   });
 

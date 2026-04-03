@@ -161,6 +161,15 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
             err: null,
           });
         }
+      } catch {
+        if (!cancelled) {
+          setLoaded({
+            itemId,
+            outgoing: [],
+            incoming: [],
+            err: "Could not load links",
+          });
+        }
       } finally {
         if (!cancelled) setCloudLoading(false);
       }

@@ -10,6 +10,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 - **Full product & UX spec:** `docs/VIGIL_MASTER_PLAN.md`
 - **How the repo should move from here:** `docs/STRATEGY.md`
+- **Blocked / account / infra follow-ups:** `docs/FOLLOW_UP.md`
 
 Read **STRATEGY first** for the current-vs-target delta. The master plan defines **custom DOM canvas** (no tldraw), **no auth**, **MIT stack**, and phases **1–8**.
 
