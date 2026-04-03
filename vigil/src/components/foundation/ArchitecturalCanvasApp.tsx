@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft } from "@phosphor-icons/react";
 
 import styles from "./ArchitecturalCanvasApp.module.css";
+import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
+import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
 import { ArchitecturalBottomDock } from "@/src/components/foundation/ArchitecturalBottomDock";
 import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
 import { ArchitecturalFolderCard } from "@/src/components/foundation/ArchitecturalFolderCard";
@@ -145,6 +147,32 @@ export function ArchitecturalCanvasApp({
   const lassoStartRef = useRef<{ x: number; y: number } | null>(null);
   const spacePanRef = useRef(false);
   const idCounterRef = useRef(2000);
+  const commitTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const queueGraphCommit = useCallback(
+    (key: string, applyCommit: () => void, delayMs: number) => {
+      const existing = commitTimersRef.current.get(key);
+      if (existing) clearTimeout(existing);
+      if (delayMs <= 0) {
+        commitTimersRef.current.delete(key);
+        applyCommit();
+        return;
+      }
+      const timer = setTimeout(() => {
+        commitTimersRef.current.delete(key);
+        applyCommit();
+      }, delayMs);
+      commitTimersRef.current.set(key, timer);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    return () => {
+      commitTimersRef.current.forEach((timer) => clearTimeout(timer));
+      commitTimersRef.current.clear();
+    };
+  }, []);
 
   const activeSpace = graph.spaces[activeSpaceId] ?? graph.spaces[graph.rootSpaceId];
   const visibleEntityIds = activeSpace?.entityIds ?? [];
@@ -163,19 +191,29 @@ export function ArchitecturalCanvasApp({
     return zMap;
   }, [visibleEntities]);
 
-  const updateNodeBody = useCallback((id: string, html: string) => {
-    setGraph((prev) => {
-      const entity = prev.entities[id];
-      if (!entity || entity.kind !== "content") return prev;
-      return {
-        ...prev,
-        entities: {
-          ...prev.entities,
-          [id]: { ...entity, bodyHtml: html },
+  const updateNodeBody = useCallback(
+    (id: string, html: string, options?: { immediate?: boolean }) => {
+      queueGraphCommit(
+        `content-body:${id}`,
+        () => {
+          setGraph((prev) => {
+            const entity = prev.entities[id];
+            if (!entity || entity.kind !== "content") return prev;
+            if (entity.bodyHtml === html) return prev;
+            return {
+              ...prev,
+              entities: {
+                ...prev.entities,
+                [id]: { ...entity, bodyHtml: html },
+              },
+            };
+          });
         },
-      };
-    });
-  }, []);
+        options?.immediate ? 0 : 120,
+      );
+    },
+    [queueGraphCommit],
+  );
 
   const openFocusMode = useCallback((id: string) => {
     const entity = graph.entities[id];
@@ -488,25 +526,35 @@ export function ArchitecturalCanvasApp({
     [activeSpaceId, graph.entities, graph.spaces, parentSpaceId],
   );
 
-  const renameFolder = useCallback((entityId: string, title: string) => {
-    setGraph((prev) => {
-      const entity = prev.entities[entityId];
-      if (!entity || entity.kind !== "folder") return prev;
-      const next = shallowCloneGraph(prev);
-      const nextTitle = title.trim() || "Untitled Folder";
-      next.entities[entityId] = {
-        ...entity,
-        title: nextTitle,
-      };
-      if (next.spaces[entity.childSpaceId]) {
-        next.spaces[entity.childSpaceId] = {
-          ...next.spaces[entity.childSpaceId],
-          name: nextTitle,
-        };
-      }
-      return next;
-    });
-  }, []);
+  const renameFolder = useCallback(
+    (entityId: string, title: string) => {
+      queueGraphCommit(
+        `folder-title:${entityId}`,
+        () => {
+          setGraph((prev) => {
+            const entity = prev.entities[entityId];
+            if (!entity || entity.kind !== "folder") return prev;
+            const next = shallowCloneGraph(prev);
+            const nextTitle = title.trim() || "Untitled Folder";
+            if (entity.title === nextTitle) return prev;
+            next.entities[entityId] = {
+              ...entity,
+              title: nextTitle,
+            };
+            if (next.spaces[entity.childSpaceId]) {
+              next.spaces[entity.childSpaceId] = {
+                ...next.spaces[entity.childSpaceId],
+                name: nextTitle,
+              };
+            }
+            return next;
+          });
+        },
+        120,
+      );
+    },
+    [queueGraphCommit],
+  );
 
   const createNewNode = useCallback((type: NodeTheme) => {
     const center = centerCoords();
@@ -858,7 +906,7 @@ export function ArchitecturalCanvasApp({
           const owner = taskCheckbox.closest<HTMLElement>(`[data-node-id]`);
           if (owner?.dataset.nodeId) {
             const bodyEl = owner.querySelector<HTMLElement>(`.${styles.nodeBody}`);
-            if (bodyEl) updateNodeBody(owner.dataset.nodeId, bodyEl.innerHTML);
+            if (bodyEl) updateNodeBody(owner.dataset.nodeId, bodyEl.innerHTML, { immediate: true });
           }
         }
       }
@@ -1239,7 +1287,7 @@ export function ArchitecturalCanvasApp({
                     activeTool={activeTool}
                     dragged={dragged}
                     selected={selected}
-                    onBodyInput={updateNodeBody}
+                    onBodyCommit={updateNodeBody}
                     onExpand={openFocusMode}
                   />
                 ) : (
@@ -1249,7 +1297,7 @@ export function ArchitecturalCanvasApp({
                     itemCount={folderCount}
                     dragOver={hoveredFolderId === entity.id}
                     selected={selected}
-                    onTitleInput={(title) => renameFolder(entity.id, title)}
+                    onTitleCommit={(title) => renameFolder(entity.id, title)}
                     onOpen={() => openFolder(entity.id)}
                   />
                 )}
@@ -1346,21 +1394,24 @@ export function ArchitecturalCanvasApp({
           />
         </div>
         <div className={styles.focusContent}>
-          <input
+          <BufferedTextInput
             type="text"
             className={styles.focusTitle}
             value={focusTitle}
-            onChange={(event) => setFocusTitle(event.target.value)}
+            debounceMs={150}
+            onCommit={(next) => setFocusTitle(next)}
             placeholder="Untitled Document"
+            data-focus-title-editor="true"
             style={{ color: focusCodeTheme ? "#ffffff" : "#111111" }}
           />
-          <div
+          <BufferedContentEditable
+            value={focusBody}
             className={`${styles.focusBody} ${focusCodeTheme ? styles.focusCode : ""}`}
-            contentEditable
-            suppressContentEditableWarning
+            editable
             spellCheck={false}
-            dangerouslySetInnerHTML={{ __html: focusBody }}
-            onInput={(event) => setFocusBody((event.target as HTMLElement).innerHTML)}
+            debounceMs={150}
+            dataAttribute="data-focus-body-editor"
+            onCommit={(nextHtml) => setFocusBody(nextHtml)}
           />
         </div>
       </div>

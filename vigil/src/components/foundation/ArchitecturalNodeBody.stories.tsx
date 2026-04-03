@@ -11,13 +11,13 @@ const meta: Meta<typeof ArchitecturalNodeBody> = {
     html: "<h1>A Structural Approach</h1><p>Body content with rich text html.</p>",
     editable: true,
     spellCheck: false,
-    onHtmlChange: () => {},
+    onHtmlCommit: () => {},
   },
   argTypes: {
     html: { control: "text" },
     editable: { control: "boolean" },
     spellCheck: { control: "boolean" },
-    onHtmlChange: { control: false },
+    onHtmlCommit: { control: false },
   },
   decorators: [
     (Story) => (

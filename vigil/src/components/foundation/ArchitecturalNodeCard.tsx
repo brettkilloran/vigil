@@ -1,13 +1,14 @@
 "use client";
 
 import { ArrowsOutSimple } from "@phosphor-icons/react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import type {
   CanvasTool,
   NodeTheme,
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
+import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import type { ButtonTone } from "@/src/components/ui/Button";
 import { Button } from "@/src/components/ui/Button";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
@@ -80,23 +81,26 @@ export function ArchitecturalNodeHeader({
 
 export function ArchitecturalNodeBody({
   html,
+  className,
   editable,
   spellCheck = false,
-  onHtmlChange,
+  onHtmlCommit,
 }: {
   html: string;
+  className?: string;
   editable: boolean;
   spellCheck?: boolean;
-  onHtmlChange?: (html: string) => void;
+  onHtmlCommit?: (html: string) => void;
 }) {
   return (
-    <div
-      className={styles.nodeBody}
-      contentEditable={editable}
-      suppressContentEditableWarning
+    <BufferedContentEditable
+      value={html}
+      className={`${styles.nodeBody} ${className ?? ""}`.trim()}
+      editable={editable}
       spellCheck={spellCheck}
-      dangerouslySetInnerHTML={{ __html: html }}
-      onInput={(event) => onHtmlChange?.((event.target as HTMLElement).innerHTML)}
+      debounceMs={300}
+      dataAttribute="data-node-body-editor"
+      onCommit={(nextHtml) => onHtmlCommit?.(nextHtml)}
     />
   );
 }
@@ -111,7 +115,7 @@ export function ArchitecturalNodeCard({
   activeTool,
   dragged,
   selected,
-  onBodyInput,
+  onBodyCommit,
   onExpand,
   tapeVariant = "clear",
   showExpandButton = true,
@@ -126,20 +130,27 @@ export function ArchitecturalNodeCard({
   activeTool: CanvasTool;
   dragged: boolean;
   selected: boolean;
-  onBodyInput: (id: string, html: string) => void;
+  onBodyCommit: (id: string, html: string) => void;
   onExpand: (id: string) => void;
   tapeVariant?: TapeVariant;
   showExpandButton?: boolean;
   bodyEditable?: boolean;
 }) {
+  const nodeWidth = width ?? 340;
+  const isMediaNode = theme === "media";
+  const cardStyle = {
+    width: width ? `${width}px` : undefined,
+    "--entity-width": `${nodeWidth}px`,
+  } as CSSProperties;
+
   return (
     <div
       className={`${styles.entityNode} ${themeClass(theme)} ${
+        isMediaNode ? styles.unboundedMediaNode : styles.a4DocumentNode
+      } ${
         dragged ? styles.dragging : ""
       } ${selected ? styles.selectedNode : ""}`}
-      style={{
-        width: width ? `${width}px` : undefined,
-      }}
+      style={cardStyle}
     >
       <ArchitecturalNodeTape variant={tapeVariant} rotationDeg={tapeRotation} />
       <ArchitecturalNodeHeader
@@ -150,9 +161,10 @@ export function ArchitecturalNodeCard({
       />
       <ArchitecturalNodeBody
         html={bodyHtml}
+        className={isMediaNode ? undefined : styles.a4DocumentBody}
         editable={bodyEditable ?? activeTool === "select"}
         spellCheck={false}
-        onHtmlChange={(html) => onBodyInput(id, html)}
+        onHtmlCommit={(html) => onBodyCommit(id, html)}
       />
     </div>
   );

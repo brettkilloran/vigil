@@ -239,7 +239,6 @@
 .entityNode {
   position: relative;
   width: 340px;
-  max-height: 486px;
   border-radius: 2px;
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.2),
@@ -251,6 +250,14 @@
   transition:
     box-shadow 0.2s ease,
     transform 0.14s ease;
+}
+
+.a4DocumentNode {
+  max-height: calc(var(--entity-width, 340px) * 1.41421356237);
+}
+
+.unboundedMediaNode {
+  max-height: none;
 }
 
 .entityNode:hover:not(.dragging) {
@@ -396,7 +403,10 @@
   user-select: text;
   flex-grow: 1;
   min-height: 80px;
-  max-height: 390px;
+}
+
+.a4DocumentBody {
+  max-height: calc((var(--entity-width, 340px) * 1.41421356237) - 92px);
   overflow: hidden;
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 84%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 0%, #000 84%, transparent 100%);

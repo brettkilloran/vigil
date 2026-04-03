@@ -3,6 +3,7 @@
 import { CornersOut, DownloadSimple, Folder } from "@phosphor-icons/react";
 
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
+import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 
 export function ArchitecturalFolderCard({
   id,
@@ -11,7 +12,7 @@ export function ArchitecturalFolderCard({
   selected = false,
   dragOver = false,
   onOpen,
-  onTitleInput,
+  onTitleCommit,
 }: {
   id: string;
   title: string;
@@ -19,7 +20,7 @@ export function ArchitecturalFolderCard({
   selected?: boolean;
   dragOver?: boolean;
   onOpen?: () => void;
-  onTitleInput?: (title: string) => void;
+  onTitleCommit?: (title: string) => void;
 }) {
   return (
     <div
@@ -41,15 +42,17 @@ export function ArchitecturalFolderCard({
       <div className={styles.folderFront}>
         <div className={styles.folderTopRow}>
           <div className={styles.folderMetaBlock}>
-            <div
+            <BufferedContentEditable
+              value={title}
               className={styles.folderTitleInput}
-              contentEditable
-              suppressContentEditableWarning
+              editable
+              plainText
               spellCheck={false}
-              onInput={(event) => onTitleInput?.((event.target as HTMLElement).innerText)}
-            >
-              {title}
-            </div>
+              debounceMs={250}
+              normalizeOnCommit={(next) => next.trim() || "Untitled Folder"}
+              onCommit={(next) => onTitleCommit?.(next)}
+              dataAttribute="data-folder-title-editor"
+            />
             <div className={styles.folderBadge}>
               {itemCount} item{itemCount === 1 ? "" : "s"}
             </div>

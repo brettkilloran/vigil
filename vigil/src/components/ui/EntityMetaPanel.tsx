@@ -2,6 +2,7 @@
 
 import { VIGIL_METADATA_LABEL } from "@/src/lib/vigil-ui-classes";
 import type { CanvasItem } from "@/src/stores/canvas-types";
+import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
 
 const FIELDS: Record<
   string,
@@ -70,13 +71,15 @@ export function EntityMetaPanel({
             className="flex flex-col gap-0.5 text-[var(--vigil-label)]"
           >
             <span className={VIGIL_METADATA_LABEL}>{f.label}</span>
-            <input
-              key={`${item.id}-${f.key}-${initial}`}
+            <BufferedTextInput
+              data-entity-meta-field={f.key}
               type={f.kind === "date" ? "date" : "text"}
               className="rounded border border-[var(--vigil-border)] bg-[var(--background)] px-2 py-1 text-[11px] text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vigil-snap)]/35"
-              defaultValue={initial}
-              onBlur={(e) => {
-                const v = e.target.value.trim();
+              value={initial}
+              debounceMs={220}
+              normalizeOnCommit={(next) => next.trim()}
+              onCommit={(nextValue) => {
+                const v = nextValue.trim();
                 const next = readMeta(item);
                 if (v) next[f.key] = v;
                 else delete next[f.key];

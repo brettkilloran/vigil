@@ -14,7 +14,7 @@ const meta: Meta<typeof ArchitecturalFolderCard> = {
     selected: false,
     dragOver: false,
     onOpen: () => {},
-    onTitleInput: () => {},
+    onTitleCommit: () => {},
   },
   argTypes: {
     id: { control: "text" },
@@ -23,7 +23,7 @@ const meta: Meta<typeof ArchitecturalFolderCard> = {
     selected: { control: "boolean" },
     dragOver: { control: "boolean" },
     onOpen: { control: false },
-    onTitleInput: { control: false },
+    onTitleCommit: { control: false },
   },
   decorators: [
     (Story) => (
