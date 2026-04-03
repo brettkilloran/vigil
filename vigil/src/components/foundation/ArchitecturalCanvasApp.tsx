@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, CaretRight, CornersOut, DownloadSimple, Folder, House } from "@phosphor-icons/react";
+import { ArrowLeft, CornersOut, DownloadSimple, Folder } from "@phosphor-icons/react";
 
 import styles from "./ArchitecturalCanvasApp.module.css";
 import { ArchitecturalBottomDock } from "@/src/components/foundation/ArchitecturalBottomDock";
@@ -22,6 +22,7 @@ const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 3;
 const ZOOM_BUTTON_STEP = 0.2;
 const WHEEL_ZOOM_SENSITIVITY = 0.0012;
+const UNIFIED_NODE_WIDTH = 340;
 
 type ArchitecturalCanvasScenario = "default" | "nested" | "corrupt";
 
@@ -447,7 +448,7 @@ export function ArchitecturalCanvasApp({
           theme: "folder",
           childSpaceId,
           rotation,
-          width: 280,
+          width: UNIFIED_NODE_WIDTH,
           tapeRotation: 0,
           slots: {
             [activeSpaceId]: { x, y },
@@ -467,12 +468,11 @@ export function ArchitecturalCanvasApp({
 
     const id = createId("node");
     let title = "New Note";
-    let width: number | undefined;
+    let width = UNIFIED_NODE_WIDTH;
     let bodyHtml = `<div contenteditable="true">Start typing...</div>`;
 
     if (type === "task") {
       title = "Checklist";
-      width = 300;
       bodyHtml = `
         <div class="${styles.taskItem}">
           <div class="${styles.taskCheckbox}"></div>
@@ -481,7 +481,6 @@ export function ArchitecturalCanvasApp({
       `;
     } else if (type === "code") {
       title = "Snippet";
-      width = 380;
       bodyHtml = `// write code here`;
     } else if (type === "media") {
       title = "Asset";
@@ -966,8 +965,6 @@ export function ArchitecturalCanvasApp({
 
   const centerWorldX = Math.round((viewportSize.width / 2 - translateX) / scale);
   const centerWorldY = Math.round((viewportSize.height / 2 - translateY) / scale);
-  const activeSpaceLabel = activeSpace?.name ?? "Unknown";
-
   return (
     <div className={styles.shell}>
       <div
@@ -984,11 +981,6 @@ export function ArchitecturalCanvasApp({
               : "default",
         }}
       >
-        <svg className={styles.connections} aria-hidden>
-          <path className={styles.link} d="M 30 -140 C 190 -140, 140 300, 250 300" />
-          <path className={styles.link} d="M 520 320 C 610 320, 590 -30, 150 -30" />
-        </svg>
-
         <div
           className={styles.canvas}
           style={{ transform: `translate(${translateX}px, ${translateY}px) scale(${scale})` }}
@@ -1090,46 +1082,50 @@ export function ArchitecturalCanvasApp({
       />
 
       <div className={styles.navWrap}>
-        <div className={styles.glassPanel}>
+        <div className={`${styles.glassPanel} ${styles.navPanel}`}>
           <div className={styles.navRow}>
-            <button
-              ref={parentDropRef}
-              type="button"
-              className={`${styles.navBtn} ${parentDropHovered ? styles.navBtnDrop : ""}`}
-              onClick={goBack}
-              disabled={!parentSpaceId}
-            >
-              <ArrowLeft size={12} />
-              Back
-            </button>
+            {parentSpaceId ? (
+              <button
+                ref={parentDropRef}
+                type="button"
+                className={`${styles.navBtn} ${parentDropHovered ? styles.navBtnDrop : ""}`}
+                onClick={goBack}
+              >
+                <ArrowLeft size={12} />
+                Back
+              </button>
+            ) : null}
             <div className={styles.crumbTrail}>
-              {navigationPath.map((spaceId, index) => (
-                <div key={spaceId} className={styles.crumbItem}>
-                  {index > 0 ? <CaretRight size={12} className={styles.crumbSep} /> : null}
-                  <button
-                    type="button"
-                    className={`${styles.crumbBtn} ${
-                      spaceId === activeSpaceId ? styles.crumbActive : ""
-                    }`}
-                    onClick={() => enterSpace(spaceId)}
-                    disabled={spaceId === activeSpaceId}
-                  >
-                    {spaceId === graph.rootSpaceId ? <House size={12} /> : <Folder size={12} />}
-                    {graph.spaces[spaceId]?.name ?? "Unknown"}
-                  </button>
-                </div>
-              ))}
+              {navigationPath.map((spaceId, index) => {
+                const isActive = spaceId === activeSpaceId;
+                const label =
+                  spaceId === graph.rootSpaceId ? "Root" : graph.spaces[spaceId]?.name ?? "Unknown";
+                return (
+                  <span key={spaceId} className={styles.crumbItem}>
+                    {index > 0 ? <span className={styles.crumbSep}>/</span> : null}
+                    <button
+                      type="button"
+                      className={`${styles.crumbBtn} ${isActive ? styles.crumbActive : ""}`}
+                      onClick={() => enterSpace(spaceId)}
+                      disabled={isActive}
+                    >
+                      {label}
+                    </button>
+                  </span>
+                );
+              })}
             </div>
-            <button
-              type="button"
-              className={styles.navBtn}
-              onClick={moveSelectionToParent}
-              disabled={!parentSpaceId || selectedNodeIds.length === 0}
-            >
-              Move to parent
-            </button>
+            {parentSpaceId ? (
+              <button
+                type="button"
+                className={styles.navBtn}
+                onClick={moveSelectionToParent}
+                disabled={selectedNodeIds.length === 0}
+              >
+                Move out
+              </button>
+            ) : null}
           </div>
-          <div className={styles.navHint}>Current Space: {activeSpaceLabel}</div>
         </div>
       </div>
 

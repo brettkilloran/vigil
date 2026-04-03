@@ -36,7 +36,7 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       x: 140,
       y: -210,
       rotation: 0.5,
-      width: 420,
+      width: 340,
       theme: "code",
       tapeRotation: -1.5,
       bodyHtml: `
@@ -58,7 +58,7 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       x: 240,
       y: 210,
       rotation: -2,
-      width: 280,
+      width: 340,
       theme: "task",
       tapeRotation: 3,
       bodyHtml: `
@@ -143,7 +143,7 @@ export function buildArchitecturalSeedGraph(
     theme: "folder",
     childSpaceId: "space-project-thesis",
     rotation: -1.1,
-    width: 280,
+    width: 340,
     tapeRotation: 0,
     slots: {
       root: { x: -430, y: -40 },
@@ -177,7 +177,7 @@ export function buildArchitecturalSeedGraph(
       theme: "folder",
       childSpaceId: "space-subsystems",
       rotation: 0.5,
-      width: 280,
+      width: 340,
       tapeRotation: 0,
       slots: {
         "space-project-thesis": { x: 220, y: -140 },

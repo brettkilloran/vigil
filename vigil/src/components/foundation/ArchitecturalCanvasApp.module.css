@@ -80,29 +80,12 @@
   z-index: 2;
 }
 
-.connections {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.link {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.1);
-  stroke-width: 2;
-  stroke-dasharray: 4 4;
-}
-
 .nodePlacement {
   position: absolute;
 }
 
 .folderNode {
-  width: 280px;
+  width: 340px;
   height: 200px;
   background: transparent;
   border-radius: 0;
@@ -463,40 +446,38 @@
 
 .navWrap {
   position: fixed;
-  top: 88px;
-  left: 24px;
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 101;
   pointer-events: none;
-  max-width: min(72vw, 900px);
+  max-width: min(78vw, 920px);
 }
 
 .navRow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   pointer-events: auto;
 }
 
-.navHint {
-  margin-top: 8px;
-  font-size: 10px;
-  color: #a1a1aa;
-  font-family: var(--font-geist-mono), monospace;
-  letter-spacing: 0.08em;
+.navPanel {
+  padding: 6px 10px;
 }
 
 .navBtn {
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.15);
   color: #a1a1aa;
   border-radius: 6px;
-  padding: 4px 10px;
+  padding: 4px 8px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
+  gap: 4px;
+  font-size: 10px;
   font-family: var(--font-geist-mono), monospace;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .navBtn:disabled {
@@ -518,18 +499,21 @@
 .crumbTrail {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
+  overflow: hidden;
 }
 
 .crumbItem {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+  min-width: 0;
 }
 
 .crumbSep {
-  color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 10px;
 }
 
 .crumbBtn {
@@ -537,13 +521,12 @@
   background: transparent;
   color: #a1a1aa;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 10px;
   font-family: var(--font-geist-mono), monospace;
-  padding: 4px 6px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  padding: 3px 5px;
+  display: block;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .crumbBtn:not(:disabled):hover {
