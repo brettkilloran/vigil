@@ -15,7 +15,7 @@ Read **STRATEGY first** for the current-vs-target delta. The master plan defines
 
 ## Current code reality
 
-The canvas is **custom DOM** (`src/components/canvas/`, `src/stores/canvas-store.ts`). Persistence: **`items`** rows + **`spaces.canvas_state`** as camera `{ x, y, zoom }` only.
+The canvas is **custom DOM** (`src/components/canvas/`, `src/stores/canvas-store.ts`). Persistence: **`items`** rows + **`spaces.canvas_state`** as camera `{ x, y, zoom }` only. **Links** panel (local canvas): outgoing/incoming from TipTap `[[` / `vigil:item:` in `content_json` via `src/lib/local-item-links.ts`; cloud mode uses `/api/items/[id]/links` and Neon `item_links`.
 
 **Zustand:** Select **stable** store slices (e.g. `useCanvasStore((s) => s.items)`). Derive lists with `useMemo(() => Object.values(items), [items])`. Avoid selectors that return a **new array or object every call** (e.g. `Object.values(s.items)` inline in the selector)—that causes re-render loops and React 19 `getServerSnapshot` warnings.
 

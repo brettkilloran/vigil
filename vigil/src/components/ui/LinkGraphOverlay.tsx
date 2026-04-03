@@ -170,6 +170,7 @@ function LinkGraphInner({
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [layoutRevision, setLayoutRevision] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -221,17 +222,22 @@ function LinkGraphInner({
     <div
       className={`flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden ${VIGIL_GLASS_PANEL}`}
     >
-      <div className="flex items-center justify-between border-b border-[var(--vigil-border)]/80 px-4 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--vigil-border)]/80 px-4 py-2.5">
         <span className="text-sm font-semibold tracking-tight text-[var(--vigil-label)]">
           Link graph
         </span>
-        <button
-          type="button"
-          className={VIGIL_CHIP_BTN}
-          onClick={onClose}
-        >
-          Close
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className={VIGIL_CHIP_BTN}
+            onClick={() => setLayoutRevision((n) => n + 1)}
+          >
+            Reset layout
+          </button>
+          <button type="button" className={VIGIL_CHIP_BTN} onClick={onClose}>
+            Close
+          </button>
+        </div>
       </div>
       <div className="min-h-[min(70vh,520px)] flex-1 bg-[var(--vigil-canvas)]">
         {loading ? (
@@ -244,6 +250,7 @@ function LinkGraphInner({
           </p>
         ) : (
           <LinkGraphInteractiveSvg
+            key={layoutRevision}
             nodes={nodes}
             edges={edges}
             onPick={onPick}
@@ -253,8 +260,9 @@ function LinkGraphInner({
       <p className="border-t border-[var(--vigil-border)] px-3 py-2 text-[10px] text-[var(--vigil-muted)]">
         Layout: <strong>d3-force</strong> (charge + links + collision). Circles
         are items; lines are <code className="text-[9px]">item_links</code>.
-        <strong> Drag</strong> a node to reposition; release to re-run layout.
-        Click (without dragging) to jump to the item.
+        <strong> Reset layout</strong> starts fresh; <strong>drag</strong> a node
+        to reposition; release to re-run layout from that pose. Click (without
+        dragging) to jump to the item.
       </p>
     </div>
   );
