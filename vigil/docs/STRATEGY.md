@@ -17,7 +17,7 @@ This file is the **short bridge** between the repo today and the full product sp
 | Persistence | **`items`** + camera in **`spaces.canvas_state`** | Same; legacy DB rows may still hold old `canvas_state` until migrated |
 | State | **zustand** + immer (`canvas-store`) | Same; **select stable slices** (e.g. `s.items`), derive arrays with `useMemo`—never return `Object.values(s.items)` from a selector (avoids infinite re-renders / `getServerSnapshot` issues) |
 | Motion | **framer-motion** + @use-gesture | Same per plan presets |
-| Styling | **Tailwind 4** + CSS variables / tokens | Visual Design Bible polish (Phases 6–7) |
+| Styling | **Tailwind 4** + tokens (`--vigil-canvas`, `--vigil-elevated`, chips/glass via `vigil-ui-classes`) | Visual Design Bible polish (Phases 6–7) |
 | Cross-card links | TipTap `vigil:item:` links + **`/api/item-links/sync`**; **`[[` picker**; **Graph** overlay (**d3-force** + **drag to reheat** layout) via **`GET /api/spaces/[id]/graph`** (cloud); note **formatting toolbar** + underline/highlight | LLM auto-linking, deeper graph UX (Phase 5) |
 | TTRPG | **Entity type** bar + **`entity_meta`** fields per type; **Timeline** panel (Event + `eventDate`) | Markdown LLM import, consistency checker, richer forms |
 | Import / export | Toolbar **Export JSON** / **Import JSON**; cloud import creates items via API | Preferences, richer conflict rules |
