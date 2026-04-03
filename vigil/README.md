@@ -39,6 +39,8 @@ Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 | ⌘/Ctrl+Z / ⇧⌘Z | Undo / redo |
 | ⌘/Ctrl+S | Stack selection |
 
+**Phase 5 (TTRPG):** With a **note** selected, use the **TTRPG** bar to set entity type and optional metadata (e.g. Event + date for **Timeline**). Toolbar **Timeline** lists event-tagged notes; **Graph** (cloud) shows items and `item_links` in a simple ring layout.
+
 ### “Background shell” running 20+ minutes?
 
 That is usually **`next dev`** (or a second copy started by mistake). Stop it from the terminal trashcan / **Ctrl+C**, or run **`npm run check`** instead when you only need to validate the project.

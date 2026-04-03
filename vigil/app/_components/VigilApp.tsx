@@ -7,6 +7,8 @@ import { BacklinksPanel } from "@/src/components/ui/BacklinksPanel";
 import { EntityTypeBar } from "@/src/components/canvas/EntityTypeBar";
 import { VigilCanvas } from "@/src/components/canvas/VigilCanvas";
 import { CommandPalette } from "@/src/components/ui/CommandPalette";
+import { LinkGraphOverlay } from "@/src/components/ui/LinkGraphOverlay";
+import { TimelinePanel } from "@/src/components/ui/TimelinePanel";
 import { ContextMenu } from "@/src/components/ui/ContextMenu";
 import { ScratchPad } from "@/src/components/ui/ScratchPad";
 import {
@@ -81,6 +83,8 @@ export default function VigilApp() {
   const [spaces, setSpaces] = useState<BootstrapPayload["spaces"]>([]);
   const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [graphOpen, setGraphOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{
     x: number;
     y: number;
@@ -163,6 +167,19 @@ export default function VigilApp() {
     },
     [patchItemLocal, scheduleItemPersist],
   );
+
+  const focusItemOnCanvas = useCallback((id: string) => {
+    const st = useCanvasStore.getState();
+    const it = st.items[id];
+    if (!it) return;
+    const z = st.camera.zoom;
+    st.setCamera({
+      x: window.innerWidth / 2 - (it.x + it.width / 2) * z,
+      y: window.innerHeight / 2 - (it.y + it.height / 2) * z,
+      zoom: z,
+    });
+    st.selectOnly(id);
+  }, []);
 
   useEffect(() => {
     const sid = useCanvasStore.getState().spaceId;
@@ -735,7 +752,7 @@ export default function VigilApp() {
         onOpenFolder={onOpenFolder}
       />
 
-      <EntityTypeBar />
+      <EntityTypeBar onPatchItem={onPatchItem} />
 
       <BacklinksPanel cloudMode={syncMode === "cloud"} />
 
@@ -851,6 +868,24 @@ export default function VigilApp() {
           >
             Search (⌘K)
           </button>
+          <button
+            type="button"
+            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            title="Notes tagged Event, sorted by metadata date"
+            onClick={() => setTimelineOpen(true)}
+          >
+            Timeline
+          </button>
+          {syncMode === "cloud" && activeSpaceId ? (
+            <button
+              type="button"
+              className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+              title="Items and item_links in this space"
+              onClick={() => setGraphOpen(true)}
+            >
+              Graph
+            </button>
+          ) : null}
         </div>
         {uploadMessage ? (
           <div className="pointer-events-auto flex max-w-[min(100vw-24px,640px)] items-start gap-2 rounded-md border border-amber-600/50 bg-amber-500/15 px-2.5 py-1.5 text-[11px] text-amber-950 dark:text-amber-100">
@@ -874,18 +909,19 @@ export default function VigilApp() {
         onClose={() => setPaletteOpen(false)}
         spaceId={activeSpaceId}
         onExportJson={exportJson}
-        onSelectItem={(id) => {
-          const st = useCanvasStore.getState();
-          const it = st.items[id];
-          if (!it) return;
-          const z = st.camera.zoom;
-          st.setCamera({
-            x: window.innerWidth / 2 - (it.x + it.width / 2) * z,
-            y: window.innerHeight / 2 - (it.y + it.height / 2) * z,
-            zoom: z,
-          });
-          st.selectOnly(id);
-        }}
+        onSelectItem={focusItemOnCanvas}
+      />
+
+      <LinkGraphOverlay
+        open={graphOpen}
+        spaceId={activeSpaceId}
+        onClose={() => setGraphOpen(false)}
+        onSelectItem={focusItemOnCanvas}
+      />
+      <TimelinePanel
+        open={timelineOpen}
+        onClose={() => setTimelineOpen(false)}
+        onSelectItem={focusItemOnCanvas}
       />
 
       <ScratchPad

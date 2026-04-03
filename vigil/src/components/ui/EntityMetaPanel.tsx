@@ -1,0 +1,85 @@
+"use client";
+
+import type { CanvasItem } from "@/src/stores/canvas-types";
+
+const FIELDS: Record<
+  string,
+  { key: string; label: string; kind: "text" | "date" }[]
+> = {
+  character: [
+    { key: "race", label: "Race", kind: "text" },
+    { key: "class", label: "Class / role", kind: "text" },
+    { key: "pronouns", label: "Pronouns", kind: "text" },
+  ],
+  location: [
+    { key: "region", label: "Region", kind: "text" },
+    { key: "terrain", label: "Terrain", kind: "text" },
+  ],
+  faction: [{ key: "alignment", label: "Alignment", kind: "text" }],
+  event: [
+    { key: "eventDate", label: "When", kind: "date" },
+    { key: "era", label: "Era / arc", kind: "text" },
+  ],
+  item: [{ key: "rarity", label: "Rarity", kind: "text" }],
+  lore: [{ key: "era", label: "Era", kind: "text" }],
+};
+
+function readMeta(item: CanvasItem): Record<string, unknown> {
+  const m = item.entityMeta;
+  return m && typeof m === "object" && !Array.isArray(m)
+    ? { ...m }
+    : {};
+}
+
+export function EntityMetaPanel({
+  item,
+  onPatchItem,
+}: {
+  item: CanvasItem;
+  onPatchItem: (id: string, patch: Partial<CanvasItem>) => void;
+}) {
+  const et = item.entityType?.trim() ?? "";
+  const fields = FIELDS[et];
+  if (!fields?.length) return null;
+
+  const persist = (next: Record<string, unknown>) => {
+    onPatchItem(item.id, { entityMeta: next });
+  };
+
+  return (
+    <div className="mt-2 flex max-h-[min(40vh,220px)] flex-col gap-2 overflow-y-auto border-t border-[var(--vigil-border)] pt-2">
+      {fields.map((f) => {
+        const meta = readMeta(item);
+        const raw = meta[f.key];
+        const initial =
+          f.kind === "date" && typeof raw === "string"
+            ? raw.slice(0, 10)
+            : String(raw ?? "");
+
+        return (
+          <label
+            key={f.key}
+            className="flex flex-col gap-0.5 text-[var(--vigil-label)]"
+          >
+            <span className="text-[9px] uppercase tracking-wide text-[var(--vigil-muted)]">
+              {f.label}
+            </span>
+            <input
+              key={`${item.id}-${f.key}-${initial}`}
+              type={f.kind === "date" ? "date" : "text"}
+              className="rounded border border-[var(--vigil-border)] bg-[var(--background)] px-1.5 py-0.5 text-[11px] text-[var(--foreground)]"
+              defaultValue={initial}
+              onBlur={(e) => {
+                const v = e.target.value.trim();
+                const next = readMeta(item);
+                if (v) next[f.key] = v;
+                else delete next[f.key];
+                persist(next);
+              }}
+            />
+          </label>
+        );
+      })}
+    </div>
+  );
+}
