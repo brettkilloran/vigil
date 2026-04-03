@@ -5,11 +5,13 @@
   --foreground: #171717;
   --vigil-muted: #555;
   --vigil-label: #333;
-  --vigil-border: #ccc;
+  --vigil-border: #d0d4dc;
   --vigil-btn-bg: #ffffff;
   --vigil-btn-fg: #111;
-  --vigil-btn-border: #c8c8c8;
+  --vigil-btn-border: #c8ccd4;
   --vigil-snap: #3b82f6;
+  --vigil-canvas: #e8ebf2;
+  --vigil-elevated: #f6f7fa;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -18,10 +20,12 @@
     --foreground: #ededed;
     --vigil-muted: #a3a3a3;
     --vigil-label: #e5e5e5;
-    --vigil-border: #3f3f3f;
-    --vigil-btn-bg: #262626;
+    --vigil-border: #3a3d46;
+    --vigil-btn-bg: #1e1f24;
     --vigil-btn-fg: #f5f5f5;
-    --vigil-btn-border: #404040;
+    --vigil-btn-border: #3f424c;
+    --vigil-canvas: #0c0d11;
+    --vigil-elevated: #18191f;
   }
 }
 
@@ -30,10 +34,12 @@ html[data-vigil-theme="light"] {
   --foreground: #171717;
   --vigil-muted: #555;
   --vigil-label: #333;
-  --vigil-border: #ccc;
+  --vigil-border: #d0d4dc;
   --vigil-btn-bg: #ffffff;
   --vigil-btn-fg: #111;
-  --vigil-btn-border: #c8c8c8;
+  --vigil-btn-border: #c8ccd4;
+  --vigil-canvas: #e8ebf2;
+  --vigil-elevated: #f6f7fa;
   color-scheme: light;
 }
 
@@ -42,10 +48,12 @@ html[data-vigil-theme="dark"] {
   --foreground: #ededed;
   --vigil-muted: #a3a3a3;
   --vigil-label: #e5e5e5;
-  --vigil-border: #3f3f3f;
-  --vigil-btn-bg: #262626;
+  --vigil-border: #3a3d46;
+  --vigil-btn-bg: #1e1f24;
   --vigil-btn-fg: #f5f5f5;
-  --vigil-btn-border: #404040;
+  --vigil-btn-border: #3f424c;
+  --vigil-canvas: #0c0d11;
+  --vigil-elevated: #18191f;
   color-scheme: dark;
 }
 
@@ -112,4 +120,72 @@ a {
 .ProseMirror li[data-type="taskItem"] > label {
   flex-shrink: 0;
   user-select: none;
+}
+
+.ProseMirror h1 {
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  margin: 0.5em 0 0.25em;
+  line-height: 1.25;
+  color: var(--foreground);
+}
+
+.ProseMirror h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0.55em 0 0.2em;
+  line-height: 1.3;
+  color: var(--foreground);
+}
+
+.ProseMirror h3 {
+  font-size: 1.02rem;
+  font-weight: 600;
+  margin: 0.5em 0 0.15em;
+  line-height: 1.35;
+  color: var(--vigil-label);
+}
+
+.ProseMirror blockquote {
+  margin: 0.5em 0;
+  padding-left: 0.85em;
+  border-left: 3px solid var(--vigil-snap);
+  color: var(--vigil-muted);
+}
+
+.ProseMirror code {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.9em;
+  padding: 0.12em 0.35em;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--vigil-muted) 12%, transparent);
+}
+
+.ProseMirror pre {
+  margin: 0.5em 0;
+  padding: 0.65em 0.85em;
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--foreground) 6%, var(--background));
+  border: 1px solid var(--vigil-border);
+  overflow-x: auto;
+}
+
+.ProseMirror pre code {
+  padding: 0;
+  background: none;
+  font-size: 0.82rem;
+}
+
+.ProseMirror hr {
+  margin: 1em 0;
+  border: none;
+  border-top: 1px solid var(--vigil-border);
+}
+
+.ProseMirror ul:not([data-type="taskList"]),
+.ProseMirror ol {
+  margin: 0.35em 0;
+  padding-left: 1.35em;
 }
