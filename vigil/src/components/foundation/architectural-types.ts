@@ -20,6 +20,7 @@ export type CanvasEntityBase = {
 export type CanvasContentEntity = CanvasEntityBase & {
   kind: "content";
   theme: ContentTheme;
+  tapeVariant?: TapeVariant;
   bodyHtml: string;
 };
 
@@ -54,6 +55,7 @@ export type CanvasNode = {
   width?: number;
   theme: ContentTheme;
   tapeRotation: number;
+  tapeVariant?: TapeVariant;
   bodyHtml: string;
 };
 

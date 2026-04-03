@@ -3,10 +3,16 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 import { Button } from "@/src/components/ui/Button";
+import type { ButtonSize as UiButtonSize } from "@/src/components/ui/Button";
 
 type ButtonSize = "icon" | "menu" | "pill";
 type ButtonTone = "glass" | "menu" | "focus-light" | "focus-dark";
 type ButtonState = "default" | "hover" | "active";
+
+function toUiButtonSize(size: ButtonSize): UiButtonSize {
+  if (size === "menu") return "sm";
+  return size;
+}
 
 export function ArchitecturalButton({
   size,
@@ -26,7 +32,7 @@ export function ArchitecturalButton({
 } & ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <Button
-      size={size}
+      size={toUiButtonSize(size)}
       tone={tone}
       variant="neutral"
       isActive={active}

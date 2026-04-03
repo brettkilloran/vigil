@@ -35,6 +35,8 @@ export function ArchitecturalNodeTape({
   return (
     <div
       className={`${styles.tape} ${tapeClass(variant)}`}
+      data-node-tape="true"
+      data-tape-variant={variant}
       style={{ transform: `translateX(-50%) rotate(${rotationDeg}deg)` }}
     />
   );

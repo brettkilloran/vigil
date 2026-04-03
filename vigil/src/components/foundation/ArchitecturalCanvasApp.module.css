@@ -295,9 +295,34 @@
 }
 
 .tapeDark {
-  background: rgba(40, 40, 45, 0.9);
-  border: 1px solid rgba(0, 0, 0, 0.5);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(99, 102, 115, 0.38) 0%,
+      rgba(68, 70, 78, 0.7) 44%,
+      rgba(38, 39, 45, 0.9) 100%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.045) 0px,
+      rgba(255, 255, 255, 0.045) 1px,
+      rgba(0, 0, 0, 0.05) 1px,
+      rgba(0, 0, 0, 0.05) 2px
+    );
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.42),
+    0 2px 6px rgba(0, 0, 0, 0.22);
   width: 80px;
+}
+
+.themeCode .tapeDark {
+  border-color: rgba(255, 255, 255, 0.045);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.45),
+    0 2px 7px rgba(0, 0, 0, 0.28);
 }
 
 .themeDefault {

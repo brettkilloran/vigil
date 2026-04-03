@@ -29,4 +29,29 @@ test.describe("VIGIL smoke", () => {
 
     await expect(nodes).toHaveCount(beforeCount + 1);
   });
+
+  test("keeps code-card tape variant and dark treatment in app shell", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByText("ARCH_ENV")).toBeVisible({ timeout: 30_000 });
+
+    const codeCard = page
+      .locator("[data-node-id]")
+      .filter({ has: page.getByText("SYS // Configuration.js") })
+      .first();
+    await expect(codeCard).toBeVisible();
+
+    const tape = codeCard.locator('[data-node-tape="true"]');
+    await expect(tape).toHaveAttribute("data-tape-variant", "dark");
+
+    const styleSnapshot = await tape.evaluate((el) => {
+      const styles = getComputedStyle(el);
+      return {
+        backgroundImage: styles.backgroundImage,
+        boxShadow: styles.boxShadow,
+      };
+    });
+
+    expect(styleSnapshot.backgroundImage).toContain("linear-gradient");
+    expect(styleSnapshot.boxShadow).toContain("inset");
+  });
 });

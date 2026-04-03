@@ -1,6 +1,6 @@
 "use client";
 
-import type { ButtonHTMLAttributes, ReactElement, ReactNode } from "react";
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactElement, ReactNode } from "react";
 import { cloneElement, isValidElement } from "react";
 
 import { cx } from "@/src/lib/cx";
@@ -92,7 +92,9 @@ export function Button({
     if (!isValidElement(children)) {
       throw new Error("Button with asChild must receive exactly one valid element.");
     }
-    const child = children as ReactElement<{ className?: string; children?: ReactNode }>;
+    const child = children as ReactElement<
+      HTMLAttributes<HTMLElement> & { className?: string; children?: ReactNode }
+    >;
     return cloneElement(child, {
       ...sharedProps({
         className: cx(child.props.className, className),

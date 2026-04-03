@@ -1,4 +1,5 @@
 import type {
+  CanvasEntity,
   CanvasContentEntity,
   CanvasGraph,
   CanvasNode,
@@ -23,6 +24,7 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       rotation: -1,
       theme: "default",
       tapeRotation: 2,
+      tapeVariant: "masking",
       bodyHtml: `
         <h1>A Structural Approach</h1>
         <p>Unlike fluid glass interfaces, this environment prioritizes rigid bounds and definitive states. It feels more like arranging physical blueprints than floating digital clouds.</p>
@@ -39,6 +41,7 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       width: 340,
       theme: "code",
       tapeRotation: -1.5,
+      tapeVariant: "dark",
       bodyHtml: `
         <span style="color: #c678dd;">const</span> <span style="color: #e5c07b;">environment</span> = {<br>
         &nbsp;&nbsp;<span style="color: #d19a66;">mode</span>: <span style="color: #98c379;">'architectural'</span>,<br>
@@ -61,6 +64,7 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       width: 340,
       theme: "task",
       tapeRotation: 3,
+      tapeVariant: "masking",
       bodyHtml: `
         <div class="${tokens.taskItem} ${tokens.done}">
           <div class="${tokens.taskCheckbox}"></div>
@@ -88,6 +92,7 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       rotation: 1,
       theme: "media",
       tapeRotation: -2.5,
+      tapeVariant: "clear",
       bodyHtml: `
         <div class="${tokens.mediaPlaceholder}">
           <span>Image Placeholder</span>
@@ -100,7 +105,7 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
   ];
 }
 
-function createContentSeedMap(tokens: StyleTokens): Record<string, CanvasContentEntity> {
+function createContentSeedMap(tokens: StyleTokens): Record<string, CanvasEntity> {
   const nodes = buildArchitecturalSeedNodes(tokens);
   return Object.fromEntries(
     nodes.map((node) => [
@@ -113,7 +118,7 @@ function createContentSeedMap(tokens: StyleTokens): Record<string, CanvasContent
         },
       } satisfies CanvasContentEntity,
     ]),
-  );
+  ) as Record<string, CanvasEntity>;
 }
 
 export function buildArchitecturalSeedGraph(
@@ -191,6 +196,7 @@ export function buildArchitecturalSeedGraph(
       theme: "default",
       rotation: -0.6,
       tapeRotation: 1.2,
+      tapeVariant: "clear",
       bodyHtml:
         "<p>This note lives one level deeper to validate recursive folders and breadcrumb navigation.</p>",
       slots: {

@@ -1,21 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, CornersOut, DownloadSimple, Folder } from "@phosphor-icons/react";
+import { ArrowLeft } from "@phosphor-icons/react";
 
 import styles from "./ArchitecturalCanvasApp.module.css";
 import { ArchitecturalBottomDock } from "@/src/components/foundation/ArchitecturalBottomDock";
 import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
+import { ArchitecturalFolderCard } from "@/src/components/foundation/ArchitecturalFolderCard";
 import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";
 import { ArchitecturalStatusBar } from "@/src/components/foundation/ArchitecturalStatusBar";
 import { ArchitecturalToolRail } from "@/src/components/foundation/ArchitecturalToolRail";
 import { buildArchitecturalSeedGraph } from "@/src/components/foundation/architectural-seed";
 import type {
+  ContentTheme,
   CanvasEntity,
   CanvasGraph,
   CanvasSpace,
   CanvasTool,
   NodeTheme,
+  TapeVariant,
 } from "@/src/components/foundation/architectural-types";
 
 const MIN_ZOOM = 0.3;
@@ -30,6 +33,13 @@ const LAYOUT_ROW_GAP = 280;
 type ArchitecturalCanvasScenario = "default" | "nested" | "corrupt";
 
 const ROOT_SPACE_ID = "root";
+
+function tapeVariantForTheme(theme: ContentTheme): TapeVariant {
+  if (theme === "code") return "dark";
+  if (theme === "task") return "masking";
+  if (theme === "media") return "clear";
+  return "masking";
+}
 
 function shallowCloneGraph(graph: CanvasGraph): CanvasGraph {
   return {
@@ -575,6 +585,7 @@ export function ArchitecturalCanvasApp({
       rotation,
       width,
       theme: type,
+      tapeVariant: tapeVariantForTheme(type),
       tapeRotation,
       bodyHtml,
       slots: {
@@ -1222,6 +1233,7 @@ export function ArchitecturalCanvasApp({
                     title={entity.title}
                     width={entity.width}
                     theme={entity.theme}
+                    tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
                     tapeRotation={entity.tapeRotation}
                     bodyHtml={entity.bodyHtml}
                     activeTool={activeTool}
@@ -1231,54 +1243,15 @@ export function ArchitecturalCanvasApp({
                     onExpand={openFocusMode}
                   />
                 ) : (
-                  <div
-                    data-folder-drop="true"
-                    data-folder-id={entity.id}
-                    className={`${styles.folderNode} ${
-                      hoveredFolderId === entity.id ? styles.folderDragOver : ""
-                    } ${selected ? styles.folderSelected : ""}`}
-                  >
-                    <div className={styles.folderTab}>
-                      <Folder size={12} />
-                      FOLDER
-                    </div>
-                    <div className={styles.folderBack} />
-                    <div className={styles.folderInterior}>
-                      <DownloadSimple size={24} />
-                      <span>Drop to insert</span>
-                    </div>
-                    <div className={styles.folderFront}>
-                      <div className={styles.folderTopRow}>
-                        <div className={styles.folderMetaBlock}>
-                          <div
-                            className={styles.folderTitleInput}
-                            contentEditable
-                            suppressContentEditableWarning
-                            spellCheck={false}
-                            onInput={(event) =>
-                              renameFolder(entity.id, (event.target as HTMLElement).innerText)
-                            }
-                          >
-                            {entity.title}
-                          </div>
-                          <div className={styles.folderBadge}>
-                            {folderCount} item{folderCount === 1 ? "" : "s"}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          className={styles.folderOpenBtn}
-                          data-folder-open-btn="true"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            openFolder(entity.id);
-                          }}
-                        >
-                          <CornersOut size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <ArchitecturalFolderCard
+                    id={entity.id}
+                    title={entity.title}
+                    itemCount={folderCount}
+                    dragOver={hoveredFolderId === entity.id}
+                    selected={selected}
+                    onTitleInput={(title) => renameFolder(entity.id, title)}
+                    onOpen={() => openFolder(entity.id)}
+                  />
                 )}
               </div>
             );
