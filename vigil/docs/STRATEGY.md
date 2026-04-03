@@ -24,6 +24,7 @@ This file is the **short bridge** between the repo today and the full product sp
 | PWA | **`public/sw.js`** + **`RegisterSw`** (prod register, minimal SW) | Offline caching strategy when needed |
 | R2 images | **Presigned PUT** at **`/api/upload/presign`** + env in `.env.local.example` | Bucket policy, CORS, optional image transforms |
 | Performance | **Viewport culling** (`visibleItems` in `VigilCanvas`), lazy **`img`** decoding | Broader memoization / virtualize if 500+ cards on screen |
+| E2E / visual | **Playwright** on **:3001** (`next start` + `PLAYWRIGHT_E2E` bootstrap), smoke + screenshot shell | Expand flows (notes, graph, palette), CI job |
 | License risk | Resolved (no tldraw) | **MIT-only** surface area |
 
 ## Strategic decision

@@ -759,6 +759,7 @@ export default function VigilApp() {
       <BacklinksPanel cloudMode={syncMode === "cloud"} />
 
       <div
+        data-vigil-toolbar
         className="pointer-events-none absolute left-3 top-3 z-[800] flex max-w-[min(100vw-24px,920px)] flex-col gap-2"
         style={{
           transform: `translateY(${springY}px)`,

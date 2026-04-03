@@ -30,6 +30,13 @@ The canvas is **custom DOM** (`src/components/canvas/`, `src/stores/canvas-store
 
 Tools: **`vigil_list_items`**, **`vigil_get_item`** (`item_id`), **`vigil_item_links`** (`item_id`), **`vigil_search`** (`q`, optional `mode`, optional `space_id`), **`vigil_graph`** (optional `space_id`). Defaults: **`VIGIL_DEFAULT_SPACE_ID`**, **`VIGIL_APP_URL`** (e.g. `http://localhost:3000`). The Next app must be running for HTTP calls to succeed. REST: **`GET /api/v1/items`** (list by `space_id`) and **`GET /api/v1/items/[itemId]`** (single item).
 
+## Playwright (`npm run test:e2e`)
+
+- Installs with the repo (`@playwright/test`); browsers: `npx playwright install chromium` (first time).
+- Config runs **`npm run build && next start` on `127.0.0.1:3001`** with **`PLAYWRIGHT_E2E=1`** so bootstrap returns an empty demo space even if Neon is configured. This avoids Next’s single-`next dev`-per-folder lock while you keep daily dev on **:3000**.
+- **Visual regression:** `e2e/visual/shell.spec.ts` — run `npm run test:e2e:update` after intentional UI changes. Snapshots are OS-specific (`*-chromium-win32.png`, etc.); CI should use one OS or the Playwright Docker image for stable pixels.
+- Reuse an existing server only when **`CI` is unset** and something is already listening on **:3001** with the same `PLAYWRIGHT_E2E` bootstrap behavior.
+
 ## Hotkeys
 
 Canvas shortcuts use **`e.ctrlKey || e.metaKey`** so **Windows/Linux use Ctrl** and **macOS uses ⌘**. UI copy (`Search (…)`, palette placeholder, context menu) comes from **`useModKeyHints()`** in `src/lib/mod-keys.ts` so labels match the user’s OS.

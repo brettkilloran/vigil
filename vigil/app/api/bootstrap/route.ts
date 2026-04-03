@@ -8,6 +8,22 @@ import {
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 
 export async function GET(req: Request) {
+  /**
+   * Playwright sets `PLAYWRIGHT_E2E=1` on the dev server (see `playwright.config.ts`)
+   * so tests get an empty demo space even when Neon is configured locally.
+   * Do not set this variable in production deployments.
+   */
+  if (process.env.PLAYWRIGHT_E2E === "1") {
+    return Response.json({
+      ok: true,
+      demo: true,
+      spaceId: null,
+      spaces: [] as { id: string; name: string; updatedAt: string }[],
+      items: [],
+      camera: { x: 0, y: 0, zoom: 1 },
+    });
+  }
+
   const db = tryGetDb();
   if (!db) {
     return Response.json({

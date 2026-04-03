@@ -321,6 +321,9 @@ export function VigilCanvas({
   return (
     <div
       ref={viewportRef}
+      data-vigil-canvas
+      role="application"
+      aria-label="VIGIL canvas"
       className="relative h-dvh w-dvw touch-none overflow-hidden bg-neutral-200 dark:bg-neutral-950"
       onPointerDown={onBgPointerDown}
       onPointerMove={onBgPointerMove}
