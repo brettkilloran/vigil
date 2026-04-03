@@ -55,7 +55,7 @@ export function EntityMetaPanel({
   };
 
   return (
-    <div className="mt-2 flex max-h-[min(40vh,220px)] flex-col gap-2 overflow-y-auto border-t border-[var(--vigil-border)] pt-2">
+    <div className="mt-2.5 flex max-h-[min(40vh,220px)] flex-col gap-2.5 overflow-y-auto border-t border-[var(--vigil-border)] pt-2.5">
       {fields.map((f) => {
         const meta = readMeta(item);
         const raw = meta[f.key];
@@ -73,7 +73,7 @@ export function EntityMetaPanel({
             <input
               key={`${item.id}-${f.key}-${initial}`}
               type={f.kind === "date" ? "date" : "text"}
-              className="rounded border border-[var(--vigil-border)] bg-[var(--background)] px-1.5 py-0.5 text-[11px] text-[var(--foreground)]"
+              className="rounded border border-[var(--vigil-border)] bg-[var(--background)] px-2 py-1 text-[11px] text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vigil-snap)]/35"
               defaultValue={initial}
               onBlur={(e) => {
                 const v = e.target.value.trim();

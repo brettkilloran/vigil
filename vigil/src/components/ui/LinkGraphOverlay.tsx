@@ -2,8 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { Network, RotateCcw, X } from "lucide-react";
+
 import { computeForceLayout } from "@/src/lib/graph-layout";
-import { VIGIL_CHIP_BTN, VIGIL_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
+import {
+  VIGIL_CHIP_BTN,
+  VIGIL_CHROME_ICON,
+  VIGIL_GLASS_PANEL,
+} from "@/src/lib/vigil-ui-classes";
 
 type GraphNode = {
   id: string;
@@ -222,8 +228,12 @@ function LinkGraphInner({
     <div
       className={`flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden ${VIGIL_GLASS_PANEL}`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--vigil-border)]/80 px-4 py-2.5">
-        <span className="text-sm font-semibold tracking-tight text-[var(--vigil-label)]">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--vigil-border)]/80 px-4 py-3">
+        <span className="flex items-center gap-2 text-sm font-semibold tracking-tight text-[var(--vigil-label)]">
+          <Network
+            className="size-4 shrink-0 text-[var(--vigil-muted)] opacity-90"
+            aria-hidden
+          />
           Link graph
         </span>
         <div className="flex flex-wrap items-center gap-2">
@@ -232,9 +242,11 @@ function LinkGraphInner({
             className={VIGIL_CHIP_BTN}
             onClick={() => setLayoutRevision((n) => n + 1)}
           >
+            <RotateCcw className={VIGIL_CHROME_ICON} aria-hidden />
             Reset layout
           </button>
           <button type="button" className={VIGIL_CHIP_BTN} onClick={onClose}>
+            <X className={VIGIL_CHROME_ICON} aria-hidden />
             Close
           </button>
         </div>
@@ -257,7 +269,7 @@ function LinkGraphInner({
           />
         )}
       </div>
-      <p className="border-t border-[var(--vigil-border)] px-3 py-2 text-[10px] text-[var(--vigil-muted)]">
+      <p className="border-t border-[var(--vigil-border)] px-4 py-2.5 text-[10px] leading-relaxed text-[var(--vigil-muted)]">
         Layout: <strong>d3-force</strong> (charge + links + collision). Circles
         are items; lines are <code className="text-[9px]">item_links</code>.
         <strong> Reset layout</strong> starts fresh; <strong>drag</strong> a node
@@ -299,7 +311,9 @@ export function LinkGraphOverlay({
           onSelectItem={onSelectItem}
         />
       ) : (
-        <div className="rounded-lg border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] p-4 text-sm text-[var(--vigil-muted)]">
+        <div
+          className={`max-w-md p-4 text-sm text-[var(--vigil-muted)] ${VIGIL_GLASS_PANEL}`}
+        >
           Select a cloud space to view the graph.
         </div>
       )}

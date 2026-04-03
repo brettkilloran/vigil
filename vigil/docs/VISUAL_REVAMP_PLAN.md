@@ -6,9 +6,13 @@
 
 ### Vercel spike (landed)
 
-**Done:** Geist Sans + Geist Mono (UI / code), Lora for `.ProseMirror` H1/H2 only; layered neutral tokens (`--vigil-card-bg`, `--vigil-card-border`, `--vigil-card-header-bg`, Vercel-ish grays + accent); cards use tokens in `CanvasItemView`; border-forward shadows in `card-shadows.ts`; softer glass/chips in `vigil-ui-classes.ts`; subtle dot grid on canvas (`.vigil-canvas-surface`); TipTap toolbar uses card header tokens.
+**Done:** Geist Sans + Geist Mono (UI / code), Lora for `.ProseMirror` H1/H2 only; layered neutral tokens (`--vigil-card-bg`, `--vigil-card-border`, `--vigil-card-header-bg`, `--vigil-folder-tab-bg`, warm `--vigil-canvas`); cards use tokens in `CanvasItemView`; Spatial-style whisper shadows + folder tab/sheen + optional folder tint; flat canvas surface; TipTap inset format bar + card header tokens.
 
-**Next from this doc:** Lucide + toolbar grouping, flower picker, Spatial-level motion/sheen, resize polish, full type-scale audit.
+**Wholesale revamp (in-scope) — done:** A–E from §8: tokens/cards, TipTap chrome + padding, **`VigilMainToolbar`** (Lucide + grouping), dot grid + resize handles + context menu icons, **`CommandPalette`** / **`ScratchPad`** / **`LinkGraphOverlay`** header parity, **`BacklinksPanel`** + **`EntityTypeBar`** + **`TimelinePanel`** padding and Lucide headers, shared **`VIGIL_CHROME_ICON`** / **`VIGIL_ICON_GHOST_BTN`**.
+
+**Spatial reference (local bible):** Keep a copy of **`spatial_reference_bible.md`** (from the Spatial.app extraction) beside the repo or under `docs/` — it lists Swift modules, spring names, typography tokens, and icon inventory that map to **`docs/VIGIL_MASTER_PLAN.md` §4 (Visual Design Bible)**. VIGIL intentionally diverges where the web stack differs (e.g. Geist vs Eina, no Display P3 requirement), but **canvas field, folder tab + sheen, whisper shadows, and flat canvas** should track that document.
+
+**Optional later (not blocking “done”):** Spring-tuned motion matching `spatial_reference_bible.md` §6; full type-scale audit; flower picker (§9); folder item counts when child-space items are queryable on canvas.
 
 ---
 
@@ -17,10 +21,10 @@
 | Symptom | Cause in code / tokens |
 |--------|-------------------------|
 | Stark white cards on near-black canvas | `CanvasItemView` sets note/checklist **`background: #fff`** while canvas uses `--vigil-canvas` (`#0c0d11` dark). No **card-surface** token tied to theme. |
-| Flat / harsh chrome | Toolbar uses text-only **`VIGIL_CHIP_BTN`** rows in `VigilApp.tsx`; little grouping, no icons, tight wrapping. |
-| TipTap bar looks pasted on | `NoteFormatToolbar` in `NoteCard.tsx` uses small letter labels on a thin bordered strip—no iconography, weak separation from body. |
-| Panels readable but cramped | `BacklinksPanel`, `EntityTypeBar`, etc. use glass classes but **padding / type scale** could step up one notch for dark backgrounds. |
-| Canvas feels empty / void | Solid fill only; optional **dot grid** or very subtle noise improves scale (plan allows this). |
+| Flat / harsh chrome | Addressed: **`VigilMainToolbar`** + Lucide; legacy diagnosis referred to pre-refactor `VigilApp` toolbar. |
+| TipTap bar looks pasted on | Addressed: Lucide icon buttons, group dividers, `VIGIL_EDITOR_TOOLBAR_ICON_BTN`, extra `.ProseMirror` padding—further “inset pill” polish optional. |
+| Panels readable but cramped | Addressed: **`p-3`**, wider Links panel, **`VIGIL_METADATA_LABEL`** sections, focus rings on list rows; further type-scale audit optional. |
+| Canvas feels empty / void | Addressed per **Spatial bible**: **flat warm/cool neutral field** — dot grid removed; calm empty canvas. |
 
 ---
 
@@ -102,23 +106,21 @@
 - `VIGIL_TOOLBAR_ICON_BTN` — square-ish, icon-centered, hover ring.
 - Keep `VIGIL_CHIP_BTN` for secondary text actions or demote to “compact chip” variant.
 
-**Also revamp:** `ContextMenu.tsx`, `CommandPalette.tsx`, `ScratchPad`, `LinkGraphOverlay` header — same icon language and spacing.
+**Also revamp:** `ContextMenu.tsx`, `CommandPalette.tsx`, `ScratchPad`, `LinkGraphOverlay` — **done** (Lucide + spacing + focus rings where needed).
 
 ---
 
 ## 6. Canvas background
 
-**File:** `VigilCanvas.tsx`
+**File:** `VigilCanvas.tsx` + `app/globals.css` (`.vigil-canvas-surface`)
 
-- Layer under transform: **optional** CSS `background-image` radial dots (use `color-mix` with `--vigil-canvas` so it works in light/dark).
-- Keep performance: **no** animated grid; static pattern only.
+- **Spatial-aligned:** flat **`--vigil-canvas`** only (warm light ~`#eae8ea`, dark charcoal ~`#1e1e22`). No dot texture — matches master plan “emptiness IS the design.”
 
 ---
 
 ## 7. Side panels (Links, TTRPG, Timeline)
 
-- Already on glass; bump **padding** (`p-3`), **max-width** where needed, **section titles** with `VIGIL_METADATA_LABEL` / semibold mix.
-- Ensure **focus rings** visible on dark glass.
+- **Landed:** `p-3`, Links `max-w` 300px, section titles via `VIGIL_METADATA_LABEL`, list-row / meta **focus rings**; timeline uses ghost dismiss like scratch.
 
 ---
 

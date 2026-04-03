@@ -9,7 +9,7 @@ import { screenToCanvas } from "@/src/lib/screen-to-canvas";
 import type { SnapGuide } from "@/src/lib/snap";
 import { snapRectPosition } from "@/src/lib/snap";
 import { useCanvasStore } from "@/src/stores/canvas-store";
-import type { CanvasItem } from "@/src/stores/canvas-types";
+import type { CanvasItem, ItemType } from "@/src/stores/canvas-types";
 
 function visibleItems(
   items: CanvasItem[],
@@ -41,7 +41,7 @@ export function VigilCanvas({
   onPatchItem: (id: string, patch: Partial<CanvasItem>) => void;
   onCreateItemAt: (
     world: { x: number; y: number },
-    kind: "note" | "sticky",
+    kind: ItemType,
   ) => void | Promise<void | string | null>;
   onOpenFolder?: (childSpaceId: string) => void;
 }) {

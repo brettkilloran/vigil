@@ -7,13 +7,14 @@ const PRESETS: Record<
   { rest: string; selected: string; lift: string }
 > = {
   light: {
-    rest: "0 0 0 1px color-mix(in srgb, var(--vigil-card-border) 100%, transparent), 0 1px 2px rgba(0,0,0,0.04)",
+    /* Spatial: two whisper layers — tight + diffuse, barely perceptible at rest */
+    rest: "0 0 0 1px color-mix(in srgb, var(--vigil-card-border) 100%, transparent), 0 1px 3px rgba(0,0,0,0.04), 0 5px 14px rgba(0,0,0,0.035)",
     selected:
       "0 0 0 2px var(--vigil-snap), 0 1px 2px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.06)",
     lift: "0 0 0 2px var(--vigil-snap), 0 4px 12px rgba(0,0,0,0.08), 0 12px 28px rgba(0,0,0,0.08)",
   },
   dark: {
-    rest: "0 0 0 1px color-mix(in srgb, var(--vigil-card-border) 100%, transparent), 0 1px 2px rgba(0,0,0,0.4)",
+    rest: "0 0 0 1px color-mix(in srgb, var(--vigil-card-border) 100%, transparent), 0 1px 3px rgba(0,0,0,0.42), 0 6px 18px rgba(0,0,0,0.28)",
     selected:
       "0 0 0 2px var(--vigil-snap), 0 2px 8px rgba(0,0,0,0.45), 0 8px 20px rgba(0,0,0,0.35)",
     lift: "0 0 0 2px var(--vigil-snap), 0 6px 16px rgba(0,0,0,0.5), 0 14px 32px rgba(0,0,0,0.4)",

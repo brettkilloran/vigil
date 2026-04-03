@@ -31,6 +31,7 @@ jobs:
         run: npm run check
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
+      # Playwright skips e2e/visual on CI (platform-specific screenshots); smoke + interaction tests only.
       - name: E2E tests
         run: npm run test:e2e
         env:

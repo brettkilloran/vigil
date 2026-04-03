@@ -1,12 +1,50 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Download,
+  FileText,
+  Folder,
+  Globe,
+  Image as ImageIcon,
+  Layers,
+  ListChecks,
+  NotebookPen,
+  Search,
+  Sparkles,
+  StickyNote,
+  Type,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, type ReactNode, useState } from "react";
 
 import { useModKeyHints } from "@/src/lib/mod-keys";
 import { useCanvasStore } from "@/src/stores/canvas-store";
 import type { CanvasItem } from "@/src/stores/canvas-types";
 
-type Hit = { kind: "item"; item: CanvasItem } | { kind: "action"; id: string; label: string };
+type Hit =
+  | { kind: "item"; item: CanvasItem }
+  | { kind: "action"; id: string; label: string; icon: ReactNode };
+
+const hitIconClass =
+  "size-4 shrink-0 text-[var(--vigil-muted)] opacity-90";
+
+function iconForItemType(itemType: string): ReactNode {
+  switch (itemType) {
+    case "note":
+      return <FileText className={hitIconClass} aria-hidden />;
+    case "sticky":
+      return <StickyNote className={hitIconClass} aria-hidden />;
+    case "image":
+      return <ImageIcon className={hitIconClass} aria-hidden />;
+    case "checklist":
+      return <ListChecks className={hitIconClass} aria-hidden />;
+    case "webclip":
+      return <Globe className={hitIconClass} aria-hidden />;
+    case "folder":
+      return <Folder className={hitIconClass} aria-hidden />;
+    default:
+      return <FileText className={hitIconClass} aria-hidden />;
+  }
+}
 
 type SearchMode = "fts" | "semantic" | "hybrid";
 
@@ -135,8 +173,18 @@ export function CommandPalette({
   const hits: Hit[] = useMemo(() => {
     const qq = q.trim().toLowerCase();
     const actions: Hit[] = [
-      { kind: "action", id: "export", label: "Export canvas JSON" },
-      { kind: "action", id: "scratch", label: "Toggle scratch pad" },
+      {
+        kind: "action",
+        id: "export",
+        label: "Export canvas",
+        icon: <Download className={hitIconClass} aria-hidden />,
+      },
+      {
+        kind: "action",
+        id: "scratch",
+        label: "Scratch pad",
+        icon: <NotebookPen className={hitIconClass} aria-hidden />,
+      },
     ];
 
     if (!qq) return actions;
@@ -195,17 +243,29 @@ export function CommandPalette({
 
   if (!open) return null;
 
-  const modeButtons: { id: SearchMode; label: string; title: string }[] = [
-    { id: "fts", label: "Keywords", title: "Full-text search (Postgres)" },
+  const modeButtons: {
+    id: SearchMode;
+    label: string;
+    title: string;
+    icon: ReactNode;
+  }[] = [
+    {
+      id: "fts",
+      label: "Keywords",
+      title: "Full-text search (Postgres)",
+      icon: <Type className="size-3.5 shrink-0 opacity-90" aria-hidden />,
+    },
     {
       id: "semantic",
       label: "Meaning",
       title: "Vector similarity (needs embeddings on items)",
+      icon: <Sparkles className="size-3.5 shrink-0 opacity-90" aria-hidden />,
     },
     {
       id: "hybrid",
       label: "Both",
       title: "Keywords first, then extra semantic matches",
+      icon: <Layers className="size-3.5 shrink-0 opacity-90" aria-hidden />,
     },
   ];
 
@@ -218,34 +278,42 @@ export function CommandPalette({
       }}
     >
       <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-[var(--vigil-border)] bg-[var(--vigil-elevated)]/95 shadow-2xl shadow-black/15 backdrop-blur-xl dark:bg-[var(--vigil-elevated)]/90 dark:shadow-black/50">
-        <input
-          className="w-full border-0 border-b border-[var(--vigil-border)] bg-transparent px-4 py-3.5 text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--vigil-muted)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--vigil-snap)]/30"
-          placeholder={
-            spaceId
-              ? `Search items (${modKeys.search})…`
-              : `Search local canvas (${modKeys.search} opens this)…`
-          }
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") onClose();
-            if (e.key === "Enter" && hits[0]) run(hits[0]!);
-          }}
-        />
+        <div className="flex items-center gap-2.5 border-b border-[var(--vigil-border)] px-3 py-2.5">
+          <Search
+            className="size-4 shrink-0 text-[var(--vigil-muted)] opacity-90"
+            aria-hidden
+          />
+          <input
+            className="min-w-0 flex-1 border-0 bg-transparent py-1 text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--vigil-muted)] focus-visible:ring-0"
+            placeholder={
+              spaceId
+                ? `Search items (${modKeys.search})…`
+                : `Search local canvas (${modKeys.search} opens this)…`
+            }
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") onClose();
+              if (e.key === "Enter" && hits[0]) run(hits[0]!);
+            }}
+            aria-label="Search"
+          />
+        </div>
         {spaceId ? (
-          <div className="flex flex-wrap gap-1 border-b border-[var(--vigil-border)] px-3 py-2">
+          <div className="flex flex-wrap gap-1.5 border-b border-[var(--vigil-border)] px-3 py-2.5">
             {modeButtons.map((b) => (
               <button
                 key={b.id}
                 type="button"
                 title={b.title}
-                className={`rounded-md px-2 py-0.5 text-[11px] font-medium ${
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vigil-snap)]/35 ${
                   searchMode === b.id
                     ? "bg-[var(--vigil-label)] text-[var(--vigil-btn-bg)]"
                     : "text-[var(--vigil-muted)] hover:bg-black/5 dark:hover:bg-white/10"
                 }`}
                 onClick={() => setSearchModePersist(b.id)}
               >
+                {b.icon}
                 {b.label}
               </button>
             ))}
@@ -256,13 +324,13 @@ export function CommandPalette({
             {remoteHint}
           </p>
         ) : null}
-        <ul className="max-h-72 overflow-auto py-1 text-sm">
+        <ul className="max-h-72 overflow-auto py-1.5 text-sm">
           {remoteLoading && spaceId && q.trim().length >= 2 ? (
-            <li className="px-4 py-2 text-[var(--vigil-muted)]">Searching…</li>
+            <li className="px-4 py-2.5 text-[var(--vigil-muted)]">Searching…</li>
           ) : null}
           {!remoteLoading || !spaceId || q.trim().length < 2 ? (
             hits.length === 0 ? (
-              <li className="px-4 py-2 text-[var(--vigil-muted)]">
+              <li className="px-4 py-2.5 text-[var(--vigil-muted)]">
                 {spaceId &&
                 q.trim().length >= 2 &&
                 (searchMode === "semantic" || searchMode === "hybrid")
@@ -274,18 +342,28 @@ export function CommandPalette({
                 <li key={h.kind === "item" ? h.item.id : h.id}>
                   <button
                     type="button"
-                    className="flex w-full px-4 py-2 text-left hover:bg-black/5 dark:hover:bg-white/10"
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left transition-colors hover:bg-black/5 focus-visible:bg-black/5 focus-visible:outline-none dark:hover:bg-white/10 dark:focus-visible:bg-white/10"
                     onClick={() => run(h)}
                   >
                     {h.kind === "item" ? (
                       <>
-                        <span className="font-medium">{h.item.title}</span>
-                        <span className="ml-2 text-xs text-[var(--vigil-muted)]">
-                          {h.item.itemType}
+                        {iconForItemType(h.item.itemType)}
+                        <span className="min-w-0 flex-1">
+                          <span className="font-medium text-[var(--foreground)]">
+                            {h.item.title}
+                          </span>
+                          <span className="ml-2 text-xs text-[var(--vigil-muted)]">
+                            {h.item.itemType}
+                          </span>
                         </span>
                       </>
                     ) : (
-                      h.label
+                      <>
+                        {h.icon}
+                        <span className="font-medium text-[var(--foreground)]">
+                          {h.label}
+                        </span>
+                      </>
                     )}
                   </button>
                 </li>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Link2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -8,7 +9,10 @@ import {
   type LocalLinkEndpoint,
 } from "@/src/lib/local-item-links";
 import { localItemsMentioningTitle } from "@/src/lib/local-title-mentions";
-import { VIGIL_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
+import {
+  VIGIL_GLASS_PANEL,
+  VIGIL_METADATA_LABEL,
+} from "@/src/lib/vigil-ui-classes";
 import { useCanvasStore } from "@/src/stores/canvas-store";
 
 type Endpoint = { id: string; title: string; itemType: string };
@@ -34,7 +38,7 @@ type Loaded =
 type LinkRow = Pick<Endpoint, "id" | "title" | "itemType">;
 
 const linkRowBtn =
-  "w-full truncate rounded-lg px-1.5 py-1 text-left text-[var(--foreground)] transition-colors hover:bg-black/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vigil-snap)]/35 dark:hover:bg-white/[0.08]";
+  "w-full truncate rounded-lg px-2 py-1.5 text-left text-[var(--foreground)] transition-colors hover:bg-black/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vigil-snap)]/35 dark:hover:bg-white/[0.08]";
 
 function LinkRowList({
   label,
@@ -48,9 +52,7 @@ function LinkRowList({
   if (rows.length === 0) return null;
   return (
     <div>
-      <div className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--vigil-muted)]">
-        {label}
-      </div>
+      <div className={`mb-1 ${VIGIL_METADATA_LABEL}`}>{label}</div>
       <ul className="space-y-0.5">
         {rows.map((r) => (
           <li key={r.id}>
@@ -181,12 +183,12 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
 
   if (!itemId) return null;
 
-  const panelClass = `pointer-events-auto absolute right-3 top-3 z-[800] max-h-[min(78vh,520px)] w-[min(92vw,280px)] overflow-y-auto p-2.5 text-xs ${VIGIL_GLASS_PANEL}`;
+  const panelClass = `pointer-events-auto absolute right-3 top-3 z-[800] max-h-[min(78vh,520px)] w-[min(92vw,300px)] overflow-y-auto p-3 text-xs ${VIGIL_GLASS_PANEL}`;
 
   const mentionsBlock =
     selectedItem && selectedItem.title.trim().length >= 3 ? (
-      <div className="mt-3 border-t border-[var(--vigil-border)]/70 pt-2.5">
-        <p className="mb-1 text-[10px] leading-snug text-[var(--vigil-muted)]">
+      <div className="mt-3 border-t border-[var(--vigil-border)]/70 pt-3">
+        <p className="mb-1.5 text-[11px] leading-snug text-[var(--vigil-muted)]">
           Other cards whose text or title contains{" "}
           <span className="font-medium text-[var(--foreground)]">
             {selectedItem.title.trim()}
@@ -204,10 +206,14 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
   if (!cloudMode) {
     return (
       <div className={panelClass}>
-        <div className="mb-1.5 font-semibold tracking-tight text-[var(--vigil-label)]">
+        <div className="mb-2 flex items-center gap-2 font-semibold tracking-tight text-[var(--vigil-label)]">
+          <Link2
+            className="size-4 shrink-0 text-[var(--vigil-muted)] opacity-90"
+            aria-hidden
+          />
           Links
         </div>
-        <p className="mb-2 text-[10px] leading-snug text-[var(--vigil-muted)]">
+        <p className="mb-2.5 text-[11px] leading-snug text-[var(--vigil-muted)]">
           From TipTap <code className="rounded bg-black/5 px-0.5 dark:bg-white/10">[[</code>{" "}
           links on this canvas (local-only; not synced to Neon).
         </p>
@@ -230,10 +236,14 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
 
   return (
     <div className={panelClass}>
-      <div className="mb-1.5 font-semibold tracking-tight text-[var(--vigil-label)]">
+      <div className="mb-2 flex items-center gap-2 font-semibold tracking-tight text-[var(--vigil-label)]">
+        <Link2
+          className="size-4 shrink-0 text-[var(--vigil-muted)] opacity-90"
+          aria-hidden
+        />
         Links
       </div>
-      <p className="mb-2 text-[10px] leading-snug text-[var(--vigil-muted)]">
+      <p className="mb-2.5 text-[11px] leading-snug text-[var(--vigil-muted)]">
         Server <code className="text-[9px]">item_links</code> plus wiki text on other notes.
       </p>
       {cloudLoading && !inSync ? (
@@ -252,9 +262,7 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
         <div className="space-y-2.5">
           {outgoing.length > 0 ? (
             <div>
-              <div className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--vigil-muted)]">
-                To
-              </div>
+              <div className={`mb-1 ${VIGIL_METADATA_LABEL}`}>To</div>
               <ul className="space-y-0.5">
                 {outgoing.map((r) => (
                   <li key={r.linkId}>
@@ -275,9 +283,7 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
           ) : null}
           {incoming.length > 0 ? (
             <div>
-              <div className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--vigil-muted)]">
-                From
-              </div>
+              <div className={`mb-1 ${VIGIL_METADATA_LABEL}`}>From</div>
               <ul className="space-y-0.5">
                 {incoming.map((r) => (
                   <li key={r.linkId}>

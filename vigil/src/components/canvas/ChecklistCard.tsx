@@ -11,16 +11,12 @@ import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
 import {
   Bold,
-  Code,
-  Heading1,
   Heading2,
-  Heading3,
   Highlighter,
   Italic,
   List,
   ListOrdered,
   ListTodo,
-  Minus,
   Strikethrough,
   Underline,
 } from "lucide-react";
@@ -28,12 +24,12 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 
 import { extractVigilItemLinkTargets } from "@/src/lib/extract-vigil-item-links";
 import { useModKeyHints } from "@/src/lib/mod-keys";
+import type { JSONDoc } from "@/src/lib/tiptap-doc-presets";
+import { emptyChecklistDoc } from "@/src/lib/tiptap-doc-presets";
 import {
   VIGIL_EDITOR_TOOLBAR_BTN_ON,
   VIGIL_EDITOR_TOOLBAR_ICON_BTN,
 } from "@/src/lib/vigil-ui-classes";
-import type { JSONDoc } from "@/src/lib/tiptap-doc-presets";
-import { emptyNoteDoc } from "@/src/lib/tiptap-doc-presets";
 import { getWikiLinkRangeFromState } from "@/src/lib/wiki-link-range";
 import type { CanvasItem } from "@/src/stores/canvas-types";
 
@@ -55,16 +51,7 @@ const linkExt = Link.configure({
   },
 });
 
-function FormatBarDivider() {
-  return (
-    <span
-      className="mx-0.5 inline-block h-5 w-px shrink-0 bg-[var(--vigil-card-border)] align-middle"
-      aria-hidden
-    />
-  );
-}
-
-function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
+function ChecklistToolbar({ editor }: { editor: Editor | null }) {
   const hints = useModKeyHints();
   const [, bump] = useReducer((n: number) => n + 1, 0);
 
@@ -89,6 +76,15 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
       className="mx-2 mt-1.5 mb-1 flex flex-wrap items-center gap-0.5 rounded-lg border border-[var(--vigil-card-border)] bg-[var(--vigil-card-header-bg)] px-1 py-1 shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.35)]"
       onMouseDown={(e) => e.preventDefault()}
     >
+      <button
+        type="button"
+        className={`${ic} ${editor.isActive("taskList") ? on : ""}`}
+        title="Checklist"
+        aria-label="Toggle checklist"
+        onClick={() => editor.chain().focus().toggleTaskList().run()}
+      >
+        <ListTodo className="size-3.5" strokeWidth={2.25} />
+      </button>
       <button
         type="button"
         className={`${ic} ${editor.isActive("bold") ? on : ""}`}
@@ -127,15 +123,6 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
       </button>
       <button
         type="button"
-        className={`${ic} ${editor.isActive("code") ? on : ""}`}
-        title="Inline code"
-        aria-label="Inline code"
-        onClick={() => editor.chain().focus().toggleCode().run()}
-      >
-        <Code className="size-3.5" strokeWidth={2.25} />
-      </button>
-      <button
-        type="button"
         className={`${ic} ${editor.isActive("highlight") ? on : ""}`}
         title="Highlight"
         aria-label="Highlight"
@@ -143,23 +130,11 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
       >
         <Highlighter className="size-3.5" strokeWidth={2.25} />
       </button>
-      <FormatBarDivider />
-      <button
-        type="button"
-        className={`${ic} ${editor.isActive("heading", { level: 1 }) ? on : ""}`}
-        title="Heading 1"
-        aria-label="Heading 1"
-        onClick={() =>
-          editor.chain().focus().toggleHeading({ level: 1 }).run()
-        }
-      >
-        <Heading1 className="size-3.5" strokeWidth={2.25} />
-      </button>
       <button
         type="button"
         className={`${ic} ${editor.isActive("heading", { level: 2 }) ? on : ""}`}
-        title="Heading 2"
-        aria-label="Heading 2"
+        title="Section heading"
+        aria-label="Section heading"
         onClick={() =>
           editor.chain().focus().toggleHeading({ level: 2 }).run()
         }
@@ -168,29 +143,8 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
       </button>
       <button
         type="button"
-        className={`${ic} ${editor.isActive("heading", { level: 3 }) ? on : ""}`}
-        title="Heading 3"
-        aria-label="Heading 3"
-        onClick={() =>
-          editor.chain().focus().toggleHeading({ level: 3 }).run()
-        }
-      >
-        <Heading3 className="size-3.5" strokeWidth={2.25} />
-      </button>
-      <FormatBarDivider />
-      <button
-        type="button"
-        className={`${ic} ${editor.isActive("taskList") ? on : ""}`}
-        title="Task list"
-        aria-label="Task list"
-        onClick={() => editor.chain().focus().toggleTaskList().run()}
-      >
-        <ListTodo className="size-3.5" strokeWidth={2.25} />
-      </button>
-      <button
-        type="button"
         className={`${ic} ${editor.isActive("bulletList") ? on : ""}`}
-        title="Bullet list"
+        title="Bullets (inside task)"
         aria-label="Bullet list"
         onClick={() => editor.chain().focus().toggleBulletList().run()}
       >
@@ -205,21 +159,11 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
       >
         <ListOrdered className="size-3.5" strokeWidth={2.25} />
       </button>
-      <FormatBarDivider />
-      <button
-        type="button"
-        className={ic}
-        title="Divider"
-        aria-label="Horizontal rule"
-        onClick={() => editor.chain().focus().setHorizontalRule().run()}
-      >
-        <Minus className="size-3.5" strokeWidth={2.25} />
-      </button>
     </div>
   );
 }
 
-export function NoteCard({
+export function ChecklistCard({
   item,
   onPersist,
   active,
@@ -236,14 +180,14 @@ export function NoteCard({
   peerItems: CanvasItem[];
   cloudSyncLinks: boolean;
 }) {
-  const initial = (item.contentJson as JSONDoc | null) ?? emptyNoteDoc();
+  const initial = (item.contentJson as JSONDoc | null) ?? emptyChecklistDoc();
   const [linkQ, setLinkQ] = useState("");
   const [wikiCtx, setWikiCtx] = useState<WikiCtxState>(null);
   const syncTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const extensions = useMemo(
     () => [
-      StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+      StarterKit.configure({ heading: { levels: [2, 3] } }),
       TiptapUnderline,
       Highlight.configure({
         multicolor: false,
@@ -253,8 +197,7 @@ export function NoteCard({
         },
       }),
       Placeholder.configure({
-        placeholder:
-          "Write something… Type [[ to link another card, or use the picker above.",
+        placeholder: "List tasks… Use [[ to link a card.",
       }),
       linkExt,
       TaskList,
@@ -293,7 +236,8 @@ export function NoteCard({
     editable: active,
     editorProps: {
       attributes: {
-        class: "max-w-none text-sm leading-relaxed focus:outline-none min-h-[120px] px-4 py-3 text-[var(--foreground)]",
+        class:
+          "checklist-editor max-w-none text-sm leading-relaxed focus:outline-none min-h-[120px] px-4 py-3 text-[var(--foreground)]",
       },
       handleKeyDown(view, event) {
         if (event.key === "Escape") {
@@ -311,10 +255,9 @@ export function NoteCard({
     onUpdate: ({ editor: ed }) => {
       const json = ed.getJSON() as JSONDoc;
       const text = ed.getText();
-      const title = text.trim().split(/\n/)[0]?.slice(0, 255) || "Note";
+      const title = text.trim().split(/\n/)[0]?.slice(0, 255) || "Checklist";
       onPersist({ contentJson: json, contentText: text, title });
       scheduleLinkSync(json);
-
       syncWikiFromEditor(ed, setWikiCtx);
     },
   });
@@ -337,7 +280,7 @@ export function NoteCard({
 
   useEffect(() => {
     if (!editor) return;
-    const next = (item.contentJson as JSONDoc | null) ?? emptyNoteDoc();
+    const next = (item.contentJson as JSONDoc | null) ?? emptyChecklistDoc();
     const cur = editor.getJSON() as JSONDoc;
     if (JSON.stringify(cur) !== JSON.stringify(next)) {
       editor.commands.setContent(next, false);
@@ -380,10 +323,7 @@ export function NoteCard({
         type: "text",
         text: target.title || "Note",
         marks: [
-          {
-            type: "link",
-            attrs: { href, target: null },
-          },
+          { type: "link", attrs: { href, target: null } },
         ],
       })
       .insertContent(" ")
@@ -391,7 +331,10 @@ export function NoteCard({
     setLinkQ("");
   };
 
-  const insertWikiLink = (target: CanvasItem, range: { from: number; to: number }) => {
+  const insertWikiLink = (
+    target: CanvasItem,
+    range: { from: number; to: number },
+  ) => {
     if (!editor) return;
     const href = `vigil:item:${target.id}`;
     editor
@@ -402,10 +345,7 @@ export function NoteCard({
         type: "text",
         text: target.title || "Note",
         marks: [
-          {
-            type: "link",
-            attrs: { href, target: null },
-          },
+          { type: "link", attrs: { href, target: null } },
         ],
       })
       .insertContent(" ")
@@ -415,73 +355,73 @@ export function NoteCard({
 
   return (
     <>
-    <div className="flex h-full min-h-0 flex-col bg-[var(--vigil-card-bg)]">
-      {active && peerItems.some((p) => p.id !== item.id) ? (
-        <div className="flex flex-col gap-1 border-b border-black/5 px-2 py-1 dark:border-white/10">
-          <input
-            type="search"
-            className="w-full rounded border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] px-1.5 py-0.5 text-[11px] text-[var(--foreground)]"
-            placeholder="Link to item…"
-            value={linkQ}
-            onChange={(e) => setLinkQ(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && filteredPeers[0]) {
-                e.preventDefault();
-                insertItemLink(filteredPeers[0]!);
-              }
-            }}
-          />
-          {linkQ.trim() && filteredPeers.length > 0 ? (
-            <div className="flex max-h-20 flex-wrap gap-0.5 overflow-y-auto">
-              {filteredPeers.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className="max-w-full truncate rounded bg-black/5 px-1.5 py-0.5 text-[10px] hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => insertItemLink(p)}
-                >
-                  {p.title}
-                </button>
-              ))}
-            </div>
-          ) : null}
+      <div className="flex h-full min-h-0 flex-col bg-[var(--vigil-card-bg)]">
+        {active && peerItems.some((p) => p.id !== item.id) ? (
+          <div className="flex flex-col gap-1 border-b border-black/5 px-2 py-1 dark:border-white/10">
+            <input
+              type="search"
+              className="w-full rounded border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] px-1.5 py-0.5 text-[11px] text-[var(--foreground)]"
+              placeholder="Link to item…"
+              value={linkQ}
+              onChange={(e) => setLinkQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && filteredPeers[0]) {
+                  e.preventDefault();
+                  insertItemLink(filteredPeers[0]!);
+                }
+              }}
+            />
+            {linkQ.trim() && filteredPeers.length > 0 ? (
+              <div className="flex max-h-20 flex-wrap gap-0.5 overflow-y-auto">
+                {filteredPeers.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className="max-w-full truncate rounded bg-black/5 px-1.5 py-0.5 text-[10px] hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => insertItemLink(p)}
+                  >
+                    {p.title}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {active ? <ChecklistToolbar editor={editor} /> : null}
+        <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--vigil-card-bg)]">
+          <EditorContent editor={editor} />
+        </div>
+      </div>
+      {wikiCtx && active ? (
+        <div
+          className="fixed z-[950] max-h-36 min-w-[200px] max-w-xs overflow-y-auto rounded-md border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] p-1 text-xs shadow-lg"
+          style={{ left: wikiCtx.left, top: wikiCtx.top }}
+          role="menu"
+          aria-label="Link to item"
+        >
+          {wikiPeers.length === 0 ? (
+            <p className="px-2 py-1 text-[var(--vigil-muted)]">
+              No matching items. Keep typing or Esc to cancel.
+            </p>
+          ) : (
+            wikiPeers.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                role="menuitem"
+                className="flex w-full truncate rounded px-2 py-1 text-left hover:bg-black/5 dark:hover:bg-white/10"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() =>
+                  insertWikiLink(p, { from: wikiCtx.from, to: wikiCtx.to })
+                }
+              >
+                {p.title}
+              </button>
+            ))
+          )}
         </div>
       ) : null}
-      {active ? <NoteFormatToolbar editor={editor} /> : null}
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--vigil-card-bg)]">
-        <EditorContent editor={editor} />
-      </div>
-    </div>
-    {wikiCtx && active ? (
-      <div
-        className="fixed z-[950] max-h-36 min-w-[200px] max-w-xs overflow-y-auto rounded-md border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] p-1 text-xs shadow-lg"
-        style={{ left: wikiCtx.left, top: wikiCtx.top }}
-        role="menu"
-        aria-label="Link to item"
-      >
-        {wikiPeers.length === 0 ? (
-          <p className="px-2 py-1 text-[var(--vigil-muted)]">
-            No matching items. Keep typing or Esc to cancel.
-          </p>
-        ) : (
-          wikiPeers.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              role="menuitem"
-              className="flex w-full truncate rounded px-2 py-1 text-left hover:bg-black/5 dark:hover:bg-white/10"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() =>
-                insertWikiLink(p, { from: wikiCtx.from, to: wikiCtx.to })
-              }
-            >
-              {p.title}
-            </button>
-          ))
-        )}
-      </div>
-    ) : null}
     </>
   );
 }

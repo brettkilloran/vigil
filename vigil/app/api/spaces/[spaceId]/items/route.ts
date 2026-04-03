@@ -75,7 +75,17 @@ export async function POST(
 
   const t = parsed.data.itemType;
   const defaultTitle =
-    t === "note" ? "Note" : t === "sticky" ? "Sticky" : t === "folder" ? "Folder" : "Item";
+    t === "note"
+      ? "Note"
+      : t === "sticky"
+        ? "Sticky"
+        : t === "folder"
+          ? "Folder"
+          : t === "checklist"
+            ? "Checklist"
+            : t === "webclip"
+              ? "Web clip"
+              : "Item";
   const title = parsed.data.title?.trim() || defaultTitle;
   const contentText = parsed.data.contentText ?? "";
   const color =

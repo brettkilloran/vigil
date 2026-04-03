@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
+import { FilePlus, Layers } from "lucide-react";
 
 import { BacklinksPanel } from "@/src/components/ui/BacklinksPanel";
 import { EntityTypeBar } from "@/src/components/canvas/EntityTypeBar";
@@ -11,6 +12,8 @@ import { LinkGraphOverlay } from "@/src/components/ui/LinkGraphOverlay";
 import { TimelinePanel } from "@/src/components/ui/TimelinePanel";
 import { ContextMenu } from "@/src/components/ui/ContextMenu";
 import { ScratchPad } from "@/src/components/ui/ScratchPad";
+import { SelectionActionBar } from "@/src/components/ui/SelectionActionBar";
+import { VigilMainToolbar } from "@/src/components/ui/VigilMainToolbar";
 import {
   type VigilColorScheme,
   useVigilThemeContext,
@@ -18,14 +21,14 @@ import {
 import { useSpringBetween } from "@/src/hooks/use-spring-between";
 import { useModKeyHints } from "@/src/lib/mod-keys";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
-import { VIGIL_CHIP_BTN, VIGIL_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
 import {
   findNeighborInDirection,
   selectionAnchor,
 } from "@/src/lib/spatial-nav";
 import { VIGIL_UI_SPRING } from "@/src/lib/spring";
+import { emptyChecklistDoc } from "@/src/lib/tiptap-doc-presets";
 import { useCanvasStore } from "@/src/stores/canvas-store";
-import type { CameraState, CanvasItem } from "@/src/stores/canvas-types";
+import type { CameraState, CanvasItem, ItemType } from "@/src/stores/canvas-types";
 import { defaultCamera } from "@/src/stores/canvas-types";
 
 const LS_KEY = "vigil-canvas-local-v1";
@@ -101,6 +104,7 @@ export default function VigilApp() {
   );
   const ctxScreenRef = useRef<{ x: number; y: number } | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const imagePickInputRef = useRef<HTMLInputElement>(null);
   const uploadMessageTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
@@ -156,6 +160,113 @@ export default function VigilApp() {
     }, 450);
     itemTimers.current.set(id, t);
   }, []);
+
+  /** `leftX` / `topY` = canvas-space top-left of the new image card (same as drop handler). */
+  const processImageFileAtWorld = useCallback(
+    async (img: File, leftX: number, topY: number) => {
+      const sid = useCanvasStore.getState().spaceId;
+      const w = 320;
+      const h = 240;
+      const zNext = Object.keys(useCanvasStore.getState().items).length + 1;
+      const title = img.name.slice(0, 255) || "Image";
+      const contentType = img.type || "application/octet-stream";
+
+      const putLocalPreview = () => {
+        const url = URL.createObjectURL(img);
+        const item: CanvasItem = {
+          id: crypto.randomUUID(),
+          spaceId: sid ?? "local",
+          itemType: "image",
+          x: leftX,
+          y: topY,
+          width: w,
+          height: h,
+          zIndex: zNext,
+          title,
+          contentText: "",
+          imageUrl: url,
+          imageMeta: { filename: img.name, localPreview: true },
+        };
+        putItem(item);
+        pushUndo({ kind: "create", item: { ...item } });
+      };
+
+      if (!sid) {
+        putLocalPreview();
+        return;
+      }
+
+      void (async () => {
+        const pres = await fetch("/api/upload/presign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contentType,
+            filename: img.name,
+            spaceId: sid,
+          }),
+        });
+        const presData = (await pres.json()) as {
+          ok?: boolean;
+          uploadUrl?: string;
+          publicUrl?: string;
+          key?: string;
+          error?: string;
+        };
+
+        if (!pres.ok || !presData.ok || !presData.uploadUrl || !presData.publicUrl) {
+          showUploadMessage(
+            presData.error ??
+              `Could not prepare image upload (HTTP ${pres.status}). Dropped a local-only preview — it will not sync or survive refresh.`,
+          );
+          putLocalPreview();
+          return;
+        }
+
+        const putRes = await fetch(presData.uploadUrl, {
+          method: "PUT",
+          body: img,
+          headers: { "Content-Type": contentType },
+        });
+        if (!putRes.ok) {
+          showUploadMessage(
+            `Upload to R2 failed (${putRes.status}). Dropped a local-only preview instead.`,
+          );
+          putLocalPreview();
+          return;
+        }
+
+        clearTimeout(uploadMessageTimer.current);
+        setUploadMessage(null);
+
+        const res = await fetch(`/api/spaces/${sid}/items`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            itemType: "image",
+            x: leftX,
+            y: topY,
+            width: w,
+            height: h,
+            title,
+            imageUrl: presData.publicUrl,
+            imageMeta: { filename: img.name, key: presData.key },
+          }),
+        });
+        const data = (await res.json()) as { ok?: boolean; item?: CanvasItem };
+        if (data.ok && data.item) {
+          putItem(data.item);
+          pushUndo({ kind: "create", item: { ...data.item } });
+        } else {
+          showUploadMessage(
+            (data as { error?: string }).error ??
+              "Image uploaded but creating the canvas item failed.",
+          );
+        }
+      })();
+    },
+    [putItem, pushUndo, showUploadMessage],
+  );
 
   const onPatchItem = useCallback(
     (id: string, patch: Partial<CanvasItem>) => {
@@ -276,16 +387,49 @@ export default function VigilApp() {
     })();
   }, [router]);
 
+  const itemDims = useCallback((kind: ItemType) => {
+    switch (kind) {
+      case "sticky":
+        return { w: 200, h: 140 };
+      case "checklist":
+        return { w: 280, h: 260 };
+      case "webclip":
+        return { w: 400, h: 320 };
+      case "image":
+        return { w: 320, h: 240 };
+      case "folder":
+        return { w: 220, h: 160 };
+      case "note":
+      default:
+        return { w: 280, h: 200 };
+    }
+  }, []);
+
   const createItemAt = useCallback(
     async (
       world: { x: number; y: number },
-      kind: "note" | "sticky",
+      kind: ItemType,
     ): Promise<string | null> => {
-      const sid = useCanvasStore.getState().spaceId;
-      const w = kind === "note" ? 280 : 200;
-      const h = kind === "note" ? 200 : 140;
+      if (kind === "folder") return null;
+
+      const { w, h } = itemDims(kind);
       const x = world.x - w / 2;
       const y = world.y - h / 2;
+      const sid = useCanvasStore.getState().spaceId;
+      const zIndex = Object.keys(useCanvasStore.getState().items).length;
+
+      const title =
+        kind === "note"
+          ? "Note"
+          : kind === "sticky"
+            ? "Sticky"
+            : kind === "checklist"
+              ? "Checklist"
+              : kind === "webclip"
+                ? "Web clip"
+                : kind === "image"
+                  ? "Image"
+                  : "Item";
 
       if (!sid) {
         const item: CanvasItem = {
@@ -296,26 +440,49 @@ export default function VigilApp() {
           y,
           width: w,
           height: h,
-          zIndex: Object.keys(useCanvasStore.getState().items).length,
-          title: kind === "note" ? "Note" : "Sticky",
+          zIndex,
+          title,
           contentText: "",
-          color: kind === "sticky" ? "#00f5a0" : "#ffffff",
+          contentJson:
+            kind === "checklist" ? emptyChecklistDoc() : undefined,
+          color:
+            kind === "sticky"
+              ? "#00f5a0"
+              : kind === "note"
+                ? "#ffffff"
+                : null,
+          imageMeta: kind === "webclip" ? {} : undefined,
         };
         putItem(item);
         pushUndo({ kind: "create", item: { ...item } });
         return item.id;
       }
 
+      const body: Record<string, unknown> = {
+        itemType: kind,
+        x,
+        y,
+        width: w,
+        height: h,
+        title,
+      };
+      if (kind === "checklist") {
+        body.contentJson = emptyChecklistDoc();
+        body.contentText = "";
+      }
+      if (kind === "webclip") {
+        body.contentText = "";
+        body.title = "Web clip";
+      }
+      if (kind === "image") {
+        body.contentText = "";
+        body.title = "Image";
+      }
+
       const res = await fetch(`/api/spaces/${sid}/items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          itemType: kind,
-          x,
-          y,
-          width: w,
-          height: h,
-        }),
+        body: JSON.stringify(body),
       });
       const data = (await res.json()) as { ok?: boolean; item?: CanvasItem };
       if (data.ok && data.item) {
@@ -324,6 +491,94 @@ export default function VigilApp() {
         return data.item.id;
       }
       return null;
+    },
+    [itemDims, putItem, pushUndo],
+  );
+
+  const deleteItemsById = useCallback(
+    (ids: string[]) => {
+      const sid = useCanvasStore.getState().spaceId;
+      for (const id of ids) {
+        const it = useCanvasStore.getState().items[id];
+        if (it) pushUndo({ kind: "delete", item: { ...it } });
+        removeItemLocal(id);
+        if (sid) void fetch(`/api/items/${id}`, { method: "DELETE" });
+      }
+      if (!sid) {
+        saveLocalState(
+          useCanvasStore.getState().camera,
+          Object.values(useCanvasStore.getState().items),
+        );
+      }
+    },
+    [pushUndo, removeItemLocal],
+  );
+
+  const duplicateItems = useCallback(
+    (toDup: CanvasItem[]) => {
+      const sid = useCanvasStore.getState().spaceId;
+      const all = Object.values(useCanvasStore.getState().items);
+      let maxZ = all.length
+        ? Math.max(...all.map((i) => i.zIndex))
+        : 0;
+
+      const runLocal = (dup: CanvasItem) => {
+        putItem(dup);
+        pushUndo({ kind: "create", item: { ...dup } });
+      };
+
+      for (const it of toDup) {
+        maxZ += 1;
+        const newId = crypto.randomUUID();
+        const dup: CanvasItem = {
+          ...it,
+          id: newId,
+          x: it.x + 28,
+          y: it.y + 28,
+          zIndex: maxZ,
+          stackId: null,
+          stackOrder: null,
+        };
+
+        if (!sid) {
+          runLocal({ ...dup, spaceId: "local" });
+          continue;
+        }
+
+        void (async () => {
+          const res = await fetch(`/api/spaces/${sid}/items`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              itemType: dup.itemType,
+              x: dup.x,
+              y: dup.y,
+              width: dup.width,
+              height: dup.height,
+              title: dup.title,
+              contentText: dup.contentText,
+              contentJson: dup.contentJson ?? undefined,
+              color: dup.color ?? undefined,
+              entityType: dup.entityType ?? undefined,
+              entityMeta: dup.entityMeta ?? undefined,
+              imageUrl: dup.imageUrl ?? undefined,
+              imageMeta: dup.imageMeta ?? undefined,
+            }),
+          });
+          const data = (await res.json()) as { ok?: boolean; item?: CanvasItem };
+          if (data.ok && data.item) {
+            putItem(data.item);
+            pushUndo({ kind: "create", item: { ...data.item } });
+          }
+        })();
+      }
+
+      if (!sid) {
+        saveLocalState(
+          useCanvasStore.getState().camera,
+          Object.values(useCanvasStore.getState().items),
+        );
+      }
     },
     [putItem, pushUndo],
   );
@@ -542,16 +797,7 @@ export default function VigilApp() {
         const ids = [...useCanvasStore.getState().selectedIds];
         if (ids.length === 0) return;
         e.preventDefault();
-        const sid = useCanvasStore.getState().spaceId;
-        for (const id of ids) {
-          const it = useCanvasStore.getState().items[id];
-          if (it) pushUndo({ kind: "delete", item: { ...it } });
-          removeItemLocal(id);
-          if (sid) void fetch(`/api/items/${id}`, { method: "DELETE" });
-        }
-        if (!sid) {
-          saveLocalState(useCanvasStore.getState().camera, Object.values(useCanvasStore.getState().items));
-        }
+        deleteItemsById(ids);
       }
 
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
@@ -618,11 +864,40 @@ export default function VigilApp() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [patchItemLocal, pushUndo, redo, removeItemLocal, scheduleItemPersist, stackSelection, undo]);
+  }, [
+    deleteItemsById,
+    patchItemLocal,
+    pushUndo,
+    redo,
+    removeItemLocal,
+    scheduleItemPersist,
+    stackSelection,
+    undo,
+  ]);
 
   const onToggleSnap = useCallback(() => {
     setSnapEnabled(!useCanvasStore.getState().snapEnabled);
   }, [setSnapEnabled]);
+
+  const dismissUpload = useCallback(() => {
+    clearTimeout(uploadMessageTimer.current);
+    setUploadMessage(null);
+  }, []);
+
+  const onImagePickChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const f = e.target.files?.[0];
+      e.target.value = "";
+      if (!f?.type.startsWith("image/")) return;
+      const w = 320;
+      const h = 240;
+      const cam = useCanvasStore.getState().camera;
+      const cx = (-cam.x + window.innerWidth / 2) / cam.zoom;
+      const cy = (-cam.y + window.innerHeight / 2) / cam.zoom;
+      void processImageFileAtWorld(f, cx - w / 2, cy - h / 2);
+    },
+    [processImageFileAtWorld],
+  );
 
   return (
     <div
@@ -638,105 +913,12 @@ export default function VigilApp() {
         const files = [...e.dataTransfer.files];
         const img = files.find((f) => f.type.startsWith("image/"));
         if (!img) return;
-        const sid = useCanvasStore.getState().spaceId;
         const w = 320;
         const h = 240;
         const cam = useCanvasStore.getState().camera;
         const wx = (-cam.x + e.clientX) / cam.zoom - w / 2;
         const wy = (-cam.y + e.clientY) / cam.zoom - h / 2;
-        const zNext = Object.keys(useCanvasStore.getState().items).length + 1;
-        const title = img.name.slice(0, 255) || "Image";
-        const contentType = img.type || "application/octet-stream";
-
-        const putLocalPreview = () => {
-          const url = URL.createObjectURL(img);
-          const item: CanvasItem = {
-            id: crypto.randomUUID(),
-            spaceId: sid ?? "local",
-            itemType: "image",
-            x: wx,
-            y: wy,
-            width: w,
-            height: h,
-            zIndex: zNext,
-            title,
-            contentText: "",
-            imageUrl: url,
-            imageMeta: { filename: img.name, localPreview: true },
-          };
-          putItem(item);
-        };
-
-        if (!sid) {
-          putLocalPreview();
-          return;
-        }
-
-        void (async () => {
-          const pres = await fetch("/api/upload/presign", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contentType,
-              filename: img.name,
-              spaceId: sid,
-            }),
-          });
-          const presData = (await pres.json()) as {
-            ok?: boolean;
-            uploadUrl?: string;
-            publicUrl?: string;
-            key?: string;
-            error?: string;
-          };
-
-          if (!pres.ok || !presData.ok || !presData.uploadUrl || !presData.publicUrl) {
-            showUploadMessage(
-              presData.error ??
-                `Could not prepare image upload (HTTP ${pres.status}). Dropped a local-only preview — it will not sync or survive refresh.`,
-            );
-            putLocalPreview();
-            return;
-          }
-
-          const putRes = await fetch(presData.uploadUrl, {
-            method: "PUT",
-            body: img,
-            headers: { "Content-Type": contentType },
-          });
-          if (!putRes.ok) {
-            showUploadMessage(
-              `Upload to R2 failed (${putRes.status}). Dropped a local-only preview instead.`,
-            );
-            putLocalPreview();
-            return;
-          }
-
-          clearTimeout(uploadMessageTimer.current);
-          setUploadMessage(null);
-
-          const res = await fetch(`/api/spaces/${sid}/items`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              itemType: "image",
-              x: wx,
-              y: wy,
-              width: w,
-              height: h,
-              title,
-              imageUrl: presData.publicUrl,
-              imageMeta: { filename: img.name, key: presData.key },
-            }),
-          });
-          const data = (await res.json()) as { ok?: boolean; item?: CanvasItem };
-          if (data.ok && data.item) putItem(data.item);
-          else
-            showUploadMessage(
-              (data as { error?: string }).error ??
-                "Image uploaded but creating the canvas item failed.",
-            );
-        })();
+        void processImageFileAtWorld(img, wx, wy);
       }}
     >
       <input
@@ -747,6 +929,14 @@ export default function VigilApp() {
         aria-hidden
         onChange={onImportJsonFile}
       />
+      <input
+        ref={imagePickInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        aria-hidden
+        onChange={onImagePickChange}
+      />
 
       <VigilCanvas
         onPatchItem={onPatchItem}
@@ -754,161 +944,41 @@ export default function VigilApp() {
         onOpenFolder={onOpenFolder}
       />
 
+      <SelectionActionBar
+        onDuplicate={duplicateItems}
+        onDelete={deleteItemsById}
+      />
+
       <EntityTypeBar onPatchItem={onPatchItem} />
 
       <BacklinksPanel cloudMode={syncMode === "cloud"} />
 
-      <div
-        data-vigil-toolbar
-        className="pointer-events-none absolute left-3 top-3 z-[800] flex max-w-[min(100vw-24px,920px)] flex-col gap-2"
-        style={{
-          transform: `translateY(${springY}px)`,
-        }}
-      >
-        <div
-          className={`pointer-events-auto flex flex-col gap-2 p-2.5 ${VIGIL_GLASS_PANEL}`}
-        >
-        <div className="flex flex-wrap items-center gap-2">
-          <span
-            className="select-none text-xs font-medium text-[var(--vigil-muted)]"
-            title={
-              syncMode === "cloud"
-                ? "Canvas saves to your database"
-                : "Add NEON_DATABASE_URL for cloud sync"
-            }
-          >
-            {syncMode === "loading"
-              ? "…"
-              : syncMode === "cloud"
-                ? "Cloud sync"
-                : "Local only"}
-          </span>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
-            onClick={onToggleSnap}
-          >
-            Snap: {snapEnabled ? "on" : "off"}
-          </button>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
-            onClick={cyclePreference}
-          >
-            Theme: {themeLabel(preference)}
-          </button>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 border-t border-[var(--vigil-border)]/60 pt-2">
-          {syncMode === "cloud" && spaces.length > 0 && activeSpaceId ? (
-            <>
-              <label className="flex items-center gap-1.5 text-xs text-[var(--vigil-label)]">
-                <span className="select-none">Space</span>
-                <select
-                  className="max-w-[220px] rounded-lg border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] px-2 py-1 text-[13px] text-[var(--vigil-btn-fg)] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vigil-snap)]/40"
-                  value={activeSpaceId}
-                  onChange={(e) => onSpaceChange(e.target.value)}
-                >
-                  {spaces.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                className={VIGIL_CHIP_BTN}
-                onClick={onNewSpace}
-              >
-                New space
-              </button>
-            </>
-          ) : null}
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
-            onClick={() => void createItemAt({ x: 120, y: 120 }, "note")}
-          >
-            Note
-          </button>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
-            onClick={() => void createItemAt({ x: 160, y: 160 }, "sticky")}
-          >
-            Sticky
-          </button>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
-            onClick={() => void newFolderSpace()}
-          >
-            Folder
-          </button>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
-            onClick={exportJson}
-          >
-            Export JSON
-          </button>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
-            onClick={() => importInputRef.current?.click()}
-          >
-            Import JSON
-          </button>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
-            onClick={() => setScratchPadOpen(!scratchPadOpen)}
-          >
-            Scratch
-          </button>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
-            onClick={() => setPaletteOpen(true)}
-          >
-            Search ({modKeys.search})
-          </button>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
-            title="Notes tagged Event, sorted by metadata date"
-            onClick={() => setTimelineOpen(true)}
-          >
-            Timeline
-          </button>
-          {syncMode === "cloud" && activeSpaceId ? (
-            <button
-              type="button"
-              className={VIGIL_CHIP_BTN}
-              title="Items and item_links in this space"
-              onClick={() => setGraphOpen(true)}
-            >
-              Graph
-            </button>
-          ) : null}
-        </div>
-        </div>
-        {uploadMessage ? (
-          <div className="pointer-events-auto flex max-w-[min(100vw-24px,640px)] items-start gap-2 rounded-md border border-amber-600/50 bg-amber-500/15 px-2.5 py-1.5 text-[11px] text-amber-950 dark:text-amber-100">
-            <span className="min-w-0 flex-1 leading-snug">{uploadMessage}</span>
-            <button
-              type="button"
-              className="shrink-0 rounded px-1.5 py-0.5 hover:bg-black/10 dark:hover:bg-white/10"
-              onClick={() => {
-                clearTimeout(uploadMessageTimer.current);
-                setUploadMessage(null);
-              }}
-            >
-              Dismiss
-            </button>
-          </div>
-        ) : null}
-      </div>
+      <VigilMainToolbar
+        springY={springY}
+        syncMode={syncMode}
+        snapEnabled={snapEnabled}
+        onToggleSnap={onToggleSnap}
+        preference={preference}
+        onCycleTheme={cyclePreference}
+        themeLabel={themeLabel}
+        modKeys={modKeys}
+        spaces={spaces}
+        activeSpaceId={activeSpaceId}
+        onSpaceChange={onSpaceChange}
+        onNewSpace={onNewSpace}
+        createItemAt={createItemAt}
+        onNewFolder={newFolderSpace}
+        exportJson={exportJson}
+        importInputRef={importInputRef}
+        imagePickInputRef={imagePickInputRef}
+        scratchPadOpen={scratchPadOpen}
+        onToggleScratch={() => setScratchPadOpen(!scratchPadOpen)}
+        onOpenSearch={() => setPaletteOpen(true)}
+        onOpenTimeline={() => setTimelineOpen(true)}
+        onOpenGraph={() => setGraphOpen(true)}
+        uploadMessage={uploadMessage}
+        onDismissUpload={dismissUpload}
+      />
 
       <CommandPalette
         open={paletteOpen}
@@ -957,6 +1027,7 @@ export default function VigilApp() {
         items={[
           {
             label: "New note here",
+            icon: <FilePlus className="size-4 shrink-0 opacity-90" aria-hidden />,
             onSelect: () => {
               const p = ctxScreenRef.current;
               if (!p) return;
@@ -968,6 +1039,7 @@ export default function VigilApp() {
           },
           {
             label: `Stack selection (${modKeys.stack})`,
+            icon: <Layers className="size-4 shrink-0 opacity-90" aria-hidden />,
             onSelect: () => void stackSelection(),
           },
         ]}

@@ -20,7 +20,7 @@ This file is the **short bridge** between the repo today and the full product sp
 | Styling | **Tailwind 4** + tokens; **Geist** + **Lora** (headings in editor); Vercel-ish neutrals + card tokens; chips/glass via `vigil-ui-classes` | Visual Design Bible polish + `VISUAL_REVAMP_PLAN` (icons, grouping) |
 | Cross-card links | TipTap `vigil:item:` links + **`/api/item-links/sync`**; **`[[` picker**; **Links** panel resolves `[[` / vigil links from note **content** on **local canvas** (no Neon); cloud uses **`item_links`** API; **Graph** overlay (**d3-force**, **Reset layout**, **drag to reheat**) via **`GET /api/spaces/[id]/graph`**; note **formatting toolbar** + underline/highlight | LLM auto-linking, deeper graph UX (Phase 5) |
 | TTRPG | **Entity type** bar + **`entity_meta`** fields per type; **Timeline** panel (Event + `eventDate`) | Markdown LLM import, consistency checker, richer forms |
-| Import / export | Toolbar **Export JSON** / **Import JSON**; cloud import creates items via API | Preferences, richer conflict rules |
+| Import / export | Toolbar **Export** / **Import** (JSON); cloud import creates items via API | Preferences, richer conflict rules |
 | PWA | **`public/sw.js`** + **`RegisterSw`** (prod register, minimal SW) | Offline caching strategy when needed |
 | R2 images | **Presigned PUT** at **`/api/upload/presign`** + env in `.env.local.example` | Bucket policy, CORS, optional image transforms |
 | Performance | **Viewport culling** (`visibleItems` in `VigilCanvas`), lazy **`img`** decoding | Broader memoization / virtualize if 500+ cards on screen |
@@ -31,7 +31,7 @@ This file is the **short bridge** between the repo today and the full product sp
 
 We **adopt the master plan as source of truth** for architecture and phases. The existing tldraw-based implementation is a **spike / prototype**: it validated Neon + API shape + UX ideas but **does not match** licensing and product goals.
 
-**Status:** Phases **1–4** largely done. **Phase 5:** entity meta, timeline, graph, local **Links** + **title mentions**, MCP tools (see `scripts/mcp-server.mjs`); LLM-heavy items remain (see **`docs/FOLLOW_UP.md`**). **Phase 6–7:** **Vercel-style spike** (Geist, layered tokens, card surfaces, dot grid) is landed; further polish per **`docs/VISUAL_REVAMP_PLAN.md`** (icons, Spatial sheen, motion). **Phase 8:** culling + PWA shell + export/import; deeper prefs/minimap/offline caching still open (**`docs/FOLLOW_UP.md`**).
+**Status:** Phases **1–4** largely done. **Phase 5:** entity meta, timeline, graph, local **Links** + **title mentions**, MCP tools (see `scripts/mcp-server.mjs`); LLM-heavy items remain (see **`docs/FOLLOW_UP.md`**). **Phase 6–7:** **Vercel-style spike** plus **wholesale visual revamp** (icons, toolbar grouping, palette/graph/scratch/panels) per **`docs/VISUAL_REVAMP_PLAN.md`** are landed; optional Spatial sheen / motion and type-scale audit remain nice-to-haves. **Phase 8:** culling + PWA shell + export/import; deeper prefs/minimap/offline caching still open (**`docs/FOLLOW_UP.md`**).
 
 ## Phase map (use for roadmaps and todos)
 
@@ -53,7 +53,7 @@ We **adopt the master plan as source of truth** for architecture and phases. The
 
 ## Visual overhaul roadmap
 
-**Vercel-style spike** (Geist, neutral tokens, card surfaces, canvas dot grid) is in `app/globals.css`, `layout.tsx`, `CanvasItemView`, `VigilCanvas`, `card-shadows.ts`, `vigil-ui-classes.ts`. Further wholesale polish (icons, grouping, Spatial-level detail): **`docs/VISUAL_REVAMP_PLAN.md`**.
+**Vercel-style spike** (Geist, neutral tokens, card surfaces, canvas dot grid) lives in `app/globals.css`, `layout.tsx`, `CanvasItemView`, `VigilCanvas`, `card-shadows.ts`, `vigil-ui-classes.ts`. **Wholesale polish** (Lucide, `VigilMainToolbar`, command palette / graph / scratch / side panels, TipTap format bar) is implemented; **`docs/VISUAL_REVAMP_PLAN.md`** tracks optional follow-ups (motion/sheen, type scale, flower picker).
 
 ## For agents / contributors
 

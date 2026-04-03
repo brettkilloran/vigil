@@ -37,7 +37,7 @@ Tools: **`vigil_list_items`**, **`vigil_get_item`**, **`vigil_item_links`**, **`
 
 - Installs with the repo (`@playwright/test`); browsers: `npx playwright install chromium` (first time).
 - Config runs **`npm run build && next start` on `127.0.0.1:3001`** with **`PLAYWRIGHT_E2E=1`** so bootstrap returns an empty demo space even if Neon is configured. This avoids Next’s single-`next dev`-per-folder lock while you keep daily dev on **:3000**.
-- **Visual regression:** `e2e/visual/shell.spec.ts` — run `npm run test:e2e:update` after intentional UI changes. Snapshots are OS-specific (`*-chromium-win32.png`, etc.); CI should use one OS or the Playwright Docker image for stable pixels.
+- **Visual regression:** `e2e/visual/shell.spec.ts` — run **`npm run test:e2e:visual`** locally; **`npm run test:e2e:update`** (or `test:e2e:visual --update-snapshots`) after intentional shell changes. Snapshots are OS-specific (`*-chromium-win32.png` vs `*-chromium-linux.png`). **GitHub Actions sets `CI=1`, which skips `e2e/visual/**`** so Ubuntu CI does not compare against Windows baselines.
 - Reuse an existing server only when **`CI` is unset** and something is already listening on **:3001** with the same `PLAYWRIGHT_E2E` bootstrap behavior.
 
 ## Hotkeys

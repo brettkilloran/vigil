@@ -1,0 +1,296 @@
+"use client";
+
+import type { RefObject } from "react";
+import {
+  AlertTriangle,
+  CalendarDays,
+  Cloud,
+  CloudOff,
+  Download,
+  FileText,
+  FolderPlus,
+  Image as ImageIcon,
+  Link2,
+  ListChecks,
+  Magnet,
+  Network,
+  NotebookPen,
+  Search,
+  StickyNote,
+  SunMoon,
+  Upload,
+  X,
+} from "lucide-react";
+
+import type { VigilColorScheme } from "@/src/hooks/use-vigil-theme";
+import {
+  VIGIL_CHIP_BTN,
+  VIGIL_CHROME_ICON,
+  VIGIL_GLASS_PANEL,
+  VIGIL_TOOLBAR_DIVIDER,
+} from "@/src/lib/vigil-ui-classes";
+import type { ItemType } from "@/src/stores/canvas-types";
+
+export type VigilCreateItemKind = Exclude<ItemType, "folder">;
+
+export type VigilSyncMode = "loading" | "local" | "cloud";
+
+export type VigilMainToolbarProps = {
+  springY: number;
+  syncMode: VigilSyncMode;
+  snapEnabled: boolean;
+  onToggleSnap: () => void;
+  preference: VigilColorScheme;
+  onCycleTheme: () => void;
+  themeLabel: (p: VigilColorScheme) => string;
+  modKeys: { search: string; stack: string };
+  spaces: { id: string; name: string; updatedAt: string }[];
+  activeSpaceId: string | null;
+  onSpaceChange: (id: string) => void;
+  onNewSpace: () => void;
+  createItemAt: (
+    world: { x: number; y: number },
+    kind: VigilCreateItemKind,
+  ) => void | Promise<void | string | null>;
+  onNewFolder: () => void | Promise<void>;
+  exportJson: () => void;
+  importInputRef: RefObject<HTMLInputElement | null>;
+  imagePickInputRef: RefObject<HTMLInputElement | null>;
+  scratchPadOpen: boolean;
+  onToggleScratch: () => void;
+  onOpenSearch: () => void;
+  onOpenTimeline: () => void;
+  onOpenGraph: () => void;
+  uploadMessage: string | null;
+  onDismissUpload: () => void;
+};
+
+export function VigilMainToolbar({
+  springY,
+  syncMode,
+  snapEnabled,
+  onToggleSnap,
+  preference,
+  onCycleTheme,
+  themeLabel,
+  modKeys,
+  spaces,
+  activeSpaceId,
+  onSpaceChange,
+  onNewSpace,
+  createItemAt,
+  onNewFolder,
+  exportJson,
+  importInputRef,
+  imagePickInputRef,
+  scratchPadOpen,
+  onToggleScratch,
+  onOpenSearch,
+  onOpenTimeline,
+  onOpenGraph,
+  uploadMessage,
+  onDismissUpload,
+}: VigilMainToolbarProps) {
+  const syncLabel =
+    syncMode === "loading"
+      ? "…"
+      : syncMode === "cloud"
+        ? "Cloud sync"
+        : "Local only";
+  const SyncIcon = syncMode === "cloud" ? Cloud : CloudOff;
+
+  return (
+    <div
+      data-vigil-toolbar
+      className="pointer-events-none absolute left-3 top-3 z-[800] flex max-w-[min(100vw-24px,920px)] flex-col gap-2"
+      style={{ transform: `translateY(${springY}px)` }}
+    >
+      <div
+        className={`pointer-events-auto flex flex-col gap-3 p-3 ${VIGIL_GLASS_PANEL}`}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            className="flex min-h-9 items-center gap-1.5 rounded-lg border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs font-medium text-[var(--vigil-label)]"
+            title={
+              syncMode === "cloud"
+                ? "Canvas saves to your database"
+                : "Add NEON_DATABASE_URL for cloud sync"
+            }
+          >
+            <SyncIcon className={VIGIL_CHROME_ICON} aria-hidden />
+            <span className="select-none">{syncLabel}</span>
+          </div>
+          <span className={VIGIL_TOOLBAR_DIVIDER} />
+          <button
+            type="button"
+            className={VIGIL_CHIP_BTN}
+            title="Align items to neighbors when dragging"
+            onClick={onToggleSnap}
+          >
+            <Magnet className={VIGIL_CHROME_ICON} aria-hidden />
+            <span>Snap {snapEnabled ? "on" : "off"}</span>
+          </button>
+          <button
+            type="button"
+            className={VIGIL_CHIP_BTN}
+            title="Color theme"
+            onClick={onCycleTheme}
+          >
+            <SunMoon className={VIGIL_CHROME_ICON} aria-hidden />
+            <span>{themeLabel(preference)}</span>
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 border-t border-[var(--vigil-border)]/60 pt-3">
+          {syncMode === "cloud" && spaces.length > 0 && activeSpaceId ? (
+            <>
+              <label className="flex min-h-9 items-center gap-1.5 text-xs text-[var(--vigil-label)]">
+                <span className="select-none shrink-0">Space</span>
+                <select
+                  className="max-w-[200px] rounded-lg border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] px-2 py-1.5 text-[13px] text-[var(--vigil-btn-fg)] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vigil-snap)]/40"
+                  value={activeSpaceId}
+                  onChange={(e) => onSpaceChange(e.target.value)}
+                >
+                  {spaces.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className={VIGIL_CHIP_BTN}
+                onClick={onNewSpace}
+              >
+                <FolderPlus className={VIGIL_CHROME_ICON} aria-hidden />
+                <span>New space</span>
+              </button>
+              <span className={VIGIL_TOOLBAR_DIVIDER} />
+            </>
+          ) : null}
+
+          <button
+            type="button"
+            className={VIGIL_CHIP_BTN}
+            onClick={() => void createItemAt({ x: 120, y: 120 }, "note")}
+          >
+            <FileText className={VIGIL_CHROME_ICON} aria-hidden />
+            <span>Note</span>
+          </button>
+          <button
+            type="button"
+            className={VIGIL_CHIP_BTN}
+            onClick={() => void createItemAt({ x: 160, y: 160 }, "sticky")}
+          >
+            <StickyNote className={VIGIL_CHROME_ICON} aria-hidden />
+            <span>Sticky</span>
+          </button>
+          <button
+            type="button"
+            className={VIGIL_CHIP_BTN}
+            title="Standalone checklist card"
+            onClick={() => void createItemAt({ x: 200, y: 120 }, "checklist")}
+          >
+            <ListChecks className={VIGIL_CHROME_ICON} aria-hidden />
+            <span>Checklist</span>
+          </button>
+          <button
+            type="button"
+            className={VIGIL_CHIP_BTN}
+            title="Save a URL with preview"
+            onClick={() => void createItemAt({ x: 240, y: 140 }, "webclip")}
+          >
+            <Link2 className={VIGIL_CHROME_ICON} aria-hidden />
+            <span>Web clip</span>
+          </button>
+          <button
+            type="button"
+            className={VIGIL_CHIP_BTN}
+            title="Place an image on the canvas"
+            onClick={() => imagePickInputRef.current?.click()}
+          >
+            <ImageIcon className={VIGIL_CHROME_ICON} aria-hidden />
+            <span>Image</span>
+          </button>
+          <button
+            type="button"
+            className={VIGIL_CHIP_BTN}
+            onClick={() => void onNewFolder()}
+          >
+            <FolderPlus className={VIGIL_CHROME_ICON} aria-hidden />
+            <span>Folder</span>
+          </button>
+
+          <span className={VIGIL_TOOLBAR_DIVIDER} />
+
+          <button type="button" className={VIGIL_CHIP_BTN} onClick={exportJson}>
+            <Download className={VIGIL_CHROME_ICON} aria-hidden />
+            <span>Export</span>
+          </button>
+          <button
+            type="button"
+            className={VIGIL_CHIP_BTN}
+            onClick={() => importInputRef.current?.click()}
+          >
+            <Upload className={VIGIL_CHROME_ICON} aria-hidden />
+            <span>Import</span>
+          </button>
+
+          <span className={VIGIL_TOOLBAR_DIVIDER} />
+
+          <button
+            type="button"
+            className={`${VIGIL_CHIP_BTN}${scratchPadOpen ? " ring-2 ring-[var(--vigil-snap)]/35 ring-offset-2 ring-offset-[var(--background)]" : ""}`}
+            onClick={onToggleScratch}
+          >
+            <NotebookPen className={VIGIL_CHROME_ICON} aria-hidden />
+            <span>Scratch</span>
+          </button>
+          <button type="button" className={VIGIL_CHIP_BTN} onClick={onOpenSearch}>
+            <Search className={VIGIL_CHROME_ICON} aria-hidden />
+            <span>Search ({modKeys.search})</span>
+          </button>
+          <button
+            type="button"
+            className={VIGIL_CHIP_BTN}
+            title="Notes tagged Event, sorted by metadata date"
+            onClick={onOpenTimeline}
+          >
+            <CalendarDays className={VIGIL_CHROME_ICON} aria-hidden />
+            <span>Timeline</span>
+          </button>
+          {syncMode === "cloud" && activeSpaceId ? (
+            <button
+              type="button"
+              className={VIGIL_CHIP_BTN}
+              title="Items and item_links in this space"
+              onClick={onOpenGraph}
+            >
+              <Network className={VIGIL_CHROME_ICON} aria-hidden />
+              <span>Graph</span>
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {uploadMessage ? (
+        <div className="pointer-events-auto flex max-w-[min(100vw-24px,640px)] items-start gap-2 rounded-lg border border-amber-600/50 bg-amber-500/15 px-3 py-2 text-[11px] text-amber-950 dark:text-amber-100">
+          <AlertTriangle
+            className="mt-0.5 size-4 shrink-0 opacity-90"
+            aria-hidden
+          />
+          <span className="min-w-0 flex-1 leading-snug">{uploadMessage}</span>
+          <button
+            type="button"
+            className="shrink-0 rounded-md p-1 hover:bg-black/10 dark:hover:bg-white/10"
+            aria-label="Dismiss"
+            onClick={onDismissUpload}
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}

@@ -1,13 +1,18 @@
 "use client";
 
 import { motion, type Transition } from "framer-motion";
+import { Layers } from "lucide-react";
 import { useCallback, useMemo } from "react";
 
+import { ChecklistCard } from "@/src/components/canvas/ChecklistCard";
+import { ImageCard } from "@/src/components/canvas/ImageCard";
 import { NoteCard } from "@/src/components/canvas/NoteCard";
 import { ResizeHandles } from "@/src/components/canvas/ResizeHandles";
 import { StickyCard } from "@/src/components/canvas/StickyCard";
+import { WebclipCard } from "@/src/components/canvas/WebclipCard";
 import { useVigilThemeContext } from "@/src/contexts/vigil-theme-context";
 import { cardBoxShadow } from "@/src/lib/card-shadows";
+import { VIGIL_METADATA_LABEL } from "@/src/lib/vigil-ui-classes";
 import { screenToCanvas } from "@/src/lib/screen-to-canvas";
 import type { ResizeHandle } from "@/src/stores/canvas-store";
 import { useCanvasStore } from "@/src/stores/canvas-store";
@@ -20,73 +25,29 @@ const springTransition: Transition = {
   mass: 0.85,
 };
 
-function ChecklistCard(props: {
-  item: CanvasItem;
-  onPersist: (p: {
-    contentJson?: Record<string, unknown> | null;
-    contentText?: string;
-    title?: string;
-  }) => void;
-  active: boolean;
-  peerItems: CanvasItem[];
-  cloudSyncLinks: boolean;
-}) {
-  return (
-    <NoteCard
-      item={props.item}
-      onPersist={props.onPersist}
-      active={props.active}
-      peerItems={props.peerItems}
-      cloudSyncLinks={props.cloudSyncLinks}
-    />
-  );
-}
-
-function ImageCard({ item }: { item: CanvasItem }) {
-  if (!item.imageUrl) {
-    return (
-      <div className="flex h-full items-center justify-center p-2 text-xs text-[var(--vigil-muted)]">
-        No image URL
-      </div>
-    );
-  }
-  return (
-    // eslint-disable-next-line @next/next/no-img-element -- blob/object URLs
-    <img
-      src={item.imageUrl}
-      alt={item.title}
-      className="h-full w-full object-cover"
-      draggable={false}
-      loading="lazy"
-      decoding="async"
-    />
-  );
-}
-
-function WebclipCard({ item }: { item: CanvasItem }) {
-  const url = item.contentText?.trim() || "";
-  if (!url.startsWith("http")) {
-    return (
-      <div className="p-2 text-xs text-[var(--vigil-muted)]">Web clip — add a URL in content</div>
-    );
-  }
-  return (
-    <iframe
-      title={item.title}
-      src={url}
-      className="h-full w-full rounded-b-xl border-0"
-      sandbox="allow-scripts allow-same-origin"
-    />
-  );
-}
-
 function FolderCard({ item }: { item: CanvasItem }) {
   const meta = item.entityMeta as { childSpaceId?: string } | undefined;
-  const n = meta?.childSpaceId ? "Open (double-click)" : "Folder";
+  const linked = !!meta?.childSpaceId;
   return (
-    <div className="flex h-full flex-col justify-between p-3">
-      <div className="text-sm font-medium">{item.title}</div>
-      <div className="text-xs text-[var(--vigil-muted)]">{n}</div>
+    <div className="flex h-full min-h-0 flex-col justify-between px-3 pb-3 pt-5">
+      <p className="text-xs leading-relaxed text-[var(--vigil-muted)]">
+        {linked
+          ? "Double-click to open this space."
+          : "Link a child space to this folder to open it from the canvas."}
+      </p>
+      <div className="mt-auto flex items-end justify-between gap-2 border-t border-black/[0.07] pt-2.5 dark:border-white/[0.09]">
+        <div className="min-w-0 flex-1">
+          <p className={VIGIL_METADATA_LABEL}>Folder</p>
+          <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+            {item.title?.trim() || "Untitled"}
+          </p>
+        </div>
+        <Layers
+          className="size-[22px] shrink-0 text-[var(--vigil-muted)] opacity-[0.85]"
+          strokeWidth={1.75}
+          aria-hidden
+        />
+      </div>
     </div>
   );
 }
@@ -161,7 +122,7 @@ export function CanvasItemView({
     item.itemType === "sticky"
       ? item.color || "#00f5a0"
       : item.itemType === "folder"
-        ? "var(--vigil-btn-bg)"
+        ? item.color || "var(--vigil-card-bg)"
         : "var(--vigil-card-bg)";
 
   const border =
@@ -198,24 +159,60 @@ export function CanvasItemView({
       );
       break;
     case "image":
-      body = <ImageCard item={item} />;
+      body = (
+        <ImageCard
+          item={item}
+          active={active}
+          onPatchItem={onPatchItem}
+        />
+      );
       break;
     case "webclip":
-      body = <WebclipCard item={item} />;
-      break;
-    case "folder":
       body = (
-        <div className="relative flex h-full flex-col overflow-hidden rounded-b-xl bg-gradient-to-br from-white/75 via-transparent to-neutral-400/18 dark:from-white/[0.08] dark:via-transparent dark:to-black/55">
+        <WebclipCard
+          item={item}
+          active={active}
+          onPatchItem={onPatchItem}
+        />
+      );
+      break;
+    case "folder": {
+      const tabTint =
+        item.color &&
+        (colorScheme === "dark"
+          ? `color-mix(in srgb, ${item.color} 52%, #141418)`
+          : `color-mix(in srgb, ${item.color} 78%, #ffffff)`);
+      body = (
+        <div className="relative flex h-full flex-col overflow-hidden rounded-b-xl">
           <div
-            className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/45 to-transparent opacity-90 dark:from-white/12 dark:to-transparent"
+            className={`pointer-events-none absolute left-3 top-0 z-[3] h-3 w-[4.5rem] -translate-y-[calc(100%-0.5px)] rounded-t-md border border-b-0 border-[var(--vigil-card-border)] shadow-[0_-1px_2px_rgba(0,0,0,0.05)] dark:shadow-[0_-1px_3px_rgba(0,0,0,0.35)] ${tabTint ? "" : "bg-[var(--vigil-folder-tab-bg)]"}`}
+            style={tabTint ? { background: tabTint } : undefined}
             aria-hidden
           />
-          <div className="relative z-[1] flex min-h-0 flex-1 flex-col">
+          {item.color ? (
+            <div
+              className="pointer-events-none absolute inset-0 z-0 opacity-[0.2] dark:opacity-[0.16]"
+              style={{
+                background: `linear-gradient(to bottom right, color-mix(in srgb, ${item.color} 40%, transparent), transparent 52%, color-mix(in srgb, ${item.color} 22%, transparent))`,
+              }}
+              aria-hidden
+            />
+          ) : null}
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-1/2 bg-gradient-to-b from-white/55 to-transparent opacity-95 dark:from-white/16 dark:to-transparent"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-2/5 bg-gradient-to-t from-black/[0.07] to-transparent dark:from-black/50 dark:to-transparent"
+            aria-hidden
+          />
+          <div className="relative z-[2] flex min-h-0 flex-1 flex-col">
             <FolderCard item={item} />
           </div>
         </div>
       );
       break;
+    }
     default:
       body = (
         <NoteCard
@@ -266,6 +263,14 @@ export function CanvasItemView({
       >
         {item.title}
       </div>
+      {item.itemType !== "sticky" &&
+      item.itemType !== "image" &&
+      item.itemType !== "folder" ? (
+        <div
+          className="pointer-events-none absolute inset-x-0 top-9 z-[1] h-14 bg-gradient-to-b from-white/[0.2] to-transparent dark:from-white/[0.05]"
+          aria-hidden
+        />
+      ) : null}
       <div className="relative h-[calc(100%-2.25rem)] overflow-hidden">{body}</div>
       {selected && selectedIds.length === 1 ? (
         <ResizeHandles onPointerDown={onResizeDown} />

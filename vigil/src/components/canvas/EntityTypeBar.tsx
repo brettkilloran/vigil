@@ -1,5 +1,7 @@
 "use client";
 
+import { ScrollText } from "lucide-react";
+
 import { EntityMetaPanel } from "@/src/components/ui/EntityMetaPanel";
 import { VIGIL_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
 import { useCanvasStore } from "@/src/stores/canvas-store";
@@ -29,12 +31,18 @@ export function EntityTypeBar({
 
   return (
     <div
-      className={`pointer-events-auto absolute left-3 top-[132px] z-[800] flex max-w-[240px] flex-col px-2.5 py-2 text-xs ${VIGIL_GLASS_PANEL}`}
+      className={`pointer-events-auto absolute left-3 top-[132px] z-[800] flex max-w-[248px] flex-col px-3 py-2.5 text-xs ${VIGIL_GLASS_PANEL}`}
     >
       <div className="flex items-center gap-2">
-        <span className="shrink-0 text-[var(--vigil-muted)]">TTRPG</span>
+        <ScrollText
+          className="size-4 shrink-0 text-[var(--vigil-muted)] opacity-90"
+          aria-hidden
+        />
+        <span className="shrink-0 font-medium text-[var(--vigil-label)]">
+          TTRPG
+        </span>
         <select
-          className="min-w-0 flex-1 rounded-lg border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] px-1.5 py-0.5 text-[var(--foreground)] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vigil-snap)]/40"
+          className="min-h-8 min-w-0 flex-1 rounded-lg border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] px-2 py-1 text-[var(--foreground)] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vigil-snap)]/40"
           value={it.entityType ?? ""}
           onChange={(e) => {
             const v = e.target.value || null;
