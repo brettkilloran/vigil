@@ -55,10 +55,10 @@
   --sem-focus-ring-offset: 2px;
 
   /* Component button tokens */
-  --cmp-button-neutral-bg-default: var(--sem-surface-glass);
+  --cmp-button-neutral-bg-default: transparent;
   --cmp-button-neutral-bg-hover: var(--sem-surface-muted-hover);
   --cmp-button-neutral-bg-active: var(--sem-surface-muted-press);
-  --cmp-button-neutral-bg-disabled: var(--sem-surface-glass);
+  --cmp-button-neutral-bg-disabled: transparent;
   --cmp-button-neutral-fg-default: var(--sem-text-primary);
   --cmp-button-neutral-fg-hover: var(--sem-text-primary);
   --cmp-button-neutral-fg-active: var(--sem-text-primary);
