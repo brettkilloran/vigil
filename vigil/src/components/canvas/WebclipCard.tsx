@@ -1,6 +1,11 @@
 "use client";
 
-import { ExternalLink, Globe, ImageIcon, RefreshCw } from "lucide-react";
+import {
+  ArrowSquareOut,
+  ArrowsClockwise,
+  Globe,
+  ImageSquare,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VIGIL_CHIP_BTN } from "@/src/lib/vigil-ui-classes";
@@ -98,9 +103,9 @@ export function WebclipCard({
   }, [active, url, meta.lastFetched, fetchPreview]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--vigil-card-bg)]">
+    <div className="flex h-full min-h-0 flex-col bg-transparent">
       {active ? (
-        <label className="block border-b border-[var(--vigil-card-border)] px-2 py-1.5">
+        <label className="block border-b border-black/10 px-2 py-1.5">
           <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--vigil-muted)]">
             Page URL
           </span>
@@ -143,8 +148,9 @@ export function WebclipCard({
             disabled={loading}
             onClick={() => void fetchPreview()}
           >
-            <RefreshCw
+            <ArrowsClockwise
               className={`size-[14px] shrink-0 ${loading ? "animate-spin" : ""}`}
+              weight="bold"
               aria-hidden
             />
             Refresh preview
@@ -154,7 +160,7 @@ export function WebclipCard({
             className={VIGIL_CHIP_BTN}
             onClick={() => setLive((v) => !v)}
           >
-            <Globe className="size-[14px] shrink-0" aria-hidden />
+            <Globe className="size-[14px] shrink-0" weight="bold" aria-hidden />
             {live ? "Hide live" : "Live site"}
           </button>
           <a
@@ -163,14 +169,14 @@ export function WebclipCard({
             rel="noreferrer noopener"
             className={`${VIGIL_CHIP_BTN} no-underline`}
           >
-            <ExternalLink className="size-[14px] shrink-0" aria-hidden />
+            <ArrowSquareOut className="size-[14px] shrink-0" weight="bold" aria-hidden />
             Open
           </a>
         </div>
       ) : null}
 
       {error && active ? (
-        <p className="px-2 py-1 text-[11px] text-amber-700 dark:text-amber-400">
+        <p className="px-2 py-1 text-[11px] text-amber-700">
           {error}
         </p>
       ) : null}
@@ -198,7 +204,7 @@ export function WebclipCard({
           </>
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-[var(--vigil-muted)]">
-            <ImageIcon className="size-8 opacity-50" aria-hidden />
+            <ImageSquare className="size-8 opacity-50" weight="regular" aria-hidden />
             <span className="text-xs">No preview yet</span>
           </div>
         )}

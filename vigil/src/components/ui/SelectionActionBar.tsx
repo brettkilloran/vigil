@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Trash2 } from "lucide-react";
+import { Copy, Trash } from "@phosphor-icons/react";
 
 import {
   VIGIL_CHIP_BTN,
@@ -40,7 +40,7 @@ export function SelectionActionBar({
         className={VIGIL_CHIP_BTN}
         onClick={() => onDuplicate(selected)}
       >
-        <Copy className={VIGIL_CHROME_ICON} aria-hidden />
+        <Copy className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
         Duplicate
       </button>
       <button
@@ -48,7 +48,7 @@ export function SelectionActionBar({
         className={VIGIL_CHIP_BTN}
         onClick={() => onDelete([...selectedIds])}
       >
-        <Trash2 className={VIGIL_CHROME_ICON} aria-hidden />
+        <Trash className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
         Delete
       </button>
     </div>

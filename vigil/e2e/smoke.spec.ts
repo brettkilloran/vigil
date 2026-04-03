@@ -16,8 +16,9 @@ test.describe("VIGIL smoke", () => {
     });
     await expect(page.locator("[data-vigil-toolbar]")).toBeVisible();
 
-    await expect(page.getByRole("button", { name: "Note" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Sticky" })).toBeVisible();
+    const toolbar = page.locator("[data-vigil-toolbar]");
+    await expect(toolbar.getByRole("button", { name: "Note" })).toBeVisible();
+    await expect(toolbar.getByRole("button", { name: "Sticky" })).toBeVisible();
 
     await expect(page.getByText("Local only")).toBeVisible();
     await expect(

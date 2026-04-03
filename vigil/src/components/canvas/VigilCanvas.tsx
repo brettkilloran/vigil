@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CanvasItemView } from "@/src/components/canvas/CanvasItemView";
+import { ConnectionLines } from "@/src/components/canvas/ConnectionLines";
 import { SnapGuidesOverlay } from "@/src/components/canvas/SnapGuides";
 import { resizeFromHandle } from "@/src/lib/resize-rect";
 import { screenToCanvas } from "@/src/lib/screen-to-canvas";
@@ -37,6 +38,7 @@ export function VigilCanvas({
   onPatchItem,
   onCreateItemAt,
   onOpenFolder,
+  onRequestFocusMode,
 }: {
   onPatchItem: (id: string, patch: Partial<CanvasItem>) => void;
   onCreateItemAt: (
@@ -44,6 +46,7 @@ export function VigilCanvas({
     kind: ItemType,
   ) => void | Promise<void | string | null>;
   onOpenFolder?: (childSpaceId: string) => void;
+  onRequestFocusMode?: (id: string) => void;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const cameraRef = useRef(useCanvasStore.getState().camera);
@@ -64,6 +67,7 @@ export function VigilCanvas({
   const setSelectedIds = useCanvasStore((s) => s.setSelectedIds);
   const setLasso = useCanvasStore((s) => s.setLasso);
   const lasso = useCanvasStore((s) => s.lasso);
+  const canvasTool = useCanvasStore((s) => s.canvasTool);
 
   const panRef = useRef<{
     startX: number;
@@ -233,7 +237,7 @@ export function VigilCanvas({
     if (!el || !rect) return;
     const cam = cameraRef.current;
 
-    if (e.shiftKey) {
+    if (canvasTool === "select" && e.shiftKey) {
       const w = screenToCanvas(e.clientX, e.clientY, rect, cam);
       lassoRef.current = { startWx: w.x, startWy: w.y };
       setLasso({ x1: w.x, y1: w.y, x2: w.x, y2: w.y });
@@ -246,7 +250,7 @@ export function VigilCanvas({
       camX: cam.x,
       camY: cam.y,
     };
-    clearSelection();
+    if (canvasTool === "select") clearSelection();
   };
 
   const onBgPointerMove = (e: React.PointerEvent) => {
@@ -355,6 +359,7 @@ export function VigilCanvas({
           transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`,
         }}
       >
+        <ConnectionLines items={items} />
         {shown.map((it) => (
           <CanvasItemView
             key={it.id}
@@ -362,6 +367,7 @@ export function VigilCanvas({
             viewportRect={rect}
             onPatchItem={onPatchItem}
             onOpenFolder={onOpenFolder}
+            onRequestFocusMode={onRequestFocusMode}
           />
         ))}
       </div>

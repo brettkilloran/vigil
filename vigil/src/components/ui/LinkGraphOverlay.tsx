@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Network, RotateCcw, X } from "lucide-react";
+import { ArrowCounterClockwise, Graph, X } from "@phosphor-icons/react";
 
 import { computeForceLayout } from "@/src/lib/graph-layout";
 import {
@@ -230,8 +230,9 @@ function LinkGraphInner({
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--vigil-border)]/80 px-4 py-3">
         <span className="flex items-center gap-2 text-sm font-semibold tracking-tight text-[var(--vigil-label)]">
-          <Network
+          <Graph
             className="size-4 shrink-0 text-[var(--vigil-muted)] opacity-90"
+            weight="bold"
             aria-hidden
           />
           Link graph
@@ -242,11 +243,11 @@ function LinkGraphInner({
             className={VIGIL_CHIP_BTN}
             onClick={() => setLayoutRevision((n) => n + 1)}
           >
-            <RotateCcw className={VIGIL_CHROME_ICON} aria-hidden />
+            <ArrowCounterClockwise className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             Reset layout
           </button>
           <button type="button" className={VIGIL_CHIP_BTN} onClick={onClose}>
-            <X className={VIGIL_CHROME_ICON} aria-hidden />
+            <X className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             Close
           </button>
         </div>

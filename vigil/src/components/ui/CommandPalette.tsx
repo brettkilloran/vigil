@@ -1,19 +1,19 @@
 "use client";
 
 import {
-  Download,
+  DownloadSimple,
   FileText,
   Folder,
   Globe,
-  Image as ImageIcon,
-  Layers,
+  ImageSquare,
   ListChecks,
-  NotebookPen,
-  Search,
-  Sparkles,
-  StickyNote,
-  Type,
-} from "lucide-react";
+  MagnifyingGlass,
+  Notebook,
+  NotePencil,
+  Sparkle,
+  Stack,
+  TextT,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, type ReactNode, useState } from "react";
 
 import { useModKeyHints } from "@/src/lib/mod-keys";
@@ -30,19 +30,19 @@ const hitIconClass =
 function iconForItemType(itemType: string): ReactNode {
   switch (itemType) {
     case "note":
-      return <FileText className={hitIconClass} aria-hidden />;
+      return <FileText className={hitIconClass} weight="bold" aria-hidden />;
     case "sticky":
-      return <StickyNote className={hitIconClass} aria-hidden />;
+      return <NotePencil className={hitIconClass} weight="bold" aria-hidden />;
     case "image":
-      return <ImageIcon className={hitIconClass} aria-hidden />;
+      return <ImageSquare className={hitIconClass} weight="bold" aria-hidden />;
     case "checklist":
-      return <ListChecks className={hitIconClass} aria-hidden />;
+      return <ListChecks className={hitIconClass} weight="bold" aria-hidden />;
     case "webclip":
-      return <Globe className={hitIconClass} aria-hidden />;
+      return <Globe className={hitIconClass} weight="bold" aria-hidden />;
     case "folder":
-      return <Folder className={hitIconClass} aria-hidden />;
+      return <Folder className={hitIconClass} weight="bold" aria-hidden />;
     default:
-      return <FileText className={hitIconClass} aria-hidden />;
+      return <FileText className={hitIconClass} weight="bold" aria-hidden />;
   }
 }
 
@@ -177,13 +177,13 @@ export function CommandPalette({
         kind: "action",
         id: "export",
         label: "Export canvas",
-        icon: <Download className={hitIconClass} aria-hidden />,
+        icon: <DownloadSimple className={hitIconClass} weight="bold" aria-hidden />,
       },
       {
         kind: "action",
         id: "scratch",
         label: "Scratch pad",
-        icon: <NotebookPen className={hitIconClass} aria-hidden />,
+        icon: <Notebook className={hitIconClass} weight="bold" aria-hidden />,
       },
     ];
 
@@ -253,20 +253,20 @@ export function CommandPalette({
       id: "fts",
       label: "Keywords",
       title: "Full-text search (Postgres)",
-      icon: <Type className="size-3.5 shrink-0 opacity-90" aria-hidden />,
+      icon: <TextT className="size-3.5 shrink-0 opacity-90" weight="bold" aria-hidden />,
     },
     {
       id: "semantic",
       label: "Meaning",
       title:
         "Vector similarity (embeddings refresh when items are saved; needs OPENAI_API_KEY)",
-      icon: <Sparkles className="size-3.5 shrink-0 opacity-90" aria-hidden />,
+      icon: <Sparkle className="size-3.5 shrink-0 opacity-90" weight="bold" aria-hidden />,
     },
     {
       id: "hybrid",
       label: "Both",
       title: "Keywords first, then extra semantic matches",
-      icon: <Layers className="size-3.5 shrink-0 opacity-90" aria-hidden />,
+      icon: <Stack className="size-3.5 shrink-0 opacity-90" weight="bold" aria-hidden />,
     },
   ];
 
@@ -280,8 +280,9 @@ export function CommandPalette({
     >
       <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-[var(--vigil-border)] bg-[var(--vigil-elevated)]/95 shadow-2xl shadow-black/15 backdrop-blur-xl dark:bg-[var(--vigil-elevated)]/90 dark:shadow-black/50">
         <div className="flex items-center gap-2.5 border-b border-[var(--vigil-border)] px-3 py-2.5">
-          <Search
+          <MagnifyingGlass
             className="size-4 shrink-0 text-[var(--vigil-muted)] opacity-90"
+            weight="bold"
             aria-hidden
           />
           <input

@@ -14,6 +14,8 @@ export type ResizeHandle =
   | "se"
   | "sw";
 
+export type CanvasTool = "select" | "pan";
+
 interface CanvasStoreState {
   spaceId: string | null;
   camera: CameraState;
@@ -31,6 +33,7 @@ interface CanvasStoreState {
   undoStack: UndoAction[];
   redoStack: UndoAction[];
   scratchPadOpen: boolean;
+  canvasTool: CanvasTool;
 }
 
 type CanvasStoreActions = {
@@ -43,6 +46,7 @@ type CanvasStoreActions = {
   setCamera: (camera: CameraState) => void;
   setSnapEnabled: (v: boolean) => void;
   setScratchPadOpen: (v: boolean) => void;
+  setCanvasTool: (t: CanvasTool) => void;
   selectOnly: (id: string | null) => void;
   toggleSelect: (id: string) => void;
   setSelectedIds: (ids: string[]) => void;
@@ -84,6 +88,7 @@ const initialState = (): CanvasStoreState => ({
   undoStack: [],
   redoStack: [],
   scratchPadOpen: false,
+  canvasTool: "select",
 });
 
 export const useCanvasStore = create<CanvasStoreState & CanvasStoreActions>()(
@@ -119,6 +124,11 @@ export const useCanvasStore = create<CanvasStoreState & CanvasStoreActions>()(
     setScratchPadOpen: (v) =>
       set((s) => {
         s.scratchPadOpen = v;
+      }),
+
+    setCanvasTool: (t) =>
+      set((s) => {
+        s.canvasTool = t;
       }),
 
     selectOnly: (id) =>

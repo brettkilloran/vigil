@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { CornerDownLeft, NotebookPen, X } from "lucide-react";
+import { ArrowElbowDownLeft, Notebook, X } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import {
@@ -35,8 +35,9 @@ export function ScratchPad({
         >
           <div className="mb-2.5 flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2 text-sm font-semibold tracking-tight text-[var(--vigil-label)]">
-              <NotebookPen
+              <Notebook
                 className="size-4 shrink-0 text-[var(--vigil-muted)] opacity-90"
+                weight="bold"
                 aria-hidden
               />
               <span className="truncate">Scratch pad</span>
@@ -47,7 +48,7 @@ export function ScratchPad({
               aria-label="Close scratch pad"
               onClick={onClose}
             >
-              <X className="size-4" strokeWidth={2.25} aria-hidden />
+              <X className="size-4" weight="bold" aria-hidden />
             </button>
           </div>
           <textarea
@@ -68,7 +69,7 @@ export function ScratchPad({
               onClose();
             }}
           >
-            <CornerDownLeft className="size-4 shrink-0 opacity-90" aria-hidden />
+            <ArrowElbowDownLeft className="size-4 shrink-0 opacity-90" weight="bold" aria-hidden />
             Drop as note
           </button>
         </motion.div>

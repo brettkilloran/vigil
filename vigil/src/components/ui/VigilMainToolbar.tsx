@@ -2,25 +2,25 @@
 
 import type { RefObject } from "react";
 import {
-  AlertTriangle,
-  CalendarDays,
+  CalendarDots,
   Cloud,
-  CloudOff,
-  Download,
+  CloudSlash,
+  DownloadSimple,
   FileText,
   FolderPlus,
-  Image as ImageIcon,
-  Link2,
+  Graph,
+  ImageSquare,
+  LinkSimple,
   ListChecks,
-  Magnet,
-  Network,
-  NotebookPen,
-  Search,
-  StickyNote,
-  SunMoon,
-  Upload,
+  MagnetStraight,
+  MagnifyingGlass,
+  Moon,
+  NotePencil,
+  Notebook,
+  UploadSimple,
+  Warning,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 
 import type { VigilColorScheme } from "@/src/hooks/use-vigil-theme";
 import {
@@ -97,7 +97,7 @@ export function VigilMainToolbar({
       : syncMode === "cloud"
         ? "Cloud sync"
         : "Local only";
-  const SyncIcon = syncMode === "cloud" ? Cloud : CloudOff;
+  const SyncIcon = syncMode === "cloud" ? Cloud : CloudSlash;
 
   return (
     <div
@@ -117,7 +117,7 @@ export function VigilMainToolbar({
                 : "Add NEON_DATABASE_URL for cloud sync"
             }
           >
-            <SyncIcon className={VIGIL_CHROME_ICON} aria-hidden />
+            <SyncIcon className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span className="select-none">{syncLabel}</span>
           </div>
           <span className={VIGIL_TOOLBAR_DIVIDER} />
@@ -127,7 +127,7 @@ export function VigilMainToolbar({
             title="Align items to neighbors when dragging"
             onClick={onToggleSnap}
           >
-            <Magnet className={VIGIL_CHROME_ICON} aria-hidden />
+            <MagnetStraight className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Snap {snapEnabled ? "on" : "off"}</span>
           </button>
           <button
@@ -136,7 +136,7 @@ export function VigilMainToolbar({
             title="Color theme"
             onClick={onCycleTheme}
           >
-            <SunMoon className={VIGIL_CHROME_ICON} aria-hidden />
+            <Moon className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>{themeLabel(preference)}</span>
           </button>
         </div>
@@ -163,7 +163,7 @@ export function VigilMainToolbar({
                 className={VIGIL_CHIP_BTN}
                 onClick={onNewSpace}
               >
-                <FolderPlus className={VIGIL_CHROME_ICON} aria-hidden />
+                <FolderPlus className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
                 <span>New space</span>
               </button>
               <span className={VIGIL_TOOLBAR_DIVIDER} />
@@ -175,7 +175,7 @@ export function VigilMainToolbar({
             className={VIGIL_CHIP_BTN}
             onClick={() => void createItemAt({ x: 120, y: 120 }, "note")}
           >
-            <FileText className={VIGIL_CHROME_ICON} aria-hidden />
+            <FileText className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Note</span>
           </button>
           <button
@@ -183,7 +183,7 @@ export function VigilMainToolbar({
             className={VIGIL_CHIP_BTN}
             onClick={() => void createItemAt({ x: 160, y: 160 }, "sticky")}
           >
-            <StickyNote className={VIGIL_CHROME_ICON} aria-hidden />
+            <NotePencil className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Sticky</span>
           </button>
           <button
@@ -192,7 +192,7 @@ export function VigilMainToolbar({
             title="Standalone checklist card"
             onClick={() => void createItemAt({ x: 200, y: 120 }, "checklist")}
           >
-            <ListChecks className={VIGIL_CHROME_ICON} aria-hidden />
+            <ListChecks className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Checklist</span>
           </button>
           <button
@@ -201,7 +201,7 @@ export function VigilMainToolbar({
             title="Save a URL with preview"
             onClick={() => void createItemAt({ x: 240, y: 140 }, "webclip")}
           >
-            <Link2 className={VIGIL_CHROME_ICON} aria-hidden />
+            <LinkSimple className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Web clip</span>
           </button>
           <button
@@ -210,7 +210,7 @@ export function VigilMainToolbar({
             title="Place an image on the canvas"
             onClick={() => imagePickInputRef.current?.click()}
           >
-            <ImageIcon className={VIGIL_CHROME_ICON} aria-hidden />
+            <ImageSquare className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Image</span>
           </button>
           <button
@@ -218,14 +218,14 @@ export function VigilMainToolbar({
             className={VIGIL_CHIP_BTN}
             onClick={() => void onNewFolder()}
           >
-            <FolderPlus className={VIGIL_CHROME_ICON} aria-hidden />
+            <FolderPlus className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Folder</span>
           </button>
 
           <span className={VIGIL_TOOLBAR_DIVIDER} />
 
           <button type="button" className={VIGIL_CHIP_BTN} onClick={exportJson}>
-            <Download className={VIGIL_CHROME_ICON} aria-hidden />
+            <DownloadSimple className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Export</span>
           </button>
           <button
@@ -233,7 +233,7 @@ export function VigilMainToolbar({
             className={VIGIL_CHIP_BTN}
             onClick={() => importInputRef.current?.click()}
           >
-            <Upload className={VIGIL_CHROME_ICON} aria-hidden />
+            <UploadSimple className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Import</span>
           </button>
 
@@ -244,11 +244,11 @@ export function VigilMainToolbar({
             className={`${VIGIL_CHIP_BTN}${scratchPadOpen ? " ring-2 ring-[var(--vigil-snap)]/35 ring-offset-2 ring-offset-[var(--background)]" : ""}`}
             onClick={onToggleScratch}
           >
-            <NotebookPen className={VIGIL_CHROME_ICON} aria-hidden />
+            <Notebook className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Scratch</span>
           </button>
           <button type="button" className={VIGIL_CHIP_BTN} onClick={onOpenSearch}>
-            <Search className={VIGIL_CHROME_ICON} aria-hidden />
+            <MagnifyingGlass className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Search ({modKeys.search})</span>
           </button>
           <button
@@ -257,7 +257,7 @@ export function VigilMainToolbar({
             title="Notes tagged Event, sorted by metadata date"
             onClick={onOpenTimeline}
           >
-            <CalendarDays className={VIGIL_CHROME_ICON} aria-hidden />
+            <CalendarDots className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Timeline</span>
           </button>
           {syncMode === "cloud" && activeSpaceId ? (
@@ -267,7 +267,7 @@ export function VigilMainToolbar({
               title="Items and item_links in this space"
               onClick={onOpenGraph}
             >
-              <Network className={VIGIL_CHROME_ICON} aria-hidden />
+              <Graph className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
               <span>Graph</span>
             </button>
           ) : null}
@@ -276,8 +276,9 @@ export function VigilMainToolbar({
 
       {uploadMessage ? (
         <div className="pointer-events-auto flex max-w-[min(100vw-24px,640px)] items-start gap-2 rounded-lg border border-amber-600/50 bg-amber-500/15 px-3 py-2 text-[11px] text-amber-950 dark:text-amber-100">
-          <AlertTriangle
+          <Warning
             className="mt-0.5 size-4 shrink-0 opacity-90"
+            weight="bold"
             aria-hidden
           />
           <span className="min-w-0 flex-1 leading-snug">{uploadMessage}</span>
@@ -287,7 +288,7 @@ export function VigilMainToolbar({
             aria-label="Dismiss"
             onClick={onDismissUpload}
           >
-            <X className="size-4" />
+            <X className="size-4" weight="bold" />
           </button>
         </div>
       ) : null}

@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, X } from "lucide-react";
+import { CalendarDots, X } from "@phosphor-icons/react";
 import { useMemo } from "react";
 
 import {
@@ -50,8 +50,9 @@ export function TimelinePanel({
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-sm font-semibold tracking-tight text-[var(--vigil-label)]">
-          <CalendarDays
+          <CalendarDots
             className="size-4 shrink-0 text-[var(--vigil-muted)] opacity-90"
+            weight="bold"
             aria-hidden
           />
           Events (TTRPG)
@@ -62,7 +63,7 @@ export function TimelinePanel({
           aria-label="Close timeline"
           onClick={onClose}
         >
-          <X className="size-4" strokeWidth={2.25} aria-hidden />
+          <X className="size-4" weight="bold" aria-hidden />
         </button>
       </div>
       <ul className="max-h-[min(36vh,280px)] overflow-y-auto py-0.5 text-xs">

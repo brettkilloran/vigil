@@ -1,6 +1,6 @@
 "use client";
 
-import { ScrollText } from "lucide-react";
+import { Scroll } from "@phosphor-icons/react";
 
 import { EntityMetaPanel } from "@/src/components/ui/EntityMetaPanel";
 import { VIGIL_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
@@ -34,8 +34,9 @@ export function EntityTypeBar({
       className={`pointer-events-auto absolute left-3 top-[132px] z-[800] flex max-w-[248px] flex-col px-3 py-2.5 text-xs ${VIGIL_GLASS_PANEL}`}
     >
       <div className="flex items-center gap-2">
-        <ScrollText
+        <Scroll
           className="size-4 shrink-0 text-[var(--vigil-muted)] opacity-90"
+          weight="bold"
           aria-hidden
         />
         <span className="shrink-0 font-medium text-[var(--vigil-label)]">

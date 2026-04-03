@@ -10,24 +10,25 @@ import StarterKit from "@tiptap/starter-kit";
 import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
 import {
-  Bold,
   Code,
-  Heading1,
-  Heading2,
-  Heading3,
   Highlighter,
-  Italic,
-  List,
-  ListOrdered,
-  ListTodo,
+  ListBullets,
+  ListChecks,
+  ListNumbers,
   Minus,
-  Strikethrough,
-  Underline,
-} from "lucide-react";
+  TextB,
+  TextHOne,
+  TextHThree,
+  TextHTwo,
+  TextItalic,
+  TextStrikethrough,
+  TextUnderline,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import { extractVigilItemLinkTargets } from "@/src/lib/extract-vigil-item-links";
 import { useModKeyHints } from "@/src/lib/mod-keys";
+import { registerActiveTipTapEditor } from "@/src/lib/tiptap-active-bridge";
 import {
   VIGIL_EDITOR_TOOLBAR_BTN_ON,
   VIGIL_EDITOR_TOOLBAR_ICON_BTN,
@@ -86,7 +87,7 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
 
   return (
     <div
-      className="mx-2 mt-1.5 mb-1 flex flex-wrap items-center gap-0.5 rounded-lg border border-[var(--vigil-card-border)] bg-[var(--vigil-card-header-bg)] px-1 py-1 shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.35)]"
+      className="mx-2 mt-1.5 mb-1 flex flex-wrap items-center gap-0.5 rounded-lg border border-black/10 bg-black/[0.03] px-1 py-1 shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
       onMouseDown={(e) => e.preventDefault()}
     >
       <button
@@ -96,7 +97,7 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
         aria-label={`Bold (${hints.bold})`}
         onClick={() => editor.chain().focus().toggleBold().run()}
       >
-        <Bold className="size-3.5" strokeWidth={2.25} />
+        <TextB className="size-3.5" weight="bold" />
       </button>
       <button
         type="button"
@@ -105,7 +106,7 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
         aria-label={`Italic (${hints.italic})`}
         onClick={() => editor.chain().focus().toggleItalic().run()}
       >
-        <Italic className="size-3.5" strokeWidth={2.25} />
+        <TextItalic className="size-3.5" weight="bold" />
       </button>
       <button
         type="button"
@@ -114,7 +115,7 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
         aria-label={`Underline (${hints.underline})`}
         onClick={() => editor.chain().focus().toggleUnderline().run()}
       >
-        <Underline className="size-3.5" strokeWidth={2.25} />
+        <TextUnderline className="size-3.5" weight="bold" />
       </button>
       <button
         type="button"
@@ -123,7 +124,7 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
         aria-label="Strikethrough"
         onClick={() => editor.chain().focus().toggleStrike().run()}
       >
-        <Strikethrough className="size-3.5" strokeWidth={2.25} />
+        <TextStrikethrough className="size-3.5" weight="bold" />
       </button>
       <button
         type="button"
@@ -132,7 +133,7 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
         aria-label="Inline code"
         onClick={() => editor.chain().focus().toggleCode().run()}
       >
-        <Code className="size-3.5" strokeWidth={2.25} />
+        <Code className="size-3.5" weight="bold" />
       </button>
       <button
         type="button"
@@ -141,7 +142,7 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
         aria-label="Highlight"
         onClick={() => editor.chain().focus().toggleHighlight().run()}
       >
-        <Highlighter className="size-3.5" strokeWidth={2.25} />
+        <Highlighter className="size-3.5" weight="bold" />
       </button>
       <FormatBarDivider />
       <button
@@ -153,7 +154,7 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
           editor.chain().focus().toggleHeading({ level: 1 }).run()
         }
       >
-        <Heading1 className="size-3.5" strokeWidth={2.25} />
+        <TextHOne className="size-3.5" weight="bold" />
       </button>
       <button
         type="button"
@@ -164,7 +165,7 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
           editor.chain().focus().toggleHeading({ level: 2 }).run()
         }
       >
-        <Heading2 className="size-3.5" strokeWidth={2.25} />
+        <TextHTwo className="size-3.5" weight="bold" />
       </button>
       <button
         type="button"
@@ -175,7 +176,7 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
           editor.chain().focus().toggleHeading({ level: 3 }).run()
         }
       >
-        <Heading3 className="size-3.5" strokeWidth={2.25} />
+        <TextHThree className="size-3.5" weight="bold" />
       </button>
       <FormatBarDivider />
       <button
@@ -185,7 +186,7 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
         aria-label="Task list"
         onClick={() => editor.chain().focus().toggleTaskList().run()}
       >
-        <ListTodo className="size-3.5" strokeWidth={2.25} />
+        <ListChecks className="size-3.5" weight="bold" />
       </button>
       <button
         type="button"
@@ -194,7 +195,7 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
         aria-label="Bullet list"
         onClick={() => editor.chain().focus().toggleBulletList().run()}
       >
-        <List className="size-3.5" strokeWidth={2.25} />
+        <ListBullets className="size-3.5" weight="bold" />
       </button>
       <button
         type="button"
@@ -203,7 +204,7 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
         aria-label="Numbered list"
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
       >
-        <ListOrdered className="size-3.5" strokeWidth={2.25} />
+        <ListNumbers className="size-3.5" weight="bold" />
       </button>
       <FormatBarDivider />
       <button
@@ -213,7 +214,7 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
         aria-label="Horizontal rule"
         onClick={() => editor.chain().focus().setHorizontalRule().run()}
       >
-        <Minus className="size-3.5" strokeWidth={2.25} />
+        <Minus className="size-3.5" weight="bold" />
       </button>
     </div>
   );
@@ -249,7 +250,7 @@ export function NoteCard({
         multicolor: false,
         HTMLAttributes: {
           class:
-            "rounded-sm bg-amber-200/90 px-0.5 dark:bg-amber-500/40",
+            "rounded-sm bg-amber-200/90 px-0.5",
         },
       }),
       Placeholder.configure({
@@ -322,6 +323,14 @@ export function NoteCard({
   useEffect(() => {
     editor?.setEditable(active);
   }, [active, editor]);
+
+  useEffect(() => {
+    if (!editor || !active) return;
+    registerActiveTipTapEditor(editor);
+    return () => {
+      registerActiveTipTapEditor(null);
+    };
+  }, [editor, active]);
 
   useEffect(() => {
     if (!editor || !active) return;
@@ -415,9 +424,9 @@ export function NoteCard({
 
   return (
     <>
-    <div className="flex h-full min-h-0 flex-col bg-[var(--vigil-card-bg)]">
+    <div className="flex h-full min-h-0 flex-col bg-transparent">
       {active && peerItems.some((p) => p.id !== item.id) ? (
-        <div className="flex flex-col gap-1 border-b border-black/5 px-2 py-1 dark:border-white/10">
+        <div className="flex flex-col gap-1 border-b border-black/10 px-2 py-1">
           <input
             type="search"
             className="w-full rounded border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] px-1.5 py-0.5 text-[11px] text-[var(--foreground)]"
@@ -437,7 +446,7 @@ export function NoteCard({
                 <button
                   key={p.id}
                   type="button"
-                  className="max-w-full truncate rounded bg-black/5 px-1.5 py-0.5 text-[10px] hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15"
+                  className="max-w-full truncate rounded bg-black/5 px-1.5 py-0.5 text-[10px] hover:bg-black/10"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => insertItemLink(p)}
                 >
@@ -449,7 +458,7 @@ export function NoteCard({
         </div>
       ) : null}
       {active ? <NoteFormatToolbar editor={editor} /> : null}
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--vigil-card-bg)]">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-transparent">
         <EditorContent editor={editor} />
       </div>
     </div>
@@ -470,7 +479,7 @@ export function NoteCard({
               key={p.id}
               type="button"
               role="menuitem"
-              className="flex w-full truncate rounded px-2 py-1 text-left hover:bg-black/5 dark:hover:bg-white/10"
+              className="flex w-full truncate rounded px-2 py-1 text-left hover:bg-black/5"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() =>
                 insertWikiLink(p, { from: wikiCtx.from, to: wikiCtx.to })

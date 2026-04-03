@@ -1,84 +1,40 @@
 @import "tailwindcss";
 
-/* Align Tailwind `dark:*` with app theme (class toggled in useVigilTheme). */
-@custom-variant dark (&:where(.dark, .dark *));
-
-/* Vercel-ish neutrals: layered surfaces, thin borders (spike). */
+/* Architectural Canvas — dark-only shell; light-themed cards use per-type tokens. */
 
 :root {
-  --background: #fafafa;
-  --foreground: #171717;
-  --vigil-muted: #737373;
-  --vigil-label: #404040;
-  --vigil-border: #e5e5e7;
-  --vigil-btn-bg: #ffffff;
-  --vigil-btn-fg: #171717;
-  --vigil-btn-border: #e5e5e7;
-  --vigil-snap: #0070f3;
-  /* Spatial bible: warm canvas (~#EDEDEF), not cool gray */
-  --vigil-canvas: #eae8ea;
-  --vigil-elevated: #ffffff;
-  --vigil-card-bg: #ffffff;
-  --vigil-card-border: #ebebeb;
-  --vigil-card-header-bg: #fafafa;
-  --vigil-folder-tab-bg: #f3f1f2;
-}
+  --bg-base: #0a0a0c;
+  --background: #0a0a0c;
+  --foreground: #f0f0f0;
+  --vigil-muted: #888890;
+  --vigil-label: #cccccc;
+  --vigil-border: rgba(255, 255, 255, 0.06);
+  --vigil-btn-bg: rgba(255, 255, 255, 0.06);
+  --vigil-btn-fg: #f0f0f0;
+  --vigil-btn-border: rgba(255, 255, 255, 0.1);
+  --vigil-snap: #3b82f6;
+  --vigil-canvas: #0a0a0c;
+  --vigil-grid-color: rgba(255, 255, 255, 0.04);
+  --vigil-elevated: rgba(15, 15, 18, 0.7);
+  --vigil-glass-border: rgba(255, 255, 255, 0.06);
+  /* Legacy card tokens — bodies often overridden by card theme */
+  --vigil-card-bg: #f4f2ec;
+  --vigil-card-border: #e2dfd5;
+  --vigil-card-header-bg: rgba(0, 0, 0, 0.04);
+  --vigil-folder-tab-bg: #e8e4dc;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #000000;
-    --foreground: #fafafa;
-    --vigil-muted: #a3a3a3;
-    --vigil-label: #d4d4d4;
-    --vigil-border: #262626;
-    --vigil-btn-bg: #171717;
-    --vigil-btn-fg: #fafafa;
-    --vigil-btn-border: #262626;
-    --vigil-snap: #3291ff;
-    --vigil-canvas: #1e1e22;
-    --vigil-elevated: #0a0a0a;
-    --vigil-card-bg: #262626;
-    --vigil-card-border: #333333;
-    --vigil-card-header-bg: #1f1f1f;
-    --vigil-folder-tab-bg: #2c2c32;
-  }
-}
+  --theme-default-bg: #f4f2ec;
+  --theme-default-text: #1a1a1a;
+  --theme-default-border: #e2dfd5;
 
-html[data-vigil-theme="light"] {
-  --background: #fafafa;
-  --foreground: #171717;
-  --vigil-muted: #737373;
-  --vigil-label: #404040;
-  --vigil-border: #e5e5e7;
-  --vigil-btn-bg: #ffffff;
-  --vigil-btn-fg: #171717;
-  --vigil-btn-border: #e5e5e7;
-  --vigil-snap: #0070f3;
-  --vigil-canvas: #eae8ea;
-  --vigil-elevated: #ffffff;
-  --vigil-card-bg: #ffffff;
-  --vigil-card-border: #ebebeb;
-  --vigil-card-header-bg: #fafafa;
-  --vigil-folder-tab-bg: #f3f1f2;
-  color-scheme: light;
-}
+  --theme-task-bg: #fffbf0;
+  --theme-task-text: #2c281e;
+  --theme-task-border: #f0e2b6;
 
-html[data-vigil-theme="dark"] {
-  --background: #000000;
-  --foreground: #fafafa;
-  --vigil-muted: #a3a3a3;
-  --vigil-label: #d4d4d4;
-  --vigil-border: #262626;
-  --vigil-btn-bg: #171717;
-  --vigil-btn-fg: #fafafa;
-  --vigil-btn-border: #262626;
-  --vigil-snap: #3291ff;
-  --vigil-canvas: #1e1e22;
-  --vigil-elevated: #0a0a0a;
-  --vigil-card-bg: #262626;
-  --vigil-card-border: #333333;
-  --vigil-card-header-bg: #1f1f1f;
-  --vigil-folder-tab-bg: #2c2c32;
+  --theme-media-bg: #ebf0f5;
+  --theme-media-text: #1c2430;
+  --theme-media-border: #c8d4e0;
+
   color-scheme: dark;
 }
 
@@ -114,27 +70,46 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html:not([data-vigil-theme="light"]) {
-    color-scheme: dark;
-  }
+/* Canvas: grid + vignette applied via layered backgrounds on the viewport element */
+.vigil-canvas-surface {
+  position: relative;
+  background-color: var(--vigil-canvas);
 }
 
-/*
- * Spatial Visual Design Bible: flat canvas — “no grid dots… The emptiness IS the design.”
- * (Dot grid removed in favor of warm neutral field; see docs/VIGIL_MASTER_PLAN.md §4.)
- */
-.vigil-canvas-surface {
-  background-color: var(--vigil-canvas);
+.vigil-canvas-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(var(--vigil-grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--vigil-grid-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: var(--vigil-grid-x, 0px) var(--vigil-grid-y, 0px);
+}
+
+.vigil-canvas-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(
+    circle at center,
+    transparent 0%,
+    var(--bg-base) 150%
+  );
 }
 
 .ProseMirror {
   outline: none;
   min-height: 4rem;
-  background-color: var(--vigil-card-bg);
+  background-color: transparent;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.65;
+  color: inherit;
 }
 
 .ProseMirror p {
@@ -163,8 +138,8 @@ a {
   height: 1.05em;
   margin: 0.2em 0 0;
   border-radius: 0.28rem;
-  border: 1.5px solid var(--vigil-border);
-  background: var(--background);
+  border: 1.5px solid color-mix(in srgb, currentColor 35%, transparent);
+  background: color-mix(in srgb, currentColor 8%, transparent);
   cursor: pointer;
   transition:
     background 0.18s ease,
@@ -174,13 +149,13 @@ a {
 }
 
 .ProseMirror li[data-type="taskItem"] input[type="checkbox"]:hover {
-  border-color: color-mix(in srgb, var(--vigil-snap) 55%, var(--vigil-border));
+  border-color: color-mix(in srgb, var(--vigil-snap) 55%, currentColor);
 }
 
 .ProseMirror li[data-type="taskItem"] input[type="checkbox"]:checked {
   background: var(--vigil-snap);
   border-color: var(--vigil-snap);
-  box-shadow: inset 0 0 0 2px var(--vigil-card-bg);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.95);
   transform: scale(1.04);
 }
 
@@ -191,7 +166,7 @@ a {
   letter-spacing: -0.015em;
   margin: 0.45em 0 0.2em;
   line-height: 1.28;
-  color: var(--foreground);
+  color: inherit;
 }
 
 .ProseMirror h2 {
@@ -201,7 +176,7 @@ a {
   letter-spacing: -0.01em;
   margin: 0.5em 0 0.18em;
   line-height: 1.32;
-  color: var(--foreground);
+  color: inherit;
 }
 
 .ProseMirror h3 {
@@ -209,14 +184,16 @@ a {
   font-weight: 600;
   margin: 0.5em 0 0.15em;
   line-height: 1.38;
-  color: var(--vigil-label);
+  color: inherit;
+  opacity: 0.92;
 }
 
 .ProseMirror blockquote {
   margin: 0.5em 0;
   padding-left: 0.85em;
   border-left: 3px solid var(--vigil-snap);
-  color: var(--vigil-muted);
+  color: inherit;
+  opacity: 0.85;
 }
 
 .ProseMirror code {
@@ -224,15 +201,15 @@ a {
   font-size: 0.9em;
   padding: 0.12em 0.35em;
   border-radius: 0.25rem;
-  background: color-mix(in srgb, var(--vigil-muted) 12%, transparent);
+  background: color-mix(in srgb, currentColor 10%, transparent);
 }
 
 .ProseMirror pre {
   margin: 0.5em 0;
   padding: 0.65em 0.85em;
   border-radius: 0.4rem;
-  background: color-mix(in srgb, var(--foreground) 6%, var(--background));
-  border: 1px solid var(--vigil-border);
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
   overflow-x: auto;
 }
 
@@ -245,7 +222,7 @@ a {
 .ProseMirror hr {
   margin: 1em 0;
   border: none;
-  border-top: 1px solid var(--vigil-border);
+  border-top: 1px solid color-mix(in srgb, currentColor 22%, transparent);
 }
 
 .ProseMirror ul:not([data-type="taskList"]),

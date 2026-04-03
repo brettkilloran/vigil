@@ -1,6 +1,6 @@
 "use client";
 
-import { Link2 } from "lucide-react";
+import { LinkSimple } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -207,8 +207,9 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
     return (
       <div className={panelClass}>
         <div className="mb-2 flex items-center gap-2 font-semibold tracking-tight text-[var(--vigil-label)]">
-          <Link2
+          <LinkSimple
             className="size-4 shrink-0 text-[var(--vigil-muted)] opacity-90"
+            weight="bold"
             aria-hidden
           />
           Links
@@ -237,8 +238,9 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
   return (
     <div className={panelClass}>
       <div className="mb-2 flex items-center gap-2 font-semibold tracking-tight text-[var(--vigil-label)]">
-        <Link2
+        <LinkSimple
           className="size-4 shrink-0 text-[var(--vigil-muted)] opacity-90"
+          weight="bold"
           aria-hidden
         />
         Links

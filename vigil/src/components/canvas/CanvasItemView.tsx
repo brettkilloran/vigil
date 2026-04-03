@@ -1,7 +1,8 @@
 "use client";
 
+import { ArrowsOutSimple, Stack } from "@phosphor-icons/react";
 import { motion, type Transition } from "framer-motion";
-import { Layers } from "lucide-react";
+import type { CSSProperties } from "react";
 import { useCallback, useMemo } from "react";
 
 import { ChecklistCard } from "@/src/components/canvas/ChecklistCard";
@@ -9,8 +10,15 @@ import { ImageCard } from "@/src/components/canvas/ImageCard";
 import { NoteCard } from "@/src/components/canvas/NoteCard";
 import { ResizeHandles } from "@/src/components/canvas/ResizeHandles";
 import { StickyCard } from "@/src/components/canvas/StickyCard";
+import { TapeStrip } from "@/src/components/canvas/TapeStrip";
 import { WebclipCard } from "@/src/components/canvas/WebclipCard";
-import { useVigilThemeContext } from "@/src/contexts/vigil-theme-context";
+import {
+  cardThemeCssVars,
+  cardThemeKind,
+  stableRotationDeg,
+  tapeRotationDeg,
+  tapeVariantForItem,
+} from "@/src/lib/card-theme";
 import { cardBoxShadow } from "@/src/lib/card-shadows";
 import { VIGIL_METADATA_LABEL } from "@/src/lib/vigil-ui-classes";
 import { screenToCanvas } from "@/src/lib/screen-to-canvas";
@@ -29,22 +37,22 @@ function FolderCard({ item }: { item: CanvasItem }) {
   const meta = item.entityMeta as { childSpaceId?: string } | undefined;
   const linked = !!meta?.childSpaceId;
   return (
-    <div className="flex h-full min-h-0 flex-col justify-between px-3 pb-3 pt-5">
-      <p className="text-xs leading-relaxed text-[var(--vigil-muted)]">
+    <div className="flex h-full min-h-0 flex-col justify-between px-3 pb-3 pt-5 text-[var(--card-fg)]">
+      <p className="text-xs leading-relaxed opacity-80">
         {linked
           ? "Double-click to open this space."
           : "Link a child space to this folder to open it from the canvas."}
       </p>
-      <div className="mt-auto flex items-end justify-between gap-2 border-t border-black/[0.07] pt-2.5 dark:border-white/[0.09]">
+      <div className="mt-auto flex items-end justify-between gap-2 border-t border-black/[0.08] pt-2.5">
         <div className="min-w-0 flex-1">
           <p className={VIGIL_METADATA_LABEL}>Folder</p>
-          <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+          <p className="truncate text-sm font-semibold">
             {item.title?.trim() || "Untitled"}
           </p>
         </div>
-        <Layers
-          className="size-[22px] shrink-0 text-[var(--vigil-muted)] opacity-[0.85]"
-          strokeWidth={1.75}
+        <Stack
+          className="size-[22px] shrink-0 opacity-[0.85]"
+          weight="duotone"
           aria-hidden
         />
       </div>
@@ -52,18 +60,23 @@ function FolderCard({ item }: { item: CanvasItem }) {
   );
 }
 
+function supportsFocusMode(item: CanvasItem): boolean {
+  return item.itemType !== "folder";
+}
+
 export function CanvasItemView({
   item,
   viewportRect,
   onPatchItem,
   onOpenFolder,
+  onRequestFocusMode,
 }: {
   item: CanvasItem;
   viewportRect: DOMRect | null;
   onPatchItem: (id: string, patch: Partial<CanvasItem>) => void;
   onOpenFolder?: (childSpaceId: string) => void;
+  onRequestFocusMode?: (id: string) => void;
 }) {
-  const { resolved: colorScheme } = useVigilThemeContext();
   const camera = useCanvasStore((s) => s.camera);
   const itemsRecord = useCanvasStore((s) => s.items);
   const spaceId = useCanvasStore((s) => s.spaceId);
@@ -83,6 +96,18 @@ export function CanvasItemView({
   const active = selected && selectedIds.length === 1;
   const isDragging = dragging?.itemId === item.id;
   const isResizing = resizing?.itemId === item.id;
+
+  const themeKind = cardThemeKind(item.itemType);
+  const themeVars: CSSProperties =
+    item.itemType === "sticky"
+      ? {}
+      : item.itemType === "folder"
+        ? cardThemeCssVars("default")
+        : cardThemeCssVars(themeKind);
+
+  const cardRotate = stableRotationDeg(item.id, 5);
+  const tapeRot = tapeRotationDeg(item.id);
+  const tapeVar = tapeVariantForItem(themeKind, item.id);
 
   const persistNote = useCallback(
     (patch: {
@@ -118,27 +143,32 @@ export function CanvasItemView({
     );
   };
 
-  const bg =
-    item.itemType === "sticky"
-      ? item.color || "#00f5a0"
-      : item.itemType === "folder"
-        ? item.color || "var(--vigil-card-bg)"
-        : "var(--vigil-card-bg)";
-
-  const border =
-    item.itemType === "sticky"
-      ? "1px solid rgba(0,0,0,0.08)"
-      : `1px solid var(--vigil-card-border)`;
-
   const transition =
     isDragging || isResizing ? { duration: 0 } : springTransition;
 
-  const shadowMode = colorScheme === "dark" ? "dark" : "light";
   const boxShadow = cardBoxShadow({
-    mode: shadowMode,
     selected,
     lifting: isDragging || isResizing,
   });
+
+  const stickyBg = item.itemType === "sticky" ? item.color || "#00f5a0" : null;
+  const accentColor =
+    item.itemType === "sticky"
+      ? "rgba(0,0,0,0.12)"
+      : item.itemType === "folder"
+        ? "var(--theme-default-border)"
+        : `var(--card-accent)`;
+
+  const cardBg =
+    stickyBg ??
+    (item.itemType === "folder"
+      ? item.color || "var(--theme-default-bg)"
+      : "var(--card-bg)");
+
+  const cardFg =
+    item.itemType === "sticky" || item.itemType === "folder"
+      ? "#1a1a1a"
+      : "var(--card-fg)";
 
   let body: React.ReactNode;
   switch (item.itemType) {
@@ -160,38 +190,28 @@ export function CanvasItemView({
       break;
     case "image":
       body = (
-        <ImageCard
-          item={item}
-          active={active}
-          onPatchItem={onPatchItem}
-        />
+        <ImageCard item={item} active={active} onPatchItem={onPatchItem} />
       );
       break;
     case "webclip":
       body = (
-        <WebclipCard
-          item={item}
-          active={active}
-          onPatchItem={onPatchItem}
-        />
+        <WebclipCard item={item} active={active} onPatchItem={onPatchItem} />
       );
       break;
     case "folder": {
       const tabTint =
         item.color &&
-        (colorScheme === "dark"
-          ? `color-mix(in srgb, ${item.color} 52%, #141418)`
-          : `color-mix(in srgb, ${item.color} 78%, #ffffff)`);
+        `color-mix(in srgb, ${item.color} 72%, var(--theme-default-bg))`;
       body = (
-        <div className="relative flex h-full flex-col overflow-hidden rounded-b-xl">
+        <div className="relative flex h-full flex-col overflow-hidden rounded-b-[2px]">
           <div
-            className={`pointer-events-none absolute left-3 top-0 z-[3] h-3 w-[4.5rem] -translate-y-[calc(100%-0.5px)] rounded-t-md border border-b-0 border-[var(--vigil-card-border)] shadow-[0_-1px_2px_rgba(0,0,0,0.05)] dark:shadow-[0_-1px_3px_rgba(0,0,0,0.35)] ${tabTint ? "" : "bg-[var(--vigil-folder-tab-bg)]"}`}
+            className={`pointer-events-none absolute left-3 top-0 z-[3] h-3 w-[4.5rem] -translate-y-[calc(100%-0.5px)] rounded-t-[2px] border border-b-0 border-black/10 shadow-sm ${tabTint ? "" : "bg-[var(--vigil-folder-tab-bg)]"}`}
             style={tabTint ? { background: tabTint } : undefined}
             aria-hidden
           />
           {item.color ? (
             <div
-              className="pointer-events-none absolute inset-0 z-0 opacity-[0.2] dark:opacity-[0.16]"
+              className="pointer-events-none absolute inset-0 z-0 opacity-[0.18]"
               style={{
                 background: `linear-gradient(to bottom right, color-mix(in srgb, ${item.color} 40%, transparent), transparent 52%, color-mix(in srgb, ${item.color} 22%, transparent))`,
               }}
@@ -199,14 +219,14 @@ export function CanvasItemView({
             />
           ) : null}
           <div
-            className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-1/2 bg-gradient-to-b from-white/55 to-transparent opacity-95 dark:from-white/16 dark:to-transparent"
+            className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-1/2 bg-gradient-to-b from-white/50 to-transparent opacity-95"
             aria-hidden
           />
           <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-2/5 bg-gradient-to-t from-black/[0.07] to-transparent dark:from-black/50 dark:to-transparent"
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-2/5 bg-gradient-to-t from-black/[0.06] to-transparent"
             aria-hidden
           />
-          <div className="relative z-[2] flex min-h-0 flex-1 flex-col">
+          <div className="relative z-[2] flex min-h-0 flex-1 flex-col bg-[var(--theme-default-bg)]">
             <FolderCard item={item} />
           </div>
         </div>
@@ -225,12 +245,37 @@ export function CanvasItemView({
       );
   }
 
+  const openFocus = () => {
+    if (supportsFocusMode(item)) onRequestFocusMode?.(item.id);
+  };
+
+  const headerLabel =
+    item.itemType === "note"
+      ? "Note"
+      : item.itemType === "sticky"
+        ? "Sticky"
+        : item.itemType === "checklist"
+          ? "Checklist"
+          : item.itemType === "image"
+            ? "Image"
+            : item.itemType === "webclip"
+              ? "Web clip"
+              : item.itemType === "folder"
+                ? "Folder"
+                : "Item";
+
   return (
     <motion.div
-      className="absolute cursor-grab select-none overflow-hidden rounded-xl active:cursor-grabbing"
+      className={`absolute cursor-grab select-none overflow-visible rounded-[2px] active:cursor-grabbing${isDragging ? " z-[1000]" : ""}`}
       style={{
-        background: bg,
-        border,
+        ...themeVars,
+        background: cardBg,
+        color: cardFg,
+        borderWidth: 1,
+        borderStyle: "solid",
+        borderColor: "rgba(0,0,0,0.06)",
+        borderTopWidth: 3,
+        borderTopColor: accentColor,
         boxShadow,
         zIndex: item.zIndex,
         transformOrigin: "50% 50%",
@@ -246,6 +291,7 @@ export function CanvasItemView({
         y: item.y,
         width: item.width,
         height: item.height,
+        rotate: cardRotate,
       }}
       transition={transition}
       onPointerDown={(e) => e.stopPropagation()}
@@ -256,22 +302,59 @@ export function CanvasItemView({
         if (meta?.childSpaceId) onOpenFolder?.(meta.childSpaceId);
       }}
     >
-      <div
-        data-vigil-chrome
-        className="flex h-9 cursor-grab items-center rounded-t-xl border-b border-[var(--vigil-card-border)] bg-[var(--vigil-card-header-bg)] px-3 text-xs font-medium text-[var(--vigil-muted)]"
-        onPointerDown={onChromePointerDown}
-      >
-        {item.title}
-      </div>
-      {item.itemType !== "sticky" &&
-      item.itemType !== "image" &&
-      item.itemType !== "folder" ? (
-        <div
-          className="pointer-events-none absolute inset-x-0 top-9 z-[1] h-14 bg-gradient-to-b from-white/[0.2] to-transparent dark:from-white/[0.05]"
-          aria-hidden
-        />
+      {item.itemType !== "folder" ? (
+        <TapeStrip variant={tapeVar} rotationDeg={tapeRot} />
       ) : null}
-      <div className="relative h-[calc(100%-2.25rem)] overflow-hidden">{body}</div>
+
+      <div
+        className="flex h-full min-h-0 flex-col overflow-hidden rounded-[2px]"
+        style={{ background: cardBg, color: cardFg }}
+      >
+        <div
+          data-vigil-chrome
+          className="pointer-events-none flex min-h-[48px] shrink-0 cursor-grab items-center justify-between gap-2 border-b border-black/[0.06] px-4 py-3 active:cursor-grabbing"
+          onPointerDown={onChromePointerDown}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            openFocus();
+          }}
+        >
+          <span className="pointer-events-none font-mono text-[11px] font-semibold uppercase tracking-[0.05em] opacity-60">
+            {headerLabel} / {item.title?.trim() || "Untitled"}
+          </span>
+          <div className="pointer-events-auto flex gap-1">
+            {supportsFocusMode(item) ? (
+              <button
+                type="button"
+                className="rounded p-1 opacity-40 transition-all hover:bg-black/[0.06] hover:opacity-100"
+                title="Focus mode"
+                aria-label="Focus mode"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openFocus();
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <ArrowsOutSimple className="size-4" weight="bold" aria-hidden />
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        {item.itemType !== "sticky" &&
+        item.itemType !== "image" &&
+        item.itemType !== "folder" ? (
+          <div
+            className="pointer-events-none absolute inset-x-0 top-[48px] z-[1] h-10 bg-gradient-to-b from-black/[0.04] to-transparent"
+            aria-hidden
+          />
+        ) : null}
+
+        <div className="relative h-[calc(100%-48px)] min-h-0 flex-1 overflow-hidden">
+          {body}
+        </div>
+      </div>
+
       {selected && selectedIds.length === 1 ? (
         <ResizeHandles onPointerDown={onResizeDown} />
       ) : null}
