@@ -47,7 +47,7 @@ export function useSpringBetween(
 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [to, from, spring.stiffness, spring.damping, spring.mass ?? 1]);
+  }, [to, from, spring]);
 
   return value;
 }

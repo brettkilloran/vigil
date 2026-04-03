@@ -17,6 +17,8 @@ Open [http://localhost:3000](http://localhost:3000). Without `NEON_DATABASE_URL`
 
 Copy [`.env.local.example`](.env.local.example) to `.env.local` for database and optional OpenAI/R2.
 
+Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
+
 ## Scripts
 
 | Script | Purpose |
