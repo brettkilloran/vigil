@@ -1,8 +1,13 @@
 "use client";
 
 import { ArrowsOutSimple } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
 
-import type { CanvasNode, CanvasTool, NodeTheme } from "@/src/components/foundation/architectural-types";
+import type {
+  CanvasTool,
+  NodeTheme,
+  TapeVariant,
+} from "@/src/components/foundation/architectural-types";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 
 function themeClass(theme: NodeTheme): string {
@@ -12,66 +17,132 @@ function themeClass(theme: NodeTheme): string {
   return styles.themeDefault;
 }
 
-export function ArchitecturalNodeCard({
-  node,
-  activeTool,
-  dragged,
-  selected,
-  zIndex,
-  onBodyInput,
-  onExpand,
+function tapeClass(variant: TapeVariant): string {
+  if (variant === "masking") return styles.tapeMasking;
+  if (variant === "dark") return styles.tapeDark;
+  return styles.tapeClear;
+}
+
+export function ArchitecturalNodeTape({
+  variant = "clear",
+  rotationDeg,
 }: {
-  node: CanvasNode;
-  activeTool: CanvasTool;
-  dragged: boolean;
-  selected: boolean;
-  zIndex: number | undefined;
-  onBodyInput: (id: string, html: string) => void;
-  onExpand: (id: string) => void;
+  variant?: TapeVariant;
+  rotationDeg: number;
 }) {
   return (
     <div
-      data-node-id={node.id}
-      className={`${styles.entityNode} ${themeClass(node.theme)} ${
-        dragged ? styles.dragging : ""
-      } ${selected ? styles.selectedNode : ""}`}
-      style={{
-        left: `${node.x}px`,
-        top: `${node.y}px`,
-        width: node.width ? `${node.width}px` : undefined,
-        transform: `rotate(${node.rotation}deg)`,
-        zIndex,
-      }}
-    >
-      <div
-        className={`${styles.tape} ${styles.tapeClear}`}
-        style={{ transform: `translateX(-50%) rotate(${node.tapeRotation}deg)` }}
-      />
+      className={`${styles.tape} ${tapeClass(variant)}`}
+      style={{ transform: `translateX(-50%) rotate(${rotationDeg}deg)` }}
+    />
+  );
+}
 
-      <div className={styles.nodeHeader}>
-        <span className={styles.nodeTitle}>{node.title}</span>
-        <div className={styles.nodeActions}>
+export function ArchitecturalNodeHeader({
+  title,
+  showExpand = true,
+  expandLabel = "Focus Mode",
+  onExpand,
+}: {
+  title: ReactNode;
+  showExpand?: boolean;
+  expandLabel?: string;
+  onExpand?: () => void;
+}) {
+  return (
+    <div className={styles.nodeHeader}>
+      <span className={styles.nodeTitle}>{title}</span>
+      <div className={styles.nodeActions}>
+        {showExpand ? (
           <button
             type="button"
             className={styles.nodeBtn}
             data-expand-btn="true"
-            title="Focus Mode"
-            onClick={() => onExpand(node.id)}
+            title={expandLabel}
+            onClick={onExpand}
           >
             <ArrowsOutSimple size={16} />
           </button>
-        </div>
+        ) : null}
       </div>
+    </div>
+  );
+}
 
-      <div
-        className={styles.nodeBody}
-        contentEditable={activeTool === "select"}
-        suppressContentEditableWarning
+export function ArchitecturalNodeBody({
+  html,
+  editable,
+  spellCheck = false,
+  onHtmlChange,
+}: {
+  html: string;
+  editable: boolean;
+  spellCheck?: boolean;
+  onHtmlChange?: (html: string) => void;
+}) {
+  return (
+    <div
+      className={styles.nodeBody}
+      contentEditable={editable}
+      suppressContentEditableWarning
+      spellCheck={spellCheck}
+      dangerouslySetInnerHTML={{ __html: html }}
+      onInput={(event) => onHtmlChange?.((event.target as HTMLElement).innerHTML)}
+    />
+  );
+}
+
+export function ArchitecturalNodeCard({
+  id,
+  title,
+  width,
+  theme,
+  tapeRotation,
+  bodyHtml,
+  activeTool,
+  dragged,
+  selected,
+  onBodyInput,
+  onExpand,
+  tapeVariant = "clear",
+  showExpandButton = true,
+  bodyEditable,
+}: {
+  id: string;
+  title: string;
+  width?: number;
+  theme: NodeTheme;
+  tapeRotation: number;
+  bodyHtml: string;
+  activeTool: CanvasTool;
+  dragged: boolean;
+  selected: boolean;
+  onBodyInput: (id: string, html: string) => void;
+  onExpand: (id: string) => void;
+  tapeVariant?: TapeVariant;
+  showExpandButton?: boolean;
+  bodyEditable?: boolean;
+}) {
+  return (
+    <div
+      className={`${styles.entityNode} ${themeClass(theme)} ${
+        dragged ? styles.dragging : ""
+      } ${selected ? styles.selectedNode : ""}`}
+      style={{
+        width: width ? `${width}px` : undefined,
+      }}
+    >
+      <ArchitecturalNodeTape variant={tapeVariant} rotationDeg={tapeRotation} />
+      <ArchitecturalNodeHeader
+        title={title}
+        showExpand={showExpandButton}
+        onExpand={() => onExpand(id)}
+      />
+      <ArchitecturalNodeBody
+        html={bodyHtml}
+        editable={bodyEditable ?? activeTool === "select"}
         spellCheck={false}
-        dangerouslySetInnerHTML={{ __html: node.bodyHtml }}
-        onInput={(event) =>
-          onBodyInput(node.id, (event.target as HTMLElement).innerHTML)
-        }
+        onHtmlChange={(html) => onBodyInput(id, html)}
       />
     </div>
   );

@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle } from "@phosphor-icons/react";
 
 import styles from "./ArchitecturalCanvasApp.module.css";
 import { ArchitecturalBottomDock } from "@/src/components/foundation/ArchitecturalBottomDock";
+import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
 import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";
 import { ArchitecturalStatusBar } from "@/src/components/foundation/ArchitecturalStatusBar";
 import { ArchitecturalToolRail } from "@/src/components/foundation/ArchitecturalToolRail";
+import { buildArchitecturalSeedNodes } from "@/src/components/foundation/architectural-seed";
 import type {
   CanvasNode,
   CanvasTool,
@@ -20,90 +21,13 @@ const ZOOM_BUTTON_STEP = 0.2;
 const WHEEL_ZOOM_SENSITIVITY = 0.0012;
 
 
-const INITIAL_NODES: CanvasNode[] = [
-  {
-    id: "node-1",
-    title: "Project Thesis",
-    x: -300,
-    y: -320,
-    rotation: -1,
-    theme: "default",
-    tapeRotation: 2,
-    bodyHtml: `
-      <h1>A Structural Approach</h1>
-      <p>Unlike fluid glass interfaces, this environment prioritizes rigid bounds and definitive states. It feels more like arranging physical blueprints than floating digital clouds.</p>
-      <blockquote>Clarity over aesthetic blur. The architecture of thought requires solid foundations.</blockquote>
-      <p>Notice the crosshair grid-it implies precision and measurement rather than passive atmosphere.</p>
-    `,
-  },
-  {
-    id: "node-2",
-    title: "SYS // Configuration.js",
-    x: 140,
-    y: -210,
-    rotation: 0.5,
-    width: 420,
-    theme: "code",
-    tapeRotation: -1.5,
-    bodyHtml: `
-      <span style="color: #c678dd;">const</span> <span style="color: #e5c07b;">environment</span> = {<br>
-      &nbsp;&nbsp;<span style="color: #d19a66;">mode</span>: <span style="color: #98c379;">'architectural'</span>,<br>
-      &nbsp;&nbsp;<span style="color: #d19a66;">friction</span>: <span style="color: #d19a66;">0.85</span>,<br>
-      &nbsp;&nbsp;<span style="color: #d19a66;">snapToGrid</span>: <span style="color: #c678dd;">false</span>,<br>
-      &nbsp;&nbsp;<span style="color: #d19a66;">theme</span>: {<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;base: <span style="color: #98c379;">'#0a0a0c'</span>,<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;accent: <span style="color: #98c379;">'#3b82f6'</span><br>
-      &nbsp;&nbsp;}<br>
-      };<br><br>
-      <span style="color: #5c6370;">// Awaiting secondary confirmation...</span>
-    `,
-  },
-  {
-    id: "node-3",
-    title: "Immediate Actions",
-    x: 240,
-    y: 210,
-    rotation: -2,
-    width: 280,
-    theme: "task",
-    tapeRotation: 3,
-    bodyHtml: `
-      <div class="${styles.taskItem} ${styles.done}">
-        <div class="${styles.taskCheckbox}"></div>
-        <div class="${styles.taskText}" contenteditable="true">Define variant palette</div>
-      </div>
-      <div class="${styles.taskItem} ${styles.done}">
-        <div class="${styles.taskCheckbox}"></div>
-        <div class="${styles.taskText}" contenteditable="true">Implement tape randomization</div>
-      </div>
-      <div class="${styles.taskItem}">
-        <div class="${styles.taskCheckbox}"></div>
-        <div class="${styles.taskText}" contenteditable="true">Build "Focus Mode" overlay</div>
-      </div>
-      <div class="${styles.taskItem}">
-        <div class="${styles.taskCheckbox}"></div>
-        <div class="${styles.taskText}" contenteditable="true">Review typographical hierarchy</div>
-      </div>
-    `,
-  },
-  {
-    id: "node-4",
-    title: "Reference // Structural",
-    x: -200,
-    y: 310,
-    rotation: 1,
-    theme: "media",
-    tapeRotation: -2.5,
-    bodyHtml: `
-      <div class="${styles.mediaPlaceholder}">
-        <span>Image Placeholder</span>
-      </div>
-      <div contenteditable="true" style="font-size: 13px; color: #555;">
-        Brutalist web design pattern reference. Note the heavy borders and lack of border-radius.
-      </div>
-    `,
-  },
-];
+const INITIAL_NODES: CanvasNode[] = buildArchitecturalSeedNodes({
+  taskItem: styles.taskItem,
+  done: styles.done,
+  taskCheckbox: styles.taskCheckbox,
+  taskText: styles.taskText,
+  mediaPlaceholder: styles.mediaPlaceholder,
+});
 
 export function ArchitecturalCanvasApp() {
   const [nodes, setNodes] = useState<CanvasNode[]>(INITIAL_NODES);
@@ -626,16 +550,31 @@ export function ArchitecturalCanvasApp() {
           {nodes.map((node) => {
             const dragged = draggedNodeId === node.id;
             return (
-              <ArchitecturalNodeCard
+              <div
                 key={node.id}
-                node={node}
-                activeTool={activeTool}
-                dragged={dragged}
-                selected={selectedNodeIds.includes(node.id)}
-                zIndex={dragged ? maxZIndex : nodeZ.get(node.id)}
-                onBodyInput={updateNodeBody}
-                onExpand={openFocusMode}
-              />
+                data-node-id={node.id}
+                className={styles.nodePlacement}
+                style={{
+                  left: `${node.x}px`,
+                  top: `${node.y}px`,
+                  transform: `rotate(${node.rotation}deg)`,
+                  zIndex: dragged ? maxZIndex : nodeZ.get(node.id),
+                }}
+              >
+                <ArchitecturalNodeCard
+                  id={node.id}
+                  title={node.title}
+                  width={node.width}
+                  theme={node.theme}
+                  tapeRotation={node.tapeRotation}
+                  bodyHtml={node.bodyHtml}
+                  activeTool={activeTool}
+                  dragged={dragged}
+                  selected={selectedNodeIds.includes(node.id)}
+                  onBodyInput={updateNodeBody}
+                  onExpand={openFocusMode}
+                />
+              </div>
             );
           })}
         </div>
@@ -674,9 +613,10 @@ export function ArchitecturalCanvasApp() {
           <div className={styles.focusMeta}>
             EDITING // {activeNodeId ? activeNodeId.toUpperCase() : "NODE"}
           </div>
-          <button type="button" className={styles.focusClose} onClick={closeFocusMode}>
-            <CheckCircle size={16} /> Done
-          </button>
+          <ArchitecturalFocusCloseButton
+            variant={focusCodeTheme ? "dark" : "light"}
+            onClick={closeFocusMode}
+          />
         </div>
         <div className={styles.focusContent}>
           <input

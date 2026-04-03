@@ -79,8 +79,12 @@
   stroke-dasharray: 4 4;
 }
 
-.entityNode {
+.nodePlacement {
   position: absolute;
+}
+
+.entityNode {
+  position: relative;
   width: 340px;
   border-radius: 2px;
   box-shadow:
@@ -487,6 +491,8 @@
   inset: 0;
   z-index: 9999;
   background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
@@ -533,9 +539,36 @@
   transition: all 0.2s;
 }
 
-.focusClose:hover {
+.focusCloseLight {
+  background: #f0f0f0;
+  color: #555;
+}
+
+.focusCloseDark {
+  background: #333;
+  color: #fff;
+}
+
+.focusClose:hover,
+.focusCloseStateHover {
   background: #e0e0e0;
   color: #111;
+}
+
+.focusCloseDark:hover,
+.focusCloseDark.focusCloseStateHover {
+  background: #444;
+  color: #fff;
+}
+
+.focusClose:active,
+.focusCloseStateActive {
+  transform: translateY(0.5px);
+}
+
+.focusClose:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .focusContent {

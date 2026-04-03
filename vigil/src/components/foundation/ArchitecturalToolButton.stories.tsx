@@ -1,0 +1,34 @@
+"use client";
+
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+
+import { ArchitecturalToolButton } from "@/src/components/foundation/ArchitecturalToolRail";
+
+const meta: Meta<typeof ArchitecturalToolButton> = {
+  title: "Architectural Shell/Primitives/Tool Button",
+  component: ArchitecturalToolButton,
+  args: {
+    label: "Select",
+    active: false,
+    icon: "+",
+    onClick: () => {},
+  },
+  argTypes: {
+    label: { control: "text" },
+    active: { control: "boolean" },
+    icon: { control: "text" },
+    onClick: { control: false },
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ background: "#0a0a0c", padding: 20 }}>
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+export default meta;
+type Story = StoryObj<typeof ArchitecturalToolButton>;
+
+export const Default: Story = {};
