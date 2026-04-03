@@ -8,11 +8,8 @@ import {
   Plus,
 } from "@phosphor-icons/react";
 
-import {
-  VIGIL_BTN_ICON,
-  VIGIL_BTN_ICON_ACTIVE,
-  VIGIL_GLASS_PANEL,
-} from "@/src/lib/vigil-ui-classes";
+import { Button } from "@/src/components/ui/Button";
+import { VIGIL_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
 import { useCanvasStore } from "@/src/stores/canvas-store";
 
 export function CanvasToolRail() {
@@ -27,32 +24,33 @@ export function CanvasToolRail() {
       role="toolbar"
       aria-label="Canvas tools"
     >
-      <button
-        type="button"
-        className={`${VIGIL_BTN_ICON} ${
-          canvasTool === "select" ? VIGIL_BTN_ICON_ACTIVE : ""
-        }`}
+      <Button
+        size="icon"
+        variant="ghost"
+        tone="glass"
+        isActive={canvasTool === "select"}
         title="Select tool"
         aria-label="Select tool"
         onClick={() => setCanvasTool("select")}
       >
         <CursorClick size={17} weight="bold" />
-      </button>
-      <button
-        type="button"
-        className={`${VIGIL_BTN_ICON} ${
-          canvasTool === "pan" ? VIGIL_BTN_ICON_ACTIVE : ""
-        }`}
+      </Button>
+      <Button
+        size="icon"
+        variant="ghost"
+        tone="glass"
+        isActive={canvasTool === "pan"}
         title="Pan tool"
         aria-label="Pan tool"
         onClick={() => setCanvasTool("pan")}
       >
         <Hand size={17} weight="bold" />
-      </button>
+      </Button>
       <span className="mx-2 my-1 h-px bg-[var(--vigil-border)]" aria-hidden />
-      <button
-        type="button"
-        className={VIGIL_BTN_ICON}
+      <Button
+        size="icon"
+        variant="ghost"
+        tone="glass"
         title="Zoom in"
         aria-label="Zoom in"
         onClick={() =>
@@ -60,10 +58,11 @@ export function CanvasToolRail() {
         }
       >
         <Plus size={17} weight="bold" />
-      </button>
-      <button
-        type="button"
-        className={VIGIL_BTN_ICON}
+      </Button>
+      <Button
+        size="icon"
+        variant="ghost"
+        tone="glass"
         title="Zoom out"
         aria-label="Zoom out"
         onClick={() =>
@@ -71,16 +70,17 @@ export function CanvasToolRail() {
         }
       >
         <Minus size={17} weight="bold" />
-      </button>
-      <button
-        type="button"
-        className={VIGIL_BTN_ICON}
+      </Button>
+      <Button
+        size="icon"
+        variant="ghost"
+        tone="glass"
         title="Recenter"
         aria-label="Recenter"
         onClick={() => setCamera({ x: 0, y: 0, zoom: 1 })}
       >
         <CrosshairSimple size={17} weight="bold" />
-      </button>
+      </Button>
     </div>
   );
 }

@@ -55,3 +55,22 @@ export const DarkDefault: Story = {
 export const Disabled: Story = {
   args: { disabled: true },
 };
+
+export const DarkHover: Story = {
+  args: { variant: "dark", forceState: "hover" },
+  decorators: DarkDefault.decorators,
+};
+
+export const DarkActive: Story = {
+  args: { variant: "dark", forceState: "active" },
+  decorators: DarkDefault.decorators,
+};
+
+export const DarkDisabled: Story = {
+  args: { variant: "dark", disabled: true },
+  decorators: DarkDefault.decorators,
+};
+
+export const NoIcon: Story = {
+  args: { showIcon: false },
+};

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 
+import { Button } from "@/src/components/ui/Button";
+
 export function ContextMenu({
   position,
   onClose,
@@ -38,10 +40,12 @@ export function ContextMenu({
       style={{ left: position.x, top: position.y }}
     >
       {items.map((it) => (
-        <button
+        <Button
           key={it.label}
-          type="button"
-          className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-[var(--foreground)] transition-colors hover:bg-black/[0.06] focus-visible:bg-black/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--vigil-snap)]/25 dark:hover:bg-white/[0.08] dark:focus-visible:bg-white/[0.08]"
+          size="sm"
+          variant="subtle"
+          tone="menu"
+          className="flex w-full items-center justify-start gap-2.5 px-3 py-2.5 text-sm"
           onClick={() => {
             it.onSelect();
             onClose();
@@ -49,7 +53,7 @@ export function ContextMenu({
         >
           {it.icon ? <span className="text-[var(--vigil-muted)]">{it.icon}</span> : null}
           <span className="min-w-0 flex-1">{it.label}</span>
-        </button>
+        </Button>
       ))}
     </div>
   );

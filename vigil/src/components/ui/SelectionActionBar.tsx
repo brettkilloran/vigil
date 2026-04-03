@@ -2,8 +2,8 @@
 
 import { Copy, Trash } from "@phosphor-icons/react";
 
+import { Button } from "@/src/components/ui/Button";
 import {
-  VIGIL_CHIP_BTN,
   VIGIL_CHROME_ICON,
   VIGIL_GLASS_PANEL,
 } from "@/src/lib/vigil-ui-classes";
@@ -35,22 +35,14 @@ export function SelectionActionBar({
       <span className="px-1 text-xs text-[var(--vigil-muted)]">
         {selectedIds.length} selected
       </span>
-      <button
-        type="button"
-        className={VIGIL_CHIP_BTN}
-        onClick={() => onDuplicate(selected)}
-      >
+      <Button size="md" variant="neutral" tone="glass" onClick={() => onDuplicate(selected)}>
         <Copy className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
         Duplicate
-      </button>
-      <button
-        type="button"
-        className={VIGIL_CHIP_BTN}
-        onClick={() => onDelete([...selectedIds])}
-      >
+      </Button>
+      <Button size="md" variant="danger" tone="glass" onClick={() => onDelete([...selectedIds])}>
         <Trash className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
         Delete
-      </button>
+      </Button>
     </div>
   );
 }

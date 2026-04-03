@@ -80,3 +80,72 @@ export const FocusPill: Story = {
     ),
   ],
 };
+
+export const IconActive: Story = {
+  args: {
+    size: "icon",
+    tone: "glass",
+    active: true,
+    children: <CursorClick size={18} />,
+  },
+  decorators: IconGlass.decorators,
+};
+
+export const IconDisabled: Story = {
+  args: {
+    size: "icon",
+    tone: "glass",
+    disabled: true,
+    children: <CursorClick size={18} />,
+  },
+  decorators: IconGlass.decorators,
+};
+
+export const MenuHover: Story = {
+  args: {
+    size: "menu",
+    tone: "menu",
+    leadingIcon: <Note size={16} />,
+    children: "Note",
+    forceState: "hover",
+  },
+  decorators: MenuAction.decorators,
+};
+
+export const FocusDark: Story = {
+  args: {
+    size: "pill",
+    tone: "focus-dark",
+    leadingIcon: <CheckCircle size={16} />,
+    children: "Done",
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ padding: 20, background: "#121217" }}>
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+export const StateMatrix: Story = {
+  render: () => (
+    <div style={{ display: "flex", gap: 10, padding: 20, background: "#0a0a0c", flexWrap: "wrap" }}>
+      <ArchitecturalButton size="icon" tone="glass">
+        <CursorClick size={18} />
+      </ArchitecturalButton>
+      <ArchitecturalButton size="icon" tone="glass" forceState="hover">
+        <CursorClick size={18} />
+      </ArchitecturalButton>
+      <ArchitecturalButton size="icon" tone="glass" forceState="active">
+        <CursorClick size={18} />
+      </ArchitecturalButton>
+      <ArchitecturalButton size="icon" tone="glass" active>
+        <CursorClick size={18} />
+      </ArchitecturalButton>
+      <ArchitecturalButton size="icon" tone="glass" disabled>
+        <CursorClick size={18} />
+      </ArchitecturalButton>
+    </div>
+  ),
+};

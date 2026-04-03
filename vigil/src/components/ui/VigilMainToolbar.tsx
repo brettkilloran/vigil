@@ -22,9 +22,9 @@ import {
   X,
 } from "@phosphor-icons/react";
 
+import { Button } from "@/src/components/ui/Button";
 import type { VigilColorScheme } from "@/src/hooks/use-vigil-theme";
 import {
-  VIGIL_CHIP_BTN,
   VIGIL_CHROME_ICON,
   VIGIL_GLASS_PANEL,
   VIGIL_TOOLBAR_DIVIDER,
@@ -121,24 +121,26 @@ export function VigilMainToolbar({
             <span className="select-none">{syncLabel}</span>
           </div>
           <span className={VIGIL_TOOLBAR_DIVIDER} />
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
+          <Button
+            size="md"
+            variant="neutral"
+            tone="glass"
             title="Align items to neighbors when dragging"
             onClick={onToggleSnap}
           >
             <MagnetStraight className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Snap {snapEnabled ? "on" : "off"}</span>
-          </button>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
+          </Button>
+          <Button
+            size="md"
+            variant="neutral"
+            tone="glass"
             title="Color theme"
             onClick={onCycleTheme}
           >
             <Moon className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>{themeLabel(preference)}</span>
-          </button>
+          </Button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--vigil-border)]/60 pt-3">
@@ -158,118 +160,105 @@ export function VigilMainToolbar({
                   ))}
                 </select>
               </label>
-              <button
-                type="button"
-                className={VIGIL_CHIP_BTN}
-                onClick={onNewSpace}
-              >
+              <Button size="md" variant="neutral" tone="glass" onClick={onNewSpace}>
                 <FolderPlus className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
                 <span>New space</span>
-              </button>
+              </Button>
               <span className={VIGIL_TOOLBAR_DIVIDER} />
             </>
           ) : null}
 
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
-            onClick={() => void createItemAt({ x: 120, y: 120 }, "note")}
-          >
+          <Button size="md" variant="neutral" tone="glass" onClick={() => void createItemAt({ x: 120, y: 120 }, "note")}>
             <FileText className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Note</span>
-          </button>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
-            onClick={() => void createItemAt({ x: 160, y: 160 }, "sticky")}
-          >
+          </Button>
+          <Button size="md" variant="neutral" tone="glass" onClick={() => void createItemAt({ x: 160, y: 160 }, "sticky")}>
             <NotePencil className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Sticky</span>
-          </button>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
+          </Button>
+          <Button
+            size="md"
+            variant="neutral"
+            tone="glass"
             title="Standalone checklist card"
             onClick={() => void createItemAt({ x: 200, y: 120 }, "checklist")}
           >
             <ListChecks className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Checklist</span>
-          </button>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
+          </Button>
+          <Button
+            size="md"
+            variant="neutral"
+            tone="glass"
             title="Save a URL with preview"
             onClick={() => void createItemAt({ x: 240, y: 140 }, "webclip")}
           >
             <LinkSimple className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Web clip</span>
-          </button>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
+          </Button>
+          <Button
+            size="md"
+            variant="neutral"
+            tone="glass"
             title="Place an image on the canvas"
             onClick={() => imagePickInputRef.current?.click()}
           >
             <ImageSquare className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Image</span>
-          </button>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
-            onClick={() => void onNewFolder()}
-          >
+          </Button>
+          <Button size="md" variant="neutral" tone="glass" onClick={() => void onNewFolder()}>
             <FolderPlus className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Folder</span>
-          </button>
+          </Button>
 
           <span className={VIGIL_TOOLBAR_DIVIDER} />
 
-          <button type="button" className={VIGIL_CHIP_BTN} onClick={exportJson}>
+          <Button size="md" variant="neutral" tone="glass" onClick={exportJson}>
             <DownloadSimple className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Export</span>
-          </button>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
-            onClick={() => importInputRef.current?.click()}
-          >
+          </Button>
+          <Button size="md" variant="neutral" tone="glass" onClick={() => importInputRef.current?.click()}>
             <UploadSimple className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Import</span>
-          </button>
+          </Button>
 
           <span className={VIGIL_TOOLBAR_DIVIDER} />
 
-          <button
-            type="button"
-            className={`${VIGIL_CHIP_BTN}${scratchPadOpen ? " ring-2 ring-[var(--vigil-snap)]/35 ring-offset-2 ring-offset-[var(--background)]" : ""}`}
+          <Button
+            size="md"
+            variant="neutral"
+            tone="glass"
+            isActive={scratchPadOpen}
             onClick={onToggleScratch}
           >
             <Notebook className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Scratch</span>
-          </button>
-          <button type="button" className={VIGIL_CHIP_BTN} onClick={onOpenSearch}>
+          </Button>
+          <Button size="md" variant="neutral" tone="glass" onClick={onOpenSearch}>
             <MagnifyingGlass className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Search ({modKeys.search})</span>
-          </button>
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
+          </Button>
+          <Button
+            size="md"
+            variant="neutral"
+            tone="glass"
             title="Notes tagged Event, sorted by metadata date"
             onClick={onOpenTimeline}
           >
             <CalendarDots className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             <span>Timeline</span>
-          </button>
+          </Button>
           {syncMode === "cloud" && activeSpaceId ? (
-            <button
-              type="button"
-              className={VIGIL_CHIP_BTN}
+            <Button
+              size="md"
+              variant="neutral"
+              tone="glass"
               title="Items and item_links in this space"
               onClick={onOpenGraph}
             >
               <Graph className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
               <span>Graph</span>
-            </button>
+            </Button>
           ) : null}
         </div>
       </div>
@@ -282,14 +271,16 @@ export function VigilMainToolbar({
             aria-hidden
           />
           <span className="min-w-0 flex-1 leading-snug">{uploadMessage}</span>
-          <button
-            type="button"
-            className="shrink-0 rounded-md p-1 hover:bg-black/10 dark:hover:bg-white/10"
+          <Button
+            size="icon"
+            variant="subtle"
+            tone="glass"
+            className="shrink-0"
             aria-label="Dismiss"
             onClick={onDismissUpload}
           >
             <X className="size-4" weight="bold" />
-          </button>
+          </Button>
         </div>
       ) : null}
     </div>

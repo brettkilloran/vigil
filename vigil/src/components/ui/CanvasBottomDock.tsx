@@ -12,12 +12,9 @@ import {
   LinkSimple,
 } from "@phosphor-icons/react";
 
+import { Button } from "@/src/components/ui/Button";
 import { getActiveTipTapEditor } from "@/src/lib/tiptap-active-bridge";
-import {
-  VIGIL_ADD_BTN,
-  VIGIL_BTN_ICON,
-  VIGIL_GLASS_PANEL,
-} from "@/src/lib/vigil-ui-classes";
+import { VIGIL_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
 import type { ItemType } from "@/src/stores/canvas-types";
 
 export function CanvasBottomDock({
@@ -43,89 +40,98 @@ export function CanvasBottomDock({
         className={`pointer-events-auto flex items-center gap-2 px-2 py-2 ${VIGIL_GLASS_PANEL}`}
       >
         <div className="flex items-center gap-1 pr-1">
-          <button
-            type="button"
-            className={VIGIL_BTN_ICON}
+          <Button
+            size="icon"
+            variant="ghost"
+            tone="glass"
             aria-label="Bold"
             title="Bold"
             onClick={() => runFmt("bold")}
           >
             <TextB size={16} weight="bold" />
-          </button>
-          <button
-            type="button"
-            className={VIGIL_BTN_ICON}
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            tone="glass"
             aria-label="Italic"
             title="Italic"
             onClick={() => runFmt("italic")}
           >
             <TextItalic size={16} weight="bold" />
-          </button>
+          </Button>
           <span className="h-5 w-px bg-[var(--vigil-border)]" aria-hidden />
-          <button
-            type="button"
-            className={VIGIL_BTN_ICON}
+          <Button
+            size="icon"
+            variant="ghost"
+            tone="glass"
             aria-label="List"
             title="List"
             onClick={() => runFmt("list")}
           >
             <ListBullets size={16} weight="bold" />
-          </button>
-          <button
-            type="button"
-            className={VIGIL_BTN_ICON}
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            tone="glass"
             aria-label="Heading"
             title="Heading"
             onClick={() => runFmt("heading")}
           >
             <TextH size={16} weight="bold" />
-          </button>
+          </Button>
         </div>
         <span className="h-6 w-px bg-[var(--vigil-border)]" aria-hidden />
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            className={VIGIL_ADD_BTN}
+          <Button
+            size="sm"
+            variant="subtle"
+            tone="menu"
             onClick={() => onCreate("note")}
           >
             <NotePencil size={14} weight="bold" />
             Note
-          </button>
-          <button
-            type="button"
-            className={VIGIL_ADD_BTN}
+          </Button>
+          <Button
+            size="sm"
+            variant="subtle"
+            tone="menu"
             onClick={() => onCreate("checklist")}
           >
             <ListChecks size={14} weight="bold" />
             Task
-          </button>
-          <button
-            type="button"
-            className={VIGIL_ADD_BTN}
+          </Button>
+          <Button
+            size="sm"
+            variant="subtle"
+            tone="menu"
             onClick={() => onCreate("image")}
           >
             <ImageSquare size={14} weight="bold" />
             Image
-          </button>
-          <button
-            type="button"
-            className={VIGIL_ADD_BTN}
+          </Button>
+          <Button
+            size="sm"
+            variant="subtle"
+            tone="menu"
             onClick={() => onCreate("webclip")}
           >
             <LinkSimple size={14} weight="bold" />
             Web clip
-          </button>
+          </Button>
         </div>
         <span className="h-6 w-px bg-[var(--vigil-border)]" aria-hidden />
-        <button
-          type="button"
-          className={VIGIL_BTN_ICON}
+        <Button
+          size="icon"
+          variant="ghost"
+          tone="glass"
           aria-label="Search"
           title="Search"
           onClick={onOpenSearch}
         >
           <MagnifyingGlass size={16} weight="bold" />
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -6,16 +6,35 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import playwright from "eslint-plugin-playwright";
 
-const eslintConfig = defineConfig([...nextVitals, ...nextTs, {
-  ...playwright.configs["flat/recommended"],
-  files: ["e2e/**/*.ts"],
-}, // Override default ignores of eslint-config-next.
-globalIgnores([
-  // Default ignores of eslint-config-next:
-  ".next/**",
-  "out/**",
-  "build/**",
-  "next-env.d.ts",
-]), ...storybook.configs["flat/recommended"]]);
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  {
+    ...playwright.configs["flat/recommended"],
+    files: ["e2e/**/*.ts"],
+  },
+  {
+    files: ["src/components/**/*.tsx"],
+    ignores: ["src/components/ui/Button.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "JSXOpeningElement[name.name='button']",
+          message: "Use the shared Button component instead of raw <button>.",
+        },
+      ],
+    },
+  },
+  // Override default ignores of eslint-config-next.
+  globalIgnores([
+    // Default ignores of eslint-config-next:
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+  ]),
+  ...storybook.configs["flat/recommended"],
+]);
 
 export default eslintConfig;

@@ -4,9 +4,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowElbowDownLeft, Notebook, X } from "@phosphor-icons/react";
 import { useState } from "react";
 
+import { Button } from "@/src/components/ui/Button";
 import {
   VIGIL_GLASS_PANEL,
-  VIGIL_ICON_GHOST_BTN,
 } from "@/src/lib/vigil-ui-classes";
 
 export function ScratchPad({
@@ -42,14 +42,15 @@ export function ScratchPad({
               />
               <span className="truncate">Scratch pad</span>
             </div>
-            <button
-              type="button"
-              className={VIGIL_ICON_GHOST_BTN}
+            <Button
+              size="icon"
+              variant="ghost"
+              tone="glass"
               aria-label="Close scratch pad"
               onClick={onClose}
             >
               <X className="size-4" weight="bold" aria-hidden />
-            </button>
+            </Button>
           </div>
           <textarea
             className="mb-2.5 h-28 w-full resize-none rounded-lg border border-[var(--vigil-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--vigil-snap)]/35"
@@ -57,9 +58,11 @@ export function ScratchPad({
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
-          <button
-            type="button"
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--foreground)] py-2.5 text-sm font-medium text-[var(--background)] transition-opacity disabled:opacity-40 dark:bg-neutral-200 dark:text-neutral-900"
+          <Button
+            size="lg"
+            variant="primary"
+            tone="solid"
+            className="flex w-full items-center justify-center gap-2"
             disabled={!text.trim()}
             onClick={() => {
               const t = text.trim();
@@ -71,7 +74,7 @@ export function ScratchPad({
           >
             <ArrowElbowDownLeft className="size-4 shrink-0 opacity-90" weight="bold" aria-hidden />
             Drop as note
-          </button>
+          </Button>
         </motion.div>
       ) : null}
     </AnimatePresence>

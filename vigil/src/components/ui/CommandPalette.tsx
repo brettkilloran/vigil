@@ -16,6 +16,7 @@ import {
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, type ReactNode, useState } from "react";
 
+import { Button } from "@/src/components/ui/Button";
 import { useModKeyHints } from "@/src/lib/mod-keys";
 import { useCanvasStore } from "@/src/stores/canvas-store";
 import type { CanvasItem } from "@/src/stores/canvas-types";
@@ -304,20 +305,17 @@ export function CommandPalette({
         {spaceId ? (
           <div className="flex flex-wrap gap-1.5 border-b border-[var(--vigil-border)] px-3 py-2.5">
             {modeButtons.map((b) => (
-              <button
+              <Button
                 key={b.id}
-                type="button"
+                size="xs"
+                variant={searchMode === b.id ? "primary" : "subtle"}
+                tone={searchMode === b.id ? "solid" : "menu"}
                 title={b.title}
-                className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vigil-snap)]/35 ${
-                  searchMode === b.id
-                    ? "bg-[var(--vigil-label)] text-[var(--vigil-btn-bg)]"
-                    : "text-[var(--vigil-muted)] hover:bg-black/5 dark:hover:bg-white/10"
-                }`}
                 onClick={() => setSearchModePersist(b.id)}
               >
                 {b.icon}
                 {b.label}
-              </button>
+              </Button>
             ))}
           </div>
         ) : null}
@@ -342,9 +340,11 @@ export function CommandPalette({
             ) : (
               hits.map((h) => (
                 <li key={h.kind === "item" ? h.item.id : h.id}>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left transition-colors hover:bg-black/5 focus-visible:bg-black/5 focus-visible:outline-none dark:hover:bg-white/10 dark:focus-visible:bg-white/10"
+                  <Button
+                    size="sm"
+                    variant="subtle"
+                    tone="menu"
+                    className="flex w-full items-center justify-start gap-2.5 px-4 py-2.5"
                     onClick={() => run(h)}
                   >
                     {h.kind === "item" ? (
@@ -367,7 +367,7 @@ export function CommandPalette({
                         </span>
                       </>
                     )}
-                  </button>
+                  </Button>
                 </li>
               ))
             )

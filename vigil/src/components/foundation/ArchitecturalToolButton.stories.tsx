@@ -32,3 +32,9 @@ export default meta;
 type Story = StoryObj<typeof ArchitecturalToolButton>;
 
 export const Default: Story = {};
+
+export const Active: Story = {
+  args: {
+    active: true,
+  },
+};

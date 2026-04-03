@@ -3,9 +3,9 @@
 import { CalendarDots, X } from "@phosphor-icons/react";
 import { useMemo } from "react";
 
+import { Button } from "@/src/components/ui/Button";
 import {
   VIGIL_GLASS_PANEL,
-  VIGIL_ICON_GHOST_BTN,
 } from "@/src/lib/vigil-ui-classes";
 import { useCanvasStore } from "@/src/stores/canvas-store";
 import type { CanvasItem } from "@/src/stores/canvas-types";
@@ -57,14 +57,15 @@ export function TimelinePanel({
           />
           Events (TTRPG)
         </span>
-        <button
-          type="button"
-          className={VIGIL_ICON_GHOST_BTN}
+        <Button
+          size="icon"
+          variant="ghost"
+          tone="glass"
           aria-label="Close timeline"
           onClick={onClose}
         >
           <X className="size-4" weight="bold" aria-hidden />
-        </button>
+        </Button>
       </div>
       <ul className="max-h-[min(36vh,280px)] overflow-y-auto py-0.5 text-xs">
         {events.length === 0 ? (
@@ -81,9 +82,11 @@ export function TimelinePanel({
                 : "—";
             return (
               <li key={it.id}>
-                <button
-                  type="button"
-                  className="flex w-full items-baseline gap-2 rounded-lg px-2 py-2 text-left transition-colors hover:bg-black/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vigil-snap)]/35 dark:hover:bg-white/[0.08]"
+                <Button
+                  size="sm"
+                  variant="subtle"
+                  tone="menu"
+                  className="flex w-full items-baseline justify-start gap-2"
                   onClick={() => {
                     onSelectItem(it.id);
                     onClose();
@@ -95,7 +98,7 @@ export function TimelinePanel({
                   <span className="min-w-0 flex-1 truncate font-medium text-[var(--foreground)]">
                     {it.title || "Event"}
                   </span>
-                </button>
+                </Button>
               </li>
             );
           })

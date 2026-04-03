@@ -3,6 +3,7 @@
 import { LinkSimple } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { Button } from "@/src/components/ui/Button";
 import {
   localIncomingToItem,
   localOutgoingFromItem,
@@ -37,9 +38,6 @@ type Loaded =
 
 type LinkRow = Pick<Endpoint, "id" | "title" | "itemType">;
 
-const linkRowBtn =
-  "w-full truncate rounded-lg px-2 py-1.5 text-left text-[var(--foreground)] transition-colors hover:bg-black/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vigil-snap)]/35 dark:hover:bg-white/[0.08]";
-
 function LinkRowList({
   label,
   rows,
@@ -56,10 +54,16 @@ function LinkRowList({
       <ul className="space-y-0.5">
         {rows.map((r) => (
           <li key={r.id}>
-            <button type="button" className={linkRowBtn} onClick={() => onPick(r.id)}>
+            <Button
+              size="sm"
+              variant="subtle"
+              tone="menu"
+              className="w-full justify-start truncate"
+              onClick={() => onPick(r.id)}
+            >
               {r.title}
               <span className="ml-1 text-[var(--vigil-muted)]">({r.itemType})</span>
-            </button>
+            </Button>
           </li>
         ))}
       </ul>
@@ -268,16 +272,18 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
               <ul className="space-y-0.5">
                 {outgoing.map((r) => (
                   <li key={r.linkId}>
-                    <button
-                      type="button"
-                      className={linkRowBtn}
+                    <Button
+                      size="sm"
+                      variant="subtle"
+                      tone="menu"
+                      className="w-full justify-start truncate"
                       onClick={() => focusItem(r.to.id)}
                     >
                       {r.to.title}
                       <span className="ml-1 text-[var(--vigil-muted)]">
                         ({r.to.itemType})
                       </span>
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -289,16 +295,18 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
               <ul className="space-y-0.5">
                 {incoming.map((r) => (
                   <li key={r.linkId}>
-                    <button
-                      type="button"
-                      className={linkRowBtn}
+                    <Button
+                      size="sm"
+                      variant="subtle"
+                      tone="menu"
+                      className="w-full justify-start truncate"
                       onClick={() => focusItem(r.from.id)}
                     >
                       {r.from.title}
                       <span className="ml-1 text-[var(--vigil-muted)]">
                         ({r.from.itemType})
                       </span>
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>

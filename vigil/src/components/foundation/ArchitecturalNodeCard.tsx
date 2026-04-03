@@ -8,6 +8,7 @@ import type {
   NodeTheme,
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
+import { Button } from "@/src/components/ui/Button";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 
 function themeClass(theme: NodeTheme): string {
@@ -54,15 +55,18 @@ export function ArchitecturalNodeHeader({
       <span className={styles.nodeTitle}>{title}</span>
       <div className={styles.nodeActions}>
         {showExpand ? (
-          <button
-            type="button"
+          <Button
+            size="icon"
+            variant="ghost"
+            tone="glass"
             className={styles.nodeBtn}
             data-expand-btn="true"
             title={expandLabel}
+            aria-label={expandLabel}
             onClick={onExpand}
           >
             <ArrowsOutSimple size={16} />
-          </button>
+          </Button>
         ) : null}
       </div>
     </div>

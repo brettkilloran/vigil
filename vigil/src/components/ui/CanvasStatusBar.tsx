@@ -8,7 +8,8 @@ import {
 } from "@phosphor-icons/react";
 import { useState } from "react";
 
-import { VIGIL_BTN_ICON, VIGIL_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
+import { Button } from "@/src/components/ui/Button";
+import { VIGIL_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
 
 type SyncMode = "loading" | "local" | "cloud";
 
@@ -60,66 +61,76 @@ export function CanvasStatusBar({
           <SyncIcon size={12} weight="bold" aria-hidden />
           {Math.round(camera.zoom * 100)}%
         </span>
-        <button
-          type="button"
-          className={VIGIL_BTN_ICON}
+        <Button
+          size="icon"
+          variant="ghost"
+          tone="glass"
           aria-label="Search"
           title="Search"
           onClick={onOpenSearch}
         >
           <MagnifyingGlass size={16} weight="bold" />
-        </button>
-        <button
-          type="button"
-          className={VIGIL_BTN_ICON}
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          tone="glass"
           aria-label="More actions"
           title="More actions"
           onClick={() => setOpen((v) => !v)}
         >
           <DotsThreeOutlineVertical size={16} weight="bold" />
-        </button>
+        </Button>
         {open ? (
           <div className="absolute right-1 top-[calc(100%+6px)] min-w-44 rounded-md border border-[var(--vigil-border)] bg-[var(--vigil-elevated)] p-1 shadow-lg">
-            <button
-              type="button"
-              className="flex w-full rounded px-2 py-1.5 text-left text-xs text-[var(--foreground)] hover:bg-white/[0.08]"
+            <Button
+              size="sm"
+              variant="subtle"
+              tone="menu"
+              className="flex w-full justify-start"
               onClick={() => {
                 setOpen(false);
                 menu.onNewSpace();
               }}
             >
               New space
-            </button>
-            <button
-              type="button"
-              className="flex w-full rounded px-2 py-1.5 text-left text-xs text-[var(--foreground)] hover:bg-white/[0.08]"
+            </Button>
+            <Button
+              size="sm"
+              variant="subtle"
+              tone="menu"
+              className="flex w-full justify-start"
               onClick={() => {
                 setOpen(false);
                 menu.onExport();
               }}
             >
               Export JSON
-            </button>
-            <button
-              type="button"
-              className="flex w-full rounded px-2 py-1.5 text-left text-xs text-[var(--foreground)] hover:bg-white/[0.08]"
+            </Button>
+            <Button
+              size="sm"
+              variant="subtle"
+              tone="menu"
+              className="flex w-full justify-start"
               onClick={() => {
                 setOpen(false);
                 menu.onImport();
               }}
             >
               Import JSON
-            </button>
-            <button
-              type="button"
-              className="flex w-full rounded px-2 py-1.5 text-left text-xs text-[var(--foreground)] hover:bg-white/[0.08]"
+            </Button>
+            <Button
+              size="sm"
+              variant="subtle"
+              tone="menu"
+              className="flex w-full justify-start"
               onClick={() => {
                 setOpen(false);
                 menu.onToggleScratch();
               }}
             >
               Toggle scratch pad
-            </button>
+            </Button>
           </div>
         ) : null}
       </div>

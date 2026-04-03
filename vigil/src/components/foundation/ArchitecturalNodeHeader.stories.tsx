@@ -32,3 +32,9 @@ export default meta;
 type Story = StoryObj<typeof ArchitecturalNodeHeader>;
 
 export const Default: Story = {};
+
+export const NoExpandButton: Story = {
+  args: {
+    showExpand: false,
+  },
+};

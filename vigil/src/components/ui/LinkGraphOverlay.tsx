@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ArrowCounterClockwise, Graph, X } from "@phosphor-icons/react";
 
+import { Button } from "@/src/components/ui/Button";
 import { computeForceLayout } from "@/src/lib/graph-layout";
 import {
-  VIGIL_CHIP_BTN,
   VIGIL_CHROME_ICON,
   VIGIL_GLASS_PANEL,
 } from "@/src/lib/vigil-ui-classes";
@@ -238,18 +238,14 @@ function LinkGraphInner({
           Link graph
         </span>
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            className={VIGIL_CHIP_BTN}
-            onClick={() => setLayoutRevision((n) => n + 1)}
-          >
+          <Button size="md" variant="neutral" tone="glass" onClick={() => setLayoutRevision((n) => n + 1)}>
             <ArrowCounterClockwise className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             Reset layout
-          </button>
-          <button type="button" className={VIGIL_CHIP_BTN} onClick={onClose}>
+          </Button>
+          <Button size="md" variant="neutral" tone="glass" onClick={onClose}>
             <X className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
             Close
-          </button>
+          </Button>
         </div>
       </div>
       <div className="min-h-[min(70vh,520px)] flex-1 bg-[var(--vigil-canvas)]">
