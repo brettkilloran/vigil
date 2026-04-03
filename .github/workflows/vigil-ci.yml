@@ -1,0 +1,37 @@
+name: VIGIL CI
+
+on:
+  push:
+    paths:
+      - "vigil/**"
+      - ".github/workflows/vigil-ci.yml"
+  pull_request:
+    paths:
+      - "vigil/**"
+      - ".github/workflows/vigil-ci.yml"
+
+defaults:
+  run:
+    working-directory: vigil
+
+jobs:
+  check-and-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: vigil/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint and build
+        run: npm run check
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: E2E tests
+        run: npm run test:e2e
+        env:
+          CI: "1"

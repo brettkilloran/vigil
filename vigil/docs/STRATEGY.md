@@ -31,7 +31,7 @@ This file is the **short bridge** between the repo today and the full product sp
 
 We **adopt the master plan as source of truth** for architecture and phases. The existing tldraw-based implementation is a **spike / prototype**: it validated Neon + API shape + UX ideas but **does not match** licensing and product goals.
 
-**Status:** Phases **1–4** largely done; **Phase 5** in progress (entity meta, timeline, **d3-force** graph, MCP **`vigil_search`** / **`vigil_graph`** / **`vigil_get_item`** / **`vigil_item_links`**). **Phase 6** started: **card shadows**, **folder sheen**, light **hover scale** on cards, Cmd+K **search mode** persisted in `localStorage`. Remaining: LLM lore workflows, consistency checker, full **Phase 6–7** polish, **perf** at scale.
+**Status:** Phases **1–4** largely done. **Phase 5:** entity meta, timeline, graph, local **Links** + **title mentions**, MCP tools (see `scripts/mcp-server.mjs`); LLM-heavy items remain (see **`docs/FOLLOW_UP.md`**). **Phase 6–7:** Inter/Lora/mono typography, glass/chrome alignment, shadows/sheen/hover from earlier work. **Phase 8:** culling + PWA shell + export/import; deeper prefs/minimap/offline caching still open (**`docs/FOLLOW_UP.md`**).
 
 ## Phase map (use for roadmaps and todos)
 

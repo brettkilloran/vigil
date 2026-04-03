@@ -1,0 +1,42 @@
+# VIGIL — follow-ups (human / account / infra)
+
+Items the codebase **cannot** complete without your action, credentials, or product decisions. Check off as you go.
+
+## Accounts & API keys
+
+- **Neon:** `NEON_DATABASE_URL` in `.env.local` (and Vercel) for cloud sync, search, graph, MCP against production.
+- **OpenAI:** `OPENAI_API_KEY` for embeddings on save, semantic/hybrid Cmd+K, and any future **LLM lore / consistency / auto-link** features.
+- **Cloudflare R2:** Bucket, CORS, and optional public URL for image uploads; align with `.env.local.example`.
+
+## Phase 5 (plan) — still LLM- or product-heavy
+
+- **Markdown bulk import + entity extraction:** Needs an LLM pipeline (or a manual wizard) you trust; not implemented server-side beyond REST shapes.
+- **Auto-linking** (suggest `[[` targets from mentions): Needs embeddings or LLM + UX for accept/reject.
+- **Lore consistency checker** (“does anything contradict …?”): Needs LLM reasoning or a curated rules engine; the app only offers **title mention search** (FTS-style substring + MCP helper) as a lightweight stand-in.
+
+## Phase 6–7 — visual / typography
+
+- **Commercial font parity** (Eina 03, etc.): We use **Inter + Lora + JetBrains Mono** per master plan web guidance; licensing for Spatial-like fonts is on you if you want pixel-match.
+- **Flower color picker**, **dual-layer shadow tuning**, **expanded note fullscreen** transition polish: larger UI passes; partially addressed via tokens and glass panels.
+- **Custom caret**, **checkbox asset-perfect** match: optional follow-up.
+
+## Phase 8 — performance & shipping
+
+- **Image thumbnails by zoom level:** Requires R2 transforms or a resize pipeline.
+- **Bundle budget (<200KB initial):** Run `ANALYZE` / `next build` analysis when you care about the number.
+- **Canvas minimap:** Not built; add if you want orientation at a glance.
+- **Onboarding overlay:** First-run hints not implemented.
+- **Preferences panel** (corner radius, spring sliders): Only theme + snap exist in toolbar; extend `localStorage` / store if you want full prefs.
+- **PWA offline caching:** Service worker is **minimal** (install + claim only); define cache strategy before relying on offline edits.
+
+## CI / repo
+
+- **GitHub Actions:** Workflow added under `vigil/.github/workflows/` runs `npm run check` and Playwright on `ubuntu-latest`. Enable Actions on the repo if disabled; update branch filters if you use a non-`main` default.
+
+## Database hygiene
+
+- **Legacy `canvas_state`:** If an old DB still stores full tldraw JSON, migrate or reset per `STRATEGY.md`.
+
+---
+
+*Last updated by agent pass (living document; edit freely).*
