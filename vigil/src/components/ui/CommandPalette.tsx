@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { useModKeyHints } from "@/src/lib/mod-keys";
 import { useCanvasStore } from "@/src/stores/canvas-store";
 import type { CanvasItem } from "@/src/stores/canvas-types";
 
@@ -27,6 +28,7 @@ export function CommandPalette({
   const [remote, setRemote] = useState<CanvasItem[]>([]);
   const [remoteLoading, setRemoteLoading] = useState(false);
   const [remoteHint, setRemoteHint] = useState<string | null>(null);
+  const modKeys = useModKeyHints();
 
   const itemsRecord = useCanvasStore((s) => s.items);
   const localItems = useMemo(
@@ -194,8 +196,8 @@ export function CommandPalette({
           className="w-full border-0 border-b border-[var(--vigil-border)] bg-transparent px-4 py-3 text-sm text-[var(--foreground)] outline-none"
           placeholder={
             spaceId
-              ? "Search items (⌘K)…"
-              : "Search local canvas (cloud sync for full search)…"
+              ? `Search items (${modKeys.search})…`
+              : `Search local canvas (${modKeys.search} opens this)…`
           }
           value={q}
           onChange={(e) => setQ(e.target.value)}

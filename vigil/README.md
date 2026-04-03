@@ -31,13 +31,15 @@ Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 
 ### Keyboard (canvas, not typing in a note)
 
+Handlers use **`Ctrl` on Windows and Linux** and **`⌘` on macOS** (`ctrlKey || metaKey`). Toolbar labels match your OS after load.
+
 | Keys | Action |
 |------|--------|
 | Arrows | Nudge selected item (Shift = larger step) |
 | **Alt+Shift** + arrows | Spatial jump: select nearest item in that direction (from selection or viewport center); recenters camera on the target |
-| ⌘/Ctrl+K | Command palette |
-| ⌘/Ctrl+Z / ⇧⌘Z | Undo / redo |
-| ⌘/Ctrl+S | Stack selection |
+| **Ctrl+K** (Win/Linux) or **⌘K** (Mac) | Command palette |
+| **Ctrl+Z** / **Ctrl+Shift+Z** (Win/Linux) or **⌘Z** / **⇧⌘Z** (Mac) | Undo / redo |
+| **Ctrl+S** (Win/Linux) or **⌘S** (Mac) | Stack selection |
 
 **Phase 5 (TTRPG):** With a **note** selected, use the **TTRPG** bar to set entity type and optional metadata (e.g. Event + date for **Timeline**). Toolbar **Timeline** lists event-tagged notes; **Graph** (cloud) shows items and `item_links` in a simple ring layout.
 

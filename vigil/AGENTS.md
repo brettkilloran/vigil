@@ -26,6 +26,10 @@ The canvas is **custom DOM** (`src/components/canvas/`, `src/stores/canvas-store
 - **Do not** start multiple `next dev` processes for the same app (port conflicts, duplicate work). Only one dev server unless you intentionally use another port.
 - **`npm run mcp`** is **stdio-long-lived** by design when Cursor attaches to the MCP server.
 
+## Hotkeys
+
+Canvas shortcuts use **`e.ctrlKey || e.metaKey`** so **Windows/Linux use Ctrl** and **macOS uses ⌘**. UI copy (`Search (…)`, palette placeholder, context menu) comes from **`useModKeyHints()`** in `src/lib/mod-keys.ts` so labels match the user’s OS.
+
 ## Licensing
 
 Do not strip or bypass third-party license UI for any dependency we add. Prefer **MIT** libraries per `docs/VIGIL_MASTER_PLAN.md`.

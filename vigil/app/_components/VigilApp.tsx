@@ -16,6 +16,7 @@ import {
   useVigilThemeContext,
 } from "@/src/contexts/vigil-theme-context";
 import { useSpringBetween } from "@/src/hooks/use-spring-between";
+import { useModKeyHints } from "@/src/lib/mod-keys";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
 import {
   findNeighborInDirection,
@@ -126,6 +127,7 @@ export default function VigilApp() {
 
   const springY = useSpringBetween(0, -14, VIGIL_UI_SPRING);
   const springOpacity = useSpringBetween(1, 0, VIGIL_UI_SPRING_SOFT);
+  const modKeys = useModKeyHints();
 
   const scheduleCameraPersist = useCallback(
     (spaceId: string, cam: CameraState) => {
@@ -866,7 +868,7 @@ export default function VigilApp() {
             className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
             onClick={() => setPaletteOpen(true)}
           >
-            Search (⌘K)
+            Search ({modKeys.search})
           </button>
           <button
             type="button"
@@ -961,7 +963,7 @@ export default function VigilApp() {
             },
           },
           {
-            label: "Stack selection (⌘S)",
+            label: `Stack selection (${modKeys.stack})`,
             onSelect: () => void stackSelection(),
           },
         ]}
