@@ -23,7 +23,11 @@ export function CommandPalette({
 }) {
   const [q, setQ] = useState("");
   const [remote, setRemote] = useState<CanvasItem[]>([]);
-  const localItems = useCanvasStore((s) => Object.values(s.items));
+  const itemsRecord = useCanvasStore((s) => s.items);
+  const localItems = useMemo(
+    () => Object.values(itemsRecord),
+    [itemsRecord],
+  );
 
   const merged = useMemo(() => {
     const byId = new Map<string, CanvasItem>();

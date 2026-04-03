@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CanvasItemView } from "@/src/components/canvas/CanvasItemView";
 import { SnapGuidesOverlay } from "@/src/components/canvas/SnapGuides";
@@ -52,7 +52,8 @@ export function VigilCanvas({
 
   const camera = useCanvasStore((s) => s.camera);
   const setCamera = useCanvasStore((s) => s.setCamera);
-  const items = useCanvasStore((s) => Object.values(s.items));
+  const itemsRecord = useCanvasStore((s) => s.items);
+  const items = useMemo(() => Object.values(itemsRecord), [itemsRecord]);
   const dragging = useCanvasStore((s) => s.dragging);
   const resizing = useCanvasStore((s) => s.resizing);
   const snapEnabled = useCanvasStore((s) => s.snapEnabled);
