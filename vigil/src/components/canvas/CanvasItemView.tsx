@@ -6,6 +6,8 @@ import { useCallback, useMemo } from "react";
 import { NoteCard } from "@/src/components/canvas/NoteCard";
 import { ResizeHandles } from "@/src/components/canvas/ResizeHandles";
 import { StickyCard } from "@/src/components/canvas/StickyCard";
+import { useVigilThemeContext } from "@/src/contexts/vigil-theme-context";
+import { cardBoxShadow } from "@/src/lib/card-shadows";
 import { screenToCanvas } from "@/src/lib/screen-to-canvas";
 import type { ResizeHandle } from "@/src/stores/canvas-store";
 import { useCanvasStore } from "@/src/stores/canvas-store";
@@ -100,6 +102,7 @@ export function CanvasItemView({
   onPatchItem: (id: string, patch: Partial<CanvasItem>) => void;
   onOpenFolder?: (childSpaceId: string) => void;
 }) {
+  const { resolved: colorScheme } = useVigilThemeContext();
   const camera = useCanvasStore((s) => s.camera);
   const itemsRecord = useCanvasStore((s) => s.items);
   const spaceId = useCanvasStore((s) => s.spaceId);
@@ -169,6 +172,13 @@ export function CanvasItemView({
   const transition =
     isDragging || isResizing ? { duration: 0 } : springTransition;
 
+  const shadowMode = colorScheme === "dark" ? "dark" : "light";
+  const boxShadow = cardBoxShadow({
+    mode: shadowMode,
+    selected,
+    lifting: isDragging || isResizing,
+  });
+
   let body: React.ReactNode;
   switch (item.itemType) {
     case "sticky":
@@ -210,13 +220,11 @@ export function CanvasItemView({
 
   return (
     <motion.div
-      className="absolute cursor-grab select-none overflow-hidden rounded-lg shadow-md active:cursor-grabbing"
+      className="absolute cursor-grab select-none overflow-hidden rounded-lg active:cursor-grabbing"
       style={{
         background: bg,
         border,
-        boxShadow: selected
-          ? "0 0 0 2px var(--vigil-snap), 0 8px 24px rgba(0,0,0,0.12)"
-          : "0 8px 24px rgba(0,0,0,0.12)",
+        boxShadow,
         zIndex: item.zIndex,
       }}
       initial={false}

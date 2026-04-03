@@ -26,6 +26,10 @@ The canvas is **custom DOM** (`src/components/canvas/`, `src/stores/canvas-store
 - **Do not** start multiple `next dev` processes for the same app (port conflicts, duplicate work). Only one dev server unless you intentionally use another port.
 - **`npm run mcp`** is **stdio-long-lived** by design when Cursor attaches to the MCP server.
 
+## MCP (`npm run mcp`)
+
+Tools: **`vigil_list_items`**, **`vigil_search`** (`q`, optional `mode`, optional `space_id`), **`vigil_graph`** (optional `space_id`). Defaults: **`VIGIL_DEFAULT_SPACE_ID`**, **`VIGIL_APP_URL`** (e.g. `http://localhost:3000`). The Next app must be running for HTTP calls to succeed.
+
 ## Hotkeys
 
 Canvas shortcuts use **`e.ctrlKey || e.metaKey`** so **Windows/Linux use Ctrl** and **macOS uses ⌘**. UI copy (`Search (…)`, palette placeholder, context menu) comes from **`useModKeyHints()`** in `src/lib/mod-keys.ts` so labels match the user’s OS.

@@ -27,7 +27,7 @@ Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 | `npm run check` | `lint` + `build` (use this for quick verification; exits when done) |
 | `npm run build` | Production build |
 | `npm run db:push` | Push Drizzle schema to Neon |
-| `npm run mcp` | MCP stdio server (see `scripts/mcp-server.mjs`; long-lived when connected) |
+| `npm run mcp` | MCP stdio: **`vigil_list_items`**, **`vigil_search`** (fts / semantic / hybrid), **`vigil_graph`** — needs app reachable at `VIGIL_APP_URL` (default `http://localhost:3000`) |
 
 ### Keyboard (canvas, not typing in a note)
 

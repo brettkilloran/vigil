@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Minimal MCP stdio server exposing VIGIL read helpers.
+ * MCP stdio server: VIGIL read helpers (list, search, graph).
  * Run: npm run mcp  (set NEON_DATABASE_URL; optional VIGIL_DEFAULT_SPACE_ID)
  */
 import { Server } from "@modelcontextprotocol/sdk/server";
@@ -15,7 +15,7 @@ const BASE =
 const SPACE = process.env.VIGIL_DEFAULT_SPACE_ID || "";
 
 const server = new Server(
-  { name: "vigil", version: "0.1.0" },
+  { name: "vigil", version: "0.2.0" },
   { capabilities: { tools: {} } },
 );
 
@@ -23,21 +23,56 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     {
       name: "vigil_list_items",
-      description: "List canvas items in a space (REST v1).",
+      description:
+        "List all canvas items in a space (REST v1 shape: version, space_id, items).",
       inputSchema: {
         type: "object",
         properties: {
-          space_id: { type: "string", description: "UUID of the space" },
+          space_id: {
+            type: "string",
+            description: "UUID of the space (omit if VIGIL_DEFAULT_SPACE_ID is set)",
+          },
         },
-        required: ["space_id"],
+      },
+    },
+    {
+      name: "vigil_search",
+      description:
+        "Search items in a space: fts (Postgres full-text), semantic (pgvector + OpenAI), or hybrid. Requires running app and DB; semantic/hybrid need OPENAI_API_KEY on the server.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          space_id: { type: "string", description: "Space UUID" },
+          q: { type: "string", description: "Query (at least 2 characters)" },
+          mode: {
+            type: "string",
+            enum: ["fts", "semantic", "hybrid"],
+            description: "Default fts",
+          },
+        },
+        required: ["q"],
+      },
+    },
+    {
+      name: "vigil_graph",
+      description:
+        "Return nodes (items in space) and edges (item_links with both ends in space). Same payload as GET /api/spaces/:id/graph.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          space_id: { type: "string", description: "Space UUID" },
+        },
       },
     },
   ],
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  if (request.params.name === "vigil_list_items") {
-    const spaceId = request.params.arguments?.space_id || SPACE;
+  const name = request.params.name;
+  const args = request.params.arguments ?? {};
+
+  if (name === "vigil_list_items") {
+    const spaceId = args.space_id || SPACE;
     if (!spaceId) {
       return {
         content: [
@@ -49,9 +84,51 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const res = await fetch(
       `${BASE}/api/v1/items?space_id=${encodeURIComponent(String(spaceId))}`,
     );
-    const text = await res.text();
-    return { content: [{ type: "text", text }] };
+    return { content: [{ type: "text", text: await res.text() }] };
   }
+
+  if (name === "vigil_search") {
+    const spaceId = args.space_id || SPACE;
+    const q = String(args.q ?? "").trim();
+    const mode = args.mode || "fts";
+    if (!spaceId) {
+      return {
+        content: [
+          { type: "text", text: "Missing space_id and VIGIL_DEFAULT_SPACE_ID" },
+        ],
+        isError: true,
+      };
+    }
+    if (q.length < 2) {
+      return {
+        content: [{ type: "text", text: "Query q must be at least 2 characters." }],
+        isError: true,
+      };
+    }
+    const url = new URL("/api/search", BASE);
+    url.searchParams.set("spaceId", String(spaceId));
+    url.searchParams.set("q", q);
+    url.searchParams.set("mode", String(mode));
+    const res = await fetch(url);
+    return { content: [{ type: "text", text: await res.text() }] };
+  }
+
+  if (name === "vigil_graph") {
+    const spaceId = args.space_id || SPACE;
+    if (!spaceId) {
+      return {
+        content: [
+          { type: "text", text: "Missing space_id and VIGIL_DEFAULT_SPACE_ID" },
+        ],
+        isError: true,
+      };
+    }
+    const res = await fetch(
+      `${BASE}/api/spaces/${encodeURIComponent(String(spaceId))}/graph`,
+    );
+    return { content: [{ type: "text", text: await res.text() }] };
+  }
+
   return {
     content: [{ type: "text", text: "Unknown tool" }],
     isError: true,
