@@ -18,6 +18,8 @@ Read **STRATEGY first** for the current-vs-target delta. The master plan defines
 
 The canvas is **custom DOM** (`src/components/canvas/`, `src/stores/canvas-store.ts`). Persistence: **`items`** rows + **`spaces.canvas_state`** as camera `{ x, y, zoom }` only. **Links** panel (local canvas): outgoing/incoming from TipTap `[[` / `vigil:item:` in `content_json` via `src/lib/local-item-links.ts`; cloud mode uses `/api/items/[id]/links` and Neon `item_links`.
 
+**Theme:** `useVigilTheme` sets `data-vigil-theme` when the user picks light/dark, and toggles **`class="dark"` on `<html>`** whenever the **resolved** appearance is dark (including “Match OS”). Tailwind `dark:*` is overridden in `app/globals.css` (`@custom-variant dark`) to follow that class—not only `prefers-color-scheme`—so chips, glass panels, and hovers match CSS variables.
+
 **Zustand:** Select **stable** store slices (e.g. `useCanvasStore((s) => s.items)`). Derive lists with `useMemo(() => Object.values(items), [items])`. Avoid selectors that return a **new array or object every call** (e.g. `Object.values(s.items)` inline in the selector)—that causes re-render loops and React 19 `getServerSnapshot` warnings.
 
 ## Terminals (Cursor / agents)

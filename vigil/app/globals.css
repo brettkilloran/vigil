@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Align Tailwind `dark:*` with app theme (class toggled in useVigilTheme). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Vercel-ish neutrals: layered surfaces, thin borders (spike). */
 
 :root {
@@ -32,9 +35,9 @@
     --vigil-snap: #3291ff;
     --vigil-canvas: #0a0a0a;
     --vigil-elevated: #0a0a0a;
-    --vigil-card-bg: #171717;
-    --vigil-card-border: #262626;
-    --vigil-card-header-bg: #141414;
+    --vigil-card-bg: #262626;
+    --vigil-card-border: #333333;
+    --vigil-card-header-bg: #1f1f1f;
   }
 }
 
@@ -68,9 +71,9 @@ html[data-vigil-theme="dark"] {
   --vigil-snap: #3291ff;
   --vigil-canvas: #0a0a0a;
   --vigil-elevated: #0a0a0a;
-  --vigil-card-bg: #171717;
-  --vigil-card-border: #262626;
-  --vigil-card-header-bg: #141414;
+  --vigil-card-bg: #262626;
+  --vigil-card-border: #333333;
+  --vigil-card-header-bg: #1f1f1f;
   color-scheme: dark;
 }
 
@@ -126,6 +129,7 @@ a {
 .ProseMirror {
   outline: none;
   min-height: 4rem;
+  background-color: var(--vigil-card-bg);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.65;

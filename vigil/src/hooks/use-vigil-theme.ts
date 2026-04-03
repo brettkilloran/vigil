@@ -35,6 +35,8 @@ export function useVigilTheme() {
     if (preference === "system") root.removeAttribute("data-vigil-theme");
     else root.setAttribute("data-vigil-theme", preference);
     root.style.colorScheme = resolved;
+    /* Tailwind `dark:*` must track resolved theme, not only prefers-color-scheme. */
+    root.classList.toggle("dark", resolved === "dark");
   }, [preference, resolved]);
 
   const setAndStore = useCallback((next: VigilColorScheme) => {

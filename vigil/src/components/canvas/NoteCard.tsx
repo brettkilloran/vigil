@@ -371,12 +371,12 @@ export function NoteCard({
 
   return (
     <>
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--vigil-card-bg)]">
       {active && peerItems.some((p) => p.id !== item.id) ? (
         <div className="flex flex-col gap-1 border-b border-black/5 px-2 py-1 dark:border-white/10">
           <input
             type="search"
-            className="w-full rounded border border-[var(--vigil-border)] bg-[var(--background)] px-1.5 py-0.5 text-[11px] text-[var(--foreground)]"
+            className="w-full rounded border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] px-1.5 py-0.5 text-[11px] text-[var(--foreground)]"
             placeholder="Link to item…"
             value={linkQ}
             onChange={(e) => setLinkQ(e.target.value)}
@@ -405,7 +405,7 @@ export function NoteCard({
         </div>
       ) : null}
       {active ? <NoteFormatToolbar editor={editor} /> : null}
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--vigil-card-bg)]">
         <EditorContent editor={editor} />
       </div>
     </div>
