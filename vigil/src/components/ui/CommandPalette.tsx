@@ -212,14 +212,14 @@ export function CommandPalette({
   return (
     <div
       data-vigil-palette
-      className="fixed inset-0 z-[1200] flex items-start justify-center bg-black/40 pt-[12vh] px-4"
+      className="fixed inset-0 z-[1200] flex items-start justify-center bg-black/35 px-4 pt-[12vh] backdrop-blur-[2px] dark:bg-black/55"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] shadow-xl">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-[var(--vigil-border)] bg-[var(--vigil-elevated)]/95 shadow-2xl shadow-black/15 backdrop-blur-xl dark:bg-[var(--vigil-elevated)]/90 dark:shadow-black/50">
         <input
-          className="w-full border-0 border-b border-[var(--vigil-border)] bg-transparent px-4 py-3 text-sm text-[var(--foreground)] outline-none"
+          className="w-full border-0 border-b border-[var(--vigil-border)] bg-transparent px-4 py-3.5 text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--vigil-muted)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--vigil-snap)]/30"
           placeholder={
             spaceId
               ? `Search items (${modKeys.search})…`
