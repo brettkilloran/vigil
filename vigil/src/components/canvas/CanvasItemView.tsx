@@ -74,7 +74,7 @@ function WebclipCard({ item }: { item: CanvasItem }) {
     <iframe
       title={item.title}
       src={url}
-      className="h-full w-full rounded-b-lg border-0"
+      className="h-full w-full rounded-b-xl border-0"
       sandbox="allow-scripts allow-same-origin"
     />
   );
@@ -162,12 +162,12 @@ export function CanvasItemView({
       ? item.color || "#00f5a0"
       : item.itemType === "folder"
         ? "var(--vigil-btn-bg)"
-        : "#fff";
+        : "var(--vigil-card-bg)";
 
   const border =
     item.itemType === "sticky"
       ? "1px solid rgba(0,0,0,0.08)"
-      : "1px solid var(--vigil-border)";
+      : `1px solid var(--vigil-card-border)`;
 
   const transition =
     isDragging || isResizing ? { duration: 0 } : springTransition;
@@ -205,7 +205,7 @@ export function CanvasItemView({
       break;
     case "folder":
       body = (
-        <div className="relative flex h-full flex-col overflow-hidden rounded-b-lg bg-gradient-to-br from-white/75 via-transparent to-neutral-400/18 dark:from-white/[0.08] dark:via-transparent dark:to-black/55">
+        <div className="relative flex h-full flex-col overflow-hidden rounded-b-xl bg-gradient-to-br from-white/75 via-transparent to-neutral-400/18 dark:from-white/[0.08] dark:via-transparent dark:to-black/55">
           <div
             className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/45 to-transparent opacity-90 dark:from-white/12 dark:to-transparent"
             aria-hidden
@@ -230,7 +230,7 @@ export function CanvasItemView({
 
   return (
     <motion.div
-      className="absolute cursor-grab select-none overflow-hidden rounded-lg active:cursor-grabbing"
+      className="absolute cursor-grab select-none overflow-hidden rounded-xl active:cursor-grabbing"
       style={{
         background: bg,
         border,
@@ -261,12 +261,12 @@ export function CanvasItemView({
     >
       <div
         data-vigil-chrome
-        className="flex h-8 cursor-grab items-center border-b border-[var(--vigil-border)]/70 bg-black/[0.02] px-2 text-xs font-medium text-[var(--vigil-muted)] dark:bg-white/[0.03]"
+        className="flex h-9 cursor-grab items-center rounded-t-xl border-b border-[var(--vigil-card-border)] bg-[var(--vigil-card-header-bg)] px-3 text-xs font-medium text-[var(--vigil-muted)]"
         onPointerDown={onChromePointerDown}
       >
         {item.title}
       </div>
-      <div className="relative h-[calc(100%-2rem)] overflow-hidden">{body}</div>
+      <div className="relative h-[calc(100%-2.25rem)] overflow-hidden">{body}</div>
       {selected && selectedIds.length === 1 ? (
         <ResizeHandles onPointerDown={onResizeDown} />
       ) : null}

@@ -16,7 +16,7 @@ Items the codebase **cannot** complete without your action, credentials, or prod
 
 ## Phase 6–7 — visual / typography
 
-- **Commercial font parity** (Eina 03, etc.): We use **Inter + Lora + JetBrains Mono** per master plan web guidance; licensing for Spatial-like fonts is on you if you want pixel-match.
+- **Commercial font parity** (Eina 03, etc.): App shell uses **Geist** + **Lora** (editor headings); licensing for Spatial-like fonts is on you if you want pixel-match.
 - **Flower color picker**, **dual-layer shadow tuning**, **expanded note fullscreen** transition polish: larger UI passes; partially addressed via tokens and glass panels.
 - **Custom caret**, **checkbox asset-perfect** match: optional follow-up.
 

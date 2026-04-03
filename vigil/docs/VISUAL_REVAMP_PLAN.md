@@ -4,6 +4,12 @@
 
 **Benchmark:** `docs/VIGIL_MASTER_PLAN.md` → Visual Design Bible + Typography + Phase 6–7 tasks.
 
+### Vercel spike (landed)
+
+**Done:** Geist Sans + Geist Mono (UI / code), Lora for `.ProseMirror` H1/H2 only; layered neutral tokens (`--vigil-card-bg`, `--vigil-card-border`, `--vigil-card-header-bg`, Vercel-ish grays + accent); cards use tokens in `CanvasItemView`; border-forward shadows in `card-shadows.ts`; softer glass/chips in `vigil-ui-classes.ts`; subtle dot grid on canvas (`.vigil-canvas-surface`); TipTap toolbar uses card header tokens.
+
+**Next from this doc:** Lucide + toolbar grouping, flower picker, Spatial-level motion/sheen, resize polish, full type-scale audit.
+
 ---
 
 ## 1. Diagnosis (why it feels “shocking” today)

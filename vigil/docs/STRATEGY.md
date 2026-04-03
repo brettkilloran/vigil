@@ -17,7 +17,7 @@ This file is the **short bridge** between the repo today and the full product sp
 | Persistence | **`items`** + camera in **`spaces.canvas_state`** | Same; legacy DB rows may still hold old `canvas_state` until migrated |
 | State | **zustand** + immer (`canvas-store`) | Same; **select stable slices** (e.g. `s.items`), derive arrays with `useMemo`—never return `Object.values(s.items)` from a selector (avoids infinite re-renders / `getServerSnapshot` issues) |
 | Motion | **framer-motion** + @use-gesture | Same per plan presets |
-| Styling | **Tailwind 4** + tokens; **Inter / Lora / JetBrains Mono** (plan web fonts); chips/glass via `vigil-ui-classes` | Visual Design Bible polish (Phases 6–7) |
+| Styling | **Tailwind 4** + tokens; **Geist** + **Lora** (headings in editor); Vercel-ish neutrals + card tokens; chips/glass via `vigil-ui-classes` | Visual Design Bible polish + `VISUAL_REVAMP_PLAN` (icons, grouping) |
 | Cross-card links | TipTap `vigil:item:` links + **`/api/item-links/sync`**; **`[[` picker**; **Links** panel resolves `[[` / vigil links from note **content** on **local canvas** (no Neon); cloud uses **`item_links`** API; **Graph** overlay (**d3-force**, **Reset layout**, **drag to reheat**) via **`GET /api/spaces/[id]/graph`**; note **formatting toolbar** + underline/highlight | LLM auto-linking, deeper graph UX (Phase 5) |
 | TTRPG | **Entity type** bar + **`entity_meta`** fields per type; **Timeline** panel (Event + `eventDate`) | Markdown LLM import, consistency checker, richer forms |
 | Import / export | Toolbar **Export JSON** / **Import JSON**; cloud import creates items via API | Preferences, richer conflict rules |
@@ -31,7 +31,7 @@ This file is the **short bridge** between the repo today and the full product sp
 
 We **adopt the master plan as source of truth** for architecture and phases. The existing tldraw-based implementation is a **spike / prototype**: it validated Neon + API shape + UX ideas but **does not match** licensing and product goals.
 
-**Status:** Phases **1–4** largely done. **Phase 5:** entity meta, timeline, graph, local **Links** + **title mentions**, MCP tools (see `scripts/mcp-server.mjs`); LLM-heavy items remain (see **`docs/FOLLOW_UP.md`**). **Phase 6–7:** Inter/Lora/mono typography, glass/chrome alignment, shadows/sheen/hover from earlier work. **Phase 8:** culling + PWA shell + export/import; deeper prefs/minimap/offline caching still open (**`docs/FOLLOW_UP.md`**).
+**Status:** Phases **1–4** largely done. **Phase 5:** entity meta, timeline, graph, local **Links** + **title mentions**, MCP tools (see `scripts/mcp-server.mjs`); LLM-heavy items remain (see **`docs/FOLLOW_UP.md`**). **Phase 6–7:** **Vercel-style spike** (Geist, layered tokens, card surfaces, dot grid) is landed; further polish per **`docs/VISUAL_REVAMP_PLAN.md`** (icons, Spatial sheen, motion). **Phase 8:** culling + PWA shell + export/import; deeper prefs/minimap/offline caching still open (**`docs/FOLLOW_UP.md`**).
 
 ## Phase map (use for roadmaps and todos)
 
@@ -53,7 +53,7 @@ We **adopt the master plan as source of truth** for architecture and phases. The
 
 ## Visual overhaul roadmap
 
-Wholesale polish for cards, toolbar, editor chrome, and tokens: **`docs/VISUAL_REVAMP_PLAN.md`** (execution order and file pointers).
+**Vercel-style spike** (Geist, neutral tokens, card surfaces, canvas dot grid) is in `app/globals.css`, `layout.tsx`, `CanvasItemView`, `VigilCanvas`, `card-shadows.ts`, `vigil-ui-classes.ts`. Further wholesale polish (icons, grouping, Spatial-level detail): **`docs/VISUAL_REVAMP_PLAN.md`**.
 
 ## For agents / contributors
 

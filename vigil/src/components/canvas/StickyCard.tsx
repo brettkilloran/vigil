@@ -16,7 +16,7 @@ export function StickyCard({
       className="h-full w-full resize-none border-0 bg-transparent px-3 py-2 text-sm leading-snug outline-none"
       style={{
         color: "#111",
-        fontFamily: "var(--font-inter), system-ui, sans-serif",
+        fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
       }}
       readOnly={!active}
       value={item.contentText}

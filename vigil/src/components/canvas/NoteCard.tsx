@@ -93,7 +93,7 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
 
   return (
     <div
-      className="flex flex-wrap items-center gap-0.5 border-b border-[var(--vigil-border)]/80 bg-[var(--vigil-elevated)]/50 px-2 py-1.5"
+      className="flex flex-wrap items-center gap-0.5 border-b border-[var(--vigil-card-border)] bg-[var(--vigil-card-header-bg)] px-2 py-2"
       onMouseDown={(e) => e.preventDefault()}
     >
       <button

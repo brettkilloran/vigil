@@ -1,59 +1,76 @@
 @import "tailwindcss";
 
+/* Vercel-ish neutrals: layered surfaces, thin borders (spike). */
+
 :root {
-  --background: #ffffff;
+  --background: #fafafa;
   --foreground: #171717;
-  --vigil-muted: #555;
-  --vigil-label: #333;
-  --vigil-border: #d0d4dc;
+  --vigil-muted: #737373;
+  --vigil-label: #404040;
+  --vigil-border: #e5e5e7;
   --vigil-btn-bg: #ffffff;
-  --vigil-btn-fg: #111;
-  --vigil-btn-border: #c8ccd4;
-  --vigil-snap: #3b82f6;
-  --vigil-canvas: #e8ebf2;
-  --vigil-elevated: #f6f7fa;
+  --vigil-btn-fg: #171717;
+  --vigil-btn-border: #e5e5e7;
+  --vigil-snap: #0070f3;
+  --vigil-canvas: #f4f4f5;
+  --vigil-elevated: #ffffff;
+  --vigil-card-bg: #ffffff;
+  --vigil-card-border: #ebebeb;
+  --vigil-card-header-bg: #fafafa;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #000000;
+    --foreground: #fafafa;
     --vigil-muted: #a3a3a3;
-    --vigil-label: #e5e5e5;
-    --vigil-border: #3a3d46;
-    --vigil-btn-bg: #1e1f24;
-    --vigil-btn-fg: #f5f5f5;
-    --vigil-btn-border: #3f424c;
-    --vigil-canvas: #0c0d11;
-    --vigil-elevated: #18191f;
+    --vigil-label: #d4d4d4;
+    --vigil-border: #262626;
+    --vigil-btn-bg: #171717;
+    --vigil-btn-fg: #fafafa;
+    --vigil-btn-border: #262626;
+    --vigil-snap: #3291ff;
+    --vigil-canvas: #0a0a0a;
+    --vigil-elevated: #0a0a0a;
+    --vigil-card-bg: #171717;
+    --vigil-card-border: #262626;
+    --vigil-card-header-bg: #141414;
   }
 }
 
 html[data-vigil-theme="light"] {
-  --background: #ffffff;
+  --background: #fafafa;
   --foreground: #171717;
-  --vigil-muted: #555;
-  --vigil-label: #333;
-  --vigil-border: #d0d4dc;
+  --vigil-muted: #737373;
+  --vigil-label: #404040;
+  --vigil-border: #e5e5e7;
   --vigil-btn-bg: #ffffff;
-  --vigil-btn-fg: #111;
-  --vigil-btn-border: #c8ccd4;
-  --vigil-canvas: #e8ebf2;
-  --vigil-elevated: #f6f7fa;
+  --vigil-btn-fg: #171717;
+  --vigil-btn-border: #e5e5e7;
+  --vigil-snap: #0070f3;
+  --vigil-canvas: #f4f4f5;
+  --vigil-elevated: #ffffff;
+  --vigil-card-bg: #ffffff;
+  --vigil-card-border: #ebebeb;
+  --vigil-card-header-bg: #fafafa;
   color-scheme: light;
 }
 
 html[data-vigil-theme="dark"] {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --background: #000000;
+  --foreground: #fafafa;
   --vigil-muted: #a3a3a3;
-  --vigil-label: #e5e5e5;
-  --vigil-border: #3a3d46;
-  --vigil-btn-bg: #1e1f24;
-  --vigil-btn-fg: #f5f5f5;
-  --vigil-btn-border: #3f424c;
-  --vigil-canvas: #0c0d11;
-  --vigil-elevated: #18191f;
+  --vigil-label: #d4d4d4;
+  --vigil-border: #262626;
+  --vigil-btn-bg: #171717;
+  --vigil-btn-fg: #fafafa;
+  --vigil-btn-border: #262626;
+  --vigil-snap: #3291ff;
+  --vigil-canvas: #0a0a0a;
+  --vigil-elevated: #0a0a0a;
+  --vigil-card-bg: #171717;
+  --vigil-card-border: #262626;
+  --vigil-card-header-bg: #141414;
   color-scheme: dark;
 }
 
@@ -73,7 +90,7 @@ body {
   flex-direction: column;
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -95,10 +112,21 @@ a {
   }
 }
 
+/* Subtle scale reference (static; matches Vercel-ish canvas feel). */
+.vigil-canvas-surface {
+  background-color: var(--vigil-canvas);
+  background-image: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--foreground) 9%, transparent) 0.75px,
+    transparent 1.25px
+  );
+  background-size: 20px 20px;
+}
+
 .ProseMirror {
   outline: none;
   min-height: 4rem;
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.65;
 }
@@ -159,7 +187,7 @@ a {
 }
 
 .ProseMirror code {
-  font-family: var(--font-mono), ui-monospace, monospace;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 0.9em;
   padding: 0.12em 0.35em;
   border-radius: 0.25rem;

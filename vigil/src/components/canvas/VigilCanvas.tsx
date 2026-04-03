@@ -324,7 +324,7 @@ export function VigilCanvas({
       data-vigil-canvas
       role="application"
       aria-label="VIGIL canvas"
-      className="relative h-dvh w-dvw touch-none overflow-hidden bg-[var(--vigil-canvas)]"
+      className="vigil-canvas-surface relative h-dvh w-dvw touch-none overflow-hidden"
       onPointerDown={onBgPointerDown}
       onPointerMove={onBgPointerMove}
       onPointerUp={onBgPointerUp}
