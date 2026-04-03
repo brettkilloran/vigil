@@ -41,7 +41,7 @@ Handlers use **`Ctrl` on Windows and Linux** and **`⌘` on macOS** (`ctrlKey ||
 | **Ctrl+Z** / **Ctrl+Shift+Z** (Win/Linux) or **⌘Z** / **⇧⌘Z** (Mac) | Undo / redo |
 | **Ctrl+S** (Win/Linux) or **⌘S** (Mac) | Stack selection |
 
-**Phase 5 (TTRPG):** With a **note** selected, use the **TTRPG** bar to set entity type and optional metadata (e.g. Event + date for **Timeline**). Toolbar **Timeline** lists event-tagged notes; **Graph** (cloud) shows items and `item_links` in a simple ring layout.
+**Phase 5 (TTRPG):** With a **note** selected, use the **TTRPG** bar to set entity type and optional metadata (e.g. Event + date for **Timeline**). Toolbar **Timeline** lists event-tagged notes; **Graph** (cloud) lays out items and `item_links` with **d3-force** (link + charge + collision).
 
 ### “Background shell” running 20+ minutes?
 

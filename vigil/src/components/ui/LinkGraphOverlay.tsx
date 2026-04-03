@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { computeForceLayout } from "@/src/lib/graph-layout";
+
 type GraphNode = {
   id: string;
   title: string;
@@ -61,25 +63,10 @@ function LinkGraphInner({
     };
   }, [spaceId]);
 
-  const layout = useMemo(() => {
-    const n = nodes.length;
-    const cx = 500;
-    const cy = 500;
-    const r = n <= 1 ? 0 : Math.min(380, 120 + n * 12);
-    const pos = new Map<string, { x: number; y: number }>();
-    nodes.forEach((node, i) => {
-      if (n === 1) {
-        pos.set(node.id, { x: cx, y: cy });
-        return;
-      }
-      const a = (2 * Math.PI * i) / n - Math.PI / 2;
-      pos.set(node.id, {
-        x: cx + r * Math.cos(a),
-        y: cy + r * Math.sin(a),
-      });
-    });
-    return pos;
-  }, [nodes]);
+  const layout = useMemo(
+    () => computeForceLayout(nodes, edges, 1000, 1000),
+    [nodes, edges],
+  );
 
   const onPick = useCallback(
     (id: string) => {
@@ -173,9 +160,9 @@ function LinkGraphInner({
         )}
       </div>
       <p className="border-t border-[var(--vigil-border)] px-3 py-2 text-[10px] text-[var(--vigil-muted)]">
-        Circles are canvas items; lines are saved links (
-        <code className="text-[9px]">item_links</code>). Click a circle to jump
-        to it.
+        Layout: <strong>d3-force</strong> (charge + links + collision). Circles
+        are items; lines are <code className="text-[9px]">item_links</code>.
+        Click a circle to jump.
       </p>
     </div>
   );
