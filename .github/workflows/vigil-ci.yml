@@ -1,5 +1,8 @@
 name: VIGIL CI
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   push:
     paths:
@@ -19,20 +22,40 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: vigil/package-lock.json
+      - name: CI diagnostics
+        run: |
+          echo "::group::Environment"
+          echo "Node: $(node -v)"
+          echo "npm: $(npm -v)"
+          echo "Runner OS: $RUNNER_OS"
+          echo "Ref: $GITHUB_REF"
+          echo "::endgroup::"
       - name: Install dependencies
-        run: npm ci
+        run: |
+          echo "::group::Install dependencies"
+          npm ci
+          echo "::endgroup::"
       - name: Lint and build
-        run: npm run check
+        run: |
+          echo "::group::Lint and build"
+          npm run check
+          echo "::endgroup::"
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        run: |
+          echo "::group::Install Playwright Chromium"
+          npx playwright install --with-deps chromium
+          echo "::endgroup::"
       # Playwright skips e2e/visual on CI (platform-specific screenshots); smoke + interaction tests only.
       - name: E2E tests
-        run: npm run test:e2e
+        run: |
+          echo "::group::E2E tests"
+          npm run test:e2e
+          echo "::endgroup::"
         env:
           CI: "1"
