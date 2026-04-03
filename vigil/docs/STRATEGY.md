@@ -51,6 +51,10 @@ We **adopt the master plan as source of truth** for architecture and phases. The
 - Master plan assumes **$0 recurring** on free tiers; **OpenAI embeddings** are usage-based (typically small).
 - **Legacy DBs:** If older rows still have full tldraw JSON in `canvas_state`, migrate or reset the dev DB to match the current Drizzle schema (camera-only `canvas_state`).
 
+## Visual overhaul roadmap
+
+Wholesale polish for cards, toolbar, editor chrome, and tokens: **`docs/VISUAL_REVAMP_PLAN.md`** (execution order and file pointers).
+
 ## For agents / contributors
 
 1. Read **`docs/VIGIL_MASTER_PLAN.md`** for visuals, gestures, springs, and phase detail.
