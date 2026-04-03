@@ -4,6 +4,7 @@ import {
   CheckSquare,
   Code,
   FileText,
+  FolderPlus,
   Image as ImageIcon,
   ListBullets,
   TextB,
@@ -29,6 +30,7 @@ function formatIcon(command: string): ReactNode {
 }
 
 function createIcon(nodeType: NodeTheme): ReactNode {
+  if (nodeType === "folder") return <FolderPlus size={16} />;
   if (nodeType === "task") return <CheckSquare size={16} />;
   if (nodeType === "code") return <Code size={16} />;
   if (nodeType === "media") return <ImageIcon size={16} />;
@@ -47,6 +49,7 @@ export const DEFAULT_CREATE_ACTIONS: DockCreateAction[] = [
   { id: "task", label: "Task", nodeType: "task" },
   { id: "code", label: "Code", nodeType: "code" },
   { id: "media", label: "Media", nodeType: "media" },
+  { id: "folder", label: "Folder", nodeType: "folder" },
 ];
 
 export function ArchitecturalFormatToolbar({

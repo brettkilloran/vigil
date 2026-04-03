@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, CaretRight, CornersOut, DownloadSimple, Folder, House } from "@phosphor-icons/react";
 
 import styles from "./ArchitecturalCanvasApp.module.css";
 import { ArchitecturalBottomDock } from "@/src/components/foundation/ArchitecturalBottomDock";
@@ -8,9 +9,11 @@ import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/Archi
 import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";
 import { ArchitecturalStatusBar } from "@/src/components/foundation/ArchitecturalStatusBar";
 import { ArchitecturalToolRail } from "@/src/components/foundation/ArchitecturalToolRail";
-import { buildArchitecturalSeedNodes } from "@/src/components/foundation/architectural-seed";
+import { buildArchitecturalSeedGraph } from "@/src/components/foundation/architectural-seed";
 import type {
-  CanvasNode,
+  CanvasEntity,
+  CanvasGraph,
+  CanvasSpace,
   CanvasTool,
   NodeTheme,
 } from "@/src/components/foundation/architectural-types";
@@ -20,17 +23,79 @@ const MAX_ZOOM = 3;
 const ZOOM_BUTTON_STEP = 0.2;
 const WHEEL_ZOOM_SENSITIVITY = 0.0012;
 
+type ArchitecturalCanvasScenario = "default" | "nested" | "corrupt";
 
-const INITIAL_NODES: CanvasNode[] = buildArchitecturalSeedNodes({
-  taskItem: styles.taskItem,
-  done: styles.done,
-  taskCheckbox: styles.taskCheckbox,
-  taskText: styles.taskText,
-  mediaPlaceholder: styles.mediaPlaceholder,
-});
+const ROOT_SPACE_ID = "root";
 
-export function ArchitecturalCanvasApp() {
-  const [nodes, setNodes] = useState<CanvasNode[]>(INITIAL_NODES);
+function shallowCloneGraph(graph: CanvasGraph): CanvasGraph {
+  return {
+    ...graph,
+    spaces: { ...graph.spaces },
+    entities: { ...graph.entities },
+  };
+}
+
+function isDescendantSpace(
+  candidateId: string,
+  ancestorId: string,
+  spaces: Record<string, CanvasSpace>,
+): boolean {
+  let currentId: string | null = candidateId;
+  while (currentId) {
+    if (currentId === ancestorId) return true;
+    currentId = spaces[currentId]?.parentSpaceId ?? null;
+  }
+  return false;
+}
+
+function buildPathToSpace(
+  spaceId: string,
+  spaces: Record<string, CanvasSpace>,
+  rootSpaceId: string,
+): string[] {
+  if (!spaces[spaceId]) return [rootSpaceId];
+  const path: string[] = [];
+  let currentId: string | null = spaceId;
+  while (currentId && spaces[currentId]) {
+    path.unshift(currentId);
+    currentId = spaces[currentId].parentSpaceId;
+  }
+  if (path[0] !== rootSpaceId) {
+    path.unshift(rootSpaceId);
+  }
+  return path;
+}
+
+function isEditableTarget(target: EventTarget | null) {
+  const el = target as HTMLElement | null;
+  if (!el) return false;
+  return (
+    el.isContentEditable ||
+    el.tagName === "INPUT" ||
+    el.tagName === "TEXTAREA" ||
+    el.tagName === "SELECT"
+  );
+}
+
+export function ArchitecturalCanvasApp({
+  scenario = "default",
+}: {
+  scenario?: ArchitecturalCanvasScenario;
+}) {
+  const [graph, setGraph] = useState<CanvasGraph>(() =>
+    buildArchitecturalSeedGraph(
+      {
+        taskItem: styles.taskItem,
+        done: styles.done,
+        taskCheckbox: styles.taskCheckbox,
+        taskText: styles.taskText,
+        mediaPlaceholder: styles.mediaPlaceholder,
+      },
+      scenario,
+    ),
+  );
+  const [activeSpaceId, setActiveSpaceId] = useState(ROOT_SPACE_ID);
+  const [navigationPath, setNavigationPath] = useState<string[]>([ROOT_SPACE_ID]);
   const [scale, setScale] = useState(1);
   const [translateX, setTranslateX] = useState(0);
   const [translateY, setTranslateY] = useState(0);
@@ -53,8 +118,11 @@ export function ArchitecturalCanvasApp() {
   const [focusTitle, setFocusTitle] = useState("");
   const [focusBody, setFocusBody] = useState("");
   const [focusCodeTheme, setFocusCodeTheme] = useState(false);
+  const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null);
+  const [parentDropHovered, setParentDropHovered] = useState(false);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const parentDropRef = useRef<HTMLButtonElement | null>(null);
   const isPanningRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0 });
   const draggedNodeRef = useRef<string | null>(null);
@@ -62,42 +130,66 @@ export function ArchitecturalCanvasApp() {
   const viewRef = useRef({ scale: 1, tx: 0, ty: 0 });
   const lassoStartRef = useRef<{ x: number; y: number } | null>(null);
   const spacePanRef = useRef(false);
+  const idCounterRef = useRef(2000);
 
+  const activeSpace = graph.spaces[activeSpaceId] ?? graph.spaces[graph.rootSpaceId];
+  const visibleEntityIds = activeSpace?.entityIds ?? [];
+  const visibleEntities = useMemo(
+    () =>
+      visibleEntityIds
+        .map((id) => graph.entities[id])
+        .filter((entity): entity is CanvasEntity => !!entity),
+    [graph.entities, visibleEntityIds],
+  );
+
+  const parentSpaceId = activeSpace?.parentSpaceId ?? null;
   const nodeZ = useMemo(() => {
     const zMap = new Map<string, number>();
-    nodes.forEach((node, index) => zMap.set(node.id, index + 1));
+    visibleEntities.forEach((entity, index) => zMap.set(entity.id, index + 1));
     return zMap;
-  }, [nodes]);
+  }, [visibleEntities]);
 
   const updateNodeBody = useCallback((id: string, html: string) => {
-    setNodes((prev) =>
-      prev.map((node) => (node.id === id ? { ...node, bodyHtml: html } : node)),
-    );
+    setGraph((prev) => {
+      const entity = prev.entities[id];
+      if (!entity || entity.kind !== "content") return prev;
+      return {
+        ...prev,
+        entities: {
+          ...prev.entities,
+          [id]: { ...entity, bodyHtml: html },
+        },
+      };
+    });
   }, []);
 
   const openFocusMode = useCallback((id: string) => {
-    const node = nodes.find((n) => n.id === id);
-    if (!node) return;
+    const entity = graph.entities[id];
+    if (!entity || entity.kind !== "content") return;
     setActiveNodeId(id);
-    setFocusTitle(node.title);
-    setFocusBody(node.bodyHtml);
-    setFocusCodeTheme(node.theme === "code");
+    setFocusTitle(entity.title);
+    setFocusBody(entity.bodyHtml);
+    setFocusCodeTheme(entity.theme === "code");
     setFocusOpen(true);
-  }, [nodes]);
+  }, [graph.entities]);
 
   const closeFocusMode = useCallback(() => {
     if (activeNodeId) {
-      setNodes((prev) =>
-        prev.map((node) =>
-          node.id === activeNodeId
-            ? {
-                ...node,
-                title: focusTitle.trim() || "Untitled",
-                bodyHtml: focusBody,
-              }
-            : node,
-        ),
-      );
+      setGraph((prev) => {
+        const entity = prev.entities[activeNodeId];
+        if (!entity || entity.kind !== "content") return prev;
+        return {
+          ...prev,
+          entities: {
+            ...prev.entities,
+            [activeNodeId]: {
+              ...entity,
+              title: focusTitle.trim() || "Untitled",
+              bodyHtml: focusBody,
+            },
+          },
+        };
+      });
     }
     setFocusOpen(false);
     setActiveNodeId(null);
@@ -151,6 +243,25 @@ export function ArchitecturalCanvasApp() {
   }, [scale, translateX, translateY]);
 
   useEffect(() => {
+    const freshGraph = buildArchitecturalSeedGraph(
+      {
+        taskItem: styles.taskItem,
+        done: styles.done,
+        taskCheckbox: styles.taskCheckbox,
+        taskText: styles.taskText,
+        mediaPlaceholder: styles.mediaPlaceholder,
+      },
+      scenario,
+    );
+    setGraph(freshGraph);
+    setActiveSpaceId(freshGraph.rootSpaceId);
+    setNavigationPath([freshGraph.rootSpaceId]);
+    setSelectedNodeIds([]);
+    setFocusOpen(false);
+    setActiveNodeId(null);
+  }, [scenario]);
+
+  useEffect(() => {
     // Keep the first client render identical to server output, then center on origin.
     setTranslateX(window.innerWidth / 2);
     setTranslateY(window.innerHeight / 2);
@@ -170,14 +281,191 @@ export function ArchitecturalCanvasApp() {
     };
   }, [scale, translateX, translateY]);
 
+  const createId = useCallback((prefix: string) => {
+    idCounterRef.current += 1;
+    return `${prefix}-${Date.now()}-${idCounterRef.current}`;
+  }, []);
+
+  const ensureFolderChildSpace = useCallback(
+    (folderId: string): string | null => {
+      let resolved: string | null = null;
+      setGraph((prev) => {
+        const folder = prev.entities[folderId];
+        if (!folder || folder.kind !== "folder") return prev;
+        if (prev.spaces[folder.childSpaceId]) {
+          resolved = folder.childSpaceId;
+          return prev;
+        }
+
+        const next = shallowCloneGraph(prev);
+        const newSpaceId = createId("space");
+        const parentSpaceId =
+          next.spaces[activeSpaceId]?.id ?? next.rootSpaceId;
+        next.spaces[newSpaceId] = {
+          id: newSpaceId,
+          name: folder.title || "Untitled Folder",
+          parentSpaceId,
+          entityIds: [],
+        };
+        next.entities[folderId] = { ...folder, childSpaceId: newSpaceId };
+        resolved = newSpaceId;
+        return next;
+      });
+      return resolved;
+    },
+    [activeSpaceId, createId],
+  );
+
+  const canMoveEntityToSpace = useCallback(
+    (entityId: string, destinationSpaceId: string, snapshot: CanvasGraph = graph) => {
+      const entity = snapshot.entities[entityId];
+      const destinationSpace = snapshot.spaces[destinationSpaceId];
+      if (!entity || !destinationSpace) return false;
+      if (entity.kind === "folder") {
+        // A folder cannot be moved into itself or any of its descendants.
+        if (isDescendantSpace(destinationSpaceId, entity.childSpaceId, snapshot.spaces)) {
+          return false;
+        }
+      }
+      return true;
+    },
+    [graph],
+  );
+
+  const moveEntityToSpace = useCallback(
+    (entityId: string, destinationSpaceId: string, fallbackSlot?: { x: number; y: number }) => {
+      setGraph((prev) => {
+        if (!canMoveEntityToSpace(entityId, destinationSpaceId, prev)) return prev;
+        const entity = prev.entities[entityId];
+        if (!entity) return prev;
+
+        const next = shallowCloneGraph(prev);
+        Object.values(next.spaces).forEach((space) => {
+          if (space.entityIds.includes(entityId)) {
+            next.spaces[space.id] = {
+              ...space,
+              entityIds: space.entityIds.filter((id) => id !== entityId),
+            };
+          }
+        });
+
+        const target = next.spaces[destinationSpaceId];
+        next.spaces[destinationSpaceId] = {
+          ...target,
+          entityIds: [...target.entityIds, entityId],
+        };
+        next.entities[entityId] = {
+          ...entity,
+          slots: {
+            ...entity.slots,
+            [destinationSpaceId]:
+              entity.slots[destinationSpaceId] ??
+              fallbackSlot ?? {
+                x: 0,
+                y: 0,
+              },
+          },
+        };
+        return next;
+      });
+    },
+    [canMoveEntityToSpace],
+  );
+
+  const enterSpace = useCallback(
+    (spaceId: string) => {
+      if (!graph.spaces[spaceId] || spaceId === activeSpaceId) return;
+      setActiveSpaceId(spaceId);
+      setNavigationPath(buildPathToSpace(spaceId, graph.spaces, graph.rootSpaceId));
+      setSelectedNodeIds([]);
+      recenterToOrigin();
+    },
+    [activeSpaceId, graph.rootSpaceId, graph.spaces, recenterToOrigin],
+  );
+
+  const openFolder = useCallback(
+    (folderId: string) => {
+      const folder = graph.entities[folderId];
+      if (!folder || folder.kind !== "folder") return;
+      const childSpaceId = graph.spaces[folder.childSpaceId]
+        ? folder.childSpaceId
+        : ensureFolderChildSpace(folderId);
+      if (!childSpaceId) return;
+      enterSpace(childSpaceId);
+    },
+    [enterSpace, ensureFolderChildSpace, graph.entities, graph.spaces],
+  );
+
+  const goBack = useCallback(() => {
+    if (!parentSpaceId) return;
+    enterSpace(parentSpaceId);
+  }, [enterSpace, parentSpaceId]);
+
+  const renameFolder = useCallback((entityId: string, title: string) => {
+    setGraph((prev) => {
+      const entity = prev.entities[entityId];
+      if (!entity || entity.kind !== "folder") return prev;
+      const next = shallowCloneGraph(prev);
+      const nextTitle = title.trim() || "Untitled Folder";
+      next.entities[entityId] = {
+        ...entity,
+        title: nextTitle,
+      };
+      if (next.spaces[entity.childSpaceId]) {
+        next.spaces[entity.childSpaceId] = {
+          ...next.spaces[entity.childSpaceId],
+          name: nextTitle,
+        };
+      }
+      return next;
+    });
+  }, []);
+
   const createNewNode = useCallback((type: NodeTheme) => {
     const center = centerCoords();
-    const id = `node-${Date.now()}`;
     const x = center.x - 170 + (Math.random() * 60 - 30);
     const y = center.y - 100 + (Math.random() * 60 - 30);
     const rotation = (Math.random() - 0.5) * 4;
     const tapeRotation = (Math.random() - 0.5) * 6;
+    setMaxZIndex((prev) => prev + 1);
 
+    if (type === "folder") {
+      const entityId = createId("folder");
+      const childSpaceId = createId("space");
+      setGraph((prev) => {
+        const next = shallowCloneGraph(prev);
+        next.spaces[childSpaceId] = {
+          id: childSpaceId,
+          name: "New Folder",
+          parentSpaceId: activeSpaceId,
+          entityIds: [],
+        };
+        next.entities[entityId] = {
+          id: entityId,
+          title: "New Folder",
+          kind: "folder",
+          theme: "folder",
+          childSpaceId,
+          rotation,
+          width: 280,
+          tapeRotation: 0,
+          slots: {
+            [activeSpaceId]: { x, y },
+          },
+        };
+        const activeSpace = next.spaces[activeSpaceId];
+        if (activeSpace) {
+          next.spaces[activeSpaceId] = {
+            ...activeSpace,
+            entityIds: [...activeSpace.entityIds, entityId],
+          };
+        }
+        return next;
+      });
+      return;
+    }
+
+    const id = createId("node");
     let title = "New Note";
     let width: number | undefined;
     let bodyHtml = `<div contenteditable="true">Start typing...</div>`;
@@ -205,21 +493,111 @@ export function ArchitecturalCanvasApp() {
       `;
     }
 
-    const nextNode: CanvasNode = {
+    const nextNode = {
       id,
       title,
-      x,
-      y,
+      kind: "content" as const,
       rotation,
       width,
       theme: type,
       tapeRotation,
       bodyHtml,
+      slots: {
+        [activeSpaceId]: { x, y },
+      },
     };
+    setGraph((prev) => {
+      const next = shallowCloneGraph(prev);
+      next.entities[id] = nextNode;
+      const space = next.spaces[activeSpaceId];
+      if (space) {
+        next.spaces[activeSpaceId] = {
+          ...space,
+          entityIds: [...space.entityIds, id],
+        };
+      }
+      return next;
+    });
+  }, [activeSpaceId, centerCoords, createId]);
 
-    setMaxZIndex((prev) => prev + 1);
-    setNodes((prev) => [...prev, nextNode]);
-  }, [centerCoords]);
+  const updateDropTargets = useCallback(
+    (draggedEntityId: string) => {
+      const draggedEl = document.querySelector<HTMLElement>(`[data-node-id="${draggedEntityId}"]`);
+      if (!draggedEl) return;
+      const dragRect = draggedEl.getBoundingClientRect();
+      const centerX = dragRect.left + dragRect.width / 2;
+      const centerY = dragRect.top + dragRect.height / 2;
+
+      let nextFolderId: string | null = null;
+      Array.from(document.querySelectorAll<HTMLElement>("[data-folder-drop='true']")).forEach(
+        (folderEl) => {
+          const folderId = folderEl.dataset.folderId;
+          if (!folderId || folderId === draggedEntityId) return;
+          const folderEntity = graph.entities[folderId];
+          if (!folderEntity || folderEntity.kind !== "folder") return;
+          const rect = folderEl.getBoundingClientRect();
+          const inside =
+            centerX > rect.left &&
+            centerX < rect.right &&
+            centerY > rect.top &&
+            centerY < rect.bottom;
+          if (!inside) return;
+          const destinationId = graph.spaces[folderEntity.childSpaceId]
+            ? folderEntity.childSpaceId
+            : folderEntity.childSpaceId;
+          if (!canMoveEntityToSpace(draggedEntityId, destinationId)) return;
+          nextFolderId = folderId;
+        },
+      );
+      setHoveredFolderId(nextFolderId);
+
+      const parentTarget = parentDropRef.current;
+      const canDropToParent = !!parentSpaceId && canMoveEntityToSpace(draggedEntityId, parentSpaceId);
+      if (!parentTarget || !canDropToParent) {
+        setParentDropHovered(false);
+        return;
+      }
+      const rect = parentTarget.getBoundingClientRect();
+      setParentDropHovered(
+        centerX > rect.left &&
+          centerX < rect.right &&
+          centerY > rect.top &&
+          centerY < rect.bottom,
+      );
+    },
+    [canMoveEntityToSpace, graph.entities, graph.spaces, parentSpaceId],
+  );
+
+  const handleDrop = useCallback(
+    (draggedEntityId: string) => {
+      const center = centerCoords();
+      const fallback = { x: center.x - 100, y: center.y - 80 };
+
+      if (parentDropHovered && parentSpaceId) {
+        moveEntityToSpace(draggedEntityId, parentSpaceId, fallback);
+        return;
+      }
+
+      if (!hoveredFolderId) return;
+      const folderEntity = graph.entities[hoveredFolderId];
+      if (!folderEntity || folderEntity.kind !== "folder") return;
+      const childSpaceId = graph.spaces[folderEntity.childSpaceId]
+        ? folderEntity.childSpaceId
+        : ensureFolderChildSpace(hoveredFolderId);
+      if (!childSpaceId) return;
+      moveEntityToSpace(draggedEntityId, childSpaceId, fallback);
+    },
+    [
+      centerCoords,
+      ensureFolderChildSpace,
+      graph.entities,
+      graph.spaces,
+      hoveredFolderId,
+      moveEntityToSpace,
+      parentDropHovered,
+      parentSpaceId,
+    ],
+  );
 
   useEffect(() => {
     const onMouseMove = (event: MouseEvent) => {
@@ -243,17 +621,27 @@ export function ArchitecturalCanvasApp() {
       if (!draggedNodeId) return;
       const x = (event.clientX - translateX) / scale - dragOffsetRef.current.x;
       const y = (event.clientY - translateY) / scale - dragOffsetRef.current.y;
-      setNodes((prev) =>
-        prev.map((node) =>
-          node.id === draggedNodeId
-            ? {
-                ...node,
-                x,
-                y,
-              }
-            : node,
-        ),
-      );
+      setGraph((prev) => {
+        const entity = prev.entities[draggedNodeId];
+        if (!entity) return prev;
+        return {
+          ...prev,
+          entities: {
+            ...prev.entities,
+            [draggedNodeId]: {
+              ...entity,
+              slots: {
+                ...entity.slots,
+                [activeSpaceId]: {
+                  x,
+                  y,
+                },
+              },
+            },
+          },
+        };
+      });
+      updateDropTargets(draggedNodeId);
     };
 
     const onMouseUp = () => {
@@ -288,8 +676,13 @@ export function ArchitecturalCanvasApp() {
 
       isPanningRef.current = false;
       setIsPanning(false);
+      if (draggedNodeRef.current) {
+        handleDrop(draggedNodeRef.current);
+      }
       draggedNodeRef.current = null;
       setDraggedNodeId(null);
+      setHoveredFolderId(null);
+      setParentDropHovered(false);
     };
 
     window.addEventListener("mousemove", onMouseMove);
@@ -298,7 +691,7 @@ export function ArchitecturalCanvasApp() {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, [lassoRectScreen, scale, translateX, translateY]);
+  }, [activeSpaceId, handleDrop, lassoRectScreen, scale, translateX, translateY, updateDropTargets]);
 
   useEffect(() => {
     const onMouseDown = (event: MouseEvent) => {
@@ -308,7 +701,10 @@ export function ArchitecturalCanvasApp() {
       const target = event.target as HTMLElement;
       const entity = target.closest<HTMLElement>(`[data-node-id]`);
       const inContent =
-        target.closest(`.${styles.nodeBody}`) || target.closest(`.${styles.nodeBtn}`);
+        target.closest(`.${styles.nodeBody}`) ||
+        target.closest(`.${styles.nodeBtn}`) ||
+        target.closest(`.${styles.folderTitleInput}`) ||
+        target.closest(`.${styles.folderOpenBtn}`);
 
       if (entity && !inContent) {
         const nodeId = entity.dataset.nodeId;
@@ -356,6 +752,14 @@ export function ArchitecturalCanvasApp() {
 
     const onDoubleClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
+      const folderEl = target.closest<HTMLElement>("[data-folder-id]");
+      if (folderEl && !target.closest(`.${styles.folderTitleInput}`)) {
+        const folderId = folderEl.dataset.folderId;
+        if (folderId) {
+          openFolder(folderId);
+          return;
+        }
+      }
       const header = target.closest(`.${styles.nodeHeader}`);
       if (!header) return;
       const entity = target.closest<HTMLElement>(`[data-node-id]`);
@@ -371,20 +775,9 @@ export function ArchitecturalCanvasApp() {
       document.removeEventListener("click", onClick);
       document.removeEventListener("dblclick", onDoubleClick);
     };
-  }, [activeTool, focusOpen, openFocusMode, scale, updateNodeBody]);
+  }, [activeTool, focusOpen, openFocusMode, openFolder, scale, updateNodeBody]);
 
   useEffect(() => {
-    const isEditableTarget = (target: EventTarget | null) => {
-      const el = target as HTMLElement | null;
-      if (!el) return false;
-      return (
-        el.isContentEditable ||
-        el.tagName === "INPUT" ||
-        el.tagName === "TEXTAREA" ||
-        el.tagName === "SELECT"
-      );
-    };
-
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.code !== "Space") return;
       if (isEditableTarget(event.target)) return;
@@ -406,6 +799,38 @@ export function ArchitecturalCanvasApp() {
       window.removeEventListener("keyup", onKeyUp);
     };
   }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (isEditableTarget(event.target)) return;
+
+      if (focusOpen) {
+        event.preventDefault();
+        closeFocusMode();
+        return;
+      }
+
+      if (draggedNodeRef.current || lassoStartRef.current || lassoRectScreen) {
+        event.preventDefault();
+        draggedNodeRef.current = null;
+        setDraggedNodeId(null);
+        lassoStartRef.current = null;
+        setLassoRectScreen(null);
+        setHoveredFolderId(null);
+        setParentDropHovered(false);
+        return;
+      }
+
+      if (parentSpaceId) {
+        event.preventDefault();
+        goBack();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [closeFocusMode, focusOpen, goBack, lassoRectScreen, parentSpaceId]);
 
   const onViewportMouseDown = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -517,14 +942,37 @@ export function ArchitecturalCanvasApp() {
     document.execCommand(command, false, value);
   }, []);
 
+  const moveSelectionToParent = useCallback(() => {
+    if (!parentSpaceId) return;
+    const center = centerCoords();
+    const fallback = { x: center.x - 100, y: center.y - 80 };
+    selectedNodeIds.forEach((entityId) => {
+      if (!visibleEntityIds.includes(entityId)) return;
+      moveEntityToSpace(entityId, parentSpaceId, fallback);
+    });
+  }, [centerCoords, moveEntityToSpace, parentSpaceId, selectedNodeIds, visibleEntityIds]);
+
+  useEffect(() => {
+    setSelectedNodeIds((prev) => prev.filter((id) => visibleEntityIds.includes(id)));
+  }, [visibleEntityIds]);
+
+  useEffect(() => {
+    if (!activeNodeId) return;
+    if (!visibleEntityIds.includes(activeNodeId)) {
+      setFocusOpen(false);
+      setActiveNodeId(null);
+    }
+  }, [activeNodeId, visibleEntityIds]);
+
   const centerWorldX = Math.round((viewportSize.width / 2 - translateX) / scale);
   const centerWorldY = Math.round((viewportSize.height / 2 - translateY) / scale);
+  const activeSpaceLabel = activeSpace?.name ?? "Unknown";
 
   return (
     <div className={styles.shell}>
       <div
         ref={viewportRef}
-        className={styles.viewport}
+        className={`${styles.viewport} ${activeSpaceId !== graph.rootSpaceId ? styles.deepSpace : ""}`}
         onMouseDown={onViewportMouseDown}
         onWheel={onWheel}
         style={{
@@ -545,33 +993,90 @@ export function ArchitecturalCanvasApp() {
           className={styles.canvas}
           style={{ transform: `translate(${translateX}px, ${translateY}px) scale(${scale})` }}
         >
-          {nodes.map((node) => {
-            const dragged = draggedNodeId === node.id;
+          {visibleEntities.map((entity) => {
+            const slot = entity.slots[activeSpaceId] ?? { x: 0, y: 0 };
+            const dragged = draggedNodeId === entity.id;
+            const folderCount =
+              entity.kind === "folder"
+                ? graph.spaces[entity.childSpaceId]?.entityIds.length ?? 0
+                : 0;
             return (
               <div
-                key={node.id}
-                data-node-id={node.id}
+                key={entity.id}
+                data-node-id={entity.id}
+                data-space-id={activeSpaceId}
                 className={styles.nodePlacement}
                 style={{
-                  left: `${node.x}px`,
-                  top: `${node.y}px`,
-                  transform: `rotate(${node.rotation}deg)`,
-                  zIndex: dragged ? maxZIndex : nodeZ.get(node.id),
+                  left: `${slot.x}px`,
+                  top: `${slot.y}px`,
+                  transform: `rotate(${entity.rotation}deg)`,
+                  zIndex: dragged ? maxZIndex : nodeZ.get(entity.id),
                 }}
               >
-                <ArchitecturalNodeCard
-                  id={node.id}
-                  title={node.title}
-                  width={node.width}
-                  theme={node.theme}
-                  tapeRotation={node.tapeRotation}
-                  bodyHtml={node.bodyHtml}
-                  activeTool={activeTool}
-                  dragged={dragged}
-                  selected={selectedNodeIds.includes(node.id)}
-                  onBodyInput={updateNodeBody}
-                  onExpand={openFocusMode}
-                />
+                {entity.kind === "content" ? (
+                  <ArchitecturalNodeCard
+                    id={entity.id}
+                    title={entity.title}
+                    width={entity.width}
+                    theme={entity.theme}
+                    tapeRotation={entity.tapeRotation}
+                    bodyHtml={entity.bodyHtml}
+                    activeTool={activeTool}
+                    dragged={dragged}
+                    selected={selectedNodeIds.includes(entity.id)}
+                    onBodyInput={updateNodeBody}
+                    onExpand={openFocusMode}
+                  />
+                ) : (
+                  <div
+                    data-folder-drop="true"
+                    data-folder-id={entity.id}
+                    className={`${styles.folderNode} ${
+                      hoveredFolderId === entity.id ? styles.folderDragOver : ""
+                    }`}
+                  >
+                    <div className={styles.folderTab}>
+                      <Folder size={12} />
+                      FOLDER
+                    </div>
+                    <div className={styles.folderBack} />
+                    <div className={styles.folderInterior}>
+                      <DownloadSimple size={24} />
+                      <span>Drop to insert</span>
+                    </div>
+                    <div className={styles.folderFront}>
+                      <div className={styles.folderTopRow}>
+                        <div className={styles.folderMetaBlock}>
+                          <div
+                            className={styles.folderTitleInput}
+                            contentEditable
+                            suppressContentEditableWarning
+                            spellCheck={false}
+                            onInput={(event) =>
+                              renameFolder(entity.id, (event.target as HTMLElement).innerText)
+                            }
+                          >
+                            {entity.title}
+                          </div>
+                          <div className={styles.folderBadge}>
+                            {folderCount} item{folderCount === 1 ? "" : "s"}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className={styles.folderOpenBtn}
+                          data-folder-open-btn="true"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openFolder(entity.id);
+                          }}
+                        >
+                          <CornersOut size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -583,6 +1088,50 @@ export function ArchitecturalCanvasApp() {
         centerWorldY={centerWorldY}
         scale={scale}
       />
+
+      <div className={styles.navWrap}>
+        <div className={styles.glassPanel}>
+          <div className={styles.navRow}>
+            <button
+              ref={parentDropRef}
+              type="button"
+              className={`${styles.navBtn} ${parentDropHovered ? styles.navBtnDrop : ""}`}
+              onClick={goBack}
+              disabled={!parentSpaceId}
+            >
+              <ArrowLeft size={12} />
+              Back
+            </button>
+            <div className={styles.crumbTrail}>
+              {navigationPath.map((spaceId, index) => (
+                <div key={spaceId} className={styles.crumbItem}>
+                  {index > 0 ? <CaretRight size={12} className={styles.crumbSep} /> : null}
+                  <button
+                    type="button"
+                    className={`${styles.crumbBtn} ${
+                      spaceId === activeSpaceId ? styles.crumbActive : ""
+                    }`}
+                    onClick={() => enterSpace(spaceId)}
+                    disabled={spaceId === activeSpaceId}
+                  >
+                    {spaceId === graph.rootSpaceId ? <House size={12} /> : <Folder size={12} />}
+                    {graph.spaces[spaceId]?.name ?? "Unknown"}
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              className={styles.navBtn}
+              onClick={moveSelectionToParent}
+              disabled={!parentSpaceId || selectedNodeIds.length === 0}
+            >
+              Move to parent
+            </button>
+          </div>
+          <div className={styles.navHint}>Current Space: {activeSpaceLabel}</div>
+        </div>
+      </div>
 
       <ArchitecturalBottomDock onFormat={runFormat} onCreateNode={createNewNode} />
 

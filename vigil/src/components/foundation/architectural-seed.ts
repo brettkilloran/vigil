@@ -1,4 +1,9 @@
-import type { CanvasNode } from "@/src/components/foundation/architectural-types";
+import type {
+  CanvasContentEntity,
+  CanvasGraph,
+  CanvasNode,
+  CanvasSpace,
+} from "@/src/components/foundation/architectural-types";
 
 type StyleTokens = {
   taskItem: string;
@@ -93,4 +98,119 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       `,
     },
   ];
+}
+
+function createContentSeedMap(tokens: StyleTokens): Record<string, CanvasContentEntity> {
+  const nodes = buildArchitecturalSeedNodes(tokens);
+  return Object.fromEntries(
+    nodes.map((node) => [
+      node.id,
+      {
+        ...node,
+        kind: "content",
+        slots: {
+          root: { x: node.x, y: node.y },
+        },
+      } satisfies CanvasContentEntity,
+    ]),
+  );
+}
+
+export function buildArchitecturalSeedGraph(
+  tokens: StyleTokens,
+  scenario: "default" | "nested" | "corrupt" = "default",
+): CanvasGraph {
+  const entities = createContentSeedMap(tokens);
+  const spaces: Record<string, CanvasSpace> = {
+    root: {
+      id: "root",
+      name: "Root",
+      parentSpaceId: null,
+      entityIds: ["node-1", "node-2", "node-3", "node-4", "folder-1"],
+    },
+    "space-project-thesis": {
+      id: "space-project-thesis",
+      name: "Project Thesis",
+      parentSpaceId: "root",
+      entityIds: [],
+    },
+  };
+
+  entities["folder-1"] = {
+    id: "folder-1",
+    title: "Project Thesis",
+    kind: "folder",
+    theme: "folder",
+    childSpaceId: "space-project-thesis",
+    rotation: -1.1,
+    width: 280,
+    tapeRotation: 0,
+    slots: {
+      root: { x: -430, y: -40 },
+    },
+  };
+
+  if (entities["node-3"]) {
+    entities["node-3"] = {
+      ...entities["node-3"],
+      slots: {
+        ...entities["node-3"].slots,
+        "space-project-thesis": { x: -100, y: 30 },
+      },
+    };
+  }
+
+  spaces["space-project-thesis"].entityIds.push("node-3");
+
+  if (scenario === "nested") {
+    spaces["space-subsystems"] = {
+      id: "space-subsystems",
+      name: "Subsystems",
+      parentSpaceId: "space-project-thesis",
+      entityIds: ["nested-note-1"],
+    };
+
+    entities["folder-2"] = {
+      id: "folder-2",
+      title: "Subsystems",
+      kind: "folder",
+      theme: "folder",
+      childSpaceId: "space-subsystems",
+      rotation: 0.5,
+      width: 280,
+      tapeRotation: 0,
+      slots: {
+        "space-project-thesis": { x: 220, y: -140 },
+      },
+    };
+
+    entities["nested-note-1"] = {
+      id: "nested-note-1",
+      title: "Nested Note",
+      kind: "content",
+      theme: "default",
+      rotation: -0.6,
+      tapeRotation: 1.2,
+      bodyHtml:
+        "<p>This note lives one level deeper to validate recursive folders and breadcrumb navigation.</p>",
+      slots: {
+        "space-subsystems": { x: -60, y: -20 },
+      },
+    };
+
+    spaces["space-project-thesis"].entityIds.push("folder-2");
+  }
+
+  if (scenario === "corrupt") {
+    entities["folder-1"] = {
+      ...entities["folder-1"],
+      childSpaceId: "missing-space-id",
+    };
+  }
+
+  return {
+    rootSpaceId: "root",
+    spaces,
+    entities,
+  };
 }
