@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -7,6 +9,7 @@
   --vigil-btn-bg: #ffffff;
   --vigil-btn-fg: #111;
   --vigil-btn-border: #c8c8c8;
+  --vigil-snap: #3b82f6;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -62,7 +65,7 @@ body {
   flex-direction: column;
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -82,4 +85,31 @@ a {
   html:not([data-vigil-theme="light"]) {
     color-scheme: dark;
   }
+}
+
+.ProseMirror {
+  outline: none;
+  min-height: 4rem;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ProseMirror p {
+  margin: 0.35em 0;
+}
+
+.ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.ProseMirror li[data-type="taskItem"] {
+  display: flex;
+  gap: 0.4rem;
+  align-items: flex-start;
+}
+
+.ProseMirror li[data-type="taskItem"] > label {
+  flex-shrink: 0;
+  user-select: none;
 }

@@ -1,0 +1,102 @@
+import { z } from "zod";
+
+import { tryGetDb } from "@/src/db/index";
+import { items } from "@/src/db/schema";
+import { assertSpaceExists, listItemsForSpace } from "@/src/lib/spaces";
+import { rowToCanvasItem } from "@/src/lib/item-mapper";
+
+const createBody = z.object({
+  itemType: z.enum(["note", "sticky", "image", "checklist", "webclip", "folder"]),
+  x: z.number().default(0),
+  y: z.number().default(0),
+  width: z.number().positive().max(4000).default(280),
+  height: z.number().positive().max(4000).default(200),
+  title: z.string().max(255).optional(),
+  contentText: z.string().optional(),
+  color: z.string().max(64).optional(),
+  entityType: z.string().max(64).optional(),
+  entityMeta: z.record(z.string(), z.any()).optional(),
+  imageUrl: z.string().max(8192).optional(),
+});
+
+export async function GET(
+  _req: Request,
+  context: { params: Promise<{ spaceId: string }> },
+) {
+  const db = tryGetDb();
+  if (!db) {
+    return Response.json(
+      { ok: false, error: "Database not configured" },
+      { status: 503 },
+    );
+  }
+  const { spaceId } = await context.params;
+  const space = await assertSpaceExists(db, spaceId);
+  if (!space) {
+    return Response.json({ ok: false, error: "Space not found" }, { status: 404 });
+  }
+  const rows = await listItemsForSpace(db, spaceId);
+  return Response.json({ ok: true, items: rows.map(rowToCanvasItem) });
+}
+
+export async function POST(
+  req: Request,
+  context: { params: Promise<{ spaceId: string }> },
+) {
+  const db = tryGetDb();
+  if (!db) {
+    return Response.json(
+      { ok: false, error: "Database not configured" },
+      { status: 503 },
+    );
+  }
+  const { spaceId } = await context.params;
+  const space = await assertSpaceExists(db, spaceId);
+  if (!space) {
+    return Response.json({ ok: false, error: "Space not found" }, { status: 404 });
+  }
+
+  let json: unknown;
+  try {
+    json = await req.json();
+  } catch {
+    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const parsed = createBody.safeParse(json);
+  if (!parsed.success) {
+    return Response.json(
+      { ok: false, error: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+
+  const t = parsed.data.itemType;
+  const defaultTitle =
+    t === "note" ? "Note" : t === "sticky" ? "Sticky" : t === "folder" ? "Folder" : "Item";
+  const title = parsed.data.title?.trim() || defaultTitle;
+  const contentText = parsed.data.contentText ?? "";
+  const color =
+    parsed.data.color ??
+    (t === "sticky" ? "#00f5a0" : t === "note" ? "#ffffff" : null);
+
+  const [row] = await db
+    .insert(items)
+    .values({
+      spaceId,
+      itemType: t,
+      x: parsed.data.x,
+      y: parsed.data.y,
+      width: parsed.data.width,
+      height: parsed.data.height,
+      title,
+      contentText,
+      color,
+      entityType: parsed.data.entityType ?? null,
+      entityMeta: parsed.data.entityMeta ?? null,
+      imageUrl: parsed.data.imageUrl ?? null,
+    })
+    .returning();
+
+  return Response.json({ ok: true, item: rowToCanvasItem(row!) });
+}

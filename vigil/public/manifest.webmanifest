@@ -1,0 +1,10 @@
+{
+  "name": "VIGIL",
+  "short_name": "VIGIL",
+  "description": "Infinite canvas for notes and worldbuilding",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#171717",
+  "icons": []
+}

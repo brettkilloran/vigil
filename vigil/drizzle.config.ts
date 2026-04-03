@@ -5,8 +5,7 @@ export default defineConfig({
   out: "./drizzle/migrations",
   dialect: "postgresql",
   dbCredentials: {
-    // drizzle-kit v0.31.10 types are strict; cast so Next build can typecheck.
-    connectionString: (process.env.NEON_DATABASE_URL ?? "") as string,
-  } as any,
+    url: process.env.NEON_DATABASE_URL ?? "",
+  },
 });
 

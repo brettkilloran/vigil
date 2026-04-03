@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import "tldraw/tldraw.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,6 +16,7 @@ export const metadata: Metadata = {
   title: "VIGIL",
   description: "Infinite canvas TTRPG worldbuilding",
   applicationName: "VIGIL",
+  manifest: "/manifest.webmanifest",
   openGraph: {
     title: "VIGIL",
     description: "Infinite canvas TTRPG worldbuilding",

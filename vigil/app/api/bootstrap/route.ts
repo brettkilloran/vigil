@@ -1,6 +1,11 @@
 import { tryGetDb } from "@/src/db/index";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
-import { getOrCreateOwnerUser, resolveActiveSpace } from "@/src/lib/vigil-owner";
+import {
+  listItemsForSpace,
+  parseCameraFromRow,
+  resolveActiveSpace,
+} from "@/src/lib/spaces";
+import { rowToCanvasItem } from "@/src/lib/item-mapper";
 
 export async function GET(req: Request) {
   const db = tryGetDb();
@@ -9,28 +14,25 @@ export async function GET(req: Request) {
       ok: true,
       demo: true,
       spaceId: null,
-      userId: null,
-      snapshot: null,
       spaces: [] as { id: string; name: string; updatedAt: string }[],
+      items: [],
+      camera: { x: 0, y: 0, zoom: 1 },
     });
   }
 
   const url = new URL(req.url);
   const requested = parseSpaceIdParam(url.searchParams.get("space"));
 
-  const user = await getOrCreateOwnerUser(db);
-  const { activeSpace, allSpaces } = await resolveActiveSpace(
-    db,
-    user.id,
-    requested,
-  );
+  const { activeSpace, allSpaces } = await resolveActiveSpace(db, requested);
+
+  const itemRows = await listItemsForSpace(db, activeSpace.id);
+  const items = itemRows.map(rowToCanvasItem);
+  const camera = parseCameraFromRow(activeSpace.canvasState);
 
   return Response.json({
     ok: true,
     demo: false,
     spaceId: activeSpace.id,
-    userId: user.id,
-    snapshot: activeSpace.canvasState ?? null,
     spaces: allSpaces.map((s) => ({
       id: s.id,
       name: s.name,
@@ -39,5 +41,7 @@ export async function GET(req: Request) {
           ? s.updatedAt.toISOString()
           : String(s.updatedAt),
     })),
+    items,
+    camera,
   });
 }

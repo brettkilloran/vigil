@@ -1,0 +1,26 @@
+import { tryGetDb } from "@/src/db/index";
+import { rowToCanvasItem } from "@/src/lib/item-mapper";
+import { assertSpaceExists, listItemsForSpace } from "@/src/lib/spaces";
+
+/** Versioned read-only list for scripts / LLM (no auth in single-user mode). */
+export async function GET(req: Request) {
+  const db = tryGetDb();
+  if (!db) {
+    return Response.json({ error: "Database not configured" }, { status: 503 });
+  }
+  const url = new URL(req.url);
+  const spaceId = url.searchParams.get("space_id");
+  if (!spaceId) {
+    return Response.json({ error: "space_id required" }, { status: 400 });
+  }
+  const space = await assertSpaceExists(db, spaceId);
+  if (!space) {
+    return Response.json({ error: "Space not found" }, { status: 404 });
+  }
+  const rows = await listItemsForSpace(db, spaceId);
+  return Response.json({
+    version: 1,
+    space_id: spaceId,
+    items: rows.map(rowToCanvasItem),
+  });
+}

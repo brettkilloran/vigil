@@ -1,59 +1,36 @@
 "use client";
 
-import "@/src/types/vigil-shapes";
-
-import {
-  createShapeId,
-  defaultShapeUtils,
-  type Editor,
-  exportAs,
-  serializeTldrawJson,
-  Tldraw,
-} from "tldraw";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { VigilNoteShapeUtil } from "@/src/canvas/VigilNoteShapeUtil";
-import { VigilStickyShapeUtil } from "@/src/canvas/VigilStickyShapeUtil";
-import { useSpringBetween } from "@/src/hooks/use-spring-between";
+import { EntityTypeBar } from "@/src/components/canvas/EntityTypeBar";
+import { VigilCanvas } from "@/src/components/canvas/VigilCanvas";
+import { CommandPalette } from "@/src/components/ui/CommandPalette";
+import { ContextMenu } from "@/src/components/ui/ContextMenu";
+import { ScratchPad } from "@/src/components/ui/ScratchPad";
 import {
   type VigilColorScheme,
   useVigilThemeContext,
 } from "@/src/contexts/vigil-theme-context";
+import { useSpringBetween } from "@/src/hooks/use-spring-between";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
 import { VIGIL_UI_SPRING, VIGIL_UI_SPRING_SOFT } from "@/src/lib/spring";
+import { useCanvasStore } from "@/src/stores/canvas-store";
+import type { CameraState, CanvasItem } from "@/src/stores/canvas-types";
+import { defaultCamera } from "@/src/stores/canvas-types";
 
-const LS_KEY = "vigil-editor-snapshot";
+const LS_KEY = "vigil-canvas-local-v1";
 
-/** ~25MB — reference art / map imports */
-const MAX_ASSET_BYTES = 25 * 1024 * 1024;
-
-const toolbarBtn: CSSProperties = {
-  padding: "4px 10px",
-  borderRadius: 6,
-  border: "1px solid var(--vigil-btn-border)",
-  background: "var(--vigil-btn-bg)",
-  color: "var(--vigil-btn-fg)",
-  cursor: "pointer",
-  fontSize: 13,
+type BootstrapPayload = {
+  ok?: boolean;
+  demo?: boolean;
+  spaceId: string | null;
+  spaces: { id: string; name: string; updatedAt: string }[];
+  items: CanvasItem[];
+  camera: CameraState;
 };
 
 type SyncMode = "loading" | "local" | "cloud";
-
-type SpaceRow = { id: string; name: string; updatedAt: string };
-
-type BootstrapPayload = {
-  spaceId: string | null;
-  snapshot: unknown | null;
-  spaces: SpaceRow[];
-};
 
 function themeLabel(p: VigilColorScheme): string {
   if (p === "system") return "Match OS";
@@ -61,198 +38,31 @@ function themeLabel(p: VigilColorScheme): string {
   return "Dark";
 }
 
-function VigilToolbarMounted({
-  editor,
-  syncMode,
-  spaces,
-  activeSpaceId,
-  onSpaceChange,
-  onNewSpace,
-  colorScheme,
-  onCycleTheme,
-  snapEnabled,
-  onToggleSnap,
-  onExportPng,
-  onExportTldr,
-}: {
-  editor: Editor;
-  syncMode: SyncMode;
-  spaces: SpaceRow[];
-  activeSpaceId: string | null;
-  onSpaceChange: (spaceId: string) => void;
-  onNewSpace: () => void;
-  colorScheme: VigilColorScheme;
-  onCycleTheme: () => void;
-  snapEnabled: boolean;
-  onToggleSnap: () => void;
-  onExportPng: () => void;
-  onExportTldr: () => void;
-}) {
-  const springY = useSpringBetween(0, -14, VIGIL_UI_SPRING);
-  const springOpacity = useSpringBetween(1, 0, VIGIL_UI_SPRING_SOFT);
-  const addNote = useCallback(() => {
-    if (!editor) return;
-    editor.createShape({
-      id: createShapeId(),
-      type: "vigil-note",
-      parentId: editor.getCurrentPageId(),
-      x: 180 + Math.random() * 48,
-      y: 180 + Math.random() * 48,
-      props: {
-        w: 280,
-        h: 180,
-        color: "#ffffff",
-        text: "",
-      },
-    });
-  }, [editor]);
+function loadLocalState(): {
+  camera: CameraState;
+  items: CanvasItem[];
+} | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const o = JSON.parse(raw) as {
+      camera?: CameraState;
+      items?: CanvasItem[];
+    };
+    if (!o.camera || !Array.isArray(o.items)) return null;
+    return { camera: o.camera, items: o.items };
+  } catch {
+    return null;
+  }
+}
 
-  const addSticky = useCallback(() => {
-    if (!editor) return;
-    editor.createShape({
-      id: createShapeId(),
-      type: "vigil-sticky",
-      parentId: editor.getCurrentPageId(),
-      x: 220 + Math.random() * 48,
-      y: 220 + Math.random() * 48,
-      props: {
-        w: 200,
-        h: 120,
-        color: "#00f5a0",
-        text: "",
-      },
-    });
-  }, [editor]);
-
-  const modeLabel =
-    syncMode === "loading"
-      ? "…"
-      : syncMode === "cloud"
-        ? "Cloud sync"
-        : "Local only";
-
-  return (
-    <div
-      style={{
-        position: "absolute",
-        top: 12,
-        left: 12,
-        zIndex: 2000,
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        flexWrap: "wrap",
-        transform: `translateY(${springY}px)`,
-        opacity: springOpacity,
-        willChange: "transform, opacity",
-      }}
-    >
-      <span
-        style={{
-          fontSize: 12,
-          color: "var(--vigil-muted)",
-          fontFamily: "system-ui, sans-serif",
-          userSelect: "none",
-        }}
-        title={
-          syncMode === "cloud"
-            ? "Canvas saves to your database"
-            : "Add NEON_DATABASE_URL for cloud sync"
-        }
-      >
-        {modeLabel}
-      </span>
-      <span
-        style={{
-          fontSize: 11,
-          color: "var(--vigil-muted)",
-          fontFamily: "system-ui, sans-serif",
-          userSelect: "none",
-          maxWidth: 200,
-          lineHeight: 1.35,
-        }}
-        title="Images, videos, and other files tldraw supports"
-      >
-        Drop files on the canvas
-      </span>
-      <button
-        type="button"
-        onClick={onToggleSnap}
-        title="Snap selection to guides and nearby shapes when moving or resizing"
-        style={{ ...toolbarBtn, fontSize: 12 }}
-      >
-        Snap: {snapEnabled ? "on" : "off"}
-      </button>
-      <button
-        type="button"
-        onClick={onCycleTheme}
-        title="Cycle theme: system, light, dark"
-        style={{ ...toolbarBtn, fontSize: 12 }}
-      >
-        Theme: {themeLabel(colorScheme)}
-      </button>
-      {syncMode === "cloud" && spaces.length > 0 && activeSpaceId ? (
-        <>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 12,
-              fontFamily: "system-ui, sans-serif",
-              color: "var(--vigil-label)",
-            }}
-          >
-            <span style={{ userSelect: "none" }}>Space</span>
-            <select
-              value={activeSpaceId}
-              onChange={(e) => onSpaceChange(e.target.value)}
-              style={{
-                fontSize: 13,
-                padding: "4px 8px",
-                borderRadius: 6,
-                border: "1px solid var(--vigil-border)",
-                maxWidth: 220,
-                background: "var(--vigil-btn-bg)",
-                color: "var(--vigil-btn-fg)",
-              }}
-            >
-              {spaces.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="button" onClick={onNewSpace} style={toolbarBtn}>
-            New space
-          </button>
-        </>
-      ) : null}
-      <button type="button" onClick={addNote} style={toolbarBtn}>
-        VIGIL note
-      </button>
-      <button type="button" onClick={addSticky} style={toolbarBtn}>
-        VIGIL sticky
-      </button>
-      <button
-        type="button"
-        onClick={onExportPng}
-        style={toolbarBtn}
-        title="Export selection as PNG, or the whole page if nothing is selected"
-      >
-        Export PNG
-      </button>
-      <button
-        type="button"
-        onClick={onExportTldr}
-        style={toolbarBtn}
-        title="Download the full canvas as a .tldr JSON file"
-      >
-        Save .tldr
-      </button>
-    </div>
-  );
+function saveLocalState(camera: CameraState, items: CanvasItem[]) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ camera, items }));
+  } catch {
+    /* quota */
+  }
 }
 
 export default function VigilApp() {
@@ -262,17 +72,142 @@ export default function VigilApp() {
   const spaceFromUrl = searchParams.get("space");
   const validSpaceParam = parseSpaceIdParam(spaceFromUrl);
 
-  const [editor, setEditor] = useState<Editor | null>(null);
   const [syncMode, setSyncMode] = useState<SyncMode>("loading");
-  const [spaces, setSpaces] = useState<SpaceRow[]>([]);
+  const [spaces, setSpaces] = useState<BootstrapPayload["spaces"]>([]);
   const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null);
-  const [snapEnabled, setSnapEnabled] = useState(false);
-  const spaceIdRef = useRef<string | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [ctxMenu, setCtxMenu] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
-  const shapeUtils = useMemo(
-    () => [...defaultShapeUtils, VigilNoteShapeUtil, VigilStickyShapeUtil],
+  const cameraTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const itemTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map(),
+  );
+  const ctxScreenRef = useRef<{ x: number; y: number } | null>(null);
+
+  const hydrate = useCanvasStore((s) => s.hydrate);
+  const reset = useCanvasStore((s) => s.reset);
+  const camera = useCanvasStore((s) => s.camera);
+  const putItem = useCanvasStore((s) => s.putItem);
+  const patchItemLocal = useCanvasStore((s) => s.patchItemLocal);
+  const removeItemLocal = useCanvasStore((s) => s.removeItemLocal);
+  const snapEnabled = useCanvasStore((s) => s.snapEnabled);
+  const setSnapEnabled = useCanvasStore((s) => s.setSnapEnabled);
+  const scratchPadOpen = useCanvasStore((s) => s.scratchPadOpen);
+  const setScratchPadOpen = useCanvasStore((s) => s.setScratchPadOpen);
+  const undo = useCanvasStore((s) => s.undo);
+  const redo = useCanvasStore((s) => s.redo);
+  const pushUndo = useCanvasStore((s) => s.pushUndo);
+  const itemsRecord = useCanvasStore((s) => s.items);
+
+  const springY = useSpringBetween(0, -14, VIGIL_UI_SPRING);
+  const springOpacity = useSpringBetween(1, 0, VIGIL_UI_SPRING_SOFT);
+
+  const scheduleCameraPersist = useCallback(
+    (spaceId: string, cam: CameraState) => {
+      clearTimeout(cameraTimer.current);
+      cameraTimer.current = setTimeout(() => {
+        void fetch(`/api/spaces/${spaceId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ camera: cam }),
+        });
+      }, 500);
+    },
     [],
   );
+
+  const scheduleItemPersist = useCallback((id: string, patch: object) => {
+    const prev = itemTimers.current.get(id);
+    if (prev) clearTimeout(prev);
+    const t = setTimeout(() => {
+      itemTimers.current.delete(id);
+      void fetch(`/api/items/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+    }, 450);
+    itemTimers.current.set(id, t);
+  }, []);
+
+  const onPatchItem = useCallback(
+    (id: string, patch: Partial<CanvasItem>) => {
+      patchItemLocal(id, patch);
+      const sid = useCanvasStore.getState().spaceId;
+      if (!sid) {
+        saveLocalState(useCanvasStore.getState().camera, Object.values(useCanvasStore.getState().items));
+        return;
+      }
+      scheduleItemPersist(id, patch);
+    },
+    [patchItemLocal, scheduleItemPersist],
+  );
+
+  useEffect(() => {
+    const sid = useCanvasStore.getState().spaceId;
+    if (syncMode !== "cloud" || !sid) return;
+    scheduleCameraPersist(sid, camera);
+  }, [camera, scheduleCameraPersist, syncMode]);
+
+  useEffect(() => {
+    if (syncMode !== "local") return;
+    saveLocalState(camera, Object.values(itemsRecord));
+  }, [camera, itemsRecord, syncMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+    reset();
+    const qs = validSpaceParam
+      ? `?space=${encodeURIComponent(validSpaceParam)}`
+      : "";
+
+    void (async () => {
+      const res = await fetch(`/api/bootstrap${qs}`);
+      const data = (await res.json()) as BootstrapPayload;
+      if (cancelled) return;
+
+      if (data.demo) {
+        const local = loadLocalState();
+        const cam = local?.camera ?? defaultCamera();
+        const items = local?.items ?? [];
+        setActiveSpaceId(null);
+        setSpaces([]);
+        setSyncMode("local");
+        hydrate({
+          spaceId: null,
+          items,
+          camera: cam,
+        });
+        return;
+      }
+
+      const sid = data.spaceId;
+      setSpaces(data.spaces ?? []);
+      setActiveSpaceId(sid);
+      setSyncMode("cloud");
+      hydrate({
+        spaceId: sid,
+        items: data.items ?? [],
+        camera: data.camera ?? defaultCamera(),
+      });
+
+      if (
+        sid &&
+        (!spaceFromUrl || !validSpaceParam || validSpaceParam !== sid)
+      ) {
+        router.replace(`/?space=${encodeURIComponent(sid)}`, { scroll: false });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrate, reset, router, spaceFromUrl, validSpaceParam]);
 
   const onSpaceChange = useCallback(
     (id: string) => {
@@ -302,183 +237,448 @@ export default function VigilApp() {
     })();
   }, [router]);
 
-  useEffect(() => {
-    if (!editor) return;
-    editor.user.updateUserPreferences({ colorScheme: preference });
-  }, [editor, preference]);
+  const createItemAt = useCallback(
+    async (
+      world: { x: number; y: number },
+      kind: "note" | "sticky",
+    ): Promise<string | null> => {
+      const sid = useCanvasStore.getState().spaceId;
+      const w = kind === "note" ? 280 : 200;
+      const h = kind === "note" ? 200 : 140;
+      const x = world.x - w / 2;
+      const y = world.y - h / 2;
+
+      if (!sid) {
+        const item: CanvasItem = {
+          id: crypto.randomUUID(),
+          spaceId: "local",
+          itemType: kind,
+          x,
+          y,
+          width: w,
+          height: h,
+          zIndex: Object.keys(useCanvasStore.getState().items).length,
+          title: kind === "note" ? "Note" : "Sticky",
+          contentText: "",
+          color: kind === "sticky" ? "#00f5a0" : "#ffffff",
+        };
+        putItem(item);
+        pushUndo({ kind: "create", item: { ...item } });
+        return item.id;
+      }
+
+      const res = await fetch(`/api/spaces/${sid}/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemType: kind,
+          x,
+          y,
+          width: w,
+          height: h,
+        }),
+      });
+      const data = (await res.json()) as { ok?: boolean; item?: CanvasItem };
+      if (data.ok && data.item) {
+        putItem(data.item);
+        pushUndo({ kind: "create", item: { ...data.item } });
+        return data.item.id;
+      }
+      return null;
+    },
+    [putItem, pushUndo],
+  );
+
+  const onOpenFolder = useCallback(
+    (childSpaceId: string) => {
+      router.push(`/?space=${encodeURIComponent(childSpaceId)}`);
+    },
+    [router],
+  );
+
+  const exportJson = useCallback(() => {
+    const payload = {
+      camera: useCanvasStore.getState().camera,
+      items: Object.values(useCanvasStore.getState().items),
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `vigil-export-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const stackSelection = useCallback(async () => {
+    const ids = useCanvasStore.getState().selectedIds;
+    if (ids.length < 2) return;
+    const stackId = crypto.randomUUID();
+    const sid = useCanvasStore.getState().spaceId;
+    ids.forEach((id, i) => {
+      patchItemLocal(id, { stackId, stackOrder: i });
+      if (sid) scheduleItemPersist(id, { stackId, stackOrder: i });
+    });
+    if (!sid) {
+      saveLocalState(useCanvasStore.getState().camera, Object.values(useCanvasStore.getState().items));
+    }
+  }, [patchItemLocal, scheduleItemPersist]);
+
+  const newFolderSpace = useCallback(async () => {
+    const sid = useCanvasStore.getState().spaceId;
+    const name = window.prompt("Folder name", "Folder");
+    if (name === null || !name.trim()) return;
+    if (!sid) {
+      window.alert("Folders need cloud sync (Neon).");
+      return;
+    }
+    const res = await fetch("/api/spaces", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim(), parentSpaceId: sid }),
+    });
+    const data = (await res.json()) as {
+      ok?: boolean;
+      space?: { id: string };
+    };
+    if (!data.ok || !data.space?.id) return;
+    const childId = data.space.id;
+    const w = 220;
+    const h = 160;
+    const cam = useCanvasStore.getState().camera;
+    const cx = (-cam.x + window.innerWidth / 2) / cam.zoom;
+    const cy = (-cam.y + window.innerHeight / 2) / cam.zoom;
+    const resItem = await fetch(`/api/spaces/${sid}/items`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        itemType: "folder",
+        x: cx - w / 2,
+        y: cy - h / 2,
+        width: w,
+        height: h,
+        title: name.trim(),
+        entityMeta: { childSpaceId: childId },
+      }),
+    });
+    const itemData = (await resItem.json()) as {
+      ok?: boolean;
+      item?: CanvasItem;
+    };
+    if (itemData.ok && itemData.item) putItem(itemData.item);
+  }, [putItem]);
 
   useEffect(() => {
-    if (!editor) return;
-    setSnapEnabled(editor.user.getIsSnapMode());
-  }, [editor]);
-
-  const onToggleSnap = useCallback(() => {
-    if (!editor) return;
-    const next = !editor.user.getIsSnapMode();
-    editor.user.updateUserPreferences({ isSnapMode: next });
-    setSnapEnabled(next);
-  }, [editor]);
-
-  const onExportPng = useCallback(() => {
-    if (!editor) return;
-    void (async () => {
-      const selected = editor.getSelectedShapeIds();
-      const ids =
-        selected.length > 0 ? selected : [...editor.getCurrentPageShapeIds()];
-      if (ids.length === 0) {
-        window.alert("Nothing on this page to export.");
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if (t?.closest?.("[data-vigil-palette]")) return;
+      if (t?.isContentEditable || t?.tagName === "INPUT" || t?.tagName === "TEXTAREA") {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+          e.preventDefault();
+          setPaletteOpen(true);
+        }
         return;
       }
-      try {
-        await exportAs(editor, ids, { format: "png", name: "vigil" });
-      } catch (e) {
-        window.alert(
-          e instanceof Error ? e.message : "Could not export PNG.",
-        );
-      }
-    })();
-  }, [editor]);
 
-  const onExportTldr = useCallback(() => {
-    if (!editor) return;
-    void (async () => {
-      try {
-        const json = await serializeTldrawJson(editor);
-        const blob = new Blob([json], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `vigil-${new Date().toISOString().slice(0, 10)}.tldr`;
-        a.click();
-        URL.revokeObjectURL(url);
-      } catch (e) {
-        window.alert(
-          e instanceof Error ? e.message : "Could not save .tldr file.",
-        );
-      }
-    })();
-  }, [editor]);
-
-  useEffect(() => {
-    if (!editor) return;
-
-    let cancelled = false;
-    let removeListener: (() => void) | undefined;
-    let debounceTimer: ReturnType<typeof setTimeout> | undefined;
-
-    void (async () => {
-      const qs = validSpaceParam
-        ? `?space=${encodeURIComponent(validSpaceParam)}`
-        : "";
-      const res = await fetch(`/api/bootstrap${qs}`);
-      const data = (await res.json()) as BootstrapPayload;
-
-      if (cancelled) return;
-
-      spaceIdRef.current = data.spaceId;
-      setActiveSpaceId(data.spaceId);
-      setSpaces(data.spaces ?? []);
-      setSyncMode(data.spaceId ? "cloud" : "local");
-
-      if (
-        data.spaceId &&
-        (!spaceFromUrl ||
-          !validSpaceParam ||
-          validSpaceParam !== data.spaceId)
-      ) {
-        router.replace(`/?space=${encodeURIComponent(data.spaceId)}`, {
-          scroll: false,
-        });
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+        return;
       }
 
-      if (data.snapshot) {
-        try {
-          editor.loadSnapshot(
-            data.snapshot as Parameters<Editor["loadSnapshot"]>[0],
-          );
-        } catch {
-          /* ignore corrupt snapshot */
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        void stackSelection();
+        return;
+      }
+
+      if (e.key === "Delete" || e.key === "Backspace") {
+        const ids = [...useCanvasStore.getState().selectedIds];
+        if (ids.length === 0) return;
+        e.preventDefault();
+        const sid = useCanvasStore.getState().spaceId;
+        for (const id of ids) {
+          const it = useCanvasStore.getState().items[id];
+          if (it) pushUndo({ kind: "delete", item: { ...it } });
+          removeItemLocal(id);
+          if (sid) void fetch(`/api/items/${id}`, { method: "DELETE" });
         }
-      } else if (data.spaceId) {
-        const ids = [...editor.getCurrentPageShapeIds()];
-        if (ids.length > 0) editor.deleteShapes(ids);
-      } else if (typeof window !== "undefined") {
-        const raw = localStorage.getItem(LS_KEY);
-        if (raw) {
-          try {
-            editor.loadSnapshot(JSON.parse(raw) as Parameters<
-              Editor["loadSnapshot"]
-            >[0]);
-          } catch {
-            /* ignore */
-          }
+        if (!sid) {
+          saveLocalState(useCanvasStore.getState().camera, Object.values(useCanvasStore.getState().items));
         }
       }
 
-      const scheduleSave = () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          void (async () => {
-            const snapshot = editor.getSnapshot();
-            const sid = spaceIdRef.current;
-            if (!sid) {
-              try {
-                localStorage.setItem(LS_KEY, JSON.stringify(snapshot));
-              } catch {
-                /* storage quota */
-              }
-              return;
-            }
-            await fetch(`/api/space/${sid}/snapshot`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ snapshot }),
-            });
-          })();
-        }, 900);
-      };
-
-      removeListener = editor.store.listen(scheduleSave, {
-        source: "user",
-        scope: "document",
-      });
-    })();
-
-    return () => {
-      cancelled = true;
-      clearTimeout(debounceTimer);
-      removeListener?.();
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+        const ids = useCanvasStore.getState().selectedIds;
+        if (ids.length !== 1) return;
+        const id = ids[0]!;
+        const it = useCanvasStore.getState().items[id];
+        if (!it) return;
+        e.preventDefault();
+        const step = e.shiftKey ? 40 : 8;
+        const dx =
+          e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
+        const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
+        const nx = it.x + dx;
+        const ny = it.y + dy;
+        patchItemLocal(id, { x: nx, y: ny });
+        if (useCanvasStore.getState().spaceId) {
+          scheduleItemPersist(id, { x: nx, y: ny });
+        }
+      }
     };
-  }, [editor, validSpaceParam, spaceFromUrl, router]);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [patchItemLocal, pushUndo, redo, removeItemLocal, scheduleItemPersist, stackSelection, undo]);
+
+  const onToggleSnap = useCallback(() => {
+    setSnapEnabled(!useCanvasStore.getState().snapEnabled);
+  }, [setSnapEnabled]);
 
   return (
     <div
-      style={{ width: "100vw", height: "100vh", position: "relative" }}
-      onDragOver={(e) => {
+      className="relative h-dvh w-dvw"
+      onContextMenu={(e) => {
         e.preventDefault();
+        ctxScreenRef.current = { x: e.clientX, y: e.clientY };
+        setCtxMenu({ x: e.clientX, y: e.clientY });
+      }}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        const files = [...e.dataTransfer.files];
+        const img = files.find((f) => f.type.startsWith("image/"));
+        if (!img) return;
+        const sid = useCanvasStore.getState().spaceId;
+        const url = URL.createObjectURL(img);
+        const w = 320;
+        const h = 240;
+        const cam = useCanvasStore.getState().camera;
+        const wx = (-cam.x + e.clientX) / cam.zoom - w / 2;
+        const wy = (-cam.y + e.clientY) / cam.zoom - h / 2;
+        if (!sid) {
+          const item: CanvasItem = {
+            id: crypto.randomUUID(),
+            spaceId: "local",
+            itemType: "image",
+            x: wx,
+            y: wy,
+            width: w,
+            height: h,
+            zIndex: Object.keys(useCanvasStore.getState().items).length + 1,
+            title: img.name.slice(0, 255) || "Image",
+            contentText: "",
+            imageUrl: url,
+            imageMeta: { filename: img.name },
+          };
+          putItem(item);
+          return;
+        }
+        void (async () => {
+          const res = await fetch(`/api/spaces/${sid}/items`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              itemType: "image",
+              x: wx,
+              y: wy,
+              width: w,
+              height: h,
+              title: img.name.slice(0, 255) || "Image",
+              imageUrl: url,
+            }),
+          });
+          const data = (await res.json()) as { ok?: boolean; item?: CanvasItem };
+          if (data.ok && data.item) putItem(data.item);
+        })();
       }}
     >
-      {editor ? (
-        <VigilToolbarMounted
-          editor={editor}
-          syncMode={syncMode}
-          spaces={spaces}
-          activeSpaceId={activeSpaceId}
-          onSpaceChange={onSpaceChange}
-          onNewSpace={onNewSpace}
-          colorScheme={preference}
-          onCycleTheme={cyclePreference}
-          snapEnabled={snapEnabled}
-          onToggleSnap={onToggleSnap}
-          onExportPng={onExportPng}
-          onExportTldr={onExportTldr}
-        />
-      ) : null}
-      <Tldraw
-        inferDarkMode={false}
-        maxAssetSize={MAX_ASSET_BYTES}
-        shapeUtils={shapeUtils}
-        onMount={(ed) => setEditor(ed)}
+      <VigilCanvas
+        onPatchItem={onPatchItem}
+        onCreateItemAt={createItemAt}
+        onOpenFolder={onOpenFolder}
+      />
+
+      <EntityTypeBar />
+
+      <div
+        className="pointer-events-none absolute left-3 top-3 z-[800] flex max-w-[min(100vw-24px,920px)] flex-col gap-2"
+        style={{
+          transform: `translateY(${springY}px)`,
+          opacity: springOpacity,
+        }}
+      >
+        <div className="pointer-events-auto flex flex-wrap items-center gap-2">
+          <span
+            className="select-none text-xs text-[var(--vigil-muted)]"
+            title={
+              syncMode === "cloud"
+                ? "Canvas saves to your database"
+                : "Add NEON_DATABASE_URL for cloud sync"
+            }
+          >
+            {syncMode === "loading"
+              ? "…"
+              : syncMode === "cloud"
+                ? "Cloud sync"
+                : "Local only"}
+          </span>
+          <button
+            type="button"
+            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            onClick={onToggleSnap}
+          >
+            Snap: {snapEnabled ? "on" : "off"}
+          </button>
+          <button
+            type="button"
+            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            onClick={cyclePreference}
+          >
+            Theme: {themeLabel(preference)}
+          </button>
+        </div>
+        <div className="pointer-events-auto flex flex-wrap items-center gap-2">
+          {syncMode === "cloud" && spaces.length > 0 && activeSpaceId ? (
+            <>
+              <label className="flex items-center gap-1.5 text-xs text-[var(--vigil-label)]">
+                <span className="select-none">Space</span>
+                <select
+                  className="max-w-[220px] rounded-md border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] px-2 py-1 text-[13px] text-[var(--vigil-btn-fg)]"
+                  value={activeSpaceId}
+                  onChange={(e) => onSpaceChange(e.target.value)}
+                >
+                  {spaces.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+                onClick={onNewSpace}
+              >
+                New space
+              </button>
+            </>
+          ) : null}
+          <button
+            type="button"
+            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            onClick={() => void createItemAt({ x: 120, y: 120 }, "note")}
+          >
+            Note
+          </button>
+          <button
+            type="button"
+            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            onClick={() => void createItemAt({ x: 160, y: 160 }, "sticky")}
+          >
+            Sticky
+          </button>
+          <button
+            type="button"
+            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            onClick={() => void newFolderSpace()}
+          >
+            Folder
+          </button>
+          <button
+            type="button"
+            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            onClick={exportJson}
+          >
+            Export JSON
+          </button>
+          <button
+            type="button"
+            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            onClick={() => setScratchPadOpen(!scratchPadOpen)}
+          >
+            Scratch
+          </button>
+          <button
+            type="button"
+            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            onClick={() => setPaletteOpen(true)}
+          >
+            Search (⌘K)
+          </button>
+        </div>
+      </div>
+
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        spaceId={activeSpaceId}
+        onExportJson={exportJson}
+        onSelectItem={(id) => {
+          const st = useCanvasStore.getState();
+          const it = st.items[id];
+          if (!it) return;
+          const z = st.camera.zoom;
+          st.setCamera({
+            x: window.innerWidth / 2 - (it.x + it.width / 2) * z,
+            y: window.innerHeight / 2 - (it.y + it.height / 2) * z,
+            zoom: z,
+          });
+          st.selectOnly(id);
+        }}
+      />
+
+      <ScratchPad
+        open={scratchPadOpen}
+        onClose={() => setScratchPadOpen(false)}
+        onSubmit={(text) => {
+          void (async () => {
+            const id = await createItemAt({ x: 200, y: 200 }, "note");
+            if (!id) return;
+            const title = text.trim().split(/\n/)[0]?.slice(0, 255) || "Note";
+            patchItemLocal(id, { contentText: text, title });
+            const sid = useCanvasStore.getState().spaceId;
+            if (sid) scheduleItemPersist(id, { contentText: text, title });
+            else {
+              saveLocalState(
+                useCanvasStore.getState().camera,
+                Object.values(useCanvasStore.getState().items),
+              );
+            }
+          })();
+        }}
+      />
+
+      <ContextMenu
+        position={ctxMenu}
+        onClose={() => setCtxMenu(null)}
+        items={[
+          {
+            label: "New note here",
+            onSelect: () => {
+              const p = ctxScreenRef.current;
+              if (!p) return;
+              const cam = useCanvasStore.getState().camera;
+              const wx = (-cam.x + p.x) / cam.zoom;
+              const wy = (-cam.y + p.y) / cam.zoom;
+              void createItemAt({ x: wx, y: wy }, "note");
+            },
+          },
+          {
+            label: "Stack selection (⌘S)",
+            onSelect: () => void stackSelection(),
+          },
+        ]}
       />
     </div>
   );

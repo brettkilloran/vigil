@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect -- spring tick seeds initial value */
 import { useEffect, useRef, useState } from "react";
 
 import {
