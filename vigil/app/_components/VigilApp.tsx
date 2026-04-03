@@ -18,11 +18,12 @@ import {
 import { useSpringBetween } from "@/src/hooks/use-spring-between";
 import { useModKeyHints } from "@/src/lib/mod-keys";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
+import { VIGIL_CHIP_BTN, VIGIL_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
 import {
   findNeighborInDirection,
   selectionAnchor,
 } from "@/src/lib/spatial-nav";
-import { VIGIL_UI_SPRING, VIGIL_UI_SPRING_SOFT } from "@/src/lib/spring";
+import { VIGIL_UI_SPRING } from "@/src/lib/spring";
 import { useCanvasStore } from "@/src/stores/canvas-store";
 import type { CameraState, CanvasItem } from "@/src/stores/canvas-types";
 import { defaultCamera } from "@/src/stores/canvas-types";
@@ -125,8 +126,7 @@ export default function VigilApp() {
   const pushUndo = useCanvasStore((s) => s.pushUndo);
   const itemsRecord = useCanvasStore((s) => s.items);
 
-  const springY = useSpringBetween(0, -14, VIGIL_UI_SPRING);
-  const springOpacity = useSpringBetween(1, 0, VIGIL_UI_SPRING_SOFT);
+  const springY = useSpringBetween(0, -10, VIGIL_UI_SPRING);
   const modKeys = useModKeyHints();
 
   const scheduleCameraPersist = useCallback(
@@ -763,12 +763,14 @@ export default function VigilApp() {
         className="pointer-events-none absolute left-3 top-3 z-[800] flex max-w-[min(100vw-24px,920px)] flex-col gap-2"
         style={{
           transform: `translateY(${springY}px)`,
-          opacity: springOpacity,
         }}
       >
-        <div className="pointer-events-auto flex flex-wrap items-center gap-2">
+        <div
+          className={`pointer-events-auto flex flex-col gap-2 p-2.5 ${VIGIL_GLASS_PANEL}`}
+        >
+        <div className="flex flex-wrap items-center gap-2">
           <span
-            className="select-none text-xs text-[var(--vigil-muted)]"
+            className="select-none text-xs font-medium text-[var(--vigil-muted)]"
             title={
               syncMode === "cloud"
                 ? "Canvas saves to your database"
@@ -783,26 +785,26 @@ export default function VigilApp() {
           </span>
           <button
             type="button"
-            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            className={VIGIL_CHIP_BTN}
             onClick={onToggleSnap}
           >
             Snap: {snapEnabled ? "on" : "off"}
           </button>
           <button
             type="button"
-            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            className={VIGIL_CHIP_BTN}
             onClick={cyclePreference}
           >
             Theme: {themeLabel(preference)}
           </button>
         </div>
-        <div className="pointer-events-auto flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 border-t border-[var(--vigil-border)]/60 pt-2">
           {syncMode === "cloud" && spaces.length > 0 && activeSpaceId ? (
             <>
               <label className="flex items-center gap-1.5 text-xs text-[var(--vigil-label)]">
                 <span className="select-none">Space</span>
                 <select
-                  className="max-w-[220px] rounded-md border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] px-2 py-1 text-[13px] text-[var(--vigil-btn-fg)]"
+                  className="max-w-[220px] rounded-lg border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)] px-2 py-1 text-[13px] text-[var(--vigil-btn-fg)] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vigil-snap)]/40"
                   value={activeSpaceId}
                   onChange={(e) => onSpaceChange(e.target.value)}
                 >
@@ -815,7 +817,7 @@ export default function VigilApp() {
               </label>
               <button
                 type="button"
-                className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+                className={VIGIL_CHIP_BTN}
                 onClick={onNewSpace}
               >
                 New space
@@ -824,56 +826,56 @@ export default function VigilApp() {
           ) : null}
           <button
             type="button"
-            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            className={VIGIL_CHIP_BTN}
             onClick={() => void createItemAt({ x: 120, y: 120 }, "note")}
           >
             Note
           </button>
           <button
             type="button"
-            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            className={VIGIL_CHIP_BTN}
             onClick={() => void createItemAt({ x: 160, y: 160 }, "sticky")}
           >
             Sticky
           </button>
           <button
             type="button"
-            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            className={VIGIL_CHIP_BTN}
             onClick={() => void newFolderSpace()}
           >
             Folder
           </button>
           <button
             type="button"
-            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            className={VIGIL_CHIP_BTN}
             onClick={exportJson}
           >
             Export JSON
           </button>
           <button
             type="button"
-            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            className={VIGIL_CHIP_BTN}
             onClick={() => importInputRef.current?.click()}
           >
             Import JSON
           </button>
           <button
             type="button"
-            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            className={VIGIL_CHIP_BTN}
             onClick={() => setScratchPadOpen(!scratchPadOpen)}
           >
             Scratch
           </button>
           <button
             type="button"
-            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            className={VIGIL_CHIP_BTN}
             onClick={() => setPaletteOpen(true)}
           >
             Search ({modKeys.search})
           </button>
           <button
             type="button"
-            className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+            className={VIGIL_CHIP_BTN}
             title="Notes tagged Event, sorted by metadata date"
             onClick={() => setTimelineOpen(true)}
           >
@@ -882,13 +884,14 @@ export default function VigilApp() {
           {syncMode === "cloud" && activeSpaceId ? (
             <button
               type="button"
-              className="rounded-md border border-[var(--vigil-btn-border)] bg-[var(--vigil-btn-bg)] px-2.5 py-1 text-xs text-[var(--vigil-btn-fg)]"
+              className={VIGIL_CHIP_BTN}
               title="Items and item_links in this space"
               onClick={() => setGraphOpen(true)}
             >
               Graph
             </button>
           ) : null}
+        </div>
         </div>
         {uploadMessage ? (
           <div className="pointer-events-auto flex max-w-[min(100vw-24px,640px)] items-start gap-2 rounded-md border border-amber-600/50 bg-amber-500/15 px-2.5 py-1.5 text-[11px] text-amber-950 dark:text-amber-100">
