@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { BacklinksPanel } from "@/src/components/ui/BacklinksPanel";
 import { EntityTypeBar } from "@/src/components/canvas/EntityTypeBar";
 import { VigilCanvas } from "@/src/components/canvas/VigilCanvas";
 import { CommandPalette } from "@/src/components/ui/CommandPalette";
@@ -510,6 +511,8 @@ export default function VigilApp() {
       />
 
       <EntityTypeBar />
+
+      <BacklinksPanel cloudMode={syncMode === "cloud"} />
 
       <div
         className="pointer-events-none absolute left-3 top-3 z-[800] flex max-w-[min(100vw-24px,920px)] flex-col gap-2"

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm";
 
 import type { tryGetDb } from "@/src/db/index";
 import { itemLinks, items, spaces } from "@/src/db/schema";
@@ -93,4 +93,80 @@ export async function listLinksForItem(db: VigilDb, itemId: string) {
         eq(itemLinks.targetItemId, itemId),
       ),
     );
+}
+
+export type LinkEndpoint = {
+  id: string;
+  title: string;
+  itemType: string;
+};
+
+export type ResolvedLinkOut = {
+  linkId: string;
+  linkType: string;
+  label: string | null;
+  to: LinkEndpoint;
+};
+
+export type ResolvedLinkIn = {
+  linkId: string;
+  linkType: string;
+  label: string | null;
+  from: LinkEndpoint;
+};
+
+export async function getItemLinksResolved(
+  db: VigilDb,
+  itemId: string,
+): Promise<{ outgoing: ResolvedLinkOut[]; incoming: ResolvedLinkIn[] }> {
+  const links = await listLinksForItem(db, itemId);
+  const peerIds = new Set<string>();
+  for (const l of links) {
+    if (l.sourceItemId === itemId) peerIds.add(l.targetItemId);
+    else peerIds.add(l.sourceItemId);
+  }
+  if (peerIds.size === 0) {
+    return { outgoing: [], incoming: [] };
+  }
+  const peerRows = await db
+    .select({
+      id: items.id,
+      title: items.title,
+      itemType: items.itemType,
+    })
+    .from(items)
+    .where(inArray(items.id, [...peerIds]));
+  const peerMap = new Map(
+    peerRows.map((p) => [
+      p.id,
+      { id: p.id, title: p.title, itemType: p.itemType },
+    ]),
+  );
+
+  const outgoing: ResolvedLinkOut[] = [];
+  const incoming: ResolvedLinkIn[] = [];
+  for (const l of links) {
+    if (l.sourceItemId === itemId) {
+      const to = peerMap.get(l.targetItemId);
+      if (to) {
+        outgoing.push({
+          linkId: l.id,
+          linkType: l.linkType,
+          label: l.label,
+          to,
+        });
+      }
+    } else {
+      const from = peerMap.get(l.sourceItemId);
+      if (from) {
+        incoming.push({
+          linkId: l.id,
+          linkType: l.linkType,
+          label: l.label,
+          from,
+        });
+      }
+    }
+  }
+  return { outgoing, incoming };
 }
