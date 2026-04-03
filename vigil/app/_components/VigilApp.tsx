@@ -15,6 +15,10 @@ import {
 } from "@/src/contexts/vigil-theme-context";
 import { useSpringBetween } from "@/src/hooks/use-spring-between";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
+import {
+  findNeighborInDirection,
+  selectionAnchor,
+} from "@/src/lib/spatial-nav";
 import { VIGIL_UI_SPRING, VIGIL_UI_SPRING_SOFT } from "@/src/lib/spring";
 import { useCanvasStore } from "@/src/stores/canvas-store";
 import type { CameraState, CanvasItem } from "@/src/stores/canvas-types";
@@ -532,16 +536,59 @@ export default function VigilApp() {
       }
 
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
-        const ids = useCanvasStore.getState().selectedIds;
+        const dir =
+          e.key === "ArrowLeft"
+            ? "left"
+            : e.key === "ArrowRight"
+              ? "right"
+              : e.key === "ArrowUp"
+                ? "up"
+                : "down";
+
+        const st0 = useCanvasStore.getState();
+        const ids = st0.selectedIds;
+        const allItems = Object.values(st0.items);
+
+        if (e.altKey && e.shiftKey) {
+          e.preventDefault();
+          let from: { x: number; y: number } | null = null;
+          const exclude = new Set(ids);
+
+          if (ids.length > 0) {
+            const selected = ids
+              .map((id) => st0.items[id])
+              .filter(Boolean) as CanvasItem[];
+            from = selectionAnchor(selected);
+          } else {
+            const cam = st0.camera;
+            from = {
+              x: (-cam.x + window.innerWidth / 2) / cam.zoom,
+              y: (-cam.y + window.innerHeight / 2) / cam.zoom,
+            };
+          }
+          if (!from) return;
+
+          const next = findNeighborInDirection(from, dir, allItems, exclude);
+          if (!next) return;
+
+          const z = st0.camera.zoom;
+          useCanvasStore.getState().setCamera({
+            x: window.innerWidth / 2 - (next.x + next.width / 2) * z,
+            y: window.innerHeight / 2 - (next.y + next.height / 2) * z,
+            zoom: z,
+          });
+          useCanvasStore.getState().selectOnly(next.id);
+          return;
+        }
+
         if (ids.length !== 1) return;
         const id = ids[0]!;
-        const it = useCanvasStore.getState().items[id];
+        const it = st0.items[id];
         if (!it) return;
         e.preventDefault();
         const step = e.shiftKey ? 40 : 8;
-        const dx =
-          e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
-        const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
+        const dx = dir === "left" ? -step : dir === "right" ? step : 0;
+        const dy = dir === "up" ? -step : dir === "down" ? step : 0;
         const nx = it.x + dx;
         const ny = it.y + dy;
         patchItemLocal(id, { x: nx, y: ny });

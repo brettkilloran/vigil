@@ -29,6 +29,16 @@ Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 | `npm run db:push` | Push Drizzle schema to Neon |
 | `npm run mcp` | MCP stdio server (see `scripts/mcp-server.mjs`; long-lived when connected) |
 
+### Keyboard (canvas, not typing in a note)
+
+| Keys | Action |
+|------|--------|
+| Arrows | Nudge selected item (Shift = larger step) |
+| **Alt+Shift** + arrows | Spatial jump: select nearest item in that direction (from selection or viewport center); recenters camera on the target |
+| ⌘/Ctrl+K | Command palette |
+| ⌘/Ctrl+Z / ⇧⌘Z | Undo / redo |
+| ⌘/Ctrl+S | Stack selection |
+
 ### “Background shell” running 20+ minutes?
 
 That is usually **`next dev`** (or a second copy started by mistake). Stop it from the terminal trashcan / **Ctrl+C**, or run **`npm run check`** instead when you only need to validate the project.
