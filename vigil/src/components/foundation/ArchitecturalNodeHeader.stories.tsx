@@ -11,12 +11,17 @@ const meta: Meta<typeof ArchitecturalNodeHeader> = {
     title: "Project Thesis",
     showExpand: true,
     expandLabel: "Focus Mode",
+    buttonTone: "card-light",
     onExpand: () => {},
   },
   argTypes: {
     title: { control: "text" },
     showExpand: { control: "boolean" },
     expandLabel: { control: "text" },
+    buttonTone: {
+      control: "radio",
+      options: ["card-light", "card-dark", "focus-light", "focus-dark"],
+    },
     onExpand: { control: false },
   },
   decorators: [
@@ -37,4 +42,18 @@ export const NoExpandButton: Story = {
   args: {
     showExpand: false,
   },
+};
+
+export const DarkCardActionTone: Story = {
+  args: {
+    title: "SYS // Configuration.js",
+    buttonTone: "card-dark",
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: 360, background: "#1c1c21", color: "#e0e0e0" }}>
+        <Story />
+      </div>
+    ),
+  ],
 };

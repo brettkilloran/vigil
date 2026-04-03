@@ -134,6 +134,20 @@
   --cmp-button-focus-dark-fg-hover: #ffffff;
   --cmp-button-focus-dark-fg-active: #ffffff;
 
+  /* Card contextual icon actions (preserve subtle header affordances) */
+  --cmp-button-card-light-bg-default: color-mix(in srgb, var(--sys-color-black) 2%, transparent);
+  --cmp-button-card-light-bg-hover: color-mix(in srgb, var(--sys-color-black) 6%, transparent);
+  --cmp-button-card-light-bg-active: color-mix(in srgb, var(--sys-color-black) 10%, transparent);
+  --cmp-button-card-light-fg-default: color-mix(in srgb, var(--sys-color-black) 58%, transparent);
+  --cmp-button-card-light-fg-hover: color-mix(in srgb, var(--sys-color-black) 78%, transparent);
+  --cmp-button-card-light-fg-active: color-mix(in srgb, var(--sys-color-black) 88%, transparent);
+  --cmp-button-card-dark-bg-default: color-mix(in srgb, var(--sys-color-white) 4%, transparent);
+  --cmp-button-card-dark-bg-hover: color-mix(in srgb, var(--sys-color-white) 10%, transparent);
+  --cmp-button-card-dark-bg-active: color-mix(in srgb, var(--sys-color-white) 16%, transparent);
+  --cmp-button-card-dark-fg-default: color-mix(in srgb, var(--sys-color-white) 64%, transparent);
+  --cmp-button-card-dark-fg-hover: color-mix(in srgb, var(--sys-color-white) 90%, transparent);
+  --cmp-button-card-dark-fg-active: var(--sys-color-white);
+
   --bg-base: #0a0a0c;
   --background: #0a0a0c;
   --foreground: #f0f0f0;
@@ -638,6 +652,36 @@ a {
   --btn-fg-hover: var(--sem-text-primary);
   --btn-fg-active: var(--sem-text-primary);
   --btn-fg-disabled: color-mix(in srgb, var(--sem-text-muted) 70%, transparent);
+  --btn-border-default: transparent;
+  --btn-border-hover: transparent;
+  --btn-border-active: transparent;
+  --btn-border-disabled: transparent;
+}
+
+.vigil-btn[data-tone="card-light"] {
+  --btn-bg-default: var(--cmp-button-card-light-bg-default);
+  --btn-bg-hover: var(--cmp-button-card-light-bg-hover);
+  --btn-bg-active: var(--cmp-button-card-light-bg-active);
+  --btn-bg-disabled: transparent;
+  --btn-fg-default: var(--cmp-button-card-light-fg-default);
+  --btn-fg-hover: var(--cmp-button-card-light-fg-hover);
+  --btn-fg-active: var(--cmp-button-card-light-fg-active);
+  --btn-fg-disabled: color-mix(in srgb, var(--cmp-button-card-light-fg-default) 60%, transparent);
+  --btn-border-default: transparent;
+  --btn-border-hover: transparent;
+  --btn-border-active: transparent;
+  --btn-border-disabled: transparent;
+}
+
+.vigil-btn[data-tone="card-dark"] {
+  --btn-bg-default: var(--cmp-button-card-dark-bg-default);
+  --btn-bg-hover: var(--cmp-button-card-dark-bg-hover);
+  --btn-bg-active: var(--cmp-button-card-dark-bg-active);
+  --btn-bg-disabled: transparent;
+  --btn-fg-default: var(--cmp-button-card-dark-fg-default);
+  --btn-fg-hover: var(--cmp-button-card-dark-fg-hover);
+  --btn-fg-active: var(--cmp-button-card-dark-fg-active);
+  --btn-fg-disabled: color-mix(in srgb, var(--cmp-button-card-dark-fg-default) 65%, transparent);
   --btn-border-default: transparent;
   --btn-border-hover: transparent;
   --btn-border-active: transparent;

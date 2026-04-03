@@ -44,7 +44,7 @@ export function ArchitecturalNodeHeader({
   title,
   showExpand = true,
   expandLabel = "Focus Mode",
-  buttonTone = "focus-light",
+  buttonTone = "card-light",
   onExpand,
 }: {
   title: ReactNode;
@@ -143,7 +143,7 @@ export function ArchitecturalNodeCard({
       <ArchitecturalNodeHeader
         title={title}
         showExpand={showExpandButton}
-        buttonTone={theme === "code" ? "focus-dark" : "focus-light"}
+        buttonTone={theme === "code" ? "card-dark" : "card-light"}
         onExpand={() => onExpand(id)}
       />
       <ArchitecturalNodeBody

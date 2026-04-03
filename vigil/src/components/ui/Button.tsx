@@ -7,7 +7,14 @@ import { cx } from "@/src/lib/cx";
 
 export type ButtonVariant = "neutral" | "primary" | "danger" | "ghost" | "subtle";
 export type ButtonSize = "xs" | "sm" | "md" | "lg" | "icon" | "pill";
-export type ButtonTone = "glass" | "solid" | "menu" | "focus-light" | "focus-dark";
+export type ButtonTone =
+  | "glass"
+  | "solid"
+  | "menu"
+  | "focus-light"
+  | "focus-dark"
+  | "card-light"
+  | "card-dark";
 export type ButtonVisualState = "default" | "hover" | "active";
 
 export type ButtonProps = {

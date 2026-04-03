@@ -169,12 +169,26 @@ This document outlines all currently defined design-system-related tokens.
 - `--cmp-button-focus-dark-fg-default`
 - `--cmp-button-focus-dark-fg-hover`
 - `--cmp-button-focus-dark-fg-active`
+- `--cmp-button-card-light-bg-default`
+- `--cmp-button-card-light-bg-hover`
+- `--cmp-button-card-light-bg-active`
+- `--cmp-button-card-light-fg-default`
+- `--cmp-button-card-light-fg-hover`
+- `--cmp-button-card-light-fg-active`
+- `--cmp-button-card-dark-bg-default`
+- `--cmp-button-card-dark-bg-hover`
+- `--cmp-button-card-dark-bg-active`
+- `--cmp-button-card-dark-fg-default`
+- `--cmp-button-card-dark-fg-hover`
+- `--cmp-button-card-dark-fg-active`
 
 ### Context usage rule
 
 - Use `focus-light` for icon actions rendered on light card surfaces (default/task/media themes) to guarantee visible hover/active affordances.
 - Use `focus-dark` for icon actions rendered on dark card surfaces (code theme) to preserve contrast parity.
 - Avoid opacity-based overrides for contextual action buttons; rely on tone tokens for state legibility.
+- For compact card-header icon actions, prefer `card-light` / `card-dark` tones (transparent base, subtle hover fill) to preserve the original low-noise card aesthetic.
+- `card-light` / `card-dark` are the canonical tones for node header action buttons in both Storybook primitives and live canvas integration, preventing visual drift between environments.
 
 ## 4) Compatibility + Legacy Global Tokens
 
