@@ -7,6 +7,7 @@ import {
   DEFAULT_CREATE_ACTIONS,
   DEFAULT_FORMAT_ACTIONS,
 } from "@/src/components/foundation/ArchitecturalBottomDock";
+import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 
 const meta: Meta<typeof ArchitecturalBottomDock> = {
   title: "Architectural Shell/Components/Bottom Dock",
@@ -28,14 +29,8 @@ const meta: Meta<typeof ArchitecturalBottomDock> = {
   },
   decorators: [
     (Story) => (
-      <div
-        style={{
-          position: "relative",
-          width: "100vw",
-          height: "100vh",
-          background: "#0a0a0c",
-        }}
-      >
+      <div className={styles.shell}>
+        <div className={styles.viewport} />
         <Story />
       </div>
     ),
