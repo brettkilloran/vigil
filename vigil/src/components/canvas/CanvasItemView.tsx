@@ -204,7 +204,17 @@ export function CanvasItemView({
       body = <WebclipCard item={item} />;
       break;
     case "folder":
-      body = <FolderCard item={item} />;
+      body = (
+        <div className="relative flex h-full flex-col overflow-hidden rounded-b-lg bg-gradient-to-br from-white/75 via-transparent to-neutral-400/18 dark:from-white/[0.08] dark:via-transparent dark:to-black/55">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/45 to-transparent opacity-90 dark:from-white/12 dark:to-transparent"
+            aria-hidden
+          />
+          <div className="relative z-[1] flex min-h-0 flex-1 flex-col">
+            <FolderCard item={item} />
+          </div>
+        </div>
+      );
       break;
     default:
       body = (
@@ -226,8 +236,14 @@ export function CanvasItemView({
         border,
         boxShadow,
         zIndex: item.zIndex,
+        transformOrigin: "50% 50%",
       }}
       initial={false}
+      whileHover={
+        isDragging || isResizing
+          ? undefined
+          : { scale: 1.006, transition: { duration: 0.14, ease: "easeOut" } }
+      }
       animate={{
         x: item.x,
         y: item.y,

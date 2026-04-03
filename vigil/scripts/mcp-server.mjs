@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * MCP stdio server: VIGIL read helpers (list, search, graph).
+ * MCP stdio server: VIGIL read helpers (list, get item, links, search, graph).
  * Run: npm run mcp  (set NEON_DATABASE_URL; optional VIGIL_DEFAULT_SPACE_ID)
  */
 import { Server } from "@modelcontextprotocol/sdk/server";
@@ -15,7 +15,7 @@ const BASE =
 const SPACE = process.env.VIGIL_DEFAULT_SPACE_ID || "";
 
 const server = new Server(
-  { name: "vigil", version: "0.2.0" },
+  { name: "vigil", version: "0.3.0" },
   { capabilities: { tools: {} } },
 );
 
@@ -62,6 +62,30 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {
           space_id: { type: "string", description: "Space UUID" },
         },
+      },
+    },
+    {
+      name: "vigil_get_item",
+      description:
+        "Fetch one canvas item by id (REST v1 shape: version, item). No space filter—item id is globally unique in DB.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          item_id: { type: "string", description: "UUID of the item" },
+        },
+        required: ["item_id"],
+      },
+    },
+    {
+      name: "vigil_item_links",
+      description:
+        "Resolved wiki links for an item: outgoing and incoming (same as GET /api/items/:id/links).",
+      inputSchema: {
+        type: "object",
+        properties: {
+          item_id: { type: "string", description: "UUID of the item" },
+        },
+        required: ["item_id"],
       },
     },
   ],
@@ -125,6 +149,34 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
     const res = await fetch(
       `${BASE}/api/spaces/${encodeURIComponent(String(spaceId))}/graph`,
+    );
+    return { content: [{ type: "text", text: await res.text() }] };
+  }
+
+  if (name === "vigil_get_item") {
+    const itemId = String(args.item_id ?? "").trim();
+    if (!itemId) {
+      return {
+        content: [{ type: "text", text: "item_id is required" }],
+        isError: true,
+      };
+    }
+    const res = await fetch(
+      `${BASE}/api/v1/items/${encodeURIComponent(itemId)}`,
+    );
+    return { content: [{ type: "text", text: await res.text() }] };
+  }
+
+  if (name === "vigil_item_links") {
+    const itemId = String(args.item_id ?? "").trim();
+    if (!itemId) {
+      return {
+        content: [{ type: "text", text: "item_id is required" }],
+        isError: true,
+      };
+    }
+    const res = await fetch(
+      `${BASE}/api/items/${encodeURIComponent(itemId)}/links`,
     );
     return { content: [{ type: "text", text: await res.text() }] };
   }

@@ -10,6 +10,19 @@ type Hit = { kind: "item"; item: CanvasItem } | { kind: "action"; id: string; la
 
 type SearchMode = "fts" | "semantic" | "hybrid";
 
+const LS_CMDK_SEARCH_MODE = "vigil-cmdk-search-mode";
+
+function readStoredSearchMode(): SearchMode {
+  if (typeof window === "undefined") return "hybrid";
+  try {
+    const v = localStorage.getItem(LS_CMDK_SEARCH_MODE);
+    if (v === "fts" || v === "semantic" || v === "hybrid") return v;
+  } catch {
+    /* ignore */
+  }
+  return "hybrid";
+}
+
 export function CommandPalette({
   open,
   onClose,
@@ -25,6 +38,19 @@ export function CommandPalette({
 }) {
   const [q, setQ] = useState("");
   const [searchMode, setSearchMode] = useState<SearchMode>("hybrid");
+
+  useEffect(() => {
+    setSearchMode(readStoredSearchMode());
+  }, []);
+
+  const setSearchModePersist = useCallback((m: SearchMode) => {
+    setSearchMode(m);
+    try {
+      localStorage.setItem(LS_CMDK_SEARCH_MODE, m);
+    } catch {
+      /* ignore */
+    }
+  }, []);
   const [remote, setRemote] = useState<CanvasItem[]>([]);
   const [remoteLoading, setRemoteLoading] = useState(false);
   const [remoteHint, setRemoteHint] = useState<string | null>(null);
@@ -218,7 +244,7 @@ export function CommandPalette({
                     ? "bg-[var(--vigil-label)] text-[var(--vigil-btn-bg)]"
                     : "text-[var(--vigil-muted)] hover:bg-black/5 dark:hover:bg-white/10"
                 }`}
-                onClick={() => setSearchMode(b.id)}
+                onClick={() => setSearchModePersist(b.id)}
               >
                 {b.label}
               </button>
