@@ -324,7 +324,7 @@ export function VigilCanvas({
       data-vigil-canvas
       role="application"
       aria-label="VIGIL canvas"
-      className="relative h-dvh w-dvw touch-none overflow-hidden bg-neutral-200 dark:bg-neutral-950"
+      className="relative h-dvh w-dvw touch-none overflow-hidden bg-[var(--vigil-canvas)]"
       onPointerDown={onBgPointerDown}
       onPointerMove={onBgPointerMove}
       onPointerUp={onBgPointerUp}
@@ -338,13 +338,15 @@ export function VigilCanvas({
           className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center px-6"
           aria-live="polite"
         >
-          <p className="max-w-md text-center text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
-            This space is empty.{" "}
-            <span className="font-medium text-neutral-800 dark:text-neutral-200">
-              Double-click
-            </span>{" "}
-            to add a note, drop an image, or use the toolbar.
-          </p>
+          <div className="max-w-md rounded-2xl border border-[var(--vigil-border)]/70 bg-[var(--vigil-elevated)]/85 px-8 py-6 text-center shadow-lg shadow-black/[0.06] backdrop-blur-md dark:shadow-black/40">
+            <p className="text-sm leading-relaxed text-[var(--vigil-muted)]">
+              This space is empty.{" "}
+              <span className="font-semibold text-[var(--foreground)]">
+                Double-click
+              </span>{" "}
+              to add a note, drop an image, or use the toolbar.
+            </p>
+          </div>
         </div>
       ) : null}
       <div
