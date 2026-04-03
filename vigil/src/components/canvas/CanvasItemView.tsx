@@ -261,7 +261,7 @@ export function CanvasItemView({
     >
       <div
         data-vigil-chrome
-        className="flex h-8 cursor-grab items-center border-b border-black/5 px-2 text-xs font-medium text-[var(--vigil-muted)] dark:border-white/10"
+        className="flex h-8 cursor-grab items-center border-b border-[var(--vigil-border)]/70 bg-black/[0.02] px-2 text-xs font-medium text-[var(--vigil-muted)] dark:bg-white/[0.03]"
         onPointerDown={onChromePointerDown}
       >
         {item.title}

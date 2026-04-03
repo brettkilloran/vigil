@@ -13,6 +13,10 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 
 import { extractVigilItemLinkTargets } from "@/src/lib/extract-vigil-item-links";
 import { useModKeyHints } from "@/src/lib/mod-keys";
+import {
+  VIGIL_EDITOR_TOOLBAR_BTN,
+  VIGIL_EDITOR_TOOLBAR_BTN_ON,
+} from "@/src/lib/vigil-ui-classes";
 import { getWikiLinkRangeFromState } from "@/src/lib/wiki-link-range";
 import type { CanvasItem } from "@/src/stores/canvas-types";
 
@@ -84,13 +88,12 @@ function NoteFormatToolbar({ editor }: { editor: Editor | null }) {
 
   if (!editor) return null;
 
-  const btn =
-    "rounded px-1.5 py-0.5 text-[11px] font-medium text-[var(--foreground)] hover:bg-black/8 dark:hover:bg-white/10";
-  const on = "bg-black/12 dark:bg-white/15";
+  const btn = VIGIL_EDITOR_TOOLBAR_BTN;
+  const on = VIGIL_EDITOR_TOOLBAR_BTN_ON;
 
   return (
     <div
-      className="flex flex-wrap items-center gap-0.5 border-b border-black/5 px-2 py-1 dark:border-white/10"
+      className="flex flex-wrap items-center gap-0.5 border-b border-[var(--vigil-border)]/80 bg-[var(--vigil-elevated)]/50 px-2 py-1.5"
       onMouseDown={(e) => e.preventDefault()}
     >
       <button
