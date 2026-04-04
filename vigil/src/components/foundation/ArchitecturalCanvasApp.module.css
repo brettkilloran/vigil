@@ -18,9 +18,9 @@
   --theme-media-bg: var(--sys-color-neutral-100);
   --theme-media-text: var(--sys-color-black);
   --theme-media-border: var(--sys-color-neutral-300);
-  --folder-bg: var(--sys-color-neutral-920);
+  --folder-bg: var(--sys-color-neutral-900);
   --folder-border: var(--sys-color-neutral-800);
-  --folder-tab: var(--sys-color-neutral-920);
+  --folder-tab: var(--sys-color-neutral-900);
   --layer-viewport-vignette: 1;
   --layer-canvas: 2;
   --layer-ui-chrome: 100;
@@ -372,11 +372,90 @@
   height: 280px;
   background: transparent;
   position: relative;
+  overflow: visible;
   cursor: grab;
   transform-origin: center center;
   transition: transform 0.16s ease;
   isolation: isolate;
   perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+/* Decorative papers: strong when closed; hidden while flap opens (drop target). */
+.folderPeekStack {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.22s ease,
+    transform 0.28s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.folderDragOver .folderPeekStack {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 0.14s ease,
+    transform 0.28s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.folderPeekCard {
+  position: absolute;
+  border-radius: 2px 2px 0 0;
+  border: none;
+  /* Lined note paper + top “title” band — reads like canvas cards, not flat bars */
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--theme-default-text) 14%, transparent) 0 2px,
+      transparent 2px 100%
+    ),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0 9px,
+      color-mix(in oklch, var(--theme-default-text) 6%, transparent) 9px 10px
+    ),
+    linear-gradient(
+      165deg,
+      color-mix(in oklch, var(--sys-color-white) 22%, var(--theme-default-bg)) 0%,
+      var(--theme-default-bg) 55%
+    );
+  background-size:
+    100% 100%,
+    100% 10px,
+    100% 100%;
+  background-position: 0 0, 0 14px, 0 0;
+  background-repeat: no-repeat, repeat-y, no-repeat;
+  box-shadow:
+    0 1px 4px var(--sem-color-shadow-22),
+    0 0 0 1px color-mix(in oklch, var(--theme-default-border) 55%, transparent),
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 65%, transparent);
+  transform-origin: 50% 100%;
+}
+
+/* Widest card, centered — like a note card; rotation comes from folder id (TS) */
+.folderPeekA {
+  width: 80%;
+  height: 38px;
+  left: 12%;
+  bottom: calc(85% - 12px);
+}
+
+/* Shifted right */
+.folderPeekB {
+  width: 74%;
+  height: 44px;
+  left: 18%;
+  bottom: calc(85% - 7px);
+}
+
+/* Shifted left, tallest */
+.folderPeekC {
+  width: 70%;
+  height: 50px;
+  left: 6%;
+  bottom: calc(85% - 3px);
 }
 
 /*
@@ -436,7 +515,12 @@
   width: 100%;
   height: 85%;
   box-sizing: border-box;
-  background: linear-gradient(
+  opacity: 1;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  /* Solid underlay so 3D tilt never reads as “see-through” during the transition */
+  background-color: var(--folder-bg);
+  background-image: linear-gradient(
     180deg,
     color-mix(in oklch, var(--folder-bg) 96%, var(--sys-color-white) 4%) 0%,
     var(--folder-bg) 28%,
@@ -444,7 +528,8 @@
   );
   border: none;
   border-radius: 14px 14px 22px 22px;
-  transform-origin: bottom;
+  transform-origin: bottom center;
+  transform: translate3d(0, 0, 1px);
   transition: transform 0.25s ease, background-color 0.3s ease;
   display: flex;
   align-items: flex-start;
@@ -459,6 +544,7 @@
 }
 
 .folderSelected .folderFront {
+  opacity: 1;
   box-shadow:
     0 0 0 1px var(--folder-border),
     0 0 0 3px var(--sem-border-tinted-ring),
@@ -522,12 +608,22 @@
 }
 
 .folderDragOver .folderFront {
-  transform: rotateX(-35deg);
+  opacity: 1;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  /* Nudge toward camera with tilt so the flap stays a solid sheet (no compositing holes) */
+  transform: rotateX(-35deg) translate3d(0, 0, 8px);
   box-shadow:
     0 0 0 1px var(--folder-border),
     0 -12px 24px var(--sem-color-shadow-45),
     inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 5%, transparent);
-  background: color-mix(in oklch, var(--folder-bg) 92%, var(--sys-color-white) 8%);
+  background-color: color-mix(in oklch, var(--folder-bg) 92%, var(--sys-color-white) 8%);
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--folder-bg) 90%, var(--sys-color-white) 10%) 0%,
+    color-mix(in oklch, var(--folder-bg) 92%, var(--sys-color-white) 8%) 45%,
+    color-mix(in oklch, var(--folder-bg) 94%, var(--sys-color-black) 6%) 100%
+  );
 }
 
 .folderDragOver .folderInterior {
@@ -610,10 +706,9 @@
 .tapeMasking,
 .tapeClear {
   box-shadow:
-    0 2px 4px var(--sem-tape-light-shadow-contact),
-    0 7px 18px var(--sem-tape-light-shadow-mid),
-    0 14px 36px var(--sem-tape-light-shadow-ambient),
-    0 22px 52px var(--sem-tape-light-shadow-halo);
+    0 1px 2px var(--sem-tape-light-shadow-contact),
+    0 2px 5px var(--sem-tape-light-shadow-mid),
+    0 3px 8px var(--sem-tape-light-shadow-ambient);
 }
 
 .tapeMasking {
@@ -647,7 +742,7 @@
   box-shadow:
     inset 0 1px 0 var(--sem-tape-inset-top),
     inset 0 -1px 0 var(--sem-tape-inset-bottom),
-    0 2px 6px var(--sem-tape-shadow-outer);
+    0 1px 3px var(--sem-tape-shadow-outer);
   width: 80px;
 }
 
@@ -656,7 +751,7 @@
   box-shadow:
     inset 0 1px 0 var(--sem-tape-inset-top-dim),
     inset 0 -1px 0 var(--sem-tape-inset-bottom-deep),
-    0 2px 7px var(--sem-tape-shadow-deep);
+    0 1px 3px var(--sem-tape-shadow-deep);
 }
 
 .themeDefault {

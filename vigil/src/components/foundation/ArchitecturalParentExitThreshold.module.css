@@ -1,42 +1,89 @@
-/* Full-width band below top chrome: drag the selection into this zone to move to the parent space. */
+/* Full-width row aligned with top chrome; centered dashed drop well. */
 
-.band {
+.rail {
   position: fixed;
   left: 0;
   right: 0;
-  pointer-events: none;
   z-index: var(--layer-ui-chrome, 100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: max(12px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
   box-sizing: border-box;
+  pointer-events: none;
   opacity: 0;
-  transition:
-    opacity 0.16s ease,
-    border-color 0.16s ease,
-    box-shadow 0.16s ease;
-  border-bottom: 1px solid transparent;
-  background: transparent;
+  transition: opacity 0.2s ease;
 }
 
-.bandArmed {
+.railArmed {
   opacity: 1;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in oklch, var(--accent) 20%, transparent) 0%,
-    color-mix(in oklch, var(--accent) 5%, transparent) 55%,
-    transparent 100%
-  );
-  border-bottom-color: color-mix(in oklch, var(--accent) 38%, transparent);
-  box-shadow: 0 10px 36px color-mix(in oklch, var(--accent) 10%, transparent);
 }
 
-.bandHovered {
-  background: linear-gradient(
-    to bottom,
-    color-mix(in oklch, var(--accent) 36%, transparent) 0%,
-    color-mix(in oklch, var(--accent) 12%, transparent) 55%,
-    transparent 100%
-  );
-  border-bottom-color: color-mix(in oklch, var(--accent) 72%, transparent);
+.well {
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  max-width: min(680px, 94vw);
+  height: calc(100% - 4px);
+  max-height: 42px;
+  min-height: 28px;
+  box-sizing: border-box;
+  padding: 0 22px;
+  border-radius: 10px;
+  border: 2px dashed transparent;
+  background: transparent;
+  transition:
+    border-color 0.18s ease,
+    border-style 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.2s ease;
+}
+
+/* Nudge up so the top clips past the viewport — reads as a threshold, not a floating chip. */
+.wellArmed {
+  transform: translateY(-12px);
+  border-color: color-mix(in oklch, var(--accent) 62%, var(--sys-color-white) 10%);
+  background: color-mix(in oklch, var(--accent) 9%, transparent);
   box-shadow:
-    0 0 40px color-mix(in oklch, var(--accent) 20%, transparent),
-    0 12px 40px color-mix(in oklch, var(--accent) 14%, transparent);
+    0 0 0 1px color-mix(in oklch, var(--accent) 12%, transparent) inset,
+    0 8px 28px color-mix(in oklch, var(--accent) 8%, transparent);
+}
+
+.wellHovered {
+  border-style: solid;
+  border-color: color-mix(in oklch, var(--accent) 82%, transparent);
+  background: color-mix(in oklch, var(--accent) 16%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--accent) 28%, transparent) inset,
+    0 0 28px color-mix(in oklch, var(--accent) 24%, transparent),
+    0 10px 32px color-mix(in oklch, var(--accent) 12%, transparent);
+  transform: translateY(-14px);
+}
+
+.icon {
+  flex-shrink: 0;
+  color: var(--accent);
+  opacity: 0.9;
+}
+
+.wellHovered .icon {
+  opacity: 1;
+}
+
+.label {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: color-mix(in oklch, var(--sys-color-white) 82%, transparent);
+  white-space: nowrap;
+}
+
+.wellHovered .label {
+  color: var(--accent);
 }

@@ -255,6 +255,12 @@ export function ArchitecturalCanvasApp({
   const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null);
   const [hoveredStackTargetId, setHoveredStackTargetId] = useState<string | null>(null);
   const [parentDropHovered, setParentDropHovered] = useState(false);
+  const parentDropHoveredRef = useRef(false);
+  const dragPointerScreenRef = useRef({ x: 0, y: 0 });
+  const setParentDropHover = useCallback((next: boolean) => {
+    parentDropHoveredRef.current = next;
+    setParentDropHovered(next);
+  }, []);
   const [stackModal, setStackModal] = useState<{
     stackId: string;
     orderedIds: string[];
@@ -469,19 +475,22 @@ export function ArchitecturalCanvasApp({
 
   const parentSpaceId = activeSpace?.parentSpaceId ?? null;
 
-  const [parentExitBandTopPx, setParentExitBandTopPx] = useState(88);
-  const syncParentExitBandTop = useCallback(() => {
+  const [parentExitRail, setParentExitRail] = useState({ top: 24, height: 40 });
+  const syncParentExitRail = useCallback(() => {
     const stack = shellTopLeftStackRef.current;
     if (!stack) return;
     const r = stack.getBoundingClientRect();
-    setParentExitBandTopPx(Math.round(r.bottom + 6));
+    setParentExitRail({
+      top: Math.round(r.top),
+      height: Math.max(Math.round(r.height), 32),
+    });
   }, []);
 
   useLayoutEffect(() => {
-    syncParentExitBandTop();
+    syncParentExitRail();
     const node = shellTopLeftStackRef.current;
     if (!node || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => syncParentExitBandTop());
+    const ro = new ResizeObserver(() => syncParentExitRail());
     ro.observe(node);
     return () => ro.disconnect();
   }, [
@@ -489,17 +498,17 @@ export function ArchitecturalCanvasApp({
     activeSpaceId,
     parentSpaceId,
     selectedNodeIds.length,
-    syncParentExitBandTop,
+    syncParentExitRail,
   ]);
 
   useLayoutEffect(() => {
-    if (draggedNodeIds.length > 0) syncParentExitBandTop();
-  }, [draggedNodeIds.length, syncParentExitBandTop]);
+    if (draggedNodeIds.length > 0) syncParentExitRail();
+  }, [draggedNodeIds.length, syncParentExitRail]);
 
   useEffect(() => {
-    window.addEventListener("resize", syncParentExitBandTop);
-    return () => window.removeEventListener("resize", syncParentExitBandTop);
-  }, [syncParentExitBandTop]);
+    window.addEventListener("resize", syncParentExitRail);
+    return () => window.removeEventListener("resize", syncParentExitRail);
+  }, [syncParentExitRail]);
 
   const nodeZ = useMemo(() => {
     const zMap = new Map<string, number>();
@@ -1209,7 +1218,7 @@ export function ArchitecturalCanvasApp({
   }, [activeSpaceId, centerCoords, createId, recordUndoBeforeMutation]);
 
   const updateDropTargets = useCallback(
-    (draggedEntityId: string) => {
+    (draggedEntityId: string, pointerClientX?: number, pointerClientY?: number) => {
       const draggedGroup =
         draggedNodeIdsRef.current.length > 0 ? draggedNodeIdsRef.current : [draggedEntityId];
       const draggedEntity = graph.entities[draggedEntityId];
@@ -1336,18 +1345,34 @@ export function ArchitecturalCanvasApp({
       const canDropToParent =
         !!parentSpaceId && draggedGroup.every((id) => canMoveEntityToSpace(id, parentSpaceId));
       if (!parentTarget || !canDropToParent) {
-        setParentDropHovered(false);
+        setParentDropHover(false);
         return;
       }
       const rect = parentTarget.getBoundingClientRect();
-      setParentDropHovered(
-        centerX > rect.left &&
-          centerX < rect.right &&
-          centerY > rect.top &&
-          centerY < rect.bottom,
-      );
+      /** Parent strip is chrome-adjacent and thin; use the live pointer (not card center). */
+      const pad = 28;
+      const left = rect.left - pad;
+      const right = rect.right + pad;
+      const top = rect.top - pad;
+      const bottom = rect.bottom + pad;
+      let inParent = false;
+      if (pointerClientX != null && pointerClientY != null) {
+        inParent =
+          pointerClientX >= left &&
+          pointerClientX <= right &&
+          pointerClientY >= top &&
+          pointerClientY <= bottom;
+      }
+      if (!inParent) {
+        inParent =
+          centerX >= left &&
+          centerX <= right &&
+          centerY >= top &&
+          centerY <= bottom;
+      }
+      setParentDropHover(inParent);
     },
-    [canMoveEntityToSpace, graph.entities, graph.spaces, parentSpaceId],
+    [canMoveEntityToSpace, graph.entities, graph.spaces, parentSpaceId, setParentDropHover],
   );
 
   const stackEntitiesOntoTarget = useCallback(
@@ -1415,7 +1440,7 @@ export function ArchitecturalCanvasApp({
       const center = centerCoords();
       const fallback = { x: center.x - 180, y: center.y - 120 };
 
-      if (parentDropHovered && parentSpaceId) {
+      if (parentDropHoveredRef.current && parentSpaceId) {
         const anchorBelowFolder = getParentFolderExitSlot(0) ?? fallback;
         moveEntitiesToSpace(draggedEntityIds, parentSpaceId, {
           anchor: anchorBelowFolder,
@@ -1455,7 +1480,6 @@ export function ArchitecturalCanvasApp({
       hoveredFolderId,
       hoveredStackTargetId,
       moveEntitiesToSpace,
-      parentDropHovered,
       parentSpaceId,
       stackEntitiesOntoTarget,
     ],
@@ -1483,6 +1507,7 @@ export function ArchitecturalCanvasApp({
 
       const draggedIds = draggedNodeIdsRef.current;
       if (draggedIds.length === 0) return;
+      dragPointerScreenRef.current = { x: event.clientX, y: event.clientY };
       const stackPointerDrag = stackPointerDragRef.current;
       if (stackPointerDrag && !stackPointerDrag.moved) {
         const moved =
@@ -1519,7 +1544,7 @@ export function ArchitecturalCanvasApp({
           entities: nextEntities,
         };
       });
-      updateDropTargets(draggedIds[0]);
+      updateDropTargets(draggedIds[0], event.clientX, event.clientY);
     };
 
     const onMouseUp = () => {
@@ -1561,7 +1586,9 @@ export function ArchitecturalCanvasApp({
       isPanningRef.current = false;
       setIsPanning(false);
       if (draggedNodeIdsRef.current.length > 0) {
-        handleDrop(draggedNodeIdsRef.current);
+        const ids = draggedNodeIdsRef.current;
+        updateDropTargets(ids[0], dragPointerScreenRef.current.x, dragPointerScreenRef.current.y);
+        handleDrop(ids);
       }
       const stackPointerDrag = stackPointerDragRef.current;
       if (stackPointerDrag?.moved) {
@@ -1576,7 +1603,7 @@ export function ArchitecturalCanvasApp({
       setDraggedNodeIds([]);
       setHoveredFolderId(null);
       setHoveredStackTargetId(null);
-      setParentDropHovered(false);
+      setParentDropHover(false);
     };
 
     window.addEventListener("mousemove", onMouseMove);
@@ -1890,6 +1917,7 @@ export function ArchitecturalCanvasApp({
             setSelectedNodeIds(dragGroup);
             draggedNodeIdsRef.current = dragGroup;
             setDraggedNodeIds(dragGroup);
+            dragPointerScreenRef.current = { x: event.clientX, y: event.clientY };
 
             const mouseCanvasX = (event.clientX - translateX) / scale;
             const mouseCanvasY = (event.clientY - translateY) / scale;
@@ -2094,7 +2122,7 @@ export function ArchitecturalCanvasApp({
         setLassoRectScreen(null);
         setHoveredFolderId(null);
         setHoveredStackTargetId(null);
-        setParentDropHovered(false);
+        setParentDropHover(false);
         return;
       }
 
@@ -2541,7 +2569,6 @@ export function ArchitecturalCanvasApp({
   );
   const fanOriginX = stackModal ? stackModal.originX - 170 : 0;
   const fanOriginY = stackModal ? stackModal.originY - 95 : 0;
-  const showParentExitThreshold = Boolean(parentSpaceId && draggedNodeIds.length > 0);
   const stackModalHull = useMemo(() => {
     if (stackModalVisibleEntities.length === 0) return null;
     let minX = Number.POSITIVE_INFINITY;
@@ -2688,6 +2715,7 @@ export function ArchitecturalCanvasApp({
                   draggedNodeIdsRef.current = entities.map((entity) => entity.id);
                   setDraggedNodeIds(entities.map((entity) => entity.id));
                   setSelectedNodeIds(entities.map((entity) => entity.id));
+                  dragPointerScreenRef.current = { x: event.clientX, y: event.clientY };
                   setMaxZIndex((prev) => prev + 1);
                   stackPointerDragRef.current = {
                     stackId,
@@ -2788,11 +2816,12 @@ export function ArchitecturalCanvasApp({
           })}
         </div>
         <div className={styles.chromeLayer}>
-        {showParentExitThreshold ? (
+        {parentSpaceId ? (
           <ArchitecturalParentExitThreshold
             ref={parentDropRef}
-            topPx={parentExitBandTopPx}
-            armed
+            topPx={parentExitRail.top}
+            heightPx={parentExitRail.height}
+            armed={draggedNodeIds.length > 0}
             hovered={parentDropHovered}
           />
         ) : null}
