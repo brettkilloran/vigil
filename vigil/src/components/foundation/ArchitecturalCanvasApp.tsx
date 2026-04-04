@@ -3005,7 +3005,7 @@ export function ArchitecturalCanvasApp({
       ? galleryEntity.bodyHtml
       : "";
 
-  const galleryNotesText = useMemo(() => {
+  const galleryNotesHtml = useMemo(() => {
     if (!galleryEntity || galleryEntity.kind !== "content" || galleryEntity.theme !== "media") {
       return "";
     }
@@ -3562,17 +3562,14 @@ export function ArchitecturalCanvasApp({
                   </div>
                 )}
               </div>
-              <div className={styles.mediaGalleryNotesSection}>
-                <span className={styles.mediaGalleryNotesLabel}>Notes</span>
-                <BufferedContentEditable
-                  value={galleryNotesText}
-                  plainText
-                  spellCheck
-                  className={styles.mediaGalleryNotesField}
-                  debounceMs={250}
-                  onCommit={(next) => updateMediaNotes(galleryNodeId, next)}
-                />
-              </div>
+              <BufferedContentEditable
+                value={galleryNotesHtml}
+                className={styles.focusBody}
+                spellCheck={false}
+                debounceMs={150}
+                dataAttribute="data-architectural-media-gallery-notes"
+                onCommit={(nextHtml) => updateMediaNotes(galleryNodeId, nextHtml)}
+              />
             </div>
           </div>
         </div>

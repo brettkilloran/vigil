@@ -6,7 +6,7 @@
 const MEDIA_ROOT_SEL = "[data-architectural-media-root]";
 const MEDIA_NOTES_SEL = "[data-architectural-media-notes]";
 
-/** Plain-text notes stored after the media root block in `bodyHtml`. */
+/** Rich HTML notes stored in `data-architectural-media-notes` after the media root in `bodyHtml`. */
 export function getArchitecturalMediaNotes(bodyHtml: string): string {
   if (typeof document === "undefined") return "";
   const doc = new DOMParser().parseFromString(
@@ -15,10 +15,10 @@ export function getArchitecturalMediaNotes(bodyHtml: string): string {
   );
   const wrap = doc.getElementById("__arch_media_notes_parse");
   const notesEl = wrap?.querySelector(MEDIA_NOTES_SEL);
-  return notesEl?.textContent ?? "";
+  return notesEl?.innerHTML ?? "";
 }
 
-export function setArchitecturalMediaNotes(bodyHtml: string, notes: string): string {
+export function setArchitecturalMediaNotes(bodyHtml: string, notesHtml: string): string {
   if (typeof document === "undefined") return bodyHtml;
   const doc = new DOMParser().parseFromString(
     `<div id="__arch_media_notes_wrap">${bodyHtml}</div>`,
@@ -32,7 +32,7 @@ export function setArchitecturalMediaNotes(bodyHtml: string, notes: string): str
     notesEl.setAttribute("data-architectural-media-notes", "true");
     wrap.appendChild(notesEl);
   }
-  notesEl.textContent = notes;
+  notesEl.innerHTML = notesHtml;
   return wrap.innerHTML;
 }
 
