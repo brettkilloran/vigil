@@ -1,6 +1,7 @@
 # Design System Token Inventory
 
-This document outlines all currently defined design-system-related tokens.
+This document outlines design-system-related tokens used by the app.
+`app/globals.css` is the authoritative source of truth when this list lags behind implementation.
 
 ## Sources
 

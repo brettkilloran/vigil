@@ -1,14 +1,19 @@
-import { and, eq, inArray, notInArray } from "drizzle-orm";
+import { and, eq, notInArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
-import { itemLinks, items } from "@/src/db/schema";
+import { itemLinks } from "@/src/db/schema";
+import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 
 const bodySchema = z.object({
   sourceItemId: z.string().uuid(),
   targetIds: z.array(z.string().uuid()),
 });
 
+/**
+ * Batch writer for keeping a source item's outgoing links in sync.
+ * Kept for external/script clients; app UI writes per-link via `/api/item-links`.
+ */
 export async function POST(req: Request) {
   const db = tryGetDb();
   if (!db) {
@@ -34,44 +39,21 @@ export async function POST(req: Request) {
   }
 
   const { sourceItemId, targetIds } = parsed.data;
-  const uniqueTargets = [...new Set(targetIds)].filter((id) => id !== sourceItemId);
-
-  const [src] = await db
-    .select()
-    .from(items)
-    .where(eq(items.id, sourceItemId))
-    .limit(1);
-  if (!src) {
-    return Response.json({ ok: false, error: "Source item not found" }, { status: 404 });
+  const validated = await validateLinkTargetsInSourceSpace(db, sourceItemId, targetIds);
+  if (!validated.ok) {
+    return Response.json({ ok: false, error: validated.error }, { status: validated.status });
   }
+  const uniqueTargets = validated.targetIds;
 
-  if (uniqueTargets.length > 0) {
-    const peerRows = await db
-      .select({ id: items.id, spaceId: items.spaceId })
-      .from(items)
-      .where(inArray(items.id, uniqueTargets));
-    if (peerRows.length !== uniqueTargets.length) {
-      return Response.json(
-        { ok: false, error: "One or more target items not found" },
-        { status: 400 },
-      );
+  await db.transaction(async (tx) => {
+    if (uniqueTargets.length === 0) {
+      await tx
+        .delete(itemLinks)
+        .where(eq(itemLinks.sourceItemId, sourceItemId));
+      return;
     }
-    for (const p of peerRows) {
-      if (p.spaceId !== src.spaceId) {
-        return Response.json(
-          { ok: false, error: "Cross-space links are not allowed" },
-          { status: 400 },
-        );
-      }
-    }
-  }
 
-  if (uniqueTargets.length === 0) {
-    await db
-      .delete(itemLinks)
-      .where(eq(itemLinks.sourceItemId, sourceItemId));
-  } else {
-    await db
+    await tx
       .delete(itemLinks)
       .where(
         and(
@@ -79,19 +61,22 @@ export async function POST(req: Request) {
           notInArray(itemLinks.targetItemId, uniqueTargets),
         ),
       );
-    for (const tid of uniqueTargets) {
-      await db
-        .insert(itemLinks)
-        .values({
+
+    await tx
+      .insert(itemLinks)
+      .values(
+        uniqueTargets.map((targetItemId) => ({
           sourceItemId,
-          targetItemId: tid,
+          targetItemId,
           linkType: "reference",
-        })
-        .onConflictDoNothing({
-          target: [itemLinks.sourceItemId, itemLinks.targetItemId],
-        });
-    }
-  }
+          sourcePin: null,
+          targetPin: null,
+        })),
+      )
+      .onConflictDoNothing({
+        target: [itemLinks.sourceItemId, itemLinks.targetItemId, itemLinks.sourcePin, itemLinks.targetPin],
+      });
+  });
 
   return Response.json({ ok: true });
 }

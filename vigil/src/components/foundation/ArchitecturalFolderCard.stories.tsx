@@ -3,6 +3,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
 import { ArchitecturalFolderCard } from "@/src/components/foundation/ArchitecturalFolderCard";
+import { FOLDER_COLOR_SCHEMES } from "@/src/components/foundation/architectural-folder-schemes";
 
 const meta: Meta<typeof ArchitecturalFolderCard> = {
   title: "Architectural Shell/Components/Folder Card",
@@ -11,8 +12,14 @@ const meta: Meta<typeof ArchitecturalFolderCard> = {
     id: "folder-story",
     title: "Covenant dossier",
     itemCount: 3,
+    previewTitles: [
+      "Telemetry sequence log",
+      "Antenna timing memo",
+      "Propulsion wake note",
+    ],
     selected: false,
     dragOver: false,
+    folderColorScheme: null,
     onOpen: () => {},
     onTitleCommit: () => {},
   },
@@ -20,8 +27,13 @@ const meta: Meta<typeof ArchitecturalFolderCard> = {
     id: { control: "text" },
     title: { control: "text" },
     itemCount: { control: "number" },
+    previewTitles: { control: "object" },
     selected: { control: "boolean" },
     dragOver: { control: "boolean" },
+    folderColorScheme: {
+      control: "select",
+      options: [null, ...FOLDER_COLOR_SCHEMES.map((scheme) => scheme.id)],
+    },
     onOpen: { control: false },
     onTitleCommit: { control: false },
   },

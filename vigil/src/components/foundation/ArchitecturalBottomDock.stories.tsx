@@ -1,13 +1,17 @@
 "use client";
 
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useState } from "react";
 
 import {
   ArchitecturalBottomDock,
+  ArchitecturalConnectionToolbar,
   DEFAULT_CREATE_ACTIONS,
   DEFAULT_DOC_INSERT_ACTIONS,
   DEFAULT_FORMAT_ACTIONS,
+  type ConnectionDockMode,
 } from "@/src/components/foundation/ArchitecturalBottomDock";
+import { type FolderColorSchemeId } from "@/src/components/foundation/architectural-folder-schemes";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 
 const meta: Meta<typeof ArchitecturalBottomDock> = {
@@ -69,4 +73,25 @@ export const Editor: Story = {
       </div>
     ),
   ],
+};
+
+function ConnectionToolbarDemo() {
+  const [mode, setMode] = useState<ConnectionDockMode>("move");
+  const [colorScheme, setColorScheme] = useState<FolderColorSchemeId | null>("midnight");
+  return (
+    <div style={{ position: "absolute", top: 24, right: 24 }}>
+      <div className={styles.rootDockPanel}>
+        <ArchitecturalConnectionToolbar
+          mode={mode}
+          onSetMode={setMode}
+          colorScheme={colorScheme}
+          onSetColorScheme={setColorScheme}
+        />
+      </div>
+    </div>
+  );
+}
+
+export const WithConnectionToolbar: Story = {
+  render: () => <ConnectionToolbarDemo />,
 };

@@ -72,7 +72,7 @@ async function getQueryEmbedding(openai: OpenAI, query: string): Promise<number[
 export async function GET(req: Request) {
   const db = tryGetDb();
   if (!db) {
-    return Response.json({ ok: false, error: "Database not configured", items: [] });
+    return Response.json({ ok: false, error: "Database not configured", items: [] }, { status: 503 });
   }
   const url = new URL(req.url);
   const spaceId = url.searchParams.get("spaceId");

@@ -11,6 +11,8 @@ import {
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import { Button } from "@/src/components/ui/Button";
 
+const FOLDER_PREVIEW_VISIBLE_MAX = 6;
+
 /** Stable 0..2^32-1 from string — same folder id always gets same “random” angles. */
 function stableHash(input: string): number {
   let h = 2166136261;
@@ -31,6 +33,7 @@ export function ArchitecturalFolderCard({
   id,
   title,
   itemCount = 0,
+  previewTitles = [],
   selected = false,
   dragOver = false,
   folderColorScheme,
@@ -40,6 +43,7 @@ export function ArchitecturalFolderCard({
   id: string;
   title: string;
   itemCount?: number;
+  previewTitles?: string[];
   selected?: boolean;
   dragOver?: boolean;
   folderColorScheme?: FolderColorSchemeId;
@@ -47,6 +51,7 @@ export function ArchitecturalFolderCard({
   onTitleCommit?: (title: string) => void;
 }) {
   const showPeek = itemCount > 0;
+  const visiblePreviewTitles = previewTitles.slice(0, FOLDER_PREVIEW_VISIBLE_MAX);
 
   const peekRotDeg = useMemo(
     () => ({
@@ -127,6 +132,19 @@ export function ArchitecturalFolderCard({
           >
             <CornersOut size={14} />
           </Button>
+        </div>
+        <div className={styles.folderContentPreview}>
+          {visiblePreviewTitles.length > 0 ? (
+            <ul className={styles.folderContentPreviewList} aria-label="Folder contents preview">
+              {visiblePreviewTitles.map((previewTitle, index) => (
+                <li key={`${id}-preview-${index}`} className={styles.folderContentPreviewItem}>
+                  {previewTitle}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className={styles.folderContentPreviewEmpty}>No content yet</div>
+          )}
         </div>
       </div>
     </div>

@@ -4,7 +4,10 @@ import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 
-/** Versioned read-only single item for scripts / LLM (no auth in single-user mode). */
+/**
+ * Versioned read-only single item for scripts / LLM (no auth in single-user mode).
+ * v1 keeps legacy `{ error: string }` failures, while `/api/*` routes use `{ ok: false, error }`.
+ */
 export async function GET(
   _req: Request,
   context: { params: Promise<{ itemId: string }> },

@@ -19,7 +19,7 @@ const vector1536 = customType<{ data: number[] }>({
 
 export const spaces = pgTable("spaces", {
   id: uuid("id").defaultRandom().primaryKey(),
-  parentSpaceId: uuid("parent_space_id"),
+  parentSpaceId: uuid("parent_space_id").references(() => spaces.id, { onDelete: "set null" }),
   name: varchar("name", { length: 255 }).notNull(),
   color: varchar("color", { length: 64 }),
   sortOrder: integer("sort_order").notNull().default(0),
@@ -73,9 +73,20 @@ export const itemLinks = pgTable(
       .references(() => items.id, { onDelete: "cascade" }),
     linkType: varchar("link_type", { length: 64 }).notNull().default("reference"),
     label: text("label"),
+    sourcePin: varchar("source_pin", { length: 64 }),
+    targetPin: varchar("target_pin", { length: 64 }),
+    color: varchar("color", { length: 128 }),
+    meta: jsonb("meta").$type<Record<string, unknown> | null>(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
-  (t) => [unique("item_links_source_target_uidx").on(t.sourceItemId, t.targetItemId)],
+  (t) => [
+    unique("item_links_source_target_pin_uidx").on(
+      t.sourceItemId,
+      t.targetItemId,
+      t.sourcePin,
+      t.targetPin,
+    ),
+  ],
 );
 
 export const itemEmbeddings = pgTable("item_embeddings", {

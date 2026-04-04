@@ -16,8 +16,10 @@ import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
 import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
 import {
   ArchitecturalBottomDock,
+  ArchitecturalFolderColorStrip,
   DEFAULT_DOC_INSERT_ACTIONS,
   DEFAULT_FORMAT_ACTIONS,
+  type ConnectionDockMode,
 } from "@/src/components/foundation/ArchitecturalBottomDock";
 import { ArchitecturalParentExitThreshold } from "@/src/components/foundation/ArchitecturalParentExitThreshold";
 import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
@@ -31,7 +33,10 @@ import {
   parseArchitecturalMediaFromBody,
   setArchitecturalMediaNotes,
 } from "@/src/components/foundation/architectural-media-html";
-import type { FolderColorSchemeId } from "@/src/components/foundation/architectural-folder-schemes";
+import {
+  FOLDER_COLOR_SCHEMES,
+  type FolderColorSchemeId,
+} from "@/src/components/foundation/architectural-folder-schemes";
 import { buildArchitecturalSeedGraph } from "@/src/components/foundation/architectural-seed";
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
 import {
@@ -40,11 +45,18 @@ import {
   type ArchitecturalUndoSnapshot,
 } from "@/src/components/foundation/architectural-undo";
 import { useModKeyHints } from "@/src/lib/mod-keys";
-import { ContextMenu } from "@/src/components/ui/ContextMenu";
+import {
+  clampContextMenuPosition,
+  ContextMenu,
+  type ContextMenuItem,
+  type ContextMenuPosition,
+} from "@/src/components/ui/ContextMenu";
 import type {
+  CanvasConnectionPin,
   ContentTheme,
   CanvasEntity,
   CanvasGraph,
+  CanvasPinConnection,
   CanvasSpace,
   CanvasTool,
   DockFormatAction,
@@ -70,10 +82,125 @@ const STACK_MODAL_GAP = 24;
 const STACK_MODAL_PADDING = 28;
 const STACK_MODAL_EJECT_MARGIN = 24;
 const STACK_CLICK_SUPPRESS_DRAG_PX = 6;
+const FOLDER_PREVIEW_MAX_ITEMS = 6;
 
 type ArchitecturalCanvasScenario = "default" | "nested" | "corrupt";
 
 const ROOT_SPACE_ID = "root";
+const CONNECTION_DEFAULT_COLOR =
+  FOLDER_COLOR_SCHEMES.find((s) => s.id === "wine")?.swatch ?? "oklch(0.48 0.30 22)";
+const CONNECTION_CUT_CURSOR =
+  'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 16 16%27%3E%3Ccircle cx=%273.2%27 cy=%274.1%27 r=%272.1%27 fill=%27none%27 stroke=%27%23ffffff%27 stroke-width=%271.2%27/%3E%3Ccircle cx=%273.2%27 cy=%2711.9%27 r=%272.1%27 fill=%27none%27 stroke=%27%23ffffff%27 stroke-width=%271.2%27/%3E%3Cpath d=%27M5.1 5.2 L13.6 1.6 M5.1 10.8 L13.6 14.4%27 stroke=%27%23ffffff%27 stroke-width=%271.4%27 stroke-linecap=%27round%27/%3E%3C/svg%3E") 3 8, crosshair';
+const CONNECTION_PIN_DEFAULT_CONTENT: CanvasConnectionPin = {
+  anchor: "topLeftInset",
+  insetX: 14,
+  insetY: 18,
+};
+const CONNECTION_PIN_DEFAULT_FOLDER: CanvasConnectionPin = {
+  anchor: "topLeftInset",
+  // Place folder pin slightly outside the card shell.
+  insetX: -6,
+  insetY: 12,
+};
+const CONNECTION_FRICTION = 0.93;
+const CONNECTION_GRAVITY = 0.35;
+const CONNECTION_ITERATIONS = 4;
+const CONNECTION_SEGMENTS = 12;
+
+type RopePoint = {
+  x: number;
+  y: number;
+  oldX: number;
+  oldY: number;
+  pinned: boolean;
+};
+
+type RopeConstraint = {
+  p1: number;
+  p2: number;
+  length: number;
+};
+
+type RopeRuntime = {
+  points: RopePoint[];
+  constraints: RopeConstraint[];
+};
+
+function isUuidLike(value: string | null | undefined): value is string {
+  if (!value) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function createRopeRuntime(start: { x: number; y: number }, end: { x: number; y: number }): RopeRuntime {
+  const points: RopePoint[] = [];
+  const constraints: RopeConstraint[] = [];
+  const distance = Math.hypot(end.x - start.x, end.y - start.y);
+  const segmentLength = Math.max(14, distance / CONNECTION_SEGMENTS);
+  for (let i = 0; i <= CONNECTION_SEGMENTS; i += 1) {
+    const t = i / CONNECTION_SEGMENTS;
+    const x = start.x + (end.x - start.x) * t;
+    const y = start.y + (end.y - start.y) * t;
+    points.push({
+      x,
+      y,
+      oldX: x,
+      oldY: y,
+      pinned: i === 0 || i === CONNECTION_SEGMENTS,
+    });
+  }
+  for (let i = 0; i < CONNECTION_SEGMENTS; i += 1) {
+    constraints.push({ p1: i, p2: i + 1, length: segmentLength * 1.1 });
+  }
+  return { points, constraints };
+}
+
+function resolveConnectionPin(
+  entityId: string,
+  pin: CanvasConnectionPin,
+  activeSpaceId: string,
+  graph: CanvasGraph,
+): { x: number; y: number } | null {
+  const entity = graph.entities[entityId];
+  if (!entity) return null;
+  const slot = entity.slots[activeSpaceId];
+  if (!slot) return null;
+  const normalizedPin =
+    pin.anchor === "topLeftInset"
+      ? entity.kind === "folder"
+        ? CONNECTION_PIN_DEFAULT_FOLDER
+        : CONNECTION_PIN_DEFAULT_CONTENT
+      : pin;
+
+  // Prefer live node geometry so pin anchors stay attached under rotation.
+  const escapedId =
+    typeof CSS !== "undefined" && typeof CSS.escape === "function"
+      ? CSS.escape(entityId)
+      : entityId.replace(/"/g, '\\"');
+  const placement = document.querySelector<HTMLElement>(
+    `[data-node-id="${escapedId}"][data-space-id="${activeSpaceId}"]`,
+  );
+  if (placement) {
+    const w = placement.offsetWidth || (entity.kind === "folder" ? FOLDER_CARD_WIDTH : entity.width ?? UNIFIED_NODE_WIDTH);
+    const h = placement.offsetHeight || (entity.kind === "folder" ? FOLDER_CARD_HEIGHT : 280);
+    const rad = (entity.rotation * Math.PI) / 180;
+    const cx = w / 2;
+    const cy = h / 2;
+    const dx = normalizedPin.insetX - cx;
+    const dy = normalizedPin.insetY - cy;
+    const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
+    const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
+    return {
+      x: slot.x + cx + rx,
+      y: slot.y + cy + ry,
+    };
+  }
+
+  return {
+    // Slots are stored as top-left card placement coordinates.
+    x: slot.x + normalizedPin.insetX,
+    y: slot.y + normalizedPin.insetY,
+  };
+}
 
 function tapeVariantForTheme(theme: ContentTheme): TapeVariant {
   if (theme === "code" || theme === "media") return "dark";
@@ -84,11 +211,27 @@ function normalizedFocusTitle(raw: string): string {
   return raw.trim() || "Untitled";
 }
 
+function folderPreviewTitles(
+  folder: Extract<CanvasEntity, { kind: "folder" }>,
+  graph: CanvasGraph,
+): string[] {
+  const childSpace = graph.spaces[folder.childSpaceId];
+  if (!childSpace) return [];
+
+  return [...childSpace.entityIds]
+    .reverse()
+    .map((entityId) => graph.entities[entityId])
+    .filter((entity): entity is Extract<CanvasEntity, { kind: "content" }> => entity?.kind === "content")
+    .slice(0, FOLDER_PREVIEW_MAX_ITEMS)
+    .map((entity) => normalizedFocusTitle(entity.title));
+}
+
 function shallowCloneGraph(graph: CanvasGraph): CanvasGraph {
   return {
     ...graph,
     spaces: { ...graph.spaces },
     entities: { ...graph.entities },
+    connections: { ...graph.connections },
   };
 }
 
@@ -399,6 +542,13 @@ export function ArchitecturalCanvasApp({
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
   const [spacePanning, setSpacePanning] = useState(false);
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const [connectionMode, setConnectionMode] = useState<ConnectionDockMode>("move");
+  const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
+  const [connectionColor, setConnectionColor] = useState(CONNECTION_DEFAULT_COLOR);
+  const [connectionCursorWorld, setConnectionCursorWorld] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const [connectionPaths, setConnectionPaths] = useState<Record<string, string>>({});
   const [lassoRectScreen, setLassoRectScreen] = useState<LassoRectScreen | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   /** After fonts + layout frame; drives viewport fade-in and avoids first-paint hiccups. */
@@ -465,10 +615,9 @@ export function ArchitecturalCanvasApp({
   const stackModalRef = useRef(stackModal);
   const stackDragRef = useRef(stackDrag);
   const stackModalCardHeightsRef = useRef(stackModalCardHeights);
-  const [selectionContextMenu, setSelectionContextMenu] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
+  const [selectionContextMenu, setSelectionContextMenu] = useState<ContextMenuPosition>(null);
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
+  const [connectionContextMenu, setConnectionContextMenu] = useState<ContextMenuPosition>(null);
   /** Canvas/stack: show dock format cluster only while focus is in a rich-text surface (card/folder title or body). */
   const [textFormatChromeActive, setTextFormatChromeActive] = useState(false);
   /** True when the caret is in a note/body editor (not titles) — drives in-doc insert strip on canvas. */
@@ -485,6 +634,7 @@ export function ArchitecturalCanvasApp({
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const shellRef = useRef<HTMLDivElement | null>(null);
+  const ropeRuntimeRef = useRef<Record<string, RopeRuntime>>({});
   const shellTopLeftStackRef = useRef<HTMLDivElement | null>(null);
   const parentDropRef = useRef<HTMLDivElement | null>(null);
   /** Ignore well click/activation briefly after a parent drop (mouseup can synthesize a click). */
@@ -511,6 +661,7 @@ export function ArchitecturalCanvasApp({
   const activeSpaceIdRef = useRef(activeSpaceId);
   const navigationPathRef = useRef(navigationPath);
   const selectedNodeIdsRef = useRef(selectedNodeIds);
+  const selectionBeforeConnectionModeRef = useRef<string[] | null>(null);
   const undoPastRef = useRef<ArchitecturalUndoSnapshot[]>([]);
   const undoFutureRef = useRef<ArchitecturalUndoSnapshot[]>([]);
   const isApplyingHistoryRef = useRef(false);
@@ -535,6 +686,11 @@ export function ArchitecturalCanvasApp({
   activeNodeIdRef.current = activeNodeId;
 
   const modKeyHints = useModKeyHints();
+
+  const createId = useCallback((prefix: string) => {
+    idCounterRef.current += 1;
+    return `${prefix}-${Date.now()}-${idCounterRef.current}`;
+  }, []);
 
   const closeStackModal = useCallback(() => {
     setStackDrag(null);
@@ -695,6 +851,211 @@ export function ArchitecturalCanvasApp({
     };
   }, []);
 
+  const setConnectionSyncPatch = useCallback(
+    (connectionId: string, patch: Partial<CanvasPinConnection>) => {
+      setGraph((prev) => {
+        const current = prev.connections[connectionId];
+        if (!current) return prev;
+        const next = shallowCloneGraph(prev);
+        next.connections[connectionId] = { ...current, ...patch, updatedAt: Date.now() };
+        return next;
+      });
+    },
+    [],
+  );
+
+  const syncCreateConnection = useCallback(
+    async (connectionId: string) => {
+      const snap = graphRef.current.connections[connectionId];
+      if (!snap) return;
+      const sourceEntity = graphRef.current.entities[snap.sourceEntityId];
+      const targetEntity = graphRef.current.entities[snap.targetEntityId];
+      const sourceItemId = sourceEntity?.persistedItemId ?? sourceEntity?.id ?? null;
+      const targetItemId = targetEntity?.persistedItemId ?? targetEntity?.id ?? null;
+      if (!isUuidLike(sourceItemId) || !isUuidLike(targetItemId)) {
+        setConnectionSyncPatch(connectionId, {
+          syncState: "local-only",
+          syncError: "No persisted UUID mapping for one or more cards.",
+        });
+        return;
+      }
+      setConnectionSyncPatch(connectionId, { syncState: "syncing", syncError: null });
+      try {
+        const res = await fetch("/api/item-links", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sourceItemId,
+            targetItemId,
+            linkType: "pin",
+            color: snap.color,
+            sourcePin: `${snap.sourcePin.anchor}:${snap.sourcePin.insetX}:${snap.sourcePin.insetY}`,
+            targetPin: `${snap.targetPin.anchor}:${snap.targetPin.insetX}:${snap.targetPin.insetY}`,
+            meta: {
+              sourcePinConfig: snap.sourcePin,
+              targetPinConfig: snap.targetPin,
+            },
+          }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const body = (await res.json()) as {
+          link?: { id?: string };
+          deduped?: boolean;
+        };
+        setConnectionSyncPatch(connectionId, {
+          syncState: "synced",
+          dbLinkId: body.link?.id ?? snap.dbLinkId ?? null,
+          syncError: null,
+        });
+      } catch (error) {
+        setConnectionSyncPatch(connectionId, {
+          syncState: "error",
+          syncError: error instanceof Error ? error.message : "Failed to persist link",
+        });
+      }
+    },
+    [setConnectionSyncPatch],
+  );
+
+  const syncDeleteConnection = useCallback(async (connection: CanvasPinConnection) => {
+    if (!connection.dbLinkId || !isUuidLike(connection.dbLinkId)) return;
+    try {
+      await fetch("/api/item-links", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: connection.dbLinkId }),
+      });
+    } catch {
+      // Keep local delete authoritative.
+    }
+  }, []);
+
+  const syncColorConnection = useCallback(
+    async (connectionId: string, color: string) => {
+      const snap = graphRef.current.connections[connectionId];
+      if (!snap?.dbLinkId || !isUuidLike(snap.dbLinkId)) return;
+      try {
+        await fetch("/api/item-links", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: snap.dbLinkId, color }),
+        });
+      } catch {
+        setConnectionSyncPatch(connectionId, {
+          syncState: "error",
+          syncError: "Failed to sync connection color",
+        });
+      }
+    },
+    [setConnectionSyncPatch],
+  );
+
+  const createConnection = useCallback(
+    (sourceEntityId: string, targetEntityId: string) => {
+      const connectionId = createId("conn");
+      recordUndoBeforeMutation();
+      setGraph((prev) => {
+        const sourceExists = !!prev.entities[sourceEntityId];
+        const targetExists = !!prev.entities[targetEntityId];
+        if (!sourceExists || !targetExists || sourceEntityId === targetEntityId) return prev;
+        const next = shallowCloneGraph(prev);
+        next.connections[connectionId] = {
+          id: connectionId,
+          sourceEntityId,
+          targetEntityId,
+          sourcePin:
+            prev.entities[sourceEntityId]?.kind === "folder"
+              ? CONNECTION_PIN_DEFAULT_FOLDER
+              : CONNECTION_PIN_DEFAULT_CONTENT,
+          targetPin:
+            prev.entities[targetEntityId]?.kind === "folder"
+              ? CONNECTION_PIN_DEFAULT_FOLDER
+              : CONNECTION_PIN_DEFAULT_CONTENT,
+          color: connectionColor,
+          slackMultiplier: 1.1,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          syncState: "local-only",
+          syncError: null,
+        };
+        return next;
+      });
+      void syncCreateConnection(connectionId);
+    },
+    [connectionColor, createId, recordUndoBeforeMutation, syncCreateConnection],
+  );
+
+  const cutConnection = useCallback(
+    (connectionId: string) => {
+      const existing = graphRef.current.connections[connectionId];
+      if (!existing) return;
+      recordUndoBeforeMutation();
+      setGraph((prev) => {
+        if (!prev.connections[connectionId]) return prev;
+        const next = shallowCloneGraph(prev);
+        delete next.connections[connectionId];
+        return next;
+      });
+      delete ropeRuntimeRef.current[connectionId];
+      void syncDeleteConnection(existing);
+    },
+    [recordUndoBeforeMutation, syncDeleteConnection],
+  );
+
+  const recolorConnection = useCallback(
+    (connectionId: string, color: string) => {
+      const current = graphRef.current.connections[connectionId];
+      if (!current || current.color === color) return;
+      recordUndoBeforeMutation();
+      setConnectionSyncPatch(connectionId, { color });
+      void syncColorConnection(connectionId, color);
+    },
+    [recordUndoBeforeMutation, setConnectionSyncPatch, syncColorConnection],
+  );
+
+  const setConnectionSlack = useCallback(
+    (connectionId: string, nextSlack: number) => {
+      const current = graphRef.current.connections[connectionId];
+      if (!current) return;
+      const clamped = Math.max(1.0, Math.min(1.35, nextSlack));
+      if (Math.abs((current.slackMultiplier ?? 1.1) - clamped) < 0.001) return;
+      recordUndoBeforeMutation();
+      setConnectionSyncPatch(connectionId, { slackMultiplier: clamped });
+    },
+    [recordUndoBeforeMutation, setConnectionSyncPatch],
+  );
+
+  const applyConnectionColor = useCallback(
+    (nextColor: string) => {
+      setConnectionColor(nextColor);
+      const selected = selectedNodeIdsRef.current;
+      if (selected.length !== 2) return;
+      const [a, b] = selected;
+      const between = Object.values(graphRef.current.connections)
+        .filter(
+          (connection) =>
+            (connection.sourceEntityId === a && connection.targetEntityId === b) ||
+            (connection.sourceEntityId === b && connection.targetEntityId === a),
+        )
+        .map((connection) => connection.id);
+      between.forEach((id) => recolorConnection(id, nextColor));
+    },
+    [recolorConnection],
+  );
+  const connectionColorSchemeId = useMemo<FolderColorSchemeId | null>(
+    () => FOLDER_COLOR_SCHEMES.find((scheme) => scheme.swatch === connectionColor)?.id ?? null,
+    [connectionColor],
+  );
+  const applyConnectionColorScheme = useCallback(
+    (nextScheme: FolderColorSchemeId | null) => {
+      if (!nextScheme) return;
+      const match = FOLDER_COLOR_SCHEMES.find((scheme) => scheme.id === nextScheme);
+      if (!match) return;
+      applyConnectionColor(match.swatch);
+    },
+    [applyConnectionColor],
+  );
+
   useEffect(() => {
     if (!stackModal) {
       setStackModalExpanded(false);
@@ -709,6 +1070,98 @@ export function ArchitecturalCanvasApp({
     return () => window.cancelAnimationFrame(frame);
   }, [stackModal]);
 
+  useEffect(() => {
+    let frame = 0;
+    const step = () => {
+      const graphSnap = graphRef.current;
+      const spaceId = activeSpaceIdRef.current;
+      const runtimeById = ropeRuntimeRef.current;
+      const nextPaths: Record<string, string> = {};
+      const activeIds = new Set<string>();
+      Object.values(graphSnap.connections).forEach((connection) => {
+        const start = resolveConnectionPin(connection.sourceEntityId, connection.sourcePin, spaceId, graphSnap);
+        const end = resolveConnectionPin(connection.targetEntityId, connection.targetPin, spaceId, graphSnap);
+        if (!start || !end) return;
+        activeIds.add(connection.id);
+        let runtime = runtimeById[connection.id];
+        if (!runtime) {
+          runtime = createRopeRuntime(start, end);
+          runtimeById[connection.id] = runtime;
+        }
+        const first = runtime.points[0];
+        const last = runtime.points[runtime.points.length - 1];
+        first.x = start.x;
+        first.y = start.y;
+        first.oldX = start.x;
+        first.oldY = start.y;
+        last.x = end.x;
+        last.y = end.y;
+        last.oldX = end.x;
+        last.oldY = end.y;
+        const slackMultiplier = connection.slackMultiplier ?? 1.1;
+        const liveDistance = Math.hypot(end.x - start.x, end.y - start.y);
+        const segmentLength = Math.max(14, liveDistance / CONNECTION_SEGMENTS) * slackMultiplier;
+        runtime.constraints.forEach((constraint) => {
+          constraint.length = segmentLength;
+        });
+
+        runtime.points.forEach((point) => {
+          if (point.pinned) return;
+          const vx = (point.x - point.oldX) * CONNECTION_FRICTION;
+          const vy = (point.y - point.oldY) * CONNECTION_FRICTION;
+          point.oldX = point.x;
+          point.oldY = point.y;
+          point.x += vx;
+          point.y += vy + CONNECTION_GRAVITY;
+        });
+        for (let i = 0; i < CONNECTION_ITERATIONS; i += 1) {
+          runtime.constraints.forEach((constraint) => {
+            const p1 = runtime.points[constraint.p1];
+            const p2 = runtime.points[constraint.p2];
+            if (!p1 || !p2) return;
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const dist = Math.hypot(dx, dy) || 0.0001;
+            const difference = constraint.length - dist;
+            const percent = difference / dist / 2;
+            const offsetX = dx * percent;
+            const offsetY = dy * percent;
+            if (!p1.pinned) {
+              p1.x -= offsetX;
+              p1.y -= offsetY;
+            }
+            if (!p2.pinned) {
+              p2.x += offsetX;
+              p2.y += offsetY;
+            }
+          });
+        }
+
+        let path = `M ${runtime.points[0]?.x ?? 0} ${runtime.points[0]?.y ?? 0}`;
+        for (let i = 1; i < runtime.points.length - 1; i += 1) {
+          const p = runtime.points[i];
+          const n = runtime.points[i + 1];
+          if (!p || !n) continue;
+          const cx = (p.x + n.x) / 2;
+          const cy = (p.y + n.y) / 2;
+          path += ` Q ${p.x} ${p.y}, ${cx} ${cy}`;
+        }
+        const penultimate = runtime.points[runtime.points.length - 2];
+        if (penultimate && last) {
+          path += ` Q ${penultimate.x} ${penultimate.y}, ${last.x} ${last.y}`;
+        }
+        nextPaths[connection.id] = path;
+      });
+      Object.keys(runtimeById).forEach((id) => {
+        if (!activeIds.has(id)) delete runtimeById[id];
+      });
+      setConnectionPaths(nextPaths);
+      frame = window.requestAnimationFrame(step);
+    };
+    frame = window.requestAnimationFrame(step);
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
   const activeSpace = graph.spaces[activeSpaceId] ?? graph.spaces[graph.rootSpaceId];
   const visibleEntityIds = activeSpace?.entityIds ?? [];
   const visibleEntities = useMemo(
@@ -717,6 +1170,16 @@ export function ArchitecturalCanvasApp({
         .map((id) => graph.entities[id])
         .filter((entity): entity is CanvasEntity => !!entity),
     [graph.entities, visibleEntityIds],
+  );
+  const visibleConnections = useMemo(
+    () =>
+      Object.values(graph.connections).filter((connection) => {
+        const source = graph.entities[connection.sourceEntityId];
+        const target = graph.entities[connection.targetEntityId];
+        if (!source || !target) return false;
+        return !!source.slots[activeSpaceId] && !!target.slots[activeSpaceId];
+      }),
+    [activeSpaceId, graph.connections, graph.entities],
   );
 
   const parentSpaceId = activeSpace?.parentSpaceId ?? null;
@@ -1237,6 +1700,8 @@ export function ArchitecturalCanvasApp({
     setActiveSpaceId(freshGraph.rootSpaceId);
     setNavigationPath([freshGraph.rootSpaceId]);
     setSelectedNodeIds([]);
+    setConnectionSourceId(null);
+    setConnectionMode("move");
     setFocusOpen(false);
     setActiveNodeId(null);
     undoPastRef.current = [];
@@ -1300,11 +1765,6 @@ export function ArchitecturalCanvasApp({
       y: (window.innerHeight / 2 - translateY) / scale,
     };
   }, [scale, translateX, translateY]);
-
-  const createId = useCallback((prefix: string) => {
-    idCounterRef.current += 1;
-    return `${prefix}-${Date.now()}-${idCounterRef.current}`;
-  }, []);
 
   const normalizeStack = useCallback((stackId: string, snapshot: CanvasGraph): CanvasGraph => {
     if (!snapshot?.entities) return snapshot;
@@ -2146,14 +2606,21 @@ export function ArchitecturalCanvasApp({
           const entity = prev.entities[id];
           const offset = dragOffsetsRef.current[id];
           if (!entity || !offset) return;
+          const currentSlot = entity.slots[activeSpaceId];
+          if (!currentSlot) return;
+          const nextX = mouseCanvasX - offset.x;
+          const nextY = mouseCanvasY - offset.y;
+          if (Math.abs(currentSlot.x - nextX) < 0.001 && Math.abs(currentSlot.y - nextY) < 0.001) {
+            return;
+          }
           changed = true;
           nextEntities[id] = {
             ...entity,
             slots: {
               ...entity.slots,
               [activeSpaceId]: {
-                x: mouseCanvasX - offset.x,
-                y: mouseCanvasY - offset.y,
+                x: nextX,
+                y: nextY,
               },
             },
           };
@@ -2546,6 +3013,22 @@ export function ArchitecturalCanvasApp({
   }, [closeStackModal, stackModal?.stackId, viewportSize.width, viewportSize.height]);
 
   useEffect(() => {
+    if (connectionMode !== "draw" || !connectionSourceId) {
+      setConnectionCursorWorld(null);
+      return;
+    }
+    const onMove = (event: MouseEvent) => {
+      const { tx, ty, scale: viewScale } = viewRef.current;
+      setConnectionCursorWorld({
+        x: (event.clientX - tx) / viewScale,
+        y: (event.clientY - ty) / viewScale,
+      });
+    };
+    window.addEventListener("mousemove", onMove);
+    return () => window.removeEventListener("mousemove", onMove);
+  }, [connectionMode, connectionSourceId]);
+
+  useEffect(() => {
     const onMouseDown = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       const taskCheckbox = target.closest(`.${styles.taskCheckbox}`);
@@ -2589,11 +3072,32 @@ export function ArchitecturalCanvasApp({
         return;
       }
 
+      const entity = target.closest<HTMLElement>(`[data-node-id]`);
+      if (connectionMode !== "move") {
+        if (connectionMode === "draw" && entity?.dataset.nodeId) {
+          const nodeId = entity.dataset.nodeId;
+          if (!nodeId) return;
+          event.preventDefault();
+          event.stopPropagation();
+          if (!connectionSourceId) {
+            setConnectionSourceId(nodeId);
+          } else if (connectionSourceId === nodeId) {
+            setConnectionSourceId(null);
+          } else {
+            createConnection(connectionSourceId, nodeId);
+            setConnectionSourceId(null);
+          }
+          return;
+        }
+        if (connectionMode === "cut") {
+          return;
+        }
+      }
+
       if (focusOpen || galleryOpen) return;
       if (activeTool === "pan" || spacePanRef.current) return;
       if (event.button !== 0) return;
       if (target.closest("[data-stack-container='true']")) return;
-      const entity = target.closest<HTMLElement>(`[data-node-id]`);
       const inContent =
         target.closest(`.${styles.nodeBody}`) ||
         target.closest(`.${styles.nodeBtn}`) ||
@@ -2647,6 +3151,7 @@ export function ArchitecturalCanvasApp({
     };
 
     const onClick = (event: MouseEvent) => {
+      if (connectionMode !== "move") return;
       const target = event.target as HTMLElement;
       const expandBtn = target.closest<HTMLElement>(`[data-expand-btn="true"]`);
       if (!expandBtn) return;
@@ -2656,6 +3161,7 @@ export function ArchitecturalCanvasApp({
     };
 
     const onDoubleClick = (event: MouseEvent) => {
+      if (connectionMode !== "move") return;
       const target = pointerEventTargetElement(event.target);
       if (!target) return;
       const folderEl = target.closest<HTMLElement>("[data-folder-id]");
@@ -2706,6 +3212,9 @@ export function ArchitecturalCanvasApp({
   }, [
     activeSpaceId,
     activeTool,
+    connectionMode,
+    connectionSourceId,
+    createConnection,
     focusOpen,
     galleryOpen,
     graph.entities,
@@ -2883,6 +3392,7 @@ export function ArchitecturalCanvasApp({
 
       // Left button drives select/lasso and normal pan-tool behavior.
       if (event.button !== 0) return;
+      if (connectionMode !== "move") return;
 
       const target = event.target as HTMLElement;
       if (
@@ -2916,7 +3426,7 @@ export function ArchitecturalCanvasApp({
         y: event.clientY - translateY,
       };
     },
-    [activeTool, focusOpen, galleryOpen, stackModal, translateX, translateY],
+    [activeTool, connectionMode, focusOpen, galleryOpen, stackModal, translateX, translateY],
   );
 
   const onWheel = useCallback(
@@ -3253,6 +3763,10 @@ export function ArchitecturalCanvasApp({
     setSelectionContextMenu(null);
   }, []);
 
+  const closeConnectionContextMenu = useCallback(() => {
+    setConnectionContextMenu(null);
+  }, []);
+
   const handleViewportContextMenuCapture = useCallback(
     (event: React.MouseEvent) => {
       if (selectedNodeIds.length < 1) return;
@@ -3262,11 +3776,12 @@ export function ArchitecturalCanvasApp({
       if (target.closest("[contenteditable='true']")) return;
       event.preventDefault();
       event.stopPropagation();
-      const MENU_MAX_W = 260;
-      const MENU_MAX_H = 240;
-      const x = Math.min(event.clientX, window.innerWidth - MENU_MAX_W - 8);
-      const y = Math.min(event.clientY, window.innerHeight - MENU_MAX_H - 8);
-      setSelectionContextMenu({ x, y });
+      setSelectionContextMenu(
+        clampContextMenuPosition(
+          { x: event.clientX, y: event.clientY },
+          { maxWidth: 260, maxHeight: 240, edgePadding: 8 },
+        ),
+      );
     },
     [focusOpen, galleryOpen, selectedNodeIds, stackModal],
   );
@@ -3411,7 +3926,7 @@ export function ArchitecturalCanvasApp({
     return contentIds.length >= 2;
   }, [graph.entities, selectedNodeIds, visibleEntityIds]);
 
-  const selectionContextMenuItems = useMemo(
+  const selectionContextMenuItems = useMemo<ContextMenuItem[]>(
     () => [
       {
         label: "Create stack",
@@ -3445,6 +3960,33 @@ export function ArchitecturalCanvasApp({
       stackSelectedContent,
     ],
   );
+
+  const connectionContextMenuItems = useMemo<ContextMenuItem[]>(() => {
+    if (!selectedConnectionId) return [];
+    const selected = graph.connections[selectedConnectionId];
+    const currentSlack = selected?.slackMultiplier ?? 1.1;
+    const base = [
+      {
+        label: "Cut connection",
+        onSelect: () => cutConnection(selectedConnectionId),
+      },
+      {
+        label: "Make thread taught",
+        disabled: currentSlack <= 1.01,
+        onSelect: () => setConnectionSlack(selectedConnectionId, 1.02),
+      },
+      {
+        label: "Loosten thread",
+        disabled: currentSlack >= 1.29,
+        onSelect: () => setConnectionSlack(selectedConnectionId, 1.28),
+      },
+    ];
+    const recolor = FOLDER_COLOR_SCHEMES.map((scheme) => ({
+      label: `Color · ${scheme.label}`,
+      onSelect: () => recolorConnection(selectedConnectionId, scheme.swatch),
+    }));
+    return [...base, ...recolor];
+  }, [cutConnection, graph.connections, recolorConnection, selectedConnectionId, setConnectionSlack]);
 
   const canInsertImage = useMemo(() => {
     if (focusOpen && activeNodeId) {
@@ -3509,6 +4051,24 @@ export function ArchitecturalCanvasApp({
   useEffect(() => {
     if (selectedNodeIds.length < 1) setSelectionContextMenu(null);
   }, [selectedNodeIds]);
+
+  useEffect(() => {
+    const onDocMouseDown = (event: MouseEvent) => {
+      const t = event.target as HTMLElement | null;
+      if (!t) return;
+      if (t.closest("[data-connection-id]")) return;
+      if (connectionContextMenu) return;
+      setSelectedConnectionId(null);
+    };
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, [connectionContextMenu]);
+
+  useEffect(() => {
+    if (!selectedConnectionId) {
+      setConnectionContextMenu(null);
+    }
+  }, [selectedConnectionId]);
 
   useEffect(() => {
     setSelectedNodeIds((prev) => prev.filter((id) => visibleEntityIds.includes(id)));
@@ -3620,7 +4180,7 @@ export function ArchitecturalCanvasApp({
           canvasSurfaceReady ? styles.viewportSurfaceReady : styles.viewportSurfacePending
         } ${activeSpaceId !== graph.rootSpaceId ? styles.deepSpace : ""}${
           stackModal ? ` ${styles.viewportStackModalOpen}` : ""
-        }`}
+        } ${connectionMode !== "move" ? styles.viewportConnectionMode : ""}`}
         aria-busy={!canvasSurfaceReady}
         data-canvas-ready={canvasSurfaceReady ? "true" : "false"}
         onMouseDown={onViewportMouseDown}
@@ -3628,8 +4188,20 @@ export function ArchitecturalCanvasApp({
         onWheel={onWheel}
         style={{
           backgroundPosition: `${translateX}px ${translateY}px`,
+          ["--connection-cursor" as string]:
+            connectionMode === "cut"
+              ? CONNECTION_CUT_CURSOR
+              : connectionMode === "draw" && connectionSourceId
+                ? "copy"
+                : "crosshair",
           cursor: isPanning
             ? "grabbing"
+            : connectionMode === "draw"
+              ? connectionSourceId
+                ? "copy"
+                : "crosshair"
+              : connectionMode === "cut"
+                ? CONNECTION_CUT_CURSOR
             : activeTool === "pan" || spacePanning
               ? "grab"
               : "default",
@@ -3639,23 +4211,126 @@ export function ArchitecturalCanvasApp({
           className={styles.canvas}
           style={{ transform: `translate(${translateX}px, ${translateY}px) scale(${scale})` }}
         >
+          <svg className={styles.connectionLayer} viewBox="0 0 10000 10000" aria-hidden>
+            {connectionMode === "draw" && connectionSourceId && connectionCursorWorld
+              ? (() => {
+                  const sourceEntity = graph.entities[connectionSourceId];
+                  if (!sourceEntity) return null;
+                  const sourcePin = resolveConnectionPin(
+                    connectionSourceId,
+                    sourceEntity.kind === "folder"
+                      ? CONNECTION_PIN_DEFAULT_FOLDER
+                      : CONNECTION_PIN_DEFAULT_CONTENT,
+                    activeSpaceId,
+                    graph,
+                  );
+                  if (!sourcePin) return null;
+                  const cx = (sourcePin.x + connectionCursorWorld.x) / 2;
+                  const cy = (sourcePin.y + connectionCursorWorld.y) / 2;
+                  return (
+                    <g>
+                      <path
+                        d={`M ${sourcePin.x} ${sourcePin.y} Q ${cx} ${cy}, ${connectionCursorWorld.x} ${connectionCursorWorld.y}`}
+                        className={`${styles.connectionStroke} ${styles.connectionStrokePreview}`}
+                        style={{ stroke: connectionColor }}
+                      />
+                      <circle
+                        cx={sourcePin.x}
+                        cy={sourcePin.y}
+                        r={4.5}
+                        className={styles.connectionPin}
+                        style={{ fill: connectionColor }}
+                      />
+                    </g>
+                  );
+                })()
+              : null}
+            {visibleConnections.map((connection) => {
+              const sourcePin = resolveConnectionPin(
+                connection.sourceEntityId,
+                connection.sourcePin,
+                activeSpaceId,
+                graph,
+              );
+              const targetPin = resolveConnectionPin(
+                connection.targetEntityId,
+                connection.targetPin,
+                activeSpaceId,
+                graph,
+              );
+              if (!sourcePin || !targetPin) return null;
+              return (
+                <g key={connection.id}>
+                  <path
+                    d={connectionPaths[connection.id] ?? ""}
+                    className={`${styles.connectionStroke} ${
+                      connectionMode === "cut" ? styles.connectionStrokeCuttable : ""
+                    } ${selectedConnectionId === connection.id ? styles.connectionStrokeSelected : ""}`}
+                    style={{ stroke: connection.color }}
+                    data-connection-id={connection.id}
+                    onMouseDown={(event) => {
+                      if (connectionMode !== "cut") return;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      cutConnection(connection.id);
+                    }}
+                    onClick={(event) => {
+                      if (connectionMode === "cut") return;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setSelectedConnectionId(connection.id);
+                    }}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setSelectedConnectionId(connection.id);
+                      setConnectionContextMenu(
+                        clampContextMenuPosition(
+                          { x: event.clientX, y: event.clientY },
+                          { maxWidth: 260, maxHeight: 360, edgePadding: 8 },
+                        ),
+                      );
+                    }}
+                  />
+                  <circle
+                    cx={sourcePin.x}
+                    cy={sourcePin.y}
+                    r={4.5}
+                    className={styles.connectionPin}
+                    style={{ fill: connection.color }}
+                  />
+                  <circle
+                    cx={targetPin.x}
+                    cy={targetPin.y}
+                    r={4.5}
+                    className={styles.connectionPin}
+                    style={{ fill: connection.color }}
+                  />
+                </g>
+              );
+            })}
+          </svg>
           {standaloneEntities.map((entity) => {
             const slot = entity.slots[activeSpaceId] ?? { x: 0, y: 0 };
             const draggedIndex = draggedNodeIds.indexOf(entity.id);
             const dragged = draggedIndex >= 0;
             const dropPreview = dragged && !!hoveredFolderId;
             const selected = selectedNodeIds.includes(entity.id);
+            const isConnectionSource = connectionSourceId === entity.id;
             const folderCount =
               entity.kind === "folder"
                 ? graph.spaces[entity.childSpaceId]?.entityIds.length ?? 0
                 : 0;
+            const previewTitles = entity.kind === "folder" ? folderPreviewTitles(entity, graph) : [];
             return (
               <div
                 key={entity.id}
                 data-node-id={entity.id}
                 data-space-id={activeSpaceId}
                 data-stack-target={entity.kind === "content" ? "true" : undefined}
-                className={`${styles.nodePlacement} ${hoveredStackTargetId === entity.id ? styles.stackDropTarget : ""}`}
+                className={`${styles.nodePlacement} ${hoveredStackTargetId === entity.id ? styles.stackDropTarget : ""} ${
+                  isConnectionSource ? styles.nodeConnectionSource : ""
+                }`}
                 style={{
                   left: `${slot.x}px`,
                   top: `${slot.y}px`,
@@ -3670,7 +4345,7 @@ export function ArchitecturalCanvasApp({
                     title={entity.title}
                     width={entity.width}
                     theme={entity.theme}
-                    tapeVariant={tapeVariantForTheme(entity.theme)}
+                    tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
                     tapeRotation={entity.tapeRotation}
                     bodyHtml={entity.bodyHtml}
                     activeTool={activeTool}
@@ -3685,6 +4360,7 @@ export function ArchitecturalCanvasApp({
                     id={entity.id}
                     title={entity.title}
                     itemCount={folderCount}
+                    previewTitles={previewTitles}
                     dragOver={hoveredFolderId === entity.id}
                     selected={selected}
                     folderColorScheme={entity.folderColorScheme}
@@ -3719,7 +4395,7 @@ export function ArchitecturalCanvasApp({
                   zIndex: z,
                 }}
                 onMouseDown={(event) => {
-                  if (event.button !== 0 || activeTool !== "select") return;
+                  if (event.button !== 0 || activeTool !== "select" || connectionMode !== "move") return;
                   const target = event.target as HTMLElement;
                   if (target.closest("[data-expand-btn='true']")) return;
                   event.stopPropagation();
@@ -3749,6 +4425,7 @@ export function ArchitecturalCanvasApp({
                   };
                 }}
                 onClick={(event) => {
+                  if (connectionMode !== "move") return;
                   event.stopPropagation();
                   const target = event.target as HTMLElement;
                   if (target.closest("[data-expand-btn='true']")) return;
@@ -3810,7 +4487,7 @@ export function ArchitecturalCanvasApp({
                         title={entity.title}
                         width={entity.width}
                         theme={entity.theme}
-                        tapeVariant={tapeVariantForTheme(entity.theme)}
+                        tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
                         tapeRotation={entity.tapeRotation}
                         bodyHtml={entity.bodyHtml}
                         activeTool={activeTool}
@@ -3826,6 +4503,7 @@ export function ArchitecturalCanvasApp({
                         id={entity.id}
                         title={entity.title}
                         itemCount={graph.spaces[entity.childSpaceId]?.entityIds.length ?? 0}
+                        previewTitles={folderPreviewTitles(entity, graph)}
                         dragOver={false}
                         selected={false}
                         folderColorScheme={entity.folderColorScheme}
@@ -3924,7 +4602,48 @@ export function ArchitecturalCanvasApp({
 
         <ArchitecturalToolRail
           activeTool={activeTool}
-          onSetTool={setActiveTool}
+          onSetTool={(tool) => {
+            setActiveTool(tool);
+            setConnectionMode("move");
+            setConnectionSourceId(null);
+            setConnectionCursorWorld(null);
+            selectionBeforeConnectionModeRef.current = null;
+          }}
+          connectionMode={connectionMode}
+          onSetConnectionMode={(next) => {
+            const resolved = connectionMode === next ? "move" : next;
+            setConnectionMode(resolved);
+            setActiveTool("select");
+            setDraggedNodeIds([]);
+            draggedNodeIdsRef.current = [];
+            lassoStartRef.current = null;
+            lassoRectScreenRef.current = null;
+            setLassoRectScreen(null);
+            if (resolved === "move") {
+              const restore = selectionBeforeConnectionModeRef.current;
+              if (restore) {
+                setSelectedNodeIds(restore.filter((id) => !!graphRef.current.entities[id]));
+              }
+              selectionBeforeConnectionModeRef.current = null;
+            } else {
+              if (!selectionBeforeConnectionModeRef.current) {
+                selectionBeforeConnectionModeRef.current = [...selectedNodeIdsRef.current];
+              }
+              setSelectedNodeIds([]);
+            }
+            if (resolved !== "draw") {
+              setConnectionSourceId(null);
+              setConnectionCursorWorld(null);
+            }
+          }}
+          connectionColorControl={
+            <ArchitecturalFolderColorStrip
+              value={connectionColorSchemeId}
+              onChange={applyConnectionColorScheme}
+              appearance="spool"
+              ariaLabel="Connection thread color"
+            />
+          }
           onZoomIn={() => zoomBy(ZOOM_BUTTON_STEP)}
           onZoomOut={() => zoomBy(-ZOOM_BUTTON_STEP)}
           onRecenter={recenterToOrigin}
@@ -3936,6 +4655,11 @@ export function ArchitecturalCanvasApp({
         position={selectionContextMenu}
         onClose={closeSelectionContextMenu}
         items={selectionContextMenuItems}
+      />
+      <ContextMenu
+        position={connectionContextMenu}
+        onClose={closeConnectionContextMenu}
+        items={connectionContextMenuItems}
       />
 
       {lassoRectScreen ? (
@@ -4036,7 +4760,7 @@ export function ArchitecturalCanvasApp({
                     title={entity.title}
                     width={entity.width}
                     theme={entity.theme}
-                    tapeVariant={tapeVariantForTheme(entity.theme)}
+                    tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
                     tapeRotation={entity.tapeRotation}
                     bodyHtml={entity.bodyHtml}
                     activeTool={activeTool}
@@ -4051,6 +4775,7 @@ export function ArchitecturalCanvasApp({
                     id={entity.id}
                     title={entity.title}
                     itemCount={graph.spaces[entity.childSpaceId]?.entityIds.length ?? 0}
+                    previewTitles={folderPreviewTitles(entity, graph)}
                     dragOver={false}
                     selected={false}
                     folderColorScheme={entity.folderColorScheme}

@@ -163,12 +163,51 @@ export function buildArchitecturalSeedGraph(
       ...entities["node-3"],
       slots: {
         ...entities["node-3"].slots,
-        "space-project-thesis": { x: -100, y: 30 },
+        "space-project-thesis": { x: -120, y: 240 },
       },
     };
   }
 
   spaces["space-project-thesis"].entityIds.push("node-3");
+
+  const folderMockNodes: CanvasNode[] = [
+    {
+      id: "dossier-01",
+      title: "INTAKE // Witness Ledger",
+      x: -420,
+      y: -180,
+      rotation: -1.2,
+      width: 340,
+      theme: "default",
+      tapeRotation: -1.1,
+      tapeVariant: "clear",
+      bodyHtml:
+        "<p>Cross-index of witness names, aliases, and conflict flags captured during the last perimeter blackout.</p><p>Use for rapid provenance checks when reports contradict each other.</p>",
+    },
+    {
+      id: "dossier-02",
+      title: "LOG // Corridor Audio Drift",
+      x: 180,
+      y: -180,
+      rotation: 0.7,
+      width: 340,
+      theme: "code",
+      tapeRotation: 1.4,
+      tapeVariant: "dark",
+      bodyHtml: `<span style="color: ${DS_COLOR.codeSampleComment};">// 04:12-04:47 local // attenuation sweep</span><br><span style="color: ${DS_COLOR.codeSampleKeyword};">const</span> drift = [0.02, 0.06, 0.11, 0.19, 0.12, 0.05];<br><span style="color: ${DS_COLOR.codeSampleKeyword};">export</span> function classify(frame){ return frame &gt; 0.12 ? 'stain-signature' : 'ambient'; }`,
+    },
+  ];
+
+  folderMockNodes.forEach((node) => {
+    entities[node.id] = {
+      ...node,
+      kind: "content",
+      slots: {
+        "space-project-thesis": { x: node.x, y: node.y },
+      },
+    } satisfies CanvasContentEntity;
+    spaces["space-project-thesis"].entityIds.push(node.id);
+  });
 
   if (scenario === "nested") {
     spaces["space-subsystems"] = {
@@ -221,5 +260,6 @@ export function buildArchitecturalSeedGraph(
     rootSpaceId: "root",
     spaces,
     entities,
+    connections: {},
   };
 }

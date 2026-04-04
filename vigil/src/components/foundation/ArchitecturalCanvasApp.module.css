@@ -30,12 +30,19 @@
   --folder-tab: var(--sys-color-neutral-900);
   --layer-viewport-vignette: 1;
   --layer-canvas: 2;
+  --layer-connections: 70;
   --layer-ui-chrome: 100;
   --layer-ui-chrome-elevated: 101;
   --layer-lasso: 120;
   --layer-stack-scrim: 890;
   --layer-stack-modal: 900;
   --layer-focus-overlay: 9999;
+  --chrome-glass-shadow: 0 8px 32px var(--sem-color-shadow-40);
+  --chrome-glass-filter: blur(16px) saturate(135%);
+  --chrome-panel-height: 42px;
+  --chrome-panel-radius: 10px;
+  --chrome-panel-pad-y: 6px;
+  --chrome-panel-pad-x: 10px;
 }
 
 .hiddenFileInput {
@@ -130,6 +137,12 @@
   background-position: center center;
 }
 
+/* In pin/cut mode, node surfaces should not show text/grab cursors. */
+.viewportConnectionMode [data-node-id],
+.viewportConnectionMode [data-node-id] * {
+  cursor: var(--connection-cursor, crosshair) !important;
+}
+
 .deepSpace {
   --bg-base: var(--sem-surface-base);
   --grid-color: var(--sem-grid-color-deep);
@@ -184,6 +197,48 @@
   z-index: var(--layer-canvas);
 }
 
+.connectionLayer {
+  position: absolute;
+  inset: 0;
+  width: 10000px;
+  height: 10000px;
+  overflow: visible;
+  pointer-events: none;
+  z-index: var(--layer-connections);
+}
+
+.connectionStroke {
+  fill: none;
+  stroke-width: 2.3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+  filter: drop-shadow(0 0 7px color-mix(in oklch, var(--sys-color-black) 36%, transparent));
+}
+
+.connectionStrokePreview {
+  stroke-dasharray: 5 5;
+  opacity: 0.85;
+}
+
+.connectionStrokeSelected {
+  stroke-width: 3px;
+  filter: drop-shadow(0 0 11px color-mix(in oklch, var(--sys-color-white) 32%, transparent));
+}
+
+.connectionStrokeCuttable {
+  pointer-events: stroke;
+  stroke-width: 10px;
+  cursor: not-allowed;
+}
+
+.connectionPin {
+  stroke: color-mix(in oklch, var(--sys-color-black) 78%, transparent);
+  stroke-width: 1px;
+  filter: drop-shadow(0 1px 2px color-mix(in oklch, var(--sys-color-black) 45%, transparent));
+  pointer-events: none;
+}
+
 .chromeLayer {
   position: fixed;
   inset: 0;
@@ -196,6 +251,16 @@
 .nodePlacement {
   position: absolute;
   transition: transform 0.14s ease;
+}
+
+.nodeConnectionSource::after {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border-radius: 12px;
+  border: 1px dashed color-mix(in oklch, var(--accent) 78%, transparent);
+  box-shadow: 0 0 14px color-mix(in oklch, var(--accent) 30%, transparent);
+  pointer-events: none;
 }
 
 .stackContainer {
@@ -619,6 +684,7 @@
   transform: translate3d(0, 0, 1px);
   transition: transform 0.25s ease, background-color 0.3s ease;
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
   padding: 24px 28px 28px;
   box-shadow:
@@ -646,6 +712,46 @@
   justify-content: space-between;
   gap: 8px;
   width: 100%;
+}
+
+.folderContentPreview {
+  margin-top: auto;
+  padding-top: 12px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.folderContentPreviewList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  row-gap: 6px;
+  width: 100%;
+}
+
+.folderContentPreviewItem {
+  padding-left: 0;
+  font-size: 10px;
+  line-height: 1.22;
+  letter-spacing: 0.02em;
+  color: color-mix(in oklch, var(--folder-fg) 33%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.folderContentPreviewEmpty {
+  font-size: 10px;
+  font-family: var(--font-geist-mono), monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--folder-fg) 42%, transparent);
 }
 
 .folderMetaBlock {
@@ -1310,7 +1416,7 @@
   position: absolute;
   top: 24px;
   left: 24px;
-  z-index: var(--layer-ui-chrome-elevated);
+  z-index: var(--layer-ui-chrome);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -1474,28 +1580,30 @@
 .rootDockPanel {
   position: relative;
   border: 1px solid var(--ui-glass-border);
-  border-radius: 8px;
-  box-shadow: 0 8px 32px var(--sem-color-shadow-40);
+  border-radius: var(--chrome-panel-radius);
+  box-shadow: var(--chrome-glass-shadow);
   background: var(--ui-glass-bg);
-  backdrop-filter: blur(16px) saturate(135%);
-  -webkit-backdrop-filter: blur(16px) saturate(135%);
+  backdrop-filter: var(--chrome-glass-filter);
+  -webkit-backdrop-filter: var(--chrome-glass-filter);
   transform: translateZ(0);
   will-change: backdrop-filter;
+  min-height: var(--chrome-panel-height);
+  box-sizing: border-box;
 }
 
 .glassPanel {
-  padding: 8px 16px;
+  padding: var(--chrome-panel-pad-y) var(--chrome-panel-pad-x);
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 /* Top-left status + breadcrumb strips: shared height, padding, and rhythm */
 .glassPanel.shellTopChromePanel {
   --arch-top-chrome-line-h: 24px;
-  min-height: calc(var(--arch-top-chrome-line-h) + 12px);
-  padding-block: 6px;
-  padding-inline: 12px;
+  min-height: var(--chrome-panel-height);
+  padding-block: var(--chrome-panel-pad-y);
+  padding-inline: var(--chrome-panel-pad-x);
   gap: 12px;
   box-sizing: border-box;
 }
@@ -1617,6 +1725,46 @@
   align-items: center;
 }
 
+.connectionToolbarWrap {
+  display: flex;
+  align-items: center;
+  min-height: var(--chrome-panel-height);
+  gap: 10px;
+}
+
+.connectionModeStrip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.connectionColorSwatches {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.connectionColorSwatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklch, var(--sys-color-white) 24%, transparent);
+  box-shadow:
+    inset 0 1px 1px color-mix(in oklch, var(--sys-color-black) 32%, transparent),
+    0 1px 2px var(--sem-color-shadow-25);
+  cursor: pointer;
+}
+
+.connectionColorSwatch:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.connectionColorSwatchActive {
+  outline: 2px solid color-mix(in oklch, var(--accent) 80%, transparent);
+  outline-offset: 1px;
+}
+
 .dockFolderTintTrigger {
   display: inline-flex;
   align-items: center;
@@ -1637,6 +1785,14 @@
     border-color 0.16s ease,
     background 0.16s ease,
     color 0.16s ease;
+}
+
+.dockFolderTintTriggerSpool {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 999px;
+  justify-content: center;
 }
 
 .dockFolderTintTrigger:hover {
@@ -1673,6 +1829,15 @@
   box-shadow:
     inset 0 1px 1px color-mix(in oklch, var(--sys-color-black) 35%, transparent),
     0 0 0 1px color-mix(in oklch, var(--sys-color-white) 12%, transparent);
+}
+
+.dockFolderTintPreviewSpool {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 3px color-mix(in oklch, var(--sys-color-black) 70%, transparent),
+    0 0 0 4px color-mix(in oklch, var(--sys-color-white) 26%, transparent);
 }
 
 .dockFolderTintPreviewClassic {
@@ -1719,26 +1884,16 @@
     inset 0 1px 0 var(--sem-overlay-white-08);
 }
 
+.dockFolderTintMenuDown {
+  bottom: auto;
+  top: calc(100% + 10px);
+}
+
 .dockFolderTintMenuEditor {
   background: var(--sys-color-black);
   border-color: color-mix(in oklch, var(--sys-color-white) 16%, transparent);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-}
-
-.dockFolderTintMenuHeader {
-  padding: 8px 12px 6px;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: color-mix(in oklch, var(--sem-text-muted) 88%, transparent);
-  border-bottom: 1px solid var(--sem-border-subtle);
-}
-
-.dockFolderTintMenuHeaderEditor {
-  color: color-mix(in oklch, var(--sys-color-white) 42%, transparent);
-  border-bottom-color: color-mix(in oklch, var(--sys-color-white) 12%, transparent);
 }
 
 .dockFolderTintSwatchGrid {
@@ -1807,7 +1962,7 @@
 }
 
 .rootDockPanel {
-  padding: 4px 5px;
+  padding: 4px 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2281,24 +2436,81 @@
   top: 50%;
   transform: translateY(-50%);
   z-index: var(--layer-ui-chrome);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sideToolsMainPanel,
+.sideToolsConnectionPanel {
   background: var(--ui-glass-bg);
-  backdrop-filter: blur(16px) saturate(135%);
-  -webkit-backdrop-filter: blur(16px) saturate(135%);
+  backdrop-filter: var(--chrome-glass-filter);
+  -webkit-backdrop-filter: var(--chrome-glass-filter);
   will-change: backdrop-filter;
   pointer-events: auto;
   border: 1px solid var(--ui-glass-border);
-  border-radius: 8px;
-  box-shadow: 0 8px 32px var(--sem-color-shadow-40);
-  padding: 8px;
+  border-radius: var(--chrome-panel-radius);
+  box-shadow: var(--chrome-glass-shadow);
+  min-width: var(--chrome-panel-height);
+  padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
+/* Draw pin + thread spool: one recessed cluster (no rule between them). */
+.sideToolsDrawSpoolCluster {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 4px 4px;
+  border-radius: calc(var(--chrome-panel-radius) - 3px);
+  background: color-mix(in oklch, var(--sys-color-black) 28%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklch, var(--sys-color-white) 8%, transparent),
+    inset 0 2px 12px color-mix(in oklch, var(--sys-color-black) 42%, transparent);
+}
+
+.sideToolsConnectionColor {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.topRightConnectionTools {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: var(--layer-ui-chrome);
+  pointer-events: auto;
+}
+
+/* In top-right chrome, open the tint menu inward (leftward) to avoid right-edge clipping. */
+.topRightConnectionTools .dockFolderTintMenu {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+/* Connection rail spool: flyout should open to the left of the control. */
+.sideToolsConnectionPanel .dockFolderTintMenu,
+.sideToolsConnectionPanel .dockFolderTintMenuDown,
+.sideToolsConnectionColor .dockFolderTintMenu,
+.sideToolsConnectionColor .dockFolderTintMenuDown {
+  top: 50%;
+  bottom: auto;
+  left: auto;
+  right: calc(100% + 10px);
+  transform: translateY(-50%);
+}
+
 @supports not ((backdrop-filter: blur(1px))) {
   .glassPanel,
   .rootDockPanel,
-  .sideTools {
+  .sideToolsMainPanel,
+  .sideToolsConnectionPanel {
     background: var(--sem-surface-glass-fallback);
   }
 

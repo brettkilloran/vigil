@@ -2,7 +2,10 @@ import { tryGetDb } from "@/src/db/index";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { assertSpaceExists, listItemsForSpace } from "@/src/lib/spaces";
 
-/** Versioned read-only list for scripts / LLM (no auth in single-user mode). */
+/**
+ * Versioned read-only list for scripts / LLM (no auth in single-user mode).
+ * v1 keeps legacy `{ error: string }` failures, while `/api/*` routes use `{ ok: false, error }`.
+ */
 export async function GET(req: Request) {
   const db = tryGetDb();
   if (!db) {

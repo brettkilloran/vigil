@@ -6,19 +6,11 @@ import { ArrowCounterClockwise, Graph, X } from "@phosphor-icons/react";
 
 import { Button } from "@/src/components/ui/Button";
 import { computeForceLayout } from "@/src/lib/graph-layout";
+import type { GraphEdge, GraphNode, SpaceGraphResponse } from "@/src/lib/graph-types";
 import {
   HEARTGARDEN_CHROME_ICON,
   HEARTGARDEN_GLASS_PANEL,
 } from "@/src/lib/vigil-ui-classes";
-
-type GraphNode = {
-  id: string;
-  title: string;
-  itemType: string;
-  entityType: string | null;
-};
-
-type GraphEdge = { source: string; target: string };
 
 function clientToSvgCoords(
   svg: SVGSVGElement,
@@ -182,13 +174,7 @@ function LinkGraphInner({
     let cancelled = false;
     void fetch(`/api/spaces/${spaceId}/graph`)
       .then((res) => res.json())
-      .then(
-        (data: {
-          ok?: boolean;
-          nodes?: GraphNode[];
-          edges?: GraphEdge[];
-          error?: string;
-        }) => {
+      .then((data: SpaceGraphResponse) => {
           if (cancelled) return;
           if (!data.ok || !data.nodes) {
             setErr(data.error ?? "Could not load graph");
@@ -200,8 +186,7 @@ function LinkGraphInner({
             setEdges(data.edges ?? []);
           }
           setDone(true);
-        },
-      )
+        })
       .catch(() => {
         if (cancelled) return;
         setErr("Could not load graph");

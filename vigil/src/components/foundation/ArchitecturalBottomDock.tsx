@@ -88,6 +88,16 @@ export const DEFAULT_CREATE_ACTIONS: DockCreateAction[] = [
   { id: "folder", label: "Folder", nodeType: "folder" },
 ];
 
+export type ConnectionDockMode = "move" | "draw" | "cut";
+export type ConnectionToolbarProps = {
+  mode: ConnectionDockMode;
+  onSetMode: (next: ConnectionDockMode) => void;
+  colorScheme: FolderColorSchemeId | null;
+  onSetColorScheme: (next: FolderColorSchemeId | null) => void;
+  disabled?: boolean;
+  variant?: "canvas" | "editor";
+};
+
 export function ArchitecturalFormatToolbar({
   insertDocActions = DEFAULT_DOC_INSERT_ACTIONS,
   formatActions = DEFAULT_FORMAT_ACTIONS,
@@ -244,18 +254,34 @@ export function ArchitecturalFolderColorStrip({
   value,
   onChange,
   variant = "canvas",
+  appearance = "label",
+  ariaLabel = "Folder inks",
 }: {
   value: FolderColorSchemeId | null;
   onChange: (next: FolderColorSchemeId | null) => void;
   variant?: "canvas" | "editor";
+  appearance?: "label" | "spool";
+  ariaLabel?: string;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuDirection, setMenuDirection] = useState<"up" | "down">("up");
   const pickerRef = useRef<HTMLDivElement | null>(null);
   const isEditor = variant === "editor";
+  const isSpool = appearance === "spool";
   const activeMeta = value ? FOLDER_COLOR_SCHEMES.find((s) => s.id === value) : null;
 
   useEffect(() => {
     if (!menuOpen) return;
+    const trigger = pickerRef.current;
+    if (trigger) {
+      const rect = trigger.getBoundingClientRect();
+      const estimatedMenuHeight = 190;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const shouldOpenDown =
+        spaceBelow >= estimatedMenuHeight || (spaceBelow > 110 && spaceAbove < estimatedMenuHeight);
+      setMenuDirection(shouldOpenDown ? "down" : "up");
+    }
     const onPointerDown = (event: PointerEvent) => {
       const t = event.target as Node | null;
       if (!t || !pickerRef.current?.contains(t)) setMenuOpen(false);
@@ -283,53 +309,51 @@ export function ArchitecturalFolderColorStrip({
       ref={pickerRef}
       className={styles.dockFolderTintPicker}
       role="group"
-      aria-label="Folder inks"
+      aria-label={ariaLabel}
     >
       <button
         type="button"
         className={cx(
           styles.dockFolderTintTrigger,
+          isSpool && styles.dockFolderTintTriggerSpool,
           isEditor && styles.dockFolderTintTriggerEditor,
           menuOpen && styles.dockFolderTintTriggerOpen,
         )}
         aria-haspopup="listbox"
         aria-expanded={menuOpen}
-        title="Folder inks"
+        title={ariaLabel}
+        aria-label={ariaLabel}
         onClick={() => setMenuOpen((open) => !open)}
       >
         <span
           className={cx(
             styles.dockFolderTintPreview,
+            isSpool && styles.dockFolderTintPreviewSpool,
             value === null ? styles.dockFolderTintPreviewClassic : null,
           )}
           style={activeMeta ? { background: activeMeta.swatch } : undefined}
           aria-hidden
         />
-        <span className={styles.dockFolderTintTriggerText}>Tint</span>
-        <CaretDown
-          size={11}
-          weight="bold"
-          className={styles.dockFolderTintCaret}
-          aria-hidden
-        />
+        {!isSpool ? <span className={styles.dockFolderTintTriggerText}>Tint</span> : null}
+        {!isSpool ? (
+          <CaretDown
+            size={11}
+            weight="bold"
+            className={styles.dockFolderTintCaret}
+            aria-hidden
+          />
+        ) : null}
       </button>
       {menuOpen ? (
         <div
           className={cx(
             styles.dockFolderTintMenu,
+            menuDirection === "down" && styles.dockFolderTintMenuDown,
             isEditor && styles.dockFolderTintMenuEditor,
           )}
           role="listbox"
-          aria-label="Folder color inks"
+          aria-label={ariaLabel}
         >
-          <div
-            className={cx(
-              styles.dockFolderTintMenuHeader,
-              isEditor && styles.dockFolderTintMenuHeaderEditor,
-            )}
-          >
-            Coven inks
-          </div>
           <div className={styles.dockFolderTintSwatchGrid}>
             <button
               type="button"
@@ -402,6 +426,56 @@ export function ArchitecturalCreateMenu({
   );
 }
 
+export function ArchitecturalConnectionToolbar({
+  mode,
+  onSetMode,
+  colorScheme,
+  onSetColorScheme,
+  disabled = false,
+  variant = "canvas",
+}: ConnectionToolbarProps) {
+  const isEditor = variant === "editor";
+  const tone = isEditor ? "card-dark" : "glass";
+  return (
+    <div className={styles.connectionToolbarWrap}>
+      <div className={styles.connectionModeStrip} role="toolbar" aria-label="Connections">
+        <ArchitecturalButton
+          size="menu"
+          tone={tone}
+          active={mode === "move"}
+          disabled={disabled}
+          onClick={() => onSetMode("move")}
+        >
+          Move
+        </ArchitecturalButton>
+        <ArchitecturalButton
+          size="menu"
+          tone={tone}
+          active={mode === "draw"}
+          disabled={disabled}
+          onClick={() => onSetMode("draw")}
+        >
+          Draw
+        </ArchitecturalButton>
+        <ArchitecturalButton
+          size="menu"
+          tone={tone}
+          active={mode === "cut"}
+          disabled={disabled}
+          onClick={() => onSetMode("cut")}
+        >
+          Cut
+        </ArchitecturalButton>
+      </div>
+      <ArchitecturalFolderColorStrip
+        value={colorScheme}
+        onChange={onSetColorScheme}
+        variant={isEditor ? "editor" : "canvas"}
+      />
+    </div>
+  );
+}
+
 export function ArchitecturalBottomDock({
   variant = "canvas",
   onFormat,
@@ -421,6 +495,7 @@ export function ArchitecturalBottomDock({
   activeBlockTag = "p",
   showCreateMenu = true,
   folderColorPicker = null,
+  connectionColorPicker = null,
 }: {
   /** `editor`: solid black panels + light icon controls (focus mode only). */
   variant?: ArchitecturalBottomDockVariant;
@@ -443,6 +518,11 @@ export function ArchitecturalBottomDock({
   showCreateMenu?: boolean;
   /** Shown when a single folder is selected on the canvas. */
   folderColorPicker?: {
+    value: FolderColorSchemeId | null;
+    onChange: (next: FolderColorSchemeId | null) => void;
+  } | null;
+  /** Global connection tint picker for pin strings. */
+  connectionColorPicker?: {
     value: FolderColorSchemeId | null;
     onChange: (next: FolderColorSchemeId | null) => void;
   } | null;
@@ -517,6 +597,19 @@ export function ArchitecturalBottomDock({
                 <ArchitecturalFolderColorStrip
                   value={folderColorPicker.value}
                   onChange={folderColorPicker.onChange}
+                  variant={isEditor ? "editor" : "canvas"}
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
+        {connectionColorPicker ? (
+          <div className={cx(styles.rootDockPanelSlot, styles.rootDockPanelSlotOpen)}>
+            <div className={styles.rootDockPanelSlotInner}>
+              <div className={styles.rootDockPanel}>
+                <ArchitecturalFolderColorStrip
+                  value={connectionColorPicker.value}
+                  onChange={connectionColorPicker.onChange}
                   variant={isEditor ? "editor" : "canvas"}
                 />
               </div>

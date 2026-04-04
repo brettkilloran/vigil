@@ -4,14 +4,35 @@ import { useEffect, useRef, type ReactNode } from "react";
 
 import { Button } from "@/src/components/ui/Button";
 
+export type ContextMenuPosition = { x: number; y: number } | null;
+export type ContextMenuItem = {
+  label: string;
+  icon?: ReactNode;
+  onSelect: () => void;
+  disabled?: boolean;
+};
+
+export function clampContextMenuPosition(
+  point: { x: number; y: number },
+  options?: { maxWidth?: number; maxHeight?: number; edgePadding?: number },
+): { x: number; y: number } {
+  const maxWidth = options?.maxWidth ?? 260;
+  const maxHeight = options?.maxHeight ?? 240;
+  const edgePadding = options?.edgePadding ?? 8;
+  return {
+    x: Math.min(point.x, window.innerWidth - maxWidth - edgePadding),
+    y: Math.min(point.y, window.innerHeight - maxHeight - edgePadding),
+  };
+}
+
 export function ContextMenu({
   position,
   onClose,
   items,
 }: {
-  position: { x: number; y: number } | null;
+  position: ContextMenuPosition;
   onClose: () => void;
-  items: { label: string; icon?: ReactNode; onSelect: () => void; disabled?: boolean }[];
+  items: ContextMenuItem[];
 }) {
   const ref = useRef<HTMLDivElement>(null);
 

@@ -2,16 +2,8 @@ import { and, eq, inArray } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
+import type { GraphEdge, GraphNode } from "@/src/lib/graph-types";
 import { assertSpaceExists } from "@/src/lib/spaces";
-
-export type GraphNode = {
-  id: string;
-  title: string;
-  itemType: string;
-  entityType: string | null;
-};
-
-export type GraphEdge = { source: string; target: string };
 
 export async function GET(
   _req: Request,
@@ -54,8 +46,12 @@ export async function GET(
 
   const linkRows = await db
     .select({
+      id: itemLinks.id,
       source: itemLinks.sourceItemId,
       target: itemLinks.targetItemId,
+      color: itemLinks.color,
+      sourcePin: itemLinks.sourcePin,
+      targetPin: itemLinks.targetPin,
     })
     .from(itemLinks)
     .where(
@@ -73,8 +69,12 @@ export async function GET(
   }));
 
   const edges: GraphEdge[] = linkRows.map((l) => ({
+    id: l.id,
     source: l.source,
     target: l.target,
+    color: l.color ?? null,
+    sourcePin: l.sourcePin ?? null,
+    targetPin: l.targetPin ?? null,
   }));
 
   return Response.json({ ok: true, nodes, edges });
