@@ -157,10 +157,19 @@ export function LoreAskPanel({
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    <>
+    <div
+      data-hg-portal-root="lore"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1210,
+        pointerEvents: "none",
+      }}
+    >
       <div
         data-hg-lore="overlay"
         aria-hidden="true"
+        style={{ pointerEvents: "auto" }}
         onMouseDown={(e) => {
           if (e.target === e.currentTarget) onClose();
         }}
@@ -288,7 +297,7 @@ export function LoreAskPanel({
           ) : null}
         </div>
       </div>
-    </>,
+    </div>,
     document.body,
   );
 }

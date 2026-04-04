@@ -734,6 +734,15 @@ function isCanvasPointerMarqueeOrPanSurface(
   activeTool: CanvasTool,
   spacePanning: boolean,
 ): boolean {
+  // Toolbars use Phosphor (svg/path) glyphs. Those must not count as the canvas surface or we start
+  // lasso/pan on icon mousedown; a tiny mouseup then clears selection (lasso “click” path).
+  if (
+    target.closest(
+      "button, a, input, textarea, select, [role='button'], [data-hg-chrome]",
+    )
+  ) {
+    return false;
+  }
   if (activeTool === "pan" || spacePanning) return true;
   if (
     target.closest("[data-node-id]") ||
@@ -4416,11 +4425,18 @@ export function ArchitecturalCanvasApp({
       if (activeTool === "pan" || spacePanRef.current) return;
       if (event.button !== 0) return;
       if (target.closest("[data-stack-container='true']")) return;
+      const nodeIdForHit = entity?.dataset.nodeId;
+      const hitEntity = nodeIdForHit ? graph.entities[nodeIdForHit] : undefined;
+      /* Folder flap (.folderFront) is the primary double-click target; arming drag here
+       * breaks native dblclick. Drag the folder from the tab/back (top) hit area only. */
+      const inFolderFront =
+        hitEntity?.kind === "folder" && !!target.closest(`.${styles.folderFront}`);
       const inContent =
         target.closest(`.${styles.nodeBody}`) ||
         target.closest(`.${styles.nodeBtn}`) ||
         target.closest(`.${styles.folderTitleInput}`) ||
-        target.closest("[data-folder-open-btn='true']");
+        target.closest("[data-folder-open-btn='true']") ||
+        inFolderFront;
 
       if (entity && !inContent) {
         const nodeId = entity.dataset.nodeId;
@@ -6154,7 +6170,7 @@ export function ArchitecturalCanvasApp({
                         size="menu"
                         tone="focus-light"
                         className={styles.navBackBtn}
-                        leadingIcon={<ArrowLeft size={12} weight="bold" aria-hidden />}
+                        leadingIcon={<ArrowLeft size={14} weight="bold" aria-hidden />}
                         onClick={goBack}
                       >
                         Back

@@ -1,6 +1,6 @@
 "use client";
 
-import { CaretUp, LinkSimple } from "@phosphor-icons/react";
+import { Bug, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/src/components/ui/Button";
@@ -47,7 +47,12 @@ export function CanvasDebugInspectorShell({
   const toggle = useCallback(() => setOpen((v) => !v), []);
 
   return (
-    <div className={styles.anchor} role="region" aria-label={title}>
+    <div
+      className={styles.anchor}
+      role="region"
+      aria-label={title}
+      data-hg-chrome="debug-inspector"
+    >
       {!open ? (
         <div className={styles.collapsedPanel}>
           <Button
@@ -56,13 +61,13 @@ export function CanvasDebugInspectorShell({
             variant="neutral"
             tone="glass"
             iconOnly
-            title="Open link inspector (debug)"
-            aria-label="Open link inspector (debug)"
+            title="Open debug link inspector"
+            aria-label="Open debug link inspector"
             aria-expanded={false}
             aria-controls={`${storageKey}-panel`}
             onClick={() => setOpen(true)}
           >
-            <LinkSimple size={18} weight="bold" aria-hidden />
+            <Bug size={18} weight="bold" aria-hidden />
           </Button>
         </div>
       ) : (
@@ -75,11 +80,11 @@ export function CanvasDebugInspectorShell({
               variant="neutral"
               tone="glass"
               iconOnly
-              title="Collapse link inspector"
-              aria-label="Collapse link inspector"
+              title="Close link inspector"
+              aria-label="Close link inspector"
               onClick={toggle}
             >
-              <CaretUp size={16} weight="bold" aria-hidden />
+              <X size={18} weight="bold" aria-hidden />
             </Button>
           </div>
           <div className={styles.panelBody}>{children}</div>

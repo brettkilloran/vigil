@@ -419,11 +419,22 @@ export function CommandPalette({
 
   if (!open || typeof document === "undefined") return null;
 
+  /* Single portal root: Fragment siblings under createPortal can trigger React removeChild(null)
+   * during fast unmount (Next.js / concurrent). */
   const portal = (
-    <>
+    <div
+      data-hg-portal-root="cmdk"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1200,
+        pointerEvents: "none",
+      }}
+    >
       <div
         data-hg-cmdk="overlay"
         aria-hidden="true"
+        style={{ pointerEvents: "auto" }}
         onMouseDown={(e) => {
           if (e.target === e.currentTarget) onClose();
         }}
@@ -637,7 +648,7 @@ export function CommandPalette({
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 
   return createPortal(portal, document.body);

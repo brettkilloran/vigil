@@ -3,10 +3,10 @@
 import { TreeStructure } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import type { CanvasContentEntity, CanvasGraph } from "@/src/components/foundation/architectural-types";
 import { Button } from "@/src/components/ui/Button";
 import { CanvasDebugInspectorShell } from "@/src/components/ui/CanvasDebugInspectorShell";
-import type { CanvasContentEntity, CanvasGraph } from "@/src/components/foundation/architectural-types";
-import { HEARTGARDEN_METADATA_LABEL } from "@/src/lib/vigil-ui-classes";
+import debugInspectorStyles from "@/src/components/ui/CanvasDebugInspectorShell.module.css";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -41,8 +41,8 @@ function RowList({
   if (rows.length === 0) return null;
   return (
     <div>
-      <div className={`mb-1 ${HEARTGARDEN_METADATA_LABEL}`}>{label}</div>
-      <ul className="space-y-0.5">
+      <div className={debugInspectorStyles.debugInspectorSectionLabel}>{label}</div>
+      <ul className={debugInspectorStyles.debugInspectorList}>
         {rows.map((r) => (
           <li key={r.id}>
             <Button
@@ -212,29 +212,29 @@ export function ArchitecturalLinksPanel({
   return (
     <CanvasDebugInspectorShell storageKey="hg-canvas-debug-links" title="Debug // Link inspector" defaultOpen={false}>
       {!cloudEnabled ? (
-        <p className="mb-2.5 text-[11px] leading-snug text-[var(--vigil-muted)]">
-          Local canvas — <code className="rounded bg-black/5 px-0.5 dark:bg-white/10">[[</code> wiki
-          targets and <code className="text-[9px]">vigil:item:</code> in note HTML. Sync to Neon for
-          server links.
+        <p className={debugInspectorStyles.debugInspectorIntro}>
+          Local canvas — <code className={debugInspectorStyles.debugInspectorCode}>[[</code> wiki
+          targets and <code className={debugInspectorStyles.debugInspectorCode}>vigil:item:</code> in
+          note HTML. Sync to Neon for server links.
         </p>
       ) : (
-        <p className="mb-2.5 text-[11px] leading-snug text-[var(--vigil-muted)]">
-          Neon <code className="text-[9px]">item_links</code>, wiki targets, and FTS-related cards in
-          this space.
+        <p className={debugInspectorStyles.debugInspectorIntro}>
+          Neon <code className={debugInspectorStyles.debugInspectorCode}>item_links</code>, wiki
+          targets, and FTS-related cards in this space.
         </p>
       )}
 
       {cloudEnabled && itemIdForCloud ? (
         cloudLoading && !cloud ? (
-          <p className="text-[var(--vigil-muted)]">Loading server links…</p>
+          <p className={debugInspectorStyles.debugInspectorMuted}>Loading server links…</p>
         ) : cloud?.err ? (
-          <p className="text-red-600 dark:text-red-400">{cloud.err}</p>
+          <p className={debugInspectorStyles.debugInspectorError}>{cloud.err}</p>
         ) : cloud ? (
-          <div className="space-y-2.5">
+          <div className={debugInspectorStyles.debugInspectorStack}>
             {cloud.outgoing.length > 0 ? (
               <div>
-                <div className={`mb-1 ${HEARTGARDEN_METADATA_LABEL}`}>To (server)</div>
-                <ul className="space-y-0.5">
+                <div className={debugInspectorStyles.debugInspectorSectionLabel}>To (server)</div>
+                <ul className={debugInspectorStyles.debugInspectorList}>
                   {cloud.outgoing.map((r) => (
                     <li key={r.linkId}>
                       <Button
@@ -256,8 +256,8 @@ export function ArchitecturalLinksPanel({
             ) : null}
             {cloud.incoming.length > 0 ? (
               <div>
-                <div className={`mb-1 ${HEARTGARDEN_METADATA_LABEL}`}>From (server)</div>
-                <ul className="space-y-0.5">
+                <div className={debugInspectorStyles.debugInspectorSectionLabel}>From (server)</div>
+                <ul className={debugInspectorStyles.debugInspectorList}>
                   {cloud.incoming.map((r) => (
                     <li key={r.linkId}>
                       <Button
@@ -278,35 +278,43 @@ export function ArchitecturalLinksPanel({
               </div>
             ) : null}
             {cloud.outgoing.length === 0 && cloud.incoming.length === 0 ? (
-              <p className="text-[var(--vigil-muted)]">No server links for this card yet.</p>
+              <p className={debugInspectorStyles.debugInspectorMuted}>
+                No server links for this card yet.
+              </p>
             ) : null}
           </div>
         ) : null
       ) : null}
 
       {entity?.kind === "content" ? (
-        <div className="mt-2 border-t border-[var(--vigil-border)]/70 pt-2">
-          <div className={`mb-1 ${HEARTGARDEN_METADATA_LABEL}`}>Wiki on this space</div>
-          <RowList label="Out" rows={localWiki.outgoing} onPick={focus} />
-          <RowList label="In" rows={localWiki.incoming} onPick={focus} />
+        <div className={debugInspectorStyles.debugInspectorDivider}>
+          <div className={debugInspectorStyles.debugInspectorSectionLabel}>Wiki on this space</div>
+          <div className={debugInspectorStyles.debugInspectorStack}>
+            <RowList label="Out" rows={localWiki.outgoing} onPick={focus} />
+            <RowList label="In" rows={localWiki.incoming} onPick={focus} />
+          </div>
           {localWiki.outgoing.length === 0 && localWiki.incoming.length === 0 ? (
-            <p className="text-[var(--vigil-muted)]">No vigil:item / HTML wiki targets yet.</p>
+            <p className={debugInspectorStyles.debugInspectorMuted}>
+              No vigil:item / HTML wiki targets yet.
+            </p>
           ) : null}
         </div>
       ) : null}
 
       {cloudEnabled && itemIdForCloud ? (
-        <div className="mt-3 border-t border-[var(--vigil-border)]/70 pt-3">
-          <div className="mb-1 flex items-center gap-1.5 text-[var(--vigil-label)]">
-            <TreeStructure className="size-3.5 text-[var(--vigil-muted)]" weight="bold" aria-hidden />
-            <span className={HEARTGARDEN_METADATA_LABEL}>Related (FTS)</span>
+        <div className={debugInspectorStyles.debugInspectorDivider}>
+          <div className={debugInspectorStyles.debugInspectorRelatedHeading}>
+            <TreeStructure size={14} weight="bold" aria-hidden />
+            <span>Related (FTS)</span>
           </div>
           {relatedLoading ? (
-            <p className="text-[var(--vigil-muted)]">Loading…</p>
+            <p className={debugInspectorStyles.debugInspectorMuted}>Loading…</p>
           ) : related.length === 0 ? (
-            <p className="text-[var(--vigil-muted)]">No strong matches in this space.</p>
+            <p className={debugInspectorStyles.debugInspectorMuted}>
+              No strong matches in this space.
+            </p>
           ) : (
-            <ul className="space-y-0.5">
+            <ul className={debugInspectorStyles.debugInspectorList}>
               {related.map((r) => (
                 <li key={r.id}>
                   <Button

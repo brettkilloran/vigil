@@ -54,8 +54,8 @@ export function ArchitecturalStatusMetric({
   );
 }
 
-const POPOVER_ESTIMATE_H = 400;
-const POPOVER_W = 288;
+const POPOVER_ESTIMATE_H = 460;
+const POPOVER_W = 328;
 const POPOVER_GAP = 8;
 
 function SaveAndVersionPopover({
@@ -191,9 +191,15 @@ function SaveAndVersionPopover({
     const rect = el.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+    const panelH = panelRef.current?.offsetHeight ?? POPOVER_ESTIMATE_H;
     const spaceBelow = vh - rect.bottom - POPOVER_GAP;
-    const flip = spaceBelow < POPOVER_ESTIMATE_H && rect.top > POPOVER_ESTIMATE_H;
-    const top = flip ? rect.top - POPOVER_GAP - POPOVER_ESTIMATE_H : rect.bottom + POPOVER_GAP;
+    const flip =
+      spaceBelow < panelH + POPOVER_GAP && rect.top > panelH + POPOVER_GAP * 2;
+    let top = flip ? rect.top - POPOVER_GAP - panelH : rect.bottom + POPOVER_GAP;
+    const minTop = 8;
+    const maxTop = Math.max(minTop, vh - panelH - 8);
+    if (top < minTop) top = minTop;
+    else if (top > maxTop) top = maxTop;
     let left = rect.left;
     const maxLeft = vw - POPOVER_W - 8;
     if (left > maxLeft) left = Math.max(8, maxLeft);
@@ -264,19 +270,21 @@ function SaveAndVersionPopover({
               <div className={styles.syncPopoverMeta}>
                 {absSaved ? (
                   <div className={styles.syncPopoverMetaRow}>
-                    <span className={styles.syncPopoverMetaKey}>Last successful write</span>{" "}
-                    <span className={styles.syncPopoverMetaVal}>{absSaved}</span>
-                    {relSaved ? (
-                      <span className={styles.syncPopoverMetaRel}> · {relSaved}</span>
-                    ) : null}
+                    <span className={styles.syncPopoverMetaKey}>Last successful write</span>
+                    <span className={styles.syncPopoverMetaValueLine}>
+                      <span className={styles.syncPopoverMetaVal}>{absSaved}</span>
+                      {relSaved ? (
+                        <span className={styles.syncPopoverMetaRel}>· {relSaved}</span>
+                      ) : null}
+                    </span>
                   </div>
                 ) : null}
                 <div className={styles.syncPopoverMetaRow}>
-                  <span className={styles.syncPopoverMetaKey}>Pending debounced saves</span>{" "}
+                  <span className={styles.syncPopoverMetaKey}>Pending debounced saves</span>
                   <span className={styles.syncPopoverMetaVal}>{sync.pending}</span>
                 </div>
                 <div className={styles.syncPopoverMetaRow}>
-                  <span className={styles.syncPopoverMetaKey}>In-flight requests</span>{" "}
+                  <span className={styles.syncPopoverMetaKey}>In-flight requests</span>
                   <span className={styles.syncPopoverMetaVal}>{sync.inFlight}</span>
                 </div>
               </div>
@@ -292,10 +300,10 @@ function SaveAndVersionPopover({
               {onExportGraphJson ? (
                 <Button
                   type="button"
-                  size="sm"
+                  size="md"
                   variant="primary"
                   tone="solid"
-                  className="mt-2 w-full"
+                  className={styles.syncPopoverExport}
                   onClick={handleExport}
                 >
                   Export graph JSON

@@ -9,6 +9,7 @@ import {
   type FolderColorSchemeId,
 } from "@/src/components/foundation/architectural-folder-schemes";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
+import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
 import { Button } from "@/src/components/ui/Button";
 
 const FOLDER_PREVIEW_VISIBLE_MAX = 6;
@@ -72,6 +73,15 @@ export function ArchitecturalFolderCard({
         selected ? styles.folderSelected : ""
       }`}
       style={schemeStyle}
+      onDoubleClick={(event) => {
+        const el = pointerEventTargetElement(event.target);
+        if (!el) return;
+        if (el.closest(`.${styles.folderTitleInput}`)) return;
+        if (el.closest("[data-folder-open-btn='true']")) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onOpen?.();
+      }}
     >
       <div className={styles.folderBack} />
       {showPeek ? (
