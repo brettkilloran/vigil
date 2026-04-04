@@ -134,16 +134,15 @@ function isEditableTarget(target: EventTarget | null) {
   );
 }
 
-/** Focus is in a shell text surface where the formatting dock applies (execCommand targets selection). */
+/**
+ * Focus / selection is in a rich prose body where the formatting dock applies.
+ * Excludes titles (focus overlay, folder names), plain-text fields, and other inputs.
+ */
 function isTextFormattingToolbarTarget(focusEl: Element | null): boolean {
   if (!focusEl || !(focusEl instanceof HTMLElement)) return false;
-  if (focusEl.closest("[data-focus-title-editor]")) return true;
-  if (focusEl.closest("[data-folder-title-editor]")) return true;
   const root = focusEl.closest("[contenteditable='true']");
   if (!root) return false;
-  return !!root.closest(
-    "[data-node-body-editor], [data-focus-body-editor], [data-folder-title-editor]",
-  );
+  return !!root.closest("[data-node-body-editor], [data-focus-body-editor]");
 }
 
 /** Caret is in a prose body surface (not card titles) — in-document insert tools apply. */

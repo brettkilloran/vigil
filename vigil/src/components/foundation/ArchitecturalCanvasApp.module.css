@@ -564,7 +564,8 @@
   );
   box-shadow:
     0 0 0 1px var(--folder-border),
-    inset 0 -18px 36px color-mix(in oklch, var(--sys-color-black) 40%, transparent);
+    /* Vignette stays in-gamut (mix with face) so neons don’t turn muddy black. */
+    inset 0 -16px 32px color-mix(in oklch, var(--folder-bg) 45%, var(--sys-color-black) 55%);
   transform: translateZ(0);
 }
 
@@ -605,11 +606,12 @@
   backface-visibility: hidden;
   /* Solid underlay so 3D tilt never reads as “see-through” during the transition */
   background-color: var(--folder-bg);
+  /* Shallow sheen: mostly hue from --folder-bg so tint matches the palette. */
   background-image: linear-gradient(
-    180deg,
-    color-mix(in oklch, var(--folder-bg) 96%, var(--sys-color-white) 4%) 0%,
-    var(--folder-bg) 28%,
-    color-mix(in oklch, var(--folder-bg) 92%, var(--sys-color-black) 8%) 100%
+    168deg,
+    color-mix(in oklch, var(--folder-bg) 82%, var(--sys-color-white)) 0%,
+    var(--folder-bg) 38%,
+    color-mix(in oklch, var(--folder-bg) 88%, var(--sys-color-black)) 100%
   );
   border: none;
   border-radius: 14px 14px 22px 22px;
@@ -686,10 +688,10 @@
     inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 5%, transparent);
   background-color: color-mix(in oklch, var(--folder-bg) 92%, var(--sys-color-white) 8%);
   background-image: linear-gradient(
-    180deg,
-    color-mix(in oklch, var(--folder-bg) 90%, var(--sys-color-white) 10%) 0%,
+    168deg,
+    color-mix(in oklch, var(--folder-bg) 78%, var(--sys-color-white)) 0%,
     color-mix(in oklch, var(--folder-bg) 92%, var(--sys-color-white) 8%) 45%,
-    color-mix(in oklch, var(--folder-bg) 94%, var(--sys-color-black) 6%) 100%
+    color-mix(in oklch, var(--folder-bg) 88%, var(--sys-color-black)) 100%
   );
 }
 
@@ -2006,6 +2008,15 @@
     animation-delay: 0.16s;
   }
 
+  /* Format strip when folder tint slot is present (tint is 3rd child, format 4th). */
+  .bottomDock
+    .rootDockCluster
+    > .rootDockPanelSlot:nth-child(4).rootDockPanelSlotOpen
+    .rootDockPanel {
+    animation: dockPanelPop 0.44s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: 0.22s;
+  }
+
   .bottomDock
     :is(
       .rootDockCluster > .rootDockPanel .dockCreateToolbar,
@@ -2157,6 +2168,10 @@
   .bottomDock
     .rootDockCluster
     > .rootDockPanelSlot:nth-child(3).rootDockPanelSlotOpen
+    .rootDockPanel,
+  .bottomDock
+    .rootDockCluster
+    > .rootDockPanelSlot:nth-child(4).rootDockPanelSlotOpen
     .rootDockPanel {
     animation: none;
   }

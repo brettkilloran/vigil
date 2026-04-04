@@ -465,19 +465,6 @@ export function ArchitecturalBottomDock({
             />
           </div>
         ) : null}
-        {folderColorPicker ? (
-          <div className={cx(styles.rootDockPanelSlot, styles.rootDockPanelSlotOpen)}>
-            <div className={styles.rootDockPanelSlotInner}>
-              <div className={styles.rootDockPanel}>
-                <ArchitecturalFolderColorStrip
-                  value={folderColorPicker.value}
-                  onChange={folderColorPicker.onChange}
-                  variant={isEditor ? "editor" : "canvas"}
-                />
-              </div>
-            </div>
-          </div>
-        ) : null}
         <div
           className={cx(
             styles.rootDockPanelSlot,
@@ -523,6 +510,19 @@ export function ArchitecturalBottomDock({
             </div>
           </div>
         </div>
+        {folderColorPicker ? (
+          <div className={cx(styles.rootDockPanelSlot, styles.rootDockPanelSlotOpen)}>
+            <div className={styles.rootDockPanelSlotInner}>
+              <div className={styles.rootDockPanel}>
+                <ArchitecturalFolderColorStrip
+                  value={folderColorPicker.value}
+                  onChange={folderColorPicker.onChange}
+                  variant={isEditor ? "editor" : "canvas"}
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
         <div
           className={cx(
             styles.rootDockPanelSlot,
