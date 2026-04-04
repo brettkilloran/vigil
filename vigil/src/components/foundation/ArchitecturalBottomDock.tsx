@@ -283,7 +283,7 @@ export function ArchitecturalFolderColorStrip({
       ref={pickerRef}
       className={styles.dockFolderTintPicker}
       role="group"
-      aria-label="Folder tint"
+      aria-label="Folder inks"
     >
       <button
         type="button"
@@ -294,7 +294,7 @@ export function ArchitecturalFolderColorStrip({
         )}
         aria-haspopup="listbox"
         aria-expanded={menuOpen}
-        title="Folder surface tint"
+        title="Folder inks"
         onClick={() => setMenuOpen((open) => !open)}
       >
         <span
@@ -320,7 +320,7 @@ export function ArchitecturalFolderColorStrip({
             isEditor && styles.dockFolderTintMenuEditor,
           )}
           role="listbox"
-          aria-label="Folder tints"
+          aria-label="Folder color inks"
         >
           <div
             className={cx(
@@ -328,15 +328,15 @@ export function ArchitecturalFolderColorStrip({
               isEditor && styles.dockFolderTintMenuHeaderEditor,
             )}
           >
-            Palette
+            Coven inks
           </div>
           <div className={styles.dockFolderTintSwatchGrid}>
             <button
               type="button"
               role="option"
               aria-selected={value === null}
-              title="Default"
-              aria-label="Default folder color"
+              title="Black mirror"
+              aria-label="Black mirror — unmarked folder"
               className={cx(
                 styles.dockFolderTintMenuSwatch,
                 styles.dockFolderTintMenuSwatchClassic,
