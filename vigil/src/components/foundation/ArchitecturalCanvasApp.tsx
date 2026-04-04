@@ -407,6 +407,10 @@ export function ArchitecturalCanvasApp({
   const [focusOpen, setFocusOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryNodeId, setGalleryNodeId] = useState<string | null>(null);
+  const [galleryDraftTitle, setGalleryDraftTitle] = useState("");
+  const [galleryDraftNotes, setGalleryDraftNotes] = useState("");
+  const [galleryBaselineTitle, setGalleryBaselineTitle] = useState("");
+  const [galleryBaselineNotes, setGalleryBaselineNotes] = useState("");
   const [galleryDimsLabel, setGalleryDimsLabel] = useState("— × —");
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [focusTitle, setFocusTitle] = useState("");
@@ -910,16 +914,6 @@ export function ArchitecturalCanvasApp({
     [queueGraphCommit, recordUndoBeforeMutation],
   );
 
-  const updateMediaNotes = useCallback(
-    (id: string, notes: string) => {
-      const e = graphRef.current.entities[id];
-      if (!e || e.kind !== "content" || e.theme !== "media") return;
-      const next = setArchitecturalMediaNotes(e.bodyHtml, notes);
-      updateNodeBody(id, next);
-    },
-    [updateNodeBody],
-  );
-
   const onArchitecturalMediaFile = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -1029,14 +1023,61 @@ export function ArchitecturalCanvasApp({
   const closeMediaGallery = useCallback(() => {
     setGalleryOpen(false);
     setGalleryNodeId(null);
+    setGalleryDraftTitle("");
+    setGalleryDraftNotes("");
+    setGalleryBaselineTitle("");
+    setGalleryBaselineNotes("");
   }, []);
 
   const openMediaGallery = useCallback((id: string) => {
     const entity = graph.entities[id];
     if (!entity || entity.kind !== "content" || entity.theme !== "media") return;
+    const notes = getArchitecturalMediaNotes(entity.bodyHtml);
     setGalleryNodeId(id);
+    setGalleryDraftTitle(entity.title);
+    setGalleryDraftNotes(notes);
+    setGalleryBaselineTitle(entity.title);
+    setGalleryBaselineNotes(notes);
     setGalleryOpen(true);
   }, [graph.entities]);
+
+  const saveGalleryAndClose = useCallback(() => {
+    if (!galleryNodeId) return;
+    const entity = graphRef.current.entities[galleryNodeId];
+    if (!entity || entity.kind !== "content" || entity.theme !== "media") {
+      closeMediaGallery();
+      return;
+    }
+    const nextTitle = normalizedFocusTitle(galleryDraftTitle);
+    const nextBody = setArchitecturalMediaNotes(entity.bodyHtml, galleryDraftNotes);
+    if (entity.title === nextTitle && entity.bodyHtml === nextBody) {
+      closeMediaGallery();
+      return;
+    }
+    recordUndoBeforeMutation();
+    setGraph((prev) => {
+      const e = prev.entities[galleryNodeId];
+      if (!e || e.kind !== "content") return prev;
+      return {
+        ...prev,
+        entities: {
+          ...prev.entities,
+          [galleryNodeId]: {
+            ...e,
+            title: nextTitle,
+            bodyHtml: setArchitecturalMediaNotes(e.bodyHtml, galleryDraftNotes),
+          },
+        },
+      };
+    });
+    closeMediaGallery();
+  }, [
+    closeMediaGallery,
+    galleryDraftNotes,
+    galleryDraftTitle,
+    galleryNodeId,
+    recordUndoBeforeMutation,
+  ]);
 
   const handleNodeExpand = useCallback(
     (id: string) => {
@@ -1101,6 +1142,22 @@ export function ArchitecturalCanvasApp({
       normalizedFocusTitle(focusTitle) !== normalizedFocusTitle(focusBaselineTitle) ||
       focusBody !== focusBaselineBody,
     [focusTitle, focusBody, focusBaselineTitle, focusBaselineBody],
+  );
+
+  const galleryDirty = useMemo(
+    () =>
+      !!galleryOpen &&
+      !!galleryNodeId &&
+      (normalizedFocusTitle(galleryDraftTitle) !== normalizedFocusTitle(galleryBaselineTitle) ||
+        galleryDraftNotes !== galleryBaselineNotes),
+    [
+      galleryBaselineNotes,
+      galleryBaselineTitle,
+      galleryDraftNotes,
+      galleryDraftTitle,
+      galleryNodeId,
+      galleryOpen,
+    ],
   );
 
   const onFocusOverlayPointerDownCapture = useCallback(
@@ -2701,10 +2758,9 @@ export function ArchitecturalCanvasApp({
       setActiveNodeId(null);
     }
     if (galleryNodeId && entityIds.includes(galleryNodeId)) {
-      setGalleryOpen(false);
-      setGalleryNodeId(null);
+      closeMediaGallery();
     }
-  }, [activeNodeId, galleryNodeId, recordUndoBeforeMutation]);
+  }, [activeNodeId, closeMediaGallery, galleryNodeId, recordUndoBeforeMutation]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -3370,18 +3426,6 @@ export function ArchitecturalCanvasApp({
         if (action.command === "formatBlock" && action.value === "blockquote") {
           return { ...action, active: formatCommandState.blockTag === "blockquote" };
         }
-        if (action.command === "formatBlock" && action.value === "h1") {
-          const level = formatCommandState.blockTag;
-          const headingLabel =
-            level === "h1" || level === "h2" || level === "h3"
-              ? `Heading (${level.toUpperCase()})`
-              : "Heading";
-          return {
-            ...action,
-            label: headingLabel,
-            active: level === "h1" || level === "h2" || level === "h3",
-          };
-        }
         return action;
       }),
     [canInsertImage, formatCommandState.blockTag],
@@ -3401,6 +3445,18 @@ export function ArchitecturalCanvasApp({
         }
         if (action.command === "insertOrderedList") {
           return { ...action, active: formatCommandState.orderedList };
+        }
+        if (action.command === "formatBlock" && action.value === "h1") {
+          const level = formatCommandState.blockTag;
+          const headingLabel =
+            level === "h1" || level === "h2" || level === "h3"
+              ? `Heading (${level.toUpperCase()})`
+              : "Heading";
+          return {
+            ...action,
+            label: headingLabel,
+            active: level === "h1" || level === "h2" || level === "h3",
+          };
         }
         return action;
       }),
@@ -3499,13 +3555,6 @@ export function ArchitecturalCanvasApp({
     galleryEntity.theme === "media"
       ? galleryEntity.bodyHtml
       : "";
-
-  const galleryNotesHtml = useMemo(() => {
-    if (!galleryEntity || galleryEntity.kind !== "content" || galleryEntity.theme !== "media") {
-      return "";
-    }
-    return getArchitecturalMediaNotes(galleryEntity.bodyHtml);
-  }, [galleryEntity]);
 
   useEffect(() => {
     if (!galleryOpen) {
@@ -3815,6 +3864,7 @@ export function ArchitecturalCanvasApp({
             showDocInsertCluster={richDocInsertChromeActive}
             insertDocActions={dockInsertActions}
             formatActions={dockFormatActions}
+            activeBlockTag={formatCommandState.blockTag}
             onFormat={runFormat}
             onCreateNode={createNewNode}
             onUndo={undo}
@@ -4022,9 +4072,9 @@ export function ArchitecturalCanvasApp({
                   Replace
                 </ArchitecturalButton>
                 <ArchitecturalFocusCloseButton
-                  dirty={false}
+                  dirty={galleryDirty}
                   onDone={closeMediaGallery}
-                  onSave={closeMediaGallery}
+                  onSave={saveGalleryAndClose}
                   onDiscard={closeMediaGallery}
                 />
               </div>
@@ -4034,9 +4084,9 @@ export function ArchitecturalCanvasApp({
                 id="arch-media-gallery-title"
                 type="text"
                 className={styles.focusTitle}
-                value={galleryEntity.title}
+                value={galleryDraftTitle}
                 debounceMs={200}
-                onCommit={(next) => renameContentEntity(galleryNodeId, next)}
+                onCommit={(next) => setGalleryDraftTitle(next)}
                 aria-label="Image title"
                 placeholder="Untitled image"
                 style={{ opacity: 1, transform: "none" }}
@@ -4066,12 +4116,12 @@ export function ArchitecturalCanvasApp({
                 )}
               </div>
               <BufferedContentEditable
-                value={galleryNotesHtml}
+                value={galleryDraftNotes}
                 className={styles.focusBody}
                 spellCheck={false}
                 debounceMs={150}
                 dataAttribute="data-architectural-media-gallery-notes"
-                onCommit={(nextHtml) => updateMediaNotes(galleryNodeId, nextHtml)}
+                onCommit={(nextHtml) => setGalleryDraftNotes(nextHtml)}
               />
             </div>
           </div>
@@ -4133,9 +4183,11 @@ export function ArchitecturalCanvasApp({
             variant="editor"
             showFormatToolbar={!focusCodeTheme}
             showDocInsertCluster={!focusCodeTheme}
+            showCreateMenu={false}
             insertDocActions={dockInsertActions}
             formatActions={dockFormatActions}
             createDisabled
+            activeBlockTag={formatCommandState.blockTag}
             onFormat={runFormat}
             onCreateNode={createNewNode}
             onUndo={undo}

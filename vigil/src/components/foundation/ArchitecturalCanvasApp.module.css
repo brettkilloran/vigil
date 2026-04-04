@@ -2052,6 +2052,32 @@
   padding: 0 2px;
 }
 
+.headingPicker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.headingPickerMenu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: calc(var(--layer-focus-overlay) + 3);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid var(--ui-glass-border);
+  background: color-mix(in oklch, var(--sys-color-black) 86%, transparent);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  box-shadow:
+    0 10px 22px var(--sem-color-shadow-45),
+    inset 0 1px 0 var(--sem-overlay-white-10);
+}
+
 .addMenu {
   display: flex;
   align-items: center;
@@ -2326,6 +2352,52 @@
 .focusEditorDark .focusHeader {
   background: transparent;
   border-bottom: none;
+}
+
+/*
+ * Header actions on dark scrim (media gallery, code focus): base focus-done / focus-discard
+ * assume a light sheet behind the button; invert for readable contrast on black/near-black.
+ */
+.shell .focusEditorDark :global(.vigil-btn[data-tone="focus-done"]) {
+  background: color-mix(in oklch, var(--sys-color-white) 94%, transparent);
+  color: var(--sys-color-black);
+  border-color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
+}
+
+.shell .focusEditorDark :global(.vigil-btn[data-tone="focus-done"]:hover),
+.shell .focusEditorDark :global(.vigil-btn[data-tone="focus-done"][data-force-state="hover"]) {
+  background: var(--sys-color-white);
+  color: var(--sys-color-black);
+  border-color: var(--sys-color-white);
+}
+
+.shell .focusEditorDark :global(.vigil-btn[data-tone="focus-done"]:active),
+.shell .focusEditorDark :global(.vigil-btn[data-tone="focus-done"][data-force-state="active"]) {
+  background: color-mix(in oklch, var(--sys-color-white) 92%, var(--sys-color-neutral-400));
+  color: var(--sys-color-black);
+  border-color: color-mix(in oklch, var(--sys-color-white) 85%, var(--sys-color-neutral-500));
+  transform: translateY(0.5px);
+}
+
+.shell .focusEditorDark :global(.vigil-btn[data-tone="focus-discard"]) {
+  background: transparent;
+  color: color-mix(in oklch, var(--sys-color-white) 80%, transparent);
+  border-color: color-mix(in oklch, var(--sys-color-white) 24%, transparent);
+}
+
+.shell .focusEditorDark :global(.vigil-btn[data-tone="focus-discard"]:hover),
+.shell .focusEditorDark :global(.vigil-btn[data-tone="focus-discard"][data-force-state="hover"]) {
+  background: color-mix(in oklch, var(--sys-color-white) 10%, transparent);
+  color: var(--sys-color-white);
+  border-color: color-mix(in oklch, var(--sys-color-white) 38%, transparent);
+}
+
+.shell .focusEditorDark :global(.vigil-btn[data-tone="focus-discard"]:active),
+.shell .focusEditorDark :global(.vigil-btn[data-tone="focus-discard"][data-force-state="active"]) {
+  background: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
+  color: var(--sys-color-white);
+  border-color: color-mix(in oklch, var(--sys-color-white) 46%, transparent);
+  transform: translateY(0.5px);
 }
 
 .focusEditorDark .focusMeta {

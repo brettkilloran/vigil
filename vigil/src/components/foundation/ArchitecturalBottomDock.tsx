@@ -60,13 +60,13 @@ function createIcon(nodeType: NodeTheme): ReactNode {
 /** In-document blocks (Dropbox Paper–style insert strip). Handled in `ArchitecturalCanvasApp` `runFormat`. */
 export const DEFAULT_DOC_INSERT_ACTIONS: DockFormatAction[] = [
   { id: "quote", label: "Quote", command: "formatBlock", value: "blockquote" },
-  { id: "heading", label: "Heading", command: "formatBlock", value: "h1" },
   { id: "checklist", label: "Checklist", command: "arch:checklist" },
   { id: "insertImage", label: "Insert image", command: "arch:insertImage" },
   { id: "divider", label: "Divider", command: "insertHorizontalRule" },
 ];
 
 export const DEFAULT_FORMAT_ACTIONS: DockFormatAction[] = [
+  { id: "heading", label: "Heading", command: "formatBlock", value: "h1" },
   { id: "bold", label: "Bold", command: "bold" },
   { id: "italic", label: "Italic", command: "italic" },
   { id: "underline", label: "Underline", command: "underline" },
@@ -132,74 +132,24 @@ export function ArchitecturalFormatToolbar({
             role="toolbar"
             aria-label="Insert blocks"
           >
-            {insertDocActions.map((action) => {
-              if (action.command === "formatBlock" && action.value === "h1") {
-                const headingOptions = [
-                  { label: "Body", value: "p" as const },
-                  { label: "H1", value: "h1" as const },
-                  { label: "H2", value: "h2" as const },
-                  { label: "H3", value: "h3" as const },
-                ];
-                return (
-                  <div key={action.id} className={styles.headingPicker} ref={headingPickerRef}>
-                    <ArchitecturalButton
-                      size="icon"
-                      tone={actionTone}
-                      active={action.active}
-                      iconOnly
-                      title={action.label}
-                      aria-label={action.label}
-                      disabled={action.disabled}
-                      leadingIcon={formatIcon(action.command, action.value)}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        if (action.disabled) return;
-                        setHeadingMenuOpen((open) => !open);
-                      }}
-                    />
-                    {headingMenuOpen ? (
-                      <div className={styles.headingPickerMenu} role="menu" aria-label="Heading levels">
-                        {headingOptions.map((opt) => (
-                          <ArchitecturalButton
-                            key={opt.value}
-                            size="menu"
-                            tone={actionTone}
-                            active={activeBlockTag === opt.value}
-                            title={opt.label}
-                            aria-label={opt.label}
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              onFormat("formatBlock", opt.value);
-                              setHeadingMenuOpen(false);
-                            }}
-                          >
-                            {opt.label}
-                          </ArchitecturalButton>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              }
-              return (
-                <ArchitecturalButton
-                  key={action.id}
-                  size="icon"
-                  tone={actionTone}
-                  active={action.active}
-                  iconOnly
-                  title={action.label}
-                  aria-label={action.label}
-                  disabled={action.disabled}
-                  leadingIcon={formatIcon(action.command, action.value)}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    if (action.disabled) return;
-                    onFormat(action.command, action.value);
-                  }}
-                />
-              );
-            })}
+            {insertDocActions.map((action) => (
+              <ArchitecturalButton
+                key={action.id}
+                size="icon"
+                tone={actionTone}
+                active={action.active}
+                iconOnly
+                title={action.label}
+                aria-label={action.label}
+                disabled={action.disabled}
+                leadingIcon={formatIcon(action.command, action.value)}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  if (action.disabled) return;
+                  onFormat(action.command, action.value);
+                }}
+              />
+            ))}
           </div>
           <div
             className={`${styles.toolbarClusterSep} ${styles.toolbarClusterSepDock}`}
@@ -212,24 +162,74 @@ export function ArchitecturalFormatToolbar({
         role="toolbar"
         aria-label="Text formatting"
       >
-        {formatActions.map((action) => (
-          <ArchitecturalButton
-            key={action.id}
-            size="icon"
-            tone={actionTone}
-            active={action.active}
-            iconOnly
-            title={action.label}
-            aria-label={action.label}
-            disabled={action.disabled}
-            leadingIcon={formatIcon(action.command, action.value)}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              if (action.disabled) return;
-              onFormat(action.command, action.value);
-            }}
-          />
-        ))}
+        {formatActions.map((action) => {
+          if (action.command === "formatBlock" && action.value === "h1") {
+            const headingOptions = [
+              { label: "Body", value: "p" as const },
+              { label: "H1", value: "h1" as const },
+              { label: "H2", value: "h2" as const },
+              { label: "H3", value: "h3" as const },
+            ];
+            return (
+              <div key={action.id} className={styles.headingPicker} ref={headingPickerRef}>
+                <ArchitecturalButton
+                  size="icon"
+                  tone={actionTone}
+                  active={action.active}
+                  iconOnly
+                  title={action.label}
+                  aria-label={action.label}
+                  disabled={action.disabled}
+                  leadingIcon={formatIcon(action.command, action.value)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    if (action.disabled) return;
+                    setHeadingMenuOpen((open) => !open);
+                  }}
+                />
+                {headingMenuOpen ? (
+                  <div className={styles.headingPickerMenu} role="menu" aria-label="Heading levels">
+                    {headingOptions.map((opt) => (
+                      <ArchitecturalButton
+                        key={opt.value}
+                        size="menu"
+                        tone={actionTone}
+                        active={activeBlockTag === opt.value}
+                        title={opt.label}
+                        aria-label={opt.label}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          onFormat("formatBlock", opt.value);
+                          setHeadingMenuOpen(false);
+                        }}
+                      >
+                        {opt.label}
+                      </ArchitecturalButton>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          }
+          return (
+            <ArchitecturalButton
+              key={action.id}
+              size="icon"
+              tone={actionTone}
+              active={action.active}
+              iconOnly
+              title={action.label}
+              aria-label={action.label}
+              disabled={action.disabled}
+              leadingIcon={formatIcon(action.command, action.value)}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                if (action.disabled) return;
+                onFormat(action.command, action.value);
+              }}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -287,6 +287,7 @@ export function ArchitecturalBottomDock({
   showDocInsertCluster = true,
   createDisabled = false,
   activeBlockTag = "p",
+  showCreateMenu = true,
 }: {
   /** `editor`: solid black panels + light icon controls (focus mode only). */
   variant?: ArchitecturalBottomDockVariant;
@@ -306,6 +307,7 @@ export function ArchitecturalBottomDock({
   showDocInsertCluster?: boolean;
   createDisabled?: boolean;
   activeBlockTag?: "p" | "h1" | "h2" | "h3" | "blockquote";
+  showCreateMenu?: boolean;
 }) {
   const isEditor = variant === "editor";
   const formatActionTone = isEditor ? "card-dark" : "glass";
@@ -315,14 +317,16 @@ export function ArchitecturalBottomDock({
   return (
     <div className={cx(styles.bottomDock, isEditor && styles.bottomDockEditor)}>
       <div className={styles.rootDockCluster}>
-        <div className={styles.rootDockPanel}>
-          <ArchitecturalCreateMenu
-            actions={createActions}
-            actionTone={createActionTone}
-            disabled={createDisabled}
-            onCreateNode={onCreateNode}
-          />
-        </div>
+        {showCreateMenu ? (
+          <div className={styles.rootDockPanel}>
+            <ArchitecturalCreateMenu
+              actions={createActions}
+              actionTone={createActionTone}
+              disabled={createDisabled}
+              onCreateNode={onCreateNode}
+            />
+          </div>
+        ) : null}
         <div
           className={cx(
             styles.rootDockPanelSlot,
