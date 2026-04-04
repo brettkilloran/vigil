@@ -5,7 +5,7 @@ This file is the **short bridge** between the repo today and planning docs. **Ta
 ## Review summary (master plan)
 
 - **Product:** Personal infinite canvas (Spatial-inspired): notes, stickies, images, folders, stacks, clips, TTRPG lore later. **Single user, no auth.**
-- **Stack target:** Next.js App Router + React, **custom DOM canvas** (CSS `transform` pan/zoom, no `<canvas>`), **@use-gesture/react**, **framer-motion**, **zustand + immer**, **TipTap**, **Tailwind 4**, **Drizzle + Neon + R2 + OpenAI** where needed.
+- **Stack target:** Next.js App Router + React, **custom DOM canvas** (CSS `transform` pan/zoom, no `<canvas>`), **@use-gesture/react**, **framer-motion**, **zustand + immer**, **TipTap**, **Tailwind 4**, **Drizzle + Neon + R2 + Anthropic** (lore) where needed.
 - **Explicit non-goals:** **No tldraw** (or any licensed whiteboard SDK). **No Auth.js / OAuth.**
 - **Data model:** Items are the source of truth on the server; `spaces.canvas_state` holds **camera only** `{ x, y, zoom }`. Schema includes `item_links`, `item_embeddings` (pgvector), stacks (`stack_id` / `stack_order`). **No `users` table** in the Drizzle schema.
 
@@ -53,7 +53,7 @@ We **treat the archived master plan** as **historical product intent** (gestures
 
 ## Environment / cost notes
 
-- Master plan assumes **$0 recurring** on free tiers; **OpenAI embeddings** are usage-based (typically small). **Anthropic** is usage-based for **`/api/lore/query`** and any future Claude features.
+- Master plan assumes **$0 recurring** on free tiers where possible. **Anthropic** is usage-based for **`/api/lore/query`** and other Claude-backed routes.
 - **Legacy DBs:** If older rows still have full tldraw JSON in `canvas_state`, migrate or reset the dev DB to match the current Drizzle schema (camera-only `canvas_state`).
 
 ## Visual overhaul roadmap

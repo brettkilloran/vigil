@@ -9,7 +9,7 @@ const meta: Meta<typeof ArchitecturalStatusBadge> = {
   component: ArchitecturalStatusBadge,
   args: {
     showPulse: true,
-    label: "heartgarden",
+    label: "波途画電",
   },
   argTypes: {
     showPulse: { control: "boolean" },

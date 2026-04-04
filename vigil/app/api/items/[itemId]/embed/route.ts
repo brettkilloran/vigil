@@ -4,14 +4,11 @@ import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
 import { refreshItemEmbedding } from "@/src/lib/item-embedding";
 
+/** Clears stale `item_embeddings` rows only; vector search is not used. */
 export async function POST(
   _req: Request,
   context: { params: Promise<{ itemId: string }> },
 ) {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) {
-    return Response.json({ ok: false, error: "OPENAI_API_KEY not set" }, { status: 503 });
-  }
   const db = tryGetDb();
   if (!db) {
     return Response.json({ ok: false, error: "Database not configured" }, { status: 503 });
@@ -21,16 +18,15 @@ export async function POST(
   if (!row) {
     return Response.json({ ok: false, error: "Not found" }, { status: 404 });
   }
-  const text = `${row.title}\n${row.contentText}`.trim();
-  if (!text) {
-    return Response.json({ ok: false, error: "No text to embed" }, { status: 400 });
-  }
 
   try {
     await refreshItemEmbedding(db, row);
   } catch {
-    return Response.json({ ok: false, error: "Embedding failed" }, { status: 500 });
+    return Response.json({ ok: false, error: "Failed to clear embedding row" }, { status: 500 });
   }
 
-  return Response.json({ ok: true, dimensions: 1536 });
+  return Response.json({
+    ok: true,
+    note: "Item embeddings are not generated; search uses Postgres full-text and trigram.",
+  });
 }

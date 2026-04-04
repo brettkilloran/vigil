@@ -5,8 +5,7 @@ Items the codebase **cannot** complete without your action, credentials, or prod
 ## Accounts & API keys
 
 - **Neon:** `NEON_DATABASE_URL` in `.env.local` (and Vercel) for cloud sync, search, graph, MCP against production. Enable **`CREATE EXTENSION vector`** on the database before pushing schema with embeddings (`npm run db:ensure-pgvector` in `vigil/`).
-- **Anthropic:** `ANTHROPIC_API_KEY` for **`POST /api/lore/query`** and the **Ask lore (AI)** UI (`LoreAskPanel`). Optional: `ANTHROPIC_LORE_MODEL` (default `claude-sonnet-4-20250514`). **Unauthenticated** today — rate-limit or protect before a public URL.
-- **OpenAI:** `OPENAI_API_KEY` for **item embeddings** on save (`item-embedding.ts`), **semantic/hybrid** Cmd+K search when hybrid mode needs vectors. **Not required** for lore v1 (FTS + Claude only).
+- **Anthropic:** `ANTHROPIC_API_KEY` for **`POST /api/lore/query`**, lore import extract, and the **Ask lore (AI)** UI (`LoreAskPanel`). Optional: `ANTHROPIC_LORE_MODEL` (default `claude-sonnet-4-20250514`). **Unauthenticated** today — rate-limit or protect before a public URL.
 - **Cloudflare R2:** Bucket, CORS, and optional public URL for image uploads; align with `.env.local.example`.
 
 ## Phase 5 (plan) — still LLM- or product-heavy

@@ -16,6 +16,7 @@ import { createPortal } from "react-dom";
 
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { Button } from "@/src/components/ui/Button";
+import { Switch } from "@/src/components/ui/Switch";
 import { cx } from "@/src/lib/cx";
 import {
   formatSavedRelative,
@@ -363,33 +364,20 @@ export function ArchitecturalCanvasEffectsToggle({
 }) {
   return (
     <div className={styles.focusEffectsStrip} data-hg-chrome="canvas-effects-toggle">
-      <div className={`${styles.rootDockPanel} ${styles.focusEffectsPanel}`}>
-        <Button
-          type="button"
-          variant="ghost"
-          size="xs"
-          tone="glass"
-          className={styles.effectsSwitch}
-          role="switch"
-          aria-checked={effectsEnabled}
-          aria-label={
-            effectsEnabled
-              ? "Canvas effects on; turn off for lean mode"
-              : "Canvas effects off; turn on for transitions and ambient detail"
-          }
-          title={
-            effectsEnabled
-              ? "Turn off flow transitions, vignette, and ambient grid"
-              : "Restore transitions and ambient chrome"
-          }
-          data-on={effectsEnabled ? "true" : "false"}
-          onClick={() => onToggle()}
-        >
-          <span className={styles.effectsSwitchTrack}>
-            <span className={styles.effectsSwitchThumb} aria-hidden />
-          </span>
-        </Button>
-      </div>
+      <Switch
+        checked={effectsEnabled}
+        onCheckedChange={() => onToggle()}
+        aria-label={
+          effectsEnabled
+            ? "Canvas effects on; turn off for lean mode"
+            : "Canvas effects off; turn on for transitions and ambient detail"
+        }
+        title={
+          effectsEnabled
+            ? "Turn off flow transitions, vignette, and ambient grid"
+            : "Restore transitions and ambient chrome"
+        }
+      />
     </div>
   );
 }

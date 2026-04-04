@@ -12,7 +12,7 @@ This is the **repo-wide checklist**: architecture snapshot, shipped tranches, an
 | **Graph state** | In-component React state + **undo/redo** stack (`architectural-undo.ts`); Neon sync via `architectural-db-bridge.ts`, `architectural-neon-api.ts`, `/api/bootstrap`, item/space routes. |
 | **Save / sync indicator** | `neon-sync-bus.ts` + instrumented `architectural-neon-api.ts` + debounced note body bumps. Status strip in **`ArchitecturalStatusBar`**: Loading → Local (demo) → Saving… → Saved / Sync error. Tooltips document **undo vs server** semantics. |
 | **Legacy zustand canvas** | `src/stores/canvas-store.ts` — still imported by some **panels** (e.g. backlinks, timeline, tool rail variants). Not the source of truth for the architectural shell. Unify or keep documented until panels are rewired. |
-| **Search** | Postgres FTS + trigram on `search_blob`; optional **OpenAI** query/item embeddings for hybrid/semantic (`/api/search`, `/api/search/suggest`, `item-embedding.ts`). |
+| **Search** | Postgres FTS + trigram on `search_blob`; hybrid mode merges FTS + fuzzy (`/api/search`, `/api/search/suggest`). `item_embeddings` / `item-embedding.ts` only clear stale rows (no vector generation). |
 | **Lore Q&A (MVP)** | `POST /api/lore/query` — retrieval via FTS (+ fuzzy fallback), synthesis via **Anthropic** (`ANTHROPIC_API_KEY`, optional `ANTHROPIC_LORE_MODEL`). UI: Cmd+K → **Ask lore (AI)** → `LoreAskPanel`. |
 | **DB** | Drizzle `src/db/schema.ts`; Neon requires **`CREATE EXTENSION vector`** before push (`npm run db:ensure-pgvector`). |
 
@@ -44,7 +44,7 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 
 1. **Dual state story** — Either migrate timeline/backlinks (and related UI) to architectural graph + Neon IDs, or keep an explicit “legacy panel” note in `AGENTS.md` until done.
 2. **`POST /api/lore/query` abuse** — Before a public URL: rate limiting, auth, or Vercel firewall; unauthenticated calls consume Anthropic quota.
-3. **Embeddings strategy** — Today: OpenAI `text-embedding-3-small` (1536-dim) for `item_embeddings` + hybrid search. Changing provider requires matching **vector dimension** or a migration.
+3. **Embeddings / vectors** — Not generated in-app; hybrid search is lexical only. The `item_embeddings` table may remain for legacy DBs; new installs can ignore it or drop after a deliberate migration.
 4. **E2E** — Optional: palette → lore panel smoke (skip or mock LLM in CI).
 5. **Canvas version history (UX2 — decision for v1)** — **Export-first:** the canvas already supports **Export graph JSON** (Cmd+K). Treat that as the supported “checkpoint” workflow until a DB snapshot or `item_revisions` table is justified. **Space / graph snapshots** and **per-item revision logs** remain future options; any in-app restore must not silently fight the local undo stack (explicit “restore from server snapshot” only).
 

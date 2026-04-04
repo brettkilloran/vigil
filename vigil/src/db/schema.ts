@@ -100,6 +100,7 @@ export const itemLinks = pgTable(
   ],
 );
 
+/** Legacy pgvector table; rows are cleared on item update but not re-inserted (search is FTS-only). */
 export const itemEmbeddings = pgTable("item_embeddings", {
   id: uuid("id").defaultRandom().primaryKey(),
   itemId: uuid("item_id")

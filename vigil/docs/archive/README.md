@@ -18,7 +18,7 @@ Files here are **kept for history** (product intent, old session breakdowns, dat
 
 | File | Notes |
 |------|--------|
-| **`vigil-master-plan-legacy.md`** | Former `docs/VIGIL_MASTER_PLAN.md` (~1k lines). Spatial-inspired product bible + Phases 1–8 + session list. **Outdated paths** (`VigilCanvas`, `components/canvas/`). Stack callouts predate Anthropic-first lore + optional OpenAI embeddings. |
+| **`vigil-master-plan-legacy.md`** | Former `docs/VIGIL_MASTER_PLAN.md` (~1k lines). Spatial-inspired product bible + Phases 1–8 + session list. **Outdated paths** (`VigilCanvas`, `components/canvas/`). Stack callouts predate Anthropic-first lore; vector embeddings are no longer generated in-app. |
 
 ## Not moved (yet)
 

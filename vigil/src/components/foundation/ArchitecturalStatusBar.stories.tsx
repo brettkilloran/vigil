@@ -8,7 +8,7 @@ const meta: Meta<typeof ArchitecturalStatusBar> = {
   title: "Heartgarden/Architectural Shell/Components/Status Bar",
   component: ArchitecturalStatusBar,
   args: {
-    envLabel: "heartgarden",
+    envLabel: "波途画電",
     showPulse: true,
     syncBootstrapPending: false,
     onExportGraphJson: () => {

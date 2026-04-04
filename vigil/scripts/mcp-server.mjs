@@ -121,7 +121,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "vigil_search",
       description:
-        "Search items in a space: fts, semantic, or hybrid. Requires running app and DB.",
+        "Search items in a space via Postgres FTS; hybrid merges FTS + trigram. mode=semantic is a legacy alias for full-text. Requires running app and DB.",
       inputSchema: {
         type: "object",
         properties: {
@@ -130,7 +130,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           mode: {
             type: "string",
             enum: ["fts", "semantic", "hybrid"],
-            description: "Default fts",
+            description: "fts | hybrid (FTS+fuzzy) | semantic (same as fts, deprecated name)",
           },
         },
         required: ["q"],

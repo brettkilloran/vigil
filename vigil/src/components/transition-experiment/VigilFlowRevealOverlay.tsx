@@ -64,7 +64,7 @@ float hash21(vec2 p) {
   return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
-// Pixel glyph pass — matches prototype “digital artifacts on liquid” behavior.
+// Pixel glyph pass — light digital shimmer (kept subtle so it doesn’t read as mud).
 vec3 pixelGlyphPass(vec2 uv, float liquidMask, float pixelSize, float t) {
   vec2 pixelCoord = floor(uv * pixelSize) / pixelSize;
   vec2 subPixel = fract(uv * pixelSize);
@@ -75,8 +75,8 @@ vec3 pixelGlyphPass(vec2 uv, float liquidMask, float pixelSize, float t) {
   float scan = sin(subPixel.y * 3.14159 * 3.0 + t * 2.0);
   scan = smoothstep(0.3, 0.7, scan) * 0.3;
   float glyph = cellPattern * scan * edgeIntensity;
-  vec3 glyphColor = vec3(0.08, 0.12, 0.15);
-  return glyphColor * glyph * 0.5;
+  vec3 glyphColor = vec3(0.12, 0.14, 0.18);
+  return glyphColor * glyph * 0.35;
 }
 
 void main() {
@@ -106,19 +106,18 @@ void main() {
   float coarseNoise = hash21(coarseCoord * 2.0 + floor(u_time));
   float coarseBlock = step(liquidMask, 0.5 + coarseNoise * 0.3) * liquidMask;
 
-  vec2 chromaOffset = vec2(
-    snoise(warpedUV * 1.5 + u_time * 0.2),
-    snoise(warpedUV * 1.5 + 100.0 + u_time * 0.2)
-  ) * 0.04;
-  float turbulence = 1.0 + abs(liquidRaw) * 3.0;
+  /* Gentle CA: mostly horizontal optical split, tiny vertical wobble — no full rainbow. */
+  float turbulence = 1.0 + abs(liquidRaw) * 1.8;
+  float wob = snoise(warpedUV * 1.2 + u_time * 0.06) * 0.008;
+  vec2 ca = vec2(0.014 + wob, wob * 0.45) * turbulence;
 
   float maskR;
   {
-    vec2 uvR = uv + chromaOffset * turbulence * vec2(1.0, 0.5);
+    vec2 uvR = uv + ca;
     float distR = length(uvR - vec2(0.5));
     vec2 wR = uvR;
     wR.x *= aspect;
-    float fR = fbm(wR + vec2(u_time * 0.05));
+    float fR = fbm(wR + vec2(u_time * 0.04));
     maskR = smoothstep(threshold - 0.3, threshold + 0.3, fR * 0.5 + 0.5 + distR);
   }
 
@@ -126,51 +125,46 @@ void main() {
 
   float maskB;
   {
-    vec2 uvB = uv - chromaOffset * turbulence * vec2(1.0, 0.5);
+    vec2 uvB = uv - ca;
     float distB = length(uvB - vec2(0.5));
     vec2 wB = uvB;
     wB.x *= aspect;
-    float fB = fbm(wB + vec2(u_time * 0.05));
+    float fB = fbm(wB + vec2(u_time * 0.04));
     maskB = smoothstep(threshold - 0.3, threshold + 0.3, fB * 0.5 + 0.5 + distB);
   }
 
   float fringeAmount = abs(maskR - maskG) + abs(maskB - maskG);
-  fringeAmount = smoothstep(0.02, 0.25, fringeAmount) * liquidMask;
+  fringeAmount = smoothstep(0.02, 0.22, fringeAmount) * liquidMask;
 
-  vec3 bloomR = vec3(0.9, 0.2, 0.3) * maskR * (1.0 - maskG) * 0.8;
-  vec3 bloomB = vec3(0.1, 0.6, 1.0) * maskB * (1.0 - maskG) * 0.8;
-  vec3 bloomG = vec3(0.02, 0.03, 0.02) * maskG;
-  vec3 chromaticLiquid = bloomR + bloomB + bloomG;
+  /* Cool opal / moonlight: slate → soft periwinkle, one muted violet rim (no hot magenta or lime). */
+  vec3 ink = vec3(0.038, 0.044, 0.058);
+  vec3 sheenCool = vec3(0.18, 0.26, 0.38);
+  vec3 sheenWarm = vec3(0.32, 0.30, 0.42);
 
-  float redLeads = smoothstep(0.0, 0.15, maskR - maskB);
-  float blueLeads = smoothstep(0.0, 0.15, maskB - maskR);
-  vec3 fringeCyan = vec3(0.05, 0.8, 0.9) * blueLeads * liquidMask;
-  vec3 fringeMagenta = vec3(0.9, 0.15, 0.6) * redLeads * liquidMask;
-  chromaticLiquid += fringeCyan + fringeMagenta;
+  float edgeR = maskR * (1.0 - maskG);
+  float edgeB = maskB * (1.0 - maskG);
+  float caSep = abs(maskR - maskB);
+  vec3 rim = mix(sheenCool, sheenWarm, smoothstep(0.05, 0.22, caSep));
+
+  vec3 chromaticLiquid = ink * maskG + rim * max(edgeR, edgeB) * 0.72;
+  chromaticLiquid += rim * fringeAmount * 0.22;
 
   float coreFactor = liquidMask * (1.0 - fringeAmount);
-  vec3 coreDark = vec3(0.03, 0.03, 0.04);
-  chromaticLiquid = mix(chromaticLiquid, coreDark, coreFactor * 0.6);
+  vec3 coreCool = vec3(0.032, 0.038, 0.05);
+  chromaticLiquid = mix(chromaticLiquid, coreCool, coreFactor * 0.28);
 
   float transitionEdge = liquidMask * (1.0 - liquidMask) * 4.0;
   transitionEdge = smoothstep(0.0, 1.0, transitionEdge);
-  vec3 glowRGB = vec3(0.8, 0.3, 0.5) * transitionEdge * (1.0 - u_progress) * 0.4;
+  vec3 glowRGB =
+    vec3(0.22, 0.30, 0.44) * transitionEdge * (1.0 - u_progress) * 0.26;
 
   vec3 finalColor = chromaticLiquid + glowRGB;
-  finalColor += vec3(liquidRaw * 0.01);
-  finalColor += glyphLayer * 0.6;
-  finalColor += hash21(uv * u_time) * 0.02;
+  finalColor += vec3(liquidRaw * 0.0035);
+  finalColor += glyphLayer * 0.28;
+  finalColor += hash21(uv * u_time) * 0.006;
 
   float finalAlpha = (maskR + maskG + maskB) / 3.0;
-  finalAlpha = max(finalAlpha, coarseBlock * 0.15);
-
-  // Central "work" safe zone: suppress fluid/tendril layer so chroma noise does not creep
-  // into the main canvas (aspect-normalized so the clear core stays circular on wide screens).
-  float dNorm =
-    length((uv - vec2(0.5)) * vec2(aspect, 1.0)) / (0.5 * sqrt(aspect * aspect + 1.0));
-  float workSafe = smoothstep(0.30, 0.56, dNorm);
-  finalColor *= workSafe;
-  finalAlpha *= workSafe;
+  finalAlpha = max(finalAlpha, coarseBlock * 0.07);
 
   // While /api/bootstrap is still in flight, u_softBoot=1: crush neon fringes so a slow
   // network does not leave the canvas under a full-intensity chroma sheet for minutes.
@@ -373,7 +367,6 @@ export function VigilFlowRevealOverlay({
   return (
     <>
       <div className={styles.wrap} aria-hidden>
-        <div className={styles.bgGrid} />
         <canvas ref={canvasRef} className={styles.canvas} />
       </div>
       {IS_DEV ? (

@@ -51,7 +51,7 @@ heartgarden (server)
 │   ├── pgvector extension     — semantic search embeddings
 │   └── tsvector + GIN index   — full-text search
 ├── Cloudflare R2              (free tier, 10GB) — image/file storage
-└── OpenAI API                 — text-embedding-3-small (pennies/month)
+└── *(Historical)* Third-party embeddings API — **removed**; search is Postgres FTS + trigram.
 ```
 
 **Why NO tldraw / NO third-party canvas SDK:**
@@ -129,7 +129,7 @@ CREATE TABLE item_links (
 CREATE TABLE item_embeddings (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_id     UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-  embedding   VECTOR(1536),  -- OpenAI text-embedding-3-small
+  embedding   VECTOR(1536),  -- legacy / optional; not populated by current app
   chunk_text  TEXT,
   created_at  TIMESTAMPTZ DEFAULT now()
 );
@@ -783,7 +783,7 @@ Three tiers:
 
 1. **Instant filter (client-side):** Items are in the zustand store. `Array.filter()` for title/type matching. Zero latency.
 2. **Full-text search (PostgreSQL tsvector):** `search_vector` column with GIN index. Handles "find all notes containing 'elvish rebellion'". Sub-50ms.
-3. **Semantic search (pgvector):** Embeds the query via OpenAI, cosine similarity against `item_embeddings`. "What do I know about political tensions in the northern kingdoms?" Returns ranked results with relevant text chunks.
+3. **Semantic search (pgvector):** *(Superseded in current app.)* Search uses full-text + trigram; `item_embeddings` is not maintained.
 
 **Search UI:** Cmd+K command palette. Global search across all Spaces. Results grouped by Space, filterable by item type and entity type.
 
@@ -910,7 +910,7 @@ src/
 - Cmd+K command palette
 - Cross-linking: `[[` syntax in TipTap, autocomplete, creates `item_links`
 - Backlinks panel on each item
-- OpenAI embeddings on item save
+- *(Removed)* third-party embeddings on item save
 - Semantic search in Cmd+K
 - REST API (versioned)
 - MCP server

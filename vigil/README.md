@@ -15,7 +15,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). Without `NEON_DATABASE_URL`, the app runs in **local-only** mode (data in `localStorage`). With Neon configured, use **`docs/STRATEGY.md`** migration notes if upgrading from older schemas (removed `users` / `source_shape_id` / tldraw snapshots).
 
-Copy [`.env.local.example`](.env.local.example) to `.env.local` for database and optional OpenAI/R2.
+Copy [`.env.local.example`](.env.local.example) to `.env.local` for database, optional **Anthropic** (lore Q&A), and optional R2.
 
 Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 
@@ -29,7 +29,7 @@ Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 | `npm run verify:foundation-sync` | Ensure app entry + foundation shell wiring did not drift from Storybook components |
 | `npm run build` | Production build |
 | `npm run db:push` | Push Drizzle schema to Neon |
-| `npm run mcp` | MCP stdio: **`vigil_list_items`**, **`vigil_search`** (fts / semantic / hybrid), **`vigil_graph`** — needs app reachable at `HEARTGARDEN_APP_URL` (default `http://localhost:3000`) |
+| `npm run mcp` | MCP stdio: **`vigil_list_items`**, **`vigil_search`** (Postgres FTS / hybrid lexical), **`vigil_graph`** — needs app reachable at `HEARTGARDEN_APP_URL` (default `http://localhost:3000`) |
 
 ### Keyboard (canvas, not typing in a note)
 

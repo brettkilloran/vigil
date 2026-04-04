@@ -25,7 +25,7 @@ The **production shell** is **`ArchitecturalCanvasApp`** (`src/components/founda
 
 Persistence: **`items`** rows + **`spaces.canvas_state`** as camera `{ x, y, zoom }` only. **Links** panel (local canvas): outgoing/incoming from TipTap `[[` / `vigil:item:` in `content_json` via `src/lib/local-item-links.ts`; cloud mode uses `/api/items/[id]/links` and Neon `item_links`.
 
-**Lore v1:** Cmd+K → **Ask lore (AI)** → `LoreAskPanel` → **`POST /api/lore/query`** (FTS retrieval + Anthropic). **Search / embeddings:** OpenAI optional for hybrid semantic search and `item_embeddings` refresh.
+**Lore v1:** Cmd+K → **Ask lore (AI)** → `LoreAskPanel` → **`POST /api/lore/query`** (FTS retrieval + Anthropic). **Search:** Postgres full-text + trigram; **`ANTHROPIC_API_KEY`** is for lore only (no separate embedding vendor).
 
 **Neon sync strip:** Top status bar shows **Loading / Local / Saving / Saved / Sync error** via `neon-sync-bus.ts` + instrumented `architectural-neon-api.ts`. **Undo/redo** is in-memory only; tooltips spell out that the server keeps the **last successful write** until the next PATCH.
 

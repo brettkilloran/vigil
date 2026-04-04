@@ -101,12 +101,16 @@
   position: relative;
   transition: filter 0.28s ease;
   will-change: filter;
+  /* Solid plane so the dot grid reads consistently under cards and overlays. */
+  background-color: var(--bg-base);
+  /* ~1 CSS px dot so subpixel rounding doesn’t erase the grid on HiDPI. */
   background-image: radial-gradient(
     circle at center,
-    var(--sem-grid-dot-strong) 0.55px,
-    transparent 0.65px
+    var(--sem-grid-dot-strong) 0.9px,
+    transparent 1.1px
   );
   background-size: 40px 40px;
+  background-repeat: repeat;
   background-position: center center;
 }
 
@@ -141,14 +145,15 @@
   }
 }
 
-/* Focus mode: drop vignette + extra deep-space layers; keep one light dot grid. */
+/* Lean / effects-off: same dot plane as full chrome so the grid stays visible. */
 .viewport.viewportAmbientOff {
   background-image: radial-gradient(
     circle at center,
-    var(--sem-grid-dot-soft) 0.55px,
-    transparent 0.65px
+    var(--sem-grid-dot-strong) 0.9px,
+    transparent 1.1px
   );
   background-size: 40px 40px;
+  background-repeat: repeat;
   background-position: center center;
 }
 
@@ -159,10 +164,11 @@
 .viewport.viewportAmbientOff.deepSpace {
   background-image: radial-gradient(
     circle at center,
-    var(--sem-grid-dot-soft) 0.55px,
-    transparent 0.65px
+    var(--sem-grid-dot-strong) 0.9px,
+    transparent 1.1px
   );
   background-size: 40px 40px;
+  background-repeat: repeat;
 }
 
 .viewportSceneLayerInstant {
@@ -172,11 +178,12 @@
 .deepSpace {
   --bg-base: var(--sem-surface-base);
   --grid-color: var(--sem-grid-color-deep);
+  background-color: var(--bg-base);
   background-image:
     radial-gradient(
       circle at center,
-      var(--sem-grid-dot-soft) 0.55px,
-      transparent 0.65px
+      var(--sem-grid-dot-strong) 0.9px,
+      transparent 1.1px
     ),
     radial-gradient(
       circle at center,
@@ -186,6 +193,7 @@
   background-size:
     40px 40px,
     200px 200px;
+  background-repeat: repeat, repeat;
   background-position:
     center center,
     center center;
@@ -2093,7 +2101,7 @@
   background: var(--sem-border-strong);
 }
 
-/* Bottom-left: focus / performance toggle; mirrors metrics strip styling. */
+/* Bottom-left: lone switch; strip passes clicks through except the control. */
 .focusEffectsStrip {
   position: absolute;
   left: max(24px, env(safe-area-inset-left, 0px));
@@ -2102,129 +2110,6 @@
   width: fit-content;
   z-index: var(--layer-ui-chrome);
   pointer-events: none;
-}
-
-/* Match bottom-right metrics chip: fixed strip height, no extra chrome-panel min-height drift. */
-.focusEffectsPanel.rootDockPanel {
-  pointer-events: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  height: var(--chrome-tool-rail-strip-width);
-  min-height: var(--chrome-tool-rail-strip-width);
-  max-height: var(--chrome-tool-rail-strip-width);
-  padding-inline: 14px;
-  padding-block: 0;
-}
-
-/*
- * Custom switch inside glass dock: must beat `.shell` glass vigil-btn hover/active fills
- * (see end of this file) and globals `.vigil-btn` min-height — chain under `.focusEffectsStrip`.
- */
-.shell .focusEffectsStrip .effectsSwitch:global(.vigil-btn) {
-  --btn-height: 26px;
-  --btn-pad-x: 0;
-  --btn-radius: 999px;
-  position: relative;
-  flex-shrink: 0;
-  box-sizing: border-box;
-  width: 44px;
-  min-width: 44px;
-  max-width: 44px;
-  height: 26px;
-  min-height: 26px;
-  max-height: 26px;
-  padding: 0 !important;
-  gap: 0 !important;
-  margin: 0;
-  line-height: 0 !important;
-  border: none !important;
-  border-radius: 999px !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  color: inherit !important;
-}
-
-.shell .focusEffectsStrip .effectsSwitch:global(.vigil-btn):hover,
-.shell .focusEffectsStrip .effectsSwitch:global(.vigil-btn):hover:not(:disabled):not([data-disabled="true"]),
-.shell .focusEffectsStrip .effectsSwitch:global(.vigil-btn):active,
-.shell .focusEffectsStrip .effectsSwitch:global(.vigil-btn):active:not(:disabled):not([data-disabled="true"]) {
-  background: transparent !important;
-  border-color: transparent !important;
-  color: inherit !important;
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-.shell .focusEffectsStrip .effectsSwitch:global(.vigil-btn):focus-visible {
-  outline: 1px solid color-mix(in oklch, var(--sys-color-white) 42%, transparent);
-  outline-offset: 3px;
-  box-shadow: none !important;
-}
-
-.effectsSwitchTrack {
-  display: block;
-  position: relative;
-  width: 100%;
-  height: 100%;
-  border-radius: 999px;
-  background: color-mix(in oklch, var(--sys-color-black) 48%, transparent);
-  border: 1px solid color-mix(in oklch, var(--sys-color-white) 10%, transparent);
-  box-shadow:
-    inset 0 1px 3px color-mix(in oklch, var(--sys-color-black) 55%, transparent),
-    0 1px 0 color-mix(in oklch, var(--sys-color-white) 7%, transparent);
-  box-sizing: border-box;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.effectsSwitch:hover .effectsSwitchTrack {
-  border-color: color-mix(in oklch, var(--sys-color-white) 15%, transparent);
-}
-
-.effectsSwitch[data-on="true"] .effectsSwitchTrack {
-  background: color-mix(in oklch, var(--sys-color-white) 11%, transparent);
-  border-color: color-mix(in oklch, var(--sys-color-white) 18%, transparent);
-  box-shadow:
-    inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 28%, transparent),
-    0 0 0 1px color-mix(in oklch, var(--sys-color-white) 8%, transparent);
-}
-
-.effectsSwitch[data-on="true"]:hover .effectsSwitchTrack {
-  border-color: color-mix(in oklch, var(--sys-color-white) 22%, transparent);
-}
-
-.effectsSwitchThumb {
-  position: absolute;
-  top: 50%;
-  left: 3px;
-  width: 16px;
-  height: 16px;
-  margin-top: -8px;
-  border-radius: 50%;
-  background: color-mix(in oklch, var(--sys-color-white) 92%, var(--sys-color-black));
-  box-shadow:
-    0 1px 3px color-mix(in oklch, var(--sys-color-black) 40%, transparent),
-    0 0 0 1px color-mix(in oklch, var(--sys-color-white) 14%, transparent);
-  transition: transform 0.22s cubic-bezier(0.2, 0.85, 0.22, 1);
-  transform: translateX(0);
-}
-
-/* 44px track − 2×3px inset − 16px thumb */
-.effectsSwitch[data-on="true"] .effectsSwitchThumb {
-  transform: translateX(22px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .effectsSwitchTrack,
-  .effectsSwitchThumb {
-    transition: none;
-  }
 }
 
 /* World X/Y + zoom: same bottom inset as `.bottomDock`; right edge pinned so width tracks content. */

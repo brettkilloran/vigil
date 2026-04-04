@@ -10,7 +10,7 @@ test.describe("heartgarden smoke", () => {
   test("loads canvas shell and primary chrome", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByText("heartgarden")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("波途画電")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("button", { name: "Note" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Task" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Folder" })).toBeVisible();
@@ -20,7 +20,7 @@ test.describe("heartgarden smoke", () => {
 
   test("creates a new note from dock", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("heartgarden")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("波途画電")).toBeVisible({ timeout: 30_000 });
 
     const nodes = page.locator("[data-node-id]");
     const beforeCount = await nodes.count();
@@ -32,7 +32,7 @@ test.describe("heartgarden smoke", () => {
 
   test("keeps code-card tape variant and dark treatment in app shell", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("heartgarden")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("波途画電")).toBeVisible({ timeout: 30_000 });
 
     const codeCard = page
       .locator("[data-node-id]")

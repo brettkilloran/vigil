@@ -44,7 +44,7 @@ Core behaviors:
 - Frontend shell orchestrates state, keyboard interaction, overlays, and API calls.
 - Zustand store maintains canvas runtime state (camera, items, selection, interaction state, undo/redo stacks).
 - API layer handles bootstrap, item/space CRUD, links, graph, search, upload presign, and webclip metadata.
-- DB (when configured) stores canonical spaces/items/links/embeddings.
+- DB (when configured) stores canonical spaces/items/links (legacy `item_embeddings` rows may exist but are not populated).
 - Local mode falls back to localStorage snapshot persistence.
 
 ## Runtime Modes
@@ -84,7 +84,7 @@ Behavior:
 - `spaces`: includes parent-child hierarchy and `canvasState` (camera snapshot).
 - `items`: canonical item rows.
 - `item_links`: directed edges between items in same space.
-- `item_embeddings`: vector embeddings used for semantic/hybrid search.
+- `item_embeddings`: optional legacy table; search is full-text + trigram only.
 
 ## Core User Workflows
 
@@ -316,7 +316,7 @@ These are good opportunities to improve during rebuild while preserving compatib
 - Bootstrap + space resolution: `app/api/bootstrap/route.ts`, `src/lib/spaces.ts`
 - Items/spaces routes: `app/api/spaces/[spaceId]/items/route.ts`, `app/api/items/[itemId]/route.ts`, `app/api/spaces/[spaceId]/route.ts`
 - Links/backlinks routes: `app/api/items/[itemId]/links/route.ts`, `app/api/item-links/sync/route.ts`
-- Search and embeddings: `app/api/search/route.ts`, `src/lib/item-embedding.ts`
+- Search (FTS / hybrid lexical): `app/api/search/route.ts`; embedding cleanup: `src/lib/item-embedding.ts`
 - Graph route: `app/api/spaces/[spaceId]/graph/route.ts`
 - Upload/webclip routes: `app/api/upload/presign/route.ts`, `app/api/webclip/preview/route.ts`
 

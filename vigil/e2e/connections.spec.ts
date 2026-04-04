@@ -6,7 +6,7 @@ test.describe("connection pin anchoring", () => {
   test.beforeEach(async ({ page }) => {
     await prepDemoSession(page);
     await page.goto("/");
-    await expect(page.getByText("heartgarden")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("波途画電")).toBeVisible({ timeout: 30_000 });
   });
 
   test("anchors drawn string pins to source and target cards", async ({ page }) => {

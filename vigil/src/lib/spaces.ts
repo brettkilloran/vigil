@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm";
 
 import type { tryGetDb } from "@/src/db/index";
-import { itemEmbeddings, itemLinks, items, spaces } from "@/src/db/schema";
+import { itemLinks, items, spaces } from "@/src/db/schema";
 import type { CameraState } from "@/src/stores/canvas-types";
 import { defaultCamera } from "@/src/stores/canvas-types";
 
@@ -254,51 +254,23 @@ export async function searchItemsFuzzy(
   return toSearchRows(rows);
 }
 
-/** Nearest items by pgvector cosine distance (`<=>`). Requires rows in `item_embeddings`. */
-export async function searchItemsSemantic(
-  db: VigilDb,
-  embedding: number[],
-  filters: SearchFilters = {},
-) {
-  if (embedding.length === 0) return [] as SearchRow[];
-  const limit = normalizeLimit(filters.limit, 24, 100);
-  const literal = `'[${embedding.map((n) => Number(n)).join(",")}]'::vector`;
-  const distanceExpr = sql<number>`${itemEmbeddings.embedding} <=> ${sql.raw(literal)}`;
-  const where = and(...searchWhereClauses(filters));
-  const rows = await db
-    .select({
-      item: items,
-      spaceId: spaces.id,
-      spaceName: spaces.name,
-      parentSpaceId: spaces.parentSpaceId,
-      score: distanceExpr,
-    })
-    .from(items)
-    .innerJoin(itemEmbeddings, eq(items.id, itemEmbeddings.itemId))
-    .innerJoin(spaces, eq(spaces.id, items.spaceId))
-    .where(where)
-    .orderBy(distanceExpr)
-    .limit(limit);
-  return toSearchRows(rows);
-}
-
+/**
+ * Merge FTS + trigram (fuzzy) hits; dedupe by item id. No vector / embedding pass.
+ */
 export async function searchItemsHybrid(
   db: VigilDb,
   query: string,
-  embedding: number[],
   filters: SearchFilters = {},
   ftsLimit = 30,
   fuzzyLimit = 16,
-  semanticLimit = 24,
 ) {
-  const [ftsRows, fuzzyRows, semRows] = await Promise.all([
+  const [ftsRows, fuzzyRows] = await Promise.all([
     searchItemsFTS(db, query, { ...filters, limit: ftsLimit }),
     searchItemsFuzzy(db, query, { ...filters, limit: fuzzyLimit }),
-    searchItemsSemantic(db, embedding, { ...filters, limit: semanticLimit }),
   ]);
   const seen = new Set<string>();
   const out: SearchRow[] = [];
-  for (const row of [...ftsRows, ...fuzzyRows, ...semRows]) {
+  for (const row of [...ftsRows, ...fuzzyRows]) {
     if (seen.has(row.item.id)) continue;
     seen.add(row.item.id);
     out.push(row);

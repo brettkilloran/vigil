@@ -64,12 +64,15 @@
 
   /* Foundation shell — ArchitecturalCanvasApp (all literals route through primitives) */
   --sem-grid-color-deep: oklch(1 0 0 / 0.02);
+  /* Viewport dot grid; ~half prior mix for subtler plane (was 11% / 6.5%). */
   --sem-grid-dot-strong: color-mix(in oklch, var(--sys-color-white) 5.5%, transparent);
-  --sem-grid-dot-soft: color-mix(in oklch, var(--sys-color-white) 3.8%, transparent);
+  --sem-grid-dot-soft: color-mix(in oklch, var(--sys-color-white) 3.25%, transparent);
   --sem-vignette-stop-4: color-mix(in oklch, var(--sys-color-black) 4%, transparent);
   --sem-vignette-stop-12: color-mix(in oklch, var(--sys-color-black) 12%, transparent);
   --sem-vignette-stop-3: color-mix(in oklch, var(--sys-color-black) 3%, transparent);
   --sem-vignette-stop-8: color-mix(in oklch, var(--sys-color-black) 8%, transparent);
+  /* Viewport ::after vignette ellipse axes = base % × this (see ArchitecturalCanvasApp.module.css). */
+  --viewport-vignette-scale: 1.22;
   --sem-color-shadow-05: color-mix(in oklch, var(--sys-color-black) 5%, transparent);
   --sem-color-shadow-20: color-mix(in oklch, var(--sys-color-black) 20%, transparent);
   --sem-color-shadow-22: color-mix(in oklch, var(--sys-color-black) 22%, transparent);
