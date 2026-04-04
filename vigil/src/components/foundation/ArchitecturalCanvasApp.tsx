@@ -4949,21 +4949,23 @@ export function ArchitecturalCanvasApp({
                         );
                       })}
                     </div>
-                    <ArchitecturalButton
-                      type="button"
-                      size="menu"
-                      tone="focus-light"
-                      leadingIcon={<MagnifyingGlass size={12} weight="bold" aria-hidden />}
-                      onClick={() => setPaletteOpen(true)}
-                      title={`Search (${modKeyHints.search})`}
-                    >
-                      Search
-                    </ArchitecturalButton>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
+        <div className={styles.topRightConnectionTools}>
+          <ArchitecturalButton
+            type="button"
+            size="menu"
+            tone="focus-light"
+            leadingIcon={<MagnifyingGlass size={12} weight="bold" aria-hidden />}
+            onClick={() => setPaletteOpen(true)}
+            title={`Search (${modKeyHints.search})`}
+          >
+            Search
+          </ArchitecturalButton>
         </div>
 
         {!focusOpen && !galleryOpen ? (
