@@ -16,7 +16,7 @@ const meta: Meta<typeof ArchitecturalStatusMetric> = {
   },
   decorators: [
     (Story) => (
-      <div style={{ background: "#0a0a0c", padding: 20 }}>
+      <div style={{ background: "var(--sem-surface-base)", padding: 20 }}>
         <Story />
       </div>
     ),

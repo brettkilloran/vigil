@@ -4,7 +4,7 @@
   "description": "Infinite canvas for notes and worldbuilding",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#fafafa",
-  "theme_color": "#171717",
+  "background_color": "oklch(0.985 0 0)",
+  "theme_color": "oklch(0.205 0 0)",
   "icons": []
 }

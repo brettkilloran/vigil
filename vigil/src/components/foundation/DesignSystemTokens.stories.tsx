@@ -147,7 +147,7 @@ function TokenCatalog() {
                       gap: 12,
                       padding: "10px 12px",
                       borderTop:
-                        idx === 0 ? "none" : "1px solid color-mix(in srgb, var(--sem-border-subtle) 70%, transparent)",
+                        idx === 0 ? "none" : "1px solid color-mix(in oklch, var(--sem-border-subtle) 70%, transparent)",
                     }}
                   >
                     <div style={swatchStyle(row.name)} />

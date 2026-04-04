@@ -4,20 +4,22 @@
 
 :root {
   /* Primitive token foundation */
-  --sys-color-black: #000000;
-  --sys-color-white: #ffffff;
-  --sys-color-neutral-950: #0a0a0a;
-  --sys-color-neutral-900: #171717;
-  --sys-color-neutral-800: #262626;
-  --sys-color-neutral-700: #404040;
-  --sys-color-neutral-500: #737373;
-  --sys-color-neutral-400: #a3a3a3;
-  --sys-color-neutral-300: #d4d4d4;
-  --sys-color-neutral-100: #f5f5f5;
+  --sys-color-black: oklch(0 0 0);
+  --sys-color-white: oklch(1 0 0);
+  --sys-color-neutral-950: oklch(0.145 0 0);
+  /* Dark chrome for code nodes / folders on near-black canvas (darker than 800, not black). */
+  --sys-color-neutral-920: oklch(0.188 0 0);
+  --sys-color-neutral-900: oklch(0.205 0 0);
+  --sys-color-neutral-800: oklch(0.269 0 0);
+  --sys-color-neutral-700: oklch(0.371 0 0);
+  --sys-color-neutral-500: oklch(0.551 0 0);
+  --sys-color-neutral-400: oklch(0.708 0 0);
+  --sys-color-neutral-300: oklch(0.868 0 0);
+  --sys-color-neutral-100: oklch(0.967 0 0);
   --sys-color-accent-500: oklch(0.74 0.31 50);
-  --sys-color-danger-500: #dc2626;
-  --sys-color-danger-400: #f87171;
-  --sys-color-danger-300: #fca5a5;
+  --sys-color-danger-500: oklch(0.577 0.245 27.33);
+  --sys-color-danger-400: oklch(0.704 0.191 17.7);
+  --sys-color-danger-300: oklch(0.793 0.133 17.7);
 
   --sys-radius-sm: 4px;
   --sys-radius-md: 8px;
@@ -39,26 +41,107 @@
   --sys-motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
 
   /* Semantic tokens */
-  --sem-surface-base: #0a0a0a;
-  --sem-surface-glass: rgba(255, 255, 255, 0.06);
-  --sem-surface-elevated: rgba(15, 15, 15, 0.7);
-  --sem-surface-muted-hover: rgba(255, 255, 255, 0.08);
-  --sem-surface-muted-press: rgba(255, 255, 255, 0.14);
-  --sem-text-primary: #f5f5f5;
-  --sem-text-secondary: #d4d4d4;
-  --sem-text-muted: #8a8a8a;
-  --sem-text-onAccent: #0a0a0a;
-  --sem-border-subtle: rgba(255, 255, 255, 0.06);
-  --sem-border-strong: rgba(255, 255, 255, 0.1);
-  --sem-border-soft: color-mix(in srgb, var(--sys-color-white) 5%, transparent);
-  --sem-border-muted: color-mix(in srgb, var(--sys-color-black) 10%, transparent);
+  --sem-surface-base: oklch(0.145 0 0);
+  --sem-surface-glass: oklch(1 0 0 / 0.06);
+  --sem-surface-elevated: oklch(0.176 0 0 / 0.7);
+  --sem-surface-muted-hover: oklch(1 0 0 / 0.08);
+  --sem-surface-muted-press: oklch(1 0 0 / 0.14);
+  --sem-text-primary: oklch(0.967 0 0);
+  --sem-text-secondary: oklch(0.868 0 0);
+  --sem-text-muted: oklch(0.62 0 0);
+  --sem-text-onAccent: oklch(0.145 0 0);
+  --sem-border-subtle: oklch(1 0 0 / 0.06);
+  --sem-border-strong: oklch(1 0 0 / 0.1);
+  --sem-border-soft: color-mix(in oklch, var(--sys-color-white) 5%, transparent);
+  --sem-border-muted: color-mix(in oklch, var(--sys-color-black) 10%, transparent);
   --sem-focus-ring: var(--sys-color-accent-500);
   --sem-focus-ring-width: 2px;
   --sem-focus-ring-offset: 2px;
-  --sem-shadow-sm: 0 1px 2px color-mix(in srgb, var(--sys-color-black) 30%, transparent);
-  --sem-shadow-md: 0 4px 12px color-mix(in srgb, var(--sys-color-black) 20%, transparent);
-  --sem-shadow-lg: 0 8px 32px color-mix(in srgb, var(--sys-color-black) 40%, transparent);
-  --sem-shadow-xl: 0 20px 40px color-mix(in srgb, var(--sys-color-black) 40%, transparent);
+  --sem-shadow-sm: 0 1px 2px color-mix(in oklch, var(--sys-color-black) 30%, transparent);
+  --sem-shadow-md: 0 4px 12px color-mix(in oklch, var(--sys-color-black) 20%, transparent);
+  --sem-shadow-lg: 0 8px 32px color-mix(in oklch, var(--sys-color-black) 40%, transparent);
+  --sem-shadow-xl: 0 20px 40px color-mix(in oklch, var(--sys-color-black) 40%, transparent);
+
+  /* Foundation shell — ArchitecturalCanvasApp (all literals route through primitives) */
+  --sem-grid-color-deep: oklch(1 0 0 / 0.02);
+  --sem-grid-dot-strong: color-mix(in oklch, var(--sys-color-white) 5.5%, transparent);
+  --sem-grid-dot-soft: color-mix(in oklch, var(--sys-color-white) 3.8%, transparent);
+  --sem-vignette-stop-4: color-mix(in oklch, var(--sys-color-black) 4%, transparent);
+  --sem-vignette-stop-12: color-mix(in oklch, var(--sys-color-black) 12%, transparent);
+  --sem-vignette-stop-3: color-mix(in oklch, var(--sys-color-black) 3%, transparent);
+  --sem-vignette-stop-8: color-mix(in oklch, var(--sys-color-black) 8%, transparent);
+  --sem-color-shadow-05: color-mix(in oklch, var(--sys-color-black) 5%, transparent);
+  --sem-color-shadow-20: color-mix(in oklch, var(--sys-color-black) 20%, transparent);
+  --sem-color-shadow-22: color-mix(in oklch, var(--sys-color-black) 22%, transparent);
+  --sem-color-shadow-25: color-mix(in oklch, var(--sys-color-black) 25%, transparent);
+  --sem-color-shadow-26: color-mix(in oklch, var(--sys-color-black) 26%, transparent);
+  --sem-color-shadow-28: color-mix(in oklch, var(--sys-color-black) 28%, transparent);
+  --sem-color-shadow-30: color-mix(in oklch, var(--sys-color-black) 30%, transparent);
+  --sem-color-shadow-38: color-mix(in oklch, var(--sys-color-black) 38%, transparent);
+  --sem-color-shadow-40: color-mix(in oklch, var(--sys-color-black) 40%, transparent);
+  --sem-color-shadow-42: color-mix(in oklch, var(--sys-color-black) 42%, transparent);
+  --sem-color-shadow-45: color-mix(in oklch, var(--sys-color-black) 45%, transparent);
+  --sem-overlay-white-02: color-mix(in oklch, var(--sys-color-white) 2%, transparent);
+  --sem-overlay-white-03: color-mix(in oklch, var(--sys-color-white) 3%, transparent);
+  --sem-overlay-white-05: color-mix(in oklch, var(--sys-color-white) 5%, transparent);
+  --sem-overlay-white-06: color-mix(in oklch, var(--sys-color-white) 6%, transparent);
+  --sem-overlay-white-07: color-mix(in oklch, var(--sys-color-white) 7%, transparent);
+  --sem-overlay-white-08: color-mix(in oklch, var(--sys-color-white) 8%, transparent);
+  --sem-overlay-white-10: color-mix(in oklch, var(--sys-color-white) 10%, transparent);
+  --sem-overlay-white-12: color-mix(in oklch, var(--sys-color-white) 12%, transparent);
+  --sem-overlay-white-14: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
+  --sem-overlay-white-16: color-mix(in oklch, var(--sys-color-white) 16%, transparent);
+  --sem-overlay-white-18: color-mix(in oklch, var(--sys-color-white) 18%, transparent);
+  --sem-overlay-white-42: color-mix(in oklch, var(--sys-color-white) 42%, transparent);
+  --sem-overlay-white-90: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
+  --sem-overlay-white-98: color-mix(in oklch, var(--sys-color-white) 98%, transparent);
+  --sem-overlay-black-05: color-mix(in oklch, var(--sys-color-black) 5%, transparent);
+  --sem-overlay-black-10: color-mix(in oklch, var(--sys-color-black) 10%, transparent);
+  --sem-overlay-black-15: color-mix(in oklch, var(--sys-color-black) 15%, transparent);
+  --sem-overlay-black-30: color-mix(in oklch, var(--sys-color-black) 30%, transparent);
+  --sem-overlay-black-80: color-mix(in oklch, var(--sys-color-black) 80%, transparent);
+  --sem-surface-stack-scrim: oklch(0.128 0.018 264 / 0.62);
+  --sem-surface-stack-badge-elevated: oklch(0.14 0.02 264 / 0.86);
+  --sem-surface-stack-badge: oklch(0.13 0.02 264 / 0.74);
+  --sem-text-stack-badge: oklch(0.88 0 0);
+  --sem-text-stack-badge-muted: oklch(0.84 0 0);
+  --sem-border-tinted-ring: oklch(0.14 0.02 264 / 0.95);
+  --sem-danger-glow-pulse-low: color-mix(in oklch, var(--sys-color-danger-400) 45%, transparent);
+  --sem-danger-glow-pulse-high: color-mix(in oklch, var(--sys-color-danger-400) 65%, transparent);
+  --sem-danger-edge-72: color-mix(in oklch, var(--sys-color-danger-400) 72%, transparent);
+  --sem-danger-edge-56: color-mix(in oklch, var(--sys-color-danger-400) 56%, transparent);
+  --sem-danger-edge-78: color-mix(in oklch, var(--sys-color-danger-400) 78%, transparent);
+  --sem-danger-edge-28: color-mix(in oklch, var(--sys-color-danger-400) 28%, transparent);
+  --sem-danger-surface-16: color-mix(in oklch, var(--sys-color-danger-500) 16%, transparent);
+  --sem-danger-surface-20: color-mix(in oklch, var(--sys-color-danger-500) 20%, transparent);
+  --sem-danger-surface-24: color-mix(in oklch, var(--sys-color-danger-500) 24%, transparent);
+  --sem-danger-hint-border: color-mix(in oklch, var(--sys-color-danger-300) 32%, transparent);
+  --sem-danger-hint-bg: oklch(0.28 0.06 25 / 0.7);
+  --sem-danger-hint-fg: oklch(0.95 0.02 25);
+  --sem-tape-clear-fill: oklch(0.96 0 0 / 0.72);
+  --sem-tape-dark-a: oklch(0.48 0.02 264 / 0.38);
+  --sem-tape-dark-b: oklch(0.38 0.02 264 / 0.7);
+  --sem-tape-dark-c: oklch(0.27 0.02 264 / 0.9);
+  --sem-tape-stripe-light: oklch(1 0 0 / 0.045);
+  --sem-tape-stripe-dark: oklch(0 0 0 / 0.05);
+  --sem-tape-border-soft: oklch(1 0 0 / 0.07);
+  --sem-tape-inset-top: oklch(1 0 0 / 0.14);
+  --sem-tape-inset-bottom: oklch(0 0 0 / 0.42);
+  --sem-tape-shadow-outer: oklch(0 0 0 / 0.22);
+  --sem-tape-inset-top-dim: oklch(1 0 0 / 0.1);
+  --sem-tape-inset-bottom-deep: oklch(0 0 0 / 0.45);
+  --sem-tape-shadow-deep: oklch(0 0 0 / 0.28);
+  /* Light tape — soft cast onto the card (layered neutral, OKLCH-mixed). */
+  --sem-tape-light-shadow-contact: color-mix(in oklch, var(--sys-color-black) 6%, transparent);
+  --sem-tape-light-shadow-mid: color-mix(in oklch, var(--sys-color-black) 3.5%, transparent);
+  --sem-tape-light-shadow-ambient: color-mix(in oklch, var(--sys-color-black) 2%, transparent);
+  --sem-tape-light-shadow-halo: color-mix(in oklch, var(--sys-color-black) 1.2%, transparent);
+  --sem-surface-glass-fallback: oklch(0.176 0 0 / 0.9);
+  --sem-surface-focus-scrim: var(--sem-overlay-white-90);
+  --sem-surface-focus-scrim-solid: var(--sem-overlay-white-98);
+  --sem-text-focus-body: oklch(0.32 0 0);
+  --sem-surface-focus-code: oklch(0.22 0 0);
+  --sem-checkbox-check-fill: color-mix(in oklch, var(--sys-color-white) 95%, transparent);
 
   /* Component button tokens */
   --cmp-button-neutral-bg-default: transparent;
@@ -68,7 +151,7 @@
   --cmp-button-neutral-fg-default: var(--sem-text-primary);
   --cmp-button-neutral-fg-hover: var(--sem-text-primary);
   --cmp-button-neutral-fg-active: var(--sem-text-primary);
-  --cmp-button-neutral-fg-disabled: color-mix(in srgb, var(--sem-text-muted) 70%, transparent);
+  --cmp-button-neutral-fg-disabled: color-mix(in oklch, var(--sem-text-muted) 70%, transparent);
   --cmp-button-neutral-border-default: transparent;
   --cmp-button-neutral-border-hover: transparent;
   --cmp-button-neutral-border-active: transparent;
@@ -81,110 +164,110 @@
   --cmp-button-ghost-fg-default: var(--sem-text-muted);
   --cmp-button-ghost-fg-hover: var(--sem-text-primary);
   --cmp-button-ghost-fg-active: var(--sem-text-primary);
-  --cmp-button-ghost-fg-disabled: color-mix(in srgb, var(--sem-text-muted) 70%, transparent);
+  --cmp-button-ghost-fg-disabled: color-mix(in oklch, var(--sem-text-muted) 70%, transparent);
   --cmp-button-ghost-border-default: transparent;
   --cmp-button-ghost-border-hover: transparent;
   --cmp-button-ghost-border-active: transparent;
   --cmp-button-ghost-border-disabled: transparent;
 
   --cmp-button-subtle-bg-default: transparent;
-  --cmp-button-subtle-bg-hover: color-mix(in srgb, var(--sys-color-black) 6%, transparent);
-  --cmp-button-subtle-bg-active: color-mix(in srgb, var(--sys-color-black) 10%, transparent);
+  --cmp-button-subtle-bg-hover: color-mix(in oklch, var(--sys-color-black) 6%, transparent);
+  --cmp-button-subtle-bg-active: color-mix(in oklch, var(--sys-color-black) 10%, transparent);
   --cmp-button-subtle-bg-disabled: transparent;
   --cmp-button-subtle-fg-default: var(--sem-text-primary);
   --cmp-button-subtle-fg-hover: var(--sem-text-primary);
   --cmp-button-subtle-fg-active: var(--sem-text-primary);
-  --cmp-button-subtle-fg-disabled: color-mix(in srgb, var(--sem-text-muted) 70%, transparent);
+  --cmp-button-subtle-fg-disabled: color-mix(in oklch, var(--sem-text-muted) 70%, transparent);
   --cmp-button-subtle-border-default: transparent;
   --cmp-button-subtle-border-hover: transparent;
   --cmp-button-subtle-border-active: transparent;
   --cmp-button-subtle-border-disabled: transparent;
 
   --cmp-button-primary-bg-default: var(--sem-text-primary);
-  --cmp-button-primary-bg-hover: color-mix(in srgb, var(--sem-text-primary) 88%, var(--sys-color-black));
-  --cmp-button-primary-bg-active: color-mix(in srgb, var(--sem-text-primary) 78%, var(--sys-color-black));
-  --cmp-button-primary-bg-disabled: color-mix(in srgb, var(--sem-text-primary) 35%, transparent);
+  --cmp-button-primary-bg-hover: color-mix(in oklch, var(--sem-text-primary) 88%, var(--sys-color-black));
+  --cmp-button-primary-bg-active: color-mix(in oklch, var(--sem-text-primary) 78%, var(--sys-color-black));
+  --cmp-button-primary-bg-disabled: color-mix(in oklch, var(--sem-text-primary) 35%, transparent);
   --cmp-button-primary-fg-default: var(--sem-text-onAccent);
   --cmp-button-primary-fg-hover: var(--sem-text-onAccent);
   --cmp-button-primary-fg-active: var(--sem-text-onAccent);
-  --cmp-button-primary-fg-disabled: color-mix(in srgb, var(--sem-text-onAccent) 50%, transparent);
+  --cmp-button-primary-fg-disabled: color-mix(in oklch, var(--sem-text-onAccent) 50%, transparent);
   --cmp-button-primary-border-default: transparent;
   --cmp-button-primary-border-hover: transparent;
   --cmp-button-primary-border-active: transparent;
   --cmp-button-primary-border-disabled: transparent;
 
-  --cmp-button-danger-bg-default: color-mix(in srgb, var(--sys-color-danger-500) 12%, transparent);
-  --cmp-button-danger-bg-hover: color-mix(in srgb, var(--sys-color-danger-500) 20%, transparent);
-  --cmp-button-danger-bg-active: color-mix(in srgb, var(--sys-color-danger-500) 28%, transparent);
-  --cmp-button-danger-bg-disabled: color-mix(in srgb, var(--sys-color-danger-500) 10%, transparent);
+  --cmp-button-danger-bg-default: color-mix(in oklch, var(--sys-color-danger-500) 12%, transparent);
+  --cmp-button-danger-bg-hover: color-mix(in oklch, var(--sys-color-danger-500) 20%, transparent);
+  --cmp-button-danger-bg-active: color-mix(in oklch, var(--sys-color-danger-500) 28%, transparent);
+  --cmp-button-danger-bg-disabled: color-mix(in oklch, var(--sys-color-danger-500) 10%, transparent);
   --cmp-button-danger-fg-default: var(--sys-color-danger-300);
   --cmp-button-danger-fg-hover: var(--sys-color-danger-300);
   --cmp-button-danger-fg-active: var(--sys-color-danger-300);
-  --cmp-button-danger-fg-disabled: color-mix(in srgb, var(--sys-color-danger-300) 60%, transparent);
-  --cmp-button-danger-border-default: color-mix(in srgb, var(--sys-color-danger-400) 45%, transparent);
-  --cmp-button-danger-border-hover: color-mix(in srgb, var(--sys-color-danger-400) 60%, transparent);
-  --cmp-button-danger-border-active: color-mix(in srgb, var(--sys-color-danger-400) 70%, transparent);
-  --cmp-button-danger-border-disabled: color-mix(in srgb, var(--sys-color-danger-400) 35%, transparent);
+  --cmp-button-danger-fg-disabled: color-mix(in oklch, var(--sys-color-danger-300) 60%, transparent);
+  --cmp-button-danger-border-default: color-mix(in oklch, var(--sys-color-danger-400) 45%, transparent);
+  --cmp-button-danger-border-hover: color-mix(in oklch, var(--sys-color-danger-400) 60%, transparent);
+  --cmp-button-danger-border-active: color-mix(in oklch, var(--sys-color-danger-400) 70%, transparent);
+  --cmp-button-danger-border-disabled: color-mix(in oklch, var(--sys-color-danger-400) 35%, transparent);
 
   /* Focus and tone specializations */
-  --cmp-button-focus-light-bg-default: #f0f0f0;
-  --cmp-button-focus-light-bg-hover: #e0e0e0;
-  --cmp-button-focus-light-bg-active: #d6d6d6;
-  --cmp-button-focus-light-fg-default: #555555;
-  --cmp-button-focus-light-fg-hover: #111111;
-  --cmp-button-focus-light-fg-active: #111111;
-  --cmp-button-focus-dark-bg-default: #333333;
-  --cmp-button-focus-dark-bg-hover: #444444;
-  --cmp-button-focus-dark-bg-active: #555555;
-  --cmp-button-focus-dark-fg-default: #ffffff;
-  --cmp-button-focus-dark-fg-hover: #ffffff;
-  --cmp-button-focus-dark-fg-active: #ffffff;
+  --cmp-button-focus-light-bg-default: oklch(0.952 0 0);
+  --cmp-button-focus-light-bg-hover: oklch(0.934 0 0);
+  --cmp-button-focus-light-bg-active: oklch(0.915 0 0);
+  --cmp-button-focus-light-fg-default: oklch(0.452 0 0);
+  --cmp-button-focus-light-fg-hover: oklch(0.216 0 0);
+  --cmp-button-focus-light-fg-active: oklch(0.216 0 0);
+  --cmp-button-focus-dark-bg-default: oklch(0.35 0 0);
+  --cmp-button-focus-dark-bg-hover: oklch(0.426 0 0);
+  --cmp-button-focus-dark-bg-active: oklch(0.48 0 0);
+  --cmp-button-focus-dark-fg-default: oklch(1 0 0);
+  --cmp-button-focus-dark-fg-hover: oklch(1 0 0);
+  --cmp-button-focus-dark-fg-active: oklch(1 0 0);
 
   /* Card contextual icon actions (preserve subtle header affordances) */
-  --cmp-button-card-light-bg-default: color-mix(in srgb, var(--sys-color-black) 2%, transparent);
-  --cmp-button-card-light-bg-hover: color-mix(in srgb, var(--sys-color-black) 6%, transparent);
-  --cmp-button-card-light-bg-active: color-mix(in srgb, var(--sys-color-black) 10%, transparent);
-  --cmp-button-card-light-fg-default: color-mix(in srgb, var(--sys-color-black) 58%, transparent);
-  --cmp-button-card-light-fg-hover: color-mix(in srgb, var(--sys-color-black) 78%, transparent);
-  --cmp-button-card-light-fg-active: color-mix(in srgb, var(--sys-color-black) 88%, transparent);
-  --cmp-button-card-dark-bg-default: color-mix(in srgb, var(--sys-color-white) 4%, transparent);
-  --cmp-button-card-dark-bg-hover: color-mix(in srgb, var(--sys-color-white) 10%, transparent);
-  --cmp-button-card-dark-bg-active: color-mix(in srgb, var(--sys-color-white) 16%, transparent);
-  --cmp-button-card-dark-fg-default: color-mix(in srgb, var(--sys-color-white) 64%, transparent);
-  --cmp-button-card-dark-fg-hover: color-mix(in srgb, var(--sys-color-white) 90%, transparent);
+  --cmp-button-card-light-bg-default: color-mix(in oklch, var(--sys-color-black) 2%, transparent);
+  --cmp-button-card-light-bg-hover: color-mix(in oklch, var(--sys-color-black) 6%, transparent);
+  --cmp-button-card-light-bg-active: color-mix(in oklch, var(--sys-color-black) 10%, transparent);
+  --cmp-button-card-light-fg-default: color-mix(in oklch, var(--sys-color-black) 58%, transparent);
+  --cmp-button-card-light-fg-hover: color-mix(in oklch, var(--sys-color-black) 78%, transparent);
+  --cmp-button-card-light-fg-active: color-mix(in oklch, var(--sys-color-black) 88%, transparent);
+  --cmp-button-card-dark-bg-default: color-mix(in oklch, var(--sys-color-white) 4%, transparent);
+  --cmp-button-card-dark-bg-hover: color-mix(in oklch, var(--sys-color-white) 10%, transparent);
+  --cmp-button-card-dark-bg-active: color-mix(in oklch, var(--sys-color-white) 16%, transparent);
+  --cmp-button-card-dark-fg-default: color-mix(in oklch, var(--sys-color-white) 64%, transparent);
+  --cmp-button-card-dark-fg-hover: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
   --cmp-button-card-dark-fg-active: var(--sys-color-white);
 
-  --bg-base: #0a0a0a;
-  --background: #0a0a0a;
-  --foreground: #f5f5f5;
-  --vigil-muted: #8a8a8a;
-  --vigil-label: #d4d4d4;
-  --vigil-border: rgba(255, 255, 255, 0.06);
-  --vigil-btn-bg: rgba(255, 255, 255, 0.06);
-  --vigil-btn-fg: #f5f5f5;
-  --vigil-btn-border: rgba(255, 255, 255, 0.1);
+  --bg-base: oklch(0.145 0 0);
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.967 0 0);
+  --vigil-muted: oklch(0.62 0 0);
+  --vigil-label: oklch(0.868 0 0);
+  --vigil-border: oklch(1 0 0 / 0.06);
+  --vigil-btn-bg: oklch(1 0 0 / 0.06);
+  --vigil-btn-fg: oklch(0.967 0 0);
+  --vigil-btn-border: oklch(1 0 0 / 0.1);
   --vigil-snap: var(--sys-color-accent-500);
-  --vigil-canvas: #0a0a0a;
-  --vigil-grid-color: rgba(255, 255, 255, 0.04);
-  --vigil-elevated: rgba(15, 15, 15, 0.7);
-  --vigil-glass-border: rgba(255, 255, 255, 0.06);
+  --vigil-canvas: oklch(0.145 0 0);
+  --vigil-grid-color: oklch(1 0 0 / 0.04);
+  --vigil-elevated: oklch(0.176 0 0 / 0.7);
+  --vigil-glass-border: oklch(1 0 0 / 0.06);
   /* Legacy card tokens — bodies often overridden by card theme */
-  --vigil-card-bg: #f5f5f5;
-  --vigil-card-border: #d4d4d4;
-  --vigil-card-header-bg: rgba(0, 0, 0, 0.04);
-  --vigil-folder-tab-bg: #e5e5e5;
+  --vigil-card-bg: oklch(0.967 0 0);
+  --vigil-card-border: oklch(0.868 0 0);
+  --vigil-card-header-bg: oklch(0 0 0 / 0.04);
+  --vigil-folder-tab-bg: oklch(0.925 0 0);
 
-  --theme-default-bg: #f5f5f5;
-  --theme-default-text: #1a1a1a;
-  --theme-default-border: #d4d4d4;
+  --theme-default-bg: oklch(0.967 0 0);
+  --theme-default-text: oklch(0.23 0 0);
+  --theme-default-border: oklch(0.868 0 0);
 
-  --theme-task-bg: #f5f5f5;
-  --theme-task-text: #1a1a1a;
-  --theme-task-border: #d4d4d4;
+  --theme-task-bg: oklch(0.967 0 0);
+  --theme-task-text: oklch(0.23 0 0);
+  --theme-task-border: oklch(0.868 0 0);
 
-  --theme-media-bg: #f5f5f5;
-  --theme-media-text: #1a1a1a;
-  --theme-media-border: #d4d4d4;
+  --theme-media-bg: oklch(0.967 0 0);
+  --theme-media-text: oklch(0.23 0 0);
+  --theme-media-border: oklch(0.868 0 0);
 
   /* Compatibility aliases */
   --vigil-btn-bg: var(--cmp-button-neutral-bg-default);
@@ -297,8 +380,8 @@ a {
   height: 1.05em;
   margin: 0.2em 0 0;
   border-radius: 0.28rem;
-  border: 1.5px solid color-mix(in srgb, currentColor 35%, transparent);
-  background: color-mix(in srgb, currentColor 8%, transparent);
+  border: 1.5px solid color-mix(in oklch, currentColor 35%, transparent);
+  background: color-mix(in oklch, currentColor 8%, transparent);
   cursor: pointer;
   transition:
     background 0.18s ease,
@@ -308,13 +391,13 @@ a {
 }
 
 .ProseMirror li[data-type="taskItem"] input[type="checkbox"]:hover {
-  border-color: color-mix(in srgb, var(--vigil-snap) 55%, currentColor);
+  border-color: color-mix(in oklch, var(--vigil-snap) 55%, currentColor);
 }
 
 .ProseMirror li[data-type="taskItem"] input[type="checkbox"]:checked {
   background: var(--vigil-snap);
   border-color: var(--vigil-snap);
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.95);
+  box-shadow: inset 0 0 0 2px var(--sem-checkbox-check-fill);
   transform: scale(1.04);
 }
 
@@ -360,15 +443,15 @@ a {
   font-size: 0.9em;
   padding: 0.12em 0.35em;
   border-radius: 0.25rem;
-  background: color-mix(in srgb, currentColor 10%, transparent);
+  background: color-mix(in oklch, currentColor 10%, transparent);
 }
 
 .ProseMirror pre {
   margin: 0.5em 0;
   padding: 0.65em 0.85em;
   border-radius: 0.4rem;
-  background: color-mix(in srgb, currentColor 8%, transparent);
-  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  background: color-mix(in oklch, currentColor 8%, transparent);
+  border: 1px solid color-mix(in oklch, currentColor 18%, transparent);
   overflow-x: auto;
 }
 
@@ -381,7 +464,7 @@ a {
 .ProseMirror hr {
   margin: 1em 0;
   border: none;
-  border-top: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-top: 1px solid color-mix(in oklch, currentColor 22%, transparent);
 }
 
 .ProseMirror ul:not([data-type="taskList"]),
@@ -448,7 +531,7 @@ a {
 .vigil-btn:focus-visible {
   outline: none;
   box-shadow:
-    0 0 0 var(--sem-focus-ring-width) color-mix(in srgb, var(--sem-focus-ring) 35%, transparent);
+    0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sem-focus-ring) 35%, transparent);
 }
 
 .vigil-btn:disabled,
@@ -623,11 +706,11 @@ a {
   --btn-bg-default: var(--cmp-button-focus-light-bg-default);
   --btn-bg-hover: var(--cmp-button-focus-light-bg-hover);
   --btn-bg-active: var(--cmp-button-focus-light-bg-active);
-  --btn-bg-disabled: color-mix(in srgb, var(--cmp-button-focus-light-bg-default) 70%, transparent);
+  --btn-bg-disabled: color-mix(in oklch, var(--cmp-button-focus-light-bg-default) 70%, transparent);
   --btn-fg-default: var(--cmp-button-focus-light-fg-default);
   --btn-fg-hover: var(--cmp-button-focus-light-fg-hover);
   --btn-fg-active: var(--cmp-button-focus-light-fg-active);
-  --btn-fg-disabled: color-mix(in srgb, var(--cmp-button-focus-light-fg-default) 65%, transparent);
+  --btn-fg-disabled: color-mix(in oklch, var(--cmp-button-focus-light-fg-default) 65%, transparent);
   --btn-border-default: transparent;
   --btn-border-hover: transparent;
   --btn-border-active: transparent;
@@ -638,11 +721,11 @@ a {
   --btn-bg-default: var(--cmp-button-focus-dark-bg-default);
   --btn-bg-hover: var(--cmp-button-focus-dark-bg-hover);
   --btn-bg-active: var(--cmp-button-focus-dark-bg-active);
-  --btn-bg-disabled: color-mix(in srgb, var(--cmp-button-focus-dark-bg-default) 70%, transparent);
+  --btn-bg-disabled: color-mix(in oklch, var(--cmp-button-focus-dark-bg-default) 70%, transparent);
   --btn-fg-default: var(--cmp-button-focus-dark-fg-default);
   --btn-fg-hover: var(--cmp-button-focus-dark-fg-hover);
   --btn-fg-active: var(--cmp-button-focus-dark-fg-active);
-  --btn-fg-disabled: color-mix(in srgb, var(--cmp-button-focus-dark-fg-default) 70%, transparent);
+  --btn-fg-disabled: color-mix(in oklch, var(--cmp-button-focus-dark-fg-default) 70%, transparent);
   --btn-border-default: transparent;
   --btn-border-hover: transparent;
   --btn-border-active: transparent;
@@ -651,13 +734,13 @@ a {
 
 .vigil-btn[data-tone="menu"] {
   --btn-bg-default: transparent;
-  --btn-bg-hover: rgba(255, 255, 255, 0.08);
-  --btn-bg-active: rgba(255, 255, 255, 0.14);
+  --btn-bg-hover: var(--sem-surface-muted-hover);
+  --btn-bg-active: var(--sem-surface-muted-press);
   --btn-bg-disabled: transparent;
   --btn-fg-default: var(--sem-text-muted);
   --btn-fg-hover: var(--sem-text-primary);
   --btn-fg-active: var(--sem-text-primary);
-  --btn-fg-disabled: color-mix(in srgb, var(--sem-text-muted) 70%, transparent);
+  --btn-fg-disabled: color-mix(in oklch, var(--sem-text-muted) 70%, transparent);
   --btn-border-default: transparent;
   --btn-border-hover: transparent;
   --btn-border-active: transparent;
@@ -672,7 +755,7 @@ a {
   --btn-fg-default: var(--cmp-button-card-light-fg-default);
   --btn-fg-hover: var(--cmp-button-card-light-fg-hover);
   --btn-fg-active: var(--cmp-button-card-light-fg-active);
-  --btn-fg-disabled: color-mix(in srgb, var(--cmp-button-card-light-fg-default) 60%, transparent);
+  --btn-fg-disabled: color-mix(in oklch, var(--cmp-button-card-light-fg-default) 60%, transparent);
   --btn-border-default: transparent;
   --btn-border-hover: transparent;
   --btn-border-active: transparent;
@@ -687,7 +770,7 @@ a {
   --btn-fg-default: var(--cmp-button-card-dark-fg-default);
   --btn-fg-hover: var(--cmp-button-card-dark-fg-hover);
   --btn-fg-active: var(--cmp-button-card-dark-fg-active);
-  --btn-fg-disabled: color-mix(in srgb, var(--cmp-button-card-dark-fg-default) 65%, transparent);
+  --btn-fg-disabled: color-mix(in oklch, var(--cmp-button-card-dark-fg-default) 65%, transparent);
   --btn-border-default: transparent;
   --btn-border-hover: transparent;
   --btn-border-active: transparent;

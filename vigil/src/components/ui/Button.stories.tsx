@@ -52,10 +52,10 @@ export const VariantMatrix: Story = {
     const variants = ["neutral", "primary", "danger", "ghost", "subtle"] as const;
     const sizes = ["xs", "sm", "md", "lg"] as const;
     return (
-      <div style={{ display: "grid", gap: 12, padding: 20, background: "#0a0a0c" }}>
+      <div style={{ display: "grid", gap: 12, padding: 20, background: "var(--sem-surface-base)" }}>
         {variants.map((variant) => (
           <div key={variant} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ width: 70, color: "#a1a1aa", fontFamily: "monospace", fontSize: 11 }}>
+            <span style={{ width: 70, color: "var(--sys-color-neutral-400)", fontFamily: "monospace", fontSize: 11 }}>
               {variant}
             </span>
             {sizes.map((size) => (
@@ -72,7 +72,7 @@ export const VariantMatrix: Story = {
 
 export const StateMatrix: Story = {
   render: () => (
-    <div style={{ display: "flex", gap: 10, padding: 20, background: "#0a0a0c", flexWrap: "wrap" }}>
+    <div style={{ display: "flex", gap: 10, padding: 20, background: "var(--sem-surface-base)", flexWrap: "wrap" }}>
       <Button>Default</Button>
       <Button forceState="hover">Hover</Button>
       <Button forceState="active">Active</Button>
@@ -97,7 +97,7 @@ export const AsChildLink: Story = {
 
 export const IconOnly: Story = {
   render: () => (
-    <div style={{ padding: 20, background: "#0a0a0c" }}>
+    <div style={{ padding: 20, background: "var(--sem-surface-base)" }}>
       <Button size="icon" iconOnly aria-label="Complete action">
         <CheckCircle size={16} />
       </Button>
@@ -107,7 +107,7 @@ export const IconOnly: Story = {
 
 export const KeyboardFocusVisible: Story = {
   render: () => (
-    <div style={{ padding: 20, background: "#0a0a0c" }}>
+    <div style={{ padding: 20, background: "var(--sem-surface-base)" }}>
       <Button>Focusable</Button>
     </div>
   ),

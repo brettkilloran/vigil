@@ -8,7 +8,7 @@ const meta: Meta<typeof ArchitecturalNodeHeader> = {
   title: "Architectural Shell/Primitives/Node Header",
   component: ArchitecturalNodeHeader,
   args: {
-    title: "Project Thesis",
+    title: "Brief // The second chance",
     showExpand: true,
     expandLabel: "Focus Mode",
     buttonTone: "card-light",
@@ -26,7 +26,7 @@ const meta: Meta<typeof ArchitecturalNodeHeader> = {
   },
   decorators: [
     (Story) => (
-      <div style={{ width: 360, background: "#f4f2ec", color: "#1a1a1a" }}>
+      <div style={{ width: 360, background: "var(--theme-default-bg)", color: "var(--theme-default-text)" }}>
         <Story />
       </div>
     ),
@@ -46,12 +46,12 @@ export const NoExpandButton: Story = {
 
 export const DarkCardActionTone: Story = {
   args: {
-    title: "SYS // Configuration.js",
+    title: "DAT // sing_1r_boot.ts",
     buttonTone: "card-dark",
   },
   decorators: [
     (Story) => (
-      <div style={{ width: 360, background: "#1c1c21", color: "#e0e0e0" }}>
+      <div style={{ width: 360, background: "var(--sys-color-neutral-900)", color: "var(--sem-text-secondary)" }}>
         <Story />
       </div>
     ),

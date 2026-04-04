@@ -42,7 +42,7 @@ export const IconGlass: Story = {
   },
   decorators: [
     (Story) => (
-      <div style={{ background: "#0a0a0c", padding: 20 }}>
+      <div style={{ background: "var(--sem-surface-base)", padding: 20 }}>
         <Story />
       </div>
     ),
@@ -58,7 +58,7 @@ export const MenuAction: Story = {
   },
   decorators: [
     (Story) => (
-      <div style={{ background: "#0a0a0c", padding: 20 }}>
+      <div style={{ background: "var(--sem-surface-base)", padding: 20 }}>
         <Story />
       </div>
     ),
@@ -74,7 +74,7 @@ export const FocusPill: Story = {
   },
   decorators: [
     (Story) => (
-      <div style={{ padding: 20, background: "#f8f8f8" }}>
+      <div style={{ padding: 20, background: "var(--sys-color-neutral-100)" }}>
         <Story />
       </div>
     ),
@@ -121,7 +121,7 @@ export const FocusDark: Story = {
   },
   decorators: [
     (Story) => (
-      <div style={{ padding: 20, background: "#121217" }}>
+      <div style={{ padding: 20, background: "var(--sys-color-neutral-900)" }}>
         <Story />
       </div>
     ),
@@ -130,7 +130,7 @@ export const FocusDark: Story = {
 
 export const StateMatrix: Story = {
   render: () => (
-    <div style={{ display: "flex", gap: 10, padding: 20, background: "#0a0a0c", flexWrap: "wrap" }}>
+    <div style={{ display: "flex", gap: 10, padding: 20, background: "var(--sem-surface-base)", flexWrap: "wrap" }}>
       <ArchitecturalButton size="icon" tone="glass">
         <CursorClick size={18} />
       </ArchitecturalButton>

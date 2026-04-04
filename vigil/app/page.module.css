@@ -6,8 +6,8 @@
   --text-secondary: var(--sys-color-neutral-700);
 
   --button-primary-hover: var(--sys-color-neutral-700);
-  --button-secondary-hover: color-mix(in srgb, var(--sys-color-black) 5%, var(--sys-color-white));
-  --button-secondary-border: color-mix(in srgb, var(--sys-color-black) 8%, var(--sys-color-white));
+  --button-secondary-hover: color-mix(in oklch, var(--sys-color-black) 5%, var(--sys-color-white));
+  --button-secondary-border: color-mix(in oklch, var(--sys-color-black) 8%, var(--sys-color-white));
 
   display: flex;
   flex: 1;

@@ -54,7 +54,7 @@ export function ScratchPad({
           </div>
           <textarea
             className="mb-2.5 h-28 w-full resize-none rounded-lg border border-[var(--vigil-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--vigil-snap)]/35"
-            placeholder="Quick note…"
+            placeholder="Scribe before it slips orbit…"
             value={text}
             onChange={(e) => setText(e.target.value)}
           />

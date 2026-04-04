@@ -33,7 +33,7 @@ const meta: Meta<typeof ArchitecturalStatusBar> = {
           position: "relative",
           width: "100vw",
           height: "100vh",
-          background: "#0a0a0a",
+          background: "var(--sem-surface-base)",
         }}
       >
         <Story />

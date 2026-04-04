@@ -36,7 +36,7 @@ test.describe("heartgarden smoke", () => {
 
     const codeCard = page
       .locator("[data-node-id]")
-      .filter({ has: page.getByText("SYS // Configuration.js") })
+      .filter({ has: page.getByText("DAT // sing_1r_boot.ts") })
       .first();
     await expect(codeCard).toBeVisible();
 

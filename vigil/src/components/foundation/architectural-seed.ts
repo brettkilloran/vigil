@@ -19,7 +19,7 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
   return [
     {
       id: "node-1",
-      title: "Project Thesis",
+      title: "Brief // The second chance",
       x: -300,
       y: -320,
       rotation: -1,
@@ -27,15 +27,15 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       tapeRotation: 2,
       tapeVariant: "masking",
       bodyHtml: `
-        <h1>A Structural Approach</h1>
-        <p>Unlike fluid glass interfaces, this environment prioritizes rigid bounds and definitive states. It feels more like arranging physical blueprints than floating digital clouds.</p>
-        <blockquote>Clarity over aesthetic blur. The architecture of thought requires solid foundations.</blockquote>
-        <p>Notice the crosshair grid-it implies precision and measurement rather than passive atmosphere.</p>
+        <h1>The ring does not forgive nostalgia.</h1>
+        <p>We fled the first world on fumes and liturgy. Out here, under a tired red sun, terraforming bought us time—but not innocence. Every colony landed with old grudges and new flags, and the planet learned our names too well.</p>
+        <blockquote>Where certainty frays, the Stain seeps in: glitches in light, memory, and the small laws we pretended were permanent.</blockquote>
+        <p>Wytches are what we call the ones who can touch it anyway—edit thought, bend seconds, bleed for a correction. This board is your orbit desk. Arrange the evidence before the wound widens.</p>
       `,
     },
     {
       id: "node-2",
-      title: "SYS // Configuration.js",
+      title: "DAT // sing_1r_boot.ts",
       x: 140,
       y: -210,
       rotation: 0.5,
@@ -44,21 +44,18 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       tapeRotation: -1.5,
       tapeVariant: "dark",
       bodyHtml: `
-        <span style="color: ${DS_COLOR.codeSampleKeyword};">const</span> <span style="color: ${DS_COLOR.codeSampleName};">environment</span> = {<br>
-        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">mode</span>: <span style="color: ${DS_COLOR.codeSampleString};">'architectural'</span>,<br>
-        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">friction</span>: <span style="color: ${DS_COLOR.codeSampleProperty};">0.85</span>,<br>
-        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">snapToGrid</span>: <span style="color: ${DS_COLOR.codeSampleKeyword};">false</span>,<br>
-        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">theme</span>: {<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;base: <span style="color: ${DS_COLOR.codeSampleString};">'var(--sem-surface-base)'</span>,<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;accent: <span style="color: ${DS_COLOR.codeSampleString};">'var(--sys-color-accent-500)'</span><br>
-        &nbsp;&nbsp;}<br>
+        <span style="color: ${DS_COLOR.codeSampleKeyword};">const</span> <span style="color: ${DS_COLOR.codeSampleName};">dataterm</span> = {<br>
+        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">host</span>: <span style="color: ${DS_COLOR.codeSampleString};">'nv.dataterm.local'</span>,<br>
+        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">phase</span>: <span style="color: ${DS_COLOR.codeSampleString};">'Sing_1R_Jailbr3ak'</span>,<br>
+        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">battery</span>: <span style="color: ${DS_COLOR.codeSampleProperty};">84</span>,<br>
+        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">queue</span>: <span style="color: ${DS_COLOR.codeSampleString};">'awaiting_datashard'</span>,<br>
         };<br><br>
-        <span style="color: ${DS_COLOR.codeSampleComment};">// Awaiting secondary confirmation...</span>
+        <span style="color: ${DS_COLOR.codeSampleComment};">// [IN] Core modules loaded · [ST] Secure channel established · calibrating retrieval…</span>
       `,
     },
     {
       id: "node-3",
-      title: "Immediate Actions",
+      title: "Coven // Field orders",
       x: 240,
       y: 210,
       rotation: -2,
@@ -69,25 +66,25 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       bodyHtml: `
         <div class="${tokens.taskItem} ${tokens.done}">
           <div class="${tokens.taskCheckbox}"></div>
-          <div class="${tokens.taskText}" contenteditable="true">Define variant palette</div>
+          <div class="${tokens.taskText}" contenteditable="true">Map Stain vents along the habitable ring</div>
         </div>
         <div class="${tokens.taskItem} ${tokens.done}">
           <div class="${tokens.taskCheckbox}"></div>
-          <div class="${tokens.taskText}" contenteditable="true">Implement tape randomization</div>
+          <div class="${tokens.taskText}" contenteditable="true">Archive a false memory in Grimoire (new tab)</div>
         </div>
         <div class="${tokens.taskItem}">
           <div class="${tokens.taskCheckbox}"></div>
-          <div class="${tokens.taskText}" contenteditable="true">Build "Focus Mode" overlay</div>
+          <div class="${tokens.taskText}" contenteditable="true">Reconcile Builder output with Core Rules</div>
         </div>
         <div class="${tokens.taskItem}">
           <div class="${tokens.taskCheckbox}"></div>
-          <div class="${tokens.taskText}" contenteditable="true">Review typographical hierarchy</div>
+          <div class="${tokens.taskText}" contenteditable="true">Escort datashard to terminus before curfew</div>
         </div>
       `,
     },
     {
       id: "node-4",
-      title: "Reference // Structural",
+      title: "Survey // Orbital still",
       x: -200,
       y: 310,
       rotation: 1,
@@ -96,10 +93,10 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       tapeVariant: "clear",
       bodyHtml: `
         <div class="${tokens.mediaPlaceholder}">
-          <span>Image Placeholder</span>
+          <span>Satellite frame · awaiting raster</span>
         </div>
         <div contenteditable="true" style="font-size: 13px; color: ${DS_COLOR.codeSampleCaption};">
-          Brutalist web design pattern reference. Note the heavy borders and lack of border-radius.
+          Cross-check terraforming scars against eyewitness drift. If the terrain disagrees with the archive, trust the bleed first—maps lie politely; the Stain does not.
         </div>
       `,
     },
@@ -136,7 +133,7 @@ export function buildArchitecturalSeedGraph(
     },
     "space-project-thesis": {
       id: "space-project-thesis",
-      name: "Project Thesis",
+      name: "Covenant dossier",
       parentSpaceId: "root",
       entityIds: [],
     },
@@ -144,7 +141,7 @@ export function buildArchitecturalSeedGraph(
 
   entities["folder-1"] = {
     id: "folder-1",
-    title: "Project Thesis",
+    title: "Covenant dossier",
     kind: "folder",
     theme: "folder",
     childSpaceId: "space-project-thesis",
@@ -171,14 +168,14 @@ export function buildArchitecturalSeedGraph(
   if (scenario === "nested") {
     spaces["space-subsystems"] = {
       id: "space-subsystems",
-      name: "Subsystems",
+      name: "Aux shaft log",
       parentSpaceId: "space-project-thesis",
       entityIds: ["nested-note-1"],
     };
 
     entities["folder-2"] = {
       id: "folder-2",
-      title: "Subsystems",
+      title: "Aux shaft log",
       kind: "folder",
       theme: "folder",
       childSpaceId: "space-subsystems",
@@ -192,14 +189,14 @@ export function buildArchitecturalSeedGraph(
 
     entities["nested-note-1"] = {
       id: "nested-note-1",
-      title: "Nested Note",
+      title: "Deep stack // Proof",
       kind: "content",
       theme: "default",
       rotation: -0.6,
       tapeRotation: 1.2,
       tapeVariant: "clear",
       bodyHtml:
-        "<p>This note lives one level deeper to validate recursive folders and breadcrumb navigation.</p>",
+        "<p>Nesting still works when the fiction does: this card sits one ring below the dossier to exercise folders, crumbs, and the small superstition that order holds under pressure.</p>",
       slots: {
         "space-subsystems": { x: -60, y: -20 },
       },

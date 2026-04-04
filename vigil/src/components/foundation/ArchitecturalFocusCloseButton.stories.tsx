@@ -45,7 +45,7 @@ export const DarkDefault: Story = {
   args: { variant: "dark" },
   decorators: [
     (Story) => (
-      <div style={{ padding: 18, background: "#121217", borderRadius: 12 }}>
+      <div style={{ padding: 18, background: "var(--sys-color-neutral-900)", borderRadius: 12 }}>
         <Story />
       </div>
     ),

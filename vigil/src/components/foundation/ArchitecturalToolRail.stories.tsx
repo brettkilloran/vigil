@@ -29,7 +29,7 @@ const meta: Meta<typeof ArchitecturalToolRail> = {
           position: "relative",
           width: "100vw",
           height: "100vh",
-          background: "#0a0a0c",
+          background: "var(--sem-surface-base)",
         }}
       >
         <Story />

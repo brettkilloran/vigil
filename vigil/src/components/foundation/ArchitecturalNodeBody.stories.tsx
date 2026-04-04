@@ -8,7 +8,7 @@ const meta: Meta<typeof ArchitecturalNodeBody> = {
   title: "Architectural Shell/Primitives/Node Body",
   component: ArchitecturalNodeBody,
   args: {
-    html: "<h1>A Structural Approach</h1><p>Body content with rich text html.</p>",
+    html: "<h1>The ring does not forgive nostalgia.</h1><p>Body content with rich text html.</p>",
     editable: true,
     spellCheck: false,
     onHtmlCommit: () => {},
@@ -21,7 +21,7 @@ const meta: Meta<typeof ArchitecturalNodeBody> = {
   },
   decorators: [
     (Story) => (
-      <div style={{ width: 360, minHeight: 220, background: "#f4f2ec", color: "#1a1a1a" }}>
+      <div style={{ width: 360, minHeight: 220, background: "var(--theme-default-bg)", color: "var(--theme-default-text)" }}>
         <Story />
       </div>
     ),

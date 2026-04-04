@@ -17,7 +17,7 @@ const meta: Meta<typeof ArchitecturalNodeTape> = {
   },
   decorators: [
     (Story) => (
-      <div style={{ position: "relative", width: 320, height: 120, background: "#0a0a0c" }}>
+      <div style={{ position: "relative", width: 320, height: 120, background: "var(--sem-surface-base)" }}>
         <div style={{ position: "absolute", top: 52, left: 120 }}>
           <Story />
         </div>

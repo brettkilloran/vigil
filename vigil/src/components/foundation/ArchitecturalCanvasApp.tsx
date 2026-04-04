@@ -495,6 +495,18 @@ export function ArchitecturalCanvasApp({
     setActiveNodeId(null);
   }, [activeNodeId, focusBody, focusTitle]);
 
+  const onFocusOverlayPointerDownCapture = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!focusOpen) return;
+      const t = event.target as HTMLElement;
+      if (t.closest(`.${styles.focusSheet}`)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      closeFocusMode();
+    },
+    [closeFocusMode, focusOpen],
+  );
+
   const updateTransformFromMouse = useCallback(
     (nextScale: number, mouseX: number, mouseY: number) => {
       const cur = viewRef.current;
@@ -916,19 +928,19 @@ export function ArchitecturalCanvasApp({
       bodyHtml = `
         <div class="${styles.taskItem}">
           <div class="${styles.taskCheckbox}"></div>
-          <div class="${styles.taskText}" contenteditable="true">New task</div>
+          <div class="${styles.taskText}" contenteditable="true">New field order</div>
         </div>
       `;
     } else if (type === "code") {
       title = "Snippet";
-      bodyHtml = `// write code here`;
+      bodyHtml = `// [IN] Compose shard at cursor…`;
     } else if (type === "media") {
       title = "Asset";
       bodyHtml = `
         <div class="${styles.mediaPlaceholder}">
-          <span>Image Placeholder</span>
+          <span>Still frame · drop asset</span>
         </div>
-        <div contenteditable="true" style="font-size: 13px; color: var(--sys-color-neutral-700);">Caption...</div>
+        <div contenteditable="true" style="font-size: 13px; color: var(--sys-color-neutral-700);">Caption the capture for the archive…</div>
       `;
     }
 
@@ -1613,7 +1625,9 @@ export function ArchitecturalCanvasApp({
       if (entity && !inContent) {
         const nodeId = entity.dataset.nodeId;
         if (nodeId) {
-          if (event.shiftKey) {
+          const extendSelection =
+            event.shiftKey || event.ctrlKey || event.metaKey;
+          if (extendSelection) {
             setSelectedNodeIds((prev) =>
               prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId],
             );
@@ -2527,40 +2541,45 @@ export function ArchitecturalCanvasApp({
         </div>
       ) : null}
 
-      <div className={`${styles.focusOverlay} ${focusOpen ? styles.focusActive : ""}`}>
-        <div className={styles.focusHeader}>
-          <div className={styles.focusMeta}>
-            EDITING // {activeNodeId ? activeNodeId.toUpperCase() : "NODE"}
+      <div
+        className={`${styles.focusOverlay} ${focusOpen ? styles.focusActive : ""}`}
+        onPointerDownCapture={onFocusOverlayPointerDownCapture}
+      >
+        <div className={styles.focusSheet}>
+          <div className={styles.focusHeader}>
+            <div className={styles.focusMeta}>
+              EDITING // {activeNodeId ? activeNodeId.toUpperCase() : "NODE"}
+            </div>
+            <ArchitecturalFocusCloseButton
+              variant={focusCodeTheme ? "dark" : "light"}
+              onClick={closeFocusMode}
+            />
           </div>
-          <ArchitecturalFocusCloseButton
-            variant={focusCodeTheme ? "dark" : "light"}
-            onClick={closeFocusMode}
-          />
-        </div>
-        <div className={styles.focusContent}>
-          <BufferedTextInput
-            type="text"
-            className={styles.focusTitle}
-            value={focusTitle}
-            debounceMs={150}
-            onCommit={(next) => setFocusTitle(next)}
-            placeholder="Untitled Document"
-            data-focus-title-editor="true"
-            style={{
-              color: focusCodeTheme
-                ? "var(--sys-color-white)"
-                : "var(--sys-color-black)",
-            }}
-          />
-          <BufferedContentEditable
-            value={focusBody}
-            className={`${styles.focusBody} ${focusCodeTheme ? styles.focusCode : ""}`}
-            editable
-            spellCheck={false}
-            debounceMs={150}
-            dataAttribute="data-focus-body-editor"
-            onCommit={(nextHtml) => setFocusBody(nextHtml)}
-          />
+          <div className={styles.focusContent}>
+            <BufferedTextInput
+              type="text"
+              className={styles.focusTitle}
+              value={focusTitle}
+              debounceMs={150}
+              onCommit={(next) => setFocusTitle(next)}
+              placeholder="Untitled brief"
+              data-focus-title-editor="true"
+              style={{
+                color: focusCodeTheme
+                  ? "var(--sys-color-white)"
+                  : "var(--sys-color-black)",
+              }}
+            />
+            <BufferedContentEditable
+              value={focusBody}
+              className={`${styles.focusBody} ${focusCodeTheme ? styles.focusCode : ""}`}
+              editable
+              spellCheck={false}
+              debounceMs={150}
+              dataAttribute="data-focus-body-editor"
+              onCommit={(nextHtml) => setFocusBody(nextHtml)}
+            />
+          </div>
         </div>
       </div>
     </div>

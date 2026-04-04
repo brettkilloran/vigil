@@ -17,7 +17,7 @@ const meta: Meta<typeof ArchitecturalStatusBadge> = {
   },
   decorators: [
     (Story) => (
-      <div style={{ background: "#0a0a0a", padding: 20 }}>
+      <div style={{ background: "var(--sem-surface-base)", padding: 20 }}>
         <Story />
       </div>
     ),

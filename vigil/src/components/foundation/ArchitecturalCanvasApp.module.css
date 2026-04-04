@@ -1,6 +1,6 @@
 :root {
   --bg-base: var(--sem-surface-base);
-  --grid-color: rgba(255, 255, 255, 0.04);
+  --grid-color: var(--vigil-grid-color);
   --ui-glass-bg: var(--sem-surface-elevated);
   --ui-glass-border: var(--sem-border-subtle);
   --text-main: var(--sem-text-primary);
@@ -9,18 +9,18 @@
   --theme-default-bg: var(--sys-color-neutral-100);
   --theme-default-text: var(--sys-color-black);
   --theme-default-border: var(--sys-color-neutral-300);
-  --theme-code-bg: var(--sys-color-neutral-800);
-  --theme-code-text: color-mix(in srgb, var(--sys-color-white) 90%, transparent);
-  --theme-code-border: var(--sys-color-neutral-700);
+  --theme-code-bg: var(--sys-color-neutral-920);
+  --theme-code-text: color-mix(in oklch, var(--sys-color-white) 93%, transparent);
+  --theme-code-border: var(--sys-color-neutral-800);
   --theme-task-bg: var(--sys-color-neutral-100);
   --theme-task-text: var(--sys-color-black);
   --theme-task-border: var(--sys-color-neutral-300);
   --theme-media-bg: var(--sys-color-neutral-100);
   --theme-media-text: var(--sys-color-black);
   --theme-media-border: var(--sys-color-neutral-300);
-  --folder-bg: var(--sys-color-neutral-800);
-  --folder-border: var(--sys-color-neutral-700);
-  --folder-tab: var(--sys-color-neutral-800);
+  --folder-bg: var(--sys-color-neutral-920);
+  --folder-border: var(--sys-color-neutral-800);
+  --folder-tab: var(--sys-color-neutral-920);
   --layer-viewport-vignette: 1;
   --layer-canvas: 2;
   --layer-ui-chrome: 100;
@@ -46,19 +46,27 @@
   width: 100vw;
   height: 100vh;
   position: relative;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect x='19.5' y='19.5' width='1' height='1' fill='rgba(255,255,255,0.055)'/%3E%3C/svg%3E");
+  background-image: radial-gradient(
+    circle at center,
+    var(--sem-grid-dot-strong) 0.55px,
+    transparent 0.65px
+  );
   background-size: 40px 40px;
   background-position: center center;
 }
 
 .deepSpace {
   --bg-base: var(--sem-surface-base);
-  --grid-color: rgba(255, 255, 255, 0.02);
+  --grid-color: var(--sem-grid-color-deep);
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect x='19.5' y='19.5' width='1' height='1' fill='rgba(255,255,255,0.038)'/%3E%3C/svg%3E"),
     radial-gradient(
       circle at center,
-      color-mix(in srgb, var(--accent) 14%, transparent) 0 1.25px,
+      var(--sem-grid-dot-soft) 0.55px,
+      transparent 0.65px
+    ),
+    radial-gradient(
+      circle at center,
+      color-mix(in oklch, var(--accent) 14%, transparent) 0 1.25px,
       transparent 1.25px 100%
     );
   background-size:
@@ -77,15 +85,15 @@
   background:
     radial-gradient(
       130% 105% at 50% 46%,
-      rgba(0, 0, 0, 0) 18%,
-      rgba(0, 0, 0, 0.04) 56%,
-      rgba(0, 0, 0, 0.12) 100%
+      transparent 18%,
+      var(--sem-vignette-stop-4) 56%,
+      var(--sem-vignette-stop-12) 100%
     ),
     radial-gradient(
       165% 130% at 50% 58%,
-      rgba(0, 0, 0, 0) 34%,
-      rgba(0, 0, 0, 0.03) 72%,
-      rgba(0, 0, 0, 0.08) 100%
+      transparent 34%,
+      var(--sem-vignette-stop-3) 72%,
+      var(--sem-vignette-stop-8) 100%
     );
   opacity: 0.72;
   z-index: var(--layer-viewport-vignette);
@@ -160,7 +168,7 @@
   font-size: 11px;
   font-weight: 600;
   font-family: var(--font-geist-mono), monospace;
-  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 0 14px color-mix(in oklch, var(--accent) 45%, transparent);
   opacity: 0;
   transform: scale(0.92);
   transition:
@@ -184,9 +192,9 @@
 .stackFocusBounds {
   position: absolute;
   border-radius: 14px;
-  border: 2px solid color-mix(in srgb, var(--accent) 85%, transparent);
-  background: color-mix(in srgb, var(--accent) 9%, transparent);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 30%, transparent);
+  border: 2px solid color-mix(in oklch, var(--accent) 85%, transparent);
+  background: color-mix(in oklch, var(--accent) 9%, transparent);
+  box-shadow: 0 0 16px color-mix(in oklch, var(--accent) 30%, transparent);
   pointer-events: none;
   z-index: 2;
 }
@@ -194,11 +202,11 @@
 .stackHoverBounds {
   position: absolute;
   border-radius: 14px;
-  border: 2px dashed color-mix(in srgb, var(--accent) 76%, white 12%);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 2px dashed color-mix(in oklch, var(--accent) 76%, var(--sys-color-white) 12%);
+  background: color-mix(in oklch, var(--accent) 10%, transparent);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent) inset,
-    0 10px 24px rgba(0, 0, 0, 0.25);
+    0 0 0 1px color-mix(in oklch, var(--accent) 24%, transparent) inset,
+    0 10px 24px var(--sem-color-shadow-25);
   pointer-events: none;
   z-index: 3;
 }
@@ -207,8 +215,8 @@
   position: absolute;
   inset: -8px;
   border-radius: 10px;
-  border: 2px dashed color-mix(in srgb, var(--accent) 76%, white 12%);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 2px dashed color-mix(in oklch, var(--accent) 76%, var(--sys-color-white) 12%);
+  background: color-mix(in oklch, var(--accent) 10%, transparent);
   pointer-events: none;
   z-index: 3;
 }
@@ -217,7 +225,7 @@
   position: fixed;
   inset: 0;
   z-index: var(--layer-stack-scrim);
-  background: rgba(8, 8, 12, 0.62);
+  background: var(--sem-surface-stack-scrim);
   backdrop-filter: blur(2px);
 }
 
@@ -262,10 +270,10 @@
 
 @keyframes stackEjectArmedPulse {
   from {
-    filter: drop-shadow(0 2px 8px rgba(255, 120, 120, 0.14));
+    filter: drop-shadow(0 2px 8px var(--sem-danger-glow-pulse-low));
   }
   to {
-    filter: drop-shadow(0 6px 16px rgba(255, 120, 120, 0.24));
+    filter: drop-shadow(0 6px 16px var(--sem-danger-glow-pulse-high));
   }
 }
 
@@ -276,9 +284,9 @@
   transform: translateX(-50%);
   padding: 6px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(12, 12, 16, 0.86);
-  color: #d4d4dc;
+  border: 1px solid var(--sem-overlay-white-18);
+  background: var(--sem-surface-stack-badge-elevated);
+  color: var(--sem-text-stack-badge);
   font-size: 11px;
   font-family: var(--font-geist-mono), monospace;
   letter-spacing: 0.02em;
@@ -292,9 +300,9 @@
   transform: translateX(-50%);
   padding: 6px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(10, 10, 14, 0.74);
-  color: #c9c9c9;
+  border: 1px solid var(--sem-overlay-white-16);
+  background: var(--sem-surface-stack-badge);
+  color: var(--sem-text-stack-badge-muted);
   font-size: 11px;
   font-family: var(--font-geist-mono), monospace;
   letter-spacing: 0.02em;
@@ -303,9 +311,9 @@
 
 .stackHullDropCue {
   position: fixed;
-  border: 1px dashed color-mix(in srgb, var(--accent) 24%, transparent);
+  border: 1px dashed color-mix(in oklch, var(--accent) 24%, transparent);
   border-radius: 20px;
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: color-mix(in oklch, var(--accent) 12%, transparent);
   pointer-events: none;
   transition:
     border-color 140ms ease,
@@ -314,20 +322,20 @@
 }
 
 .stackHullDropCueActive {
-  border-color: rgba(255, 124, 124, 0.72);
-  background: rgba(92, 20, 20, 0.2);
-  box-shadow: 0 0 0 1px rgba(255, 124, 124, 0.28) inset;
+  border-color: var(--sem-danger-edge-72);
+  background: var(--sem-danger-surface-20);
+  box-shadow: 0 0 0 1px var(--sem-danger-edge-28) inset;
   animation: stackHullCuePulse 520ms ease-in-out infinite alternate;
 }
 
 @keyframes stackHullCuePulse {
   from {
-    border-color: rgba(255, 124, 124, 0.56);
-    background: rgba(92, 20, 20, 0.16);
+    border-color: var(--sem-danger-edge-56);
+    background: var(--sem-danger-surface-16);
   }
   to {
-    border-color: rgba(255, 124, 124, 0.78);
-    background: rgba(92, 20, 20, 0.24);
+    border-color: var(--sem-danger-edge-78);
+    background: var(--sem-danger-surface-24);
   }
 }
 
@@ -338,9 +346,9 @@
   transform: translateX(-50%);
   padding: 6px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 164, 164, 0.32);
-  background: rgba(28, 14, 14, 0.7);
-  color: #ffe8e8;
+  border: 1px solid var(--sem-danger-hint-border);
+  background: var(--sem-danger-hint-bg);
+  color: var(--sem-danger-hint-fg);
   font-size: 11px;
   font-family: var(--font-geist-mono), monospace;
   letter-spacing: 0.02em;
@@ -404,7 +412,7 @@
   right: 10px;
   bottom: 12px;
   left: 10px;
-  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border: 1px dashed var(--sem-overlay-white-12);
   border-radius: 2px;
   opacity: 0;
   display: flex;
@@ -412,7 +420,7 @@
   justify-content: center;
   flex-direction: column;
   gap: 8px;
-  color: rgba(255, 255, 255, 0.2);
+  color: color-mix(in oklch, var(--sys-color-white) 20%, transparent);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -423,9 +431,9 @@
 .folderFront {
   position: absolute;
   inset: 0;
-  background: #262626;
-  border: 1px solid #454545;
-  border-top: 1px solid #5b5b5b;
+  background: var(--folder-bg);
+  border: 1px solid var(--folder-border);
+  border-top: 1px solid var(--sys-color-neutral-700);
   border-radius: 4px;
   transform-origin: bottom;
   transition: transform 0.25s ease;
@@ -438,9 +446,9 @@
 
 .folderSelected .folderFront {
   box-shadow:
-    0 0 0 3px rgba(10, 10, 12, 0.95),
-    0 0 0 7px color-mix(in srgb, var(--accent) 90%, transparent),
-    0 12px 24px rgba(0, 0, 0, 0.45);
+    0 0 0 3px var(--sem-border-tinted-ring),
+    0 0 0 7px color-mix(in oklch, var(--accent) 90%, transparent),
+    0 12px 24px var(--sem-color-shadow-45);
 }
 
 .folderTopRow {
@@ -468,7 +476,7 @@
   width: fit-content;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--sem-overlay-white-12);
   color: var(--text-muted);
   font-size: 10px;
   font-family: var(--font-geist-mono), monospace;
@@ -489,7 +497,7 @@
 
 .folderOpenBtn:hover {
   color: var(--text-main);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--sem-overlay-white-08);
 }
 
 .folderDragOver {
@@ -498,7 +506,7 @@
 
 .folderDragOver .folderFront {
   transform: rotateX(-38deg);
-  box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 -12px 24px var(--sem-color-shadow-45);
 }
 
 .folderDragOver .folderInterior {
@@ -516,8 +524,8 @@
   width: 340px;
   border-radius: 2px;
   box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.2),
-    0 1px 2px rgba(0, 0, 0, 0.3);
+    0 4px 12px var(--sem-color-shadow-20),
+    0 1px 2px var(--sem-color-shadow-30);
   cursor: grab;
   display: flex;
   flex-direction: column;
@@ -537,8 +545,8 @@
   opacity: 0;
   z-index: 24;
   box-shadow:
-    0 0 0 3px rgba(10, 10, 12, 0.95),
-    0 0 0 7px color-mix(in srgb, var(--accent) 90%, transparent);
+    0 0 0 3px var(--sem-border-tinted-ring),
+    0 0 0 7px color-mix(in oklch, var(--accent) 90%, transparent);
   transition: opacity 0.14s ease;
 }
 
@@ -556,15 +564,15 @@
 
 .dragging {
   box-shadow:
-    0 20px 40px rgba(0, 0, 0, 0.4),
-    0 8px 16px rgba(0, 0, 0, 0.3);
+    0 20px 40px var(--sem-color-shadow-40),
+    0 8px 16px var(--sem-color-shadow-30);
   cursor: grabbing;
 }
 
 .selectedNode {
   box-shadow:
-    0 10px 22px rgba(0, 0, 0, 0.38),
-    0 4px 10px rgba(0, 0, 0, 0.26);
+    0 10px 22px var(--sem-color-shadow-38),
+    0 4px 10px var(--sem-color-shadow-26);
 }
 
 .selectedNode::after {
@@ -579,18 +587,27 @@
   backdrop-filter: blur(2px);
   z-index: 6;
   pointer-events: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Diffused cast shadow onto the card below (light / “clear” tape only). */
+.tapeMasking,
+.tapeClear {
+  box-shadow:
+    0 2px 4px var(--sem-tape-light-shadow-contact),
+    0 7px 18px var(--sem-tape-light-shadow-mid),
+    0 14px 36px var(--sem-tape-light-shadow-ambient),
+    0 22px 52px var(--sem-tape-light-shadow-halo);
 }
 
 .tapeMasking {
-  background: rgba(242, 242, 242, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: var(--sem-tape-clear-fill);
+  border: 1px solid var(--sem-overlay-white-42);
   width: 90px;
 }
 
 .tapeClear {
-  background: rgba(242, 242, 242, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: var(--sem-tape-clear-fill);
+  border: 1px solid var(--sem-overlay-white-42);
   width: 70px;
 }
 
@@ -598,31 +615,31 @@
   background:
     linear-gradient(
       180deg,
-      rgba(99, 102, 115, 0.38) 0%,
-      rgba(68, 70, 78, 0.7) 44%,
-      rgba(38, 39, 45, 0.9) 100%
+      var(--sem-tape-dark-a) 0%,
+      var(--sem-tape-dark-b) 44%,
+      var(--sem-tape-dark-c) 100%
     ),
     repeating-linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0.045) 0px,
-      rgba(255, 255, 255, 0.045) 1px,
-      rgba(0, 0, 0, 0.05) 1px,
-      rgba(0, 0, 0, 0.05) 2px
+      var(--sem-tape-stripe-light) 0px,
+      var(--sem-tape-stripe-light) 1px,
+      var(--sem-tape-stripe-dark) 1px,
+      var(--sem-tape-stripe-dark) 2px
     );
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--sem-tape-border-soft);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.42),
-    0 2px 6px rgba(0, 0, 0, 0.22);
+    inset 0 1px 0 var(--sem-tape-inset-top),
+    inset 0 -1px 0 var(--sem-tape-inset-bottom),
+    0 2px 6px var(--sem-tape-shadow-outer);
   width: 80px;
 }
 
 .themeCode .tapeDark {
-  border-color: rgba(255, 255, 255, 0.045);
+  border-color: var(--sem-tape-stripe-light);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.45),
-    0 2px 7px rgba(0, 0, 0, 0.28);
+    inset 0 1px 0 var(--sem-tape-inset-top-dim),
+    inset 0 -1px 0 var(--sem-tape-inset-bottom-deep),
+    0 2px 7px var(--sem-tape-shadow-deep);
 }
 
 .themeDefault {
@@ -655,12 +672,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--sem-overlay-black-05);
   pointer-events: none;
 }
 
 .themeCode .nodeHeader {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--sem-overlay-white-05);
 }
 
 .nodeTitle {
@@ -701,8 +718,18 @@
 .a4DocumentBody {
   max-height: calc((var(--entity-width, 340px) * 1.41421356237) - 92px);
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 84%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 84%, transparent 100%);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    var(--sys-color-black) 0%,
+    var(--sys-color-black) 84%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    var(--sys-color-black) 0%,
+    var(--sys-color-black) 84%,
+    transparent 100%
+  );
 }
 
 .nodeBody h1 {
@@ -739,7 +766,7 @@
 .taskCheckbox {
   width: 16px;
   height: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--sem-overlay-black-30);
   border-radius: 3px;
   margin-top: 3px;
   cursor: pointer;
@@ -749,13 +776,13 @@
 }
 
 .done .taskCheckbox {
-  background: rgba(0, 0, 0, 0.8);
+  background: var(--sem-overlay-black-80);
   border-color: transparent;
 }
 
 .done .taskCheckbox::after {
   content: "✓";
-  color: #fff;
+  color: var(--sys-color-white);
   font-size: 10px;
 }
 
@@ -771,14 +798,14 @@
 .mediaPlaceholder {
   width: 100%;
   height: 160px;
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--sem-overlay-black-05);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(0, 0, 0, 0.3);
+  color: var(--sem-overlay-black-30);
   margin-bottom: 12px;
   border-radius: 2px;
-  border: 1px dashed rgba(0, 0, 0, 0.1);
+  border: 1px dashed var(--sem-overlay-black-10);
 }
 
 .statusWrap {
@@ -811,9 +838,9 @@
 }
 
 .navBtn {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.15);
-  color: #a3a3a3;
+  border: 1px solid var(--sem-border-strong);
+  background: var(--sem-overlay-black-15);
+  color: var(--sys-color-neutral-400);
   border-radius: 6px;
   padding: 4px 8px;
   display: flex;
@@ -832,23 +859,23 @@
 
 .navBtn:not(:disabled):hover {
   color: var(--sys-color-neutral-100);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--sem-overlay-white-08);
 }
 
 .navBtnDrop {
   border-color: var(--accent);
   color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  background: color-mix(in oklch, var(--accent) 15%, transparent);
 }
 
 .parentDrawer {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--sem-border-strong);
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.06) 0%,
-    rgba(255, 255, 255, 0.02) 100%
+    var(--sem-surface-glass) 0%,
+    var(--sem-overlay-white-02) 100%
   );
-  color: #a3a3a3;
+  color: var(--sys-color-neutral-400);
   border-radius: 8px;
   min-width: 132px;
   padding: 10px 10px 8px;
@@ -872,11 +899,11 @@
 
 .parentDrawer:not(:disabled):hover {
   color: var(--sys-color-neutral-100);
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: var(--sem-overlay-white-18);
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(255, 255, 255, 0.03) 100%
+    var(--sem-overlay-white-08) 0%,
+    var(--sem-overlay-white-03) 100%
   );
 }
 
@@ -884,7 +911,7 @@
   font-size: 9px;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: #7a7a7a;
+  color: var(--sys-color-neutral-500);
 }
 
 .parentDrawerLabel {
@@ -898,8 +925,8 @@
   color: var(--accent);
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--accent) 20%, transparent) 0%,
-    color-mix(in srgb, var(--accent) 10%, transparent) 100%
+    color-mix(in oklch, var(--accent) 20%, transparent) 0%,
+    color-mix(in oklch, var(--accent) 10%, transparent) 100%
   );
   transform: translateY(-1px);
 }
@@ -920,14 +947,14 @@
 }
 
 .crumbSep {
-  color: rgba(255, 255, 255, 0.2);
+  color: color-mix(in oklch, var(--sys-color-white) 20%, transparent);
   font-size: 10px;
 }
 
 .crumbBtn {
   border: none;
   background: transparent;
-  color: #a3a3a3;
+  color: var(--sys-color-neutral-400);
   border-radius: 4px;
   font-size: 10px;
   font-family: var(--font-geist-mono), monospace;
@@ -939,7 +966,7 @@
 
 .crumbBtn:not(:disabled):hover {
   color: var(--sys-color-neutral-100);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--sem-overlay-white-08);
 }
 
 .crumbActive {
@@ -951,7 +978,7 @@
   position: relative;
   border: 1px solid var(--ui-glass-border);
   border-radius: 8px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px var(--sem-color-shadow-40);
   background: var(--ui-glass-bg);
   backdrop-filter: blur(16px) saturate(135%);
   -webkit-backdrop-filter: blur(16px) saturate(135%);
@@ -994,13 +1021,13 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
   letter-spacing: 0.18em;
-  color: #a3a3a3;
+  color: var(--sys-color-neutral-400);
 }
 
 .monoSmall {
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
-  color: #737373;
+  color: var(--sys-color-neutral-500);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1008,13 +1035,13 @@
 
 .metric {
   margin-left: 4px;
-  color: #d4d4d4;
+  color: var(--sys-color-neutral-300);
 }
 
 .sep {
   width: 1px;
   height: 12px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--sem-border-strong);
 }
 
 .bottomDock {
@@ -1041,14 +1068,14 @@
   align-items: center;
   gap: 4px;
   padding: 0 8px;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid var(--sem-overlay-white-05);
 }
 
 .sepSmall {
   width: 1px;
   height: 16px;
   margin: 0 4px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--sem-border-strong);
 }
 
 .addMenu {
@@ -1070,7 +1097,7 @@
   pointer-events: auto;
   border: 1px solid var(--ui-glass-border);
   border-radius: 8px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px var(--sem-color-shadow-40);
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -1081,7 +1108,7 @@
   .glassPanel,
   .glassPanelDock,
   .sideTools {
-    background: rgba(15, 15, 15, 0.9);
+    background: var(--sem-surface-glass-fallback);
   }
 }
 
@@ -1097,7 +1124,7 @@
   border-radius: var(--sys-radius-md, 8px);
   border: 1px solid transparent;
   background: transparent;
-  color: var(--text-main, #f0f0f0);
+  color: var(--text-main, var(--sem-text-primary));
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1;
@@ -1123,11 +1150,11 @@
 }
 
 .shell :global(.vigil-btn[data-tone="glass"]) {
-  color: #a3a3a3;
+  color: var(--sys-color-neutral-400);
 }
 
 .shell :global(.vigil-btn[data-tone="menu"]) {
-  color: #a3a3a3;
+  color: var(--sys-color-neutral-400);
 }
 
 .shell :global(.vigil-btn[data-tone="focus-light"]) {
@@ -1141,13 +1168,13 @@
 }
 
 .shell :global(.vigil-btn[data-tone="card-light"]) {
-  background: color-mix(in srgb, #000 2%, transparent);
-  color: color-mix(in srgb, #000 58%, transparent);
+  background: color-mix(in oklch, var(--sys-color-black) 2%, transparent);
+  color: color-mix(in oklch, var(--sys-color-black) 58%, transparent);
 }
 
 .shell :global(.vigil-btn[data-tone="card-dark"]) {
-  background: color-mix(in srgb, #fff 4%, transparent);
-  color: color-mix(in srgb, #fff 64%, transparent);
+  background: color-mix(in oklch, var(--sys-color-white) 4%, transparent);
+  color: color-mix(in oklch, var(--sys-color-white) 64%, transparent);
 }
 
 .shell :global(.vigil-btn[data-active="true"]) {
@@ -1159,7 +1186,7 @@
 .shell :global(.vigil-btn[data-tone="menu"]:hover),
 .shell :global(.vigil-btn[data-tone="glass"][data-force-state="hover"]),
 .shell :global(.vigil-btn[data-tone="menu"][data-force-state="hover"]) {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--sem-overlay-white-08);
   color: var(--sys-color-neutral-100);
 }
 
@@ -1167,7 +1194,7 @@
 .shell :global(.vigil-btn[data-tone="menu"]:active),
 .shell :global(.vigil-btn[data-tone="glass"][data-force-state="active"]),
 .shell :global(.vigil-btn[data-tone="menu"][data-force-state="active"]) {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--sem-surface-muted-press);
   color: var(--sys-color-neutral-100);
   transform: translateY(0.5px);
 }
@@ -1180,14 +1207,14 @@
 
 .shell :global(.vigil-btn[data-tone="focus-light"]:active),
 .shell :global(.vigil-btn[data-tone="focus-light"][data-force-state="active"]) {
-  background: color-mix(in srgb, var(--sys-color-neutral-300) 90%, var(--sys-color-neutral-700));
+  background: color-mix(in oklch, var(--sys-color-neutral-300) 90%, var(--sys-color-neutral-700));
   color: var(--sys-color-black);
   transform: translateY(0.5px);
 }
 
 .shell :global(.vigil-btn[data-tone="focus-dark"]:hover),
 .shell :global(.vigil-btn[data-tone="focus-dark"][data-force-state="hover"]) {
-  background: color-mix(in srgb, var(--sys-color-neutral-700) 90%, var(--sys-color-neutral-300));
+  background: color-mix(in oklch, var(--sys-color-neutral-700) 90%, var(--sys-color-neutral-300));
   color: var(--sys-color-white);
 }
 
@@ -1200,26 +1227,26 @@
 
 .shell :global(.vigil-btn[data-tone="card-light"]:hover),
 .shell :global(.vigil-btn[data-tone="card-light"][data-force-state="hover"]) {
-  background: color-mix(in srgb, #000 6%, transparent);
-  color: color-mix(in srgb, #000 78%, transparent);
+  background: color-mix(in oklch, var(--sys-color-black) 6%, transparent);
+  color: color-mix(in oklch, var(--sys-color-black) 78%, transparent);
 }
 
 .shell :global(.vigil-btn[data-tone="card-light"]:active),
 .shell :global(.vigil-btn[data-tone="card-light"][data-force-state="active"]) {
-  background: color-mix(in srgb, #000 10%, transparent);
-  color: color-mix(in srgb, #000 88%, transparent);
+  background: color-mix(in oklch, var(--sys-color-black) 10%, transparent);
+  color: color-mix(in oklch, var(--sys-color-black) 88%, transparent);
   transform: translateY(0.5px);
 }
 
 .shell :global(.vigil-btn[data-tone="card-dark"]:hover),
 .shell :global(.vigil-btn[data-tone="card-dark"][data-force-state="hover"]) {
-  background: color-mix(in srgb, #fff 10%, transparent);
-  color: color-mix(in srgb, #fff 90%, transparent);
+  background: color-mix(in oklch, var(--sys-color-white) 10%, transparent);
+  color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
 }
 
 .shell :global(.vigil-btn[data-tone="card-dark"]:active),
 .shell :global(.vigil-btn[data-tone="card-dark"][data-force-state="active"]) {
-  background: color-mix(in srgb, #fff 16%, transparent);
+  background: color-mix(in oklch, var(--sys-color-white) 16%, transparent);
   color: var(--sys-color-white);
   transform: translateY(0.5px);
 }
@@ -1227,22 +1254,22 @@
 .sepVertical {
   height: 1px;
   margin: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--sem-border-strong);
 }
 
 .lassoRect {
   position: fixed;
   z-index: var(--layer-lasso);
   pointer-events: none;
-  border: 1px dashed color-mix(in srgb, var(--accent) 95%, transparent);
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px dashed color-mix(in oklch, var(--accent) 95%, transparent);
+  background: color-mix(in oklch, var(--accent) 16%, transparent);
 }
 
 .focusOverlay {
   position: fixed;
   inset: 0;
   z-index: var(--layer-focus-overlay);
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--sem-surface-focus-scrim);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
   opacity: 0;
@@ -1259,20 +1286,27 @@
 .focusActive {
   opacity: 1;
   pointer-events: auto;
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--sem-surface-focus-scrim-solid);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+}
+
+/* Column that counts as “the document”; scrim outside this closes focus on pointerdown. */
+.focusSheet {
+  max-width: 880px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
 }
 
 .focusHeader {
   position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
   padding: 20px 40px;
   display: flex;
   justify-content: space-between;
-  background: linear-gradient(to bottom, #fff 80%, rgba(255, 255, 255, 0));
+  background: linear-gradient(to bottom, var(--sys-color-white) 80%, transparent);
   z-index: 10;
   opacity: 0;
   transform: translateY(-8px);
@@ -1284,13 +1318,13 @@
 .focusMeta {
   padding-top: 8px;
   font-size: 12px;
-  color: #a3a3a3;
+  color: var(--sys-color-neutral-400);
   font-family: var(--font-geist-mono), monospace;
 }
 
 .focusContent {
   max-width: 800px;
-  margin: 40px auto 100px;
+  margin: 40px 0 100px;
   padding: 0 40px;
   opacity: 0;
   transform: translateY(12px) scale(0.992);
@@ -1320,7 +1354,7 @@
 .focusBody {
   font-size: 18px;
   line-height: 1.7;
-  color: #333;
+  color: var(--sem-text-focus-body);
   outline: none;
   min-height: 50vh;
   opacity: 0;
@@ -1368,8 +1402,8 @@
 
 .focusCode {
   font-family: var(--font-geist-mono), monospace;
-  background-color: #1f1f1f;
-  color: #d4d4d4;
+  background-color: var(--sem-surface-focus-code);
+  color: var(--sys-color-neutral-300);
   padding: 40px;
   border-radius: 8px;
 }

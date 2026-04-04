@@ -9,7 +9,7 @@ const meta: Meta<typeof ArchitecturalFolderCard> = {
   component: ArchitecturalFolderCard,
   args: {
     id: "folder-story",
-    title: "Project Thesis",
+    title: "Covenant dossier",
     itemCount: 3,
     selected: false,
     dragOver: false,
@@ -32,7 +32,7 @@ const meta: Meta<typeof ArchitecturalFolderCard> = {
           position: "relative",
           width: 420,
           height: 300,
-          background: "#0a0a0c",
+          background: "var(--sem-surface-base)",
           display: "grid",
           placeItems: "center",
         }}
