@@ -51,8 +51,8 @@ export function ArchitecturalStatusBar({
   zoomPrefixIcon?: boolean;
 }) {
   return (
-    <div className={styles.statusWrap}>
-      <div className={styles.glassPanel}>
+    <div className={styles.statusBarSegment}>
+      <div className={`${styles.glassPanel} ${styles.shellTopChromePanel}`}>
         <ArchitecturalStatusBadge showPulse={showPulse} label={envLabel} />
         <div className={styles.sep} />
         <ArchitecturalStatusMetric>

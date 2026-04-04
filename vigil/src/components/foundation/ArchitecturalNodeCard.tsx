@@ -12,6 +12,7 @@ import { BufferedContentEditable } from "@/src/components/editing/BufferedConten
 import type { ButtonTone } from "@/src/components/ui/Button";
 import { Button } from "@/src/components/ui/Button";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
+import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
 
 function themeClass(theme: NodeTheme): string {
   if (theme === "code") return styles.themeCode;
@@ -57,7 +58,16 @@ export function ArchitecturalNodeHeader({
   onExpand?: () => void;
 }) {
   return (
-    <div className={styles.nodeHeader}>
+    <div
+      className={styles.nodeHeader}
+      onDoubleClick={(event) => {
+        if (!onExpand) return;
+        const el = pointerEventTargetElement(event.target);
+        if (!el || el.closest("button") || el.closest("[data-expand-btn='true']")) return;
+        event.stopPropagation();
+        onExpand();
+      }}
+    >
       <span className={styles.nodeTitle}>{title}</span>
       <div className={styles.nodeActions}>
         {showExpand ? (
@@ -71,7 +81,7 @@ export function ArchitecturalNodeHeader({
             aria-label={expandLabel}
             onClick={onExpand}
           >
-            <ArrowsOutSimple size={16} />
+            <ArrowsOutSimple size={14} />
           </Button>
         ) : null}
       </div>

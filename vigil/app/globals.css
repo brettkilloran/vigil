@@ -732,6 +732,36 @@ a {
   --btn-border-disabled: transparent;
 }
 
+.vigil-btn[data-tone="focus-done"] {
+  --btn-bg-default: var(--sys-color-black);
+  --btn-bg-hover: oklch(0.22 0 0);
+  --btn-bg-active: oklch(0.17 0 0);
+  --btn-bg-disabled: color-mix(in oklch, var(--sys-color-black) 50%, transparent);
+  --btn-fg-default: var(--sys-color-white);
+  --btn-fg-hover: var(--sys-color-white);
+  --btn-fg-active: var(--sys-color-white);
+  --btn-fg-disabled: color-mix(in oklch, var(--sys-color-white) 55%, transparent);
+  --btn-border-default: var(--sys-color-black);
+  --btn-border-hover: oklch(0.22 0 0);
+  --btn-border-active: oklch(0.17 0 0);
+  --btn-border-disabled: transparent;
+}
+
+.vigil-btn[data-tone="focus-discard"] {
+  --btn-bg-default: transparent;
+  --btn-bg-hover: color-mix(in oklch, var(--sys-color-black) 5%, transparent);
+  --btn-bg-active: color-mix(in oklch, var(--sys-color-black) 9%, transparent);
+  --btn-bg-disabled: transparent;
+  --btn-fg-default: oklch(0.38 0 0);
+  --btn-fg-hover: var(--sys-color-black);
+  --btn-fg-active: var(--sys-color-black);
+  --btn-fg-disabled: color-mix(in oklch, var(--sys-color-neutral-500) 55%, transparent);
+  --btn-border-default: color-mix(in oklch, var(--sys-color-black) 22%, transparent);
+  --btn-border-hover: color-mix(in oklch, var(--sys-color-black) 38%, transparent);
+  --btn-border-active: color-mix(in oklch, var(--sys-color-black) 48%, transparent);
+  --btn-border-disabled: color-mix(in oklch, var(--sys-color-black) 12%, transparent);
+}
+
 .vigil-btn[data-tone="menu"] {
   --btn-bg-default: transparent;
   --btn-bg-hover: var(--sem-surface-muted-hover);

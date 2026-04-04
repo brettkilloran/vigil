@@ -146,7 +146,7 @@ export function buildArchitecturalSeedGraph(
     theme: "folder",
     childSpaceId: "space-project-thesis",
     rotation: -1.1,
-    width: 340,
+    width: 420,
     tapeRotation: 0,
     slots: {
       root: { x: -430, y: -40 },
@@ -180,7 +180,7 @@ export function buildArchitecturalSeedGraph(
       theme: "folder",
       childSpaceId: "space-subsystems",
       rotation: 0.5,
-      width: 340,
+      width: 420,
       tapeRotation: 0,
       slots: {
         "space-project-thesis": { x: 220, y: -140 },

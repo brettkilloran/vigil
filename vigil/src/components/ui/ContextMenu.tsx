@@ -11,7 +11,7 @@ export function ContextMenu({
 }: {
   position: { x: number; y: number } | null;
   onClose: () => void;
-  items: { label: string; icon?: ReactNode; onSelect: () => void }[];
+  items: { label: string; icon?: ReactNode; onSelect: () => void; disabled?: boolean }[];
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -45,8 +45,10 @@ export function ContextMenu({
           size="sm"
           variant="subtle"
           tone="menu"
+          disabled={it.disabled}
           className="flex w-full items-center justify-start gap-2.5 px-3 py-2.5 text-sm"
           onClick={() => {
+            if (it.disabled) return;
             it.onSelect();
             onClose();
           }}

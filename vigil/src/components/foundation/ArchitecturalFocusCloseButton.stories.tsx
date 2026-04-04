@@ -8,20 +8,16 @@ const meta: Meta<typeof ArchitecturalFocusCloseButton> = {
   title: "Architectural Shell/Components/Focus Close Button",
   component: ArchitecturalFocusCloseButton,
   args: {
-    label: "Done",
-    variant: "light",
-    disabled: false,
-    showIcon: true,
-    forceState: "default",
-    onClick: () => {},
+    dirty: false,
+    onDone: () => {},
+    onSave: () => {},
+    onDiscard: () => {},
   },
   argTypes: {
-    label: { control: "text" },
-    variant: { control: "radio", options: ["light", "dark"] },
-    disabled: { control: "boolean" },
-    showIcon: { control: "boolean" },
-    forceState: { control: "radio", options: ["default", "hover", "active"] },
-    onClick: { control: false },
+    dirty: { control: "boolean" },
+    onDone: { control: false },
+    onSave: { control: false },
+    onDiscard: { control: false },
   },
   parameters: {
     layout: "centered",
@@ -31,46 +27,10 @@ const meta: Meta<typeof ArchitecturalFocusCloseButton> = {
 export default meta;
 type Story = StoryObj<typeof ArchitecturalFocusCloseButton>;
 
-export const LightDefault: Story = {};
-
-export const LightHover: Story = {
-  args: { forceState: "hover" },
+export const DoneClean: Story = {
+  args: { dirty: false },
 };
 
-export const LightActive: Story = {
-  args: { forceState: "active" },
-};
-
-export const DarkDefault: Story = {
-  args: { variant: "dark" },
-  decorators: [
-    (Story) => (
-      <div style={{ padding: 18, background: "var(--sys-color-neutral-900)", borderRadius: 12 }}>
-        <Story />
-      </div>
-    ),
-  ],
-};
-
-export const Disabled: Story = {
-  args: { disabled: true },
-};
-
-export const DarkHover: Story = {
-  args: { variant: "dark", forceState: "hover" },
-  decorators: DarkDefault.decorators,
-};
-
-export const DarkActive: Story = {
-  args: { variant: "dark", forceState: "active" },
-  decorators: DarkDefault.decorators,
-};
-
-export const DarkDisabled: Story = {
-  args: { variant: "dark", disabled: true },
-  decorators: DarkDefault.decorators,
-};
-
-export const NoIcon: Story = {
-  args: { showIcon: false },
+export const SaveDiscardDirty: Story = {
+  args: { dirty: true },
 };

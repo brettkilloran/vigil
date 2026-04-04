@@ -368,60 +368,60 @@
 }
 
 .folderNode {
-  width: 356px;
-  height: 240px;
+  width: 420px;
+  height: 280px;
   background: transparent;
-  border-radius: 0;
   position: relative;
   cursor: grab;
   transform-origin: center center;
   transition: transform 0.16s ease;
+  isolation: isolate;
+  perspective: 1000px;
 }
 
-.folderTab {
-  position: absolute;
-  top: -24px;
-  left: 16px;
-  width: 100px;
-  height: 24px;
-  background: var(--folder-tab);
-  border: 1px solid var(--folder-border);
-  border-bottom: none;
-  border-radius: 6px 6px 0 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 10px;
-  font-size: 10px;
-  font-family: var(--font-geist-mono), monospace;
-  color: var(--text-muted);
-  transition: all 0.2s ease;
-}
-
+/*
+ * Folder back: 420×280 clip-path (tab shelf + peak). Keep aligned with FOLDER_CARD_* in TS.
+ */
 .folderBack {
   position: absolute;
-  inset: 0;
+  z-index: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
   background: var(--folder-bg);
-  border: 1px solid var(--folder-border);
-  border-radius: 4px;
+  /* Border + clip-path often diverge (double/halos at curves). One 0-blur spread
+     shadow is clipped with the fill so the edge tracks the path consistently. */
+  border: none;
+  clip-path: path(
+    nonzero,
+    "M 22 280 L 398 280 Q 420 280 420 262 L 420 43 Q 420 24 402 24 L 160 24 C 145 24 135 0 120 0 L 16 0 Q 0 0 0 22 L 0 262 Q 0 280 22 280 Z"
+  );
+  box-shadow:
+    0 0 0 1px var(--folder-border),
+    inset 0 -18px 36px color-mix(in oklch, var(--sys-color-black) 40%, transparent);
+  transform: translateZ(0);
 }
 
 .folderInterior {
   position: absolute;
-  top: 12px;
-  right: 10px;
-  bottom: 12px;
-  left: 10px;
+  z-index: 1;
+  bottom: 10%;
+  left: 5%;
+  width: 90%;
+  height: 70%;
+  box-sizing: border-box;
   border: 1px dashed var(--sem-overlay-white-12);
-  border-radius: 2px;
+  border-radius: 18px;
   opacity: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
   color: color-mix(in oklch, var(--sys-color-white) 20%, transparent);
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-family: var(--font-geist-mono), monospace;
@@ -430,14 +430,28 @@
 
 .folderFront {
   position: absolute;
-  inset: 0;
-  background: var(--folder-bg);
-  border: 1px solid var(--folder-border);
-  border-top: 1px solid var(--sys-color-neutral-700);
-  border-radius: 4px;
+  z-index: 2;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 85%;
+  box-sizing: border-box;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--folder-bg) 96%, var(--sys-color-white) 4%) 0%,
+    var(--folder-bg) 28%,
+    color-mix(in oklch, var(--folder-bg) 92%, var(--sys-color-black) 8%) 100%
+  );
+  border: none;
+  border-radius: 14px 14px 22px 22px;
   transform-origin: bottom;
-  transition: transform 0.25s ease;
-  padding: 20px 20px 24px;
+  transition: transform 0.25s ease, background-color 0.3s ease;
+  display: flex;
+  align-items: flex-start;
+  padding: 24px 28px 28px;
+  box-shadow:
+    0 0 0 1px var(--folder-border),
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 5%, transparent);
 }
 
 .folderNode:hover {
@@ -446,9 +460,11 @@
 
 .folderSelected .folderFront {
   box-shadow:
+    0 0 0 1px var(--folder-border),
     0 0 0 3px var(--sem-border-tinted-ring),
     0 0 0 7px color-mix(in oklch, var(--accent) 90%, transparent),
-    0 12px 24px var(--sem-color-shadow-45);
+    0 12px 24px var(--sem-color-shadow-45),
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 5%, transparent);
 }
 
 .folderTopRow {
@@ -456,6 +472,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+  width: 100%;
 }
 
 .folderMetaBlock {
@@ -465,7 +482,7 @@
 }
 
 .folderTitleInput {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 600;
   line-height: 1.2;
   color: var(--text-main);
@@ -474,11 +491,11 @@
 
 .folderBadge {
   width: fit-content;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 999px;
   background: var(--sem-overlay-white-12);
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: 11px;
   font-family: var(--font-geist-mono), monospace;
 }
 
@@ -487,9 +504,9 @@
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -505,18 +522,18 @@
 }
 
 .folderDragOver .folderFront {
-  transform: rotateX(-38deg);
-  box-shadow: 0 -12px 24px var(--sem-color-shadow-45);
+  transform: rotateX(-35deg);
+  box-shadow:
+    0 0 0 1px var(--folder-border),
+    0 -12px 24px var(--sem-color-shadow-45),
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 5%, transparent);
+  background: color-mix(in oklch, var(--folder-bg) 92%, var(--sys-color-white) 8%);
 }
 
 .folderDragOver .folderInterior {
   opacity: 1;
   border-color: var(--accent);
   color: var(--accent);
-}
-
-.folderDragOver .folderTab {
-  color: var(--text-main);
 }
 
 .entityNode {
@@ -668,12 +685,13 @@
 }
 
 .nodeHeader {
-  padding: 12px 16px;
+  padding: 10px 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--sem-overlay-black-05);
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: grab;
 }
 
 .themeCode .nodeHeader {
@@ -681,12 +699,13 @@
 }
 
 .nodeTitle {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   opacity: 0.6;
   font-family: var(--font-geist-mono), monospace;
+  line-height: 1.25;
 }
 
 .nodeActions {
@@ -705,18 +724,19 @@
 }
 
 .nodeBody {
-  padding: 16px;
+  padding: 20px 22px 22px;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.68;
   outline: none;
   cursor: text;
   user-select: text;
   flex-grow: 1;
-  min-height: 80px;
+  min-height: 88px;
 }
 
 .a4DocumentBody {
-  max-height: calc((var(--entity-width, 340px) * 1.41421356237) - 92px);
+  /* Compact header ~34px + body vertical padding + small buffer (keeps A4 clip aligned with chrome). */
+  max-height: calc((var(--entity-width, 340px) * 1.41421356237) - 90px);
   overflow: hidden;
   -webkit-mask-image: linear-gradient(
     to bottom,
@@ -732,35 +752,64 @@
   );
 }
 
+.nodeBody p {
+  margin: 0 0 0.9em;
+}
+
+.nodeBody p:last-child {
+  margin-bottom: 0;
+}
+
 .nodeBody h1 {
   font-size: 1.5em;
   font-weight: 600;
-  margin-bottom: 0.5em;
+  margin: 0.35em 0 0.55em;
+  line-height: 1.25;
 }
 
 .nodeBody h2 {
   font-size: 1.25em;
   font-weight: 600;
-  margin-bottom: 0.5em;
+  margin: 0.5em 0 0.5em;
+  line-height: 1.3;
 }
 
-.nodeBody ul {
+.nodeBody h1:first-child,
+.nodeBody h2:first-child {
+  margin-top: 0;
+}
+
+.nodeBody ul,
+.nodeBody ol {
   list-style-type: disc;
   padding-left: 1.5em;
-  margin-bottom: 1em;
+  margin: 0 0 1.05em;
+}
+
+.nodeBody ol {
+  list-style-type: decimal;
+}
+
+.nodeBody li {
+  margin-bottom: 0.35em;
+}
+
+.nodeBody li:last-child {
+  margin-bottom: 0;
 }
 
 .nodeBody blockquote {
   border-left: 2px solid var(--accent);
-  padding-left: 12px;
+  padding: 0.15em 0 0.15em 14px;
+  margin: 0.65em 0;
   opacity: 0.8;
 }
 
 .taskItem {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .taskCheckbox {
@@ -808,22 +857,74 @@
   border: 1px dashed var(--sem-overlay-black-10);
 }
 
-.statusWrap {
+.shellTopLeftStack {
   position: absolute;
   top: 24px;
   left: 24px;
-  z-index: var(--layer-ui-chrome);
+  z-index: var(--layer-ui-chrome-elevated);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: calc(100vw - 48px);
+  width: max-content;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.shellTopCluster {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 100%;
+  width: max-content;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.shellTopClusterRow {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.statusBarSegment {
+  flex: 0 0 auto;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
   pointer-events: none;
 }
 
-.navWrap {
-  position: absolute;
-  top: 22px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: var(--layer-ui-chrome-elevated);
+.statusBarSegment .glassPanel {
+  flex: 1 1 auto;
+  min-height: 100%;
+}
+
+.navChrome {
+  flex: 0 1 auto;
+  min-width: 0;
+  width: max-content;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  align-self: stretch;
+  gap: 0;
   pointer-events: none;
-  max-width: min(78vw, 920px);
+}
+
+.navChrome > .navPanel {
+  flex: 1 1 auto;
+  min-height: 100%;
+  width: max-content;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .navRow {
@@ -831,10 +932,9 @@
   align-items: center;
   gap: 8px;
   pointer-events: auto;
-}
-
-.navPanel {
-  padding: 6px 10px;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .navBtn {
@@ -868,70 +968,9 @@
   background: color-mix(in oklch, var(--accent) 15%, transparent);
 }
 
-.parentDrawer {
-  border: 1px solid var(--sem-border-strong);
-  background: linear-gradient(
-    180deg,
-    var(--sem-surface-glass) 0%,
-    var(--sem-overlay-white-02) 100%
-  );
-  color: var(--sys-color-neutral-400);
-  border-radius: 8px;
-  min-width: 132px;
-  padding: 10px 10px 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  font-family: var(--font-geist-mono), monospace;
-  cursor: pointer;
-  transition:
-    border-color 0.14s ease,
-    background 0.14s ease,
-    color 0.14s ease,
-    transform 0.14s ease;
-}
-
-.parentDrawer:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.parentDrawer:not(:disabled):hover {
-  color: var(--sys-color-neutral-100);
-  border-color: var(--sem-overlay-white-18);
-  background: linear-gradient(
-    180deg,
-    var(--sem-overlay-white-08) 0%,
-    var(--sem-overlay-white-03) 100%
-  );
-}
-
-.parentDrawerTab {
-  font-size: 9px;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--sys-color-neutral-500);
-}
-
-.parentDrawerLabel {
-  font-size: 10px;
-  letter-spacing: 0.02em;
-  color: inherit;
-}
-
-.parentDrawerActive {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: linear-gradient(
-    180deg,
-    color-mix(in oklch, var(--accent) 20%, transparent) 0%,
-    color-mix(in oklch, var(--accent) 10%, transparent) 100%
-  );
-  transform: translateY(-1px);
-}
-
 .crumbTrail {
+  flex: 0 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
@@ -974,7 +1013,7 @@
 }
 
 .glassPanel,
-.glassPanelDock {
+.rootDockPanel {
   position: relative;
   border: 1px solid var(--ui-glass-border);
   border-radius: 8px;
@@ -991,6 +1030,15 @@
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+/* Top-left status + breadcrumb strips: shared height, padding, and rhythm */
+.glassPanel.shellTopChromePanel {
+  min-height: var(--sys-control-height-md, 36px);
+  padding-block: 6px;
+  padding-inline: 12px;
+  gap: 12px;
+  box-sizing: border-box;
 }
 
 .statusLeft {
@@ -1046,7 +1094,7 @@
 
 .bottomDock {
   position: absolute;
-  bottom: 32px;
+  bottom: 28px;
   left: 0;
   right: 0;
   display: flex;
@@ -1055,33 +1103,36 @@
   z-index: var(--layer-ui-chrome);
 }
 
-.glassPanelDock {
-  padding: 8px;
+.rootDockCluster {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: auto;
+  max-width: min(96vw, 520px);
+}
+
+.rootDockPanel {
+  padding: 4px 5px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  pointer-events: auto;
+  justify-content: center;
+  flex: 0 0 auto;
 }
 
 .formatToolbar {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 0 8px;
-  border-right: 1px solid var(--sem-overlay-white-05);
-}
-
-.sepSmall {
-  width: 1px;
-  height: 16px;
-  margin: 0 4px;
-  background: var(--sem-border-strong);
+  gap: 2px;
+  padding: 0 2px;
 }
 
 .addMenu {
   display: flex;
-  gap: 4px;
-  padding: 4px;
+  align-items: center;
+  gap: 2px;
+  padding: 0 2px;
 }
 
 .sideTools {
@@ -1106,7 +1157,7 @@
 
 @supports not ((backdrop-filter: blur(1px))) {
   .glassPanel,
-  .glassPanelDock,
+  .rootDockPanel,
   .sideTools {
     background: var(--sem-surface-glass-fallback);
   }
@@ -1167,6 +1218,19 @@
   color: var(--sys-color-white);
 }
 
+/* focus-done / focus-discard: base .shell .vigil-btn forces light text + transparent bg — must override. */
+.shell :global(.vigil-btn[data-tone="focus-done"]) {
+  background: var(--sys-color-black);
+  color: var(--sys-color-white);
+  border-color: var(--sys-color-black);
+}
+
+.shell :global(.vigil-btn[data-tone="focus-discard"]) {
+  background: transparent;
+  color: oklch(0.32 0 0);
+  border-color: color-mix(in oklch, var(--sys-color-black) 28%, transparent);
+}
+
 .shell :global(.vigil-btn[data-tone="card-light"]) {
   background: color-mix(in oklch, var(--sys-color-black) 2%, transparent);
   color: color-mix(in oklch, var(--sys-color-black) 58%, transparent);
@@ -1222,6 +1286,36 @@
 .shell :global(.vigil-btn[data-tone="focus-dark"][data-force-state="active"]) {
   background: var(--sys-color-neutral-500);
   color: var(--sys-color-white);
+  transform: translateY(0.5px);
+}
+
+.shell :global(.vigil-btn[data-tone="focus-done"]:hover),
+.shell :global(.vigil-btn[data-tone="focus-done"][data-force-state="hover"]) {
+  background: oklch(0.22 0 0);
+  color: var(--sys-color-white);
+  border-color: oklch(0.22 0 0);
+}
+
+.shell :global(.vigil-btn[data-tone="focus-done"]:active),
+.shell :global(.vigil-btn[data-tone="focus-done"][data-force-state="active"]) {
+  background: oklch(0.17 0 0);
+  color: var(--sys-color-white);
+  border-color: oklch(0.17 0 0);
+  transform: translateY(0.5px);
+}
+
+.shell :global(.vigil-btn[data-tone="focus-discard"]:hover),
+.shell :global(.vigil-btn[data-tone="focus-discard"][data-force-state="hover"]) {
+  background: color-mix(in oklch, var(--sys-color-black) 5%, transparent);
+  color: var(--sys-color-black);
+  border-color: color-mix(in oklch, var(--sys-color-black) 38%, transparent);
+}
+
+.shell :global(.vigil-btn[data-tone="focus-discard"]:active),
+.shell :global(.vigil-btn[data-tone="focus-discard"][data-force-state="active"]) {
+  background: color-mix(in oklch, var(--sys-color-black) 9%, transparent);
+  color: var(--sys-color-black);
+  border-color: color-mix(in oklch, var(--sys-color-black) 48%, transparent);
   transform: translateY(0.5px);
 }
 
@@ -1291,7 +1385,7 @@
   -webkit-backdrop-filter: blur(8px);
 }
 
-/* Column that counts as “the document”; scrim outside this closes focus on pointerdown. */
+/* Column that counts as “the document”; scrim absorbs stray clicks (does not dismiss). */
 .focusSheet {
   max-width: 880px;
   margin: 0 auto;
@@ -1313,6 +1407,14 @@
   transition:
     opacity 0.2s ease,
     transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.focusHeaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .focusMeta {

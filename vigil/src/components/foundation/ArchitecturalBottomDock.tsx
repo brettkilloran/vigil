@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  ArrowClockwise,
+  ArrowCounterClockwise,
   CheckSquare,
   Code,
   FileText,
@@ -60,23 +62,21 @@ export function ArchitecturalFormatToolbar({
   onFormat: (command: string, value?: string) => void;
 }) {
   return (
-    <div className={styles.formatToolbar}>
-      {actions.map((action, index) => (
-        <div key={action.id} style={{ display: "contents" }}>
-          {index === 2 ? <div className={styles.sepSmall} /> : null}
-          <ArchitecturalButton
-            size="icon"
-            tone="glass"
-            title={action.label}
-            aria-label={action.label}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              onFormat(action.command, action.value);
-            }}
-          >
-            {formatIcon(action.command)}
-          </ArchitecturalButton>
-        </div>
+    <div className={styles.formatToolbar} role="toolbar" aria-label="Text formatting">
+      {actions.map((action) => (
+        <ArchitecturalButton
+          key={action.id}
+          size="icon"
+          tone="glass"
+          iconOnly
+          title={action.label}
+          aria-label={action.label}
+          leadingIcon={formatIcon(action.command)}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onFormat(action.command, action.value);
+          }}
+        />
       ))}
     </div>
   );
@@ -90,18 +90,18 @@ export function ArchitecturalCreateMenu({
   onCreateNode: (type: NodeTheme) => void;
 }) {
   return (
-    <div className={styles.addMenu}>
+    <div className={styles.addMenu} role="toolbar" aria-label="Create items">
       {actions.map((action) => (
         <ArchitecturalButton
           key={action.id}
-          size="menu"
+          size="icon"
           tone="menu"
-          onClick={() => onCreateNode(action.nodeType)}
-          aria-label={action.label}
+          iconOnly
+          title={action.label}
+          aria-label={`Create ${action.label}`}
           leadingIcon={createIcon(action.nodeType)}
-        >
-          {action.label}
-        </ArchitecturalButton>
+          onClick={() => onCreateNode(action.nodeType)}
+        />
       ))}
     </div>
   );
@@ -110,19 +110,61 @@ export function ArchitecturalCreateMenu({
 export function ArchitecturalBottomDock({
   onFormat,
   onCreateNode,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
+  undoLabel = "Undo",
+  redoLabel = "Redo",
   formatActions = DEFAULT_FORMAT_ACTIONS,
   createActions = DEFAULT_CREATE_ACTIONS,
 }: {
   onFormat: (command: string, value?: string) => void;
   onCreateNode: (type: NodeTheme) => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  undoLabel?: string;
+  redoLabel?: string;
   formatActions?: DockFormatAction[];
   createActions?: DockCreateAction[];
 }) {
   return (
     <div className={styles.bottomDock}>
-      <div className={styles.glassPanelDock}>
-        <ArchitecturalFormatToolbar actions={formatActions} onFormat={onFormat} />
-        <ArchitecturalCreateMenu actions={createActions} onCreateNode={onCreateNode} />
+      <div className={styles.rootDockCluster}>
+        {onUndo && onRedo ? (
+          <div className={styles.rootDockPanel}>
+            <div className={styles.addMenu} role="toolbar" aria-label="History">
+              <ArchitecturalButton
+                size="icon"
+                tone="glass"
+                iconOnly
+                title={undoLabel}
+                aria-label={undoLabel}
+                disabled={!canUndo}
+                leadingIcon={<ArrowCounterClockwise size={18} />}
+                onClick={() => onUndo()}
+              />
+              <ArchitecturalButton
+                size="icon"
+                tone="glass"
+                iconOnly
+                title={redoLabel}
+                aria-label={redoLabel}
+                disabled={!canRedo}
+                leadingIcon={<ArrowClockwise size={18} />}
+                onClick={() => onRedo()}
+              />
+            </div>
+          </div>
+        ) : null}
+        <div className={styles.rootDockPanel}>
+          <ArchitecturalFormatToolbar actions={formatActions} onFormat={onFormat} />
+        </div>
+        <div className={styles.rootDockPanel}>
+          <ArchitecturalCreateMenu actions={createActions} onCreateNode={onCreateNode} />
+        </div>
       </div>
     </div>
   );

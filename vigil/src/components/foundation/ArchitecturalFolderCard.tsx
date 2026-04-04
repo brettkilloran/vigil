@@ -1,6 +1,6 @@
 "use client";
 
-import { CornersOut, DownloadSimple, Folder } from "@phosphor-icons/react";
+import { CornersOut, DownloadSimple } from "@phosphor-icons/react";
 
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
@@ -30,13 +30,9 @@ export function ArchitecturalFolderCard({
         selected ? styles.folderSelected : ""
       }`}
     >
-      <div className={styles.folderTab}>
-        <Folder size={12} />
-        FOLDER
-      </div>
       <div className={styles.folderBack} />
       <div className={styles.folderInterior}>
-        <DownloadSimple size={24} />
+        <DownloadSimple size={28} />
         <span>Drop to insert</span>
       </div>
       <div className={styles.folderFront}>
@@ -66,7 +62,7 @@ export function ArchitecturalFolderCard({
               onOpen?.();
             }}
           >
-            <CornersOut size={16} />
+            <CornersOut size={18} />
           </button>
         </div>
       </div>

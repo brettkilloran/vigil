@@ -6,7 +6,15 @@ import { Button } from "@/src/components/ui/Button";
 import type { ButtonSize as UiButtonSize } from "@/src/components/ui/Button";
 
 type ButtonSize = "icon" | "menu" | "pill";
-type ButtonTone = "glass" | "menu" | "focus-light" | "focus-dark";
+type ButtonTone =
+  | "glass"
+  | "menu"
+  | "focus-light"
+  | "focus-dark"
+  | "focus-done"
+  | "focus-discard"
+  | "card-light"
+  | "card-dark";
 type ButtonState = "default" | "hover" | "active";
 
 function toUiButtonSize(size: ButtonSize): UiButtonSize {
@@ -20,6 +28,7 @@ export function ArchitecturalButton({
   active = false,
   forceState = "default",
   leadingIcon,
+  iconOnly = false,
   className,
   children,
   ...buttonProps
@@ -29,6 +38,7 @@ export function ArchitecturalButton({
   active?: boolean;
   forceState?: ButtonState;
   leadingIcon?: ReactNode;
+  iconOnly?: boolean;
 } & ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <Button
@@ -38,6 +48,7 @@ export function ArchitecturalButton({
       isActive={active}
       forceState={forceState}
       leadingIcon={leadingIcon}
+      iconOnly={iconOnly}
       className={className}
       {...buttonProps}
     >

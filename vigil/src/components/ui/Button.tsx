@@ -13,6 +13,8 @@ export type ButtonTone =
   | "menu"
   | "focus-light"
   | "focus-dark"
+  | "focus-done"
+  | "focus-discard"
   | "card-light"
   | "card-dark";
 export type ButtonVisualState = "default" | "hover" | "active";

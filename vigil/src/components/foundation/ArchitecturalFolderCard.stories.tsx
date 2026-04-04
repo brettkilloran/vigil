@@ -31,7 +31,7 @@ const meta: Meta<typeof ArchitecturalFolderCard> = {
         style={{
           position: "relative",
           width: 420,
-          height: 300,
+          height: 340,
           background: "var(--sem-surface-base)",
           display: "grid",
           placeItems: "center",

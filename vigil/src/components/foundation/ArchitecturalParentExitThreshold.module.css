@@ -1,0 +1,42 @@
+/* Full-width band below top chrome: drag the selection into this zone to move to the parent space. */
+
+.band {
+  position: fixed;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: var(--layer-ui-chrome, 100);
+  box-sizing: border-box;
+  opacity: 0;
+  transition:
+    opacity 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+}
+
+.bandArmed {
+  opacity: 1;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklch, var(--accent) 20%, transparent) 0%,
+    color-mix(in oklch, var(--accent) 5%, transparent) 55%,
+    transparent 100%
+  );
+  border-bottom-color: color-mix(in oklch, var(--accent) 38%, transparent);
+  box-shadow: 0 10px 36px color-mix(in oklch, var(--accent) 10%, transparent);
+}
+
+.bandHovered {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklch, var(--accent) 36%, transparent) 0%,
+    color-mix(in oklch, var(--accent) 12%, transparent) 55%,
+    transparent 100%
+  );
+  border-bottom-color: color-mix(in oklch, var(--accent) 72%, transparent);
+  box-shadow:
+    0 0 40px color-mix(in oklch, var(--accent) 20%, transparent),
+    0 12px 40px color-mix(in oklch, var(--accent) 14%, transparent);
+}

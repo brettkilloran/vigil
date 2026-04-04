@@ -1,18 +1,33 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft } from "@phosphor-icons/react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  CopySimple,
+  SquaresFour,
+  Stack,
+  Trash,
+} from "@phosphor-icons/react";
 
 import styles from "./ArchitecturalCanvasApp.module.css";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
 import { ArchitecturalBottomDock } from "@/src/components/foundation/ArchitecturalBottomDock";
+import { ArchitecturalParentExitThreshold } from "@/src/components/foundation/ArchitecturalParentExitThreshold";
 import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
 import { ArchitecturalFolderCard } from "@/src/components/foundation/ArchitecturalFolderCard";
 import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";
 import { ArchitecturalStatusBar } from "@/src/components/foundation/ArchitecturalStatusBar";
 import { ArchitecturalToolRail } from "@/src/components/foundation/ArchitecturalToolRail";
 import { buildArchitecturalSeedGraph } from "@/src/components/foundation/architectural-seed";
+import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
+import {
+  cloneArchitecturalGraph,
+  MAX_ARCHITECTURAL_UNDO,
+  type ArchitecturalUndoSnapshot,
+} from "@/src/components/foundation/architectural-undo";
+import { useModKeyHints } from "@/src/lib/mod-keys";
+import { ContextMenu } from "@/src/components/ui/ContextMenu";
 import type {
   ContentTheme,
   CanvasEntity,
@@ -28,6 +43,9 @@ const MAX_ZOOM = 3;
 const ZOOM_BUTTON_STEP = 0.2;
 const WHEEL_ZOOM_SENSITIVITY = 0.0012;
 const UNIFIED_NODE_WIDTH = 340;
+/** Matches `.folderNode` width/height in ArchitecturalCanvasApp.module.css */
+const FOLDER_CARD_WIDTH = 420;
+const FOLDER_CARD_HEIGHT = 280;
 const LAYOUT_COLUMNS = 4;
 const LAYOUT_COL_GAP = 380;
 const LAYOUT_ROW_GAP = 280;
@@ -46,6 +64,10 @@ const ROOT_SPACE_ID = "root";
 function tapeVariantForTheme(theme: ContentTheme): TapeVariant {
   if (theme === "code") return "dark";
   return "clear";
+}
+
+function normalizedFocusTitle(raw: string): string {
+  return raw.trim() || "Untitled";
 }
 
 function shallowCloneGraph(graph: CanvasGraph): CanvasGraph {
@@ -96,6 +118,32 @@ function isEditableTarget(target: EventTarget | null) {
     el.tagName === "TEXTAREA" ||
     el.tagName === "SELECT"
   );
+}
+
+type LassoRectScreen = { x1: number; y1: number; x2: number; y2: number };
+
+/**
+ * Whether a pointer event target is “canvas chrome” for pan / marquee lasso (not on an entity or stack).
+ * Entity surfaces win over raw svg/path (e.g. icons inside cards).
+ */
+function isCanvasPointerMarqueeOrPanSurface(
+  target: HTMLElement,
+  viewportEl: HTMLElement | null,
+  canvasClassName: string,
+  activeTool: CanvasTool,
+  spacePanning: boolean,
+): boolean {
+  if (activeTool === "pan" || spacePanning) return true;
+  if (
+    target.closest("[data-node-id]") ||
+    target.closest("[data-stack-container='true']")
+  ) {
+    return false;
+  }
+  if (target === viewportEl) return true;
+  const tag = target.tagName.toLowerCase();
+  if (tag === "svg" || tag === "path") return true;
+  return !!target.closest(`.${canvasClassName}`);
 }
 
 function buildStackModalLayout(
@@ -194,18 +242,15 @@ export function ArchitecturalCanvasApp({
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
   const [spacePanning, setSpacePanning] = useState(false);
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
-  const [lassoRectScreen, setLassoRectScreen] = useState<{
-    x1: number;
-    y1: number;
-    x2: number;
-    y2: number;
-  } | null>(null);
+  const [lassoRectScreen, setLassoRectScreen] = useState<LassoRectScreen | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
 
   const [focusOpen, setFocusOpen] = useState(false);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [focusTitle, setFocusTitle] = useState("");
   const [focusBody, setFocusBody] = useState("");
+  const [focusBaselineTitle, setFocusBaselineTitle] = useState("");
+  const [focusBaselineBody, setFocusBaselineBody] = useState("");
   const [focusCodeTheme, setFocusCodeTheme] = useState(false);
   const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null);
   const [hoveredStackTargetId, setHoveredStackTargetId] = useState<string | null>(null);
@@ -237,15 +282,22 @@ export function ArchitecturalCanvasApp({
   const [stackModalEjectPreview, setStackModalEjectPreview] = useState(false);
   const [stackModalEjectCount, setStackModalEjectCount] = useState(0);
   const [stackModalCardHeights, setStackModalCardHeights] = useState<Record<string, number>>({});
+  const [selectionContextMenu, setSelectionContextMenu] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const parentDropRef = useRef<HTMLButtonElement | null>(null);
+  const shellTopLeftStackRef = useRef<HTMLDivElement | null>(null);
+  const parentDropRef = useRef<HTMLDivElement | null>(null);
   const isPanningRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0 });
   const draggedNodeIdsRef = useRef<string[]>([]);
   const dragOffsetsRef = useRef<Record<string, { x: number; y: number }>>({});
   const viewRef = useRef({ scale: 1, tx: 0, ty: 0 });
   const lassoStartRef = useRef<{ x: number; y: number } | null>(null);
+  /** Mirrors lasso rect for global mouseup; React state can lag one frame behind a quick click. */
+  const lassoRectScreenRef = useRef<LassoRectScreen | null>(null);
   const spacePanRef = useRef(false);
   const idCounterRef = useRef(2000);
   const commitTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -256,6 +308,21 @@ export function ArchitecturalCanvasApp({
     moved: boolean;
   } | null>(null);
   const suppressStackOpenRef = useRef<{ stackId: string; expiresAt: number } | null>(null);
+  const graphRef = useRef(graph);
+  const activeSpaceIdRef = useRef(activeSpaceId);
+  const navigationPathRef = useRef(navigationPath);
+  const selectedNodeIdsRef = useRef(selectedNodeIds);
+  const undoPastRef = useRef<ArchitecturalUndoSnapshot[]>([]);
+  const undoFutureRef = useRef<ArchitecturalUndoSnapshot[]>([]);
+  const isApplyingHistoryRef = useRef(false);
+  const [historyEpoch, setHistoryEpoch] = useState(0);
+
+  graphRef.current = graph;
+  activeSpaceIdRef.current = activeSpaceId;
+  navigationPathRef.current = navigationPath;
+  selectedNodeIdsRef.current = selectedNodeIds;
+
+  const modKeyHints = useModKeyHints();
 
   const closeStackModal = useCallback(() => {
     setStackDrag(null);
@@ -265,6 +332,91 @@ export function ArchitecturalCanvasApp({
     setStackModalEjectCount(0);
     setSelectedNodeIds([]);
   }, []);
+
+  const recordUndoBeforeMutation = useCallback(() => {
+    if (isApplyingHistoryRef.current) return;
+    const snap: ArchitecturalUndoSnapshot = {
+      graph: cloneArchitecturalGraph(graphRef.current),
+      activeSpaceId: activeSpaceIdRef.current,
+      navigationPath: [...navigationPathRef.current],
+      selectedNodeIds: [...selectedNodeIdsRef.current],
+    };
+    undoPastRef.current = [...undoPastRef.current, snap].slice(-MAX_ARCHITECTURAL_UNDO);
+    undoFutureRef.current = [];
+    setHistoryEpoch((n) => n + 1);
+  }, []);
+
+  const undo = useCallback(() => {
+    if (undoPastRef.current.length === 0) return;
+    isApplyingHistoryRef.current = true;
+    const current: ArchitecturalUndoSnapshot = {
+      graph: cloneArchitecturalGraph(graphRef.current),
+      activeSpaceId: activeSpaceIdRef.current,
+      navigationPath: [...navigationPathRef.current],
+      selectedNodeIds: [...selectedNodeIdsRef.current],
+    };
+    const restore = undoPastRef.current[undoPastRef.current.length - 1]!;
+    undoPastRef.current = undoPastRef.current.slice(0, -1);
+    undoFutureRef.current.push(current);
+
+    const rGraph = cloneArchitecturalGraph(restore.graph);
+    let nextSpaceId = restore.activeSpaceId;
+    let nextPath = restore.navigationPath;
+    if (!rGraph.spaces[nextSpaceId]) {
+      nextSpaceId = rGraph.rootSpaceId;
+      nextPath = buildPathToSpace(nextSpaceId, rGraph.spaces, rGraph.rootSpaceId);
+    }
+
+    setGraph(rGraph);
+    setActiveSpaceId(nextSpaceId);
+    setNavigationPath(nextPath);
+    setSelectedNodeIds(restore.selectedNodeIds.filter((id) => rGraph.entities[id]));
+    closeStackModal();
+    setFocusOpen(false);
+    setActiveNodeId(null);
+    requestAnimationFrame(() => {
+      isApplyingHistoryRef.current = false;
+    });
+    setHistoryEpoch((n) => n + 1);
+  }, [closeStackModal]);
+
+  const redo = useCallback(() => {
+    if (undoFutureRef.current.length === 0) return;
+    isApplyingHistoryRef.current = true;
+    const current: ArchitecturalUndoSnapshot = {
+      graph: cloneArchitecturalGraph(graphRef.current),
+      activeSpaceId: activeSpaceIdRef.current,
+      navigationPath: [...navigationPathRef.current],
+      selectedNodeIds: [...selectedNodeIdsRef.current],
+    };
+    const restore = undoFutureRef.current[undoFutureRef.current.length - 1]!;
+    undoFutureRef.current = undoFutureRef.current.slice(0, -1);
+    undoPastRef.current = [...undoPastRef.current, current].slice(-MAX_ARCHITECTURAL_UNDO);
+
+    const rGraph = cloneArchitecturalGraph(restore.graph);
+    let nextSpaceId = restore.activeSpaceId;
+    let nextPath = restore.navigationPath;
+    if (!rGraph.spaces[nextSpaceId]) {
+      nextSpaceId = rGraph.rootSpaceId;
+      nextPath = buildPathToSpace(nextSpaceId, rGraph.spaces, rGraph.rootSpaceId);
+    }
+
+    setGraph(rGraph);
+    setActiveSpaceId(nextSpaceId);
+    setNavigationPath(nextPath);
+    setSelectedNodeIds(restore.selectedNodeIds.filter((id) => rGraph.entities[id]));
+    closeStackModal();
+    setFocusOpen(false);
+    setActiveNodeId(null);
+    requestAnimationFrame(() => {
+      isApplyingHistoryRef.current = false;
+    });
+    setHistoryEpoch((n) => n + 1);
+  }, [closeStackModal]);
+
+  void historyEpoch;
+  const canUndo = undoPastRef.current.length > 0;
+  const canRedo = undoFutureRef.current.length > 0;
 
   const queueGraphCommit = useCallback(
     (key: string, applyCommit: () => void, delayMs: number) => {
@@ -316,6 +468,39 @@ export function ArchitecturalCanvasApp({
   );
 
   const parentSpaceId = activeSpace?.parentSpaceId ?? null;
+
+  const [parentExitBandTopPx, setParentExitBandTopPx] = useState(88);
+  const syncParentExitBandTop = useCallback(() => {
+    const stack = shellTopLeftStackRef.current;
+    if (!stack) return;
+    const r = stack.getBoundingClientRect();
+    setParentExitBandTopPx(Math.round(r.bottom + 6));
+  }, []);
+
+  useLayoutEffect(() => {
+    syncParentExitBandTop();
+    const node = shellTopLeftStackRef.current;
+    if (!node || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => syncParentExitBandTop());
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, [
+    navigationPath,
+    activeSpaceId,
+    parentSpaceId,
+    selectedNodeIds.length,
+    syncParentExitBandTop,
+  ]);
+
+  useLayoutEffect(() => {
+    if (draggedNodeIds.length > 0) syncParentExitBandTop();
+  }, [draggedNodeIds.length, syncParentExitBandTop]);
+
+  useEffect(() => {
+    window.addEventListener("resize", syncParentExitBandTop);
+    return () => window.removeEventListener("resize", syncParentExitBandTop);
+  }, [syncParentExitBandTop]);
+
   const nodeZ = useMemo(() => {
     const zMap = new Map<string, number>();
     visibleEntities.forEach((entity, index) => zMap.set(entity.id, index + 1));
@@ -444,15 +629,20 @@ export function ArchitecturalCanvasApp({
       queueGraphCommit(
         `content-body:${id}`,
         () => {
-          setGraph((prev) => {
-            const entity = prev.entities[id];
-            if (!entity || entity.kind !== "content") return prev;
-            if (entity.bodyHtml === html) return prev;
+          const prev = graphRef.current;
+          const entity = prev.entities[id];
+          if (!entity || entity.kind !== "content") return;
+          if (entity.bodyHtml === html) return;
+          recordUndoBeforeMutation();
+          setGraph((p) => {
+            const e = p.entities[id];
+            if (!e || e.kind !== "content") return p;
+            if (e.bodyHtml === html) return p;
             return {
-              ...prev,
+              ...p,
               entities: {
-                ...prev.entities,
-                [id]: { ...entity, bodyHtml: html },
+                ...p.entities,
+                [id]: { ...e, bodyHtml: html },
               },
             };
           });
@@ -460,7 +650,7 @@ export function ArchitecturalCanvasApp({
         options?.immediate ? 0 : 120,
       );
     },
-    [queueGraphCommit],
+    [queueGraphCommit, recordUndoBeforeMutation],
   );
 
   const openFocusMode = useCallback((id: string) => {
@@ -469,12 +659,21 @@ export function ArchitecturalCanvasApp({
     setActiveNodeId(id);
     setFocusTitle(entity.title);
     setFocusBody(entity.bodyHtml);
+    setFocusBaselineTitle(entity.title);
+    setFocusBaselineBody(entity.bodyHtml);
     setFocusCodeTheme(entity.theme === "code");
     setFocusOpen(true);
   }, [graph.entities]);
 
-  const closeFocusMode = useCallback(() => {
+  const saveFocusAndClose = useCallback(() => {
     if (activeNodeId) {
+      const entity = graphRef.current.entities[activeNodeId];
+      if (entity && entity.kind === "content") {
+        const nextTitle = focusTitle.trim() || "Untitled";
+        if (entity.title !== nextTitle || entity.bodyHtml !== focusBody) {
+          recordUndoBeforeMutation();
+        }
+      }
       setGraph((prev) => {
         const entity = prev.entities[activeNodeId];
         if (!entity || entity.kind !== "content") return prev;
@@ -493,7 +692,19 @@ export function ArchitecturalCanvasApp({
     }
     setFocusOpen(false);
     setActiveNodeId(null);
-  }, [activeNodeId, focusBody, focusTitle]);
+  }, [activeNodeId, focusBody, focusTitle, recordUndoBeforeMutation]);
+
+  const discardFocusAndClose = useCallback(() => {
+    setFocusOpen(false);
+    setActiveNodeId(null);
+  }, []);
+
+  const focusDirty = useMemo(
+    () =>
+      normalizedFocusTitle(focusTitle) !== normalizedFocusTitle(focusBaselineTitle) ||
+      focusBody !== focusBaselineBody,
+    [focusTitle, focusBody, focusBaselineTitle, focusBaselineBody],
+  );
 
   const onFocusOverlayPointerDownCapture = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
@@ -502,9 +713,8 @@ export function ArchitecturalCanvasApp({
       if (t.closest(`.${styles.focusSheet}`)) return;
       event.preventDefault();
       event.stopPropagation();
-      closeFocusMode();
     },
-    [closeFocusMode, focusOpen],
+    [focusOpen],
   );
 
   const updateTransformFromMouse = useCallback(
@@ -571,6 +781,9 @@ export function ArchitecturalCanvasApp({
     setSelectedNodeIds([]);
     setFocusOpen(false);
     setActiveNodeId(null);
+    undoPastRef.current = [];
+    undoFutureRef.current = [];
+    setHistoryEpoch((n) => n + 1);
   }, [scenario]);
 
   useEffect(() => {
@@ -615,11 +828,13 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   const stackSelectedContent = useCallback(() => {
-    const ids = selectedNodeIds.filter((id) => {
-      const entity = graph.entities[id];
-      return !!entity && entity.kind === "content" && visibleEntityIds.includes(id);
+    const vis = visibleEntityIds;
+    const ids = selectedNodeIdsRef.current.filter((id) => {
+      const entity = graphRef.current.entities[id];
+      return !!entity && entity.kind === "content" && vis.includes(id);
     });
     if (ids.length < 2) return;
+    recordUndoBeforeMutation();
     const stackId = createId("stack");
     setGraph((prev) => {
       const next = shallowCloneGraph(prev);
@@ -635,9 +850,10 @@ export function ArchitecturalCanvasApp({
       return next;
     });
     setSelectedNodeIds(ids);
-  }, [createId, graph.entities, selectedNodeIds, visibleEntityIds]);
+  }, [createId, recordUndoBeforeMutation, visibleEntityIds]);
 
   const unstackGroup = useCallback((stackId: string) => {
+    recordUndoBeforeMutation();
     setGraph((prev) => {
       let changed = false;
       const next = shallowCloneGraph(prev);
@@ -652,10 +868,16 @@ export function ArchitecturalCanvasApp({
       });
       return changed ? next : prev;
     });
-  }, []);
+  }, [recordUndoBeforeMutation]);
 
   const ensureFolderChildSpace = useCallback(
     (folderId: string): string | null => {
+      const folderEarly = graphRef.current.entities[folderId];
+      if (!folderEarly || folderEarly.kind !== "folder") return null;
+      if (graphRef.current.spaces[folderEarly.childSpaceId]) {
+        return folderEarly.childSpaceId;
+      }
+      recordUndoBeforeMutation();
       let resolved: string | null = null;
       setGraph((prev) => {
         const folder = prev.entities[folderId];
@@ -681,7 +903,7 @@ export function ArchitecturalCanvasApp({
       });
       return resolved;
     },
-    [activeSpaceId, createId],
+    [activeSpaceId, createId, recordUndoBeforeMutation],
   );
 
   const canMoveEntityToSpace = useCallback(
@@ -704,8 +926,11 @@ export function ArchitecturalCanvasApp({
     (
       entityIds: string[],
       destinationSpaceId: string,
-      options?: { anchor?: { x: number; y: number }; forceLayout?: boolean },
+      options?: { anchor?: { x: number; y: number }; forceLayout?: boolean; skipUndo?: boolean },
     ) => {
+      if (!options?.skipUndo) {
+        recordUndoBeforeMutation();
+      }
       setGraph((prev) => {
         const targetSpace = prev.spaces[destinationSpaceId];
         if (!targetSpace) return prev;
@@ -788,7 +1013,7 @@ export function ArchitecturalCanvasApp({
         return next;
       });
     },
-    [canMoveEntityToSpace],
+    [canMoveEntityToSpace, recordUndoBeforeMutation],
   );
 
   const enterSpace = useCallback(
@@ -847,20 +1072,26 @@ export function ArchitecturalCanvasApp({
       queueGraphCommit(
         `folder-title:${entityId}`,
         () => {
-          setGraph((prev) => {
-            const entity = prev.entities[entityId];
-            if (!entity || entity.kind !== "folder") return prev;
-            const next = shallowCloneGraph(prev);
-            const nextTitle = title.trim() || "Untitled Folder";
-            if (entity.title === nextTitle) return prev;
+          const prev = graphRef.current;
+          const entity = prev.entities[entityId];
+          if (!entity || entity.kind !== "folder") return;
+          const nextTitle = title.trim() || "Untitled Folder";
+          if (entity.title === nextTitle) return;
+          recordUndoBeforeMutation();
+          setGraph((p) => {
+            const ent = p.entities[entityId];
+            if (!ent || ent.kind !== "folder") return p;
+            const next = shallowCloneGraph(p);
+            const t = title.trim() || "Untitled Folder";
+            if (ent.title === t) return p;
             next.entities[entityId] = {
-              ...entity,
-              title: nextTitle,
+              ...ent,
+              title: t,
             };
-            if (next.spaces[entity.childSpaceId]) {
-              next.spaces[entity.childSpaceId] = {
-                ...next.spaces[entity.childSpaceId],
-                name: nextTitle,
+            if (next.spaces[ent.childSpaceId]) {
+              next.spaces[ent.childSpaceId] = {
+                ...next.spaces[ent.childSpaceId],
+                name: t,
               };
             }
             return next;
@@ -869,10 +1100,11 @@ export function ArchitecturalCanvasApp({
         120,
       );
     },
-    [queueGraphCommit],
+    [queueGraphCommit, recordUndoBeforeMutation],
   );
 
   const createNewNode = useCallback((type: NodeTheme) => {
+    recordUndoBeforeMutation();
     const center = centerCoords();
     const x = center.x - 170 + (Math.random() * 60 - 30);
     const y = center.y - 100 + (Math.random() * 60 - 30);
@@ -883,6 +1115,8 @@ export function ArchitecturalCanvasApp({
     if (type === "folder") {
       const entityId = createId("folder");
       const childSpaceId = createId("space");
+      const fx = center.x - FOLDER_CARD_WIDTH / 2 + (Math.random() * 60 - 30);
+      const fy = center.y - FOLDER_CARD_HEIGHT / 2 + (Math.random() * 60 - 30);
       setGraph((prev) => {
         const next = shallowCloneGraph(prev);
         next.spaces[childSpaceId] = {
@@ -898,12 +1132,12 @@ export function ArchitecturalCanvasApp({
           theme: "folder",
           childSpaceId,
           rotation,
-          width: UNIFIED_NODE_WIDTH,
+          width: FOLDER_CARD_WIDTH,
           tapeRotation: 0,
           stackId: null,
           stackOrder: null,
           slots: {
-            [activeSpaceId]: { x, y },
+            [activeSpaceId]: { x: fx, y: fy },
           },
         };
         const activeSpace = next.spaces[activeSpaceId];
@@ -972,7 +1206,7 @@ export function ArchitecturalCanvasApp({
       }
       return next;
     });
-  }, [activeSpaceId, centerCoords, createId]);
+  }, [activeSpaceId, centerCoords, createId, recordUndoBeforeMutation]);
 
   const updateDropTargets = useCallback(
     (draggedEntityId: string) => {
@@ -1186,6 +1420,7 @@ export function ArchitecturalCanvasApp({
         moveEntitiesToSpace(draggedEntityIds, parentSpaceId, {
           anchor: anchorBelowFolder,
           forceLayout: true,
+          skipUndo: true,
         });
         return;
       }
@@ -1200,6 +1435,7 @@ export function ArchitecturalCanvasApp({
             moveEntitiesToSpace(draggedEntityIds, childSpaceId, {
               anchor: fallback,
               forceLayout: true,
+              skipUndo: true,
             });
             return;
           }
@@ -1229,12 +1465,14 @@ export function ArchitecturalCanvasApp({
     const onMouseMove = (event: MouseEvent) => {
       if (lassoStartRef.current) {
         const start = lassoStartRef.current;
-        setLassoRectScreen({
+        const next: LassoRectScreen = {
           x1: start.x,
           y1: start.y,
           x2: event.clientX,
           y2: event.clientY,
-        });
+        };
+        lassoRectScreenRef.current = next;
+        setLassoRectScreen(next);
         return;
       }
 
@@ -1286,31 +1524,37 @@ export function ArchitecturalCanvasApp({
 
     const onMouseUp = () => {
       if (lassoStartRef.current) {
-        const rect = lassoRectScreen;
+        const start = lassoStartRef.current;
+        const rect: LassoRectScreen =
+          lassoRectScreenRef.current ?? {
+            x1: start.x,
+            y1: start.y,
+            x2: start.x,
+            y2: start.y,
+          };
         lassoStartRef.current = null;
+        lassoRectScreenRef.current = null;
         setLassoRectScreen(null);
 
-        if (rect) {
-          const minX = Math.min(rect.x1, rect.x2);
-          const maxX = Math.max(rect.x1, rect.x2);
-          const minY = Math.min(rect.y1, rect.y2);
-          const maxY = Math.max(rect.y1, rect.y2);
-          const isClick = Math.abs(maxX - minX) < 3 && Math.abs(maxY - minY) < 3;
+        const minX = Math.min(rect.x1, rect.x2);
+        const maxX = Math.max(rect.x1, rect.x2);
+        const minY = Math.min(rect.y1, rect.y2);
+        const maxY = Math.max(rect.y1, rect.y2);
+        const isClick = Math.abs(maxX - minX) < 3 && Math.abs(maxY - minY) < 3;
 
-          if (isClick) {
-            setSelectedNodeIds([]);
-          } else {
-            const selected = Array.from(
-              document.querySelectorAll<HTMLElement>("[data-node-id]"),
-            )
-              .filter((el) => {
-                const r = el.getBoundingClientRect();
-                return !(r.right < minX || r.left > maxX || r.bottom < minY || r.top > maxY);
-              })
-              .map((el) => el.dataset.nodeId)
-              .filter((id): id is string => !!id);
-            setSelectedNodeIds(selected);
-          }
+        if (isClick) {
+          setSelectedNodeIds([]);
+        } else {
+          const selected = Array.from(
+            document.querySelectorAll<HTMLElement>("[data-node-id]"),
+          )
+            .filter((el) => {
+              const r = el.getBoundingClientRect();
+              return !(r.right < minX || r.left > maxX || r.bottom < minY || r.top > maxY);
+            })
+            .map((el) => el.dataset.nodeId)
+            .filter((id): id is string => !!id);
+          setSelectedNodeIds(selected);
         }
       }
 
@@ -1341,7 +1585,7 @@ export function ArchitecturalCanvasApp({
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, [activeSpaceId, handleDrop, lassoRectScreen, scale, translateX, translateY, updateDropTargets]);
+  }, [activeSpaceId, handleDrop, scale, translateX, translateY, updateDropTargets]);
 
   useEffect(() => {
     if (!stackDrag || !stackModal) return;
@@ -1642,6 +1886,7 @@ export function ArchitecturalCanvasApp({
                     ),
                   ]
                 : [nodeId];
+            recordUndoBeforeMutation();
             setSelectedNodeIds(dragGroup);
             draggedNodeIdsRef.current = dragGroup;
             setDraggedNodeIds(dragGroup);
@@ -1688,7 +1933,8 @@ export function ArchitecturalCanvasApp({
     };
 
     const onDoubleClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
+      const target = pointerEventTargetElement(event.target);
+      if (!target) return;
       const folderEl = target.closest<HTMLElement>("[data-folder-id]");
       if (folderEl && !target.closest(`.${styles.folderTitleInput}`)) {
         const folderId = folderEl.dataset.folderId;
@@ -1702,7 +1948,7 @@ export function ArchitecturalCanvasApp({
       if (!id) return;
 
       const editableWithinNode =
-        isEditableTarget(target) ||
+        isEditableTarget(event.target) ||
         !!target.closest("input, textarea, select, [contenteditable='true']");
       if (editableWithinNode) {
         const node = graph.entities[id];
@@ -1732,6 +1978,7 @@ export function ArchitecturalCanvasApp({
     graph.entities,
     openFocusMode,
     openFolder,
+    recordUndoBeforeMutation,
     scale,
     selectedNodeIds,
     translateX,
@@ -1765,6 +2012,7 @@ export function ArchitecturalCanvasApp({
 
   const deleteEntitySelection = useCallback((entityIds: string[]) => {
     if (entityIds.length === 0) return;
+    recordUndoBeforeMutation();
     setGraph((prev) => {
       const next = shallowCloneGraph(prev);
       const entityIdsToDelete = new Set<string>();
@@ -1818,7 +2066,7 @@ export function ArchitecturalCanvasApp({
       setFocusOpen(false);
       setActiveNodeId(null);
     }
-  }, [activeNodeId]);
+  }, [activeNodeId, recordUndoBeforeMutation]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1827,7 +2075,6 @@ export function ArchitecturalCanvasApp({
 
       if (focusOpen) {
         event.preventDefault();
-        closeFocusMode();
         return;
       }
 
@@ -1837,12 +2084,13 @@ export function ArchitecturalCanvasApp({
         return;
       }
 
-      if (draggedNodeIdsRef.current.length > 0 || lassoStartRef.current || lassoRectScreen) {
+      if (draggedNodeIdsRef.current.length > 0 || lassoStartRef.current) {
         event.preventDefault();
         draggedNodeIdsRef.current = [];
         dragOffsetsRef.current = {};
         setDraggedNodeIds([]);
         lassoStartRef.current = null;
+        lassoRectScreenRef.current = null;
         setLassoRectScreen(null);
         setHoveredFolderId(null);
         setHoveredStackTargetId(null);
@@ -1858,7 +2106,7 @@ export function ArchitecturalCanvasApp({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [closeFocusMode, closeStackModal, focusOpen, goBack, lassoRectScreen, parentSpaceId, stackModal]);
+  }, [closeStackModal, focusOpen, goBack, parentSpaceId, stackModal]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1894,22 +2142,28 @@ export function ArchitecturalCanvasApp({
       if (event.button !== 0) return;
 
       const target = event.target as HTMLElement;
-      const isViewport =
-        activeTool === "pan" ||
-        spacePanRef.current ||
-        target === viewportRef.current ||
-        target.tagName.toLowerCase() === "svg" ||
-        target.tagName.toLowerCase() === "path";
-      if (!isViewport) return;
+      if (
+        !isCanvasPointerMarqueeOrPanSurface(
+          target,
+          viewportRef.current,
+          styles.canvas,
+          activeTool,
+          spacePanRef.current,
+        )
+      ) {
+        return;
+      }
 
       if (activeTool === "select" && !spacePanRef.current) {
         lassoStartRef.current = { x: event.clientX, y: event.clientY };
-        setLassoRectScreen({
+        const initial: LassoRectScreen = {
           x1: event.clientX,
           y1: event.clientY,
           x2: event.clientX,
           y2: event.clientY,
-        });
+        };
+        lassoRectScreenRef.current = initial;
+        setLassoRectScreen(initial);
         return;
       }
       isPanningRef.current = true;
@@ -1990,7 +2244,27 @@ export function ArchitecturalCanvasApp({
       if (focusOpen) return;
       const mod = event.metaKey || event.ctrlKey;
       if (!mod) return;
+      if (event.key.toLowerCase() !== "z") return;
+      event.preventDefault();
+      if (event.shiftKey) redo();
+      else undo();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [focusOpen, redo, undo]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      if (target?.isContentEditable) return;
+      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
+        return;
+      }
+      if (focusOpen) return;
+      const mod = event.metaKey || event.ctrlKey;
+      if (!mod) return;
       const key = event.key.toLowerCase();
+      if (key === "z") return;
       if (key === "s") {
         event.preventDefault();
         if (selectedNodeIds.length === 1) {
@@ -2006,6 +2280,7 @@ export function ArchitecturalCanvasApp({
         const entity = graph.entities[selectedNodeIds[0]!];
         if (!entity?.stackId) return;
         event.preventDefault();
+        recordUndoBeforeMutation();
         setGraph((prev) => {
           const next = shallowCloneGraph(prev);
           next.entities[entity.id] = {
@@ -2019,31 +2294,220 @@ export function ArchitecturalCanvasApp({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [focusOpen, graph.entities, normalizeStack, selectedNodeIds, stackSelectedContent, unstackGroup]);
+  }, [
+    focusOpen,
+    graph.entities,
+    normalizeStack,
+    recordUndoBeforeMutation,
+    selectedNodeIds,
+    stackSelectedContent,
+    unstackGroup,
+  ]);
 
   const runFormat = useCallback((command: string, value?: string) => {
     document.execCommand(command, false, value);
   }, []);
 
-  const moveSelectionToParent = useCallback(() => {
-    if (!parentSpaceId) return;
-    const center = centerCoords();
-    const idsToMove = selectedNodeIds.filter((entityId) => visibleEntityIds.includes(entityId));
-    if (idsToMove.length === 0) return;
-    const fallback = { x: center.x - 180, y: center.y - 120 };
-    const anchorBelowFolder = getParentFolderExitSlot(0) ?? fallback;
-    moveEntitiesToSpace(idsToMove, parentSpaceId, {
-      anchor: anchorBelowFolder,
-      forceLayout: true,
+  const closeSelectionContextMenu = useCallback(() => {
+    setSelectionContextMenu(null);
+  }, []);
+
+  const handleViewportContextMenuCapture = useCallback(
+    (event: React.MouseEvent) => {
+      if (selectedNodeIds.length < 1) return;
+      if (focusOpen || stackModal) return;
+      const target = event.target as HTMLElement;
+      if (isEditableTarget(target)) return;
+      if (target.closest("[contenteditable='true']")) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const MENU_MAX_W = 260;
+      const MENU_MAX_H = 240;
+      const x = Math.min(event.clientX, window.innerWidth - MENU_MAX_W - 8);
+      const y = Math.min(event.clientY, window.innerHeight - MENU_MAX_H - 8);
+      setSelectionContextMenu({ x, y });
+    },
+    [focusOpen, selectedNodeIds, stackModal],
+  );
+
+  const duplicateSelectedEntities = useCallback(() => {
+    const ids = selectedNodeIdsRef.current.filter((id) => visibleEntityIds.includes(id));
+    if (ids.length === 0) return;
+    const spaceId = activeSpaceIdRef.current;
+    const prev = graphRef.current;
+    const space = prev.spaces[spaceId];
+    if (!space) return;
+
+    type PlanEntry =
+      | { kind: "content"; nid: string; fromId: string }
+      | { kind: "folder"; nid: string; fromId: string; childSpaceId: string };
+
+    const plan: PlanEntry[] = [];
+    for (const id of ids) {
+      const e = prev.entities[id];
+      if (!e) continue;
+      const slot = e.slots[spaceId];
+      if (!slot) continue;
+      if (e.kind === "content") {
+        plan.push({ kind: "content", nid: createId("node"), fromId: id });
+      } else {
+        plan.push({
+          kind: "folder",
+          nid: createId("folder"),
+          fromId: id,
+          childSpaceId: createId("space"),
+        });
+      }
+    }
+    if (plan.length === 0) return;
+
+    recordUndoBeforeMutation();
+    setGraph((p) => {
+      const next = shallowCloneGraph(p);
+      const sp = next.spaces[spaceId];
+      if (!sp) return p;
+      const newIds: string[] = [];
+      const delta = 36;
+      for (const entry of plan) {
+        const e = p.entities[entry.fromId];
+        if (!e) continue;
+        const slot = e.slots[spaceId];
+        if (!slot) continue;
+        newIds.push(entry.nid);
+        if (entry.kind === "content" && e.kind === "content") {
+          next.entities[entry.nid] = {
+            ...e,
+            id: entry.nid,
+            stackId: null,
+            stackOrder: null,
+            slots: {
+              ...e.slots,
+              [spaceId]: { x: slot.x + delta, y: slot.y + delta },
+            },
+          };
+        } else if (entry.kind === "folder" && e.kind === "folder") {
+          next.spaces[entry.childSpaceId] = {
+            id: entry.childSpaceId,
+            name: e.title || "New Folder",
+            parentSpaceId: spaceId,
+            entityIds: [],
+          };
+          next.entities[entry.nid] = {
+            ...e,
+            id: entry.nid,
+            childSpaceId: entry.childSpaceId,
+            stackId: null,
+            stackOrder: null,
+            slots: {
+              ...e.slots,
+              [spaceId]: { x: slot.x + delta, y: slot.y + delta },
+            },
+          };
+        }
+      }
+      next.spaces[spaceId] = {
+        ...sp,
+        entityIds: [...sp.entityIds, ...newIds],
+      };
+      return next;
     });
-  }, [
-    centerCoords,
-    getParentFolderExitSlot,
-    moveEntitiesToSpace,
-    parentSpaceId,
-    selectedNodeIds,
-    visibleEntityIds,
-  ]);
+    setSelectedNodeIds(plan.map((x) => x.nid));
+  }, [createId, recordUndoBeforeMutation, visibleEntityIds]);
+
+  const alignSelectedInGrid = useCallback(() => {
+    const ids = selectedNodeIdsRef.current.filter((id) => visibleEntityIds.includes(id));
+    if (ids.length < 2) return;
+    const spaceId = activeSpaceIdRef.current;
+    recordUndoBeforeMutation();
+    const cellW = 380;
+    const cellH = 300;
+    const gapX = 24;
+    const gapY = 24;
+    setGraph((prev) => {
+      const next = shallowCloneGraph(prev);
+      const sorted = [...ids].sort((a, b) => {
+        const sa = next.entities[a]?.slots[spaceId];
+        const sb = next.entities[b]?.slots[spaceId];
+        if (!sa || !sb) return 0;
+        if (Math.abs(sa.y - sb.y) > 8) return sa.y - sb.y;
+        return sa.x - sb.x;
+      });
+      let ox = Number.POSITIVE_INFINITY;
+      let oy = Number.POSITIVE_INFINITY;
+      sorted.forEach((id) => {
+        const s = next.entities[id]?.slots[spaceId];
+        if (!s) return;
+        ox = Math.min(ox, s.x);
+        oy = Math.min(oy, s.y);
+      });
+      if (!Number.isFinite(ox) || !Number.isFinite(oy)) return prev;
+      const cols = Math.max(1, Math.ceil(Math.sqrt(sorted.length)));
+      sorted.forEach((id, i) => {
+        const e = next.entities[id];
+        if (!e) return;
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        next.entities[id] = {
+          ...e,
+          slots: {
+            ...e.slots,
+            [spaceId]: {
+              x: ox + col * (cellW + gapX),
+              y: oy + row * (cellH + gapY),
+            },
+          },
+        };
+      });
+      return next;
+    });
+  }, [recordUndoBeforeMutation, visibleEntityIds]);
+
+  const canStackFromSelection = useMemo(() => {
+    const contentIds = selectedNodeIds.filter((id) => {
+      const e = graph.entities[id];
+      return e?.kind === "content" && visibleEntityIds.includes(id);
+    });
+    return contentIds.length >= 2;
+  }, [graph.entities, selectedNodeIds, visibleEntityIds]);
+
+  const selectionContextMenuItems = useMemo(
+    () => [
+      {
+        label: "Create stack",
+        icon: <Stack size={18} weight="bold" aria-hidden />,
+        disabled: !canStackFromSelection,
+        onSelect: () => stackSelectedContent(),
+      },
+      {
+        label: "Align in grid",
+        icon: <SquaresFour size={18} weight="bold" aria-hidden />,
+        disabled: selectedNodeIds.length < 2,
+        onSelect: () => alignSelectedInGrid(),
+      },
+      {
+        label: "Delete",
+        icon: <Trash size={18} weight="bold" aria-hidden />,
+        onSelect: () => deleteEntitySelection([...selectedNodeIdsRef.current]),
+      },
+      {
+        label: "Copy",
+        icon: <CopySimple size={18} weight="bold" aria-hidden />,
+        onSelect: () => duplicateSelectedEntities(),
+      },
+    ],
+    [
+      alignSelectedInGrid,
+      canStackFromSelection,
+      deleteEntitySelection,
+      duplicateSelectedEntities,
+      selectedNodeIds.length,
+      stackSelectedContent,
+    ],
+  );
+
+  useEffect(() => {
+    if (selectedNodeIds.length < 1) setSelectionContextMenu(null);
+  }, [selectedNodeIds]);
 
   useEffect(() => {
     setSelectedNodeIds((prev) => prev.filter((id) => visibleEntityIds.includes(id)));
@@ -2077,6 +2541,7 @@ export function ArchitecturalCanvasApp({
   );
   const fanOriginX = stackModal ? stackModal.originX - 170 : 0;
   const fanOriginY = stackModal ? stackModal.originY - 95 : 0;
+  const showParentExitThreshold = Boolean(parentSpaceId && draggedNodeIds.length > 0);
   const stackModalHull = useMemo(() => {
     if (stackModalVisibleEntities.length === 0) return null;
     let minX = Number.POSITIVE_INFINITY;
@@ -2109,6 +2574,7 @@ export function ArchitecturalCanvasApp({
         ref={viewportRef}
         className={`${styles.viewport} ${activeSpaceId !== graph.rootSpaceId ? styles.deepSpace : ""}`}
         onMouseDown={onViewportMouseDown}
+        onContextMenuCapture={handleViewportContextMenuCapture}
         onWheel={onWheel}
         style={{
           backgroundPosition: `${translateX}px ${translateY}px`,
@@ -2206,6 +2672,7 @@ export function ArchitecturalCanvasApp({
                   const target = event.target as HTMLElement;
                   if (target.closest("[data-expand-btn='true']")) return;
                   event.stopPropagation();
+                  recordUndoBeforeMutation();
                   const mouseCanvasX = (event.clientX - translateX) / scale;
                   const mouseCanvasY = (event.clientY - translateY) / scale;
                   const offsets: Record<string, { x: number; y: number }> = {};
@@ -2321,72 +2788,74 @@ export function ArchitecturalCanvasApp({
           })}
         </div>
         <div className={styles.chromeLayer}>
-        <ArchitecturalStatusBar
-          centerWorldX={centerWorldX}
-          centerWorldY={centerWorldY}
-          scale={scale}
-        />
-
-        <div className={styles.navWrap}>
-          <div className={`${styles.glassPanel} ${styles.navPanel}`}>
-            <div className={styles.navRow}>
-              {parentSpaceId ? (
-                <button
-                  type="button"
-                  className={styles.navBtn}
-                  onClick={goBack}
-                >
-                  <ArrowLeft size={12} />
-                  Back
-                </button>
-              ) : null}
-              {parentSpaceId ? (
-                <button
-                  ref={parentDropRef}
-                  type="button"
-                  className={`${styles.parentDrawer} ${parentDropHovered ? styles.parentDrawerActive : ""}`}
-                  onClick={moveSelectionToParent}
-                  disabled={selectedNodeIds.length === 0}
-                >
-                  <span className={styles.parentDrawerTab}>Drawer</span>
-                  <span className={styles.parentDrawerLabel}>Remove from folder</span>
-                </button>
-              ) : null}
-              <div className={styles.crumbTrail}>
-                {navigationPath.map((spaceId, index) => {
-                  const isActive = spaceId === activeSpaceId;
-                  const label =
-                    spaceId === graph.rootSpaceId ? "Root" : graph.spaces[spaceId]?.name ?? "Unknown";
-                  return (
-                    <span key={spaceId} className={styles.crumbItem}>
-                      {index > 0 ? <span className={styles.crumbSep}>/</span> : null}
+        {showParentExitThreshold ? (
+          <ArchitecturalParentExitThreshold
+            ref={parentDropRef}
+            topPx={parentExitBandTopPx}
+            armed
+            hovered={parentDropHovered}
+          />
+        ) : null}
+        <div ref={shellTopLeftStackRef} className={styles.shellTopLeftStack}>
+          <div className={styles.shellTopCluster}>
+            <div className={styles.shellTopClusterRow}>
+              <ArchitecturalStatusBar
+                centerWorldX={centerWorldX}
+                centerWorldY={centerWorldY}
+                scale={scale}
+              />
+              <div className={styles.navChrome}>
+                <div className={`${styles.glassPanel} ${styles.navPanel} ${styles.shellTopChromePanel}`}>
+                  <div className={styles.navRow}>
+                    {parentSpaceId ? (
                       <button
                         type="button"
-                        className={`${styles.crumbBtn} ${isActive ? styles.crumbActive : ""}`}
-                        onClick={() => enterSpace(spaceId)}
-                        disabled={isActive}
+                        className={styles.navBtn}
+                        onClick={goBack}
                       >
-                        {label}
+                        <ArrowLeft size={12} />
+                        Back
                       </button>
-                    </span>
-                  );
-                })}
+                    ) : null}
+                    <div className={styles.crumbTrail}>
+                      {navigationPath.map((spaceId, index) => {
+                        const isActive = spaceId === activeSpaceId;
+                        const label =
+                          spaceId === graph.rootSpaceId
+                            ? "Root"
+                            : graph.spaces[spaceId]?.name ?? "Unknown";
+                        return (
+                          <span key={spaceId} className={styles.crumbItem}>
+                            {index > 0 ? <span className={styles.crumbSep}>/</span> : null}
+                            <button
+                              type="button"
+                              className={`${styles.crumbBtn} ${isActive ? styles.crumbActive : ""}`}
+                              onClick={() => enterSpace(spaceId)}
+                              disabled={isActive}
+                            >
+                              {label}
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
-              {parentSpaceId ? (
-                <button
-                  type="button"
-                  className={styles.navBtn}
-                  onClick={moveSelectionToParent}
-                  disabled={selectedNodeIds.length === 0}
-                >
-                  Remove selected
-                </button>
-              ) : null}
             </div>
           </div>
         </div>
 
-        <ArchitecturalBottomDock onFormat={runFormat} onCreateNode={createNewNode} />
+        <ArchitecturalBottomDock
+          onFormat={runFormat}
+          onCreateNode={createNewNode}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          undoLabel={`Undo (${modKeyHints.undo})`}
+          redoLabel={`Redo (${modKeyHints.redo})`}
+        />
 
         <ArchitecturalToolRail
           activeTool={activeTool}
@@ -2397,6 +2866,12 @@ export function ArchitecturalCanvasApp({
         />
       </div>
       </div>
+
+      <ContextMenu
+        position={selectionContextMenu}
+        onClose={closeSelectionContextMenu}
+        items={selectionContextMenuItems}
+      />
 
       {lassoRectScreen ? (
         <div
@@ -2483,6 +2958,7 @@ export function ArchitecturalCanvasApp({
                   }}
                   onMouseDown={(event) => {
                     event.stopPropagation();
+                    recordUndoBeforeMutation();
                     setStackDrag({
                       entityId: entity.id,
                       stackId: stackModal.stackId,
@@ -2551,8 +3027,10 @@ export function ArchitecturalCanvasApp({
               EDITING // {activeNodeId ? activeNodeId.toUpperCase() : "NODE"}
             </div>
             <ArchitecturalFocusCloseButton
-              variant={focusCodeTheme ? "dark" : "light"}
-              onClick={closeFocusMode}
+              dirty={focusDirty}
+              onDone={discardFocusAndClose}
+              onSave={saveFocusAndClose}
+              onDiscard={discardFocusAndClose}
             />
           </div>
           <div className={styles.focusContent}>
