@@ -5083,16 +5083,24 @@ export function ArchitecturalCanvasApp({
           </div>
         </div>
         <div className={styles.topRightConnectionTools}>
-          <ArchitecturalButton
-            type="button"
-            size="menu"
-            tone="glass"
-            leadingIcon={<MagnifyingGlass size={12} weight="bold" aria-hidden />}
-            onClick={() => setPaletteOpen(true)}
-            title={`Search (${modKeyHints.search})`}
+          <div
+            className={styles.sideToolsMainPanel}
+            role="toolbar"
+            aria-label="Search"
           >
-            Search
-          </ArchitecturalButton>
+            <div className={styles.sideToolsToolGroup}>
+              <ArchitecturalButton
+                type="button"
+                size="icon"
+                tone="glass"
+                title={`Search (${modKeyHints.search})`}
+                aria-label="Search"
+                onClick={() => setPaletteOpen(true)}
+              >
+                <MagnifyingGlass size={18} weight="bold" aria-hidden />
+              </ArchitecturalButton>
+            </div>
+          </div>
         </div>
 
         {!focusOpen && !galleryOpen ? (

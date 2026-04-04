@@ -40,6 +40,8 @@
   --chrome-glass-shadow: 0 8px 32px var(--sem-color-shadow-40);
   --chrome-glass-filter: blur(16px) saturate(135%);
   --chrome-panel-height: 42px;
+  /* Vertical tool strips (side rail + top-right search): keep one width everywhere. */
+  --chrome-tool-rail-strip-width: 46px;
   --chrome-panel-radius: 10px;
   --chrome-panel-pad-y: 6px;
   --chrome-panel-pad-x: 10px;
@@ -2648,7 +2650,11 @@
 
 .sideToolsMainPanel {
   padding: 4px 2px;
-  width: 46px;
+  box-sizing: border-box;
+  width: var(--chrome-tool-rail-strip-width);
+  min-width: var(--chrome-tool-rail-strip-width);
+  max-width: var(--chrome-tool-rail-strip-width);
+  flex-shrink: 0;
   /* Let connection tint flyout extend past the glass panel (backdrop-filter can clip otherwise). */
   overflow: visible;
 }
@@ -2761,6 +2767,14 @@
   right: 24px;
   z-index: var(--layer-ui-chrome);
   pointer-events: auto;
+}
+
+/* One icon: square chip (width already --chrome-tool-rail-strip-width). */
+.topRightConnectionTools .sideToolsMainPanel {
+  height: var(--chrome-tool-rail-strip-width);
+  min-height: var(--chrome-tool-rail-strip-width);
+  max-height: var(--chrome-tool-rail-strip-width);
+  justify-content: center;
 }
 
 /* In top-right chrome, open the tint menu inward (leftward) to avoid right-edge clipping. */
