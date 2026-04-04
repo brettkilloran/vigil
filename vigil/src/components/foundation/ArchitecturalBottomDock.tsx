@@ -788,7 +788,17 @@ export function ArchitecturalBottomDock({
                       title={selectionStack.mergeTitle}
                       aria-label={selectionStack.mergeTitle}
                       leadingIcon={<Stack size={18} weight="bold" aria-hidden />}
-                      onClick={() => selectionStack.onMerge()}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        if (e.button !== 0) return;
+                        selectionStack.onMerge();
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          selectionStack.onMerge();
+                        }
+                      }}
                     />
                   ) : null}
                   {selectionStack.canUnstack ? (
@@ -799,7 +809,17 @@ export function ArchitecturalBottomDock({
                       title={selectionStack.unstackTitle}
                       aria-label={selectionStack.unstackTitle}
                       leadingIcon={<ArrowsOut size={18} weight="bold" aria-hidden />}
-                      onClick={() => selectionStack.onUnstack()}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        if (e.button !== 0) return;
+                        selectionStack.onUnstack();
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          selectionStack.onUnstack();
+                        }
+                      }}
                     />
                   ) : null}
                 </div>

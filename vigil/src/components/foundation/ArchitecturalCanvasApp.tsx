@@ -435,6 +435,86 @@ function applyUnstackStackInSpace(
   return next;
 }
 
+function buildStackGroupsForVisible(
+  graph: CanvasGraph,
+  visibleEntityIds: readonly string[],
+): Map<string, CanvasEntity[]> {
+  const groups = new Map<string, CanvasEntity[]>();
+  for (const id of visibleEntityIds) {
+    const entity = graph.entities[id];
+    if (!entity?.stackId) continue;
+    const arr = groups.get(entity.stackId) ?? [];
+    arr.push(entity);
+    groups.set(entity.stackId, arr);
+  }
+  groups.forEach((arr, key) => {
+    groups.set(
+      key,
+      [...arr].sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0)),
+    );
+  });
+  return groups;
+}
+
+/** Derive merge/unstack affordances from current graph + selection (safe to call from refs on pointer events). */
+function getStackSelectionState(
+  graph: CanvasGraph,
+  activeSpaceId: string,
+  selectedNodeIds: readonly string[],
+) {
+  const visibleEntityIds = graph.spaces[activeSpaceId]?.entityIds ?? [];
+
+  const selectedVisibleDeduped: string[] = [];
+  const seenVis = new Set<string>();
+  for (const id of selectedNodeIds) {
+    if (!visibleEntityIds.includes(id)) continue;
+    if (seenVis.has(id)) continue;
+    seenVis.add(id);
+    selectedVisibleDeduped.push(id);
+  }
+
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+  for (const id of selectedVisibleDeduped) {
+    const e = graph.entities[id];
+    if (e?.kind !== "content") continue;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    ordered.push(id);
+  }
+  const selectedContentSet = new Set(ordered);
+
+  const stackGroups = buildStackGroupsForVisible(graph, visibleEntityIds);
+
+  const whollySelectedStackIds: string[] = [];
+  stackGroups.forEach((members, stackId) => {
+    if (members.length < 2) return;
+    if (members.every((m) => selectedContentSet.has(m.id))) whollySelectedStackIds.push(stackId);
+  });
+
+  const union = new Set<string>();
+  whollySelectedStackIds.forEach((sid) => {
+    stackGroups.get(sid)?.forEach((m) => union.add(m.id));
+  });
+  const isUnionOfWhollySelectedStacks =
+    whollySelectedStackIds.length >= 1 &&
+    selectedVisibleDeduped.length === union.size &&
+    selectedVisibleDeduped.every((id) => union.has(id));
+
+  const isExactlyOneFullStack =
+    whollySelectedStackIds.length === 1 && isUnionOfWhollySelectedStacks;
+
+  const canMergeStacks = ordered.length >= 2 && !isExactlyOneFullStack;
+  const canUnstackWhollySelected = isUnionOfWhollySelectedStacks;
+
+  return {
+    orderedContentIds: ordered,
+    whollySelectedStackIds,
+    canMergeStacks,
+    canUnstackWhollySelected,
+  };
+}
+
 function isDescendantSpace(
   candidateId: string,
   ancestorId: string,
@@ -711,6 +791,26 @@ function buildStackModalLayout(
   return layout;
 }
 
+/** Map a screen point to canvas world coords (matches node `slots` space) using the transformed `.canvas` rect. */
+function clientPointToCanvasWorld(
+  clientX: number,
+  clientY: number,
+  canvasRect: DOMRect | undefined,
+  tx: number,
+  ty: number,
+  scale: number,
+): { x: number; y: number } {
+  if (!Number.isFinite(scale) || scale === 0) {
+    return { x: 0, y: 0 };
+  }
+  if (!canvasRect?.width) {
+    return { x: (clientX - tx) / scale, y: (clientY - ty) / scale };
+  }
+  const localX = clientX - canvasRect.left;
+  const localY = clientY - canvasRect.top;
+  return { x: (localX - tx) / scale, y: (localY - ty) / scale };
+}
+
 export function ArchitecturalCanvasApp({
   scenario = "default",
 }: {
@@ -784,11 +884,17 @@ export function ArchitecturalCanvasApp({
     parentDropHoveredRef.current = next;
     setParentDropHovered(next);
   }, []);
+  /** `orderedIds`: front-to-back (top-of-stack / foremost card first) for layout and expanded grid. */
   const [stackModal, setStackModal] = useState<{
     stackId: string;
     orderedIds: string[];
     originX: number;
     originY: number;
+    /** Collapsed stack anchor in canvas world (matches container `left`/`top`). */
+    anchorWorld: { x: number; y: number };
+    /** Screen-space top-left of the stack container when the modal opened (for eject math). */
+    stackScreenLeft: number;
+    stackScreenTop: number;
   } | null>(null);
   const [stackModalExpanded, setStackModalExpanded] = useState(false);
   const [stackDrag, setStackDrag] = useState<{
@@ -840,6 +946,10 @@ export function ArchitecturalCanvasApp({
   });
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  /** Element with `transform: translate scale` — used for stack eject screen→world. */
+  const canvasTransformRef = useRef<HTMLDivElement | null>(null);
+  /** Lasso hit-test scope: canvas nodes only (excludes stack modal fan, chrome, etc.). */
+  const canvasEntityLayerRef = useRef<HTMLDivElement | null>(null);
   const shellRef = useRef<HTMLDivElement | null>(null);
   const ropeRuntimeRef = useRef<Record<string, RopeRuntime>>({});
   /** Rope paths update every frame via `setAttribute`; avoid `setState` in rAF (re-render storms / max depth). */
@@ -870,12 +980,6 @@ export function ArchitecturalCanvasApp({
   const activeSpaceIdRef = useRef(activeSpaceId);
   const navigationPathRef = useRef(navigationPath);
   const selectedNodeIdsRef = useRef(selectedNodeIds);
-  /** Merge vs unstack affordances; synced after `stackSelectionUi` memo each render. */
-  const stackSelectionUiRef = useRef<{
-    canMergeStacks: boolean;
-    canUnstackWhollySelected: boolean;
-    whollySelectedStackIds: string[];
-  }>({ canMergeStacks: false, canUnstackWhollySelected: false, whollySelectedStackIds: [] });
   const selectionBeforeConnectionModeRef = useRef<string[] | null>(null);
   const alignSelectedInGridRef = useRef<() => void>(() => {});
   const undoPastRef = useRef<ArchitecturalUndoSnapshot[]>([]);
@@ -994,8 +1098,9 @@ export function ArchitecturalCanvasApp({
     lastStackEjectPreviewRef.current = false;
     setStackModalExpanded(false);
     setStackModal(null);
+    stackModalRef.current = null;
     setStackModalEjectPreview(false);
-    setStackModalEjectCount(0);
+    setHoveredStackTargetId(null);
     setSelectedNodeIds([]);
   }, []);
 
@@ -2261,21 +2366,12 @@ export function ArchitecturalCanvasApp({
     return next;
   }, []);
 
-  const stackSelectedContent = useCallback(() => {
-    const vis = visibleEntityIds;
+  const stackSelectedContent = useCallback((selectionOverride?: readonly string[]) => {
+    if (stackModalRef.current) return;
+    const g = graphRef.current;
     const spaceId = activeSpaceIdRef.current;
-    const raw = selectedNodeIdsRef.current.filter((id) => {
-      const entity = graphRef.current.entities[id];
-      return !!entity && entity.kind === "content" && vis.includes(id);
-    });
-    /* Lasso can hit every stack layer — same id appears once per card DOM node. */
-    const seen = new Set<string>();
-    const ids: string[] = [];
-    for (const id of raw) {
-      if (seen.has(id)) continue;
-      seen.add(id);
-      ids.push(id);
-    }
+    const rawSelection = selectionOverride ?? selectedNodeIdsRef.current;
+    const { orderedContentIds: ids } = getStackSelectionState(g, spaceId, rawSelection);
     if (ids.length < 2) return;
     recordUndoBeforeMutation();
     const stackId = createId("stack");
@@ -2289,13 +2385,15 @@ export function ArchitecturalCanvasApp({
       /* Match card placement fallback: missing slots still stack at a shared anchor. */
       const anchorX = finiteSlots.length > 0 ? Math.min(...finiteSlots.map((s) => s.x)) : 0;
       const anchorY = finiteSlots.length > 0 ? Math.min(...finiteSlots.map((s) => s.y)) : 0;
+      /* Higher stackOrder renders last (top of pile). First in merge/selection list = top card. */
+      const topOrder = ids.length - 1;
       ids.forEach((id, index) => {
         const entity = next.entities[id];
         if (!entity || entity.kind !== "content") return;
         next.entities[id] = {
           ...entity,
           stackId,
-          stackOrder: index,
+          stackOrder: topOrder - index,
           slots: {
             ...entity.slots,
             [spaceId]: { x: anchorX, y: anchorY },
@@ -2305,7 +2403,7 @@ export function ArchitecturalCanvasApp({
       return next;
     });
     setSelectedNodeIds(ids);
-  }, [createId, recordUndoBeforeMutation, visibleEntityIds]);
+  }, [createId, recordUndoBeforeMutation]);
 
   const unstackGroup = useCallback(
     (stackId: string) => {
@@ -2565,13 +2663,14 @@ export function ArchitecturalCanvasApp({
             );
             if (allContent && noneHaveStack) {
               const sid = crypto.randomUUID();
+              const n = groupIds.length;
               groupIds.forEach((entityId, index) => {
                 const entity = next.entities[entityId];
                 if (!entity || entity.kind !== "content") return;
                 next.entities[entityId] = {
                   ...entity,
                   stackId: sid,
-                  stackOrder: index,
+                  stackOrder: n - 1 - index,
                 };
               });
             }
@@ -3282,7 +3381,7 @@ export function ArchitecturalCanvasApp({
 
       let nextStackTargetId: string | null = null;
       const canDragGroupStack = draggedGroup.every((id) => graph.entities[id]?.kind === "content");
-      if (!nextFolderId && canDragGroupStack) {
+      if (!stackModalRef.current && !nextFolderId && canDragGroupStack) {
         Array.from(document.querySelectorAll<HTMLElement>("[data-stack-target]")).forEach(
           (targetEl) => {
             const targetId = targetEl.dataset.nodeId ?? targetEl.dataset.stackTopId;
@@ -3377,6 +3476,7 @@ export function ArchitecturalCanvasApp({
 
   const stackEntitiesOntoTarget = useCallback(
     (draggedEntityIds: string[], targetEntityId: string) => {
+      if (stackModalRef.current) return false;
       const target = graph.entities[targetEntityId];
       if (!target || target.kind !== "content") return false;
       const idsToStack = draggedEntityIds.filter((id, index) => {
@@ -3407,9 +3507,10 @@ export function ArchitecturalCanvasApp({
         const existing = Object.values(next.entities)
           .filter((entity) => entity.stackId === stackId)
           .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0));
-        let nextOrder = existing.length;
+        const baseOrder = existing.length;
+        const nAdd = idsToStack.length;
 
-        idsToStack.forEach((id) => {
+        idsToStack.forEach((id, addIndex) => {
           const entity = next.entities[id];
           if (!entity || entity.kind !== "content") return;
           if (entity.stackId && entity.stackId !== stackId) {
@@ -3418,7 +3519,8 @@ export function ArchitecturalCanvasApp({
           next.entities[id] = {
             ...entity,
             stackId,
-            stackOrder: nextOrder,
+            /* First in drag list sits on top of the pile (above existing members). */
+            stackOrder: baseOrder + (nAdd - 1 - addIndex),
             slots: targetSlot
               ? {
                   ...entity.slots,
@@ -3426,7 +3528,6 @@ export function ArchitecturalCanvasApp({
                 }
               : entity.slots,
           };
-          nextOrder += 1;
         });
 
         next = normalizeStack(stackId, next);
@@ -3479,7 +3580,7 @@ export function ArchitecturalCanvasApp({
         }
       }
 
-      if (hoveredStackTargetId) {
+      if (hoveredStackTargetId && !stackModalRef.current) {
         stackEntitiesOntoTarget(draggedEntityIds, hoveredStackTargetId);
       }
     },
@@ -3587,23 +3688,39 @@ export function ArchitecturalCanvasApp({
         if (isClick) {
           setSelectedNodeIds([]);
         } else {
-          const hits = Array.from(
-            document.querySelectorAll<HTMLElement>("[data-node-id]"),
-          )
-            .filter((el) => {
-              const r = el.getBoundingClientRect();
-              return !(r.right < minX || r.left > maxX || r.bottom < minY || r.top > maxY);
-            })
-            .map((el) => el.dataset.nodeId)
-            .filter((id): id is string => !!id);
-          /* Stacks render one `[data-node-id]` per layer — rect overlap yields duplicate ids. */
+          const spaceId = activeSpaceIdRef.current;
+          const allowedIds = new Set(
+            graphRef.current.spaces[spaceId]?.entityIds ?? [],
+          );
+          const canvasRoot = canvasEntityLayerRef.current ?? viewportRef.current;
+          const nodeEls = canvasRoot
+            ? Array.from(canvasRoot.querySelectorAll<HTMLElement>("[data-node-id]"))
+            : [];
+          /* Center-point containment matches “what the box clearly covers” better than
+           * AABB overlap (avoids grabbing neighbors / extra stack layers on a thin edge). */
+          const hits: string[] = [];
+          for (const el of nodeEls) {
+            const id = el.dataset.nodeId;
+            if (!id || !allowedIds.has(id)) continue;
+            if (el.dataset.spaceId && el.dataset.spaceId !== spaceId) continue;
+            const r = el.getBoundingClientRect();
+            if (r.width <= 0 && r.height <= 0) continue;
+            const cx = (r.left + r.right) / 2;
+            const cy = (r.top + r.bottom) / 2;
+            if (cx >= minX && cx <= maxX && cy >= minY && cy <= maxY) {
+              hits.push(id);
+            }
+          }
           const seen = new Set<string>();
-          const selected = hits.filter((id) => {
+          const unique = hits.filter((id) => {
             if (seen.has(id)) return false;
             seen.add(id);
             return true;
           });
-          setSelectedNodeIds(selected);
+          const canvasOrder = graphRef.current.spaces[spaceId]?.entityIds ?? [];
+          const orderIdx = new Map(canvasOrder.map((eid, i) => [eid, i]));
+          unique.sort((a, b) => (orderIdx.get(a) ?? 1e9) - (orderIdx.get(b) ?? 1e9));
+          setSelectedNodeIds(unique);
         }
       }
 
@@ -3812,7 +3929,7 @@ export function ArchitecturalCanvasApp({
       setStackDrag(nextDrag);
     };
 
-    const onMouseUp = () => {
+    const onMouseUp = (event: MouseEvent) => {
       const drag = stackDragRef.current;
       const hullSnap = stackDragHullOrderedIdsRef.current;
       const orderedSnap = stackModalOrderedIdsDuringDragRef.current;
@@ -3829,12 +3946,15 @@ export function ArchitecturalCanvasApp({
       const modal = stackModalRef.current;
       if (!drag || !modal) return;
 
+      const releaseX = event.clientX;
+      const releaseY = event.clientY;
+
       const hullForEject = hullSnap ?? getVisibleOrdered(modal.orderedIds);
       const outsideWithMargin = isDraggedOutsideHull(
         {
           entityId: drag.entityId,
-          currentX: drag.currentX,
-          currentY: drag.currentY,
+          currentX: releaseX,
+          currentY: releaseY,
           pointerOffsetX: drag.pointerOffsetX,
           pointerOffsetY: drag.pointerOffsetY,
         },
@@ -3842,8 +3962,10 @@ export function ArchitecturalCanvasApp({
       );
 
       const orderedIdsForCommit = orderedSnap ?? modal.orderedIds;
+      const pointerMoved =
+        Math.hypot(releaseX - drag.startX, releaseY - drag.startY) > 2;
 
-      if (outsideWithMargin && drag.intent === "reorder") {
+      if (outsideWithMargin && pointerMoved) {
         const graphSnap = graphRef.current;
         const extracted = graphSnap.entities[drag.entityId];
         const spaceId = activeSpaceIdRef.current;
@@ -3855,84 +3977,101 @@ export function ArchitecturalCanvasApp({
               (entity): entity is CanvasEntity =>
                 !!entity && entity.kind === "content" && entity.stackId === modal.stackId,
             );
-          if (remaining.length >= 2) {
-            const normalizedRemaining = [...remaining]
-              .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0))
-              .map((entity, index) => ({
-                ...entity,
-                stackId: modal.stackId,
-                stackOrder: index,
-              }));
-            setGraph((prev) => {
-              const next = shallowCloneGraph(prev);
-              normalizedRemaining.forEach((entity) => {
-                const current = next.entities[entity.id];
-                if (!current) return;
-                next.entities[entity.id] = {
-                  ...current,
-                  stackId: entity.stackId,
-                  stackOrder: entity.stackOrder,
-                };
-              });
-              const pulled = next.entities[drag.entityId];
-              if (pulled && extracted.kind === "content") {
-                next.entities[drag.entityId] = {
-                  ...pulled,
-                  stackId: null,
-                  stackOrder: null,
-                };
-              }
-              return next;
-            });
-            setMaxZIndex((z) => z + 1);
-            setStackModal((prev) =>
-              prev ? { ...prev, orderedIds: normalizedRemaining.map((entity) => entity.id) } : prev,
-            );
-          } else {
-            setGraph((prev) => {
-              const next = shallowCloneGraph(prev);
-              const pulled = next.entities[drag.entityId];
-              if (pulled) {
-                next.entities[drag.entityId] = {
-                  ...pulled,
-                  stackId: null,
-                  stackOrder: null,
-                };
-              }
-              remaining.forEach((entity) => {
-                const current = next.entities[entity.id];
-                if (!current) return;
-                next.entities[entity.id] = {
-                  ...current,
-                  stackId: null,
-                  stackOrder: null,
-                };
-              });
-              return next;
-            });
-            setMaxZIndex((z) => z + 1);
-            closeStackModal();
-          }
-          setStackModalEjectCount((count) => count + 1);
+
           const { tx, ty, scale: viewScale } = viewRef.current;
-          const worldDropX = (drag.currentX - drag.pointerOffsetX - tx) / viewScale;
-          const worldDropY = (drag.currentY - drag.pointerOffsetY - ty) / viewScale;
+          const canvasRect = canvasTransformRef.current?.getBoundingClientRect();
+          const cardLeftClient = releaseX - drag.pointerOffsetX;
+          const cardTopClient = releaseY - drag.pointerOffsetY;
+          const aw = modal.anchorWorld;
+          const stackSL = modal.stackScreenLeft;
+          const stackST = modal.stackScreenTop;
+          let worldDropX: number;
+          let worldDropY: number;
+          if (
+            aw &&
+            Number.isFinite(stackSL) &&
+            Number.isFinite(stackST) &&
+            Number.isFinite(viewScale) &&
+            viewScale !== 0
+          ) {
+            worldDropX = Math.round(aw.x + (cardLeftClient - stackSL) / viewScale);
+            worldDropY = Math.round(aw.y + (cardTopClient - stackST) / viewScale);
+          } else {
+            const dropWorld = clientPointToCanvasWorld(
+              cardLeftClient,
+              cardTopClient,
+              canvasRect,
+              tx,
+              ty,
+              viewScale,
+            );
+            worldDropX = Math.round(dropWorld.x);
+            worldDropY = Math.round(dropWorld.y);
+          }
+
+          const sortedRemaining = [...remaining].sort(
+            (a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0),
+          );
+          const anchorSource = sortedRemaining[sortedRemaining.length - 1] ?? sortedRemaining[0];
+          const anchorFallback = anchorSource
+            ? graphSnap.entities[anchorSource.id]?.slots[spaceId]
+            : undefined;
+          const anchorSlot = aw ?? anchorFallback;
+
           setGraph((prev) => {
             const next = shallowCloneGraph(prev);
-            const entity = next.entities[drag.entityId];
-            if (!entity) return prev;
-            next.entities[drag.entityId] = {
-              ...entity,
-              slots: {
-                ...entity.slots,
-                [spaceId]: {
-                  x: Math.round(worldDropX),
-                  y: Math.round(worldDropY),
+            if (sortedRemaining.length >= 2) {
+              sortedRemaining.forEach((entity, index) => {
+                const current = next.entities[entity.id];
+                if (!current) return;
+                next.entities[entity.id] = {
+                  ...current,
+                  stackId: modal.stackId,
+                  stackOrder: index,
+                  slots:
+                    anchorSlot != null
+                      ? { ...current.slots, [spaceId]: { x: anchorSlot.x, y: anchorSlot.y } }
+                      : current.slots,
+                };
+              });
+            } else if (sortedRemaining.length === 1) {
+              const sole = sortedRemaining[0]!;
+              const current = next.entities[sole.id];
+              if (current) {
+                next.entities[sole.id] = {
+                  ...current,
+                  stackId: null,
+                  stackOrder: null,
+                  slots:
+                    anchorSlot != null
+                      ? { ...current.slots, [spaceId]: { x: anchorSlot.x, y: anchorSlot.y } }
+                      : current.slots,
+                };
+              }
+            }
+            const pulled = next.entities[drag.entityId];
+            if (pulled && extracted.kind === "content") {
+              next.entities[drag.entityId] = {
+                ...pulled,
+                stackId: null,
+                stackOrder: null,
+                slots: {
+                  ...pulled.slots,
+                  [spaceId]: { x: worldDropX, y: worldDropY },
                 },
-              },
-            };
+              };
+            }
             return next;
           });
+          setMaxZIndex((z) => z + 1);
+          setStackModalEjectCount((count) => count + 1);
+          closeStackModal();
+          if (persistNeonRef.current) {
+            const persistIds = [drag.entityId, ...sortedRemaining.map((e) => e.id)];
+            requestAnimationFrame(() => {
+              persistNeonItemsLayout(persistIds);
+            });
+          }
         }
         return;
       }
@@ -3940,12 +4079,13 @@ export function ArchitecturalCanvasApp({
         const ordered = orderedIdsForCommit;
         setGraph((prev) => {
           const next = shallowCloneGraph(prev);
+          const topOrder = ordered.length - 1;
           ordered.forEach((id, index) => {
             const entity = next.entities[id];
             if (!entity) return;
             next.entities[id] = {
               ...entity,
-              stackOrder: index,
+              stackOrder: topOrder - index,
             };
           });
           return next;
@@ -3954,12 +4094,18 @@ export function ArchitecturalCanvasApp({
     };
 
     window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("mouseup", onMouseUp, true);
     return () => {
       window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("mouseup", onMouseUp, true);
     };
-  }, [closeStackModal, stackModal?.stackId, viewportSize.width, viewportSize.height]);
+  }, [
+    closeStackModal,
+    persistNeonItemsLayout,
+    stackModal?.stackId,
+    viewportSize.width,
+    viewportSize.height,
+  ]);
 
   useEffect(() => {
     if (connectionMode !== "draw" || !connectionSourceId) {
@@ -4991,63 +5137,17 @@ export function ArchitecturalCanvasApp({
   }, [recordUndoBeforeMutation, visibleEntityIds]);
   alignSelectedInGridRef.current = alignSelectedInGrid;
 
-  const stackSelectionUi = useMemo(() => {
-    const selectedVisibleDeduped: string[] = [];
-    const seenVis = new Set<string>();
-    for (const id of selectedNodeIds) {
-      if (!visibleEntityIds.includes(id)) continue;
-      if (seenVis.has(id)) continue;
-      seenVis.add(id);
-      selectedVisibleDeduped.push(id);
-    }
+  const stackSelectionUi = useMemo(
+    () => getStackSelectionState(graph, activeSpaceId, selectedNodeIds),
+    [graph, activeSpaceId, selectedNodeIds],
+  );
 
-    const ordered: string[] = [];
-    const seen = new Set<string>();
-    for (const id of selectedVisibleDeduped) {
-      const e = graph.entities[id];
-      if (e?.kind !== "content") continue;
-      if (seen.has(id)) continue;
-      seen.add(id);
-      ordered.push(id);
-    }
-    const selectedContentSet = new Set(ordered);
-
-    const whollySelectedStackIds: string[] = [];
-    stackGroups.forEach((members, stackId) => {
-      if (members.length < 2) return;
-      if (members.every((m) => selectedContentSet.has(m.id))) whollySelectedStackIds.push(stackId);
-    });
-
-    const union = new Set<string>();
-    whollySelectedStackIds.forEach((sid) => {
-      stackGroups.get(sid)?.forEach((m) => union.add(m.id));
-    });
-    /* Selection must be *exactly* those stack members (no extra folders/cards). */
-    const isUnionOfWhollySelectedStacks =
-      whollySelectedStackIds.length >= 1 &&
-      selectedVisibleDeduped.length === union.size &&
-      selectedVisibleDeduped.every((id) => union.has(id));
-
-    const isExactlyOneFullStack =
-      whollySelectedStackIds.length === 1 && isUnionOfWhollySelectedStacks;
-
-    const canMergeStacks = ordered.length >= 2 && !isExactlyOneFullStack;
-    const canUnstackWhollySelected = isUnionOfWhollySelectedStacks;
-
-    return {
-      canMergeStacks,
-      canUnstackWhollySelected,
-      whollySelectedStackIds,
-    };
-  }, [graph.entities, selectedNodeIds, visibleEntityIds, stackGroups]);
-
-  stackSelectionUiRef.current = stackSelectionUi;
-
-  const unstackWhollySelectedStacks = useCallback(() => {
-    const { whollySelectedStackIds } = stackSelectionUiRef.current;
-    if (whollySelectedStackIds.length === 0) return;
-    const spaceId = activeSpaceIdRef.current;
+  const unstackWhollySelectedStacks = useCallback((selectionOverride?: readonly string[]) => {
     const g = graphRef.current;
+    const spaceId = activeSpaceIdRef.current;
+    const rawSelection = selectionOverride ?? selectedNodeIdsRef.current;
+    const { whollySelectedStackIds } = getStackSelectionState(g, spaceId, rawSelection);
+    if (whollySelectedStackIds.length === 0) return;
     const memberIds: string[] = [];
     for (const sid of whollySelectedStackIds) {
       const members = Object.values(g.entities)
@@ -5094,11 +5194,15 @@ export function ArchitecturalCanvasApp({
             }
           }
         }
-        const ui = stackSelectionUiRef.current;
+        const ui = getStackSelectionState(
+          graphRef.current,
+          activeSpaceIdRef.current,
+          selectedNodeIds,
+        );
         if (ui.canMergeStacks) {
-          stackSelectedContent();
+          stackSelectedContent(selectedNodeIds);
         } else if (ui.canUnstackWhollySelected) {
-          unstackWhollySelectedStacks();
+          unstackWhollySelectedStacks(selectedNodeIds);
         }
         return;
       }
@@ -5140,13 +5244,13 @@ export function ArchitecturalCanvasApp({
           stackSelectionUi.whollySelectedStackIds.length >= 2 ? "Merge stacks" : "Create stack",
         icon: <Stack size={18} weight="bold" aria-hidden />,
         disabled: !stackSelectionUi.canMergeStacks,
-        onSelect: () => stackSelectedContent(),
+        onSelect: () => stackSelectedContent(selectedNodeIds),
       },
       {
         label: "Unstack",
         icon: <ArrowsOut size={18} weight="bold" aria-hidden />,
         disabled: !stackSelectionUi.canUnstackWhollySelected,
-        onSelect: () => unstackWhollySelectedStacks(),
+        onSelect: () => unstackWhollySelectedStacks(selectedNodeIds),
       },
       {
         label: "Align in grid",
@@ -5169,7 +5273,7 @@ export function ArchitecturalCanvasApp({
       alignSelectedInGrid,
       deleteEntitySelection,
       duplicateSelectedEntities,
-      selectedNodeIds.length,
+      selectedNodeIds,
       stackSelectedContent,
       stackSelectionUi.canMergeStacks,
       stackSelectionUi.canUnstackWhollySelected,
@@ -5425,12 +5529,14 @@ export function ArchitecturalCanvasApp({
         }}
       >
         <div
+          ref={canvasTransformRef}
           className={`${styles.canvas}${
             draggedNodeIds.length > 0 ? ` ${styles.canvasDraggingConnections}` : ""
           }`}
           style={{ transform: `translate(${translateX}px, ${translateY}px) scale(${scale})` }}
         >
           <div
+            ref={canvasEntityLayerRef}
             className={`${styles.canvasEntityLayer}${
               connectionMode === "cut" ? ` ${styles.canvasEntityLayerCutDim}` : ""
             }`}
@@ -5565,11 +5671,16 @@ export function ArchitecturalCanvasApp({
                   }
                   if (draggedNodeIdsRef.current.length > 0) return;
                   const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
+                  setStackModalEjectCount(0);
+                  setHoveredStackTargetId(null);
                   setStackModal({
                     stackId,
-                    orderedIds: entities.map((entity) => entity.id),
+                    orderedIds: [...entities].reverse().map((entity) => entity.id),
                     originX: rect.left + rect.width / 2,
                     originY: rect.top + rect.height / 2,
+                    anchorWorld: { x: slot.x, y: slot.y },
+                    stackScreenLeft: rect.left,
+                    stackScreenTop: rect.top,
                   });
                 }}
               >
@@ -5892,13 +6003,13 @@ export function ArchitecturalCanvasApp({
             }}
             selectionStack={{
               canMerge: stackSelectionUi.canMergeStacks,
-              onMerge: () => stackSelectedContent(),
+              onMerge: () => stackSelectedContent(selectedNodeIds),
               mergeTitle:
                 stackSelectionUi.whollySelectedStackIds.length >= 2
                   ? `Merge stacks (${modKeyHints.stack})`
                   : `Create stack (${modKeyHints.stack})`,
               canUnstack: stackSelectionUi.canUnstackWhollySelected,
-              onUnstack: () => unstackWhollySelectedStacks(),
+              onUnstack: () => unstackWhollySelectedStacks(selectedNodeIds),
               unstackTitle: "Unstack",
             }}
           />
@@ -6002,7 +6113,7 @@ export function ArchitecturalCanvasApp({
       {stackModal ? <div className={styles.stackScrim} onClick={closeStackModal} /> : null}
       {stackModal ? (
         <div
-          className={styles.stackFanStage}
+          className={`${styles.stackFanStage}${stackDrag ? ` ${styles.stackFanStageDragging}` : ""}`}
           data-stack-fan-stage="true"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
@@ -6028,15 +6139,18 @@ export function ArchitecturalCanvasApp({
               scale: 1,
             };
             const drag = stackDrag?.entityId === entity.id ? stackDrag : null;
-            const collapsedX = fanOriginX + index * 6;
-            const collapsedY = fanOriginY + index * 6;
+            const visLast = stackModalVisibleEntities.length - 1;
+            /* orderedIds is front-first; rank 0 = back of fan, visLast = foremost card. */
+            const rank = visLast - index;
+            const collapsedX = fanOriginX + rank * 6;
+            const collapsedY = fanOriginY + rank * 6;
             const baseX = stackModalExpanded ? slot.x : collapsedX;
             const baseY = stackModalExpanded ? slot.y : collapsedY;
             const dragX = drag ? drag.currentX - drag.pointerOffsetX : baseX;
             const dragY = drag ? drag.currentY - drag.pointerOffsetY : baseY;
             const rotation = stackModalExpanded
-              ? ((index % 2 === 0 ? -1 : 1) * 0.8)
-              : (index - (stackModalEntities.length - 1) / 2) * 1.6;
+              ? ((rank % 2 === 0 ? -1 : 1) * 0.8)
+              : (rank - (stackModalEntities.length - 1) / 2) * 1.6;
             return (
               <div
                 key={entity.id}
@@ -6044,7 +6158,7 @@ export function ArchitecturalCanvasApp({
                 data-space-id={activeSpaceId}
                 className={`${styles.stackFanCard} ${drag ? styles.stackFanDragging : ""} ${drag && stackModalEjectPreview ? styles.stackFanEjectArmed : ""}`}
                 style={{
-                  zIndex: 900 + index,
+                  zIndex: 900 + rank,
                   transform: `translate(${dragX}px, ${dragY}px) rotate(${rotation}deg) scale(${slot.scale})`,
                 }}
                 ref={(el) => {

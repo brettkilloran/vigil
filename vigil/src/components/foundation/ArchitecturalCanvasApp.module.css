@@ -394,6 +394,10 @@
   box-sizing: border-box;
 }
 
+.stackFanStageDragging {
+  /* Marker: child .stackFanCard transitions disabled while dragging */
+}
+
 .stackFanCard {
   position: absolute;
   top: 0;
@@ -405,6 +409,11 @@
 
 .stackFanDragging {
   cursor: grabbing;
+}
+
+/* During stack-modal drag, disable transform transitions so the card tracks the pointer (no lag / “stuck to stack”). */
+.stackFanStageDragging .stackFanCard {
+  transition: none;
 }
 
 .stackFanEjectArmed {
@@ -1323,6 +1332,8 @@
   align-items: flex-start;
   gap: 10px;
   margin-bottom: 10px;
+  font: inherit;
+  line-height: inherit;
 }
 
 /* Exported for demo seed HTML (checklist “done” rows compose taskItem + done). */
@@ -1330,26 +1341,64 @@
 }
 
 .taskCheckbox {
-  width: 16px;
-  height: 16px;
-  border: 1px solid var(--sem-overlay-black-30);
-  border-radius: 3px;
+  /* Checkmark: SVG mask (white stroke) + solid fg — centered with translate, not font metrics. */
+  --arch-task-check-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M1%205.5L4.5%209L11%201.5'/%3E%3C/svg%3E");
+
+  position: relative;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  width: var(--cmp-task-checkbox-size);
+  height: var(--cmp-task-checkbox-size);
+  border: 1px solid color-mix(in oklch, currentColor 30%, transparent);
+  border-radius: var(--cmp-task-checkbox-radius);
+  background: color-mix(in oklch, currentColor 6%, transparent);
+  line-height: inherit;
   margin-top: 3px;
+  margin-top: max(0px, calc((1lh - var(--cmp-task-checkbox-size)) / 2));
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  transition:
+    background var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
+    border-color var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
+    box-shadow var(--sys-motion-duration-fast) var(--sys-motion-ease-standard);
+}
+
+.taskCheckbox:hover {
+  border-color: color-mix(in oklch, var(--accent) 42%, currentColor);
+  background: color-mix(in oklch, currentColor 9%, transparent);
 }
 
 .done .taskCheckbox {
-  background: var(--sem-overlay-black-80);
+  background: var(--cmp-task-checkbox-checked-bg);
   border-color: transparent;
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 28%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 14%, transparent);
 }
 
 .done .taskCheckbox::after {
-  content: "✓";
-  color: var(--sys-color-white);
-  font-size: 10px;
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 62.5%;
+  height: 52.5%;
+  translate: -50% -50%;
+  background-color: var(--cmp-task-checkbox-mark-fg);
+  pointer-events: none;
+  -webkit-mask-image: var(--arch-task-check-mask);
+  mask-image: var(--arch-task-check-mask);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .taskCheckbox {
+    transition: none;
+  }
 }
 
 .done .taskText {
