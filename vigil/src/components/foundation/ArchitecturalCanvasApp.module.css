@@ -836,8 +836,8 @@
   line-height: 1;
 }
 
-.themeImage .mediaUploadBtn,
-.focusEditorDark .mediaUploadBtn {
+/* On-card Replace only; gallery focus header uses `ArchitecturalButton` focus-dark. */
+.themeImage .mediaUploadBtn {
   border: 1px solid var(--sem-overlay-white-18);
   background: color-mix(in oklch, var(--sys-color-neutral-920) 82%, transparent);
   color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
@@ -846,8 +846,7 @@
     0 4px 16px var(--sem-color-shadow-45);
 }
 
-.themeImage .mediaUploadBtn:hover,
-.focusEditorDark .mediaUploadBtn:hover {
+.themeImage .mediaUploadBtn:hover {
   background: color-mix(in oklch, var(--sys-color-neutral-800) 88%, transparent);
   border-color: var(--sem-overlay-white-16);
   box-shadow:
@@ -855,13 +854,11 @@
     0 6px 20px var(--sem-color-shadow-42);
 }
 
-.themeImage .mediaUploadBtn:active,
-.focusEditorDark .mediaUploadBtn:active {
+.themeImage .mediaUploadBtn:active {
   transform: scale(0.98);
 }
 
-.themeImage .mediaUploadBtn:focus-visible,
-.focusEditorDark .mediaUploadBtn:focus-visible {
+.themeImage .mediaUploadBtn:focus-visible {
   box-shadow:
     0 1px 0 var(--sem-overlay-white-08),
     0 4px 16px var(--sem-color-shadow-45),
@@ -1391,6 +1388,9 @@
   width: max-content;
   max-width: 100%;
   min-width: 0;
+  /* Fixed band matches `.shellTopChromePanel` inner height so crumbs vs Back don’t change strip height. */
+  min-height: var(--arch-top-chrome-line-h, 24px);
+  flex-shrink: 0;
 }
 
 .navBtn {
@@ -1453,8 +1453,14 @@
   border-radius: 4px;
   font-size: 10px;
   font-family: var(--font-geist-mono), monospace;
-  padding: 3px 5px;
-  display: block;
+  padding: 0 6px;
+  line-height: 1;
+  box-sizing: border-box;
+  min-height: var(--arch-top-chrome-line-h, 24px);
+  height: var(--arch-top-chrome-line-h, 24px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -1490,7 +1496,8 @@
 
 /* Top-left status + breadcrumb strips: shared height, padding, and rhythm */
 .glassPanel.shellTopChromePanel {
-  min-height: var(--sys-control-height-md, 36px);
+  --arch-top-chrome-line-h: 24px;
+  min-height: calc(var(--arch-top-chrome-line-h) + 12px);
   padding-block: 6px;
   padding-inline: 12px;
   gap: 12px;
@@ -1501,6 +1508,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: var(--arch-top-chrome-line-h, 24px);
+  flex-shrink: 0;
 }
 
 .pulseDot {
@@ -1524,6 +1533,7 @@
 .monoTag {
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
+  line-height: 1;
   letter-spacing: 0.18em;
   color: var(--sys-color-neutral-400);
 }
@@ -1531,10 +1541,13 @@
 .monoSmall {
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
+  line-height: 1;
   color: var(--sys-color-neutral-500);
   display: flex;
   align-items: center;
   gap: 6px;
+  min-height: var(--arch-top-chrome-line-h, 24px);
+  flex-shrink: 0;
 }
 
 .metric {
@@ -2150,6 +2163,23 @@
 .shell :global(.vigil-btn[data-tone="focus-light"]) {
   background: var(--sys-color-neutral-100);
   color: var(--sys-color-neutral-700);
+}
+
+/* Nav “Back”: same tone + fixed box so row height matches crumb targets (see `--arch-top-chrome-line-h`). */
+.shell :global(.vigil-btn[data-tone="focus-light"]).navBackBtn {
+  box-sizing: border-box;
+  min-height: var(--arch-top-chrome-line-h, 24px);
+  height: var(--arch-top-chrome-line-h, 24px);
+  max-height: var(--arch-top-chrome-line-h, 24px);
+  padding-block: 0;
+  padding-inline: 8px;
+  gap: 4px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 600;
+  font-family: var(--font-geist-mono), monospace;
+  border-radius: 6px;
+  border: 1px solid color-mix(in oklch, var(--sys-color-black) 14%, transparent);
 }
 
 .shell :global(.vigil-btn[data-tone="focus-dark"]) {

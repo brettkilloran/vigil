@@ -6,6 +6,39 @@
 const MEDIA_ROOT_SEL = "[data-architectural-media-root]";
 const MEDIA_NOTES_SEL = "[data-architectural-media-notes]";
 
+/** First `<img …>` in `html` (SSR-safe; mirrors `querySelector("img")` on a small fragment). */
+function parseFirstImgFromHtmlFragment(html: string): { src: string | null; alt: string } {
+  const imgMatch = html.match(/<img\b[^>]*>/i);
+  if (!imgMatch) return { src: null, alt: "" };
+  const tag = imgMatch[0];
+  const srcQuoted = /\bsrc\s*=\s*["']([^"']*)["']/i.exec(tag);
+  const srcUnquoted = !srcQuoted ? /\bsrc\s*=\s*([^\s>]+)/i.exec(tag) : null;
+  const rawSrc = srcQuoted?.[1] ?? srcUnquoted?.[1] ?? null;
+  const src = rawSrc != null && rawSrc.length > 0 ? rawSrc : null;
+  const altQuoted = /\balt\s*=\s*["']([^"']*)["']/i.exec(tag);
+  const altUnquoted = !altQuoted ? /\balt\s*=\s*([^\s>]+)/i.exec(tag) : null;
+  const alt = altQuoted?.[1] ?? altUnquoted?.[1] ?? "";
+  return { src, alt };
+}
+
+/**
+ * Same result with or without `document` / DOMParser (SSR + client), so media cards hydrate consistently.
+ */
+export function parseArchitecturalMediaFromBody(bodyHtml: string): {
+  src: string | null;
+  alt: string;
+} {
+  const rootOpen = /<[^>]*\bdata-architectural-media-root\s*=\s*(?:"true"|'true'|true)\b[^>]*>/i.exec(
+    bodyHtml,
+  );
+  if (rootOpen && rootOpen.index !== undefined) {
+    const inner = bodyHtml.slice(rootOpen.index + rootOpen[0].length);
+    const parsed = parseFirstImgFromHtmlFragment(inner);
+    if (parsed.src) return parsed;
+  }
+  return parseFirstImgFromHtmlFragment(bodyHtml);
+}
+
 /** Rich HTML notes stored in `data-architectural-media-notes` after the media root in `bodyHtml`. */
 export function getArchitecturalMediaNotes(bodyHtml: string): string {
   if (typeof document === "undefined") return "";
@@ -34,25 +67,6 @@ export function setArchitecturalMediaNotes(bodyHtml: string, notesHtml: string):
   }
   notesEl.innerHTML = notesHtml;
   return wrap.innerHTML;
-}
-
-export function parseArchitecturalMediaFromBody(bodyHtml: string): {
-  src: string | null;
-  alt: string;
-} {
-  if (typeof document === "undefined") return { src: null, alt: "" };
-  const doc = new DOMParser().parseFromString(
-    `<div id="__arch_media_parse">${bodyHtml}</div>`,
-    "text/html",
-  );
-  const wrap = doc.getElementById("__arch_media_parse");
-  const root = wrap?.querySelector(MEDIA_ROOT_SEL);
-  const img = (root ?? wrap)?.querySelector("img");
-  if (!img) return { src: null, alt: "" };
-  return {
-    src: img.getAttribute("src"),
-    alt: img.getAttribute("alt") ?? "",
-  };
 }
 
 export function applyImageDataUrlToArchitecturalMediaBody(

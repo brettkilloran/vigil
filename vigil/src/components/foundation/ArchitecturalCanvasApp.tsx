@@ -13,6 +13,7 @@ import {
 import styles from "./ArchitecturalCanvasApp.module.css";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
+import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
 import { ArchitecturalBottomDock } from "@/src/components/foundation/ArchitecturalBottomDock";
 import { ArchitecturalParentExitThreshold } from "@/src/components/foundation/ArchitecturalParentExitThreshold";
 import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
@@ -327,9 +328,9 @@ export function ArchitecturalCanvasApp({
     x: number;
     y: number;
   } | null>(null);
-  /** Canvas/stack: show dock format cluster while focus is in a note/folder title/body editor, or a prose card is selected. */
+  /** Canvas/stack: show dock format cluster only while focus is in a rich-text surface (card/folder title or body). */
   const [textFormatChromeActive, setTextFormatChromeActive] = useState(false);
-  /** True when the caret is in a note/focus body (not titles) — drives in-doc insert strip on canvas. */
+  /** True when the caret is in a note/body editor (not titles) — drives in-doc insert strip on canvas. */
   const [richDocInsertChromeActive, setRichDocInsertChromeActive] = useState(false);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -2866,17 +2867,6 @@ export function ArchitecturalCanvasApp({
     return contentIds.length >= 2;
   }, [graph.entities, selectedNodeIds, visibleEntityIds]);
 
-  const singleRichDocSelected = useMemo(() => {
-    if (selectedNodeIds.length !== 1) return false;
-    const entity = graph.entities[selectedNodeIds[0]!];
-    return (
-      !!entity &&
-      entity.kind === "content" &&
-      visibleEntityIds.includes(entity.id) &&
-      (entity.theme === "default" || entity.theme === "task")
-    );
-  }, [graph.entities, selectedNodeIds, visibleEntityIds]);
-
   const selectionContextMenuItems = useMemo(
     () => [
       {
@@ -3272,14 +3262,16 @@ export function ArchitecturalCanvasApp({
                 <div className={`${styles.glassPanel} ${styles.navPanel} ${styles.shellTopChromePanel}`}>
                   <div className={styles.navRow}>
                     {parentSpaceId ? (
-                      <button
+                      <ArchitecturalButton
                         type="button"
-                        className={styles.navBtn}
+                        size="menu"
+                        tone="focus-light"
+                        className={styles.navBackBtn}
+                        leadingIcon={<ArrowLeft size={12} weight="bold" aria-hidden />}
                         onClick={goBack}
                       >
-                        <ArrowLeft size={12} />
                         Back
-                      </button>
+                      </ArchitecturalButton>
                     ) : null}
                     <div className={styles.crumbTrail}>
                       {navigationPath.map((spaceId, index) => {
@@ -3312,8 +3304,8 @@ export function ArchitecturalCanvasApp({
 
         {!focusOpen && !galleryOpen ? (
           <ArchitecturalBottomDock
-            showFormatToolbar={textFormatChromeActive || singleRichDocSelected}
-            showDocInsertCluster={richDocInsertChromeActive || singleRichDocSelected}
+            showFormatToolbar={textFormatChromeActive}
+            showDocInsertCluster={richDocInsertChromeActive}
             onFormat={runFormat}
             onCreateNode={createNewNode}
             onUndo={undo}
@@ -3507,17 +3499,16 @@ export function ArchitecturalCanvasApp({
                 ) : null}
               </div>
               <div className={styles.focusHeaderActions}>
-                <button
+                <ArchitecturalButton
                   type="button"
-                  className={styles.mediaUploadBtn}
+                  size="pill"
+                  tone="focus-dark"
+                  leadingIcon={<UploadSimple size={16} weight="bold" aria-hidden />}
                   data-architectural-media-upload="true"
                   data-media-owner-id={galleryNodeId}
                 >
-                  <span className={styles.mediaUploadBtnIcon}>
-                    <UploadSimple size={16} weight="bold" aria-hidden />
-                  </span>
                   Replace
-                </button>
+                </ArchitecturalButton>
                 <ArchitecturalFocusCloseButton
                   dirty={false}
                   onDone={closeMediaGallery}
