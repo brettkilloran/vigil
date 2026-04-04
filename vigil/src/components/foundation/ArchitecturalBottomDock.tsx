@@ -358,13 +358,13 @@ export function ArchitecturalFolderColorStrip({
       <button
         type="button"
         role="option"
-        aria-selected={value === null}
+        aria-selected={value == null}
         title="Black mirror"
         aria-label="Black mirror — unmarked folder"
         className={cx(
           styles.dockFolderTintMenuSwatch,
           styles.dockFolderTintMenuSwatchClassic,
-          value === null && styles.dockFolderTintMenuSwatchSelected,
+          value == null && styles.dockFolderTintMenuSwatchSelected,
         )}
         onClick={() => pick(null)}
       />
@@ -378,6 +378,8 @@ export function ArchitecturalFolderColorStrip({
           aria-label={s.label}
           className={cx(
             styles.dockFolderTintMenuSwatch,
+            (s.id === "white" || s.id === "gray" || s.id === "parchment") &&
+              styles.dockFolderTintMenuSwatchHighKey,
             value === s.id && styles.dockFolderTintMenuSwatchSelected,
           )}
           style={{ background: s.swatch }}
@@ -440,7 +442,7 @@ export function ArchitecturalFolderColorStrip({
           className={cx(
             styles.dockFolderTintPreview,
             isSpool && styles.dockFolderTintPreviewSpool,
-            value === null ? styles.dockFolderTintPreviewClassic : null,
+            activeMeta == null ? styles.dockFolderTintPreviewClassic : null,
           )}
           style={activeMeta ? { background: activeMeta.swatch } : undefined}
           aria-hidden

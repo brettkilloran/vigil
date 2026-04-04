@@ -143,20 +143,29 @@
   cursor: var(--connection-cursor, crosshair) !important;
 }
 
-/* Cut mode: dim nodes/stacks; keep threads above the scrim (nodes can outrank default layer-connections). */
-.viewportCutThreadMode .connectionLayer {
-  z-index: 6000;
+/* Canvas drag: connection SVG is a sibling after entity layer; bump z-index if anything else stacks oddly. */
+.canvasDraggingConnections .connectionLayer {
+  z-index: 12000;
 }
 
-.canvasCutDim {
+/* Cut mode: dim cards via filter on this layer only (avoids z-fighting / 3D compositing vs a full-canvas scrim). */
+.canvasEntityLayer {
   position: absolute;
   inset: 0;
   width: 10000px;
   height: 10000px;
-  pointer-events: none;
-  z-index: 5900;
-  background: color-mix(in oklch, var(--sys-color-neutral-950) 52%, transparent);
-  transition: opacity 0.22s ease;
+  background: transparent;
+}
+
+.canvasEntityLayerCutDim {
+  filter: brightness(0.5) saturate(0.9);
+  transition: filter 0.22s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvasEntityLayerCutDim {
+    transition: none;
+  }
 }
 
 .deepSpace {
@@ -751,12 +760,26 @@
   width: 100%;
 }
 
-/* Logical connection-pin point: first line of title row (not folder corner). Measured in resolveConnectionPin. */
+/*
+ * Logical thread attach: pocket mouth — centered on the flap top so curves read as
+ * going into the folder, not landing on the front face.
+ */
 .folderConnectionPinAnchor {
   position: absolute;
-  left: 6px;
-  /* ~vertical center of .folderTitleInput first line (24px × 1.2 line-height) */
-  top: 14px;
+  left: 50%;
+  top: -30px;
+  width: 1px;
+  height: 1px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* Content cards: top-left inset (matches CONNECTION_PIN_DEFAULT_CONTENT / slot fallback). */
+.contentConnectionPinAnchor {
+  position: absolute;
+  left: 14px;
+  top: 18px;
   width: 1px;
   height: 1px;
   pointer-events: none;
@@ -782,6 +805,7 @@
   display: grid;
   row-gap: 6px;
   width: 100%;
+  opacity: 0.82;
 }
 
 .folderContentPreviewItem {
@@ -789,8 +813,8 @@
   font-size: 10px;
   line-height: 1.22;
   letter-spacing: 0.02em;
-  /* Mix with face — not `transparent`, which washes out on both light and dark inks */
-  color: color-mix(in oklch, var(--folder-fg) 82%, var(--folder-bg) 18%);
+  /* Softer into face + list opacity — keeps hue from folder tint without shouting */
+  color: color-mix(in oklch, var(--folder-fg) 68%, var(--folder-bg) 32%);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -801,7 +825,8 @@
   font-family: var(--font-geist-mono), monospace;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: color-mix(in oklch, var(--folder-fg) 72%, var(--folder-bg) 28%);
+  color: color-mix(in oklch, var(--folder-fg) 58%, var(--folder-bg) 42%);
+  opacity: 0.82;
 }
 
 .folderMetaBlock {
@@ -1136,6 +1161,7 @@
 /* Legacy class name retained for stories/tooling; canvas image nodes use `.themeImage`. */
 
 .nodeHeader {
+  position: relative;
   padding: 10px 18px;
   display: flex;
   justify-content: space-between;
@@ -1948,6 +1974,15 @@
   );
 }
 
+/* Spool trigger sits on a white chip; theme neutrals can read too light — force ink-like preview. */
+.dockFolderTintPreviewSpool.dockFolderTintPreviewClassic {
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklch, oklch(0.38 0.02 265) 55%, oklch(0.14 0.02 265)) 0%,
+    oklch(0.12 0.02 265) 100%
+  );
+}
+
 .dockFolderTintTriggerText {
   font-size: 10px;
   letter-spacing: 0.14em;
@@ -2048,6 +2083,15 @@
     inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 35%, transparent),
     0 0 0 1px color-mix(in oklch, var(--sys-color-black) 55%, transparent),
     0 0 14px color-mix(in oklch, var(--sys-color-white) 12%, transparent);
+}
+
+/* Light / mid neutrals stay visible on glass popovers. */
+.dockFolderTintMenuSwatchHighKey {
+  border: 1px solid color-mix(in oklch, var(--sys-color-white) 34%, transparent);
+  box-shadow:
+    inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 22%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 42%, transparent),
+    0 1px 3px var(--sem-color-shadow-22);
 }
 
 .dockFolderTintMenuSwatchSelected {
@@ -2550,7 +2594,8 @@
   pointer-events: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  /* Physical gap between bar segments (two separate .sideToolsMainPanel cards). */
+  gap: 10px;
 }
 
 .sideToolsMainPanel,
@@ -2581,10 +2626,13 @@
   padding: 4px;
 }
 
-.sideToolsMainPanel .sepVertical,
-.sideToolsConnectionPanel .sepVertical {
-  align-self: stretch;
-  margin: 5px 0;
+/* Tight stack inside one bar segment (each segment is its own .sideToolsMainPanel). */
+.sideToolsToolGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
 }
 
 /* Draw pin + thread spool: layout always; recessed “well” only in draw mode. */

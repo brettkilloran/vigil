@@ -4,6 +4,11 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import {
   ArrowLeft,
   CopySimple,
+  DownloadSimple,
+  FileText,
+  Folder,
+  MagnifyingGlass,
+  NotePencil,
   SquaresFour,
   Stack,
   Trash,
@@ -45,12 +50,19 @@ import {
   type ArchitecturalUndoSnapshot,
 } from "@/src/components/foundation/architectural-undo";
 import { useModKeyHints } from "@/src/lib/mod-keys";
+import { useRecentItems } from "@/src/hooks/use-recent-items";
 import {
   clampContextMenuPosition,
   ContextMenu,
   type ContextMenuItem,
   type ContextMenuPosition,
 } from "@/src/components/ui/ContextMenu";
+import {
+  CommandPalette,
+  type PaletteAction,
+  type PaletteItem,
+  type PaletteSpace,
+} from "@/src/components/ui/CommandPalette";
 import type {
   CanvasConnectionPin,
   ContentTheme,
@@ -88,11 +100,12 @@ type ArchitecturalCanvasScenario = "default" | "nested" | "corrupt";
 
 const ROOT_SPACE_ID = "root";
 const CONNECTION_DEFAULT_COLOR =
-  FOLDER_COLOR_SCHEMES.find((s) => s.id === "coral")?.swatch ?? "oklch(0.62 0.30 48)";
+  FOLDER_COLOR_SCHEMES.find((s) => s.id === "coral")?.swatch ?? "oklch(0.68 0.32 48)";
 /** Dark neutral thread for "Black mirror" / classic picker slot (not a folder scheme swatch). */
 const CONNECTION_CLASSIC_THREAD_COLOR = "oklch(0.22 0.025 265)";
-const CONNECTION_CUT_CURSOR =
-  'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 16 16%27%3E%3Ccircle cx=%273.2%27 cy=%274.1%27 r=%272.1%27 fill=%27none%27 stroke=%27%23ffffff%27 stroke-width=%271.2%27/%3E%3Ccircle cx=%273.2%27 cy=%2711.9%27 r=%272.1%27 fill=%27none%27 stroke=%27%23ffffff%27 stroke-width=%271.2%27/%3E%3Cpath d=%27M5.1 5.2 L13.6 1.6 M5.1 10.8 L13.6 14.4%27 stroke=%27%23ffffff%27 stroke-width=%271.4%27 stroke-linecap=%27round%27/%3E%3C/svg%3E") 3 8, crosshair';
+/** OS/browser built-ins only — CSS has no pin/scissors keywords; crosshair reads as precise targeting. */
+const CONNECTION_DRAW_CURSOR = "crosshair";
+const CONNECTION_CUT_CURSOR = "crosshair";
 const CONNECTION_PIN_DEFAULT_CONTENT: CanvasConnectionPin = {
   anchor: "topLeftInset",
   insetX: 14,
@@ -128,6 +141,13 @@ type RopeRuntime = {
   constraints: RopeConstraint[];
 };
 
+/** Canvas camera; used to map pin anchors from screen space (getBoundingClientRect) to graph space. */
+type ConnectionPinViewContext = {
+  tx: number;
+  ty: number;
+  scale: number;
+};
+
 function isUuidLike(value: string | null | undefined): value is string {
   if (!value) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -161,6 +181,7 @@ function resolveConnectionPin(
   pin: CanvasConnectionPin,
   activeSpaceId: string,
   graph: CanvasGraph,
+  view?: ConnectionPinViewContext,
 ): { x: number; y: number } | null {
   const entity = graph.entities[entityId];
   if (!entity) return null;
@@ -178,10 +199,39 @@ function resolveConnectionPin(
     typeof CSS !== "undefined" && typeof CSS.escape === "function"
       ? CSS.escape(entityId)
       : entityId.replace(/"/g, '\\"');
-  const placement = document.querySelector<HTMLElement>(
-    `[data-node-id="${escapedId}"][data-space-id="${activeSpaceId}"]`,
-  );
+  const escapedSpace =
+    typeof CSS !== "undefined" && typeof CSS.escape === "function"
+      ? CSS.escape(activeSpaceId)
+      : activeSpaceId.replace(/"/g, '\\"');
+  const nodeSel = `[data-node-id="${escapedId}"][data-space-id="${escapedSpace}"]`;
+  /* Fan stage is a shell sibling of the canvas; when the stack modal is open, match it first so
+     threads follow the fanned cards instead of the (still-mounted) collapsed stack under the scrim. */
+  const fanStage = document.querySelector<HTMLElement>("[data-stack-fan-stage='true']");
+  const placement =
+    (fanStage?.querySelector<HTMLElement>(nodeSel) as HTMLElement | null) ??
+    document.querySelector<HTMLElement>(nodeSel);
   if (placement) {
+    const pinSelector =
+      entity.kind === "folder"
+        ? "[data-folder-connection-pin-anchor]"
+        : entity.kind === "content"
+          ? "[data-content-connection-pin-anchor]"
+          : null;
+    const stackLayer = placement.dataset.stackLayer === "true";
+    const inFanStage = !!placement.closest("[data-stack-fan-stage='true']");
+    if (view && pinSelector && (stackLayer || inFanStage)) {
+      const anchorEl = placement.querySelector<HTMLElement>(pinSelector);
+      if (anchorEl) {
+        const r = anchorEl.getBoundingClientRect();
+        const cx = (r.left + r.right) / 2;
+        const cy = (r.top + r.bottom) / 2;
+        return {
+          x: (cx - view.tx) / view.scale,
+          y: (cy - view.ty) / view.scale,
+        };
+      }
+    }
+
     const w = placement.offsetWidth || (entity.kind === "folder" ? FOLDER_CARD_WIDTH : entity.width ?? UNIFIED_NODE_WIDTH);
     const h = placement.offsetHeight || (entity.kind === "folder" ? FOLDER_CARD_HEIGHT : 280);
     const rad = (entity.rotation * Math.PI) / 180;
@@ -190,22 +240,26 @@ function resolveConnectionPin(
 
     let insetX = normalizedPin.insetX;
     let insetY = normalizedPin.insetY;
-    if (entity.kind === "folder") {
-      const anchor = placement.querySelector<HTMLElement>("[data-folder-connection-pin-anchor]");
-      if (anchor) {
-        let ax = anchor.offsetLeft + anchor.offsetWidth / 2;
-        let ay = anchor.offsetTop + anchor.offsetHeight / 2;
-        let op: HTMLElement | null = anchor.offsetParent as HTMLElement | null;
-        while (op && op !== placement) {
-          ax += op.offsetLeft;
-          ay += op.offsetTop;
-          op = op.offsetParent as HTMLElement | null;
-        }
-        if (op === placement) {
-          insetX = ax;
-          insetY = ay;
-        }
+    const applyAnchor = (selector: string) => {
+      const anchor = placement!.querySelector<HTMLElement>(selector);
+      if (!anchor) return;
+      let ax = anchor.offsetLeft + anchor.offsetWidth / 2;
+      let ay = anchor.offsetTop + anchor.offsetHeight / 2;
+      let op: HTMLElement | null = anchor.offsetParent as HTMLElement | null;
+      while (op && op !== placement) {
+        ax += op.offsetLeft;
+        ay += op.offsetTop;
+        op = op.offsetParent as HTMLElement | null;
       }
+      if (op === placement) {
+        insetX = ax;
+        insetY = ay;
+      }
+    };
+    if (entity.kind === "folder") {
+      applyAnchor("[data-folder-connection-pin-anchor]");
+    } else if (entity.kind === "content") {
+      applyAnchor("[data-content-connection-pin-anchor]");
     }
 
     const dx = insetX - cx;
@@ -710,6 +764,20 @@ export function ArchitecturalCanvasApp({
   activeNodeIdRef.current = activeNodeId;
 
   const modKeyHints = useModKeyHints();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const { items: recentItems, push: pushRecentItem } = useRecentItems();
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const mod = event.metaKey || event.ctrlKey;
+      if (!mod || event.altKey || event.shiftKey) return;
+      if (event.key.toLowerCase() !== "k") return;
+      event.preventDefault();
+      setPaletteOpen((prev) => !prev);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const createId = useCallback((prefix: string) => {
     idCounterRef.current += 1;
@@ -1105,9 +1173,23 @@ export function ArchitecturalCanvasApp({
       const runtimeById = ropeRuntimeRef.current;
       const nextPaths: Record<string, string> = {};
       const activeIds = new Set<string>();
+      const { tx, ty, scale: pinScale } = viewRef.current;
+      const pinView: ConnectionPinViewContext = { tx, ty, scale: pinScale };
       Object.values(graphSnap.connections).forEach((connection) => {
-        const start = resolveConnectionPin(connection.sourceEntityId, connection.sourcePin, spaceId, graphSnap);
-        const end = resolveConnectionPin(connection.targetEntityId, connection.targetPin, spaceId, graphSnap);
+        const start = resolveConnectionPin(
+          connection.sourceEntityId,
+          connection.sourcePin,
+          spaceId,
+          graphSnap,
+          pinView,
+        );
+        const end = resolveConnectionPin(
+          connection.targetEntityId,
+          connection.targetPin,
+          spaceId,
+          graphSnap,
+          pinView,
+        );
         if (!start || !end) return;
         activeIds.add(connection.id);
         let runtime = runtimeById[connection.id];
@@ -1210,6 +1292,41 @@ export function ArchitecturalCanvasApp({
   );
 
   const parentSpaceId = activeSpace?.parentSpaceId ?? null;
+
+  const paletteItems = useMemo<PaletteItem[]>(() => {
+    const out: PaletteItem[] = [];
+    for (const entity of Object.values(graph.entities)) {
+      const slotSpaceIds = Object.keys(entity.slots);
+      if (slotSpaceIds.length === 0) continue;
+      const preferredSpaceId =
+        slotSpaceIds.includes(activeSpaceId) ? activeSpaceId : slotSpaceIds[0]!;
+      const space = graph.spaces[preferredSpaceId];
+      if (!space) continue;
+      const snippet =
+        entity.kind === "content"
+          ? entity.bodyHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 180)
+          : undefined;
+      out.push({
+        id: entity.id,
+        title: entity.title || "Untitled",
+        itemType: entity.kind === "folder" ? "folder" : entity.theme === "task" ? "checklist" : entity.theme,
+        entityType: null,
+        spaceId: preferredSpaceId,
+        spaceName: space.name,
+        snippet,
+      });
+    }
+    return out;
+  }, [activeSpaceId, graph.entities, graph.spaces]);
+
+  const paletteSpaces = useMemo<PaletteSpace[]>(() => {
+    return Object.values(graph.spaces).map((space) => {
+      const path = buildPathToSpace(space.id, graph.spaces, graph.rootSpaceId)
+        .map((id) => (id === graph.rootSpaceId ? "Root" : graph.spaces[id]?.name ?? "Unknown"))
+        .join(" / ");
+      return { id: space.id, name: space.name, pathLabel: path };
+    });
+  }, [graph.rootSpaceId, graph.spaces]);
 
   const [parentExitRail, setParentExitRail] = useState({ top: 24, height: 40 });
   const syncParentExitRail = useCallback(() => {
@@ -1492,6 +1609,15 @@ export function ArchitecturalCanvasApp({
   const openFocusMode = useCallback((id: string) => {
     const entity = graph.entities[id];
     if (!entity || entity.kind !== "content") return;
+    const spaceId = Object.keys(entity.slots)[0] ?? activeSpaceIdRef.current;
+    const spaceName = graph.spaces[spaceId]?.name ?? "Unknown";
+    pushRecentItem({
+      id: entity.id,
+      title: entity.title,
+      itemType: entity.theme === "task" ? "checklist" : entity.theme,
+      spaceId,
+      spaceName,
+    });
     const normalizedBody =
       entity.theme === "task"
         ? normalizeChecklistMarkup(entity.bodyHtml, {
@@ -1508,7 +1634,7 @@ export function ArchitecturalCanvasApp({
     setFocusBaselineBody(normalizedBody);
     setFocusCodeTheme(entity.theme === "code");
     setFocusOpen(true);
-  }, [graph.entities]);
+  }, [graph.entities, graph.spaces, pushRecentItem]);
 
   const closeMediaGallery = useCallback(() => {
     setGalleryOpen(false);
@@ -1709,6 +1835,11 @@ export function ArchitecturalCanvasApp({
     viewRef.current = { scale, tx: translateX, ty: translateY };
   }, [scale, translateX, translateY]);
 
+  const connectionPinView = useMemo<ConnectionPinViewContext>(
+    () => ({ tx: translateX, ty: translateY, scale }),
+    [translateX, translateY, scale],
+  );
+
   useEffect(() => {
     const freshGraph = buildArchitecturalSeedGraph(
       {
@@ -1820,6 +1951,14 @@ export function ArchitecturalCanvasApp({
     const stackId = createId("stack");
     setGraph((prev) => {
       const next = shallowCloneGraph(prev);
+      const slots = ids
+        .map((id) => next.entities[id]?.slots[activeSpaceId])
+        .filter((s): s is { x: number; y: number } => !!s);
+      if (slots.length === 0) return prev;
+      /* One shared slot for the stack (matches drop-onto-target stacking). Top-left of the pile
+         keeps the collapsed container aligned with `resolveConnectionPin` + thread endpoints. */
+      const anchorX = Math.min(...slots.map((s) => s.x));
+      const anchorY = Math.min(...slots.map((s) => s.y));
       ids.forEach((id, index) => {
         const entity = next.entities[id];
         if (!entity || entity.kind !== "content") return;
@@ -1827,12 +1966,16 @@ export function ArchitecturalCanvasApp({
           ...entity,
           stackId,
           stackOrder: index,
+          slots: {
+            ...entity.slots,
+            [activeSpaceId]: { x: anchorX, y: anchorY },
+          },
         };
       });
       return next;
     });
     setSelectedNodeIds(ids);
-  }, [createId, recordUndoBeforeMutation, visibleEntityIds]);
+  }, [activeSpaceId, createId, recordUndoBeforeMutation, visibleEntityIds]);
 
   const unstackGroup = useCallback((stackId: string) => {
     recordUndoBeforeMutation();
@@ -2048,6 +2191,52 @@ export function ArchitecturalCanvasApp({
     if (!parentSpaceId) return;
     enterSpace(parentSpaceId);
   }, [enterSpace, parentSpaceId]);
+
+  const focusEntityFromPalette = useCallback(
+    (entityId: string, openInFocus = false) => {
+      const graphSnap = graphRef.current;
+      const entity = graphSnap.entities[entityId];
+      if (!entity) return;
+      const candidateSpaceIds = Object.keys(entity.slots);
+      let targetSpaceId = activeSpaceIdRef.current;
+      if (!entity.slots[targetSpaceId]) {
+        targetSpaceId = candidateSpaceIds[0] ?? targetSpaceId;
+      }
+      if (!graphSnap.spaces[targetSpaceId]) return;
+      if (targetSpaceId !== activeSpaceIdRef.current) {
+        setActiveSpaceId(targetSpaceId);
+        setNavigationPath(buildPathToSpace(targetSpaceId, graphSnap.spaces, graphSnap.rootSpaceId));
+      }
+      const slot = entity.slots[targetSpaceId];
+      if (slot) {
+        const viewport = viewportRef.current?.getBoundingClientRect();
+        const width = viewport?.width ?? window.innerWidth;
+        const height = viewport?.height ?? window.innerHeight;
+        const nextScale = viewRef.current.scale;
+        setTranslateX(width / 2 - slot.x * nextScale);
+        setTranslateY(height / 2 - slot.y * nextScale);
+      }
+      setSelectedNodeIds([entityId]);
+      if (openInFocus && entity.kind === "content") {
+        openFocusMode(entityId);
+      }
+    },
+    [openFocusMode],
+  );
+
+  const paletteActions = useMemo<PaletteAction[]>(
+    () => [
+      { id: "create-note", label: "Create note", hint: "Add a new note at center", icon: <FileText size={14} weight="bold" /> },
+      { id: "create-checklist", label: "Create checklist", hint: "Add a checklist card", icon: <NotePencil size={14} weight="bold" /> },
+      { id: "create-media", label: "Create image card", hint: "Add a media card", icon: <SquaresFour size={14} weight="bold" /> },
+      { id: "create-folder", label: "Create folder", hint: "Add folder and child space", icon: <Folder size={14} weight="bold" /> },
+      { id: "export-json", label: "Export graph JSON", hint: "Download the current graph", icon: <DownloadSimple size={14} weight="bold" /> },
+      { id: "toggle-theme", label: "Toggle theme", hint: "Switch light/dark shell class", icon: <CopySimple size={14} weight="bold" /> },
+      { id: "zoom-fit", label: "Zoom to fit", hint: "Fit visible cards into the viewport", icon: <SquaresFour size={14} weight="bold" /> },
+      { id: "recenter", label: "Recenter canvas", hint: modKeyHints.recenter, icon: <Stack size={14} weight="bold" /> },
+    ],
+    [modKeyHints.recenter],
+  );
 
   const getParentFolderExitSlot = useCallback(
     (offsetIndex = 0) => {
@@ -2315,6 +2504,80 @@ export function ArchitecturalCanvasApp({
       return next;
     });
   }, [activeSpaceId, centerCoords, createId, recordUndoBeforeMutation]);
+
+  const runPaletteAction = useCallback((actionId: string) => {
+    if (actionId === "create-note") {
+      createNewNode("default");
+      return;
+    }
+    if (actionId === "create-checklist") {
+      createNewNode("task");
+      return;
+    }
+    if (actionId === "create-media") {
+      createNewNode("media");
+      return;
+    }
+    if (actionId === "create-folder") {
+      createNewNode("folder");
+      return;
+    }
+    if (actionId === "export-json") {
+      const data = JSON.stringify(graphRef.current, null, 2);
+      const blob = new Blob([data], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `vigil-graph-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+    if (actionId === "toggle-theme") {
+      const html = document.documentElement;
+      html.classList.toggle("dark");
+      html.dataset.vigilTheme = html.classList.contains("dark") ? "dark" : "light";
+      return;
+    }
+    if (actionId === "zoom-fit") {
+      const ids = activeSpace?.entityIds ?? [];
+      if (ids.length === 0) {
+        recenterToOrigin();
+        return;
+      }
+      const slots = ids
+        .map((id) => graphRef.current.entities[id]?.slots[activeSpaceIdRef.current])
+        .filter((slot): slot is { x: number; y: number } => !!slot);
+      if (slots.length === 0) {
+        recenterToOrigin();
+        return;
+      }
+      const minX = Math.min(...slots.map((slot) => slot.x));
+      const minY = Math.min(...slots.map((slot) => slot.y));
+      const maxX = Math.max(...slots.map((slot) => slot.x + UNIFIED_NODE_WIDTH));
+      const maxY = Math.max(...slots.map((slot) => slot.y + 260));
+      const viewport = viewportRef.current?.getBoundingClientRect();
+      const width = viewport?.width ?? window.innerWidth;
+      const height = viewport?.height ?? window.innerHeight;
+      const pad = 120;
+      const nextScale = Math.max(
+        MIN_ZOOM,
+        Math.min(
+          MAX_ZOOM,
+          Math.min((width - pad) / Math.max(1, maxX - minX), (height - pad) / Math.max(1, maxY - minY)),
+        ),
+      );
+      setScale(nextScale);
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+      setTranslateX(width / 2 - centerX * nextScale);
+      setTranslateY(height / 2 - centerY * nextScale);
+      return;
+    }
+    if (actionId === "recenter") {
+      recenterToOrigin();
+    }
+  }, [activeSpace?.entityIds, createNewNode, recenterToOrigin]);
 
   const updateDropTargets = useCallback(
     (draggedEntityId: string, pointerClientX?: number, pointerClientY?: number) => {
@@ -3188,9 +3451,34 @@ export function ArchitecturalCanvasApp({
     };
 
     const onDoubleClick = (event: MouseEvent) => {
-      if (connectionMode !== "move") return;
       const target = pointerEventTargetElement(event.target);
       if (!target) return;
+
+      if (connectionMode === "draw" || connectionMode === "cut") {
+        if (focusOpen || galleryOpen || stackModalRef.current) return;
+        if (
+          isCanvasPointerMarqueeOrPanSurface(
+            target,
+            viewportRef.current,
+            styles.canvas,
+            activeTool,
+            false,
+          )
+        ) {
+          event.preventDefault();
+          setConnectionMode("move");
+          setConnectionSourceId(null);
+          setConnectionCursorWorld(null);
+          const restore = selectionBeforeConnectionModeRef.current;
+          if (restore) {
+            setSelectedNodeIds(restore.filter((id) => !!graphRef.current.entities[id]));
+          }
+          selectionBeforeConnectionModeRef.current = null;
+        }
+        return;
+      }
+
+      if (connectionMode !== "move") return;
       const folderEl = target.closest<HTMLElement>("[data-folder-id]");
       if (folderEl && !target.closest(`.${styles.folderTitleInput}`)) {
         const folderId = folderEl.dataset.folderId;
@@ -4028,12 +4316,9 @@ export function ArchitecturalCanvasApp({
         onSelect: () => setConnectionSlack(selectedConnectionId, 1.28),
       },
     ];
-    const recolor = FOLDER_COLOR_SCHEMES.map((scheme) => ({
-      label: `Color · ${scheme.label}`,
-      onSelect: () => recolorConnection(selectedConnectionId, scheme.swatch),
-    }));
-    return [...base, ...recolor];
-  }, [cutConnection, graph.connections, recolorConnection, selectedConnectionId, setConnectionSlack]);
+    /* Thread color lives on the draw-mode spool in the tool rail — keeps this menu short. */
+    return base;
+  }, [cutConnection, graph.connections, selectedConnectionId, setConnectionSlack]);
 
   const canInsertImage = useMemo(() => {
     if (focusOpen && activeNodeId) {
@@ -4227,9 +4512,7 @@ export function ArchitecturalCanvasApp({
           canvasSurfaceReady ? styles.viewportSurfaceReady : styles.viewportSurfacePending
         } ${activeSpaceId !== graph.rootSpaceId ? styles.deepSpace : ""}${
           stackModal ? ` ${styles.viewportStackModalOpen}` : ""
-        } ${connectionMode !== "move" ? styles.viewportConnectionMode : ""}${
-          connectionMode === "cut" ? ` ${styles.viewportCutThreadMode}` : ""
-        }`}
+        } ${connectionMode !== "move" ? styles.viewportConnectionMode : ""}`}
         aria-busy={!canvasSurfaceReady}
         data-canvas-ready={canvasSurfaceReady ? "true" : "false"}
         onMouseDown={onViewportMouseDown}
@@ -4242,13 +4525,13 @@ export function ArchitecturalCanvasApp({
               ? CONNECTION_CUT_CURSOR
               : connectionMode === "draw" && connectionSourceId
                 ? "copy"
-                : "crosshair",
+                : CONNECTION_DRAW_CURSOR,
           cursor: isPanning
             ? "grabbing"
             : connectionMode === "draw"
               ? connectionSourceId
                 ? "copy"
-                : "crosshair"
+                : CONNECTION_DRAW_CURSOR
               : connectionMode === "cut"
                 ? CONNECTION_CUT_CURSOR
             : activeTool === "pan" || spacePanning
@@ -4257,139 +4540,16 @@ export function ArchitecturalCanvasApp({
         }}
       >
         <div
-          className={styles.canvas}
+          className={`${styles.canvas}${
+            draggedNodeIds.length > 0 ? ` ${styles.canvasDraggingConnections}` : ""
+          }`}
           style={{ transform: `translate(${translateX}px, ${translateY}px) scale(${scale})` }}
         >
-          <svg className={styles.connectionLayer} viewBox="0 0 10000 10000" aria-hidden>
-            {connectionMode === "draw" && connectionSourceId && connectionCursorWorld
-              ? (() => {
-                  const sourceEntity = graph.entities[connectionSourceId];
-                  if (!sourceEntity) return null;
-                  const sourcePin = resolveConnectionPin(
-                    connectionSourceId,
-                    sourceEntity.kind === "folder"
-                      ? CONNECTION_PIN_DEFAULT_FOLDER
-                      : CONNECTION_PIN_DEFAULT_CONTENT,
-                    activeSpaceId,
-                    graph,
-                  );
-                  if (!sourcePin) return null;
-                  const cx = (sourcePin.x + connectionCursorWorld.x) / 2;
-                  const cy = (sourcePin.y + connectionCursorWorld.y) / 2;
-                  return (
-                    <g>
-                      <path
-                        d={`M ${sourcePin.x} ${sourcePin.y} Q ${cx} ${cy}, ${connectionCursorWorld.x} ${connectionCursorWorld.y}`}
-                        className={`${styles.connectionStroke} ${styles.connectionStrokePreview}`}
-                        style={{ stroke: connectionColor }}
-                      />
-                      <circle
-                        cx={sourcePin.x}
-                        cy={sourcePin.y}
-                        r={4.5}
-                        className={styles.connectionPin}
-                        style={{ fill: connectionColor }}
-                      />
-                    </g>
-                  );
-                })()
-              : null}
-            {visibleConnections.map((connection) => {
-              const sourcePin = resolveConnectionPin(
-                connection.sourceEntityId,
-                connection.sourcePin,
-                activeSpaceId,
-                graph,
-              );
-              const targetPin = resolveConnectionPin(
-                connection.targetEntityId,
-                connection.targetPin,
-                activeSpaceId,
-                graph,
-              );
-              if (!sourcePin || !targetPin) return null;
-              const pathD = connectionPaths[connection.id] ?? "";
-              const isCut = connectionMode === "cut";
-              return (
-                <g key={connection.id} data-connection-id={connection.id}>
-                  {!isCut ? (
-                    <path
-                      d={pathD}
-                      className={styles.connectionHitStroke}
-                      data-connection-id={connection.id}
-                      onMouseDown={(event) => {
-                        if (event.button !== 0) return;
-                        event.stopPropagation();
-                      }}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        setSelectedConnectionId(connection.id);
-                      }}
-                      onContextMenu={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        setSelectedConnectionId(connection.id);
-                        setConnectionContextMenu(
-                          clampContextMenuPosition(
-                            { x: event.clientX, y: event.clientY },
-                            { maxWidth: 236, maxHeight: 360, edgePadding: 8 },
-                          ),
-                        );
-                      }}
-                    />
-                  ) : null}
-                  <path
-                    d={pathD}
-                    className={`${styles.connectionStroke} ${
-                      isCut ? styles.connectionStrokeCuttable : ""
-                    } ${selectedConnectionId === connection.id ? styles.connectionStrokeSelected : ""}`}
-                    style={{ stroke: connection.color }}
-                    data-connection-id={connection.id}
-                    onMouseDown={(event) => {
-                      if (!isCut) return;
-                      event.preventDefault();
-                      event.stopPropagation();
-                      cutConnection(connection.id);
-                    }}
-                    onClick={(event) => {
-                      if (isCut) return;
-                      event.preventDefault();
-                      event.stopPropagation();
-                      setSelectedConnectionId(connection.id);
-                    }}
-                    onContextMenu={(event) => {
-                      if (!isCut) return;
-                      event.preventDefault();
-                      event.stopPropagation();
-                      setSelectedConnectionId(connection.id);
-                      setConnectionContextMenu(
-                        clampContextMenuPosition(
-                          { x: event.clientX, y: event.clientY },
-                          { maxWidth: 236, maxHeight: 360, edgePadding: 8 },
-                        ),
-                      );
-                    }}
-                  />
-                  <circle
-                    cx={sourcePin.x}
-                    cy={sourcePin.y}
-                    r={4.5}
-                    className={styles.connectionPin}
-                    style={{ fill: connection.color }}
-                  />
-                  <circle
-                    cx={targetPin.x}
-                    cy={targetPin.y}
-                    r={4.5}
-                    className={styles.connectionPin}
-                    style={{ fill: connection.color }}
-                  />
-                </g>
-              );
-            })}
-          </svg>
-          {connectionMode === "cut" ? <div className={styles.canvasCutDim} aria-hidden /> : null}
+          <div
+            className={`${styles.canvasEntityLayer}${
+              connectionMode === "cut" ? ` ${styles.canvasEntityLayerCutDim}` : ""
+            }`}
+          >
           {standaloneEntities.map((entity) => {
             const slot = entity.slots[activeSpaceId] ?? { x: 0, y: 0 };
             const draggedIndex = draggedNodeIds.indexOf(entity.id);
@@ -4599,6 +4759,139 @@ export function ArchitecturalCanvasApp({
               </div>
             );
           })}
+          </div>
+          <svg className={styles.connectionLayer} viewBox="0 0 10000 10000" aria-hidden>
+            {connectionMode === "draw" && connectionSourceId && connectionCursorWorld
+              ? (() => {
+                  const sourceEntity = graph.entities[connectionSourceId];
+                  if (!sourceEntity) return null;
+                  const sourcePin = resolveConnectionPin(
+                    connectionSourceId,
+                    sourceEntity.kind === "folder"
+                      ? CONNECTION_PIN_DEFAULT_FOLDER
+                      : CONNECTION_PIN_DEFAULT_CONTENT,
+                    activeSpaceId,
+                    graph,
+                    connectionPinView,
+                  );
+                  if (!sourcePin) return null;
+                  const cx = (sourcePin.x + connectionCursorWorld.x) / 2;
+                  const cy = (sourcePin.y + connectionCursorWorld.y) / 2;
+                  return (
+                    <g>
+                      <path
+                        d={`M ${sourcePin.x} ${sourcePin.y} Q ${cx} ${cy}, ${connectionCursorWorld.x} ${connectionCursorWorld.y}`}
+                        className={`${styles.connectionStroke} ${styles.connectionStrokePreview}`}
+                        style={{ stroke: connectionColor }}
+                      />
+                      <circle
+                        cx={sourcePin.x}
+                        cy={sourcePin.y}
+                        r={4.5}
+                        className={styles.connectionPin}
+                        style={{ fill: connectionColor }}
+                      />
+                    </g>
+                  );
+                })()
+              : null}
+            {visibleConnections.map((connection) => {
+              const sourcePin = resolveConnectionPin(
+                connection.sourceEntityId,
+                connection.sourcePin,
+                activeSpaceId,
+                graph,
+                connectionPinView,
+              );
+              const targetPin = resolveConnectionPin(
+                connection.targetEntityId,
+                connection.targetPin,
+                activeSpaceId,
+                graph,
+                connectionPinView,
+              );
+              if (!sourcePin || !targetPin) return null;
+              const pathD = connectionPaths[connection.id] ?? "";
+              const isCut = connectionMode === "cut";
+              return (
+                <g key={connection.id} data-connection-id={connection.id}>
+                  {!isCut ? (
+                    <path
+                      d={pathD}
+                      className={styles.connectionHitStroke}
+                      data-connection-id={connection.id}
+                      onMouseDown={(event) => {
+                        if (event.button !== 0) return;
+                        event.stopPropagation();
+                      }}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setSelectedConnectionId(connection.id);
+                      }}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setSelectedConnectionId(connection.id);
+                        setConnectionContextMenu(
+                          clampContextMenuPosition(
+                            { x: event.clientX, y: event.clientY },
+                            { maxWidth: 236, maxHeight: 360, edgePadding: 8 },
+                          ),
+                        );
+                      }}
+                    />
+                  ) : null}
+                  <path
+                    d={pathD}
+                    className={`${styles.connectionStroke} ${
+                      isCut ? styles.connectionStrokeCuttable : ""
+                    } ${selectedConnectionId === connection.id ? styles.connectionStrokeSelected : ""}`}
+                    style={{ stroke: connection.color }}
+                    data-connection-id={connection.id}
+                    onMouseDown={(event) => {
+                      if (!isCut) return;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      cutConnection(connection.id);
+                    }}
+                    onClick={(event) => {
+                      if (isCut) return;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setSelectedConnectionId(connection.id);
+                    }}
+                    onContextMenu={(event) => {
+                      if (!isCut) return;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setSelectedConnectionId(connection.id);
+                      setConnectionContextMenu(
+                        clampContextMenuPosition(
+                          { x: event.clientX, y: event.clientY },
+                          { maxWidth: 236, maxHeight: 360, edgePadding: 8 },
+                        ),
+                      );
+                    }}
+                  />
+                  <circle
+                    cx={sourcePin.x}
+                    cy={sourcePin.y}
+                    r={4.5}
+                    className={styles.connectionPin}
+                    style={{ fill: connection.color }}
+                  />
+                  <circle
+                    cx={targetPin.x}
+                    cy={targetPin.y}
+                    r={4.5}
+                    className={styles.connectionPin}
+                    style={{ fill: connection.color }}
+                  />
+                </g>
+              );
+            })}
+          </svg>
         </div>
         <div className={styles.chromeLayer}>
         {parentSpaceId ? (
@@ -4656,6 +4949,16 @@ export function ArchitecturalCanvasApp({
                         );
                       })}
                     </div>
+                    <ArchitecturalButton
+                      type="button"
+                      size="menu"
+                      tone="focus-light"
+                      leadingIcon={<MagnifyingGlass size={12} weight="bold" aria-hidden />}
+                      onClick={() => setPaletteOpen(true)}
+                      title={`Search (${modKeyHints.search})`}
+                    >
+                      Search
+                    </ArchitecturalButton>
                   </div>
                 </div>
               </div>
@@ -4731,6 +5034,19 @@ export function ArchitecturalCanvasApp({
           onZoomOut={() => zoomBy(-ZOOM_BUTTON_STEP)}
           onRecenter={recenterToOrigin}
         />
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          currentSpaceId={activeSpaceId}
+          items={paletteItems}
+          spaces={paletteSpaces}
+          actions={paletteActions}
+          recentItems={recentItems}
+          onRecordRecentItem={pushRecentItem}
+          onSelectItem={(id) => focusEntityFromPalette(id)}
+          onSelectSpace={(spaceId) => enterSpace(spaceId)}
+          onRunAction={runPaletteAction}
+        />
       </div>
       </div>
 
@@ -4761,6 +5077,7 @@ export function ArchitecturalCanvasApp({
       {stackModal ? (
         <div
           className={styles.stackFanStage}
+          data-stack-fan-stage="true"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               closeStackModal();
@@ -4798,6 +5115,7 @@ export function ArchitecturalCanvasApp({
               <div
                 key={entity.id}
                 data-node-id={entity.id}
+                data-space-id={activeSpaceId}
                 className={`${styles.stackFanCard} ${drag ? styles.stackFanDragging : ""} ${drag && stackModalEjectPreview ? styles.stackFanEjectArmed : ""}`}
                 style={{
                   zIndex: 900 + index,

@@ -67,64 +67,246 @@ export async function listItemsForSpace(db: VigilDb, spaceId: string) {
     .orderBy(asc(items.zIndex), asc(items.createdAt));
 }
 
-export async function searchItemsFTS(db: VigilDb, spaceId: string, query: string) {
+export type SearchSort = "relevance" | "updated" | "created" | "title";
+
+export type SearchFilters = {
+  spaceId?: string;
+  itemTypes?: string[];
+  entityTypes?: string[];
+  updatedAfter?: Date;
+  hasLinks?: boolean;
+  inStack?: boolean;
+  sort?: SearchSort;
+  limit?: number;
+};
+
+export type SearchRow = {
+  item: typeof items.$inferSelect;
+  space: Pick<typeof spaces.$inferSelect, "id" | "name" | "parentSpaceId">;
+  score?: number;
+  snippet?: string;
+};
+
+function normalizeLimit(limit: number | undefined, fallback: number, max: number): number {
+  if (!Number.isFinite(limit)) return fallback;
+  const value = Math.floor(limit as number);
+  if (value <= 0) return fallback;
+  return Math.min(value, max);
+}
+
+function searchWhereClauses(filters: SearchFilters): ReturnType<typeof sql>[] {
+  const clauses: ReturnType<typeof sql>[] = [];
+  if (filters.spaceId) clauses.push(eq(items.spaceId, filters.spaceId));
+  if (filters.itemTypes?.length) clauses.push(inArray(items.itemType, filters.itemTypes));
+  if (filters.entityTypes?.length) clauses.push(inArray(items.entityType, filters.entityTypes));
+  if (filters.updatedAfter) clauses.push(sql`${items.updatedAt} >= ${filters.updatedAfter}`);
+  if (filters.hasLinks === true) {
+    clauses.push(
+      sql`exists (select 1 from ${itemLinks} l where l.source_item_id = ${items.id} or l.target_item_id = ${items.id})`,
+    );
+  }
+  if (filters.hasLinks === false) {
+    clauses.push(
+      sql`not exists (select 1 from ${itemLinks} l where l.source_item_id = ${items.id} or l.target_item_id = ${items.id})`,
+    );
+  }
+  if (filters.inStack === true) clauses.push(sql`${items.stackId} is not null`);
+  if (filters.inStack === false) clauses.push(sql`${items.stackId} is null`);
+  return clauses;
+}
+
+function applySortForNonRanked(sort: SearchSort | undefined) {
+  if (sort === "created") return [desc(items.createdAt)];
+  if (sort === "title") return [asc(items.title), desc(items.updatedAt)];
+  return [desc(items.updatedAt)];
+}
+
+function buildPrefixTsQuery(query: string): string | null {
+  const tokens = query
+    .toLowerCase()
+    .split(/\s+/)
+    .map((token) => token.replace(/[^a-z0-9_-]/g, ""))
+    .filter(Boolean);
+  if (tokens.length === 0) return null;
+  const parts = tokens.map((token, index) =>
+    index === tokens.length - 1 ? `${token}:*` : token,
+  );
+  return parts.join(" & ");
+}
+
+function toSearchRows(
+  rows: {
+    item: typeof items.$inferSelect;
+    spaceId: string;
+    spaceName: string;
+    parentSpaceId: string | null;
+    score?: number;
+    snippet?: string;
+  }[],
+): SearchRow[] {
+  return rows.map((row) => ({
+    item: row.item,
+    space: { id: row.spaceId, name: row.spaceName, parentSpaceId: row.parentSpaceId },
+    score: row.score,
+    snippet: row.snippet,
+  }));
+}
+
+export async function searchItemsFTS(
+  db: VigilDb,
+  query: string,
+  filters: SearchFilters = {},
+) {
   const q = query.trim();
-  if (!q) return [];
-  return db
-    .select()
+  if (!q) return [] as SearchRow[];
+  const limit = normalizeLimit(filters.limit, 50, 200);
+  const vectorExpr = sql`to_tsvector('english', coalesce(${items.searchBlob}, ''))`;
+  const tsQuery = sql`plainto_tsquery('english', ${q})`;
+  const rankExpr = sql<number>`ts_rank(${vectorExpr}, ${tsQuery})`;
+  const where = and(...searchWhereClauses(filters), sql`${vectorExpr} @@ ${tsQuery}`);
+  const sort = filters.sort ?? "relevance";
+  const rankedOrder =
+    sort === "relevance"
+      ? [desc(rankExpr), desc(items.updatedAt)]
+      : applySortForNonRanked(sort);
+  const rows = await db
+    .select({
+      item: items,
+      spaceId: spaces.id,
+      spaceName: spaces.name,
+      parentSpaceId: spaces.parentSpaceId,
+      score: rankExpr,
+    })
     .from(items)
-    .where(
-      and(
-        eq(items.spaceId, spaceId),
-        sql`to_tsvector('english', coalesce(${items.title}, '') || ' ' || coalesce(${items.contentText}, '')) @@ plainto_tsquery('english', ${q})`,
-      ),
-    )
-    .orderBy(desc(items.updatedAt))
-    .limit(50);
+    .innerJoin(spaces, eq(spaces.id, items.spaceId))
+    .where(where)
+    .orderBy(...rankedOrder)
+    .limit(limit);
+  return toSearchRows(rows);
+}
+
+export async function searchItemsFuzzy(
+  db: VigilDb,
+  query: string,
+  filters: SearchFilters = {},
+  minSimilarity = 0.25,
+) {
+  const q = query.trim();
+  if (!q) return [] as SearchRow[];
+  const limit = normalizeLimit(filters.limit, 24, 100);
+  const similarityExpr = sql<number>`similarity(${items.title}, ${q})`;
+  const where = and(...searchWhereClauses(filters), sql`${similarityExpr} > ${minSimilarity}`);
+  const sort = filters.sort ?? "relevance";
+  const rankedOrder =
+    sort === "relevance"
+      ? [desc(similarityExpr), desc(items.updatedAt)]
+      : applySortForNonRanked(sort);
+  const rows = await db
+    .select({
+      item: items,
+      spaceId: spaces.id,
+      spaceName: spaces.name,
+      parentSpaceId: spaces.parentSpaceId,
+      score: similarityExpr,
+    })
+    .from(items)
+    .innerJoin(spaces, eq(spaces.id, items.spaceId))
+    .where(where)
+    .orderBy(...rankedOrder)
+    .limit(limit);
+  return toSearchRows(rows);
 }
 
 /** Nearest items by pgvector cosine distance (`<=>`). Requires rows in `item_embeddings`. */
 export async function searchItemsSemantic(
   db: VigilDb,
-  spaceId: string,
   embedding: number[],
-  limit = 24,
+  filters: SearchFilters = {},
 ) {
-  if (embedding.length === 0) return [];
+  if (embedding.length === 0) return [] as SearchRow[];
+  const limit = normalizeLimit(filters.limit, 24, 100);
   const literal = `'[${embedding.map((n) => Number(n)).join(",")}]'::vector`;
+  const distanceExpr = sql<number>`${itemEmbeddings.embedding} <=> ${sql.raw(literal)}`;
+  const where = and(...searchWhereClauses(filters));
   const rows = await db
-    .select()
+    .select({
+      item: items,
+      spaceId: spaces.id,
+      spaceName: spaces.name,
+      parentSpaceId: spaces.parentSpaceId,
+      score: distanceExpr,
+    })
     .from(items)
     .innerJoin(itemEmbeddings, eq(items.id, itemEmbeddings.itemId))
-    .where(eq(items.spaceId, spaceId))
-    .orderBy(sql`${itemEmbeddings.embedding} <=> ${sql.raw(literal)}`)
+    .innerJoin(spaces, eq(spaces.id, items.spaceId))
+    .where(where)
+    .orderBy(distanceExpr)
     .limit(limit);
-  return rows.map((r) => r.items);
+  return toSearchRows(rows);
 }
 
 export async function searchItemsHybrid(
   db: VigilDb,
-  spaceId: string,
   query: string,
   embedding: number[],
+  filters: SearchFilters = {},
   ftsLimit = 30,
+  fuzzyLimit = 16,
   semanticLimit = 24,
 ) {
-  const [ftsRows, semRows] = await Promise.all([
-    searchItemsFTS(db, spaceId, query),
-    searchItemsSemantic(db, spaceId, embedding, semanticLimit),
+  const [ftsRows, fuzzyRows, semRows] = await Promise.all([
+    searchItemsFTS(db, query, { ...filters, limit: ftsLimit }),
+    searchItemsFuzzy(db, query, { ...filters, limit: fuzzyLimit }),
+    searchItemsSemantic(db, embedding, { ...filters, limit: semanticLimit }),
   ]);
   const seen = new Set<string>();
-  const out: Awaited<ReturnType<typeof searchItemsFTS>> = [];
-  for (const row of ftsRows.slice(0, ftsLimit)) {
-    if (seen.has(row.id)) continue;
-    seen.add(row.id);
+  const out: SearchRow[] = [];
+  for (const row of [...ftsRows, ...fuzzyRows, ...semRows]) {
+    if (seen.has(row.item.id)) continue;
+    seen.add(row.item.id);
     out.push(row);
   }
-  for (const row of semRows) {
-    if (seen.has(row.id)) continue;
-    seen.add(row.id);
+  return out;
+}
+
+export async function suggestItems(
+  db: VigilDb,
+  query: string,
+  filters: SearchFilters = {},
+) {
+  const q = query.trim();
+  if (!q) return [] as SearchRow[];
+  const limit = normalizeLimit(filters.limit, 10, 20);
+  const vectorExpr = sql`to_tsvector('english', coalesce(${items.searchBlob}, ''))`;
+  const prefixTs = buildPrefixTsQuery(q);
+  const tsQuery = prefixTs
+    ? sql`to_tsquery('english', ${prefixTs})`
+    : sql`plainto_tsquery('english', ${q})`;
+  const rankExpr = sql<number>`ts_rank(${vectorExpr}, ${tsQuery})`;
+  const where = and(...searchWhereClauses(filters), sql`${vectorExpr} @@ ${tsQuery}`);
+  const ftsRows = await db
+    .select({
+      item: items,
+      spaceId: spaces.id,
+      spaceName: spaces.name,
+      parentSpaceId: spaces.parentSpaceId,
+      score: rankExpr,
+      snippet: sql<string>`ts_headline('english', coalesce(${items.searchBlob}, ''), ${tsQuery})`,
+    })
+    .from(items)
+    .innerJoin(spaces, eq(spaces.id, items.spaceId))
+    .where(where)
+    .orderBy(desc(rankExpr), desc(items.updatedAt))
+    .limit(limit);
+  const out = toSearchRows(ftsRows);
+  if (out.length >= limit) return out;
+  const fuzzyRows = await searchItemsFuzzy(db, q, { ...filters, limit: limit - out.length });
+  const seen = new Set(out.map((row) => row.item.id));
+  for (const row of fuzzyRows) {
+    if (seen.has(row.item.id)) continue;
     out.push(row);
+    seen.add(row.item.id);
+    if (out.length >= limit) break;
   }
   return out;
 }

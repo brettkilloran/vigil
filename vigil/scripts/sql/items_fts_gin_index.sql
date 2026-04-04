@@ -5,6 +5,6 @@ ON items
 USING gin (
   to_tsvector(
     'english',
-    coalesce(title, '') || ' ' || coalesce(content_text, '')
+    coalesce(search_blob, '')
   )
 );

@@ -55,93 +55,93 @@ export function contrastingFolderInk(swatch: string): string {
 }
 
 /**
- * High-chroma OKLCH throughout (incl. neutrals as tinted “electric” grays / whites).
- * `label` = tooltip / a11y names (occult flavor). `swatch` = face; `border` = rim.
+ * Saturated OKLCH rainbow: gray + white (after classic black), then ROYGBIV + pink + peach.
+ * High chroma, Dribbble-style pops; rims are lighter / more electric. 14 + classic = 15 (3×5).
  */
 export const FOLDER_COLOR_SCHEMES: FolderColorSchemeMeta[] = [
   {
-    id: "midnight",
-    label: "Witching hour",
-    swatch: "oklch(0.32 0.28 278)",
-    border: "oklch(0.70 0.32 278)",
-  },
-  {
     id: "gray",
-    label: "Grave dust",
-    swatch: "oklch(0.50 0.12 265)",
-    border: "oklch(0.78 0.20 285)",
+    label: "Neutral gray",
+    swatch: "oklch(0.54 0 0)",
+    border: "oklch(0.76 0 0)",
   },
   {
     id: "white",
-    label: "Salt circle",
-    swatch: "oklch(0.97 0.05 230)",
-    border: "oklch(0.62 0.22 250)",
+    label: "Ice prism",
+    swatch: "oklch(0.99 0.03 230)",
+    border: "oklch(0.72 0.18 250)",
   },
   {
     id: "wine",
-    label: "Blood oath",
-    swatch: "oklch(0.48 0.30 22)",
-    border: "oklch(0.74 0.32 22)",
+    label: "Scarlet",
+    swatch: "oklch(0.52 0.34 25)",
+    border: "oklch(0.72 0.36 25)",
   },
   {
     id: "coral",
-    label: "Pyre ember",
-    swatch: "oklch(0.62 0.30 48)",
-    border: "oklch(0.84 0.28 48)",
+    label: "Tangerine",
+    swatch: "oklch(0.68 0.32 48)",
+    border: "oklch(0.86 0.30 48)",
   },
   {
     id: "amber",
-    label: "Sun-disk honey",
-    swatch: "oklch(0.78 0.32 92)",
-    border: "oklch(0.91 0.30 98)",
-  },
-  {
-    id: "lime",
-    label: "Belladonna",
-    swatch: "oklch(0.70 0.34 128)",
-    border: "oklch(0.88 0.30 128)",
+    label: "Lemon voltage",
+    swatch: "oklch(0.91 0.21 102)",
+    border: "oklch(0.62 0.28 102)",
   },
   {
     id: "forest",
-    label: "Yew root",
-    swatch: "oklch(0.44 0.30 145)",
-    border: "oklch(0.72 0.32 145)",
+    label: "Emerald",
+    swatch: "oklch(0.55 0.32 150)",
+    border: "oklch(0.78 0.30 150)",
+  },
+  {
+    id: "lime",
+    label: "Chartreuse",
+    swatch: "oklch(0.84 0.30 128)",
+    border: "oklch(0.62 0.28 128)",
   },
   {
     id: "cyan",
-    label: "Tidal sigil",
-    swatch: "oklch(0.56 0.28 195)",
-    border: "oklch(0.80 0.28 195)",
+    label: "Aqua neon",
+    swatch: "oklch(0.74 0.22 198)",
+    border: "oklch(0.90 0.18 198)",
   },
   {
     id: "ocean",
-    label: "Leviathan deep",
-    swatch: "oklch(0.48 0.30 262)",
-    border: "oklch(0.74 0.32 262)",
+    label: "Cobalt",
+    swatch: "oklch(0.52 0.30 262)",
+    border: "oklch(0.72 0.32 262)",
+  },
+  {
+    id: "midnight",
+    label: "Indigo pulse",
+    swatch: "oklch(0.42 0.32 278)",
+    border: "oklch(0.64 0.34 278)",
   },
   {
     id: "violet",
-    label: "Third eye",
-    swatch: "oklch(0.50 0.32 302)",
-    border: "oklch(0.76 0.34 302)",
+    label: "Electric violet",
+    swatch: "oklch(0.52 0.34 305)",
+    border: "oklch(0.76 0.34 305)",
   },
   {
     id: "magenta",
-    label: "Foxglove ward",
-    swatch: "oklch(0.58 0.34 328)",
-    border: "oklch(0.78 0.32 328)",
+    label: "Hot magenta",
+    swatch: "oklch(0.58 0.35 328)",
+    border: "oklch(0.78 0.34 328)",
   },
   {
     id: "rose",
-    label: "Thorn philtre",
-    swatch: "oklch(0.60 0.30 2)",
-    border: "oklch(0.78 0.32 2)",
+    label: "Hyper pink",
+    swatch: "oklch(0.62 0.32 2)",
+    border: "oklch(0.82 0.28 2)",
   },
   {
     id: "parchment",
-    label: "Grimoire page",
-    swatch: "oklch(0.90 0.12 95)",
-    border: "oklch(0.58 0.26 75)",
+    label: "Peach pop",
+    swatch: "oklch(0.80 0.20 55)",
+    border: "oklch(0.62 0.26 45)",
   },
 ];
 

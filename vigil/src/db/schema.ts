@@ -44,6 +44,7 @@ export const items = pgTable("items", {
 
   title: varchar("title", { length: 255 }).notNull().default(""),
   contentText: text("content_text").notNull().default(""),
+  searchBlob: text("search_blob").notNull().default(""),
   contentJson: jsonb("content_json").$type<Record<string, unknown> | null>(),
 
   imageUrl: text("image_url"),

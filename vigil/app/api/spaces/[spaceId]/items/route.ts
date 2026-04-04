@@ -4,6 +4,7 @@ import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
 import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
+import { buildSearchBlob } from "@/src/lib/search-blob";
 import { assertSpaceExists, listItemsForSpace } from "@/src/lib/spaces";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
 
@@ -93,6 +94,15 @@ export async function POST(
   const color =
     parsed.data.color ??
     (t === "sticky" ? DS_COLOR.itemDefaultSticky : t === "note" ? DS_COLOR.itemDefaultNote : null);
+  const searchBlob = buildSearchBlob({
+    title,
+    contentText,
+    contentJson: parsed.data.contentJson ?? null,
+    entityType: parsed.data.entityType ?? null,
+    entityMeta: parsed.data.entityMeta ?? null,
+    imageUrl: parsed.data.imageUrl ?? null,
+    imageMeta: parsed.data.imageMeta ?? null,
+  });
 
   const [row] = await db
     .insert(items)
@@ -105,6 +115,7 @@ export async function POST(
       height: parsed.data.height,
       title,
       contentText,
+      searchBlob,
       contentJson: parsed.data.contentJson ?? null,
       color,
       entityType: parsed.data.entityType ?? null,

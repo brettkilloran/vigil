@@ -5,6 +5,7 @@ import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
 import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
+import { buildSearchBlob } from "@/src/lib/search-blob";
 
 const patchBody = z.object({
   x: z.number().optional(),
@@ -21,6 +22,8 @@ const patchBody = z.object({
     .optional(),
   entityType: z.string().max(64).nullable().optional(),
   entityMeta: z.record(z.string(), z.any()).nullable().optional(),
+  imageUrl: z.string().max(8192).nullable().optional(),
+  imageMeta: z.record(z.string(), z.any()).nullable().optional(),
   stackId: z.string().uuid().nullable().optional(),
   stackOrder: z.number().int().nullable().optional(),
 });
@@ -77,8 +80,11 @@ export async function PATCH(
     itemType?: string;
     entityType?: string | null;
     entityMeta?: Record<string, unknown> | null;
+    imageUrl?: string | null;
+    imageMeta?: Record<string, unknown> | null;
     stackId?: string | null;
     stackOrder?: number | null;
+    searchBlob?: string;
   } = {
     updatedAt: new Date(),
   };
@@ -94,8 +100,20 @@ export async function PATCH(
   if (p.itemType !== undefined) updates.itemType = p.itemType;
   if (p.entityType !== undefined) updates.entityType = p.entityType;
   if (p.entityMeta !== undefined) updates.entityMeta = p.entityMeta;
+  if (p.imageUrl !== undefined) updates.imageUrl = p.imageUrl;
+  if (p.imageMeta !== undefined) updates.imageMeta = p.imageMeta;
   if (p.stackId !== undefined) updates.stackId = p.stackId;
   if (p.stackOrder !== undefined) updates.stackOrder = p.stackOrder;
+
+  updates.searchBlob = buildSearchBlob({
+    title: p.title ?? existing.title,
+    contentText: p.contentText ?? existing.contentText,
+    contentJson: p.contentJson ?? existing.contentJson,
+    entityType: p.entityType ?? existing.entityType,
+    entityMeta: p.entityMeta ?? existing.entityMeta,
+    imageUrl: p.imageUrl ?? existing.imageUrl,
+    imageMeta: p.imageMeta ?? existing.imageMeta,
+  });
 
   const [row] = await db
     .update(items)

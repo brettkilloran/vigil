@@ -70,6 +70,11 @@ export function ArchitecturalNodeHeader({
         onExpand();
       }}
     >
+      <span
+        className={styles.contentConnectionPinAnchor}
+        data-content-connection-pin-anchor="true"
+        aria-hidden
+      />
       <span className={styles.nodeTitle}>{title}</span>
       <div className={styles.nodeActions}>
         {showExpand ? (

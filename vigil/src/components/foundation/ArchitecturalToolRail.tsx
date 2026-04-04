@@ -82,85 +82,106 @@ export function ArchitecturalToolRail({
 
   const threadSpoolOpen = connectionMode === "draw";
 
+  const toolGroup =
+    showSelectPan ||
+    showConnectionModes ||
+    (!showConnectionModes && !!connectionColorControl);
+  const viewGroup = showZoom || showRecenter;
+
   return (
     <div className={styles.sideTools}>
-      <div className={styles.sideToolsMainPanel}>
-        {showSelectPan ? (
-          <>
-            <ArchitecturalToolButton
-              label="Select"
-              active={canvasToolActive && activeTool === "select"}
-              icon={<CursorClick size={18} />}
-              onClick={() => onSetTool("select")}
-            />
-            <ArchitecturalToolButton
-              label="Pan Hand"
-              active={canvasToolActive && activeTool === "pan"}
-              icon={<HandGrabbing size={18} />}
-              onClick={() => onSetTool("pan")}
-            />
-          </>
-        ) : null}
-        {showConnectionModes ? (
-          <>
-            {connectionColorControl ? (
-              <div
-                className={cx(
-                  styles.sideToolsDrawSpoolCluster,
-                  threadSpoolOpen && styles.sideToolsDrawSpoolClusterEngaged,
-                )}
-              >
-                {drawConnectionButton}
-                <div
-                  className={cx(
-                    styles.sideToolsThreadSpoolReveal,
-                    threadSpoolOpen && styles.sideToolsThreadSpoolRevealOpen,
-                  )}
-                >
-                  <div className={styles.sideToolsThreadSpoolRevealInner}>
-                    <div className={styles.sideToolsConnectionColor}>{connectionColorControl}</div>
+      {toolGroup ? (
+        <div
+          className={styles.sideToolsMainPanel}
+          role="toolbar"
+          aria-label="Canvas tools"
+        >
+          <div className={styles.sideToolsToolGroup}>
+            {showSelectPan ? (
+              <>
+                <ArchitecturalToolButton
+                  label="Select"
+                  active={canvasToolActive && activeTool === "select"}
+                  icon={<CursorClick size={18} />}
+                  onClick={() => onSetTool("select")}
+                />
+                <ArchitecturalToolButton
+                  label="Pan Hand"
+                  active={canvasToolActive && activeTool === "pan"}
+                  icon={<HandGrabbing size={18} />}
+                  onClick={() => onSetTool("pan")}
+                />
+              </>
+            ) : null}
+            {showConnectionModes ? (
+              <>
+                {connectionColorControl ? (
+                  <div
+                    className={cx(
+                      styles.sideToolsDrawSpoolCluster,
+                      threadSpoolOpen && styles.sideToolsDrawSpoolClusterEngaged,
+                    )}
+                  >
+                    {drawConnectionButton}
+                    <div
+                      className={cx(
+                        styles.sideToolsThreadSpoolReveal,
+                        threadSpoolOpen && styles.sideToolsThreadSpoolRevealOpen,
+                      )}
+                    >
+                      <div className={styles.sideToolsThreadSpoolRevealInner}>
+                        <div className={styles.sideToolsConnectionColor}>{connectionColorControl}</div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ) : (
-              drawConnectionButton
-            )}
-            <ArchitecturalToolButton
-              label="Cut connection"
-              active={connectionMode === "cut"}
-              icon={<Scissors size={18} />}
-              onClick={() => onSetConnectionMode?.("cut")}
-            />
-          </>
-        ) : null}
-        {!showConnectionModes && connectionColorControl ? (
-          <div className={styles.sideToolsConnectionColor}>{connectionColorControl}</div>
-        ) : null}
-        {(showConnectionModes || !!connectionColorControl) && (showZoom || showRecenter) ? (
-          <div className={styles.sepVertical} />
-        ) : null}
-        {showZoom ? (
-          <>
-            <ArchitecturalToolButton
-              label="Zoom In"
-              icon={<Plus size={18} />}
-              onClick={onZoomIn}
-            />
-            <ArchitecturalToolButton
-              label="Zoom Out"
-              icon={<Minus size={18} />}
-              onClick={onZoomOut}
-            />
-          </>
-        ) : null}
-        {showRecenter ? (
-          <ArchitecturalToolButton
-            label="Recenter"
-            icon={<Crosshair size={18} />}
-            onClick={onRecenter}
-          />
-        ) : null}
-      </div>
+                ) : (
+                  drawConnectionButton
+                )}
+                <ArchitecturalToolButton
+                  label="Cut connection"
+                  active={connectionMode === "cut"}
+                  icon={<Scissors size={18} />}
+                  onClick={() => onSetConnectionMode?.("cut")}
+                />
+              </>
+            ) : null}
+            {!showConnectionModes && connectionColorControl ? (
+              <div className={styles.sideToolsConnectionColor}>{connectionColorControl}</div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+      {viewGroup ? (
+        <div
+          className={styles.sideToolsMainPanel}
+          role="toolbar"
+          aria-label="View"
+        >
+          <div className={styles.sideToolsToolGroup}>
+            {showZoom ? (
+              <>
+                <ArchitecturalToolButton
+                  label="Zoom In"
+                  icon={<Plus size={18} />}
+                  onClick={onZoomIn}
+                />
+                <ArchitecturalToolButton
+                  label="Zoom Out"
+                  icon={<Minus size={18} />}
+                  onClick={onZoomOut}
+                />
+              </>
+            ) : null}
+            {showRecenter ? (
+              <ArchitecturalToolButton
+                label="Recenter"
+                icon={<Crosshair size={18} />}
+                onClick={onRecenter}
+              />
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
