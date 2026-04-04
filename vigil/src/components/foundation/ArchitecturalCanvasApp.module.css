@@ -1615,11 +1615,11 @@
   }
 }
 
-/* Full-width control: brand + save line; opens save / version popover */
+/* Compact trigger: pulse + brand (+ error glyph only). Width stable so nav crumbs don’t shift. */
 .shellTopChromePanel .statusSaveBarTrigger:global(.vigil-btn) {
-  flex: 1 1 auto;
-  min-width: 0;
-  width: 100%;
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
   justify-content: flex-start;
   min-height: var(--arch-top-chrome-line-h, 24px);
   height: auto;
@@ -1631,19 +1631,6 @@
 .statusSaveWarningIcon {
   flex-shrink: 0;
   color: oklch(0.72 0.2 25);
-}
-
-.statusSaveLine {
-  flex: 1 1 auto;
-  min-width: 0;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 10px;
-  line-height: 1.25;
-  color: var(--sys-color-neutral-400);
-  text-align: left;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .syncPopover {
@@ -1668,7 +1655,16 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--vigil-label);
-  margin: 0 0 8px;
+  margin: 0 0 4px;
+}
+
+.syncPopoverStatusLine {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--sys-color-neutral-400);
+  margin: 0 0 10px;
+  word-break: break-word;
 }
 
 .syncPopoverBody {

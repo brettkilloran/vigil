@@ -205,7 +205,7 @@ function SaveAndVersionPopover({
     if (!open) return;
     const id = requestAnimationFrame(() => reposition());
     return () => cancelAnimationFrame(id);
-  }, [open, reposition, statusLine, busy, sync.lastError, bootstrapPending]);
+  }, [open, reposition, showWarningIcon]);
 
   useEffect(() => {
     if (!open) return;
@@ -258,6 +258,7 @@ function SaveAndVersionPopover({
             <div id={`${popoverId}-title`} className={styles.syncPopoverTitle}>
               {detailTitle}
             </div>
+            <div className={styles.syncPopoverStatusLine}>{statusLine}</div>
             <p className={styles.syncPopoverBody}>{detailBody}</p>
             {sync.cloudEnabled && !bootstrapPending ? (
               <div className={styles.syncPopoverMeta}>
@@ -336,7 +337,6 @@ function SaveAndVersionPopover({
         {showWarningIcon ? (
           <WarningCircle className={styles.statusSaveWarningIcon} size={16} weight="bold" aria-hidden />
         ) : null}
-        <span className={styles.statusSaveLine}>{statusLine}</span>
       </Button>
       {panel}
     </>
