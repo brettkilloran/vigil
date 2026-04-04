@@ -766,21 +766,92 @@
   color: #555;
 }
 
+.shell :global(.vigil-btn[data-tone="focus-dark"]) {
+  background: #333;
+  color: #fff;
+}
+
+.shell :global(.vigil-btn[data-tone="card-light"]) {
+  background: color-mix(in srgb, #000 2%, transparent);
+  color: color-mix(in srgb, #000 58%, transparent);
+}
+
+.shell :global(.vigil-btn[data-tone="card-dark"]) {
+  background: color-mix(in srgb, #fff 4%, transparent);
+  color: color-mix(in srgb, #fff 64%, transparent);
+}
+
 .shell :global(.vigil-btn[data-active="true"]) {
   background: #f0f0f0;
   color: #111;
 }
 
-.shell :global(.vigil-btn:hover),
-.shell :global(.vigil-btn[data-force-state="hover"]) {
+.shell :global(.vigil-btn[data-tone="glass"]:hover),
+.shell :global(.vigil-btn[data-tone="menu"]:hover),
+.shell :global(.vigil-btn[data-tone="glass"][data-force-state="hover"]),
+.shell :global(.vigil-btn[data-tone="menu"][data-force-state="hover"]) {
   background: rgba(255, 255, 255, 0.08);
   color: #f0f0f0;
 }
 
-.shell :global(.vigil-btn:active),
-.shell :global(.vigil-btn[data-force-state="active"]) {
+.shell :global(.vigil-btn[data-tone="glass"]:active),
+.shell :global(.vigil-btn[data-tone="menu"]:active),
+.shell :global(.vigil-btn[data-tone="glass"][data-force-state="active"]),
+.shell :global(.vigil-btn[data-tone="menu"][data-force-state="active"]) {
   background: rgba(255, 255, 255, 0.14);
   color: #f0f0f0;
+  transform: translateY(0.5px);
+}
+
+.shell :global(.vigil-btn[data-tone="focus-light"]:hover),
+.shell :global(.vigil-btn[data-tone="focus-light"][data-force-state="hover"]) {
+  background: #e0e0e0;
+  color: #111;
+}
+
+.shell :global(.vigil-btn[data-tone="focus-light"]:active),
+.shell :global(.vigil-btn[data-tone="focus-light"][data-force-state="active"]) {
+  background: #d6d6d6;
+  color: #111;
+  transform: translateY(0.5px);
+}
+
+.shell :global(.vigil-btn[data-tone="focus-dark"]:hover),
+.shell :global(.vigil-btn[data-tone="focus-dark"][data-force-state="hover"]) {
+  background: #444;
+  color: #fff;
+}
+
+.shell :global(.vigil-btn[data-tone="focus-dark"]:active),
+.shell :global(.vigil-btn[data-tone="focus-dark"][data-force-state="active"]) {
+  background: #555;
+  color: #fff;
+  transform: translateY(0.5px);
+}
+
+.shell :global(.vigil-btn[data-tone="card-light"]:hover),
+.shell :global(.vigil-btn[data-tone="card-light"][data-force-state="hover"]) {
+  background: color-mix(in srgb, #000 6%, transparent);
+  color: color-mix(in srgb, #000 78%, transparent);
+}
+
+.shell :global(.vigil-btn[data-tone="card-light"]:active),
+.shell :global(.vigil-btn[data-tone="card-light"][data-force-state="active"]) {
+  background: color-mix(in srgb, #000 10%, transparent);
+  color: color-mix(in srgb, #000 88%, transparent);
+  transform: translateY(0.5px);
+}
+
+.shell :global(.vigil-btn[data-tone="card-dark"]:hover),
+.shell :global(.vigil-btn[data-tone="card-dark"][data-force-state="hover"]) {
+  background: color-mix(in srgb, #fff 10%, transparent);
+  color: color-mix(in srgb, #fff 90%, transparent);
+}
+
+.shell :global(.vigil-btn[data-tone="card-dark"]:active),
+.shell :global(.vigil-btn[data-tone="card-dark"][data-force-state="active"]) {
+  background: color-mix(in srgb, #fff 16%, transparent);
+  color: #fff;
   transform: translateY(0.5px);
 }
 
