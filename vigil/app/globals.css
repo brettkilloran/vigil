@@ -239,11 +239,11 @@
 
   /*
    * Checklist controls — canvas architectural rows (`.taskCheckbox`) + TipTap task lists.
-   * Mark is drawn via CSS mask so it stays centered across fonts/OS; checked fill matches app accent.
+   * Mark is drawn via CSS mask so it stays centered across fonts/OS; checked fill is neutral ink (not accent).
    */
   --cmp-task-checkbox-size: 16px;
   --cmp-task-checkbox-radius: var(--sys-radius-sm);
-  --cmp-task-checkbox-checked-bg: var(--sys-color-accent-500);
+  --cmp-task-checkbox-checked-bg: var(--sem-overlay-black-80);
   --cmp-task-checkbox-mark-fg: var(--sys-color-white);
 
   --bg-base: oklch(0.145 0 0);

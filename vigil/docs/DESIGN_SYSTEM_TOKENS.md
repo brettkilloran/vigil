@@ -88,7 +88,7 @@ This document outlines design-system-related tokens used by the app.
 - `--sem-shadow-lg`
 - `--sem-shadow-xl`
 
-## 3) Component Tokens (`--cmp-button-*`)
+## 3) Component Tokens (`--cmp-button-*`, `--cmp-task-checkbox-*`)
 
 ### Neutral variant
 
@@ -200,6 +200,21 @@ This document outlines design-system-related tokens used by the app.
 - For compact card-header icon actions, prefer `card-light` / `card-dark` tones (transparent base, subtle hover fill) to preserve the original low-noise card aesthetic.
 - `card-light` / `card-dark` are the canonical tones for node header action buttons in both Storybook primitives and live canvas integration, preventing visual drift between environments.
 
+### Task checklist (canvas + prose)
+
+Architectural canvas checklist rows use the module class `taskCheckbox` in `ArchitecturalCanvasApp.module.css` (contenteditable `div`, toggled via `.done` on the parent `taskItem`). TipTap editor task lists use `input[type="checkbox"]` under `.ProseMirror li[data-type="taskItem"]` in `app/globals.css`. Both should pull from the same component tokens so checked state, radius, and accent color stay aligned.
+
+- `--cmp-task-checkbox-size` — box length on the canvas control (TipTap checkboxes stay `em`-scaled but use the same radius token).
+- `--cmp-task-checkbox-radius` — corner radius (`var(--sys-radius-sm)`).
+- `--cmp-task-checkbox-checked-bg` — filled background when checked (`var(--sem-overlay-black-80)`).
+- `--cmp-task-checkbox-mark-fg` — checkmark color on the canvas control (mask-filled `::after`; typically white).
+
+Related semantic token used by TipTap checked inset highlight:
+
+- `--sem-checkbox-check-fill` — inner halo on native checkbox `:checked` (keeps a crisp edge next to the accent fill).
+
+Implementation note: the canvas mark is **not** a Unicode glyph; it is an SVG delivered as a `mask-image` so the glyph stays centered regardless of font stack. To change the mark shape, edit the data URL in `.taskCheckbox`’s `--arch-task-check-mask` in `ArchitecturalCanvasApp.module.css`.
+
 ## 4) Compatibility + Legacy Global Tokens
 
 These still exist globally for compatibility and incremental migration.
@@ -284,5 +299,6 @@ From `src/components/foundation/ArchitecturalCanvasApp.module.css`:
 ## Notes
 
 - The authoritative button system now lives in `--sys-*`, `--sem-*`, and `--cmp-button-*` under `app/globals.css`.
+- Task checklist controls add `--cmp-task-checkbox-*` in the same file; the canvas-only checkmark geometry lives in `ArchitecturalCanvasApp.module.css` (see **Task checklist** under component tokens above).
 - `--vigil-*` and module-scoped tokens remain for compatibility and should be consolidated over time.
 - Non-CSS runtime defaults that must align with the design system are centralized in `src/lib/design-system-tokens.ts` (`DS_COLOR`).
