@@ -17,6 +17,7 @@ export default function Home() {
             justifyContent: "center",
             fontFamily: "system-ui, sans-serif",
             color: "var(--vigil-muted)",
+            backgroundColor: "#0c0c0e",
           }}
         >
           Loading heartgarden…

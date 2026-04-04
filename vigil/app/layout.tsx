@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Lora } from "next/font/google";
+import { Geist, Geist_Mono, Lora, Noto_Sans_JP } from "next/font/google";
 
 import { RegisterSw } from "@/src/components/RegisterSw";
 import "./globals.css";
@@ -22,6 +22,14 @@ const lora = Lora({
   display: "swap",
 });
 
+const notoSansJP = Noto_Sans_JP({
+  variable: "--font-noto-sans-jp",
+  weight: "700",
+  subsets: ["latin"],
+  display: "swap",
+  preload: true,
+});
+
 export const metadata: Metadata = {
   title: "heartgarden",
   description: "Infinite canvas TTRPG worldbuilding",
@@ -41,7 +49,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${lora.variable}`}
+      className={`${geistSans.variable} ${geistMono.variable} ${lora.variable} ${notoSansJP.variable}`}
     >
       <body>
         {children}

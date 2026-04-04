@@ -19,6 +19,8 @@ import {
   UploadSimple,
 } from "@phosphor-icons/react";
 
+import { VigilFlowRevealOverlay } from "@/src/components/transition-experiment/VigilFlowRevealOverlay";
+
 import styles from "./ArchitecturalCanvasApp.module.css";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
@@ -122,6 +124,17 @@ const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 3;
 const ZOOM_BUTTON_STEP = 0.2;
 const WHEEL_ZOOM_SENSITIVITY = 0.0012;
+/** Scene fade-out / fade-in duration (ms); keep in sync with `.viewportSceneLayer` in ArchitecturalCanvasApp.module.css */
+const VIEWPORT_SCENE_FADE_MS = 760;
+/** Hold at opacity 0 while flow overlay peaks (between fade-out and fade-in). */
+const VIEWPORT_SCENE_PEAK_HOLD_MS = 320;
+/**
+ * When `navTransitionActive` clears, the entering page fades in — schedule that at the midpoint of
+ * fade-out + peak hold + fade-in so fast loads don’t swap content before the outro finishes.
+ */
+const VIEWPORT_TRANSITION_CENTER_MS = Math.floor(
+  (VIEWPORT_SCENE_FADE_MS * 2 + VIEWPORT_SCENE_PEAK_HOLD_MS) / 2,
+);
 const UNIFIED_NODE_WIDTH = 340;
 /** Matches `.folderNode` width/height in ArchitecturalCanvasApp.module.css */
 const FOLDER_CARD_WIDTH = 420;
@@ -891,6 +904,7 @@ export function ArchitecturalCanvasApp({
   const [canvasSurfaceReady, setCanvasSurfaceReady] = useState(false);
   /** For app route: hide canvas content until bootstrap resolves (single graph + camera commit). */
   const [canvasBootstrapResolved, setCanvasBootstrapResolved] = useState(() => scenario !== "default");
+  const [navTransitionActive, setNavTransitionActive] = useState(false);
 
   const [focusOpen, setFocusOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -2841,26 +2855,55 @@ export function ArchitecturalCanvasApp({
     (spaceId: string) => {
       const snap = graphRef.current;
       if (!snap.spaces[spaceId] || spaceId === activeSpaceIdRef.current) return;
+      setNavTransitionActive(true);
       void (async () => {
+        const now = () => (typeof performance !== "undefined" ? performance.now() : 0);
+        const tNav = now();
+        const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
         let merged: CanvasGraph | null = null;
-        if (persistNeonRef.current && isUuidLike(spaceId)) {
-          const data = await fetchBootstrap(spaceId);
-          if (data && data.demo === false && data.spaceId) {
-            merged = mergeBootstrapView(graphRef.current, data);
-            setGraph(merged);
-            setTranslateX(data.camera.x);
-            setTranslateY(data.camera.y);
-            setScale(data.camera.zoom);
-            if (data.items.length > 0) {
-              setMaxZIndex((z) => Math.max(z, ...data.items.map((i) => i.zIndex)));
+        let bootstrapCamera: { x: number; y: number; zoom: number } | null = null;
+        let bootstrapMaxZ: number | null = null;
+        try {
+          if (persistNeonRef.current && isUuidLike(spaceId)) {
+            const data = await fetchBootstrap(spaceId);
+            if (data && data.demo === false && data.spaceId) {
+              merged = mergeBootstrapView(graphRef.current, data);
+              bootstrapCamera = { x: data.camera.x, y: data.camera.y, zoom: data.camera.zoom };
+              if (data.items.length > 0) {
+                bootstrapMaxZ = Math.max(...data.items.map((i) => i.zIndex), 100);
+              }
             }
           }
+        } finally {
+          const elapsedAfterFetch = now() - tNav;
+          const waitFadeOutEnd = Math.max(0, VIEWPORT_SCENE_FADE_MS - elapsedAfterFetch);
+          if (waitFadeOutEnd > 0) await sleep(waitFadeOutEnd);
+
+          const g = merged ?? graphRef.current;
+          if (merged) {
+            setGraph(merged);
+            if (bootstrapCamera) {
+              setTranslateX(bootstrapCamera.x);
+              setTranslateY(bootstrapCamera.y);
+              setScale(bootstrapCamera.zoom);
+            }
+            if (bootstrapMaxZ !== null) {
+              const zCap = bootstrapMaxZ;
+              setMaxZIndex((z) => Math.max(z, zCap));
+            }
+          }
+          setActiveSpaceId(spaceId);
+          setNavigationPath(buildPathToSpace(spaceId, g.spaces, g.rootSpaceId));
+          setSelectedNodeIds([]);
+          if (!merged) recenterToOrigin();
+
+          const elapsedBeforeRelease = now() - tNav;
+          const waitUntilCenter = Math.max(0, VIEWPORT_TRANSITION_CENTER_MS - elapsedBeforeRelease);
+          if (waitUntilCenter > 0) await sleep(waitUntilCenter);
+
+          setNavTransitionActive(false);
         }
-        const g = merged ?? graphRef.current;
-        setActiveSpaceId(spaceId);
-        setNavigationPath(buildPathToSpace(spaceId, g.spaces, g.rootSpaceId));
-        setSelectedNodeIds([]);
-        if (!merged) recenterToOrigin();
       })();
     },
     [recenterToOrigin],
@@ -5742,7 +5785,7 @@ export function ArchitecturalCanvasApp({
     >
       <div
         ref={viewportRef}
-        className={`${styles.viewport} ${styles.viewportSurface} ${
+        className={`${styles.viewport} ${
           viewportRevealReady ? styles.viewportSurfaceReady : styles.viewportSurfacePending
         } ${activeSpaceId !== graph.rootSpaceId ? styles.deepSpace : ""}${
           stackModal ? ` ${styles.viewportStackModalOpen}` : ""
@@ -5773,6 +5816,14 @@ export function ArchitecturalCanvasApp({
               : "default",
         }}
       >
+        <div
+          className={`${styles.viewportSceneLayer} ${
+            viewportRevealReady && !navTransitionActive
+              ? styles.viewportSceneLayerVisible
+              : styles.viewportSceneLayerDimmed
+          }`}
+          aria-hidden={!viewportRevealReady || navTransitionActive}
+        >
         <div
           ref={canvasTransformRef}
           className={`${styles.canvas}${
@@ -6143,6 +6194,13 @@ export function ArchitecturalCanvasApp({
             })}
           </svg>
         </div>
+        </div>
+        <VigilFlowRevealOverlay
+          scenario={scenario}
+          bootContentReady={viewportRevealReady}
+          navActive={navTransitionActive}
+          bootstrapPending={scenario === "default" && !canvasBootstrapResolved}
+        />
         <div className={styles.chromeLayer}>
         {parentSpaceId ? (
           <ArchitecturalParentExitThreshold
