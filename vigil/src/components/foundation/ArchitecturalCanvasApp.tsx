@@ -3752,7 +3752,7 @@ export function ArchitecturalCanvasApp({
 
   const onWheel = useCallback(
     (event: React.WheelEvent<HTMLDivElement>) => {
-      if (focusOpen || galleryOpen || stackModal) return;
+      if (focusOpen || galleryOpen || stackModal || paletteOpenRef.current) return;
       const target = event.target as HTMLElement;
       const inEditable =
         !!target.closest("input, textarea, select, [contenteditable='true']");
