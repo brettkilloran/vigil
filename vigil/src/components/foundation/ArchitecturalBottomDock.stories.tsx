@@ -1,6 +1,6 @@
 "use client";
 
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 import { useState } from "react";
 
 import {
@@ -15,7 +15,7 @@ import { type FolderColorSchemeId } from "@/src/components/foundation/architectu
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 
 const meta: Meta<typeof ArchitecturalBottomDock> = {
-  title: "Architectural Shell/Components/Bottom Dock",
+  title: "Heartgarden/Architectural Shell/Components/Bottom Dock",
   component: ArchitecturalBottomDock,
   args: {
     onFormat: () => {},
@@ -56,7 +56,53 @@ export const WithoutFormatToolbar: Story = {
   args: { showFormatToolbar: false },
 };
 
-/** Solid black dock + `card-dark` icon tones — matches focus / editor overlay. */
+export const WithSelectionDelete: Story = {
+  args: {
+    onUndo: () => {},
+    onRedo: () => {},
+    canUndo: true,
+    canRedo: false,
+    selectionDelete: { selectedCount: 2, onDelete: () => {} },
+  },
+};
+
+export const WithSelectionStack: Story = {
+  args: {
+    onUndo: () => {},
+    onRedo: () => {},
+    canUndo: true,
+    canRedo: false,
+    selectionDelete: { selectedCount: 2, onDelete: () => {} },
+    selectionStack: {
+      canMerge: true,
+      onMerge: () => {},
+      mergeTitle: "Create stack (Ctrl+S)",
+      canUnstack: false,
+      onUnstack: () => {},
+      unstackTitle: "Unstack",
+    },
+  },
+};
+
+export const WithSelectionStackMergeAndUnstack: Story = {
+  args: {
+    onUndo: () => {},
+    onRedo: () => {},
+    canUndo: true,
+    canRedo: false,
+    selectionDelete: { selectedCount: 4, onDelete: () => {} },
+    selectionStack: {
+      canMerge: true,
+      onMerge: () => {},
+      mergeTitle: "Merge stacks (Ctrl+S)",
+      canUnstack: true,
+      onUnstack: () => {},
+      unstackTitle: "Unstack",
+    },
+  },
+};
+
+/** Solid black dock + `card-dark` icon tones â€” matches focus / editor overlay. */
 export const Editor: Story = {
   args: { variant: "editor" },
   decorators: [
@@ -95,3 +141,4 @@ function ConnectionToolbarDemo() {
 export const WithConnectionToolbar: Story = {
   render: () => <ConnectionToolbarDemo />,
 };
+

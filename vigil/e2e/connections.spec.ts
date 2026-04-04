@@ -15,8 +15,10 @@ test.describe("connection pin anchoring", () => {
 
     const source = nodes.nth(0);
     const target = nodes.nth(1);
-    const sourceId = await source.getAttribute("data-node-id");
-    const targetId = await target.getAttribute("data-node-id");
+    await expect(source).toHaveAttribute("data-node-id");
+    await expect(target).toHaveAttribute("data-node-id");
+    const sourceId = await source.evaluate((el) => el.getAttribute("data-node-id"));
+    const targetId = await target.evaluate((el) => el.getAttribute("data-node-id"));
     expect(sourceId).toBeTruthy();
     expect(targetId).toBeTruthy();
 

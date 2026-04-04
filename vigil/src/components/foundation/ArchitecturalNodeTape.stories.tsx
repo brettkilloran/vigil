@@ -1,11 +1,11 @@
 "use client";
 
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 
 import { ArchitecturalNodeTape } from "@/src/components/foundation/ArchitecturalNodeCard";
 
 const meta: Meta<typeof ArchitecturalNodeTape> = {
-  title: "Architectural Shell/Primitives/Node Tape",
+  title: "Heartgarden/Architectural Shell/Primitives/Node Tape",
   component: ArchitecturalNodeTape,
   args: {
     variant: "clear",
@@ -30,3 +30,4 @@ export default meta;
 type Story = StoryObj<typeof ArchitecturalNodeTape>;
 
 export const Default: Story = {};
+

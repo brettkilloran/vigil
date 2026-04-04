@@ -37,6 +37,7 @@ export function useModKeyHints() {
             bold: "⌘B",
             italic: "⌘I",
             underline: "⌘U",
+            recenter: "⌘0",
           }
         : {
             search: "Ctrl+K",
@@ -46,6 +47,7 @@ export function useModKeyHints() {
             bold: "Ctrl+B",
             italic: "Ctrl+I",
             underline: "Ctrl+U",
+            recenter: "Ctrl+0",
           },
     [apple],
   );

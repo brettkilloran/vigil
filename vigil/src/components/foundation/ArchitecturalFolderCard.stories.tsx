@@ -1,12 +1,12 @@
 "use client";
 
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 
 import { ArchitecturalFolderCard } from "@/src/components/foundation/ArchitecturalFolderCard";
 import { FOLDER_COLOR_SCHEMES } from "@/src/components/foundation/architectural-folder-schemes";
 
 const meta: Meta<typeof ArchitecturalFolderCard> = {
-  title: "Architectural Shell/Components/Folder Card",
+  title: "Heartgarden/Architectural Shell/Components/Folder Card",
   component: ArchitecturalFolderCard,
   args: {
     id: "folder-story",
@@ -19,7 +19,7 @@ const meta: Meta<typeof ArchitecturalFolderCard> = {
     ],
     selected: false,
     dragOver: false,
-    folderColorScheme: null,
+    folderColorScheme: undefined,
     onOpen: () => {},
     onTitleCommit: () => {},
   },
@@ -32,7 +32,7 @@ const meta: Meta<typeof ArchitecturalFolderCard> = {
     dragOver: { control: "boolean" },
     folderColorScheme: {
       control: "select",
-      options: [null, ...FOLDER_COLOR_SCHEMES.map((scheme) => scheme.id)],
+      options: [undefined, ...FOLDER_COLOR_SCHEMES.map((scheme) => scheme.id)],
     },
     onOpen: { control: false },
     onTitleCommit: { control: false },
@@ -71,3 +71,4 @@ export const DragOver: Story = {
     dragOver: true,
   },
 };
+

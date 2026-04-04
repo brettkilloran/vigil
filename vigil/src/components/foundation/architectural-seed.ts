@@ -263,3 +263,51 @@ export function buildArchitecturalSeedGraph(
     connections: {},
   };
 }
+
+/** Seed graph uses this id; Neon bootstrap uses a UUID active space. */
+export const SEED_LOCAL_ROOT_SPACE_ID = "root";
+
+/**
+ * Remap the seed “root” space and all entity slots from `root` → `activeSpaceId`
+ * so the same demo graph works after bootstrap (empty DB space still shows cards).
+ */
+export function pinSeedGraphToActiveSpace(seed: CanvasGraph, activeSpaceId: string): CanvasGraph {
+  if (activeSpaceId === SEED_LOCAL_ROOT_SPACE_ID) {
+    return structuredClone(seed);
+  }
+
+  const next = structuredClone(seed) as CanvasGraph;
+  const spaces = { ...next.spaces } as Record<string, CanvasSpace>;
+  const oldRoot = spaces[SEED_LOCAL_ROOT_SPACE_ID];
+  if (!oldRoot) {
+    return next;
+  }
+
+  delete spaces[SEED_LOCAL_ROOT_SPACE_ID];
+  spaces[activeSpaceId] = {
+    ...oldRoot,
+    id: activeSpaceId,
+  };
+
+  for (const sid of Object.keys(spaces)) {
+    const s = spaces[sid];
+    if (s?.parentSpaceId === SEED_LOCAL_ROOT_SPACE_ID) {
+      spaces[sid] = { ...s, parentSpaceId: activeSpaceId };
+    }
+  }
+
+  next.spaces = spaces;
+
+  const entities = { ...next.entities } as Record<string, CanvasEntity>;
+  for (const entityId of Object.keys(entities)) {
+    const e = entities[entityId]!;
+    if (!("slots" in e) || !e.slots) continue;
+    if (!(SEED_LOCAL_ROOT_SPACE_ID in e.slots)) continue;
+    const slots = { ...e.slots };
+    slots[activeSpaceId] = slots[SEED_LOCAL_ROOT_SPACE_ID]!;
+    delete slots[SEED_LOCAL_ROOT_SPACE_ID];
+    entities[entityId] = { ...e, slots } as CanvasEntity;
+  }
+  next.entities = entities;
+  return next;
+}

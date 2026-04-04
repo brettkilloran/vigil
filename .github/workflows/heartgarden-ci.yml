@@ -46,6 +46,11 @@ jobs:
           echo "::group::Lint and build"
           npm run check
           echo "::endgroup::"
+      - name: Build Storybook
+        run: |
+          echo "::group::Build Storybook (regression guard for .storybook + stories)"
+          npm run build-storybook
+          echo "::endgroup::"
       - name: Install Playwright Chromium
         run: |
           echo "::group::Install Playwright Chromium"

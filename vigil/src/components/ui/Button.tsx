@@ -1,7 +1,7 @@
 "use client";
 
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactElement, ReactNode } from "react";
-import { cloneElement, isValidElement } from "react";
+import { cloneElement, forwardRef, isValidElement } from "react";
 
 import { cx } from "@/src/lib/cx";
 
@@ -68,22 +68,25 @@ function sharedProps({
   };
 }
 
-export function Button({
-  variant = "neutral",
-  size = "md",
-  tone = "glass",
-  isActive = false,
-  isLoading = false,
-  leadingIcon,
-  trailingIcon,
-  iconOnly = false,
-  asChild = false,
-  forceState = "default",
-  className,
-  children,
-  disabled,
-  ...buttonProps
-}: ButtonProps) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  {
+    variant = "neutral",
+    size = "md",
+    tone = "glass",
+    isActive = false,
+    isLoading = false,
+    leadingIcon,
+    trailingIcon,
+    iconOnly = false,
+    asChild = false,
+    forceState = "default",
+    className,
+    children,
+    disabled,
+    ...buttonProps
+  },
+  ref,
+) {
   const mergedDisabled = disabled || isLoading;
 
   if (iconOnly && !buttonProps["aria-label"]) {
@@ -122,6 +125,7 @@ export function Button({
 
   return (
     <button
+      ref={ref}
       type="button"
       disabled={mergedDisabled}
       aria-busy={isLoading || undefined}
@@ -143,4 +147,4 @@ export function Button({
       {trailingIcon}
     </button>
   );
-}
+});

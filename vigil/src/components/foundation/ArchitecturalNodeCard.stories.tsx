@@ -1,6 +1,6 @@
 "use client";
 
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 
 import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";
 import { buildArchitecturalSeedNodes } from "@/src/components/foundation/architectural-seed";
@@ -29,7 +29,7 @@ const seedTask = getSeed("task");
 const seedMedia = getSeed("media");
 
 const meta: Meta<typeof ArchitecturalNodeCard> = {
-  title: "Architectural Shell/Components/Node Card",
+  title: "Heartgarden/Architectural Shell/Components/Node Card",
   component: ArchitecturalNodeCard,
   args: {
     id: seedDefault.id,
@@ -118,3 +118,4 @@ export const Media: Story = {
     tapeVariant: "dark",
   },
 };
+

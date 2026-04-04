@@ -23,6 +23,7 @@ import {
 import { createPortal } from "react-dom";
 
 import type { RecentPaletteItem } from "@/src/hooks/use-recent-items";
+import { Button } from "@/src/components/ui/Button";
 
 export type PaletteItem = {
   id: string;
@@ -486,9 +487,11 @@ export function CommandPalette({
                       return null;
                     const { item } = row;
                     return (
-                      <button
+                      <Button
                         key={row.key}
                         type="button"
+                        variant="ghost"
+                        tone="glass"
                         id={`palette-opt-${gi}`}
                         data-hg-cmdk="item"
                         data-palette-row-index={gi}
@@ -504,7 +507,7 @@ export function CommandPalette({
                           <span className="cmdk-item-meta">{item.spaceName}</span>
                         </div>
                         <ClockCounterClockwise className="size-3.5 opacity-40 ml-auto shrink-0" />
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
@@ -522,9 +525,11 @@ export function CommandPalette({
                       return null;
                     const { item } = row;
                     return (
-                      <button
+                      <Button
                         key={row.key}
                         type="button"
+                        variant="ghost"
+                        tone="glass"
                         id={`palette-opt-${gi}`}
                         data-hg-cmdk="item"
                         data-palette-row-index={gi}
@@ -544,7 +549,7 @@ export function CommandPalette({
                             <span className="cmdk-item-snippet">{item.snippet}</span>
                           ) : null}
                         </div>
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
@@ -561,9 +566,11 @@ export function CommandPalette({
                     if (row.kind !== "space") return null;
                     const { space } = row;
                     return (
-                      <button
+                      <Button
                         key={row.key}
                         type="button"
+                        variant="ghost"
+                        tone="glass"
                         id={`palette-opt-${gi}`}
                         data-hg-cmdk="item"
                         data-palette-row-index={gi}
@@ -580,7 +587,7 @@ export function CommandPalette({
                             <span className="cmdk-item-meta">{space.pathLabel}</span>
                           ) : null}
                         </div>
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
@@ -597,9 +604,11 @@ export function CommandPalette({
                     if (row.kind !== "action") return null;
                     const { action } = row;
                     return (
-                      <button
+                      <Button
                         key={row.key}
                         type="button"
+                        variant="ghost"
+                        tone="glass"
                         id={`palette-opt-${gi}`}
                         data-hg-cmdk="item"
                         data-palette-row-index={gi}
@@ -618,7 +627,7 @@ export function CommandPalette({
                             <span className="cmdk-item-meta">{action.hint}</span>
                           ) : null}
                         </div>
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>

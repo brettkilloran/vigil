@@ -1,21 +1,33 @@
-import type { Preview } from '@storybook/nextjs-vite'
-import '../app/globals.css'
+import type { Preview } from "@storybook/nextjs";
+
+import "../app/globals.css";
 
 const preview: Preview = {
   parameters: {
-    controls: {
-      matchers: {
-       color: /(background|color)$/i,
-       date: /Date$/i,
+    options: {
+      // Serializable for `storybook build` (no functions). Nested tuples = group / nested path.
+      storySort: {
+        order: [
+          "Heartgarden",
+          ["Heartgarden", "Overview"],
+          ["Heartgarden", "Design System"],
+          ["Heartgarden", "Architectural Shell"],
+          "*",
+        ],
       },
     },
-
+    nextjs: {
+      appDirectory: true,
+    },
+    controls: {
+      matchers: {
+        color: /(background|color)$/i,
+        date: /Date$/i,
+      },
+    },
     a11y: {
-      // 'todo' - show a11y violations in the test UI only
-      // 'error' - fail CI on a11y violations
-      // 'off' - skip a11y checks entirely
-      test: 'todo'
-    }
+      test: "todo",
+    },
   },
 };
 

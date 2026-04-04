@@ -1,12 +1,12 @@
 "use client";
 
 import { CheckCircle, CursorClick, Note } from "@phosphor-icons/react";
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 
 import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
 
 const meta: Meta<typeof ArchitecturalButton> = {
-  title: "Architectural Shell/Primitives/Button",
+  title: "Heartgarden/Architectural Shell/Primitives/Button",
   component: ArchitecturalButton,
   args: {
     size: "icon",
@@ -149,3 +149,4 @@ export const StateMatrix: Story = {
     </div>
   ),
 };
+

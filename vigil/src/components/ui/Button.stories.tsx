@@ -1,13 +1,13 @@
 "use client";
 
 import { CheckCircle, CursorClick, Trash } from "@phosphor-icons/react";
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 import { expect, userEvent, within } from "storybook/test";
 
 import { Button } from "@/src/components/ui/Button";
 
 const meta: Meta<typeof Button> = {
-  title: "Design System/Button",
+  title: "Heartgarden/Design System/Button",
   component: Button,
   args: {
     variant: "neutral",
@@ -146,3 +146,4 @@ export const LoadingSuppressesClick: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Loading Action" }));
   },
 };
+

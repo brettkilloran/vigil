@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { CSSProperties } from "react";
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 
 type TokenRow = {
   name: string;
@@ -87,11 +87,7 @@ function swatchStyle(name: string): CSSProperties {
 }
 
 function TokenCatalog() {
-  const [rows, setRows] = useState<TokenRow[]>([]);
-
-  useEffect(() => {
-    setRows(readRootTokens());
-  }, []);
+  const [rows] = useState<TokenRow[]>(() => readRootTokens());
 
   const grouped = useMemo(() => {
     const groups: Record<string, TokenRow[]> = {};
@@ -176,7 +172,7 @@ function TokenCatalog() {
 }
 
 const meta: Meta<typeof TokenCatalog> = {
-  title: "Design System/Tokens Source of Truth",
+  title: "Heartgarden/Design System/Tokens Source of Truth",
   component: TokenCatalog,
   parameters: {
     layout: "fullscreen",
@@ -193,4 +189,5 @@ export default meta;
 type Story = StoryObj<typeof TokenCatalog>;
 
 export const Catalog: Story = {};
+
 

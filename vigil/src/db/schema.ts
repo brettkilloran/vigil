@@ -1,6 +1,7 @@
 import {
   customType,
   doublePrecision,
+  foreignKey,
   integer,
   jsonb,
   pgTable,
@@ -17,17 +18,26 @@ const vector1536 = customType<{ data: number[] }>({
   },
 });
 
-export const spaces = pgTable("spaces", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  parentSpaceId: uuid("parent_space_id").references(() => spaces.id, { onDelete: "set null" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  color: varchar("color", { length: 64 }),
-  sortOrder: integer("sort_order").notNull().default(0),
-  /** Camera only: { x, y, zoom }. Legacy rows may hold tldraw snapshot until migrated. */
-  canvasState: jsonb("canvas_state").$type<Record<string, unknown> | null>(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-});
+export const spaces = pgTable(
+  "spaces",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    parentSpaceId: uuid("parent_space_id"),
+    name: varchar("name", { length: 255 }).notNull(),
+    color: varchar("color", { length: 64 }),
+    sortOrder: integer("sort_order").notNull().default(0),
+    /** Camera only: { x, y, zoom }. Legacy rows may hold tldraw snapshot until migrated. */
+    canvasState: jsonb("canvas_state").$type<Record<string, unknown> | null>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.parentSpaceId],
+      foreignColumns: [table.id],
+    }).onDelete("set null"),
+  ],
+);
 
 export const items = pgTable("items", {
   id: uuid("id").defaultRandom().primaryKey(),

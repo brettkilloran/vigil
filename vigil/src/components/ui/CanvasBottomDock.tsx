@@ -17,6 +17,15 @@ import { getActiveTipTapEditor } from "@/src/lib/tiptap-active-bridge";
 import { HEARTGARDEN_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
 import type { ItemType } from "@/src/stores/canvas-types";
 
+/** Chained commands from StarterKit; `getActiveTipTapEditor` returns untyped `Editor`. */
+type StarterKitFormatChain = {
+  run: () => boolean;
+  toggleBold: () => StarterKitFormatChain;
+  toggleItalic: () => StarterKitFormatChain;
+  toggleBulletList: () => StarterKitFormatChain;
+  toggleHeading: (opts: { level: 2 }) => StarterKitFormatChain;
+};
+
 export function CanvasBottomDock({
   onCreate,
   onOpenSearch,
@@ -27,7 +36,7 @@ export function CanvasBottomDock({
   const runFmt = (action: "bold" | "italic" | "list" | "heading") => {
     const editor = getActiveTipTapEditor();
     if (!editor) return;
-    const chain = editor.chain().focus();
+    const chain = editor.chain().focus() as unknown as StarterKitFormatChain;
     if (action === "bold") chain.toggleBold().run();
     if (action === "italic") chain.toggleItalic().run();
     if (action === "list") chain.toggleBulletList().run();

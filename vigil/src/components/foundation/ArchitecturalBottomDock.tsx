@@ -13,11 +13,14 @@ import {
   ListNumbers,
   Minus,
   Quotes,
+  ArrowsOut,
+  Stack,
   TextB,
   TextH,
   TextItalic,
   TextStrikethrough,
   TextUnderline,
+  Trash,
 } from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -27,6 +30,7 @@ import {
   ArchitecturalButton,
   type ArchitecturalButtonTone,
 } from "@/src/components/foundation/ArchitecturalButton";
+import { Button } from "@/src/components/ui/Button";
 import {
   FOLDER_COLOR_SCHEMES,
   type FolderColorSchemeId,
@@ -278,7 +282,11 @@ export function ArchitecturalFolderColorStrip({
   const activeMeta = value ? FOLDER_COLOR_SCHEMES.find((s) => s.id === value) : null;
 
   useEffect(() => {
-    if (!engaged) setMenuOpen(false);
+    if (!engaged) {
+      // Collapse tint menu when the dock disengages (e.g. leaving editor/focus).
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync when `engaged` becomes false
+      setMenuOpen(false);
+    }
   }, [engaged]);
 
   useEffect(() => {
@@ -292,6 +300,7 @@ export function ArchitecturalFolderColorStrip({
         const spaceAbove = rect.top;
         const shouldOpenDown =
           spaceBelow >= estimatedMenuHeight || (spaceBelow > 110 && spaceAbove < estimatedMenuHeight);
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- flip menu from viewport measurement after open
         setMenuDirection(shouldOpenDown ? "down" : "up");
       }
     }
@@ -311,6 +320,7 @@ export function ArchitecturalFolderColorStrip({
 
   useLayoutEffect(() => {
     if (!menuOpen || !isSpool) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear fixed position when spool menu closes
       setSpoolMenuPos(null);
       return;
     }
@@ -355,8 +365,11 @@ export function ArchitecturalFolderColorStrip({
 
   const swatchGrid = (
     <div className={styles.dockFolderTintSwatchGrid}>
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        tone="glass"
+        iconOnly
         role="option"
         aria-selected={value == null}
         title="Black mirror"
@@ -369,9 +382,12 @@ export function ArchitecturalFolderColorStrip({
         onClick={() => pick(null)}
       />
       {FOLDER_COLOR_SCHEMES.map((s) => (
-        <button
+        <Button
           key={s.id}
           type="button"
+          variant="ghost"
+          tone="glass"
+          iconOnly
           role="option"
           aria-selected={value === s.id}
           title={s.label}
@@ -421,9 +437,11 @@ export function ArchitecturalFolderColorStrip({
       aria-label={ariaLabel}
       aria-hidden={engaged ? undefined : true}
     >
-      <button
+      <Button
         ref={triggerRef}
         type="button"
+        variant="ghost"
+        tone="glass"
         className={cx(
           styles.dockFolderTintTrigger,
           isSpool && styles.dockFolderTintTriggerSpool,
@@ -456,7 +474,7 @@ export function ArchitecturalFolderColorStrip({
             aria-hidden
           />
         ) : null}
-      </button>
+      </Button>
       {menuOpen && !isSpool ? (
         <div
           className={cx(
@@ -580,6 +598,8 @@ export function ArchitecturalBottomDock({
   showCreateMenu = true,
   folderColorPicker = null,
   connectionColorPicker = null,
+  selectionDelete,
+  selectionStack,
 }: {
   /** `editor`: solid black panels + light icon controls (focus mode only). */
   variant?: ArchitecturalBottomDockVariant;
@@ -610,6 +630,26 @@ export function ArchitecturalBottomDock({
     value: FolderColorSchemeId | null;
     onChange: (next: FolderColorSchemeId | null) => void;
   } | null;
+  /**
+   * Canvas-only: own dock cluster next to history. Omit on editor dock.
+   * Keep mounted with `selectedCount: 0` so open panels after it don’t jump; slot collapses to 0 width.
+   */
+  selectionDelete?: {
+    selectedCount: number;
+    onDelete: () => void;
+  };
+  /**
+   * Merge stacks / create stack + unstack wholly selected stacks. Omit on editor dock.
+   * Keep mounted with both flags false so the strip doesn’t reflow.
+   */
+  selectionStack?: {
+    canMerge: boolean;
+    onMerge: () => void;
+    mergeTitle: string;
+    canUnstack: boolean;
+    onUnstack: () => void;
+    unstackTitle: string;
+  };
 }) {
   const isEditor = variant === "editor";
   const formatActionTone = isEditor ? "card-dark" : "glass";
@@ -674,8 +714,104 @@ export function ArchitecturalBottomDock({
             </div>
           </div>
         </div>
+        {selectionDelete ? (
+          <div
+            className={cx(
+              styles.rootDockPanelSlot,
+              selectionDelete.selectedCount > 0 && styles.rootDockPanelSlotOpen,
+            )}
+          >
+            <div className={styles.rootDockPanelSlotInner}>
+              <div
+                className={styles.rootDockPanel}
+                inert={selectionDelete.selectedCount > 0 ? undefined : true}
+              >
+                <div
+                  className={cx(styles.addMenu, styles.dockSelectionDeleteToolbar)}
+                  role="toolbar"
+                  aria-label="Selection"
+                  aria-hidden={selectionDelete.selectedCount > 0 ? undefined : true}
+                >
+                  {selectionDelete.selectedCount > 0 ? (
+                    <ArchitecturalButton
+                      size="icon"
+                      tone={historyActionTone}
+                      iconOnly
+                      title={
+                        selectionDelete.selectedCount === 1
+                          ? "Delete"
+                          : `Delete ${selectionDelete.selectedCount} items`
+                      }
+                      aria-label={
+                        selectionDelete.selectedCount === 1
+                          ? "Delete selected item"
+                          : `Delete ${selectionDelete.selectedCount} selected items`
+                      }
+                      leadingIcon={<Trash size={18} />}
+                      onClick={() => selectionDelete.onDelete()}
+                    />
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+        {selectionStack ? (
+          <div
+            className={cx(
+              styles.rootDockPanelSlot,
+              (selectionStack.canMerge || selectionStack.canUnstack) &&
+                styles.rootDockPanelSlotOpen,
+            )}
+            data-hg-dock="stack-strip"
+          >
+            <div className={styles.rootDockPanelSlotInner}>
+              <div
+                className={styles.rootDockPanel}
+                inert={
+                  selectionStack.canMerge || selectionStack.canUnstack ? undefined : true
+                }
+              >
+                <div
+                  className={cx(styles.addMenu, styles.dockStackToolbar)}
+                  role="toolbar"
+                  aria-label="Stacks"
+                  aria-hidden={
+                    selectionStack.canMerge || selectionStack.canUnstack ? undefined : true
+                  }
+                >
+                  {selectionStack.canMerge ? (
+                    <ArchitecturalButton
+                      size="icon"
+                      tone={historyActionTone}
+                      iconOnly
+                      title={selectionStack.mergeTitle}
+                      aria-label={selectionStack.mergeTitle}
+                      leadingIcon={<Stack size={18} weight="bold" aria-hidden />}
+                      onClick={() => selectionStack.onMerge()}
+                    />
+                  ) : null}
+                  {selectionStack.canUnstack ? (
+                    <ArchitecturalButton
+                      size="icon"
+                      tone={historyActionTone}
+                      iconOnly
+                      title={selectionStack.unstackTitle}
+                      aria-label={selectionStack.unstackTitle}
+                      leadingIcon={<ArrowsOut size={18} weight="bold" aria-hidden />}
+                      onClick={() => selectionStack.onUnstack()}
+                    />
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
         {folderColorPicker ? (
-          <div className={cx(styles.rootDockPanelSlot, styles.rootDockPanelSlotOpen)}>
+          <div
+            className={cx(styles.rootDockPanelSlot, styles.rootDockPanelSlotOpen)}
+            data-hg-dock="tint-strip"
+          >
             <div className={styles.rootDockPanelSlotInner}>
               <div className={styles.rootDockPanel}>
                 <ArchitecturalFolderColorStrip
@@ -688,7 +824,10 @@ export function ArchitecturalBottomDock({
           </div>
         ) : null}
         {connectionColorPicker ? (
-          <div className={cx(styles.rootDockPanelSlot, styles.rootDockPanelSlotOpen)}>
+          <div
+            className={cx(styles.rootDockPanelSlot, styles.rootDockPanelSlotOpen)}
+            data-hg-dock="tint-strip"
+          >
             <div className={styles.rootDockPanelSlotInner}>
               <div className={styles.rootDockPanel}>
                 <ArchitecturalFolderColorStrip
@@ -705,6 +844,7 @@ export function ArchitecturalBottomDock({
             styles.rootDockPanelSlot,
             showFormatToolbar && styles.rootDockPanelSlotOpen,
           )}
+          data-hg-dock="format-strip"
         >
           <div className={styles.rootDockPanelSlotInner}>
             <div

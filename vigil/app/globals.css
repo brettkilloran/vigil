@@ -277,6 +277,52 @@
   --vigil-elevated: var(--sem-surface-elevated);
   --vigil-glass-border: var(--sem-border-subtle);
 
+  /* Architectural canvas shell (was :root in ArchitecturalCanvasApp.module.css — CSS Modules forbid global selectors) */
+  --bg-base: var(--sem-surface-base);
+  --grid-color: var(--vigil-grid-color);
+  --ui-glass-bg: var(--sem-surface-elevated);
+  --ui-glass-border: var(--sem-border-subtle);
+  --text-main: var(--sem-text-primary);
+  --text-muted: var(--sem-text-muted);
+  --accent: var(--sys-color-accent-500);
+  --theme-default-bg: var(--sys-color-neutral-100);
+  --theme-default-text: var(--sys-color-black);
+  --theme-default-border: var(--sys-color-neutral-300);
+  --theme-code-bg: var(--sys-color-neutral-920);
+  --theme-code-text: color-mix(in oklch, var(--sys-color-white) 93%, transparent);
+  --theme-code-border: var(--sys-color-neutral-800);
+  --theme-task-bg: var(--sys-color-neutral-100);
+  --theme-task-text: var(--sys-color-black);
+  --theme-task-border: var(--sys-color-neutral-300);
+  --theme-media-bg: var(--sys-color-neutral-100);
+  --theme-media-text: var(--sys-color-black);
+  --theme-media-border: var(--sys-color-neutral-300);
+  --theme-image-bg: color-mix(in oklch, var(--sys-color-neutral-920) 94%, var(--sys-color-neutral-900));
+  --theme-image-text: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
+  --theme-image-border: var(--sys-color-neutral-700);
+  --theme-image-well-a: var(--sys-color-neutral-950);
+  --theme-image-well-b: var(--sys-color-neutral-920);
+  --theme-image-well-c: var(--sys-color-neutral-900);
+  --folder-bg: var(--sys-color-neutral-900);
+  --folder-border: var(--sys-color-neutral-800);
+  --folder-tab: var(--sys-color-neutral-900);
+  --layer-viewport-vignette: 1;
+  --layer-canvas: 2;
+  --layer-connections: 70;
+  --layer-ui-chrome: 100;
+  --layer-ui-chrome-elevated: 101;
+  --layer-lasso: 120;
+  --layer-stack-scrim: 890;
+  --layer-stack-modal: 900;
+  --layer-focus-overlay: 9999;
+  --chrome-glass-shadow: 0 8px 32px var(--sem-color-shadow-40);
+  --chrome-glass-filter: blur(16px) saturate(135%);
+  --chrome-panel-height: 42px;
+  --chrome-tool-rail-strip-width: 46px;
+  --chrome-panel-radius: 10px;
+  --chrome-panel-pad-y: 6px;
+  --chrome-panel-pad-x: 10px;
+
   color-scheme: dark;
 }
 
@@ -983,6 +1029,198 @@ a {
   padding: 2px 6px;
   margin-left: auto;
   flex-shrink: 0;
+}
+
+/* ── Ask lore panel (Claude + canvas retrieval) ── */
+
+[data-hg-lore="overlay"] {
+  position: fixed;
+  inset: 0;
+  z-index: 1210;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+[data-hg-lore="dialog"] {
+  position: fixed;
+  inset: 0;
+  z-index: 1210;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 10vh 16px 24px;
+  pointer-events: none;
+  overscroll-behavior: none;
+}
+
+[data-hg-lore="root"] {
+  pointer-events: auto;
+  max-width: 560px;
+  width: 100%;
+  background: var(--sys-color-neutral-900);
+  border-radius: 12px;
+  border: 1px solid var(--sem-border-subtle, rgba(255 255 255 / 0.08));
+  box-shadow:
+    0 16px 70px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 var(--sem-overlay-white-08);
+  padding: 16px 18px 18px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  color: var(--sem-text-primary, #fafafa);
+  max-height: min(82vh, 720px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  outline: none;
+  animation: cmdk-panel-in 150ms ease;
+}
+
+[data-hg-lore="header"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+[data-hg-lore="title"] {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+[data-hg-lore="lede"] {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--sem-text-muted, #a1a1a1);
+}
+
+[data-hg-lore="textarea"] {
+  width: 100%;
+  resize: vertical;
+  min-height: 88px;
+  max-height: 200px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--sem-border-subtle, rgba(255 255 255 / 0.12));
+  background: color-mix(in oklch, var(--sys-color-neutral-900) 88%, white 12%);
+  color: var(--sem-text-primary, #fafafa);
+  outline: none;
+}
+
+[data-hg-lore="textarea"]:focus {
+  border-color: color-mix(in oklch, var(--sem-accent-primary) 55%, transparent);
+}
+
+[data-hg-lore="textarea"]:disabled {
+  opacity: 0.65;
+}
+
+[data-hg-lore="scope"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--sem-text-muted, #a1a1a1);
+  user-select: none;
+}
+
+[data-hg-lore="actions"] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+[data-hg-lore="hint"] {
+  font-size: 11px;
+  color: var(--sem-text-muted, #888);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+[data-hg-lore="hint"] kbd {
+  border: 1px solid var(--sem-border-subtle, rgba(255 255 255 / 0.1));
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+[data-hg-lore="error"] {
+  font-size: 13px;
+  color: var(--sys-color-danger-foreground, #fecaca);
+  background: color-mix(in oklch, var(--sys-color-danger-500, #ef4444) 18%, transparent);
+  border: 1px solid color-mix(in oklch, var(--sys-color-danger-500, #ef4444) 35%, transparent);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+[data-hg-lore="answer-wrap"] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+
+[data-hg-lore="answer-label"] {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sem-text-muted, #888);
+}
+
+[data-hg-lore="answer"] {
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow: auto;
+  max-height: min(38vh, 320px);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--sem-border-subtle, rgba(255 255 255 / 0.08));
+  background: color-mix(in oklch, var(--sys-color-neutral-900) 92%, white 8%);
+}
+
+[data-hg-lore="model"] {
+  font-size: 11px;
+  color: var(--sem-text-muted, #666);
+}
+
+[data-hg-lore="empty-answer"] {
+  font-size: 13px;
+  color: var(--sem-text-muted, #888);
+}
+
+[data-hg-lore="sources"] {
+  font-size: 13px;
+  border-top: 1px solid var(--sem-border-subtle, rgba(255 255 255 / 0.08));
+  padding-top: 8px;
+}
+
+[data-hg-lore="sources"] summary {
+  cursor: pointer;
+  color: var(--sem-text-muted, #a1a1a1);
+  user-select: none;
+}
+
+[data-hg-lore="sources"] ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+[data-hg-lore="sources"] li {
+  margin: 0;
 }
 
 @keyframes cmdk-overlay-in {

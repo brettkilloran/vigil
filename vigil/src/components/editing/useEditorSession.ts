@@ -26,8 +26,9 @@ export function useEditorSession({
   normalizeOnCommit,
   onCommit,
 }: UseEditorSessionOptions): UseEditorSessionResult {
-  const [draft, setDraft] = useState(value);
   const [isEditing, setIsEditing] = useState(false);
+  const [editDraft, setEditDraft] = useState("");
+  const draft = isEditing ? editDraft : value;
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestValueRef = useRef(value);
@@ -44,16 +45,11 @@ export function useEditorSession({
   }, [normalizeOnCommit]);
 
   useEffect(() => {
-    latestDraftRef.current = draft;
-  }, [draft]);
-
-  useEffect(() => {
     latestValueRef.current = value;
     if (!isEditing) {
-      setDraft(value);
       latestDraftRef.current = value;
     }
-  }, [isEditing, value]);
+  }, [value, isEditing]);
 
   const clearPendingCommit = useCallback(() => {
     if (!timerRef.current) return;
@@ -72,26 +68,29 @@ export function useEditorSession({
         latestOnCommitRef.current(normalized, reason);
       }
       if (normalized !== latestDraftRef.current) {
-        setDraft(normalized);
         latestDraftRef.current = normalized;
+        if (isEditing) {
+          setEditDraft(normalized);
+        }
       }
       return normalized;
     },
-    [normalizeDraft],
+    [normalizeDraft, isEditing],
   );
 
   const commitNow = useCallback(
     (reason: EditorCommitReason = "manual") => {
       clearPendingCommit();
+      const out = commitDraft(latestDraftRef.current, reason);
       setIsEditing(false);
-      return commitDraft(latestDraftRef.current, reason);
+      return out;
     },
     [clearPendingCommit, commitDraft],
   );
 
   const onDraftChange = useCallback(
     (next: string) => {
-      setDraft(next);
+      setEditDraft(next);
       latestDraftRef.current = next;
       clearPendingCommit();
       if (debounceMs <= 0) {
@@ -107,6 +106,9 @@ export function useEditorSession({
   );
 
   const beginEditing = useCallback(() => {
+    const v = latestValueRef.current;
+    setEditDraft(v);
+    latestDraftRef.current = v;
     setIsEditing(true);
   }, []);
 
@@ -114,7 +116,6 @@ export function useEditorSession({
     clearPendingCommit();
     setIsEditing(false);
     const resetValue = latestValueRef.current;
-    setDraft(resetValue);
     latestDraftRef.current = resetValue;
     return resetValue;
   }, [clearPendingCommit]);

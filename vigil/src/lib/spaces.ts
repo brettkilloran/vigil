@@ -67,6 +67,43 @@ export async function listItemsForSpace(db: VigilDb, spaceId: string) {
     .orderBy(asc(items.zIndex), asc(items.createdAt));
 }
 
+/** Active space plus all descendant spaces (for canvas items that live in child spaces). */
+export function collectSpaceSubtreeIds(
+  rootId: string,
+  spaceRows: { id: string; parentSpaceId: string | null }[],
+): string[] {
+  const byParent = new Map<string | null, string[]>();
+  for (const s of spaceRows) {
+    const p = s.parentSpaceId ?? null;
+    const list = byParent.get(p) ?? [];
+    list.push(s.id);
+    byParent.set(p, list);
+  }
+  const out: string[] = [];
+  const stack = [rootId];
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    out.push(id);
+    const kids = byParent.get(id);
+    if (kids) for (const k of kids) stack.push(k);
+  }
+  return out;
+}
+
+export async function listItemsForSpaceSubtree(
+  db: VigilDb,
+  rootSpaceId: string,
+  spaceRows: { id: string; parentSpaceId: string | null }[],
+) {
+  const ids = collectSpaceSubtreeIds(rootSpaceId, spaceRows);
+  if (ids.length === 0) return [];
+  return db
+    .select()
+    .from(items)
+    .where(inArray(items.spaceId, ids))
+    .orderBy(asc(items.zIndex), asc(items.createdAt));
+}
+
 export type SearchSort = "relevance" | "updated" | "created" | "title";
 
 export type SearchFilters = {

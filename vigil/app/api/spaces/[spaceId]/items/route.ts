@@ -22,6 +22,7 @@ const createBody = z.object({
   entityMeta: z.record(z.string(), z.any()).optional(),
   imageUrl: z.string().max(8192).optional(),
   imageMeta: z.record(z.string(), z.any()).optional(),
+  zIndex: z.number().int().optional(),
 });
 
 export async function GET(
@@ -122,6 +123,7 @@ export async function POST(
       entityMeta: parsed.data.entityMeta ?? null,
       imageUrl: parsed.data.imageUrl ?? null,
       imageMeta: parsed.data.imageMeta ?? null,
+      ...(parsed.data.zIndex !== undefined ? { zIndex: parsed.data.zIndex } : {}),
     })
     .returning();
 

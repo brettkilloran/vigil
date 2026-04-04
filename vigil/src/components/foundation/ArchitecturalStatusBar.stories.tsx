@@ -1,11 +1,11 @@
 "use client";
 
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 
 import { ArchitecturalStatusBar } from "@/src/components/foundation/ArchitecturalStatusBar";
 
 const meta: Meta<typeof ArchitecturalStatusBar> = {
-  title: "Architectural Shell/Components/Status Bar",
+  title: "Heartgarden/Architectural Shell/Components/Status Bar",
   component: ArchitecturalStatusBar,
   args: {
     centerWorldX: 0,
@@ -52,3 +52,4 @@ export const NoPulse: Story = {
     showPulse: false,
   },
 };
+

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 export type RecentPaletteItem = {
   id: string;
@@ -50,11 +50,7 @@ function writeRecentItems(items: RecentPaletteItem[]): void {
 }
 
 export function useRecentItems() {
-  const [items, setItems] = useState<RecentPaletteItem[]>([]);
-
-  useEffect(() => {
-    setItems(readRecentItems());
-  }, []);
+  const [items, setItems] = useState<RecentPaletteItem[]>(() => readRecentItems());
 
   const push = useCallback((entry: Omit<RecentPaletteItem, "updatedAt">) => {
     setItems((prev) => {

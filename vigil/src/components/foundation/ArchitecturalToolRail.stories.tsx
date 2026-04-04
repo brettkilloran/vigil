@@ -1,13 +1,13 @@
 "use client";
 
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 import { useState } from "react";
 
 import { ArchitecturalToolRail } from "@/src/components/foundation/ArchitecturalToolRail";
 import type { CanvasTool } from "@/src/components/foundation/architectural-types";
 
 const meta: Meta<typeof ArchitecturalToolRail> = {
-  title: "Architectural Shell/Components/Tool Rail",
+  title: "Heartgarden/Architectural Shell/Components/Tool Rail",
   component: ArchitecturalToolRail,
   args: {
     showSelectPan: true,
@@ -76,3 +76,4 @@ function ToolRailHarnessWithArgs({
     />
   );
 }
+

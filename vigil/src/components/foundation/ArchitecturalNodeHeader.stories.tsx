@@ -1,11 +1,11 @@
 "use client";
 
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 
 import { ArchitecturalNodeHeader } from "@/src/components/foundation/ArchitecturalNodeCard";
 
 const meta: Meta<typeof ArchitecturalNodeHeader> = {
-  title: "Architectural Shell/Primitives/Node Header",
+  title: "Heartgarden/Architectural Shell/Primitives/Node Header",
   component: ArchitecturalNodeHeader,
   args: {
     title: "Brief // The second chance",
@@ -57,3 +57,4 @@ export const DarkCardActionTone: Story = {
     ),
   ],
 };
+

@@ -1,6 +1,6 @@
 "use client";
 
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 
 import {
   ArchitecturalFormatToolbar,
@@ -9,7 +9,7 @@ import {
 } from "@/src/components/foundation/ArchitecturalBottomDock";
 
 const meta: Meta<typeof ArchitecturalFormatToolbar> = {
-  title: "Architectural Shell/Primitives/Format Toolbar",
+  title: "Heartgarden/Architectural Shell/Primitives/Format Toolbar",
   component: ArchitecturalFormatToolbar,
   args: {
     insertDocActions: DEFAULT_DOC_INSERT_ACTIONS,
@@ -55,3 +55,4 @@ export const OnBlackDock: Story = {
     ),
   ],
 };
+

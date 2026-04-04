@@ -1,11 +1,11 @@
 "use client";
 
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 
 import { ArchitecturalToolButton } from "@/src/components/foundation/ArchitecturalToolRail";
 
 const meta: Meta<typeof ArchitecturalToolButton> = {
-  title: "Architectural Shell/Primitives/Tool Button",
+  title: "Heartgarden/Architectural Shell/Primitives/Tool Button",
   component: ArchitecturalToolButton,
   args: {
     label: "Select",
@@ -38,3 +38,4 @@ export const Active: Story = {
     active: true,
   },
 };
+

@@ -1,0 +1,7 @@
+---
+description: Guardrails for heartgarden (vigil) dev, Storybook, and CSS
+globs: vigil/**
+alwaysApply: false
+---
+
+Before changing **`package.json` dev scripts**, **`.storybook/`**, **`*.stories.*`**, **`next.config.ts`**, or **token/CSS architecture** under `vigil/`, read **`vigil/AGENTS.md`** → section **"Local dev, Node, and Storybook (guardrails)"** and keep those invariants unless you intentionally replace them and re-verify on Windows.

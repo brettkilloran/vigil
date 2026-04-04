@@ -1,11 +1,11 @@
 "use client";
 
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 
 import { ArchitecturalCanvasApp } from "@/src/components/foundation/ArchitecturalCanvasApp";
 
 const meta: Meta<typeof ArchitecturalCanvasApp> = {
-  title: "Architectural Shell/Integration/Full Canvas",
+  title: "Heartgarden/Architectural Shell/Integration/Full Canvas",
   component: ArchitecturalCanvasApp,
   parameters: {
     layout: "fullscreen",
@@ -26,3 +26,4 @@ export const NestedFolders: Story = {
 export const CorruptFolderRecovery: Story = {
   render: () => <ArchitecturalCanvasApp scenario="corrupt" />,
 };
+

@@ -212,14 +212,17 @@ export function ArchitecturalNodeCard({
               </div>
             )}
             <div className={styles.mediaImageActions} contentEditable={false}>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                tone="glass"
+                size="sm"
                 className={styles.mediaUploadBtn}
                 data-architectural-media-upload="true"
                 data-media-owner-id={id}
               >
                 Replace
-              </button>
+              </Button>
             </div>
           </div>
         </div>

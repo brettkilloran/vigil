@@ -1,11 +1,13 @@
 import { tryGetDb } from "@/src/db/index";
+import { ensureArchitecturalDemoSeed } from "@/src/lib/architectural-demo-seed-db";
+import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
 import {
   listItemsForSpace,
+  listItemsForSpaceSubtree,
   parseCameraFromRow,
   resolveActiveSpace,
 } from "@/src/lib/spaces";
-import { rowToCanvasItem } from "@/src/lib/item-mapper";
 
 export async function GET(req: Request) {
   /**
@@ -41,7 +43,22 @@ export async function GET(req: Request) {
 
   const { activeSpace, allSpaces } = await resolveActiveSpace(db, requested);
 
-  const itemRows = await listItemsForSpace(db, activeSpace.id);
+  const spaceRows = allSpaces.map((s) => ({
+    id: s.id,
+    parentSpaceId: s.parentSpaceId ?? null,
+  }));
+
+  const rootItems = await listItemsForSpace(db, activeSpace.id);
+  if (rootItems.length === 0 && activeSpace.parentSpaceId == null) {
+    await ensureArchitecturalDemoSeed(
+      db,
+      activeSpace.id,
+      allSpaces.map((s) => s.id),
+    );
+  }
+
+  const itemRows = await listItemsForSpaceSubtree(db, activeSpace.id, spaceRows);
+
   const items = itemRows.map(rowToCanvasItem);
   const camera = parseCameraFromRow(activeSpace.canvasState);
 
@@ -52,6 +69,7 @@ export async function GET(req: Request) {
     spaces: allSpaces.map((s) => ({
       id: s.id,
       name: s.name,
+      parentSpaceId: s.parentSpaceId ?? null,
       updatedAt:
         s.updatedAt instanceof Date
           ? s.updatedAt.toISOString()

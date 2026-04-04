@@ -1,6 +1,6 @@
 "use client";
 
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 
 import {
   ArchitecturalCreateMenu,
@@ -8,7 +8,7 @@ import {
 } from "@/src/components/foundation/ArchitecturalBottomDock";
 
 const meta: Meta<typeof ArchitecturalCreateMenu> = {
-  title: "Architectural Shell/Primitives/Create Menu",
+  title: "Heartgarden/Architectural Shell/Primitives/Create Menu",
   component: ArchitecturalCreateMenu,
   args: {
     actions: DEFAULT_CREATE_ACTIONS,
@@ -50,3 +50,4 @@ export const OnBlackDock: Story = {
     ),
   ],
 };
+

@@ -1,52 +1,3 @@
-:root {
-  --bg-base: var(--sem-surface-base);
-  --grid-color: var(--vigil-grid-color);
-  --ui-glass-bg: var(--sem-surface-elevated);
-  --ui-glass-border: var(--sem-border-subtle);
-  --text-main: var(--sem-text-primary);
-  --text-muted: var(--sem-text-muted);
-  --accent: var(--sys-color-accent-500);
-  --theme-default-bg: var(--sys-color-neutral-100);
-  --theme-default-text: var(--sys-color-black);
-  --theme-default-border: var(--sys-color-neutral-300);
-  --theme-code-bg: var(--sys-color-neutral-920);
-  --theme-code-text: color-mix(in oklch, var(--sys-color-white) 93%, transparent);
-  --theme-code-border: var(--sys-color-neutral-800);
-  --theme-task-bg: var(--sys-color-neutral-100);
-  --theme-task-text: var(--sys-color-black);
-  --theme-task-border: var(--sys-color-neutral-300);
-  --theme-media-bg: var(--sys-color-neutral-100);
-  --theme-media-text: var(--sys-color-black);
-  --theme-media-border: var(--sys-color-neutral-300);
-  /* Image entity card — dark well aligned with shell / code nodes. */
-  --theme-image-bg: color-mix(in oklch, var(--sys-color-neutral-920) 94%, var(--sys-color-neutral-900));
-  --theme-image-text: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
-  --theme-image-border: var(--sys-color-neutral-700);
-  --theme-image-well-a: var(--sys-color-neutral-950);
-  --theme-image-well-b: var(--sys-color-neutral-920);
-  --theme-image-well-c: var(--sys-color-neutral-900);
-  --folder-bg: var(--sys-color-neutral-900);
-  --folder-border: var(--sys-color-neutral-800);
-  --folder-tab: var(--sys-color-neutral-900);
-  --layer-viewport-vignette: 1;
-  --layer-canvas: 2;
-  --layer-connections: 70;
-  --layer-ui-chrome: 100;
-  --layer-ui-chrome-elevated: 101;
-  --layer-lasso: 120;
-  --layer-stack-scrim: 890;
-  --layer-stack-modal: 900;
-  --layer-focus-overlay: 9999;
-  --chrome-glass-shadow: 0 8px 32px var(--sem-color-shadow-40);
-  --chrome-glass-filter: blur(16px) saturate(135%);
-  --chrome-panel-height: 42px;
-  /* Vertical tool strips (side rail + top-right search): keep one width everywhere. */
-  --chrome-tool-rail-strip-width: 46px;
-  --chrome-panel-radius: 10px;
-  --chrome-panel-pad-y: 6px;
-  --chrome-panel-pad-x: 10px;
-}
-
 .hiddenFileInput {
   position: absolute;
   width: 1px;
@@ -1374,6 +1325,10 @@
   margin-bottom: 10px;
 }
 
+/* Exported for demo seed HTML (checklist “done” rows compose taskItem + done). */
+.done {
+}
+
 .taskCheckbox {
   width: 16px;
   height: 16px;
@@ -2351,10 +2306,27 @@
     animation-delay: 0.16s;
   }
 
-  /* Format strip when folder tint slot is present (tint is 3rd child, format 4th). */
+  /* Stack-from-selection — `data-hg-dock` (optional slot; avoids clashing with format when stack prop omitted). */
   .bottomDock
     .rootDockCluster
-    > .rootDockPanelSlot:nth-child(4).rootDockPanelSlotOpen
+    > .rootDockPanelSlot[data-hg-dock="stack-strip"].rootDockPanelSlotOpen
+    .rootDockPanel {
+    animation: dockPanelPop 0.44s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: 0.19s;
+  }
+
+  /* Tint strips — `data-hg-dock` so optional slots don’t break nth-child. */
+  .bottomDock
+    .rootDockCluster
+    > .rootDockPanelSlot[data-hg-dock="tint-strip"].rootDockPanelSlotOpen
+    .rootDockPanel {
+    animation: dockPanelPop 0.44s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: 0.22s;
+  }
+
+  .bottomDock
+    .rootDockCluster
+    > .rootDockPanelSlot[data-hg-dock="format-strip"].rootDockPanelSlotOpen
     .rootDockPanel {
     animation: dockPanelPop 0.44s cubic-bezier(0.22, 1, 0.36, 1) backwards;
     animation-delay: 0.22s;
@@ -2364,6 +2336,8 @@
     :is(
       .rootDockCluster > .rootDockPanel .dockCreateToolbar,
       .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockSelectionDeleteToolbar,
+      .rootDockPanelSlotOpen .dockStackToolbar,
       .rootDockPanelSlotOpen .dockFormatToolbar,
       .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
     )
@@ -2375,6 +2349,8 @@
     :is(
       .rootDockCluster > .rootDockPanel .dockCreateToolbar,
       .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockSelectionDeleteToolbar,
+      .rootDockPanelSlotOpen .dockStackToolbar,
       .rootDockPanelSlotOpen .dockFormatToolbar,
       .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
     )
@@ -2386,6 +2362,8 @@
     :is(
       .rootDockCluster > .rootDockPanel .dockCreateToolbar,
       .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockSelectionDeleteToolbar,
+      .rootDockPanelSlotOpen .dockStackToolbar,
       .rootDockPanelSlotOpen .dockFormatToolbar,
       .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
     )
@@ -2397,6 +2375,8 @@
     :is(
       .rootDockCluster > .rootDockPanel .dockCreateToolbar,
       .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockSelectionDeleteToolbar,
+      .rootDockPanelSlotOpen .dockStackToolbar,
       .rootDockPanelSlotOpen .dockFormatToolbar,
       .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
     )
@@ -2408,6 +2388,8 @@
     :is(
       .rootDockCluster > .rootDockPanel .dockCreateToolbar,
       .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockSelectionDeleteToolbar,
+      .rootDockPanelSlotOpen .dockStackToolbar,
       .rootDockPanelSlotOpen .dockFormatToolbar,
       .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
     )
@@ -2419,6 +2401,8 @@
     :is(
       .rootDockCluster > .rootDockPanel .dockCreateToolbar,
       .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockSelectionDeleteToolbar,
+      .rootDockPanelSlotOpen .dockStackToolbar,
       .rootDockPanelSlotOpen .dockFormatToolbar,
       .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
     )
@@ -2430,6 +2414,8 @@
     :is(
       .rootDockCluster > .rootDockPanel .dockCreateToolbar,
       .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockSelectionDeleteToolbar,
+      .rootDockPanelSlotOpen .dockStackToolbar,
       .rootDockPanelSlotOpen .dockFormatToolbar,
       .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
     )
@@ -2441,6 +2427,8 @@
     :is(
       .rootDockCluster > .rootDockPanel .dockCreateToolbar,
       .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockSelectionDeleteToolbar,
+      .rootDockPanelSlotOpen .dockStackToolbar,
       .rootDockPanelSlotOpen .dockFormatToolbar,
       .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
     )
@@ -2452,6 +2440,8 @@
     :is(
       .rootDockCluster > .rootDockPanel .dockCreateToolbar,
       .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockSelectionDeleteToolbar,
+      .rootDockPanelSlotOpen .dockStackToolbar,
       .rootDockPanelSlotOpen .dockFormatToolbar,
       .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
     )
@@ -2463,6 +2453,8 @@
     :is(
       .rootDockCluster > .rootDockPanel .dockCreateToolbar,
       .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockSelectionDeleteToolbar,
+      .rootDockPanelSlotOpen .dockStackToolbar,
       .rootDockPanelSlotOpen .dockFormatToolbar,
       .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
     )
@@ -2474,6 +2466,8 @@
     :is(
       .rootDockCluster > .rootDockPanel .dockCreateToolbar,
       .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockSelectionDeleteToolbar,
+      .rootDockPanelSlotOpen .dockStackToolbar,
       .rootDockPanelSlotOpen .dockFormatToolbar,
       .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
     )
@@ -2514,7 +2508,15 @@
     .rootDockPanel,
   .bottomDock
     .rootDockCluster
-    > .rootDockPanelSlot:nth-child(4).rootDockPanelSlotOpen
+    > .rootDockPanelSlot[data-hg-dock="stack-strip"].rootDockPanelSlotOpen
+    .rootDockPanel,
+  .bottomDock
+    .rootDockCluster
+    > .rootDockPanelSlot[data-hg-dock="tint-strip"].rootDockPanelSlotOpen
+    .rootDockPanel,
+  .bottomDock
+    .rootDockCluster
+    > .rootDockPanelSlot[data-hg-dock="format-strip"].rootDockPanelSlotOpen
     .rootDockPanel {
     animation: none;
   }
@@ -2555,6 +2557,8 @@
     :is(
       .rootDockCluster > .rootDockPanel .dockCreateToolbar,
       .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockSelectionDeleteToolbar,
+      .rootDockPanelSlotOpen .dockStackToolbar,
       .rootDockPanelSlotOpen .dockFormatToolbar,
       .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
     )

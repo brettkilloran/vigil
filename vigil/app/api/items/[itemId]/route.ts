@@ -6,8 +6,11 @@ import { items } from "@/src/db/schema";
 import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
+import { assertSpaceExists } from "@/src/lib/spaces";
 
 const patchBody = z.object({
+  /** Move item to another canvas space (e.g. into / out of a folder). */
+  spaceId: z.string().uuid().optional(),
   x: z.number().optional(),
   y: z.number().optional(),
   width: z.number().positive().max(4000).optional(),
@@ -85,9 +88,19 @@ export async function PATCH(
     stackId?: string | null;
     stackOrder?: number | null;
     searchBlob?: string;
+    spaceId?: string;
   } = {
     updatedAt: new Date(),
   };
+
+  if (p.spaceId !== undefined) {
+    const space = await assertSpaceExists(db, p.spaceId);
+    if (!space) {
+      return Response.json({ ok: false, error: "Space not found" }, { status: 400 });
+    }
+    updates.spaceId = p.spaceId;
+  }
+
   if (p.x !== undefined) updates.x = p.x;
   if (p.y !== undefined) updates.y = p.y;
   if (p.width !== undefined) updates.width = p.width;

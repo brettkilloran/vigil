@@ -1,11 +1,11 @@
 "use client";
 
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 
 import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
 
 const meta: Meta<typeof ArchitecturalFocusCloseButton> = {
-  title: "Architectural Shell/Components/Focus Close Button",
+  title: "Heartgarden/Architectural Shell/Components/Focus Close Button",
   component: ArchitecturalFocusCloseButton,
   args: {
     dirty: false,
@@ -34,3 +34,4 @@ export const DoneClean: Story = {
 export const SaveDiscardDirty: Story = {
   args: { dirty: true },
 };
+

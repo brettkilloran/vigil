@@ -1,13 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   ArrowLeft,
+  ArrowsOut,
   CopySimple,
   DownloadSimple,
   FileText,
   Folder,
   MagnifyingGlass,
+  Sparkle,
   NotePencil,
   SquaresFour,
   Stack,
@@ -19,6 +22,7 @@ import styles from "./ArchitecturalCanvasApp.module.css";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
 import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
+import { Button } from "@/src/components/ui/Button";
 import {
   ArchitecturalBottomDock,
   ArchitecturalFolderColorStrip,
@@ -42,7 +46,26 @@ import {
   FOLDER_COLOR_SCHEMES,
   type FolderColorSchemeId,
 } from "@/src/components/foundation/architectural-folder-schemes";
+import {
+  buildCanvasGraphFromBootstrap,
+  buildContentJsonForContentEntity,
+  buildContentJsonForFolderEntity,
+  canvasItemToEntity,
+  htmlToPlainText,
+  mergeBootstrapView,
+  architecturalItemType,
+  entityGeometryOnSpace,
+} from "@/src/components/foundation/architectural-db-bridge";
 import { buildArchitecturalSeedGraph } from "@/src/components/foundation/architectural-seed";
+import {
+  apiCreateItem,
+  apiCreateSpace,
+  apiDeleteItem,
+  apiPatchItem,
+  apiPatchSpaceCamera,
+  apiPatchSpaceName,
+  fetchBootstrap,
+} from "@/src/components/foundation/architectural-neon-api";
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
 import {
   cloneArchitecturalGraph,
@@ -63,10 +86,13 @@ import {
   type PaletteItem,
   type PaletteSpace,
 } from "@/src/components/ui/CommandPalette";
+import { LoreAskPanel } from "@/src/components/ui/LoreAskPanel";
 import type {
   CanvasConnectionPin,
-  ContentTheme,
+  CanvasContentEntity,
   CanvasEntity,
+  CanvasFolderEntity,
+  ContentTheme,
   CanvasGraph,
   CanvasPinConnection,
   CanvasSpace,
@@ -99,6 +125,30 @@ const FOLDER_PREVIEW_MAX_ITEMS = 6;
 type ArchitecturalCanvasScenario = "default" | "nested" | "corrupt";
 
 const ROOT_SPACE_ID = "root";
+
+/** Empty graph for `scenario === "default"` until bootstrap (and optional seed materialize) finishes — avoids seed → DB entity-id swap flashing. */
+function createBootstrapPendingGraph(): CanvasGraph {
+  return {
+    rootSpaceId: ROOT_SPACE_ID,
+    spaces: {
+      [ROOT_SPACE_ID]: {
+        id: ROOT_SPACE_ID,
+        name: "Root",
+        parentSpaceId: null,
+        entityIds: [],
+      },
+    },
+    entities: {},
+    connections: {},
+  };
+}
+
+/** Stable fallback so `useMemo` deps do not churn when a space row has no `entityIds` yet. */
+const EMPTY_ENTITY_IDS: readonly string[] = [];
+/** Stable `collapsedStacks` when there are no multi-card stacks (avoids effect loops on new `[]` each render). */
+const EMPTY_COLLAPSED_STACKS: { stackId: string; entities: CanvasEntity[]; top: CanvasEntity }[] = [];
+const EMPTY_STACK_BOUNDS: Record<string, { left: number; top: number; width: number; height: number }> =
+  {};
 const CONNECTION_DEFAULT_COLOR =
   FOLDER_COLOR_SCHEMES.find((s) => s.id === "coral")?.swatch ?? "oklch(0.68 0.32 48)";
 /** Dark neutral thread for "Black mirror" / classic picker slot (not a folder scheme swatch). */
@@ -151,6 +201,37 @@ type ConnectionPinViewContext = {
 function isUuidLike(value: string | null | undefined): value is string {
   if (!value) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function collectEntityIdsForDeletion(graph: CanvasGraph, roots: string[]): string[] {
+  const entityIdsToDelete = new Set<string>();
+  const spaceIdsToDelete = new Set<string>();
+
+  const markEntity = (entityId: string) => {
+    if (entityIdsToDelete.has(entityId)) return;
+    const entity = graph.entities[entityId];
+    if (!entity) return;
+    entityIdsToDelete.add(entityId);
+
+    if (entity.kind !== "folder") return;
+    const stack = [entity.childSpaceId];
+    while (stack.length > 0) {
+      const spaceId = stack.pop();
+      if (!spaceId || spaceIdsToDelete.has(spaceId)) continue;
+      const space = graph.spaces[spaceId];
+      if (!space) continue;
+      spaceIdsToDelete.add(spaceId);
+      space.entityIds.forEach(markEntity);
+      Object.values(graph.spaces).forEach((candidate) => {
+        if (candidate.parentSpaceId === spaceId) {
+          stack.push(candidate.id);
+        }
+      });
+    }
+  };
+
+  roots.forEach((id) => markEntity(id));
+  return [...entityIdsToDelete];
 }
 
 function createRopeRuntime(start: { x: number; y: number }, end: { x: number; y: number }): RopeRuntime {
@@ -310,6 +391,48 @@ function shallowCloneGraph(graph: CanvasGraph): CanvasGraph {
     entities: { ...graph.entities },
     connections: { ...graph.connections },
   };
+}
+
+/** Flatten one multi-card stack in `spaceId` (shared undo step when called in a loop). */
+function applyUnstackStackInSpace(
+  snapshot: CanvasGraph,
+  stackId: string,
+  spaceId: string,
+): CanvasGraph {
+  const next = shallowCloneGraph(snapshot);
+  const members = Object.values(next.entities)
+    .filter(
+      (entity): entity is Extract<CanvasEntity, { kind: "content" }> =>
+        entity.kind === "content" && entity.stackId === stackId,
+    )
+    .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0));
+  if (members.length === 0) return next;
+
+  const anchor =
+    members[members.length - 1]?.slots[spaceId] ??
+    members[0]?.slots[spaceId] ?? { x: 0, y: 0 };
+  const cols = Math.max(1, Math.min(3, Math.ceil(Math.sqrt(members.length))));
+  const spacingX = 72;
+  const spacingY = 64;
+
+  members.forEach((entity, index) => {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    const centeredCol = col - (cols - 1) / 2;
+    next.entities[entity.id] = {
+      ...entity,
+      stackId: null,
+      stackOrder: null,
+      slots: {
+        ...entity.slots,
+        [spaceId]: {
+          x: Math.round(anchor.x + centeredCol * spacingX),
+          y: Math.round(anchor.y + row * spacingY),
+        },
+      },
+    };
+  });
+  return next;
 }
 
 function isDescendantSpace(
@@ -500,7 +623,7 @@ type LassoRectScreen = { x1: number; y1: number; x2: number; y2: number };
  * Entity surfaces win over raw svg/path (e.g. icons inside cards). Connection threads are not marquee targets.
  */
 function isCanvasPointerMarqueeOrPanSurface(
-  target: HTMLElement,
+  target: Element,
   viewportEl: HTMLElement | null,
   canvasClassName: string,
   activeTool: CanvasTool,
@@ -541,7 +664,7 @@ function buildStackModalLayout(
     scale: number;
   } | null = null;
 
-  candidates.forEach((cols) => {
+  for (const cols of candidates) {
     const rowHeights: number[] = [];
     const rowSizes: number[] = [];
     for (let i = 0; i < itemIds.length; i += cols) {
@@ -562,7 +685,7 @@ function buildStackModalLayout(
     if (!best || scale > best.scale) {
       best = { cols, rowHeights, rowSizes, totalW, totalH, scale };
     }
-  });
+  }
 
   if (!best) return {};
   const layout: Record<string, { x: number; y: number; scale: number }> = {};
@@ -594,19 +717,21 @@ export function ArchitecturalCanvasApp({
   scenario?: ArchitecturalCanvasScenario;
 }) {
   const [graph, setGraph] = useState<CanvasGraph>(() =>
-    buildArchitecturalSeedGraph(
-      {
-        taskItem: styles.taskItem,
-        done: styles.done,
-        taskCheckbox: styles.taskCheckbox,
-        taskText: styles.taskText,
-        mediaFrame: styles.mediaFrame,
-        mediaImage: styles.mediaImage,
-        mediaImageActions: styles.mediaImageActions,
-        mediaUploadBtn: styles.mediaUploadBtn,
-      },
-      scenario,
-    ),
+    scenario === "default"
+      ? createBootstrapPendingGraph()
+      : buildArchitecturalSeedGraph(
+          {
+            taskItem: styles.taskItem,
+            done: styles.done,
+            taskCheckbox: styles.taskCheckbox,
+            taskText: styles.taskText,
+            mediaFrame: styles.mediaFrame,
+            mediaImage: styles.mediaImage,
+            mediaImageActions: styles.mediaImageActions,
+            mediaUploadBtn: styles.mediaUploadBtn,
+          },
+          scenario,
+        ),
   );
   const [activeSpaceId, setActiveSpaceId] = useState(ROOT_SPACE_ID);
   const [navigationPath, setNavigationPath] = useState<string[]>([ROOT_SPACE_ID]);
@@ -626,15 +751,18 @@ export function ArchitecturalCanvasApp({
   const [connectionCursorWorld, setConnectionCursorWorld] = useState<{ x: number; y: number } | null>(
     null,
   );
-  const [connectionPaths, setConnectionPaths] = useState<Record<string, string>>({});
   const [lassoRectScreen, setLassoRectScreen] = useState<LassoRectScreen | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   /** After fonts + layout frame; drives viewport fade-in and avoids first-paint hiccups. */
   const [canvasSurfaceReady, setCanvasSurfaceReady] = useState(false);
+  /** For app route: hide canvas content until bootstrap resolves (single graph + camera commit). */
+  const [canvasBootstrapResolved, setCanvasBootstrapResolved] = useState(() => scenario !== "default");
 
   const [focusOpen, setFocusOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [lorePanelOpen, setLorePanelOpen] = useState(false);
+  const lorePanelOpenRef = useRef(false);
   const [galleryNodeId, setGalleryNodeId] = useState<string | null>(null);
   const [galleryDraftTitle, setGalleryDraftTitle] = useState("");
   const [galleryDraftNotes, setGalleryDraftNotes] = useState("");
@@ -714,6 +842,8 @@ export function ArchitecturalCanvasApp({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const shellRef = useRef<HTMLDivElement | null>(null);
   const ropeRuntimeRef = useRef<Record<string, RopeRuntime>>({});
+  /** Rope paths update every frame via `setAttribute`; avoid `setState` in rAF (re-render storms / max depth). */
+  const connectionLayerSvgRef = useRef<SVGSVGElement | null>(null);
   const shellTopLeftStackRef = useRef<HTMLDivElement | null>(null);
   const parentDropRef = useRef<HTMLDivElement | null>(null);
   /** Ignore well click/activation briefly after a parent drop (mouseup can synthesize a click). */
@@ -740,6 +870,12 @@ export function ArchitecturalCanvasApp({
   const activeSpaceIdRef = useRef(activeSpaceId);
   const navigationPathRef = useRef(navigationPath);
   const selectedNodeIdsRef = useRef(selectedNodeIds);
+  /** Merge vs unstack affordances; synced after `stackSelectionUi` memo each render. */
+  const stackSelectionUiRef = useRef<{
+    canMergeStacks: boolean;
+    canUnstackWhollySelected: boolean;
+    whollySelectedStackIds: string[];
+  }>({ canMergeStacks: false, canUnstackWhollySelected: false, whollySelectedStackIds: [] });
   const selectionBeforeConnectionModeRef = useRef<string[] | null>(null);
   const alignSelectedInGridRef = useRef<() => void>(() => {});
   const undoPastRef = useRef<ArchitecturalUndoSnapshot[]>([]);
@@ -750,6 +886,9 @@ export function ArchitecturalCanvasApp({
   const paletteOpenRef = useRef(false);
   const activeNodeIdRef = useRef(activeNodeId);
   const pendingMediaUploadRef = useRef<{ mode: "focus" | "canvas"; id: string } | null>(null);
+  const persistNeonRef = useRef(false);
+  const itemContentPatchTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const cameraPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mediaFileInputRef = useRef<HTMLInputElement | null>(null);
   const lastFormatRangeRef = useRef<Range | null>(null);
   const [historyEpoch, setHistoryEpoch] = useState(0);
@@ -765,6 +904,7 @@ export function ArchitecturalCanvasApp({
   focusOpenRef.current = focusOpen;
   galleryOpenRef.current = galleryOpen;
   paletteOpenRef.current = paletteOpen;
+  lorePanelOpenRef.current = lorePanelOpen;
   activeNodeIdRef.current = activeNodeId;
 
   const modKeyHints = useModKeyHints();
@@ -772,6 +912,7 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (lorePanelOpenRef.current) return;
       const mod = event.metaKey || event.ctrlKey;
       if (!mod || event.altKey || event.shiftKey) return;
       if (event.key.toLowerCase() !== "k") return;
@@ -782,9 +923,65 @@ export function ArchitecturalCanvasApp({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const createId = useCallback((prefix: string) => {
+  const createId = useCallback((_prefix?: string) => {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
     idCounterRef.current += 1;
-    return `${prefix}-${Date.now()}-${idCounterRef.current}`;
+    return `hg-${Date.now()}-${idCounterRef.current}`;
+  }, []);
+
+  const schedulePersistContentBody = useCallback((entityId: string, bodyHtml: string) => {
+    if (!persistNeonRef.current || !isUuidLike(entityId)) return;
+    const prevT = itemContentPatchTimersRef.current.get(entityId);
+    if (prevT) clearTimeout(prevT);
+    const t = setTimeout(() => {
+      itemContentPatchTimersRef.current.delete(entityId);
+      const ent = graphRef.current.entities[entityId];
+      if (!ent || ent.kind !== "content") return;
+      const contentJson = buildContentJsonForContentEntity({ ...ent, bodyHtml });
+      void apiPatchItem(entityId, {
+        contentText: htmlToPlainText(bodyHtml),
+        contentJson,
+      });
+    }, 450);
+    itemContentPatchTimersRef.current.set(entityId, t);
+  }, []);
+
+  /** Persist geometry and `items.spaceId` from whichever space currently owns each entity in the graph. */
+  const persistNeonItemsLayout = useCallback((ids: string[]) => {
+    if (!persistNeonRef.current) return;
+    const g = graphRef.current;
+    const active = activeSpaceIdRef.current;
+    for (const id of ids) {
+      if (!isUuidLike(id)) continue;
+      const e = g.entities[id];
+      if (!e) continue;
+      const holders = Object.values(g.spaces).filter((s) => s.entityIds.includes(id));
+      if (holders.length === 0) continue;
+      const primary =
+        holders.length === 1
+          ? holders[0]!.id
+          : holders.find((s) => s.id === active)?.id ?? holders[0]!.id;
+      const geo = entityGeometryOnSpace(e, primary);
+      const patch: Record<string, unknown> = {
+        spaceId: primary,
+        x: geo.x,
+        y: geo.y,
+        width: geo.width,
+        height: geo.height,
+      };
+      if (e.kind === "content") {
+        if (!e.stackId) {
+          patch.stackId = null;
+          patch.stackOrder = null;
+        } else if (isUuidLike(e.stackId)) {
+          patch.stackId = e.stackId;
+          patch.stackOrder = e.stackOrder ?? null;
+        }
+      }
+      void apiPatchItem(id, patch);
+    }
   }, []);
 
   const closeStackModal = useCallback(() => {
@@ -1267,7 +1464,15 @@ export function ArchitecturalCanvasApp({
       Object.keys(runtimeById).forEach((id) => {
         if (!activeIds.has(id)) delete runtimeById[id];
       });
-      setConnectionPaths(nextPaths);
+      const svgRoot = connectionLayerSvgRef.current;
+      if (svgRoot) {
+        svgRoot.querySelectorAll<SVGPathElement>("path[data-connection-id]").forEach((pathEl) => {
+          const id = pathEl.getAttribute("data-connection-id");
+          if (!id) return;
+          const d = nextPaths[id] ?? "";
+          pathEl.setAttribute("d", d);
+        });
+      }
       frame = window.requestAnimationFrame(step);
     };
     frame = window.requestAnimationFrame(step);
@@ -1275,7 +1480,7 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   const activeSpace = graph.spaces[activeSpaceId] ?? graph.spaces[graph.rootSpaceId];
-  const visibleEntityIds = activeSpace?.entityIds ?? [];
+  const visibleEntityIds = activeSpace?.entityIds ?? EMPTY_ENTITY_IDS;
   const visibleEntities = useMemo(
     () =>
       visibleEntityIds
@@ -1404,17 +1609,18 @@ export function ArchitecturalCanvasApp({
       }),
     [stackGroups, visibleEntities],
   );
-  const collapsedStacks = useMemo(
-    () =>
-      Array.from(stackGroups.entries())
-        .filter(([, arr]) => arr.length > 1)
-        .map(([stackId, arr]) => ({ stackId, entities: arr, top: arr[arr.length - 1]! })),
-    [stackGroups],
-  );
+  const collapsedStacks = useMemo(() => {
+    const out = Array.from(stackGroups.entries())
+      .filter(([, arr]) => arr.length > 1)
+      .map(([stackId, arr]) => ({ stackId, entities: arr, top: arr[arr.length - 1]! }));
+    return out.length === 0 ? EMPTY_COLLAPSED_STACKS : out;
+  }, [stackGroups]);
 
   useEffect(() => {
     if (collapsedStacks.length === 0) {
-      setStackFocusBoundsById({});
+      setStackFocusBoundsById((prev) =>
+        Object.keys(prev).length === 0 ? prev : EMPTY_STACK_BOUNDS,
+      );
       return;
     }
     const next: Record<string, { left: number; top: number; width: number; height: number }> = {};
@@ -1449,12 +1655,15 @@ export function ArchitecturalCanvasApp({
         height: maxY - minY + pad * 2,
       };
     });
-    setStackFocusBoundsById(next);
-  }, [collapsedStacks, graph.entities, selectedNodeIds, stackModal]);
+    const nextJson = JSON.stringify(next);
+    setStackFocusBoundsById((prev) => (JSON.stringify(prev) === nextJson ? prev : next));
+  }, [collapsedStacks, selectedNodeIds, stackModal]);
 
   useEffect(() => {
     if (collapsedStacks.length === 0) {
-      setStackHoverBoundsById({});
+      setStackHoverBoundsById((prev) =>
+        Object.keys(prev).length === 0 ? prev : EMPTY_STACK_BOUNDS,
+      );
       return;
     }
     const next: Record<string, { left: number; top: number; width: number; height: number }> = {};
@@ -1487,8 +1696,9 @@ export function ArchitecturalCanvasApp({
         height: maxY - minY + pad * 2,
       };
     });
-    setStackHoverBoundsById(next);
-  }, [collapsedStacks, graph.entities, stackModal]);
+    const nextJson = JSON.stringify(next);
+    setStackHoverBoundsById((prev) => (JSON.stringify(prev) === nextJson ? prev : next));
+  }, [collapsedStacks, stackModal]);
   const updateNodeBody = useCallback(
     (id: string, html: string, options?: { immediate?: boolean }) => {
       const normalizedHtml = normalizeChecklistMarkup(html, {
@@ -1517,11 +1727,12 @@ export function ArchitecturalCanvasApp({
               },
             };
           });
+          schedulePersistContentBody(id, normalizedHtml);
         },
         options?.immediate ? 0 : 120,
       );
     },
-    [queueGraphCommit, recordUndoBeforeMutation],
+    [queueGraphCommit, recordUndoBeforeMutation, schedulePersistContentBody],
   );
 
   const onArchitecturalMediaFile = useCallback(
@@ -1591,7 +1802,7 @@ export function ArchitecturalCanvasApp({
           mode: "focus",
           id: activeNodeIdRef.current,
         };
-      } else if (nodeHost?.dataset.nodeId) {
+      } else if (nodeHost instanceof HTMLElement && nodeHost.dataset.nodeId) {
         pendingMediaUploadRef.current = {
           mode: "canvas",
           id: nodeHost.dataset.nodeId,
@@ -1674,21 +1885,38 @@ export function ArchitecturalCanvasApp({
       return;
     }
     recordUndoBeforeMutation();
-    setGraph((prev) => {
-      const e = prev.entities[galleryNodeId];
-      if (!e || e.kind !== "content") return prev;
-      return {
-        ...prev,
-        entities: {
-          ...prev.entities,
-          [galleryNodeId]: {
-            ...e,
-            title: nextTitle,
-            bodyHtml: setArchitecturalMediaNotes(e.bodyHtml, galleryDraftNotes),
+      setGraph((prev) => {
+        const e = prev.entities[galleryNodeId];
+        if (!e || e.kind !== "content") return prev;
+        return {
+          ...prev,
+          entities: {
+            ...prev.entities,
+            [galleryNodeId]: {
+              ...e,
+              title: nextTitle,
+              bodyHtml: setArchitecturalMediaNotes(e.bodyHtml, galleryDraftNotes),
+            },
           },
-        },
-      };
-    });
+        };
+      });
+      if (persistNeonRef.current && isUuidLike(galleryNodeId)) {
+        const gid = galleryNodeId;
+        const nextBody = setArchitecturalMediaNotes(entity.bodyHtml, galleryDraftNotes);
+        queueMicrotask(() => {
+          const ent = graphRef.current.entities[gid];
+          if (!ent || ent.kind !== "content") return;
+          void apiPatchItem(gid, {
+            title: nextTitle,
+            contentText: htmlToPlainText(nextBody),
+            contentJson: buildContentJsonForContentEntity({
+              ...ent,
+              title: nextTitle,
+              bodyHtml: nextBody,
+            }),
+          });
+        });
+      }
     closeMediaGallery();
   }, [
     closeMediaGallery,
@@ -1746,6 +1974,23 @@ export function ArchitecturalCanvasApp({
           },
         };
       });
+      if (persistNeonRef.current && isUuidLike(activeNodeId)) {
+        const aid = activeNodeId;
+        const nextTitle = focusTitle.trim() || "Untitled";
+        queueMicrotask(() => {
+          const ent = graphRef.current.entities[aid];
+          if (!ent || ent.kind !== "content") return;
+          void apiPatchItem(aid, {
+            title: nextTitle,
+            contentText: htmlToPlainText(normalizedFocusBody),
+            contentJson: buildContentJsonForContentEntity({
+              ...ent,
+              title: nextTitle,
+              bodyHtml: normalizedFocusBody,
+            }),
+          });
+        });
+      }
     }
     setFocusOpen(false);
     setActiveNodeId(null);
@@ -1838,44 +2083,117 @@ export function ArchitecturalCanvasApp({
     viewRef.current = { scale, tx: translateX, ty: translateY };
   }, [scale, translateX, translateY]);
 
+  useEffect(() => {
+    if (!isUuidLike(graph.rootSpaceId) || !isUuidLike(activeSpaceId)) return;
+    if (cameraPersistTimerRef.current) clearTimeout(cameraPersistTimerRef.current);
+    cameraPersistTimerRef.current = setTimeout(() => {
+      cameraPersistTimerRef.current = null;
+      void apiPatchSpaceCamera(activeSpaceId, {
+        x: translateX,
+        y: translateY,
+        zoom: scale,
+      });
+    }, 700);
+    return () => {
+      if (cameraPersistTimerRef.current) clearTimeout(cameraPersistTimerRef.current);
+    };
+  }, [activeSpaceId, graph.rootSpaceId, scale, translateX, translateY]);
+
   const connectionPinView = useMemo<ConnectionPinViewContext>(
     () => ({ tx: translateX, ty: translateY, scale }),
     [translateX, translateY, scale],
   );
 
   useEffect(() => {
-    const freshGraph = buildArchitecturalSeedGraph(
-      {
-        taskItem: styles.taskItem,
-        done: styles.done,
-        taskCheckbox: styles.taskCheckbox,
-        taskText: styles.taskText,
-        mediaFrame: styles.mediaFrame,
-        mediaImage: styles.mediaImage,
-        mediaImageActions: styles.mediaImageActions,
-        mediaUploadBtn: styles.mediaUploadBtn,
-      },
-      scenario,
-    );
-    setGraph(freshGraph);
-    setActiveSpaceId(freshGraph.rootSpaceId);
-    setNavigationPath([freshGraph.rootSpaceId]);
-    setSelectedNodeIds([]);
-    setConnectionSourceId(null);
-    setConnectionMode("move");
-    setFocusOpen(false);
-    setActiveNodeId(null);
-    undoPastRef.current = [];
-    undoFutureRef.current = [];
-    setHistoryEpoch((n) => n + 1);
+    const tokens = {
+      taskItem: styles.taskItem,
+      done: styles.done,
+      taskCheckbox: styles.taskCheckbox,
+      taskText: styles.taskText,
+      mediaFrame: styles.mediaFrame,
+      mediaImage: styles.mediaImage,
+      mediaImageActions: styles.mediaImageActions,
+      mediaUploadBtn: styles.mediaUploadBtn,
+    };
+
+    if (scenario !== "default") {
+      persistNeonRef.current = false;
+      setCanvasBootstrapResolved(true);
+      const freshGraph = buildArchitecturalSeedGraph(tokens, scenario);
+      setGraph(freshGraph);
+      setActiveSpaceId(freshGraph.rootSpaceId);
+      setNavigationPath([freshGraph.rootSpaceId]);
+      setSelectedNodeIds([]);
+      setConnectionSourceId(null);
+      setConnectionMode("move");
+      setFocusOpen(false);
+      setActiveNodeId(null);
+      undoPastRef.current = [];
+      undoFutureRef.current = [];
+      setHistoryEpoch((n) => n + 1);
+      return;
+    }
+
+    setCanvasBootstrapResolved(false);
+    setGraph(createBootstrapPendingGraph());
+    setActiveSpaceId(ROOT_SPACE_ID);
+    setNavigationPath([ROOT_SPACE_ID]);
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const data = await fetchBootstrap();
+        if (cancelled || !data || data.demo !== false || !data.spaceId) {
+          throw new Error("demo");
+        }
+        persistNeonRef.current = true;
+        const nextGraph = buildCanvasGraphFromBootstrap(data);
+        const maxZi =
+          data.items.length > 0 ? Math.max(...data.items.map((i) => i.zIndex), 100) : 100;
+        setGraph(nextGraph);
+        setActiveSpaceId(data.spaceId);
+        setNavigationPath(
+          buildPathToSpace(data.spaceId, nextGraph.spaces, nextGraph.rootSpaceId),
+        );
+        setTranslateX(data.camera.x);
+        setTranslateY(data.camera.y);
+        setScale(data.camera.zoom);
+        setMaxZIndex(maxZi);
+      } catch {
+        if (cancelled) return;
+        persistNeonRef.current = false;
+        const freshGraph = buildArchitecturalSeedGraph(tokens, "default");
+        setGraph(freshGraph);
+        setActiveSpaceId(freshGraph.rootSpaceId);
+        setNavigationPath([freshGraph.rootSpaceId]);
+        setTranslateX(window.innerWidth / 2);
+        setTranslateY(window.innerHeight / 2);
+        setScale(1);
+      }
+      if (cancelled) return;
+      setCanvasBootstrapResolved(true);
+      setSelectedNodeIds([]);
+      setConnectionSourceId(null);
+      setConnectionMode("move");
+      setFocusOpen(false);
+      setActiveNodeId(null);
+      undoPastRef.current = [];
+      undoFutureRef.current = [];
+      setHistoryEpoch((n) => n + 1);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [scenario]);
 
   useLayoutEffect(() => {
-    // Apply camera before first paint so we never flash translate 0,0 (especially
-    // noticeable when seed content sits far from the origin).
-    setTranslateX(window.innerWidth / 2);
-    setTranslateY(window.innerHeight / 2);
     setViewportSize({ width: window.innerWidth, height: window.innerHeight });
+    // Default scenario: camera comes from bootstrap in one batch (avoids center → server camera jump).
+    if (scenario !== "default") {
+      setTranslateX(window.innerWidth / 2);
+      setTranslateY(window.innerHeight / 2);
+    }
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setCanvasSurfaceReady(true);
@@ -1886,7 +2204,7 @@ export function ArchitecturalCanvasApp({
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, []);
+  }, [scenario]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1945,23 +2263,32 @@ export function ArchitecturalCanvasApp({
 
   const stackSelectedContent = useCallback(() => {
     const vis = visibleEntityIds;
-    const ids = selectedNodeIdsRef.current.filter((id) => {
+    const spaceId = activeSpaceIdRef.current;
+    const raw = selectedNodeIdsRef.current.filter((id) => {
       const entity = graphRef.current.entities[id];
       return !!entity && entity.kind === "content" && vis.includes(id);
     });
+    /* Lasso can hit every stack layer — same id appears once per card DOM node. */
+    const seen = new Set<string>();
+    const ids: string[] = [];
+    for (const id of raw) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      ids.push(id);
+    }
     if (ids.length < 2) return;
     recordUndoBeforeMutation();
     const stackId = createId("stack");
     setGraph((prev) => {
       const next = shallowCloneGraph(prev);
-      const slots = ids
-        .map((id) => next.entities[id]?.slots[activeSpaceId])
-        .filter((s): s is { x: number; y: number } => !!s);
-      if (slots.length === 0) return prev;
-      /* One shared slot for the stack (matches drop-onto-target stacking). Top-left of the pile
-         keeps the collapsed container aligned with `resolveConnectionPin` + thread endpoints. */
-      const anchorX = Math.min(...slots.map((s) => s.x));
-      const anchorY = Math.min(...slots.map((s) => s.y));
+      const finiteSlots = ids
+        .map((id) => next.entities[id]?.slots[spaceId])
+        .filter((s): s is { x: number; y: number } =>
+          !!s && Number.isFinite(s.x) && Number.isFinite(s.y),
+        );
+      /* Match card placement fallback: missing slots still stack at a shared anchor. */
+      const anchorX = finiteSlots.length > 0 ? Math.min(...finiteSlots.map((s) => s.x)) : 0;
+      const anchorY = finiteSlots.length > 0 ? Math.min(...finiteSlots.map((s) => s.y)) : 0;
       ids.forEach((id, index) => {
         const entity = next.entities[id];
         if (!entity || entity.kind !== "content") return;
@@ -1971,85 +2298,87 @@ export function ArchitecturalCanvasApp({
           stackOrder: index,
           slots: {
             ...entity.slots,
-            [activeSpaceId]: { x: anchorX, y: anchorY },
+            [spaceId]: { x: anchorX, y: anchorY },
           },
         };
       });
       return next;
     });
     setSelectedNodeIds(ids);
-  }, [activeSpaceId, createId, recordUndoBeforeMutation, visibleEntityIds]);
+  }, [createId, recordUndoBeforeMutation, visibleEntityIds]);
 
-  const unstackGroup = useCallback((stackId: string) => {
-    recordUndoBeforeMutation();
-    setGraph((prev) => {
-      const next = shallowCloneGraph(prev);
-      const members = Object.values(next.entities)
-        .filter(
-          (entity): entity is Extract<CanvasEntity, { kind: "content" }> =>
-            entity.kind === "content" && entity.stackId === stackId,
-        )
-        .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0));
-      if (members.length === 0) return prev;
-
-      const anchor =
-        members[members.length - 1]?.slots[activeSpaceId] ??
-        members[0]?.slots[activeSpaceId] ?? { x: 0, y: 0 };
-      const cols = Math.max(1, Math.min(3, Math.ceil(Math.sqrt(members.length))));
-      const spacingX = 72;
-      const spacingY = 64;
-
-      members.forEach((entity, index) => {
-        const col = index % cols;
-        const row = Math.floor(index / cols);
-        const centeredCol = col - (cols - 1) / 2;
-        next.entities[entity.id] = {
-          ...entity,
-          stackId: null,
-          stackOrder: null,
-          slots: {
-            ...entity.slots,
-            [activeSpaceId]: {
-              x: Math.round(anchor.x + centeredCol * spacingX),
-              y: Math.round(anchor.y + row * spacingY),
-            },
-          },
-        };
-      });
-      return next;
-    });
-  }, [activeSpaceId, recordUndoBeforeMutation]);
+  const unstackGroup = useCallback(
+    (stackId: string) => {
+      recordUndoBeforeMutation();
+      setGraph((prev) => applyUnstackStackInSpace(prev, stackId, activeSpaceId));
+    },
+    [activeSpaceId, recordUndoBeforeMutation],
+  );
 
   const ensureFolderChildSpace = useCallback(
-    (folderId: string): string | null => {
+    async (folderId: string): Promise<string | null> => {
       const folderEarly = graphRef.current.entities[folderId];
       if (!folderEarly || folderEarly.kind !== "folder") return null;
       if (graphRef.current.spaces[folderEarly.childSpaceId]) {
         return folderEarly.childSpaceId;
       }
+
+      if (persistNeonRef.current && isUuidLike(folderId)) {
+        recordUndoBeforeMutation();
+        const folder = graphRef.current.entities[folderId];
+        if (!folder || folder.kind !== "folder") return null;
+        const parentSpaceId = activeSpaceIdRef.current;
+        const created = await apiCreateSpace(folder.title || "Untitled Folder", parentSpaceId);
+        if (!created.ok || !created.space?.id) return null;
+        const newSpaceId = created.space.id;
+        const contentJson = buildContentJsonForFolderEntity({
+          ...folder,
+          childSpaceId: newSpaceId,
+        });
+        await apiPatchItem(folderId, { contentJson });
+        flushSync(() => {
+          setGraph((prev) => {
+            const f = prev.entities[folderId];
+            if (!f || f.kind !== "folder") return prev;
+            const next = shallowCloneGraph(prev);
+            next.spaces[newSpaceId] = {
+              id: newSpaceId,
+              name: f.title || "Untitled Folder",
+              parentSpaceId,
+              entityIds: [],
+            };
+            next.entities[folderId] = { ...f, childSpaceId: newSpaceId };
+            return next;
+          });
+        });
+        return newSpaceId;
+      }
+
       recordUndoBeforeMutation();
       let resolved: string | null = null;
-      setGraph((prev) => {
-        const folder = prev.entities[folderId];
-        if (!folder || folder.kind !== "folder") return prev;
-        if (prev.spaces[folder.childSpaceId]) {
-          resolved = folder.childSpaceId;
-          return prev;
-        }
+      flushSync(() => {
+        setGraph((prev) => {
+          const folder = prev.entities[folderId];
+          if (!folder || folder.kind !== "folder") return prev;
+          if (prev.spaces[folder.childSpaceId]) {
+            resolved = folder.childSpaceId;
+            return prev;
+          }
 
-        const next = shallowCloneGraph(prev);
-        const newSpaceId = createId("space");
-        const parentSpaceId =
-          next.spaces[activeSpaceId]?.id ?? next.rootSpaceId;
-        next.spaces[newSpaceId] = {
-          id: newSpaceId,
-          name: folder.title || "Untitled Folder",
-          parentSpaceId,
-          entityIds: [],
-        };
-        next.entities[folderId] = { ...folder, childSpaceId: newSpaceId };
-        resolved = newSpaceId;
-        return next;
+          const next = shallowCloneGraph(prev);
+          const newSpaceId = createId("space");
+          const parentSpaceId =
+            next.spaces[activeSpaceId]?.id ?? next.rootSpaceId;
+          next.spaces[newSpaceId] = {
+            id: newSpaceId,
+            name: folder.title || "Untitled Folder",
+            parentSpaceId,
+            entityIds: [],
+          };
+          next.entities[folderId] = { ...folder, childSpaceId: newSpaceId };
+          resolved = newSpaceId;
+          return next;
+        });
       });
       return resolved;
     },
@@ -2076,12 +2405,20 @@ export function ArchitecturalCanvasApp({
     (
       entityIds: string[],
       destinationSpaceId: string,
-      options?: { anchor?: { x: number; y: number }; forceLayout?: boolean; skipUndo?: boolean },
+      options?: {
+        anchor?: { x: number; y: number };
+        forceLayout?: boolean;
+        skipUndo?: boolean;
+        /** Commit graph before Neon persist (cross-space drop / parent exit). */
+        neonFlush?: boolean;
+        /** Space the items are leaving (for grouping same-slot piles when DB has no stackId yet). */
+        fromSpaceId?: string;
+      },
     ) => {
       if (!options?.skipUndo) {
         recordUndoBeforeMutation();
       }
-      setGraph((prev) => {
+      const apply = (prev: CanvasGraph) => {
         const targetSpace = prev.spaces[destinationSpaceId];
         if (!targetSpace) return prev;
 
@@ -2145,49 +2482,157 @@ export function ArchitecturalCanvasApp({
           };
         };
 
-        idsToMove.forEach((entityId, index) => {
-          const entity = next.entities[entityId];
-          if (!entity) return;
-          const existingSlot = entity.slots[destinationSpaceId];
-          const destinationSlot =
-            shouldForceLayout || !existingSlot ? findNextSlot(index) : existingSlot;
-          next.entities[entityId] = {
-            ...entity,
-            slots: {
-              ...entity.slots,
-              [destinationSpaceId]: destinationSlot,
-            },
-          };
-        });
+        /** Stacked content nodes share one canvas slot; lay out one position per stack, not per card. */
+        const stackGroupKey = (entityId: string): string => {
+          const ent = next.entities[entityId];
+          if (ent?.kind === "content" && ent.stackId) return `stack:${ent.stackId}`;
+          const from = options?.fromSpaceId;
+          if (from && ent?.kind === "content") {
+            const s = ent.slots[from];
+            if (s) {
+              const rx = Math.round(s.x);
+              const ry = Math.round(s.y);
+              return `pile:${from}:${rx}:${ry}`;
+            }
+          }
+          return `solo:${entityId}`;
+        };
+        const groupKeys: string[] = [];
+        const idsByGroup = new Map<string, string[]>();
+        for (const id of idsToMove) {
+          const key = stackGroupKey(id);
+          if (!idsByGroup.has(key)) {
+            idsByGroup.set(key, []);
+            groupKeys.push(key);
+          }
+          idsByGroup.get(key)!.push(id);
+        }
+
+        let layoutGroupIndex = 0;
+        for (const key of groupKeys) {
+          const groupIds = idsByGroup.get(key)!;
+          const lead = next.entities[groupIds[0]!];
+          if (!lead) continue;
+
+          const leadExisting = lead.slots[destinationSpaceId];
+          const sharedStack =
+            lead.kind === "content" &&
+            !!lead.stackId &&
+            groupIds.every((gid) => {
+              const e = next.entities[gid];
+              return e?.kind === "content" && e.stackId === lead.stackId;
+            });
+
+          let destinationSlot: { x: number; y: number };
+          if (
+            !shouldForceLayout &&
+            leadExisting &&
+            (!sharedStack ||
+              groupIds.every((gid) => {
+                const s = next.entities[gid]?.slots[destinationSpaceId];
+                return (
+                  !!s && s.x === leadExisting.x && s.y === leadExisting.y
+                );
+              }))
+          ) {
+            destinationSlot = leadExisting;
+          } else {
+            destinationSlot = findNextSlot(layoutGroupIndex);
+            layoutGroupIndex += 1;
+          }
+
+          for (const entityId of groupIds) {
+            const entity = next.entities[entityId];
+            if (!entity) continue;
+            next.entities[entityId] = {
+              ...entity,
+              slots: {
+                ...entity.slots,
+                [destinationSpaceId]: destinationSlot,
+              },
+            };
+          }
+
+          if (
+            key.startsWith("pile:") &&
+            groupIds.length > 1 &&
+            typeof crypto !== "undefined" &&
+            typeof crypto.randomUUID === "function"
+          ) {
+            const allContent = groupIds.every((gid) => next.entities[gid]?.kind === "content");
+            const noneHaveStack = groupIds.every(
+              (gid) => !next.entities[gid] || next.entities[gid]!.kind !== "content" || !next.entities[gid]!.stackId,
+            );
+            if (allContent && noneHaveStack) {
+              const sid = crypto.randomUUID();
+              groupIds.forEach((entityId, index) => {
+                const entity = next.entities[entityId];
+                if (!entity || entity.kind !== "content") return;
+                next.entities[entityId] = {
+                  ...entity,
+                  stackId: sid,
+                  stackOrder: index,
+                };
+              });
+            }
+          }
+        }
 
         return next;
-      });
+      };
+      if (options?.neonFlush && persistNeonRef.current) {
+        flushSync(() => {
+          setGraph(apply);
+        });
+      } else {
+        setGraph(apply);
+      }
     },
     [canMoveEntityToSpace, recordUndoBeforeMutation],
   );
 
   const enterSpace = useCallback(
     (spaceId: string) => {
-      if (!graph.spaces[spaceId] || spaceId === activeSpaceId) return;
-      setActiveSpaceId(spaceId);
-      setNavigationPath(buildPathToSpace(spaceId, graph.spaces, graph.rootSpaceId));
-      setSelectedNodeIds([]);
-      recenterToOrigin();
+      const snap = graphRef.current;
+      if (!snap.spaces[spaceId] || spaceId === activeSpaceIdRef.current) return;
+      void (async () => {
+        let merged: CanvasGraph | null = null;
+        if (persistNeonRef.current && isUuidLike(spaceId)) {
+          const data = await fetchBootstrap(spaceId);
+          if (data && data.demo === false && data.spaceId) {
+            merged = mergeBootstrapView(graphRef.current, data);
+            setGraph(merged);
+            setTranslateX(data.camera.x);
+            setTranslateY(data.camera.y);
+            setScale(data.camera.zoom);
+            if (data.items.length > 0) {
+              setMaxZIndex((z) => Math.max(z, ...data.items.map((i) => i.zIndex)));
+            }
+          }
+        }
+        const g = merged ?? graphRef.current;
+        setActiveSpaceId(spaceId);
+        setNavigationPath(buildPathToSpace(spaceId, g.spaces, g.rootSpaceId));
+        setSelectedNodeIds([]);
+        if (!merged) recenterToOrigin();
+      })();
     },
-    [activeSpaceId, graph.rootSpaceId, graph.spaces, recenterToOrigin],
+    [recenterToOrigin],
   );
 
   const openFolder = useCallback(
     (folderId: string) => {
-      const folder = graph.entities[folderId];
-      if (!folder || folder.kind !== "folder") return;
-      const childSpaceId = graph.spaces[folder.childSpaceId]
-        ? folder.childSpaceId
-        : ensureFolderChildSpace(folderId);
-      if (!childSpaceId) return;
-      enterSpace(childSpaceId);
+      void (async () => {
+        const folder = graphRef.current.entities[folderId];
+        if (!folder || folder.kind !== "folder") return;
+        const childSpaceId = graphRef.current.spaces[folder.childSpaceId]
+          ? folder.childSpaceId
+          : await ensureFolderChildSpace(folderId);
+        if (!childSpaceId) return;
+        enterSpace(childSpaceId);
+      })();
     },
-    [enterSpace, ensureFolderChildSpace, graph.entities, graph.spaces],
+    [enterSpace, ensureFolderChildSpace],
   );
 
   const goBack = useCallback(() => {
@@ -2206,25 +2651,35 @@ export function ArchitecturalCanvasApp({
         targetSpaceId = candidateSpaceIds[0] ?? targetSpaceId;
       }
       if (!graphSnap.spaces[targetSpaceId]) return;
+
+      const panToEntity = () => {
+        const ent = graphRef.current.entities[entityId];
+        const slot = ent?.slots[targetSpaceId];
+        if (slot) {
+          const viewport = viewportRef.current?.getBoundingClientRect();
+          const width = viewport?.width ?? window.innerWidth;
+          const height = viewport?.height ?? window.innerHeight;
+          const nextScale = viewRef.current.scale;
+          setTranslateX(width / 2 - slot.x * nextScale);
+          setTranslateY(height / 2 - slot.y * nextScale);
+        }
+        setSelectedNodeIds([entityId]);
+        if (openInFocus && ent?.kind === "content") {
+          openFocusMode(entityId);
+        }
+      };
+
       if (targetSpaceId !== activeSpaceIdRef.current) {
-        setActiveSpaceId(targetSpaceId);
-        setNavigationPath(buildPathToSpace(targetSpaceId, graphSnap.spaces, graphSnap.rootSpaceId));
+        enterSpace(targetSpaceId);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(panToEntity);
+        });
+        return;
       }
-      const slot = entity.slots[targetSpaceId];
-      if (slot) {
-        const viewport = viewportRef.current?.getBoundingClientRect();
-        const width = viewport?.width ?? window.innerWidth;
-        const height = viewport?.height ?? window.innerHeight;
-        const nextScale = viewRef.current.scale;
-        setTranslateX(width / 2 - slot.x * nextScale);
-        setTranslateY(height / 2 - slot.y * nextScale);
-      }
-      setSelectedNodeIds([entityId]);
-      if (openInFocus && entity.kind === "content") {
-        openFocusMode(entityId);
-      }
+
+      panToEntity();
     },
-    [openFocusMode],
+    [enterSpace, openFocusMode],
   );
 
   const paletteActions = useMemo<PaletteAction[]>(
@@ -2237,6 +2692,13 @@ export function ArchitecturalCanvasApp({
       { id: "toggle-theme", label: "Toggle theme", hint: "Switch light/dark shell class", icon: <CopySimple size={14} weight="bold" /> },
       { id: "zoom-fit", label: "Zoom to fit", hint: "Fit visible cards into the viewport", icon: <SquaresFour size={14} weight="bold" /> },
       { id: "recenter", label: "Recenter canvas", hint: modKeyHints.recenter, icon: <Stack size={14} weight="bold" /> },
+      {
+        id: "ask-lore",
+        label: "Ask lore (AI)",
+        hint: "Claude answers from searchable canvas text",
+        keywords: ["lore", "ai", "claude", "ask", "heartgarden", "question"],
+        icon: <Sparkle size={14} weight="bold" />,
+      },
     ],
     [modKeyHints.recenter],
   );
@@ -2266,7 +2728,20 @@ export function ArchitecturalCanvasApp({
   const moveSelectionToParent = useCallback(() => {
     if (Date.now() < suppressParentExitActivateUntilRef.current) return;
     if (!parentSpaceId) return;
-    const idsToMove = selectedNodeIds.filter((entityId) => visibleEntityIds.includes(entityId));
+    const snap = graphRef.current;
+    const vis = new Set(snap.spaces[activeSpaceId]?.entityIds ?? []);
+    const selected = selectedNodeIds.filter((id) => vis.has(id));
+    const idsToMoveSet = new Set<string>(selected);
+    for (const id of selected) {
+      const e = snap.entities[id];
+      if (e?.kind !== "content" || !e.stackId) continue;
+      for (const ent of Object.values(snap.entities)) {
+        if (ent.kind === "content" && ent.stackId === e.stackId && vis.has(ent.id)) {
+          idsToMoveSet.add(ent.id);
+        }
+      }
+    }
+    const idsToMove = [...idsToMoveSet];
     if (idsToMove.length === 0) return;
     if (!idsToMove.every((id) => canMoveEntityToSpace(id, parentSpaceId))) return;
     const center = centerCoords();
@@ -2275,15 +2750,21 @@ export function ArchitecturalCanvasApp({
     moveEntitiesToSpace(idsToMove, parentSpaceId, {
       anchor: anchorBelowFolder,
       forceLayout: true,
+      neonFlush: true,
+      fromSpaceId: activeSpaceId,
     });
+    if (persistNeonRef.current) {
+      persistNeonItemsLayout(idsToMove);
+    }
   }, [
+    activeSpaceId,
     canMoveEntityToSpace,
     centerCoords,
     getParentFolderExitSlot,
     moveEntitiesToSpace,
     parentSpaceId,
+    persistNeonItemsLayout,
     selectedNodeIds,
-    visibleEntityIds,
   ]);
 
   const renameFolder = useCallback(
@@ -2314,6 +2795,14 @@ export function ArchitecturalCanvasApp({
               };
             }
             return next;
+          });
+          queueMicrotask(() => {
+            if (!persistNeonRef.current || !isUuidLike(entityId)) return;
+            const ent = graphRef.current.entities[entityId];
+            if (ent?.kind !== "folder") return;
+            const t = title.trim() || "Untitled Folder";
+            void apiPatchItem(entityId, { title: t });
+            if (isUuidLike(ent.childSpaceId)) void apiPatchSpaceName(ent.childSpaceId, t);
           });
         },
         120,
@@ -2346,6 +2835,12 @@ export function ArchitecturalCanvasApp({
             }
             return next;
           });
+          queueMicrotask(() => {
+            if (!persistNeonRef.current || !isUuidLike(entityId)) return;
+            const ent = graphRef.current.entities[entityId];
+            if (ent?.kind !== "folder") return;
+            void apiPatchItem(entityId, { contentJson: buildContentJsonForFolderEntity(ent) });
+          });
         },
         120,
       );
@@ -2373,6 +2868,10 @@ export function ArchitecturalCanvasApp({
             next.entities[entityId] = { ...ent, title: t };
             return next;
           });
+          queueMicrotask(() => {
+            if (!persistNeonRef.current || !isUuidLike(entityId)) return;
+            void apiPatchItem(entityId, { title: title.trim() || "Untitled" });
+          });
         },
         120,
       );
@@ -2399,7 +2898,139 @@ export function ArchitecturalCanvasApp({
     const y = center.y - 100 + (Math.random() * 60 - 30);
     const rotation = (Math.random() - 0.5) * 4;
     const tapeRotation = (Math.random() - 0.5) * 6;
-    setMaxZIndex((prev) => prev + 1);
+    const nextZ = maxZIndexRef.current + 1;
+    setMaxZIndex(nextZ);
+
+    if (persistNeonRef.current && isUuidLike(activeSpaceId)) {
+      const spaceId = activeSpaceId;
+      void (async () => {
+        if (type === "folder") {
+          const fx = center.x - FOLDER_CARD_WIDTH / 2 + (Math.random() * 60 - 30);
+          const fy = center.y - FOLDER_CARD_HEIGHT / 2 + (Math.random() * 60 - 30);
+          const spaceRes = await apiCreateSpace("New Folder", spaceId);
+          if (!spaceRes.ok || !spaceRes.space?.id) return;
+          const childSpaceId = spaceRes.space.id;
+          const tempFolder: CanvasFolderEntity = {
+            id: "",
+            title: "New Folder",
+            kind: "folder",
+            theme: "folder",
+            childSpaceId,
+            rotation,
+            width: FOLDER_CARD_WIDTH,
+            tapeRotation: 0,
+            stackId: null,
+            stackOrder: null,
+            slots: { [spaceId]: { x: fx, y: fy } },
+          };
+          const itemRes = await apiCreateItem(spaceId, {
+            itemType: "folder",
+            x: fx,
+            y: fy,
+            width: FOLDER_CARD_WIDTH,
+            height: FOLDER_CARD_HEIGHT,
+            title: "New Folder",
+            contentJson: buildContentJsonForFolderEntity(tempFolder),
+            zIndex: nextZ,
+          });
+          if (!itemRes.ok || !itemRes.item) return;
+          const entity = canvasItemToEntity(itemRes.item, spaceId);
+          if (!entity || entity.kind !== "folder") return;
+          setGraph((prev) => {
+            const next = shallowCloneGraph(prev);
+            next.spaces[childSpaceId] = {
+              id: childSpaceId,
+              name: "New Folder",
+              parentSpaceId: spaceId,
+              entityIds: [],
+            };
+            next.entities[entity.id] = entity;
+            const sp = next.spaces[spaceId];
+            if (sp) {
+              next.spaces[spaceId] = { ...sp, entityIds: [...sp.entityIds, entity.id] };
+            }
+            return next;
+          });
+          return;
+        }
+
+        let title = "New Note";
+        const width = UNIFIED_NODE_WIDTH;
+        let contentTheme: ContentTheme =
+          type === "task" ? "default" : (type as ContentTheme);
+        let bodyHtml = `<div contenteditable="true">Start typing...</div>`;
+
+        if (type === "task") {
+          title = "Checklist";
+          contentTheme = "task";
+          bodyHtml = `
+        <div class="${styles.taskItem}" contenteditable="false">
+          <div class="${styles.taskCheckbox}" contenteditable="false"></div>
+          <div class="${styles.taskText}" contenteditable="true">Clarify objective and acceptance criteria</div>
+        </div>
+        <div class="${styles.taskItem}" contenteditable="false">
+          <div class="${styles.taskCheckbox}" contenteditable="false"></div>
+          <div class="${styles.taskText}" contenteditable="true">Break work into two focused steps</div>
+        </div>
+      `;
+        } else if (type === "code") {
+          title = "Snippet";
+          contentTheme = "code";
+          bodyHtml = `// [IN] Compose shard at cursor…`;
+        } else if (type === "media") {
+          title = "Untitled photo";
+          contentTheme = "media";
+          bodyHtml = `
+        <div class="${styles.mediaFrame}" data-architectural-media-root="true">
+          <div class="${styles.mediaPlaceholder}" data-architectural-media-fallback="true">Upload an image</div>
+          <div class="${styles.mediaImageActions}" contenteditable="false">
+            <button type="button" class="${styles.mediaUploadBtn}" data-architectural-media-upload="true">Upload</button>
+          </div>
+        </div>
+        <div data-architectural-media-notes="true"></div>
+      `;
+        }
+
+        const tempNode: CanvasContentEntity = {
+          id: "",
+          title,
+          kind: "content",
+          rotation,
+          width,
+          theme: contentTheme,
+          tapeVariant: tapeVariantForTheme(contentTheme),
+          tapeRotation,
+          bodyHtml,
+          stackId: null,
+          stackOrder: null,
+          slots: { [spaceId]: { x, y } },
+        };
+        const itemRes = await apiCreateItem(spaceId, {
+          itemType: architecturalItemType(tempNode),
+          x,
+          y,
+          width,
+          height: 280,
+          title,
+          contentText: htmlToPlainText(bodyHtml),
+          contentJson: buildContentJsonForContentEntity(tempNode),
+          zIndex: nextZ,
+        });
+        if (!itemRes.ok || !itemRes.item) return;
+        const entity = canvasItemToEntity(itemRes.item, spaceId);
+        if (!entity) return;
+        setGraph((prev) => {
+          const next = shallowCloneGraph(prev);
+          next.entities[entity.id] = entity;
+          const sp = next.spaces[spaceId];
+          if (sp) {
+            next.spaces[spaceId] = { ...sp, entityIds: [...sp.entityIds, entity.id] };
+          }
+          return next;
+        });
+      })();
+      return;
+    }
 
     if (type === "folder") {
       const entityId = createId("folder");
@@ -2443,7 +3074,7 @@ export function ArchitecturalCanvasApp({
 
     const id = createId("node");
     let title = "New Note";
-    let width = UNIFIED_NODE_WIDTH;
+    const width = UNIFIED_NODE_WIDTH;
     let contentTheme: ContentTheme =
       type === "task" ? "default" : (type as ContentTheme);
     let bodyHtml = `<div contenteditable="true">Start typing...</div>`;
@@ -2579,6 +3210,10 @@ export function ArchitecturalCanvasApp({
     }
     if (actionId === "recenter") {
       recenterToOrigin();
+      return;
+    }
+    if (actionId === "ask-lore") {
+      setLorePanelOpen(true);
     }
   }, [activeSpace?.entityIds, createNewNode, recenterToOrigin]);
 
@@ -2807,7 +3442,7 @@ export function ArchitecturalCanvasApp({
   );
 
   const handleDrop = useCallback(
-    (draggedEntityIds: string[]) => {
+    async (draggedEntityIds: string[]) => {
       if (draggedEntityIds.length === 0) return;
       const center = centerCoords();
       const fallback = { x: center.x - 180, y: center.y - 120 };
@@ -2818,22 +3453,26 @@ export function ArchitecturalCanvasApp({
           anchor: anchorBelowFolder,
           forceLayout: true,
           skipUndo: true,
+          neonFlush: true,
+          fromSpaceId: activeSpaceIdRef.current,
         });
         suppressParentExitActivateUntilRef.current = Date.now() + 500;
         return;
       }
 
       if (hoveredFolderId) {
-        const folderEntity = graph.entities[hoveredFolderId];
+        const folderEntity = graphRef.current.entities[hoveredFolderId];
         if (folderEntity && folderEntity.kind === "folder") {
-          const childSpaceId = graph.spaces[folderEntity.childSpaceId]
+          const childSpaceId = graphRef.current.spaces[folderEntity.childSpaceId]
             ? folderEntity.childSpaceId
-            : ensureFolderChildSpace(hoveredFolderId);
+            : await ensureFolderChildSpace(hoveredFolderId);
           if (childSpaceId) {
             moveEntitiesToSpace(draggedEntityIds, childSpaceId, {
               anchor: fallback,
               forceLayout: true,
               skipUndo: true,
+              neonFlush: true,
+              fromSpaceId: activeSpaceIdRef.current,
             });
             return;
           }
@@ -2848,8 +3487,6 @@ export function ArchitecturalCanvasApp({
       centerCoords,
       ensureFolderChildSpace,
       getParentFolderExitSlot,
-      graph.entities,
-      graph.spaces,
       hoveredFolderId,
       hoveredStackTargetId,
       moveEntitiesToSpace,
@@ -2950,7 +3587,7 @@ export function ArchitecturalCanvasApp({
         if (isClick) {
           setSelectedNodeIds([]);
         } else {
-          const selected = Array.from(
+          const hits = Array.from(
             document.querySelectorAll<HTMLElement>("[data-node-id]"),
           )
             .filter((el) => {
@@ -2959,6 +3596,13 @@ export function ArchitecturalCanvasApp({
             })
             .map((el) => el.dataset.nodeId)
             .filter((id): id is string => !!id);
+          /* Stacks render one `[data-node-id]` per layer — rect overlap yields duplicate ids. */
+          const seen = new Set<string>();
+          const selected = hits.filter((id) => {
+            if (seen.has(id)) return false;
+            seen.add(id);
+            return true;
+          });
           setSelectedNodeIds(selected);
         }
       }
@@ -2966,9 +3610,16 @@ export function ArchitecturalCanvasApp({
       isPanningRef.current = false;
       setIsPanning(false);
       if (draggedNodeIdsRef.current.length > 0) {
-        const ids = draggedNodeIdsRef.current;
+        const ids = [...draggedNodeIdsRef.current];
         updateDropTargets(ids[0], dragPointerScreenRef.current.x, dragPointerScreenRef.current.y);
-        handleDrop(ids);
+        void handleDrop(ids).then(() => {
+          if (!persistNeonRef.current) return;
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              persistNeonItemsLayout(ids);
+            });
+          });
+        });
       }
       const stackPointerDrag = stackPointerDragRef.current;
       if (stackPointerDrag?.moved) {
@@ -2992,7 +3643,15 @@ export function ArchitecturalCanvasApp({
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, [activeSpaceId, handleDrop, scale, translateX, translateY, updateDropTargets]);
+  }, [
+    activeSpaceId,
+    handleDrop,
+    persistNeonItemsLayout,
+    scale,
+    translateX,
+    translateY,
+    updateDropTargets,
+  ]);
 
   useEffect(() => {
     if (!stackModal) return;
@@ -3188,7 +3847,6 @@ export function ArchitecturalCanvasApp({
         const graphSnap = graphRef.current;
         const extracted = graphSnap.entities[drag.entityId];
         const spaceId = activeSpaceIdRef.current;
-        const zi = maxZIndexRef.current;
         if (extracted) {
           const remainingOrdered = orderedIdsForCommit.filter((id) => id !== drag.entityId);
           const remaining = remainingOrdered
@@ -3222,7 +3880,6 @@ export function ArchitecturalCanvasApp({
                   ...pulled,
                   stackId: null,
                   stackOrder: null,
-                  zIndex: zi + 1,
                 };
               }
               return next;
@@ -3240,7 +3897,6 @@ export function ArchitecturalCanvasApp({
                   ...pulled,
                   stackId: null,
                   stackOrder: null,
-                  zIndex: zi + 1,
                 };
               }
               remaining.forEach((entity) => {
@@ -3550,7 +4206,7 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (paletteOpenRef.current) return;
+      if (paletteOpenRef.current || lorePanelOpenRef.current) return;
       if (event.code !== "Space") return;
       if (isEditableTarget(event.target)) return;
       event.preventDefault();
@@ -3574,6 +4230,7 @@ export function ArchitecturalCanvasApp({
 
   const deleteEntitySelection = useCallback((entityIds: string[]) => {
     if (entityIds.length === 0) return;
+    const idsToRemove = collectEntityIdsForDeletion(graphRef.current, entityIds);
     recordUndoBeforeMutation();
     setGraph((prev) => {
       const next = shallowCloneGraph(prev);
@@ -3623,6 +4280,12 @@ export function ArchitecturalCanvasApp({
       return next;
     });
 
+    if (persistNeonRef.current) {
+      for (const id of idsToRemove) {
+        if (isUuidLike(id)) void apiDeleteItem(id);
+      }
+    }
+
     setSelectedNodeIds((prev) => prev.filter((id) => !entityIds.includes(id)));
     if (activeNodeId && entityIds.includes(activeNodeId)) {
       setFocusOpen(false);
@@ -3635,7 +4298,7 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (paletteOpenRef.current) return;
+      if (paletteOpenRef.current || lorePanelOpenRef.current) return;
       if (event.key !== "Escape") return;
       if (isEditableTarget(event.target)) return;
 
@@ -3682,7 +4345,7 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (paletteOpenRef.current) return;
+      if (paletteOpenRef.current || lorePanelOpenRef.current) return;
       const isDeleteKey = event.key === "Delete" || event.key === "Backspace";
       if (!isDeleteKey) return;
       if (isEditableTarget(event.target) || focusOpen || galleryOpen) return;
@@ -3752,7 +4415,8 @@ export function ArchitecturalCanvasApp({
 
   const onWheel = useCallback(
     (event: React.WheelEvent<HTMLDivElement>) => {
-      if (focusOpen || galleryOpen || stackModal || paletteOpenRef.current) return;
+      if (focusOpen || galleryOpen || stackModal || paletteOpenRef.current || lorePanelOpenRef.current)
+        return;
       const target = event.target as HTMLElement;
       const inEditable =
         !!target.closest("input, textarea, select, [contenteditable='true']");
@@ -3787,7 +4451,7 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (paletteOpenRef.current) return;
+      if (paletteOpenRef.current || lorePanelOpenRef.current) return;
       const target = event.target as HTMLElement;
       if (target?.isContentEditable) return;
       if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
@@ -3818,7 +4482,7 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (paletteOpenRef.current) return;
+      if (paletteOpenRef.current || lorePanelOpenRef.current) return;
       const target = event.target as HTMLElement;
       if (target?.isContentEditable) return;
       if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
@@ -3838,60 +4502,7 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (paletteOpenRef.current) return;
-      const target = event.target as HTMLElement;
-      if (target?.isContentEditable) return;
-      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
-        return;
-      }
-      if (focusOpen || galleryOpen) return;
-      const mod = event.metaKey || event.ctrlKey;
-      if (!mod) return;
-      const key = event.key.toLowerCase();
-      if (key === "z") return;
-      if (key === "s") {
-        event.preventDefault();
-        if (selectedNodeIds.length === 1) {
-          const entity = graph.entities[selectedNodeIds[0]!];
-          if (entity?.stackId) {
-            unstackGroup(entity.stackId);
-            return;
-          }
-        }
-        stackSelectedContent();
-      }
-      if (key === "u" && selectedNodeIds.length === 1) {
-        const entity = graph.entities[selectedNodeIds[0]!];
-        if (!entity?.stackId) return;
-        event.preventDefault();
-        recordUndoBeforeMutation();
-        setGraph((prev) => {
-          const next = shallowCloneGraph(prev);
-          next.entities[entity.id] = {
-            ...next.entities[entity.id],
-            stackId: null,
-            stackOrder: null,
-          };
-          return normalizeStack(entity.stackId!, next);
-        });
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [
-    focusOpen,
-    galleryOpen,
-    graph.entities,
-    normalizeStack,
-    recordUndoBeforeMutation,
-    selectedNodeIds,
-    stackSelectedContent,
-    unstackGroup,
-  ]);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (paletteOpenRef.current) return;
+      if (paletteOpenRef.current || lorePanelOpenRef.current) return;
       const target = event.target as HTMLElement | null;
       if (isEditableTarget(target)) return;
       if (focusOpen || galleryOpen || stackModal) return;
@@ -4380,21 +4991,162 @@ export function ArchitecturalCanvasApp({
   }, [recordUndoBeforeMutation, visibleEntityIds]);
   alignSelectedInGridRef.current = alignSelectedInGrid;
 
-  const canStackFromSelection = useMemo(() => {
-    const contentIds = selectedNodeIds.filter((id) => {
+  const stackSelectionUi = useMemo(() => {
+    const selectedVisibleDeduped: string[] = [];
+    const seenVis = new Set<string>();
+    for (const id of selectedNodeIds) {
+      if (!visibleEntityIds.includes(id)) continue;
+      if (seenVis.has(id)) continue;
+      seenVis.add(id);
+      selectedVisibleDeduped.push(id);
+    }
+
+    const ordered: string[] = [];
+    const seen = new Set<string>();
+    for (const id of selectedVisibleDeduped) {
       const e = graph.entities[id];
-      return e?.kind === "content" && visibleEntityIds.includes(id);
+      if (e?.kind !== "content") continue;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      ordered.push(id);
+    }
+    const selectedContentSet = new Set(ordered);
+
+    const whollySelectedStackIds: string[] = [];
+    stackGroups.forEach((members, stackId) => {
+      if (members.length < 2) return;
+      if (members.every((m) => selectedContentSet.has(m.id))) whollySelectedStackIds.push(stackId);
     });
-    return contentIds.length >= 2;
-  }, [graph.entities, selectedNodeIds, visibleEntityIds]);
+
+    const union = new Set<string>();
+    whollySelectedStackIds.forEach((sid) => {
+      stackGroups.get(sid)?.forEach((m) => union.add(m.id));
+    });
+    /* Selection must be *exactly* those stack members (no extra folders/cards). */
+    const isUnionOfWhollySelectedStacks =
+      whollySelectedStackIds.length >= 1 &&
+      selectedVisibleDeduped.length === union.size &&
+      selectedVisibleDeduped.every((id) => union.has(id));
+
+    const isExactlyOneFullStack =
+      whollySelectedStackIds.length === 1 && isUnionOfWhollySelectedStacks;
+
+    const canMergeStacks = ordered.length >= 2 && !isExactlyOneFullStack;
+    const canUnstackWhollySelected = isUnionOfWhollySelectedStacks;
+
+    return {
+      canMergeStacks,
+      canUnstackWhollySelected,
+      whollySelectedStackIds,
+    };
+  }, [graph.entities, selectedNodeIds, visibleEntityIds, stackGroups]);
+
+  stackSelectionUiRef.current = stackSelectionUi;
+
+  const unstackWhollySelectedStacks = useCallback(() => {
+    const { whollySelectedStackIds } = stackSelectionUiRef.current;
+    if (whollySelectedStackIds.length === 0) return;
+    const spaceId = activeSpaceIdRef.current;
+    const g = graphRef.current;
+    const memberIds: string[] = [];
+    for (const sid of whollySelectedStackIds) {
+      const members = Object.values(g.entities)
+        .filter(
+          (e): e is Extract<CanvasEntity, { kind: "content" }> =>
+            e.kind === "content" && e.stackId === sid,
+        )
+        .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0));
+      memberIds.push(...members.map((m) => m.id));
+    }
+    recordUndoBeforeMutation();
+    setGraph((prev) => {
+      let next = prev;
+      for (const stackId of whollySelectedStackIds) {
+        next = applyUnstackStackInSpace(next, stackId, spaceId);
+      }
+      return next;
+    });
+    setSelectedNodeIds(memberIds);
+  }, [recordUndoBeforeMutation]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (paletteOpenRef.current || lorePanelOpenRef.current) return;
+      const target = event.target as HTMLElement;
+      if (target?.isContentEditable) return;
+      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
+        return;
+      }
+      if (focusOpen || galleryOpen) return;
+      const mod = event.metaKey || event.ctrlKey;
+      if (!mod) return;
+      const key = event.key.toLowerCase();
+      if (key === "z") return;
+      if (key === "s") {
+        event.preventDefault();
+        if (selectedNodeIds.length === 1) {
+          const entity = graph.entities[selectedNodeIds[0]!];
+          if (entity?.kind === "content" && entity.stackId) {
+            const group = stackGroups.get(entity.stackId);
+            if (group && group.length >= 2) {
+              unstackGroup(entity.stackId);
+              return;
+            }
+          }
+        }
+        const ui = stackSelectionUiRef.current;
+        if (ui.canMergeStacks) {
+          stackSelectedContent();
+        } else if (ui.canUnstackWhollySelected) {
+          unstackWhollySelectedStacks();
+        }
+        return;
+      }
+      if (key === "u" && selectedNodeIds.length === 1) {
+        const entity = graph.entities[selectedNodeIds[0]!];
+        if (!entity?.stackId) return;
+        event.preventDefault();
+        recordUndoBeforeMutation();
+        setGraph((prev) => {
+          const next = shallowCloneGraph(prev);
+          next.entities[entity.id] = {
+            ...next.entities[entity.id],
+            stackId: null,
+            stackOrder: null,
+          };
+          return normalizeStack(entity.stackId!, next);
+        });
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    focusOpen,
+    galleryOpen,
+    graph.entities,
+    normalizeStack,
+    recordUndoBeforeMutation,
+    selectedNodeIds,
+    stackGroups,
+    stackSelectedContent,
+    unstackGroup,
+    unstackWhollySelectedStacks,
+  ]);
 
   const selectionContextMenuItems = useMemo<ContextMenuItem[]>(
     () => [
       {
-        label: "Create stack",
+        label:
+          stackSelectionUi.whollySelectedStackIds.length >= 2 ? "Merge stacks" : "Create stack",
         icon: <Stack size={18} weight="bold" aria-hidden />,
-        disabled: !canStackFromSelection,
+        disabled: !stackSelectionUi.canMergeStacks,
         onSelect: () => stackSelectedContent(),
+      },
+      {
+        label: "Unstack",
+        icon: <ArrowsOut size={18} weight="bold" aria-hidden />,
+        disabled: !stackSelectionUi.canUnstackWhollySelected,
+        onSelect: () => unstackWhollySelectedStacks(),
       },
       {
         label: "Align in grid",
@@ -4415,11 +5167,14 @@ export function ArchitecturalCanvasApp({
     ],
     [
       alignSelectedInGrid,
-      canStackFromSelection,
       deleteEntitySelection,
       duplicateSelectedEntities,
       selectedNodeIds.length,
       stackSelectedContent,
+      stackSelectionUi.canMergeStacks,
+      stackSelectionUi.canUnstackWhollySelected,
+      stackSelectionUi.whollySelectedStackIds.length,
+      unstackWhollySelectedStacks,
     ],
   );
 
@@ -4626,6 +5381,9 @@ export function ArchitecturalCanvasApp({
     setGalleryDimsLabel("— × —");
   }, [galleryOpen, galleryBodyFingerprint]);
 
+  const viewportRevealReady =
+    canvasSurfaceReady && (scenario !== "default" || canvasBootstrapResolved);
+
   return (
     <div
       ref={shellRef}
@@ -4636,12 +5394,12 @@ export function ArchitecturalCanvasApp({
       <div
         ref={viewportRef}
         className={`${styles.viewport} ${styles.viewportSurface} ${
-          canvasSurfaceReady ? styles.viewportSurfaceReady : styles.viewportSurfacePending
+          viewportRevealReady ? styles.viewportSurfaceReady : styles.viewportSurfacePending
         } ${activeSpaceId !== graph.rootSpaceId ? styles.deepSpace : ""}${
           stackModal ? ` ${styles.viewportStackModalOpen}` : ""
         } ${connectionMode !== "move" ? styles.viewportConnectionMode : ""}`}
-        aria-busy={!canvasSurfaceReady}
-        data-canvas-ready={canvasSurfaceReady ? "true" : "false"}
+        aria-busy={!viewportRevealReady}
+        data-canvas-ready={viewportRevealReady ? "true" : "false"}
         onMouseDown={onViewportMouseDown}
         onContextMenuCapture={handleViewportContextMenuCapture}
         onWheel={onWheel}
@@ -4887,7 +5645,12 @@ export function ArchitecturalCanvasApp({
             );
           })}
           </div>
-          <svg className={styles.connectionLayer} viewBox="0 0 10000 10000" aria-hidden>
+          <svg
+            ref={connectionLayerSvgRef}
+            className={styles.connectionLayer}
+            viewBox="0 0 10000 10000"
+            aria-hidden
+          >
             {connectionMode === "draw" && connectionSourceId && connectionCursorWorld
               ? (() => {
                   const sourceEntity = graph.entities[connectionSourceId];
@@ -4938,7 +5701,8 @@ export function ArchitecturalCanvasApp({
                 connectionPinView,
               );
               if (!sourcePin || !targetPin) return null;
-              const pathD = connectionPaths[connection.id] ?? "";
+              /** Placeholder only; rope sim writes `d` imperatively (see rAF `step`). */
+              const pathD = "M 0 0";
               const isCut = connectionMode === "cut";
               return (
                 <g key={connection.id} data-connection-id={connection.id}>
@@ -5064,14 +5828,17 @@ export function ArchitecturalCanvasApp({
                         return (
                           <span key={spaceId} className={styles.crumbItem}>
                             {index > 0 ? <span className={styles.crumbSep}>/</span> : null}
-                            <button
+                            <Button
                               type="button"
+                              variant="ghost"
+                              tone="glass"
+                              size="sm"
                               className={`${styles.crumbBtn} ${isActive ? styles.crumbActive : ""}`}
                               onClick={() => enterSpace(spaceId)}
                               disabled={isActive}
                             >
                               {label}
-                            </button>
+                            </Button>
                           </span>
                         );
                       })}
@@ -5119,6 +5886,21 @@ export function ArchitecturalCanvasApp({
             undoLabel={`Undo (${modKeyHints.undo})`}
             redoLabel={`Redo (${modKeyHints.redo})`}
             folderColorPicker={folderColorPickerForDock}
+            selectionDelete={{
+              selectedCount: selectedNodeIds.length,
+              onDelete: () => deleteEntitySelection([...selectedNodeIdsRef.current]),
+            }}
+            selectionStack={{
+              canMerge: stackSelectionUi.canMergeStacks,
+              onMerge: () => stackSelectedContent(),
+              mergeTitle:
+                stackSelectionUi.whollySelectedStackIds.length >= 2
+                  ? `Merge stacks (${modKeyHints.stack})`
+                  : `Create stack (${modKeyHints.stack})`,
+              canUnstack: stackSelectionUi.canUnstackWhollySelected,
+              onUnstack: () => unstackWhollySelectedStacks(),
+              unstackTitle: "Unstack",
+            }}
           />
         ) : null}
 
@@ -5183,6 +5965,13 @@ export function ArchitecturalCanvasApp({
           onSelectItem={(id) => focusEntityFromPalette(id)}
           onSelectSpace={(spaceId) => enterSpace(spaceId)}
           onRunAction={runPaletteAction}
+        />
+        <LoreAskPanel
+          open={lorePanelOpen}
+          onClose={() => setLorePanelOpen(false)}
+          spaceId={activeSpaceId}
+          spaceScopedAllowed={isUuidLike(activeSpaceId)}
+          onOpenSource={(id) => focusEntityFromPalette(id)}
         />
       </div>
       </div>

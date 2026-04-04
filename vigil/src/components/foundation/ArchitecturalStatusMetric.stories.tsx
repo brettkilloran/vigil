@@ -1,11 +1,11 @@
 "use client";
 
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 
 import { ArchitecturalStatusMetric } from "@/src/components/foundation/ArchitecturalStatusBar";
 
 const meta: Meta<typeof ArchitecturalStatusMetric> = {
-  title: "Architectural Shell/Primitives/Status Metric",
+  title: "Heartgarden/Architectural Shell/Primitives/Status Metric",
   component: ArchitecturalStatusMetric,
   args: {
     children: "100%",
@@ -27,3 +27,4 @@ export default meta;
 type Story = StoryObj<typeof ArchitecturalStatusMetric>;
 
 export const Default: Story = {};
+

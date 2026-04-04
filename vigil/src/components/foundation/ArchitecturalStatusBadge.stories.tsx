@@ -1,11 +1,11 @@
 "use client";
 
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 
 import { ArchitecturalStatusBadge } from "@/src/components/foundation/ArchitecturalStatusBar";
 
 const meta: Meta<typeof ArchitecturalStatusBadge> = {
-  title: "Architectural Shell/Primitives/Status Badge",
+  title: "Heartgarden/Architectural Shell/Primitives/Status Badge",
   component: ArchitecturalStatusBadge,
   args: {
     showPulse: true,
@@ -28,3 +28,4 @@ export default meta;
 type Story = StoryObj<typeof ArchitecturalStatusBadge>;
 
 export const Default: Story = {};
+

@@ -22,10 +22,33 @@ The canvas is **custom DOM** (`src/components/canvas/`, `src/stores/canvas-store
 
 **Zustand:** Select **stable** store slices (e.g. `useCanvasStore((s) => s.items)`). Derive lists with `useMemo(() => Object.values(items), [items])`. Avoid selectors that return a **new array or object every call** (e.g. `Object.values(s.items)` inline in the selector)—that causes re-render loops and React 19 `getServerSnapshot` warnings.
 
+## Local dev, Node, and Storybook (guardrails)
+
+**Package manager:** Use **npm** only in `vigil/` (`package-lock.json`). Do not mix pnpm/yarn in the same tree without a deliberate migration.
+
+**Node on PATH (Windows portable installs):** If `npm`/`node` are missing in a new terminal or in Cursor, the portable Node folder is probably not on **User** `PATH`. Run once per portable upgrade:
+
+- `powershell -ExecutionPolicy Bypass -File scripts/pin-portable-node-user-path.ps1`  
+  Then **restart Cursor** so integrated terminals inherit the updated User `PATH`.
+
+**Daily dev URLs:** From `vigil/`, prefer **`npm run dev:surfaces`** (app + Storybook). Use a normal browser (**Chrome / Edge**), not the editor’s embedded browser, for Storybook.
+
+| Surface | URL | Notes |
+|--------|-----|--------|
+| heartgarden (Next) | `http://localhost:3000` | `next.config.ts` **`allowedDevOrigins`** includes `localhost` and `127.0.0.1` so dev HMR is not blocked when mixing those hosts. If you use the **Network** URL from the dev banner, add that **hostname** to `allowedDevOrigins` too. |
+| Storybook (dev) | `http://localhost:6006` | Scripts use **`--host 0.0.0.0`** and `.storybook/main.ts` sets **`webpackFinal` → `devServer.allowedHosts: "all"`** so localhost / 127.0.0.1 / LAN do not produce a blank shell. **Do not remove** those without re-validating Storybook on Windows. |
+| Storybook (static fallback) | `http://localhost:6007` | **`npm run storybook:static`** — production build + `serve`; use if dev Storybook misbehaves. Port **6007** avoids clashing with dev on **6006**. |
+
+**Next.js dev:** `dev` / `dev:app` use **`next dev --webpack`** (not Turbopack) — Turbopack previously hung on `/` for this app.
+
+**CSS modules:** Do not put **`:root { … }`** in `*.module.css` (Webpack CSS modules reject global selectors and the app/Storybook build can fail). Shared token blocks live in **`app/globals.css`**.
+
+**CI:** GitHub Actions runs **`npm run build-storybook`** after **`npm run check`** so broken Storybook config or stories fail the pipeline. Locally you can run **`npm run check:all`** (lint + Next build + Storybook build) before pushing.
+
 ## Terminals (Cursor / agents)
 
 - **`npm run dev`** runs until you stop it. If an agent **backgrounds** the dev server, the IDE will show a shell “running” for tens of minutes — that is **normal**, not a hung build.
-- **Prefer `npm run check`** (lint + production build) to verify changes; it **exits** and avoids orphan dev servers.
+- **Prefer `npm run check`** (lint + production build) to verify changes; it **exits** and avoids orphan dev servers. Use **`npm run check:all`** when touching Storybook, `.storybook/`, or stories.
 - **Do not** start multiple `next dev` processes for the same app (port conflicts, duplicate work). Only one dev server unless you intentionally use another port.
 - **`npm run mcp`** is **stdio-long-lived** by design when Cursor attaches to the MCP server.
 
