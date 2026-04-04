@@ -9,6 +9,7 @@ import {
   DownloadSimple,
   FileText,
   Folder,
+  Graph,
   MagnifyingGlass,
   Sparkle,
   NotePencil,
@@ -66,7 +67,16 @@ import {
   apiPatchSpaceName,
   fetchBootstrap,
 } from "@/src/components/foundation/architectural-neon-api";
-import { neonSyncBumpPending, neonSyncSetCloudEnabled, neonSyncUnbumpPending } from "@/src/lib/neon-sync-bus";
+import { mergeHydratedDbConnections } from "@/src/lib/architectural-item-link-graph";
+import { LORE_LINK_TYPE_OPTIONS } from "@/src/lib/lore-link-types";
+import type { LoreImportEntityDraft, LoreImportLinkDraft } from "@/src/lib/lore-import-types";
+import {
+  getNeonSyncSnapshot,
+  neonSyncBumpPending,
+  neonSyncSetCloudEnabled,
+  neonSyncUnbumpPending,
+  subscribeNeonSync,
+} from "@/src/lib/neon-sync-bus";
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
 import {
   cloneArchitecturalGraph,
@@ -87,6 +97,8 @@ import {
   type PaletteItem,
   type PaletteSpace,
 } from "@/src/components/ui/CommandPalette";
+import { ArchitecturalLinksPanel } from "@/src/components/ui/ArchitecturalLinksPanel";
+import { LinkGraphOverlay } from "@/src/components/ui/LinkGraphOverlay";
 import { LoreAskPanel } from "@/src/components/ui/LoreAskPanel";
 import type {
   CanvasConnectionPin,
@@ -124,6 +136,15 @@ const STACK_CLICK_SUPPRESS_DRAG_PX = 6;
 const FOLDER_PREVIEW_MAX_ITEMS = 6;
 
 type ArchitecturalCanvasScenario = "default" | "nested" | "corrupt";
+
+type LoreImportDraftState = {
+  fileName?: string;
+  sourceTitle?: string;
+  sourceText: string;
+  includeSourceCard: boolean;
+  entities: LoreImportEntityDraft[];
+  suggestedLinks: LoreImportLinkDraft[];
+};
 
 const ROOT_SPACE_ID = "root";
 
@@ -864,6 +885,12 @@ export function ArchitecturalCanvasApp({
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [lorePanelOpen, setLorePanelOpen] = useState(false);
   const lorePanelOpenRef = useRef(false);
+  const [graphOverlayOpen, setGraphOverlayOpen] = useState(false);
+  const [loreImportDraft, setLoreImportDraft] = useState<LoreImportDraftState | null>(null);
+  const [loreImportCommitting, setLoreImportCommitting] = useState(false);
+  const loreImportDraftRef = useRef<LoreImportDraftState | null>(null);
+  const [cloudLinksBar, setCloudLinksBar] = useState(() => getNeonSyncSnapshot().cloudEnabled);
+  const loreImportFileInputRef = useRef<HTMLInputElement | null>(null);
   const [galleryNodeId, setGalleryNodeId] = useState<string | null>(null);
   const [galleryDraftTitle, setGalleryDraftTitle] = useState("");
   const [galleryDraftNotes, setGalleryDraftNotes] = useState("");
@@ -885,6 +912,11 @@ export function ArchitecturalCanvasApp({
     parentDropHoveredRef.current = next;
     setParentDropHovered(next);
   }, []);
+
+  useEffect(() => {
+    loreImportDraftRef.current = loreImportDraft;
+  }, [loreImportDraft]);
+
   /** `orderedIds`: front-to-back (top-of-stack / foremost card first) for layout and expanded grid. */
   const [stackModal, setStackModal] = useState<{
     stackId: string;
@@ -1035,6 +1067,8 @@ export function ArchitecturalCanvasApp({
     idCounterRef.current += 1;
     return `hg-${Date.now()}-${idCounterRef.current}`;
   }, []);
+
+  useEffect(() => subscribeNeonSync(() => setCloudLinksBar(getNeonSyncSnapshot().cloudEnabled)), []);
 
   const schedulePersistContentBody = useCallback((entityId: string, bodyHtml: string) => {
     if (!persistNeonRef.current || !isUuidLike(entityId)) return;
@@ -1288,7 +1322,7 @@ export function ArchitecturalCanvasApp({
           body: JSON.stringify({
             sourceItemId,
             targetItemId,
-            linkType: "pin",
+            linkType: snap.linkType ?? "pin",
             color: snap.color,
             sourcePin: `${snap.sourcePin.anchor}:${snap.sourcePin.insetX}:${snap.sourcePin.insetY}`,
             targetPin: `${snap.targetPin.anchor}:${snap.targetPin.insetX}:${snap.targetPin.insetY}`,
@@ -1351,6 +1385,38 @@ export function ArchitecturalCanvasApp({
     [setConnectionSyncPatch],
   );
 
+  const syncLinkTypeConnection = useCallback(
+    async (connectionId: string, linkType: string) => {
+      const snap = graphRef.current.connections[connectionId];
+      if (!snap?.dbLinkId || !isUuidLike(snap.dbLinkId)) return;
+      try {
+        const res = await fetch("/api/item-links", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: snap.dbLinkId, linkType }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      } catch {
+        setConnectionSyncPatch(connectionId, {
+          syncState: "error",
+          syncError: "Failed to sync link type",
+        });
+      }
+    },
+    [setConnectionSyncPatch],
+  );
+
+  const setConnectionLinkType = useCallback(
+    (connectionId: string, linkType: string) => {
+      const cur = graphRef.current.connections[connectionId];
+      if (!cur || (cur.linkType ?? "pin") === linkType) return;
+      recordUndoBeforeMutation();
+      setConnectionSyncPatch(connectionId, { linkType });
+      void syncLinkTypeConnection(connectionId, linkType);
+    },
+    [recordUndoBeforeMutation, setConnectionSyncPatch, syncLinkTypeConnection],
+  );
+
   const createConnection = useCallback(
     (sourceEntityId: string, targetEntityId: string) => {
       const connectionId = createId("conn");
@@ -1373,6 +1439,7 @@ export function ArchitecturalCanvasApp({
               ? CONNECTION_PIN_DEFAULT_FOLDER
               : CONNECTION_PIN_DEFAULT_CONTENT,
           color: connectionColor,
+          linkType: "pin",
           slackMultiplier: 1.1,
           createdAt: Date.now(),
           updatedAt: Date.now(),
@@ -2208,6 +2275,35 @@ export function ArchitecturalCanvasApp({
     };
   }, [activeSpaceId, graph.rootSpaceId, scale, translateX, translateY]);
 
+  useEffect(() => {
+    if (scenario !== "default" || !canvasBootstrapResolved) return;
+    if (!persistNeonRef.current) return;
+    if (!isUuidLike(activeSpaceId)) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/spaces/${encodeURIComponent(activeSpaceId)}/graph`);
+        const data = (await res.json()) as {
+          ok?: boolean;
+          edges?: import("@/src/lib/graph-types").GraphEdge[];
+        };
+        if (cancelled || !data?.ok || !data.edges) return;
+        setGraph((prev) =>
+          mergeHydratedDbConnections(prev, data.edges!, {
+            defaultFolderPin: CONNECTION_PIN_DEFAULT_FOLDER,
+            defaultContentPin: CONNECTION_PIN_DEFAULT_CONTENT,
+            fallbackColor: CONNECTION_DEFAULT_COLOR,
+          }),
+        );
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSpaceId, canvasBootstrapResolved, scenario]);
+
   const connectionPinView = useMemo<ConnectionPinViewContext>(
     () => ({ tx: translateX, ty: translateY, scale }),
     [translateX, translateY, scale],
@@ -2356,6 +2452,73 @@ export function ArchitecturalCanvasApp({
       y: (window.innerHeight / 2 - translateY) / scale,
     };
   }, [scale, translateX, translateY]);
+
+  const commitLoreImport = useCallback(async () => {
+    const d = loreImportDraftRef.current;
+    if (!d) return;
+    if (!persistNeonRef.current || !isUuidLike(activeSpaceId)) {
+      window.alert("Importing to the canvas requires a connected Neon space (not local demo mode).");
+      return;
+    }
+    const trimmedEntities = d.entities
+      .map((e) => ({
+        name: e.name.trim(),
+        kind: e.kind.trim() || "lore",
+        summary: e.summary.trim(),
+      }))
+      .filter((e) => e.name.length > 0);
+    const hasSource = d.includeSourceCard && d.sourceText.trim().length > 0;
+    if (!hasSource && trimmedEntities.length < 1) {
+      window.alert("Add at least one entity with a name, or include the source text as a card.");
+      return;
+    }
+    const center = centerCoords();
+    setLoreImportCommitting(true);
+    try {
+      const res = await fetch("/api/lore/import/commit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          spaceId: activeSpaceId,
+          sourceDocument: hasSource
+            ? {
+                title: d.sourceTitle?.trim() || d.fileName,
+                text: d.sourceText,
+              }
+            : undefined,
+          entities: trimmedEntities,
+          suggestedLinks: d.suggestedLinks.filter((l) => l.fromName.trim() && l.toName.trim()),
+          layout: { originX: center.x - 140, originY: center.y - 120 },
+        }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        linkWarnings?: string[];
+      };
+      if (!res.ok || !data.ok) {
+        window.alert(typeof data.error === "string" ? data.error : "Commit failed");
+        return;
+      }
+      if (data.linkWarnings?.length) {
+        window.alert(
+          `Imported. Link notes:\n${data.linkWarnings.slice(0, 8).join("\n")}${data.linkWarnings.length > 8 ? "\n…" : ""}`,
+        );
+      }
+      const boot = await fetchBootstrap(activeSpaceId);
+      if (boot && boot.demo === false && boot.spaceId) {
+        setGraph((g) => mergeBootstrapView(g, boot));
+        if (boot.items.length > 0) {
+          setMaxZIndex((z) => Math.max(z, ...boot.items.map((i) => i.zIndex)));
+        }
+      }
+      setLoreImportDraft(null);
+    } catch {
+      window.alert("Commit request failed");
+    } finally {
+      setLoreImportCommitting(false);
+    }
+  }, [activeSpaceId, centerCoords]);
 
   const normalizeStack = useCallback((stackId: string, snapshot: CanvasGraph): CanvasGraph => {
     if (!snapshot?.entities) return snapshot;
@@ -2805,6 +2968,20 @@ export function ArchitecturalCanvasApp({
         keywords: ["lore", "ai", "claude", "ask", "heartgarden", "question"],
         icon: <Sparkle size={14} weight="bold" />,
       },
+      {
+        id: "link-graph",
+        label: "Link graph",
+        hint: "Force-directed item_links view for this space",
+        keywords: ["graph", "links", "network", "edges"],
+        icon: <Graph size={14} weight="bold" />,
+      },
+      {
+        id: "import-lore",
+        label: "Import lore file",
+        hint: "PDF / markdown → text + Claude entity extract (beta)",
+        keywords: ["import", "pdf", "markdown", "upload"],
+        icon: <UploadSimple size={14} weight="bold" />,
+      },
     ],
     [modKeyHints.recenter],
   );
@@ -3245,6 +3422,65 @@ export function ArchitecturalCanvasApp({
     });
   }, [activeSpaceId, centerCoords, createId, recordUndoBeforeMutation]);
 
+  const onLoreImportFileChange = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      if (!file) return;
+      const fd = new FormData();
+      fd.append("file", file);
+      try {
+        const parseRes = await fetch("/api/lore/import/parse", { method: "POST", body: fd });
+        const parsed = (await parseRes.json()) as {
+          ok?: boolean;
+          error?: string;
+          text?: string;
+          fileName?: string;
+          suggestedTitle?: string;
+        };
+        if (!parsed.ok || typeof parsed.text !== "string") {
+          window.alert(parsed.error ?? "Parse failed");
+          return;
+        }
+        let entities: LoreImportEntityDraft[] = [];
+        let suggestedLinks: LoreImportLinkDraft[] = [];
+        try {
+          const extRes = await fetch("/api/lore/import/extract", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: parsed.text }),
+          });
+          const extracted = (await extRes.json()) as {
+            ok?: boolean;
+            error?: string;
+            entities?: LoreImportEntityDraft[];
+            suggestedLinks?: LoreImportLinkDraft[];
+          };
+          if (extRes.ok && extracted.ok) {
+            entities = Array.isArray(extracted.entities) ? extracted.entities : [];
+            suggestedLinks = Array.isArray(extracted.suggestedLinks) ? extracted.suggestedLinks : [];
+          } else if (extRes.status !== 503) {
+            window.alert(extracted.error ?? "Extract failed");
+            return;
+          }
+        } catch {
+          /* Network error — still open manual review with parsed text */
+        }
+        setLoreImportDraft({
+          fileName: parsed.fileName,
+          sourceTitle: parsed.suggestedTitle,
+          sourceText: parsed.text,
+          includeSourceCard: true,
+          entities,
+          suggestedLinks,
+        });
+      } catch {
+        window.alert("Import request failed");
+      }
+    },
+    [],
+  );
+
   const runPaletteAction = useCallback((actionId: string) => {
     if (actionId === "create-note") {
       createNewNode("default");
@@ -3320,6 +3556,14 @@ export function ArchitecturalCanvasApp({
     }
     if (actionId === "ask-lore") {
       setLorePanelOpen(true);
+      return;
+    }
+    if (actionId === "link-graph") {
+      setGraphOverlayOpen(true);
+      return;
+    }
+    if (actionId === "import-lore") {
+      loreImportFileInputRef.current?.click();
     }
   }, [activeSpace?.entityIds, createNewNode, recenterToOrigin]);
 
@@ -5293,7 +5537,12 @@ export function ArchitecturalCanvasApp({
     if (!selectedConnectionId) return [];
     const selected = graph.connections[selectedConnectionId];
     const currentSlack = selected?.slackMultiplier ?? 1.1;
-    const base = [
+    const currentLt = selected?.linkType ?? "pin";
+    const typeItems: ContextMenuItem[] = LORE_LINK_TYPE_OPTIONS.map((opt) => ({
+      label: `${currentLt === opt.value ? "✓ " : ""}Link: ${opt.label}`,
+      onSelect: () => setConnectionLinkType(selectedConnectionId, opt.value),
+    }));
+    const base: ContextMenuItem[] = [
       {
         label: "Cut connection",
         onSelect: () => cutConnection(selectedConnectionId),
@@ -5308,10 +5557,10 @@ export function ArchitecturalCanvasApp({
         disabled: currentSlack >= 1.29,
         onSelect: () => setConnectionSlack(selectedConnectionId, 1.28),
       },
+      ...typeItems,
     ];
-    /* Thread color lives on the draw-mode spool in the tool rail — keeps this menu short. */
     return base;
-  }, [cutConnection, graph.connections, selectedConnectionId, setConnectionSlack]);
+  }, [cutConnection, graph.connections, selectedConnectionId, setConnectionLinkType, setConnectionSlack]);
 
   const canInsertImage = useMemo(() => {
     if (focusOpen && activeNodeId) {
@@ -5822,6 +6071,9 @@ export function ArchitecturalCanvasApp({
               /** Placeholder only; rope sim writes `d` imperatively (see rAF `step`). */
               const pathD = "M 0 0";
               const isCut = connectionMode === "cut";
+              const lt = connection.linkType ?? "pin";
+              const dash =
+                lt !== "pin" && lt !== "reference" ? ("10 7" as const) : undefined;
               return (
                 <g key={connection.id} data-connection-id={connection.id}>
                   {!isCut ? (
@@ -5845,7 +6097,7 @@ export function ArchitecturalCanvasApp({
                         setConnectionContextMenu(
                           clampContextMenuPosition(
                             { x: event.clientX, y: event.clientY },
-                            { maxWidth: 236, maxHeight: 360, edgePadding: 8 },
+                            { maxWidth: 260, maxHeight: 520, edgePadding: 8 },
                           ),
                         );
                       }}
@@ -5856,7 +6108,7 @@ export function ArchitecturalCanvasApp({
                     className={`${styles.connectionStroke} ${
                       isCut ? styles.connectionStrokeCuttable : ""
                     } ${selectedConnectionId === connection.id ? styles.connectionStrokeSelected : ""}`}
-                    style={{ stroke: connection.color }}
+                    style={{ stroke: connection.color, strokeDasharray: dash }}
                     data-connection-id={connection.id}
                     onMouseDown={(event) => {
                       if (!isCut) return;
@@ -5878,7 +6130,7 @@ export function ArchitecturalCanvasApp({
                       setConnectionContextMenu(
                         clampContextMenuPosition(
                           { x: event.clientX, y: event.clientY },
-                          { maxWidth: 236, maxHeight: 360, edgePadding: 8 },
+                          { maxWidth: 260, maxHeight: 520, edgePadding: 8 },
                         ),
                       );
                     }}
@@ -6081,7 +6333,7 @@ export function ArchitecturalCanvasApp({
           actions={paletteActions}
           recentItems={recentItems}
           onRecordRecentItem={pushRecentItem}
-          onSelectItem={(id) => focusEntityFromPalette(id)}
+          onSelectItem={(id, openInFocus) => focusEntityFromPalette(id, openInFocus)}
           onSelectSpace={(spaceId) => enterSpace(spaceId)}
           onRunAction={runPaletteAction}
         />
@@ -6092,6 +6344,317 @@ export function ArchitecturalCanvasApp({
           spaceScopedAllowed={isUuidLike(activeSpaceId)}
           onOpenSource={(id) => focusEntityFromPalette(id)}
         />
+        <input
+          ref={loreImportFileInputRef}
+          type="file"
+          accept=".pdf,.md,.txt,.markdown,text/plain,text/markdown,application/pdf"
+          className="sr-only"
+          aria-hidden
+          tabIndex={-1}
+          onChange={onLoreImportFileChange}
+        />
+        <ArchitecturalLinksPanel
+          graph={graph}
+          activeSpaceId={activeSpaceId}
+          selectedEntityIds={selectedNodeIds}
+          cloudEnabled={cloudLinksBar}
+          onFocusEntity={(id) => focusEntityFromPalette(id)}
+        />
+        <LinkGraphOverlay
+          open={graphOverlayOpen}
+          spaceId={cloudLinksBar && isUuidLike(activeSpaceId) ? activeSpaceId : null}
+          onClose={() => setGraphOverlayOpen(false)}
+          onSelectItem={(id) => focusEntityFromPalette(id)}
+        />
+        {loreImportDraft ? (
+          <div
+            className="fixed inset-0 z-[1150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Lore import review"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget && !loreImportCommitting) setLoreImportDraft(null);
+            }}
+          >
+            <datalist id="hg-lore-import-kinds">
+              {(
+                ["npc", "location", "faction", "quest", "item", "lore", "other"] as const
+              ).map((k) => (
+                <option key={k} value={k} />
+              ))}
+            </datalist>
+            <datalist id="hg-lore-import-linktypes">
+              {LORE_LINK_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value} label={o.label} />
+              ))}
+            </datalist>
+            <div className="flex max-h-[min(90vh,720px)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-panel)] p-4 shadow-xl">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="text-sm font-semibold text-[var(--vigil-label)]">Lore import</span>
+                  {loreImportDraft.fileName ? (
+                    <p className="text-[10px] text-[var(--vigil-muted)]">{loreImportDraft.fileName}</p>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="neutral"
+                    tone="glass"
+                    disabled={loreImportCommitting}
+                    onClick={() => setLoreImportDraft(null)}
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    tone="solid"
+                    disabled={loreImportCommitting}
+                    onClick={() => void commitLoreImport()}
+                  >
+                    {loreImportCommitting ? "Saving…" : "Add to canvas"}
+                  </Button>
+                </div>
+              </div>
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+                {loreImportDraft.entities.length === 0 && loreImportDraft.suggestedLinks.length === 0 ? (
+                  <p className="text-[11px] text-[var(--vigil-muted)]">
+                    No AI-extracted entities yet (missing API key or empty result). Add entity rows below, or
+                    include the source text as a note card.
+                  </p>
+                ) : null}
+                <label className="flex items-start gap-2 text-[11px] text-[var(--vigil-label)]">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={loreImportDraft.includeSourceCard}
+                    onChange={(e) =>
+                      setLoreImportDraft((p) => (p ? { ...p, includeSourceCard: e.target.checked } : p))
+                    }
+                  />
+                  <span>Include full source text as a note card (recommended for traceability)</span>
+                </label>
+                <div>
+                  <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-[var(--vigil-muted)]">
+                    Source text
+                  </span>
+                  <textarea
+                    className="h-28 w-full resize-y rounded-lg border border-[var(--vigil-border)] bg-[var(--vigil-surface)] px-2 py-1.5 text-[11px] text-[var(--vigil-label)]"
+                    value={loreImportDraft.sourceText}
+                    onChange={(e) =>
+                      setLoreImportDraft((p) => (p ? { ...p, sourceText: e.target.value } : p))
+                    }
+                    spellCheck={false}
+                  />
+                </div>
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--vigil-muted)]">
+                      Entities (manual edit)
+                    </span>
+                    <Button
+                      size="xs"
+                      variant="neutral"
+                      tone="glass"
+                      type="button"
+                      onClick={() =>
+                        setLoreImportDraft((p) =>
+                          p
+                            ? {
+                                ...p,
+                                entities: [...p.entities, { name: "", kind: "lore", summary: "" }],
+                              }
+                            : p,
+                        )
+                      }
+                    >
+                      Add entity
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {loreImportDraft.entities.length === 0 ? (
+                      <p className="text-[10px] text-[var(--vigil-muted)]">No entities — use Add entity.</p>
+                    ) : null}
+                    {loreImportDraft.entities.map((ent, i) => (
+                      <div
+                        key={i}
+                        className="grid gap-2 rounded-lg border border-[var(--vigil-border)] bg-black/[0.03] p-2 dark:bg-white/[0.04] sm:grid-cols-[1fr_100px_1fr_auto]"
+                      >
+                        <input
+                          className="rounded border border-[var(--vigil-border)] bg-[var(--vigil-surface)] px-2 py-1 text-[11px] text-[var(--vigil-label)]"
+                          placeholder="Name"
+                          value={ent.name}
+                          onChange={(e) =>
+                            setLoreImportDraft((p) => {
+                              if (!p) return p;
+                              const next = [...p.entities];
+                              next[i] = { ...next[i]!, name: e.target.value };
+                              return { ...p, entities: next };
+                            })
+                          }
+                        />
+                        <input
+                          className="rounded border border-[var(--vigil-border)] bg-[var(--vigil-surface)] px-2 py-1 text-[11px] text-[var(--vigil-label)]"
+                          placeholder="Kind"
+                          list="hg-lore-import-kinds"
+                          value={ent.kind}
+                          onChange={(e) =>
+                            setLoreImportDraft((p) => {
+                              if (!p) return p;
+                              const next = [...p.entities];
+                              next[i] = { ...next[i]!, kind: e.target.value };
+                              return { ...p, entities: next };
+                            })
+                          }
+                        />
+                        <input
+                          className="rounded border border-[var(--vigil-border)] bg-[var(--vigil-surface)] px-2 py-1 text-[11px] text-[var(--vigil-label)] sm:col-span-1"
+                          placeholder="Summary"
+                          value={ent.summary}
+                          onChange={(e) =>
+                            setLoreImportDraft((p) => {
+                              if (!p) return p;
+                              const next = [...p.entities];
+                              next[i] = { ...next[i]!, summary: e.target.value };
+                              return { ...p, entities: next };
+                            })
+                          }
+                        />
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          tone="glass"
+                          type="button"
+                          className="justify-self-end"
+                          onClick={() =>
+                            setLoreImportDraft((p) => {
+                              if (!p) return p;
+                              const next = p.entities.filter((_, j) => j !== i);
+                              const names = new Set(
+                                next.map((e) => e.name.trim().toLowerCase()).filter(Boolean),
+                              );
+                              const links = p.suggestedLinks.filter(
+                                (l) =>
+                                  names.has(l.fromName.trim().toLowerCase()) &&
+                                  names.has(l.toName.trim().toLowerCase()),
+                              );
+                              return { ...p, entities: next, suggestedLinks: links };
+                            })
+                          }
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--vigil-muted)]">
+                      Suggested links
+                    </span>
+                    <Button
+                      size="xs"
+                      variant="neutral"
+                      tone="glass"
+                      type="button"
+                      onClick={() =>
+                        setLoreImportDraft((p) =>
+                          p
+                            ? {
+                                ...p,
+                                suggestedLinks: [
+                                  ...p.suggestedLinks,
+                                  { fromName: "", toName: "", linkType: "reference" },
+                                ],
+                              }
+                            : p,
+                        )
+                      }
+                    >
+                      Add link
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {loreImportDraft.suggestedLinks.length === 0 ? (
+                      <p className="text-[10px] text-[var(--vigil-muted)]">No links.</p>
+                    ) : null}
+                    {loreImportDraft.suggestedLinks.map((link, i) => (
+                      <div
+                        key={i}
+                        className="grid gap-2 rounded-lg border border-[var(--vigil-border)] bg-black/[0.03] p-2 dark:bg-white/[0.04] sm:grid-cols-[1fr_1fr_120px_auto]"
+                      >
+                        <input
+                          className="rounded border border-[var(--vigil-border)] bg-[var(--vigil-surface)] px-2 py-1 text-[11px] text-[var(--vigil-label)]"
+                          placeholder="From (entity name)"
+                          value={link.fromName}
+                          onChange={(e) =>
+                            setLoreImportDraft((p) => {
+                              if (!p) return p;
+                              const next = [...p.suggestedLinks];
+                              next[i] = { ...next[i]!, fromName: e.target.value };
+                              return { ...p, suggestedLinks: next };
+                            })
+                          }
+                        />
+                        <input
+                          className="rounded border border-[var(--vigil-border)] bg-[var(--vigil-surface)] px-2 py-1 text-[11px] text-[var(--vigil-label)]"
+                          placeholder="To (entity name)"
+                          value={link.toName}
+                          onChange={(e) =>
+                            setLoreImportDraft((p) => {
+                              if (!p) return p;
+                              const next = [...p.suggestedLinks];
+                              next[i] = { ...next[i]!, toName: e.target.value };
+                              return { ...p, suggestedLinks: next };
+                            })
+                          }
+                        />
+                        <input
+                          className="rounded border border-[var(--vigil-border)] bg-[var(--vigil-surface)] px-2 py-1 text-[11px] text-[var(--vigil-label)]"
+                          placeholder="Type"
+                          list="hg-lore-import-linktypes"
+                          value={link.linkType ?? ""}
+                          onChange={(e) =>
+                            setLoreImportDraft((p) => {
+                              if (!p) return p;
+                              const next = [...p.suggestedLinks];
+                              next[i] = { ...next[i]!, linkType: e.target.value };
+                              return { ...p, suggestedLinks: next };
+                            })
+                          }
+                        />
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          tone="glass"
+                          type="button"
+                          className="justify-self-end"
+                          onClick={() =>
+                            setLoreImportDraft((p) => {
+                              if (!p) return p;
+                              return {
+                                ...p,
+                                suggestedLinks: p.suggestedLinks.filter((_, j) => j !== i),
+                              };
+                            })
+                          }
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <p className="mt-3 text-[10px] text-[var(--vigil-muted)]">
+                Cards are placed near the viewport center. Requires Neon (not local demo). Link rows must match
+                entity names (case-insensitive).
+              </p>
+            </div>
+          </div>
+        ) : null}
       </div>
       </div>
 

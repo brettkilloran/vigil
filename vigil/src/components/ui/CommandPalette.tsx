@@ -91,7 +91,7 @@ export function CommandPalette({
   spaces: PaletteSpace[];
   actions: PaletteAction[];
   recentItems: RecentPaletteItem[];
-  onSelectItem: (id: string) => void;
+  onSelectItem: (id: string, openInFocus?: boolean) => void;
   onSelectSpace: (spaceId: string) => void;
   onRecordRecentItem: (item: Omit<RecentPaletteItem, "updatedAt">) => void;
   onRunAction: (actionId: string) => void;
@@ -299,10 +299,11 @@ export function CommandPalette({
         spaceId: item.spaceId,
         spaceName: item.spaceName,
       });
-      onSelectItem(item.id);
+      const openInFocus = q.trim().length > 0;
+      onSelectItem(item.id, openInFocus);
       onClose();
     },
-    [onClose, onRecordRecentItem, onSelectItem],
+    [onClose, onRecordRecentItem, onSelectItem, q],
   );
 
   const selectSpace = useCallback(

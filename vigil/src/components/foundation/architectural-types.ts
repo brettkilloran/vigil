@@ -71,6 +71,8 @@ export type CanvasPinConnection = {
   dbLinkId?: string | null;
   syncState?: CanvasConnectionSyncState;
   syncError?: string | null;
+  /** Mirrors `item_links.link_type` (pin, ally, quest, …). */
+  linkType?: string;
 };
 
 export type CanvasGraph = {

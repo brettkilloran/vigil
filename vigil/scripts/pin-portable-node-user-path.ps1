@@ -1,6 +1,7 @@
 # Run once after installing/upgrading a "node-portable" zip on Windows.
-# Prepends the newest node-v*-win-x64 folder under %LOCALAPPDATA%\node-portable to your *User* PATH
-# so Cursor, PowerShell, and cmd all see node and npm without workarounds.
+# Creates %LOCALAPPDATA%\node-portable\current -> newest node-v*-win-x64, then prepends
+# that stable path to your *User* PATH so Cursor, PowerShell, and cmd see node/npm.
+# Upgrades: extract a new node-v* folder, run this script again — PATH stays "...\current".
 $ErrorActionPreference = "Stop"
 $root = Join-Path $env:LOCALAPPDATA "node-portable"
 if (-not (Test-Path $root)) {
@@ -17,14 +18,28 @@ $nodeDir = $latest.FullName
 if (-not (Test-Path (Join-Path $nodeDir "node.exe"))) {
   Write-Error "node.exe missing in $nodeDir"
 }
+
+$linkPath = Join-Path $root "current"
+if (Test-Path $linkPath) {
+  # Junctions: prefer cmd rmdir — Remove-Item occasionally blocks on Windows.
+  $rmdir = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "rmdir", "/q", "`"$linkPath`"" -Wait -PassThru -NoNewWindow
+  if ($rmdir.ExitCode -ne 0 -and (Test-Path $linkPath)) {
+    Remove-Item -LiteralPath $linkPath -Force -ErrorAction Stop
+  }
+}
+New-Item -ItemType Junction -Path $linkPath -Target $nodeDir | Out-Null
+if (-not (Test-Path (Join-Path $linkPath "node.exe"))) {
+  Write-Error "Junction failed: node.exe not visible at $linkPath"
+}
+
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
 $parts = @()
 if (-not [string]::IsNullOrEmpty($userPath)) {
   $parts = $userPath -split ';' | Where-Object { $_ -and $_.Trim() -ne '' }
 }
-# Drop any older node-portable entries so PATH does not accumulate.
-$parts = $parts | Where-Object { $_ -notmatch '\\node-portable\\node-v' }
-$newParts = @($nodeDir) + $parts
+# Drop any node-portable entries (versioned dirs or old current) so PATH does not accumulate.
+$parts = $parts | Where-Object { $_ -notmatch '\\node-portable\\' }
+$newParts = @($linkPath) + $parts
 [Environment]::SetEnvironmentVariable("Path", ($newParts -join ';'), "User")
-Write-Host "User PATH updated. Node dir: $nodeDir"
+Write-Host "User PATH updated. Junction: $linkPath -> $nodeDir"
 Write-Host "Restart Cursor (or open a new terminal) so the change applies."

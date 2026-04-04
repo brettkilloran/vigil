@@ -52,6 +52,7 @@ export async function GET(
       color: itemLinks.color,
       sourcePin: itemLinks.sourcePin,
       targetPin: itemLinks.targetPin,
+      linkType: itemLinks.linkType,
     })
     .from(itemLinks)
     .where(
@@ -75,6 +76,7 @@ export async function GET(
     color: l.color ?? null,
     sourcePin: l.sourcePin ?? null,
     targetPin: l.targetPin ?? null,
+    linkType: l.linkType ?? null,
   }));
 
   return Response.json({ ok: true, nodes, edges });

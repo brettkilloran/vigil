@@ -1,3 +1,4 @@
+import { desc } from "drizzle-orm";
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
@@ -8,6 +9,31 @@ const bodySchema = z.object({
   name: z.string().trim().min(1).max(255),
   parentSpaceId: z.string().uuid().nullable().optional(),
 });
+
+export async function GET() {
+  const db = tryGetDb();
+  if (!db) {
+    return Response.json({ ok: false, error: "Database not configured", spaces: [] }, { status: 503 });
+  }
+  const rows = await db
+    .select({
+      id: spaces.id,
+      name: spaces.name,
+      parentSpaceId: spaces.parentSpaceId,
+      updatedAt: spaces.updatedAt,
+    })
+    .from(spaces)
+    .orderBy(desc(spaces.updatedAt));
+  return Response.json({
+    ok: true,
+    spaces: rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      parentSpaceId: r.parentSpaceId,
+      updatedAt: r.updatedAt instanceof Date ? r.updatedAt.toISOString() : String(r.updatedAt),
+    })),
+  });
+}
 
 export async function POST(req: Request) {
   const db = tryGetDb();

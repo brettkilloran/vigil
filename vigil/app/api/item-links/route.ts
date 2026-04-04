@@ -20,6 +20,7 @@ const patchBodySchema = z.object({
   id: z.string().uuid(),
   color: z.string().max(128).optional(),
   label: z.string().max(500).nullable().optional(),
+  linkType: z.string().max(64).optional(),
   meta: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
@@ -99,14 +100,16 @@ export async function PATCH(req: Request) {
       { status: 400 },
     );
   }
-  const { id, color, label, meta } = parsed.data;
+  const { id, color, label, linkType, meta } = parsed.data;
   const updates: {
     color?: string;
     label?: string | null;
+    linkType?: string;
     meta?: Record<string, unknown> | null;
   } = {};
   if (color !== undefined) updates.color = color;
   if (label !== undefined) updates.label = label;
+  if (linkType !== undefined) updates.linkType = linkType;
   if (meta !== undefined) updates.meta = meta;
   if (Object.keys(updates).length < 1) {
     return Response.json({ ok: false, error: "No updates provided" }, { status: 400 });

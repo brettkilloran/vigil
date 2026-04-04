@@ -37,10 +37,19 @@ Persistence: **`items`** rows + **`spaces.canvas_state`** as camera `{ x, y, zoo
 
 **Package manager:** Use **npm** only in `vigil/` (`package-lock.json`). Do not mix pnpm/yarn in the same tree without a deliberate migration.
 
-**Node on PATH (Windows portable installs):** If `npm`/`node` are missing in a new terminal or in Cursor, the portable Node folder is probably not on **User** `PATH`. Run once per portable upgrade:
+**Node on PATH (Windows portable installs):** If `npm`/`node` are missing in a new terminal or in Cursor, the portable Node folder is probably not on **User** `PATH`.
 
-- `powershell -ExecutionPolicy Bypass -File scripts/pin-portable-node-user-path.ps1`  
-  Then **restart Cursor** so integrated terminals inherit the updated User `PATH`.
+**First-time setup or after upgrading Node portable:**
+
+1. Download **Windows x64 Binary (.zip)** from [Node.js downloads](https://nodejs.org/en/download/) (pick the version you want).
+2. Extract the zip so you have a folder like  
+   `%LOCALAPPDATA%\node-portable\node-v24.x.x-win-x64`  
+   (sibling to any older `node-v*-win-x64` folders is fine).
+3. From the `vigil/` folder, run:
+   - `powershell -ExecutionPolicy Bypass -File scripts/pin-portable-node-user-path.ps1`
+4. **Restart Cursor** (or close all integrated terminals and open a new one) so they read the updated User `PATH`.
+
+The script picks the **newest** `node-v*-win-x64` under `%LOCALAPPDATA%\node-portable\`, points `%LOCALAPPDATA%\node-portable\current` at it (junction), and prepends `current` to your **User** `PATH` — so the next upgrade is always: **unzip new version → run script again → restart Cursor**.
 
 **Daily dev URLs:** From `vigil/`, prefer **`npm run dev:surfaces`** (app + Storybook). Use a normal browser (**Chrome / Edge**), not the editor’s embedded browser, for Storybook.
 
@@ -65,7 +74,7 @@ Persistence: **`items`** rows + **`spaces.canvas_state`** as camera `{ x, y, zoo
 
 ## MCP (`npm run mcp`)
 
-Tools: **`vigil_list_items`**, **`vigil_get_item`**, **`vigil_item_links`**, **`vigil_title_mentions`** (FTS for an item’s title in a space), **`vigil_search`**, **`vigil_graph`**. Defaults: **`HEARTGARDEN_DEFAULT_SPACE_ID`**, **`HEARTGARDEN_APP_URL`** (e.g. `http://localhost:3000`). The Next app must be running for HTTP calls to succeed. REST: **`GET /api/v1/items`** (list by `space_id`) and **`GET /api/v1/items/[itemId]`** (single item).
+Tools include **`vigil_browse_spaces`**, **`vigil_space_summary`**, **`vigil_list_items`**, **`vigil_get_item`** / **`vigil_get_entity`**, **`vigil_item_links`**, **`vigil_traverse_links`**, **`vigil_related_items`**, **`vigil_title_mentions`**, **`vigil_search`**, **`vigil_graph`**, **`vigil_lore_query`**, **`vigil_patch_item`** (needs **`HEARTGARDEN_MCP_WRITE_KEY`** on the MCP process and matching `write_key` in the tool call). **Resources:** `lore://space/<uuid>` (summary + graph JSON). Defaults: **`HEARTGARDEN_DEFAULT_SPACE_ID`**, **`HEARTGARDEN_APP_URL`**. The Next app must be running for HTTP calls to succeed.
 
 ## Playwright (`npm run test:e2e`)
 

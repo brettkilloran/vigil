@@ -12,6 +12,7 @@ export type GraphEdge = {
   color: string | null;
   sourcePin: string | null;
   targetPin: string | null;
+  linkType: string | null;
 };
 
 export type SpaceGraphResponse = {

@@ -46,11 +46,7 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 2. **`POST /api/lore/query` abuse** — Before a public URL: rate limiting, auth, or Vercel firewall; unauthenticated calls consume Anthropic quota.
 3. **Embeddings strategy** — Today: OpenAI `text-embedding-3-small` (1536-dim) for `item_embeddings` + hybrid search. Changing provider requires matching **vector dimension** or a migration.
 4. **E2E** — Optional: palette → lore panel smoke (skip or mock LLM in CI).
-5. **Canvas version history (not started)** — Product “version control” options to evaluate:
-   - **Space / graph snapshots** — periodic or manual rows (JSON blob or item version table) + “Restore snapshot” (conflicts with current undo stack — need UX).
-   - **Per-item revision log** — append-only `item_revisions` on each PATCH (storage heavy; query for diff UI).
-   - **Git export** — canonical files on disk for power users (out of app scope vs in-app timeline).
-   - **Undo vs DB:** Today **undo is local-only**; Neon holds the **last successful write**. Any future “revert server to match undo” would be an explicit sync action.
+5. **Canvas version history (UX2 — decision for v1)** — **Export-first:** the canvas already supports **Export graph JSON** (Cmd+K). Treat that as the supported “checkpoint” workflow until a DB snapshot or `item_revisions` table is justified. **Space / graph snapshots** and **per-item revision logs** remain future options; any in-app restore must not silently fight the local undo stack (explicit “restore from server snapshot” only).
 
 ### Mid-term — master plan Phase 5 (TTRPG + intelligence)
 

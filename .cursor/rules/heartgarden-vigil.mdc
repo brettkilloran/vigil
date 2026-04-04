@@ -1,0 +1,7 @@
+---
+description: heartgarden app (vigil/) dev and Storybook guardrails
+globs: vigil/**
+alwaysApply: false
+---
+
+When working under **`vigil/`**, read **`vigil/AGENTS.md`** → **"Local dev, Node, and Storybook (guardrails)"** before changing dev scripts, Storybook, or CSS-module vs global token layout.
