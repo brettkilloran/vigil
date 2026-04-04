@@ -6,7 +6,7 @@ import { Button } from "@/src/components/ui/Button";
 import type { ButtonSize as UiButtonSize } from "@/src/components/ui/Button";
 
 type ButtonSize = "icon" | "menu" | "pill";
-type ButtonTone =
+export type ArchitecturalButtonTone =
   | "glass"
   | "menu"
   | "focus-light"
@@ -15,6 +15,8 @@ type ButtonTone =
   | "focus-discard"
   | "card-light"
   | "card-dark";
+
+type ButtonTone = ArchitecturalButtonTone;
 type ButtonState = "default" | "hover" | "active";
 
 function toUiButtonSize(size: ButtonSize): UiButtonSize {

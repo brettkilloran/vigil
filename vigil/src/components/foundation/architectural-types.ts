@@ -73,3 +73,6 @@ export type DockCreateAction = {
   label: string;
   nodeType: NodeTheme;
 };
+
+/** Bottom dock: frosted glass on canvas vs solid black in focus editor. */
+export type ArchitecturalBottomDockVariant = "canvas" | "editor";

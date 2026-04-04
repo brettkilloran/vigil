@@ -7,6 +7,7 @@ import {
   SquaresFour,
   Stack,
   Trash,
+  UploadSimple,
 } from "@phosphor-icons/react";
 
 import styles from "./ArchitecturalCanvasApp.module.css";
@@ -19,6 +20,12 @@ import { ArchitecturalFolderCard } from "@/src/components/foundation/Architectur
 import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";
 import { ArchitecturalStatusBar } from "@/src/components/foundation/ArchitecturalStatusBar";
 import { ArchitecturalToolRail } from "@/src/components/foundation/ArchitecturalToolRail";
+import {
+  applyImageDataUrlToArchitecturalMediaBody,
+  getArchitecturalMediaNotes,
+  parseArchitecturalMediaFromBody,
+  setArchitecturalMediaNotes,
+} from "@/src/components/foundation/architectural-media-html";
 import { buildArchitecturalSeedGraph } from "@/src/components/foundation/architectural-seed";
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
 import {
@@ -62,7 +69,7 @@ type ArchitecturalCanvasScenario = "default" | "nested" | "corrupt";
 const ROOT_SPACE_ID = "root";
 
 function tapeVariantForTheme(theme: ContentTheme): TapeVariant {
-  if (theme === "code") return "dark";
+  if (theme === "code" || theme === "media") return "dark";
   return "clear";
 }
 
@@ -118,6 +125,26 @@ function isEditableTarget(target: EventTarget | null) {
     el.tagName === "TEXTAREA" ||
     el.tagName === "SELECT"
   );
+}
+
+/** Focus is in a shell text surface where the formatting dock applies (execCommand targets selection). */
+function isTextFormattingToolbarTarget(focusEl: Element | null): boolean {
+  if (!focusEl || !(focusEl instanceof HTMLElement)) return false;
+  if (focusEl.closest("[data-focus-title-editor]")) return true;
+  if (focusEl.closest("[data-folder-title-editor]")) return true;
+  const root = focusEl.closest("[contenteditable='true']");
+  if (!root) return false;
+  return !!root.closest(
+    "[data-node-body-editor], [data-focus-body-editor], [data-folder-title-editor]",
+  );
+}
+
+/** Caret is in a prose body surface (not card titles) — in-document insert tools apply. */
+function isRichDocBodyFormattingTarget(focusEl: Element | null): boolean {
+  if (!focusEl || !(focusEl instanceof HTMLElement)) return false;
+  const root = focusEl.closest("[contenteditable='true']");
+  if (!root) return false;
+  return !!root.closest("[data-node-body-editor], [data-focus-body-editor]");
 }
 
 type LassoRectScreen = { x1: number; y1: number; x2: number; y2: number };
@@ -226,7 +253,10 @@ export function ArchitecturalCanvasApp({
         done: styles.done,
         taskCheckbox: styles.taskCheckbox,
         taskText: styles.taskText,
-        mediaPlaceholder: styles.mediaPlaceholder,
+        mediaFrame: styles.mediaFrame,
+        mediaImage: styles.mediaImage,
+        mediaImageActions: styles.mediaImageActions,
+        mediaUploadBtn: styles.mediaUploadBtn,
       },
       scenario,
     ),
@@ -248,6 +278,9 @@ export function ArchitecturalCanvasApp({
   const [canvasSurfaceReady, setCanvasSurfaceReady] = useState(false);
 
   const [focusOpen, setFocusOpen] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryNodeId, setGalleryNodeId] = useState<string | null>(null);
+  const [galleryDimsLabel, setGalleryDimsLabel] = useState("— × —");
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [focusTitle, setFocusTitle] = useState("");
   const [focusBody, setFocusBody] = useState("");
@@ -294,8 +327,13 @@ export function ArchitecturalCanvasApp({
     x: number;
     y: number;
   } | null>(null);
+  /** Canvas/stack: show dock format cluster while focus is in a note/folder title/body editor, or a prose card is selected. */
+  const [textFormatChromeActive, setTextFormatChromeActive] = useState(false);
+  /** True when the caret is in a note/focus body (not titles) — drives in-doc insert strip on canvas. */
+  const [richDocInsertChromeActive, setRichDocInsertChromeActive] = useState(false);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const shellRef = useRef<HTMLDivElement | null>(null);
   const shellTopLeftStackRef = useRef<HTMLDivElement | null>(null);
   const parentDropRef = useRef<HTMLDivElement | null>(null);
   /** Ignore well click/activation briefly after a parent drop (mouseup can synthesize a click). */
@@ -325,12 +363,20 @@ export function ArchitecturalCanvasApp({
   const undoPastRef = useRef<ArchitecturalUndoSnapshot[]>([]);
   const undoFutureRef = useRef<ArchitecturalUndoSnapshot[]>([]);
   const isApplyingHistoryRef = useRef(false);
+  const focusOpenRef = useRef(focusOpen);
+  const galleryOpenRef = useRef(galleryOpen);
+  const activeNodeIdRef = useRef(activeNodeId);
+  const pendingMediaUploadRef = useRef<{ mode: "focus" | "canvas"; id: string } | null>(null);
+  const mediaFileInputRef = useRef<HTMLInputElement | null>(null);
   const [historyEpoch, setHistoryEpoch] = useState(0);
 
   graphRef.current = graph;
   activeSpaceIdRef.current = activeSpaceId;
   navigationPathRef.current = navigationPath;
   selectedNodeIdsRef.current = selectedNodeIds;
+  focusOpenRef.current = focusOpen;
+  galleryOpenRef.current = galleryOpen;
+  activeNodeIdRef.current = activeNodeId;
 
   const modKeyHints = useModKeyHints();
 
@@ -666,6 +712,101 @@ export function ArchitecturalCanvasApp({
     [queueGraphCommit, recordUndoBeforeMutation],
   );
 
+  const updateMediaNotes = useCallback(
+    (id: string, notes: string) => {
+      const e = graphRef.current.entities[id];
+      if (!e || e.kind !== "content" || e.theme !== "media") return;
+      const next = setArchitecturalMediaNotes(e.bodyHtml, notes);
+      updateNodeBody(id, next);
+    },
+    [updateNodeBody],
+  );
+
+  const onArchitecturalMediaFile = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      const pending = pendingMediaUploadRef.current;
+      pendingMediaUploadRef.current = null;
+      if (!file || !file.type.startsWith("image/") || !pending) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        const alt =
+          file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() ||
+          "Uploaded image";
+        if (pending.mode === "focus") {
+          setFocusBody((prev) =>
+            applyImageDataUrlToArchitecturalMediaBody(
+              prev,
+              dataUrl,
+              alt,
+              styles.mediaImage,
+            ),
+          );
+          return;
+        }
+        const entity = graphRef.current.entities[pending.id];
+        if (!entity || entity.kind !== "content") return;
+        updateNodeBody(
+          pending.id,
+          applyImageDataUrlToArchitecturalMediaBody(
+            entity.bodyHtml,
+            dataUrl,
+            alt,
+            styles.mediaImage,
+          ),
+          { immediate: true },
+        );
+      };
+      reader.readAsDataURL(file);
+    },
+    [updateNodeBody],
+  );
+
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    const stopCaretDriftOnButton = (e: MouseEvent) => {
+      const t = (e.target as HTMLElement).closest("[data-architectural-media-upload]");
+      if (t) e.preventDefault();
+    };
+    const onUploadClick = (e: MouseEvent) => {
+      const t = (e.target as HTMLElement).closest("[data-architectural-media-upload]");
+      if (!t) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const ownerFromBtn = t.getAttribute("data-media-owner-id");
+      if (ownerFromBtn) {
+        pendingMediaUploadRef.current = { mode: "canvas", id: ownerFromBtn };
+        mediaFileInputRef.current?.click();
+        return;
+      }
+      const inFocusBody = t.closest("[data-focus-body-editor]");
+      const nodeHost = t.closest("[data-node-id]");
+      if (inFocusBody && focusOpenRef.current && activeNodeIdRef.current) {
+        pendingMediaUploadRef.current = {
+          mode: "focus",
+          id: activeNodeIdRef.current,
+        };
+      } else if (nodeHost?.dataset.nodeId) {
+        pendingMediaUploadRef.current = {
+          mode: "canvas",
+          id: nodeHost.dataset.nodeId,
+        };
+      } else {
+        return;
+      }
+      mediaFileInputRef.current?.click();
+    };
+    shell.addEventListener("mousedown", stopCaretDriftOnButton, true);
+    shell.addEventListener("click", onUploadClick, true);
+    return () => {
+      shell.removeEventListener("mousedown", stopCaretDriftOnButton, true);
+      shell.removeEventListener("click", onUploadClick, true);
+    };
+  }, []);
+
   const openFocusMode = useCallback((id: string) => {
     const entity = graph.entities[id];
     if (!entity || entity.kind !== "content") return;
@@ -677,6 +818,36 @@ export function ArchitecturalCanvasApp({
     setFocusCodeTheme(entity.theme === "code");
     setFocusOpen(true);
   }, [graph.entities]);
+
+  const closeMediaGallery = useCallback(() => {
+    setGalleryOpen(false);
+    setGalleryNodeId(null);
+  }, []);
+
+  const openMediaGallery = useCallback((id: string) => {
+    const entity = graph.entities[id];
+    if (!entity || entity.kind !== "content" || entity.theme !== "media") return;
+    setGalleryNodeId(id);
+    setGalleryOpen(true);
+  }, [graph.entities]);
+
+  const handleNodeExpand = useCallback(
+    (id: string) => {
+      const entity = graph.entities[id];
+      if (!entity || entity.kind !== "content") return;
+      if (entity.theme === "media") openMediaGallery(id);
+      else openFocusMode(id);
+    },
+    [graph.entities, openFocusMode, openMediaGallery],
+  );
+
+  useEffect(() => {
+    if (!galleryOpen || !galleryNodeId) return;
+    const e = graph.entities[galleryNodeId];
+    if (!e || e.kind !== "content" || e.theme !== "media") {
+      closeMediaGallery();
+    }
+  }, [closeMediaGallery, galleryNodeId, galleryOpen, graph.entities]);
 
   const saveFocusAndClose = useCallback(() => {
     if (activeNodeId) {
@@ -724,6 +895,7 @@ export function ArchitecturalCanvasApp({
       if (!focusOpen) return;
       const t = event.target as HTMLElement;
       if (t.closest(`.${styles.focusSheet}`)) return;
+      if (t.closest(`.${styles.focusBottomDock}`)) return;
       event.preventDefault();
       event.stopPropagation();
     },
@@ -784,7 +956,10 @@ export function ArchitecturalCanvasApp({
         done: styles.done,
         taskCheckbox: styles.taskCheckbox,
         taskText: styles.taskText,
-        mediaPlaceholder: styles.mediaPlaceholder,
+        mediaFrame: styles.mediaFrame,
+        mediaImage: styles.mediaImage,
+        mediaImageActions: styles.mediaImageActions,
+        mediaUploadBtn: styles.mediaUploadBtn,
       },
       scenario,
     );
@@ -1176,6 +1351,33 @@ export function ArchitecturalCanvasApp({
     [queueGraphCommit, recordUndoBeforeMutation],
   );
 
+  const renameContentEntity = useCallback(
+    (entityId: string, title: string) => {
+      queueGraphCommit(
+        `content-title:${entityId}`,
+        () => {
+          const prev = graphRef.current;
+          const entity = prev.entities[entityId];
+          if (!entity || entity.kind !== "content") return;
+          const nextTitle = title.trim() || "Untitled";
+          if (entity.title === nextTitle) return;
+          recordUndoBeforeMutation();
+          setGraph((p) => {
+            const ent = p.entities[entityId];
+            if (!ent || ent.kind !== "content") return p;
+            const t = title.trim() || "Untitled";
+            if (ent.title === t) return p;
+            const next = shallowCloneGraph(p);
+            next.entities[entityId] = { ...ent, title: t };
+            return next;
+          });
+        },
+        120,
+      );
+    },
+    [queueGraphCommit, recordUndoBeforeMutation],
+  );
+
   const createNewNode = useCallback((type: NodeTheme) => {
     recordUndoBeforeMutation();
     const center = centerCoords();
@@ -1242,12 +1444,15 @@ export function ArchitecturalCanvasApp({
       title = "Snippet";
       bodyHtml = `// [IN] Compose shard at cursor…`;
     } else if (type === "media") {
-      title = "Asset";
+      title = "Untitled photo";
       bodyHtml = `
-        <div class="${styles.mediaPlaceholder}">
-          <span>Still frame · drop asset</span>
+        <div class="${styles.mediaFrame}" data-architectural-media-root="true">
+          <img class="${styles.mediaImage}" src="/caliginia-sphere.png" alt="Caliginia sphere — survey frame" />
+          <div class="${styles.mediaImageActions}" contenteditable="false">
+            <button type="button" class="${styles.mediaUploadBtn}" data-architectural-media-upload="true">Replace</button>
+          </div>
         </div>
-        <div contenteditable="true" style="font-size: 13px; color: var(--sys-color-neutral-700);">Caption the capture for the archive…</div>
+        <div data-architectural-media-notes="true"></div>
       `;
     }
 
@@ -1946,7 +2151,7 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onMouseDown = (event: MouseEvent) => {
-      if (focusOpen) return;
+      if (focusOpen || galleryOpen) return;
       if (activeTool === "pan" || spacePanRef.current) return;
       if (event.button !== 0) return;
       const target = event.target as HTMLElement;
@@ -2022,7 +2227,7 @@ export function ArchitecturalCanvasApp({
       if (!expandBtn) return;
       const entity = expandBtn.closest<HTMLElement>(`[data-node-id]`);
       const id = entity?.dataset.nodeId;
-      if (id) openFocusMode(id);
+      if (id) handleNodeExpand(id);
     };
 
     const onDoubleClick = (event: MouseEvent) => {
@@ -2040,12 +2245,21 @@ export function ArchitecturalCanvasApp({
       const id = entity?.dataset.nodeId;
       if (!id) return;
 
+      const node = graph.entities[id];
+      if (
+        node?.kind === "content" &&
+        node.theme === "media" &&
+        target.closest("[data-image-open-gallery]")
+      ) {
+        handleNodeExpand(id);
+        return;
+      }
+
       const editableWithinNode =
         isEditableTarget(event.target) ||
         !!target.closest("input, textarea, select, [contenteditable='true']");
       if (editableWithinNode) {
-        const node = graph.entities[id];
-        if (node?.kind === "content") {
+        if (node?.kind === "content" && node.theme !== "media") {
           openFocusMode(id);
         }
         return;
@@ -2068,7 +2282,9 @@ export function ArchitecturalCanvasApp({
     activeSpaceId,
     activeTool,
     focusOpen,
+    galleryOpen,
     graph.entities,
+    handleNodeExpand,
     openFocusMode,
     openFolder,
     recordUndoBeforeMutation,
@@ -2159,12 +2375,22 @@ export function ArchitecturalCanvasApp({
       setFocusOpen(false);
       setActiveNodeId(null);
     }
-  }, [activeNodeId, recordUndoBeforeMutation]);
+    if (galleryNodeId && entityIds.includes(galleryNodeId)) {
+      setGalleryOpen(false);
+      setGalleryNodeId(null);
+    }
+  }, [activeNodeId, galleryNodeId, recordUndoBeforeMutation]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (isEditableTarget(event.target)) return;
+
+      if (galleryOpen) {
+        event.preventDefault();
+        closeMediaGallery();
+        return;
+      }
 
       if (focusOpen) {
         event.preventDefault();
@@ -2199,13 +2425,13 @@ export function ArchitecturalCanvasApp({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [closeStackModal, focusOpen, goBack, parentSpaceId, stackModal]);
+  }, [closeMediaGallery, closeStackModal, focusOpen, galleryOpen, goBack, parentSpaceId, stackModal]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const isDeleteKey = event.key === "Delete" || event.key === "Backspace";
       if (!isDeleteKey) return;
-      if (isEditableTarget(event.target) || focusOpen) return;
+      if (isEditableTarget(event.target) || focusOpen || galleryOpen) return;
       if (selectedNodeIds.length === 0) return;
       event.preventDefault();
       deleteEntitySelection(selectedNodeIds);
@@ -2213,11 +2439,11 @@ export function ArchitecturalCanvasApp({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [deleteEntitySelection, focusOpen, selectedNodeIds]);
+  }, [deleteEntitySelection, focusOpen, galleryOpen, selectedNodeIds]);
 
   const onViewportMouseDown = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
-      if (focusOpen) return;
+      if (focusOpen || galleryOpen) return;
 
       // Middle mouse drag always pans (tool-agnostic), similar to design tools.
       if (event.button === 1) {
@@ -2266,12 +2492,12 @@ export function ArchitecturalCanvasApp({
         y: event.clientY - translateY,
       };
     },
-    [activeTool, focusOpen, translateX, translateY],
+    [activeTool, focusOpen, galleryOpen, translateX, translateY],
   );
 
   const onWheel = useCallback(
     (event: React.WheelEvent<HTMLDivElement>) => {
-      if (focusOpen) return;
+      if (focusOpen || galleryOpen) return;
       const target = event.target as HTMLElement;
       const inEditable =
         !!target.closest("input, textarea, select, [contenteditable='true']");
@@ -2294,7 +2520,7 @@ export function ArchitecturalCanvasApp({
         setTranslateY((prev) => prev - event.deltaY);
       }
     },
-    [focusOpen, normalizeWheelDelta, updateTransformFromMouse],
+    [focusOpen, galleryOpen, normalizeWheelDelta, updateTransformFromMouse],
   );
 
   useEffect(() => {
@@ -2304,7 +2530,7 @@ export function ArchitecturalCanvasApp({
       if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
         return;
       }
-      if (focusOpen) return;
+      if (focusOpen || galleryOpen) return;
 
       const key = event.key;
       if (key === "=" || key === "+" || key === "NumpadAdd") {
@@ -2325,7 +2551,7 @@ export function ArchitecturalCanvasApp({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [focusOpen, recenterToOrigin, zoomBy]);
+  }, [focusOpen, galleryOpen, recenterToOrigin, zoomBy]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -2334,7 +2560,7 @@ export function ArchitecturalCanvasApp({
       if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
         return;
       }
-      if (focusOpen) return;
+      if (focusOpen || galleryOpen) return;
       const mod = event.metaKey || event.ctrlKey;
       if (!mod) return;
       if (event.key.toLowerCase() !== "z") return;
@@ -2344,7 +2570,7 @@ export function ArchitecturalCanvasApp({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [focusOpen, redo, undo]);
+  }, [focusOpen, galleryOpen, redo, undo]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -2353,7 +2579,7 @@ export function ArchitecturalCanvasApp({
       if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
         return;
       }
-      if (focusOpen) return;
+      if (focusOpen || galleryOpen) return;
       const mod = event.metaKey || event.ctrlKey;
       if (!mod) return;
       const key = event.key.toLowerCase();
@@ -2389,6 +2615,7 @@ export function ArchitecturalCanvasApp({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [
     focusOpen,
+    galleryOpen,
     graph.entities,
     normalizeStack,
     recordUndoBeforeMutation,
@@ -2398,8 +2625,84 @@ export function ArchitecturalCanvasApp({
   ]);
 
   const runFormat = useCallback((command: string, value?: string) => {
+    const shell = shellRef.current;
+    const focusRichBody = () => {
+      if (!shell) return;
+      if (focusOpenRef.current && activeNodeIdRef.current) {
+        shell.querySelector<HTMLElement>('[data-focus-body-editor="true"]')?.focus();
+        return;
+      }
+      const ids = selectedNodeIdsRef.current;
+      if (ids.length !== 1) return;
+      const entity = graphRef.current.entities[ids[0]!];
+      if (!entity || entity.kind !== "content") return;
+      if (entity.theme !== "default" && entity.theme !== "task") return;
+      shell
+        .querySelector<HTMLElement>(`[data-node-id="${ids[0]!}"] [data-node-body-editor="true"]`)
+        ?.focus();
+    };
+
+    const triggerImageInsert = () => {
+      focusRichBody();
+      if (focusOpenRef.current && activeNodeIdRef.current) {
+        pendingMediaUploadRef.current = { mode: "focus", id: activeNodeIdRef.current };
+      } else {
+        const ids = selectedNodeIdsRef.current;
+        if (ids.length !== 1) return;
+        const entity = graphRef.current.entities[ids[0]!];
+        if (!entity || entity.kind !== "content") return;
+        pendingMediaUploadRef.current = { mode: "canvas", id: entity.id };
+      }
+      mediaFileInputRef.current?.click();
+    };
+
+    focusRichBody();
+
+    if (command === "arch:codeBlock") {
+      document.execCommand("insertHTML", false, "<pre><code>&#8203;</code></pre>");
+      return;
+    }
+    if (command === "arch:checklist") {
+      document.execCommand(
+        "insertHTML",
+        false,
+        '<ul data-arch-checklist="true"><li><input type="checkbox" contenteditable="false" /> </li></ul>',
+      );
+      return;
+    }
+    if (command === "arch:insertImage") {
+      triggerImageInsert();
+      return;
+    }
+
     document.execCommand(command, false, value);
   }, []);
+
+  const refreshTextFormatChrome = useCallback(() => {
+    const shell = shellRef.current;
+    const ae = document.activeElement;
+    if (!shell || !ae || !(ae instanceof Node) || !shell.contains(ae)) {
+      setTextFormatChromeActive(false);
+      setRichDocInsertChromeActive(false);
+      return;
+    }
+    const fmt = isTextFormattingToolbarTarget(ae);
+    setTextFormatChromeActive(fmt);
+    setRichDocInsertChromeActive(fmt && isRichDocBodyFormattingTarget(ae));
+  }, []);
+
+  useEffect(() => {
+    const onIn = () => refreshTextFormatChrome();
+    const onOut = () => {
+      requestAnimationFrame(() => refreshTextFormatChrome());
+    };
+    document.addEventListener("focusin", onIn, true);
+    document.addEventListener("focusout", onOut, true);
+    return () => {
+      document.removeEventListener("focusin", onIn, true);
+      document.removeEventListener("focusout", onOut, true);
+    };
+  }, [refreshTextFormatChrome]);
 
   const closeSelectionContextMenu = useCallback(() => {
     setSelectionContextMenu(null);
@@ -2408,7 +2711,7 @@ export function ArchitecturalCanvasApp({
   const handleViewportContextMenuCapture = useCallback(
     (event: React.MouseEvent) => {
       if (selectedNodeIds.length < 1) return;
-      if (focusOpen || stackModal) return;
+      if (focusOpen || galleryOpen || stackModal) return;
       const target = event.target as HTMLElement;
       if (isEditableTarget(target)) return;
       if (target.closest("[contenteditable='true']")) return;
@@ -2420,7 +2723,7 @@ export function ArchitecturalCanvasApp({
       const y = Math.min(event.clientY, window.innerHeight - MENU_MAX_H - 8);
       setSelectionContextMenu({ x, y });
     },
-    [focusOpen, selectedNodeIds, stackModal],
+    [focusOpen, galleryOpen, selectedNodeIds, stackModal],
   );
 
   const duplicateSelectedEntities = useCallback(() => {
@@ -2563,6 +2866,17 @@ export function ArchitecturalCanvasApp({
     return contentIds.length >= 2;
   }, [graph.entities, selectedNodeIds, visibleEntityIds]);
 
+  const singleRichDocSelected = useMemo(() => {
+    if (selectedNodeIds.length !== 1) return false;
+    const entity = graph.entities[selectedNodeIds[0]!];
+    return (
+      !!entity &&
+      entity.kind === "content" &&
+      visibleEntityIds.includes(entity.id) &&
+      (entity.theme === "default" || entity.theme === "task")
+    );
+  }, [graph.entities, selectedNodeIds, visibleEntityIds]);
+
   const selectionContextMenuItems = useMemo(
     () => [
       {
@@ -2674,8 +2988,45 @@ export function ArchitecturalCanvasApp({
       height: maxY - minY,
     };
   }, [stackModalCardHeights, stackModalLayout, stackModalVisibleEntities]);
+
+  const galleryEntity =
+    galleryOpen && galleryNodeId ? graph.entities[galleryNodeId] : undefined;
+  const galleryRaster = useMemo(() => {
+    if (!galleryEntity || galleryEntity.kind !== "content" || galleryEntity.theme !== "media") {
+      return { src: null as string | null, alt: "" };
+    }
+    return parseArchitecturalMediaFromBody(galleryEntity.bodyHtml);
+  }, [galleryEntity]);
+
+  const galleryBodyFingerprint =
+    galleryOpen &&
+    galleryEntity?.kind === "content" &&
+    galleryEntity.theme === "media"
+      ? galleryEntity.bodyHtml
+      : "";
+
+  const galleryNotesText = useMemo(() => {
+    if (!galleryEntity || galleryEntity.kind !== "content" || galleryEntity.theme !== "media") {
+      return "";
+    }
+    return getArchitecturalMediaNotes(galleryEntity.bodyHtml);
+  }, [galleryEntity]);
+
+  useEffect(() => {
+    if (!galleryOpen) {
+      setGalleryDimsLabel("— × —");
+      return;
+    }
+    setGalleryDimsLabel("— × —");
+  }, [galleryOpen, galleryBodyFingerprint]);
+
   return (
-    <div className={styles.shell}>
+    <div
+      ref={shellRef}
+      className={`${styles.shell} ${focusOpen || galleryOpen ? styles.shellBackdropBlurActive : ""} ${
+        focusOpen ? styles.shellFocusDockBleed : ""
+      }`}
+    >
       <div
         ref={viewportRef}
         className={`${styles.viewport} ${styles.viewportSurface} ${
@@ -2738,7 +3089,7 @@ export function ArchitecturalCanvasApp({
                     selected={selected}
                     showTape={!entity.stackId}
                     onBodyCommit={updateNodeBody}
-                    onExpand={openFocusMode}
+                    onExpand={handleNodeExpand}
                   />
                 ) : (
                   <ArchitecturalFolderCard
@@ -2877,7 +3228,7 @@ export function ArchitecturalCanvasApp({
                         selected={false}
                         showTape={!entity.stackId}
                         onBodyCommit={updateNodeBody}
-                        onExpand={openFocusMode}
+                        onExpand={handleNodeExpand}
                         bodyEditable={false}
                       />
                     ) : (
@@ -2959,16 +3310,20 @@ export function ArchitecturalCanvasApp({
           </div>
         </div>
 
-        <ArchitecturalBottomDock
-          onFormat={runFormat}
-          onCreateNode={createNewNode}
-          onUndo={undo}
-          onRedo={redo}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          undoLabel={`Undo (${modKeyHints.undo})`}
-          redoLabel={`Redo (${modKeyHints.redo})`}
-        />
+        {!focusOpen && !galleryOpen ? (
+          <ArchitecturalBottomDock
+            showFormatToolbar={textFormatChromeActive || singleRichDocSelected}
+            showDocInsertCluster={richDocInsertChromeActive || singleRichDocSelected}
+            onFormat={runFormat}
+            onCreateNode={createNewNode}
+            onUndo={undo}
+            onRedo={redo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            undoLabel={`Undo (${modKeyHints.undo})`}
+            redoLabel={`Redo (${modKeyHints.redo})`}
+          />
+        ) : null}
 
         <ArchitecturalToolRail
           activeTool={activeTool}
@@ -3054,6 +3409,7 @@ export function ArchitecturalCanvasApp({
               return (
                 <div
                   key={entity.id}
+                  data-node-id={entity.id}
                   className={`${styles.stackFanCard} ${drag ? styles.stackFanDragging : ""} ${drag && stackModalEjectPreview ? styles.stackFanEjectArmed : ""}`}
                   style={{
                     zIndex: 900 + index,
@@ -3099,7 +3455,7 @@ export function ArchitecturalCanvasApp({
                       selected={false}
                       showTape={!entity.stackId}
                       onBodyCommit={updateNodeBody}
-                      onExpand={openFocusMode}
+                      onExpand={handleNodeExpand}
                     />
                   ) : (
                     <ArchitecturalFolderCard
@@ -3130,8 +3486,102 @@ export function ArchitecturalCanvasApp({
         </div>
       ) : null}
 
+      {galleryOpen &&
+      galleryNodeId &&
+      galleryEntity?.kind === "content" &&
+      galleryEntity.theme === "media" ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="arch-media-gallery-title"
+          className={`${styles.focusOverlay} ${styles.focusActive} ${styles.focusEditorDark}`}
+        >
+          <div className={styles.focusSheet}>
+            <div className={styles.focusHeader} style={{ opacity: 1, transform: "none" }}>
+              <div className={styles.focusMeta}>
+                VIEWING // {galleryNodeId.toUpperCase()}
+                {galleryRaster.src ? (
+                  <span className={styles.mediaGalleryDimsInline}>
+                    &ensp;{galleryDimsLabel}
+                  </span>
+                ) : null}
+              </div>
+              <div className={styles.focusHeaderActions}>
+                <button
+                  type="button"
+                  className={styles.mediaUploadBtn}
+                  data-architectural-media-upload="true"
+                  data-media-owner-id={galleryNodeId}
+                >
+                  <span className={styles.mediaUploadBtnIcon}>
+                    <UploadSimple size={16} weight="bold" aria-hidden />
+                  </span>
+                  Replace
+                </button>
+                <ArchitecturalFocusCloseButton
+                  dirty={false}
+                  onDone={closeMediaGallery}
+                  onSave={closeMediaGallery}
+                  onDiscard={closeMediaGallery}
+                />
+              </div>
+            </div>
+            <div className={styles.focusContent} style={{ opacity: 1, transform: "none" }}>
+              <BufferedTextInput
+                id="arch-media-gallery-title"
+                type="text"
+                className={styles.focusTitle}
+                value={galleryEntity.title}
+                debounceMs={200}
+                onCommit={(next) => renameContentEntity(galleryNodeId, next)}
+                aria-label="Image title"
+                placeholder="Untitled image"
+                style={{ opacity: 1, transform: "none" }}
+              />
+              <div className={styles.mediaGalleryAssetStage}>
+                {galleryRaster.src ? (
+                  <img
+                    key={galleryRaster.src}
+                    src={galleryRaster.src}
+                    alt={galleryRaster.alt || galleryEntity.title}
+                    className={styles.mediaGalleryAsset}
+                    draggable={false}
+                    onLoad={(e) => {
+                      const { naturalWidth, naturalHeight } = e.currentTarget;
+                      if (naturalWidth && naturalHeight) {
+                        setGalleryDimsLabel(`${naturalWidth} × ${naturalHeight}`);
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className={styles.mediaGalleryEmpty}>
+                    <p className={styles.mediaGalleryEmptyTitle}>No image loaded</p>
+                    <p className={styles.mediaGalleryEmptyHint}>
+                      Use Replace above or on the card.
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className={styles.mediaGalleryNotesSection}>
+                <span className={styles.mediaGalleryNotesLabel}>Notes</span>
+                <BufferedContentEditable
+                  value={galleryNotesText}
+                  plainText
+                  spellCheck
+                  className={styles.mediaGalleryNotesField}
+                  debounceMs={250}
+                  onCommit={(next) => updateMediaNotes(galleryNodeId, next)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div
-        className={`${styles.focusOverlay} ${focusOpen ? styles.focusActive : ""}`}
+        className={`${styles.focusOverlay} ${focusOpen ? styles.focusActive : ""} ${
+          focusOpen && focusCodeTheme ? styles.focusEditorDark : ""
+        }`}
         onPointerDownCapture={onFocusOverlayPointerDownCapture}
       >
         <div className={styles.focusSheet}>
@@ -3155,11 +3605,6 @@ export function ArchitecturalCanvasApp({
               onCommit={(next) => setFocusTitle(next)}
               placeholder="Untitled brief"
               data-focus-title-editor="true"
-              style={{
-                color: focusCodeTheme
-                  ? "var(--sys-color-white)"
-                  : "var(--sys-color-black)",
-              }}
             />
             <BufferedContentEditable
               value={focusBody}
@@ -3173,7 +3618,33 @@ export function ArchitecturalCanvasApp({
           </div>
         </div>
       </div>
+      {focusOpen ? (
+        <div className={styles.focusBottomDock}>
+          <ArchitecturalBottomDock
+            variant="editor"
+            showFormatToolbar={!focusCodeTheme}
+            showDocInsertCluster={!focusCodeTheme}
+            onFormat={runFormat}
+            onCreateNode={createNewNode}
+            onUndo={undo}
+            onRedo={redo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            undoLabel={`Undo (${modKeyHints.undo})`}
+            redoLabel={`Redo (${modKeyHints.redo})`}
+          />
+        </div>
+      ) : null}
 
+      <input
+        ref={mediaFileInputRef}
+        type="file"
+        className={styles.hiddenFileInput}
+        accept="image/*"
+        tabIndex={-1}
+        aria-hidden
+        onChange={onArchitecturalMediaFile}
+      />
     </div>
   );
 }

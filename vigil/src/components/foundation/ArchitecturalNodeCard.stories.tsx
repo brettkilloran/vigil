@@ -11,7 +11,10 @@ const seedNodes = buildArchitecturalSeedNodes({
   done: styles.done,
   taskCheckbox: styles.taskCheckbox,
   taskText: styles.taskText,
-  mediaPlaceholder: styles.mediaPlaceholder,
+  mediaFrame: styles.mediaFrame,
+  mediaImage: styles.mediaImage,
+  mediaImageActions: styles.mediaImageActions,
+  mediaUploadBtn: styles.mediaUploadBtn,
 });
 
 function getSeed(theme: "default" | "code" | "task" | "media") {
@@ -112,6 +115,6 @@ export const Media: Story = {
     theme: seedMedia.theme,
     tapeRotation: seedMedia.tapeRotation,
     bodyHtml: seedMedia.bodyHtml,
-    tapeVariant: "clear",
+    tapeVariant: "dark",
   },
 };

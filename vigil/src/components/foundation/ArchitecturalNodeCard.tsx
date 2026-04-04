@@ -1,14 +1,16 @@
 "use client";
 
-import { ArrowsOutSimple } from "@phosphor-icons/react";
+import { ArrowsOutSimple, Image as ImageIcon } from "@phosphor-icons/react";
 import type { CSSProperties, ReactNode } from "react";
+import { useMemo } from "react";
 
+import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
+import { parseArchitecturalMediaFromBody } from "@/src/components/foundation/architectural-media-html";
 import type {
   CanvasTool,
   NodeTheme,
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
-import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import type { ButtonTone } from "@/src/components/ui/Button";
 import { Button } from "@/src/components/ui/Button";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
@@ -17,7 +19,7 @@ import { pointerEventTargetElement } from "@/src/components/foundation/pointer-e
 function themeClass(theme: NodeTheme): string {
   if (theme === "code") return styles.themeCode;
   if (theme === "task") return styles.themeTask;
-  if (theme === "media") return styles.themeMedia;
+  if (theme === "media") return styles.themeImage;
   return styles.themeDefault;
 }
 
@@ -127,6 +129,7 @@ export function ArchitecturalNodeCard({
   selected,
   onBodyCommit,
   onExpand,
+  onTitleCommit,
   tapeVariant = "clear",
   showExpandButton = true,
   bodyEditable,
@@ -143,23 +146,85 @@ export function ArchitecturalNodeCard({
   selected: boolean;
   onBodyCommit: (id: string, html: string) => void;
   onExpand: (id: string) => void;
+  onTitleCommit?: (id: string, title: string) => void;
   tapeVariant?: TapeVariant;
   showExpandButton?: boolean;
   bodyEditable?: boolean;
   showTape?: boolean;
 }) {
-  const nodeWidth = width ?? 340;
   const isMediaNode = theme === "media";
+  const nodeWidth = width ?? 340;
   const cardStyle = {
-    width: width ? `${width}px` : undefined,
+    width: width != null ? `${width}px` : undefined,
     "--entity-width": `${nodeWidth}px`,
   } as CSSProperties;
 
+  const imageCardMedia = useMemo(
+    () => (isMediaNode ? parseArchitecturalMediaFromBody(bodyHtml) : { src: null, alt: "" }),
+    [bodyHtml, isMediaNode],
+  );
+
+  if (isMediaNode) {
+    return (
+      <div
+        className={`${styles.entityNode} ${themeClass(theme)} ${styles.unboundedMediaNode} ${
+          dragged ? styles.dragging : ""
+        } ${selected ? styles.selectedNode : ""}`}
+        style={cardStyle}
+      >
+        {showTape ? <ArchitecturalNodeTape variant={tapeVariant} rotationDeg={tapeRotation} /> : null}
+        <ArchitecturalNodeHeader
+          title={title.trim() || "Untitled image"}
+          showExpand={showExpandButton}
+          expandLabel="Open gallery"
+          buttonTone="card-dark"
+          onExpand={() => onExpand(id)}
+        />
+        <div
+          className={
+            imageCardMedia.src
+              ? styles.imageContainer
+              : `${styles.imageContainer} ${styles.imageContainerPlaceholder}`
+          }
+          data-image-open-gallery="true"
+          title="Double-click to open gallery"
+        >
+          <div
+            className={styles.imageCardMediaRoot}
+            data-architectural-media-root="true"
+          >
+            {imageCardMedia.src ? (
+              <img
+                key={imageCardMedia.src}
+                className={styles.imageSlotImg}
+                src={imageCardMedia.src}
+                alt={imageCardMedia.alt || title}
+                draggable={false}
+              />
+            ) : (
+              <div className={styles.imagePlaceholderIcon} aria-hidden>
+                <ImageIcon size={48} weight="regular" />
+              </div>
+            )}
+            <div className={styles.mediaImageActions} contentEditable={false}>
+              <button
+                type="button"
+                className={styles.mediaUploadBtn}
+                data-architectural-media-upload="true"
+                data-media-owner-id={id}
+              >
+                Replace
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className={`${styles.entityNode} ${themeClass(theme)} ${
-        isMediaNode ? styles.unboundedMediaNode : styles.a4DocumentNode
-      } ${
+      className={`${styles.entityNode} ${themeClass(theme)} ${styles.a4DocumentNode} ${
         dragged ? styles.dragging : ""
       } ${selected ? styles.selectedNode : ""}`}
       style={cardStyle}
@@ -173,7 +238,7 @@ export function ArchitecturalNodeCard({
       />
       <ArchitecturalNodeBody
         html={bodyHtml}
-        className={isMediaNode ? undefined : styles.a4DocumentBody}
+        className={styles.a4DocumentBody}
         editable={bodyEditable ?? activeTool === "select"}
         spellCheck={false}
         onHtmlCommit={(html) => onBodyCommit(id, html)}

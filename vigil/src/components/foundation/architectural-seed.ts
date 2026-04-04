@@ -12,7 +12,10 @@ type StyleTokens = {
   done: string;
   taskCheckbox: string;
   taskText: string;
-  mediaPlaceholder: string;
+  mediaFrame: string;
+  mediaImage: string;
+  mediaImageActions: string;
+  mediaUploadBtn: string;
 };
 
 export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
@@ -84,20 +87,22 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
     },
     {
       id: "node-4",
-      title: "SURVEY // ORBITAL STILL",
+      title: "SURVEY // CALIGINIA SPHERE",
       x: -202,
       y: 106,
       rotation: 2.2,
+      width: 340,
       theme: "media",
       tapeRotation: 1.6,
-      tapeVariant: "clear",
+      tapeVariant: "dark",
       bodyHtml: `
-        <div class="${tokens.mediaPlaceholder}">
-          <span>Satellite frame · awaiting raster</span>
+        <div class="${tokens.mediaFrame}" data-architectural-media-root="true">
+          <img class="${tokens.mediaImage}" src="/caliginia-sphere.png" alt="Caliginia sphere — survey frame" />
+          <div class="${tokens.mediaImageActions}" contenteditable="false">
+            <button type="button" class="${tokens.mediaUploadBtn}" data-architectural-media-upload="true">Replace</button>
+          </div>
         </div>
-        <div contenteditable="true" style="font-size: 13px; color: ${DS_COLOR.codeSampleCaption};">
-          Cross-check terraforming scars against eyewitness drift. If the terrain disagrees with the archive, trust the bleed first—maps lie politely; the Stain does not.
-        </div>
+        <div data-architectural-media-notes="true"></div>
       `,
     },
   ];

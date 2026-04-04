@@ -18,6 +18,13 @@
   --theme-media-bg: var(--sys-color-neutral-100);
   --theme-media-text: var(--sys-color-black);
   --theme-media-border: var(--sys-color-neutral-300);
+  /* Image entity card — dark well aligned with shell / code nodes. */
+  --theme-image-bg: color-mix(in oklch, var(--sys-color-neutral-920) 94%, var(--sys-color-neutral-900));
+  --theme-image-text: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
+  --theme-image-border: var(--sys-color-neutral-700);
+  --theme-image-well-a: var(--sys-color-neutral-950);
+  --theme-image-well-b: var(--sys-color-neutral-920);
+  --theme-image-well-c: var(--sys-color-neutral-900);
   --folder-bg: var(--sys-color-neutral-900);
   --folder-border: var(--sys-color-neutral-800);
   --folder-tab: var(--sys-color-neutral-900);
@@ -31,6 +38,20 @@
   --layer-focus-overlay: 9999;
 }
 
+.hiddenFileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .shell {
   width: 100vw;
   height: 100vh;
@@ -40,6 +61,21 @@
   user-select: none;
   font-family: var(--font-geist-sans), sans-serif;
   position: relative;
+}
+
+/* Fixed focus dock + panel shadows extend past shell edges; default shell overflow clips them. */
+.shell.shellFocusDockBleed {
+  overflow: visible;
+}
+
+/*
+ * Robust focus/gallery background blur:
+ * blur real background layers when overlays are open, so defocus survives
+ * browser/compositing edge cases where `backdrop-filter` can appear inert.
+ */
+.shellBackdropBlurActive .viewport,
+.shellBackdropBlurActive .chromeLayer {
+  filter: blur(12px) saturate(90%);
 }
 
 /* Initial load: hide until fonts/layout settle, then fade in (see canvasSurfaceReady in TS). */
@@ -62,6 +98,12 @@
     transition: none;
   }
 
+  .viewport,
+  .chromeLayer {
+    transition: none;
+    will-change: auto;
+  }
+
   .viewportSurfacePending {
     opacity: 1;
     pointer-events: auto;
@@ -72,6 +114,8 @@
   width: 100vw;
   height: 100vh;
   position: relative;
+  transition: filter 0.28s ease;
+  will-change: filter;
   background-image: radial-gradient(
     circle at center,
     var(--sem-grid-dot-strong) 0.55px,
@@ -140,6 +184,8 @@
   inset: 0;
   z-index: var(--layer-ui-chrome);
   pointer-events: none;
+  transition: filter 0.28s ease;
+  will-change: filter;
 }
 
 .nodePlacement {
@@ -700,6 +746,135 @@
   max-height: none;
 }
 
+/*
+ * Image entity layout: title header, dark preview well (hugs raster), notes + dimensions strip.
+ * Shares tape, selection ring, and drag behavior with other entity nodes.
+ */
+.themeImage {
+  background-color: var(--theme-image-bg);
+  color: var(--theme-image-text);
+  border-top: 3px solid var(--theme-image-border);
+  border-right: 1px solid var(--sem-overlay-white-08);
+  border-bottom: 2px solid var(--sem-overlay-black-30);
+  border-left: 1px solid var(--sem-overlay-white-06);
+  border-radius: 2px 4px 4px 2px;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='archNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23archNoise)' opacity='0.04'/%3E%3C/svg%3E");
+  box-shadow:
+    1px 1px 0 var(--sem-color-shadow-40),
+    3px 3px 8px var(--sem-color-shadow-45),
+    6px 6px 16px var(--sem-color-shadow-45),
+    inset 0 0 48px var(--sem-overlay-white-05);
+}
+
+.themeImage .nodeHeader {
+  border-bottom: 1px solid var(--sem-overlay-white-08);
+}
+
+.imageContainer {
+  width: 100%;
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-bottom: 1px solid var(--sem-overlay-white-10);
+  box-shadow: inset 0 1px 3px var(--sem-color-shadow-40);
+  cursor: zoom-in;
+  background: linear-gradient(
+    135deg,
+    var(--theme-image-well-a) 0%,
+    var(--theme-image-well-b) 50%,
+    var(--theme-image-well-c) 100%
+  );
+}
+
+/* Empty state: keep a modest target for the icon + replace control. */
+.imageContainerPlaceholder {
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.imageContainer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='archImgNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23archImgNoise)' opacity='0.05'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.imageCardMediaRoot {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: block;
+  line-height: 0;
+}
+
+.imageCardMediaRoot .mediaImageActions {
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.imageCardMediaRoot:hover .mediaImageActions,
+.imageCardMediaRoot:focus-within .mediaImageActions {
+  opacity: 1;
+}
+
+.imageSlotImg {
+  width: 100%;
+  height: auto;
+  display: block;
+  vertical-align: middle;
+}
+
+.imagePlaceholderIcon {
+  color: color-mix(in oklch, var(--theme-image-text) 25%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.themeImage .mediaUploadBtn,
+.focusEditorDark .mediaUploadBtn {
+  border: 1px solid var(--sem-overlay-white-18);
+  background: color-mix(in oklch, var(--sys-color-neutral-920) 82%, transparent);
+  color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
+  box-shadow:
+    0 1px 0 var(--sem-overlay-white-08),
+    0 4px 16px var(--sem-color-shadow-45);
+}
+
+.themeImage .mediaUploadBtn:hover,
+.focusEditorDark .mediaUploadBtn:hover {
+  background: color-mix(in oklch, var(--sys-color-neutral-800) 88%, transparent);
+  border-color: var(--sem-overlay-white-16);
+  box-shadow:
+    0 1px 0 var(--sem-overlay-white-12),
+    0 6px 20px var(--sem-color-shadow-42);
+}
+
+.themeImage .mediaUploadBtn:active,
+.focusEditorDark .mediaUploadBtn:active {
+  transform: scale(0.98);
+}
+
+.themeImage .mediaUploadBtn:focus-visible,
+.focusEditorDark .mediaUploadBtn:focus-visible {
+  box-shadow:
+    0 1px 0 var(--sem-overlay-white-08),
+    0 4px 16px var(--sem-color-shadow-45),
+    0 0 0 var(--sem-focus-ring-width)
+      color-mix(in oklch, var(--sys-color-white) 38%, transparent);
+}
+
+@media (hover: none) {
+  .imageCardMediaRoot .mediaImageActions {
+    opacity: 1;
+  }
+}
+
 .entityNode:hover:not(.dragging) {
   transform: scale(1.012);
 }
@@ -808,6 +983,8 @@
   border-top: 3px solid var(--theme-media-border);
 }
 
+/* Legacy class name retained for stories/tooling; canvas image nodes use `.themeImage`. */
+
 .nodeHeader {
   padding: 10px 18px;
   display: flex;
@@ -885,8 +1062,10 @@
 }
 
 .nodeBody h1 {
+  font-family: var(--font-geist-sans), sans-serif;
   font-size: 1.5em;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   margin: 0.35em 0 0.55em;
   line-height: 1.25;
 }
@@ -898,8 +1077,16 @@
   line-height: 1.3;
 }
 
+.nodeBody h3 {
+  font-size: 1.125em;
+  font-weight: 600;
+  margin: 0.5em 0 0.5em;
+  line-height: 1.3;
+}
+
 .nodeBody h1:first-child,
-.nodeBody h2:first-child {
+.nodeBody h2:first-child,
+.nodeBody h3:first-child {
   margin-top: 0;
 }
 
@@ -927,6 +1114,48 @@
   padding: 0.15em 0 0.15em 14px;
   margin: 0.65em 0;
   opacity: 0.8;
+}
+
+.nodeBody ul[data-arch-checklist="true"] {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.65em 0;
+}
+
+.nodeBody ul[data-arch-checklist="true"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45em;
+  margin-bottom: 0.4em;
+}
+
+.nodeBody ul[data-arch-checklist="true"] input[type="checkbox"] {
+  flex-shrink: 0;
+  margin-top: 0.2em;
+}
+
+.nodeBody pre {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.88em;
+  line-height: 1.45;
+  padding: 0.75em 1em;
+  margin: 0.75em 0;
+  border-radius: 6px;
+  background: var(--sem-surface-muted);
+  border: 1px solid var(--sem-border-subtle);
+  overflow-x: auto;
+}
+
+.nodeBody pre code {
+  font-family: inherit;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.nodeBody hr {
+  border: none;
+  border-top: 1px solid var(--sem-overlay-black-15);
+  margin: 1.15em 0;
 }
 
 .taskItem {
@@ -979,6 +1208,109 @@
   margin-bottom: 12px;
   border-radius: 2px;
   border: 1px dashed var(--sem-overlay-black-10);
+}
+
+/* Raster embed + replace control (bodyHtml `data-architectural-media-root`). */
+.mediaFrame {
+  position: relative;
+  width: 100%;
+  margin-bottom: 12px;
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid var(--sem-overlay-black-10);
+  background: var(--sem-overlay-black-05);
+}
+
+.mediaImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 280px;
+  object-fit: cover;
+  vertical-align: middle;
+}
+
+.mediaImageActions {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.mediaFrame:hover .mediaImageActions,
+.mediaFrame:focus-within .mediaImageActions {
+  opacity: 1;
+}
+
+.mediaUploadBtn {
+  appearance: none;
+  margin: 0;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  /* Parents like `.imageCardMediaRoot` use `line-height: 0` for images — reset so label isn’t crushed */
+  line-height: 1.25;
+  min-height: var(--sys-control-height-sm, 32px);
+  padding: 6px 14px;
+  border: 1px solid var(--sem-overlay-black-15);
+  background: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  color: var(--sys-color-neutral-800);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: var(--sys-radius-md, 8px);
+  cursor: pointer;
+  font-family: var(--font-geist-sans), sans-serif;
+  box-shadow: 0 2px 10px var(--sem-color-shadow-20);
+  white-space: nowrap;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.2s ease,
+    transform 0.16s ease;
+}
+
+.mediaUploadBtn:hover {
+  background: var(--sys-color-white);
+}
+
+.mediaUploadBtn:active {
+  transform: scale(0.98);
+}
+
+.mediaUploadBtn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 2px 10px var(--sem-color-shadow-20),
+    0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sem-focus-ring) 40%, transparent);
+}
+
+.mediaUploadBtnIcon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+@media (hover: none) {
+  .mediaImageActions {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mediaImageActions {
+    transition: none;
+  }
 }
 
 .shellTopLeftStack {
@@ -1225,16 +1557,54 @@
   justify-content: center;
   pointer-events: none;
   z-index: var(--layer-ui-chrome);
+  overflow: visible;
+}
+
+/* Focus editor only (`variant="editor"`): solid black clusters, high contrast on light sheet. */
+.bottomDockEditor .rootDockPanel {
+  background: var(--sys-color-black);
+  border-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow:
+    0 10px 28px color-mix(in oklch, var(--sys-color-black) 55%, transparent),
+    0 2px 8px color-mix(in oklch, var(--sys-color-black) 35%, transparent);
+}
+
+.bottomDockEditor .toolbarClusterSep {
+  background: color-mix(in oklch, var(--sys-color-white) 22%, transparent);
+}
+
+/* Same dock as .bottomDock but fixed above focus scrim (viewport dock sits under overlay z-index). */
+.focusBottomDock {
+  position: fixed;
+  bottom: 28px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  /* Above `.focusOverlay` so dock shadows are not clipped by overlay overflow; hit-testing stays correct. */
+  z-index: calc(var(--layer-focus-overlay) + 1);
 }
 
 .rootDockCluster {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 6px;
   pointer-events: auto;
-  max-width: min(96vw, 520px);
+  max-width: min(96vw, 920px);
+  transform-origin: center bottom;
+  overflow: visible;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bottomDock .rootDockCluster {
+    animation: dockClusterRise 0.42s cubic-bezier(0.22, 1, 0.32, 1) backwards;
+  }
 }
 
 .rootDockPanel {
@@ -1243,6 +1613,447 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
+}
+
+.formatToolbarWrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+}
+
+/* Collapsible “insert blocks” strip + separator (width animates via grid). */
+.formatToolbarInsertSlot {
+  display: grid;
+  grid-template-columns: 0fr;
+  margin-inline-end: 0;
+  overflow: hidden;
+  transition:
+    grid-template-columns 0.34s cubic-bezier(0.22, 1, 0.32, 1),
+    margin-inline-end 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.formatToolbarInsertSlotOpen {
+  grid-template-columns: 1fr;
+  margin-inline-end: 8px;
+}
+
+.bottomDock .formatToolbarInsertSlotOpen {
+  overflow: visible;
+}
+
+.formatToolbarInsertSlotInner {
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform-origin: left center;
+  transition: transform 0.36s cubic-bezier(0.22, 1, 0.32, 1);
+}
+
+.bottomDock .formatToolbarInsertSlotOpen .formatToolbarInsertSlotInner {
+  overflow: visible;
+}
+
+.bottomDock .formatToolbarInsertSlot:not(.formatToolbarInsertSlotOpen) .formatToolbarInsertSlotInner {
+  transform: scale(0.9);
+}
+
+.bottomDock .formatToolbarInsertSlotOpen .formatToolbarInsertSlotInner {
+  transform: scale(1);
+}
+
+.toolbarClusterSepDock {
+  opacity: 0;
+  transform: scaleY(0.55);
+  transform-origin: center center;
+  transition:
+    opacity 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.formatToolbarInsertSlotOpen .toolbarClusterSepDock {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+@keyframes dockToolbarIconIn {
+  from {
+    opacity: 0;
+    transform: translateY(7px) scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dockClusterRise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dockPanelPop {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.9);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translateY(-1px) scale(1.02);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Format panel: keep mounted; collapse width when hidden (smooth with grid 0fr). */
+.rootDockPanelSlot {
+  display: grid;
+  grid-template-columns: 0fr;
+  max-height: 56px;
+  overflow: hidden;
+  transition: grid-template-columns 0.44s cubic-bezier(0.22, 1, 0.28, 1);
+}
+
+.rootDockPanelSlotOpen {
+  grid-template-columns: 1fr;
+}
+
+.bottomDock .rootDockPanelSlotOpen {
+  overflow: visible;
+}
+
+.rootDockPanelSlotInner {
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform-origin: center bottom;
+  transition: transform 0.42s cubic-bezier(0.22, 1, 0.32, 1);
+}
+
+/* Let `.rootDockPanel` box-shadow paint outside the slot while collapsed state still clips. */
+.bottomDock .rootDockPanelSlotOpen .rootDockPanelSlotInner {
+  overflow: visible;
+}
+
+.bottomDock .rootDockPanelSlot:not(.rootDockPanelSlotOpen) .rootDockPanelSlotInner {
+  transform: scale(0.91);
+}
+
+.bottomDock .rootDockPanelSlotOpen .rootDockPanelSlotInner {
+  transform: scale(1);
+}
+
+.bottomDock .rootDockPanelSlot:not(.rootDockPanelSlotOpen) .rootDockPanel {
+  opacity: 0;
+  transform: translateY(12px) scale(0.94);
+  pointer-events: none;
+  transition:
+    opacity 0.22s ease-out,
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.bottomDock .rootDockPanelSlotOpen .rootDockPanel {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  transition:
+    opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1) 0.05s,
+    transform 0.38s cubic-bezier(0.22, 1, 0.32, 1) 0.05s,
+    box-shadow 0.32s ease,
+    border-color 0.24s ease;
+}
+
+.bottomDock .rootDockPanelSlotOpen .rootDockPanel:hover {
+  transform: translateY(-1px) scale(1);
+  box-shadow:
+    0 12px 36px var(--sem-color-shadow-38),
+    0 4px 12px var(--sem-color-shadow-28);
+}
+
+.bottomDockEditor .rootDockPanelSlotOpen .rootDockPanel:hover {
+  box-shadow:
+    0 14px 40px color-mix(in oklch, var(--sys-color-black) 58%, transparent),
+    0 4px 14px color-mix(in oklch, var(--sys-color-black) 38%, transparent);
+}
+
+/* Create cluster + panels inside collapsible slots (history / format). */
+.bottomDock .rootDockCluster > .rootDockPanel,
+.bottomDock .rootDockCluster > .rootDockPanelSlot .rootDockPanel {
+  transition:
+    transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.32s ease;
+}
+
+.bottomDock .rootDockCluster > .rootDockPanel:hover,
+.bottomDock .rootDockCluster > .rootDockPanelSlot .rootDockPanel:hover {
+  transform: translateY(-1px) scale(1);
+  box-shadow:
+    0 12px 36px var(--sem-color-shadow-38),
+    0 4px 12px var(--sem-color-shadow-28);
+}
+
+.bottomDockEditor .rootDockCluster > .rootDockPanel:hover,
+.bottomDockEditor .rootDockCluster > .rootDockPanelSlot .rootDockPanel:hover {
+  box-shadow:
+    0 14px 40px color-mix(in oklch, var(--sys-color-black) 58%, transparent),
+    0 4px 14px color-mix(in oklch, var(--sys-color-black) 38%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bottomDock .rootDockCluster > .rootDockPanel:first-child {
+    animation: dockPanelPop 0.44s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: 0.04s;
+  }
+
+  .bottomDock
+    .rootDockCluster
+    > .rootDockPanelSlot:nth-child(2).rootDockPanelSlotOpen
+    .rootDockPanel {
+    animation: dockPanelPop 0.44s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: 0.1s;
+  }
+
+  .bottomDock
+    .rootDockCluster
+    > .rootDockPanelSlot:nth-child(3).rootDockPanelSlotOpen
+    .rootDockPanel {
+    animation: dockPanelPop 0.44s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: 0.16s;
+  }
+
+  .bottomDock
+    :is(
+      .rootDockCluster > .rootDockPanel .dockCreateToolbar,
+      .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockFormatToolbar,
+      .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
+    )
+    :global(.vigil-btn) {
+    animation: dockToolbarIconIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  .bottomDock
+    :is(
+      .rootDockCluster > .rootDockPanel .dockCreateToolbar,
+      .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockFormatToolbar,
+      .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
+    )
+    :global(.vigil-btn:nth-child(1)) {
+    animation-delay: 0.02s;
+  }
+
+  .bottomDock
+    :is(
+      .rootDockCluster > .rootDockPanel .dockCreateToolbar,
+      .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockFormatToolbar,
+      .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
+    )
+    :global(.vigil-btn:nth-child(2)) {
+    animation-delay: 0.04s;
+  }
+
+  .bottomDock
+    :is(
+      .rootDockCluster > .rootDockPanel .dockCreateToolbar,
+      .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockFormatToolbar,
+      .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
+    )
+    :global(.vigil-btn:nth-child(3)) {
+    animation-delay: 0.06s;
+  }
+
+  .bottomDock
+    :is(
+      .rootDockCluster > .rootDockPanel .dockCreateToolbar,
+      .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockFormatToolbar,
+      .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
+    )
+    :global(.vigil-btn:nth-child(4)) {
+    animation-delay: 0.08s;
+  }
+
+  .bottomDock
+    :is(
+      .rootDockCluster > .rootDockPanel .dockCreateToolbar,
+      .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockFormatToolbar,
+      .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
+    )
+    :global(.vigil-btn:nth-child(5)) {
+    animation-delay: 0.1s;
+  }
+
+  .bottomDock
+    :is(
+      .rootDockCluster > .rootDockPanel .dockCreateToolbar,
+      .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockFormatToolbar,
+      .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
+    )
+    :global(.vigil-btn:nth-child(6)) {
+    animation-delay: 0.12s;
+  }
+
+  .bottomDock
+    :is(
+      .rootDockCluster > .rootDockPanel .dockCreateToolbar,
+      .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockFormatToolbar,
+      .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
+    )
+    :global(.vigil-btn:nth-child(7)) {
+    animation-delay: 0.14s;
+  }
+
+  .bottomDock
+    :is(
+      .rootDockCluster > .rootDockPanel .dockCreateToolbar,
+      .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockFormatToolbar,
+      .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
+    )
+    :global(.vigil-btn:nth-child(8)) {
+    animation-delay: 0.16s;
+  }
+
+  .bottomDock
+    :is(
+      .rootDockCluster > .rootDockPanel .dockCreateToolbar,
+      .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockFormatToolbar,
+      .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
+    )
+    :global(.vigil-btn:nth-child(9)) {
+    animation-delay: 0.18s;
+  }
+
+  .bottomDock
+    :is(
+      .rootDockCluster > .rootDockPanel .dockCreateToolbar,
+      .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockFormatToolbar,
+      .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
+    )
+    :global(.vigil-btn:nth-child(10)) {
+    animation-delay: 0.2s;
+  }
+}
+
+.shell :global(.bottomDock .vigil-btn:not(:disabled):not([data-disabled="true"])) {
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.22s ease;
+}
+
+.shell :global(.bottomDock .vigil-btn:not(:disabled):not([data-disabled="true"]):active) {
+  transform: translateY(1px) scale(0.93);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottomDock .rootDockCluster {
+    animation: none;
+  }
+
+  .bottomDock .rootDockCluster > .rootDockPanel,
+  .bottomDock .rootDockCluster > .rootDockPanelSlot .rootDockPanel {
+    transition: none;
+  }
+
+  .bottomDock .rootDockCluster > .rootDockPanel:first-child,
+  .bottomDock
+    .rootDockCluster
+    > .rootDockPanelSlot:nth-child(2).rootDockPanelSlotOpen
+    .rootDockPanel,
+  .bottomDock
+    .rootDockCluster
+    > .rootDockPanelSlot:nth-child(3).rootDockPanelSlotOpen
+    .rootDockPanel {
+    animation: none;
+  }
+
+  .bottomDock .rootDockPanelSlotInner {
+    transition: none;
+  }
+
+  .bottomDock .rootDockPanelSlot:not(.rootDockPanelSlotOpen) .rootDockPanelSlotInner,
+  .bottomDock .rootDockPanelSlotOpen .rootDockPanelSlotInner {
+    transform: none;
+  }
+
+  .bottomDock .formatToolbarInsertSlotInner {
+    transition: none;
+  }
+
+  .bottomDock .formatToolbarInsertSlot:not(.formatToolbarInsertSlotOpen) .formatToolbarInsertSlotInner,
+  .bottomDock .formatToolbarInsertSlotOpen .formatToolbarInsertSlotInner {
+    transform: none;
+  }
+
+  .formatToolbarInsertSlot,
+  .rootDockPanelSlot {
+    transition: none;
+  }
+
+  .toolbarClusterSepDock {
+    transition: none;
+  }
+
+  .bottomDock .rootDockPanelSlot:not(.rootDockPanelSlotOpen) .rootDockPanel,
+  .bottomDock .rootDockPanelSlotOpen .rootDockPanel {
+    transition: none;
+  }
+
+  .bottomDock .rootDockPanelSlotOpen .rootDockPanel:hover,
+  .bottomDock .rootDockCluster > .rootDockPanel:hover,
+  .bottomDock .rootDockCluster > .rootDockPanelSlot .rootDockPanel:hover {
+    transform: none;
+  }
+
+  .bottomDock
+    :is(
+      .rootDockCluster > .rootDockPanel .dockCreateToolbar,
+      .rootDockPanelSlotOpen .dockHistoryToolbar,
+      .rootDockPanelSlotOpen .dockFormatToolbar,
+      .rootDockPanelSlotOpen .formatToolbarInsertSlotOpen .dockInsertToolbar
+    )
+    :global(.vigil-btn) {
+    animation: none;
+  }
+
+  .shell :global(.bottomDock .vigil-btn:not(:disabled):not([data-disabled="true"])) {
+    transition: none;
+  }
+
+  .shell :global(.bottomDock .vigil-btn:not(:disabled):not([data-disabled="true"]):active) {
+    transform: none;
+  }
+}
+
+.toolbarClusterSep {
+  width: 1px;
+  height: 22px;
+  background: var(--sem-border-strong);
+  flex-shrink: 0;
 }
 
 .formatToolbar {
@@ -1284,6 +2095,10 @@
   .rootDockPanel,
   .sideTools {
     background: var(--sem-surface-glass-fallback);
+  }
+
+  .bottomDockEditor .rootDockPanel {
+    background: var(--sys-color-black);
   }
 }
 
@@ -1483,13 +2298,148 @@
   background: color-mix(in oklch, var(--accent) 16%, transparent);
 }
 
+/*
+ * Dark focus editor — shared by media gallery and code-node focus mode.
+ * Same layout as the light document editor; dark scrim + light type + sticky header gradient.
+ * Chained selectors beat `.focusOverlay` / `.focusActive` (declared below).
+ */
+
+.focusEditorDark.focusOverlay {
+  color: var(--sem-text-primary);
+  background: color-mix(in oklch, var(--sys-color-black) 82%, transparent);
+  backdrop-filter: blur(22px) saturate(115%);
+  -webkit-backdrop-filter: blur(22px) saturate(115%);
+}
+
+.focusEditorDark.focusOverlay.focusActive {
+  background: color-mix(in oklch, var(--sys-color-neutral-950) 96%, transparent);
+  backdrop-filter: blur(30px) saturate(118%);
+  -webkit-backdrop-filter: blur(30px) saturate(118%);
+}
+
+.focusEditorDark .focusHeader {
+  background: transparent;
+  border-bottom: none;
+}
+
+.focusEditorDark .focusMeta {
+  color: var(--sem-text-muted);
+}
+
+.focusEditorDark .focusTitle {
+  color: var(--sem-text-secondary);
+}
+
+.focusEditorDark .focusTitle::placeholder {
+  color: var(--sem-text-muted);
+  opacity: 1;
+}
+
+/* Code body panel: subtle edge on dark scrim (gallery has its own asset frame). */
+.focusEditorDark .focusBody.focusCode {
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--sys-color-white) 8%, transparent),
+    0 20px 48px color-mix(in oklch, var(--sys-color-black) 45%, transparent);
+}
+
+.mediaGalleryDimsInline {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--sem-text-muted);
+  white-space: nowrap;
+}
+
+.mediaGalleryAssetStage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Same horizontal band as `.focusHeader` content (inside shared 40px sheet padding). */
+  margin: 12px 0 40px;
+  min-height: 160px;
+}
+
+.mediaGalleryAsset {
+  display: block;
+  max-width: 100%;
+  max-height: min(68vh, 640px);
+  width: auto;
+  height: auto;
+  border-radius: 2px;
+  vertical-align: middle;
+  object-fit: contain;
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--sys-color-white) 9%, transparent),
+    0 20px 48px color-mix(in oklch, var(--sys-color-black) 55%, transparent);
+}
+
+.mediaGalleryEmpty {
+  text-align: center;
+  padding: 56px 28px;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+.mediaGalleryEmptyTitle {
+  margin: 0 0 10px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sem-text-muted);
+}
+
+.mediaGalleryEmptyHint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: color-mix(in oklch, var(--sem-text-muted) 88%, transparent);
+}
+
+.mediaGalleryNotesSection {
+  margin-top: 8px;
+}
+
+.mediaGalleryNotesLabel {
+  display: block;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sem-text-muted);
+  margin-bottom: 10px;
+}
+
+.mediaGalleryNotesField {
+  min-height: 4em;
+  max-height: min(30vh, 240px);
+  overflow-y: auto;
+  padding: 12px 14px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--sem-text-secondary);
+  border-radius: 4px;
+  border: 1px solid var(--sem-border-subtle);
+  background: var(--sem-surface-glass);
+  white-space: pre-wrap;
+  word-break: break-word;
+  outline: none;
+}
+
+.mediaGalleryNotesField:focus {
+  border-color: var(--sem-focus-ring);
+  box-shadow: 0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sem-focus-ring) 45%, transparent);
+}
+
 .focusOverlay {
   position: fixed;
   inset: 0;
   z-index: var(--layer-focus-overlay);
   background: var(--sem-surface-focus-scrim);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   opacity: 0;
   pointer-events: none;
   transition:
@@ -1497,7 +2447,11 @@
     background-color 0.34s ease,
     backdrop-filter 0.34s ease,
     -webkit-backdrop-filter 0.34s ease;
-  overflow-y: auto;
+  /* Scroll lives on `.focusSheet` so fixed UI (e.g. bottom dock) is not a descendant of overflow; avoids clipped shadows. */
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   color: var(--sys-color-black);
 }
 
@@ -1505,8 +2459,8 @@
   opacity: 1;
   pointer-events: auto;
   background: var(--sem-surface-focus-scrim-solid);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
 }
 
 /* Column that counts as “the document”; scrim absorbs stray clicks (does not dismiss). */
@@ -1516,6 +2470,12 @@
   width: 100%;
   box-sizing: border-box;
   position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow-x: visible;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .focusHeader {
@@ -1524,7 +2484,7 @@
   padding: 20px 40px;
   display: flex;
   justify-content: space-between;
-  background: linear-gradient(to bottom, var(--sys-color-white) 80%, transparent);
+  background: transparent;
   z-index: 10;
   opacity: 0;
   transform: translateY(-8px);
@@ -1548,8 +2508,11 @@
   font-family: var(--font-geist-mono), monospace;
 }
 
+/* Full sheet width; 40px horizontal padding matches `.focusHeader` so body aligns with meta / actions. */
 .focusContent {
-  max-width: 800px;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
   margin: 40px 0 100px;
   padding: 0 40px;
   opacity: 0;
@@ -1560,11 +2523,13 @@
 }
 
 .focusTitle {
-  font-size: 42px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-  margin-bottom: 24px;
+  font-size: 18px;
+  line-height: 1.7;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  /* Matches `.nodeTitle` (inherited label color at 0.6); avoid `opacity` here — focus enter/exit animates it */
+  color: color-mix(in oklch, var(--sys-color-black) 60%, transparent);
+  margin: 0 0 0.75em;
   border: none;
   outline: none;
   width: 100%;
@@ -1575,6 +2540,11 @@
   transition:
     opacity 0.24s ease,
     transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.focusTitle::placeholder {
+  color: var(--sys-color-neutral-400);
+  opacity: 0.85;
 }
 
 .focusBody {
@@ -1618,12 +2588,99 @@
   margin-bottom: 1.2em;
 }
 
-.focusBody h1,
-.focusBody h2 {
+.focusBody h1 {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 1.5em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--sys-color-black);
+  margin: 0.35em 0 0.55em;
+  line-height: 1.25;
+}
+
+.focusBody h2 {
+  font-size: 1.25em;
   font-weight: 600;
-  margin-top: 1.5em;
-  margin-bottom: 0.5em;
+  color: var(--sys-color-black);
+  margin: 0.5em 0 0.5em;
+  line-height: 1.3;
+}
+
+.focusBody h3 {
+  font-size: 1.125em;
+  font-weight: 600;
+  color: var(--sys-color-black);
+  margin: 0.5em 0 0.5em;
+  line-height: 1.3;
+}
+
+.focusBody h1:first-child,
+.focusBody h2:first-child,
+.focusBody h3:first-child {
+  margin-top: 0;
+}
+
+.focusBody blockquote {
+  border-left: 2px solid var(--accent);
+  padding: 0.15em 0 0.15em 14px;
+  margin: 0.65em 0;
+  opacity: 0.85;
+}
+
+.focusBody ul[data-arch-checklist="true"] {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.65em 0;
+}
+
+.focusBody ul[data-arch-checklist="true"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45em;
+  margin-bottom: 0.4em;
+}
+
+.focusBody ul[data-arch-checklist="true"] input[type="checkbox"] {
+  flex-shrink: 0;
+  margin-top: 0.2em;
+}
+
+.focusBody pre {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.88em;
+  line-height: 1.45;
+  padding: 0.75em 1em;
+  margin: 0.75em 0;
+  border-radius: 6px;
+  background: var(--sem-surface-muted);
+  border: 1px solid var(--sem-border-subtle);
+  overflow-x: auto;
+}
+
+.focusBody pre code {
+  font-family: inherit;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.focusBody hr {
+  border: none;
+  border-top: 1px solid var(--sem-overlay-black-15);
+  margin: 1.15em 0;
+}
+
+.focusBody ul,
+.focusBody ol {
+  padding-left: 1.5em;
+  margin: 0 0 1.05em;
+}
+
+.focusBody ul {
+  list-style-type: disc;
+}
+
+.focusBody ol {
+  list-style-type: decimal;
 }
 
 .focusCode {
@@ -1632,6 +2689,13 @@
   color: var(--sys-color-neutral-300);
   padding: 40px;
   border-radius: 8px;
+}
+
+.focusBody.focusCode h1,
+.focusBody.focusCode h2,
+.focusBody.focusCode h3 {
+  color: inherit;
+  opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

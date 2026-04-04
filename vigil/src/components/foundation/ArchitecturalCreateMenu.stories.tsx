@@ -16,6 +16,7 @@ const meta: Meta<typeof ArchitecturalCreateMenu> = {
   },
   argTypes: {
     actions: { control: "object" },
+    actionTone: { control: "select", options: ["menu", "card-dark"] },
     onCreateNode: { control: false },
   },
   decorators: [
@@ -31,3 +32,21 @@ export default meta;
 type Story = StoryObj<typeof ArchitecturalCreateMenu>;
 
 export const Default: Story = {};
+
+export const OnBlackDock: Story = {
+  args: { actionTone: "card-dark" },
+  decorators: [
+    (Story) => (
+      <div
+        style={{
+          background: "var(--sys-color-black)",
+          padding: "12px 16px",
+          borderRadius: 8,
+          display: "inline-block",
+        }}
+      >
+        <Story />
+      </div>
+    ),
+  ],
+};
