@@ -16,8 +16,8 @@ export function clampContextMenuPosition(
   point: { x: number; y: number },
   options?: { maxWidth?: number; maxHeight?: number; edgePadding?: number },
 ): { x: number; y: number } {
-  const maxWidth = options?.maxWidth ?? 260;
-  const maxHeight = options?.maxHeight ?? 240;
+  const maxWidth = options?.maxWidth ?? 236;
+  const maxHeight = options?.maxHeight ?? 280;
   const edgePadding = options?.edgePadding ?? 8;
   return {
     x: Math.min(point.x, window.innerWidth - maxWidth - edgePadding),
@@ -57,25 +57,36 @@ export function ContextMenu({
   return (
     <div
       ref={ref}
-      className="fixed z-[1100] min-w-[208px] rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-elevated)]/95 py-1 shadow-xl shadow-black/12 backdrop-blur-xl dark:shadow-black/45"
+      role="menu"
+      aria-label="Context menu"
+      className="fixed z-[1100] flex w-[min(236px,calc(100vw-16px))] min-w-[180px] max-w-[236px] flex-col rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-elevated)]/95 py-1 shadow-xl shadow-black/12 backdrop-blur-xl dark:shadow-black/45"
       style={{ left: position.x, top: position.y }}
     >
       {items.map((it) => (
         <Button
           key={it.label}
           size="sm"
-          variant="subtle"
+          variant="ghost"
           tone="menu"
           disabled={it.disabled}
-          className="flex w-full items-center justify-start gap-2.5 px-3 py-2.5 text-sm"
+          leadingIcon={
+            it.icon ? (
+              <span
+                className="flex size-[18px] shrink-0 items-center justify-center text-current opacity-90 [&_svg]:size-[18px]"
+                aria-hidden
+              >
+                {it.icon}
+              </span>
+            ) : undefined
+          }
+          className="h-auto min-h-0 w-full justify-start gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium"
           onClick={() => {
             if (it.disabled) return;
             it.onSelect();
             onClose();
           }}
         >
-          {it.icon ? <span className="text-[var(--vigil-muted)]">{it.icon}</span> : null}
-          <span className="min-w-0 flex-1">{it.label}</span>
+          <span className="min-w-0 flex-1 truncate">{it.label}</span>
         </Button>
       ))}
     </div>

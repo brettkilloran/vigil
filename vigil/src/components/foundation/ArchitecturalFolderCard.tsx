@@ -100,6 +100,11 @@ export function ArchitecturalFolderCard({
       </div>
       <div className={styles.folderFront}>
         <div className={styles.folderTopRow}>
+          <span
+            className={styles.folderConnectionPinAnchor}
+            data-folder-connection-pin-anchor="true"
+            aria-hidden
+          />
           <div className={styles.folderMetaBlock}>
             <BufferedContentEditable
               value={title}

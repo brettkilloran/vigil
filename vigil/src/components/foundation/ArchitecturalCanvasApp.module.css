@@ -143,6 +143,22 @@
   cursor: var(--connection-cursor, crosshair) !important;
 }
 
+/* Cut mode: dim nodes/stacks; keep threads above the scrim (nodes can outrank default layer-connections). */
+.viewportCutThreadMode .connectionLayer {
+  z-index: 6000;
+}
+
+.canvasCutDim {
+  position: absolute;
+  inset: 0;
+  width: 10000px;
+  height: 10000px;
+  pointer-events: none;
+  z-index: 5900;
+  background: color-mix(in oklch, var(--sys-color-neutral-950) 52%, transparent);
+  transition: opacity 0.22s ease;
+}
+
 .deepSpace {
   --bg-base: var(--sem-surface-base);
   --grid-color: var(--sem-grid-color-deep);
@@ -216,6 +232,17 @@
   filter: drop-shadow(0 0 7px color-mix(in oklch, var(--sys-color-black) 36%, transparent));
 }
 
+/* Invisible wide stroke under the visible thread — move/draw hit target (visible path stays pointer-events: none). */
+.connectionHitStroke {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 20px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
 .connectionStrokePreview {
   stroke-dasharray: 5 5;
   opacity: 0.85;
@@ -229,7 +256,16 @@
 .connectionStrokeCuttable {
   pointer-events: stroke;
   stroke-width: 10px;
-  cursor: not-allowed;
+  cursor: var(--connection-cursor, crosshair);
+  transition:
+    filter 0.16s ease,
+    stroke-opacity 0.16s ease;
+}
+
+.connectionStrokeCuttable:hover {
+  filter: drop-shadow(0 0 14px color-mix(in oklch, var(--sys-color-white) 55%, transparent))
+    drop-shadow(0 0 6px color-mix(in oklch, var(--accent) 40%, transparent));
+  stroke-opacity: 1;
 }
 
 .connectionPin {
@@ -642,7 +678,7 @@
   width: 90%;
   height: 70%;
   box-sizing: border-box;
-  border: 1px dashed color-mix(in oklch, var(--folder-fg) 22%, transparent);
+  border: 1px dashed color-mix(in oklch, var(--folder-fg) 38%, var(--folder-bg) 62%);
   border-radius: 18px;
   opacity: 0;
   display: flex;
@@ -650,7 +686,7 @@
   justify-content: center;
   flex-direction: column;
   gap: 9px;
-  color: color-mix(in oklch, var(--folder-fg) 32%, transparent);
+  color: color-mix(in oklch, var(--folder-fg) 52%, var(--folder-bg) 48%);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -707,11 +743,24 @@
 }
 
 .folderTopRow {
+  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
   width: 100%;
+}
+
+/* Logical connection-pin point: first line of title row (not folder corner). Measured in resolveConnectionPin. */
+.folderConnectionPinAnchor {
+  position: absolute;
+  left: 6px;
+  /* ~vertical center of .folderTitleInput first line (24px × 1.2 line-height) */
+  top: 14px;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+  opacity: 0;
 }
 
 .folderContentPreview {
@@ -740,7 +789,8 @@
   font-size: 10px;
   line-height: 1.22;
   letter-spacing: 0.02em;
-  color: color-mix(in oklch, var(--folder-fg) 33%, transparent);
+  /* Mix with face — not `transparent`, which washes out on both light and dark inks */
+  color: color-mix(in oklch, var(--folder-fg) 82%, var(--folder-bg) 18%);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -751,7 +801,7 @@
   font-family: var(--font-geist-mono), monospace;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: color-mix(in oklch, var(--folder-fg) 42%, transparent);
+  color: color-mix(in oklch, var(--folder-fg) 72%, var(--folder-bg) 28%);
 }
 
 .folderMetaBlock {
@@ -765,6 +815,7 @@
   font-weight: 600;
   line-height: 1.2;
   color: var(--folder-fg);
+  -webkit-text-fill-color: var(--folder-fg);
   outline: none;
 }
 
@@ -772,8 +823,8 @@
   width: fit-content;
   padding: 3px 10px;
   border-radius: 999px;
-  background: color-mix(in oklch, var(--folder-fg) 14%, transparent);
-  color: color-mix(in oklch, var(--folder-fg) 72%, transparent);
+  background: color-mix(in oklch, var(--folder-fg) 20%, var(--folder-bg) 80%);
+  color: var(--folder-fg);
   font-size: 11px;
   font-family: var(--font-geist-mono), monospace;
 }
@@ -1725,6 +1776,13 @@
   align-items: center;
 }
 
+/* Bottom dock: same vertical footprint as neighboring dock icon buttons. */
+.bottomDock .dockFolderTintTrigger:not(.dockFolderTintTriggerSpool) {
+  min-height: var(--sys-control-height-md, 36px);
+  height: auto;
+  box-sizing: border-box;
+}
+
 .connectionToolbarWrap {
   display: flex;
   align-items: center;
@@ -1793,6 +1851,15 @@
   padding: 0;
   border-radius: 999px;
   justify-content: center;
+  /* Thread spool (tool rail): raised chip on light engaged well — not bottom-dock dark glass */
+  background: var(--sys-color-white);
+  border: 1px solid color-mix(in oklch, var(--sys-color-black) 12%, transparent);
+  color: var(--sem-text-primary);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow:
+    0 1px 2px color-mix(in oklch, var(--sys-color-black) 10%, transparent),
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 92%, transparent);
 }
 
 .dockFolderTintTrigger:hover {
@@ -1805,6 +1872,36 @@
   border-color: color-mix(in oklch, var(--sys-color-white) 22%, transparent);
   background: color-mix(in oklch, var(--sys-color-black) 55%, transparent);
   color: var(--sem-text-primary);
+}
+
+.dockFolderTintTrigger.dockFolderTintTriggerSpool:hover {
+  border-color: color-mix(in oklch, var(--sys-color-black) 18%, transparent);
+  background: color-mix(in oklch, var(--sys-color-neutral-100) 35%, var(--sys-color-white));
+  color: var(--sem-text-primary);
+  box-shadow:
+    0 2px 6px color-mix(in oklch, var(--sys-color-black) 12%, transparent),
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 75%, transparent);
+}
+
+.dockFolderTintTrigger.dockFolderTintTriggerSpool.dockFolderTintTriggerOpen {
+  border-color: color-mix(in oklch, var(--accent) 50%, var(--sys-color-black) 12%);
+  background: var(--sys-color-white);
+  color: var(--sem-text-primary);
+  box-shadow:
+    0 0 0 2px color-mix(in oklch, var(--accent) 30%, transparent),
+    0 2px 8px color-mix(in oklch, var(--sys-color-black) 14%, transparent),
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 88%, transparent);
+}
+
+.dockFolderTintTriggerSpool:focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--accent) 65%, transparent);
+  outline-offset: 2px;
+}
+
+.dockFolderTintTriggerSpool:disabled {
+  opacity: 0.42;
+  cursor: default;
+  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 88%, transparent);
 }
 
 .dockFolderTintTriggerEditor {
@@ -1832,12 +1929,15 @@
 }
 
 .dockFolderTintPreviewSpool {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 999px;
+  flex-shrink: 0;
+  border: 2px solid color-mix(in oklch, var(--sys-color-white) 72%, transparent);
   box-shadow:
-    0 0 0 3px color-mix(in oklch, var(--sys-color-black) 70%, transparent),
-    0 0 0 4px color-mix(in oklch, var(--sys-color-white) 26%, transparent);
+    inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 24%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 10%, transparent),
+    0 1px 3px var(--sem-color-shadow-25);
 }
 
 .dockFolderTintPreviewClassic {
@@ -1887,6 +1987,15 @@
 .dockFolderTintMenuDown {
   bottom: auto;
   top: calc(100% + 10px);
+}
+
+/* Spool tint menu is portaled to `document.body` — reset anchor so `top`/`left` inline coords win. */
+.dockFolderTintMenuSpoolFixed {
+  position: fixed;
+  bottom: auto;
+  right: auto;
+  transform: none;
+  margin: 0;
 }
 
 .dockFolderTintMenuEditor {
@@ -2136,6 +2245,8 @@
 /* Create cluster + panels inside collapsible slots (history / format). */
 .bottomDock .rootDockCluster > .rootDockPanel,
 .bottomDock .rootDockCluster > .rootDockPanelSlot .rootDockPanel {
+  /* Match icon toolbars: sm/md control height + rootDockPanel vertical padding (4px × 2). */
+  min-height: calc(var(--sys-control-height-md, 36px) + 8px);
   transition:
     transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.32s ease;
@@ -2453,11 +2564,21 @@
   border-radius: var(--chrome-panel-radius);
   box-shadow: var(--chrome-glass-shadow);
   min-width: var(--chrome-panel-height);
-  padding: 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
+}
+
+.sideToolsMainPanel {
+  padding: 4px 2px;
+  width: 46px;
+  /* Let connection tint flyout extend past the glass panel (backdrop-filter can clip otherwise). */
+  overflow: visible;
+}
+
+.sideToolsConnectionPanel {
+  padding: 4px;
 }
 
 .sideToolsMainPanel .sepVertical,
@@ -2466,7 +2587,7 @@
   margin: 5px 0;
 }
 
-/* Draw pin + thread spool: one recessed cluster (no rule between them). */
+/* Draw pin + thread spool: layout always; recessed “well” only in draw mode. */
 .sideToolsDrawSpoolCluster {
   align-self: center;
   display: flex;
@@ -2475,13 +2596,19 @@
   gap: 2px;
   width: fit-content;
   max-width: 100%;
-  /* ~7px each side: wider “thread well” than the 36px icon alone */
-  padding: 2px 7px 3px;
+}
+
+.sideToolsDrawSpoolClusterEngaged {
+  /* ~3px each side: wider “thread well” than the 36px icon alone */
+  padding: 2px 3px 3px;
   border-radius: calc(var(--chrome-panel-radius) - 3px);
-  background: color-mix(in oklch, var(--sys-color-black) 28%, transparent);
+  overflow: visible;
+  /* Align with glass tool `data-active` (neutral-100) — light well, not a dark recess */
+  background: var(--sys-color-neutral-100);
   box-shadow:
-    inset 0 0 0 1px color-mix(in oklch, var(--sys-color-white) 8%, transparent),
-    inset 0 2px 12px color-mix(in oklch, var(--sys-color-black) 42%, transparent);
+    inset 0 0 0 1px color-mix(in oklch, var(--sys-color-black) 10%, transparent),
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 55%, transparent),
+    inset 0 2px 10px color-mix(in oklch, var(--sys-color-black) 5%, transparent);
 }
 
 .sideToolsConnectionColor {
@@ -2492,6 +2619,61 @@
 
 .sideToolsDrawSpoolCluster .sideToolsConnectionColor {
   width: auto;
+}
+
+/* Thread spool: show only in draw mode with height + fade/slide. */
+.sideToolsThreadSpoolReveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  width: 100%;
+  pointer-events: none;
+  transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sideToolsThreadSpoolRevealOpen {
+  grid-template-rows: 1fr;
+  pointer-events: auto;
+}
+
+.sideToolsThreadSpoolRevealInner {
+  display: flex;
+  min-height: 0;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Tint flyout is `position: absolute` to the left of the trigger; hidden overflow clips it. */
+.sideToolsThreadSpoolRevealOpen .sideToolsThreadSpoolRevealInner {
+  overflow: visible;
+}
+
+.sideToolsThreadSpoolReveal .sideToolsConnectionColor {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.92);
+  transform-origin: top center;
+  transition:
+    opacity 0.24s cubic-bezier(0.33, 1, 0.68, 1),
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: 0s;
+}
+
+.sideToolsThreadSpoolRevealOpen .sideToolsConnectionColor {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.06s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sideToolsThreadSpoolReveal,
+  .sideToolsThreadSpoolRevealOpen {
+    transition-duration: 0.01ms;
+  }
+
+  .sideToolsThreadSpoolReveal .sideToolsConnectionColor,
+  .sideToolsThreadSpoolRevealOpen .sideToolsConnectionColor {
+    transition-duration: 0.01ms;
+    transition-delay: 0s;
+  }
 }
 
 .topRightConnectionTools {
@@ -2646,6 +2828,19 @@
   color: var(--sys-color-neutral-100);
 }
 
+/* Selected glass tool: light fill + dark icon; default glass hover uses light text → white-on-white in engaged well. */
+.shell :global(.vigil-btn[data-tone="glass"][data-active="true"]:hover:not(:disabled):not([data-disabled="true"])),
+.shell :global(.vigil-btn[data-tone="menu"][data-active="true"]:hover:not(:disabled):not([data-disabled="true"])),
+.shell :global(
+    .vigil-btn[data-tone="glass"][data-active="true"][data-force-state="hover"]:not(:disabled):not([data-disabled="true"])
+  ),
+.shell :global(
+    .vigil-btn[data-tone="menu"][data-active="true"][data-force-state="hover"]:not(:disabled):not([data-disabled="true"])
+  ) {
+  background: color-mix(in oklch, var(--sys-color-neutral-100) 82%, var(--sys-color-black) 14%);
+  color: var(--sys-color-black);
+}
+
 .shell :global(.vigil-btn[data-tone="glass"]:active:not(:disabled):not([data-disabled="true"])),
 .shell :global(.vigil-btn[data-tone="menu"]:active:not(:disabled):not([data-disabled="true"])),
 .shell :global(
@@ -2656,6 +2851,19 @@
   ) {
   background: var(--sem-surface-muted-press);
   color: var(--sys-color-neutral-100);
+  transform: translateY(0.5px);
+}
+
+.shell :global(.vigil-btn[data-tone="glass"][data-active="true"]:active:not(:disabled):not([data-disabled="true"])),
+.shell :global(.vigil-btn[data-tone="menu"][data-active="true"]:active:not(:disabled):not([data-disabled="true"])),
+.shell :global(
+    .vigil-btn[data-tone="glass"][data-active="true"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])
+  ),
+.shell :global(
+    .vigil-btn[data-tone="menu"][data-active="true"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])
+  ) {
+  background: color-mix(in oklch, var(--sys-color-neutral-100) 72%, var(--sys-color-black) 22%);
+  color: var(--sys-color-black);
   transform: translateY(0.5px);
 }
 

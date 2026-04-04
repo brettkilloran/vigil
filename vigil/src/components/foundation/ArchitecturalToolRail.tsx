@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
 import type { CanvasTool } from "@/src/components/foundation/architectural-types";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
+import { cx } from "@/src/lib/cx";
 
 export function ArchitecturalToolButton({
   label,
@@ -79,6 +80,8 @@ export function ArchitecturalToolRail({
     />
   );
 
+  const threadSpoolOpen = connectionMode === "draw";
+
   return (
     <div className={styles.sideTools}>
       <div className={styles.sideToolsMainPanel}>
@@ -101,9 +104,23 @@ export function ArchitecturalToolRail({
         {showConnectionModes ? (
           <>
             {connectionColorControl ? (
-              <div className={styles.sideToolsDrawSpoolCluster}>
+              <div
+                className={cx(
+                  styles.sideToolsDrawSpoolCluster,
+                  threadSpoolOpen && styles.sideToolsDrawSpoolClusterEngaged,
+                )}
+              >
                 {drawConnectionButton}
-                <div className={styles.sideToolsConnectionColor}>{connectionColorControl}</div>
+                <div
+                  className={cx(
+                    styles.sideToolsThreadSpoolReveal,
+                    threadSpoolOpen && styles.sideToolsThreadSpoolRevealOpen,
+                  )}
+                >
+                  <div className={styles.sideToolsThreadSpoolRevealInner}>
+                    <div className={styles.sideToolsConnectionColor}>{connectionColorControl}</div>
+                  </div>
+                </div>
               </div>
             ) : (
               drawConnectionButton

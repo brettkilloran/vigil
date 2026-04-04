@@ -19,7 +19,8 @@ import {
   TextStrikethrough,
   TextUnderline,
 } from "@phosphor-icons/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 
 import {
@@ -256,39 +257,87 @@ export function ArchitecturalFolderColorStrip({
   variant = "canvas",
   appearance = "label",
   ariaLabel = "Folder inks",
+  /** When false, flyout closes and the trigger is inert (e.g. thread spool only in draw mode). */
+  engaged = true,
 }: {
   value: FolderColorSchemeId | null;
   onChange: (next: FolderColorSchemeId | null) => void;
   variant?: "canvas" | "editor";
   appearance?: "label" | "spool";
   ariaLabel?: string;
+  engaged?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuDirection, setMenuDirection] = useState<"up" | "down">("up");
+  const [spoolMenuPos, setSpoolMenuPos] = useState<{ top: number; left: number } | null>(null);
   const pickerRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const isEditor = variant === "editor";
   const isSpool = appearance === "spool";
   const activeMeta = value ? FOLDER_COLOR_SCHEMES.find((s) => s.id === value) : null;
 
   useEffect(() => {
+    if (!engaged) setMenuOpen(false);
+  }, [engaged]);
+
+  useEffect(() => {
     if (!menuOpen) return;
-    const trigger = pickerRef.current;
-    if (trigger) {
-      const rect = trigger.getBoundingClientRect();
-      const estimatedMenuHeight = 190;
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
-      const shouldOpenDown =
-        spaceBelow >= estimatedMenuHeight || (spaceBelow > 110 && spaceAbove < estimatedMenuHeight);
-      setMenuDirection(shouldOpenDown ? "down" : "up");
+    if (!isSpool) {
+      const trigger = pickerRef.current;
+      if (trigger) {
+        const rect = trigger.getBoundingClientRect();
+        const estimatedMenuHeight = 190;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const shouldOpenDown =
+          spaceBelow >= estimatedMenuHeight || (spaceBelow > 110 && spaceAbove < estimatedMenuHeight);
+        setMenuDirection(shouldOpenDown ? "down" : "up");
+      }
     }
     const onPointerDown = (event: PointerEvent) => {
       const t = event.target as Node | null;
-      if (!t || !pickerRef.current?.contains(t)) setMenuOpen(false);
+      if (!t) {
+        setMenuOpen(false);
+        return;
+      }
+      if (pickerRef.current?.contains(t)) return;
+      if (isSpool && menuRef.current?.contains(t)) return;
+      setMenuOpen(false);
     };
     window.addEventListener("pointerdown", onPointerDown, true);
     return () => window.removeEventListener("pointerdown", onPointerDown, true);
-  }, [menuOpen]);
+  }, [menuOpen, isSpool]);
+
+  useLayoutEffect(() => {
+    if (!menuOpen || !isSpool) {
+      setSpoolMenuPos(null);
+      return;
+    }
+    const position = () => {
+      const trig = triggerRef.current;
+      const menuEl = menuRef.current;
+      if (!trig || !menuEl) return;
+      const tr = trig.getBoundingClientRect();
+      const gap = 10;
+      const mw = menuEl.offsetWidth;
+      const mh = menuEl.offsetHeight;
+      if (mw < 1 || mh < 1) return;
+      let left = tr.left - gap - mw;
+      let top = tr.top + tr.height / 2 - mh / 2;
+      const pad = 8;
+      left = Math.max(pad, Math.min(left, window.innerWidth - mw - pad));
+      top = Math.max(pad, Math.min(top, window.innerHeight - mh - pad));
+      setSpoolMenuPos({ left, top });
+    };
+    position();
+    window.addEventListener("scroll", position, true);
+    window.addEventListener("resize", position);
+    return () => {
+      window.removeEventListener("scroll", position, true);
+      window.removeEventListener("resize", position);
+    };
+  }, [menuOpen, isSpool]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -304,14 +353,74 @@ export function ArchitecturalFolderColorStrip({
     setMenuOpen(false);
   };
 
+  const swatchGrid = (
+    <div className={styles.dockFolderTintSwatchGrid}>
+      <button
+        type="button"
+        role="option"
+        aria-selected={value === null}
+        title="Black mirror"
+        aria-label="Black mirror — unmarked folder"
+        className={cx(
+          styles.dockFolderTintMenuSwatch,
+          styles.dockFolderTintMenuSwatchClassic,
+          value === null && styles.dockFolderTintMenuSwatchSelected,
+        )}
+        onClick={() => pick(null)}
+      />
+      {FOLDER_COLOR_SCHEMES.map((s) => (
+        <button
+          key={s.id}
+          type="button"
+          role="option"
+          aria-selected={value === s.id}
+          title={s.label}
+          aria-label={s.label}
+          className={cx(
+            styles.dockFolderTintMenuSwatch,
+            value === s.id && styles.dockFolderTintMenuSwatchSelected,
+          )}
+          style={{ background: s.swatch }}
+          onClick={() => pick(s.id)}
+        />
+      ))}
+    </div>
+  );
+
+  const spoolMenuPortal =
+    menuOpen && isSpool && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            ref={menuRef}
+            className={cx(
+              styles.dockFolderTintMenu,
+              styles.dockFolderTintMenuSpoolFixed,
+              isEditor && styles.dockFolderTintMenuEditor,
+            )}
+            role="listbox"
+            aria-label={ariaLabel}
+            style={
+              spoolMenuPos
+                ? { top: spoolMenuPos.top, left: spoolMenuPos.left, opacity: 1 }
+                : { top: 0, left: 0, opacity: 0, pointerEvents: "none" as const }
+            }
+          >
+            {swatchGrid}
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <div
       ref={pickerRef}
       className={styles.dockFolderTintPicker}
       role="group"
       aria-label={ariaLabel}
+      aria-hidden={engaged ? undefined : true}
     >
       <button
+        ref={triggerRef}
         type="button"
         className={cx(
           styles.dockFolderTintTrigger,
@@ -320,10 +429,12 @@ export function ArchitecturalFolderColorStrip({
           menuOpen && styles.dockFolderTintTriggerOpen,
         )}
         aria-haspopup="listbox"
-        aria-expanded={menuOpen}
+        aria-expanded={engaged ? menuOpen : false}
         title={ariaLabel}
         aria-label={ariaLabel}
-        onClick={() => setMenuOpen((open) => !open)}
+        disabled={!engaged}
+        tabIndex={engaged ? undefined : -1}
+        onClick={() => engaged && setMenuOpen((open) => !open)}
       >
         <span
           className={cx(
@@ -344,7 +455,7 @@ export function ArchitecturalFolderColorStrip({
           />
         ) : null}
       </button>
-      {menuOpen ? (
+      {menuOpen && !isSpool ? (
         <div
           className={cx(
             styles.dockFolderTintMenu,
@@ -354,39 +465,10 @@ export function ArchitecturalFolderColorStrip({
           role="listbox"
           aria-label={ariaLabel}
         >
-          <div className={styles.dockFolderTintSwatchGrid}>
-            <button
-              type="button"
-              role="option"
-              aria-selected={value === null}
-              title="Black mirror"
-              aria-label="Black mirror — unmarked folder"
-              className={cx(
-                styles.dockFolderTintMenuSwatch,
-                styles.dockFolderTintMenuSwatchClassic,
-                value === null && styles.dockFolderTintMenuSwatchSelected,
-              )}
-              onClick={() => pick(null)}
-            />
-            {FOLDER_COLOR_SCHEMES.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                role="option"
-                aria-selected={value === s.id}
-                title={s.label}
-                aria-label={s.label}
-                className={cx(
-                  styles.dockFolderTintMenuSwatch,
-                  value === s.id && styles.dockFolderTintMenuSwatchSelected,
-                )}
-                style={{ background: s.swatch }}
-                onClick={() => pick(s.id)}
-              />
-            ))}
-          </div>
+          {swatchGrid}
         </div>
       ) : null}
+      {spoolMenuPortal}
     </div>
   );
 }

@@ -88,7 +88,9 @@ type ArchitecturalCanvasScenario = "default" | "nested" | "corrupt";
 
 const ROOT_SPACE_ID = "root";
 const CONNECTION_DEFAULT_COLOR =
-  FOLDER_COLOR_SCHEMES.find((s) => s.id === "wine")?.swatch ?? "oklch(0.48 0.30 22)";
+  FOLDER_COLOR_SCHEMES.find((s) => s.id === "coral")?.swatch ?? "oklch(0.62 0.30 48)";
+/** Dark neutral thread for "Black mirror" / classic picker slot (not a folder scheme swatch). */
+const CONNECTION_CLASSIC_THREAD_COLOR = "oklch(0.22 0.025 265)";
 const CONNECTION_CUT_CURSOR =
   'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 16 16%27%3E%3Ccircle cx=%273.2%27 cy=%274.1%27 r=%272.1%27 fill=%27none%27 stroke=%27%23ffffff%27 stroke-width=%271.2%27/%3E%3Ccircle cx=%273.2%27 cy=%2711.9%27 r=%272.1%27 fill=%27none%27 stroke=%27%23ffffff%27 stroke-width=%271.2%27/%3E%3Cpath d=%27M5.1 5.2 L13.6 1.6 M5.1 10.8 L13.6 14.4%27 stroke=%27%23ffffff%27 stroke-width=%271.4%27 stroke-linecap=%27round%27/%3E%3C/svg%3E") 3 8, crosshair';
 const CONNECTION_PIN_DEFAULT_CONTENT: CanvasConnectionPin = {
@@ -98,9 +100,9 @@ const CONNECTION_PIN_DEFAULT_CONTENT: CanvasConnectionPin = {
 };
 const CONNECTION_PIN_DEFAULT_FOLDER: CanvasConnectionPin = {
   anchor: "topLeftInset",
-  // Place folder pin slightly outside the card shell.
-  insetX: -6,
-  insetY: 12,
+  // Fallback when anchor element is not mounted (SSR / no DOM).
+  insetX: 34,
+  insetY: 80,
 };
 const CONNECTION_FRICTION = 0.93;
 const CONNECTION_GRAVITY = 0.35;
@@ -185,8 +187,29 @@ function resolveConnectionPin(
     const rad = (entity.rotation * Math.PI) / 180;
     const cx = w / 2;
     const cy = h / 2;
-    const dx = normalizedPin.insetX - cx;
-    const dy = normalizedPin.insetY - cy;
+
+    let insetX = normalizedPin.insetX;
+    let insetY = normalizedPin.insetY;
+    if (entity.kind === "folder") {
+      const anchor = placement.querySelector<HTMLElement>("[data-folder-connection-pin-anchor]");
+      if (anchor) {
+        let ax = anchor.offsetLeft + anchor.offsetWidth / 2;
+        let ay = anchor.offsetTop + anchor.offsetHeight / 2;
+        let op: HTMLElement | null = anchor.offsetParent as HTMLElement | null;
+        while (op && op !== placement) {
+          ax += op.offsetLeft;
+          ay += op.offsetTop;
+          op = op.offsetParent as HTMLElement | null;
+        }
+        if (op === placement) {
+          insetX = ax;
+          insetY = ay;
+        }
+      }
+    }
+
+    const dx = insetX - cx;
+    const dy = insetY - cy;
     const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
     const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
     return {
@@ -419,8 +442,8 @@ function normalizeChecklistMarkup(
 type LassoRectScreen = { x1: number; y1: number; x2: number; y2: number };
 
 /**
- * Whether a pointer event target is “canvas chrome” for pan / marquee lasso (not on an entity or stack).
- * Entity surfaces win over raw svg/path (e.g. icons inside cards).
+ * Whether a pointer event target is “canvas chrome” for pan / marquee lasso (not on an entity, stack, or thread).
+ * Entity surfaces win over raw svg/path (e.g. icons inside cards). Connection threads are not marquee targets.
  */
 function isCanvasPointerMarqueeOrPanSurface(
   target: HTMLElement,
@@ -432,7 +455,8 @@ function isCanvasPointerMarqueeOrPanSurface(
   if (activeTool === "pan" || spacePanning) return true;
   if (
     target.closest("[data-node-id]") ||
-    target.closest("[data-stack-container='true']")
+    target.closest("[data-stack-container='true']") ||
+    target.closest("[data-connection-id]")
   ) {
     return false;
   }
@@ -1042,13 +1066,16 @@ export function ArchitecturalCanvasApp({
     },
     [recolorConnection],
   );
-  const connectionColorSchemeId = useMemo<FolderColorSchemeId | null>(
-    () => FOLDER_COLOR_SCHEMES.find((scheme) => scheme.swatch === connectionColor)?.id ?? null,
-    [connectionColor],
-  );
+  const connectionColorSchemeId = useMemo<FolderColorSchemeId | null>(() => {
+    if (connectionColor === CONNECTION_CLASSIC_THREAD_COLOR) return null;
+    return FOLDER_COLOR_SCHEMES.find((scheme) => scheme.swatch === connectionColor)?.id ?? null;
+  }, [connectionColor]);
   const applyConnectionColorScheme = useCallback(
     (nextScheme: FolderColorSchemeId | null) => {
-      if (!nextScheme) return;
+      if (nextScheme === null) {
+        applyConnectionColor(CONNECTION_CLASSIC_THREAD_COLOR);
+        return;
+      }
       const match = FOLDER_COLOR_SCHEMES.find((scheme) => scheme.id === nextScheme);
       if (!match) return;
       applyConnectionColor(match.swatch);
@@ -3799,7 +3826,7 @@ export function ArchitecturalCanvasApp({
       setSelectionContextMenu(
         clampContextMenuPosition(
           { x: event.clientX, y: event.clientY },
-          { maxWidth: 260, maxHeight: 240, edgePadding: 8 },
+          { maxWidth: 236, maxHeight: 280, edgePadding: 8 },
         ),
       );
     },
@@ -4200,7 +4227,9 @@ export function ArchitecturalCanvasApp({
           canvasSurfaceReady ? styles.viewportSurfaceReady : styles.viewportSurfacePending
         } ${activeSpaceId !== graph.rootSpaceId ? styles.deepSpace : ""}${
           stackModal ? ` ${styles.viewportStackModalOpen}` : ""
-        } ${connectionMode !== "move" ? styles.viewportConnectionMode : ""}`}
+        } ${connectionMode !== "move" ? styles.viewportConnectionMode : ""}${
+          connectionMode === "cut" ? ` ${styles.viewportCutThreadMode}` : ""
+        }`}
         aria-busy={!canvasSurfaceReady}
         data-canvas-ready={canvasSurfaceReady ? "true" : "false"}
         onMouseDown={onViewportMouseDown}
@@ -4279,35 +4308,65 @@ export function ArchitecturalCanvasApp({
                 graph,
               );
               if (!sourcePin || !targetPin) return null;
+              const pathD = connectionPaths[connection.id] ?? "";
+              const isCut = connectionMode === "cut";
               return (
                 <g key={connection.id} data-connection-id={connection.id}>
+                  {!isCut ? (
+                    <path
+                      d={pathD}
+                      className={styles.connectionHitStroke}
+                      data-connection-id={connection.id}
+                      onMouseDown={(event) => {
+                        if (event.button !== 0) return;
+                        event.stopPropagation();
+                      }}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setSelectedConnectionId(connection.id);
+                      }}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setSelectedConnectionId(connection.id);
+                        setConnectionContextMenu(
+                          clampContextMenuPosition(
+                            { x: event.clientX, y: event.clientY },
+                            { maxWidth: 236, maxHeight: 360, edgePadding: 8 },
+                          ),
+                        );
+                      }}
+                    />
+                  ) : null}
                   <path
-                    d={connectionPaths[connection.id] ?? ""}
+                    d={pathD}
                     className={`${styles.connectionStroke} ${
-                      connectionMode === "cut" ? styles.connectionStrokeCuttable : ""
+                      isCut ? styles.connectionStrokeCuttable : ""
                     } ${selectedConnectionId === connection.id ? styles.connectionStrokeSelected : ""}`}
                     style={{ stroke: connection.color }}
                     data-connection-id={connection.id}
                     onMouseDown={(event) => {
-                      if (connectionMode !== "cut") return;
+                      if (!isCut) return;
                       event.preventDefault();
                       event.stopPropagation();
                       cutConnection(connection.id);
                     }}
                     onClick={(event) => {
-                      if (connectionMode === "cut") return;
+                      if (isCut) return;
                       event.preventDefault();
                       event.stopPropagation();
                       setSelectedConnectionId(connection.id);
                     }}
                     onContextMenu={(event) => {
+                      if (!isCut) return;
                       event.preventDefault();
                       event.stopPropagation();
                       setSelectedConnectionId(connection.id);
                       setConnectionContextMenu(
                         clampContextMenuPosition(
                           { x: event.clientX, y: event.clientY },
-                          { maxWidth: 260, maxHeight: 360, edgePadding: 8 },
+                          { maxWidth: 236, maxHeight: 360, edgePadding: 8 },
                         ),
                       );
                     }}
@@ -4330,6 +4389,7 @@ export function ArchitecturalCanvasApp({
               );
             })}
           </svg>
+          {connectionMode === "cut" ? <div className={styles.canvasCutDim} aria-hidden /> : null}
           {standaloneEntities.map((entity) => {
             const slot = entity.slots[activeSpaceId] ?? { x: 0, y: 0 };
             const draggedIndex = draggedNodeIds.indexOf(entity.id);
@@ -4664,6 +4724,7 @@ export function ArchitecturalCanvasApp({
               onChange={applyConnectionColorScheme}
               appearance="spool"
               ariaLabel="Connection thread color"
+              engaged={connectionMode === "draw"}
             />
           }
           onZoomIn={() => zoomBy(ZOOM_BUTTON_STEP)}
