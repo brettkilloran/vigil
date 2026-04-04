@@ -79,12 +79,13 @@ vec3 digitalGlitchPass(vec2 uv, float liquidMask, float pixelSize, float t) {
   vec3 rgbShift = vec3(0.0);
   float rOffset = hash21(vec2(pixelCoord.x + 1.0, glitchTime)) * 2.0 - 1.0;
   float bOffset = hash21(vec2(pixelCoord.x + 2.0, glitchTime)) * 2.0 - 1.0;
-  rgbShift.r = step(0.8, blockNoise) * rOffset * 0.4;
-  rgbShift.b = step(0.85, blockNoise) * bOffset * 0.4;
+  rgbShift.r = step(0.72, blockNoise) * rOffset * 0.72;
+  rgbShift.g = step(0.78, blockNoise) * (rOffset - bOffset) * 0.22;
+  rgbShift.b = step(0.76, blockNoise) * bOffset * 0.72;
   float streakNoise = hash21(vec2(pixelCoord.y * 20.0, glitchTime));
   float streak = step(0.9, streakNoise) * step(subPixel.x, 0.5);
   float glitch = (glitchBlock * 0.5 + scan * scanIntensity + streak * 0.6) * edgeIntensity;
-  vec3 glitchColor = vec3(0.1, 0.12, 0.15) + rgbShift;
+  vec3 glitchColor = vec3(0.09, 0.11, 0.14) + rgbShift;
   return glitchColor * glitch;
 }
 
@@ -115,10 +116,10 @@ void main() {
   float coarseNoise = hash21(coarseCoord * 2.0 + floor(u_time));
   float coarseBlock = step(liquidMask, 0.5 + coarseNoise * 0.3) * liquidMask;
 
-  /* Gentle CA: mostly horizontal optical split, tiny vertical wobble — no full rainbow. */
-  float turbulence = 1.0 + abs(liquidRaw) * 1.8;
-  float wob = snoise(warpedUV * 1.2 + u_time * 0.06) * 0.008;
-  vec2 ca = vec2(0.014 + wob, wob * 0.45) * turbulence;
+  /* CA: horizontal RGB split + wobble — stronger than “opal” baseline, still no rainbow wash. */
+  float turbulence = 1.0 + abs(liquidRaw) * 2.45;
+  float wob = snoise(warpedUV * 1.2 + u_time * 0.09) * 0.014;
+  vec2 ca = vec2(0.026 + wob, wob * 0.52) * turbulence;
 
   float maskR;
   {
@@ -143,33 +144,80 @@ void main() {
   }
 
   float fringeAmount = abs(maskR - maskG) + abs(maskB - maskG);
-  fringeAmount = smoothstep(0.02, 0.22, fringeAmount) * liquidMask;
+  fringeAmount = smoothstep(0.015, 0.2, fringeAmount) * liquidMask;
 
-  /* Cool opal / moonlight: slate → soft periwinkle, one muted violet rim (no hot magenta or lime). */
-  vec3 ink = vec3(0.038, 0.044, 0.058);
-  vec3 sheenCool = vec3(0.18, 0.26, 0.38);
-  vec3 sheenWarm = vec3(0.32, 0.30, 0.42);
+  /*
+   * Liquid color (closer to reference feel): roaming hue from fbm + phase-based RGB
+   * (waveGlitchPass-style), not constant pink/blue ribbons from saturated lead tints.
+   */
+  vec3 ink = vec3(0.034, 0.040, 0.054);
+
+  float terrA = fbm(warpedUV * 1.1 + vec2(u_time * 0.035)) * 0.5 + 0.5;
+  float terrB =
+    snoise(warpedUV * 2.2 + vec2(9.1 + u_time * 0.06, 2.4 - u_time * 0.04)) * 0.5 +
+    0.5;
+  vec3 toneSteel = vec3(0.10, 0.20, 0.34);
+  vec3 toneWine = vec3(0.28, 0.18, 0.32);
+  vec3 toneSage = vec3(0.16, 0.26, 0.22);
+  vec3 bodyHue = mix(mix(toneSteel, toneWine, terrA), toneSage, terrB * 0.55);
+
+  float wPh = warpedUV.y * 14.0 + warpedUV.x * 9.0 + u_time * 2.1;
+  float rWv = sin(wPh + 0.55);
+  float gWv = sin(wPh);
+  float bWv = sin(wPh - 0.55);
+  vec3 flowChroma = vec3(
+    (rWv - gWv) * 0.11,
+    (gWv - bWv) * 0.07,
+    (bWv - rWv) * 0.11
+  );
+  flowChroma.r += sin(u_time * 0.9 + uv.y * 11.0) * 0.06;
+  flowChroma.b += cos(u_time * 0.85 + uv.x * 9.0) * 0.07;
 
   float edgeR = maskR * (1.0 - maskG);
   float edgeB = maskB * (1.0 - maskG);
   float caSep = abs(maskR - maskB);
-  vec3 rim = mix(sheenCool, sheenWarm, smoothstep(0.05, 0.22, caSep));
 
-  vec3 chromaticLiquid = ink * maskG + rim * max(edgeR, edgeB) * 0.72;
-  chromaticLiquid += rim * fringeAmount * 0.22;
+  vec3 sheenCool = vec3(0.11, 0.22, 0.37);
+  vec3 sheenWarm = vec3(0.30, 0.24, 0.38);
+  vec3 rimBase = mix(sheenCool, sheenWarm, smoothstep(0.04, 0.24, caSep));
+  float rimJitter =
+    0.82 + 0.18 * (snoise(warpedUV * 3.5 + vec2(u_time * 0.08, u_time * 0.05)) * 0.5 + 0.5);
+  vec3 rim = rimBase * rimJitter;
+
+  vec3 chromaticLiquid = ink * maskG;
+  chromaticLiquid += bodyHue * liquidMask * 0.22;
+  chromaticLiquid += flowChroma * liquidMask * 0.42;
+  chromaticLiquid += rim * max(edgeR, edgeB) * 0.88;
+  chromaticLiquid += rim * fringeAmount * 0.34;
+
+  float redLeads = smoothstep(0.0, 0.14, maskR - maskB);
+  float blueLeads = smoothstep(0.0, 0.14, maskB - maskR);
+  chromaticLiquid += vec3(0.10, 0.30, 0.36) * blueLeads * liquidMask * 0.26;
+  chromaticLiquid += vec3(0.34, 0.15, 0.28) * redLeads * liquidMask * 0.26;
 
   float coreFactor = liquidMask * (1.0 - fringeAmount);
-  vec3 coreCool = vec3(0.032, 0.038, 0.05);
-  chromaticLiquid = mix(chromaticLiquid, coreCool, coreFactor * 0.28);
+  vec3 coreCool = vec3(0.028, 0.034, 0.046);
+  chromaticLiquid = mix(chromaticLiquid, coreCool, coreFactor * 0.26);
 
   float transitionEdge = liquidMask * (1.0 - liquidMask) * 4.0;
   transitionEdge = smoothstep(0.0, 1.0, transitionEdge);
   vec3 glowRGB =
-    vec3(0.22, 0.30, 0.44) * transitionEdge * (1.0 - u_progress) * 0.26;
+    vec3(0.38, 0.22, 0.42) * transitionEdge * (1.0 - u_progress) * 0.30;
 
   vec3 finalColor = chromaticLiquid + glowRGB;
   finalColor += vec3(liquidRaw * 0.0035);
   finalColor += glitchLayer * mix(0.52, 0.11, u_softBoot);
+
+  /* CRT scanlines: liquid-only; pitch + phase drift for visible motion (no second CSS layer). */
+  float linePitch = 4.0 + sin(u_time * 1.22) * 0.65;
+  float scanPhase =
+    6.2831853 * uv.y * u_resolution.y / linePitch + u_time * 3.85;
+  scanPhase += sin(uv.y * 14.0 + u_time * 2.35) * 0.55;
+  float scanBand = sin(scanPhase) * 0.5 + 0.5;
+  scanBand = smoothstep(0.18, 0.82, scanBand);
+  float scanMul = mix(0.82, 1.0, scanBand);
+  float scanWeight = liquidMask * mix(0.68, 0.3, u_softBoot);
+  finalColor *= mix(1.0, scanMul, scanWeight);
 
   float finalAlpha = (maskR + maskG + maskB) / 3.0;
   finalAlpha = max(finalAlpha, coarseBlock * 0.07);
