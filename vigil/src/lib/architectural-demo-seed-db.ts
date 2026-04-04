@@ -61,12 +61,12 @@ function spacesParentBeforeChildren(graph: CanvasGraph): CanvasSpace[] {
 
 function depthFromRoot(graph: CanvasGraph, spaceId: string): number {
   let d = 0;
-  let cur: string | null | undefined = spaceId;
+  let cur: string | undefined = spaceId;
   while (cur) {
-    const s = graph.spaces[cur];
+    const s: CanvasSpace | undefined = graph.spaces[cur];
     if (!s?.parentSpaceId) break;
     d += 1;
-    cur = s.parentSpaceId;
+    cur = s.parentSpaceId ?? undefined;
   }
   return d;
 }

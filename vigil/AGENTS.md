@@ -8,15 +8,26 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Source of truth
 
-- **Full product & UX spec:** `docs/HEARTGARDEN_MASTER_PLAN.md`
+- **Lore-engine task order (Phases A–D, UX2):** Cursor plan `heartgarden_lore_engine_7fc1fb56.plan.md` under `.cursor/plans/` (YAML todos + narrative).
+- **Repo-wide shipped vs next + hardening backlog:** `docs/BUILD_PLAN.md`
+- **Doc index:** `docs/HEARTGARDEN_MASTER_PLAN.md`
+- **Historical product bible (dated paths):** `docs/archive/vigil-master-plan-legacy.md` — `docs/VIGIL_MASTER_PLAN.md` is a stub pointer.
 - **How the repo should move from here:** `docs/STRATEGY.md`
 - **Blocked / account / infra follow-ups:** `docs/FOLLOW_UP.md`
 
-Read **STRATEGY first** for the current-vs-target delta. The master plan defines **custom DOM canvas** (no tldraw), **no auth**, **MIT stack**, and phases **1–8**.
+Read **STRATEGY** for the current-vs-target delta, **BUILD_PLAN** for architecture and backlog, and the **Cursor plan** for ordered lore/import/MCP work. The legacy master plan still describes **custom DOM canvas** (no tldraw), **no auth**, **MIT stack**, and phases **1–8** at a product level.
 
 ## Current code reality
 
-The canvas is **custom DOM** (`src/components/canvas/`, `src/stores/canvas-store.ts`). Persistence: **`items`** rows + **`spaces.canvas_state`** as camera `{ x, y, zoom }` only. **Links** panel (local canvas): outgoing/incoming from TipTap `[[` / `vigil:item:` in `content_json` via `src/lib/local-item-links.ts`; cloud mode uses `/api/items/[id]/links` and Neon `item_links`.
+The **production shell** is **`ArchitecturalCanvasApp`** (`src/components/foundation/ArchitecturalCanvasApp.tsx`), mounted from `app/_components/VigilApp.tsx`. It uses **in-component graph state** + Neon sync (`architectural-db-bridge.ts`, `architectural-neon-api.ts`, `/api/bootstrap`, item/space APIs) when not in demo seed mode.
+
+**Legacy:** `src/stores/canvas-store.ts` still backs some **panels** (e.g. backlinks, timeline). Treat as parallel until unified — see `docs/BUILD_PLAN.md`.
+
+Persistence: **`items`** rows + **`spaces.canvas_state`** as camera `{ x, y, zoom }` only. **Links** panel (local canvas): outgoing/incoming from TipTap `[[` / `vigil:item:` in `content_json` via `src/lib/local-item-links.ts`; cloud mode uses `/api/items/[id]/links` and Neon `item_links`.
+
+**Lore v1:** Cmd+K → **Ask lore (AI)** → `LoreAskPanel` → **`POST /api/lore/query`** (FTS retrieval + Anthropic). **Search / embeddings:** OpenAI optional for hybrid semantic search and `item_embeddings` refresh.
+
+**Neon sync strip:** Top status bar shows **Loading / Local / Saving / Saved / Sync error** via `neon-sync-bus.ts` + instrumented `architectural-neon-api.ts`. **Undo/redo** is in-memory only; tooltips spell out that the server keeps the **last successful write** until the next PATCH.
 
 **Theme:** `useVigilTheme` sets `data-vigil-theme` when the user picks light/dark, and toggles **`class="dark"` on `<html>`** whenever the **resolved** appearance is dark (including “Match OS”). Tailwind `dark:*` is overridden in `app/globals.css` (`@custom-variant dark`) to follow that class—not only `prefers-color-scheme`—so chips, glass panels, and hovers match CSS variables.
 

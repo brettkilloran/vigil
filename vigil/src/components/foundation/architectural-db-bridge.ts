@@ -179,7 +179,6 @@ export function findRootSpaceId(spaces: BootstrapSpaceRow[]): string {
 
 export function buildCanvasGraphFromBootstrap(data: BootstrapResponse): CanvasGraph {
   const rootSpaceId = findRootSpaceId(data.spaces);
-  const activeSpaceId = data.spaceId ?? rootSpaceId;
 
   const spacesRecord: Record<string, CanvasSpace> = {};
   for (const s of data.spaces) {

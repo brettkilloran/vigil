@@ -14,6 +14,7 @@ const meta: Meta<typeof ArchitecturalStatusBar> = {
     envLabel: "heartgarden",
     showPulse: true,
     zoomPrefixIcon: true,
+    syncBootstrapPending: false,
   },
   argTypes: {
     centerWorldX: { control: { type: "number", step: 10 } },
@@ -22,6 +23,7 @@ const meta: Meta<typeof ArchitecturalStatusBar> = {
     envLabel: { control: "text" },
     showPulse: { control: "boolean" },
     zoomPrefixIcon: { control: "boolean" },
+    syncBootstrapPending: { control: "boolean" },
   },
   parameters: {
     layout: "fullscreen",

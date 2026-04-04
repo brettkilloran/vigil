@@ -1575,6 +1575,42 @@
   min-height: 100%;
 }
 
+.syncMetric {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.syncLabel {
+  max-width: 148px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.syncMuted {
+  color: var(--sem-text-muted, #888);
+}
+
+.syncError {
+  color: var(--sys-color-danger-foreground, #fecaca);
+}
+
+.syncOk {
+  color: color-mix(in oklch, var(--sem-accent-primary) 80%, white);
+}
+
+.syncSpin {
+  animation: arch-sync-spin 0.65s linear infinite;
+}
+
+@keyframes arch-sync-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .navChrome {
   flex: 0 1 auto;
   min-width: 0;

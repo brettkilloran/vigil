@@ -66,6 +66,7 @@ import {
   apiPatchSpaceName,
   fetchBootstrap,
 } from "@/src/components/foundation/architectural-neon-api";
+import { neonSyncBumpPending, neonSyncSetCloudEnabled, neonSyncUnbumpPending } from "@/src/lib/neon-sync-bus";
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
 import {
   cloneArchitecturalGraph,
@@ -1038,9 +1039,12 @@ export function ArchitecturalCanvasApp({
   const schedulePersistContentBody = useCallback((entityId: string, bodyHtml: string) => {
     if (!persistNeonRef.current || !isUuidLike(entityId)) return;
     const prevT = itemContentPatchTimersRef.current.get(entityId);
+    const isFirstTimerForEntity = !prevT;
     if (prevT) clearTimeout(prevT);
+    if (isFirstTimerForEntity) neonSyncBumpPending();
     const t = setTimeout(() => {
       itemContentPatchTimersRef.current.delete(entityId);
+      neonSyncUnbumpPending();
       const ent = graphRef.current.entities[entityId];
       if (!ent || ent.kind !== "content") return;
       const contentJson = buildContentJsonForContentEntity({ ...ent, bodyHtml });
@@ -2223,6 +2227,7 @@ export function ArchitecturalCanvasApp({
 
     if (scenario !== "default") {
       persistNeonRef.current = false;
+      neonSyncSetCloudEnabled(false);
       setCanvasBootstrapResolved(true);
       const freshGraph = buildArchitecturalSeedGraph(tokens, scenario);
       setGraph(freshGraph);
@@ -2252,6 +2257,7 @@ export function ArchitecturalCanvasApp({
           throw new Error("demo");
         }
         persistNeonRef.current = true;
+        neonSyncSetCloudEnabled(true);
         const nextGraph = buildCanvasGraphFromBootstrap(data);
         const maxZi =
           data.items.length > 0 ? Math.max(...data.items.map((i) => i.zIndex), 100) : 100;
@@ -2267,6 +2273,7 @@ export function ArchitecturalCanvasApp({
       } catch {
         if (cancelled) return;
         persistNeonRef.current = false;
+        neonSyncSetCloudEnabled(false);
         const freshGraph = buildArchitecturalSeedGraph(tokens, "default");
         setGraph(freshGraph);
         setActiveSpaceId(freshGraph.rootSpaceId);
@@ -5913,6 +5920,7 @@ export function ArchitecturalCanvasApp({
                 centerWorldX={centerWorldX}
                 centerWorldY={centerWorldY}
                 scale={scale}
+                syncBootstrapPending={scenario === "default" && !canvasBootstrapResolved}
               />
               <div className={styles.navChrome}>
                 <div className={`${styles.glassPanel} ${styles.navPanel} ${styles.shellTopChromePanel}`}>

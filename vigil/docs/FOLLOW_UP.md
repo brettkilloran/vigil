@@ -4,15 +4,17 @@ Items the codebase **cannot** complete without your action, credentials, or prod
 
 ## Accounts & API keys
 
-- **Neon:** `NEON_DATABASE_URL` in `.env.local` (and Vercel) for cloud sync, search, graph, MCP against production.
-- **OpenAI:** `OPENAI_API_KEY` for embeddings on save, semantic/hybrid Cmd+K, and any future **LLM lore / consistency / auto-link** features.
+- **Neon:** `NEON_DATABASE_URL` in `.env.local` (and Vercel) for cloud sync, search, graph, MCP against production. Enable **`CREATE EXTENSION vector`** on the database before pushing schema with embeddings (`npm run db:ensure-pgvector` in `vigil/`).
+- **Anthropic:** `ANTHROPIC_API_KEY` for **`POST /api/lore/query`** and the **Ask lore (AI)** UI (`LoreAskPanel`). Optional: `ANTHROPIC_LORE_MODEL` (default `claude-sonnet-4-20250514`). **Unauthenticated** today — rate-limit or protect before a public URL.
+- **OpenAI:** `OPENAI_API_KEY` for **item embeddings** on save (`item-embedding.ts`), **semantic/hybrid** Cmd+K search when hybrid mode needs vectors. **Not required** for lore v1 (FTS + Claude only).
 - **Cloudflare R2:** Bucket, CORS, and optional public URL for image uploads; align with `.env.local.example`.
 
 ## Phase 5 (plan) — still LLM- or product-heavy
 
 - **Markdown bulk import + entity extraction:** Needs an LLM pipeline (or a manual wizard) you trust; not implemented server-side beyond REST shapes.
 - **Auto-linking** (suggest `[[` targets from mentions): Needs embeddings or LLM + UX for accept/reject.
-- **Lore consistency checker** (“does anything contradict …?”): Needs LLM reasoning or a curated rules engine; the app only offers **title mention search** (FTS-style substring + MCP helper) as a lightweight stand-in.
+- **Lore consistency checker** (“does anything contradict …?”): Needs LLM reasoning or a curated rules engine. **Partial stand-in:** **`/api/lore/query`** answers from retrieved canvas excerpts (FTS); not a full contradiction engine across the whole graph.
+- **Dual canvas state:** Some panels still use **`canvas-store`** while the main shell is **`ArchitecturalCanvasApp`** — unify or document (see **`docs/BUILD_PLAN.md`**).
 
 ## Phase 6–7 — visual / typography
 
@@ -38,5 +40,7 @@ Items the codebase **cannot** complete without your action, credentials, or prod
 - **Legacy `canvas_state`:** If an old DB still stores full tldraw JSON, migrate or reset per `STRATEGY.md`.
 
 ---
+
+**Execution checklist:** `docs/BUILD_PLAN.md`
 
 *Last updated by agent pass (living document; edit freely).*
