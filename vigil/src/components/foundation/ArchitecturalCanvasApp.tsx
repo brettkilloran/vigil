@@ -931,10 +931,23 @@ export function ArchitecturalCanvasApp({
           return;
         }
       }
-      const header = target.closest(`.${styles.nodeHeader}`);
-      if (!header) return;
       const entity = target.closest<HTMLElement>(`[data-node-id]`);
       const id = entity?.dataset.nodeId;
+      if (!id) return;
+
+      const editableWithinNode =
+        isEditableTarget(target) ||
+        !!target.closest("input, textarea, select, [contenteditable='true']");
+      if (editableWithinNode) {
+        const node = graph.entities[id];
+        if (node?.kind === "content") {
+          openFocusMode(id);
+        }
+        return;
+      }
+
+      const header = target.closest(`.${styles.nodeHeader}`);
+      if (!header) return;
       if (id) openFocusMode(id);
     };
 
