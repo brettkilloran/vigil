@@ -3769,13 +3769,33 @@ export function ArchitecturalCanvasApp({
 
   const handleViewportContextMenuCapture = useCallback(
     (event: React.MouseEvent) => {
-      if (selectedNodeIds.length < 1) return;
       if (focusOpen || galleryOpen || stackModal) return;
       const target = event.target as HTMLElement;
+      if (target.closest("[data-connection-id]")) return;
       if (isEditableTarget(target)) return;
       if (target.closest("[contenteditable='true']")) return;
+
+      const nodeHost = target.closest<HTMLElement>("[data-node-id]");
+      const nodeId = nodeHost?.dataset.nodeId;
+      const stackHost = target.closest<HTMLElement>("[data-stack-container='true']");
+      const stackId = stackHost?.dataset.stackId;
+
+      let hitIds: string[] | null = null;
+      if (nodeId && visibleEntityIds.includes(nodeId)) {
+        hitIds = [nodeId];
+      } else if (stackId) {
+        const members = visibleEntities
+          .filter((e) => e.stackId === stackId)
+          .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0))
+          .map((e) => e.id);
+        if (members.length > 0) hitIds = members;
+      }
+
+      if (!hitIds || hitIds.length < 1) return;
+
       event.preventDefault();
       event.stopPropagation();
+      setSelectedNodeIds(hitIds);
       setSelectionContextMenu(
         clampContextMenuPosition(
           { x: event.clientX, y: event.clientY },
@@ -3783,7 +3803,7 @@ export function ArchitecturalCanvasApp({
         ),
       );
     },
-    [focusOpen, galleryOpen, selectedNodeIds, stackModal],
+    [focusOpen, galleryOpen, stackModal, visibleEntities, visibleEntityIds],
   );
 
   const duplicateSelectedEntities = useCallback(() => {
@@ -4260,7 +4280,7 @@ export function ArchitecturalCanvasApp({
               );
               if (!sourcePin || !targetPin) return null;
               return (
-                <g key={connection.id}>
+                <g key={connection.id} data-connection-id={connection.id}>
                   <path
                     d={connectionPaths[connection.id] ?? ""}
                     className={`${styles.connectionStroke} ${
@@ -4473,6 +4493,8 @@ export function ArchitecturalCanvasApp({
                 {entities.map((entity, index) => (
                   <div
                     key={entity.id}
+                    data-node-id={entity.id}
+                    data-space-id={activeSpaceId}
                     data-stack-layer="true"
                     className={`${styles.stackLayer} ${index === entities.length - 1 ? styles.stackLayerTopInteractive : ""}`}
                     style={{

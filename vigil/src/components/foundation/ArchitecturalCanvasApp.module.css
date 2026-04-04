@@ -2453,19 +2453,30 @@
   border-radius: var(--chrome-panel-radius);
   box-shadow: var(--chrome-glass-shadow);
   min-width: var(--chrome-panel-height);
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-/* Draw pin + thread spool: one recessed cluster (no rule between them). */
-.sideToolsDrawSpoolCluster {
+  padding: 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 3px 4px 4px;
+}
+
+.sideToolsMainPanel .sepVertical,
+.sideToolsConnectionPanel .sepVertical {
+  align-self: stretch;
+  margin: 5px 0;
+}
+
+/* Draw pin + thread spool: one recessed cluster (no rule between them). */
+.sideToolsDrawSpoolCluster {
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: fit-content;
+  max-width: 100%;
+  /* ~7px each side: wider “thread well” than the 36px icon alone */
+  padding: 2px 7px 3px;
   border-radius: calc(var(--chrome-panel-radius) - 3px);
   background: color-mix(in oklch, var(--sys-color-black) 28%, transparent);
   box-shadow:
@@ -2477,6 +2488,10 @@
   display: flex;
   justify-content: center;
   width: 100%;
+}
+
+.sideToolsDrawSpoolCluster .sideToolsConnectionColor {
+  width: auto;
 }
 
 .topRightConnectionTools {
