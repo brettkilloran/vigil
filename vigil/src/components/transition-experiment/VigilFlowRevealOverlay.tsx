@@ -64,19 +64,28 @@ float hash21(vec2 p) {
   return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
-// Pixel glyph pass — light digital shimmer (kept subtle so it doesn’t read as mud).
-vec3 pixelGlyphPass(vec2 uv, float liquidMask, float pixelSize, float t) {
+/* AESTHETICS // FLOW style: blocky digital glitch on the liquid edge (prototype digitalGlitchPass). */
+vec3 digitalGlitchPass(vec2 uv, float liquidMask, float pixelSize, float t) {
   vec2 pixelCoord = floor(uv * pixelSize) / pixelSize;
   vec2 subPixel = fract(uv * pixelSize);
-  float edgeIntensity = liquidMask * (1.0 - liquidMask) * 4.0;
+  float edgeIntensity = liquidMask * (1.0 - liquidMask) * 5.0;
   edgeIntensity = pow(max(edgeIntensity, 0.0001), 0.7);
-  float cellNoise = hash21(pixelCoord + floor(t * 2.0));
-  float cellPattern = step(0.4, cellNoise) * step(cellNoise, 0.6);
-  float scan = sin(subPixel.y * 3.14159 * 3.0 + t * 2.0);
-  scan = smoothstep(0.3, 0.7, scan) * 0.3;
-  float glyph = cellPattern * scan * edgeIntensity;
-  vec3 glyphColor = vec3(0.12, 0.14, 0.18);
-  return glyphColor * glyph * 0.35;
+  float glitchTime = floor(t * 12.0);
+  float blockNoise = hash21(pixelCoord + glitchTime);
+  float glitchBlock = step(0.85, blockNoise) * step(0.5, hash21(vec2(pixelCoord.y, glitchTime)));
+  float scan = sin(subPixel.y * 3.14159 * 4.0 + t * 15.0);
+  scan = smoothstep(0.4, 0.6, scan);
+  float scanIntensity = step(0.6, hash21(vec2(pixelCoord.y, glitchTime))) * 0.5;
+  vec3 rgbShift = vec3(0.0);
+  float rOffset = hash21(vec2(pixelCoord.x + 1.0, glitchTime)) * 2.0 - 1.0;
+  float bOffset = hash21(vec2(pixelCoord.x + 2.0, glitchTime)) * 2.0 - 1.0;
+  rgbShift.r = step(0.8, blockNoise) * rOffset * 0.4;
+  rgbShift.b = step(0.85, blockNoise) * bOffset * 0.4;
+  float streakNoise = hash21(vec2(pixelCoord.y * 20.0, glitchTime));
+  float streak = step(0.9, streakNoise) * step(subPixel.x, 0.5);
+  float glitch = (glitchBlock * 0.5 + scan * scanIntensity + streak * 0.6) * edgeIntensity;
+  vec3 glitchColor = vec3(0.1, 0.12, 0.15) + rgbShift;
+  return glitchColor * glitch;
 }
 
 void main() {
@@ -99,7 +108,7 @@ void main() {
   float threshold = u_progress * 1.5;
   float liquidMask = smoothstep(threshold - 0.35, threshold + 0.35, liquidRaw * 0.5 + 0.5 + dist);
 
-  vec3 glyphLayer = pixelGlyphPass(uv, liquidMask, 150.0, u_time);
+  vec3 glitchLayer = digitalGlitchPass(uv, liquidMask, 88.0, u_time);
 
   float coarsePixel = 50.0;
   vec2 coarseCoord = floor(uv * coarsePixel) / coarsePixel;
@@ -160,8 +169,7 @@ void main() {
 
   vec3 finalColor = chromaticLiquid + glowRGB;
   finalColor += vec3(liquidRaw * 0.0035);
-  finalColor += glyphLayer * 0.28;
-  finalColor += hash21(uv * u_time) * 0.006;
+  finalColor += glitchLayer * mix(0.52, 0.11, u_softBoot);
 
   float finalAlpha = (maskR + maskG + maskB) / 3.0;
   finalAlpha = max(finalAlpha, coarseBlock * 0.07);
