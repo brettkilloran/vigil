@@ -26,7 +26,7 @@ import {
 
 export function ArchitecturalStatusBadge({
   showPulse = true,
-  label = "heartgarden",
+  label = "波途画電",
 }: {
   showPulse?: boolean;
   label?: string;
@@ -341,13 +341,56 @@ function SaveAndVersionPopover({
         {showPulse ? (
           <span className={cx(styles.pulseDot, pulseToneClass)} aria-hidden />
         ) : null}
-        <span className={styles.monoTag}>{envLabel}</span>
+        <span className={styles.monoTag} lang="ja">
+          {envLabel}
+        </span>
         {showWarningIcon ? (
           <WarningCircle className={styles.statusSaveWarningIcon} size={16} weight="bold" aria-hidden />
         ) : null}
       </Button>
       {panel}
     </>
+  );
+}
+
+/** Bottom-left: minimal switch for canvas transitions + ambient detail vs lean mode. */
+export function ArchitecturalCanvasEffectsToggle({
+  effectsEnabled,
+  onToggle,
+}: {
+  effectsEnabled: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className={styles.focusEffectsStrip} data-hg-chrome="canvas-effects-toggle">
+      <div className={`${styles.rootDockPanel} ${styles.focusEffectsPanel}`}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          tone="glass"
+          className={styles.effectsSwitch}
+          role="switch"
+          aria-checked={effectsEnabled}
+          aria-label={
+            effectsEnabled
+              ? "Canvas effects on; turn off for lean mode"
+              : "Canvas effects off; turn on for transitions and ambient detail"
+          }
+          title={
+            effectsEnabled
+              ? "Turn off flow transitions, vignette, and ambient grid"
+              : "Restore transitions and ambient chrome"
+          }
+          data-on={effectsEnabled ? "true" : "false"}
+          onClick={() => onToggle()}
+        >
+          <span className={styles.effectsSwitchTrack}>
+            <span className={styles.effectsSwitchThumb} aria-hidden />
+          </span>
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -387,7 +430,7 @@ export function ArchitecturalViewportMetrics({
 }
 
 export function ArchitecturalStatusBar({
-  envLabel = "heartgarden",
+  envLabel = "波途画電",
   showPulse = true,
   syncBootstrapPending = false,
   onExportGraphJson,

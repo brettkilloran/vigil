@@ -164,6 +164,14 @@ void main() {
   float finalAlpha = (maskR + maskG + maskB) / 3.0;
   finalAlpha = max(finalAlpha, coarseBlock * 0.15);
 
+  // Central "work" safe zone: suppress fluid/tendril layer so chroma noise does not creep
+  // into the main canvas (aspect-normalized so the clear core stays circular on wide screens).
+  float dNorm =
+    length((uv - vec2(0.5)) * vec2(aspect, 1.0)) / (0.5 * sqrt(aspect * aspect + 1.0));
+  float workSafe = smoothstep(0.30, 0.56, dNorm);
+  finalColor *= workSafe;
+  finalAlpha *= workSafe;
+
   // While /api/bootstrap is still in flight, u_softBoot=1: crush neon fringes so a slow
   // network does not leave the canvas under a full-intensity chroma sheet for minutes.
   vec3 coolVeil = vec3(0.038, 0.042, 0.05);

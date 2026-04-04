@@ -38,6 +38,7 @@ import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/Archi
 import { ArchitecturalFolderCard } from "@/src/components/foundation/ArchitecturalFolderCard";
 import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";
 import {
+  ArchitecturalCanvasEffectsToggle,
   ArchitecturalStatusBar,
   ArchitecturalViewportMetrics,
 } from "@/src/components/foundation/ArchitecturalStatusBar";
@@ -89,6 +90,7 @@ import {
   type ArchitecturalUndoSnapshot,
 } from "@/src/components/foundation/architectural-undo";
 import { useModKeyHints } from "@/src/lib/mod-keys";
+import { VIGIL_CANVAS_EFFECTS_STORAGE_KEY } from "@/src/lib/vigil-canvas-prefs";
 import { useRecentItems } from "@/src/hooks/use-recent-items";
 import {
   clampContextMenuPosition,
@@ -905,6 +907,8 @@ export function ArchitecturalCanvasApp({
   /** For app route: hide canvas content until bootstrap resolves (single graph + camera commit). */
   const [canvasBootstrapResolved, setCanvasBootstrapResolved] = useState(() => scenario !== "default");
   const [navTransitionActive, setNavTransitionActive] = useState(false);
+  const [canvasEffectsEnabled, setCanvasEffectsEnabled] = useState(true);
+  const canvasEffectsEnabledRef = useRef(true);
 
   const [focusOpen, setFocusOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -2437,6 +2441,33 @@ export function ArchitecturalCanvasApp({
     };
   }, []);
 
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (localStorage.getItem(VIGIL_CANVAS_EFFECTS_STORAGE_KEY) === "0") {
+        setCanvasEffectsEnabled(false);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(VIGIL_CANVAS_EFFECTS_STORAGE_KEY, canvasEffectsEnabled ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+    canvasEffectsEnabledRef.current = canvasEffectsEnabled;
+  }, [canvasEffectsEnabled]);
+
+  useEffect(() => {
+    if (!canvasEffectsEnabled && navTransitionActive) {
+      setNavTransitionActive(false);
+    }
+  }, [canvasEffectsEnabled, navTransitionActive]);
+
   const centerCoords = useCallback(() => {
     return {
       x: (window.innerWidth / 2 - translateX) / scale,
@@ -2855,6 +2886,55 @@ export function ArchitecturalCanvasApp({
     (spaceId: string) => {
       const snap = graphRef.current;
       if (!snap.spaces[spaceId] || spaceId === activeSpaceIdRef.current) return;
+
+      const applySpaceNavigation = (
+        merged: CanvasGraph | null,
+        bootstrapCamera: { x: number; y: number; zoom: number } | null,
+        bootstrapMaxZ: number | null,
+      ) => {
+        const g = merged ?? graphRef.current;
+        if (merged) {
+          setGraph(merged);
+          if (bootstrapCamera) {
+            setTranslateX(bootstrapCamera.x);
+            setTranslateY(bootstrapCamera.y);
+            setScale(bootstrapCamera.zoom);
+          }
+          if (bootstrapMaxZ !== null) {
+            const zCap = bootstrapMaxZ;
+            setMaxZIndex((z) => Math.max(z, zCap));
+          }
+        }
+        setActiveSpaceId(spaceId);
+        setNavigationPath(buildPathToSpace(spaceId, g.spaces, g.rootSpaceId));
+        setSelectedNodeIds([]);
+        if (!merged) recenterToOrigin();
+      };
+
+      if (!canvasEffectsEnabledRef.current) {
+        void (async () => {
+          let merged: CanvasGraph | null = null;
+          let bootstrapCamera: { x: number; y: number; zoom: number } | null = null;
+          let bootstrapMaxZ: number | null = null;
+          try {
+            if (persistNeonRef.current && isUuidLike(spaceId)) {
+              const data = await fetchBootstrap(spaceId);
+              if (data && data.demo === false && data.spaceId) {
+                merged = mergeBootstrapView(graphRef.current, data);
+                bootstrapCamera = { x: data.camera.x, y: data.camera.y, zoom: data.camera.zoom };
+                if (data.items.length > 0) {
+                  bootstrapMaxZ = Math.max(...data.items.map((i) => i.zIndex), 100);
+                }
+              }
+            }
+          } catch {
+            /* ignore */
+          }
+          applySpaceNavigation(merged, bootstrapCamera, bootstrapMaxZ);
+        })();
+        return;
+      }
+
       setNavTransitionActive(true);
       void (async () => {
         const now = () => (typeof performance !== "undefined" ? performance.now() : 0);
@@ -2880,23 +2960,7 @@ export function ArchitecturalCanvasApp({
           const waitFadeOutEnd = Math.max(0, VIEWPORT_SCENE_FADE_MS - elapsedAfterFetch);
           if (waitFadeOutEnd > 0) await sleep(waitFadeOutEnd);
 
-          const g = merged ?? graphRef.current;
-          if (merged) {
-            setGraph(merged);
-            if (bootstrapCamera) {
-              setTranslateX(bootstrapCamera.x);
-              setTranslateY(bootstrapCamera.y);
-              setScale(bootstrapCamera.zoom);
-            }
-            if (bootstrapMaxZ !== null) {
-              const zCap = bootstrapMaxZ;
-              setMaxZIndex((z) => Math.max(z, zCap));
-            }
-          }
-          setActiveSpaceId(spaceId);
-          setNavigationPath(buildPathToSpace(spaceId, g.spaces, g.rootSpaceId));
-          setSelectedNodeIds([]);
-          if (!merged) recenterToOrigin();
+          applySpaceNavigation(merged, bootstrapCamera, bootstrapMaxZ);
 
           const elapsedBeforeRelease = now() - tNav;
           const waitUntilCenter = Math.max(0, VIEWPORT_TRANSITION_CENTER_MS - elapsedBeforeRelease);
@@ -5773,8 +5837,13 @@ export function ArchitecturalCanvasApp({
     setGalleryDimsLabel("— × —");
   }, [galleryOpen, galleryBodyFingerprint]);
 
-  const viewportRevealReady =
-    canvasSurfaceReady && (scenario !== "default" || canvasBootstrapResolved);
+  const viewportRevealReady = useMemo(() => {
+    const bootstrapOk = scenario !== "default" || canvasBootstrapResolved;
+    if (!canvasEffectsEnabled && scenario === "default") {
+      return bootstrapOk;
+    }
+    return canvasSurfaceReady && bootstrapOk;
+  }, [canvasEffectsEnabled, canvasSurfaceReady, canvasBootstrapResolved, scenario]);
 
   return (
     <div
@@ -5788,8 +5857,10 @@ export function ArchitecturalCanvasApp({
         className={`${styles.viewport} ${
           viewportRevealReady ? styles.viewportSurfaceReady : styles.viewportSurfacePending
         } ${activeSpaceId !== graph.rootSpaceId ? styles.deepSpace : ""}${
-          stackModal ? ` ${styles.viewportStackModalOpen}` : ""
-        } ${connectionMode !== "move" ? styles.viewportConnectionMode : ""}`}
+          !canvasEffectsEnabled ? ` ${styles.viewportAmbientOff}` : ""
+        }${stackModal ? ` ${styles.viewportStackModalOpen}` : ""} ${
+          connectionMode !== "move" ? styles.viewportConnectionMode : ""
+        }`}
         aria-busy={!viewportRevealReady}
         data-canvas-ready={viewportRevealReady ? "true" : "false"}
         onMouseDown={onViewportMouseDown}
@@ -5818,6 +5889,8 @@ export function ArchitecturalCanvasApp({
       >
         <div
           className={`${styles.viewportSceneLayer} ${
+            !canvasEffectsEnabled ? styles.viewportSceneLayerInstant : ""
+          } ${
             viewportRevealReady && !navTransitionActive
               ? styles.viewportSceneLayerVisible
               : styles.viewportSceneLayerDimmed
@@ -6195,12 +6268,14 @@ export function ArchitecturalCanvasApp({
           </svg>
         </div>
         </div>
-        <VigilFlowRevealOverlay
-          scenario={scenario}
-          bootContentReady={viewportRevealReady}
-          navActive={navTransitionActive}
-          bootstrapPending={scenario === "default" && !canvasBootstrapResolved}
-        />
+        {canvasEffectsEnabled ? (
+          <VigilFlowRevealOverlay
+            scenario={scenario}
+            bootContentReady={viewportRevealReady}
+            navActive={navTransitionActive}
+            bootstrapPending={scenario === "default" && !canvasBootstrapResolved}
+          />
+        ) : null}
         <div className={styles.chromeLayer}>
         {parentSpaceId ? (
           <ArchitecturalParentExitThreshold
@@ -6287,6 +6362,10 @@ export function ArchitecturalCanvasApp({
           </div>
         </div>
 
+        <ArchitecturalCanvasEffectsToggle
+          effectsEnabled={canvasEffectsEnabled}
+          onToggle={() => setCanvasEffectsEnabled((v) => !v)}
+        />
         <ArchitecturalViewportMetrics
           centerWorldX={centerWorldX}
           centerWorldY={centerWorldY}
