@@ -14,7 +14,11 @@ import styles from "./ArchitecturalCanvasApp.module.css";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
 import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
-import { ArchitecturalBottomDock } from "@/src/components/foundation/ArchitecturalBottomDock";
+import {
+  ArchitecturalBottomDock,
+  DEFAULT_DOC_INSERT_ACTIONS,
+  DEFAULT_FORMAT_ACTIONS,
+} from "@/src/components/foundation/ArchitecturalBottomDock";
 import { ArchitecturalParentExitThreshold } from "@/src/components/foundation/ArchitecturalParentExitThreshold";
 import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
 import { ArchitecturalFolderCard } from "@/src/components/foundation/ArchitecturalFolderCard";
@@ -42,6 +46,7 @@ import type {
   CanvasGraph,
   CanvasSpace,
   CanvasTool,
+  DockFormatAction,
   NodeTheme,
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
@@ -146,6 +151,126 @@ function isRichDocBodyFormattingTarget(focusEl: Element | null): boolean {
   const root = focusEl.closest("[contenteditable='true']");
   if (!root) return false;
   return !!root.closest("[data-node-body-editor], [data-focus-body-editor]");
+}
+
+function normalizeFormatBlockTag(value: string | null | undefined): "p" | "h1" | "h2" | "h3" | "blockquote" {
+  const cleaned = (value ?? "")
+    .toLowerCase()
+    .replace(/[<>]/g, "")
+    .trim();
+  if (cleaned === "h1" || cleaned === "h2" || cleaned === "h3" || cleaned === "blockquote") {
+    return cleaned;
+  }
+  return "p";
+}
+
+function isNodeWithin(element: HTMLElement, candidate: Node | null): boolean {
+  if (!candidate) return false;
+  if (candidate === element) return true;
+  return element.contains(candidate);
+}
+
+function placeCaretAtEnd(element: HTMLElement) {
+  element.focus();
+  const selection = window.getSelection();
+  if (!selection) return;
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+function shouldNormalizeChecklistMarkup(
+  html: string,
+  taskItemClass: string,
+): boolean {
+  return html.includes(taskItemClass) || html.includes('data-arch-checklist="true"');
+}
+
+function normalizeChecklistMarkup(
+  html: string,
+  classes: { taskItem: string; taskCheckbox: string; taskText: string; done: string },
+): string {
+  if (typeof document === "undefined") return html;
+  if (!shouldNormalizeChecklistMarkup(html, classes.taskItem)) return html;
+
+  const doc = new DOMParser().parseFromString(
+    `<div id="__arch_task_parse">${html}</div>`,
+    "text/html",
+  );
+  const wrap = doc.getElementById("__arch_task_parse");
+  if (!wrap) return html;
+
+  wrap.querySelectorAll("ul[data-arch-checklist='true']").forEach((ul) => {
+    const frag = doc.createDocumentFragment();
+    ul.querySelectorAll("li").forEach((li) => {
+      const item = doc.createElement("div");
+      item.setAttribute("class", classes.taskItem);
+      item.setAttribute("contenteditable", "false");
+
+      const checked = !!li.querySelector("input[type='checkbox']:checked");
+      if (checked) item.classList.add(classes.done);
+
+      const checkbox = doc.createElement("div");
+      checkbox.setAttribute("class", classes.taskCheckbox);
+      checkbox.setAttribute("contenteditable", "false");
+      item.appendChild(checkbox);
+
+      const text = doc.createElement("div");
+      text.setAttribute("class", classes.taskText);
+      text.setAttribute("contenteditable", "true");
+      text.innerHTML = li.innerHTML.replace(/<input[^>]*>/gi, "").trim() || "New item";
+      item.appendChild(text);
+      frag.appendChild(item);
+    });
+    ul.replaceWith(frag);
+  });
+
+  wrap.querySelectorAll(`.${classes.taskItem}`).forEach((taskItemEl) => {
+    const taskItem = taskItemEl as HTMLElement;
+    taskItem.setAttribute("contenteditable", "false");
+    let checkbox = taskItem.querySelector<HTMLElement>(`.${classes.taskCheckbox}`);
+    if (!checkbox) {
+      checkbox = doc.createElement("div");
+      checkbox.setAttribute("class", classes.taskCheckbox);
+      taskItem.prepend(checkbox);
+    }
+    checkbox.setAttribute("contenteditable", "false");
+
+    let taskText = taskItem.querySelector<HTMLElement>(`.${classes.taskText}`);
+    if (!taskText) {
+      taskText = doc.createElement("div");
+      taskText.setAttribute("class", classes.taskText);
+      taskText.setAttribute("contenteditable", "true");
+
+      const textParts: string[] = [];
+      Array.from(taskItem.childNodes).forEach((node) => {
+        if (node === checkbox || node === taskText) return;
+        if (
+          node.nodeType === Node.ELEMENT_NODE &&
+          (node as Element).classList.contains(classes.taskCheckbox)
+        ) {
+          return;
+        }
+        if (
+          node.nodeType === Node.ELEMENT_NODE &&
+          (node as Element).classList.contains(classes.taskText)
+        ) {
+          return;
+        }
+        const value =
+          node.nodeType === Node.TEXT_NODE
+            ? node.textContent ?? ""
+            : (node as HTMLElement).innerText ?? "";
+        if (value.trim()) textParts.push(value.trim());
+      });
+      taskText.textContent = textParts.join(" ") || "New item";
+      taskItem.appendChild(taskText);
+    }
+  });
+
+  return wrap.innerHTML;
 }
 
 type LassoRectScreen = { x1: number; y1: number; x2: number; y2: number };
@@ -268,6 +393,7 @@ export function ArchitecturalCanvasApp({
   const [translateX, setTranslateX] = useState(0);
   const [translateY, setTranslateY] = useState(0);
   const [maxZIndex, setMaxZIndex] = useState(100);
+  const maxZIndexRef = useRef(100);
   const [isPanning, setIsPanning] = useState(false);
   const [draggedNodeIds, setDraggedNodeIds] = useState<string[]>([]);
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
@@ -324,6 +450,17 @@ export function ArchitecturalCanvasApp({
   const [stackModalEjectPreview, setStackModalEjectPreview] = useState(false);
   const [stackModalEjectCount, setStackModalEjectCount] = useState(0);
   const [stackModalCardHeights, setStackModalCardHeights] = useState<Record<string, number>>({});
+  /** Frozen visible ids for eject hull during a stack drag (layout swaps won’t shrink/grow the drop zone). */
+  const stackDragHullOrderedIdsRef = useRef<string[] | null>(null);
+  /** Latest stack order during an active stack drag (synced before React re-render). */
+  const stackModalOrderedIdsDuringDragRef = useRef<string[] | null>(null);
+  const stackEjectTouchedOutsideRef = useRef(false);
+  /** After user leaves the eject hull then returns, skip live reorder until mouseup (prevents swap spam). */
+  const stackBlockLiveReorderRef = useRef(false);
+  const lastStackEjectPreviewRef = useRef(false);
+  const stackModalRef = useRef(stackModal);
+  const stackDragRef = useRef(stackDrag);
+  const stackModalCardHeightsRef = useRef(stackModalCardHeights);
   const [selectionContextMenu, setSelectionContextMenu] = useState<{
     x: number;
     y: number;
@@ -332,6 +469,15 @@ export function ArchitecturalCanvasApp({
   const [textFormatChromeActive, setTextFormatChromeActive] = useState(false);
   /** True when the caret is in a note/body editor (not titles) — drives in-doc insert strip on canvas. */
   const [richDocInsertChromeActive, setRichDocInsertChromeActive] = useState(false);
+  const [formatCommandState, setFormatCommandState] = useState({
+    bold: false,
+    italic: false,
+    underline: false,
+    strikeThrough: false,
+    unorderedList: false,
+    orderedList: false,
+    blockTag: "p" as "p" | "h1" | "h2" | "h3" | "blockquote",
+  });
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const shellRef = useRef<HTMLDivElement | null>(null);
@@ -369,9 +515,14 @@ export function ArchitecturalCanvasApp({
   const activeNodeIdRef = useRef(activeNodeId);
   const pendingMediaUploadRef = useRef<{ mode: "focus" | "canvas"; id: string } | null>(null);
   const mediaFileInputRef = useRef<HTMLInputElement | null>(null);
+  const lastFormatRangeRef = useRef<Range | null>(null);
   const [historyEpoch, setHistoryEpoch] = useState(0);
 
   graphRef.current = graph;
+  maxZIndexRef.current = maxZIndex;
+  stackModalRef.current = stackModal;
+  stackDragRef.current = stackDrag;
+  stackModalCardHeightsRef.current = stackModalCardHeights;
   activeSpaceIdRef.current = activeSpaceId;
   navigationPathRef.current = navigationPath;
   selectedNodeIdsRef.current = selectedNodeIds;
@@ -383,6 +534,12 @@ export function ArchitecturalCanvasApp({
 
   const closeStackModal = useCallback(() => {
     setStackDrag(null);
+    stackDragRef.current = null;
+    stackDragHullOrderedIdsRef.current = null;
+    stackModalOrderedIdsDuringDragRef.current = null;
+    stackEjectTouchedOutsideRef.current = false;
+    stackBlockLiveReorderRef.current = false;
+    lastStackEjectPreviewRef.current = false;
     setStackModalExpanded(false);
     setStackModal(null);
     setStackModalEjectPreview(false);
@@ -429,8 +586,25 @@ export function ArchitecturalCanvasApp({
     setNavigationPath(nextPath);
     setSelectedNodeIds(restore.selectedNodeIds.filter((id) => rGraph.entities[id]));
     closeStackModal();
-    setFocusOpen(false);
-    setActiveNodeId(null);
+    const restoredFocusNodeId = activeNodeIdRef.current;
+    if (focusOpenRef.current && restoredFocusNodeId) {
+      const restored = rGraph.entities[restoredFocusNodeId];
+      if (restored && restored.kind === "content") {
+        setActiveNodeId(restoredFocusNodeId);
+        setFocusTitle(restored.title);
+        setFocusBody(restored.bodyHtml);
+        setFocusBaselineTitle(restored.title);
+        setFocusBaselineBody(restored.bodyHtml);
+        setFocusCodeTheme(restored.theme === "code");
+        setFocusOpen(true);
+      } else {
+        setFocusOpen(false);
+        setActiveNodeId(null);
+      }
+    } else {
+      setFocusOpen(false);
+      setActiveNodeId(null);
+    }
     requestAnimationFrame(() => {
       isApplyingHistoryRef.current = false;
     });
@@ -463,8 +637,25 @@ export function ArchitecturalCanvasApp({
     setNavigationPath(nextPath);
     setSelectedNodeIds(restore.selectedNodeIds.filter((id) => rGraph.entities[id]));
     closeStackModal();
-    setFocusOpen(false);
-    setActiveNodeId(null);
+    const restoredFocusNodeId = activeNodeIdRef.current;
+    if (focusOpenRef.current && restoredFocusNodeId) {
+      const restored = rGraph.entities[restoredFocusNodeId];
+      if (restored && restored.kind === "content") {
+        setActiveNodeId(restoredFocusNodeId);
+        setFocusTitle(restored.title);
+        setFocusBody(restored.bodyHtml);
+        setFocusBaselineTitle(restored.title);
+        setFocusBaselineBody(restored.bodyHtml);
+        setFocusCodeTheme(restored.theme === "code");
+        setFocusOpen(true);
+      } else {
+        setFocusOpen(false);
+        setActiveNodeId(null);
+      }
+    } else {
+      setFocusOpen(false);
+      setActiveNodeId(null);
+    }
     requestAnimationFrame(() => {
       isApplyingHistoryRef.current = false;
     });
@@ -686,23 +877,29 @@ export function ArchitecturalCanvasApp({
   }, [collapsedStacks, graph.entities, stackModal]);
   const updateNodeBody = useCallback(
     (id: string, html: string, options?: { immediate?: boolean }) => {
+      const normalizedHtml = normalizeChecklistMarkup(html, {
+        taskItem: styles.taskItem,
+        taskCheckbox: styles.taskCheckbox,
+        taskText: styles.taskText,
+        done: styles.done,
+      });
       queueGraphCommit(
         `content-body:${id}`,
         () => {
           const prev = graphRef.current;
           const entity = prev.entities[id];
           if (!entity || entity.kind !== "content") return;
-          if (entity.bodyHtml === html) return;
+          if (entity.bodyHtml === normalizedHtml) return;
           recordUndoBeforeMutation();
           setGraph((p) => {
             const e = p.entities[id];
             if (!e || e.kind !== "content") return p;
-            if (e.bodyHtml === html) return p;
+            if (e.bodyHtml === normalizedHtml) return p;
             return {
               ...p,
               entities: {
                 ...p.entities,
-                [id]: { ...e, bodyHtml: html },
+                [id]: { ...e, bodyHtml: normalizedHtml },
               },
             };
           });
@@ -811,11 +1008,20 @@ export function ArchitecturalCanvasApp({
   const openFocusMode = useCallback((id: string) => {
     const entity = graph.entities[id];
     if (!entity || entity.kind !== "content") return;
+    const normalizedBody =
+      entity.theme === "task"
+        ? normalizeChecklistMarkup(entity.bodyHtml, {
+            taskItem: styles.taskItem,
+            taskCheckbox: styles.taskCheckbox,
+            taskText: styles.taskText,
+            done: styles.done,
+          })
+        : entity.bodyHtml;
     setActiveNodeId(id);
     setFocusTitle(entity.title);
-    setFocusBody(entity.bodyHtml);
+    setFocusBody(normalizedBody);
     setFocusBaselineTitle(entity.title);
-    setFocusBaselineBody(entity.bodyHtml);
+    setFocusBaselineBody(normalizedBody);
     setFocusCodeTheme(entity.theme === "code");
     setFocusOpen(true);
   }, [graph.entities]);
@@ -851,11 +1057,17 @@ export function ArchitecturalCanvasApp({
   }, [closeMediaGallery, galleryNodeId, galleryOpen, graph.entities]);
 
   const saveFocusAndClose = useCallback(() => {
+    const normalizedFocusBody = normalizeChecklistMarkup(focusBody, {
+      taskItem: styles.taskItem,
+      taskCheckbox: styles.taskCheckbox,
+      taskText: styles.taskText,
+      done: styles.done,
+    });
     if (activeNodeId) {
       const entity = graphRef.current.entities[activeNodeId];
       if (entity && entity.kind === "content") {
         const nextTitle = focusTitle.trim() || "Untitled";
-        if (entity.title !== nextTitle || entity.bodyHtml !== focusBody) {
+        if (entity.title !== nextTitle || entity.bodyHtml !== normalizedFocusBody) {
           recordUndoBeforeMutation();
         }
       }
@@ -869,7 +1081,7 @@ export function ArchitecturalCanvasApp({
             [activeNodeId]: {
               ...entity,
               title: focusTitle.trim() || "Untitled",
-              bodyHtml: focusBody,
+              bodyHtml: normalizedFocusBody,
             },
           },
         };
@@ -1081,20 +1293,42 @@ export function ArchitecturalCanvasApp({
   const unstackGroup = useCallback((stackId: string) => {
     recordUndoBeforeMutation();
     setGraph((prev) => {
-      let changed = false;
       const next = shallowCloneGraph(prev);
-      Object.values(next.entities).forEach((entity) => {
-        if (entity.stackId !== stackId) return;
-        changed = true;
+      const members = Object.values(next.entities)
+        .filter(
+          (entity): entity is Extract<CanvasEntity, { kind: "content" }> =>
+            entity.kind === "content" && entity.stackId === stackId,
+        )
+        .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0));
+      if (members.length === 0) return prev;
+
+      const anchor =
+        members[members.length - 1]?.slots[activeSpaceId] ??
+        members[0]?.slots[activeSpaceId] ?? { x: 0, y: 0 };
+      const cols = Math.max(1, Math.min(3, Math.ceil(Math.sqrt(members.length))));
+      const spacingX = 72;
+      const spacingY = 64;
+
+      members.forEach((entity, index) => {
+        const col = index % cols;
+        const row = Math.floor(index / cols);
+        const centeredCol = col - (cols - 1) / 2;
         next.entities[entity.id] = {
           ...entity,
           stackId: null,
           stackOrder: null,
+          slots: {
+            ...entity.slots,
+            [activeSpaceId]: {
+              x: Math.round(anchor.x + centeredCol * spacingX),
+              y: Math.round(anchor.y + row * spacingY),
+            },
+          },
         };
       });
-      return changed ? next : prev;
+      return next;
     });
-  }, [recordUndoBeforeMutation]);
+  }, [activeSpaceId, recordUndoBeforeMutation]);
 
   const ensureFolderChildSpace = useCallback(
     (folderId: string): string | null => {
@@ -1431,26 +1665,34 @@ export function ArchitecturalCanvasApp({
     const id = createId("node");
     let title = "New Note";
     let width = UNIFIED_NODE_WIDTH;
+    let contentTheme: ContentTheme =
+      type === "task" ? "default" : (type as ContentTheme);
     let bodyHtml = `<div contenteditable="true">Start typing...</div>`;
 
     if (type === "task") {
       title = "Checklist";
       bodyHtml = `
-        <div class="${styles.taskItem}">
-          <div class="${styles.taskCheckbox}"></div>
-          <div class="${styles.taskText}" contenteditable="true">New field order</div>
+        <div class="${styles.taskItem}" contenteditable="false">
+          <div class="${styles.taskCheckbox}" contenteditable="false"></div>
+          <div class="${styles.taskText}" contenteditable="true">Clarify objective and acceptance criteria</div>
+        </div>
+        <div class="${styles.taskItem}" contenteditable="false">
+          <div class="${styles.taskCheckbox}" contenteditable="false"></div>
+          <div class="${styles.taskText}" contenteditable="true">Break work into two focused steps</div>
         </div>
       `;
     } else if (type === "code") {
       title = "Snippet";
+      contentTheme = "code";
       bodyHtml = `// [IN] Compose shard at cursor…`;
     } else if (type === "media") {
       title = "Untitled photo";
+      contentTheme = "media";
       bodyHtml = `
         <div class="${styles.mediaFrame}" data-architectural-media-root="true">
-          <img class="${styles.mediaImage}" src="/caliginia-sphere.png" alt="Caliginia sphere — survey frame" />
+          <div class="${styles.mediaPlaceholder}" data-architectural-media-fallback="true">Upload an image</div>
           <div class="${styles.mediaImageActions}" contenteditable="false">
-            <button type="button" class="${styles.mediaUploadBtn}" data-architectural-media-upload="true">Replace</button>
+            <button type="button" class="${styles.mediaUploadBtn}" data-architectural-media-upload="true">Upload</button>
           </div>
         </div>
         <div data-architectural-media-notes="true"></div>
@@ -1463,8 +1705,8 @@ export function ArchitecturalCanvasApp({
       kind: "content" as const,
       rotation,
       width,
-      theme: type,
-      tapeVariant: tapeVariantForTheme(type),
+      theme: contentTheme,
+      tapeVariant: tapeVariantForTheme(contentTheme),
       tapeRotation,
       bodyHtml,
       stackId: null,
@@ -1665,6 +1907,7 @@ export function ArchitecturalCanvasApp({
         if (!next.entities[targetEntityId]) return prev;
         const targetEntity = next.entities[targetEntityId];
         if (!targetEntity || targetEntity.kind !== "content") return prev;
+        const targetSlot = targetEntity.slots[activeSpaceId];
         if (!targetEntity.stackId) {
           next.entities[targetEntityId] = {
             ...targetEntity,
@@ -1688,6 +1931,12 @@ export function ArchitecturalCanvasApp({
             ...entity,
             stackId,
             stackOrder: nextOrder,
+            slots: targetSlot
+              ? {
+                  ...entity.slots,
+                  [activeSpaceId]: { x: targetSlot.x, y: targetSlot.y },
+                }
+              : entity.slots,
           };
           nextOrder += 1;
         });
@@ -1701,7 +1950,7 @@ export function ArchitecturalCanvasApp({
       setSelectedNodeIds([targetEntityId, ...idsToStack]);
       return true;
     },
-    [createId, graph.entities, normalizeStack],
+    [activeSpaceId, createId, graph.entities, normalizeStack],
   );
 
   const handleDrop = useCallback(
@@ -1886,10 +2135,14 @@ export function ArchitecturalCanvasApp({
   }, [activeSpaceId, handleDrop, scale, translateX, translateY, updateDropTargets]);
 
   useEffect(() => {
-    if (!stackDrag || !stackModal) return;
-    const getVisibleOrdered = (orderedIds: string[]) => orderedIds.slice(0, STACK_MODAL_MAX_ITEMS);
+    if (!stackModal) return;
+
+    const getVisibleOrdered = (orderedIds: string[]) =>
+      orderedIds.slice(0, STACK_MODAL_MAX_ITEMS);
+
     const getHullBounds = (orderedIds: string[]) => {
-      const layout = buildStackModalLayout(orderedIds, viewportSize, stackModalCardHeights);
+      const cardHeights = stackModalCardHeightsRef.current;
+      const layout = buildStackModalLayout(orderedIds, viewportSize, cardHeights);
       let minX = Number.POSITIVE_INFINITY;
       let minY = Number.POSITIVE_INFINITY;
       let maxX = Number.NEGATIVE_INFINITY;
@@ -1898,7 +2151,7 @@ export function ArchitecturalCanvasApp({
         const slot = layout[id];
         if (!slot) return;
         const cardW = STACK_MODAL_CARD_W * slot.scale;
-        const cardH = (stackModalCardHeights[id] ?? STACK_MODAL_CARD_H_ESTIMATE) * slot.scale;
+        const cardH = (cardHeights[id] ?? STACK_MODAL_CARD_H_ESTIMATE) * slot.scale;
         minX = Math.min(minX, slot.x);
         minY = Math.min(minY, slot.y);
         maxX = Math.max(maxX, slot.x + cardW);
@@ -1907,6 +2160,7 @@ export function ArchitecturalCanvasApp({
       if (!Number.isFinite(minX) || !Number.isFinite(minY)) return null;
       return { left: minX, top: minY, right: maxX, bottom: maxY };
     };
+
     const getDraggedRect = (
       drag: {
         entityId: string;
@@ -1917,15 +2171,18 @@ export function ArchitecturalCanvasApp({
       },
       orderedIds: string[],
     ) => {
-      const layout = buildStackModalLayout(orderedIds, viewportSize, stackModalCardHeights);
+      const cardHeights = stackModalCardHeightsRef.current;
+      const layout = buildStackModalLayout(orderedIds, viewportSize, cardHeights);
       const slot = layout[drag.entityId];
-      const scale = slot?.scale ?? 1;
-      const width = STACK_MODAL_CARD_W * scale;
-      const height = (stackModalCardHeights[drag.entityId] ?? STACK_MODAL_CARD_H_ESTIMATE) * scale;
+      const slotScale = slot?.scale ?? 1;
+      const width = STACK_MODAL_CARD_W * slotScale;
+      const height =
+        (cardHeights[drag.entityId] ?? STACK_MODAL_CARD_H_ESTIMATE) * slotScale;
       const left = drag.currentX - drag.pointerOffsetX;
       const top = drag.currentY - drag.pointerOffsetY;
       return { left, top, right: left + width, bottom: top + height };
     };
+
     const isDraggedOutsideHull = (
       drag: {
         entityId: string;
@@ -1948,69 +2205,112 @@ export function ArchitecturalCanvasApp({
         centerY > hull.bottom + STACK_MODAL_EJECT_MARGIN
       );
     };
+
     const onMouseMove = (event: MouseEvent) => {
-      setStackDrag((prev) => {
-        if (!prev) return prev;
-        const dx = event.clientX - prev.startX;
-        const dy = event.clientY - prev.startY;
-        const intent = Math.abs(dx) > 10 || Math.abs(dy) > 10 ? "reorder" : prev.intent;
-        const visibleOrdered = getVisibleOrdered(stackModal.orderedIds);
-        const outsideWithMargin = isDraggedOutsideHull(
-          {
-            entityId: prev.entityId,
-            currentX: event.clientX,
-            currentY: event.clientY,
-            pointerOffsetX: prev.pointerOffsetX,
-            pointerOffsetY: prev.pointerOffsetY,
-          },
-          visibleOrdered,
-        );
-        setStackModalEjectPreview(outsideWithMargin && intent === "reorder");
-        if (intent === "reorder" && !outsideWithMargin) {
-          setStackModal((prevModal) => {
-            if (!prevModal) return prevModal;
-            const visibleOrdered = [...getVisibleOrdered(prevModal.orderedIds)];
-            const from = visibleOrdered.indexOf(prev.entityId);
-            if (from < 0) return prevModal;
-            const layout = buildStackModalLayout(visibleOrdered, viewportSize, stackModalCardHeights);
-            const swapWith = visibleOrdered.findIndex((id) => {
-              if (id === prev.entityId) return false;
-              const slot = layout[id];
-              if (!slot) return false;
-              const width = STACK_MODAL_CARD_W * slot.scale;
-              const height = (stackModalCardHeights[id] ?? STACK_MODAL_CARD_H_ESTIMATE) * slot.scale;
-              return (
-                event.clientX >= slot.x &&
-                event.clientX <= slot.x + width &&
-                event.clientY >= slot.y &&
-                event.clientY <= slot.y + height
-              );
-            });
-            if (swapWith < 0 || swapWith === from) return prevModal;
-            const nextVisible = [...visibleOrdered];
-            const current = nextVisible[from];
-            nextVisible[from] = nextVisible[swapWith];
-            nextVisible[swapWith] = current;
-            const hiddenOrdered = prevModal.orderedIds.slice(STACK_MODAL_MAX_ITEMS);
-            return {
-              ...prevModal,
-              orderedIds: [...nextVisible, ...hiddenOrdered],
-            };
-          });
-        }
-        return {
-          ...prev,
+      const prev = stackDragRef.current;
+      if (!prev) return;
+
+      const dx = event.clientX - prev.startX;
+      const dy = event.clientY - prev.startY;
+      const intent =
+        Math.abs(dx) > 10 || Math.abs(dy) > 10 ? "reorder" : prev.intent;
+
+      const hullOrdered =
+        stackDragHullOrderedIdsRef.current ??
+        getVisibleOrdered(stackModalRef.current?.orderedIds ?? []);
+
+      const outsideWithMargin = isDraggedOutsideHull(
+        {
+          entityId: prev.entityId,
           currentX: event.clientX,
           currentY: event.clientY,
-          intent,
-        };
-      });
+          pointerOffsetX: prev.pointerOffsetX,
+          pointerOffsetY: prev.pointerOffsetY,
+        },
+        hullOrdered,
+      );
+
+      if (intent === "reorder" && outsideWithMargin) {
+        stackEjectTouchedOutsideRef.current = true;
+      }
+      if (stackEjectTouchedOutsideRef.current && !outsideWithMargin) {
+        stackBlockLiveReorderRef.current = true;
+      }
+
+      const nextEject = outsideWithMargin && intent === "reorder";
+      if (nextEject !== lastStackEjectPreviewRef.current) {
+        lastStackEjectPreviewRef.current = nextEject;
+        setStackModalEjectPreview(nextEject);
+      }
+
+      if (
+        intent === "reorder" &&
+        !outsideWithMargin &&
+        !stackBlockLiveReorderRef.current
+      ) {
+        setStackModal((prevModal) => {
+          if (!prevModal) return prevModal;
+          const visibleOrdered = [...getVisibleOrdered(prevModal.orderedIds)];
+          const from = visibleOrdered.indexOf(prev.entityId);
+          if (from < 0) return prevModal;
+          const cardHeights = stackModalCardHeightsRef.current;
+          const layout = buildStackModalLayout(visibleOrdered, viewportSize, cardHeights);
+          const swapWith = visibleOrdered.findIndex((id) => {
+            if (id === prev.entityId) return false;
+            const slot = layout[id];
+            if (!slot) return false;
+            const width = STACK_MODAL_CARD_W * slot.scale;
+            const height = (cardHeights[id] ?? STACK_MODAL_CARD_H_ESTIMATE) * slot.scale;
+            return (
+              event.clientX >= slot.x &&
+              event.clientX <= slot.x + width &&
+              event.clientY >= slot.y &&
+              event.clientY <= slot.y + height
+            );
+          });
+          if (swapWith < 0 || swapWith === from) return prevModal;
+          const nextVisible = [...visibleOrdered];
+          const swapItem = nextVisible[from];
+          nextVisible[from] = nextVisible[swapWith];
+          nextVisible[swapWith] = swapItem;
+          const hiddenOrdered = prevModal.orderedIds.slice(STACK_MODAL_MAX_ITEMS);
+          const nextOrdered = [...nextVisible, ...hiddenOrdered];
+          stackModalOrderedIdsDuringDragRef.current = nextOrdered;
+          return {
+            ...prevModal,
+            orderedIds: nextOrdered,
+          };
+        });
+      }
+
+      const nextDrag = {
+        ...prev,
+        currentX: event.clientX,
+        currentY: event.clientY,
+        intent,
+      };
+      stackDragRef.current = nextDrag;
+      setStackDrag(nextDrag);
     };
+
     const onMouseUp = () => {
-      const drag = stackDrag;
+      const drag = stackDragRef.current;
+      const hullSnap = stackDragHullOrderedIdsRef.current;
+      const orderedSnap = stackModalOrderedIdsDuringDragRef.current;
+
       setStackDrag(null);
+      stackDragRef.current = null;
       setStackModalEjectPreview(false);
-      if (!drag) return;
+      lastStackEjectPreviewRef.current = false;
+      stackDragHullOrderedIdsRef.current = null;
+      stackModalOrderedIdsDuringDragRef.current = null;
+      stackEjectTouchedOutsideRef.current = false;
+      stackBlockLiveReorderRef.current = false;
+
+      const modal = stackModalRef.current;
+      if (!drag || !modal) return;
+
+      const hullForEject = hullSnap ?? getVisibleOrdered(modal.orderedIds);
       const outsideWithMargin = isDraggedOutsideHull(
         {
           entityId: drag.entityId,
@@ -2019,24 +2319,30 @@ export function ArchitecturalCanvasApp({
           pointerOffsetX: drag.pointerOffsetX,
           pointerOffsetY: drag.pointerOffsetY,
         },
-        getVisibleOrdered(stackModal.orderedIds),
+        hullForEject,
       );
+
+      const orderedIdsForCommit = orderedSnap ?? modal.orderedIds;
+
       if (outsideWithMargin && drag.intent === "reorder") {
-        const extracted = graph.entities[drag.entityId];
+        const graphSnap = graphRef.current;
+        const extracted = graphSnap.entities[drag.entityId];
+        const spaceId = activeSpaceIdRef.current;
+        const zi = maxZIndexRef.current;
         if (extracted) {
-          const remainingOrdered = stackModal.orderedIds.filter((id) => id !== drag.entityId);
+          const remainingOrdered = orderedIdsForCommit.filter((id) => id !== drag.entityId);
           const remaining = remainingOrdered
-            .map((id) => graph.entities[id])
+            .map((id) => graphSnap.entities[id])
             .filter(
               (entity): entity is CanvasEntity =>
-                !!entity && entity.kind === "content" && entity.stackId === stackModal.stackId,
+                !!entity && entity.kind === "content" && entity.stackId === modal.stackId,
             );
           if (remaining.length >= 2) {
             const normalizedRemaining = [...remaining]
               .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0))
               .map((entity, index) => ({
                 ...entity,
-                stackId: stackModal.stackId,
+                stackId: modal.stackId,
                 stackOrder: index,
               }));
             setGraph((prev) => {
@@ -2056,7 +2362,7 @@ export function ArchitecturalCanvasApp({
                   ...pulled,
                   stackId: null,
                   stackOrder: null,
-                  zIndex: maxZIndex + 1,
+                  zIndex: zi + 1,
                 };
               }
               return next;
@@ -2074,7 +2380,7 @@ export function ArchitecturalCanvasApp({
                   ...pulled,
                   stackId: null,
                   stackOrder: null,
-                  zIndex: maxZIndex + 1,
+                  zIndex: zi + 1,
                 };
               }
               remaining.forEach((entity) => {
@@ -2092,8 +2398,9 @@ export function ArchitecturalCanvasApp({
             closeStackModal();
           }
           setStackModalEjectCount((count) => count + 1);
-          const worldDropX = (drag.currentX - translateX) / scale;
-          const worldDropY = (drag.currentY - translateY) / scale;
+          const { tx, ty, scale: viewScale } = viewRef.current;
+          const worldDropX = (drag.currentX - drag.pointerOffsetX - tx) / viewScale;
+          const worldDropY = (drag.currentY - drag.pointerOffsetY - ty) / viewScale;
           setGraph((prev) => {
             const next = shallowCloneGraph(prev);
             const entity = next.entities[drag.entityId];
@@ -2102,7 +2409,7 @@ export function ArchitecturalCanvasApp({
               ...entity,
               slots: {
                 ...entity.slots,
-                [activeSpaceId]: {
+                [spaceId]: {
                   x: Math.round(worldDropX),
                   y: Math.round(worldDropY),
                 },
@@ -2114,7 +2421,7 @@ export function ArchitecturalCanvasApp({
         return;
       }
       if (drag.intent === "reorder") {
-        const ordered = stackModal.orderedIds;
+        const ordered = orderedIdsForCommit;
         setGraph((prev) => {
           const next = shallowCloneGraph(prev);
           ordered.forEach((id, index) => {
@@ -2129,33 +2436,62 @@ export function ArchitecturalCanvasApp({
         });
       }
     };
+
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
     return () => {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, [
-    closeStackModal,
-    activeSpaceId,
-    graph.entities,
-    normalizeStack,
-    scale,
-    stackDrag,
-    stackModalCardHeights,
-    stackModal,
-    translateX,
-    translateY,
-    viewportSize,
-    maxZIndex,
-  ]);
+  }, [closeStackModal, stackModal?.stackId, viewportSize.width, viewportSize.height]);
 
   useEffect(() => {
     const onMouseDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const taskCheckbox = target.closest(`.${styles.taskCheckbox}`);
+      if (taskCheckbox) {
+        event.preventDefault();
+        event.stopPropagation();
+        const taskItem = taskCheckbox.closest(`.${styles.taskItem}`);
+        if (taskItem) {
+          taskItem.classList.toggle(styles.done);
+          const focusBodyEl = taskCheckbox.closest<HTMLElement>("[data-focus-body-editor='true']");
+          if (focusBodyEl && focusOpenRef.current && activeNodeIdRef.current) {
+            const nextHtml = normalizeChecklistMarkup(focusBodyEl.innerHTML, {
+              taskItem: styles.taskItem,
+              taskCheckbox: styles.taskCheckbox,
+              taskText: styles.taskText,
+              done: styles.done,
+            });
+            if (focusBodyEl.innerHTML !== nextHtml) {
+              focusBodyEl.innerHTML = nextHtml;
+            }
+            setFocusBody(nextHtml);
+            return;
+          }
+          const owner = taskCheckbox.closest<HTMLElement>(`[data-node-id]`);
+          if (owner?.dataset.nodeId) {
+            const bodyEl = owner.querySelector<HTMLElement>(`.${styles.nodeBody}`);
+            if (bodyEl) {
+              const nextHtml = normalizeChecklistMarkup(bodyEl.innerHTML, {
+                taskItem: styles.taskItem,
+                taskCheckbox: styles.taskCheckbox,
+                taskText: styles.taskText,
+                done: styles.done,
+              });
+              if (bodyEl.innerHTML !== nextHtml) {
+                bodyEl.innerHTML = nextHtml;
+              }
+              updateNodeBody(owner.dataset.nodeId, nextHtml, { immediate: true });
+            }
+          }
+        }
+        return;
+      }
+
       if (focusOpen || galleryOpen) return;
       if (activeTool === "pan" || spacePanRef.current) return;
       if (event.button !== 0) return;
-      const target = event.target as HTMLElement;
       if (target.closest("[data-stack-container='true']")) return;
       const entity = target.closest<HTMLElement>(`[data-node-id]`);
       const inContent =
@@ -2208,18 +2544,6 @@ export function ArchitecturalCanvasApp({
         }
       }
 
-      const taskCheckbox = target.closest(`.${styles.taskCheckbox}`);
-      if (taskCheckbox) {
-        const taskItem = taskCheckbox.closest(`.${styles.taskItem}`);
-        if (taskItem) {
-          taskItem.classList.toggle(styles.done);
-          const owner = taskCheckbox.closest<HTMLElement>(`[data-node-id]`);
-          if (owner?.dataset.nodeId) {
-            const bodyEl = owner.querySelector<HTMLElement>(`.${styles.nodeBody}`);
-            if (bodyEl) updateNodeBody(owner.dataset.nodeId, bodyEl.innerHTML, { immediate: true });
-          }
-        }
-      }
     };
 
     const onClick = (event: MouseEvent) => {
@@ -2444,7 +2768,7 @@ export function ArchitecturalCanvasApp({
 
   const onViewportMouseDown = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
-      if (focusOpen || galleryOpen) return;
+      if (focusOpen || galleryOpen || stackModal) return;
 
       // Middle mouse drag always pans (tool-agnostic), similar to design tools.
       if (event.button === 1) {
@@ -2493,12 +2817,12 @@ export function ArchitecturalCanvasApp({
         y: event.clientY - translateY,
       };
     },
-    [activeTool, focusOpen, galleryOpen, translateX, translateY],
+    [activeTool, focusOpen, galleryOpen, stackModal, translateX, translateY],
   );
 
   const onWheel = useCallback(
     (event: React.WheelEvent<HTMLDivElement>) => {
-      if (focusOpen || galleryOpen) return;
+      if (focusOpen || galleryOpen || stackModal) return;
       const target = event.target as HTMLElement;
       const inEditable =
         !!target.closest("input, textarea, select, [contenteditable='true']");
@@ -2521,7 +2845,7 @@ export function ArchitecturalCanvasApp({
         setTranslateY((prev) => prev - event.deltaY);
       }
     },
-    [focusOpen, galleryOpen, normalizeWheelDelta, updateTransformFromMouse],
+    [focusOpen, galleryOpen, stackModal, normalizeWheelDelta, updateTransformFromMouse],
   );
 
   useEffect(() => {
@@ -2531,7 +2855,7 @@ export function ArchitecturalCanvasApp({
       if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
         return;
       }
-      if (focusOpen || galleryOpen) return;
+      if (focusOpen || galleryOpen || stackModal) return;
 
       const key = event.key;
       if (key === "=" || key === "+" || key === "NumpadAdd") {
@@ -2552,7 +2876,7 @@ export function ArchitecturalCanvasApp({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [focusOpen, galleryOpen, recenterToOrigin, zoomBy]);
+  }, [focusOpen, galleryOpen, recenterToOrigin, stackModal, zoomBy]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -2625,58 +2949,33 @@ export function ArchitecturalCanvasApp({
     unstackGroup,
   ]);
 
-  const runFormat = useCallback((command: string, value?: string) => {
+  const resolveRichTextFormatTarget = useCallback((): HTMLElement | null => {
     const shell = shellRef.current;
-    const focusRichBody = () => {
-      if (!shell) return;
-      if (focusOpenRef.current && activeNodeIdRef.current) {
-        shell.querySelector<HTMLElement>('[data-focus-body-editor="true"]')?.focus();
-        return;
-      }
-      const ids = selectedNodeIdsRef.current;
-      if (ids.length !== 1) return;
-      const entity = graphRef.current.entities[ids[0]!];
-      if (!entity || entity.kind !== "content") return;
-      if (entity.theme !== "default" && entity.theme !== "task") return;
-      shell
-        .querySelector<HTMLElement>(`[data-node-id="${ids[0]!}"] [data-node-body-editor="true"]`)
-        ?.focus();
-    };
-
-    const triggerImageInsert = () => {
-      focusRichBody();
-      if (focusOpenRef.current && activeNodeIdRef.current) {
-        pendingMediaUploadRef.current = { mode: "focus", id: activeNodeIdRef.current };
-      } else {
-        const ids = selectedNodeIdsRef.current;
-        if (ids.length !== 1) return;
-        const entity = graphRef.current.entities[ids[0]!];
-        if (!entity || entity.kind !== "content") return;
-        pendingMediaUploadRef.current = { mode: "canvas", id: entity.id };
-      }
-      mediaFileInputRef.current?.click();
-    };
-
-    focusRichBody();
-
-    if (command === "arch:codeBlock") {
-      document.execCommand("insertHTML", false, "<pre><code>&#8203;</code></pre>");
-      return;
+    if (!shell) return null;
+    if (focusOpenRef.current && activeNodeIdRef.current) {
+      return shell.querySelector<HTMLElement>('[data-focus-body-editor="true"]');
     }
-    if (command === "arch:checklist") {
-      document.execCommand(
-        "insertHTML",
-        false,
-        '<ul data-arch-checklist="true"><li><input type="checkbox" contenteditable="false" /> </li></ul>',
-      );
-      return;
-    }
-    if (command === "arch:insertImage") {
-      triggerImageInsert();
-      return;
-    }
+    const ids = selectedNodeIdsRef.current;
+    if (ids.length !== 1) return null;
+    const entity = graphRef.current.entities[ids[0]!];
+    if (!entity || entity.kind !== "content") return null;
+    if (entity.theme !== "default" && entity.theme !== "task") return null;
+    return shell.querySelector<HTMLElement>(`[data-node-id="${ids[0]!}"] [data-node-body-editor="true"]`);
+  }, []);
 
-    document.execCommand(command, false, value);
+  const canInsertImageAtCurrentTarget = useCallback(() => {
+    if (focusOpenRef.current && activeNodeIdRef.current) {
+      const entity = graphRef.current.entities[activeNodeIdRef.current];
+      return !!entity && entity.kind === "content" && entity.theme !== "code";
+    }
+    const ids = selectedNodeIdsRef.current;
+    if (ids.length !== 1) return false;
+    const entity = graphRef.current.entities[ids[0]!];
+    return (
+      !!entity &&
+      entity.kind === "content" &&
+      (entity.theme === "default" || entity.theme === "task")
+    );
   }, []);
 
   const refreshTextFormatChrome = useCallback(() => {
@@ -2685,11 +2984,41 @@ export function ArchitecturalCanvasApp({
     if (!shell || !ae || !(ae instanceof Node) || !shell.contains(ae)) {
       setTextFormatChromeActive(false);
       setRichDocInsertChromeActive(false);
+      setFormatCommandState({
+        bold: false,
+        italic: false,
+        underline: false,
+        strikeThrough: false,
+        unorderedList: false,
+        orderedList: false,
+        blockTag: "p",
+      });
       return;
     }
     const fmt = isTextFormattingToolbarTarget(ae);
     setTextFormatChromeActive(fmt);
     setRichDocInsertChromeActive(fmt && isRichDocBodyFormattingTarget(ae));
+    if (!fmt) {
+      setFormatCommandState({
+        bold: false,
+        italic: false,
+        underline: false,
+        strikeThrough: false,
+        unorderedList: false,
+        orderedList: false,
+        blockTag: "p",
+      });
+      return;
+    }
+    setFormatCommandState({
+      bold: document.queryCommandState("bold"),
+      italic: document.queryCommandState("italic"),
+      underline: document.queryCommandState("underline"),
+      strikeThrough: document.queryCommandState("strikeThrough"),
+      unorderedList: document.queryCommandState("insertUnorderedList"),
+      orderedList: document.queryCommandState("insertOrderedList"),
+      blockTag: normalizeFormatBlockTag(document.queryCommandValue("formatBlock")),
+    });
   }, []);
 
   useEffect(() => {
@@ -2704,6 +3033,122 @@ export function ArchitecturalCanvasApp({
       document.removeEventListener("focusout", onOut, true);
     };
   }, [refreshTextFormatChrome]);
+
+  useEffect(() => {
+    const onSelectionChange = () => {
+      const shell = shellRef.current;
+      const selection = window.getSelection();
+      if (!shell || !selection || selection.rangeCount < 1) {
+        lastFormatRangeRef.current = null;
+        refreshTextFormatChrome();
+        return;
+      }
+      const range = selection.getRangeAt(0);
+      const anchor = range.commonAncestorContainer;
+      const anchorEl =
+        anchor instanceof HTMLElement ? anchor : anchor.parentElement;
+      if (!anchorEl || !shell.contains(anchorEl) || !isTextFormattingToolbarTarget(anchorEl)) {
+        lastFormatRangeRef.current = null;
+        refreshTextFormatChrome();
+        return;
+      }
+      lastFormatRangeRef.current = range.cloneRange();
+      refreshTextFormatChrome();
+    };
+    document.addEventListener("selectionchange", onSelectionChange);
+    return () => document.removeEventListener("selectionchange", onSelectionChange);
+  }, [refreshTextFormatChrome]);
+
+  const runFormat = useCallback(
+    (command: string, value?: string) => {
+      const shell = shellRef.current;
+      if (!shell) return;
+
+      const dispatchInput = (target: HTMLElement | null) => {
+        target?.dispatchEvent(new Event("input", { bubbles: true }));
+      };
+
+      const restoreSelection = (target: HTMLElement | null) => {
+        const selection = window.getSelection();
+        const saved = lastFormatRangeRef.current;
+        if (!selection || !saved || !target) return false;
+        if (!isNodeWithin(target, saved.commonAncestorContainer)) return false;
+        selection.removeAllRanges();
+        selection.addRange(saved);
+        return true;
+      };
+
+      const target = resolveRichTextFormatTarget();
+      if (command === "arch:insertImage") {
+        if (!canInsertImageAtCurrentTarget()) return;
+        if (focusOpenRef.current && activeNodeIdRef.current) {
+          pendingMediaUploadRef.current = { mode: "focus", id: activeNodeIdRef.current };
+        } else {
+          const ids = selectedNodeIdsRef.current;
+          const entity = ids.length === 1 ? graphRef.current.entities[ids[0]!] : null;
+          if (!entity || entity.kind !== "content") return;
+          pendingMediaUploadRef.current = { mode: "canvas", id: entity.id };
+        }
+        mediaFileInputRef.current?.click();
+        return;
+      }
+
+      if (!target) return;
+      if (!restoreSelection(target)) {
+        placeCaretAtEnd(target);
+      }
+
+      if (command === "arch:checklist") {
+        document.execCommand(
+          "insertHTML",
+          false,
+          `<div class="${styles.taskItem}" contenteditable="false"><div class="${styles.taskCheckbox}" contenteditable="false"></div><div class="${styles.taskText}" contenteditable="true">New item</div></div>`,
+        );
+        dispatchInput(target);
+        refreshTextFormatChrome();
+        return;
+      }
+
+      if (command === "formatBlock" && value === "h1") {
+        const current = normalizeFormatBlockTag(document.queryCommandValue("formatBlock"));
+        const next = current === "h1" || current === "h2" || current === "h3" ? "p" : "h1";
+        document.execCommand("formatBlock", false, next);
+        dispatchInput(target);
+        refreshTextFormatChrome();
+        return;
+      }
+
+      if (command === "formatBlock" && value === "blockquote") {
+        const current = normalizeFormatBlockTag(document.queryCommandValue("formatBlock"));
+        document.execCommand("formatBlock", false, current === "blockquote" ? "p" : "blockquote");
+        dispatchInput(target);
+        refreshTextFormatChrome();
+        return;
+      }
+
+      document.execCommand(command, false, value);
+      dispatchInput(target);
+      refreshTextFormatChrome();
+    },
+    [canInsertImageAtCurrentTarget, refreshTextFormatChrome, resolveRichTextFormatTarget],
+  );
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (galleryOpenRef.current) return;
+      const mod = event.metaKey || event.ctrlKey;
+      if (!mod || event.altKey) return;
+      const key = event.key.toLowerCase();
+      const command = key === "b" ? "bold" : key === "i" ? "italic" : key === "u" ? "underline" : null;
+      if (!command) return;
+      const target = event.target as HTMLElement | null;
+      if (!target || !isTextFormattingToolbarTarget(target)) return;
+      event.preventDefault();
+      runFormat(command);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [runFormat]);
 
   const closeSelectionContextMenu = useCallback(() => {
     setSelectionContextMenu(null);
@@ -2902,6 +3347,66 @@ export function ArchitecturalCanvasApp({
     ],
   );
 
+  const canInsertImage = useMemo(() => {
+    if (focusOpen && activeNodeId) {
+      const entity = graph.entities[activeNodeId];
+      return !!entity && entity.kind === "content" && entity.theme !== "code";
+    }
+    if (selectedNodeIds.length !== 1) return false;
+    const entity = graph.entities[selectedNodeIds[0]!];
+    return (
+      !!entity &&
+      entity.kind === "content" &&
+      (entity.theme === "default" || entity.theme === "task")
+    );
+  }, [activeNodeId, focusOpen, graph.entities, selectedNodeIds]);
+
+  const dockInsertActions = useMemo<DockFormatAction[]>(
+    () =>
+      DEFAULT_DOC_INSERT_ACTIONS.map((action) => {
+        if (action.command === "arch:insertImage") {
+          return { ...action, disabled: !canInsertImage };
+        }
+        if (action.command === "formatBlock" && action.value === "blockquote") {
+          return { ...action, active: formatCommandState.blockTag === "blockquote" };
+        }
+        if (action.command === "formatBlock" && action.value === "h1") {
+          const level = formatCommandState.blockTag;
+          const headingLabel =
+            level === "h1" || level === "h2" || level === "h3"
+              ? `Heading (${level.toUpperCase()})`
+              : "Heading";
+          return {
+            ...action,
+            label: headingLabel,
+            active: level === "h1" || level === "h2" || level === "h3",
+          };
+        }
+        return action;
+      }),
+    [canInsertImage, formatCommandState.blockTag],
+  );
+
+  const dockFormatActions = useMemo<DockFormatAction[]>(
+    () =>
+      DEFAULT_FORMAT_ACTIONS.map((action) => {
+        if (action.command === "bold") return { ...action, active: formatCommandState.bold };
+        if (action.command === "italic") return { ...action, active: formatCommandState.italic };
+        if (action.command === "underline") return { ...action, active: formatCommandState.underline };
+        if (action.command === "strikeThrough") {
+          return { ...action, active: formatCommandState.strikeThrough };
+        }
+        if (action.command === "insertUnorderedList") {
+          return { ...action, active: formatCommandState.unorderedList };
+        }
+        if (action.command === "insertOrderedList") {
+          return { ...action, active: formatCommandState.orderedList };
+        }
+        return action;
+      }),
+    [formatCommandState],
+  );
+
   useEffect(() => {
     if (selectedNodeIds.length < 1) setSelectionContextMenu(null);
   }, [selectedNodeIds]);
@@ -3021,7 +3526,9 @@ export function ArchitecturalCanvasApp({
         ref={viewportRef}
         className={`${styles.viewport} ${styles.viewportSurface} ${
           canvasSurfaceReady ? styles.viewportSurfaceReady : styles.viewportSurfacePending
-        } ${activeSpaceId !== graph.rootSpaceId ? styles.deepSpace : ""}`}
+        } ${activeSpaceId !== graph.rootSpaceId ? styles.deepSpace : ""}${
+          stackModal ? ` ${styles.viewportStackModalOpen}` : ""
+        }`}
         aria-busy={!canvasSurfaceReady}
         data-canvas-ready={canvasSurfaceReady ? "true" : "false"}
         onMouseDown={onViewportMouseDown}
@@ -3306,6 +3813,8 @@ export function ArchitecturalCanvasApp({
           <ArchitecturalBottomDock
             showFormatToolbar={textFormatChromeActive}
             showDocInsertCluster={richDocInsertChromeActive}
+            insertDocActions={dockInsertActions}
+            formatActions={dockFormatActions}
             onFormat={runFormat}
             onCreateNode={createNewNode}
             onUndo={undo}
@@ -3348,132 +3857,135 @@ export function ArchitecturalCanvasApp({
       {stackModal ? <div className={styles.stackScrim} onClick={closeStackModal} /> : null}
       {stackModal ? (
         <div
-          className={styles.stackModal}
+          className={styles.stackFanStage}
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               closeStackModal();
             }
           }}
         >
+          {stackModalHull && stackDrag ? (
+            <div
+              className={`${styles.stackHullDropCue} ${stackModalEjectPreview ? styles.stackHullDropCueActive : ""}`}
+              style={{
+                left: stackModalHull.left - STACK_MODAL_EJECT_MARGIN,
+                top: stackModalHull.top - STACK_MODAL_EJECT_MARGIN,
+                width: stackModalHull.width + STACK_MODAL_EJECT_MARGIN * 2,
+                height: stackModalHull.height + STACK_MODAL_EJECT_MARGIN * 2,
+              }}
+            />
+          ) : null}
+          {stackModalVisibleEntities.map((entity, index) => {
+            const slot = stackModalLayout[entity.id] ?? {
+              x: viewportSize.width / 2 - 170,
+              y: viewportSize.height / 2 - 95,
+              scale: 1,
+            };
+            const drag = stackDrag?.entityId === entity.id ? stackDrag : null;
+            const collapsedX = fanOriginX + index * 6;
+            const collapsedY = fanOriginY + index * 6;
+            const baseX = stackModalExpanded ? slot.x : collapsedX;
+            const baseY = stackModalExpanded ? slot.y : collapsedY;
+            const dragX = drag ? drag.currentX - drag.pointerOffsetX : baseX;
+            const dragY = drag ? drag.currentY - drag.pointerOffsetY : baseY;
+            const rotation = stackModalExpanded
+              ? ((index % 2 === 0 ? -1 : 1) * 0.8)
+              : (index - (stackModalEntities.length - 1) / 2) * 1.6;
+            return (
+              <div
+                key={entity.id}
+                data-node-id={entity.id}
+                className={`${styles.stackFanCard} ${drag ? styles.stackFanDragging : ""} ${drag && stackModalEjectPreview ? styles.stackFanEjectArmed : ""}`}
+                style={{
+                  zIndex: 900 + index,
+                  transform: `translate(${dragX}px, ${dragY}px) rotate(${rotation}deg) scale(${slot.scale})`,
+                }}
+                ref={(el) => {
+                  if (!el) return;
+                  const cardEl = el.firstElementChild as HTMLElement | null;
+                  const h = cardEl?.offsetHeight ?? STACK_MODAL_CARD_H_ESTIMATE;
+                  setStackModalCardHeights((prev) => {
+                    const current = prev[entity.id];
+                    if (current && Math.abs(current - h) < 1) return prev;
+                    return { ...prev, [entity.id]: h };
+                  });
+                }}
+                onMouseDown={(event) => {
+                  event.stopPropagation();
+                  recordUndoBeforeMutation();
+                  const visibleHull = stackModal.orderedIds.slice(0, STACK_MODAL_MAX_ITEMS);
+                  stackDragHullOrderedIdsRef.current = visibleHull;
+                  stackModalOrderedIdsDuringDragRef.current = stackModal.orderedIds.slice();
+                  stackEjectTouchedOutsideRef.current = false;
+                  stackBlockLiveReorderRef.current = false;
+                  lastStackEjectPreviewRef.current = false;
+                  const nextStackDrag = {
+                    entityId: entity.id,
+                    stackId: stackModal.stackId,
+                    startX: event.clientX,
+                    startY: event.clientY,
+                    currentX: event.clientX,
+                    currentY: event.clientY,
+                    pointerOffsetX: event.clientX - baseX,
+                    pointerOffsetY: event.clientY - baseY,
+                    intent: "pending" as const,
+                  };
+                  stackDragRef.current = nextStackDrag;
+                  setStackDrag(nextStackDrag);
+                }}
+              >
+                {entity.kind === "content" ? (
+                  <ArchitecturalNodeCard
+                    id={entity.id}
+                    title={entity.title}
+                    width={entity.width}
+                    theme={entity.theme}
+                    tapeVariant={tapeVariantForTheme(entity.theme)}
+                    tapeRotation={entity.tapeRotation}
+                    bodyHtml={entity.bodyHtml}
+                    activeTool={activeTool}
+                    dragged={!!drag}
+                    selected={false}
+                    showTape={!entity.stackId}
+                    onBodyCommit={updateNodeBody}
+                    onExpand={handleNodeExpand}
+                  />
+                ) : (
+                  <ArchitecturalFolderCard
+                    id={entity.id}
+                    title={entity.title}
+                    itemCount={graph.spaces[entity.childSpaceId]?.entityIds.length ?? 0}
+                    dragOver={false}
+                    selected={false}
+                    onTitleCommit={(title) => renameFolder(entity.id, title)}
+                    onOpen={() => openFolder(entity.id)}
+                  />
+                )}
+              </div>
+            );
+          })}
+          {stackModalHiddenCount > 0 ? (
+            <div className={styles.stackModalOverflowBadge}>
+              +{stackModalHiddenCount} more in stack
+            </div>
+          ) : null}
+          {stackModalEjectCount > 0 ? (
+            <div className={styles.stackModalEjectBadge}>Removed {stackModalEjectCount}</div>
+          ) : null}
+          {stackDrag && stackModalEjectPreview ? (
+            <div className={styles.stackModalUnstackHint}>Release to unstack</div>
+          ) : null}
+        </div>
+      ) : null}
+      {stackModal ? (
+        <div className={styles.stackModal}>
           <div className={styles.stackModalCloseButtonWrap}>
             <ArchitecturalFocusCloseButton
-              label="Close"
-              variant="dark"
-              showIcon={false}
-              onClick={closeStackModal}
+              dirty={false}
+              onDone={closeStackModal}
+              onSave={closeStackModal}
+              onDiscard={closeStackModal}
             />
-          </div>
-          <div
-            className={styles.stackFanStage}
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) {
-                closeStackModal();
-              }
-            }}
-          >
-            {stackModalHull && stackDrag ? (
-              <div
-                className={`${styles.stackHullDropCue} ${stackModalEjectPreview ? styles.stackHullDropCueActive : ""}`}
-                style={{
-                  left: stackModalHull.left - STACK_MODAL_EJECT_MARGIN,
-                  top: stackModalHull.top - STACK_MODAL_EJECT_MARGIN,
-                  width: stackModalHull.width + STACK_MODAL_EJECT_MARGIN * 2,
-                  height: stackModalHull.height + STACK_MODAL_EJECT_MARGIN * 2,
-                }}
-              />
-            ) : null}
-            {stackModalVisibleEntities.map((entity, index) => {
-              const slot = stackModalLayout[entity.id] ?? {
-                x: viewportSize.width / 2 - 170,
-                y: viewportSize.height / 2 - 95,
-                scale: 1,
-              };
-              const drag = stackDrag?.entityId === entity.id ? stackDrag : null;
-              const collapsedX = fanOriginX + index * 6;
-              const collapsedY = fanOriginY + index * 6;
-              const baseX = stackModalExpanded ? slot.x : collapsedX;
-              const baseY = stackModalExpanded ? slot.y : collapsedY;
-              const dragX = drag ? drag.currentX - drag.pointerOffsetX : baseX;
-              const dragY = drag ? drag.currentY - drag.pointerOffsetY : baseY;
-              const rotation = stackModalExpanded
-                ? ((index % 2 === 0 ? -1 : 1) * 0.8)
-                : (index - (stackModalEntities.length - 1) / 2) * 1.6;
-              return (
-                <div
-                  key={entity.id}
-                  data-node-id={entity.id}
-                  className={`${styles.stackFanCard} ${drag ? styles.stackFanDragging : ""} ${drag && stackModalEjectPreview ? styles.stackFanEjectArmed : ""}`}
-                  style={{
-                    zIndex: 900 + index,
-                    transform: `translate(${dragX}px, ${dragY}px) rotate(${rotation}deg) scale(${slot.scale})`,
-                  }}
-                  ref={(el) => {
-                    if (!el) return;
-                    const cardEl = el.firstElementChild as HTMLElement | null;
-                    const h = cardEl?.offsetHeight ?? STACK_MODAL_CARD_H_ESTIMATE;
-                    setStackModalCardHeights((prev) => {
-                      const current = prev[entity.id];
-                      if (current && Math.abs(current - h) < 1) return prev;
-                      return { ...prev, [entity.id]: h };
-                    });
-                  }}
-                  onMouseDown={(event) => {
-                    event.stopPropagation();
-                    recordUndoBeforeMutation();
-                    setStackDrag({
-                      entityId: entity.id,
-                      stackId: stackModal.stackId,
-                      startX: event.clientX,
-                      startY: event.clientY,
-                      currentX: event.clientX,
-                      currentY: event.clientY,
-                      pointerOffsetX: event.clientX - baseX,
-                      pointerOffsetY: event.clientY - baseY,
-                      intent: "pending",
-                    });
-                  }}
-                >
-                  {entity.kind === "content" ? (
-                    <ArchitecturalNodeCard
-                      id={entity.id}
-                      title={entity.title}
-                      width={entity.width}
-                      theme={entity.theme}
-                      tapeVariant={tapeVariantForTheme(entity.theme)}
-                      tapeRotation={entity.tapeRotation}
-                      bodyHtml={entity.bodyHtml}
-                      activeTool={activeTool}
-                      dragged={!!drag}
-                      selected={false}
-                      showTape={!entity.stackId}
-                      onBodyCommit={updateNodeBody}
-                      onExpand={handleNodeExpand}
-                    />
-                  ) : (
-                    <ArchitecturalFolderCard
-                      id={entity.id}
-                      title={entity.title}
-                      itemCount={graph.spaces[entity.childSpaceId]?.entityIds.length ?? 0}
-                      dragOver={false}
-                      selected={false}
-                      onTitleCommit={(title) => renameFolder(entity.id, title)}
-                      onOpen={() => openFolder(entity.id)}
-                    />
-                  )}
-                </div>
-              );
-            })}
-            {stackModalHiddenCount > 0 ? (
-              <div className={styles.stackModalOverflowBadge}>
-                +{stackModalHiddenCount} more in stack
-              </div>
-            ) : null}
-            {stackModalEjectCount > 0 ? (
-              <div className={styles.stackModalEjectBadge}>Removed {stackModalEjectCount}</div>
-            ) : null}
-            {stackDrag && stackModalEjectPreview ? (
-              <div className={styles.stackModalUnstackHint}>Release to unstack</div>
-            ) : null}
           </div>
         </div>
       ) : null}
@@ -3601,7 +4113,16 @@ export function ArchitecturalCanvasApp({
               spellCheck={false}
               debounceMs={150}
               dataAttribute="data-focus-body-editor"
-              onCommit={(nextHtml) => setFocusBody(nextHtml)}
+              onCommit={(nextHtml) =>
+                setFocusBody(
+                  normalizeChecklistMarkup(nextHtml, {
+                    taskItem: styles.taskItem,
+                    taskCheckbox: styles.taskCheckbox,
+                    taskText: styles.taskText,
+                    done: styles.done,
+                  }),
+                )
+              }
             />
           </div>
         </div>
@@ -3612,6 +4133,9 @@ export function ArchitecturalCanvasApp({
             variant="editor"
             showFormatToolbar={!focusCodeTheme}
             showDocInsertCluster={!focusCodeTheme}
+            insertDocActions={dockInsertActions}
+            formatActions={dockFormatActions}
+            createDisabled
             onFormat={runFormat}
             onCreateNode={createNewNode}
             onUndo={undo}

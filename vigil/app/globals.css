@@ -567,6 +567,18 @@ a {
   border-color: var(--cmp-button-primary-border-default);
 }
 
+.vigil-btn[data-active="true"]:hover {
+  background: var(--cmp-button-primary-bg-hover);
+  color: var(--cmp-button-primary-fg-hover);
+  border-color: var(--cmp-button-primary-border-hover);
+}
+
+.vigil-btn[data-active="true"]:active {
+  background: var(--cmp-button-primary-bg-active);
+  color: var(--cmp-button-primary-fg-active);
+  border-color: var(--cmp-button-primary-border-active);
+}
+
 .vigil-btn[data-size="xs"] {
   --btn-height: var(--sys-control-height-xs);
   --btn-pad-x: var(--sys-control-pad-x-xs);

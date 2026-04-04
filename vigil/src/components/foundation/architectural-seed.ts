@@ -63,24 +63,24 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       y: 108,
       rotation: -3.1,
       width: 340,
-      theme: "task",
+      theme: "default",
       tapeRotation: -2.4,
       tapeVariant: "masking",
       bodyHtml: `
-        <div class="${tokens.taskItem} ${tokens.done}">
-          <div class="${tokens.taskCheckbox}"></div>
+        <div class="${tokens.taskItem} ${tokens.done}" contenteditable="false">
+          <div class="${tokens.taskCheckbox}" contenteditable="false"></div>
           <div class="${tokens.taskText}" contenteditable="true">Map Stain vents along the habitable ring</div>
         </div>
-        <div class="${tokens.taskItem} ${tokens.done}">
-          <div class="${tokens.taskCheckbox}"></div>
+        <div class="${tokens.taskItem} ${tokens.done}" contenteditable="false">
+          <div class="${tokens.taskCheckbox}" contenteditable="false"></div>
           <div class="${tokens.taskText}" contenteditable="true">Archive a false memory in Grimoire (new tab)</div>
         </div>
-        <div class="${tokens.taskItem}">
-          <div class="${tokens.taskCheckbox}"></div>
+        <div class="${tokens.taskItem}" contenteditable="false">
+          <div class="${tokens.taskCheckbox}" contenteditable="false"></div>
           <div class="${tokens.taskText}" contenteditable="true">Reconcile Builder output with Core Rules</div>
         </div>
-        <div class="${tokens.taskItem}">
-          <div class="${tokens.taskCheckbox}"></div>
+        <div class="${tokens.taskItem}" contenteditable="false">
+          <div class="${tokens.taskCheckbox}" contenteditable="false"></div>
           <div class="${tokens.taskText}" contenteditable="true">Escort datashard to terminus before curfew</div>
         </div>
       `,

@@ -18,6 +18,7 @@ import {
   TextStrikethrough,
   TextUnderline,
 } from "@phosphor-icons/react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import {
@@ -34,7 +35,6 @@ import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.cs
 import { cx } from "@/src/lib/cx";
 
 function formatIcon(command: string, value?: string): ReactNode {
-  if (command === "arch:codeBlock") return <Code size={18} />;
   if (command === "arch:checklist") return <CheckSquare size={18} />;
   if (command === "arch:insertImage") return <ImageIcon size={18} />;
   if (command === "insertHorizontalRule") return <Minus size={18} />;
@@ -60,7 +60,7 @@ function createIcon(nodeType: NodeTheme): ReactNode {
 /** In-document blocks (Dropbox Paper–style insert strip). Handled in `ArchitecturalCanvasApp` `runFormat`. */
 export const DEFAULT_DOC_INSERT_ACTIONS: DockFormatAction[] = [
   { id: "quote", label: "Quote", command: "formatBlock", value: "blockquote" },
-  { id: "codeBlock", label: "Code block", command: "arch:codeBlock" },
+  { id: "heading", label: "Heading", command: "formatBlock", value: "h1" },
   { id: "checklist", label: "Checklist", command: "arch:checklist" },
   { id: "insertImage", label: "Insert image", command: "arch:insertImage" },
   { id: "divider", label: "Divider", command: "insertHorizontalRule" },
@@ -73,7 +73,6 @@ export const DEFAULT_FORMAT_ACTIONS: DockFormatAction[] = [
   { id: "strikeThrough", label: "Strikethrough", command: "strikeThrough" },
   { id: "list", label: "Bulleted list", command: "insertUnorderedList" },
   { id: "numberedList", label: "Numbered list", command: "insertOrderedList" },
-  { id: "heading", label: "Heading", command: "formatBlock", value: "h1" },
 ];
 
 export const DEFAULT_CREATE_ACTIONS: DockCreateAction[] = [
@@ -89,6 +88,7 @@ export function ArchitecturalFormatToolbar({
   formatActions = DEFAULT_FORMAT_ACTIONS,
   showDocInsertCluster = true,
   actionTone = "glass",
+  activeBlockTag = "p",
   onFormat,
 }: {
   insertDocActions?: DockFormatAction[];
@@ -97,8 +97,24 @@ export function ArchitecturalFormatToolbar({
   showDocInsertCluster?: boolean;
   /** `card-dark` for solid black editor dock. */
   actionTone?: Extract<ArchitecturalButtonTone, "glass" | "card-dark">;
+  activeBlockTag?: "p" | "h1" | "h2" | "h3" | "blockquote";
   onFormat: (command: string, value?: string) => void;
 }) {
+  const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
+  const headingPickerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!headingMenuOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const t = event.target as Node | null;
+      if (!t || !headingPickerRef.current?.contains(t)) {
+        setHeadingMenuOpen(false);
+      }
+    };
+    window.addEventListener("pointerdown", onPointerDown, true);
+    return () => window.removeEventListener("pointerdown", onPointerDown, true);
+  }, [headingMenuOpen]);
+
   return (
     <div className={styles.formatToolbarWrap}>
       <div
@@ -116,21 +132,74 @@ export function ArchitecturalFormatToolbar({
             role="toolbar"
             aria-label="Insert blocks"
           >
-            {insertDocActions.map((action) => (
-              <ArchitecturalButton
-                key={action.id}
-                size="icon"
-                tone={actionTone}
-                iconOnly
-                title={action.label}
-                aria-label={action.label}
-                leadingIcon={formatIcon(action.command, action.value)}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  onFormat(action.command, action.value);
-                }}
-              />
-            ))}
+            {insertDocActions.map((action) => {
+              if (action.command === "formatBlock" && action.value === "h1") {
+                const headingOptions = [
+                  { label: "Body", value: "p" as const },
+                  { label: "H1", value: "h1" as const },
+                  { label: "H2", value: "h2" as const },
+                  { label: "H3", value: "h3" as const },
+                ];
+                return (
+                  <div key={action.id} className={styles.headingPicker} ref={headingPickerRef}>
+                    <ArchitecturalButton
+                      size="icon"
+                      tone={actionTone}
+                      active={action.active}
+                      iconOnly
+                      title={action.label}
+                      aria-label={action.label}
+                      disabled={action.disabled}
+                      leadingIcon={formatIcon(action.command, action.value)}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        if (action.disabled) return;
+                        setHeadingMenuOpen((open) => !open);
+                      }}
+                    />
+                    {headingMenuOpen ? (
+                      <div className={styles.headingPickerMenu} role="menu" aria-label="Heading levels">
+                        {headingOptions.map((opt) => (
+                          <ArchitecturalButton
+                            key={opt.value}
+                            size="menu"
+                            tone={actionTone}
+                            active={activeBlockTag === opt.value}
+                            title={opt.label}
+                            aria-label={opt.label}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              onFormat("formatBlock", opt.value);
+                              setHeadingMenuOpen(false);
+                            }}
+                          >
+                            {opt.label}
+                          </ArchitecturalButton>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }
+              return (
+                <ArchitecturalButton
+                  key={action.id}
+                  size="icon"
+                  tone={actionTone}
+                  active={action.active}
+                  iconOnly
+                  title={action.label}
+                  aria-label={action.label}
+                  disabled={action.disabled}
+                  leadingIcon={formatIcon(action.command, action.value)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    if (action.disabled) return;
+                    onFormat(action.command, action.value);
+                  }}
+                />
+              );
+            })}
           </div>
           <div
             className={`${styles.toolbarClusterSep} ${styles.toolbarClusterSepDock}`}
@@ -148,12 +217,15 @@ export function ArchitecturalFormatToolbar({
             key={action.id}
             size="icon"
             tone={actionTone}
+            active={action.active}
             iconOnly
             title={action.label}
             aria-label={action.label}
+            disabled={action.disabled}
             leadingIcon={formatIcon(action.command, action.value)}
             onMouseDown={(e) => {
               e.preventDefault();
+              if (action.disabled) return;
               onFormat(action.command, action.value);
             }}
           />
@@ -166,11 +238,13 @@ export function ArchitecturalFormatToolbar({
 export function ArchitecturalCreateMenu({
   actions,
   actionTone = "menu",
+  disabled = false,
   onCreateNode,
 }: {
   actions: DockCreateAction[];
   /** `card-dark` for solid black editor dock. */
   actionTone?: Extract<ArchitecturalButtonTone, "menu" | "card-dark">;
+  disabled?: boolean;
   onCreateNode: (type: NodeTheme) => void;
 }) {
   return (
@@ -187,6 +261,7 @@ export function ArchitecturalCreateMenu({
           iconOnly
           title={action.label}
           aria-label={`Create ${action.label}`}
+          disabled={disabled}
           leadingIcon={createIcon(action.nodeType)}
           onClick={() => onCreateNode(action.nodeType)}
         />
@@ -210,6 +285,8 @@ export function ArchitecturalBottomDock({
   createActions = DEFAULT_CREATE_ACTIONS,
   showFormatToolbar = true,
   showDocInsertCluster = true,
+  createDisabled = false,
+  activeBlockTag = "p",
 }: {
   /** `editor`: solid black panels + light icon controls (focus mode only). */
   variant?: ArchitecturalBottomDockVariant;
@@ -227,6 +304,8 @@ export function ArchitecturalBottomDock({
   /** When false, only history + create clusters show (canvas not in a text field). */
   showFormatToolbar?: boolean;
   showDocInsertCluster?: boolean;
+  createDisabled?: boolean;
+  activeBlockTag?: "p" | "h1" | "h2" | "h3" | "blockquote";
 }) {
   const isEditor = variant === "editor";
   const formatActionTone = isEditor ? "card-dark" : "glass";
@@ -240,6 +319,7 @@ export function ArchitecturalBottomDock({
           <ArchitecturalCreateMenu
             actions={createActions}
             actionTone={createActionTone}
+            disabled={createDisabled}
             onCreateNode={onCreateNode}
           />
         </div>
@@ -304,6 +384,7 @@ export function ArchitecturalBottomDock({
                 formatActions={formatActions}
                 showDocInsertCluster={showDocInsertCluster}
                 actionTone={formatActionTone}
+                activeBlockTag={activeBlockTag}
                 onFormat={onFormat}
               />
             </div>

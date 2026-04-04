@@ -93,6 +93,11 @@
   pointer-events: auto;
 }
 
+/* Stack modal: block all canvas/chrome hit-testing below fixed stack layers (avoids stray drags). */
+.viewportSurfaceReady.viewportStackModalOpen {
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .viewportSurface {
     transition: none;
@@ -301,26 +306,29 @@
   backdrop-filter: blur(2px);
 }
 
+/* Chrome only (close). Fan cards live in .stackFanStage as a shell sibling so hits don’t leak via nested flex. */
 .stackModal {
   position: fixed;
   inset: 0;
-  z-index: var(--layer-stack-modal);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  z-index: calc(var(--layer-stack-modal) + 1);
+  pointer-events: none;
 }
 
 .stackModalCloseButtonWrap {
   position: fixed;
   top: 20px;
   right: 24px;
-  z-index: calc(var(--layer-stack-modal) + 2);
+  z-index: calc(var(--layer-stack-modal) + 40);
+  pointer-events: auto;
 }
 
 .stackFanStage {
+  position: fixed;
+  inset: 0;
+  z-index: var(--layer-stack-modal);
   width: 100vw;
   height: 100vh;
-  position: relative;
+  box-sizing: border-box;
 }
 
 .stackFanCard {
@@ -788,7 +796,9 @@
 
 /* Empty state: keep a modest target for the icon + replace control. */
 .imageContainerPlaceholder {
-  min-height: 160px;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
+  background: var(--sys-color-black);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1792,40 +1802,12 @@
     border-color 0.24s ease;
 }
 
-.bottomDock .rootDockPanelSlotOpen .rootDockPanel:hover {
-  transform: translateY(-1px) scale(1);
-  box-shadow:
-    0 12px 36px var(--sem-color-shadow-38),
-    0 4px 12px var(--sem-color-shadow-28);
-}
-
-.bottomDockEditor .rootDockPanelSlotOpen .rootDockPanel:hover {
-  box-shadow:
-    0 14px 40px color-mix(in oklch, var(--sys-color-black) 58%, transparent),
-    0 4px 14px color-mix(in oklch, var(--sys-color-black) 38%, transparent);
-}
-
 /* Create cluster + panels inside collapsible slots (history / format). */
 .bottomDock .rootDockCluster > .rootDockPanel,
 .bottomDock .rootDockCluster > .rootDockPanelSlot .rootDockPanel {
   transition:
     transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.32s ease;
-}
-
-.bottomDock .rootDockCluster > .rootDockPanel:hover,
-.bottomDock .rootDockCluster > .rootDockPanelSlot .rootDockPanel:hover {
-  transform: translateY(-1px) scale(1);
-  box-shadow:
-    0 12px 36px var(--sem-color-shadow-38),
-    0 4px 12px var(--sem-color-shadow-28);
-}
-
-.bottomDockEditor .rootDockCluster > .rootDockPanel:hover,
-.bottomDockEditor .rootDockCluster > .rootDockPanelSlot .rootDockPanel:hover {
-  box-shadow:
-    0 14px 40px color-mix(in oklch, var(--sys-color-black) 58%, transparent),
-    0 4px 14px color-mix(in oklch, var(--sys-color-black) 38%, transparent);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -2034,12 +2016,6 @@
   .bottomDock .rootDockPanelSlot:not(.rootDockPanelSlotOpen) .rootDockPanel,
   .bottomDock .rootDockPanelSlotOpen .rootDockPanel {
     transition: none;
-  }
-
-  .bottomDock .rootDockPanelSlotOpen .rootDockPanel:hover,
-  .bottomDock .rootDockCluster > .rootDockPanel:hover,
-  .bottomDock .rootDockCluster > .rootDockPanelSlot .rootDockPanel:hover {
-    transform: none;
   }
 
   .bottomDock
@@ -2496,6 +2472,40 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* Document focus mode: keep scroll affordance but make it visually quiet. */
+.focusOverlay:not(.focusEditorDark) .focusSheet {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--sys-color-black) 20%, transparent) transparent;
+}
+
+.focusOverlay:not(.focusEditorDark) .focusSheet::-webkit-scrollbar {
+  width: 8px;
+}
+
+.focusOverlay:not(.focusEditorDark) .focusSheet::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.focusOverlay:not(.focusEditorDark) .focusSheet::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--sys-color-black) 18%, transparent);
+  border-radius: 999px;
+}
+
+.focusOverlay:not(.focusEditorDark) .focusSheet::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, var(--sys-color-black) 28%, transparent);
+}
+
+/* Dark media/code viewer: hide scrollbar chrome, keep scrolling behavior. */
+.focusOverlay.focusEditorDark .focusSheet {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.focusOverlay.focusEditorDark .focusSheet::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 .focusHeader {
   position: sticky;
   top: 0;
@@ -2603,7 +2613,7 @@
 }
 
 .focusBody p {
-  margin-bottom: 1.2em;
+  margin: 0;
 }
 
 .focusBody h1 {
@@ -2640,9 +2650,16 @@
 
 .focusBody blockquote {
   border-left: 2px solid var(--accent);
-  padding: 0.15em 0 0.15em 14px;
-  margin: 0.65em 0;
+  padding: 0.35em 0 0.35em 14px;
+  margin: 0;
   opacity: 0.85;
+}
+
+.focusBody p + p,
+.focusBody p + blockquote,
+.focusBody blockquote + p,
+.focusBody blockquote + blockquote {
+  margin-top: 0.95em;
 }
 
 .focusBody ul[data-arch-checklist="true"] {
