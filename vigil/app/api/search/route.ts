@@ -9,6 +9,66 @@ import {
   searchItemsSemantic,
 } from "@/src/lib/spaces";
 
+const MIN_SEMANTIC_QUERY_LENGTH = 4;
+const HYBRID_FTS_SHORT_CIRCUIT_LIMIT = 12;
+const EMBEDDING_CACHE_TTL_MS = 10 * 60 * 1000;
+const EMBEDDING_CACHE_MAX = 200;
+
+const queryEmbeddingCache = new Map<
+  string,
+  { vector: number[]; expiresAt: number }
+>();
+const inFlightEmbeddings = new Map<string, Promise<number[]>>();
+
+function pruneEmbeddingCache(now: number) {
+  for (const [k, v] of queryEmbeddingCache) {
+    if (v.expiresAt <= now) queryEmbeddingCache.delete(k);
+  }
+  while (queryEmbeddingCache.size > EMBEDDING_CACHE_MAX) {
+    const oldestKey = queryEmbeddingCache.keys().next().value as string | undefined;
+    if (!oldestKey) break;
+    queryEmbeddingCache.delete(oldestKey);
+  }
+}
+
+async function getQueryEmbedding(openai: OpenAI, query: string): Promise<number[] | null> {
+  const key = query.trim().toLowerCase();
+  if (!key) return null;
+  const now = Date.now();
+  const cached = queryEmbeddingCache.get(key);
+  if (cached && cached.expiresAt > now) {
+    return cached.vector;
+  }
+  queryEmbeddingCache.delete(key);
+
+  const existingInFlight = inFlightEmbeddings.get(key);
+  if (existingInFlight) {
+    return existingInFlight;
+  }
+
+  const request = (async () => {
+    const emb = await openai.embeddings.create({
+      model: "text-embedding-3-small",
+      input: query.slice(0, 8000),
+    });
+    const vector = emb.data[0]?.embedding;
+    if (!vector?.length) return [];
+    pruneEmbeddingCache(Date.now());
+    queryEmbeddingCache.set(key, {
+      vector,
+      expiresAt: Date.now() + EMBEDDING_CACHE_TTL_MS,
+    });
+    return vector;
+  })();
+
+  inFlightEmbeddings.set(key, request);
+  try {
+    return await request;
+  } finally {
+    inFlightEmbeddings.delete(key);
+  }
+}
+
 export async function GET(req: Request) {
   const db = tryGetDb();
   if (!db) {
@@ -36,6 +96,27 @@ export async function GET(req: Request) {
     return Response.json({ ok: true, items: rows.map(rowToCanvasItem), mode: "fts" });
   }
 
+  if (mode === "hybrid") {
+    const ftsRows = await searchItemsFTS(db, spaceId, q);
+    if (ftsRows.length >= HYBRID_FTS_SHORT_CIRCUIT_LIMIT) {
+      return Response.json({
+        ok: true,
+        items: ftsRows.map(rowToCanvasItem),
+        mode: "hybrid",
+      });
+    }
+  }
+
+  if (q.length < MIN_SEMANTIC_QUERY_LENGTH) {
+    const rows = await searchItemsFTS(db, spaceId, q);
+    return Response.json({
+      ok: true,
+      items: rows.map(rowToCanvasItem),
+      mode,
+      note: `Semantic embedding skipped for short query (<${MIN_SEMANTIC_QUERY_LENGTH} chars)`,
+    });
+  }
+
   const key = process.env.OPENAI_API_KEY;
   if (!key) {
     return Response.json(
@@ -50,11 +131,7 @@ export async function GET(req: Request) {
   }
 
   const openai = new OpenAI({ apiKey: key });
-  const emb = await openai.embeddings.create({
-    model: "text-embedding-3-small",
-    input: q.slice(0, 8000),
-  });
-  const vector = emb.data[0]?.embedding;
+  const vector = await getQueryEmbedding(openai, q);
   if (!vector?.length) {
     return Response.json(
       { ok: false, error: "Embedding request failed", items: [], mode },

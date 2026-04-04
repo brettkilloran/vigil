@@ -103,10 +103,11 @@ export async function PATCH(
     .where(eq(items.id, itemId))
     .returning();
 
-  const contentDirty =
-    p.title !== undefined ||
-    p.contentText !== undefined ||
-    p.contentJson !== undefined;
+  const titleChanged =
+    p.title !== undefined && p.title !== existing.title;
+  const contentTextChanged =
+    p.contentText !== undefined && p.contentText !== existing.contentText;
+  const contentDirty = titleChanged || contentTextChanged;
   if (contentDirty && row) {
     scheduleItemEmbeddingRefresh(db, row);
   }
