@@ -1,4 +1,4 @@
-const VIGIL_ITEM_HREF = /^vigil:item:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+const HEARTGARDEN_ITEM_HREF = /^vigil:item:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
 /** Walk TipTap/ProseMirror JSON for link marks with href `vigil:item:<uuid>`. */
 export function extractVigilItemLinkTargets(doc: unknown): string[] {
@@ -13,7 +13,7 @@ export function extractVigilItemLinkTargets(doc: unknown): string[] {
         if (mark.type !== "link") continue;
         const attrs = mark.attrs as Record<string, unknown> | undefined;
         const href = typeof attrs?.href === "string" ? attrs.href : "";
-        const match = VIGIL_ITEM_HREF.exec(href);
+        const match = HEARTGARDEN_ITEM_HREF.exec(href);
         if (match) out.add(match[1]!.toLowerCase());
       }
     }

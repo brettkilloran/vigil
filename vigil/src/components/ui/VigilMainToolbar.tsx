@@ -25,9 +25,9 @@ import {
 import { Button } from "@/src/components/ui/Button";
 import type { VigilColorScheme } from "@/src/hooks/use-vigil-theme";
 import {
-  VIGIL_CHROME_ICON,
-  VIGIL_GLASS_PANEL,
-  VIGIL_TOOLBAR_DIVIDER,
+  HEARTGARDEN_CHROME_ICON,
+  HEARTGARDEN_GLASS_PANEL,
+  HEARTGARDEN_TOOLBAR_DIVIDER,
 } from "@/src/lib/vigil-ui-classes";
 import type { ItemType } from "@/src/stores/canvas-types";
 
@@ -106,7 +106,7 @@ export function VigilMainToolbar({
       style={{ transform: `translateY(${springY}px)` }}
     >
       <div
-        className={`pointer-events-auto flex flex-col gap-3 p-3 ${VIGIL_GLASS_PANEL}`}
+        className={`pointer-events-auto flex flex-col gap-3 p-3 ${HEARTGARDEN_GLASS_PANEL}`}
       >
         <div className="flex flex-wrap items-center gap-2">
           <div
@@ -117,10 +117,10 @@ export function VigilMainToolbar({
                 : "Add NEON_DATABASE_URL for cloud sync"
             }
           >
-            <SyncIcon className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+            <SyncIcon className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             <span className="select-none">{syncLabel}</span>
           </div>
-          <span className={VIGIL_TOOLBAR_DIVIDER} />
+          <span className={HEARTGARDEN_TOOLBAR_DIVIDER} />
           <Button
             size="md"
             variant="neutral"
@@ -128,7 +128,7 @@ export function VigilMainToolbar({
             title="Align items to neighbors when dragging"
             onClick={onToggleSnap}
           >
-            <MagnetStraight className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+            <MagnetStraight className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             <span>Snap {snapEnabled ? "on" : "off"}</span>
           </Button>
           <Button
@@ -138,7 +138,7 @@ export function VigilMainToolbar({
             title="Color theme"
             onClick={onCycleTheme}
           >
-            <Moon className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+            <Moon className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             <span>{themeLabel(preference)}</span>
           </Button>
         </div>
@@ -161,19 +161,19 @@ export function VigilMainToolbar({
                 </select>
               </label>
               <Button size="md" variant="neutral" tone="glass" onClick={onNewSpace}>
-                <FolderPlus className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+                <FolderPlus className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
                 <span>New space</span>
               </Button>
-              <span className={VIGIL_TOOLBAR_DIVIDER} />
+              <span className={HEARTGARDEN_TOOLBAR_DIVIDER} />
             </>
           ) : null}
 
           <Button size="md" variant="neutral" tone="glass" onClick={() => void createItemAt({ x: 120, y: 120 }, "note")}>
-            <FileText className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+            <FileText className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             <span>Note</span>
           </Button>
           <Button size="md" variant="neutral" tone="glass" onClick={() => void createItemAt({ x: 160, y: 160 }, "sticky")}>
-            <NotePencil className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+            <NotePencil className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             <span>Sticky</span>
           </Button>
           <Button
@@ -183,7 +183,7 @@ export function VigilMainToolbar({
             title="Standalone checklist card"
             onClick={() => void createItemAt({ x: 200, y: 120 }, "checklist")}
           >
-            <ListChecks className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+            <ListChecks className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             <span>Checklist</span>
           </Button>
           <Button
@@ -193,7 +193,7 @@ export function VigilMainToolbar({
             title="Save a URL with preview"
             onClick={() => void createItemAt({ x: 240, y: 140 }, "webclip")}
           >
-            <LinkSimple className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+            <LinkSimple className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             <span>Web clip</span>
           </Button>
           <Button
@@ -203,26 +203,26 @@ export function VigilMainToolbar({
             title="Place an image on the canvas"
             onClick={() => imagePickInputRef.current?.click()}
           >
-            <ImageSquare className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+            <ImageSquare className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             <span>Image</span>
           </Button>
           <Button size="md" variant="neutral" tone="glass" onClick={() => void onNewFolder()}>
-            <FolderPlus className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+            <FolderPlus className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             <span>Folder</span>
           </Button>
 
-          <span className={VIGIL_TOOLBAR_DIVIDER} />
+          <span className={HEARTGARDEN_TOOLBAR_DIVIDER} />
 
           <Button size="md" variant="neutral" tone="glass" onClick={exportJson}>
-            <DownloadSimple className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+            <DownloadSimple className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             <span>Export</span>
           </Button>
           <Button size="md" variant="neutral" tone="glass" onClick={() => importInputRef.current?.click()}>
-            <UploadSimple className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+            <UploadSimple className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             <span>Import</span>
           </Button>
 
-          <span className={VIGIL_TOOLBAR_DIVIDER} />
+          <span className={HEARTGARDEN_TOOLBAR_DIVIDER} />
 
           <Button
             size="md"
@@ -231,11 +231,11 @@ export function VigilMainToolbar({
             isActive={scratchPadOpen}
             onClick={onToggleScratch}
           >
-            <Notebook className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+            <Notebook className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             <span>Scratch</span>
           </Button>
           <Button size="md" variant="neutral" tone="glass" onClick={onOpenSearch}>
-            <MagnifyingGlass className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+            <MagnifyingGlass className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             <span>Search ({modKeys.search})</span>
           </Button>
           <Button
@@ -245,7 +245,7 @@ export function VigilMainToolbar({
             title="Notes tagged Event, sorted by metadata date"
             onClick={onOpenTimeline}
           >
-            <CalendarDots className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+            <CalendarDots className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             <span>Timeline</span>
           </Button>
           {syncMode === "cloud" && activeSpaceId ? (
@@ -256,7 +256,7 @@ export function VigilMainToolbar({
               title="Items and item_links in this space"
               onClick={onOpenGraph}
             >
-              <Graph className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+              <Graph className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
               <span>Graph</span>
             </Button>
           ) : null}

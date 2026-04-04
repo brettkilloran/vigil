@@ -1,8 +1,8 @@
 {
-  "name": "vigil",
+  "name": "heartgarden",
   "version": "0.1.0",
   "private": true,
-  "description": "VIGIL — infinite canvas for solo TTRPG worldbuilding",
+  "description": "heartgarden — infinite canvas for solo TTRPG worldbuilding",
   "scripts": {
     "dev": "next dev",
     "dev:app": "next dev --hostname 127.0.0.1 --port 3000",

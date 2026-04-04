@@ -1,6 +1,6 @@
 # Cursor workspace
 
-The **VIGIL** Next.js app lives in **`vigil/`**. Run the dev server from that folder so it binds to port **3000**:
+The **heartgarden** Next.js app lives in **`vigil/`**. Run the dev server from that folder so it binds to port **3000**:
 
 ```bash
 cd vigil

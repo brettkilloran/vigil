@@ -1,6 +1,6 @@
-# VIGIL — Engineering strategy (living)
+# heartgarden — Engineering strategy (living)
 
-This file is the **short bridge** between the repo today and the full product spec. The spec is **`docs/VIGIL_MASTER_PLAN.md`** (canonical copy of the user’s master document).
+This file is the **short bridge** between the repo today and the full product spec. The spec is **`docs/HEARTGARDEN_MASTER_PLAN.md`** (canonical copy of the user’s master document).
 
 ## Review summary (master plan)
 
@@ -57,7 +57,7 @@ We **adopt the master plan as source of truth** for architecture and phases. The
 
 ## For agents / contributors
 
-1. Read **`docs/VIGIL_MASTER_PLAN.md`** for visuals, gestures, springs, and phase detail.
+1. Read **`docs/HEARTGARDEN_MASTER_PLAN.md`** for visuals, gestures, springs, and phase detail.
 2. Prefer code that follows the custom-canvas architecture; **tldraw is gone** from this repo.
 3. **Zustand:** Subscribe to **stable references** from the store (e.g. `s.items`). Use `useMemo` to derive `Object.values(items)` in the component. Do **not** use selectors that allocate a new array/object every render.
 4. When touching schema, align migrations with **`src/db/schema.ts`** and the master plan (stacks, search, embeddings, links).

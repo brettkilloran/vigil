@@ -14,7 +14,7 @@ import {
 
 import { Button } from "@/src/components/ui/Button";
 import { getActiveTipTapEditor } from "@/src/lib/tiptap-active-bridge";
-import { VIGIL_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
+import { HEARTGARDEN_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
 import type { ItemType } from "@/src/stores/canvas-types";
 
 export function CanvasBottomDock({
@@ -37,7 +37,7 @@ export function CanvasBottomDock({
   return (
     <div className="pointer-events-none fixed bottom-8 left-1/2 z-[800] -translate-x-1/2">
       <div
-        className={`pointer-events-auto flex items-center gap-2 px-2 py-2 ${VIGIL_GLASS_PANEL}`}
+        className={`pointer-events-auto flex items-center gap-2 px-2 py-2 ${HEARTGARDEN_GLASS_PANEL}`}
       >
         <div className="flex items-center gap-1 pr-1">
           <Button

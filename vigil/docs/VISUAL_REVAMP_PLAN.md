@@ -1,16 +1,16 @@
-# VIGIL — Visual revamp plan (wholesale polish)
+# heartgarden — Visual revamp plan (wholesale polish)
 
 **Goal:** Move from “wireframe / programmer UI” to a cohesive, Spatial-inspired surface: readable hierarchy, soft contrast, depth, consistent radii, and chrome that reads as **buttons** and **panels**, not floating text.
 
-**Benchmark:** `docs/VIGIL_MASTER_PLAN.md` → Visual Design Bible + Typography + Phase 6–7 tasks.
+**Benchmark:** `docs/HEARTGARDEN_MASTER_PLAN.md` → Visual Design Bible + Typography + Phase 6–7 tasks.
 
 ### Vercel spike (landed)
 
 **Done:** Geist Sans + Geist Mono (UI / code), Lora for `.ProseMirror` H1/H2 only; layered neutral tokens (`--vigil-card-bg`, `--vigil-card-border`, `--vigil-card-header-bg`, `--vigil-folder-tab-bg`, warm `--vigil-canvas`); cards use tokens in `CanvasItemView`; Spatial-style whisper shadows + folder tab/sheen + optional folder tint; flat canvas surface; TipTap inset format bar + card header tokens.
 
-**Wholesale revamp (in-scope) — done:** A–E from §8: tokens/cards, TipTap chrome + padding, **`VigilMainToolbar`** (Lucide + grouping), dot grid + resize handles + context menu icons, **`CommandPalette`** / **`ScratchPad`** / **`LinkGraphOverlay`** header parity, **`BacklinksPanel`** + **`EntityTypeBar`** + **`TimelinePanel`** padding and Lucide headers, shared **`VIGIL_CHROME_ICON`** / **`VIGIL_ICON_GHOST_BTN`**.
+**Wholesale revamp (in-scope) — done:** A–E from §8: tokens/cards, TipTap chrome + padding, **`VigilMainToolbar`** (Lucide + grouping), dot grid + resize handles + context menu icons, **`CommandPalette`** / **`ScratchPad`** / **`LinkGraphOverlay`** header parity, **`BacklinksPanel`** + **`EntityTypeBar`** + **`TimelinePanel`** padding and Lucide headers, shared **`HEARTGARDEN_CHROME_ICON`** / **`HEARTGARDEN_ICON_GHOST_BTN`**.
 
-**Spatial reference (local bible):** Keep a copy of **`spatial_reference_bible.md`** (from the Spatial.app extraction) beside the repo or under `docs/` — it lists Swift modules, spring names, typography tokens, and icon inventory that map to **`docs/VIGIL_MASTER_PLAN.md` §4 (Visual Design Bible)**. VIGIL intentionally diverges where the web stack differs (e.g. Geist vs Eina, no Display P3 requirement), but **canvas field, folder tab + sheen, whisper shadows, and flat canvas** should track that document.
+**Spatial reference (local bible):** Keep a copy of **`spatial_reference_bible.md`** (from the Spatial.app extraction) beside the repo or under `docs/` — it lists Swift modules, spring names, typography tokens, and icon inventory that map to **`docs/HEARTGARDEN_MASTER_PLAN.md` §4 (Visual Design Bible)**. heartgarden intentionally diverges where the web stack differs (e.g. Geist vs Eina, no Display P3 requirement), but **canvas field, folder tab + sheen, whisper shadows, and flat canvas** should track that document.
 
 **Optional later (not blocking “done”):** Spring-tuned motion matching `spatial_reference_bible.md` §6; full type-scale audit; flower picker (§9); folder item counts when child-space items are queryable on canvas.
 
@@ -22,8 +22,8 @@
 |--------|-------------------------|
 | Stark white cards on near-black canvas | `CanvasItemView` sets note/checklist **`background: #fff`** while canvas uses `--vigil-canvas` (`#0c0d11` dark). No **card-surface** token tied to theme. |
 | Flat / harsh chrome | Addressed: **`VigilMainToolbar`** + Lucide; legacy diagnosis referred to pre-refactor `VigilApp` toolbar. |
-| TipTap bar looks pasted on | Addressed: Lucide icon buttons, group dividers, `VIGIL_EDITOR_TOOLBAR_ICON_BTN`, extra `.ProseMirror` padding—further “inset pill” polish optional. |
-| Panels readable but cramped | Addressed: **`p-3`**, wider Links panel, **`VIGIL_METADATA_LABEL`** sections, focus rings on list rows; further type-scale audit optional. |
+| TipTap bar looks pasted on | Addressed: Lucide icon buttons, group dividers, `HEARTGARDEN_EDITOR_TOOLBAR_ICON_BTN`, extra `.ProseMirror` padding—further “inset pill” polish optional. |
+| Panels readable but cramped | Addressed: **`p-3`**, wider Links panel, **`HEARTGARDEN_METADATA_LABEL`** sections, focus rings on list rows; further type-scale audit optional. |
 | Canvas feels empty / void | Addressed per **Spatial bible**: **flat warm/cool neutral field** — dot grid removed; calm empty canvas. |
 
 ---
@@ -43,7 +43,7 @@
 
 - Cards: `rounded-xl` or `rounded-2xl` (match panels).
 - Inner editor: `rounded-b-*` aligned with card.
-- Toolbar capsule: same family as `VIGIL_GLASS_PANEL`.
+- Toolbar capsule: same family as `HEARTGARDEN_GLASS_PANEL`.
 
 **2.3 Elevation** — extend `src/lib/card-shadows.ts`:
 
@@ -84,7 +84,7 @@
 - Replace raw `B` / `I` with **Lucide** (`Bold`, `Italic`, etc.) + `aria-label` + tooltip titles (keep mod key hints).
 - Toolbar container: **rounded** inner container, `backdrop-blur` or solid `--vigil-elevated`, **vertical rhythm** (`gap-1`, `py-2`).
 - Optional: **divider** components between groups (marks, lists, headings).
-- Wiki link / code buttons: icons + consistent pressed state (`VIGIL_EDITOR_TOOLBAR_BTN_ON` refined).
+- Wiki link / code buttons: icons + consistent pressed state (`HEARTGARDEN_EDITOR_TOOLBAR_BTN_ON` refined).
 
 **globals.css** `.ProseMirror`:
 
@@ -94,7 +94,7 @@
 
 ## 5. Main toolbar & floating chrome
 
-**File:** `app/_components/VigilApp.tsx` (toolbar block using `VIGIL_GLASS_PANEL`)
+**File:** `app/_components/VigilApp.tsx` (toolbar block using `HEARTGARDEN_GLASS_PANEL`)
 
 - **Group** actions: Create (Note, Sticky, Folder) | Data (Export, Import) | Panels (Scratch, Search, Timeline, Graph) | Settings row (snap, theme, space).
 - Use **horizontal dividers** (`border-t` + `gap`) or nested glass **sub-panels**.
@@ -103,8 +103,8 @@
 
 **Shared classes:** evolve `src/lib/vigil-ui-classes.ts`:
 
-- `VIGIL_TOOLBAR_ICON_BTN` — square-ish, icon-centered, hover ring.
-- Keep `VIGIL_CHIP_BTN` for secondary text actions or demote to “compact chip” variant.
+- `HEARTGARDEN_TOOLBAR_ICON_BTN` — square-ish, icon-centered, hover ring.
+- Keep `HEARTGARDEN_CHIP_BTN` for secondary text actions or demote to “compact chip” variant.
 
 **Also revamp:** `ContextMenu.tsx`, `CommandPalette.tsx`, `ScratchPad`, `LinkGraphOverlay` — **done** (Lucide + spacing + focus rings where needed).
 
@@ -120,7 +120,7 @@
 
 ## 7. Side panels (Links, TTRPG, Timeline)
 
-- **Landed:** `p-3`, Links `max-w` 300px, section titles via `VIGIL_METADATA_LABEL`, list-row / meta **focus rings**; timeline uses ghost dismiss like scratch.
+- **Landed:** `p-3`, Links `max-w` 300px, section titles via `HEARTGARDEN_METADATA_LABEL`, list-row / meta **focus rings**; timeline uses ghost dismiss like scratch.
 
 ---
 

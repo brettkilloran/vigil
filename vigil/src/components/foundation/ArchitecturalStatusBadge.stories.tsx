@@ -9,7 +9,7 @@ const meta: Meta<typeof ArchitecturalStatusBadge> = {
   component: ArchitecturalStatusBadge,
   args: {
     showPulse: true,
-    label: "ARCH_ENV",
+    label: "heartgarden",
   },
   argTypes: {
     showPulse: { control: "boolean" },
@@ -17,7 +17,7 @@ const meta: Meta<typeof ArchitecturalStatusBadge> = {
   },
   decorators: [
     (Story) => (
-      <div style={{ background: "#0a0a0c", padding: 20 }}>
+      <div style={{ background: "#0a0a0a", padding: 20 }}>
         <Story />
       </div>
     ),

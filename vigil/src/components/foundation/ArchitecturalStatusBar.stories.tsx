@@ -11,7 +11,7 @@ const meta: Meta<typeof ArchitecturalStatusBar> = {
     centerWorldX: 0,
     centerWorldY: 0,
     scale: 1,
-    envLabel: "ARCH_ENV",
+    envLabel: "heartgarden",
     showPulse: true,
     zoomPrefixIcon: true,
   },
@@ -33,7 +33,7 @@ const meta: Meta<typeof ArchitecturalStatusBar> = {
           position: "relative",
           width: "100vw",
           height: "100vh",
-          background: "#0a0a0c",
+          background: "#0a0a0a",
         }}
       >
         <Story />

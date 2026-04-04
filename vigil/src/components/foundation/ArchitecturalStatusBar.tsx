@@ -7,7 +7,7 @@ import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.cs
 
 export function ArchitecturalStatusBadge({
   showPulse = true,
-  label = "ARCH_ENV",
+  label = "heartgarden",
 }: {
   showPulse?: boolean;
   label?: string;
@@ -39,7 +39,7 @@ export function ArchitecturalStatusBar({
   centerWorldX,
   centerWorldY,
   scale,
-  envLabel = "ARCH_ENV",
+  envLabel = "heartgarden",
   showPulse = true,
   zoomPrefixIcon = true,
 }: {

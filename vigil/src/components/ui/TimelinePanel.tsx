@@ -5,7 +5,7 @@ import { useMemo } from "react";
 
 import { Button } from "@/src/components/ui/Button";
 import {
-  VIGIL_GLASS_PANEL,
+  HEARTGARDEN_GLASS_PANEL,
 } from "@/src/lib/vigil-ui-classes";
 import { useCanvasStore } from "@/src/stores/canvas-store";
 import type { CanvasItem } from "@/src/stores/canvas-types";
@@ -44,7 +44,7 @@ export function TimelinePanel({
 
   return (
     <div
-      className={`pointer-events-auto fixed bottom-3 left-1/2 z-[900] max-h-[min(40vh,320px)] w-[min(96vw,420px)] -translate-x-1/2 overflow-hidden p-3 ${VIGIL_GLASS_PANEL}`}
+      className={`pointer-events-auto fixed bottom-3 left-1/2 z-[900] max-h-[min(40vh,320px)] w-[min(96vw,420px)] -translate-x-1/2 overflow-hidden p-3 ${HEARTGARDEN_GLASS_PANEL}`}
       role="dialog"
       aria-label="Event timeline"
     >

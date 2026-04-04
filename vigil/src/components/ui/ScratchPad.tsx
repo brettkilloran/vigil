@@ -6,7 +6,7 @@ import { useState } from "react";
 
 import { Button } from "@/src/components/ui/Button";
 import {
-  VIGIL_GLASS_PANEL,
+  HEARTGARDEN_GLASS_PANEL,
 } from "@/src/lib/vigil-ui-classes";
 
 export function ScratchPad({
@@ -31,7 +31,7 @@ export function ScratchPad({
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: 28, opacity: 0 }}
           transition={{ type: "spring", damping: 26, stiffness: 320 }}
-          className={`fixed bottom-4 right-4 z-[900] w-[min(100vw-2rem,380px)] p-3.5 shadow-xl ${VIGIL_GLASS_PANEL}`}
+          className={`fixed bottom-4 right-4 z-[900] w-[min(100vw-2rem,380px)] p-3.5 shadow-xl ${HEARTGARDEN_GLASS_PANEL}`}
         >
           <div className="mb-2.5 flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2 text-sm font-semibold tracking-tight text-[var(--vigil-label)]">

@@ -65,7 +65,7 @@ export async function POST(req: Request) {
       signal: ctrl.signal,
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (compatible; VIGIL-Webclip/1.0; +https://github.com)",
+          "Mozilla/5.0 (compatible; heartgarden-Webclip/1.0; +https://github.com)",
         Accept: "text/html,application/xhtml+xml",
       },
       redirect: "follow",

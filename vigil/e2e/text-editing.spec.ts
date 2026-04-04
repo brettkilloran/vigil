@@ -6,7 +6,7 @@ test.describe("text editing hardening", () => {
   test.beforeEach(async ({ page }) => {
     await prepDemoSession(page);
     await page.goto("/");
-    await expect(page.getByText("ARCH_ENV")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("heartgarden")).toBeVisible({ timeout: 30_000 });
   });
 
   test("keeps caret anchored in node body while typing", async ({ page }) => {

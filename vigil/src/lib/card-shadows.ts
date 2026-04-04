@@ -1,11 +1,11 @@
 /** Card elevation — architectural dark canvas, light cards. */
 
 const REST =
-  "0 4px 12px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.3)";
+  "var(--sem-shadow-md), var(--sem-shadow-sm)";
 const SELECTED =
-  "0 0 0 2px var(--vigil-snap), 0 4px 12px rgba(0,0,0,0.25), 0 1px 2px rgba(0,0,0,0.3)";
+  "0 0 0 2px var(--vigil-snap), 0 4px 12px color-mix(in srgb, var(--sys-color-black) 25%, transparent), var(--sem-shadow-sm)";
 const LIFT =
-  "0 20px 40px rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.3)";
+  "var(--sem-shadow-xl), 0 8px 16px color-mix(in srgb, var(--sys-color-black) 30%, transparent)";
 
 export function cardBoxShadow(opts: {
   selected: boolean;

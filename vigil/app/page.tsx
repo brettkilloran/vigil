@@ -16,10 +16,10 @@ export default function Home() {
             alignItems: "center",
             justifyContent: "center",
             fontFamily: "system-ui, sans-serif",
-            color: "var(--vigil-muted, #555)",
+            color: "var(--vigil-muted)",
           }}
         >
-          Loading VIGIL…
+          Loading heartgarden…
         </div>
       }
     >

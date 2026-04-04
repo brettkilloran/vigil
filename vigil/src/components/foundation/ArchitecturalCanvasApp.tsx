@@ -37,6 +37,7 @@ const STACK_MODAL_CARD_H_ESTIMATE = 420;
 const STACK_MODAL_GAP = 24;
 const STACK_MODAL_PADDING = 28;
 const STACK_MODAL_EJECT_MARGIN = 24;
+const STACK_CLICK_SUPPRESS_DRAG_PX = 6;
 
 type ArchitecturalCanvasScenario = "default" | "nested" | "corrupt";
 
@@ -44,9 +45,7 @@ const ROOT_SPACE_ID = "root";
 
 function tapeVariantForTheme(theme: ContentTheme): TapeVariant {
   if (theme === "code") return "dark";
-  if (theme === "task") return "masking";
-  if (theme === "media") return "clear";
-  return "masking";
+  return "clear";
 }
 
 function shallowCloneGraph(graph: CanvasGraph): CanvasGraph {
@@ -225,8 +224,8 @@ export function ArchitecturalCanvasApp({
     startY: number;
     currentX: number;
     currentY: number;
-    originCardX: number;
-    originCardY: number;
+    pointerOffsetX: number;
+    pointerOffsetY: number;
     intent: "pending" | "reorder";
   } | null>(null);
   const [stackFocusBoundsById, setStackFocusBoundsById] = useState<
@@ -250,6 +249,13 @@ export function ArchitecturalCanvasApp({
   const spacePanRef = useRef(false);
   const idCounterRef = useRef(2000);
   const commitTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const stackPointerDragRef = useRef<{
+    stackId: string;
+    startX: number;
+    startY: number;
+    moved: boolean;
+  } | null>(null);
+  const suppressStackOpenRef = useRef<{ stackId: string; expiresAt: number } | null>(null);
 
   const closeStackModal = useCallback(() => {
     setStackDrag(null);
@@ -581,6 +587,7 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   const normalizeStack = useCallback((stackId: string, snapshot: CanvasGraph): CanvasGraph => {
+    if (!snapshot?.entities) return snapshot;
     const entities = Object.values(snapshot.entities)
       .filter((entity) => entity.stackId === stackId)
       .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0));
@@ -921,7 +928,7 @@ export function ArchitecturalCanvasApp({
         <div class="${styles.mediaPlaceholder}">
           <span>Image Placeholder</span>
         </div>
-        <div contenteditable="true" style="font-size: 13px; color: #555;">Caption...</div>
+        <div contenteditable="true" style="font-size: 13px; color: var(--sys-color-neutral-700);">Caption...</div>
       `;
     }
 
@@ -1027,7 +1034,46 @@ export function ArchitecturalCanvasApp({
             if (!targetId || draggedGroup.includes(targetId)) return;
             const targetEntity = graph.entities[targetId];
             if (!targetEntity || targetEntity.kind !== "content") return;
-            const rect = targetEl.getBoundingClientRect();
+            let rect = targetEl.getBoundingClientRect();
+            if (targetEl.dataset.stackTopId) {
+              // Use the visual stack layer hull instead of container box to keep
+              // stack-hit testing aligned with what users see.
+              const layers = Array.from(
+                targetEl.querySelectorAll<HTMLElement>("[data-stack-layer='true']"),
+              );
+              if (layers.length > 0) {
+                let minX = Number.POSITIVE_INFINITY;
+                let minY = Number.POSITIVE_INFINITY;
+                let maxX = Number.NEGATIVE_INFINITY;
+                let maxY = Number.NEGATIVE_INFINITY;
+                layers.forEach((layer) => {
+                  const layerRect = layer.getBoundingClientRect();
+                  minX = Math.min(minX, layerRect.left);
+                  minY = Math.min(minY, layerRect.top);
+                  maxX = Math.max(maxX, layerRect.right);
+                  maxY = Math.max(maxY, layerRect.bottom);
+                });
+                if (
+                  Number.isFinite(minX) &&
+                  Number.isFinite(minY) &&
+                  Number.isFinite(maxX) &&
+                  Number.isFinite(maxY)
+                ) {
+                  const pad = 10;
+                  rect = {
+                    left: minX - pad,
+                    top: minY - pad,
+                    right: maxX + pad,
+                    bottom: maxY + pad,
+                    width: maxX - minX + pad * 2,
+                    height: maxY - minY + pad * 2,
+                    x: minX - pad,
+                    y: minY - pad,
+                    toJSON: () => ({}),
+                  } as DOMRect;
+                }
+              }
+            }
             const inside =
               centerX > rect.left &&
               centerX < rect.right &&
@@ -1187,6 +1233,15 @@ export function ArchitecturalCanvasApp({
 
       const draggedIds = draggedNodeIdsRef.current;
       if (draggedIds.length === 0) return;
+      const stackPointerDrag = stackPointerDragRef.current;
+      if (stackPointerDrag && !stackPointerDrag.moved) {
+        const moved =
+          Math.hypot(event.clientX - stackPointerDrag.startX, event.clientY - stackPointerDrag.startY) >
+          STACK_CLICK_SUPPRESS_DRAG_PX;
+        if (moved) {
+          stackPointerDragRef.current = { ...stackPointerDrag, moved: true };
+        }
+      }
       const mouseCanvasX = (event.clientX - translateX) / scale;
       const mouseCanvasY = (event.clientY - translateY) / scale;
       setGraph((prev) => {
@@ -1252,6 +1307,14 @@ export function ArchitecturalCanvasApp({
       if (draggedNodeIdsRef.current.length > 0) {
         handleDrop(draggedNodeIdsRef.current);
       }
+      const stackPointerDrag = stackPointerDragRef.current;
+      if (stackPointerDrag?.moved) {
+        suppressStackOpenRef.current = {
+          stackId: stackPointerDrag.stackId,
+          expiresAt: Date.now() + 450,
+        };
+      }
+      stackPointerDragRef.current = null;
       draggedNodeIdsRef.current = [];
       dragOffsetsRef.current = {};
       setDraggedNodeIds([]);
@@ -1270,6 +1333,7 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     if (!stackDrag || !stackModal) return;
+    const getVisibleOrdered = (orderedIds: string[]) => orderedIds.slice(0, STACK_MODAL_MAX_ITEMS);
     const getHullBounds = (orderedIds: string[]) => {
       const layout = buildStackModalLayout(orderedIds, viewportSize, stackModalCardHeights);
       let minX = Number.POSITIVE_INFINITY;
@@ -1289,24 +1353,69 @@ export function ArchitecturalCanvasApp({
       if (!Number.isFinite(minX) || !Number.isFinite(minY)) return null;
       return { left: minX, top: minY, right: maxX, bottom: maxY };
     };
+    const getDraggedRect = (
+      drag: {
+        entityId: string;
+        currentX: number;
+        currentY: number;
+        pointerOffsetX: number;
+        pointerOffsetY: number;
+      },
+      orderedIds: string[],
+    ) => {
+      const layout = buildStackModalLayout(orderedIds, viewportSize, stackModalCardHeights);
+      const slot = layout[drag.entityId];
+      const scale = slot?.scale ?? 1;
+      const width = STACK_MODAL_CARD_W * scale;
+      const height = (stackModalCardHeights[drag.entityId] ?? STACK_MODAL_CARD_H_ESTIMATE) * scale;
+      const left = drag.currentX - drag.pointerOffsetX;
+      const top = drag.currentY - drag.pointerOffsetY;
+      return { left, top, right: left + width, bottom: top + height };
+    };
+    const isDraggedOutsideHull = (
+      drag: {
+        entityId: string;
+        currentX: number;
+        currentY: number;
+        pointerOffsetX: number;
+        pointerOffsetY: number;
+      },
+      orderedIds: string[],
+    ) => {
+      const hull = getHullBounds(orderedIds);
+      if (!hull) return false;
+      const rect = getDraggedRect(drag, orderedIds);
+      const centerX = (rect.left + rect.right) / 2;
+      const centerY = (rect.top + rect.bottom) / 2;
+      return (
+        centerX < hull.left - STACK_MODAL_EJECT_MARGIN ||
+        centerX > hull.right + STACK_MODAL_EJECT_MARGIN ||
+        centerY < hull.top - STACK_MODAL_EJECT_MARGIN ||
+        centerY > hull.bottom + STACK_MODAL_EJECT_MARGIN
+      );
+    };
     const onMouseMove = (event: MouseEvent) => {
       setStackDrag((prev) => {
         if (!prev) return prev;
         const dx = event.clientX - prev.startX;
         const dy = event.clientY - prev.startY;
         const intent = Math.abs(dx) > 10 || Math.abs(dy) > 10 ? "reorder" : prev.intent;
-        const hull = getHullBounds(stackModal.orderedIds.slice(0, STACK_MODAL_MAX_ITEMS));
-        const outsideWithMargin = hull
-          ? event.clientX < hull.left - STACK_MODAL_EJECT_MARGIN ||
-            event.clientX > hull.right + STACK_MODAL_EJECT_MARGIN ||
-            event.clientY < hull.top - STACK_MODAL_EJECT_MARGIN ||
-            event.clientY > hull.bottom + STACK_MODAL_EJECT_MARGIN
-          : false;
+        const visibleOrdered = getVisibleOrdered(stackModal.orderedIds);
+        const outsideWithMargin = isDraggedOutsideHull(
+          {
+            entityId: prev.entityId,
+            currentX: event.clientX,
+            currentY: event.clientY,
+            pointerOffsetX: prev.pointerOffsetX,
+            pointerOffsetY: prev.pointerOffsetY,
+          },
+          visibleOrdered,
+        );
         setStackModalEjectPreview(outsideWithMargin && intent === "reorder");
         if (intent === "reorder" && !outsideWithMargin) {
           setStackModal((prevModal) => {
             if (!prevModal) return prevModal;
-            const visibleOrdered = [...prevModal.orderedIds.slice(0, STACK_MODAL_MAX_ITEMS)];
+            const visibleOrdered = [...getVisibleOrdered(prevModal.orderedIds)];
             const from = visibleOrdered.indexOf(prev.entityId);
             if (from < 0) return prevModal;
             const layout = buildStackModalLayout(visibleOrdered, viewportSize, stackModalCardHeights);
@@ -1348,13 +1457,16 @@ export function ArchitecturalCanvasApp({
       setStackDrag(null);
       setStackModalEjectPreview(false);
       if (!drag) return;
-      const hull = getHullBounds(stackModal.orderedIds.slice(0, STACK_MODAL_MAX_ITEMS));
-      const outsideWithMargin = hull
-        ? drag.currentX < hull.left - STACK_MODAL_EJECT_MARGIN ||
-          drag.currentX > hull.right + STACK_MODAL_EJECT_MARGIN ||
-          drag.currentY < hull.top - STACK_MODAL_EJECT_MARGIN ||
-          drag.currentY > hull.bottom + STACK_MODAL_EJECT_MARGIN
-        : false;
+      const outsideWithMargin = isDraggedOutsideHull(
+        {
+          entityId: drag.entityId,
+          currentX: drag.currentX,
+          currentY: drag.currentY,
+          pointerOffsetX: drag.pointerOffsetX,
+          pointerOffsetY: drag.pointerOffsetY,
+        },
+        getVisibleOrdered(stackModal.orderedIds),
+      );
       if (outsideWithMargin && drag.intent === "reorder") {
         const extracted = graph.entities[drag.entityId];
         if (extracted) {
@@ -1366,7 +1478,13 @@ export function ArchitecturalCanvasApp({
                 !!entity && entity.kind === "content" && entity.stackId === stackModal.stackId,
             );
           if (remaining.length >= 2) {
-            const normalizedRemaining = normalizeStack(remaining, stackModal.stackId);
+            const normalizedRemaining = [...remaining]
+              .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0))
+              .map((entity, index) => ({
+                ...entity,
+                stackId: stackModal.stackId,
+                stackOrder: index,
+              }));
             setGraph((prev) => {
               const next = shallowCloneGraph(prev);
               normalizedRemaining.forEach((entity) => {
@@ -1422,13 +1540,21 @@ export function ArchitecturalCanvasApp({
           setStackModalEjectCount((count) => count + 1);
           const worldDropX = (drag.currentX - translateX) / scale;
           const worldDropY = (drag.currentY - translateY) / scale;
-          moveEntitiesToSpace([drag.entityId], activeSpaceId, {
-            // Force one-card placement into the nearest vacant grid slot around drop.
-            anchor: {
-              x: Math.round(worldDropX),
-              y: Math.round(worldDropY),
-            },
-            forceLayout: true,
+          setGraph((prev) => {
+            const next = shallowCloneGraph(prev);
+            const entity = next.entities[drag.entityId];
+            if (!entity) return prev;
+            next.entities[drag.entityId] = {
+              ...entity,
+              slots: {
+                ...entity.slots,
+                [activeSpaceId]: {
+                  x: Math.round(worldDropX),
+                  y: Math.round(worldDropY),
+                },
+              },
+            };
+            return next;
           });
         }
         return;
@@ -1459,7 +1585,6 @@ export function ArchitecturalCanvasApp({
     closeStackModal,
     activeSpaceId,
     graph.entities,
-    moveEntitiesToSpace,
     normalizeStack,
     scale,
     stackDrag,
@@ -2015,7 +2140,7 @@ export function ArchitecturalCanvasApp({
                     title={entity.title}
                     width={entity.width}
                     theme={entity.theme}
-                    tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
+                    tapeVariant={tapeVariantForTheme(entity.theme)}
                     tapeRotation={entity.tapeRotation}
                     bodyHtml={entity.bodyHtml}
                     activeTool={activeTool}
@@ -2064,6 +2189,8 @@ export function ArchitecturalCanvasApp({
                 }}
                 onMouseDown={(event) => {
                   if (event.button !== 0 || activeTool !== "select") return;
+                  const target = event.target as HTMLElement;
+                  if (target.closest("[data-expand-btn='true']")) return;
                   event.stopPropagation();
                   const mouseCanvasX = (event.clientX - translateX) / scale;
                   const mouseCanvasY = (event.clientY - translateY) / scale;
@@ -2081,9 +2208,26 @@ export function ArchitecturalCanvasApp({
                   setDraggedNodeIds(entities.map((entity) => entity.id));
                   setSelectedNodeIds(entities.map((entity) => entity.id));
                   setMaxZIndex((prev) => prev + 1);
+                  stackPointerDragRef.current = {
+                    stackId,
+                    startX: event.clientX,
+                    startY: event.clientY,
+                    moved: false,
+                  };
                 }}
                 onClick={(event) => {
                   event.stopPropagation();
+                  const target = event.target as HTMLElement;
+                  if (target.closest("[data-expand-btn='true']")) return;
+                  const suppressed = suppressStackOpenRef.current;
+                  if (suppressed) {
+                    if (Date.now() > suppressed.expiresAt) {
+                      suppressStackOpenRef.current = null;
+                    } else if (suppressed.stackId === stackId) {
+                      suppressStackOpenRef.current = null;
+                      return;
+                    }
+                  }
                   if (draggedNodeIdsRef.current.length > 0) return;
                   const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
                   setStackModal({
@@ -2120,12 +2264,11 @@ export function ArchitecturalCanvasApp({
                   <div
                     key={entity.id}
                     data-stack-layer="true"
-                    className={styles.stackLayer}
+                    className={`${styles.stackLayer} ${index === entities.length - 1 ? styles.stackLayerTopInteractive : ""}`}
                     style={{
                       "--stack-x": `${index * 6}px`,
                       "--stack-y": `${index * 6}px`,
                       "--stack-r": `${(index - (entities.length - 1) / 2) * 1.6}deg`,
-                      opacity: 1 - (entities.length - index - 1) * 0.12,
                     } as React.CSSProperties}
                   >
                     {entity.kind === "content" ? (
@@ -2134,7 +2277,7 @@ export function ArchitecturalCanvasApp({
                         title={entity.title}
                         width={entity.width}
                         theme={entity.theme}
-                        tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
+                        tapeVariant={tapeVariantForTheme(entity.theme)}
                         tapeRotation={entity.tapeRotation}
                         bodyHtml={entity.bodyHtml}
                         activeTool={activeTool}
@@ -2163,9 +2306,7 @@ export function ArchitecturalCanvasApp({
             );
           })}
         </div>
-      </div>
-
-      <div className={styles.chromeLayer}>
+        <div className={styles.chromeLayer}>
         <ArchitecturalStatusBar
           centerWorldX={centerWorldX}
           centerWorldY={centerWorldY}
@@ -2177,13 +2318,24 @@ export function ArchitecturalCanvasApp({
             <div className={styles.navRow}>
               {parentSpaceId ? (
                 <button
-                  ref={parentDropRef}
                   type="button"
-                  className={`${styles.navBtn} ${parentDropHovered ? styles.navBtnDrop : ""}`}
+                  className={styles.navBtn}
                   onClick={goBack}
                 >
                   <ArrowLeft size={12} />
                   Back
+                </button>
+              ) : null}
+              {parentSpaceId ? (
+                <button
+                  ref={parentDropRef}
+                  type="button"
+                  className={`${styles.parentDrawer} ${parentDropHovered ? styles.parentDrawerActive : ""}`}
+                  onClick={moveSelectionToParent}
+                  disabled={selectedNodeIds.length === 0}
+                >
+                  <span className={styles.parentDrawerTab}>Drawer</span>
+                  <span className={styles.parentDrawerLabel}>Remove from folder</span>
                 </button>
               ) : null}
               <div className={styles.crumbTrail}>
@@ -2213,7 +2365,7 @@ export function ArchitecturalCanvasApp({
                   onClick={moveSelectionToParent}
                   disabled={selectedNodeIds.length === 0}
                 >
-                  Move out
+                  Remove selected
                 </button>
               ) : null}
             </div>
@@ -2229,6 +2381,7 @@ export function ArchitecturalCanvasApp({
           onZoomOut={() => zoomBy(-ZOOM_BUTTON_STEP)}
           onRecenter={recenterToOrigin}
         />
+      </div>
       </div>
 
       {lassoRectScreen ? (
@@ -2253,6 +2406,14 @@ export function ArchitecturalCanvasApp({
             }
           }}
         >
+          <div className={styles.stackModalCloseButtonWrap}>
+            <ArchitecturalFocusCloseButton
+              label="Close"
+              variant="dark"
+              showIcon={false}
+              onClick={closeStackModal}
+            />
+          </div>
           <div
             className={styles.stackFanStage}
             onMouseDown={(event) => {
@@ -2279,14 +2440,12 @@ export function ArchitecturalCanvasApp({
                 scale: 1,
               };
               const drag = stackDrag?.entityId === entity.id ? stackDrag : null;
-              const dx = drag ? drag.currentX - drag.startX : 0;
-              const dy = drag ? drag.currentY - drag.startY : 0;
               const collapsedX = fanOriginX + index * 6;
               const collapsedY = fanOriginY + index * 6;
               const baseX = stackModalExpanded ? slot.x : collapsedX;
               const baseY = stackModalExpanded ? slot.y : collapsedY;
-              const dragX = drag ? drag.originCardX + dx : baseX;
-              const dragY = drag ? drag.originCardY + dy : baseY;
+              const dragX = drag ? drag.currentX - drag.pointerOffsetX : baseX;
+              const dragY = drag ? drag.currentY - drag.pointerOffsetY : baseY;
               const rotation = stackModalExpanded
                 ? ((index % 2 === 0 ? -1 : 1) * 0.8)
                 : (index - (stackModalEntities.length - 1) / 2) * 1.6;
@@ -2317,8 +2476,8 @@ export function ArchitecturalCanvasApp({
                       startY: event.clientY,
                       currentX: event.clientX,
                       currentY: event.clientY,
-                      originCardX: baseX,
-                      originCardY: baseY,
+                      pointerOffsetX: event.clientX - baseX,
+                      pointerOffsetY: event.clientY - baseY,
                       intent: "pending",
                     });
                   }}
@@ -2329,7 +2488,7 @@ export function ArchitecturalCanvasApp({
                       title={entity.title}
                       width={entity.width}
                       theme={entity.theme}
-                      tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
+                      tapeVariant={tapeVariantForTheme(entity.theme)}
                       tapeRotation={entity.tapeRotation}
                       bodyHtml={entity.bodyHtml}
                       activeTool={activeTool}
@@ -2337,10 +2496,7 @@ export function ArchitecturalCanvasApp({
                       selected={false}
                       showTape={!entity.stackId}
                       onBodyCommit={updateNodeBody}
-                      onExpand={(id) => {
-                        closeStackModal();
-                        openFocusMode(id);
-                      }}
+                      onExpand={openFocusMode}
                     />
                   ) : (
                     <ArchitecturalFolderCard
@@ -2390,7 +2546,11 @@ export function ArchitecturalCanvasApp({
             onCommit={(next) => setFocusTitle(next)}
             placeholder="Untitled Document"
             data-focus-title-editor="true"
-            style={{ color: focusCodeTheme ? "#ffffff" : "#111111" }}
+            style={{
+              color: focusCodeTheme
+                ? "var(--sys-color-white)"
+                : "var(--sys-color-black)",
+            }}
           />
           <BufferedContentEditable
             value={focusBody}

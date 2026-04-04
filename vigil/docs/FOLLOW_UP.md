@@ -1,4 +1,4 @@
-# VIGIL — follow-ups (human / account / infra)
+# heartgarden — follow-ups (human / account / infra)
 
 Items the codebase **cannot** complete without your action, credentials, or product decisions. Check off as you go.
 

@@ -4,11 +4,11 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# VIGIL — agent notes
+# heartgarden — agent notes
 
 ## Source of truth
 
-- **Full product & UX spec:** `docs/VIGIL_MASTER_PLAN.md`
+- **Full product & UX spec:** `docs/HEARTGARDEN_MASTER_PLAN.md`
 - **How the repo should move from here:** `docs/STRATEGY.md`
 - **Blocked / account / infra follow-ups:** `docs/FOLLOW_UP.md`
 
@@ -31,7 +31,7 @@ The canvas is **custom DOM** (`src/components/canvas/`, `src/stores/canvas-store
 
 ## MCP (`npm run mcp`)
 
-Tools: **`vigil_list_items`**, **`vigil_get_item`**, **`vigil_item_links`**, **`vigil_title_mentions`** (FTS for an item’s title in a space), **`vigil_search`**, **`vigil_graph`**. Defaults: **`VIGIL_DEFAULT_SPACE_ID`**, **`VIGIL_APP_URL`** (e.g. `http://localhost:3000`). The Next app must be running for HTTP calls to succeed. REST: **`GET /api/v1/items`** (list by `space_id`) and **`GET /api/v1/items/[itemId]`** (single item).
+Tools: **`vigil_list_items`**, **`vigil_get_item`**, **`vigil_item_links`**, **`vigil_title_mentions`** (FTS for an item’s title in a space), **`vigil_search`**, **`vigil_graph`**. Defaults: **`HEARTGARDEN_DEFAULT_SPACE_ID`**, **`HEARTGARDEN_APP_URL`** (e.g. `http://localhost:3000`). The Next app must be running for HTTP calls to succeed. REST: **`GET /api/v1/items`** (list by `space_id`) and **`GET /api/v1/items/[itemId]`** (single item).
 
 ## Playwright (`npm run test:e2e`)
 
@@ -46,4 +46,4 @@ Canvas shortcuts use **`e.ctrlKey || e.metaKey`** so **Windows/Linux use Ctrl** 
 
 ## Licensing
 
-Do not strip or bypass third-party license UI for any dependency we add. Prefer **MIT** libraries per `docs/VIGIL_MASTER_PLAN.md`.
+Do not strip or bypass third-party license UI for any dependency we add. Prefer **MIT** libraries per `docs/HEARTGARDEN_MASTER_PLAN.md`.

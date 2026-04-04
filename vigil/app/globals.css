@@ -6,15 +6,15 @@
   /* Primitive token foundation */
   --sys-color-black: #000000;
   --sys-color-white: #ffffff;
-  --sys-color-neutral-950: #0a0a0c;
-  --sys-color-neutral-900: #121217;
-  --sys-color-neutral-800: #1b1b22;
-  --sys-color-neutral-700: #2f2f3a;
-  --sys-color-neutral-500: #71717a;
-  --sys-color-neutral-400: #a1a1aa;
-  --sys-color-neutral-300: #cccccc;
-  --sys-color-neutral-100: #f0f0f0;
-  --sys-color-accent-500: #3b82f6;
+  --sys-color-neutral-950: #0a0a0a;
+  --sys-color-neutral-900: #171717;
+  --sys-color-neutral-800: #262626;
+  --sys-color-neutral-700: #404040;
+  --sys-color-neutral-500: #737373;
+  --sys-color-neutral-400: #a3a3a3;
+  --sys-color-neutral-300: #d4d4d4;
+  --sys-color-neutral-100: #f5f5f5;
+  --sys-color-accent-500: oklch(0.74 0.31 50);
   --sys-color-danger-500: #dc2626;
   --sys-color-danger-400: #f87171;
   --sys-color-danger-300: #fca5a5;
@@ -39,20 +39,26 @@
   --sys-motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
 
   /* Semantic tokens */
-  --sem-surface-base: #0a0a0c;
+  --sem-surface-base: #0a0a0a;
   --sem-surface-glass: rgba(255, 255, 255, 0.06);
-  --sem-surface-elevated: rgba(15, 15, 18, 0.7);
+  --sem-surface-elevated: rgba(15, 15, 15, 0.7);
   --sem-surface-muted-hover: rgba(255, 255, 255, 0.08);
   --sem-surface-muted-press: rgba(255, 255, 255, 0.14);
-  --sem-text-primary: #f0f0f0;
-  --sem-text-secondary: #cccccc;
-  --sem-text-muted: #888890;
-  --sem-text-onAccent: #0a0a0c;
+  --sem-text-primary: #f5f5f5;
+  --sem-text-secondary: #d4d4d4;
+  --sem-text-muted: #8a8a8a;
+  --sem-text-onAccent: #0a0a0a;
   --sem-border-subtle: rgba(255, 255, 255, 0.06);
   --sem-border-strong: rgba(255, 255, 255, 0.1);
-  --sem-focus-ring: #3b82f6;
+  --sem-border-soft: color-mix(in srgb, var(--sys-color-white) 5%, transparent);
+  --sem-border-muted: color-mix(in srgb, var(--sys-color-black) 10%, transparent);
+  --sem-focus-ring: var(--sys-color-accent-500);
   --sem-focus-ring-width: 2px;
   --sem-focus-ring-offset: 2px;
+  --sem-shadow-sm: 0 1px 2px color-mix(in srgb, var(--sys-color-black) 30%, transparent);
+  --sem-shadow-md: 0 4px 12px color-mix(in srgb, var(--sys-color-black) 20%, transparent);
+  --sem-shadow-lg: 0 8px 32px color-mix(in srgb, var(--sys-color-black) 40%, transparent);
+  --sem-shadow-xl: 0 20px 40px color-mix(in srgb, var(--sys-color-black) 40%, transparent);
 
   /* Component button tokens */
   --cmp-button-neutral-bg-default: transparent;
@@ -148,37 +154,37 @@
   --cmp-button-card-dark-fg-hover: color-mix(in srgb, var(--sys-color-white) 90%, transparent);
   --cmp-button-card-dark-fg-active: var(--sys-color-white);
 
-  --bg-base: #0a0a0c;
-  --background: #0a0a0c;
-  --foreground: #f0f0f0;
-  --vigil-muted: #888890;
-  --vigil-label: #cccccc;
+  --bg-base: #0a0a0a;
+  --background: #0a0a0a;
+  --foreground: #f5f5f5;
+  --vigil-muted: #8a8a8a;
+  --vigil-label: #d4d4d4;
   --vigil-border: rgba(255, 255, 255, 0.06);
   --vigil-btn-bg: rgba(255, 255, 255, 0.06);
-  --vigil-btn-fg: #f0f0f0;
+  --vigil-btn-fg: #f5f5f5;
   --vigil-btn-border: rgba(255, 255, 255, 0.1);
-  --vigil-snap: #3b82f6;
-  --vigil-canvas: #0a0a0c;
+  --vigil-snap: var(--sys-color-accent-500);
+  --vigil-canvas: #0a0a0a;
   --vigil-grid-color: rgba(255, 255, 255, 0.04);
-  --vigil-elevated: rgba(15, 15, 18, 0.7);
+  --vigil-elevated: rgba(15, 15, 15, 0.7);
   --vigil-glass-border: rgba(255, 255, 255, 0.06);
   /* Legacy card tokens — bodies often overridden by card theme */
-  --vigil-card-bg: #f4f2ec;
-  --vigil-card-border: #e2dfd5;
+  --vigil-card-bg: #f5f5f5;
+  --vigil-card-border: #d4d4d4;
   --vigil-card-header-bg: rgba(0, 0, 0, 0.04);
-  --vigil-folder-tab-bg: #e8e4dc;
+  --vigil-folder-tab-bg: #e5e5e5;
 
-  --theme-default-bg: #f4f2ec;
+  --theme-default-bg: #f5f5f5;
   --theme-default-text: #1a1a1a;
-  --theme-default-border: #e2dfd5;
+  --theme-default-border: #d4d4d4;
 
-  --theme-task-bg: #fffbf0;
-  --theme-task-text: #2c281e;
-  --theme-task-border: #f0e2b6;
+  --theme-task-bg: #f5f5f5;
+  --theme-task-text: #1a1a1a;
+  --theme-task-border: #d4d4d4;
 
-  --theme-media-bg: #ebf0f5;
-  --theme-media-text: #1c2430;
-  --theme-media-border: #c8d4e0;
+  --theme-media-bg: #f5f5f5;
+  --theme-media-text: #1a1a1a;
+  --theme-media-border: #d4d4d4;
 
   /* Compatibility aliases */
   --vigil-btn-bg: var(--cmp-button-neutral-bg-default);

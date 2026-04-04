@@ -7,8 +7,8 @@ import { ArrowCounterClockwise, Graph, X } from "@phosphor-icons/react";
 import { Button } from "@/src/components/ui/Button";
 import { computeForceLayout } from "@/src/lib/graph-layout";
 import {
-  VIGIL_CHROME_ICON,
-  VIGIL_GLASS_PANEL,
+  HEARTGARDEN_CHROME_ICON,
+  HEARTGARDEN_GLASS_PANEL,
 } from "@/src/lib/vigil-ui-classes";
 
 type GraphNode = {
@@ -226,7 +226,7 @@ function LinkGraphInner({
 
   return (
     <div
-      className={`flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden ${VIGIL_GLASS_PANEL}`}
+      className={`flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden ${HEARTGARDEN_GLASS_PANEL}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--vigil-border)]/80 px-4 py-3">
         <span className="flex items-center gap-2 text-sm font-semibold tracking-tight text-[var(--vigil-label)]">
@@ -239,11 +239,11 @@ function LinkGraphInner({
         </span>
         <div className="flex flex-wrap items-center gap-2">
           <Button size="md" variant="neutral" tone="glass" onClick={() => setLayoutRevision((n) => n + 1)}>
-            <ArrowCounterClockwise className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+            <ArrowCounterClockwise className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             Reset layout
           </Button>
           <Button size="md" variant="neutral" tone="glass" onClick={onClose}>
-            <X className={VIGIL_CHROME_ICON} weight="bold" aria-hidden />
+            <X className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             Close
           </Button>
         </div>
@@ -309,7 +309,7 @@ export function LinkGraphOverlay({
         />
       ) : (
         <div
-          className={`max-w-md p-4 text-sm text-[var(--vigil-muted)] ${VIGIL_GLASS_PANEL}`}
+          className={`max-w-md p-4 text-sm text-[var(--vigil-muted)] ${HEARTGARDEN_GLASS_PANEL}`}
         >
           Select a cloud space to view the graph.
         </div>

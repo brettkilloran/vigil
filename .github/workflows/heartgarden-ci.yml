@@ -1,4 +1,4 @@
-name: VIGIL CI
+name: heartgarden CI
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -7,11 +7,11 @@ on:
   push:
     paths:
       - "vigil/**"
-      - ".github/workflows/vigil-ci.yml"
+      - ".github/workflows/heartgarden-ci.yml"
   pull_request:
     paths:
       - "vigil/**"
-      - ".github/workflows/vigil-ci.yml"
+      - ".github/workflows/heartgarden-ci.yml"
 
 defaults:
   run:

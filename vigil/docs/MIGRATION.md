@@ -1,4 +1,4 @@
-# Database migration notes (VIGIL)
+# Database migration notes (heartgarden)
 
 The current Drizzle schema **does not** include:
 
@@ -6,7 +6,7 @@ The current Drizzle schema **does not** include:
 - `items.source_shape_id`
 - tldraw document JSON in `spaces.canvas_state` (only **`{ "x", "y", "zoom" }`**)
 
-If your Neon database was created with an older VIGIL build:
+If your Neon database was created with an older heartgarden build:
 
 1. **Easiest for development:** drop the old tables (or create a new Neon branch) and run `npm run db:push` so the schema matches [`src/db/schema.ts`](../src/db/schema.ts).
 
@@ -14,4 +14,4 @@ If your Neon database was created with an older VIGIL build:
 
 3. **Extensions:** embeddings use `pgvector`. On Neon, enable the **pgvector** extension for the database if you use `/api/items/[id]/embed`.
 
-See also [`STRATEGY.md`](./STRATEGY.md) and [`VIGIL_MASTER_PLAN.md`](./VIGIL_MASTER_PLAN.md).
+See also [`STRATEGY.md`](./STRATEGY.md) and [`HEARTGARDEN_MASTER_PLAN.md`](./HEARTGARDEN_MASTER_PLAN.md).

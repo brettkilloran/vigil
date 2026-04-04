@@ -23,12 +23,12 @@ const lora = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "VIGIL",
+  title: "heartgarden",
   description: "Infinite canvas TTRPG worldbuilding",
-  applicationName: "VIGIL",
+  applicationName: "heartgarden",
   manifest: "/manifest.webmanifest",
   openGraph: {
-    title: "VIGIL",
+    title: "heartgarden",
     description: "Infinite canvas TTRPG worldbuilding",
   },
 };

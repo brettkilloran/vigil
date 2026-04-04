@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * E2E + visual regression for VIGIL.
+ * E2E + visual regression for heartgarden.
  *
  * - `npm run test:e2e` — builds once, then headless Chromium against `next start` on **:3001**
  *   (avoids Next’s single `next dev` lock per repo while you keep `npm run dev` on :3000).

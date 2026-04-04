@@ -9,7 +9,7 @@ import {
 import { useState } from "react";
 
 import { Button } from "@/src/components/ui/Button";
-import { VIGIL_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
+import { HEARTGARDEN_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
 
 type SyncMode = "loading" | "local" | "cloud";
 
@@ -41,7 +41,7 @@ export function CanvasStatusBar({
   return (
     <div className="pointer-events-none fixed left-6 top-6 z-[800]">
       <div
-        className={`pointer-events-auto relative flex items-center gap-2 px-3 py-2 ${VIGIL_GLASS_PANEL}`}
+        className={`pointer-events-auto relative flex items-center gap-2 px-3 py-2 ${HEARTGARDEN_GLASS_PANEL}`}
       >
         <div className="flex items-center gap-1.5">
           <span

@@ -71,12 +71,21 @@ This document outlines all currently defined design-system-related tokens.
 
 - `--sem-border-subtle`
 - `--sem-border-strong`
+- `--sem-border-soft`
+- `--sem-border-muted`
 
 ### Focus
 
 - `--sem-focus-ring`
 - `--sem-focus-ring-width`
 - `--sem-focus-ring-offset`
+
+### Shadow
+
+- `--sem-shadow-sm`
+- `--sem-shadow-md`
+- `--sem-shadow-lg`
+- `--sem-shadow-xl`
 
 ## 3) Component Tokens (`--cmp-button-*`)
 
@@ -275,3 +284,4 @@ From `src/components/foundation/ArchitecturalCanvasApp.module.css`:
 
 - The authoritative button system now lives in `--sys-*`, `--sem-*`, and `--cmp-button-*` under `app/globals.css`.
 - `--vigil-*` and module-scoped tokens remain for compatibility and should be consolidated over time.
+- Non-CSS runtime defaults that must align with the design system are centralized in `src/lib/design-system-tokens.ts` (`DS_COLOR`).

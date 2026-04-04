@@ -46,13 +46,9 @@ export function tapeVariantForItem(
   kind: CardThemeKind,
   itemId: string,
 ): TapeVariant {
-  const h = hashString(itemId);
-  if (kind === "media") return "clear";
-  if (kind === "task") return "masking";
-  const roll = h % 3;
-  if (roll === 0) return "masking";
-  if (roll === 1) return "clear";
-  return "dark";
+  void kind;
+  void itemId;
+  return "clear";
 }
 
 export function stableRotationDeg(itemId: string, range = 4): number {

@@ -1,6 +1,6 @@
 {
-  "name": "VIGIL",
-  "short_name": "VIGIL",
+  "name": "heartgarden",
+  "short_name": "heartgarden",
   "description": "Infinite canvas for notes and worldbuilding",
   "start_url": "/",
   "display": "standalone",

@@ -1,8 +1,8 @@
-This is a [Next.js](https://nextjs.org) app: **VIGIL** — a custom DOM infinite canvas (no third-party whiteboard SDK).
+This is a [Next.js](https://nextjs.org) app: **heartgarden** — a custom DOM infinite canvas (no third-party whiteboard SDK).
 
 ## Product direction
 
-Full spec: **`docs/VIGIL_MASTER_PLAN.md`**. Engineering bridge: **`docs/STRATEGY.md`**.
+Full spec: **`docs/HEARTGARDEN_MASTER_PLAN.md`**. Engineering bridge: **`docs/STRATEGY.md`**.
 
 **Stack:** Next.js App Router, React, Tailwind CSS 4, zustand + immer, @use-gesture/react, framer-motion, TipTap, Drizzle + Neon.
 
@@ -29,7 +29,7 @@ Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 | `npm run verify:foundation-sync` | Ensure app entry + foundation shell wiring did not drift from Storybook components |
 | `npm run build` | Production build |
 | `npm run db:push` | Push Drizzle schema to Neon |
-| `npm run mcp` | MCP stdio: **`vigil_list_items`**, **`vigil_search`** (fts / semantic / hybrid), **`vigil_graph`** — needs app reachable at `VIGIL_APP_URL` (default `http://localhost:3000`) |
+| `npm run mcp` | MCP stdio: **`vigil_list_items`**, **`vigil_search`** (fts / semantic / hybrid), **`vigil_graph`** — needs app reachable at `HEARTGARDEN_APP_URL` (default `http://localhost:3000`) |
 
 ### Keyboard (canvas, not typing in a note)
 

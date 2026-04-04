@@ -5,6 +5,7 @@ import type {
   CanvasNode,
   CanvasSpace,
 } from "@/src/components/foundation/architectural-types";
+import { DS_COLOR } from "@/src/lib/design-system-tokens";
 
 type StyleTokens = {
   taskItem: string;
@@ -43,16 +44,16 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       tapeRotation: -1.5,
       tapeVariant: "dark",
       bodyHtml: `
-        <span style="color: #c678dd;">const</span> <span style="color: #e5c07b;">environment</span> = {<br>
-        &nbsp;&nbsp;<span style="color: #d19a66;">mode</span>: <span style="color: #98c379;">'architectural'</span>,<br>
-        &nbsp;&nbsp;<span style="color: #d19a66;">friction</span>: <span style="color: #d19a66;">0.85</span>,<br>
-        &nbsp;&nbsp;<span style="color: #d19a66;">snapToGrid</span>: <span style="color: #c678dd;">false</span>,<br>
-        &nbsp;&nbsp;<span style="color: #d19a66;">theme</span>: {<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;base: <span style="color: #98c379;">'#0a0a0c'</span>,<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;accent: <span style="color: #98c379;">'#3b82f6'</span><br>
+        <span style="color: ${DS_COLOR.codeSampleKeyword};">const</span> <span style="color: ${DS_COLOR.codeSampleName};">environment</span> = {<br>
+        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">mode</span>: <span style="color: ${DS_COLOR.codeSampleString};">'architectural'</span>,<br>
+        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">friction</span>: <span style="color: ${DS_COLOR.codeSampleProperty};">0.85</span>,<br>
+        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">snapToGrid</span>: <span style="color: ${DS_COLOR.codeSampleKeyword};">false</span>,<br>
+        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">theme</span>: {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;base: <span style="color: ${DS_COLOR.codeSampleString};">'var(--sem-surface-base)'</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;accent: <span style="color: ${DS_COLOR.codeSampleString};">'var(--sys-color-accent-500)'</span><br>
         &nbsp;&nbsp;}<br>
         };<br><br>
-        <span style="color: #5c6370;">// Awaiting secondary confirmation...</span>
+        <span style="color: ${DS_COLOR.codeSampleComment};">// Awaiting secondary confirmation...</span>
       `,
     },
     {
@@ -97,7 +98,7 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
         <div class="${tokens.mediaPlaceholder}">
           <span>Image Placeholder</span>
         </div>
-        <div contenteditable="true" style="font-size: 13px; color: #555;">
+        <div contenteditable="true" style="font-size: 13px; color: ${DS_COLOR.codeSampleCaption};">
           Brutalist web design pattern reference. Note the heavy borders and lack of border-radius.
         </div>
       `,

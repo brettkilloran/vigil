@@ -11,8 +11,8 @@ import {
 } from "@/src/lib/local-item-links";
 import { localItemsMentioningTitle } from "@/src/lib/local-title-mentions";
 import {
-  VIGIL_GLASS_PANEL,
-  VIGIL_METADATA_LABEL,
+  HEARTGARDEN_GLASS_PANEL,
+  HEARTGARDEN_METADATA_LABEL,
 } from "@/src/lib/vigil-ui-classes";
 import { useCanvasStore } from "@/src/stores/canvas-store";
 
@@ -50,7 +50,7 @@ function LinkRowList({
   if (rows.length === 0) return null;
   return (
     <div>
-      <div className={`mb-1 ${VIGIL_METADATA_LABEL}`}>{label}</div>
+      <div className={`mb-1 ${HEARTGARDEN_METADATA_LABEL}`}>{label}</div>
       <ul className="space-y-0.5">
         {rows.map((r) => (
           <li key={r.id}>
@@ -187,7 +187,7 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
 
   if (!itemId) return null;
 
-  const panelClass = `pointer-events-auto absolute right-3 top-3 z-[800] max-h-[min(78vh,520px)] w-[min(92vw,300px)] overflow-y-auto p-3 text-xs ${VIGIL_GLASS_PANEL}`;
+  const panelClass = `pointer-events-auto absolute right-3 top-3 z-[800] max-h-[min(78vh,520px)] w-[min(92vw,300px)] overflow-y-auto p-3 text-xs ${HEARTGARDEN_GLASS_PANEL}`;
 
   const mentionsBlock =
     selectedItem && selectedItem.title.trim().length >= 3 ? (
@@ -268,7 +268,7 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
         <div className="space-y-2.5">
           {outgoing.length > 0 ? (
             <div>
-              <div className={`mb-1 ${VIGIL_METADATA_LABEL}`}>To</div>
+              <div className={`mb-1 ${HEARTGARDEN_METADATA_LABEL}`}>To</div>
               <ul className="space-y-0.5">
                 {outgoing.map((r) => (
                   <li key={r.linkId}>
@@ -291,7 +291,7 @@ export function BacklinksPanel({ cloudMode }: { cloudMode: boolean }) {
           ) : null}
           {incoming.length > 0 ? (
             <div>
-              <div className={`mb-1 ${VIGIL_METADATA_LABEL}`}>From</div>
+              <div className={`mb-1 ${HEARTGARDEN_METADATA_LABEL}`}>From</div>
               <ul className="space-y-0.5">
                 {incoming.map((r) => (
                   <li key={r.linkId}>

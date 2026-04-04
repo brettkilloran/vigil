@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * MCP stdio server: VIGIL read helpers (list, get item, links, search, graph).
- * Run: npm run mcp  (set NEON_DATABASE_URL; optional VIGIL_DEFAULT_SPACE_ID)
+ * MCP stdio server: heartgarden read helpers (list, get item, links, search, graph).
+ * Run: npm run mcp (set NEON_DATABASE_URL; optional HEARTGARDEN_DEFAULT_SPACE_ID)
  */
 import { Server } from "@modelcontextprotocol/sdk/server";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -10,12 +10,15 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-const BASE =
-  process.env.VIGIL_APP_URL?.replace(/\/$/, "") || "http://localhost:3000";
-const SPACE = process.env.VIGIL_DEFAULT_SPACE_ID || "";
+const BASE = (process.env.HEARTGARDEN_APP_URL || "http://localhost:3000").replace(
+  /\/$/,
+  "",
+);
+const SPACE =
+  process.env.HEARTGARDEN_DEFAULT_SPACE_ID || "";
 
 const server = new Server(
-  { name: "vigil", version: "0.4.0" },
+  { name: "heartgarden", version: "0.4.0" },
   { capabilities: { tools: {} } },
 );
 
@@ -30,7 +33,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {
           space_id: {
             type: "string",
-            description: "UUID of the space (omit if VIGIL_DEFAULT_SPACE_ID is set)",
+            description: "UUID of the space (omit if HEARTGARDEN_DEFAULT_SPACE_ID is set)",
           },
         },
       },
@@ -98,7 +101,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           item_id: { type: "string", description: "UUID of the item whose title is searched for" },
           space_id: {
             type: "string",
-            description: "Space UUID (omit if VIGIL_DEFAULT_SPACE_ID is set)",
+            description: "Space UUID (omit if HEARTGARDEN_DEFAULT_SPACE_ID is set)",
           },
         },
         required: ["item_id"],
@@ -116,7 +119,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (!spaceId) {
       return {
         content: [
-          { type: "text", text: "Missing space_id and VIGIL_DEFAULT_SPACE_ID" },
+          { type: "text", text: "Missing space_id and HEARTGARDEN_DEFAULT_SPACE_ID" },
         ],
         isError: true,
       };
@@ -134,7 +137,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (!spaceId) {
       return {
         content: [
-          { type: "text", text: "Missing space_id and VIGIL_DEFAULT_SPACE_ID" },
+          { type: "text", text: "Missing space_id and HEARTGARDEN_DEFAULT_SPACE_ID" },
         ],
         isError: true,
       };
@@ -158,7 +161,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (!spaceId) {
       return {
         content: [
-          { type: "text", text: "Missing space_id and VIGIL_DEFAULT_SPACE_ID" },
+          { type: "text", text: "Missing space_id and HEARTGARDEN_DEFAULT_SPACE_ID" },
         ],
         isError: true,
       };
@@ -209,7 +212,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (!spaceId) {
       return {
         content: [
-          { type: "text", text: "Missing space_id and VIGIL_DEFAULT_SPACE_ID" },
+          { type: "text", text: "Missing space_id and HEARTGARDEN_DEFAULT_SPACE_ID" },
         ],
         isError: true,
       };

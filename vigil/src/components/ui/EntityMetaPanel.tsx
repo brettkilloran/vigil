@@ -1,6 +1,6 @@
 "use client";
 
-import { VIGIL_METADATA_LABEL } from "@/src/lib/vigil-ui-classes";
+import { HEARTGARDEN_METADATA_LABEL } from "@/src/lib/vigil-ui-classes";
 import type { CanvasItem } from "@/src/stores/canvas-types";
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
 
@@ -70,7 +70,7 @@ export function EntityMetaPanel({
             key={f.key}
             className="flex flex-col gap-0.5 text-[var(--vigil-label)]"
           >
-            <span className={VIGIL_METADATA_LABEL}>{f.label}</span>
+            <span className={HEARTGARDEN_METADATA_LABEL}>{f.label}</span>
             <BufferedTextInput
               data-entity-meta-field={f.key}
               type={f.kind === "date" ? "date" : "text"}

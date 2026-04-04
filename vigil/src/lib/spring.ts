@@ -8,13 +8,13 @@ export type SpringParams = {
   mass?: number;
 };
 
-export const VIGIL_UI_SPRING: SpringParams = {
+export const HEARTGARDEN_UI_SPRING: SpringParams = {
   stiffness: 420,
   damping: 32,
   mass: 1,
 };
 
-export const VIGIL_UI_SPRING_SOFT: SpringParams = {
+export const HEARTGARDEN_UI_SPRING_SOFT: SpringParams = {
   stiffness: 280,
   damping: 26,
   mass: 1,

@@ -1,14 +1,14 @@
-# VIGIL Functional PRD (UI-Agnostic Rebuild)
+# heartgarden Functional PRD (UI-Agnostic Rebuild)
 
 ## Goal
 
-Rebuild VIGIL from scratch on a new interface while preserving existing product behavior, data contracts, and user workflows.
+Rebuild heartgarden from scratch on a new interface while preserving existing product behavior, data contracts, and user workflows.
 
 This document intentionally excludes visual/style/chrome requirements and focuses only on functionality.
 
 ## Product Summary
 
-VIGIL is a spatial knowledge canvas for solo worldbuilding and investigation work. Users place and edit structured content cards on an infinite canvas, connect ideas through internal links, organize work into spaces/folders, and query the corpus via keyword or semantic search.
+heartgarden is a spatial knowledge canvas for solo worldbuilding and investigation work. Users place and edit structured content cards on an infinite canvas, connect ideas through internal links, organize work into spaces/folders, and query the corpus via keyword or semantic search.
 
 Core behaviors:
 - Infinite canvas with pan/zoom, drag, resize, lasso selection, snapping.

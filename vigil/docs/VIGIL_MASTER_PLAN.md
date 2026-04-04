@@ -1,8 +1,8 @@
-# VIGIL — Master Build Plan
+# heartgarden — Master Build Plan
 
-> **What this document is:** A fully self-contained plan for building VIGIL, an infinite canvas knowledge tool inspired by the macOS app Spatial. This document contains EVERY detail needed to build the app from scratch — architecture, visual design specs, animation parameters, typography, interaction patterns, and phased implementation. It was compiled by reverse-engineering the Spatial.app binary, extracting its App Store screenshots, and analyzing its design philosophy.
+> **What this document is:** A fully self-contained plan for building heartgarden, an infinite canvas knowledge tool inspired by the macOS app Spatial. This document contains EVERY detail needed to build the app from scratch — architecture, visual design specs, animation parameters, typography, interaction patterns, and phased implementation. It was compiled by reverse-engineering the Spatial.app binary, extracting its App Store screenshots, and analyzing its design philosophy.
 >
-> **What VIGIL is:** A personal-use infinite canvas web app for organizing notes, images, stickies, checklists, web clips, and folders on a free-form spatial surface. Optimized for two use cases: (1) general knowledge management/work productivity and (2) TTRPG worldbuilding with cross-linked lore, semantic search, and LLM integration.
+> **What heartgarden is:** A personal-use infinite canvas web app for organizing notes, images, stickies, checklists, web clips, and folders on a free-form spatial surface. Optimized for two use cases: (1) general knowledge management/work productivity and (2) TTRPG worldbuilding with cross-linked lore, semantic search, and LLM integration.
 >
 > **Single user, no auth.** This is a personal tool. No login, no OAuth, no user management. One person, one database.
 >
@@ -32,7 +32,7 @@
 ## Stack & Architecture
 
 ```
-VIGIL (client)
+heartgarden (client)
 ├── Next.js 15 App Router + React 19
 ├── Custom Canvas Engine (CSS transforms, no <canvas> element)
 │   ├── @use-gesture/react   (MIT) — unified pointer/touch/wheel gestures
@@ -42,7 +42,7 @@ VIGIL (client)
 ├── Tailwind CSS 4            (MIT) — utility-first styling
 └── TypeScript strict mode
 
-VIGIL (server)
+heartgarden (server)
 ├── Next.js API Routes (REST)
 ├── Drizzle ORM               (MIT) — type-safe SQL
 ├── Neon PostgreSQL            (free tier, 0.5GB)
@@ -952,7 +952,7 @@ This phase is about going from "functional" to "beautiful." Reference the Visual
 - **Font loading:** Set up proper web font loading with `font-display: swap` and preload for the primary fonts. NO flash of unstyled text.
 - **Type scale audit:** Go through every piece of text in the app and verify it matches the Type Scale table above. Every label, every heading, every body paragraph, every metadata field.
 - **Metadata labels:** ALL-CAPS, wide letter-spacing, small monospace-like appearance. These are used in image detail views, folder cards, and anywhere structured data is shown.
-- **Line spacing in notes:** The note editor should have generous paragraph spacing. Reading text in VIGIL should feel like reading a well-typeset book, not a dense code editor.
+- **Line spacing in notes:** The note editor should have generous paragraph spacing. Reading text in heartgarden should feel like reading a well-typeset book, not a dense code editor.
 - **Custom caret:** Spatial has a `CustomCaret` — consider making the text cursor slightly thicker or colored to match the app's personality.
 - **Bullet/checkbox polish:** Implement the exact circular checkbox style (small open circle → filled dark circle). Bullet points should be small filled circles, not the browser default. Reference `bullet-medium-point-dark`, `bullet-medium-point-light` assets.
 - **Link arrows:** Items that reference external URLs should show a small right-pointing arrow icon.
@@ -978,7 +978,7 @@ This phase is about going from "functional" to "beautiful." Reference the Visual
 
 ## Reference Screenshots
 
-The following App Store screenshots from Spatial are included as `spatial-reference-images/` alongside this plan. These are the visual benchmark. VIGIL should match this level of visual quality.
+The following App Store screenshots from Spatial are included as `spatial-reference-images/` alongside this plan. These are the visual benchmark. heartgarden should match this level of visual quality.
 
 ### screenshot-1.jpg — Main Canvas Overview
 Shows the full canvas with a mix of content types: 3 car photos (edge-to-edge in cards), a duck photo with "Quack!" sticky overlaid, a red graphic design poster, multiple note cards with text, a checklist with "Today/Tomorrow/One of these days" sections, a folder card ("7 Items - Archived ideas to keep around for later"), and a small web clip. The canvas background is warm light gray. All items float with subtle shadows. Items are spaced generously. The blue pill label at top reads "NOTES, GRAPHICS, MOTION AND WEBCLIPS". Bottom-left shows the sliders/settings icon. Bottom-right shows "09/10" space nav with gear, chevrons, and plus.

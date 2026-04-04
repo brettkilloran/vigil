@@ -38,34 +38,34 @@ export function vigilButtonDataAttrs({
 }
 
 /** Vertical rule between toolbar groups (hidden on very narrow rows). */
-export const VIGIL_TOOLBAR_DIVIDER = "hidden h-7 w-px shrink-0 bg-[var(--vigil-border)] sm:block";
+export const HEARTGARDEN_TOOLBAR_DIVIDER = "hidden h-7 w-px shrink-0 bg-[var(--vigil-border)] sm:block";
 
-export const VIGIL_GLASS_PANEL =
-  "rounded-[var(--sys-radius-md)] border border-[var(--sem-border-subtle)] bg-[var(--sem-surface-elevated)] backdrop-blur-[12px] shadow-[0_8px_32px_rgba(0,0,0,0.4)]";
+export const HEARTGARDEN_GLASS_PANEL =
+  "rounded-[var(--sys-radius-md)] border border-[var(--sem-border-subtle)] bg-[var(--sem-surface-elevated)] backdrop-blur-[12px] shadow-[var(--sem-shadow-lg)]";
 
 /** TipTap row inside note cards (compact). */
-export const VIGIL_EDITOR_TOOLBAR_BTN = cx(
+export const HEARTGARDEN_EDITOR_TOOLBAR_BTN = cx(
   "vigil-btn",
   "min-h-[var(--sys-control-height-xs)] px-1.5 py-0.5 text-[11px] font-medium text-[inherit]",
 );
 
 /** Icon-only control in the note format bar (min touch target). */
-export const VIGIL_EDITOR_TOOLBAR_ICON_BTN = cx(
+export const HEARTGARDEN_EDITOR_TOOLBAR_ICON_BTN = cx(
   "vigil-btn",
   "h-8 w-8 shrink-0 border-transparent text-[inherit]",
 );
 
-export const VIGIL_EDITOR_TOOLBAR_BTN_ON = "border-[var(--vigil-card-border)] bg-black/[0.08]";
+export const HEARTGARDEN_EDITOR_TOOLBAR_BTN_ON = "border-[var(--vigil-card-border)] bg-black/[0.08]";
 
 /** ALL-CAPS metadata labels (image detail, entity fields, etc.). */
-export const VIGIL_METADATA_LABEL = "text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--vigil-muted)]";
+export const HEARTGARDEN_METADATA_LABEL = "text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--vigil-muted)]";
 
 /** ~15px icon in toolbar chips and modal headers (matches main toolbar). */
-export const VIGIL_CHROME_ICON = "size-[15px] shrink-0 opacity-90";
+export const HEARTGARDEN_CHROME_ICON = "size-[15px] shrink-0 opacity-90";
 
 /** Legacy constants mapped to recipe defaults during migration. */
-export const VIGIL_CHIP_BTN = cx("vigil-btn", "min-h-9 px-3 py-1.5");
-export const VIGIL_BTN_ICON = cx("vigil-btn", "h-9 w-9 border-transparent");
-export const VIGIL_BTN_ICON_ACTIVE = "data-[active=true]:bg-[var(--cmp-button-primary-bg-default)]";
-export const VIGIL_ADD_BTN = cx("vigil-btn", "px-3 py-1.5");
-export const VIGIL_ICON_GHOST_BTN = cx("vigil-btn", "h-8 w-8 border-transparent");
+export const HEARTGARDEN_CHIP_BTN = cx("vigil-btn", "min-h-9 px-3 py-1.5");
+export const HEARTGARDEN_BTN_ICON = cx("vigil-btn", "h-9 w-9 border-transparent");
+export const HEARTGARDEN_BTN_ICON_ACTIVE = "data-[active=true]:bg-[var(--cmp-button-primary-bg-default)]";
+export const HEARTGARDEN_ADD_BTN = cx("vigil-btn", "px-3 py-1.5");
+export const HEARTGARDEN_ICON_GHOST_BTN = cx("vigil-btn", "h-8 w-8 border-transparent");

@@ -5,6 +5,7 @@ import { items } from "@/src/db/schema";
 import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { assertSpaceExists, listItemsForSpace } from "@/src/lib/spaces";
+import { DS_COLOR } from "@/src/lib/design-system-tokens";
 
 const createBody = z.object({
   itemType: z.enum(["note", "sticky", "image", "checklist", "webclip", "folder"]),
@@ -91,7 +92,7 @@ export async function POST(
   const contentText = parsed.data.contentText ?? "";
   const color =
     parsed.data.color ??
-    (t === "sticky" ? "#00f5a0" : t === "note" ? "#ffffff" : null);
+    (t === "sticky" ? DS_COLOR.itemDefaultSticky : t === "note" ? DS_COLOR.itemDefaultNote : null);
 
   const [row] = await db
     .insert(items)

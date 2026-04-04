@@ -9,7 +9,7 @@ import {
 } from "@phosphor-icons/react";
 
 import { Button } from "@/src/components/ui/Button";
-import { VIGIL_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
+import { HEARTGARDEN_GLASS_PANEL } from "@/src/lib/vigil-ui-classes";
 import { useCanvasStore } from "@/src/stores/canvas-store";
 
 export function CanvasToolRail() {
@@ -20,7 +20,7 @@ export function CanvasToolRail() {
 
   return (
     <div
-      className={`pointer-events-auto fixed right-6 top-1/2 z-[820] flex -translate-y-1/2 flex-col gap-1 p-2 ${VIGIL_GLASS_PANEL}`}
+      className={`pointer-events-auto fixed right-6 top-1/2 z-[820] flex -translate-y-1/2 flex-col gap-1 p-2 ${HEARTGARDEN_GLASS_PANEL}`}
       role="toolbar"
       aria-label="Canvas tools"
     >
