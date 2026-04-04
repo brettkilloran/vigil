@@ -1,14 +1,12 @@
 "use client";
 
-import { LinkSimple, TreeStructure } from "@phosphor-icons/react";
+import { TreeStructure } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/src/components/ui/Button";
+import { CanvasDebugInspectorShell } from "@/src/components/ui/CanvasDebugInspectorShell";
 import type { CanvasContentEntity, CanvasGraph } from "@/src/components/foundation/architectural-types";
-import {
-  HEARTGARDEN_GLASS_PANEL,
-  HEARTGARDEN_METADATA_LABEL,
-} from "@/src/lib/vigil-ui-classes";
+import { HEARTGARDEN_METADATA_LABEL } from "@/src/lib/vigil-ui-classes";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -211,19 +209,8 @@ export function ArchitecturalLinksPanel({
 
   if (!entityId) return null;
 
-  const panelClass = `pointer-events-auto absolute right-3 top-[52px] z-[800] max-h-[min(72vh,480px)] w-[min(92vw,280px)] overflow-y-auto p-3 text-xs ${HEARTGARDEN_GLASS_PANEL}`;
-
   return (
-    <div className={panelClass}>
-      <div className="mb-2 flex items-center gap-2 font-semibold tracking-tight text-[var(--vigil-label)]">
-        <LinkSimple
-          className="size-4 shrink-0 text-[var(--vigil-muted)] opacity-90"
-          weight="bold"
-          aria-hidden
-        />
-        Links
-      </div>
-
+    <CanvasDebugInspectorShell storageKey="hg-canvas-debug-links" title="Debug // Link inspector" defaultOpen={false}>
       {!cloudEnabled ? (
         <p className="mb-2.5 text-[11px] leading-snug text-[var(--vigil-muted)]">
           Local canvas — <code className="rounded bg-black/5 px-0.5 dark:bg-white/10">[[</code> wiki
@@ -338,6 +325,6 @@ export function ArchitecturalLinksPanel({
           )}
         </div>
       ) : null}
-    </div>
+    </CanvasDebugInspectorShell>
   );
 }

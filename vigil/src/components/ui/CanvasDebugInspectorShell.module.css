@@ -1,0 +1,77 @@
+/**
+ * Matches `.sideToolsMainPanel` / chrome glass (ArchitecturalCanvasApp.module.css)
+ * so debug tooling reads as first-party UI, not a floating overlay.
+ */
+.anchor {
+  position: absolute;
+  right: 24px;
+  /* Above bottom dock (dock uses bottom: 28px + format row can grow). */
+  bottom: 118px;
+  z-index: 800;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.collapsedPanel {
+  background: var(--ui-glass-bg);
+  backdrop-filter: var(--chrome-glass-filter);
+  -webkit-backdrop-filter: var(--chrome-glass-filter);
+  border: 1px solid var(--ui-glass-border);
+  border-radius: var(--chrome-panel-radius);
+  box-shadow: var(--chrome-glass-shadow);
+  width: var(--chrome-tool-rail-strip-width);
+  min-width: var(--chrome-tool-rail-strip-width);
+  padding: 4px 2px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.expandedPanel {
+  background: var(--ui-glass-bg);
+  backdrop-filter: var(--chrome-glass-filter);
+  -webkit-backdrop-filter: var(--chrome-glass-filter);
+  border: 1px solid var(--ui-glass-border);
+  border-radius: var(--chrome-panel-radius);
+  box-shadow: var(--chrome-glass-shadow);
+  width: min(92vw, 300px);
+  max-height: min(52vh, 520px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panelHeader {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid color-mix(in oklch, var(--vigil-border) 85%, transparent);
+}
+
+.panelTitle {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vigil-muted);
+  line-height: 1.35;
+}
+
+.panelBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 10px 12px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--vigil-label);
+}

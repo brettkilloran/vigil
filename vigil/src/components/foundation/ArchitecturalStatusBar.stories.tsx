@@ -8,21 +8,17 @@ const meta: Meta<typeof ArchitecturalStatusBar> = {
   title: "Heartgarden/Architectural Shell/Components/Status Bar",
   component: ArchitecturalStatusBar,
   args: {
-    centerWorldX: 0,
-    centerWorldY: 0,
-    scale: 1,
     envLabel: "heartgarden",
     showPulse: true,
-    zoomPrefixIcon: true,
     syncBootstrapPending: false,
+    onExportGraphJson: () => {
+      console.info("Export graph JSON");
+    },
+    exportGraphPaletteHint: "⌘K → Export graph JSON",
   },
   argTypes: {
-    centerWorldX: { control: { type: "number", step: 10 } },
-    centerWorldY: { control: { type: "number", step: 10 } },
-    scale: { control: { type: "range", min: 0.3, max: 3, step: 0.1 } },
     envLabel: { control: "text" },
     showPulse: { control: "boolean" },
-    zoomPrefixIcon: { control: "boolean" },
     syncBootstrapPending: { control: "boolean" },
   },
   parameters: {

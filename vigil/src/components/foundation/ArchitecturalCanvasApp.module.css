@@ -1530,7 +1530,8 @@
   position: absolute;
   top: 24px;
   left: 24px;
-  z-index: var(--layer-ui-chrome);
+  /* Above sibling chrome (e.g. parent-exit rail at --layer-ui-chrome) so crumbs/status stay inspectable. */
+  z-index: var(--layer-ui-chrome-elevated);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -1560,6 +1561,8 @@
   width: max-content;
   max-width: 100%;
   min-width: 0;
+  /* One hit target for status + nav including flex gap (children can still opt out via none if needed). */
+  pointer-events: auto;
 }
 
 .statusBarSegment {
@@ -1567,7 +1570,8 @@
   align-self: stretch;
   display: flex;
   flex-direction: column;
-  pointer-events: none;
+  /* Match other chrome (e.g. `.topRightConnectionTools`, `.navRow`): participate in hit-testing so the strip is inspectable and blocks canvas drags. */
+  pointer-events: auto;
 }
 
 .statusBarSegment .glassPanel {
@@ -1611,6 +1615,128 @@
   }
 }
 
+/* Full-width control: brand + save line; opens save / version popover */
+.shellTopChromePanel .statusSaveBarTrigger:global(.vigil-btn) {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  justify-content: flex-start;
+  min-height: var(--arch-top-chrome-line-h, 24px);
+  height: auto;
+  padding: 0;
+  gap: 8px;
+  border-radius: inherit;
+}
+
+.statusSaveWarningIcon {
+  flex-shrink: 0;
+  color: oklch(0.72 0.2 25);
+}
+
+.statusSaveLine {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  line-height: 1.25;
+  color: var(--sys-color-neutral-400);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.syncPopover {
+  position: fixed;
+  width: min(288px, calc(100vw - 16px));
+  max-height: min(420px, calc(100vh - 24px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  border-radius: var(--chrome-panel-radius);
+  border: 1px solid var(--ui-glass-border);
+  background: var(--ui-glass-bg);
+  backdrop-filter: var(--chrome-glass-filter);
+  -webkit-backdrop-filter: var(--chrome-glass-filter);
+  box-shadow: var(--chrome-glass-shadow);
+  z-index: 850;
+}
+
+.syncPopoverTitle {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--vigil-label);
+  margin: 0 0 8px;
+}
+
+.syncPopoverBody {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--vigil-muted);
+}
+
+.syncPopoverMeta {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in oklch, var(--vigil-border) 75%, transparent);
+}
+
+.syncPopoverMetaRow {
+  font-size: 10px;
+  line-height: 1.5;
+  margin-top: 4px;
+  color: var(--vigil-muted);
+}
+
+.syncPopoverMetaKey {
+  font-weight: 500;
+  color: var(--vigil-label);
+}
+
+.syncPopoverMetaVal {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  color: var(--vigil-muted);
+}
+
+.syncPopoverMetaRel {
+  font-size: 9px;
+  opacity: 0.85;
+}
+
+.syncPopoverSection {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in oklch, var(--vigil-border) 75%, transparent);
+}
+
+.syncPopoverSectionLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--vigil-muted);
+  margin-bottom: 6px;
+}
+
+.syncPopoverSectionBody {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--vigil-muted);
+}
+
+.syncPopoverHint {
+  margin: 8px 0 0;
+  font-size: 9px;
+  line-height: 1.4;
+  color: var(--vigil-muted);
+  opacity: 0.9;
+}
+
 .navChrome {
   flex: 0 1 auto;
   min-width: 0;
@@ -1621,7 +1747,7 @@
   align-items: flex-start;
   align-self: stretch;
   gap: 0;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .navChrome > .navPanel {
@@ -1630,6 +1756,7 @@
   width: max-content;
   max-width: 100%;
   box-sizing: border-box;
+  pointer-events: auto;
 }
 
 .navRow {
@@ -1770,8 +1897,37 @@
   width: 8px;
   height: 8px;
   border-radius: 999px;
+  flex-shrink: 0;
   background: var(--accent);
   animation: pulse 1.6s ease-in-out infinite;
+}
+
+/* Semantic save / DB state (ArchitecturalStatusBar brand control). */
+.pulseDotToneLoading {
+  background: oklch(0.72 0.08 250);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.pulseDotToneLocal {
+  background: oklch(0.55 0.02 260);
+  animation: none;
+  opacity: 0.85;
+}
+
+.pulseDotToneSaving {
+  background: oklch(0.78 0.16 85);
+  animation: pulse 0.85s ease-in-out infinite;
+}
+
+.pulseDotToneOk {
+  background: oklch(0.65 0.19 150);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.pulseDotToneError {
+  background: oklch(0.63 0.22 25);
+  animation: none;
+  opacity: 1;
 }
 
 @keyframes pulse {
@@ -1781,6 +1937,16 @@
   }
   50% {
     opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulseDot,
+  .pulseDotToneLoading,
+  .pulseDotToneSaving,
+  .pulseDotToneOk {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
   }
 }
 
@@ -1799,7 +1965,7 @@
   color: var(--sys-color-neutral-500);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-height: var(--arch-top-chrome-line-h, 24px);
   flex-shrink: 0;
 }
@@ -1813,6 +1979,37 @@
   width: 1px;
   height: 12px;
   background: var(--sem-border-strong);
+}
+
+/* World X/Y + zoom: same bottom inset as `.bottomDock`; right edge pinned so width tracks content. */
+.viewportMetricsStrip {
+  position: absolute;
+  right: max(24px, env(safe-area-inset-right, 0px));
+  left: auto;
+  bottom: 28px;
+  width: fit-content;
+  max-width: calc(100vw - 48px);
+  z-index: var(--layer-ui-chrome);
+  pointer-events: none;
+}
+
+.viewportMetricsPanel {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-inline: 16px;
+  box-sizing: border-box;
+  min-height: var(--chrome-tool-rail-strip-width);
+  max-height: var(--chrome-tool-rail-strip-width);
+  width: fit-content;
+  max-width: 100%;
+}
+
+.viewportMetricsPanel .monoSmall {
+  min-height: 0;
 }
 
 .bottomDock {
@@ -2193,6 +2390,15 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
+}
+
+/* Beats the generic `.rootDockPanel` rule above (same specificity, later wins without both classes). */
+.rootDockPanel.viewportMetricsPanel {
+  padding-block: 0;
+  padding-inline: 16px;
+  justify-content: flex-end;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .formatToolbarWrap {

@@ -35,7 +35,10 @@ import { ArchitecturalParentExitThreshold } from "@/src/components/foundation/Ar
 import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
 import { ArchitecturalFolderCard } from "@/src/components/foundation/ArchitecturalFolderCard";
 import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";
-import { ArchitecturalStatusBar } from "@/src/components/foundation/ArchitecturalStatusBar";
+import {
+  ArchitecturalStatusBar,
+  ArchitecturalViewportMetrics,
+} from "@/src/components/foundation/ArchitecturalStatusBar";
 import { ArchitecturalToolRail } from "@/src/components/foundation/ArchitecturalToolRail";
 import {
   applyImageDataUrlToArchitecturalMediaBody,
@@ -1711,41 +1714,6 @@ export function ArchitecturalCanvasApp({
       return { id: space.id, name: space.name, pathLabel: path };
     });
   }, [graph.rootSpaceId, graph.spaces]);
-
-  const [parentExitRail, setParentExitRail] = useState({ top: 24, height: 40 });
-  const syncParentExitRail = useCallback(() => {
-    const stack = shellTopLeftStackRef.current;
-    if (!stack) return;
-    const r = stack.getBoundingClientRect();
-    setParentExitRail({
-      top: Math.round(r.top),
-      height: Math.max(Math.round(r.height), 32),
-    });
-  }, []);
-
-  useLayoutEffect(() => {
-    syncParentExitRail();
-    const node = shellTopLeftStackRef.current;
-    if (!node || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => syncParentExitRail());
-    ro.observe(node);
-    return () => ro.disconnect();
-  }, [
-    navigationPath,
-    activeSpaceId,
-    parentSpaceId,
-    selectedNodeIds.length,
-    syncParentExitRail,
-  ]);
-
-  useLayoutEffect(() => {
-    if (draggedNodeIds.length > 0) syncParentExitRail();
-  }, [draggedNodeIds.length, syncParentExitRail]);
-
-  useEffect(() => {
-    window.addEventListener("resize", syncParentExitRail);
-    return () => window.removeEventListener("resize", syncParentExitRail);
-  }, [syncParentExitRail]);
 
   const nodeZ = useMemo(() => {
     const zMap = new Map<string, number>();
@@ -3481,6 +3449,17 @@ export function ArchitecturalCanvasApp({
     [],
   );
 
+  const exportGraphJson = useCallback(() => {
+    const data = JSON.stringify(graphRef.current, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `vigil-graph-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
   const runPaletteAction = useCallback((actionId: string) => {
     if (actionId === "create-note") {
       createNewNode("default");
@@ -3499,14 +3478,7 @@ export function ArchitecturalCanvasApp({
       return;
     }
     if (actionId === "export-json") {
-      const data = JSON.stringify(graphRef.current, null, 2);
-      const blob = new Blob([data], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `vigil-graph-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      exportGraphJson();
       return;
     }
     if (actionId === "toggle-theme") {
@@ -3565,7 +3537,7 @@ export function ArchitecturalCanvasApp({
     if (actionId === "import-lore") {
       loreImportFileInputRef.current?.click();
     }
-  }, [activeSpace?.entityIds, createNewNode, recenterToOrigin]);
+  }, [activeSpace?.entityIds, createNewNode, exportGraphJson, recenterToOrigin]);
 
   const updateDropTargets = useCallback(
     (draggedEntityId: string, pointerClientX?: number, pointerClientY?: number) => {
@@ -6158,7 +6130,7 @@ export function ArchitecturalCanvasApp({
         {parentSpaceId ? (
           <ArchitecturalParentExitThreshold
             ref={parentDropRef}
-            toolbarBottomPx={parentExitRail.top + parentExitRail.height}
+            toolbarBottomPx={0}
             visible={parentExitStripVisible}
             hovered={parentDropHovered}
             interactive={parentExitInteractive}
@@ -6167,14 +6139,13 @@ export function ArchitecturalCanvasApp({
         ) : null}
         <div ref={shellTopLeftStackRef} className={styles.shellTopLeftStack}>
           <div className={styles.shellTopCluster}>
-            <div className={styles.shellTopClusterRow}>
+            <div className={styles.shellTopClusterRow} data-hg-chrome="top-left-cluster">
               <ArchitecturalStatusBar
-                centerWorldX={centerWorldX}
-                centerWorldY={centerWorldY}
-                scale={scale}
                 syncBootstrapPending={scenario === "default" && !canvasBootstrapResolved}
+                onExportGraphJson={exportGraphJson}
+                exportGraphPaletteHint={`${modKeyHints.search} → Export graph JSON`}
               />
-              <div className={styles.navChrome}>
+              <div className={styles.navChrome} data-hg-chrome="nav-breadcrumb">
                 <div className={`${styles.glassPanel} ${styles.navPanel} ${styles.shellTopChromePanel}`}>
                   <div className={styles.navRow}>
                     {parentSpaceId ? (
@@ -6241,6 +6212,11 @@ export function ArchitecturalCanvasApp({
           </div>
         </div>
 
+        <ArchitecturalViewportMetrics
+          centerWorldX={centerWorldX}
+          centerWorldY={centerWorldY}
+          scale={scale}
+        />
         {!focusOpen && !galleryOpen ? (
           <ArchitecturalBottomDock
             showFormatToolbar={textFormatChromeActive}
