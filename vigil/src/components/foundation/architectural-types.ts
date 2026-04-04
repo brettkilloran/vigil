@@ -15,6 +15,8 @@ export type CanvasEntityBase = {
   width?: number;
   tapeRotation: number;
   slots: Record<string, EntitySpatialSlot>;
+  stackId?: string | null;
+  stackOrder?: number | null;
 };
 
 export type CanvasContentEntity = CanvasEntityBase & {

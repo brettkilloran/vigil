@@ -120,6 +120,7 @@ export function ArchitecturalNodeCard({
   tapeVariant = "clear",
   showExpandButton = true,
   bodyEditable,
+  showTape = true,
 }: {
   id: string;
   title: string;
@@ -135,6 +136,7 @@ export function ArchitecturalNodeCard({
   tapeVariant?: TapeVariant;
   showExpandButton?: boolean;
   bodyEditable?: boolean;
+  showTape?: boolean;
 }) {
   const nodeWidth = width ?? 340;
   const isMediaNode = theme === "media";
@@ -152,7 +154,7 @@ export function ArchitecturalNodeCard({
       } ${selected ? styles.selectedNode : ""}`}
       style={cardStyle}
     >
-      <ArchitecturalNodeTape variant={tapeVariant} rotationDeg={tapeRotation} />
+      {showTape ? <ArchitecturalNodeTape variant={tapeVariant} rotationDeg={tapeRotation} /> : null}
       <ArchitecturalNodeHeader
         title={title}
         showExpand={showExpandButton}
