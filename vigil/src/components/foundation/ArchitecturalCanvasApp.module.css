@@ -1895,7 +1895,7 @@
 }
 
 .crumbActive {
-  color: var(--accent);
+  color: var(--sys-color-white, #ffffff);
 }
 
 .glassPanel,
@@ -3206,6 +3206,17 @@
 
 .shell :global(.vigil-btn[data-tone="glass"]) {
   color: var(--sys-color-neutral-400);
+}
+
+/* Current space in trail: white; beat glass tone + disabled opacity on non-clickable crumb. */
+.shell :global(.vigil-btn[data-tone="glass"]).crumbActive,
+.shell :global(.vigil-btn[data-tone="glass"]).crumbActive:disabled,
+.shell :global(.vigil-btn[data-tone="glass"]).crumbActive[data-disabled="true"] {
+  color: var(--sys-color-white, #ffffff);
+  opacity: 1;
+  cursor: default;
+  background: transparent;
+  border-color: transparent;
 }
 
 .shell :global(.vigil-btn[data-tone="menu"]) {

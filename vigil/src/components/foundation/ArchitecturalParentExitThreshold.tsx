@@ -6,13 +6,9 @@ import { forwardRef, useCallback, type KeyboardEvent } from "react";
 import styles from "@/src/components/foundation/ArchitecturalParentExitThreshold.module.css";
 
 export type ArchitecturalParentExitThresholdProps = {
-  /**
-   * Viewport Y of the bottom edge of the top toolbar (status + breadcrumbs), from
-   * `getBoundingClientRect().bottom` on the shell stack. Rail height is this plus
-   * `extendBelowToolbarPx` so the well’s bottom sits slightly below the toolbar.
-   */
+  /** Reserved for future layout tuning (rail height is content-sized). */
   toolbarBottomPx: number;
-  /** Pixels to extend the drop zone below the toolbar (into the canvas). */
+  /** Reserved for future layout tuning. */
   extendBelowToolbarPx?: number;
   /** When false, band stays invisible (ref still valid for layout if needed). */
   visible: boolean;
@@ -23,25 +19,13 @@ export type ArchitecturalParentExitThresholdProps = {
 };
 
 /**
- * Centered dashed drop well: bottom edge just below the top toolbar; body extends above
- * (often past y=0). Ref sits on the well for hit-testing.
+ * Centered dashed drop well at the top of the viewport. Ref sits on the well for hit-testing.
  */
 export const ArchitecturalParentExitThreshold = forwardRef<
   HTMLDivElement,
   ArchitecturalParentExitThresholdProps
->(function ArchitecturalParentExitThreshold(
-  {
-    toolbarBottomPx,
-    extendBelowToolbarPx = 40,
-    visible,
-    hovered,
-    interactive,
-    onActivate,
-  },
-  ref,
-) {
-  const railHeight = Math.max(0, toolbarBottomPx + extendBelowToolbarPx);
-
+>(function ArchitecturalParentExitThreshold(props, ref) {
+  const { visible, hovered, interactive, onActivate } = props;
   const runActivate = useCallback(() => {
     if (!interactive || !onActivate) return;
     onActivate();
@@ -69,10 +53,7 @@ export const ArchitecturalParentExitThreshold = forwardRef<
     .join(" ");
 
   return (
-    <div
-      className={`${styles.rail} ${visible ? styles.railVisible : ""}`}
-      style={{ height: railHeight }}
-    >
+    <div className={`${styles.rail} ${visible ? styles.railVisible : ""}`}>
       <div
         ref={ref}
         className={wellClass}

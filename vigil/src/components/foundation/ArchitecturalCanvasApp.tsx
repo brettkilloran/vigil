@@ -2898,6 +2898,10 @@ export function ArchitecturalCanvasApp({
       }
       if (!graphSnap.spaces[targetSpaceId]) return;
 
+      if (openInFocus && entity.kind === "content") {
+        openFocusMode(entityId);
+      }
+
       const panToEntity = () => {
         const ent = graphRef.current.entities[entityId];
         const slot = ent?.slots[targetSpaceId];
@@ -2910,9 +2914,6 @@ export function ArchitecturalCanvasApp({
           setTranslateY(height / 2 - slot.y * nextScale);
         }
         setSelectedNodeIds([entityId]);
-        if (openInFocus && ent?.kind === "content") {
-          openFocusMode(entityId);
-        }
       };
 
       if (targetSpaceId !== activeSpaceIdRef.current) {

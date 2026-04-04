@@ -4,9 +4,9 @@
  */
 .anchor {
   position: absolute;
-  right: 24px;
-  /* Above bottom dock (dock uses bottom: 28px + format row can grow). */
-  bottom: 118px;
+  right: max(24px, env(safe-area-inset-right, 0px));
+  /* Sit just above the X/Y + zoom strip (same bottom inset and rail height as `.viewportMetricsStrip`). */
+  bottom: calc(28px + var(--chrome-tool-rail-strip-width, 46px) + 10px);
   z-index: 800;
   pointer-events: auto;
   display: flex;

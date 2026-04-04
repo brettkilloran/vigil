@@ -299,11 +299,10 @@ export function CommandPalette({
         spaceId: item.spaceId,
         spaceName: item.spaceName,
       });
-      const openInFocus = q.trim().length > 0;
-      onSelectItem(item.id, openInFocus);
+      onSelectItem(item.id, true);
       onClose();
     },
-    [onClose, onRecordRecentItem, onSelectItem, q],
+    [onClose, onRecordRecentItem, onSelectItem],
   );
 
   const selectSpace = useCallback(
