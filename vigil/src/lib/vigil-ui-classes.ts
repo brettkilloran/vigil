@@ -43,6 +43,18 @@ export const HEARTGARDEN_TOOLBAR_DIVIDER = "hidden h-7 w-px shrink-0 bg-[var(--v
 export const HEARTGARDEN_GLASS_PANEL =
   "rounded-[var(--sys-radius-md)] border border-[var(--sem-border-subtle)] bg-[var(--sem-surface-elevated)] backdrop-blur-[12px] shadow-[var(--sem-shadow-lg)]";
 
+/** Command palette surface (cmdk-inspired, token-native). */
+export const HEARTGARDEN_COMMAND_SURFACE = cx(
+  HEARTGARDEN_GLASS_PANEL,
+  "w-full max-w-2xl overflow-hidden",
+);
+
+/** Command palette option row baseline. */
+export const HEARTGARDEN_COMMAND_OPTION = cx(
+  "flex w-full items-start justify-start gap-2.5 rounded-[10px] px-3 py-2.5 text-left transition-colors",
+  "text-[var(--sem-text-primary)]",
+);
+
 /** TipTap row inside note cards (compact). */
 export const HEARTGARDEN_EDITOR_TOOLBAR_BTN = cx(
   "vigil-btn",

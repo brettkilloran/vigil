@@ -1212,21 +1212,52 @@
 }
 
 .a4DocumentBody {
-  /* Compact header ~34px + body vertical padding + small buffer (keeps A4 clip aligned with chrome). */
   max-height: calc((var(--entity-width, 340px) * 1.41421356237) - 90px);
-  overflow: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+
+  /* Subtle bottom fade: ~6 % of viewport height ≈ bottom padding, so text stays readable. */
   -webkit-mask-image: linear-gradient(
     to bottom,
     var(--sys-color-black) 0%,
-    var(--sys-color-black) 84%,
+    var(--sys-color-black) 94%,
     transparent 100%
   );
   mask-image: linear-gradient(
     to bottom,
     var(--sys-color-black) 0%,
-    var(--sys-color-black) 84%,
+    var(--sys-color-black) 94%,
     transparent 100%
   );
+
+  /* Thin scrollbar — invisible at rest, tinted on hover. */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  scrollbar-gutter: stable;
+}
+
+.a4DocumentBody:hover,
+.a4DocumentBody:focus {
+  scrollbar-color: color-mix(in oklch, currentColor 18%, transparent) transparent;
+}
+
+/* Webkit / Blink scrollbar refinement. */
+.a4DocumentBody::-webkit-scrollbar {
+  width: 5px;
+}
+
+.a4DocumentBody::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.a4DocumentBody::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.a4DocumentBody:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, currentColor 18%, transparent);
 }
 
 .nodeBody p {

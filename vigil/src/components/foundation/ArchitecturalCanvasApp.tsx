@@ -634,6 +634,7 @@ export function ArchitecturalCanvasApp({
 
   const [focusOpen, setFocusOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [galleryNodeId, setGalleryNodeId] = useState<string | null>(null);
   const [galleryDraftTitle, setGalleryDraftTitle] = useState("");
   const [galleryDraftNotes, setGalleryDraftNotes] = useState("");
@@ -740,11 +741,13 @@ export function ArchitecturalCanvasApp({
   const navigationPathRef = useRef(navigationPath);
   const selectedNodeIdsRef = useRef(selectedNodeIds);
   const selectionBeforeConnectionModeRef = useRef<string[] | null>(null);
+  const alignSelectedInGridRef = useRef<() => void>(() => {});
   const undoPastRef = useRef<ArchitecturalUndoSnapshot[]>([]);
   const undoFutureRef = useRef<ArchitecturalUndoSnapshot[]>([]);
   const isApplyingHistoryRef = useRef(false);
   const focusOpenRef = useRef(focusOpen);
   const galleryOpenRef = useRef(galleryOpen);
+  const paletteOpenRef = useRef(false);
   const activeNodeIdRef = useRef(activeNodeId);
   const pendingMediaUploadRef = useRef<{ mode: "focus" | "canvas"; id: string } | null>(null);
   const mediaFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -761,10 +764,10 @@ export function ArchitecturalCanvasApp({
   selectedNodeIdsRef.current = selectedNodeIds;
   focusOpenRef.current = focusOpen;
   galleryOpenRef.current = galleryOpen;
+  paletteOpenRef.current = paletteOpen;
   activeNodeIdRef.current = activeNodeId;
 
   const modKeyHints = useModKeyHints();
-  const [paletteOpen, setPaletteOpen] = useState(false);
   const { items: recentItems, push: pushRecentItem } = useRecentItems();
 
   useEffect(() => {
@@ -3547,6 +3550,7 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (paletteOpenRef.current) return;
       if (event.code !== "Space") return;
       if (isEditableTarget(event.target)) return;
       event.preventDefault();
@@ -3631,6 +3635,7 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (paletteOpenRef.current) return;
       if (event.key !== "Escape") return;
       if (isEditableTarget(event.target)) return;
 
@@ -3677,6 +3682,7 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (paletteOpenRef.current) return;
       const isDeleteKey = event.key === "Delete" || event.key === "Backspace";
       if (!isDeleteKey) return;
       if (isEditableTarget(event.target) || focusOpen || galleryOpen) return;
@@ -3751,8 +3757,15 @@ export function ArchitecturalCanvasApp({
       const inEditable =
         !!target.closest("input, textarea, select, [contenteditable='true']");
 
-      // Preserve native wheel behavior inside editors when user is not zooming.
-      if (inEditable && !(event.ctrlKey || event.metaKey)) return;
+      // Allow native scroll inside node bodies even when not contenteditable
+      // (e.g. pan tool active). Only when the body actually overflows.
+      const scrollBody = target.closest<HTMLElement>("[data-node-body-editor]");
+      const inScrollableBody =
+        !!scrollBody && scrollBody.scrollHeight > scrollBody.clientHeight;
+
+      // Preserve native wheel/scroll behavior inside editors or scrollable
+      // document bodies when the user is not pinch-zooming.
+      if ((inEditable || inScrollableBody) && !(event.ctrlKey || event.metaKey)) return;
 
       event.preventDefault();
       if (event.ctrlKey || event.metaKey) {
@@ -3774,6 +3787,7 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (paletteOpenRef.current) return;
       const target = event.target as HTMLElement;
       if (target?.isContentEditable) return;
       if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
@@ -3804,6 +3818,7 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (paletteOpenRef.current) return;
       const target = event.target as HTMLElement;
       if (target?.isContentEditable) return;
       if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
@@ -3823,6 +3838,7 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (paletteOpenRef.current) return;
       const target = event.target as HTMLElement;
       if (target?.isContentEditable) return;
       if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
@@ -3871,6 +3887,116 @@ export function ArchitecturalCanvasApp({
     selectedNodeIds,
     stackSelectedContent,
     unstackGroup,
+  ]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (paletteOpenRef.current) return;
+      const target = event.target as HTMLElement | null;
+      if (isEditableTarget(target)) return;
+      if (focusOpen || galleryOpen || stackModal) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+      const key = event.key.toLowerCase();
+
+      // Tool / mode hotkeys use unmodified single keys to avoid browser/system collisions.
+      if (key === "v") {
+        event.preventDefault();
+        setActiveTool("select");
+        setConnectionMode("move");
+        setConnectionSourceId(null);
+        setConnectionCursorWorld(null);
+        selectionBeforeConnectionModeRef.current = null;
+        return;
+      }
+      if (key === "h") {
+        event.preventDefault();
+        setActiveTool("pan");
+        setConnectionMode("move");
+        setConnectionSourceId(null);
+        setConnectionCursorWorld(null);
+        selectionBeforeConnectionModeRef.current = null;
+        return;
+      }
+      if (key === "d") {
+        event.preventDefault();
+        const resolved = connectionMode === "draw" ? "move" : "draw";
+        setConnectionMode(resolved);
+        setActiveTool("select");
+        if (resolved === "move") {
+          const restore = selectionBeforeConnectionModeRef.current;
+          if (restore) setSelectedNodeIds(restore.filter((id) => !!graphRef.current.entities[id]));
+          selectionBeforeConnectionModeRef.current = null;
+          setConnectionSourceId(null);
+          setConnectionCursorWorld(null);
+        } else {
+          if (!selectionBeforeConnectionModeRef.current) {
+            selectionBeforeConnectionModeRef.current = [...selectedNodeIdsRef.current];
+          }
+          setSelectedNodeIds([]);
+        }
+        return;
+      }
+      if (key === "x") {
+        event.preventDefault();
+        const resolved = connectionMode === "cut" ? "move" : "cut";
+        setConnectionMode(resolved);
+        setActiveTool("select");
+        if (resolved === "move") {
+          const restore = selectionBeforeConnectionModeRef.current;
+          if (restore) setSelectedNodeIds(restore.filter((id) => !!graphRef.current.entities[id]));
+          selectionBeforeConnectionModeRef.current = null;
+          setConnectionSourceId(null);
+          setConnectionCursorWorld(null);
+        } else {
+          if (!selectionBeforeConnectionModeRef.current) {
+            selectionBeforeConnectionModeRef.current = [...selectedNodeIdsRef.current];
+          }
+          setSelectedNodeIds([]);
+        }
+        return;
+      }
+
+      // Creation hotkeys (1-5) map to dock create actions.
+      if (key === "1") {
+        event.preventDefault();
+        createNewNode("default");
+        return;
+      }
+      if (key === "2") {
+        event.preventDefault();
+        createNewNode("task");
+        return;
+      }
+      if (key === "3") {
+        event.preventDefault();
+        createNewNode("code");
+        return;
+      }
+      if (key === "4") {
+        event.preventDefault();
+        createNewNode("media");
+        return;
+      }
+      if (key === "5") {
+        event.preventDefault();
+        createNewNode("folder");
+        return;
+      }
+
+      if (key === "g" && selectedNodeIdsRef.current.length >= 2) {
+        event.preventDefault();
+        alignSelectedInGridRef.current();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    connectionMode,
+    createNewNode,
+    focusOpen,
+    galleryOpen,
+    stackModal,
   ]);
 
   const resolveRichTextFormatTarget = useCallback((): HTMLElement | null => {
@@ -4252,6 +4378,7 @@ export function ArchitecturalCanvasApp({
       return next;
     });
   }, [recordUndoBeforeMutation, visibleEntityIds]);
+  alignSelectedInGridRef.current = alignSelectedInGrid;
 
   const canStackFromSelection = useMemo(() => {
     const contentIds = selectedNodeIds.filter((id) => {
@@ -4959,7 +5086,7 @@ export function ArchitecturalCanvasApp({
           <ArchitecturalButton
             type="button"
             size="menu"
-            tone="focus-light"
+            tone="glass"
             leadingIcon={<MagnifyingGlass size={12} weight="bold" aria-hidden />}
             onClick={() => setPaletteOpen(true)}
             title={`Search (${modKeyHints.search})`}
