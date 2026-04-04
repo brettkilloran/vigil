@@ -1,5 +1,9 @@
+import type { FolderColorSchemeId } from "@/src/components/foundation/architectural-folder-schemes";
+
 export type ContentTheme = "default" | "code" | "task" | "media";
 export type NodeTheme = ContentTheme | "folder";
+
+export type { FolderColorSchemeId };
 export type CanvasTool = "select" | "pan";
 export type TapeVariant = "clear" | "masking" | "dark";
 
@@ -30,6 +34,8 @@ export type CanvasFolderEntity = CanvasEntityBase & {
   kind: "folder";
   theme: "folder";
   childSpaceId: string;
+  /** Canvas folder face tint; omit for shell default palette. */
+  folderColorScheme?: FolderColorSchemeId;
 };
 
 export type CanvasEntity = CanvasContentEntity | CanvasFolderEntity;

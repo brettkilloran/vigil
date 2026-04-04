@@ -4,7 +4,12 @@ import { useMemo } from "react";
 import { CornersOut, DownloadSimple } from "@phosphor-icons/react";
 
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
+import {
+  folderNodeStyleForScheme,
+  type FolderColorSchemeId,
+} from "@/src/components/foundation/architectural-folder-schemes";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
+import { Button } from "@/src/components/ui/Button";
 
 /** Stable 0..2^32-1 from string — same folder id always gets same “random” angles. */
 function stableHash(input: string): number {
@@ -28,6 +33,7 @@ export function ArchitecturalFolderCard({
   itemCount = 0,
   selected = false,
   dragOver = false,
+  folderColorScheme,
   onOpen,
   onTitleCommit,
 }: {
@@ -36,6 +42,7 @@ export function ArchitecturalFolderCard({
   itemCount?: number;
   selected?: boolean;
   dragOver?: boolean;
+  folderColorScheme?: FolderColorSchemeId;
   onOpen?: () => void;
   onTitleCommit?: (title: string) => void;
 }) {
@@ -50,6 +57,8 @@ export function ArchitecturalFolderCard({
     [id],
   );
 
+  const schemeStyle = folderNodeStyleForScheme(folderColorScheme);
+
   return (
     <div
       data-folder-drop="true"
@@ -57,6 +66,7 @@ export function ArchitecturalFolderCard({
       className={`${styles.folderNode} ${dragOver ? styles.folderDragOver : ""} ${
         selected ? styles.folderSelected : ""
       }`}
+      style={schemeStyle}
     >
       <div className={styles.folderBack} />
       {showPeek ? (
@@ -101,17 +111,22 @@ export function ArchitecturalFolderCard({
               {itemCount} item{itemCount === 1 ? "" : "s"}
             </div>
           </div>
-          <button
+          <Button
             type="button"
-            className={styles.folderOpenBtn}
+            size="icon"
+            variant="ghost"
+            tone="card-dark"
+            className={styles.nodeBtn}
             data-folder-open-btn="true"
+            title="Open folder"
+            aria-label="Open folder"
             onClick={(event) => {
               event.stopPropagation();
               onOpen?.();
             }}
           >
-            <CornersOut size={18} />
-          </button>
+            <CornersOut size={14} />
+          </Button>
         </div>
       </div>
     </div>

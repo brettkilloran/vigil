@@ -459,6 +459,8 @@
   isolation: isolate;
   perspective: 1000px;
   transform-style: preserve-3d;
+  /* Light typography on default dark folder; overridden per tint via inline --folder-fg */
+  --folder-fg: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
 }
 
 /* Decorative papers: strong when closed; hidden while flap opens (drop target). */
@@ -574,7 +576,7 @@
   width: 90%;
   height: 70%;
   box-sizing: border-box;
-  border: 1px dashed var(--sem-overlay-white-12);
+  border: 1px dashed color-mix(in oklch, var(--folder-fg) 22%, transparent);
   border-radius: 18px;
   opacity: 0;
   display: flex;
@@ -582,7 +584,7 @@
   justify-content: center;
   flex-direction: column;
   gap: 9px;
-  color: color-mix(in oklch, var(--sys-color-white) 20%, transparent);
+  color: color-mix(in oklch, var(--folder-fg) 32%, transparent);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -654,7 +656,7 @@
   font-size: 24px;
   font-weight: 600;
   line-height: 1.2;
-  color: var(--text-main);
+  color: var(--folder-fg);
   outline: none;
 }
 
@@ -662,28 +664,10 @@
   width: fit-content;
   padding: 3px 10px;
   border-radius: 999px;
-  background: var(--sem-overlay-white-12);
-  color: var(--text-muted);
+  background: color-mix(in oklch, var(--folder-fg) 14%, transparent);
+  color: color-mix(in oklch, var(--folder-fg) 72%, transparent);
   font-size: 11px;
   font-family: var(--font-geist-mono), monospace;
-}
-
-.folderOpenBtn {
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  width: 32px;
-  height: 32px;
-  border-radius: 7px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.folderOpenBtn:hover {
-  color: var(--text-main);
-  background: var(--sem-overlay-white-08);
 }
 
 .folderDragOver {
@@ -1624,6 +1608,196 @@
   overflow: visible;
 }
 
+/* Folder tint: trigger + dropdown (swatch grid classes must match ArchitecturalBottomDock). */
+.dockFolderTintPicker {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.dockFolderTintTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px 0 8px;
+  margin: 0;
+  border-radius: 8px;
+  border: 1px solid var(--sem-border-subtle);
+  background: color-mix(in oklch, var(--sys-color-black) 72%, transparent);
+  color: color-mix(in oklch, var(--sem-text-muted) 92%, transparent);
+  cursor: pointer;
+  font-family: var(--font-geist-mono), monospace;
+  backdrop-filter: blur(12px) saturate(118%);
+  -webkit-backdrop-filter: blur(12px) saturate(118%);
+  box-shadow: inset 0 1px 0 var(--sem-overlay-white-08);
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.dockFolderTintTrigger:hover {
+  border-color: color-mix(in oklch, var(--sem-text-muted) 28%, var(--sem-border-subtle));
+  background: color-mix(in oklch, var(--sys-color-black) 62%, transparent);
+  color: var(--sem-text-primary);
+}
+
+.dockFolderTintTriggerOpen {
+  border-color: color-mix(in oklch, var(--sys-color-white) 22%, transparent);
+  background: color-mix(in oklch, var(--sys-color-black) 55%, transparent);
+  color: var(--sem-text-primary);
+}
+
+.dockFolderTintTriggerEditor {
+  border-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
+  background: color-mix(in oklch, var(--sys-color-black) 40%, transparent);
+  color: color-mix(in oklch, var(--sys-color-white) 58%, transparent);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.dockFolderTintTriggerEditor:hover,
+.dockFolderTintTriggerEditor.dockFolderTintTriggerOpen {
+  color: color-mix(in oklch, var(--sys-color-white) 82%, transparent);
+  border-color: color-mix(in oklch, var(--sys-color-white) 26%, transparent);
+}
+
+.dockFolderTintPreview {
+  width: 5px;
+  height: 18px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  box-shadow:
+    inset 0 1px 1px color-mix(in oklch, var(--sys-color-black) 35%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--sys-color-white) 12%, transparent);
+}
+
+.dockFolderTintPreviewClassic {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--sys-color-neutral-600) 88%, var(--sys-color-neutral-900)) 0%,
+    var(--sys-color-neutral-900) 100%
+  );
+}
+
+.dockFolderTintTriggerText {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.88;
+}
+
+.dockFolderTintCaret {
+  flex-shrink: 0;
+  opacity: 0.55;
+  transition: transform 0.2s ease;
+}
+
+.dockFolderTintTriggerOpen .dockFolderTintCaret {
+  transform: rotate(-180deg);
+  opacity: 0.85;
+}
+
+.dockFolderTintMenu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: calc(var(--layer-focus-overlay) + 3);
+  min-width: 0;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid var(--ui-glass-border);
+  background: color-mix(in oklch, var(--sys-color-black) 88%, transparent);
+  backdrop-filter: blur(16px) saturate(122%);
+  -webkit-backdrop-filter: blur(16px) saturate(122%);
+  box-shadow:
+    0 12px 28px var(--sem-color-shadow-50),
+    inset 0 1px 0 var(--sem-overlay-white-08);
+}
+
+.dockFolderTintMenuEditor {
+  background: var(--sys-color-black);
+  border-color: color-mix(in oklch, var(--sys-color-white) 16%, transparent);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.dockFolderTintMenuHeader {
+  padding: 8px 12px 6px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--sem-text-muted) 88%, transparent);
+  border-bottom: 1px solid var(--sem-border-subtle);
+}
+
+.dockFolderTintMenuHeaderEditor {
+  color: color-mix(in oklch, var(--sys-color-white) 42%, transparent);
+  border-bottom-color: color-mix(in oklch, var(--sys-color-white) 12%, transparent);
+}
+
+.dockFolderTintSwatchGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 30px);
+  gap: 10px;
+  justify-content: center;
+  padding: 12px 14px 14px;
+}
+
+.dockFolderTintMenuSwatch {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  box-shadow:
+    inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 32%, transparent),
+    0 1px 3px var(--sem-color-shadow-22);
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.14s ease,
+    border-color 0.14s ease;
+}
+
+.dockFolderTintMenuSwatch:hover {
+  transform: scale(1.1);
+}
+
+/* Default / system folder: reads on dark popover (rim + cool sheen, not a “missing” hole). */
+.dockFolderTintMenuSwatchClassic {
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklch, var(--sys-color-neutral-500) 55%, var(--sys-color-neutral-800)) 0%,
+    color-mix(in oklch, var(--sys-color-neutral-900) 92%, var(--sys-color-neutral-700)) 100%
+  );
+  border: 1px solid color-mix(in oklch, var(--sys-color-white) 42%, transparent);
+  box-shadow:
+    inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 35%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 55%, transparent),
+    0 0 14px color-mix(in oklch, var(--sys-color-white) 12%, transparent);
+}
+
+.dockFolderTintMenuSwatchSelected {
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 22%, transparent),
+    0 0 0 2px color-mix(in oklch, var(--accent) 38%, transparent);
+}
+
+.dockFolderTintMenuEditor .dockFolderTintMenuSwatch:hover {
+  box-shadow:
+    inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 22%, transparent),
+    0 1px 3px var(--sem-color-shadow-30),
+    0 0 0 1px color-mix(in oklch, var(--sys-color-white) 18%, transparent);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .bottomDock .rootDockCluster {
     animation: dockClusterRise 0.42s cubic-bezier(0.22, 1, 0.32, 1) backwards;
@@ -1954,13 +2128,14 @@
   }
 }
 
-.shell :global(.bottomDock .vigil-btn:not(:disabled):not([data-disabled="true"])) {
+/* `.bottomDock` must be module-local — :global(.bottomDock …) never matched the hashed class. */
+.shell .bottomDock :global(.vigil-btn:not(:disabled):not([data-disabled="true"])) {
   transition:
     transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.22s ease;
 }
 
-.shell :global(.bottomDock .vigil-btn:not(:disabled):not([data-disabled="true"]):active) {
+.shell .bottomDock :global(.vigil-btn:not(:disabled):not([data-disabled="true"]):active) {
   transform: translateY(1px) scale(0.93);
 }
 
@@ -2029,11 +2204,11 @@
     animation: none;
   }
 
-  .shell :global(.bottomDock .vigil-btn:not(:disabled):not([data-disabled="true"])) {
+  .shell .bottomDock :global(.vigil-btn:not(:disabled):not([data-disabled="true"])) {
     transition: none;
   }
 
-  .shell :global(.bottomDock .vigil-btn:not(:disabled):not([data-disabled="true"]):active) {
+  .shell .bottomDock :global(.vigil-btn:not(:disabled):not([data-disabled="true"]):active) {
     transform: none;
   }
 }
@@ -2217,21 +2392,52 @@
   color: var(--sys-color-black);
 }
 
-.shell :global(.vigil-btn[data-tone="glass"]:hover),
-.shell :global(.vigil-btn[data-tone="menu"]:hover),
-.shell :global(.vigil-btn[data-tone="glass"][data-force-state="hover"]),
-.shell :global(.vigil-btn[data-tone="menu"][data-force-state="hover"]) {
+.shell :global(.vigil-btn[data-tone="glass"]:hover:not(:disabled):not([data-disabled="true"])),
+.shell :global(.vigil-btn[data-tone="menu"]:hover:not(:disabled):not([data-disabled="true"])),
+.shell :global(
+    .vigil-btn[data-tone="glass"][data-force-state="hover"]:not(:disabled):not([data-disabled="true"])
+  ),
+.shell :global(
+    .vigil-btn[data-tone="menu"][data-force-state="hover"]:not(:disabled):not([data-disabled="true"])
+  ) {
   background: var(--sem-overlay-white-08);
   color: var(--sys-color-neutral-100);
 }
 
-.shell :global(.vigil-btn[data-tone="glass"]:active),
-.shell :global(.vigil-btn[data-tone="menu"]:active),
-.shell :global(.vigil-btn[data-tone="glass"][data-force-state="active"]),
-.shell :global(.vigil-btn[data-tone="menu"][data-force-state="active"]) {
+.shell :global(.vigil-btn[data-tone="glass"]:active:not(:disabled):not([data-disabled="true"])),
+.shell :global(.vigil-btn[data-tone="menu"]:active:not(:disabled):not([data-disabled="true"])),
+.shell :global(
+    .vigil-btn[data-tone="glass"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])
+  ),
+.shell :global(
+    .vigil-btn[data-tone="menu"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])
+  ) {
   background: var(--sem-surface-muted-press);
   color: var(--sys-color-neutral-100);
   transform: translateY(0.5px);
+}
+
+/* Bottom dock: disabled history — token foreground only; opacity: 1 avoids stacking with globals’ .vigil-btn:disabled { opacity: 0.55 }. */
+.shell .bottomDock :global(.vigil-btn[data-tone="glass"]:disabled),
+.shell .bottomDock :global(.vigil-btn[data-tone="glass"][data-disabled="true"]) {
+  color: var(--btn-fg-disabled);
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.shell .bottomDock :global(.vigil-btn[data-tone="menu"]:disabled),
+.shell .bottomDock :global(.vigil-btn[data-tone="menu"][data-disabled="true"]) {
+  color: var(--btn-fg-disabled);
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.shell .bottomDock :global(.vigil-btn[data-tone="card-dark"]:disabled),
+.shell .bottomDock :global(.vigil-btn[data-tone="card-dark"][data-disabled="true"]) {
+  color: var(--btn-fg-disabled);
+  background: transparent;
+  opacity: 1;
+  cursor: not-allowed;
 }
 
 .shell :global(.vigil-btn[data-tone="focus-light"]:hover),
@@ -2290,27 +2496,35 @@
   transform: translateY(0.5px);
 }
 
-.shell :global(.vigil-btn[data-tone="card-light"]:hover),
-.shell :global(.vigil-btn[data-tone="card-light"][data-force-state="hover"]) {
+.shell :global(.vigil-btn[data-tone="card-light"]:hover:not(:disabled):not([data-disabled="true"])),
+.shell :global(
+    .vigil-btn[data-tone="card-light"][data-force-state="hover"]:not(:disabled):not([data-disabled="true"])
+  ) {
   background: color-mix(in oklch, var(--sys-color-black) 6%, transparent);
   color: color-mix(in oklch, var(--sys-color-black) 78%, transparent);
 }
 
-.shell :global(.vigil-btn[data-tone="card-light"]:active),
-.shell :global(.vigil-btn[data-tone="card-light"][data-force-state="active"]) {
+.shell :global(.vigil-btn[data-tone="card-light"]:active:not(:disabled):not([data-disabled="true"])),
+.shell :global(
+    .vigil-btn[data-tone="card-light"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])
+  ) {
   background: color-mix(in oklch, var(--sys-color-black) 10%, transparent);
   color: color-mix(in oklch, var(--sys-color-black) 88%, transparent);
   transform: translateY(0.5px);
 }
 
-.shell :global(.vigil-btn[data-tone="card-dark"]:hover),
-.shell :global(.vigil-btn[data-tone="card-dark"][data-force-state="hover"]) {
+.shell :global(.vigil-btn[data-tone="card-dark"]:hover:not(:disabled):not([data-disabled="true"])),
+.shell :global(
+    .vigil-btn[data-tone="card-dark"][data-force-state="hover"]:not(:disabled):not([data-disabled="true"])
+  ) {
   background: color-mix(in oklch, var(--sys-color-white) 10%, transparent);
   color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
 }
 
-.shell :global(.vigil-btn[data-tone="card-dark"]:active),
-.shell :global(.vigil-btn[data-tone="card-dark"][data-force-state="active"]) {
+.shell :global(.vigil-btn[data-tone="card-dark"]:active:not(:disabled):not([data-disabled="true"])),
+.shell :global(
+    .vigil-btn[data-tone="card-dark"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])
+  ) {
   background: color-mix(in oklch, var(--sys-color-white) 16%, transparent);
   color: var(--sys-color-white);
   transform: translateY(0.5px);

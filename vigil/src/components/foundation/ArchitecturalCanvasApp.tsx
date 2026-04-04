@@ -31,6 +31,7 @@ import {
   parseArchitecturalMediaFromBody,
   setArchitecturalMediaNotes,
 } from "@/src/components/foundation/architectural-media-html";
+import type { FolderColorSchemeId } from "@/src/components/foundation/architectural-folder-schemes";
 import { buildArchitecturalSeedGraph } from "@/src/components/foundation/architectural-seed";
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
 import {
@@ -1643,6 +1644,37 @@ export function ArchitecturalCanvasApp({
     [queueGraphCommit, recordUndoBeforeMutation],
   );
 
+  const setFolderColorScheme = useCallback(
+    (entityId: string, scheme: FolderColorSchemeId | null) => {
+      queueGraphCommit(
+        `folder-scheme:${entityId}`,
+        () => {
+          const prev = graphRef.current;
+          const entity = prev.entities[entityId];
+          if (!entity || entity.kind !== "folder") return;
+          if (scheme == null && entity.folderColorScheme == null) return;
+          if (scheme != null && entity.folderColorScheme === scheme) return;
+          recordUndoBeforeMutation();
+          setGraph((p) => {
+            const ent = p.entities[entityId];
+            if (!ent || ent.kind !== "folder") return p;
+            const next = shallowCloneGraph(p);
+            if (scheme == null) {
+              const updated = { ...ent };
+              delete updated.folderColorScheme;
+              next.entities[entityId] = updated;
+            } else {
+              next.entities[entityId] = { ...ent, folderColorScheme: scheme };
+            }
+            return next;
+          });
+        },
+        120,
+      );
+    },
+    [queueGraphCommit, recordUndoBeforeMutation],
+  );
+
   const renameContentEntity = useCallback(
     (entityId: string, title: string) => {
       queueGraphCommit(
@@ -1669,6 +1701,18 @@ export function ArchitecturalCanvasApp({
     },
     [queueGraphCommit, recordUndoBeforeMutation],
   );
+
+  const folderColorPickerForDock = useMemo(() => {
+    if (focusOpen || galleryOpen) return null;
+    if (selectedNodeIds.length !== 1) return null;
+    const id = selectedNodeIds[0]!;
+    const e = graph.entities[id];
+    if (!e || e.kind !== "folder") return null;
+    return {
+      value: e.folderColorScheme ?? null,
+      onChange: (next: FolderColorSchemeId | null) => setFolderColorScheme(id, next),
+    };
+  }, [focusOpen, galleryOpen, graph.entities, selectedNodeIds, setFolderColorScheme]);
 
   const createNewNode = useCallback((type: NodeTheme) => {
     recordUndoBeforeMutation();
@@ -2555,7 +2599,7 @@ export function ArchitecturalCanvasApp({
         target.closest(`.${styles.nodeBody}`) ||
         target.closest(`.${styles.nodeBtn}`) ||
         target.closest(`.${styles.folderTitleInput}`) ||
-        target.closest(`.${styles.folderOpenBtn}`);
+        target.closest("[data-folder-open-btn='true']");
 
       if (entity && !inContent) {
         const nodeId = entity.dataset.nodeId;
@@ -3644,6 +3688,7 @@ export function ArchitecturalCanvasApp({
                     itemCount={folderCount}
                     dragOver={hoveredFolderId === entity.id}
                     selected={selected}
+                    folderColorScheme={entity.folderColorScheme}
                     onTitleCommit={(title) => renameFolder(entity.id, title)}
                     onOpen={() => openFolder(entity.id)}
                   />
@@ -3784,6 +3829,7 @@ export function ArchitecturalCanvasApp({
                         itemCount={graph.spaces[entity.childSpaceId]?.entityIds.length ?? 0}
                         dragOver={false}
                         selected={false}
+                        folderColorScheme={entity.folderColorScheme}
                         onTitleCommit={(title) => renameFolder(entity.id, title)}
                         onOpen={() => openFolder(entity.id)}
                       />
@@ -3873,6 +3919,7 @@ export function ArchitecturalCanvasApp({
             canRedo={canRedo}
             undoLabel={`Undo (${modKeyHints.undo})`}
             redoLabel={`Redo (${modKeyHints.redo})`}
+            folderColorPicker={folderColorPickerForDock}
           />
         ) : null}
 
@@ -4007,6 +4054,7 @@ export function ArchitecturalCanvasApp({
                     itemCount={graph.spaces[entity.childSpaceId]?.entityIds.length ?? 0}
                     dragOver={false}
                     selected={false}
+                    folderColorScheme={entity.folderColorScheme}
                     onTitleCommit={(title) => renameFolder(entity.id, title)}
                     onOpen={() => openFolder(entity.id)}
                   />

@@ -3,6 +3,7 @@
 import {
   ArrowClockwise,
   ArrowCounterClockwise,
+  CaretDown,
   CheckSquare,
   Code,
   FileText,
@@ -25,6 +26,10 @@ import {
   ArchitecturalButton,
   type ArchitecturalButtonTone,
 } from "@/src/components/foundation/ArchitecturalButton";
+import {
+  FOLDER_COLOR_SCHEMES,
+  type FolderColorSchemeId,
+} from "@/src/components/foundation/architectural-folder-schemes";
 import type {
   ArchitecturalBottomDockVariant,
   DockCreateAction,
@@ -235,6 +240,133 @@ export function ArchitecturalFormatToolbar({
   );
 }
 
+export function ArchitecturalFolderColorStrip({
+  value,
+  onChange,
+  variant = "canvas",
+}: {
+  value: FolderColorSchemeId | null;
+  onChange: (next: FolderColorSchemeId | null) => void;
+  variant?: "canvas" | "editor";
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement | null>(null);
+  const isEditor = variant === "editor";
+  const activeMeta = value ? FOLDER_COLOR_SCHEMES.find((s) => s.id === value) : null;
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const t = event.target as Node | null;
+      if (!t || !pickerRef.current?.contains(t)) setMenuOpen(false);
+    };
+    window.addEventListener("pointerdown", onPointerDown, true);
+    return () => window.removeEventListener("pointerdown", onPointerDown, true);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
+  const pick = (next: FolderColorSchemeId | null) => {
+    onChange(next);
+    setMenuOpen(false);
+  };
+
+  return (
+    <div
+      ref={pickerRef}
+      className={styles.dockFolderTintPicker}
+      role="group"
+      aria-label="Folder tint"
+    >
+      <button
+        type="button"
+        className={cx(
+          styles.dockFolderTintTrigger,
+          isEditor && styles.dockFolderTintTriggerEditor,
+          menuOpen && styles.dockFolderTintTriggerOpen,
+        )}
+        aria-haspopup="listbox"
+        aria-expanded={menuOpen}
+        title="Folder surface tint"
+        onClick={() => setMenuOpen((open) => !open)}
+      >
+        <span
+          className={cx(
+            styles.dockFolderTintPreview,
+            value === null ? styles.dockFolderTintPreviewClassic : null,
+          )}
+          style={activeMeta ? { background: activeMeta.swatch } : undefined}
+          aria-hidden
+        />
+        <span className={styles.dockFolderTintTriggerText}>Tint</span>
+        <CaretDown
+          size={11}
+          weight="bold"
+          className={styles.dockFolderTintCaret}
+          aria-hidden
+        />
+      </button>
+      {menuOpen ? (
+        <div
+          className={cx(
+            styles.dockFolderTintMenu,
+            isEditor && styles.dockFolderTintMenuEditor,
+          )}
+          role="listbox"
+          aria-label="Folder tints"
+        >
+          <div
+            className={cx(
+              styles.dockFolderTintMenuHeader,
+              isEditor && styles.dockFolderTintMenuHeaderEditor,
+            )}
+          >
+            Palette
+          </div>
+          <div className={styles.dockFolderTintSwatchGrid}>
+            <button
+              type="button"
+              role="option"
+              aria-selected={value === null}
+              title="Default"
+              aria-label="Default folder color"
+              className={cx(
+                styles.dockFolderTintMenuSwatch,
+                styles.dockFolderTintMenuSwatchClassic,
+                value === null && styles.dockFolderTintMenuSwatchSelected,
+              )}
+              onClick={() => pick(null)}
+            />
+            {FOLDER_COLOR_SCHEMES.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                role="option"
+                aria-selected={value === s.id}
+                title={s.label}
+                aria-label={s.label}
+                className={cx(
+                  styles.dockFolderTintMenuSwatch,
+                  value === s.id && styles.dockFolderTintMenuSwatchSelected,
+                )}
+                style={{ background: s.swatch }}
+                onClick={() => pick(s.id)}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function ArchitecturalCreateMenu({
   actions,
   actionTone = "menu",
@@ -288,6 +420,7 @@ export function ArchitecturalBottomDock({
   createDisabled = false,
   activeBlockTag = "p",
   showCreateMenu = true,
+  folderColorPicker = null,
 }: {
   /** `editor`: solid black panels + light icon controls (focus mode only). */
   variant?: ArchitecturalBottomDockVariant;
@@ -308,6 +441,11 @@ export function ArchitecturalBottomDock({
   createDisabled?: boolean;
   activeBlockTag?: "p" | "h1" | "h2" | "h3" | "blockquote";
   showCreateMenu?: boolean;
+  /** Shown when a single folder is selected on the canvas. */
+  folderColorPicker?: {
+    value: FolderColorSchemeId | null;
+    onChange: (next: FolderColorSchemeId | null) => void;
+  } | null;
 }) {
   const isEditor = variant === "editor";
   const formatActionTone = isEditor ? "card-dark" : "glass";
@@ -325,6 +463,19 @@ export function ArchitecturalBottomDock({
               disabled={createDisabled}
               onCreateNode={onCreateNode}
             />
+          </div>
+        ) : null}
+        {folderColorPicker ? (
+          <div className={cx(styles.rootDockPanelSlot, styles.rootDockPanelSlotOpen)}>
+            <div className={styles.rootDockPanelSlotInner}>
+              <div className={styles.rootDockPanel}>
+                <ArchitecturalFolderColorStrip
+                  value={folderColorPicker.value}
+                  onChange={folderColorPicker.onChange}
+                  variant={isEditor ? "editor" : "canvas"}
+                />
+              </div>
+            </div>
           </div>
         ) : null}
         <div

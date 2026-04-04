@@ -63,7 +63,7 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       y: 108,
       rotation: -3.1,
       width: 340,
-      theme: "default",
+      theme: "task",
       tapeRotation: -2.4,
       tapeVariant: "masking",
       bodyHtml: `
