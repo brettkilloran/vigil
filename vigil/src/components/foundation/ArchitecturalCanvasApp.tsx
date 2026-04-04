@@ -244,6 +244,8 @@ export function ArchitecturalCanvasApp({
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [lassoRectScreen, setLassoRectScreen] = useState<LassoRectScreen | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  /** After fonts + layout frame; drives viewport fade-in and avoids first-paint hiccups. */
+  const [canvasSurfaceReady, setCanvasSurfaceReady] = useState(false);
 
   const [focusOpen, setFocusOpen] = useState(false);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
@@ -296,6 +298,8 @@ export function ArchitecturalCanvasApp({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const shellTopLeftStackRef = useRef<HTMLDivElement | null>(null);
   const parentDropRef = useRef<HTMLDivElement | null>(null);
+  /** Ignore well click/activation briefly after a parent drop (mouseup can synthesize a click). */
+  const suppressParentExitActivateUntilRef = useRef(0);
   const isPanningRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0 });
   const draggedNodeIdsRef = useRef<string[]>([]);
@@ -795,17 +799,54 @@ export function ArchitecturalCanvasApp({
     setHistoryEpoch((n) => n + 1);
   }, [scenario]);
 
-  useEffect(() => {
-    // Keep the first client render identical to server output, then center on origin.
+  useLayoutEffect(() => {
+    // Apply camera before first paint so we never flash translate 0,0 (especially
+    // noticeable when seed content sits far from the origin).
     setTranslateX(window.innerWidth / 2);
     setTranslateY(window.innerHeight / 2);
     setViewportSize({ width: window.innerWidth, height: window.innerHeight });
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setCanvasSurfaceReady(true);
+    }
 
     const onResize = () => {
       setViewportSize({ width: window.innerWidth, height: window.innerHeight });
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let cancelled = false;
+    const reveal = () => {
+      if (!cancelled) setCanvasSurfaceReady(true);
+    };
+    const hardCapMs = 1400;
+    const capTimer = window.setTimeout(reveal, hardCapMs);
+
+    void (async () => {
+      try {
+        await document.fonts?.ready;
+      } catch {
+        /* ignore */
+      }
+      if (cancelled) return;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.clearTimeout(capTimer);
+          reveal();
+        });
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(capTimer);
+    };
   }, []);
 
   const centerCoords = useCallback(() => {
@@ -1075,6 +1116,29 @@ export function ArchitecturalCanvasApp({
     },
     [activeSpaceId, graph.entities, graph.spaces, parentSpaceId],
   );
+
+  const moveSelectionToParent = useCallback(() => {
+    if (Date.now() < suppressParentExitActivateUntilRef.current) return;
+    if (!parentSpaceId) return;
+    const idsToMove = selectedNodeIds.filter((entityId) => visibleEntityIds.includes(entityId));
+    if (idsToMove.length === 0) return;
+    if (!idsToMove.every((id) => canMoveEntityToSpace(id, parentSpaceId))) return;
+    const center = centerCoords();
+    const fallback = { x: center.x - 180, y: center.y - 120 };
+    const anchorBelowFolder = getParentFolderExitSlot(0) ?? fallback;
+    moveEntitiesToSpace(idsToMove, parentSpaceId, {
+      anchor: anchorBelowFolder,
+      forceLayout: true,
+    });
+  }, [
+    canMoveEntityToSpace,
+    centerCoords,
+    getParentFolderExitSlot,
+    moveEntitiesToSpace,
+    parentSpaceId,
+    selectedNodeIds,
+    visibleEntityIds,
+  ]);
 
   const renameFolder = useCallback(
     (entityId: string, title: string) => {
@@ -1447,6 +1511,7 @@ export function ArchitecturalCanvasApp({
           forceLayout: true,
           skipUndo: true,
         });
+        suppressParentExitActivateUntilRef.current = Date.now() + 500;
         return;
       }
 
@@ -2569,6 +2634,20 @@ export function ArchitecturalCanvasApp({
   );
   const fanOriginX = stackModal ? stackModal.originX - 170 : 0;
   const fanOriginY = stackModal ? stackModal.originY - 95 : 0;
+  const selectedVisibleIds = useMemo(
+    () => selectedNodeIds.filter((id) => visibleEntityIds.includes(id)),
+    [selectedNodeIds, visibleEntityIds],
+  );
+  const parentExitStripVisible =
+    !!parentSpaceId && (draggedNodeIds.length > 0 || selectedVisibleIds.length > 0);
+  const parentExitInteractive = useMemo(() => {
+    if (!parentSpaceId) return false;
+    return (
+      selectedVisibleIds.length > 0 &&
+      selectedVisibleIds.every((id) => canMoveEntityToSpace(id, parentSpaceId))
+    );
+  }, [canMoveEntityToSpace, parentSpaceId, selectedVisibleIds]);
+
   const stackModalHull = useMemo(() => {
     if (stackModalVisibleEntities.length === 0) return null;
     let minX = Number.POSITIVE_INFINITY;
@@ -2599,7 +2678,11 @@ export function ArchitecturalCanvasApp({
     <div className={styles.shell}>
       <div
         ref={viewportRef}
-        className={`${styles.viewport} ${activeSpaceId !== graph.rootSpaceId ? styles.deepSpace : ""}`}
+        className={`${styles.viewport} ${styles.viewportSurface} ${
+          canvasSurfaceReady ? styles.viewportSurfaceReady : styles.viewportSurfacePending
+        } ${activeSpaceId !== graph.rootSpaceId ? styles.deepSpace : ""}`}
+        aria-busy={!canvasSurfaceReady}
+        data-canvas-ready={canvasSurfaceReady ? "true" : "false"}
         onMouseDown={onViewportMouseDown}
         onContextMenuCapture={handleViewportContextMenuCapture}
         onWheel={onWheel}
@@ -2819,10 +2902,11 @@ export function ArchitecturalCanvasApp({
         {parentSpaceId ? (
           <ArchitecturalParentExitThreshold
             ref={parentDropRef}
-            topPx={parentExitRail.top}
-            heightPx={parentExitRail.height}
-            armed={draggedNodeIds.length > 0}
+            toolbarBottomPx={parentExitRail.top + parentExitRail.height}
+            visible={parentExitStripVisible}
             hovered={parentDropHovered}
+            interactive={parentExitInteractive}
+            onActivate={moveSelectionToParent}
           />
         ) : null}
         <div ref={shellTopLeftStackRef} className={styles.shellTopLeftStack}>
@@ -3089,6 +3173,7 @@ export function ArchitecturalCanvasApp({
           </div>
         </div>
       </div>
+
     </div>
   );
 }

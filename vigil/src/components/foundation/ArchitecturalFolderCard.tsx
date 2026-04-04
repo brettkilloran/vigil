@@ -16,10 +16,10 @@ function stableHash(input: string): number {
   return h >>> 0;
 }
 
-/** Degrees in ~[-3.6, 3.5], varies by layer so stacks don’t look parallel. */
+/** Degrees in ~[-4.5, 3.5], varies by layer so stacks don’t look parallel. */
 function peekSheetRotationDeg(folderId: string, layer: number): number {
-  const n = stableHash(`vigil:folder-peek:${folderId}:${layer}`);
-  return (n % 720) / 100 - 3.6;
+  const n = stableHash(`vigil:folder-peek:v2:${folderId}:${layer}`);
+  return (n % 800) / 100 - 4.5;
 }
 
 export function ArchitecturalFolderCard({

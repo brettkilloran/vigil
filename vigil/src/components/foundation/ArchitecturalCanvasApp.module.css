@@ -42,6 +42,32 @@
   position: relative;
 }
 
+/* Initial load: hide until fonts/layout settle, then fade in (see canvasSurfaceReady in TS). */
+.viewportSurface {
+  transition: opacity 0.5s cubic-bezier(0.2, 0.85, 0.22, 1);
+}
+
+.viewportSurfacePending {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.viewportSurfaceReady {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewportSurface {
+    transition: none;
+  }
+
+  .viewportSurfacePending {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 .viewport {
   width: 100vw;
   height: 100vh;
@@ -402,6 +428,8 @@
 
 .folderPeekCard {
   position: absolute;
+  /* Rounded top only; bottom stays square so a long “tail” behind the flap
+     doesn’t show a curved corner artifact above the fold. */
   border-radius: 2px 2px 0 0;
   border: none;
   /* Lined note paper + top “title” band — reads like canvas cards, not flat bars */
@@ -434,28 +462,29 @@
   transform-origin: 50% 100%;
 }
 
-/* Widest card, centered — like a note card; rotation comes from folder id (TS) */
+/* Tall sheets so rotated corners stay masked behind .folderFront (z-index 2).
+   bottom% tuned so the sheet top stays inside the 280px folder node (no peek above y=0). */
 .folderPeekA {
   width: 80%;
-  height: 38px;
+  height: 108px;
   left: 12%;
-  bottom: calc(85% - 12px);
+  bottom: calc(62.5% - 10px);
 }
 
 /* Shifted right */
 .folderPeekB {
   width: 74%;
-  height: 44px;
+  height: 118px;
   left: 18%;
-  bottom: calc(85% - 7px);
+  bottom: calc(59.3% - 5px);
 }
 
-/* Shifted left, tallest */
+/* Shifted left, tallest (118px → bottom offset capped ~162px so top ≥ 0) */
 .folderPeekC {
   width: 70%;
-  height: 50px;
+  height: 118px;
   left: 6%;
-  bottom: calc(85% - 3px);
+  bottom: calc(58.57% - 2px);
 }
 
 /*

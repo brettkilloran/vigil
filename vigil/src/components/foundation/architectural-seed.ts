@@ -19,12 +19,12 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
   return [
     {
       id: "node-1",
-      title: "Brief // The second chance",
-      x: -300,
-      y: -320,
-      rotation: -1,
+      title: "BRIEF // THE SECOND CHANCE",
+      x: -140,
+      y: -463,
+      rotation: -2.6,
       theme: "default",
-      tapeRotation: 2,
+      tapeRotation: -2.2,
       tapeVariant: "masking",
       bodyHtml: `
         <h1>The ring does not forgive nostalgia.</h1>
@@ -35,13 +35,13 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
     },
     {
       id: "node-2",
-      title: "DAT // sing_1r_boot.ts",
-      x: 140,
-      y: -210,
-      rotation: 0.5,
+      title: "DAT // SING_IN_BOOT.TS",
+      x: 325,
+      y: -334,
+      rotation: 2.4,
       width: 340,
       theme: "code",
-      tapeRotation: -1.5,
+      tapeRotation: 2.8,
       tapeVariant: "dark",
       bodyHtml: `
         <span style="color: ${DS_COLOR.codeSampleKeyword};">const</span> <span style="color: ${DS_COLOR.codeSampleName};">dataterm</span> = {<br>
@@ -55,13 +55,13 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
     },
     {
       id: "node-3",
-      title: "Coven // Field orders",
-      x: 240,
-      y: 210,
-      rotation: -2,
+      title: "COVEN // FIELD ORDERS",
+      x: 262,
+      y: 108,
+      rotation: -3.1,
       width: 340,
       theme: "task",
-      tapeRotation: 3,
+      tapeRotation: -2.4,
       tapeVariant: "masking",
       bodyHtml: `
         <div class="${tokens.taskItem} ${tokens.done}">
@@ -84,12 +84,12 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
     },
     {
       id: "node-4",
-      title: "Survey // Orbital still",
-      x: -200,
-      y: 310,
-      rotation: 1,
+      title: "SURVEY // ORBITAL STILL",
+      x: -202,
+      y: 106,
+      rotation: 2.2,
       theme: "media",
-      tapeRotation: -2.5,
+      tapeRotation: 1.6,
       tapeVariant: "clear",
       bodyHtml: `
         <div class="${tokens.mediaPlaceholder}">
@@ -145,11 +145,11 @@ export function buildArchitecturalSeedGraph(
     kind: "folder",
     theme: "folder",
     childSpaceId: "space-project-thesis",
-    rotation: -1.1,
+    rotation: -4.2,
     width: 420,
     tapeRotation: 0,
     slots: {
-      root: { x: -430, y: -40 },
+      root: { x: -682, y: -157 },
     },
   };
 

@@ -1,67 +1,94 @@
-/* Full-width row aligned with top chrome; centered dashed drop well. */
+/* Rail from viewport top down past the toolbar; well’s bottom hangs into the canvas. */
 
 .rail {
   position: fixed;
   left: 0;
   right: 0;
+  top: 0;
   z-index: var(--layer-ui-chrome, 100);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  padding-inline: max(12px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
+  padding-inline: max(8px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
   box-sizing: border-box;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.2s ease;
 }
 
-.railArmed {
+.railVisible {
   opacity: 1;
 }
 
 .well {
   pointer-events: none;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   width: 100%;
-  max-width: min(680px, 94vw);
-  height: calc(100% - 4px);
-  max-height: 42px;
-  min-height: 28px;
+  max-width: min(1080px, 98vw);
+  height: var(--parent-exit-well-height, 108px);
   box-sizing: border-box;
-  padding: 0 22px;
-  border-radius: 10px;
+  padding: 0 40px;
+  border-radius: 14px;
   border: 2px dashed transparent;
   background: transparent;
   transition:
     border-color 0.18s ease,
     border-style 0.18s ease,
     background 0.18s ease,
-    box-shadow 0.18s ease,
-    transform 0.2s ease;
+    box-shadow 0.18s ease;
 }
 
-/* Nudge up so the top clips past the viewport — reads as a threshold, not a floating chip. */
-.wellArmed {
-  transform: translateY(-12px);
+/* Lift toward the breadcrumb / nav cap line (mono ~10px), not the geometric well center */
+.wellRow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  transform: translateY(-6px);
+}
+
+.wellVisible {
   border-color: color-mix(in oklch, var(--accent) 62%, var(--sys-color-white) 10%);
-  background: color-mix(in oklch, var(--accent) 9%, transparent);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklch, var(--accent) 4%, transparent) 0%,
+    color-mix(in oklch, var(--accent) 11%, transparent) 100%
+  );
   box-shadow:
     0 0 0 1px color-mix(in oklch, var(--accent) 12%, transparent) inset,
     0 8px 28px color-mix(in oklch, var(--accent) 8%, transparent);
 }
 
+.wellInteractive {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.wellInteractive:focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--accent) 70%, transparent);
+  outline-offset: 3px;
+}
+
+.wellDisabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .wellHovered {
   border-style: solid;
   border-color: color-mix(in oklch, var(--accent) 82%, transparent);
-  background: color-mix(in oklch, var(--accent) 16%, transparent);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklch, var(--accent) 10%, transparent) 0%,
+    color-mix(in oklch, var(--accent) 18%, transparent) 100%
+  );
   box-shadow:
     0 0 0 1px color-mix(in oklch, var(--accent) 28%, transparent) inset,
     0 0 28px color-mix(in oklch, var(--accent) 24%, transparent),
     0 10px 32px color-mix(in oklch, var(--accent) 12%, transparent);
-  transform: translateY(-14px);
 }
 
 .icon {
@@ -78,8 +105,9 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: none;
+  line-height: 1.25;
   color: color-mix(in oklch, var(--sys-color-white) 82%, transparent);
   white-space: nowrap;
 }
