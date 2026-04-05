@@ -10,28 +10,28 @@ import { fileURLToPath } from "node:url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(path.join(root, "package.json"));
 
-const checks = [
-  ["react", "react/package.json"],
-  ["react-dom", "react-dom/package.json"],
-  ["storybook", "storybook/package.json"],
-  ["@storybook/nextjs", "@storybook/nextjs/package.json"],
-  ["react-refresh", "react-refresh/package.json"],
-  ["webpack", "webpack/package.json"],
-  ["html-webpack-plugin", "html-webpack-plugin/package.json"],
+const mustExist = [
+  "react/package.json",
+  "react-dom/package.json",
+  "storybook/package.json",
+  "@storybook/nextjs/package.json",
+  "react-refresh/package.json",
+  "webpack/package.json",
+  "html-webpack-plugin/package.json",
 ];
 
 let bad = false;
-for (const [, rel] of checks) {
+for (const rel of mustExist) {
   const abs = path.join(root, "node_modules", rel);
   if (!existsSync(abs)) {
     // eslint-disable-next-line no-console -- CLI diagnostics
-    console.error(`Missing: ${rel}`);
+    console.error(`Missing: node_modules/${rel}`);
     bad = true;
   }
 }
 
 if (!bad) {
-  for (const [name] of checks) {
+  for (const name of ["react", "react-dom"]) {
     try {
       require.resolve(name, { paths: [root] });
     } catch {

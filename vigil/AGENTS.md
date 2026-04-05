@@ -63,8 +63,8 @@ The script picks the **newest** `node-v*-win-x64` under `%LOCALAPPDATA%\node-por
 | Surface | URL | Notes |
 |--------|-----|--------|
 | heartgarden (Next) | `http://localhost:3000` | `next.config.ts` **`allowedDevOrigins`** includes `localhost` and `127.0.0.1` so dev HMR is not blocked when mixing those hosts. If you use the **Network** URL from the dev banner, add that **hostname** to `allowedDevOrigins` too. |
-| Storybook (dev) | `http://localhost:6006` | Default scripts use **`--host localhost`** (avoids Windows blank UI from HMR / dev-client URL mismatch). For LAN, use **`npm run storybook:lan`** (`--host 0.0.0.0`). `.storybook/main.ts` sets **`core.allowedHosts: true`**, **`webpackFinal` → `devServer.allowedHosts: "all"`**, strips Next’s compiled React aliases, and **re-pins `react` / `react-dom`** to `vigil/node_modules`. Preview loads **`.storybook/preview-overrides.css`** after `globals.css` so the app’s `body { display: flex }` / `*` reset does not collapse the iframe. Use **Chrome or Edge**, not the editor’s embedded browser. |
-| Storybook (static fallback) | `http://localhost:6007` | **`npm run storybook:static`** — production build + `serve`; use if dev Storybook misbehaves. Port **6007** avoids clashing with dev on **6006**. |
+| Storybook (dev) | **`http://127.0.0.1:6006`** | Scripts bind **`127.0.0.1`** explicitly. **Wait for the first webpack compile** (often 30–90s) until the terminal prints a **Local:** URL — opening earlier yields **`ERR_CONNECTION_REFUSED`**. For LAN, use **`npm run storybook:lan`**. Config: **`core.allowedHosts: true`**, React re-pinning in **`.storybook/main.ts`**, **`.storybook/preview-overrides.css`**. Use **Chrome or Edge**; the editor’s embedded browser often cannot reach the dev server. |
+| Storybook (static fallback) | **`http://127.0.0.1:6007`** | **`npm run storybook:static`** — build + `serve`; use if dev Storybook will not stay up. Port **6007** avoids clashing with **6006**. |
 
 **Next.js dev:** `dev` / `dev:app` use **`next dev --webpack`** (not Turbopack) — Turbopack previously hung on `/` for this app.
 
@@ -72,7 +72,7 @@ The script picks the **newest** `node-v*-win-x64` under `%LOCALAPPDATA%\node-por
 
 **CI:** GitHub Actions runs **`npm run build-storybook`** after **`npm run check`** so broken Storybook config or stories fail the pipeline. Locally you can run **`npm run check:all`** (lint + Next build + Storybook build) before pushing.
 
-**Corrupt `node_modules` (Storybook/Webpack `ENOENT` for `@storybook/*`, `react-refresh`, `html-webpack-plugin`, etc.):** That pattern is almost always a **partial or broken install**, not bad app code. Stop **Next**, **Storybook**, and **Playwright** (anything holding `node_modules`), then from **`vigil/`** run **`npm run reinstall`** (removes **`node_modules`** and runs **`npm ci`**). On Windows, if delete hits **EBUSY** / **EPERM**, close integrated terminals, exit stray **`node.exe`** processes, and retry.
+**Corrupt `node_modules` (Storybook/Webpack `ENOENT` for `@storybook/*`, `react-refresh`, `html-webpack-plugin`, etc.):** That pattern is almost always a **partial or broken install**, not bad app code. Stop **Next**, **Storybook**, and **Playwright** (anything holding `node_modules`), then from **`vigil/`** run **`npm run reinstall`** (removes **`node_modules`** and runs **`npm ci`**). On Windows, if delete hits **EBUSY** / **EPERM**, close integrated terminals, exit stray **`node.exe`** processes, and retry. **`npm run storybook:doctor`** checks that key packages exist before you spend time on webpack config.
 
 **Database (Neon + vault index):** From **`vigil/`**, **`npm run db:vault-setup`** — pgvector extension, **`drizzle-kit push --force`**, then **`scripts/vault-sql-migrate.mjs`**. **`npm run vault:reindex`** hits **`POST /api/items/:id/index`** for all rows (needs dev server + server-side **`OPENAI_API_KEY`**). GitHub: manual workflow **`heartgarden-db-vault.yml`** + secret **`HEARTGARDEN_NEON_DATABASE_URL`**. Details: **`docs/FOLLOW_UP.md`**.
 
@@ -80,6 +80,7 @@ The script picks the **newest** `node-v*-win-x64` under `%LOCALAPPDATA%\node-por
 
 - **`npm run dev`** runs until you stop it. If an agent **backgrounds** the dev server, the IDE will show a shell “running” for tens of minutes — that is **normal**, not a hung build.
 - **Prefer `npm run check`** (lint + production build) to verify changes; it **exits** and avoids orphan dev servers. Use **`npm run check:all`** when touching Storybook, `.storybook/`, or stories.
+- **`ERR_CONNECTION_REFUSED`** in the browser for Storybook means **nothing is listening on that port** (process not started, still compiling, or crashed). Keep the terminal running, wait for **Local:** in the log, or run **`npm run storybook:doctor`** / scroll up for webpack errors.
 - **Do not** start multiple `next dev` processes for the same app (port conflicts, duplicate work). Only one dev server unless you intentionally use another port.
 - **`npm run mcp`** is **stdio-long-lived** by design when Cursor attaches to the MCP server.
 
