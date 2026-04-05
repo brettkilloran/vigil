@@ -1,8 +1,9 @@
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
-import { assertSpaceExists } from "@/src/lib/spaces";
+import { loreQueryRateLimitExceeded } from "@/src/lib/lore-query-rate-limit";
 import { retrieveLoreSources, synthesizeLoreAnswer } from "@/src/lib/lore-engine";
+import { assertSpaceExists } from "@/src/lib/spaces";
 
 const bodySchema = z.object({
   question: z.string().min(1).max(4000),
@@ -13,6 +14,18 @@ const bodySchema = z.object({
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 
 export async function POST(req: Request) {
+  if (loreQueryRateLimitExceeded(req)) {
+    return Response.json(
+      {
+        ok: false,
+        error: "Too many lore requests. Try again in a minute.",
+        answer: null,
+        sources: [],
+      },
+      { status: 429 },
+    );
+  }
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return Response.json(

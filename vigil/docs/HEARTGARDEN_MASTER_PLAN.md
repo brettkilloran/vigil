@@ -5,7 +5,7 @@
 | Priority | Document |
 |----------|----------|
 | **1 — Task list & phases (lore engine + bridge + MCP expansion)** | **Cursor:** `.cursor/plans/heartgarden_lore_engine_7fc1fb56.plan.md` (YAML todos + narrative). This is the completion ledger you want agents to follow. |
-| **2 — Repo snapshot & hardening backlog** | **`docs/BUILD_PLAN.md`** — architecture table, shipped tranches, near/mid/later items (dual zustand, rate limits, embeddings, version history, etc.). |
+| **2 — Repo snapshot & hardening backlog** | **`docs/BUILD_PLAN.md`** — architecture table, shipped tranches, near/mid/later items (lore hardening, embeddings, version history, etc.). |
 
 ## Supporting docs (not task ledgers)
 

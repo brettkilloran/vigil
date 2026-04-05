@@ -1,5 +1,7 @@
 # heartgarden — Visual revamp plan (wholesale polish)
 
+**Note:** This doc predates the **architectural-only** shell. Names like `VigilCanvas`, `CanvasItemView`, `VigilMainToolbar`, `ScratchPad`, and `BacklinksPanel` refer to **removed or superseded** paths; the live UI is **`ArchitecturalCanvasApp`** and `src/components/foundation/*`. Treat §§ below as **historical intent + token guidance**, not a file map.
+
 **Goal:** Move from “wireframe / programmer UI” to a cohesive, Spatial-inspired surface: readable hierarchy, soft contrast, depth, consistent radii, and chrome that reads as **buttons** and **panels**, not floating text.
 
 **Benchmark:** `docs/HEARTGARDEN_MASTER_PLAN.md` → Visual Design Bible + Typography + Phase 6–7 tasks.

@@ -5,7 +5,7 @@ This file is the **short bridge** between the repo today and planning docs. **Ta
 ## Review summary (master plan)
 
 - **Product:** Personal infinite canvas (Spatial-inspired): notes, stickies, images, folders, stacks, clips, TTRPG lore later. **Single user, no auth.**
-- **Stack target:** Next.js App Router + React, **custom DOM canvas** (CSS `transform` pan/zoom, no `<canvas>`), **@use-gesture/react**, **framer-motion**, **zustand + immer**, **TipTap**, **Tailwind 4**, **Drizzle + Neon + R2 + Anthropic** (lore) where needed.
+- **Stack target:** Next.js App Router + React, **custom DOM canvas** (CSS `transform` pan/zoom, no `<canvas>`), **@use-gesture/react**, **framer-motion**, **TipTap**, **Tailwind 4**, **Drizzle + Neon + R2 + Anthropic** (lore) where needed.
 - **Explicit non-goals:** **No tldraw** (or any licensed whiteboard SDK). **No Auth.js / OAuth.**
 - **Data model:** Items are the source of truth on the server; `spaces.canvas_state` holds **camera only** `{ x, y, zoom }`. Schema includes `item_links`, `item_embeddings` (pgvector), stacks (`stack_id` / `stack_order`). **No `users` table** in the Drizzle schema.
 
@@ -15,7 +15,7 @@ This file is the **short bridge** between the repo today and planning docs. **Ta
 |------|------------------|----------------------|
 | Canvas | **tldraw removed**; **production shell = `ArchitecturalCanvasApp`** (`src/components/foundation/`) | Custom DOM + CSS transform layer + item cards (same intent as plan’s `VigilCanvas`) |
 | Persistence | **`items`** + camera in **`spaces.canvas_state`**; Neon **bootstrap + CRUD bridge** for architectural graph when not in demo mode | Same; legacy DB rows may still hold old `canvas_state` until migrated |
-| State | **Primary graph:** React state inside `ArchitecturalCanvasApp`. **Also:** **zustand** `canvas-store` for some **panels** (backlinks, timeline, etc.) — **dual stack until unified** | Plan: zustand + immer; **select stable slices**, derive arrays with `useMemo`—never return `Object.values(s.items)` from a selector (avoids infinite re-renders / `getServerSnapshot` issues) |
+| State | **Canvas graph:** React state inside `ArchitecturalCanvasApp` (single source of truth). **`canvas-types.ts`** remains the shared **API/DB row** shape for mappers and routes. | Same product intent; legacy zustand spike removed from tree |
 | Motion | **framer-motion** + @use-gesture | Same per plan presets |
 | Styling | **Tailwind 4** + tokens; **Geist** + **Lora** (headings in editor); Vercel-ish neutrals + card tokens; chips/glass via `vigil-ui-classes` | Visual Design Bible polish + `VISUAL_REVAMP_PLAN` (icons, grouping) |
 | Cross-card links | TipTap `vigil:item:` links + **`/api/item-links/sync`**; **`[[` picker**; **Links** panel resolves `[[` / vigil links from note **content** on **local canvas** (no Neon); cloud uses **`item_links`** API; **Graph** overlay (**d3-force**, **Reset layout**, **drag to reheat**) via **`GET /api/spaces/[id]/graph`**; note **formatting toolbar** + underline/highlight | LLM auto-linking, deeper graph UX (Phase 5) |
@@ -58,7 +58,7 @@ We **treat the archived master plan** as **historical product intent** (gestures
 
 ## Visual overhaul roadmap
 
-**Vercel-style spike** (Geist, neutral tokens, card surfaces, canvas dot grid) lives in `app/globals.css`, `layout.tsx`, `CanvasItemView`, `VigilCanvas`, `card-shadows.ts`, `vigil-ui-classes.ts`. **Wholesale polish** (Lucide, `VigilMainToolbar`, command palette / graph / scratch / side panels, TipTap format bar) is implemented; **`docs/VISUAL_REVAMP_PLAN.md`** tracks optional follow-ups (motion/sheen, type scale, flower picker).
+**Vercel-style spike** (Geist, neutral tokens, card surfaces) lives in `app/globals.css`, `layout.tsx`, and the **architectural** shell (`ArchitecturalCanvasApp`, `vigil-ui-classes.ts`). Older path names in **`docs/VISUAL_REVAMP_PLAN.md`** (`VigilCanvas`, `ScratchPad`, etc.) are **historical** — the shipped UI is architectural-only. **`docs/VISUAL_REVAMP_PLAN.md`** tracks optional follow-ups (motion/sheen, type scale, flower picker).
 
 ## For agents / contributors
 

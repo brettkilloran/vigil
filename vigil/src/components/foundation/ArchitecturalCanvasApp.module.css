@@ -331,6 +331,185 @@
   z-index: 10060;
 }
 
+/* ── Post–“Enter the garden” chrome entrance (staggered edges → center dock) ── */
+.toolRailEnterShell {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  z-index: var(--layer-ui-chrome);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.toolRailEnterShell .sideTools {
+  position: static;
+  right: auto;
+  top: auto;
+  transform: none;
+}
+
+.chromeEnterTopLeft {
+  animation: hg-chrome-enter-tl 0.46s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.03s;
+}
+
+.chromeEnterTopRight {
+  animation: hg-chrome-enter-tr 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.05s;
+}
+
+.chromeEnterBottomLeft {
+  animation: hg-chrome-enter-bl 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.1s;
+}
+
+.chromeEnterBottomRight {
+  animation: hg-chrome-enter-br 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.14s;
+}
+
+.chromeEnterRightRail {
+  animation: hg-chrome-enter-rr 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.12s;
+}
+
+.chromeEnterBottomCenter {
+  animation: hg-chrome-enter-bc 0.58s cubic-bezier(0.33, 1, 0.2, 1) both;
+  animation-delay: 0.2s;
+}
+
+@keyframes hg-chrome-enter-tl {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hg-chrome-enter-tr {
+  from {
+    opacity: 0;
+    transform: translate(14px, -12px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hg-chrome-enter-bl {
+  from {
+    opacity: 0;
+    transform: translate(-14px, 14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hg-chrome-enter-br {
+  from {
+    opacity: 0;
+    transform: translate(14px, 12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hg-chrome-enter-rr {
+  from {
+    opacity: 0;
+    transform: translateX(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hg-chrome-enter-bc {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.focusEffectsEnterHost {
+  position: absolute;
+  left: max(24px, env(safe-area-inset-left, 0px));
+  bottom: 28px;
+  width: fit-content;
+  z-index: var(--layer-ui-chrome);
+  pointer-events: none;
+}
+
+.focusEffectsEnterHost .focusEffectsStrip {
+  position: static;
+  left: auto;
+  bottom: auto;
+}
+
+.viewportMetricsEnterHost {
+  position: absolute;
+  right: max(24px, env(safe-area-inset-right, 0px));
+  left: auto;
+  bottom: 28px;
+  width: fit-content;
+  max-width: calc(100vw - 48px);
+  z-index: var(--layer-ui-chrome);
+  pointer-events: none;
+}
+
+.viewportMetricsEnterHost .viewportMetricsStrip {
+  position: static;
+  right: auto;
+  left: auto;
+  bottom: auto;
+  max-width: 100%;
+}
+
+.bottomDockEnterHost {
+  position: absolute;
+  bottom: 28px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: var(--layer-ui-chrome);
+  overflow: visible;
+}
+
+.bottomDockEnterHost .bottomDock {
+  position: static;
+  left: auto;
+  right: auto;
+  bottom: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chromeEnterTopLeft,
+  .chromeEnterTopRight,
+  .chromeEnterBottomLeft,
+  .chromeEnterBottomRight,
+  .chromeEnterRightRail,
+  .chromeEnterBottomCenter {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .nodePlacement {
   position: absolute;
   transition: transform 0.14s ease;

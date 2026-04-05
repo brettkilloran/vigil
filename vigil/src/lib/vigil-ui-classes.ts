@@ -10,14 +10,8 @@ export type VigilButtonRecipeOptions = {
   className?: string;
 };
 
-export function vigilButtonRecipe({
-  variant = "neutral",
-  size = "md",
-  tone = "glass",
-  active = false,
-  forceState = "default",
-  className,
-}: VigilButtonRecipeOptions = {}) {
+export function vigilButtonRecipe(opts: VigilButtonRecipeOptions = {}) {
+  const { className } = opts;
   return cx(className ?? "", "vigil-btn");
 }
 

@@ -13,6 +13,7 @@ export async function refreshItemEmbedding(db: VigilDb, row: ItemRow): Promise<v
   await db.delete(itemEmbeddings).where(eq(itemEmbeddings.itemId, row.id));
 }
 
+/** Fire-and-forget: clears legacy `item_embeddings` rows after item writes (not semantic search maintenance). */
 export function scheduleItemEmbeddingRefresh(db: VigilDb, row: ItemRow): void {
   void refreshItemEmbedding(db, row).catch(() => {
     /* best-effort cleanup */

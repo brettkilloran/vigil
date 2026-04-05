@@ -134,7 +134,6 @@ export function ArchitecturalNodeCard({
   selected,
   onBodyCommit,
   onExpand,
-  onTitleCommit,
   tapeVariant = "clear",
   showExpandButton = true,
   bodyEditable,
@@ -151,7 +150,6 @@ export function ArchitecturalNodeCard({
   selected: boolean;
   onBodyCommit: (id: string, html: string) => void;
   onExpand: (id: string) => void;
-  onTitleCommit?: (id: string, title: string) => void;
   tapeVariant?: TapeVariant;
   showExpandButton?: boolean;
   bodyEditable?: boolean;
@@ -199,6 +197,7 @@ export function ArchitecturalNodeCard({
             data-architectural-media-root="true"
           >
             {imageCardMedia.src ? (
+              // eslint-disable-next-line @next/next/no-img-element -- dynamic user/R2 URLs; not suitable for next/image without broad remotePatterns
               <img
                 key={imageCardMedia.src}
                 className={styles.imageSlotImg}

@@ -307,12 +307,11 @@ These are good opportunities to improve during rebuild while preserving compatib
 
 ## Canonical Functional References in Current Codebase
 
-- App orchestration: `app/_components/VigilApp.tsx`
-- Canvas interaction engine: `src/components/canvas/VigilCanvas.tsx`
-- Item renderer/controller: `src/components/canvas/CanvasItemView.tsx`
-- Store + interaction state: `src/stores/canvas-store.ts`, `src/stores/canvas-types.ts`
-- Note/checklist editors: `src/components/canvas/NoteCard.tsx`, `src/components/canvas/ChecklistCard.tsx`
-- Link extraction/local linking: `src/lib/extract-vigil-item-links.ts`, `src/lib/local-item-links.ts`
+- App orchestration: `app/_components/VigilApp.tsx` → **`ArchitecturalCanvasApp`**
+- Canvas shell + graph state: `src/components/foundation/ArchitecturalCanvasApp.tsx`, `architectural-types.ts`, `architectural-db-bridge.ts`, `architectural-neon-api.ts`
+- API/DB item shape (mapper): `src/stores/canvas-types.ts`, `src/lib/item-mapper.ts`
+- Note bodies: TipTap inside **`ArchitecturalNodeCard`** / focus editor paths in the same shell
+- Links inspector + wiki targets in HTML: `src/components/ui/ArchitecturalLinksPanel.tsx`
 - Bootstrap + space resolution: `app/api/bootstrap/route.ts`, `src/lib/spaces.ts`
 - Items/spaces routes: `app/api/spaces/[spaceId]/items/route.ts`, `app/api/items/[itemId]/route.ts`, `app/api/spaces/[spaceId]/route.ts`
 - Links/backlinks routes: `app/api/items/[itemId]/links/route.ts`, `app/api/item-links/sync/route.ts`

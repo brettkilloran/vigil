@@ -940,6 +940,8 @@ export function ArchitecturalCanvasApp({
 
   /** Default route: user must click Activate; flow runs 0→1 only then. Nested/corrupt: no gate. */
   const [canvasSessionActivated, setCanvasSessionActivated] = useState(false);
+  /** Bumps on each “Enter the garden” (and once for non-default scenarios) so chrome keyframes replay. */
+  const [chromeEnterEpoch, setChromeEnterEpoch] = useState(0);
   /** One celebration SFX per boot stay (reset on log out). */
   const bootCelebrationPlayedRef = useRef(false);
   const neonUiSoundRef = useRef<{
@@ -1153,7 +1155,7 @@ export function ArchitecturalCanvasApp({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const createId = useCallback((_prefix?: string) => {
+  const createId = useCallback(() => {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
       return crypto.randomUUID();
     }
@@ -1462,9 +1464,10 @@ export function ArchitecturalCanvasApp({
   );
 
   useEffect(() => {
+    const timers = commitTimersRef.current;
     return () => {
-      commitTimersRef.current.forEach((timer) => clearTimeout(timer));
-      commitTimersRef.current.clear();
+      timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
     };
   }, []);
 
@@ -1601,7 +1604,7 @@ export function ArchitecturalCanvasApp({
 
   const createConnection = useCallback(
     (sourceEntityId: string, targetEntityId: string) => {
-      const connectionId = createId("conn");
+      const connectionId = createId();
       recordUndoBeforeMutation();
       setGraph((prev) => {
         const sourceExists = !!prev.entities[sourceEntityId];
@@ -1917,14 +1920,6 @@ export function ArchitecturalCanvasApp({
     });
     return groups;
   }, [visibleEntities]);
-  const stackedEntityIds = useMemo(() => {
-    const ids = new Set<string>();
-    stackGroups.forEach((arr) => {
-      if (arr.length <= 1) return;
-      arr.forEach((entity) => ids.add(entity.id));
-    });
-    return ids;
-  }, [stackGroups]);
   const standaloneEntities = useMemo(
     () =>
       visibleEntities.filter((entity) => {
@@ -2632,6 +2627,11 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   useLayoutEffect(() => {
+    if (prefersReducedMotion || scenario === "default") return;
+    setChromeEnterEpoch((e) => (e >= 1 ? e : 1));
+  }, [scenario, prefersReducedMotion]);
+
+  useLayoutEffect(() => {
     if (scenario !== "default") return;
     if (!prefersReducedMotion) return;
     /* Do not dismiss boot while showing the post–log out splash (same deps can re-run after logout). */
@@ -2762,7 +2762,7 @@ export function ArchitecturalCanvasApp({
     const { orderedContentIds: ids } = getStackSelectionState(g, spaceId, rawSelection);
     if (ids.length < 2) return;
     recordUndoBeforeMutation();
-    const stackId = createId("stack");
+    const stackId = createId();
     setGraph((prev) => {
       const next = shallowCloneGraph(prev);
       const finiteSlots = ids
@@ -2852,7 +2852,7 @@ export function ArchitecturalCanvasApp({
           }
 
           const next = shallowCloneGraph(prev);
-          const newSpaceId = createId("space");
+          const newSpaceId = createId();
           const parentSpaceId =
             next.spaces[activeSpaceId]?.id ?? next.rootSpaceId;
           next.spaces[newSpaceId] = {
@@ -3432,37 +3432,6 @@ export function ArchitecturalCanvasApp({
     [queueGraphCommit, recordUndoBeforeMutation],
   );
 
-  const renameContentEntity = useCallback(
-    (entityId: string, title: string) => {
-      queueGraphCommit(
-        `content-title:${entityId}`,
-        () => {
-          const prev = graphRef.current;
-          const entity = prev.entities[entityId];
-          if (!entity || entity.kind !== "content") return;
-          const nextTitle = title.trim() || "Untitled";
-          if (entity.title === nextTitle) return;
-          recordUndoBeforeMutation();
-          setGraph((p) => {
-            const ent = p.entities[entityId];
-            if (!ent || ent.kind !== "content") return p;
-            const t = title.trim() || "Untitled";
-            if (ent.title === t) return p;
-            const next = shallowCloneGraph(p);
-            next.entities[entityId] = { ...ent, title: t };
-            return next;
-          });
-          queueMicrotask(() => {
-            if (!persistNeonRef.current || !isUuidLike(entityId)) return;
-            void apiPatchItem(entityId, { title: title.trim() || "Untitled" });
-          });
-        },
-        120,
-      );
-    },
-    [queueGraphCommit, recordUndoBeforeMutation],
-  );
-
   const folderColorPickerForDock = useMemo(() => {
     if (focusOpen || galleryOpen) return null;
     if (selectedNodeIds.length !== 1) return null;
@@ -3617,8 +3586,8 @@ export function ArchitecturalCanvasApp({
     }
 
     if (type === "folder") {
-      const entityId = createId("folder");
-      const childSpaceId = createId("space");
+      const entityId = createId();
+      const childSpaceId = createId();
       const fx = center.x - FOLDER_CARD_WIDTH / 2 + (Math.random() * 60 - 30);
       const fy = center.y - FOLDER_CARD_HEIGHT / 2 + (Math.random() * 60 - 30);
       setGraph((prev) => {
@@ -3656,7 +3625,7 @@ export function ArchitecturalCanvasApp({
       return;
     }
 
-    const id = createId("node");
+    const id = createId();
     let title = "New Note";
     const width = UNIFIED_NODE_WIDTH;
     let contentTheme: ContentTheme =
@@ -4057,7 +4026,7 @@ export function ArchitecturalCanvasApp({
       });
       if (idsToStack.length === 0) return false;
 
-      const stackId = target.stackId ?? createId("stack");
+      const stackId = target.stackId ?? createId();
       setGraph((prev) => {
         let next = shallowCloneGraph(prev);
         const normalizedOldStackIds = new Set<string>();
@@ -4335,6 +4304,7 @@ export function ArchitecturalCanvasApp({
     handleDrop,
     persistNeonItemsLayout,
     scale,
+    setParentDropHover,
     translateX,
     translateY,
     updateDropTargets,
@@ -4677,13 +4647,7 @@ export function ArchitecturalCanvasApp({
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp, true);
     };
-  }, [
-    closeStackModal,
-    persistNeonItemsLayout,
-    stackModal?.stackId,
-    viewportSize.width,
-    viewportSize.height,
-  ]);
+  }, [closeStackModal, persistNeonItemsLayout, stackModal, viewportSize]);
 
   useEffect(() => {
     if (connectionMode !== "draw" || !connectionSourceId) {
@@ -5098,7 +5062,16 @@ export function ArchitecturalCanvasApp({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [closeMediaGallery, closeStackModal, focusOpen, galleryOpen, goBack, parentSpaceId, stackModal]);
+  }, [
+    closeMediaGallery,
+    closeStackModal,
+    focusOpen,
+    galleryOpen,
+    goBack,
+    parentSpaceId,
+    setParentDropHover,
+    stackModal,
+  ]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -5640,13 +5613,13 @@ export function ArchitecturalCanvasApp({
       const slot = e.slots[spaceId];
       if (!slot) continue;
       if (e.kind === "content") {
-        plan.push({ kind: "content", nid: createId("node"), fromId: id });
+        plan.push({ kind: "content", nid: createId(), fromId: id });
       } else {
         plan.push({
           kind: "folder",
-          nid: createId("folder"),
+          nid: createId(),
           fromId: id,
-          childSpaceId: createId("space"),
+          childSpaceId: createId(),
         });
       }
     }
@@ -6133,6 +6106,8 @@ export function ArchitecturalCanvasApp({
   const bootPreActivateGate =
     scenario === "default" && !bootLayerDismissed && !canvasSessionActivated;
 
+  const chromeEntranceOn = !prefersReducedMotion && chromeEnterEpoch > 0;
+
   const showLogOutToAuth = scenario === "default" && !bootLayerVisible;
 
   return (
@@ -6149,6 +6124,9 @@ export function ArchitecturalCanvasApp({
             if (!bootCelebrationPlayedRef.current) {
               bootCelebrationPlayedRef.current = true;
               playVigilUiSound("celebration");
+            }
+            if (!prefersReducedMotion) {
+              setChromeEnterEpoch((e) => e + 1);
             }
             setCanvasSessionActivated(true);
           }}
@@ -6609,7 +6587,10 @@ export function ArchitecturalCanvasApp({
         ) : null}
         <div className={styles.topRightConnectionTools}>
           <div
-            className={styles.sideToolsMainPanel}
+            key={`hg-ce-search-${chromeEnterEpoch}`}
+            className={`${styles.sideToolsMainPanel}${
+              chromeEntranceOn ? ` ${styles.chromeEnterTopRight}` : ""
+            }`}
             role="toolbar"
             aria-label="Search"
           >
@@ -6629,107 +6610,135 @@ export function ArchitecturalCanvasApp({
         </div>
 
         {!bootPreActivateGate ? (
-          <ArchitecturalCanvasEffectsToggle
-            effectsEnabled={canvasEffectsEnabled}
-            onEffectsEnabledChange={handleCanvasEffectsEnabledChange}
-            trailingSlot={
-              !bootLayerVisible ? (
-                <>
-                  <div className={styles.focusEffectsDockSep} aria-hidden />
-                  <VigilAppChromeAudioMuteButton />
-                </>
-              ) : null
-            }
-          />
+          <div
+            key={`hg-ce-fx-${chromeEnterEpoch}`}
+            className={`${styles.focusEffectsEnterHost}${
+              chromeEntranceOn ? ` ${styles.chromeEnterBottomLeft}` : ""
+            }`}
+          >
+            <ArchitecturalCanvasEffectsToggle
+              effectsEnabled={canvasEffectsEnabled}
+              onEffectsEnabledChange={handleCanvasEffectsEnabledChange}
+              trailingSlot={
+                !bootLayerVisible ? (
+                  <>
+                    <div className={styles.focusEffectsDockSep} aria-hidden />
+                    <VigilAppChromeAudioMuteButton />
+                  </>
+                ) : null
+              }
+            />
+          </div>
         ) : null}
-        <ArchitecturalViewportMetrics
-          centerWorldX={centerWorldX}
-          centerWorldY={centerWorldY}
-          scale={scale}
-        />
-        {!focusOpen && !galleryOpen ? (
-          <ArchitecturalBottomDock
-            showFormatToolbar={textFormatChromeActive}
-            showDocInsertCluster={richDocInsertChromeActive}
-            insertDocActions={dockInsertActions}
-            formatActions={dockFormatActions}
-            activeBlockTag={formatCommandState.blockTag}
-            onFormat={runFormat}
-            onCreateNode={createNewNode}
-            onUndo={undoFromDock}
-            onRedo={redoFromDock}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            undoLabel={`Undo (${modKeyHints.undo})`}
-            redoLabel={`Redo (${modKeyHints.redo})`}
-            folderColorPicker={folderColorPickerForDock}
-            selectionDelete={{
-              selectedCount: selectedNodeIds.length,
-              onDelete: () => deleteEntitySelection([...selectedNodeIdsRef.current]),
-            }}
-            selectionStack={{
-              canMerge: stackSelectionUi.canMergeStacks,
-              onMerge: () => stackSelectedContent(selectedNodeIds),
-              mergeTitle:
-                stackSelectionUi.whollySelectedStackIds.length >= 2
-                  ? `Merge stacks (${modKeyHints.stack})`
-                  : `Create stack (${modKeyHints.stack})`,
-              canUnstack: stackSelectionUi.canUnstackWhollySelected,
-              onUnstack: () => unstackWhollySelectedStacks(selectedNodeIds),
-              unstackTitle: "Unstack",
-            }}
+        <div
+          key={`hg-ce-metrics-${chromeEnterEpoch}`}
+          className={`${styles.viewportMetricsEnterHost}${
+            chromeEntranceOn ? ` ${styles.chromeEnterBottomRight}` : ""
+          }`}
+        >
+          <ArchitecturalViewportMetrics
+            centerWorldX={centerWorldX}
+            centerWorldY={centerWorldY}
+            scale={scale}
           />
+        </div>
+        {!focusOpen && !galleryOpen ? (
+          <div
+            key={`hg-ce-dock-${chromeEnterEpoch}`}
+            className={`${styles.bottomDockEnterHost}${
+              chromeEntranceOn ? ` ${styles.chromeEnterBottomCenter}` : ""
+            }`}
+          >
+            <ArchitecturalBottomDock
+              showFormatToolbar={textFormatChromeActive}
+              showDocInsertCluster={richDocInsertChromeActive}
+              insertDocActions={dockInsertActions}
+              formatActions={dockFormatActions}
+              activeBlockTag={formatCommandState.blockTag}
+              onFormat={runFormat}
+              onCreateNode={createNewNode}
+              onUndo={undoFromDock}
+              onRedo={redoFromDock}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              undoLabel={`Undo (${modKeyHints.undo})`}
+              redoLabel={`Redo (${modKeyHints.redo})`}
+              folderColorPicker={folderColorPickerForDock}
+              selectionDelete={{
+                selectedCount: selectedNodeIds.length,
+                onDelete: () => deleteEntitySelection([...selectedNodeIdsRef.current]),
+              }}
+              selectionStack={{
+                canMerge: stackSelectionUi.canMergeStacks,
+                onMerge: () => stackSelectedContent(selectedNodeIds),
+                mergeTitle:
+                  stackSelectionUi.whollySelectedStackIds.length >= 2
+                    ? `Merge stacks (${modKeyHints.stack})`
+                    : `Create stack (${modKeyHints.stack})`,
+                canUnstack: stackSelectionUi.canUnstackWhollySelected,
+                onUnstack: () => unstackWhollySelectedStacks(selectedNodeIds),
+                unstackTitle: "Unstack",
+              }}
+            />
+          </div>
         ) : null}
 
-        <ArchitecturalToolRail
-          activeTool={activeTool}
-          onSetTool={(tool) => {
-            setActiveTool(tool);
-            setConnectionMode("move");
-            setConnectionSourceId(null);
-            setConnectionCursorWorld(null);
-            selectionBeforeConnectionModeRef.current = null;
-          }}
-          connectionMode={connectionMode}
-          onSetConnectionMode={(next) => {
-            const resolved = connectionMode === next ? "move" : next;
-            setConnectionMode(resolved);
-            setActiveTool("select");
-            setDraggedNodeIds([]);
-            draggedNodeIdsRef.current = [];
-            lassoStartRef.current = null;
-            lassoRectScreenRef.current = null;
-            setLassoRectScreen(null);
-            if (resolved === "move") {
-              const restore = selectionBeforeConnectionModeRef.current;
-              if (restore) {
-                setSelectedNodeIds(restore.filter((id) => !!graphRef.current.entities[id]));
-              }
-              selectionBeforeConnectionModeRef.current = null;
-            } else {
-              if (!selectionBeforeConnectionModeRef.current) {
-                selectionBeforeConnectionModeRef.current = [...selectedNodeIdsRef.current];
-              }
-              setSelectedNodeIds([]);
-            }
-            if (resolved !== "draw") {
+        <div
+          key={`hg-ce-rail-${chromeEnterEpoch}`}
+          className={`${styles.toolRailEnterShell}${
+            chromeEntranceOn ? ` ${styles.chromeEnterRightRail}` : ""
+          }`}
+        >
+          <ArchitecturalToolRail
+            activeTool={activeTool}
+            onSetTool={(tool) => {
+              setActiveTool(tool);
+              setConnectionMode("move");
               setConnectionSourceId(null);
               setConnectionCursorWorld(null);
+              selectionBeforeConnectionModeRef.current = null;
+            }}
+            connectionMode={connectionMode}
+            onSetConnectionMode={(next) => {
+              const resolved = connectionMode === next ? "move" : next;
+              setConnectionMode(resolved);
+              setActiveTool("select");
+              setDraggedNodeIds([]);
+              draggedNodeIdsRef.current = [];
+              lassoStartRef.current = null;
+              lassoRectScreenRef.current = null;
+              setLassoRectScreen(null);
+              if (resolved === "move") {
+                const restore = selectionBeforeConnectionModeRef.current;
+                if (restore) {
+                  setSelectedNodeIds(restore.filter((id) => !!graphRef.current.entities[id]));
+                }
+                selectionBeforeConnectionModeRef.current = null;
+              } else {
+                if (!selectionBeforeConnectionModeRef.current) {
+                  selectionBeforeConnectionModeRef.current = [...selectedNodeIdsRef.current];
+                }
+                setSelectedNodeIds([]);
+              }
+              if (resolved !== "draw") {
+                setConnectionSourceId(null);
+                setConnectionCursorWorld(null);
+              }
+            }}
+            connectionColorControl={
+              <ArchitecturalFolderColorStrip
+                value={connectionColorSchemeId}
+                onChange={applyConnectionColorScheme}
+                appearance="spool"
+                ariaLabel="Connection thread color"
+                engaged={connectionMode === "draw"}
+              />
             }
-          }}
-          connectionColorControl={
-            <ArchitecturalFolderColorStrip
-              value={connectionColorSchemeId}
-              onChange={applyConnectionColorScheme}
-              appearance="spool"
-              ariaLabel="Connection thread color"
-              engaged={connectionMode === "draw"}
-            />
-          }
-          onZoomIn={() => zoomBy(ZOOM_BUTTON_STEP)}
-          onZoomOut={() => zoomBy(-ZOOM_BUTTON_STEP)}
-          onRecenter={recenterToOrigin}
-        />
+            onZoomIn={() => zoomBy(ZOOM_BUTTON_STEP)}
+            onZoomOut={() => zoomBy(-ZOOM_BUTTON_STEP)}
+            onRecenter={recenterToOrigin}
+          />
+        </div>
         <CommandPalette
           open={paletteOpen}
           onClose={() => setPaletteOpen(false)}
@@ -7286,6 +7295,7 @@ export function ArchitecturalCanvasApp({
               />
               <div className={styles.mediaGalleryAssetStage}>
                 {galleryRaster.src ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- dynamic user/R2 URLs; not suitable for next/image without broad remotePatterns
                   <img
                     key={galleryRaster.src}
                     src={galleryRaster.src}
@@ -7409,7 +7419,12 @@ export function ArchitecturalCanvasApp({
         }`}
       >
         <div ref={shellTopLeftStackRef} className={styles.shellTopLeftStack}>
-          <div className={styles.shellTopCluster}>
+          <div
+            key={`hg-ce-tl-${chromeEnterEpoch}`}
+            className={`${styles.shellTopCluster}${
+              chromeEntranceOn ? ` ${styles.chromeEnterTopLeft}` : ""
+            }`}
+          >
             <div className={styles.shellTopClusterRow} data-hg-chrome="top-left-cluster">
               <ArchitecturalStatusBar
                 syncBootstrapPending={scenario === "default" && !canvasBootstrapResolved}

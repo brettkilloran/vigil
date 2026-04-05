@@ -80,7 +80,10 @@ export function ArchitecturalLinksPanel({
 }) {
   const entityId = selectedEntityIds.length === 1 ? selectedEntityIds[0]! : null;
   const entity = entityId ? graph.entities[entityId] : undefined;
-  const visibleIds = graph.spaces[activeSpaceId]?.entityIds ?? [];
+  const visibleIds = useMemo(
+    () => graph.spaces[activeSpaceId]?.entityIds ?? [],
+    [graph, activeSpaceId],
+  );
 
   const itemIdForCloud =
     entity && UUID_RE.test(entity.persistedItemId ?? entity.id)

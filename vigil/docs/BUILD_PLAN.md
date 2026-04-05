@@ -1,6 +1,6 @@
 # heartgarden — execution build plan (living)
 
-This is the **repo-wide checklist**: architecture snapshot, shipped tranches, and backlog (hardening, dual state, embeddings, e2e, later phases). **Ordered lore-engine work** (import pipeline, link phases, MCP expansion) lives in the **Cursor plan** `heartgarden_lore_engine_7fc1fb56.plan.md` under `.cursor/plans/` — treat that as the completion ledger for Phases A–D + UX2 unless you explicitly reprioritize here.
+This is the **repo-wide checklist**: architecture snapshot, shipped tranches, and backlog (hardening, embeddings, e2e, later phases). **Ordered lore-engine work** (import pipeline, link phases, MCP expansion) lives in the **Cursor plan** `heartgarden_lore_engine_7fc1fb56.plan.md` under `.cursor/plans/` — treat that as the completion ledger for Phases A–D + UX2 unless you explicitly reprioritize here.
 
 **Historical product bible** (Spatial-style sessions, old paths): **`docs/archive/vigil-master-plan-legacy.md`**. Stub at **`VIGIL_MASTER_PLAN.md`** points there. Honest engineering delta: **`STRATEGY.md`**. Human / account items: **`FOLLOW_UP.md`**.
 
@@ -11,9 +11,8 @@ This is the **repo-wide checklist**: architecture snapshot, shipped tranches, an
 | **Production canvas shell** | `ArchitecturalCanvasApp` + `src/components/foundation/*` — mounted from `app/_components/VigilApp.tsx`. |
 | **Graph state** | In-component React state + **undo/redo** stack (`architectural-undo.ts`); Neon sync via `architectural-db-bridge.ts`, `architectural-neon-api.ts`, `/api/bootstrap`, item/space routes. |
 | **Save / sync indicator** | `neon-sync-bus.ts` + instrumented `architectural-neon-api.ts` + debounced note body bumps. Status strip in **`ArchitecturalStatusBar`**: Loading → Local (demo) → Saving… → Saved / Sync error. Tooltips document **undo vs server** semantics. |
-| **Legacy zustand canvas** | `src/stores/canvas-store.ts` — still imported by some **panels** (e.g. backlinks, timeline, tool rail variants). Not the source of truth for the architectural shell. Unify or keep documented until panels are rewired. |
 | **Search** | Postgres FTS + trigram on `search_blob`; hybrid mode merges FTS + fuzzy (`/api/search`, `/api/search/suggest`). `item_embeddings` / `item-embedding.ts` only clear stale rows (no vector generation). |
-| **Lore Q&A (MVP)** | `POST /api/lore/query` — retrieval via FTS (+ fuzzy fallback), synthesis via **Anthropic** (`ANTHROPIC_API_KEY`, optional `ANTHROPIC_LORE_MODEL`). UI: Cmd+K → **Ask lore (AI)** → `LoreAskPanel`. |
+| **Lore Q&A (MVP)** | `POST /api/lore/query` — retrieval via FTS (+ fuzzy fallback), synthesis via **Anthropic** (`ANTHROPIC_API_KEY`, optional `ANTHROPIC_LORE_MODEL`). **Best-effort IP rate limit** in-process (`lore-query-rate-limit.ts`); tighten with auth / KV before a public URL. UI: Cmd+K → **Ask lore (AI)** → `LoreAskPanel`. |
 | **DB** | Drizzle `src/db/schema.ts`; Neon requires **`CREATE EXTENSION vector`** before push (`npm run db:ensure-pgvector`). |
 
 **Health check:** From the app root (**`vigil/`** unless renamed — **`docs/NAMING.md`**), run `npm run check` (lint + production build). After UX / DB / stacking changes, run `npm run test:unit` and targeted `npm run test:e2e` if flows touched.
@@ -42,11 +41,10 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 
 ### Near-term — hardening & parity
 
-1. **Dual state story** — Either migrate timeline/backlinks (and related UI) to architectural graph + Neon IDs, or keep an explicit “legacy panel” note in `AGENTS.md` until done.
-2. **`POST /api/lore/query` abuse** — Before a public URL: rate limiting, auth, or Vercel firewall; unauthenticated calls consume Anthropic quota.
-3. **Embeddings / vectors** — Not generated in-app; hybrid search is lexical only. The `item_embeddings` table may remain for legacy DBs; new installs can ignore it or drop after a deliberate migration.
-4. **E2E** — Optional: palette → lore panel smoke (skip or mock LLM in CI).
-5. **Canvas version history (UX2 — decision for v1)** — **Export-first:** the canvas already supports **Export graph JSON** (Cmd+K). Treat that as the supported “checkpoint” workflow until a DB snapshot or `item_revisions` table is justified. **Space / graph snapshots** and **per-item revision logs** remain future options; any in-app restore must not silently fight the local undo stack (explicit “restore from server snapshot” only).
+1. **`POST /api/lore/query` hardening** — Baseline in-memory rate limit is shipped; before a public URL add auth, edge firewall, or Redis / Vercel KV for global limits.
+2. **Embeddings / vectors** — Not generated in-app; hybrid search is lexical only. The `item_embeddings` table may remain for legacy DBs; new installs can ignore it or drop after a deliberate migration.
+3. **E2E** — Optional: palette → lore panel smoke (skip or mock LLM in CI).
+4. **Canvas version history (UX2 — decision for v1)** — **Export-first:** the canvas already supports **Export graph JSON** (Cmd+K). Treat that as the supported “checkpoint” workflow until a DB snapshot or `item_revisions` table is justified. **Space / graph snapshots** and **per-item revision logs** remain future options; any in-app restore must not silently fight the local undo stack (explicit “restore from server snapshot” only).
 
 ### Mid-term — master plan Phase 5 (TTRPG + intelligence)
 
