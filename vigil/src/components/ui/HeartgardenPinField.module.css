@@ -47,12 +47,12 @@
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  opacity: 0.35;
+  opacity: 0.28;
   background: linear-gradient(
     105deg,
     transparent 0%,
-    color-mix(in oklch, var(--sys-color-white) 8%, transparent) 42%,
-    transparent 68%
+    color-mix(in oklch, var(--sys-color-white) 6%, transparent) 44%,
+    transparent 70%
   );
 }
 
@@ -96,7 +96,7 @@
 .cell:focus-visible {
   border-color: color-mix(in oklch, var(--sys-color-accent-500) 55%, transparent);
   box-shadow:
-    inset 0 0 12px color-mix(in oklch, var(--sys-color-black) 35%, transparent),
+    inset 0 0 10px color-mix(in oklch, var(--sys-color-black) 32%, transparent),
     0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sem-focus-ring) 40%, transparent);
 }
 
@@ -125,12 +125,13 @@
     transform 0.2s ease;
 }
 
-/* Match .cell; beat globals `.vigil-btn[data-size="icon"]` width/min-height */
+/* Match .cell; beat globals `.vigil-btn[data-size="icon"]` size + radius */
 .submit:global(.vigil-btn[data-size="icon"]) {
   width: 1.85rem;
   height: 2.15rem;
   min-width: 1.85rem;
   min-height: 2.15rem;
+  border-radius: var(--sys-radius-sm);
 }
 
 .submit:disabled {
