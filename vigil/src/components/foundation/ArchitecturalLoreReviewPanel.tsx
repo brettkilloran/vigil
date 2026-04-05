@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "@phosphor-icons/react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import styles from "@/src/components/foundation/ArchitecturalLoreReviewPanel.module.css";
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
@@ -70,6 +70,10 @@ export function ArchitecturalLoreReviewPanel({
   const [tagBusy, setTagBusy] = useState(false);
   const [dismissed, setDismissed] = useState<Set<number>>(() => new Set());
 
+  useEffect(() => {
+    setDismissed(new Set());
+  }, [issues]);
+
   const visibleIssues = useMemo(
     () => issues.filter((_, i) => !dismissed.has(i)),
     [issues, dismissed],
@@ -98,13 +102,14 @@ export function ArchitecturalLoreReviewPanel({
 
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        tone="glass"
         className={styles.backdrop}
         aria-label="Close vault review"
-        onClick={() => {
-          if (!loading) onClose();
-        }}
+        disabled={loading}
+        onClick={onClose}
       />
       <aside className={styles.panel} aria-label="Vault review">
         <div className={styles.panelHeader}>
@@ -166,14 +171,17 @@ export function ArchitecturalLoreReviewPanel({
             <div className={styles.chipRow}>
               {PRESET_TAGS.map((t) => (
                 <ArchitecturalTooltip key={t.id} content={t.hint} side="bottom" delayMs={240}>
-                  <button
+                  <Button
                     type="button"
+                    size="xs"
+                    variant="subtle"
+                    tone="glass"
                     className={styles.chip}
                     disabled={!canTag || tagBusy || loading}
                     onClick={() => void applyTags([t.id])}
                   >
                     {t.label}
-                  </button>
+                  </Button>
                 </ArchitecturalTooltip>
               ))}
             </div>
@@ -200,15 +208,18 @@ export function ArchitecturalLoreReviewPanel({
               <div className={styles.sectionLabel}>Suggested tags (AI)</div>
               <div className={styles.chipRow}>
                 {suggestedNoteTags.map((tag) => (
-                  <button
+                  <Button
                     key={tag}
                     type="button"
+                    size="xs"
+                    variant="subtle"
+                    tone="glass"
                     className={styles.chip}
                     disabled={!canTag || tagBusy}
                     onClick={() => void applyTags([tag])}
                   >
                     {tag.replace(/_/g, " ")}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>

@@ -1802,19 +1802,33 @@
   }
 }
 
-.shellTopRightStack {
+/* Vault review + import/search: one anchored row (was two stacks both at top/right). */
+.topRightChromeCluster {
   position: absolute;
   top: 24px;
-  right: 24px;
+  right: max(24px, env(safe-area-inset-right, 0px));
   z-index: var(--layer-ui-chrome-elevated);
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  pointer-events: none;
+  flex-direction: row;
+  justify-content: flex-end;
+  max-width: calc(100vw - 48px);
   box-sizing: border-box;
+  pointer-events: none;
 }
 
-.shellTopRightStack > * {
+.topRightChromeClusterInner {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 8px;
+  width: max-content;
+  max-width: 100%;
+  pointer-events: none;
+}
+
+.topRightChromeClusterInner > * {
   pointer-events: auto;
 }
 
@@ -3522,10 +3536,9 @@
 }
 
 .topRightConnectionTools {
-  position: absolute;
-  top: 24px;
-  right: 24px;
-  z-index: var(--layer-ui-chrome);
+  position: static;
+  flex: 0 0 auto;
+  z-index: auto;
   pointer-events: auto;
 }
 

@@ -3725,6 +3725,21 @@ export function ArchitecturalCanvasApp({
     [resolveVaultReviewDraft],
   );
 
+  /** Splash / auth boot (`VigilAppBootScreen`) — hide workspace-only chrome until dismissed. */
+  const bootLayerVisible =
+    scenario === "default" &&
+    !bootLayerDismissed &&
+    (!prefersReducedMotion || bootAfterLogout);
+
+  const vaultReviewChromeVisible =
+    cloudLinksBar && isUuidLike(activeSpaceId) && !bootLayerVisible;
+
+  useEffect(() => {
+    if (bootLayerVisible) {
+      setLoreReviewPanelOpen(false);
+    }
+  }, [bootLayerVisible]);
+
   const paletteActions = useMemo<PaletteAction[]>(
     () => [
       { id: "create-note", label: "Create note", hint: "Add a new note at center", icon: <FileText size={14} weight="bold" /> },
@@ -3756,7 +3771,7 @@ export function ArchitecturalCanvasApp({
         keywords: ["import", "pdf", "markdown", "upload"],
         icon: <UploadSimple size={14} weight="bold" />,
       },
-      ...(cloudLinksBar && isUuidLike(activeSpaceId)
+      ...(vaultReviewChromeVisible
         ? [
             {
               id: "check-lore-consistency",
@@ -3768,7 +3783,7 @@ export function ArchitecturalCanvasApp({
           ]
         : []),
     ],
-    [activeSpaceId, cloudLinksBar, modKeyHints.recenter],
+    [modKeyHints.recenter, vaultReviewChromeVisible],
   );
 
   const getParentFolderExitSlot = useCallback(
@@ -4437,11 +4452,18 @@ export function ArchitecturalCanvasApp({
       return;
     }
     if (actionId === "check-lore-consistency") {
+      if (bootLayerVisible) return;
       setLoreReviewError(null);
       setLoreReviewPanelOpen(true);
       playVigilUiSound("select");
     }
-  }, [activeSpace?.entityIds, createNewNode, exportGraphJson, recenterToOrigin]);
+  }, [
+    activeSpace?.entityIds,
+    bootLayerVisible,
+    createNewNode,
+    exportGraphJson,
+    recenterToOrigin,
+  ]);
 
   const updateDropTargets = useCallback(
     (draggedEntityId: string, pointerClientX?: number, pointerClientY?: number) => {
@@ -6720,11 +6742,6 @@ export function ArchitecturalCanvasApp({
     return technicalViewportReady && canvasSessionActivated;
   }, [scenario, technicalViewportReady, canvasSessionActivated]);
 
-  const bootLayerVisible =
-    scenario === "default" &&
-    !bootLayerDismissed &&
-    (!prefersReducedMotion || bootAfterLogout);
-
   /**
    * Pre-Enter gate only: hide in-viewport chrome + dot grid, elevate top-left above the boot overlay.
    * Once the user activates, show real chrome immediately — boot UI may stay mounted for ambient audio
@@ -6749,7 +6766,8 @@ export function ArchitecturalCanvasApp({
 
   const chromeEntranceOn = !prefersReducedMotion && chromeEnterEpoch > 0;
 
-  const showLogOutToAuth = scenario === "default" && !bootLayerVisible;
+  /** Same moment as top-left chrome after Enter — do not wait for boot tear-down / ambient fade. */
+  const showLogOutToAuth = scenario === "default" && canvasSessionActivated;
 
   return (
     <>
@@ -7247,49 +7265,6 @@ export function ArchitecturalCanvasApp({
             onActivate={moveSelectionToParent}
           />
         ) : null}
-        <div className={styles.topRightConnectionTools}>
-          <div
-            key={`hg-ce-search-${chromeEnterEpoch}`}
-            className={`${styles.sideToolsMainPanel}${
-              chromeEntranceOn ? ` ${styles.chromeEnterTopRight}` : ""
-            }`}
-            role="toolbar"
-            aria-label="Search and import"
-          >
-            <div className={styles.sideToolsToolGroup}>
-              <ArchitecturalTooltip content="Import PDF or Markdown" side="bottom" delayMs={320}>
-                <ArchitecturalButton
-                  type="button"
-                  size="icon"
-                  tone="glass"
-                  aria-label="Import document"
-                  onClick={() => {
-                    playVigilUiSound("select");
-                    loreImportFileInputRef.current?.click();
-                  }}
-                >
-                  <UploadSimple size={18} weight="bold" aria-hidden />
-                </ArchitecturalButton>
-              </ArchitecturalTooltip>
-              <div className={styles.focusEffectsDockSep} aria-hidden />
-              <ArchitecturalTooltip
-                content={`Search (${modKeyHints.search})`}
-                side="bottom"
-                delayMs={320}
-              >
-                <ArchitecturalButton
-                  type="button"
-                  size="icon"
-                  tone="glass"
-                  aria-label="Search"
-                  onClick={() => setPaletteOpen(true)}
-                >
-                  <MagnifyingGlass size={18} weight="bold" aria-hidden />
-                </ArchitecturalButton>
-              </ArchitecturalTooltip>
-            </div>
-          </div>
-        </div>
 
         {!bootPreActivateGate ? (
           <div
@@ -7469,82 +7444,18 @@ export function ArchitecturalCanvasApp({
             </div>
           </div>
         ) : null}
-        {loreConsistencyOpen ? (
-          <div
-            className="fixed inset-0 z-[1160] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Lore consistency check"
-            onMouseDown={(e) => {
-              if (e.target === e.currentTarget && !loreConsistencyLoading) {
-                setLoreConsistencyOpen(false);
-              }
-            }}
-          >
-            <div className="flex max-h-[min(85vh,520px)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-panel)] p-4 shadow-xl">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-semibold text-[var(--vigil-label)]">
-                  Lore consistency check
-                </span>
-                <Button
-                  size="sm"
-                  variant="neutral"
-                  tone="glass"
-                  type="button"
-                  disabled={loreConsistencyLoading}
-                  onClick={() => setLoreConsistencyOpen(false)}
-                >
-                  Close
-                </Button>
-              </div>
-              {loreConsistencyLoading ? (
-                <p className="text-[12px] text-[var(--vigil-muted)]">Comparing your note to the vault…</p>
-              ) : null}
-              {loreConsistencyError ? (
-                <p className="text-[12px] text-red-600 dark:text-red-400">{loreConsistencyError}</p>
-              ) : null}
-              {!loreConsistencyLoading &&
-              !loreConsistencyError &&
-              loreConsistencyIssues.length === 0 ? (
-                <p className="text-[12px] text-[var(--vigil-muted)]">
-                  No conflicts or warnings were flagged. Retrieval can miss relevant cards — this is a helper,
-                  not proof.
-                </p>
-              ) : null}
-              {!loreConsistencyLoading && loreConsistencyIssues.length > 0 ? (
-                <ul className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 text-[11px] text-[var(--vigil-label)]">
-                  {loreConsistencyIssues.map((issue, i) => (
-                    <li
-                      key={i}
-                      className="rounded-lg border border-[var(--vigil-border)] bg-black/[0.03] p-2 dark:bg-white/[0.04]"
-                    >
-                      <span
-                        className={
-                          issue.severity === "contradiction"
-                            ? "text-red-600 dark:text-red-400"
-                            : issue.severity === "info"
-                              ? "text-[var(--vigil-muted)]"
-                              : "text-amber-700 dark:text-amber-300"
-                        }
-                      >
-                        {issue.severity}
-                      </span>
-                      <span className="ml-2 font-medium">{issue.summary}</span>
-                      {issue.details ? (
-                        <p className="mt-1 text-[10px] text-[var(--vigil-muted)]">{issue.details}</p>
-                      ) : null}
-                      {issue.candidateItemId ? (
-                        <p className="mt-1 font-mono text-[9px] text-[var(--vigil-muted)]">
-                          Related item: {issue.candidateItemId}
-                        </p>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
+        <ArchitecturalLoreReviewPanel
+          open={loreReviewPanelOpen}
+          onClose={() => setLoreReviewPanelOpen(false)}
+          draft={vaultReviewDraftActive}
+          onRunAnalysis={() => void runVaultReviewAnalysis()}
+          onAppendTags={appendVaultReviewTags}
+          loading={loreReviewLoading}
+          error={loreReviewError}
+          issues={loreReviewIssues}
+          suggestedNoteTags={loreReviewSuggestedTags}
+          semanticSummary={loreReviewSemanticSummary}
+        />
         {loreSmartReview ? (
           <div
             className="fixed inset-0 z-[1150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
@@ -8698,6 +8609,85 @@ export function ArchitecturalCanvasApp({
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+        <div className={styles.topRightChromeCluster} data-hg-chrome="top-right-tools">
+          <div
+            key={`hg-ce-tr-cluster-${chromeEnterEpoch}`}
+            className={`${styles.topRightChromeClusterInner}${
+              chromeEntranceOn ? ` ${styles.chromeEnterTopRight}` : ""
+            }`}
+          >
+            {vaultReviewChromeVisible ? (
+              <div
+                className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.shellTopLogOutPanel}`}
+                data-hg-chrome="vault-review"
+              >
+                <ArchitecturalTooltip
+                  content="Vault review — consistency check & semantic tags (no layout changes)"
+                  side="bottom"
+                  delayMs={320}
+                >
+                  <ArchitecturalButton
+                    type="button"
+                    size="icon"
+                    tone="glass"
+                    iconOnly
+                    leadingIcon={<Tag size={18} weight="bold" aria-hidden />}
+                    className={styles.shellTopLogOutTrigger}
+                    aria-label="Open vault review"
+                    onClick={() => {
+                      setLoreReviewError(null);
+                      setLoreReviewPanelOpen(true);
+                      playVigilUiSound("select");
+                    }}
+                  />
+                </ArchitecturalTooltip>
+              </div>
+            ) : null}
+            {!bootPreActivateGate ? (
+              <div className={styles.topRightConnectionTools}>
+                <div
+                  key={`hg-ce-search-${chromeEnterEpoch}`}
+                  className={styles.sideToolsMainPanel}
+                  role="toolbar"
+                  aria-label="Search and import"
+                >
+                  <div className={styles.sideToolsToolGroup}>
+                    <ArchitecturalTooltip content="Import PDF or Markdown" side="bottom" delayMs={320}>
+                      <ArchitecturalButton
+                        type="button"
+                        size="icon"
+                        tone="glass"
+                        aria-label="Import document"
+                        onClick={() => {
+                          playVigilUiSound("select");
+                          loreImportFileInputRef.current?.click();
+                        }}
+                      >
+                        <UploadSimple size={18} weight="bold" aria-hidden />
+                      </ArchitecturalButton>
+                    </ArchitecturalTooltip>
+                    <div className={styles.focusEffectsDockSep} aria-hidden />
+                    <ArchitecturalTooltip
+                      content={`Search (${modKeyHints.search})`}
+                      side="bottom"
+                      delayMs={320}
+                    >
+                      <ArchitecturalButton
+                        type="button"
+                        size="icon"
+                        tone="glass"
+                        aria-label="Search"
+                        onClick={() => setPaletteOpen(true)}
+                      >
+                        <MagnifyingGlass size={18} weight="bold" aria-hidden />
+                      </ArchitecturalButton>
+                    </ArchitecturalTooltip>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

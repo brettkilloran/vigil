@@ -2,7 +2,7 @@
  * Full-screen boot / preload (AESTHETICS // FLOW structure, Vigil copy).
  * Transparent so VigilFlowRevealOverlay + viewport dot grid read through; main chrome is hidden in parent except elevated top-left stack.
  *
- * Corner gutters match ArchitecturalCanvasApp shell: .shellTopLeftStack / .topRightConnectionTools use 24px;
+ * Corner gutters match ArchitecturalCanvasApp shell: .shellTopLeftStack / .topRightChromeCluster use 24px;
  * bottom metrics / focus strip use 28px (.viewportMetricsStrip, .focusEffectsStrip).
  */
 .overlay {

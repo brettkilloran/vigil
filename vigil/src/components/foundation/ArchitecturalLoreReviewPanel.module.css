@@ -2,9 +2,20 @@
   position: fixed;
   inset: 0;
   z-index: 1155;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
   background: color-mix(in oklch, var(--sys-color-black) 35%, transparent);
   pointer-events: auto;
   animation: loreReviewFadeIn 0.2s ease;
+  /* Shared Button adds .vigil-btn; keep overlay hitbox only */
+  box-shadow: none;
+  justify-content: unset;
+  align-items: unset;
 }
 
 @keyframes loreReviewFadeIn {
