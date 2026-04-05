@@ -62,6 +62,10 @@ const POPOVER_ESTIMATE_H = 460;
 const POPOVER_W = 328;
 /** Gap below the frosted chrome strip (not the inner button box). */
 const POPOVER_GAP = 4;
+/** Nudge popover left of trigger alignment (viewport clamp still applies). */
+const POPOVER_SHIFT_LEFT = 6;
+/** Extra vertical offset after anchor-based placement (viewport clamp still applies). */
+const POPOVER_SHIFT_DOWN = 4;
 
 function SaveAndVersionPopover({
   popoverAnchorRef,
@@ -209,11 +213,12 @@ function SaveAndVersionPopover({
     let top = flip
       ? anchorRect.top - POPOVER_GAP - panelH
       : anchorRect.bottom + POPOVER_GAP;
+    top += POPOVER_SHIFT_DOWN;
     const minTop = 8;
     const maxTop = Math.max(minTop, vh - panelH - 8);
     if (top < minTop) top = minTop;
     else if (top > maxTop) top = maxTop;
-    let left = triggerRect.left;
+    let left = triggerRect.left - POPOVER_SHIFT_LEFT;
     const maxLeft = vw - POPOVER_W - 8;
     if (left > maxLeft) left = Math.max(8, maxLeft);
     if (left < 8) left = 8;
