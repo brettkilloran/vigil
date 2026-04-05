@@ -63,5 +63,15 @@ export function useRecentItems() {
     });
   }, []);
 
-  return { items, push };
+  const pruneIds = useCallback((ids: ReadonlySet<string>) => {
+    if (ids.size === 0) return;
+    setItems((prev) => {
+      const next = prev.filter((row) => !ids.has(row.id));
+      if (next.length === prev.length) return prev;
+      writeRecentItems(next);
+      return next;
+    });
+  }, []);
+
+  return { items, push, pruneIds };
 }

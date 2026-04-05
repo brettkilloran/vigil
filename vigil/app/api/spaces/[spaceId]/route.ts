@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import { spaces } from "@/src/db/schema";
-import { assertSpaceExists } from "@/src/lib/spaces";
+import { assertSpaceExists, deleteSpaceSubtree } from "@/src/lib/spaces";
 
 const patchBody = z.object({
   camera: z
@@ -63,4 +63,24 @@ export async function PATCH(
     .where(eq(spaces.id, spaceId));
 
   return Response.json({ ok: true });
+}
+
+export async function DELETE(
+  _req: Request,
+  context: { params: Promise<{ spaceId: string }> },
+) {
+  const db = tryGetDb();
+  if (!db) {
+    return Response.json(
+      { ok: false, error: "Database not configured" },
+      { status: 503 },
+    );
+  }
+  const { spaceId } = await context.params;
+  const result = await deleteSpaceSubtree(db, spaceId);
+  if (!result.ok) {
+    const status = result.error === "Space not found" ? 404 : 400;
+    return Response.json({ ok: false, error: result.error }, { status });
+  }
+  return Response.json({ ok: true, deletedSpaceIds: result.deletedIds });
 }

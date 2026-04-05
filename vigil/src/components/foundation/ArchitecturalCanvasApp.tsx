@@ -71,6 +71,7 @@ import {
   apiCreateItem,
   apiCreateSpace,
   apiDeleteItem,
+  apiDeleteSpaceSubtree,
   apiPatchItem,
   apiPatchSpaceCamera,
   apiPatchSpaceName,
@@ -249,7 +250,10 @@ function isUuidLike(value: string | null | undefined): value is string {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-function collectEntityIdsForDeletion(graph: CanvasGraph, roots: string[]): string[] {
+function collectDeletionClosure(
+  graph: CanvasGraph,
+  roots: string[],
+): { entityIds: string[]; spaceIds: string[] } {
   const entityIdsToDelete = new Set<string>();
   const spaceIdsToDelete = new Set<string>();
 
@@ -277,7 +281,18 @@ function collectEntityIdsForDeletion(graph: CanvasGraph, roots: string[]): strin
   };
 
   roots.forEach((id) => markEntity(id));
-  return [...entityIdsToDelete];
+  const rootSpaceId = graph.rootSpaceId;
+  const spaceIds = [...spaceIdsToDelete].filter((id) => id !== rootSpaceId);
+  return { entityIds: [...entityIdsToDelete], spaceIds };
+}
+
+/** Spaces to delete remotely: each root of a subtree within `spaceIds` (avoid duplicate DELETE calls). */
+function filterSpaceDeletionRoots(spaceIds: string[], graph: CanvasGraph): string[] {
+  const set = new Set(spaceIds.filter((id) => id !== graph.rootSpaceId));
+  return [...set].filter((id) => {
+    const p = graph.spaces[id]?.parentSpaceId ?? null;
+    return !p || !set.has(p);
+  });
 }
 
 function createRopeRuntime(start: { x: number; y: number }, end: { x: number; y: number }): RopeRuntime {
@@ -1120,8 +1135,10 @@ export function ArchitecturalCanvasApp({
   activeNodeIdRef.current = activeNodeId;
 
   const modKeyHints = useModKeyHints();
-  const { items: recentItems, push: pushRecentItem } = useRecentItems();
-  const { items: recentFolders, push: pushRecentFolder } = useRecentFolders();
+  const { items: recentItems, push: pushRecentItem, pruneIds: pruneRecentItems } =
+    useRecentItems();
+  const { items: recentFolders, push: pushRecentFolder, pruneIds: pruneRecentFolders } =
+    useRecentFolders();
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -4938,73 +4955,103 @@ export function ArchitecturalCanvasApp({
     };
   }, []);
 
-  const deleteEntitySelection = useCallback((entityIds: string[]) => {
-    if (entityIds.length === 0) return;
-    const idsToRemove = collectEntityIdsForDeletion(graphRef.current, entityIds);
-    recordUndoBeforeMutation();
-    setGraph((prev) => {
-      const next = shallowCloneGraph(prev);
-      const entityIdsToDelete = new Set<string>();
-      const spaceIdsToDelete = new Set<string>();
+  const deleteEntitySelection = useCallback(
+    (entityIds: string[]) => {
+      if (entityIds.length === 0) return;
+      const snap = graphRef.current;
+      const { entityIds: idsToRemove, spaceIds } = collectDeletionClosure(snap, entityIds);
+      const spaceRoots = filterSpaceDeletionRoots(spaceIds, snap);
+      recordUndoBeforeMutation();
+      setGraph((prev) => {
+        const next = shallowCloneGraph(prev);
+        const entityIdsToDelete = new Set<string>();
+        const spaceIdsToDelete = new Set<string>();
 
-      const markEntity = (entityId: string) => {
-        if (entityIdsToDelete.has(entityId)) return;
-        const entity = next.entities[entityId];
-        if (!entity) return;
-        entityIdsToDelete.add(entityId);
+        const markEntity = (entityId: string) => {
+          if (entityIdsToDelete.has(entityId)) return;
+          const entity = next.entities[entityId];
+          if (!entity) return;
+          entityIdsToDelete.add(entityId);
 
-        if (entity.kind !== "folder") return;
-        const stack = [entity.childSpaceId];
-        while (stack.length > 0) {
-          const spaceId = stack.pop();
-          if (!spaceId || spaceIdsToDelete.has(spaceId)) continue;
-          const space = next.spaces[spaceId];
-          if (!space) continue;
-          spaceIdsToDelete.add(spaceId);
-          space.entityIds.forEach(markEntity);
-          Object.values(next.spaces).forEach((candidate) => {
-            if (candidate.parentSpaceId === spaceId) {
-              stack.push(candidate.id);
-            }
-          });
-        }
-      };
-
-      entityIds.forEach(markEntity);
-
-      Object.values(next.spaces).forEach((space) => {
-        next.spaces[space.id] = {
-          ...space,
-          entityIds: space.entityIds.filter((id) => !entityIdsToDelete.has(id)),
+          if (entity.kind !== "folder") return;
+          const stack = [entity.childSpaceId];
+          while (stack.length > 0) {
+            const spaceId = stack.pop();
+            if (!spaceId || spaceIdsToDelete.has(spaceId)) continue;
+            const space = next.spaces[spaceId];
+            if (!space) continue;
+            spaceIdsToDelete.add(spaceId);
+            space.entityIds.forEach(markEntity);
+            Object.values(next.spaces).forEach((candidate) => {
+              if (candidate.parentSpaceId === spaceId) {
+                stack.push(candidate.id);
+              }
+            });
+          }
         };
+
+        entityIds.forEach(markEntity);
+
+        Object.values(next.spaces).forEach((space) => {
+          next.spaces[space.id] = {
+            ...space,
+            entityIds: space.entityIds.filter((id) => !entityIdsToDelete.has(id)),
+          };
+        });
+
+        entityIdsToDelete.forEach((entityId) => {
+          delete next.entities[entityId];
+        });
+        spaceIdsToDelete.forEach((spaceId) => {
+          if (spaceId !== next.rootSpaceId) {
+            delete next.spaces[spaceId];
+          }
+        });
+
+        Object.keys(next.connections).forEach((cid) => {
+          const c = next.connections[cid];
+          if (
+            entityIdsToDelete.has(c.sourceEntityId) ||
+            entityIdsToDelete.has(c.targetEntityId)
+          ) {
+            delete next.connections[cid];
+          }
+        });
+
+        return next;
       });
 
-      entityIdsToDelete.forEach((entityId) => {
-        delete next.entities[entityId];
-      });
-      spaceIdsToDelete.forEach((spaceId) => {
-        if (spaceId !== next.rootSpaceId) {
-          delete next.spaces[spaceId];
+      if (persistNeonRef.current) {
+        for (const id of idsToRemove) {
+          if (isUuidLike(id)) void apiDeleteItem(id);
         }
-      });
-      return next;
-    });
-
-    if (persistNeonRef.current) {
-      for (const id of idsToRemove) {
-        if (isUuidLike(id)) void apiDeleteItem(id);
+        for (const sid of spaceRoots) {
+          if (isUuidLike(sid)) void apiDeleteSpaceSubtree(sid);
+        }
       }
-    }
 
-    setSelectedNodeIds((prev) => prev.filter((id) => !entityIds.includes(id)));
-    if (activeNodeId && entityIds.includes(activeNodeId)) {
-      setFocusOpen(false);
-      setActiveNodeId(null);
-    }
-    if (galleryNodeId && entityIds.includes(galleryNodeId)) {
-      closeMediaGallery();
-    }
-  }, [activeNodeId, closeMediaGallery, galleryNodeId, recordUndoBeforeMutation]);
+      const pruned = new Set(idsToRemove);
+      pruneRecentItems(pruned);
+      pruneRecentFolders(pruned);
+
+      setSelectedNodeIds((prev) => prev.filter((id) => !entityIds.includes(id)));
+      if (activeNodeId && entityIds.includes(activeNodeId)) {
+        setFocusOpen(false);
+        setActiveNodeId(null);
+      }
+      if (galleryNodeId && entityIds.includes(galleryNodeId)) {
+        closeMediaGallery();
+      }
+    },
+    [
+      activeNodeId,
+      closeMediaGallery,
+      galleryNodeId,
+      pruneRecentFolders,
+      pruneRecentItems,
+      recordUndoBeforeMutation,
+    ],
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

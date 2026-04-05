@@ -92,6 +92,21 @@ export async function apiDeleteItem(itemId: string): Promise<boolean> {
   }
 }
 
+/** Removes a folder child space and its descendants from Neon (items cascade). */
+export async function apiDeleteSpaceSubtree(spaceId: string): Promise<boolean> {
+  const track = getNeonSyncSnapshot().cloudEnabled;
+  if (track) neonSyncBeginRequest();
+  try {
+    const res = await fetch(`/api/spaces/${spaceId}`, { method: "DELETE" });
+    const ok = res.ok;
+    if (track) neonSyncEndRequest(ok, ok ? undefined : `HTTP ${res.status}`);
+    return ok;
+  } catch (e) {
+    if (track) neonSyncEndRequest(false, e instanceof Error ? e.message : "Network error");
+    return false;
+  }
+}
+
 export async function apiPatchSpaceCamera(
   spaceId: string,
   camera: { x: number; y: number; zoom: number },

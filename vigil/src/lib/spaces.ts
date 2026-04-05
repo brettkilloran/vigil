@@ -407,3 +407,56 @@ export async function getItemLinksResolved(
   }
   return { outgoing, incoming };
 }
+
+/**
+ * Deletes a space and all descendant spaces (post-order: leaves first).
+ * Items in those spaces are removed via `items.space_id` ON DELETE CASCADE.
+ */
+export async function deleteSpaceSubtree(
+  db: VigilDb,
+  spaceId: string,
+): Promise<{ ok: true; deletedIds: string[] } | { ok: false; error: string }> {
+  const all = await db
+    .select({ id: spaces.id, parentSpaceId: spaces.parentSpaceId })
+    .from(spaces);
+
+  if (!all.some((s) => s.id === spaceId)) {
+    return { ok: false, error: "Space not found" };
+  }
+
+  const byParent = new Map<string | null, string[]>();
+  for (const s of all) {
+    const p = s.parentSpaceId ?? null;
+    const list = byParent.get(p) ?? [];
+    list.push(s.id);
+    byParent.set(p, list);
+  }
+
+  const inTree = new Set<string>();
+  const stack: string[] = [spaceId];
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    if (inTree.has(id)) continue;
+    inTree.add(id);
+    for (const kid of byParent.get(id) ?? []) stack.push(kid);
+  }
+
+  if (inTree.size >= all.length) {
+    return { ok: false, error: "Cannot delete all spaces" };
+  }
+
+  const order: string[] = [];
+  const postOrder = (id: string) => {
+    for (const kid of byParent.get(id) ?? []) {
+      if (inTree.has(kid)) postOrder(kid);
+    }
+    order.push(id);
+  };
+  postOrder(spaceId);
+
+  for (const id of order) {
+    await db.delete(spaces).where(eq(spaces.id, id));
+  }
+
+  return { ok: true, deletedIds: order };
+}
