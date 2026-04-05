@@ -142,7 +142,7 @@ After **A–C**, take **screenshots** (light/dark, empty + populated) and compar
 
 ## 9. Non-goals (this pass)
 
-- **Flower color picker** — separate milestone (high effort).
+- **Flower color picker** (user-facing theme / card chrome) — separate milestone (high effort). *Boot **`VigilBootFlowerGarden`** is decorative only; not this picker.*
 - **Fullscreen note transition** — can follow once card language is stable.
 - **LLM / data** features — out of scope for visuals-only work.
 
