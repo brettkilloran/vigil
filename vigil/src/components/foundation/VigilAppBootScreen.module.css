@@ -149,6 +149,21 @@
     0 1px 3px color-mix(in oklch, var(--sys-color-black) 55%, transparent);
 }
 
+/* Status line + ambient control: pinned to the top-right gutter. */
+.metaTopRightCluster {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 12px;
+  max-width: 100%;
+  pointer-events: none;
+}
+
+.metaTopRightCluster > * {
+  pointer-events: auto;
+}
+
 .metaTopInner {
   display: flex;
   flex-wrap: wrap;
@@ -208,6 +223,23 @@
   line-height: 1.45;
 }
 
+/* Credit + ambient control: never let the growing left cluster flex-shrink this to zero. */
+.metaBottomRightCluster {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 14px;
+  flex: 0 0 auto;
+  min-width: min-content;
+  max-width: 100%;
+  pointer-events: none;
+}
+
+.metaBottomRightCluster > * {
+  pointer-events: auto;
+}
+
 .content {
   position: relative;
   z-index: 1;
@@ -231,10 +263,10 @@
 }
 
 /*
- * CTA hover — layered glitches:
- * (1) Kicker/title: Coyier-style ::before/::after + attr(data-text), stronger chroma + stepped clip slices.
- * (2) Blurbs: outer .bootBlurbGlitchWrap = horizontal scan clips (multi-line safe);
- *    inner .bootBlurbChroma = RGB split + skew/jitter (second anim family).
+ * CTA hover — Chris Coyier / CSS-Tricks style text glitch:
+ * https://css-tricks.com/glitch-effect-text-images-svg/
+ * Duplicates via ::before/::after + attr(data-text), chroma text-shadow, animated clip-path slices.
+ * Multi-line blurbs: animated RGB text-shadow only (pseudos can’t mirror <br /> faithfully).
  */
 
 .bootGlitchLayer {
@@ -247,7 +279,7 @@
   display: block;
 }
 
-/* Near-void mask — slightly higher opacity so channel edges read sharper. */
+/* Near-void mask so offset channels read as “misaligned scan” not double-glyph soup. */
 .bootGlitchLayer::before,
 .bootGlitchLayer::after {
   content: attr(data-text);
@@ -264,19 +296,15 @@
 }
 
 .bootGlitchLayer::before {
-  left: -5px;
-  text-shadow:
-    3px 0 oklch(0.72 0.28 25),
-    5px 0 oklch(0.62 0.2 30 / 0.45);
-  background: oklch(0.1 0 0 / 0.96);
+  left: -2px;
+  text-shadow: 2px 0 oklch(0.66 0.24 28);
+  background: oklch(0.11 0 0 / 0.93);
 }
 
 .bootGlitchLayer::after {
-  left: 5px;
-  text-shadow:
-    -3px 0 oklch(0.74 0.16 255),
-    -5px 0 oklch(0.65 0.12 268 / 0.5);
-  background: oklch(0.1 0 0 / 0.96);
+  left: 2px;
+  text-shadow: -2px 0 oklch(0.72 0.12 250);
+  background: oklch(0.11 0 0 / 0.93);
 }
 
 .content:has(.enterGardenBtn:hover:not(:disabled)) .bootGlitchLayer::before,
@@ -285,330 +313,157 @@
 }
 
 .content:has(.enterGardenBtn:hover:not(:disabled)) .bootGlitchLayer::before {
-  animation: vigilBootGlitchClip1 1.15s steps(18, jump-end) infinite;
+  animation: vigilBootGlitchClip1 2.75s linear infinite alternate;
 }
 
 .content:has(.enterGardenBtn:hover:not(:disabled)) .bootGlitchLayer::after {
-  animation: vigilBootGlitchClip2 1.42s steps(16, jump-end) infinite reverse;
+  animation: vigilBootGlitchClip2 3.1s linear infinite alternate;
 }
 
 @keyframes vigilBootGlitchClip1 {
   0% {
-    clip-path: inset(0 0 95% 0);
-    opacity: 0.92;
-  }
-
-  7% {
-    clip-path: inset(72% 0 8% 0);
-    opacity: 1;
+    clip-path: inset(8% 0 82% 0);
   }
 
   14% {
-    clip-path: inset(18% 0 68% 0);
-    opacity: 0.88;
-  }
-
-  21% {
-    clip-path: inset(55% 0 30% 0);
-    opacity: 1;
+    clip-path: inset(62% 0 18% 0);
   }
 
   28% {
-    clip-path: inset(4% 0 88% 0);
-    opacity: 0.94;
-  }
-
-  35% {
-    clip-path: inset(40% 0 48% 0);
-    opacity: 1;
+    clip-path: inset(28% 0 58% 0);
   }
 
   42% {
-    clip-path: inset(88% 0 4% 0);
-    opacity: 0.9;
+    clip-path: inset(78% 0 8% 0);
   }
 
-  50% {
-    clip-path: inset(22% 0 62% 0);
-    opacity: 1;
+  56% {
+    clip-path: inset(15% 0 72% 0);
   }
 
-  57% {
-    clip-path: inset(65% 0 18% 0);
-    opacity: 0.86;
-  }
-
-  64% {
-    clip-path: inset(10% 0 78% 0);
-    opacity: 1;
-  }
-
-  71% {
+  70% {
     clip-path: inset(48% 0 38% 0);
-    opacity: 0.93;
   }
 
-  78% {
-    clip-path: inset(92% 0 2% 0);
-    opacity: 1;
-  }
-
-  85% {
-    clip-path: inset(30% 0 55% 0);
-    opacity: 0.89;
-  }
-
-  92% {
-    clip-path: inset(78% 0 12% 0);
-    opacity: 1;
+  84% {
+    clip-path: inset(88% 0 4% 0);
   }
 
   100% {
-    clip-path: inset(14% 0 72% 0);
-    opacity: 0.95;
+    clip-path: inset(35% 0 45% 0);
   }
 }
 
 @keyframes vigilBootGlitchClip2 {
   0% {
-    clip-path: inset(60% 0 28% 0);
-    opacity: 0.9;
+    clip-path: inset(72% 0 12% 0);
   }
 
-  11% {
-    clip-path: inset(8% 0 84% 0);
-    opacity: 1;
-  }
-
-  22% {
-    clip-path: inset(44% 0 42% 0);
-    opacity: 0.87;
+  16% {
+    clip-path: inset(18% 0 68% 0);
   }
 
   33% {
-    clip-path: inset(2% 0 92% 0);
-    opacity: 1;
-  }
-
-  44% {
-    clip-path: inset(70% 0 22% 0);
-    opacity: 0.91;
-  }
-
-  55% {
-    clip-path: inset(26% 0 58% 0);
-    opacity: 1;
-  }
-
-  66% {
-    clip-path: inset(82% 0 10% 0);
-    opacity: 0.85;
-  }
-
-  77% {
-    clip-path: inset(36% 0 50% 0);
-    opacity: 1;
-  }
-
-  88% {
-    clip-path: inset(52% 0 34% 0);
-    opacity: 0.92;
-  }
-
-  100% {
-    clip-path: inset(16% 0 74% 0);
-    opacity: 1;
-  }
-}
-
-/* Block wrapper: full-paragraph horizontal tear (type B vs chroma on child). */
-.bootBlurbGlitchWrap {
-  display: block;
-  position: relative;
-}
-
-.content:has(.enterGardenBtn:hover:not(:disabled)) .bootBlurbGlitchWrap {
-  animation: vigilBootBlurbSlice 1.65s steps(20, jump-end) infinite;
-}
-
-.content:has(.enterGardenBtn:hover:not(:disabled)) .blurbWrap > .blurb:nth-of-type(2) .bootBlurbGlitchWrap {
-  animation-delay: -0.55s;
-}
-
-@keyframes vigilBootBlurbSlice {
-  0% {
-    clip-path: inset(0 0 0 0);
-  }
-
-  5% {
-    clip-path: inset(38% 0 58% 0);
-  }
-
-  10% {
-    clip-path: inset(0 0 92% 0);
-  }
-
-  15% {
-    clip-path: inset(62% 0 28% 0);
-  }
-
-  20% {
-    clip-path: inset(12% 0 78% 0);
-  }
-
-  25% {
-    clip-path: inset(84% 0 8% 0);
-  }
-
-  30% {
-    clip-path: inset(48% 0 44% 0);
-  }
-
-  35% {
-    clip-path: inset(6% 0 86% 0);
-  }
-
-  40% {
-    clip-path: inset(72% 0 20% 0);
-  }
-
-  45% {
-    clip-path: inset(24% 0 68% 0);
+    clip-path: inset(52% 0 30% 0);
   }
 
   50% {
-    clip-path: inset(90% 0 4% 0);
+    clip-path: inset(5% 0 85% 0);
   }
 
-  55% {
-    clip-path: inset(52% 0 40% 0);
+  66% {
+    clip-path: inset(40% 0 48% 0);
   }
 
-  60% {
-    clip-path: inset(4% 0 88% 0);
-  }
-
-  65% {
-    clip-path: inset(68% 0 24% 0);
-  }
-
-  70% {
-    clip-path: inset(32% 0 58% 0);
-  }
-
-  75% {
-    clip-path: inset(76% 0 16% 0);
-  }
-
-  80% {
-    clip-path: inset(18% 0 74% 0);
-  }
-
-  85% {
-    clip-path: inset(56% 0 36% 0);
-  }
-
-  90% {
-    clip-path: inset(8% 0 84% 0);
-  }
-
-  95% {
-    clip-path: inset(42% 0 50% 0);
+  83% {
+    clip-path: inset(92% 0 2% 0);
   }
 
   100% {
-    clip-path: inset(0 0 0 0);
+    clip-path: inset(22% 0 62% 0);
   }
 }
 
 .bootBlurbChroma {
   display: inline;
+  /* Subtle always-on signal drift on body copy; CTA hover swaps to stronger chroma burst below. */
+  animation: vigilBootBlurbIdleGlitch 5.8s ease-in-out infinite;
 }
 
 .content:has(.enterGardenBtn:hover:not(:disabled)) .bootBlurbChroma {
-  animation:
-    vigilBootBlurbChroma 1.25s steps(10, jump-end) infinite,
-    vigilBootBlurbSkewJitter 0.48s steps(12, jump-end) infinite;
+  animation: vigilBootBlurbChroma 2.35s ease-in-out infinite;
 }
 
-.content:has(.enterGardenBtn:hover:not(:disabled)) .blurbWrap > .blurb:nth-of-type(2) .bootBlurbChroma {
-  animation-delay:
-    -0.32s,
-    -0.2s;
+@keyframes vigilBootBlurbIdleGlitch {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    text-shadow:
+      0 0 16px color-mix(in oklch, var(--bg-base) 82%, transparent),
+      0 1px 3px color-mix(in oklch, var(--sys-color-black) 40%, transparent),
+      1px 0 0 oklch(0.62 0.14 32 / 0.22),
+      -1px 0 0 oklch(0.64 0.08 255 / 0.18);
+  }
+
+  33% {
+    transform: translate3d(0.35px, -0.2px, 0);
+    text-shadow:
+      0 0 15px color-mix(in oklch, var(--bg-base) 84%, transparent),
+      0 1px 3px color-mix(in oklch, var(--sys-color-black) 38%, transparent),
+      -1.5px 0 0 oklch(0.65 0.16 28 / 0.28),
+      1px 0.5px 0 oklch(0.66 0.07 248 / 0.22);
+  }
+
+  66% {
+    transform: translate3d(-0.25px, 0.15px, 0);
+    text-shadow:
+      0 0 17px color-mix(in oklch, var(--bg-base) 80%, transparent),
+      0 1px 3px color-mix(in oklch, var(--sys-color-black) 42%, transparent),
+      1.5px -0.5px 0 oklch(0.6 0.12 35 / 0.24),
+      -1px 0 0 oklch(0.68 0.1 252 / 0.2);
+  }
 }
 
 @keyframes vigilBootBlurbChroma {
   0%,
   100% {
     text-shadow:
-      0 0 18px color-mix(in oklch, var(--bg-base) 78%, transparent),
-      0 1px 4px color-mix(in oklch, var(--sys-color-black) 48%, transparent),
-      4px 0 0 oklch(0.68 0.26 28 / 0.72),
-      -4px 0 0 oklch(0.7 0.18 252 / 0.68),
-      0 2px 8px oklch(0.55 0.22 310 / 0.35);
+      0 0 16px color-mix(in oklch, var(--bg-base) 82%, transparent),
+      0 1px 3px color-mix(in oklch, var(--sys-color-black) 40%, transparent),
+      2px 0 0 oklch(0.62 0.2 30 / 0.5),
+      -2px 0 0 oklch(0.64 0.12 255 / 0.45);
   }
 
   20% {
     text-shadow:
-      0 0 20px color-mix(in oklch, var(--bg-base) 72%, transparent),
-      0 2px 5px color-mix(in oklch, var(--sys-color-black) 52%, transparent),
-      -6px 1px 0 oklch(0.72 0.28 22 / 0.78),
-      5px -1px 0 oklch(0.68 0.14 248 / 0.72),
-      3px 3px 0 oklch(0.62 0.2 140 / 0.4);
+      0 0 16px color-mix(in oklch, var(--bg-base) 82%, transparent),
+      0 1px 3px color-mix(in oklch, var(--sys-color-black) 40%, transparent),
+      -3px 0 0 oklch(0.68 0.22 28 / 0.58),
+      2px 1px 0 oklch(0.68 0.1 248 / 0.5);
   }
 
   40% {
     text-shadow:
-      0 0 22px color-mix(in oklch, var(--bg-base) 68%, transparent),
-      0 1px 4px color-mix(in oklch, var(--sys-color-black) 55%, transparent),
-      5px -2px 0 oklch(0.64 0.22 32 / 0.75),
-      -5px 2px 0 oklch(0.74 0.16 238 / 0.7),
-      -2px 0 12px oklch(0.58 0.24 300 / 0.42);
+      0 0 18px color-mix(in oklch, var(--bg-base) 78%, transparent),
+      0 1px 3px color-mix(in oklch, var(--sys-color-black) 45%, transparent),
+      1px -1px 0 oklch(0.6 0.18 32 / 0.52),
+      -2px 2px 0 oklch(0.7 0.14 240 / 0.48);
   }
 
   60% {
     text-shadow:
-      0 0 18px color-mix(in oklch, var(--bg-base) 76%, transparent),
-      0 1px 3px color-mix(in oklch, var(--sys-color-black) 46%, transparent),
-      6px 0 0 oklch(0.66 0.24 26 / 0.8),
-      -3px -2px 0 oklch(0.7 0.12 268 / 0.65),
-      0 -2px 10px oklch(0.6 0.2 200 / 0.38);
+      0 0 16px color-mix(in oklch, var(--bg-base) 82%, transparent),
+      0 1px 3px color-mix(in oklch, var(--sys-color-black) 40%, transparent),
+      3px 0 0 oklch(0.64 0.2 25 / 0.55),
+      -1px -1px 0 oklch(0.66 0.11 260 / 0.5);
   }
 
   80% {
     text-shadow:
-      0 0 20px color-mix(in oklch, var(--bg-base) 74%, transparent),
-      0 2px 4px color-mix(in oklch, var(--sys-color-black) 50%, transparent),
-      -4px 2px 0 oklch(0.7 0.26 24 / 0.74),
-      4px 1px 0 oklch(0.66 0.15 255 / 0.68),
-      2px -3px 6px oklch(0.64 0.18 180 / 0.45);
-  }
-}
-
-@keyframes vigilBootBlurbSkewJitter {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) skewX(0deg);
-  }
-
-  15% {
-    transform: translate3d(-4px, 0, 0) skewX(-1.1deg);
-  }
-
-  30% {
-    transform: translate3d(5px, 1px, 0) skewX(0.85deg);
-  }
-
-  45% {
-    transform: translate3d(-2px, -1px, 0) skewX(-0.45deg);
-  }
-
-  60% {
-    transform: translate3d(3px, 0, 0) skewX(0.5deg);
-  }
-
-  75% {
-    transform: translate3d(-5px, 1px, 0) skewX(-0.7deg);
+      0 0 17px color-mix(in oklch, var(--bg-base) 80%, transparent),
+      0 1px 3px color-mix(in oklch, var(--sys-color-black) 42%, transparent),
+      -2px 1px 0 oklch(0.63 0.19 30 / 0.52),
+      2px 0 0 oklch(0.69 0.13 252 / 0.46);
   }
 }
 
@@ -684,7 +539,7 @@
 }
 
 /*
- * CTA: neutral lift + depth; middle-column glitches on hover (see .bootGlitchLayer / .bootBlurbGlitchWrap / .bootBlurbChroma).
+ * CTA: neutral lift + depth; kicker/title Coyier glitch on hover; blurbs idle drift + stronger chroma on hover.
  */
 .enterGardenBtn:not(:disabled) {
   transition:
@@ -917,14 +772,9 @@
     opacity: 0 !important;
   }
 
-  .content:has(.enterGardenBtn:hover:not(:disabled)) .bootBlurbGlitchWrap {
+  .bootBlurbChroma {
     animation: none !important;
-    clip-path: none !important;
-  }
-
-  .content:has(.enterGardenBtn:hover:not(:disabled)) .bootBlurbChroma {
-    animation: none !important;
-    transform: none !important;
+    transform: none;
   }
 
   .enterGardenBtn:not(:disabled) {

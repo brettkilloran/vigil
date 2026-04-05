@@ -9,6 +9,7 @@ import { Button } from "@/src/components/ui/Button";
 import { HEARTGARDEN_APP_VERSION } from "@/src/lib/app-version";
 
 import { ArchitecturalCanvasEffectsToggle } from "./ArchitecturalStatusBar";
+import { VigilBootAmbientAudio, vigilBootAmbientFadeOutMs } from "./VigilBootAmbientAudio";
 import type { VigilBootFlowerGardenHandle } from "./VigilBootFlowerGarden";
 import { VigilBootFlowerGarden, VIGIL_BOOT_FLOWER_CELL_PX } from "./VigilBootFlowerGarden";
 import styles from "./VigilAppBootScreen.module.css";
@@ -18,7 +19,7 @@ export type VigilAppBootScreenProps = {
   technicalReady: boolean;
   /** Fires on click (starts flow transition in parent); boot fade runs in parallel. */
   onActivate: () => void;
-  /** After opacity exit animation (reduced motion: not used — parent may unmount immediately). */
+  /** After boot tear-down (overlay opacity first; may wait for ambient audio fade to finish). */
   onExitComplete: () => void;
   /**
    * Dedicated host inside `.viewport` (see `ArchitecturalCanvasApp` `.bootFlowerPortalHost`) — blooms sit
@@ -62,6 +63,10 @@ function gridCellsOnSegment(x0: number, y0: number, x1: number, y1: number, cell
   }
   return out;
 }
+
+/** Keep in sync with `.overlay { transition: opacity … }` in VigilAppBootScreen.module.css */
+const BOOT_OVERLAY_OPACITY_MS = 720;
+const BOOT_OVERLAY_OPACITY_MS_REDUCED = 120;
 
 const HOVER_SPAWN_MIN_DIST_PX = 48;
 const HOVER_SPAWN_RECENT_CAP = 16;
@@ -126,6 +131,8 @@ export function VigilAppBootScreen({
   const enterGardenHoverSpawnRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recentEnterGardenSpawnsRef = useRef<{ x: number; y: number }[]>([]);
   const prefersReducedMotionRef = useRef(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const exitCompleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const endPoisonDrag = useCallback((el: HTMLDivElement | null, pointerId?: number) => {
     poisonDragRef.current = false;
@@ -151,13 +158,25 @@ export function VigilAppBootScreen({
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    prefersReducedMotionRef.current = mq.matches;
-    const onChange = () => {
-      prefersReducedMotionRef.current = mq.matches;
+    const sync = () => {
+      const m = mq.matches;
+      prefersReducedMotionRef.current = m;
+      setPrefersReducedMotion(m);
     };
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
   }, []);
+
+  useEffect(
+    () => () => {
+      if (exitCompleteTimerRef.current != null) {
+        clearTimeout(exitCompleteTimerRef.current);
+        exitCompleteTimerRef.current = null;
+      }
+    },
+    [],
+  );
 
   const clearEnterGardenHoverSpawn = useCallback(() => {
     const id = enterGardenHoverSpawnRef.current;
@@ -172,17 +191,10 @@ export function VigilAppBootScreen({
     if (exiting) clearEnterGardenHoverSpawn();
   }, [exiting, clearEnterGardenHoverSpawn]);
 
-  useEffect(() => {
-    if (!canvasEffectsEnabled) {
-      clearEnterGardenHoverSpawn();
-      endPoisonDrag(null);
-    }
-  }, [canvasEffectsEnabled, clearEnterGardenHoverSpawn, endPoisonDrag]);
-
   useEffect(() => () => clearEnterGardenHoverSpawn(), [clearEnterGardenHoverSpawn]);
 
   const tickEnterGardenHoverSpawn = useCallback(() => {
-    if (exiting || !canvasEffectsEnabled || !technicalReady || prefersReducedMotionRef.current) return;
+    if (exiting || !technicalReady || prefersReducedMotionRef.current) return;
     const cluster = bootCenterClusterRef.current;
     const garden = flowerGardenRef.current;
     if (!cluster || !garden) return;
@@ -194,22 +206,16 @@ export function VigilAppBootScreen({
     garden.spawnAt(p.x, p.y);
     recent.push(p);
     if (recent.length > HOVER_SPAWN_RECENT_CAP) recent.splice(0, recent.length - HOVER_SPAWN_RECENT_CAP);
-  }, [canvasEffectsEnabled, exiting, technicalReady]);
+  }, [exiting, technicalReady]);
 
   const onEnterGardenPointerEnter = useCallback(() => {
-    if (exiting || !canvasEffectsEnabled || !technicalReady || prefersReducedMotionRef.current) return;
+    if (exiting || !technicalReady || prefersReducedMotionRef.current) return;
     clearEnterGardenHoverSpawn();
     tickEnterGardenHoverSpawn();
     enterGardenHoverSpawnRef.current = setInterval(() => {
       tickEnterGardenHoverSpawn();
     }, 200 + Math.floor(Math.random() * 120));
-  }, [
-    canvasEffectsEnabled,
-    clearEnterGardenHoverSpawn,
-    exiting,
-    technicalReady,
-    tickEnterGardenHoverSpawn,
-  ]);
+  }, [clearEnterGardenHoverSpawn, exiting, technicalReady, tickEnterGardenHoverSpawn]);
 
   const onEnterGardenPointerLeave = useCallback(() => {
     clearEnterGardenHoverSpawn();
@@ -225,19 +231,38 @@ export function VigilAppBootScreen({
     (e: React.TransitionEvent<HTMLDivElement>) => {
       if (e.target !== e.currentTarget) return;
       if (!exiting || e.propertyName !== "opacity") return;
-      onExitComplete();
+
+      if (exitCompleteTimerRef.current != null) {
+        clearTimeout(exitCompleteTimerRef.current);
+        exitCompleteTimerRef.current = null;
+      }
+
+      const overlayMs = prefersReducedMotion ? BOOT_OVERLAY_OPACITY_MS_REDUCED : BOOT_OVERLAY_OPACITY_MS;
+      const audioMs = vigilBootAmbientFadeOutMs(prefersReducedMotion);
+      const delayMs = Math.max(0, audioMs - overlayMs);
+
+      if (delayMs === 0) {
+        onExitComplete();
+        return;
+      }
+      exitCompleteTimerRef.current = setTimeout(() => {
+        exitCompleteTimerRef.current = null;
+        onExitComplete();
+      }, delayMs);
     },
-    [exiting, onExitComplete],
+    [exiting, onExitComplete, prefersReducedMotion],
   );
 
   const onOverlayPointerDownCapture = useCallback(
     (e: PointerEvent<HTMLDivElement>) => {
-      if (exiting || !canvasEffectsEnabled) return;
+      if (exiting) return;
       if (e.button !== 0) return;
       const target = e.target as HTMLElement | null;
       if (!target) return;
       if (target.closest("[data-vigil-boot-flower-tools]")) return;
       if (target.closest("[data-vigil-boot-activate]")) return;
+      if (target.closest('[data-hg-chrome="canvas-effects-toggle"]')) return;
+      if (target.closest("[data-vigil-boot-ambient-audio]")) return;
       if (flowerTool === "poison") {
         poisonDragRef.current = true;
         poisonLastClientRef.current = { x: e.clientX, y: e.clientY };
@@ -251,13 +276,12 @@ export function VigilAppBootScreen({
       }
       flowerGardenRef.current?.spawnAt(e.clientX, e.clientY);
     },
-    [canvasEffectsEnabled, exiting, flowerTool],
+    [exiting, flowerTool],
   );
 
   const onOverlayPointerMove = useCallback(
     (e: PointerEvent<HTMLDivElement>) => {
-      if (exiting || !canvasEffectsEnabled || !poisonDragRef.current || flowerToolRef.current !== "poison")
-        return;
+      if (exiting || !poisonDragRef.current || flowerToolRef.current !== "poison") return;
       if ((e.buttons & 1) === 0) return;
       const last = poisonLastClientRef.current;
       if (!last) return;
@@ -270,7 +294,7 @@ export function VigilAppBootScreen({
       }
       poisonLastClientRef.current = { x: e.clientX, y: e.clientY };
     },
-    [canvasEffectsEnabled, exiting],
+    [exiting],
   );
 
   const onOverlayPointerUpOrCancel = useCallback(
@@ -289,7 +313,7 @@ export function VigilAppBootScreen({
       {flowerPortalContainer
         ? createPortal(
             <div className={styles.bootFlowerDeepPlane} aria-hidden>
-              <VigilBootFlowerGarden ref={flowerGardenRef} active={!exiting && canvasEffectsEnabled} />
+              <VigilBootFlowerGarden ref={flowerGardenRef} active={!exiting} />
             </div>,
             flowerPortalContainer,
           )
@@ -321,12 +345,8 @@ export function VigilAppBootScreen({
               iconOnly
               isActive={flowerTool === "grow"}
               aria-label="Plant mode — click to grow flowers"
-              title={
-                canvasEffectsEnabled
-                  ? "Plant flowers"
-                  : "Turn on canvas effects to plant flowers"
-              }
-              disabled={exiting || !canvasEffectsEnabled}
+              title="Plant flowers"
+              disabled={exiting}
               onClick={(ev) => {
                 ev.stopPropagation();
                 setFlowerTool("grow");
@@ -341,12 +361,8 @@ export function VigilAppBootScreen({
               iconOnly
               isActive={flowerTool === "poison"}
               aria-label="Poison mode — click or drag on the garden to wilt flowers"
-              title={
-                canvasEffectsEnabled
-                  ? "Poison — click or drag to wilt"
-                  : "Turn on canvas effects to use poison"
-              }
-              disabled={exiting || !canvasEffectsEnabled}
+              title="Poison — click or drag to wilt"
+              disabled={exiting}
               onClick={(ev) => {
                 ev.stopPropagation();
                 setFlowerTool("poison");
@@ -374,18 +390,26 @@ export function VigilAppBootScreen({
         </div>
       </div>
       <div className={styles.metaTop}>
-        <div
-          className={`${styles.metaTopInner} ${styles.mono} ${styles.fadeInMetaTop}`}
-          style={{ animationDelay: "0.22s" }}
-        >
-          <span>
-            {technicalReady ? "NOMINAL · AWAIT_SESSION" : "TOPOLOGY · FONTS · VIEWPORT"}
-          </span>
-          <span aria-hidden> · </span>
-          <span>09.03.Y394</span>
-          <span className={styles.metaCursor} aria-hidden>
-            _
-          </span>
+        <div className={styles.metaTopRightCluster}>
+          <div
+            className={`${styles.metaTopInner} ${styles.mono} ${styles.fadeInMetaTop}`}
+            style={{ animationDelay: "0.22s" }}
+          >
+            <span>
+              {technicalReady ? "NOMINAL · AWAIT_SESSION" : "TOPOLOGY · FONTS · VIEWPORT"}
+            </span>
+            <span aria-hidden> · </span>
+            <span>09.03.Y394</span>
+            <span className={styles.metaCursor} aria-hidden>
+              _
+            </span>
+          </div>
+          <VigilBootAmbientAudio
+            suspended={exiting}
+            reduceMotion={prefersReducedMotion}
+            className={styles.fadeInMetaTop}
+            style={{ animationDelay: "0.38s" }}
+          />
         </div>
       </div>
 
@@ -411,21 +435,17 @@ export function VigilAppBootScreen({
           </h1>
           <div id="vigil-boot-desc" className={styles.blurbWrap}>
             <p className={`${styles.blurb} ${styles.blurbReveal}`} style={{ animationDelay: "0.88s" }}>
-              <span className={styles.bootBlurbGlitchWrap}>
-                <span className={styles.bootBlurbChroma}>
-                  An infinite, living archive of Caliginia’s thermal shadows—
-                  <br />
-                  a permanent negative stained upon the retina. The eyelid is gone; shutter jammed open.
-                </span>
+              <span className={styles.bootBlurbChroma}>
+                An infinite, living archive of Caliginia’s thermal shadows—
+                <br />
+                a permanent negative stained upon the retina. The eyelid is gone; shutter jammed open.
               </span>
             </p>
             <p className={`${styles.blurb} ${styles.blurbReveal}`} style={{ animationDelay: "1.08s" }}>
-              <span className={styles.bootBlurbGlitchWrap}>
-                <span className={styles.bootBlurbChroma}>
-                  Yet no light enters the panopticon.
-                  <br />
-                  Just flowers, blooming in the vitreous dark.
-                </span>
+              <span className={styles.bootBlurbChroma}>
+                Yet no light enters the panopticon.
+                <br />
+                Just flowers, blooming in the vitreous dark.
               </span>
             </p>
           </div>
@@ -466,11 +486,13 @@ export function VigilAppBootScreen({
             onEffectsEnabledChange={onCanvasEffectsEnabledChange}
           />
           <div className={`${styles.metaBottomLeft} ${styles.mono}`}>
-            Stain Channel · v.{HEARTGARDEN_APP_VERSION}
+            Channel Stain · v.{HEARTGARDEN_APP_VERSION}
           </div>
         </div>
-        <div className={`${styles.mono} ${styles.fadeInBottom}`} style={{ animationDelay: "1.48s" }}>
-          ♥ BRETT KILLORAN
+        <div className={styles.metaBottomRightCluster}>
+          <div className={`${styles.mono} ${styles.fadeInBottom}`} style={{ animationDelay: "1.48s" }}>
+            ♥ BRETT KILLORAN
+          </div>
         </div>
       </div>
     </div>
