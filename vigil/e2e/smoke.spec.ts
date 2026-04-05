@@ -1,6 +1,15 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
-import { prepDemoSession } from "./fixtures/bootstrap";
+import { dismissHeartgardenBootIfPresent, prepDemoSession } from "./fixtures/bootstrap";
+
+async function gotoCanvasAfterBoot(page: Page) {
+  await page.goto("/");
+  await expect(page.locator("[data-vigil-canvas]")).toBeVisible({ timeout: 30_000 });
+  await dismissHeartgardenBootIfPresent(page);
+  await expect(page.getByRole("button", { name: /Save and database/ })).toBeVisible({
+    timeout: 30_000,
+  });
+}
 
 test.describe("heartgarden smoke", () => {
   test.beforeEach(async ({ page }) => {
@@ -8,9 +17,7 @@ test.describe("heartgarden smoke", () => {
   });
 
   test("loads canvas shell and primary chrome", async ({ page }) => {
-    await page.goto("/");
-
-    await expect(page.getByText("波途画電")).toBeVisible({ timeout: 30_000 });
+    await gotoCanvasAfterBoot(page);
     await expect(page.getByRole("button", { name: "Note" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Task" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Folder" })).toBeVisible();
@@ -19,8 +26,7 @@ test.describe("heartgarden smoke", () => {
   });
 
   test("creates a new note from dock", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByText("波途画電")).toBeVisible({ timeout: 30_000 });
+    await gotoCanvasAfterBoot(page);
 
     const nodes = page.locator("[data-node-id]");
     const beforeCount = await nodes.count();
@@ -31,13 +37,11 @@ test.describe("heartgarden smoke", () => {
   });
 
   test("keeps code-card tape variant and dark treatment in app shell", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByText("波途画電")).toBeVisible({ timeout: 30_000 });
+    await gotoCanvasAfterBoot(page);
 
-    const codeCard = page
-      .locator("[data-node-id]")
-      .filter({ has: page.getByText("DAT // sing_1r_boot.ts") })
-      .first();
+    await page.getByRole("button", { name: "Code" }).click();
+
+    const codeCard = page.locator("[data-node-id]").first();
     await expect(codeCard).toBeVisible();
 
     const tape = codeCard.locator('[data-node-tape="true"]');

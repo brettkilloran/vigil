@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-import { prepDemoSession } from "../fixtures/bootstrap";
+import { dismissHeartgardenBootIfPresent, prepDemoSession } from "../fixtures/bootstrap";
 
 test.describe("visual: shell (light, empty demo)", () => {
   test.beforeEach(async ({ page }) => {
@@ -14,6 +14,8 @@ test.describe("visual: shell (light, empty demo)", () => {
       timeout: 30_000,
     });
     await expect(page.getByText("Local only")).toBeVisible();
+    await dismissHeartgardenBootIfPresent(page);
+    await expect(page.getByText("Workspace unavailable")).toBeVisible();
 
     // Let layout, fonts, and theme settle before capturing.
     await expect(page.locator("html[data-vigil-theme='light']")).toBeVisible();
