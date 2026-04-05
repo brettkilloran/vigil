@@ -6,6 +6,25 @@ import {
   neonSyncEndRequest,
 } from "@/src/lib/neon-sync-bus";
 
+const vaultIndexTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const VAULT_INDEX_DEBOUNCE_MS = 2800;
+
+function scheduleVaultIndexForItem(itemId: string) {
+  const prev = vaultIndexTimers.get(itemId);
+  if (prev) clearTimeout(prev);
+  const t = setTimeout(() => {
+    vaultIndexTimers.delete(itemId);
+    void fetch(`/api/items/${encodeURIComponent(itemId)}/index`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    }).catch(() => {
+      /* non-fatal */
+    });
+  }, VAULT_INDEX_DEBOUNCE_MS);
+  vaultIndexTimers.set(itemId, t);
+}
+
 export async function fetchBootstrap(spaceId?: string): Promise<BootstrapResponse | null> {
   const q = spaceId ? `?space=${encodeURIComponent(spaceId)}` : "";
   const res = await fetch(`/api/bootstrap${q}`);
