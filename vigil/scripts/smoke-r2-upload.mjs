@@ -3,7 +3,7 @@
  * Run from repo root: node vigil/scripts/smoke-r2-upload.mjs
  */
 import { execSync } from "node:child_process";
-import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
