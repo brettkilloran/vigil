@@ -1,0 +1,179 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1155;
+  background: color-mix(in oklch, var(--sys-color-black) 35%, transparent);
+  pointer-events: auto;
+  animation: loreReviewFadeIn 0.2s ease;
+}
+
+@keyframes loreReviewFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 1156;
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100vw);
+  height: 100%;
+  max-height: 100dvh;
+  box-sizing: border-box;
+  border-left: 1px solid var(--vigil-border);
+  background: var(--vigil-panel);
+  box-shadow: -12px 0 40px color-mix(in oklch, var(--sys-color-black) 22%, transparent);
+  pointer-events: auto;
+  animation: loreReviewSlideIn 0.28s cubic-bezier(0.22, 0.82, 0.16, 1);
+}
+
+@keyframes loreReviewSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0.85;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .panel {
+    animation: none;
+  }
+}
+
+.panelHeader {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--vigil-border);
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vigil-label);
+  letter-spacing: 0.02em;
+}
+
+.panelSubtitle {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--vigil-muted);
+}
+
+.panelBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sectionLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vigil-muted);
+  margin-bottom: 6px;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--vigil-border);
+  background: color-mix(in oklch, var(--vigil-surface) 88%, transparent);
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--vigil-label);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.chip:hover:not(:disabled) {
+  border-color: color-mix(in oklch, var(--accent) 35%, var(--vigil-border));
+  background: color-mix(in oklch, var(--accent) 8%, var(--vigil-surface));
+}
+
+.chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.issueCard {
+  border-radius: 10px;
+  border: 1px solid var(--vigil-border);
+  padding: 10px 12px;
+  background: color-mix(in oklch, var(--sys-color-black) 3%, transparent);
+}
+
+.issueMeta {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.issueSummary {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--vigil-label);
+}
+
+.issueDetails {
+  margin-top: 6px;
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--vigil-muted);
+}
+
+.issueActions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hintPill {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 9px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: color-mix(in oklch, var(--accent) 12%, transparent);
+  color: var(--vigil-label);
+}
+
+.primaryCta {
+  width: 100%;
+  margin-top: 4px;
+}
