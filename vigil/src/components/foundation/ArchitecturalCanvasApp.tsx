@@ -3029,12 +3029,28 @@ export function ArchitecturalCanvasApp({
       setCanvasSessionActivated(false);
       setBootLayerDismissed(false);
       setBootAmbientEpoch((e) => e + 1);
-      if (prefersReducedMotion) setBootAfterLogout(true);
+      /*
+       * Always set — the boot auto-enter effect keys off `heartgardenBootApi.sessionValid`, which stays true
+       * until DELETE + refetch complete; without this flag it immediately re-dismisses boot for motion users.
+       */
+      setBootAfterLogout(true);
     });
     /* Same synchronous stack as log-out click: Web Audio + media element play() must run here for autoplay. */
     bootAmbientPrimePlaybackRef.current?.();
-    void fetch("/api/heartgarden/boot", { method: "DELETE", credentials: "include" });
-  }, [scenario, prefersReducedMotion]);
+    void (async () => {
+      try {
+        const res = await fetch("/api/heartgarden/boot", { method: "DELETE", credentials: "include" });
+        if (!res.ok) return;
+        setHeartgardenBootApi((prev) =>
+          prev.loaded
+            ? { ...prev, sessionValid: false, sessionTier: null }
+            : prev,
+        );
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [scenario]);
 
   const centerCoords = useCallback(() => {
     return {
