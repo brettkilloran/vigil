@@ -1,0 +1,30 @@
+/*
+ * Bottom-right boot chrome: matches .flowerToolsPanel glass (VigilAppBootScreen) + icon toolbar rhythm.
+ */
+.wrap {
+  flex-shrink: 0;
+  /* Parent may set pointer-events; keep hit target reliable. */
+  position: relative;
+  z-index: 3;
+}
+
+.panel {
+  pointer-events: auto;
+  background: color-mix(in oklch, var(--sys-color-neutral-950) 76%, transparent);
+  border: 1px solid color-mix(in oklch, var(--sys-color-white) 14%, transparent);
+  backdrop-filter: var(--chrome-glass-filter);
+  -webkit-backdrop-filter: var(--chrome-glass-filter);
+  border-radius: var(--chrome-panel-radius);
+  box-shadow: var(--chrome-glass-shadow);
+  padding: 4px 6px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
