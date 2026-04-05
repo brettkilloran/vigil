@@ -44,7 +44,7 @@ export const Playground: Story = {
   args: {
     content: "Short hint — same glass vocabulary as the top save strip.",
     side: "top",
-    delayMs: 400,
+    delayMs: 280,
     disabled: false,
     associateDescription: false,
   },

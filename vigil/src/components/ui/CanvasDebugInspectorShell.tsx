@@ -3,6 +3,7 @@
 import { Bug, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
+import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 
 import styles from "./CanvasDebugInspectorShell.module.css";
@@ -55,37 +56,39 @@ export function CanvasDebugInspectorShell({
     >
       {!open ? (
         <div className={styles.collapsedPanel}>
-          <Button
-            type="button"
-            size="icon"
-            variant="neutral"
-            tone="glass"
-            iconOnly
-            title="Open debug link inspector"
-            aria-label="Open debug link inspector"
-            aria-expanded={false}
-            aria-controls={`${storageKey}-panel`}
-            onClick={() => setOpen(true)}
-          >
-            <Bug size={18} weight="bold" aria-hidden />
-          </Button>
-        </div>
-      ) : (
-        <div id={`${storageKey}-panel`} className={styles.expandedPanel}>
-          <div className={styles.panelHeader}>
-            <span className={styles.panelTitle}>{title}</span>
+          <ArchitecturalTooltip content="Open debug link inspector" side="left" delayMs={280}>
             <Button
               type="button"
               size="icon"
               variant="neutral"
               tone="glass"
               iconOnly
-              title="Close link inspector"
-              aria-label="Close link inspector"
-              onClick={toggle}
+              aria-label="Open debug link inspector"
+              aria-expanded={false}
+              aria-controls={`${storageKey}-panel`}
+              onClick={() => setOpen(true)}
             >
-              <X size={18} weight="bold" aria-hidden />
+              <Bug size={18} weight="bold" aria-hidden />
             </Button>
+          </ArchitecturalTooltip>
+        </div>
+      ) : (
+        <div id={`${storageKey}-panel`} className={styles.expandedPanel}>
+          <div className={styles.panelHeader}>
+            <span className={styles.panelTitle}>{title}</span>
+            <ArchitecturalTooltip content="Close link inspector" side="bottom" delayMs={280}>
+              <Button
+                type="button"
+                size="icon"
+                variant="neutral"
+                tone="glass"
+                iconOnly
+                aria-label="Close link inspector"
+                onClick={toggle}
+              >
+                <X size={18} weight="bold" aria-hidden />
+              </Button>
+            </ArchitecturalTooltip>
           </div>
           <div className={styles.panelBody}>{children}</div>
         </div>

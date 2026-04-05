@@ -10,6 +10,7 @@ import {
 } from "@/src/components/foundation/architectural-folder-schemes";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
+import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 
 const FOLDER_PREVIEW_VISIBLE_MAX = 6;
@@ -131,22 +132,23 @@ export function ArchitecturalFolderCard({
               {itemCount} item{itemCount === 1 ? "" : "s"}
             </div>
           </div>
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            tone="card-dark"
-            className={styles.nodeBtn}
-            data-folder-open-btn="true"
-            title="Open folder"
-            aria-label="Open folder"
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpen?.();
-            }}
-          >
-            <CornersOut size={14} />
-          </Button>
+          <ArchitecturalTooltip content="Open folder" side="bottom" delayMs={320}>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              tone="card-dark"
+              className={styles.nodeBtn}
+              data-folder-open-btn="true"
+              aria-label="Open folder"
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpen?.();
+              }}
+            >
+              <CornersOut size={14} />
+            </Button>
+          </ArchitecturalTooltip>
         </div>
         <div className={styles.folderContentPreview}>
           {visiblePreviewTitles.length > 0 ? (

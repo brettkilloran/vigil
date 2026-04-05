@@ -86,7 +86,12 @@ import {
   DEFAULT_LINK_SLACK_MULTIPLIER,
 } from "@/src/lib/item-link-meta";
 import { LORE_LINK_TYPE_OPTIONS } from "@/src/lib/lore-link-types";
-import type { LoreImportPlan } from "@/src/lib/lore-import-plan-types";
+import { validateClarificationAnswersForApply } from "@/src/lib/lore-import-clarifications";
+import type {
+  ClarificationAnswer,
+  LoreImportClarificationItem,
+  LoreImportPlan,
+} from "@/src/lib/lore-import-plan-types";
 import type { LoreImportEntityDraft, LoreImportLinkDraft } from "@/src/lib/lore-import-types";
 import {
   getNeonSyncSnapshot,
@@ -189,6 +194,20 @@ type LoreSmartImportReviewState = {
   sourceTitle?: string;
   fileName?: string;
 };
+
+function upsertClarificationAnswer(
+  prev: ClarificationAnswer[],
+  next: ClarificationAnswer,
+): ClarificationAnswer[] {
+  return [...prev.filter((a) => a.clarificationId !== next.clarificationId), next];
+}
+
+function recommendedClarificationOptionId(
+  c: LoreImportClarificationItem,
+): string | undefined {
+  const r = c.options.find((o) => o.recommended);
+  return r?.id ?? c.options[0]?.id;
+}
 
 const ROOT_SPACE_ID = "root";
 
@@ -1090,12 +1109,24 @@ export function ArchitecturalCanvasApp({
   const graphOverlayOpenSoundPrevRef = useRef(false);
   const [loreImportDraft, setLoreImportDraft] = useState<LoreImportDraftState | null>(null);
   const [loreSmartReview, setLoreSmartReview] = useState<LoreSmartImportReviewState | null>(null);
-  const [loreSmartTab, setLoreSmartTab] = useState<"structure" | "merges">("structure");
+  const [loreSmartTab, setLoreSmartTab] = useState<"structure" | "merges" | "questions">(
+    "structure",
+  );
   const [loreSmartPlanning, setLoreSmartPlanning] = useState(false);
   const [loreSmartIncludeSource, setLoreSmartIncludeSource] = useState(true);
   const [loreSmartAcceptedMergeIds, setLoreSmartAcceptedMergeIds] = useState<Record<string, boolean>>(
     {},
   );
+  const [loreSmartClarificationAnswers, setLoreSmartClarificationAnswers] = useState<
+    ClarificationAnswer[]
+  >([]);
+  const loreSmartClarificationsOk = useMemo(() => {
+    if (!loreSmartReview) return true;
+    return validateClarificationAnswersForApply(
+      loreSmartReview.plan,
+      loreSmartClarificationAnswers,
+    ).ok;
+  }, [loreSmartReview, loreSmartClarificationAnswers]);
   const [loreImportCommitting, setLoreImportCommitting] = useState(false);
   const loreImportDraftRef = useRef<LoreImportDraftState | null>(null);
   const [cloudLinksBar, setCloudLinksBar] = useState(() => getNeonSyncSnapshot().cloudEnabled);
@@ -3006,6 +3037,7 @@ export function ArchitecturalCanvasApp({
                 }
               : undefined,
           acceptedMergeProposalIds,
+          clarificationAnswers: loreSmartClarificationAnswers,
         }),
       });
       const data = (await res.json()) as {
@@ -3033,6 +3065,7 @@ export function ArchitecturalCanvasApp({
       playVigilUiSound("celebration");
       setLoreSmartReview(null);
       setLoreSmartAcceptedMergeIds({});
+      setLoreSmartClarificationAnswers([]);
       setLoreSmartTab("structure");
     } catch {
       playVigilUiSound("caution");
@@ -3044,6 +3077,7 @@ export function ArchitecturalCanvasApp({
     activeSpaceId,
     centerCoords,
     loreSmartAcceptedMergeIds,
+    loreSmartClarificationAnswers,
     loreSmartIncludeSource,
     loreSmartReview,
   ]);
@@ -4031,6 +4065,7 @@ export function ArchitecturalCanvasApp({
           setLoreImportDraft(null);
           setLoreSmartReview(null);
           setLoreSmartAcceptedMergeIds({});
+          setLoreSmartClarificationAnswers([]);
           setLoreSmartIncludeSource(true);
           setLoreSmartTab("structure");
           setLoreSmartPlanning(true);
@@ -4063,11 +4098,17 @@ export function ArchitecturalCanvasApp({
                 sourceTitle: parsed.suggestedTitle,
                 fileName: parsed.fileName,
               });
+              setLoreSmartClarificationAnswers([]);
               const nextMerge: Record<string, boolean> = {};
               for (const m of planned.plan.mergeProposals) {
                 nextMerge[m.id] = false;
               }
               setLoreSmartAcceptedMergeIds(nextMerge);
+              if (
+                planned.plan.clarifications.some((c) => c.severity === "required")
+              ) {
+                setLoreSmartTab("questions");
+              }
               return;
             }
           } catch {
@@ -7034,30 +7075,36 @@ export function ArchitecturalCanvasApp({
             aria-label="Search and import"
           >
             <div className={styles.sideToolsToolGroup}>
-              <ArchitecturalButton
-                type="button"
-                size="icon"
-                tone="glass"
-                title="Import PDF or Markdown"
-                aria-label="Import document"
-                onClick={() => {
-                  playVigilUiSound("select");
-                  loreImportFileInputRef.current?.click();
-                }}
-              >
-                <UploadSimple size={18} weight="bold" aria-hidden />
-              </ArchitecturalButton>
+              <ArchitecturalTooltip content="Import PDF or Markdown" side="bottom" delayMs={320}>
+                <ArchitecturalButton
+                  type="button"
+                  size="icon"
+                  tone="glass"
+                  aria-label="Import document"
+                  onClick={() => {
+                    playVigilUiSound("select");
+                    loreImportFileInputRef.current?.click();
+                  }}
+                >
+                  <UploadSimple size={18} weight="bold" aria-hidden />
+                </ArchitecturalButton>
+              </ArchitecturalTooltip>
               <div className={styles.focusEffectsDockSep} aria-hidden />
-              <ArchitecturalButton
-                type="button"
-                size="icon"
-                tone="glass"
-                title={`Search (${modKeyHints.search})`}
-                aria-label="Search"
-                onClick={() => setPaletteOpen(true)}
+              <ArchitecturalTooltip
+                content={`Search (${modKeyHints.search})`}
+                side="bottom"
+                delayMs={320}
               >
-                <MagnifyingGlass size={18} weight="bold" aria-hidden />
-              </ArchitecturalButton>
+                <ArchitecturalButton
+                  type="button"
+                  size="icon"
+                  tone="glass"
+                  aria-label="Search"
+                  onClick={() => setPaletteOpen(true)}
+                >
+                  <MagnifyingGlass size={18} weight="bold" aria-hidden />
+                </ArchitecturalButton>
+              </ArchitecturalTooltip>
             </div>
           </div>
         </div>
@@ -7246,6 +7293,7 @@ export function ArchitecturalCanvasApp({
               if (e.target === e.currentTarget && !loreImportCommitting) {
                 setLoreSmartReview(null);
                 setLoreSmartAcceptedMergeIds({});
+                setLoreSmartClarificationAnswers([]);
                 setLoreSmartTab("structure");
               }
             }}
@@ -7268,6 +7316,9 @@ export function ArchitecturalCanvasApp({
                     {loreSmartReview.plan.contradictions.length > 0
                       ? ` · ${loreSmartReview.plan.contradictions.length} flagged for review`
                       : ""}
+                    {loreSmartReview.plan.clarifications.length > 0
+                      ? ` · ${loreSmartReview.plan.clarifications.length} open question(s)`
+                      : ""}
                   </p>
                   <p className="text-[10px] text-[var(--vigil-muted)]">
                     Imported links use relationship types (ally, faction, …), not pin threads. Pin
@@ -7284,6 +7335,7 @@ export function ArchitecturalCanvasApp({
                     onClick={() => {
                       setLoreSmartReview(null);
                       setLoreSmartAcceptedMergeIds({});
+                      setLoreSmartClarificationAnswers([]);
                       setLoreSmartTab("structure");
                     }}
                   >
@@ -7293,7 +7345,7 @@ export function ArchitecturalCanvasApp({
                     size="sm"
                     variant="primary"
                     tone="solid"
-                    disabled={loreImportCommitting}
+                    disabled={loreImportCommitting || !loreSmartClarificationsOk}
                     onClick={() => void commitSmartLoreImport()}
                   >
                     {loreImportCommitting ? "Applying…" : "Apply import"}
@@ -7319,7 +7371,25 @@ export function ArchitecturalCanvasApp({
                 >
                   Merges
                 </Button>
+                <Button
+                  size="xs"
+                  variant={loreSmartTab === "questions" ? "primary" : "neutral"}
+                  tone="glass"
+                  type="button"
+                  onClick={() => setLoreSmartTab("questions")}
+                >
+                  Open questions
+                  {loreSmartReview.plan.clarifications.filter((c) => c.severity === "required")
+                    .length > 0
+                    ? ` (${loreSmartReview.plan.clarifications.filter((c) => c.severity === "required").length} required)`
+                    : ""}
+                </Button>
               </div>
+              {!loreSmartClarificationsOk ? (
+                <p className="mb-2 text-[10px] text-amber-700 dark:text-amber-300">
+                  Answer all required questions in Open questions before applying.
+                </p>
+              ) : null}
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
                 <label className="flex items-start gap-2 text-[11px] text-[var(--vigil-label)]">
                   <input
@@ -7392,6 +7462,147 @@ export function ArchitecturalCanvasApp({
                         </ul>
                       </div>
                     ) : null}
+                  </div>
+                ) : loreSmartTab === "questions" ? (
+                  <div className="space-y-3 text-[11px] text-[var(--vigil-label)]">
+                    {loreSmartReview.plan.clarifications.length === 0 ? (
+                      <p className="text-[var(--vigil-muted)]">No open questions for this import.</p>
+                    ) : (
+                      <ul className="max-h-[52vh] space-y-4 overflow-y-auto pr-1">
+                        {loreSmartReview.plan.clarifications.map((c) => {
+                          const ans = loreSmartClarificationAnswers.find(
+                            (a) => a.clarificationId === c.id,
+                          );
+                          const isMulti = c.questionKind === "multi_select";
+                          const selectedSet = new Set(
+                            ans?.resolution === "answered"
+                              ? (ans.selectedOptionIds ?? [])
+                              : ans?.resolution === "skipped_default" && ans.skipDefaultOptionId
+                                ? [ans.skipDefaultOptionId]
+                                : [],
+                          );
+                          return (
+                            <li
+                              key={c.id}
+                              className="rounded-lg border border-[var(--vigil-border)] bg-black/[0.03] p-3 dark:bg-white/[0.04]"
+                            >
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-medium">{c.title}</span>
+                                <span className="text-[9px] uppercase text-[var(--vigil-muted)]">
+                                  {c.category.replace(/_/g, " ")}
+                                </span>
+                                {c.severity === "required" ? (
+                                  <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] uppercase text-amber-800 dark:text-amber-200">
+                                    Required
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] uppercase text-[var(--vigil-muted)]">
+                                    Optional
+                                  </span>
+                                )}
+                              </div>
+                              {c.context ? (
+                                <p className="mt-2 text-[10px] leading-relaxed text-[var(--vigil-muted)]">
+                                  {c.context}
+                                </p>
+                              ) : null}
+                              <div className="mt-3 space-y-2">
+                                {c.options.map((opt) =>
+                                  isMulti ? (
+                                    <label
+                                      key={opt.id}
+                                      className="flex cursor-pointer items-start gap-2 text-[11px]"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        className="mt-0.5"
+                                        checked={selectedSet.has(opt.id)}
+                                        onChange={(e) => {
+                                          let base: string[] =
+                                            ans?.resolution === "answered"
+                                              ? [...(ans.selectedOptionIds ?? [])]
+                                              : ans?.resolution === "skipped_default" &&
+                                                  ans.skipDefaultOptionId
+                                                ? [ans.skipDefaultOptionId]
+                                                : [];
+                                          if (e.target.checked) {
+                                            if (!base.includes(opt.id)) base.push(opt.id);
+                                          } else {
+                                            base = base.filter((x) => x !== opt.id);
+                                          }
+                                          setLoreSmartClarificationAnswers((prev) =>
+                                            upsertClarificationAnswer(prev, {
+                                              clarificationId: c.id,
+                                              resolution: "answered",
+                                              selectedOptionIds: base,
+                                            }),
+                                          );
+                                        }}
+                                      />
+                                      <span>{opt.label}</span>
+                                    </label>
+                                  ) : (
+                                    <label
+                                      key={opt.id}
+                                      className="flex cursor-pointer items-start gap-2 text-[11px]"
+                                    >
+                                      <input
+                                        type="radio"
+                                        className="mt-0.5"
+                                        name={`clarify-${c.id}`}
+                                        checked={
+                                          !!(
+                                            ans?.resolution === "answered" &&
+                                            ans.selectedOptionIds?.[0] === opt.id
+                                          ) ||
+                                          !!(
+                                            ans?.resolution === "skipped_default" &&
+                                            ans.skipDefaultOptionId === opt.id
+                                          )
+                                        }
+                                        onChange={() =>
+                                          setLoreSmartClarificationAnswers((prev) =>
+                                            upsertClarificationAnswer(prev, {
+                                              clarificationId: c.id,
+                                              resolution: "answered",
+                                              selectedOptionIds: [opt.id],
+                                            }),
+                                          )
+                                        }
+                                      />
+                                      <span>{opt.label}</span>
+                                    </label>
+                                  ),
+                                )}
+                              </div>
+                              {recommendedClarificationOptionId(c) ? (
+                                <div className="mt-2">
+                                  <Button
+                                    size="xs"
+                                    variant="neutral"
+                                    tone="glass"
+                                    type="button"
+                                    onClick={() => {
+                                      const def = recommendedClarificationOptionId(c);
+                                      if (!def) return;
+                                      setLoreSmartClarificationAnswers((prev) =>
+                                        upsertClarificationAnswer(prev, {
+                                          clarificationId: c.id,
+                                          resolution: "skipped_default",
+                                          skipDefaultOptionId: def,
+                                        }),
+                                      );
+                                    }}
+                                  >
+                                    Use recommended default
+                                  </Button>
+                                </div>
+                              ) : null}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -8157,17 +8368,22 @@ export function ArchitecturalCanvasApp({
                   <div
                     className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.shellTopLogOutPanel}`}
                   >
-                    <ArchitecturalButton
-                      type="button"
-                      size="icon"
-                      tone="glass"
-                      iconOnly
-                      leadingIcon={<SignOut size={18} weight="bold" aria-hidden />}
-                      className={styles.shellTopLogOutTrigger}
-                      title="Log out — return to auth splash"
-                      aria-label="Log out and return to auth splash"
-                      onClick={handleLogOutToAuth}
-                    />
+                    <ArchitecturalTooltip
+                      content="Log out — return to auth splash"
+                      side="bottom"
+                      delayMs={320}
+                    >
+                      <ArchitecturalButton
+                        type="button"
+                        size="icon"
+                        tone="glass"
+                        iconOnly
+                        leadingIcon={<SignOut size={18} weight="bold" aria-hidden />}
+                        className={styles.shellTopLogOutTrigger}
+                        aria-label="Log out and return to auth splash"
+                        onClick={handleLogOutToAuth}
+                      />
+                    </ArchitecturalTooltip>
                   </div>
                 </div>
               ) : null}
@@ -8193,20 +8409,25 @@ export function ArchitecturalCanvasApp({
                           spaceId === graph.rootSpaceId
                             ? ROOT_SPACE_DISPLAY_NAME
                             : graph.spaces[spaceId]?.name ?? "Unknown";
+                        const crumbTip = isActive
+                          ? `${label} — current space`
+                          : `Open “${label}” in the canvas`;
                         return (
                           <span key={spaceId} className={styles.crumbItem}>
                             {index > 0 ? <span className={styles.crumbSep}>/</span> : null}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              tone="glass"
-                              size="sm"
-                              className={`${styles.crumbBtn} ${isActive ? styles.crumbActive : ""}`}
-                              onClick={() => enterSpace(spaceId)}
-                              disabled={isActive}
-                            >
-                              {label}
-                            </Button>
+                            <ArchitecturalTooltip content={crumbTip} side="bottom" delayMs={320}>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                tone="glass"
+                                size="sm"
+                                className={`${styles.crumbBtn} ${isActive ? styles.crumbActive : ""}`}
+                                onClick={() => enterSpace(spaceId)}
+                                disabled={isActive}
+                              >
+                                {label}
+                              </Button>
+                            </ArchitecturalTooltip>
                           </span>
                         );
                       })}

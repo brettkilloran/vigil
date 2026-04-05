@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import VigilApp from "./_components/VigilApp";
 import { VigilThemeProvider } from "@/src/contexts/vigil-theme-context";
+import { HEARTGARDEN_BRAND_MARK_EMOJI } from "@/src/lib/brand-mark";
 
 export default function Home() {
   return (
@@ -20,7 +21,7 @@ export default function Home() {
             backgroundColor: "#0c0c0e",
           }}
         >
-          Loading heartgarden…
+          {HEARTGARDEN_BRAND_MARK_EMOJI} Loading heartgarden…
         </div>
       }
     >

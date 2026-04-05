@@ -99,7 +99,6 @@ function SaveAndVersionPopover({
 
   const {
     pulseToneClass,
-    tooltipTitle,
     statusLine,
     showWarningIcon,
     detailTitle,
@@ -119,7 +118,6 @@ function SaveAndVersionPopover({
         : null;
 
     let pulseToneClass = styles.pulseDotToneLocal;
-    let tooltipTitle = "";
     let statusLine = "";
     let showWarningIcon = false;
     let detailTitle = "Local session";
@@ -128,54 +126,40 @@ function SaveAndVersionPopover({
 
     if (bootstrapPending) {
       pulseToneClass = styles.pulseDotToneLoading;
-      tooltipTitle =
-        "Loading your workspace from the server. Sync status is unknown until loading finishes. Click for details.";
       statusLine = "Loading workspace…";
       detailTitle = "Loading workspace";
       detailBody = "Resolving demo vs Neon and hydrating the canvas…";
     } else if (offlineNoSnapshot) {
       pulseToneClass = styles.pulseDotToneLocal;
-      tooltipTitle =
-        "Database not reachable and no local snapshot yet. Your data is not shown because the app could not load it — not because it was deleted. Click for details.";
       statusLine = "Database not reachable";
       detailTitle = "Workspace not loaded";
       detailBody =
         "Heartgarden could not open a database-backed workspace from this session, and this browser does not have a prior snapshot yet. Configure NEON_DATABASE_URL, fix network access, and reload. Once you load successfully, we cache a view so brief outages still look like your garden.";
     } else if (!sync.cloudEnabled && showingCachedWorkspace) {
       pulseToneClass = styles.pulseDotToneSaving;
-      tooltipTitle =
-        "Showing your last loaded workspace from this browser while we try to reconnect to Neon. Edits stay local until the server is back. Click for details.";
       statusLine = "Offline · showing saved view";
       detailTitle = "Cached workspace";
       detailBody =
         "You are seeing the last workspace snapshot stored in this browser. We retry automatically and when the network comes back. New changes are kept on this device until Neon is reachable again.";
     } else if (!sync.cloudEnabled) {
       pulseToneClass = styles.pulseDotToneLocal;
-      tooltipTitle =
-        "Not connected to Neon — this session is local only. Nothing is written to a remote database. Click for export-based version history and full notes.";
       statusLine = "Local only · not connected";
     } else if (sync.lastError) {
       pulseToneClass = styles.pulseDotToneError;
       showWarningIcon = true;
       const err = sync.lastError.trim();
       const short = err.length > 44 ? `${err.slice(0, 42)}…` : err;
-      tooltipTitle = `Database save error: ${err} Edits stay on the canvas until the next successful save. Undo does not revert the server. Click for details.`;
       statusLine = short;
       detailTitle = "Sync error";
       detailBody = `${sync.lastError} Edits stay local until the next successful save. Undo/redo only affects the canvas in memory, not the database.`;
     } else if (busy) {
       pulseToneClass = styles.pulseDotToneSaving;
-      tooltipTitle =
-        "Saving to Neon (including debounced note edits). Safe to keep editing — undo applies to the canvas in memory while writes complete. Click for details.";
       statusLine = "Saving…";
       detailTitle = "Writing to Neon";
       detailBody =
         "Saving changes (including debounced note edits). Undo restores local canvas state; Neon keeps the last successful write until you edit again.";
     } else {
       pulseToneClass = styles.pulseDotToneOk;
-      tooltipTitle = rel
-        ? `Last successful write to Neon: ${rel}. All pending changes are saved. Undo does not revert the database — click for full sync notes and version history.`
-        : "Connected to Neon. Click for sync details, pending write counts, and export-based version history.";
       statusLine = rel ? `Saved · ${rel}` : "Synced with Neon";
       detailTitle = "Synced with Neon";
       detailBody =
@@ -202,7 +186,6 @@ function SaveAndVersionPopover({
 
     return {
       pulseToneClass,
-      tooltipTitle,
       statusLine,
       showWarningIcon,
       detailTitle,
@@ -379,36 +362,28 @@ function SaveAndVersionPopover({
       <span className="sr-only" aria-live="polite" aria-atomic="true">
         {liveAnnouncement}
       </span>
-      <ArchitecturalTooltip
-        content={tooltipTitle}
-        side="bottom"
-        delayMs={400}
-        disabled={open}
-        associateDescription
+      <Button
+        ref={triggerRef}
+        variant="neutral"
+        size="sm"
+        tone="glass"
+        className={styles.statusSaveBarTrigger}
+        aria-label={triggerAriaLabel}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        aria-controls={open ? popoverId : undefined}
+        onClick={() => setOpen((v) => !v)}
       >
-        <Button
-          ref={triggerRef}
-          variant="neutral"
-          size="sm"
-          tone="glass"
-          className={styles.statusSaveBarTrigger}
-          aria-label={triggerAriaLabel}
-          aria-expanded={open}
-          aria-haspopup="dialog"
-          aria-controls={open ? popoverId : undefined}
-          onClick={() => setOpen((v) => !v)}
-        >
-          {showPulse ? (
-            <span className={cx(styles.pulseDot, pulseToneClass)} aria-hidden />
-          ) : null}
-          <span className={styles.monoTag} lang="ja">
-            {envLabel}
-          </span>
-          {showWarningIcon ? (
-            <WarningCircle className={styles.statusSaveWarningIcon} size={16} weight="bold" aria-hidden />
-          ) : null}
-        </Button>
-      </ArchitecturalTooltip>
+        {showPulse ? (
+          <span className={cx(styles.pulseDot, pulseToneClass)} aria-hidden />
+        ) : null}
+        <span className={styles.monoTag} lang="ja">
+          {envLabel}
+        </span>
+        {showWarningIcon ? (
+          <WarningCircle className={styles.statusSaveWarningIcon} size={16} weight="bold" aria-hidden />
+        ) : null}
+      </Button>
       {panel}
     </div>
   );

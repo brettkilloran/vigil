@@ -3,6 +3,7 @@
 import { SpeakerHigh, SpeakerSlash } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 
+import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 import { readAppAudioMuted, subscribeAppAudioMuted, writeAppAudioMuted } from "@/src/lib/vigil-audio-prefs";
 
@@ -27,30 +28,32 @@ export function VigilAppChromeAudioMuteButton() {
     <SpeakerHigh size={18} weight="bold" aria-hidden />
   );
 
+  const tip =
+    muted
+      ? "Unmute audio (ambient + interface sounds)"
+      : "Mute audio (ambient + interface sounds)";
+
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      tone="glass"
-      size="icon"
-      iconOnly
-      data-hg-chrome="app-audio-mute"
-      aria-label={
-        muted
-          ? "Unmute audio — ambient layers and interface sounds"
-          : "Mute audio — ambient layers and interface sounds"
-      }
-      title={
-        muted
-          ? "Unmute audio (ambient + interface sounds)"
-          : "Mute audio (ambient + interface sounds)"
-      }
-      onClick={(e) => {
-        e.stopPropagation();
-        onToggle();
-      }}
-    >
-      {icon}
-    </Button>
+    <ArchitecturalTooltip content={tip} side="top" delayMs={320}>
+      <Button
+        type="button"
+        variant="ghost"
+        tone="glass"
+        size="icon"
+        iconOnly
+        data-hg-chrome="app-audio-mute"
+        aria-label={
+          muted
+            ? "Unmute audio — ambient layers and interface sounds"
+            : "Mute audio — ambient layers and interface sounds"
+        }
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+      >
+        {icon}
+      </Button>
+    </ArchitecturalTooltip>
   );
 }

@@ -1,8 +1,8 @@
-import { eq, max } from "drizzle-orm";
+import { and, eq, max, sql } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
 import { z } from "zod";
 
-import { itemLinks, items, spaces } from "@/src/db/schema";
+import { importReviewItems, itemLinks, items, spaces } from "@/src/db/schema";
 import { buildContentJsonForFolderEntity } from "@/src/components/foundation/architectural-db-bridge";
 import type { CanvasFolderEntity } from "@/src/components/foundation/architectural-types";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
@@ -12,9 +12,17 @@ import {
   buildLoreNoteContentJson,
   planLoreImportCardLayout,
 } from "@/src/lib/lore-import-commit";
-import { normalizeImportItemLinkType } from "@/src/lib/lore-import-item-link";
+import {
+  applyClarificationPatches,
+  validateClarificationAnswersForApply,
+} from "@/src/lib/lore-import-clarifications";
+import {
+  filterPlanLinksToSameCanvasSpace,
+  normalizeImportItemLinkType,
+} from "@/src/lib/lore-import-item-link";
 import {
   buildDefaultEntityMeta,
+  clarificationAnswerSchema,
   loreImportPlanSchema,
   type LoreImportPlan,
 } from "@/src/lib/lore-import-plan-types";
@@ -52,6 +60,8 @@ export const loreImportApplyBodySchema = z.object({
   acceptedMergeProposalIds: z.array(z.string().uuid()).default([]),
   /** If set, only these note clientIds are created (excluding those fully handled by merges). */
   createNoteClientIds: z.array(z.string().min(1).max(64)).optional(),
+  /** Answers for plan.clarifications; required items must all be present before apply. */
+  clarificationAnswers: z.array(clarificationAnswerSchema).optional().default([]),
 });
 
 export type LoreImportApplyBody = z.infer<typeof loreImportApplyBodySchema>;
@@ -133,10 +143,39 @@ export async function applyLoreImportPlan(
     throw new Error("Space not found");
   }
 
-  const plan = body.plan;
+  let plan = body.plan;
   if (plan.importBatchId !== body.importBatchId) {
     throw new Error("importBatchId mismatch between body and plan");
   }
+
+  const clarificationAnswers = body.clarificationAnswers ?? [];
+  const v = validateClarificationAnswersForApply(plan, clarificationAnswers);
+  if (!v.ok) throw new Error(v.error);
+  try {
+    plan = applyClarificationPatches(plan, clarificationAnswers);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Clarification patch failed";
+    throw new Error(msg);
+  }
+  const linkRefilter = filterPlanLinksToSameCanvasSpace(
+    plan.notes.map((n) => ({
+      clientId: n.clientId,
+      folderClientId: n.folderClientId,
+    })),
+    plan.links.map((l) => ({
+      fromClientId: l.fromClientId,
+      toClientId: l.toClientId,
+      linkType: l.linkType,
+    })),
+  );
+  plan = {
+    ...plan,
+    links: linkRefilter.links,
+    importPlanWarnings: [
+      ...(plan.importPlanWarnings ?? []),
+      ...linkRefilter.warnings,
+    ],
+  };
 
   const acceptedMergeIds = new Set(body.acceptedMergeProposalIds);
   const mergeProposalsAccepted = plan.mergeProposals.filter((m) =>
@@ -443,6 +482,19 @@ export async function applyLoreImportPlan(
       if (lr) linksCreated += 1;
     }
   });
+
+  for (const a of clarificationAnswers) {
+    await db
+      .update(importReviewItems)
+      .set({ status: "resolved", updatedAt: new Date() })
+      .where(
+        and(
+          eq(importReviewItems.importBatchId, plan.importBatchId),
+          eq(importReviewItems.spaceId, body.spaceId),
+          sql`(${importReviewItems.payload}->>'clarificationId') = ${a.clarificationId}`,
+        ),
+      );
+  }
 
   for (const row of rowsToSchedule) {
     scheduleItemEmbeddingRefresh(db, row);

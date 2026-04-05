@@ -6,5 +6,12 @@
   "display": "standalone",
   "background_color": "oklch(0.985 0 0)",
   "theme_color": "oklch(0.205 0 0)",
-  "icons": []
+  "icons": [
+    {
+      "src": "/brand-heart.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
 }

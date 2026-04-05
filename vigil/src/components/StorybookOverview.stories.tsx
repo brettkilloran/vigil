@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs";
 
+import { HEARTGARDEN_BRAND_MARK_EMOJI } from "@/src/lib/brand-mark";
+
 const meta = {
   title: "Heartgarden/Overview",
   parameters: {
@@ -27,7 +29,9 @@ export const AboutThisStorybook: Story = {
         lineHeight: 1.55,
       }}
     >
-      <h1 style={{ fontSize: "1.35rem", fontWeight: 700, marginBottom: 12 }}>heartgarden · Storybook</h1>
+      <h1 style={{ fontSize: "1.35rem", fontWeight: 700, marginBottom: 12 }}>
+        {HEARTGARDEN_BRAND_MARK_EMOJI} heartgarden · Storybook
+      </h1>
       <p style={{ color: "var(--sem-text-muted)", marginBottom: 16 }}>
         This Storybook documents UI used by the heartgarden canvas app: design tokens, shell
         primitives, and shared components. It is not a second product — it mirrors what ships in the

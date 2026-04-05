@@ -340,8 +340,13 @@
   --vigil-shell-top-chrome-line-h: var(--sys-control-height-sm);
   --chrome-panel-height: calc(var(--sys-control-height-sm) + (var(--chrome-panel-pad-y) * 2));
 
-  /* Tooltips — same frosted vocabulary as sync popover / chrome, compact for hints */
-  --layer-tooltip: 240;
+  /*
+   * Tooltips — same frosted vocabulary as sync popover / chrome, compact for hints.
+   * Stacking: `#hg-portal-root` uses z-index just above `.chromeLayerTopLeftBootElevated` (10060)
+   * so hints paint over shell chrome; siblings inside the portal use their own z-index (e.g. cmdk 1200).
+   */
+  --layer-portal-root: 10070;
+  --layer-tooltip: 1;
   --cmp-tooltip-bg: var(--ui-glass-bg);
   --cmp-tooltip-border: var(--ui-glass-border);
   --cmp-tooltip-fg: var(--text-main);
@@ -380,6 +385,15 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Portal root: see `getVigilPortalRoot()` — must stack above boot-elevated chrome (10060). */
+#hg-portal-root {
+  position: fixed;
+  inset: 0;
+  z-index: var(--layer-portal-root);
+  pointer-events: none;
+  isolation: isolate;
 }
 
 * {
@@ -870,6 +884,20 @@ a {
   --btn-border-hover: transparent;
   --btn-border-active: transparent;
   --btn-border-disabled: transparent;
+}
+
+/* Hitbox: receives hover when a disabled `.vigil-btn` inside passes pointer-events through. */
+.hg-tooltip-hitbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.hg-tooltip-hitbox .vigil-btn:disabled,
+.hg-tooltip-hitbox .vigil-btn[data-disabled="true"] {
+  pointer-events: none;
 }
 
 .vigil-tooltip-surface {

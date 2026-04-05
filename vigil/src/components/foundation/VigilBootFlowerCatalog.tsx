@@ -13,6 +13,7 @@ import {
   type BloomShape,
   type VigilBootBloomKind,
 } from "./VigilBootFlowerGarden";
+import { ArchitecturalTooltip } from "./ArchitecturalTooltip";
 
 import styles from "./VigilBootFlowerCatalog.module.css";
 
@@ -61,10 +62,12 @@ function BloomTile({
   }, [shape, speciesIndex, kind]);
 
   return (
-    <div className={styles.tile} title={`#${speciesIndex} · ${varietyName}`}>
-      <canvas ref={ref} className={styles.canvas} aria-hidden />
-      <span className={styles.tileLabel}>{varietyName}</span>
-    </div>
+    <ArchitecturalTooltip content={`#${speciesIndex} · ${varietyName}`} side="top" delayMs={200}>
+      <div className={styles.tile}>
+        <canvas ref={ref} className={styles.canvas} aria-hidden />
+        <span className={styles.tileLabel}>{varietyName}</span>
+      </div>
+    </ArchitecturalTooltip>
   );
 }
 
@@ -91,15 +94,23 @@ export function VigilBootFlowerCatalog({ kind = "full" }: VigilBootFlowerCatalog
       <div className={styles.specLegend}>
         {SPECIES.map((spec, i) => (
           <div key={i} className={styles.specCard}>
-            <div className={styles.specLabel} title={`Index ${i}`}>
-              {spec.name}
-              <span className={styles.specIndex}> #{i}</span>
-            </div>
+            <ArchitecturalTooltip content={`Index ${i}`} side="top" delayMs={200}>
+              <div className={styles.specLabel}>
+                {spec.name}
+                <span className={styles.specIndex}> #{i}</span>
+              </div>
+            </ArchitecturalTooltip>
             <div className={styles.swatches}>
-              <span title="Stem" className={styles.swatch} style={{ background: spec.stem }} />
-              <span title="Leaf" className={styles.swatch} style={{ background: spec.leaf }} />
+              <ArchitecturalTooltip content="Stem" side="top" delayMs={200}>
+                <span className={styles.swatch} style={{ background: spec.stem }} />
+              </ArchitecturalTooltip>
+              <ArchitecturalTooltip content="Leaf" side="top" delayMs={200}>
+                <span className={styles.swatch} style={{ background: spec.leaf }} />
+              </ArchitecturalTooltip>
               {spec.spike ? (
-                <span title="Spike" className={styles.swatch} style={{ background: spec.spike }} />
+                <ArchitecturalTooltip content="Spike" side="top" delayMs={200}>
+                  <span className={styles.swatch} style={{ background: spec.spike }} />
+                </ArchitecturalTooltip>
               ) : null}
             </div>
           </div>
@@ -108,10 +119,12 @@ export function VigilBootFlowerCatalog({ kind = "full" }: VigilBootFlowerCatalog
 
       <div className={styles.columnHead} style={tileGridStyle}>
         {SPECIES.map((spec, i) => (
-          <span key={i} className={styles.columnHeadCell} title={`#${i} · ${spec.name}`}>
-            <span className={styles.columnHeadName}>{spec.name}</span>
-            <span className={styles.columnHeadIdx}>#{i}</span>
-          </span>
+          <ArchitecturalTooltip key={i} content={`#${i} · ${spec.name}`} side="bottom" delayMs={200}>
+            <span className={styles.columnHeadCell}>
+              <span className={styles.columnHeadName}>{spec.name}</span>
+              <span className={styles.columnHeadIdx}>#{i}</span>
+            </span>
+          </ArchitecturalTooltip>
         ))}
       </div>
 

@@ -68,7 +68,45 @@ Rules:
 - Use append_dated for session-style updates; use append_section for adding a labeled subsection.
 - Flag contradictions when the new text conflicts with a candidate excerpt and cannot be merged safely without human choice.`;
 
-function extractJsonObject(raw: string): string | null {
+const CLARIFY_SYSTEM = `You help users import TTRPG / worldbuilding documents into a spatial notes app with high accuracy.
+
+Return ONLY valid JSON (no markdown fence):
+{ "clarifications": [ CLARIFICATION_ITEM, ... ] }
+
+Each CLARIFICATION_ITEM must include:
+- "category": "structure" | "link_semantics" | "canon_weight" | "conflict"
+- "severity": "required" when human choice materially affects correctness; "optional" for minor polish only
+- "title": short question (max ~120 chars)
+- "context": 1–3 sentences: say what you are unsure about and cite evidence (note titles, chunk headings, candidate titles, merge rationale). Admit uncertainty plainly. Never shame the user.
+- "questionKind": "single_select" | "multi_select" | "confirm_default"
+- "options": array of 2–6 objects, each with:
+  - "id": short stable id (e.g. "a", "b")
+  - "label": user-facing choice
+  - "recommended": true on exactly one option when you have a best guess
+  - "planPatchHint": ONE machine patch object (see HINT OPS below)
+
+Optional: "relatedNoteClientIds", "relatedMergeProposalId" (uuid from payload), "relatedLink": { "fromClientId", "toClientId" }
+
+Tone: collaborative, default-forward (always mark a recommended option when possible), bounded (one decision per item). If you cannot ground a question in the payload, omit that clarification.
+
+HINT OPS — every planPatchHint must be exactly one of:
+{ "op": "no_op" }
+{ "op": "set_note_folder", "noteClientId": "<id>", "folderClientId": "<folder clientId>" | null }
+{ "op": "set_link_type", "fromClientId": "<id>", "toClientId": "<id>", "linkType": "reference"|"ally"|"enemy"|"neutral"|"faction"|"quest"|"location"|"npc"|"lore" }
+{ "op": "remove_link", "fromClientId": "<id>", "toClientId": "<id>" }
+{ "op": "set_ingestion_signals", "noteClientId": "<id>", "patch": { optional salienceRole, voiceReliability, importance 0-1 } }
+{ "op": "set_lore_historical", "noteClientId": "<id>", "loreHistorical": true|false }
+{ "op": "discard_merge_proposal", "mergeProposalId": "<uuid from mergeProposals in payload>" }
+
+Rules:
+- For **every contradiction** in the payload, emit at least one **required** "conflict" clarification unless the contradiction is trivial noise.
+- Ask about **link_semantics** when relationship type is ambiguous between two linked notes.
+- Ask **structure** when a note could belong in two folders or the folder split is uncertain.
+- Ask **canon_weight** when voiceReliability is unknown/mixed but the content sounds like rules or official lore (importance / historical vs current).
+- Use mergeProposalId from the payload verbatim in discard_merge_proposal hints.
+- Never invent note clientIds or folder clientIds — only use ids from the payload.`;
+
+export function extractJsonObject(raw: string): string | null {
   const t = raw.trim();
   const start = t.indexOf("{");
   const end = t.lastIndexOf("}");
@@ -314,6 +352,66 @@ export async function runLoreImportMergeLlm(
     return { mergeProposals, contradictions };
   } catch {
     return { mergeProposals: [], contradictions: [] };
+  }
+}
+
+export type LoreImportClarifyContext = {
+  folders: {
+    clientId: string;
+    title: string;
+    parentClientId: string | null | undefined;
+  }[];
+  notes: {
+    clientId: string;
+    title: string;
+    summary: string;
+    folderClientId: string | null;
+    canonicalEntityKind?: string;
+    ingestionSignals?: IngestionSignals;
+    loreHistorical?: boolean;
+  }[];
+  links: { fromClientId: string; toClientId: string; linkType?: string }[];
+  mergeProposals: {
+    id: string;
+    noteClientId: string;
+    targetItemId: string;
+    targetTitle: string;
+    strategy: string;
+    rationale?: string;
+  }[];
+  contradictions: {
+    id: string;
+    noteClientId?: string;
+    summary: string;
+    details?: string;
+  }[];
+  chunks: { id: string; heading: string; excerpt: string }[];
+};
+
+export async function runLoreImportClarifyLlm(
+  apiKey: string,
+  model: string,
+  context: LoreImportClarifyContext,
+): Promise<unknown[]> {
+  const client = new Anthropic({ apiKey });
+  const user = `IMPORT PLAN CONTEXT (JSON):\n${JSON.stringify(context).slice(0, 110_000)}`;
+  const res = await client.messages.create({
+    model,
+    max_tokens: 8192,
+    system: CLARIFY_SYSTEM,
+    messages: [{ role: "user", content: user }],
+  });
+  let raw = "";
+  for (const block of res.content) {
+    if (block.type === "text") raw += block.text;
+  }
+  const jsonStr = extractJsonObject(raw);
+  if (!jsonStr) return [];
+  try {
+    const parsed = JSON.parse(jsonStr) as { clarifications?: unknown[] };
+    return Array.isArray(parsed.clarifications) ? parsed.clarifications : [];
+  } catch {
+    return [];
   }
 }
 

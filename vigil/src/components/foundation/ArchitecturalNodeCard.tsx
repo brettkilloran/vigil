@@ -12,6 +12,7 @@ import type {
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
 import type { ButtonTone } from "@/src/components/ui/Button";
+import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
@@ -78,18 +79,19 @@ export function ArchitecturalNodeHeader({
       <span className={styles.nodeTitle}>{title}</span>
       <div className={styles.nodeActions}>
         {showExpand ? (
-          <Button
-            size="icon"
-            variant="ghost"
-            tone={buttonTone}
-            className={styles.nodeBtn}
-            data-expand-btn="true"
-            title={expandLabel}
-            aria-label={expandLabel}
-            onClick={onExpand}
-          >
-            <ArrowsOutSimple size={14} />
-          </Button>
+          <ArchitecturalTooltip content={expandLabel} side="bottom" delayMs={320}>
+            <Button
+              size="icon"
+              variant="ghost"
+              tone={buttonTone}
+              className={styles.nodeBtn}
+              data-expand-btn="true"
+              aria-label={expandLabel}
+              onClick={onExpand}
+            >
+              <ArrowsOutSimple size={14} />
+            </Button>
+          </ArchitecturalTooltip>
         ) : null}
       </div>
     </div>
@@ -183,48 +185,46 @@ export function ArchitecturalNodeCard({
           buttonTone="card-dark"
           onExpand={() => onExpand(id)}
         />
-        <div
-          className={
-            imageCardMedia.src
-              ? styles.imageContainer
-              : `${styles.imageContainer} ${styles.imageContainerPlaceholder}`
-          }
-          data-image-open-gallery="true"
-          title="Double-click to open gallery"
-        >
+        <ArchitecturalTooltip content="Double-click to open gallery" side="top" delayMs={400}>
           <div
-            className={styles.imageCardMediaRoot}
-            data-architectural-media-root="true"
+            className={
+              imageCardMedia.src
+                ? styles.imageContainer
+                : `${styles.imageContainer} ${styles.imageContainerPlaceholder}`
+            }
+            data-image-open-gallery="true"
           >
-            {imageCardMedia.src ? (
-              // eslint-disable-next-line @next/next/no-img-element -- dynamic user/R2 URLs; not suitable for next/image without broad remotePatterns
-              <img
-                key={imageCardMedia.src}
-                className={styles.imageSlotImg}
-                src={imageCardMedia.src}
-                alt={imageCardMedia.alt || title}
-                draggable={false}
-              />
-            ) : (
-              <div className={styles.imagePlaceholderIcon} aria-hidden>
-                <ImageIcon size={48} weight="regular" />
+            <div className={styles.imageCardMediaRoot} data-architectural-media-root="true">
+              {imageCardMedia.src ? (
+                // eslint-disable-next-line @next/next/no-img-element -- dynamic user/R2 URLs; not suitable for next/image without broad remotePatterns
+                <img
+                  key={imageCardMedia.src}
+                  className={styles.imageSlotImg}
+                  src={imageCardMedia.src}
+                  alt={imageCardMedia.alt || title}
+                  draggable={false}
+                />
+              ) : (
+                <div className={styles.imagePlaceholderIcon} aria-hidden>
+                  <ImageIcon size={48} weight="regular" />
+                </div>
+              )}
+              <div className={styles.mediaImageActions} contentEditable={false}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  tone="glass"
+                  size="sm"
+                  className={styles.mediaUploadBtn}
+                  data-architectural-media-upload="true"
+                  data-media-owner-id={id}
+                >
+                  Replace
+                </Button>
               </div>
-            )}
-            <div className={styles.mediaImageActions} contentEditable={false}>
-              <Button
-                type="button"
-                variant="ghost"
-                tone="glass"
-                size="sm"
-                className={styles.mediaUploadBtn}
-                data-architectural-media-upload="true"
-                data-media-owner-id={id}
-              >
-                Replace
-              </Button>
             </div>
           </div>
-        </div>
+        </ArchitecturalTooltip>
       </div>
     );
   }

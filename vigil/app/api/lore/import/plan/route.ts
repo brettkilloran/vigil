@@ -68,10 +68,11 @@ export async function POST(req: Request) {
     });
 
     const persistReview = parsed.data.persistReview !== false;
-    if (persistReview && plan.contradictions.length > 0) {
+    if (persistReview) {
       const now = new Date();
-      await db.insert(importReviewItems).values(
-        plan.contradictions.map((c) => ({
+      const rows: (typeof importReviewItems.$inferInsert)[] = [];
+      for (const c of plan.contradictions) {
+        rows.push({
           importBatchId: plan.importBatchId,
           spaceId: parsed.data.spaceId,
           status: "pending",
@@ -85,8 +86,31 @@ export async function POST(req: Request) {
           },
           createdAt: now,
           updatedAt: now,
-        })),
-      );
+        });
+      }
+      for (const cl of plan.clarifications) {
+        if (cl.severity !== "required") continue;
+        rows.push({
+          importBatchId: plan.importBatchId,
+          spaceId: parsed.data.spaceId,
+          status: "pending",
+          kind: `clarification_${cl.category}`,
+          payload: {
+            clarificationId: cl.id,
+            category: cl.category,
+            title: cl.title,
+            context: cl.context,
+            questionKind: cl.questionKind,
+            optionLabels: cl.options.map((o) => ({ id: o.id, label: o.label })),
+            fileName: plan.fileName,
+          },
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+      if (rows.length > 0) {
+        await db.insert(importReviewItems).values(rows);
+      }
     }
 
     return Response.json({ ok: true, plan });

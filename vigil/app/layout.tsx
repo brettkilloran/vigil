@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Lora, Noto_Sans_JP } from "next/font/google";
 
 import { RegisterSw } from "@/src/components/RegisterSw";
+import { HEARTGARDEN_BRAND_ICON_PATH } from "@/src/lib/brand-mark";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -36,6 +37,10 @@ export const metadata: Metadata = {
   description: "Infinite canvas TTRPG worldbuilding",
   applicationName: "heartgarden",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: HEARTGARDEN_BRAND_ICON_PATH, type: "image/svg+xml" }],
+    apple: [{ url: HEARTGARDEN_BRAND_ICON_PATH }],
+  },
   openGraph: {
     title: "heartgarden",
     description: "Infinite canvas TTRPG worldbuilding",
