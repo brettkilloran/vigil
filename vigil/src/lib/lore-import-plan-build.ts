@@ -4,10 +4,15 @@ import type { CanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds"
 import { chunkSourceText } from "@/src/lib/lore-import-chunk";
 import {
   attachBodiesToOutline,
+  runLoreImportClarifyLlm,
   runLoreImportMergeLlm,
   runLoreImportOutlineLlm,
   type CandidateRow,
 } from "@/src/lib/lore-import-plan-llm";
+import {
+  ensureClarificationsForContradictions,
+  normalizeClarificationsFromLlm,
+} from "@/src/lib/lore-import-clarifications";
 import { filterPlanLinksToSameCanvasSpace } from "@/src/lib/lore-import-item-link";
 import type { IngestionSignals, LoreImportPlan } from "@/src/lib/lore-import-plan-types";
 import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
@@ -120,6 +125,58 @@ export async function buildLoreImportPlan(args: {
     })),
   );
 
+  const clarifyPayload = {
+    folders: outline.folders.map((f) => ({
+      clientId: f.clientId,
+      title: f.title,
+      parentClientId: f.parentClientId,
+    })),
+    notes: notesInternal.map((n) => ({
+      clientId: n.clientId,
+      title: n.title,
+      summary: n.summary.slice(0, 600),
+      folderClientId: n.folderClientId,
+      canonicalEntityKind: n.canonicalEntityKind,
+      ingestionSignals: n.ingestionSignals,
+      loreHistorical: n.loreHistorical,
+    })),
+    links: coLocatedLinks,
+    mergeProposals: mergeProposals.map((m) => ({
+      id: m.id,
+      noteClientId: m.noteClientId,
+      targetItemId: m.targetItemId,
+      targetTitle: m.targetTitle,
+      strategy: m.strategy,
+      rationale: m.rationale,
+    })),
+    contradictions: contradictions.map((c) => ({
+      id: c.id,
+      noteClientId: c.noteClientId,
+      summary: c.summary,
+      details: c.details,
+    })),
+    chunks: chunks.map((c) => ({
+      id: c.id,
+      heading: c.heading,
+      excerpt: args.fullText.slice(
+        c.charStart,
+        Math.min(c.charEnd, c.charStart + 2400),
+      ),
+    })),
+  };
+
+  const clarifyRaw = await runLoreImportClarifyLlm(
+    args.apiKey,
+    args.model,
+    clarifyPayload,
+  );
+  let clarifications = normalizeClarificationsFromLlm(clarifyRaw);
+  clarifications = ensureClarificationsForContradictions(
+    contradictions,
+    mergeProposals,
+    clarifications,
+  );
+
   const planRaw: LoreImportPlan = {
     importBatchId: args.importBatchId,
     fileName: args.fileName,
@@ -155,7 +212,7 @@ export async function buildLoreImportPlan(args: {
     })),
     mergeProposals,
     contradictions,
-    clarifications: [],
+    clarifications,
     importPlanWarnings: linkWarnings.length > 0 ? linkWarnings : undefined,
   };
 

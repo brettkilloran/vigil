@@ -8,6 +8,8 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type FocusEvent as ReactFocusEvent,
+  type PointerEvent as ReactPointerEvent,
   type ReactElement,
   type ReactNode,
   type Ref,
@@ -35,11 +37,21 @@ function innerRefOf(el: ReactElement) {
   return (el as unknown as { ref?: Ref<HTMLElement> }).ref;
 }
 
+function pointerOutLeavesTarget(
+  currentTarget: EventTarget | null,
+  relatedTarget: EventTarget | null,
+) {
+  if (!(currentTarget instanceof Element)) return true;
+  if (relatedTarget == null) return true;
+  if (!(relatedTarget instanceof Node)) return true;
+  return !currentTarget.contains(relatedTarget);
+}
+
 export function ArchitecturalTooltip({
   content,
   children,
   side = "top",
-  delayMs = 480,
+  delayMs = 280,
   disabled = false,
   /** When true, `aria-describedby` points at the tooltip while open (e.g. long help vs short label). */
   associateDescription = false,
@@ -168,8 +180,8 @@ export function ArchitecturalTooltip({
 
   useLayoutEffect(() => {
     if (!open) {
-      setPaintOpen(false);
-      return;
+      const id = requestAnimationFrame(() => setPaintOpen(false));
+      return () => cancelAnimationFrame(id);
     }
     const id = requestAnimationFrame(() => setPaintOpen(true));
     return () => cancelAnimationFrame(id);
@@ -186,6 +198,15 @@ export function ArchitecturalTooltip({
     };
   }, [open, updatePosition]);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") scheduleHide();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, scheduleHide]);
+
   useEffect(
     () => () => {
       clearShowTimer();
@@ -194,10 +215,8 @@ export function ArchitecturalTooltip({
   );
 
   const childProps = children.props as {
-    onPointerEnter?: React.PointerEventHandler<HTMLElement>;
-    onPointerLeave?: React.PointerEventHandler<HTMLElement>;
-    onFocus?: React.FocusEventHandler<HTMLElement>;
-    onBlur?: React.FocusEventHandler<HTMLElement>;
+    onPointerOver?: React.PointerEventHandler<HTMLElement>;
+    onPointerOut?: React.PointerEventHandler<HTMLElement>;
     "aria-describedby"?: string;
   };
   const childDescribedBy = childProps["aria-describedby"];
@@ -208,28 +227,32 @@ export function ArchitecturalTooltip({
         : tipId
       : childDescribedBy;
 
-  /* Ref callback runs on React commit, not during render (merge for anchor + forwarded ref). */
-  // eslint-disable-next-line react-hooks/refs -- false positive: callback assigns refs when DOM attaches
-  const trigger = cloneElement(children as ReactElement<Record<string, unknown>>, {
+  const onHitboxPointerOver = (e: ReactPointerEvent<HTMLSpanElement>) => {
+    childProps.onPointerOver?.(e as unknown as ReactPointerEvent<HTMLElement>);
+    if (e.pointerType === "touch") return;
+    scheduleShow(false);
+  };
+
+  const onHitboxPointerOut = (e: ReactPointerEvent<HTMLSpanElement>) => {
+    childProps.onPointerOut?.(e as unknown as ReactPointerEvent<HTMLElement>);
+    if (pointerOutLeavesTarget(e.currentTarget, e.relatedTarget)) scheduleHide();
+  };
+
+  const onHitboxFocusCapture = () => {
+    scheduleShow(true);
+  };
+
+  const onHitboxBlurCapture = (e: ReactFocusEvent<HTMLSpanElement>) => {
+    if (pointerOutLeavesTarget(e.currentTarget, e.relatedTarget)) scheduleHide();
+  };
+
+  const setHitboxRef = (node: HTMLSpanElement | null) => {
+    (triggerRef as { current: HTMLElement | null }).current = node;
+  };
+
+  const triggerChild = cloneElement(children as ReactElement<Record<string, unknown>>, {
     ref: (node: HTMLElement | null) => {
-      (triggerRef as { current: HTMLElement | null }).current = node;
       assignRef(innerRefOf(children), node);
-    },
-    onPointerEnter: (e: React.PointerEvent<HTMLElement>) => {
-      childProps.onPointerEnter?.(e);
-      scheduleShow(false);
-    },
-    onPointerLeave: (e: React.PointerEvent<HTMLElement>) => {
-      childProps.onPointerLeave?.(e);
-      scheduleHide();
-    },
-    onFocus: (e: React.FocusEvent<HTMLElement>) => {
-      childProps.onFocus?.(e);
-      scheduleShow(true);
-    },
-    onBlur: (e: React.FocusEvent<HTMLElement>) => {
-      childProps.onBlur?.(e);
-      scheduleHide();
     },
     "aria-describedby": mergedDescribedBy,
   });
@@ -253,7 +276,16 @@ export function ArchitecturalTooltip({
 
   return (
     <>
-      {trigger}
+      <span
+        ref={setHitboxRef}
+        className="hg-tooltip-hitbox"
+        onPointerOver={onHitboxPointerOver}
+        onPointerOut={onHitboxPointerOut}
+        onFocusCapture={onHitboxFocusCapture}
+        onBlurCapture={onHitboxBlurCapture}
+      >
+        {triggerChild}
+      </span>
       {portal}
     </>
   );

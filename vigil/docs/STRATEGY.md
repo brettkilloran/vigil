@@ -5,7 +5,7 @@ This file is the **short bridge** between the repo today and planning docs. **Ta
 ## Review summary (master plan)
 
 - **Product:** Personal infinite canvas (Spatial-inspired): notes, stickies, images, folders, stacks, clips, TTRPG lore later. **Single user, no auth.**
-- **Stack target:** Next.js App Router + React, **custom DOM canvas** (CSS `transform` pan/zoom, no `<canvas>`), **contentEditable**-buffered notes, **Tailwind 4**, **Drizzle + Neon + R2 + Anthropic** (lore) where needed; **d3-force** for the cloud graph overlay.
+- **Stack target:** Next.js App Router + React, **custom DOM canvas** for entities (CSS `transform` pan/zoom on card/folder nodes), **contentEditable**-buffered notes, **Tailwind 4**, **Drizzle + Neon + R2 + Anthropic** (lore) where needed; **d3-force** for the cloud graph overlay. **Optional:** a separate full-viewport **WebGL** `<canvas>` for the flow-reveal / boot visual (`VigilFlowRevealOverlay`) when canvas effects are on — not the data canvas.
 - **Explicit non-goals:** **No tldraw** (or any licensed whiteboard SDK). **No Auth.js / OAuth.**
 - **Data model:** Items are the source of truth on the server; `spaces.canvas_state` holds **camera only** `{ x, y, zoom }`. Schema includes `item_links`, `item_embeddings` (pgvector), stacks (`stack_id` / `stack_order`). **No `users` table** in the Drizzle schema.
 
@@ -16,7 +16,7 @@ This file is the **short bridge** between the repo today and planning docs. **Ta
 | Canvas | **tldraw removed**; **production shell = `ArchitecturalCanvasApp`** (`src/components/foundation/`) | Custom DOM + CSS transform layer + item cards (same intent as plan’s `VigilCanvas`) |
 | Persistence | **`items`** + camera in **`spaces.canvas_state`**; Neon **bootstrap + CRUD bridge** for architectural graph when not in demo mode | Same; legacy DB rows may still hold old `canvas_state` until migrated |
 | State | **Canvas graph:** React state inside `ArchitecturalCanvasApp` (single source of truth). **`src/model/canvas-types.ts`** is the shared **API/DB row** shape for mappers and routes. | Same product intent; legacy zustand spike removed from tree |
-| Motion | **CSS transitions** + pointer/wheel handlers in **`ArchitecturalCanvasApp`** (no framer-motion / @use-gesture in tree) | Same product feel; optional motion lib later |
+| Motion | **CSS transitions** + pointer/wheel handlers in **`ArchitecturalCanvasApp`**; optional **WebGL** flow overlay + timed **nav** dimming when canvas effects are on (**no** framer-motion / @use-gesture / three / gsap in tree) | Same product feel; optional motion lib later |
 | Styling | **Tailwind 4** + tokens; **Geist** + **Lora** (headings in editor); Vercel-ish neutrals + card tokens; chips/glass via `vigil-ui-classes` | Visual Design Bible polish + `VISUAL_REVAMP_PLAN` (icons, grouping) |
 | Cross-card links | Wiki-style `vigil:item:` / `[[` in note HTML + **`/api/item-links`** / **`/api/item-links/sync`**; **Links** panel resolves from **content** on **local canvas** (no Neon); cloud uses **`item_links`** API; **Graph** overlay (**d3-force**) via **`GET /api/spaces/[id]/graph`** | Richer editor (e.g. TipTap), LLM auto-linking, Phase 5 graph UX |
 | Lore / LLM | **`POST /api/lore/query`** — hybrid retrieval (FTS + vectors + graph) + **Anthropic**; **`LoreAskPanel`**; vault index via **OpenAI** embeddings + optional lore meta | Phase 5 consistency checker, bulk import, auto-link; optional streaming |

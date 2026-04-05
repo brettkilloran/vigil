@@ -17,6 +17,7 @@ import { Button } from "@/src/components/ui/Button";
 import { HEARTGARDEN_APP_VERSION } from "@/src/lib/app-version";
 
 import { ArchitecturalCanvasEffectsToggle } from "./ArchitecturalStatusBar";
+import { ArchitecturalTooltip } from "./ArchitecturalTooltip";
 import { VigilBootAmbientAudio, vigilBootAmbientFadeOutMs } from "./VigilBootAmbientAudio";
 import type { VigilBootFlowerGardenHandle } from "./VigilBootFlowerGarden";
 import { VigilBootFlowerGarden, VIGIL_BOOT_FLOWER_CELL_PX } from "./VigilBootFlowerGarden";
@@ -360,54 +361,57 @@ export function VigilAppBootScreen({
           aria-label="Boot flower tools"
         >
           <div className={styles.flowerToolbar}>
-            <Button
-              variant="ghost"
-              tone="glass"
-              size="icon"
-              iconOnly
-              isActive={flowerTool === "grow"}
-              aria-label="Plant mode — click to grow flowers"
-              title="Plant flowers"
-              disabled={exiting}
-              onClick={(ev) => {
-                ev.stopPropagation();
-                setFlowerTool("grow");
-              }}
-            >
-              <Plant size={18} weight="bold" aria-hidden />
-            </Button>
-            <Button
-              variant="ghost"
-              tone="glass"
-              size="icon"
-              iconOnly
-              isActive={flowerTool === "poison"}
-              aria-label="Poison mode — click or drag on the garden to wilt flowers"
-              title="Poison — click or drag to wilt"
-              disabled={exiting}
-              onClick={(ev) => {
-                ev.stopPropagation();
-                setFlowerTool("poison");
-              }}
-            >
-              <Skull size={18} weight="bold" aria-hidden />
-            </Button>
+            <ArchitecturalTooltip content="Plant flowers" side="bottom" delayMs={280}>
+              <Button
+                variant="ghost"
+                tone="glass"
+                size="icon"
+                iconOnly
+                isActive={flowerTool === "grow"}
+                aria-label="Plant mode — click to grow flowers"
+                disabled={exiting}
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  setFlowerTool("grow");
+                }}
+              >
+                <Plant size={18} weight="bold" aria-hidden />
+              </Button>
+            </ArchitecturalTooltip>
+            <ArchitecturalTooltip content="Poison — click or drag to wilt" side="bottom" delayMs={280}>
+              <Button
+                variant="ghost"
+                tone="glass"
+                size="icon"
+                iconOnly
+                isActive={flowerTool === "poison"}
+                aria-label="Poison mode — click or drag on the garden to wilt flowers"
+                disabled={exiting}
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  setFlowerTool("poison");
+                }}
+              >
+                <Skull size={18} weight="bold" aria-hidden />
+              </Button>
+            </ArchitecturalTooltip>
             <div className={styles.flowerToolbarSep} aria-hidden />
-            <Button
-              variant="ghost"
-              tone="glass"
-              size="icon"
-              iconOnly
-              aria-label="Clear all flowers"
-              title="Clear all flowers"
-              disabled={exiting}
-              onClick={(ev) => {
-                ev.stopPropagation();
-                flowerGardenRef.current?.clearAll();
-              }}
-            >
-              <Broom size={18} weight="bold" aria-hidden />
-            </Button>
+            <ArchitecturalTooltip content="Clear all flowers" side="bottom" delayMs={280}>
+              <Button
+                variant="ghost"
+                tone="glass"
+                size="icon"
+                iconOnly
+                aria-label="Clear all flowers"
+                disabled={exiting}
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  flowerGardenRef.current?.clearAll();
+                }}
+              >
+                <Broom size={18} weight="bold" aria-hidden />
+              </Button>
+            </ArchitecturalTooltip>
           </div>
         </div>
       </div>

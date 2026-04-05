@@ -13,6 +13,7 @@ import {
   type SyntheticEvent,
 } from "react";
 
+import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 
 import {
@@ -498,41 +499,43 @@ export function VigilBootAmbientAudio({
         ))}
       </div>
       {embedInChromeRow ? (
-        <Button
-          type="button"
-          variant="ghost"
-          tone="glass"
-          size="icon"
-          iconOnly
-          aria-label={ariaLabel}
-          title={title}
-          disabled={suspended}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
-        >
-          {icon}
-        </Button>
+        <ArchitecturalTooltip content={title} side="top" delayMs={320}>
+          <Button
+            type="button"
+            variant="ghost"
+            tone="glass"
+            size="icon"
+            iconOnly
+            aria-label={ariaLabel}
+            disabled={suspended}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle();
+            }}
+          >
+            {icon}
+          </Button>
+        </ArchitecturalTooltip>
       ) : (
         <div className={styles.panel} role="toolbar" aria-label="App audio — ambient and interface sounds">
           <div className={styles.toolbar}>
-            <Button
-              type="button"
-              variant="ghost"
-              tone="glass"
-              size="icon"
-              iconOnly
-              aria-label={ariaLabel}
-              title={title}
-              disabled={suspended}
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggle();
-              }}
-            >
-              {icon}
-            </Button>
+            <ArchitecturalTooltip content={title} side="top" delayMs={320}>
+              <Button
+                type="button"
+                variant="ghost"
+                tone="glass"
+                size="icon"
+                iconOnly
+                aria-label={ariaLabel}
+                disabled={suspended}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggle();
+                }}
+              >
+                {icon}
+              </Button>
+            </ArchitecturalTooltip>
           </div>
         </div>
       )}

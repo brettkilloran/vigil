@@ -34,6 +34,8 @@ Persistence: **`items`** rows + **`spaces.canvas_state`** as camera `{ x, y, zoo
 
 **Theme:** `useVigilTheme` sets `data-vigil-theme` when the user picks light/dark, and toggles **`class="dark"` on `<html>`** whenever the **resolved** appearance is dark (including “Match OS”). Tailwind `dark:*` is overridden in `app/globals.css` (`@custom-variant dark`) to follow that class—not only `prefers-color-scheme`—so chips, glass panels, and hovers match CSS variables.
 
+**Boot + optional flow overlay (default scenario):** Pre-activation **`VigilAppBootScreen`** gates full chrome until the user continues; **`technicalViewportReady`** / **`viewportRevealReady`** separate bootstrap/surface readiness from that choice. With **canvas effects** enabled, **`VigilFlowRevealOverlay`** (`src/components/transition-experiment/`) draws a full-viewport **WebGL** shader on top of the DOM canvas; with effects off it unmounts and **`enterSpace`** skips timed nav dimming. Boot flowers port **`VigilBootFlowerGarden`** below the overlay stack. Details and known gaps (e.g. no `enterSpace` cancel token yet): **`docs/BUILD_PLAN.md`** architecture table.
+
 ## Local dev, Node, and Storybook (guardrails)
 
 **Package manager:** Use **npm** only in the app directory (**`vigil/`** today — see **`docs/NAMING.md`** if renamed) (`package-lock.json`). Do not mix pnpm/yarn in the same tree without a deliberate migration.

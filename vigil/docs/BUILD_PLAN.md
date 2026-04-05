@@ -51,6 +51,7 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 3. **Retrieval observability** — `HEARTGARDEN_VAULT_DEBUG=1` enables `console.debug` RRF diagnostics in `vault-retrieval.ts` (shipped).
 4. **E2E** — Optional: palette → lore panel smoke (skip or mock LLM in CI).
 5. **Canvas version history (UX2 — decision for v1)** — **Export-first:** the canvas already supports **Export graph JSON** (Cmd+K). Treat that as the supported “checkpoint” workflow until a DB snapshot or `item_revisions` table is justified. **Space / graph snapshots** and **per-item revision logs** remain future options; any in-app restore must not silently fight the local undo stack (explicit “restore from server snapshot” only).
+6. **Space nav hardening (canvas effects on)** — **`enterSpace`** async paths can race if the user triggers another navigation before the prior fetch finishes; add a **generation / cancel token** so only the latest navigation applies merged bootstrap state. Optional: load **`VigilFlowRevealOverlay`** via **`next/dynamic` `{ ssr: false }`** to keep the main bundle lean; optional **short CSS-only** nav cue when effects are **off** if you want consistent feel without WebGL.
 
 ### Mid-term — master plan Phase 5 (TTRPG + intelligence)
 
