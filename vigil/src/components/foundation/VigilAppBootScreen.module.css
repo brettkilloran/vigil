@@ -17,6 +17,7 @@
   font-family: var(--font-vigil-boot-display, var(--font-geist-sans), serif);
   -webkit-font-smoothing: antialiased;
   pointer-events: auto;
+  user-select: none;
   opacity: 1;
   transition: opacity 720ms cubic-bezier(0.22, 0.82, 0.16, 1);
 }
@@ -100,9 +101,19 @@
     0 2px 14px color-mix(in oklch, var(--sys-color-black) 45%, transparent);
 }
 
-.titleItalic {
-  font-style: italic;
-  font-weight: 400;
+.titleCjk {
+  /* Next’s Noto_Sans_JP typings omit the japanese subset; OS CJK fonts carry 波途画電. */
+  font-family:
+    var(--font-noto-sans-jp),
+    "Hiragino Sans",
+    "Hiragino Kaku Gothic ProN",
+    "Noto Sans CJK JP",
+    "Yu Gothic UI",
+    "Meiryo",
+    "Segoe UI Symbol",
+    var(--font-vigil-boot-display, serif);
+  font-weight: 700;
+  letter-spacing: 0.12em;
 }
 
 .lineDecoration {
@@ -117,6 +128,14 @@
   );
 }
 
+.blurbWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+  max-width: min(32rem, 100%);
+  margin-inline: auto;
+}
+
 .blurb {
   max-width: 28rem;
   margin: 0;
@@ -127,6 +146,10 @@
   text-shadow:
     0 0 16px color-mix(in oklch, var(--bg-base) 82%, transparent),
     0 1px 3px color-mix(in oklch, var(--sys-color-black) 40%, transparent);
+}
+
+.blurbWrap .blurb {
+  max-width: none;
 }
 
 .activateWrap {
@@ -162,6 +185,13 @@
 .activateBtn:disabled {
   opacity: 0.42;
   cursor: not-allowed;
+}
+
+/* Sentence-case CTA (default .activateBtn forces uppercase). */
+.activateBtnSentence {
+  text-transform: none !important;
+  letter-spacing: 0.06em !important;
+  font-size: 0.72rem !important;
 }
 
 .waitHint {
