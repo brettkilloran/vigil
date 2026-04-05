@@ -26,6 +26,7 @@ import {
   getNeonSyncSnapshot,
   subscribeNeonSync,
 } from "@/src/lib/neon-sync-bus";
+import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
 
 export function ArchitecturalStatusBadge({
   showPulse = true,
@@ -258,6 +259,7 @@ function SaveAndVersionPopover({
   }, [open]);
 
   const handleExport = () => {
+    playVigilUiSound("button");
     onExportGraphJson?.();
     setOpen(false);
   };
@@ -370,12 +372,15 @@ export function ArchitecturalCanvasEffectsToggle({
   effectsEnabled,
   onEffectsEnabledChange,
   layout = "fixed",
+  trailingSlot,
 }: {
   effectsEnabled: boolean;
   /** Must be stable (e.g. `setState` from `useState`) — keep callback identity steady under React 19. */
   onEffectsEnabledChange: (next: boolean) => void;
   /** `fixed` = bottom-left chrome anchor; `inline` = in-flow strip; `bare` = button only (e.g. shared boot dock panel). */
   layout?: "fixed" | "inline" | "bare";
+  /** Extra controls in the same glass strip (e.g. app-wide audio mute). `fixed` layout only. */
+  trailingSlot?: ReactNode;
 }) {
   const checked = Boolean(effectsEnabled);
 
@@ -444,7 +449,16 @@ export function ArchitecturalCanvasEffectsToggle({
 
   return (
     <div className={styles.focusEffectsStrip} data-hg-chrome="canvas-effects-toggle">
-      <div className={`${styles.rootDockPanel} ${styles.focusEffectsDockPanel}`}>{control}</div>
+      <div
+        className={cx(
+          styles.rootDockPanel,
+          styles.focusEffectsDockPanel,
+          trailingSlot ? styles.focusEffectsDockCluster : undefined,
+        )}
+      >
+        {control}
+        {trailingSlot}
+      </div>
     </div>
   );
 }

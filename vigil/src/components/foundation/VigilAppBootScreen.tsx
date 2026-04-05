@@ -1,7 +1,15 @@
 "use client";
 
 import { Broom, Plant, Skull } from "@phosphor-icons/react";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MutableRefObject,
+  type PointerEvent,
+} from "react";
 import { createPortal } from "react-dom";
 
 import { Button } from "@/src/components/ui/Button";
@@ -29,6 +37,10 @@ export type VigilAppBootScreenProps = {
   /** Same state as post-boot bottom-left effects switch (main in-viewport chrome hidden until Enter). */
   canvasEffectsEnabled: boolean;
   onCanvasEffectsEnabledChange: (next: boolean) => void;
+  /** Increments when returning to auth (e.g. log out) so layered ambient remounts and restarts. */
+  bootAmbientEpoch?: number;
+  /** Parent calls ref.current() after log-out flushSync (same gesture as click) to satisfy autoplay policy. */
+  bootAmbientPrimePlaybackRef?: MutableRefObject<(() => void) | null>;
 };
 
 /**
@@ -118,6 +130,8 @@ export function VigilAppBootScreen({
   flowerPortalContainer,
   canvasEffectsEnabled,
   onCanvasEffectsEnabledChange,
+  bootAmbientEpoch = 0,
+  bootAmbientPrimePlaybackRef,
 }: VigilAppBootScreenProps) {
   const [exiting, setExiting] = useState(false);
   const [flowerTool, setFlowerTool] = useState<FlowerPointerTool>("grow");
@@ -481,7 +495,7 @@ export function VigilAppBootScreen({
           <div
             className={styles.bootChromeDockPanel}
             role="toolbar"
-            aria-label="Boot visual effects and ambient audio"
+            aria-label="Boot visual effects and app audio"
           >
             <ArchitecturalCanvasEffectsToggle
               layout="bare"
@@ -490,9 +504,11 @@ export function VigilAppBootScreen({
             />
             <div className={styles.bootChromeDockSep} aria-hidden />
             <VigilBootAmbientAudio
+              key={bootAmbientEpoch}
               embedInChromeRow
               suspended={exiting}
               reduceMotion={prefersReducedMotion}
+              primePlaybackFromGestureRef={bootAmbientPrimePlaybackRef}
             />
           </div>
           <div className={`${styles.metaBottomLeft} ${styles.mono}`}>

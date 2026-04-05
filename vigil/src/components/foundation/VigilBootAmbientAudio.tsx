@@ -4,14 +4,22 @@ import { SpeakerHigh, SpeakerSlash } from "@phosphor-icons/react";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
+  type MutableRefObject,
   type SyntheticEvent,
 } from "react";
 
 import { Button } from "@/src/components/ui/Button";
+
+import {
+  readAppAudioMuted,
+  subscribeAppAudioMuted,
+  writeAppAudioMuted,
+} from "@/src/lib/vigil-audio-prefs";
 
 import {
   VIGIL_BOOT_AMBIENT_LAYERS,
@@ -19,8 +27,6 @@ import {
 } from "./bootAmbientLayers";
 
 import styles from "./VigilBootAmbientAudio.module.css";
-
-const STORAGE_KEY = "heartgarden-boot-ambient-muted";
 
 const FADE_IN_S = 4.2;
 const FADE_OUT_S = 3.4;
@@ -121,6 +127,11 @@ export type VigilBootAmbientAudioProps = {
   style?: CSSProperties;
   /** Omit outer glass panel — render only the mute control for a shared chrome row (e.g. boot dock). */
   embedInChromeRow?: boolean;
+  /**
+   * Parent sets this; after mount the ref holds a no-arg fn that runs `tryStart` (for log-out click to call
+   * synchronously after `flushSync`, inside the user-gesture stack).
+   */
+  primePlaybackFromGestureRef?: MutableRefObject<(() => void) | null>;
 };
 
 export function VigilBootAmbientAudio({
@@ -129,6 +140,7 @@ export function VigilBootAmbientAudio({
   className,
   style,
   embedInChromeRow = false,
+  primePlaybackFromGestureRef,
 }: VigilBootAmbientAudioProps) {
   const fadeInS = reduceMotion ? FADE_IN_S_REDUCED : FADE_IN_S;
   const fadeOutS = reduceMotion ? FADE_OUT_S_REDUCED : FADE_OUT_S;
@@ -141,9 +153,10 @@ export function VigilBootAmbientAudio({
   const fadeRafCancelRef = useRef<(() => void) | null>(null);
   const fadeOutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [muted, setMuted] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
+  const [muted, setMuted] = useState(() => readAppAudioMuted());
   const [blocked, setBlocked] = useState(false);
+
+  useEffect(() => subscribeAppAudioMuted(() => setMuted(readAppAudioMuted())), []);
 
   const clearFallbackFade = useCallback(() => {
     fadeRafCancelRef.current?.();
@@ -237,20 +250,31 @@ export function VigilBootAmbientAudio({
     );
   }, [clearFadeOutTimer, clearFallbackFade, fadeOutS]);
 
-  useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect -- hydrate mute preference from localStorage after mount */
-    try {
-      setMuted(localStorage.getItem(STORAGE_KEY) === "1");
-    } catch {
-      /* ignore */
-    }
-    setHydrated(true);
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, []);
-
-  useEffect(() => {
+  const tryStart = useCallback(async () => {
     const elements = getAudioElements(audioRefs.current);
     if (!elements) return;
+    try {
+      await resumeAndPlayAll(audioCtxRef.current, elements);
+      writeAppAudioMuted(false);
+      setBlocked(false);
+      scheduleFadeIn();
+    } catch {
+      setBlocked(true);
+    }
+  }, [scheduleFadeIn]);
+
+  useLayoutEffect(() => {
+    const elements = getAudioElements(audioRefs.current);
+    if (!elements) return;
+
+    const assignPrimePlayback = () => {
+      if (primePlaybackFromGestureRef) {
+        primePlaybackFromGestureRef.current = () => {
+          if (readAppAudioMuted()) return;
+          void tryStart();
+        };
+      }
+    };
 
     for (const el of elements) {
       el.loop = true;
@@ -269,7 +293,12 @@ export function VigilBootAmbientAudio({
         for (let i = 0; i < elements.length; i++) {
           elements[i].volume = 0;
         }
-        return;
+        assignPrimePlayback();
+        return () => {
+          if (primePlaybackFromGestureRef) {
+            primePlaybackFromGestureRef.current = null;
+          }
+        };
       }
 
       ctx = new AC();
@@ -305,7 +334,12 @@ export function VigilBootAmbientAudio({
       }
     }
 
+    assignPrimePlayback();
+
     return () => {
+      if (primePlaybackFromGestureRef) {
+        primePlaybackFromGestureRef.current = null;
+      }
       clearFallbackFade();
       clearFadeOutTimer();
       webGainsRef.current = null;
@@ -314,40 +348,15 @@ export function VigilBootAmbientAudio({
         audioCtxRef.current = null;
       }
     };
-  }, [clearFadeOutTimer, clearFallbackFade]);
+  }, [clearFadeOutTimer, clearFallbackFade, primePlaybackFromGestureRef, tryStart]);
 
-  const tryStart = useCallback(async () => {
-    const elements = getAudioElements(audioRefs.current);
-    if (!elements) return;
-    try {
-      await resumeAndPlayAll(audioCtxRef.current, elements);
-      setBlocked(false);
-      scheduleFadeIn();
-    } catch {
-      setBlocked(true);
-    }
-  }, [scheduleFadeIn]);
-
-  useEffect(() => {
-    if (!hydrated || muted || suspended) return;
-    const elements = getAudioElements(audioRefs.current);
-    if (!elements) return;
-
-    let cancelled = false;
-    void resumeAndPlayAll(audioCtxRef.current, elements)
-      .then(() => {
-        if (!cancelled) {
-          setBlocked(false);
-          scheduleFadeIn();
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setBlocked(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [hydrated, muted, suspended, scheduleFadeIn]);
+  /* useLayoutEffect: start audio in the same turn as a log-out flushSync so browser autoplay policy accepts play(). */
+  useLayoutEffect(() => {
+    if (muted || suspended) return;
+    /* tryStart → setState only after await play() (microtask); rule flags any effect-invoked path that touches setState. */
+    /* eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: gesture window + async blocked/fade updates */
+    void tryStart();
+  }, [muted, suspended, tryStart]);
 
   useEffect(() => {
     if (!suspended) return;
@@ -358,7 +367,7 @@ export function VigilBootAmbientAudio({
   }, [clearFadeOutTimer, scheduleFadeOutAndPause, suspended]);
 
   useEffect(() => {
-    if (!hydrated || !muted) return;
+    if (!muted) return;
     const elements = getAudioElements(audioRefs.current);
     if (!elements) return;
 
@@ -381,16 +390,12 @@ export function VigilBootAmbientAudio({
     for (let i = 0; i < elements.length; i++) {
       elements[i].volume = viaWebAudio ? 1 : clamp01(peaks[i]);
     }
-  }, [clearFadeOutTimer, clearFallbackFade, hydrated, muted]);
+  }, [clearFadeOutTimer, clearFallbackFade, muted]);
 
   const onToggle = useCallback(() => {
     if (muted) {
+      writeAppAudioMuted(false);
       setMuted(false);
-      try {
-        localStorage.setItem(STORAGE_KEY, "0");
-      } catch {
-        /* ignore */
-      }
       if (suspended) return;
       void tryStart();
       return;
@@ -401,12 +406,8 @@ export function VigilBootAmbientAudio({
       return;
     }
 
+    writeAppAudioMuted(true);
     setMuted(true);
-    try {
-      localStorage.setItem(STORAGE_KEY, "1");
-    } catch {
-      /* ignore */
-    }
 
     const elements = getAudioElements(audioRefs.current);
     if (!elements) return;
@@ -440,17 +441,17 @@ export function VigilBootAmbientAudio({
 
   const title =
     muted
-      ? "Unmute ambient audio"
+      ? "Unmute audio (ambient layers and interface sounds)"
       : blocked
-        ? "Start ambient audio (click — autoplay was blocked)"
-        : "Mute ambient audio";
+        ? "Start audio (click — autoplay was blocked)"
+        : "Mute audio (ambient layers and interface sounds)";
 
   const ariaLabel =
     muted
-      ? "Unmute layered ambient audio on the auth screen"
+      ? "Unmute layered ambient audio and interface sounds"
       : blocked
         ? "Start ambient audio"
-        : "Mute layered ambient audio on the auth screen";
+        : "Mute layered ambient audio and interface sounds";
 
   const audioRefCallbacks = useMemo(
     () =>
@@ -504,7 +505,7 @@ export function VigilBootAmbientAudio({
           {icon}
         </Button>
       ) : (
-        <div className={styles.panel} role="toolbar" aria-label="Ambient audio">
+        <div className={styles.panel} role="toolbar" aria-label="App audio — ambient and interface sounds">
           <div className={styles.toolbar}>
             <Button
               type="button"

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
+import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
 
 import { Button } from "@/src/components/ui/Button";
 
@@ -99,6 +100,7 @@ export function LoreAskPanel({
   const submit = useCallback(async () => {
     const q = question.trim();
     if (!q || loading) return;
+    playVigilUiSound("button");
     setLoading(true);
     setError(null);
     setAnswer(null);
@@ -127,14 +129,17 @@ export function LoreAskPanel({
           if (Array.isArray(fe) && fe[0]) msg = fe[0];
           else msg = "Invalid request";
         }
+        playVigilUiSound("caution");
         setError(msg);
         if (Array.isArray(data.sources)) setSources(data.sources);
         return;
       }
+      playVigilUiSound("notification");
       setAnswer(data.answer ?? "");
       setSources(Array.isArray(data.sources) ? data.sources : []);
       setModel(typeof data.model === "string" ? data.model : null);
     } catch {
+      playVigilUiSound("caution");
       setError("Network error");
     } finally {
       setLoading(false);

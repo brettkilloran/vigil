@@ -295,7 +295,7 @@
   justify-content: center;
   align-items: center;
   text-align: center;
-  padding: 2rem 1rem;
+  padding: 1.5rem 1rem;
 }
 
 /* Kicker + title + blurbs: wrapper for hover-glitch (keeps entrance animations on children). */
@@ -431,7 +431,7 @@
 }
 
 .kicker {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.35rem;
   text-shadow:
     0 0 18px color-mix(in oklch, var(--bg-base) 80%, transparent),
     0 1px 2px color-mix(in oklch, var(--sys-color-black) 50%, transparent);
@@ -468,10 +468,10 @@
 .blurbWrap {
   display: flex;
   flex-direction: column;
-  gap: 1.35rem;
+  gap: 1.05rem;
   width: 100%;
   max-width: 800px;
-  margin-top: clamp(3.5rem, 12vh, 7rem);
+  margin-top: clamp(2.25rem, 8vh, 4.75rem);
   margin-inline: auto;
 }
 
@@ -494,7 +494,7 @@
 }
 
 .activateWrap {
-  margin-top: 2.25rem;
+  margin-top: 1.75rem;
   display: flex;
   flex-direction: column;
   align-items: center;

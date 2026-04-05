@@ -2201,6 +2201,18 @@
   width: fit-content;
 }
 
+.focusEffectsDockCluster {
+  gap: 2px;
+}
+
+.focusEffectsDockSep {
+  width: 1px;
+  height: 12px;
+  flex-shrink: 0;
+  margin-inline: 2px;
+  background: var(--sem-border-strong);
+}
+
 /* Same control in normal flow (e.g. legacy inline meta). Button keeps pointer-events: auto. */
 .focusEffectsStripInline {
   display: flex;

@@ -23,6 +23,7 @@ import {
 import { VigilFlowRevealOverlay } from "@/src/components/transition-experiment/VigilFlowRevealOverlay";
 
 import { VigilAppBootScreen } from "./VigilAppBootScreen";
+import { VigilAppChromeAudioMuteButton } from "./VigilAppChromeAudioMuteButton";
 import styles from "./ArchitecturalCanvasApp.module.css";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
@@ -85,6 +86,7 @@ import {
   neonSyncUnbumpPending,
   subscribeNeonSync,
 } from "@/src/lib/neon-sync-bus";
+import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
 import {
   cloneArchitecturalGraph,
@@ -899,6 +901,7 @@ export function ArchitecturalCanvasApp({
   const [spacePanning, setSpacePanning] = useState(false);
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [connectionMode, setConnectionMode] = useState<ConnectionDockMode>("move");
+  const connectionModeSoundPrevRef = useRef<ConnectionDockMode>("move");
   const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
   const [connectionColor, setConnectionColor] = useState(CONNECTION_DEFAULT_COLOR);
   const [connectionCursorWorld, setConnectionCursorWorld] = useState<{ x: number; y: number } | null>(
@@ -913,6 +916,8 @@ export function ArchitecturalCanvasApp({
   const [navTransitionActive, setNavTransitionActive] = useState(false);
   const [canvasEffectsEnabled, setCanvasEffectsEnabled] = useState(true);
   const canvasEffectsEnabledRef = useRef(true);
+  const canvasEffectsSoundInitRef = useRef(false);
+  const canvasEffectsSoundPrevRef = useRef(true);
   /** Radix controlled Switch + two instances (boot + chrome) can loop in React 19; guard + unmount duplicate. */
   const handleCanvasEffectsEnabledChange = useCallback((next: boolean) => {
     setCanvasEffectsEnabled((prev) => (prev === next ? prev : next));
@@ -920,18 +925,32 @@ export function ArchitecturalCanvasApp({
 
   /** Default route: user must click Activate; flow runs 0→1 only then. Nested/corrupt: no gate. */
   const [canvasSessionActivated, setCanvasSessionActivated] = useState(false);
+  /** One celebration SFX per boot stay (reset on log out). */
+  const bootCelebrationPlayedRef = useRef(false);
+  const neonUiSoundRef = useRef<{
+    lastError: string | null;
+    busy: boolean;
+    idleTimer: ReturnType<typeof setTimeout> | null;
+  }>({ lastError: null, busy: false, idleTimer: null });
   /** Boot UI removed after exit animation (or immediately if reduced motion). */
   const [bootLayerDismissed, setBootLayerDismissed] = useState(() => scenario !== "default");
   /** Lets reduced-motion users see the auth splash again after explicit Log out. */
   const [bootAfterLogout, setBootAfterLogout] = useState(false);
+  /** Bumps when returning to auth so boot ambient remounts and can play again after tear-down. */
+  const [bootAmbientEpoch, setBootAmbientEpoch] = useState(0);
+  /** Populated by `VigilBootAmbientAudio`; log-out handler calls after `flushSync` (same gesture as click). */
+  const bootAmbientPrimePlaybackRef = useRef<(() => void) | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   const [focusOpen, setFocusOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const paletteOpenSoundPrevRef = useRef(false);
   const [lorePanelOpen, setLorePanelOpen] = useState(false);
   const lorePanelOpenRef = useRef(false);
+  const lorePanelOpenSoundPrevRef = useRef(false);
   const [graphOverlayOpen, setGraphOverlayOpen] = useState(false);
+  const graphOverlayOpenSoundPrevRef = useRef(false);
   const [loreImportDraft, setLoreImportDraft] = useState<LoreImportDraftState | null>(null);
   const [loreImportCommitting, setLoreImportCommitting] = useState(false);
   const loreImportDraftRef = useRef<LoreImportDraftState | null>(null);
@@ -1000,6 +1019,8 @@ export function ArchitecturalCanvasApp({
   const stackDragHullOrderedIdsRef = useRef<string[] | null>(null);
   /** Latest stack order during an active stack drag (synced before React re-render). */
   const stackModalOrderedIdsDuringDragRef = useRef<string[] | null>(null);
+  /** Baseline order at stack drag start (for reorder vs eject SFX). */
+  const stackModalDragStartOrderedIdsRef = useRef<string[] | null>(null);
   const stackEjectTouchedOutsideRef = useRef(false);
   /** After user leaves the eject hull then returns, skip live reorder until mouseup (prevents swap spam). */
   const stackBlockLiveReorderRef = useRef(false);
@@ -1124,6 +1145,83 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   useEffect(() => subscribeNeonSync(() => setCloudLinksBar(getNeonSyncSnapshot().cloudEnabled)), []);
+
+  useEffect(() => {
+    const snap0 = getNeonSyncSnapshot();
+    const r0 = neonUiSoundRef.current;
+    r0.lastError = snap0.lastError;
+    r0.busy = snap0.pending > 0 || snap0.inFlight > 0;
+  }, []);
+
+  useEffect(() => {
+    return subscribeNeonSync(() => {
+      const sync = getNeonSyncSnapshot();
+      const r = neonUiSoundRef.current;
+      if (!sync.cloudEnabled) {
+        r.lastError = sync.lastError;
+        r.busy = sync.pending > 0 || sync.inFlight > 0;
+        if (r.idleTimer) {
+          clearTimeout(r.idleTimer);
+          r.idleTimer = null;
+        }
+        return;
+      }
+      const err = sync.lastError;
+      if (!r.lastError && err) playVigilUiSound("caution");
+      if (r.lastError && !err) playVigilUiSound("notification");
+      const busy = sync.pending > 0 || sync.inFlight > 0;
+      if (r.busy && !busy && !err) {
+        if (r.idleTimer) clearTimeout(r.idleTimer);
+        r.idleTimer = setTimeout(() => {
+          playVigilUiSound("notification");
+          neonUiSoundRef.current.idleTimer = null;
+        }, 420);
+      }
+      if (busy && r.idleTimer) {
+        clearTimeout(r.idleTimer);
+        r.idleTimer = null;
+      }
+      r.lastError = err;
+      r.busy = busy;
+    });
+  }, []);
+
+  useEffect(() => {
+    const prev = paletteOpenSoundPrevRef.current;
+    paletteOpenSoundPrevRef.current = paletteOpen;
+    if (prev !== paletteOpen) playVigilUiSound("tap");
+  }, [paletteOpen]);
+
+  useEffect(() => {
+    if (lorePanelOpenSoundPrevRef.current && !lorePanelOpen) playVigilUiSound("tap");
+    lorePanelOpenSoundPrevRef.current = lorePanelOpen;
+  }, [lorePanelOpen]);
+
+  useEffect(() => {
+    if (graphOverlayOpenSoundPrevRef.current && !graphOverlayOpen) playVigilUiSound("tap");
+    graphOverlayOpenSoundPrevRef.current = graphOverlayOpen;
+  }, [graphOverlayOpen]);
+
+  useEffect(() => {
+    const prev = connectionModeSoundPrevRef.current;
+    connectionModeSoundPrevRef.current = connectionMode;
+    if (prev === connectionMode) return;
+    if (prev === "move" && connectionMode !== "move") playVigilUiSound("toggle_on");
+    else if (prev !== "move" && connectionMode === "move") playVigilUiSound("toggle_off");
+    else playVigilUiSound("select");
+  }, [connectionMode]);
+
+  useEffect(() => {
+    if (!canvasEffectsSoundInitRef.current) {
+      canvasEffectsSoundInitRef.current = true;
+      canvasEffectsSoundPrevRef.current = canvasEffectsEnabled;
+      return;
+    }
+    if (canvasEffectsSoundPrevRef.current !== canvasEffectsEnabled) {
+      playVigilUiSound(canvasEffectsEnabled ? "toggle_on" : "toggle_off");
+      canvasEffectsSoundPrevRef.current = canvasEffectsEnabled;
+    }
+  }, [canvasEffectsEnabled]);
 
   const schedulePersistContentBody = useCallback((entityId: string, bodyHtml: string) => {
     if (!persistNeonRef.current || !isUuidLike(entityId)) return;
@@ -1311,6 +1409,18 @@ export function ArchitecturalCanvasApp({
     });
     setHistoryEpoch((n) => n + 1);
   }, [closeStackModal]);
+
+  const undoFromDock = useCallback(() => {
+    if (undoPastRef.current.length === 0) return;
+    undo();
+    playVigilUiSound("tap");
+  }, [undo]);
+
+  const redoFromDock = useCallback(() => {
+    if (undoFutureRef.current.length === 0) return;
+    redo();
+    playVigilUiSound("tap");
+  }, [redo]);
 
   void historyEpoch;
   const canUndo = undoPastRef.current.length > 0;
@@ -2507,21 +2617,30 @@ export function ArchitecturalCanvasApp({
   useLayoutEffect(() => {
     if (scenario !== "default") return;
     if (!prefersReducedMotion) return;
+    /* Do not dismiss boot while showing the post–log out splash (same deps can re-run after logout). */
+    if (bootAfterLogout) return;
     setCanvasSessionActivated(true);
     setBootLayerDismissed(true);
-  }, [scenario, prefersReducedMotion]);
+  }, [scenario, prefersReducedMotion, bootAfterLogout]);
 
   const handleLogOutToAuth = useCallback(() => {
     if (scenario !== "default") return;
-    setFocusOpen(false);
-    setGalleryOpen(false);
-    setPaletteOpen(false);
-    setLorePanelOpen(false);
-    setGraphOverlayOpen(false);
-    setStackModal(null);
-    setCanvasSessionActivated(false);
-    setBootLayerDismissed(false);
-    if (prefersReducedMotion) setBootAfterLogout(true);
+    /* Synchronous commit so boot ambient layoutEffects run while the log-out click still counts as user gesture (autoplay). */
+    flushSync(() => {
+      bootCelebrationPlayedRef.current = false;
+      setFocusOpen(false);
+      setGalleryOpen(false);
+      setPaletteOpen(false);
+      setLorePanelOpen(false);
+      setGraphOverlayOpen(false);
+      setStackModal(null);
+      setCanvasSessionActivated(false);
+      setBootLayerDismissed(false);
+      setBootAmbientEpoch((e) => e + 1);
+      if (prefersReducedMotion) setBootAfterLogout(true);
+    });
+    /* Same synchronous stack as log-out click: Web Audio + media element play() must run here for autoplay. */
+    bootAmbientPrimePlaybackRef.current?.();
   }, [scenario, prefersReducedMotion]);
 
   const centerCoords = useCallback(() => {
@@ -2552,6 +2671,7 @@ export function ArchitecturalCanvasApp({
     }
     const center = centerCoords();
     setLoreImportCommitting(true);
+    playVigilUiSound("button");
     try {
       const res = await fetch("/api/lore/import/commit", {
         method: "POST",
@@ -2575,6 +2695,7 @@ export function ArchitecturalCanvasApp({
         linkWarnings?: string[];
       };
       if (!res.ok || !data.ok) {
+        playVigilUiSound("caution");
         window.alert(typeof data.error === "string" ? data.error : "Commit failed");
         return;
       }
@@ -2590,8 +2711,10 @@ export function ArchitecturalCanvasApp({
           setMaxZIndex((z) => Math.max(z, ...boot.items.map((i) => i.zIndex)));
         }
       }
+      playVigilUiSound("celebration");
       setLoreImportDraft(null);
     } catch {
+      playVigilUiSound("caution");
       window.alert("Commit request failed");
     } finally {
       setLoreImportCommitting(false);
@@ -2943,6 +3066,12 @@ export function ArchitecturalCanvasApp({
       const snap = graphRef.current;
       if (!snap.spaces[spaceId] || spaceId === activeSpaceIdRef.current) return;
 
+      const fromDepth = navigationPathRef.current.length;
+      const nextPathPreview = buildPathToSpace(spaceId, snap.spaces, snap.rootSpaceId);
+      const toDepth = nextPathPreview.length;
+      if (toDepth > fromDepth) playVigilUiSound("transition_down");
+      else if (toDepth < fromDepth) playVigilUiSound("transition_up");
+
       const applySpaceNavigation = (
         merged: CanvasGraph | null,
         bootstrapCamera: { x: number; y: number; zoom: number } | null,
@@ -3101,6 +3230,7 @@ export function ArchitecturalCanvasApp({
       }
 
       panToEntity();
+      playVigilUiSound("select");
     },
     [enterSpace, openFocusMode],
   );
@@ -3649,26 +3779,33 @@ export function ArchitecturalCanvasApp({
   const runPaletteAction = useCallback((actionId: string) => {
     if (actionId === "create-note") {
       createNewNode("default");
+      playVigilUiSound("select");
       return;
     }
     if (actionId === "create-checklist") {
       createNewNode("task");
+      playVigilUiSound("select");
       return;
     }
     if (actionId === "create-media") {
       createNewNode("media");
+      playVigilUiSound("select");
       return;
     }
     if (actionId === "create-folder") {
       createNewNode("folder");
+      playVigilUiSound("select");
       return;
     }
     if (actionId === "export-json") {
+      playVigilUiSound("button");
       exportGraphJson();
       return;
     }
     if (actionId === "toggle-theme") {
       const html = document.documentElement;
+      const willBeDark = !html.classList.contains("dark");
+      playVigilUiSound(willBeDark ? "toggle_on" : "toggle_off");
       html.classList.toggle("dark");
       html.dataset.vigilTheme = html.classList.contains("dark") ? "dark" : "light";
       return;
@@ -3677,6 +3814,7 @@ export function ArchitecturalCanvasApp({
       const ids = activeSpace?.entityIds ?? [];
       if (ids.length === 0) {
         recenterToOrigin();
+        playVigilUiSound("select");
         return;
       }
       const slots = ids
@@ -3684,6 +3822,7 @@ export function ArchitecturalCanvasApp({
         .filter((slot): slot is { x: number; y: number } => !!slot);
       if (slots.length === 0) {
         recenterToOrigin();
+        playVigilUiSound("select");
         return;
       }
       const minX = Math.min(...slots.map((slot) => slot.x));
@@ -3706,21 +3845,26 @@ export function ArchitecturalCanvasApp({
       const centerY = (minY + maxY) / 2;
       setTranslateX(width / 2 - centerX * nextScale);
       setTranslateY(height / 2 - centerY * nextScale);
+      playVigilUiSound("select");
       return;
     }
     if (actionId === "recenter") {
       recenterToOrigin();
+      playVigilUiSound("select");
       return;
     }
     if (actionId === "ask-lore") {
       setLorePanelOpen(true);
+      playVigilUiSound("select");
       return;
     }
     if (actionId === "link-graph") {
       setGraphOverlayOpen(true);
+      playVigilUiSound("select");
       return;
     }
     if (actionId === "import-lore") {
+      playVigilUiSound("select");
       loreImportFileInputRef.current?.click();
     }
   }, [activeSpace?.entityIds, createNewNode, exportGraphJson, recenterToOrigin]);
@@ -4342,6 +4486,7 @@ export function ArchitecturalCanvasApp({
       const drag = stackDragRef.current;
       const hullSnap = stackDragHullOrderedIdsRef.current;
       const orderedSnap = stackModalOrderedIdsDuringDragRef.current;
+      const stackOrderAtDragStart = stackModalDragStartOrderedIdsRef.current;
 
       setStackDrag(null);
       stackDragRef.current = null;
@@ -4349,6 +4494,7 @@ export function ArchitecturalCanvasApp({
       lastStackEjectPreviewRef.current = false;
       stackDragHullOrderedIdsRef.current = null;
       stackModalOrderedIdsDuringDragRef.current = null;
+      stackModalDragStartOrderedIdsRef.current = null;
       stackEjectTouchedOutsideRef.current = false;
       stackBlockLiveReorderRef.current = false;
 
@@ -4474,6 +4620,7 @@ export function ArchitecturalCanvasApp({
           });
           setMaxZIndex((z) => z + 1);
           setStackModalEjectCount((count) => count + 1);
+          playVigilUiSound("swipe");
           closeStackModal();
           if (persistNeonRef.current) {
             const persistIds = [drag.entityId, ...sortedRemaining.map((e) => e.id)];
@@ -4486,6 +4633,11 @@ export function ArchitecturalCanvasApp({
       }
       if (drag.intent === "reorder") {
         const ordered = orderedIdsForCommit;
+        const orderChanged =
+          stackOrderAtDragStart != null &&
+          (stackOrderAtDragStart.length !== ordered.length ||
+            stackOrderAtDragStart.some((id, i) => id !== ordered[i]));
+        if (orderChanged) playVigilUiSound("swipe");
         setGraph((prev) => {
           const next = shallowCloneGraph(prev);
           const topOrder = ordered.length - 1;
@@ -5055,8 +5207,14 @@ export function ArchitecturalCanvasApp({
       if (!mod) return;
       if (event.key.toLowerCase() !== "z") return;
       event.preventDefault();
-      if (event.shiftKey) redo();
-      else undo();
+      if (event.shiftKey) {
+        if (undoFutureRef.current.length === 0) return;
+        redo();
+      } else {
+        if (undoPastRef.current.length === 0) return;
+        undo();
+      }
+      playVigilUiSound("tap");
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -5942,7 +6100,15 @@ export function ArchitecturalCanvasApp({
           flowerPortalContainer={bootFlowerPortalHost}
           canvasEffectsEnabled={canvasEffectsEnabled}
           onCanvasEffectsEnabledChange={handleCanvasEffectsEnabledChange}
-          onActivate={() => setCanvasSessionActivated(true)}
+          bootAmbientEpoch={bootAmbientEpoch}
+          bootAmbientPrimePlaybackRef={bootAmbientPrimePlaybackRef}
+          onActivate={() => {
+            if (!bootCelebrationPlayedRef.current) {
+              bootCelebrationPlayedRef.current = true;
+              playVigilUiSound("celebration");
+            }
+            setCanvasSessionActivated(true);
+          }}
           onExitComplete={() => {
             setBootLayerDismissed(true);
             setBootAfterLogout(false);
@@ -6423,6 +6589,14 @@ export function ArchitecturalCanvasApp({
           <ArchitecturalCanvasEffectsToggle
             effectsEnabled={canvasEffectsEnabled}
             onEffectsEnabledChange={handleCanvasEffectsEnabledChange}
+            trailingSlot={
+              !bootLayerVisible ? (
+                <>
+                  <div className={styles.focusEffectsDockSep} aria-hidden />
+                  <VigilAppChromeAudioMuteButton />
+                </>
+              ) : null
+            }
           />
         ) : null}
         <ArchitecturalViewportMetrics
@@ -6439,8 +6613,8 @@ export function ArchitecturalCanvasApp({
             activeBlockTag={formatCommandState.blockTag}
             onFormat={runFormat}
             onCreateNode={createNewNode}
-            onUndo={undo}
-            onRedo={redo}
+            onUndo={undoFromDock}
+            onRedo={redoFromDock}
             canUndo={canUndo}
             canRedo={canRedo}
             undoLabel={`Undo (${modKeyHints.undo})`}
@@ -6939,6 +7113,7 @@ export function ArchitecturalCanvasApp({
                   const visibleHull = stackModal.orderedIds.slice(0, STACK_MODAL_MAX_ITEMS);
                   stackDragHullOrderedIdsRef.current = visibleHull;
                   stackModalOrderedIdsDuringDragRef.current = stackModal.orderedIds.slice();
+                  stackModalDragStartOrderedIdsRef.current = stackModal.orderedIds.slice();
                   stackEjectTouchedOutsideRef.current = false;
                   stackBlockLiveReorderRef.current = false;
                   lastStackEjectPreviewRef.current = false;
@@ -7165,8 +7340,8 @@ export function ArchitecturalCanvasApp({
             activeBlockTag={formatCommandState.blockTag}
             onFormat={runFormat}
             onCreateNode={createNewNode}
-            onUndo={undo}
-            onRedo={redo}
+            onUndo={undoFromDock}
+            onRedo={redoFromDock}
             canUndo={canUndo}
             canRedo={canRedo}
             undoLabel={`Undo (${modKeyHints.undo})`}
