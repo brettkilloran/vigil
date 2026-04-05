@@ -8,7 +8,9 @@ import {
   readBootEnv,
   verifyBootSessionCookie,
 } from "@/src/lib/heartgarden-boot-session";
+import { isHeartgardenPlayerLayerMisconfigured } from "@/src/lib/heartgarden-player-layer-env";
 import { assertSpaceExists } from "@/src/lib/spaces";
+import { isHeartgardenGmPlayerSpaceBreakGlassEnabled } from "@/src/lib/heartgarden-gm-break-glass";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
 
 /** Stable JSON for visitor / invalid-session denials (no hints). */
@@ -17,27 +19,49 @@ export const HEARTGARDEN_API_FORBIDDEN = { ok: false, error: "Forbidden." } as c
 export type HeartgardenApiBootContext =
   | { role: "gm" }
   | { role: "visitor"; playerSpaceId: string }
+  | { role: "demo" }
   | { role: "visitor_forbidden" }
-  /** Boot gate on and `hg_boot` cookie present but signature/tamper invalid. */
-  | { role: "session_invalid" };
+  | { role: "session_invalid" }
+  /** Boot gate on and no `hg_boot` cookie (middleware should block `/api/*` first). */
+  | { role: "unauthenticated" };
 
 type CookieJar = { get: (name: string) => { value?: string } | undefined };
 
+/** Neon space UUID hidden from GM workspace when set (Players-only space). */
+export function heartgardenPlayerSpaceIdExcludedFromGm(): string | undefined {
+  return parseSpaceIdParam((process.env.HEARTGARDEN_PLAYER_SPACE_ID ?? "").trim() || null);
+}
+
+export function gmMayAccessSpaceId(ctx: HeartgardenApiBootContext, spaceId: string): boolean {
+  if (ctx.role !== "gm") return true;
+  const hid = heartgardenPlayerSpaceIdExcludedFromGm();
+  if (!hid) return true;
+  if (spaceId === hid && isHeartgardenGmPlayerSpaceBreakGlassEnabled()) return true;
+  return spaceId !== hid;
+}
+
+export function gmMayAccessItemSpace(ctx: HeartgardenApiBootContext, itemSpaceId: string): boolean {
+  return gmMayAccessSpaceId(ctx, itemSpaceId);
+}
+
 /**
- * Resolve boot tier for API routes. GM path when gate off, E2E, pre-PIN (no cookie), or valid access cookie.
- * Visitor path only with valid visitor cookie + valid `HEARTGARDEN_PLAYER_SPACE_ID` env.
+ * Resolve boot tier for API routes. GM path when gate off, E2E, or valid access cookie.
+ * Visitor path only with valid visitor cookie + valid `HEARTGARDEN_PLAYER_SPACE_ID` env and config.
  */
 export function parseHeartgardenApiBootContext(jar: CookieJar): HeartgardenApiBootContext {
   const { gateEnabled, sessionSecret } = readBootEnv();
   if (!gateEnabled || isPlaywrightE2E()) return { role: "gm" };
 
   const raw = jar.get(HEARTGARDEN_BOOT_COOKIE_NAME)?.value;
-  if (!raw) return { role: "gm" };
+  if (!raw) return { role: "unauthenticated" };
 
   const payload = verifyBootSessionCookie(sessionSecret, raw);
   if (!payload) return { role: "session_invalid" };
 
   if (payload.tier === "access") return { role: "gm" };
+  if (payload.tier === "demo") return { role: "demo" };
+
+  if (isHeartgardenPlayerLayerMisconfigured()) return { role: "visitor_forbidden" };
 
   const playerSpaceId = parseSpaceIdParam((process.env.HEARTGARDEN_PLAYER_SPACE_ID ?? "").trim() || null);
   if (!playerSpaceId) return { role: "visitor_forbidden" };
@@ -54,7 +78,17 @@ export function heartgardenApiForbiddenJsonResponse(): Response {
 }
 
 export function isHeartgardenVisitorBlocked(ctx: HeartgardenApiBootContext): boolean {
-  return ctx.role === "visitor_forbidden" || ctx.role === "session_invalid";
+  return (
+    ctx.role === "visitor_forbidden" ||
+    ctx.role === "session_invalid" ||
+    ctx.role === "unauthenticated" ||
+    ctx.role === "demo"
+  );
+}
+
+/** GM or Players — sessions that may call Neon-backed item/space APIs. */
+export function isHeartgardenNeonDataSession(ctx: HeartgardenApiBootContext): boolean {
+  return ctx.role === "gm" || ctx.role === "visitor";
 }
 
 /** Visitor may only touch items in exactly this space (Option A — no child spaces in player layer). */
@@ -93,10 +127,9 @@ export async function getHeartgardenApiBootContext(): Promise<HeartgardenApiBoot
   return parseHeartgardenApiBootContext(jar);
 }
 
-/** Lore, vault index, upload, reindex, semantic search, etc. — no player-tier access. */
+/** Lore, vault index, upload, reindex, semantic search, etc. — no player-tier or demo access. */
 export function enforceGmOnlyBootContext(ctx: HeartgardenApiBootContext): Response | null {
-  if (isHeartgardenVisitorBlocked(ctx)) return heartgardenApiForbiddenJsonResponse();
-  if (ctx.role === "visitor") return heartgardenApiForbiddenJsonResponse();
+  if (ctx.role !== "gm") return heartgardenApiForbiddenJsonResponse();
   return null;
 }
 

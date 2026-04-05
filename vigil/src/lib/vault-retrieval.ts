@@ -2,7 +2,7 @@
  * Hybrid search over the vault: FTS + fuzzy + optional pgvector chunks, fused via RRF
  * (`fuseRrfFromOrderedLists`). Consumed by `/api/search`, lore import planning, and `lore-engine`.
  */
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 
 import { itemEmbeddings, itemLinks, items, spaces } from "@/src/db/schema";
 import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
@@ -47,6 +47,7 @@ export async function searchItemChunksByVector(
 
   const whereParts: ReturnType<typeof sql>[] = [];
   if (filters.spaceId) whereParts.push(eq(itemEmbeddings.spaceId, filters.spaceId));
+  if (filters.excludeSpaceId) whereParts.push(ne(itemEmbeddings.spaceId, filters.excludeSpaceId));
 
   const whereClause = whereParts.length ? and(...whereParts) : undefined;
 
@@ -231,6 +232,7 @@ export async function expandLinkedItems(
   const where = and(
     inArray(items.id, toFetch),
     ...(filters.spaceId ? [eq(items.spaceId, filters.spaceId)] : []),
+    ...(filters.excludeSpaceId ? [ne(items.spaceId, filters.excludeSpaceId)] : []),
   );
   const found = await db
     .select({

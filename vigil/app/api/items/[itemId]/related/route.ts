@@ -4,6 +4,8 @@ import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
+  gmMayAccessItemSpace,
+  gmMayAccessSpaceId,
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForVisitor,
   isHeartgardenVisitorBlocked,
@@ -35,6 +37,9 @@ export async function GET(
   if (!visitorMayAccessItemSpace(bootCtx, row.spaceId)) {
     return heartgardenApiForbiddenJsonResponse();
   }
+  if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, row.spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
 
   const url = new URL(req.url);
   const spaceParam = url.searchParams.get("spaceId");
@@ -44,6 +49,9 @@ export async function GET(
       return heartgardenApiForbiddenJsonResponse();
     }
     spaceId = bootCtx.playerSpaceId;
+  }
+  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
   }
   const limit = Math.min(
     20,

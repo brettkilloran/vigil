@@ -260,6 +260,29 @@
   flex-shrink: 0;
 }
 
+/* When center copy is hidden, slow pulse on the restore toggle (reduced-motion users get .bootCopyToggleGlowStatic from TS). */
+@keyframes vigilBootCopyTogglePulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  50% {
+    box-shadow:
+      0 0 14px 2px color-mix(in oklch, var(--sys-color-white) 28%, transparent),
+      0 0 28px 4px color-mix(in oklch, var(--sys-color-white) 12%, transparent);
+  }
+}
+
+.bootCopyToggleGlow {
+  border-radius: var(--radius-md, 10px);
+  animation: vigilBootCopyTogglePulse 3.2s ease-in-out infinite;
+}
+
+.bootCopyToggleGlowStatic {
+  border-radius: var(--radius-md, 10px);
+  box-shadow: 0 0 12px 1px color-mix(in oklch, var(--sys-color-white) 22%, transparent);
+}
+
 .metaBottomLeft {
   min-width: 0;
   max-width: min(320px, 50vw);
@@ -293,6 +316,19 @@
   align-items: center;
   text-align: center;
   padding: 1.5rem 1rem;
+  transition: opacity 0.32s ease, visibility 0.32s ease;
+}
+
+.contentHidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content {
+    transition-duration: 0.12s;
+  }
 }
 
 /* Kicker + title + blurbs: wrapper for hover-glitch (keeps entrance animations on children). */
@@ -875,4 +911,13 @@
     transform: none;
     filter: none;
   }
+}
+
+.bootServerError {
+  margin: 0 0 12px;
+  max-width: 22rem;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: #ffb4a8;
+  text-align: center;
 }

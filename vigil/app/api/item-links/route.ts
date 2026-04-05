@@ -5,6 +5,7 @@ import { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
+  gmMayAccessItemSpace,
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForVisitor,
   isHeartgardenVisitorBlocked,
@@ -83,6 +84,9 @@ export async function POST(req: Request) {
   if (!visitorMayAccessItemSpace(bootCtx, srcItem.spaceId)) {
     return heartgardenApiForbiddenJsonResponse();
   }
+  if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, srcItem.spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
   const validated = await validateLinkTargetsInSourceSpace(db, sourceItemId, [targetItemId]);
   if (!validated.ok) {
     return Response.json({ ok: false, error: validated.error }, { status: validated.status });
@@ -154,6 +158,13 @@ export async function PATCH(req: Request) {
     .where(eq(items.id, linkMeta.sourceItemId))
     .limit(1);
   if (!visitorMayAccessItemSpace(bootCtx, srcForLink?.spaceId ?? "")) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+  if (
+    bootCtx.role === "gm" &&
+    srcForLink &&
+    !gmMayAccessItemSpace(bootCtx, srcForLink.spaceId)
+  ) {
     return heartgardenApiForbiddenJsonResponse();
   }
 
@@ -249,6 +260,13 @@ export async function DELETE(req: Request) {
     .where(eq(items.id, linkMeta.sourceItemId))
     .limit(1);
   if (!visitorMayAccessItemSpace(bootCtx, srcForLink?.spaceId ?? "")) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+  if (
+    bootCtx.role === "gm" &&
+    srcForLink &&
+    !gmMayAccessItemSpace(bootCtx, srcForLink.spaceId)
+  ) {
     return heartgardenApiForbiddenJsonResponse();
   }
   const deleted = await db

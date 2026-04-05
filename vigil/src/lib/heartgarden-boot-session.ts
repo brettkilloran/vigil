@@ -1,12 +1,13 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { HEARTGARDEN_BOOT_PIN_LENGTH } from "@/src/lib/heartgarden-boot-pin-constants";
+import { readHeartgardenPlayersBootPin } from "@/src/lib/heartgarden-boot-players-pin";
 
 export { HEARTGARDEN_BOOT_PIN_LENGTH } from "@/src/lib/heartgarden-boot-pin-constants";
 
 export const HEARTGARDEN_BOOT_COOKIE_NAME = "hg_boot";
 
-export type HeartgardenBootTier = "access" | "visitor";
+export type HeartgardenBootTier = "access" | "visitor" | "demo";
 
 export type HeartgardenBootPayload = {
   tier: HeartgardenBootTier;
@@ -16,6 +17,7 @@ export type HeartgardenBootPayload = {
 
 const DUMMY_DIGEST_A = createHash("sha256").update("\0hg_boot_unset_a", "utf8").digest();
 const DUMMY_DIGEST_B = createHash("sha256").update("\0hg_boot_unset_b", "utf8").digest();
+const DUMMY_DIGEST_C = createHash("sha256").update("\0hg_boot_unset_c", "utf8").digest();
 
 export function isPlaywrightE2E(): boolean {
   return process.env.PLAYWRIGHT_E2E === "1";
@@ -25,19 +27,22 @@ export function readBootEnv(): {
   gateEnabled: boolean;
   accessPin: string;
   visitorPin: string;
+  demoPin: string;
   sessionSecret: string;
 } {
   if (isPlaywrightE2E()) {
-    return { gateEnabled: false, accessPin: "", visitorPin: "", sessionSecret: "" };
+    return { gateEnabled: false, accessPin: "", visitorPin: "", demoPin: "", sessionSecret: "" };
   }
   const accessPin = (process.env.HEARTGARDEN_BOOT_PIN_ACCESS ?? "").trim();
-  const visitorPin = (process.env.HEARTGARDEN_BOOT_PIN_VISITOR ?? "").trim();
+  const visitorPin = readHeartgardenPlayersBootPin();
+  const demoPin = (process.env.HEARTGARDEN_BOOT_PIN_DEMO ?? "").trim();
   const sessionSecret = (process.env.HEARTGARDEN_BOOT_SESSION_SECRET ?? "").trim();
   const accessOk = accessPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
   const visitorOk = visitorPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
-  /** Gate is on when the session secret is set and at least one PIN is configured (access and/or visitor). */
-  const gateEnabled = sessionSecret.length >= 16 && (accessOk || visitorOk);
-  return { gateEnabled, accessPin, visitorPin, sessionSecret };
+  const demoOk = demoPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
+  /** Gate is on when the session secret is set and at least one PIN is configured. */
+  const gateEnabled = sessionSecret.length >= 16 && (accessOk || visitorOk || demoOk);
+  return { gateEnabled, accessPin, visitorPin, demoPin, sessionSecret };
 }
 
 export function bootSessionMaxAgeSec(): number {
@@ -55,16 +60,25 @@ function sha256Utf8(s: string): Buffer {
  * Compare submitted code to access / visitor pins without short-circuiting digest equality.
  * Returns tier or null. Pins shorter than 8 use dummy digests so they never match.
  */
-export function resolveBootPinTier(code: string, accessPin: string, visitorPin: string): HeartgardenBootTier | null {
+export function resolveBootPinTier(
+  code: string,
+  accessPin: string,
+  visitorPin: string,
+  demoPin: string,
+): HeartgardenBootTier | null {
   const h = sha256Utf8(code);
   const hAccess =
     accessPin.length === HEARTGARDEN_BOOT_PIN_LENGTH ? sha256Utf8(accessPin) : DUMMY_DIGEST_A;
   const hVisitor =
     visitorPin.length === HEARTGARDEN_BOOT_PIN_LENGTH ? sha256Utf8(visitorPin) : DUMMY_DIGEST_B;
+  const hDemo =
+    demoPin.length === HEARTGARDEN_BOOT_PIN_LENGTH ? sha256Utf8(demoPin) : DUMMY_DIGEST_C;
   const okAccess = timingSafeEqual(h, hAccess);
   const okVisitor = timingSafeEqual(h, hVisitor);
+  const okDemo = timingSafeEqual(h, hDemo);
   if (okAccess) return "access";
   if (okVisitor) return "visitor";
+  if (okDemo) return "demo";
   return null;
 }
 
@@ -117,7 +131,7 @@ export function verifyBootSessionCookie(secret: string, cookieValue: string): He
   }
   if (!parsed || typeof parsed !== "object") return null;
   const o = parsed as Record<string, unknown>;
-  if (o.tier !== "access" && o.tier !== "visitor") return null;
+  if (o.tier !== "access" && o.tier !== "visitor" && o.tier !== "demo") return null;
   if (typeof o.exp !== "number" || !Number.isFinite(o.exp)) return null;
   const now = Math.floor(Date.now() / 1000);
   if (o.exp <= now) return null;

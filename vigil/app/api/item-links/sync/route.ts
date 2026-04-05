@@ -5,6 +5,7 @@ import { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
+  gmMayAccessItemSpace,
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForVisitor,
   isHeartgardenVisitorBlocked,
@@ -58,6 +59,9 @@ export async function POST(req: Request) {
     );
   }
   if (!visitorMayAccessItemSpace(bootCtx, srcItem.spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+  if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, srcItem.spaceId)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   const validated = await validateLinkTargetsInSourceSpace(db, sourceItemId, targetIds);

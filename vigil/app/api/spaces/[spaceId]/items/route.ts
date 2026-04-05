@@ -4,17 +4,22 @@ import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
+  gmMayAccessSpaceId,
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForVisitor,
   isHeartgardenVisitorBlocked,
   visitorMayAccessSpaceId,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { DS_COLOR } from "@/src/lib/design-system-tokens";
+import {
+  playersMayCreateItemType,
+  stripGmOnlyEntityMetaPatch,
+} from "@/src/lib/player-item-policy";
 import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
 import { assertSpaceExists, listItemsForSpace } from "@/src/lib/spaces";
-import { DS_COLOR } from "@/src/lib/design-system-tokens";
 
 const createBody = z.object({
   itemType: z.enum(["note", "sticky", "image", "checklist", "webclip", "folder"]),
@@ -59,6 +64,9 @@ export async function GET(
   if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
     return heartgardenApiForbiddenJsonResponse();
   }
+  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
   const rows = await listItemsForSpace(db, spaceId);
   return Response.json({ ok: true, items: rows.map(rowToCanvasItem) });
 }
@@ -89,6 +97,9 @@ export async function POST(
   if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
     return heartgardenApiForbiddenJsonResponse();
   }
+  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
 
   let json: unknown;
   try {
@@ -106,6 +117,21 @@ export async function POST(
   }
 
   const t = parsed.data.itemType;
+  if (bootCtx.role === "visitor") {
+    if (!playersMayCreateItemType(t)) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+    if (parsed.data.imageUrl !== undefined || parsed.data.imageMeta !== undefined) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+  }
+
+  const entityMetaForRow =
+    bootCtx.role === "visitor"
+      ? stripGmOnlyEntityMetaPatch(parsed.data.entityMeta as Record<string, unknown> | undefined) ??
+        null
+      : (parsed.data.entityMeta ?? null);
+
   const defaultTitle =
     t === "note"
       ? "Note"
@@ -128,7 +154,7 @@ export async function POST(
     contentText,
     contentJson: parsed.data.contentJson ?? null,
     entityType: parsed.data.entityType ?? null,
-    entityMeta: parsed.data.entityMeta ?? null,
+    entityMeta: entityMetaForRow,
     imageUrl: parsed.data.imageUrl ?? null,
     imageMeta: parsed.data.imageMeta ?? null,
     loreSummary: null,
@@ -150,7 +176,7 @@ export async function POST(
       contentJson: parsed.data.contentJson ?? null,
       color,
       entityType: parsed.data.entityType ?? null,
-      entityMeta: parsed.data.entityMeta ?? null,
+      entityMeta: entityMetaForRow,
       imageUrl: parsed.data.imageUrl ?? null,
       imageMeta: parsed.data.imageMeta ?? null,
       ...(parsed.data.zIndex !== undefined ? { zIndex: parsed.data.zIndex } : {}),

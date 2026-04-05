@@ -1,6 +1,7 @@
 import { tryGetDb } from "@/src/db/index";
 import {
   getHeartgardenApiBootContext,
+  gmMayAccessSpaceId,
   isHeartgardenVisitorBlocked,
   visitorMayAccessSpaceId,
 } from "@/src/lib/heartgarden-api-boot-context";
@@ -33,6 +34,9 @@ export async function GET(req: Request) {
     return Response.json({ error: "Space not found" }, { status: 404 });
   }
   if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
+    return Response.json({ error: "Forbidden." }, { status: 403 });
+  }
+  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
     return Response.json({ error: "Forbidden." }, { status: 403 });
   }
   const rows = await listItemsForSpace(db, spaceId);

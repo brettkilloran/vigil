@@ -1,14 +1,14 @@
-import { desc } from "drizzle-orm";
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import { spaces } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
+  gmMayAccessSpaceId,
   heartgardenApiForbiddenJsonResponse,
   isHeartgardenVisitorBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
-import { assertSpaceExists } from "@/src/lib/spaces";
+import { assertSpaceExists, listGmWorkspaceSpaces } from "@/src/lib/spaces";
 
 const bodySchema = z.object({
   name: z.string().trim().min(1).max(255),
@@ -41,15 +41,7 @@ export async function GET() {
       ],
     });
   }
-  const rows = await db
-    .select({
-      id: spaces.id,
-      name: spaces.name,
-      parentSpaceId: spaces.parentSpaceId,
-      updatedAt: spaces.updatedAt,
-    })
-    .from(spaces)
-    .orderBy(desc(spaces.updatedAt));
+  const rows = await listGmWorkspaceSpaces(db);
   return Response.json({
     ok: true,
     spaces: rows.map((r) => ({
@@ -91,6 +83,9 @@ export async function POST(req: Request) {
   const { name, parentSpaceId } = parsed.data;
 
   if (parentSpaceId !== undefined && parentSpaceId !== null) {
+    if (!gmMayAccessSpaceId(bootCtx, parentSpaceId)) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
     const parent = await assertSpaceExists(db, parentSpaceId);
     if (!parent) {
       return Response.json(

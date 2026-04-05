@@ -2,6 +2,8 @@ import { tryGetDb } from "@/src/db/index";
 import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
+  gmMayAccessSpaceId,
+  heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { reindexSpaceVault } from "@/src/lib/item-vault-index";
 import { assertSpaceExists, type VigilDb } from "@/src/lib/spaces";
@@ -43,6 +45,9 @@ export async function POST(req: Request, context: { params: Promise<{ spaceId: s
   const space = await assertSpaceExists(db as VigilDb, spaceId);
   if (!space) {
     return Response.json({ ok: false, error: "Space not found" }, { status: 404 });
+  }
+  if (!gmMayAccessSpaceId(bootCtxEarly, spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
   }
 
   const result = await reindexSpaceVault(db as VigilDb, spaceId, { refreshLoreMeta });

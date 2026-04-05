@@ -2,11 +2,12 @@ import { tryGetDb } from "@/src/db/index";
 import { isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
 import {
   getHeartgardenApiBootContext,
+  gmMayAccessSpaceId,
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForVisitor,
   isHeartgardenVisitorBlocked,
-  visitorMayAccessSpaceId,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { applySearchTierPolicy } from "@/src/lib/heartgarden-search-tier-policy";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import {
   assertSpaceExists,
@@ -79,17 +80,17 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim();
-  let mode = (url.searchParams.get("mode") ?? "hybrid").toLowerCase();
-  const filters = parseFilters(url);
+  const modeRaw = (url.searchParams.get("mode") ?? "hybrid").toLowerCase();
+  const parsedFilters = parseFilters(url);
 
-  if (bootCtx.role === "visitor") {
-    if (filters.spaceId && !visitorMayAccessSpaceId(bootCtx, filters.spaceId)) {
-      return heartgardenApiForbiddenJsonResponse();
-    }
-    filters.spaceId = bootCtx.playerSpaceId;
-    if (mode === "hybrid" || mode === "semantic") {
-      mode = "fts";
-    }
+  const tiered = applySearchTierPolicy(bootCtx, parsedFilters, modeRaw);
+  if (!tiered.ok) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+  const { filters, mode } = tiered;
+
+  if (bootCtx.role === "gm" && filters.spaceId && !gmMayAccessSpaceId(bootCtx, filters.spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
   }
 
   if (filters.spaceId) {

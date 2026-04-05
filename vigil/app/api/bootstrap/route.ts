@@ -13,7 +13,7 @@ import {
   assertSpaceExists,
   listItemsForSpaceSubtree,
   parseCameraFromRow,
-  resolveActiveSpace,
+  resolveActiveSpaceGmWorkspace,
 } from "@/src/lib/spaces";
 
 export async function GET(req: Request) {
@@ -87,7 +87,7 @@ export async function GET(req: Request) {
     });
   }
 
-  const { activeSpace, allSpaces } = await resolveActiveSpace(db, requested);
+  const { activeSpace, allSpaces } = await resolveActiveSpaceGmWorkspace(db, requested);
 
   const spaceRows = allSpaces.map((s) => ({
     id: s.id,

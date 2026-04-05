@@ -1,6 +1,6 @@
 "use client";
 
-import { Broom, Plant, Skull } from "@phosphor-icons/react";
+import { Broom, Eye, EyeSlash, Plant, Skull } from "@phosphor-icons/react";
 import {
   useCallback,
   useEffect,
@@ -48,6 +48,8 @@ export type VigilAppBootScreenProps = {
   bootGateEnabled?: boolean;
   /** False until GET /api/heartgarden/boot has completed (disables CTA until known). */
   bootGateStatusReady?: boolean;
+  /** Server misconfiguration (e.g. Players PIN without `HEARTGARDEN_PLAYER_SPACE_ID`). */
+  serverConfigurationError?: string | null;
 };
 
 /**
@@ -157,6 +159,7 @@ export function VigilAppBootScreen({
   bootAmbientPrimePlaybackRef,
   bootGateEnabled = false,
   bootGateStatusReady = true,
+  serverConfigurationError = null,
 }: VigilAppBootScreenProps) {
   const [exiting, setExiting] = useState(false);
   const [accessConsoleOpen, setAccessConsoleOpen] = useState(false);
@@ -165,6 +168,8 @@ export function VigilAppBootScreen({
   const [pinError, setPinError] = useState<string | null>(null);
   const [pinSubmitting, setPinSubmitting] = useState(false);
   const [flowerTool, setFlowerTool] = useState<FlowerPointerTool>("grow");
+  /** When false, center copy + CTA are visually hidden so the flower garden can fill the view. */
+  const [bootCenterCopyVisible, setBootCenterCopyVisible] = useState(true);
   const flowerGardenRef = useRef<VigilBootFlowerGardenHandle>(null);
   const flowerToolRef = useRef(flowerTool);
   const poisonDragRef = useRef(false);
@@ -250,16 +255,16 @@ export function VigilAppBootScreen({
   useEffect(() => () => clearEnterGardenHoverSpawn(), [clearEnterGardenHoverSpawn]);
 
   const tickEnterGardenHoverSpawn = useCallback(() => {
-    if (exiting || !technicalReady || prefersReducedMotionRef.current) return;
+    if (exiting || !technicalReady || prefersReducedMotionRef.current || !bootCenterCopyVisible) return;
     spawnFlowerInEnterGardenHoverBounds(
       bootCenterClusterRef.current,
       flowerGardenRef.current,
       recentEnterGardenSpawnsRef.current,
     );
-  }, [exiting, technicalReady]);
+  }, [bootCenterCopyVisible, exiting, technicalReady]);
 
   const onEnterGardenPointerEnter = useCallback(() => {
-    if (exiting || !technicalReady || prefersReducedMotionRef.current) return;
+    if (exiting || !technicalReady || prefersReducedMotionRef.current || !bootCenterCopyVisible) return;
     if (bootGateEnabled && accessConsoleOpen) return;
     clearEnterGardenHoverSpawn();
     tickEnterGardenHoverSpawn();
@@ -271,9 +276,14 @@ export function VigilAppBootScreen({
     accessConsoleOpen,
     clearEnterGardenHoverSpawn,
     exiting,
+    bootCenterCopyVisible,
     technicalReady,
     tickEnterGardenHoverSpawn,
   ]);
+
+  useEffect(() => {
+    if (!bootCenterCopyVisible) clearEnterGardenHoverSpawn();
+  }, [bootCenterCopyVisible, clearEnterGardenHoverSpawn]);
 
   const onEnterGardenPointerLeave = useCallback(() => {
     clearEnterGardenHoverSpawn();
@@ -341,6 +351,11 @@ export function VigilAppBootScreen({
       bootPinFlowerLenRef.current = pinValue.length;
       return;
     }
+    if (!bootCenterCopyVisible) {
+      clearBootPinFlowerTimers();
+      bootPinFlowerLenRef.current = pinValue.length;
+      return;
+    }
     if (prefersReducedMotion) {
       clearBootPinFlowerTimers();
       bootPinFlowerLenRef.current = pinValue.length;
@@ -366,7 +381,14 @@ export function VigilAppBootScreen({
       }
     }
     bootPinFlowerLenRef.current = pinValue.length;
-  }, [pinValue, accessConsoleOpen, exiting, prefersReducedMotion, clearBootPinFlowerTimers]);
+  }, [
+    pinValue,
+    accessConsoleOpen,
+    exiting,
+    bootCenterCopyVisible,
+    prefersReducedMotion,
+    clearBootPinFlowerTimers,
+  ]);
 
   useEffect(
     () => () => {
@@ -410,6 +432,7 @@ export function VigilAppBootScreen({
       if (target.closest("[data-vigil-boot-flower-tools]")) return;
       if (target.closest('[data-hg-chrome="canvas-effects-toggle"]')) return;
       if (target.closest("[data-vigil-boot-ambient-audio]")) return;
+      if (target.closest("[data-vigil-boot-copy-toggle]")) return;
       if (
         bootGateEnabled &&
         accessConsoleOpen &&
@@ -490,8 +513,9 @@ export function VigilAppBootScreen({
         className={`${styles.overlay} ${exiting ? styles.overlayExiting : ""} ${flowerTool === "grow" ? styles.overlayPlantMode : styles.overlayPoisonMode}`}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="vigil-boot-title"
-        aria-describedby="vigil-boot-desc"
+        aria-label={bootCenterCopyVisible ? undefined : "Heartgarden boot — garden play mode"}
+        aria-labelledby={bootCenterCopyVisible ? "vigil-boot-title" : undefined}
+        aria-describedby={bootCenterCopyVisible ? "vigil-boot-desc" : undefined}
         onPointerDown={onOverlayPointerDown}
         onPointerMove={onOverlayPointerMove}
         onPointerUp={onOverlayPointerUpOrCancel}
@@ -578,7 +602,11 @@ export function VigilAppBootScreen({
         </div>
       </div>
 
-      <div ref={bootCenterClusterRef} className={styles.content}>
+      <div
+        ref={bootCenterClusterRef}
+        className={cx(styles.content, !bootCenterCopyVisible && styles.contentHidden)}
+        aria-hidden={!bootCenterCopyVisible}
+      >
         <div className={styles.middleCopy}>
           <div
             className={`${styles.mono} ${styles.fadeInKicker}`}
@@ -642,6 +670,11 @@ export function VigilAppBootScreen({
                 className={cx(styles.morphTier, !accessConsoleOpen && styles.morphTierHidden)}
                 aria-hidden={!accessConsoleOpen}
               >
+                {serverConfigurationError ? (
+                  <p className={styles.bootServerError} role="alert">
+                    {serverConfigurationError}
+                  </p>
+                ) : null}
                 <HeartgardenPinField
                   key={bootPinFieldKey}
                   id="vigil-boot-access-pin"
@@ -695,13 +728,49 @@ export function VigilAppBootScreen({
           <div
             className={styles.bootChromeDockPanel}
             role="toolbar"
-            aria-label="Boot visual effects and app audio"
+            aria-label="Boot visual effects, copy visibility, and app audio"
           >
             <ArchitecturalCanvasEffectsToggle
               layout="bare"
               effectsEnabled={canvasEffectsEnabled}
               onEffectsEnabledChange={onCanvasEffectsEnabledChange}
             />
+            <div className={styles.bootChromeDockSep} aria-hidden />
+            <ArchitecturalTooltip
+              content={bootCenterCopyVisible ? "Hide title and entry — play with the garden" : "Show title and entry"}
+              side="top"
+              delayMs={320}
+            >
+              <Button
+                type="button"
+                variant="ghost"
+                tone="glass"
+                size="icon"
+                iconOnly
+                data-vigil-boot-copy-toggle="true"
+                className={cx(
+                  !bootCenterCopyVisible &&
+                    (prefersReducedMotion ? styles.bootCopyToggleGlowStatic : styles.bootCopyToggleGlow),
+                )}
+                aria-pressed={!bootCenterCopyVisible}
+                aria-label={
+                  bootCenterCopyVisible
+                    ? "Hide title and entry — focus on the garden"
+                    : "Show title and entry"
+                }
+                disabled={exiting}
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  setBootCenterCopyVisible((v) => !v);
+                }}
+              >
+                {bootCenterCopyVisible ? (
+                  <EyeSlash size={18} weight="bold" aria-hidden />
+                ) : (
+                  <Eye size={18} weight="bold" aria-hidden />
+                )}
+              </Button>
+            </ArchitecturalTooltip>
             <div className={styles.bootChromeDockSep} aria-hidden />
             <VigilBootAmbientAudio
               key={bootAmbientEpoch}

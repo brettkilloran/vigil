@@ -5,12 +5,19 @@ import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
+  gmMayAccessItemSpace,
+  gmMayAccessSpaceId,
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForVisitor,
   isHeartgardenVisitorBlocked,
   visitorMayAccessItemSpace,
   visitorMayApplySpaceIdPatch,
 } from "@/src/lib/heartgarden-api-boot-context";
+import {
+  playersMayPatchItemType,
+  playersPatchBodyViolatesPolicy,
+  stripGmOnlyEntityMetaPatch,
+} from "@/src/lib/player-item-policy";
 import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
@@ -95,6 +102,15 @@ export async function PATCH(
     );
   }
 
+  if (bootCtx.role === "visitor") {
+    if (playersPatchBodyViolatesPolicy(parsed.data)) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+    if (!playersMayPatchItemType(parsed.data.itemType)) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+  }
+
   const [existing] = await db
     .select()
     .from(items)
@@ -107,6 +123,9 @@ export async function PATCH(
     );
   }
   if (!visitorMayAccessItemSpace(bootCtx, existing.spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+  if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, existing.spaceId)) {
     return heartgardenApiForbiddenJsonResponse();
   }
 
@@ -146,6 +165,9 @@ export async function PATCH(
         Response.json({ ok: false, error: "Space not found" }, { status: 400 }),
       );
     }
+    if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, p.spaceId)) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
     updates.spaceId = p.spaceId;
   }
 
@@ -161,11 +183,25 @@ export async function PATCH(
   if (p.itemType !== undefined) updates.itemType = p.itemType;
   if (p.entityType !== undefined) updates.entityType = p.entityType;
   if (p.entityMeta !== undefined) {
-    updates.entityMeta = p.entityMeta;
+    if (bootCtx.role === "visitor") {
+      if (p.entityMeta === null) {
+        updates.entityMeta = null;
+      } else {
+        const stripped = stripGmOnlyEntityMetaPatch(p.entityMeta as Record<string, unknown>);
+        updates.entityMeta =
+          stripped && Object.keys(stripped).length > 0 ? stripped : null;
+      }
+    } else {
+      updates.entityMeta = p.entityMeta;
+    }
   } else if (p.entityMetaMerge !== undefined && Object.keys(p.entityMetaMerge).length > 0) {
+    const mergePatch =
+      bootCtx.role === "visitor"
+        ? stripGmOnlyEntityMetaPatch(p.entityMetaMerge as Record<string, unknown>) ?? {}
+        : (p.entityMetaMerge as Record<string, unknown>);
     updates.entityMeta = mergeEntityMeta(
       existing.entityMeta as Record<string, unknown> | null | undefined,
-      p.entityMetaMerge as Record<string, unknown>,
+      mergePatch,
     );
   }
   if (p.imageUrl !== undefined) updates.imageUrl = p.imageUrl;
@@ -239,6 +275,9 @@ export async function DELETE(
     );
   }
   if (!visitorMayAccessItemSpace(bootCtx, existing.spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+  if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, existing.spaceId)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   const deleted = await db.delete(items).where(eq(items.id, itemId)).returning();

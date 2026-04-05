@@ -1,11 +1,17 @@
-import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 
 import type { tryGetDb } from "@/src/db/index";
 import { itemLinks, items, spaces } from "@/src/db/schema";
+import { isHeartgardenGmPlayerSpaceBreakGlassEnabled } from "@/src/lib/heartgarden-gm-break-glass";
+import { parseSpaceIdParam } from "@/src/lib/space-id";
 import type { CameraState } from "@/src/model/canvas-types";
 import { defaultCamera } from "@/src/model/canvas-types";
 
 export type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
+
+function playerSpaceIdExcludedFromGmDb(): string | undefined {
+  return parseSpaceIdParam((process.env.HEARTGARDEN_PLAYER_SPACE_ID ?? "").trim() || null);
+}
 
 export function parseCameraFromRow(raw: unknown): CameraState {
   if (!raw || typeof raw !== "object") return defaultCamera();
@@ -29,6 +35,39 @@ export async function listAllSpaces(db: VigilDb) {
     .select()
     .from(spaces)
     .orderBy(desc(spaces.updatedAt));
+}
+
+/** Spaces visible in the GM workspace (excludes `HEARTGARDEN_PLAYER_SPACE_ID` when set). */
+export async function listGmWorkspaceSpaces(db: VigilDb) {
+  const all = await listAllSpaces(db);
+  const hid = playerSpaceIdExcludedFromGmDb();
+  if (!hid || isHeartgardenGmPlayerSpaceBreakGlassEnabled()) return all;
+  return all.filter((s) => s.id !== hid);
+}
+
+/**
+ * Like `resolveActiveSpace` but never selects the Players-only space for GM.
+ * If the DB only contains the hidden space, inserts a new “Main space” for GM.
+ */
+export async function resolveActiveSpaceGmWorkspace(db: VigilDb, requestedSpaceId?: string) {
+  let allSpaces = await listGmWorkspaceSpaces(db);
+  if (allSpaces.length === 0) {
+    const [created] = await db
+      .insert(spaces)
+      .values({ name: "Main space" })
+      .returning();
+    allSpaces = [created!];
+  }
+  const hid = playerSpaceIdExcludedFromGmDb();
+  const breakGlass = isHeartgardenGmPlayerSpaceBreakGlassEnabled();
+  const reqOk =
+    requestedSpaceId &&
+    allSpaces.some((s) => s.id === requestedSpaceId) &&
+    (!hid || breakGlass || requestedSpaceId !== hid);
+  const active = reqOk
+    ? allSpaces.find((s) => s.id === requestedSpaceId)!
+    : allSpaces[0];
+  return { activeSpace: active, allSpaces };
 }
 
 export async function resolveActiveSpace(
@@ -108,6 +147,8 @@ export type SearchSort = "relevance" | "updated" | "created" | "title";
 
 export type SearchFilters = {
   spaceId?: string;
+  /** Exclude items in this space (GM global search vs Players space). */
+  excludeSpaceId?: string;
   itemTypes?: string[];
   entityTypes?: string[];
   updatedAfter?: Date;
@@ -138,6 +179,7 @@ function normalizeLimit(limit: number | undefined, fallback: number, max: number
 function searchWhereClauses(filters: SearchFilters): ReturnType<typeof sql>[] {
   const clauses: ReturnType<typeof sql>[] = [];
   if (filters.spaceId) clauses.push(eq(items.spaceId, filters.spaceId));
+  if (filters.excludeSpaceId) clauses.push(ne(items.spaceId, filters.excludeSpaceId));
   if (filters.itemTypes?.length) clauses.push(inArray(items.itemType, filters.itemTypes));
   if (filters.entityTypes?.length) clauses.push(inArray(items.entityType, filters.entityTypes));
   if (filters.updatedAfter) clauses.push(sql`${items.updatedAt} >= ${filters.updatedAfter}`);

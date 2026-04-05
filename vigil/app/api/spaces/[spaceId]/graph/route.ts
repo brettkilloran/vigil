@@ -4,6 +4,7 @@ import { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
+  gmMayAccessSpaceId,
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForVisitor,
   isHeartgardenVisitorBlocked,
@@ -40,6 +41,9 @@ export async function GET(
     );
   }
   if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
     return heartgardenApiForbiddenJsonResponse();
   }
 

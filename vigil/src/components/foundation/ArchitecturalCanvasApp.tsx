@@ -122,6 +122,7 @@ import {
   clearWorkspaceViewCache,
   readWorkspaceViewCache,
   writeWorkspaceViewCache,
+  type WorkspaceBootTierTag,
 } from "@/src/lib/workspace-view-cache";
 import { useRecentFolders } from "@/src/hooks/use-recent-folders";
 import { useRecentItems } from "@/src/hooks/use-recent-items";
@@ -1107,6 +1108,57 @@ function WorkspaceBootstrapErrorPanel() {
   );
 }
 
+type HeartgardenBootStatusJson = {
+  gateEnabled?: boolean;
+  sessionValid?: boolean;
+  sessionTier?: unknown;
+  playerLayerMisconfigured?: boolean;
+};
+
+export type HeartgardenBootApiState = {
+  loaded: boolean;
+  gateEnabled: boolean;
+  sessionValid: boolean;
+  sessionTier: "access" | "visitor" | "demo" | null;
+  playerLayerMisconfigured: boolean;
+};
+
+function parseHeartgardenBootStatus(d: HeartgardenBootStatusJson): HeartgardenBootApiState {
+  const st = d.sessionTier;
+  const tier = st === "access" || st === "visitor" || st === "demo" ? st : null;
+  return {
+    loaded: true,
+    gateEnabled: Boolean(d.gateEnabled),
+    sessionValid: Boolean(d.sessionValid),
+    sessionTier: tier,
+    playerLayerMisconfigured: Boolean(d.gateEnabled && d.playerLayerMisconfigured),
+  };
+}
+
+/** Local-only demo canvas (no Neon); same showcase as nested scenario seed. */
+function buildHeartgardenNestedDemoGraph() {
+  return buildArchitecturalSeedGraph(
+    {
+      taskItem: styles.taskItem,
+      done: styles.done,
+      taskCheckbox: styles.taskCheckbox,
+      taskText: styles.taskText,
+      mediaFrame: styles.mediaFrame,
+      mediaImage: styles.mediaImage,
+      mediaImageActions: styles.mediaImageActions,
+      mediaUploadBtn: styles.mediaUploadBtn,
+    },
+    "nested",
+  );
+}
+
+function workspaceCacheTierForNeonSession(b: HeartgardenBootApiState): WorkspaceBootTierTag {
+  if (!b.gateEnabled) return "open";
+  if (b.sessionTier === "access") return "access";
+  if (b.sessionTier === "visitor") return "visitor";
+  return "open";
+}
+
 export function ArchitecturalCanvasApp({
   scenario = "default",
 }: {
@@ -1189,14 +1241,15 @@ export function ArchitecturalCanvasApp({
   /** Lets reduced-motion users see the auth splash again after explicit Log out. */
   const [bootAfterLogout, setBootAfterLogout] = useState(false);
   /** GET /api/heartgarden/boot — gate + cookie session (no secrets in state). */
-  const [heartgardenBootApi, setHeartgardenBootApi] = useState<{
-    loaded: boolean;
-    gateEnabled: boolean;
-    sessionValid: boolean;
-    sessionTier: "access" | "visitor" | null;
-  }>({ loaded: false, gateEnabled: false, sessionValid: false, sessionTier: null });
-  /** Visitor boot PIN + `HEARTGARDEN_PLAYER_SPACE_ID`: scoped notes-only layer (server-enforced). */
-  const isPlayerLayer = useMemo(
+  const [heartgardenBootApi, setHeartgardenBootApi] = useState<HeartgardenBootApiState>({
+    loaded: false,
+    gateEnabled: false,
+    sessionValid: false,
+    sessionTier: null,
+    playerLayerMisconfigured: false,
+  });
+  /** Players PIN + `HEARTGARDEN_PLAYER_SPACE_ID`: scoped notes layer (server-enforced). */
+  const isPlayersTier = useMemo(
     () =>
       heartgardenBootApi.loaded &&
       heartgardenBootApi.gateEnabled &&
@@ -1207,6 +1260,32 @@ export function ArchitecturalCanvasApp({
       heartgardenBootApi.sessionTier,
     ],
   );
+  const isDemoTier = useMemo(
+    () =>
+      heartgardenBootApi.loaded &&
+      heartgardenBootApi.gateEnabled &&
+      heartgardenBootApi.sessionTier === "demo",
+    [heartgardenBootApi.loaded, heartgardenBootApi.gateEnabled, heartgardenBootApi.sessionTier],
+  );
+  /** Hide GM-only affordances (Players + Demo local canvas). */
+  const isRestrictedLayer = isPlayersTier || isDemoTier;
+  const heartgardenBootApiRef = useRef(heartgardenBootApi);
+  heartgardenBootApiRef.current = heartgardenBootApi;
+
+  const bootServerConfigurationError = useMemo(
+    () =>
+      heartgardenBootApi.loaded &&
+      heartgardenBootApi.gateEnabled &&
+      heartgardenBootApi.playerLayerMisconfigured
+        ? "The Players access layer is misconfigured (missing or invalid HEARTGARDEN_PLAYER_SPACE_ID). Contact the operator."
+        : null,
+    [
+      heartgardenBootApi.loaded,
+      heartgardenBootApi.gateEnabled,
+      heartgardenBootApi.playerLayerMisconfigured,
+    ],
+  );
+
   /** Bumps when returning to auth so boot ambient remounts and can play again after tear-down. */
   const [bootAmbientEpoch, setBootAmbientEpoch] = useState(0);
   /** Populated by `VigilBootAmbientAudio`; log-out handler calls after `flushSync` (same gesture as click). */
@@ -2946,7 +3025,8 @@ export function ArchitecturalCanvasApp({
       if (!data.spaceId || data.demo !== false) return;
       const maxZi =
         data.items.length > 0 ? Math.max(...data.items.map((i) => i.zIndex), 100) : 100;
-      writeWorkspaceViewCache(data, maxZi);
+      const cacheTier = workspaceCacheTierForNeonSession(heartgardenBootApiRef.current);
+      writeWorkspaceViewCache(data, maxZi, cacheTier);
       setNeonWorkspaceOk(true);
       setWorkspaceViewFromCache(false);
       persistNeonRef.current = true;
@@ -2956,8 +3036,25 @@ export function ArchitecturalCanvasApp({
     [applyBootstrapData],
   );
 
-  const heartgardenBootApiRef = useRef(heartgardenBootApi);
-  heartgardenBootApiRef.current = heartgardenBootApi;
+  const applyDemoLocalCanvas = useCallback(() => {
+    setNeonWorkspaceOk(true);
+    setWorkspaceViewFromCache(false);
+    persistNeonRef.current = false;
+    neonSyncSetCloudEnabled(false);
+    const freshGraph = buildHeartgardenNestedDemoGraph();
+    setGraph(freshGraph);
+    setActiveSpaceId(freshGraph.rootSpaceId);
+    setNavigationPath([freshGraph.rootSpaceId]);
+    setSelectedNodeIds([]);
+    setConnectionSourceId(null);
+    setConnectionMode("move");
+    setFocusOpen(false);
+    setActiveNodeId(null);
+    undoPastRef.current = [];
+    undoFutureRef.current = [];
+    setHistoryEpoch((n) => n + 1);
+    setCanvasBootstrapResolved(true);
+  }, []);
 
   useEffect(() => {
     if (scenario !== "default") {
@@ -2991,6 +3088,42 @@ export function ArchitecturalCanvasApp({
       return;
     }
 
+    const boot = heartgardenBootApi;
+    if (!boot.loaded) {
+      setCanvasBootstrapResolved(false);
+      setNeonWorkspaceOk(null);
+      setWorkspaceViewFromCache(false);
+      setGraph(createBootstrapPendingGraph());
+      setActiveSpaceId(ROOT_SPACE_ID);
+      setNavigationPath([ROOT_SPACE_ID]);
+      return;
+    }
+
+    if (boot.gateEnabled && boot.sessionValid && boot.sessionTier === "demo") {
+      applyDemoLocalCanvas();
+      return;
+    }
+
+    if (boot.gateEnabled && !boot.sessionValid) {
+      setCanvasBootstrapResolved(true);
+      setNeonWorkspaceOk(null);
+      setWorkspaceViewFromCache(false);
+      persistNeonRef.current = false;
+      neonSyncSetCloudEnabled(false);
+      setGraph(createBootstrapPendingGraph());
+      setActiveSpaceId(ROOT_SPACE_ID);
+      setNavigationPath([ROOT_SPACE_ID]);
+      setSelectedNodeIds([]);
+      setConnectionSourceId(null);
+      setConnectionMode("move");
+      setFocusOpen(false);
+      setActiveNodeId(null);
+      undoPastRef.current = [];
+      undoFutureRef.current = [];
+      setHistoryEpoch((n) => n + 1);
+      return;
+    }
+
     setCanvasBootstrapResolved(false);
     setNeonWorkspaceOk(null);
     setWorkspaceViewFromCache(false);
@@ -3008,14 +3141,12 @@ export function ArchitecturalCanvasApp({
         ingestLiveBootstrap(data);
       } catch {
         if (cancelled) return;
-        const cached = readWorkspaceViewCache();
-        if (cached?.bootstrap?.spaceId) {
-          setNeonWorkspaceOk(false);
-          setWorkspaceViewFromCache(true);
-          persistNeonRef.current = false;
-          neonSyncSetCloudEnabled(false);
-          applyBootstrapDataRef.current(cached.bootstrap, cached.maxZIndex);
-        } else {
+        const b = heartgardenBootApiRef.current;
+        const skipCache =
+          !b.loaded ||
+          (b.gateEnabled && !b.sessionValid) ||
+          (b.gateEnabled && b.sessionTier === "demo");
+        if (skipCache) {
           setNeonWorkspaceOk(false);
           setWorkspaceViewFromCache(false);
           persistNeonRef.current = false;
@@ -3026,6 +3157,27 @@ export function ArchitecturalCanvasApp({
           setTranslateX(window.innerWidth / 2);
           setTranslateY(window.innerHeight / 2);
           setScale(1);
+        } else {
+          const tier = workspaceCacheTierForNeonSession(b);
+          const cached = readWorkspaceViewCache(tier);
+          if (cached?.bootstrap?.spaceId) {
+            setNeonWorkspaceOk(false);
+            setWorkspaceViewFromCache(true);
+            persistNeonRef.current = false;
+            neonSyncSetCloudEnabled(false);
+            applyBootstrapDataRef.current(cached.bootstrap, cached.maxZIndex);
+          } else {
+            setNeonWorkspaceOk(false);
+            setWorkspaceViewFromCache(false);
+            persistNeonRef.current = false;
+            neonSyncSetCloudEnabled(false);
+            setGraph(createBootstrapPendingGraph());
+            setActiveSpaceId(ROOT_SPACE_ID);
+            setNavigationPath([ROOT_SPACE_ID]);
+            setTranslateX(window.innerWidth / 2);
+            setTranslateY(window.innerHeight / 2);
+            setScale(1);
+          }
         }
       }
       if (cancelled) return;
@@ -3043,10 +3195,14 @@ export function ArchitecturalCanvasApp({
     return () => {
       cancelled = true;
     };
-  }, [scenario, ingestLiveBootstrap]);
+  }, [scenario, ingestLiveBootstrap, applyDemoLocalCanvas, heartgardenBootApi]);
 
   useEffect(() => {
     if (scenario !== "default" || !workspaceViewFromCache) return;
+    const b = heartgardenBootApiRef.current;
+    if (!b.loaded) return;
+    if (b.gateEnabled && (!b.sessionValid || b.sessionTier === "demo")) return;
+
     let cancelled = false;
     const tryReconnect = async () => {
       try {
@@ -3066,7 +3222,7 @@ export function ArchitecturalCanvasApp({
       window.removeEventListener("online", onOnline);
       window.clearInterval(interval);
     };
-  }, [scenario, workspaceViewFromCache, ingestLiveBootstrap]);
+  }, [scenario, workspaceViewFromCache, ingestLiveBootstrap, heartgardenBootApi]);
 
   useLayoutEffect(() => {
     setViewportSize({ width: window.innerWidth, height: window.innerHeight });
@@ -3165,21 +3321,11 @@ export function ArchitecturalCanvasApp({
     fetch("/api/heartgarden/boot", { credentials: "include" })
       .then(async (r) => {
         if (!r.ok) throw new Error("boot status");
-        return r.json() as Promise<{
-          gateEnabled?: boolean;
-          sessionValid?: boolean;
-          sessionTier?: "access" | "visitor" | null;
-        }>;
+        return r.json() as Promise<HeartgardenBootStatusJson>;
       })
       .then((d) => {
         if (cancelled) return;
-        const tier = d.sessionTier === "access" || d.sessionTier === "visitor" ? d.sessionTier : null;
-        setHeartgardenBootApi({
-          loaded: true,
-          gateEnabled: Boolean(d.gateEnabled),
-          sessionValid: Boolean(d.sessionValid),
-          sessionTier: tier,
-        });
+        setHeartgardenBootApi(parseHeartgardenBootStatus(d));
       })
       .catch(() => {
         if (cancelled) return;
@@ -3188,6 +3334,7 @@ export function ArchitecturalCanvasApp({
           gateEnabled: false,
           sessionValid: false,
           sessionTier: null,
+          playerLayerMisconfigured: false,
         });
       });
     return () => {
@@ -3196,13 +3343,13 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   useEffect(() => {
-    if (!isPlayerLayer) return;
+    if (!isRestrictedLayer) return;
     setLorePanelOpen(false);
     setGraphOverlayOpen(false);
     setLoreImportDraft(null);
     setLoreSmartReview(null);
     setLoreReviewPanelOpen(false);
-  }, [isPlayerLayer]);
+  }, [isRestrictedLayer]);
 
   useLayoutEffect(() => {
     if (scenario !== "default") return;
@@ -4062,7 +4209,7 @@ export function ArchitecturalCanvasApp({
   const vaultReviewChromeVisible =
     cloudLinksBar &&
     isUuidLike(activeSpaceId) &&
-    !isPlayerLayer &&
+    !isRestrictedLayer &&
     !(scenario === "default" && !bootLayerDismissed && !canvasSessionActivated);
 
   useEffect(() => {
@@ -4115,7 +4262,7 @@ export function ArchitecturalCanvasApp({
           ]
         : []),
     ];
-    if (!isPlayerLayer) return all;
+    if (!isRestrictedLayer) return all;
     const deny = new Set([
       "export-json",
       "ask-lore",
@@ -4126,7 +4273,7 @@ export function ArchitecturalCanvasApp({
       "create-folder",
     ]);
     return all.filter((a) => !deny.has(a.id));
-  }, [isPlayerLayer, modKeyHints.recenter, vaultReviewChromeVisible]);
+  }, [isRestrictedLayer, modKeyHints.recenter, vaultReviewChromeVisible]);
 
   const getParentFolderExitSlot = useCallback(
     (offsetIndex = 0) => {
@@ -4286,7 +4433,7 @@ export function ArchitecturalCanvasApp({
   }, [focusOpen, galleryOpen, graph.entities, selectedNodeIds, setFolderColorScheme]);
 
   const createNewNode = useCallback((type: NodeTheme) => {
-    if (isPlayerLayer && (type === "media" || type === "folder")) return;
+    if (isRestrictedLayer && (type === "media" || type === "folder")) return;
     recordUndoBeforeMutation();
     const center = centerCoords();
     const x = center.x - 170 + (Math.random() * 60 - 30);
@@ -4532,7 +4679,7 @@ export function ArchitecturalCanvasApp({
       }
       return next;
     });
-  }, [activeSpaceId, centerCoords, createId, isPlayerLayer, recordUndoBeforeMutation]);
+  }, [activeSpaceId, centerCoords, createId, isRestrictedLayer, recordUndoBeforeMutation]);
 
   const onLoreImportFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -4704,7 +4851,7 @@ export function ArchitecturalCanvasApp({
 
   const runPaletteAction = useCallback((actionId: string) => {
     if (
-      isPlayerLayer &&
+      isRestrictedLayer &&
       [
         "export-json",
         "ask-lore",
@@ -4819,7 +4966,7 @@ export function ArchitecturalCanvasApp({
     bootLayerVisible,
     createNewNode,
     exportGraphJson,
-    isPlayerLayer,
+    isRestrictedLayer,
     recenterToOrigin,
   ]);
 
@@ -6328,13 +6475,13 @@ export function ArchitecturalCanvasApp({
         return;
       }
       if (key === "4") {
-        if (isPlayerLayer) return;
+        if (isRestrictedLayer) return;
         event.preventDefault();
         createNewNode("media");
         return;
       }
       if (key === "5") {
-        if (isPlayerLayer) return;
+        if (isRestrictedLayer) return;
         event.preventDefault();
         createNewNode("folder");
         return;
@@ -6347,7 +6494,7 @@ export function ArchitecturalCanvasApp({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [connectionMode, createNewNode, focusOpen, galleryOpen, isPlayerLayer, stackModal]);
+  }, [connectionMode, createNewNode, focusOpen, galleryOpen, isRestrictedLayer, stackModal]);
 
   const resolveRichTextFormatTarget = useCallback((): HTMLElement | null => {
     const shell = shellRef.current;
@@ -6922,24 +7069,24 @@ export function ArchitecturalCanvasApp({
     () =>
       DEFAULT_DOC_INSERT_ACTIONS.map((action) => {
         if (action.command === "arch:insertImage") {
-          return { ...action, disabled: !canInsertImage || isPlayerLayer };
+          return { ...action, disabled: !canInsertImage || isRestrictedLayer };
         }
         if (action.command === "formatBlock" && action.value === "blockquote") {
           return { ...action, active: formatCommandState.blockTag === "blockquote" };
         }
         return action;
       }),
-    [canInsertImage, formatCommandState.blockTag, isPlayerLayer],
+    [canInsertImage, formatCommandState.blockTag, isRestrictedLayer],
   );
 
   const dockCreateActions = useMemo(
     () =>
-      isPlayerLayer
+      isRestrictedLayer
         ? DEFAULT_CREATE_ACTIONS.filter(
             (a) => a.nodeType !== "media" && a.nodeType !== "folder",
           )
         : DEFAULT_CREATE_ACTIONS,
-    [isPlayerLayer],
+    [isRestrictedLayer],
   );
 
   const dockFormatActions = useMemo<DockFormatAction[]>(
@@ -7148,6 +7295,7 @@ export function ArchitecturalCanvasApp({
           bootAmbientPrimePlaybackRef={bootAmbientPrimePlaybackRef}
           bootGateEnabled={heartgardenBootApi.loaded && heartgardenBootApi.gateEnabled}
           bootGateStatusReady={heartgardenBootApi.loaded}
+          serverConfigurationError={bootServerConfigurationError}
           onActivate={() => {
             if (!bootCelebrationPlayedRef.current) {
               bootCelebrationPlayedRef.current = true;
@@ -7158,26 +7306,19 @@ export function ArchitecturalCanvasApp({
             }
             setCanvasSessionActivated(true);
             /*
-             * Boot PIN sets `hg_boot` after POST; the initial bootstrap effect already ran without that cookie
-             * and received GM-scoped data. Re-fetch so visitor / access tiers see the correct workspace.
+             * POST /api/heartgarden/boot sets `hg_boot`; refresh GET status so tier/sessionValid match the cookie,
+             * then the bootstrap effect (or demo branch) loads the correct workspace.
              */
             const boot = heartgardenBootApiRef.current;
             if (boot.loaded && boot.gateEnabled) {
               void (async () => {
                 try {
-                  const data = await fetchBootstrap();
-                  if (!data || data.demo !== false || !data.spaceId) return;
-                  ingestLiveBootstrap(data);
-                  setSelectedNodeIds([]);
-                  setConnectionSourceId(null);
-                  setConnectionMode("move");
-                  setFocusOpen(false);
-                  setActiveNodeId(null);
-                  undoPastRef.current = [];
-                  undoFutureRef.current = [];
-                  setHistoryEpoch((n) => n + 1);
+                  const r = await fetch("/api/heartgarden/boot", { credentials: "include" });
+                  if (!r.ok) return;
+                  const d = (await r.json()) as HeartgardenBootStatusJson;
+                  setHeartgardenBootApi(parseHeartgardenBootStatus(d));
                 } catch {
-                  /* keep prior graph; user can reload */
+                  /* ignore */
                 }
               })();
             }
@@ -7806,7 +7947,7 @@ export function ArchitecturalCanvasApp({
           onOpenRecentFolder={openFolder}
           onRunAction={runPaletteAction}
         />
-        {!isPlayerLayer ? (
+        {!isRestrictedLayer ? (
           <LoreAskPanel
             open={lorePanelOpen}
             onClose={() => setLorePanelOpen(false)}
@@ -7815,7 +7956,7 @@ export function ArchitecturalCanvasApp({
             onOpenSource={(id) => focusEntityFromPalette(id)}
           />
         ) : null}
-        {!isPlayerLayer ? (
+        {!isRestrictedLayer ? (
           <input
             ref={loreImportFileInputRef}
             type="file"
@@ -7842,7 +7983,7 @@ export function ArchitecturalCanvasApp({
             </div>
           </div>
         ) : null}
-        {!isPlayerLayer ? (
+        {!isRestrictedLayer ? (
           <ArchitecturalLoreReviewPanel
             open={loreReviewPanelOpen}
             onClose={() => setLoreReviewPanelOpen(false)}
@@ -7856,7 +7997,7 @@ export function ArchitecturalCanvasApp({
             semanticSummary={loreReviewSemanticSummary}
           />
         ) : null}
-        {loreSmartReview && !isPlayerLayer ? (
+        {loreSmartReview && !isRestrictedLayer ? (
           <div
             className="fixed inset-0 z-[1150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
             role="dialog"
@@ -8273,7 +8414,7 @@ export function ArchitecturalCanvasApp({
           cloudEnabled={cloudLinksBar}
           onFocusEntity={(id) => focusEntityFromPalette(id)}
         />
-        {!isPlayerLayer ? (
+        {!isRestrictedLayer ? (
           <LinkGraphOverlay
             open={graphOverlayOpen}
             spaceId={cloudLinksBar && isUuidLike(activeSpaceId) ? activeSpaceId : null}
@@ -8281,7 +8422,7 @@ export function ArchitecturalCanvasApp({
             onSelectItem={(id) => focusEntityFromPalette(id)}
           />
         ) : null}
-        {loreImportDraft && !loreSmartReview && !isPlayerLayer ? (
+        {loreImportDraft && !loreSmartReview && !isRestrictedLayer ? (
           <div
             className="fixed inset-0 z-[1150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
             role="dialog"
@@ -9049,7 +9190,7 @@ export function ArchitecturalCanvasApp({
             ) : null}
             {!bootPreActivateGate ? (
               <div className={styles.topRightConnectionTools}>
-                {!isPlayerLayer ? (
+                {!isRestrictedLayer ? (
                   <div
                     key={`hg-ce-import-${chromeEnterEpoch}`}
                     className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.shellTopLogOutPanel}`}

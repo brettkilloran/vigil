@@ -11,6 +11,14 @@ vi.mock("@/src/lib/item-links-validation", () => ({
   validateLinkTargetsInSourceSpace: validateLinkTargetsInSourceSpaceMock,
 }));
 
+vi.mock("@/src/lib/heartgarden-api-boot-context", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/src/lib/heartgarden-api-boot-context")>();
+  return {
+    ...mod,
+    getHeartgardenApiBootContext: vi.fn(() => Promise.resolve({ role: "gm" })),
+  };
+});
+
 describe("POST /api/item-links/sync", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -29,6 +37,13 @@ describe("POST /api/item-links/sync", () => {
     };
 
     const db = {
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            limit: vi.fn(async () => [{ spaceId: "space-a" }]),
+          })),
+        })),
+      })),
       transaction: vi.fn(async (run: (txn: typeof tx) => Promise<void>) => run(tx)),
     };
 

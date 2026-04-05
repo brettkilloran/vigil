@@ -11,13 +11,30 @@ vi.mock("@/src/lib/item-links-validation", () => ({
   validateLinkTargetsInSourceSpace: validateLinkTargetsInSourceSpaceMock,
 }));
 
+vi.mock("@/src/lib/heartgarden-api-boot-context", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/src/lib/heartgarden-api-boot-context")>();
+  return {
+    ...mod,
+    getHeartgardenApiBootContext: vi.fn(() => Promise.resolve({ role: "gm" })),
+  };
+});
+
 describe("POST /api/item-links", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("rejects cross-space links from shared validation", async () => {
-    tryGetDbMock.mockReturnValue({});
+    const db = {
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            limit: vi.fn(async () => [{ spaceId: "00000000-0000-4000-8000-000000000099" }]),
+          })),
+        })),
+      })),
+    };
+    tryGetDbMock.mockReturnValue(db);
     validateLinkTargetsInSourceSpaceMock.mockResolvedValue({
       ok: false,
       status: 400,
@@ -41,7 +58,7 @@ describe("POST /api/item-links", () => {
     expect(payload.ok).toBe(false);
     expect(payload.error).toBe("Cross-space links are not allowed");
     expect(validateLinkTargetsInSourceSpaceMock).toHaveBeenCalledWith(
-      {},
+      db,
       "00000000-0000-4000-8000-000000000001",
       ["00000000-0000-4000-8000-000000000002"],
     );

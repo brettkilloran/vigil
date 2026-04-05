@@ -5,6 +5,7 @@ import { tryGetDb } from "@/src/db/index";
 import { spaces } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
+  gmMayAccessSpaceId,
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForVisitor,
   isHeartgardenVisitorBlocked,
@@ -49,6 +50,9 @@ export async function PATCH(
     );
   }
   if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
     return heartgardenApiForbiddenJsonResponse();
   }
 
@@ -99,6 +103,9 @@ export async function DELETE(
     return heartgardenApiForbiddenJsonResponse();
   }
   const { spaceId } = await context.params;
+  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
   const result = await deleteSpaceSubtree(db, spaceId);
   if (!result.ok) {
     const status = result.error === "Space not found" ? 404 : 400;

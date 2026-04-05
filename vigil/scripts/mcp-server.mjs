@@ -25,6 +25,15 @@ const BASE = (process.env.HEARTGARDEN_APP_URL || "http://localhost:3000").replac
 );
 const SPACE = process.env.HEARTGARDEN_DEFAULT_SPACE_ID || "";
 const WRITE_KEY = (process.env.HEARTGARDEN_MCP_WRITE_KEY || "").trim();
+/** When set, MCP never lists this space (Players-only); matches server GM isolation. */
+const PLAYER_SPACE_EXCLUDED = (process.env.HEARTGARDEN_PLAYER_SPACE_ID || "").trim().toLowerCase();
+const GM_PLAYER_SPACE_BREAK_GLASS =
+  (process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE || "").trim() === "1";
+
+function filterGmSpaces(spaces) {
+  if (GM_PLAYER_SPACE_BREAK_GLASS || !PLAYER_SPACE_EXCLUDED || !Array.isArray(spaces)) return spaces;
+  return spaces.filter((s) => String(s?.id ?? "").toLowerCase() !== PLAYER_SPACE_EXCLUDED);
+}
 
 const server = new Server(
   { name: "heartgarden", version: PKG.version },
@@ -35,7 +44,7 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
   try {
     const res = await fetch(`${BASE}/api/spaces`);
     const data = await res.json();
-    const spaces = Array.isArray(data.spaces) ? data.spaces : [];
+    const spaces = filterGmSpaces(Array.isArray(data.spaces) ? data.spaces : []);
     return {
       resources: spaces.map((s) => ({
         uri: `lore://space/${s.id}`,
@@ -318,7 +327,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   if (name === "vigil_browse_spaces") {
     const res = await fetch(`${BASE}/api/spaces`);
-    return { content: [{ type: "text", text: await res.text() }] };
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      if (data && Array.isArray(data.spaces)) {
+        data.spaces = filterGmSpaces(data.spaces);
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      }
+    } catch {
+      /* passthrough */
+    }
+    return { content: [{ type: "text", text }] };
   }
 
   if (name === "vigil_space_summary") {

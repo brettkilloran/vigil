@@ -1,10 +1,11 @@
 import { tryGetDb } from "@/src/db/index";
 import {
   getHeartgardenApiBootContext,
+  gmMayAccessSpaceId,
   heartgardenApiForbiddenJsonResponse,
   isHeartgardenVisitorBlocked,
-  visitorMayAccessSpaceId,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { applySuggestTierPolicy } from "@/src/lib/heartgarden-search-tier-policy";
 import { suggestItems, type SearchFilters } from "@/src/lib/spaces";
 
 function parseBool(raw: string | null): boolean | undefined {
@@ -52,12 +53,14 @@ export async function GET(req: Request) {
   if (q.length < 1) {
     return Response.json({ ok: true, suggestions: [] });
   }
-  const filters = parseFilters(url);
-  if (bootCtx.role === "visitor") {
-    if (filters.spaceId && !visitorMayAccessSpaceId(bootCtx, filters.spaceId)) {
-      return heartgardenApiForbiddenJsonResponse();
-    }
-    filters.spaceId = bootCtx.playerSpaceId;
+  const parsed = parseFilters(url);
+  const tiered = applySuggestTierPolicy(bootCtx, parsed);
+  if (!tiered.ok) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+  const filters = tiered.filters;
+  if (bootCtx.role === "gm" && filters.spaceId && !gmMayAccessSpaceId(bootCtx, filters.spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
   }
   const rows = await suggestItems(db, q, filters);
   const suggestions = rows.map((row) => ({
