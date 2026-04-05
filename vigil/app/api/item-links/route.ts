@@ -3,7 +3,16 @@ import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import { itemLinks } from "@/src/db/schema";
+import { clampLinkMetaSlackMultiplier } from "@/src/lib/item-link-meta";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
+
+function normalizeItemLinkMeta(meta: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...meta };
+  if ("slackMultiplier" in next && typeof next.slackMultiplier === "number") {
+    next.slackMultiplier = clampLinkMetaSlackMultiplier(next.slackMultiplier);
+  }
+  return next;
+}
 
 const bodySchema = z.object({
   sourceItemId: z.string().uuid(),
@@ -57,6 +66,7 @@ export async function POST(req: Request) {
   if (!validated.ok) {
     return Response.json({ ok: false, error: validated.error }, { status: validated.status });
   }
+  const metaForRow = meta ? normalizeItemLinkMeta(meta) : null;
   const [row] = await db
     .insert(itemLinks)
     .values({
@@ -67,7 +77,7 @@ export async function POST(req: Request) {
       sourcePin: sourcePin ?? null,
       targetPin: targetPin ?? null,
       color: color ?? null,
-      meta: meta ?? null,
+      meta: metaForRow,
     })
     .onConflictDoNothing({
       target: [itemLinks.sourceItemId, itemLinks.targetItemId, itemLinks.sourcePin, itemLinks.targetPin],
@@ -102,7 +112,11 @@ export async function PATCH(req: Request) {
   }
   const { id, color, label, linkType, meta } = parsed.data;
 
-  const [existing] = await db.select().from(itemLinks).where(eq(itemLinks.id, id)).limit(1);
+  const [existing] = await db
+    .select({ meta: itemLinks.meta })
+    .from(itemLinks)
+    .where(eq(itemLinks.id, id))
+    .limit(1);
   if (!existing) {
     return Response.json({ ok: false, error: "Link not found" }, { status: 404 });
   }
@@ -124,7 +138,7 @@ export async function PATCH(req: Request) {
         existing.meta && typeof existing.meta === "object" && !Array.isArray(existing.meta)
           ? { ...(existing.meta as Record<string, unknown>) }
           : {};
-      updates.meta = { ...prev, ...meta };
+      updates.meta = normalizeItemLinkMeta({ ...prev, ...meta });
     }
   }
   if (Object.keys(updates).length < 1) {

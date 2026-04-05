@@ -64,7 +64,7 @@ export type CanvasPinConnection = {
   sourcePin: CanvasConnectionPin;
   targetPin: CanvasConnectionPin;
   color: string;
-  /** Rope slack multiplier. 1.0 = taut, higher = looser. Persisted as `item_links.meta.slackMultiplier`. */
+  /** Rope slack multiplier. 1.0 = taut, higher = looser. Stored in `item_links.meta.slackMultiplier`; default constant in `item-link-meta.ts`. */
   slackMultiplier?: number;
   createdAt: number;
   updatedAt: number;

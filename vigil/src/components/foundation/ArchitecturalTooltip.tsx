@@ -31,6 +31,10 @@ function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
+function innerRefOf(el: ReactElement) {
+  return (el as unknown as { ref?: Ref<HTMLElement> }).ref;
+}
+
 export function ArchitecturalTooltip({
   content,
   children,
@@ -41,14 +45,7 @@ export function ArchitecturalTooltip({
   associateDescription = false,
 }: {
   content: ReactNode;
-  children: ReactElement<{
-    ref?: Ref<HTMLElement>;
-    onPointerEnter?: React.PointerEventHandler<HTMLElement>;
-    onPointerLeave?: React.PointerEventHandler<HTMLElement>;
-    onFocus?: React.FocusEventHandler<HTMLElement>;
-    onBlur?: React.FocusEventHandler<HTMLElement>;
-    "aria-describedby"?: string;
-  }>;
+  children: ReactElement;
   side?: Side;
   delayMs?: number;
   disabled?: boolean;
@@ -196,7 +193,14 @@ export function ArchitecturalTooltip({
     [clearShowTimer],
   );
 
-  const childDescribedBy = children.props["aria-describedby"];
+  const childProps = children.props as {
+    onPointerEnter?: React.PointerEventHandler<HTMLElement>;
+    onPointerLeave?: React.PointerEventHandler<HTMLElement>;
+    onFocus?: React.FocusEventHandler<HTMLElement>;
+    onBlur?: React.FocusEventHandler<HTMLElement>;
+    "aria-describedby"?: string;
+  };
+  const childDescribedBy = childProps["aria-describedby"];
   const mergedDescribedBy =
     associateDescription && open && paintOpen
       ? typeof childDescribedBy === "string" && childDescribedBy.trim()
@@ -204,25 +208,27 @@ export function ArchitecturalTooltip({
         : tipId
       : childDescribedBy;
 
-  const trigger = cloneElement(children, {
+  /* Ref callback runs on React commit, not during render (merge for anchor + forwarded ref). */
+  // eslint-disable-next-line react-hooks/refs -- false positive: callback assigns refs when DOM attaches
+  const trigger = cloneElement(children as ReactElement<Record<string, unknown>>, {
     ref: (node: HTMLElement | null) => {
       (triggerRef as { current: HTMLElement | null }).current = node;
-      assignRef((children as ReactElement<{ ref?: Ref<HTMLElement> }>).ref, node);
+      assignRef(innerRefOf(children), node);
     },
     onPointerEnter: (e: React.PointerEvent<HTMLElement>) => {
-      children.props.onPointerEnter?.(e);
+      childProps.onPointerEnter?.(e);
       scheduleShow(false);
     },
     onPointerLeave: (e: React.PointerEvent<HTMLElement>) => {
-      children.props.onPointerLeave?.(e);
+      childProps.onPointerLeave?.(e);
       scheduleHide();
     },
     onFocus: (e: React.FocusEvent<HTMLElement>) => {
-      children.props.onFocus?.(e);
+      childProps.onFocus?.(e);
       scheduleShow(true);
     },
     onBlur: (e: React.FocusEvent<HTMLElement>) => {
-      children.props.onBlur?.(e);
+      childProps.onBlur?.(e);
       scheduleHide();
     },
     "aria-describedby": mergedDescribedBy,

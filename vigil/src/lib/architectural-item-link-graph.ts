@@ -4,7 +4,7 @@ import type {
   CanvasPinConnection,
 } from "@/src/components/foundation/architectural-types";
 import type { GraphEdge } from "@/src/lib/graph-types";
-import { clampLinkMetaSlackMultiplier } from "@/src/lib/item-link-meta";
+import { resolveSlackMultiplierForDisplay } from "@/src/lib/item-link-meta";
 
 function shallowCloneGraph(graph: CanvasGraph): CanvasGraph {
   return {
@@ -67,10 +67,7 @@ export function mergeHydratedDbConnections(
     const targetPin = parseItemLinkPinString(edge.targetPin, tgtFallback);
 
     const connectionId = `${NEON_LINK_PREFIX}${edge.id}`;
-    const slackMultiplier =
-      typeof edge.slackMultiplier === "number" && Number.isFinite(edge.slackMultiplier)
-        ? clampLinkMetaSlackMultiplier(edge.slackMultiplier)
-        : 1.1;
+    const slackMultiplier = resolveSlackMultiplierForDisplay(edge.slackMultiplier);
     merged[connectionId] = {
       id: connectionId,
       sourceEntityId: edge.source,

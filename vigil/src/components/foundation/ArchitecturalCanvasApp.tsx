@@ -80,7 +80,10 @@ import {
   fetchBootstrap,
 } from "@/src/components/foundation/architectural-neon-api";
 import { mergeHydratedDbConnections } from "@/src/lib/architectural-item-link-graph";
-import { clampLinkMetaSlackMultiplier } from "@/src/lib/item-link-meta";
+import {
+  clampLinkMetaSlackMultiplier,
+  DEFAULT_LINK_SLACK_MULTIPLIER,
+} from "@/src/lib/item-link-meta";
 import { LORE_LINK_TYPE_OPTIONS } from "@/src/lib/lore-link-types";
 import type { LoreImportPlan } from "@/src/lib/lore-import-plan-types";
 import type { LoreImportEntityDraft, LoreImportLinkDraft } from "@/src/lib/lore-import-types";
@@ -1639,7 +1642,9 @@ export function ArchitecturalCanvasApp({
             meta: {
               sourcePinConfig: snap.sourcePin,
               targetPinConfig: snap.targetPin,
-              slackMultiplier: clampLinkMetaSlackMultiplier(snap.slackMultiplier ?? 1.1),
+              slackMultiplier: clampLinkMetaSlackMultiplier(
+                snap.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER,
+              ),
             },
           }),
         });
@@ -1677,6 +1682,7 @@ export function ArchitecturalCanvasApp({
           }),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        setConnectionSyncPatch(connectionId, { syncState: "synced", syncError: null });
       } catch {
         setConnectionSyncPatch(connectionId, {
           syncState: "error",
@@ -1775,7 +1781,7 @@ export function ArchitecturalCanvasApp({
               : CONNECTION_PIN_DEFAULT_CONTENT,
           color: connectionColor,
           linkType: "pin",
-          slackMultiplier: 1.1,
+          slackMultiplier: DEFAULT_LINK_SLACK_MULTIPLIER,
           createdAt: Date.now(),
           updatedAt: Date.now(),
           syncState: "local-only",
@@ -1821,7 +1827,8 @@ export function ArchitecturalCanvasApp({
       const current = graphRef.current.connections[connectionId];
       if (!current) return;
       const clamped = clampLinkMetaSlackMultiplier(nextSlack);
-      if (Math.abs((current.slackMultiplier ?? 1.1) - clamped) < 0.001) return;
+      if (Math.abs((current.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER) - clamped) < 0.001)
+        return;
       recordUndoBeforeMutation();
       setConnectionSyncPatch(connectionId, { slackMultiplier: clamped });
       void syncConnectionSlack(connectionId, clamped);
@@ -1948,7 +1955,7 @@ export function ArchitecturalCanvasApp({
         last.y = end.y;
         last.oldX = end.x;
         last.oldY = end.y;
-        const slackMultiplier = connection.slackMultiplier ?? 1.1;
+        const slackMultiplier = connection.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER;
         const liveDistance = Math.hypot(end.x - start.x, end.y - start.y);
         const segmentLength = Math.max(14, liveDistance / CONNECTION_SEGMENTS) * slackMultiplier;
         runtime.constraints.forEach((constraint) => {
@@ -4563,11 +4570,8 @@ export function ArchitecturalCanvasApp({
       updateDropTargets(draggedIds[0], event.clientX, event.clientY);
     };
 
-    const finishLassoFromPointer = (event: PointerEvent) => {
+    const completeActiveLasso = () => {
       if (!lassoStartRef.current) return;
-      const pid = lassoPointerIdRef.current;
-      if (pid != null && event.pointerId !== pid) return;
-
       const start = lassoStartRef.current;
       const rect: LassoRectScreen =
         lassoRectScreenRef.current ?? {
@@ -4626,8 +4630,32 @@ export function ArchitecturalCanvasApp({
       }
     };
 
-    const onPointerUp = (event: PointerEvent) => {
-      finishLassoFromPointer(event);
+    const finishLassoFromPointer = (event: PointerEvent) => {
+      if (!lassoStartRef.current) return;
+      const pid = lassoPointerIdRef.current;
+      if (pid != null && event.pointerId !== pid) return;
+      completeActiveLasso();
+    };
+
+    const onMouseMoveForLasso = (event: MouseEvent) => {
+      if (!lassoStartRef.current) return;
+      const start = lassoStartRef.current;
+      const next: LassoRectScreen = {
+        x1: start.x,
+        y1: start.y,
+        x2: event.clientX,
+        y2: event.clientY,
+      };
+      lassoRectScreenRef.current = next;
+      setLassoRectScreen(next);
+    };
+
+    const onWindowPointerOrMouseUp = (event: PointerEvent | MouseEvent) => {
+      if ("pointerId" in event) {
+        finishLassoFromPointer(event);
+      } else if (event.button === 0 && lassoStartRef.current) {
+        completeActiveLasso();
+      }
 
       isPanningRef.current = false;
       setIsPanning(false);
@@ -4660,12 +4688,16 @@ export function ArchitecturalCanvasApp({
     };
 
     window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-    window.addEventListener("pointercancel", onPointerUp);
+    window.addEventListener("pointerup", onWindowPointerOrMouseUp);
+    window.addEventListener("pointercancel", onWindowPointerOrMouseUp);
+    window.addEventListener("mousemove", onMouseMoveForLasso);
+    window.addEventListener("mouseup", onWindowPointerOrMouseUp);
     return () => {
       window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-      window.removeEventListener("pointercancel", onPointerUp);
+      window.removeEventListener("pointerup", onWindowPointerOrMouseUp);
+      window.removeEventListener("pointercancel", onWindowPointerOrMouseUp);
+      window.removeEventListener("mousemove", onMouseMoveForLasso);
+      window.removeEventListener("mouseup", onWindowPointerOrMouseUp);
     };
   }, [
     activeSpaceId,
@@ -6246,7 +6278,7 @@ export function ArchitecturalCanvasApp({
   const connectionContextMenuItems = useMemo<ContextMenuItem[]>(() => {
     if (!selectedConnectionId) return [];
     const selected = graph.connections[selectedConnectionId];
-    const currentSlack = selected?.slackMultiplier ?? 1.1;
+    const currentSlack = selected?.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER;
     const currentLt = selected?.linkType ?? "pin";
     const typeItems: ContextMenuItem[] = LORE_LINK_TYPE_OPTIONS.map((opt) => ({
       label: `${currentLt === opt.value ? "✓ " : ""}Link: ${opt.label}`,
