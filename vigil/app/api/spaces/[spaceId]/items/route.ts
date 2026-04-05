@@ -2,6 +2,13 @@ import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
+import {
+  getHeartgardenApiBootContext,
+  heartgardenApiForbiddenJsonResponse,
+  heartgardenMaskNotFoundForVisitor,
+  isHeartgardenVisitorBlocked,
+  visitorMayAccessSpaceId,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
@@ -37,10 +44,20 @@ export async function GET(
       { status: 503 },
     );
   }
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
   const { spaceId } = await context.params;
   const space = await assertSpaceExists(db, spaceId);
   if (!space) {
-    return Response.json({ ok: false, error: "Space not found" }, { status: 404 });
+    return heartgardenMaskNotFoundForVisitor(
+      bootCtx,
+      Response.json({ ok: false, error: "Space not found" }, { status: 404 }),
+    );
+  }
+  if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
   }
   const rows = await listItemsForSpace(db, spaceId);
   return Response.json({ ok: true, items: rows.map(rowToCanvasItem) });
@@ -57,10 +74,20 @@ export async function POST(
       { status: 503 },
     );
   }
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
   const { spaceId } = await context.params;
   const space = await assertSpaceExists(db, spaceId);
   if (!space) {
-    return Response.json({ ok: false, error: "Space not found" }, { status: 404 });
+    return heartgardenMaskNotFoundForVisitor(
+      bootCtx,
+      Response.json({ ok: false, error: "Space not found" }, { status: 404 }),
+    );
+  }
+  if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
   }
 
   let json: unknown;
@@ -130,7 +157,7 @@ export async function POST(
     })
     .returning();
 
-  if (row) {
+  if (row && bootCtx.role !== "visitor") {
     scheduleItemEmbeddingRefresh(db, row);
     if (contentText.trim().length > 0 || title.trim().length > 0) {
       scheduleVaultReindexAfterResponse(row.id);

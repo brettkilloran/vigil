@@ -3,6 +3,10 @@ import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import { loreImportJobs } from "@/src/db/schema";
+import {
+  enforceGmOnlyBootContext,
+  getHeartgardenApiBootContext,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { scheduleLoreImportJobProcessing } from "@/src/lib/lore-import-job-after";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
@@ -15,6 +19,10 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const bootCtx = await getHeartgardenApiBootContext();
+  const denied = enforceGmOnlyBootContext(bootCtx);
+  if (denied) return denied;
+
   const db = tryGetDb();
   if (!db) {
     return Response.json(

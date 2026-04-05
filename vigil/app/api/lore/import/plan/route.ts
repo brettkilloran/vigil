@@ -2,6 +2,10 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
+import {
+  enforceGmOnlyBootContext,
+  getHeartgardenApiBootContext,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { buildLoreImportPlan } from "@/src/lib/lore-import-plan-build";
 import { persistImportReviewQueueFromPlan } from "@/src/lib/lore-import-persist-review";
 import { assertSpaceExists } from "@/src/lib/spaces";
@@ -17,6 +21,10 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const bootCtx = await getHeartgardenApiBootContext();
+  const denied = enforceGmOnlyBootContext(bootCtx);
+  if (denied) return denied;
+
   const key = process.env.ANTHROPIC_API_KEY?.trim();
   if (!key) {
     return Response.json(

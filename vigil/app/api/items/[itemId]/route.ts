@@ -3,6 +3,14 @@ import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
+import {
+  getHeartgardenApiBootContext,
+  heartgardenApiForbiddenJsonResponse,
+  heartgardenMaskNotFoundForVisitor,
+  isHeartgardenVisitorBlocked,
+  visitorMayAccessItemSpace,
+  visitorMayApplySpaceIdPatch,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
@@ -66,6 +74,10 @@ export async function PATCH(
       { status: 503 },
     );
   }
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
   const { itemId } = await context.params;
 
   let json: unknown;
@@ -89,7 +101,13 @@ export async function PATCH(
     .where(eq(items.id, itemId))
     .limit(1);
   if (!existing) {
-    return Response.json({ ok: false, error: "Not found" }, { status: 404 });
+    return heartgardenMaskNotFoundForVisitor(
+      bootCtx,
+      Response.json({ ok: false, error: "Not found" }, { status: 404 }),
+    );
+  }
+  if (!visitorMayAccessItemSpace(bootCtx, existing.spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
   }
 
   const p = parsed.data;
@@ -118,9 +136,15 @@ export async function PATCH(
   };
 
   if (p.spaceId !== undefined) {
+    if (!visitorMayApplySpaceIdPatch(bootCtx, existing.spaceId, p.spaceId)) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
     const space = await assertSpaceExists(db, p.spaceId);
     if (!space) {
-      return Response.json({ ok: false, error: "Space not found" }, { status: 400 });
+      return heartgardenMaskNotFoundForVisitor(
+        bootCtx,
+        Response.json({ ok: false, error: "Space not found" }, { status: 400 }),
+      );
     }
     updates.spaceId = p.spaceId;
   }
@@ -179,11 +203,13 @@ export async function PATCH(
   const contentDirty = titleChanged || contentTextChanged;
   const metaDirty =
     p.entityMeta !== undefined || p.entityMetaMerge !== undefined;
-  if (contentDirty && row) {
-    scheduleItemEmbeddingRefresh(db, row);
-    scheduleVaultReindexAfterResponse(row.id);
-  } else if (metaDirty && row) {
-    scheduleVaultReindexAfterResponse(row.id);
+  if (bootCtx.role !== "visitor") {
+    if (contentDirty && row) {
+      scheduleItemEmbeddingRefresh(db, row);
+      scheduleVaultReindexAfterResponse(row.id);
+    } else if (metaDirty && row) {
+      scheduleVaultReindexAfterResponse(row.id);
+    }
   }
 
   return Response.json({ ok: true, item: rowToCanvasItem(row!) });
@@ -200,10 +226,27 @@ export async function DELETE(
       { status: 503 },
     );
   }
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
   const { itemId } = await context.params;
+  const [existing] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
+  if (!existing) {
+    return heartgardenMaskNotFoundForVisitor(
+      bootCtx,
+      Response.json({ ok: false, error: "Not found" }, { status: 404 }),
+    );
+  }
+  if (!visitorMayAccessItemSpace(bootCtx, existing.spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
   const deleted = await db.delete(items).where(eq(items.id, itemId)).returning();
   if (deleted.length === 0) {
-    return Response.json({ ok: false, error: "Not found" }, { status: 404 });
+    return heartgardenMaskNotFoundForVisitor(
+      bootCtx,
+      Response.json({ ok: false, error: "Not found" }, { status: 404 }),
+    );
   }
   return Response.json({ ok: true });
 }

@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import {
+  consumeHeartgardenBootPostRateLimit,
+  heartgardenBootClientIp,
+} from "@/src/lib/heartgarden-boot-rate-limit";
+import {
   bootSessionCookieOptions,
   bootSessionMaxAgeSec,
   clearBootSessionCookieOptions,
@@ -30,13 +34,25 @@ export async function GET() {
   const jar = await cookies();
   const raw = jar.get(HEARTGARDEN_BOOT_COOKIE_NAME)?.value;
   const sessionValid = gateEnabled && sessionValidFromCookie(raw, sessionSecret);
-  return NextResponse.json({ gateEnabled, sessionValid });
+  let sessionTier: "access" | "visitor" | null = null;
+  if (gateEnabled && raw && sessionSecret) {
+    const payload = verifyBootSessionCookie(sessionSecret, raw);
+    if (payload?.tier === "access" || payload?.tier === "visitor") {
+      sessionTier = payload.tier;
+    }
+  }
+  return NextResponse.json({ gateEnabled, sessionValid, sessionTier });
 }
 
 export async function POST(req: Request) {
   const { gateEnabled, accessPin, visitorPin, sessionSecret } = readBootEnv();
   if (!gateEnabled) {
     return NextResponse.json({ error: "Boot gate is not enabled." }, { status: 400 });
+  }
+
+  const ip = heartgardenBootClientIp(req);
+  if (!consumeHeartgardenBootPostRateLimit(ip)) {
+    return NextResponse.json({ error: "Too many requests." }, { status: 429 });
   }
 
   let body: unknown;

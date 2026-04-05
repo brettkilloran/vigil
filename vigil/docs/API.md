@@ -8,7 +8,17 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/bootstrap` | Active space, spaces list, items (subtree), camera. **`PLAYWRIGHT_E2E=1`** forces empty demo payload (tests only). |
+| GET | `/api/bootstrap` | Active space, spaces list, items (subtree), camera. **`PLAYWRIGHT_E2E=1`** forces empty demo payload (tests only). With boot gate on and a valid **`visitor`** `hg_boot` cookie, scopes to **`HEARTGARDEN_PLAYER_SPACE_ID`** only (403 if misconfigured). |
+
+## Boot gate (splash PIN)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/heartgarden/boot` | **`{ gateEnabled, sessionValid, sessionTier }`** — no secrets. **`sessionTier`** is **`"access"`**, **`"visitor"`**, or **`null`** (invalid cookie, gate off, or not yet signed in). Gate is **off** when **`PLAYWRIGHT_E2E=1`**, when **`HEARTGARDEN_BOOT_SESSION_SECRET`** is shorter than **16** characters, or when **neither** PIN is exactly **8** characters (**`HEARTGARDEN_BOOT_PIN_ACCESS`** and/or **`HEARTGARDEN_BOOT_PIN_VISITOR`** — either one is enough to turn the gate on). |
+| POST | `/api/heartgarden/boot` | Body **`{ code }`** — exactly **8** characters (after trim). On success: **204** + **`Set-Cookie`** `hg_boot` (httpOnly, signed tier **access** or **visitor**). On failure: **401** with constant **`{ error: "Access denied." }`**. Too many attempts from one client IP: **429** **`{ error: "Too many requests." }`** (in-memory limit per instance; see env below). |
+| DELETE | `/api/heartgarden/boot` | Clears **`hg_boot`** (e.g. after in-app **Log out**). **204**. |
+
+**Env:** **`HEARTGARDEN_BOOT_PIN_ACCESS`**, optional **`HEARTGARDEN_BOOT_PIN_VISITOR`**, **`HEARTGARDEN_BOOT_SESSION_SECRET`**, optional **`HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC`**, optional **`HEARTGARDEN_PLAYER_SPACE_ID`** (UUID of the campaign/table space for **visitor** tier; required for a working visitor session). See **`docs/VERCEL_ENV_VARS.md`** and **`docs/PLAYER_LAYER.md`**.
 
 ## Spaces
 
@@ -39,7 +49,7 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/search` | Query params: `q`, `spaceId`, mode (`hybrid` / `semantic` / FTS), filters. Uses pgvector when configured. |
+| GET | `/api/search` | Query params: `q`, `spaceId`, mode (`hybrid` / `semantic` / FTS), filters. Uses pgvector when configured. **Visitor** tier: `spaceId` forced to player space; hybrid/semantic downgraded to FTS. |
 | GET | `/api/search/suggest` | Prefix / palette suggestions. |
 | GET | `/api/search/chunks` | Raw chunk-level hits (debug / advanced clients). |
 
@@ -97,7 +107,13 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 | `OPENAI_API_KEY` | Embeddings / semantic search |
 | `HEARTGARDEN_MCP_WRITE_KEY` | Reindex + MCP write tools (must match client `write_key`) |
 | `R2_*` | Image presign |
-| `PLAYWRIGHT_E2E` | Bootstrap empty demo (tests only) |
+| `PLAYWRIGHT_E2E` | Bootstrap empty demo (tests only); boot gate forced off in **`/api/heartgarden/boot`** |
+| `HEARTGARDEN_BOOT_PIN_ACCESS` / `HEARTGARDEN_BOOT_PIN_VISITOR` | Boot splash PINs (8 chars each if set) |
+| `HEARTGARDEN_BOOT_SESSION_SECRET` | Signs **`hg_boot`** session cookie |
+| `HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC` | Optional cookie max-age |
+| `HEARTGARDEN_PLAYER_SPACE_ID` | Visitor-tier scoped space UUID (see **`docs/PLAYER_LAYER.md`**) |
+| `HEARTGARDEN_BOOT_POST_RATE_LIMIT_MAX` | Optional max **`POST /api/heartgarden/boot`** attempts per IP per window (default **40**, clamped **3–500**) |
+| `HEARTGARDEN_BOOT_POST_RATE_LIMIT_WINDOW_MS` | Optional window length in ms (default **15 minutes**, clamped **30s–1h**) |
 
 See also **`docs/DEPLOY_VERCEL.md`**, **`docs/FOLLOW_UP.md`**, and **`AGENTS.md`** for operational detail.
 

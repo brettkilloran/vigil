@@ -1,5 +1,9 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
+import { HEARTGARDEN_BOOT_PIN_LENGTH } from "@/src/lib/heartgarden-boot-pin-constants";
+
+export { HEARTGARDEN_BOOT_PIN_LENGTH } from "@/src/lib/heartgarden-boot-pin-constants";
+
 export const HEARTGARDEN_BOOT_COOKIE_NAME = "hg_boot";
 
 export type HeartgardenBootTier = "access" | "visitor";
@@ -12,8 +16,6 @@ export type HeartgardenBootPayload = {
 
 const DUMMY_DIGEST_A = createHash("sha256").update("\0hg_boot_unset_a", "utf8").digest();
 const DUMMY_DIGEST_B = createHash("sha256").update("\0hg_boot_unset_b", "utf8").digest();
-
-export const HEARTGARDEN_BOOT_PIN_LENGTH = 8;
 
 export function isPlaywrightE2E(): boolean {
   return process.env.PLAYWRIGHT_E2E === "1";
@@ -31,8 +33,10 @@ export function readBootEnv(): {
   const accessPin = (process.env.HEARTGARDEN_BOOT_PIN_ACCESS ?? "").trim();
   const visitorPin = (process.env.HEARTGARDEN_BOOT_PIN_VISITOR ?? "").trim();
   const sessionSecret = (process.env.HEARTGARDEN_BOOT_SESSION_SECRET ?? "").trim();
-  const gateEnabled =
-    accessPin.length === HEARTGARDEN_BOOT_PIN_LENGTH && sessionSecret.length >= 16;
+  const accessOk = accessPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
+  const visitorOk = visitorPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
+  /** Gate is on when the session secret is set and at least one PIN is configured (access and/or visitor). */
+  const gateEnabled = sessionSecret.length >= 16 && (accessOk || visitorOk);
   return { gateEnabled, accessPin, visitorPin, sessionSecret };
 }
 

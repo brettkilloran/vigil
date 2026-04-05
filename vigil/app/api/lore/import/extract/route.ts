@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+import {
+  enforceGmOnlyBootContext,
+  getHeartgardenApiBootContext,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { extractLoreEntitiesWithAnthropic } from "@/src/lib/lore-import-extract";
 
 export const runtime = "nodejs";
@@ -9,6 +13,10 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const bootCtx = await getHeartgardenApiBootContext();
+  const denied = enforceGmOnlyBootContext(bootCtx);
+  if (denied) return denied;
+
   const key = process.env.ANTHROPIC_API_KEY?.trim();
   if (!key) {
     return Response.json(

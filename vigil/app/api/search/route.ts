@@ -1,6 +1,13 @@
 import { tryGetDb } from "@/src/db/index";
-import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
+import {
+  getHeartgardenApiBootContext,
+  heartgardenApiForbiddenJsonResponse,
+  heartgardenMaskNotFoundForVisitor,
+  isHeartgardenVisitorBlocked,
+  visitorMayAccessSpaceId,
+} from "@/src/lib/heartgarden-api-boot-context";
+import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import {
   assertSpaceExists,
   type SearchFilters,
@@ -65,15 +72,33 @@ export async function GET(req: Request) {
   if (!db) {
     return Response.json({ ok: false, error: "Database not configured", items: [] }, { status: 503 });
   }
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim();
-  const mode = (url.searchParams.get("mode") ?? "hybrid").toLowerCase();
+  let mode = (url.searchParams.get("mode") ?? "hybrid").toLowerCase();
   const filters = parseFilters(url);
+
+  if (bootCtx.role === "visitor") {
+    if (filters.spaceId && !visitorMayAccessSpaceId(bootCtx, filters.spaceId)) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+    filters.spaceId = bootCtx.playerSpaceId;
+    if (mode === "hybrid" || mode === "semantic") {
+      mode = "fts";
+    }
+  }
 
   if (filters.spaceId) {
     const space = await assertSpaceExists(db, filters.spaceId);
     if (!space) {
-      return Response.json({ ok: false, error: "Space not found", items: [] }, { status: 404 });
+      return heartgardenMaskNotFoundForVisitor(
+        bootCtx,
+        Response.json({ ok: false, error: "Space not found", items: [] }, { status: 404 }),
+      );
     }
   }
 

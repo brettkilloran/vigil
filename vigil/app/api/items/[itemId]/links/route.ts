@@ -2,6 +2,13 @@ import { eq } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
+import {
+  getHeartgardenApiBootContext,
+  heartgardenApiForbiddenJsonResponse,
+  heartgardenMaskNotFoundForVisitor,
+  isHeartgardenVisitorBlocked,
+  visitorMayAccessItemSpace,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { getItemLinksResolved } from "@/src/lib/spaces";
 
 export async function GET(
@@ -15,10 +22,20 @@ export async function GET(
       { status: 503 },
     );
   }
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
   const { itemId } = await context.params;
   const [row] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
   if (!row) {
-    return Response.json({ ok: false, error: "Not found" }, { status: 404 });
+    return heartgardenMaskNotFoundForVisitor(
+      bootCtx,
+      Response.json({ ok: false, error: "Not found" }, { status: 404 }),
+    );
+  }
+  if (!visitorMayAccessItemSpace(bootCtx, row.spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
   }
   const { outgoing, incoming } = await getItemLinksResolved(db, itemId);
   return Response.json({ ok: true, outgoing, incoming });

@@ -2,6 +2,10 @@ import { eq } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
+import {
+  enforceGmOnlyBootContext,
+  getHeartgardenApiBootContext,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { reindexItemVault } from "@/src/lib/item-vault-index";
 import { vaultItemIndexRateLimitExceeded } from "@/src/lib/vault-index-rate-limit";
 
@@ -9,6 +13,10 @@ export async function POST(
   req: Request,
   context: { params: Promise<{ itemId: string }> },
 ) {
+  const bootCtxEarly = await getHeartgardenApiBootContext();
+  const deniedEarly = enforceGmOnlyBootContext(bootCtxEarly);
+  if (deniedEarly) return deniedEarly;
+
   if (vaultItemIndexRateLimitExceeded(req)) {
     return Response.json(
       { ok: false, error: "Too many index requests. Try again in a minute." },

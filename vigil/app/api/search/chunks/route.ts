@@ -1,4 +1,8 @@
 import { tryGetDb } from "@/src/db/index";
+import {
+  enforceGmOnlyBootContext,
+  getHeartgardenApiBootContext,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { assertSpaceExists, type SearchFilters, type VigilDb } from "@/src/lib/spaces";
 import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
 import { searchItemChunksByVector } from "@/src/lib/vault-retrieval";
@@ -12,6 +16,10 @@ function parseFilters(url: URL): SearchFilters {
 }
 
 export async function GET(req: Request) {
+  const bootCtx = await getHeartgardenApiBootContext();
+  const denied = enforceGmOnlyBootContext(bootCtx);
+  if (denied) return denied;
+
   const db = tryGetDb();
   if (!db) {
     return Response.json({ ok: false, error: "Database not configured", chunks: [] }, { status: 503 });

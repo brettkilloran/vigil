@@ -2,7 +2,14 @@ import { and, eq, notInArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
-import { itemLinks } from "@/src/db/schema";
+import { itemLinks, items } from "@/src/db/schema";
+import {
+  getHeartgardenApiBootContext,
+  heartgardenApiForbiddenJsonResponse,
+  heartgardenMaskNotFoundForVisitor,
+  isHeartgardenVisitorBlocked,
+  visitorMayAccessItemSpace,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 
 const bodySchema = z.object({
@@ -22,6 +29,10 @@ export async function POST(req: Request) {
       { status: 503 },
     );
   }
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
 
   let json: unknown;
   try {
@@ -39,6 +50,16 @@ export async function POST(req: Request) {
   }
 
   const { sourceItemId, targetIds } = parsed.data;
+  const [srcItem] = await db.select({ spaceId: items.spaceId }).from(items).where(eq(items.id, sourceItemId)).limit(1);
+  if (!srcItem) {
+    return heartgardenMaskNotFoundForVisitor(
+      bootCtx,
+      Response.json({ ok: false, error: "Source item not found" }, { status: 404 }),
+    );
+  }
+  if (!visitorMayAccessItemSpace(bootCtx, srcItem.spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
   const validated = await validateLinkTargetsInSourceSpace(db, sourceItemId, targetIds);
   if (!validated.ok) {
     return Response.json({ ok: false, error: validated.error }, { status: validated.status });

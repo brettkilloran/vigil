@@ -10,8 +10,9 @@ import {
   type KeyboardEvent,
 } from "react";
 
+import { Button } from "@/src/components/ui/Button";
 import { cx } from "@/src/lib/cx";
-import { HEARTGARDEN_BOOT_PIN_LENGTH } from "@/src/lib/heartgarden-boot-session";
+import { HEARTGARDEN_BOOT_PIN_LENGTH } from "@/src/lib/heartgarden-boot-pin-constants";
 
 import styles from "./HeartgardenPinField.module.css";
 
@@ -178,15 +179,18 @@ export function HeartgardenPinField({
               );
             })}
           </div>
-          <button
+          <Button
             type="button"
+            variant="primary"
+            tone="solid"
+            size="icon"
+            iconOnly
             className={cx(styles.submit, complete && !block && styles.submitReady)}
             disabled={!complete || block}
             aria-label="Submit access code"
             onClick={() => onSubmit()}
-          >
-            <ArrowRight size={22} weight="bold" aria-hidden />
-          </button>
+            leadingIcon={<ArrowRight size={22} weight="bold" aria-hidden />}
+          />
         </div>
       </fieldset>
       <p id={errorId} className={styles.error} aria-live="polite" role="status">

@@ -3,6 +3,10 @@ import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
+import {
+  enforceGmOnlyBootContext,
+  getHeartgardenApiBootContext,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
 import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
 import {
@@ -74,6 +78,10 @@ function resolveNameToId(
 }
 
 export async function POST(req: Request) {
+  const bootCtx = await getHeartgardenApiBootContext();
+  const denied = enforceGmOnlyBootContext(bootCtx);
+  if (denied) return denied;
+
   const db = tryGetDb();
   if (!db) {
     return Response.json(

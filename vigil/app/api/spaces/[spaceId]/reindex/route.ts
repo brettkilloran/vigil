@@ -1,9 +1,17 @@
 import { tryGetDb } from "@/src/db/index";
-import { assertSpaceExists, type VigilDb } from "@/src/lib/spaces";
+import {
+  enforceGmOnlyBootContext,
+  getHeartgardenApiBootContext,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { reindexSpaceVault } from "@/src/lib/item-vault-index";
+import { assertSpaceExists, type VigilDb } from "@/src/lib/spaces";
 import { vaultSpaceReindexRateLimitExceeded } from "@/src/lib/vault-index-rate-limit";
 
 export async function POST(req: Request, context: { params: Promise<{ spaceId: string }> }) {
+  const bootCtxEarly = await getHeartgardenApiBootContext();
+  const deniedEarly = enforceGmOnlyBootContext(bootCtxEarly);
+  if (deniedEarly) return deniedEarly;
+
   if (vaultSpaceReindexRateLimitExceeded(req)) {
     return Response.json(
       { ok: false, error: "Too many reindex requests. Try again in a minute." },

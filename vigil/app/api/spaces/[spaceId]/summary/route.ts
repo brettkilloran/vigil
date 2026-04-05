@@ -2,6 +2,13 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
+import {
+  getHeartgardenApiBootContext,
+  heartgardenApiForbiddenJsonResponse,
+  heartgardenMaskNotFoundForVisitor,
+  isHeartgardenVisitorBlocked,
+  visitorMayAccessSpaceId,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
 export async function GET(
@@ -12,10 +19,20 @@ export async function GET(
   if (!db) {
     return Response.json({ ok: false, error: "Database not configured" }, { status: 503 });
   }
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
   const { spaceId } = await context.params;
   const space = await assertSpaceExists(db, spaceId);
   if (!space) {
-    return Response.json({ ok: false, error: "Space not found" }, { status: 404 });
+    return heartgardenMaskNotFoundForVisitor(
+      bootCtx,
+      Response.json({ ok: false, error: "Space not found" }, { status: 404 }),
+    );
+  }
+  if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
   }
 
   const [itemRow] = await db

@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
+import {
+  enforceGmOnlyBootContext,
+  getHeartgardenApiBootContext,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { loreQueryRateLimitExceeded } from "@/src/lib/lore-query-rate-limit";
 import { retrieveLoreSources, synthesizeLoreAnswer } from "@/src/lib/lore-engine";
 import { assertSpaceExists } from "@/src/lib/spaces";
@@ -16,6 +20,10 @@ const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  const bootCtx = await getHeartgardenApiBootContext();
+  const denied = enforceGmOnlyBootContext(bootCtx);
+  if (denied) return denied;
+
   if ((process.env.HEARTGARDEN_LORE_QUERY_DISABLED ?? "").trim() === "1") {
     return Response.json(
       {

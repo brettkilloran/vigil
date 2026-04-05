@@ -40,6 +40,7 @@ import { Button } from "@/src/components/ui/Button";
 import {
   ArchitecturalBottomDock,
   ArchitecturalFolderColorStrip,
+  DEFAULT_CREATE_ACTIONS,
   DEFAULT_DOC_INSERT_ACTIONS,
   DEFAULT_FORMAT_ACTIONS,
   type ConnectionDockMode,
@@ -1107,6 +1108,25 @@ export function ArchitecturalCanvasApp({
   const [bootLayerDismissed, setBootLayerDismissed] = useState(() => scenario !== "default");
   /** Lets reduced-motion users see the auth splash again after explicit Log out. */
   const [bootAfterLogout, setBootAfterLogout] = useState(false);
+  /** GET /api/heartgarden/boot — gate + cookie session (no secrets in state). */
+  const [heartgardenBootApi, setHeartgardenBootApi] = useState<{
+    loaded: boolean;
+    gateEnabled: boolean;
+    sessionValid: boolean;
+    sessionTier: "access" | "visitor" | null;
+  }>({ loaded: false, gateEnabled: false, sessionValid: false, sessionTier: null });
+  /** Visitor boot PIN + `HEARTGARDEN_PLAYER_SPACE_ID`: scoped notes-only layer (server-enforced). */
+  const isPlayerLayer = useMemo(
+    () =>
+      heartgardenBootApi.loaded &&
+      heartgardenBootApi.gateEnabled &&
+      heartgardenBootApi.sessionTier === "visitor",
+    [
+      heartgardenBootApi.loaded,
+      heartgardenBootApi.gateEnabled,
+      heartgardenBootApi.sessionTier,
+    ],
+  );
   /** Bumps when returning to auth so boot ambient remounts and can play again after tear-down. */
   const [bootAmbientEpoch, setBootAmbientEpoch] = useState(0);
   /** Populated by `VigilBootAmbientAudio`; log-out handler calls after `flushSync` (same gesture as click). */
@@ -2920,14 +2940,80 @@ export function ArchitecturalCanvasApp({
     setChromeEnterEpoch((e) => (e >= 1 ? e : 1));
   }, [scenario, prefersReducedMotion]);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/heartgarden/boot", { credentials: "include" })
+      .then(async (r) => {
+        if (!r.ok) throw new Error("boot status");
+        return r.json() as Promise<{
+          gateEnabled?: boolean;
+          sessionValid?: boolean;
+          sessionTier?: "access" | "visitor" | null;
+        }>;
+      })
+      .then((d) => {
+        if (cancelled) return;
+        const tier = d.sessionTier === "access" || d.sessionTier === "visitor" ? d.sessionTier : null;
+        setHeartgardenBootApi({
+          loaded: true,
+          gateEnabled: Boolean(d.gateEnabled),
+          sessionValid: Boolean(d.sessionValid),
+          sessionTier: tier,
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setHeartgardenBootApi({
+          loaded: true,
+          gateEnabled: false,
+          sessionValid: false,
+          sessionTier: null,
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isPlayerLayer) return;
+    setLorePanelOpen(false);
+    setGraphOverlayOpen(false);
+    setLoreImportDraft(null);
+    setLoreSmartReview(null);
+    setLoreReviewPanelOpen(false);
+  }, [isPlayerLayer]);
+
   useLayoutEffect(() => {
     if (scenario !== "default") return;
-    if (!prefersReducedMotion) return;
+    if (!heartgardenBootApi.loaded) return;
     /* Do not dismiss boot while showing the post–log out splash (same deps can re-run after logout). */
     if (bootAfterLogout) return;
+    if (heartgardenBootApi.gateEnabled) {
+      if (heartgardenBootApi.sessionValid) {
+        if (!bootCelebrationPlayedRef.current) {
+          bootCelebrationPlayedRef.current = true;
+          playVigilUiSound("celebration");
+        }
+        if (!prefersReducedMotion) {
+          setChromeEnterEpoch((e) => e + 1);
+        }
+        setCanvasSessionActivated(true);
+        setBootLayerDismissed(true);
+      }
+      return;
+    }
+    if (!prefersReducedMotion) return;
     setCanvasSessionActivated(true);
     setBootLayerDismissed(true);
-  }, [scenario, prefersReducedMotion, bootAfterLogout]);
+  }, [
+    scenario,
+    prefersReducedMotion,
+    bootAfterLogout,
+    heartgardenBootApi.loaded,
+    heartgardenBootApi.gateEnabled,
+    heartgardenBootApi.sessionValid,
+  ]);
 
   const handleLogOutToAuth = useCallback(() => {
     if (scenario !== "default") return;
@@ -2947,6 +3033,7 @@ export function ArchitecturalCanvasApp({
     });
     /* Same synchronous stack as log-out click: Web Audio + media element play() must run here for autoplay. */
     bootAmbientPrimePlaybackRef.current?.();
+    void fetch("/api/heartgarden/boot", { method: "DELETE", credentials: "include" });
   }, [scenario, prefersReducedMotion]);
 
   const centerCoords = useCallback(() => {
@@ -3738,6 +3825,7 @@ export function ArchitecturalCanvasApp({
   const vaultReviewChromeVisible =
     cloudLinksBar &&
     isUuidLike(activeSpaceId) &&
+    !isPlayerLayer &&
     !(scenario === "default" && !bootLayerDismissed && !canvasSessionActivated);
 
   useEffect(() => {
@@ -3747,8 +3835,8 @@ export function ArchitecturalCanvasApp({
     }
   }, [scenario, bootLayerDismissed, canvasSessionActivated]);
 
-  const paletteActions = useMemo<PaletteAction[]>(
-    () => [
+  const paletteActions = useMemo<PaletteAction[]>(() => {
+    const all: PaletteAction[] = [
       { id: "create-note", label: "Create note", hint: "Add a new note at center", icon: <FileText size={14} weight="bold" /> },
       { id: "create-checklist", label: "Create checklist", hint: "Add a checklist card", icon: <NotePencil size={14} weight="bold" /> },
       { id: "create-media", label: "Create image card", hint: "Add a media card", icon: <SquaresFour size={14} weight="bold" /> },
@@ -3789,9 +3877,19 @@ export function ArchitecturalCanvasApp({
             } satisfies PaletteAction,
           ]
         : []),
-    ],
-    [modKeyHints.recenter, vaultReviewChromeVisible],
-  );
+    ];
+    if (!isPlayerLayer) return all;
+    const deny = new Set([
+      "export-json",
+      "ask-lore",
+      "link-graph",
+      "import-lore",
+      "check-lore-consistency",
+      "create-media",
+      "create-folder",
+    ]);
+    return all.filter((a) => !deny.has(a.id));
+  }, [isPlayerLayer, modKeyHints.recenter, vaultReviewChromeVisible]);
 
   const getParentFolderExitSlot = useCallback(
     (offsetIndex = 0) => {
@@ -3951,6 +4049,7 @@ export function ArchitecturalCanvasApp({
   }, [focusOpen, galleryOpen, graph.entities, selectedNodeIds, setFolderColorScheme]);
 
   const createNewNode = useCallback((type: NodeTheme) => {
+    if (isPlayerLayer && (type === "media" || type === "folder")) return;
     recordUndoBeforeMutation();
     const center = centerCoords();
     const x = center.x - 170 + (Math.random() * 60 - 30);
@@ -4196,7 +4295,7 @@ export function ArchitecturalCanvasApp({
       }
       return next;
     });
-  }, [activeSpaceId, centerCoords, createId, recordUndoBeforeMutation]);
+  }, [activeSpaceId, centerCoords, createId, isPlayerLayer, recordUndoBeforeMutation]);
 
   const onLoreImportFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -4367,6 +4466,20 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   const runPaletteAction = useCallback((actionId: string) => {
+    if (
+      isPlayerLayer &&
+      [
+        "export-json",
+        "ask-lore",
+        "link-graph",
+        "import-lore",
+        "check-lore-consistency",
+        "create-media",
+        "create-folder",
+      ].includes(actionId)
+    ) {
+      return;
+    }
     if (actionId === "create-note") {
       createNewNode("default");
       playVigilUiSound("select");
@@ -4469,6 +4582,7 @@ export function ArchitecturalCanvasApp({
     bootLayerVisible,
     createNewNode,
     exportGraphJson,
+    isPlayerLayer,
     recenterToOrigin,
   ]);
 
@@ -5977,11 +6091,13 @@ export function ArchitecturalCanvasApp({
         return;
       }
       if (key === "4") {
+        if (isPlayerLayer) return;
         event.preventDefault();
         createNewNode("media");
         return;
       }
       if (key === "5") {
+        if (isPlayerLayer) return;
         event.preventDefault();
         createNewNode("folder");
         return;
@@ -5994,13 +6110,7 @@ export function ArchitecturalCanvasApp({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [
-    connectionMode,
-    createNewNode,
-    focusOpen,
-    galleryOpen,
-    stackModal,
-  ]);
+  }, [connectionMode, createNewNode, focusOpen, galleryOpen, isPlayerLayer, stackModal]);
 
   const resolveRichTextFormatTarget = useCallback((): HTMLElement | null => {
     const shell = shellRef.current;
@@ -6575,14 +6685,24 @@ export function ArchitecturalCanvasApp({
     () =>
       DEFAULT_DOC_INSERT_ACTIONS.map((action) => {
         if (action.command === "arch:insertImage") {
-          return { ...action, disabled: !canInsertImage };
+          return { ...action, disabled: !canInsertImage || isPlayerLayer };
         }
         if (action.command === "formatBlock" && action.value === "blockquote") {
           return { ...action, active: formatCommandState.blockTag === "blockquote" };
         }
         return action;
       }),
-    [canInsertImage, formatCommandState.blockTag],
+    [canInsertImage, formatCommandState.blockTag, isPlayerLayer],
+  );
+
+  const dockCreateActions = useMemo(
+    () =>
+      isPlayerLayer
+        ? DEFAULT_CREATE_ACTIONS.filter(
+            (a) => a.nodeType !== "media" && a.nodeType !== "folder",
+          )
+        : DEFAULT_CREATE_ACTIONS,
+    [isPlayerLayer],
   );
 
   const dockFormatActions = useMemo<DockFormatAction[]>(
@@ -6786,6 +6906,8 @@ export function ArchitecturalCanvasApp({
           onCanvasEffectsEnabledChange={handleCanvasEffectsEnabledChange}
           bootAmbientEpoch={bootAmbientEpoch}
           bootAmbientPrimePlaybackRef={bootAmbientPrimePlaybackRef}
+          bootGateEnabled={heartgardenBootApi.loaded && heartgardenBootApi.gateEnabled}
+          bootGateStatusReady={heartgardenBootApi.loaded}
           onActivate={() => {
             if (!bootCelebrationPlayedRef.current) {
               bootCelebrationPlayedRef.current = true;
@@ -7318,6 +7440,7 @@ export function ArchitecturalCanvasApp({
               showDocInsertCluster={richDocInsertChromeActive}
               insertDocActions={dockInsertActions}
               formatActions={dockFormatActions}
+              createActions={dockCreateActions}
               activeBlockTag={formatCommandState.blockTag}
               onFormat={runFormat}
               onCreateNode={createNewNode}
@@ -7419,22 +7542,26 @@ export function ArchitecturalCanvasApp({
           onOpenRecentFolder={openFolder}
           onRunAction={runPaletteAction}
         />
-        <LoreAskPanel
-          open={lorePanelOpen}
-          onClose={() => setLorePanelOpen(false)}
-          spaceId={activeSpaceId}
-          spaceScopedAllowed={isUuidLike(activeSpaceId)}
-          onOpenSource={(id) => focusEntityFromPalette(id)}
-        />
-        <input
-          ref={loreImportFileInputRef}
-          type="file"
-          accept=".pdf,.md,.txt,.markdown,text/plain,text/markdown,application/pdf"
-          className="sr-only"
-          aria-hidden
-          tabIndex={-1}
-          onChange={onLoreImportFileChange}
-        />
+        {!isPlayerLayer ? (
+          <LoreAskPanel
+            open={lorePanelOpen}
+            onClose={() => setLorePanelOpen(false)}
+            spaceId={activeSpaceId}
+            spaceScopedAllowed={isUuidLike(activeSpaceId)}
+            onOpenSource={(id) => focusEntityFromPalette(id)}
+          />
+        ) : null}
+        {!isPlayerLayer ? (
+          <input
+            ref={loreImportFileInputRef}
+            type="file"
+            accept=".pdf,.md,.txt,.markdown,text/plain,text/markdown,application/pdf"
+            className="sr-only"
+            aria-hidden
+            tabIndex={-1}
+            onChange={onLoreImportFileChange}
+          />
+        ) : null}
         {loreSmartPlanning ? (
           <div
             className="fixed inset-0 z-[1150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
@@ -7451,19 +7578,21 @@ export function ArchitecturalCanvasApp({
             </div>
           </div>
         ) : null}
-        <ArchitecturalLoreReviewPanel
-          open={loreReviewPanelOpen}
-          onClose={() => setLoreReviewPanelOpen(false)}
-          draft={vaultReviewDraftActive}
-          onRunAnalysis={() => void runVaultReviewAnalysis()}
-          onAppendTags={appendVaultReviewTags}
-          loading={loreReviewLoading}
-          error={loreReviewError}
-          issues={loreReviewIssues}
-          suggestedNoteTags={loreReviewSuggestedTags}
-          semanticSummary={loreReviewSemanticSummary}
-        />
-        {loreSmartReview ? (
+        {!isPlayerLayer ? (
+          <ArchitecturalLoreReviewPanel
+            open={loreReviewPanelOpen}
+            onClose={() => setLoreReviewPanelOpen(false)}
+            draft={vaultReviewDraftActive}
+            onRunAnalysis={() => void runVaultReviewAnalysis()}
+            onAppendTags={appendVaultReviewTags}
+            loading={loreReviewLoading}
+            error={loreReviewError}
+            issues={loreReviewIssues}
+            suggestedNoteTags={loreReviewSuggestedTags}
+            semanticSummary={loreReviewSemanticSummary}
+          />
+        ) : null}
+        {loreSmartReview && !isPlayerLayer ? (
           <div
             className="fixed inset-0 z-[1150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
             role="dialog"
@@ -7880,13 +8009,15 @@ export function ArchitecturalCanvasApp({
           cloudEnabled={cloudLinksBar}
           onFocusEntity={(id) => focusEntityFromPalette(id)}
         />
-        <LinkGraphOverlay
-          open={graphOverlayOpen}
-          spaceId={cloudLinksBar && isUuidLike(activeSpaceId) ? activeSpaceId : null}
-          onClose={() => setGraphOverlayOpen(false)}
-          onSelectItem={(id) => focusEntityFromPalette(id)}
-        />
-        {loreImportDraft && !loreSmartReview ? (
+        {!isPlayerLayer ? (
+          <LinkGraphOverlay
+            open={graphOverlayOpen}
+            spaceId={cloudLinksBar && isUuidLike(activeSpaceId) ? activeSpaceId : null}
+            onClose={() => setGraphOverlayOpen(false)}
+            onSelectItem={(id) => focusEntityFromPalette(id)}
+          />
+        ) : null}
+        {loreImportDraft && !loreSmartReview && !isPlayerLayer ? (
           <div
             className="fixed inset-0 z-[1150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
             role="dialog"
@@ -8654,28 +8785,30 @@ export function ArchitecturalCanvasApp({
             ) : null}
             {!bootPreActivateGate ? (
               <div className={styles.topRightConnectionTools}>
-                <div
-                  key={`hg-ce-import-${chromeEnterEpoch}`}
-                  className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.shellTopLogOutPanel}`}
-                  data-hg-chrome="import-document"
-                >
-                  <ArchitecturalTooltip content="Import PDF or Markdown" side="bottom" delayMs={320}>
-                    <ArchitecturalButton
-                      type="button"
-                      size="icon"
-                      tone="glass"
-                      iconOnly
-                      className={styles.shellTopLogOutTrigger}
-                      aria-label="Import document"
-                      onClick={() => {
-                        playVigilUiSound("select");
-                        loreImportFileInputRef.current?.click();
-                      }}
-                    >
-                      <UploadSimple size={18} weight="bold" aria-hidden />
-                    </ArchitecturalButton>
-                  </ArchitecturalTooltip>
-                </div>
+                {!isPlayerLayer ? (
+                  <div
+                    key={`hg-ce-import-${chromeEnterEpoch}`}
+                    className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.shellTopLogOutPanel}`}
+                    data-hg-chrome="import-document"
+                  >
+                    <ArchitecturalTooltip content="Import PDF or Markdown" side="bottom" delayMs={320}>
+                      <ArchitecturalButton
+                        type="button"
+                        size="icon"
+                        tone="glass"
+                        iconOnly
+                        className={styles.shellTopLogOutTrigger}
+                        aria-label="Import document"
+                        onClick={() => {
+                          playVigilUiSound("select");
+                          loreImportFileInputRef.current?.click();
+                        }}
+                      >
+                        <UploadSimple size={18} weight="bold" aria-hidden />
+                      </ArchitecturalButton>
+                    </ArchitecturalTooltip>
+                  </div>
+                ) : null}
                 <div
                   key={`hg-ce-search-${chromeEnterEpoch}`}
                   className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.shellTopLogOutPanel}`}

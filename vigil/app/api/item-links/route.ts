@@ -2,7 +2,14 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
-import { itemLinks } from "@/src/db/schema";
+import { itemLinks, items } from "@/src/db/schema";
+import {
+  getHeartgardenApiBootContext,
+  heartgardenApiForbiddenJsonResponse,
+  heartgardenMaskNotFoundForVisitor,
+  isHeartgardenVisitorBlocked,
+  visitorMayAccessItemSpace,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { clampLinkMetaSlackMultiplier } from "@/src/lib/item-link-meta";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 
@@ -45,6 +52,10 @@ export async function POST(req: Request) {
       { status: 503 },
     );
   }
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
   let json: unknown;
   try {
     json = await req.json();
@@ -61,6 +72,16 @@ export async function POST(req: Request) {
   const { sourceItemId, targetItemId, linkType, label, sourcePin, targetPin, color, meta } = parsed.data;
   if (sourceItemId === targetItemId) {
     return Response.json({ ok: false, error: "Self-link not allowed" }, { status: 400 });
+  }
+  const [srcItem] = await db.select({ spaceId: items.spaceId }).from(items).where(eq(items.id, sourceItemId)).limit(1);
+  if (!srcItem) {
+    return heartgardenMaskNotFoundForVisitor(
+      bootCtx,
+      Response.json({ ok: false, error: "Source item not found" }, { status: 404 }),
+    );
+  }
+  if (!visitorMayAccessItemSpace(bootCtx, srcItem.spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
   }
   const validated = await validateLinkTargetsInSourceSpace(db, sourceItemId, [targetItemId]);
   if (!validated.ok) {
@@ -97,6 +118,10 @@ export async function PATCH(req: Request) {
       { status: 503 },
     );
   }
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
   let json: unknown;
   try {
     json = await req.json();
@@ -112,13 +137,36 @@ export async function PATCH(req: Request) {
   }
   const { id, color, label, linkType, meta } = parsed.data;
 
+  const [linkMeta] = await db
+    .select({ sourceItemId: itemLinks.sourceItemId })
+    .from(itemLinks)
+    .where(eq(itemLinks.id, id))
+    .limit(1);
+  if (!linkMeta) {
+    return heartgardenMaskNotFoundForVisitor(
+      bootCtx,
+      Response.json({ ok: false, error: "Link not found" }, { status: 404 }),
+    );
+  }
+  const [srcForLink] = await db
+    .select({ spaceId: items.spaceId })
+    .from(items)
+    .where(eq(items.id, linkMeta.sourceItemId))
+    .limit(1);
+  if (!visitorMayAccessItemSpace(bootCtx, srcForLink?.spaceId ?? "")) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+
   const [existing] = await db
     .select({ meta: itemLinks.meta })
     .from(itemLinks)
     .where(eq(itemLinks.id, id))
     .limit(1);
   if (!existing) {
-    return Response.json({ ok: false, error: "Link not found" }, { status: 404 });
+    return heartgardenMaskNotFoundForVisitor(
+      bootCtx,
+      Response.json({ ok: false, error: "Link not found" }, { status: 404 }),
+    );
   }
 
   const updates: {
@@ -150,7 +198,10 @@ export async function PATCH(req: Request) {
     .where(eq(itemLinks.id, id))
     .returning();
   if (!updated) {
-    return Response.json({ ok: false, error: "Link not found" }, { status: 404 });
+    return heartgardenMaskNotFoundForVisitor(
+      bootCtx,
+      Response.json({ ok: false, error: "Link not found" }, { status: 404 }),
+    );
   }
   return Response.json({ ok: true, link: updated });
 }
@@ -162,6 +213,10 @@ export async function DELETE(req: Request) {
       { ok: false, error: "Database not configured" },
       { status: 503 },
     );
+  }
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx)) {
+    return heartgardenApiForbiddenJsonResponse();
   }
   let json: unknown;
   try {
@@ -177,12 +232,34 @@ export async function DELETE(req: Request) {
     );
   }
   const { id } = parsed.data;
+  const [linkMeta] = await db
+    .select({ sourceItemId: itemLinks.sourceItemId })
+    .from(itemLinks)
+    .where(eq(itemLinks.id, id))
+    .limit(1);
+  if (!linkMeta) {
+    return heartgardenMaskNotFoundForVisitor(
+      bootCtx,
+      Response.json({ ok: false, error: "Link not found" }, { status: 404 }),
+    );
+  }
+  const [srcForLink] = await db
+    .select({ spaceId: items.spaceId })
+    .from(items)
+    .where(eq(items.id, linkMeta.sourceItemId))
+    .limit(1);
+  if (!visitorMayAccessItemSpace(bootCtx, srcForLink?.spaceId ?? "")) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
   const deleted = await db
     .delete(itemLinks)
     .where(eq(itemLinks.id, id))
     .returning();
   if (deleted.length < 1) {
-    return Response.json({ ok: false, error: "Link not found" }, { status: 404 });
+    return heartgardenMaskNotFoundForVisitor(
+      bootCtx,
+      Response.json({ ok: false, error: "Link not found" }, { status: 404 }),
+    );
   }
   return Response.json({ ok: true });
 }

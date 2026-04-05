@@ -1,4 +1,10 @@
 import { tryGetDb } from "@/src/db/index";
+import {
+  getHeartgardenApiBootContext,
+  heartgardenApiForbiddenJsonResponse,
+  isHeartgardenVisitorBlocked,
+  visitorMayAccessSpaceId,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { suggestItems, type SearchFilters } from "@/src/lib/spaces";
 
 function parseBool(raw: string | null): boolean | undefined {
@@ -37,12 +43,22 @@ export async function GET(req: Request) {
       { status: 503 },
     );
   }
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim();
   if (q.length < 1) {
     return Response.json({ ok: true, suggestions: [] });
   }
   const filters = parseFilters(url);
+  if (bootCtx.role === "visitor") {
+    if (filters.spaceId && !visitorMayAccessSpaceId(bootCtx, filters.spaceId)) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+    filters.spaceId = bootCtx.playerSpaceId;
+  }
   const rows = await suggestItems(db, q, filters);
   const suggestions = rows.map((row) => ({
     id: row.item.id,

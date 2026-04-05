@@ -2,6 +2,11 @@ import { eq } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
+import {
+  getHeartgardenApiBootContext,
+  isHeartgardenVisitorBlocked,
+  visitorMayAccessItemSpace,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 
 /**
@@ -16,10 +21,20 @@ export async function GET(
   if (!db) {
     return Response.json({ error: "Database not configured" }, { status: 503 });
   }
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx)) {
+    return Response.json({ error: "Forbidden." }, { status: 403 });
+  }
   const { itemId } = await context.params;
   const [row] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
   if (!row) {
+    if (bootCtx.role === "visitor") {
+      return Response.json({ error: "Forbidden." }, { status: 403 });
+    }
     return Response.json({ error: "Not found" }, { status: 404 });
+  }
+  if (!visitorMayAccessItemSpace(bootCtx, row.spaceId)) {
+    return Response.json({ error: "Forbidden." }, { status: 403 });
   }
   return Response.json({
     version: 1,

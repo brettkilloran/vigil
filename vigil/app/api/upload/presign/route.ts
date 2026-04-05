@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import {
+  enforceGmOnlyBootContext,
+  getHeartgardenApiBootContext,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { presignImagePut, readR2Env } from "@/src/lib/r2-upload";
 
 const bodySchema = z.object({
@@ -10,6 +14,10 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const bootCtx = await getHeartgardenApiBootContext();
+  const denied = enforceGmOnlyBootContext(bootCtx);
+  if (denied) return denied;
+
   const env = readR2Env();
   if (!env) {
     return NextResponse.json(

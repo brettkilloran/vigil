@@ -2,6 +2,10 @@ import { eq } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { loreImportJobs } from "@/src/db/schema";
+import {
+  enforceGmOnlyBootContext,
+  getHeartgardenApiBootContext,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { scheduleLoreImportJobProcessing } from "@/src/lib/lore-import-job-after";
 import {
   STALE_LORE_IMPORT_PROCESSING_MS,
@@ -13,6 +17,10 @@ export const runtime = "nodejs";
 type RouteCtx = { params: Promise<{ jobId: string }> };
 
 export async function GET(req: Request, ctx: RouteCtx) {
+  const bootCtx = await getHeartgardenApiBootContext();
+  const denied = enforceGmOnlyBootContext(bootCtx);
+  if (denied) return denied;
+
   const { jobId } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/i.test(jobId)) {
     return Response.json({ ok: false, error: "Invalid job id" }, { status: 400 });

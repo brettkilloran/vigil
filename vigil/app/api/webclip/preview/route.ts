@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import {
+  enforceGmOnlyBootContext,
+  getHeartgardenApiBootContext,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { webclipMshotUrl } from "@/src/lib/webclip-preview";
 
 const bodySchema = z.object({
@@ -32,6 +36,10 @@ function pickTitle(html: string): string | null {
  * Uses og:image when present; always returns mshots URL as screenshot fallback.
  */
 export async function POST(req: Request) {
+  const bootCtx = await getHeartgardenApiBootContext();
+  const denied = enforceGmOnlyBootContext(bootCtx);
+  if (denied) return denied;
+
   let json: unknown;
   try {
     json = await req.json();

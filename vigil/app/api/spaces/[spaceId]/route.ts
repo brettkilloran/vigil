@@ -3,6 +3,13 @@ import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import { spaces } from "@/src/db/schema";
+import {
+  getHeartgardenApiBootContext,
+  heartgardenApiForbiddenJsonResponse,
+  heartgardenMaskNotFoundForVisitor,
+  isHeartgardenVisitorBlocked,
+  visitorMayAccessSpaceId,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { assertSpaceExists, deleteSpaceSubtree } from "@/src/lib/spaces";
 
 const patchBody = z.object({
@@ -28,10 +35,21 @@ export async function PATCH(
     );
   }
 
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+
   const { spaceId } = await context.params;
   const space = await assertSpaceExists(db, spaceId);
   if (!space) {
-    return Response.json({ ok: false, error: "Space not found" }, { status: 404 });
+    return heartgardenMaskNotFoundForVisitor(
+      bootCtx,
+      Response.json({ ok: false, error: "Space not found" }, { status: 404 }),
+    );
+  }
+  if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
+    return heartgardenApiForbiddenJsonResponse();
   }
 
   let json: unknown;
@@ -75,6 +93,10 @@ export async function DELETE(
       { ok: false, error: "Database not configured" },
       { status: 503 },
     );
+  }
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx) || bootCtx.role === "visitor") {
+    return heartgardenApiForbiddenJsonResponse();
   }
   const { spaceId } = await context.params;
   const result = await deleteSpaceSubtree(db, spaceId);

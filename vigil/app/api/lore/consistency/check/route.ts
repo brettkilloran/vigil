@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
+import {
+  enforceGmOnlyBootContext,
+  getHeartgardenApiBootContext,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { runLoreConsistencyCheck } from "@/src/lib/lore-consistency-check";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
@@ -14,6 +18,10 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const bootCtx = await getHeartgardenApiBootContext();
+  const denied = enforceGmOnlyBootContext(bootCtx);
+  if (denied) return denied;
+
   const key = process.env.ANTHROPIC_API_KEY?.trim();
   if (!key) {
     return Response.json(

@@ -2,6 +2,10 @@ import { eq } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
+import {
+  enforceGmOnlyBootContext,
+  getHeartgardenApiBootContext,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { refreshItemEmbedding } from "@/src/lib/item-embedding";
 
 /** Clears stale `item_embeddings` rows only; vector search is not used. */
@@ -9,6 +13,10 @@ export async function POST(
   _req: Request,
   context: { params: Promise<{ itemId: string }> },
 ) {
+  const bootCtx = await getHeartgardenApiBootContext();
+  const denied = enforceGmOnlyBootContext(bootCtx);
+  if (denied) return denied;
+
   const db = tryGetDb();
   if (!db) {
     return Response.json({ ok: false, error: "Database not configured" }, { status: 503 });

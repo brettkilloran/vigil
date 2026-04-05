@@ -1,5 +1,9 @@
 import { tryGetDb } from "@/src/db/index";
 import {
+  enforceGmOnlyBootContext,
+  getHeartgardenApiBootContext,
+} from "@/src/lib/heartgarden-api-boot-context";
+import {
   applyLoreImportPlan,
   loreImportApplyBodySchema,
 } from "@/src/lib/lore-import-apply";
@@ -8,6 +12,10 @@ import { assertSpaceExists } from "@/src/lib/spaces";
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  const bootCtx = await getHeartgardenApiBootContext();
+  const denied = enforceGmOnlyBootContext(bootCtx);
+  if (denied) return denied;
+
   const db = tryGetDb();
   if (!db) {
     return Response.json(

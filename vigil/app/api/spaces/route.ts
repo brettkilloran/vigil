@@ -3,6 +3,11 @@ import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import { spaces } from "@/src/db/schema";
+import {
+  getHeartgardenApiBootContext,
+  heartgardenApiForbiddenJsonResponse,
+  isHeartgardenVisitorBlocked,
+} from "@/src/lib/heartgarden-api-boot-context";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
 const bodySchema = z.object({
@@ -14,6 +19,27 @@ export async function GET() {
   const db = tryGetDb();
   if (!db) {
     return Response.json({ ok: false, error: "Database not configured", spaces: [] }, { status: 503 });
+  }
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+  if (bootCtx.role === "visitor") {
+    const row = await assertSpaceExists(db, bootCtx.playerSpaceId);
+    if (!row) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+    return Response.json({
+      ok: true,
+      spaces: [
+        {
+          id: row.id,
+          name: row.name,
+          parentSpaceId: row.parentSpaceId,
+          updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
+        },
+      ],
+    });
   }
   const rows = await db
     .select({
@@ -42,6 +68,10 @@ export async function POST(req: Request) {
       { ok: false, error: "Database not configured" },
       { status: 503 },
     );
+  }
+  const bootCtx = await getHeartgardenApiBootContext();
+  if (isHeartgardenVisitorBlocked(bootCtx) || bootCtx.role === "visitor") {
+    return heartgardenApiForbiddenJsonResponse();
   }
 
   let json: unknown;

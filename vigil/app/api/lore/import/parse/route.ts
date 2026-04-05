@@ -1,5 +1,10 @@
 import { PDFParse } from "pdf-parse";
 
+import {
+  enforceGmOnlyBootContext,
+  getHeartgardenApiBootContext,
+} from "@/src/lib/heartgarden-api-boot-context";
+
 export const runtime = "nodejs";
 
 function stripBom(text: string) {
@@ -8,6 +13,10 @@ function stripBom(text: string) {
 }
 
 export async function POST(req: Request) {
+  const bootCtx = await getHeartgardenApiBootContext();
+  const denied = enforceGmOnlyBootContext(bootCtx);
+  if (denied) return denied;
+
   const ct = req.headers.get("content-type") ?? "";
   if (!ct.includes("multipart/form-data")) {
     return Response.json(
