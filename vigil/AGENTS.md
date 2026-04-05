@@ -42,6 +42,8 @@ Persistence: **`items`** rows + **`spaces.canvas_state`** as camera `{ x, y, zoo
 
 **Package manager:** Use **npm** only in the app directory (**`vigil/`** today — see **`docs/NAMING.md`** if renamed) (`package-lock.json`). Do not mix pnpm/yarn in the same tree without a deliberate migration.
 
+**`package-lock.json` vs Ubuntu CI (`npm ci` / “Missing … from lock file”):** A normal **`npm install` on Windows** can drop **Linux-only optional** resolutions (e.g. **`@emnapi/*`** under **`@img/sharp-wasm32`**). GitHub Actions then fails **`npm ci`**. From **`vigil/`**: run **`npm run verify:package-lock-ci`** before pushing (clean temp install with **npm 10.x**, same major as **Node 22** on Actions). If it fails, run **`npm run lockfile:regenerate-linux`**, re-run verify, then **commit `package-lock.json`**.
+
 **Node on PATH (Windows portable installs):** If `npm`/`node` are missing in a new terminal or in Cursor, the portable Node folder is probably not on **User** `PATH`.
 
 **First-time setup or after upgrading Node portable:**
@@ -61,7 +63,7 @@ The script picks the **newest** `node-v*-win-x64` under `%LOCALAPPDATA%\node-por
 | Surface | URL | Notes |
 |--------|-----|--------|
 | heartgarden (Next) | `http://localhost:3000` | `next.config.ts` **`allowedDevOrigins`** includes `localhost` and `127.0.0.1` so dev HMR is not blocked when mixing those hosts. If you use the **Network** URL from the dev banner, add that **hostname** to `allowedDevOrigins` too. |
-| Storybook (dev) | `http://localhost:6006` | Scripts use **`--host 0.0.0.0`** and `.storybook/main.ts` sets **`webpackFinal` → `devServer.allowedHosts: "all"`** so localhost / 127.0.0.1 / LAN do not produce a blank shell. **Do not remove** those without re-validating Storybook on Windows. |
+| Storybook (dev) | `http://localhost:6006` | Scripts use **`--host 0.0.0.0`**. `.storybook/main.ts` sets **`core.allowedHosts: true`** (Storybook’s own Host/Origin checks), **`webpackFinal` → `devServer.allowedHosts: "all"`**, and **`devServer.client.webSocketURL: "auto://0.0.0.0:0/ws"`** so HMR matches the URL you open (avoids a **blank** manager/preview on Windows/LAN). **Do not remove** without re-validating. Use **Chrome or Edge**, not the editor’s embedded browser, if the shell still misbehaves. |
 | Storybook (static fallback) | `http://localhost:6007` | **`npm run storybook:static`** — production build + `serve`; use if dev Storybook misbehaves. Port **6007** avoids clashing with dev on **6006**. |
 
 **Next.js dev:** `dev` / `dev:app` use **`next dev --webpack`** (not Turbopack) — Turbopack previously hung on `/` for this app.
@@ -69,6 +71,8 @@ The script picks the **newest** `node-v*-win-x64` under `%LOCALAPPDATA%\node-por
 **CSS modules:** Do not put **`:root { … }`** in `*.module.css` (Webpack CSS modules reject global selectors and the app/Storybook build can fail). Shared token blocks live in **`app/globals.css`**.
 
 **CI:** GitHub Actions runs **`npm run build-storybook`** after **`npm run check`** so broken Storybook config or stories fail the pipeline. Locally you can run **`npm run check:all`** (lint + Next build + Storybook build) before pushing.
+
+**Corrupt `node_modules` (Storybook/Webpack `ENOENT` for `@storybook/*`, `react-refresh`, `html-webpack-plugin`, etc.):** That pattern is almost always a **partial or broken install**, not bad app code. Stop **Next**, **Storybook**, and **Playwright** (anything holding `node_modules`), then from **`vigil/`** run **`npm run reinstall`** (removes **`node_modules`** and runs **`npm ci`**). On Windows, if delete hits **EBUSY** / **EPERM**, close integrated terminals, exit stray **`node.exe`** processes, and retry.
 
 **Database (Neon + vault index):** From **`vigil/`**, **`npm run db:vault-setup`** — pgvector extension, **`drizzle-kit push --force`**, then **`scripts/vault-sql-migrate.mjs`**. **`npm run vault:reindex`** hits **`POST /api/items/:id/index`** for all rows (needs dev server + server-side **`OPENAI_API_KEY`**). GitHub: manual workflow **`heartgarden-db-vault.yml`** + secret **`HEARTGARDEN_NEON_DATABASE_URL`**. Details: **`docs/FOLLOW_UP.md`**.
 
