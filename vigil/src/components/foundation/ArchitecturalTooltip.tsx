@@ -33,8 +33,10 @@ function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
+/** React 19: ref is a normal prop — do not read `element.ref` (deprecated). */
 function innerRefOf(el: ReactElement) {
-  return (el as unknown as { ref?: Ref<HTMLElement> }).ref;
+  const p = el.props as { ref?: Ref<HTMLElement> | undefined };
+  return p.ref;
 }
 
 function pointerOutLeavesTarget(
