@@ -1650,6 +1650,43 @@
   pointer-events: auto;
 }
 
+/* Same frosted strip as status save + nav: align to chrome line, not a lone floating vigil-btn. */
+.shellTopLogOutWrap {
+  flex: 0 0 auto;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+  pointer-events: auto;
+}
+
+.shellTopLogOutWrap .glassPanel.shellTopChromePanel {
+  flex: 1 1 auto;
+  min-height: 100%;
+}
+
+/* Tight frosted chip: one dock-style icon between save strip and breadcrumb. */
+.shellTopLogOutPanel.glassPanel.shellTopChromePanel {
+  gap: 0;
+  justify-content: center;
+}
+
+/* Square icon control, same vertical band as save trigger / nav row. */
+.shellTopChromePanel .shellTopLogOutTrigger:global(.vigil-btn) {
+  flex: 0 0 auto;
+  --arch-log-out-trigger-h: var(--arch-top-chrome-line-h, var(--vigil-shell-top-chrome-line-h, 32px));
+  width: var(--arch-log-out-trigger-h);
+  min-width: var(--arch-log-out-trigger-h);
+  max-width: var(--arch-log-out-trigger-h);
+  height: var(--arch-log-out-trigger-h);
+  min-height: var(--arch-log-out-trigger-h);
+  max-height: var(--arch-log-out-trigger-h);
+  box-sizing: border-box;
+  padding: 0;
+  border-radius: 6px;
+}
+
 /* Save popover trigger + sr-only live region — one DOM parent (portal is still a React child). */
 .statusBarSaveCluster {
   display: flex;
@@ -1721,7 +1758,9 @@
   height: var(--arch-status-save-trigger-h);
   min-height: var(--arch-status-save-trigger-h);
   max-height: var(--arch-status-save-trigger-h);
-  padding: 0;
+  box-sizing: border-box;
+  padding-block: 0;
+  padding-inline: calc(var(--sys-control-pad-x-sm) + var(--vigil-btn-inline-pad-extra, 4px));
   gap: 8px;
   border-radius: 6px;
 }
@@ -3298,7 +3337,7 @@
   justify-content: center;
   gap: 0.375rem;
   min-height: var(--sys-control-height-md, 36px);
-  padding-inline: var(--sys-control-pad-x-md, 12px);
+  padding-inline: calc(var(--sys-control-pad-x-md, 12px) + var(--vigil-btn-inline-pad-extra, 4px));
   border-radius: var(--sys-radius-md, 8px);
   border: 1px solid transparent;
   background: transparent;
@@ -3318,12 +3357,12 @@
 
 .shell :global(.vigil-btn[data-size="sm"]) {
   min-height: var(--sys-control-height-sm, 32px);
-  padding-inline: var(--sys-control-pad-x-sm, 10px);
+  padding-inline: calc(var(--sys-control-pad-x-sm, 10px) + var(--vigil-btn-inline-pad-extra, 4px));
 }
 
 .shell :global(.vigil-btn[data-size="pill"]) {
   min-height: var(--sys-control-height-lg, 40px);
-  padding-inline: var(--sys-control-pad-x-lg, 16px);
+  padding-inline: calc(var(--sys-control-pad-x-lg, 16px) + var(--vigil-btn-inline-pad-extra, 4px));
   border-radius: var(--sys-radius-full, 999px);
 }
 
@@ -3357,7 +3396,7 @@
   min-height: var(--arch-top-chrome-line-h, var(--vigil-shell-top-chrome-line-h, 32px));
   height: auto;
   max-height: none;
-  padding-inline: var(--sys-control-pad-x-sm, 10px);
+  padding-inline: calc(var(--sys-control-pad-x-sm, 10px) + var(--vigil-btn-inline-pad-extra, 4px));
   gap: 6px;
   font-size: 11px;
   line-height: 1.15;

@@ -83,7 +83,7 @@ export type CanvasGraph = {
 };
 
 /** UI label for the graph root in breadcrumbs, command palette paths, etc. */
-export const ROOT_SPACE_DISPLAY_NAME = "Auth";
+export const ROOT_SPACE_DISPLAY_NAME = "Root";
 
 // Backward-compatible shape for isolated node stories.
 export type CanvasNode = Omit<CanvasContentEntity, "kind" | "slots"> & {

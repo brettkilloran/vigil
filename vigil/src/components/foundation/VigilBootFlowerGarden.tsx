@@ -248,64 +248,76 @@ function particleTouchesExpandedCut(px: number, py: number, cut: Set<string>, ma
 }
 
 export type BloomShape =
-  | "spike"
-  | "disk"
-  | "bell"
-  | "cross"
-  | "star"
-  | "fan"
-  | "spray"
-  | "twin"
-  | "lily"
-  | "pendant"
-  | "crown"
-  | "comet"
-  | "pompom"
-  | "orchid"
-  | "umbel"
-  | "zigzag"
-  | "heart"
-  | "crescent"
-  | "lotus"
-  | "biolume"
-  | "veil"
-  | "triskel"
-  | "sakura"
-  | "ume"
-  | "kiku"
-  | "fuji"
-  | "iris";
+  | "Stelix"
+  | "Orbith"
+  | "Dew Goblet"
+  | "Quadron"
+  | "Painwheel"
+  | "Mourning Fan"
+  | "Sperion"
+  | "Duonis"
+  | "Fear Lily"
+  | "Grave Tears"
+  | "Thorn Tiara"
+  | "Bolide"
+  | "Bloodsop"
+  | "Soft Fang"
+  | "Rethel"
+  | "Zygoth"
+  | "Sweet Curse"
+  | "Falcith"
+  | "Mirror Lotus"
+  | "Glowmoth"
+  | "Witch Eye"
+  | "Obelon"
+  | "Trikon"
+  | "Ghost Petal"
+  | "Prunith"
+  | "Vortalis"
+  | "Racemor"
+  | "Blade Lily"
+  | "Bonebloom"
+  | "Fourfold Root"
+  | "Nodion"
+  | "Serpic"
+  | "Sorrow Weep";
 
-/** Japanese-garden-inspired `BloomShape` ids: sakura, ume, kiku, fuji, iris (see painters below). */
+/** Bloom silhouette ids — mix of xenobotanical tokens and folk / garden names (see `paintBloomCluster`). */
 
 export const BLOOM_SHAPES: BloomShape[] = [
-  "spike",
-  "disk",
-  "bell",
-  "cross",
-  "star",
-  "fan",
-  "spray",
-  "twin",
-  "lily",
-  "pendant",
-  "crown",
-  "comet",
-  "pompom",
-  "orchid",
-  "umbel",
-  "zigzag",
-  "heart",
-  "crescent",
-  "lotus",
-  "biolume",
-  "veil",
-  "triskel",
-  "sakura",
-  "ume",
-  "kiku",
-  "fuji",
-  "iris",
+  "Stelix",
+  "Orbith",
+  "Dew Goblet",
+  "Quadron",
+  "Painwheel",
+  "Mourning Fan",
+  "Sperion",
+  "Duonis",
+  "Fear Lily",
+  "Grave Tears",
+  "Thorn Tiara",
+  "Bolide",
+  "Bloodsop",
+  "Soft Fang",
+  "Rethel",
+  "Zygoth",
+  "Sweet Curse",
+  "Falcith",
+  "Mirror Lotus",
+  "Glowmoth",
+  "Witch Eye",
+  "Obelon",
+  "Trikon",
+  "Ghost Petal",
+  "Prunith",
+  "Vortalis",
+  "Racemor",
+  "Blade Lily",
+  "Bonebloom",
+  "Fourfold Root",
+  "Nodion",
+  "Serpic",
+  "Sorrow Weep",
 ];
 
 type GardenRng = { s: number };
@@ -339,7 +351,7 @@ function shuffleBloomShapeOrderMutable(order: BloomShape[], rng: GardenRng): voi
 }
 
 export type Species = {
-  /** Human-readable color variety (catalog / debugging) */
+  /** Xenobotanical cultivar label (catalog / debugging) */
   name: string;
   stem: string;
   leaf: string;
@@ -364,7 +376,7 @@ export type Species = {
 
 export const SPECIES: Species[] = [
   {
-    name: "Periwinkle",
+    name: "Threnis",
     stem: FOLIAGE[0].stem,
     leaf: FOLIAGE[0].leaf,
     bloom: mixOklch(LEGACY_BLUE_PETAL, "oklch(0.56 0.22 272)", 42),
@@ -383,7 +395,7 @@ export const SPECIES: Species[] = [
     spike: null,
   },
   {
-    name: "Foxglove",
+    name: "Morvex",
     stem: FOLIAGE[1].stem,
     leaf: FOLIAGE[1].leaf,
     bloom: mixOklch("oklch(0.62 0.26 330)", mixOklch(ORANGE_POP, SYS_ACCENT, 42), 52),
@@ -402,7 +414,7 @@ export const SPECIES: Species[] = [
     spike: SYS_DANGER_400,
   },
   {
-    name: "Hydrangea",
+    name: "Nubilith",
     stem: FOLIAGE[2].stem,
     leaf: FOLIAGE[2].leaf,
     bloom: mixOklch(LEGACY_ROYAL_PETAL, "oklch(0.5 0.24 278)", 38),
@@ -421,7 +433,7 @@ export const SPECIES: Species[] = [
     spike: null,
   },
   {
-    name: "Buttercup",
+    name: "Pyllor",
     stem: FOLIAGE[3].stem,
     leaf: FOLIAGE[3].leaf,
     bloom: mixOklch("oklch(0.74 0.2 52)", ORANGE_POP, 38),
@@ -440,7 +452,7 @@ export const SPECIES: Species[] = [
     spike: null,
   },
   {
-    name: "Aquatic",
+    name: "Nerith",
     stem: FOLIAGE[4].stem,
     leaf: FOLIAGE[4].leaf,
     bloom: mixOklch(LEGACY_SKY_PETAL, "oklch(0.66 0.12 236)", 40),
@@ -459,7 +471,7 @@ export const SPECIES: Species[] = [
     spike: null,
   },
   {
-    name: "Primrose",
+    name: "Carnith",
     stem: FOLIAGE[5].stem,
     leaf: FOLIAGE[5].leaf,
     bloom: mixOklch("oklch(0.52 0.24 27)", SYS_DANGER_400, 50),
@@ -478,7 +490,7 @@ export const SPECIES: Species[] = [
     spike: null,
   },
   {
-    name: "Thistle",
+    name: "Velkor",
     stem: FOLIAGE[6].stem,
     leaf: FOLIAGE[6].leaf,
     bloom: mixOklch("oklch(0.58 0.22 305)", mixOklch(ORANGE_MID, SYS_ACCENT, 45), 55),
@@ -496,9 +508,9 @@ export const SPECIES: Species[] = [
     lateralRun: 0.25,
     spike: SYS_DANGER_500,
   },
-  /** Yellow bell blooms (hue ~95–102); green stem/leaf from FOLIAGE[7]. */
+  /** Helio-cultivar yellow; green stem/leaf from FOLIAGE[7]. */
   {
-    name: "Bluebell",
+    name: "Aurith",
     stem: FOLIAGE[7].stem,
     leaf: FOLIAGE[7].leaf,
     bloom: mixOklch("oklch(0.8 0.2 96)", mixOklch(ORANGE_SOFT, SYS_ACCENT, 62), 72),
@@ -516,9 +528,9 @@ export const SPECIES: Species[] = [
     lateralRun: 0.35,
     spike: null,
   },
-  /** Acid chartreuse / lime (hue ~124–142); hot center, deeper yellow-green rim */
+  /** Acid chartreuse (hue ~124–142). */
   {
-    name: "Cornflower",
+    name: "Virex",
     stem: FOLIAGE[8].stem,
     leaf: FOLIAGE[8].leaf,
     bloom: mixOklch("oklch(0.72 0.28 132)", "oklch(0.66 0.24 140)", 46),
@@ -536,9 +548,9 @@ export const SPECIES: Species[] = [
     lateralRun: 0.48,
     spike: null,
   },
-  /** Legacy forget-me-not — #7fc8ff sky family dominates petals */
+  /** Sky-thread blues. */
   {
-    name: "Forget-me-not",
+    name: "Mnexis",
     stem: FOLIAGE[9].stem,
     leaf: FOLIAGE[9].leaf,
     bloom: mixOklch(LEGACY_SKY_PETAL, SYS_ACCENT, 86),
@@ -556,9 +568,9 @@ export const SPECIES: Species[] = [
     lateralRun: 0.42,
     spike: null,
   },
-  /** Saturated magenta / hot pink (hue ~348–358); distinct from Foxglove violet and Thistle purple */
+  /** Saturated magenta (hue ~348–358). */
   {
-    name: "Hot pink",
+    name: "Rubilix",
     stem: FOLIAGE[10].stem,
     leaf: FOLIAGE[10].leaf,
     bloom: mixOklch("oklch(0.58 0.3 352)", "oklch(0.5 0.26 348)", 42),
@@ -577,11 +589,11 @@ export const SPECIES: Species[] = [
     spike: null,
   },
   /**
-   * Rare rainbow — red / chartreuse / blue-violet layers read as a spectrum in pixel blooms.
+   * Rare Kalevon — red / chartreuse / blue-violet layers in pixel blooms.
    * Spawn: see `VIGIL_BOOT_FLOWER_RARE_SPAWN_EACH` (last `VIGIL_BOOT_FLOWER_RARE_COUNT` species).
    */
   {
-    name: "Spectrum",
+    name: "Kalevon",
     stem: FOLIAGE[11].stem,
     leaf: FOLIAGE[11].leaf,
     bloom: mixOklch("oklch(0.6 0.28 28)", SYS_DANGER_400, 46),
@@ -600,7 +612,7 @@ export const SPECIES: Species[] = [
     spike: null,
   },
   {
-    name: "Prism",
+    name: "Volyth",
     stem: FOLIAGE[12].stem,
     leaf: FOLIAGE[12].leaf,
     bloom: mixOklch("oklch(0.5 0.36 322)", LEGACY_ROYAL_PETAL, 18),
@@ -620,7 +632,7 @@ export const SPECIES: Species[] = [
   },
 ];
 
-/** Last this many `SPECIES` entries use `VIGIL_BOOT_FLOWER_RARE_SPAWN_EACH` each (rainbow rares). */
+/** Last this many `SPECIES` entries use `VIGIL_BOOT_FLOWER_RARE_SPAWN_EACH` each (Kalevon / Volyth). */
 export const VIGIL_BOOT_FLOWER_RARE_COUNT = 2;
 /** Per-spawn probability for each rare tail species (~2% ⇒ ~4% any rare with count 2). */
 export const VIGIL_BOOT_FLOWER_RARE_SPAWN_EACH = 0.02;
@@ -661,6 +673,16 @@ type Particle = {
 /** Rare stem traits — rolled once per new root spawn, copied to branches. */
 const VINE_LEAFY_CHANCE = 0.072;
 const VINE_THORNY_CHANCE = 0.054;
+
+/**
+ * Counter-gust vs default wind-swept lean: ~15% extra chance each tick for leftward lateral,
+ * steeper-up vertical jitter, and trying the left-ish escape first when the stem is blocked.
+ */
+const GROWTH_GUST_LEFT_LATERAL = 0.15;
+const GROWTH_GUST_UP_CHANCE = 0.15;
+/** When up-gust hits, pull `r2` down so `(r2 - 0.5) * upJitter` skews toward −y (climb). */
+const GROWTH_GUST_UP_R2_SHIFT = 0.12;
+const GROWTH_COLLIDE_LEFT_FIRST = 0.15;
 
 /** Thorn tint: almost stem, slight leaf lift so it still reads as a point. */
 function thornColorForSpec(spec: Species): string {
@@ -781,7 +803,7 @@ type BloomKind = "full" | "mini";
 
 type PaintFn = (x: number, y: number, color: string) => void;
 
-/** Foxglove-style vertical raceme (stem grows up = −y). */
+/** Stelix — vertical raceme (stem grows up = −y). */
 function paintShapeSpike(paint: PaintFn, cx: number, cy: number, spec: Species, rnd: number[], mini: boolean) {
   const h = mini ? 2 : 4;
   paint(cx, cy, spec.bloomCore);
@@ -844,7 +866,7 @@ function paintShapeDisk(paint: PaintFn, cx: number, cy: number, spec: Species, r
   }
 }
 
-/** Bluebell: mass below the attachment. */
+/** Dew Goblet — mass below the attachment. */
 function paintShapeBell(paint: PaintFn, cx: number, cy: number, spec: Species, rnd: number[], mini: boolean) {
   paint(cx, cy, spec.bloomCore);
   paint(cx, cy + 1, spec.bloom);
@@ -996,7 +1018,7 @@ function paintShapeLily(paint: PaintFn, cx: number, cy: number, spec: Species, r
   }
 }
 
-/** Wisteria-style drip below the anchor. */
+/** Grave Tears — drip below the anchor. */
 function paintShapePendant(paint: PaintFn, cx: number, cy: number, spec: Species, rnd: number[], mini: boolean) {
   paint(cx, cy, spec.bloomCore);
   const depth = mini ? 2 : 4;
@@ -1133,72 +1155,44 @@ function paintShapeZigzag(paint: PaintFn, cx: number, cy: number, spec: Species,
 }
 
 /**
- * Classic ♥ pixel silhouette — two upper lobes, cleft, taper to a point (−y = up).
- * `BloomShape` id: `"heart"`.
+ * Sweet Curse — compact heart silhouette; two lobes, cleft, single-cell tip (−y = up).
+ * `BloomShape` id: `"Sweet Curse"`.
  */
 function paintShapeHeart(paint: PaintFn, cx: number, cy: number, spec: Species, rnd: number[], mini: boolean) {
   if (mini) {
-    for (const [dx, dy] of [
-      [-1, -2],
-      [1, -2],
-      [-2, -1],
-      [-1, -1],
-      [0, -1],
-      [1, -1],
-      [2, -1],
-      [-1, 0],
-      [0, 0],
-      [1, 0],
-      [0, 1],
+    for (const [dx, dy, c] of [
+      [-1, -2, spec.bloomHalo],
+      [0, -2, spec.bloomCore],
+      [1, -2, spec.bloomHalo],
+      [-1, -1, spec.bloom],
+      [0, -1, spec.bloomCore],
+      [1, -1, spec.bloom],
+      [0, 0, spec.bloomCore],
+      [0, 1, spec.bloom],
     ] as const) {
-      const c =
-        dx === 0 && dy === 1
-          ? spec.bloomCore
-          : dx === 0 && dy === -1
-            ? spec.bloomCore
-            : Math.abs(dx) + Math.abs(dy) >= 3
-              ? spec.bloomHalo
-              : spec.bloom;
       paint(cx + dx, cy + dy, c);
     }
     return;
   }
   const cells: [number, number, string][] = [
-    [-2, -4, spec.bloomHalo],
-    [-1, -4, spec.bloom],
-    [1, -4, spec.bloom],
-    [2, -4, spec.bloomHalo],
-    [-3, -3, spec.bloomHalo],
-    [-2, -3, spec.bloom],
-    [-1, -3, spec.bloomCore],
-    [0, -3, spec.bloom],
-    [1, -3, spec.bloomCore],
-    [2, -3, spec.bloom],
-    [3, -3, spec.bloomHalo],
-    [-3, -2, spec.bloom],
-    [-2, -2, spec.bloomCore],
+    [-1, -3, spec.bloomHalo],
+    [0, -3, spec.bloomCore],
+    [1, -3, spec.bloomHalo],
+    [-2, -2, spec.bloomHalo],
     [-1, -2, spec.bloom],
     [0, -2, spec.bloomCore],
     [1, -2, spec.bloom],
-    [2, -2, spec.bloomCore],
-    [3, -2, spec.bloom],
-    [-3, -1, spec.bloomHalo],
+    [2, -2, spec.bloomHalo],
     [-2, -1, spec.bloom],
     [-1, -1, spec.bloomCore],
     [0, -1, spec.bloom],
     [1, -1, spec.bloomCore],
     [2, -1, spec.bloom],
-    [3, -1, spec.bloomHalo],
-    [-2, 0, spec.bloomHalo],
     [-1, 0, spec.bloom],
     [0, 0, spec.bloomCore],
     [1, 0, spec.bloom],
-    [2, 0, spec.bloomHalo],
-    [-1, 1, spec.bloom],
     [0, 1, spec.bloomCore],
-    [1, 1, spec.bloom],
     [0, 2, spec.bloom],
-    [0, 3, spec.bloomCore],
   ];
   for (const [dx, dy, c] of cells) {
     paint(cx + dx, cy + dy, c);
@@ -1349,7 +1343,7 @@ function paintShapeVeil(paint: PaintFn, cx: number, cy: number, spec: Species, r
   paint(cx + (mini ? 2 : 4), cy - 2, alienBeacon(spec));
 }
 
-/** Three-armed whorl — longer arms, Y silhouette reads clearly. */
+/** Trikon — three-arm whorl, Y silhouette reads clearly. */
 function paintShapeTriskel(paint: PaintFn, cx: number, cy: number, spec: Species, rnd: number[], mini: boolean) {
   const rot = Math.floor(rnd[9]! * 3);
   const armSets: [number, number][][] = [
@@ -1417,7 +1411,7 @@ function paintShapeTriskel(paint: PaintFn, cx: number, cy: number, spec: Species
   }
 }
 
-/** Sakura — five petals opening upward (−y); split tips suggest cherry notches. */
+/** Ghost Petal — five petals opening upward (−y); split tips. */
 function paintShapeSakura(paint: PaintFn, cx: number, cy: number, spec: Species, rnd: number[], mini: boolean) {
   paint(cx, cy, spec.bloomCore);
   if (mini) {
@@ -1458,7 +1452,7 @@ function paintShapeSakura(paint: PaintFn, cx: number, cy: number, spec: Species,
   if (rnd[5]! > 0.35) paint(cx + 2, cy - 2, spec.bloomHalo);
 }
 
-/** Ume (plum) — five stubbier lobes, fuller disk than sakura. */
+/** Prunith — five stubbier lobes, fuller disk than Ghost Petal. */
 function paintShapeUme(paint: PaintFn, cx: number, cy: number, spec: Species, rnd: number[], mini: boolean) {
   paint(cx, cy, spec.bloomCore);
   if (mini) {
@@ -1502,7 +1496,7 @@ function paintShapeUme(paint: PaintFn, cx: number, cy: number, spec: Species, rn
   }
 }
 
-/** Kiku — chrysanthemum: dense core, two radiating rings, outer halo spears. */
+/** Vortalis — dense core, two radiating rings, outer halo spears. */
 function paintShapeKiku(paint: PaintFn, cx: number, cy: number, spec: Species, rnd: number[], mini: boolean) {
   paint(cx, cy, spec.bloomCore);
   const ring1: [number, number][] = [
@@ -1556,7 +1550,7 @@ function paintShapeKiku(paint: PaintFn, cx: number, cy: number, spec: Species, r
   }
 }
 
-/** Fuji — wisteria: parallel hanging strands (broader than single `pendant`). */
+/** Racemor — parallel hanging strands (broader than Grave Tears). */
 function paintShapeFuji(paint: PaintFn, cx: number, cy: number, spec: Species, rnd: number[], mini: boolean) {
   paint(cx, cy, spec.bloomCore);
   const strands: number[] = mini ? [0] : [-2, 0, 2];
@@ -1573,7 +1567,7 @@ function paintShapeFuji(paint: PaintFn, cx: number, cy: number, spec: Species, r
   }
 }
 
-/** Iris — three upper standards (−y) and three lower falls (+y), slender silhouette. */
+/** Blade Lily — upright standards (−y) and lower falls (+y). */
 function paintShapeIris(paint: PaintFn, cx: number, cy: number, spec: Species, rnd: number[], mini: boolean) {
   paint(cx, cy, spec.bloomCore);
   if (mini) {
@@ -1604,6 +1598,371 @@ function paintShapeIris(paint: PaintFn, cx: number, cy: number, spec: Species, r
   if (rnd[7]! > 0.4) paint(cx + 2, cy + 2, spec.bloomHalo);
 }
 
+/** Nodding bloom — core at anchor; mass droops down-diagonal (`rnd[9]` picks left/right lilt). */
+function paintShapeNod(paint: PaintFn, cx: number, cy: number, spec: Species, rnd: number[], mini: boolean) {
+  const f = rnd[9]! > 0.5 ? 1 : -1;
+  paint(cx, cy, spec.bloomCore);
+  if (mini) {
+    paint(cx + f, cy + 1, spec.bloom);
+    paint(cx, cy + 1, spec.bloomHalo);
+    paint(cx + f * 2, cy + 2, spec.bloomHalo);
+    paint(cx + f, cy + 2, spec.bloomCore);
+    return;
+  }
+  paint(cx + f, cy + 1, spec.bloom);
+  paint(cx, cy + 1, spec.bloomHalo);
+  paint(cx + f * 2, cy + 1, spec.bloomHalo);
+  paint(cx + f, cy + 2, spec.bloomCore);
+  paint(cx + f * 2, cy + 2, spec.bloom);
+  paint(cx + f * 3, cy + 2, spec.bloomHalo);
+  paint(cx + f * 2, cy + 3, spec.bloom);
+  paint(cx + f * 3, cy + 3, spec.bloomHalo);
+  paint(cx + f * 3, cy + 4, spec.bloomCore);
+  paint(cx + f * 4, cy + 3, spec.bloomHalo);
+  if (rnd[1]! > 0.35) paint(cx + f, cy + 3, spec.bloomHalo);
+}
+
+/**
+ * Lilting S-curve — bends out then down, then curls back; puff at the toe.
+ * Horizontal mirror from `rnd[9]`.
+ */
+function paintShapeLilt(paint: PaintFn, cx: number, cy: number, spec: Species, rnd: number[], mini: boolean) {
+  const f = rnd[9]! > 0.5 ? 1 : -1;
+  const sx = (x: number) => f * x;
+  paint(cx, cy, spec.bloomCore);
+  if (mini) {
+    paint(cx + sx(1), cy + 1, spec.bloom);
+    paint(cx + sx(1), cy + 2, spec.bloomHalo);
+    paint(cx + sx(2), cy + 2, spec.bloomCore);
+    paint(cx + sx(2), cy + 3, spec.bloom);
+    paint(cx + sx(1), cy + 3, spec.bloomHalo);
+    return;
+  }
+  const steps: [number, number, string][] = [
+    [sx(0), 1, spec.bloomHalo],
+    [sx(1), 1, spec.bloom],
+    [sx(1), 2, spec.bloomCore],
+    [sx(2), 2, spec.bloomHalo],
+    [sx(2), 3, spec.bloom],
+    [sx(3), 3, spec.bloomHalo],
+    [sx(3), 4, spec.bloomCore],
+    [sx(3), 5, spec.bloom],
+    [sx(2), 5, spec.bloomHalo],
+    [sx(2), 6, spec.bloom],
+    [sx(1), 6, spec.bloomHalo],
+    [sx(1), 7, spec.bloomCore],
+    [sx(0), 7, spec.bloomHalo],
+    [sx(0), 8, spec.bloom],
+    [sx(-1), 7, spec.bloomHalo],
+    [sx(1), 8, spec.bloomHalo],
+  ];
+  for (const [dx, dy, c] of steps) {
+    paint(cx + dx, cy + dy, c);
+  }
+}
+
+/** Weeping shape — widens as it drops, then the lowest lip hangs past the stem line. */
+function paintShapeWeep(paint: PaintFn, cx: number, cy: number, spec: Species, rnd: number[], mini: boolean) {
+  const f = rnd[9]! > 0.5 ? 1 : -1;
+  paint(cx, cy, spec.bloomCore);
+  if (mini) {
+    paint(cx, cy + 1, spec.bloom);
+    paint(cx + f, cy + 2, spec.bloomHalo);
+    paint(cx, cy + 2, spec.bloomCore);
+    paint(cx - f, cy + 2, spec.bloomHalo);
+    paint(cx + f * 2, cy + 3, spec.bloom);
+    paint(cx + f, cy + 3, spec.bloom);
+    return;
+  }
+  paint(cx, cy + 1, spec.bloomHalo);
+  paint(cx - f, cy + 1, spec.bloom);
+  paint(cx + f, cy + 1, spec.bloom);
+  paint(cx - f, cy + 2, spec.bloomHalo);
+  paint(cx, cy + 2, spec.bloom);
+  paint(cx + f, cy + 2, spec.bloomHalo);
+  paint(cx - f * 2, cy + 3, spec.bloom);
+  paint(cx - f, cy + 3, spec.bloomCore);
+  paint(cx, cy + 3, spec.bloom);
+  paint(cx + f, cy + 3, spec.bloomCore);
+  paint(cx + f * 2, cy + 3, spec.bloom);
+  paint(cx - f * 2, cy + 4, spec.bloomHalo);
+  paint(cx - f, cy + 4, spec.bloom);
+  paint(cx, cy + 4, spec.bloomCore);
+  paint(cx + f, cy + 4, spec.bloom);
+  paint(cx + f * 2, cy + 4, spec.bloomHalo);
+  paint(cx + f * 3, cy + 4, spec.bloomHalo);
+  paint(cx + f * 2, cy + 5, spec.bloom);
+  paint(cx + f * 3, cy + 5, spec.bloomCore);
+  paint(cx + f * 4, cy + 5, spec.bloomHalo);
+  if (rnd[4]! > 0.4) paint(cx - f * 3, cy + 4, spec.bloomHalo);
+}
+
+/**
+ * Bonebloom — domed cranium, eye sockets, nose gap, teeth + chin (−y = up).
+ * BloomShape id: `"Bonebloom"`.
+ */
+function paintShapeSkull(paint: PaintFn, cx: number, cy: number, spec: Species, rnd: number[], mini: boolean) {
+  void rnd;
+  if (mini) {
+    for (const [dx, dy, c] of [
+      [0, -3, spec.bloomHalo],
+      [-1, -2, spec.bloom],
+      [0, -2, spec.bloomCore],
+      [1, -2, spec.bloom],
+      [-2, -1, spec.bloomHalo],
+      [-1, -1, spec.bloomHalo],
+      [0, -1, spec.bloomCore],
+      [1, -1, spec.bloomHalo],
+      [2, -1, spec.bloomHalo],
+      [-1, 0, spec.bloom],
+      [0, 0, spec.bloomCore],
+      [1, 0, spec.bloom],
+      [-1, 1, spec.bloomHalo],
+      [0, 1, spec.bloom],
+      [1, 1, spec.bloomHalo],
+      [0, 2, spec.bloomCore],
+    ] as const) {
+      paint(cx + dx, cy + dy, c);
+    }
+    return;
+  }
+  const h = spec.bloomHalo;
+  const b = spec.bloom;
+  const c = spec.bloomCore;
+  const cells: [number, number, string][] = [
+    [-1, -5, h],
+    [0, -5, c],
+    [1, -5, h],
+    [-2, -4, h],
+    [-1, -4, b],
+    [0, -4, c],
+    [1, -4, b],
+    [2, -4, h],
+    [-3, -3, h],
+    [0, -3, c],
+    [3, -3, h],
+    [-3, -2, b],
+    [0, -2, b],
+    [3, -2, b],
+    [-3, -1, b],
+    [-1, -1, b],
+    [1, -1, b],
+    [3, -1, b],
+    [-3, 0, b],
+    [-2, 0, b],
+    [-1, 0, c],
+    [1, 0, c],
+    [2, 0, b],
+    [3, 0, b],
+    [-2, 1, h],
+    [-1, 1, b],
+    [0, 1, c],
+    [1, 1, b],
+    [2, 1, h],
+    [-1, 2, b],
+    [0, 2, c],
+    [1, 2, b],
+    [0, 3, h],
+  ];
+  for (const [dx, dy, col] of cells) {
+    paint(cx + dx, cy + dy, col);
+  }
+}
+
+/**
+ * Fourfold Root — four heart-ish lobes on N/E/S/W and a center knot.
+ * BloomShape id: `"Fourfold Root"`.
+ */
+function paintShapeClover(paint: PaintFn, cx: number, cy: number, spec: Species, rnd: number[], mini: boolean) {
+  void rnd;
+  const h = spec.bloomHalo;
+  const b = spec.bloom;
+  const c = spec.bloomCore;
+  if (mini) {
+    paint(cx, cy, c);
+    for (const [dx, dy, col] of [
+      [0, -2, h],
+      [-1, -1, b],
+      [0, -1, b],
+      [1, -1, b],
+      [-2, 0, h],
+      [-1, 0, b],
+      [1, 0, b],
+      [2, 0, h],
+      [-1, 1, b],
+      [0, 1, b],
+      [1, 1, b],
+      [0, 2, h],
+    ] as const) {
+      paint(cx + dx, cy + dy, col);
+    }
+    return;
+  }
+  paint(cx, cy, c);
+  const cells: [number, number, string][] = [
+    // North lobe (heart bump)
+    [0, -5, h],
+    [-1, -4, b],
+    [0, -4, c],
+    [1, -4, b],
+    [-2, -3, h],
+    [-1, -3, b],
+    [0, -3, b],
+    [1, -3, b],
+    [2, -3, h],
+    [-1, -2, b],
+    [0, -2, b],
+    [1, -2, b],
+    // East lobe
+    [5, 0, h],
+    [4, -1, b],
+    [4, 0, c],
+    [4, 1, b],
+    [3, -2, h],
+    [3, -1, b],
+    [3, 0, b],
+    [3, 1, b],
+    [3, 2, h],
+    [2, -1, b],
+    [2, 1, b],
+    // South lobe
+    [0, 5, h],
+    [-1, 4, b],
+    [0, 4, c],
+    [1, 4, b],
+    [-2, 3, h],
+    [-1, 3, b],
+    [0, 3, b],
+    [1, 3, b],
+    [2, 3, h],
+    [-1, 2, b],
+    [0, 2, b],
+    [1, 2, b],
+    // West lobe
+    [-5, 0, h],
+    [-4, -1, b],
+    [-4, 0, c],
+    [-4, 1, b],
+    [-3, -2, h],
+    [-3, -1, b],
+    [-3, 0, b],
+    [-3, 1, b],
+    [-3, 2, h],
+    [-2, -1, b],
+    [-2, 1, b],
+  ];
+  for (const [dx, dy, col] of cells) {
+    paint(cx + dx, cy + dy, col);
+  }
+}
+
+/**
+ * Witch Eye — roundish gaze: sclera ring, iris donut, pupil, catchlight (−y = up).
+ * `BloomShape` id: `"Witch Eye"`.
+ */
+function paintShapeGlassGaze(paint: PaintFn, cx: number, cy: number, spec: Species, rnd: number[], mini: boolean) {
+  const h = spec.bloomHalo;
+  const s = spec.bloom;
+  const p = spec.bloomCore;
+  const iris = spec.bloom;
+  const glint = spec.bloomHalo;
+  const lx = rnd[4]! > 0.5 ? 1 : -1;
+  const slit = rnd[8]! > 0.86;
+  const lazyX = !slit && rnd[5]! > 0.68 ? 1 : !slit && rnd[5]! < 0.32 ? -1 : 0;
+
+  if (mini) {
+    paint(cx, cy - 2, h);
+    paint(cx - 1, cy - 1, h);
+    paint(cx, cy - 1, slit ? p : s);
+    paint(cx + 1, cy - 1, h);
+    if (slit) {
+      paint(cx, cy, p);
+      paint(cx - 1, cy, iris);
+      paint(cx + 1, cy, iris);
+    } else {
+      paint(cx + lazyX - 1, cy, iris);
+      paint(cx + lazyX, cy, p);
+      paint(cx + lazyX + 1, cy, iris);
+    }
+    paint(cx - 1, cy + 1, s);
+    paint(cx, cy + 1, h);
+    paint(cx + 1, cy + 1, s);
+    if (rnd[3]! > 0.48) paint(cx - 2, cy, h);
+    if (rnd[7]! > 0.58) paint(cx + 2, cy - 1, h);
+    paint(cx + lx, cy - 1, glint);
+    return;
+  }
+
+  const smallOrb: [number, number, string][] = slit
+    ? [
+        [0, -3, h],
+        [-1, -2, h],
+        [0, -2, s],
+        [1, -2, h],
+        [-2, -1, h],
+        [-1, -1, iris],
+        [0, -1, p],
+        [1, -1, iris],
+        [2, -1, h],
+        [-2, 0, s],
+        [-1, 0, iris],
+        [0, 0, p],
+        [1, 0, iris],
+        [2, 0, s],
+        [-2, 1, h],
+        [-1, 1, iris],
+        [0, 1, iris],
+        [1, 1, iris],
+        [2, 1, h],
+        [-1, 2, s],
+        [0, 2, s],
+        [1, 2, s],
+        [0, 3, h],
+      ]
+    : [
+        [0, -3, h],
+        [-1, -2, h],
+        [0, -2, s],
+        [1, -2, h],
+        [-2, -1, h],
+        [-1, -1, iris],
+        [0, -1, iris],
+        [1, -1, iris],
+        [2, -1, h],
+        [-2, 0, s],
+        [-1, 0, iris],
+        [0, 0, iris],
+        [1, 0, iris],
+        [2, 0, s],
+        [-2, 1, h],
+        [-1, 1, iris],
+        [0, 1, iris],
+        [1, 1, iris],
+        [2, 1, h],
+        [-1, 2, s],
+        [0, 2, s],
+        [1, 2, s],
+        [0, 3, h],
+      ];
+
+  for (const [dx, dy, col] of smallOrb) {
+    paint(cx + dx, cy + dy, col);
+  }
+  if (!slit) {
+    paint(cx + lazyX, cy, p);
+  }
+
+  if (rnd[2]! > 0.52) paint(cx - 3, cy - 1, h);
+  if (rnd[2]! > 0.38) paint(cx - 3, cy, h);
+  if (rnd[7]! > 0.48) paint(cx + 3, cy, h);
+  if (rnd[7]! > 0.62) paint(cx + 2, cy + 2, h);
+  if (rnd[3]! > 0.68) paint(cx - 1, cy + 3, h);
+  if (rnd[6]! > 0.72) paint(cx + 1, cy - 4, h);
+  if (rnd[1]! > 0.8) paint(cx - 2, cy + 2, p);
+
+  paint(cx + lx, cy - 2, glint);
+}
+
 /** Overwrites cells so the stem tip becomes a visible flower (tryPaint skips occupied). */
 function paintBloomCluster(
   cx: number,
@@ -1624,86 +1983,104 @@ function paintBloomCluster(
   const mini = kind === "mini";
 
   switch (shape) {
-    case "spike":
+    case "Stelix":
       paintShapeSpike(paint, cx, cy, spec, rnd, mini);
       break;
-    case "disk":
+    case "Orbith":
       paintShapeDisk(paint, cx, cy, spec, rnd, mini);
       break;
-    case "bell":
+    case "Dew Goblet":
       paintShapeBell(paint, cx, cy, spec, rnd, mini);
       break;
-    case "cross":
+    case "Quadron":
       paintShapeCross(paint, cx, cy, spec, rnd, mini);
       break;
-    case "star":
+    case "Painwheel":
       paintShapeStar(paint, cx, cy, spec, rnd, mini);
       break;
-    case "fan":
+    case "Mourning Fan":
       paintShapeFan(paint, cx, cy, spec, rnd, mini);
       break;
-    case "spray":
+    case "Sperion":
       paintShapeSpray(paint, cx, cy, spec, rnd, mini);
       break;
-    case "twin":
+    case "Duonis":
       paintShapeTwin(paint, cx, cy, spec, rnd, mini);
       break;
-    case "lily":
+    case "Fear Lily":
       paintShapeLily(paint, cx, cy, spec, rnd, mini);
       break;
-    case "pendant":
+    case "Grave Tears":
       paintShapePendant(paint, cx, cy, spec, rnd, mini);
       break;
-    case "crown":
+    case "Thorn Tiara":
       paintShapeCrown(paint, cx, cy, spec, rnd, mini);
       break;
-    case "comet":
+    case "Bolide":
       paintShapeComet(paint, cx, cy, spec, rnd, mini);
       break;
-    case "pompom":
+    case "Bloodsop":
       paintShapePompom(paint, cx, cy, spec, rnd, mini);
       break;
-    case "orchid":
+    case "Soft Fang":
       paintShapeOrchid(paint, cx, cy, spec, rnd, mini);
       break;
-    case "umbel":
+    case "Rethel":
       paintShapeUmbel(paint, cx, cy, spec, rnd, mini);
       break;
-    case "zigzag":
+    case "Zygoth":
       paintShapeZigzag(paint, cx, cy, spec, rnd, mini);
       break;
-    case "heart":
+    case "Sweet Curse":
       paintShapeHeart(paint, cx, cy, spec, rnd, mini);
       break;
-    case "crescent":
+    case "Falcith":
       paintShapeCrescent(paint, cx, cy, spec, rnd, mini);
       break;
-    case "lotus":
+    case "Mirror Lotus":
       paintShapeLotus(paint, cx, cy, spec, rnd, mini);
       break;
-    case "biolume":
+    case "Glowmoth":
       paintShapeBiolume(paint, cx, cy, spec, rnd, mini);
       break;
-    case "veil":
+    case "Witch Eye":
+      paintShapeGlassGaze(paint, cx, cy, spec, rnd, mini);
+      break;
+    case "Obelon":
       paintShapeVeil(paint, cx, cy, spec, rnd, mini);
       break;
-    case "triskel":
+    case "Trikon":
       paintShapeTriskel(paint, cx, cy, spec, rnd, mini);
       break;
-    case "sakura":
+    case "Ghost Petal":
       paintShapeSakura(paint, cx, cy, spec, rnd, mini);
       break;
-    case "ume":
+    case "Prunith":
       paintShapeUme(paint, cx, cy, spec, rnd, mini);
       break;
-    case "kiku":
+    case "Vortalis":
       paintShapeKiku(paint, cx, cy, spec, rnd, mini);
       break;
-    case "fuji":
+    case "Racemor":
       paintShapeFuji(paint, cx, cy, spec, rnd, mini);
       break;
-    case "iris":
+    case "Blade Lily":
       paintShapeIris(paint, cx, cy, spec, rnd, mini);
+      break;
+    case "Bonebloom":
+      paintShapeSkull(paint, cx, cy, spec, rnd, mini);
+      break;
+    case "Fourfold Root":
+      paintShapeClover(paint, cx, cy, spec, rnd, mini);
+      break;
+    case "Nodion":
+      paintShapeNod(paint, cx, cy, spec, rnd, mini);
+      break;
+    case "Serpic":
+      paintShapeLilt(paint, cx, cy, spec, rnd, mini);
+      break;
+    case "Sorrow Weep":
+      paintShapeWeep(paint, cx, cy, spec, rnd, mini);
       break;
     default:
       paintShapeDisk(paint, cx, cy, spec, rnd, mini);
@@ -2010,10 +2387,15 @@ export const VigilBootFlowerGarden = forwardRef<VigilBootFlowerGardenHandle, Vig
             }
 
             const sinW = Math.sin(p.age * spec.sinFreq) * spec.sinAmp;
-            const lateral = Math.round((r - 0.5) * spec.wander + sinW);
+            let lateral = Math.round((r - 0.5) * spec.wander + sinW);
+            if (p.rnd[(p.age + 7) % 10]! < GROWTH_GUST_LEFT_LATERAL) lateral -= 1;
             const run = p.age % 5 === 0 && r2 < spec.lateralRun ? p.dir * Math.round(r3 * 2) : 0;
             let nx = p.x + lateral + run;
-            let ny = p.y - 1 + Math.round((r2 - 0.5) * spec.upJitter);
+            let r2Up = r2;
+            if (p.rnd[(p.age + 8) % 10]! < GROWTH_GUST_UP_CHANCE) {
+              r2Up = Math.max(0, r2 - GROWTH_GUST_UP_R2_SHIFT);
+            }
+            let ny = p.y - 1 + Math.round((r2Up - 0.5) * spec.upJitter);
 
             nx = Math.max(0, Math.min(cols - 1, nx));
             ny = Math.max(0, Math.min(rows - 1, ny));
@@ -2027,12 +2409,20 @@ export const VigilBootFlowerGarden = forwardRef<VigilBootFlowerGardenHandle, Vig
               next.push(p);
               moved = true;
             } else {
-              const alts = [
-                [p.x + p.dir, p.y - 1],
-                [p.x - p.dir, p.y - 1],
-                [p.x + lateral, p.y],
-                [p.x, p.y - 2],
-              ] as const;
+              const leftFirst = p.rnd[(p.age + 4) % 10]! < GROWTH_COLLIDE_LEFT_FIRST;
+              const alts = leftFirst
+                ? ([
+                    [p.x - p.dir, p.y - 1],
+                    [p.x + p.dir, p.y - 1],
+                    [p.x + lateral, p.y],
+                    [p.x, p.y - 2],
+                  ] as const)
+                : ([
+                    [p.x + p.dir, p.y - 1],
+                    [p.x - p.dir, p.y - 1],
+                    [p.x + lateral, p.y],
+                    [p.x, p.y - 2],
+                  ] as const);
               for (const [ax, ay] of alts) {
                 if (ax < 0 || ax >= cols || ay < 0 || ay >= rows) continue;
                 if (!occupied.has(cellKey(ax, ay))) {

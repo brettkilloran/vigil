@@ -326,45 +326,52 @@ export function VigilAppBootScreen({ technicalReady, onActivate, onExitComplete 
           </div>
         </div>
       </div>
-      <div className={`${styles.metaTop} ${styles.mono} ${styles.fadeIn}`} style={{ animationDelay: "0.35s" }}>
-        <span>
-          {technicalReady ? "NOMINAL · AWAIT_SESSION" : "TOPOLOGY · FONTS · VIEWPORT"}
-        </span>
-        <span aria-hidden> · </span>
-        <span>09.03.Y394</span>
+      <div className={styles.metaTop}>
+        <div
+          className={`${styles.metaTopInner} ${styles.mono} ${styles.fadeInMetaTop}`}
+          style={{ animationDelay: "0.22s" }}
+        >
+          <span>
+            {technicalReady ? "NOMINAL · AWAIT_SESSION" : "TOPOLOGY · FONTS · VIEWPORT"}
+          </span>
+          <span aria-hidden> · </span>
+          <span>09.03.Y394</span>
+          <span className={styles.metaCursor} aria-hidden>
+            _
+          </span>
+        </div>
       </div>
 
       <div ref={bootCenterClusterRef} className={styles.content}>
-        <div className={`${styles.kicker} ${styles.mono} ${styles.fadeIn}`} style={{ animationDelay: "0.55s" }}>
+        <div
+          className={`${styles.kicker} ${styles.mono} ${styles.fadeInKicker}`}
+          style={{ animationDelay: "0.42s" }}
+        >
           HEARTGARDEN
         </div>
         <h1
           id="vigil-boot-title"
           lang="ja"
-          className={`${styles.title} ${styles.titleCjk} ${styles.fadeIn}`}
-          style={{ animationDelay: "0.72s" }}
+          className={`${styles.title} ${styles.titleCjk} ${styles.fadeInTitle}`}
+          style={{ animationDelay: "0.58s" }}
         >
           波途画電
         </h1>
-        <div
-          id="vigil-boot-desc"
-          className={`${styles.blurbWrap} ${styles.fadeIn}`}
-          style={{ animationDelay: "1.1s" }}
-        >
-          <p className={styles.blurb}>
+        <div id="vigil-boot-desc" className={styles.blurbWrap}>
+          <p className={`${styles.blurb} ${styles.blurbReveal}`} style={{ animationDelay: "0.88s" }}>
             An infinite, living archive of Caliginia’s thermal shadows—
             <br />
             a permanent negative stained upon the retina. The eyelid is gone; shutter jammed open.
           </p>
-          <p className={styles.blurb}>
+          <p className={`${styles.blurb} ${styles.blurbReveal}`} style={{ animationDelay: "1.08s" }}>
             Yet no light enters the panopticon.
             <br />
             Just flowers, blooming in the vitreous dark.
           </p>
         </div>
         <div
-          className={`${styles.activateWrap} ${styles.fadeIn}`}
-          style={{ animationDelay: "1.28s" }}
+          className={`${styles.activateWrap} ${styles.fadeInCta}`}
+          style={{ animationDelay: "1.22s" }}
           data-vigil-boot-activate="true"
         >
           <Button
@@ -387,11 +394,16 @@ export function VigilAppBootScreen({ technicalReady, onActivate, onExitComplete 
         </div>
       </div>
 
-      <div className={`${styles.metaBottom} ${styles.mono} ${styles.fadeIn}`} style={{ animationDelay: "1.4s" }}>
-        <div className={styles.metaBottomLeft}>
+      <div className={styles.metaBottom}>
+        <div
+          className={`${styles.metaBottomLeft} ${styles.mono} ${styles.fadeInBottom}`}
+          style={{ animationDelay: "1.32s" }}
+        >
           INDEX_LIVE · GRAPH_PERSIST · v.{HEARTGARDEN_APP_VERSION}
         </div>
-        <div>♥ BRETT KILLORAN</div>
+        <div className={`${styles.mono} ${styles.fadeInBottom}`} style={{ animationDelay: "1.48s" }}>
+          ♥ BRETT KILLORAN
+        </div>
       </div>
     </div>
   );

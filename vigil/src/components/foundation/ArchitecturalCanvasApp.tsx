@@ -10,9 +10,10 @@ import {
   FileText,
   Folder,
   Graph,
+  DoorOpen,
   MagnifyingGlass,
-  Sparkle,
   NotePencil,
+  Sparkle,
   SquaresFour,
   Stack,
   Trash,
@@ -916,6 +917,8 @@ export function ArchitecturalCanvasApp({
   const [canvasSessionActivated, setCanvasSessionActivated] = useState(false);
   /** Boot UI removed after exit animation (or immediately if reduced motion). */
   const [bootLayerDismissed, setBootLayerDismissed] = useState(() => scenario !== "default");
+  /** Lets reduced-motion users see the auth splash again after explicit Log out. */
+  const [bootAfterLogout, setBootAfterLogout] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   const [focusOpen, setFocusOpen] = useState(false);
@@ -2492,6 +2495,19 @@ export function ArchitecturalCanvasApp({
     if (!prefersReducedMotion) return;
     setCanvasSessionActivated(true);
     setBootLayerDismissed(true);
+  }, [scenario, prefersReducedMotion]);
+
+  const handleLogOutToAuth = useCallback(() => {
+    if (scenario !== "default") return;
+    setFocusOpen(false);
+    setGalleryOpen(false);
+    setPaletteOpen(false);
+    setLorePanelOpen(false);
+    setGraphOverlayOpen(false);
+    setStackModal(null);
+    setCanvasSessionActivated(false);
+    setBootLayerDismissed(false);
+    if (prefersReducedMotion) setBootAfterLogout(true);
   }, [scenario, prefersReducedMotion]);
 
   const centerCoords = useCallback(() => {
@@ -5876,16 +5892,25 @@ export function ArchitecturalCanvasApp({
     return technicalViewportReady && canvasSessionActivated;
   }, [scenario, technicalViewportReady, canvasSessionActivated]);
 
-  const bootChromeSuppressed =
-    scenario === "default" && !prefersReducedMotion && !bootLayerDismissed;
+  const bootLayerVisible =
+    scenario === "default" &&
+    !bootLayerDismissed &&
+    (!prefersReducedMotion || bootAfterLogout);
+
+  const bootChromeSuppressed = bootLayerVisible;
+
+  const showLogOutToAuth = scenario === "default" && !bootLayerVisible;
 
   return (
     <>
-      {scenario === "default" && !prefersReducedMotion && !bootLayerDismissed ? (
+      {bootLayerVisible ? (
         <VigilAppBootScreen
           technicalReady={technicalViewportReady}
           onActivate={() => setCanvasSessionActivated(true)}
-          onExitComplete={() => setBootLayerDismissed(true)}
+          onExitComplete={() => {
+            setBootLayerDismissed(true);
+            setBootAfterLogout(false);
+          }}
         />
       ) : null}
       <div
@@ -7128,6 +7153,25 @@ export function ArchitecturalCanvasApp({
                 onExportGraphJson={exportGraphJson}
                 exportGraphPaletteHint={`${modKeyHints.search} → Export graph JSON`}
               />
+              {showLogOutToAuth ? (
+                <div className={styles.shellTopLogOutWrap} data-hg-chrome="log-out">
+                  <div
+                    className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.shellTopLogOutPanel}`}
+                  >
+                    <ArchitecturalButton
+                      type="button"
+                      size="icon"
+                      tone="glass"
+                      iconOnly
+                      leadingIcon={<DoorOpen size={18} weight="bold" aria-hidden />}
+                      className={styles.shellTopLogOutTrigger}
+                      title="Log out — return to auth splash"
+                      aria-label="Log out and return to auth splash"
+                      onClick={handleLogOutToAuth}
+                    />
+                  </div>
+                </div>
+              ) : null}
               <div className={styles.navChrome} data-hg-chrome="nav-breadcrumb">
                 <div className={`${styles.glassPanel} ${styles.navPanel} ${styles.shellTopChromePanel}`}>
                   <div className={styles.navRow}>

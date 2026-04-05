@@ -57,16 +57,18 @@
  * Fade opacity only on the panel (.flowerToolsFade).
  */
 .flowerToolsFade {
-  animation: vigilBootFlowerToolsFade 1.1s ease 0.35s forwards;
+  animation: vigilBootFlowerToolsFade 1s cubic-bezier(0.22, 0.82, 0.16, 1) 0.28s forwards;
   opacity: 0;
 }
 
 @keyframes vigilBootFlowerToolsFade {
   from {
     opacity: 0;
+    transform: translateX(14px);
   }
   to {
     opacity: 1;
+    transform: translateX(0);
   }
 }
 
@@ -122,13 +124,39 @@
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 0.25rem;
   z-index: 2;
   cursor: default;
   text-shadow:
     0 0 20px color-mix(in oklch, var(--bg-base) 85%, transparent),
     0 1px 3px color-mix(in oklch, var(--sys-color-black) 55%, transparent);
+}
+
+.metaTopInner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  max-width: 100%;
+}
+
+.metaCursor {
+  display: inline-block;
+  margin-inline-start: 0.02em;
+  font-weight: 300;
+  opacity: 0.35;
+  animation: vigilBootMetaCursor 1.05s steps(2, jump-end) infinite;
+}
+
+@keyframes vigilBootMetaCursor {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+
+  50% {
+    opacity: 0.95;
+  }
 }
 
 .metaBottom {
@@ -236,9 +264,19 @@
 }
 
 /*
- * Hover: intense true-red glow, no visible border (overrides .vigil-btn).
- * Pairs with JS spawns around the CTA (see VigilAppBootScreen).
+ * CTA: no chlorophyll halo until hover; pulse only while hovered (pairs with JS spawns).
  */
+.enterGardenBtn:not(:disabled) {
+  transition: box-shadow 0.4s ease, border-color 0.25s ease, transform 0.35s cubic-bezier(0.22, 0.82, 0.16, 1);
+  box-shadow: none;
+}
+
+.enterGardenBtn:not(:disabled):focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sem-focus-ring) 35%, transparent);
+}
+
 .enterGardenBtn:not(:disabled):hover {
   border-color: transparent !important;
   animation: vigilBootEnterGardenPulse 1.1s ease-in-out infinite;
@@ -248,16 +286,16 @@
   0%,
   100% {
     box-shadow:
-      0 0 22px oklch(0.58 0.29 27 / 0.88),
-      0 0 52px oklch(0.52 0.28 27 / 0.62),
-      0 0 92px oklch(0.48 0.24 27 / 0.42);
+      0 0 22px oklch(0.64 0.2 146 / 0.82),
+      0 0 52px oklch(0.58 0.17 150 / 0.55),
+      0 0 92px oklch(0.5 0.12 154 / 0.36);
   }
 
   50% {
     box-shadow:
-      0 0 32px oklch(0.64 0.3 27 / 0.95),
-      0 0 72px oklch(0.56 0.29 27 / 0.72),
-      0 0 120px oklch(0.5 0.26 27 / 0.48);
+      0 0 32px oklch(0.7 0.22 144 / 0.9),
+      0 0 72px oklch(0.62 0.19 148 / 0.65),
+      0 0 120px oklch(0.54 0.14 152 / 0.42);
   }
 }
 
@@ -268,8 +306,131 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   opacity: 0.5;
+  animation: vigilBootWaitHint 0.7s ease 0.2s forwards;
 }
 
+@keyframes vigilBootWaitHint {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 0.5;
+    transform: translateY(0);
+  }
+}
+
+/* —— Entrance variants (stagger via inline animation-delay on each node) —— */
+
+.fadeInMetaTop {
+  animation: vigilBootMetaTopIn 1.15s cubic-bezier(0.22, 0.82, 0.16, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes vigilBootMetaTopIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.fadeInKicker {
+  animation: vigilBootKickerIn 1.35s cubic-bezier(0.22, 0.82, 0.16, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes vigilBootKickerIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+    letter-spacing: 0.42em;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    letter-spacing: 0.15em;
+  }
+}
+
+.fadeInTitle {
+  animation: vigilBootTitleIn 1.5s cubic-bezier(0.2, 0.85, 0.18, 1) forwards;
+  opacity: 0;
+  will-change: filter, transform;
+}
+
+@keyframes vigilBootTitleIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.blurbReveal {
+  animation: vigilBootBlurbIn 1.55s cubic-bezier(0.22, 0.82, 0.16, 1) forwards;
+  opacity: 0;
+  will-change: filter, transform, opacity;
+}
+
+@keyframes vigilBootBlurbIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(5px);
+  }
+  to {
+    opacity: 0.88;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.fadeInCta {
+  animation: vigilBootCtaWrapIn 1.2s cubic-bezier(0.22, 0.82, 0.16, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes vigilBootCtaWrapIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.fadeInBottom {
+  animation: vigilBootBottomIn 1.1s cubic-bezier(0.22, 0.82, 0.16, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes vigilBootBottomIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* Legacy hook if needed */
 .fadeIn {
   animation: vigilBootFade 1.85s ease forwards;
   opacity: 0;
@@ -291,22 +452,60 @@
     transition: opacity 0.12s ease;
   }
 
-  .fadeIn {
+  .fadeIn,
+  .fadeInMetaTop,
+  .fadeInKicker,
+  .fadeInTitle,
+  .blurbReveal,
+  .fadeInCta,
+  .fadeInBottom {
     animation: none;
     opacity: 1;
+    transform: none;
+    filter: none;
+    will-change: auto;
+  }
+
+  .fadeInKicker {
+    letter-spacing: 0.15em;
+  }
+
+  .blurbReveal {
+    opacity: 0.88;
+  }
+
+  .metaCursor {
+    animation: none;
+    opacity: 0.55;
+  }
+
+  .waitHint {
+    animation: none;
+    opacity: 0.5;
     transform: none;
   }
 
   .flowerToolsFade {
     animation: none;
     opacity: 1;
+    transform: none;
+  }
+
+  .enterGardenBtn:not(:disabled) {
+    animation: none;
+    box-shadow: none;
+  }
+
+  .enterGardenBtn:not(:disabled):focus-visible {
+    box-shadow:
+      0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sem-focus-ring) 35%, transparent);
   }
 
   .enterGardenBtn:not(:disabled):hover {
     animation: none;
     border-color: transparent !important;
     box-shadow:
-      0 0 26px oklch(0.6 0.29 27 / 0.9),
-      0 0 64px oklch(0.54 0.28 27 / 0.58);
+      0 0 28px oklch(0.66 0.2 146 / 0.88),
+      0 0 68px oklch(0.58 0.16 150 / 0.52);
   }
 }
