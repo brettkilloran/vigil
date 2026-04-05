@@ -45,12 +45,12 @@ export const Default: Story = {
           items={[
             {
               label: "Copy link",
-              icon: <Copy weight="bold" />,
+              icon: <Copy className="size-[18px]" weight="bold" />,
               onSelect: fn(),
             },
             {
               label: "Remove",
-              icon: <Trash weight="bold" />,
+              icon: <Trash className="size-[18px]" weight="bold" />,
               onSelect: fn(),
             },
             { label: "Disabled row", onSelect: fn(), disabled: true },

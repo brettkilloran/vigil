@@ -1,0 +1,23 @@
+/*
+ * Loaded after `app/globals.css` in the preview iframe only.
+ * Globals set `body { display: flex }` and a universal `* { margin: 0 }` reset, which can collapse
+ * or hide Storybook’s preview mount (looks like a black / empty canvas even when the manager works).
+ */
+html {
+  height: auto !important;
+}
+
+html,
+body {
+  min-height: 100vh !important;
+}
+
+body {
+  display: block !important;
+}
+
+#root,
+#storybook-root {
+  min-height: 100vh;
+  box-sizing: border-box;
+}

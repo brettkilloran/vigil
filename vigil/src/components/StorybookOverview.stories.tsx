@@ -50,6 +50,19 @@ export const AboutThisStorybook: Story = {
           Heartgarden → Experiments — prototypes (e.g. transition WebGL) not yet wired into the main shell.
         </span>
       </p>
+      <p
+        style={{
+          marginTop: 16,
+          marginBottom: 0,
+          color: "var(--sem-text-muted)",
+          fontSize: "0.92rem",
+        }}
+      >
+        A few surfaces are API-heavy and are not duplicated here: for example the link-graph modal loads{" "}
+        <code style={{ fontSize: "0.85em" }}>/api/spaces/…/graph</code>, and the command palette’s remote
+        suggestions call <code style={{ fontSize: "0.85em" }}>/api/search/suggest</code> after two
+        characters. Use a running Next app to exercise those paths.
+      </p>
     </div>
   ),
 };

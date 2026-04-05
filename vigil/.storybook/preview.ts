@@ -1,6 +1,7 @@
 import type { Preview } from "@storybook/nextjs";
 
 import "../app/globals.css";
+import "./preview-overrides.css";
 
 const preview: Preview = {
   parameters: {
