@@ -14,7 +14,6 @@ import { createPortal } from "react-dom";
 
 import { Button } from "@/src/components/ui/Button";
 
-import { HEARTGARDEN_BRAND_MARK_EMOJI } from "@/src/lib/brand-mark";
 import { HEARTGARDEN_APP_VERSION } from "@/src/lib/app-version";
 
 import { ArchitecturalCanvasEffectsToggle } from "./ArchitecturalStatusBar";
@@ -440,9 +439,6 @@ export function VigilAppBootScreen({
             className={`${styles.mono} ${styles.fadeInKicker}`}
             style={{ animationDelay: "0.42s" }}
           >
-            <span className={styles.brandMarkEmoji} aria-hidden="true">
-              {HEARTGARDEN_BRAND_MARK_EMOJI}
-            </span>{" "}
             <span className={`${styles.kicker} ${styles.bootGlitchLayer}`} data-text="HEARTGARDEN">
               HEARTGARDEN
             </span>
@@ -525,7 +521,7 @@ export function VigilAppBootScreen({
         </div>
         <div className={styles.metaBottomRightCluster}>
           <div className={`${styles.mono} ${styles.fadeInBottom}`} style={{ animationDelay: "1.48s" }}>
-            ♥ BRETT KILLORAN
+            BRETT KILLORAN
           </div>
         </div>
       </div>

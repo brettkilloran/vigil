@@ -146,16 +146,6 @@
   font-weight: 400;
 }
 
-/* Same mark as favicon; sits outside glitch layers. */
-.brandMarkEmoji {
-  letter-spacing: 0;
-  text-transform: none;
-  font-size: 0.85rem;
-  line-height: 1;
-  vertical-align: -0.08em;
-  margin-right: 0.12rem;
-}
-
 .metaTop {
   position: absolute;
   top: max(24px, env(safe-area-inset-top, 0px));
