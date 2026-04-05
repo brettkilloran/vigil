@@ -83,7 +83,7 @@ export function VigilBootFlowerCatalog({ kind = "full" }: VigilBootFlowerCatalog
         Each row is one <strong>bloom shape</strong> ({BLOOM_SHAPES.length} total). Columns are{" "}
         <strong>color varieties</strong> by name (see legend). Fixed random seed so pixels match between runs.
         Bloom kind: <strong>{kind}</strong>. The last <strong>{VIGIL_BOOT_FLOWER_RARE_COUNT}</strong> columns (
-        <strong>Kalevon</strong> &amp; <strong>Volyth</strong>) each have a{" "}
+        <strong>Spectrum</strong> &amp; <strong>Confetti</strong>) each have a{" "}
         <strong>{Math.round(VIGIL_BOOT_FLOWER_RARE_SPAWN_EACH * 100)}%</strong> spawn rate in the live garden; all
         other varieties split the remainder evenly.
       </p>

@@ -4315,3 +4315,46 @@
     transform: none;
   }
 }
+
+/* Below UI chrome (100) so status + dock stay usable; blocks canvas interaction. */
+.neonWorkspaceUnavailableOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--layer-ui-chrome) - 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 20px;
+  pointer-events: auto;
+  background: color-mix(in oklch, var(--bg-base) 78%, transparent);
+  backdrop-filter: blur(12px) saturate(1.06);
+}
+
+.neonWorkspaceUnavailablePanel {
+  max-width: 440px;
+  width: 100%;
+  padding: 22px 24px;
+}
+
+.neonWorkspaceUnavailableTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin: 0 0 12px;
+  color: var(--text-main);
+}
+
+.neonWorkspaceUnavailableBody {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: color-mix(in oklch, var(--text-main) 86%, transparent);
+}
+
+.neonWorkspaceUnavailableIcon {
+  flex-shrink: 0;
+  color: color-mix(in oklch, var(--accent) 55%, var(--text-main));
+}

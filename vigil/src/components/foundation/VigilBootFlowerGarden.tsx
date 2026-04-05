@@ -351,7 +351,7 @@ function shuffleBloomShapeOrderMutable(order: BloomShape[], rng: GardenRng): voi
 }
 
 export type Species = {
-  /** Xenobotanical cultivar label (catalog / debugging) */
+  /** Variety label for catalog / Storybook (plain color-forward names). */
   name: string;
   stem: string;
   leaf: string;
@@ -376,7 +376,7 @@ export type Species = {
 
 export const SPECIES: Species[] = [
   {
-    name: "Threnis",
+    name: "Periwinkle",
     stem: FOLIAGE[0].stem,
     leaf: FOLIAGE[0].leaf,
     bloom: mixOklch(LEGACY_BLUE_PETAL, "oklch(0.56 0.22 272)", 42),
@@ -395,7 +395,7 @@ export const SPECIES: Species[] = [
     spike: null,
   },
   {
-    name: "Morvex",
+    name: "Raspberry",
     stem: FOLIAGE[1].stem,
     leaf: FOLIAGE[1].leaf,
     bloom: mixOklch("oklch(0.62 0.26 330)", mixOklch(ORANGE_POP, SYS_ACCENT, 42), 52),
@@ -414,7 +414,7 @@ export const SPECIES: Species[] = [
     spike: SYS_DANGER_400,
   },
   {
-    name: "Nubilith",
+    name: "Indigo",
     stem: FOLIAGE[2].stem,
     leaf: FOLIAGE[2].leaf,
     bloom: mixOklch(LEGACY_ROYAL_PETAL, "oklch(0.5 0.24 278)", 38),
@@ -433,7 +433,7 @@ export const SPECIES: Species[] = [
     spike: null,
   },
   {
-    name: "Pyllor",
+    name: "Marigold",
     stem: FOLIAGE[3].stem,
     leaf: FOLIAGE[3].leaf,
     bloom: mixOklch("oklch(0.74 0.2 52)", ORANGE_POP, 38),
@@ -452,7 +452,7 @@ export const SPECIES: Species[] = [
     spike: null,
   },
   {
-    name: "Nerith",
+    name: "Sky",
     stem: FOLIAGE[4].stem,
     leaf: FOLIAGE[4].leaf,
     bloom: mixOklch(LEGACY_SKY_PETAL, "oklch(0.66 0.12 236)", 40),
@@ -471,7 +471,7 @@ export const SPECIES: Species[] = [
     spike: null,
   },
   {
-    name: "Carnith",
+    name: "Poppy",
     stem: FOLIAGE[5].stem,
     leaf: FOLIAGE[5].leaf,
     bloom: mixOklch("oklch(0.52 0.24 27)", SYS_DANGER_400, 50),
@@ -490,7 +490,7 @@ export const SPECIES: Species[] = [
     spike: null,
   },
   {
-    name: "Velkor",
+    name: "Plum",
     stem: FOLIAGE[6].stem,
     leaf: FOLIAGE[6].leaf,
     bloom: mixOklch("oklch(0.58 0.22 305)", mixOklch(ORANGE_MID, SYS_ACCENT, 45), 55),
@@ -510,7 +510,7 @@ export const SPECIES: Species[] = [
   },
   /** Helio-cultivar yellow; green stem/leaf from FOLIAGE[7]. */
   {
-    name: "Aurith",
+    name: "Buttercup",
     stem: FOLIAGE[7].stem,
     leaf: FOLIAGE[7].leaf,
     bloom: mixOklch("oklch(0.8 0.2 96)", mixOklch(ORANGE_SOFT, SYS_ACCENT, 62), 72),
@@ -530,7 +530,7 @@ export const SPECIES: Species[] = [
   },
   /** Acid chartreuse (hue ~124–142). */
   {
-    name: "Virex",
+    name: "Chartreuse",
     stem: FOLIAGE[8].stem,
     leaf: FOLIAGE[8].leaf,
     bloom: mixOklch("oklch(0.72 0.28 132)", "oklch(0.66 0.24 140)", 46),
@@ -550,7 +550,7 @@ export const SPECIES: Species[] = [
   },
   /** Sky-thread blues. */
   {
-    name: "Mnexis",
+    name: "Azure",
     stem: FOLIAGE[9].stem,
     leaf: FOLIAGE[9].leaf,
     bloom: mixOklch(LEGACY_SKY_PETAL, SYS_ACCENT, 86),
@@ -570,7 +570,7 @@ export const SPECIES: Species[] = [
   },
   /** Saturated magenta (hue ~348–358). */
   {
-    name: "Rubilix",
+    name: "Fuchsia",
     stem: FOLIAGE[10].stem,
     leaf: FOLIAGE[10].leaf,
     bloom: mixOklch("oklch(0.58 0.3 352)", "oklch(0.5 0.26 348)", 42),
@@ -589,11 +589,11 @@ export const SPECIES: Species[] = [
     spike: null,
   },
   /**
-   * Rare Kalevon — red / chartreuse / blue-violet layers in pixel blooms.
+   * Rare Spectrum — red / chartreuse / blue-violet layers in pixel blooms.
    * Spawn: see `VIGIL_BOOT_FLOWER_RARE_SPAWN_EACH` (last `VIGIL_BOOT_FLOWER_RARE_COUNT` species).
    */
   {
-    name: "Kalevon",
+    name: "Spectrum",
     stem: FOLIAGE[11].stem,
     leaf: FOLIAGE[11].leaf,
     bloom: mixOklch("oklch(0.6 0.28 28)", SYS_DANGER_400, 46),
@@ -612,7 +612,7 @@ export const SPECIES: Species[] = [
     spike: null,
   },
   {
-    name: "Volyth",
+    name: "Confetti",
     stem: FOLIAGE[12].stem,
     leaf: FOLIAGE[12].leaf,
     bloom: mixOklch("oklch(0.5 0.36 322)", LEGACY_ROYAL_PETAL, 18),
@@ -632,7 +632,7 @@ export const SPECIES: Species[] = [
   },
 ];
 
-/** Last this many `SPECIES` entries use `VIGIL_BOOT_FLOWER_RARE_SPAWN_EACH` each (Kalevon / Volyth). */
+/** Last this many `SPECIES` entries use `VIGIL_BOOT_FLOWER_RARE_SPAWN_EACH` each (Spectrum / Confetti). */
 export const VIGIL_BOOT_FLOWER_RARE_COUNT = 2;
 /** Per-spawn probability for each rare tail species (~2% ⇒ ~4% any rare with count 2). */
 export const VIGIL_BOOT_FLOWER_RARE_SPAWN_EACH = 0.02;

@@ -18,6 +18,7 @@ import {
   Stack,
   Trash,
   UploadSimple,
+  WarningCircle,
 } from "@phosphor-icons/react";
 
 import { VigilFlowRevealOverlay } from "@/src/components/transition-experiment/VigilFlowRevealOverlay";
@@ -928,6 +929,13 @@ export function ArchitecturalCanvasApp({
   const [canvasSurfaceReady, setCanvasSurfaceReady] = useState(false);
   /** For app route: hide canvas content until bootstrap resolves (single graph + camera commit). */
   const [canvasBootstrapResolved, setCanvasBootstrapResolved] = useState(() => scenario !== "default");
+  /**
+   * Default route only: null while bootstrap in flight; true when Neon returned a real workspace;
+   * false when offline / demo bootstrap (no DB or failed request).
+   */
+  const [neonWorkspaceOk, setNeonWorkspaceOk] = useState<boolean | null>(() =>
+    scenario === "default" ? null : true,
+  );
   const [navTransitionActive, setNavTransitionActive] = useState(false);
   const [canvasEffectsEnabled, setCanvasEffectsEnabled] = useState(true);
   const canvasEffectsEnabledRef = useRef(true);
@@ -2481,18 +2489,18 @@ export function ArchitecturalCanvasApp({
   );
 
   useEffect(() => {
-    const tokens = {
-      taskItem: styles.taskItem,
-      done: styles.done,
-      taskCheckbox: styles.taskCheckbox,
-      taskText: styles.taskText,
-      mediaFrame: styles.mediaFrame,
-      mediaImage: styles.mediaImage,
-      mediaImageActions: styles.mediaImageActions,
-      mediaUploadBtn: styles.mediaUploadBtn,
-    };
-
     if (scenario !== "default") {
+      const tokens = {
+        taskItem: styles.taskItem,
+        done: styles.done,
+        taskCheckbox: styles.taskCheckbox,
+        taskText: styles.taskText,
+        mediaFrame: styles.mediaFrame,
+        mediaImage: styles.mediaImage,
+        mediaImageActions: styles.mediaImageActions,
+        mediaUploadBtn: styles.mediaUploadBtn,
+      };
+      setNeonWorkspaceOk(true);
       persistNeonRef.current = false;
       neonSyncSetCloudEnabled(false);
       setCanvasBootstrapResolved(true);
@@ -2512,6 +2520,7 @@ export function ArchitecturalCanvasApp({
     }
 
     setCanvasBootstrapResolved(false);
+    setNeonWorkspaceOk(null);
     setGraph(createBootstrapPendingGraph());
     setActiveSpaceId(ROOT_SPACE_ID);
     setNavigationPath([ROOT_SPACE_ID]);
@@ -2523,6 +2532,7 @@ export function ArchitecturalCanvasApp({
         if (cancelled || !data || data.demo !== false || !data.spaceId) {
           throw new Error("demo");
         }
+        setNeonWorkspaceOk(true);
         persistNeonRef.current = true;
         neonSyncSetCloudEnabled(true);
         const nextGraph = buildCanvasGraphFromBootstrap(data);
@@ -2539,12 +2549,12 @@ export function ArchitecturalCanvasApp({
         setMaxZIndex(maxZi);
       } catch {
         if (cancelled) return;
+        setNeonWorkspaceOk(false);
         persistNeonRef.current = false;
         neonSyncSetCloudEnabled(false);
-        const freshGraph = buildArchitecturalSeedGraph(tokens, "default");
-        setGraph(freshGraph);
-        setActiveSpaceId(freshGraph.rootSpaceId);
-        setNavigationPath([freshGraph.rootSpaceId]);
+        setGraph(createBootstrapPendingGraph());
+        setActiveSpaceId(ROOT_SPACE_ID);
+        setNavigationPath([ROOT_SPACE_ID]);
         setTranslateX(window.innerWidth / 2);
         setTranslateY(window.innerHeight / 2);
         setScale(1);
@@ -6133,6 +6143,9 @@ export function ArchitecturalCanvasApp({
   const bootPreActivateGate =
     scenario === "default" && !bootLayerDismissed && !canvasSessionActivated;
 
+  const showNeonWorkspaceUnavailable =
+    scenario === "default" && neonWorkspaceOk === false && canvasBootstrapResolved;
+
   const chromeEntranceOn = !prefersReducedMotion && chromeEnterEpoch > 0;
 
   const showLogOutToAuth = scenario === "default" && !bootLayerVisible;
@@ -6179,6 +6192,7 @@ export function ArchitecturalCanvasApp({
           connectionMode !== "move" ? styles.viewportConnectionMode : ""
         }${bootPreActivateGate ? ` ${styles.viewportBootNoGrid}` : ""}`}
         aria-busy={!viewportRevealReady}
+        data-vigil-canvas="true"
         data-canvas-ready={viewportRevealReady ? "true" : "false"}
         onMouseDown={onViewportMouseDown}
         onContextMenuCapture={handleViewportContextMenuCapture}
@@ -6598,6 +6612,33 @@ export function ArchitecturalCanvasApp({
             navActive={navTransitionActive}
             bootstrapPending={scenario === "default" && !canvasBootstrapResolved}
           />
+        ) : null}
+        {showNeonWorkspaceUnavailable ? (
+          <div
+            className={styles.neonWorkspaceUnavailableOverlay}
+            role="alert"
+            aria-live="assertive"
+            data-neon-workspace-unavailable="true"
+          >
+            <div
+              className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.neonWorkspaceUnavailablePanel}`}
+            >
+              <h2 className={styles.neonWorkspaceUnavailableTitle}>
+                <WarningCircle
+                  className={styles.neonWorkspaceUnavailableIcon}
+                  size={22}
+                  weight="bold"
+                  aria-hidden
+                />
+                Workspace unavailable
+              </h2>
+              <p className={styles.neonWorkspaceUnavailableBody}>
+                Heartgarden could not connect to a database-backed workspace. Set{" "}
+                <span className={styles.monoSmall}>NEON_DATABASE_URL</span> for this app, confirm the
+                server can reach Neon, then reload. Until then nothing is saved remotely.
+              </p>
+            </div>
+          </div>
         ) : null}
         <div
           className={`${styles.chromeLayer}${bootPreActivateGate ? ` ${styles.chromeLayerBootSuppressed}` : ""}`}

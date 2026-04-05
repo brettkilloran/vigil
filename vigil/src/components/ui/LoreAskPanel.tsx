@@ -15,6 +15,8 @@ export type LoreAskSource = {
   spaceId: string;
   spaceName: string;
   excerpt: string;
+  matchedChunks?: string[];
+  viaGraph?: boolean;
 };
 
 type LoreResponse = {
@@ -211,7 +213,9 @@ export function LoreAskPanel({
           </div>
 
           <p data-hg-lore="lede">
-            Answers use search hits from your canvas (full-text), then Claude. Requires{" "}
+            Retrieval uses lexical search plus vector chunks (when{" "}
+            <code className="text-[12px] opacity-90">OPENAI_API_KEY</code> is set and notes are
+            indexed), linked neighbors, then Claude. Requires{" "}
             <code className="text-[12px] opacity-90">ANTHROPIC_API_KEY</code>.
           </p>
 
@@ -277,7 +281,7 @@ export function LoreAskPanel({
               <summary>Sources used ({sources.length})</summary>
               <ul>
                 {sources.map((s) => (
-                  <li key={s.itemId}>
+                  <li key={s.itemId} className="space-y-1">
                     <Button
                       type="button"
                       variant="ghost"
@@ -294,9 +298,21 @@ export function LoreAskPanel({
                         <span className="text-[var(--sem-text-muted)] text-[12px]">
                           {" "}
                           · {s.spaceName}
+                          {s.viaGraph ? (
+                            <span className="text-[var(--sem-text-muted)]"> · linked</span>
+                          ) : null}
                         </span>
                       </span>
                     </Button>
+                    {s.matchedChunks && s.matchedChunks.length > 0 ? (
+                      <div className="pl-2 text-[11px] leading-snug text-[var(--sem-text-muted)] border-l border-[var(--sem-border-subtle)] ml-1 max-h-24 overflow-y-auto">
+                        {s.matchedChunks.slice(0, 3).map((c, i) => (
+                          <p key={i} className="mb-1 line-clamp-3">
+                            {c}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
                   </li>
                 ))}
               </ul>

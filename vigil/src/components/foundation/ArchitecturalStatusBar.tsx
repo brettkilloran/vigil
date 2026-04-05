@@ -117,7 +117,7 @@ function SaveAndVersionPopover({
     let showWarningIcon = false;
     let detailTitle = "Local session";
     let detailBody =
-      "Not connected to Neon — demo seed or no database. Changes stay in this session. Use Export graph JSON below for a file checkpoint.";
+      "Not connected to Neon — no database URL or bootstrap failed. Changes stay in this session. Use Export graph JSON below for a file checkpoint.";
 
     if (bootstrapPending) {
       pulseToneClass = styles.pulseDotToneLoading;
