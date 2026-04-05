@@ -119,6 +119,7 @@ import {
 import { useModKeyHints } from "@/src/lib/mod-keys";
 import { VIGIL_CANVAS_EFFECTS_STORAGE_KEY } from "@/src/lib/vigil-canvas-prefs";
 import {
+  clearWorkspaceViewCache,
   readWorkspaceViewCache,
   writeWorkspaceViewCache,
 } from "@/src/lib/workspace-view-cache";
@@ -273,6 +274,13 @@ function createBootstrapPendingGraph(): CanvasGraph {
 
 /** Stable fallback so `useMemo` deps do not churn when a space row has no `entityIds` yet. */
 const EMPTY_ENTITY_IDS: readonly string[] = [];
+
+/** True when lengths match and each index is `===` (for selection / id-list no-op updates). */
+function sameOrderedStringIds(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
 /** Stable `collapsedStacks` when there are no multi-card stacks (avoids effect loops on new `[]` each render). */
 const EMPTY_COLLAPSED_STACKS: { stackId: string; entities: CanvasEntity[]; top: CanvasEntity }[] = [];
 const EMPTY_STACK_BOUNDS: Record<string, { left: number; top: number; width: number; height: number }> =
@@ -2107,7 +2115,17 @@ export function ArchitecturalCanvasApp({
   }, [stackModal]);
 
   const activeSpace = graph.spaces[activeSpaceId] ?? graph.spaces[graph.rootSpaceId];
-  const activeSpaceEntityIds = activeSpace?.entityIds ?? EMPTY_ENTITY_IDS;
+  const activeSpaceEntityIdsRaw = activeSpace?.entityIds ?? EMPTY_ENTITY_IDS;
+  /**
+   * Space id + ordered ids so memo identity cannot collide across spaces with the same id set.
+   * Join delimiter must not appear in ids (heartgarden entity ids are UUIDs).
+   */
+  const activeSpaceEntityIdsFingerprint = `${activeSpaceId}\u0001${activeSpaceEntityIdsRaw.join("\u0001")}`;
+  const activeSpaceEntityIds = useMemo(
+    () => activeSpaceEntityIdsRaw,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fingerprint captures space + ordered ids; raw array ref churns on graph clone
+    [activeSpaceEntityIdsFingerprint],
+  );
   const activeSpaceEntities = useMemo(
     () =>
       activeSpaceEntityIds
@@ -2920,6 +2938,26 @@ export function ArchitecturalCanvasApp({
     setScale(data.camera.zoom);
     setMaxZIndex(maxZi);
   }, []);
+  const applyBootstrapDataRef = useRef(applyBootstrapData);
+  applyBootstrapDataRef.current = applyBootstrapData;
+
+  const ingestLiveBootstrap = useCallback(
+    (data: BootstrapResponse) => {
+      if (!data.spaceId || data.demo !== false) return;
+      const maxZi =
+        data.items.length > 0 ? Math.max(...data.items.map((i) => i.zIndex), 100) : 100;
+      writeWorkspaceViewCache(data, maxZi);
+      setNeonWorkspaceOk(true);
+      setWorkspaceViewFromCache(false);
+      persistNeonRef.current = true;
+      neonSyncSetCloudEnabled(true);
+      applyBootstrapData(data, maxZi);
+    },
+    [applyBootstrapData],
+  );
+
+  const heartgardenBootApiRef = useRef(heartgardenBootApi);
+  heartgardenBootApiRef.current = heartgardenBootApi;
 
   useEffect(() => {
     if (scenario !== "default") {
@@ -2967,14 +3005,7 @@ export function ArchitecturalCanvasApp({
         if (cancelled || !data || data.demo !== false || !data.spaceId) {
           throw new Error("demo");
         }
-        const maxZi =
-          data.items.length > 0 ? Math.max(...data.items.map((i) => i.zIndex), 100) : 100;
-        writeWorkspaceViewCache(data, maxZi);
-        setNeonWorkspaceOk(true);
-        setWorkspaceViewFromCache(false);
-        persistNeonRef.current = true;
-        neonSyncSetCloudEnabled(true);
-        applyBootstrapData(data, maxZi);
+        ingestLiveBootstrap(data);
       } catch {
         if (cancelled) return;
         const cached = readWorkspaceViewCache();
@@ -2983,7 +3014,7 @@ export function ArchitecturalCanvasApp({
           setWorkspaceViewFromCache(true);
           persistNeonRef.current = false;
           neonSyncSetCloudEnabled(false);
-          applyBootstrapData(cached.bootstrap, cached.maxZIndex);
+          applyBootstrapDataRef.current(cached.bootstrap, cached.maxZIndex);
         } else {
           setNeonWorkspaceOk(false);
           setWorkspaceViewFromCache(false);
@@ -3012,7 +3043,7 @@ export function ArchitecturalCanvasApp({
     return () => {
       cancelled = true;
     };
-  }, [scenario, applyBootstrapData]);
+  }, [scenario, ingestLiveBootstrap]);
 
   useEffect(() => {
     if (scenario !== "default" || !workspaceViewFromCache) return;
@@ -3021,14 +3052,7 @@ export function ArchitecturalCanvasApp({
       try {
         const data = await fetchBootstrap();
         if (cancelled || !data || data.demo !== false || !data.spaceId) return;
-        const maxZi =
-          data.items.length > 0 ? Math.max(...data.items.map((i) => i.zIndex), 100) : 100;
-        writeWorkspaceViewCache(data, maxZi);
-        setNeonWorkspaceOk(true);
-        setWorkspaceViewFromCache(false);
-        persistNeonRef.current = true;
-        neonSyncSetCloudEnabled(true);
-        applyBootstrapData(data, maxZi);
+        ingestLiveBootstrap(data);
       } catch {
         /* keep cached view */
       }
@@ -3042,7 +3066,7 @@ export function ArchitecturalCanvasApp({
       window.removeEventListener("online", onOnline);
       window.clearInterval(interval);
     };
-  }, [scenario, workspaceViewFromCache, applyBootstrapData]);
+  }, [scenario, workspaceViewFromCache, ingestLiveBootstrap]);
 
   useLayoutEffect(() => {
     setViewportSize({ width: window.innerWidth, height: window.innerHeight });
@@ -3215,6 +3239,7 @@ export function ArchitecturalCanvasApp({
     if (scenario !== "default") return;
     /* Synchronous commit so boot ambient layoutEffects run while the log-out click still counts as user gesture (autoplay). */
     flushSync(() => {
+      clearWorkspaceViewCache();
       bootCelebrationPlayedRef.current = false;
       setFocusOpen(false);
       setGalleryOpen(false);
@@ -6950,8 +6975,9 @@ export function ArchitecturalCanvasApp({
   );
 
   useEffect(() => {
-    if (selectedNodeIds.length < 1) setSelectionContextMenu(null);
-  }, [selectedNodeIds]);
+    if (selectedNodeIds.length >= 1) return;
+    setSelectionContextMenu((prev) => (prev === null ? prev : null));
+  }, [selectedNodeIds.length]);
 
   useEffect(() => {
     const onDocMouseDown = (event: MouseEvent) => {
@@ -6966,13 +6992,15 @@ export function ArchitecturalCanvasApp({
   }, [connectionContextMenu]);
 
   useEffect(() => {
-    if (!selectedConnectionId) {
-      setConnectionContextMenu(null);
-    }
+    if (selectedConnectionId) return;
+    setConnectionContextMenu((prev) => (prev === null ? prev : null));
   }, [selectedConnectionId]);
 
   useEffect(() => {
-    setSelectedNodeIds((prev) => prev.filter((id) => activeSpaceEntityIds.includes(id)));
+    setSelectedNodeIds((prev) => {
+      const next = prev.filter((id) => activeSpaceEntityIds.includes(id));
+      return sameOrderedStringIds(prev, next) ? prev : next;
+    });
   }, [activeSpaceEntityIds]);
 
   useEffect(() => {
@@ -7129,6 +7157,30 @@ export function ArchitecturalCanvasApp({
               setChromeEnterEpoch((e) => e + 1);
             }
             setCanvasSessionActivated(true);
+            /*
+             * Boot PIN sets `hg_boot` after POST; the initial bootstrap effect already ran without that cookie
+             * and received GM-scoped data. Re-fetch so visitor / access tiers see the correct workspace.
+             */
+            const boot = heartgardenBootApiRef.current;
+            if (boot.loaded && boot.gateEnabled) {
+              void (async () => {
+                try {
+                  const data = await fetchBootstrap();
+                  if (!data || data.demo !== false || !data.spaceId) return;
+                  ingestLiveBootstrap(data);
+                  setSelectedNodeIds([]);
+                  setConnectionSourceId(null);
+                  setConnectionMode("move");
+                  setFocusOpen(false);
+                  setActiveNodeId(null);
+                  undoPastRef.current = [];
+                  undoFutureRef.current = [];
+                  setHistoryEpoch((n) => n + 1);
+                } catch {
+                  /* keep prior graph; user can reload */
+                }
+              })();
+            }
           }}
           onExitComplete={() => {
             setBootLayerDismissed(true);

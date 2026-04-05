@@ -54,3 +54,12 @@ export function writeWorkspaceViewCache(
     /* quota / private mode */
   }
 }
+
+export function clearWorkspaceViewCache(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(WORKSPACE_VIEW_CACHE_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
