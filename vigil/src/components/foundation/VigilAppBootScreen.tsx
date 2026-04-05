@@ -273,6 +273,11 @@ export function VigilAppBootScreen({
     setPinError(null);
   }, [technicalReady, exiting, bootGateStatusReady]);
 
+  const dismissAccessConsoleIfPinEmpty = useCallback(() => {
+    setAccessConsoleOpen(false);
+    setPinError(null);
+  }, []);
+
   const handleEnterGardenButtonClick = useCallback(() => {
     if (!technicalReady || exiting) return;
     if (bootGateEnabled) {
@@ -570,6 +575,7 @@ export function VigilAppBootScreen({
                   submitting={pinSubmitting}
                   errorMessage={pinError}
                   autoFocus={accessConsoleOpen}
+                  onEmptyBlur={dismissAccessConsoleIfPinEmpty}
                   className={styles.bootAccessPinField}
                 />
               </div>

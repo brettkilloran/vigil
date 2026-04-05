@@ -550,7 +550,7 @@
   max-width: min(100%, 22rem);
   margin-inline: auto;
   min-height: 2.85rem;
-  transition: min-height 0.38s cubic-bezier(0.22, 0.82, 0.16, 1);
+  transition: min-height 0.58s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .morphHostConsole {
@@ -564,17 +564,33 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition:
-    opacity 0.34s ease,
-    transform 0.38s cubic-bezier(0.22, 0.82, 0.16, 1),
-    visibility 0.34s;
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
 }
 
+/* Becoming visible: show immediately, then ease in */
+.morphTier:not(.morphTierHidden) {
+  transition:
+    opacity 0.56s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.52s cubic-bezier(0.22, 0.82, 0.16, 1),
+    visibility 0s linear 0s;
+}
+
+/* Exiting: fade and soften first, then drop visibility for clean stacking */
 .morphTierHidden {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: translateY(10px) scale(0.985);
+  transform: translateY(14px) scale(0.968);
+  filter: blur(5px);
+  transition:
+    opacity 0.48s cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 0.54s cubic-bezier(0.22, 0.61, 0.36, 1),
+    filter 0.44s cubic-bezier(0.22, 0.61, 0.36, 1),
+    visibility 0s linear 0.52s;
 }
 
 .bootAccessPinField {
@@ -857,5 +873,6 @@
 
   .morphTierHidden {
     transform: none;
+    filter: none;
   }
 }

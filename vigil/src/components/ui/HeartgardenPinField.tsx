@@ -3,6 +3,7 @@
 import { ArrowRight } from "@phosphor-icons/react";
 import {
   useCallback,
+  useEffect,
   useId,
   useRef,
   type ChangeEvent,
@@ -31,6 +32,8 @@ export type HeartgardenPinFieldProps = {
   errorMessage?: string | null;
   /** Focus first cell on mount (e.g. when console opens) */
   autoFocus?: boolean;
+  /** When focus leaves this control and `value` is still empty (e.g. dismiss boot access console). */
+  onEmptyBlur?: () => void;
   className?: string;
 };
 
@@ -48,12 +51,14 @@ export function HeartgardenPinField({
   submitting = false,
   errorMessage = null,
   autoFocus = false,
+  onEmptyBlur,
   className,
 }: HeartgardenPinFieldProps) {
   const reactId = useId();
   const baseId = idProp ?? `hg-pin-${reactId.replace(/:/gu, "")}`;
   const errorId = `${baseId}-error`;
   const refs = useRef<(HTMLInputElement | null)[]>([]);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
   const setRef = useCallback((i: number) => (el: HTMLInputElement | null) => {
     refs.current[i] = el;
@@ -142,8 +147,22 @@ export function HeartgardenPinField({
   const block = disabled || submitting;
   const showError = Boolean(errorMessage);
 
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || !onEmptyBlur) return;
+    const onFocusOut = (e: FocusEvent) => {
+      if (disabled || submitting) return;
+      const next = e.relatedTarget as Node | null;
+      if (next && el.contains(next)) return;
+      if (value.length > 0) return;
+      onEmptyBlur();
+    };
+    el.addEventListener("focusout", onFocusOut);
+    return () => el.removeEventListener("focusout", onFocusOut);
+  }, [value, onEmptyBlur, disabled, submitting]);
+
   return (
-    <div className={cx(styles.wrap, className)}>
+    <div ref={wrapRef} className={cx(styles.wrap, className)}>
       <fieldset
         className={styles.fieldset}
         disabled={block}
