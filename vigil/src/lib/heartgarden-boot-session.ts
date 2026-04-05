@@ -1,5 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
+import { HEARTGARDEN_BOOT_COOKIE_MAX_CHARS } from "@/src/lib/heartgarden-boot-cookie-limits";
 import { HEARTGARDEN_BOOT_PIN_LENGTH } from "@/src/lib/heartgarden-boot-pin-constants";
 import { readHeartgardenPlayersBootPin } from "@/src/lib/heartgarden-boot-players-pin";
 
@@ -113,6 +114,7 @@ export function signBootSessionPayload(secret: string, payload: HeartgardenBootP
 }
 
 export function verifyBootSessionCookie(secret: string, cookieValue: string): HeartgardenBootPayload | null {
+  if (cookieValue.length > HEARTGARDEN_BOOT_COOKIE_MAX_CHARS) return null;
   const parts = cookieValue.split(".");
   if (parts.length !== 2) return null;
   const [payloadB64, sigB64] = parts;

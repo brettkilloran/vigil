@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { HEARTGARDEN_BOOT_COOKIE_MAX_CHARS } from "@/src/lib/heartgarden-boot-cookie-limits";
 import {
   HEARTGARDEN_BOOT_COOKIE_NAME,
   isHeartgardenBootApiAllowlisted,
@@ -25,7 +26,7 @@ export async function middleware(request: NextRequest) {
   }
 
   const raw = request.cookies.get(HEARTGARDEN_BOOT_COOKIE_NAME)?.value;
-  if (!raw) {
+  if (!raw || raw.length > HEARTGARDEN_BOOT_COOKIE_MAX_CHARS) {
     return NextResponse.json(FORBIDDEN, { status: 403 });
   }
 

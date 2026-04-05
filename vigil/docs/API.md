@@ -8,17 +8,17 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/bootstrap` | Active space, spaces list, items (subtree), camera. **`PLAYWRIGHT_E2E=1`** forces empty demo payload (tests only). With boot gate on and a valid **`visitor`** `hg_boot` cookie, scopes to **`HEARTGARDEN_PLAYER_SPACE_ID`** only (403 if misconfigured). |
+| GET | `/api/bootstrap` | Active space, spaces list, items (subtree), camera. **`PLAYWRIGHT_E2E=1`** forces empty demo payload (tests only). With boot gate on, **`middleware`** returns **403** without a valid **`hg_boot`** cookie (except **`/api/heartgarden/boot`**). With a valid **`visitor`** tier cookie, scopes to **`HEARTGARDEN_PLAYER_SPACE_ID`** only (403 if misconfigured). **`demo`** tier should not call this in normal clients (local canvas only). |
 
 ## Boot gate (splash PIN)
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/heartgarden/boot` | **`{ gateEnabled, sessionValid, sessionTier }`** — no secrets. **`sessionTier`** is **`"access"`**, **`"visitor"`**, or **`null`** (invalid cookie, gate off, or not yet signed in). Gate is **off** when **`PLAYWRIGHT_E2E=1`**, when **`HEARTGARDEN_BOOT_SESSION_SECRET`** is shorter than **16** characters, or when **neither** PIN is exactly **8** characters (**`HEARTGARDEN_BOOT_PIN_ACCESS`** and/or **`HEARTGARDEN_BOOT_PIN_VISITOR`** — either one is enough to turn the gate on). |
-| POST | `/api/heartgarden/boot` | Body **`{ code }`** — exactly **8** characters (after trim). On success: **204** + **`Set-Cookie`** `hg_boot` (httpOnly, signed tier **access** or **visitor**). On failure: **401** with constant **`{ error: "Access denied." }`**. Too many attempts from one client IP: **429** **`{ error: "Too many requests." }`** (in-memory limit per instance; see env below). |
+| GET | `/api/heartgarden/boot` | **`{ gateEnabled, sessionValid, sessionTier, playerLayerMisconfigured? }`** — no secrets. **`sessionTier`** is **`"access"`**, **`"visitor"`**, **`"demo"`**, or **`null`**. Gate is **off** when **`PLAYWRIGHT_E2E=1`**, when **`HEARTGARDEN_BOOT_SESSION_SECRET`** is shorter than **16** characters, or when no PIN is exactly **8** characters (**access**, **Players** via **`HEARTGARDEN_BOOT_PIN_PLAYERS`** or **`HEARTGARDEN_BOOT_PIN_VISITOR`**, and/or **demo**). |
+| POST | `/api/heartgarden/boot` | Body **`{ code }`** — exactly **8** characters (after trim). On success: **204** + **`Set-Cookie`** `hg_boot` (httpOnly, signed tier **access**, **visitor**, or **demo**). On failure: **401** with constant **`{ error: "Access denied." }`**. Too many attempts from one client IP: **429** **`{ error: "Too many requests." }`** (in-memory limit per instance; see env below). |
 | DELETE | `/api/heartgarden/boot` | Clears **`hg_boot`** (e.g. after in-app **Log out**). **204**. |
 
-**Env:** **`HEARTGARDEN_BOOT_PIN_ACCESS`**, optional **`HEARTGARDEN_BOOT_PIN_VISITOR`**, **`HEARTGARDEN_BOOT_SESSION_SECRET`**, optional **`HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC`**, optional **`HEARTGARDEN_PLAYER_SPACE_ID`** (UUID of the campaign/table space for **visitor** tier; required for a working visitor session). See **`docs/VERCEL_ENV_VARS.md`** and **`docs/PLAYER_LAYER.md`**.
+**Env:** **`HEARTGARDEN_BOOT_PIN_ACCESS`**, optional **`HEARTGARDEN_BOOT_PIN_PLAYERS`** (preferred) or **`HEARTGARDEN_BOOT_PIN_VISITOR`**, optional **`HEARTGARDEN_BOOT_PIN_DEMO`**, **`HEARTGARDEN_BOOT_SESSION_SECRET`**, optional **`HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC`**, optional **`HEARTGARDEN_PLAYER_SPACE_ID`** (Players tier), optional **`HEARTGARDEN_GM_ALLOW_PLAYER_SPACE=1`** (GM break-glass). See **`docs/VERCEL_ENV_VARS.md`** and **`docs/PLAYER_LAYER.md`**.
 
 ## Spaces
 
@@ -108,7 +108,7 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 | `HEARTGARDEN_MCP_WRITE_KEY` | Reindex + MCP write tools (must match client `write_key`) |
 | `R2_*` | Image presign |
 | `PLAYWRIGHT_E2E` | Bootstrap empty demo (tests only); boot gate forced off in **`/api/heartgarden/boot`** |
-| `HEARTGARDEN_BOOT_PIN_ACCESS` / `HEARTGARDEN_BOOT_PIN_VISITOR` | Boot splash PINs (8 chars each if set) |
+| `HEARTGARDEN_BOOT_PIN_ACCESS` / `HEARTGARDEN_BOOT_PIN_PLAYERS` / `HEARTGARDEN_BOOT_PIN_VISITOR` / `HEARTGARDEN_BOOT_PIN_DEMO` | Boot splash PINs (8 chars each if set) |
 | `HEARTGARDEN_BOOT_SESSION_SECRET` | Signs **`hg_boot`** session cookie |
 | `HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC` | Optional cookie max-age |
 | `HEARTGARDEN_PLAYER_SPACE_ID` | Visitor-tier scoped space UUID (see **`docs/PLAYER_LAYER.md`**) |
