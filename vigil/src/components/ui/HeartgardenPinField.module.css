@@ -98,14 +98,21 @@
 }
 
 .cell:focus-visible {
-  border-color: color-mix(in oklch, var(--sys-color-accent-500) 55%, transparent);
+  border-color: color-mix(in oklch, oklch(0.72 0.19 145) 55%, transparent);
   box-shadow:
     inset 0 0 10px color-mix(in oklch, var(--sys-color-black) 32%, transparent),
-    0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sem-focus-ring) 40%, transparent);
+    0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, oklch(0.72 0.19 145) 40%, transparent);
 }
 
 .cellInvalid {
   border-color: color-mix(in oklch, var(--sys-color-danger-400) 45%, transparent);
+}
+
+.cell.cellInvalid:focus-visible {
+  border-color: color-mix(in oklch, var(--sys-color-danger-400) 55%, transparent);
+  box-shadow:
+    inset 0 0 10px color-mix(in oklch, var(--sys-color-black) 32%, transparent),
+    0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sys-color-danger-400) 40%, transparent);
 }
 
 .submit {
