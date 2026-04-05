@@ -5,9 +5,12 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
+  useState,
   type ChangeEvent,
   type ClipboardEvent,
+  type CSSProperties,
   type KeyboardEvent,
 } from "react";
 
@@ -59,6 +62,10 @@ export function HeartgardenPinField({
   const errorId = `${baseId}-error`;
   const refs = useRef<(HTMLInputElement | null)[]>([]);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const valueRef = useRef(value);
+  const prevValueLenRef = useRef(0);
+  const pulseTimeoutsRef = useRef<number[]>([]);
+  const [pulseSlots, setPulseSlots] = useState(() => new Set<number>());
 
   const setRef = useCallback((i: number) => (el: HTMLInputElement | null) => {
     refs.current[i] = el;
@@ -147,6 +154,10 @@ export function HeartgardenPinField({
   const block = disabled || submitting;
   const showError = Boolean(errorMessage);
 
+  useLayoutEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+
   useEffect(() => {
     const el = wrapRef.current;
     if (!el || !onEmptyBlur) return;
@@ -154,12 +165,46 @@ export function HeartgardenPinField({
       if (disabled || submitting) return;
       const next = e.relatedTarget as Node | null;
       if (next && el.contains(next)) return;
-      if (value.length > 0) return;
+      if (valueRef.current.length > 0) return;
       onEmptyBlur();
     };
-    el.addEventListener("focusout", onFocusOut);
-    return () => el.removeEventListener("focusout", onFocusOut);
-  }, [value, onEmptyBlur, disabled, submitting]);
+    el.addEventListener("focusout", onFocusOut, true);
+    return () => el.removeEventListener("focusout", onFocusOut, true);
+  }, [onEmptyBlur, disabled, submitting]);
+
+  useEffect(() => {
+    return () => {
+      for (const id of pulseTimeoutsRef.current) window.clearTimeout(id);
+      pulseTimeoutsRef.current = [];
+    };
+  }, []);
+
+  useEffect(() => {
+    const prev = prevValueLenRef.current;
+    if (value.length < prev) {
+      prevValueLenRef.current = value.length;
+      return;
+    }
+    if (value.length > prev) {
+      for (let j = prev; j < value.length; j++) {
+        const idx = j;
+        const delay = (j - prev) * 46;
+        const t1 = window.setTimeout(() => {
+          setPulseSlots((s) => new Set(s).add(idx));
+          const t2 = window.setTimeout(() => {
+            setPulseSlots((s) => {
+              const n = new Set(s);
+              n.delete(idx);
+              return n;
+            });
+          }, 460);
+          pulseTimeoutsRef.current.push(t2);
+        }, delay);
+        pulseTimeoutsRef.current.push(t1);
+      }
+      prevValueLenRef.current = value.length;
+    }
+  }, [value]);
 
   return (
     <div ref={wrapRef} className={cx(styles.wrap, className)}>
@@ -170,8 +215,15 @@ export function HeartgardenPinField({
         aria-invalid={showError ? true : undefined}
       >
         <legend className={styles.legend}>{legend}</legend>
-        <div className={styles.console}>
-          <div className={styles.slots} role="group" aria-label={legend}>
+        <div
+          className={cx(styles.console, styles.consoleEnter)}
+          style={
+            {
+              "--pin-slot-count": SLOTS,
+            } as CSSProperties
+          }
+        >
+          <div className={cx(styles.slots, styles.slotsEnter)} role="group" aria-label={legend}>
             {Array.from({ length: SLOTS }, (_, i) => {
               const char = value[i] ?? "";
               const inputId = `${baseId}-${i + 1}`;
@@ -180,7 +232,12 @@ export function HeartgardenPinField({
                   key={i}
                   ref={setRef(i)}
                   id={inputId}
-                  className={cx(styles.cell, showError && styles.cellInvalid)}
+                  style={{ "--pin-i": i } as CSSProperties}
+                  className={cx(
+                    styles.cell,
+                    showError && styles.cellInvalid,
+                    pulseSlots.has(i) && styles.cellPulse,
+                  )}
                   type="password"
                   name={`${baseId}-char-${i + 1}`}
                   inputMode="text"

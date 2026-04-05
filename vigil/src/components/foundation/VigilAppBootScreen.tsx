@@ -130,6 +130,22 @@ function pickEnterGardenHoverSpawn(
   return sampleUniformInEllipse(cx, cy, rx, ry);
 }
 
+/** Same ellipse + spacing as hover spawns on “Enter the garden.” (`bootCenterClusterRef` bbox). */
+function spawnFlowerInEnterGardenHoverBounds(
+  cluster: HTMLElement | null,
+  garden: VigilBootFlowerGardenHandle | null,
+  recent: { x: number; y: number }[],
+): void {
+  if (!cluster || !garden) return;
+  const rect = cluster.getBoundingClientRect();
+  if (rect.width < 2 || rect.height < 2) return;
+  const p = pickEnterGardenHoverSpawn(rect, recent, HOVER_SPAWN_MIN_DIST_PX);
+  if (!p) return;
+  garden.spawnAt(p.x, p.y);
+  recent.push(p);
+  if (recent.length > HOVER_SPAWN_RECENT_CAP) recent.splice(0, recent.length - HOVER_SPAWN_RECENT_CAP);
+}
+
 export function VigilAppBootScreen({
   technicalReady,
   onActivate,
@@ -144,6 +160,7 @@ export function VigilAppBootScreen({
 }: VigilAppBootScreenProps) {
   const [exiting, setExiting] = useState(false);
   const [accessConsoleOpen, setAccessConsoleOpen] = useState(false);
+  const [bootPinFieldKey, setBootPinFieldKey] = useState(0);
   const [pinValue, setPinValue] = useState("");
   const [pinError, setPinError] = useState<string | null>(null);
   const [pinSubmitting, setPinSubmitting] = useState(false);
@@ -153,6 +170,13 @@ export function VigilAppBootScreen({
   const poisonDragRef = useRef(false);
   const poisonLastClientRef = useRef<{ x: number; y: number } | null>(null);
   const activateButtonRef = useRef<HTMLButtonElement | null>(null);
+  const bootPinFlowerLenRef = useRef(0);
+  const bootPinFlowerTimersRef = useRef<number[]>([]);
+
+  const clearBootPinFlowerTimers = useCallback(() => {
+    for (const t of bootPinFlowerTimersRef.current) window.clearTimeout(t);
+    bootPinFlowerTimersRef.current = [];
+  }, []);
   /** Hero column (kicker, title, blurbs, CTA) — bbox for hover spawn ellipse around this block. */
   const bootCenterClusterRef = useRef<HTMLDivElement | null>(null);
   const enterGardenHoverSpawnRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -227,17 +251,11 @@ export function VigilAppBootScreen({
 
   const tickEnterGardenHoverSpawn = useCallback(() => {
     if (exiting || !technicalReady || prefersReducedMotionRef.current) return;
-    const cluster = bootCenterClusterRef.current;
-    const garden = flowerGardenRef.current;
-    if (!cluster || !garden) return;
-    const rect = cluster.getBoundingClientRect();
-    if (rect.width < 2 || rect.height < 2) return;
-    const recent = recentEnterGardenSpawnsRef.current;
-    const p = pickEnterGardenHoverSpawn(rect, recent, HOVER_SPAWN_MIN_DIST_PX);
-    if (!p) return;
-    garden.spawnAt(p.x, p.y);
-    recent.push(p);
-    if (recent.length > HOVER_SPAWN_RECENT_CAP) recent.splice(0, recent.length - HOVER_SPAWN_RECENT_CAP);
+    spawnFlowerInEnterGardenHoverBounds(
+      bootCenterClusterRef.current,
+      flowerGardenRef.current,
+      recentEnterGardenSpawnsRef.current,
+    );
   }, [exiting, technicalReady]);
 
   const onEnterGardenPointerEnter = useCallback(() => {
@@ -269,11 +287,16 @@ export function VigilAppBootScreen({
 
   const openAccessConsole = useCallback(() => {
     if (!technicalReady || exiting || !bootGateStatusReady) return;
+    setBootPinFieldKey((k) => k + 1);
     setAccessConsoleOpen(true);
     setPinError(null);
   }, [technicalReady, exiting, bootGateStatusReady]);
 
   const dismissAccessConsoleIfPinEmpty = useCallback(() => {
+    const ae = document.activeElement;
+    if (ae instanceof HTMLElement && ae.closest("[data-vigil-boot-access-morph]")) {
+      ae.blur();
+    }
     setAccessConsoleOpen(false);
     setPinError(null);
   }, []);
@@ -312,6 +335,46 @@ export function VigilAppBootScreen({
 
   const ctaEnabled = technicalReady && !exiting && bootGateStatusReady;
 
+  useEffect(() => {
+    if (!accessConsoleOpen || exiting) {
+      clearBootPinFlowerTimers();
+      bootPinFlowerLenRef.current = pinValue.length;
+      return;
+    }
+    if (prefersReducedMotion) {
+      clearBootPinFlowerTimers();
+      bootPinFlowerLenRef.current = pinValue.length;
+      return;
+    }
+    if (pinValue.length < bootPinFlowerLenRef.current) {
+      clearBootPinFlowerTimers();
+      bootPinFlowerLenRef.current = pinValue.length;
+      return;
+    }
+    const prev = bootPinFlowerLenRef.current;
+    if (pinValue.length > prev) {
+      for (let i = prev; i < pinValue.length; i++) {
+        const slot = i;
+        const tid = window.setTimeout(() => {
+          spawnFlowerInEnterGardenHoverBounds(
+            bootCenterClusterRef.current,
+            flowerGardenRef.current,
+            recentEnterGardenSpawnsRef.current,
+          );
+        }, (slot - prev) * 40);
+        bootPinFlowerTimersRef.current.push(tid);
+      }
+    }
+    bootPinFlowerLenRef.current = pinValue.length;
+  }, [pinValue, accessConsoleOpen, exiting, prefersReducedMotion, clearBootPinFlowerTimers]);
+
+  useEffect(
+    () => () => {
+      clearBootPinFlowerTimers();
+    },
+    [clearBootPinFlowerTimers],
+  );
+
   const onTransitionEnd = useCallback(
     (e: React.TransitionEvent<HTMLDivElement>) => {
       if (e.target !== e.currentTarget) return;
@@ -345,9 +408,18 @@ export function VigilAppBootScreen({
       const target = e.target as HTMLElement | null;
       if (!target) return;
       if (target.closest("[data-vigil-boot-flower-tools]")) return;
-      if (target.closest("[data-vigil-boot-activate]")) return;
       if (target.closest('[data-hg-chrome="canvas-effects-toggle"]')) return;
       if (target.closest("[data-vigil-boot-ambient-audio]")) return;
+      if (
+        bootGateEnabled &&
+        accessConsoleOpen &&
+        pinValue.length === 0 &&
+        !pinSubmitting &&
+        !target.closest("[data-vigil-boot-activate]")
+      ) {
+        dismissAccessConsoleIfPinEmpty();
+      }
+      if (target.closest("[data-vigil-boot-activate]")) return;
       if (flowerTool === "poison") {
         poisonDragRef.current = true;
         poisonLastClientRef.current = { x: e.clientX, y: e.clientY };
@@ -361,7 +433,15 @@ export function VigilAppBootScreen({
       }
       flowerGardenRef.current?.spawnAt(e.clientX, e.clientY);
     },
-    [exiting, flowerTool],
+    [
+      exiting,
+      flowerTool,
+      bootGateEnabled,
+      accessConsoleOpen,
+      pinValue.length,
+      pinSubmitting,
+      dismissAccessConsoleIfPinEmpty,
+    ],
   );
 
   const onOverlayPointerMove = useCallback(
@@ -563,6 +643,7 @@ export function VigilAppBootScreen({
                 aria-hidden={!accessConsoleOpen}
               >
                 <HeartgardenPinField
+                  key={bootPinFieldKey}
                   id="vigil-boot-access-pin"
                   legend="Heartgarden access code"
                   value={pinValue}
