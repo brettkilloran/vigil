@@ -1,9 +1,7 @@
 import { tryGetDb } from "@/src/db/index";
-import { ensureArchitecturalDemoSeed } from "@/src/lib/architectural-demo-seed-db";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
 import {
-  listItemsForSpace,
   listItemsForSpaceSubtree,
   parseCameraFromRow,
   resolveActiveSpace,
@@ -47,15 +45,6 @@ export async function GET(req: Request) {
     id: s.id,
     parentSpaceId: s.parentSpaceId ?? null,
   }));
-
-  const rootItems = await listItemsForSpace(db, activeSpace.id);
-  if (rootItems.length === 0 && activeSpace.parentSpaceId == null) {
-    await ensureArchitecturalDemoSeed(
-      db,
-      activeSpace.id,
-      allSpaces.map((s) => s.id),
-    );
-  }
 
   const itemRows = await listItemsForSpaceSubtree(db, activeSpace.id, spaceRows);
 
