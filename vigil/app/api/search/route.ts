@@ -1,5 +1,6 @@
 import { tryGetDb } from "@/src/db/index";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
+import { isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
 import {
   assertSpaceExists,
   type SearchFilters,
@@ -7,6 +8,7 @@ import {
   searchItemsFuzzy,
   searchItemsHybrid,
 } from "@/src/lib/spaces";
+import { hybridRetrieveItems } from "@/src/lib/vault-retrieval";
 
 const HYBRID_FTS_SHORT_CIRCUIT_LIMIT = 12;
 
@@ -86,24 +88,49 @@ export async function GET(req: Request) {
     return Response.json({ ok: true, items: mapRows(rows), mode: "fuzzy" });
   }
 
-  /** Legacy alias: vector semantic search was removed; same as FTS. */
   if (mode === "semantic") {
-    const rows = await searchItemsFTS(db, q, filters);
+    if (!isEmbeddingApiConfigured()) {
+      const rows = await searchItemsFTS(db, q, filters);
+      return Response.json({
+        ok: true,
+        items: mapRows(rows),
+        mode: "fts",
+        note: "OPENAI_API_KEY not set; fell back to full-text search.",
+      });
+    }
+    const limit = Math.min(80, Math.max(8, filters.limit ?? 24));
+    const { rows } = await hybridRetrieveItems(db, q, filters, {
+      maxItems: limit,
+      includeVector: true,
+    });
     return Response.json({
       ok: true,
       items: mapRows(rows),
-      mode: "fts",
-      note: "mode=semantic is deprecated; results use full-text search only.",
+      mode: "semantic",
     });
   }
 
   if (mode === "hybrid") {
+    if (isEmbeddingApiConfigured()) {
+      const limit = Math.min(80, Math.max(8, filters.limit ?? 24));
+      const { rows } = await hybridRetrieveItems(db, q, filters, {
+        maxItems: limit,
+        includeVector: true,
+      });
+      return Response.json({
+        ok: true,
+        items: mapRows(rows),
+        mode: "hybrid",
+      });
+    }
+
     const ftsRows = await searchItemsFTS(db, q, filters);
     if (ftsRows.length >= HYBRID_FTS_SHORT_CIRCUIT_LIMIT) {
       return Response.json({
         ok: true,
         items: mapRows(ftsRows),
         mode: "hybrid",
+        note: "Lexical hybrid only (set OPENAI_API_KEY for vector fusion).",
       });
     }
     const rows = await searchItemsHybrid(db, q, filters);
@@ -111,6 +138,7 @@ export async function GET(req: Request) {
       ok: true,
       items: mapRows(rows),
       mode: "hybrid",
+      note: "Lexical hybrid only (set OPENAI_API_KEY for vector fusion).",
     });
   }
 

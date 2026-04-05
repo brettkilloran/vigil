@@ -2,8 +2,8 @@ import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm";
 
 import type { tryGetDb } from "@/src/db/index";
 import { itemLinks, items, spaces } from "@/src/db/schema";
-import type { CameraState } from "@/src/stores/canvas-types";
-import { defaultCamera } from "@/src/stores/canvas-types";
+import type { CameraState } from "@/src/model/canvas-types";
+import { defaultCamera } from "@/src/model/canvas-types";
 
 export type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 
@@ -213,6 +213,42 @@ export async function searchItemsFTS(
       spaceName: spaces.name,
       parentSpaceId: spaces.parentSpaceId,
       score: rankExpr,
+    })
+    .from(items)
+    .innerJoin(spaces, eq(spaces.id, items.spaceId))
+    .where(where)
+    .orderBy(...rankedOrder)
+    .limit(limit);
+  return toSearchRows(rows);
+}
+
+/** Same as `searchItemsFTS` but includes `ts_headline` snippet for each row. */
+export async function searchItemsFTSWithSnippets(
+  db: VigilDb,
+  query: string,
+  filters: SearchFilters = {},
+) {
+  const q = query.trim();
+  if (!q) return [] as SearchRow[];
+  const limit = normalizeLimit(filters.limit, 50, 200);
+  const vectorExpr = sql`to_tsvector('english', coalesce(${items.searchBlob}, ''))`;
+  const tsQuery = sql`plainto_tsquery('english', ${q})`;
+  const rankExpr = sql<number>`ts_rank(${vectorExpr}, ${tsQuery})`;
+  const snippetExpr = sql<string>`ts_headline('english', coalesce(${items.searchBlob}, ''), ${tsQuery})`;
+  const where = and(...searchWhereClauses(filters), sql`${vectorExpr} @@ ${tsQuery}`);
+  const sort = filters.sort ?? "relevance";
+  const rankedOrder =
+    sort === "relevance"
+      ? [desc(rankExpr), desc(items.updatedAt)]
+      : applySortForNonRanked(sort);
+  const rows = await db
+    .select({
+      item: items,
+      spaceId: spaces.id,
+      spaceName: spaces.name,
+      parentSpaceId: spaces.parentSpaceId,
+      score: rankExpr,
+      snippet: snippetExpr,
     })
     .from(items)
     .innerJoin(spaces, eq(spaces.id, items.spaceId))

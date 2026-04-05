@@ -36,9 +36,3 @@ export interface CanvasItem {
   stackId?: string | null;
   stackOrder?: number | null;
 }
-
-export type UndoAction =
-  | { kind: "move"; itemId: string; before: { x: number; y: number }; after: { x: number; y: number } }
-  | { kind: "create"; item: CanvasItem }
-  | { kind: "delete"; item: CanvasItem }
-  | { kind: "patch"; itemId: string; before: Partial<CanvasItem>; after: Partial<CanvasItem> };

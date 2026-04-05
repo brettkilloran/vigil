@@ -103,6 +103,8 @@ export async function POST(
     entityMeta: parsed.data.entityMeta ?? null,
     imageUrl: parsed.data.imageUrl ?? null,
     imageMeta: parsed.data.imageMeta ?? null,
+    loreSummary: null,
+    loreAliases: null,
   });
 
   const [row] = await db

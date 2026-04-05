@@ -496,12 +496,12 @@ function applyUnstackStackInSpace(
   return next;
 }
 
-function buildStackGroupsForVisible(
+function buildStackGroupsForActiveSpace(
   graph: CanvasGraph,
-  visibleEntityIds: readonly string[],
+  activeSpaceEntityIds: readonly string[],
 ): Map<string, CanvasEntity[]> {
   const groups = new Map<string, CanvasEntity[]>();
-  for (const id of visibleEntityIds) {
+  for (const id of activeSpaceEntityIds) {
     const entity = graph.entities[id];
     if (!entity?.stackId) continue;
     const arr = groups.get(entity.stackId) ?? [];
@@ -523,12 +523,12 @@ function getStackSelectionState(
   activeSpaceId: string,
   selectedNodeIds: readonly string[],
 ) {
-  const visibleEntityIds = graph.spaces[activeSpaceId]?.entityIds ?? [];
+  const activeSpaceEntityIds = graph.spaces[activeSpaceId]?.entityIds ?? [];
 
   const selectedVisibleDeduped: string[] = [];
   const seenVis = new Set<string>();
   for (const id of selectedNodeIds) {
-    if (!visibleEntityIds.includes(id)) continue;
+    if (!activeSpaceEntityIds.includes(id)) continue;
     if (seenVis.has(id)) continue;
     seenVis.add(id);
     selectedVisibleDeduped.push(id);
@@ -545,7 +545,7 @@ function getStackSelectionState(
   }
   const selectedContentSet = new Set(ordered);
 
-  const stackGroups = buildStackGroupsForVisible(graph, visibleEntityIds);
+  const stackGroups = buildStackGroupsForActiveSpace(graph, activeSpaceEntityIds);
 
   const whollySelectedStackIds: string[] = [];
   stackGroups.forEach((members, stackId) => {
@@ -933,7 +933,7 @@ export function ArchitecturalCanvasApp({
   const canvasEffectsEnabledRef = useRef(true);
   const canvasEffectsSoundInitRef = useRef(false);
   const canvasEffectsSoundPrevRef = useRef(true);
-  /** Radix controlled Switch + two instances (boot + chrome) can loop in React 19; guard + unmount duplicate. */
+  /** Canvas effects toggle: dedupe so boot + chrome surfaces do not fight React state. */
   const handleCanvasEffectsEnabledChange = useCallback((next: boolean) => {
     setCanvasEffectsEnabled((prev) => (prev === next ? prev : next));
   }, []);
@@ -1032,7 +1032,7 @@ export function ArchitecturalCanvasApp({
   const [stackModalEjectPreview, setStackModalEjectPreview] = useState(false);
   const [stackModalEjectCount, setStackModalEjectCount] = useState(0);
   const [stackModalCardHeights, setStackModalCardHeights] = useState<Record<string, number>>({});
-  /** Frozen visible ids for eject hull during a stack drag (layout swaps won’t shrink/grow the drop zone). */
+  /** Frozen active-space entity ids for eject hull during a stack drag (layout swaps won’t shrink/grow the drop zone). */
   const stackDragHullOrderedIdsRef = useRef<string[] | null>(null);
   /** Latest stack order during an active stack drag (synced before React re-render). */
   const stackModalOrderedIdsDuringDragRef = useRef<string[] | null>(null);
@@ -1726,9 +1726,38 @@ export function ArchitecturalCanvasApp({
     return () => window.cancelAnimationFrame(frame);
   }, [stackModal]);
 
+  const activeSpace = graph.spaces[activeSpaceId] ?? graph.spaces[graph.rootSpaceId];
+  const activeSpaceEntityIds = activeSpace?.entityIds ?? EMPTY_ENTITY_IDS;
+  const activeSpaceEntities = useMemo(
+    () =>
+      activeSpaceEntityIds
+        .map((id) => graph.entities[id])
+        .filter((entity): entity is CanvasEntity => !!entity),
+    [graph.entities, activeSpaceEntityIds],
+  );
+  const activeSpaceConnections = useMemo(
+    () =>
+      Object.values(graph.connections).filter((connection) => {
+        const source = graph.entities[connection.sourceEntityId];
+        const target = graph.entities[connection.targetEntityId];
+        if (!source || !target) return false;
+        return !!source.slots[activeSpaceId] && !!target.slots[activeSpaceId];
+      }),
+    [activeSpaceId, graph.connections, graph.entities],
+  );
+  const activeSpacePinConnectionCount = activeSpaceConnections.length;
+
   useEffect(() => {
+    if (activeSpacePinConnectionCount === 0) return;
     let frame = 0;
+    let cancelled = false;
+
     const step = () => {
+      if (cancelled) return;
+      if (document.visibilityState !== "visible") {
+        frame = 0;
+        return;
+      }
       const graphSnap = graphRef.current;
       const spaceId = activeSpaceIdRef.current;
       const runtimeById = ropeRuntimeRef.current;
@@ -1836,29 +1865,27 @@ export function ArchitecturalCanvasApp({
       }
       frame = window.requestAnimationFrame(step);
     };
-    frame = window.requestAnimationFrame(step);
-    return () => window.cancelAnimationFrame(frame);
-  }, []);
 
-  const activeSpace = graph.spaces[activeSpaceId] ?? graph.spaces[graph.rootSpaceId];
-  const visibleEntityIds = activeSpace?.entityIds ?? EMPTY_ENTITY_IDS;
-  const visibleEntities = useMemo(
-    () =>
-      visibleEntityIds
-        .map((id) => graph.entities[id])
-        .filter((entity): entity is CanvasEntity => !!entity),
-    [graph.entities, visibleEntityIds],
-  );
-  const visibleConnections = useMemo(
-    () =>
-      Object.values(graph.connections).filter((connection) => {
-        const source = graph.entities[connection.sourceEntityId];
-        const target = graph.entities[connection.targetEntityId];
-        if (!source || !target) return false;
-        return !!source.slots[activeSpaceId] && !!target.slots[activeSpaceId];
-      }),
-    [activeSpaceId, graph.connections, graph.entities],
-  );
+    const onVisibility = () => {
+      if (cancelled) return;
+      if (document.visibilityState === "visible") {
+        if (frame === 0) {
+          frame = window.requestAnimationFrame(step);
+        }
+      } else if (frame) {
+        window.cancelAnimationFrame(frame);
+        frame = 0;
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    frame = window.requestAnimationFrame(step);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [activeSpacePinConnectionCount]);
 
   const parentSpaceId = activeSpace?.parentSpaceId ?? null;
 
@@ -1901,12 +1928,12 @@ export function ArchitecturalCanvasApp({
 
   const nodeZ = useMemo(() => {
     const zMap = new Map<string, number>();
-    visibleEntities.forEach((entity, index) => zMap.set(entity.id, index + 1));
+    activeSpaceEntities.forEach((entity, index) => zMap.set(entity.id, index + 1));
     return zMap;
-  }, [visibleEntities]);
+  }, [activeSpaceEntities]);
   const stackGroups = useMemo(() => {
     const groups = new Map<string, CanvasEntity[]>();
-    visibleEntities.forEach((entity) => {
+    activeSpaceEntities.forEach((entity) => {
       if (!entity.stackId) return;
       const arr = groups.get(entity.stackId) ?? [];
       arr.push(entity);
@@ -1919,15 +1946,15 @@ export function ArchitecturalCanvasApp({
       );
     });
     return groups;
-  }, [visibleEntities]);
+  }, [activeSpaceEntities]);
   const standaloneEntities = useMemo(
     () =>
-      visibleEntities.filter((entity) => {
+      activeSpaceEntities.filter((entity) => {
         if (!entity.stackId) return true;
         const group = stackGroups.get(entity.stackId);
         return !group || group.length <= 1;
       }),
-    [stackGroups, visibleEntities],
+    [stackGroups, activeSpaceEntities],
   );
   const collapsedStacks = useMemo(() => {
     const out = Array.from(stackGroups.entries())
@@ -4760,7 +4787,7 @@ export function ArchitecturalCanvasApp({
                 ? [
                     nodeId,
                     ...selectedNodeIds.filter(
-                      (id) => id !== nodeId && visibleEntityIds.includes(id),
+                      (id) => id !== nodeId && activeSpaceEntityIds.includes(id),
                     ),
                   ]
                 : [nodeId];
@@ -4892,7 +4919,7 @@ export function ArchitecturalCanvasApp({
     translateX,
     translateY,
     updateNodeBody,
-    visibleEntityIds,
+    activeSpaceEntityIds,
   ]);
 
   useEffect(() => {
@@ -5569,10 +5596,10 @@ export function ArchitecturalCanvasApp({
       const stackId = stackHost?.dataset.stackId;
 
       let hitIds: string[] | null = null;
-      if (nodeId && visibleEntityIds.includes(nodeId)) {
+      if (nodeId && activeSpaceEntityIds.includes(nodeId)) {
         hitIds = [nodeId];
       } else if (stackId) {
-        const members = visibleEntities
+        const members = activeSpaceEntities
           .filter((e) => e.stackId === stackId)
           .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0))
           .map((e) => e.id);
@@ -5591,11 +5618,11 @@ export function ArchitecturalCanvasApp({
         ),
       );
     },
-    [focusOpen, galleryOpen, stackModal, visibleEntities, visibleEntityIds],
+    [focusOpen, galleryOpen, stackModal, activeSpaceEntities, activeSpaceEntityIds],
   );
 
   const duplicateSelectedEntities = useCallback(() => {
-    const ids = selectedNodeIdsRef.current.filter((id) => visibleEntityIds.includes(id));
+    const ids = selectedNodeIdsRef.current.filter((id) => activeSpaceEntityIds.includes(id));
     if (ids.length === 0) return;
     const spaceId = activeSpaceIdRef.current;
     const prev = graphRef.current;
@@ -5676,10 +5703,10 @@ export function ArchitecturalCanvasApp({
       return next;
     });
     setSelectedNodeIds(plan.map((x) => x.nid));
-  }, [createId, recordUndoBeforeMutation, visibleEntityIds]);
+  }, [createId, recordUndoBeforeMutation, activeSpaceEntityIds]);
 
   const alignSelectedInGrid = useCallback(() => {
-    const ids = selectedNodeIdsRef.current.filter((id) => visibleEntityIds.includes(id));
+    const ids = selectedNodeIdsRef.current.filter((id) => activeSpaceEntityIds.includes(id));
     if (ids.length < 2) return;
     const spaceId = activeSpaceIdRef.current;
     recordUndoBeforeMutation();
@@ -5724,7 +5751,7 @@ export function ArchitecturalCanvasApp({
       });
       return next;
     });
-  }, [recordUndoBeforeMutation, visibleEntityIds]);
+  }, [recordUndoBeforeMutation, activeSpaceEntityIds]);
   alignSelectedInGridRef.current = alignSelectedInGrid;
 
   const stackSelectionUi = useMemo(
@@ -5984,16 +6011,16 @@ export function ArchitecturalCanvasApp({
   }, [selectedConnectionId]);
 
   useEffect(() => {
-    setSelectedNodeIds((prev) => prev.filter((id) => visibleEntityIds.includes(id)));
-  }, [visibleEntityIds]);
+    setSelectedNodeIds((prev) => prev.filter((id) => activeSpaceEntityIds.includes(id)));
+  }, [activeSpaceEntityIds]);
 
   useEffect(() => {
     if (!activeNodeId) return;
-    if (!visibleEntityIds.includes(activeNodeId)) {
+    if (!activeSpaceEntityIds.includes(activeNodeId)) {
       setFocusOpen(false);
       setActiveNodeId(null);
     }
-  }, [activeNodeId, visibleEntityIds]);
+  }, [activeNodeId, activeSpaceEntityIds]);
 
   const centerWorldX = Math.round((viewportSize.width / 2 - translateX) / scale);
   const centerWorldY = Math.round((viewportSize.height / 2 - translateY) / scale);
@@ -6016,8 +6043,8 @@ export function ArchitecturalCanvasApp({
   const fanOriginX = stackModal ? stackModal.originX - 170 : 0;
   const fanOriginY = stackModal ? stackModal.originY - 95 : 0;
   const selectedVisibleIds = useMemo(
-    () => selectedNodeIds.filter((id) => visibleEntityIds.includes(id)),
-    [selectedNodeIds, visibleEntityIds],
+    () => selectedNodeIds.filter((id) => activeSpaceEntityIds.includes(id)),
+    [selectedNodeIds, activeSpaceEntityIds],
   );
   const parentExitStripVisible =
     !!parentSpaceId && (draggedNodeIds.length > 0 || selectedVisibleIds.length > 0);
@@ -6456,7 +6483,7 @@ export function ArchitecturalCanvasApp({
                   );
                 })()
               : null}
-            {visibleConnections.map((connection) => {
+            {activeSpaceConnections.map((connection) => {
               const sourcePin = resolveConnectionPin(
                 connection.sourceEntityId,
                 connection.sourcePin,

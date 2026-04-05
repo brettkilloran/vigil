@@ -147,6 +147,8 @@ export async function POST(req: Request) {
       entityMeta: args.entityMeta ?? null,
       imageUrl: null,
       imageMeta: null,
+      loreSummary: null,
+      loreAliases: null,
     });
     const [row] = await db
       .insert(items)

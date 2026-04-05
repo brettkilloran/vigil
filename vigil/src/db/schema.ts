@@ -68,6 +68,11 @@ export const items = pgTable("items", {
   stackId: uuid("stack_id"),
   stackOrder: integer("stack_order"),
 
+  /** LLM-generated compact index for FTS + retrieval (refreshed on vault index). */
+  loreSummary: text("lore_summary"),
+  loreAliases: jsonb("lore_aliases").$type<string[] | null>(),
+  loreIndexedAt: timestamp("lore_indexed_at", { withTimezone: true }),
+
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
@@ -100,12 +105,19 @@ export const itemLinks = pgTable(
   ],
 );
 
-/** Legacy pgvector table; rows are cleared on item update but not re-inserted (search is FTS-only). */
+/** Chunk embeddings for semantic search; rebuilt by vault index pipeline. */
 export const itemEmbeddings = pgTable("item_embeddings", {
   id: uuid("id").defaultRandom().primaryKey(),
   itemId: uuid("item_id")
     .notNull()
     .references(() => items.id, { onDelete: "cascade" }),
+  spaceId: uuid("space_id")
+    .notNull()
+    .references(() => spaces.id, { onDelete: "cascade" }),
+  chunkIndex: integer("chunk_index").notNull().default(0),
+  /** sha256 hex of chunk text at index time (debug / future skip). */
+  contentHash: varchar("content_hash", { length: 64 }).notNull().default(""),
+  sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }).notNull(),
   embedding: vector1536("embedding"),
   chunkText: text("chunk_text").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),

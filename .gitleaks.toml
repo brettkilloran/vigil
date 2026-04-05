@@ -1,0 +1,15 @@
+# Gitleaks config for the Cursor monorepo (heartgarden lives under vigil/).
+# https://github.com/gitleaks/gitleaks
+
+title = "Cursor / heartgarden"
+
+[extend]
+# Use upstream defaults; override only what we need.
+useDefault = true
+
+# Example env file uses generic placeholders only.
+[[allowlists]]
+description = "Env example template"
+paths = [
+  '''\.env\.local\.example$''',
+]

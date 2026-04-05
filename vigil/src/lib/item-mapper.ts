@@ -1,7 +1,7 @@
 import type { InferSelectModel } from "drizzle-orm";
 
 import type { items } from "@/src/db/schema";
-import type { CanvasItem, ItemType } from "@/src/stores/canvas-types";
+import type { CanvasItem, ItemType } from "@/src/model/canvas-types";
 
 type ItemRow = InferSelectModel<typeof items>;
 

@@ -1,0 +1,21 @@
+# Secret scanning for the whole repository (not only vigil/). Uses .gitleaks.toml at repo root.
+# Also enable GitHub "Secret scanning" + "Push protection" under repo Settings → Code security and analysis.
+name: gitleaks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

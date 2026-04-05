@@ -5,7 +5,7 @@ This file is the **short bridge** between the repo today and planning docs. **Ta
 ## Review summary (master plan)
 
 - **Product:** Personal infinite canvas (Spatial-inspired): notes, stickies, images, folders, stacks, clips, TTRPG lore later. **Single user, no auth.**
-- **Stack target:** Next.js App Router + React, **custom DOM canvas** (CSS `transform` pan/zoom, no `<canvas>`), **@use-gesture/react**, **framer-motion**, **TipTap**, **Tailwind 4**, **Drizzle + Neon + R2 + Anthropic** (lore) where needed.
+- **Stack target:** Next.js App Router + React, **custom DOM canvas** (CSS `transform` pan/zoom, no `<canvas>`), **contentEditable**-buffered notes, **Tailwind 4**, **Drizzle + Neon + R2 + Anthropic** (lore) where needed; **d3-force** for the cloud graph overlay.
 - **Explicit non-goals:** **No tldraw** (or any licensed whiteboard SDK). **No Auth.js / OAuth.**
 - **Data model:** Items are the source of truth on the server; `spaces.canvas_state` holds **camera only** `{ x, y, zoom }`. Schema includes `item_links`, `item_embeddings` (pgvector), stacks (`stack_id` / `stack_order`). **No `users` table** in the Drizzle schema.
 
@@ -15,17 +15,17 @@ This file is the **short bridge** between the repo today and planning docs. **Ta
 |------|------------------|----------------------|
 | Canvas | **tldraw removed**; **production shell = `ArchitecturalCanvasApp`** (`src/components/foundation/`) | Custom DOM + CSS transform layer + item cards (same intent as plan’s `VigilCanvas`) |
 | Persistence | **`items`** + camera in **`spaces.canvas_state`**; Neon **bootstrap + CRUD bridge** for architectural graph when not in demo mode | Same; legacy DB rows may still hold old `canvas_state` until migrated |
-| State | **Canvas graph:** React state inside `ArchitecturalCanvasApp` (single source of truth). **`canvas-types.ts`** remains the shared **API/DB row** shape for mappers and routes. | Same product intent; legacy zustand spike removed from tree |
-| Motion | **framer-motion** + @use-gesture | Same per plan presets |
+| State | **Canvas graph:** React state inside `ArchitecturalCanvasApp` (single source of truth). **`src/model/canvas-types.ts`** is the shared **API/DB row** shape for mappers and routes. | Same product intent; legacy zustand spike removed from tree |
+| Motion | **CSS transitions** + pointer/wheel handlers in **`ArchitecturalCanvasApp`** (no framer-motion / @use-gesture in tree) | Same product feel; optional motion lib later |
 | Styling | **Tailwind 4** + tokens; **Geist** + **Lora** (headings in editor); Vercel-ish neutrals + card tokens; chips/glass via `vigil-ui-classes` | Visual Design Bible polish + `VISUAL_REVAMP_PLAN` (icons, grouping) |
-| Cross-card links | TipTap `vigil:item:` links + **`/api/item-links/sync`**; **`[[` picker**; **Links** panel resolves `[[` / vigil links from note **content** on **local canvas** (no Neon); cloud uses **`item_links`** API; **Graph** overlay (**d3-force**, **Reset layout**, **drag to reheat**) via **`GET /api/spaces/[id]/graph`**; note **formatting toolbar** + underline/highlight | LLM auto-linking, deeper graph UX (Phase 5) |
+| Cross-card links | Wiki-style `vigil:item:` / `[[` in note HTML + **`/api/item-links`** / **`/api/item-links/sync`**; **Links** panel resolves from **content** on **local canvas** (no Neon); cloud uses **`item_links`** API; **Graph** overlay (**d3-force**) via **`GET /api/spaces/[id]/graph`** | Richer editor (e.g. TipTap), LLM auto-linking, Phase 5 graph UX |
 | Lore / LLM (v1) | **`POST /api/lore/query`** — FTS (+ fuzzy) retrieval + **Anthropic** synthesis; **`LoreAskPanel`** from Cmd+K **Ask lore (AI)** | Phase 5 consistency checker, bulk import, auto-link; optional streaming / citations UX |
 | Save confidence | **Status bar** sync line (`neon-sync-bus` + wrapped Neon API calls + debounced note pending); documents undo vs server in UI | Optional: canvas **version history** / snapshots (`BUILD_PLAN.md` UX2) |
 | TTRPG | **Entity type** bar + **`entity_meta`** fields per type; **Timeline** panel (Event + `eventDate`) | Markdown LLM import, consistency checker, richer forms |
 | Import / export | Toolbar **Export** / **Import** (JSON); cloud import creates items via API | Preferences, richer conflict rules |
 | PWA | **`public/sw.js`** + **`RegisterSw`** (prod register, minimal SW) | Offline caching strategy when needed |
 | R2 images | **Presigned PUT** at **`/api/upload/presign`** + env in `.env.local.example` | Bucket policy, CORS, optional image transforms |
-| Performance | **Viewport culling** (visible entity lists in **`ArchitecturalCanvasApp`**), lazy **`img`** decoding | Broader memoization / virtualize if 500+ cards on screen |
+| Performance | **Active-space entity lists** in **`ArchitecturalCanvasApp`**, connection rope **rAF** only when pin links exist in the active space + tab visible; lazy **`img`** decoding | Geometric viewport culling / virtualize if 500+ cards on screen |
 | E2E / visual | **Playwright** on **:3001** (`next start` + `PLAYWRIGHT_E2E` bootstrap), smoke + screenshot shell | Expand flows (notes, graph, palette), CI job |
 | License risk | Resolved (no tldraw) | **MIT-only** surface area |
 

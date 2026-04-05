@@ -1,5 +1,5 @@
 import type { BootstrapResponse } from "@/src/components/foundation/architectural-db-bridge";
-import type { CanvasItem } from "@/src/stores/canvas-types";
+import type { CanvasItem } from "@/src/model/canvas-types";
 import {
   getNeonSyncSnapshot,
   neonSyncBeginRequest,
@@ -50,6 +50,9 @@ export async function apiCreateItem(
     const data = (await res.json()) as { ok: boolean; item?: CanvasItem; error?: string };
     const ok = res.ok && !!data.ok;
     if (track) neonSyncEndRequest(ok, ok ? undefined : data.error ?? `HTTP ${res.status}`);
+    if (ok && data.item?.id) {
+      scheduleVaultIndexForItem(data.item.id);
+    }
     return data;
   } catch (e) {
     if (track) neonSyncEndRequest(false, e instanceof Error ? e.message : "Network error");
@@ -71,6 +74,9 @@ export async function apiPatchItem(
     });
     const ok = res.ok;
     if (track) neonSyncEndRequest(ok, ok ? undefined : `HTTP ${res.status}`);
+    if (ok && (patch.title !== undefined || patch.contentText !== undefined)) {
+      scheduleVaultIndexForItem(itemId);
+    }
     return ok;
   } catch (e) {
     if (track) neonSyncEndRequest(false, e instanceof Error ? e.message : "Network error");

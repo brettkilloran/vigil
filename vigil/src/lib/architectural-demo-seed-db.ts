@@ -203,6 +203,8 @@ export async function ensureArchitecturalDemoSeed(
           entityMeta: null,
           imageUrl: null,
           imageMeta: null,
+          loreSummary: null,
+          loreAliases: null,
         });
         const [row] = await tx
           .insert(items)
@@ -242,6 +244,8 @@ export async function ensureArchitecturalDemoSeed(
         entityMeta: null,
         imageUrl: null,
         imageMeta: null,
+        loreSummary: null,
+        loreAliases: null,
       });
       const [row] = await tx
         .insert(items)

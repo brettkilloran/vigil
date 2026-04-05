@@ -15,13 +15,3 @@ export function tryGetDb() {
   return cachedDb;
 }
 
-export function getDb() {
-  const db = tryGetDb();
-  if (!db) {
-    throw new Error(
-      "Missing NEON_DATABASE_URL in .env.local (required for Phase 1 persistence).",
-    );
-  }
-  return db;
-}
-

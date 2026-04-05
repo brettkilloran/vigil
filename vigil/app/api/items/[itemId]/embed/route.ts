@@ -27,6 +27,6 @@ export async function POST(
 
   return Response.json({
     ok: true,
-    note: "Item embeddings are not generated; search uses Postgres full-text and trigram.",
+    note: "Stale embedding rows cleared. POST /api/items/:id/index to chunk + embed (requires OPENAI_API_KEY).",
   });
 }

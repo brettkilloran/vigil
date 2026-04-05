@@ -126,6 +126,8 @@ export async function PATCH(
     entityMeta: p.entityMeta ?? existing.entityMeta,
     imageUrl: p.imageUrl ?? existing.imageUrl,
     imageMeta: p.imageMeta ?? existing.imageMeta,
+    loreSummary: existing.loreSummary,
+    loreAliases: existing.loreAliases ?? undefined,
   });
 
   const [row] = await db

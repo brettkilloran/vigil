@@ -10,8 +10,8 @@ import type {
   ContentTheme,
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
-import type { CanvasItem } from "@/src/stores/canvas-types";
-import type { CameraState } from "@/src/stores/canvas-types";
+import type { CanvasItem } from "@/src/model/canvas-types";
+import type { CameraState } from "@/src/model/canvas-types";
 
 const UNIFIED_NODE_WIDTH = 340;
 const FOLDER_CARD_WIDTH = 420;

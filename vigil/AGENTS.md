@@ -26,7 +26,7 @@ Read **STRATEGY** for the current-vs-target delta, **BUILD_PLAN** for architectu
 
 The **production shell** is **`ArchitecturalCanvasApp`** (`src/components/foundation/ArchitecturalCanvasApp.tsx`), mounted from `app/_components/VigilApp.tsx` (file name is legacy; this is the heartgarden shell). It uses **in-component graph state** (single source of truth for the canvas graph) + Neon sync (`architectural-db-bridge.ts`, `architectural-neon-api.ts`, `/api/bootstrap`, item/space APIs) when not in demo seed mode.
 
-Persistence: **`items`** rows + **`spaces.canvas_state`** as camera `{ x, y, zoom }` only. **Links:** wiki-style `vigil:item:` targets in note HTML are resolved in the shell (e.g. **`ArchitecturalLinksPanel`**); cloud mode uses `/api/items/[id]/links` and Neon `item_links`. Shared row types: **`src/stores/canvas-types.ts`** (API / mapper shape), separate from **`architectural-types.ts`** (in-memory graph).
+Persistence: **`items`** rows + **`spaces.canvas_state`** as camera `{ x, y, zoom }` only. **Links:** wiki-style `vigil:item:` targets in note HTML are resolved in the shell (e.g. **`ArchitecturalLinksPanel`**); cloud mode uses `/api/items/[id]/links` and Neon `item_links`. Shared row types: **`src/model/canvas-types.ts`** (API / mapper shape), separate from **`architectural-types.ts`** (in-memory graph).
 
 **Lore v1:** Cmd+K → **Ask lore (AI)** → `LoreAskPanel` → **`POST /api/lore/query`** (FTS retrieval + Anthropic). **Search:** Postgres full-text + trigram; **`ANTHROPIC_API_KEY`** is for lore only (no separate embedding vendor).
 

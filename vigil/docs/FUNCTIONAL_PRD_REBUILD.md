@@ -309,7 +309,7 @@ These are good opportunities to improve during rebuild while preserving compatib
 
 - App orchestration: `app/_components/VigilApp.tsx` → **`ArchitecturalCanvasApp`**
 - Canvas shell + graph state: `src/components/foundation/ArchitecturalCanvasApp.tsx`, `architectural-types.ts`, `architectural-db-bridge.ts`, `architectural-neon-api.ts`
-- API/DB item shape (mapper): `src/stores/canvas-types.ts`, `src/lib/item-mapper.ts`
+- API/DB item shape (mapper): `src/model/canvas-types.ts`, `src/lib/item-mapper.ts`
 - Note bodies: TipTap inside **`ArchitecturalNodeCard`** / focus editor paths in the same shell
 - Links inspector + wiki targets in HTML: `src/components/ui/ArchitecturalLinksPanel.tsx`
 - Bootstrap + space resolution: `app/api/bootstrap/route.ts`, `src/lib/spaces.ts`
