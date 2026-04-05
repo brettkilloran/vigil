@@ -1,9 +1,13 @@
 /**
- * GLSL for the “data corruption” look from the System Failure demo.
+ * Fragment logic matches the “System Failure” HTML demo (tear / stretch / rgb offset / acid / speckle / grain).
  *
- * **Animation (every frame, in JS):** set `u_time` to monotonic seconds (e.g. elapsed since mount).
- * **Source (occasionally):** sample `u_textTexture` — in the original HTML this was a canvas redrawn
- * only on resize/font load; the tear / RGB / acid flashes all key off `u_time`, not on retexturing.
+ * That demo’s texture is **white glyphs on transparent** (`textAlpha` only on type). The shader uses flat
+ * `textColor` ink: `mix(bgColor, textColor, textAlpha)` then heavy acid on torn strips — fine for sparse alpha.
+ *
+ * **html2canvas** snapshots are usually **opaque across the whole card**, so the same acid mix hits almost
+ * every pixel in a torn band → neon soup. Use **`u_bitmapMode = 1`** (sample chroma as ink) and
+ * **`u_acidIntensity &lt; 1`** (scale the `0.85` mix) for UI captures. Use **`u_bitmapMode = 0`**, **`u_acidIntensity = 1`**
+ * to match the original snippet with a typographic texture.
  */
 
 export const DATA_CORRUPTION_GLITCH_VERTEX_SHADER = `
@@ -22,6 +26,8 @@ uniform float u_time;
 uniform vec2 u_resolution;
 uniform vec3 u_bgColor;
 uniform sampler2D u_textTexture;
+uniform float u_bitmapMode;
+uniform float u_acidIntensity;
 
 varying vec2 vUv;
 
@@ -67,7 +73,9 @@ void main() {
 
   float textAlpha = texG.a;
 
+  vec3 chroma = vec3(texR.r, texG.g, texB.b);
   vec3 textColor = vec3(0.05, 0.06, 0.08);
+  vec3 ink = mix(textColor, chroma, clamp(u_bitmapMode, 0.0, 1.0));
 
   vec3 acidCyan = vec3(0.0, 1.0, 1.0);
   vec3 acidMagenta = vec3(1.0, 0.0, 1.0);
@@ -77,18 +85,19 @@ void main() {
   vec3 finalColor = bgColor;
 
   if (textAlpha > 0.1) {
-    finalColor = mix(bgColor, textColor, textAlpha);
+    finalColor = mix(bgColor, ink, textAlpha);
 
     if (isTearing > 0.5 || isStretching > 0.5) {
       float colorMapPos = random(vec2(shiftUv.x, t * 0.1));
 
-      vec3 injectedColor = textColor;
+      vec3 injectedColor = ink;
       if (colorMapPos > 0.8) injectedColor = acidCyan;
       else if (colorMapPos > 0.6) injectedColor = acidMagenta;
       else if (colorMapPos > 0.4) injectedColor = deepBlue;
       else if (colorMapPos > 0.2) injectedColor = acidGreen;
 
-      finalColor = mix(finalColor, injectedColor, 0.85);
+      float acidMix = 0.85 * clamp(u_acidIntensity, 0.0, 2.0);
+      finalColor = mix(finalColor, injectedColor, acidMix);
     }
   } else {
     if (isTearing > 0.5 && random(vec2(shiftUv.x, shiftUv.y)) > 0.9) {
@@ -107,3 +116,11 @@ void main() {
   gl_FragColor = vec4(finalColor, 1.0);
 }
 `;
+
+/** Snippet parity: white-on-alpha canvas + full-strength acid (original HTML). */
+export const DATA_CORRUPTION_GLITCH_SNIPPET_BITMAP = 0;
+export const DATA_CORRUPTION_GLITCH_SNIPPET_ACID = 1;
+
+/** html2canvas / opaque UI: chroma ink + tame acid so torn bands do not flood the whole card. */
+export const DATA_CORRUPTION_GLITCH_DOM_BITMAP = 1;
+export const DATA_CORRUPTION_GLITCH_DOM_ACID = 0.22;

@@ -5924,7 +5924,13 @@ export function ArchitecturalCanvasApp({
     !bootLayerDismissed &&
     (!prefersReducedMotion || bootAfterLogout);
 
-  const bootChromeSuppressed = bootLayerVisible;
+  /**
+   * Pre-Enter gate only: hide in-viewport chrome + dot grid, elevate top-left above the boot overlay.
+   * Once the user activates, show real chrome immediately — boot UI may stay mounted for ambient audio
+   * fade (seconds) after the overlay opacity transition, which previously hid toolbars for that whole gap.
+   */
+  const bootPreActivateGate =
+    scenario === "default" && !bootLayerDismissed && !canvasSessionActivated;
 
   const showLogOutToAuth = scenario === "default" && !bootLayerVisible;
 
@@ -5957,7 +5963,7 @@ export function ArchitecturalCanvasApp({
           !canvasEffectsEnabled ? ` ${styles.viewportAmbientOff}` : ""
         }${stackModal ? ` ${styles.viewportStackModalOpen}` : ""} ${
           connectionMode !== "move" ? styles.viewportConnectionMode : ""
-        }${bootChromeSuppressed ? ` ${styles.viewportBootNoGrid}` : ""}`}
+        }${bootPreActivateGate ? ` ${styles.viewportBootNoGrid}` : ""}`}
         aria-busy={!viewportRevealReady}
         data-canvas-ready={viewportRevealReady ? "true" : "false"}
         onMouseDown={onViewportMouseDown}
@@ -6380,7 +6386,7 @@ export function ArchitecturalCanvasApp({
           />
         ) : null}
         <div
-          className={`${styles.chromeLayer}${bootChromeSuppressed ? ` ${styles.chromeLayerBootSuppressed}` : ""}`}
+          className={`${styles.chromeLayer}${bootPreActivateGate ? ` ${styles.chromeLayerBootSuppressed}` : ""}`}
         >
         {parentSpaceId ? (
           <ArchitecturalParentExitThreshold
@@ -6413,7 +6419,7 @@ export function ArchitecturalCanvasApp({
           </div>
         </div>
 
-        {!bootChromeSuppressed ? (
+        {!bootPreActivateGate ? (
           <ArchitecturalCanvasEffectsToggle
             effectsEnabled={canvasEffectsEnabled}
             onEffectsEnabledChange={handleCanvasEffectsEnabledChange}
@@ -7181,7 +7187,7 @@ export function ArchitecturalCanvasApp({
       </div>
       <div
         className={`${styles.chromeLayer}${
-          bootChromeSuppressed ? ` ${styles.chromeLayerTopLeftBootElevated}` : ""
+          bootPreActivateGate ? ` ${styles.chromeLayerTopLeftBootElevated}` : ""
         }`}
       >
         <div ref={shellTopLeftStackRef} className={styles.shellTopLeftStack}>

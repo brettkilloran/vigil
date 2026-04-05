@@ -1,11 +1,29 @@
 /*
- * Bottom-right boot chrome: matches .flowerToolsPanel glass (VigilAppBootScreen) + icon toolbar rhythm.
+ * Boot ambient: glass panel (standalone) or icon-only slot inside the lower-left boot dock.
  */
 .wrap {
   flex-shrink: 0;
-  /* Parent may set pointer-events; keep hit target reliable. */
   position: relative;
   z-index: 3;
+}
+
+.audioMount {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  pointer-events: none;
+}
+
+.wrapEmbed {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .panel {
@@ -18,6 +36,7 @@
   box-shadow: var(--chrome-glass-shadow);
   padding: 4px 6px;
   box-sizing: border-box;
+  width: 46px;
   display: flex;
   align-items: center;
   justify-content: center;

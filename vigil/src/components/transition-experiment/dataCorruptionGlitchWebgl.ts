@@ -11,6 +11,8 @@ export type DataCorruptionGlitchGl = {
   resLoc: WebGLUniformLocation | null;
   bgLoc: WebGLUniformLocation | null;
   texLoc: WebGLUniformLocation | null;
+  bitmapModeLoc: WebGLUniformLocation | null;
+  acidIntensityLoc: WebGLUniformLocation | null;
   posBuffer: WebGLBuffer;
   posAttrib: number;
 };
@@ -76,14 +78,29 @@ export function createDataCorruptionGlitchGl(canvas: HTMLCanvasElement): DataCor
   const resLoc = gl.getUniformLocation(program, "u_resolution");
   const bgLoc = gl.getUniformLocation(program, "u_bgColor");
   const texLoc = gl.getUniformLocation(program, "u_textTexture");
+  const bitmapModeLoc = gl.getUniformLocation(program, "u_bitmapMode");
+  const acidIntensityLoc = gl.getUniformLocation(program, "u_acidIntensity");
 
   gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  /* Match THREE.LinearFilter in the reference HTML (NearestFilter was for a different prototype). */
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-  return { gl, program, tex, timeLoc, resLoc, bgLoc, texLoc, posBuffer: positionBuffer, posAttrib };
+  return {
+    gl,
+    program,
+    tex,
+    timeLoc,
+    resLoc,
+    bgLoc,
+    texLoc,
+    bitmapModeLoc,
+    acidIntensityLoc,
+    posBuffer: positionBuffer,
+    posAttrib,
+  };
 }
 
 export function disposeDataCorruptionGlitchGl(ctx: DataCorruptionGlitchGl | null) {
@@ -125,6 +142,8 @@ export function drawDataCorruptionGlitchFrame(
   height: number,
   timeSeconds: number,
   bgRgb: [number, number, number],
+  bitmapMode: number,
+  acidIntensity: number,
 ) {
   const { gl } = ctx;
   gl.viewport(0, 0, width, height);
@@ -135,6 +154,8 @@ export function drawDataCorruptionGlitchFrame(
   if (ctx.timeLoc) gl.uniform1f(ctx.timeLoc, timeSeconds);
   if (ctx.resLoc) gl.uniform2f(ctx.resLoc, width, height);
   if (ctx.bgLoc) gl.uniform3f(ctx.bgLoc, bgRgb[0], bgRgb[1], bgRgb[2]);
+  if (ctx.bitmapModeLoc) gl.uniform1f(ctx.bitmapModeLoc, bitmapMode);
+  if (ctx.acidIntensityLoc) gl.uniform1f(ctx.acidIntensityLoc, acidIntensity);
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, ctx.tex);
   if (ctx.texLoc) gl.uniform1i(ctx.texLoc, 0);

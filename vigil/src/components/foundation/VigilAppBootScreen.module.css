@@ -36,6 +36,15 @@
   pointer-events: none;
 }
 
+/* Drop auth-only chrome immediately on Enter so the handoff reads as “shell” → workspace. */
+.overlayExiting .flowerToolsRail,
+.overlayExiting .metaTop,
+.overlayExiting .metaBottom {
+  opacity: 0;
+  transition: opacity 0.22s ease;
+  pointer-events: none;
+}
+
 /*
  * Portaled into `.bootFlowerPortalHost` — below VigilFlowRevealOverlay (z 92); host handles stack vs scene.
  * Visual-only; hit-testing stays on `.overlay` (spawn / poison).
@@ -46,6 +55,12 @@
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
+  opacity: 1;
+  transition: opacity 0.32s ease;
+}
+
+.bootFlowerDeepPlaneExiting {
+  opacity: 0;
 }
 
 .overlayPlantMode {
@@ -149,11 +164,11 @@
     0 1px 3px color-mix(in oklch, var(--sys-color-black) 55%, transparent);
 }
 
-/* Status line + ambient control: pinned to the top-right gutter. */
+/* Status line: pinned to the top-right gutter. */
 .metaTopRightCluster {
   display: flex;
   flex-flow: row wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: flex-end;
   gap: 12px;
   max-width: 100%;
@@ -211,10 +226,38 @@
 .metaBottomLeftCluster {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   gap: 12px;
   min-width: 0;
   flex: 1 1 auto;
+}
+
+/* Lower-left dock: shared glass panel for canvas-effects + ambient audio (matches rootDockPanel / chrome tokens). */
+.bootChromeDockPanel {
+  pointer-events: auto;
+  flex-shrink: 0;
+  background: color-mix(in oklch, var(--sys-color-neutral-950) 76%, transparent);
+  border: 1px solid color-mix(in oklch, var(--sys-color-white) 14%, transparent);
+  backdrop-filter: var(--chrome-glass-filter);
+  -webkit-backdrop-filter: var(--chrome-glass-filter);
+  border-radius: var(--chrome-panel-radius);
+  box-shadow: var(--chrome-glass-shadow);
+  padding-block: var(--chrome-panel-pad-y);
+  padding-inline: var(--chrome-panel-pad-x);
+  box-sizing: border-box;
+  min-height: var(--chrome-panel-height);
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--chrome-panel-pad-x);
+}
+
+.bootChromeDockSep {
+  width: 1px;
+  height: 22px;
+  margin: 0;
+  background: var(--sem-border-strong);
+  flex-shrink: 0;
 }
 
 .metaBottomLeft {
@@ -223,7 +266,7 @@
   line-height: 1.45;
 }
 
-/* Credit + ambient control: never let the growing left cluster flex-shrink this to zero. */
+/* Credit line: never let the growing left cluster flex-shrink this to zero. */
 .metaBottomRightCluster {
   display: flex;
   flex-flow: row wrap;
@@ -266,7 +309,7 @@
  * CTA hover — Chris Coyier / CSS-Tricks style text glitch:
  * https://css-tricks.com/glitch-effect-text-images-svg/
  * Duplicates via ::before/::after + attr(data-text), chroma text-shadow, animated clip-path slices.
- * Multi-line blurbs: animated RGB text-shadow only (pseudos can’t mirror <br /> faithfully).
+ * Kicker + title only — body blurbs stay clean (no glitch).
  */
 
 .bootGlitchLayer {
@@ -384,89 +427,6 @@
   }
 }
 
-.bootBlurbChroma {
-  display: inline;
-  /* Subtle always-on signal drift on body copy; CTA hover swaps to stronger chroma burst below. */
-  animation: vigilBootBlurbIdleGlitch 5.8s ease-in-out infinite;
-}
-
-.content:has(.enterGardenBtn:hover:not(:disabled)) .bootBlurbChroma {
-  animation: vigilBootBlurbChroma 2.35s ease-in-out infinite;
-}
-
-@keyframes vigilBootBlurbIdleGlitch {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0);
-    text-shadow:
-      0 0 16px color-mix(in oklch, var(--bg-base) 82%, transparent),
-      0 1px 3px color-mix(in oklch, var(--sys-color-black) 40%, transparent),
-      1px 0 0 oklch(0.62 0.14 32 / 0.22),
-      -1px 0 0 oklch(0.64 0.08 255 / 0.18);
-  }
-
-  33% {
-    transform: translate3d(0.35px, -0.2px, 0);
-    text-shadow:
-      0 0 15px color-mix(in oklch, var(--bg-base) 84%, transparent),
-      0 1px 3px color-mix(in oklch, var(--sys-color-black) 38%, transparent),
-      -1.5px 0 0 oklch(0.65 0.16 28 / 0.28),
-      1px 0.5px 0 oklch(0.66 0.07 248 / 0.22);
-  }
-
-  66% {
-    transform: translate3d(-0.25px, 0.15px, 0);
-    text-shadow:
-      0 0 17px color-mix(in oklch, var(--bg-base) 80%, transparent),
-      0 1px 3px color-mix(in oklch, var(--sys-color-black) 42%, transparent),
-      1.5px -0.5px 0 oklch(0.6 0.12 35 / 0.24),
-      -1px 0 0 oklch(0.68 0.1 252 / 0.2);
-  }
-}
-
-@keyframes vigilBootBlurbChroma {
-  0%,
-  100% {
-    text-shadow:
-      0 0 16px color-mix(in oklch, var(--bg-base) 82%, transparent),
-      0 1px 3px color-mix(in oklch, var(--sys-color-black) 40%, transparent),
-      2px 0 0 oklch(0.62 0.2 30 / 0.5),
-      -2px 0 0 oklch(0.64 0.12 255 / 0.45);
-  }
-
-  20% {
-    text-shadow:
-      0 0 16px color-mix(in oklch, var(--bg-base) 82%, transparent),
-      0 1px 3px color-mix(in oklch, var(--sys-color-black) 40%, transparent),
-      -3px 0 0 oklch(0.68 0.22 28 / 0.58),
-      2px 1px 0 oklch(0.68 0.1 248 / 0.5);
-  }
-
-  40% {
-    text-shadow:
-      0 0 18px color-mix(in oklch, var(--bg-base) 78%, transparent),
-      0 1px 3px color-mix(in oklch, var(--sys-color-black) 45%, transparent),
-      1px -1px 0 oklch(0.6 0.18 32 / 0.52),
-      -2px 2px 0 oklch(0.7 0.14 240 / 0.48);
-  }
-
-  60% {
-    text-shadow:
-      0 0 16px color-mix(in oklch, var(--bg-base) 82%, transparent),
-      0 1px 3px color-mix(in oklch, var(--sys-color-black) 40%, transparent),
-      3px 0 0 oklch(0.64 0.2 25 / 0.55),
-      -1px -1px 0 oklch(0.66 0.11 260 / 0.5);
-  }
-
-  80% {
-    text-shadow:
-      0 0 17px color-mix(in oklch, var(--bg-base) 80%, transparent),
-      0 1px 3px color-mix(in oklch, var(--sys-color-black) 42%, transparent),
-      -2px 1px 0 oklch(0.63 0.19 30 / 0.52),
-      2px 0 0 oklch(0.69 0.13 252 / 0.46);
-  }
-}
-
 .kicker {
   margin-bottom: 0.75rem;
   text-shadow:
@@ -539,7 +499,7 @@
 }
 
 /*
- * CTA: neutral lift + depth; kicker/title Coyier glitch on hover; blurbs idle drift + stronger chroma on hover.
+ * CTA: neutral lift + depth; kicker/title Coyier glitch on hover.
  */
 .enterGardenBtn:not(:disabled) {
   transition:
@@ -766,15 +726,20 @@
     transform: none;
   }
 
+  .bootFlowerDeepPlane {
+    transition: none;
+  }
+
+  .overlayExiting .flowerToolsRail,
+  .overlayExiting .metaTop,
+  .overlayExiting .metaBottom {
+    transition: none;
+  }
+
   .content:has(.enterGardenBtn:hover:not(:disabled)) .bootGlitchLayer::before,
   .content:has(.enterGardenBtn:hover:not(:disabled)) .bootGlitchLayer::after {
     animation: none !important;
     opacity: 0 !important;
-  }
-
-  .bootBlurbChroma {
-    animation: none !important;
-    transform: none;
   }
 
   .enterGardenBtn:not(:disabled) {

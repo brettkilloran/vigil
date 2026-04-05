@@ -4,6 +4,10 @@ import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useRef } from "react";
 
 import {
+  DATA_CORRUPTION_GLITCH_DOM_ACID,
+  DATA_CORRUPTION_GLITCH_DOM_BITMAP,
+} from "@/src/components/transition-experiment/dataCorruptionGlitchShaders";
+import {
   createDataCorruptionGlitchGl,
   disposeDataCorruptionGlitchGl,
   drawDataCorruptionGlitchFrame,
@@ -31,6 +35,13 @@ export type VigilDataCorruptionGlitchOverlayProps = {
    * glitch feel choppy.
    */
   captureIntervalMs?: number;
+  /**
+   * `0` = flat `textColor` ink like the HTML snippet (white-on-transparent textures). `1` = chroma from
+   * the bitmap (html2canvas UI).
+   */
+  bitmapMode?: number;
+  /** Scales the `0.85` acid mix on torn strips; use &lt; 1 for opaque DOM snapshots. */
+  acidIntensity?: number;
 };
 
 export function VigilDataCorruptionGlitchOverlay({
@@ -39,6 +50,8 @@ export function VigilDataCorruptionGlitchOverlay({
   style,
   backgroundRgb = [0.608, 0.702, 0.761],
   captureIntervalMs = 0,
+  bitmapMode = DATA_CORRUPTION_GLITCH_DOM_BITMAP,
+  acidIntensity = DATA_CORRUPTION_GLITCH_DOM_ACID,
 }: VigilDataCorruptionGlitchOverlayProps) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const captureRef = useRef<HTMLDivElement | null>(null);
@@ -48,6 +61,10 @@ export function VigilDataCorruptionGlitchOverlay({
 
   const bgRgbRef = useRef<[number, number, number]>(backgroundRgb);
   bgRgbRef.current = backgroundRgb;
+  const bitmapModeRef = useRef(bitmapMode);
+  bitmapModeRef.current = bitmapMode;
+  const acidIntensityRef = useRef(acidIntensity);
+  acidIntensityRef.current = acidIntensity;
 
   const startTimeRef = useRef(0);
   const rafRef = useRef(0);
@@ -151,7 +168,15 @@ export function VigilDataCorruptionGlitchOverlay({
       }
 
       const t = (performance.now() - startTimeRef.current) * 0.001;
-      drawDataCorruptionGlitchFrame(g, width, height, t, bgRgbRef.current);
+      drawDataCorruptionGlitchFrame(
+        g,
+        width,
+        height,
+        t,
+        bgRgbRef.current,
+        bitmapModeRef.current,
+        acidIntensityRef.current,
+      );
       rafRef.current = requestAnimationFrame(render);
     };
 

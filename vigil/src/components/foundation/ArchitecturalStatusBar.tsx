@@ -1,6 +1,6 @@
 "use client";
 
-import { MagnifyingGlass, WarningCircle } from "@phosphor-icons/react";
+import { MagnifyingGlass, Sparkle, WarningCircle } from "@phosphor-icons/react";
 import {
   useCallback,
   useEffect,
@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -17,7 +18,6 @@ import { createPortal } from "react-dom";
 
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { Button } from "@/src/components/ui/Button";
-import { Switch } from "@/src/components/ui/Switch";
 import { cx } from "@/src/lib/cx";
 import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
 import {
@@ -365,37 +365,86 @@ function SaveAndVersionPopover({
   );
 }
 
-/** Bottom-left: minimal switch for canvas transitions + ambient detail vs lean mode. */
+/** Bottom-left: toggle canvas transitions + ambient detail vs lean mode (icon button). */
 export function ArchitecturalCanvasEffectsToggle({
   effectsEnabled,
   onEffectsEnabledChange,
   layout = "fixed",
 }: {
   effectsEnabled: boolean;
-  /** Must be stable (e.g. `setState` from `useState`) — Radix controlled switch + changing callback identity each render can loop under React 19. */
+  /** Must be stable (e.g. `setState` from `useState`) — keep callback identity steady under React 19. */
   onEffectsEnabledChange: (next: boolean) => void;
-  /** `fixed` = bottom-left chrome anchor; `inline` = flow beside other UI (boot meta). */
-  layout?: "fixed" | "inline";
+  /** `fixed` = bottom-left chrome anchor; `inline` = in-flow strip; `bare` = button only (e.g. shared boot dock panel). */
+  layout?: "fixed" | "inline" | "bare";
 }) {
   const checked = Boolean(effectsEnabled);
-  const stripClass =
-    layout === "inline" ? styles.focusEffectsStripInline : styles.focusEffectsStrip;
+
+  const checkedRef = useRef(checked);
+  const onEffectsEnabledChangeRef = useRef(onEffectsEnabledChange);
+
+  useLayoutEffect(() => {
+    checkedRef.current = checked;
+    onEffectsEnabledChangeRef.current = onEffectsEnabledChange;
+  }, [checked, onEffectsEnabledChange]);
+
+  const onButtonClick = useCallback((e: ReactMouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    onEffectsEnabledChangeRef.current(!checkedRef.current);
+  }, []);
+
+  const ariaLabel = checked
+    ? "Canvas effects on; turn off for lean mode"
+    : "Canvas effects off; turn on for transitions and ambient detail";
+  const title = checked
+    ? "Turn off flow transitions, vignette, and ambient grid"
+    : "Restore transitions and ambient chrome";
+
+  const control = (
+    <Button
+      type="button"
+      variant="ghost"
+      tone="glass"
+      size="icon"
+      iconOnly
+      aria-label={ariaLabel}
+      title={title}
+      isActive={checked}
+      onClick={onButtonClick}
+    >
+      <Sparkle size={18} weight="bold" aria-hidden />
+    </Button>
+  );
+
+  if (layout === "bare") {
+    return (
+      <Button
+        type="button"
+        variant="ghost"
+        tone="glass"
+        size="icon"
+        iconOnly
+        data-hg-chrome="canvas-effects-toggle"
+        aria-label={ariaLabel}
+        title={title}
+        isActive={checked}
+        onClick={onButtonClick}
+      >
+        <Sparkle size={18} weight="bold" aria-hidden />
+      </Button>
+    );
+  }
+
+  if (layout === "inline") {
+    return (
+      <div className={styles.focusEffectsStripInline} data-hg-chrome="canvas-effects-toggle">
+        {control}
+      </div>
+    );
+  }
+
   return (
-    <div className={stripClass} data-hg-chrome="canvas-effects-toggle">
-      <Switch
-        checked={checked}
-        onCheckedChange={onEffectsEnabledChange}
-        aria-label={
-          checked
-            ? "Canvas effects on; turn off for lean mode"
-            : "Canvas effects off; turn on for transitions and ambient detail"
-        }
-        title={
-          checked
-            ? "Turn off flow transitions, vignette, and ambient grid"
-            : "Restore transitions and ambient chrome"
-        }
-      />
+    <div className={styles.focusEffectsStrip} data-hg-chrome="canvas-effects-toggle">
+      <div className={`${styles.rootDockPanel} ${styles.focusEffectsDockPanel}`}>{control}</div>
     </div>
   );
 }

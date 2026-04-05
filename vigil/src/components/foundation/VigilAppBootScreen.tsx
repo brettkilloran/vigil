@@ -26,7 +26,7 @@ export type VigilAppBootScreenProps = {
    * **below** `VigilFlowRevealOverlay` (z ~92); boot copy/tools stay on the high overlay stack.
    */
   flowerPortalContainer: HTMLElement | null;
-  /** Same state as post-boot bottom-left effects switch (main chrome is suppressed during boot). */
+  /** Same state as post-boot bottom-left effects switch (main in-viewport chrome hidden until Enter). */
   canvasEffectsEnabled: boolean;
   onCanvasEffectsEnabledChange: (next: boolean) => void;
 };
@@ -191,6 +191,11 @@ export function VigilAppBootScreen({
     if (exiting) clearEnterGardenHoverSpawn();
   }, [exiting, clearEnterGardenHoverSpawn]);
 
+  useEffect(() => {
+    if (!exiting) return;
+    flowerGardenRef.current?.clearAll();
+  }, [exiting]);
+
   useEffect(() => () => clearEnterGardenHoverSpawn(), [clearEnterGardenHoverSpawn]);
 
   const tickEnterGardenHoverSpawn = useCallback(() => {
@@ -253,7 +258,7 @@ export function VigilAppBootScreen({
     [exiting, onExitComplete, prefersReducedMotion],
   );
 
-  const onOverlayPointerDownCapture = useCallback(
+  const onOverlayPointerDown = useCallback(
     (e: PointerEvent<HTMLDivElement>) => {
       if (exiting) return;
       if (e.button !== 0) return;
@@ -312,7 +317,10 @@ export function VigilAppBootScreen({
     <>
       {flowerPortalContainer
         ? createPortal(
-            <div className={styles.bootFlowerDeepPlane} aria-hidden>
+            <div
+              className={`${styles.bootFlowerDeepPlane} ${exiting ? styles.bootFlowerDeepPlaneExiting : ""}`}
+              aria-hidden
+            >
               <VigilBootFlowerGarden ref={flowerGardenRef} active={!exiting} />
             </div>,
             flowerPortalContainer,
@@ -324,7 +332,7 @@ export function VigilAppBootScreen({
         aria-modal="true"
         aria-labelledby="vigil-boot-title"
         aria-describedby="vigil-boot-desc"
-        onPointerDownCapture={onOverlayPointerDownCapture}
+        onPointerDown={onOverlayPointerDown}
         onPointerMove={onOverlayPointerMove}
         onPointerUp={onOverlayPointerUpOrCancel}
         onPointerCancel={onOverlayPointerUpOrCancel}
@@ -404,12 +412,6 @@ export function VigilAppBootScreen({
               _
             </span>
           </div>
-          <VigilBootAmbientAudio
-            suspended={exiting}
-            reduceMotion={prefersReducedMotion}
-            className={styles.fadeInMetaTop}
-            style={{ animationDelay: "0.38s" }}
-          />
         </div>
       </div>
 
@@ -435,18 +437,14 @@ export function VigilAppBootScreen({
           </h1>
           <div id="vigil-boot-desc" className={styles.blurbWrap}>
             <p className={`${styles.blurb} ${styles.blurbReveal}`} style={{ animationDelay: "0.88s" }}>
-              <span className={styles.bootBlurbChroma}>
-                An infinite, living archive of Caliginia’s thermal shadows—
-                <br />
-                a permanent negative stained upon the retina. The eyelid is gone; shutter jammed open.
-              </span>
+              An infinite, living archive of Caliginia’s thermal shadows—
+              <br />
+              a permanent negative stained upon the retina. The eyelid is gone; shutter jammed open.
             </p>
             <p className={`${styles.blurb} ${styles.blurbReveal}`} style={{ animationDelay: "1.08s" }}>
-              <span className={styles.bootBlurbChroma}>
-                Yet no light enters the panopticon.
-                <br />
-                Just flowers, blooming in the vitreous dark.
-              </span>
+              Yet no light enters the panopticon.
+              <br />
+              Just flowers, blooming in the vitreous dark.
             </p>
           </div>
         </div>
@@ -480,11 +478,23 @@ export function VigilAppBootScreen({
           className={`${styles.metaBottomLeftCluster} ${styles.fadeInBottom}`}
           style={{ animationDelay: "1.32s" }}
         >
-          <ArchitecturalCanvasEffectsToggle
-            layout="inline"
-            effectsEnabled={canvasEffectsEnabled}
-            onEffectsEnabledChange={onCanvasEffectsEnabledChange}
-          />
+          <div
+            className={styles.bootChromeDockPanel}
+            role="toolbar"
+            aria-label="Boot visual effects and ambient audio"
+          >
+            <ArchitecturalCanvasEffectsToggle
+              layout="bare"
+              effectsEnabled={canvasEffectsEnabled}
+              onEffectsEnabledChange={onCanvasEffectsEnabledChange}
+            />
+            <div className={styles.bootChromeDockSep} aria-hidden />
+            <VigilBootAmbientAudio
+              embedInChromeRow
+              suspended={exiting}
+              reduceMotion={prefersReducedMotion}
+            />
+          </div>
           <div className={`${styles.metaBottomLeft} ${styles.mono}`}>
             Channel Stain · v.{HEARTGARDEN_APP_VERSION}
           </div>

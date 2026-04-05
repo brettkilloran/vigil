@@ -5,6 +5,10 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import type { RefObject } from "react";
 
 import {
+  DATA_CORRUPTION_GLITCH_DOM_ACID,
+  DATA_CORRUPTION_GLITCH_DOM_BITMAP,
+} from "@/src/components/transition-experiment/dataCorruptionGlitchShaders";
+import {
   createDataCorruptionGlitchGl,
   disposeDataCorruptionGlitchGl,
   drawDataCorruptionGlitchFrame,
@@ -21,6 +25,8 @@ export type VigilDataCorruptionGlitchAttachedProps = {
   captureIntervalMs?: number;
   /** Above Storybook panes / shell (fixed layer). */
   zIndex?: number;
+  bitmapMode?: number;
+  acidIntensity?: number;
 };
 
 /**
@@ -34,6 +40,8 @@ export function VigilDataCorruptionGlitchAttached({
   backgroundRgb = [0.608, 0.702, 0.761],
   captureIntervalMs = 0,
   zIndex = 400_000,
+  bitmapMode = DATA_CORRUPTION_GLITCH_DOM_BITMAP,
+  acidIntensity = DATA_CORRUPTION_GLITCH_DOM_ACID,
 }: VigilDataCorruptionGlitchAttachedProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -45,6 +53,10 @@ export function VigilDataCorruptionGlitchAttached({
 
   const bgRgbRef = useRef(backgroundRgb);
   bgRgbRef.current = backgroundRgb;
+  const bitmapModeRef = useRef(bitmapMode);
+  bitmapModeRef.current = bitmapMode;
+  const acidIntensityRef = useRef(acidIntensity);
+  acidIntensityRef.current = acidIntensity;
 
   const glRef = useRef<DataCorruptionGlitchGl | null>(null);
   const startTimeRef = useRef(0);
@@ -192,7 +204,15 @@ export function VigilDataCorruptionGlitchAttached({
         return;
       }
       const t = (performance.now() - startTimeRef.current) * 0.001;
-      drawDataCorruptionGlitchFrame(g, width, height, t, bgRgbRef.current);
+      drawDataCorruptionGlitchFrame(
+        g,
+        width,
+        height,
+        t,
+        bgRgbRef.current,
+        bitmapModeRef.current,
+        acidIntensityRef.current,
+      );
       rafRef.current = requestAnimationFrame(render);
     };
 

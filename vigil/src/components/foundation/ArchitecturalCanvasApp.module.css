@@ -2177,7 +2177,7 @@
   background: var(--sem-border-strong);
 }
 
-/* Bottom-left: lone switch; strip passes clicks through except the control. */
+/* Bottom-left: glass panel + effects toggle button; strip passes clicks through except the control. */
 .focusEffectsStrip {
   position: absolute;
   left: max(24px, env(safe-area-inset-left, 0px));
@@ -2188,7 +2188,20 @@
   pointer-events: none;
 }
 
-/* Same switch in normal flow (e.g. boot screen meta row). Switch keeps pointer-events: auto. */
+.focusEffectsDockPanel {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: var(--chrome-panel-pad-y);
+  padding-inline: var(--chrome-panel-pad-x);
+  box-sizing: border-box;
+  min-height: var(--chrome-panel-height);
+  max-height: var(--chrome-panel-height);
+  width: fit-content;
+}
+
+/* Same control in normal flow (e.g. legacy inline meta). Button keeps pointer-events: auto. */
 .focusEffectsStripInline {
   display: flex;
   align-items: center;

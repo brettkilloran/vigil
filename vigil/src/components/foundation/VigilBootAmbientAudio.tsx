@@ -4,6 +4,7 @@ import { SpeakerHigh, SpeakerSlash } from "@phosphor-icons/react";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -12,16 +13,14 @@ import {
 
 import { Button } from "@/src/components/ui/Button";
 
+import {
+  VIGIL_BOOT_AMBIENT_LAYERS,
+  VIGIL_BOOT_AMBIENT_LAYER_COUNT,
+} from "./bootAmbientLayers";
+
 import styles from "./VigilBootAmbientAudio.module.css";
 
 const STORAGE_KEY = "heartgarden-boot-ambient-muted";
-
-const FOREST_SRC = "/audio/boot-forest-wind.aac";
-const MUSIC_SRC = "/audio/boot-vapor-fingers.mp3";
-
-/** Relative loudness at the gain nodes (routing via Web Audio). */
-const FOREST_VOLUME = 0.42;
-const MUSIC_VOLUME = 0.32;
 
 const FADE_IN_S = 4.2;
 const FADE_OUT_S = 3.4;
@@ -36,31 +35,48 @@ export function vigilBootAmbientFadeOutMs(reduceMotion: boolean): number {
   return reduceMotion ? 120 : VIGIL_BOOT_AMBIENT_FADE_OUT_MS;
 }
 
-async function playPair(
-  ctx: AudioContext | null,
-  a: HTMLAudioElement,
-  b: HTMLAudioElement,
-): Promise<void> {
+/** HTMLMediaElement.volume must stay in [0, 1]; RAF fades can undershoot from float error. */
+function clamp01(v: number): number {
+  return Math.min(1, Math.max(0, v));
+}
+
+function getAudioElements(refs: (HTMLAudioElement | null)[]): HTMLAudioElement[] | null {
+  const out: HTMLAudioElement[] = [];
+  for (let i = 0; i < VIGIL_BOOT_AMBIENT_LAYER_COUNT; i++) {
+    const el = refs[i];
+    if (!el) return null;
+    out.push(el);
+  }
+  return out;
+}
+
+async function resumeAndPlayAll(ctx: AudioContext | null, elements: HTMLAudioElement[]): Promise<void> {
   if (ctx?.state === "suspended") {
     await ctx.resume();
   }
-  await Promise.all([a.play(), b.play()]);
+  await Promise.all(elements.map((el) => el.play()));
 }
 
-function pausePair(a: HTMLAudioElement, b: HTMLAudioElement): void {
-  a.pause();
-  b.pause();
+function pauseAll(elements: HTMLAudioElement[]): void {
+  for (const el of elements) {
+    el.pause();
+  }
 }
 
-function cancelGainAutomation(g: GainNode | null, ctx: AudioContext | null) {
-  if (!g || !ctx) return;
+function cancelGainNode(g: GainNode, ctx: AudioContext): void {
   const t = ctx.currentTime;
   g.gain.cancelScheduledValues(t);
   g.gain.setValueAtTime(g.gain.value, t);
 }
 
+function cancelAllGains(gains: GainNode[], ctx: AudioContext): void {
+  for (const g of gains) {
+    cancelGainNode(g, ctx);
+  }
+}
+
 /** If `loop` misses a seam on some decoders, nudge back to the start. */
-function onAmbientEnded(e: SyntheticEvent<HTMLAudioElement>) {
+function onAmbientEnded(e: SyntheticEvent<HTMLAudioElement>): void {
   const el = e.currentTarget;
   el.loop = true;
   el.currentTime = 0;
@@ -69,13 +85,11 @@ function onAmbientEnded(e: SyntheticEvent<HTMLAudioElement>) {
   });
 }
 
-function rafVolumeFade(
-  forest: HTMLAudioElement,
-  music: HTMLAudioElement,
-  fromF: number,
-  fromM: number,
-  toF: number,
-  toM: number,
+/** Fallback when Web Audio is unavailable: drive element.volume only (no panning). */
+function rafFadeVolumes(
+  elements: HTMLAudioElement[],
+  from: number[],
+  to: number[],
   durationMs: number,
   onDone?: () => void,
 ): () => void {
@@ -83,8 +97,9 @@ function rafVolumeFade(
   let raf = 0;
   const step = (now: number) => {
     const u = Math.min(1, (now - t0) / durationMs);
-    forest.volume = fromF + (toF - fromF) * u;
-    music.volume = fromM + (toM - fromM) * u;
+    for (let i = 0; i < elements.length; i++) {
+      elements[i].volume = clamp01(from[i] + (to[i] - from[i]) * u);
+    }
     if (u < 1) {
       raf = requestAnimationFrame(step);
     } else {
@@ -95,14 +110,17 @@ function rafVolumeFade(
   return () => cancelAnimationFrame(raf);
 }
 
+function targetVolumes(): number[] {
+  return VIGIL_BOOT_AMBIENT_LAYERS.map((l) => l.gain);
+}
+
 export type VigilBootAmbientAudioProps = {
-  /** When true, fade out and stop (boot overlay exiting to main app). */
   suspended: boolean;
-  /** Shorter fades to align with reduced-motion boot overlay (≈120ms). */
   reduceMotion?: boolean;
-  /** Optional entrance animation classes from parent (e.g. boot fade-in). */
   className?: string;
   style?: CSSProperties;
+  /** Omit outer glass panel — render only the mute control for a shared chrome row (e.g. boot dock). */
+  embedInChromeRow?: boolean;
 };
 
 export function VigilBootAmbientAudio({
@@ -110,21 +128,21 @@ export function VigilBootAmbientAudio({
   reduceMotion = false,
   className,
   style,
+  embedInChromeRow = false,
 }: VigilBootAmbientAudioProps) {
   const fadeInS = reduceMotion ? FADE_IN_S_REDUCED : FADE_IN_S;
   const fadeOutS = reduceMotion ? FADE_OUT_S_REDUCED : FADE_OUT_S;
-  const forestRef = useRef<HTMLAudioElement | null>(null);
-  const musicRef = useRef<HTMLAudioElement | null>(null);
+
+  const audioRefs = useRef<(HTMLAudioElement | null)[]>([]);
   const audioCtxRef = useRef<AudioContext | null>(null);
-  const gainForestRef = useRef<GainNode | null>(null);
-  const gainMusicRef = useRef<GainNode | null>(null);
-  const usesWebAudioRef = useRef(false);
+  /** One gain node per layer; null = Web Audio not used. */
+  const webGainsRef = useRef<GainNode[] | null>(null);
+
   const fadeRafCancelRef = useRef<(() => void) | null>(null);
   const fadeOutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [muted, setMuted] = useState(false);
   const [hydrated, setHydrated] = useState(false);
-  /** Autoplay was blocked; next explicit click should start both layers. */
   const [blocked, setBlocked] = useState(false);
 
   const clearFallbackFade = useCallback(() => {
@@ -141,91 +159,80 @@ export function VigilBootAmbientAudio({
 
   const scheduleFadeIn = useCallback(() => {
     const ctx = audioCtxRef.current;
-    const forest = forestRef.current;
-    const music = musicRef.current;
-    if (!forest || !music) return;
+    const elements = getAudioElements(audioRefs.current);
+    if (!elements) return;
 
     clearFallbackFade();
     clearFadeOutTimer();
 
-    if (usesWebAudioRef.current && ctx && gainForestRef.current && gainMusicRef.current) {
-      const gF = gainForestRef.current;
-      const gM = gainMusicRef.current;
+    const gains = webGainsRef.current;
+    if (gains && ctx) {
       const t = ctx.currentTime;
-      cancelGainAutomation(gF, ctx);
-      cancelGainAutomation(gM, ctx);
-      gF.gain.setValueAtTime(0, t);
-      gM.gain.setValueAtTime(0, t);
-      gF.gain.linearRampToValueAtTime(FOREST_VOLUME, t + fadeInS);
-      gM.gain.linearRampToValueAtTime(MUSIC_VOLUME, t + fadeInS);
+      cancelAllGains(gains, ctx);
+      for (let i = 0; i < gains.length; i++) {
+        const g = gains[i];
+        const peak = VIGIL_BOOT_AMBIENT_LAYERS[i].gain;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(peak, t + fadeInS);
+      }
       return;
     }
 
-    forest.volume = 0;
-    music.volume = 0;
-    fadeRafCancelRef.current = rafVolumeFade(
-      forest,
-      music,
-      0,
-      0,
-      FOREST_VOLUME,
-      MUSIC_VOLUME,
-      fadeInS * 1000,
-    );
+    const zeros = elements.map(() => 0);
+    const peaks = targetVolumes();
+    for (let i = 0; i < elements.length; i++) {
+      elements[i].volume = 0;
+    }
+    fadeRafCancelRef.current = rafFadeVolumes(elements, zeros, peaks, fadeInS * 1000);
   }, [clearFadeOutTimer, clearFallbackFade, fadeInS]);
 
   const scheduleFadeOutAndPause = useCallback(() => {
     const ctx = audioCtxRef.current;
-    const forest = forestRef.current;
-    const music = musicRef.current;
-    if (!forest || !music) return;
+    const elements = getAudioElements(audioRefs.current);
+    if (!elements) return;
 
     clearFallbackFade();
     clearFadeOutTimer();
 
-    if (forest.paused && music.paused) return;
+    if (elements.every((el) => el.paused)) return;
 
-    if (usesWebAudioRef.current && ctx && gainForestRef.current && gainMusicRef.current) {
-      const gF = gainForestRef.current;
-      const gM = gainMusicRef.current;
+    const gains = webGainsRef.current;
+    if (gains && ctx) {
       const t = ctx.currentTime;
-      cancelGainAutomation(gF, ctx);
-      cancelGainAutomation(gM, ctx);
-      const vF = gF.gain.value;
-      const vM = gM.gain.value;
-      gF.gain.setValueAtTime(vF, t);
-      gM.gain.setValueAtTime(vM, t);
-      gF.gain.linearRampToValueAtTime(0, t + fadeOutS);
-      gM.gain.linearRampToValueAtTime(0, t + fadeOutS);
+      cancelAllGains(gains, ctx);
+      for (const g of gains) {
+        const v = g.gain.value;
+        g.gain.setValueAtTime(v, t);
+        g.gain.linearRampToValueAtTime(0, t + fadeOutS);
+      }
       fadeOutTimerRef.current = setTimeout(() => {
         fadeOutTimerRef.current = null;
-        pausePair(forest, music);
-        if (gainForestRef.current && gainMusicRef.current && ctx) {
-          const t1 = ctx.currentTime;
-          gainForestRef.current.gain.cancelScheduledValues(t1);
-          gainMusicRef.current.gain.cancelScheduledValues(t1);
-          gainForestRef.current.gain.setValueAtTime(0, t1);
-          gainMusicRef.current.gain.setValueAtTime(0, t1);
+        pauseAll(elements);
+        if (webGainsRef.current && audioCtxRef.current) {
+          const t1 = audioCtxRef.current.currentTime;
+          for (const g of webGainsRef.current) {
+            g.gain.cancelScheduledValues(t1);
+            g.gain.setValueAtTime(0, t1);
+          }
         }
       }, fadeOutS * 1000 + 80);
       return;
     }
 
-    const fromF = forest.volume;
-    const fromM = music.volume;
-    fadeRafCancelRef.current = rafVolumeFade(
-      forest,
-      music,
-      fromF,
-      fromM,
-      0,
-      0,
+    const from = elements.map((el) => clamp01(el.volume));
+    const zeros = elements.map(() => 0);
+    const peaks = targetVolumes();
+    fadeRafCancelRef.current = rafFadeVolumes(
+      elements,
+      from,
+      zeros,
       fadeOutS * 1000,
       () => {
         fadeRafCancelRef.current = null;
-        pausePair(forest, music);
-        forest.volume = FOREST_VOLUME;
-        music.volume = MUSIC_VOLUME;
+        pauseAll(elements);
+        for (let i = 0; i < elements.length; i++) {
+          elements[i].volume = clamp01(peaks[i]);
+        }
       },
     );
   }, [clearFadeOutTimer, clearFallbackFade, fadeOutS]);
@@ -242,79 +249,78 @@ export function VigilBootAmbientAudio({
   }, []);
 
   useEffect(() => {
-    const forest = forestRef.current;
-    const music = musicRef.current;
-    if (!forest || !music) return;
+    const elements = getAudioElements(audioRefs.current);
+    if (!elements) return;
 
-    forest.loop = true;
-    music.loop = true;
+    for (const el of elements) {
+      el.loop = true;
+    }
 
     let ctx: AudioContext | null = null;
+    const AC =
+      typeof window !== "undefined"
+        ? (window.AudioContext ??
+          (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)
+        : null;
+
     try {
-      const AC =
-        window.AudioContext ??
-        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AC) {
-        usesWebAudioRef.current = false;
-        forest.volume = 0;
-        music.volume = 0;
+        webGainsRef.current = null;
+        for (let i = 0; i < elements.length; i++) {
+          elements[i].volume = 0;
+        }
         return;
       }
 
       ctx = new AC();
       audioCtxRef.current = ctx;
-      usesWebAudioRef.current = true;
 
-      /*
-       * Stereo passthrough: no Web Audio panning. OS “spatial” features (Windows Sonic, Dolby Atmos for
-       * headphones, Apple Spatial Audio, etc.) are applied by the user’s system to the mixed output — there is
-       * no standard browser API to route arbitrary <audio> into those engines per-stream.
-       */
-      const srcF = ctx.createMediaElementSource(forest);
-      const srcM = ctx.createMediaElementSource(music);
-      const gainF = ctx.createGain();
-      const gainM = ctx.createGain();
-      gainF.gain.value = 0;
-      gainM.gain.value = 0;
-      gainForestRef.current = gainF;
-      gainMusicRef.current = gainM;
-
-      forest.volume = 1;
-      music.volume = 1;
-
-      srcF.connect(gainF).connect(ctx.destination);
-      srcM.connect(gainM).connect(ctx.destination);
+      const gains: GainNode[] = [];
+      for (let i = 0; i < VIGIL_BOOT_AMBIENT_LAYER_COUNT; i++) {
+        const el = elements[i];
+        const spec = VIGIL_BOOT_AMBIENT_LAYERS[i];
+        const src = ctx.createMediaElementSource(el);
+        const gain = ctx.createGain();
+        gain.gain.value = 0;
+        gains.push(gain);
+        el.volume = 1;
+        src.connect(gain);
+        if (typeof spec.pan === "number") {
+          const panner = ctx.createStereoPanner();
+          panner.pan.value = spec.pan;
+          gain.connect(panner).connect(ctx.destination);
+        } else {
+          gain.connect(ctx.destination);
+        }
+      }
+      webGainsRef.current = gains;
     } catch {
-      usesWebAudioRef.current = false;
+      webGainsRef.current = null;
       if (ctx) {
         void ctx.close();
         audioCtxRef.current = null;
       }
-      gainForestRef.current = null;
-      gainMusicRef.current = null;
-      forest.volume = 0;
-      music.volume = 0;
+      for (const el of elements) {
+        el.volume = 0;
+      }
     }
 
     return () => {
       clearFallbackFade();
       clearFadeOutTimer();
+      webGainsRef.current = null;
       if (ctx) {
         void ctx.close();
         audioCtxRef.current = null;
       }
-      gainForestRef.current = null;
-      gainMusicRef.current = null;
-      usesWebAudioRef.current = false;
     };
   }, [clearFadeOutTimer, clearFallbackFade]);
 
   const tryStart = useCallback(async () => {
-    const forest = forestRef.current;
-    const music = musicRef.current;
-    if (!forest || !music) return;
+    const elements = getAudioElements(audioRefs.current);
+    if (!elements) return;
     try {
-      await playPair(audioCtxRef.current, forest, music);
+      await resumeAndPlayAll(audioCtxRef.current, elements);
       setBlocked(false);
       scheduleFadeIn();
     } catch {
@@ -323,19 +329,17 @@ export function VigilBootAmbientAudio({
   }, [scheduleFadeIn]);
 
   useEffect(() => {
-    if (!hydrated) return;
-    if (muted || suspended) return;
-
-    const forest = forestRef.current;
-    const music = musicRef.current;
-    if (!forest || !music) return;
+    if (!hydrated || muted || suspended) return;
+    const elements = getAudioElements(audioRefs.current);
+    if (!elements) return;
 
     let cancelled = false;
-    void playPair(audioCtxRef.current, forest, music)
+    void resumeAndPlayAll(audioCtxRef.current, elements)
       .then(() => {
-        if (cancelled) return;
-        setBlocked(false);
-        scheduleFadeIn();
+        if (!cancelled) {
+          setBlocked(false);
+          scheduleFadeIn();
+        }
       })
       .catch(() => {
         if (!cancelled) setBlocked(true);
@@ -354,25 +358,29 @@ export function VigilBootAmbientAudio({
   }, [clearFadeOutTimer, scheduleFadeOutAndPause, suspended]);
 
   useEffect(() => {
-    if (!hydrated) return;
-    if (!muted) return;
-    const forest = forestRef.current;
-    const music = musicRef.current;
-    if (!forest || !music) return;
+    if (!hydrated || !muted) return;
+    const elements = getAudioElements(audioRefs.current);
+    if (!elements) return;
 
     clearFallbackFade();
     clearFadeOutTimer();
+
     const ctx = audioCtxRef.current;
-    if (usesWebAudioRef.current && ctx && gainForestRef.current && gainMusicRef.current) {
-      cancelGainAutomation(gainForestRef.current, ctx);
-      cancelGainAutomation(gainMusicRef.current, ctx);
+    const gains = webGainsRef.current;
+    if (gains && ctx) {
+      cancelAllGains(gains, ctx);
       const t = ctx.currentTime;
-      gainForestRef.current.gain.setValueAtTime(0, t);
-      gainMusicRef.current.gain.setValueAtTime(0, t);
+      for (const g of gains) {
+        g.gain.setValueAtTime(0, t);
+      }
     }
-    pausePair(forest, music);
-    forest.volume = usesWebAudioRef.current ? 1 : FOREST_VOLUME;
-    music.volume = usesWebAudioRef.current ? 1 : MUSIC_VOLUME;
+    pauseAll(elements);
+
+    const peaks = targetVolumes();
+    const viaWebAudio = webGainsRef.current != null && audioCtxRef.current != null;
+    for (let i = 0; i < elements.length; i++) {
+      elements[i].volume = viaWebAudio ? 1 : clamp01(peaks[i]);
+    }
   }, [clearFadeOutTimer, clearFallbackFade, hydrated, muted]);
 
   const onToggle = useCallback(() => {
@@ -399,22 +407,28 @@ export function VigilBootAmbientAudio({
     } catch {
       /* ignore */
     }
-    const forest = forestRef.current;
-    const music = musicRef.current;
-    if (forest && music) {
-      clearFallbackFade();
-      clearFadeOutTimer();
-      const ctx = audioCtxRef.current;
-      if (usesWebAudioRef.current && ctx && gainForestRef.current && gainMusicRef.current) {
-        cancelGainAutomation(gainForestRef.current, ctx);
-        cancelGainAutomation(gainMusicRef.current, ctx);
-        const t = ctx.currentTime;
-        gainForestRef.current.gain.setValueAtTime(0, t);
-        gainMusicRef.current.gain.setValueAtTime(0, t);
+
+    const elements = getAudioElements(audioRefs.current);
+    if (!elements) return;
+
+    clearFallbackFade();
+    clearFadeOutTimer();
+
+    const ctx = audioCtxRef.current;
+    const gains = webGainsRef.current;
+    if (gains && ctx) {
+      cancelAllGains(gains, ctx);
+      const t = ctx.currentTime;
+      for (const g of gains) {
+        g.gain.setValueAtTime(0, t);
       }
-      pausePair(forest, music);
-      forest.volume = usesWebAudioRef.current ? 1 : FOREST_VOLUME;
-      music.volume = usesWebAudioRef.current ? 1 : MUSIC_VOLUME;
+    }
+    pauseAll(elements);
+
+    const peaks = targetVolumes();
+    const viaWebAudio = webGainsRef.current != null && audioCtxRef.current != null;
+    for (let i = 0; i < elements.length; i++) {
+      elements[i].volume = viaWebAudio ? 1 : clamp01(peaks[i]);
     }
   }, [blocked, clearFadeOutTimer, clearFallbackFade, muted, suspended, tryStart]);
 
@@ -438,52 +452,79 @@ export function VigilBootAmbientAudio({
         ? "Start ambient audio"
         : "Mute layered ambient audio on the auth screen";
 
+  const audioRefCallbacks = useMemo(
+    () =>
+      VIGIL_BOOT_AMBIENT_LAYERS.map(
+        (_, i) => (el: HTMLAudioElement | null) => {
+          audioRefs.current[i] = el;
+        },
+      ),
+    [],
+  );
+
+  const wrapClass = `${styles.wrap} ${embedInChromeRow ? styles.wrapEmbed : ""} ${className ?? ""}`.trim();
+
   return (
     <div
-      className={`${styles.wrap} ${className ?? ""}`.trim()}
+      className={wrapClass}
       style={style}
       data-vigil-boot-ambient-audio="true"
+      onPointerDown={(e) => e.stopPropagation()}
     >
-      <audio
-        ref={forestRef}
-        src={FOREST_SRC}
-        loop
-        preload="auto"
-        playsInline
-        aria-hidden
-        data-vigil-boot-audio="forest"
-        onEnded={onAmbientEnded}
-      />
-      <audio
-        ref={musicRef}
-        src={MUSIC_SRC}
-        loop
-        preload="auto"
-        playsInline
-        aria-hidden
-        data-vigil-boot-audio="music"
-        onEnded={onAmbientEnded}
-      />
-      <div className={styles.panel} role="toolbar" aria-label="Ambient audio">
-        <div className={styles.toolbar}>
-          <Button
-            type="button"
-            variant="ghost"
-            tone="glass"
-            size="icon"
-            iconOnly
-            aria-label={ariaLabel}
-            title={title}
-            disabled={suspended}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggle();
-            }}
-          >
-            {icon}
-          </Button>
-        </div>
+      <div className={styles.audioMount} aria-hidden>
+        {VIGIL_BOOT_AMBIENT_LAYERS.map((layer, i) => (
+          <audio
+            key={layer.id}
+            ref={audioRefCallbacks[i]}
+            src={layer.src}
+            loop
+            preload="auto"
+            playsInline
+            aria-hidden
+            data-vigil-boot-audio={layer.id}
+            onEnded={onAmbientEnded}
+          />
+        ))}
       </div>
+      {embedInChromeRow ? (
+        <Button
+          type="button"
+          variant="ghost"
+          tone="glass"
+          size="icon"
+          iconOnly
+          aria-label={ariaLabel}
+          title={title}
+          disabled={suspended}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
+        >
+          {icon}
+        </Button>
+      ) : (
+        <div className={styles.panel} role="toolbar" aria-label="Ambient audio">
+          <div className={styles.toolbar}>
+            <Button
+              type="button"
+              variant="ghost"
+              tone="glass"
+              size="icon"
+              iconOnly
+              aria-label={ariaLabel}
+              title={title}
+              disabled={suspended}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle();
+              }}
+            >
+              {icon}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

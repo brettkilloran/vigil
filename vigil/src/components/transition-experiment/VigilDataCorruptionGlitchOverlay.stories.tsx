@@ -9,6 +9,12 @@ import { ArchitecturalNodeCard } from "@/src/components/foundation/Architectural
 import { buildArchitecturalSeedNodes } from "@/src/components/foundation/architectural-seed";
 import type { CanvasNode } from "@/src/components/foundation/architectural-types";
 import canvasStyles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
+import {
+  DATA_CORRUPTION_GLITCH_DOM_ACID,
+  DATA_CORRUPTION_GLITCH_DOM_BITMAP,
+  DATA_CORRUPTION_GLITCH_SNIPPET_ACID,
+  DATA_CORRUPTION_GLITCH_SNIPPET_BITMAP,
+} from "@/src/components/transition-experiment/dataCorruptionGlitchShaders";
 import { VigilDataCorruptionGlitchAttached } from "@/src/components/transition-experiment/VigilDataCorruptionGlitchAttached";
 import { VigilDataCorruptionGlitchOverlay } from "@/src/components/transition-experiment/VigilDataCorruptionGlitchOverlay";
 import { Button } from "@/src/components/ui/Button";
@@ -129,6 +135,8 @@ function buildSamples(): Sample[] {
 type StoryArgs = {
   seed: number;
   captureIntervalMs: number;
+  bitmapMode: number;
+  acidIntensity: number;
 };
 
 const meta = {
@@ -138,7 +146,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "**VigilDataCorruptionGlitchOverlay** wraps content (canvas is a DOM sibling over the capture subtree). Ancestor **`overflow: hidden`** still clips that canvas. **VigilDataCorruptionGlitchAttached** does not wrap the node: it portals a `fixed` WebGL layer aligned to `targetRef`, so the glitch is not clipped by the card frame. Motion is **`u_time`** in the fragment shader; **`captureIntervalMs` defaults to 0**.",
+          "Shader matches the HTML snippet’s structure. **Opaque html2canvas tiles** need **`bitmapMode: 1`** (chroma ink) and **`acidIntensity` well below 1** — otherwise `mix(..., injectedColor, 0.85)` floods torn bands because `textAlpha` is ~1 everywhere (unlike the original white-on-transparent texture). **`bitmapMode: 0`** + **`acidIntensity: 1`** matches the snippet for typographic sources.",
       },
     },
   },
@@ -148,10 +156,20 @@ const meta = {
       control: { type: "range", min: 0, max: 2000, step: 50 },
       description: "0 = snapshot only on mount/resize (smooth shader animation). >0 repaints DOM to texture on an interval (heavy; can stutter).",
     },
+    bitmapMode: {
+      control: { type: "range", min: 0, max: 1, step: 1 },
+      description: "0 = snippet ink (flat textColor). 1 = bitmap chroma (DOM snapshots).",
+    },
+    acidIntensity: {
+      control: { type: "range", min: 0, max: 1, step: 0.02 },
+      description: "Scales the 0.85 acid mix on torn strips. Use ~0.2 for opaque tiles; 1 for snippet parity.",
+    },
   },
   args: {
     seed: 42,
     captureIntervalMs: 0,
+    bitmapMode: DATA_CORRUPTION_GLITCH_DOM_BITMAP,
+    acidIntensity: DATA_CORRUPTION_GLITCH_DOM_ACID,
   },
 } satisfies Meta<StoryArgs>;
 
@@ -159,7 +177,7 @@ export default meta;
 type Story = StoryObj<StoryArgs>;
 
 export const RandomizedComponentGrid: Story = {
-  render: ({ seed, captureIntervalMs }) => {
+  render: ({ seed, captureIntervalMs, bitmapMode, acidIntensity }) => {
     const tiles = useMemo(() => {
       const samples = buildSamples();
       shuffleInPlace(samples, seed);
@@ -185,10 +203,8 @@ export const RandomizedComponentGrid: Story = {
             lineHeight: 1.45,
           }}
         >
-          Tiles use seed <strong>ArchitecturalNodeCard</strong> variants (default / code / task / media) plus design-system and
-          architectural buttons. Glitch motion is <strong>shader-only</strong> (<code style={{ color: "#b8d4ff" }}>u_time</code>);
-          keep <strong>Capture interval</strong> at <strong>0</strong> unless you need live DOM updates. Tile fill{" "}
-          <code style={{ color: "#b8d4ff" }}>{TILE_BG}</code> matches <code style={{ color: "#b8d4ff" }}>backgroundRgb</code>.
+          Seed <strong>ArchitecturalNodeCard</strong>s + buttons. Defaults: <strong>bitmapMode 1</strong>, <strong>acid ~0.22</strong> so opaque captures do not get a full-card acid wash. Tile fill <code style={{ color: "#b8d4ff" }}>{TILE_BG}</code> matches{" "}
+          <code style={{ color: "#b8d4ff" }}>backgroundRgb</code>.
         </p>
         <div
           style={{
@@ -210,6 +226,8 @@ export const RandomizedComponentGrid: Story = {
             >
               <VigilDataCorruptionGlitchOverlay
                 captureIntervalMs={captureIntervalMs}
+                bitmapMode={bitmapMode}
+                acidIntensity={acidIntensity}
                 backgroundRgb={TILE_BG_RGB}
                 style={{
                   width: "100%",
@@ -244,11 +262,15 @@ export const RandomizedComponentGrid: Story = {
 export const SingleButton: Story = {
   args: {
     captureIntervalMs: 0,
+    bitmapMode: DATA_CORRUPTION_GLITCH_DOM_BITMAP,
+    acidIntensity: DATA_CORRUPTION_GLITCH_DOM_ACID,
   },
-  render: ({ captureIntervalMs }) => (
+  render: ({ captureIntervalMs, bitmapMode, acidIntensity }) => (
     <div style={{ padding: 40, background: "var(--sem-surface-base)" }}>
       <VigilDataCorruptionGlitchOverlay
         captureIntervalMs={captureIntervalMs}
+        bitmapMode={bitmapMode}
+        acidIntensity={acidIntensity}
         backgroundRgb={DEMO_BG_RGB}
         style={{ padding: 20, backgroundColor: DEMO_BG, borderRadius: 12 }}
       >
@@ -264,7 +286,15 @@ export const SingleButton: Story = {
 const PORTAL_DEMO_SURFACE = "#0e0e16";
 const PORTAL_DEMO_SURFACE_RGB: [number, number, number] = [14 / 255, 14 / 255, 22 / 255];
 
-function CodeNodePortalAttachedDemo({ captureIntervalMs }: { captureIntervalMs: number }) {
+function CodeNodePortalAttachedDemo({
+  captureIntervalMs,
+  bitmapMode,
+  acidIntensity,
+}: {
+  captureIntervalMs: number;
+  bitmapMode: number;
+  acidIntensity: number;
+}) {
   const targetRef = useRef<HTMLDivElement | null>(null);
   const codeSeed = seedNodes.find((n) => n.theme === "code");
   if (!codeSeed) {
@@ -329,6 +359,8 @@ function CodeNodePortalAttachedDemo({ captureIntervalMs }: { captureIntervalMs: 
         targetRef={targetRef}
         backgroundRgb={PORTAL_DEMO_SURFACE_RGB}
         captureIntervalMs={captureIntervalMs}
+        bitmapMode={bitmapMode}
+        acidIntensity={acidIntensity}
       />
     </div>
   );
@@ -338,6 +370,57 @@ function CodeNodePortalAttachedDemo({ captureIntervalMs }: { captureIntervalMs: 
 export const CodeNodePortalAttached: Story = {
   args: {
     captureIntervalMs: 0,
+    bitmapMode: DATA_CORRUPTION_GLITCH_DOM_BITMAP,
+    acidIntensity: DATA_CORRUPTION_GLITCH_DOM_ACID,
   },
-  render: ({ captureIntervalMs }) => <CodeNodePortalAttachedDemo captureIntervalMs={captureIntervalMs} />,
+  render: ({ captureIntervalMs, bitmapMode, acidIntensity }) => (
+    <CodeNodePortalAttachedDemo
+      captureIntervalMs={captureIntervalMs}
+      bitmapMode={bitmapMode}
+      acidIntensity={acidIntensity}
+    />
+  ),
+};
+
+/** White type on the demo bg: closer to the HTML texture (use snippet bitmap + acid controls). */
+export const SnippetStyleSystemFailure: Story = {
+  args: {
+    captureIntervalMs: 0,
+    bitmapMode: DATA_CORRUPTION_GLITCH_SNIPPET_BITMAP,
+    acidIntensity: DATA_CORRUPTION_GLITCH_SNIPPET_ACID,
+  },
+  render: ({ captureIntervalMs, bitmapMode, acidIntensity }) => (
+    <div style={{ padding: 48, minHeight: "100vh", background: DEMO_BG, boxSizing: "border-box" }}>
+      <VigilDataCorruptionGlitchOverlay
+        captureIntervalMs={captureIntervalMs}
+        bitmapMode={bitmapMode}
+        acidIntensity={acidIntensity}
+        backgroundRgb={DEMO_BG_RGB}
+        style={{
+          width: "min(92vw, 720px)",
+          minHeight: 220,
+          boxSizing: "border-box",
+          padding: 32,
+          backgroundColor: DEMO_BG,
+        }}
+      >
+        <div
+          style={{
+            fontFamily: '"JetBrains Mono", "Courier New", monospace',
+            fontWeight: 800,
+            fontSize: "clamp(1.5rem, 5vw, 3rem)",
+            lineHeight: 1.05,
+            color: "#ffffff",
+            textAlign: "center",
+            textTransform: "uppercase",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          SYSTEM
+          <br />
+          FAILURE
+        </div>
+      </VigilDataCorruptionGlitchOverlay>
+    </div>
+  ),
 };
