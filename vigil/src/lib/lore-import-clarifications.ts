@@ -189,10 +189,10 @@ export function countRequiredClarificationsUnresolved(plan: LoreImportPlan): num
   return plan.clarifications.filter((c) => c.severity === "required").length;
 }
 
-const MAX_CLARIFICATION_ITEMS = 36;
+const MAX_CLARIFICATION_ITEMS = 40;
 
 /**
- * Avoid huge LLM outputs: keep every required item, then optional, up to {@link MAX_CLARIFICATION_ITEMS}.
+ * Avoid huge LLM outputs: keep all required, add optional only while under the cap (optional trimmed first).
  */
 export function capClarificationList(
   list: LoreImportClarificationItem[],
@@ -200,10 +200,11 @@ export function capClarificationList(
   if (list.length <= MAX_CLARIFICATION_ITEMS) return list;
   const required = list.filter((c) => c.severity === "required");
   const optional = list.filter((c) => c.severity === "optional");
-  if (required.length >= MAX_CLARIFICATION_ITEMS) {
+  const room = Math.max(0, MAX_CLARIFICATION_ITEMS - required.length);
+  if (room === 0) {
     return required.slice(0, MAX_CLARIFICATION_ITEMS);
   }
-  return [...required, ...optional].slice(0, MAX_CLARIFICATION_ITEMS);
+  return [...required, ...optional.slice(0, room)];
 }
 
 function parseHintLoose(o: unknown): PlanPatchHint | null {

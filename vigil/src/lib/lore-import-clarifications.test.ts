@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyClarificationPatches,
+  capClarificationList,
   validateClarificationAnswersForApply,
 } from "@/src/lib/lore-import-clarifications";
 import type { ClarificationAnswer, LoreImportPlan } from "@/src/lib/lore-import-plan-types";
@@ -147,6 +148,39 @@ describe("validateClarificationAnswersForApply", () => {
     ];
     const r = validateClarificationAnswersForApply(plan, answers);
     expect(r.ok).toBe(false);
+  });
+});
+
+describe("capClarificationList", () => {
+  it("drops optional items first when over cap", () => {
+    const twoOpt = {
+      id: randomUUID(),
+      category: "structure" as const,
+      severity: "optional" as const,
+      title: "O",
+      questionKind: "single_select" as const,
+      options: [
+        { id: "a", label: "A", planPatchHint: { op: "no_op" as const } },
+        { id: "b", label: "B", planPatchHint: { op: "no_op" as const } },
+      ],
+    };
+    const req = {
+      id: randomUUID(),
+      category: "structure" as const,
+      severity: "required" as const,
+      title: "R",
+      questionKind: "single_select" as const,
+      options: [
+        { id: "a", label: "A", planPatchHint: { op: "no_op" as const } },
+        { id: "b", label: "B", planPatchHint: { op: "no_op" as const } },
+      ],
+    };
+    const list = Array.from({ length: 50 }, (_, i) =>
+      i === 0 ? req : { ...twoOpt, id: randomUUID() },
+    );
+    const capped = capClarificationList(list);
+    expect(capped.length).toBe(40);
+    expect(capped.some((c) => c.id === req.id)).toBe(true);
   });
 });
 
