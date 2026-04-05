@@ -11,6 +11,7 @@ import {
   useState,
   useSyncExternalStore,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
 
@@ -58,15 +59,19 @@ export function ArchitecturalStatusMetric({
 
 const POPOVER_ESTIMATE_H = 460;
 const POPOVER_W = 328;
-const POPOVER_GAP = 8;
+/** Gap below the frosted chrome strip (not the inner button box). */
+const POPOVER_GAP = 4;
 
 function SaveAndVersionPopover({
+  popoverAnchorRef,
   envLabel,
   showPulse = true,
   bootstrapPending,
   onExportGraphJson,
   exportGraphPaletteHint,
 }: {
+  /** Bottom edge of this element (status glass strip) aligns the popover; trigger ref still sets horizontal origin. */
+  popoverAnchorRef: RefObject<HTMLDivElement | null>;
   envLabel: string;
   showPulse?: boolean;
   bootstrapPending: boolean;
@@ -188,26 +193,31 @@ function SaveAndVersionPopover({
   });
 
   const reposition = useCallback(() => {
-    const el = triggerRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
+    const triggerEl = triggerRef.current;
+    if (!triggerEl) return;
+    const triggerRect = triggerEl.getBoundingClientRect();
+    const anchorEl = popoverAnchorRef.current;
+    const anchorRect = anchorEl?.getBoundingClientRect() ?? triggerRect;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const panelH = panelRef.current?.offsetHeight ?? POPOVER_ESTIMATE_H;
-    const spaceBelow = vh - rect.bottom - POPOVER_GAP;
+    const spaceBelow = vh - anchorRect.bottom - POPOVER_GAP;
     const flip =
-      spaceBelow < panelH + POPOVER_GAP && rect.top > panelH + POPOVER_GAP * 2;
-    let top = flip ? rect.top - POPOVER_GAP - panelH : rect.bottom + POPOVER_GAP;
+      spaceBelow < panelH + POPOVER_GAP * 2 &&
+      anchorRect.top > panelH + POPOVER_GAP * 2;
+    let top = flip
+      ? anchorRect.top - POPOVER_GAP - panelH
+      : anchorRect.bottom + POPOVER_GAP;
     const minTop = 8;
     const maxTop = Math.max(minTop, vh - panelH - 8);
     if (top < minTop) top = minTop;
     else if (top > maxTop) top = maxTop;
-    let left = rect.left;
+    let left = triggerRect.left;
     const maxLeft = vw - POPOVER_W - 8;
     if (left > maxLeft) left = Math.max(8, maxLeft);
     if (left < 8) left = 8;
     setPanelPos({ top, left, flip });
-  }, []);
+  }, [popoverAnchorRef]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -358,23 +368,30 @@ function SaveAndVersionPopover({
 /** Bottom-left: minimal switch for canvas transitions + ambient detail vs lean mode. */
 export function ArchitecturalCanvasEffectsToggle({
   effectsEnabled,
-  onToggle,
+  onEffectsEnabledChange,
+  layout = "fixed",
 }: {
   effectsEnabled: boolean;
-  onToggle: () => void;
+  /** Must be stable (e.g. `setState` from `useState`) — Radix controlled switch + changing callback identity each render can loop under React 19. */
+  onEffectsEnabledChange: (next: boolean) => void;
+  /** `fixed` = bottom-left chrome anchor; `inline` = flow beside other UI (boot meta). */
+  layout?: "fixed" | "inline";
 }) {
+  const checked = Boolean(effectsEnabled);
+  const stripClass =
+    layout === "inline" ? styles.focusEffectsStripInline : styles.focusEffectsStrip;
   return (
-    <div className={styles.focusEffectsStrip} data-hg-chrome="canvas-effects-toggle">
+    <div className={stripClass} data-hg-chrome="canvas-effects-toggle">
       <Switch
-        checked={effectsEnabled}
-        onCheckedChange={() => onToggle()}
+        checked={checked}
+        onCheckedChange={onEffectsEnabledChange}
         aria-label={
-          effectsEnabled
+          checked
             ? "Canvas effects on; turn off for lean mode"
             : "Canvas effects off; turn on for transitions and ambient detail"
         }
         title={
-          effectsEnabled
+          checked
             ? "Turn off flow transitions, vignette, and ambient grid"
             : "Restore transitions and ambient chrome"
         }
@@ -432,10 +449,15 @@ export function ArchitecturalStatusBar({
   onExportGraphJson?: () => void;
   exportGraphPaletteHint?: string;
 }) {
+  const syncChromeRef = useRef<HTMLDivElement>(null);
   return (
     <div className={styles.statusBarSegment} data-hg-chrome="canvas-status">
-      <div className={`${styles.glassPanel} ${styles.shellTopChromePanel}`}>
+      <div
+        ref={syncChromeRef}
+        className={`${styles.glassPanel} ${styles.shellTopChromePanel}`}
+      >
         <SaveAndVersionPopover
+          popoverAnchorRef={syncChromeRef}
           envLabel={envLabel}
           showPulse={showPulse}
           bootstrapPending={syncBootstrapPending}

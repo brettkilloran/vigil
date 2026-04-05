@@ -317,7 +317,7 @@
   will-change: filter;
 }
 
-/* Full-screen boot uses a transparent plane so flow (z 85) + viewport show through. */
+/* Full-screen boot uses a transparent plane so flow (z ~92) + viewport show through. */
 .chromeLayerBootSuppressed {
   visibility: hidden;
   opacity: 0;
@@ -2185,6 +2185,15 @@
   bottom: 28px;
   width: fit-content;
   z-index: var(--layer-ui-chrome);
+  pointer-events: none;
+}
+
+/* Same switch in normal flow (e.g. boot screen meta row). Switch keeps pointer-events: auto. */
+.focusEffectsStripInline {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  flex-grow: 0;
   pointer-events: none;
 }
 

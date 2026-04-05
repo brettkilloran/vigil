@@ -1,9 +1,13 @@
-/* Sits above canvas/connections, below UI chrome (--layer-ui-chrome: 100). */
+/*
+ * Above boot flower plane (.bootFlowerPortalHost z 36), below UI chrome (--layer-ui-chrome: 100).
+ * Was 85; bumped so WebGL wisps composite reliably over portaled flowers (fixed + portal DOM order).
+ */
 .wrap {
   position: fixed;
   inset: 0;
-  z-index: 85;
+  z-index: 92;
   pointer-events: none;
+  isolation: isolate;
 }
 
 .canvas {

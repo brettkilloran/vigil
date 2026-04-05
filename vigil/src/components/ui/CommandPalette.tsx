@@ -25,6 +25,7 @@ import { createPortal } from "react-dom";
 import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
 
 import type { RecentPaletteItem } from "@/src/hooks/use-recent-items";
+import type { RecentPaletteFolder } from "@/src/hooks/use-recent-folders";
 import { Button } from "@/src/components/ui/Button";
 
 export type PaletteItem = {
@@ -81,9 +82,11 @@ export function CommandPalette({
   spaces,
   actions,
   recentItems,
+  recentFolders,
   onSelectItem,
   onSelectSpace,
   onRecordRecentItem,
+  onOpenRecentFolder,
   onRunAction,
 }: {
   open: boolean;
@@ -93,9 +96,11 @@ export function CommandPalette({
   spaces: PaletteSpace[];
   actions: PaletteAction[];
   recentItems: RecentPaletteItem[];
+  recentFolders: RecentPaletteFolder[];
   onSelectItem: (id: string, openInFocus?: boolean) => void;
   onSelectSpace: (spaceId: string) => void;
   onRecordRecentItem: (item: Omit<RecentPaletteItem, "updatedAt">) => void;
+  onOpenRecentFolder: (folderId: string) => void;
   onRunAction: (actionId: string) => void;
 }) {
   const [q, setQ] = useState("");
@@ -270,6 +275,16 @@ export function CommandPalette({
     return recentItems.slice(0, 8);
   }, [recentItems, qq]);
 
+  const recentFoldersFiltered = useMemo(() => {
+    const cap = 8;
+    if (!qq) return recentFolders.slice(0, cap);
+    return recentFolders
+      .filter((f) =>
+        `${f.title} ${f.parentSpaceName}`.toLowerCase().includes(qq),
+      )
+      .slice(0, cap);
+  }, [recentFolders, qq]);
+
   const filteredSpaces = useMemo(() => {
     return spaces
       .filter((s) => {
@@ -315,6 +330,14 @@ export function CommandPalette({
     [onClose, onSelectSpace],
   );
 
+  const openRecentFolder = useCallback(
+    (folderId: string) => {
+      onOpenRecentFolder(folderId);
+      onClose();
+    },
+    [onClose, onOpenRecentFolder],
+  );
+
   const runAction = useCallback(
     (actionId: string) => {
       onRunAction(actionId);
@@ -325,6 +348,7 @@ export function CommandPalette({
 
   type PaletteRow =
     | { kind: "item"; key: string; item: PaletteItem }
+    | { kind: "recentFolder"; key: string; folder: RecentPaletteFolder }
     | { kind: "space"; key: string; space: PaletteSpace }
     | { kind: "action"; key: string; action: PaletteAction };
 
@@ -332,6 +356,13 @@ export function CommandPalette({
     const rows: PaletteRow[] = [];
     for (const item of recentFiltered) {
       rows.push({ kind: "item", key: `recent-${item.id}`, item });
+    }
+    for (const folder of recentFoldersFiltered) {
+      rows.push({
+        kind: "recentFolder",
+        key: `recent-folder-${folder.id}`,
+        folder,
+      });
     }
     for (const item of allItems) {
       rows.push({ kind: "item", key: `item-${item.id}`, item });
@@ -343,7 +374,13 @@ export function CommandPalette({
       rows.push({ kind: "action", key: `action-${action.id}`, action });
     }
     return rows;
-  }, [allItems, filteredActions, filteredSpaces, recentFiltered]);
+  }, [
+    allItems,
+    filteredActions,
+    filteredSpaces,
+    recentFiltered,
+    recentFoldersFiltered,
+  ]);
 
   const totalRows = flatRows.length;
   const hasResults = totalRows > 0;
@@ -364,9 +401,11 @@ export function CommandPalette({
     const row = flatRows[selectedIndex];
     if (!row) return;
     if (row.kind === "item") selectItem(row.item);
+    else if (row.kind === "recentFolder")
+      openRecentFolder(row.folder.id);
     else if (row.kind === "space") selectSpace(row.space.id);
     else runAction(row.action.id);
-  }, [flatRows, runAction, selectItem, selectSpace, selectedIndex]);
+  }, [flatRows, openRecentFolder, runAction, selectItem, selectSpace, selectedIndex]);
 
   const onKeyDownRoot = useCallback(
     (e: React.KeyboardEvent) => {
@@ -465,7 +504,7 @@ export function CommandPalette({
               aria-activedescendant={
                 totalRows > 0 ? `palette-opt-${selectedIndex}` : undefined
               }
-              placeholder="Search items, spaces, actions..."
+              placeholder="Search items, spaces, folders, actions..."
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
@@ -518,6 +557,51 @@ export function CommandPalette({
                         <div className="cmdk-item-content">
                           <span>{item.title}</span>
                           <span className="cmdk-item-meta">{item.spaceName}</span>
+                        </div>
+                        <ClockCounterClockwise className="size-3.5 opacity-40 ml-auto shrink-0" />
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {recentFoldersFiltered.length > 0 ? (
+              <div data-hg-cmdk="group" role="presentation">
+                <div
+                  data-hg-cmdk="group-heading"
+                  id={`${listboxId}-recent-folders`}
+                >
+                  Recent folders
+                </div>
+                <div
+                  role="group"
+                  aria-labelledby={`${listboxId}-recent-folders`}
+                >
+                  {flatRows.map((row, gi) => {
+                    if (row.kind !== "recentFolder") return null;
+                    const { folder } = row;
+                    return (
+                      <Button
+                        key={row.key}
+                        type="button"
+                        variant="ghost"
+                        tone="glass"
+                        id={`palette-opt-${gi}`}
+                        data-hg-cmdk="item"
+                        data-palette-row-index={gi}
+                        role="option"
+                        aria-selected={gi === selectedIndex}
+                        data-selected={gi === selectedIndex ? "true" : undefined}
+                        onMouseEnter={() => setSelectedIndex(gi)}
+                        onClick={() => openRecentFolder(folder.id)}
+                      >
+                        <Folder className={iconCls} weight="bold" />
+                        <div className="cmdk-item-content">
+                          <span>{folder.title}</span>
+                          <span className="cmdk-item-meta">
+                            {folder.parentSpaceName || "Canvas"}
+                          </span>
                         </div>
                         <ClockCounterClockwise className="size-3.5 opacity-40 ml-auto shrink-0" />
                       </Button>

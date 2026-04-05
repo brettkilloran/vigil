@@ -10,9 +10,9 @@ import {
   FileText,
   Folder,
   Graph,
-  DoorOpen,
   MagnifyingGlass,
   NotePencil,
+  SignOut,
   Sparkle,
   SquaresFour,
   Stack,
@@ -93,6 +93,7 @@ import {
 } from "@/src/components/foundation/architectural-undo";
 import { useModKeyHints } from "@/src/lib/mod-keys";
 import { VIGIL_CANVAS_EFFECTS_STORAGE_KEY } from "@/src/lib/vigil-canvas-prefs";
+import { useRecentFolders } from "@/src/hooks/use-recent-folders";
 import { useRecentItems } from "@/src/hooks/use-recent-items";
 import {
   clampContextMenuPosition,
@@ -1020,6 +1021,14 @@ export function ArchitecturalCanvasApp({
   });
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const [bootFlowerPortalHost, setBootFlowerPortalHost] = useState<HTMLDivElement | null>(null);
+  const setViewportNode = useCallback((node: HTMLDivElement | null) => {
+    viewportRef.current = node;
+  }, []);
+
+  const setBootFlowerPortalNode = useCallback((node: HTMLDivElement | null) => {
+    setBootFlowerPortalHost(node);
+  }, []);
   /** Element with `transform: translate scale` — used for stack eject screen→world. */
   const canvasTransformRef = useRef<HTMLDivElement | null>(null);
   /** Lasso hit-test scope: canvas nodes only (excludes stack modal fan, chrome, etc.). */
@@ -1087,6 +1096,7 @@ export function ArchitecturalCanvasApp({
 
   const modKeyHints = useModKeyHints();
   const { items: recentItems, push: pushRecentItem } = useRecentItems();
+  const { items: recentFolders, push: pushRecentFolder } = useRecentFolders();
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -3018,16 +3028,29 @@ export function ArchitecturalCanvasApp({
   const openFolder = useCallback(
     (folderId: string) => {
       void (async () => {
-        const folder = graphRef.current.entities[folderId];
+        const snap = graphRef.current;
+        const folder = snap.entities[folderId];
         if (!folder || folder.kind !== "folder") return;
-        const childSpaceId = graphRef.current.spaces[folder.childSpaceId]
+        const slotSpaceIds = Object.keys(folder.slots).filter((sid) => snap.spaces[sid]);
+        const parentSpaceId =
+          slotSpaceIds.find((sid) => sid === activeSpaceIdRef.current) ??
+          slotSpaceIds[0] ??
+          activeSpaceIdRef.current;
+        const parentSpace = snap.spaces[parentSpaceId];
+        const childSpaceId = snap.spaces[folder.childSpaceId]
           ? folder.childSpaceId
           : await ensureFolderChildSpace(folderId);
         if (!childSpaceId) return;
+        pushRecentFolder({
+          id: folderId,
+          title: folder.title || "Untitled Folder",
+          parentSpaceId,
+          parentSpaceName: parentSpace?.name ?? "",
+        });
         enterSpace(childSpaceId);
       })();
     },
-    [enterSpace, ensureFolderChildSpace],
+    [enterSpace, ensureFolderChildSpace, pushRecentFolder],
   );
 
   const goBack = useCallback(() => {
@@ -5906,6 +5929,9 @@ export function ArchitecturalCanvasApp({
       {bootLayerVisible ? (
         <VigilAppBootScreen
           technicalReady={technicalViewportReady}
+          flowerPortalContainer={bootFlowerPortalHost}
+          canvasEffectsEnabled={canvasEffectsEnabled}
+          onCanvasEffectsEnabledChange={setCanvasEffectsEnabled}
           onActivate={() => setCanvasSessionActivated(true)}
           onExitComplete={() => {
             setBootLayerDismissed(true);
@@ -5920,7 +5946,7 @@ export function ArchitecturalCanvasApp({
         }`}
       >
       <div
-        ref={viewportRef}
+        ref={setViewportNode}
         className={`${styles.viewport} ${
           viewportRevealReady ? styles.viewportSurfaceReady : styles.viewportSurfacePending
         } ${activeSpaceId !== graph.rootSpaceId ? styles.deepSpace : ""}${
@@ -6336,6 +6362,11 @@ export function ArchitecturalCanvasApp({
           </svg>
         </div>
         </div>
+        {/*
+         * Boot flowers portaled here only — sibling **before** VigilFlowRevealOverlay so the WebGL
+         * ambient stack (z ~92) composites above pixel blooms (this host z ~36), not under them.
+         */}
+        <div ref={setBootFlowerPortalNode} className={styles.bootFlowerPortalHost} aria-hidden />
         {canvasEffectsEnabled ? (
           <VigilFlowRevealOverlay
             scenario={scenario}
@@ -6380,7 +6411,7 @@ export function ArchitecturalCanvasApp({
 
         <ArchitecturalCanvasEffectsToggle
           effectsEnabled={canvasEffectsEnabled}
-          onToggle={() => setCanvasEffectsEnabled((v) => !v)}
+          onEffectsEnabledChange={setCanvasEffectsEnabled}
         />
         <ArchitecturalViewportMetrics
           centerWorldX={centerWorldX}
@@ -6478,9 +6509,11 @@ export function ArchitecturalCanvasApp({
           spaces={paletteSpaces}
           actions={paletteActions}
           recentItems={recentItems}
+          recentFolders={recentFolders}
           onRecordRecentItem={pushRecentItem}
           onSelectItem={(id, openInFocus) => focusEntityFromPalette(id, openInFocus)}
           onSelectSpace={(spaceId) => enterSpace(spaceId)}
+          onOpenRecentFolder={openFolder}
           onRunAction={runPaletteAction}
         />
         <LoreAskPanel
@@ -7163,7 +7196,7 @@ export function ArchitecturalCanvasApp({
                       size="icon"
                       tone="glass"
                       iconOnly
-                      leadingIcon={<DoorOpen size={18} weight="bold" aria-hidden />}
+                      leadingIcon={<SignOut size={18} weight="bold" aria-hidden />}
                       className={styles.shellTopLogOutTrigger}
                       title="Log out — return to auth splash"
                       aria-label="Log out and return to auth splash"
