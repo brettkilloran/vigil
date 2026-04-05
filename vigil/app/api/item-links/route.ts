@@ -101,6 +101,12 @@ export async function PATCH(req: Request) {
     );
   }
   const { id, color, label, linkType, meta } = parsed.data;
+
+  const [existing] = await db.select().from(itemLinks).where(eq(itemLinks.id, id)).limit(1);
+  if (!existing) {
+    return Response.json({ ok: false, error: "Link not found" }, { status: 404 });
+  }
+
   const updates: {
     color?: string;
     label?: string | null;
@@ -110,7 +116,17 @@ export async function PATCH(req: Request) {
   if (color !== undefined) updates.color = color;
   if (label !== undefined) updates.label = label;
   if (linkType !== undefined) updates.linkType = linkType;
-  if (meta !== undefined) updates.meta = meta;
+  if (meta !== undefined) {
+    if (meta === null) {
+      updates.meta = null;
+    } else {
+      const prev =
+        existing.meta && typeof existing.meta === "object" && !Array.isArray(existing.meta)
+          ? { ...(existing.meta as Record<string, unknown>) }
+          : {};
+      updates.meta = { ...prev, ...meta };
+    }
+  }
   if (Object.keys(updates).length < 1) {
     return Response.json({ ok: false, error: "No updates provided" }, { status: 400 });
   }

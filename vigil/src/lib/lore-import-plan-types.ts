@@ -91,6 +91,8 @@ export const loreImportPlanSchema = z.object({
   links: z.array(loreImportPlanLinkSchema),
   mergeProposals: z.array(mergeProposalSchema),
   contradictions: z.array(contradictionSchema),
+  /** Server-generated: cross-space link drops, etc. (round-tripped through apply). */
+  importPlanWarnings: z.array(z.string().max(600)).max(48).optional(),
 });
 
 export type LoreImportPlan = z.infer<typeof loreImportPlanSchema>;

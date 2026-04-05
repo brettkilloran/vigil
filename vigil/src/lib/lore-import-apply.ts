@@ -10,9 +10,9 @@ import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 import {
   buildLoreNoteContentJson,
-  normalizeLoreLinkType,
   planLoreImportCardLayout,
 } from "@/src/lib/lore-import-commit";
+import { normalizeImportItemLinkType } from "@/src/lib/lore-import-item-link";
 import {
   buildDefaultEntityMeta,
   loreImportPlanSchema,
@@ -417,7 +417,7 @@ export async function applyLoreImportPlan(
         continue;
       }
 
-      const linkType = normalizeLoreLinkType(link.linkType);
+      const linkType = normalizeImportItemLinkType(link.linkType);
       const [lr] = await dbx
         .insert(itemLinks)
         .values({
@@ -425,6 +425,7 @@ export async function applyLoreImportPlan(
           targetItemId: toId,
           linkType,
           label: null,
+          /** Null: canvas hydration supplies default pin anchors (`mergeHydratedDbConnections`). */
           sourcePin: null,
           targetPin: null,
           color: null,

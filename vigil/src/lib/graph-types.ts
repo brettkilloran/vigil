@@ -13,6 +13,8 @@ export type GraphEdge = {
   sourcePin: string | null;
   targetPin: string | null;
   linkType: string | null;
+  /** From `item_links.meta.slackMultiplier` when present (rope taut/loose). */
+  slackMultiplier?: number | null;
 };
 
 export type SpaceGraphResponse = {

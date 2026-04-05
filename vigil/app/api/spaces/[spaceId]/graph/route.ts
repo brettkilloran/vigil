@@ -3,6 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
 import type { GraphEdge, GraphNode } from "@/src/lib/graph-types";
+import { parseSlackMultiplierFromLinkMeta } from "@/src/lib/item-link-meta";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
 export async function GET(
@@ -53,6 +54,7 @@ export async function GET(
       sourcePin: itemLinks.sourcePin,
       targetPin: itemLinks.targetPin,
       linkType: itemLinks.linkType,
+      meta: itemLinks.meta,
     })
     .from(itemLinks)
     .where(
@@ -77,6 +79,7 @@ export async function GET(
     sourcePin: l.sourcePin ?? null,
     targetPin: l.targetPin ?? null,
     linkType: l.linkType ?? null,
+    slackMultiplier: parseSlackMultiplierFromLinkMeta(l.meta),
   }));
 
   return Response.json({ ok: true, nodes, edges });

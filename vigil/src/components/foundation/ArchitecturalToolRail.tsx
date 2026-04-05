@@ -12,6 +12,7 @@ import {
 import type { ReactNode } from "react";
 
 import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
+import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import type { CanvasTool } from "@/src/components/foundation/architectural-types";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { cx } from "@/src/lib/cx";
@@ -28,16 +29,17 @@ export function ArchitecturalToolButton({
   onClick?: () => void;
 }) {
   return (
-    <ArchitecturalButton
-      size="icon"
-      tone="glass"
-      active={active}
-      title={label}
-      aria-label={label}
-      onClick={onClick}
-    >
-      {icon}
-    </ArchitecturalButton>
+    <ArchitecturalTooltip content={label} side="right" delayMs={420}>
+      <ArchitecturalButton
+        size="icon"
+        tone="glass"
+        active={active}
+        aria-label={label}
+        onClick={onClick}
+      >
+        {icon}
+      </ArchitecturalButton>
+    </ArchitecturalTooltip>
   );
 }
 

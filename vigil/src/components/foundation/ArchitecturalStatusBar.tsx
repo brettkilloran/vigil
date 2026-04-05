@@ -17,6 +17,7 @@ import {
 import { createPortal } from "react-dom";
 
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
+import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 import { cx } from "@/src/lib/cx";
 import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
@@ -378,29 +379,36 @@ function SaveAndVersionPopover({
       <span className="sr-only" aria-live="polite" aria-atomic="true">
         {liveAnnouncement}
       </span>
-      <Button
-        ref={triggerRef}
-        variant="neutral"
-        size="sm"
-        tone="glass"
-        className={styles.statusSaveBarTrigger}
-        title={tooltipTitle}
-        aria-label={triggerAriaLabel}
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        aria-controls={open ? popoverId : undefined}
-        onClick={() => setOpen((v) => !v)}
+      <ArchitecturalTooltip
+        content={tooltipTitle}
+        side="bottom"
+        delayMs={400}
+        disabled={open}
+        associateDescription
       >
-        {showPulse ? (
-          <span className={cx(styles.pulseDot, pulseToneClass)} aria-hidden />
-        ) : null}
-        <span className={styles.monoTag} lang="ja">
-          {envLabel}
-        </span>
-        {showWarningIcon ? (
-          <WarningCircle className={styles.statusSaveWarningIcon} size={16} weight="bold" aria-hidden />
-        ) : null}
-      </Button>
+        <Button
+          ref={triggerRef}
+          variant="neutral"
+          size="sm"
+          tone="glass"
+          className={styles.statusSaveBarTrigger}
+          aria-label={triggerAriaLabel}
+          aria-expanded={open}
+          aria-haspopup="dialog"
+          aria-controls={open ? popoverId : undefined}
+          onClick={() => setOpen((v) => !v)}
+        >
+          {showPulse ? (
+            <span className={cx(styles.pulseDot, pulseToneClass)} aria-hidden />
+          ) : null}
+          <span className={styles.monoTag} lang="ja">
+            {envLabel}
+          </span>
+          {showWarningIcon ? (
+            <WarningCircle className={styles.statusSaveWarningIcon} size={16} weight="bold" aria-hidden />
+          ) : null}
+        </Button>
+      </ArchitecturalTooltip>
       {panel}
     </div>
   );
@@ -444,37 +452,39 @@ export function ArchitecturalCanvasEffectsToggle({
     : "Restore transitions and ambient chrome";
 
   const control = (
-    <Button
-      type="button"
-      variant="ghost"
-      tone="glass"
-      size="icon"
-      iconOnly
-      aria-label={ariaLabel}
-      title={title}
-      isActive={checked}
-      onClick={onButtonClick}
-    >
-      <Waves size={18} weight="bold" aria-hidden />
-    </Button>
-  );
-
-  if (layout === "bare") {
-    return (
+    <ArchitecturalTooltip content={title} side="top" delayMs={420}>
       <Button
         type="button"
         variant="ghost"
         tone="glass"
         size="icon"
         iconOnly
-        data-hg-chrome="canvas-effects-toggle"
         aria-label={ariaLabel}
-        title={title}
         isActive={checked}
         onClick={onButtonClick}
       >
         <Waves size={18} weight="bold" aria-hidden />
       </Button>
+    </ArchitecturalTooltip>
+  );
+
+  if (layout === "bare") {
+    return (
+      <ArchitecturalTooltip content={title} side="top" delayMs={420}>
+        <Button
+          type="button"
+          variant="ghost"
+          tone="glass"
+          size="icon"
+          iconOnly
+          data-hg-chrome="canvas-effects-toggle"
+          aria-label={ariaLabel}
+          isActive={checked}
+          onClick={onButtonClick}
+        >
+          <Waves size={18} weight="bold" aria-hidden />
+        </Button>
+      </ArchitecturalTooltip>
     );
   }
 

@@ -80,6 +80,7 @@ import {
   fetchBootstrap,
 } from "@/src/components/foundation/architectural-neon-api";
 import { mergeHydratedDbConnections } from "@/src/lib/architectural-item-link-graph";
+import { clampLinkMetaSlackMultiplier } from "@/src/lib/item-link-meta";
 import { LORE_LINK_TYPE_OPTIONS } from "@/src/lib/lore-link-types";
 import type { LoreImportPlan } from "@/src/lib/lore-import-plan-types";
 import type { LoreImportEntityDraft, LoreImportLinkDraft } from "@/src/lib/lore-import-types";
@@ -802,6 +803,8 @@ function isCanvasPointerMarqueeOrPanSurface(
     return false;
   }
   if (target === viewportEl) return true;
+  /* Scene layer is an ancestor of `.canvas`, not inside it — `closest(canvas)` misses hits on this div. */
+  if (target.closest("[data-vigil-scene-layer='true']")) return true;
   const tag = target.tagName.toLowerCase();
   if (tag === "svg" || tag === "path") return true;
   return !!target.closest(`.${canvasClassName}`);
@@ -1211,6 +1214,8 @@ export function ArchitecturalCanvasApp({
   const lassoStartRef = useRef<{ x: number; y: number } | null>(null);
   /** Mirrors lasso rect for global mouseup; React state can lag one frame behind a quick click. */
   const lassoRectScreenRef = useRef<LassoRectScreen | null>(null);
+  /** `pointerId` that started the active lasso; ignore other pointers until release. */
+  const lassoPointerIdRef = useRef<number | null>(null);
   const spacePanRef = useRef(false);
   const idCounterRef = useRef(2000);
   const commitTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -1634,6 +1639,7 @@ export function ArchitecturalCanvasApp({
             meta: {
               sourcePinConfig: snap.sourcePin,
               targetPinConfig: snap.targetPin,
+              slackMultiplier: clampLinkMetaSlackMultiplier(snap.slackMultiplier ?? 1.1),
             },
           }),
         });
@@ -1651,6 +1657,30 @@ export function ArchitecturalCanvasApp({
         setConnectionSyncPatch(connectionId, {
           syncState: "error",
           syncError: error instanceof Error ? error.message : "Failed to persist link",
+        });
+      }
+    },
+    [setConnectionSyncPatch],
+  );
+
+  const syncConnectionSlack = useCallback(
+    async (connectionId: string, slackMultiplier: number) => {
+      const snap = graphRef.current.connections[connectionId];
+      if (!snap?.dbLinkId || !isUuidLike(snap.dbLinkId)) return;
+      try {
+        const res = await fetch("/api/item-links", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: snap.dbLinkId,
+            meta: { slackMultiplier: clampLinkMetaSlackMultiplier(slackMultiplier) },
+          }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      } catch {
+        setConnectionSyncPatch(connectionId, {
+          syncState: "error",
+          syncError: "Failed to sync thread slack",
         });
       }
     },
@@ -1790,12 +1820,13 @@ export function ArchitecturalCanvasApp({
     (connectionId: string, nextSlack: number) => {
       const current = graphRef.current.connections[connectionId];
       if (!current) return;
-      const clamped = Math.max(1.0, Math.min(1.35, nextSlack));
+      const clamped = clampLinkMetaSlackMultiplier(nextSlack);
       if (Math.abs((current.slackMultiplier ?? 1.1) - clamped) < 0.001) return;
       recordUndoBeforeMutation();
       setConnectionSyncPatch(connectionId, { slackMultiplier: clamped });
+      void syncConnectionSlack(connectionId, clamped);
     },
-    [recordUndoBeforeMutation, setConnectionSyncPatch],
+    [recordUndoBeforeMutation, setConnectionSyncPatch, syncConnectionSlack],
   );
 
   const applyConnectionColor = useCallback(
@@ -4462,8 +4493,10 @@ export function ArchitecturalCanvasApp({
   );
 
   useEffect(() => {
-    const onMouseMove = (event: MouseEvent) => {
+    const onPointerMove = (event: PointerEvent) => {
       if (lassoStartRef.current) {
+        const pid = lassoPointerIdRef.current;
+        if (pid != null && event.pointerId !== pid) return;
         const start = lassoStartRef.current;
         const next: LassoRectScreen = {
           x1: start.x,
@@ -4530,64 +4563,71 @@ export function ArchitecturalCanvasApp({
       updateDropTargets(draggedIds[0], event.clientX, event.clientY);
     };
 
-    const onMouseUp = () => {
-      if (lassoStartRef.current) {
-        const start = lassoStartRef.current;
-        const rect: LassoRectScreen =
-          lassoRectScreenRef.current ?? {
-            x1: start.x,
-            y1: start.y,
-            x2: start.x,
-            y2: start.y,
-          };
-        lassoStartRef.current = null;
-        lassoRectScreenRef.current = null;
-        setLassoRectScreen(null);
+    const finishLassoFromPointer = (event: PointerEvent) => {
+      if (!lassoStartRef.current) return;
+      const pid = lassoPointerIdRef.current;
+      if (pid != null && event.pointerId !== pid) return;
 
-        const minX = Math.min(rect.x1, rect.x2);
-        const maxX = Math.max(rect.x1, rect.x2);
-        const minY = Math.min(rect.y1, rect.y2);
-        const maxY = Math.max(rect.y1, rect.y2);
-        const isClick = Math.abs(maxX - minX) < 3 && Math.abs(maxY - minY) < 3;
+      const start = lassoStartRef.current;
+      const rect: LassoRectScreen =
+        lassoRectScreenRef.current ?? {
+          x1: start.x,
+          y1: start.y,
+          x2: start.x,
+          y2: start.y,
+        };
+      lassoStartRef.current = null;
+      lassoPointerIdRef.current = null;
+      lassoRectScreenRef.current = null;
+      setLassoRectScreen(null);
 
-        if (isClick) {
-          setSelectedNodeIds([]);
-        } else {
-          const spaceId = activeSpaceIdRef.current;
-          const allowedIds = new Set(
-            graphRef.current.spaces[spaceId]?.entityIds ?? [],
-          );
-          const canvasRoot = canvasEntityLayerRef.current ?? viewportRef.current;
-          const nodeEls = canvasRoot
-            ? Array.from(canvasRoot.querySelectorAll<HTMLElement>("[data-node-id]"))
-            : [];
-          /* Center-point containment matches “what the box clearly covers” better than
-           * AABB overlap (avoids grabbing neighbors / extra stack layers on a thin edge). */
-          const hits: string[] = [];
-          for (const el of nodeEls) {
-            const id = el.dataset.nodeId;
-            if (!id || !allowedIds.has(id)) continue;
-            if (el.dataset.spaceId && el.dataset.spaceId !== spaceId) continue;
-            const r = el.getBoundingClientRect();
-            if (r.width <= 0 && r.height <= 0) continue;
-            const cx = (r.left + r.right) / 2;
-            const cy = (r.top + r.bottom) / 2;
-            if (cx >= minX && cx <= maxX && cy >= minY && cy <= maxY) {
-              hits.push(id);
-            }
+      const minX = Math.min(rect.x1, rect.x2);
+      const maxX = Math.max(rect.x1, rect.x2);
+      const minY = Math.min(rect.y1, rect.y2);
+      const maxY = Math.max(rect.y1, rect.y2);
+      const isClick = Math.abs(maxX - minX) < 3 && Math.abs(maxY - minY) < 3;
+
+      if (isClick) {
+        setSelectedNodeIds([]);
+      } else {
+        const spaceId = activeSpaceIdRef.current;
+        const allowedIds = new Set(
+          graphRef.current.spaces[spaceId]?.entityIds ?? [],
+        );
+        const canvasRoot = canvasEntityLayerRef.current ?? viewportRef.current;
+        const nodeEls = canvasRoot
+          ? Array.from(canvasRoot.querySelectorAll<HTMLElement>("[data-node-id]"))
+          : [];
+        /* Center-point containment matches “what the box clearly covers” better than
+         * AABB overlap (avoids grabbing neighbors / extra stack layers on a thin edge). */
+        const hits: string[] = [];
+        for (const el of nodeEls) {
+          const id = el.dataset.nodeId;
+          if (!id || !allowedIds.has(id)) continue;
+          if (el.dataset.spaceId && el.dataset.spaceId !== spaceId) continue;
+          const r = el.getBoundingClientRect();
+          if (r.width <= 0 && r.height <= 0) continue;
+          const cx = (r.left + r.right) / 2;
+          const cy = (r.top + r.bottom) / 2;
+          if (cx >= minX && cx <= maxX && cy >= minY && cy <= maxY) {
+            hits.push(id);
           }
-          const seen = new Set<string>();
-          const unique = hits.filter((id) => {
-            if (seen.has(id)) return false;
-            seen.add(id);
-            return true;
-          });
-          const canvasOrder = graphRef.current.spaces[spaceId]?.entityIds ?? [];
-          const orderIdx = new Map(canvasOrder.map((eid, i) => [eid, i]));
-          unique.sort((a, b) => (orderIdx.get(a) ?? 1e9) - (orderIdx.get(b) ?? 1e9));
-          setSelectedNodeIds(unique);
         }
+        const seen = new Set<string>();
+        const unique = hits.filter((id) => {
+          if (seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        });
+        const canvasOrder = graphRef.current.spaces[spaceId]?.entityIds ?? [];
+        const orderIdx = new Map(canvasOrder.map((eid, i) => [eid, i]));
+        unique.sort((a, b) => (orderIdx.get(a) ?? 1e9) - (orderIdx.get(b) ?? 1e9));
+        setSelectedNodeIds(unique);
       }
+    };
+
+    const onPointerUp = (event: PointerEvent) => {
+      finishLassoFromPointer(event);
 
       isPanningRef.current = false;
       setIsPanning(false);
@@ -4619,11 +4659,13 @@ export function ArchitecturalCanvasApp({
       setParentDropHover(false);
     };
 
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
     return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
     };
   }, [
     activeSpaceId,
@@ -5372,6 +5414,7 @@ export function ArchitecturalCanvasApp({
         dragOffsetsRef.current = {};
         setDraggedNodeIds([]);
         lassoStartRef.current = null;
+        lassoPointerIdRef.current = null;
         lassoRectScreenRef.current = null;
         setLassoRectScreen(null);
         setHoveredFolderId(null);
@@ -5414,8 +5457,9 @@ export function ArchitecturalCanvasApp({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [deleteEntitySelection, focusOpen, galleryOpen, selectedNodeIds]);
 
-  const onViewportMouseDown = useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
+  const onViewportPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!event.isPrimary) return;
       if (focusOpen || galleryOpen || stackModal) return;
 
       // Middle mouse drag always pans (tool-agnostic), similar to design tools.
@@ -5448,6 +5492,7 @@ export function ArchitecturalCanvasApp({
       }
 
       if (activeTool === "select" && !spacePanRef.current) {
+        lassoPointerIdRef.current = event.pointerId;
         lassoStartRef.current = { x: event.clientX, y: event.clientY };
         const initial: LassoRectScreen = {
           x1: event.clientX,
@@ -6496,7 +6541,7 @@ export function ArchitecturalCanvasApp({
         aria-busy={!viewportRevealReady}
         data-vigil-canvas="true"
         data-canvas-ready={viewportRevealReady ? "true" : "false"}
-        onMouseDown={onViewportMouseDown}
+        onPointerDownCapture={onViewportPointerDown}
         onContextMenuCapture={handleViewportContextMenuCapture}
         onWheel={onWheel}
         style={{
@@ -6522,6 +6567,7 @@ export function ArchitecturalCanvasApp({
         }}
       >
         <div
+          data-vigil-scene-layer="true"
           className={`${styles.viewportSceneLayer} ${
             !canvasEffectsEnabled ? styles.viewportSceneLayerInstant : ""
           } ${
@@ -7079,6 +7125,7 @@ export function ArchitecturalCanvasApp({
               setDraggedNodeIds([]);
               draggedNodeIdsRef.current = [];
               lassoStartRef.current = null;
+              lassoPointerIdRef.current = null;
               lassoRectScreenRef.current = null;
               setLassoRectScreen(null);
               if (resolved === "move") {
@@ -7181,9 +7228,17 @@ export function ArchitecturalCanvasApp({
                   <p className="text-[10px] text-[var(--vigil-muted)]">
                     {loreSmartReview.plan.folders.length} folders · {loreSmartReview.plan.notes.length}{" "}
                     notes · {loreSmartReview.plan.mergeProposals.length} merge suggestions
+                    {loreSmartReview.plan.links.length > 0
+                      ? ` · ${loreSmartReview.plan.links.length} same-canvas semantic links`
+                      : ""}
                     {loreSmartReview.plan.contradictions.length > 0
                       ? ` · ${loreSmartReview.plan.contradictions.length} flagged for review`
                       : ""}
+                  </p>
+                  <p className="text-[10px] text-[var(--vigil-muted)]">
+                    Imported links use relationship types (ally, faction, …), not pin threads. Pin
+                    connections are for hand-drawn ropes; add those on the canvas if you need ties
+                    across folders.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -7289,6 +7344,19 @@ export function ArchitecturalCanvasApp({
                         {loreSmartReview.plan.contradictions.length} contradiction(s) were saved to
                         your review queue for later.
                       </p>
+                    ) : null}
+                    {loreSmartReview.plan.importPlanWarnings &&
+                    loreSmartReview.plan.importPlanWarnings.length > 0 ? (
+                      <div>
+                        <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-[var(--vigil-muted)]">
+                          Link plan adjustments
+                        </span>
+                        <ul className="list-inside list-disc space-y-1 text-[10px] text-[var(--vigil-muted)]">
+                          {loreSmartReview.plan.importPlanWarnings.map((w, i) => (
+                            <li key={i}>{w}</li>
+                          ))}
+                        </ul>
+                      </div>
                     ) : null}
                   </div>
                 ) : (

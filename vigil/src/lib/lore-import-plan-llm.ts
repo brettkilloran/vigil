@@ -32,7 +32,7 @@ Return ONLY valid JSON (no markdown fence) with this exact shape:
     }
   ],
   "links": [
-    { "fromClientId": "note clientId", "toClientId": "note clientId", "linkType": optional string }
+    { "fromClientId": "note clientId", "toClientId": "note clientId", "linkType": "reference"|"ally"|"enemy"|"neutral"|"faction"|"quest"|"location"|"npc"|"lore" (optional; default reference) }
   ]
 }
 
@@ -40,7 +40,9 @@ Rules:
 - Every chunk id from the list should appear in at least one note's sourceChunkIds, or be clearly redundant — prefer covering the whole document.
 - Use 1–12 folders max unless the document clearly needs more.
 - Titles must be stable proper nouns or section names when possible.
-- If the document is tiny, one folder and one note is fine.`;
+- If the document is tiny, one folder and one note is fine.
+- **Links:** Only connect two notes that share the same folderClientId (same canvas space). Never use linkType "pin" — that is reserved for user-drawn pin threads on the canvas; use semantic types (npc, faction, location, ally, …) so relationship styling works.
+- Keep each note focused (one topic or tight cluster) so entity kinds and link types stay accurate.`;
 
 const MERGE_SYSTEM = `You match new imported notes to existing canvas items (candidates from search).
 

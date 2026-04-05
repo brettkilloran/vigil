@@ -8,6 +8,7 @@ import {
   runLoreImportOutlineLlm,
   type CandidateRow,
 } from "@/src/lib/lore-import-plan-llm";
+import { filterPlanLinksToSameCanvasSpace } from "@/src/lib/lore-import-item-link";
 import type { IngestionSignals, LoreImportPlan } from "@/src/lib/lore-import-plan-types";
 import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
 import type { VigilDb } from "@/src/lib/spaces";
@@ -107,6 +108,18 @@ export async function buildLoreImportPlan(args: {
     details: c.details,
   }));
 
+  const { links: coLocatedLinks, warnings: linkWarnings } = filterPlanLinksToSameCanvasSpace(
+    notesInternal.map((n) => ({
+      clientId: n.clientId,
+      folderClientId: n.folderClientId,
+    })),
+    outline.links.map((l) => ({
+      fromClientId: l.fromClientId,
+      toClientId: l.toClientId,
+      linkType: l.linkType,
+    })),
+  );
+
   const planRaw: LoreImportPlan = {
     importBatchId: args.importBatchId,
     fileName: args.fileName,
@@ -135,13 +148,14 @@ export async function buildLoreImportPlan(args: {
       loreHistorical: n.loreHistorical,
       sourceChunkIds: n.sourceChunkIds,
     })),
-    links: outline.links.map((l) => ({
+    links: coLocatedLinks.map((l) => ({
       fromClientId: l.fromClientId,
       toClientId: l.toClientId,
       linkType: l.linkType,
     })),
     mergeProposals,
     contradictions,
+    importPlanWarnings: linkWarnings.length > 0 ? linkWarnings : undefined,
   };
 
   const parsed = loreImportPlanSchema.safeParse(planRaw);

@@ -7,9 +7,9 @@ import { DS_COLOR } from "@/src/lib/design-system-tokens";
 import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
 import {
   buildLoreNoteContentJson,
-  normalizeLoreLinkType,
   planLoreImportCardLayout,
 } from "@/src/lib/lore-import-commit";
+import { normalizeImportItemLinkType } from "@/src/lib/lore-import-item-link";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { assertSpaceExists } from "@/src/lib/spaces";
@@ -235,7 +235,7 @@ export async function POST(req: Request) {
       continue;
     }
 
-    const linkType = normalizeLoreLinkType(link.linkType);
+    const linkType = normalizeImportItemLinkType(link.linkType);
     const [row] = await db
       .insert(itemLinks)
       .values({

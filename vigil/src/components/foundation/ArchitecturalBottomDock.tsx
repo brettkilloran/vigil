@@ -24,13 +24,14 @@ import {
 } from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 
-import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
 import {
   ArchitecturalButton,
   type ArchitecturalButtonTone,
 } from "@/src/components/foundation/ArchitecturalButton";
+import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
+import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
 import { Button } from "@/src/components/ui/Button";
 import {
   FOLDER_COLOR_SCHEMES,
@@ -44,6 +45,24 @@ import type {
 } from "@/src/components/foundation/architectural-types";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { cx } from "@/src/lib/cx";
+
+function DockChromeTooltip({
+  content,
+  side = "top",
+  disabled,
+  children,
+}: {
+  content: ReactNode;
+  side?: "top" | "bottom" | "left" | "right";
+  disabled?: boolean;
+  children: ReactElement;
+}) {
+  return (
+    <ArchitecturalTooltip content={content} side={side} delayMs={400} disabled={disabled}>
+      {children}
+    </ArchitecturalTooltip>
+  );
+}
 
 function formatIcon(command: string, value?: string): ReactNode {
   if (command === "arch:checklist") return <CheckSquare size={18} />;
@@ -154,22 +173,22 @@ export function ArchitecturalFormatToolbar({
             aria-label="Insert blocks"
           >
             {insertDocActions.map((action) => (
-              <ArchitecturalButton
-                key={action.id}
-                size="icon"
-                tone={actionTone}
-                active={action.active}
-                iconOnly
-                title={action.label}
-                aria-label={action.label}
-                disabled={action.disabled}
-                leadingIcon={formatIcon(action.command, action.value)}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  if (action.disabled) return;
-                  onFormat(action.command, action.value);
-                }}
-              />
+              <DockChromeTooltip key={action.id} content={action.label}>
+                <ArchitecturalButton
+                  size="icon"
+                  tone={actionTone}
+                  active={action.active}
+                  iconOnly
+                  aria-label={action.label}
+                  disabled={action.disabled}
+                  leadingIcon={formatIcon(action.command, action.value)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    if (action.disabled) return;
+                    onFormat(action.command, action.value);
+                  }}
+                />
+              </DockChromeTooltip>
             ))}
           </div>
           <div
@@ -193,39 +212,40 @@ export function ArchitecturalFormatToolbar({
             ];
             return (
               <div key={action.id} className={styles.headingPicker} ref={headingPickerRef}>
-                <ArchitecturalButton
-                  size="icon"
-                  tone={actionTone}
-                  active={action.active}
-                  iconOnly
-                  title={action.label}
-                  aria-label={action.label}
-                  disabled={action.disabled}
-                  leadingIcon={formatIcon(action.command, action.value)}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    if (action.disabled) return;
-                    setHeadingMenuOpen((open) => !open);
-                  }}
-                />
+                <DockChromeTooltip content={action.label}>
+                  <ArchitecturalButton
+                    size="icon"
+                    tone={actionTone}
+                    active={action.active}
+                    iconOnly
+                    aria-label={action.label}
+                    disabled={action.disabled}
+                    leadingIcon={formatIcon(action.command, action.value)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (action.disabled) return;
+                      setHeadingMenuOpen((open) => !open);
+                    }}
+                  />
+                </DockChromeTooltip>
                 {headingMenuOpen ? (
                   <div className={styles.headingPickerMenu} role="menu" aria-label="Heading levels">
                     {headingOptions.map((opt) => (
-                      <ArchitecturalButton
-                        key={opt.value}
-                        size="menu"
-                        tone={actionTone}
-                        active={activeBlockTag === opt.value}
-                        title={opt.label}
-                        aria-label={opt.label}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          onFormat("formatBlock", opt.value);
-                          setHeadingMenuOpen(false);
-                        }}
-                      >
-                        {opt.label}
-                      </ArchitecturalButton>
+                      <DockChromeTooltip key={opt.value} content={opt.label}>
+                        <ArchitecturalButton
+                          size="menu"
+                          tone={actionTone}
+                          active={activeBlockTag === opt.value}
+                          aria-label={opt.label}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            onFormat("formatBlock", opt.value);
+                            setHeadingMenuOpen(false);
+                          }}
+                        >
+                          {opt.label}
+                        </ArchitecturalButton>
+                      </DockChromeTooltip>
                     ))}
                   </div>
                 ) : null}
@@ -233,22 +253,22 @@ export function ArchitecturalFormatToolbar({
             );
           }
           return (
-            <ArchitecturalButton
-              key={action.id}
-              size="icon"
-              tone={actionTone}
-              active={action.active}
-              iconOnly
-              title={action.label}
-              aria-label={action.label}
-              disabled={action.disabled}
-              leadingIcon={formatIcon(action.command, action.value)}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                if (action.disabled) return;
-                onFormat(action.command, action.value);
-              }}
-            />
+            <DockChromeTooltip key={action.id} content={action.label}>
+              <ArchitecturalButton
+                size="icon"
+                tone={actionTone}
+                active={action.active}
+                iconOnly
+                aria-label={action.label}
+                disabled={action.disabled}
+                leadingIcon={formatIcon(action.command, action.value)}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  if (action.disabled) return;
+                  onFormat(action.command, action.value);
+                }}
+              />
+            </DockChromeTooltip>
           );
         })}
       </div>
@@ -366,42 +386,43 @@ export function ArchitecturalFolderColorStrip({
 
   const swatchGrid = (
     <div className={styles.dockFolderTintSwatchGrid}>
-      <Button
-        type="button"
-        variant="ghost"
-        tone="glass"
-        iconOnly
-        role="option"
-        aria-selected={value == null}
-        title="Black mirror"
-        aria-label="Black mirror — unmarked folder"
-        className={cx(
-          styles.dockFolderTintMenuSwatch,
-          styles.dockFolderTintMenuSwatchClassic,
-          value == null && styles.dockFolderTintMenuSwatchSelected,
-        )}
-        onClick={() => pick(null)}
-      />
-      {FOLDER_COLOR_SCHEMES.map((s) => (
+      <DockChromeTooltip content="Black mirror">
         <Button
-          key={s.id}
           type="button"
           variant="ghost"
           tone="glass"
           iconOnly
           role="option"
-          aria-selected={value === s.id}
-          title={s.label}
-          aria-label={s.label}
+          aria-selected={value == null}
+          aria-label="Black mirror — unmarked folder"
           className={cx(
             styles.dockFolderTintMenuSwatch,
-            (s.id === "white" || s.id === "gray" || s.id === "parchment") &&
-              styles.dockFolderTintMenuSwatchHighKey,
-            value === s.id && styles.dockFolderTintMenuSwatchSelected,
+            styles.dockFolderTintMenuSwatchClassic,
+            value == null && styles.dockFolderTintMenuSwatchSelected,
           )}
-          style={{ background: s.swatch }}
-          onClick={() => pick(s.id)}
+          onClick={() => pick(null)}
         />
+      </DockChromeTooltip>
+      {FOLDER_COLOR_SCHEMES.map((s) => (
+        <DockChromeTooltip key={s.id} content={s.label}>
+          <Button
+            type="button"
+            variant="ghost"
+            tone="glass"
+            iconOnly
+            role="option"
+            aria-selected={value === s.id}
+            aria-label={s.label}
+            className={cx(
+              styles.dockFolderTintMenuSwatch,
+              (s.id === "white" || s.id === "gray" || s.id === "parchment") &&
+                styles.dockFolderTintMenuSwatchHighKey,
+              value === s.id && styles.dockFolderTintMenuSwatchSelected,
+            )}
+            style={{ background: s.swatch }}
+            onClick={() => pick(s.id)}
+          />
+        </DockChromeTooltip>
       ))}
     </div>
   );
@@ -438,44 +459,45 @@ export function ArchitecturalFolderColorStrip({
       aria-label={ariaLabel}
       aria-hidden={engaged ? undefined : true}
     >
-      <Button
-        ref={triggerRef}
-        type="button"
-        variant="ghost"
-        tone="glass"
-        className={cx(
-          styles.dockFolderTintTrigger,
-          isSpool && styles.dockFolderTintTriggerSpool,
-          isEditor && styles.dockFolderTintTriggerEditor,
-          menuOpen && styles.dockFolderTintTriggerOpen,
-        )}
-        aria-haspopup="listbox"
-        aria-expanded={engaged ? menuOpen : false}
-        title={ariaLabel}
-        aria-label={ariaLabel}
-        disabled={!engaged}
-        tabIndex={engaged ? undefined : -1}
-        onClick={() => engaged && setMenuOpen((open) => !open)}
-      >
-        <span
+      <DockChromeTooltip content={ariaLabel} disabled={menuOpen}>
+        <Button
+          ref={triggerRef}
+          type="button"
+          variant="ghost"
+          tone="glass"
           className={cx(
-            styles.dockFolderTintPreview,
-            isSpool && styles.dockFolderTintPreviewSpool,
-            activeMeta == null ? styles.dockFolderTintPreviewClassic : null,
+            styles.dockFolderTintTrigger,
+            isSpool && styles.dockFolderTintTriggerSpool,
+            isEditor && styles.dockFolderTintTriggerEditor,
+            menuOpen && styles.dockFolderTintTriggerOpen,
           )}
-          style={activeMeta ? { background: activeMeta.swatch } : undefined}
-          aria-hidden
-        />
-        {!isSpool ? <span className={styles.dockFolderTintTriggerText}>Tint</span> : null}
-        {!isSpool ? (
-          <CaretDown
-            size={11}
-            weight="bold"
-            className={styles.dockFolderTintCaret}
+          aria-haspopup="listbox"
+          aria-expanded={engaged ? menuOpen : false}
+          aria-label={ariaLabel}
+          disabled={!engaged}
+          tabIndex={engaged ? undefined : -1}
+          onClick={() => engaged && setMenuOpen((open) => !open)}
+        >
+          <span
+            className={cx(
+              styles.dockFolderTintPreview,
+              isSpool && styles.dockFolderTintPreviewSpool,
+              activeMeta == null ? styles.dockFolderTintPreviewClassic : null,
+            )}
+            style={activeMeta ? { background: activeMeta.swatch } : undefined}
             aria-hidden
           />
-        ) : null}
-      </Button>
+          {!isSpool ? <span className={styles.dockFolderTintTriggerText}>Tint</span> : null}
+          {!isSpool ? (
+            <CaretDown
+              size={11}
+              weight="bold"
+              className={styles.dockFolderTintCaret}
+              aria-hidden
+            />
+          ) : null}
+        </Button>
+      </DockChromeTooltip>
       {menuOpen && !isSpool ? (
         <div
           className={cx(
@@ -513,17 +535,17 @@ export function ArchitecturalCreateMenu({
       aria-label="Create items"
     >
       {actions.map((action) => (
-        <ArchitecturalButton
-          key={action.id}
-          size="icon"
-          tone={actionTone}
-          iconOnly
-          title={action.label}
-          aria-label={`Create ${action.label}`}
-          disabled={disabled}
-          leadingIcon={createIcon(action.nodeType)}
-          onClick={() => onCreateNode(action.nodeType)}
-        />
+        <DockChromeTooltip key={action.id} content={action.label}>
+          <ArchitecturalButton
+            size="icon"
+            tone={actionTone}
+            iconOnly
+            aria-label={`Create ${action.label}`}
+            disabled={disabled}
+            leadingIcon={createIcon(action.nodeType)}
+            onClick={() => onCreateNode(action.nodeType)}
+          />
+        </DockChromeTooltip>
       ))}
     </div>
   );
@@ -689,26 +711,28 @@ export function ArchitecturalBottomDock({
               >
                 {onUndo && onRedo ? (
                   <>
-                    <ArchitecturalButton
-                      size="icon"
-                      tone={historyActionTone}
-                      iconOnly
-                      title={undoLabel}
-                      aria-label={undoLabel}
-                      disabled={!canUndo}
-                      leadingIcon={<ArrowCounterClockwise size={18} />}
-                      onClick={() => onUndo()}
-                    />
-                    <ArchitecturalButton
-                      size="icon"
-                      tone={historyActionTone}
-                      iconOnly
-                      title={redoLabel}
-                      aria-label={redoLabel}
-                      disabled={!canRedo}
-                      leadingIcon={<ArrowClockwise size={18} />}
-                      onClick={() => onRedo()}
-                    />
+                    <DockChromeTooltip content={undoLabel}>
+                      <ArchitecturalButton
+                        size="icon"
+                        tone={historyActionTone}
+                        iconOnly
+                        aria-label={undoLabel}
+                        disabled={!canUndo}
+                        leadingIcon={<ArrowCounterClockwise size={18} />}
+                        onClick={() => onUndo()}
+                      />
+                    </DockChromeTooltip>
+                    <DockChromeTooltip content={redoLabel}>
+                      <ArchitecturalButton
+                        size="icon"
+                        tone={historyActionTone}
+                        iconOnly
+                        aria-label={redoLabel}
+                        disabled={!canRedo}
+                        leadingIcon={<ArrowClockwise size={18} />}
+                        onClick={() => onRedo()}
+                      />
+                    </DockChromeTooltip>
                   </>
                 ) : null}
               </div>
@@ -734,23 +758,26 @@ export function ArchitecturalBottomDock({
                   aria-hidden={selectionDelete.selectedCount > 0 ? undefined : true}
                 >
                   {selectionDelete.selectedCount > 0 ? (
-                    <ArchitecturalButton
-                      size="icon"
-                      tone={historyActionTone}
-                      iconOnly
-                      title={
+                    <DockChromeTooltip
+                      content={
                         selectionDelete.selectedCount === 1
                           ? "Delete"
                           : `Delete ${selectionDelete.selectedCount} items`
                       }
-                      aria-label={
-                        selectionDelete.selectedCount === 1
-                          ? "Delete selected item"
-                          : `Delete ${selectionDelete.selectedCount} selected items`
-                      }
-                      leadingIcon={<Trash size={18} />}
-                      onClick={() => selectionDelete.onDelete()}
-                    />
+                    >
+                      <ArchitecturalButton
+                        size="icon"
+                        tone={historyActionTone}
+                        iconOnly
+                        aria-label={
+                          selectionDelete.selectedCount === 1
+                            ? "Delete selected item"
+                            : `Delete ${selectionDelete.selectedCount} selected items`
+                        }
+                        leadingIcon={<Trash size={18} />}
+                        onClick={() => selectionDelete.onDelete()}
+                      />
+                    </DockChromeTooltip>
                   ) : null}
                 </div>
               </div>
@@ -782,46 +809,48 @@ export function ArchitecturalBottomDock({
                   }
                 >
                   {selectionStack.canMerge ? (
-                    <ArchitecturalButton
-                      size="icon"
-                      tone={historyActionTone}
-                      iconOnly
-                      title={selectionStack.mergeTitle}
-                      aria-label={selectionStack.mergeTitle}
-                      leadingIcon={<Stack size={18} weight="bold" aria-hidden />}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        if (e.button !== 0) return;
-                        selectionStack.onMerge();
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
+                    <DockChromeTooltip content={selectionStack.mergeTitle}>
+                      <ArchitecturalButton
+                        size="icon"
+                        tone={historyActionTone}
+                        iconOnly
+                        aria-label={selectionStack.mergeTitle}
+                        leadingIcon={<Stack size={18} weight="bold" aria-hidden />}
+                        onMouseDown={(e) => {
                           e.preventDefault();
+                          if (e.button !== 0) return;
                           selectionStack.onMerge();
-                        }
-                      }}
-                    />
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            selectionStack.onMerge();
+                          }
+                        }}
+                      />
+                    </DockChromeTooltip>
                   ) : null}
                   {selectionStack.canUnstack ? (
-                    <ArchitecturalButton
-                      size="icon"
-                      tone={historyActionTone}
-                      iconOnly
-                      title={selectionStack.unstackTitle}
-                      aria-label={selectionStack.unstackTitle}
-                      leadingIcon={<ArrowsOut size={18} weight="bold" aria-hidden />}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        if (e.button !== 0) return;
-                        selectionStack.onUnstack();
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
+                    <DockChromeTooltip content={selectionStack.unstackTitle}>
+                      <ArchitecturalButton
+                        size="icon"
+                        tone={historyActionTone}
+                        iconOnly
+                        aria-label={selectionStack.unstackTitle}
+                        leadingIcon={<ArrowsOut size={18} weight="bold" aria-hidden />}
+                        onMouseDown={(e) => {
                           e.preventDefault();
+                          if (e.button !== 0) return;
                           selectionStack.onUnstack();
-                        }
-                      }}
-                    />
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            selectionStack.onUnstack();
+                          }
+                        }}
+                      />
+                    </DockChromeTooltip>
                   ) : null}
                 </div>
               </div>

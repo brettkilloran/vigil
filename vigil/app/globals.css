@@ -340,6 +340,24 @@
   --vigil-shell-top-chrome-line-h: var(--sys-control-height-sm);
   --chrome-panel-height: calc(var(--sys-control-height-sm) + (var(--chrome-panel-pad-y) * 2));
 
+  /* Tooltips — same frosted vocabulary as sync popover / chrome, compact for hints */
+  --layer-tooltip: 240;
+  --cmp-tooltip-bg: var(--ui-glass-bg);
+  --cmp-tooltip-border: var(--ui-glass-border);
+  --cmp-tooltip-fg: var(--text-main);
+  --cmp-tooltip-fg-muted: var(--text-muted);
+  --cmp-tooltip-radius: var(--sys-radius-md);
+  --cmp-tooltip-pad-x: 10px;
+  --cmp-tooltip-pad-y: 7px;
+  --cmp-tooltip-font-size: 12px;
+  --cmp-tooltip-line-height: 1.45;
+  --cmp-tooltip-letter-spacing: 0.01em;
+  --cmp-tooltip-max-width: min(300px, calc(100vw - 32px));
+  --cmp-tooltip-shadow: var(--chrome-glass-shadow);
+  --cmp-tooltip-backdrop: var(--chrome-glass-filter);
+  --cmp-tooltip-enter-duration: var(--sys-motion-duration-fast);
+  --cmp-tooltip-enter-ease: var(--sys-motion-ease-standard);
+
   color-scheme: dark;
 }
 
@@ -852,6 +870,58 @@ a {
   --btn-border-hover: transparent;
   --btn-border-active: transparent;
   --btn-border-disabled: transparent;
+}
+
+.vigil-tooltip-surface {
+  position: fixed;
+  z-index: var(--layer-tooltip);
+  box-sizing: border-box;
+  max-width: var(--cmp-tooltip-max-width);
+  padding: var(--cmp-tooltip-pad-y) var(--cmp-tooltip-pad-x);
+  border-radius: var(--cmp-tooltip-radius);
+  border: 1px solid var(--cmp-tooltip-border);
+  background: var(--cmp-tooltip-bg);
+  color: var(--cmp-tooltip-fg);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--cmp-tooltip-font-size);
+  font-weight: 500;
+  line-height: var(--cmp-tooltip-line-height);
+  letter-spacing: var(--cmp-tooltip-letter-spacing);
+  text-align: left;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  pointer-events: none;
+  box-shadow: var(--cmp-tooltip-shadow);
+  backdrop-filter: var(--cmp-tooltip-backdrop);
+  -webkit-backdrop-filter: var(--cmp-tooltip-backdrop);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  opacity: 0;
+  transform: scale(0.97);
+  transition:
+    opacity var(--cmp-tooltip-enter-duration) var(--cmp-tooltip-enter-ease),
+    transform var(--cmp-tooltip-enter-duration) var(--cmp-tooltip-enter-ease);
+}
+
+.vigil-tooltip-surface[data-state="open"] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.vigil-tooltip-surface[data-side="top"] {
+  transform-origin: 50% 100%;
+}
+
+.vigil-tooltip-surface[data-side="bottom"] {
+  transform-origin: 50% 0%;
+}
+
+.vigil-tooltip-surface[data-side="left"] {
+  transform-origin: 100% 50%;
+}
+
+.vigil-tooltip-surface[data-side="right"] {
+  transform-origin: 0% 50%;
 }
 
 /* ── command palette (cmdk-style layout, no cmdk package) ── */

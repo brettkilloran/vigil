@@ -1,6 +1,6 @@
 "use client";
 
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 
 import { Button } from "@/src/components/ui/Button";
 import type { ButtonSize as UiButtonSize } from "@/src/components/ui/Button";
@@ -24,26 +24,33 @@ function toUiButtonSize(size: ButtonSize): UiButtonSize {
   return size;
 }
 
-export function ArchitecturalButton({
-  size,
-  tone,
-  active = false,
-  forceState = "default",
-  leadingIcon,
-  iconOnly = false,
-  className,
-  children,
-  ...buttonProps
-}: {
-  size: ButtonSize;
-  tone: ButtonTone;
-  active?: boolean;
-  forceState?: ButtonState;
-  leadingIcon?: ReactNode;
-  iconOnly?: boolean;
-} & ButtonHTMLAttributes<HTMLButtonElement>) {
+export const ArchitecturalButton = forwardRef<
+  HTMLButtonElement,
+  {
+    size: ButtonSize;
+    tone: ButtonTone;
+    active?: boolean;
+    forceState?: ButtonState;
+    leadingIcon?: ReactNode;
+    iconOnly?: boolean;
+  } & ButtonHTMLAttributes<HTMLButtonElement>
+>(function ArchitecturalButton(
+  {
+    size,
+    tone,
+    active = false,
+    forceState = "default",
+    leadingIcon,
+    iconOnly = false,
+    className,
+    children,
+    ...buttonProps
+  },
+  ref,
+) {
   return (
     <Button
+      ref={ref}
       size={toUiButtonSize(size)}
       tone={tone}
       variant="neutral"
@@ -57,4 +64,4 @@ export function ArchitecturalButton({
       {children}
     </Button>
   );
-}
+});
