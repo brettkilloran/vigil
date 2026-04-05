@@ -1,7 +1,7 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1155;
+  z-index: var(--layer-vault-review-backdrop, 10078);
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -9,13 +9,22 @@
   padding: 0;
   border: none;
   border-radius: 0;
-  background: color-mix(in oklch, var(--sys-color-black) 35%, transparent);
+  /* Strong scrim: modality + hide bright canvas/cards behind the drawer */
+  background: color-mix(in oklch, var(--sys-color-black) 62%, transparent);
+  backdrop-filter: blur(10px) saturate(1.12);
+  -webkit-backdrop-filter: blur(10px) saturate(1.12);
   pointer-events: auto;
   animation: loreReviewFadeIn 0.2s ease;
   /* Shared Button adds .vigil-btn; keep overlay hitbox only */
   box-shadow: none;
   justify-content: unset;
   align-items: unset;
+}
+
+@supports not ((backdrop-filter: blur(1px))) {
+  .backdrop {
+    background: color-mix(in oklch, var(--sys-color-black) 78%, transparent);
+  }
 }
 
 @keyframes loreReviewFadeIn {
@@ -31,16 +40,23 @@
   position: fixed;
   top: 0;
   right: 0;
-  z-index: 1156;
+  z-index: var(--layer-vault-review-panel, 10079);
   display: flex;
   flex-direction: column;
   width: min(420px, 100vw);
   height: 100%;
   max-height: 100dvh;
   box-sizing: border-box;
-  border-left: 1px solid var(--vigil-border);
-  background: var(--vigil-panel);
-  box-shadow: -12px 0 40px color-mix(in oklch, var(--sys-color-black) 22%, transparent);
+  isolation: isolate;
+  /* Opaque shell (same contract as cmdk): no bright canvas bleed-through */
+  border-left: 1px solid var(--sem-border-subtle, oklch(1 0 0 / 0.08));
+  background-color: var(--vigil-panel, var(--sys-color-neutral-900));
+  color: var(--sem-text-primary, oklch(0.967 0 0));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow:
+    -28px 0 56px color-mix(in oklch, var(--sys-color-black) 45%, transparent),
+    inset 1px 0 0 var(--sem-overlay-white-06, oklch(1 0 0 / 0.06));
   pointer-events: auto;
   animation: loreReviewSlideIn 0.28s cubic-bezier(0.22, 0.82, 0.16, 1);
 }
@@ -70,14 +86,15 @@
   justify-content: space-between;
   gap: 12px;
   padding: 16px 16px 12px;
-  border-bottom: 1px solid var(--vigil-border);
+  border-bottom: 1px solid var(--sem-border-subtle, oklch(1 0 0 / 0.08));
+  background: color-mix(in oklch, var(--sys-color-neutral-950) 40%, var(--sys-color-neutral-900));
 }
 
 .panelTitle {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--vigil-label);
+  color: var(--sem-text-primary, var(--vigil-label));
   letter-spacing: 0.02em;
 }
 
@@ -85,7 +102,7 @@
   margin: 4px 0 0;
   font-size: 11px;
   line-height: 1.45;
-  color: var(--vigil-muted);
+  color: var(--sem-text-secondary, var(--vigil-muted));
 }
 
 .panelBody {
@@ -103,7 +120,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--vigil-muted);
+  color: color-mix(in oklch, var(--sem-text-muted, var(--vigil-muted)) 88%, var(--sem-text-primary) 12%);
   margin-bottom: 6px;
 }
 
@@ -117,12 +134,12 @@
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  border: 1px solid var(--vigil-border);
-  background: color-mix(in oklch, var(--vigil-surface) 88%, transparent);
+  border: 1px solid var(--sem-border-strong, oklch(1 0 0 / 0.1));
+  background: var(--sys-color-neutral-800);
   padding: 4px 10px;
   font-size: 10px;
   font-weight: 500;
-  color: var(--vigil-label);
+  color: var(--sem-text-primary, var(--vigil-label));
   cursor: pointer;
   transition:
     background 0.15s ease,
@@ -130,8 +147,8 @@
 }
 
 .chip:hover:not(:disabled) {
-  border-color: color-mix(in oklch, var(--accent) 35%, var(--vigil-border));
-  background: color-mix(in oklch, var(--accent) 8%, var(--vigil-surface));
+  border-color: color-mix(in oklch, var(--accent, var(--sys-color-accent-500)) 40%, var(--sys-color-neutral-700));
+  background: color-mix(in oklch, var(--sys-color-neutral-800) 85%, var(--sys-color-neutral-700));
 }
 
 .chip:disabled {
@@ -139,11 +156,82 @@
   cursor: not-allowed;
 }
 
+.infoDisclosure {
+  margin-top: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--sem-border-subtle, oklch(1 0 0 / 0.08));
+  background: var(--sys-color-neutral-920);
+  overflow: hidden;
+}
+
+.infoDisclosureSummary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--vigil-muted);
+  user-select: none;
+}
+
+.infoDisclosureSummary::-webkit-details-marker {
+  display: none;
+}
+
+.infoDisclosureSummary::after {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid color-mix(in oklch, var(--vigil-muted) 70%, transparent);
+  flex-shrink: 0;
+  transition: transform 0.18s ease;
+}
+
+.infoDisclosure[open] > .infoDisclosureSummary::after {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .infoDisclosureSummary::after {
+    transition: none;
+  }
+}
+
+.infoDisclosureBody {
+  padding: 0 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .issueCard {
   border-radius: 10px;
-  border: 1px solid var(--vigil-border);
+  border: 1px solid var(--sem-border-subtle, oklch(1 0 0 / 0.08));
   padding: 10px 12px;
-  background: color-mix(in oklch, var(--sys-color-black) 3%, transparent);
+  background: var(--sys-color-neutral-920);
+}
+
+.issueCardQuiet {
+  border-color: var(--sem-border-subtle, oklch(1 0 0 / 0.08));
+  background: var(--sys-color-neutral-950);
+  padding: 8px 10px;
+}
+
+.issueCardQuiet .issueSummary {
+  font-size: 11px;
+  font-weight: 450;
+}
+
+.issueCardQuiet .issueDetails {
+  font-size: 9px;
 }
 
 .issueMeta {
@@ -157,14 +245,14 @@
 .issueSummary {
   font-size: 12px;
   font-weight: 500;
-  color: var(--vigil-label);
+  color: var(--sem-text-primary, var(--vigil-label));
 }
 
 .issueDetails {
   margin-top: 6px;
   font-size: 10px;
   line-height: 1.45;
-  color: var(--vigil-muted);
+  color: var(--sem-text-muted, var(--vigil-muted));
 }
 
 .issueActions {
@@ -180,8 +268,8 @@
   font-size: 9px;
   padding: 2px 8px;
   border-radius: 6px;
-  background: color-mix(in oklch, var(--accent) 12%, transparent);
-  color: var(--vigil-label);
+  background: color-mix(in oklch, var(--accent, var(--sys-color-accent-500)) 18%, var(--sys-color-neutral-800));
+  color: var(--sem-text-primary, var(--vigil-label));
 }
 
 .primaryCta {

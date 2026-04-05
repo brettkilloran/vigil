@@ -264,6 +264,8 @@
   --vigil-snap: var(--sys-color-accent-500);
   --vigil-canvas: oklch(0.145 0 0);
   --vigil-grid-color: oklch(1 0 0 / 0.04);
+  /* Opaque modal / drawer shells — was missing and fell back to transparent in several panels. */
+  --vigil-panel: var(--sys-color-neutral-900);
   --vigil-elevated: oklch(0.176 0 0 / 0.7);
   --vigil-glass-border: oklch(1 0 0 / 0.06);
   /* Legacy card tokens — bodies often overridden by card theme */
@@ -346,6 +348,9 @@
    * so hints paint over shell chrome; siblings inside the portal use their own z-index (e.g. cmdk 1200).
    */
   --layer-portal-root: 10070;
+  /* Above `.chromeLayerTopLeftBootElevated` (10060) so the drawer sits in a true modal layer */
+  --layer-vault-review-backdrop: 10078;
+  --layer-vault-review-panel: 10079;
   --layer-tooltip: 1;
   --cmp-tooltip-bg: var(--ui-glass-bg);
   --cmp-tooltip-border: var(--ui-glass-border);

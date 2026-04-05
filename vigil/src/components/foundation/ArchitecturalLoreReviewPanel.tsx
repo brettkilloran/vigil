@@ -2,6 +2,7 @@
 
 import { X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 import styles from "@/src/components/foundation/ArchitecturalLoreReviewPanel.module.css";
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
@@ -74,9 +75,29 @@ export function ArchitecturalLoreReviewPanel({
     setDismissed(new Set());
   }, [issues]);
 
-  const visibleIssues = useMemo(
-    () => issues.filter((_, i) => !dismissed.has(i)),
-    [issues, dismissed],
+  const { attentionIndices, infoIndices } = useMemo(() => {
+    const attention: number[] = [];
+    const info: number[] = [];
+    issues.forEach((issue, i) => {
+      if (issue.severity === "info") info.push(i);
+      else attention.push(i);
+    });
+    return { attentionIndices: attention, infoIndices: info };
+  }, [issues]);
+
+  const infoDisclosureKey = useMemo(
+    () => infoIndices.map((idx) => `${idx}:${issues[idx]?.summary ?? ""}`).join("‖"),
+    [infoIndices, issues],
+  );
+
+  const visibleAttentionCount = useMemo(
+    () => attentionIndices.filter((i) => !dismissed.has(i)).length,
+    [attentionIndices, dismissed],
+  );
+
+  const visibleInfoCount = useMemo(
+    () => infoIndices.filter((i) => !dismissed.has(i)).length,
+    [infoIndices, dismissed],
   );
 
   const applyTags = useCallback(
@@ -100,7 +121,7 @@ export function ArchitecturalLoreReviewPanel({
 
   const canTag = Boolean(draft?.excludeItemId);
 
-  return (
+  const modal = (
     <>
       <Button
         type="button"
@@ -111,17 +132,25 @@ export function ArchitecturalLoreReviewPanel({
         disabled={loading}
         onClick={onClose}
       />
-      <aside className={styles.panel} aria-label="Vault review">
+      <aside
+        className={styles.panel}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="hg-vault-review-title"
+      >
         <div className={styles.panelHeader}>
           <div>
-            <h2 className={styles.panelTitle}>Vault review</h2>
+            <h2 id="hg-vault-review-title" className={styles.panelTitle}>
+              Vault review
+            </h2>
             <p className={styles.panelSubtitle}>
               Consistency pass plus light semantic tags. Many findings are fine to{" "}
               <strong>label</strong> instead of moving or flagging as errors.
             </p>
             {draft ? (
               <p className={styles.panelSubtitle}>
-                Target: <span className="font-medium text-[var(--vigil-label)]">{draft.targetLabel}</span>
+                Target:{" "}
+                <span className="font-medium text-[var(--sem-text-primary)]">{draft.targetLabel}</span>
               </p>
             ) : (
               <p className={`${styles.panelSubtitle} text-amber-700 dark:text-amber-300`}>
@@ -162,36 +191,6 @@ export function ArchitecturalLoreReviewPanel({
             </Button>
           </div>
 
-          <div>
-            <div className={styles.sectionLabel}>Quick labels (no move / sort)</div>
-            <p className="mb-2 text-[10px] leading-relaxed text-[var(--vigil-muted)]">
-              Append tags to this card’s metadata for search and future tooling. Does not change canvas
-              layout.
-            </p>
-            <div className={styles.chipRow}>
-              {PRESET_TAGS.map((t) => (
-                <ArchitecturalTooltip key={t.id} content={t.hint} side="bottom" delayMs={240}>
-                  <Button
-                    type="button"
-                    size="xs"
-                    variant="subtle"
-                    tone="glass"
-                    className={styles.chip}
-                    disabled={!canTag || tagBusy || loading}
-                    onClick={() => void applyTags([t.id])}
-                  >
-                    {t.label}
-                  </Button>
-                </ArchitecturalTooltip>
-              ))}
-            </div>
-            {!canTag && draft ? (
-              <p className="mt-2 text-[10px] text-[var(--vigil-muted)]">
-                Tags require a synced note (save to Neon first if this card is new).
-              </p>
-            ) : null}
-          </div>
-
           {error ? (
             <p className="text-[12px] text-red-600 dark:text-red-400">{error}</p>
           ) : null}
@@ -226,12 +225,52 @@ export function ArchitecturalLoreReviewPanel({
           ) : null}
 
           <div>
+            <div className={styles.sectionLabel}>Quick labels (no move / sort)</div>
+            <p className="mb-2 text-[10px] leading-relaxed text-[var(--vigil-muted)]">
+              Append tags to this card’s metadata for search and future tooling. Does not change canvas
+              layout.
+            </p>
+            <div className={styles.chipRow}>
+              {PRESET_TAGS.map((t) => (
+                <ArchitecturalTooltip key={t.id} content={t.hint} side="bottom" delayMs={240}>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="subtle"
+                    tone="glass"
+                    className={styles.chip}
+                    disabled={!canTag || tagBusy || loading}
+                    onClick={() => void applyTags([t.id])}
+                  >
+                    {t.label}
+                  </Button>
+                </ArchitecturalTooltip>
+              ))}
+            </div>
+            {!canTag && draft ? (
+              <p className="mt-2 text-[10px] text-[var(--vigil-muted)]">
+                Tags require a synced note (save to Neon first if this card is new).
+              </p>
+            ) : null}
+          </div>
+
+          <div>
             <div className={styles.sectionLabel}>
-              Findings {visibleIssues.length > 0 ? `(${visibleIssues.length})` : ""}
+              Needs attention
+              {visibleAttentionCount > 0 ? ` (${visibleAttentionCount})` : ""}
             </div>
             {!loading && !error && issues.length === 0 && semanticSummary == null && suggestedNoteTags.length === 0 ? (
               <p className="text-[11px] text-[var(--vigil-muted)]">
                 Run an analysis to compare this note against retrieved vault excerpts.
+              </p>
+            ) : null}
+            {!loading &&
+            !error &&
+            issues.length > 0 &&
+            visibleAttentionCount === 0 &&
+            visibleInfoCount > 0 ? (
+              <p className="text-[11px] text-[var(--vigil-muted)]">
+                No contradictions or warnings — context notes are below if you want detail.
               </p>
             ) : null}
             {!loading && issues.length === 0 && (semanticSummary || suggestedNoteTags.length > 0) ? (
@@ -239,15 +278,14 @@ export function ArchitecturalLoreReviewPanel({
                 No conflict rows — optional tags above still apply.
               </p>
             ) : null}
-            <ul className="mt-2 space-y-2">
-              {issues.map((issue, i) => {
-                if (dismissed.has(i)) return null;
+            <ul className="mt-2 list-none space-y-2 p-0">
+              {attentionIndices.map((i) => {
+                const issue = issues[i];
+                if (!issue || dismissed.has(i)) return null;
                 const sev =
                   issue.severity === "contradiction"
                     ? "text-red-600 dark:text-red-400"
-                    : issue.severity === "info"
-                      ? "text-[var(--vigil-muted)]"
-                      : "text-amber-700 dark:text-amber-300";
+                    : "text-amber-700 dark:text-amber-300";
                 return (
                   <li key={i} className={styles.issueCard}>
                     <div className={`${styles.issueMeta} ${sev}`}>{issue.severity}</div>
@@ -288,9 +326,67 @@ export function ArchitecturalLoreReviewPanel({
                 );
               })}
             </ul>
+
+            {infoIndices.length > 0 ? (
+              <details key={infoDisclosureKey} className={styles.infoDisclosure}>
+                <summary className={styles.infoDisclosureSummary}>
+                  Context notes
+                  {visibleInfoCount > 0 ? ` (${visibleInfoCount})` : ""}
+                </summary>
+                <div className={styles.infoDisclosureBody}>
+                  {infoIndices.map((i) => {
+                    const issue = issues[i];
+                    if (!issue || dismissed.has(i)) return null;
+                    return (
+                      <div
+                        key={i}
+                        className={`${styles.issueCard} ${styles.issueCardQuiet}`}
+                      >
+                        <div className={`${styles.issueMeta} text-[var(--vigil-muted)]`}>info</div>
+                        <div className={styles.issueSummary}>{issue.summary}</div>
+                        {issue.details ? <div className={styles.issueDetails}>{issue.details}</div> : null}
+                        {issue.handlingHint ? (
+                          <span className={styles.hintPill}>Hint: {issue.handlingHint.replace(/_/g, " ")}</span>
+                        ) : null}
+                        {issue.candidateItemId ? (
+                          <div className="mt-1 font-mono text-[9px] text-[var(--vigil-muted)]">
+                            Related: {issue.candidateItemId}
+                          </div>
+                        ) : null}
+                        <div className={styles.issueActions}>
+                          <Button
+                            type="button"
+                            size="xs"
+                            variant="neutral"
+                            tone="glass"
+                            onClick={() => setDismissed((prev) => new Set(prev).add(i))}
+                          >
+                            Dismiss
+                          </Button>
+                          {canTag ? (
+                            <Button
+                              type="button"
+                              size="xs"
+                              variant="neutral"
+                              tone="glass"
+                              disabled={tagBusy}
+                              onClick={() => void applyTags(["reviewed_finding_ack"])}
+                            >
+                              Tag: acknowledged
+                            </Button>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </details>
+            ) : null}
           </div>
         </div>
       </aside>
     </>
   );
+
+  return createPortal(modal, document.body);
 }

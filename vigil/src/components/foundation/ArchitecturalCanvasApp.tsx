@@ -12,11 +12,11 @@ import {
   Graph,
   MagnifyingGlass,
   NotePencil,
+  SealCheck,
   SignOut,
   Sparkle,
   SquaresFour,
   Stack,
-  Tag,
   Trash,
   UploadSimple,
   WarningCircle,
@@ -3778,7 +3778,7 @@ export function ArchitecturalCanvasApp({
               label: "Vault review (consistency & tags)",
               hint: "Top-right panel — AI pass + label without moving cards",
               keywords: ["consistency", "conflict", "contradiction", "lore", "check", "tags", "vault"],
-              icon: <Tag size={14} weight="bold" />,
+              icon: <SealCheck size={14} weight="bold" />,
             } satisfies PaletteAction,
           ]
         : []),
@@ -8633,7 +8633,7 @@ export function ArchitecturalCanvasApp({
                     size="icon"
                     tone="glass"
                     iconOnly
-                    leadingIcon={<Tag size={18} weight="bold" aria-hidden />}
+                    leadingIcon={<SealCheck size={18} weight="bold" aria-hidden />}
                     className={styles.shellTopLogOutTrigger}
                     aria-label="Open vault review"
                     onClick={() => {
