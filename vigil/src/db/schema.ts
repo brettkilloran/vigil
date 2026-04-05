@@ -89,6 +89,22 @@ export const importReviewItems = pgTable("import_review_items", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
+/** Async smart-import plan generation (`after()` worker updates status + plan). */
+export const loreImportJobs = pgTable("lore_import_jobs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  spaceId: uuid("space_id")
+    .notNull()
+    .references(() => spaces.id, { onDelete: "cascade" }),
+  importBatchId: uuid("import_batch_id").notNull(),
+  status: varchar("status", { length: 32 }).notNull().default("queued"),
+  sourceText: text("source_text").notNull(),
+  fileName: varchar("file_name", { length: 512 }),
+  plan: jsonb("plan").$type<Record<string, unknown> | null>(),
+  error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
 export const itemLinks = pgTable(
   "item_links",
   {
