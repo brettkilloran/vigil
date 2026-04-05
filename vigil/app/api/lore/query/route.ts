@@ -75,7 +75,7 @@ export async function POST(req: Request) {
     return Response.json({
       ok: true,
       answer:
-        "No canvas items matched that question in search. Try different keywords, widen your question, or add notes to the space.",
+        "No canvas items matched that question (lexical + semantic if configured). Try different wording, index notes (OPENAI_API_KEY + POST /api/items/:id/index), or add content to the space.",
       sources: [],
       model: null,
     });
