@@ -2,6 +2,8 @@ import { and, eq, inArray, or, sql } from "drizzle-orm";
 
 import { itemEmbeddings, itemLinks, items, spaces } from "@/src/db/schema";
 import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
+import { logVaultHybridRetrieval } from "@/src/lib/vault-retrieval-debug";
+import { fuseRrfFromOrderedLists } from "@/src/lib/vault-retrieval-rrf";
 import type { VigilDb } from "@/src/lib/spaces";
 import {
   searchItemsFTSWithSnippets,
@@ -10,7 +12,6 @@ import {
   type SearchRow,
 } from "@/src/lib/spaces";
 
-const RRF_K = 60;
 const DEFAULT_VECTOR_CHUNK_LIMIT = 56;
 const DEFAULT_MAX_ITEMS = 16;
 const MAX_CHUNKS_PER_ITEM = 4;
@@ -74,11 +75,6 @@ export async function searchItemChunksByVector(
   }));
 }
 
-function rrfScore(rank: number | undefined): number {
-  if (rank === undefined) return 0;
-  return 1 / (RRF_K + rank + 1);
-}
-
 export type HybridRetrieveResult = {
   rows: SearchRow[];
   itemIdToChunks: Map<string, string[]>;
@@ -139,12 +135,6 @@ export async function hybridRetrieveItems(
     }
   }
 
-  const vecRankByItem = new Map<string, number>();
-  for (let i = 0; i < vecHits.length; i++) {
-    const id = vecHits[i]!.itemId;
-    if (!vecRankByItem.has(id)) vecRankByItem.set(id, i);
-  }
-
   for (const h of vecHits) {
     const list = itemIdToChunks.get(h.itemId) ?? [];
     if (list.length < MAX_CHUNKS_PER_ITEM) {
@@ -153,25 +143,14 @@ export async function hybridRetrieveItems(
     }
   }
 
-  const lexRankByItem = new Map<string, number>();
-  lexicalRows.forEach((r, i) => {
-    if (!lexRankByItem.has(r.item.id)) lexRankByItem.set(r.item.id, i);
+  const lexicalOrderedIds = lexicalRows.map((r) => r.item.id);
+  const vectorOrderedIds = vecHits.map((h) => h.itemId);
+  const { topIds, scores } = fuseRrfFromOrderedLists({
+    lexicalOrderedIds,
+    vectorOrderedIds,
+    maxItems,
   });
 
-  const allIds = new Set<string>([
-    ...lexicalRows.map((r) => r.item.id),
-    ...vecHits.map((h) => h.itemId),
-  ]);
-
-  const scored = [...allIds].map((id) => {
-    const lexR = lexRankByItem.get(id);
-    const vecR = vecRankByItem.get(id);
-    const score = rrfScore(lexR) + rrfScore(vecR);
-    return { id, score };
-  });
-  scored.sort((a, b) => b.score - a.score);
-
-  const topIds = scored.slice(0, maxItems).map((s) => s.id);
   const rowById = new Map<string, SearchRow>();
   for (const r of lexicalRows) rowById.set(r.item.id, r);
   for (const h of vecHits) {
@@ -190,6 +169,26 @@ export async function hybridRetrieveItems(
     const r = rowById.get(id);
     if (r) rows.push(r);
   }
+
+  logVaultHybridRetrieval({
+    queryPreview: q.slice(0, 240),
+    maxItems,
+    useVector,
+    ftsHits: ftsRows.length,
+    lexicalRows: lexicalRows.length,
+    vectorChunkHits: vecHits.length,
+    top: topIds.slice(0, 12).map((id) => {
+      const s = scores.get(id);
+      const title = rowById.get(id)?.item.title?.trim() || "Untitled";
+      return {
+        id,
+        title,
+        lexRank: s?.lexRank,
+        vecRank: s?.vecRank,
+        rrf: s?.rrf != null ? Number(s.rrf.toFixed(5)) : undefined,
+      };
+    }),
+  });
 
   return { rows, itemIdToChunks, itemIdToFtsSnippet };
 }

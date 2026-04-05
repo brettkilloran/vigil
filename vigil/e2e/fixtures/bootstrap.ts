@@ -1,11 +1,14 @@
 import type { Page } from "@playwright/test";
 
-/** Stable theme + empty local canvas; demo payload comes from `GET /api/bootstrap` when `PLAYWRIGHT_E2E=1` on the server. */
+import { WORKSPACE_VIEW_CACHE_STORAGE_KEY } from "../../src/lib/workspace-view-cache";
+
+/** Stable theme + no workspace cache; demo payload comes from `GET /api/bootstrap` when `PLAYWRIGHT_E2E=1` on the server. */
 export async function prepDemoSession(page: Page) {
-  await page.addInitScript(() => {
+  await page.addInitScript((workspaceCacheKey: string) => {
     localStorage.setItem("vigil-color-scheme", "light");
     localStorage.removeItem("vigil-canvas-local-v1");
-  });
+    localStorage.removeItem(workspaceCacheKey);
+  }, WORKSPACE_VIEW_CACHE_STORAGE_KEY);
 }
 
 /** Default route shows the boot gate until the user enters; dock and workspace overlay sit behind it. */

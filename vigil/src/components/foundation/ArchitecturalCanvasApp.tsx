@@ -58,6 +58,7 @@ import {
   type FolderColorSchemeId,
 } from "@/src/components/foundation/architectural-folder-schemes";
 import {
+  type BootstrapResponse,
   buildCanvasGraphFromBootstrap,
   buildContentJsonForContentEntity,
   buildContentJsonForFolderEntity,
@@ -97,6 +98,10 @@ import {
 } from "@/src/components/foundation/architectural-undo";
 import { useModKeyHints } from "@/src/lib/mod-keys";
 import { VIGIL_CANVAS_EFFECTS_STORAGE_KEY } from "@/src/lib/vigil-canvas-prefs";
+import {
+  readWorkspaceViewCache,
+  writeWorkspaceViewCache,
+} from "@/src/lib/workspace-view-cache";
 import { useRecentFolders } from "@/src/hooks/use-recent-folders";
 import { useRecentItems } from "@/src/hooks/use-recent-items";
 import {
@@ -936,6 +941,8 @@ export function ArchitecturalCanvasApp({
   const [neonWorkspaceOk, setNeonWorkspaceOk] = useState<boolean | null>(() =>
     scenario === "default" ? null : true,
   );
+  /** True when the canvas is hydrated from localStorage because live bootstrap failed (still looks “loaded”). */
+  const [workspaceViewFromCache, setWorkspaceViewFromCache] = useState(false);
   const [navTransitionActive, setNavTransitionActive] = useState(false);
   const [canvasEffectsEnabled, setCanvasEffectsEnabled] = useState(true);
   const canvasEffectsEnabledRef = useRef(true);
@@ -2439,10 +2446,12 @@ export function ArchitecturalCanvasApp({
   }, [scale, translateX, translateY]);
 
   useEffect(() => {
+    if (!persistNeonRef.current) return;
     if (!isUuidLike(graph.rootSpaceId) || !isUuidLike(activeSpaceId)) return;
     if (cameraPersistTimerRef.current) clearTimeout(cameraPersistTimerRef.current);
     cameraPersistTimerRef.current = setTimeout(() => {
       cameraPersistTimerRef.current = null;
+      if (!persistNeonRef.current) return;
       void apiPatchSpaceCamera(activeSpaceId, {
         x: translateX,
         y: translateY,
@@ -2488,6 +2497,18 @@ export function ArchitecturalCanvasApp({
     [translateX, translateY, scale],
   );
 
+  const applyBootstrapData = useCallback((data: BootstrapResponse, maxZi: number) => {
+    if (!data.spaceId) return;
+    const nextGraph = buildCanvasGraphFromBootstrap(data);
+    setGraph(nextGraph);
+    setActiveSpaceId(data.spaceId);
+    setNavigationPath(buildPathToSpace(data.spaceId, nextGraph.spaces, nextGraph.rootSpaceId));
+    setTranslateX(data.camera.x);
+    setTranslateY(data.camera.y);
+    setScale(data.camera.zoom);
+    setMaxZIndex(maxZi);
+  }, []);
+
   useEffect(() => {
     if (scenario !== "default") {
       const tokens = {
@@ -2501,6 +2522,7 @@ export function ArchitecturalCanvasApp({
         mediaUploadBtn: styles.mediaUploadBtn,
       };
       setNeonWorkspaceOk(true);
+      setWorkspaceViewFromCache(false);
       persistNeonRef.current = false;
       neonSyncSetCloudEnabled(false);
       setCanvasBootstrapResolved(true);
@@ -2521,6 +2543,7 @@ export function ArchitecturalCanvasApp({
 
     setCanvasBootstrapResolved(false);
     setNeonWorkspaceOk(null);
+    setWorkspaceViewFromCache(false);
     setGraph(createBootstrapPendingGraph());
     setActiveSpaceId(ROOT_SPACE_ID);
     setNavigationPath([ROOT_SPACE_ID]);
@@ -2532,32 +2555,35 @@ export function ArchitecturalCanvasApp({
         if (cancelled || !data || data.demo !== false || !data.spaceId) {
           throw new Error("demo");
         }
-        setNeonWorkspaceOk(true);
-        persistNeonRef.current = true;
-        neonSyncSetCloudEnabled(true);
-        const nextGraph = buildCanvasGraphFromBootstrap(data);
         const maxZi =
           data.items.length > 0 ? Math.max(...data.items.map((i) => i.zIndex), 100) : 100;
-        setGraph(nextGraph);
-        setActiveSpaceId(data.spaceId);
-        setNavigationPath(
-          buildPathToSpace(data.spaceId, nextGraph.spaces, nextGraph.rootSpaceId),
-        );
-        setTranslateX(data.camera.x);
-        setTranslateY(data.camera.y);
-        setScale(data.camera.zoom);
-        setMaxZIndex(maxZi);
+        writeWorkspaceViewCache(data, maxZi);
+        setNeonWorkspaceOk(true);
+        setWorkspaceViewFromCache(false);
+        persistNeonRef.current = true;
+        neonSyncSetCloudEnabled(true);
+        applyBootstrapData(data, maxZi);
       } catch {
         if (cancelled) return;
-        setNeonWorkspaceOk(false);
-        persistNeonRef.current = false;
-        neonSyncSetCloudEnabled(false);
-        setGraph(createBootstrapPendingGraph());
-        setActiveSpaceId(ROOT_SPACE_ID);
-        setNavigationPath([ROOT_SPACE_ID]);
-        setTranslateX(window.innerWidth / 2);
-        setTranslateY(window.innerHeight / 2);
-        setScale(1);
+        const cached = readWorkspaceViewCache();
+        if (cached?.bootstrap?.spaceId) {
+          setNeonWorkspaceOk(false);
+          setWorkspaceViewFromCache(true);
+          persistNeonRef.current = false;
+          neonSyncSetCloudEnabled(false);
+          applyBootstrapData(cached.bootstrap, cached.maxZIndex);
+        } else {
+          setNeonWorkspaceOk(false);
+          setWorkspaceViewFromCache(false);
+          persistNeonRef.current = false;
+          neonSyncSetCloudEnabled(false);
+          setGraph(createBootstrapPendingGraph());
+          setActiveSpaceId(ROOT_SPACE_ID);
+          setNavigationPath([ROOT_SPACE_ID]);
+          setTranslateX(window.innerWidth / 2);
+          setTranslateY(window.innerHeight / 2);
+          setScale(1);
+        }
       }
       if (cancelled) return;
       setCanvasBootstrapResolved(true);
@@ -2574,7 +2600,37 @@ export function ArchitecturalCanvasApp({
     return () => {
       cancelled = true;
     };
-  }, [scenario]);
+  }, [scenario, applyBootstrapData]);
+
+  useEffect(() => {
+    if (scenario !== "default" || !workspaceViewFromCache) return;
+    let cancelled = false;
+    const tryReconnect = async () => {
+      try {
+        const data = await fetchBootstrap();
+        if (cancelled || !data || data.demo !== false || !data.spaceId) return;
+        const maxZi =
+          data.items.length > 0 ? Math.max(...data.items.map((i) => i.zIndex), 100) : 100;
+        writeWorkspaceViewCache(data, maxZi);
+        setNeonWorkspaceOk(true);
+        setWorkspaceViewFromCache(false);
+        persistNeonRef.current = true;
+        neonSyncSetCloudEnabled(true);
+        applyBootstrapData(data, maxZi);
+      } catch {
+        /* keep cached view */
+      }
+    };
+    void tryReconnect();
+    const onOnline = () => void tryReconnect();
+    window.addEventListener("online", onOnline);
+    const interval = window.setInterval(tryReconnect, 45_000);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", onOnline);
+      window.clearInterval(interval);
+    };
+  }, [scenario, workspaceViewFromCache, applyBootstrapData]);
 
   useLayoutEffect(() => {
     setViewportSize({ width: window.innerWidth, height: window.innerHeight });
@@ -6143,8 +6199,12 @@ export function ArchitecturalCanvasApp({
   const bootPreActivateGate =
     scenario === "default" && !bootLayerDismissed && !canvasSessionActivated;
 
-  const showNeonWorkspaceUnavailable =
-    scenario === "default" && neonWorkspaceOk === false && canvasBootstrapResolved;
+  /** No live Neon and no local snapshot — avoid an empty canvas that reads as data loss. */
+  const showWorkspaceBlockingNoSnapshot =
+    scenario === "default" &&
+    neonWorkspaceOk === false &&
+    !workspaceViewFromCache &&
+    canvasBootstrapResolved;
 
   const chromeEntranceOn = !prefersReducedMotion && chromeEnterEpoch > 0;
 
@@ -6190,7 +6250,9 @@ export function ArchitecturalCanvasApp({
           !canvasEffectsEnabled ? ` ${styles.viewportAmbientOff}` : ""
         }${stackModal ? ` ${styles.viewportStackModalOpen}` : ""} ${
           connectionMode !== "move" ? styles.viewportConnectionMode : ""
-        }${bootPreActivateGate ? ` ${styles.viewportBootNoGrid}` : ""}`}
+        }${bootPreActivateGate ? ` ${styles.viewportBootNoGrid}` : ""}${
+          showWorkspaceBlockingNoSnapshot ? ` ${styles.viewportDisconnectedNoData}` : ""
+        }`}
         aria-busy={!viewportRevealReady}
         data-vigil-canvas="true"
         data-canvas-ready={viewportRevealReady ? "true" : "false"}
@@ -6613,12 +6675,12 @@ export function ArchitecturalCanvasApp({
             bootstrapPending={scenario === "default" && !canvasBootstrapResolved}
           />
         ) : null}
-        {showNeonWorkspaceUnavailable ? (
+        {showWorkspaceBlockingNoSnapshot ? (
           <div
             className={styles.neonWorkspaceUnavailableOverlay}
             role="alert"
             aria-live="assertive"
-            data-neon-workspace-unavailable="true"
+            data-workspace-blocking-no-snapshot="true"
           >
             <div
               className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.neonWorkspaceUnavailablePanel}`}
@@ -6630,12 +6692,14 @@ export function ArchitecturalCanvasApp({
                   weight="bold"
                   aria-hidden
                 />
-                Workspace unavailable
+                Could not load workspace
               </h2>
               <p className={styles.neonWorkspaceUnavailableBody}>
-                Heartgarden could not connect to a database-backed workspace. Set{" "}
-                <span className={styles.monoSmall}>NEON_DATABASE_URL</span> for this app, confirm the
-                server can reach Neon, then reload. Until then nothing is saved remotely.
+                Nothing is missing from your account yet — we simply could not reach your Heartgarden
+                database from this browser session. Set{" "}
+                <span className={styles.monoSmall}>NEON_DATABASE_URL</span>, check network access to
+                Neon, then reload. After you have loaded successfully once, we keep a local snapshot so
+                a short outage does not look like an empty garden.
               </p>
             </div>
           </div>
@@ -7496,6 +7560,13 @@ export function ArchitecturalCanvasApp({
             <div className={styles.shellTopClusterRow} data-hg-chrome="top-left-cluster">
               <ArchitecturalStatusBar
                 syncBootstrapPending={scenario === "default" && !canvasBootstrapResolved}
+                syncShowingCachedWorkspace={
+                  scenario === "default" && workspaceViewFromCache && canvasBootstrapResolved
+                }
+                syncOfflineNoSnapshot={
+                  scenario === "default" &&
+                  showWorkspaceBlockingNoSnapshot
+                }
                 onExportGraphJson={exportGraphJson}
                 exportGraphPaletteHint={`${modKeyHints.search} → Export graph JSON`}
               />

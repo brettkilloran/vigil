@@ -66,3 +66,4 @@ We **treat the archived master plan** as **historical product intent** (gestures
 2. Prefer code that follows the custom-canvas architecture (**`ArchitecturalCanvasApp`**); **tldraw is gone** from this repo.
 3. **Zustand:** Subscribe to **stable references** from the store (e.g. `s.items`). Use `useMemo` to derive `Object.values(items)` in the component. Do **not** use selectors that allocate a new array/object every render.
 4. When touching schema, align migrations with **`src/db/schema.ts`** and the master plan (stacks, search, embeddings, links).
+5. **Neon vault ops:** **`npm run db:vault-setup`** (extension + Drizzle push + vault SQL), **`npm run vault:reindex`** (needs running app + server **`OPENAI_API_KEY`**). Human checklist + CI workflow: **`docs/FOLLOW_UP.md`**; script table: **`README.md`**.

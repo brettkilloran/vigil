@@ -28,7 +28,7 @@ The **production shell** is **`ArchitecturalCanvasApp`** (`src/components/founda
 
 Persistence: **`items`** rows + **`spaces.canvas_state`** as camera `{ x, y, zoom }` only. **Links:** wiki-style `vigil:item:` targets in note HTML are resolved in the shell (e.g. **`ArchitecturalLinksPanel`**); cloud mode uses `/api/items/[id]/links` and Neon `item_links`. Shared row types: **`src/model/canvas-types.ts`** (API / mapper shape), separate from **`architectural-types.ts`** (in-memory graph).
 
-**Lore + vault index:** Cmd+K → **Ask lore** → `LoreAskPanel` → **`POST /api/lore/query`** (hybrid FTS + vector chunks + link neighbors + Anthropic). **`OPENAI_API_KEY`** enables embeddings; debounced **`POST /api/items/:id/index`** from `architectural-neon-api.ts` after note writes. **Search:** `/api/search` `hybrid` / `semantic` use RRF when embeddings exist; **`GET /api/search/chunks`** for raw chunk hits.
+**Lore + vault index:** Cmd+K → **Ask lore** → `LoreAskPanel` → **`POST /api/lore/query`** (hybrid FTS + vector chunks + link neighbors + Anthropic). **`OPENAI_API_KEY`** enables embeddings; debounced **`POST /api/items/:id/index`** from `architectural-neon-api.ts` after note writes. Optional **`HEARTGARDEN_INDEX_AFTER_PATCH=1`**: Next **`after()`** reindex from `schedule-vault-index-after.ts` on PATCH/create. **`HEARTGARDEN_VAULT_DEBUG=1`**: log hybrid RRF ranks. **`HEARTGARDEN_INDEX_SKIP_LORE_META=1`**: vectors-only index default (saves Anthropic on bulk reindex). **Search:** `/api/search` `hybrid` / `semantic` use RRF when embeddings exist; **`GET /api/search/chunks`** for raw chunk hits.
 
 **Neon sync strip:** Top status bar shows **Loading / Local / Saving / Saved / Sync error** via `neon-sync-bus.ts` + instrumented `architectural-neon-api.ts`. **Undo/redo** is in-memory only; tooltips spell out that the server keeps the **last successful write** until the next PATCH.
 
@@ -65,6 +65,8 @@ The script picks the **newest** `node-v*-win-x64` under `%LOCALAPPDATA%\node-por
 **CSS modules:** Do not put **`:root { … }`** in `*.module.css` (Webpack CSS modules reject global selectors and the app/Storybook build can fail). Shared token blocks live in **`app/globals.css`**.
 
 **CI:** GitHub Actions runs **`npm run build-storybook`** after **`npm run check`** so broken Storybook config or stories fail the pipeline. Locally you can run **`npm run check:all`** (lint + Next build + Storybook build) before pushing.
+
+**Database (Neon + vault index):** From **`vigil/`**, **`npm run db:vault-setup`** — pgvector extension, **`drizzle-kit push --force`**, then **`scripts/vault-sql-migrate.mjs`**. **`npm run vault:reindex`** hits **`POST /api/items/:id/index`** for all rows (needs dev server + server-side **`OPENAI_API_KEY`**). GitHub: manual workflow **`heartgarden-db-vault.yml`** + secret **`HEARTGARDEN_NEON_DATABASE_URL`**. Details: **`docs/FOLLOW_UP.md`**.
 
 ## Terminals (Cursor / agents)
 

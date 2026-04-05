@@ -6,6 +6,7 @@ import { items } from "@/src/db/schema";
 import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
+import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
 const patchBody = z.object({
@@ -143,6 +144,7 @@ export async function PATCH(
   const contentDirty = titleChanged || contentTextChanged;
   if (contentDirty && row) {
     scheduleItemEmbeddingRefresh(db, row);
+    scheduleVaultReindexAfterResponse(row.id);
   }
 
   return Response.json({ ok: true, item: rowToCanvasItem(row!) });

@@ -5,6 +5,7 @@ import { items } from "@/src/db/schema";
 import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
+import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
 import { assertSpaceExists, listItemsForSpace } from "@/src/lib/spaces";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
 
@@ -131,6 +132,9 @@ export async function POST(
 
   if (row) {
     scheduleItemEmbeddingRefresh(db, row);
+    if (contentText.trim().length > 0 || title.trim().length > 0) {
+      scheduleVaultReindexAfterResponse(row.id);
+    }
   }
 
   return Response.json({ ok: true, item: rowToCanvasItem(row!) });

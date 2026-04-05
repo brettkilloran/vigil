@@ -213,6 +213,14 @@
   background-image: none;
 }
 
+/* First visit / no cache: no empty dot grid behind the setup card (reads as “blank project”). */
+.viewport.viewportDisconnectedNoData,
+.viewport.viewportDisconnectedNoData.deepSpace,
+.viewport.viewportDisconnectedNoData.viewportAmbientOff,
+.viewport.viewportDisconnectedNoData.viewportAmbientOff.deepSpace {
+  background-image: none;
+}
+
 .viewport::after {
   content: "";
   position: absolute;

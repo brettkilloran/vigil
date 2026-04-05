@@ -14,6 +14,15 @@ export type ItemRow = typeof items.$inferSelect;
 
 const DEFAULT_LORE_MODEL = "claude-sonnet-4-20250514";
 
+/** When unset, `HEARTGARDEN_INDEX_SKIP_LORE_META=1` skips Anthropic lore fields on index. */
+function resolveRefreshLoreMeta(explicit?: boolean): boolean {
+  if (explicit === false) return false;
+  if (explicit === true) return true;
+  const skip = (process.env.HEARTGARDEN_INDEX_SKIP_LORE_META ?? "").trim().toLowerCase();
+  if (skip === "1" || skip === "true" || skip === "yes") return false;
+  return true;
+}
+
 function sha256Hex(s: string): string {
   return createHash("sha256").update(s, "utf8").digest("hex");
 }
@@ -59,7 +68,7 @@ export async function reindexItemVault(
   }
 
   let loreMetaUpdated = false;
-  const wantMeta = options.refreshLoreMeta !== false;
+  const wantMeta = resolveRefreshLoreMeta(options.refreshLoreMeta);
   const anthropicKey = (process.env.ANTHROPIC_API_KEY ?? "").trim();
   if (wantMeta && anthropicKey) {
     const model =

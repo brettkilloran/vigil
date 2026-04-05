@@ -16,7 +16,7 @@ This is the **repo-wide checklist**: architecture snapshot, shipped tranches, an
 | **Lore Q&A** | `POST /api/lore/query` — **hybrid retrieval** (`vault-retrieval.ts`) + **1-hop `item_links` neighbors**, synthesis via **Anthropic**. Same env + `lore-query-rate-limit.ts` as before. UI: **Ask lore** → `LoreAskPanel`. |
 | **DB** | Drizzle `src/db/schema.ts`; Neon requires **`CREATE EXTENSION vector`** before push (`npm run db:ensure-pgvector`). |
 
-**Health check:** From the app root (**`vigil/`** unless renamed — **`docs/NAMING.md`**), run `npm run check` (lint + production build). After UX / DB / stacking changes, run `npm run test:unit` and targeted `npm run test:e2e` if flows touched.
+**Health check:** From the app root (**`vigil/`** unless renamed — **`docs/NAMING.md`**), run `npm run check` (lint + production build). After UX / DB / stacking changes, run `npm run test:unit` and targeted `npm run test:e2e` if flows touched. **Neon vault schema:** `npm run db:vault-setup`; **embedding backfill:** app up + `npm run vault:reindex` (see **`docs/FOLLOW_UP.md`**).
 
 ---
 
@@ -43,9 +43,10 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 ### Near-term — hardening & parity
 
 1. **`POST /api/lore/query` hardening** — Baseline in-memory rate limit is shipped; before a public URL add auth, edge firewall, or Redis / Vercel KV for global limits.
-2. **Index + embedding ops** — Tune HNSW / IVFFLAT on Neon; optional **`waitUntil`** on PATCH for server-driven index; global queue if index volume exceeds debounced client + reindex.
-3. **E2E** — Optional: palette → lore panel smoke (skip or mock LLM in CI).
-4. **Canvas version history (UX2 — decision for v1)** — **Export-first:** the canvas already supports **Export graph JSON** (Cmd+K). Treat that as the supported “checkpoint” workflow until a DB snapshot or `item_revisions` table is justified. **Space / graph snapshots** and **per-item revision logs** remain future options; any in-app restore must not silently fight the local undo stack (explicit “restore from server snapshot” only).
+2. **Index + embedding ops** — Tune HNSW / IVFFLAT on Neon. Optional **`HEARTGARDEN_INDEX_AFTER_PATCH=1`** uses Next **`after()`** on item PATCH/create (`schedule-vault-index-after.ts`); global queue if volume still exceeds debounced client + reindex.
+3. **Retrieval observability** — `HEARTGARDEN_VAULT_DEBUG=1` enables `console.debug` RRF diagnostics in `vault-retrieval.ts` (shipped).
+4. **E2E** — Optional: palette → lore panel smoke (skip or mock LLM in CI).
+5. **Canvas version history (UX2 — decision for v1)** — **Export-first:** the canvas already supports **Export graph JSON** (Cmd+K). Treat that as the supported “checkpoint” workflow until a DB snapshot or `item_revisions` table is justified. **Space / graph snapshots** and **per-item revision logs** remain future options; any in-app restore must not silently fight the local undo stack (explicit “restore from server snapshot” only).
 
 ### Mid-term — master plan Phase 5 (TTRPG + intelligence)
 

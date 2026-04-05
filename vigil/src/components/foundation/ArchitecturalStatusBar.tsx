@@ -72,6 +72,8 @@ function SaveAndVersionPopover({
   envLabel,
   showPulse = true,
   bootstrapPending,
+  showingCachedWorkspace = false,
+  offlineNoSnapshot = false,
   onExportGraphJson,
   exportGraphPaletteHint,
 }: {
@@ -80,6 +82,10 @@ function SaveAndVersionPopover({
   envLabel: string;
   showPulse?: boolean;
   bootstrapPending: boolean;
+  /** Live Neon unavailable; UI is the last successful snapshot from this browser. */
+  showingCachedWorkspace?: boolean;
+  /** Could not reach DB and there is no local snapshot yet (setup / network). */
+  offlineNoSnapshot?: boolean;
   onExportGraphJson?: () => void;
   exportGraphPaletteHint?: string;
 }) {
@@ -126,6 +132,22 @@ function SaveAndVersionPopover({
       statusLine = "Loading workspace…";
       detailTitle = "Loading workspace";
       detailBody = "Resolving demo vs Neon and hydrating the canvas…";
+    } else if (offlineNoSnapshot) {
+      pulseToneClass = styles.pulseDotToneLocal;
+      tooltipTitle =
+        "Database not reachable and no local snapshot yet. Your data is not shown because the app could not load it — not because it was deleted. Click for details.";
+      statusLine = "Database not reachable";
+      detailTitle = "Workspace not loaded";
+      detailBody =
+        "Heartgarden could not open a database-backed workspace from this session, and this browser does not have a prior snapshot yet. Configure NEON_DATABASE_URL, fix network access, and reload. Once you load successfully, we cache a view so brief outages still look like your garden.";
+    } else if (!sync.cloudEnabled && showingCachedWorkspace) {
+      pulseToneClass = styles.pulseDotToneSaving;
+      tooltipTitle =
+        "Showing your last loaded workspace from this browser while we try to reconnect to Neon. Edits stay local until the server is back. Click for details.";
+      statusLine = "Offline · showing saved view";
+      detailTitle = "Cached workspace";
+      detailBody =
+        "You are seeing the last workspace snapshot stored in this browser. We retry automatically and when the network comes back. New changes are kept on this device until Neon is reachable again.";
     } else if (!sync.cloudEnabled) {
       pulseToneClass = styles.pulseDotToneLocal;
       tooltipTitle =
@@ -161,15 +183,19 @@ function SaveAndVersionPopover({
 
     const live = bootstrapPending
       ? "Loading workspace"
-      : !sync.cloudEnabled
-        ? "Local session, not connected to Neon"
-        : sync.lastError
-          ? `Sync error: ${sync.lastError}`
-          : busy
-            ? "Saving to Neon"
-            : rel
-              ? `Saved to Neon ${rel}`
-              : "Saved to Neon";
+      : offlineNoSnapshot
+        ? "Workspace could not load; database not reachable"
+        : !sync.cloudEnabled && showingCachedWorkspace
+          ? "Offline, showing cached workspace from this browser"
+          : !sync.cloudEnabled
+            ? "Local session, not connected to Neon"
+            : sync.lastError
+              ? `Sync error: ${sync.lastError}`
+              : busy
+                ? "Saving to Neon"
+                : rel
+                  ? `Saved to Neon ${rel}`
+                  : "Saved to Neon";
 
     const aria = `Save and database: ${statusLine}. Open menu for details, export, and version history.`;
 
@@ -185,7 +211,15 @@ function SaveAndVersionPopover({
       relSaved: rel,
       absSaved: abs,
     };
-  }, [bootstrapPending, busy, sync.cloudEnabled, sync.lastError, sync.lastSavedAt]);
+  }, [
+    bootstrapPending,
+    busy,
+    offlineNoSnapshot,
+    showingCachedWorkspace,
+    sync.cloudEnabled,
+    sync.lastError,
+    sync.lastSavedAt,
+  ]);
 
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -507,6 +541,8 @@ export function ArchitecturalStatusBar({
   envLabel = "波途画電",
   showPulse = true,
   syncBootstrapPending = false,
+  syncShowingCachedWorkspace = false,
+  syncOfflineNoSnapshot = false,
   onExportGraphJson,
   exportGraphPaletteHint,
 }: {
@@ -514,6 +550,8 @@ export function ArchitecturalStatusBar({
   showPulse?: boolean;
   /** True while default-scenario bootstrap is in flight (before we know demo vs Neon). */
   syncBootstrapPending?: boolean;
+  syncShowingCachedWorkspace?: boolean;
+  syncOfflineNoSnapshot?: boolean;
   onExportGraphJson?: () => void;
   exportGraphPaletteHint?: string;
 }) {
@@ -529,6 +567,8 @@ export function ArchitecturalStatusBar({
           envLabel={envLabel}
           showPulse={showPulse}
           bootstrapPending={syncBootstrapPending}
+          showingCachedWorkspace={syncShowingCachedWorkspace}
+          offlineNoSnapshot={syncOfflineNoSnapshot}
           onExportGraphJson={onExportGraphJson}
           exportGraphPaletteHint={exportGraphPaletteHint}
         />
