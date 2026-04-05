@@ -305,6 +305,15 @@
   max-width: 100%;
 }
 
+/* Reserve horizontal space for `.flowerToolsRail` (~46px + gutter); desktop unchanged above breakpoint. */
+@media (max-width: 640px) {
+  .content {
+    padding-inline-end: calc(
+      var(--chrome-tool-rail-strip-width, 46px) + 32px + env(safe-area-inset-right, 0px)
+    );
+  }
+}
+
 /*
  * CTA hover — Chris Coyier / CSS-Tricks style text glitch:
  * https://css-tricks.com/glitch-effect-text-images-svg/

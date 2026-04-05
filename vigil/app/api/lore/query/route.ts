@@ -13,7 +13,21 @@ const bodySchema = z.object({
 
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 
+export const runtime = "nodejs";
+
 export async function POST(req: Request) {
+  if ((process.env.HEARTGARDEN_LORE_QUERY_DISABLED ?? "").trim() === "1") {
+    return Response.json(
+      {
+        ok: false,
+        error: "Lore query is disabled on this deployment (HEARTGARDEN_LORE_QUERY_DISABLED).",
+        answer: null,
+        sources: [],
+      },
+      { status: 503 },
+    );
+  }
+
   if (loreQueryRateLimitExceeded(req)) {
     return Response.json(
       {
@@ -59,17 +73,30 @@ export async function POST(req: Request) {
 
   const { question, spaceId, limit } = parsed.data;
 
-  if (spaceId) {
-    const space = await assertSpaceExists(db, spaceId);
-    if (!space) {
-      return Response.json(
-        { ok: false, error: "Space not found", answer: null, sources: [] },
-        { status: 404 },
-      );
+  let sources: Awaited<ReturnType<typeof retrieveLoreSources>>;
+  try {
+    if (spaceId) {
+      const space = await assertSpaceExists(db, spaceId);
+      if (!space) {
+        return Response.json(
+          { ok: false, error: "Space not found", answer: null, sources: [] },
+          { status: 404 },
+        );
+      }
     }
+    sources = await retrieveLoreSources(db, question, { spaceId, limit });
+  } catch (err) {
+    console.error("[lore/query] retrieval", err);
+    return Response.json(
+      {
+        ok: false,
+        error: "Lore retrieval failed (check database and search configuration).",
+        answer: null,
+        sources: [],
+      },
+      { status: 500 },
+    );
   }
-
-  const sources = await retrieveLoreSources(db, question, { spaceId, limit });
 
   if (sources.length === 0) {
     return Response.json({

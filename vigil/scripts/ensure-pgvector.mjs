@@ -1,5 +1,7 @@
 /**
- * Neon: enable pgvector before `drizzle-kit push` if item_embeddings uses vector().
+ * Neon: enable extensions before `drizzle-kit push` / vault SQL.
+ * - vector: chunk embeddings
+ * - pg_trgm: fuzzy search (`similarity`) used when FTS has no hits — lore + search
  * Run: node ./scripts/ensure-pgvector.mjs
  */
 import { config } from "dotenv";
@@ -13,4 +15,5 @@ if (!url) {
 }
 const sql = neon(url);
 await sql`CREATE EXTENSION IF NOT EXISTS vector`;
-console.log("pgvector extension ready.");
+await sql`CREATE EXTENSION IF NOT EXISTS pg_trgm`;
+console.log("pgvector + pg_trgm extensions ready.");

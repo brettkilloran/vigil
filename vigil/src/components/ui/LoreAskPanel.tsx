@@ -27,6 +27,21 @@ type LoreResponse = {
   error?: unknown;
 };
 
+function loreScrollableAncestorWithin(el: Node | null, boundary: HTMLElement): HTMLElement | null {
+  let n: Element | null = el instanceof Element ? el : el?.parentElement ?? null;
+  while (n && boundary.contains(n)) {
+    if (n instanceof HTMLElement) {
+      const st = window.getComputedStyle(n);
+      const oy = st.overflowY;
+      if ((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight + 1) {
+        return n;
+      }
+    }
+    n = n.parentElement;
+  }
+  return null;
+}
+
 export function LoreAskPanel({
   open,
   onClose,
@@ -93,10 +108,51 @@ export function LoreAskPanel({
         e.preventDefault();
         return;
       }
-      if (!root.contains(t)) e.preventDefault();
+      if (!root.contains(t)) {
+        e.preventDefault();
+        return;
+      }
+      const scrollEl = loreScrollableAncestorWithin(t, root);
+      if (scrollEl) {
+        const { scrollTop, scrollHeight, clientHeight } = scrollEl;
+        const dy = e.deltaY;
+        const edge = 1;
+        const atTop = scrollTop <= edge;
+        const atBottom = scrollTop + clientHeight >= scrollHeight - edge;
+        if ((dy < 0 && atTop) || (dy > 0 && atBottom)) {
+          e.preventDefault();
+        }
+        return;
+      }
+      e.preventDefault();
     };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const root = rootRef.current;
+      const t = e.target;
+      if (!root || !(t instanceof Node)) {
+        e.preventDefault();
+        return;
+      }
+      if (!root.contains(t)) {
+        e.preventDefault();
+        return;
+      }
+      if (t instanceof Element && t.closest("textarea, input, select, [contenteditable='true']")) {
+        return;
+      }
+      if (loreScrollableAncestorWithin(t, root)) {
+        return;
+      }
+      e.preventDefault();
+    };
+
     window.addEventListener("wheel", onWheel, { passive: false, capture: true });
-    return () => window.removeEventListener("wheel", onWheel, { capture: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
+    return () => {
+      window.removeEventListener("wheel", onWheel, { capture: true });
+      window.removeEventListener("touchmove", onTouchMove, { capture: true });
+    };
   }, [open]);
 
   const submit = useCallback(async () => {
@@ -179,8 +235,10 @@ export function LoreAskPanel({
         data-hg-lore="overlay"
         aria-hidden="true"
         style={{ pointerEvents: "auto" }}
-        onMouseDown={(e) => {
-          if (e.target === e.currentTarget) onClose();
+        onPointerDown={(e) => {
+          if (e.target !== e.currentTarget) return;
+          if (e.button !== 0) return;
+          onClose();
         }}
       />
       <div data-hg-lore="dialog" role="presentation">

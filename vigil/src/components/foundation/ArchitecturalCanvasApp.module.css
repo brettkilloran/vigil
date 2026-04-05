@@ -15,6 +15,7 @@
 .shell {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background-color: var(--bg-base);
   color: var(--text-main);
@@ -100,6 +101,7 @@
 .viewport {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   position: relative;
   transition: filter 0.28s ease;
   will-change: filter;
@@ -342,7 +344,7 @@
 /* ── Post–“Enter the garden” chrome entrance (staggered edges → center dock) ── */
 .toolRailEnterShell {
   position: absolute;
-  right: 24px;
+  right: max(24px, env(safe-area-inset-right, 0px));
   top: 50%;
   z-index: var(--layer-ui-chrome);
   pointer-events: none;
@@ -456,7 +458,7 @@
 .focusEffectsEnterHost {
   position: absolute;
   left: max(24px, env(safe-area-inset-left, 0px));
-  bottom: 28px;
+  bottom: max(28px, env(safe-area-inset-bottom, 0px));
   width: fit-content;
   z-index: var(--layer-ui-chrome);
   pointer-events: none;
@@ -472,7 +474,7 @@
   position: absolute;
   right: max(24px, env(safe-area-inset-right, 0px));
   left: auto;
-  bottom: 28px;
+  bottom: max(28px, env(safe-area-inset-bottom, 0px));
   width: fit-content;
   max-width: calc(100vw - 48px);
   z-index: var(--layer-ui-chrome);
@@ -489,7 +491,7 @@
 
 .bottomDockEnterHost {
   position: absolute;
-  bottom: 28px;
+  bottom: max(28px, env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
   display: flex;
@@ -661,8 +663,8 @@
 
 .stackModalCloseButtonWrap {
   position: fixed;
-  top: 20px;
-  right: 24px;
+  top: max(20px, env(safe-area-inset-top, 0px));
+  right: max(24px, env(safe-area-inset-right, 0px));
   z-index: calc(var(--layer-stack-modal) + 40);
   pointer-events: auto;
 }
@@ -713,7 +715,7 @@
 
 .stackModalOverflowBadge {
   position: fixed;
-  bottom: 28px;
+  bottom: max(28px, env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   padding: 6px 12px;
@@ -729,7 +731,7 @@
 
 .stackModalEjectBadge {
   position: fixed;
-  bottom: 64px;
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   padding: 6px 12px;
@@ -1811,7 +1813,7 @@
 /* Vault review + import/search: one anchored row (was two stacks both at top/right). */
 .topRightChromeCluster {
   position: absolute;
-  top: 24px;
+  top: max(24px, env(safe-area-inset-top, 0px));
   right: max(24px, env(safe-area-inset-right, 0px));
   z-index: var(--layer-ui-chrome-elevated);
   display: flex;
@@ -1840,8 +1842,8 @@
 
 .shellTopLeftStack {
   position: absolute;
-  top: 24px;
-  left: 24px;
+  top: max(24px, env(safe-area-inset-top, 0px));
+  left: max(24px, env(safe-area-inset-left, 0px));
   /* Above sibling chrome (e.g. parent-exit rail at --layer-ui-chrome) so crumbs/status stay inspectable. */
   z-index: var(--layer-ui-chrome-elevated);
   display: flex;
@@ -2409,7 +2411,7 @@
   position: absolute;
   left: max(24px, env(safe-area-inset-left, 0px));
   right: auto;
-  bottom: 28px;
+  bottom: max(28px, env(safe-area-inset-bottom, 0px));
   width: fit-content;
   z-index: var(--layer-ui-chrome);
   pointer-events: none;
@@ -2453,7 +2455,7 @@
   position: absolute;
   right: max(24px, env(safe-area-inset-right, 0px));
   left: auto;
-  bottom: 28px;
+  bottom: max(28px, env(safe-area-inset-bottom, 0px));
   width: fit-content;
   max-width: calc(100vw - 48px);
   z-index: var(--layer-ui-chrome);
@@ -2481,7 +2483,7 @@
 
 .bottomDock {
   position: absolute;
-  bottom: 28px;
+  bottom: max(28px, env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
   display: flex;
@@ -2509,7 +2511,7 @@
 /* Same dock as .bottomDock but fixed above focus scrim (viewport dock sits under overlay z-index). */
 .focusBottomDock {
   position: fixed;
-  bottom: 28px;
+  bottom: max(28px, env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
   display: flex;
@@ -3400,7 +3402,7 @@
 
 .sideTools {
   position: absolute;
-  right: 24px;
+  right: max(24px, env(safe-area-inset-right, 0px));
   top: 50%;
   transform: translateY(-50%);
   z-index: var(--layer-ui-chrome);
