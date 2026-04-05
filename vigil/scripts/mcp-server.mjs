@@ -20,7 +20,7 @@ const SPACE = process.env.HEARTGARDEN_DEFAULT_SPACE_ID || "";
 const WRITE_KEY = (process.env.HEARTGARDEN_MCP_WRITE_KEY || "").trim();
 
 const server = new Server(
-  { name: "heartgarden", version: "0.5.0" },
+  { name: "heartgarden", version: "0.6.0" },
   { capabilities: { tools: {}, resources: {} } },
 );
 
@@ -121,7 +121,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "vigil_search",
       description:
-        "Search items in a space via Postgres FTS; hybrid merges FTS + trigram. mode=semantic is a legacy alias for full-text. Requires running app and DB.",
+        "Search canvas items via GET /api/search. hybrid (default): FTS + fuzzy + vector RRF when the app has OPENAI_API_KEY. semantic: vector-fused item ranking. fts | fuzzy: lexical only.",
       inputSchema: {
         type: "object",
         properties: {
@@ -129,8 +129,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           q: { type: "string", description: "Query (at least 2 characters)" },
           mode: {
             type: "string",
-            enum: ["fts", "semantic", "hybrid"],
-            description: "fts | hybrid (FTS+fuzzy) | semantic (same as fts, deprecated name)",
+            enum: ["fts", "fuzzy", "semantic", "hybrid"],
+            description: "Default hybrid",
           },
         },
         required: ["q"],
@@ -224,14 +224,62 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "vigil_lore_query",
       description:
-        "Ask a natural-language question; server retrieves via FTS then Claude synthesizes. POST /api/lore/query.",
+        "Ask a natural-language question; hybrid retrieval (FTS + vectors + graph neighbors) then Claude synthesizes. POST /api/lore/query.",
       inputSchema: {
         type: "object",
         properties: {
           question: { type: "string" },
           space_id: { type: "string", description: "Optional space UUID filter" },
+          limit: { type: "integer", description: "Max sources 1–24, default 14" },
         },
         required: ["question"],
+      },
+    },
+    {
+      name: "vigil_semantic_search",
+      description:
+        "Return top matching text chunks (vector) with item ids. GET /api/search/chunks. Requires app OPENAI_API_KEY and indexed items. Omit space_id to search all spaces.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          space_id: {
+            type: "string",
+            description: "Optional space UUID; else HEARTGARDEN_DEFAULT_SPACE_ID or all spaces",
+          },
+          q: { type: "string", description: "Query (at least 2 characters)" },
+          limit: { type: "integer", description: "Max chunks, default 24" },
+        },
+        required: ["q"],
+      },
+    },
+    {
+      name: "vigil_index_item",
+      description:
+        "Chunk + embed one item and refresh lore summary/aliases (Anthropic). POST /api/items/:id/index. Rate-limited.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          item_id: { type: "string" },
+          refresh_lore_meta: {
+            type: "boolean",
+            description: "Default true; set false to skip Anthropic lore fields",
+          },
+        },
+        required: ["item_id"],
+      },
+    },
+    {
+      name: "vigil_reindex_space",
+      description:
+        "Reindex all items in a space (embeddings + optional lore meta). POST /api/spaces/:id/reindex. Requires write_key matching HEARTGARDEN_MCP_WRITE_KEY.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          write_key: { type: "string" },
+          space_id: { type: "string", description: "Space UUID" },
+          refresh_lore_meta: { type: "boolean", description: "Default true" },
+        },
+        required: ["write_key", "space_id"],
       },
     },
     {
@@ -297,7 +345,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (name === "vigil_search") {
     const spaceId = args.space_id || SPACE;
     const q = String(args.q ?? "").trim();
-    const mode = args.mode || "fts";
+    const mode = args.mode || "hybrid";
     if (!spaceId) {
       return {
         content: [
@@ -466,11 +514,83 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const body = {
       question,
       ...(args.space_id ? { spaceId: String(args.space_id) } : {}),
+      ...(args.limit != null ? { limit: Number(args.limit) } : {}),
     };
     const res = await fetch(`${BASE}/api/lore/query`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+    });
+    return { content: [{ type: "text", text: await res.text() }] };
+  }
+
+  if (name === "vigil_semantic_search") {
+    const spaceId = args.space_id ? String(args.space_id).trim() : SPACE;
+    const q = String(args.q ?? "").trim();
+    if (q.length < 2) {
+      return {
+        content: [{ type: "text", text: "Query q must be at least 2 characters." }],
+        isError: true,
+      };
+    }
+    const url = new URL("/api/search/chunks", BASE);
+    if (spaceId) url.searchParams.set("spaceId", spaceId);
+    url.searchParams.set("q", q);
+    if (args.limit != null) url.searchParams.set("limit", String(args.limit));
+    const res = await fetch(url);
+    return { content: [{ type: "text", text: await res.text() }] };
+  }
+
+  if (name === "vigil_index_item") {
+    const itemId = String(args.item_id ?? "").trim();
+    if (!itemId) {
+      return {
+        content: [{ type: "text", text: "item_id is required" }],
+        isError: true,
+      };
+    }
+    const payload =
+      args.refresh_lore_meta === false ? { refreshLoreMeta: false } : {};
+    const res = await fetch(`${BASE}/api/items/${encodeURIComponent(itemId)}/index`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return { content: [{ type: "text", text: await res.text() }] };
+  }
+
+  if (name === "vigil_reindex_space") {
+    if (!WRITE_KEY) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "HEARTGARDEN_MCP_WRITE_KEY is not set on the MCP server process.",
+          },
+        ],
+        isError: true,
+      };
+    }
+    if (String(args.write_key ?? "") !== WRITE_KEY) {
+      return {
+        content: [{ type: "text", text: "Invalid write_key" }],
+        isError: true,
+      };
+    }
+    const spaceId = String(args.space_id ?? "").trim();
+    if (!spaceId) {
+      return {
+        content: [{ type: "text", text: "space_id is required" }],
+        isError: true,
+      };
+    }
+    const res = await fetch(`${BASE}/api/spaces/${encodeURIComponent(spaceId)}/reindex`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        write_key: WRITE_KEY,
+        refreshLoreMeta: args.refresh_lore_meta !== false,
+      }),
     });
     return { content: [{ type: "text", text: await res.text() }] };
   }
