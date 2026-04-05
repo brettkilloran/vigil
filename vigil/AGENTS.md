@@ -28,7 +28,7 @@ The **production shell** is **`ArchitecturalCanvasApp`** (`src/components/founda
 
 Persistence: **`items`** rows + **`spaces.canvas_state`** as camera `{ x, y, zoom }` only. **Links:** wiki-style `vigil:item:` targets in note HTML are resolved in the shell (e.g. **`ArchitecturalLinksPanel`**); cloud mode uses `/api/items/[id]/links` and Neon `item_links`. Shared row types: **`src/model/canvas-types.ts`** (API / mapper shape), separate from **`architectural-types.ts`** (in-memory graph).
 
-**Lore v1:** Cmd+K → **Ask lore (AI)** → `LoreAskPanel` → **`POST /api/lore/query`** (FTS retrieval + Anthropic). **Search:** Postgres full-text + trigram; **`ANTHROPIC_API_KEY`** is for lore only (no separate embedding vendor).
+**Lore + vault index:** Cmd+K → **Ask lore** → `LoreAskPanel` → **`POST /api/lore/query`** (hybrid FTS + vector chunks + link neighbors + Anthropic). **`OPENAI_API_KEY`** enables embeddings; debounced **`POST /api/items/:id/index`** from `architectural-neon-api.ts` after note writes. **Search:** `/api/search` `hybrid` / `semantic` use RRF when embeddings exist; **`GET /api/search/chunks`** for raw chunk hits.
 
 **Neon sync strip:** Top status bar shows **Loading / Local / Saving / Saved / Sync error** via `neon-sync-bus.ts` + instrumented `architectural-neon-api.ts`. **Undo/redo** is in-memory only; tooltips spell out that the server keeps the **last successful write** until the next PATCH.
 
@@ -75,7 +75,7 @@ The script picks the **newest** `node-v*-win-x64` under `%LOCALAPPDATA%\node-por
 
 ## MCP (`npm run mcp`)
 
-Tools include **`vigil_browse_spaces`**, **`vigil_space_summary`**, **`vigil_list_items`**, … (full list in `scripts/mcp-server.mjs`) — names keep the **`vigil_`** prefix for MCP client compatibility; **`HEARTGARDEN_MCP_WRITE_KEY`** on the MCP process must match `write_key` in **`vigil_patch_item`**. **Resources:** `lore://space/<uuid>` (summary + graph JSON). Defaults: **`HEARTGARDEN_DEFAULT_SPACE_ID`**, **`HEARTGARDEN_APP_URL`**. The Next app must be running for HTTP calls to succeed.
+Tools include **`vigil_browse_spaces`**, **`vigil_space_summary`**, **`vigil_list_items`**, **`vigil_search`** (default `hybrid`), **`vigil_semantic_search`**, **`vigil_graph`**, **`vigil_get_item`** / **`vigil_get_entity`**, **`vigil_item_links`**, **`vigil_traverse_links`**, **`vigil_related_items`**, **`vigil_title_mentions`**, **`vigil_lore_query`**, **`vigil_index_item`**, **`vigil_reindex_space`**, **`vigil_patch_item`** — see **`scripts/mcp-server.mjs`**. **`HEARTGARDEN_MCP_WRITE_KEY`** must match `write_key` on **`vigil_patch_item`** and **`vigil_reindex_space`**. **Resources:** `lore://space/<uuid>`. Defaults: **`HEARTGARDEN_DEFAULT_SPACE_ID`**, **`HEARTGARDEN_APP_URL`**. The Next app must be running for HTTP calls to succeed.
 
 ## Playwright (`npm run test:e2e`)
 

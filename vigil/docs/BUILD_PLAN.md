@@ -11,8 +11,9 @@ This is the **repo-wide checklist**: architecture snapshot, shipped tranches, an
 | **Production canvas shell** | `ArchitecturalCanvasApp` + `src/components/foundation/*` — mounted from `app/_components/VigilApp.tsx`. |
 | **Graph state** | In-component React state + **undo/redo** stack (`architectural-undo.ts`); Neon sync via `architectural-db-bridge.ts`, `architectural-neon-api.ts`, `/api/bootstrap`, item/space routes. |
 | **Save / sync indicator** | `neon-sync-bus.ts` + instrumented `architectural-neon-api.ts` + debounced note body bumps. Status strip in **`ArchitecturalStatusBar`**: Loading → Local (demo) → Saving… → Saved / Sync error. Tooltips document **undo vs server** semantics. |
-| **Search** | Postgres FTS + trigram on `search_blob`; hybrid mode merges FTS + fuzzy (`/api/search`, `/api/search/suggest`). `item_embeddings` / `item-embedding.ts` only clear stale rows (no vector generation). |
-| **Lore Q&A (MVP)** | `POST /api/lore/query` — retrieval via FTS (+ fuzzy fallback), synthesis via **Anthropic** (`ANTHROPIC_API_KEY`, optional `ANTHROPIC_LORE_MODEL`). **Best-effort IP rate limit** in-process (`lore-query-rate-limit.ts`); tighten with auth / KV before a public URL. UI: Cmd+K → **Ask lore (AI)** → `LoreAskPanel`. |
+| **Search** | Postgres FTS + trigram on `search_blob`. **`/api/search`**: `hybrid` / `semantic` use **RRF** of FTS + fuzzy + **pgvector** chunks when `OPENAI_API_KEY` is set; `GET /api/search/chunks` returns raw chunk hits. **`/api/search/suggest`** remains prefix-FTS. |
+| **Vault index** | `item_embeddings` stores **per-chunk** vectors (`space_id`, `chunk_index`, …). **`POST /api/items/[id]/index`** (re)chunks + OpenAI embeds + optional Anthropic **lore summary/aliases** (`lore-item-meta.ts`). Client **debounced** trigger in `architectural-neon-api.ts` after create/patch; **`POST /api/spaces/[id]/reindex`** (MCP `write_key`) for backfill. Rate limits: `vault-index-rate-limit.ts`. |
+| **Lore Q&A** | `POST /api/lore/query` — **hybrid retrieval** (`vault-retrieval.ts`) + **1-hop `item_links` neighbors**, synthesis via **Anthropic**. Same env + `lore-query-rate-limit.ts` as before. UI: **Ask lore** → `LoreAskPanel`. |
 | **DB** | Drizzle `src/db/schema.ts`; Neon requires **`CREATE EXTENSION vector`** before push (`npm run db:ensure-pgvector`). |
 
 **Health check:** From the app root (**`vigil/`** unless renamed — **`docs/NAMING.md`**), run `npm run check` (lint + production build). After UX / DB / stacking changes, run `npm run test:unit` and targeted `npm run test:e2e` if flows touched.
@@ -29,7 +30,7 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 | Drizzle + Neon + pgvector | `spaces`, `items`, `item_links`, `item_embeddings`; self-FK on `spaces.parent_space_id`. |
 | **Neon persistence bridge** | Bootstrap hydrate, create/patch/delete items & spaces, camera persistence, folder child spaces (Phase “A” in recent work). |
 | Cmd+K palette | Local filter + `/api/search/suggest`, spaces, actions, recent items. |
-| **Lore engine (v1)** | Server: `src/lib/lore-engine.ts` + `/api/lore/query`. Client: `LoreAskPanel`. |
+| **Lore engine + vault retrieval** | `lore-engine.ts`, `vault-retrieval.ts`, `item-vault-index.ts`, `/api/lore/query`, `/api/search`, `/api/search/chunks`, index + reindex routes. Client: `LoreAskPanel`. |
 | **Neon save indicator** | Live sync line in status bar; tracks in-flight mutations + debounced content patches. |
 | CI / Storybook | `npm run check`; Storybook in CI per `AGENTS.md`. |
 
@@ -42,7 +43,7 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 ### Near-term — hardening & parity
 
 1. **`POST /api/lore/query` hardening** — Baseline in-memory rate limit is shipped; before a public URL add auth, edge firewall, or Redis / Vercel KV for global limits.
-2. **Embeddings / vectors** — Not generated in-app; hybrid search is lexical only. The `item_embeddings` table may remain for legacy DBs; new installs can ignore it or drop after a deliberate migration.
+2. **Index + embedding ops** — Tune HNSW / IVFFLAT on Neon; optional **`waitUntil`** on PATCH for server-driven index; global queue if index volume exceeds debounced client + reindex.
 3. **E2E** — Optional: palette → lore panel smoke (skip or mock LLM in CI).
 4. **Canvas version history (UX2 — decision for v1)** — **Export-first:** the canvas already supports **Export graph JSON** (Cmd+K). Treat that as the supported “checkpoint” workflow until a DB snapshot or `item_revisions` table is justified. **Space / graph snapshots** and **per-item revision logs** remain future options; any in-app restore must not silently fight the local undo stack (explicit “restore from server snapshot” only).
 
