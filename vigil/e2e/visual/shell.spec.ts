@@ -13,8 +13,8 @@ test.describe("visual: shell (light, empty demo)", () => {
     await expect(page.locator("[data-vigil-canvas]")).toBeVisible({
       timeout: 30_000,
     });
-    await expect(page.getByText("Database not reachable")).toBeVisible();
     await dismissHeartgardenBootIfPresent(page);
+    await expect(page.getByText("Database not reachable")).toBeVisible();
     await expect(page.getByText("Could not load workspace")).toBeVisible();
 
     // Let layout, fonts, and theme settle before capturing.

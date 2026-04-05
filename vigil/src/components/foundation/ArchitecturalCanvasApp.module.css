@@ -4338,28 +4338,90 @@
   backdrop-filter: blur(12px) saturate(1.06);
 }
 
-.neonWorkspaceUnavailablePanel {
-  max-width: 440px;
+/*
+ * Workspace bootstrap error: override .glassPanel row flex (status-strip layout) — use a vertical card.
+ */
+.glassPanel.neonWorkspaceUnavailablePanel {
+  flex-direction: column;
+  align-items: stretch;
+  min-height: auto;
+  max-width: min(520px, calc(100vw - 40px));
   width: 100%;
+  gap: 16px;
   padding: 22px 24px;
+  box-sizing: border-box;
 }
 
 .neonWorkspaceUnavailableTitle {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  margin: 0 0 12px;
+  margin: 0;
+  line-height: 1.3;
   color: var(--text-main);
 }
 
-.neonWorkspaceUnavailableBody {
+.neonWorkspaceUnavailableLead {
   margin: 0;
   font-size: 13px;
   line-height: 1.55;
-  color: color-mix(in oklch, var(--text-main) 86%, transparent);
+  color: color-mix(in oklch, var(--text-main) 88%, transparent);
+}
+
+.neonWorkspaceUnavailableCopySection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.neonWorkspaceUnavailableCopyToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  width: 100%;
+}
+
+.neonWorkspaceUnavailableCopyLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--text-main) 62%, transparent);
+}
+
+.neonWorkspaceUnavailablePre {
+  margin: 0;
+  padding: 12px 14px;
+  width: 100%;
+  max-height: min(220px, 38vh);
+  overflow: auto;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-main);
+  background: var(--sem-surface-muted);
+  border: 1px solid var(--sem-border-subtle);
+  border-radius: 8px;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.neonWorkspaceUnavailableFoot {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: color-mix(in oklch, var(--text-main) 72%, transparent);
 }
 
 .neonWorkspaceUnavailableIcon {

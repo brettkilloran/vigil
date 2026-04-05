@@ -887,6 +887,96 @@ function clientPointToCanvasWorld(
   return { x: (localX - tx) / scale, y: (localY - ty) / scale };
 }
 
+/** Plain text for clipboard / support when bootstrap cannot reach Postgres. */
+const WORKSPACE_BOOTSTRAP_ERROR_COPY = `Heartgarden — Could not load workspace
+
+No account data was deleted. This browser session could not open a Postgres workspace.
+
+Fix:
+1. Add NEON_DATABASE_URL or DATABASE_URL to vigil/.env.local (your Neon connection string).
+2. Restart the dev server from the vigil folder: npm run dev
+3. Reload this page.
+
+After one successful load, Heartgarden keeps a local snapshot in this browser so short outages still show your garden.`;
+
+function WorkspaceBootstrapErrorPanel() {
+  const [copied, setCopied] = useState(false);
+
+  const onCopyDetails = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(WORKSPACE_BOOTSTRAP_ERROR_COPY);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2500);
+    } catch {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = WORKSPACE_BOOTSTRAP_ERROR_COPY;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 2500);
+      } catch {
+        window.alert("Could not copy automatically — select the text in the box and press Ctrl+C (⌘C on Mac).");
+      }
+    }
+  }, []);
+
+  return (
+    <div
+      className={styles.neonWorkspaceUnavailableOverlay}
+      role="alert"
+      aria-live="assertive"
+      data-workspace-blocking-no-snapshot="true"
+    >
+      <div className={`${styles.glassPanel} ${styles.neonWorkspaceUnavailablePanel}`}>
+        <h2 className={styles.neonWorkspaceUnavailableTitle}>
+          <WarningCircle
+            className={styles.neonWorkspaceUnavailableIcon}
+            size={22}
+            weight="bold"
+            aria-hidden
+          />
+          Could not load workspace
+        </h2>
+        <p className={styles.neonWorkspaceUnavailableLead}>
+          Nothing was removed from your account — we could not open a database-backed workspace from
+          this session. Use the message below for setup or support.
+        </p>
+        <div className={styles.neonWorkspaceUnavailableCopySection}>
+          <div className={styles.neonWorkspaceUnavailableCopyToolbar}>
+            <span id="hg-ws-err-copy-label" className={styles.neonWorkspaceUnavailableCopyLabel}>
+              Full message
+            </span>
+            <ArchitecturalButton
+              type="button"
+              size="menu"
+              tone="glass"
+              leadingIcon={<CopySimple size={16} weight="bold" aria-hidden />}
+              onClick={onCopyDetails}
+              aria-labelledby="hg-ws-err-copy-label"
+            >
+              {copied ? "Copied" : "Copy"}
+            </ArchitecturalButton>
+          </div>
+          <pre className={styles.neonWorkspaceUnavailablePre} tabIndex={0}>
+            {WORKSPACE_BOOTSTRAP_ERROR_COPY}
+          </pre>
+        </div>
+        <p className={styles.neonWorkspaceUnavailableFoot}>
+          Both <span className={styles.monoSmall}>NEON_DATABASE_URL</span> and{" "}
+          <span className={styles.monoSmall}>DATABASE_URL</span> are read from{" "}
+          <span className={styles.monoSmall}>vigil/.env.local</span>.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function ArchitecturalCanvasApp({
   scenario = "default",
 }: {
@@ -6206,6 +6296,13 @@ export function ArchitecturalCanvasApp({
     !workspaceViewFromCache &&
     canvasBootstrapResolved;
 
+  /**
+   * Defer blocking UI until the boot overlay is gone — the splash uses a transparent fixed layer; an
+   * in-viewport fixed scrim can stack above it and obscure the poetry + CTA.
+   */
+  const showWorkspaceBlockingOverlay =
+    showWorkspaceBlockingNoSnapshot && !bootLayerVisible;
+
   const chromeEntranceOn = !prefersReducedMotion && chromeEnterEpoch > 0;
 
   const showLogOutToAuth = scenario === "default" && !bootLayerVisible;
@@ -6251,7 +6348,7 @@ export function ArchitecturalCanvasApp({
         }${stackModal ? ` ${styles.viewportStackModalOpen}` : ""} ${
           connectionMode !== "move" ? styles.viewportConnectionMode : ""
         }${bootPreActivateGate ? ` ${styles.viewportBootNoGrid}` : ""}${
-          showWorkspaceBlockingNoSnapshot ? ` ${styles.viewportDisconnectedNoData}` : ""
+          showWorkspaceBlockingOverlay ? ` ${styles.viewportDisconnectedNoData}` : ""
         }`}
         aria-busy={!viewportRevealReady}
         data-vigil-canvas="true"
@@ -6675,35 +6772,7 @@ export function ArchitecturalCanvasApp({
             bootstrapPending={scenario === "default" && !canvasBootstrapResolved}
           />
         ) : null}
-        {showWorkspaceBlockingNoSnapshot ? (
-          <div
-            className={styles.neonWorkspaceUnavailableOverlay}
-            role="alert"
-            aria-live="assertive"
-            data-workspace-blocking-no-snapshot="true"
-          >
-            <div
-              className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.neonWorkspaceUnavailablePanel}`}
-            >
-              <h2 className={styles.neonWorkspaceUnavailableTitle}>
-                <WarningCircle
-                  className={styles.neonWorkspaceUnavailableIcon}
-                  size={22}
-                  weight="bold"
-                  aria-hidden
-                />
-                Could not load workspace
-              </h2>
-              <p className={styles.neonWorkspaceUnavailableBody}>
-                Nothing is missing from your account yet — we simply could not reach your Heartgarden
-                database from this browser session. Set{" "}
-                <span className={styles.monoSmall}>NEON_DATABASE_URL</span>, check network access to
-                Neon, then reload. After you have loaded successfully once, we keep a local snapshot so
-                a short outage does not look like an empty garden.
-              </p>
-            </div>
-          </div>
-        ) : null}
+        {showWorkspaceBlockingOverlay ? <WorkspaceBootstrapErrorPanel /> : null}
         <div
           className={`${styles.chromeLayer}${bootPreActivateGate ? ` ${styles.chromeLayerBootSuppressed}` : ""}`}
         >
@@ -7561,11 +7630,13 @@ export function ArchitecturalCanvasApp({
               <ArchitecturalStatusBar
                 syncBootstrapPending={scenario === "default" && !canvasBootstrapResolved}
                 syncShowingCachedWorkspace={
-                  scenario === "default" && workspaceViewFromCache && canvasBootstrapResolved
+                  scenario === "default" &&
+                  workspaceViewFromCache &&
+                  canvasBootstrapResolved &&
+                  !bootLayerVisible
                 }
                 syncOfflineNoSnapshot={
-                  scenario === "default" &&
-                  showWorkspaceBlockingNoSnapshot
+                  scenario === "default" && showWorkspaceBlockingOverlay
                 }
                 onExportGraphJson={exportGraphJson}
                 exportGraphPaletteHint={`${modKeyHints.search} → Export graph JSON`}
