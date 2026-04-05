@@ -2091,6 +2091,35 @@
   min-width: 0;
 }
 
+.syncPopoverCopyRow {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  min-width: 0;
+}
+
+.syncPopoverDiagnostic {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 240px;
+  overflow: auto;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: color-mix(in oklch, var(--vigil-muted) 82%, var(--vigil-label) 18%);
+  background: color-mix(in oklch, var(--vigil-surface) 92%, var(--vigil-border) 8%);
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklch, var(--vigil-border) 80%, transparent);
+}
+
+.syncPopoverCopyReport {
+  align-self: flex-start;
+}
+
 .syncPopoverMeta {
   margin-top: 20px;
   padding-top: 20px;

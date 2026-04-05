@@ -5,6 +5,7 @@ import {
   neonSyncBeginRequest,
   neonSyncEndRequest,
 } from "@/src/lib/neon-sync-bus";
+import { parseJsonBody, syncFailureFromApiResponse } from "@/src/lib/sync-error-diagnostic";
 
 const vaultIndexTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const VAULT_INDEX_DEBOUNCE_MS = 2800;
@@ -25,6 +26,31 @@ function scheduleVaultIndexForItem(itemId: string) {
   vaultIndexTimers.set(itemId, t);
 }
 
+function finishNeonTrack(
+  track: boolean,
+  operation: string,
+  res: Response,
+  rawText: string,
+  body: Record<string, unknown>,
+  logicalOk: boolean,
+) {
+  if (!track) return;
+  if (logicalOk) {
+    neonSyncEndRequest(true);
+    return;
+  }
+  const detail = syncFailureFromApiResponse(operation, res, rawText, body, logicalOk);
+  neonSyncEndRequest(
+    false,
+    detail ?? {
+      operation,
+      httpStatus: res.status,
+      message: `HTTP ${res.status}`,
+      cause: "http",
+    },
+  );
+}
+
 export async function fetchBootstrap(spaceId?: string): Promise<BootstrapResponse | null> {
   const q = spaceId ? `?space=${encodeURIComponent(spaceId)}` : "";
   const res = await fetch(`/api/bootstrap${q}`);
@@ -38,43 +64,67 @@ export async function apiCreateSpace(
 ): Promise<{ ok: boolean; space?: { id: string }; error?: string }> {
   const track = getNeonSyncSnapshot().cloudEnabled;
   if (track) neonSyncBeginRequest();
+  const op = "POST /api/spaces";
   try {
     const res = await fetch("/api/spaces", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, parentSpaceId }),
     });
-    const data = (await res.json()) as { ok: boolean; space?: { id: string }; error?: string };
-    const ok = res.ok && !!data.ok;
-    if (track) neonSyncEndRequest(ok, ok ? undefined : data.error ?? `HTTP ${res.status}`);
-    return data;
+    const rawText = await res.text();
+    const body = parseJsonBody(rawText) as {
+      ok?: boolean;
+      space?: { id: string };
+      error?: string;
+    };
+    const logicalOk = res.ok && !!body.ok;
+    finishNeonTrack(track, op, res, rawText, body, logicalOk);
+    return { ok: logicalOk, space: body.space, error: body.error };
   } catch (e) {
-    if (track) neonSyncEndRequest(false, e instanceof Error ? e.message : "Network error");
+    if (track) {
+      neonSyncEndRequest(false, {
+        operation: op,
+        message: e instanceof Error ? e.message : "Network error",
+        cause: "network",
+      });
+    }
     return { ok: false, error: "Network error" };
   }
 }
 
 export async function apiCreateItem(
   spaceId: string,
-  body: Record<string, unknown>,
+  bodyPayload: Record<string, unknown>,
 ): Promise<{ ok: boolean; item?: CanvasItem; error?: string }> {
   const track = getNeonSyncSnapshot().cloudEnabled;
   if (track) neonSyncBeginRequest();
+  const op = `POST /api/spaces/${spaceId}/items`;
   try {
     const res = await fetch(`/api/spaces/${spaceId}/items`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(bodyPayload),
     });
-    const data = (await res.json()) as { ok: boolean; item?: CanvasItem; error?: string };
-    const ok = res.ok && !!data.ok;
-    if (track) neonSyncEndRequest(ok, ok ? undefined : data.error ?? `HTTP ${res.status}`);
-    if (ok && data.item?.id) {
-      scheduleVaultIndexForItem(data.item.id);
+    const rawText = await res.text();
+    const body = parseJsonBody(rawText) as {
+      ok?: boolean;
+      item?: CanvasItem;
+      error?: string;
+    };
+    const logicalOk = res.ok && !!body.ok;
+    finishNeonTrack(track, op, res, rawText, body, logicalOk);
+    if (logicalOk && body.item?.id) {
+      scheduleVaultIndexForItem(body.item.id);
     }
-    return data;
+    return { ok: logicalOk, item: body.item, error: body.error };
   } catch (e) {
-    if (track) neonSyncEndRequest(false, e instanceof Error ? e.message : "Network error");
+    if (track) {
+      neonSyncEndRequest(false, {
+        operation: op,
+        message: e instanceof Error ? e.message : "Network error",
+        cause: "network",
+      });
+    }
     return { ok: false, error: "Network error" };
   }
 }
@@ -85,20 +135,29 @@ export async function apiPatchItem(
 ): Promise<boolean> {
   const track = getNeonSyncSnapshot().cloudEnabled;
   if (track) neonSyncBeginRequest();
+  const op = `PATCH /api/items/${itemId}`;
   try {
     const res = await fetch(`/api/items/${itemId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
-    const ok = res.ok;
-    if (track) neonSyncEndRequest(ok, ok ? undefined : `HTTP ${res.status}`);
-    if (ok && (patch.title !== undefined || patch.contentText !== undefined)) {
+    const rawText = await res.text();
+    const body = parseJsonBody(rawText) as { ok?: boolean; error?: string };
+    const logicalOk = res.ok && body.ok === true;
+    finishNeonTrack(track, op, res, rawText, body, logicalOk);
+    if (logicalOk && (patch.title !== undefined || patch.contentText !== undefined)) {
       scheduleVaultIndexForItem(itemId);
     }
-    return ok;
+    return logicalOk;
   } catch (e) {
-    if (track) neonSyncEndRequest(false, e instanceof Error ? e.message : "Network error");
+    if (track) {
+      neonSyncEndRequest(false, {
+        operation: op,
+        message: e instanceof Error ? e.message : "Network error",
+        cause: "network",
+      });
+    }
     return false;
   }
 }
@@ -106,13 +165,22 @@ export async function apiPatchItem(
 export async function apiDeleteItem(itemId: string): Promise<boolean> {
   const track = getNeonSyncSnapshot().cloudEnabled;
   if (track) neonSyncBeginRequest();
+  const op = `DELETE /api/items/${itemId}`;
   try {
     const res = await fetch(`/api/items/${itemId}`, { method: "DELETE" });
-    const ok = res.ok;
-    if (track) neonSyncEndRequest(ok, ok ? undefined : `HTTP ${res.status}`);
-    return ok;
+    const rawText = await res.text();
+    const body = parseJsonBody(rawText) as { ok?: boolean; error?: string };
+    const logicalOk = res.ok && body.ok === true;
+    finishNeonTrack(track, op, res, rawText, body, logicalOk);
+    return logicalOk;
   } catch (e) {
-    if (track) neonSyncEndRequest(false, e instanceof Error ? e.message : "Network error");
+    if (track) {
+      neonSyncEndRequest(false, {
+        operation: op,
+        message: e instanceof Error ? e.message : "Network error",
+        cause: "network",
+      });
+    }
     return false;
   }
 }
@@ -121,13 +189,22 @@ export async function apiDeleteItem(itemId: string): Promise<boolean> {
 export async function apiDeleteSpaceSubtree(spaceId: string): Promise<boolean> {
   const track = getNeonSyncSnapshot().cloudEnabled;
   if (track) neonSyncBeginRequest();
+  const op = `DELETE /api/spaces/${spaceId}`;
   try {
     const res = await fetch(`/api/spaces/${spaceId}`, { method: "DELETE" });
-    const ok = res.ok;
-    if (track) neonSyncEndRequest(ok, ok ? undefined : `HTTP ${res.status}`);
-    return ok;
+    const rawText = await res.text();
+    const body = parseJsonBody(rawText) as { ok?: boolean; error?: string };
+    const logicalOk = res.ok && body.ok === true;
+    finishNeonTrack(track, op, res, rawText, body, logicalOk);
+    return logicalOk;
   } catch (e) {
-    if (track) neonSyncEndRequest(false, e instanceof Error ? e.message : "Network error");
+    if (track) {
+      neonSyncEndRequest(false, {
+        operation: op,
+        message: e instanceof Error ? e.message : "Network error",
+        cause: "network",
+      });
+    }
     return false;
   }
 }
@@ -138,17 +215,26 @@ export async function apiPatchSpaceCamera(
 ): Promise<boolean> {
   const track = getNeonSyncSnapshot().cloudEnabled;
   if (track) neonSyncBeginRequest();
+  const op = `PATCH /api/spaces/${spaceId} (camera)`;
   try {
     const res = await fetch(`/api/spaces/${spaceId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ camera }),
     });
-    const ok = res.ok;
-    if (track) neonSyncEndRequest(ok, ok ? undefined : `HTTP ${res.status}`);
-    return ok;
+    const rawText = await res.text();
+    const body = parseJsonBody(rawText) as { ok?: boolean; error?: string };
+    const logicalOk = res.ok && body.ok === true;
+    finishNeonTrack(track, op, res, rawText, body, logicalOk);
+    return logicalOk;
   } catch (e) {
-    if (track) neonSyncEndRequest(false, e instanceof Error ? e.message : "Network error");
+    if (track) {
+      neonSyncEndRequest(false, {
+        operation: op,
+        message: e instanceof Error ? e.message : "Network error",
+        cause: "network",
+      });
+    }
     return false;
   }
 }
@@ -156,17 +242,26 @@ export async function apiPatchSpaceCamera(
 export async function apiPatchSpaceName(spaceId: string, name: string): Promise<boolean> {
   const track = getNeonSyncSnapshot().cloudEnabled;
   if (track) neonSyncBeginRequest();
+  const op = `PATCH /api/spaces/${spaceId} (name)`;
   try {
     const res = await fetch(`/api/spaces/${spaceId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
     });
-    const ok = res.ok;
-    if (track) neonSyncEndRequest(ok, ok ? undefined : `HTTP ${res.status}`);
-    return ok;
+    const rawText = await res.text();
+    const body = parseJsonBody(rawText) as { ok?: boolean; error?: string };
+    const logicalOk = res.ok && body.ok === true;
+    finishNeonTrack(track, op, res, rawText, body, logicalOk);
+    return logicalOk;
   } catch (e) {
-    if (track) neonSyncEndRequest(false, e instanceof Error ? e.message : "Network error");
+    if (track) {
+      neonSyncEndRequest(false, {
+        operation: op,
+        message: e instanceof Error ? e.message : "Network error",
+        cause: "network",
+      });
+    }
     return false;
   }
 }

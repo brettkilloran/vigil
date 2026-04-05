@@ -103,10 +103,12 @@ import type { LoreImportEntityDraft, LoreImportLinkDraft } from "@/src/lib/lore-
 import {
   getNeonSyncSnapshot,
   neonSyncBumpPending,
+  neonSyncReportAuxiliaryFailure,
   neonSyncSetCloudEnabled,
   neonSyncUnbumpPending,
   subscribeNeonSync,
 } from "@/src/lib/neon-sync-bus";
+import { parseJsonBody, syncFailureFromApiResponse } from "@/src/lib/sync-error-diagnostic";
 import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
 import {
@@ -216,6 +218,31 @@ function recommendedClarificationOptionId(
   return r?.id ?? c.options[0]?.id;
 }
 
+function reportItemLinkFailure(
+  operation: string,
+  res: Response,
+  rawText: string,
+  body: Record<string, unknown>,
+  logicalOk: boolean,
+): string {
+  const d = syncFailureFromApiResponse(operation, res, rawText, body, logicalOk);
+  const msg =
+    d?.message ??
+    (rawText.trim() ? rawText.trim().slice(0, 200) : `HTTP ${res.status}`);
+  if (getNeonSyncSnapshot().cloudEnabled) {
+    neonSyncReportAuxiliaryFailure(
+      d ?? {
+        operation,
+        httpStatus: res.status,
+        message: msg,
+        responseSnippet: rawText.length > 800 ? `${rawText.slice(0, 800)}…` : rawText,
+        cause: "http",
+      },
+    );
+  }
+  return msg;
+}
+
 function stripHtmlToPlain(html: string): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -250,6 +277,51 @@ const EMPTY_ENTITY_IDS: readonly string[] = [];
 const EMPTY_COLLAPSED_STACKS: { stackId: string; entities: CanvasEntity[]; top: CanvasEntity }[] = [];
 const EMPTY_STACK_BOUNDS: Record<string, { left: number; top: number; width: number; height: number }> =
   {};
+
+/** Integer px so JSON compare in stack bounds effects does not churn on subpixel rect noise (infinite re-renders). */
+function snapStackBoundsRect(r: {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}): { left: number; top: number; width: number; height: number } {
+  return {
+    left: Math.round(r.left),
+    top: Math.round(r.top),
+    width: Math.round(r.width),
+    height: Math.round(r.height),
+  };
+}
+
+/** Avoid setState loops: layout can still jitter by 1px between frames after rounding. */
+function stackBoundsRecordsVisuallyEqual(
+  prev: Record<string, { left: number; top: number; width: number; height: number }>,
+  next: Record<string, { left: number; top: number; width: number; height: number }>,
+  tolPx: number,
+): boolean {
+  const pk = Object.keys(prev).sort();
+  const nk = Object.keys(next).sort();
+  if (pk.length !== nk.length) return false;
+  for (let i = 0; i < pk.length; i++) {
+    if (pk[i] !== nk[i]) return false;
+  }
+  for (const k of pk) {
+    const a = prev[k]!;
+    const b = next[k]!;
+    if (
+      Math.abs(a.left - b.left) > tolPx ||
+      Math.abs(a.top - b.top) > tolPx ||
+      Math.abs(a.width - b.width) > tolPx ||
+      Math.abs(a.height - b.height) > tolPx
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+const STACK_BOUNDS_EQ_TOL_PX = 2;
+
 const CONNECTION_DEFAULT_COLOR =
   FOLDER_COLOR_SCHEMES.find((s) => s.id === "coral")?.swatch ?? "oklch(0.68 0.32 48)";
 /** Dark neutral thread for "Black mirror" / classic picker slot (not a folder scheme swatch). */
@@ -1721,21 +1793,36 @@ export function ArchitecturalCanvasApp({
             },
           }),
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const body = (await res.json()) as {
+        const rawText = await res.text();
+        const body = parseJsonBody(rawText) as {
+          ok?: boolean;
           link?: { id?: string };
           deduped?: boolean;
         };
+        const logicalOk = res.ok && body.ok === true;
+        if (!logicalOk) {
+          const msg = reportItemLinkFailure("POST /api/item-links", res, rawText, body, logicalOk);
+          setConnectionSyncPatch(connectionId, { syncState: "error", syncError: msg });
+          return;
+        }
         setConnectionSyncPatch(connectionId, {
           syncState: "synced",
           dbLinkId: body.link?.id ?? snap.dbLinkId ?? null,
           syncError: null,
         });
       } catch (error) {
+        const msg = error instanceof Error ? error.message : "Failed to persist link";
         setConnectionSyncPatch(connectionId, {
           syncState: "error",
-          syncError: error instanceof Error ? error.message : "Failed to persist link",
+          syncError: msg,
         });
+        if (getNeonSyncSnapshot().cloudEnabled) {
+          neonSyncReportAuxiliaryFailure({
+            operation: "POST /api/item-links",
+            message: msg,
+            cause: "network",
+          });
+        }
       }
     },
     [setConnectionSyncPatch],
@@ -1754,13 +1841,34 @@ export function ArchitecturalCanvasApp({
             meta: { slackMultiplier: clampLinkMetaSlackMultiplier(slackMultiplier) },
           }),
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const rawText = await res.text();
+        const body = parseJsonBody(rawText) as { ok?: boolean; error?: string };
+        const logicalOk = res.ok && body.ok === true;
+        if (!logicalOk) {
+          const msg = reportItemLinkFailure(
+            "PATCH /api/item-links (slack)",
+            res,
+            rawText,
+            body,
+            logicalOk,
+          );
+          setConnectionSyncPatch(connectionId, { syncState: "error", syncError: msg });
+          return;
+        }
         setConnectionSyncPatch(connectionId, { syncState: "synced", syncError: null });
-      } catch {
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "Failed to sync thread slack";
         setConnectionSyncPatch(connectionId, {
           syncState: "error",
-          syncError: "Failed to sync thread slack",
+          syncError: msg,
         });
+        if (getNeonSyncSnapshot().cloudEnabled) {
+          neonSyncReportAuxiliaryFailure({
+            operation: "PATCH /api/item-links (slack)",
+            message: msg,
+            cause: "network",
+          });
+        }
       }
     },
     [setConnectionSyncPatch],
@@ -1784,16 +1892,37 @@ export function ArchitecturalCanvasApp({
       const snap = graphRef.current.connections[connectionId];
       if (!snap?.dbLinkId || !isUuidLike(snap.dbLinkId)) return;
       try {
-        await fetch("/api/item-links", {
+        const res = await fetch("/api/item-links", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: snap.dbLinkId, color }),
         });
-      } catch {
+        const rawText = await res.text();
+        const body = parseJsonBody(rawText) as { ok?: boolean; error?: string };
+        const logicalOk = res.ok && body.ok === true;
+        if (!logicalOk) {
+          const msg = reportItemLinkFailure(
+            "PATCH /api/item-links (color)",
+            res,
+            rawText,
+            body,
+            logicalOk,
+          );
+          setConnectionSyncPatch(connectionId, { syncState: "error", syncError: msg });
+        }
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "Failed to sync connection color";
         setConnectionSyncPatch(connectionId, {
           syncState: "error",
-          syncError: "Failed to sync connection color",
+          syncError: msg,
         });
+        if (getNeonSyncSnapshot().cloudEnabled) {
+          neonSyncReportAuxiliaryFailure({
+            operation: "PATCH /api/item-links (color)",
+            message: msg,
+            cause: "network",
+          });
+        }
       }
     },
     [setConnectionSyncPatch],
@@ -1809,12 +1938,32 @@ export function ArchitecturalCanvasApp({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: snap.dbLinkId, linkType }),
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      } catch {
+        const rawText = await res.text();
+        const body = parseJsonBody(rawText) as { ok?: boolean; error?: string };
+        const logicalOk = res.ok && body.ok === true;
+        if (!logicalOk) {
+          const msg = reportItemLinkFailure(
+            "PATCH /api/item-links (linkType)",
+            res,
+            rawText,
+            body,
+            logicalOk,
+          );
+          setConnectionSyncPatch(connectionId, { syncState: "error", syncError: msg });
+        }
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "Failed to sync link type";
         setConnectionSyncPatch(connectionId, {
           syncState: "error",
-          syncError: "Failed to sync link type",
+          syncError: msg,
         });
+        if (getNeonSyncSnapshot().cloudEnabled) {
+          neonSyncReportAuxiliaryFailure({
+            operation: "PATCH /api/item-links (linkType)",
+            message: msg,
+            cause: "network",
+          });
+        }
       }
     },
     [setConnectionSyncPatch],
@@ -2194,6 +2343,47 @@ export function ArchitecturalCanvasApp({
     return out.length === 0 ? EMPTY_COLLAPSED_STACKS : out;
   }, [stackGroups]);
 
+  /** Stable primitive keys so stack-bounds effects do not re-run when `collapsedStacks` is a new array ref with the same logical stacks. */
+  const stackModalLayoutKey = useMemo(() => {
+    if (!stackModal) return "0";
+    return `${stackModal.stackId}:${stackModal.orderedIds.join(",")}`;
+  }, [stackModal]);
+
+  const stackFocusBoundsEffectKey = useMemo(() => {
+    if (collapsedStacks.length === 0) return "empty";
+    const stackPart = collapsedStacks
+      .map(({ stackId, entities }) => {
+        const sel = entities.some((e) => selectedNodeIds.includes(e.id)) ? "1" : "0";
+        const ids = entities.map((e) => e.id).join(",");
+        return `${stackId}:${sel}:${ids}`;
+      })
+      .sort()
+      .join("|");
+    const selPart = [...selectedNodeIds].sort().join(",");
+    const viewPart = `${scale.toFixed(4)}_${Math.round(translateX)}_${Math.round(translateY)}`;
+    return `${stackPart}#${selPart}#${stackModalLayoutKey}#${viewPart}`;
+  }, [
+    collapsedStacks,
+    selectedNodeIds,
+    stackModalLayoutKey,
+    scale,
+    translateX,
+    translateY,
+  ]);
+
+  const stackHoverBoundsEffectKey = useMemo(() => {
+    if (collapsedStacks.length === 0) return "empty";
+    const stackPart = collapsedStacks
+      .map(({ stackId, entities }) => {
+        const ids = entities.map((e) => e.id).join(",");
+        return `${stackId}:${ids}`;
+      })
+      .sort()
+      .join("|");
+    const viewPart = `${scale.toFixed(4)}_${Math.round(translateX)}_${Math.round(translateY)}`;
+    return `${stackPart}#${stackModalLayoutKey}#${viewPart}`;
+  }, [collapsedStacks, stackModalLayoutKey, scale, translateX, translateY]);
+
   useEffect(() => {
     if (collapsedStacks.length === 0) {
       setStackFocusBoundsById((prev) =>
@@ -2226,16 +2416,19 @@ export function ArchitecturalCanvasApp({
         maxY = Math.max(maxY, rect.bottom);
       });
       const pad = 10;
-      next[stackId] = {
+      next[stackId] = snapStackBoundsRect({
         left: minX - containerRect.left - pad,
         top: minY - containerRect.top - pad,
         width: maxX - minX + pad * 2,
         height: maxY - minY + pad * 2,
-      };
+      });
     });
-    const nextJson = JSON.stringify(next);
-    setStackFocusBoundsById((prev) => (JSON.stringify(prev) === nextJson ? prev : next));
-  }, [collapsedStacks, selectedNodeIds, stackModal]);
+    setStackFocusBoundsById((prev) =>
+      stackBoundsRecordsVisuallyEqual(prev, next, STACK_BOUNDS_EQ_TOL_PX) ? prev : next,
+    );
+    // `stackFocusBoundsEffectKey` encodes collapsed stacks, selection, modal layout, and pan/zoom.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid re-running on `collapsedStacks` ref churn
+  }, [stackFocusBoundsEffectKey]);
 
   useEffect(() => {
     if (collapsedStacks.length === 0) {
@@ -2267,16 +2460,19 @@ export function ArchitecturalCanvasApp({
         maxY = Math.max(maxY, rect.bottom);
       });
       const pad = 10;
-      next[stackId] = {
+      next[stackId] = snapStackBoundsRect({
         left: minX - containerRect.left - pad,
         top: minY - containerRect.top - pad,
         width: maxX - minX + pad * 2,
         height: maxY - minY + pad * 2,
-      };
+      });
     });
-    const nextJson = JSON.stringify(next);
-    setStackHoverBoundsById((prev) => (JSON.stringify(prev) === nextJson ? prev : next));
-  }, [collapsedStacks, stackModal]);
+    setStackHoverBoundsById((prev) =>
+      stackBoundsRecordsVisuallyEqual(prev, next, STACK_BOUNDS_EQ_TOL_PX) ? prev : next,
+    );
+    // `stackHoverBoundsEffectKey` encodes collapsed stacks, modal layout, and pan/zoom.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid re-running on `collapsedStacks` ref churn
+  }, [stackHoverBoundsEffectKey]);
   const updateNodeBody = useCallback(
     (id: string, html: string, options?: { immediate?: boolean }) => {
       const normalizedHtml = normalizeChecklistMarkup(html, {

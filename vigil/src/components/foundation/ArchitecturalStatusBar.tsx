@@ -27,6 +27,10 @@ import {
   getNeonSyncSnapshot,
   subscribeNeonSync,
 } from "@/src/lib/neon-sync-bus";
+import {
+  SYNC_ERROR_DIAGNOSTIC_SEP,
+  syncErrorSummaryLine,
+} from "@/src/lib/sync-error-diagnostic";
 import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
 
 export function ArchitecturalStatusBadge({
@@ -103,6 +107,7 @@ function SaveAndVersionPopover({
     showWarningIcon,
     detailTitle,
     detailBody,
+    detailPasteText,
     liveAnnouncement,
     triggerAriaLabel,
     relSaved,
@@ -121,6 +126,8 @@ function SaveAndVersionPopover({
     let statusLine = "";
     let showWarningIcon = false;
     let detailTitle = "Local session";
+    /** Full multi-line diagnostic when present (structured sync errors). */
+    let detailPasteText: string | null = null;
     let detailBody =
       "Not connected to Neon — no database URL or bootstrap failed. Changes stay in this session. Use Export graph JSON below for a file checkpoint.";
 
@@ -148,10 +155,15 @@ function SaveAndVersionPopover({
       pulseToneClass = styles.pulseDotToneError;
       showWarningIcon = true;
       const err = sync.lastError.trim();
-      const short = err.length > 44 ? `${err.slice(0, 42)}…` : err;
-      statusLine = short;
+      statusLine = syncErrorSummaryLine(err);
       detailTitle = "Sync error";
-      detailBody = `${sync.lastError} Edits stay local until the next successful save. Undo/redo only affects the canvas in memory, not the database.`;
+      if (err.includes(SYNC_ERROR_DIAGNOSTIC_SEP)) {
+        detailPasteText = err;
+        detailBody =
+          "Edits stay local until the next successful save. Undo/redo only affects the canvas in memory, not the database. Copy the full report below when asking for help — it includes the request, HTTP status, and response snippet.";
+      } else {
+        detailBody = `${sync.lastError} Edits stay local until the next successful save. Undo/redo only affects the canvas in memory, not the database.`;
+      }
     } else if (busy) {
       pulseToneClass = styles.pulseDotToneSaving;
       statusLine = "Saving…";
@@ -175,7 +187,7 @@ function SaveAndVersionPopover({
           : !sync.cloudEnabled
             ? "Local session, not connected to Neon"
             : sync.lastError
-              ? `Sync error: ${sync.lastError}`
+              ? `Sync error: ${syncErrorSummaryLine(sync.lastError)}`
               : busy
                 ? "Saving to Neon"
                 : rel
@@ -190,6 +202,7 @@ function SaveAndVersionPopover({
       showWarningIcon,
       detailTitle,
       detailBody,
+      detailPasteText,
       liveAnnouncement: live,
       triggerAriaLabel: aria,
       relSaved: rel,
@@ -206,9 +219,11 @@ function SaveAndVersionPopover({
   ]);
 
   const [open, setOpen] = useState(false);
+  const [copyReportHint, setCopyReportHint] = useState<"idle" | "copied" | "failed">("idle");
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const popoverId = useId();
+
   const [panelPos, setPanelPos] = useState<{ top: number; left: number; flip: boolean }>({
     top: 0,
     left: 0,
@@ -261,30 +276,35 @@ function SaveAndVersionPopover({
     };
   }, [open, reposition]);
 
+  const closeSyncPopover = useCallback(() => {
+    setCopyReportHint("idle");
+    setOpen(false);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") closeSyncPopover();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [open, closeSyncPopover]);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node;
       if (triggerRef.current?.contains(t) || panelRef.current?.contains(t)) return;
-      setOpen(false);
+      closeSyncPopover();
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
+  }, [open, closeSyncPopover]);
 
   const handleExport = () => {
     playVigilUiSound("button");
     onExportGraphJson?.();
-    setOpen(false);
+    closeSyncPopover();
   };
 
   const panel =
@@ -303,6 +323,40 @@ function SaveAndVersionPopover({
             </div>
             <div className={styles.syncPopoverStatusLine}>{statusLine}</div>
             <p className={styles.syncPopoverBody}>{detailBody}</p>
+            {sync.lastError ? (
+              <div className={styles.syncPopoverCopyRow}>
+                {detailPasteText ? (
+                  <pre className={styles.syncPopoverDiagnostic} tabIndex={0}>
+                    {detailPasteText}
+                  </pre>
+                ) : null}
+                <Button
+                  type="button"
+                  size="md"
+                  variant="neutral"
+                  tone="glass"
+                  className={styles.syncPopoverCopyReport}
+                  onClick={() => {
+                    const text = (sync.lastError ?? "").trim();
+                    if (!text) return;
+                    void navigator.clipboard.writeText(text).then(
+                      () => {
+                        playVigilUiSound("tap");
+                        setCopyReportHint("copied");
+                        window.setTimeout(() => setCopyReportHint("idle"), 2200);
+                      },
+                      () => setCopyReportHint("failed"),
+                    );
+                  }}
+                >
+                  {copyReportHint === "copied"
+                    ? "Copied"
+                    : copyReportHint === "failed"
+                      ? "Copy failed"
+                      : "Copy error report"}
+                </Button>
+              </div>
+            ) : null}
             {sync.cloudEnabled && !bootstrapPending ? (
               <div className={styles.syncPopoverMeta}>
                 {absSaved ? (
@@ -372,7 +426,10 @@ function SaveAndVersionPopover({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-controls={open ? popoverId : undefined}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setCopyReportHint("idle");
+          setOpen((v) => !v);
+        }}
       >
         {showPulse ? (
           <span className={cx(styles.pulseDot, pulseToneClass)} aria-hidden />

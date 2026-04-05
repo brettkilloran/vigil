@@ -1,3 +1,10 @@
+import {
+  formatSyncFailureReport,
+  type SyncFailureDetail,
+} from "@/src/lib/sync-error-diagnostic";
+
+export type NeonSyncFailureInput = string | SyncFailureDetail;
+
 export type NeonSyncSnapshot = {
   /** True when `NEON_DATABASE_URL` bootstrap succeeded (not demo seed). */
   cloudEnabled: boolean;
@@ -104,12 +111,41 @@ export function neonSyncBeginRequest() {
   emit();
 }
 
-export function neonSyncEndRequest(ok: boolean, message?: string) {
+export function neonSyncEndRequest(ok: boolean, detail?: NeonSyncFailureInput) {
   inFlight = Math.max(0, inFlight - 1);
   if (ok) {
     lastSavedAt = Date.now();
+  } else if (!detail) {
+    lastError = formatSyncFailureReport(
+      { operation: "(unknown)", message: "Save failed", cause: "client" },
+      { cloudEnabled },
+    );
+  } else if (typeof detail === "string") {
+    const m = detail.trim() || "Save failed";
+    lastError = formatSyncFailureReport(
+      { operation: "(unspecified API call)", message: m, cause: "client" },
+      { cloudEnabled },
+    );
   } else {
-    lastError = message?.trim() || "Save failed";
+    lastError = formatSyncFailureReport(detail, { cloudEnabled });
+  }
+  emit();
+}
+
+/** For failures that did not use {@link neonSyncBeginRequest} (e.g. item-link fetches). */
+export function neonSyncReportAuxiliaryFailure(detail: NeonSyncFailureInput) {
+  if (!cloudEnabled) return;
+  if (typeof detail === "string") {
+    lastError = formatSyncFailureReport(
+      {
+        operation: "(client sync)",
+        message: detail.trim() || "Sync error",
+        cause: "client",
+      },
+      { cloudEnabled },
+    );
+  } else {
+    lastError = formatSyncFailureReport(detail, { cloudEnabled });
   }
   emit();
 }
