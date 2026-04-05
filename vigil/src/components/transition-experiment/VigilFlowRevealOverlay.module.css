@@ -12,11 +12,3 @@
   display: block;
   z-index: 0;
 }
-
-.devReplay {
-  position: fixed;
-  bottom: 14px;
-  right: 14px;
-  z-index: 10002;
-  pointer-events: auto;
-}

@@ -1,9 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowsClockwise } from "@phosphor-icons/react";
 
-import { Button } from "@/src/components/ui/Button";
 import styles from "./VigilFlowRevealOverlay.module.css";
 
 const VERTEX_SHADER = `
@@ -270,8 +268,6 @@ function compileShader(gl: WebGLRenderingContext, type: number, source: string):
   return shader;
 }
 
-const IS_DEV = process.env.NODE_ENV === "development";
-
 export type VigilFlowRevealOverlayProps = {
   scenario: "default" | "nested" | "corrupt";
   /** After the user activates (or non-default mount): full reveal target 1; before that, ambient ~nav idle. */
@@ -453,39 +449,12 @@ export function VigilFlowRevealOverlay({
     };
   }, [skipBoot, reduceMotion, disposeGl]);
 
-  const replay = useCallback(() => {
-    if (skipBoot || reduceMotion) return;
-    progressRef.current = 0;
-    targetProgressRef.current = 0;
-    window.setTimeout(() => {
-      targetProgressRef.current = 1;
-    }, 300);
-  }, [skipBoot, reduceMotion]);
-
   if (skipBoot) return null;
   if (reduceMotion) return null;
 
   return (
-    <>
-      <div className={styles.wrap} aria-hidden>
-        <canvas ref={canvasRef} className={styles.canvas} />
-      </div>
-      {IS_DEV ? (
-        <div className={styles.devReplay}>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            tone="menu"
-            iconOnly
-            aria-label="Replay flow reveal"
-            title="Replay flow reveal"
-            onClick={replay}
-          >
-            <ArrowsClockwise size={18} weight="bold" aria-hidden />
-          </Button>
-        </div>
-      ) : null}
-    </>
+    <div className={styles.wrap} aria-hidden>
+      <canvas ref={canvasRef} className={styles.canvas} />
+    </div>
   );
 }

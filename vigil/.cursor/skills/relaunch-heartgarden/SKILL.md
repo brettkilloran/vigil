@@ -1,13 +1,13 @@
 ---
-name: relaunch-vigil
-description: Relaunch the Vigil dev app on its existing port and open it immediately, including a specific route when provided. Use when the user asks to relaunch/restart Vigil, keep the same port, open in Cursor/browser, or mentions a target page like /, /foo, or /spaces/123.
+name: relaunch-heartgarden
+description: Relaunch the heartgarden Next.js dev app on its existing port and open it immediately, including a specific route when provided. Use when the user asks to relaunch/restart the app, keep the same port, open in Cursor/browser, or mentions a target page like /, /foo, or /spaces/123. The app directory in git is vigil/ unless renamed (see vigil/docs/NAMING.md).
 ---
 
-# Relaunch Vigil
+# Relaunch heartgarden
 
 ## Goal
 
-Restart Vigil quickly on the same port, verify it is healthy, and open the requested page.
+Restart the heartgarden dev server quickly on the same port, verify it is healthy, and open the requested page.
 
 ## Inputs
 
@@ -21,13 +21,13 @@ Restart Vigil quickly on the same port, verify it is healthy, and open the reque
    - Otherwise use `/`.
 
 2. Reuse the current port when possible:
-   - Check existing terminal metadata for the current Vigil dev command.
+   - Check existing terminal metadata for the current dev command.
    - If a port is present, reuse it.
    - If unknown, default to `3000`.
 
-3. Restart Vigil:
+3. Restart the app:
    - Stop the process currently bound to the selected port.
-   - Start dev server from `vigil/` using the portable Node path:
+   - Start dev server from the app directory (**`vigil/`** today — see **`docs/NAMING.md`** if renamed) using the portable Node path when applicable:
      - `cmd /c "set PATH=C:\Users\Brett\AppData\Local\node-portable\node-v24.11.0-win-x64;%PATH%&& npm run dev -- --port <PORT> --hostname 127.0.0.1"`
 
 4. Verify health before opening:

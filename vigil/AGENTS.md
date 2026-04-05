@@ -6,9 +6,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # heartgarden — agent notes
 
+## Naming (product vs `vigil/` folder)
+
+**heartgarden** is the app name. The Next.js tree is in **`vigil/`** (legacy directory name). **Vercel** and **CI** use that path until you rename it — steps and stable `vigil:*` IDs (links, MCP tools, CSS tokens, localStorage) are documented in **`docs/NAMING.md`**.
+
 ## Source of truth
 
 - **Lore-engine task order (Phases A–D, UX2):** Cursor plan `heartgarden_lore_engine_7fc1fb56.plan.md` under `.cursor/plans/` (YAML todos + narrative).
+- **Product vs repo folder / rename checklist:** `docs/NAMING.md`
 - **Repo-wide shipped vs next + hardening backlog:** `docs/BUILD_PLAN.md`
 - **Doc index:** `docs/HEARTGARDEN_MASTER_PLAN.md`
 - **Historical product bible (dated paths):** `docs/archive/vigil-master-plan-legacy.md` — `docs/VIGIL_MASTER_PLAN.md` is a stub pointer.
@@ -19,7 +24,7 @@ Read **STRATEGY** for the current-vs-target delta, **BUILD_PLAN** for architectu
 
 ## Current code reality
 
-The **production shell** is **`ArchitecturalCanvasApp`** (`src/components/foundation/ArchitecturalCanvasApp.tsx`), mounted from `app/_components/VigilApp.tsx`. It uses **in-component graph state** + Neon sync (`architectural-db-bridge.ts`, `architectural-neon-api.ts`, `/api/bootstrap`, item/space APIs) when not in demo seed mode.
+The **production shell** is **`ArchitecturalCanvasApp`** (`src/components/foundation/ArchitecturalCanvasApp.tsx`), mounted from `app/_components/VigilApp.tsx` (file name is legacy; this is the heartgarden shell). It uses **in-component graph state** + Neon sync (`architectural-db-bridge.ts`, `architectural-neon-api.ts`, `/api/bootstrap`, item/space APIs) when not in demo seed mode.
 
 **Legacy:** `src/stores/canvas-store.ts` still backs some **panels** (e.g. backlinks, timeline). Treat as parallel until unified — see `docs/BUILD_PLAN.md`.
 
@@ -35,7 +40,7 @@ Persistence: **`items`** rows + **`spaces.canvas_state`** as camera `{ x, y, zoo
 
 ## Local dev, Node, and Storybook (guardrails)
 
-**Package manager:** Use **npm** only in `vigil/` (`package-lock.json`). Do not mix pnpm/yarn in the same tree without a deliberate migration.
+**Package manager:** Use **npm** only in the app directory (**`vigil/`** today — see **`docs/NAMING.md`** if renamed) (`package-lock.json`). Do not mix pnpm/yarn in the same tree without a deliberate migration.
 
 **Node on PATH (Windows portable installs):** If `npm`/`node` are missing in a new terminal or in Cursor, the portable Node folder is probably not on **User** `PATH`.
 
@@ -74,7 +79,7 @@ The script picks the **newest** `node-v*-win-x64` under `%LOCALAPPDATA%\node-por
 
 ## MCP (`npm run mcp`)
 
-Tools include **`vigil_browse_spaces`**, **`vigil_space_summary`**, **`vigil_list_items`**, **`vigil_get_item`** / **`vigil_get_entity`**, **`vigil_item_links`**, **`vigil_traverse_links`**, **`vigil_related_items`**, **`vigil_title_mentions`**, **`vigil_search`**, **`vigil_graph`**, **`vigil_lore_query`**, **`vigil_patch_item`** (needs **`HEARTGARDEN_MCP_WRITE_KEY`** on the MCP process and matching `write_key` in the tool call). **Resources:** `lore://space/<uuid>` (summary + graph JSON). Defaults: **`HEARTGARDEN_DEFAULT_SPACE_ID`**, **`HEARTGARDEN_APP_URL`**. The Next app must be running for HTTP calls to succeed.
+Tools include **`vigil_browse_spaces`**, **`vigil_space_summary`**, **`vigil_list_items`**, … (full list in `scripts/mcp-server.mjs`) — names keep the **`vigil_`** prefix for MCP client compatibility; **`HEARTGARDEN_MCP_WRITE_KEY`** on the MCP process must match `write_key` in **`vigil_patch_item`**. **Resources:** `lore://space/<uuid>` (summary + graph JSON). Defaults: **`HEARTGARDEN_DEFAULT_SPACE_ID`**, **`HEARTGARDEN_APP_URL`**. The Next app must be running for HTTP calls to succeed.
 
 ## Playwright (`npm run test:e2e`)
 

@@ -7,7 +7,7 @@ Files here are **kept for history** (product intent, old session breakdowns, dat
 | What | Where |
 |------|--------|
 | **Remaining engineering tasks (lore vertical + ordered phases)** | Cursor plan: `.cursor/plans/heartgarden_lore_engine_7fc1fb56.plan.md` (or your copy under the user’s `.cursor/plans/` path). |
-| **Repo reality: architecture, shipped tranches, hardening backlog** | `vigil/docs/BUILD_PLAN.md` |
+| **Repo reality: architecture, shipped tranches, hardening backlog** | `vigil/docs/BUILD_PLAN.md` (paths use **`vigil/`**; product is **heartgarden** — **`../NAMING.md`**) |
 | **Human / keys / infra** | `vigil/docs/FOLLOW_UP.md` |
 | **Contributor onboarding** | `vigil/AGENTS.md` |
 | **Engineering delta notes** | `vigil/docs/STRATEGY.md` (being slimmed to reference the above) |

@@ -4,6 +4,8 @@ import { Sparkle, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
+
 import { Button } from "@/src/components/ui/Button";
 
 export type LoreAskSource = {
@@ -298,6 +300,6 @@ export function LoreAskPanel({
         </div>
       </div>
     </div>,
-    document.body,
+    getVigilPortalRoot(),
   );
 }

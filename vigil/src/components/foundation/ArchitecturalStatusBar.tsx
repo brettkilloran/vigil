@@ -18,6 +18,7 @@ import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.cs
 import { Button } from "@/src/components/ui/Button";
 import { Switch } from "@/src/components/ui/Switch";
 import { cx } from "@/src/lib/cx";
+import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
 import {
   formatSavedRelative,
   getNeonSyncServerSnapshot,
@@ -317,12 +318,12 @@ function SaveAndVersionPopover({
               ) : null}
             </div>
           </div>,
-          document.body,
+          getVigilPortalRoot(),
         )
       : null;
 
   return (
-    <>
+    <div className={styles.statusBarSaveCluster}>
       <span className="sr-only" aria-live="polite" aria-atomic="true">
         {liveAnnouncement}
       </span>
@@ -350,7 +351,7 @@ function SaveAndVersionPopover({
         ) : null}
       </Button>
       {panel}
-    </>
+    </div>
   );
 }
 

@@ -16,7 +16,7 @@ This is the **repo-wide checklist**: architecture snapshot, shipped tranches, an
 | **Lore Q&A (MVP)** | `POST /api/lore/query` — retrieval via FTS (+ fuzzy fallback), synthesis via **Anthropic** (`ANTHROPIC_API_KEY`, optional `ANTHROPIC_LORE_MODEL`). UI: Cmd+K → **Ask lore (AI)** → `LoreAskPanel`. |
 | **DB** | Drizzle `src/db/schema.ts`; Neon requires **`CREATE EXTENSION vector`** before push (`npm run db:ensure-pgvector`). |
 
-**Health check:** From `vigil/`, run `npm run check` (lint + production build). After UX / DB / stacking changes, run `npm run test:unit` and targeted `npm run test:e2e` if flows touched.
+**Health check:** From the app root (**`vigil/`** unless renamed — **`docs/NAMING.md`**), run `npm run check` (lint + production build). After UX / DB / stacking changes, run `npm run test:unit` and targeted `npm run test:e2e` if flows touched.
 
 ---
 

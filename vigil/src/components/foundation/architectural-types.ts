@@ -82,6 +82,9 @@ export type CanvasGraph = {
   connections: Record<string, CanvasPinConnection>;
 };
 
+/** UI label for the graph root in breadcrumbs, command palette paths, etc. */
+export const ROOT_SPACE_DISPLAY_NAME = "Auth";
+
 // Backward-compatible shape for isolated node stories.
 export type CanvasNode = Omit<CanvasContentEntity, "kind" | "slots"> & {
   x: number;

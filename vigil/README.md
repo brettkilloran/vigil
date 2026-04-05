@@ -29,7 +29,7 @@ Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 | `npm run verify:foundation-sync` | Ensure app entry + foundation shell wiring did not drift from Storybook components |
 | `npm run build` | Production build |
 | `npm run db:push` | Push Drizzle schema to Neon |
-| `npm run mcp` | MCP stdio: **`vigil_list_items`**, **`vigil_search`** (Postgres FTS / hybrid lexical), **`vigil_graph`** — needs app reachable at `HEARTGARDEN_APP_URL` (default `http://localhost:3000`) |
+| `npm run mcp` | MCP stdio tools (legacy names **`vigil_*`**, e.g. **`vigil_list_items`**, **`vigil_search`**, **`vigil_graph`**) — needs app reachable at `HEARTGARDEN_APP_URL` (default `http://localhost:3000`). Do not rename tool strings without updating MCP client configs. |
 
 ### Keyboard (canvas, not typing in a note)
 
@@ -70,4 +70,8 @@ If one view looks stale:
 
 ## Deploy on Vercel
 
-Set `NEON_DATABASE_URL` in project environment variables. No tldraw license is required.
+**Short version:** Vercel **Root Directory** = **`vigil`**. Set `NEON_DATABASE_URL` (and optional Anthropic / R2 per [`.env.local.example`](.env.local.example)). Do **not** set `PLAYWRIGHT_E2E`. No tldraw license is required.
+
+**Full checklist (Neon pooling, Preview envs, R2 CORS, CLI, troubleshooting):** **[`docs/DEPLOY_VERCEL.md`](docs/DEPLOY_VERCEL.md)**.
+
+**Naming:** **`docs/NAMING.md`** (heartgarden vs `vigil/` folder, stable `vigil:*` IDs).

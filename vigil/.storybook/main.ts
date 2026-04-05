@@ -2,7 +2,7 @@ import type { StorybookConfig } from "@storybook/nextjs";
 import type { Configuration } from "webpack";
 
 /**
- * heartgarden UI documentation. Repo directory is `vigil/`; stories live under `src/components/`.
+ * heartgarden UI documentation. App directory in git is `vigil/` (see `docs/NAMING.md`); stories live under `src/components/`.
  * Invariants (Windows / dev-server): keep `webpackFinal` + `allowedHosts: "all"`; see `AGENTS.md`
  * § "Local dev, Node, and Storybook (guardrails)".
  */

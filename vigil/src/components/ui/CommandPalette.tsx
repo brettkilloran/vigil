@@ -22,6 +22,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
+
 import type { RecentPaletteItem } from "@/src/hooks/use-recent-items";
 import { Button } from "@/src/components/ui/Button";
 
@@ -650,5 +652,5 @@ export function CommandPalette({
     </div>
   );
 
-  return createPortal(portal, document.body);
+  return createPortal(portal, getVigilPortalRoot());
 }

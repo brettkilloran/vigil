@@ -12,7 +12,9 @@
 | Document | Purpose |
 |----------|---------|
 | **`docs/STRATEGY.md`** | Engineering delta, phase map notes; points at BUILD_PLAN + Cursor plan. |
+| **`docs/NAMING.md`** | Product name **heartgarden** vs **`vigil/`** folder; stable `vigil:*` IDs; optional folder rename checklist. |
 | **`docs/FOLLOW_UP.md`** | API keys, human decisions, infra. |
+| **`docs/DEPLOY_VERCEL.md`** | Vercel project setup, env vars, Neon/R2, previews, troubleshooting. |
 | **`docs/DESIGN_SYSTEM_TOKENS.md`** | Token reference. |
 | **`docs/VISUAL_REVAMP_PLAN.md`** | UI polish / revamp ideas. |
 | **`docs/MIGRATION.md`**, **`docs/FUNCTIONAL_PRD_REBUILD.md`** | Historical context. |
@@ -23,4 +25,4 @@
 |----------|----------|
 | Former **full** master build plan (~Phases 1–8, sessions, old paths) | **`docs/archive/vigil-master-plan-legacy.md`** — see **`docs/archive/README.md`**. |
 
-**Agent onboarding:** `AGENTS.md` at repo root (`vigil/`).
+**Agent onboarding:** `AGENTS.md` in the app directory (**`vigil/`**; **`docs/NAMING.md`** if you rename the folder).

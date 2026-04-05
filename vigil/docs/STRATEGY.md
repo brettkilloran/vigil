@@ -11,7 +11,7 @@ This file is the **short bridge** between the repo today and planning docs. **Ta
 
 ## Current repo vs target (honest delta)
 
-| Area | Today (`vigil/`) | Target (master plan) |
+| Area | Today (heartgarden app in **`vigil/`** — see **`docs/NAMING.md`**) | Target (master plan) |
 |------|------------------|----------------------|
 | Canvas | **tldraw removed**; **production shell = `ArchitecturalCanvasApp`** (`src/components/foundation/`) | Custom DOM + CSS transform layer + item cards (same intent as plan’s `VigilCanvas`) |
 | Persistence | **`items`** + camera in **`spaces.canvas_state`**; Neon **bootstrap + CRUD bridge** for architectural graph when not in demo mode | Same; legacy DB rows may still hold old `canvas_state` until migrated |

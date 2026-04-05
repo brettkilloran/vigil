@@ -1,3 +1,4 @@
+# CI for the heartgarden Next.js app. Working directory is vigil/ until the folder is renamed — see vigil/docs/NAMING.md
 name: heartgarden CI
 
 env:

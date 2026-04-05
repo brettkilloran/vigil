@@ -46,7 +46,7 @@ export async function presignImagePut(
   const id = crypto.randomUUID();
   const seg = opts.spaceId ?? "uploads";
   const name = safeFilename(opts.filename ?? "image");
-  const key = `vigil/${seg}/${id}-${name}`;
+  const key = `heartgarden/${seg}/${id}-${name}`;
 
   const client = new S3Client({
     region: "auto",

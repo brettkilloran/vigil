@@ -4,7 +4,7 @@ Items the codebase **cannot** complete without your action, credentials, or prod
 
 ## Accounts & API keys
 
-- **Neon:** `NEON_DATABASE_URL` in `.env.local` (and Vercel) for cloud sync, search, graph, MCP against production. Enable **`CREATE EXTENSION vector`** on the database before pushing schema with embeddings (`npm run db:ensure-pgvector` in `vigil/`).
+- **Neon:** `NEON_DATABASE_URL` in `.env.local` (and Vercel) for cloud sync, search, graph, MCP against production. Enable **`CREATE EXTENSION vector`** on the database before pushing schema with embeddings (`npm run db:ensure-pgvector` from the app root — currently **`vigil/`**; see **`docs/NAMING.md`** if you rename the folder).
 - **Anthropic:** `ANTHROPIC_API_KEY` for **`POST /api/lore/query`**, lore import extract, and the **Ask lore (AI)** UI (`LoreAskPanel`). Optional: `ANTHROPIC_LORE_MODEL` (default `claude-sonnet-4-20250514`). **Unauthenticated** today — rate-limit or protect before a public URL.
 - **Cloudflare R2:** Bucket, CORS, and optional public URL for image uploads; align with `.env.local.example`.
 
@@ -32,7 +32,7 @@ Items the codebase **cannot** complete without your action, credentials, or prod
 
 ## CI / repo
 
-- **GitHub Actions:** Workflow added under `vigil/.github/workflows/` runs `npm run check` and Playwright on `ubuntu-latest`. Enable Actions on the repo if disabled; update branch filters if you use a non-`main` default.
+- **GitHub Actions:** Workflow lives at **`.github/workflows/heartgarden-ci.yml`** (repository root). It runs `npm run check`, Storybook build, and Playwright from the **`vigil/`** working directory. Enable Actions on the repo if disabled; update path filters and `working-directory` if you rename **`vigil/`** (see **`docs/NAMING.md`**).
 
 ## Database hygiene
 

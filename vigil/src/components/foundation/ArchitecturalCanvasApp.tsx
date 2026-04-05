@@ -108,19 +108,20 @@ import {
 import { ArchitecturalLinksPanel } from "@/src/components/ui/ArchitecturalLinksPanel";
 import { LinkGraphOverlay } from "@/src/components/ui/LinkGraphOverlay";
 import { LoreAskPanel } from "@/src/components/ui/LoreAskPanel";
-import type {
-  CanvasConnectionPin,
-  CanvasContentEntity,
-  CanvasEntity,
-  CanvasFolderEntity,
-  ContentTheme,
-  CanvasGraph,
-  CanvasPinConnection,
-  CanvasSpace,
-  CanvasTool,
-  DockFormatAction,
-  NodeTheme,
-  TapeVariant,
+import {
+  type CanvasConnectionPin,
+  type CanvasContentEntity,
+  type CanvasEntity,
+  type CanvasFolderEntity,
+  type ContentTheme,
+  type CanvasGraph,
+  type CanvasPinConnection,
+  type CanvasSpace,
+  type CanvasTool,
+  type DockFormatAction,
+  type NodeTheme,
+  type TapeVariant,
+  ROOT_SPACE_DISPLAY_NAME,
 } from "@/src/components/foundation/architectural-types";
 
 const MIN_ZOOM = 0.3;
@@ -174,7 +175,7 @@ function createBootstrapPendingGraph(): CanvasGraph {
     spaces: {
       [ROOT_SPACE_ID]: {
         id: ROOT_SPACE_ID,
-        name: "Root",
+        name: ROOT_SPACE_DISPLAY_NAME,
         parentSpaceId: null,
         entityIds: [],
       },
@@ -1743,7 +1744,9 @@ export function ArchitecturalCanvasApp({
   const paletteSpaces = useMemo<PaletteSpace[]>(() => {
     return Object.values(graph.spaces).map((space) => {
       const path = buildPathToSpace(space.id, graph.spaces, graph.rootSpaceId)
-        .map((id) => (id === graph.rootSpaceId ? "Root" : graph.spaces[id]?.name ?? "Unknown"))
+        .map((id) =>
+          id === graph.rootSpaceId ? ROOT_SPACE_DISPLAY_NAME : graph.spaces[id]?.name ?? "Unknown",
+        )
         .join(" / ");
       return { id: space.id, name: space.name, pathLabel: path };
     });
@@ -3595,7 +3598,7 @@ export function ArchitecturalCanvasApp({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `vigil-graph-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
+    a.download = `heartgarden-graph-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }, []);
@@ -6329,60 +6332,6 @@ export function ArchitecturalCanvasApp({
             onActivate={moveSelectionToParent}
           />
         ) : null}
-        <div ref={shellTopLeftStackRef} className={styles.shellTopLeftStack}>
-          <div className={styles.shellTopCluster}>
-            <div className={styles.shellTopClusterRow} data-hg-chrome="top-left-cluster">
-              <ArchitecturalStatusBar
-                syncBootstrapPending={scenario === "default" && !canvasBootstrapResolved}
-                onExportGraphJson={exportGraphJson}
-                exportGraphPaletteHint={`${modKeyHints.search} → Export graph JSON`}
-              />
-              <div className={styles.navChrome} data-hg-chrome="nav-breadcrumb">
-                <div className={`${styles.glassPanel} ${styles.navPanel} ${styles.shellTopChromePanel}`}>
-                  <div className={styles.navRow}>
-                    {parentSpaceId ? (
-                      <ArchitecturalButton
-                        type="button"
-                        size="menu"
-                        tone="focus-light"
-                        className={styles.navBackBtn}
-                        leadingIcon={<ArrowLeft size={14} weight="bold" aria-hidden />}
-                        onClick={goBack}
-                      >
-                        Back
-                      </ArchitecturalButton>
-                    ) : null}
-                    <div className={styles.crumbTrail}>
-                      {navigationPath.map((spaceId, index) => {
-                        const isActive = spaceId === activeSpaceId;
-                        const label =
-                          spaceId === graph.rootSpaceId
-                            ? "Root"
-                            : graph.spaces[spaceId]?.name ?? "Unknown";
-                        return (
-                          <span key={spaceId} className={styles.crumbItem}>
-                            {index > 0 ? <span className={styles.crumbSep}>/</span> : null}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              tone="glass"
-                              size="sm"
-                              className={`${styles.crumbBtn} ${isActive ? styles.crumbActive : ""}`}
-                              onClick={() => enterSpace(spaceId)}
-                              disabled={isActive}
-                            >
-                              {label}
-                            </Button>
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
         <div className={styles.topRightConnectionTools}>
           <div
             className={styles.sideToolsMainPanel}
@@ -7165,6 +7114,66 @@ export function ArchitecturalCanvasApp({
         aria-hidden
         onChange={onArchitecturalMediaFile}
       />
+      </div>
+      <div
+        className={`${styles.chromeLayer}${
+          bootChromeSuppressed ? ` ${styles.chromeLayerTopLeftBootElevated}` : ""
+        }`}
+      >
+        <div ref={shellTopLeftStackRef} className={styles.shellTopLeftStack}>
+          <div className={styles.shellTopCluster}>
+            <div className={styles.shellTopClusterRow} data-hg-chrome="top-left-cluster">
+              <ArchitecturalStatusBar
+                syncBootstrapPending={scenario === "default" && !canvasBootstrapResolved}
+                onExportGraphJson={exportGraphJson}
+                exportGraphPaletteHint={`${modKeyHints.search} → Export graph JSON`}
+              />
+              <div className={styles.navChrome} data-hg-chrome="nav-breadcrumb">
+                <div className={`${styles.glassPanel} ${styles.navPanel} ${styles.shellTopChromePanel}`}>
+                  <div className={styles.navRow}>
+                    {parentSpaceId ? (
+                      <ArchitecturalButton
+                        type="button"
+                        size="menu"
+                        tone="focus-light"
+                        className={styles.navBackBtn}
+                        leadingIcon={<ArrowLeft size={14} weight="bold" aria-hidden />}
+                        onClick={goBack}
+                      >
+                        Back
+                      </ArchitecturalButton>
+                    ) : null}
+                    <div className={styles.crumbTrail}>
+                      {navigationPath.map((spaceId, index) => {
+                        const isActive = spaceId === activeSpaceId;
+                        const label =
+                          spaceId === graph.rootSpaceId
+                            ? ROOT_SPACE_DISPLAY_NAME
+                            : graph.spaces[spaceId]?.name ?? "Unknown";
+                        return (
+                          <span key={spaceId} className={styles.crumbItem}>
+                            {index > 0 ? <span className={styles.crumbSep}>/</span> : null}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              tone="glass"
+                              size="sm"
+                              className={`${styles.crumbBtn} ${isActive ? styles.crumbActive : ""}`}
+                              onClick={() => enterSpace(spaceId)}
+                              disabled={isActive}
+                            >
+                              {label}
+                            </Button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </>
   );

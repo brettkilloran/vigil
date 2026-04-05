@@ -6,9 +6,32 @@
   overflow: hidden;
 }
 
+/* Hidden defs only — filter referenced from inline style on .fxStack */
+.svgDefs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/*
+ * Flowers only: horizontal RGB split via SVG filter + light contrast (inline).
+ * Scanlines are drawn in-canvas with source-atop so they never hit text or void.
+ */
+.fxStack {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  isolation: isolate;
+}
+
 .canvas {
   display: block;
   width: 100%;
   height: 100%;
   pointer-events: none;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }

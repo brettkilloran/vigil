@@ -1,9 +1,10 @@
-import type {
-  CanvasEntity,
-  CanvasContentEntity,
-  CanvasGraph,
-  CanvasNode,
-  CanvasSpace,
+import {
+  ROOT_SPACE_DISPLAY_NAME,
+  type CanvasEntity,
+  type CanvasContentEntity,
+  type CanvasGraph,
+  type CanvasNode,
+  type CanvasSpace,
 } from "@/src/components/foundation/architectural-types";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
 
@@ -132,7 +133,7 @@ export function buildArchitecturalSeedGraph(
   const spaces: Record<string, CanvasSpace> = {
     root: {
       id: "root",
-      name: "Root",
+      name: ROOT_SPACE_DISPLAY_NAME,
       parentSpaceId: null,
       entityIds: ["node-1", "node-2", "node-3", "node-4", "folder-1"],
     },

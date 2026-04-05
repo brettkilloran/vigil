@@ -10,7 +10,7 @@ import styles from "./Switch.module.css";
 export type SwitchProps = React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>;
 
 /**
- * Accessible toggle (Radix Switch) with Vigil canvas chrome styling.
+ * Accessible toggle (Radix Switch) with heartgarden canvas chrome styling.
  * @see https://www.radix-ui.com/primitives/docs/components/switch
  */
 export const Switch = React.forwardRef<React.ComponentRef<typeof SwitchPrimitives.Root>, SwitchProps>(

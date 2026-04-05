@@ -564,6 +564,7 @@ a {
   border: 1px solid var(--btn-border-default);
   background: var(--btn-bg-default);
   color: var(--btn-fg-default);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--btn-font-size);
   font-weight: var(--btn-font-weight);
   line-height: 1;

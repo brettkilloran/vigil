@@ -34,7 +34,9 @@
  * browser/compositing edge cases where `backdrop-filter` can appear inert.
  */
 .shellBackdropBlurActive .viewport,
-.shellBackdropBlurActive .chromeLayer {
+.shellBackdropBlurActive .chromeLayer,
+/* Top-left chrome renders as a sibling after `.shell` so it stacks above the boot overlay. */
+.shellBackdropBlurActive + .chromeLayer {
   filter: blur(12px) saturate(90%);
 }
 
@@ -322,6 +324,11 @@
   transition:
     opacity 0.24s ease,
     visibility 0.24s ease;
+}
+
+/* Boot overlay (VigilAppBootScreen) sits at z-index 10050; keep real status + nav interactive. */
+.chromeLayerTopLeftBootElevated {
+  z-index: 10060;
 }
 
 .nodePlacement {
@@ -1641,6 +1648,15 @@
   min-width: 0;
   /* One hit target for status + nav including flex gap (children can still opt out via none if needed). */
   pointer-events: auto;
+}
+
+/* Save popover trigger + sr-only live region — one DOM parent (portal is still a React child). */
+.statusBarSaveCluster {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .statusBarSegment {
