@@ -9,7 +9,7 @@ export default defineConfig({
   out: "./drizzle/migrations",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.NEON_DATABASE_URL ?? "",
+    url: process.env.NEON_DATABASE_URL?.trim() || process.env.DATABASE_URL?.trim() || "",
   },
 });
 
