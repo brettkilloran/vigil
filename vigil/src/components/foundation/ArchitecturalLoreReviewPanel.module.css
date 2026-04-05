@@ -9,9 +9,9 @@
   padding: 0;
   border: none;
   border-radius: 0;
-  background: color-mix(in oklch, var(--sys-color-black) 72%, transparent);
-  backdrop-filter: blur(14px) saturate(1.08);
-  -webkit-backdrop-filter: blur(14px) saturate(1.08);
+  background: color-mix(in oklch, var(--sem-surface-base) 78%, transparent);
+  backdrop-filter: blur(12px) saturate(1.02);
+  -webkit-backdrop-filter: blur(12px) saturate(1.02);
   pointer-events: auto;
   animation: loreReviewFadeIn var(--sys-motion-duration-normal) var(--sys-motion-ease-standard);
   box-shadow: none;
@@ -19,9 +19,54 @@
   align-items: unset;
 }
 
+/*
+ * Full-viewport dismiss: keep shared `Button` / `.vigil-btn` for lint, but pin token states so hover
+ * does not swap in `--cmp-button-ghost-bg-hover` (reads as the scrim “lighting up”).
+ */
+.backdrop:global(.vigil-btn) {
+  --lore-scrim: color-mix(in oklch, var(--sem-surface-base) 78%, transparent);
+  --btn-bg-default: var(--lore-scrim);
+  --btn-bg-hover: var(--lore-scrim);
+  --btn-bg-active: var(--lore-scrim);
+  --btn-bg-disabled: var(--lore-scrim);
+  --btn-border-default: transparent;
+  --btn-border-hover: transparent;
+  --btn-border-active: transparent;
+  --btn-border-disabled: transparent;
+  --btn-fg-default: transparent;
+  --btn-fg-hover: transparent;
+  --btn-fg-active: transparent;
+  --btn-fg-disabled: transparent;
+  color: transparent;
+  transform: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.backdrop:global(.vigil-btn):hover,
+.backdrop:global(.vigil-btn):active {
+  transform: none;
+  box-shadow: none;
+}
+
+.backdrop:global(.vigil-btn):focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--sem-focus-ring) 45%, transparent);
+}
+
+.backdrop:global(.vigil-btn):disabled,
+.backdrop:global(.vigil-btn)[data-disabled="true"] {
+  opacity: 1;
+  cursor: not-allowed;
+}
+
 @supports not ((backdrop-filter: blur(1px))) {
   .backdrop {
-    background: color-mix(in oklch, var(--sys-color-black) 82%, transparent);
+    background: color-mix(in oklch, var(--sem-surface-base) 88%, transparent);
+  }
+
+  .backdrop:global(.vigil-btn) {
+    --lore-scrim: color-mix(in oklch, var(--sem-surface-base) 88%, transparent);
   }
 }
 
@@ -34,6 +79,7 @@
   }
 }
 
+/* Flat shell: same vocabulary as canvas / `--sem-surface-base` — no side accent stripe, no panel gradient. */
 .panel {
   position: fixed;
   top: 0;
@@ -47,34 +93,13 @@
   box-sizing: border-box;
   isolation: isolate;
   border-left: 1px solid var(--sem-border-subtle);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklch, var(--sys-color-neutral-800) 22%, var(--vigil-panel)) 0%,
-      var(--vigil-panel) 28%,
-      var(--vigil-panel) 100%
-    );
+  background: var(--sem-surface-base);
   color: var(--sem-text-primary);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  box-shadow: var(--sem-shadow-xl), inset 0 1px 0 var(--sem-overlay-white-06);
+  box-shadow: -14px 0 48px var(--sem-color-shadow-42);
   pointer-events: auto;
   animation: loreReviewSlideIn calc(var(--sys-motion-duration-normal) + 60ms) cubic-bezier(0.22, 0.82, 0.16, 1);
-}
-
-.panel::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 2px;
-  background: linear-gradient(
-    180deg,
-    color-mix(in oklch, var(--sem-focus-ring) 55%, transparent) 0%,
-    color-mix(in oklch, var(--sem-focus-ring) 8%, transparent) 42%,
-    transparent 100%
-  );
-  pointer-events: none;
-  z-index: 1;
 }
 
 @keyframes loreReviewSlideIn {
@@ -102,13 +127,9 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 20px 18px 18px;
+  padding: 22px 20px 18px;
   border-bottom: 1px solid var(--sem-border-subtle);
-  background: linear-gradient(
-    180deg,
-    color-mix(in oklch, var(--sys-color-neutral-800) 18%, transparent) 0%,
-    transparent 100%
-  );
+  background: transparent;
   z-index: 2;
 }
 
@@ -117,9 +138,18 @@
   min-width: 0;
 }
 
-.metadataEyebrow {
+.microLabel {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  color: var(--sem-text-muted);
+}
+
+.drawerEyebrow {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .headerAside {
@@ -129,52 +159,50 @@
 
 .panelTitle {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
   font-weight: 600;
-  letter-spacing: -0.025em;
-  line-height: 1.25;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   color: var(--sem-text-primary);
 }
 
 .introText {
-  margin: 10px 0 0;
-  font-size: 12px;
+  margin: 12px 0 0;
+  font-size: 0.8125rem;
   line-height: 1.55;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   color: var(--sem-text-secondary);
-  max-width: 38em;
+  max-width: 36em;
 }
 
 .introStrong {
   font-weight: 600;
-  color: color-mix(in oklch, var(--sem-focus-ring) 72%, var(--sem-text-primary));
+  color: var(--sem-text-primary);
 }
 
 .targetCard {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  margin-top: 14px;
+  margin-top: 16px;
   padding: 12px 14px;
   border-radius: var(--sys-radius-lg);
   border: 1px solid var(--sem-border-subtle);
-  background: color-mix(in oklch, var(--sys-color-neutral-800) 42%, var(--vigil-panel));
-  box-shadow:
-    inset 0 1px 0 var(--sem-overlay-white-05),
-    var(--sem-shadow-sm);
+  background: var(--sys-color-neutral-950);
+  box-shadow: none;
 }
 
 .targetIconTint {
   margin-top: 1px;
-  color: color-mix(in oklch, var(--sem-text-muted) 68%, var(--sem-focus-ring) 32%);
+  color: var(--sem-text-muted);
 }
 
 .targetMeta {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .metadataKicker {
@@ -182,9 +210,10 @@
 }
 
 .targetTitle {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1.35;
+  letter-spacing: -0.02em;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   color: var(--sem-text-primary);
   overflow: hidden;
@@ -198,12 +227,12 @@
   display: flex;
   align-items: flex-start;
   gap: 11px;
-  margin-top: 14px;
+  margin-top: 16px;
   padding: 12px 14px;
   border-radius: var(--sys-radius-lg);
   border: 1px solid var(--sem-caution-border);
   background: var(--sem-caution-surface);
-  box-shadow: inset 0 1px 0 var(--sem-caution-inset);
+  box-shadow: none;
 }
 
 .calloutWarnIcon {
@@ -214,13 +243,12 @@
 
 .calloutWarnText {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.8125rem;
   line-height: 1.5;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   color: var(--sem-text-secondary);
 }
 
-/* Icon-only dismiss: `Button` already applies `.vigil-btn`; match control height + pill. */
 .closeFab:global(.vigil-btn) {
   width: var(--sys-control-height-md);
   height: var(--sys-control-height-md);
@@ -239,28 +267,29 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 18px 18px 28px;
+  padding: 20px 20px 32px;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 24px;
 }
 
 .ctaBand {
-  padding: 14px;
-  margin: -4px 0 0;
+  padding: 12px;
+  margin: 0;
   border-radius: var(--sys-radius-lg);
   border: 1px solid var(--sem-border-subtle);
-  background: color-mix(in oklch, var(--sys-color-neutral-800) 28%, var(--vigil-panel));
-  box-shadow: inset 0 1px 0 var(--sem-overlay-white-04);
+  background: var(--sys-color-neutral-950);
+  box-shadow: none;
 }
 
 .primaryCta {
   width: 100%;
   min-height: var(--sys-control-height-lg);
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.02em;
+  font-size: 0.8125rem;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  box-shadow: var(--sem-shadow-sm);
+  box-shadow: none;
 }
 
 .section {
@@ -270,30 +299,25 @@
 }
 
 .sectionHead {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 8px;
+  margin: 0 0 10px;
 }
 
-.sectionAccent {
-  width: 3px;
-  height: 13px;
-  flex-shrink: 0;
-  border-radius: var(--sys-radius-sm);
-  background: linear-gradient(
-    180deg,
-    color-mix(in oklch, var(--sem-focus-ring) 85%, var(--sys-color-neutral-700)),
-    color-mix(in oklch, var(--sem-focus-ring) 25%, var(--sys-color-neutral-700))
-  );
+.sectionTitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  color: var(--sem-text-primary);
 }
 
 .sectionHint {
   margin: 0 0 12px;
-  font-size: 11px;
+  font-size: 0.8125rem;
   line-height: 1.5;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  color: var(--sem-text-muted);
+  color: var(--sem-text-secondary);
   max-width: 40em;
 }
 
@@ -301,13 +325,13 @@
   padding: 12px 14px;
   border-radius: var(--sys-radius-lg);
   border: 1px solid var(--sem-border-subtle);
-  background: color-mix(in oklch, var(--sys-color-neutral-920) 80%, var(--vigil-panel));
-  box-shadow: inset 0 1px 0 var(--sem-overlay-white-03);
+  background: var(--sys-color-neutral-950);
+  box-shadow: none;
 }
 
 .semanticText {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.8125rem;
   line-height: 1.55;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   color: var(--sem-text-secondary);
@@ -317,7 +341,7 @@
   margin: 0;
   padding: 11px 13px;
   border-radius: var(--sys-radius-md);
-  font-size: 12px;
+  font-size: 0.8125rem;
   line-height: 1.45;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   border: 1px solid var(--sem-danger-hint-border);
@@ -343,15 +367,14 @@
   }
 }
 
-/* Override shared `.vigil-btn` tokens so label chips match the drawer. */
 .chip:global(.vigil-btn) {
-  --btn-bg-default: color-mix(in oklch, var(--sys-color-neutral-800) 55%, var(--sys-color-neutral-920));
-  --btn-bg-hover: color-mix(in oklch, var(--sys-color-neutral-800) 72%, var(--sys-color-neutral-700));
-  --btn-bg-active: color-mix(in oklch, var(--sys-color-neutral-800) 62%, var(--sys-color-neutral-700));
-  --btn-bg-disabled: color-mix(in oklch, var(--sys-color-neutral-800) 35%, var(--sys-color-neutral-920));
-  --btn-border-default: color-mix(in oklch, var(--sem-border-strong) 80%, var(--sem-border-subtle));
-  --btn-border-hover: color-mix(in oklch, var(--sem-focus-ring) 38%, var(--sys-color-neutral-600));
-  --btn-border-active: color-mix(in oklch, var(--sem-focus-ring) 45%, var(--sys-color-neutral-600));
+  --btn-bg-default: var(--sys-color-neutral-950);
+  --btn-bg-hover: color-mix(in oklch, var(--sys-color-neutral-920) 55%, var(--sys-color-neutral-950));
+  --btn-bg-active: color-mix(in oklch, var(--sys-color-neutral-920) 70%, var(--sys-color-neutral-950));
+  --btn-bg-disabled: color-mix(in oklch, var(--sys-color-neutral-950) 65%, var(--sem-surface-base));
+  --btn-border-default: var(--sem-border-subtle);
+  --btn-border-hover: color-mix(in oklch, var(--sem-text-muted) 25%, var(--sem-border-subtle));
+  --btn-border-active: var(--btn-border-hover);
   --btn-fg-default: var(--sem-text-primary);
   --btn-fg-hover: var(--sem-text-primary);
   --btn-fg-active: var(--sem-text-primary);
@@ -359,20 +382,20 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--sys-radius-lg);
+  border-radius: var(--sys-radius-md);
   padding: 8px 12px;
   min-height: 36px;
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.25;
+  letter-spacing: -0.01em;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   text-align: center;
   cursor: pointer;
   transition:
-    box-shadow var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
-    transform var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
+    background var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
     border-color var(--sys-motion-duration-fast) var(--sys-motion-ease-standard);
-  box-shadow: inset 0 1px 0 var(--sem-overlay-white-04);
+  box-shadow: none;
 }
 
 .chipGrid .chip:global(.vigil-btn) {
@@ -380,9 +403,7 @@
 }
 
 .chip:global(.vigil-btn):hover:not(:disabled):not([data-disabled="true"]) {
-  box-shadow:
-    inset 0 1px 0 var(--sem-overlay-white-06),
-    0 0 0 1px color-mix(in oklch, var(--sem-focus-ring) 12%, transparent);
+  box-shadow: none;
 }
 
 .chip:global(.vigil-btn):active:not(:disabled):not([data-disabled="true"]) {
@@ -391,14 +412,13 @@
 
 .chip:global(.vigil-btn):disabled,
 .chip:global(.vigil-btn)[data-disabled="true"] {
-  opacity: 0.42;
+  opacity: 0.4;
   cursor: not-allowed;
-  box-shadow: none;
 }
 
 .syncHint {
   margin: 10px 0 0;
-  font-size: 10px;
+  font-size: 0.6875rem;
   line-height: 1.45;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   color: var(--sem-text-muted);
@@ -408,21 +428,21 @@
   margin: 0;
   padding: 14px 14px;
   border-radius: var(--sys-radius-lg);
-  border: 1px dashed color-mix(in oklch, var(--sem-text-muted) 35%, var(--sem-border-subtle));
-  background: color-mix(in oklch, var(--sys-color-neutral-950) 40%, transparent);
-  font-size: 12px;
+  border: 1px dashed var(--sem-border-subtle);
+  background: var(--sys-color-neutral-950);
+  font-size: 0.8125rem;
   line-height: 1.5;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  color: var(--sem-text-muted);
+  color: var(--sem-text-secondary);
 }
 
 .infoDisclosure {
   margin-top: 10px;
   border-radius: var(--sys-radius-lg);
   border: 1px solid var(--sem-border-subtle);
-  background: color-mix(in oklch, var(--sys-color-neutral-920) 50%, var(--vigil-panel));
+  background: var(--sys-color-neutral-950);
   overflow: hidden;
-  box-shadow: inset 0 1px 0 var(--sem-overlay-white-03);
+  box-shadow: none;
 }
 
 .infoDisclosureSummary {
@@ -433,9 +453,10 @@
   gap: 8px;
   padding: 11px 14px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 0.8125rem;
   font-weight: 600;
-  letter-spacing: 0.03em;
+  letter-spacing: -0.02em;
+  text-transform: none;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   color: var(--sem-text-secondary);
   user-select: none;
@@ -482,11 +503,9 @@
   border-radius: var(--sys-radius-lg);
   border: 1px solid var(--sem-border-subtle);
   padding: 12px 14px;
-  background: color-mix(in oklch, var(--sys-color-neutral-920) 65%, var(--vigil-panel));
-  box-shadow: inset 0 1px 0 var(--sem-overlay-white-04), var(--sem-shadow-sm);
-  transition:
-    border-color var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
-    box-shadow var(--sys-motion-duration-fast) var(--sys-motion-ease-standard);
+  background: var(--sys-color-neutral-950);
+  box-shadow: none;
+  transition: border-color var(--sys-motion-duration-fast) var(--sys-motion-ease-standard);
 }
 
 .issueCard:hover {
@@ -495,8 +514,8 @@
 
 .issueCardQuiet {
   border-color: var(--sem-border-subtle);
-  background: color-mix(in oklch, var(--sys-color-neutral-950) 55%, var(--vigil-panel));
-  box-shadow: inset 0 1px 0 var(--sem-overlay-white-03);
+  background: var(--sem-surface-base);
+  box-shadow: none;
   padding: 10px 12px;
 }
 
@@ -505,19 +524,19 @@
 }
 
 .issueCardQuiet .issueSummary {
-  font-size: 11px;
+  font-size: 0.8125rem;
   font-weight: 500;
 }
 
 .issueCardQuiet .issueDetails {
-  font-size: 10px;
+  font-size: 0.6875rem;
 }
 
 .issueMeta {
-  font-size: 9px;
-  font-weight: 700;
+  font-size: 0.625rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   margin-bottom: 6px;
 }
@@ -527,7 +546,7 @@
 }
 
 .issueMetaWarning {
-  color: color-mix(in oklch, var(--sem-focus-ring) 78%, var(--sem-text-primary));
+  color: color-mix(in oklch, var(--sem-focus-ring) 65%, var(--sem-text-secondary));
 }
 
 .issueMetaInfo {
@@ -535,16 +554,17 @@
 }
 
 .issueSummary {
-  font-size: 12px;
+  font-size: 0.8125rem;
   font-weight: 500;
-  line-height: 1.4;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   color: var(--sem-text-primary);
 }
 
 .issueDetails {
   margin-top: 8px;
-  font-size: 11px;
+  font-size: 0.75rem;
   line-height: 1.45;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   color: var(--sem-text-muted);
@@ -552,7 +572,7 @@
 
 .issueRelatedId {
   margin-top: 4px;
-  font-size: 10px;
+  font-size: 0.625rem;
   line-height: 1.35;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   color: var(--sem-text-muted);
@@ -568,14 +588,14 @@
 .hintPill {
   display: inline-block;
   margin-top: 8px;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 500;
-  padding: 4px 9px;
+  padding: 4px 8px;
   border-radius: var(--sys-radius-sm);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  background: color-mix(in oklch, var(--sem-focus-ring) 16%, var(--sys-color-neutral-800));
-  color: var(--sem-text-primary);
-  border: 1px solid color-mix(in oklch, var(--sem-focus-ring) 22%, transparent);
+  background: var(--sys-color-neutral-920);
+  color: var(--sem-text-secondary);
+  border: 1px solid var(--sem-border-subtle);
 }
 
 .issueList {
@@ -589,8 +609,8 @@
 
 .mutedLine {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.8125rem;
   line-height: 1.45;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  color: var(--sem-text-muted);
+  color: var(--sem-text-secondary);
 }

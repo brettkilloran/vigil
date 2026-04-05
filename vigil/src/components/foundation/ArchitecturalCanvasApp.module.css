@@ -430,14 +430,15 @@
   }
 }
 
+/* Keep `translateY(-50%)` in both frames — `.toolRailEnterShell` uses it with `top: 50%` for vertical center. */
 @keyframes hg-chrome-enter-rr {
   from {
     opacity: 0;
-    transform: translateX(22px);
+    transform: translate(22px, -50%);
   }
   to {
     opacity: 1;
-    transform: none;
+    transform: translateY(-50%);
   }
 }
 
@@ -510,11 +511,16 @@
   .chromeEnterTopRight,
   .chromeEnterBottomLeft,
   .chromeEnterBottomRight,
-  .chromeEnterRightRail,
   .chromeEnterBottomCenter {
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  .chromeEnterRightRail {
+    animation: none;
+    opacity: 1;
+    transform: translateY(-50%);
   }
 }
 
@@ -3540,32 +3546,10 @@
   flex: 0 0 auto;
   z-index: auto;
   pointer-events: auto;
-}
-
-/* Horizontal glass chip: import + divider + search (not the narrow vertical rail strip). */
-.topRightConnectionTools .sideToolsMainPanel {
+  display: flex;
   flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  width: fit-content;
-  min-width: unset;
-  max-width: none;
-  padding: 4px 6px;
-  height: var(--chrome-tool-rail-strip-width);
-  min-height: var(--chrome-tool-rail-strip-width);
-  max-height: var(--chrome-tool-rail-strip-width);
-}
-
-.topRightConnectionTools .sideToolsToolGroup {
-  flex-direction: row;
-  align-items: center;
-  gap: 4px;
-  width: auto;
-}
-
-.topRightConnectionTools .focusEffectsDockSep {
-  height: 20px;
-  align-self: center;
+  align-items: stretch;
+  gap: 8px;
 }
 
 /* In top-right chrome, open the tint menu inward (leftward) to avoid right-edge clipping. */

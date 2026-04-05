@@ -8,11 +8,7 @@ import styles from "@/src/components/foundation/ArchitecturalLoreReviewPanel.mod
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 import { cx } from "@/src/lib/cx";
-import {
-  HEARTGARDEN_CHROME_ICON,
-  HEARTGARDEN_METADATA_LABEL,
-  HEARTGARDEN_SECTION_TITLE,
-} from "@/src/lib/vigil-ui-classes";
+import { HEARTGARDEN_CHROME_ICON } from "@/src/lib/vigil-ui-classes";
 import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
 
 export type VaultReviewDraft = {
@@ -146,7 +142,7 @@ export function ArchitecturalLoreReviewPanel({
       >
         <div className={styles.panelHeader}>
           <div className={styles.headerMain}>
-            <span className={cx(HEARTGARDEN_METADATA_LABEL, styles.metadataEyebrow)}>Lore quality</span>
+            <span className={cx(styles.microLabel, styles.drawerEyebrow)}>Beta</span>
             <h2 id="hg-vault-review-title" className={styles.panelTitle}>
               Vault review
             </h2>
@@ -158,7 +154,7 @@ export function ArchitecturalLoreReviewPanel({
               <div className={styles.targetCard}>
                 <Article className={cx(HEARTGARDEN_CHROME_ICON, styles.targetIconTint)} size={15} weight="duotone" aria-hidden />
                 <div className={styles.targetMeta}>
-                  <span className={cx(HEARTGARDEN_METADATA_LABEL, styles.metadataKicker)}>Active note</span>
+                  <span className={cx(styles.microLabel, styles.metadataKicker)}>Active note</span>
                   <span className={styles.targetTitle}>{draft.targetLabel}</span>
                 </div>
               </div>
@@ -215,8 +211,7 @@ export function ArchitecturalLoreReviewPanel({
           {semanticSummary && !loading ? (
             <div className={styles.section}>
               <div className={styles.sectionHead}>
-                <span className={styles.sectionAccent} aria-hidden />
-                <h3 className={HEARTGARDEN_SECTION_TITLE}>Semantic read</h3>
+                <h3 className={styles.sectionTitle}>Semantic read</h3>
               </div>
               <div className={styles.semanticCard}>
                 <p className={styles.semanticText}>{semanticSummary}</p>
@@ -227,8 +222,7 @@ export function ArchitecturalLoreReviewPanel({
           {suggestedNoteTags.length > 0 && !loading ? (
             <div className={styles.section}>
               <div className={styles.sectionHead}>
-                <span className={styles.sectionAccent} aria-hidden />
-                <h3 className={HEARTGARDEN_SECTION_TITLE}>Suggested tags</h3>
+                <h3 className={styles.sectionTitle}>Suggested tags</h3>
               </div>
               <p className={styles.sectionHint}>From the last pass — tap to append to this note.</p>
               <div className={styles.chipRow}>
@@ -252,8 +246,7 @@ export function ArchitecturalLoreReviewPanel({
 
           <div className={styles.section}>
             <div className={styles.sectionHead}>
-              <span className={styles.sectionAccent} aria-hidden />
-              <h3 className={HEARTGARDEN_SECTION_TITLE}>Quick labels</h3>
+              <h3 className={styles.sectionTitle}>Quick labels</h3>
             </div>
             <p className={styles.sectionHint}>
               Metadata only — search and future tooling. No canvas moves or sorting.
@@ -284,8 +277,7 @@ export function ArchitecturalLoreReviewPanel({
 
           <div className={styles.section}>
             <div className={styles.sectionHead}>
-              <span className={styles.sectionAccent} aria-hidden />
-              <h3 className={HEARTGARDEN_SECTION_TITLE}>
+              <h3 className={styles.sectionTitle}>
                 Needs attention
                 {visibleAttentionCount > 0 ? ` · ${visibleAttentionCount}` : ""}
               </h3>

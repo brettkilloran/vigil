@@ -6,7 +6,7 @@ This is the **step-by-step** companion to the short notes in [`README.md`](../RE
 
 - **Framework:** Next.js (App Router), detected automatically by Vercel.
 - **Monorepo:** The Next app is **not** at the repository root. It lives in **`vigil/`** until you rename it ([`NAMING.md`](./NAMING.md)).
-- **Build:** Default `npm install` + `npm run build` from that directory (same as [`package.json`](../package.json) — no custom output directory).
+- **Build:** After install, Vercel runs **`npm run check`** (lint + production build) via [`vercel.json`](../vercel.json) — same gate as local CI. Local **`npm run build`** remains **`next build` only** for quick iteration.
 
 ## 2. Create the Vercel project
 
@@ -15,7 +15,7 @@ This is the **step-by-step** companion to the short notes in [`README.md`](../RE
    - **Framework Preset:** Next.js (auto).
    - **Root Directory:** **`vigil`** → *Edit* → set to `vigil` (so Vercel runs install/build inside that folder).  
      If you already renamed the folder to `heartgarden`, use **`heartgarden`** instead and update path filters in [`.github/workflows/heartgarden-ci.yml`](../../.github/workflows/heartgarden-ci.yml) to match.
-   - **Build Command:** leave default (`next build` / `npm run build`).
+   - **Build Command:** leave **Override** empty so Vercel uses [`vercel.json`](../vercel.json) → **`npm run check`**. If you override in the dashboard, set it to **`npm run check`** to match (lint + `next build`).
    - **Install Command:** leave default (`npm install`) or use **`npm ci`** only if you enable a setting that skips lockfile issues; this repo ships `package-lock.json` under `vigil/`.
    - **Output Directory:** leave default (Next handles this).
 3. **Node.js version:** In **Project → Settings → General → Node.js Version**, pick **22.x** (matches CI) or at least **20.x** (`package.json` has `"engines": { "node": ">=20" }`).
@@ -96,7 +96,7 @@ Production deploys are usually triggered by **git push** once the Git integratio
 
 | Symptom | Things to check |
 |--------|-------------------|
-| Build fails on Vercel | Root Directory **`vigil`**, Node **20+**, same branch as local; run **`npm run check`** locally from `vigil/`. |
+| Build fails on Vercel | Root Directory **`vigil`**, Node **20+**, same branch as local; run **`npm run check`** locally from `vigil/`. If only lint fails, fix ESLint or align dashboard **Build Command** with **`npm run check`**. |
 | Site loads but always “demo” / empty cloud | `NEON_DATABASE_URL` missing or wrong environment; redeploy after fixing. |
 | DB errors / too many connections | Use Neon’s **pooled** connection string for serverless. |
 | R2 upload fails in browser | CORS on bucket for your Vercel URL; `R2_PUBLIC_BASE_URL` matches how objects are read. |

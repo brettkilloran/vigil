@@ -8655,43 +8655,49 @@ export function ArchitecturalCanvasApp({
             {!bootPreActivateGate ? (
               <div className={styles.topRightConnectionTools}>
                 <div
-                  key={`hg-ce-search-${chromeEnterEpoch}`}
-                  className={styles.sideToolsMainPanel}
-                  role="toolbar"
-                  aria-label="Search and import"
+                  key={`hg-ce-import-${chromeEnterEpoch}`}
+                  className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.shellTopLogOutPanel}`}
+                  data-hg-chrome="import-document"
                 >
-                  <div className={styles.sideToolsToolGroup}>
-                    <ArchitecturalTooltip content="Import PDF or Markdown" side="bottom" delayMs={320}>
-                      <ArchitecturalButton
-                        type="button"
-                        size="icon"
-                        tone="glass"
-                        aria-label="Import document"
-                        onClick={() => {
-                          playVigilUiSound("select");
-                          loreImportFileInputRef.current?.click();
-                        }}
-                      >
-                        <UploadSimple size={18} weight="bold" aria-hidden />
-                      </ArchitecturalButton>
-                    </ArchitecturalTooltip>
-                    <div className={styles.focusEffectsDockSep} aria-hidden />
-                    <ArchitecturalTooltip
-                      content={`Search (${modKeyHints.search})`}
-                      side="bottom"
-                      delayMs={320}
+                  <ArchitecturalTooltip content="Import PDF or Markdown" side="bottom" delayMs={320}>
+                    <ArchitecturalButton
+                      type="button"
+                      size="icon"
+                      tone="glass"
+                      iconOnly
+                      className={styles.shellTopLogOutTrigger}
+                      aria-label="Import document"
+                      onClick={() => {
+                        playVigilUiSound("select");
+                        loreImportFileInputRef.current?.click();
+                      }}
                     >
-                      <ArchitecturalButton
-                        type="button"
-                        size="icon"
-                        tone="glass"
-                        aria-label="Search"
-                        onClick={() => setPaletteOpen(true)}
-                      >
-                        <MagnifyingGlass size={18} weight="bold" aria-hidden />
-                      </ArchitecturalButton>
-                    </ArchitecturalTooltip>
-                  </div>
+                      <UploadSimple size={18} weight="bold" aria-hidden />
+                    </ArchitecturalButton>
+                  </ArchitecturalTooltip>
+                </div>
+                <div
+                  key={`hg-ce-search-${chromeEnterEpoch}`}
+                  className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.shellTopLogOutPanel}`}
+                  data-hg-chrome="search"
+                >
+                  <ArchitecturalTooltip
+                    content={`Search (${modKeyHints.search})`}
+                    side="bottom"
+                    delayMs={320}
+                  >
+                    <ArchitecturalButton
+                      type="button"
+                      size="icon"
+                      tone="glass"
+                      iconOnly
+                      className={styles.shellTopLogOutTrigger}
+                      aria-label="Search"
+                      onClick={() => setPaletteOpen(true)}
+                    >
+                      <MagnifyingGlass size={18} weight="bold" aria-hidden />
+                    </ArchitecturalButton>
+                  </ArchitecturalTooltip>
                 </div>
               </div>
             ) : null}
