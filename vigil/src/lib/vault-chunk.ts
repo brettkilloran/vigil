@@ -26,7 +26,18 @@ export function chunkVaultText(fullText: string): string[] {
 
   for (const p of paragraphs) {
     if (!buf) {
-      buf = p;
+      if (p.length <= VAULT_CHUNK_TARGET_CHARS) {
+        buf = p;
+        continue;
+      }
+      for (const hard of hardSplitParagraph(p)) {
+        if (!buf) buf = hard;
+        else if (buf.length + 1 + hard.length <= VAULT_CHUNK_TARGET_CHARS) buf = `${buf} ${hard}`;
+        else {
+          flushBuf();
+          buf = hard;
+        }
+      }
       continue;
     }
     if (buf.length + 2 + p.length <= VAULT_CHUNK_TARGET_CHARS) {

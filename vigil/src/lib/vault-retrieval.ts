@@ -14,8 +14,6 @@ const RRF_K = 60;
 const DEFAULT_VECTOR_CHUNK_LIMIT = 56;
 const DEFAULT_MAX_ITEMS = 16;
 const MAX_CHUNKS_PER_ITEM = 4;
-const GRAPH_EXTRA_ITEMS = 8;
-const GRAPH_EXCERPT_CHARS = 420;
 
 function vectorSqlLiteral(embedding: number[]): string {
   if (embedding.length !== 1536 || !embedding.every((n) => Number.isFinite(n))) {
@@ -47,7 +45,7 @@ export async function searchItemChunksByVector(
 
   const whereClause = whereParts.length ? and(...whereParts) : undefined;
 
-  const q = db
+  const base = db
     .select({
       itemId: itemEmbeddings.itemId,
       chunkText: itemEmbeddings.chunkText,
@@ -60,11 +58,11 @@ export async function searchItemChunksByVector(
     })
     .from(itemEmbeddings)
     .innerJoin(items, eq(items.id, itemEmbeddings.itemId))
-    .innerJoin(spaces, eq(spaces.id, items.spaceId))
-    .orderBy(distanceExpr)
-    .limit(limit);
+    .innerJoin(spaces, eq(spaces.id, items.spaceId));
 
-  const rows = whereClause ? await q.where(whereClause) : await q;
+  const rows = whereClause
+    ? await base.where(whereClause).orderBy(distanceExpr).limit(limit)
+    : await base.orderBy(distanceExpr).limit(limit);
 
   return rows.map((r) => ({
     itemId: r.itemId,
@@ -196,8 +194,6 @@ export async function hybridRetrieveItems(
   return { rows, itemIdToChunks, itemIdToFtsSnippet };
 }
 
-export type GraphNeighborRow = SearchRow & { graphNeighbor?: true };
-
 /**
  * Add up to `cap` linked items (1-hop) not already in `seedIds`.
  */
@@ -248,7 +244,6 @@ export async function expandLinkedItems(
   return found.map((r) => ({
     item: r.item,
     space: { id: r.spaceId, name: r.spaceName, parentSpaceId: r.parentSpaceId },
-    graphNeighbor: true as const,
   }));
 }
 
