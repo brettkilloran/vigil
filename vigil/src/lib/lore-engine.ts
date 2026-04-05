@@ -1,3 +1,7 @@
+/**
+ * Lore Q&A pipeline: hybrid vault retrieval (`hybridRetrieveItems` + link expansion)
+ * → excerpt shaping → Anthropic completion. Used by `POST /api/lore/query`.
+ */
 import Anthropic from "@anthropic-ai/sdk";
 
 import type { tryGetDb } from "@/src/db/index";

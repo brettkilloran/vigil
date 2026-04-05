@@ -13,6 +13,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## Source of truth
 
 - **Lore-engine task order (Phases A–D, UX2):** Cursor plan `heartgarden_lore_engine_7fc1fb56.plan.md` under `.cursor/plans/` (YAML todos + narrative).
+- **Subsystem → files:** `docs/CODEMAP.md`
+- **HTTP API catalog:** `docs/API.md`
 - **Product vs repo folder / rename checklist:** `docs/NAMING.md`
 - **Repo-wide shipped vs next + hardening backlog:** `docs/BUILD_PLAN.md`
 - **Doc index:** `docs/HEARTGARDEN_MASTER_PLAN.md`

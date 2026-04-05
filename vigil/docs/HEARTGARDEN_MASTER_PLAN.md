@@ -11,6 +11,8 @@
 
 | Document | Purpose |
 |----------|---------|
+| **`docs/CODEMAP.md`** | Subsystem → file map (canvas, sync, search, vault, lore, import, MCP). |
+| **`docs/API.md`** | `app/api/**` routes (methods, purpose, secrets / env). |
 | **`docs/STRATEGY.md`** | Engineering delta, phase map notes; points at BUILD_PLAN + Cursor plan. |
 | **`docs/NAMING.md`** | Product name **heartgarden** vs **`vigil/`** folder; stable `vigil:*` IDs; optional folder rename checklist. |
 | **`docs/FOLLOW_UP.md`** | API keys, human decisions, infra. |

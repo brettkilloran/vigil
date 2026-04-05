@@ -1,3 +1,7 @@
+/**
+ * Hybrid search over the vault: FTS + fuzzy + optional pgvector chunks, fused via RRF
+ * (`fuseRrfFromOrderedLists`). Consumed by `/api/search`, lore import planning, and `lore-engine`.
+ */
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 
 import { itemEmbeddings, itemLinks, items, spaces } from "@/src/db/schema";
