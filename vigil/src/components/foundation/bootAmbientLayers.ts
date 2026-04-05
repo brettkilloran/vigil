@@ -11,8 +11,8 @@ export type VigilBootAmbientLayer = {
   pan?: number;
 };
 
-/** Forest + meadow: slightly quieter than music so the bed sits behind the theme track. */
-export const VIGIL_BOOT_AMBIENT_NATURE_GAIN = 0.24;
+/** Forest + meadow: same per-layer gain as the legacy single forest bed (0.42). */
+export const VIGIL_BOOT_AMBIENT_NATURE_GAIN = 0.42;
 export const VIGIL_BOOT_AMBIENT_MUSIC_GAIN = 0.32;
 
 export const VIGIL_BOOT_AMBIENT_LAYERS: readonly VigilBootAmbientLayer[] = [

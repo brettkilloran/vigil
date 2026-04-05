@@ -156,7 +156,10 @@
   right: max(24px, env(safe-area-inset-right, 0px));
   display: flex;
   justify-content: flex-end;
-  align-items: flex-start;
+  /* Same vertical band as `.shellTopLeftStack` + `.glassPanel.shellTopChromePanel` (chrome-panel-height). */
+  align-items: center;
+  min-height: var(--chrome-panel-height);
+  box-sizing: border-box;
   z-index: 2;
   cursor: default;
   text-shadow:
@@ -182,7 +185,7 @@
 .metaTopInner {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: flex-end;
   gap: 0.25rem;
   max-width: 100%;
@@ -214,7 +217,7 @@
   right: max(24px, env(safe-area-inset-right, 0px));
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   gap: 1rem;
   z-index: 2;
   cursor: default;
@@ -226,7 +229,7 @@
 .metaBottomLeftCluster {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   gap: 12px;
   min-width: 0;
   flex: 1 1 auto;
@@ -270,7 +273,7 @@
 .metaBottomRightCluster {
   display: flex;
   flex-flow: row wrap;
-  align-items: flex-end;
+  align-items: center;
   justify-content: flex-end;
   gap: 14px;
   flex: 0 0 auto;
