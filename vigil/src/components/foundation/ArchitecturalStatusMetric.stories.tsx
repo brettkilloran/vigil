@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { ArchitecturalStatusMetric } from "@/src/components/foundation/ArchitecturalStatusBar";
 
 const meta: Meta<typeof ArchitecturalStatusMetric> = {
-  title: "Heartgarden/Architectural Shell/Primitives/Status Metric",
+  title: "Heartgarden/Architectural Shell/Status metric",
   component: ArchitecturalStatusMetric,
   args: {
     children: "100%",

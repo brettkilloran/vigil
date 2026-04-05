@@ -321,7 +321,9 @@ export function VigilFlowRevealOverlay({
   } | null>(null);
 
   /*
-   * Pre-activate (boot copy): same shader target as idle canvas after load — progress 1 (thin edge wisps).
+   * Pre-activate (boot copy): after load, progress 1 (thin edge wisps). While bootstrap is in flight,
+   * drive progress ~0 so the same liquid flow covers the viewport (hides graph hydration) — same
+   * language as nav/activate, not a dimmed peek-through.
    * Nav transitions alone use 0.18. Activate edge: snap progress 0 then ease to 1 for the wipe.
    */
   useEffect(() => {
@@ -329,6 +331,11 @@ export function VigilFlowRevealOverlay({
     if (navActive) {
       targetProgressRef.current = 0.18;
       prevSessionActivatedRef.current = sessionActivated;
+      return;
+    }
+    if (bootstrapPending) {
+      targetProgressRef.current = 0;
+      if (!sessionActivated) prevSessionActivatedRef.current = false;
       return;
     }
     if (!sessionActivated) {
@@ -341,7 +348,7 @@ export function VigilFlowRevealOverlay({
     }
     targetProgressRef.current = 1;
     prevSessionActivatedRef.current = true;
-  }, [navActive, sessionActivated, skipBoot, reduceMotion]);
+  }, [navActive, sessionActivated, skipBoot, reduceMotion, bootstrapPending]);
 
   const disposeGl = useCallback(() => {
     const g = glRef.current;
@@ -400,9 +407,17 @@ export function VigilFlowRevealOverlay({
     startTimeRef.current = Date.now();
     const initiallyActivated = sessionActivatedRef.current;
     prevSessionActivatedRef.current = initiallyActivated;
-    /* Idle behind boot = progress 1 (matches post-reveal canvas); Activate replays from 0. */
-    targetProgressRef.current = 1;
-    progressRef.current = 1;
+    /* Loading: full flow veil; idle behind boot (post-bootstrap): thin wisps at progress 1. */
+    if (bootstrapPendingRef.current) {
+      targetProgressRef.current = 0;
+      progressRef.current = 0;
+    } else if (!initiallyActivated) {
+      targetProgressRef.current = 1;
+      progressRef.current = 1;
+    } else {
+      targetProgressRef.current = 1;
+      progressRef.current = 0;
+    }
 
     let width = 0;
     let height = 0;
@@ -430,7 +445,11 @@ export function VigilFlowRevealOverlay({
       if (ctx.progressLoc !== null) gl.uniform1f(ctx.progressLoc, progressRef.current);
       if (ctx.resLoc !== null) gl.uniform2f(ctx.resLoc, width, height);
       if (ctx.softBootLoc !== null) {
-        gl.uniform1f(ctx.softBootLoc, bootstrapPendingRef.current ? 1.0 : 0.0);
+        /*
+         * During bootstrap we drive progress ~0 (full flow cover) instead of wisps + soft crush.
+         * Keep soft boot off so the veil stays visually solid; soft boot was for the old “wisps over dim canvas” case.
+         */
+        gl.uniform1f(ctx.softBootLoc, 0.0);
       }
 
       gl.clearColor(0, 0, 0, 0);

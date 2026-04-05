@@ -8,7 +8,7 @@ import {
 } from "@/src/components/foundation/ArchitecturalBottomDock";
 
 const meta: Meta<typeof ArchitecturalCreateMenu> = {
-  title: "Heartgarden/Architectural Shell/Primitives/Create Menu",
+  title: "Heartgarden/Architectural Shell/Create menu",
   component: ArchitecturalCreateMenu,
   args: {
     actions: DEFAULT_CREATE_ACTIONS,

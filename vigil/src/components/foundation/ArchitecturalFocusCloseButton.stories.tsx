@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
 
 const meta: Meta<typeof ArchitecturalFocusCloseButton> = {
-  title: "Heartgarden/Architectural Shell/Components/Focus Close Button",
+  title: "Heartgarden/Architectural Shell/Focus close button",
   component: ArchitecturalFocusCloseButton,
   args: {
     dirty: false,

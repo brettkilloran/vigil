@@ -29,7 +29,7 @@ const seedTask = getSeed("task");
 const seedMedia = getSeed("media");
 
 const meta: Meta<typeof ArchitecturalNodeCard> = {
-  title: "Heartgarden/Architectural Shell/Components/Node Card",
+  title: "Heartgarden/Architectural Shell/Node card",
   component: ArchitecturalNodeCard,
   args: {
     id: seedDefault.id,

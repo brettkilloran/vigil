@@ -189,7 +189,7 @@ export function HeartgardenPinField({
             disabled={!complete || block}
             aria-label="Submit access code"
             onClick={() => onSubmit()}
-            leadingIcon={<ArrowRight size={22} weight="bold" aria-hidden />}
+            leadingIcon={<ArrowRight size={18} weight="bold" aria-hidden />}
           />
         </div>
       </fieldset>

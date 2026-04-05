@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { ArchitecturalCanvasApp } from "@/src/components/foundation/ArchitecturalCanvasApp";
 
 const meta: Meta<typeof ArchitecturalCanvasApp> = {
-  title: "Heartgarden/Architectural Shell/Integration/Full Canvas",
+  title: "Heartgarden/Architectural Shell/Full canvas",
   component: ArchitecturalCanvasApp,
   parameters: {
     layout: "fullscreen",

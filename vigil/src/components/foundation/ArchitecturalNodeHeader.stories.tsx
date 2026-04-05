@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { ArchitecturalNodeHeader } from "@/src/components/foundation/ArchitecturalNodeCard";
 
 const meta: Meta<typeof ArchitecturalNodeHeader> = {
-  title: "Heartgarden/Architectural Shell/Primitives/Node Header",
+  title: "Heartgarden/Architectural Shell/Node header",
   component: ArchitecturalNodeHeader,
   args: {
     title: "Brief // The second chance",

@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { VigilBootFlowerCatalog } from "./VigilBootFlowerCatalog";
 
 const meta = {
-  title: "Foundation/Vigil boot flower catalog",
+  title: "Heartgarden/Architectural Shell/Boot flower catalog",
   component: VigilBootFlowerCatalog,
   parameters: {
     layout: "fullscreen",

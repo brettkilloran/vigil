@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { ArchitecturalStatusBar } from "@/src/components/foundation/ArchitecturalStatusBar";
 
 const meta: Meta<typeof ArchitecturalStatusBar> = {
-  title: "Heartgarden/Architectural Shell/Components/Status Bar",
+  title: "Heartgarden/Architectural Shell/Status bar",
   component: ArchitecturalStatusBar,
   args: {
     envLabel: "波途画電",

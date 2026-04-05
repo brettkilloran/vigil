@@ -6,7 +6,7 @@ import { ArchitecturalFolderCard } from "@/src/components/foundation/Architectur
 import { FOLDER_COLOR_SCHEMES } from "@/src/components/foundation/architectural-folder-schemes";
 
 const meta: Meta<typeof ArchitecturalFolderCard> = {
-  title: "Heartgarden/Architectural Shell/Components/Folder Card",
+  title: "Heartgarden/Architectural Shell/Folder card",
   component: ArchitecturalFolderCard,
   args: {
     id: "folder-story",

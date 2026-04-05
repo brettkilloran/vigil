@@ -46,7 +46,7 @@ export const AboutThisStorybook: Story = {
       <p style={{ marginBottom: 0 }}>
         <strong>Canvas shell:</strong>{" "}
         <span style={{ color: "var(--sem-text-secondary)" }}>
-          Heartgarden → Architectural Shell → …
+          Heartgarden → Architectural Shell (flat list: layout pieces, node chrome, full canvas)
         </span>
       </p>
     </div>
