@@ -9,6 +9,27 @@ import { buildSearchBlob } from "@/src/lib/search-blob";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
+function mergeEntityMeta(
+  existing: Record<string, unknown> | null | undefined,
+  patch: Record<string, unknown>,
+): Record<string, unknown> {
+  const base = {
+    ...(existing && typeof existing === "object" && !Array.isArray(existing) ? existing : {}),
+  };
+  for (const [k, v] of Object.entries(patch)) {
+    if (k === "loreReviewTags" && Array.isArray(v)) {
+      const prev = Array.isArray(base.loreReviewTags)
+        ? (base.loreReviewTags as unknown[]).map(String)
+        : [];
+      const add = v.map(String).filter(Boolean);
+      base.loreReviewTags = [...new Set([...prev, ...add])];
+    } else {
+      base[k] = v;
+    }
+  }
+  return base;
+}
+
 const patchBody = z.object({
   /** Move item to another canvas space (e.g. into / out of a folder). */
   spaceId: z.string().uuid().optional(),
@@ -26,6 +47,8 @@ const patchBody = z.object({
     .optional(),
   entityType: z.string().max(64).nullable().optional(),
   entityMeta: z.record(z.string(), z.any()).nullable().optional(),
+  /** Shallow merge into existing entity_meta; `loreReviewTags` arrays are unioned. */
+  entityMetaMerge: z.record(z.string(), z.unknown()).optional(),
   imageUrl: z.string().max(8192).nullable().optional(),
   imageMeta: z.record(z.string(), z.any()).nullable().optional(),
   stackId: z.string().uuid().nullable().optional(),
@@ -113,18 +136,30 @@ export async function PATCH(
   if (p.color !== undefined) updates.color = p.color;
   if (p.itemType !== undefined) updates.itemType = p.itemType;
   if (p.entityType !== undefined) updates.entityType = p.entityType;
-  if (p.entityMeta !== undefined) updates.entityMeta = p.entityMeta;
+  if (p.entityMeta !== undefined) {
+    updates.entityMeta = p.entityMeta;
+  } else if (p.entityMetaMerge !== undefined && Object.keys(p.entityMetaMerge).length > 0) {
+    updates.entityMeta = mergeEntityMeta(
+      existing.entityMeta as Record<string, unknown> | null | undefined,
+      p.entityMetaMerge as Record<string, unknown>,
+    );
+  }
   if (p.imageUrl !== undefined) updates.imageUrl = p.imageUrl;
   if (p.imageMeta !== undefined) updates.imageMeta = p.imageMeta;
   if (p.stackId !== undefined) updates.stackId = p.stackId;
   if (p.stackOrder !== undefined) updates.stackOrder = p.stackOrder;
+
+  const resolvedEntityMeta =
+    updates.entityMeta !== undefined
+      ? updates.entityMeta
+      : (existing.entityMeta as Record<string, unknown> | null);
 
   updates.searchBlob = buildSearchBlob({
     title: p.title ?? existing.title,
     contentText: p.contentText ?? existing.contentText,
     contentJson: p.contentJson ?? existing.contentJson,
     entityType: p.entityType ?? existing.entityType,
-    entityMeta: p.entityMeta ?? existing.entityMeta,
+    entityMeta: resolvedEntityMeta ?? undefined,
     imageUrl: p.imageUrl ?? existing.imageUrl,
     imageMeta: p.imageMeta ?? existing.imageMeta,
     loreSummary: existing.loreSummary,
@@ -142,8 +177,12 @@ export async function PATCH(
   const contentTextChanged =
     p.contentText !== undefined && p.contentText !== existing.contentText;
   const contentDirty = titleChanged || contentTextChanged;
+  const metaDirty =
+    p.entityMeta !== undefined || p.entityMetaMerge !== undefined;
   if (contentDirty && row) {
     scheduleItemEmbeddingRefresh(db, row);
+    scheduleVaultReindexAfterResponse(row.id);
+  } else if (metaDirty && row) {
     scheduleVaultReindexAfterResponse(row.id);
   }
 
