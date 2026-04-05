@@ -913,6 +913,10 @@ export function ArchitecturalCanvasApp({
   const [navTransitionActive, setNavTransitionActive] = useState(false);
   const [canvasEffectsEnabled, setCanvasEffectsEnabled] = useState(true);
   const canvasEffectsEnabledRef = useRef(true);
+  /** Radix controlled Switch + two instances (boot + chrome) can loop in React 19; guard + unmount duplicate. */
+  const handleCanvasEffectsEnabledChange = useCallback((next: boolean) => {
+    setCanvasEffectsEnabled((prev) => (prev === next ? prev : next));
+  }, []);
 
   /** Default route: user must click Activate; flow runs 0→1 only then. Nested/corrupt: no gate. */
   const [canvasSessionActivated, setCanvasSessionActivated] = useState(false);
@@ -5931,7 +5935,7 @@ export function ArchitecturalCanvasApp({
           technicalReady={technicalViewportReady}
           flowerPortalContainer={bootFlowerPortalHost}
           canvasEffectsEnabled={canvasEffectsEnabled}
-          onCanvasEffectsEnabledChange={setCanvasEffectsEnabled}
+          onCanvasEffectsEnabledChange={handleCanvasEffectsEnabledChange}
           onActivate={() => setCanvasSessionActivated(true)}
           onExitComplete={() => {
             setBootLayerDismissed(true);
@@ -6409,10 +6413,12 @@ export function ArchitecturalCanvasApp({
           </div>
         </div>
 
-        <ArchitecturalCanvasEffectsToggle
-          effectsEnabled={canvasEffectsEnabled}
-          onEffectsEnabledChange={setCanvasEffectsEnabled}
-        />
+        {!bootChromeSuppressed ? (
+          <ArchitecturalCanvasEffectsToggle
+            effectsEnabled={canvasEffectsEnabled}
+            onEffectsEnabledChange={handleCanvasEffectsEnabledChange}
+          />
+        ) : null}
         <ArchitecturalViewportMetrics
           centerWorldX={centerWorldX}
           centerWorldY={centerWorldY}
