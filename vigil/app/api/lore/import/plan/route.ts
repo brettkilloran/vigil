@@ -1,11 +1,9 @@
 import { randomUUID } from "crypto";
 import { z } from "zod";
 
-import { and, eq } from "drizzle-orm";
-
 import { tryGetDb } from "@/src/db/index";
-import { importReviewItems } from "@/src/db/schema";
 import { buildLoreImportPlan } from "@/src/lib/lore-import-plan-build";
+import { persistImportReviewQueueFromPlan } from "@/src/lib/lore-import-persist-review";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
 export const runtime = "nodejs";
@@ -70,59 +68,12 @@ export async function POST(req: Request) {
     });
 
     const persistReview = parsed.data.persistReview !== false;
-    if (persistReview) {
-      const now = new Date();
-      const rows: (typeof importReviewItems.$inferInsert)[] = [];
-      for (const c of plan.contradictions) {
-        rows.push({
-          importBatchId: plan.importBatchId,
-          spaceId: parsed.data.spaceId,
-          status: "pending",
-          kind: "contradiction",
-          payload: {
-            contradictionId: c.id,
-            noteClientId: c.noteClientId,
-            summary: c.summary,
-            details: c.details,
-            fileName: plan.fileName,
-          },
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
-      for (const cl of plan.clarifications) {
-        if (cl.severity !== "required") continue;
-        rows.push({
-          importBatchId: plan.importBatchId,
-          spaceId: parsed.data.spaceId,
-          status: "pending",
-          kind: `clarification_${cl.category}`,
-          payload: {
-            clarificationId: cl.id,
-            category: cl.category,
-            title: cl.title,
-            context: cl.context,
-            questionKind: cl.questionKind,
-            optionLabels: cl.options.map((o) => ({ id: o.id, label: o.label })),
-            fileName: plan.fileName,
-          },
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
-      if (rows.length > 0) {
-        await db
-          .delete(importReviewItems)
-          .where(
-            and(
-              eq(importReviewItems.spaceId, parsed.data.spaceId),
-              eq(importReviewItems.importBatchId, plan.importBatchId),
-              eq(importReviewItems.status, "pending"),
-            ),
-          );
-        await db.insert(importReviewItems).values(rows);
-      }
-    }
+    await persistImportReviewQueueFromPlan(
+      db,
+      parsed.data.spaceId,
+      plan,
+      persistReview,
+    );
 
     return Response.json({ ok: true, plan });
   } catch (e) {
