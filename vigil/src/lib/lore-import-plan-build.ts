@@ -155,6 +155,7 @@ export async function buildLoreImportPlan(args: {
     })),
     mergeProposals,
     contradictions,
+    clarifications: [],
     importPlanWarnings: linkWarnings.length > 0 ? linkWarnings : undefined,
   };
 

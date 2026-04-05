@@ -3513,12 +3513,30 @@
   pointer-events: auto;
 }
 
-/* One icon: square chip (width already --chrome-tool-rail-strip-width). */
+/* Horizontal glass chip: import + divider + search (not the narrow vertical rail strip). */
 .topRightConnectionTools .sideToolsMainPanel {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-width: unset;
+  max-width: none;
+  padding: 4px 6px;
   height: var(--chrome-tool-rail-strip-width);
   min-height: var(--chrome-tool-rail-strip-width);
   max-height: var(--chrome-tool-rail-strip-width);
-  justify-content: center;
+}
+
+.topRightConnectionTools .sideToolsToolGroup {
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  width: auto;
+}
+
+.topRightConnectionTools .focusEffectsDockSep {
+  height: 20px;
+  align-self: center;
 }
 
 /* In top-right chrome, open the tint menu inward (leftward) to avoid right-edge clipping. */

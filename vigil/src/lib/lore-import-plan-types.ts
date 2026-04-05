@@ -72,6 +72,99 @@ export const contradictionSchema = z.object({
   details: z.string().max(8000).optional(),
 });
 
+const ingestionSignalsPatchSchema = z
+  .object({
+    salienceRole: z
+      .enum(["crunch", "flavor", "plot_hook", "table_advice", "mixed"])
+      .optional(),
+    voiceReliability: z
+      .enum([
+        "in_world_document",
+        "narrator",
+        "gm_note",
+        "player_knowledge",
+        "unknown",
+      ])
+      .optional(),
+    importance: z.number().min(0).max(1).optional(),
+  })
+  .strict();
+
+/** Machine-readable edit applied when the user picks a clarification option. */
+export const planPatchHintSchema = z.discriminatedUnion("op", [
+  z.object({ op: z.literal("no_op") }),
+  z.object({
+    op: z.literal("set_note_folder"),
+    noteClientId: z.string().min(1).max(64),
+    folderClientId: z.string().min(1).max(64).nullable(),
+  }),
+  z.object({
+    op: z.literal("set_link_type"),
+    fromClientId: z.string().min(1).max(64),
+    toClientId: z.string().min(1).max(64),
+    linkType: z.string().min(1).max(64),
+  }),
+  z.object({
+    op: z.literal("remove_link"),
+    fromClientId: z.string().min(1).max(64),
+    toClientId: z.string().min(1).max(64),
+  }),
+  z.object({
+    op: z.literal("set_ingestion_signals"),
+    noteClientId: z.string().min(1).max(64),
+    patch: ingestionSignalsPatchSchema,
+  }),
+  z.object({
+    op: z.literal("set_lore_historical"),
+    noteClientId: z.string().min(1).max(64),
+    loreHistorical: z.boolean(),
+  }),
+  z.object({
+    op: z.literal("discard_merge_proposal"),
+    mergeProposalId: z.string().uuid(),
+  }),
+]);
+
+export type PlanPatchHint = z.infer<typeof planPatchHintSchema>;
+
+export const loreImportClarificationOptionSchema = z.object({
+  id: z.string().min(1).max(64),
+  label: z.string().min(1).max(500),
+  recommended: z.boolean().optional(),
+  planPatchHint: planPatchHintSchema,
+});
+
+export const loreImportClarificationItemSchema = z.object({
+  id: z.string().uuid(),
+  category: z.enum(["structure", "link_semantics", "canon_weight", "conflict"]),
+  severity: z.enum(["required", "optional"]),
+  title: z.string().min(1).max(300),
+  context: z.string().max(4000).optional(),
+  questionKind: z.enum(["single_select", "multi_select", "confirm_default"]),
+  options: z.array(loreImportClarificationOptionSchema).min(2).max(12),
+  relatedNoteClientIds: z.array(z.string().min(1).max(64)).max(20).optional(),
+  relatedMergeProposalId: z.string().uuid().optional(),
+  relatedLink: z
+    .object({
+      fromClientId: z.string().min(1).max(64),
+      toClientId: z.string().min(1).max(64),
+    })
+    .optional(),
+});
+
+export type LoreImportClarificationItem = z.infer<
+  typeof loreImportClarificationItemSchema
+>;
+
+export const clarificationAnswerSchema = z.object({
+  clarificationId: z.string().uuid(),
+  resolution: z.enum(["answered", "skipped_default"]),
+  selectedOptionIds: z.array(z.string().min(1).max(64)).max(12).optional(),
+  skipDefaultOptionId: z.string().min(1).max(64).optional(),
+});
+
+export type ClarificationAnswer = z.infer<typeof clarificationAnswerSchema>;
+
 export const loreImportPlanSchema = z.object({
   importBatchId: z.string().uuid(),
   fileName: z.string().max(512).optional(),
@@ -91,6 +184,8 @@ export const loreImportPlanSchema = z.object({
   links: z.array(loreImportPlanLinkSchema),
   mergeProposals: z.array(mergeProposalSchema),
   contradictions: z.array(contradictionSchema),
+  /** LLM + validation: open questions; required items block apply until answered. */
+  clarifications: z.array(loreImportClarificationItemSchema).optional().default([]),
   /** Server-generated: cross-space link drops, etc. (round-tripped through apply). */
   importPlanWarnings: z.array(z.string().max(600)).max(48).optional(),
 });

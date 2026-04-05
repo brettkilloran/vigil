@@ -29,6 +29,7 @@ import styles from "./ArchitecturalCanvasApp.module.css";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
 import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
+import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 import {
   ArchitecturalBottomDock,
@@ -7030,19 +7031,9 @@ export function ArchitecturalCanvasApp({
               chromeEntranceOn ? ` ${styles.chromeEnterTopRight}` : ""
             }`}
             role="toolbar"
-            aria-label="Search"
+            aria-label="Search and import"
           >
             <div className={styles.sideToolsToolGroup}>
-              <ArchitecturalButton
-                type="button"
-                size="icon"
-                tone="glass"
-                title={`Search (${modKeyHints.search})`}
-                aria-label="Search"
-                onClick={() => setPaletteOpen(true)}
-              >
-                <MagnifyingGlass size={18} weight="bold" aria-hidden />
-              </ArchitecturalButton>
               <ArchitecturalButton
                 type="button"
                 size="icon"
@@ -7055,6 +7046,17 @@ export function ArchitecturalCanvasApp({
                 }}
               >
                 <UploadSimple size={18} weight="bold" aria-hidden />
+              </ArchitecturalButton>
+              <div className={styles.focusEffectsDockSep} aria-hidden />
+              <ArchitecturalButton
+                type="button"
+                size="icon"
+                tone="glass"
+                title={`Search (${modKeyHints.search})`}
+                aria-label="Search"
+                onClick={() => setPaletteOpen(true)}
+              >
+                <MagnifyingGlass size={18} weight="bold" aria-hidden />
               </ArchitecturalButton>
             </div>
           </div>

@@ -9,6 +9,10 @@ This is the **repo-wide checklist**: architecture snapshot, shipped tranches, an
 | Layer | Location / notes |
 |--------|------------------|
 | **Production canvas shell** | `ArchitecturalCanvasApp` + `src/components/foundation/*` — mounted from `app/_components/VigilApp.tsx`. |
+| **Boot + session gate (default scenario)** | `VigilAppBootScreen` + `canvasSessionActivated` / `bootLayerDismissed`; `technicalViewportReady` vs `viewportRevealReady` (bootstrap + surface ready; activation required before full chrome). Optional boot flowers (`VigilBootFlowerGarden` portaled under the overlay stack). |
+| **Flow / nav visuals (optional)** | When **canvas effects** are on: `VigilFlowRevealOverlay` (`src/components/transition-experiment/`) — full-viewport **raw WebGL** shader (FBM “liquid” edge + digital-glitch pass), no `three` / `gsap`. Drives `u_progress` from `sessionActivated`, `navTransitionActive`, and `bootstrapPending`. **Off:** overlay unmounted; **space changes** skip timed nav dimming (instant `enterSpace`). `prefers-reduced-motion: reduce` → overlay returns `null`. |
+| **Space nav timing (effects on)** | `enterSpace` sets `navTransitionActive`; scene layer uses `viewportSceneLayerDimmed` until fetch + `VIEWPORT_SCENE_FADE_MS` / `VIEWPORT_TRANSITION_CENTER_MS` elide (see `ArchitecturalCanvasApp.tsx`). Rapid successive navigations have **no cancel token** yet (differs from early Cursor transition plan). |
+| **Suspense shell** | `app/page.tsx` — dark `#0c0c0e` fallback to reduce flash before client boot UI. |
 | **Graph state** | In-component React state + **undo/redo** stack (`architectural-undo.ts`); Neon sync via `architectural-db-bridge.ts`, `architectural-neon-api.ts`, `/api/bootstrap`, item/space routes. |
 | **Save / sync indicator** | `neon-sync-bus.ts` + instrumented `architectural-neon-api.ts` + debounced note body bumps. Status strip in **`ArchitecturalStatusBar`**: Loading → Local (demo) → Saving… → Saved / Sync error. Tooltips document **undo vs server** semantics. |
 | **Search** | Postgres FTS + trigram on `search_blob`. **`/api/search`**: `hybrid` / `semantic` use **RRF** of FTS + fuzzy + **pgvector** chunks when `OPENAI_API_KEY` is set; `GET /api/search/chunks` returns raw chunk hits. **`/api/search/suggest`** remains prefix-FTS. |
@@ -34,7 +38,7 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 | **Neon save indicator** | Live sync line in status bar; tracks in-flight mutations + debounced content patches. |
 | CI / Storybook | `npm run check`; Storybook in CI per `AGENTS.md`. |
 
-*Recent batches (UX, seed data, stacking):* they refine the shell above and **do not invalidate** the master phase map—re-run checks and e2e smoke after merges.
+*Recent batches (UX, seed data, stacking, boot gate, optional WebGL flow overlay, canvas-effects toggle):* they refine the shell above and **do not invalidate** the master phase map—re-run checks and e2e smoke after merges.
 
 ---
 
