@@ -66,6 +66,10 @@ export const HEARTGARDEN_EDITOR_TOOLBAR_BTN_ON = "border-[var(--vigil-card-borde
 /** ALL-CAPS metadata labels (image detail, entity fields, etc.). */
 export const HEARTGARDEN_METADATA_LABEL = "text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--vigil-muted)]";
 
+/** Sentence-case section title for dense side panels (vault review, metadata blocks). */
+export const HEARTGARDEN_SECTION_TITLE =
+  "m-0 text-[11px] font-semibold leading-none tracking-[0.02em] text-[var(--sem-text-secondary)]";
+
 /** ~15px icon in toolbar chips and modal headers (matches main toolbar). */
 export const HEARTGARDEN_CHROME_ICON = "size-[15px] shrink-0 opacity-90";
 

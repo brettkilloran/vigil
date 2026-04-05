@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Lora, Noto_Sans_JP } from "next/font/google";
 
 import { RegisterSw } from "@/src/components/RegisterSw";
 import { HEARTGARDEN_BRAND_ICON_PATH } from "@/src/lib/brand-mark";
+import { HEARTGARDEN_APP_VERSION_LABEL } from "@/src/lib/app-version";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -36,6 +37,7 @@ export const metadata: Metadata = {
   title: "heartgarden",
   description: "Infinite canvas TTRPG worldbuilding",
   applicationName: "heartgarden",
+  generator: `heartgarden/${HEARTGARDEN_APP_VERSION_LABEL}`,
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [{ url: HEARTGARDEN_BRAND_ICON_PATH, type: "image/svg+xml" }],

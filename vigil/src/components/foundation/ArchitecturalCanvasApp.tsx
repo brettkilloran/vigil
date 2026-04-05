@@ -3731,14 +3731,21 @@ export function ArchitecturalCanvasApp({
     !bootLayerDismissed &&
     (!prefersReducedMotion || bootAfterLogout);
 
+  /**
+   * Same moment as import/search in `topRightChromeCluster` (`!bootPreActivateGate` below): after Enter,
+   * not after boot exit (`bootLayerDismissed`). Using expanded expr — `bootPreActivateGate` is declared later.
+   */
   const vaultReviewChromeVisible =
-    cloudLinksBar && isUuidLike(activeSpaceId) && !bootLayerVisible;
+    cloudLinksBar &&
+    isUuidLike(activeSpaceId) &&
+    !(scenario === "default" && !bootLayerDismissed && !canvasSessionActivated);
 
   useEffect(() => {
-    if (bootLayerVisible) {
+    const preActivate = scenario === "default" && !bootLayerDismissed && !canvasSessionActivated;
+    if (preActivate) {
       setLoreReviewPanelOpen(false);
     }
-  }, [bootLayerVisible]);
+  }, [scenario, bootLayerDismissed, canvasSessionActivated]);
 
   const paletteActions = useMemo<PaletteAction[]>(
     () => [

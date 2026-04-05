@@ -124,6 +124,11 @@
   --sem-danger-hint-border: color-mix(in oklch, var(--sys-color-danger-300) 32%, transparent);
   --sem-danger-hint-bg: oklch(0.28 0.06 25 / 0.7);
   --sem-danger-hint-fg: oklch(0.95 0.02 25);
+  /* Warm callouts (vault review, non-destructive prompts) — derived from accent, not ad-hoc amber. */
+  --sem-caution-surface: color-mix(in oklch, var(--sys-color-accent-500) 9%, var(--sys-color-neutral-920));
+  --sem-caution-border: color-mix(in oklch, var(--sys-color-accent-500) 26%, var(--sem-border-subtle));
+  --sem-caution-inset: color-mix(in oklch, var(--sys-color-accent-500) 11%, transparent);
+  --sem-caution-icon: color-mix(in oklch, var(--sys-color-accent-500) 72%, var(--sem-text-secondary));
   --sem-tape-clear-fill: oklch(0.96 0 0 / 0.72);
   --sem-tape-dark-a: oklch(0.48 0.02 264 / 0.38);
   --sem-tape-dark-b: oklch(0.38 0.02 264 / 0.7);

@@ -31,6 +31,8 @@ Add these in **Project → Settings → Environment Variables**. Mark secrets as
 | `NEON_DATABASE_URL` | Production, Preview (optional) | For cloud sync | Postgres URL from Neon. Prefer the **pooled / serverless** connection string Neon documents for **many short-lived connections** (fits Vercel functions). Include SSL if Neon gives it (`?sslmode=require` etc.). |
 | `ANTHROPIC_API_KEY` | Production, Preview (optional) | For lore | Powers **`/api/lore/query`** and lore import extract. **Never** prefix with `NEXT_PUBLIC_`. |
 | `ANTHROPIC_LORE_MODEL` | Same | Optional | Default in code if unset. |
+| `OPENAI_API_KEY` | Production, Preview (optional) | For semantic search + embeddings | Enables chunk embeddings, hybrid / semantic [`/api/search`](../app/api/search/route.ts) and richer lore retrieval. Without it, search stays lexical-only. **Never** `NEXT_PUBLIC_`. |
+| `HEARTGARDEN_EMBEDDING_MODEL` | Same | Optional | Default `text-embedding-3-small` in code if unset. |
 | `R2_ACCOUNT_ID` | Production, Preview | For R2 uploads | With the other `R2_*` vars, enables [`/api/upload/presign`](../app/api/upload/presign/route.ts). |
 | `R2_ACCESS_KEY_ID` | Same | For R2 | |
 | `R2_SECRET_ACCESS_KEY` | Same | For R2 | Sensitive. |
@@ -46,9 +48,9 @@ Add these in **Project → Settings → Environment Variables**. Mark secrets as
 
 ### Preview vs Production
 
-- **Simplest:** Copy the same `NEON_DATABASE_URL` to **Preview** if you’re okay with previews hitting a shared DB (risky for destructive tests).
-- **Safer:** Use a **separate Neon branch / database** for Preview and put that URL only under **Preview**.
-- **Lore / R2:** Omit Anthropic and R2 on Preview if you want cheaper/safer PR previews.
+- **Recommended (isolated previews):** Create a **separate Neon branch / database** for **Preview**; set **only** that pooled URL on the **Preview** environment in Vercel. Run `db:ensure-pgvector` and schema push/migrate against that branch too. Production and Preview stay independent (no PR tests touching prod data).
+- **Simplest (not recommended for active development):** Use the same `NEON_DATABASE_URL` on **Preview** as Production — easy, but destructive or noisy tests can affect shared data.
+- **Lore / R2:** Omit Anthropic, OpenAI, and R2 on Preview if you want cheaper/safer PR previews (canvas still works in demo/local-style modes depending on what’s set).
 
 After changing env vars, **redeploy** (Deployments → … → Redeploy) so new values apply.
 

@@ -1,6 +1,6 @@
 {
   "name": "heartgarden",
-  "version": "0.1.0",
+  "version": "0.9.1",
   "private": true,
   "description": "heartgarden — infinite canvas for solo TTRPG worldbuilding",
   "engines": {
@@ -38,7 +38,10 @@
     "storybook": "storybook dev -p 6006 --host 0.0.0.0 --disable-telemetry --no-open",
     "build-storybook": "storybook build",
     "preview-storybook": "npx --yes serve storybook-static -l 6007 --no-clipboard",
-    "storybook:static": "npm run build-storybook && npm run preview-storybook"
+    "storybook:static": "npm run build-storybook && npm run preview-storybook",
+    "release:patch": "npm version patch",
+    "release:minor": "npm version minor",
+    "release:major": "npm version major"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",

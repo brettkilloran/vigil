@@ -14,7 +14,7 @@ import { createPortal } from "react-dom";
 
 import { Button } from "@/src/components/ui/Button";
 
-import { HEARTGARDEN_APP_VERSION } from "@/src/lib/app-version";
+import { HEARTGARDEN_APP_VERSION_LABEL } from "@/src/lib/app-version";
 
 import { ArchitecturalCanvasEffectsToggle } from "./ArchitecturalStatusBar";
 import { ArchitecturalTooltip } from "./ArchitecturalTooltip";
@@ -516,7 +516,7 @@ export function VigilAppBootScreen({
             />
           </div>
           <div className={`${styles.metaBottomLeft} ${styles.mono}`}>
-            Channel Stain · v.{HEARTGARDEN_APP_VERSION}
+            Channel Stain · v.{HEARTGARDEN_APP_VERSION_LABEL}
           </div>
         </div>
         <div className={styles.metaBottomRightCluster}>

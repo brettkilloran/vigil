@@ -3,6 +3,9 @@
  * MCP stdio server: heartgarden lore + canvas helpers.
  * Run: npm run mcp (HEARTGARDEN_APP_URL, optional HEARTGARDEN_DEFAULT_SPACE_ID, optional HEARTGARDEN_MCP_WRITE_KEY)
  */
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Server } from "@modelcontextprotocol/sdk/server";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -12,6 +15,10 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
+const PKG = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../package.json"), "utf8"),
+);
+
 const BASE = (process.env.HEARTGARDEN_APP_URL || "http://localhost:3000").replace(
   /\/$/,
   "",
@@ -20,7 +27,7 @@ const SPACE = process.env.HEARTGARDEN_DEFAULT_SPACE_ID || "";
 const WRITE_KEY = (process.env.HEARTGARDEN_MCP_WRITE_KEY || "").trim();
 
 const server = new Server(
-  { name: "heartgarden", version: "0.6.0" },
+  { name: "heartgarden", version: PKG.version },
   { capabilities: { tools: {}, resources: {} } },
 );
 

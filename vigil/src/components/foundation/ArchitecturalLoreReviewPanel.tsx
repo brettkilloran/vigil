@@ -1,12 +1,18 @@
 "use client";
 
-import { X } from "@phosphor-icons/react";
+import { Article, Sparkle, WarningCircle, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 import styles from "@/src/components/foundation/ArchitecturalLoreReviewPanel.module.css";
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
+import { cx } from "@/src/lib/cx";
+import {
+  HEARTGARDEN_CHROME_ICON,
+  HEARTGARDEN_METADATA_LABEL,
+  HEARTGARDEN_SECTION_TITLE,
+} from "@/src/lib/vigil-ui-classes";
 import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
 
 export type VaultReviewDraft = {
@@ -139,48 +145,61 @@ export function ArchitecturalLoreReviewPanel({
         aria-labelledby="hg-vault-review-title"
       >
         <div className={styles.panelHeader}>
-          <div>
+          <div className={styles.headerMain}>
+            <span className={cx(HEARTGARDEN_METADATA_LABEL, styles.metadataEyebrow)}>Lore quality</span>
             <h2 id="hg-vault-review-title" className={styles.panelTitle}>
               Vault review
             </h2>
-            <p className={styles.panelSubtitle}>
+            <p className={styles.introText}>
               Consistency pass plus light semantic tags. Many findings are fine to{" "}
-              <strong>label</strong> instead of moving or flagging as errors.
+              <strong className={styles.introStrong}>label</strong> instead of moving or flagging as errors.
             </p>
             {draft ? (
-              <p className={styles.panelSubtitle}>
-                Target:{" "}
-                <span className="font-medium text-[var(--sem-text-primary)]">{draft.targetLabel}</span>
-              </p>
+              <div className={styles.targetCard}>
+                <Article className={cx(HEARTGARDEN_CHROME_ICON, styles.targetIconTint)} size={15} weight="duotone" aria-hidden />
+                <div className={styles.targetMeta}>
+                  <span className={cx(HEARTGARDEN_METADATA_LABEL, styles.metadataKicker)}>Active note</span>
+                  <span className={styles.targetTitle}>{draft.targetLabel}</span>
+                </div>
+              </div>
             ) : (
-              <p className={`${styles.panelSubtitle} text-amber-700 dark:text-amber-300`}>
-                Select one text note or open focus mode on a note.
-              </p>
+              <div className={styles.calloutWarn} role="status">
+                <WarningCircle className={styles.calloutWarnIcon} size={18} weight="fill" aria-hidden />
+                <p className={styles.calloutWarnText}>
+                  Select one text note or open focus mode on a note to run a pass.
+                </p>
+              </div>
             )}
           </div>
-          <ArchitecturalTooltip content="Close" side="left" delayMs={200}>
-            <Button
-              type="button"
-              size="sm"
-              variant="neutral"
-              tone="glass"
-              aria-label="Close vault review"
-              disabled={loading}
-              onClick={onClose}
-            >
-              <X size={16} weight="bold" aria-hidden />
-            </Button>
-          </ArchitecturalTooltip>
+          <div className={styles.headerAside}>
+            <ArchitecturalTooltip content="Close" side="left" delayMs={200}>
+              <Button
+                type="button"
+                size="sm"
+                variant="neutral"
+                tone="glass"
+                className={styles.closeFab}
+                iconOnly
+                aria-label="Close vault review"
+                disabled={loading}
+                onClick={onClose}
+              >
+                <X className={HEARTGARDEN_CHROME_ICON} size={15} weight="bold" aria-hidden />
+              </Button>
+            </ArchitecturalTooltip>
+          </div>
         </div>
 
         <div className={styles.panelBody}>
-          <div>
+          <div className={styles.ctaBand}>
             <Button
               type="button"
-              size="sm"
+              size="md"
               variant="primary"
               tone="solid"
               className={styles.primaryCta}
+              isLoading={loading}
+              leadingIcon={loading ? undefined : <Sparkle className={HEARTGARDEN_CHROME_ICON} size={15} weight="fill" aria-hidden />}
               disabled={!draft || loading}
               onClick={() => {
                 setDismissed(new Set());
@@ -191,20 +210,27 @@ export function ArchitecturalLoreReviewPanel({
             </Button>
           </div>
 
-          {error ? (
-            <p className="text-[12px] text-red-600 dark:text-red-400">{error}</p>
-          ) : null}
+          {error ? <p className={styles.errorCallout}>{error}</p> : null}
 
           {semanticSummary && !loading ? (
-            <div>
-              <div className={styles.sectionLabel}>Semantic read</div>
-              <p className="text-[11px] leading-relaxed text-[var(--vigil-label)]">{semanticSummary}</p>
+            <div className={styles.section}>
+              <div className={styles.sectionHead}>
+                <span className={styles.sectionAccent} aria-hidden />
+                <h3 className={HEARTGARDEN_SECTION_TITLE}>Semantic read</h3>
+              </div>
+              <div className={styles.semanticCard}>
+                <p className={styles.semanticText}>{semanticSummary}</p>
+              </div>
             </div>
           ) : null}
 
           {suggestedNoteTags.length > 0 && !loading ? (
-            <div>
-              <div className={styles.sectionLabel}>Suggested tags (AI)</div>
+            <div className={styles.section}>
+              <div className={styles.sectionHead}>
+                <span className={styles.sectionAccent} aria-hidden />
+                <h3 className={HEARTGARDEN_SECTION_TITLE}>Suggested tags</h3>
+              </div>
+              <p className={styles.sectionHint}>From the last pass — tap to append to this note.</p>
               <div className={styles.chipRow}>
                 {suggestedNoteTags.map((tag) => (
                   <Button
@@ -224,13 +250,15 @@ export function ArchitecturalLoreReviewPanel({
             </div>
           ) : null}
 
-          <div>
-            <div className={styles.sectionLabel}>Quick labels (no move / sort)</div>
-            <p className="mb-2 text-[10px] leading-relaxed text-[var(--vigil-muted)]">
-              Append tags to this card’s metadata for search and future tooling. Does not change canvas
-              layout.
+          <div className={styles.section}>
+            <div className={styles.sectionHead}>
+              <span className={styles.sectionAccent} aria-hidden />
+              <h3 className={HEARTGARDEN_SECTION_TITLE}>Quick labels</h3>
+            </div>
+            <p className={styles.sectionHint}>
+              Metadata only — search and future tooling. No canvas moves or sorting.
             </p>
-            <div className={styles.chipRow}>
+            <div className={styles.chipGrid}>
               {PRESET_TAGS.map((t) => (
                 <ArchitecturalTooltip key={t.id} content={t.hint} side="bottom" delayMs={240}>
                   <Button
@@ -248,20 +276,24 @@ export function ArchitecturalLoreReviewPanel({
               ))}
             </div>
             {!canTag && draft ? (
-              <p className="mt-2 text-[10px] text-[var(--vigil-muted)]">
-                Tags require a synced note (save to Neon first if this card is new).
+              <p className={styles.syncHint}>
+                Tags need a synced note — save to Neon first if this card is new.
               </p>
             ) : null}
           </div>
 
-          <div>
-            <div className={styles.sectionLabel}>
-              Needs attention
-              {visibleAttentionCount > 0 ? ` (${visibleAttentionCount})` : ""}
+          <div className={styles.section}>
+            <div className={styles.sectionHead}>
+              <span className={styles.sectionAccent} aria-hidden />
+              <h3 className={HEARTGARDEN_SECTION_TITLE}>
+                Needs attention
+                {visibleAttentionCount > 0 ? ` · ${visibleAttentionCount}` : ""}
+              </h3>
             </div>
             {!loading && !error && issues.length === 0 && semanticSummary == null && suggestedNoteTags.length === 0 ? (
-              <p className="text-[11px] text-[var(--vigil-muted)]">
-                Run an analysis to compare this note against retrieved vault excerpts.
+              <p className={styles.emptyHint}>
+                Run an analysis to compare this note against retrieved vault excerpts. Results land here as
+                short rows you can dismiss or tag.
               </p>
             ) : null}
             {!loading &&
@@ -269,35 +301,29 @@ export function ArchitecturalLoreReviewPanel({
             issues.length > 0 &&
             visibleAttentionCount === 0 &&
             visibleInfoCount > 0 ? (
-              <p className="text-[11px] text-[var(--vigil-muted)]">
+              <p className={styles.mutedLine}>
                 No contradictions or warnings — context notes are below if you want detail.
               </p>
             ) : null}
             {!loading && issues.length === 0 && (semanticSummary || suggestedNoteTags.length > 0) ? (
-              <p className="text-[11px] text-[var(--vigil-muted)]">
-                No conflict rows — optional tags above still apply.
-              </p>
+              <p className={styles.mutedLine}>No conflict rows — optional tags above still apply.</p>
             ) : null}
-            <ul className="mt-2 list-none space-y-2 p-0">
+            <ul className={styles.issueList}>
               {attentionIndices.map((i) => {
                 const issue = issues[i];
                 if (!issue || dismissed.has(i)) return null;
-                const sev =
-                  issue.severity === "contradiction"
-                    ? "text-red-600 dark:text-red-400"
-                    : "text-amber-700 dark:text-amber-300";
+                const sevClass =
+                  issue.severity === "contradiction" ? styles.issueMetaContradiction : styles.issueMetaWarning;
                 return (
                   <li key={i} className={styles.issueCard}>
-                    <div className={`${styles.issueMeta} ${sev}`}>{issue.severity}</div>
+                    <div className={`${styles.issueMeta} ${sevClass}`}>{issue.severity}</div>
                     <div className={styles.issueSummary}>{issue.summary}</div>
                     {issue.details ? <div className={styles.issueDetails}>{issue.details}</div> : null}
                     {issue.handlingHint ? (
                       <span className={styles.hintPill}>Hint: {issue.handlingHint.replace(/_/g, " ")}</span>
                     ) : null}
                     {issue.candidateItemId ? (
-                      <div className="mt-1 font-mono text-[9px] text-[var(--vigil-muted)]">
-                        Related: {issue.candidateItemId}
-                      </div>
+                      <div className={styles.issueRelatedId}>Related: {issue.candidateItemId}</div>
                     ) : null}
                     <div className={styles.issueActions}>
                       <Button
@@ -342,16 +368,14 @@ export function ArchitecturalLoreReviewPanel({
                         key={i}
                         className={`${styles.issueCard} ${styles.issueCardQuiet}`}
                       >
-                        <div className={`${styles.issueMeta} text-[var(--vigil-muted)]`}>info</div>
+                        <div className={`${styles.issueMeta} ${styles.issueMetaInfo}`}>info</div>
                         <div className={styles.issueSummary}>{issue.summary}</div>
                         {issue.details ? <div className={styles.issueDetails}>{issue.details}</div> : null}
                         {issue.handlingHint ? (
                           <span className={styles.hintPill}>Hint: {issue.handlingHint.replace(/_/g, " ")}</span>
                         ) : null}
                         {issue.candidateItemId ? (
-                          <div className="mt-1 font-mono text-[9px] text-[var(--vigil-muted)]">
-                            Related: {issue.candidateItemId}
-                          </div>
+                          <div className={styles.issueRelatedId}>Related: {issue.candidateItemId}</div>
                         ) : null}
                         <div className={styles.issueActions}>
                           <Button

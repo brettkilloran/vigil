@@ -17,6 +17,7 @@
 | **`docs/NAMING.md`** | Product name **heartgarden** vs **`vigil/`** folder; stable `vigil:*` IDs; optional folder rename checklist. |
 | **`docs/FOLLOW_UP.md`** | API keys, human decisions, infra. |
 | **`docs/DEPLOY_VERCEL.md`** | Vercel project setup, env vars, Neon/R2, previews, troubleshooting. |
+| **`docs/VERSIONING.md`** | App semver (`package.json`), release scripts, deploy label (`+git` on Vercel). |
 | **`docs/DESIGN_SYSTEM_TOKENS.md`** | Token reference. |
 | **`docs/VISUAL_REVAMP_PLAN.md`** | UI polish / revamp ideas. |
 | **`docs/MIGRATION.md`**, **`docs/FUNCTIONAL_PRD_REBUILD.md`** | Historical context. |
