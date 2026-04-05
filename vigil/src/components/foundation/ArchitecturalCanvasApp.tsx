@@ -16,6 +16,7 @@ import {
   Sparkle,
   SquaresFour,
   Stack,
+  Tag,
   Trash,
   UploadSimple,
   WarningCircle,
@@ -23,6 +24,11 @@ import {
 
 import { VigilFlowRevealOverlay } from "@/src/components/transition-experiment/VigilFlowRevealOverlay";
 
+import {
+  ArchitecturalLoreReviewPanel,
+  type VaultReviewDraft,
+  type VaultReviewIssue,
+} from "@/src/components/foundation/ArchitecturalLoreReviewPanel";
 import { VigilAppBootScreen } from "./VigilAppBootScreen";
 import { VigilAppChromeAudioMuteButton } from "./VigilAppChromeAudioMuteButton";
 import styles from "./ArchitecturalCanvasApp.module.css";
@@ -207,6 +213,15 @@ function recommendedClarificationOptionId(
 ): string | undefined {
   const r = c.options.find((o) => o.recommended);
   return r?.id ?? c.options[0]?.id;
+}
+
+function stripHtmlToPlain(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 const ROOT_SPACE_ID = "root";
@@ -1127,6 +1142,12 @@ export function ArchitecturalCanvasApp({
       loreSmartClarificationAnswers,
     ).ok;
   }, [loreSmartReview, loreSmartClarificationAnswers]);
+  const [loreReviewPanelOpen, setLoreReviewPanelOpen] = useState(false);
+  const [loreReviewLoading, setLoreReviewLoading] = useState(false);
+  const [loreReviewError, setLoreReviewError] = useState<string | null>(null);
+  const [loreReviewIssues, setLoreReviewIssues] = useState<VaultReviewIssue[]>([]);
+  const [loreReviewSuggestedTags, setLoreReviewSuggestedTags] = useState<string[]>([]);
+  const [loreReviewSemanticSummary, setLoreReviewSemanticSummary] = useState<string | null>(null);
   const [loreImportCommitting, setLoreImportCommitting] = useState(false);
   const loreImportDraftRef = useRef<LoreImportDraftState | null>(null);
   const [cloudLinksBar, setCloudLinksBar] = useState(() => getNeonSyncSnapshot().cloudEnabled);
@@ -3596,6 +3617,114 @@ export function ArchitecturalCanvasApp({
     [enterSpace, openFocusMode],
   );
 
+  const resolveVaultReviewDraft = useCallback((): VaultReviewDraft | null => {
+    if (!cloudLinksBar || !isUuidLike(activeSpaceId)) return null;
+    if (focusOpen && activeNodeId) {
+      const ent = graph.entities[activeNodeId];
+      if (!ent || ent.kind !== "content" || ent.theme === "media") return null;
+      return {
+        title: focusTitle.trim(),
+        bodyText: stripHtmlToPlain(focusBody),
+        excludeItemId:
+          ent.persistedItemId && isUuidLike(ent.persistedItemId)
+            ? ent.persistedItemId
+            : undefined,
+        targetLabel: focusTitle.trim() || "Focused note",
+      };
+    }
+    if (selectedNodeIds.length === 1) {
+      const ent = graph.entities[selectedNodeIds[0]!];
+      if (!ent || ent.kind !== "content" || ent.theme === "media") return null;
+      return {
+        title: (ent.title ?? "").trim(),
+        bodyText: stripHtmlToPlain(ent.bodyHtml),
+        excludeItemId:
+          ent.persistedItemId && isUuidLike(ent.persistedItemId)
+            ? ent.persistedItemId
+            : undefined,
+        targetLabel: (ent.title ?? "").trim() || "Selected note",
+      };
+    }
+    return null;
+  }, [
+    activeNodeId,
+    activeSpaceId,
+    cloudLinksBar,
+    focusBody,
+    focusOpen,
+    focusTitle,
+    graph.entities,
+    selectedNodeIds,
+  ]);
+
+  const vaultReviewDraftActive = useMemo(
+    () => (loreReviewPanelOpen ? resolveVaultReviewDraft() : null),
+    [loreReviewPanelOpen, resolveVaultReviewDraft],
+  );
+
+  const runVaultReviewAnalysis = useCallback(async () => {
+    const draft = resolveVaultReviewDraft();
+    if (!draft) {
+      setLoreReviewError("Select one text note or open focus mode on a note.");
+      return;
+    }
+    if (draft.bodyText.length < 12) {
+      setLoreReviewError("Add a bit more text before running the analysis.");
+      return;
+    }
+    setLoreReviewLoading(true);
+    setLoreReviewError(null);
+    setLoreReviewIssues([]);
+    setLoreReviewSuggestedTags([]);
+    setLoreReviewSemanticSummary(null);
+    playVigilUiSound("button");
+    try {
+      const res = await fetch("/api/lore/consistency/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          spaceId: activeSpaceId,
+          title: draft.title,
+          bodyText: draft.bodyText,
+          excludeItemId: draft.excludeItemId,
+        }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        issues?: VaultReviewIssue[];
+        suggestedNoteTags?: string[];
+        semanticSummary?: string | null;
+      };
+      if (!res.ok || !data.ok) {
+        setLoreReviewError(typeof data.error === "string" ? data.error : "Analysis failed");
+        return;
+      }
+      setLoreReviewIssues(Array.isArray(data.issues) ? data.issues : []);
+      setLoreReviewSuggestedTags(
+        Array.isArray(data.suggestedNoteTags) ? data.suggestedNoteTags : [],
+      );
+      setLoreReviewSemanticSummary(
+        typeof data.semanticSummary === "string" ? data.semanticSummary : null,
+      );
+    } catch {
+      setLoreReviewError("Request failed");
+    } finally {
+      setLoreReviewLoading(false);
+    }
+  }, [activeSpaceId, resolveVaultReviewDraft]);
+
+  const appendVaultReviewTags = useCallback(
+    async (tags: string[]): Promise<boolean> => {
+      const draft = resolveVaultReviewDraft();
+      if (!draft?.excludeItemId) return false;
+      return apiPatchItem(draft.excludeItemId, {
+        entityMetaMerge: { loreReviewTags: tags },
+      });
+    },
+    [resolveVaultReviewDraft],
+  );
+
   const paletteActions = useMemo<PaletteAction[]>(
     () => [
       { id: "create-note", label: "Create note", hint: "Add a new note at center", icon: <FileText size={14} weight="bold" /> },
@@ -3627,8 +3756,19 @@ export function ArchitecturalCanvasApp({
         keywords: ["import", "pdf", "markdown", "upload"],
         icon: <UploadSimple size={14} weight="bold" />,
       },
+      ...(cloudLinksBar && isUuidLike(activeSpaceId)
+        ? [
+            {
+              id: "check-lore-consistency",
+              label: "Vault review (consistency & tags)",
+              hint: "Top-right panel — AI pass + label without moving cards",
+              keywords: ["consistency", "conflict", "contradiction", "lore", "check", "tags", "vault"],
+              icon: <Tag size={14} weight="bold" />,
+            } satisfies PaletteAction,
+          ]
+        : []),
     ],
-    [modKeyHints.recenter],
+    [activeSpaceId, cloudLinksBar, modKeyHints.recenter],
   );
 
   const getParentFolderExitSlot = useCallback(
@@ -4070,49 +4210,85 @@ export function ArchitecturalCanvasApp({
           setLoreSmartTab("structure");
           setLoreSmartPlanning(true);
           try {
-            const planRes = await fetch("/api/lore/import/plan", {
+            const jobRes = await fetch("/api/lore/import/jobs", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 text: parsed.text,
                 spaceId,
                 fileName: parsed.fileName,
-                persistReview: true,
               }),
             });
-            const planned = (await planRes.json()) as {
+            const jobBody = (await jobRes.json()) as {
               ok?: boolean;
               error?: string;
-              plan?: LoreImportPlan;
+              jobId?: string;
             };
-            if (!planRes.ok || !planned.ok || !planned.plan) {
+            if (!jobRes.ok || !jobBody.ok || !jobBody.jobId) {
               window.alert(
-                typeof planned.error === "string"
-                  ? planned.error
-                  : "Smart import plan failed — opening legacy review.",
+                typeof jobBody.error === "string"
+                  ? jobBody.error
+                  : "Could not start import job — opening legacy review.",
               );
             } else {
-              setLoreSmartReview({
-                plan: planned.plan,
-                sourceText: parsed.text,
-                sourceTitle: parsed.suggestedTitle,
-                fileName: parsed.fileName,
-              });
-              setLoreSmartClarificationAnswers([]);
-              const nextMerge: Record<string, boolean> = {};
-              for (const m of planned.plan.mergeProposals) {
-                nextMerge[m.id] = false;
+              const jobId = jobBody.jobId;
+              const maxAttempts = 240;
+              let planReady = false;
+              for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                const poll = await fetch(
+                  `/api/lore/import/jobs/${jobId}?spaceId=${encodeURIComponent(spaceId)}`,
+                );
+                const st = (await poll.json()) as {
+                  ok?: boolean;
+                  status?: string;
+                  plan?: LoreImportPlan;
+                  error?: string;
+                };
+                if (!poll.ok || !st.ok) {
+                  window.alert(
+                    typeof st.error === "string"
+                      ? st.error
+                      : "Import job status request failed — opening legacy review.",
+                  );
+                  break;
+                }
+                if (st.status === "ready" && st.plan) {
+                  planReady = true;
+                  setLoreSmartReview({
+                    plan: st.plan,
+                    sourceText: parsed.text,
+                    sourceTitle: parsed.suggestedTitle,
+                    fileName: parsed.fileName,
+                  });
+                  setLoreSmartClarificationAnswers([]);
+                  const nextMerge: Record<string, boolean> = {};
+                  for (const m of st.plan.mergeProposals) {
+                    nextMerge[m.id] = false;
+                  }
+                  setLoreSmartAcceptedMergeIds(nextMerge);
+                  if (st.plan.clarifications.some((c) => c.severity === "required")) {
+                    setLoreSmartTab("questions");
+                  }
+                  return;
+                }
+                if (st.status === "failed") {
+                  window.alert(
+                    typeof st.error === "string"
+                      ? st.error
+                      : "Smart import plan failed — opening legacy review.",
+                  );
+                  break;
+                }
+                await new Promise((r) => setTimeout(r, 900));
               }
-              setLoreSmartAcceptedMergeIds(nextMerge);
-              if (
-                planned.plan.clarifications.some((c) => c.severity === "required")
-              ) {
-                setLoreSmartTab("questions");
+              if (!planReady) {
+                window.alert(
+                  "Import planning is taking too long (the server may still be working). Try again with a shorter file, or use legacy import.",
+                );
               }
-              return;
             }
           } catch {
-            window.alert("Smart import plan request failed — opening legacy review.");
+            window.alert("Smart import job request failed — opening legacy review.");
           } finally {
             setLoreSmartPlanning(false);
           }
@@ -4258,6 +4434,12 @@ export function ArchitecturalCanvasApp({
     if (actionId === "import-lore") {
       playVigilUiSound("select");
       loreImportFileInputRef.current?.click();
+      return;
+    }
+    if (actionId === "check-lore-consistency") {
+      setLoreReviewError(null);
+      setLoreReviewPanelOpen(true);
+      playVigilUiSound("select");
     }
   }, [activeSpace?.entityIds, createNewNode, exportGraphJson, recenterToOrigin]);
 
@@ -7279,7 +7461,87 @@ export function ArchitecturalCanvasApp({
             aria-label="Building import plan"
           >
             <div className="rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-panel)] px-6 py-4 text-sm text-[var(--vigil-label)] shadow-xl">
-              Building import plan…
+              <p className="font-medium">Planning import…</p>
+              <p className="mt-1 max-w-xs text-[11px] text-[var(--vigil-muted)]">
+                Running in the background on the server. You can leave this page open — it usually finishes
+                within a minute or two for typical files.
+              </p>
+            </div>
+          </div>
+        ) : null}
+        {loreConsistencyOpen ? (
+          <div
+            className="fixed inset-0 z-[1160] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Lore consistency check"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget && !loreConsistencyLoading) {
+                setLoreConsistencyOpen(false);
+              }
+            }}
+          >
+            <div className="flex max-h-[min(85vh,520px)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-panel)] p-4 shadow-xl">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-semibold text-[var(--vigil-label)]">
+                  Lore consistency check
+                </span>
+                <Button
+                  size="sm"
+                  variant="neutral"
+                  tone="glass"
+                  type="button"
+                  disabled={loreConsistencyLoading}
+                  onClick={() => setLoreConsistencyOpen(false)}
+                >
+                  Close
+                </Button>
+              </div>
+              {loreConsistencyLoading ? (
+                <p className="text-[12px] text-[var(--vigil-muted)]">Comparing your note to the vault…</p>
+              ) : null}
+              {loreConsistencyError ? (
+                <p className="text-[12px] text-red-600 dark:text-red-400">{loreConsistencyError}</p>
+              ) : null}
+              {!loreConsistencyLoading &&
+              !loreConsistencyError &&
+              loreConsistencyIssues.length === 0 ? (
+                <p className="text-[12px] text-[var(--vigil-muted)]">
+                  No conflicts or warnings were flagged. Retrieval can miss relevant cards — this is a helper,
+                  not proof.
+                </p>
+              ) : null}
+              {!loreConsistencyLoading && loreConsistencyIssues.length > 0 ? (
+                <ul className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 text-[11px] text-[var(--vigil-label)]">
+                  {loreConsistencyIssues.map((issue, i) => (
+                    <li
+                      key={i}
+                      className="rounded-lg border border-[var(--vigil-border)] bg-black/[0.03] p-2 dark:bg-white/[0.04]"
+                    >
+                      <span
+                        className={
+                          issue.severity === "contradiction"
+                            ? "text-red-600 dark:text-red-400"
+                            : issue.severity === "info"
+                              ? "text-[var(--vigil-muted)]"
+                              : "text-amber-700 dark:text-amber-300"
+                        }
+                      >
+                        {issue.severity}
+                      </span>
+                      <span className="ml-2 font-medium">{issue.summary}</span>
+                      {issue.details ? (
+                        <p className="mt-1 text-[10px] text-[var(--vigil-muted)]">{issue.details}</p>
+                      ) : null}
+                      {issue.candidateItemId ? (
+                        <p className="mt-1 font-mono text-[9px] text-[var(--vigil-muted)]">
+                          Related item: {issue.candidateItemId}
+                        </p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           </div>
         ) : null}

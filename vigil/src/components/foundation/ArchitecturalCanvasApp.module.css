@@ -1802,6 +1802,22 @@
   }
 }
 
+.shellTopRightStack {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: var(--layer-ui-chrome-elevated);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.shellTopRightStack > * {
+  pointer-events: auto;
+}
+
 .shellTopLeftStack {
   position: absolute;
   top: 24px;
