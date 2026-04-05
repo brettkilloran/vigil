@@ -78,6 +78,6 @@ If one view looks stale:
 
 **Short version:** Vercel **Root Directory** = **`vigil`**. Set `NEON_DATABASE_URL` (and optional Anthropic / R2 per [`.env.local.example`](.env.local.example)). Do **not** set `PLAYWRIGHT_E2E`. No tldraw license is required.
 
-**Full checklist (Neon pooling, Preview envs, R2 CORS, CLI, troubleshooting):** **[`docs/DEPLOY_VERCEL.md`](docs/DEPLOY_VERCEL.md)**.
+**Full guide:** **[`docs/DEPLOY_VERCEL.md`](docs/DEPLOY_VERCEL.md)**. **Dashboard checklist:** **[`docs/DEPLOY_VERCEL_CHECKLIST.md`](docs/DEPLOY_VERCEL_CHECKLIST.md)**. **Neon prod + Preview branches:** **[`docs/NEON_VERCEL_SETUP.md`](docs/NEON_VERCEL_SETUP.md)**.
 
 **Naming:** **`docs/NAMING.md`** (heartgarden vs `vigil/` folder, stable `vigil:*` IDs).

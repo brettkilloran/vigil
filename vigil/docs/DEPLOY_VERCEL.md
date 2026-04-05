@@ -38,6 +38,7 @@ Add these in **Project → Settings → Environment Variables**. Mark secrets as
 | `R2_SECRET_ACCESS_KEY` | Same | For R2 | Sensitive. |
 | `R2_BUCKET_NAME` | Same | For R2 | |
 | `R2_PUBLIC_BASE_URL` | Same | For R2 | Public origin for GET of uploaded objects, **no trailing slash** (e.g. `https://pub-xxxx.r2.dev`). |
+| `HEARTGARDEN_LORE_QUERY_DISABLED` | Production, Preview (optional) | Hardening | Set to **`1`** to disable **`POST /api/lore/query`** (**503**) while the rest of the app stays up. Remove when auth / stronger limits are in place. |
 
 **Do not set on Vercel:**
 
@@ -71,13 +72,49 @@ If you use browser uploads:
 1. Create bucket + S3 API token; fill all `R2_*` env vars on Vercel.
 2. **CORS** on the bucket must allow the browser to **PUT** to the presigned URL from your **Vercel origin** (e.g. `https://your-project.vercel.app`) and optionally your custom domain. Allowed methods typically include **PUT**; allowed headers at least **`Content-Type`**. Without CORS, presign succeeds but the browser upload fails.
 
+### Example CORS rule (R2 dashboard)
+
+In **R2 → your bucket → Settings → CORS policy**, JSON like the following (replace origins with your real **`https://<project>.vercel.app`** and any custom domain). Wildcard `*.vercel.app` is **not** always accepted by every S3-compatible UI — if the editor rejects `*`, list each origin explicitly.
+
+```json
+[
+  {
+    "AllowedOrigins": [
+      "https://heartgarden.vercel.app",
+      "https://your-preview-branch.vercel.app"
+    ],
+    "AllowedMethods": ["GET", "PUT", "HEAD"],
+    "AllowedHeaders": ["Content-Type", "Content-Length"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+Add a second origin line for every **stable** preview URL you care about, or tighten to Production only until you need previews uploading.
+
+**Checklist:** [`DEPLOY_VERCEL_CHECKLIST.md`](./DEPLOY_VERCEL_CHECKLIST.md) section D references Preview DB; align **CORS** with the same hostnames you use in the browser.
+
 ## 6. Custom domain
 
 **Project → Settings → Domains:** add your domain; point DNS as Vercel instructs. TLS is automatic.
 
 ## 7. Security note (public URL)
 
-Lore and several APIs are **unauthenticated** today. Before sharing a wide audience link, add rate limiting, auth, or edge protection — see [`FOLLOW_UP.md`](./FOLLOW_UP.md).
+Lore and several APIs are **unauthenticated** today. Before sharing a wide audience link:
+
+| Measure | Notes |
+|--------|--------|
+| **Vercel Deployment Protection** | Password or SSO on **Preview** (and optionally Production) so random visitors cannot load the app — [Vercel docs](https://vercel.com/docs/security/deployment-protection). |
+| **Disable lore until hardened** | Set **`HEARTGARDEN_LORE_QUERY_DISABLED=1`** on the server → **`POST /api/lore/query`** returns **503** (“Lore query disabled”). Canvas and other features keep working if the DB is configured. Remove or unset when you add proper auth / limits. |
+| **Rate limits / KV** | In-process limits exist for lore query; for **global** limits use Redis or **Vercel KV** — see [`BUILD_PLAN.md`](./BUILD_PLAN.md) and [`FOLLOW_UP.md`](./FOLLOW_UP.md). |
+| **API spend caps** | Use provider dashboards (Anthropic, OpenAI) for billing alerts and caps. |
+
+Env var (optional, Production / Preview):
+
+| Variable | Value | Effect |
+|----------|--------|--------|
+| `HEARTGARDEN_LORE_QUERY_DISABLED` | `1` | Blocks **`/api/lore/query`** only. |
 
 ## 8. CLI workflow (optional)
 
@@ -111,4 +148,4 @@ Production deploys are usually triggered by **git push** once the Git integratio
 
 ---
 
-*See also:* [`NAMING.md`](./NAMING.md) (folder name vs product), [`FOLLOW_UP.md`](./FOLLOW_UP.md) (keys and human follow-ups).
+*See also:* [`DEPLOY_VERCEL_CHECKLIST.md`](./DEPLOY_VERCEL_CHECKLIST.md) (ordered dashboard tasks), [`NEON_VERCEL_SETUP.md`](./NEON_VERCEL_SETUP.md) (prod + Preview branches), [`NAMING.md`](./NAMING.md) (folder name vs product), [`FOLLOW_UP.md`](./FOLLOW_UP.md) (keys and human follow-ups).
