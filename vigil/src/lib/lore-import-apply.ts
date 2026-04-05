@@ -177,7 +177,10 @@ export async function applyLoreImportPlan(
     ],
   };
 
-  const acceptedMergeIds = new Set(body.acceptedMergeProposalIds);
+  const mergeIdSet = new Set(plan.mergeProposals.map((m) => m.id));
+  const acceptedMergeIds = new Set(
+    body.acceptedMergeProposalIds.filter((id) => mergeIdSet.has(id)),
+  );
   const mergeProposalsAccepted = plan.mergeProposals.filter((m) =>
     acceptedMergeIds.has(m.id),
   );
@@ -481,20 +484,20 @@ export async function applyLoreImportPlan(
         .returning();
       if (lr) linksCreated += 1;
     }
-  });
 
-  for (const a of clarificationAnswers) {
-    await db
-      .update(importReviewItems)
-      .set({ status: "resolved", updatedAt: new Date() })
-      .where(
-        and(
-          eq(importReviewItems.importBatchId, plan.importBatchId),
-          eq(importReviewItems.spaceId, body.spaceId),
-          sql`(${importReviewItems.payload}->>'clarificationId') = ${a.clarificationId}`,
-        ),
-      );
-  }
+    for (const a of clarificationAnswers) {
+      await tx
+        .update(importReviewItems)
+        .set({ status: "resolved", updatedAt: new Date() })
+        .where(
+          and(
+            eq(importReviewItems.importBatchId, plan.importBatchId),
+            eq(importReviewItems.spaceId, body.spaceId),
+            sql`(${importReviewItems.payload}->>'clarificationId') = ${a.clarificationId}`,
+          ),
+        );
+    }
+  });
 
   for (const row of rowsToSchedule) {
     scheduleItemEmbeddingRefresh(db, row);

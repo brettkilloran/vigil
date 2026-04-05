@@ -10,6 +10,7 @@ import {
   type CandidateRow,
 } from "@/src/lib/lore-import-plan-llm";
 import {
+  capClarificationList,
   ensureClarificationsForContradictions,
   normalizeClarificationsFromLlm,
 } from "@/src/lib/lore-import-clarifications";
@@ -176,6 +177,7 @@ export async function buildLoreImportPlan(args: {
     mergeProposals,
     clarifications,
   );
+  clarifications = capClarificationList(clarifications);
 
   const planRaw: LoreImportPlan = {
     importBatchId: args.importBatchId,

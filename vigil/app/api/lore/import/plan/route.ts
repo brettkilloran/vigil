@@ -1,6 +1,8 @@
 import { randomUUID } from "crypto";
 import { z } from "zod";
 
+import { and, eq } from "drizzle-orm";
+
 import { tryGetDb } from "@/src/db/index";
 import { importReviewItems } from "@/src/db/schema";
 import { buildLoreImportPlan } from "@/src/lib/lore-import-plan-build";
@@ -109,6 +111,15 @@ export async function POST(req: Request) {
         });
       }
       if (rows.length > 0) {
+        await db
+          .delete(importReviewItems)
+          .where(
+            and(
+              eq(importReviewItems.spaceId, parsed.data.spaceId),
+              eq(importReviewItems.importBatchId, plan.importBatchId),
+              eq(importReviewItems.status, "pending"),
+            ),
+          );
         await db.insert(importReviewItems).values(rows);
       }
     }
