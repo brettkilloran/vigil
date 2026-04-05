@@ -13,8 +13,10 @@ import {
 import { createPortal } from "react-dom";
 
 import { Button } from "@/src/components/ui/Button";
+import { HeartgardenPinField } from "@/src/components/ui/HeartgardenPinField";
 
 import { HEARTGARDEN_APP_VERSION_LABEL } from "@/src/lib/app-version";
+import { cx } from "@/src/lib/cx";
 
 import { ArchitecturalCanvasEffectsToggle } from "./ArchitecturalStatusBar";
 import { ArchitecturalTooltip } from "./ArchitecturalTooltip";
@@ -42,6 +44,10 @@ export type VigilAppBootScreenProps = {
   bootAmbientEpoch?: number;
   /** Parent calls ref.current() after log-out flushSync (same gesture as click) to satisfy autoplay policy. */
   bootAmbientPrimePlaybackRef?: MutableRefObject<(() => void) | null>;
+  /** Server boot PIN gate: first click opens access console; unlock via POST /api/heartgarden/boot. */
+  bootGateEnabled?: boolean;
+  /** False until GET /api/heartgarden/boot has completed (disables CTA until known). */
+  bootGateStatusReady?: boolean;
 };
 
 /**
@@ -133,8 +139,14 @@ export function VigilAppBootScreen({
   onCanvasEffectsEnabledChange,
   bootAmbientEpoch = 0,
   bootAmbientPrimePlaybackRef,
+  bootGateEnabled = false,
+  bootGateStatusReady = true,
 }: VigilAppBootScreenProps) {
   const [exiting, setExiting] = useState(false);
+  const [accessConsoleOpen, setAccessConsoleOpen] = useState(false);
+  const [pinValue, setPinValue] = useState("");
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [pinSubmitting, setPinSubmitting] = useState(false);
   const [flowerTool, setFlowerTool] = useState<FlowerPointerTool>("grow");
   const flowerGardenRef = useRef<VigilBootFlowerGardenHandle>(null);
   const flowerToolRef = useRef(flowerTool);
@@ -230,12 +242,20 @@ export function VigilAppBootScreen({
 
   const onEnterGardenPointerEnter = useCallback(() => {
     if (exiting || !technicalReady || prefersReducedMotionRef.current) return;
+    if (bootGateEnabled && accessConsoleOpen) return;
     clearEnterGardenHoverSpawn();
     tickEnterGardenHoverSpawn();
     enterGardenHoverSpawnRef.current = setInterval(() => {
       tickEnterGardenHoverSpawn();
     }, 200 + Math.floor(Math.random() * 120));
-  }, [clearEnterGardenHoverSpawn, exiting, technicalReady, tickEnterGardenHoverSpawn]);
+  }, [
+    bootGateEnabled,
+    accessConsoleOpen,
+    clearEnterGardenHoverSpawn,
+    exiting,
+    technicalReady,
+    tickEnterGardenHoverSpawn,
+  ]);
 
   const onEnterGardenPointerLeave = useCallback(() => {
     clearEnterGardenHoverSpawn();
@@ -246,6 +266,46 @@ export function VigilAppBootScreen({
     onActivate();
     setExiting(true);
   }, [technicalReady, exiting, onActivate]);
+
+  const openAccessConsole = useCallback(() => {
+    if (!technicalReady || exiting || !bootGateStatusReady) return;
+    setAccessConsoleOpen(true);
+    setPinError(null);
+  }, [technicalReady, exiting, bootGateStatusReady]);
+
+  const handleEnterGardenButtonClick = useCallback(() => {
+    if (!technicalReady || exiting) return;
+    if (bootGateEnabled) {
+      if (!accessConsoleOpen) openAccessConsole();
+      return;
+    }
+    handleActivate();
+  }, [bootGateEnabled, accessConsoleOpen, technicalReady, exiting, openAccessConsole, handleActivate]);
+
+  const submitAccessPin = useCallback(async () => {
+    if (!bootGateEnabled || pinValue.length !== 8 || exiting || pinSubmitting) return;
+    setPinSubmitting(true);
+    setPinError(null);
+    try {
+      const res = await fetch("/api/heartgarden/boot", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: pinValue }),
+      });
+      if (res.status === 204) {
+        handleActivate();
+        return;
+      }
+      setPinError("Access denied.");
+    } catch {
+      setPinError("Access denied.");
+    } finally {
+      setPinSubmitting(false);
+    }
+  }, [bootGateEnabled, pinValue, exiting, pinSubmitting, handleActivate]);
+
+  const ctaEnabled = technicalReady && !exiting && bootGateStatusReady;
 
   const onTransitionEnd = useCallback(
     (e: React.TransitionEvent<HTMLDivElement>) => {
@@ -471,21 +531,70 @@ export function VigilAppBootScreen({
           style={{ animationDelay: "1.22s" }}
           data-vigil-boot-activate="true"
         >
-          <Button
-            ref={activateButtonRef}
-            variant="primary"
-            tone="solid"
-            className={styles.enterGardenBtn}
-            disabled={!technicalReady || exiting}
-            onClick={handleActivate}
-            onPointerEnter={onEnterGardenPointerEnter}
-            onPointerLeave={onEnterGardenPointerLeave}
-          >
-            Enter the garden.
-          </Button>
+          {bootGateEnabled ? (
+            <div
+              className={cx(styles.morphHost, accessConsoleOpen && styles.morphHostConsole)}
+              data-vigil-boot-access-morph="true"
+            >
+              <div
+                className={cx(styles.morphTier, accessConsoleOpen && styles.morphTierHidden)}
+                aria-hidden={accessConsoleOpen}
+              >
+                <Button
+                  ref={activateButtonRef}
+                  variant="primary"
+                  tone="solid"
+                  className={styles.enterGardenBtn}
+                  disabled={!ctaEnabled}
+                  onClick={handleEnterGardenButtonClick}
+                  onPointerEnter={onEnterGardenPointerEnter}
+                  onPointerLeave={onEnterGardenPointerLeave}
+                >
+                  Enter the garden.
+                </Button>
+              </div>
+              <div
+                className={cx(styles.morphTier, !accessConsoleOpen && styles.morphTierHidden)}
+                aria-hidden={!accessConsoleOpen}
+              >
+                <HeartgardenPinField
+                  id="vigil-boot-access-pin"
+                  legend="Heartgarden access code"
+                  value={pinValue}
+                  onValueChange={(v) => {
+                    setPinValue(v);
+                    if (pinError) setPinError(null);
+                  }}
+                  onSubmit={submitAccessPin}
+                  disabled={!technicalReady || exiting}
+                  submitting={pinSubmitting}
+                  errorMessage={pinError}
+                  autoFocus={accessConsoleOpen}
+                  className={styles.bootAccessPinField}
+                />
+              </div>
+            </div>
+          ) : (
+            <Button
+              ref={activateButtonRef}
+              variant="primary"
+              tone="solid"
+              className={styles.enterGardenBtn}
+              disabled={!ctaEnabled}
+              onClick={handleEnterGardenButtonClick}
+              onPointerEnter={onEnterGardenPointerEnter}
+              onPointerLeave={onEnterGardenPointerLeave}
+            >
+              Enter the garden.
+            </Button>
+          )}
           {!technicalReady ? (
             <p className={styles.waitHint} aria-live="polite">
               Provisioning render shell…
+            </p>
+          ) : bootGateEnabled && !bootGateStatusReady ? (
+            <p className={styles.waitHint} aria-live="polite">
+              Checking access…
             </p>
           ) : null}
         </div>

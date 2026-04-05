@@ -305,12 +305,47 @@
   max-width: 100%;
 }
 
-/* Reserve horizontal space for `.flowerToolsRail` (~46px + gutter); desktop unchanged above breakpoint. */
+/*
+ * Narrow: keep copy optically centered in the viewport while clearing `.flowerToolsRail`.
+ * (End-only padding shifted the flex center left; use max-width + margin auto instead.)
+ */
 @media (max-width: 640px) {
   .content {
-    padding-inline-end: calc(
-      var(--chrome-tool-rail-strip-width, 46px) + 32px + env(safe-area-inset-right, 0px)
+    padding-block: 1.5rem;
+    padding-inline: max(1rem, env(safe-area-inset-left, 0px)) max(1rem, env(safe-area-inset-right, 0px));
+  }
+
+  .middleCopy {
+    max-width: min(
+      40rem,
+      calc(
+        100vw - var(--chrome-tool-rail-strip-width, 46px) - 56px - env(safe-area-inset-left, 0px) -
+          env(safe-area-inset-right, 0px)
+      )
     );
+    margin-inline: auto;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .middleCopy .title {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .middleCopy .kicker {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* `display: block` glitch wrapper otherwise spans full row; keep glyph cluster centered. */
+  .middleCopy .title .bootGlitchLayer {
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto;
   }
 }
 
@@ -505,6 +540,45 @@
   flex-direction: column;
   align-items: center;
   gap: 0.75rem;
+}
+
+/* Enter → access console morph (boot PIN gate) */
+.morphHost {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: min(100%, 22rem);
+  margin-inline: auto;
+  min-height: 2.85rem;
+  transition: min-height 0.38s cubic-bezier(0.22, 0.82, 0.16, 1);
+}
+
+.morphHostConsole {
+  min-height: 7.75rem;
+}
+
+.morphTier {
+  grid-area: 1 / 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition:
+    opacity 0.34s ease,
+    transform 0.38s cubic-bezier(0.22, 0.82, 0.16, 1),
+    visibility 0.34s;
+}
+
+.morphTierHidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(10px) scale(0.985);
+}
+
+.bootAccessPinField {
+  width: 100%;
 }
 
 /*
@@ -771,5 +845,17 @@
 
   .enterGardenBtn:not(:disabled):active {
     transform: translateY(0);
+  }
+
+  .morphHost {
+    transition: none;
+  }
+
+  .morphTier {
+    transition: none;
+  }
+
+  .morphTierHidden {
+    transform: none;
   }
 }

@@ -38,6 +38,9 @@ jobs:
           echo "Ref: $GITHUB_REF"
           echo "::endgroup::"
       - name: Install dependencies
+        env:
+          # Avoid mutating .git/hooks in CI; prepare script respects this (see vigil/scripts/install-git-hooks.mjs).
+          SKIP_INSTALL_GIT_HOOKS: "1"
         run: |
           echo "::group::Install dependencies"
           npm ci
