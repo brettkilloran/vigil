@@ -540,6 +540,9 @@
   cursor: grab;
   transition: transform 0.14s ease;
   --stack-fan-mult: 1;
+  /* Padding around the fan is not interactive — otherwise hits count as “stack chrome” and block
+   * background lasso / deselect (isCanvasPointerMarqueeOrPanSurface). Top card + badge opt in. */
+  pointer-events: none;
 }
 
 .stackContainer:hover {
@@ -569,6 +572,7 @@
   position: absolute;
   top: -10px;
   right: -10px;
+  pointer-events: auto;
   width: 26px;
   height: 26px;
   border-radius: 50%;
@@ -4015,9 +4019,9 @@
   -webkit-backdrop-filter: blur(14px);
   opacity: 0;
   pointer-events: none;
+  /* Do not animate background-color: opening code focus would interpolate light scrim → dark and flash white. */
   transition:
     opacity 0.26s cubic-bezier(0.33, 1, 0.68, 1),
-    background-color 0.34s ease,
     backdrop-filter 0.34s ease,
     -webkit-backdrop-filter 0.34s ease;
   /* Scroll lives on `.focusSheet` so fixed UI (e.g. bottom dock) is not a descendant of overflow; avoids clipped shadows. */

@@ -77,6 +77,18 @@ export const items = pgTable("items", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
+/** Import / ingestion review queue (contradictions, future notifications). */
+export const importReviewItems = pgTable("import_review_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  importBatchId: uuid("import_batch_id").notNull(),
+  spaceId: uuid("space_id").references(() => spaces.id, { onDelete: "cascade" }),
+  status: varchar("status", { length: 32 }).notNull().default("pending"),
+  kind: varchar("kind", { length: 64 }).notNull().default("contradiction"),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
 export const itemLinks = pgTable(
   "item_links",
   {

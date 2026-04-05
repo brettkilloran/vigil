@@ -81,6 +81,7 @@ import {
 } from "@/src/components/foundation/architectural-neon-api";
 import { mergeHydratedDbConnections } from "@/src/lib/architectural-item-link-graph";
 import { LORE_LINK_TYPE_OPTIONS } from "@/src/lib/lore-link-types";
+import type { LoreImportPlan } from "@/src/lib/lore-import-plan-types";
 import type { LoreImportEntityDraft, LoreImportLinkDraft } from "@/src/lib/lore-import-types";
 import {
   getNeonSyncSnapshot,
@@ -175,6 +176,13 @@ type LoreImportDraftState = {
   includeSourceCard: boolean;
   entities: LoreImportEntityDraft[];
   suggestedLinks: LoreImportLinkDraft[];
+};
+
+type LoreSmartImportReviewState = {
+  plan: LoreImportPlan;
+  sourceText: string;
+  sourceTitle?: string;
+  fileName?: string;
 };
 
 const ROOT_SPACE_ID = "root";
@@ -1074,6 +1082,13 @@ export function ArchitecturalCanvasApp({
   const [graphOverlayOpen, setGraphOverlayOpen] = useState(false);
   const graphOverlayOpenSoundPrevRef = useRef(false);
   const [loreImportDraft, setLoreImportDraft] = useState<LoreImportDraftState | null>(null);
+  const [loreSmartReview, setLoreSmartReview] = useState<LoreSmartImportReviewState | null>(null);
+  const [loreSmartTab, setLoreSmartTab] = useState<"structure" | "merges">("structure");
+  const [loreSmartPlanning, setLoreSmartPlanning] = useState(false);
+  const [loreSmartIncludeSource, setLoreSmartIncludeSource] = useState(true);
+  const [loreSmartAcceptedMergeIds, setLoreSmartAcceptedMergeIds] = useState<Record<string, boolean>>(
+    {},
+  );
   const [loreImportCommitting, setLoreImportCommitting] = useState(false);
   const loreImportDraftRef = useRef<LoreImportDraftState | null>(null);
   const [cloudLinksBar, setCloudLinksBar] = useState(() => getNeonSyncSnapshot().cloudEnabled);
@@ -2921,6 +2936,79 @@ export function ArchitecturalCanvasApp({
     }
   }, [activeSpaceId, centerCoords]);
 
+  const commitSmartLoreImport = useCallback(async () => {
+    const rev = loreSmartReview;
+    if (!rev) return;
+    if (!persistNeonRef.current || !isUuidLike(activeSpaceId)) {
+      window.alert("Importing to the canvas requires a connected Neon space (not local demo mode).");
+      return;
+    }
+    const center = centerCoords();
+    const acceptedMergeProposalIds = Object.entries(loreSmartAcceptedMergeIds)
+      .filter(([, v]) => v)
+      .map(([id]) => id);
+    setLoreImportCommitting(true);
+    playVigilUiSound("button");
+    try {
+      const res = await fetch("/api/lore/import/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          spaceId: activeSpaceId,
+          importBatchId: rev.plan.importBatchId,
+          plan: rev.plan,
+          layout: { originX: center.x - 140, originY: center.y - 120 },
+          includeSourceCard: loreSmartIncludeSource,
+          sourceDocument:
+            loreSmartIncludeSource && rev.sourceText.trim().length > 0
+              ? {
+                  title: rev.sourceTitle?.trim() || rev.fileName || rev.plan.fileName,
+                  text: rev.sourceText,
+                }
+              : undefined,
+          acceptedMergeProposalIds,
+        }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        linkWarnings?: string[];
+      };
+      if (!res.ok || !data.ok) {
+        playVigilUiSound("caution");
+        window.alert(typeof data.error === "string" ? data.error : "Apply failed");
+        return;
+      }
+      if (data.linkWarnings?.length) {
+        window.alert(
+          `Imported. Link notes:\n${data.linkWarnings.slice(0, 8).join("\n")}${data.linkWarnings.length > 8 ? "\n…" : ""}`,
+        );
+      }
+      const boot = await fetchBootstrap(activeSpaceId);
+      if (boot && boot.demo === false && boot.spaceId) {
+        setGraph((g) => mergeBootstrapView(g, boot));
+        if (boot.items.length > 0) {
+          setMaxZIndex((z) => Math.max(z, ...boot.items.map((i) => i.zIndex)));
+        }
+      }
+      playVigilUiSound("celebration");
+      setLoreSmartReview(null);
+      setLoreSmartAcceptedMergeIds({});
+      setLoreSmartTab("structure");
+    } catch {
+      playVigilUiSound("caution");
+      window.alert("Apply request failed");
+    } finally {
+      setLoreImportCommitting(false);
+    }
+  }, [
+    activeSpaceId,
+    centerCoords,
+    loreSmartAcceptedMergeIds,
+    loreSmartIncludeSource,
+    loreSmartReview,
+  ]);
+
   const normalizeStack = useCallback((stackId: string, snapshot: CanvasGraph): CanvasGraph => {
     if (!snapshot?.entities) return snapshot;
     const entities = Object.values(snapshot.entities)
@@ -3895,6 +3983,61 @@ export function ArchitecturalCanvasApp({
           window.alert(parsed.error ?? "Parse failed");
           return;
         }
+
+        const spaceId = activeSpaceIdRef.current;
+        const useSmart =
+          persistNeonRef.current && isUuidLike(spaceId) && parsed.text.trim().length > 0;
+
+        if (useSmart) {
+          setLoreImportDraft(null);
+          setLoreSmartReview(null);
+          setLoreSmartAcceptedMergeIds({});
+          setLoreSmartIncludeSource(true);
+          setLoreSmartTab("structure");
+          setLoreSmartPlanning(true);
+          try {
+            const planRes = await fetch("/api/lore/import/plan", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                text: parsed.text,
+                spaceId,
+                fileName: parsed.fileName,
+                persistReview: true,
+              }),
+            });
+            const planned = (await planRes.json()) as {
+              ok?: boolean;
+              error?: string;
+              plan?: LoreImportPlan;
+            };
+            if (!planRes.ok || !planned.ok || !planned.plan) {
+              window.alert(
+                typeof planned.error === "string"
+                  ? planned.error
+                  : "Smart import plan failed — opening legacy review.",
+              );
+            } else {
+              setLoreSmartReview({
+                plan: planned.plan,
+                sourceText: parsed.text,
+                sourceTitle: parsed.suggestedTitle,
+                fileName: parsed.fileName,
+              });
+              const nextMerge: Record<string, boolean> = {};
+              for (const m of planned.plan.mergeProposals) {
+                nextMerge[m.id] = false;
+              }
+              setLoreSmartAcceptedMergeIds(nextMerge);
+              return;
+            }
+          } catch {
+            window.alert("Smart import plan request failed — opening legacy review.");
+          } finally {
+            setLoreSmartPlanning(false);
+          }
+        }
+
         let entities: LoreImportEntityDraft[] = [];
         let suggestedLinks: LoreImportLinkDraft[] = [];
         try {
@@ -6485,64 +6628,6 @@ export function ArchitecturalCanvasApp({
                   top: `${slot.y}px`,
                   zIndex: z,
                 }}
-                onMouseDown={(event) => {
-                  if (event.button !== 0 || activeTool !== "select" || connectionMode !== "move") return;
-                  const target = event.target as HTMLElement;
-                  if (target.closest("[data-expand-btn='true']")) return;
-                  event.stopPropagation();
-                  recordUndoBeforeMutation();
-                  const mouseCanvasX = (event.clientX - translateX) / scale;
-                  const mouseCanvasY = (event.clientY - translateY) / scale;
-                  const offsets: Record<string, { x: number; y: number }> = {};
-                  entities.forEach((entity) => {
-                    const entitySlot = entity.slots[activeSpaceId];
-                    if (!entitySlot) return;
-                    offsets[entity.id] = {
-                      x: mouseCanvasX - entitySlot.x,
-                      y: mouseCanvasY - entitySlot.y,
-                    };
-                  });
-                  dragOffsetsRef.current = offsets;
-                  draggedNodeIdsRef.current = entities.map((entity) => entity.id);
-                  setDraggedNodeIds(entities.map((entity) => entity.id));
-                  setSelectedNodeIds(entities.map((entity) => entity.id));
-                  dragPointerScreenRef.current = { x: event.clientX, y: event.clientY };
-                  setMaxZIndex((prev) => prev + 1);
-                  stackPointerDragRef.current = {
-                    stackId,
-                    startX: event.clientX,
-                    startY: event.clientY,
-                    moved: false,
-                  };
-                }}
-                onClick={(event) => {
-                  if (connectionMode !== "move") return;
-                  event.stopPropagation();
-                  const target = event.target as HTMLElement;
-                  if (target.closest("[data-expand-btn='true']")) return;
-                  const suppressed = suppressStackOpenRef.current;
-                  if (suppressed) {
-                    if (Date.now() > suppressed.expiresAt) {
-                      suppressStackOpenRef.current = null;
-                    } else if (suppressed.stackId === stackId) {
-                      suppressStackOpenRef.current = null;
-                      return;
-                    }
-                  }
-                  if (draggedNodeIdsRef.current.length > 0) return;
-                  const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
-                  setStackModalEjectCount(0);
-                  setHoveredStackTargetId(null);
-                  setStackModal({
-                    stackId,
-                    orderedIds: [...entities].reverse().map((entity) => entity.id),
-                    originX: rect.left + rect.width / 2,
-                    originY: rect.top + rect.height / 2,
-                    anchorWorld: { x: slot.x, y: slot.y },
-                    stackScreenLeft: rect.left,
-                    stackScreenTop: rect.top,
-                  });
-                }}
               >
                 {focusBounds ? (
                   <div
@@ -6566,18 +6651,91 @@ export function ArchitecturalCanvasApp({
                     }}
                   />
                 ) : null}
-                {entities.map((entity, index) => (
+                {entities.map((entity, index) => {
+                  const isTopStackLayer = index === entities.length - 1;
+                  return (
                   <div
                     key={entity.id}
                     data-node-id={entity.id}
                     data-space-id={activeSpaceId}
                     data-stack-layer="true"
-                    className={`${styles.stackLayer} ${index === entities.length - 1 ? styles.stackLayerTopInteractive : ""}`}
+                    className={`${styles.stackLayer} ${isTopStackLayer ? styles.stackLayerTopInteractive : ""}`}
                     style={{
                       "--stack-x": `${index * 6}px`,
                       "--stack-y": `${index * 6}px`,
                       "--stack-r": `${(index - (entities.length - 1) / 2) * 1.6}deg`,
                     } as React.CSSProperties}
+                    onMouseDown={
+                      isTopStackLayer
+                        ? (event) => {
+                            if (
+                              event.button !== 0 ||
+                              activeTool !== "select" ||
+                              connectionMode !== "move"
+                            )
+                              return;
+                            const t = event.target as HTMLElement;
+                            if (t.closest("[data-expand-btn='true']")) return;
+                            event.stopPropagation();
+                            recordUndoBeforeMutation();
+                            const mouseCanvasX = (event.clientX - translateX) / scale;
+                            const mouseCanvasY = (event.clientY - translateY) / scale;
+                            const offsets: Record<string, { x: number; y: number }> = {};
+                            entities.forEach((e) => {
+                              const entitySlot = e.slots[activeSpaceId];
+                              if (!entitySlot) return;
+                              offsets[e.id] = {
+                                x: mouseCanvasX - entitySlot.x,
+                                y: mouseCanvasY - entitySlot.y,
+                              };
+                            });
+                            dragOffsetsRef.current = offsets;
+                            draggedNodeIdsRef.current = entities.map((e) => e.id);
+                            setDraggedNodeIds(entities.map((e) => e.id));
+                            setSelectedNodeIds(entities.map((e) => e.id));
+                            dragPointerScreenRef.current = { x: event.clientX, y: event.clientY };
+                            setMaxZIndex((prev) => prev + 1);
+                            stackPointerDragRef.current = {
+                              stackId,
+                              startX: event.clientX,
+                              startY: event.clientY,
+                              moved: false,
+                            };
+                          }
+                        : undefined
+                    }
+                    onClick={
+                      isTopStackLayer
+                        ? (event) => {
+                            if (connectionMode !== "move") return;
+                            event.stopPropagation();
+                            const t = event.target as HTMLElement;
+                            if (t.closest("[data-expand-btn='true']")) return;
+                            const suppressed = suppressStackOpenRef.current;
+                            if (suppressed) {
+                              if (Date.now() > suppressed.expiresAt) {
+                                suppressStackOpenRef.current = null;
+                              } else if (suppressed.stackId === stackId) {
+                                suppressStackOpenRef.current = null;
+                                return;
+                              }
+                            }
+                            if (draggedNodeIdsRef.current.length > 0) return;
+                            const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
+                            setStackModalEjectCount(0);
+                            setHoveredStackTargetId(null);
+                            setStackModal({
+                              stackId,
+                              orderedIds: [...entities].reverse().map((e) => e.id),
+                              originX: rect.left + rect.width / 2,
+                              originY: rect.top + rect.height / 2,
+                              anchorWorld: { x: slot.x, y: slot.y },
+                              stackScreenLeft: rect.left,
+                              stackScreenTop: rect.top,
+                            });
+                          }
+                        : undefined
+                    }
                   >
                     {entity.kind === "content" ? (
                       <ArchitecturalNodeCard
@@ -6610,7 +6768,8 @@ export function ArchitecturalCanvasApp({
                       />
                     )}
                   </div>
-                ))}
+                );
+                })}
                 <div className={styles.stackCountBadge}>{entities.length}</div>
               </div>
             );
@@ -6806,6 +6965,19 @@ export function ArchitecturalCanvasApp({
               >
                 <MagnifyingGlass size={18} weight="bold" aria-hidden />
               </ArchitecturalButton>
+              <ArchitecturalButton
+                type="button"
+                size="icon"
+                tone="glass"
+                title="Import PDF or Markdown"
+                aria-label="Import document"
+                onClick={() => {
+                  playVigilUiSound("select");
+                  loreImportFileInputRef.current?.click();
+                }}
+              >
+                <UploadSimple size={18} weight="bold" aria-hidden />
+              </ArchitecturalButton>
             </div>
           </div>
         </div>
@@ -6971,6 +7143,243 @@ export function ArchitecturalCanvasApp({
           tabIndex={-1}
           onChange={onLoreImportFileChange}
         />
+        {loreSmartPlanning ? (
+          <div
+            className="fixed inset-0 z-[1150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
+            role="status"
+            aria-live="polite"
+            aria-label="Building import plan"
+          >
+            <div className="rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-panel)] px-6 py-4 text-sm text-[var(--vigil-label)] shadow-xl">
+              Building import plan…
+            </div>
+          </div>
+        ) : null}
+        {loreSmartReview ? (
+          <div
+            className="fixed inset-0 z-[1150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Smart document import"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget && !loreImportCommitting) {
+                setLoreSmartReview(null);
+                setLoreSmartAcceptedMergeIds({});
+                setLoreSmartTab("structure");
+              }
+            }}
+          >
+            <div className="flex max-h-[min(90vh,760px)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-panel)] p-4 shadow-xl">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="text-sm font-semibold text-[var(--vigil-label)]">
+                    Smart import
+                  </span>
+                  {loreSmartReview.fileName ? (
+                    <p className="text-[10px] text-[var(--vigil-muted)]">{loreSmartReview.fileName}</p>
+                  ) : null}
+                  <p className="text-[10px] text-[var(--vigil-muted)]">
+                    {loreSmartReview.plan.folders.length} folders · {loreSmartReview.plan.notes.length}{" "}
+                    notes · {loreSmartReview.plan.mergeProposals.length} merge suggestions
+                    {loreSmartReview.plan.contradictions.length > 0
+                      ? ` · ${loreSmartReview.plan.contradictions.length} flagged for review`
+                      : ""}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="neutral"
+                    tone="glass"
+                    disabled={loreImportCommitting}
+                    onClick={() => {
+                      setLoreSmartReview(null);
+                      setLoreSmartAcceptedMergeIds({});
+                      setLoreSmartTab("structure");
+                    }}
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    tone="solid"
+                    disabled={loreImportCommitting}
+                    onClick={() => void commitSmartLoreImport()}
+                  >
+                    {loreImportCommitting ? "Applying…" : "Apply import"}
+                  </Button>
+                </div>
+              </div>
+              <div className="mb-3 flex gap-1 border-b border-[var(--vigil-border)] pb-2">
+                <Button
+                  size="xs"
+                  variant={loreSmartTab === "structure" ? "primary" : "neutral"}
+                  tone="glass"
+                  type="button"
+                  onClick={() => setLoreSmartTab("structure")}
+                >
+                  Structure
+                </Button>
+                <Button
+                  size="xs"
+                  variant={loreSmartTab === "merges" ? "primary" : "neutral"}
+                  tone="glass"
+                  type="button"
+                  onClick={() => setLoreSmartTab("merges")}
+                >
+                  Merges
+                </Button>
+              </div>
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+                <label className="flex items-start gap-2 text-[11px] text-[var(--vigil-label)]">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={loreSmartIncludeSource}
+                    onChange={(e) => setLoreSmartIncludeSource(e.target.checked)}
+                  />
+                  <span>Include full source text as a note card</span>
+                </label>
+                {loreSmartTab === "structure" ? (
+                  <div className="space-y-3 text-[11px] text-[var(--vigil-label)]">
+                    {loreSmartReview.plan.folders.length > 0 ? (
+                      <div>
+                        <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-[var(--vigil-muted)]">
+                          Folders
+                        </span>
+                        <ul className="list-inside list-disc space-y-1 text-[var(--vigil-muted)]">
+                          {loreSmartReview.plan.folders.map((f) => (
+                            <li key={f.clientId}>
+                              <span className="text-[var(--vigil-label)]">{f.title}</span>
+                              {f.parentClientId ? (
+                                <span className="text-[var(--vigil-muted)]">
+                                  {" "}
+                                  (under {f.parentClientId})
+                                </span>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    <div>
+                      <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-[var(--vigil-muted)]">
+                        Notes
+                      </span>
+                      <ul className="max-h-[42vh] space-y-2 overflow-y-auto pr-1">
+                        {loreSmartReview.plan.notes.map((n) => (
+                          <li
+                            key={n.clientId}
+                            className="rounded-lg border border-[var(--vigil-border)] bg-black/[0.03] p-2 dark:bg-white/[0.04]"
+                          >
+                            <div className="flex flex-wrap items-baseline justify-between gap-2">
+                              <span className="font-medium">{n.title}</span>
+                              <span className="text-[10px] uppercase text-[var(--vigil-muted)]">
+                                {n.canonicalEntityKind}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-[10px] text-[var(--vigil-muted)]">{n.summary}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    {loreSmartReview.plan.contradictions.length > 0 ? (
+                      <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                        {loreSmartReview.plan.contradictions.length} contradiction(s) were saved to
+                        your review queue for later.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="xs"
+                        variant="neutral"
+                        tone="glass"
+                        type="button"
+                        disabled={loreSmartReview.plan.mergeProposals.length === 0}
+                        onClick={() => {
+                          const next: Record<string, boolean> = {};
+                          for (const m of loreSmartReview.plan.mergeProposals) {
+                            next[m.id] = true;
+                          }
+                          setLoreSmartAcceptedMergeIds(next);
+                        }}
+                      >
+                        Select all merges
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="neutral"
+                        tone="glass"
+                        type="button"
+                        disabled={loreSmartReview.plan.mergeProposals.length === 0}
+                        onClick={() => {
+                          const next: Record<string, boolean> = {};
+                          for (const m of loreSmartReview.plan.mergeProposals) {
+                            next[m.id] = false;
+                          }
+                          setLoreSmartAcceptedMergeIds(next);
+                        }}
+                      >
+                        Clear merges
+                      </Button>
+                    </div>
+                    {loreSmartReview.plan.mergeProposals.length === 0 ? (
+                      <p className="text-[11px] text-[var(--vigil-muted)]">
+                        No merge suggestions — new notes and folders will be created.
+                      </p>
+                    ) : (
+                      <ul className="max-h-[48vh] space-y-3 overflow-y-auto pr-1">
+                        {loreSmartReview.plan.mergeProposals.map((m) => (
+                          <li
+                            key={m.id}
+                            className="rounded-lg border border-[var(--vigil-border)] bg-black/[0.03] p-2 dark:bg-white/[0.04]"
+                          >
+                            <label className="flex cursor-pointer gap-2 text-[11px] text-[var(--vigil-label)]">
+                              <input
+                                type="checkbox"
+                                className="mt-0.5"
+                                checked={!!loreSmartAcceptedMergeIds[m.id]}
+                                onChange={() =>
+                                  setLoreSmartAcceptedMergeIds((p) => ({
+                                    ...p,
+                                    [m.id]: !p[m.id],
+                                  }))
+                                }
+                              />
+                              <span>
+                                Merge into{" "}
+                                <span className="font-medium">{m.targetTitle}</span>
+                                {m.targetSpaceName ? (
+                                  <span className="text-[var(--vigil-muted)]">
+                                    {" "}
+                                    · {m.targetSpaceName}
+                                  </span>
+                                ) : null}
+                                <span className="block text-[10px] text-[var(--vigil-muted)]">
+                                  Strategy: {m.strategy}
+                                  {m.targetItemType || m.targetEntityType
+                                    ? ` · existing type ${m.targetItemType ?? "note"} / ${m.targetEntityType ?? "—"}`
+                                    : ""}
+                                </span>
+                              </span>
+                            </label>
+                            <pre className="mt-2 max-h-36 overflow-auto whitespace-pre-wrap rounded border border-[var(--vigil-border)] bg-[var(--vigil-surface)] p-2 text-[10px] text-[var(--vigil-muted)]">
+                              {m.proposedText}
+                            </pre>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : null}
         <ArchitecturalLinksPanel
           graph={graph}
           activeSpaceId={activeSpaceId}
@@ -6984,7 +7393,7 @@ export function ArchitecturalCanvasApp({
           onClose={() => setGraphOverlayOpen(false)}
           onSelectItem={(id) => focusEntityFromPalette(id)}
         />
-        {loreImportDraft ? (
+        {loreImportDraft && !loreSmartReview ? (
           <div
             className="fixed inset-0 z-[1150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
             role="dialog"
@@ -7534,7 +7943,7 @@ export function ArchitecturalCanvasApp({
 
       <div
         className={`${styles.focusOverlay} ${focusOpen ? styles.focusActive : ""} ${
-          focusOpen && focusCodeTheme ? styles.focusEditorDark : ""
+          focusCodeTheme ? styles.focusEditorDark : ""
         }`}
         onPointerDownCapture={onFocusOverlayPointerDownCapture}
       >

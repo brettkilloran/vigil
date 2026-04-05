@@ -115,6 +115,10 @@ export type SearchFilters = {
   inStack?: boolean;
   sort?: SearchSort;
   limit?: number;
+  /** Items with `entityMeta.campaignEpoch` null or >= this value are included. */
+  minCampaignEpoch?: number;
+  /** When true, exclude items with `entityMeta.loreHistorical === true`. */
+  excludeLoreHistorical?: boolean;
 };
 
 export type SearchRow = {
@@ -149,6 +153,20 @@ function searchWhereClauses(filters: SearchFilters): ReturnType<typeof sql>[] {
   }
   if (filters.inStack === true) clauses.push(sql`${items.stackId} is not null`);
   if (filters.inStack === false) clauses.push(sql`${items.stackId} is null`);
+  if (filters.minCampaignEpoch !== undefined) {
+    const v = filters.minCampaignEpoch;
+    clauses.push(
+      sql`(
+        ${items.entityMeta} ->> 'campaignEpoch' is null
+        or (${items.entityMeta} ->> 'campaignEpoch')::int >= ${v}
+      )`,
+    );
+  }
+  if (filters.excludeLoreHistorical === true) {
+    clauses.push(
+      sql`coalesce((${items.entityMeta} ->> 'loreHistorical')::boolean, false) = false`,
+    );
+  }
   return clauses;
 }
 

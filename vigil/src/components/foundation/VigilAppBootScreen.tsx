@@ -458,7 +458,7 @@ export function VigilAppBootScreen({
             <p className={`${styles.blurb} ${styles.blurbReveal}`} style={{ animationDelay: "1.08s" }}>
               Yet no light enters the panopticon.
               <br />
-              Just flowers, blooming in the vitreous dark.
+              Only flowers, blooming in the vitreous dark.
             </p>
           </div>
         </div>

@@ -37,6 +37,7 @@ function parseFilters(url: URL): SearchFilters {
       ? sortRaw
       : undefined;
   const limitRaw = Number(url.searchParams.get("limit"));
+  const minEpochRaw = Number(url.searchParams.get("minCampaignEpoch"));
   return {
     spaceId: url.searchParams.get("spaceId") ?? undefined,
     itemTypes: parseCsv(url.searchParams.get("types")),
@@ -47,6 +48,8 @@ function parseFilters(url: URL): SearchFilters {
     inStack: parseBool(url.searchParams.get("inStack")),
     sort,
     limit: Number.isFinite(limitRaw) ? limitRaw : undefined,
+    minCampaignEpoch: Number.isFinite(minEpochRaw) ? Math.floor(minEpochRaw) : undefined,
+    excludeLoreHistorical: parseBool(url.searchParams.get("excludeLoreHistorical")),
   };
 }
 
