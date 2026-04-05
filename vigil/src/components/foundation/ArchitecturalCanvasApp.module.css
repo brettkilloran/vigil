@@ -103,13 +103,17 @@
   will-change: filter;
   /* Solid plane so the dot grid reads consistently under cards and overlays. */
   background-color: var(--bg-base);
-  /* ~1 CSS px dot so subpixel rounding doesn’t erase the grid on HiDPI. */
+  /*
+   * Dot grid in *world* units (40): scales with canvas zoom via --viewport-grid-scale
+   * (set inline from ArchitecturalCanvasApp). Matches translate(tx,ty) scale(s), origin 0 0.
+   */
+  --viewport-grid-scale: 1;
   background-image: radial-gradient(
     circle at center,
-    var(--sem-grid-dot-strong) 0.9px,
-    transparent 1.1px
+    var(--sem-grid-dot-strong) calc(0.9px * var(--viewport-grid-scale)),
+    transparent calc(1.1px * var(--viewport-grid-scale))
   );
-  background-size: 40px 40px;
+  background-size: calc(40px * var(--viewport-grid-scale)) calc(40px * var(--viewport-grid-scale));
   background-repeat: repeat;
   background-position: center center;
 }
@@ -149,10 +153,10 @@
 .viewport.viewportAmbientOff {
   background-image: radial-gradient(
     circle at center,
-    var(--sem-grid-dot-strong) 0.9px,
-    transparent 1.1px
+    var(--sem-grid-dot-strong) calc(0.9px * var(--viewport-grid-scale)),
+    transparent calc(1.1px * var(--viewport-grid-scale))
   );
-  background-size: 40px 40px;
+  background-size: calc(40px * var(--viewport-grid-scale)) calc(40px * var(--viewport-grid-scale));
   background-repeat: repeat;
   background-position: center center;
 }
@@ -164,10 +168,10 @@
 .viewport.viewportAmbientOff.deepSpace {
   background-image: radial-gradient(
     circle at center,
-    var(--sem-grid-dot-strong) 0.9px,
-    transparent 1.1px
+    var(--sem-grid-dot-strong) calc(0.9px * var(--viewport-grid-scale)),
+    transparent calc(1.1px * var(--viewport-grid-scale))
   );
-  background-size: 40px 40px;
+  background-size: calc(40px * var(--viewport-grid-scale)) calc(40px * var(--viewport-grid-scale));
   background-repeat: repeat;
 }
 
@@ -182,17 +186,17 @@
   background-image:
     radial-gradient(
       circle at center,
-      var(--sem-grid-dot-strong) 0.9px,
-      transparent 1.1px
+      var(--sem-grid-dot-strong) calc(0.9px * var(--viewport-grid-scale)),
+      transparent calc(1.1px * var(--viewport-grid-scale))
     ),
     radial-gradient(
       circle at center,
-      color-mix(in oklch, var(--accent) 14%, transparent) 0 1.25px,
-      transparent 1.25px 100%
+      color-mix(in oklch, var(--accent) 14%, transparent) 0 calc(1.25px * var(--viewport-grid-scale)),
+      transparent calc(1.25px * var(--viewport-grid-scale)) 100%
     );
   background-size:
-    40px 40px,
-    200px 200px;
+    calc(40px * var(--viewport-grid-scale)) calc(40px * var(--viewport-grid-scale)),
+    calc(200px * var(--viewport-grid-scale)) calc(200px * var(--viewport-grid-scale));
   background-repeat: repeat, repeat;
   background-position:
     center center,

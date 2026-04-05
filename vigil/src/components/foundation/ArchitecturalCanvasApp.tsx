@@ -5868,6 +5868,7 @@ export function ArchitecturalCanvasApp({
         onWheel={onWheel}
         style={{
           backgroundPosition: `${translateX}px ${translateY}px`,
+          ["--viewport-grid-scale" as string]: String(scale),
           ["--connection-cursor" as string]:
             connectionMode === "cut"
               ? CONNECTION_CUT_CURSOR

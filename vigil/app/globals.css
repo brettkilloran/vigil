@@ -64,9 +64,9 @@
 
   /* Foundation shell — ArchitecturalCanvasApp (all literals route through primitives) */
   --sem-grid-color-deep: oklch(1 0 0 / 0.02);
-  /* Viewport dot grid; ~half prior mix for subtler plane (was 11% / 6.5%). */
-  --sem-grid-dot-strong: color-mix(in oklch, var(--sys-color-white) 5.5%, transparent);
-  --sem-grid-dot-soft: color-mix(in oklch, var(--sys-color-white) 3.25%, transparent);
+  /* Viewport dot grid; ~half prior mix for subtler plane (was 11% / 6.5%). +5% rel. lightness. */
+  --sem-grid-dot-strong: color-mix(in oklch, var(--sys-color-white) 5.78%, transparent);
+  --sem-grid-dot-soft: color-mix(in oklch, var(--sys-color-white) 3.41%, transparent);
   --sem-vignette-stop-4: color-mix(in oklch, var(--sys-color-black) 4%, transparent);
   --sem-vignette-stop-12: color-mix(in oklch, var(--sys-color-black) 12%, transparent);
   --sem-vignette-stop-3: color-mix(in oklch, var(--sys-color-black) 3%, transparent);
