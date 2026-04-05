@@ -12,6 +12,7 @@ const preview: Preview = {
           ["Heartgarden", "Overview"],
           ["Heartgarden", "Design System"],
           ["Heartgarden", "Architectural Shell"],
+          ["Heartgarden", "Experiments"],
           "*",
         ],
       },

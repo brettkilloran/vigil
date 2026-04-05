@@ -88,6 +88,7 @@
     "eslint-config-next": "16.2.2",
     "eslint-plugin-playwright": "^2.10.1",
     "eslint-plugin-storybook": "^10.3.4",
+    "html2canvas": "^1.4.1",
     "jsdom": "^26.1.0",
     "playwright": "^1.59.1",
     "storybook": "^10.3.4",
