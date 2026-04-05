@@ -1,0 +1,202 @@
+/*
+ * Full-screen boot / preload (AESTHETICS // FLOW structure, Vigil copy).
+ * Transparent so VigilFlowRevealOverlay + viewport dot grid read through; chrome is hidden in parent.
+ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: clamp(1.25rem, 4vw, 3rem);
+  margin: 0;
+  border: none;
+  background-color: transparent;
+  color: var(--sys-color-white);
+  font-family: var(--font-vigil-boot-display, var(--font-geist-sans), serif);
+  -webkit-font-smoothing: antialiased;
+  pointer-events: auto;
+  opacity: 1;
+  transition: opacity 720ms cubic-bezier(0.22, 0.82, 0.16, 1);
+}
+
+/* No vignette / grain layers: they band on sRGB and grey-wash the stack. Legibility = text-shadow only (same idea as rest of app). */
+
+.overlayExiting {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mono {
+  font-family: var(--font-vigil-boot-mono, var(--font-geist-mono), monospace);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  font-weight: 400;
+}
+
+.metaTop {
+  position: absolute;
+  top: clamp(1.25rem, 4vw, 3rem);
+  left: clamp(1.25rem, 4vw, 3rem);
+  right: clamp(1.25rem, 4vw, 3rem);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  z-index: 2;
+  text-shadow:
+    0 0 20px color-mix(in oklch, var(--bg-base) 85%, transparent),
+    0 1px 3px color-mix(in oklch, var(--sys-color-black) 55%, transparent);
+}
+
+.metaBottom {
+  position: absolute;
+  bottom: clamp(1.25rem, 4vw, 3rem);
+  left: clamp(1.25rem, 4vw, 3rem);
+  right: clamp(1.25rem, 4vw, 3rem);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  z-index: 2;
+  text-shadow:
+    0 0 20px color-mix(in oklch, var(--bg-base) 85%, transparent),
+    0 1px 3px color-mix(in oklch, var(--sys-color-black) 55%, transparent);
+}
+
+.metaBottomLeft {
+  max-width: 220px;
+  line-height: 1.45;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.kicker {
+  margin-bottom: 0.75rem;
+  text-shadow:
+    0 0 18px color-mix(in oklch, var(--bg-base) 80%, transparent),
+    0 1px 2px color-mix(in oklch, var(--sys-color-black) 50%, transparent);
+}
+
+.title {
+  font-size: clamp(2.75rem, 9vw, 7.5rem);
+  font-weight: 300;
+  line-height: 0.92;
+  margin: 0;
+  opacity: 1;
+  text-shadow:
+    0 0 28px color-mix(in oklch, var(--bg-base) 75%, transparent),
+    0 2px 14px color-mix(in oklch, var(--sys-color-black) 45%, transparent);
+}
+
+.titleItalic {
+  font-style: italic;
+  font-weight: 400;
+}
+
+.lineDecoration {
+  width: 1px;
+  height: min(100px, 14vh);
+  margin: 1.75rem 0;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in oklch, var(--sys-color-white) 72%, transparent),
+    transparent
+  );
+}
+
+.blurb {
+  max-width: 28rem;
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  font-style: italic;
+  opacity: 0.88;
+  text-shadow:
+    0 0 16px color-mix(in oklch, var(--bg-base) 82%, transparent),
+    0 1px 3px color-mix(in oklch, var(--sys-color-black) 40%, transparent);
+}
+
+.activateWrap {
+  margin-top: 2.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.activateBtn {
+  font-family: var(--font-vigil-boot-mono, var(--font-geist-mono), monospace) !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  font-size: 0.7rem !important;
+  padding: 0.75rem 2rem !important;
+  border-radius: 0 !important;
+  border-color: color-mix(in oklch, var(--sys-color-white) 32%, transparent) !important;
+  background: transparent !important;
+  color: var(--sys-color-white) !important;
+  transition:
+    background 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.35s ease !important;
+}
+
+.activateBtn:hover:not(:disabled) {
+  background: var(--sys-color-white) !important;
+  color: var(--bg-base) !important;
+  border-color: var(--sys-color-white) !important;
+}
+
+.activateBtn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.waitHint {
+  margin: 0;
+  font-family: var(--font-vigil-boot-mono, var(--font-geist-mono), monospace);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+
+.fadeIn {
+  animation: vigilBootFade 1.85s ease forwards;
+  opacity: 0;
+}
+
+@keyframes vigilBootFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay {
+    transition: opacity 0.12s ease;
+  }
+
+  .fadeIn {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

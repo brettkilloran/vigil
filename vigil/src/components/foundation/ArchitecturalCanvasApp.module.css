@@ -203,6 +203,14 @@
     center center;
 }
 
+/* Activate boot: solid plane only (no world dot grid behind transparent overlay). */
+.viewport.viewportBootNoGrid,
+.viewport.viewportBootNoGrid.deepSpace,
+.viewport.viewportBootNoGrid.viewportAmbientOff,
+.viewport.viewportBootNoGrid.viewportAmbientOff.deepSpace {
+  background-image: none;
+}
+
 .viewport::after {
   content: "";
   position: absolute;
@@ -305,6 +313,15 @@
   pointer-events: none;
   transition: filter 0.28s ease;
   will-change: filter;
+}
+
+/* Full-screen boot uses a transparent plane so flow (z 85) + viewport show through. */
+.chromeLayerBootSuppressed {
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity 0.24s ease,
+    visibility 0.24s ease;
 }
 
 .nodePlacement {

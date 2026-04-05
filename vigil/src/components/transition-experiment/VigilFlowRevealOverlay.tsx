@@ -107,7 +107,27 @@ void main() {
 
   float dist = length(uv - vec2(0.5, 0.5));
   float threshold = u_progress * 1.5;
-  float liquidMask = smoothstep(threshold - 0.35, threshold + 0.35, liquidRaw * 0.5 + 0.5 + dist);
+  /*
+   * Low threshold: smoothstep(-0.35, 0.35, reveal) puts reveal≈0 at the band midpoint →
+   * liquidMask≈0.5 everywhere = full-opacity chroma + diagonal flow reads as rainbow stripes.
+   * Bias lo/hi so reveal=0 maps near 0 until progress advances.
+   */
+  float reveal = liquidRaw * 0.5 + 0.5 + dist;
+  float loM = threshold - 0.35;
+  float hiM = threshold + 0.35;
+  float earlyBand = 1.0 - step(0.28, threshold);
+  float loMF = mix(loM, max(loM, 0.0), earlyBand);
+  float hiMF = mix(hiM, max(hiM, 0.58), earlyBand);
+  float liquidMask = smoothstep(loMF, hiMF, reveal);
+
+  float loRB = threshold - 0.3;
+  float hiRB = threshold + 0.3;
+  float loRBF = mix(loRB, max(loRB, 0.0), earlyBand);
+  float hiRBF = mix(hiRB, max(hiRB, 0.52), earlyBand);
+
+  /* Ramp saturated / diagonal chroma after preload; extra cut during bootstrap (u_softBoot). */
+  float chromaRamp = smoothstep(0.05, 0.42, u_progress);
+  float chromaSoft = chromaRamp * mix(1.0, 0.22, u_softBoot);
 
   vec3 glitchLayer = digitalGlitchPass(uv, liquidMask, 88.0, u_time);
 
@@ -116,10 +136,11 @@ void main() {
   float coarseNoise = hash21(coarseCoord * 2.0 + floor(u_time));
   float coarseBlock = step(liquidMask, 0.5 + coarseNoise * 0.3) * liquidMask;
 
-  /* CA: horizontal RGB split + wobble — stronger than “opal” baseline, still no rainbow wash. */
+  /* CA: horizontal RGB split + wobble — ease in with progress; less split during early band. */
   float turbulence = 1.0 + abs(liquidRaw) * 2.45;
   float wob = snoise(warpedUV * 1.2 + u_time * 0.09) * 0.014;
   vec2 ca = vec2(0.026 + wob, wob * 0.52) * turbulence;
+  ca *= mix(1.0, 0.48, earlyBand) * mix(1.0, 0.55, 1.0 - chromaRamp);
 
   float maskR;
   {
@@ -128,7 +149,7 @@ void main() {
     vec2 wR = uvR;
     wR.x *= aspect;
     float fR = fbm(wR + vec2(u_time * 0.04));
-    maskR = smoothstep(threshold - 0.3, threshold + 0.3, fR * 0.5 + 0.5 + distR);
+    maskR = smoothstep(loRBF, hiRBF, fR * 0.5 + 0.5 + distR);
   }
 
   float maskG = liquidMask;
@@ -140,7 +161,7 @@ void main() {
     vec2 wB = uvB;
     wB.x *= aspect;
     float fB = fbm(wB + vec2(u_time * 0.04));
-    maskB = smoothstep(threshold - 0.3, threshold + 0.3, fB * 0.5 + 0.5 + distB);
+    maskB = smoothstep(loRBF, hiRBF, fB * 0.5 + 0.5 + distB);
   }
 
   float fringeAmount = abs(maskR - maskG) + abs(maskB - maskG);
@@ -161,7 +182,11 @@ void main() {
   vec3 toneSage = vec3(0.16, 0.26, 0.22);
   vec3 bodyHue = mix(mix(toneSteel, toneWine, terrA), toneSage, terrB * 0.55);
 
-  float wPh = warpedUV.y * 14.0 + warpedUV.x * 9.0 + u_time * 2.1;
+  /* Mostly horizontal phase early (less diagonal rainbow); add X drift as chroma ramps. */
+  float wPh =
+    warpedUV.y * 14.0 +
+    warpedUV.x * mix(2.5, 9.0, chromaRamp) +
+    u_time * 2.1;
   float rWv = sin(wPh + 0.55);
   float gWv = sin(wPh);
   float bWv = sin(wPh - 0.55);
@@ -185,15 +210,15 @@ void main() {
   vec3 rim = rimBase * rimJitter;
 
   vec3 chromaticLiquid = ink * maskG;
-  chromaticLiquid += bodyHue * liquidMask * 0.22;
-  chromaticLiquid += flowChroma * liquidMask * 0.42;
-  chromaticLiquid += rim * max(edgeR, edgeB) * 0.88;
-  chromaticLiquid += rim * fringeAmount * 0.34;
+  chromaticLiquid += bodyHue * liquidMask * 0.22 * mix(0.4, 1.0, chromaRamp);
+  chromaticLiquid += flowChroma * liquidMask * 0.42 * chromaSoft;
+  chromaticLiquid += rim * max(edgeR, edgeB) * 0.88 * chromaSoft;
+  chromaticLiquid += rim * fringeAmount * 0.34 * chromaSoft;
 
   float redLeads = smoothstep(0.0, 0.14, maskR - maskB);
   float blueLeads = smoothstep(0.0, 0.14, maskB - maskR);
-  chromaticLiquid += vec3(0.10, 0.30, 0.36) * blueLeads * liquidMask * 0.26;
-  chromaticLiquid += vec3(0.34, 0.15, 0.28) * redLeads * liquidMask * 0.26;
+  chromaticLiquid += vec3(0.10, 0.30, 0.36) * blueLeads * liquidMask * 0.26 * chromaSoft;
+  chromaticLiquid += vec3(0.34, 0.15, 0.28) * redLeads * liquidMask * 0.26 * chromaSoft;
 
   float coreFactor = liquidMask * (1.0 - fringeAmount);
   vec3 coreCool = vec3(0.028, 0.034, 0.046);
@@ -206,17 +231,18 @@ void main() {
 
   vec3 finalColor = chromaticLiquid + glowRGB;
   finalColor += vec3(liquidRaw * 0.0035);
-  finalColor += glitchLayer * mix(0.52, 0.11, u_softBoot);
+  finalColor += glitchLayer * mix(0.52, 0.11, u_softBoot) * chromaSoft;
 
   /* CRT scanlines: liquid-only; pitch + phase drift for visible motion (no second CSS layer). */
   float linePitch = 4.0 + sin(u_time * 1.22) * 0.65;
   float scanPhase =
     6.2831853 * uv.y * u_resolution.y / linePitch + u_time * 3.85;
-  scanPhase += sin(uv.y * 14.0 + u_time * 2.35) * 0.55;
+  scanPhase += sin(uv.y * 14.0 + u_time * 2.35) * 0.55 * chromaRamp;
   float scanBand = sin(scanPhase) * 0.5 + 0.5;
   scanBand = smoothstep(0.18, 0.82, scanBand);
   float scanMul = mix(0.82, 1.0, scanBand);
-  float scanWeight = liquidMask * mix(0.68, 0.3, u_softBoot);
+  float scanWeight =
+    liquidMask * mix(0.68, 0.3, u_softBoot) * mix(0.2, 1.0, chromaRamp);
   finalColor *= mix(1.0, scanMul, scanWeight);
 
   float finalAlpha = (maskR + maskG + maskB) / 3.0;
@@ -248,7 +274,8 @@ const IS_DEV = process.env.NODE_ENV === "development";
 
 export type VigilFlowRevealOverlayProps = {
   scenario: "default" | "nested" | "corrupt";
-  bootContentReady: boolean;
+  /** After the user activates (or non-default mount): full reveal target 1; before that, ambient ~nav idle. */
+  sessionActivated: boolean;
   navActive: boolean;
   /** True while default-scenario bootstrap fetch has not finished — dims the overlay. */
   bootstrapPending?: boolean;
@@ -256,7 +283,7 @@ export type VigilFlowRevealOverlayProps = {
 
 export function VigilFlowRevealOverlay({
   scenario,
-  bootContentReady,
+  sessionActivated,
   navActive,
   bootstrapPending = false,
 }: VigilFlowRevealOverlayProps) {
@@ -272,8 +299,8 @@ export function VigilFlowRevealOverlay({
     return () => mq.removeEventListener("change", u);
   }, []);
 
-  const bootContentReadyRef = useRef(bootContentReady);
-  bootContentReadyRef.current = bootContentReady;
+  const sessionActivatedRef = useRef(sessionActivated);
+  sessionActivatedRef.current = sessionActivated;
 
   const navActiveRef = useRef(navActive);
   navActiveRef.current = navActive;
@@ -283,6 +310,7 @@ export function VigilFlowRevealOverlay({
 
   const targetProgressRef = useRef(0);
   const progressRef = useRef(0);
+  const prevSessionActivatedRef = useRef(false);
   const startTimeRef = useRef(0);
   const rafRef = useRef(0);
 
@@ -296,13 +324,28 @@ export function VigilFlowRevealOverlay({
     posBuffer: WebGLBuffer;
   } | null>(null);
 
+  /*
+   * Pre-activate (boot copy): same shader target as idle canvas after load — progress 1 (thin edge wisps).
+   * Nav transitions alone use 0.18. Activate edge: snap progress 0 then ease to 1 for the wipe.
+   */
   useEffect(() => {
-    if (skipBoot) return;
-    if (reduceMotion) return;
-    if (navActive) targetProgressRef.current = 0.18;
-    else if (bootContentReady) targetProgressRef.current = 1;
-    else targetProgressRef.current = 0;
-  }, [navActive, bootContentReady, skipBoot, reduceMotion]);
+    if (skipBoot || reduceMotion) return;
+    if (navActive) {
+      targetProgressRef.current = 0.18;
+      prevSessionActivatedRef.current = sessionActivated;
+      return;
+    }
+    if (!sessionActivated) {
+      targetProgressRef.current = 1;
+      prevSessionActivatedRef.current = false;
+      return;
+    }
+    if (!prevSessionActivatedRef.current) {
+      progressRef.current = 0;
+    }
+    targetProgressRef.current = 1;
+    prevSessionActivatedRef.current = true;
+  }, [navActive, sessionActivated, skipBoot, reduceMotion]);
 
   const disposeGl = useCallback(() => {
     const g = glRef.current;
@@ -359,9 +402,11 @@ export function VigilFlowRevealOverlay({
     glRef.current = { gl, program, timeLoc, progressLoc, resLoc, softBootLoc, posBuffer: positionBuffer };
 
     startTimeRef.current = Date.now();
-    const initiallyReady = bootContentReadyRef.current;
-    targetProgressRef.current = initiallyReady ? 1 : 0;
-    progressRef.current = initiallyReady ? 1 : 0;
+    const initiallyActivated = sessionActivatedRef.current;
+    prevSessionActivatedRef.current = initiallyActivated;
+    /* Idle behind boot = progress 1 (matches post-reveal canvas); Activate replays from 0. */
+    targetProgressRef.current = 1;
+    progressRef.current = 1;
 
     let width = 0;
     let height = 0;

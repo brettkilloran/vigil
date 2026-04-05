@@ -21,6 +21,7 @@ import {
 
 import { VigilFlowRevealOverlay } from "@/src/components/transition-experiment/VigilFlowRevealOverlay";
 
+import { VigilAppBootScreen } from "./VigilAppBootScreen";
 import styles from "./ArchitecturalCanvasApp.module.css";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
@@ -909,6 +910,12 @@ export function ArchitecturalCanvasApp({
   const [navTransitionActive, setNavTransitionActive] = useState(false);
   const [canvasEffectsEnabled, setCanvasEffectsEnabled] = useState(true);
   const canvasEffectsEnabledRef = useRef(true);
+
+  /** Default route: user must click Activate; flow runs 0→1 only then. Nested/corrupt: no gate. */
+  const [canvasSessionActivated, setCanvasSessionActivated] = useState(false);
+  /** Boot UI removed after exit animation (or immediately if reduced motion). */
+  const [bootLayerDismissed, setBootLayerDismissed] = useState(() => scenario !== "default");
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   const [focusOpen, setFocusOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -2467,6 +2474,22 @@ export function ArchitecturalCanvasApp({
       setNavTransitionActive(false);
     }
   }, [canvasEffectsEnabled, navTransitionActive]);
+
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setPrefersReducedMotion(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (scenario !== "default") return;
+    if (!prefersReducedMotion) return;
+    setCanvasSessionActivated(true);
+    setBootLayerDismissed(true);
+  }, [scenario, prefersReducedMotion]);
 
   const centerCoords = useCallback(() => {
     return {
@@ -5837,7 +5860,7 @@ export function ArchitecturalCanvasApp({
     setGalleryDimsLabel("— × —");
   }, [galleryOpen, galleryBodyFingerprint]);
 
-  const viewportRevealReady = useMemo(() => {
+  const technicalViewportReady = useMemo(() => {
     const bootstrapOk = scenario !== "default" || canvasBootstrapResolved;
     if (!canvasEffectsEnabled && scenario === "default") {
       return bootstrapOk;
@@ -5845,13 +5868,29 @@ export function ArchitecturalCanvasApp({
     return canvasSurfaceReady && bootstrapOk;
   }, [canvasEffectsEnabled, canvasSurfaceReady, canvasBootstrapResolved, scenario]);
 
+  const viewportRevealReady = useMemo(() => {
+    if (scenario !== "default") return technicalViewportReady;
+    return technicalViewportReady && canvasSessionActivated;
+  }, [scenario, technicalViewportReady, canvasSessionActivated]);
+
+  const bootChromeSuppressed =
+    scenario === "default" && !prefersReducedMotion && !bootLayerDismissed;
+
   return (
-    <div
-      ref={shellRef}
-      className={`${styles.shell} ${focusOpen || galleryOpen ? styles.shellBackdropBlurActive : ""} ${
-        focusOpen ? styles.shellFocusDockBleed : ""
-      }`}
-    >
+    <>
+      {scenario === "default" && !prefersReducedMotion && !bootLayerDismissed ? (
+        <VigilAppBootScreen
+          technicalReady={technicalViewportReady}
+          onActivate={() => setCanvasSessionActivated(true)}
+          onExitComplete={() => setBootLayerDismissed(true)}
+        />
+      ) : null}
+      <div
+        ref={shellRef}
+        className={`${styles.shell} ${focusOpen || galleryOpen ? styles.shellBackdropBlurActive : ""} ${
+          focusOpen ? styles.shellFocusDockBleed : ""
+        }`}
+      >
       <div
         ref={viewportRef}
         className={`${styles.viewport} ${
@@ -5860,7 +5899,7 @@ export function ArchitecturalCanvasApp({
           !canvasEffectsEnabled ? ` ${styles.viewportAmbientOff}` : ""
         }${stackModal ? ` ${styles.viewportStackModalOpen}` : ""} ${
           connectionMode !== "move" ? styles.viewportConnectionMode : ""
-        }`}
+        }${bootChromeSuppressed ? ` ${styles.viewportBootNoGrid}` : ""}`}
         aria-busy={!viewportRevealReady}
         data-canvas-ready={viewportRevealReady ? "true" : "false"}
         onMouseDown={onViewportMouseDown}
@@ -6272,12 +6311,14 @@ export function ArchitecturalCanvasApp({
         {canvasEffectsEnabled ? (
           <VigilFlowRevealOverlay
             scenario={scenario}
-            bootContentReady={viewportRevealReady}
+            sessionActivated={scenario !== "default" || canvasSessionActivated}
             navActive={navTransitionActive}
             bootstrapPending={scenario === "default" && !canvasBootstrapResolved}
           />
         ) : null}
-        <div className={styles.chromeLayer}>
+        <div
+          className={`${styles.chromeLayer}${bootChromeSuppressed ? ` ${styles.chromeLayerBootSuppressed}` : ""}`}
+        >
         {parentSpaceId ? (
           <ArchitecturalParentExitThreshold
             ref={parentDropRef}
@@ -7124,6 +7165,7 @@ export function ArchitecturalCanvasApp({
         aria-hidden
         onChange={onArchitecturalMediaFile}
       />
-    </div>
+      </div>
+    </>
   );
 }
