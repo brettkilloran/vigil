@@ -69,6 +69,16 @@ function pauseAll(elements: HTMLAudioElement[]): void {
   }
 }
 
+/** Avoid InvalidStateError when catch + effect cleanup both close, or React Strict Mode remounts. */
+function safeCloseAudioContext(ctx: AudioContext | null): void {
+  if (!ctx || ctx.state === "closed") return;
+  try {
+    void ctx.close();
+  } catch {
+    /* ignore */
+  }
+}
+
 function cancelGainNode(g: GainNode, ctx: AudioContext): void {
   const t = ctx.currentTime;
   g.gain.cancelScheduledValues(t);
@@ -326,7 +336,7 @@ export function VigilBootAmbientAudio({
     } catch {
       webGainsRef.current = null;
       if (ctx) {
-        void ctx.close();
+        safeCloseAudioContext(ctx);
         audioCtxRef.current = null;
       }
       for (const el of elements) {
@@ -344,7 +354,7 @@ export function VigilBootAmbientAudio({
       clearFadeOutTimer();
       webGainsRef.current = null;
       if (ctx) {
-        void ctx.close();
+        safeCloseAudioContext(ctx);
         audioCtxRef.current = null;
       }
     };

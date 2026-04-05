@@ -90,7 +90,6 @@ function getSndInstance(): Promise<SndInstance | null> {
 }
 
 export function playVigilUiSound(kind: VigilUiSoundKind): void {
-  if (!VIGIL_UI_SOUNDS_ENABLED) return;
   if (!allowUiSounds()) return;
   void getSndInstance().then((snd) => {
     if (!snd || !allowUiSounds()) return;

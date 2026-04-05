@@ -4754,18 +4754,14 @@ export function ArchitecturalCanvasApp({
       if (activeTool === "pan" || spacePanRef.current) return;
       if (event.button !== 0) return;
       if (target.closest("[data-stack-container='true']")) return;
-      const nodeIdForHit = entity?.dataset.nodeId;
-      const hitEntity = nodeIdForHit ? graph.entities[nodeIdForHit] : undefined;
-      /* Folder flap (.folderFront) is the primary double-click target; arming drag here
-       * breaks native dblclick. Drag the folder from the tab/back (top) hit area only. */
-      const inFolderFront =
-        hitEntity?.kind === "folder" && !!target.closest(`.${styles.folderFront}`);
+      /* Folder face (.folderFront) must arm drag/select like other cards; only the title
+       * editor, chrome buttons, and note bodies opt out. Double-click to open uses React
+       * onDoubleClick on ArchitecturalFolderCard (with stopPropagation). */
       const inContent =
         target.closest(`.${styles.nodeBody}`) ||
         target.closest(`.${styles.nodeBtn}`) ||
         target.closest(`.${styles.folderTitleInput}`) ||
-        target.closest("[data-folder-open-btn='true']") ||
-        inFolderFront;
+        target.closest("[data-folder-open-btn='true']");
 
       if (entity && !inContent) {
         const nodeId = entity.dataset.nodeId;
