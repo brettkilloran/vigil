@@ -16,7 +16,7 @@ const surface = {
 } as const;
 
 const meta: Meta<typeof ArchitecturalTooltip> = {
-  title: "Heartgarden/Design System/Tooltip",
+  title: "Heartgarden/UI/Tooltip",
   component: ArchitecturalTooltip,
   parameters: {
     layout: "fullscreen",

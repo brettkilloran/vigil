@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { ArchitecturalNodeBody } from "@/src/components/foundation/ArchitecturalNodeCard";
 
 const meta: Meta<typeof ArchitecturalNodeBody> = {
-  title: "Heartgarden/Architectural Shell/Node body",
+  title: "Heartgarden/UI/Node body",
   component: ArchitecturalNodeBody,
   args: {
     html: "<h1>The ring does not forgive nostalgia.</h1><p>Body content with rich text html.</p>",

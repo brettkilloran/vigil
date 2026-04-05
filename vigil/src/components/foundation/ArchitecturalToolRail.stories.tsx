@@ -7,7 +7,7 @@ import { ArchitecturalToolRail } from "@/src/components/foundation/Architectural
 import type { CanvasTool } from "@/src/components/foundation/architectural-types";
 
 const meta: Meta<typeof ArchitecturalToolRail> = {
-  title: "Heartgarden/Architectural Shell/Tool rail",
+  title: "Heartgarden/UI/Tool rail",
   component: ArchitecturalToolRail,
   args: {
     showSelectPan: true,

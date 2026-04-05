@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { ArchitecturalNodeTape } from "@/src/components/foundation/ArchitecturalNodeCard";
 
 const meta: Meta<typeof ArchitecturalNodeTape> = {
-  title: "Heartgarden/Architectural Shell/Node tape",
+  title: "Heartgarden/UI/Node tape",
   component: ArchitecturalNodeTape,
   args: {
     variant: "clear",

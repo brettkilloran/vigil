@@ -1,0 +1,106 @@
+"use client";
+
+import type { Meta, StoryObj } from "@storybook/nextjs";
+import { fn } from "storybook/test";
+
+import { CommandPalette } from "@/src/components/ui/CommandPalette";
+import type { RecentPaletteFolder } from "@/src/hooks/use-recent-folders";
+import type { RecentPaletteItem } from "@/src/hooks/use-recent-items";
+
+const now = Date.now();
+
+const mockRecentItems: RecentPaletteItem[] = [
+  {
+    id: "item-note-1",
+    title: "BRIEF // THE SECOND CHANCE",
+    itemType: "note",
+    spaceId: "root",
+    spaceName: "Root",
+    updatedAt: now,
+  },
+  {
+    id: "item-code-1",
+    title: "DAT // sing_1r_boot.ts",
+    itemType: "note",
+    spaceId: "root",
+    spaceName: "Root",
+    updatedAt: now - 60_000,
+  },
+];
+
+const mockRecentFolders: RecentPaletteFolder[] = [
+  {
+    id: "folder-1",
+    title: "Covenant dossier",
+    parentSpaceId: "root",
+    parentSpaceName: "Root",
+    updatedAt: now,
+  },
+];
+
+const meta = {
+  title: "Heartgarden/UI/Command palette",
+  component: CommandPalette,
+  parameters: {
+    layout: "fullscreen",
+    docs: {
+      description: {
+        component:
+          "Cmd+K palette: recent items, folders, spaces, and actions. Remote suggestions load only after two+ characters (hits `/api/search/suggest` in production).",
+      },
+    },
+  },
+} satisfies Meta<typeof CommandPalette>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+export const Open: Story = {
+  render: () => (
+    <CommandPalette
+      open
+      onClose={fn()}
+      currentSpaceId="root"
+      items={[
+        {
+          id: "pal-1",
+          title: "Field orders checklist",
+          itemType: "checklist",
+          spaceId: "root",
+          spaceName: "Root",
+          snippet: "Escort datashard to terminus",
+        },
+        {
+          id: "pal-2",
+          title: "Caliginia sphere",
+          itemType: "image",
+          spaceId: "root",
+          spaceName: "Root",
+        },
+      ]}
+      spaces={[
+        { id: "root", name: "Root", pathLabel: "/" },
+        { id: "space-project-thesis", name: "Covenant dossier", pathLabel: "/Covenant dossier" },
+      ]}
+      actions={[
+        {
+          id: "new-note",
+          label: "New note",
+          keywords: ["create", "note"],
+        },
+        {
+          id: "new-folder",
+          label: "New folder",
+          keywords: ["create", "folder"],
+        },
+      ]}
+      recentItems={mockRecentItems}
+      recentFolders={mockRecentFolders}
+      onSelectItem={fn()}
+      onSelectSpace={fn()}
+      onRecordRecentItem={fn()}
+      onOpenRecentFolder={fn()}
+      onRunAction={fn()}
+    />
+  ),
+};

@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { ArchitecturalToolButton } from "@/src/components/foundation/ArchitecturalToolRail";
 
 const meta: Meta<typeof ArchitecturalToolButton> = {
-  title: "Heartgarden/Architectural Shell/Tool button",
+  title: "Heartgarden/UI/Tool button",
   component: ArchitecturalToolButton,
   args: {
     label: "Select",

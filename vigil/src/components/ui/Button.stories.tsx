@@ -7,7 +7,7 @@ import { expect, userEvent, within } from "storybook/test";
 import { Button } from "@/src/components/ui/Button";
 
 const meta: Meta<typeof Button> = {
-  title: "Heartgarden/Design System/Button",
+  title: "Heartgarden/UI/Button",
   component: Button,
   args: {
     variant: "neutral",

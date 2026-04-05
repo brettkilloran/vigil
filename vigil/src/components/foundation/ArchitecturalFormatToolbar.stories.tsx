@@ -9,7 +9,7 @@ import {
 } from "@/src/components/foundation/ArchitecturalBottomDock";
 
 const meta: Meta<typeof ArchitecturalFormatToolbar> = {
-  title: "Heartgarden/Architectural Shell/Format toolbar",
+  title: "Heartgarden/UI/Format toolbar",
   component: ArchitecturalFormatToolbar,
   args: {
     insertDocActions: DEFAULT_DOC_INSERT_ACTIONS,

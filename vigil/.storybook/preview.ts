@@ -10,8 +10,8 @@ const preview: Preview = {
         order: [
           "Heartgarden",
           ["Heartgarden", "Overview"],
-          ["Heartgarden", "Design System"],
-          ["Heartgarden", "Architectural Shell"],
+          ["Heartgarden", "UI"],
+          ["Heartgarden", "Experiments"],
           "*",
         ],
       },

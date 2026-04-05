@@ -6,7 +6,7 @@ import { useState, type ComponentProps } from "react";
 import { HeartgardenPinField } from "@/src/components/ui/HeartgardenPinField";
 
 const meta: Meta<typeof HeartgardenPinField> = {
-  title: "Heartgarden/Design System/Pin field",
+  title: "Heartgarden/UI/Pin field",
   component: HeartgardenPinField,
   decorators: [
     (Story) => (

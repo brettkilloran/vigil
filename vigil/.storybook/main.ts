@@ -16,7 +16,7 @@ const NEXT_COMPILED_REACT_ALIAS_KEYS = [
 ] as const;
 
 /**
- * heartgarden UI documentation. App directory in git is `vigil/` (see `docs/NAMING.md`); stories are colocated under `src/components/**` and use explicit `meta.title` paths (`Heartgarden/Overview`, `Design System/*`, `Architectural Shell/*`) — not filesystem folders — for the sidebar.
+ * heartgarden UI documentation. App directory in git is `vigil/` (see `docs/NAMING.md`); stories are colocated under `src/components/**` and use explicit `meta.title` paths (`Heartgarden/Overview`, `UI/*`, `Experiments/*`) — not filesystem folders — for the sidebar.
  * Invariants (Windows / dev-server): keep `webpackFinal` + `allowedHosts: "all"`; see `AGENTS.md`
  * § "Local dev, Node, and Storybook (guardrails)".
  */

@@ -15,7 +15,7 @@ import { type FolderColorSchemeId } from "@/src/components/foundation/architectu
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 
 const meta: Meta<typeof ArchitecturalBottomDock> = {
-  title: "Heartgarden/Architectural Shell/Bottom dock",
+  title: "Heartgarden/UI/Bottom dock",
   component: ArchitecturalBottomDock,
   args: {
     onFormat: () => {},

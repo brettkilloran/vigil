@@ -38,15 +38,16 @@ export const AboutThisStorybook: Story = {
         Next app.
       </p>
       <p style={{ marginBottom: 8 }}>
-        <strong>Tokens:</strong>{" "}
+        <strong>UI catalog:</strong>{" "}
         <span style={{ color: "var(--sem-text-secondary)" }}>
-          Heartgarden → Design System → Tokens Source of Truth
+          Heartgarden → UI — tokens, shared controls, canvas chrome, and full-canvas integration in one list
+          (sorted by name).
         </span>
       </p>
       <p style={{ marginBottom: 0 }}>
-        <strong>Canvas shell:</strong>{" "}
+        <strong>Experiments:</strong>{" "}
         <span style={{ color: "var(--sem-text-secondary)" }}>
-          Heartgarden → Architectural Shell (flat list: layout pieces, node chrome, full canvas)
+          Heartgarden → Experiments — prototypes (e.g. transition WebGL) not yet wired into the main shell.
         </span>
       </p>
     </div>

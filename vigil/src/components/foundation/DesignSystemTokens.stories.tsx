@@ -172,7 +172,7 @@ function TokenCatalog() {
 }
 
 const meta: Meta<typeof TokenCatalog> = {
-  title: "Heartgarden/Design System/Tokens Source of Truth",
+  title: "Heartgarden/UI/Tokens source of truth",
   component: TokenCatalog,
   parameters: {
     layout: "fullscreen",
