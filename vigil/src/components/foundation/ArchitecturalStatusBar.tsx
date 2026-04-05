@@ -1,6 +1,6 @@
 "use client";
 
-import { MagnifyingGlass, Sparkle, WarningCircle } from "@phosphor-icons/react";
+import { MagnifyingGlass, Waves, WarningCircle } from "@phosphor-icons/react";
 import {
   useCallback,
   useEffect,
@@ -411,7 +411,7 @@ export function ArchitecturalCanvasEffectsToggle({
       isActive={checked}
       onClick={onButtonClick}
     >
-      <Sparkle size={18} weight="bold" aria-hidden />
+      <Waves size={18} weight="bold" aria-hidden />
     </Button>
   );
 
@@ -429,7 +429,7 @@ export function ArchitecturalCanvasEffectsToggle({
         isActive={checked}
         onClick={onButtonClick}
       >
-        <Sparkle size={18} weight="bold" aria-hidden />
+        <Waves size={18} weight="bold" aria-hidden />
       </Button>
     );
   }
