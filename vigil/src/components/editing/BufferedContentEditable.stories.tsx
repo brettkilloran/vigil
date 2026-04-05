@@ -23,6 +23,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const logBodyCommit = fn();
+
 export const PlainText: Story = {
   render: () => {
     const [value, setValue] = useState("Edit this line. Blur commits; Escape cancels.");
@@ -33,7 +35,7 @@ export const PlainText: Story = {
           className="min-h-[88px] rounded-lg border border-[var(--vigil-border)] bg-[var(--vigil-elevated)] px-3 py-2 text-sm leading-relaxed text-[var(--sem-text-primary)] outline-none focus:ring-2 focus:ring-[var(--sem-accent-primary)]"
           value={value}
           onCommit={(next) => {
-            fn()(next);
+            logBodyCommit(next);
             setValue(next);
           }}
         />

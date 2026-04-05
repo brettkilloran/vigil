@@ -23,6 +23,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const logTextCommit = fn();
+
 export const Default: Story = {
   render: () => {
     const [value, setValue] = useState("Double-click to rename");
@@ -33,7 +35,7 @@ export const Default: Story = {
           className="w-full rounded-lg border border-[var(--vigil-border)] bg-[var(--vigil-elevated)] px-3 py-2 text-sm text-[var(--sem-text-primary)] outline-none focus:ring-2 focus:ring-[var(--sem-accent-primary)]"
           value={value}
           onCommit={(next) => {
-            fn()(next);
+            logTextCommit(next);
             setValue(next);
           }}
         />
