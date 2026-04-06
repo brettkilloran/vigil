@@ -28,6 +28,10 @@ import {
   subscribeNeonSync,
 } from "@/src/lib/neon-sync-bus";
 import {
+  getVaultIndexStatusSnapshot,
+  subscribeVaultIndexStatus,
+} from "@/src/lib/vault-index-status-bus";
+import {
   SYNC_ERROR_DIAGNOSTIC_SEP,
   syncErrorSummaryLine,
 } from "@/src/lib/sync-error-diagnostic";
@@ -583,6 +587,36 @@ export function ArchitecturalViewportMetrics({
   );
 }
 
+function VaultIndexStatusInline() {
+  const [, tick] = useState(0);
+
+  useEffect(() => {
+    return subscribeVaultIndexStatus(() => tick((n) => n + 1));
+  }, []);
+
+  const { pendingCount, inFlightCount, errorLine } = getVaultIndexStatusSnapshot();
+  const vaultBusy = pendingCount + inFlightCount > 0;
+
+  if (!vaultBusy && !errorLine) return null;
+
+  return (
+    <>
+      <div className={styles.sep} />
+      <ArchitecturalStatusMetric
+        icon={
+          errorLine ? (
+            <WarningCircle className={styles.statusSaveWarningIcon} size={14} weight="bold" aria-hidden />
+          ) : undefined
+        }
+      >
+        <span className={styles.monoSmall} aria-live="polite">
+          {errorLine ?? "Indexing notes for search…"}
+        </span>
+      </ArchitecturalStatusMetric>
+    </>
+  );
+}
+
 export function ArchitecturalStatusBar({
   envLabel = "波途画電",
   showPulse = true,
@@ -621,6 +655,7 @@ export function ArchitecturalStatusBar({
           onExportGraphJson={onExportGraphJson}
           exportGraphPaletteHint={exportGraphPaletteHint}
         />
+        <VaultIndexStatusInline />
         {collabPeerCount > 0 ? (
           <>
             <div className={styles.sep} />

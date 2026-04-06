@@ -6,6 +6,13 @@ import {
   neonSyncEndRequest,
 } from "@/src/lib/neon-sync-bus";
 import { parseJsonBody, syncFailureFromApiResponse } from "@/src/lib/sync-error-diagnostic";
+import {
+  vaultIndexClearInFlight,
+  vaultIndexClearPending,
+  vaultIndexMarkInFlight,
+  vaultIndexMarkPending,
+  vaultIndexSetError,
+} from "@/src/lib/vault-index-status-bus";
 
 const vaultIndexTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const VAULT_INDEX_DEBOUNCE_MS = 2800;
@@ -13,15 +20,42 @@ const VAULT_INDEX_DEBOUNCE_MS = 2800;
 function scheduleVaultIndexForItem(itemId: string) {
   const prev = vaultIndexTimers.get(itemId);
   if (prev) clearTimeout(prev);
+  vaultIndexMarkPending(itemId);
   const t = setTimeout(() => {
     vaultIndexTimers.delete(itemId);
-    void fetch(`/api/items/${encodeURIComponent(itemId)}/index`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    }).catch(() => {
-      /* non-fatal */
-    });
+    vaultIndexClearPending(itemId);
+    vaultIndexMarkInFlight(itemId);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/items/${encodeURIComponent(itemId)}/index`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        const rawText = await res.text();
+        let body: Record<string, unknown> = {};
+        try {
+          body = rawText.trim() ? (JSON.parse(rawText) as Record<string, unknown>) : {};
+        } catch {
+          body = {};
+        }
+        if (res.status === 429) {
+          vaultIndexSetError("Search index rate limited — try again shortly.");
+        } else if (!res.ok) {
+          const err =
+            typeof body.error === "string"
+              ? body.error
+              : `Index failed (${res.status})`;
+          vaultIndexSetError(err);
+        } else if (body.ok !== true) {
+          vaultIndexSetError(typeof body.error === "string" ? body.error : "Index did not complete.");
+        }
+      } catch {
+        vaultIndexSetError("Search index request failed (network).");
+      } finally {
+        vaultIndexClearInFlight(itemId);
+      }
+    })();
   }, VAULT_INDEX_DEBOUNCE_MS);
   vaultIndexTimers.set(itemId, t);
 }

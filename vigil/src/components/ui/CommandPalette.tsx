@@ -304,7 +304,7 @@ export function CommandPalette({
           `${a.label} ${a.keywords?.join(" ") ?? ""}`.toLowerCase();
         return hay.includes(qq);
       })
-      .slice(0, qq ? 8 : 6);
+      .slice(0, qq ? 12 : 14);
   }, [actions, qq]);
 
   const selectItem = useCallback(

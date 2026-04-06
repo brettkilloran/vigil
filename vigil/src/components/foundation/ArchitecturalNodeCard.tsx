@@ -4,7 +4,10 @@ import { ArrowsOutSimple, Image as ImageIcon } from "@phosphor-icons/react";
 import type { CSSProperties, ReactNode } from "react";
 import { useMemo, useState } from "react";
 
-import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
+import {
+  BufferedContentEditable,
+  type WikiLinkAssistConfig,
+} from "@/src/components/editing/BufferedContentEditable";
 import { parseArchitecturalMediaFromBody } from "@/src/components/foundation/architectural-media-html";
 import type {
   CanvasTool,
@@ -106,6 +109,7 @@ export function ArchitecturalNodeBody({
   spellCheck = false,
   onHtmlCommit,
   onDraftDirtyChange,
+  wikiLinkAssist,
 }: {
   html: string;
   className?: string;
@@ -113,6 +117,7 @@ export function ArchitecturalNodeBody({
   spellCheck?: boolean;
   onHtmlCommit?: (html: string) => void;
   onDraftDirtyChange?: (dirty: boolean) => void;
+  wikiLinkAssist?: WikiLinkAssistConfig | null;
 }) {
   return (
     <BufferedContentEditable
@@ -124,6 +129,7 @@ export function ArchitecturalNodeBody({
       dataAttribute="data-node-body-editor"
       onCommit={(nextHtml) => onHtmlCommit?.(nextHtml)}
       onDraftDirtyChange={onDraftDirtyChange}
+      wikiLinkAssist={wikiLinkAssist ?? null}
     />
   );
 }
@@ -148,6 +154,7 @@ export function ArchitecturalNodeCard({
   /** Canvas zoom scale — used to pick image decode width when a resize template is configured. */
   canvasPanZoomScale = 1,
   useFullImageResolution = false,
+  wikiLinkAssist,
 }: {
   id: string;
   title: string;
@@ -167,6 +174,7 @@ export function ArchitecturalNodeCard({
   onBodyDraftDirty?: (dirty: boolean) => void;
   canvasPanZoomScale?: number;
   useFullImageResolution?: boolean;
+  wikiLinkAssist?: WikiLinkAssistConfig | null;
 }) {
   const isMediaNode = theme === "media";
   const nodeWidth = width ?? 340;
@@ -279,6 +287,9 @@ export function ArchitecturalNodeCard({
         spellCheck={false}
         onHtmlCommit={(html) => onBodyCommit(id, html)}
         onDraftDirtyChange={onBodyDraftDirty}
+        wikiLinkAssist={
+          theme === "default" || theme === "task" ? wikiLinkAssist ?? null : null
+        }
       />
     </div>
   );

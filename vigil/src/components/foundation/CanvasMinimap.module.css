@@ -1,0 +1,42 @@
+.root {
+  pointer-events: auto;
+  border-radius: 12px;
+  border: 1px solid color-mix(in oklch, var(--vigil-border) 85%, transparent);
+  background: color-mix(in oklch, var(--vigil-panel) 92%, transparent);
+  box-shadow: 0 4px 24px color-mix(in oklch, var(--sys-color-black) 18%, transparent);
+  padding: 6px;
+  width: 184px;
+  flex-shrink: 0;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--vigil-canvas) 40%, transparent);
+}
+
+.atom {
+  fill: color-mix(in oklch, var(--vigil-label) 22%, transparent);
+  stroke: color-mix(in oklch, var(--vigil-border) 70%, transparent);
+  stroke-width: 0.5;
+}
+
+.atomSelected {
+  fill: color-mix(in oklch, var(--accent) 35%, transparent);
+  stroke: color-mix(in oklch, var(--accent) 55%, transparent);
+}
+
+.viewportRect {
+  fill: none;
+  stroke: color-mix(in oklch, var(--accent) 65%, transparent);
+  stroke-width: 2;
+  pointer-events: stroke;
+  cursor: grab;
+}
+
+.viewportRectDragging {
+  cursor: grabbing;
+}

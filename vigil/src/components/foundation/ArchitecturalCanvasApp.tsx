@@ -14,18 +14,23 @@ import { flushSync } from "react-dom";
 import {
   ArrowLeft,
   ArrowsOut,
+  BoundingBox,
   CopySimple,
   DownloadSimple,
   FileText,
   Folder,
   Graph,
+  ImageSquare,
+  Lightning,
   MagnifyingGlass,
   NotePencil,
+  Scan,
   SealCheck,
   SignOut,
   Sparkle,
   SquaresFour,
   Stack,
+  Sun,
   Trash,
   UploadSimple,
   WarningCircle,
@@ -40,6 +45,7 @@ import { VigilAppBootScreen } from "./VigilAppBootScreen";
 import { VigilAppChromeAudioMuteButton } from "./VigilAppChromeAudioMuteButton";
 import styles from "./ArchitecturalCanvasApp.module.css";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
+import type { WikiLinkAssistConfig } from "@/src/components/editing/BufferedContentEditable";
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
 import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
@@ -56,6 +62,8 @@ import { ArchitecturalParentExitThreshold } from "@/src/components/foundation/Ar
 import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
 import { ArchitecturalFolderCard } from "@/src/components/foundation/ArchitecturalFolderCard";
 import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";
+import { CanvasMinimap } from "@/src/components/foundation/CanvasMinimap";
+import { CanvasViewportToast } from "@/src/components/foundation/CanvasViewportToast";
 import {
   ArchitecturalCanvasEffectsToggle,
   ArchitecturalStatusBar,
@@ -132,6 +140,14 @@ import {
 import { useModKeyHints } from "@/src/lib/mod-keys";
 import { VIGIL_CANVAS_EFFECTS_STORAGE_KEY } from "@/src/lib/vigil-canvas-prefs";
 import { readSpaceCamera, writeSpaceCamera } from "@/src/lib/heartgarden-space-camera";
+import {
+  computeSpaceContentBounds,
+  fitCameraToActiveSpaceContent,
+  fitCameraToSelection,
+  isContentMostlyOffScreen,
+  viewportWorldRect,
+  type CollapsedStackInfo,
+} from "@/src/lib/canvas-view-bounds";
 import {
   buildCullExceptionEntityIds,
   collapsedStackIntersectsWorldRect,
@@ -1474,6 +1490,7 @@ export function ArchitecturalCanvasApp({
   const [focusOpen, setFocusOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [viewportToastOpen, setViewportToastOpen] = useState(false);
   const paletteOpenSoundPrevRef = useRef(false);
   const [lorePanelOpen, setLorePanelOpen] = useState(false);
   const lorePanelOpenRef = useRef(false);
@@ -1660,6 +1677,9 @@ export function ArchitecturalCanvasApp({
   } | null>(null);
   const suppressStackOpenRef = useRef<{ stackId: string; expiresAt: number } | null>(null);
   const graphRef = useRef(graph);
+  /** Incremented on each `enterSpace` so stale `fetchBootstrap` completions are ignored. */
+  const spaceNavGenerationRef = useRef(0);
+  const viewportToastCooldownUntilRef = useRef(0);
   const activeSpaceIdRef = useRef(activeSpaceId);
   const navigationPathRef = useRef(navigationPath);
   const selectedNodeIdsRef = useRef(selectedNodeIds);
@@ -2922,6 +2942,57 @@ export function ArchitecturalCanvasApp({
     return out.length === 0 ? EMPTY_COLLAPSED_STACKS : out;
   }, [stackGroups]);
 
+  useEffect(() => {
+    const preActivateGate = scenario === "default" && !bootLayerDismissed && !canvasSessionActivated;
+    if (
+      focusOpen ||
+      galleryOpen ||
+      stackModal ||
+      paletteOpen ||
+      lorePanelOpen ||
+      loreReviewPanelOpen ||
+      preActivateGate
+    ) {
+      setViewportToastOpen(false);
+      return;
+    }
+    const id = window.setTimeout(() => {
+      const bounds = computeSpaceContentBounds(graph, activeSpaceId, collapsedStacks);
+      if (!bounds) {
+        setViewportToastOpen(false);
+        return;
+      }
+      const vw = Math.max(1, viewportSize.width);
+      const vh = Math.max(1, viewportSize.height);
+      const vpRect = viewportWorldRect(translateX, translateY, scale, vw, vh);
+      if (!isContentMostlyOffScreen(bounds, vpRect)) {
+        setViewportToastOpen(false);
+        return;
+      }
+      if (Date.now() < viewportToastCooldownUntilRef.current) return;
+      setViewportToastOpen(true);
+    }, 450);
+    return () => window.clearTimeout(id);
+  }, [
+    activeSpaceId,
+    bootLayerDismissed,
+    canvasSessionActivated,
+    collapsedStacks,
+    focusOpen,
+    galleryOpen,
+    graph,
+    lorePanelOpen,
+    loreReviewPanelOpen,
+    paletteOpen,
+    scale,
+    scenario,
+    stackModal,
+    translateX,
+    translateY,
+    viewportSize.height,
+    viewportSize.width,
+  ]);
+
   const cullExceptionEntityIds = useMemo(
     () =>
       buildCullExceptionEntityIds({
@@ -3513,6 +3584,92 @@ export function ArchitecturalCanvasApp({
     setTranslateX(window.innerWidth / 2);
     setTranslateY(window.innerHeight / 2);
     setScale(1);
+  }, []);
+
+  const makeWikiLinkAssist = useCallback(
+    (excludeEntityId?: string): WikiLinkAssistConfig | null => {
+      if (isRestrictedLayer) return null;
+      if (!isUuidLike(activeSpaceId)) return null;
+      return {
+        enabled: true,
+        excludeEntityId,
+        getLocalItems: () => {
+          const g = graphRef.current;
+          const sid = activeSpaceIdRef.current;
+          const ids = g.spaces[sid]?.entityIds ?? [];
+          const out: { id: string; title: string }[] = [];
+          for (const id of ids) {
+            const e = g.entities[id];
+            if (!e) continue;
+            out.push({ id, title: e.title || "Untitled" });
+          }
+          return out;
+        },
+        fetchRemoteSuggest: cloudLinksBar
+          ? async (q, signal) => {
+              const sid = activeSpaceIdRef.current;
+              if (!isUuidLike(sid)) return [];
+              const params = new URLSearchParams({ q, mode: "hybrid" });
+              params.set("spaceId", sid);
+              const res = await fetch(`/api/search/suggest?${params}`, { signal });
+              const data = (await res.json()) as {
+                ok?: boolean;
+                suggestions?: { id: string; title: string }[];
+              };
+              if (!data.ok || !Array.isArray(data.suggestions)) return [];
+              return data.suggestions.map((s) => ({ id: s.id, title: s.title }));
+            }
+          : undefined,
+      };
+    },
+    [activeSpaceId, cloudLinksBar, isRestrictedLayer],
+  );
+
+  const applyFitAllToViewport = useCallback(() => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    const w = rect?.width ?? viewportSizeRef.current.width ?? window.innerWidth;
+    const h = rect?.height ?? viewportSizeRef.current.height ?? window.innerHeight;
+    const next = fitCameraToActiveSpaceContent(
+      graphRef.current,
+      activeSpaceIdRef.current,
+      w,
+      h,
+      MIN_ZOOM,
+      MAX_ZOOM,
+    );
+    if (!next) {
+      recenterToOrigin();
+      return;
+    }
+    setScale(next.scale);
+    setTranslateX(next.translateX);
+    setTranslateY(next.translateY);
+    playVigilUiSound("select");
+  }, [recenterToOrigin]);
+
+  const onMinimapPanWorldDelta = useCallback((dw: number, dh: number) => {
+    const s = viewRef.current.scale;
+    setTranslateX((tx) => tx - dw * s);
+    setTranslateY((ty) => ty - dh * s);
+  }, []);
+
+  const onMinimapCenterOnWorld = useCallback((wx: number, wy: number) => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    const w = rect?.width ?? viewportSizeRef.current.width ?? window.innerWidth;
+    const h = rect?.height ?? viewportSizeRef.current.height ?? window.innerHeight;
+    const s = viewRef.current.scale;
+    setTranslateX(w / 2 - wx * s);
+    setTranslateY(h / 2 - wy * s);
+  }, []);
+
+  const onViewportToastShow = useCallback(() => {
+    setViewportToastOpen(false);
+    applyFitAllToViewport();
+  }, [applyFitAllToViewport]);
+
+  const onViewportToastDismiss = useCallback(() => {
+    viewportToastCooldownUntilRef.current = Date.now() + 20_000;
+    setViewportToastOpen(false);
   }, []);
 
   const normalizeWheelDelta = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
@@ -4517,6 +4674,9 @@ export function ArchitecturalCanvasApp({
       const snap = graphRef.current;
       if (!snap.spaces[spaceId] || spaceId === activeSpaceIdRef.current) return;
 
+      const navGen = ++spaceNavGenerationRef.current;
+      const targetSpaceId = spaceId;
+
       const fromDepth = navigationPathRef.current.length;
       const nextPathPreview = buildPathToSpace(spaceId, snap.spaces, snap.rootSpaceId);
       const toDepth = nextPathPreview.length;
@@ -4532,26 +4692,28 @@ export function ArchitecturalCanvasApp({
             setMaxZIndex((z) => Math.max(z, zCap));
           }
         }
-        if (isUuidLike(spaceId)) {
-          const cam = readSpaceCamera(spaceId) ?? defaultCamera();
+        if (isUuidLike(targetSpaceId)) {
+          const cam = readSpaceCamera(targetSpaceId) ?? defaultCamera();
           setTranslateX(cam.x);
           setTranslateY(cam.y);
           setScale(cam.zoom);
         } else if (!merged) {
           recenterToOrigin();
         }
-        setActiveSpaceId(spaceId);
-        setNavigationPath(buildPathToSpace(spaceId, g.spaces, g.rootSpaceId));
+        setActiveSpaceId(targetSpaceId);
+        setNavigationPath(buildPathToSpace(targetSpaceId, g.spaces, g.rootSpaceId));
         setSelectedNodeIds([]);
       };
+
+      const stillCurrent = () => navGen === spaceNavGenerationRef.current;
 
       if (!canvasEffectsEnabledRef.current) {
         void (async () => {
           let merged: CanvasGraph | null = null;
           let bootstrapMaxZ: number | null = null;
           try {
-            if (persistNeonRef.current && isUuidLike(spaceId)) {
-              const data = await fetchBootstrap(spaceId);
+            if (persistNeonRef.current && isUuidLike(targetSpaceId)) {
+              const data = await fetchBootstrap(targetSpaceId);
               if (data && data.demo === false && data.spaceId) {
                 merged = mergeBootstrapView(graphRef.current, data);
                 if (data.items.length > 0) {
@@ -4572,6 +4734,7 @@ export function ArchitecturalCanvasApp({
           } catch {
             /* ignore */
           }
+          if (!stillCurrent()) return;
           applySpaceNavigation(merged, bootstrapMaxZ);
         })();
         return;
@@ -4586,8 +4749,8 @@ export function ArchitecturalCanvasApp({
         let merged: CanvasGraph | null = null;
         let bootstrapMaxZ: number | null = null;
         try {
-          if (persistNeonRef.current && isUuidLike(spaceId)) {
-            const data = await fetchBootstrap(spaceId);
+          if (persistNeonRef.current && isUuidLike(targetSpaceId)) {
+            const data = await fetchBootstrap(targetSpaceId);
             if (data && data.demo === false && data.spaceId) {
               merged = mergeBootstrapView(graphRef.current, data);
               if (data.items.length > 0) {
@@ -4610,13 +4773,16 @@ export function ArchitecturalCanvasApp({
           const waitFadeOutEnd = Math.max(0, VIEWPORT_SCENE_FADE_MS - elapsedAfterFetch);
           if (waitFadeOutEnd > 0) await sleep(waitFadeOutEnd);
 
+          if (!stillCurrent()) return;
           applySpaceNavigation(merged, bootstrapMaxZ);
 
           const elapsedBeforeRelease = now() - tNav;
           const waitUntilCenter = Math.max(0, VIEWPORT_TRANSITION_CENTER_MS - elapsedBeforeRelease);
           if (waitUntilCenter > 0) await sleep(waitUntilCenter);
 
-          setNavTransitionActive(false);
+          if (stillCurrent()) {
+            setNavTransitionActive(false);
+          }
         }
       })();
     },
@@ -4835,11 +5001,25 @@ export function ArchitecturalCanvasApp({
     const all: PaletteAction[] = [
       { id: "create-note", label: "Create note", hint: "Add a new note at center", icon: <FileText size={14} weight="bold" /> },
       { id: "create-checklist", label: "Create checklist", hint: "Add a checklist card", icon: <NotePencil size={14} weight="bold" /> },
-      { id: "create-media", label: "Create image card", hint: "Add a media card", icon: <SquaresFour size={14} weight="bold" /> },
+      { id: "create-media", label: "Create image card", hint: "Add a media card", icon: <ImageSquare size={14} weight="bold" /> },
       { id: "create-folder", label: "Create folder", hint: "Add folder and child space", icon: <Folder size={14} weight="bold" /> },
       { id: "export-json", label: "Export graph JSON", hint: "Download the current graph", icon: <DownloadSimple size={14} weight="bold" /> },
-      { id: "toggle-theme", label: "Toggle theme", hint: "Switch light/dark shell class", icon: <CopySimple size={14} weight="bold" /> },
-      { id: "zoom-fit", label: "Zoom to fit", hint: "Fit visible cards into the viewport", icon: <SquaresFour size={14} weight="bold" /> },
+      { id: "toggle-theme", label: "Toggle theme", hint: "Switch light/dark shell class", icon: <Sun size={14} weight="bold" /> },
+      {
+        id: "toggle-canvas-effects",
+        label: "Toggle canvas effects",
+        hint: "Flow transitions, vignette, ambient grid",
+        keywords: ["motion", "transition", "performance", "effects", "lean"],
+        icon: <Lightning size={14} weight="bold" />,
+      },
+      { id: "zoom-fit", label: "Zoom to fit", hint: "Fit visible cards into the viewport", icon: <BoundingBox size={14} weight="bold" /> },
+      {
+        id: "zoom-selection",
+        label: "Zoom to selection",
+        hint: "Frame selected cards",
+        keywords: ["selection", "frame", "focus"],
+        icon: <Scan size={14} weight="bold" />,
+      },
       { id: "recenter", label: "Recenter canvas", hint: modKeyHints.recenter, icon: <Stack size={14} weight="bold" /> },
       {
         id: "ask-lore",
@@ -4850,7 +5030,7 @@ export function ArchitecturalCanvasApp({
       },
       {
         id: "link-graph",
-        label: "Link graph",
+        label: "Toggle link graph",
         hint: "Force-directed item_links view for this space",
         keywords: ["graph", "links", "network", "edges"],
         icon: <Graph size={14} weight="bold" />,
@@ -5576,41 +5756,40 @@ export function ArchitecturalCanvasApp({
       html.dataset.vigilTheme = html.classList.contains("dark") ? "dark" : "light";
       return;
     }
+    if (actionId === "toggle-canvas-effects") {
+      setCanvasEffectsEnabled((v) => !v);
+      playVigilUiSound("select");
+      return;
+    }
     if (actionId === "zoom-fit") {
-      const ids = activeSpace?.entityIds ?? [];
+      applyFitAllToViewport();
+      return;
+    }
+    if (actionId === "zoom-selection") {
+      const ids = selectedNodeIdsRef.current.filter((id) =>
+        (graphRef.current.spaces[activeSpaceIdRef.current]?.entityIds ?? []).includes(id),
+      );
       if (ids.length === 0) {
-        recenterToOrigin();
-        playVigilUiSound("select");
+        playVigilUiSound("caution");
         return;
       }
-      const slots = ids
-        .map((id) => graphRef.current.entities[id]?.slots[activeSpaceIdRef.current])
-        .filter((slot): slot is { x: number; y: number } => !!slot);
-      if (slots.length === 0) {
-        recenterToOrigin();
-        playVigilUiSound("select");
-        return;
-      }
-      const minX = Math.min(...slots.map((slot) => slot.x));
-      const minY = Math.min(...slots.map((slot) => slot.y));
-      const maxX = Math.max(...slots.map((slot) => slot.x + UNIFIED_NODE_WIDTH));
-      const maxY = Math.max(...slots.map((slot) => slot.y + 260));
       const viewport = viewportRef.current?.getBoundingClientRect();
       const width = viewport?.width ?? window.innerWidth;
       const height = viewport?.height ?? window.innerHeight;
-      const pad = 120;
-      const nextScale = Math.max(
+      const next = fitCameraToSelection(
+        graphRef.current,
+        activeSpaceIdRef.current,
+        ids,
+        width,
+        height,
         MIN_ZOOM,
-        Math.min(
-          MAX_ZOOM,
-          Math.min((width - pad) / Math.max(1, maxX - minX), (height - pad) / Math.max(1, maxY - minY)),
-        ),
+        MAX_ZOOM,
       );
-      setScale(nextScale);
-      const centerX = (minX + maxX) / 2;
-      const centerY = (minY + maxY) / 2;
-      setTranslateX(width / 2 - centerX * nextScale);
-      setTranslateY(height / 2 - centerY * nextScale);
+      if (next) {
+        setScale(next.scale);
+        setTranslateX(next.translateX);
+        setTranslateY(next.translateY);
+      }
       playVigilUiSound("select");
       return;
     }
@@ -5620,12 +5799,12 @@ export function ArchitecturalCanvasApp({
       return;
     }
     if (actionId === "ask-lore") {
-      setLorePanelOpen(true);
+      setLorePanelOpen((v) => !v);
       playVigilUiSound("select");
       return;
     }
     if (actionId === "link-graph") {
-      setGraphOverlayOpen(true);
+      setGraphOverlayOpen((v) => !v);
       playVigilUiSound("select");
       return;
     }
@@ -5641,7 +5820,7 @@ export function ArchitecturalCanvasApp({
       playVigilUiSound("select");
     }
   }, [
-    activeSpace?.entityIds,
+    applyFitAllToViewport,
     bootLayerVisible,
     createNewNode,
     exportGraphJson,
@@ -8164,6 +8343,7 @@ export function ArchitecturalCanvasApp({
                     onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
                     canvasPanZoomScale={scale}
                     useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
+                    wikiLinkAssist={makeWikiLinkAssist(entity.id)}
                   />
                 ) : (
                   <ArchitecturalFolderCard
@@ -9567,6 +9747,7 @@ export function ArchitecturalCanvasApp({
                     onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
                     canvasPanZoomScale={1}
                     useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
+                    wikiLinkAssist={makeWikiLinkAssist(entity.id)}
                   />
                 ) : (
                   <ArchitecturalFolderCard
@@ -9693,6 +9874,7 @@ export function ArchitecturalCanvasApp({
                 debounceMs={150}
                 dataAttribute="data-architectural-media-gallery-notes"
                 onCommit={(nextHtml) => setGalleryDraftNotes(nextHtml)}
+                wikiLinkAssist={makeWikiLinkAssist(galleryNodeId ?? undefined)}
               />
             </div>
           </div>
@@ -9744,6 +9926,7 @@ export function ArchitecturalCanvasApp({
                   }),
                 )
               }
+              wikiLinkAssist={!focusCodeTheme ? makeWikiLinkAssist(activeNodeId ?? undefined) : null}
             />
           </div>
         </div>
@@ -9883,6 +10066,35 @@ export function ArchitecturalCanvasApp({
               </div>
             </div>
           </div>
+          {!(
+            focusOpen ||
+            galleryOpen ||
+            stackModal ||
+            bootPreActivateGate ||
+            !viewportRevealReady
+          ) && (activeSpace?.entityIds?.length ?? 0) > 0 ? (
+            <div
+              className={`${styles.glassPanel} ${styles.shellTopChromePanel}`}
+              style={{ pointerEvents: "auto" }}
+            >
+              <CanvasMinimap
+                graph={graph}
+                activeSpaceId={activeSpaceId}
+                collapsedStacks={collapsedStacks as CollapsedStackInfo[]}
+                translateX={translateX}
+                translateY={translateY}
+                scale={scale}
+                viewportWidth={Math.max(1, viewportSize.width)}
+                viewportHeight={Math.max(1, viewportSize.height)}
+                selectedNodeIds={selectedNodeIds}
+                minZoom={MIN_ZOOM}
+                maxZoom={MAX_ZOOM}
+                onPanWorldDelta={onMinimapPanWorldDelta}
+                onCenterOnWorld={onMinimapCenterOnWorld}
+                onFitAll={applyFitAllToViewport}
+              />
+            </div>
+          ) : null}
         </div>
         <div className={styles.topRightChromeCluster} data-hg-chrome="top-right-tools">
           <div
@@ -9971,6 +10183,9 @@ export function ArchitecturalCanvasApp({
             ) : null}
           </div>
         </div>
+        {viewportToastOpen ? (
+          <CanvasViewportToast onShow={onViewportToastShow} onDismiss={onViewportToastDismiss} />
+        ) : null}
       </div>
     </>
   );
