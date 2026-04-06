@@ -11,7 +11,7 @@ These stay as **`vigil…`** on purpose so existing data and integrations keep w
 - **TipTap / note links:** `vigil:item:<uuid>` (stored in `content_json` and Neon).
 - **MCP tool names:** `vigil_list_items`, `vigil_search`, etc. (Cursor MCP configs reference them by string).
 - **CSS design tokens:** `--vigil-*`, classes like `vigil-btn`, `data-vigil-theme` (large surface area).
-- **localStorage keys:** e.g. `vigil-canvas-local-v1`, `vigil-recent-items`, `vigil-canvas-effects-enabled`.
+- **localStorage keys:** e.g. `vigil-canvas-local-v1`, `vigil-recent-items-v2:<tier>`, `vigil-recent-folders-v2:<tier>`, `heartgarden-workspace-view-v2`, `vigil-canvas-effects-enabled`.
 
 Renaming those requires migrations, dual-read/write, or user data loss.
 

@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+import type { WorkspaceBootTierTag } from "@/src/lib/workspace-view-cache";
 
 export type RecentPaletteItem = {
   id: string;
@@ -11,13 +13,16 @@ export type RecentPaletteItem = {
   updatedAt: number;
 };
 
-const LS_RECENT_ITEMS = "vigil-recent-items";
 const MAX_RECENT_ITEMS = 20;
 
-function readRecentItems(): RecentPaletteItem[] {
+function storageKeyForTier(tier: WorkspaceBootTierTag): string {
+  return `vigil-recent-items-v2:${tier}`;
+}
+
+function readRecentItems(tier: WorkspaceBootTierTag): RecentPaletteItem[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(LS_RECENT_ITEMS);
+    const raw = window.localStorage.getItem(storageKeyForTier(tier));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -40,38 +45,51 @@ function readRecentItems(): RecentPaletteItem[] {
   }
 }
 
-function writeRecentItems(items: RecentPaletteItem[]): void {
+function writeRecentItems(tier: WorkspaceBootTierTag, items: RecentPaletteItem[]): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(LS_RECENT_ITEMS, JSON.stringify(items.slice(0, MAX_RECENT_ITEMS)));
+    window.localStorage.setItem(
+      storageKeyForTier(tier),
+      JSON.stringify(items.slice(0, MAX_RECENT_ITEMS)),
+    );
   } catch {
     /* ignore */
   }
 }
 
-export function useRecentItems() {
-  const [items, setItems] = useState<RecentPaletteItem[]>(() => readRecentItems());
+export function useRecentItems(tier: WorkspaceBootTierTag) {
+  const [items, setItems] = useState<RecentPaletteItem[]>(() => readRecentItems(tier));
 
-  const push = useCallback((entry: Omit<RecentPaletteItem, "updatedAt">) => {
-    setItems((prev) => {
-      const next: RecentPaletteItem[] = [
-        { ...entry, updatedAt: Date.now() },
-        ...prev.filter((row) => row.id !== entry.id),
-      ].slice(0, MAX_RECENT_ITEMS);
-      writeRecentItems(next);
-      return next;
-    });
-  }, []);
+  useEffect(() => {
+    setItems(readRecentItems(tier));
+  }, [tier]);
 
-  const pruneIds = useCallback((ids: ReadonlySet<string>) => {
-    if (ids.size === 0) return;
-    setItems((prev) => {
-      const next = prev.filter((row) => !ids.has(row.id));
-      if (next.length === prev.length) return prev;
-      writeRecentItems(next);
-      return next;
-    });
-  }, []);
+  const push = useCallback(
+    (entry: Omit<RecentPaletteItem, "updatedAt">) => {
+      setItems((prev) => {
+        const next: RecentPaletteItem[] = [
+          { ...entry, updatedAt: Date.now() },
+          ...prev.filter((row) => row.id !== entry.id),
+        ].slice(0, MAX_RECENT_ITEMS);
+        writeRecentItems(tier, next);
+        return next;
+      });
+    },
+    [tier],
+  );
+
+  const pruneIds = useCallback(
+    (ids: ReadonlySet<string>) => {
+      if (ids.size === 0) return;
+      setItems((prev) => {
+        const next = prev.filter((row) => !ids.has(row.id));
+        if (next.length === prev.length) return prev;
+        writeRecentItems(tier, next);
+        return next;
+      });
+    },
+    [tier],
+  );
 
   return { items, push, pruneIds };
 }

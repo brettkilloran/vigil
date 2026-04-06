@@ -1873,10 +1873,11 @@ export function ArchitecturalCanvasApp({
   itemConflictQueueRef.current = itemConflictQueue;
 
   const modKeyHints = useModKeyHints();
+  const recentPaletteTier: WorkspaceBootTierTag = workspaceCacheTierForNeonSession(heartgardenBootApi);
   const { items: recentItems, push: pushRecentItem, pruneIds: pruneRecentItems } =
-    useRecentItems();
+    useRecentItems(recentPaletteTier);
   const { items: recentFolders, push: pushRecentFolder, pruneIds: pruneRecentFolders } =
-    useRecentFolders();
+    useRecentFolders(recentPaletteTier);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

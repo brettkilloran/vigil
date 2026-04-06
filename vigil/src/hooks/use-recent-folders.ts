@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+import type { WorkspaceBootTierTag } from "@/src/lib/workspace-view-cache";
 
 /** Folder entities the user has opened (entered child space), for Cmd+K quick access. */
 export type RecentPaletteFolder = {
@@ -11,13 +13,16 @@ export type RecentPaletteFolder = {
   updatedAt: number;
 };
 
-const LS_RECENT_FOLDERS = "vigil-recent-folders";
 const MAX_RECENT_FOLDERS = 20;
 
-function readRecentFolders(): RecentPaletteFolder[] {
+function storageKeyForTier(tier: WorkspaceBootTierTag): string {
+  return `vigil-recent-folders-v2:${tier}`;
+}
+
+function readRecentFolders(tier: WorkspaceBootTierTag): RecentPaletteFolder[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(LS_RECENT_FOLDERS);
+    const raw = window.localStorage.getItem(storageKeyForTier(tier));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -39,11 +44,11 @@ function readRecentFolders(): RecentPaletteFolder[] {
   }
 }
 
-function writeRecentFolders(items: RecentPaletteFolder[]): void {
+function writeRecentFolders(tier: WorkspaceBootTierTag, items: RecentPaletteFolder[]): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(
-      LS_RECENT_FOLDERS,
+    window.localStorage.setItem(
+      storageKeyForTier(tier),
       JSON.stringify(items.slice(0, MAX_RECENT_FOLDERS)),
     );
   } catch {
@@ -51,29 +56,39 @@ function writeRecentFolders(items: RecentPaletteFolder[]): void {
   }
 }
 
-export function useRecentFolders() {
-  const [items, setItems] = useState<RecentPaletteFolder[]>(() => readRecentFolders());
+export function useRecentFolders(tier: WorkspaceBootTierTag) {
+  const [items, setItems] = useState<RecentPaletteFolder[]>(() => readRecentFolders(tier));
 
-  const push = useCallback((entry: Omit<RecentPaletteFolder, "updatedAt">) => {
-    setItems((prev) => {
-      const next: RecentPaletteFolder[] = [
-        { ...entry, updatedAt: Date.now() },
-        ...prev.filter((row) => row.id !== entry.id),
-      ].slice(0, MAX_RECENT_FOLDERS);
-      writeRecentFolders(next);
-      return next;
-    });
-  }, []);
+  useEffect(() => {
+    setItems(readRecentFolders(tier));
+  }, [tier]);
 
-  const pruneIds = useCallback((ids: ReadonlySet<string>) => {
-    if (ids.size === 0) return;
-    setItems((prev) => {
-      const next = prev.filter((row) => !ids.has(row.id));
-      if (next.length === prev.length) return prev;
-      writeRecentFolders(next);
-      return next;
-    });
-  }, []);
+  const push = useCallback(
+    (entry: Omit<RecentPaletteFolder, "updatedAt">) => {
+      setItems((prev) => {
+        const next: RecentPaletteFolder[] = [
+          { ...entry, updatedAt: Date.now() },
+          ...prev.filter((row) => row.id !== entry.id),
+        ].slice(0, MAX_RECENT_FOLDERS);
+        writeRecentFolders(tier, next);
+        return next;
+      });
+    },
+    [tier],
+  );
+
+  const pruneIds = useCallback(
+    (ids: ReadonlySet<string>) => {
+      if (ids.size === 0) return;
+      setItems((prev) => {
+        const next = prev.filter((row) => !ids.has(row.id));
+        if (next.length === prev.length) return prev;
+        writeRecentFolders(tier, next);
+        return next;
+      });
+    },
+    [tier],
+  );
 
   return { items, push, pruneIds };
 }
