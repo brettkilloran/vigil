@@ -2,7 +2,7 @@
  * Hybrid search over the vault: FTS + fuzzy + optional pgvector chunks, fused via RRF
  * (`fuseRrfFromOrderedLists`). Consumed by `/api/search`, lore import planning, and `lore-engine`.
  */
-import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, notInArray, or, sql } from "drizzle-orm";
 
 import { itemEmbeddings, itemLinks, items, spaces } from "@/src/db/schema";
 import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
@@ -46,7 +46,11 @@ export async function searchItemChunksByVector(
   const distanceExpr = sql<number>`${itemEmbeddings.embedding} <=> ${lit}`;
 
   const whereParts: ReturnType<typeof sql>[] = [];
-  if (filters.spaceId) whereParts.push(eq(itemEmbeddings.spaceId, filters.spaceId));
+  if (filters.spaceIds?.length) whereParts.push(inArray(itemEmbeddings.spaceId, filters.spaceIds));
+  else if (filters.spaceId) whereParts.push(eq(itemEmbeddings.spaceId, filters.spaceId));
+  if (filters.excludeSpaceIds?.length) {
+    whereParts.push(notInArray(itemEmbeddings.spaceId, filters.excludeSpaceIds));
+  }
   if (filters.excludeSpaceId) whereParts.push(ne(itemEmbeddings.spaceId, filters.excludeSpaceId));
 
   const whereClause = whereParts.length ? and(...whereParts) : undefined;
@@ -231,7 +235,9 @@ export async function expandLinkedItems(
 
   const where = and(
     inArray(items.id, toFetch),
-    ...(filters.spaceId ? [eq(items.spaceId, filters.spaceId)] : []),
+    ...(filters.spaceIds?.length ? [inArray(items.spaceId, filters.spaceIds)] : []),
+    ...(filters.spaceId && !filters.spaceIds?.length ? [eq(items.spaceId, filters.spaceId)] : []),
+    ...(filters.excludeSpaceIds?.length ? [notInArray(items.spaceId, filters.excludeSpaceIds)] : []),
     ...(filters.excludeSpaceId ? [ne(items.spaceId, filters.excludeSpaceId)] : []),
   );
   const found = await db

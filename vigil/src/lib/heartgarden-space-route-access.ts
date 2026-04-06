@@ -5,8 +5,8 @@ import {
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForPlayer,
   isHeartgardenPlayerBlocked,
-  playerMayAccessSpaceId,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { spaceIsUnderPlayerRoot } from "@/src/lib/heartgarden-space-subtree";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
@@ -39,8 +39,11 @@ export async function requireHeartgardenSpaceApiAccess(
     };
   }
 
-  if (!playerMayAccessSpaceId(bootCtx, spaceId)) {
-    return { ok: false, response: heartgardenApiForbiddenJsonResponse() };
+  if (bootCtx.role === "player") {
+    const ok = await spaceIsUnderPlayerRoot(db, bootCtx.playerSpaceId, spaceId);
+    if (!ok) {
+      return { ok: false, response: heartgardenApiForbiddenJsonResponse() };
+    }
   }
   if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
     return { ok: false, response: heartgardenApiForbiddenJsonResponse() };

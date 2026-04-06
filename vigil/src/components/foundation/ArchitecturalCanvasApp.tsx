@@ -229,7 +229,28 @@ const VigilFlowRevealOverlay = dynamic(
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 3;
 const ZOOM_BUTTON_STEP = 0.2;
-const WHEEL_ZOOM_SENSITIVITY = 0.0012;
+/** Trackpad pinch (ctrl/meta + wheel): slightly damped vs mouse wheel for smoother Mac gestures. */
+const WHEEL_ZOOM_SENSITIVITY = 0.00088;
+
+/** deltaMode → pixels (Figma-style canvas: stable pan on macOS trackpads / WebKit line mode). */
+function normalizeWheelPanAxis(delta: number, deltaMode: number, axis: "x" | "y"): number {
+  if (deltaMode === WheelEvent.DOM_DELTA_LINE) return delta * 16;
+  if (deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+    if (typeof window === "undefined") return delta;
+    return delta * (axis === "x" ? window.innerWidth : window.innerHeight);
+  }
+  return delta;
+}
+
+/** deltaY + deltaMode → pixels for pinch-zoom (ctrl/meta + wheel on Mac trackpad). */
+function normalizeWheelZoomDeltaY(deltaY: number, deltaMode: number): number {
+  if (deltaMode === WheelEvent.DOM_DELTA_LINE) return deltaY * 16;
+  if (deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+    if (typeof window === "undefined") return deltaY;
+    return deltaY * window.innerHeight;
+  }
+  return deltaY;
+}
 /** Scene fade-out / fade-in duration (ms); keep in sync with `.viewportSceneLayer` in ArchitecturalCanvasApp.module.css */
 const VIEWPORT_SCENE_FADE_MS = 760;
 /** Hold at opacity 0 while flow overlay peaks (between fade-out and fade-in). */
@@ -1568,11 +1589,11 @@ export function ArchitecturalCanvasApp({
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [viewportToastOpen, setViewportToastOpen] = useState(false);
   const [minimapOpen, setMinimapOpen] = useState(() => {
-    if (typeof window === "undefined") return true;
+    if (typeof window === "undefined") return false;
     try {
-      return localStorage.getItem(VIGIL_MINIMAP_VISIBLE_STORAGE_KEY) !== "0";
+      return localStorage.getItem(VIGIL_MINIMAP_VISIBLE_STORAGE_KEY) === "1";
     } catch {
-      return true;
+      return false;
     }
   });
   const [minimapPlacementSizes, setMinimapPlacementSizes] = useState<
@@ -3619,6 +3640,7 @@ export function ArchitecturalCanvasApp({
 
   useHeartgardenSpaceChangeSync({
     enabled: collabNeonActive,
+    hasRemotePeers: presencePeers.length > 0,
     activeSpaceId,
     graphRef,
     syncCursorRef,
@@ -3858,12 +3880,8 @@ export function ArchitecturalCanvasApp({
     playVigilUiSound("tap");
   }, []);
 
-  const normalizeWheelDelta = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
-    // deltaMode: 0=pixel, 1=line, 2=page. Normalize to pixels for stable zoom.
-    if (event.deltaMode === 1) return event.deltaY * 16;
-    if (event.deltaMode === 2) return event.deltaY * window.innerHeight;
-    return event.deltaY;
-  }, []);
+  const viewportWheelZoomRef = useRef(updateTransformFromMouse);
+  viewportWheelZoomRef.current = updateTransformFromMouse;
 
   useEffect(() => {
     if (!isUuidLike(activeSpaceId)) return;
@@ -7438,41 +7456,94 @@ export function ArchitecturalCanvasApp({
     [activeTool, connectionMode],
   );
 
-  const onWheel = useCallback(
-    (event: React.WheelEvent<HTMLDivElement>) => {
-      if (focusOpen || galleryOpen || stackModal || paletteOpenRef.current || lorePanelOpenRef.current)
-        return;
-      const target = event.target as HTMLElement;
-      const inEditable =
-        !!target.closest("input, textarea, select, [contenteditable='true']");
+  /**
+   * macOS trackpad (Figma-style): two-finger pan → wheel deltaX/Y; pinch → ctrl/meta + wheel.
+   * React’s root `wheel` delegation is passive, so `preventDefault()` does not stop browser
+   * scrolling; use a non-passive listener on the viewport.
+   */
+  useLayoutEffect(() => {
+    const root = viewportRef.current;
+    if (!root) return;
 
-      // Allow native scroll inside node bodies even when not contenteditable
-      // (e.g. pan tool active). Only when the body actually overflows.
+    const onWheelNative = (event: WheelEvent) => {
+      if (
+        focusOpenRef.current ||
+        galleryOpenRef.current ||
+        stackModalRef.current ||
+        paletteOpenRef.current ||
+        lorePanelOpenRef.current
+      ) {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+
+      const inEditable = !!target.closest("input, textarea, select, [contenteditable='true']");
       const scrollBody = target.closest<HTMLElement>("[data-node-body-editor]");
       const inScrollableBody =
         !!scrollBody && scrollBody.scrollHeight > scrollBody.clientHeight;
 
-      // Preserve native wheel/scroll behavior inside editors or scrollable
-      // document bodies when the user is not pinch-zooming.
-      if ((inEditable || inScrollableBody) && !(event.ctrlKey || event.metaKey)) return;
+      const pinchZoom = event.ctrlKey || event.metaKey;
+      if ((inEditable || inScrollableBody) && !pinchZoom) return;
 
       event.preventDefault();
-      if (event.ctrlKey || event.metaKey) {
-        const deltaPx = normalizeWheelDelta(event);
+      if (pinchZoom) {
+        const deltaPx = normalizeWheelZoomDeltaY(event.deltaY, event.deltaMode);
         const factor = Math.exp(-deltaPx * WHEEL_ZOOM_SENSITIVITY);
         const nextScale = Math.min(
           Math.max(MIN_ZOOM, viewRef.current.scale * factor),
           MAX_ZOOM,
         );
-        const rect = event.currentTarget.getBoundingClientRect();
-        updateTransformFromMouse(nextScale, event.clientX - rect.left, event.clientY - rect.top);
-      } else {
-        setTranslateX((prev) => prev - event.deltaX);
-        setTranslateY((prev) => prev - event.deltaY);
+        const rect = root.getBoundingClientRect();
+        viewportWheelZoomRef.current(
+          nextScale,
+          event.clientX - rect.left,
+          event.clientY - rect.top,
+        );
+        return;
       }
-    },
-    [focusOpen, galleryOpen, stackModal, normalizeWheelDelta, updateTransformFromMouse],
-  );
+
+      const dx = normalizeWheelPanAxis(event.deltaX, event.deltaMode, "x");
+      const dy = normalizeWheelPanAxis(event.deltaY, event.deltaMode, "y");
+      setTranslateX((prev) => prev - dx);
+      setTranslateY((prev) => prev - dy);
+    };
+
+    root.addEventListener("wheel", onWheelNative, { passive: false });
+    return () => root.removeEventListener("wheel", onWheelNative);
+  }, []);
+
+  /**
+   * Stop OS/browser page zoom on trackpad pinch (Safari/WebKit + Chrome): without this, pinch still
+   * scales the whole UI even when the viewport `wheel` handler applies canvas zoom.
+   */
+  useLayoutEffect(() => {
+    const blockDocumentPinchWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      const t = event.target;
+      if (!(t instanceof Element)) return;
+      if (t.closest("input, textarea, select, [contenteditable='true'], [data-hg-allow-browser-zoom]")) {
+        return;
+      }
+      event.preventDefault();
+    };
+
+    window.addEventListener("wheel", blockDocumentPinchWheel, { capture: true, passive: false });
+
+    const blockSafariGestureZoom = (event: Event) => {
+      event.preventDefault();
+    };
+    document.addEventListener("gesturestart", blockSafariGestureZoom, { passive: false });
+    document.addEventListener("gesturechange", blockSafariGestureZoom, { passive: false });
+    document.addEventListener("gestureend", blockSafariGestureZoom, { passive: false });
+
+    return () => {
+      window.removeEventListener("wheel", blockDocumentPinchWheel, { capture: true });
+      document.removeEventListener("gesturestart", blockSafariGestureZoom);
+      document.removeEventListener("gesturechange", blockSafariGestureZoom);
+      document.removeEventListener("gestureend", blockSafariGestureZoom);
+    };
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -8592,7 +8663,6 @@ export function ArchitecturalCanvasApp({
         data-canvas-ready={viewportRevealReady ? "true" : "false"}
         onPointerDownCapture={onViewportPointerDown}
         onContextMenuCapture={handleViewportContextMenuCapture}
-        onWheel={onWheel}
         style={{
           backgroundPosition: `${translateX}px ${translateY}px`,
           ["--viewport-grid-scale" as string]: String(scale),

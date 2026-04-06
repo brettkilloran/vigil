@@ -6,7 +6,7 @@ import {
   getHeartgardenApiBootContext,
   gmMayAccessItemSpace,
   isHeartgardenPlayerBlocked,
-  playerMayAccessItemSpace,
+  playerMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 
@@ -34,7 +34,7 @@ export async function GET(
     }
     return Response.json({ error: "Not found" }, { status: 404 });
   }
-  if (!playerMayAccessItemSpace(bootCtx, row.spaceId)) {
+  if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, row.spaceId))) {
     return Response.json({ error: "Forbidden." }, { status: 403 });
   }
   if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, row.spaceId)) {

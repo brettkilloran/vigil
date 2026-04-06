@@ -9,7 +9,7 @@ import {
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForPlayer,
   isHeartgardenPlayerBlocked,
-  playerMayAccessItemSpace,
+  playerMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { clampLinkMetaSlackMultiplier } from "@/src/lib/item-link-meta";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
       Response.json({ ok: false, error: "Source item not found" }, { status: 404 }),
     );
   }
-  if (!playerMayAccessItemSpace(bootCtx, srcItem.spaceId)) {
+  if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, srcItem.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, srcItem.spaceId)) {
@@ -157,7 +157,7 @@ export async function PATCH(req: Request) {
     .from(items)
     .where(eq(items.id, linkMeta.sourceItemId))
     .limit(1);
-  if (!playerMayAccessItemSpace(bootCtx, srcForLink?.spaceId ?? "")) {
+  if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, srcForLink?.spaceId ?? ""))) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (
@@ -259,7 +259,7 @@ export async function DELETE(req: Request) {
     .from(items)
     .where(eq(items.id, linkMeta.sourceItemId))
     .limit(1);
-  if (!playerMayAccessItemSpace(bootCtx, srcForLink?.spaceId ?? "")) {
+  if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, srcForLink?.spaceId ?? ""))) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (

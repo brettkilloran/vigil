@@ -9,8 +9,8 @@ import {
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForPlayer,
   isHeartgardenPlayerBlocked,
-  playerMayAccessItemSpace,
-  playerMayAccessSpaceId,
+  playerMayAccessItemSpaceAsync,
+  playerMayAccessSpaceIdAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { searchItemsFTS } from "@/src/lib/spaces";
 
@@ -34,7 +34,7 @@ export async function GET(
       Response.json({ ok: false, error: "Not found" }, { status: 404 }),
     );
   }
-  if (!playerMayAccessItemSpace(bootCtx, row.spaceId)) {
+  if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, row.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, row.spaceId)) {
@@ -45,10 +45,10 @@ export async function GET(
   const spaceParam = url.searchParams.get("spaceId");
   let spaceId = spaceParam && spaceParam.length > 0 ? spaceParam : row.spaceId;
   if (bootCtx.role === "player") {
-    if (spaceParam && !playerMayAccessSpaceId(bootCtx, spaceParam)) {
+    if (spaceParam && !(await playerMayAccessSpaceIdAsync(db, bootCtx, spaceParam))) {
       return heartgardenApiForbiddenJsonResponse();
     }
-    spaceId = bootCtx.playerSpaceId;
+    spaceId = row.spaceId;
   }
   if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
     return heartgardenApiForbiddenJsonResponse();

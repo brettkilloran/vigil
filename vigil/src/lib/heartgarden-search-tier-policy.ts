@@ -1,16 +1,21 @@
+import { spaces } from "@/src/db/schema";
 import {
   heartgardenPlayerSpaceIdExcludedFromGm,
   type HeartgardenApiBootContext,
+  playerMayAccessSpaceIdAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { isHeartgardenGmPlayerSpaceBreakGlassEnabled } from "@/src/lib/heartgarden-gm-break-glass";
-import type { SearchFilters } from "@/src/lib/spaces";
+import { collectDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
+import type { SearchFilters, VigilDb } from "@/src/lib/spaces";
 
 export type SearchTierPolicyResult =
   | { ok: false }
   | { ok: true; filters: SearchFilters; mode: string };
 
 /**
- * Centralizes `/api/search` tier rules: Players pin space + fts-only; GM global search excludes Players space.
+ * Centralizes `/api/search` tier rules: Players use fts-only; GM global search excludes Players space.
+ * Player space scoping (root vs folder vs full subtree) is applied in
+ * {@link finalizeHeartgardenSearchFiltersForDb}.
  */
 export function applySearchTierPolicy(
   ctx: HeartgardenApiBootContext,
@@ -22,10 +27,6 @@ export function applySearchTierPolicy(
 
   if (ctx.role === "player") {
     const nextFilters = { ...filters };
-    if (nextFilters.spaceId && nextFilters.spaceId !== ctx.playerSpaceId) {
-      return { ok: false };
-    }
-    nextFilters.spaceId = ctx.playerSpaceId;
     let m = mode;
     if (m === "hybrid" || m === "semantic") m = "fts";
     return { ok: true, filters: nextFilters, mode: m };
@@ -46,12 +47,7 @@ export function applySuggestTierPolicy(
   const hid = heartgardenPlayerSpaceIdExcludedFromGm();
 
   if (ctx.role === "player") {
-    const nextFilters = { ...filters };
-    if (nextFilters.spaceId && nextFilters.spaceId !== ctx.playerSpaceId) {
-      return { ok: false };
-    }
-    nextFilters.spaceId = ctx.playerSpaceId;
-    return { ok: true, filters: nextFilters, mode: "" };
+    return { ok: true, filters: { ...filters }, mode: "" };
   }
 
   if (ctx.role === "gm" && hid && !filters.spaceId && !isHeartgardenGmPlayerSpaceBreakGlassEnabled()) {
@@ -59,4 +55,40 @@ export function applySuggestTierPolicy(
   }
 
   return { ok: true, filters: { ...filters }, mode: "" };
+}
+
+/**
+ * DB-backed search filter shaping: player folder + subtree scope; GM excludes full player-world subtree.
+ */
+export async function finalizeHeartgardenSearchFiltersForDb(
+  db: VigilDb,
+  ctx: HeartgardenApiBootContext,
+  filters: SearchFilters,
+): Promise<SearchFilters | null> {
+  if (ctx.role === "player") {
+    const next: SearchFilters = { ...filters };
+    if (next.spaceId) {
+      if (!(await playerMayAccessSpaceIdAsync(db, ctx, next.spaceId))) return null;
+      return next;
+    }
+    const slim = await db
+      .select({ id: spaces.id, parentSpaceId: spaces.parentSpaceId })
+      .from(spaces);
+    next.spaceIds = [...collectDescendantSpaceIds(ctx.playerSpaceId, slim)];
+    delete next.spaceId;
+    return next;
+  }
+
+  if (ctx.role === "gm" && filters.excludeSpaceId) {
+    const root = filters.excludeSpaceId;
+    const next: SearchFilters = { ...filters };
+    delete next.excludeSpaceId;
+    const slim = await db
+      .select({ id: spaces.id, parentSpaceId: spaces.parentSpaceId })
+      .from(spaces);
+    next.excludeSpaceIds = [...collectDescendantSpaceIds(root, slim)];
+    return next;
+  }
+
+  return filters;
 }

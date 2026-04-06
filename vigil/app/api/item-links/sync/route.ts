@@ -9,7 +9,7 @@ import {
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForPlayer,
   isHeartgardenPlayerBlocked,
-  playerMayAccessItemSpace,
+  playerMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
       Response.json({ ok: false, error: "Source item not found" }, { status: 404 }),
     );
   }
-  if (!playerMayAccessItemSpace(bootCtx, srcItem.spaceId)) {
+  if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, srcItem.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, srcItem.spaceId)) {

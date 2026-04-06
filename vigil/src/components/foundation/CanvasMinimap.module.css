@@ -25,10 +25,10 @@
   gap: 6px;
 }
 
-/* Bottom-right chrome: stretch to `.viewportMetricsMinimapAbove` (same width as X/Y + zoom strip). */
+/* Bottom-right chrome: fixed width (see `.viewportMetricsMinimapAbove`); never stretch with metrics strip. */
 .rootMetricsDock {
-  width: 100%;
-  max-width: 100%;
+  width: 168px;
+  max-width: min(168px, calc(100vw - 48px));
 }
 
 .svg {

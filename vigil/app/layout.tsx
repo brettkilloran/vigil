@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Lora, Noto_Sans_JP } from "next/font/google";
 
 import { RegisterSw } from "@/src/components/RegisterSw";
@@ -32,6 +32,17 @@ const notoSansJP = Noto_Sans_JP({
   display: "swap",
   preload: true,
 });
+
+/**
+ * Canvas shell: keep browser pinch / smart-zoom from scaling the whole page (Chrome ctrl+wheel,
+ * Safari trackpad). In-canvas zoom is handled in `ArchitecturalCanvasApp`.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export const metadata: Metadata = {
   title: "heartgarden",

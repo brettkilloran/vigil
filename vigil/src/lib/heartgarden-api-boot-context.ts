@@ -13,6 +13,7 @@ import {
 } from "@/src/lib/heartgarden-player-layer-env";
 import { assertSpaceExists, resolveActiveSpaceGmWorkspace } from "@/src/lib/spaces";
 import { isHeartgardenGmPlayerSpaceBreakGlassEnabled } from "@/src/lib/heartgarden-gm-break-glass";
+import { spaceIsUnderPlayerRoot } from "@/src/lib/heartgarden-space-subtree";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
 
 /** Stable JSON for player / invalid-session denials (no hints). */
@@ -99,13 +100,25 @@ export function isHeartgardenNeonDataSession(ctx: HeartgardenApiBootContext): bo
   return ctx.role === "gm" || ctx.role === "player";
 }
 
-/** Players may only touch items in exactly this space (Option A — no child spaces in player layer). */
+/**
+ * Players may touch items in the assigned **root** space or any **folder** space under it.
+ * Prefer {@link playerMayAccessItemSpaceAsync} in route handlers (DB-backed subtree check).
+ */
 export function playerMayAccessItemSpace(ctx: HeartgardenApiBootContext, itemSpaceId: string): boolean {
   if (ctx.role !== "player") return true;
   return itemSpaceId === ctx.playerSpaceId;
 }
 
-/** Players cannot move items to another space. */
+export async function playerMayAccessItemSpaceAsync(
+  db: NonNullable<ReturnType<typeof tryGetDb>>,
+  ctx: HeartgardenApiBootContext,
+  itemSpaceId: string,
+): Promise<boolean> {
+  if (ctx.role !== "player") return true;
+  return spaceIsUnderPlayerRoot(db, ctx.playerSpaceId, itemSpaceId);
+}
+
+/** Players cannot move items outside their player-root subtree. */
 export function playerMayApplySpaceIdPatch(
   ctx: HeartgardenApiBootContext,
   existingSpaceId: string,
@@ -116,6 +129,21 @@ export function playerMayApplySpaceIdPatch(
   return nextSpaceId === existingSpaceId && nextSpaceId === ctx.playerSpaceId;
 }
 
+export async function playerMayApplySpaceIdPatchAsync(
+  db: NonNullable<ReturnType<typeof tryGetDb>>,
+  ctx: HeartgardenApiBootContext,
+  existingSpaceId: string,
+  nextSpaceId: string | undefined,
+): Promise<boolean> {
+  if (ctx.role !== "player") return true;
+  if (nextSpaceId === undefined) return true;
+  const root = ctx.playerSpaceId;
+  return (
+    (await spaceIsUnderPlayerRoot(db, root, existingSpaceId)) &&
+    (await spaceIsUnderPlayerRoot(db, root, nextSpaceId))
+  );
+}
+
 export async function assertPlayerSpaceRowExists(
   db: NonNullable<ReturnType<typeof tryGetDb>>,
   playerSpaceId: string,
@@ -124,9 +152,19 @@ export async function assertPlayerSpaceRowExists(
   return Boolean(row);
 }
 
+/** Prefer {@link playerMayAccessSpaceIdAsync} in async routes. */
 export function playerMayAccessSpaceId(ctx: HeartgardenApiBootContext, spaceId: string): boolean {
   if (ctx.role !== "player") return true;
   return spaceId === ctx.playerSpaceId;
+}
+
+export async function playerMayAccessSpaceIdAsync(
+  db: NonNullable<ReturnType<typeof tryGetDb>>,
+  ctx: HeartgardenApiBootContext,
+  spaceId: string,
+): Promise<boolean> {
+  if (ctx.role !== "player") return true;
+  return spaceIsUnderPlayerRoot(db, ctx.playerSpaceId, spaceId);
 }
 
 /** Use at the top of Route Handlers that support the player layer. */

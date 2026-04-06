@@ -7,7 +7,10 @@ import {
   heartgardenMaskNotFoundForPlayer,
   isHeartgardenPlayerBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
-import { applySearchTierPolicy } from "@/src/lib/heartgarden-search-tier-policy";
+import {
+  applySearchTierPolicy,
+  finalizeHeartgardenSearchFiltersForDb,
+} from "@/src/lib/heartgarden-search-tier-policy";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import {
   assertSpaceExists,
@@ -87,7 +90,12 @@ export async function GET(req: Request) {
   if (!tiered.ok) {
     return heartgardenApiForbiddenJsonResponse();
   }
-  const { filters, mode } = tiered;
+  const finalized = await finalizeHeartgardenSearchFiltersForDb(db, bootCtx, tiered.filters);
+  if (!finalized) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+  const { mode } = tiered;
+  const filters = finalized;
 
   if (bootCtx.role === "gm" && filters.spaceId && !gmMayAccessSpaceId(bootCtx, filters.spaceId)) {
     return heartgardenApiForbiddenJsonResponse();

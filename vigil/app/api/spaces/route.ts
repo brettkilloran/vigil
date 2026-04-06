@@ -10,6 +10,7 @@ import {
   heartgardenApiForbiddenJsonResponse,
   isHeartgardenPlayerBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { fetchPlayerSubtreeSpacesFull } from "@/src/lib/heartgarden-space-subtree";
 import { assertSpaceExists, listGmWorkspaceSpaces } from "@/src/lib/spaces";
 
 const bodySchema = z.object({
@@ -29,20 +30,18 @@ export async function GET() {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (bootCtx.role === "player") {
-    const row = await assertSpaceExists(db, bootCtx.playerSpaceId);
-    if (!row) {
+    const rows = await fetchPlayerSubtreeSpacesFull(db, bootCtx.playerSpaceId);
+    if (rows.length === 0) {
       return heartgardenApiForbiddenJsonResponse();
     }
     return Response.json({
       ok: true,
-      spaces: [
-        {
-          id: row.id,
-          name: row.name,
-          parentSpaceId: row.parentSpaceId,
-          updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
-        },
-      ],
+      spaces: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        parentSpaceId: row.parentSpaceId,
+        updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
+      })),
     });
   }
   const rows = await listGmWorkspaceSpaces(db);

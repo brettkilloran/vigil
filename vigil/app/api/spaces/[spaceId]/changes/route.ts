@@ -5,6 +5,7 @@ import { items, spaces } from "@/src/db/schema";
 import { getHeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
+import { fetchPlayerSubtreeSpaceRows } from "@/src/lib/heartgarden-space-subtree";
 import { collectSpaceSubtreeIds, listGmWorkspaceSpaces } from "@/src/lib/spaces";
 
 function maxIsoCursor(rows: { updatedAt: Date | null }[], fallbackMs: number): string {
@@ -42,7 +43,6 @@ export async function GET(
   const { spaceId } = await context.params;
   const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
   if (!access.ok) return access.response;
-  const space = access.space;
 
   const sinceRaw = url.searchParams.get("since")?.trim() ?? "";
   let sinceMs = 0;
@@ -58,7 +58,7 @@ export async function GET(
   let spaceRows: { id: string; parentSpaceId: string | null }[];
 
   if (bootCtx.role === "player") {
-    spaceRows = [{ id: space.id, parentSpaceId: space.parentSpaceId ?? null }];
+    spaceRows = await fetchPlayerSubtreeSpaceRows(db, bootCtx.playerSpaceId);
   } else {
     const allSpaces = await listGmWorkspaceSpaces(db);
     spaceRows = allSpaces.map((s) => ({

@@ -8,14 +8,26 @@
  */
 export const HEARTGARDEN_PRESENCE_TTL_MS = 120_000;
 
-/** Delta poll interval (`GET …/changes`). */
-export const HEARTGARDEN_SPACE_CHANGE_POLL_MS = 8_000;
+/**
+ * Delta poll interval (`GET …/changes`) when you are alone in the space — fewer Neon round-trips.
+ * (Former default was 8s; solo users still see remote edits faster than before.)
+ */
+export const HEARTGARDEN_SPACE_CHANGE_POLL_MS_SOLO = 5_500;
+
+/**
+ * Delta poll when at least one **other** client has presence in this space — closer to design-tool
+ * latency; still polling (no WebSocket) so expect ~2–3s worst-case after a save lands in Neon.
+ */
+export const HEARTGARDEN_SPACE_CHANGE_POLL_MS_COLLAB = 2_200;
+
+/** @deprecated Prefer SOLO/COLLAB; kept for callers that need a single default. */
+export const HEARTGARDEN_SPACE_CHANGE_POLL_MS = HEARTGARDEN_SPACE_CHANGE_POLL_MS_SOLO;
 
 /** Presence heartbeat POST interval. */
 export const HEARTGARDEN_PRESENCE_HEARTBEAT_MS = 25_000;
 
-/** Peer list GET interval — cursors feel less frozen than a 12s poll. */
-export const HEARTGARDEN_PRESENCE_PEER_POLL_MS = 4000;
+/** Peer list GET interval — drives collab-mode detection + cursor chips; slightly snappier than 4s. */
+export const HEARTGARDEN_PRESENCE_PEER_POLL_MS = 3000;
 
 /** Min interval between presence POSTs triggered by pointer movement (camera+pointer payload). */
 export const HEARTGARDEN_PRESENCE_POINTER_FLUSH_MIN_MS = 2000;

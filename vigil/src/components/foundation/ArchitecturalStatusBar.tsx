@@ -591,7 +591,7 @@ export function ArchitecturalViewportMetrics({
   centerWorldY,
   scale,
   zoomPrefixIcon = true,
-  minimapOpen = true,
+  minimapOpen = false,
   onToggleMinimap,
 }: {
   centerWorldX: number;

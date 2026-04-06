@@ -5,7 +5,10 @@ import {
   heartgardenApiForbiddenJsonResponse,
   isHeartgardenPlayerBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
-import { applySuggestTierPolicy } from "@/src/lib/heartgarden-search-tier-policy";
+import {
+  applySuggestTierPolicy,
+  finalizeHeartgardenSearchFiltersForDb,
+} from "@/src/lib/heartgarden-search-tier-policy";
 import { suggestItems, type SearchFilters } from "@/src/lib/spaces";
 
 function parseBool(raw: string | null): boolean | undefined {
@@ -58,7 +61,11 @@ export async function GET(req: Request) {
   if (!tiered.ok) {
     return heartgardenApiForbiddenJsonResponse();
   }
-  const filters = tiered.filters;
+  const finalized = await finalizeHeartgardenSearchFiltersForDb(db, bootCtx, tiered.filters);
+  if (!finalized) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+  const filters = finalized;
   if (bootCtx.role === "gm" && filters.spaceId && !gmMayAccessSpaceId(bootCtx, filters.spaceId)) {
     return heartgardenApiForbiddenJsonResponse();
   }

@@ -545,8 +545,9 @@
   z-index: 1;
   flex: none;
   pointer-events: auto;
-  /* Match in-flow strip width (panel is fit-content; minimap is out of flow otherwise). */
-  width: 100%;
+  /* Fixed width: same as `CanvasMinimap` `.root` — do not grow/shrink with X/Y readout. */
+  width: 168px;
+  max-width: min(168px, calc(100vw - 48px));
   min-width: 0;
   box-sizing: border-box;
 }

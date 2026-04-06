@@ -11,7 +11,8 @@ import { fetchSpaceChanges } from "@/src/components/foundation/architectural-neo
 import {
   HEARTGARDEN_COLLA_POLL_ERROR_SNIPPET,
   HEARTGARDEN_COLLA_POLL_FAILURE_USER_MESSAGE,
-  HEARTGARDEN_SPACE_CHANGE_POLL_MS,
+  HEARTGARDEN_SPACE_CHANGE_POLL_MS_COLLAB,
+  HEARTGARDEN_SPACE_CHANGE_POLL_MS_SOLO,
 } from "@/src/lib/heartgarden-collab-constants";
 import {
   neonSyncClearLastErrorIfContains,
@@ -24,6 +25,8 @@ const AUX_FAILURE_AFTER_CONSECUTIVE_MISSES = 3;
 
 export function useHeartgardenSpaceChangeSync(options: {
   enabled: boolean;
+  /** True when presence lists at least one other client in this space (excludes self). */
+  hasRemotePeers: boolean;
   activeSpaceId: string;
   graphRef: MutableRefObject<CanvasGraph>;
   syncCursorRef: MutableRefObject<string>;
@@ -38,6 +41,7 @@ export function useHeartgardenSpaceChangeSync(options: {
 }): void {
   const {
     enabled,
+    hasRemotePeers,
     activeSpaceId,
     graphRef,
     syncCursorRef,
@@ -150,9 +154,13 @@ export function useHeartgardenSpaceChangeSync(options: {
       }
     };
 
+    const pollMs = hasRemotePeers
+      ? HEARTGARDEN_SPACE_CHANGE_POLL_MS_COLLAB
+      : HEARTGARDEN_SPACE_CHANGE_POLL_MS_SOLO;
+
     const startPoll = () => {
       if (pollTimer != null || document.visibilityState === "hidden") return;
-      pollTimer = window.setInterval(run, HEARTGARDEN_SPACE_CHANGE_POLL_MS);
+      pollTimer = window.setInterval(run, pollMs);
     };
 
     const onVisibility = () => {
@@ -179,6 +187,7 @@ export function useHeartgardenSpaceChangeSync(options: {
     };
   }, [
     enabled,
+    hasRemotePeers,
     activeSpaceId,
     graphRef,
     syncCursorRef,

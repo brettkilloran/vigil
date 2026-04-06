@@ -2,10 +2,7 @@ import { and, gt, inArray, lte } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { canvasPresence, spaces } from "@/src/db/schema";
-import {
-  getHeartgardenApiBootContext,
-  playerMayAccessSpaceId,
-} from "@/src/lib/heartgarden-api-boot-context";
+import { getHeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
 import { HEARTGARDEN_PRESENCE_TTL_MS } from "@/src/lib/heartgarden-collab-constants";
 import { heartgardenBootClientIp } from "@/src/lib/heartgarden-boot-rate-limit";
 import {
@@ -16,7 +13,10 @@ import {
 } from "@/src/lib/heartgarden-presence-body";
 import { consumeHeartgardenPresencePostRateLimit } from "@/src/lib/heartgarden-presence-rate-limit";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
-import { collectDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
+import {
+  collectDescendantSpaceIds,
+  spaceIsUnderPlayerRoot,
+} from "@/src/lib/heartgarden-space-subtree";
 import { z } from "zod";
 
 async function deleteStalePresenceRows(db: NonNullable<ReturnType<typeof tryGetDb>>) {
@@ -90,7 +90,9 @@ export async function GET(
 
   for (const r of rows) {
     if (selfId && z.string().uuid().safeParse(selfId).success && r.clientId === selfId) continue;
-    if (!playerMayAccessSpaceId(bootCtx, r.activeSpaceId)) continue;
+    if (bootCtx.role === "player") {
+      if (!(await spaceIsUnderPlayerRoot(db, bootCtx.playerSpaceId, r.activeSpaceId))) continue;
+    }
     const cam = safePresenceCameraFromUnknown(r.camera);
     const ptr = safePresencePointerFromUnknown(r.pointer);
     out.push({

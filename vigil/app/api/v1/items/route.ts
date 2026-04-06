@@ -3,7 +3,7 @@ import {
   getHeartgardenApiBootContext,
   gmMayAccessSpaceId,
   isHeartgardenPlayerBlocked,
-  playerMayAccessSpaceId,
+  playerMayAccessSpaceIdAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { assertSpaceExists, listItemsForSpace } from "@/src/lib/spaces";
@@ -33,7 +33,7 @@ export async function GET(req: Request) {
     }
     return Response.json({ error: "Space not found" }, { status: 404 });
   }
-  if (!playerMayAccessSpaceId(bootCtx, spaceId)) {
+  if (!(await playerMayAccessSpaceIdAsync(db, bootCtx, spaceId))) {
     return Response.json({ error: "Forbidden." }, { status: 403 });
   }
   if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {

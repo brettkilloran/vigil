@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, notInArray, or, sql } from "drizzle-orm";
 
 import type { tryGetDb } from "@/src/db/index";
 import { itemLinks, items, spaces } from "@/src/db/schema";
@@ -192,8 +192,12 @@ export type SearchSort = "relevance" | "updated" | "created" | "title";
 
 export type SearchFilters = {
   spaceId?: string;
+  /** When set, restrict to these spaces (e.g. player root + all folders under it). Mutually exclusive with `spaceId` in practice. */
+  spaceIds?: string[];
   /** Exclude items in this space (GM global search vs Players space). */
   excludeSpaceId?: string;
+  /** Exclude items in any of these spaces (full player-world subtree for GM). */
+  excludeSpaceIds?: string[];
   itemTypes?: string[];
   entityTypes?: string[];
   updatedAfter?: Date;
@@ -223,7 +227,9 @@ function normalizeLimit(limit: number | undefined, fallback: number, max: number
 
 function searchWhereClauses(filters: SearchFilters): ReturnType<typeof sql>[] {
   const clauses: ReturnType<typeof sql>[] = [];
-  if (filters.spaceId) clauses.push(eq(items.spaceId, filters.spaceId));
+  if (filters.spaceIds?.length) clauses.push(inArray(items.spaceId, filters.spaceIds));
+  else if (filters.spaceId) clauses.push(eq(items.spaceId, filters.spaceId));
+  if (filters.excludeSpaceIds?.length) clauses.push(notInArray(items.spaceId, filters.excludeSpaceIds));
   if (filters.excludeSpaceId) clauses.push(ne(items.spaceId, filters.excludeSpaceId));
   if (filters.itemTypes?.length) clauses.push(inArray(items.itemType, filters.itemTypes));
   if (filters.entityTypes?.length) clauses.push(inArray(items.entityType, filters.entityTypes));

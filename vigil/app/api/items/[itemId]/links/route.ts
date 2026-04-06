@@ -8,7 +8,7 @@ import {
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForPlayer,
   isHeartgardenPlayerBlocked,
-  playerMayAccessItemSpace,
+  playerMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { getItemLinksResolved } from "@/src/lib/spaces";
 
@@ -35,7 +35,7 @@ export async function GET(
       Response.json({ ok: false, error: "Not found" }, { status: 404 }),
     );
   }
-  if (!playerMayAccessItemSpace(bootCtx, row.spaceId)) {
+  if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, row.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, row.spaceId)) {

@@ -10,8 +10,8 @@ import {
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForPlayer,
   isHeartgardenPlayerBlocked,
-  playerMayAccessItemSpace,
-  playerMayApplySpaceIdPatch,
+  playerMayAccessItemSpaceAsync,
+  playerMayApplySpaceIdPatchAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import {
   playersMayPatchItemType,
@@ -124,7 +124,7 @@ export async function PATCH(
       Response.json({ ok: false, error: "Not found" }, { status: 404 }),
     );
   }
-  if (!playerMayAccessItemSpace(bootCtx, existing.spaceId)) {
+  if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, existing.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, existing.spaceId)) {
@@ -169,7 +169,7 @@ export async function PATCH(
   };
 
   if (p.spaceId !== undefined) {
-    if (!playerMayApplySpaceIdPatch(bootCtx, existing.spaceId, p.spaceId)) {
+    if (!(await playerMayApplySpaceIdPatchAsync(db, bootCtx, existing.spaceId, p.spaceId))) {
       return heartgardenApiForbiddenJsonResponse();
     }
     const space = await assertSpaceExists(db, p.spaceId);
@@ -288,7 +288,7 @@ export async function DELETE(
       Response.json({ ok: false, error: "Not found" }, { status: 404 }),
     );
   }
-  if (!playerMayAccessItemSpace(bootCtx, existing.spaceId)) {
+  if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, existing.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, existing.spaceId)) {
