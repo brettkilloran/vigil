@@ -27,6 +27,8 @@ export type HeartgardenPinFieldProps = {
   id?: string;
   /** Accessible name; visually hidden via `.legend` */
   legend: string;
+  /** Shown above the PIN row (legend stays screen-reader-only unless you rely on this for sighted users). */
+  visibleCaption?: string;
   value: string;
   onValueChange: (next: string) => void;
   onSubmit: () => void;
@@ -47,6 +49,7 @@ function clampPin(raw: string): string {
 export function HeartgardenPinField({
   id: idProp,
   legend,
+  visibleCaption,
   value,
   onValueChange,
   onSubmit,
@@ -60,6 +63,7 @@ export function HeartgardenPinField({
   const reactId = useId();
   const baseId = idProp ?? `hg-pin-${reactId.replace(/:/gu, "")}`;
   const errorId = `${baseId}-error`;
+  const captionId = `${baseId}-caption`;
   const refs = useRef<(HTMLInputElement | null)[]>([]);
   const wrapRef = useRef<HTMLDivElement>(null);
   const valueRef = useRef(value);
@@ -153,6 +157,8 @@ export function HeartgardenPinField({
   const complete = value.length === SLOTS;
   const block = disabled || submitting;
   const showError = Boolean(errorMessage);
+  const describedBy =
+    [visibleCaption ? captionId : null, showError ? errorId : null].filter(Boolean).join(" ") || undefined;
 
   useLayoutEffect(() => {
     valueRef.current = value;
@@ -211,10 +217,15 @@ export function HeartgardenPinField({
       <fieldset
         className={styles.fieldset}
         disabled={block}
-        aria-describedby={showError ? errorId : undefined}
+        aria-describedby={describedBy}
         aria-invalid={showError ? true : undefined}
       >
         <legend className={styles.legend}>{legend}</legend>
+        {visibleCaption ? (
+          <p id={captionId} className={styles.visibleCaption}>
+            {visibleCaption}
+          </p>
+        ) : null}
         <div
           className={cx(styles.console, styles.consoleEnter)}
           style={

@@ -25,6 +25,16 @@
   border: 0;
 }
 
+.visibleCaption {
+  margin: 0 0 0.65rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+  color: color-mix(in oklch, var(--sys-color-white) 72%, transparent);
+  text-shadow: 0 1px 2px color-mix(in oklch, var(--sys-color-black) 45%, transparent);
+}
+
 @keyframes pinConsoleReveal {
   from {
     opacity: 0.42;

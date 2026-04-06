@@ -679,6 +679,7 @@ export function VigilAppBootScreen({
                   key={bootPinFieldKey}
                   id="vigil-boot-access-pin"
                   legend="Heartgarden access code"
+                  visibleCaption="Eight-character PIN (access, demo, or players)."
                   value={pinValue}
                   onValueChange={(v) => {
                     setPinValue(v);
