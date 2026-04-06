@@ -59,6 +59,11 @@ function sha256Utf8(s: string): Buffer {
   return createHash("sha256").update(s, "utf8").digest();
 }
 
+/** Trim + lowercase — boot PIN comparison is case-insensitive. */
+function normalizeBootPinForCompare(s: string): string {
+  return s.trim().toLowerCase();
+}
+
 function normalizeBootTierFromCookie(raw: unknown): HeartgardenBootTier | null {
   if (raw === "access" || raw === "demo" || raw === "player") return raw;
   if (raw === "visitor") return "player";
@@ -68,6 +73,7 @@ function normalizeBootTierFromCookie(raw: unknown): HeartgardenBootTier | null {
 /**
  * Compare submitted code to Bishop / Players / demo pins without short-circuiting digest equality.
  * Returns tier or null. Pins shorter than 8 use dummy digests so they never match.
+ * Comparison is **case-insensitive** (trim + lowercase before hashing).
  */
 export function resolveBootPinTier(
   code: string,
@@ -75,13 +81,18 @@ export function resolveBootPinTier(
   playersPin: string,
   demoPin: string,
 ): HeartgardenBootTier | null {
-  const h = sha256Utf8(code);
+  const c = normalizeBootPinForCompare(code);
+  if (c.length !== HEARTGARDEN_BOOT_PIN_LENGTH) return null;
+  const h = sha256Utf8(c);
+  const b = normalizeBootPinForCompare(bishopPin);
+  const p = normalizeBootPinForCompare(playersPin);
+  const d = normalizeBootPinForCompare(demoPin);
   const hBishop =
-    bishopPin.length === HEARTGARDEN_BOOT_PIN_LENGTH ? sha256Utf8(bishopPin) : DUMMY_DIGEST_A;
+    b.length === HEARTGARDEN_BOOT_PIN_LENGTH ? sha256Utf8(b) : DUMMY_DIGEST_A;
   const hPlayers =
-    playersPin.length === HEARTGARDEN_BOOT_PIN_LENGTH ? sha256Utf8(playersPin) : DUMMY_DIGEST_B;
+    p.length === HEARTGARDEN_BOOT_PIN_LENGTH ? sha256Utf8(p) : DUMMY_DIGEST_B;
   const hDemo =
-    demoPin.length === HEARTGARDEN_BOOT_PIN_LENGTH ? sha256Utf8(demoPin) : DUMMY_DIGEST_C;
+    d.length === HEARTGARDEN_BOOT_PIN_LENGTH ? sha256Utf8(d) : DUMMY_DIGEST_C;
   const okBishop = timingSafeEqual(h, hBishop);
   const okPlayers = timingSafeEqual(h, hPlayers);
   const okDemo = timingSafeEqual(h, hDemo);
