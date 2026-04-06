@@ -11,7 +11,11 @@ import {
   isHeartgardenVisitorBlocked,
   visitorMayAccessSpaceId,
 } from "@/src/lib/heartgarden-api-boot-context";
-import { assertSpaceExists, deleteSpaceSubtree } from "@/src/lib/spaces";
+import {
+  assertSpaceExists,
+  assertSpaceReparentAllowed,
+  deleteSpaceSubtree,
+} from "@/src/lib/spaces";
 
 const patchBody = z.object({
   camera: z
@@ -22,6 +26,8 @@ const patchBody = z.object({
     })
     .optional(),
   name: z.string().min(1).max(255).optional(),
+  /** When set, moves this space under a new parent (folder inner space ↔ canvas space). GM-only. */
+  parentSpaceId: z.string().uuid().nullable().optional(),
 });
 
 export async function PATCH(
@@ -71,13 +77,42 @@ export async function PATCH(
     );
   }
 
-  await db
-    .update(spaces)
-    .set({
-      ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
-      updatedAt: new Date(),
-    })
-    .where(eq(spaces.id, spaceId));
+  if (parsed.data.parentSpaceId !== undefined) {
+    if (bootCtx.role === "visitor") {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+    if (!gmMayAccessSpaceId(bootCtx, spaceId)) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+    const nextParent = parsed.data.parentSpaceId;
+    if (nextParent !== null && !gmMayAccessSpaceId(bootCtx, nextParent)) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+    const reparent = await assertSpaceReparentAllowed(db, spaceId, nextParent);
+    if (!reparent.ok) {
+      if (reparent.error === "parent_not_found") {
+        return Response.json({ ok: false, error: "Parent space not found" }, { status: 404 });
+      }
+      if (reparent.error === "would_create_cycle") {
+        return Response.json({ ok: false, error: "Invalid parent (cycle)" }, { status: 400 });
+      }
+      return Response.json({ ok: false, error: "Space not found" }, { status: 404 });
+    }
+  }
+
+  const setPayload: {
+    name?: string;
+    parentSpaceId?: string | null;
+    updatedAt: Date;
+  } = { updatedAt: new Date() };
+  if (parsed.data.name !== undefined) {
+    setPayload.name = parsed.data.name;
+  }
+  if (parsed.data.parentSpaceId !== undefined) {
+    setPayload.parentSpaceId = parsed.data.parentSpaceId;
+  }
+
+  await db.update(spaces).set(setPayload).where(eq(spaces.id, spaceId));
 
   return Response.json({ ok: true });
 }

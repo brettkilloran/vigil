@@ -98,6 +98,51 @@ export async function assertSpaceExists(db: VigilDb, spaceId: string) {
   return row;
 }
 
+/**
+ * Returns true if setting `spaceId.parentSpaceId = newParentId` would create a cycle
+ * (`newParentId` is `spaceId` or lies in `spaceId`'s descendant subtree). Pure helper for tests + server.
+ */
+export function spaceReparentWouldCreateCycle(
+  spaceId: string,
+  newParentId: string | null,
+  rows: readonly { id: string; parentSpaceId: string | null }[],
+): boolean {
+  if (newParentId == null) return false;
+  if (newParentId === spaceId) return true;
+  const byId = new Map(rows.map((r) => [r.id, r.parentSpaceId ?? null]));
+  let current: string | null = newParentId;
+  const seen = new Set<string>();
+  while (current) {
+    if (current === spaceId) return true;
+    if (seen.has(current)) return true;
+    seen.add(current);
+    current = byId.get(current) ?? null;
+  }
+  return false;
+}
+
+export async function assertSpaceReparentAllowed(
+  db: VigilDb,
+  spaceId: string,
+  newParentId: string | null,
+): Promise<
+  { ok: true } | { ok: false; error: "space_not_found" | "parent_not_found" | "would_create_cycle" }
+> {
+  const child = await assertSpaceExists(db, spaceId);
+  if (!child) return { ok: false, error: "space_not_found" };
+  if (newParentId !== null) {
+    const parent = await assertSpaceExists(db, newParentId);
+    if (!parent) return { ok: false, error: "parent_not_found" };
+  }
+  const treeRows = await db
+    .select({ id: spaces.id, parentSpaceId: spaces.parentSpaceId })
+    .from(spaces);
+  if (spaceReparentWouldCreateCycle(spaceId, newParentId, treeRows)) {
+    return { ok: false, error: "would_create_cycle" };
+  }
+  return { ok: true };
+}
+
 export async function listItemsForSpace(db: VigilDb, spaceId: string) {
   return db
     .select()

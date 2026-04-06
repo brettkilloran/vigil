@@ -26,7 +26,7 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 |--------|------|---------|
 | GET | `/api/spaces` | List spaces. |
 | POST | `/api/spaces` | Create space. |
-| PATCH | `/api/spaces/[spaceId]` | Update **name** only. A **`camera`** field in the body is accepted for backward compatibility but **ignored** (viewport is not persisted server-side). |
+| PATCH | `/api/spaces/[spaceId]` | Update **name** and/or **`parentSpaceId`** (UUID or `null`). A **`camera`** field in the body is accepted for backward compatibility but **ignored** (viewport is not persisted server-side). **`parentSpaceId`** is **GM-only** (rejected for **visitor**); requires access to both this space and the new parent; the server rejects moves that would create a **parent cycle**. Use this to keep a folder’s inner space aligned when its folder card moves between canvases. |
 | DELETE | `/api/spaces/[spaceId]` | Delete space (cascade per schema). |
 | GET | `/api/spaces/[spaceId]/changes` | Query **`since`** (ISO timestamp). Returns **`{ ok, items, itemIds, cursor }`** — changed rows since **`since`**, full id list for the space subtree (for delete sync), and a **`cursor`** for the next poll. Boot-scoped like other space routes. |
 | GET | `/api/spaces/[spaceId]/presence` | Optional **`?except=<clientUuid>`**. Peers with a heartbeat in the last **~2 minutes**. |

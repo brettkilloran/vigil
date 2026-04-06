@@ -97,6 +97,7 @@ import {
   apiDeleteSpaceSubtree,
   apiPatchItem,
   apiPatchSpaceName,
+  apiPatchSpaceParent,
   fetchBootstrap,
 } from "@/src/components/foundation/architectural-neon-api";
 import { mergeHydratedDbConnections } from "@/src/lib/architectural-item-link-graph";
@@ -251,6 +252,24 @@ function collectIdsNeedingNeonLayoutResync(from: CanvasGraph, to: CanvasGraph): 
     }
   }
   return [...out];
+}
+
+/** `spaces.parentSpaceId` rows that differ between snapshots (Neon resync after undo/redo). */
+function collectSpacesNeedingParentResync(
+  from: CanvasGraph,
+  to: CanvasGraph,
+): { spaceId: string; parentSpaceId: string | null }[] {
+  const out: { spaceId: string; parentSpaceId: string | null }[] = [];
+  for (const sid of Object.keys(to.spaces)) {
+    if (!isUuidLike(sid)) continue;
+    const a = from.spaces[sid];
+    const b = to.spaces[sid];
+    if (!a || !b) continue;
+    if (a.parentSpaceId !== b.parentSpaceId) {
+      out.push({ spaceId: sid, parentSpaceId: b.parentSpaceId });
+    }
+  }
+  return out;
 }
 
 type ArchitecturalCanvasScenario = "default" | "nested" | "corrupt";
@@ -1874,6 +1893,30 @@ export function ArchitecturalCanvasApp({
     [patchItemWithVersion],
   );
 
+  /** After item layout PATCH, align each folder's inner `spaces.parent_space_id` with the space that holds the folder card. */
+  const persistNeonFolderInnerSpaceParentsAfterLayout = useCallback(
+    (ids: string[], graphSnapshot?: CanvasGraph) => {
+      if (!persistNeonRef.current) return;
+      const g = graphSnapshot ?? graphRef.current;
+      const active = activeSpaceIdRef.current;
+      for (const id of ids) {
+        if (!isUuidLike(id)) continue;
+        const e = g.entities[id];
+        if (!e || e.kind !== "folder") continue;
+        if (!isUuidLike(e.childSpaceId)) continue;
+        const holders = Object.values(g.spaces).filter((s) => s.entityIds.includes(id));
+        if (holders.length === 0) continue;
+        const primary =
+          holders.length === 1
+            ? holders[0]!.id
+            : holders.find((s) => s.id === active)?.id ?? holders[0]!.id;
+        if (!isUuidLike(primary)) continue;
+        void apiPatchSpaceParent(e.childSpaceId, primary);
+      }
+    },
+    [],
+  );
+
   /** Persist geometry and `items.spaceId` from whichever space currently owns each entity in the graph. */
   const persistNeonItemsLayout = useCallback((ids: string[], graphSnapshot?: CanvasGraph) => {
     if (!persistNeonRef.current) return;
@@ -1908,7 +1951,8 @@ export function ArchitecturalCanvasApp({
       }
       void patchItemWithVersion(id, patch);
     }
-  }, [patchItemWithVersion]);
+    persistNeonFolderInnerSpaceParentsAfterLayout(ids, g);
+  }, [patchItemWithVersion, persistNeonFolderInnerSpaceParentsAfterLayout]);
 
   const closeStackModal = useCallback(() => {
     setStackDrag(null);
@@ -2054,6 +2098,11 @@ export function ArchitecturalCanvasApp({
       const layoutIds = collectIdsNeedingNeonLayoutResync(from, to);
       if (layoutIds.length > 0) {
         persistNeonItemsLayout(layoutIds, to);
+      }
+      for (const { spaceId, parentSpaceId } of collectSpacesNeedingParentResync(from, to)) {
+        if (!isUuidLike(spaceId)) continue;
+        if (parentSpaceId !== null && !isUuidLike(parentSpaceId)) continue;
+        void apiPatchSpaceParent(spaceId, parentSpaceId);
       }
     },
     [persistNeonItemsLayout, setGraph],
@@ -4327,6 +4376,18 @@ export function ArchitecturalCanvasApp({
                 };
               });
             }
+          }
+        }
+
+        for (const id of idsToMove) {
+          const ent = next.entities[id];
+          if (!ent || ent.kind !== "folder") continue;
+          const inner = next.spaces[ent.childSpaceId];
+          if (inner) {
+            next.spaces[ent.childSpaceId] = {
+              ...inner,
+              parentSpaceId: destinationSpaceId,
+            };
           }
         }
 

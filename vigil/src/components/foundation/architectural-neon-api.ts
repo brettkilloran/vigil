@@ -337,3 +337,33 @@ export async function apiPatchSpaceName(spaceId: string, name: string): Promise<
     return false;
   }
 }
+
+export async function apiPatchSpaceParent(
+  spaceId: string,
+  parentSpaceId: string | null,
+): Promise<boolean> {
+  const track = getNeonSyncSnapshot().cloudEnabled;
+  if (track) neonSyncBeginRequest();
+  const op = `PATCH /api/spaces/${spaceId} (parentSpaceId)`;
+  try {
+    const res = await fetch(`/api/spaces/${spaceId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parentSpaceId }),
+    });
+    const rawText = await res.text();
+    const body = parseJsonBody(rawText) as { ok?: boolean; error?: string };
+    const logicalOk = res.ok && body.ok === true;
+    finishNeonTrack(track, op, res, rawText, body, logicalOk);
+    return logicalOk;
+  } catch (e) {
+    if (track) {
+      neonSyncEndRequest(false, {
+        operation: op,
+        message: e instanceof Error ? e.message : "Network error",
+        cause: "network",
+      });
+    }
+    return false;
+  }
+}
