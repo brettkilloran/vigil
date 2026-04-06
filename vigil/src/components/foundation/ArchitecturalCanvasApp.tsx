@@ -6135,10 +6135,14 @@ export function ArchitecturalCanvasApp({
       return;
     }
     if (actionId === "check-lore-consistency") {
-      if (bootLayerVisible) return;
+      if (bootLayerVisible) {
+        playVigilUiSound("caution");
+        return;
+      }
       setLoreReviewError(null);
       setLoreReviewPanelOpen(true);
       playVigilUiSound("select");
+      return;
     }
   }, [
     applyFitAllToViewport,
@@ -6147,6 +6151,11 @@ export function ArchitecturalCanvasApp({
     exportGraphJson,
     isRestrictedLayer,
     recenterToOrigin,
+    setCanvasEffectsEnabled,
+    setGraphOverlayOpen,
+    setLorePanelOpen,
+    setLoreReviewError,
+    setLoreReviewPanelOpen,
   ]);
 
   const updateDropTargets = useCallback(

@@ -21,6 +21,17 @@ Set **`HEARTGARDEN_GM_ALLOW_PLAYER_SPACE=1`** so **GM** sessions can list, searc
 
 Full detail lives in server helper [`src/lib/heartgarden-api-boot-context.ts`](../src/lib/heartgarden-api-boot-context.ts).
 
+## Severing GM and player data in Neon (one-time cleanup)
+
+If Bishop and Players ever shared a space (legacy behavior) or you need to guarantee **no** `item_links` edges between the GM world and the player world:
+
+1. From **`vigil/`**, preview impact:  
+   `HEARTGARDEN_SEVER_WORLDS_DRY=1 npm run db:sever-worlds`
+2. Destructive run (deletes all **items** and **folder spaces** under player roots, removes **cross-world** links; keeps implicit / env root **space rows** empty):  
+   `HEARTGARDEN_SEVER_WORLDS_CONFIRM=1 npm run db:sever-worlds`
+
+The script uses the same env as the app (`.env.local` + `HEARTGARDEN_PLAYER_SPACE_ID` / `HEARTGARDEN_DEFAULT_SPACE_ID`). It targets the union of subtrees rooted at every `__heartgarden_player_root__` row and at the resolved env UUID. **Do not** point `HEARTGARDEN_DEFAULT_SPACE_ID` at a GM workspace UUID unless you intend to wipe that space’s items. Implementation: [`src/lib/heartgarden-sever-player-gm-worlds.ts`](../src/lib/heartgarden-sever-player-gm-worlds.ts).
+
 ## Invariants (do not regress)
 
 1. **GM path unchanged** — Logic branches must be **`if (player)`** / Players only where intended. Never default the app to Players behavior on data routes.

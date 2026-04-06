@@ -48,6 +48,42 @@ describe("mergeRemoteItemPatches", () => {
     expect(next.spaces["space-1"]?.entityIds).toEqual(["a"]);
   });
 
+  it("drops pin threads when a tombstoned entity is removed", () => {
+    const boot: BootstrapResponse = {
+      ok: true,
+      demo: false,
+      spaceId: "space-1",
+      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
+      items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"), noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z")],
+      camera: { x: 0, y: 0, zoom: 1 },
+    };
+    const prevBase = buildCanvasGraphFromBootstrap(boot);
+    const thread: CanvasPinConnection = {
+      id: "conn-1",
+      sourceEntityId: "a",
+      targetEntityId: "b",
+      sourcePin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
+      targetPin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
+      color: "#888",
+      linkType: "pin",
+      slackMultiplier: 1,
+      createdAt: 1,
+      updatedAt: 1,
+      syncState: "synced",
+      dbLinkId: "00000000-0000-4000-8000-0000000000bb",
+      syncError: null,
+    };
+    const prev = {
+      ...prevBase,
+      connections: { ...prevBase.connections, [thread.id]: thread },
+    };
+    const changed = [noteItem("a", "space-1", "A2", "2020-01-02T00:00:00.000Z")];
+    const serverIds = new Set<string>(["a"]);
+    const next = mergeRemoteItemPatches(prev, changed, serverIds, ["space-1"]);
+    expect(next.entities.b).toBeUndefined();
+    expect(next.connections[thread.id]).toBeUndefined();
+  });
+
   it("does not tombstone ids in the exempt set when missing from server list", () => {
     const boot: BootstrapResponse = {
       ok: true,

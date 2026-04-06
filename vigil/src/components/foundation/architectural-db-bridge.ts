@@ -389,7 +389,10 @@ export function mergeRemoteItemPatches(
     ...prev,
     spaces: spacesRecord,
     entities,
-    connections: prev.connections,
+    connections: pruneConnectionsToExistingEntities(
+      prev.connections,
+      new Set(Object.keys(entities)),
+    ),
   };
 }
 
