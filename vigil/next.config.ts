@@ -1,4 +1,7 @@
 import type { NextConfig } from "next";
+import bundleAnalyzer from "@next/bundle-analyzer";
+
+const withBundleAnalyzer = bundleAnalyzer({ enabled: process.env.ANALYZE === "1" });
 
 const nextConfig: NextConfig = {
   /**
@@ -17,4 +20,4 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1", "localhost"],
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

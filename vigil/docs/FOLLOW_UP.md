@@ -23,8 +23,9 @@ Items the codebase **cannot** complete without your action, credentials, or prod
 
 ## Phase 8 — performance & shipping
 
-- **Image thumbnails by zoom level:** Requires R2 transforms or a resize pipeline.
-- **Bundle budget (<200KB initial):** Run `ANALYZE` / `next build` analysis when you care about the number.
+- **Image thumbnails by zoom level:** Canvas media cards use **`resolveImageDisplayUrl`** (`src/lib/heartgarden-image-display-url.ts`) with optional **`NEXT_PUBLIC_HEARTGARDEN_IMAGE_URL_TEMPLATE`** (see `.env.local.example`) for on-demand CDN resizing; without a template, the original R2 URL is used.
+- **Bundle budget (<200KB initial):** From **`vigil/`**, run **`npm run analyze`** (`ANALYZE=1` + `@next/bundle-analyzer` after `next build`) and compare **First Load JS** in the build summary; optional CI cap not wired by default.
+- **Viewport culling:** **`canvas-viewport-cull.ts`** + `ArchitecturalCanvasApp` skip off-screen nodes, collapsed stacks, and connection SVG/rope sim (selected / dragged / connection-draw source always kept).
 - **Canvas minimap:** Not built; add if you want orientation at a glance.
 - **Onboarding overlay:** First-run hints not implemented.
 - **Preferences panel** (corner radius, spring sliders): Only theme + snap exist in toolbar; extend `localStorage` / store if you want full prefs.

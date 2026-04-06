@@ -9,6 +9,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import dynamic from "next/dynamic";
 import { flushSync } from "react-dom";
 import {
   ArrowLeft,
@@ -29,8 +30,6 @@ import {
   UploadSimple,
   WarningCircle,
 } from "@phosphor-icons/react";
-
-import { VigilFlowRevealOverlay } from "@/src/components/transition-experiment/VigilFlowRevealOverlay";
 
 import {
   ArchitecturalLoreReviewPanel,
@@ -133,6 +132,13 @@ import {
 import { useModKeyHints } from "@/src/lib/mod-keys";
 import { VIGIL_CANVAS_EFFECTS_STORAGE_KEY } from "@/src/lib/vigil-canvas-prefs";
 import { readSpaceCamera, writeSpaceCamera } from "@/src/lib/heartgarden-space-camera";
+import {
+  buildCullExceptionEntityIds,
+  collapsedStackIntersectsWorldRect,
+  connectionIntersectsWorldRect,
+  entityIntersectsWorldRect,
+  worldRectFromViewport,
+} from "@/src/lib/canvas-viewport-cull";
 import { useHeartgardenPresenceHeartbeat } from "@/src/hooks/use-heartgarden-presence-heartbeat";
 import { useHeartgardenSpaceChangeSync } from "@/src/hooks/use-heartgarden-space-change-sync";
 import {
@@ -175,6 +181,14 @@ import {
   type TapeVariant,
   ROOT_SPACE_DISPLAY_NAME,
 } from "@/src/components/foundation/architectural-types";
+
+const VigilFlowRevealOverlay = dynamic(
+  () =>
+    import("@/src/components/transition-experiment/VigilFlowRevealOverlay").then((mod) => ({
+      default: mod.VigilFlowRevealOverlay,
+    })),
+  { ssr: false, loading: () => null },
+);
 
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 3;
@@ -505,6 +519,8 @@ const CONNECTION_FRICTION = 0.93;
 const CONNECTION_GRAVITY = 0.35;
 const CONNECTION_ITERATIONS = 4;
 const CONNECTION_SEGMENTS = 12;
+/** World-space padding around the viewport for culling (cards / threads slightly off-screen stay mounted). */
+const CULL_MARGIN_WORLD = 100;
 
 type RopePoint = {
   x: number;
@@ -1627,6 +1643,7 @@ export function ArchitecturalCanvasApp({
   const draggedNodeIdsRef = useRef<string[]>([]);
   const dragOffsetsRef = useRef<Record<string, { x: number; y: number }>>({});
   const viewRef = useRef({ scale: 1, tx: 0, ty: 0 });
+  const viewportSizeRef = useRef({ width: 0, height: 0 });
   const lassoStartRef = useRef<{ x: number; y: number } | null>(null);
   /** Mirrors lasso rect for global mouseup; React state can lag one frame behind a quick click. */
   const lassoRectScreenRef = useRef<LassoRectScreen | null>(null);
@@ -1646,6 +1663,7 @@ export function ArchitecturalCanvasApp({
   const activeSpaceIdRef = useRef(activeSpaceId);
   const navigationPathRef = useRef(navigationPath);
   const selectedNodeIdsRef = useRef(selectedNodeIds);
+  const connectionSourceIdRef = useRef<string | null>(null);
   const selectionBeforeConnectionModeRef = useRef<string[] | null>(null);
   const alignSelectedInGridRef = useRef<() => void>(() => {});
   const undoPastRef = useRef<ArchitecturalUndoSnapshot[]>([]);
@@ -1671,6 +1689,7 @@ export function ArchitecturalCanvasApp({
 
   graphRef.current = graph;
   viewRef.current = { scale, tx: translateX, ty: translateY };
+  viewportSizeRef.current = viewportSize;
   maxZIndexRef.current = maxZIndex;
   stackModalRef.current = stackModal;
   stackDragRef.current = stackDrag;
@@ -1678,6 +1697,8 @@ export function ArchitecturalCanvasApp({
   activeSpaceIdRef.current = activeSpaceId;
   navigationPathRef.current = navigationPath;
   selectedNodeIdsRef.current = selectedNodeIds;
+  draggedNodeIdsRef.current = draggedNodeIds;
+  connectionSourceIdRef.current = connectionSourceId;
   focusOpenRef.current = focusOpen;
   galleryOpenRef.current = galleryOpen;
   paletteOpenRef.current = paletteOpen;
@@ -2682,7 +2703,28 @@ export function ArchitecturalCanvasApp({
       const activeIds = new Set<string>();
       const { tx, ty, scale: pinScale } = viewRef.current;
       const pinView: ConnectionPinViewContext = { tx, ty, scale: pinScale };
+      const { width: vw, height: vh } = viewportSizeRef.current;
+      const worldRectCullSim =
+        vw > 0 && vh > 0
+          ? worldRectFromViewport(tx, ty, pinScale, vw, vh, CULL_MARGIN_WORLD)
+          : { left: -Infinity, top: -Infinity, right: Infinity, bottom: Infinity };
+      const cullExcSim = buildCullExceptionEntityIds({
+        selectedNodeIds: selectedNodeIdsRef.current,
+        draggedNodeIds: draggedNodeIdsRef.current,
+        connectionSourceId: connectionSourceIdRef.current,
+      });
       Object.values(graphSnap.connections).forEach((connection) => {
+        const source = graphSnap.entities[connection.sourceEntityId];
+        const target = graphSnap.entities[connection.targetEntityId];
+        if (!source || !target) return;
+        if (!source.slots[spaceId] || !target.slots[spaceId]) return;
+        if (
+          vw > 0 &&
+          vh > 0 &&
+          !connectionIntersectsWorldRect(connection, graphSnap, spaceId, worldRectCullSim, cullExcSim)
+        ) {
+          return;
+        }
         const start = resolveConnectionPin(
           connection.sourceEntityId,
           connection.sourcePin,
@@ -2879,6 +2921,59 @@ export function ArchitecturalCanvasApp({
       .map(([stackId, arr]) => ({ stackId, entities: arr, top: arr[arr.length - 1]! }));
     return out.length === 0 ? EMPTY_COLLAPSED_STACKS : out;
   }, [stackGroups]);
+
+  const cullExceptionEntityIds = useMemo(
+    () =>
+      buildCullExceptionEntityIds({
+        selectedNodeIds,
+        draggedNodeIds,
+        connectionSourceId,
+      }),
+    [selectedNodeIds, draggedNodeIds, connectionSourceId],
+  );
+
+  const worldCullRect = useMemo(
+    () =>
+      worldRectFromViewport(
+        translateX,
+        translateY,
+        scale,
+        Math.max(1, viewportSize.width),
+        Math.max(1, viewportSize.height),
+        CULL_MARGIN_WORLD,
+      ),
+    [translateX, translateY, scale, viewportSize.width, viewportSize.height],
+  );
+
+  const visibleStandaloneEntities = useMemo(
+    () =>
+      standaloneEntities.filter((entity) =>
+        entityIntersectsWorldRect(entity, activeSpaceId, worldCullRect, cullExceptionEntityIds),
+      ),
+    [standaloneEntities, activeSpaceId, worldCullRect, cullExceptionEntityIds],
+  );
+
+  const visibleCollapsedStacks = useMemo(
+    () =>
+      collapsedStacks.filter(({ entities }) =>
+        collapsedStackIntersectsWorldRect(entities, activeSpaceId, worldCullRect, cullExceptionEntityIds),
+      ),
+    [collapsedStacks, activeSpaceId, worldCullRect, cullExceptionEntityIds],
+  );
+
+  const visibleActiveSpaceConnections = useMemo(
+    () =>
+      activeSpaceConnections.filter((connection) =>
+        connectionIntersectsWorldRect(
+          connection,
+          graph,
+          activeSpaceId,
+          worldCullRect,
+          cullExceptionEntityIds,
+        ),
+      ),
+    [activeSpaceConnections, graph, activeSpaceId, worldCullRect, cullExceptionEntityIds],
+  );
 
   /** Stable primitive keys so stack-bounds effects do not re-run when `collapsedStacks` is a new array ref with the same logical stacks. */
   const stackModalLayoutKey = useMemo(() => {
@@ -8022,7 +8117,7 @@ export function ArchitecturalCanvasApp({
               connectionMode === "cut" ? ` ${styles.canvasEntityLayerCutDim}` : ""
             }`}
           >
-          {standaloneEntities.map((entity) => {
+          {visibleStandaloneEntities.map((entity) => {
             const slot = entity.slots[activeSpaceId] ?? { x: 0, y: 0 };
             const draggedIndex = draggedNodeIds.indexOf(entity.id);
             const dragged = draggedIndex >= 0;
@@ -8067,6 +8162,8 @@ export function ArchitecturalCanvasApp({
                     onBodyCommit={updateNodeBody}
                     onExpand={handleNodeExpand}
                     onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
+                    canvasPanZoomScale={scale}
+                    useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
                   />
                 ) : (
                   <ArchitecturalFolderCard
@@ -8084,7 +8181,7 @@ export function ArchitecturalCanvasApp({
               </div>
             );
           })}
-          {collapsedStacks.map(({ stackId, entities, top }) => {
+          {visibleCollapsedStacks.map(({ stackId, entities, top }) => {
             if (stackModal?.stackId === stackId) return null;
             const slot = top.slots[activeSpaceId] ?? { x: 0, y: 0 };
             const selected = entities.some((entity) => selectedNodeIds.includes(entity.id));
@@ -8232,6 +8329,8 @@ export function ArchitecturalCanvasApp({
                         onBodyCommit={updateNodeBody}
                         onExpand={handleNodeExpand}
                         bodyEditable={false}
+                        canvasPanZoomScale={scale}
+                        useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
                       />
                     ) : (
                       <ArchitecturalFolderCard
@@ -8294,7 +8393,7 @@ export function ArchitecturalCanvasApp({
                   );
                 })()
               : null}
-            {activeSpaceConnections.map((connection) => {
+            {visibleActiveSpaceConnections.map((connection) => {
               const sourcePin = resolveConnectionPin(
                 connection.sourceEntityId,
                 connection.sourcePin,
@@ -9466,6 +9565,8 @@ export function ArchitecturalCanvasApp({
                     onBodyCommit={updateNodeBody}
                     onExpand={handleNodeExpand}
                     onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
+                    canvasPanZoomScale={1}
+                    useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
                   />
                 ) : (
                   <ArchitecturalFolderCard

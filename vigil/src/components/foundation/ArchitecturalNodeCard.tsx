@@ -2,7 +2,7 @@
 
 import { ArrowsOutSimple, Image as ImageIcon } from "@phosphor-icons/react";
 import type { CSSProperties, ReactNode } from "react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import { parseArchitecturalMediaFromBody } from "@/src/components/foundation/architectural-media-html";
@@ -16,6 +16,7 @@ import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalT
 import { Button } from "@/src/components/ui/Button";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
+import { resolveImageDisplayUrl } from "@/src/lib/heartgarden-image-display-url";
 
 function themeClass(theme: NodeTheme): string {
   if (theme === "code") return styles.themeCode;
@@ -144,6 +145,9 @@ export function ArchitecturalNodeCard({
   bodyEditable,
   showTape = true,
   onBodyDraftDirty,
+  /** Canvas zoom scale — used to pick image decode width when a resize template is configured. */
+  canvasPanZoomScale = 1,
+  useFullImageResolution = false,
 }: {
   id: string;
   title: string;
@@ -161,9 +165,14 @@ export function ArchitecturalNodeCard({
   bodyEditable?: boolean;
   showTape?: boolean;
   onBodyDraftDirty?: (dirty: boolean) => void;
+  canvasPanZoomScale?: number;
+  useFullImageResolution?: boolean;
 }) {
   const isMediaNode = theme === "media";
   const nodeWidth = width ?? 340;
+  const [imageDpr] = useState(() =>
+    typeof window !== "undefined" ? Math.min(window.devicePixelRatio ?? 1, 2.5) : 1,
+  );
   const cardStyle = {
     width: width != null ? `${width}px` : undefined,
     "--entity-width": `${nodeWidth}px`,
@@ -173,6 +182,21 @@ export function ArchitecturalNodeCard({
     () => (isMediaNode ? parseArchitecturalMediaFromBody(bodyHtml) : { src: null, alt: "" }),
     [bodyHtml, isMediaNode],
   );
+
+  const imageDisplaySrc = useMemo(() => {
+    if (!imageCardMedia.src) return null;
+    return resolveImageDisplayUrl(imageCardMedia.src, {
+      maxCssPixels: nodeWidth * canvasPanZoomScale,
+      devicePixelRatio: imageDpr,
+      useFullResolution: useFullImageResolution,
+    });
+  }, [
+    imageCardMedia.src,
+    nodeWidth,
+    canvasPanZoomScale,
+    imageDpr,
+    useFullImageResolution,
+  ]);
 
   if (isMediaNode) {
     return (
@@ -203,9 +227,9 @@ export function ArchitecturalNodeCard({
               {imageCardMedia.src ? (
                 // eslint-disable-next-line @next/next/no-img-element -- dynamic user/R2 URLs; not suitable for next/image without broad remotePatterns
                 <img
-                  key={imageCardMedia.src}
+                  key={`${imageCardMedia.src}|${imageDisplaySrc ?? ""}`}
                   className={styles.imageSlotImg}
-                  src={imageCardMedia.src}
+                  src={imageDisplaySrc ?? imageCardMedia.src}
                   alt={imageCardMedia.alt || title}
                   draggable={false}
                 />
