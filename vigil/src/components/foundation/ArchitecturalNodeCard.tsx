@@ -110,6 +110,8 @@ export function ArchitecturalNodeBody({
   onHtmlCommit,
   onDraftDirtyChange,
   wikiLinkAssist,
+  onRichDocCommand,
+  emptyPlaceholder,
 }: {
   html: string;
   className?: string;
@@ -118,6 +120,8 @@ export function ArchitecturalNodeBody({
   onHtmlCommit?: (html: string) => void;
   onDraftDirtyChange?: (dirty: boolean) => void;
   wikiLinkAssist?: WikiLinkAssistConfig | null;
+  onRichDocCommand?: (command: string, value?: string) => void;
+  emptyPlaceholder?: string | null;
 }) {
   return (
     <BufferedContentEditable
@@ -132,6 +136,12 @@ export function ArchitecturalNodeBody({
         taskText: styles.taskText,
         taskCheckbox: styles.taskCheckbox,
       }}
+      documentBlockDrag={{
+        handleClass: styles.archBlockDragHandle,
+        taskItemClass: styles.taskItem,
+      }}
+      richDocCommand={onRichDocCommand}
+      emptyPlaceholder={emptyPlaceholder ?? null}
       onCommit={(nextHtml) => onHtmlCommit?.(nextHtml)}
       onDraftDirtyChange={onDraftDirtyChange}
       wikiLinkAssist={wikiLinkAssist ?? null}
@@ -160,6 +170,8 @@ export function ArchitecturalNodeCard({
   canvasPanZoomScale = 1,
   useFullImageResolution = false,
   wikiLinkAssist,
+  onRichDocCommand,
+  emptyPlaceholder,
 }: {
   id: string;
   title: string;
@@ -180,6 +192,8 @@ export function ArchitecturalNodeCard({
   canvasPanZoomScale?: number;
   useFullImageResolution?: boolean;
   wikiLinkAssist?: WikiLinkAssistConfig | null;
+  onRichDocCommand?: (command: string, value?: string) => void;
+  emptyPlaceholder?: string | null;
 }) {
   const isMediaNode = theme === "media";
   const nodeWidth = width ?? 340;
@@ -295,6 +309,8 @@ export function ArchitecturalNodeCard({
         wikiLinkAssist={
           theme === "default" || theme === "task" ? wikiLinkAssist ?? null : null
         }
+        onRichDocCommand={onRichDocCommand}
+        emptyPlaceholder={emptyPlaceholder}
       />
     </div>
   );

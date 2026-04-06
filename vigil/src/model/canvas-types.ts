@@ -6,12 +6,21 @@ export type ItemType =
   | "webclip"
   | "folder";
 
+/**
+ * Logical camera for the infinite canvas. **`x` / `y`** are the **CSS transform
+ * translate** applied to the scene in screen pixels (same units as React state
+ * `translateX` / `translateY` in `ArchitecturalCanvasApp`). World `(0, 0)` sits at
+ * the canvas origin; **`defaultCamera()`** is the intentional home position for
+ * arrival (bootstrap, open folder, recenter) — not “center of the viewport,” which
+ * would shift content down/right. Policy: **`vigil/AGENTS.md`** (Canvas camera).
+ */
 export interface CameraState {
   x: number;
   y: number;
   zoom: number;
 }
 
+/** World origin, zoom 1 — default when entering a space or loading bootstrap data. */
 export function defaultCamera(): CameraState {
   return { x: 0, y: 0, zoom: 1 };
 }

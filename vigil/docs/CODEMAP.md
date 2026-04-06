@@ -9,6 +9,7 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Next app root, global CSS | `app/layout.tsx`, `app/page.tsx`, `app/globals.css` |
 | Client mount, boot gate | `app/_components/VigilApp.tsx` |
 | Production canvas UI (graph state lives here) | `src/components/foundation/ArchitecturalCanvasApp.tsx` |
+| Browser-local camera storage + arrival policy | `src/lib/heartgarden-space-camera.ts` (see **`AGENTS.md`** → Canvas camera) |
 | Foundation types / pieces | `src/components/foundation/*` |
 | Flow / WebGL overlay (optional) | `src/components/transition-experiment/VigilFlowRevealOverlay.tsx` |
 | Legacy / parallel store (panels) | `src/stores/canvas-store.ts` (see `BUILD_PLAN.md`) |
@@ -19,6 +20,7 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 |--------|-----------|
 | Minimap + viewport metrics strip | `src/components/foundation/CanvasMinimap.tsx`, `ArchitecturalStatusBar.tsx` (`ArchitecturalViewportMetrics`), `src/lib/vigil-canvas-prefs.ts` |
 | Fit camera / world bounds for UI | `src/lib/canvas-view-bounds.ts` |
+| Default camera / `CameraState` | `src/model/canvas-types.ts` (`defaultCamera`) |
 | Transient viewport toasts | `src/components/foundation/CanvasViewportToast.tsx` |
 | Buffered rich text + wiki `[[` assist | `src/components/editing/BufferedContentEditable.tsx`, `WikiLinkAssistPopover.tsx`, `src/lib/wiki-link-caret.ts` |
 | Resolved image URLs (zoom / CDN template) | `src/lib/heartgarden-image-display-url.ts` |

@@ -1,6 +1,27 @@
 import type { CameraState } from "@/src/model/canvas-types";
 
-/** Per-space viewport in localStorage (shared PIN: one remembered view per browser profile per space). */
+/**
+ * Per-space viewport in **localStorage** (`heartgarden-space-camera-v1`): one
+ * remembered **translate + zoom** per space id in this browser profile.
+ *
+ * **Writes** — While the user pans or zooms, the shell debounces
+ * {@link writeSpaceCamera} so storage tracks the last on-screen view for that space.
+ *
+ * **Arrival (bootstrap, open folder / `enterSpace`, non-default shell first paint,
+ * explicit recenter)** — The shell applies {@link defaultCamera} from
+ * `canvas-types.ts` and **does not** call {@link readSpaceCamera} to restore a prior
+ * offset. That avoids landing shifted **down/right** from stale values or the old
+ * half-window placeholder. {@link writeSpaceCamera} is still invoked so storage
+ * matches the view we actually showed.
+ *
+ * **Follow / presence** — When entering a space with a remote viewport override
+ * (e.g. follow another tab), the shell may use a **clamped** camera instead of
+ * `defaultCamera()`; see `enterSpace` in `ArchitecturalCanvasApp.tsx`.
+ *
+ * **Read API** — {@link readSpaceCamera} remains available for tooling or future
+ * product rules (e.g. optional “restore last position”); the main shell paths above
+ * intentionally start at origin unless a follow override applies.
+ */
 const STORAGE_KEY = "heartgarden-space-camera-v1";
 
 const MAX_ZOOM = 8;

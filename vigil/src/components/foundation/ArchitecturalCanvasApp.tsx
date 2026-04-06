@@ -151,7 +151,7 @@ import {
   readCanvasMinimapVisibleFromStorage,
   writeCanvasMinimapVisibleToStorage,
 } from "@/src/lib/vigil-canvas-prefs";
-import { readSpaceCamera, writeSpaceCamera } from "@/src/lib/heartgarden-space-camera";
+import { writeSpaceCamera } from "@/src/lib/heartgarden-space-camera";
 import {
   buildCollapsedStacksList,
   computeSpaceContentBounds,
@@ -610,15 +610,6 @@ type ConnectionPinViewContext = {
 function isUuidLike(value: string | null | undefined): value is string {
   if (!value) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-/** Detect mistaken per-space camera (e.g. child space key written with parent pan). */
-function camerasNearlyEqual(a: CameraState, b: CameraState): boolean {
-  return (
-    Math.abs(a.x - b.x) < 1 &&
-    Math.abs(a.y - b.y) < 1 &&
-    Math.abs(a.zoom - b.zoom) < 1e-4
-  );
 }
 
 function clampFollowCamera(cam: CameraState): CameraState {
@@ -3813,10 +3804,15 @@ export function ArchitecturalCanvasApp({
     [updateTransformFromMouse],
   );
 
+  /** Resets to `defaultCamera()` and syncs storage for the active UUID space — see `AGENTS.md` (Canvas camera). */
   const recenterToOrigin = useCallback(() => {
-    setTranslateX(window.innerWidth / 2);
-    setTranslateY(window.innerHeight / 2);
-    setScale(1);
+    const cam = defaultCamera();
+    setTranslateX(cam.x);
+    setTranslateY(cam.y);
+    setScale(cam.zoom);
+    if (isUuidLike(activeSpaceIdRef.current)) {
+      writeSpaceCamera(activeSpaceIdRef.current, cam);
+    }
   }, []);
 
   const makeWikiLinkAssist = useCallback(
@@ -3965,6 +3961,7 @@ export function ArchitecturalCanvasApp({
     [translateX, translateY, scale],
   );
 
+  /** Hydrates graph from bootstrap and sets camera to `defaultCamera()` (arrival at origin — see `AGENTS.md`). */
   const applyBootstrapData = useCallback((data: BootstrapResponse, maxZi: number) => {
     if (!data.spaceId) return;
     const nextGraph = buildCanvasGraphFromBootstrap(data);
@@ -3982,14 +3979,11 @@ export function ArchitecturalCanvasApp({
       }
     }
     syncCursorRef.current = maxMs > 0 ? new Date(maxMs).toISOString() : new Date(0).toISOString();
-    const storedCam = readSpaceCamera(data.spaceId);
-    const cam = storedCam ?? defaultCamera();
+    const cam = defaultCamera();
     setTranslateX(cam.x);
     setTranslateY(cam.y);
     setScale(cam.zoom);
-    if (storedCam == null) {
-      writeSpaceCamera(data.spaceId, cam);
-    }
+    writeSpaceCamera(data.spaceId, cam);
     setMaxZIndex(maxZi);
   }, []);
   const applyBootstrapDataRef = useRef(applyBootstrapData);
@@ -4134,8 +4128,8 @@ export function ArchitecturalCanvasApp({
           setGraph(createBootstrapPendingGraph());
           setActiveSpaceId(ROOT_SPACE_ID);
           setNavigationPath([ROOT_SPACE_ID]);
-          setTranslateX(window.innerWidth / 2);
-          setTranslateY(window.innerHeight / 2);
+          setTranslateX(0);
+          setTranslateY(0);
           setScale(1);
         } else {
           const tier = workspaceCacheTierForNeonSession(b);
@@ -4157,8 +4151,8 @@ export function ArchitecturalCanvasApp({
             setGraph(createBootstrapPendingGraph());
             setActiveSpaceId(ROOT_SPACE_ID);
             setNavigationPath([ROOT_SPACE_ID]);
-            setTranslateX(window.innerWidth / 2);
-            setTranslateY(window.innerHeight / 2);
+            setTranslateX(0);
+            setTranslateY(0);
             setScale(1);
           }
         }
@@ -4209,10 +4203,11 @@ export function ArchitecturalCanvasApp({
 
   useLayoutEffect(() => {
     setViewportSize({ width: window.innerWidth, height: window.innerHeight });
-    // Default scenario: camera comes from bootstrap in one batch (avoids center → server camera jump).
+    // Non-default shell: seed translate at world origin (not half-window) — `AGENTS.md` (Canvas camera).
+    // Default scenario: leave translate to bootstrap, which applies camera in one batch.
     if (scenario !== "default") {
-      setTranslateX(window.innerWidth / 2);
-      setTranslateY(window.innerHeight / 2);
+      setTranslateX(0);
+      setTranslateY(0);
     }
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -4933,12 +4928,6 @@ export function ArchitecturalCanvasApp({
       const fromDepth = navigationPathRef.current.length;
       const nextPathPreview = buildPathToSpace(spaceId, snap.spaces, snap.rootSpaceId);
       const toDepth = nextPathPreview.length;
-      const descendingDeeper = toDepth > fromDepth;
-      const viewBeforeNav: CameraState = {
-        x: viewRef.current.tx,
-        y: viewRef.current.ty,
-        zoom: viewRef.current.scale,
-      };
       if (toDepth > fromDepth) playVigilUiSound("transition_down");
       else if (toDepth < fromDepth) playVigilUiSound("transition_up");
 
@@ -4952,25 +4941,13 @@ export function ArchitecturalCanvasApp({
           }
         }
         if (isUuidLike(targetSpaceId)) {
-          let cam: CameraState;
-          if (cameraOverride != null) {
-            cam = clampFollowCamera(cameraOverride);
-          } else {
-            const stored = readSpaceCamera(targetSpaceId);
-            if (
-              descendingDeeper &&
-              stored != null &&
-              camerasNearlyEqual(stored, viewBeforeNav)
-            ) {
-              cam = defaultCamera();
-              writeSpaceCamera(targetSpaceId, cam);
-            } else {
-              cam = stored ?? defaultCamera();
-            }
-          }
+          // Arrival at origin unless following a remote viewport (`heartgarden-space-camera` + AGENTS.md).
+          const cam: CameraState =
+            cameraOverride != null ? clampFollowCamera(cameraOverride) : defaultCamera();
           setTranslateX(cam.x);
           setTranslateY(cam.y);
           setScale(cam.zoom);
+          writeSpaceCamera(targetSpaceId, cam);
         } else if (!merged) {
           /* Local seed spaces use string ids; match defaultCamera (0,0) where showcase cards are authored. */
           const cam = defaultCamera();
@@ -8806,6 +8783,16 @@ export function ArchitecturalCanvasApp({
                     canvasPanZoomScale={scale}
                     useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
                     wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                    onRichDocCommand={
+                      entity.theme === "default" || entity.theme === "task"
+                        ? (command, value) => runFormat(command, value)
+                        : undefined
+                    }
+                    emptyPlaceholder={
+                      entity.theme === "default" || entity.theme === "task"
+                        ? "Write here, or type / for blocks…"
+                        : undefined
+                    }
                   />
                 ) : (
                   <ArchitecturalFolderCard
@@ -10247,6 +10234,16 @@ export function ArchitecturalCanvasApp({
                     canvasPanZoomScale={1}
                     useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
                     wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                    onRichDocCommand={
+                      entity.theme === "default" || entity.theme === "task"
+                        ? (command, value) => runFormat(command, value)
+                        : undefined
+                    }
+                    emptyPlaceholder={
+                      entity.theme === "default" || entity.theme === "task"
+                        ? "Write here, or type / for blocks…"
+                        : undefined
+                    }
                   />
                 ) : (
                   <ArchitecturalFolderCard
@@ -10377,6 +10374,12 @@ export function ArchitecturalCanvasApp({
                   taskText: styles.taskText,
                   taskCheckbox: styles.taskCheckbox,
                 }}
+                documentBlockDrag={{
+                  handleClass: styles.archBlockDragHandle,
+                  taskItemClass: styles.taskItem,
+                }}
+                richDocCommand={(command, value) => runFormat(command, value)}
+                emptyPlaceholder="Write a caption, or type / for blocks…"
                 onCommit={(nextHtml) => setGalleryDraftNotes(nextHtml)}
                 wikiLinkAssist={makeWikiLinkAssist(galleryNodeId ?? undefined)}
               />
@@ -10425,6 +10428,20 @@ export function ArchitecturalCanvasApp({
                 taskText: styles.taskText,
                 taskCheckbox: styles.taskCheckbox,
               }}
+              documentBlockDrag={
+                focusCodeTheme
+                  ? null
+                  : {
+                      handleClass: styles.archBlockDragHandle,
+                      taskItemClass: styles.taskItem,
+                    }
+              }
+              richDocCommand={
+                focusCodeTheme ? undefined : (command, value) => runFormat(command, value)
+              }
+              emptyPlaceholder={
+                focusCodeTheme ? null : "Write here, or type / for blocks…"
+              }
               onCommit={(nextHtml) =>
                 setFocusBody(
                   normalizeChecklistMarkup(nextHtml, {

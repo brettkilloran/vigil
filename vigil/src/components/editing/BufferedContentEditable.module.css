@@ -1,0 +1,33 @@
+/* Host wraps the contenteditable + ephemeral drag UI (handles live on inner nodes). */
+.richEditorHost {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.richEditorHostInner {
+  flex: 1;
+  min-height: 0;
+}
+
+.dropIndicator {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--accent) 72%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--sys-color-black) 8%, transparent);
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0.95;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropIndicator {
+    box-shadow: none;
+  }
+}

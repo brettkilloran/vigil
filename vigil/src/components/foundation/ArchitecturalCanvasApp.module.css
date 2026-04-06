@@ -1526,6 +1526,22 @@
   min-height: 88px;
 }
 
+.nodeBody[data-arch-doc-empty="true"] {
+  position: relative;
+}
+
+.nodeBody[data-arch-doc-empty="true"]::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  top: 20px;
+  pointer-events: none;
+  color: color-mix(in oklch, currentColor 38%, transparent);
+  font-size: 14px;
+  line-height: 1.68;
+}
+
 .a4DocumentBody {
   max-height: calc((var(--entity-width, 340px) * 1.41421356237) - 90px);
   overflow-y: auto;
@@ -1761,6 +1777,99 @@
 
 .taskText {
   outline: none;
+}
+
+/* Paper-style block drag handle (ephemeral in DOM; stripped before save). */
+.archBlockDragHandle {
+  box-sizing: border-box;
+  flex-shrink: 0;
+  width: 14px;
+  min-height: 1.2em;
+  margin-top: 3px;
+  margin-top: max(0px, calc((1lh - 12px) / 2));
+  align-self: flex-start;
+  border: 0;
+  padding: 0;
+  border-radius: 3px;
+  cursor: grab;
+  color: color-mix(in oklch, currentColor 38%, transparent);
+  background:
+    radial-gradient(currentColor 1.1px, transparent 1.2px) 0 0 / 4px 4px repeat,
+    radial-gradient(currentColor 1.1px, transparent 1.2px) 2px 2px / 4px 4px repeat;
+  opacity: 0;
+  transition:
+    opacity var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
+    color var(--sys-motion-duration-fast) var(--sys-motion-ease-standard);
+  user-select: none;
+  -webkit-user-drag: element;
+}
+
+.archBlockDragHandle:active {
+  cursor: grabbing;
+}
+
+.nodeBody:hover .archBlockDragHandle,
+.focusBody:hover .archBlockDragHandle,
+.taskItem:hover .archBlockDragHandle {
+  opacity: 0.4;
+}
+
+.archBlockDragHandle:hover {
+  opacity: 0.85;
+  color: color-mix(in oklch, var(--accent) 55%, currentColor);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .archBlockDragHandle {
+    transition: none;
+  }
+}
+
+/* Prose blocks: handle sits in the left gutter (task rows use flex; see .taskItem). */
+.nodeBody > p:has(.archBlockDragHandle),
+.nodeBody > h1:has(.archBlockDragHandle),
+.nodeBody > h2:has(.archBlockDragHandle),
+.nodeBody > h3:has(.archBlockDragHandle),
+.nodeBody > blockquote:has(.archBlockDragHandle),
+.nodeBody > pre:has(.archBlockDragHandle) {
+  position: relative;
+  padding-left: 22px;
+}
+
+.nodeBody > p:has(.archBlockDragHandle) .archBlockDragHandle,
+.nodeBody > h1:has(.archBlockDragHandle) .archBlockDragHandle,
+.nodeBody > h2:has(.archBlockDragHandle) .archBlockDragHandle,
+.nodeBody > h3:has(.archBlockDragHandle) .archBlockDragHandle,
+.nodeBody > blockquote:has(.archBlockDragHandle) .archBlockDragHandle,
+.nodeBody > pre:has(.archBlockDragHandle) .archBlockDragHandle {
+  position: absolute;
+  left: 2px;
+  top: 0.2em;
+  margin-top: 0;
+  align-self: auto;
+}
+
+.focusBody > p:has(.archBlockDragHandle),
+.focusBody > h1:has(.archBlockDragHandle),
+.focusBody > h2:has(.archBlockDragHandle),
+.focusBody > h3:has(.archBlockDragHandle),
+.focusBody > blockquote:has(.archBlockDragHandle),
+.focusBody > pre:has(.archBlockDragHandle) {
+  position: relative;
+  padding-left: 22px;
+}
+
+.focusBody > p:has(.archBlockDragHandle) .archBlockDragHandle,
+.focusBody > h1:has(.archBlockDragHandle) .archBlockDragHandle,
+.focusBody > h2:has(.archBlockDragHandle) .archBlockDragHandle,
+.focusBody > h3:has(.archBlockDragHandle) .archBlockDragHandle,
+.focusBody > blockquote:has(.archBlockDragHandle) .archBlockDragHandle,
+.focusBody > pre:has(.archBlockDragHandle) .archBlockDragHandle {
+  position: absolute;
+  left: 2px;
+  top: 0.2em;
+  margin-top: 0;
+  align-self: auto;
 }
 
 .mediaPlaceholder {
@@ -4384,6 +4493,22 @@ button.rootDockPanel.viewportMetricsPanel {
   transition:
     opacity 0.26s ease,
     transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.focusBody[data-arch-doc-empty="true"] {
+  position: relative;
+}
+
+.focusBody[data-arch-doc-empty="true"]::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  pointer-events: none;
+  color: color-mix(in oklch, currentColor 40%, transparent);
+  font-size: 18px;
+  line-height: 1.7;
 }
 
 .focusActive .focusHeader {
