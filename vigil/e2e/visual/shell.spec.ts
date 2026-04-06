@@ -14,8 +14,8 @@ test.describe("visual: shell (light, empty demo)", () => {
       timeout: 30_000,
     });
     await dismissHeartgardenBootIfPresent(page);
-    await expect(page.getByText("Database not reachable")).toBeVisible();
-    await expect(page.getByText("Could not load workspace")).toBeVisible();
+    /* PLAYWRIGHT_E2E bootstrap is demo/empty; with boot gate off the shell falls back to local demo canvas. */
+    await expect(page.getByText("Local only · not connected")).toBeVisible();
 
     // Let layout, fonts, and theme settle before capturing.
     await expect(page.locator("html[data-vigil-theme='light']")).toBeVisible();

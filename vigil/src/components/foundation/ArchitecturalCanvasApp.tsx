@@ -1272,17 +1272,22 @@ function clientPointToCanvasWorld(
   return { x: (localX - tx) / scale, y: (localY - ty) / scale };
 }
 
-/** Plain text for clipboard / support when bootstrap cannot reach Postgres. */
+/** Plain text for clipboard / support when bootstrap cannot reach Postgres (boot gate on, cloud expected). */
 const WORKSPACE_BOOTSTRAP_ERROR_COPY = `Heartgarden — Could not load workspace
 
 No account data was deleted. This browser session could not open a Postgres workspace.
 
-Fix:
-1. Add NEON_DATABASE_URL or DATABASE_URL to vigil/.env.local (your Neon connection string).
+Local dev:
+1. Add NEON_DATABASE_URL, DATABASE_URL, POSTGRES_URL, or POSTGRES_PRISMA_URL to vigil/.env.local (Neon connection string).
 2. Restart the dev server from the vigil folder: npm run dev
 3. Reload this page.
 
-After one successful load, Heartgarden keeps a local snapshot in this browser so short outages still show your garden.`;
+Vercel / hosted:
+1. Project → Settings → Environment Variables: add NEON_DATABASE_URL (or DATABASE_URL) for Production — use Neon’s pooled serverless URL; see docs/DEPLOY_VERCEL.md.
+2. Redeploy so serverless functions pick up the variable.
+3. Reload this page.
+
+After one successful cloud load, Heartgarden keeps a local snapshot in this browser so short outages still show your garden.`;
 
 function WorkspaceBootstrapErrorPanel() {
   const [copied, setCopied] = useState(false);
@@ -1353,9 +1358,11 @@ function WorkspaceBootstrapErrorPanel() {
           </pre>
         </div>
         <p className={styles.neonWorkspaceUnavailableFoot}>
-          Both <span className={styles.monoSmall}>NEON_DATABASE_URL</span> and{" "}
-          <span className={styles.monoSmall}>DATABASE_URL</span> are read from{" "}
-          <span className={styles.monoSmall}>vigil/.env.local</span>.
+          Server checks{" "}
+          <span className={styles.monoSmall}>NEON_DATABASE_URL</span>,{" "}
+          <span className={styles.monoSmall}>DATABASE_URL</span>,{" "}
+          <span className={styles.monoSmall}>POSTGRES_URL</span>, then{" "}
+          <span className={styles.monoSmall}>POSTGRES_PRISMA_URL</span> (Vercel / Neon).
         </p>
       </div>
     </div>
@@ -3921,10 +3928,14 @@ export function ArchitecturalCanvasApp({
       }
     }
     syncCursorRef.current = maxMs > 0 ? new Date(maxMs).toISOString() : new Date(0).toISOString();
-    const cam = readSpaceCamera(data.spaceId) ?? defaultCamera();
+    const storedCam = readSpaceCamera(data.spaceId);
+    const cam = storedCam ?? defaultCamera();
     setTranslateX(cam.x);
     setTranslateY(cam.y);
     setScale(cam.zoom);
+    if (storedCam == null) {
+      writeSpaceCamera(data.spaceId, cam);
+    }
     setMaxZIndex(maxZi);
   }, []);
   const applyBootstrapDataRef = useRef(applyBootstrapData);
@@ -3955,6 +3966,11 @@ export function ArchitecturalCanvasApp({
     setGraph(freshGraph);
     setActiveSpaceId(freshGraph.rootSpaceId);
     setNavigationPath([freshGraph.rootSpaceId]);
+    const demoCam = defaultCamera();
+    setTranslateX(demoCam.x);
+    setTranslateY(demoCam.y);
+    setScale(demoCam.zoom);
+    writeSpaceCamera(freshGraph.rootSpaceId, demoCam);
     setSelectedNodeIds([]);
     setConnectionSourceId(null);
     setConnectionMode("move");
@@ -4076,6 +4092,9 @@ export function ArchitecturalCanvasApp({
             persistNeonRef.current = false;
             neonSyncSetCloudEnabled(false);
             applyBootstrapDataRef.current(cached.bootstrap, cached.maxZIndex);
+          } else if (!b.gateEnabled) {
+            /* README: without Neon, open gate runs local-only demo — same as demo PIN tier. */
+            applyDemoLocalCanvas();
           } else {
             setNeonWorkspaceOk(false);
             setWorkspaceViewFromCache(false);
@@ -4881,7 +4900,11 @@ export function ArchitecturalCanvasApp({
           setTranslateY(cam.y);
           setScale(cam.zoom);
         } else if (!merged) {
-          recenterToOrigin();
+          /* Local seed spaces use string ids; match defaultCamera (0,0) where showcase cards are authored. */
+          const cam = defaultCamera();
+          setTranslateX(cam.x);
+          setTranslateY(cam.y);
+          setScale(cam.zoom);
         }
         setActiveSpaceId(targetSpaceId);
         setNavigationPath(buildPathToSpace(targetSpaceId, g.spaces, g.rootSpaceId));
@@ -4969,7 +4992,7 @@ export function ArchitecturalCanvasApp({
         }
       })();
     },
-    [recenterToOrigin],
+    [],
   );
 
   const handleFollowPresencePeer = useCallback(
@@ -10333,6 +10356,12 @@ export function ArchitecturalCanvasApp({
           >
             <div className={styles.shellTopClusterRow} data-hg-chrome="top-left-cluster">
               <ArchitecturalStatusBar
+                syncAwaitingBootAuth={
+                  scenario === "default" &&
+                  heartgardenBootApi.loaded &&
+                  heartgardenBootApi.gateEnabled &&
+                  !heartgardenBootApi.sessionValid
+                }
                 syncBootstrapPending={scenario === "default" && !canvasBootstrapResolved}
                 syncShowingCachedWorkspace={
                   scenario === "default" &&

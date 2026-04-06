@@ -83,6 +83,7 @@ function SaveAndVersionPopover({
   popoverAnchorRef,
   envLabel,
   showPulse = true,
+  awaitingBootAuth = false,
   bootstrapPending,
   showingCachedWorkspace = false,
   offlineNoSnapshot = false,
@@ -93,6 +94,8 @@ function SaveAndVersionPopover({
   popoverAnchorRef: RefObject<HTMLDivElement | null>;
   envLabel: string;
   showPulse?: boolean;
+  /** Boot PIN gate is on and this browser has not completed sign-in — not a database outage. */
+  awaitingBootAuth?: boolean;
   bootstrapPending: boolean;
   /** Live Neon unavailable; UI is the last successful snapshot from this browser. */
   showingCachedWorkspace?: boolean;
@@ -138,7 +141,13 @@ function SaveAndVersionPopover({
     let detailBody =
       "Not connected to Neon — no database URL or bootstrap failed. Changes stay in this session. Use Export graph JSON below for a file checkpoint.";
 
-    if (bootstrapPending) {
+    if (awaitingBootAuth) {
+      pulseToneClass = styles.pulseDotToneLocal;
+      statusLine = "Not signed in yet";
+      detailTitle = "Finish the splash screen first";
+      detailBody =
+        "You have not opened a signed-in session yet, so the workspace has not loaded and nothing here reflects database status. Use Enter the garden on the splash screen, then enter your access code. After that, this strip shows whether you are synced with the cloud.";
+    } else if (bootstrapPending) {
       pulseToneClass = styles.pulseDotToneLoading;
       statusLine = "Loading workspace…";
       detailTitle = "Loading workspace";
@@ -185,15 +194,17 @@ function SaveAndVersionPopover({
         "All pending changes are written to Neon. Undo/redo changes the canvas in memory only — it does not revert the server. Edit again to push a new save.";
     }
 
-    const live = bootstrapPending
-      ? "Loading workspace"
-      : offlineNoSnapshot
-        ? "Workspace could not load; database not reachable"
-        : !sync.cloudEnabled && showingCachedWorkspace
-          ? "Offline, showing cached workspace from this browser"
-          : !sync.cloudEnabled
-            ? "Local session, not connected to Neon"
-            : sync.lastError
+    const live = awaitingBootAuth
+      ? "Not signed in; complete the splash screen to load workspace"
+      : bootstrapPending
+        ? "Loading workspace"
+        : offlineNoSnapshot
+          ? "Workspace could not load; database not reachable"
+          : !sync.cloudEnabled && showingCachedWorkspace
+            ? "Offline, showing cached workspace from this browser"
+            : !sync.cloudEnabled
+              ? "Local session, not connected to Neon"
+              : sync.lastError
               ? `Sync error: ${syncErrorSummaryLine(sync.lastError)}`
               : busy
                 ? "Saving to Neon"
@@ -220,6 +231,7 @@ function SaveAndVersionPopover({
       absSaved: abs,
     };
   }, [
+    awaitingBootAuth,
     bootstrapPending,
     busy,
     offlineNoSnapshot,
@@ -688,6 +700,7 @@ export type CollabPeerPresenceChip = {
 export function ArchitecturalStatusBar({
   envLabel = "波途画電",
   showPulse = true,
+  syncAwaitingBootAuth = false,
   syncBootstrapPending = false,
   syncShowingCachedWorkspace = false,
   syncOfflineNoSnapshot = false,
@@ -697,6 +710,8 @@ export function ArchitecturalStatusBar({
 }: {
   envLabel?: string;
   showPulse?: boolean;
+  /** Boot PIN gate on and no valid session yet — show sign-in copy instead of “offline / Neon”. */
+  syncAwaitingBootAuth?: boolean;
   /** True while default-scenario bootstrap is in flight (before we know demo vs Neon). */
   syncBootstrapPending?: boolean;
   syncShowingCachedWorkspace?: boolean;
@@ -717,6 +732,7 @@ export function ArchitecturalStatusBar({
           popoverAnchorRef={syncChromeRef}
           envLabel={envLabel}
           showPulse={showPulse}
+          awaitingBootAuth={syncAwaitingBootAuth}
           bootstrapPending={syncBootstrapPending}
           showingCachedWorkspace={syncShowingCachedWorkspace}
           offlineNoSnapshot={syncOfflineNoSnapshot}

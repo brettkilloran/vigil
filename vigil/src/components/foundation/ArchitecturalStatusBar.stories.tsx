@@ -51,6 +51,15 @@ export const NoPulse: Story = {
   },
 };
 
+/** Splash visible: PIN gate on, no session — not the same as Neon offline. */
+export const AwaitingBootAuth: Story = {
+  args: {
+    syncAwaitingBootAuth: true,
+    syncBootstrapPending: false,
+    syncOfflineNoSnapshot: false,
+  },
+};
+
 export const WithCollabPeers: Story = {
   args: {
     collabPeers: [
