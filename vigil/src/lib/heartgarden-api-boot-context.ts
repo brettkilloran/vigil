@@ -1,14 +1,17 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import type { tryGetDb } from "@/src/db/index";
+import { tryGetDb } from "@/src/db/index";
 import {
   HEARTGARDEN_BOOT_COOKIE_NAME,
   readBootEnv,
   verifyBootSessionCookie,
 } from "@/src/lib/heartgarden-boot-session";
-import { isHeartgardenPlayerLayerMisconfigured } from "@/src/lib/heartgarden-player-layer-env";
-import { assertSpaceExists } from "@/src/lib/spaces";
+import {
+  isHeartgardenPlayerLayerMisconfigured,
+  resolveHeartgardenPlayerSpaceIdFromEnv,
+} from "@/src/lib/heartgarden-player-layer-env";
+import { assertSpaceExists, resolveActiveSpaceGmWorkspace } from "@/src/lib/spaces";
 import { isHeartgardenGmPlayerSpaceBreakGlassEnabled } from "@/src/lib/heartgarden-gm-break-glass";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
 
@@ -20,6 +23,11 @@ export type HeartgardenApiBootContext =
   | { role: "player"; playerSpaceId: string }
   | { role: "demo" }
   | { role: "player_forbidden" }
+  /**
+   * Player cookie + no explicit env space id — resolve to Neon default workspace in
+   * {@link getHeartgardenApiBootContext} before handling data routes.
+   */
+  | { role: "player_resolve_from_db" }
   | { role: "session_invalid" }
   /** Boot gate on and no `hg_boot` cookie (middleware should block `/api/*` first). */
   | { role: "unauthenticated" };
@@ -45,7 +53,8 @@ export function gmMayAccessItemSpace(ctx: HeartgardenApiBootContext, itemSpaceId
 
 /**
  * Resolve boot tier for API routes. GM path when gate off, E2E, or valid Bishop (`access`) cookie.
- * Player path only with valid player cookie + valid `HEARTGARDEN_PLAYER_SPACE_ID` env and config.
+ * Player path with valid player cookie: env UUID if set, else {@link player_resolve_from_db} for
+ * async resolution against Neon (see {@link getHeartgardenApiBootContext}).
  */
 export function parseHeartgardenApiBootContext(jar: CookieJar): HeartgardenApiBootContext {
   const { gateEnabled, sessionSecret } = readBootEnv();
@@ -62,10 +71,9 @@ export function parseHeartgardenApiBootContext(jar: CookieJar): HeartgardenApiBo
 
   if (isHeartgardenPlayerLayerMisconfigured()) return { role: "player_forbidden" };
 
-  const playerSpaceId = parseSpaceIdParam((process.env.HEARTGARDEN_PLAYER_SPACE_ID ?? "").trim() || null);
-  if (!playerSpaceId) return { role: "player_forbidden" };
-
-  return { role: "player", playerSpaceId };
+  const playerSpaceId = resolveHeartgardenPlayerSpaceIdFromEnv();
+  if (playerSpaceId) return { role: "player", playerSpaceId };
+  return { role: "player_resolve_from_db" };
 }
 
 export function heartgardenApiForbiddenResponse(): NextResponse {
@@ -79,6 +87,7 @@ export function heartgardenApiForbiddenJsonResponse(): Response {
 export function isHeartgardenPlayerBlocked(ctx: HeartgardenApiBootContext): boolean {
   return (
     ctx.role === "player_forbidden" ||
+    ctx.role === "player_resolve_from_db" ||
     ctx.role === "session_invalid" ||
     ctx.role === "unauthenticated" ||
     ctx.role === "demo"
@@ -123,7 +132,12 @@ export function playerMayAccessSpaceId(ctx: HeartgardenApiBootContext, spaceId: 
 /** Use at the top of Route Handlers that support the player layer. */
 export async function getHeartgardenApiBootContext(): Promise<HeartgardenApiBootContext> {
   const jar = await cookies();
-  return parseHeartgardenApiBootContext(jar);
+  const ctx = parseHeartgardenApiBootContext(jar);
+  if (ctx.role !== "player_resolve_from_db") return ctx;
+  const db = tryGetDb();
+  if (!db) return { role: "player_forbidden" };
+  const { activeSpace } = await resolveActiveSpaceGmWorkspace(db, undefined);
+  return { role: "player", playerSpaceId: activeSpace.id };
 }
 
 /** Lore, vault index, upload, reindex, semantic search, etc. — no player-tier or demo access. */

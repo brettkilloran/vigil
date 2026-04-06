@@ -1,15 +1,15 @@
-# Players layer (Players PIN + `HEARTGARDEN_PLAYER_SPACE_ID`)
+# Players layer (Players PIN + optional `HEARTGARDEN_PLAYER_SPACE_ID`)
 
-## What `HEARTGARDEN_PLAYER_SPACE_ID` is and why it is an env var
+## What `HEARTGARDEN_PLAYER_SPACE_ID` is (optional)
 
 Heartgarden stores canvas data in Neon: each **space** is a row (with a UUID). Items belong to a **`space_id`**.
 
 - **Bishop** (`HEARTGARDEN_BOOT_PIN_BISHOP`) signs in as cookie tier **`access`** — full GM: all spaces the app would normally list, subject to optional hiding of the player space from GM lists (see break-glass below).
-- **Players** (`HEARTGARDEN_BOOT_PIN_PLAYERS`) signs in as cookie tier **`player`**. The server must know **which single space** those sessions are allowed to use. That UUID is **`HEARTGARDEN_PLAYER_SPACE_ID`**.
+- **Players** (`HEARTGARDEN_BOOT_PIN_PLAYERS`) signs in as cookie tier **`player`**. The server allows **exactly one** Neon space for those sessions. If **`HEARTGARDEN_PLAYER_SPACE_ID`** is set to a valid UUID, that row is used. If it is **unset**, the server uses the **same default workspace** as Bishop (first space from GM resolution — typically the most recently updated root space, or a new “Main space” if the DB is empty). Set the env var when you want Players on a **different** space than that default, or to **hide** that space from GM lists (see below).
 
-It is an **environment variable** so the binding is **server-side only**: the browser never receives “try this space id”; the operator sets it once per deploy (e.g. Vercel), and every API route enforces it after reading the signed **`hg_boot`** cookie. Storing it in the DB or in client config would weaken that guarantee or complicate bootstrapping.
+Optional second source: **`HEARTGARDEN_DEFAULT_SPACE_ID`** (MCP convention) is used only when **`HEARTGARDEN_PLAYER_SPACE_ID`** is empty.
 
-**What value to put there:** the **`id`** of the Neon **`spaces`** row that should be the Players canvas (the “composite” world you expose to non-Bishop, non-demo users). You can copy it from GM tooling, SQL, or after creating the space in-app while logged in as Bishop. It must be a **canonical UUID** string (same format as other space ids in the API).
+**What value to put in `HEARTGARDEN_PLAYER_SPACE_ID`:** the **`id`** of the Neon **`spaces`** row that should be the Players canvas when it must differ from the default GM landing space. It must be a **canonical UUID** string (same format as other space ids in the API).
 
 **Demo** (`HEARTGARDEN_BOOT_PIN_DEMO`, tier **`demo`**) uses a **local-seeded** canvas only and does not use this env var for Neon.
 
@@ -24,9 +24,9 @@ Full detail lives in server helper [`src/lib/heartgarden-api-boot-context.ts`](.
 ## Invariants (do not regress)
 
 1. **GM path unchanged** — Logic branches must be **`if (player)`** / Players only where intended. Never default the app to Players behavior on data routes.
-2. **Fail closed** — Missing/invalid **`HEARTGARDEN_PLAYER_SPACE_ID`** or space not in DB → Players get **403** on scoped routes (constant body `{ ok: false, error: "Forbidden." }`). No fallback to “first space”.
+2. **Fail closed** — **Invalid** (non-empty but not UUID) **`HEARTGARDEN_PLAYER_SPACE_ID`** / **`HEARTGARDEN_DEFAULT_SPACE_ID`**, missing Neon DB when Players need a resolved space, or space not in DB → Players get **403** on scoped routes (constant body `{ ok: false, error: "Forbidden." }`). When env is empty, the server resolves the default GM workspace space from Neon (not client-controlled).
 3. **Defense in depth** — Bootstrap scoping is UX; every API that uses `spaceId` / `itemId` re-checks tier and resolves ownership from the DB where required.
-4. **Flat space (Option A)** — Players may only access items whose **`space_id`** equals **`HEARTGARDEN_PLAYER_SPACE_ID`** exactly (no child-space drill-down).
+4. **Flat space (Option A)** — Players may only access items whose **`space_id`** equals the **resolved** player space id (env UUID or default workspace) exactly (no child-space drill-down).
 5. **No recon-by-error** — Denial bodies stay generic. For **Players** (`player` tier), missing spaces/items/links return **403** with the same constant JSON as other denials (not **404**), so clients cannot infer whether a UUID exists in another space. **GM** sessions keep normal **404** where applicable.
 6. **Same browser, two cookies** — Bishop machines use **`access`**; do not share the Bishop PIN on untrusted player devices.
 7. **Boot brute-force** — `POST /api/heartgarden/boot` is **rate-limited per IP** (in-memory per server instance; tunable via env). **`PLAYWRIGHT_E2E=1`** disables the limit for CI.
@@ -83,4 +83,4 @@ Any new **`app/api/**`** handler that reads **`spaceId`**, **`itemId`**, or link
 
 **Players misconfiguration**
 
-- [ ] Players cookie but missing/invalid player space env → operator alert webhook optional (`HEARTGARDEN_PLAYER_LAYER_ALERT_WEBHOOK_URL`); bootstrap and mutating routes **403** (not GM data); boot screen shows configuration error when flagged.
+- [ ] Players cookie but **invalid** (non-empty, bad UUID) player/default space env → operator alert webhook optional (`HEARTGARDEN_PLAYER_LAYER_ALERT_WEBHOOK_URL`); bootstrap and mutating routes **403** (not GM data); boot screen shows configuration error when flagged. Empty env with valid Neon is **not** misconfigured.

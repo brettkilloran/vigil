@@ -1,11 +1,9 @@
-import { cookies } from "next/headers";
-
 import { tryGetDb } from "@/src/db/index";
 import {
   assertPlayerSpaceRowExists,
+  getHeartgardenApiBootContext,
   heartgardenApiForbiddenJsonResponse,
   isHeartgardenPlayerBlocked,
-  parseHeartgardenApiBootContext,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
@@ -48,8 +46,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const requested = parseSpaceIdParam(url.searchParams.get("space"));
 
-  const jar = await cookies();
-  const bootCtx = parseHeartgardenApiBootContext(jar);
+  const bootCtx = await getHeartgardenApiBootContext();
   if (isHeartgardenPlayerBlocked(bootCtx)) {
     return heartgardenApiForbiddenJsonResponse();
   }
