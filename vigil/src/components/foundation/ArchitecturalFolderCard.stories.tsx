@@ -10,13 +10,9 @@ const meta: Meta<typeof ArchitecturalFolderCard> = {
   component: ArchitecturalFolderCard,
   args: {
     id: "folder-story",
-    title: "Covenant dossier",
+    title: "Research folder",
     itemCount: 3,
-    previewTitles: [
-      "Telemetry sequence log",
-      "Antenna timing memo",
-      "Propulsion wake note",
-    ],
+    previewTitles: ["Source list", "Snippet: normalizer", "Archive"],
     selected: false,
     dragOver: false,
     folderColorScheme: undefined,

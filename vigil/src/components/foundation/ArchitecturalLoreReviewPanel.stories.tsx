@@ -14,7 +14,7 @@ const sampleDraft: VaultReviewDraft = {
   bodyText:
     "Cross-index of witness names and conflict flags. Tone is in-world but references a mechanic as if canon.",
   excludeItemId: "00000000-0000-4000-8000-000000000001",
-  targetLabel: "BRIEF // THE SECOND CHANCE",
+  targetLabel: "Welcome to this board",
 };
 
 const sampleIssues: VaultReviewIssue[] = [

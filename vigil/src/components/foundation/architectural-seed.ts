@@ -23,7 +23,7 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
   return [
     {
       id: "node-1",
-      title: "BRIEF // THE SECOND CHANCE",
+      title: "Welcome to this board",
       x: -140,
       y: -463,
       rotation: -2.6,
@@ -31,15 +31,15 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       tapeRotation: -2.2,
       tapeVariant: "masking",
       bodyHtml: `
-        <h1>The ring does not forgive nostalgia.</h1>
-        <p>We fled the first world on fumes and liturgy. Out here, under a tired red sun, terraforming bought us time—but not innocence. Every colony landed with old grudges and new flags, and the planet learned our names too well.</p>
-        <blockquote>Where certainty frays, the Stain seeps in: glitches in light, memory, and the small laws we pretended were permanent.</blockquote>
-        <p>Wytches are what we call the ones who can touch it anyway—edit thought, bend seconds, bleed for a correction. This board is your orbit desk. Arrange the evidence before the wound widens.</p>
+        <h1>Start here</h1>
+        <p>Heartgarden is a canvas for notes, tasks, images, and nested spaces. Drag cards, open folders to move inward, and use the trail at the top to climb back out.</p>
+        <blockquote>Everything saves to the workspace you are signed into. Pinch or scroll to zoom; drag the background to pan.</blockquote>
+        <p>Open the <strong>Research folder</strong> on the right when you are ready—the cards inside are different from what you see out here, so nothing is duplicated for the sake of a demo.</p>
       `,
     },
     {
       id: "node-2",
-      title: "DAT // SING_IN_BOOT.TS",
+      title: "Sample sync config",
       x: 325,
       y: -334,
       rotation: 2.4,
@@ -48,18 +48,18 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       tapeRotation: 2.8,
       tapeVariant: "dark",
       bodyHtml: `
-        <span style="color: ${DS_COLOR.codeSampleKeyword};">const</span> <span style="color: ${DS_COLOR.codeSampleName};">dataterm</span> = {<br>
-        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">host</span>: <span style="color: ${DS_COLOR.codeSampleString};">'nv.dataterm.local'</span>,<br>
-        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">phase</span>: <span style="color: ${DS_COLOR.codeSampleString};">'Sing_1R_Jailbr3ak'</span>,<br>
-        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">battery</span>: <span style="color: ${DS_COLOR.codeSampleProperty};">84</span>,<br>
-        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">queue</span>: <span style="color: ${DS_COLOR.codeSampleString};">'awaiting_datashard'</span>,<br>
-        };<br><br>
-        <span style="color: ${DS_COLOR.codeSampleComment};">// [IN] Core modules loaded · [ST] Secure channel established · calibrating retrieval…</span>
+        <span style="color: ${DS_COLOR.codeSampleComment};">// Example: how a small client might describe its session</span><br>
+        <span style="color: ${DS_COLOR.codeSampleKeyword};">export const</span> <span style="color: ${DS_COLOR.codeSampleName};">workspaceSession</span> = {<br>
+        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">id</span>: <span style="color: ${DS_COLOR.codeSampleString};">'hg-demo-01'</span>,<br>
+        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">region</span>: <span style="color: ${DS_COLOR.codeSampleString};">'us-east'</span>,<br>
+        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">lastSyncedAt</span>: <span style="color: ${DS_COLOR.codeSampleKeyword};">new</span> <span style="color: ${DS_COLOR.codeSampleName};">Date</span>(<span style="color: ${DS_COLOR.codeSampleString};">'2026-04-01T12:00:00Z'</span>),<br>
+        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">status</span>: <span style="color: ${DS_COLOR.codeSampleString};">'idle'</span>,<br>
+        } <span style="color: ${DS_COLOR.codeSampleKeyword};">as const</span>;<br>
       `,
     },
     {
       id: "node-3",
-      title: "COVEN // FIELD ORDERS",
+      title: "Try these next",
       x: 262,
       y: 108,
       rotation: -3.1,
@@ -70,25 +70,25 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       bodyHtml: `
         <div class="${tokens.taskItem} ${tokens.done}" contenteditable="false">
           <div class="${tokens.taskCheckbox}" contenteditable="false"></div>
-          <div class="${tokens.taskText}" contenteditable="true">Map Stain vents along the habitable ring</div>
+          <div class="${tokens.taskText}" contenteditable="true">Pan and zoom until the layout feels comfortable</div>
         </div>
         <div class="${tokens.taskItem} ${tokens.done}" contenteditable="false">
           <div class="${tokens.taskCheckbox}" contenteditable="false"></div>
-          <div class="${tokens.taskText}" contenteditable="true">Archive a false memory in Grimoire (new tab)</div>
+          <div class="${tokens.taskText}" contenteditable="true">Double-click the background to create a quick note</div>
         </div>
         <div class="${tokens.taskItem}" contenteditable="false">
           <div class="${tokens.taskCheckbox}" contenteditable="false"></div>
-          <div class="${tokens.taskText}" contenteditable="true">Reconcile Builder output with Core Rules</div>
+          <div class="${tokens.taskText}" contenteditable="true">Open the Research folder and read the cards one level down</div>
         </div>
         <div class="${tokens.taskItem}" contenteditable="false">
           <div class="${tokens.taskCheckbox}" contenteditable="false"></div>
-          <div class="${tokens.taskText}" contenteditable="true">Escort datashard to terminus before curfew</div>
+          <div class="${tokens.taskText}" contenteditable="true">Use search (keyboard shortcut in the status bar) when the board grows</div>
         </div>
       `,
     },
     {
       id: "node-4",
-      title: "SURVEY // CALIGINIA SPHERE",
+      title: "Reference image",
       x: -202,
       y: 106,
       rotation: 2.2,
@@ -98,12 +98,12 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       tapeVariant: "dark",
       bodyHtml: `
         <div class="${tokens.mediaFrame}" data-architectural-media-root="true">
-          <img class="${tokens.mediaImage}" src="/caliginia-sphere.png" alt="Caliginia sphere — survey frame" />
+          <img class="${tokens.mediaImage}" src="/caliginia-sphere.png" alt="Abstract sphere render used as sample media" />
           <div class="${tokens.mediaImageActions}" contenteditable="false">
             <button type="button" class="${tokens.mediaUploadBtn}" data-architectural-media-upload="true">Replace</button>
           </div>
         </div>
-        <div data-architectural-media-notes="true"></div>
+        <div data-architectural-media-notes="true"><p>Media cards accept uploads and keep captions here. Replace the image to try your own file.</p></div>
       `,
     },
   ];
@@ -139,7 +139,7 @@ export function buildArchitecturalSeedGraph(
     },
     "space-project-thesis": {
       id: "space-project-thesis",
-      name: "Covenant dossier",
+      name: "Research",
       parentSpaceId: "root",
       entityIds: [],
     },
@@ -147,55 +147,46 @@ export function buildArchitecturalSeedGraph(
 
   entities["folder-1"] = {
     id: "folder-1",
-    title: "Covenant dossier",
+    title: "Research folder",
     kind: "folder",
     theme: "folder",
     childSpaceId: "space-project-thesis",
     rotation: -4.2,
     width: 420,
     tapeRotation: 0,
+    /* Clear of root cluster: sits mid-right, below the code card row */
     slots: {
-      root: { x: -682, y: -157 },
+      root: { x: 460, y: -40 },
     },
   };
-
-  if (entities["node-3"]) {
-    entities["node-3"] = {
-      ...entities["node-3"],
-      slots: {
-        ...entities["node-3"].slots,
-        "space-project-thesis": { x: -120, y: 240 },
-      },
-    };
-  }
-
-  spaces["space-project-thesis"].entityIds.push("node-3");
 
   const folderMockNodes: CanvasNode[] = [
     {
       id: "dossier-01",
-      title: "INTAKE // Witness Ledger",
-      x: -420,
-      y: -180,
+      title: "Source list",
+      x: -460,
+      y: -200,
       rotation: -1.2,
       width: 340,
       theme: "default",
       tapeRotation: -1.1,
       tapeVariant: "clear",
       bodyHtml:
-        "<p>Cross-index of witness names, aliases, and conflict flags captured during the last perimeter blackout.</p><p>Use for rapid provenance checks when reports contradict each other.</p>",
+        "<p><strong>Curated inputs</strong> for the demo workspace—articles, interview notes, and exports you would normally link from a real project.</p><p>In practice you might tag these, link cards together, or move them into a shared folder for review.</p>",
     },
     {
       id: "dossier-02",
-      title: "LOG // Corridor Audio Drift",
-      x: 180,
-      y: -180,
+      title: "Snippet: normalizer",
+      x: 40,
+      y: -200,
       rotation: 0.7,
       width: 340,
       theme: "code",
       tapeRotation: 1.4,
       tapeVariant: "dark",
-      bodyHtml: `<span style="color: ${DS_COLOR.codeSampleComment};">// 04:12-04:47 local // attenuation sweep</span><br><span style="color: ${DS_COLOR.codeSampleKeyword};">const</span> drift = [0.02, 0.06, 0.11, 0.19, 0.12, 0.05];<br><span style="color: ${DS_COLOR.codeSampleKeyword};">export</span> function classify(frame){ return frame &gt; 0.12 ? 'stain-signature' : 'ambient'; }`,
+      bodyHtml: `<span style="color: ${DS_COLOR.codeSampleComment};">// Strip noise from pasted text before indexing</span><br><span style="color: ${DS_COLOR.codeSampleKeyword};">function</span> <span style="color: ${DS_COLOR.codeSampleName};">normalize</span>(s: <span style="color: ${DS_COLOR.codeSampleName};">string</span>) {<br>
+&nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleKeyword};">return</span> s.<span style="color: ${DS_COLOR.codeSampleName};">replace</span>(<span style="color: ${DS_COLOR.codeSampleString};">/\\s+/g</span>, <span style="color: ${DS_COLOR.codeSampleString};">' '</span>).<span style="color: ${DS_COLOR.codeSampleName};">trim</span>();<br>
+}`,
     },
   ];
 
@@ -213,37 +204,38 @@ export function buildArchitecturalSeedGraph(
   if (scenario === "nested") {
     spaces["space-subsystems"] = {
       id: "space-subsystems",
-      name: "Aux shaft log",
+      name: "Archive",
       parentSpaceId: "space-project-thesis",
       entityIds: ["nested-note-1"],
     };
 
     entities["folder-2"] = {
       id: "folder-2",
-      title: "Aux shaft log",
+      title: "Archive",
       kind: "folder",
       theme: "folder",
       childSpaceId: "space-subsystems",
       rotation: 0.5,
       width: 420,
       tapeRotation: 0,
+      /* Below the top row of dossier cards, right side — no horizontal overlap with either card */
       slots: {
-        "space-project-thesis": { x: 220, y: -140 },
+        "space-project-thesis": { x: 420, y: 200 },
       },
     };
 
     entities["nested-note-1"] = {
       id: "nested-note-1",
-      title: "Deep stack // Proof",
+      title: "Third level",
       kind: "content",
       theme: "default",
       rotation: -0.6,
       tapeRotation: 1.2,
       tapeVariant: "clear",
       bodyHtml:
-        "<p>Nesting still works when the fiction does: this card sits one ring below the dossier to exercise folders, crumbs, and the small superstition that order holds under pressure.</p>",
+        "<p>You are two folders deep. Breadcrumbs at the top of the canvas show the path; use them to jump up without losing your place.</p><p>This card only exists here—nothing on the outer canvas repeats it—so nested spaces stay easy to tell apart.</p>",
       slots: {
-        "space-subsystems": { x: -60, y: -20 },
+        "space-subsystems": { x: -80, y: 40 },
       },
     };
 

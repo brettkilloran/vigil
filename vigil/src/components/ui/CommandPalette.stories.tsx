@@ -12,7 +12,7 @@ const now = Date.now();
 const mockRecentItems: RecentPaletteItem[] = [
   {
     id: "item-note-1",
-    title: "BRIEF // THE SECOND CHANCE",
+    title: "Welcome to this board",
     itemType: "note",
     spaceId: "root",
     spaceName: "Root",
@@ -20,7 +20,7 @@ const mockRecentItems: RecentPaletteItem[] = [
   },
   {
     id: "item-code-1",
-    title: "DAT // sing_1r_boot.ts",
+    title: "Sample sync config",
     itemType: "note",
     spaceId: "root",
     spaceName: "Root",
@@ -31,7 +31,7 @@ const mockRecentItems: RecentPaletteItem[] = [
 const mockRecentFolders: RecentPaletteFolder[] = [
   {
     id: "folder-1",
-    title: "Covenant dossier",
+    title: "Research folder",
     parentSpaceId: "root",
     parentSpaceName: "Root",
     updatedAt: now,
@@ -64,15 +64,15 @@ export const Open: Story = {
       items={[
         {
           id: "pal-1",
-          title: "Field orders checklist",
+          title: "Try these next",
           itemType: "checklist",
           spaceId: "root",
           spaceName: "Root",
-          snippet: "Escort datashard to terminus",
+          snippet: "Open the Research folder",
         },
         {
           id: "pal-2",
-          title: "Caliginia sphere",
+          title: "Reference image",
           itemType: "image",
           spaceId: "root",
           spaceName: "Root",
@@ -80,7 +80,7 @@ export const Open: Story = {
       ]}
       spaces={[
         { id: "root", name: "Root", pathLabel: "/" },
-        { id: "space-project-thesis", name: "Covenant dossier", pathLabel: "/Covenant dossier" },
+        { id: "space-project-thesis", name: "Research", pathLabel: "/Research" },
       ]}
       actions={[
         {

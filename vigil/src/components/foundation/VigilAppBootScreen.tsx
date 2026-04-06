@@ -628,14 +628,14 @@ export function VigilAppBootScreen({
           </h1>
           <div id="vigil-boot-desc" className={styles.blurbWrap}>
             <p className={`${styles.blurb} ${styles.blurbReveal}`} style={{ animationDelay: "0.88s" }}>
-              An infinite, living archive of Caliginia’s thermal shadows—
+              A canvas for notes, research, and loose threads—
               <br />
-              a permanent negative stained upon the retina. The eyelid is gone; shutter jammed open.
+              arranged in space instead of tabs, so you can see how ideas touch.
             </p>
             <p className={`${styles.blurb} ${styles.blurbReveal}`} style={{ animationDelay: "1.08s" }}>
-              Yet no light enters the panopticon.
+              Folders nest; the trail above keeps your depth in view.
               <br />
-              Only flowers, blooming in the vitreous dark.
+              Nothing here is final copy—only a quiet place to begin.
             </p>
           </div>
         </div>
