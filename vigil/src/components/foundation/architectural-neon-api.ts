@@ -79,9 +79,18 @@ export async function fetchBootstrap(spaceId?: string): Promise<BootstrapRespons
   return data.ok ? data : null;
 }
 
+export type SpaceChangePayloadRow = {
+  id: string;
+  name: string;
+  parentSpaceId: string | null;
+  updatedAt?: string;
+};
+
 export type SpaceChangesResponse = {
   ok: boolean;
   items?: CanvasItem[];
+  /** Subtree `spaces` rows updated since `since` (e.g. reparent / rename). */
+  spaces?: SpaceChangePayloadRow[];
   itemIds?: string[];
   cursor?: string;
   error?: string;
@@ -90,10 +99,14 @@ export type SpaceChangesResponse = {
 export async function fetchSpaceChanges(
   spaceId: string,
   since: string,
+  options?: { includeItemIds?: boolean },
 ): Promise<SpaceChangesResponse | null> {
   try {
+    const q = new URLSearchParams();
+    q.set("since", since);
+    if (options?.includeItemIds) q.set("includeItemIds", "1");
     const res = await fetch(
-      `/api/spaces/${encodeURIComponent(spaceId)}/changes?since=${encodeURIComponent(since)}`,
+      `/api/spaces/${encodeURIComponent(spaceId)}/changes?${q.toString()}`,
     );
     const data = (await res.json()) as SpaceChangesResponse;
     return res.ok && data.ok ? data : null;

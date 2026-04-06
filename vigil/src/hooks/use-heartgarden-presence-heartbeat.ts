@@ -92,3 +92,6 @@ export function useHeartgardenPresenceHeartbeat(options: {
     };
   }, [enabled, activeSpaceId, setPresencePeerCount]);
 }
+
+/** Plan / collab docs alias — same as {@link useHeartgardenPresenceHeartbeat}. */
+export { useHeartgardenPresenceHeartbeat as usePresenceHeartbeat };

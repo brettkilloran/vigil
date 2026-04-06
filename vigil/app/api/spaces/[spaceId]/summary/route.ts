@@ -2,15 +2,8 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
-import {
-  getHeartgardenApiBootContext,
-  gmMayAccessSpaceId,
-  heartgardenApiForbiddenJsonResponse,
-  heartgardenMaskNotFoundForVisitor,
-  isHeartgardenVisitorBlocked,
-  visitorMayAccessSpaceId,
-} from "@/src/lib/heartgarden-api-boot-context";
-import { assertSpaceExists } from "@/src/lib/spaces";
+import { getHeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
+import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 
 export async function GET(
   _req: Request,
@@ -21,23 +14,10 @@ export async function GET(
     return Response.json({ ok: false, error: "Database not configured" }, { status: 503 });
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
   const { spaceId } = await context.params;
-  const space = await assertSpaceExists(db, spaceId);
-  if (!space) {
-    return heartgardenMaskNotFoundForVisitor(
-      bootCtx,
-      Response.json({ ok: false, error: "Space not found" }, { status: 404 }),
-    );
-  }
-  if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
-  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
+  const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
+  if (!access.ok) return access.response;
+  const space = access.space;
 
   const [itemRow] = await db
     .select({ c: sql<number>`count(*)::int` })

@@ -289,11 +289,14 @@ export function mergeBootstrapView(prev: CanvasGraph, data: BootstrapResponse): 
  * Apply remote item rows from delta sync. Removes entities missing from `serverItemIdsInSubtree`
  * but previously listed under `subtreeSpaceIds`. Re-homes entities when `spaceId` changes.
  * `tombstoneExemptIds` keeps local-only rows (e.g. undo-after-delete until POST restore completes).
+ *
+ * When `serverItemIdsInSubtree` is **`null`**, remote tombstone deletes are skipped (partial delta
+ * poll without a full id snapshot — see `includeItemIds` on `GET …/changes`).
  */
 export function mergeRemoteItemPatches(
   prev: CanvasGraph,
   changedItems: CanvasItem[],
-  serverItemIdsInSubtree: ReadonlySet<string>,
+  serverItemIdsInSubtree: ReadonlySet<string> | null,
   subtreeSpaceIds: readonly string[],
   protectedContentIds: ReadonlySet<string> = new Set(),
   tombstoneExemptIds: ReadonlySet<string> = new Set(),
@@ -302,7 +305,9 @@ export function mergeRemoteItemPatches(
   const entities: Record<string, CanvasEntity> = { ...prev.entities };
 
   const entityHome = new Map<string, string>();
-  for (const [sid, sp] of Object.entries(spacesRecord)) {
+  for (const sid of subtreeSpaceIds) {
+    const sp = spacesRecord[sid];
+    if (!sp) continue;
     for (const eid of sp.entityIds) {
       entityHome.set(eid, sid);
     }
@@ -324,6 +329,7 @@ export function mergeRemoteItemPatches(
   };
 
   for (const id of prevIdsInSubtree) {
+    if (serverItemIdsInSubtree === null) continue;
     if (serverItemIdsInSubtree.has(id)) continue;
     if (tombstoneExemptIds.has(id)) continue;
     delete entities[id];
@@ -349,6 +355,42 @@ export function mergeRemoteItemPatches(
     entities,
     connections: prev.connections,
   };
+}
+
+export type RemoteSpaceChangeRow = {
+  id: string;
+  name: string;
+  parentSpaceId: string | null;
+};
+
+/**
+ * Apply `spaces` row updates from delta sync (e.g. folder reparent → `parent_space_id`).
+ * Preserves existing `entityIds`; inserts a stub space if the client had not loaded it yet.
+ */
+export function mergeRemoteSpaceRowsIntoGraph(
+  prev: CanvasGraph,
+  spaceRows: readonly RemoteSpaceChangeRow[],
+): CanvasGraph {
+  if (spaceRows.length === 0) return prev;
+  const spacesRecord: Record<string, CanvasSpace> = { ...prev.spaces };
+  for (const row of spaceRows) {
+    const existing = spacesRecord[row.id];
+    if (existing) {
+      spacesRecord[row.id] = {
+        ...existing,
+        name: row.name,
+        parentSpaceId: row.parentSpaceId,
+      };
+    } else {
+      spacesRecord[row.id] = {
+        id: row.id,
+        name: row.name,
+        parentSpaceId: row.parentSpaceId,
+        entityIds: [],
+      };
+    }
+  }
+  return { ...prev, spaces: spacesRecord };
 }
 
 /** Remove item rows that no longer exist on the server (e.g. PATCH 404 after remote delete). */

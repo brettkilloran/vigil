@@ -2,17 +2,10 @@ import { and, eq, inArray } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
-import {
-  getHeartgardenApiBootContext,
-  gmMayAccessSpaceId,
-  heartgardenApiForbiddenJsonResponse,
-  heartgardenMaskNotFoundForVisitor,
-  isHeartgardenVisitorBlocked,
-  visitorMayAccessSpaceId,
-} from "@/src/lib/heartgarden-api-boot-context";
+import { getHeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
 import type { GraphEdge, GraphNode } from "@/src/lib/graph-types";
 import { parseSlackMultiplierFromLinkMeta } from "@/src/lib/item-link-meta";
-import { assertSpaceExists } from "@/src/lib/spaces";
+import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 
 export async function GET(
   _req: Request,
@@ -26,26 +19,9 @@ export async function GET(
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
   const { spaceId } = await context.params;
-  const space = await assertSpaceExists(db, spaceId);
-  if (!space) {
-    return heartgardenMaskNotFoundForVisitor(
-      bootCtx,
-      Response.json(
-        { ok: false, error: "Space not found", nodes: [], edges: [] },
-        { status: 404 },
-      ),
-    );
-  }
-  if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
-  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
+  const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
+  if (!access.ok) return access.response;
 
   const rows = await db
     .select({

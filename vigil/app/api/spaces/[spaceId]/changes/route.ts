@@ -1,7 +1,7 @@
 import { and, asc, gt, inArray } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
-import { items } from "@/src/db/schema";
+import { items, spaces } from "@/src/db/schema";
 import { getHeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
@@ -20,11 +20,15 @@ export async function GET(
   req: Request,
   context: { params: Promise<{ spaceId: string }> },
 ) {
+  const url = new URL(req.url);
+  const includeItemIds = url.searchParams.get("includeItemIds") === "1";
+
   if (process.env.PLAYWRIGHT_E2E === "1") {
     return Response.json({
       ok: true,
       items: [],
-      itemIds: [],
+      spaces: [] as { id: string; name: string; parentSpaceId: string | null; updatedAt: string }[],
+      ...(includeItemIds ? { itemIds: [] as string[] } : {}),
       cursor: new Date(0).toISOString(),
     });
   }
@@ -40,7 +44,6 @@ export async function GET(
   if (!access.ok) return access.response;
   const space = access.space;
 
-  const url = new URL(req.url);
   const sinceRaw = url.searchParams.get("since")?.trim() ?? "";
   let sinceMs = 0;
   if (sinceRaw.length > 0) {
@@ -69,16 +72,20 @@ export async function GET(
     return Response.json({
       ok: true,
       items: [],
-      itemIds: [],
+      spaces: [],
+      ...(includeItemIds ? { itemIds: [] as string[] } : {}),
       cursor: new Date(sinceMs).toISOString(),
     });
   }
 
-  const idRows = await db
-    .select({ id: items.id })
-    .from(items)
-    .where(inArray(items.spaceId, subtreeIds));
-  const itemIds = idRows.map((r) => r.id);
+  let itemIds: string[] | undefined;
+  if (includeItemIds) {
+    const idRows = await db
+      .select({ id: items.id })
+      .from(items)
+      .where(inArray(items.spaceId, subtreeIds));
+    itemIds = idRows.map((r) => r.id);
+  }
 
   const changedRows = await db
     .select()
@@ -87,12 +94,33 @@ export async function GET(
     .orderBy(asc(items.updatedAt));
 
   const changedItems = changedRows.map(rowToCanvasItem);
-  const cursor = maxIsoCursor(changedRows, sinceMs);
+
+  const changedSpaceRows = await db
+    .select({
+      id: spaces.id,
+      name: spaces.name,
+      parentSpaceId: spaces.parentSpaceId,
+      updatedAt: spaces.updatedAt,
+    })
+    .from(spaces)
+    .where(and(inArray(spaces.id, subtreeIds), gt(spaces.updatedAt, sinceDate)))
+    .orderBy(asc(spaces.updatedAt));
+
+  const spacePayload = changedSpaceRows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    parentSpaceId: r.parentSpaceId ?? null,
+    updatedAt:
+      r.updatedAt instanceof Date ? r.updatedAt.toISOString() : String(r.updatedAt ?? ""),
+  }));
+
+  const cursor = maxIsoCursor([...changedRows, ...changedSpaceRows], sinceMs);
 
   return Response.json({
     ok: true,
     items: changedItems,
-    itemIds,
+    ...(spacePayload.length > 0 ? { spaces: spacePayload } : {}),
+    ...(includeItemIds && itemIds !== undefined ? { itemIds } : {}),
     cursor,
   });
 }

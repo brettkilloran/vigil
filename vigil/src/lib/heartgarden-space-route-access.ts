@@ -16,6 +16,8 @@ export type HeartgardenSpaceRouteSpaceRow = NonNullable<Awaited<ReturnType<typeo
 /**
  * Authorize Heartgarden boot context for a space-scoped API route (GM / visitor / demo rules).
  * Call after `tryGetDb` and `getHeartgardenApiBootContext`.
+ *
+ * Collab / maintainer docs may refer to this as **`assertHeartgardenSpaceRouteAccess`** — same function.
  */
 export async function requireHeartgardenSpaceApiAccess(
   db: VigilDb,
@@ -46,3 +48,6 @@ export async function requireHeartgardenSpaceApiAccess(
 
   return { ok: true, space };
 }
+
+/** Alias for search / older plans; identical to {@link requireHeartgardenSpaceApiAccess}. */
+export const assertHeartgardenSpaceRouteAccess = requireHeartgardenSpaceApiAccess;

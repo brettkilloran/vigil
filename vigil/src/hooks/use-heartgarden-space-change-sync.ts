@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 
-import { mergeRemoteItemPatches } from "@/src/components/foundation/architectural-db-bridge";
+import {
+  mergeRemoteItemPatches,
+  mergeRemoteSpaceRowsIntoGraph,
+} from "@/src/components/foundation/architectural-db-bridge";
 import type { CanvasGraph } from "@/src/components/foundation/architectural-types";
 import { fetchSpaceChanges } from "@/src/components/foundation/architectural-neon-api";
 import {
@@ -47,12 +50,15 @@ export function useHeartgardenSpaceChangeSync(options: {
   } = options;
 
   const consecutiveMissesRef = useRef(0);
+  const needFullItemIdsRef = useRef(true);
 
   useEffect(() => {
     if (!enabled) {
       consecutiveMissesRef.current = 0;
       return;
     }
+
+    needFullItemIdsRef.current = true;
 
     let cancelled = false;
     let inFlight = false;
@@ -63,9 +69,20 @@ export function useHeartgardenSpaceChangeSync(options: {
       inFlight = true;
       try {
         const since = syncCursorRef.current;
-        const data = await fetchSpaceChanges(activeSpaceId, since);
+        const wantFull = needFullItemIdsRef.current;
+        const data = await fetchSpaceChanges(activeSpaceId, since, {
+          includeItemIds: wantFull,
+        });
         if (cancelled) return;
-        if (!data?.itemIds) {
+        if (!data) {
+          consecutiveMissesRef.current += 1;
+          if (consecutiveMissesRef.current >= AUX_FAILURE_AFTER_CONSECUTIVE_MISSES) {
+            neonSyncReportAuxiliaryFailure(HEARTGARDEN_COLLA_POLL_FAILURE_USER_MESSAGE);
+            consecutiveMissesRef.current = 0;
+          }
+          return;
+        }
+        if (wantFull && !Array.isArray(data.itemIds)) {
           consecutiveMissesRef.current += 1;
           if (consecutiveMissesRef.current >= AUX_FAILURE_AFTER_CONSECUTIVE_MISSES) {
             neonSyncReportAuxiliaryFailure(HEARTGARDEN_COLLA_POLL_FAILURE_USER_MESSAGE);
@@ -78,29 +95,40 @@ export function useHeartgardenSpaceChangeSync(options: {
         if (typeof data.cursor === "string" && data.cursor.length > 0) {
           syncCursorRef.current = data.cursor;
         }
+        if (Array.isArray(data.itemIds)) {
+          needFullItemIdsRef.current = false;
+        }
+        const serverIds: ReadonlySet<string> | null = Array.isArray(data.itemIds)
+          ? new Set(data.itemIds)
+          : null;
         const graphSnap = graphRef.current;
         const spaceRows = Object.values(graphSnap.spaces).map((s) => ({
           id: s.id,
           parentSpaceId: s.parentSpaceId ?? null,
         }));
         const subtree = collectSpaceSubtreeIds(activeSpaceId, spaceRows);
-        const serverIds = new Set(data.itemIds);
         const protectedContentIds = new Set<string>();
         if (focusOpenRef.current && focusDirtyRef.current && activeNodeIdRef.current) {
           protectedContentIds.add(activeNodeIdRef.current);
         }
         inlineContentDirtyIdsRef.current.forEach((id) => protectedContentIds.add(id));
         const rawItems = data.items ?? [];
-        setGraph((prev) =>
-          mergeRemoteItemPatches(
+        const rawSpaces = (data.spaces ?? []).map((s) => ({
+          id: s.id,
+          name: s.name,
+          parentSpaceId: s.parentSpaceId ?? null,
+        }));
+        setGraph((prev) => {
+          const mergedItems = mergeRemoteItemPatches(
             prev,
             rawItems,
             serverIds,
             subtree,
             protectedContentIds,
             remoteTombstoneExemptIdsRef.current,
-          ),
-        );
+          );
+          return mergeRemoteSpaceRowsIntoGraph(mergedItems, rawSpaces);
+        });
         for (const it of rawItems) {
           if (it.updatedAt) itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
         }
@@ -127,6 +155,7 @@ export function useHeartgardenSpaceChangeSync(options: {
         stopPoll();
         return;
       }
+      needFullItemIdsRef.current = true;
       startPoll();
       void run();
     };
@@ -156,3 +185,6 @@ export function useHeartgardenSpaceChangeSync(options: {
     itemServerUpdatedAtRef,
   ]);
 }
+
+/** Plan / collab docs alias — same as {@link useHeartgardenSpaceChangeSync}. */
+export { useHeartgardenSpaceChangeSync as useSpaceChangeSync };

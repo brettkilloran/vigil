@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   mergeRemoteItemPatches,
+  mergeRemoteSpaceRowsIntoGraph,
   removeEntitiesFromGraphAfterRemoteDelete,
   type BootstrapResponse,
   buildCanvasGraphFromBootstrap,
@@ -117,6 +118,47 @@ describe("mergeRemoteItemPatches", () => {
     expect(next.entities.a?.id).toBe("a");
     expect(next.spaces["space-1"]?.entityIds).toEqual([]);
     expect(next.spaces["space-2"]?.entityIds).toEqual(["a"]);
+  });
+
+  it("with null server id set skips remote tombstones but still applies changed rows", () => {
+    const boot: BootstrapResponse = {
+      ok: true,
+      demo: false,
+      spaceId: "space-1",
+      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
+      items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"), noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z")],
+      camera: { x: 0, y: 0, zoom: 1 },
+    };
+    const prev = buildCanvasGraphFromBootstrap(boot);
+    const changed = [noteItem("a", "space-1", "A2", "2020-01-02T00:00:00.000Z")];
+    const next = mergeRemoteItemPatches(prev, changed, null, ["space-1"]);
+    expect(next.entities.a?.title).toBe("A2");
+    expect(next.entities.b?.title).toBe("B");
+    expect([...(next.spaces["space-1"]?.entityIds ?? [])].sort()).toEqual(["a", "b"]);
+  });
+});
+
+describe("mergeRemoteSpaceRowsIntoGraph", () => {
+  it("updates parentSpaceId and name while keeping entityIds", () => {
+    const boot: BootstrapResponse = {
+      ok: true,
+      demo: false,
+      spaceId: "space-1",
+      spaces: [
+        { id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
+        { id: "space-2", name: "Inner", parentSpaceId: "space-1", updatedAt: "2020-01-01T00:00:00.000Z" },
+      ],
+      items: [],
+      camera: { x: 0, y: 0, zoom: 1 },
+    };
+    const prev = buildCanvasGraphFromBootstrap(boot);
+    prev.spaces["space-2"]!.entityIds = ["note-1"];
+    const next = mergeRemoteSpaceRowsIntoGraph(prev, [
+      { id: "space-2", name: "RenamedInner", parentSpaceId: "space-99" },
+    ]);
+    expect(next.spaces["space-2"]?.name).toBe("RenamedInner");
+    expect(next.spaces["space-2"]?.parentSpaceId).toBe("space-99");
+    expect(next.spaces["space-2"]?.entityIds).toEqual(["note-1"]);
   });
 });
 
