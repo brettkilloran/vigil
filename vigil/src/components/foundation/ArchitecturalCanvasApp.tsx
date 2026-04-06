@@ -74,6 +74,7 @@ import {
   htmlToPlainText,
   mergeBootstrapView,
   applyServerCanvasItemToGraph,
+  buildContentItemRestorePayload,
   removeEntitiesFromGraphAfterRemoteDelete,
   architecturalItemType,
   entityGeometryOnSpace,
@@ -194,6 +195,53 @@ const STACK_MODAL_EJECT_MARGIN = 24;
 const STACK_CLICK_SUPPRESS_DRAG_PX = 6;
 const FOLDER_PREVIEW_MAX_ITEMS = 6;
 
+function entitySlotsDiffer(a: CanvasEntity, b: CanvasEntity): boolean {
+  const keys = new Set([...Object.keys(a.slots), ...Object.keys(b.slots)]);
+  for (const k of keys) {
+    const sa = a.slots[k];
+    const sb = b.slots[k];
+    const ax = sa?.x ?? null;
+    const ay = sa?.y ?? null;
+    const bx = sb?.x ?? null;
+    const by = sb?.y ?? null;
+    if (ax !== bx || ay !== by) return true;
+  }
+  return false;
+}
+
+/** Content/folder rows whose layout or stack fields differ between snapshots (Neon resync after undo/redo). */
+function collectIdsNeedingNeonLayoutResync(from: CanvasGraph, to: CanvasGraph): string[] {
+  const out = new Set<string>();
+  for (const id of Object.keys(to.entities)) {
+    if (!from.entities[id]) continue;
+    if (!isUuidLike(id)) continue;
+    const a = from.entities[id]!;
+    const b = to.entities[id]!;
+    if (a.kind !== b.kind) {
+      out.add(id);
+      continue;
+    }
+    if (entitySlotsDiffer(a, b)) {
+      out.add(id);
+      continue;
+    }
+    if (a.kind === "content" && b.kind === "content") {
+      if (a.stackId !== b.stackId || a.stackOrder !== b.stackOrder) {
+        out.add(id);
+        continue;
+      }
+      if ((a.width ?? UNIFIED_NODE_WIDTH) !== (b.width ?? UNIFIED_NODE_WIDTH)) {
+        out.add(id);
+      }
+    } else if (a.kind === "folder" && b.kind === "folder") {
+      if ((a.width ?? FOLDER_CARD_WIDTH) !== (b.width ?? FOLDER_CARD_WIDTH)) {
+        out.add(id);
+      }
+    }
+  }
+  return [...out];
+}
+
 type ArchitecturalCanvasScenario = "default" | "nested" | "corrupt";
 
 type LoreImportDraftState = {
@@ -249,6 +297,74 @@ function reportItemLinkFailure(
     );
   }
   return msg;
+}
+
+async function deleteItemLinkByDbId(dbLinkId: string): Promise<void> {
+  try {
+    await fetch("/api/item-links", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: dbLinkId }),
+    });
+  } catch {
+    /* keep local graph authoritative */
+  }
+}
+
+async function postItemLinkFromConnectionSnapshot(
+  c: CanvasPinConnection,
+  entities: Record<string, CanvasEntity>,
+): Promise<{ ok: boolean; dbLinkId: string | null }> {
+  const sourceEntity = entities[c.sourceEntityId];
+  const targetEntity = entities[c.targetEntityId];
+  const sourceItemId = sourceEntity?.persistedItemId ?? sourceEntity?.id ?? null;
+  const targetItemId = targetEntity?.persistedItemId ?? targetEntity?.id ?? null;
+  if (!isUuidLike(sourceItemId) || !isUuidLike(targetItemId)) {
+    return { ok: false, dbLinkId: null };
+  }
+  try {
+    const res = await fetch("/api/item-links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sourceItemId,
+        targetItemId,
+        linkType: c.linkType ?? "pin",
+        color: c.color,
+        sourcePin: `${c.sourcePin.anchor}:${c.sourcePin.insetX}:${c.sourcePin.insetY}`,
+        targetPin: `${c.targetPin.anchor}:${c.targetPin.insetX}:${c.targetPin.insetY}`,
+        meta: {
+          sourcePinConfig: c.sourcePin,
+          targetPinConfig: c.targetPin,
+          slackMultiplier: clampLinkMetaSlackMultiplier(
+            c.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER,
+          ),
+        },
+      }),
+    });
+    const rawText = await res.text();
+    const body = parseJsonBody(rawText) as {
+      ok?: boolean;
+      link?: { id?: string };
+      deduped?: boolean;
+    };
+    const logicalOk = res.ok && body.ok === true;
+    if (!logicalOk) {
+      reportItemLinkFailure("POST /api/item-links (history)", res, rawText, body, logicalOk);
+      return { ok: false, dbLinkId: null };
+    }
+    return { ok: true, dbLinkId: body.link?.id ?? null };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Failed to persist link";
+    if (getNeonSyncSnapshot().cloudEnabled) {
+      neonSyncReportAuxiliaryFailure({
+        operation: "POST /api/item-links (history)",
+        message: msg,
+        cause: "network",
+      });
+    }
+    return { ok: false, dbLinkId: null };
+  }
 }
 
 function stripHtmlToPlain(html: string): string {
@@ -1497,6 +1613,8 @@ export function ArchitecturalCanvasApp({
   const itemContentPatchTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const cameraPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const itemServerUpdatedAtRef = useRef<Map<string, string>>(new Map());
+  /** While undo restores a deleted row, collab merge must not tombstone it before POST /items completes. */
+  const remoteTombstoneExemptIdsRef = useRef<Set<string>>(new Set());
   const syncCursorRef = useRef<string>(new Date(0).toISOString());
   const focusDirtyRef = useRef(false);
   const inlineContentDirtyIdsRef = useRef<Set<string>>(new Set());
@@ -1505,6 +1623,7 @@ export function ArchitecturalCanvasApp({
   const [historyEpoch, setHistoryEpoch] = useState(0);
 
   graphRef.current = graph;
+  viewRef.current = { scale, tx: translateX, ty: translateY };
   maxZIndexRef.current = maxZIndex;
   stackModalRef.current = stackModal;
   stackDragRef.current = stackDrag;
@@ -1728,9 +1847,9 @@ export function ArchitecturalCanvasApp({
   );
 
   /** Persist geometry and `items.spaceId` from whichever space currently owns each entity in the graph. */
-  const persistNeonItemsLayout = useCallback((ids: string[]) => {
+  const persistNeonItemsLayout = useCallback((ids: string[], graphSnapshot?: CanvasGraph) => {
     if (!persistNeonRef.current) return;
-    const g = graphRef.current;
+    const g = graphSnapshot ?? graphRef.current;
     const active = activeSpaceIdRef.current;
     for (const id of ids) {
       if (!isUuidLike(id)) continue;
@@ -1792,6 +1911,109 @@ export function ArchitecturalCanvasApp({
     setHistoryEpoch((n) => n + 1);
   }, []);
 
+  const syncNeonAfterHistoryTransition = useCallback(
+    async (from: CanvasGraph, to: CanvasGraph) => {
+      if (!persistNeonRef.current) return;
+
+      const fromConnIds = new Set(Object.keys(from.connections));
+      const toConnIds = new Set(Object.keys(to.connections));
+      for (const cid of fromConnIds) {
+        if (toConnIds.has(cid)) continue;
+        const c = from.connections[cid];
+        if (c?.dbLinkId && isUuidLike(c.dbLinkId)) {
+          void deleteItemLinkByDbId(c.dbLinkId);
+        }
+      }
+
+      const fromIds = new Set(Object.keys(from.entities));
+      const toIds = new Set(Object.keys(to.entities));
+      const added = [...toIds].filter((id) => !fromIds.has(id) && isUuidLike(id));
+      const removed = [...fromIds].filter((id) => !toIds.has(id) && isUuidLike(id));
+
+      if (removed.length > 0) {
+        const { entityIds: idsToRemove, spaceIds } = collectDeletionClosure(from, removed);
+        const spaceRoots = filterSpaceDeletionRoots(spaceIds, from);
+        for (const id of idsToRemove) {
+          if (isUuidLike(id)) void apiDeleteItem(id);
+        }
+        for (const sid of spaceRoots) {
+          if (isUuidLike(sid)) void apiDeleteSpaceSubtree(sid);
+        }
+      }
+
+      for (const id of added) {
+        const ent = to.entities[id];
+        if (!ent || ent.kind === "folder") continue;
+
+        remoteTombstoneExemptIdsRef.current.add(id);
+        const payload = buildContentItemRestorePayload(to, id, ent);
+        if (!payload) {
+          remoteTombstoneExemptIdsRef.current.delete(id);
+          continue;
+        }
+        try {
+          const res = await apiCreateItem(payload.spaceId, payload.body);
+          if (res.ok && res.item?.updatedAt) {
+            itemServerUpdatedAtRef.current.set(id, res.item.updatedAt);
+          }
+        } finally {
+          remoteTombstoneExemptIdsRef.current.delete(id);
+        }
+      }
+
+      for (const cid of toConnIds) {
+        if (fromConnIds.has(cid)) continue;
+        const c = to.connections[cid];
+        if (!c) continue;
+        const result = await postItemLinkFromConnectionSnapshot(c, to.entities);
+        if (result.ok && result.dbLinkId && isUuidLike(result.dbLinkId)) {
+          setGraph((prev) => {
+            const cur = prev.connections[cid];
+            if (!cur) return prev;
+            const next = shallowCloneGraph(prev);
+            next.connections[cid] = {
+              ...cur,
+              dbLinkId: result.dbLinkId,
+              syncState: "synced",
+              syncError: null,
+            };
+            return next;
+          });
+        } else if (result.ok) {
+          setGraph((prev) => {
+            const cur = prev.connections[cid];
+            if (!cur) return prev;
+            const next = shallowCloneGraph(prev);
+            next.connections[cid] = {
+              ...cur,
+              syncState: "error",
+              syncError: "Thread restored but server returned no link id",
+            };
+            return next;
+          });
+        } else if (!result.ok) {
+          setGraph((prev) => {
+            const cur = prev.connections[cid];
+            if (!cur) return prev;
+            const next = shallowCloneGraph(prev);
+            next.connections[cid] = {
+              ...cur,
+              syncState: "error",
+              syncError: "Could not restore thread on server",
+            };
+            return next;
+          });
+        }
+      }
+
+      const layoutIds = collectIdsNeedingNeonLayoutResync(from, to);
+      if (layoutIds.length > 0) {
+        persistNeonItemsLayout(layoutIds, to);
+      }
+    },
+    [persistNeonItemsLayout, setGraph],
+  );
+
   const undo = useCallback(() => {
     if (undoPastRef.current.length === 0) return;
     isApplyingHistoryRef.current = true;
@@ -1837,11 +2059,14 @@ export function ArchitecturalCanvasApp({
       setFocusOpen(false);
       setActiveNodeId(null);
     }
+    if (persistNeonRef.current) {
+      void syncNeonAfterHistoryTransition(current.graph, rGraph);
+    }
     requestAnimationFrame(() => {
       isApplyingHistoryRef.current = false;
     });
     setHistoryEpoch((n) => n + 1);
-  }, [closeStackModal]);
+  }, [closeStackModal, syncNeonAfterHistoryTransition]);
 
   const redo = useCallback(() => {
     if (undoFutureRef.current.length === 0) return;
@@ -1888,11 +2113,14 @@ export function ArchitecturalCanvasApp({
       setFocusOpen(false);
       setActiveNodeId(null);
     }
+    if (persistNeonRef.current) {
+      void syncNeonAfterHistoryTransition(current.graph, rGraph);
+    }
     requestAnimationFrame(() => {
       isApplyingHistoryRef.current = false;
     });
     setHistoryEpoch((n) => n + 1);
-  }, [closeStackModal]);
+  }, [closeStackModal, syncNeonAfterHistoryTransition]);
 
   const undoFromDock = useCallback(() => {
     if (undoPastRef.current.length === 0) return;
@@ -3010,6 +3238,7 @@ export function ArchitecturalCanvasApp({
     focusDirtyRef,
     activeNodeIdRef,
     inlineContentDirtyIdsRef,
+    remoteTombstoneExemptIdsRef,
     setGraph,
     itemServerUpdatedAtRef,
   });
@@ -3090,10 +3319,6 @@ export function ArchitecturalCanvasApp({
     if (event.deltaMode === 2) return event.deltaY * window.innerHeight;
     return event.deltaY;
   }, []);
-
-  useEffect(() => {
-    viewRef.current = { scale, tx: translateX, ty: translateY };
-  }, [scale, translateX, translateY]);
 
   useEffect(() => {
     if (!isUuidLike(activeSpaceId)) return;
@@ -3774,14 +3999,26 @@ export function ArchitecturalCanvasApp({
       return next;
     });
     setSelectedNodeIds(ids);
-  }, [createId, recordUndoBeforeMutation]);
+    if (persistNeonRef.current) {
+      queueMicrotask(() => persistNeonItemsLayout(ids));
+    }
+  }, [createId, persistNeonItemsLayout, recordUndoBeforeMutation]);
 
   const unstackGroup = useCallback(
     (stackId: string) => {
       recordUndoBeforeMutation();
+      const members = Object.values(graphRef.current.entities)
+        .filter(
+          (e): e is Extract<CanvasEntity, { kind: "content" }> =>
+            e.kind === "content" && e.stackId === stackId,
+        )
+        .map((e) => e.id);
       setGraph((prev) => applyUnstackStackInSpace(prev, stackId, activeSpaceId));
+      if (persistNeonRef.current && members.length > 0) {
+        queueMicrotask(() => persistNeonItemsLayout(members));
+      }
     },
-    [activeSpaceId, recordUndoBeforeMutation],
+    [activeSpaceId, persistNeonItemsLayout, recordUndoBeforeMutation],
   );
 
   const ensureFolderChildSpace = useCallback(
@@ -4607,11 +4844,18 @@ export function ArchitecturalCanvasApp({
     if (persistNeonRef.current && isUuidLike(activeSpaceId)) {
       const spaceId = activeSpaceId;
       void (async () => {
+        try {
         if (type === "folder") {
           const fx = center.x - FOLDER_CARD_WIDTH / 2 + (Math.random() * 60 - 30);
           const fy = center.y - FOLDER_CARD_HEIGHT / 2 + (Math.random() * 60 - 30);
           const spaceRes = await apiCreateSpace("New Folder", spaceId);
-          if (!spaceRes.ok || !spaceRes.space?.id) return;
+          if (!spaceRes.ok || !spaceRes.space?.id) {
+            window.alert(
+              spaceRes.error?.trim() ||
+                "Could not create folder space. Check sync status or try again.",
+            );
+            return;
+          }
           const childSpaceId = spaceRes.space.id;
           const tempFolder: CanvasFolderEntity = {
             id: "",
@@ -4636,12 +4880,30 @@ export function ArchitecturalCanvasApp({
             contentJson: buildContentJsonForFolderEntity(tempFolder),
             zIndex: nextZ,
           });
-          if (!itemRes.ok || !itemRes.item) return;
+          if (!itemRes.ok || !itemRes.item) {
+            window.alert(
+              itemRes.error?.trim() ||
+                "Could not create folder on the canvas. Check sync status or try again.",
+            );
+            return;
+          }
           if (itemRes.item.updatedAt) {
             itemServerUpdatedAtRef.current.set(itemRes.item.id, itemRes.item.updatedAt);
           }
           const entity = canvasItemToEntity(itemRes.item, spaceId);
-          if (!entity || entity.kind !== "folder") return;
+          if (!entity || entity.kind !== "folder") {
+            const msg =
+              "Could not display the new folder after create (unexpected response).";
+            if (getNeonSyncSnapshot().cloudEnabled) {
+              neonSyncReportAuxiliaryFailure({
+                operation: "createNewNode (folder map)",
+                message: msg,
+                cause: "client",
+              });
+            }
+            window.alert(msg);
+            return;
+          }
           setGraph((prev) => {
             const next = shallowCloneGraph(prev);
             next.spaces[childSpaceId] = {
@@ -4722,12 +4984,30 @@ export function ArchitecturalCanvasApp({
           contentJson: buildContentJsonForContentEntity(tempNode),
           zIndex: nextZ,
         });
-        if (!itemRes.ok || !itemRes.item) return;
+        if (!itemRes.ok || !itemRes.item) {
+          window.alert(
+            itemRes.error?.trim() ||
+              "Could not create item on the canvas. Check sync status or try again.",
+          );
+          return;
+        }
         if (itemRes.item.updatedAt) {
           itemServerUpdatedAtRef.current.set(itemRes.item.id, itemRes.item.updatedAt);
         }
         const entity = canvasItemToEntity(itemRes.item, spaceId);
-        if (!entity) return;
+        if (!entity) {
+          const msg =
+            "Could not display the new item after create (unexpected response).";
+          if (getNeonSyncSnapshot().cloudEnabled) {
+            neonSyncReportAuxiliaryFailure({
+              operation: "createNewNode (content map)",
+              message: msg,
+              cause: "client",
+            });
+          }
+          window.alert(msg);
+          return;
+        }
         setGraph((prev) => {
           const next = shallowCloneGraph(prev);
           next.entities[entity.id] = entity;
@@ -4737,6 +5017,17 @@ export function ArchitecturalCanvasApp({
           }
           return next;
         });
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : "Create failed unexpectedly.";
+          if (getNeonSyncSnapshot().cloudEnabled) {
+            neonSyncReportAuxiliaryFailure({
+              operation: "createNewNode",
+              message: msg,
+              cause: "network",
+            });
+          }
+          window.alert(msg);
+        }
       })();
       return;
     }
@@ -5308,6 +5599,7 @@ export function ArchitecturalCanvasApp({
       });
       if (idsToStack.length === 0) return false;
 
+      recordUndoBeforeMutation();
       const stackId = target.stackId ?? createId();
       setGraph((prev) => {
         let next = shallowCloneGraph(prev);
@@ -5358,9 +5650,30 @@ export function ArchitecturalCanvasApp({
         return next;
       });
       setSelectedNodeIds([targetEntityId, ...idsToStack]);
+      if (persistNeonRef.current) {
+        queueMicrotask(() => {
+          const g = graphRef.current;
+          const top = g.entities[targetEntityId];
+          const sid = top?.kind === "content" ? top.stackId : null;
+          const persistSet = new Set<string>([targetEntityId, ...idsToStack]);
+          if (sid) {
+            for (const e of Object.values(g.entities)) {
+              if (e.kind === "content" && e.stackId === sid) persistSet.add(e.id);
+            }
+          }
+          persistNeonItemsLayout([...persistSet]);
+        });
+      }
       return true;
     },
-    [activeSpaceId, createId, graph.entities, normalizeStack],
+    [
+      activeSpaceId,
+      createId,
+      graph.entities,
+      normalizeStack,
+      persistNeonItemsLayout,
+      recordUndoBeforeMutation,
+    ],
   );
 
   const handleDrop = useCallback(
@@ -5451,8 +5764,9 @@ export function ArchitecturalCanvasApp({
           stackPointerDragRef.current = { ...stackPointerDrag, moved: true };
         }
       }
-      const mouseCanvasX = (event.clientX - translateX) / scale;
-      const mouseCanvasY = (event.clientY - translateY) / scale;
+      const { tx, ty, scale: viewScale } = viewRef.current;
+      const mouseCanvasX = (event.clientX - tx) / viewScale;
+      const mouseCanvasY = (event.clientY - ty) / viewScale;
       setGraph((prev) => {
         const nextEntities = { ...prev.entities };
         let changed = false;
@@ -5621,10 +5935,7 @@ export function ArchitecturalCanvasApp({
     activeSpaceId,
     handleDrop,
     persistNeonItemsLayout,
-    scale,
     setParentDropHover,
-    translateX,
-    translateY,
     updateDropTargets,
   ]);
 
@@ -5956,6 +6267,9 @@ export function ArchitecturalCanvasApp({
           });
           return next;
         });
+        if (orderChanged && persistNeonRef.current) {
+          requestAnimationFrame(() => persistNeonItemsLayout(ordered));
+        }
       }
     };
 

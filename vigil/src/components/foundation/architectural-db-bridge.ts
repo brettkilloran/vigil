@@ -288,6 +288,7 @@ export function mergeBootstrapView(prev: CanvasGraph, data: BootstrapResponse): 
 /**
  * Apply remote item rows from delta sync. Removes entities missing from `serverItemIdsInSubtree`
  * but previously listed under `subtreeSpaceIds`. Re-homes entities when `spaceId` changes.
+ * `tombstoneExemptIds` keeps local-only rows (e.g. undo-after-delete until POST restore completes).
  */
 export function mergeRemoteItemPatches(
   prev: CanvasGraph,
@@ -295,6 +296,7 @@ export function mergeRemoteItemPatches(
   serverItemIdsInSubtree: ReadonlySet<string>,
   subtreeSpaceIds: readonly string[],
   protectedContentIds: ReadonlySet<string> = new Set(),
+  tombstoneExemptIds: ReadonlySet<string> = new Set(),
 ): CanvasGraph {
   const spacesRecord: Record<string, CanvasSpace> = { ...prev.spaces };
   const entities: Record<string, CanvasEntity> = { ...prev.entities };
@@ -323,6 +325,7 @@ export function mergeRemoteItemPatches(
 
   for (const id of prevIdsInSubtree) {
     if (serverItemIdsInSubtree.has(id)) continue;
+    if (tombstoneExemptIds.has(id)) continue;
     delete entities[id];
     stripFromHome(id);
   }
@@ -450,4 +453,42 @@ export function entityGeometryOnSpace(entity: CanvasEntity, spaceId: string) {
         : entity.width ?? UNIFIED_NODE_WIDTH,
     height: 280,
   };
+}
+
+/** Space that currently lists `entityId` in `entityIds` (canonical home for DB `space_id`). */
+export function homeSpaceIdForEntity(graph: CanvasGraph, entityId: string): string | null {
+  for (const sp of Object.values(graph.spaces)) {
+    if (sp.entityIds.includes(entityId)) return sp.id;
+  }
+  return null;
+}
+
+/**
+ * Build `POST /api/spaces/:id/items` body to recreate a content row after undo (same UUID).
+ * Folders are not supported here (child space must exist on the server first).
+ */
+export function buildContentItemRestorePayload(
+  graph: CanvasGraph,
+  entityId: string,
+  entity: CanvasEntity,
+): { spaceId: string; body: Record<string, unknown> } | null {
+  if (entity.kind !== "content") return null;
+  const spaceId = homeSpaceIdForEntity(graph, entityId);
+  if (!spaceId) return null;
+  const geom = entityGeometryOnSpace(entity, spaceId);
+  const itemType = architecturalItemType(entity);
+  const body: Record<string, unknown> = {
+    id: entityId,
+    itemType,
+    x: geom.x,
+    y: geom.y,
+    width: geom.width,
+    height: geom.height,
+    title: entity.title,
+    contentText: htmlToPlainText(entity.bodyHtml),
+    contentJson: buildContentJsonForContentEntity(entity),
+  };
+  if (entity.stackId != null) body.stackId = entity.stackId;
+  if (entity.stackOrder != null) body.stackOrder = entity.stackOrder;
+  return { spaceId, body };
 }

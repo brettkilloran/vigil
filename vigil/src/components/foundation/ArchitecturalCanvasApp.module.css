@@ -69,8 +69,8 @@
   pointer-events: none;
 }
 
-/* Stack modal: block all canvas/chrome hit-testing below fixed stack layers (avoids stray drags). */
-.viewportSurfaceReady.viewportStackModalOpen {
+/* Stack modal: block scene/canvas hit-testing under the fan; in-viewport chrome (dock, rails) stays interactive. */
+.viewportSurfaceReady.viewportStackModalOpen .viewportSceneLayer {
   pointer-events: none;
 }
 

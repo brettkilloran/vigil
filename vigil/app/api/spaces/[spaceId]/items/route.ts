@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
@@ -22,6 +23,8 @@ import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-inde
 import { assertSpaceExists, listItemsForSpace } from "@/src/lib/spaces";
 
 const createBody = z.object({
+  /** When set, insert this row id (used for undo-after-delete restore). Must not already exist. */
+  id: z.string().uuid().optional(),
   itemType: z.enum(["note", "sticky", "image", "checklist", "webclip", "folder"]),
   x: z.number().default(0),
   y: z.number().default(0),
@@ -36,6 +39,8 @@ const createBody = z.object({
   imageUrl: z.string().max(8192).optional(),
   imageMeta: z.record(z.string(), z.any()).optional(),
   zIndex: z.number().int().optional(),
+  stackId: z.string().uuid().nullable().optional(),
+  stackOrder: z.number().int().nullable().optional(),
 });
 
 export async function GET(
@@ -124,6 +129,16 @@ export async function POST(
     if (parsed.data.imageUrl !== undefined || parsed.data.imageMeta !== undefined) {
       return heartgardenApiForbiddenJsonResponse();
     }
+    if (parsed.data.id !== undefined) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+  }
+
+  if (parsed.data.id) {
+    const [existing] = await db.select().from(items).where(eq(items.id, parsed.data.id)).limit(1);
+    if (existing) {
+      return Response.json({ ok: false, error: "Item id already exists" }, { status: 409 });
+    }
   }
 
   const entityMetaForRow =
@@ -164,6 +179,7 @@ export async function POST(
   const [row] = await db
     .insert(items)
     .values({
+      ...(parsed.data.id ? { id: parsed.data.id } : {}),
       spaceId,
       itemType: t,
       x: parsed.data.x,
@@ -180,6 +196,8 @@ export async function POST(
       imageUrl: parsed.data.imageUrl ?? null,
       imageMeta: parsed.data.imageMeta ?? null,
       ...(parsed.data.zIndex !== undefined ? { zIndex: parsed.data.zIndex } : {}),
+      ...(parsed.data.stackId !== undefined ? { stackId: parsed.data.stackId } : {}),
+      ...(parsed.data.stackOrder !== undefined ? { stackOrder: parsed.data.stackOrder } : {}),
     })
     .returning();
 

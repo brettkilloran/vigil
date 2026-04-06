@@ -44,6 +44,23 @@ describe("mergeRemoteItemPatches", () => {
     expect(next.spaces["space-1"]?.entityIds).toEqual(["a"]);
   });
 
+  it("does not tombstone ids in the exempt set when missing from server list", () => {
+    const boot: BootstrapResponse = {
+      ok: true,
+      demo: false,
+      spaceId: "space-1",
+      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
+      items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"), noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z")],
+      camera: { x: 0, y: 0, zoom: 1 },
+    };
+    const prev = buildCanvasGraphFromBootstrap(boot);
+    const changed = [noteItem("a", "space-1", "A2", "2020-01-02T00:00:00.000Z")];
+    const serverIds = new Set<string>(["a"]);
+    const next = mergeRemoteItemPatches(prev, changed, serverIds, ["space-1"], new Set(), new Set(["b"]));
+    expect(next.entities.b?.title).toBe("B");
+    expect([...(next.spaces["space-1"]?.entityIds ?? [])].sort()).toEqual(["a", "b"]);
+  });
+
   it("keeps local title and body when id is protected but applies geometry from server", () => {
     const boot: BootstrapResponse = {
       ok: true,
