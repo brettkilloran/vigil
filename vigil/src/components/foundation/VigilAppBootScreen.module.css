@@ -20,7 +20,7 @@
   border: none;
   background-color: transparent;
   color: var(--sys-color-white);
-  /* Match app chrome (body / .vigil-btn); keep Lora only on .blurb. */
+  /* Match app chrome (body / .vigil-btn). */
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   pointer-events: auto;
@@ -331,7 +331,7 @@
   }
 }
 
-/* Kicker + title + blurbs: wrapper for hover-glitch (keeps entrance animations on children). */
+/* Kicker + title: wrapper for hover-glitch (keeps entrance animations on children). */
 .middleCopy {
   display: flex;
   flex-direction: column;
@@ -389,7 +389,7 @@
  * CTA hover — Chris Coyier / CSS-Tricks style text glitch:
  * https://css-tricks.com/glitch-effect-text-images-svg/
  * Duplicates via ::before/::after + attr(data-text), chroma text-shadow, animated clip-path slices.
- * Kicker + title only — body blurbs stay clean (no glitch).
+ * Kicker + title only (no glitch on body copy).
  */
 
 .bootGlitchLayer {
@@ -542,36 +542,8 @@
   letter-spacing: 0.12em;
 }
 
-.blurbWrap {
-  display: flex;
-  flex-direction: column;
-  gap: 1.05rem;
-  width: 100%;
-  max-width: 800px;
-  margin-top: clamp(2.25rem, 8vh, 4.75rem);
-  margin-inline: auto;
-}
-
-.blurb {
-  max-width: 28rem;
-  margin: 0;
-  font-family: var(--font-lora), ui-serif, Georgia, serif;
-  font-size: 1.05rem;
-  line-height: 1.65;
-  font-style: italic;
-  opacity: 0.88;
-  text-shadow:
-    0 0 16px color-mix(in oklch, var(--bg-base) 82%, transparent),
-    0 1px 3px color-mix(in oklch, var(--sys-color-black) 40%, transparent);
-}
-
-.blurbWrap .blurb {
-  width: 100%;
-  max-width: none;
-}
-
 .activateWrap {
-  margin-top: 1.75rem;
+  margin-top: clamp(2.25rem, 8vh, 4.75rem);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -747,25 +719,6 @@
   }
 }
 
-.blurbReveal {
-  animation: vigilBootBlurbIn 1.55s cubic-bezier(0.22, 0.82, 0.16, 1) forwards;
-  opacity: 0;
-  will-change: filter, transform, opacity;
-}
-
-@keyframes vigilBootBlurbIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-    filter: blur(5px);
-  }
-  to {
-    opacity: 0.88;
-    transform: translateY(0);
-    filter: blur(0);
-  }
-}
-
 .fadeInCta {
   animation: vigilBootCtaWrapIn 1.2s cubic-bezier(0.22, 0.82, 0.16, 1) forwards;
   opacity: 0;
@@ -826,7 +779,6 @@
   .fadeInMetaTop,
   .fadeInKicker,
   .fadeInTitle,
-  .blurbReveal,
   .fadeInCta,
   .fadeInBottom {
     animation: none;
@@ -838,10 +790,6 @@
 
   .fadeInKicker {
     letter-spacing: 0.15em;
-  }
-
-  .blurbReveal {
-    opacity: 0.88;
   }
 
   .metaCursor {
