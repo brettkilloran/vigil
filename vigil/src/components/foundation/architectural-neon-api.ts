@@ -1,5 +1,5 @@
 import type { BootstrapResponse } from "@/src/components/foundation/architectural-db-bridge";
-import type { CanvasItem } from "@/src/model/canvas-types";
+import type { CameraState, CanvasItem } from "@/src/model/canvas-types";
 import {
   getNeonSyncSnapshot,
   neonSyncBeginRequest,
@@ -149,12 +149,52 @@ export async function fetchSpaceChanges(
   }
 }
 
-export async function postPresenceHeartbeat(spaceId: string, clientId: string): Promise<boolean> {
+export type SpacePresencePeer = {
+  clientId: string;
+  activeSpaceId: string;
+  camera: CameraState;
+  pointer: { x: number; y: number } | null;
+  updatedAt: string;
+};
+
+function parseSpacePresencePeer(raw: unknown): SpacePresencePeer | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.clientId !== "string" || typeof o.activeSpaceId !== "string") return null;
+  if (typeof o.updatedAt !== "string") return null;
+  const cam = o.camera;
+  if (typeof cam !== "object" || cam === null) return null;
+  const c = cam as Record<string, unknown>;
+  if (typeof c.x !== "number" || typeof c.y !== "number" || typeof c.zoom !== "number") return null;
+  let pointer: { x: number; y: number } | null = null;
+  if (o.pointer !== null && typeof o.pointer === "object" && o.pointer !== null) {
+    const p = o.pointer as Record<string, unknown>;
+    if (typeof p.x === "number" && typeof p.y === "number") pointer = { x: p.x, y: p.y };
+  }
+  return {
+    clientId: o.clientId,
+    activeSpaceId: o.activeSpaceId,
+    camera: { x: c.x, y: c.y, zoom: c.zoom },
+    pointer,
+    updatedAt: o.updatedAt,
+  };
+}
+
+/** Heartbeat / pointer flush: one row per client in `canvas_presence`. */
+export async function postPresencePayload(
+  spaceId: string,
+  clientId: string,
+  payload: { camera: CameraState; pointer: { x: number; y: number } | null },
+): Promise<boolean> {
   try {
     const res = await fetch(`/api/spaces/${encodeURIComponent(spaceId)}/presence`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clientId }),
+      body: JSON.stringify({
+        clientId,
+        camera: payload.camera,
+        pointer: payload.pointer,
+      }),
     });
     const body = (await res.json()) as { ok?: boolean };
     return res.ok && body.ok === true;
@@ -163,22 +203,40 @@ export async function postPresenceHeartbeat(spaceId: string, clientId: string): 
   }
 }
 
+export async function fetchSpacePresencePeersDetail(
+  spaceId: string,
+  exceptClientId?: string,
+  options?: { scope?: "local" | "subtree" },
+): Promise<SpacePresencePeer[]> {
+  try {
+    const q = new URLSearchParams();
+    if (exceptClientId != null && exceptClientId.length > 0) {
+      q.set("except", exceptClientId);
+    }
+    if (options?.scope === "local") q.set("scope", "local");
+    const qs = q.toString();
+    const res = await fetch(
+      `/api/spaces/${encodeURIComponent(spaceId)}/presence${qs ? `?${qs}` : ""}`,
+    );
+    const body = (await res.json()) as { ok?: boolean; peers?: unknown[] };
+    if (!res.ok || !body.ok || !Array.isArray(body.peers)) return [];
+    const out: SpacePresencePeer[] = [];
+    for (const row of body.peers) {
+      const p = parseSpacePresencePeer(row);
+      if (p) out.push(p);
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchSpacePresencePeers(
   spaceId: string,
   exceptClientId?: string,
 ): Promise<number> {
-  try {
-    const q =
-      exceptClientId != null && exceptClientId.length > 0
-        ? `?except=${encodeURIComponent(exceptClientId)}`
-        : "";
-    const res = await fetch(`/api/spaces/${encodeURIComponent(spaceId)}/presence${q}`);
-    const body = (await res.json()) as { ok?: boolean; peers?: { clientId: string }[] };
-    if (!res.ok || !body.ok || !Array.isArray(body.peers)) return 0;
-    return body.peers.length;
-  } catch {
-    return 0;
-  }
+  const peers = await fetchSpacePresencePeersDetail(spaceId, exceptClientId);
+  return peers.length;
 }
 
 export async function apiCreateSpace(

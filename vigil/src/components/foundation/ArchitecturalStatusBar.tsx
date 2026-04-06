@@ -1,6 +1,6 @@
 "use client";
 
-import { MagnifyingGlass, Waves, WarningCircle } from "@phosphor-icons/react";
+import { MagnifyingGlass, MapTrifold, Waves, WarningCircle } from "@phosphor-icons/react";
 import {
   useCallback,
   useEffect,
@@ -552,37 +552,79 @@ export function ArchitecturalCanvasEffectsToggle({
   );
 }
 
-/** Bottom-right glass chip: world XY + zoom; right edge pinned, grows left as values change; matches dock bottom + tool-rail strip height. */
+/** Bottom-right glass chip: map icon toggles canvas minimap; X/Y/zoom are read-only status. */
 export function ArchitecturalViewportMetrics({
   centerWorldX,
   centerWorldY,
   scale,
   zoomPrefixIcon = true,
+  minimapOpen = true,
+  onToggleMinimap,
 }: {
   centerWorldX: number;
   centerWorldY: number;
   scale: number;
   zoomPrefixIcon?: boolean;
+  minimapOpen?: boolean;
+  onToggleMinimap?: () => void;
 }) {
+  const metricsReadout = (
+    <>
+      <ArchitecturalStatusMetric>
+        X:
+        <span className={styles.metric}>{centerWorldX}</span> Y:
+        <span className={styles.metric}>{centerWorldY}</span>
+      </ArchitecturalStatusMetric>
+      <div className={styles.sep} />
+      <ArchitecturalStatusMetric
+        icon={zoomPrefixIcon ? <MagnifyingGlass size={12} aria-hidden /> : undefined}
+      >
+        <span className={styles.metric}>{Math.round(scale * 100)}%</span>
+      </ArchitecturalStatusMetric>
+    </>
+  );
+
+  const panel = onToggleMinimap ? (
+    <div className={cx(styles.rootDockPanel, styles.viewportMetricsPanel)}>
+      <ArchitecturalTooltip
+        content={minimapOpen ? "Hide canvas map" : "Show canvas map"}
+        side="top"
+        delayMs={280}
+      >
+        <button
+          type="button"
+          className={styles.viewportMetricsMapToggle}
+          onClick={onToggleMinimap}
+          aria-pressed={minimapOpen}
+          aria-label={minimapOpen ? "Hide canvas map" : "Show canvas map"}
+        >
+          <MapTrifold
+            size={22}
+            weight={minimapOpen ? "fill" : "regular"}
+            aria-hidden
+          />
+        </button>
+      </ArchitecturalTooltip>
+      <div className={styles.sep} aria-hidden />
+      <div className={styles.viewportMetricsReadout} role="status" aria-label="Viewport center and zoom">
+        {metricsReadout}
+      </div>
+    </div>
+  ) : (
+    <div className={`${styles.rootDockPanel} ${styles.viewportMetricsPanel}`}>{metricsReadout}</div>
+  );
+
   return (
     <div
       className={styles.viewportMetricsStrip}
       data-hg-chrome="viewport-metrics"
-      aria-label="Viewport position and zoom"
+      aria-label={
+        onToggleMinimap
+          ? "Viewport position, zoom, and canvas map toggle"
+          : "Viewport position and zoom"
+      }
     >
-      <div className={`${styles.rootDockPanel} ${styles.viewportMetricsPanel}`}>
-        <ArchitecturalStatusMetric>
-          X:
-          <span className={styles.metric}>{centerWorldX}</span> Y:
-          <span className={styles.metric}>{centerWorldY}</span>
-        </ArchitecturalStatusMetric>
-        <div className={styles.sep} />
-        <ArchitecturalStatusMetric
-          icon={zoomPrefixIcon ? <MagnifyingGlass size={12} aria-hidden /> : undefined}
-        >
-          <span className={styles.metric}>{Math.round(scale * 100)}%</span>
-        </ArchitecturalStatusMetric>
-      </div>
+      {panel}
     </div>
   );
 }
@@ -617,13 +659,22 @@ function VaultIndexStatusInline() {
   );
 }
 
+export type CollabPeerPresenceChip = {
+  clientId: string;
+  emoji: string;
+  title: string;
+  ariaLabel: string;
+  muted?: boolean;
+  onFollow: () => void;
+};
+
 export function ArchitecturalStatusBar({
   envLabel = "波途画電",
   showPulse = true,
   syncBootstrapPending = false,
   syncShowingCachedWorkspace = false,
   syncOfflineNoSnapshot = false,
-  collabPeerCount = 0,
+  collabPeers = [],
   onExportGraphJson,
   exportGraphPaletteHint,
 }: {
@@ -633,8 +684,8 @@ export function ArchitecturalStatusBar({
   syncBootstrapPending?: boolean;
   syncShowingCachedWorkspace?: boolean;
   syncOfflineNoSnapshot?: boolean;
-  /** Other browsers recently heartbeating this space (best-effort). */
-  collabPeerCount?: number;
+  /** Other sessions in this space subtree (best-effort); click chip to follow their view. */
+  collabPeers?: CollabPeerPresenceChip[];
   onExportGraphJson?: () => void;
   exportGraphPaletteHint?: string;
 }) {
@@ -656,14 +707,23 @@ export function ArchitecturalStatusBar({
           exportGraphPaletteHint={exportGraphPaletteHint}
         />
         <VaultIndexStatusInline />
-        {collabPeerCount > 0 ? (
+        {collabPeers.length > 0 ? (
           <>
             <div className={styles.sep} />
-            <ArchitecturalStatusMetric>
-              <span aria-live="polite">
-                {collabPeerCount} other{collabPeerCount === 1 ? "" : "s"} here
-              </span>
-            </ArchitecturalStatusMetric>
+            <div className={styles.collabPeerStrip} role="group" aria-label="Collaborators in this area">
+              {collabPeers.map((p) => (
+                <button
+                  key={p.clientId}
+                  type="button"
+                  className={`${styles.collabPeerChip} ${p.muted ? styles.collabPeerChipMuted : ""}`}
+                  title={p.title}
+                  aria-label={p.ariaLabel}
+                  onClick={p.onFollow}
+                >
+                  {p.emoji}
+                </button>
+              ))}
+            </div>
           </>
         ) : null}
       </div>

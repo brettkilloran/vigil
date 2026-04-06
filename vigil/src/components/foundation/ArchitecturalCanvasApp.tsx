@@ -69,6 +69,7 @@ import {
   ArchitecturalStatusBar,
   ArchitecturalViewportMetrics,
 } from "@/src/components/foundation/ArchitecturalStatusBar";
+import { ArchitecturalRemotePresenceCursors } from "@/src/components/foundation/ArchitecturalRemotePresenceLayer";
 import { ArchitecturalToolRail } from "@/src/components/foundation/ArchitecturalToolRail";
 import {
   applyImageDataUrlToArchitecturalMediaBody,
@@ -106,6 +107,8 @@ import {
   apiPatchSpaceName,
   apiPatchSpaceParent,
   fetchBootstrap,
+  postPresencePayload,
+  type SpacePresencePeer,
 } from "@/src/components/foundation/architectural-neon-api";
 import { mergeHydratedDbConnections } from "@/src/lib/architectural-item-link-graph";
 import {
@@ -138,9 +141,13 @@ import {
   type ArchitecturalUndoSnapshot,
 } from "@/src/components/foundation/architectural-undo";
 import { useModKeyHints } from "@/src/lib/mod-keys";
-import { VIGIL_CANVAS_EFFECTS_STORAGE_KEY } from "@/src/lib/vigil-canvas-prefs";
+import {
+  VIGIL_CANVAS_EFFECTS_STORAGE_KEY,
+  VIGIL_MINIMAP_VISIBLE_STORAGE_KEY,
+} from "@/src/lib/vigil-canvas-prefs";
 import { readSpaceCamera, writeSpaceCamera } from "@/src/lib/heartgarden-space-camera";
 import {
+  buildCollapsedStacksList,
   computeSpaceContentBounds,
   fitCameraToActiveSpaceContent,
   fitCameraToSelection,
@@ -155,6 +162,14 @@ import {
   entityIntersectsWorldRect,
   worldRectFromViewport,
 } from "@/src/lib/canvas-viewport-cull";
+import {
+  HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MAX,
+  HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MIN,
+  HEARTGARDEN_PRESENCE_POINTER_FLUSH_MIN_MS,
+  HEARTGARDEN_PRESENCE_POINTER_STALE_MS,
+} from "@/src/lib/heartgarden-collab-constants";
+import { presenceEmojiForClientId } from "@/src/lib/collab-presence-identity";
+import { getOrCreatePresenceClientId } from "@/src/lib/heartgarden-presence-client";
 import { useHeartgardenPresenceHeartbeat } from "@/src/hooks/use-heartgarden-presence-heartbeat";
 import { useHeartgardenSpaceChangeSync } from "@/src/hooks/use-heartgarden-space-change-sync";
 import {
@@ -163,7 +178,7 @@ import {
   writeWorkspaceViewCache,
   type WorkspaceBootTierTag,
 } from "@/src/lib/workspace-view-cache";
-import type { CanvasItem } from "@/src/model/canvas-types";
+import type { CameraState, CanvasItem } from "@/src/model/canvas-types";
 import { defaultCamera } from "@/src/model/canvas-types";
 import { useRecentFolders } from "@/src/hooks/use-recent-folders";
 import { useRecentItems } from "@/src/hooks/use-recent-items";
@@ -569,6 +584,20 @@ function isUuidLike(value: string | null | undefined): value is string {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+function clampFollowCamera(cam: CameraState): CameraState {
+  return {
+    x: Number.isFinite(cam.x) ? cam.x : 0,
+    y: Number.isFinite(cam.y) ? cam.y : 0,
+    zoom: Math.min(
+      HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MAX,
+      Math.max(
+        HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MIN,
+        Number.isFinite(cam.zoom) ? cam.zoom : 1,
+      ),
+    ),
+  };
+}
+
 function collectDeletionClosure(
   graph: CanvasGraph,
   roots: string[],
@@ -694,7 +723,9 @@ function resolveConnectionPin(
     }
 
     const w = placement.offsetWidth || (entity.kind === "folder" ? FOLDER_CARD_WIDTH : entity.width ?? UNIFIED_NODE_WIDTH);
-    const h = placement.offsetHeight || (entity.kind === "folder" ? FOLDER_CARD_HEIGHT : 280);
+    const h =
+      placement.offsetHeight ||
+      (entity.kind === "folder" ? FOLDER_CARD_HEIGHT : entity.height ?? 280);
     const rad = (entity.rotation * Math.PI) / 180;
     const cx = w / 2;
     const cy = h / 2;
@@ -738,6 +769,32 @@ function resolveConnectionPin(
     x: slot.x + normalizedPin.insetX,
     y: slot.y + normalizedPin.insetY,
   };
+}
+
+/** Live placement size for persistence / bounds — same node resolution as connection pins. */
+function measureArchitecturalNodePlacement(
+  entityId: string,
+  spaceId: string,
+): { width: number; height: number } | null {
+  if (typeof document === "undefined") return null;
+  const escapedId =
+    typeof CSS !== "undefined" && typeof CSS.escape === "function"
+      ? CSS.escape(entityId)
+      : entityId.replace(/"/g, '\\"');
+  const escapedSpace =
+    typeof CSS !== "undefined" && typeof CSS.escape === "function"
+      ? CSS.escape(spaceId)
+      : spaceId.replace(/"/g, '\\"');
+  const nodeSel = `[data-node-id="${escapedId}"][data-space-id="${escapedSpace}"]`;
+  const fanStage = document.querySelector<HTMLElement>("[data-stack-fan-stage='true']");
+  const placement =
+    (fanStage?.querySelector<HTMLElement>(nodeSel) as HTMLElement | null) ??
+    document.querySelector<HTMLElement>(nodeSel);
+  if (!placement) return null;
+  const w = placement.offsetWidth;
+  const h = placement.offsetHeight;
+  if (w < 8 || h < 8) return null;
+  return { width: w, height: h };
 }
 
 function tapeVariantForTheme(theme: ContentTheme): TapeVariant {
@@ -1410,7 +1467,9 @@ export function ArchitecturalCanvasApp({
   const [navTransitionActive, setNavTransitionActive] = useState(false);
   const [itemConflictQueue, setItemConflictQueue] = useState<CanvasItem[]>([]);
   const itemConflictQueueRef = useRef<CanvasItem[]>([]);
-  const [presencePeerCount, setPresencePeerCount] = useState(0);
+  const [presencePeers, setPresencePeers] = useState<SpacePresencePeer[]>([]);
+  const localPointerWorldRef = useRef<{ x: number; y: number } | null>(null);
+  const lastPointerPresencePostRef = useRef(0);
   const [canvasEffectsEnabled, setCanvasEffectsEnabled] = useState(true);
   const canvasEffectsEnabledRef = useRef(true);
   const canvasEffectsSoundInitRef = useRef(false);
@@ -1491,6 +1550,17 @@ export function ArchitecturalCanvasApp({
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [viewportToastOpen, setViewportToastOpen] = useState(false);
+  const [minimapOpen, setMinimapOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      return localStorage.getItem(VIGIL_MINIMAP_VISIBLE_STORAGE_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const [minimapPlacementSizes, setMinimapPlacementSizes] = useState<
+    ReadonlyMap<string, { width: number; height: number }>
+  >(() => new Map());
   const paletteOpenSoundPrevRef = useRef(false);
   const [lorePanelOpen, setLorePanelOpen] = useState(false);
   const lorePanelOpenRef = useRef(false);
@@ -1976,6 +2046,7 @@ export function ArchitecturalCanvasApp({
     if (!persistNeonRef.current) return;
     const g = graphSnapshot ?? graphRef.current;
     const active = activeSpaceIdRef.current;
+    const dimUpdates: { id: string; width: number; height: number }[] = [];
     for (const id of ids) {
       if (!isUuidLike(id)) continue;
       const e = g.entities[id];
@@ -1987,12 +2058,24 @@ export function ArchitecturalCanvasApp({
           ? holders[0]!.id
           : holders.find((s) => s.id === active)?.id ?? holders[0]!.id;
       const geo = entityGeometryOnSpace(e, primary);
+      const measured = measureArchitecturalNodePlacement(id, primary);
+      const width = measured?.width ?? geo.width;
+      const height = measured?.height ?? geo.height;
+      if (measured) {
+        const prevW =
+          e.kind === "folder" ? e.width ?? FOLDER_CARD_WIDTH : e.width ?? UNIFIED_NODE_WIDTH;
+        const prevH =
+          e.kind === "folder" ? e.height ?? FOLDER_CARD_HEIGHT : e.height ?? 280;
+        if (Math.abs(width - prevW) > 0.5 || Math.abs(height - prevH) > 0.5) {
+          dimUpdates.push({ id, width, height });
+        }
+      }
       const patch: Record<string, unknown> = {
         spaceId: primary,
         x: geo.x,
         y: geo.y,
-        width: geo.width,
-        height: geo.height,
+        width,
+        height,
       };
       if (e.kind === "content") {
         if (!e.stackId) {
@@ -2005,8 +2088,18 @@ export function ArchitecturalCanvasApp({
       }
       void patchItemWithVersion(id, patch);
     }
+    if (dimUpdates.length > 0) {
+      setGraph((prev) => {
+        const next = shallowCloneGraph(prev);
+        for (const { id, width, height } of dimUpdates) {
+          const ent = next.entities[id];
+          if (ent) next.entities[id] = { ...ent, width, height };
+        }
+        return next;
+      });
+    }
     persistNeonFolderInnerSpaceParentsAfterLayout(ids, g);
-  }, [patchItemWithVersion, persistNeonFolderInnerSpaceParentsAfterLayout]);
+  }, [patchItemWithVersion, persistNeonFolderInnerSpaceParentsAfterLayout, setGraph]);
 
   const closeStackModal = useCallback(() => {
     setStackDrag(null);
@@ -2942,6 +3035,19 @@ export function ArchitecturalCanvasApp({
     return out.length === 0 ? EMPTY_COLLAPSED_STACKS : out;
   }, [stackGroups]);
 
+  const minimapDomMeasureKey = useMemo(() => {
+    const ids = [...(graph.spaces[activeSpaceId]?.entityIds ?? [])].sort();
+    return ids
+      .map((id) => {
+        const e = graph.entities[id];
+        if (!e) return id;
+        const wh = `${e.width ?? ""}×${e.height ?? ""}`;
+        if (e.kind === "content") return `${id}:${wh}:${e.bodyHtml?.length ?? 0}`;
+        return `${id}:${wh}`;
+      })
+      .join("|");
+  }, [graph.entities, graph.spaces, activeSpaceId]);
+
   useEffect(() => {
     const preActivateGate = scenario === "default" && !bootLayerDismissed && !canvasSessionActivated;
     if (
@@ -3516,11 +3622,69 @@ export function ArchitecturalCanvasApp({
     itemServerUpdatedAtRef,
   });
 
+  const presencePayloadForHeartbeat = useCallback(() => {
+    const v = viewRef.current;
+    return {
+      camera: { x: v.tx, y: v.ty, zoom: v.scale },
+      pointer: localPointerWorldRef.current,
+    };
+  }, []);
+
+  const onPresencePeersUpdate = useCallback((peers: SpacePresencePeer[]) => {
+    setPresencePeers(peers);
+  }, []);
+
   useHeartgardenPresenceHeartbeat({
     enabled: collabNeonActive,
     activeSpaceId,
-    setPresencePeerCount,
+    getPayload: presencePayloadForHeartbeat,
+    onPeersUpdate: onPresencePeersUpdate,
   });
+
+  useEffect(() => {
+    if (!collabNeonActive) return;
+    const el = viewportRef.current;
+    if (!el) return;
+    let raf = 0;
+    const flush = () => {
+      raf = 0;
+      const clientId = getOrCreatePresenceClientId();
+      if (!clientId) return;
+      const v = viewRef.current;
+      void postPresencePayload(activeSpaceId, clientId, {
+        camera: { x: v.tx, y: v.ty, zoom: v.scale },
+        pointer: localPointerWorldRef.current,
+      });
+    };
+    const scheduleFlush = () => {
+      const now = Date.now();
+      if (now - lastPointerPresencePostRef.current < HEARTGARDEN_PRESENCE_POINTER_FLUSH_MIN_MS) {
+        return;
+      }
+      lastPointerPresencePostRef.current = now;
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(flush);
+    };
+    const onMove = (e: PointerEvent) => {
+      if (document.visibilityState === "hidden") return;
+      const v = viewRef.current;
+      const worldX = (e.clientX - v.tx) / v.scale;
+      const worldY = (e.clientY - v.ty) / v.scale;
+      localPointerWorldRef.current = { x: worldX, y: worldY };
+      scheduleFlush();
+    };
+    const onLeave = () => {
+      localPointerWorldRef.current = null;
+      scheduleFlush();
+    };
+    el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointerleave", onLeave);
+    return () => {
+      el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerleave", onLeave);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [collabNeonActive, activeSpaceId, viewportRevealReady]);
 
   const galleryDirty = useMemo(
     () =>
@@ -3670,6 +3834,19 @@ export function ArchitecturalCanvasApp({
   const onViewportToastDismiss = useCallback(() => {
     viewportToastCooldownUntilRef.current = Date.now() + 20_000;
     setViewportToastOpen(false);
+  }, []);
+
+  const toggleMinimapOpen = useCallback(() => {
+    setMinimapOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(VIGIL_MINIMAP_VISIBLE_STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore quota / private mode */
+      }
+      return next;
+    });
+    playVigilUiSound("tap");
   }, []);
 
   const normalizeWheelDelta = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
@@ -4670,12 +4847,13 @@ export function ArchitecturalCanvasApp({
   );
 
   const enterSpace = useCallback(
-    (spaceId: string) => {
+    (spaceId: string, opts?: { cameraOverride?: CameraState }) => {
       const snap = graphRef.current;
       if (!snap.spaces[spaceId] || spaceId === activeSpaceIdRef.current) return;
 
       const navGen = ++spaceNavGenerationRef.current;
       const targetSpaceId = spaceId;
+      const cameraOverride = opts?.cameraOverride;
 
       const fromDepth = navigationPathRef.current.length;
       const nextPathPreview = buildPathToSpace(spaceId, snap.spaces, snap.rootSpaceId);
@@ -4693,7 +4871,10 @@ export function ArchitecturalCanvasApp({
           }
         }
         if (isUuidLike(targetSpaceId)) {
-          const cam = readSpaceCamera(targetSpaceId) ?? defaultCamera();
+          const cam =
+            cameraOverride != null
+              ? clampFollowCamera(cameraOverride)
+              : readSpaceCamera(targetSpaceId) ?? defaultCamera();
           setTranslateX(cam.x);
           setTranslateY(cam.y);
           setScale(cam.zoom);
@@ -4788,6 +4969,57 @@ export function ArchitecturalCanvasApp({
     },
     [recenterToOrigin],
   );
+
+  const handleFollowPresencePeer = useCallback(
+    (peer: SpacePresencePeer) => {
+      const snap = graphRef.current;
+      if (!snap.spaces[peer.activeSpaceId]) return;
+
+      if (focusOpen || galleryOpen || stackModal != null) {
+        if (
+          !window.confirm(
+            "Close the open card, gallery, or stack and jump to this collaborator’s view?",
+          )
+        ) {
+          return;
+        }
+        setFocusOpen(false);
+        setGalleryOpen(false);
+        setStackModal(null);
+        setActiveNodeId(null);
+      }
+
+      const cam = clampFollowCamera(peer.camera);
+
+      if (peer.activeSpaceId === activeSpaceIdRef.current) {
+        setTranslateX(cam.x);
+        setTranslateY(cam.y);
+        setScale(cam.zoom);
+        return;
+      }
+
+      enterSpace(peer.activeSpaceId, { cameraOverride: cam });
+    },
+    [focusOpen, galleryOpen, stackModal, enterSpace],
+  );
+
+  const collabPeerChips = useMemo((): CollabPeerPresenceChip[] => {
+    const now = Date.now();
+    return presencePeers.map((p) => {
+      const short = p.clientId.slice(-4).toLowerCase();
+      const spaceName = graph.spaces[p.activeSpaceId]?.name ?? "Space";
+      const t = Date.parse(p.updatedAt);
+      const stale = !Number.isFinite(t) || now - t > 60_000;
+      return {
+        clientId: p.clientId,
+        emoji: presenceEmojiForClientId(p.clientId),
+        title: `${spaceName} · …${short}${stale ? " · may be stale" : ""}`,
+        ariaLabel: `Follow collaborator ending …${short}`,
+        muted: stale,
+        onFollow: () => handleFollowPresencePeer(p),
+      };
+    });
+  }, [presencePeers, graph.spaces, handleFollowPresencePeer]);
 
   const openFolder = useCallback(
     (folderId: string) => {
@@ -5266,6 +5498,7 @@ export function ArchitecturalCanvasApp({
             childSpaceId,
             rotation,
             width: FOLDER_CARD_WIDTH,
+            height: FOLDER_CARD_HEIGHT,
             tapeRotation: 0,
             stackId: null,
             stackOrder: null,
@@ -5366,6 +5599,7 @@ export function ArchitecturalCanvasApp({
           kind: "content",
           rotation,
           width,
+          height: 280,
           theme: contentTheme,
           tapeVariant: tapeVariantForTheme(contentTheme),
           tapeRotation,
@@ -5454,6 +5688,7 @@ export function ArchitecturalCanvasApp({
           childSpaceId,
           rotation,
           width: FOLDER_CARD_WIDTH,
+          height: FOLDER_CARD_HEIGHT,
           tapeRotation: 0,
           stackId: null,
           stackOrder: null,
@@ -5516,6 +5751,7 @@ export function ArchitecturalCanvasApp({
       kind: "content" as const,
       rotation,
       width,
+      height: 280,
       theme: contentTheme,
       tapeVariant: tapeVariantForTheme(contentTheme),
       tapeRotation,
@@ -8137,6 +8373,70 @@ export function ArchitecturalCanvasApp({
     return technicalViewportReady && canvasSessionActivated;
   }, [scenario, technicalViewportReady, canvasSessionActivated]);
 
+  useLayoutEffect(() => {
+    const canMeasure =
+      minimapOpen &&
+      !focusOpen &&
+      !galleryOpen &&
+      !stackModal &&
+      viewportRevealReady;
+    if (!canMeasure) {
+      setMinimapPlacementSizes(new Map());
+      return;
+    }
+
+    const runMeasure = () => {
+      if (typeof document === "undefined") return;
+      const g = graphRef.current;
+      const spaceId = activeSpaceIdRef.current;
+      const entityIds = g.spaces[spaceId]?.entityIds ?? [];
+      if (entityIds.length === 0) {
+        setMinimapPlacementSizes(new Map());
+        return;
+      }
+      const collapsed = buildCollapsedStacksList(g, spaceId);
+      const stackMulti = new Set(collapsed.map((c) => c.stackId));
+      const map = new Map<string, { width: number; height: number }>();
+      for (const id of entityIds) {
+        const e = g.entities[id];
+        if (!e) continue;
+        if (e.stackId && stackMulti.has(e.stackId)) continue;
+        const m = measureArchitecturalNodePlacement(id, spaceId);
+        if (m) map.set(id, m);
+      }
+      for (const cs of collapsed) {
+        const m = measureArchitecturalNodePlacement(cs.top.id, spaceId);
+        if (m) map.set(cs.top.id, m);
+      }
+      setMinimapPlacementSizes(map);
+    };
+
+    runMeasure();
+
+    const root = canvasEntityLayerRef.current ?? viewportRef.current;
+    if (!root) return undefined;
+
+    const esc =
+      typeof CSS !== "undefined" && typeof CSS.escape === "function"
+        ? CSS.escape(activeSpaceId)
+        : activeSpaceId.replace(/"/g, '\\"');
+    const nodes = root.querySelectorAll<HTMLElement>(`[data-space-id="${esc}"][data-node-id]`);
+
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(runMeasure);
+    });
+    nodes.forEach((el) => ro.observe(el));
+    return () => ro.disconnect();
+  }, [
+    minimapOpen,
+    focusOpen,
+    galleryOpen,
+    stackModal,
+    viewportRevealReady,
+    activeSpaceId,
+    minimapDomMeasureKey,
+  ]);
+
   /**
    * Pre-Enter gate only: hide in-viewport chrome + dot grid, elevate top-left above the boot overlay.
    * Once the user activates, show real chrome immediately — boot UI may stay mounted for ambient audio
@@ -8674,6 +8974,13 @@ export function ArchitecturalCanvasApp({
               );
             })}
           </svg>
+          {collabNeonActive ? (
+            <ArchitecturalRemotePresenceCursors
+              peers={presencePeers.filter((p) => p.activeSpaceId === activeSpaceId)}
+              prefersReducedMotion={prefersReducedMotion}
+              pointerStaleMs={HEARTGARDEN_PRESENCE_POINTER_STALE_MS}
+            />
+          ) : null}
         </div>
         </div>
         {/*
@@ -8731,11 +9038,40 @@ export function ArchitecturalCanvasApp({
             chromeEntranceOn ? ` ${styles.chromeEnterBottomRight}` : ""
           }`}
         >
-          <ArchitecturalViewportMetrics
-            centerWorldX={centerWorldX}
-            centerWorldY={centerWorldY}
-            scale={scale}
-          />
+          <div className={styles.viewportMetricsCluster}>
+            <ArchitecturalViewportMetrics
+              centerWorldX={centerWorldX}
+              centerWorldY={centerWorldY}
+              scale={scale}
+              minimapOpen={minimapOpen}
+              onToggleMinimap={toggleMinimapOpen}
+            />
+            {minimapOpen &&
+            !focusOpen &&
+            !galleryOpen &&
+            !stackModal &&
+            viewportRevealReady ? (
+              <div className={styles.shellBottomRightMinimapSlot}>
+                <CanvasMinimap
+                  graph={graph}
+                  activeSpaceId={activeSpaceId}
+                  collapsedStacks={collapsedStacks as CollapsedStackInfo[]}
+                  translateX={translateX}
+                  translateY={translateY}
+                  scale={scale}
+                  viewportWidth={Math.max(1, viewportSize.width)}
+                  viewportHeight={Math.max(1, viewportSize.height)}
+                  selectedNodeIds={selectedNodeIds}
+                  minZoom={MIN_ZOOM}
+                  maxZoom={MAX_ZOOM}
+                  onPanWorldDelta={onMinimapPanWorldDelta}
+                  onCenterOnWorld={onMinimapCenterOnWorld}
+                  onFitAll={applyFitAllToViewport}
+                  placementSizes={minimapPlacementSizes}
+                />
+              </div>
+            ) : null}
+          </div>
         </div>
         {!focusOpen && !galleryOpen ? (
           <div
@@ -9988,7 +10324,7 @@ export function ArchitecturalCanvasApp({
                 syncOfflineNoSnapshot={
                   scenario === "default" && showWorkspaceBlockingOverlay
                 }
-                collabPeerCount={presencePeerCount}
+                collabPeers={collabPeerChips}
                 onExportGraphJson={exportGraphJson}
                 exportGraphPaletteHint={`${modKeyHints.search} → Export graph JSON`}
               />
@@ -10066,35 +10402,6 @@ export function ArchitecturalCanvasApp({
               </div>
             </div>
           </div>
-          {!(
-            focusOpen ||
-            galleryOpen ||
-            stackModal ||
-            bootPreActivateGate ||
-            !viewportRevealReady
-          ) && (activeSpace?.entityIds?.length ?? 0) > 0 ? (
-            <div
-              className={`${styles.glassPanel} ${styles.shellTopChromePanel}`}
-              style={{ pointerEvents: "auto" }}
-            >
-              <CanvasMinimap
-                graph={graph}
-                activeSpaceId={activeSpaceId}
-                collapsedStacks={collapsedStacks as CollapsedStackInfo[]}
-                translateX={translateX}
-                translateY={translateY}
-                scale={scale}
-                viewportWidth={Math.max(1, viewportSize.width)}
-                viewportHeight={Math.max(1, viewportSize.height)}
-                selectedNodeIds={selectedNodeIds}
-                minZoom={MIN_ZOOM}
-                maxZoom={MAX_ZOOM}
-                onPanWorldDelta={onMinimapPanWorldDelta}
-                onCenterOnWorld={onMinimapCenterOnWorld}
-                onFitAll={applyFitAllToViewport}
-              />
-            </div>
-          ) : null}
         </div>
         <div className={styles.topRightChromeCluster} data-hg-chrome="top-right-tools">
           <div

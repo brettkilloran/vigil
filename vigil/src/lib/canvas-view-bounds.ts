@@ -12,6 +12,8 @@ export const CANVAS_BOUNDS_FOLDER_HEIGHT = 280;
 /** CSS stack fan-out step (see --stack-x / --stack-y in ArchitecturalCanvasApp). */
 const STACK_SPREAD_PX = 6;
 const MAX_STACK_SPREAD_EXTRA = 240;
+/** Matches `--stack-r` step in `.stackLayer` (index − (n−1)/2) × this value. */
+const STACK_FAN_ROT_STEP_DEG = 1.6;
 
 export type WorldBounds = {
   minX: number;
@@ -96,28 +98,58 @@ export function rotatedRectWorldBounds(
 
 function entityLocalSize(entity: CanvasEntity): { w: number; h: number } {
   if (entity.kind === "folder") {
-    return { w: entity.width ?? CANVAS_BOUNDS_FOLDER_WIDTH, h: CANVAS_BOUNDS_FOLDER_HEIGHT };
+    return {
+      w: entity.width ?? CANVAS_BOUNDS_FOLDER_WIDTH,
+      h: entity.height ?? CANVAS_BOUNDS_FOLDER_HEIGHT,
+    };
   }
   return {
     w: entity.width ?? CANVAS_BOUNDS_UNIFIED_NODE_WIDTH,
-    h: CANVAS_BOUNDS_CONTENT_HEIGHT,
+    h: entity.height ?? CANVAS_BOUNDS_CONTENT_HEIGHT,
   };
 }
 
-function boundsForEntityAtSlot(entity: CanvasEntity, spaceId: string): WorldBounds | null {
+/** Live DOM size for a node (px in canvas layout space ≈ world units). */
+export type MinimapPlacementSize = { width: number; height: number };
+
+function entitySizeForMinimap(
+  entity: CanvasEntity,
+  measured?: MinimapPlacementSize | null,
+): { w: number; h: number } {
+  if (
+    measured &&
+    Number.isFinite(measured.width) &&
+    Number.isFinite(measured.height) &&
+    measured.width >= 8 &&
+    measured.height >= 8
+  ) {
+    return { w: measured.width, h: measured.height };
+  }
+  return entityLocalSize(entity);
+}
+
+function boundsForEntityAtSlot(
+  entity: CanvasEntity,
+  spaceId: string,
+  measured?: MinimapPlacementSize | null,
+): WorldBounds | null {
   const slot = entity.slots[spaceId];
   if (!slot) return null;
-  const { w, h } = entityLocalSize(entity);
+  const { w, h } = entitySizeForMinimap(entity, measured);
   return rotatedRectWorldBounds(slot.x, slot.y, w, h, entity.rotation ?? 0);
 }
 
-function boundsForCollapsedStack(entry: CollapsedStackInfo, spaceId: string): WorldBounds | null {
+function boundsForCollapsedStack(
+  entry: CollapsedStackInfo,
+  spaceId: string,
+  measuredTop?: MinimapPlacementSize | null,
+): WorldBounds | null {
   const { top, entities } = entry;
   const slot = top.slots[spaceId];
   if (!slot) return null;
   const n = entities.length;
   const extra = Math.min((n - 1) * STACK_SPREAD_PX, MAX_STACK_SPREAD_EXTRA);
-  const { w: bw, h: bh } = entityLocalSize(top);
+  const { w: bw, h: bh } = entitySizeForMinimap(top, measuredTop);
   const w = bw + extra;
   const h = bh + extra;
   return rotatedRectWorldBounds(slot.x, slot.y, w, h, top.rotation ?? 0);
@@ -130,6 +162,7 @@ export function computeSpaceContentBounds(
   graph: CanvasGraph,
   activeSpaceId: string,
   collapsedStacks: readonly CollapsedStackInfo[],
+  placementSizes?: ReadonlyMap<string, MinimapPlacementSize> | null,
 ): WorldBounds | null {
   const entityIds = graph.spaces[activeSpaceId]?.entityIds ?? [];
   if (entityIds.length === 0) return null;
@@ -142,13 +175,15 @@ export function computeSpaceContentBounds(
     const entity = graph.entities[id];
     if (!entity) continue;
     if (entity.stackId && stackMulti.has(entity.stackId)) continue;
-    const b = boundsForEntityAtSlot(entity, activeSpaceId);
+    const measured = placementSizes?.get(id) ?? null;
+    const b = boundsForEntityAtSlot(entity, activeSpaceId, measured);
     if (!b) continue;
     acc = acc ? unionBounds(acc, b) : b;
   }
 
   for (const cs of collapsedStacks) {
-    const b = boundsForCollapsedStack(cs, activeSpaceId);
+    const measuredTop = placementSizes?.get(cs.top.id) ?? null;
+    const b = boundsForCollapsedStack(cs, activeSpaceId, measuredTop);
     if (!b) continue;
     acc = acc ? unionBounds(acc, b) : b;
   }
@@ -327,8 +362,15 @@ export function isContentMostlyOffScreen(
 
 export type MinimapAtomRect = {
   key: string;
+  /** Axis-aligned bounds (union of rotated rect); used for content bounds / padding. */
   bounds: WorldBounds;
   selected: boolean;
+  /** Unrotated local rect in world space — matches canvas `nodePlacement` (top-left + size + CSS rotate). */
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotationDeg: number;
 };
 
 /**
@@ -339,6 +381,7 @@ export function listMinimapAtomRects(
   activeSpaceId: string,
   collapsedStacks: readonly CollapsedStackInfo[],
   selectedNodeIds: ReadonlySet<string>,
+  placementSizes?: ReadonlyMap<string, MinimapPlacementSize> | null,
 ): MinimapAtomRect[] {
   const entityIds = graph.spaces[activeSpaceId]?.entityIds ?? [];
   const stackMulti = new Set(collapsedStacks.map((c) => c.stackId));
@@ -348,23 +391,48 @@ export function listMinimapAtomRects(
     const entity = graph.entities[id];
     if (!entity) continue;
     if (entity.stackId && stackMulti.has(entity.stackId)) continue;
-    const b = boundsForEntityAtSlot(entity, activeSpaceId);
+    const slot = entity.slots[activeSpaceId];
+    if (!slot) continue;
+    const measured = placementSizes?.get(id) ?? null;
+    const { w, h } = entitySizeForMinimap(entity, measured);
+    const b = boundsForEntityAtSlot(entity, activeSpaceId, measured);
     if (!b) continue;
     out.push({
       key: `e:${id}`,
       bounds: b,
       selected: selectedNodeIds.has(id),
+      x: slot.x,
+      y: slot.y,
+      width: w,
+      height: h,
+      rotationDeg: entity.rotation ?? 0,
     });
   }
 
   for (const cs of collapsedStacks) {
-    const b = boundsForCollapsedStack(cs, activeSpaceId);
+    const { top, entities } = cs;
+    const slot = top.slots[activeSpaceId];
+    if (!slot) continue;
+    const n = entities.length;
+    const measuredTop = placementSizes?.get(top.id) ?? null;
+    const b = boundsForCollapsedStack(cs, activeSpaceId, measuredTop);
     if (!b) continue;
     const selected = cs.entities.some((e) => selectedNodeIds.has(e.id));
+    const { w: bw, h: bh } = entitySizeForMinimap(top, measuredTop);
+    /* Top stack layer: translate((n−1)×6, (n−1)×6) then fan rotate — same as .stackLayer in the shell. */
+    const topIndex = n - 1;
+    const tx = topIndex * STACK_SPREAD_PX;
+    const ty = topIndex * STACK_SPREAD_PX;
+    const fanDeg = (topIndex - (n - 1) / 2) * STACK_FAN_ROT_STEP_DEG;
     out.push({
       key: `s:${cs.stackId}`,
       bounds: b,
       selected,
+      x: slot.x + tx,
+      y: slot.y + ty,
+      width: bw,
+      height: bh,
+      rotationDeg: fanDeg,
     });
   }
 

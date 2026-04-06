@@ -487,6 +487,10 @@
   width: fit-content;
   z-index: var(--layer-ui-chrome);
   pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
 }
 
 .focusEffectsEnterHost .focusEffectsStrip {
@@ -512,6 +516,24 @@
   left: auto;
   bottom: auto;
   max-width: 100%;
+}
+
+/* Bottom-right: X/Y chip + optional minimap to its right (outward toward screen edge). */
+.viewportMetricsCluster {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline-start: auto;
+  pointer-events: none;
+}
+
+.viewportMetricsCluster > * {
+  pointer-events: auto;
 }
 
 .bottomDockEnterHost {
@@ -1871,6 +1893,74 @@
   pointer-events: auto;
 }
 
+.shellBottomRightMinimapSlot {
+  pointer-events: auto;
+  flex: 0 0 auto;
+}
+
+.viewportMetricsToggle {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: inherit;
+}
+
+.viewportMetricsToggle:focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .viewportMetricsToggle:hover {
+    filter: brightness(1.04);
+  }
+}
+
+.viewportMetricsMapToggle {
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: calc(var(--chrome-panel-radius, 12px) - 6px);
+  font: inherit;
+  color: inherit;
+  background: color-mix(in oklch, var(--vigil-label) 6%, transparent);
+  cursor: pointer;
+  line-height: 0;
+}
+
+.viewportMetricsMapToggle:focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .viewportMetricsMapToggle:hover {
+    filter: brightness(1.06);
+    background: color-mix(in oklch, var(--vigil-label) 10%, transparent);
+  }
+}
+
+.viewportMetricsReadout {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  pointer-events: none;
+}
+
 .shellTopLeftStack {
   position: absolute;
   top: max(24px, env(safe-area-inset-top, 0px));
@@ -2415,6 +2505,45 @@
   opacity: 1;
 }
 
+.collabPeerStrip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: min(300px, 44vw);
+}
+
+.collabPeerChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--sem-overlay-white-18, rgba(255, 255, 255, 0.12));
+  background: color-mix(in oklch, var(--accent) 14%, transparent);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    opacity 0.12s ease;
+}
+
+.collabPeerChip:hover {
+  transform: scale(1.05);
+}
+
+.collabPeerChipMuted {
+  opacity: 0.55;
+}
+
+.collabPeerChip:focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--accent) 65%, transparent);
+  outline-offset: 2px;
+}
+
 @keyframes pulse {
   0%,
   100% {
@@ -2929,6 +3058,11 @@
   justify-content: flex-end;
   width: fit-content;
   max-width: 100%;
+}
+
+button.rootDockPanel.viewportMetricsPanel {
+  /* Inherit glass from .rootDockPanel; reset button chrome */
+  background: var(--ui-glass-bg);
 }
 
 .formatToolbarWrap {

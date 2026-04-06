@@ -15,6 +15,9 @@ import type { CameraState } from "@/src/model/canvas-types";
 
 const UNIFIED_NODE_WIDTH = 340;
 const FOLDER_CARD_WIDTH = 420;
+const FOLDER_CARD_HEIGHT = 280;
+/** Default when `items.height` is missing (matches canvas placement fallback). */
+const DEFAULT_CONTENT_CARD_HEIGHT = 280;
 const DEFAULT_NOTE_HTML = `<div contenteditable="true">Start typing...</div>`;
 
 export type BootstrapSpaceRow = {
@@ -139,6 +142,8 @@ export function canvasItemToEntity(
       childSpaceId,
       rotation: hg?.rotation ?? 0,
       width: item.width || FOLDER_CARD_WIDTH,
+      height:
+        typeof item.height === "number" && item.height > 0 ? item.height : FOLDER_CARD_HEIGHT,
       tapeRotation: hg?.tapeRotation ?? 0,
       stackId: item.stackId ?? null,
       stackOrder: item.stackOrder ?? null,
@@ -160,6 +165,10 @@ export function canvasItemToEntity(
     theme,
     rotation: hg?.rotation ?? 0,
     width: item.width || UNIFIED_NODE_WIDTH,
+    height:
+      typeof item.height === "number" && item.height > 0
+        ? item.height
+        : DEFAULT_CONTENT_CARD_HEIGHT,
     tapeRotation: hg?.tapeRotation ?? 0,
     tapeVariant: hg?.tapeVariant ?? tapeVariantForTheme(theme),
     bodyHtml: bodyHtmlFromCanvasItem(item),
@@ -504,7 +513,10 @@ export function entityGeometryOnSpace(entity: CanvasEntity, spaceId: string) {
       entity.kind === "folder"
         ? entity.width ?? FOLDER_CARD_WIDTH
         : entity.width ?? UNIFIED_NODE_WIDTH,
-    height: 280,
+    height:
+      entity.kind === "folder"
+        ? entity.height ?? FOLDER_CARD_HEIGHT
+        : entity.height ?? DEFAULT_CONTENT_CARD_HEIGHT,
   };
 }
 

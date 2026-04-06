@@ -94,41 +94,32 @@ function MinimapDemo() {
         padding: 24,
       }}
     >
-      <div
-        style={{
-          maxWidth: 220,
-          borderRadius: 12,
-          border: "1px solid var(--vigil-border, rgba(255,255,255,0.12))",
-          background: "var(--vigil-panel, rgba(20,24,30,0.92))",
+      <CanvasMinimap
+        graph={mockGraph}
+        activeSpaceId={SPACE}
+        collapsedStacks={collapsed}
+        translateX={translateX}
+        translateY={translateY}
+        scale={scale}
+        viewportWidth={960}
+        viewportHeight={640}
+        selectedNodeIds={["n2"]}
+        minZoom={0.3}
+        maxZoom={3}
+        onPanWorldDelta={(dw, dh) => {
+          setTranslateX((x) => x - dw * scale);
+          setTranslateY((y) => y - dh * scale);
         }}
-      >
-        <CanvasMinimap
-          graph={mockGraph}
-          activeSpaceId={SPACE}
-          collapsedStacks={collapsed}
-          translateX={translateX}
-          translateY={translateY}
-          scale={scale}
-          viewportWidth={960}
-          viewportHeight={640}
-          selectedNodeIds={["n2"]}
-          minZoom={0.3}
-          maxZoom={3}
-          onPanWorldDelta={(dw, dh) => {
-            setTranslateX((x) => x - dw * scale);
-            setTranslateY((y) => y - dh * scale);
-          }}
-          onCenterOnWorld={(wx, wy) => {
-            setTranslateX(960 / 2 - wx * scale);
-            setTranslateY(640 / 2 - wy * scale);
-          }}
-          onFitAll={() => {
-            setScale(0.35);
-            setTranslateX(100);
-            setTranslateY(60);
-          }}
-        />
-      </div>
+        onCenterOnWorld={(wx, wy) => {
+          setTranslateX(960 / 2 - wx * scale);
+          setTranslateY(640 / 2 - wy * scale);
+        }}
+        onFitAll={() => {
+          setScale(0.35);
+          setTranslateX(100);
+          setTranslateY(60);
+        }}
+      />
       <p style={{ marginTop: 16, fontSize: 12, color: "var(--vigil-muted, #8a93a3)" }}>
         Mock camera: scale {scale.toFixed(2)}, translate ({Math.round(translateX)}, {Math.round(translateY)}).
         Double-click background resets demo fit.

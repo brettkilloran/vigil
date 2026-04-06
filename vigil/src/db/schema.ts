@@ -5,7 +5,6 @@ import {
   integer,
   jsonb,
   pgTable,
-  primaryKey,
   text,
   timestamp,
   unique,
@@ -40,18 +39,19 @@ export const spaces = pgTable(
   ],
 );
 
-/** Ephemeral multiplayer awareness (pruned on read by age). */
-export const spacePresence = pgTable(
-  "space_presence",
-  {
-    spaceId: uuid("space_id")
-      .notNull()
-      .references(() => spaces.id, { onDelete: "cascade" }),
-    clientId: uuid("client_id").notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [primaryKey({ columns: [t.spaceId, t.clientId] })],
-);
+/**
+ * One row per browser tab (`client_id`). Replaces legacy `space_presence` composite key
+ * so subtree presence queries do not duplicate peers after space switches.
+ */
+export const canvasPresence = pgTable("canvas_presence", {
+  clientId: uuid("client_id").primaryKey(),
+  activeSpaceId: uuid("active_space_id")
+    .notNull()
+    .references(() => spaces.id, { onDelete: "cascade" }),
+  camera: jsonb("camera").$type<{ x: number; y: number; zoom: number }>().notNull(),
+  pointer: jsonb("pointer").$type<{ x: number; y: number } | null>(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const items = pgTable("items", {
   id: uuid("id").defaultRandom().primaryKey(),

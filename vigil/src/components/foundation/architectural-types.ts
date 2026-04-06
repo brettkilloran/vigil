@@ -25,6 +25,8 @@ export type CanvasEntityBase = {
   title: string;
   rotation: number;
   width?: number;
+  /** Rendered card height in world px when known (DB `items.height` or measured layout). */
+  height?: number;
   tapeRotation: number;
   slots: Record<string, EntitySpatialSlot>;
   /** Optional DB item id used for dual-write link persistence. */

@@ -13,8 +13,18 @@ export const HEARTGARDEN_SPACE_CHANGE_POLL_MS = 8_000;
 /** Presence heartbeat POST interval. */
 export const HEARTGARDEN_PRESENCE_HEARTBEAT_MS = 25_000;
 
-/** Peer count GET interval (same order of magnitude as heartbeat; not required under TTL). */
-export const HEARTGARDEN_PRESENCE_PEER_POLL_MS = 12_000;
+/** Peer list GET interval — cursors feel less frozen than a 12s poll. */
+export const HEARTGARDEN_PRESENCE_PEER_POLL_MS = 4000;
+
+/** Min interval between presence POSTs triggered by pointer movement (camera+pointer payload). */
+export const HEARTGARDEN_PRESENCE_POINTER_FLUSH_MIN_MS = 2000;
+
+/** Hide remote pointer if the peer row is older than this (pointer may be stale even if row is in TTL). */
+export const HEARTGARDEN_PRESENCE_POINTER_STALE_MS = 10_000;
+
+/** Presence camera zoom bounds — match shell `ArchitecturalCanvasApp` MIN_ZOOM / MAX_ZOOM. */
+export const HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MIN = 0.3;
+export const HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MAX = 3;
 
 /** Substring of the delta-poll failure message; used to clear status-bar errors when polls recover. */
 export const HEARTGARDEN_COLLA_POLL_ERROR_SNIPPET = "space changes (poll)";

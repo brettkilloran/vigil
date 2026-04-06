@@ -8,6 +8,7 @@ import {
   listMinimapAtomRects,
   viewportWorldRect,
   type CollapsedStackInfo,
+  type MinimapPlacementSize,
 } from "@/src/lib/canvas-view-bounds";
 
 import styles from "./CanvasMinimap.module.css";
@@ -29,6 +30,8 @@ type CanvasMinimapProps = {
   /** Center viewport on a world point at current zoom. */
   onCenterOnWorld: (wx: number, wy: number) => void;
   onFitAll: () => void;
+  /** Live placement sizes from DOM (`offsetWidth`/`offsetHeight`) keyed by entity id. */
+  placementSizes?: ReadonlyMap<string, MinimapPlacementSize> | null;
 };
 
 function padBounds(
@@ -63,6 +66,7 @@ export function CanvasMinimap({
   onPanWorldDelta,
   onCenterOnWorld,
   onFitAll,
+  placementSizes = null,
 }: CanvasMinimapProps) {
   void _minZoom;
   void _maxZoom;
@@ -71,24 +75,25 @@ export function CanvasMinimap({
   const [dragging, setDragging] = useState(false);
 
   const contentBounds = useMemo(
-    () => computeSpaceContentBounds(graph, activeSpaceId, collapsedStacks),
-    [graph, activeSpaceId, collapsedStacks],
+    () => computeSpaceContentBounds(graph, activeSpaceId, collapsedStacks, placementSizes),
+    [graph, activeSpaceId, collapsedStacks, placementSizes],
   );
-
-  const viewBoxRect = useMemo(() => {
-    if (!contentBounds) return null;
-    return padBounds(contentBounds, 0.1, 80);
-  }, [contentBounds]);
-
-  const atoms = useMemo(() => {
-    const sel = new Set(selectedNodeIds);
-    return listMinimapAtomRects(graph, activeSpaceId, collapsedStacks, sel);
-  }, [graph, activeSpaceId, collapsedStacks, selectedNodeIds]);
 
   const vpWorld = useMemo(
     () => viewportWorldRect(translateX, translateY, scale, viewportWidth, viewportHeight),
     [translateX, translateY, scale, viewportWidth, viewportHeight],
   );
+
+  /** Empty spaces have no content bounds; still show the map frame from the current viewport. */
+  const viewBoxRect = useMemo(() => {
+    if (contentBounds) return padBounds(contentBounds, 0.1, 80);
+    return padBounds(vpWorld, 0.12, 120);
+  }, [contentBounds, vpWorld]);
+
+  const atoms = useMemo(() => {
+    const sel = new Set(selectedNodeIds);
+    return listMinimapAtomRects(graph, activeSpaceId, collapsedStacks, sel, placementSizes);
+  }, [graph, activeSpaceId, collapsedStacks, selectedNodeIds, placementSizes]);
 
   const clientToWorldDelta = useCallback(
     (movementX: number, movementY: number) => {
@@ -155,8 +160,6 @@ export function CanvasMinimap({
     [onFitAll],
   );
 
-  if (!viewBoxRect) return null;
-
   const vb = `${viewBoxRect.minX} ${viewBoxRect.minY} ${viewBoxRect.maxX - viewBoxRect.minX} ${viewBoxRect.maxY - viewBoxRect.minY}`;
 
   return (
@@ -167,22 +170,28 @@ export function CanvasMinimap({
         viewBox={vb}
         preserveAspectRatio="xMidYMid meet"
         role="img"
+        tabIndex={-1}
         aria-label="Canvas minimap"
         onPointerMove={onSvgPointerMove}
         onClick={onSvgClick}
         onDoubleClick={onSvgDblClick}
       >
-        {atoms.map((a) => (
-          <rect
-            key={a.key}
-            x={a.bounds.minX}
-            y={a.bounds.minY}
-            width={Math.max(4, a.bounds.maxX - a.bounds.minX)}
-            height={Math.max(4, a.bounds.maxY - a.bounds.minY)}
-            rx={2}
-            className={a.selected ? styles.atomSelected : styles.atom}
-          />
-        ))}
+        {atoms.map((a) => {
+          const cx = a.x + a.width / 2;
+          const cy = a.y + a.height / 2;
+          return (
+            <rect
+              key={a.key}
+              x={a.x}
+              y={a.y}
+              width={a.width}
+              height={a.height}
+              rx={2}
+              transform={a.rotationDeg !== 0 ? `rotate(${a.rotationDeg} ${cx} ${cy})` : undefined}
+              className={a.selected ? styles.atomSelected : styles.atom}
+            />
+          );
+        })}
         <rect
           data-minimap-viewport="true"
           x={vpWorld.minX}

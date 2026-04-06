@@ -1,12 +1,28 @@
+/* Match `.glassPanel.shellTopChromePanel` (status strip) — same tokens; min-height unconstrained for map aspect. */
+
 .root {
   pointer-events: auto;
-  border-radius: 12px;
-  border: 1px solid color-mix(in oklch, var(--vigil-border) 85%, transparent);
-  background: color-mix(in oklch, var(--vigil-panel) 92%, transparent);
-  box-shadow: 0 4px 24px color-mix(in oklch, var(--sys-color-black) 18%, transparent);
-  padding: 6px;
-  width: 184px;
+  position: relative;
+  width: 168px;
+  max-width: min(168px, calc(100vw - 48px));
   flex-shrink: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--ui-glass-border);
+  border-radius: var(--chrome-panel-radius);
+  box-shadow: var(--chrome-glass-shadow);
+  background: var(--ui-glass-bg);
+  backdrop-filter: var(--chrome-glass-filter);
+  -webkit-backdrop-filter: var(--chrome-glass-filter);
+  transform: translateZ(0);
+  will-change: backdrop-filter;
+  /* Same padding rhythm as `.glassPanel` / `.shellTopChromePanel` */
+  padding-block: var(--chrome-panel-pad-y);
+  padding-inline: var(--chrome-panel-pad-x);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
 }
 
 .svg {
@@ -14,29 +30,37 @@
   width: 100%;
   height: auto;
   aspect-ratio: 4 / 3;
-  border-radius: 8px;
-  background: color-mix(in oklch, var(--vigil-canvas) 40%, transparent);
+  border-radius: calc(var(--chrome-panel-radius, 12px) - 4px);
+  background: color-mix(in oklch, var(--vigil-canvas) 22%, var(--vigil-surface));
+  outline: none;
 }
 
 .atom {
-  fill: color-mix(in oklch, var(--vigil-label) 22%, transparent);
-  stroke: color-mix(in oklch, var(--vigil-border) 70%, transparent);
-  stroke-width: 0.5;
+  fill: color-mix(in oklch, var(--vigil-label) 7%, transparent);
+  stroke: color-mix(in oklch, var(--vigil-label) 11%, transparent);
+  stroke-width: 0.4;
 }
 
 .atomSelected {
-  fill: color-mix(in oklch, var(--accent) 35%, transparent);
-  stroke: color-mix(in oklch, var(--accent) 55%, transparent);
+  fill: color-mix(in oklch, var(--accent) 16%, transparent);
+  stroke: color-mix(in oklch, var(--accent) 28%, transparent);
+  stroke-width: 0.45;
 }
 
 .viewportRect {
-  fill: none;
-  stroke: color-mix(in oklch, var(--accent) 65%, transparent);
-  stroke-width: 2;
+  fill: color-mix(in oklch, var(--vigil-label) 4%, transparent);
+  stroke: color-mix(in oklch, var(--vigil-label) 26%, transparent);
+  stroke-width: 1;
   pointer-events: stroke;
   cursor: grab;
 }
 
 .viewportRectDragging {
   cursor: grabbing;
+}
+
+@media (hover: hover) {
+  .root:hover .viewportRect {
+    stroke: color-mix(in oklch, var(--vigil-label) 40%, transparent);
+  }
 }
