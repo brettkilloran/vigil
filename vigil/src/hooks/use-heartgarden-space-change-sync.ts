@@ -129,8 +129,12 @@ export function useHeartgardenSpaceChangeSync(options: {
           );
           return mergeRemoteSpaceRowsIntoGraph(mergedItems, rawSpaces);
         });
+        // Do not bump baseUpdatedAt for cards with local draft — avoids 409 races with debounced saves
+        // and our own echo on the delta feed while the editor is dirty (merge already skips body for these).
         for (const it of rawItems) {
-          if (it.updatedAt) itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
+          if (it.updatedAt && !protectedContentIds.has(it.id)) {
+            itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
+          }
         }
       } finally {
         inFlight = false;

@@ -1842,6 +1842,19 @@ export function ArchitecturalCanvasApp({
           if (r.item.updatedAt) itemServerUpdatedAtRef.current.set(r.item.id, r.item.updatedAt);
           return false;
         }
+        const serverAt = r.item.updatedAt;
+        if (typeof serverAt === "string" && serverAt.length > 0) {
+          itemServerUpdatedAtRef.current.set(itemId, serverAt);
+          const r2 = await apiPatchItem(itemId, { ...patch, baseUpdatedAt: serverAt });
+          if (r2.ok) {
+            if (r2.item.updatedAt) itemServerUpdatedAtRef.current.set(itemId, r2.item.updatedAt);
+            return true;
+          }
+          if (!r2.ok && "conflict" in r2 && r2.conflict) {
+            enqueueItemConflict(r2.item);
+            return false;
+          }
+        }
         enqueueItemConflict(r.item);
       }
       return false;
