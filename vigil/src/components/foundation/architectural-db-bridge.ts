@@ -243,6 +243,7 @@ function mergeEntityFromItemProtectingText(
 export function mergeBootstrapView(prev: CanvasGraph, data: BootstrapResponse): CanvasGraph {
   const rootSpaceId = findRootSpaceId(data.spaces);
   const affectedSpaceIds = new Set(data.items.map((i) => i.spaceId));
+  const payloadItemIds = new Set(data.items.map((i) => i.id));
 
   const spacesRecord: Record<string, CanvasSpace> = { ...prev.spaces };
   for (const s of data.spaces) {
@@ -264,15 +265,23 @@ export function mergeBootstrapView(prev: CanvasGraph, data: BootstrapResponse): 
     if (sp && !sp.entityIds.includes(merged.id)) sp.entityIds.push(merged.id);
   }
 
+  const idsToDelete = new Set<string>();
   for (const spaceId of affectedSpaceIds) {
     const prevIds = prev.spaces[spaceId]?.entityIds ?? [];
     const newIds = spacesRecord[spaceId]?.entityIds ?? [];
     for (const id of prevIds) {
       if (newIds.includes(id)) continue;
+      if (payloadItemIds.has(id)) continue;
+      idsToDelete.add(id);
+    }
+  }
+
+  if (idsToDelete.size > 0) {
+    for (const sp of Object.values(spacesRecord)) {
+      sp.entityIds = sp.entityIds.filter((e) => !idsToDelete.has(e));
+    }
+    for (const id of idsToDelete) {
       delete entities[id];
-      for (const sp of Object.values(spacesRecord)) {
-        sp.entityIds = sp.entityIds.filter((e) => e !== id);
-      }
     }
   }
 
@@ -432,8 +441,10 @@ export function applyServerCanvasItemToGraph(prev: CanvasGraph, item: CanvasItem
   const merged = mergeEntityFromItem(prev.entities[item.id], item);
   if (!merged) return prev;
   const spacesRecord: Record<string, CanvasSpace> = { ...prev.spaces };
-  for (const sp of Object.values(spacesRecord)) {
-    sp.entityIds = sp.entityIds.filter((e) => e !== item.id);
+  for (const sid of Object.keys(spacesRecord)) {
+    const sp = spacesRecord[sid]!;
+    if (!sp.entityIds.includes(item.id)) continue;
+    spacesRecord[sid] = { ...sp, entityIds: sp.entityIds.filter((e) => e !== item.id) };
   }
   const sp = spacesRecord[item.spaceId];
   if (sp && !sp.entityIds.includes(merged.id)) sp.entityIds.push(merged.id);

@@ -3,14 +3,8 @@ import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
-import {
-  getHeartgardenApiBootContext,
-  gmMayAccessSpaceId,
-  heartgardenApiForbiddenJsonResponse,
-  heartgardenMaskNotFoundForVisitor,
-  isHeartgardenVisitorBlocked,
-  visitorMayAccessSpaceId,
-} from "@/src/lib/heartgarden-api-boot-context";
+import { getHeartgardenApiBootContext, heartgardenApiForbiddenJsonResponse } from "@/src/lib/heartgarden-api-boot-context";
+import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
 import {
   playersMayCreateItemType,
@@ -20,7 +14,7 @@ import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
-import { assertSpaceExists, listItemsForSpace } from "@/src/lib/spaces";
+import { listItemsForSpace } from "@/src/lib/spaces";
 
 const createBody = z.object({
   /** When set, insert this row id (used for undo-after-delete restore). Must not already exist. */
@@ -55,23 +49,9 @@ export async function GET(
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
   const { spaceId } = await context.params;
-  const space = await assertSpaceExists(db, spaceId);
-  if (!space) {
-    return heartgardenMaskNotFoundForVisitor(
-      bootCtx,
-      Response.json({ ok: false, error: "Space not found" }, { status: 404 }),
-    );
-  }
-  if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
-  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
+  const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
+  if (!access.ok) return access.response;
   const rows = await listItemsForSpace(db, spaceId);
   return Response.json({ ok: true, items: rows.map(rowToCanvasItem) });
 }
@@ -88,23 +68,9 @@ export async function POST(
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
   const { spaceId } = await context.params;
-  const space = await assertSpaceExists(db, spaceId);
-  if (!space) {
-    return heartgardenMaskNotFoundForVisitor(
-      bootCtx,
-      Response.json({ ok: false, error: "Space not found" }, { status: 404 }),
-    );
-  }
-  if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
-  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
+  const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
+  if (!access.ok) return access.response;
 
   let json: unknown;
   try {

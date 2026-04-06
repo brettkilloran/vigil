@@ -17,6 +17,7 @@ import {
   neonSyncClearLastErrorIfContains,
   neonSyncReportAuxiliaryFailure,
 } from "@/src/lib/neon-sync-bus";
+import { buildCollabMergeProtectedContentIds } from "@/src/lib/heartgarden-space-change-sync-utils";
 import { collectSpaceSubtreeIds } from "@/src/lib/spaces";
 
 const AUX_FAILURE_AFTER_CONSECUTIVE_MISSES = 3;
@@ -107,11 +108,12 @@ export function useHeartgardenSpaceChangeSync(options: {
           parentSpaceId: s.parentSpaceId ?? null,
         }));
         const subtree = collectSpaceSubtreeIds(activeSpaceId, spaceRows);
-        const protectedContentIds = new Set<string>();
-        if (focusOpenRef.current && focusDirtyRef.current && activeNodeIdRef.current) {
-          protectedContentIds.add(activeNodeIdRef.current);
-        }
-        inlineContentDirtyIdsRef.current.forEach((id) => protectedContentIds.add(id));
+        const protectedContentIds = buildCollabMergeProtectedContentIds({
+          focusOpen: focusOpenRef.current,
+          focusDirty: focusDirtyRef.current,
+          activeNodeId: activeNodeIdRef.current,
+          inlineContentDirtyIds: inlineContentDirtyIdsRef.current,
+        });
         const rawItems = data.items ?? [];
         const rawSpaces = (data.spaces ?? []).map((s) => ({
           id: s.id,

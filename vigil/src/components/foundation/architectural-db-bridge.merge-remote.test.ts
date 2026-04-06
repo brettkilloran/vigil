@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  mergeBootstrapView,
   mergeRemoteItemPatches,
   mergeRemoteSpaceRowsIntoGraph,
   removeEntitiesFromGraphAfterRemoteDelete,
+  applyServerCanvasItemToGraph,
   type BootstrapResponse,
   buildCanvasGraphFromBootstrap,
 } from "@/src/components/foundation/architectural-db-bridge";
@@ -135,6 +137,101 @@ describe("mergeRemoteItemPatches", () => {
     expect(next.entities.a?.title).toBe("A2");
     expect(next.entities.b?.title).toBe("B");
     expect([...(next.spaces["space-1"]?.entityIds ?? [])].sort()).toEqual(["a", "b"]);
+  });
+});
+
+describe("mergeBootstrapView", () => {
+  it("keeps entity when item moved to another affected space in the same payload", () => {
+    const bootPrev: BootstrapResponse = {
+      ok: true,
+      demo: false,
+      spaceId: "space-1",
+      spaces: [
+        { id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
+        { id: "space-2", name: "Child", parentSpaceId: "space-1", updatedAt: "2020-01-01T00:00:00.000Z" },
+      ],
+      items: [
+        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
+      camera: { x: 0, y: 0, zoom: 1 },
+    };
+    const prev = buildCanvasGraphFromBootstrap(bootPrev);
+    const bootNext: BootstrapResponse = {
+      ...bootPrev,
+      items: [
+        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+        noteItem("a", "space-2", "A", "2020-01-02T00:00:00.000Z"),
+      ],
+    };
+    const next = mergeBootstrapView(prev, bootNext);
+    expect(next.entities.a?.title).toBe("A");
+    expect(next.entities.b?.title).toBe("B");
+    expect([...(next.spaces["space-1"]?.entityIds ?? [])].sort()).toEqual(["b"]);
+    expect(next.spaces["space-2"]?.entityIds).toEqual(["a"]);
+  });
+
+  it("batch-removes many stale ids without per-id full graph scans", () => {
+    const spaces = [
+      { id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
+      ...Array.from({ length: 24 }, (_, i) => ({
+        id: `space-x-${i}`,
+        name: `X${i}`,
+        parentSpaceId: "space-1" as string | null,
+        updatedAt: "2020-01-01T00:00:00.000Z",
+      })),
+    ];
+    const items = [
+      noteItem("keep", "space-1", "Keep", "2020-01-01T00:00:00.000Z"),
+      ...Array.from({ length: 24 }, (_, i) =>
+        noteItem(`stale-${i}`, "space-1", `S${i}`, "2020-01-01T00:00:00.000Z"),
+      ),
+    ];
+    const bootFull: BootstrapResponse = {
+      ok: true,
+      demo: false,
+      spaceId: "space-1",
+      spaces,
+      items,
+      camera: { x: 0, y: 0, zoom: 1 },
+    };
+    const prev = buildCanvasGraphFromBootstrap(bootFull);
+    const bootTrimmed: BootstrapResponse = {
+      ...bootFull,
+      items: [noteItem("keep", "space-1", "Keep", "2020-01-01T00:00:00.000Z")],
+    };
+    const next = mergeBootstrapView(prev, bootTrimmed);
+    expect(Object.keys(next.entities).sort()).toEqual(["keep"]);
+    expect(next.spaces["space-1"]?.entityIds).toEqual(["keep"]);
+  });
+});
+
+describe("applyServerCanvasItemToGraph", () => {
+  it("moves item between spaces without scanning empty entity lists for mutation", () => {
+    const spaces = [
+      { id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
+      { id: "space-2", name: "Child", parentSpaceId: "space-1", updatedAt: "2020-01-01T00:00:00.000Z" },
+      ...Array.from({ length: 20 }, (_, i) => ({
+        id: `space-e-${i}`,
+        name: `E${i}`,
+        parentSpaceId: "space-1" as string | null,
+        updatedAt: "2020-01-01T00:00:00.000Z",
+      })),
+    ];
+    const boot: BootstrapResponse = {
+      ok: true,
+      demo: false,
+      spaceId: "space-1",
+      spaces,
+      items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
+      camera: { x: 0, y: 0, zoom: 1 },
+    };
+    const prev = buildCanvasGraphFromBootstrap(boot);
+    const moved = noteItem("a", "space-2", "A2", "2020-01-02T00:00:00.000Z");
+    const next = applyServerCanvasItemToGraph(prev, moved);
+    expect(next.entities.a?.title).toBe("A2");
+    expect(next.spaces["space-1"]?.entityIds).toEqual([]);
+    expect(next.spaces["space-2"]?.entityIds).toEqual(["a"]);
   });
 });
 

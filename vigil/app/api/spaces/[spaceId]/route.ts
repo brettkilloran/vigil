@@ -7,15 +7,10 @@ import {
   getHeartgardenApiBootContext,
   gmMayAccessSpaceId,
   heartgardenApiForbiddenJsonResponse,
-  heartgardenMaskNotFoundForVisitor,
   isHeartgardenVisitorBlocked,
-  visitorMayAccessSpaceId,
 } from "@/src/lib/heartgarden-api-boot-context";
-import {
-  assertSpaceExists,
-  assertSpaceReparentAllowed,
-  deleteSpaceSubtree,
-} from "@/src/lib/spaces";
+import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
+import { assertSpaceReparentAllowed, deleteSpaceSubtree } from "@/src/lib/spaces";
 
 const patchBody = z.object({
   camera: z
@@ -43,24 +38,9 @@ export async function PATCH(
   }
 
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
-
   const { spaceId } = await context.params;
-  const space = await assertSpaceExists(db, spaceId);
-  if (!space) {
-    return heartgardenMaskNotFoundForVisitor(
-      bootCtx,
-      Response.json({ ok: false, error: "Space not found" }, { status: 404 }),
-    );
-  }
-  if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
-  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
+  const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
+  if (!access.ok) return access.response;
 
   let json: unknown;
   try {
@@ -79,9 +59,6 @@ export async function PATCH(
 
   if (parsed.data.parentSpaceId !== undefined) {
     if (bootCtx.role === "visitor") {
-      return heartgardenApiForbiddenJsonResponse();
-    }
-    if (!gmMayAccessSpaceId(bootCtx, spaceId)) {
       return heartgardenApiForbiddenJsonResponse();
     }
     const nextParent = parsed.data.parentSpaceId;
@@ -133,9 +110,8 @@ export async function DELETE(
     return heartgardenApiForbiddenJsonResponse();
   }
   const { spaceId } = await context.params;
-  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
+  const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
+  if (!access.ok) return access.response;
   const result = await deleteSpaceSubtree(db, spaceId);
   if (!result.ok) {
     const status = result.error === "Space not found" ? 404 : 400;
