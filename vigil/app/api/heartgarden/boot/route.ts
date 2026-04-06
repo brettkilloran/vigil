@@ -37,14 +37,14 @@ export async function GET() {
   const sessionValid =
     gateEnabled &&
     Boolean(payload) &&
-    !(payload?.tier === "visitor" && playerLayerMisconfigured);
+    !(payload?.tier === "player" && playerLayerMisconfigured);
 
-  let sessionTier: "access" | "visitor" | "demo" | null = null;
+  let sessionTier: "access" | "player" | "demo" | null = null;
   if (gateEnabled && payload) {
     if (payload.tier === "access" || payload.tier === "demo") {
       sessionTier = payload.tier;
-    } else if (payload.tier === "visitor" && !playerLayerMisconfigured) {
-      sessionTier = "visitor";
+    } else if (payload.tier === "player" && !playerLayerMisconfigured) {
+      sessionTier = "player";
     }
   }
 
@@ -59,7 +59,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { gateEnabled, accessPin, visitorPin, demoPin, sessionSecret } = readBootEnv();
+  const { gateEnabled, bishopPin, playersPin, demoPin, sessionSecret } = readBootEnv();
   if (!gateEnabled) {
     return NextResponse.json({ error: "Boot gate is not enabled." }, { status: 400 });
   }
@@ -86,12 +86,12 @@ export async function POST(req: Request) {
     return NextResponse.json(GENERIC_UNAUTHORIZED, { status: 401 });
   }
 
-  const tier = resolveBootPinTier(code, accessPin, visitorPin, demoPin);
+  const tier = resolveBootPinTier(code, bishopPin, playersPin, demoPin);
   if (!tier) {
     return NextResponse.json(GENERIC_UNAUTHORIZED, { status: 401 });
   }
 
-  if (tier === "visitor" && isHeartgardenPlayerLayerMisconfigured()) {
+  if (tier === "player" && isHeartgardenPlayerLayerMisconfigured()) {
     return NextResponse.json(GENERIC_UNAUTHORIZED, { status: 401 });
   }
 

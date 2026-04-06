@@ -20,7 +20,7 @@ export function applySearchTierPolicy(
   const mode = modeRaw.toLowerCase();
   const hid = heartgardenPlayerSpaceIdExcludedFromGm();
 
-  if (ctx.role === "visitor") {
+  if (ctx.role === "player") {
     const nextFilters = { ...filters };
     if (nextFilters.spaceId && nextFilters.spaceId !== ctx.playerSpaceId) {
       return { ok: false };
@@ -45,7 +45,7 @@ export function applySuggestTierPolicy(
 ): SearchTierPolicyResult {
   const hid = heartgardenPlayerSpaceIdExcludedFromGm();
 
-  if (ctx.role === "visitor") {
+  if (ctx.role === "player") {
     const nextFilters = { ...filters };
     if (nextFilters.spaceId && nextFilters.spaceId !== ctx.playerSpaceId) {
       return { ok: false };

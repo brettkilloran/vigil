@@ -6,9 +6,9 @@ import {
   getHeartgardenApiBootContext,
   gmMayAccessItemSpace,
   heartgardenApiForbiddenJsonResponse,
-  heartgardenMaskNotFoundForVisitor,
-  isHeartgardenVisitorBlocked,
-  visitorMayAccessItemSpace,
+  heartgardenMaskNotFoundForPlayer,
+  isHeartgardenPlayerBlocked,
+  playerMayAccessItemSpace,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { getItemLinksResolved } from "@/src/lib/spaces";
 
@@ -24,18 +24,18 @@ export async function GET(
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
+  if (isHeartgardenPlayerBlocked(bootCtx)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   const { itemId } = await context.params;
   const [row] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
   if (!row) {
-    return heartgardenMaskNotFoundForVisitor(
+    return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json({ ok: false, error: "Not found" }, { status: 404 }),
     );
   }
-  if (!visitorMayAccessItemSpace(bootCtx, row.spaceId)) {
+  if (!playerMayAccessItemSpace(bootCtx, row.spaceId)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, row.spaceId)) {

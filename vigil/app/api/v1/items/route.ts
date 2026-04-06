@@ -2,8 +2,8 @@ import { tryGetDb } from "@/src/db/index";
 import {
   getHeartgardenApiBootContext,
   gmMayAccessSpaceId,
-  isHeartgardenVisitorBlocked,
-  visitorMayAccessSpaceId,
+  isHeartgardenPlayerBlocked,
+  playerMayAccessSpaceId,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { assertSpaceExists, listItemsForSpace } from "@/src/lib/spaces";
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     return Response.json({ error: "Database not configured" }, { status: 503 });
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
+  if (isHeartgardenPlayerBlocked(bootCtx)) {
     return Response.json({ error: "Forbidden." }, { status: 403 });
   }
   const url = new URL(req.url);
@@ -28,12 +28,12 @@ export async function GET(req: Request) {
   }
   const space = await assertSpaceExists(db, spaceId);
   if (!space) {
-    if (bootCtx.role === "visitor") {
+    if (bootCtx.role === "player") {
       return Response.json({ error: "Forbidden." }, { status: 403 });
     }
     return Response.json({ error: "Space not found" }, { status: 404 });
   }
-  if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
+  if (!playerMayAccessSpaceId(bootCtx, spaceId)) {
     return Response.json({ error: "Forbidden." }, { status: 403 });
   }
   if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {

@@ -4,7 +4,7 @@ import { tryGetDb } from "@/src/db/index";
 import {
   assertPlayerSpaceRowExists,
   heartgardenApiForbiddenJsonResponse,
-  isHeartgardenVisitorBlocked,
+  isHeartgardenPlayerBlocked,
   parseHeartgardenApiBootContext,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
@@ -50,11 +50,11 @@ export async function GET(req: Request) {
 
   const jar = await cookies();
   const bootCtx = parseHeartgardenApiBootContext(jar);
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
+  if (isHeartgardenPlayerBlocked(bootCtx)) {
     return heartgardenApiForbiddenJsonResponse();
   }
 
-  if (bootCtx.role === "visitor") {
+  if (bootCtx.role === "player") {
     const ok = await assertPlayerSpaceRowExists(db, bootCtx.playerSpaceId);
     if (!ok) {
       return heartgardenApiForbiddenJsonResponse();

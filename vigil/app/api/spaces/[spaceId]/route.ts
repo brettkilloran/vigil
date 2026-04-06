@@ -7,7 +7,7 @@ import {
   getHeartgardenApiBootContext,
   gmMayAccessSpaceId,
   heartgardenApiForbiddenJsonResponse,
-  isHeartgardenVisitorBlocked,
+  isHeartgardenPlayerBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 import { assertSpaceReparentAllowed, deleteSpaceSubtree } from "@/src/lib/spaces";
@@ -58,7 +58,7 @@ export async function PATCH(
   }
 
   if (parsed.data.parentSpaceId !== undefined) {
-    if (bootCtx.role === "visitor") {
+    if (bootCtx.role === "player") {
       return heartgardenApiForbiddenJsonResponse();
     }
     const nextParent = parsed.data.parentSpaceId;
@@ -106,7 +106,7 @@ export async function DELETE(
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx) || bootCtx.role === "visitor") {
+  if (isHeartgardenPlayerBlocked(bootCtx) || bootCtx.role === "player") {
     return heartgardenApiForbiddenJsonResponse();
   }
   const { spaceId } = await context.params;

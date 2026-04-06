@@ -7,10 +7,10 @@ import {
   gmMayAccessItemSpace,
   gmMayAccessSpaceId,
   heartgardenApiForbiddenJsonResponse,
-  heartgardenMaskNotFoundForVisitor,
-  isHeartgardenVisitorBlocked,
-  visitorMayAccessItemSpace,
-  visitorMayAccessSpaceId,
+  heartgardenMaskNotFoundForPlayer,
+  isHeartgardenPlayerBlocked,
+  playerMayAccessItemSpace,
+  playerMayAccessSpaceId,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { searchItemsFTS } from "@/src/lib/spaces";
 
@@ -23,18 +23,18 @@ export async function GET(
     return Response.json({ ok: false, error: "Database not configured", items: [] }, { status: 503 });
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
+  if (isHeartgardenPlayerBlocked(bootCtx)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   const { itemId } = await context.params;
   const [row] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
   if (!row) {
-    return heartgardenMaskNotFoundForVisitor(
+    return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json({ ok: false, error: "Not found" }, { status: 404 }),
     );
   }
-  if (!visitorMayAccessItemSpace(bootCtx, row.spaceId)) {
+  if (!playerMayAccessItemSpace(bootCtx, row.spaceId)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, row.spaceId)) {
@@ -44,8 +44,8 @@ export async function GET(
   const url = new URL(req.url);
   const spaceParam = url.searchParams.get("spaceId");
   let spaceId = spaceParam && spaceParam.length > 0 ? spaceParam : row.spaceId;
-  if (bootCtx.role === "visitor") {
-    if (spaceParam && !visitorMayAccessSpaceId(bootCtx, spaceParam)) {
+  if (bootCtx.role === "player") {
+    if (spaceParam && !playerMayAccessSpaceId(bootCtx, spaceParam)) {
       return heartgardenApiForbiddenJsonResponse();
     }
     spaceId = bootCtx.playerSpaceId;

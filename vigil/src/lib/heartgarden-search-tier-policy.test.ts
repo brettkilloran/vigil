@@ -20,8 +20,8 @@ describe("applySearchTierPolicy", () => {
     else process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE = prevBreakGlass;
   });
 
-  it("forces visitor space and fts for hybrid", () => {
-    const ctx: HeartgardenApiBootContext = { role: "visitor", playerSpaceId: PLAYER_UUID };
+  it("forces player space and fts for hybrid", () => {
+    const ctx: HeartgardenApiBootContext = { role: "player", playerSpaceId: PLAYER_UUID };
     const r = applySearchTierPolicy(ctx, {}, "hybrid");
     expect(r.ok).toBe(true);
     if (r.ok) {
@@ -30,8 +30,8 @@ describe("applySearchTierPolicy", () => {
     }
   });
 
-  it("rejects visitor with wrong spaceId", () => {
-    const ctx: HeartgardenApiBootContext = { role: "visitor", playerSpaceId: PLAYER_UUID };
+  it("rejects player with wrong spaceId", () => {
+    const ctx: HeartgardenApiBootContext = { role: "player", playerSpaceId: PLAYER_UUID };
     const r = applySearchTierPolicy(ctx, { spaceId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" }, "fts");
     expect(r.ok).toBe(false);
   });

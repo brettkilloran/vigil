@@ -10,17 +10,17 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/bootstrap` | Active space, spaces list, items (subtree), camera (legacy field; shell uses **browser-local** pan/zoom per space). **`PLAYWRIGHT_E2E=1`** forces empty demo payload (tests only). With boot gate on, **`middleware`** returns **403** without a valid **`hg_boot`** cookie (except **`/api/heartgarden/boot`**). With a valid **`visitor`** tier cookie, scopes to **`HEARTGARDEN_PLAYER_SPACE_ID`** only (403 if misconfigured). **`demo`** tier should not call this in normal clients (local canvas only). |
+| GET | `/api/bootstrap` | Active space, spaces list, items (subtree), camera (legacy field; shell uses **browser-local** pan/zoom per space). **`PLAYWRIGHT_E2E=1`** forces empty demo payload (tests only). With boot gate on, **`middleware`** returns **403** without a valid **`hg_boot`** cookie (except **`/api/heartgarden/boot`**). With a valid **`player`** tier cookie, scopes to **`HEARTGARDEN_PLAYER_SPACE_ID`** only (403 if misconfigured). **`demo`** tier should not call this in normal clients (local canvas only). |
 
 ## Boot gate (splash PIN)
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/heartgarden/boot` | **`{ gateEnabled, sessionValid, sessionTier, playerLayerMisconfigured? }`** — no secrets. **`sessionTier`** is **`"access"`**, **`"visitor"`**, **`"demo"`**, or **`null`**. Gate is **off** when **`PLAYWRIGHT_E2E=1`**, when **`HEARTGARDEN_BOOT_SESSION_SECRET`** is shorter than **16** characters, or when no PIN is exactly **8** characters (**access**, **Players** via **`HEARTGARDEN_BOOT_PIN_PLAYERS`** or **`HEARTGARDEN_BOOT_PIN_VISITOR`**, and/or **demo**). |
-| POST | `/api/heartgarden/boot` | Body **`{ code }`** — exactly **8** characters (after trim). On success: **204** + **`Set-Cookie`** `hg_boot` (httpOnly, signed tier **access**, **visitor**, or **demo**). On failure: **401** with constant **`{ error: "Access denied." }`**. Too many attempts from one client IP: **429** **`{ error: "Too many requests." }`** (in-memory limit per instance; see env below). |
+| GET | `/api/heartgarden/boot` | **`{ gateEnabled, sessionValid, sessionTier, playerLayerMisconfigured? }`** — no secrets. **`sessionTier`** is **`"access"`** (Bishop), **`"player"`**, **`"demo"`**, or **`null`**. Gate is **off** when **`PLAYWRIGHT_E2E=1`**, when **`HEARTGARDEN_BOOT_SESSION_SECRET`** is shorter than **16** characters, or when no PIN is exactly **8** characters (**Bishop**, **Players**, and/or **demo**). Clients may still see legacy **`"visitor"`** until they refresh against a new deploy; treat like **`"player"`**. |
+| POST | `/api/heartgarden/boot` | Body **`{ code }`** — exactly **8** characters (after trim). On success: **204** + **`Set-Cookie`** `hg_boot` (httpOnly, signed tier **access**, **player**, or **demo**). On failure: **401** with constant **`{ error: "Access denied." }`**. Too many attempts from one client IP: **429** **`{ error: "Too many requests." }`** (in-memory limit per instance; see env below). |
 | DELETE | `/api/heartgarden/boot` | Clears **`hg_boot`** (e.g. after in-app **Log out**). **204**. |
 
-**Env:** **`HEARTGARDEN_BOOT_PIN_ACCESS`**, optional **`HEARTGARDEN_BOOT_PIN_PLAYERS`** (preferred) or **`HEARTGARDEN_BOOT_PIN_VISITOR`**, optional **`HEARTGARDEN_BOOT_PIN_DEMO`**, **`HEARTGARDEN_BOOT_SESSION_SECRET`**, optional **`HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC`**, optional **`HEARTGARDEN_PLAYER_SPACE_ID`** (Players tier), optional **`HEARTGARDEN_GM_ALLOW_PLAYER_SPACE=1`** (GM break-glass). See **`docs/VERCEL_ENV_VARS.md`** and **`docs/PLAYER_LAYER.md`**.
+**Env:** **`HEARTGARDEN_BOOT_PIN_BISHOP`**, optional **`HEARTGARDEN_BOOT_PIN_PLAYERS`**, optional **`HEARTGARDEN_BOOT_PIN_DEMO`**, **`HEARTGARDEN_BOOT_SESSION_SECRET`**, optional **`HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC`**, optional **`HEARTGARDEN_PLAYER_SPACE_ID`** (required when Players PIN is set), optional **`HEARTGARDEN_GM_ALLOW_PLAYER_SPACE=1`** (GM break-glass). See **`docs/VERCEL_ENV_VARS.md`** and **`docs/PLAYER_LAYER.md`**.
 
 ## Spaces
 
@@ -28,7 +28,7 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 |--------|------|---------|
 | GET | `/api/spaces` | List spaces. |
 | POST | `/api/spaces` | Create space. |
-| PATCH | `/api/spaces/[spaceId]` | Update **name** and/or **`parentSpaceId`** (UUID or `null`). A **`camera`** field in the body is accepted for backward compatibility but **ignored** (viewport is not persisted server-side). **`parentSpaceId`** is **GM-only** (rejected for **visitor**); requires access to both this space and the new parent; the server rejects moves that would create a **parent cycle**. Use this to keep a folder’s inner space aligned when its folder card moves between canvases. |
+| PATCH | `/api/spaces/[spaceId]` | Update **name** and/or **`parentSpaceId`** (UUID or `null`). A **`camera`** field in the body is accepted for backward compatibility but **ignored** (viewport is not persisted server-side). **`parentSpaceId`** is **GM-only** (rejected for **player**); requires access to both this space and the new parent; the server rejects moves that would create a **parent cycle**. Use this to keep a folder’s inner space aligned when its folder card moves between canvases. |
 | DELETE | `/api/spaces/[spaceId]` | Delete space (cascade per schema). |
 | GET | `/api/spaces/[spaceId]/changes` | Query **`since`** (ISO timestamp). Response includes **`items`** (changed item rows) and **`cursor`** (max of item + space `updated_at` in range). When any subtree **`spaces`** row changed since **`since`** (e.g. folder reparent / rename), **`spaces`** lists **`{ id, name, parentSpaceId, updatedAt }`** so other clients can merge without a full bootstrap. Optional **`includeItemIds=1`**: when set, includes **`itemIds`** (full subtree id list for tombstone sync). When omitted, **`itemIds` is omitted** — the shell sends **`includeItemIds=1`** after navigation or when the tab becomes visible again, then steady-state polls omit it. |
 | GET | `/api/spaces/[spaceId]/presence` | Optional **`?except=<clientUuid>`**. Optional **`scope=local`** — restrict to peers whose **`activeSpaceId`** equals **`spaceId`**; **default** (omit param) returns peers in **`spaceId`’s entire subtree** (descendant child spaces included). Each peer: **`clientId`**, **`activeSpaceId`**, **`camera`** `{ x, y, zoom }`, **`pointer`** `{ x, y } \| null` (world coordinates), **`updatedAt`** (ISO). TTL **~2 minutes**. |
@@ -54,7 +54,7 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/search` | Query params: `q`, `spaceId`, mode (`hybrid` / `semantic` / FTS), filters. Uses pgvector when configured. **Visitor** tier: `spaceId` forced to player space; hybrid/semantic downgraded to FTS. |
+| GET | `/api/search` | Query params: `q`, `spaceId`, mode (`hybrid` / `semantic` / FTS), filters. Uses pgvector when configured. **Players** tier: `spaceId` forced to player space; hybrid/semantic downgraded to FTS. |
 | GET | `/api/search/suggest` | Prefix / palette suggestions. |
 | GET | `/api/search/chunks` | Raw chunk-level hits (debug / advanced clients). |
 
@@ -113,10 +113,10 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 | `HEARTGARDEN_MCP_WRITE_KEY` | Reindex + MCP write tools (must match client `write_key`) |
 | `R2_*` | Image presign |
 | `PLAYWRIGHT_E2E` | Bootstrap empty demo (tests only); boot gate forced off in **`/api/heartgarden/boot`** |
-| `HEARTGARDEN_BOOT_PIN_ACCESS` / `HEARTGARDEN_BOOT_PIN_PLAYERS` / `HEARTGARDEN_BOOT_PIN_VISITOR` / `HEARTGARDEN_BOOT_PIN_DEMO` | Boot splash PINs (8 chars each if set) |
+| `HEARTGARDEN_BOOT_PIN_BISHOP` / `HEARTGARDEN_BOOT_PIN_PLAYERS` / `HEARTGARDEN_BOOT_PIN_DEMO` | Boot splash PINs (8 chars each if set) |
 | `HEARTGARDEN_BOOT_SESSION_SECRET` | Signs **`hg_boot`** session cookie |
 | `HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC` | Optional cookie max-age |
-| `HEARTGARDEN_PLAYER_SPACE_ID` | Visitor-tier scoped space UUID (see **`docs/PLAYER_LAYER.md`**) |
+| `HEARTGARDEN_PLAYER_SPACE_ID` | Players-tier scoped space UUID (see **`docs/PLAYER_LAYER.md`**) |
 | `HEARTGARDEN_BOOT_POST_RATE_LIMIT_MAX` | Optional max **`POST /api/heartgarden/boot`** attempts per IP per window (default **40**, clamped **3–500**) |
 | `HEARTGARDEN_BOOT_POST_RATE_LIMIT_WINDOW_MS` | Optional window length in ms (default **15 minutes**, clamped **30s–1h**) |
 | `HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_MAX` | Optional max **`POST …/presence`** per **public IP** per window (default **4000**, clamped **10–100000**). Baseline ~36 posts per **tab** per 15 min from the **25s** heartbeat; **pointer moves** can add throttled POSTs (~one every **2s** while moving). Two household players on one Wi‑Fi ≈ 2× that — still far below default. Raise only for very many devices sharing one IP. |

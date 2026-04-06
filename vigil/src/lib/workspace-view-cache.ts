@@ -6,7 +6,7 @@ const LEGACY_STORAGE_KEY = "heartgarden-workspace-view-v1";
 /** Current cache blob (includes tier so GM / Players snapshots do not mix). */
 export const WORKSPACE_VIEW_CACHE_STORAGE_KEY = "heartgarden-workspace-view-v2";
 
-export type WorkspaceBootTierTag = "access" | "visitor" | "open";
+export type WorkspaceBootTierTag = "access" | "player" | "open";
 
 export type WorkspaceViewCachePayload = {
   v: 2;
@@ -44,10 +44,17 @@ export function readWorkspaceViewCache(expectedBootTier?: WorkspaceBootTierTag |
     if (parsed.v !== 2) return null;
     if (typeof parsed.savedAt !== "number") return null;
     if (typeof parsed.maxZIndex !== "number" || parsed.maxZIndex < 1) return null;
-    if (parsed.bootTier !== "access" && parsed.bootTier !== "visitor" && parsed.bootTier !== "open") {
+    if (
+      parsed.bootTier !== "access" &&
+      parsed.bootTier !== "player" &&
+      parsed.bootTier !== "visitor" &&
+      parsed.bootTier !== "open"
+    ) {
       return null;
     }
-    if (expectedBootTier != null && expectedBootTier !== parsed.bootTier) {
+    const bootTier: WorkspaceBootTierTag =
+      parsed.bootTier === "visitor" ? "player" : (parsed.bootTier as WorkspaceBootTierTag);
+    if (expectedBootTier != null && expectedBootTier !== bootTier) {
       return null;
     }
     const boot = parseBootstrap(parsed.bootstrap);
@@ -56,7 +63,7 @@ export function readWorkspaceViewCache(expectedBootTier?: WorkspaceBootTierTag |
       v: 2,
       savedAt: parsed.savedAt,
       maxZIndex: parsed.maxZIndex,
-      bootTier: parsed.bootTier,
+      bootTier,
       bootstrap: boot,
     };
   } catch {

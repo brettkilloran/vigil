@@ -88,7 +88,7 @@ export async function POST(
   }
 
   const t = parsed.data.itemType;
-  if (bootCtx.role === "visitor") {
+  if (bootCtx.role === "player") {
     if (!playersMayCreateItemType(t)) {
       return heartgardenApiForbiddenJsonResponse();
     }
@@ -108,7 +108,7 @@ export async function POST(
   }
 
   const entityMetaForRow =
-    bootCtx.role === "visitor"
+    bootCtx.role === "player"
       ? stripGmOnlyEntityMetaPatch(parsed.data.entityMeta as Record<string, unknown> | undefined) ??
         null
       : (parsed.data.entityMeta ?? null);
@@ -167,7 +167,7 @@ export async function POST(
     })
     .returning();
 
-  if (row && bootCtx.role !== "visitor") {
+  if (row && bootCtx.role !== "player") {
     scheduleItemEmbeddingRefresh(db, row);
     if (contentText.trim().length > 0 || title.trim().length > 0) {
       scheduleVaultReindexAfterResponse(row.id);

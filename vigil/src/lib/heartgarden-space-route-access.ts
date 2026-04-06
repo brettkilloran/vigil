@@ -3,9 +3,9 @@ import type { HeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-c
 import {
   gmMayAccessSpaceId,
   heartgardenApiForbiddenJsonResponse,
-  heartgardenMaskNotFoundForVisitor,
-  isHeartgardenVisitorBlocked,
-  visitorMayAccessSpaceId,
+  heartgardenMaskNotFoundForPlayer,
+  isHeartgardenPlayerBlocked,
+  playerMayAccessSpaceId,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
@@ -14,7 +14,7 @@ type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 export type HeartgardenSpaceRouteSpaceRow = NonNullable<Awaited<ReturnType<typeof assertSpaceExists>>>;
 
 /**
- * Authorize Heartgarden boot context for a space-scoped API route (GM / visitor / demo rules).
+ * Authorize Heartgarden boot context for a space-scoped API route (GM / Players / demo rules).
  * Call after `tryGetDb` and `getHeartgardenApiBootContext`.
  *
  * Collab / maintainer docs may refer to this as **`assertHeartgardenSpaceRouteAccess`** — same function.
@@ -24,7 +24,7 @@ export async function requireHeartgardenSpaceApiAccess(
   bootCtx: HeartgardenApiBootContext,
   spaceId: string,
 ): Promise<{ ok: true; space: HeartgardenSpaceRouteSpaceRow } | { ok: false; response: Response }> {
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
+  if (isHeartgardenPlayerBlocked(bootCtx)) {
     return { ok: false, response: heartgardenApiForbiddenJsonResponse() };
   }
 
@@ -32,14 +32,14 @@ export async function requireHeartgardenSpaceApiAccess(
   if (!space) {
     return {
       ok: false,
-      response: heartgardenMaskNotFoundForVisitor(
+      response: heartgardenMaskNotFoundForPlayer(
         bootCtx,
         Response.json({ ok: false, error: "Space not found" }, { status: 404 }),
       ),
     };
   }
 
-  if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
+  if (!playerMayAccessSpaceId(bootCtx, spaceId)) {
     return { ok: false, response: heartgardenApiForbiddenJsonResponse() };
   }
   if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {

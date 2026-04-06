@@ -1373,13 +1373,18 @@ export type HeartgardenBootApiState = {
   loaded: boolean;
   gateEnabled: boolean;
   sessionValid: boolean;
-  sessionTier: "access" | "visitor" | "demo" | null;
+  sessionTier: "access" | "player" | "demo" | null;
   playerLayerMisconfigured: boolean;
 };
 
 function parseHeartgardenBootStatus(d: HeartgardenBootStatusJson): HeartgardenBootApiState {
   const st = d.sessionTier;
-  const tier = st === "access" || st === "visitor" || st === "demo" ? st : null;
+  const tier =
+    st === "access" || st === "demo" || st === "player"
+      ? st
+      : st === "visitor"
+        ? "player"
+        : null;
   return {
     loaded: true,
     gateEnabled: Boolean(d.gateEnabled),
@@ -1409,7 +1414,7 @@ function buildHeartgardenNestedDemoGraph() {
 function workspaceCacheTierForNeonSession(b: HeartgardenBootApiState): WorkspaceBootTierTag {
   if (!b.gateEnabled) return "open";
   if (b.sessionTier === "access") return "access";
-  if (b.sessionTier === "visitor") return "visitor";
+  if (b.sessionTier === "player") return "player";
   return "open";
 }
 
@@ -1512,7 +1517,7 @@ export function ArchitecturalCanvasApp({
     () =>
       heartgardenBootApi.loaded &&
       heartgardenBootApi.gateEnabled &&
-      heartgardenBootApi.sessionTier === "visitor",
+      heartgardenBootApi.sessionTier === "player",
     [
       heartgardenBootApi.loaded,
       heartgardenBootApi.gateEnabled,

@@ -4,7 +4,7 @@ import { tryGetDb } from "@/src/db/index";
 import { canvasPresence, spaces } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
-  visitorMayAccessSpaceId,
+  playerMayAccessSpaceId,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { HEARTGARDEN_PRESENCE_TTL_MS } from "@/src/lib/heartgarden-collab-constants";
 import { heartgardenBootClientIp } from "@/src/lib/heartgarden-boot-rate-limit";
@@ -90,7 +90,7 @@ export async function GET(
 
   for (const r of rows) {
     if (selfId && z.string().uuid().safeParse(selfId).success && r.clientId === selfId) continue;
-    if (!visitorMayAccessSpaceId(bootCtx, r.activeSpaceId)) continue;
+    if (!playerMayAccessSpaceId(bootCtx, r.activeSpaceId)) continue;
     const cam = safePresenceCameraFromUnknown(r.camera);
     const ptr = safePresencePointerFromUnknown(r.pointer);
     out.push({

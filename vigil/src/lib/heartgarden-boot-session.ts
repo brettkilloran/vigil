@@ -9,7 +9,8 @@ export { HEARTGARDEN_BOOT_PIN_LENGTH } from "@/src/lib/heartgarden-boot-pin-cons
 
 export const HEARTGARDEN_BOOT_COOKIE_NAME = "hg_boot";
 
-export type HeartgardenBootTier = "access" | "visitor" | "demo";
+/** Signed cookie payload tier. Legacy cookies may still store `"visitor"`; verify normalizes to `"player"`. */
+export type HeartgardenBootTier = "access" | "player" | "demo";
 
 export type HeartgardenBootPayload = {
   tier: HeartgardenBootTier;
@@ -27,24 +28,24 @@ export function isPlaywrightE2E(): boolean {
 
 export function readBootEnv(): {
   gateEnabled: boolean;
-  accessPin: string;
-  visitorPin: string;
+  bishopPin: string;
+  playersPin: string;
   demoPin: string;
   sessionSecret: string;
 } {
   if (isHeartgardenBootGateBypassed()) {
-    return { gateEnabled: false, accessPin: "", visitorPin: "", demoPin: "", sessionSecret: "" };
+    return { gateEnabled: false, bishopPin: "", playersPin: "", demoPin: "", sessionSecret: "" };
   }
-  const accessPin = (process.env.HEARTGARDEN_BOOT_PIN_ACCESS ?? "").trim();
-  const visitorPin = readHeartgardenPlayersBootPin();
+  const bishopPin = (process.env.HEARTGARDEN_BOOT_PIN_BISHOP ?? "").trim();
+  const playersPin = readHeartgardenPlayersBootPin();
   const demoPin = (process.env.HEARTGARDEN_BOOT_PIN_DEMO ?? "").trim();
   const sessionSecret = (process.env.HEARTGARDEN_BOOT_SESSION_SECRET ?? "").trim();
-  const accessOk = accessPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
-  const visitorOk = visitorPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
+  const bishopOk = bishopPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
+  const playersOk = playersPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
   const demoOk = demoPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
   /** Gate is on when the session secret is set and at least one PIN is configured. */
-  const gateEnabled = sessionSecret.length >= 16 && (accessOk || visitorOk || demoOk);
-  return { gateEnabled, accessPin, visitorPin, demoPin, sessionSecret };
+  const gateEnabled = sessionSecret.length >= 16 && (bishopOk || playersOk || demoOk);
+  return { gateEnabled, bishopPin, playersPin, demoPin, sessionSecret };
 }
 
 export function bootSessionMaxAgeSec(): number {
@@ -58,28 +59,34 @@ function sha256Utf8(s: string): Buffer {
   return createHash("sha256").update(s, "utf8").digest();
 }
 
+function normalizeBootTierFromCookie(raw: unknown): HeartgardenBootTier | null {
+  if (raw === "access" || raw === "demo" || raw === "player") return raw;
+  if (raw === "visitor") return "player";
+  return null;
+}
+
 /**
- * Compare submitted code to access / visitor pins without short-circuiting digest equality.
+ * Compare submitted code to Bishop / Players / demo pins without short-circuiting digest equality.
  * Returns tier or null. Pins shorter than 8 use dummy digests so they never match.
  */
 export function resolveBootPinTier(
   code: string,
-  accessPin: string,
-  visitorPin: string,
+  bishopPin: string,
+  playersPin: string,
   demoPin: string,
 ): HeartgardenBootTier | null {
   const h = sha256Utf8(code);
-  const hAccess =
-    accessPin.length === HEARTGARDEN_BOOT_PIN_LENGTH ? sha256Utf8(accessPin) : DUMMY_DIGEST_A;
-  const hVisitor =
-    visitorPin.length === HEARTGARDEN_BOOT_PIN_LENGTH ? sha256Utf8(visitorPin) : DUMMY_DIGEST_B;
+  const hBishop =
+    bishopPin.length === HEARTGARDEN_BOOT_PIN_LENGTH ? sha256Utf8(bishopPin) : DUMMY_DIGEST_A;
+  const hPlayers =
+    playersPin.length === HEARTGARDEN_BOOT_PIN_LENGTH ? sha256Utf8(playersPin) : DUMMY_DIGEST_B;
   const hDemo =
     demoPin.length === HEARTGARDEN_BOOT_PIN_LENGTH ? sha256Utf8(demoPin) : DUMMY_DIGEST_C;
-  const okAccess = timingSafeEqual(h, hAccess);
-  const okVisitor = timingSafeEqual(h, hVisitor);
+  const okBishop = timingSafeEqual(h, hBishop);
+  const okPlayers = timingSafeEqual(h, hPlayers);
   const okDemo = timingSafeEqual(h, hDemo);
-  if (okAccess) return "access";
-  if (okVisitor) return "visitor";
+  if (okBishop) return "access";
+  if (okPlayers) return "player";
   if (okDemo) return "demo";
   return null;
 }
@@ -134,11 +141,12 @@ export function verifyBootSessionCookie(secret: string, cookieValue: string): He
   }
   if (!parsed || typeof parsed !== "object") return null;
   const o = parsed as Record<string, unknown>;
-  if (o.tier !== "access" && o.tier !== "visitor" && o.tier !== "demo") return null;
+  const tier = normalizeBootTierFromCookie(o.tier);
+  if (!tier) return null;
   if (typeof o.exp !== "number" || !Number.isFinite(o.exp)) return null;
   const now = Math.floor(Date.now() / 1000);
   if (o.exp <= now) return null;
-  return { tier: o.tier, exp: o.exp };
+  return { tier, exp: o.exp };
 }
 
 export function clearBootSessionCookieOptions(): {

@@ -4,8 +4,8 @@ import {
   getHeartgardenApiBootContext,
   gmMayAccessSpaceId,
   heartgardenApiForbiddenJsonResponse,
-  heartgardenMaskNotFoundForVisitor,
-  isHeartgardenVisitorBlocked,
+  heartgardenMaskNotFoundForPlayer,
+  isHeartgardenPlayerBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { applySearchTierPolicy } from "@/src/lib/heartgarden-search-tier-policy";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
@@ -74,7 +74,7 @@ export async function GET(req: Request) {
     return Response.json({ ok: false, error: "Database not configured", items: [] }, { status: 503 });
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
+  if (isHeartgardenPlayerBlocked(bootCtx)) {
     return heartgardenApiForbiddenJsonResponse();
   }
 
@@ -96,7 +96,7 @@ export async function GET(req: Request) {
   if (filters.spaceId) {
     const space = await assertSpaceExists(db, filters.spaceId);
     if (!space) {
-      return heartgardenMaskNotFoundForVisitor(
+      return heartgardenMaskNotFoundForPlayer(
         bootCtx,
         Response.json({ ok: false, error: "Space not found", items: [] }, { status: 404 }),
       );

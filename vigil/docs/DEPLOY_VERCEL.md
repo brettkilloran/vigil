@@ -39,8 +39,9 @@ Add these in **Project → Settings → Environment Variables**. Mark secrets as
 | `R2_BUCKET_NAME` | Same | For R2 | |
 | `R2_PUBLIC_BASE_URL` | Same | For R2 | Public origin for GET of uploaded objects, **no trailing slash** (e.g. `https://pub-xxxx.r2.dev`). |
 | `HEARTGARDEN_LORE_QUERY_DISABLED` | Production, Preview (optional) | Hardening | Set to **`1`** to disable **`POST /api/lore/query`** (**503**) while the rest of the app stays up. Remove when auth / stronger limits are in place. |
-| `HEARTGARDEN_BOOT_PIN_ACCESS` | Production, Preview (optional) | Boot gate | Exactly **8** characters if set; GM tier. With **`HEARTGARDEN_BOOT_SESSION_SECRET`** (16+ chars), the gate turns on when **this and/or** visitor PIN is 8 chars. Sensitive. |
-| `HEARTGARDEN_BOOT_PIN_VISITOR` | Same | Player tier PIN | Exactly **8** characters if set; visitor tier in signed **`hg_boot`** cookie. Gate can be enabled with visitor-only, access-only, or both. Sensitive. |
+| `HEARTGARDEN_BOOT_PIN_BISHOP` | Production, Preview (optional) | Boot gate | Exactly **8** characters if set; GM tier (`access`) in signed **`hg_boot`**. With **`HEARTGARDEN_BOOT_SESSION_SECRET`** (16+ chars), the gate turns on when **this and/or** Players / demo PIN is 8 chars. Sensitive. |
+| `HEARTGARDEN_BOOT_PIN_PLAYERS` | Same | Players tier PIN | Exactly **8** characters if set; **`player`** tier in signed **`hg_boot`**. Requires valid **`HEARTGARDEN_PLAYER_SPACE_ID`**. Sensitive. |
+| `HEARTGARDEN_BOOT_PIN_DEMO` | Same | Demo tier PIN | Exactly **8** characters if set; **`demo`** tier (local-seeded canvas). Sensitive. |
 | `HEARTGARDEN_BOOT_SESSION_SECRET` | Same | Required if gate on | HMAC secret for boot session cookie. Sensitive. |
 | `HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC` | Same | Optional | Cookie TTL (**60–31536000** seconds); default **30 days**. |
 

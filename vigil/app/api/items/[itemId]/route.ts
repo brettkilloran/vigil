@@ -8,10 +8,10 @@ import {
   gmMayAccessItemSpace,
   gmMayAccessSpaceId,
   heartgardenApiForbiddenJsonResponse,
-  heartgardenMaskNotFoundForVisitor,
-  isHeartgardenVisitorBlocked,
-  visitorMayAccessItemSpace,
-  visitorMayApplySpaceIdPatch,
+  heartgardenMaskNotFoundForPlayer,
+  isHeartgardenPlayerBlocked,
+  playerMayAccessItemSpace,
+  playerMayApplySpaceIdPatch,
 } from "@/src/lib/heartgarden-api-boot-context";
 import {
   playersMayPatchItemType,
@@ -84,7 +84,7 @@ export async function PATCH(
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
+  if (isHeartgardenPlayerBlocked(bootCtx)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   const { itemId } = await context.params;
@@ -104,7 +104,7 @@ export async function PATCH(
     );
   }
 
-  if (bootCtx.role === "visitor") {
+  if (bootCtx.role === "player") {
     if (playersPatchBodyViolatesPolicy(parsed.data)) {
       return heartgardenApiForbiddenJsonResponse();
     }
@@ -119,12 +119,12 @@ export async function PATCH(
     .where(eq(items.id, itemId))
     .limit(1);
   if (!existing) {
-    return heartgardenMaskNotFoundForVisitor(
+    return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json({ ok: false, error: "Not found" }, { status: 404 }),
     );
   }
-  if (!visitorMayAccessItemSpace(bootCtx, existing.spaceId)) {
+  if (!playerMayAccessItemSpace(bootCtx, existing.spaceId)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, existing.spaceId)) {
@@ -169,12 +169,12 @@ export async function PATCH(
   };
 
   if (p.spaceId !== undefined) {
-    if (!visitorMayApplySpaceIdPatch(bootCtx, existing.spaceId, p.spaceId)) {
+    if (!playerMayApplySpaceIdPatch(bootCtx, existing.spaceId, p.spaceId)) {
       return heartgardenApiForbiddenJsonResponse();
     }
     const space = await assertSpaceExists(db, p.spaceId);
     if (!space) {
-      return heartgardenMaskNotFoundForVisitor(
+      return heartgardenMaskNotFoundForPlayer(
         bootCtx,
         Response.json({ ok: false, error: "Space not found" }, { status: 400 }),
       );
@@ -197,7 +197,7 @@ export async function PATCH(
   if (p.itemType !== undefined) updates.itemType = p.itemType;
   if (p.entityType !== undefined) updates.entityType = p.entityType;
   if (p.entityMeta !== undefined) {
-    if (bootCtx.role === "visitor") {
+    if (bootCtx.role === "player") {
       if (p.entityMeta === null) {
         updates.entityMeta = null;
       } else {
@@ -210,7 +210,7 @@ export async function PATCH(
     }
   } else if (p.entityMetaMerge !== undefined && Object.keys(p.entityMetaMerge).length > 0) {
     const mergePatch =
-      bootCtx.role === "visitor"
+      bootCtx.role === "player"
         ? stripGmOnlyEntityMetaPatch(p.entityMetaMerge as Record<string, unknown>) ?? {}
         : (p.entityMetaMerge as Record<string, unknown>);
     updates.entityMeta = mergeEntityMeta(
@@ -253,7 +253,7 @@ export async function PATCH(
   const contentDirty = titleChanged || contentTextChanged;
   const metaDirty =
     p.entityMeta !== undefined || p.entityMetaMerge !== undefined;
-  if (bootCtx.role !== "visitor") {
+  if (bootCtx.role !== "player") {
     if (contentDirty && row) {
       scheduleItemEmbeddingRefresh(db, row);
       scheduleVaultReindexAfterResponse(row.id);
@@ -277,18 +277,18 @@ export async function DELETE(
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
+  if (isHeartgardenPlayerBlocked(bootCtx)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   const { itemId } = await context.params;
   const [existing] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
   if (!existing) {
-    return heartgardenMaskNotFoundForVisitor(
+    return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json({ ok: false, error: "Not found" }, { status: 404 }),
     );
   }
-  if (!visitorMayAccessItemSpace(bootCtx, existing.spaceId)) {
+  if (!playerMayAccessItemSpace(bootCtx, existing.spaceId)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, existing.spaceId)) {
@@ -296,7 +296,7 @@ export async function DELETE(
   }
   const deleted = await db.delete(items).where(eq(items.id, itemId)).returning();
   if (deleted.length === 0) {
-    return heartgardenMaskNotFoundForVisitor(
+    return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json({ ok: false, error: "Not found" }, { status: 404 }),
     );

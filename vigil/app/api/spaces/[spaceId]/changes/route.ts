@@ -57,7 +57,7 @@ export async function GET(
 
   let spaceRows: { id: string; parentSpaceId: string | null }[];
 
-  if (bootCtx.role === "visitor") {
+  if (bootCtx.role === "player") {
     spaceRows = [{ id: space.id, parentSpaceId: space.parentSpaceId ?? null }];
   } else {
     const allSpaces = await listGmWorkspaceSpaces(db);

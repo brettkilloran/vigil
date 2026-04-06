@@ -7,9 +7,9 @@ import {
   getHeartgardenApiBootContext,
   gmMayAccessItemSpace,
   heartgardenApiForbiddenJsonResponse,
-  heartgardenMaskNotFoundForVisitor,
-  isHeartgardenVisitorBlocked,
-  visitorMayAccessItemSpace,
+  heartgardenMaskNotFoundForPlayer,
+  isHeartgardenPlayerBlocked,
+  playerMayAccessItemSpace,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { clampLinkMetaSlackMultiplier } from "@/src/lib/item-link-meta";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
+  if (isHeartgardenPlayerBlocked(bootCtx)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   let json: unknown;
@@ -76,12 +76,12 @@ export async function POST(req: Request) {
   }
   const [srcItem] = await db.select({ spaceId: items.spaceId }).from(items).where(eq(items.id, sourceItemId)).limit(1);
   if (!srcItem) {
-    return heartgardenMaskNotFoundForVisitor(
+    return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json({ ok: false, error: "Source item not found" }, { status: 404 }),
     );
   }
-  if (!visitorMayAccessItemSpace(bootCtx, srcItem.spaceId)) {
+  if (!playerMayAccessItemSpace(bootCtx, srcItem.spaceId)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, srcItem.spaceId)) {
@@ -123,7 +123,7 @@ export async function PATCH(req: Request) {
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
+  if (isHeartgardenPlayerBlocked(bootCtx)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   let json: unknown;
@@ -147,7 +147,7 @@ export async function PATCH(req: Request) {
     .where(eq(itemLinks.id, id))
     .limit(1);
   if (!linkMeta) {
-    return heartgardenMaskNotFoundForVisitor(
+    return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json({ ok: false, error: "Link not found" }, { status: 404 }),
     );
@@ -157,7 +157,7 @@ export async function PATCH(req: Request) {
     .from(items)
     .where(eq(items.id, linkMeta.sourceItemId))
     .limit(1);
-  if (!visitorMayAccessItemSpace(bootCtx, srcForLink?.spaceId ?? "")) {
+  if (!playerMayAccessItemSpace(bootCtx, srcForLink?.spaceId ?? "")) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (
@@ -174,7 +174,7 @@ export async function PATCH(req: Request) {
     .where(eq(itemLinks.id, id))
     .limit(1);
   if (!existing) {
-    return heartgardenMaskNotFoundForVisitor(
+    return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json({ ok: false, error: "Link not found" }, { status: 404 }),
     );
@@ -209,7 +209,7 @@ export async function PATCH(req: Request) {
     .where(eq(itemLinks.id, id))
     .returning();
   if (!updated) {
-    return heartgardenMaskNotFoundForVisitor(
+    return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json({ ok: false, error: "Link not found" }, { status: 404 }),
     );
@@ -226,7 +226,7 @@ export async function DELETE(req: Request) {
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
+  if (isHeartgardenPlayerBlocked(bootCtx)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   let json: unknown;
@@ -249,7 +249,7 @@ export async function DELETE(req: Request) {
     .where(eq(itemLinks.id, id))
     .limit(1);
   if (!linkMeta) {
-    return heartgardenMaskNotFoundForVisitor(
+    return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json({ ok: false, error: "Link not found" }, { status: 404 }),
     );
@@ -259,7 +259,7 @@ export async function DELETE(req: Request) {
     .from(items)
     .where(eq(items.id, linkMeta.sourceItemId))
     .limit(1);
-  if (!visitorMayAccessItemSpace(bootCtx, srcForLink?.spaceId ?? "")) {
+  if (!playerMayAccessItemSpace(bootCtx, srcForLink?.spaceId ?? "")) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (
@@ -274,7 +274,7 @@ export async function DELETE(req: Request) {
     .where(eq(itemLinks.id, id))
     .returning();
   if (deleted.length < 1) {
-    return heartgardenMaskNotFoundForVisitor(
+    return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json({ ok: false, error: "Link not found" }, { status: 404 }),
     );

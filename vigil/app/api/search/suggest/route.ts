@@ -3,7 +3,7 @@ import {
   getHeartgardenApiBootContext,
   gmMayAccessSpaceId,
   heartgardenApiForbiddenJsonResponse,
-  isHeartgardenVisitorBlocked,
+  isHeartgardenPlayerBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { applySuggestTierPolicy } from "@/src/lib/heartgarden-search-tier-policy";
 import { suggestItems, type SearchFilters } from "@/src/lib/spaces";
@@ -45,7 +45,7 @@ export async function GET(req: Request) {
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
+  if (isHeartgardenPlayerBlocked(bootCtx)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   const url = new URL(req.url);

@@ -7,9 +7,9 @@ import {
   getHeartgardenApiBootContext,
   gmMayAccessItemSpace,
   heartgardenApiForbiddenJsonResponse,
-  heartgardenMaskNotFoundForVisitor,
-  isHeartgardenVisitorBlocked,
-  visitorMayAccessItemSpace,
+  heartgardenMaskNotFoundForPlayer,
+  isHeartgardenPlayerBlocked,
+  playerMayAccessItemSpace,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
+  if (isHeartgardenPlayerBlocked(bootCtx)) {
     return heartgardenApiForbiddenJsonResponse();
   }
 
@@ -53,12 +53,12 @@ export async function POST(req: Request) {
   const { sourceItemId, targetIds } = parsed.data;
   const [srcItem] = await db.select({ spaceId: items.spaceId }).from(items).where(eq(items.id, sourceItemId)).limit(1);
   if (!srcItem) {
-    return heartgardenMaskNotFoundForVisitor(
+    return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json({ ok: false, error: "Source item not found" }, { status: 404 }),
     );
   }
-  if (!visitorMayAccessItemSpace(bootCtx, srcItem.spaceId)) {
+  if (!playerMayAccessItemSpace(bootCtx, srcItem.spaceId)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, srcItem.spaceId)) {

@@ -8,7 +8,7 @@ import {
   getHeartgardenApiBootContext,
   gmMayAccessSpaceId,
   heartgardenApiForbiddenJsonResponse,
-  isHeartgardenVisitorBlocked,
+  isHeartgardenPlayerBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { assertSpaceExists, listGmWorkspaceSpaces } from "@/src/lib/spaces";
 
@@ -25,10 +25,10 @@ export async function GET() {
     return Response.json({ ok: false, error: "Database not configured", spaces: [] }, { status: 503 });
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
+  if (isHeartgardenPlayerBlocked(bootCtx)) {
     return heartgardenApiForbiddenJsonResponse();
   }
-  if (bootCtx.role === "visitor") {
+  if (bootCtx.role === "player") {
     const row = await assertSpaceExists(db, bootCtx.playerSpaceId);
     if (!row) {
       return heartgardenApiForbiddenJsonResponse();
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx) || bootCtx.role === "visitor") {
+  if (isHeartgardenPlayerBlocked(bootCtx) || bootCtx.role === "player") {
     return heartgardenApiForbiddenJsonResponse();
   }
 

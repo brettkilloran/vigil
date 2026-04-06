@@ -10,7 +10,7 @@ import { readHeartgardenPlayersBootPin } from "@/src/lib/heartgarden-boot-player
 
 export const HEARTGARDEN_BOOT_COOKIE_NAME = "hg_boot";
 
-export type HeartgardenBootTierEdge = "access" | "visitor" | "demo";
+export type HeartgardenBootTierEdge = "access" | "player" | "demo";
 
 function base64UrlToUint8Array(s: string): Uint8Array | null {
   if (!/^[A-Za-z0-9_-]*$/u.test(s)) return null;
@@ -50,6 +50,12 @@ async function hmacSha256(secretUtf8: string, messageUtf8: string): Promise<Uint
   return new Uint8Array(sig);
 }
 
+function normalizeBootTierFromCookieEdge(raw: unknown): HeartgardenBootTierEdge | null {
+  if (raw === "access" || raw === "demo" || raw === "player") return raw;
+  if (raw === "visitor") return "player";
+  return null;
+}
+
 export function readBootGateEnvEdge(): {
   gateEnabled: boolean;
   sessionSecret: string;
@@ -57,14 +63,14 @@ export function readBootGateEnvEdge(): {
   if (isHeartgardenBootGateBypassed()) {
     return { gateEnabled: false, sessionSecret: "" };
   }
-  const accessPin = (process.env.HEARTGARDEN_BOOT_PIN_ACCESS ?? "").trim();
-  const visitorPin = readHeartgardenPlayersBootPin();
+  const bishopPin = (process.env.HEARTGARDEN_BOOT_PIN_BISHOP ?? "").trim();
+  const playersPin = readHeartgardenPlayersBootPin();
   const demoPin = (process.env.HEARTGARDEN_BOOT_PIN_DEMO ?? "").trim();
   const sessionSecret = (process.env.HEARTGARDEN_BOOT_SESSION_SECRET ?? "").trim();
-  const accessOk = accessPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
-  const visitorOk = visitorPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
+  const bishopOk = bishopPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
+  const playersOk = playersPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
   const demoOk = demoPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
-  const gateEnabled = sessionSecret.length >= 16 && (accessOk || visitorOk || demoOk);
+  const gateEnabled = sessionSecret.length >= 16 && (bishopOk || playersOk || demoOk);
   return { gateEnabled, sessionSecret };
 }
 
@@ -93,11 +99,12 @@ export async function verifyBootSessionCookieEdge(
   }
   if (!parsed || typeof parsed !== "object") return null;
   const o = parsed as Record<string, unknown>;
-  if (o.tier !== "access" && o.tier !== "visitor" && o.tier !== "demo") return null;
+  const tier = normalizeBootTierFromCookieEdge(o.tier);
+  if (!tier) return null;
   if (typeof o.exp !== "number" || !Number.isFinite(o.exp)) return null;
   const now = Math.floor(Date.now() / 1000);
   if (o.exp <= now) return null;
-  return { tier: o.tier, exp: o.exp };
+  return { tier, exp: o.exp };
 }
 
 export function isHeartgardenBootApiAllowlisted(pathname: string): boolean {

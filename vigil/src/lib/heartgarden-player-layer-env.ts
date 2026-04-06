@@ -31,7 +31,7 @@ export async function firePlayerLayerMisconfigAlertOnce(misconfigured: boolean):
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        text: "heartgarden: Players boot PIN is set (HEARTGARDEN_BOOT_PIN_PLAYERS or HEARTGARDEN_BOOT_PIN_VISITOR) but HEARTGARDEN_PLAYER_SPACE_ID is missing or not a valid UUID.",
+        text: "heartgarden: HEARTGARDEN_BOOT_PIN_PLAYERS is set but HEARTGARDEN_PLAYER_SPACE_ID is missing or not a valid UUID.",
       }),
       signal: ac.signal,
     });
