@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "next dev --webpack",
+    "dev:preview": "node ./scripts/dev-preview.mjs",
     "dev:app": "next dev --webpack --port 3000",
     "predev:storybook": "node ./scripts/storybook-start-hint.mjs",
     "dev:storybook": "npx --no-install storybook dev --port 6006 --host 127.0.0.1 --disable-telemetry --no-open --ci",

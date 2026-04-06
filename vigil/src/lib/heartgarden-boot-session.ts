@@ -1,6 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { HEARTGARDEN_BOOT_COOKIE_MAX_CHARS } from "@/src/lib/heartgarden-boot-cookie-limits";
+import { isHeartgardenBootGateBypassed } from "@/src/lib/heartgarden-boot-gate-bypass";
 import { HEARTGARDEN_BOOT_PIN_LENGTH } from "@/src/lib/heartgarden-boot-pin-constants";
 import { readHeartgardenPlayersBootPin } from "@/src/lib/heartgarden-boot-players-pin";
 
@@ -31,7 +32,7 @@ export function readBootEnv(): {
   demoPin: string;
   sessionSecret: string;
 } {
-  if (isPlaywrightE2E()) {
+  if (isHeartgardenBootGateBypassed()) {
     return { gateEnabled: false, accessPin: "", visitorPin: "", demoPin: "", sessionSecret: "" };
   }
   const accessPin = (process.env.HEARTGARDEN_BOOT_PIN_ACCESS ?? "").trim();

@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 import type { tryGetDb } from "@/src/db/index";
 import {
   HEARTGARDEN_BOOT_COOKIE_NAME,
-  isPlaywrightE2E,
   readBootEnv,
   verifyBootSessionCookie,
 } from "@/src/lib/heartgarden-boot-session";
@@ -50,7 +49,7 @@ export function gmMayAccessItemSpace(ctx: HeartgardenApiBootContext, itemSpaceId
  */
 export function parseHeartgardenApiBootContext(jar: CookieJar): HeartgardenApiBootContext {
   const { gateEnabled, sessionSecret } = readBootEnv();
-  if (!gateEnabled || isPlaywrightE2E()) return { role: "gm" };
+  if (!gateEnabled) return { role: "gm" };
 
   const raw = jar.get(HEARTGARDEN_BOOT_COOKIE_NAME)?.value;
   if (!raw) return { role: "unauthenticated" };
