@@ -17,7 +17,7 @@ Use with **[`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)** and the **[dashboard check
 | `NEXT_PUBLIC_HEARTGARDEN_IMAGE_URL_TEMPLATE` | Optional | Optional | Client-side **zoom-aware** image URLs for media cards (`{w}` / `{url}` placeholders). See **`.env.local.example`** and **`docs/FEATURES.md`** (Media). |
 | `HEARTGARDEN_LORE_QUERY_DISABLED` | Optional (`1` to harden) | Optional | Disables **`POST /api/lore/query`** only. |
 | `HEARTGARDEN_BOOT_PIN_BISHOP` | Optional | Optional | Exactly **8** characters if set; GM tier (**`access`**) in the signed cookie. With **`HEARTGARDEN_BOOT_SESSION_SECRET`** (16+ chars), at least one of Bishop / Players / demo PIN must be 8 chars to enable the gate. Sensitive. |
-| `HEARTGARDEN_BOOT_PIN_PLAYERS` | Optional | Optional | Players PIN (**8** chars). Cookie tier **`player`**. If set, **`HEARTGARDEN_PLAYER_SPACE_ID`** must be a valid space UUID. Sensitive. |
+| `HEARTGARDEN_BOOT_PIN_PLAYERS` | Optional | Optional | Players PIN (**8** chars). Cookie tier **`player`**. If set, **`HEARTGARDEN_PLAYER_SPACE_ID`** must be a valid space UUID. Sensitive. **`HEARTGARDEN_BOOT_PIN_PLAYER`** (singular) is also read as an alias if `…_PLAYERS` is unset — prefer the plural name in new setups. |
 | `HEARTGARDEN_BOOT_PIN_DEMO` | Optional | Optional | **8** chars; demo tier, local-only canvas. Sensitive. |
 | `HEARTGARDEN_GM_ALLOW_PLAYER_SPACE` | Omit | Omit | Set **`1`** only for recovery: GM may access the Players-only space in lists, search, and item APIs. |
 | `HEARTGARDEN_BOOT_SESSION_SECRET` | If gate used | If gate used | Signs **`hg_boot`** httpOnly cookie. Sensitive; rotate if leaked. |
