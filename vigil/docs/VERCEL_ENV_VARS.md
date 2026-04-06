@@ -14,6 +14,7 @@ Use with **[`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)** and the **[dashboard check
 | `R2_SECRET_ACCESS_KEY` | If uploads | If uploads | Mark **Sensitive**. |
 | `R2_BUCKET_NAME` | If uploads | If uploads | |
 | `R2_PUBLIC_BASE_URL` | If uploads | If uploads | No trailing slash. |
+| `NEXT_PUBLIC_HEARTGARDEN_IMAGE_URL_TEMPLATE` | Optional | Optional | Client-side **zoom-aware** image URLs for media cards (`{w}` / `{url}` placeholders). See **`.env.local.example`** and **`docs/FEATURES.md`** (Media). |
 | `HEARTGARDEN_LORE_QUERY_DISABLED` | Optional (`1` to harden) | Optional | Disables **`POST /api/lore/query`** only. |
 | `HEARTGARDEN_BOOT_PIN_ACCESS` | Optional | Optional | Exactly **8** characters if set; GM tier in the signed cookie. With **`HEARTGARDEN_BOOT_SESSION_SECRET`** (16+ chars), at least one of access / Players / demo PIN must be 8 chars to enable the gate. Sensitive. |
 | `HEARTGARDEN_BOOT_PIN_PLAYERS` | Optional | Optional | Preferred Players PIN (**8** chars). If unset or wrong length, **`HEARTGARDEN_BOOT_PIN_VISITOR`** is used. Cookie tier remains **`visitor`**. Sensitive. |

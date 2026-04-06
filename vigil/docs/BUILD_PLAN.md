@@ -12,16 +12,19 @@ This is the **repo-wide checklist**: architecture snapshot, shipped tranches, an
 | **Boot + session gate (default scenario)** | `VigilAppBootScreen` + `canvasSessionActivated` / `bootLayerDismissed`; `technicalViewportReady` vs `viewportRevealReady` (bootstrap + surface ready; activation required before full chrome). Optional boot flowers (`VigilBootFlowerGarden` portaled under the overlay stack). |
 | **Flow / nav visuals (optional)** | When **canvas effects** are on: `VigilFlowRevealOverlay` via **`next/dynamic`** (`ssr: false`) from `src/components/transition-experiment/` — full-viewport **raw WebGL** shader (FBM “liquid” edge + digital-glitch pass), no `three` / `gsap`. Drives `u_progress` from `sessionActivated`, `navTransitionActive`, and `bootstrapPending`. **Off:** overlay unmounted; **space changes** skip timed nav dimming (instant `enterSpace`). `prefers-reduced-motion: reduce` → overlay returns `null`. |
 | **Canvas performance (scale)** | **`src/lib/canvas-viewport-cull.ts`** — viewport culling for entity DOM, collapsed stacks, and connections (SVG + rope **rAF**). Media: **`heartgarden-image-display-url.ts`** + optional **`NEXT_PUBLIC_HEARTGARDEN_IMAGE_URL_TEMPLATE`**. Bundle: **`npm run analyze`**. |
-| **Space nav timing (effects on)** | `enterSpace` sets `navTransitionActive`; scene layer uses `viewportSceneLayerDimmed` until fetch + `VIEWPORT_SCENE_FADE_MS` / `VIEWPORT_TRANSITION_CENTER_MS` elide (see `ArchitecturalCanvasApp.tsx`). Rapid successive navigations have **no cancel token** yet (differs from early Cursor transition plan). |
+| **Space nav timing (effects on)** | `enterSpace` sets `navTransitionActive`; scene layer uses `viewportSceneLayerDimmed` until fetch + `VIEWPORT_SCENE_FADE_MS` / `VIEWPORT_TRANSITION_CENTER_MS` elide (see `ArchitecturalCanvasApp.tsx`). A **generation counter** drops stale async completions when the user navigates again before the prior fetch finishes; optional future work: cancel in-flight fetch or a CSS-only nav cue when effects are **off**. |
 | **Suspense shell** | `app/page.tsx` — dark `#0c0c0e` fallback to reduce flash before client boot UI. |
 | **Graph state** | In-component React state + **undo/redo** stack (`architectural-undo.ts`); Neon sync via `architectural-db-bridge.ts`, `architectural-neon-api.ts`, `/api/bootstrap`, item/space routes. |
-| **Save / sync indicator** | `neon-sync-bus.ts` + instrumented `architectural-neon-api.ts` + debounced note body bumps. Status strip in **`ArchitecturalStatusBar`**: Loading → Local (demo) → Saving… → Saved / Sync error. Tooltips document **undo vs server** semantics. |
+| **Save / sync indicator** | `neon-sync-bus.ts` + instrumented `architectural-neon-api.ts` + debounced note body bumps. Status strip in **`ArchitecturalStatusBar`**: Loading → Local (demo) → Saving… → Saved / Sync error; optional **vault index** busy/error line via **`vault-index-status-bus.ts`**. Tooltips document **undo vs server** semantics. |
+| **Canvas navigation aids** | **Minimap** (viewport metrics strip toggle), **fit / frame** helpers (`canvas-view-bounds.ts`), optional **viewport toast** (`CanvasViewportToast.tsx`). See **`docs/FEATURES.md`**. |
+| **Rich note editing** | **`BufferedContentEditable`** + **`[[` wiki link assist** (`WikiLinkAssistPopover.tsx`, `wiki-link-caret.ts`). |
 | **Search** | Postgres FTS + trigram on `search_blob`. **`/api/search`**: `hybrid` / `semantic` use **RRF** of FTS + fuzzy + **pgvector** chunks when `OPENAI_API_KEY` is set; `GET /api/search/chunks` returns raw chunk hits. **`/api/search/suggest`** remains prefix-FTS. |
 | **Vault index** | `item_embeddings` stores **per-chunk** vectors (`space_id`, `chunk_index`, …). **`POST /api/items/[id]/index`** (re)chunks + Anthropic embeds **lore summary/aliases** (`lore-item-meta.ts`). Client **debounced** trigger in `architectural-neon-api.ts` after create/patch; **`POST /api/spaces/[id]/reindex`** (MCP `write_key`) for backfill. Rate limits: `vault-index-rate-limit.ts`. |
 | **Lore Q&A** | `POST /api/lore/query` — **hybrid retrieval** (`vault-retrieval.ts`) + **1-hop `item_links` neighbors**, synthesis via **Anthropic**. Same env + `lore-query-rate-limit.ts` as before. UI: **Ask lore** → `LoreAskPanel`. |
 | **DB** | Drizzle `src/db/schema.ts`; Neon requires **`CREATE EXTENSION vector`** before push (`npm run db:ensure-pgvector`). |
+| **Soft multiplayer (presence)** | Optional **`canvas_presence`** + `GET/POST /api/spaces/[spaceId]/presence` (subtree peer list by default). Client: `use-heartgarden-presence-heartbeat.ts`, `architectural-neon-api.ts`, remote cursors in `ArchitecturalRemotePresenceLayer.tsx`, emoji **follow** chips in `ArchitecturalStatusBar`. See **`docs/PLAYER_LAYER.md`** and **`docs/API.md`**. |
 
-**Code / API maps:** **`docs/CODEMAP.md`** (where logic lives by feature), **`docs/API.md`** (route catalog). Update them when you add routes or a new vertical.
+**Code / API maps:** **`docs/FEATURES.md`** (shipped capability index), **`docs/CODEMAP.md`** (where logic lives by feature), **`docs/API.md`** (route catalog). Update them when you ship a user-facing feature or a new API vertical.
 
 **Health check:** From the app root (**`vigil/`** unless renamed — **`docs/NAMING.md`**), run `npm run check` (lint + production build). After UX / DB / stacking changes, run `npm run test:unit` and targeted `npm run test:e2e` if flows touched. **Neon vault schema:** `npm run db:vault-setup`; **embedding backfill:** app up + `npm run vault:reindex` (see **`docs/FOLLOW_UP.md`**).
 
@@ -36,9 +39,16 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 | Custom DOM surface (no tldraw) | Transform-based pan/zoom, cards, folders, stacks, connections. |
 | Drizzle + Neon + pgvector | `spaces`, `items`, `item_links`, `item_embeddings`; self-FK on `spaces.parent_space_id`. |
 | **Neon persistence bridge** | Bootstrap hydrate, create/patch/delete items & spaces, camera persistence, folder child spaces (Phase “A” in recent work). |
-| Cmd+K palette | Local filter + `/api/search/suggest`, spaces, actions, recent items. |
+| Cmd+K palette | Local filter + `/api/search/suggest`, spaces, actions, recent items, export (action list expanded over time). |
+| **Canvas minimap + fit** | Toggle map from viewport metrics; fit-to-content / fit-selection math shared via **`canvas-view-bounds.ts`**. |
+| **Vault index status UI** | Status bar shows embedding/index busy + error state (event bus). |
+| **`[[` wiki link assist** | Popover while typing wiki links in buffered rich text. |
+| **Viewport culling + dynamic flow overlay** | Off-screen DOM skipped; **`VigilFlowRevealOverlay`** loaded with **`next/dynamic`** (`ssr: false`). |
+| **Zoom-aware media URLs** | Optional **`NEXT_PUBLIC_HEARTGARDEN_IMAGE_URL_TEMPLATE`** for CDN-sized images on cards. |
+| **Delta sync + space rows** | **`GET …/changes`** returns **`spaces`** patches for subtree reparents; steady-state **`itemIds`** omission with refresh on nav / visibility. |
 | **Lore engine + vault retrieval** | `lore-engine.ts`, `vault-retrieval.ts`, `item-vault-index.ts`, `/api/lore/query`, `/api/search`, `/api/search/chunks`, index + reindex routes. Client: `LoreAskPanel`. |
 | **Neon save indicator** | Live sync line in status bar; tracks in-flight mutations + debounced content patches. |
+| **Soft presence + follow view** | Ephemeral **`canvas_presence`** rows; status bar collaborator chips + in-canvas remote pointers; **follow** applies peer camera / space (confirm if focus or stack UI is open). |
 | CI / Storybook | `npm run check`; Storybook in CI per `AGENTS.md`. |
 
 *Recent batches (UX, seed data, stacking, boot gate, optional WebGL flow overlay, canvas-effects toggle):* they refine the shell above and **do not invalidate** the master phase map—re-run checks and e2e smoke after merges.
@@ -54,7 +64,7 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 3. **Retrieval observability** — `HEARTGARDEN_VAULT_DEBUG=1` enables `console.debug` RRF diagnostics in `vault-retrieval.ts` (shipped).
 4. **E2E** — Optional: palette → lore panel smoke (skip or mock LLM in CI).
 5. **Canvas version history (UX2 — decision for v1)** — **Export-first:** the canvas already supports **Export graph JSON** (Cmd+K). Treat that as the supported “checkpoint” workflow until a DB snapshot or `item_revisions` table is justified. **Space / graph snapshots** and **per-item revision logs** remain future options; any in-app restore must not silently fight the local undo stack (explicit “restore from server snapshot” only).
-6. **Space nav hardening (canvas effects on)** — **`enterSpace`** async paths can race if the user triggers another navigation before the prior fetch finishes; add a **generation / cancel token** so only the latest navigation applies merged bootstrap state. **`VigilFlowRevealOverlay`** is loaded via **`next/dynamic`** (`ssr: false`). Optional **short CSS-only** nav cue when effects are **off** if you want consistent feel without WebGL.
+6. **Space nav hardening (residual)** — **`enterSpace`** already uses a **generation guard** so stale fetches do not apply. Optional: **abort** in-flight bootstrap fetch on newer navigation, or a **short CSS-only** nav cue when canvas effects are **off** for parity with the WebGL transition.
 7. **Collab delta API (beyond steady-state `includeItemIds=1`)** — Optional next tracks: **E2** tombstones / `deleted_item_ids` since cursor; **E3** monotonic subtree revision so clients never re-enumerate full id sets on recovery. **`GET …/changes`** today omits **`itemIds`** on steady-state polls per `docs/API.md` / `PLAYER_LAYER.md`.
 
 ### Mid-term — master plan Phase 5 (TTRPG + intelligence)
@@ -62,7 +72,7 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 Matches **legacy** Phase 5 themes and **`FOLLOW_UP.md`** LLM items (see archive master plan for original wording):
 
 - Markdown bulk import + entity extraction pipeline.
-- Auto-linking (suggest `[[` targets) with review UX.
+- Auto-linking beyond in-note **`[[` assist** (popover in `BufferedContentEditable`) — e.g. batch suggest + review UX for imports.
 - Deeper graph/timeline integration with persisted `item_links` and UUID stability everywhere.
 - Lore consistency checker (LLM).
 

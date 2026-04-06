@@ -64,3 +64,25 @@
     stroke: color-mix(in oklch, var(--vigil-label) 40%, transparent);
   }
 }
+
+/* Inline next to viewport dock icon: match row height, lighter chrome than standalone minimap. */
+.rootToolbarEmbed {
+  width: 118px;
+  max-width: min(118px, 26vw);
+  padding: 2px;
+  gap: 2px;
+  border-radius: calc(var(--chrome-panel-radius, 12px) - 8px);
+  box-shadow: none;
+  background: color-mix(in oklch, var(--vigil-canvas) 38%, var(--vigil-surface));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.svgToolbarEmbed {
+  width: 100%;
+  height: 32px;
+  max-height: 32px;
+  aspect-ratio: unset;
+  flex: 0 0 auto;
+  border-radius: calc(var(--chrome-panel-radius, 12px) - 10px);
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { FrameCorners, MagnifyingGlass, Waves, WarningCircle } from "@phosphor-icons/react";
+import { MagnifyingGlass, SquaresFour, Waves, WarningCircle } from "@phosphor-icons/react";
 import {
   useCallback,
   useEffect,
@@ -560,7 +560,6 @@ export function ArchitecturalViewportMetrics({
   zoomPrefixIcon = true,
   minimapOpen = true,
   onToggleMinimap,
-  minimapSlot = null,
 }: {
   centerWorldX: number;
   centerWorldY: number;
@@ -568,8 +567,6 @@ export function ArchitecturalViewportMetrics({
   zoomPrefixIcon?: boolean;
   minimapOpen?: boolean;
   onToggleMinimap?: () => void;
-  /** Rendered immediately to the right of the map toggle (embedded minimap). */
-  minimapSlot?: ReactNode;
 }) {
   const metricsReadout = (
     <>
@@ -589,9 +586,13 @@ export function ArchitecturalViewportMetrics({
 
   const panel = onToggleMinimap ? (
     <div className={cx(styles.rootDockPanel, styles.viewportMetricsPanel)}>
+      <div className={styles.viewportMetricsReadout} role="status" aria-label="Viewport center and zoom">
+        {metricsReadout}
+      </div>
+      <div className={styles.sep} aria-hidden />
       <ArchitecturalTooltip
         content={minimapOpen ? "Hide canvas map" : "Show canvas map"}
-        side="top"
+        side="bottom"
         delayMs={280}
       >
         <Button
@@ -604,18 +605,13 @@ export function ArchitecturalViewportMetrics({
           aria-pressed={minimapOpen}
           aria-label={minimapOpen ? "Hide canvas map" : "Show canvas map"}
         >
-          <FrameCorners
+          <SquaresFour
             size={20}
             weight={minimapOpen ? "fill" : "regular"}
             aria-hidden
           />
         </Button>
       </ArchitecturalTooltip>
-      {minimapSlot}
-      <div className={styles.sep} aria-hidden />
-      <div className={styles.viewportMetricsReadout} role="status" aria-label="Viewport center and zoom">
-        {metricsReadout}
-      </div>
     </div>
   ) : (
     <div className={`${styles.rootDockPanel} ${styles.viewportMetricsPanel}`}>{metricsReadout}</div>

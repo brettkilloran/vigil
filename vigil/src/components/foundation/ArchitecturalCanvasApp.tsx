@@ -9037,41 +9037,40 @@ export function ArchitecturalCanvasApp({
             chromeEntranceOn ? ` ${styles.chromeEnterBottomRight}` : ""
           }`}
         >
-          <ArchitecturalViewportMetrics
-            centerWorldX={centerWorldX}
-            centerWorldY={centerWorldY}
-            scale={scale}
-            minimapOpen={minimapOpen}
-            onToggleMinimap={toggleMinimapOpen}
-            minimapSlot={
-              minimapOpen &&
-              !focusOpen &&
-              !galleryOpen &&
-              !stackModal &&
-              viewportRevealReady ? (
-                <div className={styles.viewportMetricsMinimapSlot}>
-                  <CanvasMinimap
-                    graph={graph}
-                    activeSpaceId={activeSpaceId}
-                    collapsedStacks={collapsedStacks as CollapsedStackInfo[]}
-                    translateX={translateX}
-                    translateY={translateY}
-                    scale={scale}
-                    viewportWidth={Math.max(1, viewportSize.width)}
-                    viewportHeight={Math.max(1, viewportSize.height)}
-                    selectedNodeIds={selectedNodeIds}
-                    minZoom={MIN_ZOOM}
-                    maxZoom={MAX_ZOOM}
-                    onPanWorldDelta={onMinimapPanWorldDelta}
-                    onCenterOnWorld={onMinimapCenterOnWorld}
-                    onFitAll={applyFitAllToViewport}
-                    placementSizes={minimapPlacementSizes}
-                    toolbarEmbed
-                  />
-                </div>
-              ) : null
-            }
-          />
+          <div className={styles.viewportMetricsCluster}>
+            {minimapOpen &&
+            !focusOpen &&
+            !galleryOpen &&
+            !stackModal &&
+            viewportRevealReady ? (
+              <div className={styles.viewportMetricsMinimapAbove}>
+                <CanvasMinimap
+                  graph={graph}
+                  activeSpaceId={activeSpaceId}
+                  collapsedStacks={collapsedStacks as CollapsedStackInfo[]}
+                  translateX={translateX}
+                  translateY={translateY}
+                  scale={scale}
+                  viewportWidth={Math.max(1, viewportSize.width)}
+                  viewportHeight={Math.max(1, viewportSize.height)}
+                  selectedNodeIds={selectedNodeIds}
+                  minZoom={MIN_ZOOM}
+                  maxZoom={MAX_ZOOM}
+                  onPanWorldDelta={onMinimapPanWorldDelta}
+                  onCenterOnWorld={onMinimapCenterOnWorld}
+                  onFitAll={applyFitAllToViewport}
+                  placementSizes={minimapPlacementSizes}
+                />
+              </div>
+            ) : null}
+            <ArchitecturalViewportMetrics
+              centerWorldX={centerWorldX}
+              centerWorldY={centerWorldY}
+              scale={scale}
+              minimapOpen={minimapOpen}
+              onToggleMinimap={toggleMinimapOpen}
+            />
+          </div>
         </div>
         {!focusOpen && !galleryOpen ? (
           <div

@@ -10,6 +10,7 @@ import {
   type CollapsedStackInfo,
   type MinimapPlacementSize,
 } from "@/src/lib/canvas-view-bounds";
+import { cx } from "@/src/lib/cx";
 
 import styles from "./CanvasMinimap.module.css";
 
@@ -32,6 +33,8 @@ type CanvasMinimapProps = {
   onFitAll: () => void;
   /** Live placement sizes from DOM (`offsetWidth`/`offsetHeight`) keyed by entity id. */
   placementSizes?: ReadonlyMap<string, MinimapPlacementSize> | null;
+  /** Compact chrome for embedding in the bottom-right viewport metrics dock row. */
+  toolbarEmbed?: boolean;
 };
 
 function padBounds(
@@ -67,6 +70,7 @@ export function CanvasMinimap({
   onCenterOnWorld,
   onFitAll,
   placementSizes = null,
+  toolbarEmbed = false,
 }: CanvasMinimapProps) {
   void _minZoom;
   void _maxZoom;
@@ -163,10 +167,13 @@ export function CanvasMinimap({
   const vb = `${viewBoxRect.minX} ${viewBoxRect.minY} ${viewBoxRect.maxX - viewBoxRect.minX} ${viewBoxRect.maxY - viewBoxRect.minY}`;
 
   return (
-    <div className={styles.root} data-hg-chrome="canvas-minimap">
+    <div
+      className={cx(styles.root, toolbarEmbed && styles.rootToolbarEmbed)}
+      data-hg-chrome="canvas-minimap"
+    >
       <svg
         ref={svgRef}
-        className={styles.svg}
+        className={cx(styles.svg, toolbarEmbed && styles.svgToolbarEmbed)}
         viewBox={vb}
         preserveAspectRatio="xMidYMid meet"
         role="img"

@@ -2,8 +2,9 @@
  * Shared timing for multiplayer delta sync and presence.
  *
  * **TTL vs clients:** `HEARTGARDEN_PRESENCE_TTL_MS` must stay **above** heartbeat interval plus
- * network / tab-throttle skew so rows are not pruned between beats. Peer poll can be slower than
- * heartbeat (cosmetic count only). Change TTL here and in docs together — see `PLAYER_LAYER.md`.
+ * network / tab-throttle skew so rows are not pruned between beats. Peer list GET runs on a
+ * shorter interval than heartbeat so cursors update smoothly; pointer POSTs are throttled
+ * separately. Change TTL here and in docs together — see `PLAYER_LAYER.md`.
  */
 export const HEARTGARDEN_PRESENCE_TTL_MS = 120_000;
 

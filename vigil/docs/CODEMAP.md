@@ -13,16 +13,32 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Flow / WebGL overlay (optional) | `src/components/transition-experiment/VigilFlowRevealOverlay.tsx` |
 | Legacy / parallel store (panels) | `src/stores/canvas-store.ts` (see `BUILD_PLAN.md`) |
 
+## Canvas chrome, navigation & note editing
+
+| Concern | Location |
+|--------|-----------|
+| Minimap + viewport metrics strip | `src/components/foundation/CanvasMinimap.tsx`, `ArchitecturalStatusBar.tsx` (`ArchitecturalViewportMetrics`), `src/lib/vigil-canvas-prefs.ts` |
+| Fit camera / world bounds for UI | `src/lib/canvas-view-bounds.ts` |
+| Transient viewport toasts | `src/components/foundation/CanvasViewportToast.tsx` |
+| Buffered rich text + wiki `[[` assist | `src/components/editing/BufferedContentEditable.tsx`, `WikiLinkAssistPopover.tsx`, `src/lib/wiki-link-caret.ts` |
+| Resolved image URLs (zoom / CDN template) | `src/lib/heartgarden-image-display-url.ts` |
+| Viewport culling (entities, stacks, connections) | `src/lib/canvas-viewport-cull.ts` |
+
 ## Persistence (Neon) & canvas sync
 
 | Concern | Location |
 |--------|-----------|
 | Hydrate / active space + items | `app/api/bootstrap/route.ts` → `src/lib/spaces.ts` |
 | Client ↔ API bridge | `src/components/foundation/architectural-neon-api.ts`, `architectural-db-bridge.ts` |
+| Delta poll + merge (space changes hook) | `src/hooks/use-heartgarden-space-change-sync.ts`, `src/lib/heartgarden-space-change-sync-utils.ts` |
 | Sync status bus | `src/lib/neon-sync-bus.ts` |
 | Undo / redo (in-memory) | `src/components/foundation/architectural-undo.ts` |
 | Item row ↔ canvas shape | `src/lib/item-mapper.ts`, `src/model/canvas-types.ts` |
 | Space subtree / camera | `src/lib/spaces.ts` |
+| Subtree helper (presence GET) | `src/lib/heartgarden-space-subtree.ts` |
+| Presence POST body validation | `src/lib/heartgarden-presence-body.ts` |
+| Presence client + poll/heartbeat | `src/hooks/use-heartgarden-presence-heartbeat.ts`, `src/components/foundation/architectural-neon-api.ts`, `src/lib/heartgarden-collab-constants.ts` |
+| Remote cursors + emoji identity | `src/components/foundation/ArchitecturalRemotePresenceLayer.tsx`, `src/lib/collab-presence-identity.ts` |
 
 ## Search & vault index
 
@@ -33,6 +49,7 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Raw chunk hits | `app/api/search/chunks/route.ts` |
 | Hybrid retrieval (FTS + vector + fusion) | `src/lib/vault-retrieval.ts`, `vault-retrieval-rrf.ts` |
 | Chunk + embed + lore meta on item | `app/api/items/[itemId]/index/route.ts`, `src/lib/item-vault-index.ts`, `lore-item-meta.ts` |
+| Vault index UI status (status bar) | `src/lib/vault-index-status-bus.ts` → `ArchitecturalStatusBar.tsx` (`VaultIndexStatusInline`) |
 | Debounced / `after()` reindex | `src/lib/schedule-vault-index-after.ts` |
 | Embeddings provider | `src/lib/embedding-provider.ts`, `item-embedding.ts` |
 | DB tables | `src/db/schema.ts` (`items`, `item_embeddings`, …) |
@@ -73,6 +90,8 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 |--------|-----------|
 | List / create spaces | `app/api/spaces/route.ts` |
 | Patch camera / rename / delete | `app/api/spaces/[spaceId]/route.ts` |
+| Delta sync (items + optional spaces / itemIds) | `app/api/spaces/[spaceId]/changes/route.ts` |
+| Ephemeral presence (peers, camera, pointer; boot access via `heartgarden-space-route-access`) | `app/api/spaces/[spaceId]/presence/route.ts` |
 | Items in space | `app/api/spaces/[spaceId]/items/route.ts` |
 | Graph export shape | `app/api/spaces/[spaceId]/graph/route.ts` |
 | Summary (MCP / tooling) | `app/api/spaces/[spaceId]/summary/route.ts` |
@@ -91,6 +110,7 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Concern | Location |
 |--------|-----------|
 | R2 presign | `app/api/upload/presign/route.ts`, `src/lib/r2-upload.ts` |
+| Display URL template (client-side media) | Env **`NEXT_PUBLIC_HEARTGARDEN_IMAGE_URL_TEMPLATE`** + `src/lib/heartgarden-image-display-url.ts` |
 | Webclip preview fetch | `app/api/webclip/preview/route.ts`, `src/lib/webclip-preview.ts` |
 
 ## Versioned read API (scripts)

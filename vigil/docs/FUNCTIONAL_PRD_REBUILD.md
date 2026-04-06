@@ -28,7 +28,7 @@ Core behaviors:
 ### Out of Scope
 - Pixel/visual parity with current UI.
 - Theming/light-dark behavior and visual polish details.
-- Auth/multi-user collaboration (not currently implemented).
+- Account-based auth, permissions, and **full** realtime co-editing (CRDT/OT / Google-Docs-style merge). **Soft presence** (no accounts) — optional **`canvas_presence`**, subtree peer list, remote cursors, and **follow** another tab’s viewport — is implemented in cloud mode; see **`docs/PLAYER_LAYER.md`**.
 
 ## Users and Primary Jobs
 

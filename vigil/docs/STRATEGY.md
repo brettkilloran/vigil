@@ -1,6 +1,6 @@
 # heartgarden — Engineering strategy (living)
 
-This file is the **short bridge** between the repo today and planning docs. **Task order for the lore vertical** (Phases A–D, UX2): Cursor plan `heartgarden_lore_engine_7fc1fb56.plan.md` (`.cursor/plans/`). **Repo-wide shipped vs next:** **`docs/BUILD_PLAN.md`**. **Index:** **`docs/HEARTGARDEN_MASTER_PLAN.md`**. **Historical product bible** (dated paths): **`docs/archive/vigil-master-plan-legacy.md`** — stub at **`docs/VIGIL_MASTER_PLAN.md`**.
+This file is the **short bridge** between the repo today and planning docs. **Task order for the lore vertical** (Phases A–D, UX2): Cursor plan `heartgarden_lore_engine_7fc1fb56.plan.md` (`.cursor/plans/`). **Repo-wide shipped vs next:** **`docs/BUILD_PLAN.md`**. **Shipped feature → code index:** **`docs/FEATURES.md`**. **Index:** **`docs/HEARTGARDEN_MASTER_PLAN.md`**. **Historical product bible** (dated paths): **`docs/archive/vigil-master-plan-legacy.md`** — stub at **`docs/VIGIL_MASTER_PLAN.md`**.
 
 ## Review summary (master plan)
 
@@ -25,7 +25,7 @@ This file is the **short bridge** between the repo today and planning docs. **Ta
 | Import / export | Toolbar **Export** / **Import** (JSON); cloud import creates items via API | Preferences, richer conflict rules |
 | PWA | **`public/sw.js`** + **`RegisterSw`** (prod register, minimal SW) | Offline caching strategy when needed |
 | R2 images | **Presigned PUT** at **`/api/upload/presign`** + env in `.env.local.example` | Bucket policy, CORS, optional image transforms |
-| Performance | **Active-space entity lists** in **`ArchitecturalCanvasApp`**, connection rope **rAF** only when pin links exist in the active space + tab visible; lazy **`img`** decoding | Geometric viewport culling / virtualize if 500+ cards on screen |
+| Performance | **Viewport culling** (`canvas-viewport-cull.ts`) for entities, stacks, and connections; active-space lists + rope **rAF** when pin links exist + tab visible; lazy **`img`** decoding; optional **zoom-aware** image URLs (`heartgarden-image-display-url.ts`) | Further virtualize if 500+ cards on screen; bundle / idle tuning |
 | E2E / visual | **Playwright** on **:3001** (`next start` + `PLAYWRIGHT_E2E` bootstrap), smoke + screenshot shell | Expand flows (notes, graph, palette), CI job |
 | License risk | Resolved (no tldraw) | **MIT-only** surface area |
 
@@ -33,7 +33,7 @@ This file is the **short bridge** between the repo today and planning docs. **Ta
 
 We **treat the archived master plan** as **historical product intent** (gestures, phases, feel), not as accurate file paths. **Execution SoT:** Cursor lore plan + **`BUILD_PLAN.md`**. The old tldraw spike validated Neon + API shape + UX ideas but **does not match** licensing and product goals.
 
-**Status:** Phases **1–4** largely done in substance (including **Neon architectural bridge**, palette, search APIs, MCP). **Lore Q&A v1** (Anthropic + DB text retrieval) is **landed** — see **`docs/BUILD_PLAN.md`**. **Phase 5:** entity meta, timeline, graph, local **Links** + **title mentions**, MCP tools (see `scripts/mcp-server.mjs`); LLM-heavy items remain (see **`docs/FOLLOW_UP.md`**). **Phase 6–7:** **Vercel-style spike** plus **wholesale visual revamp** (icons, toolbar grouping, palette/graph/scratch/panels) per **`docs/VISUAL_REVAMP_PLAN.md`** are largely landed; optional Spatial sheen / motion and type-scale audit remain nice-to-haves. **Phase 8:** culling + PWA shell + export/import; deeper prefs/minimap/offline caching still open (**`docs/FOLLOW_UP.md`**).
+**Status:** Phases **1–4** largely done in substance (including **Neon architectural bridge**, palette, search APIs, MCP). **Lore Q&A v1** (Anthropic + DB text retrieval) is **landed** — see **`docs/BUILD_PLAN.md`**. **Phase 5:** entity meta, timeline, graph, local **Links** + **title mentions**, MCP tools (see `scripts/mcp-server.mjs`); LLM-heavy items remain (see **`docs/FOLLOW_UP.md`**). **Phase 6–7:** **Vercel-style spike** plus **wholesale visual revamp** (icons, toolbar grouping, palette/graph/scratch/panels) per **`docs/VISUAL_REVAMP_PLAN.md`** are largely landed; optional Spatial sheen / motion and type-scale audit remain nice-to-haves. **Phase 8:** **viewport culling** and **canvas minimap** are landed; PWA shell + export/import; deeper prefs / offline caching still open (**`docs/FOLLOW_UP.md`**). **Soft collab** (delta sync, optional presence, follow view) is documented in **`docs/PLAYER_LAYER.md`** and **`docs/FEATURES.md`**.
 
 **After UX / seed / stacking fixes:** Re-run **`npm run check`** and any affected e2e; the **phase map is unchanged** — updates belong in **`BUILD_PLAN.md`** when you close a tranche.
 

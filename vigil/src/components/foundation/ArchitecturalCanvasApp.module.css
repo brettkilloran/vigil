@@ -508,6 +508,7 @@
   max-width: calc(100vw - 48px);
   z-index: var(--layer-ui-chrome);
   pointer-events: none;
+  overflow: visible;
 }
 
 .viewportMetricsEnterHost .viewportMetricsStrip {
@@ -518,14 +519,15 @@
   max-width: 100%;
 }
 
-/* Bottom-right: X/Y chip + optional minimap to its right (outward toward screen edge). */
+/*
+ * Bottom-right: only the X/Y strip participates in layout. Minimap is position:absolute so
+ * toggling it does not shift or resize the dock strip.
+ */
 .viewportMetricsCluster {
+  position: relative;
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: flex-end;
-  justify-content: flex-end;
-  gap: 10px;
   width: fit-content;
   max-width: 100%;
   margin-inline-start: auto;
@@ -533,6 +535,15 @@
 }
 
 .viewportMetricsCluster > * {
+  pointer-events: auto;
+}
+
+.viewportMetricsMinimapAbove {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  z-index: 1;
+  flex: none;
   pointer-events: auto;
 }
 
@@ -1893,11 +1904,6 @@
   pointer-events: auto;
 }
 
-.shellBottomRightMinimapSlot {
-  pointer-events: auto;
-  flex: 0 0 auto;
-}
-
 .viewportMetricsToggle {
   appearance: none;
   -webkit-appearance: none;
@@ -1919,44 +1925,12 @@
   }
 }
 
-.viewportMetricsMapToggle {
-  appearance: none;
-  -webkit-appearance: none;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 36px;
-  margin: 0;
-  padding: 0;
-  border: none;
-  border-radius: calc(var(--chrome-panel-radius, 12px) - 6px);
-  font: inherit;
-  color: inherit;
-  background: color-mix(in oklch, var(--vigil-label) 6%, transparent);
-  cursor: pointer;
-  line-height: 0;
-}
-
-.viewportMetricsMapToggle:focus-visible {
-  outline: 2px solid color-mix(in oklch, var(--accent) 70%, transparent);
-  outline-offset: 2px;
-}
-
-@media (hover: hover) {
-  .viewportMetricsMapToggle:hover {
-    filter: brightness(1.06);
-    background: color-mix(in oklch, var(--vigil-label) 10%, transparent);
-  }
-}
-
 .viewportMetricsReadout {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   min-width: 0;
   pointer-events: none;
 }
@@ -2655,13 +2629,13 @@
   pointer-events: auto;
   display: flex;
   flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  padding-inline: 16px;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 4px;
   box-sizing: border-box;
-  min-height: var(--chrome-tool-rail-strip-width);
-  max-height: var(--chrome-tool-rail-strip-width);
+  min-height: var(--chrome-panel-height);
   width: fit-content;
   max-width: 100%;
 }
@@ -3053,11 +3027,13 @@
 
 /* Beats the generic `.rootDockPanel` rule above (same specificity, later wins without both classes). */
 .rootDockPanel.viewportMetricsPanel {
-  padding-block: 0;
-  padding-inline: 16px;
-  justify-content: flex-end;
+  padding: 4px;
+  gap: 6px;
+  justify-content: flex-start;
+  align-items: center;
   width: fit-content;
   max-width: 100%;
+  min-height: var(--chrome-panel-height);
 }
 
 button.rootDockPanel.viewportMetricsPanel {

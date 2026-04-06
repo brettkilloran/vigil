@@ -11,6 +11,7 @@
 
 | Document | Purpose |
 |----------|---------|
+| **`docs/FEATURES.md`** | **Shipped capabilities** → docs + code paths (collab, canvas chrome, vault UI, editing, media, boot). Start here for “where is X implemented?” |
 | **`docs/CODEMAP.md`** | Subsystem → file map (canvas, sync, search, vault, lore, import, MCP). |
 | **`docs/API.md`** | `app/api/**` routes (methods, purpose, secrets / env). |
 | **`docs/STRATEGY.md`** | Engineering delta, phase map notes; points at BUILD_PLAN + Cursor plan. |
