@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { tryGetDb } from "@/src/db/index";
 import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
+  gmMayAccessSpaceIdAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { presignImagePut, readR2Env } from "@/src/lib/r2-upload";
 
@@ -55,6 +57,22 @@ export async function POST(req: Request) {
       { ok: false, error: "Only image/* content types are allowed.", code: "INVALID_TYPE" },
       { status: 400 },
     );
+  }
+
+  if (parsed.data.spaceId) {
+    const db = tryGetDb();
+    if (!db) {
+      return NextResponse.json(
+        { ok: false, error: "Database not configured", code: "DB_UNAVAILABLE" },
+        { status: 503 },
+      );
+    }
+    if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, parsed.data.spaceId))) {
+      return NextResponse.json(
+        { ok: false, error: "Forbidden.", code: "FORBIDDEN" },
+        { status: 403 },
+      );
+    }
   }
 
   try {

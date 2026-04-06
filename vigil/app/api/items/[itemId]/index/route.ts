@@ -5,6 +5,7 @@ import { items } from "@/src/db/schema";
 import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
+  gmMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { reindexItemVault } from "@/src/lib/item-vault-index";
 import { vaultItemIndexRateLimitExceeded } from "@/src/lib/vault-index-rate-limit";
@@ -33,6 +34,9 @@ export async function POST(
   const [row] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
   if (!row) {
     return Response.json({ ok: false, error: "Not found" }, { status: 404 });
+  }
+  if (!(await gmMayAccessItemSpaceAsync(db, bootCtxEarly, row.spaceId))) {
+    return Response.json({ ok: false, error: "Forbidden." }, { status: 403 });
   }
 
   let refreshLoreMeta = true;

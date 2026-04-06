@@ -5,6 +5,7 @@ import { items } from "@/src/db/schema";
 import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
+  gmMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { refreshItemEmbedding } from "@/src/lib/item-embedding";
 
@@ -25,6 +26,9 @@ export async function POST(
   const [row] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
   if (!row) {
     return Response.json({ ok: false, error: "Not found" }, { status: 404 });
+  }
+  if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, row.spaceId))) {
+    return Response.json({ ok: false, error: "Forbidden." }, { status: 403 });
   }
 
   try {

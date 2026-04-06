@@ -4,6 +4,7 @@ import { tryGetDb } from "@/src/db/index";
 import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
+  gmMayAccessSpaceIdAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { runLoreConsistencyCheck } from "@/src/lib/lore-consistency-check";
 import { assertSpaceExists } from "@/src/lib/spaces";
@@ -51,6 +52,10 @@ export async function POST(req: Request) {
       { ok: false, error: parsed.error.flatten() },
       { status: 400 },
     );
+  }
+
+  if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, parsed.data.spaceId))) {
+    return Response.json({ ok: false, error: "Forbidden." }, { status: 403 });
   }
 
   const space = await assertSpaceExists(db, parsed.data.spaceId);
