@@ -53,7 +53,28 @@ export const NoPulse: Story = {
 
 export const WithCollabPeers: Story = {
   args: {
-    collabPeerCount: 2,
+    collabPeers: [
+      {
+        clientId: "11111111-1111-4111-8111-111111111111",
+        emoji: "🦊",
+        title: "Notes · …1111",
+        ariaLabel: "Follow collaborator ending …1111",
+        muted: false,
+        onFollow: () => {
+          console.info("follow peer a");
+        },
+      },
+      {
+        clientId: "22222222-2222-4222-8222-222222222222",
+        emoji: "🌸",
+        title: "Lore · …2222 · may be stale",
+        ariaLabel: "Follow collaborator ending …2222",
+        muted: true,
+        onFollow: () => {
+          console.info("follow peer b");
+        },
+      },
+    ],
   },
 };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { MagnifyingGlass, MapTrifold, Waves, WarningCircle } from "@phosphor-icons/react";
+import { FrameCorners, MagnifyingGlass, Waves, WarningCircle } from "@phosphor-icons/react";
 import {
   useCallback,
   useEffect,
@@ -560,6 +560,7 @@ export function ArchitecturalViewportMetrics({
   zoomPrefixIcon = true,
   minimapOpen = true,
   onToggleMinimap,
+  minimapSlot = null,
 }: {
   centerWorldX: number;
   centerWorldY: number;
@@ -567,6 +568,8 @@ export function ArchitecturalViewportMetrics({
   zoomPrefixIcon?: boolean;
   minimapOpen?: boolean;
   onToggleMinimap?: () => void;
+  /** Rendered immediately to the right of the map toggle (embedded minimap). */
+  minimapSlot?: ReactNode;
 }) {
   const metricsReadout = (
     <>
@@ -591,20 +594,24 @@ export function ArchitecturalViewportMetrics({
         side="top"
         delayMs={280}
       >
-        <button
+        <Button
           type="button"
-          className={styles.viewportMetricsMapToggle}
+          size="icon"
+          tone="glass"
+          variant="ghost"
+          iconOnly
           onClick={onToggleMinimap}
           aria-pressed={minimapOpen}
           aria-label={minimapOpen ? "Hide canvas map" : "Show canvas map"}
         >
-          <MapTrifold
-            size={22}
+          <FrameCorners
+            size={20}
             weight={minimapOpen ? "fill" : "regular"}
             aria-hidden
           />
-        </button>
+        </Button>
       </ArchitecturalTooltip>
+      {minimapSlot}
       <div className={styles.sep} aria-hidden />
       <div className={styles.viewportMetricsReadout} role="status" aria-label="Viewport center and zoom">
         {metricsReadout}
@@ -712,16 +719,19 @@ export function ArchitecturalStatusBar({
             <div className={styles.sep} />
             <div className={styles.collabPeerStrip} role="group" aria-label="Collaborators in this area">
               {collabPeers.map((p) => (
-                <button
+                <Button
                   key={p.clientId}
                   type="button"
-                  className={`${styles.collabPeerChip} ${p.muted ? styles.collabPeerChipMuted : ""}`}
+                  size="xs"
+                  tone="glass"
+                  variant="ghost"
+                  className={cx(styles.collabPeerChip, p.muted && styles.collabPeerChipMuted)}
                   title={p.title}
                   aria-label={p.ariaLabel}
                   onClick={p.onFollow}
                 >
                   {p.emoji}
-                </button>
+                </Button>
               ))}
             </div>
           </>

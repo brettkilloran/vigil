@@ -83,7 +83,7 @@ Behavior:
 ## Persistence Tables (Cloud)
 - `spaces`: includes parent-child hierarchy; `canvasState` is legacy (shell does not persist camera there).
 - `items`: canonical item rows.
-- `space_presence`: optional heartbeats for soft “others here” UI.
+- `canvas_presence`: optional heartbeats + camera/pointer for multiplayer presence UI.
 - `item_links`: directed edges between items in same space.
 - `item_embeddings`: optional legacy table; search is full-text + trigram only.
 

@@ -68,6 +68,7 @@ import {
   ArchitecturalCanvasEffectsToggle,
   ArchitecturalStatusBar,
   ArchitecturalViewportMetrics,
+  type CollabPeerPresenceChip,
 } from "@/src/components/foundation/ArchitecturalStatusBar";
 import { ArchitecturalRemotePresenceCursors } from "@/src/components/foundation/ArchitecturalRemotePresenceLayer";
 import { ArchitecturalToolRail } from "@/src/components/foundation/ArchitecturalToolRail";
@@ -166,7 +167,6 @@ import {
   HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MAX,
   HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MIN,
   HEARTGARDEN_PRESENCE_POINTER_FLUSH_MIN_MS,
-  HEARTGARDEN_PRESENCE_POINTER_STALE_MS,
 } from "@/src/lib/heartgarden-collab-constants";
 import { presenceEmojiForClientId } from "@/src/lib/collab-presence-identity";
 import { getOrCreatePresenceClientId } from "@/src/lib/heartgarden-presence-client";
@@ -3684,7 +3684,7 @@ export function ArchitecturalCanvasApp({
       el.removeEventListener("pointerleave", onLeave);
       if (raf) cancelAnimationFrame(raf);
     };
-  }, [collabNeonActive, activeSpaceId, viewportRevealReady]);
+  }, [collabNeonActive, activeSpaceId]);
 
   const galleryDirty = useMemo(
     () =>
@@ -8978,7 +8978,6 @@ export function ArchitecturalCanvasApp({
             <ArchitecturalRemotePresenceCursors
               peers={presencePeers.filter((p) => p.activeSpaceId === activeSpaceId)}
               prefersReducedMotion={prefersReducedMotion}
-              pointerStaleMs={HEARTGARDEN_PRESENCE_POINTER_STALE_MS}
             />
           ) : null}
         </div>
@@ -9038,40 +9037,41 @@ export function ArchitecturalCanvasApp({
             chromeEntranceOn ? ` ${styles.chromeEnterBottomRight}` : ""
           }`}
         >
-          <div className={styles.viewportMetricsCluster}>
-            <ArchitecturalViewportMetrics
-              centerWorldX={centerWorldX}
-              centerWorldY={centerWorldY}
-              scale={scale}
-              minimapOpen={minimapOpen}
-              onToggleMinimap={toggleMinimapOpen}
-            />
-            {minimapOpen &&
-            !focusOpen &&
-            !galleryOpen &&
-            !stackModal &&
-            viewportRevealReady ? (
-              <div className={styles.shellBottomRightMinimapSlot}>
-                <CanvasMinimap
-                  graph={graph}
-                  activeSpaceId={activeSpaceId}
-                  collapsedStacks={collapsedStacks as CollapsedStackInfo[]}
-                  translateX={translateX}
-                  translateY={translateY}
-                  scale={scale}
-                  viewportWidth={Math.max(1, viewportSize.width)}
-                  viewportHeight={Math.max(1, viewportSize.height)}
-                  selectedNodeIds={selectedNodeIds}
-                  minZoom={MIN_ZOOM}
-                  maxZoom={MAX_ZOOM}
-                  onPanWorldDelta={onMinimapPanWorldDelta}
-                  onCenterOnWorld={onMinimapCenterOnWorld}
-                  onFitAll={applyFitAllToViewport}
-                  placementSizes={minimapPlacementSizes}
-                />
-              </div>
-            ) : null}
-          </div>
+          <ArchitecturalViewportMetrics
+            centerWorldX={centerWorldX}
+            centerWorldY={centerWorldY}
+            scale={scale}
+            minimapOpen={minimapOpen}
+            onToggleMinimap={toggleMinimapOpen}
+            minimapSlot={
+              minimapOpen &&
+              !focusOpen &&
+              !galleryOpen &&
+              !stackModal &&
+              viewportRevealReady ? (
+                <div className={styles.viewportMetricsMinimapSlot}>
+                  <CanvasMinimap
+                    graph={graph}
+                    activeSpaceId={activeSpaceId}
+                    collapsedStacks={collapsedStacks as CollapsedStackInfo[]}
+                    translateX={translateX}
+                    translateY={translateY}
+                    scale={scale}
+                    viewportWidth={Math.max(1, viewportSize.width)}
+                    viewportHeight={Math.max(1, viewportSize.height)}
+                    selectedNodeIds={selectedNodeIds}
+                    minZoom={MIN_ZOOM}
+                    maxZoom={MAX_ZOOM}
+                    onPanWorldDelta={onMinimapPanWorldDelta}
+                    onCenterOnWorld={onMinimapCenterOnWorld}
+                    onFitAll={applyFitAllToViewport}
+                    placementSizes={minimapPlacementSizes}
+                    toolbarEmbed
+                  />
+                </div>
+              ) : null
+            }
+          />
         </div>
         {!focusOpen && !galleryOpen ? (
           <div

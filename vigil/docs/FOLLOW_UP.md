@@ -38,7 +38,7 @@ Items the codebase **cannot** complete without your action, credentials, or prod
 
 ## Database hygiene
 
-- **`space_presence` table:** Multiplayer **presence** heartbeats require this table in Postgres. After upgrading schema, run **`npm run db:push`** from **`vigil/`** (or your usual Drizzle migration path) so `POST/GET /api/spaces/[spaceId]/presence` succeed.
+- **`canvas_presence` table:** Multiplayer **presence** (one row per browser tab) requires this table in Postgres. After upgrading schema, run **`npm run db:push`** from **`vigil/`** (or your usual Drizzle migration path) so `POST/GET /api/spaces/[spaceId]/presence` succeed. Older deployments may still have legacy **`space_presence`**; new code uses **`canvas_presence`** only.
 - **Legacy `canvas_state`:** If an old DB still stores full tldraw JSON, migrate or reset per `STRATEGY.md`.
 - **Vault schema + SQL (automated locally):** From **`vigil/`**, **`npm run db:vault-setup`** runs **`db:ensure-pgvector`**, **`db:push:force`**, and **`db:vault-sql`** (`scripts/vault-sql-migrate.mjs` applies **`drizzle/migrations/0003_vault_embeddings_lore_meta.sql`** with an HNSW fallback). For interactive pushes without `--force`, keep using **`npm run db:push`** alone.
 - **Backfill embeddings:** With the app running (`npm run dev` or `npm start`) and **`OPENAI_API_KEY`** set for the server, run **`npm run vault:reindex`** (`scripts/vault-reindex-all.mjs`). Optional env: **`VAULT_REINDEX_SPACE_ID`**, **`VAULT_REINDEX_SKIP_LORE=1`**, **`HEARTGARDEN_APP_URL`**, **`VAULT_REINDEX_DRY=1`** (count only).

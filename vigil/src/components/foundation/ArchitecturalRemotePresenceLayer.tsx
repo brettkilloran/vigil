@@ -8,17 +8,13 @@ import styles from "./ArchitecturalRemotePresenceLayer.module.css";
 type Props = {
   peers: SpacePresencePeer[];
   prefersReducedMotion: boolean;
-  pointerStaleMs: number;
 };
 
-export function ArchitecturalRemotePresenceCursors({ peers, prefersReducedMotion, pointerStaleMs }: Props) {
-  const now = Date.now();
+export function ArchitecturalRemotePresenceCursors({ peers, prefersReducedMotion }: Props) {
   return (
     <div className={styles.remoteCursorRoot} aria-hidden>
       {peers.map((p) => {
         if (!p.pointer) return null;
-        const t = Date.parse(p.updatedAt);
-        if (!Number.isFinite(t) || now - t > pointerStaleMs) return null;
         const emoji = presenceEmojiForClientId(p.clientId);
         const color = presenceCursorColor(p.clientId);
         const shortId = p.clientId.slice(-4).toLowerCase();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 import {
   fetchSpacePresencePeersDetail,
@@ -24,9 +24,11 @@ export function useHeartgardenPresenceHeartbeat(options: {
 }): void {
   const { enabled, activeSpaceId, getPayload, onPeersUpdate } = options;
   const getPayloadRef = useRef(getPayload);
-  getPayloadRef.current = getPayload;
   const onPeersRef = useRef(onPeersUpdate);
-  onPeersRef.current = onPeersUpdate;
+  useLayoutEffect(() => {
+    getPayloadRef.current = getPayload;
+    onPeersRef.current = onPeersUpdate;
+  });
 
   useEffect(() => {
     if (!enabled) {

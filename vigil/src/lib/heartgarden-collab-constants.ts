@@ -19,9 +19,6 @@ export const HEARTGARDEN_PRESENCE_PEER_POLL_MS = 4000;
 /** Min interval between presence POSTs triggered by pointer movement (camera+pointer payload). */
 export const HEARTGARDEN_PRESENCE_POINTER_FLUSH_MIN_MS = 2000;
 
-/** Hide remote pointer if the peer row is older than this (pointer may be stale even if row is in TTL). */
-export const HEARTGARDEN_PRESENCE_POINTER_STALE_MS = 10_000;
-
 /** Presence camera zoom bounds — match shell `ArchitecturalCanvasApp` MIN_ZOOM / MAX_ZOOM. */
 export const HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MIN = 0.3;
 export const HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MAX = 3;
