@@ -520,27 +520,45 @@ export function ArchitecturalCreateMenu({
   actions,
   actionTone = "menu",
   disabled = false,
+  disabledReason = null,
   onCreateNode,
 }: {
   actions: DockCreateAction[];
   /** `card-dark` for solid black editor dock. */
   actionTone?: Extract<ArchitecturalButtonTone, "menu" | "card-dark">;
   disabled?: boolean;
+  /** Shown in tooltips and aria when `disabled` is true. */
+  disabledReason?: string | null;
   onCreateNode: (type: NodeTheme) => void;
 }) {
+  const toolbarAria =
+    disabled && disabledReason?.trim()
+      ? `Create items — ${disabledReason.trim()}`
+      : "Create items";
   return (
     <div
       className={`${styles.addMenu} ${styles.dockCreateToolbar}`}
       role="toolbar"
-      aria-label="Create items"
+      aria-label={toolbarAria}
     >
       {actions.map((action) => (
-        <DockChromeTooltip key={action.id} content={action.label}>
+        <DockChromeTooltip
+          key={action.id}
+          content={
+            disabled && disabledReason?.trim()
+              ? `${action.label} — ${disabledReason.trim()}`
+              : action.label
+          }
+        >
           <ArchitecturalButton
             size="icon"
             tone={actionTone}
             iconOnly
-            aria-label={`Create ${action.label}`}
+            aria-label={
+              disabled && disabledReason?.trim()
+                ? `Create ${action.label}: ${disabledReason.trim()}`
+                : `Create ${action.label}`
+            }
             disabled={disabled}
             leadingIcon={createIcon(action.nodeType)}
             onClick={() => onCreateNode(action.nodeType)}
@@ -617,6 +635,7 @@ export function ArchitecturalBottomDock({
   showFormatToolbar = true,
   showDocInsertCluster = true,
   createDisabled = false,
+  createDisabledReason = null,
   activeBlockTag = "p",
   showCreateMenu = true,
   folderColorPicker = null,
@@ -641,6 +660,7 @@ export function ArchitecturalBottomDock({
   showFormatToolbar?: boolean;
   showDocInsertCluster?: boolean;
   createDisabled?: boolean;
+  createDisabledReason?: string | null;
   activeBlockTag?: "p" | "h1" | "h2" | "h3" | "blockquote";
   showCreateMenu?: boolean;
   /** Shown when a single folder is selected on the canvas. */
@@ -688,6 +708,7 @@ export function ArchitecturalBottomDock({
               actions={createActions}
               actionTone={createActionTone}
               disabled={createDisabled}
+              disabledReason={createDisabledReason}
               onCreateNode={onCreateNode}
             />
           </div>

@@ -194,7 +194,11 @@ function SaveAndVersionPopover({
                   ? `Saved to Neon ${rel}`
                   : "Saved to Neon";
 
-    const aria = `Save and database: ${statusLine}. Open menu for details, export, and version history.`;
+    const aria = `Save and database: ${statusLine}. Open menu for details, export, and version history.${
+      sync.cloudEnabled && sync.lastError?.trim()
+        ? " Bottom toolbar create buttons are disabled until the next successful save."
+        : ""
+    }`;
 
     return {
       pulseToneClass,
