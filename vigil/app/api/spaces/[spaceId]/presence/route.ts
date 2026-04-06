@@ -1,4 +1,4 @@
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, lt } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { spacePresence } from "@/src/db/schema";
@@ -125,6 +125,11 @@ export async function POST(
       target: [spacePresence.spaceId, spacePresence.clientId],
       set: { updatedAt: new Date() },
     });
+
+  const staleCutoff = new Date(Date.now() - PRESENCE_TTL_MS * 3);
+  await db
+    .delete(spacePresence)
+    .where(and(eq(spacePresence.spaceId, spaceId), lt(spacePresence.updatedAt, staleCutoff)));
 
   return Response.json({ ok: true });
 }

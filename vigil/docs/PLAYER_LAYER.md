@@ -19,8 +19,9 @@ Full detail lives in server helper [`src/lib/heartgarden-api-boot-context.ts`](.
 ## Collaboration (multiplayer)
 
 - **Viewport:** Pan/zoom is **per browser** (`localStorage` key map `heartgarden-space-camera-v1`), not `spaces.canvas_state`.
-- **Remote edits:** The shell **polls** `GET /api/spaces/[spaceId]/changes?since=…` (~8s) and merges rows; deletes sync via the returned **`itemIds`** list.
-- **Concurrent edits on one card:** PATCH may return **409** if **`baseUpdatedAt`** does not match; the UI can offer **Use server version**. There is still **no** Google-Docs-style live merged typing (CRDT/OT would be a separate project).
+- **Remote edits:** The shell **polls** `GET /api/spaces/[spaceId]/changes?since=…` (~8s) and merges rows; deletes sync via the returned **`itemIds`** list. When the tab becomes **visible** again, it **polls immediately** (does not wait for the next interval).
+- **Drafts vs remote:** While the **focus overlay** or an **inline card body** has unpersisted text, merges **keep local title/body** but still apply **layout** from the server for that card.
+- **Concurrent edits on one card:** PATCH may return **409** if **`baseUpdatedAt`** does not match; the UI queues conflicts and can **Use server version** per item. **Geometry-only** conflicts may **apply the server row** without blocking. **404** on PATCH means the item was deleted elsewhere; the shell removes it locally. There is still **no** Google-Docs-style live merged typing (CRDT/OT would be a separate project).
 - **Presence:** Optional **`space_presence`** table + heartbeat routes; status bar shows **“N others here”** when peers are active.
 
 ## Client feature matrix (`ArchitecturalCanvasApp`)

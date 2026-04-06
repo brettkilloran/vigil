@@ -30,7 +30,7 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 | DELETE | `/api/spaces/[spaceId]` | Delete space (cascade per schema). |
 | GET | `/api/spaces/[spaceId]/changes` | Query **`since`** (ISO timestamp). Returns **`{ ok, items, itemIds, cursor }`** — changed rows since **`since`**, full id list for the space subtree (for delete sync), and a **`cursor`** for the next poll. Boot-scoped like other space routes. |
 | GET | `/api/spaces/[spaceId]/presence` | Optional **`?except=<clientUuid>`**. Peers with a heartbeat in the last **~2 minutes**. |
-| POST | `/api/spaces/[spaceId]/presence` | Body **`{ clientId: uuid }`** — heartbeat (upsert). Requires **`space_presence`** table in Postgres (`npm run db:push` after schema pull). |
+| POST | `/api/spaces/[spaceId]/presence` | Body **`{ clientId: uuid }`** — heartbeat (upsert). Deletes stale rows for that space (heartbeats older than several × TTL). Requires **`space_presence`** table in Postgres (`npm run db:push` after schema pull). |
 | GET | `/api/spaces/[spaceId]/items` | Items for space. |
 | POST | `/api/spaces/[spaceId]/items` | Create item in space. |
 | GET | `/api/spaces/[spaceId]/graph` | Graph JSON export for space. |
@@ -41,7 +41,7 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| PATCH | `/api/items/[itemId]` | Partial update (geometry, content, entity meta, stack, …). Optional **`baseUpdatedAt`** (ISO) must match the row’s **`updated_at`** or the handler returns **409** **`{ ok: false, error: "conflict", item }`**. Success returns **`{ ok: true, item }`** (includes **`updatedAt`**). Triggers search blob / optional vault scheduling per implementation. |
+| PATCH | `/api/items/[itemId]` | Partial update (geometry, content, entity meta, stack, …). Optional **`baseUpdatedAt`** (ISO) must match the row’s **`updated_at`** or the handler returns **409** **`{ ok: false, error: "conflict", item }`**. Missing item → **404**; the shell drops the entity locally (remote delete). Success returns **`{ ok: true, item }`** (includes **`updatedAt`**). Triggers search blob / optional vault scheduling per implementation. |
 | DELETE | `/api/items/[itemId]` | Delete item. |
 | POST | `/api/items/[itemId]/embed` | Clear stale `item_embeddings` rows for item (does not embed). |
 | POST | `/api/items/[itemId]/index` | Chunk + embed + optional lore meta. Needs **`OPENAI_API_KEY`** for vectors; lore meta may use Anthropic. Rate-limited. |

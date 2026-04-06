@@ -75,6 +75,7 @@ import {
   mergeBootstrapView,
   mergeRemoteItemPatches,
   applyServerCanvasItemToGraph,
+  removeEntitiesFromGraphAfterRemoteDelete,
   architecturalItemType,
   entityGeometryOnSpace,
 } from "@/src/components/foundation/architectural-db-bridge";
@@ -596,6 +597,14 @@ function shallowCloneGraph(graph: CanvasGraph): CanvasGraph {
     entities: { ...graph.entities },
     connections: { ...graph.connections },
   };
+}
+
+function patchTouchesItemContent(patch: Record<string, unknown>): boolean {
+  return (
+    patch.title !== undefined ||
+    patch.contentText !== undefined ||
+    patch.contentJson !== undefined
+  );
 }
 
 /** Flatten one multi-card stack in `spaceId` (shared undo step when called in a loop). */
@@ -1225,7 +1234,8 @@ export function ArchitecturalCanvasApp({
   /** True when the canvas is hydrated from localStorage because live bootstrap failed (still looks “loaded”). */
   const [workspaceViewFromCache, setWorkspaceViewFromCache] = useState(false);
   const [navTransitionActive, setNavTransitionActive] = useState(false);
-  const [itemConflict, setItemConflict] = useState<CanvasItem | null>(null);
+  const [itemConflictQueue, setItemConflictQueue] = useState<CanvasItem[]>([]);
+  const itemConflictQueueRef = useRef<CanvasItem[]>([]);
   const [presencePeerCount, setPresencePeerCount] = useState(0);
   const [canvasEffectsEnabled, setCanvasEffectsEnabled] = useState(true);
   const canvasEffectsEnabledRef = useRef(true);
@@ -1343,6 +1353,7 @@ export function ArchitecturalCanvasApp({
   const [cloudLinksBar, setCloudLinksBar] = useState(() => getNeonSyncSnapshot().cloudEnabled);
   const loreImportFileInputRef = useRef<HTMLInputElement | null>(null);
   const [galleryNodeId, setGalleryNodeId] = useState<string | null>(null);
+  const galleryNodeIdRef = useRef<string | null>(null);
   const [galleryDraftTitle, setGalleryDraftTitle] = useState("");
   const [galleryDraftNotes, setGalleryDraftNotes] = useState("");
   const [galleryBaselineTitle, setGalleryBaselineTitle] = useState("");
@@ -1492,6 +1503,7 @@ export function ArchitecturalCanvasApp({
   const itemServerUpdatedAtRef = useRef<Map<string, string>>(new Map());
   const syncCursorRef = useRef<string>(new Date(0).toISOString());
   const focusDirtyRef = useRef(false);
+  const inlineContentDirtyIdsRef = useRef<Set<string>>(new Set());
   const mediaFileInputRef = useRef<HTMLInputElement | null>(null);
   const lastFormatRangeRef = useRef<Range | null>(null);
   const [historyEpoch, setHistoryEpoch] = useState(0);
@@ -1509,6 +1521,8 @@ export function ArchitecturalCanvasApp({
   paletteOpenRef.current = paletteOpen;
   lorePanelOpenRef.current = lorePanelOpen;
   activeNodeIdRef.current = activeNodeId;
+  galleryNodeIdRef.current = galleryNodeId;
+  itemConflictQueueRef.current = itemConflictQueue;
 
   const modKeyHints = useModKeyHints();
   const { items: recentItems, push: pushRecentItem, pruneIds: pruneRecentItems } =
@@ -1616,20 +1630,65 @@ export function ArchitecturalCanvasApp({
     }
   }, [canvasEffectsEnabled]);
 
-  const patchItemWithVersion = useCallback(async (itemId: string, patch: Record<string, unknown>) => {
-    const base = itemServerUpdatedAtRef.current.get(itemId);
-    const body: Record<string, unknown> = base ? { ...patch, baseUpdatedAt: base } : { ...patch };
-    const r = await apiPatchItem(itemId, body);
-    if (r.ok) {
-      if (r.item.updatedAt) itemServerUpdatedAtRef.current.set(itemId, r.item.updatedAt);
-      return true;
-    }
-    if (!r.ok && "conflict" in r && r.conflict) setItemConflict(r.item);
-    return false;
+  const enqueueItemConflict = useCallback((item: CanvasItem) => {
+    setItemConflictQueue((q) => {
+      const deduped = q.filter((i) => i.id !== item.id);
+      return [...deduped, item].slice(-8);
+    });
   }, []);
 
+  const patchItemWithVersion = useCallback(
+    async (itemId: string, patch: Record<string, unknown>) => {
+      const base = itemServerUpdatedAtRef.current.get(itemId);
+      const body: Record<string, unknown> = base ? { ...patch, baseUpdatedAt: base } : { ...patch };
+      const r = await apiPatchItem(itemId, body);
+      if (r.ok) {
+        if (r.item.updatedAt) itemServerUpdatedAtRef.current.set(itemId, r.item.updatedAt);
+        return true;
+      }
+      if (!r.ok && "gone" in r && r.gone) {
+        itemServerUpdatedAtRef.current.delete(itemId);
+        const prevT = itemContentPatchTimersRef.current.get(itemId);
+        if (prevT) {
+          clearTimeout(prevT);
+          itemContentPatchTimersRef.current.delete(itemId);
+          neonSyncUnbumpPending();
+        }
+        inlineContentDirtyIdsRef.current.delete(itemId);
+        setItemConflictQueue((q) => q.filter((i) => i.id !== itemId));
+        setGraph((prev) => removeEntitiesFromGraphAfterRemoteDelete(prev, [itemId]));
+        pruneRecentItems(new Set([itemId]));
+        pruneRecentFolders(new Set([itemId]));
+        setSelectedNodeIds((p) => p.filter((id) => id !== itemId));
+        if (activeNodeIdRef.current === itemId) {
+          setFocusOpen(false);
+          setActiveNodeId(null);
+        }
+        if (galleryNodeIdRef.current === itemId) {
+          setGalleryOpen(false);
+          setGalleryNodeId(null);
+          setGalleryDraftTitle("");
+          setGalleryDraftNotes("");
+          setGalleryBaselineTitle("");
+          setGalleryBaselineNotes("");
+        }
+        return false;
+      }
+      if (!r.ok && "conflict" in r && r.conflict) {
+        if (!patchTouchesItemContent(patch)) {
+          setGraph((prev) => applyServerCanvasItemToGraph(prev, r.item));
+          if (r.item.updatedAt) itemServerUpdatedAtRef.current.set(r.item.id, r.item.updatedAt);
+          return false;
+        }
+        enqueueItemConflict(r.item);
+      }
+      return false;
+    },
+    [enqueueItemConflict, pruneRecentFolders, pruneRecentItems],
+  );
+
   const applyItemConflictFromServer = useCallback(() => {
-    const it = itemConflict;
+    const it = itemConflictQueueRef.current[0];
     if (!it) return;
     setGraph((prev) => applyServerCanvasItemToGraph(prev, it));
     if (it.updatedAt) itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
@@ -1642,8 +1701,12 @@ export function ArchitecturalCanvasApp({
         setFocusBaselineTitle(e.title);
       }
     });
-    setItemConflict(null);
-  }, [itemConflict]);
+    setItemConflictQueue((q) => q.slice(1));
+  }, []);
+
+  const dismissConflictHead = useCallback(() => {
+    setItemConflictQueue((q) => q.slice(1));
+  }, []);
 
   const schedulePersistContentBody = useCallback(
     (entityId: string, bodyHtml: string) => {
@@ -2652,6 +2715,12 @@ export function ArchitecturalCanvasApp({
     [queueGraphCommit, recordUndoBeforeMutation, schedulePersistContentBody],
   );
 
+  const setInlineBodyDraftDirty = useCallback((entityId: string, dirty: boolean) => {
+    const s = inlineContentDirtyIdsRef.current;
+    if (dirty) s.add(entityId);
+    else s.delete(entityId);
+  }, []);
+
   const onArchitecturalMediaFile = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -3022,37 +3091,50 @@ export function ArchitecturalCanvasApp({
     if (!persistNeonRef.current) return;
     if (!isUuidLike(activeSpaceId)) return;
     let cancelled = false;
+    let inFlight = false;
     const run = async () => {
-      if (cancelled || document.visibilityState === "hidden") return;
-      const since = syncCursorRef.current;
-      const data = await fetchSpaceChanges(activeSpaceId, since);
-      if (!data?.itemIds || cancelled) return;
-      if (typeof data.cursor === "string" && data.cursor.length > 0) {
-        syncCursorRef.current = data.cursor;
-      }
-      const graphSnap = graphRef.current;
-      const spaceRows = Object.values(graphSnap.spaces).map((s) => ({
-        id: s.id,
-        parentSpaceId: s.parentSpaceId ?? null,
-      }));
-      const subtree = collectSpaceSubtreeIds(activeSpaceId, spaceRows);
-      const serverIds = new Set(data.itemIds);
-      const skipId =
-        focusOpenRef.current && focusDirtyRef.current && activeNodeIdRef.current
-          ? activeNodeIdRef.current
-          : null;
-      const rawItems = data.items ?? [];
-      const changed = skipId ? rawItems.filter((i) => i.id !== skipId) : rawItems;
-      setGraph((prev) => mergeRemoteItemPatches(prev, changed, serverIds, subtree));
-      for (const it of changed) {
-        if (it.updatedAt) itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
+      if (cancelled || document.visibilityState === "hidden" || inFlight) return;
+      inFlight = true;
+      try {
+        const since = syncCursorRef.current;
+        const data = await fetchSpaceChanges(activeSpaceId, since);
+        if (!data?.itemIds || cancelled) return;
+        if (typeof data.cursor === "string" && data.cursor.length > 0) {
+          syncCursorRef.current = data.cursor;
+        }
+        const graphSnap = graphRef.current;
+        const spaceRows = Object.values(graphSnap.spaces).map((s) => ({
+          id: s.id,
+          parentSpaceId: s.parentSpaceId ?? null,
+        }));
+        const subtree = collectSpaceSubtreeIds(activeSpaceId, spaceRows);
+        const serverIds = new Set(data.itemIds);
+        const protectedContentIds = new Set<string>();
+        if (focusOpenRef.current && focusDirtyRef.current && activeNodeIdRef.current) {
+          protectedContentIds.add(activeNodeIdRef.current);
+        }
+        inlineContentDirtyIdsRef.current.forEach((id) => protectedContentIds.add(id));
+        const rawItems = data.items ?? [];
+        setGraph((prev) =>
+          mergeRemoteItemPatches(prev, rawItems, serverIds, subtree, protectedContentIds),
+        );
+        for (const it of rawItems) {
+          if (it.updatedAt) itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
+        }
+      } finally {
+        inFlight = false;
       }
     };
     const interval = window.setInterval(run, 8000);
     void run();
+    const onVisibility = () => {
+      if (!cancelled && document.visibilityState === "visible") void run();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [scenario, canvasBootstrapResolved, activeSpaceId]);
 
@@ -7426,16 +7508,19 @@ export function ArchitecturalCanvasApp({
 
   return (
     <>
-      {itemConflict ? (
+      {itemConflictQueue.length > 0 ? (
         <div className={styles.collabConflictBanner} role="alert">
           <span>
             Another session updated this card while you were editing. Load the server copy or dismiss to
             keep your draft.
+            {itemConflictQueue.length > 1
+              ? ` (${itemConflictQueue.length - 1} more in queue)`
+              : ""}
           </span>
           <ArchitecturalButton type="button" size="menu" tone="glass" onClick={applyItemConflictFromServer}>
             Use server version
           </ArchitecturalButton>
-          <ArchitecturalButton type="button" size="menu" tone="glass" onClick={() => setItemConflict(null)}>
+          <ArchitecturalButton type="button" size="menu" tone="glass" onClick={dismissConflictHead}>
             Dismiss
           </ArchitecturalButton>
         </div>
@@ -7597,6 +7682,7 @@ export function ArchitecturalCanvasApp({
                     showTape={!entity.stackId}
                     onBodyCommit={updateNodeBody}
                     onExpand={handleNodeExpand}
+                    onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
                   />
                 ) : (
                   <ArchitecturalFolderCard
@@ -8993,6 +9079,7 @@ export function ArchitecturalCanvasApp({
                     showTape={!entity.stackId}
                     onBodyCommit={updateNodeBody}
                     onExpand={handleNodeExpand}
+                    onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
                   />
                 ) : (
                   <ArchitecturalFolderCard

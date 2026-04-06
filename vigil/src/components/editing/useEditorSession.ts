@@ -9,6 +9,8 @@ type UseEditorSessionOptions = {
   debounceMs?: number;
   normalizeOnCommit?: (value: string) => string;
   onCommit: (value: string, reason: EditorCommitReason) => void;
+  /** Fires when the live draft diverges from `value` while focused, and `false` when not editing or when aligned. */
+  onDraftDirtyChange?: (dirty: boolean) => void;
 };
 
 type UseEditorSessionResult = {
@@ -25,6 +27,7 @@ export function useEditorSession({
   debounceMs = 350,
   normalizeOnCommit,
   onCommit,
+  onDraftDirtyChange,
 }: UseEditorSessionOptions): UseEditorSessionResult {
   const [isEditing, setIsEditing] = useState(false);
   const [editDraft, setEditDraft] = useState("");
@@ -35,6 +38,11 @@ export function useEditorSession({
   const latestDraftRef = useRef(value);
   const latestOnCommitRef = useRef(onCommit);
   const latestNormalizeRef = useRef(normalizeOnCommit);
+  const draftDirtyCbRef = useRef(onDraftDirtyChange);
+
+  useEffect(() => {
+    draftDirtyCbRef.current = onDraftDirtyChange;
+  }, [onDraftDirtyChange]);
 
   useEffect(() => {
     latestOnCommitRef.current = onCommit;
@@ -125,6 +133,16 @@ export function useEditorSession({
       clearPendingCommit();
     };
   }, [clearPendingCommit]);
+
+  useEffect(() => {
+    const cb = draftDirtyCbRef.current;
+    if (!cb) return;
+    if (!isEditing) {
+      cb(false);
+      return;
+    }
+    cb(editDraft !== value);
+  }, [isEditing, editDraft, value]);
 
   return {
     draft,

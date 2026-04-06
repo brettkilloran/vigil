@@ -220,6 +220,22 @@ function mergeEntityFromItem(
   return fresh;
 }
 
+/** Apply server row but keep local title/body (or folder title) when the user has a text draft. */
+function mergeEntityFromItemProtectingText(
+  prevEntity: CanvasEntity | undefined,
+  item: CanvasItem,
+): CanvasEntity | null {
+  const merged = mergeEntityFromItem(prevEntity, item);
+  if (!merged || !prevEntity) return merged;
+  if (prevEntity.kind === "content" && merged.kind === "content") {
+    return { ...merged, title: prevEntity.title, bodyHtml: prevEntity.bodyHtml };
+  }
+  if (prevEntity.kind === "folder" && merged.kind === "folder") {
+    return { ...merged, title: prevEntity.title };
+  }
+  return merged;
+}
+
 /**
  * Merge server rows into the in-memory graph. Bootstrap items are only guaranteed for the
  * active space subtree, so spaces with no items in the payload keep their previous `entityIds`.
@@ -278,6 +294,7 @@ export function mergeRemoteItemPatches(
   changedItems: CanvasItem[],
   serverItemIdsInSubtree: ReadonlySet<string>,
   subtreeSpaceIds: readonly string[],
+  protectedContentIds: ReadonlySet<string> = new Set(),
 ): CanvasGraph {
   const spacesRecord: Record<string, CanvasSpace> = { ...prev.spaces };
   const entities: Record<string, CanvasEntity> = { ...prev.entities };
@@ -301,7 +318,10 @@ export function mergeRemoteItemPatches(
     for (const sp of Object.values(spacesRecord)) {
       sp.entityIds = sp.entityIds.filter((e) => e !== item.id);
     }
-    const merged = mergeEntityFromItem(entities[item.id], item);
+    const mergeFn = protectedContentIds.has(item.id)
+      ? mergeEntityFromItemProtectingText
+      : mergeEntityFromItem;
+    const merged = mergeFn(entities[item.id], item);
     if (!merged) continue;
     entities[item.id] = merged;
     const sp = spacesRecord[item.spaceId];
@@ -313,6 +333,40 @@ export function mergeRemoteItemPatches(
     spaces: spacesRecord,
     entities,
     connections: prev.connections,
+  };
+}
+
+/** Remove item rows that no longer exist on the server (e.g. PATCH 404 after remote delete). */
+export function removeEntitiesFromGraphAfterRemoteDelete(
+  prev: CanvasGraph,
+  entityIds: readonly string[],
+): CanvasGraph {
+  const ids = new Set(entityIds);
+  if (ids.size === 0) return prev;
+  const spacesRecord: Record<string, CanvasSpace> = { ...prev.spaces };
+  for (const sid of Object.keys(spacesRecord)) {
+    const sp = spacesRecord[sid]!;
+    spacesRecord[sid] = {
+      ...sp,
+      entityIds: sp.entityIds.filter((e) => !ids.has(e)),
+    };
+  }
+  const entities: Record<string, CanvasEntity> = { ...prev.entities };
+  for (const id of ids) {
+    delete entities[id];
+  }
+  const connections = { ...prev.connections };
+  for (const cid of Object.keys(connections)) {
+    const c = connections[cid]!;
+    if (ids.has(c.sourceEntityId) || ids.has(c.targetEntityId)) {
+      delete connections[cid];
+    }
+  }
+  return {
+    ...prev,
+    spaces: spacesRecord,
+    entities,
+    connections,
   };
 }
 

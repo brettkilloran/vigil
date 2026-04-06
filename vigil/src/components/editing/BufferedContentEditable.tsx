@@ -16,6 +16,7 @@ type BufferedContentEditableProps = {
   plainText?: boolean;
   normalizeOnCommit?: (value: string) => string;
   onCommit: (value: string, reason: EditorCommitReason) => void;
+  onDraftDirtyChange?: (dirty: boolean) => void;
   onEscape?: () => void;
   onEnter?: () => void;
   dataAttribute?: string;
@@ -30,6 +31,7 @@ export function BufferedContentEditable({
   plainText = false,
   normalizeOnCommit,
   onCommit,
+  onDraftDirtyChange,
   onEscape,
   onEnter,
   dataAttribute,
@@ -46,6 +48,7 @@ export function BufferedContentEditable({
     debounceMs,
     normalizeOnCommit,
     onCommit,
+    onDraftDirtyChange,
   });
 
   useEffect(() => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   mergeRemoteItemPatches,
+  removeEntitiesFromGraphAfterRemoteDelete,
   type BootstrapResponse,
   buildCanvasGraphFromBootstrap,
 } from "@/src/components/foundation/architectural-db-bridge";
@@ -41,5 +42,76 @@ describe("mergeRemoteItemPatches", () => {
     expect(next.entities.a?.title).toBe("A2");
     expect(next.entities.b).toBeUndefined();
     expect(next.spaces["space-1"]?.entityIds).toEqual(["a"]);
+  });
+
+  it("keeps local title and body when id is protected but applies geometry from server", () => {
+    const boot: BootstrapResponse = {
+      ok: true,
+      demo: false,
+      spaceId: "space-1",
+      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
+      items: [noteItem("a", "space-1", "ServerTitle", "2020-01-01T00:00:00.000Z")],
+      camera: { x: 0, y: 0, zoom: 1 },
+    };
+    const prevBase = buildCanvasGraphFromBootstrap(boot);
+    const ent = prevBase.entities.a;
+    if (!ent || ent.kind !== "content") throw new Error("expected content entity");
+    const prev = {
+      ...prevBase,
+      entities: {
+        ...prevBase.entities,
+        a: {
+          ...ent,
+          title: "LocalTitle",
+          bodyHtml: "<div>local draft</div>",
+        },
+      },
+    };
+    const remote = noteItem("a", "space-1", "RemoteTitle", "2020-01-02T00:00:00.000Z");
+    remote.x = 120;
+    remote.y = 240;
+    remote.contentJson = { format: "html", html: "<div>server html</div>" };
+    const serverIds = new Set<string>(["a"]);
+    const next = mergeRemoteItemPatches(prev, [remote], serverIds, ["space-1"], new Set(["a"]));
+    const out = next.entities.a;
+    expect(out?.kind).toBe("content");
+    if (out?.kind !== "content") return;
+    expect(out.title).toBe("LocalTitle");
+    expect(out.bodyHtml).toBe("<div>local draft</div>");
+    expect(out.slots["space-1"]).toEqual({ x: 120, y: 240 });
+  });
+});
+
+describe("removeEntitiesFromGraphAfterRemoteDelete", () => {
+  it("drops entity from spaces and connections", () => {
+    const boot: BootstrapResponse = {
+      ok: true,
+      demo: false,
+      spaceId: "space-1",
+      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
+      items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
+      camera: { x: 0, y: 0, zoom: 1 },
+    };
+    const prev = buildCanvasGraphFromBootstrap(boot);
+    const pin = { anchor: "topLeftInset" as const, insetX: 0, insetY: 0 };
+    const withConn = {
+      ...prev,
+      connections: {
+        c1: {
+          id: "c1",
+          sourceEntityId: "a",
+          targetEntityId: "a",
+          sourcePin: pin,
+          targetPin: pin,
+          color: "#000",
+          createdAt: 0,
+          updatedAt: 0,
+        },
+      },
+    };
+    const next = removeEntitiesFromGraphAfterRemoteDelete(withConn, ["a"]);
+    expect(next.entities.a).toBeUndefined();
+    expect(next.spaces["space-1"]?.entityIds).toEqual([]);
+    expect(next.connections.c1).toBeUndefined();
   });
 });

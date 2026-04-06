@@ -32,6 +32,15 @@ test.describe("text editing hardening", () => {
     await expect(bodyEditor).toContainText("hardening-check");
   });
 
+  test("node body keeps typed text after blur (commit path)", async ({ page }) => {
+    const bodyEditor = page.locator('[data-node-body-editor="true"]').first();
+    await expect(bodyEditor).toBeVisible();
+    await bodyEditor.click();
+    await page.keyboard.type(" blur-commit-guard");
+    await bodyEditor.blur();
+    await expect(bodyEditor).toContainText("blur-commit-guard");
+  });
+
   test("keeps folder title editor focused during inline rename", async ({ page }) => {
     await page.getByRole("button", { name: "Folder" }).click();
 

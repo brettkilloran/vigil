@@ -69,6 +69,7 @@ function runSerializedItemPatch<T>(itemId: string, fn: () => Promise<T>): Promis
 export type ApiPatchItemResult =
   | { ok: true; item: CanvasItem }
   | { ok: false; conflict: true; item: CanvasItem }
+  | { ok: false; gone: true }
   | { ok: false; error?: string };
 
 export async function fetchBootstrap(spaceId?: string): Promise<BootstrapResponse | null> {
@@ -224,6 +225,11 @@ export async function apiPatchItem(
         error?: string;
         item?: CanvasItem;
       };
+
+      if (res.status === 404) {
+        finishNeonTrack(track, op, res, rawText, body, false);
+        return { ok: false, gone: true };
+      }
 
       if (res.status === 409 && body.error === "conflict" && body.item) {
         if (track) neonSyncEndRequest(true);

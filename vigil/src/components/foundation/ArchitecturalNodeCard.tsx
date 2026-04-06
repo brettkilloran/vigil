@@ -104,12 +104,14 @@ export function ArchitecturalNodeBody({
   editable,
   spellCheck = false,
   onHtmlCommit,
+  onDraftDirtyChange,
 }: {
   html: string;
   className?: string;
   editable: boolean;
   spellCheck?: boolean;
   onHtmlCommit?: (html: string) => void;
+  onDraftDirtyChange?: (dirty: boolean) => void;
 }) {
   return (
     <BufferedContentEditable
@@ -120,6 +122,7 @@ export function ArchitecturalNodeBody({
       debounceMs={300}
       dataAttribute="data-node-body-editor"
       onCommit={(nextHtml) => onHtmlCommit?.(nextHtml)}
+      onDraftDirtyChange={onDraftDirtyChange}
     />
   );
 }
@@ -140,6 +143,7 @@ export function ArchitecturalNodeCard({
   showExpandButton = true,
   bodyEditable,
   showTape = true,
+  onBodyDraftDirty,
 }: {
   id: string;
   title: string;
@@ -156,6 +160,7 @@ export function ArchitecturalNodeCard({
   showExpandButton?: boolean;
   bodyEditable?: boolean;
   showTape?: boolean;
+  onBodyDraftDirty?: (dirty: boolean) => void;
 }) {
   const isMediaNode = theme === "media";
   const nodeWidth = width ?? 340;
@@ -249,6 +254,7 @@ export function ArchitecturalNodeCard({
         editable={bodyEditable ?? activeTool === "select"}
         spellCheck={false}
         onHtmlCommit={(html) => onBodyCommit(id, html)}
+        onDraftDirtyChange={onBodyDraftDirty}
       />
     </div>
   );
