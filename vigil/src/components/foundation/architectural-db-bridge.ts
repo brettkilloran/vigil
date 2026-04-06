@@ -464,8 +464,33 @@ export function homeSpaceIdForEntity(graph: CanvasGraph, entityId: string): stri
 }
 
 /**
+ * Topologically sort new space ids so each row is inserted after its parent (when parent is also new).
+ */
+export function topoSortAddedSpacesForRestore(
+  addedIds: ReadonlySet<string>,
+  spaces: Record<string, CanvasSpace>,
+): string[] {
+  const result: string[] = [];
+  const remaining = new Set(addedIds);
+  while (remaining.size > 0) {
+    let progress = false;
+    for (const id of [...remaining]) {
+      const p = spaces[id]?.parentSpaceId ?? null;
+      if (p != null && remaining.has(p)) continue;
+      result.push(id);
+      remaining.delete(id);
+      progress = true;
+    }
+    if (!progress) {
+      result.push(...remaining);
+      break;
+    }
+  }
+  return result;
+}
+
+/**
  * Build `POST /api/spaces/:id/items` body to recreate a content row after undo (same UUID).
- * Folders are not supported here (child space must exist on the server first).
  */
 export function buildContentItemRestorePayload(
   graph: CanvasGraph,
@@ -487,6 +512,34 @@ export function buildContentItemRestorePayload(
     title: entity.title,
     contentText: htmlToPlainText(entity.bodyHtml),
     contentJson: buildContentJsonForContentEntity(entity),
+  };
+  if (entity.stackId != null) body.stackId = entity.stackId;
+  if (entity.stackOrder != null) body.stackOrder = entity.stackOrder;
+  return { spaceId, body };
+}
+
+/**
+ * Recreate a folder card row after undo. Call only after `childSpaceId` exists on the server
+ * (restore spaces with {@link topoSortAddedSpacesForRestore} first).
+ */
+export function buildFolderItemRestorePayload(
+  graph: CanvasGraph,
+  entityId: string,
+  entity: CanvasFolderEntity,
+): { spaceId: string; body: Record<string, unknown> } | null {
+  const spaceId = homeSpaceIdForEntity(graph, entityId);
+  if (!spaceId) return null;
+  const geom = entityGeometryOnSpace(entity, spaceId);
+  const body: Record<string, unknown> = {
+    id: entityId,
+    itemType: "folder" as const,
+    x: geom.x,
+    y: geom.y,
+    width: geom.width,
+    height: geom.height,
+    title: entity.title,
+    contentText: "",
+    contentJson: buildContentJsonForFolderEntity(entity),
   };
   if (entity.stackId != null) body.stackId = entity.stackId;
   if (entity.stackOrder != null) body.stackOrder = entity.stackOrder;

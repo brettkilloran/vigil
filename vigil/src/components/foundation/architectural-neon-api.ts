@@ -137,15 +137,18 @@ export async function fetchSpacePresencePeers(
 export async function apiCreateSpace(
   name: string,
   parentSpaceId: string | null,
+  options?: { id?: string },
 ): Promise<{ ok: boolean; space?: { id: string }; error?: string }> {
   const track = getNeonSyncSnapshot().cloudEnabled;
   if (track) neonSyncBeginRequest();
   const op = "POST /api/spaces";
   try {
+    const payload: Record<string, unknown> = { name, parentSpaceId };
+    if (options?.id) payload.id = options.id;
     const res = await fetch("/api/spaces", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, parentSpaceId }),
+      body: JSON.stringify(payload),
     });
     const rawText = await res.text();
     const body = parseJsonBody(rawText) as {

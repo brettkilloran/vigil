@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { eq } from "drizzle-orm";
+
 import { tryGetDb } from "@/src/db/index";
 import { spaces } from "@/src/db/schema";
 import {
@@ -11,6 +13,8 @@ import {
 import { assertSpaceExists, listGmWorkspaceSpaces } from "@/src/lib/spaces";
 
 const bodySchema = z.object({
+  /** When set, insert this row id (undo-after-delete folder subtree restore). Must not already exist. */
+  id: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(255),
   parentSpaceId: z.string().uuid().nullable().optional(),
 });
@@ -82,6 +86,13 @@ export async function POST(req: Request) {
   }
   const { name, parentSpaceId } = parsed.data;
 
+  if (parsed.data.id !== undefined) {
+    const [existing] = await db.select().from(spaces).where(eq(spaces.id, parsed.data.id)).limit(1);
+    if (existing) {
+      return Response.json({ ok: false, error: "Space id already exists" }, { status: 409 });
+    }
+  }
+
   if (parentSpaceId !== undefined && parentSpaceId !== null) {
     if (!gmMayAccessSpaceId(bootCtx, parentSpaceId)) {
       return heartgardenApiForbiddenJsonResponse();
@@ -98,6 +109,7 @@ export async function POST(req: Request) {
   const [created] = await db
     .insert(spaces)
     .values({
+      ...(parsed.data.id ? { id: parsed.data.id } : {}),
       name,
       ...(parentSpaceId !== undefined ? { parentSpaceId } : {}),
     })

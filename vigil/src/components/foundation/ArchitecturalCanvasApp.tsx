@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { flushSync } from "react-dom";
 import {
   ArrowLeft,
@@ -75,7 +83,9 @@ import {
   mergeBootstrapView,
   applyServerCanvasItemToGraph,
   buildContentItemRestorePayload,
+  buildFolderItemRestorePayload,
   removeEntitiesFromGraphAfterRemoteDelete,
+  topoSortAddedSpacesForRestore,
   architecturalItemType,
   entityGeometryOnSpace,
 } from "@/src/components/foundation/architectural-db-bridge";
@@ -104,6 +114,7 @@ import type {
 import type { LoreImportEntityDraft, LoreImportLinkDraft } from "@/src/lib/lore-import-types";
 import {
   getNeonSyncSnapshot,
+  getNeonSyncServerSnapshot,
   neonSyncBumpPending,
   neonSyncReportAuxiliaryFailure,
   neonSyncSetCloudEnabled,
@@ -1463,6 +1474,23 @@ export function ArchitecturalCanvasApp({
   const [loreImportCommitting, setLoreImportCommitting] = useState(false);
   const loreImportDraftRef = useRef<LoreImportDraftState | null>(null);
   const [cloudLinksBar, setCloudLinksBar] = useState(() => getNeonSyncSnapshot().cloudEnabled);
+  const neonSyncSnapshot = useSyncExternalStore(
+    subscribeNeonSync,
+    getNeonSyncSnapshot,
+    getNeonSyncServerSnapshot,
+  );
+  const dockCreateDisabledBySyncError = useMemo(() => {
+    if (isRestrictedLayer || !isUuidLike(activeSpaceId)) return false;
+    if (!cloudLinksBar) return false;
+    return Boolean(neonSyncSnapshot.lastError?.trim());
+  }, [activeSpaceId, cloudLinksBar, isRestrictedLayer, neonSyncSnapshot.lastError]);
+  const dockCreateSyncDisabledHint = useMemo(
+    () =>
+      dockCreateDisabledBySyncError
+        ? "Cannot save new items while database sync shows an error — open the top-left status control for details"
+        : null,
+    [dockCreateDisabledBySyncError],
+  );
   const loreImportFileInputRef = useRef<HTMLInputElement | null>(null);
   const [galleryNodeId, setGalleryNodeId] = useState<string | null>(null);
   const galleryNodeIdRef = useRef<string | null>(null);
@@ -1941,12 +1969,29 @@ export function ArchitecturalCanvasApp({
         }
       }
 
+      const addedSpaceIds = new Set(
+        Object.keys(to.spaces).filter(
+          (sid) => !from.spaces[sid] && isUuidLike(sid) && sid !== to.rootSpaceId,
+        ),
+      );
+      if (addedSpaceIds.size > 0) {
+        const spaceOrder = topoSortAddedSpacesForRestore(addedSpaceIds, to.spaces);
+        for (const sid of spaceOrder) {
+          const row = to.spaces[sid];
+          if (!row) continue;
+          await apiCreateSpace(row.name?.trim() || "Folder", row.parentSpaceId ?? null, { id: sid });
+        }
+      }
+
       for (const id of added) {
         const ent = to.entities[id];
-        if (!ent || ent.kind === "folder") continue;
+        if (!ent) continue;
 
         remoteTombstoneExemptIdsRef.current.add(id);
-        const payload = buildContentItemRestorePayload(to, id, ent);
+        const payload =
+          ent.kind === "folder"
+            ? buildFolderItemRestorePayload(to, id, ent)
+            : buildContentItemRestorePayload(to, id, ent);
         if (!payload) {
           remoteTombstoneExemptIdsRef.current.delete(id);
           continue;
@@ -4832,6 +4877,13 @@ export function ArchitecturalCanvasApp({
 
   const createNewNode = useCallback((type: NodeTheme) => {
     if (isRestrictedLayer && (type === "media" || type === "folder")) return;
+    if (
+      persistNeonRef.current &&
+      isUuidLike(activeSpaceId) &&
+      getNeonSyncSnapshot().lastError?.trim()
+    ) {
+      return;
+    }
     recordUndoBeforeMutation();
     const center = centerCoords();
     const x = center.x - 170 + (Math.random() * 60 - 30);
@@ -8345,6 +8397,8 @@ export function ArchitecturalCanvasApp({
               insertDocActions={dockInsertActions}
               formatActions={dockFormatActions}
               createActions={dockCreateActions}
+              createDisabled={dockCreateDisabledBySyncError}
+              createDisabledReason={dockCreateSyncDisabledHint}
               activeBlockTag={formatCommandState.blockTag}
               onFormat={runFormat}
               onCreateNode={createNewNode}
