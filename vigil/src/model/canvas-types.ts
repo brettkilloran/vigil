@@ -35,4 +35,6 @@ export interface CanvasItem {
   entityMeta?: Record<string, unknown> | null;
   stackId?: string | null;
   stackOrder?: number | null;
+  /** ISO timestamp from DB; used for delta sync and optimistic concurrency. */
+  updatedAt?: string;
 }

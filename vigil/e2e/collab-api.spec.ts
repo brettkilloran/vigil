@@ -1,0 +1,34 @@
+import { test, expect } from "@playwright/test";
+
+/**
+ * Under `PLAYWRIGHT_E2E=1`, delta and presence routes return empty stubs without Postgres.
+ * @see playwright.config.ts
+ */
+test.describe("collaboration API stubs (e2e server)", () => {
+  test("GET /api/spaces/[id]/changes returns ok + arrays", async ({ request }) => {
+    const res = await request.get(
+      "/api/spaces/00000000-0000-4000-8000-000000000001/changes?since=1970-01-01T00:00:00.000Z",
+    );
+    expect(res.ok()).toBeTruthy();
+    const body = (await res.json()) as {
+      ok?: boolean;
+      items?: unknown[];
+      itemIds?: unknown[];
+      cursor?: string;
+    };
+    expect(body.ok).toBe(true);
+    expect(Array.isArray(body.items)).toBe(true);
+    expect(Array.isArray(body.itemIds)).toBe(true);
+    expect(typeof body.cursor).toBe("string");
+  });
+
+  test("GET /api/spaces/[id]/presence returns ok", async ({ request }) => {
+    const res = await request.get(
+      "/api/spaces/00000000-0000-4000-8000-000000000001/presence",
+    );
+    expect(res.ok()).toBeTruthy();
+    const body = (await res.json()) as { ok?: boolean; peers?: unknown[] };
+    expect(body.ok).toBe(true);
+    expect(Array.isArray(body.peers)).toBe(true);
+  });
+});

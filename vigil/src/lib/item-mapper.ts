@@ -38,5 +38,11 @@ export function rowToCanvasItem(row: ItemRow): CanvasItem {
     entityMeta: row.entityMeta ?? undefined,
     stackId: row.stackId,
     stackOrder: row.stackOrder ?? undefined,
+    updatedAt:
+      row.updatedAt instanceof Date
+        ? row.updatedAt.toISOString()
+        : row.updatedAt
+          ? String(row.updatedAt)
+          : undefined,
   };
 }

@@ -5,6 +5,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -37,6 +38,19 @@ export const spaces = pgTable(
       foreignColumns: [table.id],
     }).onDelete("set null"),
   ],
+);
+
+/** Ephemeral multiplayer awareness (pruned on read by age). */
+export const spacePresence = pgTable(
+  "space_presence",
+  {
+    spaceId: uuid("space_id")
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    clientId: uuid("client_id").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.spaceId, t.clientId] })],
 );
 
 export const items = pgTable("items", {

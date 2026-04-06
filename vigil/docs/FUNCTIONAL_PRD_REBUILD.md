@@ -62,7 +62,7 @@ Activated when DB is available.
 
 Behavior:
 - App resolves active space on bootstrap.
-- Item and camera updates are debounced and persisted via API.
+- Item updates are debounced and persisted via API. **Viewport** (pan/zoom) is debounced to **`localStorage`** per space (`heartgarden-space-camera-v1`), not to Neon.
 - Server-backed search, links, and graph are enabled.
 
 ## Data Model (Behavioral Contract)
@@ -81,8 +81,9 @@ Behavior:
 - `x`, `y`, `zoom`
 
 ## Persistence Tables (Cloud)
-- `spaces`: includes parent-child hierarchy and `canvasState` (camera snapshot).
+- `spaces`: includes parent-child hierarchy; `canvasState` is legacy (shell does not persist camera there).
 - `items`: canonical item rows.
+- `space_presence`: optional heartbeats for soft “others here” UI.
 - `item_links`: directed edges between items in same space.
 - `item_embeddings`: optional legacy table; search is full-text + trigram only.
 

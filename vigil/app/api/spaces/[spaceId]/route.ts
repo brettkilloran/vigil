@@ -75,11 +75,6 @@ export async function PATCH(
     .update(spaces)
     .set({
       ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
-      ...(parsed.data.camera !== undefined
-        ? {
-            canvasState: parsed.data.camera as unknown as Record<string, unknown>,
-          }
-        : {}),
       updatedAt: new Date(),
     })
     .where(eq(spaces.id, spaceId));

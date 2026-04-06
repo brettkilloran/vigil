@@ -68,6 +68,8 @@ const patchBody = z.object({
   imageMeta: z.record(z.string(), z.any()).nullable().optional(),
   stackId: z.string().uuid().nullable().optional(),
   stackOrder: z.number().int().nullable().optional(),
+  /** ISO timestamp from last known server row; mismatch → 409 + current item. */
+  baseUpdatedAt: z.string().optional(),
 });
 
 export async function PATCH(
@@ -130,6 +132,18 @@ export async function PATCH(
   }
 
   const p = parsed.data;
+  if (p.baseUpdatedAt) {
+    const baseMs = Date.parse(p.baseUpdatedAt);
+    if (Number.isFinite(baseMs)) {
+      const rowMs = existing.updatedAt instanceof Date ? existing.updatedAt.getTime() : 0;
+      if (rowMs !== baseMs) {
+        return Response.json(
+          { ok: false, error: "conflict", item: rowToCanvasItem(existing) },
+          { status: 409 },
+        );
+      }
+    }
+  }
   const updates: {
     updatedAt: Date;
     x?: number;

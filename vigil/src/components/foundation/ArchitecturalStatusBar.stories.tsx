@@ -51,3 +51,9 @@ export const NoPulse: Story = {
   },
 };
 
+export const WithCollabPeers: Story = {
+  args: {
+    collabPeerCount: 2,
+  },
+};
+

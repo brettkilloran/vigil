@@ -585,6 +585,7 @@ export function ArchitecturalStatusBar({
   syncBootstrapPending = false,
   syncShowingCachedWorkspace = false,
   syncOfflineNoSnapshot = false,
+  collabPeerCount = 0,
   onExportGraphJson,
   exportGraphPaletteHint,
 }: {
@@ -594,6 +595,8 @@ export function ArchitecturalStatusBar({
   syncBootstrapPending?: boolean;
   syncShowingCachedWorkspace?: boolean;
   syncOfflineNoSnapshot?: boolean;
+  /** Other browsers recently heartbeating this space (best-effort). */
+  collabPeerCount?: number;
   onExportGraphJson?: () => void;
   exportGraphPaletteHint?: string;
 }) {
@@ -614,6 +617,16 @@ export function ArchitecturalStatusBar({
           onExportGraphJson={onExportGraphJson}
           exportGraphPaletteHint={exportGraphPaletteHint}
         />
+        {collabPeerCount > 0 ? (
+          <>
+            <div className={styles.sep} />
+            <ArchitecturalStatusMetric>
+              <span aria-live="polite">
+                {collabPeerCount} other{collabPeerCount === 1 ? "" : "s"} here
+              </span>
+            </ArchitecturalStatusMetric>
+          </>
+        ) : null}
       </div>
     </div>
   );

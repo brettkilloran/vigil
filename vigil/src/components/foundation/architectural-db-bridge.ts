@@ -269,6 +269,71 @@ export function mergeBootstrapView(prev: CanvasGraph, data: BootstrapResponse): 
   };
 }
 
+/**
+ * Apply remote item rows from delta sync. Removes entities missing from `serverItemIdsInSubtree`
+ * but previously listed under `subtreeSpaceIds`. Re-homes entities when `spaceId` changes.
+ */
+export function mergeRemoteItemPatches(
+  prev: CanvasGraph,
+  changedItems: CanvasItem[],
+  serverItemIdsInSubtree: ReadonlySet<string>,
+  subtreeSpaceIds: readonly string[],
+): CanvasGraph {
+  const spacesRecord: Record<string, CanvasSpace> = { ...prev.spaces };
+  const entities: Record<string, CanvasEntity> = { ...prev.entities };
+
+  const prevIdsInSubtree = new Set<string>();
+  for (const sid of subtreeSpaceIds) {
+    for (const id of spacesRecord[sid]?.entityIds ?? []) {
+      prevIdsInSubtree.add(id);
+    }
+  }
+
+  for (const id of prevIdsInSubtree) {
+    if (serverItemIdsInSubtree.has(id)) continue;
+    delete entities[id];
+    for (const sp of Object.values(spacesRecord)) {
+      sp.entityIds = sp.entityIds.filter((e) => e !== id);
+    }
+  }
+
+  for (const item of changedItems) {
+    for (const sp of Object.values(spacesRecord)) {
+      sp.entityIds = sp.entityIds.filter((e) => e !== item.id);
+    }
+    const merged = mergeEntityFromItem(entities[item.id], item);
+    if (!merged) continue;
+    entities[item.id] = merged;
+    const sp = spacesRecord[item.spaceId];
+    if (sp && !sp.entityIds.includes(merged.id)) sp.entityIds.push(merged.id);
+  }
+
+  return {
+    ...prev,
+    spaces: spacesRecord,
+    entities,
+    connections: prev.connections,
+  };
+}
+
+/** Apply one server row (e.g. after a 409 conflict “Reload”). */
+export function applyServerCanvasItemToGraph(prev: CanvasGraph, item: CanvasItem): CanvasGraph {
+  const merged = mergeEntityFromItem(prev.entities[item.id], item);
+  if (!merged) return prev;
+  const spacesRecord: Record<string, CanvasSpace> = { ...prev.spaces };
+  for (const sp of Object.values(spacesRecord)) {
+    sp.entityIds = sp.entityIds.filter((e) => e !== item.id);
+  }
+  const sp = spacesRecord[item.spaceId];
+  if (sp && !sp.entityIds.includes(merged.id)) sp.entityIds.push(merged.id);
+  return {
+    ...prev,
+    spaces: spacesRecord,
+    entities: { ...prev.entities, [item.id]: merged },
+    connections: prev.connections,
+  };
+}
+
 export function buildContentJsonForContentEntity(
   entity: CanvasContentEntity,
 ): Record<string, unknown> {

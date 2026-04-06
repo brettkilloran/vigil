@@ -16,9 +16,12 @@ Full detail lives in server helper [`src/lib/heartgarden-api-boot-context.ts`](.
 6. **Same browser, two cookies** — GM machines use **`access`**; do not share the GM PIN on untrusted player devices.
 7. **Boot brute-force** — `POST /api/heartgarden/boot` is **rate-limited per IP** (in-memory per server instance; tunable via env). **`PLAYWRIGHT_E2E=1`** disables the limit for CI.
 
-## Collaboration caveat
+## Collaboration (multiplayer)
 
-There is no realtime merge layer: multiple Players editing the **same** note are **last-write-wins** via Neon PATCH. Different cards scale better.
+- **Viewport:** Pan/zoom is **per browser** (`localStorage` key map `heartgarden-space-camera-v1`), not `spaces.canvas_state`.
+- **Remote edits:** The shell **polls** `GET /api/spaces/[spaceId]/changes?since=…` (~8s) and merges rows; deletes sync via the returned **`itemIds`** list.
+- **Concurrent edits on one card:** PATCH may return **409** if **`baseUpdatedAt`** does not match; the UI can offer **Use server version**. There is still **no** Google-Docs-style live merged typing (CRDT/OT would be a separate project).
+- **Presence:** Optional **`space_presence`** table + heartbeat routes; status bar shows **“N others here”** when peers are active.
 
 ## Client feature matrix (`ArchitecturalCanvasApp`)
 

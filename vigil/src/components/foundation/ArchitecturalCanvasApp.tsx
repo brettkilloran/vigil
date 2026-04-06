@@ -73,6 +73,8 @@ import {
   canvasItemToEntity,
   htmlToPlainText,
   mergeBootstrapView,
+  mergeRemoteItemPatches,
+  applyServerCanvasItemToGraph,
   architecturalItemType,
   entityGeometryOnSpace,
 } from "@/src/components/foundation/architectural-db-bridge";
@@ -83,9 +85,11 @@ import {
   apiDeleteItem,
   apiDeleteSpaceSubtree,
   apiPatchItem,
-  apiPatchSpaceCamera,
   apiPatchSpaceName,
   fetchBootstrap,
+  fetchSpaceChanges,
+  fetchSpacePresencePeers,
+  postPresenceHeartbeat,
 } from "@/src/components/foundation/architectural-neon-api";
 import { mergeHydratedDbConnections } from "@/src/lib/architectural-item-link-graph";
 import {
@@ -118,12 +122,17 @@ import {
 } from "@/src/components/foundation/architectural-undo";
 import { useModKeyHints } from "@/src/lib/mod-keys";
 import { VIGIL_CANVAS_EFFECTS_STORAGE_KEY } from "@/src/lib/vigil-canvas-prefs";
+import { getOrCreatePresenceClientId } from "@/src/lib/heartgarden-presence-client";
+import { readSpaceCamera, writeSpaceCamera } from "@/src/lib/heartgarden-space-camera";
+import { collectSpaceSubtreeIds } from "@/src/lib/spaces";
 import {
   clearWorkspaceViewCache,
   readWorkspaceViewCache,
   writeWorkspaceViewCache,
   type WorkspaceBootTierTag,
 } from "@/src/lib/workspace-view-cache";
+import type { CanvasItem } from "@/src/model/canvas-types";
+import { defaultCamera } from "@/src/model/canvas-types";
 import { useRecentFolders } from "@/src/hooks/use-recent-folders";
 import { useRecentItems } from "@/src/hooks/use-recent-items";
 import {
@@ -1216,6 +1225,8 @@ export function ArchitecturalCanvasApp({
   /** True when the canvas is hydrated from localStorage because live bootstrap failed (still looks “loaded”). */
   const [workspaceViewFromCache, setWorkspaceViewFromCache] = useState(false);
   const [navTransitionActive, setNavTransitionActive] = useState(false);
+  const [itemConflict, setItemConflict] = useState<CanvasItem | null>(null);
+  const [presencePeerCount, setPresencePeerCount] = useState(0);
   const [canvasEffectsEnabled, setCanvasEffectsEnabled] = useState(true);
   const canvasEffectsEnabledRef = useRef(true);
   const canvasEffectsSoundInitRef = useRef(false);
@@ -1478,6 +1489,9 @@ export function ArchitecturalCanvasApp({
   const persistNeonRef = useRef(false);
   const itemContentPatchTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const cameraPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const itemServerUpdatedAtRef = useRef<Map<string, string>>(new Map());
+  const syncCursorRef = useRef<string>(new Date(0).toISOString());
+  const focusDirtyRef = useRef(false);
   const mediaFileInputRef = useRef<HTMLInputElement | null>(null);
   const lastFormatRangeRef = useRef<Range | null>(null);
   const [historyEpoch, setHistoryEpoch] = useState(0);
@@ -1602,25 +1616,57 @@ export function ArchitecturalCanvasApp({
     }
   }, [canvasEffectsEnabled]);
 
-  const schedulePersistContentBody = useCallback((entityId: string, bodyHtml: string) => {
-    if (!persistNeonRef.current || !isUuidLike(entityId)) return;
-    const prevT = itemContentPatchTimersRef.current.get(entityId);
-    const isFirstTimerForEntity = !prevT;
-    if (prevT) clearTimeout(prevT);
-    if (isFirstTimerForEntity) neonSyncBumpPending();
-    const t = setTimeout(() => {
-      itemContentPatchTimersRef.current.delete(entityId);
-      neonSyncUnbumpPending();
-      const ent = graphRef.current.entities[entityId];
-      if (!ent || ent.kind !== "content") return;
-      const contentJson = buildContentJsonForContentEntity({ ...ent, bodyHtml });
-      void apiPatchItem(entityId, {
-        contentText: htmlToPlainText(bodyHtml),
-        contentJson,
-      });
-    }, 450);
-    itemContentPatchTimersRef.current.set(entityId, t);
+  const patchItemWithVersion = useCallback(async (itemId: string, patch: Record<string, unknown>) => {
+    const base = itemServerUpdatedAtRef.current.get(itemId);
+    const body: Record<string, unknown> = base ? { ...patch, baseUpdatedAt: base } : { ...patch };
+    const r = await apiPatchItem(itemId, body);
+    if (r.ok) {
+      if (r.item.updatedAt) itemServerUpdatedAtRef.current.set(itemId, r.item.updatedAt);
+      return true;
+    }
+    if (!r.ok && "conflict" in r && r.conflict) setItemConflict(r.item);
+    return false;
   }, []);
+
+  const applyItemConflictFromServer = useCallback(() => {
+    const it = itemConflict;
+    if (!it) return;
+    setGraph((prev) => applyServerCanvasItemToGraph(prev, it));
+    if (it.updatedAt) itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
+    queueMicrotask(() => {
+      const e = graphRef.current.entities[it.id];
+      if (e && e.kind === "content" && activeNodeIdRef.current === it.id) {
+        setFocusBody(e.bodyHtml);
+        setFocusBaselineBody(e.bodyHtml);
+        setFocusTitle(e.title);
+        setFocusBaselineTitle(e.title);
+      }
+    });
+    setItemConflict(null);
+  }, [itemConflict]);
+
+  const schedulePersistContentBody = useCallback(
+    (entityId: string, bodyHtml: string) => {
+      if (!persistNeonRef.current || !isUuidLike(entityId)) return;
+      const prevT = itemContentPatchTimersRef.current.get(entityId);
+      const isFirstTimerForEntity = !prevT;
+      if (prevT) clearTimeout(prevT);
+      if (isFirstTimerForEntity) neonSyncBumpPending();
+      const t = setTimeout(() => {
+        itemContentPatchTimersRef.current.delete(entityId);
+        neonSyncUnbumpPending();
+        const ent = graphRef.current.entities[entityId];
+        if (!ent || ent.kind !== "content") return;
+        const contentJson = buildContentJsonForContentEntity({ ...ent, bodyHtml });
+        void patchItemWithVersion(entityId, {
+          contentText: htmlToPlainText(bodyHtml),
+          contentJson,
+        });
+      }, 450);
+      itemContentPatchTimersRef.current.set(entityId, t);
+    },
+    [patchItemWithVersion],
+  );
 
   /** Persist geometry and `items.spaceId` from whichever space currently owns each entity in the graph. */
   const persistNeonItemsLayout = useCallback((ids: string[]) => {
@@ -1654,9 +1700,9 @@ export function ArchitecturalCanvasApp({
           patch.stackOrder = e.stackOrder ?? null;
         }
       }
-      void apiPatchItem(id, patch);
+      void patchItemWithVersion(id, patch);
     }
-  }, []);
+  }, [patchItemWithVersion]);
 
   const closeStackModal = useCallback(() => {
     setStackDrag(null);
@@ -2777,7 +2823,7 @@ export function ArchitecturalCanvasApp({
         queueMicrotask(() => {
           const ent = graphRef.current.entities[gid];
           if (!ent || ent.kind !== "content") return;
-          void apiPatchItem(gid, {
+          void patchItemWithVersion(gid, {
             title: nextTitle,
             contentText: htmlToPlainText(nextBody),
             contentJson: buildContentJsonForContentEntity({
@@ -2794,6 +2840,7 @@ export function ArchitecturalCanvasApp({
     galleryDraftNotes,
     galleryDraftTitle,
     galleryNodeId,
+    patchItemWithVersion,
     recordUndoBeforeMutation,
   ]);
 
@@ -2851,7 +2898,7 @@ export function ArchitecturalCanvasApp({
         queueMicrotask(() => {
           const ent = graphRef.current.entities[aid];
           if (!ent || ent.kind !== "content") return;
-          void apiPatchItem(aid, {
+          void patchItemWithVersion(aid, {
             title: nextTitle,
             contentText: htmlToPlainText(normalizedFocusBody),
             contentJson: buildContentJsonForContentEntity({
@@ -2865,7 +2912,7 @@ export function ArchitecturalCanvasApp({
     }
     setFocusOpen(false);
     setActiveNodeId(null);
-  }, [activeNodeId, focusBody, focusTitle, recordUndoBeforeMutation]);
+  }, [activeNodeId, focusBody, focusTitle, patchItemWithVersion, recordUndoBeforeMutation]);
 
   const discardFocusAndClose = useCallback(() => {
     setFocusOpen(false);
@@ -2878,6 +2925,10 @@ export function ArchitecturalCanvasApp({
       focusBody !== focusBaselineBody,
     [focusTitle, focusBody, focusBaselineTitle, focusBaselineBody],
   );
+
+  useEffect(() => {
+    focusDirtyRef.current = focusDirty;
+  }, [focusDirty]);
 
   const galleryDirty = useMemo(
     () =>
@@ -2955,22 +3006,80 @@ export function ArchitecturalCanvasApp({
   }, [scale, translateX, translateY]);
 
   useEffect(() => {
-    if (!persistNeonRef.current) return;
-    if (!isUuidLike(graph.rootSpaceId) || !isUuidLike(activeSpaceId)) return;
+    if (!isUuidLike(activeSpaceId)) return;
     if (cameraPersistTimerRef.current) clearTimeout(cameraPersistTimerRef.current);
     cameraPersistTimerRef.current = setTimeout(() => {
       cameraPersistTimerRef.current = null;
-      if (!persistNeonRef.current) return;
-      void apiPatchSpaceCamera(activeSpaceId, {
-        x: translateX,
-        y: translateY,
-        zoom: scale,
-      });
+      writeSpaceCamera(activeSpaceId, { x: translateX, y: translateY, zoom: scale });
     }, 700);
     return () => {
       if (cameraPersistTimerRef.current) clearTimeout(cameraPersistTimerRef.current);
     };
-  }, [activeSpaceId, graph.rootSpaceId, scale, translateX, translateY]);
+  }, [activeSpaceId, scale, translateX, translateY]);
+
+  useEffect(() => {
+    if (scenario !== "default" || !canvasBootstrapResolved) return;
+    if (!persistNeonRef.current) return;
+    if (!isUuidLike(activeSpaceId)) return;
+    let cancelled = false;
+    const run = async () => {
+      if (cancelled || document.visibilityState === "hidden") return;
+      const since = syncCursorRef.current;
+      const data = await fetchSpaceChanges(activeSpaceId, since);
+      if (!data?.itemIds || cancelled) return;
+      if (typeof data.cursor === "string" && data.cursor.length > 0) {
+        syncCursorRef.current = data.cursor;
+      }
+      const graphSnap = graphRef.current;
+      const spaceRows = Object.values(graphSnap.spaces).map((s) => ({
+        id: s.id,
+        parentSpaceId: s.parentSpaceId ?? null,
+      }));
+      const subtree = collectSpaceSubtreeIds(activeSpaceId, spaceRows);
+      const serverIds = new Set(data.itemIds);
+      const skipId =
+        focusOpenRef.current && focusDirtyRef.current && activeNodeIdRef.current
+          ? activeNodeIdRef.current
+          : null;
+      const rawItems = data.items ?? [];
+      const changed = skipId ? rawItems.filter((i) => i.id !== skipId) : rawItems;
+      setGraph((prev) => mergeRemoteItemPatches(prev, changed, serverIds, subtree));
+      for (const it of changed) {
+        if (it.updatedAt) itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
+      }
+    };
+    const interval = window.setInterval(run, 8000);
+    void run();
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [scenario, canvasBootstrapResolved, activeSpaceId]);
+
+  useEffect(() => {
+    if (scenario !== "default" || !canvasBootstrapResolved) return;
+    if (!persistNeonRef.current || !isUuidLike(activeSpaceId)) return;
+    const clientId = getOrCreatePresenceClientId();
+    if (!clientId) return;
+    let cancelled = false;
+    const beat = () => {
+      if (!cancelled) void postPresenceHeartbeat(activeSpaceId, clientId);
+    };
+    const poll = async () => {
+      if (cancelled) return;
+      const n = await fetchSpacePresencePeers(activeSpaceId, clientId);
+      if (!cancelled) setPresencePeerCount(n);
+    };
+    beat();
+    void poll();
+    const hb = window.setInterval(beat, 25_000);
+    const pr = window.setInterval(poll, 12_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(hb);
+      window.clearInterval(pr);
+    };
+  }, [scenario, canvasBootstrapResolved, activeSpaceId]);
 
   useEffect(() => {
     if (scenario !== "default" || !canvasBootstrapResolved) return;
@@ -3012,9 +3121,21 @@ export function ArchitecturalCanvasApp({
     setGraph(nextGraph);
     setActiveSpaceId(data.spaceId);
     setNavigationPath(buildPathToSpace(data.spaceId, nextGraph.spaces, nextGraph.rootSpaceId));
-    setTranslateX(data.camera.x);
-    setTranslateY(data.camera.y);
-    setScale(data.camera.zoom);
+    const m = itemServerUpdatedAtRef.current;
+    m.clear();
+    let maxMs = 0;
+    for (const it of data.items) {
+      if (it.updatedAt) {
+        m.set(it.id, it.updatedAt);
+        const t = Date.parse(it.updatedAt);
+        if (Number.isFinite(t) && t > maxMs) maxMs = t;
+      }
+    }
+    syncCursorRef.current = maxMs > 0 ? new Date(maxMs).toISOString() : new Date(0).toISOString();
+    const cam = readSpaceCamera(data.spaceId) ?? defaultCamera();
+    setTranslateX(cam.x);
+    setTranslateY(cam.y);
+    setScale(cam.zoom);
     setMaxZIndex(maxZi);
   }, []);
   const applyBootstrapDataRef = useRef(applyBootstrapData);
@@ -3657,7 +3778,7 @@ export function ArchitecturalCanvasApp({
           ...folder,
           childSpaceId: newSpaceId,
         });
-        await apiPatchItem(folderId, { contentJson });
+        await patchItemWithVersion(folderId, { contentJson });
         flushSync(() => {
           setGraph((prev) => {
             const f = prev.entities[folderId];
@@ -3704,7 +3825,7 @@ export function ArchitecturalCanvasApp({
       });
       return resolved;
     },
-    [activeSpaceId, createId, recordUndoBeforeMutation],
+    [activeSpaceId, createId, patchItemWithVersion, recordUndoBeforeMutation],
   );
 
   const canMoveEntityToSpace = useCallback(
@@ -3925,50 +4046,56 @@ export function ArchitecturalCanvasApp({
       if (toDepth > fromDepth) playVigilUiSound("transition_down");
       else if (toDepth < fromDepth) playVigilUiSound("transition_up");
 
-      const applySpaceNavigation = (
-        merged: CanvasGraph | null,
-        bootstrapCamera: { x: number; y: number; zoom: number } | null,
-        bootstrapMaxZ: number | null,
-      ) => {
+      const applySpaceNavigation = (merged: CanvasGraph | null, bootstrapMaxZ: number | null) => {
         const g = merged ?? graphRef.current;
         if (merged) {
           setGraph(merged);
-          if (bootstrapCamera) {
-            setTranslateX(bootstrapCamera.x);
-            setTranslateY(bootstrapCamera.y);
-            setScale(bootstrapCamera.zoom);
-          }
           if (bootstrapMaxZ !== null) {
             const zCap = bootstrapMaxZ;
             setMaxZIndex((z) => Math.max(z, zCap));
           }
         }
+        if (isUuidLike(spaceId)) {
+          const cam = readSpaceCamera(spaceId) ?? defaultCamera();
+          setTranslateX(cam.x);
+          setTranslateY(cam.y);
+          setScale(cam.zoom);
+        } else if (!merged) {
+          recenterToOrigin();
+        }
         setActiveSpaceId(spaceId);
         setNavigationPath(buildPathToSpace(spaceId, g.spaces, g.rootSpaceId));
         setSelectedNodeIds([]);
-        if (!merged) recenterToOrigin();
       };
 
       if (!canvasEffectsEnabledRef.current) {
         void (async () => {
           let merged: CanvasGraph | null = null;
-          let bootstrapCamera: { x: number; y: number; zoom: number } | null = null;
           let bootstrapMaxZ: number | null = null;
           try {
             if (persistNeonRef.current && isUuidLike(spaceId)) {
               const data = await fetchBootstrap(spaceId);
               if (data && data.demo === false && data.spaceId) {
                 merged = mergeBootstrapView(graphRef.current, data);
-                bootstrapCamera = { x: data.camera.x, y: data.camera.y, zoom: data.camera.zoom };
                 if (data.items.length > 0) {
                   bootstrapMaxZ = Math.max(...data.items.map((i) => i.zIndex), 100);
                 }
+                let maxMs = Date.parse(syncCursorRef.current);
+                if (!Number.isFinite(maxMs)) maxMs = 0;
+                for (const it of data.items) {
+                  if (it.updatedAt) {
+                    itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
+                    const t = Date.parse(it.updatedAt);
+                    if (Number.isFinite(t) && t > maxMs) maxMs = t;
+                  }
+                }
+                syncCursorRef.current = new Date(maxMs).toISOString();
               }
             }
           } catch {
             /* ignore */
           }
-          applySpaceNavigation(merged, bootstrapCamera, bootstrapMaxZ);
+          applySpaceNavigation(merged, bootstrapMaxZ);
         })();
         return;
       }
@@ -3980,17 +4107,25 @@ export function ArchitecturalCanvasApp({
         const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
         let merged: CanvasGraph | null = null;
-        let bootstrapCamera: { x: number; y: number; zoom: number } | null = null;
         let bootstrapMaxZ: number | null = null;
         try {
           if (persistNeonRef.current && isUuidLike(spaceId)) {
             const data = await fetchBootstrap(spaceId);
             if (data && data.demo === false && data.spaceId) {
               merged = mergeBootstrapView(graphRef.current, data);
-              bootstrapCamera = { x: data.camera.x, y: data.camera.y, zoom: data.camera.zoom };
               if (data.items.length > 0) {
                 bootstrapMaxZ = Math.max(...data.items.map((i) => i.zIndex), 100);
               }
+              let maxMs = Date.parse(syncCursorRef.current);
+              if (!Number.isFinite(maxMs)) maxMs = 0;
+              for (const it of data.items) {
+                if (it.updatedAt) {
+                  itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
+                  const t = Date.parse(it.updatedAt);
+                  if (Number.isFinite(t) && t > maxMs) maxMs = t;
+                }
+              }
+              syncCursorRef.current = new Date(maxMs).toISOString();
             }
           }
         } finally {
@@ -3998,7 +4133,7 @@ export function ArchitecturalCanvasApp({
           const waitFadeOutEnd = Math.max(0, VIEWPORT_SCENE_FADE_MS - elapsedAfterFetch);
           if (waitFadeOutEnd > 0) await sleep(waitFadeOutEnd);
 
-          applySpaceNavigation(merged, bootstrapCamera, bootstrapMaxZ);
+          applySpaceNavigation(merged, bootstrapMaxZ);
 
           const elapsedBeforeRelease = now() - tNav;
           const waitUntilCenter = Math.max(0, VIEWPORT_TRANSITION_CENTER_MS - elapsedBeforeRelease);
@@ -4189,11 +4324,11 @@ export function ArchitecturalCanvasApp({
     async (tags: string[]): Promise<boolean> => {
       const draft = resolveVaultReviewDraft();
       if (!draft?.excludeItemId) return false;
-      return apiPatchItem(draft.excludeItemId, {
+      return patchItemWithVersion(draft.excludeItemId, {
         entityMetaMerge: { loreReviewTags: tags },
       });
     },
-    [resolveVaultReviewDraft],
+    [patchItemWithVersion, resolveVaultReviewDraft],
   );
 
   /** Splash / auth boot (`VigilAppBootScreen`) — hide workspace-only chrome until dismissed. */
@@ -4373,14 +4508,14 @@ export function ArchitecturalCanvasApp({
             const ent = graphRef.current.entities[entityId];
             if (ent?.kind !== "folder") return;
             const t = title.trim() || "Untitled Folder";
-            void apiPatchItem(entityId, { title: t });
+            void patchItemWithVersion(entityId, { title: t });
             if (isUuidLike(ent.childSpaceId)) void apiPatchSpaceName(ent.childSpaceId, t);
           });
         },
         120,
       );
     },
-    [queueGraphCommit, recordUndoBeforeMutation],
+    [patchItemWithVersion, queueGraphCommit, recordUndoBeforeMutation],
   );
 
   const setFolderColorScheme = useCallback(
@@ -4411,13 +4546,13 @@ export function ArchitecturalCanvasApp({
             if (!persistNeonRef.current || !isUuidLike(entityId)) return;
             const ent = graphRef.current.entities[entityId];
             if (ent?.kind !== "folder") return;
-            void apiPatchItem(entityId, { contentJson: buildContentJsonForFolderEntity(ent) });
+            void patchItemWithVersion(entityId, { contentJson: buildContentJsonForFolderEntity(ent) });
           });
         },
         120,
       );
     },
-    [queueGraphCommit, recordUndoBeforeMutation],
+    [patchItemWithVersion, queueGraphCommit, recordUndoBeforeMutation],
   );
 
   const folderColorPickerForDock = useMemo(() => {
@@ -4476,6 +4611,9 @@ export function ArchitecturalCanvasApp({
             zIndex: nextZ,
           });
           if (!itemRes.ok || !itemRes.item) return;
+          if (itemRes.item.updatedAt) {
+            itemServerUpdatedAtRef.current.set(itemRes.item.id, itemRes.item.updatedAt);
+          }
           const entity = canvasItemToEntity(itemRes.item, spaceId);
           if (!entity || entity.kind !== "folder") return;
           setGraph((prev) => {
@@ -4559,6 +4697,9 @@ export function ArchitecturalCanvasApp({
           zIndex: nextZ,
         });
         if (!itemRes.ok || !itemRes.item) return;
+        if (itemRes.item.updatedAt) {
+          itemServerUpdatedAtRef.current.set(itemRes.item.id, itemRes.item.updatedAt);
+        }
         const entity = canvasItemToEntity(itemRes.item, spaceId);
         if (!entity) return;
         setGraph((prev) => {
@@ -7285,6 +7426,20 @@ export function ArchitecturalCanvasApp({
 
   return (
     <>
+      {itemConflict ? (
+        <div className={styles.collabConflictBanner} role="alert">
+          <span>
+            Another session updated this card while you were editing. Load the server copy or dismiss to
+            keep your draft.
+          </span>
+          <ArchitecturalButton type="button" size="menu" tone="glass" onClick={applyItemConflictFromServer}>
+            Use server version
+          </ArchitecturalButton>
+          <ArchitecturalButton type="button" size="menu" tone="glass" onClick={() => setItemConflict(null)}>
+            Dismiss
+          </ArchitecturalButton>
+        </div>
+      ) : null}
       {bootLayerVisible ? (
         <VigilAppBootScreen
           technicalReady={technicalViewportReady}
@@ -9076,6 +9231,7 @@ export function ArchitecturalCanvasApp({
                 syncOfflineNoSnapshot={
                   scenario === "default" && showWorkspaceBlockingOverlay
                 }
+                collabPeerCount={presencePeerCount}
                 onExportGraphJson={exportGraphJson}
                 exportGraphPaletteHint={`${modKeyHints.search} → Export graph JSON`}
               />

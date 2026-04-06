@@ -4525,3 +4525,23 @@
   flex-shrink: 0;
   color: color-mix(in oklch, var(--accent) 55%, var(--text-main));
 }
+
+.collabConflictBanner {
+  position: fixed;
+  bottom: 88px;
+  left: 50%;
+  z-index: 85;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  max-width: min(560px, calc(100vw - 24px));
+  transform: translateX(-50%);
+  border-radius: 10px;
+  background: var(--sem-surface-elevated);
+  border: 1px solid var(--sem-border-subtle);
+  box-shadow: 0 8px 32px color-mix(in oklch, black 18%, transparent);
+  font-size: 13px;
+  line-height: 1.35;
+}
