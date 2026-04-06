@@ -17,8 +17,12 @@ import {
 import { filterPlanLinksToSameCanvasSpace } from "@/src/lib/lore-import-item-link";
 import type { IngestionSignals, LoreImportPlan } from "@/src/lib/lore-import-plan-types";
 import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
-import type { VigilDb } from "@/src/lib/spaces";
+import type { HeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
+import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
+import type { SearchFilters, VigilDb } from "@/src/lib/spaces";
 import { hybridRetrieveItems } from "@/src/lib/vault-retrieval";
+
+const GM_LORE_IMPORT_SEARCH: HeartgardenApiBootContext = { role: "gm" };
 
 type OutlineNoteInternal = {
   clientId: string;
@@ -55,10 +59,16 @@ export async function buildLoreImportPlan(args: {
     bodyText: String((n as { bodyText?: string }).bodyText ?? "").slice(0, 120_000),
   }));
 
+  const vaultSearchFilters: SearchFilters =
+    (await finalizeHeartgardenSearchFiltersForDb(args.db, GM_LORE_IMPORT_SEARCH, {})) ?? {};
+
   const candidatesByNoteClientId: Record<string, CandidateRow[]> = {};
   for (const n of notesInternal) {
     const q = `${n.title} ${n.summary}`.trim().slice(0, 800);
-    const hybrid = await hybridRetrieveItems(args.db, q, {}, { maxItems: 8, includeVector: true });
+    const hybrid = await hybridRetrieveItems(args.db, q, vaultSearchFilters, {
+      maxItems: 8,
+      includeVector: true,
+    });
     candidatesByNoteClientId[n.clientId] = hybrid.rows.map((r) => {
       const snippet =
         hybrid.itemIdToFtsSnippet.get(r.item.id) ??

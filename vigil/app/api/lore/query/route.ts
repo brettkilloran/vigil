@@ -4,10 +4,12 @@ import { tryGetDb } from "@/src/db/index";
 import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
+  gmMayAccessSpaceIdAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { loreQueryRateLimitExceeded } from "@/src/lib/lore-query-rate-limit";
 import { retrieveLoreSources, synthesizeLoreAnswer } from "@/src/lib/lore-engine";
-import { assertSpaceExists } from "@/src/lib/spaces";
+import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
+import { assertSpaceExists, type SearchFilters } from "@/src/lib/spaces";
 
 const bodySchema = z.object({
   question: z.string().min(1).max(4000),
@@ -83,7 +85,14 @@ export async function POST(req: Request) {
 
   let sources: Awaited<ReturnType<typeof retrieveLoreSources>>;
   try {
+    const baseFilters: SearchFilters = { spaceId, limit };
     if (spaceId) {
+      if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, spaceId))) {
+        return Response.json(
+          { ok: false, error: "Forbidden.", answer: null, sources: [] },
+          { status: 403 },
+        );
+      }
       const space = await assertSpaceExists(db, spaceId);
       if (!space) {
         return Response.json(
@@ -92,7 +101,14 @@ export async function POST(req: Request) {
         );
       }
     }
-    sources = await retrieveLoreSources(db, question, { spaceId, limit });
+    const finalized = await finalizeHeartgardenSearchFiltersForDb(db, bootCtx, baseFilters);
+    if (!finalized) {
+      return Response.json(
+        { ok: false, error: "Forbidden.", answer: null, sources: [] },
+        { status: 403 },
+      );
+    }
+    sources = await retrieveLoreSources(db, question, finalized);
   } catch (err) {
     console.error("[lore/query] retrieval", err);
     return Response.json(

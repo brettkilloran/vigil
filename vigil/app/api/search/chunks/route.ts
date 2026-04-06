@@ -2,7 +2,10 @@ import { tryGetDb } from "@/src/db/index";
 import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
+  gmMayAccessSpaceIdAsync,
+  heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
 import { assertSpaceExists, type SearchFilters, type VigilDb } from "@/src/lib/spaces";
 import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
 import { searchItemChunksByVector } from "@/src/lib/vault-retrieval";
@@ -27,7 +30,17 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim();
-  const filters = parseFilters(url);
+  const parsed = parseFilters(url);
+
+  if (parsed.spaceId && !(await gmMayAccessSpaceIdAsync(db as VigilDb, bootCtx, parsed.spaceId))) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+
+  const finalized = await finalizeHeartgardenSearchFiltersForDb(db as VigilDb, bootCtx, parsed);
+  if (!finalized) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+  const filters = finalized;
 
   if (filters.spaceId) {
     const space = await assertSpaceExists(db as VigilDb, filters.spaceId);
