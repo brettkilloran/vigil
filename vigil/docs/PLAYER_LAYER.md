@@ -19,10 +19,10 @@ Full detail lives in server helper [`src/lib/heartgarden-api-boot-context.ts`](.
 ## Collaboration (multiplayer)
 
 - **Viewport:** Pan/zoom is **per browser** (`localStorage` key map `heartgarden-space-camera-v1`), not `spaces.canvas_state`.
-- **Remote edits:** The shell **polls** `GET /api/spaces/[spaceId]/changes?since=…` (~8s) and merges rows; deletes sync via the returned **`itemIds`** list. When the tab becomes **visible** again, it **polls immediately** (does not wait for the next interval).
+- **Remote edits:** The shell **polls** `GET /api/spaces/[spaceId]/changes?since=…` on an interval defined with presence timing in [`src/lib/heartgarden-collab-constants.ts`](../src/lib/heartgarden-collab-constants.ts) (8s changes poll, 25s presence heartbeat, 12s peer poll, 120s server presence TTL). **Timers pause while the tab is hidden**; when the tab becomes **visible** again, it **polls immediately** (does not wait for the next interval).
 - **Drafts vs remote:** While the **focus overlay** or an **inline card body** has unpersisted text, merges **keep local title/body** but still apply **layout** from the server for that card.
 - **Concurrent edits on one card:** PATCH may return **409** if **`baseUpdatedAt`** does not match; the UI queues conflicts and can **Use server version** per item. **Geometry-only** conflicts may **apply the server row** without blocking. **404** on PATCH means the item was deleted elsewhere; the shell removes it locally. There is still **no** Google-Docs-style live merged typing (CRDT/OT would be a separate project).
-- **Presence:** Optional **`space_presence`** table + heartbeat routes; status bar shows **“N others here”** when peers are active.
+- **Presence:** Optional **`space_presence`** table + heartbeat routes; status bar shows **“N others here”** when peers are active. The server rate-limits heartbeats **by the client’s public IP**. **Two (or more) players in one household on the same Wi‑Fi** share that single IP, so they are counted together for the limit — this is expected and **does not require any setup** at normal scale (defaults are far above a few tabs). Very large groups on one network (events, classrooms) can raise **`HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_*`** — see [`docs/API.md`](./API.md) and [`docs/VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md).
 
 ## Client feature matrix (`ArchitecturalCanvasApp`)
 

@@ -1,23 +1,27 @@
-import { and, eq, gt, lt } from "drizzle-orm";
+import { and, eq, gt, lte } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { spacePresence } from "@/src/db/schema";
-import {
-  getHeartgardenApiBootContext,
-  gmMayAccessSpaceId,
-  heartgardenApiForbiddenJsonResponse,
-  heartgardenMaskNotFoundForVisitor,
-  isHeartgardenVisitorBlocked,
-  visitorMayAccessSpaceId,
-} from "@/src/lib/heartgarden-api-boot-context";
-import { assertSpaceExists } from "@/src/lib/spaces";
+import { getHeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
+import { HEARTGARDEN_PRESENCE_TTL_MS } from "@/src/lib/heartgarden-collab-constants";
+import { heartgardenBootClientIp } from "@/src/lib/heartgarden-boot-rate-limit";
+import { consumeHeartgardenPresencePostRateLimit } from "@/src/lib/heartgarden-presence-rate-limit";
+import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 import { z } from "zod";
-
-const PRESENCE_TTL_MS = 120_000;
 
 const postBody = z.object({
   clientId: z.string().uuid(),
 });
+
+async function deleteStalePresenceForSpace(
+  db: NonNullable<ReturnType<typeof tryGetDb>>,
+  spaceId: string,
+) {
+  const staleCutoff = new Date(Date.now() - HEARTGARDEN_PRESENCE_TTL_MS);
+  await db
+    .delete(spacePresence)
+    .where(and(eq(spacePresence.spaceId, spaceId), lte(spacePresence.updatedAt, staleCutoff)));
+}
 
 export async function GET(
   req: Request,
@@ -33,29 +37,16 @@ export async function GET(
   }
 
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
-
   const { spaceId } = await context.params;
-  const space = await assertSpaceExists(db, spaceId);
-  if (!space) {
-    return heartgardenMaskNotFoundForVisitor(
-      bootCtx,
-      Response.json({ ok: false, error: "Space not found" }, { status: 404 }),
-    );
-  }
-  if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
-  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
+  const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
+  if (!access.ok) return access.response;
+
+  await deleteStalePresenceForSpace(db, spaceId);
 
   const url = new URL(req.url);
   const selfId = url.searchParams.get("except")?.trim() ?? "";
 
-  const cutoff = new Date(Date.now() - PRESENCE_TTL_MS);
+  const cutoff = new Date(Date.now() - HEARTGARDEN_PRESENCE_TTL_MS);
   const rows = await db
     .select({ clientId: spacePresence.clientId })
     .from(spacePresence)
@@ -83,23 +74,12 @@ export async function POST(
   }
 
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
-
   const { spaceId } = await context.params;
-  const space = await assertSpaceExists(db, spaceId);
-  if (!space) {
-    return heartgardenMaskNotFoundForVisitor(
-      bootCtx,
-      Response.json({ ok: false, error: "Space not found" }, { status: 404 }),
-    );
-  }
-  if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
-  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
+  const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
+  if (!access.ok) return access.response;
+
+  if (!consumeHeartgardenPresencePostRateLimit(heartgardenBootClientIp(req))) {
+    return Response.json({ ok: false, error: "Rate limited" }, { status: 429 });
   }
 
   let json: unknown;
@@ -114,22 +94,20 @@ export async function POST(
     return Response.json({ ok: false, error: parsed.error.flatten() }, { status: 400 });
   }
 
+  const now = new Date();
   await db
     .insert(spacePresence)
     .values({
       spaceId,
       clientId: parsed.data.clientId,
-      updatedAt: new Date(),
+      updatedAt: now,
     })
     .onConflictDoUpdate({
       target: [spacePresence.spaceId, spacePresence.clientId],
-      set: { updatedAt: new Date() },
+      set: { updatedAt: now },
     });
 
-  const staleCutoff = new Date(Date.now() - PRESENCE_TTL_MS * 3);
-  await db
-    .delete(spacePresence)
-    .where(and(eq(spacePresence.spaceId, spaceId), lt(spacePresence.updatedAt, staleCutoff)));
+  await deleteStalePresenceForSpace(db, spaceId);
 
   return Response.json({ ok: true });
 }

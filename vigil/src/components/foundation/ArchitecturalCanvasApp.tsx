@@ -73,7 +73,6 @@ import {
   canvasItemToEntity,
   htmlToPlainText,
   mergeBootstrapView,
-  mergeRemoteItemPatches,
   applyServerCanvasItemToGraph,
   removeEntitiesFromGraphAfterRemoteDelete,
   architecturalItemType,
@@ -88,9 +87,6 @@ import {
   apiPatchItem,
   apiPatchSpaceName,
   fetchBootstrap,
-  fetchSpaceChanges,
-  fetchSpacePresencePeers,
-  postPresenceHeartbeat,
 } from "@/src/components/foundation/architectural-neon-api";
 import { mergeHydratedDbConnections } from "@/src/lib/architectural-item-link-graph";
 import {
@@ -123,9 +119,9 @@ import {
 } from "@/src/components/foundation/architectural-undo";
 import { useModKeyHints } from "@/src/lib/mod-keys";
 import { VIGIL_CANVAS_EFFECTS_STORAGE_KEY } from "@/src/lib/vigil-canvas-prefs";
-import { getOrCreatePresenceClientId } from "@/src/lib/heartgarden-presence-client";
 import { readSpaceCamera, writeSpaceCamera } from "@/src/lib/heartgarden-space-camera";
-import { collectSpaceSubtreeIds } from "@/src/lib/spaces";
+import { useHeartgardenPresenceHeartbeat } from "@/src/hooks/use-heartgarden-presence-heartbeat";
+import { useHeartgardenSpaceChangeSync } from "@/src/hooks/use-heartgarden-space-change-sync";
 import {
   clearWorkspaceViewCache,
   readWorkspaceViewCache,
@@ -2999,6 +2995,31 @@ export function ArchitecturalCanvasApp({
     focusDirtyRef.current = focusDirty;
   }, [focusDirty]);
 
+  const collabNeonActive =
+    scenario === "default" &&
+    canvasBootstrapResolved &&
+    persistNeonRef.current &&
+    isUuidLike(activeSpaceId);
+
+  useHeartgardenSpaceChangeSync({
+    enabled: collabNeonActive,
+    activeSpaceId,
+    graphRef,
+    syncCursorRef,
+    focusOpenRef,
+    focusDirtyRef,
+    activeNodeIdRef,
+    inlineContentDirtyIdsRef,
+    setGraph,
+    itemServerUpdatedAtRef,
+  });
+
+  useHeartgardenPresenceHeartbeat({
+    enabled: collabNeonActive,
+    activeSpaceId,
+    setPresencePeerCount,
+  });
+
   const galleryDirty = useMemo(
     () =>
       !!galleryOpen &&
@@ -3085,83 +3106,6 @@ export function ArchitecturalCanvasApp({
       if (cameraPersistTimerRef.current) clearTimeout(cameraPersistTimerRef.current);
     };
   }, [activeSpaceId, scale, translateX, translateY]);
-
-  useEffect(() => {
-    if (scenario !== "default" || !canvasBootstrapResolved) return;
-    if (!persistNeonRef.current) return;
-    if (!isUuidLike(activeSpaceId)) return;
-    let cancelled = false;
-    let inFlight = false;
-    const run = async () => {
-      if (cancelled || document.visibilityState === "hidden" || inFlight) return;
-      inFlight = true;
-      try {
-        const since = syncCursorRef.current;
-        const data = await fetchSpaceChanges(activeSpaceId, since);
-        if (!data?.itemIds || cancelled) return;
-        if (typeof data.cursor === "string" && data.cursor.length > 0) {
-          syncCursorRef.current = data.cursor;
-        }
-        const graphSnap = graphRef.current;
-        const spaceRows = Object.values(graphSnap.spaces).map((s) => ({
-          id: s.id,
-          parentSpaceId: s.parentSpaceId ?? null,
-        }));
-        const subtree = collectSpaceSubtreeIds(activeSpaceId, spaceRows);
-        const serverIds = new Set(data.itemIds);
-        const protectedContentIds = new Set<string>();
-        if (focusOpenRef.current && focusDirtyRef.current && activeNodeIdRef.current) {
-          protectedContentIds.add(activeNodeIdRef.current);
-        }
-        inlineContentDirtyIdsRef.current.forEach((id) => protectedContentIds.add(id));
-        const rawItems = data.items ?? [];
-        setGraph((prev) =>
-          mergeRemoteItemPatches(prev, rawItems, serverIds, subtree, protectedContentIds),
-        );
-        for (const it of rawItems) {
-          if (it.updatedAt) itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
-        }
-      } finally {
-        inFlight = false;
-      }
-    };
-    const interval = window.setInterval(run, 8000);
-    void run();
-    const onVisibility = () => {
-      if (!cancelled && document.visibilityState === "visible") void run();
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [scenario, canvasBootstrapResolved, activeSpaceId]);
-
-  useEffect(() => {
-    if (scenario !== "default" || !canvasBootstrapResolved) return;
-    if (!persistNeonRef.current || !isUuidLike(activeSpaceId)) return;
-    const clientId = getOrCreatePresenceClientId();
-    if (!clientId) return;
-    let cancelled = false;
-    const beat = () => {
-      if (!cancelled) void postPresenceHeartbeat(activeSpaceId, clientId);
-    };
-    const poll = async () => {
-      if (cancelled) return;
-      const n = await fetchSpacePresencePeers(activeSpaceId, clientId);
-      if (!cancelled) setPresencePeerCount(n);
-    };
-    beat();
-    void poll();
-    const hb = window.setInterval(beat, 25_000);
-    const pr = window.setInterval(poll, 12_000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(hb);
-      window.clearInterval(pr);
-    };
-  }, [scenario, canvasBootstrapResolved, activeSpaceId]);
 
   useEffect(() => {
     if (scenario !== "default" || !canvasBootstrapResolved) return;

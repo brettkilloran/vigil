@@ -24,6 +24,8 @@ Use with **[`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)** and the **[dashboard check
 | `HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC` | Optional | Optional | Cookie lifetime (default **30 days**); must be **60–31536000** if set. |
 | `HEARTGARDEN_BOOT_POST_RATE_LIMIT_MAX` | Optional | Optional | Max **`POST /api/heartgarden/boot`** attempts per IP per window (default **40**; clamped **3–500**). In-memory per server instance. |
 | `HEARTGARDEN_BOOT_POST_RATE_LIMIT_WINDOW_MS` | Optional | Optional | Rate-limit window in ms (default **900000** = 15 min; clamped **30000–3600000**). |
+| `HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_MAX` | Optional | Optional | Max **`POST /api/spaces/[id]/presence`** per **public IP** per window (default **4000**; clamped **10–100000**). **Roommates / family on the same home Wi‑Fi** share one IP — the default is already safe for that; raise only for unusually many devices on one network (see **`docs/PLAYER_LAYER.md`**). In-memory per server instance. |
+| `HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_WINDOW_MS` | Optional | Optional | Presence rate-limit window in ms (default **900000** = 15 min; clamped **60000–3600000**). |
 | `HEARTGARDEN_PLAYER_SPACE_ID` | If Players PIN used | If Players PIN used | UUID of the Neon **space** Players may use (must exist in DB). Without a valid value, Players sessions get **403** on bootstrap and data routes. Not required for **access**-only gate. |
 
 **Do not set:** `PLAYWRIGHT_E2E` (also forces the boot gate **off** in **`/api/heartgarden/boot`** for E2E).

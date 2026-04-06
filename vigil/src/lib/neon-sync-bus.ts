@@ -150,6 +150,17 @@ export function neonSyncReportAuxiliaryFailure(detail: NeonSyncFailureInput) {
   emit();
 }
 
+/**
+ * Clears {@link NeonSyncSnapshot.lastError} only when it contains `fragment` (e.g. after a
+ * successful delta poll). Avoids wiping mutation errors from PATCH flows.
+ */
+export function neonSyncClearLastErrorIfContains(fragment: string) {
+  if (!cloudEnabled || !fragment || lastError == null) return;
+  if (!lastError.includes(fragment)) return;
+  lastError = null;
+  emit();
+}
+
 export function formatSavedRelative(ts: number | null): string {
   if (ts == null) return "";
   const sec = Math.floor((Date.now() - ts) / 1000);

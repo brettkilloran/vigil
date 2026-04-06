@@ -2,20 +2,10 @@ import { and, asc, gt, inArray } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
-import {
-  getHeartgardenApiBootContext,
-  gmMayAccessSpaceId,
-  heartgardenApiForbiddenJsonResponse,
-  heartgardenMaskNotFoundForVisitor,
-  isHeartgardenVisitorBlocked,
-  visitorMayAccessSpaceId,
-} from "@/src/lib/heartgarden-api-boot-context";
+import { getHeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
+import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
-import {
-  assertSpaceExists,
-  collectSpaceSubtreeIds,
-  listGmWorkspaceSpaces,
-} from "@/src/lib/spaces";
+import { collectSpaceSubtreeIds, listGmWorkspaceSpaces } from "@/src/lib/spaces";
 
 function maxIsoCursor(rows: { updatedAt: Date | null }[], fallbackMs: number): string {
   let ms = fallbackMs;
@@ -45,24 +35,10 @@ export async function GET(
   }
 
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenVisitorBlocked(bootCtx)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
-
   const { spaceId } = await context.params;
-  const space = await assertSpaceExists(db, spaceId);
-  if (!space) {
-    return heartgardenMaskNotFoundForVisitor(
-      bootCtx,
-      Response.json({ ok: false, error: "Space not found" }, { status: 404 }),
-    );
-  }
-  if (!visitorMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
-  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
+  const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
+  if (!access.ok) return access.response;
+  const space = access.space;
 
   const url = new URL(req.url);
   const sinceRaw = url.searchParams.get("since")?.trim() ?? "";

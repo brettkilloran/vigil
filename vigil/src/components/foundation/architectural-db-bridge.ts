@@ -299,6 +299,13 @@ export function mergeRemoteItemPatches(
   const spacesRecord: Record<string, CanvasSpace> = { ...prev.spaces };
   const entities: Record<string, CanvasEntity> = { ...prev.entities };
 
+  const entityHome = new Map<string, string>();
+  for (const [sid, sp] of Object.entries(spacesRecord)) {
+    for (const eid of sp.entityIds) {
+      entityHome.set(eid, sid);
+    }
+  }
+
   const prevIdsInSubtree = new Set<string>();
   for (const sid of subtreeSpaceIds) {
     for (const id of spacesRecord[sid]?.entityIds ?? []) {
@@ -306,18 +313,22 @@ export function mergeRemoteItemPatches(
     }
   }
 
+  const stripFromHome = (id: string) => {
+    const home = entityHome.get(id);
+    if (home && spacesRecord[home]) {
+      spacesRecord[home].entityIds = spacesRecord[home].entityIds.filter((e) => e !== id);
+    }
+    entityHome.delete(id);
+  };
+
   for (const id of prevIdsInSubtree) {
     if (serverItemIdsInSubtree.has(id)) continue;
     delete entities[id];
-    for (const sp of Object.values(spacesRecord)) {
-      sp.entityIds = sp.entityIds.filter((e) => e !== id);
-    }
+    stripFromHome(id);
   }
 
   for (const item of changedItems) {
-    for (const sp of Object.values(spacesRecord)) {
-      sp.entityIds = sp.entityIds.filter((e) => e !== item.id);
-    }
+    stripFromHome(item.id);
     const mergeFn = protectedContentIds.has(item.id)
       ? mergeEntityFromItemProtectingText
       : mergeEntityFromItem;
@@ -326,6 +337,7 @@ export function mergeRemoteItemPatches(
     entities[item.id] = merged;
     const sp = spacesRecord[item.spaceId];
     if (sp && !sp.entityIds.includes(merged.id)) sp.entityIds.push(merged.id);
+    entityHome.set(item.id, item.spaceId);
   }
 
   return {

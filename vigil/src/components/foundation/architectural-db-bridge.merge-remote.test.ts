@@ -80,6 +80,27 @@ describe("mergeRemoteItemPatches", () => {
     expect(out.bodyHtml).toBe("<div>local draft</div>");
     expect(out.slots["space-1"]).toEqual({ x: 120, y: 240 });
   });
+
+  it("moves entity to another space in subtree when server row changes spaceId", () => {
+    const boot: BootstrapResponse = {
+      ok: true,
+      demo: false,
+      spaceId: "space-1",
+      spaces: [
+        { id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
+        { id: "space-2", name: "Child", parentSpaceId: "space-1", updatedAt: "2020-01-01T00:00:00.000Z" },
+      ],
+      items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
+      camera: { x: 0, y: 0, zoom: 1 },
+    };
+    const prev = buildCanvasGraphFromBootstrap(boot);
+    const moved = noteItem("a", "space-2", "A", "2020-01-02T00:00:00.000Z");
+    const subtree = ["space-1", "space-2"];
+    const next = mergeRemoteItemPatches(prev, [moved], new Set(["a"]), subtree);
+    expect(next.entities.a?.id).toBe("a");
+    expect(next.spaces["space-1"]?.entityIds).toEqual([]);
+    expect(next.spaces["space-2"]?.entityIds).toEqual(["a"]);
+  });
 });
 
 describe("removeEntitiesFromGraphAfterRemoteDelete", () => {

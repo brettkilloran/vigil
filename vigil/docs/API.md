@@ -30,7 +30,7 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 | DELETE | `/api/spaces/[spaceId]` | Delete space (cascade per schema). |
 | GET | `/api/spaces/[spaceId]/changes` | Query **`since`** (ISO timestamp). Returns **`{ ok, items, itemIds, cursor }`** — changed rows since **`since`**, full id list for the space subtree (for delete sync), and a **`cursor`** for the next poll. Boot-scoped like other space routes. |
 | GET | `/api/spaces/[spaceId]/presence` | Optional **`?except=<clientUuid>`**. Peers with a heartbeat in the last **~2 minutes**. |
-| POST | `/api/spaces/[spaceId]/presence` | Body **`{ clientId: uuid }`** — heartbeat (upsert). Deletes stale rows for that space (heartbeats older than several × TTL). Requires **`space_presence`** table in Postgres (`npm run db:push` after schema pull). |
+| POST | `/api/spaces/[spaceId]/presence` | Body **`{ clientId: uuid }`** — heartbeat (upsert). Rate-limited **per public IP** (in-memory per server instance). **Same household Wi‑Fi** = one IP for everyone there; defaults assume this is normal and stay well above a few players. Tune **`HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_*`** only for very many devices on one network. **`PLAYWRIGHT_E2E=1`** bypasses. Deletes stale rows for that space (heartbeats not newer than the server TTL). **`429`** if rate limited. Requires **`space_presence`** in Postgres (`npm run db:push` after schema pull). |
 | GET | `/api/spaces/[spaceId]/items` | Items for space. |
 | POST | `/api/spaces/[spaceId]/items` | Create item in space. |
 | GET | `/api/spaces/[spaceId]/graph` | Graph JSON export for space. |
@@ -117,6 +117,8 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 | `HEARTGARDEN_PLAYER_SPACE_ID` | Visitor-tier scoped space UUID (see **`docs/PLAYER_LAYER.md`**) |
 | `HEARTGARDEN_BOOT_POST_RATE_LIMIT_MAX` | Optional max **`POST /api/heartgarden/boot`** attempts per IP per window (default **40**, clamped **3–500**) |
 | `HEARTGARDEN_BOOT_POST_RATE_LIMIT_WINDOW_MS` | Optional window length in ms (default **15 minutes**, clamped **30s–1h**) |
+| `HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_MAX` | Optional max **`POST …/presence`** per **public IP** per window (default **4000**, clamped **10–100000**). ~36 posts per **tab** per 15 min at a 25s heartbeat (two household players on one Wi‑Fi ≈ 72 — still tiny vs default). Raise only for very many devices sharing one IP. |
+| `HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_WINDOW_MS` | Optional window in ms (default **15 minutes**, clamped **60s–1h**) |
 
 See also **`docs/DEPLOY_VERCEL.md`**, **`docs/FOLLOW_UP.md`**, and **`AGENTS.md`** for operational detail.
 
