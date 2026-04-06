@@ -143,10 +143,10 @@ function SaveAndVersionPopover({
 
     if (awaitingBootAuth) {
       pulseToneClass = styles.pulseDotToneLocal;
-      statusLine = "Not signed in yet";
-      detailTitle = "Finish the splash screen first";
+      statusLine = "Awaiting sign-in";
+      detailTitle = "No active session";
       detailBody =
-        "You have not opened a signed-in session yet, so the workspace has not loaded and nothing here reflects database status. Use Enter the garden on the splash screen, then enter your access code. After that, this strip shows whether you are synced with the cloud.";
+        "Save and sync information applies only after you authenticate. Continue from the welcome screen, then enter your access code when the gate requests it. Until a session is established, the workspace does not load from the server and this panel does not reflect database state.";
     } else if (bootstrapPending) {
       pulseToneClass = styles.pulseDotToneLoading;
       statusLine = "Loading workspace…";
@@ -195,7 +195,7 @@ function SaveAndVersionPopover({
     }
 
     const live = awaitingBootAuth
-      ? "Not signed in; complete the splash screen to load workspace"
+      ? "Awaiting sign-in; authenticate from the welcome screen to load the workspace"
       : bootstrapPending
         ? "Loading workspace"
         : offlineNoSnapshot
@@ -212,11 +212,13 @@ function SaveAndVersionPopover({
                   ? `Saved to Neon ${rel}`
                   : "Saved to Neon";
 
-    const aria = `Save and database: ${statusLine}. Open menu for details, export, and version history.${
-      sync.cloudEnabled && sync.lastError?.trim()
-        ? " Bottom toolbar create buttons are disabled until the next successful save."
-        : ""
-    }`;
+    const aria = awaitingBootAuth
+      ? `Connection status: ${statusLine}. Open the menu for details. A valid session is required before workspace data loads.`
+      : `Save and database: ${statusLine}. Open menu for details, export, and version history.${
+          sync.cloudEnabled && sync.lastError?.trim()
+            ? " Bottom toolbar create buttons are disabled until the next successful save."
+            : ""
+        }`;
 
     return {
       pulseToneClass,
@@ -315,13 +317,15 @@ function SaveAndVersionPopover({
 
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent) => {
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
       const t = e.target as Node;
       if (triggerRef.current?.contains(t) || panelRef.current?.contains(t)) return;
       closeSyncPopover();
     };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    /* Capture: dismiss before canvas / shell bubble handlers; inside-panel hits still target descendants first. */
+    document.addEventListener("pointerdown", onDown, true);
+    return () => document.removeEventListener("pointerdown", onDown, true);
   }, [open, closeSyncPopover]);
 
   const handleExport = () => {
@@ -336,10 +340,14 @@ function SaveAndVersionPopover({
           <div
             ref={panelRef}
             id={popoverId}
+            data-hg-sync-popover="true"
             className={styles.syncPopover}
             style={{ top: panelPos.top, left: panelPos.left }}
             role="dialog"
             aria-labelledby={`${popoverId}-title`}
+            /* Block bubble to document — canvas + other shell listeners must not eat clicks / break copy. */
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
             <div id={`${popoverId}-title`} className={styles.syncPopoverTitle}>
               {detailTitle}

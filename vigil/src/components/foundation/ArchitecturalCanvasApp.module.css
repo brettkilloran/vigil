@@ -2124,7 +2124,11 @@
   backdrop-filter: var(--chrome-glass-filter);
   -webkit-backdrop-filter: var(--chrome-glass-filter);
   box-shadow: var(--chrome-glass-shadow);
-  z-index: 850;
+  /* Above in-portal siblings (cmdk 1200, wiki 12000) and explicit hit-target under pointer-events:none #hg-portal-root */
+  z-index: 15000;
+  pointer-events: auto;
+  user-select: text;
+  -webkit-user-select: text;
   display: flex;
   flex-direction: column;
   align-items: stretch;

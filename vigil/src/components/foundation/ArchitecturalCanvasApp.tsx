@@ -6965,6 +6965,7 @@ export function ArchitecturalCanvasApp({
   useEffect(() => {
     const onMouseDown = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
+      if (target.closest("[data-hg-sync-popover='true']")) return;
       const taskCheckbox = target.closest(`.${styles.taskCheckbox}`);
       if (taskCheckbox) {
         event.preventDefault();
@@ -8270,6 +8271,7 @@ export function ArchitecturalCanvasApp({
     const onDocMouseDown = (event: MouseEvent) => {
       const t = event.target as HTMLElement | null;
       if (!t) return;
+      if (t.closest("[data-hg-sync-popover='true']")) return;
       if (t.closest("[data-connection-id]")) return;
       if (connectionContextMenu) return;
       setSelectedConnectionId(null);
