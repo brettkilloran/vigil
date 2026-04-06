@@ -29,6 +29,27 @@ function assignRef<T>(ref: Ref<T> | undefined, value: T | null) {
 
 type Side = "top" | "bottom" | "left" | "right";
 
+/** Stable array identity for `avoidSides` on bottom-anchored chrome (dock, metrics strip, etc.). */
+export const ARCH_TOOLTIP_AVOID_BOTTOM: readonly Side[] = ["bottom"];
+
+/** Stable array identity for `avoidSides` on top strips (nav, top-right tools). */
+export const ARCH_TOOLTIP_AVOID_TOP: readonly Side[] = ["top"];
+
+function preferredSideOrder(preferred: Side): Side[] {
+  switch (preferred) {
+    case "top":
+      return ["top", "bottom", "right", "left"];
+    case "bottom":
+      return ["bottom", "top", "right", "left"];
+    case "left":
+      return ["left", "right", "top", "bottom"];
+    case "right":
+      return ["right", "left", "top", "bottom"];
+    default:
+      return ["top", "bottom", "right", "left"];
+  }
+}
+
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
@@ -57,6 +78,11 @@ export function ArchitecturalTooltip({
   disabled = false,
   /** When true, `aria-describedby` points at the tooltip while open (e.g. long help vs short label). */
   associateDescription = false,
+  /**
+   * Sides to skip when resolving viewport overflow. Use `["bottom"]` for bottom-dock / bottom-right
+   * chrome so tips stay above controls instead of flipping onto the canvas; `["top"]` for top strips.
+   */
+  avoidSides,
 }: {
   content: ReactNode;
   children: ReactElement;
@@ -64,6 +90,7 @@ export function ArchitecturalTooltip({
   delayMs?: number;
   disabled?: boolean;
   associateDescription?: boolean;
+  avoidSides?: readonly Side[];
 }) {
   const tipId = useId();
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -145,14 +172,9 @@ export function ArchitecturalTooltip({
       left + tw > vw - VIEWPORT_MARGIN;
 
     if (overflow()) {
-      const order: Side[] =
-        side === "top"
-          ? ["top", "bottom", "right", "left"]
-          : side === "bottom"
-            ? ["bottom", "top", "right", "left"]
-            : side === "left"
-              ? ["left", "right", "top", "bottom"]
-              : ["right", "left", "top", "bottom"];
+      const avoid = new Set(avoidSides ?? []);
+      let order = preferredSideOrder(side).filter((s) => !avoid.has(s));
+      if (order.length === 0) order = [side];
 
       for (const s of order) {
         place(s);
@@ -168,7 +190,7 @@ export function ArchitecturalTooltip({
 
     tip.dataset.side = resolvedSide;
     setCoords({ top, left });
-  }, [side]);
+  }, [side, avoidSides]);
 
   useLayoutEffect(() => {
     if (!open) return;

@@ -1,6 +1,6 @@
 "use client";
 
-import { MagnifyingGlass, SquaresFour, Waves, WarningCircle } from "@phosphor-icons/react";
+import { MagnifyingGlass, PictureInPicture, Waves, WarningCircle } from "@phosphor-icons/react";
 import {
   useCallback,
   useEffect,
@@ -17,7 +17,10 @@ import {
 import { createPortal } from "react-dom";
 
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
-import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
+import {
+  ArchitecturalTooltip,
+  ARCH_TOOLTIP_AVOID_BOTTOM,
+} from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 import { cx } from "@/src/lib/cx";
 import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
@@ -492,7 +495,12 @@ export function ArchitecturalCanvasEffectsToggle({
     : "Restore transitions and ambient chrome";
 
   const control = (
-    <ArchitecturalTooltip content={title} side="top" delayMs={420}>
+    <ArchitecturalTooltip
+      content={title}
+      side="top"
+      delayMs={420}
+      avoidSides={ARCH_TOOLTIP_AVOID_BOTTOM}
+    >
       <Button
         type="button"
         variant="ghost"
@@ -510,7 +518,12 @@ export function ArchitecturalCanvasEffectsToggle({
 
   if (layout === "bare") {
     return (
-      <ArchitecturalTooltip content={title} side="top" delayMs={420}>
+      <ArchitecturalTooltip
+        content={title}
+        side="top"
+        delayMs={420}
+        avoidSides={ARCH_TOOLTIP_AVOID_BOTTOM}
+      >
         <Button
           type="button"
           variant="ghost"
@@ -592,8 +605,9 @@ export function ArchitecturalViewportMetrics({
       <div className={styles.sep} aria-hidden />
       <ArchitecturalTooltip
         content={minimapOpen ? "Hide canvas map" : "Show canvas map"}
-        side="bottom"
+        side="top"
         delayMs={280}
+        avoidSides={ARCH_TOOLTIP_AVOID_BOTTOM}
       >
         <Button
           type="button"
@@ -605,7 +619,7 @@ export function ArchitecturalViewportMetrics({
           aria-pressed={minimapOpen}
           aria-label={minimapOpen ? "Hide canvas map" : "Show canvas map"}
         >
-          <SquaresFour
+          <PictureInPicture
             size={20}
             weight={minimapOpen ? "fill" : "regular"}
             aria-hidden

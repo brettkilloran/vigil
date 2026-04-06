@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { CanvasMinimap } from "@/src/components/foundation/CanvasMinimap";
 import type { CanvasGraph } from "@/src/components/foundation/architectural-types";
-import { buildCollapsedStacksList } from "@/src/lib/canvas-view-bounds";
+import { buildCollapsedStacksList, minimapLayoutSignature } from "@/src/lib/canvas-view-bounds";
 
 const SPACE = "space-1";
 
@@ -78,6 +78,7 @@ const mockGraph: CanvasGraph = {
 };
 
 const collapsed = buildCollapsedStacksList(mockGraph, SPACE);
+const mockMinimapLayoutKey = minimapLayoutSignature(mockGraph, SPACE);
 
 function MinimapDemo() {
   const [translateX, setTranslateX] = useState(120);
@@ -96,6 +97,7 @@ function MinimapDemo() {
     >
       <CanvasMinimap
         graph={mockGraph}
+        layoutSignature={mockMinimapLayoutKey}
         activeSpaceId={SPACE}
         collapsedStacks={collapsed}
         translateX={translateX}

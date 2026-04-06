@@ -13,7 +13,10 @@ import {
   type SyntheticEvent,
 } from "react";
 
-import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
+import {
+  ArchitecturalTooltip,
+  ARCH_TOOLTIP_AVOID_BOTTOM,
+} from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 
 import {
@@ -499,7 +502,12 @@ export function VigilBootAmbientAudio({
         ))}
       </div>
       {embedInChromeRow ? (
-        <ArchitecturalTooltip content={title} side="top" delayMs={320}>
+        <ArchitecturalTooltip
+          content={title}
+          side="top"
+          delayMs={320}
+          avoidSides={ARCH_TOOLTIP_AVOID_BOTTOM}
+        >
           <Button
             type="button"
             variant="ghost"
@@ -519,7 +527,12 @@ export function VigilBootAmbientAudio({
       ) : (
         <div className={styles.panel} role="toolbar" aria-label="App audio — ambient and interface sounds">
           <div className={styles.toolbar}>
-            <ArchitecturalTooltip content={title} side="top" delayMs={320}>
+            <ArchitecturalTooltip
+              content={title}
+              side="top"
+              delayMs={320}
+              avoidSides={ARCH_TOOLTIP_AVOID_BOTTOM}
+            >
               <Button
                 type="button"
                 variant="ghost"

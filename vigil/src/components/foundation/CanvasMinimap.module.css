@@ -25,6 +25,12 @@
   gap: 6px;
 }
 
+/* Bottom-right chrome: stretch to `.viewportMetricsMinimapAbove` (same width as X/Y + zoom strip). */
+.rootMetricsDock {
+  width: 100%;
+  max-width: 100%;
+}
+
 .svg {
   display: block;
   width: 100%;

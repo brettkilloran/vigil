@@ -30,7 +30,10 @@ import {
   ArchitecturalButton,
   type ArchitecturalButtonTone,
 } from "@/src/components/foundation/ArchitecturalButton";
-import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
+import {
+  ArchitecturalTooltip,
+  ARCH_TOOLTIP_AVOID_BOTTOM,
+} from "@/src/components/foundation/ArchitecturalTooltip";
 import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
 import { Button } from "@/src/components/ui/Button";
 import {
@@ -58,7 +61,13 @@ function DockChromeTooltip({
   children: ReactElement;
 }) {
   return (
-    <ArchitecturalTooltip content={content} side={side} delayMs={400} disabled={disabled}>
+    <ArchitecturalTooltip
+      content={content}
+      side={side}
+      delayMs={400}
+      disabled={disabled}
+      avoidSides={ARCH_TOOLTIP_AVOID_BOTTOM}
+    >
       {children}
     </ArchitecturalTooltip>
   );

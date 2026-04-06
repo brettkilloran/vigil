@@ -12,6 +12,8 @@ import {
   fitCameraToBounds,
   isContentMostlyOffScreen,
   listMinimapAtomRects,
+  minimapLayoutSignature,
+  minimapPlacementMapsEqual,
   rotatedRectWorldBounds,
   viewportWorldRect,
 } from "@/src/lib/canvas-view-bounds";
@@ -110,6 +112,46 @@ describe("computeSpaceContentBounds", () => {
     const withDom = computeSpaceContentBounds(g, SPACE, [], measured);
     expect(withDom!.maxY - withDom!.minY).toBeGreaterThan(graphOnly!.maxY - graphOnly!.minY);
     expect(withDom!.maxY).toBeCloseTo(20 + 900);
+  });
+});
+
+describe("minimapLayoutSignature", () => {
+  it("changes when a card is unstacked (stackId / stackOrder)", () => {
+    const stacked = graphWith([
+      content("a", 0, 0, { stackId: "st", stackOrder: 0 }),
+      content("b", 0, 0, { stackId: "st", stackOrder: 1 }),
+    ]);
+    const unstacked = graphWith([
+      content("a", 0, 0, { stackId: null, stackOrder: null }),
+      content("b", 10, 10, { stackId: null, stackOrder: null }),
+    ]);
+    expect(minimapLayoutSignature(stacked, SPACE)).not.toBe(minimapLayoutSignature(unstacked, SPACE));
+  });
+
+  it("changes when a node moves in the active space (slot)", () => {
+    const g1 = graphWith([content("a", 0, 0)]);
+    const g2 = graphWith([content("a", 50, 0)]);
+    expect(minimapLayoutSignature(g1, SPACE)).not.toBe(minimapLayoutSignature(g2, SPACE));
+  });
+});
+
+describe("minimapPlacementMapsEqual", () => {
+  it("returns true for identical maps", () => {
+    const a = new Map([
+      ["x", { width: 100, height: 200 }],
+      ["y", { width: 10, height: 10 }],
+    ]);
+    const b = new Map([
+      ["x", { width: 100, height: 200 }],
+      ["y", { width: 10, height: 10 }],
+    ]);
+    expect(minimapPlacementMapsEqual(a, b)).toBe(true);
+  });
+
+  it("returns false when dimensions differ", () => {
+    const a = new Map([["x", { width: 100, height: 200 }]]);
+    const b = new Map([["x", { width: 101, height: 200 }]]);
+    expect(minimapPlacementMapsEqual(a, b)).toBe(false);
   });
 });
 

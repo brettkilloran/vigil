@@ -545,6 +545,10 @@
   z-index: 1;
   flex: none;
   pointer-events: auto;
+  /* Match in-flow strip width (panel is fit-content; minimap is out of flow otherwise). */
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .bottomDockEnterHost {
@@ -2633,7 +2637,9 @@
   align-items: center;
   justify-content: flex-start;
   gap: 6px;
-  padding: 4px;
+  /* Match glass chrome vertical rhythm; extra inline-start vs 4px so X/Y isn’t glued to the border. */
+  padding-block: var(--chrome-panel-pad-y);
+  padding-inline: calc(var(--chrome-panel-pad-x) + 6px) var(--chrome-panel-pad-x);
   box-sizing: border-box;
   min-height: var(--chrome-panel-height);
   width: fit-content;
@@ -3027,7 +3033,8 @@
 
 /* Beats the generic `.rootDockPanel` rule above (same specificity, later wins without both classes). */
 .rootDockPanel.viewportMetricsPanel {
-  padding: 4px;
+  padding-block: var(--chrome-panel-pad-y);
+  padding-inline: calc(var(--chrome-panel-pad-x) + 6px) var(--chrome-panel-pad-x);
   gap: 6px;
   justify-content: flex-start;
   align-items: center;

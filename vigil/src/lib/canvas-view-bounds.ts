@@ -51,6 +51,55 @@ export function buildCollapsedStacksList(
   return out;
 }
 
+/**
+ * Fingerprint of every graph field that affects minimap world geometry for `activeSpaceId`
+ * (slots, stack membership/order, rotations, declared sizes, content length for DOM-driven height).
+ *
+ * Use to gate expensive minimap work when the `CanvasGraph` object reference churns on each
+ * collab patch but layout-relevant data is unchanged. Also ensures ResizeObserver wiring re-runs
+ * after unstack / restack / remote moves that don’t change unrelated entities.
+ */
+export function minimapLayoutSignature(graph: CanvasGraph, activeSpaceId: string): string {
+  const entityIds = [...(graph.spaces[activeSpaceId]?.entityIds ?? [])].sort();
+  const entityParts: string[] = [];
+
+  for (const id of entityIds) {
+    const e = graph.entities[id];
+    if (!e) {
+      entityParts.push(`?${id}`);
+      continue;
+    }
+    const slot = e.slots[activeSpaceId];
+    const slotStr = slot ? `${slot.x},${slot.y}` : "∅";
+    const stack = `${e.stackId ?? "·"}:${e.stackOrder ?? "·"}`;
+    const rot = e.rotation ?? 0;
+
+    if (e.kind === "folder") {
+      const w = e.width ?? "";
+      const h = e.height ?? "";
+      entityParts.push(`F:${id}:${slotStr}:${rot}:${w}×${h}:${stack}`);
+    } else {
+      const w = e.width ?? "";
+      const h = e.height ?? "";
+      const bodyLen = e.bodyHtml?.length ?? 0;
+      entityParts.push(`C:${id}:${slotStr}:${rot}:${w}×${h}:${stack}:${bodyLen}`);
+    }
+  }
+
+  const collapsed = buildCollapsedStacksList(graph, activeSpaceId);
+  const stackTopo = collapsed
+    .map((cs) => {
+      const members = cs.entities
+        .map((ent) => `${ent.id}@${ent.stackOrder ?? 0}`)
+        .join(",");
+      return `${cs.stackId}:${cs.top.id}:${members}`;
+    })
+    .sort()
+    .join("|");
+
+  return `${entityParts.join("|")}###${stackTopo}`;
+}
+
 function unionBounds(a: WorldBounds, b: WorldBounds): WorldBounds {
   return {
     minX: Math.min(a.minX, b.minX),
@@ -111,6 +160,19 @@ function entityLocalSize(entity: CanvasEntity): { w: number; h: number } {
 
 /** Live DOM size for a node (px in canvas layout space ≈ world units). */
 export type MinimapPlacementSize = { width: number; height: number };
+
+/** Avoid minimap subtree re-renders when DOM remeasure yields identical dimensions. */
+export function minimapPlacementMapsEqual(
+  a: ReadonlyMap<string, MinimapPlacementSize>,
+  b: ReadonlyMap<string, MinimapPlacementSize>,
+): boolean {
+  if (a.size !== b.size) return false;
+  for (const [k, v] of a) {
+    const u = b.get(k);
+    if (!u || u.width !== v.width || u.height !== v.height) return false;
+  }
+  return true;
+}
 
 function entitySizeForMinimap(
   entity: CanvasEntity,

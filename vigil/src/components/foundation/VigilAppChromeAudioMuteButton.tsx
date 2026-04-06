@@ -3,7 +3,10 @@
 import { SpeakerHigh, SpeakerSlash } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 
-import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
+import {
+  ArchitecturalTooltip,
+  ARCH_TOOLTIP_AVOID_BOTTOM,
+} from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 import { readAppAudioMuted, subscribeAppAudioMuted, writeAppAudioMuted } from "@/src/lib/vigil-audio-prefs";
 
@@ -34,7 +37,12 @@ export function VigilAppChromeAudioMuteButton() {
       : "Mute audio (ambient + interface sounds)";
 
   return (
-    <ArchitecturalTooltip content={tip} side="top" delayMs={320}>
+    <ArchitecturalTooltip
+      content={tip}
+      side="top"
+      delayMs={320}
+      avoidSides={ARCH_TOOLTIP_AVOID_BOTTOM}
+    >
       <Button
         type="button"
         variant="ghost"

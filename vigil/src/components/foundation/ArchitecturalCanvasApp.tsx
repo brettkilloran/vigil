@@ -48,7 +48,10 @@ import { BufferedContentEditable } from "@/src/components/editing/BufferedConten
 import type { WikiLinkAssistConfig } from "@/src/components/editing/BufferedContentEditable";
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
 import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
-import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
+import {
+  ArchitecturalTooltip,
+  ARCH_TOOLTIP_AVOID_TOP,
+} from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 import {
   ArchitecturalBottomDock,
@@ -153,6 +156,8 @@ import {
   fitCameraToActiveSpaceContent,
   fitCameraToSelection,
   isContentMostlyOffScreen,
+  minimapLayoutSignature,
+  minimapPlacementMapsEqual,
   viewportWorldRect,
   type CollapsedStackInfo,
 } from "@/src/lib/canvas-view-bounds";
@@ -3035,18 +3040,10 @@ export function ArchitecturalCanvasApp({
     return out.length === 0 ? EMPTY_COLLAPSED_STACKS : out;
   }, [stackGroups]);
 
-  const minimapDomMeasureKey = useMemo(() => {
-    const ids = [...(graph.spaces[activeSpaceId]?.entityIds ?? [])].sort();
-    return ids
-      .map((id) => {
-        const e = graph.entities[id];
-        if (!e) return id;
-        const wh = `${e.width ?? ""}×${e.height ?? ""}`;
-        if (e.kind === "content") return `${id}:${wh}:${e.bodyHtml?.length ?? 0}`;
-        return `${id}:${wh}`;
-      })
-      .join("|");
-  }, [graph.entities, graph.spaces, activeSpaceId]);
+  const minimapLayoutKey = useMemo(
+    () => minimapLayoutSignature(graph, activeSpaceId),
+    [graph, activeSpaceId],
+  );
 
   useEffect(() => {
     const preActivateGate = scenario === "default" && !bootLayerDismissed && !canvasSessionActivated;
@@ -6366,6 +6363,13 @@ export function ArchitecturalCanvasApp({
     ],
   );
 
+  const handleDropRef = useRef(handleDrop);
+  handleDropRef.current = handleDrop;
+  const updateDropTargetsRef = useRef(updateDropTargets);
+  updateDropTargetsRef.current = updateDropTargets;
+  const persistNeonItemsLayoutRef = useRef(persistNeonItemsLayout);
+  persistNeonItemsLayoutRef.current = persistNeonItemsLayout;
+
   useEffect(() => {
     const onPointerMove = (event: PointerEvent) => {
       if (lassoStartRef.current) {
@@ -6403,6 +6407,7 @@ export function ArchitecturalCanvasApp({
       const { tx, ty, scale: viewScale } = viewRef.current;
       const mouseCanvasX = (event.clientX - tx) / viewScale;
       const mouseCanvasY = (event.clientY - ty) / viewScale;
+      const spaceId = activeSpaceIdRef.current;
       setGraph((prev) => {
         const nextEntities = { ...prev.entities };
         let changed = false;
@@ -6410,7 +6415,7 @@ export function ArchitecturalCanvasApp({
           const entity = prev.entities[id];
           const offset = dragOffsetsRef.current[id];
           if (!entity || !offset) return;
-          const currentSlot = entity.slots[activeSpaceId];
+          const currentSlot = entity.slots[spaceId];
           if (!currentSlot) return;
           const nextX = mouseCanvasX - offset.x;
           const nextY = mouseCanvasY - offset.y;
@@ -6422,7 +6427,7 @@ export function ArchitecturalCanvasApp({
             ...entity,
             slots: {
               ...entity.slots,
-              [activeSpaceId]: {
+              [spaceId]: {
                 x: nextX,
                 y: nextY,
               },
@@ -6435,7 +6440,7 @@ export function ArchitecturalCanvasApp({
           entities: nextEntities,
         };
       });
-      updateDropTargets(draggedIds[0], event.clientX, event.clientY);
+      updateDropTargetsRef.current(draggedIds[0], event.clientX, event.clientY);
     };
 
     const completeActiveLasso = () => {
@@ -6529,12 +6534,12 @@ export function ArchitecturalCanvasApp({
       setIsPanning(false);
       if (draggedNodeIdsRef.current.length > 0) {
         const ids = [...draggedNodeIdsRef.current];
-        updateDropTargets(ids[0], dragPointerScreenRef.current.x, dragPointerScreenRef.current.y);
-        void handleDrop(ids).then(() => {
+        updateDropTargetsRef.current(ids[0], dragPointerScreenRef.current.x, dragPointerScreenRef.current.y);
+        void handleDropRef.current(ids).then(() => {
           if (!persistNeonRef.current) return;
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-              persistNeonItemsLayout(ids);
+              persistNeonItemsLayoutRef.current(ids);
             });
           });
         });
@@ -6567,13 +6572,9 @@ export function ArchitecturalCanvasApp({
       window.removeEventListener("mousemove", onMouseMoveForLasso);
       window.removeEventListener("mouseup", onWindowPointerOrMouseUp);
     };
-  }, [
-    activeSpaceId,
-    handleDrop,
-    persistNeonItemsLayout,
-    setParentDropHover,
-    updateDropTargets,
-  ]);
+    /* Intentionally no deps: handleDrop/updateDropTargets change every pan frame via centerCoords →
+     * would re-bind window listeners constantly and can trigger max update depth with pointermove. */
+  }, [setParentDropHover]);
 
   useEffect(() => {
     if (!stackModal) return;
@@ -6877,7 +6878,7 @@ export function ArchitecturalCanvasApp({
           if (persistNeonRef.current) {
             const persistIds = [drag.entityId, ...sortedRemaining.map((e) => e.id)];
             requestAnimationFrame(() => {
-              persistNeonItemsLayout(persistIds);
+              persistNeonItemsLayoutRef.current(persistIds);
             });
           }
         }
@@ -6904,7 +6905,7 @@ export function ArchitecturalCanvasApp({
           return next;
         });
         if (orderChanged && persistNeonRef.current) {
-          requestAnimationFrame(() => persistNeonItemsLayout(ordered));
+          requestAnimationFrame(() => persistNeonItemsLayoutRef.current(ordered));
         }
       }
     };
@@ -6915,7 +6916,7 @@ export function ArchitecturalCanvasApp({
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp, true);
     };
-  }, [closeStackModal, persistNeonItemsLayout, stackModal, viewportSize]);
+  }, [closeStackModal, stackModal, viewportSize]);
 
   useEffect(() => {
     if (connectionMode !== "draw" || !connectionSourceId) {
@@ -6999,7 +7000,7 @@ export function ArchitecturalCanvasApp({
         }
       }
 
-      if (focusOpen || galleryOpen) return;
+      if (focusOpenRef.current || galleryOpenRef.current) return;
       if (activeTool === "pan" || spacePanRef.current) return;
       if (event.button !== 0) return;
       if (target.closest("[data-stack-container='true']")) return;
@@ -7023,14 +7024,13 @@ export function ArchitecturalCanvasApp({
             );
             return;
           } else {
+            const sel = selectedNodeIdsRef.current;
+            const spaceEntityIds =
+              graphRef.current.spaces[activeSpaceIdRef.current]?.entityIds ?? [];
+            const inSpace = new Set(spaceEntityIds);
             const dragGroup =
-              selectedNodeIds.includes(nodeId) && selectedNodeIds.length > 1
-                ? [
-                    nodeId,
-                    ...selectedNodeIds.filter(
-                      (id) => id !== nodeId && activeSpaceEntityIds.includes(id),
-                    ),
-                  ]
+              sel.includes(nodeId) && sel.length > 1
+                ? [nodeId, ...sel.filter((id) => id !== nodeId && inSpace.has(id))]
                 : [nodeId];
             recordUndoBeforeMutation();
             setSelectedNodeIds(dragGroup);
@@ -7038,12 +7038,14 @@ export function ArchitecturalCanvasApp({
             setDraggedNodeIds(dragGroup);
             dragPointerScreenRef.current = { x: event.clientX, y: event.clientY };
 
-            const mouseCanvasX = (event.clientX - translateX) / scale;
-            const mouseCanvasY = (event.clientY - translateY) / scale;
+            const { tx, ty, scale: viewScale } = viewRef.current;
+            const mouseCanvasX = (event.clientX - tx) / viewScale;
+            const mouseCanvasY = (event.clientY - ty) / viewScale;
             const offsets: Record<string, { x: number; y: number }> = {};
+            const spaceId = activeSpaceIdRef.current;
             dragGroup.forEach((id) => {
-              const dragEntity = graph.entities[id];
-              const slot = dragEntity?.slots[activeSpaceId];
+              const dragEntity = graphRef.current.entities[id];
+              const slot = dragEntity?.slots[spaceId];
               if (!slot) return;
               offsets[id] = {
                 x: mouseCanvasX - slot.x,
@@ -7073,7 +7075,7 @@ export function ArchitecturalCanvasApp({
       if (!target) return;
 
       if (connectionMode === "draw" || connectionMode === "cut") {
-        if (focusOpen || galleryOpen || stackModalRef.current) return;
+        if (focusOpenRef.current || galleryOpenRef.current || stackModalRef.current) return;
         if (
           isCanvasPointerMarqueeOrPanSurface(
             target,
@@ -7109,7 +7111,7 @@ export function ArchitecturalCanvasApp({
       const id = entity?.dataset.nodeId;
       if (!id) return;
 
-      const node = graph.entities[id];
+      const node = graphRef.current.entities[id];
       if (
         node?.kind === "content" &&
         node.theme === "media" &&
@@ -7143,24 +7145,15 @@ export function ArchitecturalCanvasApp({
       document.removeEventListener("dblclick", onDoubleClick);
     };
   }, [
-    activeSpaceId,
     activeTool,
     connectionMode,
     connectionSourceId,
     createConnection,
-    focusOpen,
-    galleryOpen,
-    graph.entities,
     handleNodeExpand,
     openFocusMode,
     openFolder,
     recordUndoBeforeMutation,
-    scale,
-    selectedNodeIds,
-    translateX,
-    translateY,
     updateNodeBody,
-    activeSpaceEntityIds,
   ]);
 
   useEffect(() => {
@@ -7360,16 +7353,17 @@ export function ArchitecturalCanvasApp({
   const onViewportPointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       if (!event.isPrimary) return;
-      if (focusOpen || galleryOpen || stackModal) return;
+      if (focusOpenRef.current || galleryOpenRef.current || stackModalRef.current) return;
 
       // Middle mouse drag always pans (tool-agnostic), similar to design tools.
       if (event.button === 1) {
         event.preventDefault();
         isPanningRef.current = true;
         setIsPanning(true);
+        const { tx, ty } = viewRef.current;
         panStartRef.current = {
-          x: event.clientX - translateX,
-          y: event.clientY - translateY,
+          x: event.clientX - tx,
+          y: event.clientY - ty,
         };
         return;
       }
@@ -7406,12 +7400,13 @@ export function ArchitecturalCanvasApp({
       }
       isPanningRef.current = true;
       setIsPanning(true);
+      const { tx, ty } = viewRef.current;
       panStartRef.current = {
-        x: event.clientX - translateX,
-        y: event.clientY - translateY,
+        x: event.clientX - tx,
+        y: event.clientY - ty,
       };
     },
-    [activeTool, connectionMode, focusOpen, galleryOpen, stackModal, translateX, translateY],
+    [activeTool, connectionMode],
   );
 
   const onWheel = useCallback(
@@ -8385,13 +8380,14 @@ export function ArchitecturalCanvasApp({
       return;
     }
 
+    let rafId = 0;
     const runMeasure = () => {
       if (typeof document === "undefined") return;
       const g = graphRef.current;
       const spaceId = activeSpaceIdRef.current;
       const entityIds = g.spaces[spaceId]?.entityIds ?? [];
       if (entityIds.length === 0) {
-        setMinimapPlacementSizes(new Map());
+        setMinimapPlacementSizes((prev) => (prev.size === 0 ? prev : new Map()));
         return;
       }
       const collapsed = buildCollapsedStacksList(g, spaceId);
@@ -8408,7 +8404,18 @@ export function ArchitecturalCanvasApp({
         const m = measureArchitecturalNodePlacement(cs.top.id, spaceId);
         if (m) map.set(cs.top.id, m);
       }
-      setMinimapPlacementSizes(map);
+      setMinimapPlacementSizes((prev) => {
+        if (minimapPlacementMapsEqual(prev, map)) return prev;
+        return map;
+      });
+    };
+
+    const scheduleMeasure = () => {
+      if (rafId !== 0) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        runMeasure();
+      });
     };
 
     runMeasure();
@@ -8423,10 +8430,16 @@ export function ArchitecturalCanvasApp({
     const nodes = root.querySelectorAll<HTMLElement>(`[data-space-id="${esc}"][data-node-id]`);
 
     const ro = new ResizeObserver(() => {
-      requestAnimationFrame(runMeasure);
+      scheduleMeasure();
     });
     nodes.forEach((el) => ro.observe(el));
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (rafId !== 0) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+    };
   }, [
     minimapOpen,
     focusOpen,
@@ -8434,7 +8447,7 @@ export function ArchitecturalCanvasApp({
     stackModal,
     viewportRevealReady,
     activeSpaceId,
-    minimapDomMeasureKey,
+    minimapLayoutKey,
   ]);
 
   /**
@@ -9046,6 +9059,7 @@ export function ArchitecturalCanvasApp({
               <div className={styles.viewportMetricsMinimapAbove}>
                 <CanvasMinimap
                   graph={graph}
+                  layoutSignature={minimapLayoutKey}
                   activeSpaceId={activeSpaceId}
                   collapsedStacks={collapsedStacks as CollapsedStackInfo[]}
                   translateX={translateX}
@@ -9060,6 +9074,7 @@ export function ArchitecturalCanvasApp({
                   onCenterOnWorld={onMinimapCenterOnWorld}
                   onFitAll={applyFitAllToViewport}
                   placementSizes={minimapPlacementSizes}
+                  metricsDockWidth
                 />
               </div>
             ) : null}
@@ -10336,6 +10351,7 @@ export function ArchitecturalCanvasApp({
                       content="Log out — return to auth splash"
                       side="bottom"
                       delayMs={320}
+                      avoidSides={ARCH_TOOLTIP_AVOID_TOP}
                     >
                       <ArchitecturalButton
                         type="button"
@@ -10379,7 +10395,12 @@ export function ArchitecturalCanvasApp({
                         return (
                           <span key={spaceId} className={styles.crumbItem}>
                             {index > 0 ? <span className={styles.crumbSep}>/</span> : null}
-                            <ArchitecturalTooltip content={crumbTip} side="bottom" delayMs={320}>
+                            <ArchitecturalTooltip
+                              content={crumbTip}
+                              side="bottom"
+                              delayMs={320}
+                              avoidSides={ARCH_TOOLTIP_AVOID_TOP}
+                            >
                               <Button
                                 type="button"
                                 variant="ghost"
@@ -10418,6 +10439,7 @@ export function ArchitecturalCanvasApp({
                   content="Vault review — consistency check & semantic tags (no layout changes)"
                   side="bottom"
                   delayMs={320}
+                  avoidSides={ARCH_TOOLTIP_AVOID_TOP}
                 >
                   <ArchitecturalButton
                     type="button"
@@ -10444,7 +10466,12 @@ export function ArchitecturalCanvasApp({
                     className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.shellTopLogOutPanel}`}
                     data-hg-chrome="import-document"
                   >
-                    <ArchitecturalTooltip content="Import PDF or Markdown" side="bottom" delayMs={320}>
+                    <ArchitecturalTooltip
+                      content="Import PDF or Markdown"
+                      side="bottom"
+                      delayMs={320}
+                      avoidSides={ARCH_TOOLTIP_AVOID_TOP}
+                    >
                       <ArchitecturalButton
                         type="button"
                         size="icon"
@@ -10471,6 +10498,7 @@ export function ArchitecturalCanvasApp({
                     content={`Search (${modKeyHints.search})`}
                     side="bottom"
                     delayMs={320}
+                    avoidSides={ARCH_TOOLTIP_AVOID_TOP}
                   >
                     <ArchitecturalButton
                       type="button"

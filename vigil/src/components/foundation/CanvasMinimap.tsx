@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { CanvasGraph } from "@/src/components/foundation/architectural-types";
 import {
@@ -16,6 +16,8 @@ import styles from "./CanvasMinimap.module.css";
 
 type CanvasMinimapProps = {
   graph: CanvasGraph;
+  /** Output of `minimapLayoutSignature(graph, activeSpaceId)` — throttles work when `graph` ref churns (collab). */
+  layoutSignature: string;
   activeSpaceId: string;
   collapsedStacks: readonly CollapsedStackInfo[];
   translateX: number;
@@ -35,6 +37,8 @@ type CanvasMinimapProps = {
   placementSizes?: ReadonlyMap<string, MinimapPlacementSize> | null;
   /** Compact chrome for embedding in the bottom-right viewport metrics dock row. */
   toolbarEmbed?: boolean;
+  /** Stretch to host width (metrics cluster strip above minimap). */
+  metricsDockWidth?: boolean;
 };
 
 function padBounds(
@@ -56,6 +60,7 @@ function padBounds(
 
 export function CanvasMinimap({
   graph,
+  layoutSignature,
   activeSpaceId,
   collapsedStacks,
   translateX,
@@ -71,9 +76,11 @@ export function CanvasMinimap({
   onFitAll,
   placementSizes = null,
   toolbarEmbed = false,
+  metricsDockWidth = false,
 }: CanvasMinimapProps) {
   void _minZoom;
   void _maxZoom;
+  void layoutSignature;
   const svgRef = useRef<SVGSVGElement | null>(null);
   const draggingRef = useRef(false);
   const [dragging, setDragging] = useState(false);
@@ -97,7 +104,7 @@ export function CanvasMinimap({
   const atoms = useMemo(() => {
     const sel = new Set(selectedNodeIds);
     return listMinimapAtomRects(graph, activeSpaceId, collapsedStacks, sel, placementSizes);
-  }, [graph, activeSpaceId, collapsedStacks, selectedNodeIds, placementSizes]);
+  }, [graph, activeSpaceId, collapsedStacks, placementSizes, selectedNodeIds]);
 
   const clientToWorldDelta = useCallback(
     (movementX: number, movementY: number) => {
@@ -141,6 +148,25 @@ export function CanvasMinimap({
     }
   }, []);
 
+  const onViewportLostPointerCapture = useCallback(() => {
+    draggingRef.current = false;
+    setDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (!dragging) return;
+    const end = () => {
+      draggingRef.current = false;
+      setDragging(false);
+    };
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+    return () => {
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+    };
+  }, [dragging]);
+
   const onSvgClick = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
       if ((e.target as SVGElement).closest("[data-minimap-viewport]")) return;
@@ -168,7 +194,11 @@ export function CanvasMinimap({
 
   return (
     <div
-      className={cx(styles.root, toolbarEmbed && styles.rootToolbarEmbed)}
+      className={cx(
+        styles.root,
+        toolbarEmbed && styles.rootToolbarEmbed,
+        metricsDockWidth && styles.rootMetricsDock,
+      )}
       data-hg-chrome="canvas-minimap"
     >
       <svg
@@ -180,6 +210,7 @@ export function CanvasMinimap({
         tabIndex={-1}
         aria-label="Canvas minimap"
         onPointerMove={onSvgPointerMove}
+        onLostPointerCapture={onViewportLostPointerCapture}
         onClick={onSvgClick}
         onDoubleClick={onSvgDblClick}
       >
@@ -209,6 +240,7 @@ export function CanvasMinimap({
           onPointerDown={onViewportPointerDown}
           onPointerUp={onViewportPointerUp}
           onPointerCancel={onViewportPointerUp}
+          onLostPointerCapture={onViewportLostPointerCapture}
         />
       </svg>
     </div>
