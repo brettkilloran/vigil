@@ -182,7 +182,7 @@ export function VigilAppBootScreen({
     for (const t of bootPinFlowerTimersRef.current) window.clearTimeout(t);
     bootPinFlowerTimersRef.current = [];
   }, []);
-  /** Hero column (kicker, title, CTA) — bbox for hover spawn ellipse around this block. */
+  /** Hero column (kicker, title, blurbs, CTA) — bbox for hover spawn ellipse around this block. */
   const bootCenterClusterRef = useRef<HTMLDivElement | null>(null);
   const enterGardenHoverSpawnRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recentEnterGardenSpawnsRef = useRef<{ x: number; y: number }[]>([]);
@@ -515,6 +515,7 @@ export function VigilAppBootScreen({
         aria-modal="true"
         aria-label={bootCenterCopyVisible ? undefined : "Heartgarden boot — garden play mode"}
         aria-labelledby={bootCenterCopyVisible ? "vigil-boot-title" : undefined}
+        aria-describedby={bootCenterCopyVisible ? "vigil-boot-desc" : undefined}
         onPointerDown={onOverlayPointerDown}
         onPointerMove={onOverlayPointerMove}
         onPointerUp={onOverlayPointerUpOrCancel}
@@ -625,6 +626,18 @@ export function VigilAppBootScreen({
               波途画電
             </span>
           </h1>
+          <div id="vigil-boot-desc" className={styles.blurbWrap}>
+            <p className={`${styles.blurb} ${styles.blurbReveal}`} style={{ animationDelay: "0.88s" }}>
+              An infinite, living archive of Caliginia’s thermal shadows—
+              <br />
+              a permanent negative stained upon the retina. The eyelid is gone; shutter jammed open.
+            </p>
+            <p className={`${styles.blurb} ${styles.blurbReveal}`} style={{ animationDelay: "1.08s" }}>
+              Yet no light enters the panopticon.
+              <br />
+              Only flowers, blooming in the vitreous dark.
+            </p>
+          </div>
         </div>
         <div
           className={`${styles.activateWrap} ${styles.fadeInCta}`}
