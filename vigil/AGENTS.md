@@ -40,6 +40,8 @@ Persistence: **`items`** rows; **`spaces.canvas_state`** is legacy (camera is **
 
 ## Local dev, Node, and Storybook (guardrails)
 
+**Cursor / new agent sessions:** Local run, restart, and **`http://localhost:3000`** defaults (boot gate off in `next dev`, no `dev:preview`) are spelled out in repo root **`.cursor/rules/heartgarden-local-dev.mdc`** — that rule is **`alwaysApply: true`** so agents pick it up without opening `vigil/` first.
+
 **Package manager:** Use **npm** only in the app directory (**`vigil/`** today — see **`docs/NAMING.md`** if renamed) (`package-lock.json`). Do not mix pnpm/yarn in the same tree without a deliberate migration.
 
 **`package-lock.json` vs Ubuntu CI (`npm ci` / “Missing … from lock file”):** A normal **`npm install` on Windows** can drop **Linux-only optional** resolutions (e.g. **`@emnapi/*`** under **`@img/sharp-wasm32`**). GitHub Actions then fails **`npm ci`**. From **`vigil/`**: run **`npm run verify:package-lock-ci`** before pushing (clean temp install with **npm 10.x**, same major as **Node 22** on Actions). If it fails, run **`npm run lockfile:regenerate-linux`**, re-run verify, then **commit `package-lock.json`**.
@@ -66,7 +68,7 @@ The script picks the **newest** `node-v*-win-x64` under `%LOCALAPPDATA%\node-por
 | Storybook (dev) | **`http://127.0.0.1:6006`** | Scripts bind **`127.0.0.1`** explicitly. **Wait for the first webpack compile** (often 30–90s) until the terminal prints a **Local:** URL — opening earlier yields **`ERR_CONNECTION_REFUSED`**. For LAN, use **`npm run storybook:lan`**. Config: **`core.allowedHosts: true`**, React re-pinning in **`.storybook/main.ts`**, **`.storybook/preview-overrides.css`**. Use **Chrome or Edge**; the editor’s embedded browser often cannot reach the dev server. |
 | Storybook (static fallback) | **`http://127.0.0.1:6007`** | **`npm run storybook:static`** — build + `serve`; use if dev Storybook will not stay up. Port **6007** avoids clashing with **6006**. |
 
-**Next.js dev:** `dev` / `dev:app` use **`next dev --webpack`** (not Turbopack) — Turbopack previously hung on `/` for this app. The boot screen only accepts **eight-character** **`HEARTGARDEN_BOOT_PIN_*`** codes; **`HEARTGARDEN_BOOT_SESSION_SECRET`** signs cookies **on the server** and is never entered in the UI. If the gate is configured in env but you do not want to copy **PINs** into **`.env.local`** (for example when using Cursor’s **Simple Browser** preview against **`localhost`**), run **`npm run dev:preview`** or set **`HEARTGARDEN_DEV_BOOT_NO_GATE=1`** for **`next dev` only** — it is ignored when **`NODE_ENV`** is **`production`** (including Vercel).
+**Next.js dev:** `dev` / `dev:app` use **`next dev --webpack`** (not Turbopack) — Turbopack previously hung on `/` for this app. **`next dev` turns the boot PIN gate off by default** so **`http://localhost:3000`** works without copying PINs into **`.env.local`**. Set **`HEARTGARDEN_DEV_ENFORCE_BOOT_GATE=1`** to test the PIN flow locally. Deployed / **`next start`** behavior is unchanged. The boot UI only accepts **eight-character** **`HEARTGARDEN_BOOT_PIN_*`** codes; **`HEARTGARDEN_BOOT_SESSION_SECRET`** is server-only.
 
 **CSS modules:** Do not put **`:root { … }`** in `*.module.css` (Webpack CSS modules reject global selectors and the app/Storybook build can fail). Shared token blocks live in **`app/globals.css`**.
 

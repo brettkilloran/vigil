@@ -1,0 +1,27 @@
+---
+description: >-
+  heartgarden (vigil/) — run dev server, localhost preview, restarts, boot gate defaults.
+  Apply when the user asks to run/preview/test the app, restart dev, open localhost, or use Cursor’s browser.
+alwaysApply: true
+---
+
+# Heartgarden — local run, preview, and restarts (`vigil/`)
+
+Use this whenever the user (or task) involves **running heartgarden**, **restarting the dev server**, **previewing in the browser**, **`localhost`**, **Cursor Simple Browser**, or **testing the UI** against a local server.
+
+## Commands (execute; do not only instruct)
+
+- **Working directory:** **`vigil/`** (Next app root; see `vigil/docs/NAMING.md`).
+- **Start or restart:** **`npm run dev`** (`next dev --webpack`). Run it in the integrated terminal; wait until the server is listening.
+- **URL:** **`http://localhost:3000`** or **`http://127.0.0.1:3000`**. Same host the dev banner prints; avoid starting a second `next dev` on the same folder/port.
+- **Do not** recommend **`dev:preview`** or **`HEARTGARDEN_DEV_BOOT_NO_GATE`** — removed; default **`npm run dev`** is enough.
+
+## Boot PIN gate (local only)
+
+- In **`next dev`**, the boot PIN gate is **off by default** — no PIN or special env is required to enter the app at localhost.
+- **Production** and **`next start`** are unchanged (real `HEARTGARDEN_BOOT_*` still apply when configured).
+- To **test the PIN flow locally**, set **`HEARTGARDEN_DEV_ENFORCE_BOOT_GATE=1`** in **`vigil/.env.local`** and restart dev. Details: **`vigil/.env.local.example`**, **`vigil/AGENTS.md`** (Next.js dev paragraph).
+
+## Longer context
+
+Storybook, lockfile, and Windows Node notes: **`vigil/AGENTS.md`** → **Local dev, Node, and Storybook (guardrails)**.

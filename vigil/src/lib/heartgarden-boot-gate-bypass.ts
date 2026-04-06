@@ -3,8 +3,10 @@
  * treat the session as GM (`readBootEnv` / `readBootGateEnvEdge` return `gateEnabled: false`).
  *
  * - `PLAYWRIGHT_E2E=1` — used by Playwright (`next start` on another port).
- * - `HEARTGARDEN_DEV_BOOT_NO_GATE=1` — **local `next dev` only** (`NODE_ENV === "development"`).
- *   Ignored in production builds and on Vercel, so it cannot weaken deployed environments.
+ * - **`next dev`** (`NODE_ENV === "development"`): gate is **off by default** so local work (e.g. Cursor,
+ *   http://localhost:3000) does not require copying PINs into `.env.local`. Set
+ *   **`HEARTGARDEN_DEV_ENFORCE_BOOT_GATE=1`** to test the PIN flow locally when boot env is configured.
+ * - Production / `next start` with `NODE_ENV === "production"` is unchanged.
  */
 
 function truthyEnv(raw: string | undefined): boolean {
@@ -15,5 +17,6 @@ function truthyEnv(raw: string | undefined): boolean {
 export function isHeartgardenBootGateBypassed(): boolean {
   if (process.env.PLAYWRIGHT_E2E === "1") return true;
   if (process.env.NODE_ENV !== "development") return false;
-  return truthyEnv(process.env.HEARTGARDEN_DEV_BOOT_NO_GATE);
+  if (truthyEnv(process.env.HEARTGARDEN_DEV_ENFORCE_BOOT_GATE)) return false;
+  return true;
 }

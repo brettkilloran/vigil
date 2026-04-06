@@ -5,3 +5,5 @@ alwaysApply: false
 ---
 
 When working under the **heartgarden** app (folder **`vigil/`** in git — see `vigil/docs/NAMING.md`), read **`vigil/AGENTS.md`** → **"Local dev, Node, and Storybook (guardrails)"** before changing dev scripts, Storybook, or CSS-module vs global token layout.
+
+For **running or restarting `npm run dev`**, **localhost preview**, and **boot gate defaults**, the repo also has **`alwaysApply`** rule **`.cursor/rules/heartgarden-local-dev.mdc`** — follow it for those requests.

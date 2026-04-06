@@ -5,3 +5,5 @@ alwaysApply: false
 ---
 
 Before changing **`package.json` dev scripts**, **`.storybook/`**, **`*.stories.*`**, **`next.config.ts`**, or **token/CSS architecture** in the heartgarden app (**`vigil/`**), read **`vigil/AGENTS.md`** → section **"Local dev, Node, and Storybook (guardrails)"** and keep those invariants unless you intentionally replace them and re-verify on Windows.
+
+**Run / restart / localhost:** repo root **`.cursor/rules/heartgarden-local-dev.mdc`** (`alwaysApply`) — use **`npm run dev`** from **`vigil/`** and **`http://localhost:3000`**; boot gate is off by default in dev unless **`HEARTGARDEN_DEV_ENFORCE_BOOT_GATE=1`**.
