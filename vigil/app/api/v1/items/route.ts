@@ -1,7 +1,7 @@
 import { tryGetDb } from "@/src/db/index";
 import {
   getHeartgardenApiBootContext,
-  gmMayAccessSpaceId,
+  gmMayAccessSpaceIdAsync,
   isHeartgardenPlayerBlocked,
   playerMayAccessSpaceIdAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
@@ -36,7 +36,7 @@ export async function GET(req: Request) {
   if (!(await playerMayAccessSpaceIdAsync(db, bootCtx, spaceId))) {
     return Response.json({ error: "Forbidden." }, { status: 403 });
   }
-  if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
+  if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, spaceId))) {
     return Response.json({ error: "Forbidden." }, { status: 403 });
   }
   const rows = await listItemsForSpace(db, spaceId);

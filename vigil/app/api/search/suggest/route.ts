@@ -1,7 +1,7 @@
 import { tryGetDb } from "@/src/db/index";
 import {
   getHeartgardenApiBootContext,
-  gmMayAccessSpaceId,
+  gmMayAccessSpaceIdAsync,
   heartgardenApiForbiddenJsonResponse,
   isHeartgardenPlayerBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
@@ -66,7 +66,11 @@ export async function GET(req: Request) {
     return heartgardenApiForbiddenJsonResponse();
   }
   const filters = finalized;
-  if (bootCtx.role === "gm" && filters.spaceId && !gmMayAccessSpaceId(bootCtx, filters.spaceId)) {
+  if (
+    bootCtx.role === "gm" &&
+    filters.spaceId &&
+    !(await gmMayAccessSpaceIdAsync(db, bootCtx, filters.spaceId))
+  ) {
     return heartgardenApiForbiddenJsonResponse();
   }
   const rows = await suggestItems(db, q, filters);

@@ -37,6 +37,7 @@
     "db:vault-sql": "node ./scripts/vault-sql-migrate.mjs",
     "db:vault-setup": "npm run db:ensure-pgvector && npm run db:push:force && npm run db:vault-sql",
     "vault:reindex": "node ./scripts/vault-reindex-all.mjs",
+    "db:sever-worlds": "npx --no-install tsx ./scripts/sever-player-gm-worlds.ts",
     "db:studio": "drizzle-kit studio",
     "db:migrate": "drizzle-kit migrate",
     "mcp": "node ./scripts/mcp-server.mjs",
@@ -95,6 +96,7 @@
     "playwright": "^1.59.1",
     "react-refresh": "^0.18.0",
     "storybook": "^10.3.4",
+    "tsx": "^4.21.0",
     "typescript": "^5",
     "vite": "^8.0.3",
     "vitest": "^4.1.2"

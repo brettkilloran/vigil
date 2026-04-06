@@ -9,7 +9,7 @@ describe("player-item-policy", () => {
   it("allows only note, sticky, checklist for create", () => {
     expect(playersMayCreateItemType("note")).toBe(true);
     expect(playersMayCreateItemType("image")).toBe(false);
-    expect(playersMayCreateItemType("folder")).toBe(false);
+    expect(playersMayCreateItemType("folder")).toBe(true);
     expect(playersMayCreateItemType("webclip")).toBe(false);
   });
 

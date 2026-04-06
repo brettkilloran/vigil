@@ -1,5 +1,6 @@
 import type {
   CanvasConnectionPin,
+  CanvasEntity,
   CanvasGraph,
   CanvasPinConnection,
 } from "@/src/components/foundation/architectural-types";
@@ -34,6 +35,15 @@ export function parseItemLinkPinString(
 
 const NEON_LINK_PREFIX = "neon-link-";
 
+function resolveEntityForGraphEdge(graph: CanvasGraph, itemId: string): CanvasEntity | undefined {
+  const direct = graph.entities[itemId];
+  if (direct) return direct;
+  for (const e of Object.values(graph.entities)) {
+    if (e.persistedItemId === itemId) return e;
+  }
+  return undefined;
+}
+
 /**
  * Replace server-backed connections with edges from `GET /api/spaces/:id/graph`,
  * while preserving purely local threads (`dbLinkId` unset).
@@ -57,8 +67,8 @@ export function mergeHydratedDbConnections(
 
   const now = Date.now();
   for (const edge of edges) {
-    const src = graph.entities[edge.source];
-    const tgt = graph.entities[edge.target];
+    const src = resolveEntityForGraphEdge(graph, edge.source);
+    const tgt = resolveEntityForGraphEdge(graph, edge.target);
     if (!src || !tgt) continue;
 
     const srcFallback = src.kind === "folder" ? opts.defaultFolderPin : opts.defaultContentPin;
@@ -70,8 +80,8 @@ export function mergeHydratedDbConnections(
     const slackMultiplier = resolveSlackMultiplierForDisplay(edge.slackMultiplier);
     merged[connectionId] = {
       id: connectionId,
-      sourceEntityId: edge.source,
-      targetEntityId: edge.target,
+      sourceEntityId: src.id,
+      targetEntityId: tgt.id,
       sourcePin,
       targetPin,
       color: edge.color ?? opts.fallbackColor,

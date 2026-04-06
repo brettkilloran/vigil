@@ -5,7 +5,7 @@ import { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
-  gmMayAccessItemSpace,
+  gmMayAccessItemSpaceAsync,
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForPlayer,
   isHeartgardenPlayerBlocked,
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
   if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, srcItem.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
   }
-  if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, srcItem.spaceId)) {
+  if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, srcItem.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
   }
   const validated = await validateLinkTargetsInSourceSpace(db, sourceItemId, targetIds);

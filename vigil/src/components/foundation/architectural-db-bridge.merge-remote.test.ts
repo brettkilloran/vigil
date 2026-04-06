@@ -9,6 +9,7 @@ import {
   type BootstrapResponse,
   buildCanvasGraphFromBootstrap,
 } from "@/src/components/foundation/architectural-db-bridge";
+import type { CanvasPinConnection } from "@/src/components/foundation/architectural-types";
 import type { CanvasItem } from "@/src/model/canvas-types";
 
 function noteItem(id: string, spaceId: string, title: string, updatedAt: string): CanvasItem {
@@ -203,6 +204,82 @@ describe("mergeBootstrapView", () => {
     const next = mergeBootstrapView(prev, bootTrimmed);
     expect(Object.keys(next.entities).sort()).toEqual(["keep"]);
     expect(next.spaces["space-1"]?.entityIds).toEqual(["keep"]);
+  });
+
+  it("preserves connections between entities that still exist after merge", () => {
+    const boot: BootstrapResponse = {
+      ok: true,
+      demo: false,
+      spaceId: "space-1",
+      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
+      items: [
+        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
+      camera: { x: 0, y: 0, zoom: 1 },
+    };
+    const prev = buildCanvasGraphFromBootstrap(boot);
+    const thread: CanvasPinConnection = {
+      id: "local-conn-1",
+      sourceEntityId: "a",
+      targetEntityId: "b",
+      sourcePin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
+      targetPin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
+      color: "#888",
+      linkType: "pin",
+      slackMultiplier: 1,
+      createdAt: 1,
+      updatedAt: 1,
+      syncState: "local-only",
+      syncError: null,
+    };
+    prev.connections[thread.id] = thread;
+    const bootNext: BootstrapResponse = {
+      ...boot,
+      items: [
+        noteItem("a", "space-1", "A2", "2020-01-02T00:00:00.000Z"),
+        noteItem("b", "space-1", "B2", "2020-01-02T00:00:00.000Z"),
+      ],
+    };
+    const next = mergeBootstrapView(prev, bootNext);
+    expect(next.connections[thread.id]).toEqual(thread);
+  });
+
+  it("drops connections when an endpoint entity is removed by merge", () => {
+    const bootFull: BootstrapResponse = {
+      ok: true,
+      demo: false,
+      spaceId: "space-1",
+      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
+      items: [
+        noteItem("keep", "space-1", "Keep", "2020-01-01T00:00:00.000Z"),
+        noteItem("gone", "space-1", "Gone", "2020-01-01T00:00:00.000Z"),
+      ],
+      camera: { x: 0, y: 0, zoom: 1 },
+    };
+    const prev = buildCanvasGraphFromBootstrap(bootFull);
+    const thread: CanvasPinConnection = {
+      id: "c1",
+      sourceEntityId: "keep",
+      targetEntityId: "gone",
+      sourcePin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
+      targetPin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
+      color: "#888",
+      linkType: "pin",
+      slackMultiplier: 1,
+      createdAt: 1,
+      updatedAt: 1,
+      syncState: "synced",
+      dbLinkId: "00000000-0000-4000-8000-0000000000aa",
+      syncError: null,
+    };
+    prev.connections[thread.id] = thread;
+    const bootTrimmed: BootstrapResponse = {
+      ...bootFull,
+      items: [noteItem("keep", "space-1", "Keep", "2020-01-01T00:00:00.000Z")],
+    };
+    const next = mergeBootstrapView(prev, bootTrimmed);
+    expect(next.connections[thread.id]).toBeUndefined();
   });
 });
 

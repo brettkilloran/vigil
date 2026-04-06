@@ -16,8 +16,9 @@ export function resolveHeartgardenPlayerSpaceIdFromEnv(): string | undefined {
 
 /**
  * True when Players PIN is configured (8 chars) but an operator set a **non-empty** env value that
- * is not a valid UUID. Empty/missing vars are OK: the server resolves the default workspace space
- * from Neon (same as Bishop’s landing space when `HEARTGARDEN_PLAYER_SPACE_ID` is unset).
+ * is not a valid UUID. Empty/missing vars are OK: the server uses a dedicated implicit Players root
+ * space in Neon (never Bishop’s default GM workspace). Explicit UUIDs still use
+ * `HEARTGARDEN_PLAYER_SPACE_ID` / `HEARTGARDEN_DEFAULT_SPACE_ID`.
  */
 export function isHeartgardenPlayerLayerMisconfigured(): boolean {
   const playersPin = readHeartgardenPlayersBootPin();

@@ -10,7 +10,7 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/bootstrap` | Active space, spaces list, items (subtree), camera (legacy field; shell uses **browser-local** pan/zoom per space). **`PLAYWRIGHT_E2E=1`** forces empty demo payload (tests only). With boot gate on, **`middleware`** returns **403** without a valid **`hg_boot`** cookie (except **`/api/heartgarden/boot`**). With a valid **`player`** tier cookie, scopes to **`HEARTGARDEN_PLAYER_SPACE_ID`** only (403 if misconfigured). **`demo`** tier should not call this in normal clients (local canvas only). |
+| GET | `/api/bootstrap` | Active space, spaces list, items (subtree), camera (legacy field; shell uses **browser-local** pan/zoom per space). **`PLAYWRIGHT_E2E=1`** forces empty demo payload (tests only). With boot gate on, **`middleware`** returns **403** without a valid **`hg_boot`** cookie (except **`/api/heartgarden/boot`**). With a valid **`player`** tier cookie, scopes to the resolved Players root (env UUID if set, else implicit dedicated space; 403 if misconfigured). **`demo`** tier should not call this in normal clients (local canvas only). |
 
 ## Boot gate (splash PIN)
 
@@ -20,14 +20,14 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 | POST | `/api/heartgarden/boot` | Body **`{ code }`** — exactly **8** characters (after trim); **PIN match is case-insensitive**. On success: **204** + **`Set-Cookie`** `hg_boot` (httpOnly, signed tier **access**, **player**, or **demo**). On failure: **401** with constant **`{ error: "Access denied." }`**. Too many attempts from one client IP: **429** **`{ error: "Too many requests." }`** (in-memory limit per instance; see env below). |
 | DELETE | `/api/heartgarden/boot` | Clears **`hg_boot`** (e.g. after in-app **Log out**). **204**. |
 
-**Env:** **`HEARTGARDEN_BOOT_PIN_BISHOP`**, optional **`HEARTGARDEN_BOOT_PIN_PLAYERS`**, optional **`HEARTGARDEN_BOOT_PIN_DEMO`**, **`HEARTGARDEN_BOOT_SESSION_SECRET`**, optional **`HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC`**, optional **`HEARTGARDEN_PLAYER_SPACE_ID`** (required when Players PIN is set), optional **`HEARTGARDEN_GM_ALLOW_PLAYER_SPACE=1`** (GM break-glass). See **`docs/VERCEL_ENV_VARS.md`** and **`docs/PLAYER_LAYER.md`**.
+**Env:** **`HEARTGARDEN_BOOT_PIN_BISHOP`**, optional **`HEARTGARDEN_BOOT_PIN_PLAYERS`**, optional **`HEARTGARDEN_BOOT_PIN_DEMO`**, **`HEARTGARDEN_BOOT_SESSION_SECRET`**, optional **`HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC`**, optional **`HEARTGARDEN_PLAYER_SPACE_ID`**, optional **`HEARTGARDEN_GM_ALLOW_PLAYER_SPACE=1`** (GM break-glass). See **`docs/VERCEL_ENV_VARS.md`** and **`docs/PLAYER_LAYER.md`**.
 
 ## Spaces
 
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/api/spaces` | List spaces. |
-| POST | `/api/spaces` | Create space. |
+| POST | `/api/spaces` | Create space. **GM:** optional top-level row (`parentSpaceId` omitted) or child of an allowed parent. **Player:** **`parentSpaceId` required** — must be the Players root or a folder space under it (`spaceIsUnderPlayerRoot`); cannot supply **`id`** (no client-chosen UUID). |
 | PATCH | `/api/spaces/[spaceId]` | Update **name** and/or **`parentSpaceId`** (UUID or `null`). A **`camera`** field in the body is accepted for backward compatibility but **ignored** (viewport is not persisted server-side). **`parentSpaceId`** is **GM-only** (rejected for **player**); requires access to both this space and the new parent; the server rejects moves that would create a **parent cycle**. Use this to keep a folder’s inner space aligned when its folder card moves between canvases. |
 | DELETE | `/api/spaces/[spaceId]` | Delete space (cascade per schema). |
 | GET | `/api/spaces/[spaceId]/changes` | Query **`since`** (ISO timestamp). Response includes **`items`** (changed item rows) and **`cursor`** (max of item + space `updated_at` in range). When any subtree **`spaces`** row changed since **`since`** (e.g. folder reparent / rename), **`spaces`** lists **`{ id, name, parentSpaceId, updatedAt }`** so other clients can merge without a full bootstrap. Optional **`includeItemIds=1`**: when set, includes **`itemIds`** (full subtree id list for tombstone sync). When omitted, **`itemIds` is omitted** — the shell sends **`includeItemIds=1`** after navigation or when the tab becomes visible again, then steady-state polls omit it. |

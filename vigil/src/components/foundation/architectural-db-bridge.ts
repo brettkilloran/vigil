@@ -6,6 +6,7 @@ import type {
   CanvasEntity,
   CanvasFolderEntity,
   CanvasGraph,
+  CanvasPinConnection,
   CanvasSpace,
   ContentTheme,
   TapeVariant,
@@ -186,6 +187,20 @@ export function findRootSpaceId(spaces: BootstrapSpaceRow[]): string {
   return roots[0]?.id ?? spaces[0]?.id ?? "";
 }
 
+/** Keep canvas threads when rebasing bootstrap data; drop edges whose cards were removed. */
+export function pruneConnectionsToExistingEntities(
+  connections: Record<string, CanvasPinConnection>,
+  entityIds: ReadonlySet<string>,
+): Record<string, CanvasPinConnection> {
+  const next: Record<string, CanvasPinConnection> = {};
+  for (const [id, c] of Object.entries(connections)) {
+    if (entityIds.has(c.sourceEntityId) && entityIds.has(c.targetEntityId)) {
+      next[id] = c;
+    }
+  }
+  return next;
+}
+
 export function buildCanvasGraphFromBootstrap(data: BootstrapResponse): CanvasGraph {
   const rootSpaceId = findRootSpaceId(data.spaces);
 
@@ -299,7 +314,10 @@ export function mergeBootstrapView(prev: CanvasGraph, data: BootstrapResponse): 
     rootSpaceId,
     spaces: spacesRecord,
     entities,
-    connections: {},
+    connections: pruneConnectionsToExistingEntities(
+      prev.connections,
+      new Set(Object.keys(entities)),
+    ),
   };
 }
 

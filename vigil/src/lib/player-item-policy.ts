@@ -1,5 +1,5 @@
-/** Matches `isPlayerLayer` create paths: note, sticky, checklist — not folder/image/webclip. */
-const PLAYERS_ALLOWED_ITEM_TYPES = new Set(["note", "sticky", "checklist"]);
+/** Matches `isPlayerLayer` create paths: note, sticky, checklist, folder — not image/webclip. */
+const PLAYERS_ALLOWED_ITEM_TYPES = new Set(["note", "sticky", "checklist", "folder"]);
 
 const GM_ONLY_ENTITY_META_KEYS = new Set([
   "loreReviewTags",

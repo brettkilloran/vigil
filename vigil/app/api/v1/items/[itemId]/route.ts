@@ -4,7 +4,7 @@ import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
-  gmMayAccessItemSpace,
+  gmMayAccessItemSpaceAsync,
   isHeartgardenPlayerBlocked,
   playerMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
@@ -37,7 +37,7 @@ export async function GET(
   if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, row.spaceId))) {
     return Response.json({ error: "Forbidden." }, { status: 403 });
   }
-  if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, row.spaceId)) {
+  if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, row.spaceId))) {
     return Response.json({ error: "Forbidden." }, { status: 403 });
   }
   return Response.json({

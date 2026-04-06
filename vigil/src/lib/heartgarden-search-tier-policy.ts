@@ -6,7 +6,11 @@ import {
 } from "@/src/lib/heartgarden-api-boot-context";
 import { isHeartgardenGmPlayerSpaceBreakGlassEnabled } from "@/src/lib/heartgarden-gm-break-glass";
 import { collectDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
-import type { SearchFilters, VigilDb } from "@/src/lib/spaces";
+import {
+  findImplicitPlayerRootSpaceId,
+  type SearchFilters,
+  type VigilDb,
+} from "@/src/lib/spaces";
 
 export type SearchTierPolicyResult =
   | { ok: false }
@@ -88,6 +92,24 @@ export async function finalizeHeartgardenSearchFiltersForDb(
       .from(spaces);
     next.excludeSpaceIds = [...collectDescendantSpaceIds(root, slim)];
     return next;
+  }
+
+  if (
+    ctx.role === "gm" &&
+    !isHeartgardenGmPlayerSpaceBreakGlassEnabled() &&
+    !filters.spaceId &&
+    !filters.excludeSpaceId &&
+    !(filters.excludeSpaceIds?.length)
+  ) {
+    const implicitRootId = await findImplicitPlayerRootSpaceId(db);
+    if (implicitRootId) {
+      const next: SearchFilters = { ...filters };
+      const slim = await db
+        .select({ id: spaces.id, parentSpaceId: spaces.parentSpaceId })
+        .from(spaces);
+      next.excludeSpaceIds = [...collectDescendantSpaceIds(implicitRootId, slim)];
+      return next;
+    }
   }
 
   return filters;

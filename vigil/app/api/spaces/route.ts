@@ -6,11 +6,13 @@ import { tryGetDb } from "@/src/db/index";
 import { spaces } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
-  gmMayAccessSpaceId,
+  gmMayAccessSpaceIdAsync,
   heartgardenApiForbiddenJsonResponse,
+  heartgardenMaskNotFoundForPlayer,
   isHeartgardenPlayerBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
-import { fetchPlayerSubtreeSpacesFull } from "@/src/lib/heartgarden-space-subtree";
+import { isHeartgardenImplicitPlayerRootSpaceName } from "@/src/lib/heartgarden-implicit-player-space";
+import { fetchPlayerSubtreeSpacesFull, spaceIsUnderPlayerRoot } from "@/src/lib/heartgarden-space-subtree";
 import { assertSpaceExists, listGmWorkspaceSpaces } from "@/src/lib/spaces";
 
 const bodySchema = z.object({
@@ -65,7 +67,7 @@ export async function POST(req: Request) {
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenPlayerBlocked(bootCtx) || bootCtx.role === "player") {
+  if (isHeartgardenPlayerBlocked(bootCtx)) {
     return heartgardenApiForbiddenJsonResponse();
   }
 
@@ -85,6 +87,52 @@ export async function POST(req: Request) {
   }
   const { name, parentSpaceId } = parsed.data;
 
+  if (isHeartgardenImplicitPlayerRootSpaceName(name)) {
+    return Response.json({ ok: false, error: "Invalid space name" }, { status: 400 });
+  }
+
+  if (bootCtx.role === "player") {
+    if (parsed.data.id !== undefined) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+    if (parentSpaceId === undefined || parentSpaceId === null) {
+      return Response.json({ ok: false, error: "Parent space required" }, { status: 400 });
+    }
+    if (!(await spaceIsUnderPlayerRoot(db, bootCtx.playerSpaceId, parentSpaceId))) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+    const parent = await assertSpaceExists(db, parentSpaceId);
+    if (!parent) {
+      return heartgardenMaskNotFoundForPlayer(
+        bootCtx,
+        Response.json({ ok: false, error: "Parent space not found" }, { status: 404 }),
+      );
+    }
+    const [created] = await db
+      .insert(spaces)
+      .values({
+        name,
+        parentSpaceId,
+      })
+      .returning();
+
+    return Response.json({
+      ok: true,
+      space: {
+        id: created!.id,
+        name: created!.name,
+        updatedAt:
+          created!.updatedAt instanceof Date
+            ? created!.updatedAt.toISOString()
+            : String(created!.updatedAt),
+      },
+    });
+  }
+
+  if (bootCtx.role !== "gm") {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+
   if (parsed.data.id !== undefined) {
     const [existing] = await db.select().from(spaces).where(eq(spaces.id, parsed.data.id)).limit(1);
     if (existing) {
@@ -93,7 +141,7 @@ export async function POST(req: Request) {
   }
 
   if (parentSpaceId !== undefined && parentSpaceId !== null) {
-    if (!gmMayAccessSpaceId(bootCtx, parentSpaceId)) {
+    if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, parentSpaceId))) {
       return heartgardenApiForbiddenJsonResponse();
     }
     const parent = await assertSpaceExists(db, parentSpaceId);
@@ -102,6 +150,9 @@ export async function POST(req: Request) {
         { ok: false, error: "Parent space not found" },
         { status: 404 },
       );
+    }
+    if (isHeartgardenImplicitPlayerRootSpaceName(parent.name)) {
+      return Response.json({ ok: false, error: "Invalid parent" }, { status: 400 });
     }
   }
 

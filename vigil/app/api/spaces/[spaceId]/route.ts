@@ -5,10 +5,11 @@ import { tryGetDb } from "@/src/db/index";
 import { spaces } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
-  gmMayAccessSpaceId,
+  gmMayAccessSpaceIdAsync,
   heartgardenApiForbiddenJsonResponse,
   isHeartgardenPlayerBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { isHeartgardenImplicitPlayerRootSpaceName } from "@/src/lib/heartgarden-implicit-player-space";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 import { assertSpaceReparentAllowed, deleteSpaceSubtree } from "@/src/lib/spaces";
 
@@ -57,12 +58,29 @@ export async function PATCH(
     );
   }
 
+  if (parsed.data.name !== undefined) {
+    const fromName = access.space.name;
+    const toName = parsed.data.name.trim();
+    if (
+      isHeartgardenImplicitPlayerRootSpaceName(toName) &&
+      !isHeartgardenImplicitPlayerRootSpaceName(fromName)
+    ) {
+      return Response.json({ ok: false, error: "Invalid space name" }, { status: 400 });
+    }
+    if (
+      isHeartgardenImplicitPlayerRootSpaceName(fromName) &&
+      !isHeartgardenImplicitPlayerRootSpaceName(toName)
+    ) {
+      return Response.json({ ok: false, error: "Invalid space name" }, { status: 400 });
+    }
+  }
+
   if (parsed.data.parentSpaceId !== undefined) {
     if (bootCtx.role === "player") {
       return heartgardenApiForbiddenJsonResponse();
     }
     const nextParent = parsed.data.parentSpaceId;
-    if (nextParent !== null && !gmMayAccessSpaceId(bootCtx, nextParent)) {
+    if (nextParent !== null && !(await gmMayAccessSpaceIdAsync(db, bootCtx, nextParent))) {
       return heartgardenApiForbiddenJsonResponse();
     }
     const reparent = await assertSpaceReparentAllowed(db, spaceId, nextParent);

@@ -6,6 +6,7 @@ import {
   heartgardenMaskNotFoundForPlayer,
   isHeartgardenPlayerBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { isHeartgardenImplicitPlayerRootSpaceName } from "@/src/lib/heartgarden-implicit-player-space";
 import { spaceIsUnderPlayerRoot } from "@/src/lib/heartgarden-space-subtree";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
@@ -44,6 +45,9 @@ export async function requireHeartgardenSpaceApiAccess(
     if (!ok) {
       return { ok: false, response: heartgardenApiForbiddenJsonResponse() };
     }
+  }
+  if (bootCtx.role === "gm" && isHeartgardenImplicitPlayerRootSpaceName(space.name)) {
+    return { ok: false, response: heartgardenApiForbiddenJsonResponse() };
   }
   if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
     return { ok: false, response: heartgardenApiForbiddenJsonResponse() };

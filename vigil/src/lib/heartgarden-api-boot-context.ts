@@ -7,14 +7,20 @@ import {
   readBootEnv,
   verifyBootSessionCookie,
 } from "@/src/lib/heartgarden-boot-session";
+import { isHeartgardenImplicitPlayerRootSpaceName } from "@/src/lib/heartgarden-implicit-player-space";
 import {
   isHeartgardenPlayerLayerMisconfigured,
   resolveHeartgardenPlayerSpaceIdFromEnv,
 } from "@/src/lib/heartgarden-player-layer-env";
-import { assertSpaceExists, resolveActiveSpaceGmWorkspace } from "@/src/lib/spaces";
+import {
+  assertSpaceExists,
+  resolveOrCreateImplicitPlayerRootSpace,
+} from "@/src/lib/spaces";
 import { isHeartgardenGmPlayerSpaceBreakGlassEnabled } from "@/src/lib/heartgarden-gm-break-glass";
 import { spaceIsUnderPlayerRoot } from "@/src/lib/heartgarden-space-subtree";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
+
+type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 
 /** Stable JSON for player / invalid-session denials (no hints). */
 export const HEARTGARDEN_API_FORBIDDEN = { ok: false, error: "Forbidden." } as const;
@@ -50,6 +56,30 @@ export function gmMayAccessSpaceId(ctx: HeartgardenApiBootContext, spaceId: stri
 
 export function gmMayAccessItemSpace(ctx: HeartgardenApiBootContext, itemSpaceId: string): boolean {
   return gmMayAccessSpaceId(ctx, itemSpaceId);
+}
+
+/**
+ * GM cannot access the implicit Players-only root space (or items in it) even when
+ * `HEARTGARDEN_PLAYER_SPACE_ID` is unset.
+ */
+export async function gmMayAccessSpaceIdAsync(
+  db: VigilDb,
+  ctx: HeartgardenApiBootContext,
+  spaceId: string,
+): Promise<boolean> {
+  if (!gmMayAccessSpaceId(ctx, spaceId)) return false;
+  if (ctx.role !== "gm") return true;
+  const row = await assertSpaceExists(db, spaceId);
+  if (!row) return false;
+  return !isHeartgardenImplicitPlayerRootSpaceName(row.name);
+}
+
+export async function gmMayAccessItemSpaceAsync(
+  db: VigilDb,
+  ctx: HeartgardenApiBootContext,
+  itemSpaceId: string,
+): Promise<boolean> {
+  return gmMayAccessSpaceIdAsync(db, ctx, itemSpaceId);
 }
 
 /**
@@ -174,8 +204,8 @@ export async function getHeartgardenApiBootContext(): Promise<HeartgardenApiBoot
   if (ctx.role !== "player_resolve_from_db") return ctx;
   const db = tryGetDb();
   if (!db) return { role: "player_forbidden" };
-  const { activeSpace } = await resolveActiveSpaceGmWorkspace(db, undefined);
-  return { role: "player", playerSpaceId: activeSpace.id };
+  const row = await resolveOrCreateImplicitPlayerRootSpace(db);
+  return { role: "player", playerSpaceId: row.id };
 }
 
 /** Lore, vault index, upload, reindex, semantic search, etc. — no player-tier or demo access. */

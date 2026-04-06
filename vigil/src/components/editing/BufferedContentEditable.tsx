@@ -17,11 +17,86 @@ import {
   rangeForPlainTextOffsets,
 } from "@/src/lib/wiki-link-caret";
 
+function isCaretAtStartOfHost(host: HTMLElement, range: Range): boolean {
+  if (!range.collapsed) return false;
+  const probe = document.createRange();
+  try {
+    probe.setStart(host, 0);
+    probe.setEnd(range.startContainer, range.startOffset);
+  } catch {
+    return false;
+  }
+  return probe.toString().length === 0;
+}
+
+function placeCaretAtEnd(el: HTMLElement) {
+  const sel = window.getSelection();
+  if (!sel) return;
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+function placeCaretAtStart(el: HTMLElement) {
+  const sel = window.getSelection();
+  if (!sel) return;
+  const range = document.createRange();
+  range.setStart(el, 0);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+function taskTextIsVisuallyEmpty(el: HTMLElement): boolean {
+  const t = el.innerText.replace(/\u00a0/g, " ").replace(/\uFEFF/g, "");
+  return t.replace(/\s+/g, "").length === 0;
+}
+
+/** Place caret in `taskText`, preferring a hit-test at the click point when it falls inside the text. */
+function placeCaretInTaskTextFromPoint(taskText: HTMLElement, clientX: number, clientY: number) {
+  const sel = window.getSelection();
+  if (!sel) return;
+  let range: Range | null = null;
+  const doc = taskText.ownerDocument;
+  if (typeof doc.caretRangeFromPoint === "function") {
+    try {
+      range = doc.caretRangeFromPoint(clientX, clientY);
+    } catch {
+      range = null;
+    }
+  } else if ("caretPositionFromPoint" in doc && typeof (doc as unknown as { caretPositionFromPoint: (x: number, y: number) => { offsetNode: Node; offset: number } | null }).caretPositionFromPoint === "function") {
+    const pos = (
+      doc as unknown as {
+        caretPositionFromPoint(x: number, y: number): { offsetNode: Node; offset: number } | null;
+      }
+    ).caretPositionFromPoint(clientX, clientY);
+    if (pos?.offsetNode) {
+      range = doc.createRange();
+      range.setStart(pos.offsetNode, pos.offset);
+      range.collapse(true);
+    }
+  }
+  if (range && taskText.contains(range.startContainer)) {
+    sel.removeAllRanges();
+    sel.addRange(range);
+    return;
+  }
+  placeCaretAtEnd(taskText);
+}
+
 export type WikiLinkAssistConfig = {
   enabled: boolean;
   getLocalItems: () => WikiCandidate[];
   fetchRemoteSuggest?: (q: string, signal: AbortSignal) => Promise<WikiCandidate[]>;
   excludeEntityId?: string;
+};
+
+export type ChecklistDeletionClassNames = {
+  taskItem: string;
+  taskText: string;
+  taskCheckbox: string;
 };
 
 type BufferedContentEditableProps = {
@@ -38,6 +113,11 @@ type BufferedContentEditableProps = {
   onEnter?: () => void;
   dataAttribute?: string;
   wikiLinkAssist?: WikiLinkAssistConfig | null;
+  /**
+   * When set: (1) Backspace at the start of an empty checklist text cell removes the whole task row.
+   * (2) Pointer hits on the row outside the text cell (e.g. beside the checkbox) move the caret into the text.
+   */
+  checklistDeletion?: ChecklistDeletionClassNames | null;
 };
 
 export function BufferedContentEditable({
@@ -54,6 +134,7 @@ export function BufferedContentEditable({
   onEnter,
   dataAttribute,
   wikiLinkAssist,
+  checklistDeletion,
 }: BufferedContentEditableProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const {
@@ -218,6 +299,25 @@ export function BufferedContentEditable({
           onDraftChange(next);
           requestAnimationFrame(() => refreshWikiAssist());
         }}
+        onPointerDownCapture={(event) => {
+          if (!checklistDeletion || plainText || !editable || event.button !== 0) return;
+          const root = ref.current;
+          if (!root || !root.contains(event.target as Node)) return;
+          const t = event.target as HTMLElement;
+          const taskItemSel = `.${checklistDeletion.taskItem}`;
+          const taskTextSel = `.${checklistDeletion.taskText}`;
+          const taskCheckboxSel = `.${checklistDeletion.taskCheckbox}`;
+          const taskItem = t.closest(taskItemSel) as HTMLElement | null;
+          if (!taskItem || !root.contains(taskItem)) return;
+          if (t.closest(taskTextSel)) return;
+          if (t.closest(taskCheckboxSel)) return;
+          const taskText = taskItem.querySelector(taskTextSel) as HTMLElement | null;
+          if (!taskText) return;
+          event.preventDefault();
+          beginEditing();
+          taskText.focus({ preventScroll: true });
+          placeCaretInTaskTextFromPoint(taskText, event.clientX, event.clientY);
+        }}
         onKeyDown={(event) => {
           if (wikiOpen && wikiCandidates.length > 0) {
             if (event.key === "ArrowDown") {
@@ -240,6 +340,56 @@ export function BufferedContentEditable({
               event.preventDefault();
               closeWiki();
               return;
+            }
+          }
+
+          if (
+            checklistDeletion &&
+            !plainText &&
+            event.key === "Backspace" &&
+            !event.defaultPrevented
+          ) {
+            const root = ref.current;
+            const sel = window.getSelection();
+            if (root && sel && sel.isCollapsed && sel.rangeCount > 0) {
+              const range = sel.getRangeAt(0);
+              let anchor: Node | null = range.startContainer;
+              if (anchor.nodeType === Node.TEXT_NODE) anchor = anchor.parentElement;
+              const anchorEl = anchor instanceof Element ? anchor : null;
+              const taskTextSel = `.${checklistDeletion.taskText}`;
+              const taskItemSel = `.${checklistDeletion.taskItem}`;
+              const taskText = anchorEl?.closest(taskTextSel) as HTMLElement | null;
+              if (
+                taskText &&
+                root.contains(taskText) &&
+                isCaretAtStartOfHost(taskText, range) &&
+                taskTextIsVisuallyEmpty(taskText)
+              ) {
+                const taskItem = taskText.closest(taskItemSel) as HTMLElement | null;
+                if (taskItem && root.contains(taskItem)) {
+                  event.preventDefault();
+                  const prevItem = taskItem.previousElementSibling as HTMLElement | null;
+                  const nextItem = taskItem.nextElementSibling as HTMLElement | null;
+                  taskItem.remove();
+                  const nextHtml = readElementValue();
+                  onDraftChange(nextHtml);
+                  requestAnimationFrame(() => {
+                    const r = ref.current;
+                    if (!r?.isConnected) return;
+                    const prevText =
+                      prevItem?.matches(taskItemSel) === true
+                        ? (prevItem.querySelector(taskTextSel) as HTMLElement | null)
+                        : null;
+                    const nextText =
+                      !prevText && nextItem?.matches(taskItemSel) === true
+                        ? (nextItem.querySelector(taskTextSel) as HTMLElement | null)
+                        : null;
+                    if (prevText) placeCaretAtEnd(prevText);
+                    else if (nextText) placeCaretAtStart(nextText);
+                  });
+                  return;
+                }
+              }
             }
           }
 

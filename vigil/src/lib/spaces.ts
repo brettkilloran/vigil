@@ -3,6 +3,10 @@ import { and, asc, desc, eq, inArray, ne, notInArray, or, sql } from "drizzle-or
 import type { tryGetDb } from "@/src/db/index";
 import { itemLinks, items, spaces } from "@/src/db/schema";
 import { isHeartgardenGmPlayerSpaceBreakGlassEnabled } from "@/src/lib/heartgarden-gm-break-glass";
+import {
+  HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME,
+  isHeartgardenImplicitPlayerRootSpaceName,
+} from "@/src/lib/heartgarden-implicit-player-space";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
 import type { CameraState } from "@/src/model/canvas-types";
 import { defaultCamera } from "@/src/model/canvas-types";
@@ -37,12 +41,42 @@ export async function listAllSpaces(db: VigilDb) {
     .orderBy(desc(spaces.updatedAt));
 }
 
-/** Spaces visible in the GM workspace (excludes `HEARTGARDEN_PLAYER_SPACE_ID` when set). */
+/**
+ * Spaces visible in the GM workspace (excludes the implicit Players-only root row and
+ * `HEARTGARDEN_PLAYER_SPACE_ID` when set).
+ */
 export async function listGmWorkspaceSpaces(db: VigilDb) {
   const all = await listAllSpaces(db);
+  const withoutImplicit = all.filter((s) => !isHeartgardenImplicitPlayerRootSpaceName(s.name));
   const hid = playerSpaceIdExcludedFromGmDb();
-  if (!hid || isHeartgardenGmPlayerSpaceBreakGlassEnabled()) return all;
-  return all.filter((s) => s.id !== hid);
+  if (!hid || isHeartgardenGmPlayerSpaceBreakGlassEnabled()) return withoutImplicit;
+  return withoutImplicit.filter((s) => s.id !== hid);
+}
+
+/** Select-only: used for GM search exclusion (must not insert rows). */
+export async function findImplicitPlayerRootSpaceId(db: VigilDb): Promise<string | undefined> {
+  const [row] = await db
+    .select({ id: spaces.id })
+    .from(spaces)
+    .where(eq(spaces.name, HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME))
+    .orderBy(asc(spaces.createdAt))
+    .limit(1);
+  return row?.id;
+}
+
+export async function resolveOrCreateImplicitPlayerRootSpace(db: VigilDb) {
+  const existing = await db
+    .select()
+    .from(spaces)
+    .where(eq(spaces.name, HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME))
+    .orderBy(asc(spaces.createdAt))
+    .limit(1);
+  if (existing[0]) return existing[0];
+  const [created] = await db
+    .insert(spaces)
+    .values({ name: HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME })
+    .returning();
+  return created!;
 }
 
 /**

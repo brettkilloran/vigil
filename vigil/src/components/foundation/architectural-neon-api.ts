@@ -17,13 +17,39 @@ import {
 const vaultIndexTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const VAULT_INDEX_DEBOUNCE_MS = 2800;
 
+/** When true, skip debounced `POST /api/items/:id/index` (Players tier — route is GM-only). */
+let vaultIndexClientDisabledForPlayerLayer = false;
+
+function clearAllVaultIndexTimers() {
+  const ids = [...vaultIndexTimers.keys()];
+  for (const id of ids) {
+    const t = vaultIndexTimers.get(id);
+    if (t) clearTimeout(t);
+    vaultIndexTimers.delete(id);
+    vaultIndexClearPending(id);
+  }
+}
+
+/**
+ * Call from the shell when the session is the Players access layer. Prevents client-side
+ * vault index requests that always 403 and spam {@link vaultIndexSetError} / status churn.
+ */
+export function neonVaultIndexSetPlayerLayerActive(active: boolean) {
+  const next = active;
+  if (vaultIndexClientDisabledForPlayerLayer === next) return;
+  vaultIndexClientDisabledForPlayerLayer = next;
+  if (next) clearAllVaultIndexTimers();
+}
+
 function scheduleVaultIndexForItem(itemId: string) {
+  if (vaultIndexClientDisabledForPlayerLayer) return;
   const prev = vaultIndexTimers.get(itemId);
   if (prev) clearTimeout(prev);
   vaultIndexMarkPending(itemId);
   const t = setTimeout(() => {
     vaultIndexTimers.delete(itemId);
     vaultIndexClearPending(itemId);
+    if (vaultIndexClientDisabledForPlayerLayer) return;
     vaultIndexMarkInFlight(itemId);
     void (async () => {
       try {
@@ -39,7 +65,9 @@ function scheduleVaultIndexForItem(itemId: string) {
         } catch {
           body = {};
         }
-        if (res.status === 429) {
+        if (res.status === 403) {
+          /* GM-only route; ignore (e.g. race before player-layer flag applied). */
+        } else if (res.status === 429) {
           vaultIndexSetError("Search index rate limited — try again shortly.");
         } else if (!res.ok) {
           const err =

@@ -127,6 +127,11 @@ export function ArchitecturalNodeBody({
       spellCheck={spellCheck}
       debounceMs={300}
       dataAttribute="data-node-body-editor"
+      checklistDeletion={{
+        taskItem: styles.taskItem,
+        taskText: styles.taskText,
+        taskCheckbox: styles.taskCheckbox,
+      }}
       onCommit={(nextHtml) => onHtmlCommit?.(nextHtml)}
       onDraftDirtyChange={onDraftDirtyChange}
       wikiLinkAssist={wikiLinkAssist ?? null}

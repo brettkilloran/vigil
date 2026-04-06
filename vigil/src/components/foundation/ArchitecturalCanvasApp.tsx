@@ -30,7 +30,6 @@ import {
   Sparkle,
   SquaresFour,
   Stack,
-  Sun,
   Trash,
   UploadSimple,
   WarningCircle,
@@ -111,6 +110,7 @@ import {
   apiPatchSpaceName,
   apiPatchSpaceParent,
   fetchBootstrap,
+  neonVaultIndexSetPlayerLayerActive,
   postPresencePayload,
   type SpacePresencePeer,
 } from "@/src/components/foundation/architectural-neon-api";
@@ -148,6 +148,8 @@ import { useModKeyHints } from "@/src/lib/mod-keys";
 import {
   VIGIL_CANVAS_EFFECTS_STORAGE_KEY,
   VIGIL_MINIMAP_VISIBLE_STORAGE_KEY,
+  readCanvasMinimapVisibleFromStorage,
+  writeCanvasMinimapVisibleToStorage,
 } from "@/src/lib/vigil-canvas-prefs";
 import { readSpaceCamera, writeSpaceCamera } from "@/src/lib/heartgarden-space-camera";
 import {
@@ -608,6 +610,15 @@ type ConnectionPinViewContext = {
 function isUuidLike(value: string | null | undefined): value is string {
   if (!value) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+/** Detect mistaken per-space camera (e.g. child space key written with parent pan). */
+function camerasNearlyEqual(a: CameraState, b: CameraState): boolean {
+  return (
+    Math.abs(a.x - b.x) < 1 &&
+    Math.abs(a.y - b.y) < 1 &&
+    Math.abs(a.zoom - b.zoom) < 1e-4
+  );
 }
 
 function clampFollowCamera(cam: CameraState): CameraState {
@@ -1564,6 +1575,11 @@ export function ArchitecturalCanvasApp({
   const heartgardenBootApiRef = useRef(heartgardenBootApi);
   heartgardenBootApiRef.current = heartgardenBootApi;
 
+  useEffect(() => {
+    neonVaultIndexSetPlayerLayerActive(isPlayersTier);
+    return () => neonVaultIndexSetPlayerLayerActive(false);
+  }, [isPlayersTier]);
+
   const bootServerConfigurationError = useMemo(
     () =>
       heartgardenBootApi.loaded &&
@@ -1588,14 +1604,22 @@ export function ArchitecturalCanvasApp({
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [viewportToastOpen, setViewportToastOpen] = useState(false);
-  const [minimapOpen, setMinimapOpen] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return localStorage.getItem(VIGIL_MINIMAP_VISIBLE_STORAGE_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
+  /** Default hidden; restored from `localStorage` on the client after SSR hydrate (see layout effect). */
+  const [minimapOpen, setMinimapOpen] = useState(false);
+
+  useLayoutEffect(() => {
+    setMinimapOpen(readCanvasMinimapVisibleFromStorage());
+  }, []);
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== VIGIL_MINIMAP_VISIBLE_STORAGE_KEY) return;
+      if (e.storageArea !== window.localStorage) return;
+      setMinimapOpen(e.newValue === "1");
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
   const [minimapPlacementSizes, setMinimapPlacementSizes] = useState<
     ReadonlyMap<string, { width: number; height: number }>
   >(() => new Map());
@@ -1805,6 +1829,13 @@ export function ArchitecturalCanvasApp({
   const persistNeonRef = useRef(false);
   const itemContentPatchTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const cameraPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Latest space + pan for debounced localStorage write (avoids stale closure writing wrong space). */
+  const cameraPersistSnapshotRef = useRef<{
+    spaceId: string;
+    tx: number;
+    ty: number;
+    zoom: number;
+  }>({ spaceId: ROOT_SPACE_ID, tx: 0, ty: 0, zoom: 1 });
   const itemServerUpdatedAtRef = useRef<Map<string, string>>(new Map());
   /** While undo restores a deleted row, collab merge must not tombstone it before POST /items completes. */
   const remoteTombstoneExemptIdsRef = useRef<Set<string>>(new Set());
@@ -1817,6 +1848,12 @@ export function ArchitecturalCanvasApp({
 
   graphRef.current = graph;
   viewRef.current = { scale, tx: translateX, ty: translateY };
+  cameraPersistSnapshotRef.current = {
+    spaceId: activeSpaceId,
+    tx: translateX,
+    ty: translateY,
+    zoom: scale,
+  };
   viewportSizeRef.current = viewportSize;
   maxZIndexRef.current = maxZIndex;
   stackModalRef.current = stackModal;
@@ -3870,11 +3907,7 @@ export function ArchitecturalCanvasApp({
   const toggleMinimapOpen = useCallback(() => {
     setMinimapOpen((prev) => {
       const next = !prev;
-      try {
-        localStorage.setItem(VIGIL_MINIMAP_VISIBLE_STORAGE_KEY, next ? "1" : "0");
-      } catch {
-        /* ignore quota / private mode */
-      }
+      writeCanvasMinimapVisibleToStorage(next);
       return next;
     });
     playVigilUiSound("tap");
@@ -3888,7 +3921,9 @@ export function ArchitecturalCanvasApp({
     if (cameraPersistTimerRef.current) clearTimeout(cameraPersistTimerRef.current);
     cameraPersistTimerRef.current = setTimeout(() => {
       cameraPersistTimerRef.current = null;
-      writeSpaceCamera(activeSpaceId, { x: translateX, y: translateY, zoom: scale });
+      const snap = cameraPersistSnapshotRef.current;
+      if (!isUuidLike(snap.spaceId)) return;
+      writeSpaceCamera(snap.spaceId, { x: snap.tx, y: snap.ty, zoom: snap.zoom });
     }, 700);
     return () => {
       if (cameraPersistTimerRef.current) clearTimeout(cameraPersistTimerRef.current);
@@ -4897,6 +4932,12 @@ export function ArchitecturalCanvasApp({
       const fromDepth = navigationPathRef.current.length;
       const nextPathPreview = buildPathToSpace(spaceId, snap.spaces, snap.rootSpaceId);
       const toDepth = nextPathPreview.length;
+      const descendingDeeper = toDepth > fromDepth;
+      const viewBeforeNav: CameraState = {
+        x: viewRef.current.tx,
+        y: viewRef.current.ty,
+        zoom: viewRef.current.scale,
+      };
       if (toDepth > fromDepth) playVigilUiSound("transition_down");
       else if (toDepth < fromDepth) playVigilUiSound("transition_up");
 
@@ -4910,10 +4951,22 @@ export function ArchitecturalCanvasApp({
           }
         }
         if (isUuidLike(targetSpaceId)) {
-          const cam =
-            cameraOverride != null
-              ? clampFollowCamera(cameraOverride)
-              : readSpaceCamera(targetSpaceId) ?? defaultCamera();
+          let cam: CameraState;
+          if (cameraOverride != null) {
+            cam = clampFollowCamera(cameraOverride);
+          } else {
+            const stored = readSpaceCamera(targetSpaceId);
+            if (
+              descendingDeeper &&
+              stored != null &&
+              camerasNearlyEqual(stored, viewBeforeNav)
+            ) {
+              cam = defaultCamera();
+              writeSpaceCamera(targetSpaceId, cam);
+            } else {
+              cam = stored ?? defaultCamera();
+            }
+          }
           setTranslateX(cam.x);
           setTranslateY(cam.y);
           setScale(cam.zoom);
@@ -5279,7 +5332,6 @@ export function ArchitecturalCanvasApp({
       { id: "create-media", label: "Create image card", hint: "Add a media card", icon: <ImageSquare size={14} weight="bold" /> },
       { id: "create-folder", label: "Create folder", hint: "Add folder and child space", icon: <Folder size={14} weight="bold" /> },
       { id: "export-json", label: "Export graph JSON", hint: "Download the current graph", icon: <DownloadSimple size={14} weight="bold" /> },
-      { id: "toggle-theme", label: "Toggle theme", hint: "Switch light/dark shell class", icon: <Sun size={14} weight="bold" /> },
       {
         id: "toggle-canvas-effects",
         label: "Toggle canvas effects",
@@ -5337,7 +5389,6 @@ export function ArchitecturalCanvasApp({
       "import-lore",
       "check-lore-consistency",
       "create-media",
-      "create-folder",
     ]);
     return all.filter((a) => !deny.has(a.id));
   }, [isRestrictedLayer, modKeyHints.recenter, vaultReviewChromeVisible]);
@@ -5500,7 +5551,7 @@ export function ArchitecturalCanvasApp({
   }, [focusOpen, galleryOpen, graph.entities, selectedNodeIds, setFolderColorScheme]);
 
   const createNewNode = useCallback((type: NodeTheme) => {
-    if (isRestrictedLayer && (type === "media" || type === "folder")) return;
+    if (isRestrictedLayer && type === "media") return;
     if (
       persistNeonRef.current &&
       isUuidLike(activeSpaceId) &&
@@ -5997,7 +6048,6 @@ export function ArchitecturalCanvasApp({
         "import-lore",
         "check-lore-consistency",
         "create-media",
-        "create-folder",
       ].includes(actionId)
     ) {
       return;
@@ -6025,14 +6075,6 @@ export function ArchitecturalCanvasApp({
     if (actionId === "export-json") {
       playVigilUiSound("button");
       exportGraphJson();
-      return;
-    }
-    if (actionId === "toggle-theme") {
-      const html = document.documentElement;
-      const willBeDark = !html.classList.contains("dark");
-      playVigilUiSound(willBeDark ? "toggle_on" : "toggle_off");
-      html.classList.toggle("dark");
-      html.dataset.vigilTheme = html.classList.contains("dark") ? "dark" : "light";
       return;
     }
     if (actionId === "toggle-canvas-effects") {
@@ -7693,7 +7735,6 @@ export function ArchitecturalCanvasApp({
         return;
       }
       if (key === "5") {
-        if (isRestrictedLayer) return;
         event.preventDefault();
         createNewNode("folder");
         return;
@@ -8294,9 +8335,7 @@ export function ArchitecturalCanvasApp({
   const dockCreateActions = useMemo(
     () =>
       isRestrictedLayer
-        ? DEFAULT_CREATE_ACTIONS.filter(
-            (a) => a.nodeType !== "media" && a.nodeType !== "folder",
-          )
+        ? DEFAULT_CREATE_ACTIONS.filter((a) => a.nodeType !== "media")
         : DEFAULT_CREATE_ACTIONS,
     [isRestrictedLayer],
   );
@@ -10323,6 +10362,11 @@ export function ArchitecturalCanvasApp({
                 spellCheck={false}
                 debounceMs={150}
                 dataAttribute="data-architectural-media-gallery-notes"
+                checklistDeletion={{
+                  taskItem: styles.taskItem,
+                  taskText: styles.taskText,
+                  taskCheckbox: styles.taskCheckbox,
+                }}
                 onCommit={(nextHtml) => setGalleryDraftNotes(nextHtml)}
                 wikiLinkAssist={makeWikiLinkAssist(galleryNodeId ?? undefined)}
               />
@@ -10366,6 +10410,11 @@ export function ArchitecturalCanvasApp({
               spellCheck={false}
               debounceMs={150}
               dataAttribute="data-focus-body-editor"
+              checklistDeletion={{
+                taskItem: styles.taskItem,
+                taskText: styles.taskText,
+                taskCheckbox: styles.taskCheckbox,
+              }}
               onCommit={(nextHtml) =>
                 setFocusBody(
                   normalizeChecklistMarkup(nextHtml, {

@@ -2,7 +2,7 @@ import { tryGetDb } from "@/src/db/index";
 import { isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
 import {
   getHeartgardenApiBootContext,
-  gmMayAccessSpaceId,
+  gmMayAccessSpaceIdAsync,
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForPlayer,
   isHeartgardenPlayerBlocked,
@@ -97,7 +97,11 @@ export async function GET(req: Request) {
   const { mode } = tiered;
   const filters = finalized;
 
-  if (bootCtx.role === "gm" && filters.spaceId && !gmMayAccessSpaceId(bootCtx, filters.spaceId)) {
+  if (
+    bootCtx.role === "gm" &&
+    filters.spaceId &&
+    !(await gmMayAccessSpaceIdAsync(db, bootCtx, filters.spaceId))
+  ) {
     return heartgardenApiForbiddenJsonResponse();
   }
 

@@ -1,11 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
-  gmMayAccessItemSpace,
+  gmMayAccessItemSpaceAsync,
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForPlayer,
   isHeartgardenPlayerBlocked,
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
   if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, srcItem.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
   }
-  if (bootCtx.role === "gm" && !gmMayAccessItemSpace(bootCtx, srcItem.spaceId)) {
+  if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, srcItem.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
   }
   const validated = await validateLinkTargetsInSourceSpace(db, sourceItemId, [targetItemId]);
@@ -109,7 +109,26 @@ export async function POST(req: Request) {
     })
     .returning();
   if (!row) {
-    return Response.json({ ok: true, deduped: true });
+    const pinClause = and(
+      sourcePin != null && sourcePin !== ""
+        ? eq(itemLinks.sourcePin, sourcePin)
+        : isNull(itemLinks.sourcePin),
+      targetPin != null && targetPin !== ""
+        ? eq(itemLinks.targetPin, targetPin)
+        : isNull(itemLinks.targetPin),
+    );
+    const [existing] = await db
+      .select()
+      .from(itemLinks)
+      .where(
+        and(eq(itemLinks.sourceItemId, sourceItemId), eq(itemLinks.targetItemId, targetItemId), pinClause),
+      )
+      .limit(1);
+    return Response.json({
+      ok: true,
+      deduped: true,
+      ...(existing ? { link: existing } : {}),
+    });
   }
   return Response.json({ ok: true, link: row });
 }
@@ -161,9 +180,8 @@ export async function PATCH(req: Request) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (
-    bootCtx.role === "gm" &&
     srcForLink &&
-    !gmMayAccessItemSpace(bootCtx, srcForLink.spaceId)
+    !(await gmMayAccessItemSpaceAsync(db, bootCtx, srcForLink.spaceId))
   ) {
     return heartgardenApiForbiddenJsonResponse();
   }
@@ -263,9 +281,8 @@ export async function DELETE(req: Request) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (
-    bootCtx.role === "gm" &&
     srcForLink &&
-    !gmMayAccessItemSpace(bootCtx, srcForLink.spaceId)
+    !(await gmMayAccessItemSpaceAsync(db, bootCtx, srcForLink.spaceId))
   ) {
     return heartgardenApiForbiddenJsonResponse();
   }

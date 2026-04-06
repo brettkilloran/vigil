@@ -5,11 +5,11 @@
 Heartgarden stores canvas data in Neon: each **space** is a row (with a UUID). Items belong to a **`space_id`**.
 
 - **Bishop** (`HEARTGARDEN_BOOT_PIN_BISHOP`) signs in as cookie tier **`access`** — full GM: all spaces the app would normally list, subject to optional hiding of the player space from GM lists (see break-glass below).
-- **Players** (`HEARTGARDEN_BOOT_PIN_PLAYERS`) signs in as cookie tier **`player`**. The server allows **exactly one** Neon space for those sessions. If **`HEARTGARDEN_PLAYER_SPACE_ID`** is set to a valid UUID, that row is used. If it is **unset**, the server uses the **same default workspace** as Bishop (first space from GM resolution — typically the most recently updated root space, or a new “Main space” if the DB is empty). Set the env var when you want Players on a **different** space than that default, or to **hide** that space from GM lists (see below).
+- **Players** (`HEARTGARDEN_BOOT_PIN_PLAYERS`) signs in as cookie tier **`player`**. The server allows **exactly one** Neon space for those sessions. If **`HEARTGARDEN_PLAYER_SPACE_ID`** (or **`HEARTGARDEN_DEFAULT_SPACE_ID`**) is set to a valid UUID, that row is used. If both are **unset**, the server uses a **dedicated implicit Players root** space (created on first Players session if needed), **not** Bishop’s default GM workspace — so GM and Players never share canvas data by accident. Set the env var when you want a specific UUID, or to **hide** that space from GM lists while using an explicit id (see below).
 
 Optional second source: **`HEARTGARDEN_DEFAULT_SPACE_ID`** (MCP convention) is used only when **`HEARTGARDEN_PLAYER_SPACE_ID`** is empty.
 
-**What value to put in `HEARTGARDEN_PLAYER_SPACE_ID`:** the **`id`** of the Neon **`spaces`** row that should be the Players canvas when it must differ from the default GM landing space. It must be a **canonical UUID** string (same format as other space ids in the API).
+**What value to put in `HEARTGARDEN_PLAYER_SPACE_ID`:** the **`id`** of the Neon **`spaces`** row that should be the Players canvas (optional if you accept the auto-created implicit root). It must be a **canonical UUID** string (same format as other space ids in the API).
 
 **Demo** (`HEARTGARDEN_BOOT_PIN_DEMO`, tier **`demo`**) uses a **local-seeded** canvas only and does not use this env var for Neon.
 
@@ -24,9 +24,9 @@ Full detail lives in server helper [`src/lib/heartgarden-api-boot-context.ts`](.
 ## Invariants (do not regress)
 
 1. **GM path unchanged** — Logic branches must be **`if (player)`** / Players only where intended. Never default the app to Players behavior on data routes.
-2. **Fail closed** — **Invalid** (non-empty but not UUID) **`HEARTGARDEN_PLAYER_SPACE_ID`** / **`HEARTGARDEN_DEFAULT_SPACE_ID`**, missing Neon DB when Players need a resolved space, or space not in DB → Players get **403** on scoped routes (constant body `{ ok: false, error: "Forbidden." }`). When env is empty, the server resolves the default GM workspace space from Neon (not client-controlled).
+2. **Fail closed** — **Invalid** (non-empty but not UUID) **`HEARTGARDEN_PLAYER_SPACE_ID`** / **`HEARTGARDEN_DEFAULT_SPACE_ID`**, missing Neon DB when Players need a resolved space, or space not in DB → Players get **403** on scoped routes (constant body `{ ok: false, error: "Forbidden." }`). When env is empty, the server resolves the implicit Players root space from Neon (not client-controlled, never the GM default workspace).
 3. **Defense in depth** — Bootstrap scoping is UX; every API that uses `spaceId` / `itemId` re-checks tier and resolves ownership from the DB where required.
-4. **Flat space (Option A)** — Players may only access items whose **`space_id`** equals the **resolved** player space id (env UUID or default workspace) exactly (no child-space drill-down).
+4. **Subtree (folders)** — Players may access items in the **resolved player root space** and in **child folder spaces** under it (`spaceIsUnderPlayerRoot`). Same rules apply to **`item_links`** (pin threads): `POST` / `PATCH` / `DELETE` `/api/item-links` and `GET /api/spaces/[spaceId]/graph` use `playerMayAccessItemSpaceAsync` / `requireHeartgardenSpaceApiAccess` so threads persist like GM, scoped to the player world.
 5. **No recon-by-error** — Denial bodies stay generic. For **Players** (`player` tier), missing spaces/items/links return **403** with the same constant JSON as other denials (not **404**), so clients cannot infer whether a UUID exists in another space. **GM** sessions keep normal **404** where applicable.
 6. **Same browser, two cookies** — Bishop machines use **`access`**; do not share the Bishop PIN on untrusted player devices.
 7. **Boot brute-force** — `POST /api/heartgarden/boot` is **rate-limited per IP** (in-memory per server instance; tunable via env). **`PLAYWRIGHT_E2E=1`** disables the limit for CI.
@@ -45,10 +45,11 @@ When **`isPlayersTier`** (boot loaded, gate on, **`sessionTier === "player"`**):
 
 | Surface | Players |
 |---------|---------|
-| Notes, checklists, code cards | On |
-| Folders, new child spaces, media cards | Off (API + UI) |
+| Notes, checklists, code cards, folders (child spaces) | On |
+| Media cards, webclip | Off (API + UI) |
 | Rich-text image insert in dock | Off |
-| Cmd/Ctrl+4, 5 (media / folder hotkeys) | No-op |
+| Cmd/Ctrl+4 (media hotkey) | No-op |
+| Cmd/Ctrl+5 (folder) | On |
 | Palette: Ask lore, link graph, import, vault review, export JSON | Hidden |
 | Top bar: import, vault review | Hidden |
 | Lore panels, smart import, link graph overlay | Unmounted |
@@ -77,6 +78,8 @@ Any new **`app/api/**`** handler that reads **`spaceId`**, **`itemId`**, or link
 - [ ] `GET /api/bootstrap` lists **only** the player space and its items.
 - [ ] `PATCH /api/items/<id>` for an item in another space → **403**.
 - [ ] Random non-existent item UUID → **403** (not **404**) so existence is not leaked.
+- [ ] `POST /api/item-links` between two items in the player subtree → **200**; refresh / `GET …/graph` shows the edge.
+- [ ] `POST /api/spaces` with `{ name, parentSpaceId }` where parent is the player root or a folder under it → **200**; `POST …/items` with `itemType: "folder"` → **200**; dock / palette / **5** create folder.
 - [ ] `POST /api/lore/query` (and other lore routes) → **403**.
 - [ ] `POST /api/upload/presign` → **403**.
 - [ ] UI: no lore/import/vault/graph export entry points.
