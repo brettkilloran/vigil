@@ -2231,6 +2231,11 @@
   pointer-events: auto;
 }
 
+/* Hard guard: legacy session/source context chip must never render in top-left chrome. */
+.shellTopClusterRow [data-hg-chrome="workspace-context"] {
+  display: none !important;
+}
+
 /* Same frosted strip as status save + nav: align to chrome line, not a lone floating vigil-btn. */
 .shellTopLogOutWrap {
   flex: 0 0 auto;

@@ -98,9 +98,13 @@ export async function resolveActiveSpaceGmWorkspace(db: VigilDb, requestedSpaceI
     requestedSpaceId &&
     allSpaces.some((s) => s.id === requestedSpaceId) &&
     (!hid || breakGlass || requestedSpaceId !== hid);
+  const defaultRoot =
+    allSpaces.find((s) => s.parentSpaceId == null) ??
+    allSpaces.find((s) => s.name.trim().toLowerCase() === "main space") ??
+    allSpaces[0];
   const active = reqOk
     ? allSpaces.find((s) => s.id === requestedSpaceId)!
-    : allSpaces[0];
+    : defaultRoot;
   return { activeSpace: active, allSpaces };
 }
 
@@ -116,10 +120,14 @@ export async function resolveActiveSpace(
       .returning();
     allSpaces = [created!];
   }
+  const defaultRoot =
+    allSpaces.find((s) => s.parentSpaceId == null) ??
+    allSpaces.find((s) => s.name.trim().toLowerCase() === "main space") ??
+    allSpaces[0];
   const active =
     requestedSpaceId && allSpaces.some((s) => s.id === requestedSpaceId)
       ? allSpaces.find((s) => s.id === requestedSpaceId)!
-      : allSpaces[0];
+      : defaultRoot;
   return { activeSpace: active, allSpaces };
 }
 
