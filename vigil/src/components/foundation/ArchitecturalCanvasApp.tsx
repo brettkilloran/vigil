@@ -6527,8 +6527,10 @@ export function ArchitecturalCanvasApp({
       }
 
       if (isPanningRef.current) {
-        setTranslateX(event.clientX - panStartRef.current.x);
-        setTranslateY(event.clientY - panStartRef.current.y);
+        const nextTx = event.clientX - panStartRef.current.x;
+        const nextTy = event.clientY - panStartRef.current.y;
+        setTranslateX((prev) => (prev === nextTx ? prev : nextTx));
+        setTranslateY((prev) => (prev === nextTy ? prev : nextTy));
       }
 
       const draggedIds = draggedNodeIdsRef.current;
@@ -6696,7 +6698,8 @@ export function ArchitecturalCanvasApp({
       setDraggedNodeIds([]);
       setHoveredFolderId(null);
       setHoveredStackTargetId(null);
-      setParentDropHover(false);
+      parentDropHoveredRef.current = false;
+      setParentDropHovered(false);
     };
 
     window.addEventListener("pointermove", onPointerMove);
@@ -6712,8 +6715,8 @@ export function ArchitecturalCanvasApp({
       window.removeEventListener("mouseup", onWindowPointerOrMouseUp);
     };
     /* Intentionally no deps: handleDrop/updateDropTargets change every pan frame via centerCoords →
-     * would re-bind window listeners constantly and can trigger max update depth with pointermove. */
-  }, [setParentDropHover]);
+     * re-binding window listeners on those deps causes max update depth during pan (pointermove). */
+  }, []);
 
   useEffect(() => {
     if (!stackModal) return;

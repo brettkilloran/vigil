@@ -601,13 +601,14 @@ export function ArchitecturalViewportMetrics({
   minimapOpen?: boolean;
   onToggleMinimap?: () => void;
 }) {
-  /** Viewport-derived X/Y differ SSR vs first client paint (`window` / ref size). Show stable 0,0 until mounted. */
-  const [viewportMetricsMounted, setViewportMetricsMounted] = useState(false);
-  useEffect(() => {
-    setViewportMetricsMounted(true);
-  }, []);
-  const displayWorldX = viewportMetricsMounted ? centerWorldX : 0;
-  const displayWorldY = viewportMetricsMounted ? centerWorldY : 0;
+  /** Viewport-derived X/Y differ SSR vs client. Show stable 0,0 on server snapshot. */
+  const isClient = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+  const displayWorldX = isClient ? centerWorldX : 0;
+  const displayWorldY = isClient ? centerWorldY : 0;
 
   const metricsReadout = (
     <>
