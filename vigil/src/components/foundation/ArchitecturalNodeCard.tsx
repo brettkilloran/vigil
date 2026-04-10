@@ -274,7 +274,7 @@ export function ArchitecturalNodeCard({
                   data-architectural-media-upload="true"
                   data-media-owner-id={id}
                 >
-                  Replace
+                  {imageCardMedia.src ? "Replace" : "Upload"}
                 </Button>
               </div>
             </div>

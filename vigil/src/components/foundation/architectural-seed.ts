@@ -7,6 +7,7 @@ import {
   type CanvasSpace,
 } from "@/src/components/foundation/architectural-types";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
+import { mediaUploadActionLabel } from "@/src/components/foundation/architectural-media-html";
 
 type StyleTokens = {
   taskItem: string;
@@ -112,7 +113,7 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
         <div class="${tokens.mediaFrame}" data-architectural-media-root="true">
           <img class="${tokens.mediaImage}" src="/caliginia-sphere.png" alt="Abstract sphere render used as sample media" />
           <div class="${tokens.mediaImageActions}" contenteditable="false">
-            <button type="button" class="${tokens.mediaUploadBtn}" data-architectural-media-upload="true">Replace</button>
+            <button type="button" class="vigil-btn ${tokens.mediaUploadBtn}" data-variant="ghost" data-size="sm" data-tone="glass" data-architectural-media-upload="true">${mediaUploadActionLabel(true)}</button>
           </div>
         </div>
         <div data-architectural-media-notes="true"><p>Media cards accept uploads and keep captions here. Replace the image to try your own file.</p></div>

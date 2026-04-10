@@ -5,6 +5,22 @@
  */
 const MEDIA_ROOT_SEL = "[data-architectural-media-root]";
 const MEDIA_NOTES_SEL = "[data-architectural-media-notes]";
+const MEDIA_UPLOAD_BTN_SEL = "[data-architectural-media-upload]";
+
+export function mediaUploadActionLabel(hasImage: boolean): "Upload" | "Replace" {
+  return hasImage ? "Replace" : "Upload";
+}
+
+function buildMediaUploadButtonClass(uploadButtonClass?: string): string {
+  const tokens = new Set(
+    (uploadButtonClass || "")
+      .split(/\s+/)
+      .map((t) => t.trim())
+      .filter(Boolean),
+  );
+  tokens.add("vigil-btn");
+  return Array.from(tokens).join(" ");
+}
 
 /** First `<img …>` in `html` (SSR-safe; mirrors `querySelector("img")` on a small fragment). */
 function parseFirstImgFromHtmlFragment(html: string): { src: string | null; alt: string } {
@@ -84,6 +100,7 @@ export function applyImageDataUrlToArchitecturalMediaBody(
   dataUrl: string,
   alt: string,
   imageClass: string,
+  options?: { uploadButtonClass?: string },
 ): string {
   if (typeof document === "undefined") return bodyHtml;
   const doc = new DOMParser().parseFromString(
@@ -105,6 +122,16 @@ export function applyImageDataUrlToArchitecturalMediaBody(
   img.setAttribute("alt", alt.replace(/"/g, ""));
   if (imageClass) img.setAttribute("class", imageClass);
   img.removeAttribute("data-hg-portrait-placeholder");
+  const uploadBtn = root.querySelector<HTMLElement>(MEDIA_UPLOAD_BTN_SEL);
+  if (uploadBtn) {
+    uploadBtn.textContent = mediaUploadActionLabel(true);
+    if (options?.uploadButtonClass || !uploadBtn.getAttribute("class")) {
+      uploadBtn.setAttribute("class", buildMediaUploadButtonClass(options?.uploadButtonClass));
+    }
+    uploadBtn.setAttribute("data-variant", "ghost");
+    uploadBtn.setAttribute("data-size", "sm");
+    uploadBtn.setAttribute("data-tone", "glass");
+  }
 
   return wrap.innerHTML;
 }

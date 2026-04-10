@@ -9,6 +9,7 @@ import type {
 import { LORE_V9_HEADER_META_PLACEHOLDER } from "@/src/lib/lore-v9-placeholder";
 import archBodyStyles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import loreCardStyles from "@/src/components/foundation/lore-entity-card.module.css";
+import { mediaUploadActionLabel } from "@/src/components/foundation/architectural-media-html";
 
 /** v11 portrait placeholder (4:3); base tone comes from CSS on the `img` (plate-relative). */
 export const LORE_PORTRAIT_PLACEHOLDER_DARK =
@@ -87,7 +88,7 @@ function characterV11(): string {
 <div class="${s.charSkMediaRoot}" data-architectural-media-root="true" data-hg-lore-portrait-root="v11" contenteditable="false">
 <img class="${s.charSkPortraitImg}" src="${LORE_PORTRAIT_PLACEHOLDER_DARK}" alt="" width="240" height="180" contenteditable="false" draggable="false" data-hg-portrait-placeholder="true" />
 <div data-hg-portrait-actions="true" contenteditable="false">
-<button type="button" class="${archBodyStyles.mediaUploadBtn}" data-architectural-media-upload="true">Upload</button>
+<button type="button" class="vigil-btn ${archBodyStyles.mediaUploadBtn}" data-variant="ghost" data-size="sm" data-tone="glass" data-architectural-media-upload="true">${mediaUploadActionLabel(false)}</button>
 </div>
 </div>
 </div>

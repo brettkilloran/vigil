@@ -105,7 +105,9 @@ function LabSkeuoCard({
         const alt =
           file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() || "Portrait";
         setBodyAfterUpload((prev) =>
-          applyImageDataUrlToArchitecturalMediaBody(prev, dataUrl, alt, portraitCommittedClass),
+          applyImageDataUrlToArchitecturalMediaBody(prev, dataUrl, alt, portraitCommittedClass, {
+            uploadButtonClass: canvasStyles.mediaUploadBtn,
+          }),
         );
       };
       reader.readAsDataURL(file);
