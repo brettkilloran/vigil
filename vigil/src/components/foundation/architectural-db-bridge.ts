@@ -9,9 +9,15 @@ import type {
   CanvasPinConnection,
   CanvasSpace,
   ContentTheme,
+  LoreCard,
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
 import type { CanvasItem } from "@/src/model/canvas-types";
+import {
+  defaultLoreCardVariantForKind,
+  parseLoreCard,
+  tapeVariantForLoreCard,
+} from "@/src/lib/lore-node-seed-html";
 import type { CameraState } from "@/src/model/canvas-types";
 
 const UNIFIED_NODE_WIDTH = 340;
@@ -44,6 +50,7 @@ export type HgArchPayload = {
   rotation?: number;
   tapeRotation?: number;
   folderColorScheme?: string;
+  loreCard?: LoreCard;
 };
 
 export function htmlToPlainText(html: string): string {
@@ -77,6 +84,7 @@ function readHgArch(cj: Record<string, unknown> | null): HgArchPayload | null {
     tapeRotation: typeof o.tapeRotation === "number" ? o.tapeRotation : undefined,
     folderColorScheme:
       typeof o.folderColorScheme === "string" ? o.folderColorScheme : undefined,
+    loreCard: parseLoreCard(o.loreCard),
   };
 }
 
@@ -159,6 +167,16 @@ export function canvasItemToEntity(
   }
 
   const theme = themeFromItemType(item, hg);
+  const loreFromHg = hg?.loreCard;
+  const loreFromEntityType =
+    item.entityType === "character" || item.entityType === "faction" || item.entityType === "location"
+      ? ({
+          kind: item.entityType,
+          variant: defaultLoreCardVariantForKind(item.entityType),
+        } satisfies LoreCard)
+      : undefined;
+  const loreCard = loreFromHg ?? loreFromEntityType;
+
   const entity: CanvasContentEntity = {
     id: item.id,
     title: item.title || "Untitled",
@@ -179,6 +197,12 @@ export function canvasItemToEntity(
       [activeSpaceId]: { x: item.x, y: item.y },
     },
   };
+  if (loreCard) {
+    entity.loreCard = loreCard;
+    if (!hg?.tapeVariant) {
+      entity.tapeVariant = tapeVariantForLoreCard(loreCard.kind, loreCard.variant);
+    }
+  }
   return entity;
 }
 
@@ -495,6 +519,9 @@ export function buildContentJsonForContentEntity(
     rotation: entity.rotation,
     tapeRotation: entity.tapeRotation,
   };
+  if (entity.loreCard) {
+    hgArch.loreCard = entity.loreCard;
+  }
   return {
     format: "html",
     html: entity.bodyHtml,
@@ -599,6 +626,7 @@ export function buildContentItemRestorePayload(
     contentText: htmlToPlainText(entity.bodyHtml),
     contentJson: buildContentJsonForContentEntity(entity),
   };
+  if (entity.loreCard) body.entityType = entity.loreCard.kind;
   if (entity.stackId != null) body.stackId = entity.stackId;
   if (entity.stackOrder != null) body.stackOrder = entity.stackOrder;
   return { spaceId, body };

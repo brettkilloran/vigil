@@ -1,7 +1,14 @@
 import type { FolderColorSchemeId } from "@/src/components/foundation/architectural-folder-schemes";
 
 export type ContentTheme = "default" | "code" | "task" | "media";
-export type NodeTheme = ContentTheme | "folder";
+
+/** Lore canvas nodes: stored as `note` rows with `entity_type` + `hgArch.loreCard`. */
+export type LoreCardKind = "character" | "faction" | "location";
+/** Faction/location: v1–v3. Character: v3 (passport strip), v8–v9 (protocol IDs). */
+export type LoreCardVariant = "v1" | "v2" | "v3" | "v8" | "v9";
+export type LoreCard = { kind: LoreCardKind; variant: LoreCardVariant };
+
+export type NodeTheme = ContentTheme | "folder" | LoreCardKind;
 
 export type { FolderColorSchemeId };
 export type CanvasTool = "select" | "pan";
@@ -40,6 +47,8 @@ export type CanvasContentEntity = CanvasEntityBase & {
   theme: ContentTheme;
   tapeVariant?: TapeVariant;
   bodyHtml: string;
+  /** When set, card chrome + `entity_type` on sync; body uses shared lore templates. */
+  loreCard?: LoreCard;
 };
 
 export type CanvasFolderEntity = CanvasEntityBase & {

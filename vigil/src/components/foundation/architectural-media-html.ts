@@ -69,6 +69,16 @@ export function setArchitecturalMediaNotes(bodyHtml: string, notesHtml: string):
   return wrap.innerHTML;
 }
 
+/** Lore v8 (and similar) portrait wells use `data-hg-lore-portrait-root` on the media root. */
+export function bodyUsesLorePortraitMediaSlot(bodyHtml: string): boolean {
+  return /\bdata-hg-lore-portrait-root\s*=/i.test(bodyHtml);
+}
+
+/** v9 ID card portrait slot (distinct CSS class on committed `<img>`). */
+export function lorePortraitSlotUsesV9(bodyHtml: string): boolean {
+  return /\bdata-hg-lore-portrait-root\s*=\s*(?:"v9"|'v9'|v9)\b/i.test(bodyHtml);
+}
+
 export function applyImageDataUrlToArchitecturalMediaBody(
   bodyHtml: string,
   dataUrl: string,
@@ -94,6 +104,7 @@ export function applyImageDataUrlToArchitecturalMediaBody(
   img.setAttribute("src", dataUrl);
   img.setAttribute("alt", alt.replace(/"/g, ""));
   if (imageClass) img.setAttribute("class", imageClass);
+  img.removeAttribute("data-hg-portrait-placeholder");
 
   return wrap.innerHTML;
 }
