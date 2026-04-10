@@ -249,8 +249,8 @@ const VigilFlowRevealOverlay = dynamic(
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 3;
 const ZOOM_BUTTON_STEP = 0.2;
-/** Trackpad pinch (ctrl/meta + wheel): slightly damped vs mouse wheel for smoother Mac gestures. */
-const WHEEL_ZOOM_SENSITIVITY = 0.00088;
+/** Trackpad pinch (ctrl/meta + wheel): tuned to feel close to Figma on laptop trackpads. */
+const WHEEL_ZOOM_SENSITIVITY = 0.00235;
 
 /** deltaMode → pixels (Figma-style canvas: stable pan on macOS trackpads / WebKit line mode). */
 function normalizeWheelPanAxis(delta: number, deltaMode: number, axis: "x" | "y"): number {
@@ -270,6 +270,18 @@ function normalizeWheelZoomDeltaY(deltaY: number, deltaMode: number): number {
     return deltaY * window.innerHeight;
   }
   return deltaY;
+}
+
+function canScrollableBodyConsumeWheel(body: HTMLElement | null, event: WheelEvent): boolean {
+  if (!body) return false;
+  if (body.scrollHeight <= body.clientHeight + 1) return false;
+  const goingDown = event.deltaY > 0;
+  const goingUp = event.deltaY < 0;
+  if (!goingDown && !goingUp) return false;
+  const maxScrollTop = body.scrollHeight - body.clientHeight;
+  const atTop = body.scrollTop <= 0;
+  const atBottom = body.scrollTop >= maxScrollTop - 1;
+  return (goingDown && !atBottom) || (goingUp && !atTop);
 }
 /** Scene fade-out / fade-in duration (ms); keep in sync with `.viewportSceneLayer` in ArchitecturalCanvasApp.module.css */
 const VIEWPORT_SCENE_FADE_MS = 760;
@@ -7756,11 +7768,19 @@ export function ArchitecturalCanvasApp({
 
       const inEditable = !!target.closest("input, textarea, select, [contenteditable='true']");
       const scrollBody = target.closest<HTMLElement>("[data-node-body-editor]");
-      const inScrollableBody =
-        !!scrollBody && scrollBody.scrollHeight > scrollBody.clientHeight;
+      const inScrollableBody = !!scrollBody && scrollBody.scrollHeight > scrollBody.clientHeight;
+      const activeEl = document.activeElement as HTMLElement | null;
+      const editableRoot = target.closest<HTMLElement>("input, textarea, select, [contenteditable='true']");
+      const editableIsActivelyFocused =
+        !!editableRoot &&
+        !!activeEl &&
+        (editableRoot === activeEl || editableRoot.contains(activeEl));
+      const bodyCanConsumeWheel = canScrollableBodyConsumeWheel(scrollBody, event);
 
       const pinchZoom = event.ctrlKey || event.metaKey;
-      if ((inEditable || inScrollableBody) && !pinchZoom) return;
+      if (!pinchZoom && (editableIsActivelyFocused || bodyCanConsumeWheel)) return;
+      // Preserve native wheel behavior for non-focused form fields outside the canvas editor surfaces.
+      if (!pinchZoom && inEditable && !inScrollableBody && !editableIsActivelyFocused) return;
 
       event.preventDefault();
       if (pinchZoom) {
