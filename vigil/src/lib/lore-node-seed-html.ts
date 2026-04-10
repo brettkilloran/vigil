@@ -5,6 +5,7 @@ import type {
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
 
+import { LORE_V9_HEADER_META_PLACEHOLDER } from "@/src/lib/lore-v9-placeholder";
 import archBodyStyles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import loreCardStyles from "@/src/components/foundation/lore-entity-card.module.css";
 
@@ -15,11 +16,26 @@ export const LORE_PORTRAIT_PLACEHOLDER =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#c5d0dc"/><stop offset="100%" stop-color="#8e9daf"/></linearGradient></defs><rect width="120" height="160" fill="url(#g)"/><ellipse cx="60" cy="56" rx="24" ry="28" fill="rgba(255,255,255,.4)"/><path d="M28 120 Q60 92 92 120 L92 160 L28 160 Z" fill="rgba(255,255,255,.32)"/></svg>`,
   );
 
-/** Dark ID / v9 portrait well: reticle only; full-well fill comes from CSS (`--sk-portrait-placeholder-surface`). */
+/** v9 portrait placeholder: technical overlay; base tone comes from CSS on the `img` (plate-relative). */
 export const LORE_PORTRAIT_PLACEHOLDER_DARK =
   "data:image/svg+xml," +
   encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160"><g fill="none" stroke="rgba(0,0,0,0.24)" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter"><path d="M10 26 L10 10 L26 10"/><path d="M94 10 L110 10 L110 26"/><path d="M10 134 L10 150 L26 150"/><path d="M110 134 L110 150 L94 150"/></g><g stroke="rgba(0,0,0,0.14)" stroke-width="1"><line x1="52" y1="80" x2="68" y2="80"/><line x1="60" y1="72" x2="60" y2="88"/></g></svg>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160">
+<g opacity="0.5" stroke="rgba(255,255,255,0.09)" stroke-width="0.6" stroke-linecap="square">
+<line x1="0" y1="40" x2="120" y2="40"/><line x1="0" y1="80" x2="120" y2="80"/><line x1="0" y1="120" x2="120" y2="120"/>
+<line x1="30" y1="0" x2="30" y2="160"/><line x1="60" y1="0" x2="60" y2="160"/><line x1="90" y1="0" x2="90" y2="160"/>
+</g>
+<g fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="1.05" stroke-linecap="square" stroke-linejoin="miter">
+<path d="M10 26 L10 10 L26 10"/><path d="M94 10 L110 10 L110 26"/><path d="M10 134 L10 150 L26 150"/><path d="M110 134 L110 150 L94 150"/>
+</g>
+<g stroke="rgba(255,255,255,0.14)" stroke-width="1" stroke-linecap="square">
+<line x1="52" y1="80" x2="68" y2="80"/><line x1="60" y1="72" x2="60" y2="88"/>
+</g>
+<g opacity="0.55" stroke="rgba(255,255,255,0.08)" stroke-width="0.55" stroke-linecap="square">
+<line x1="4" y1="80" x2="14" y2="80"/><line x1="106" y1="80" x2="116" y2="80"/>
+<line x1="60" y1="4" x2="60" y2="14"/><line x1="60" y1="146" x2="60" y2="156"/>
+</g>
+</svg>`,
   );
 
 const s = loreCardStyles;
@@ -149,7 +165,7 @@ function characterV9(): string {
 <div class="${s.charSkLanyard}" aria-hidden="true"></div>
 <div class="${s.charSkHeaderRow}">
 <div class="${s.charSkHeaderLeft}">
-<span class="${s.charSkHeaderMeta}" contenteditable="true" spellcheck="false">CLGN-ID</span>
+<span class="${s.charSkHeaderMeta}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">${LORE_V9_HEADER_META_PLACEHOLDER}</span>
 </div>
 <span role="button" tabindex="0" class="${s.charSkExpandBtn}" data-expand-btn="true" aria-label="Focus mode" title="Focus mode" contenteditable="false">
 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M200 64v64a8 8 0 0 1-16 0V83.3l-45.2 45.1a8 8 0 0 1-11.3-11.3L172.7 72H136a8 8 0 0 1 0-16h64a8 8 0 0 1 8 8Zm-88 88H72v36.7l45.2-45.1a8 8 0 0 1 11.3 11.3L83.3 200H120a8 8 0 0 1 0 16H56a8 8 0 0 1-8-8v-64a8 8 0 0 1 16 0Z"/></svg>
@@ -160,7 +176,6 @@ function characterV9(): string {
 <div class="${s.charSkPhotoWrap}" contenteditable="false">
 <div class="${s.charSkMediaRoot}" data-architectural-media-root="true" data-hg-lore-portrait-root="v9" contenteditable="false">
 <img class="${s.charSkPortraitImg}" src="${LORE_PORTRAIT_PLACEHOLDER_DARK}" alt="" width="240" height="320" contenteditable="false" draggable="false" data-hg-portrait-placeholder="true" />
-<div class="${s.charSkPortraitBarcode}" data-hg-lore-portrait-barcode="true" contenteditable="false" aria-hidden="true"></div>
 <div data-hg-portrait-actions="true" contenteditable="false">
 <button type="button" class="${archBodyStyles.mediaUploadBtn}" data-architectural-media-upload="true">Upload</button>
 </div>
@@ -171,26 +186,142 @@ function characterV9(): string {
 <div class="${s.charSkNameBlock}">
 <div class="${s.charSkNameHeading}">
 <span class="${s.charSkFieldLabel}">Identification</span>
-<div class="${s.charSkDisplayName}" contenteditable="true" spellcheck="false">Name</div>
+<div class="${s.charSkDisplayName}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</div>
 </div>
 <div class="${s.charSkNameTail}">
-<span class="${s.charSkRole}" contenteditable="true" spellcheck="false">Role</span>
+<span class="${s.charSkRole}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</span>
 </div>
 </div>
 <div class="${s.charSkMetaBlock}">
 <div class="${s.charSkMetaRow}">
 <span class="${s.charSkFieldLabel}">Affiliation</span>
-<span class="${s.charSkMetaValue}" contenteditable="true" spellcheck="false">Faction</span>
+<span class="${s.charSkMetaValue}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</span>
 </div>
 <div class="${s.charSkMetaRow}">
 <span class="${s.charSkFieldLabel}">Nationality</span>
-<span class="${s.charSkMetaValue}" contenteditable="true" spellcheck="false">Nation</span>
+<span class="${s.charSkMetaValue}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</span>
 </div>
 </div>
 </div>
 <div class="${s.charSkNotesCell}">
 <span class="${s.charSkFieldLabel}">Notes</span>
-<div class="${s.charSkNotesBody}" contenteditable="true" spellcheck="false"><p>Hooks, stains, tags.</p></div>
+<div class="${s.charSkNotesBody}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true"><p>REDACTED</p></div>
+</div>
+</div>
+</div>
+</div>
+</div>`;
+}
+
+/** Character v10 — v9 layout + stronger skeuomorphic plastic (sheen, bevel, inset portrait). */
+function characterV10(): string {
+  return `<div class="${s.charSkShell} ${s.charSkShellV10}" contenteditable="false">
+<div class="${s.charSkCard}" contenteditable="false">
+<div class="${s.charSkCardMaterial}">
+<div class="${s.charSkGrid}">
+<div class="${s.charSkHeaderCell}">
+<div class="${s.charSkLanyard}" aria-hidden="true"></div>
+<div class="${s.charSkHeaderRow}">
+<div class="${s.charSkHeaderLeft}">
+<span class="${s.charSkHeaderMeta}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">${LORE_V9_HEADER_META_PLACEHOLDER}</span>
+</div>
+<span role="button" tabindex="0" class="${s.charSkExpandBtn}" data-expand-btn="true" aria-label="Focus mode" title="Focus mode" contenteditable="false">
+<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M200 64v64a8 8 0 0 1-16 0V83.3l-45.2 45.1a8 8 0 0 1-11.3-11.3L172.7 72H136a8 8 0 0 1 0-16h64a8 8 0 0 1 8 8Zm-88 88H72v36.7l45.2-45.1a8 8 0 0 1 11.3 11.3L83.3 200H120a8 8 0 0 1 0 16H56a8 8 0 0 1-8-8v-64a8 8 0 0 1 16 0Z"/></svg>
+</span>
+</div>
+</div>
+<div class="${s.charSkPhotoCell}">
+<div class="${s.charSkPhotoWrap}" contenteditable="false">
+<div class="${s.charSkMediaRoot}" data-architectural-media-root="true" data-hg-lore-portrait-root="v10" contenteditable="false">
+<img class="${s.charSkPortraitImg}" src="${LORE_PORTRAIT_PLACEHOLDER_DARK}" alt="" width="240" height="320" contenteditable="false" draggable="false" data-hg-portrait-placeholder="true" />
+<div data-hg-portrait-actions="true" contenteditable="false">
+<button type="button" class="${archBodyStyles.mediaUploadBtn}" data-architectural-media-upload="true">Upload</button>
+</div>
+</div>
+</div>
+</div>
+<div class="${s.charSkIdentityCell}">
+<div class="${s.charSkNameBlock}">
+<div class="${s.charSkNameHeading}">
+<span class="${s.charSkFieldLabel}">Identification</span>
+<div class="${s.charSkDisplayName}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</div>
+</div>
+<div class="${s.charSkNameTail}">
+<span class="${s.charSkRole}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</span>
+</div>
+</div>
+<div class="${s.charSkMetaBlock}">
+<div class="${s.charSkMetaRow}">
+<span class="${s.charSkFieldLabel}">Affiliation</span>
+<span class="${s.charSkMetaValue}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</span>
+</div>
+<div class="${s.charSkMetaRow}">
+<span class="${s.charSkFieldLabel}">Nationality</span>
+<span class="${s.charSkMetaValue}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</span>
+</div>
+</div>
+</div>
+<div class="${s.charSkNotesCell}">
+<span class="${s.charSkFieldLabel}">Notes</span>
+<div class="${s.charSkNotesBody}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true"><p>REDACTED</p></div>
+</div>
+</div>
+</div>
+</div>
+</div>`;
+}
+
+/** Character v11 — 1:1 with v10 shell; placeholders use marker-stroke redaction (guest-check style). */
+function characterV11(): string {
+  return `<div class="${s.charSkShell} ${s.charSkShellV11}" contenteditable="false">
+<div class="${s.charSkCard}" contenteditable="false">
+<div class="${s.charSkCardMaterial}">
+<div class="${s.charSkGrid}">
+<div class="${s.charSkHeaderCell}">
+<div class="${s.charSkLanyard}" aria-hidden="true"></div>
+<div class="${s.charSkHeaderRow}">
+<div class="${s.charSkHeaderLeft}">
+<span class="${s.charSkHeaderMeta}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">${LORE_V9_HEADER_META_PLACEHOLDER}</span>
+</div>
+<span role="button" tabindex="0" class="${s.charSkExpandBtn}" data-expand-btn="true" aria-label="Focus mode" title="Focus mode" contenteditable="false">
+<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M200 64v64a8 8 0 0 1-16 0V83.3l-45.2 45.1a8 8 0 0 1-11.3-11.3L172.7 72H136a8 8 0 0 1 0-16h64a8 8 0 0 1 8 8Zm-88 88H72v36.7l45.2-45.1a8 8 0 0 1 11.3 11.3L83.3 200H120a8 8 0 0 1 0 16H56a8 8 0 0 1-8-8v-64a8 8 0 0 1 16 0Z"/></svg>
+</span>
+</div>
+</div>
+<div class="${s.charSkPhotoCell}">
+<div class="${s.charSkPhotoWrap}" contenteditable="false">
+<div class="${s.charSkMediaRoot}" data-architectural-media-root="true" data-hg-lore-portrait-root="v11" contenteditable="false">
+<img class="${s.charSkPortraitImg}" src="${LORE_PORTRAIT_PLACEHOLDER_DARK}" alt="" width="240" height="320" contenteditable="false" draggable="false" data-hg-portrait-placeholder="true" />
+<div data-hg-portrait-actions="true" contenteditable="false">
+<button type="button" class="${archBodyStyles.mediaUploadBtn}" data-architectural-media-upload="true">Upload</button>
+</div>
+</div>
+</div>
+</div>
+<div class="${s.charSkIdentityCell}">
+<div class="${s.charSkNameBlock}">
+<div class="${s.charSkNameHeading}">
+<span class="${s.charSkFieldLabel}">Identification</span>
+<div class="${s.charSkDisplayName}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</div>
+</div>
+<div class="${s.charSkNameTail}">
+<span class="${s.charSkRole}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</span>
+</div>
+</div>
+<div class="${s.charSkMetaBlock}">
+<div class="${s.charSkMetaRow}">
+<span class="${s.charSkFieldLabel}">Affiliation</span>
+<span class="${s.charSkMetaValue}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</span>
+</div>
+<div class="${s.charSkMetaRow}">
+<span class="${s.charSkFieldLabel}">Nationality</span>
+<span class="${s.charSkMetaValue}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</span>
+</div>
+</div>
+</div>
+<div class="${s.charSkNotesCell}">
+<span class="${s.charSkFieldLabel}">Notes</span>
+<div class="${s.charSkNotesBody}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true"><p>REDACTED</p></div>
 </div>
 </div>
 </div>
@@ -303,6 +434,8 @@ export function getLoreNodeSeedBodyHtml(
     if (variant === "v3") return characterV3();
     if (variant === "v8") return characterV8();
     if (variant === "v9") return characterV9();
+    if (variant === "v10") return characterV10();
+    if (variant === "v11") return characterV11();
     return characterV9();
   }
   if (kind === "faction") {
@@ -334,7 +467,7 @@ export function parseLoreCard(raw: unknown): LoreCard | undefined {
     if (v === "v1" || v === "v2" || v === "v4" || v === "v5" || v === "v6" || v === "v7") {
       v = "v9";
     }
-    if (v !== "v3" && v !== "v8" && v !== "v9") return;
+    if (v !== "v3" && v !== "v8" && v !== "v9" && v !== "v10" && v !== "v11") return;
     return { kind, variant: v as LoreCardVariant };
   }
   if (v !== "v1" && v !== "v2" && v !== "v3") return;

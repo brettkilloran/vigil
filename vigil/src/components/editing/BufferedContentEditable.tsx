@@ -28,11 +28,8 @@ import {
 
 import hostStyles from "@/src/components/editing/BufferedContentEditable.module.css";
 import { applySpellcheckToNestedEditables } from "@/src/lib/contenteditable-spellcheck";
-import {
-  BARCODE_DEBOUNCE_MS,
-  flushLoreCharSkPortraitBarcode,
-  syncLoreCharSkPortraitBarcode,
-} from "@/src/lib/lore-char-sk-barcode";
+import { syncCharSkDisplayNameStack } from "@/src/lib/lore-char-sk-display-name";
+import { syncLoreV9RedactedPlaceholderState } from "@/src/lib/lore-v9-placeholder";
 
 function isCaretAtStartOfHost(host: HTMLElement, range: Range): boolean {
   if (!range.collapsed) return false;
@@ -513,7 +510,8 @@ export function BufferedContentEditable({
       el.innerHTML = draft;
       applySpellcheckToNestedEditables(el, spellCheck);
       if (documentBlockDrag) ensureDocumentBlockDragHandles(el, documentBlockDrag);
-      syncLoreCharSkPortraitBarcode(el);
+      syncCharSkDisplayNameStack(el);
+      syncLoreV9RedactedPlaceholderState(el);
     }
   }, [draft, plainText, documentBlockDrag, spellCheck]);
 
@@ -521,7 +519,26 @@ export function BufferedContentEditable({
     const el = ref.current;
     if (!el || plainText) return;
     applySpellcheckToNestedEditables(el, spellCheck);
+    syncCharSkDisplayNameStack(el);
+    syncLoreV9RedactedPlaceholderState(el);
   }, [draft, plainText, spellCheck]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || plainText) return;
+    const onFocusOut = (e: FocusEvent) => {
+      const t = (e.target as HTMLElement | null)?.closest?.(
+        '[class*="charSkDisplayName"][data-hg-lore-field]',
+      );
+      if (!t || !el.contains(t)) return;
+      queueMicrotask(() => {
+        syncCharSkDisplayNameStack(el);
+        syncLoreV9RedactedPlaceholderState(el);
+      });
+    };
+    el.addEventListener("focusout", onFocusOut);
+    return () => el.removeEventListener("focusout", onFocusOut);
+  }, [plainText]);
 
   const readElementValue = useCallback(() => {
     const el = ref.current;
@@ -630,7 +647,8 @@ export function BufferedContentEditable({
         onBlur={() => {
           closeWiki();
           closeSlash();
-          flushLoreCharSkPortraitBarcode(ref.current);
+          syncCharSkDisplayNameStack(ref.current);
+          syncLoreV9RedactedPlaceholderState(ref.current);
           commitNow("blur");
         }}
         onCompositionStart={() => {
@@ -646,7 +664,7 @@ export function BufferedContentEditable({
         onInput={() => {
           const next = readElementValue();
           onDraftChange(next);
-          syncLoreCharSkPortraitBarcode(ref.current, { debounceMs: BARCODE_DEBOUNCE_MS });
+          syncLoreV9RedactedPlaceholderState(ref.current);
           requestAnimationFrame(() => {
             if (documentBlockDrag && ref.current && !plainText) {
               ensureDocumentBlockDragHandles(ref.current, documentBlockDrag);
@@ -962,7 +980,8 @@ export function BufferedContentEditable({
               if (plainText) ref.current.innerText = reset;
               else {
                 ref.current.innerHTML = reset;
-                syncLoreCharSkPortraitBarcode(ref.current);
+                syncCharSkDisplayNameStack(ref.current);
+                syncLoreV9RedactedPlaceholderState(ref.current);
               }
               ref.current.blur();
             }

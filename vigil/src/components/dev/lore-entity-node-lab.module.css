@@ -86,9 +86,10 @@
   color: var(--sem-text-muted);
 }
 
+/* Min track width matches entity card width (340px) so skeuo previews are not squeezed/clipped. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
   gap: 22px;
 }
 

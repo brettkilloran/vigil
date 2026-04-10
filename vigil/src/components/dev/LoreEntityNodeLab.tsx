@@ -33,10 +33,8 @@ import {
   getLoreNodeSeedBodyHtml,
   locationStripVariantFromSeed,
 } from "@/src/lib/lore-node-seed-html";
-import {
-  BARCODE_DEBOUNCE_MS,
-  syncLoreCharSkPortraitBarcode,
-} from "@/src/lib/lore-char-sk-barcode";
+import { syncCharSkDisplayNameStack } from "@/src/lib/lore-char-sk-display-name";
+import { syncLoreV9RedactedPlaceholderState } from "@/src/lib/lore-v9-placeholder";
 import { applyImageDataUrlToArchitecturalMediaBody } from "@/src/components/foundation/architectural-media-html";
 import { applySpellcheckToNestedEditables } from "@/src/lib/contenteditable-spellcheck";
 
@@ -82,10 +80,10 @@ function LabCard({
   );
 }
 
-type LoreSkeuoProtocolVariant = Extract<LoreCardVariant, "v8" | "v9">;
+type LoreSkeuoProtocolVariant = Extract<LoreCardVariant, "v8" | "v9" | "v10" | "v11">;
 
 function loreProtocolUsesPortraitPicker(v: LoreSkeuoProtocolVariant): boolean {
-  return v === "v8" || v === "v9";
+  return v === "v8" || v === "v9" || v === "v10" || v === "v11";
 }
 
 /** Canvas-style shell without tape or header — for posterity iterations that read as physical objects. */
@@ -104,7 +102,9 @@ function LabSkeuoCard({
   const portraitFileRef = useRef<HTMLInputElement>(null);
 
   const portraitCommittedClass =
-    loreVariant === "v9" ? cardStyles.charSkPortraitImg : cardStyles.char3dPortraitImg;
+    loreVariant === "v9" || loreVariant === "v10" || loreVariant === "v11"
+      ? cardStyles.charSkPortraitImg
+      : cardStyles.char3dPortraitImg;
 
   const onPortraitFile = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -153,15 +153,32 @@ function LabSkeuoCard({
   useLayoutEffect(() => {
     const body = labBodyRef.current;
     if (body) applySpellcheckToNestedEditables(body, false);
-    syncLoreCharSkPortraitBarcode(rootRef.current);
+    syncCharSkDisplayNameStack(rootRef.current);
+    syncLoreV9RedactedPlaceholderState(rootRef.current);
   }, [displayHtml]);
 
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
-    const onInput = () => syncLoreCharSkPortraitBarcode(root, { debounceMs: BARCODE_DEBOUNCE_MS });
+    const onInput = () => {
+      syncLoreV9RedactedPlaceholderState(root);
+    };
+    const onFocusOut = (e: FocusEvent) => {
+      const t = (e.target as HTMLElement | null)?.closest?.(
+        '[class*="charSkDisplayName"][data-hg-lore-field]',
+      );
+      if (!t || !root.contains(t)) return;
+      queueMicrotask(() => {
+        syncCharSkDisplayNameStack(root);
+        syncLoreV9RedactedPlaceholderState(root);
+      });
+    };
     root.addEventListener("input", onInput, true);
-    return () => root.removeEventListener("input", onInput, true);
+    root.addEventListener("focusout", onFocusOut);
+    return () => {
+      root.removeEventListener("input", onInput, true);
+      root.removeEventListener("focusout", onFocusOut);
+    };
   }, [displayHtml]);
 
   return (
@@ -305,14 +322,36 @@ function LoreEntityNodeLabInner() {
               </ul>
             </div>
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>V9 · Dark ID (skeuo, portrait Code 128)</span>
+              <span className={labStyles.variantLabel}>V9 · Dark ID (skeuo)</span>
               <LabSkeuoCard loreVariant="v9" html={getLoreNodeSeedBodyHtml("character", "v9")} />
               <ul className={labStyles.spec}>
                 <li>
                   Evolves v8: same portrait media slot and notes-on-plate editing story; typography aligns with shared
-                  document field labels; deeper inset photo well; layered plastic material. Footer barcode band is
-                  removed; a real Code 128 (field-derived payload) sits in the portrait well bottom-left. Committed
-                  portrait uses <code>charSkPortraitImg</code> (v8 keeps <code>char3dPortraitImg</code>).
+                  document field labels; deeper inset photo well; layered plastic material (no footer barcode band).
+                  Committed portrait uses <code>charSkPortraitImg</code> (v8 keeps <code>char3dPortraitImg</code>).
+                </li>
+              </ul>
+            </div>
+            <div className={labStyles.cell}>
+              <span className={labStyles.variantLabel}>V10 · Dark ID (plastic skeuo)</span>
+              <LabSkeuoCard loreVariant="v10" html={getLoreNodeSeedBodyHtml("character", "v10")} />
+              <ul className={labStyles.spec}>
+                <li>
+                  Same HTML story as v9; <code>charSkShellV10</code> adds matte-plastic gradients, rim light, fine
+                  grain, and a deeper recessed portrait well—closer to v8’s tactile language without the barcode
+                  footer band. Portrait root <code>data-hg-lore-portrait-root=&quot;v10&quot;</code> shares v9 image
+                  treatment.
+                </li>
+              </ul>
+            </div>
+            <div className={labStyles.cell}>
+              <span className={labStyles.variantLabel}>V11 · Dark ID (marker redaction)</span>
+              <LabSkeuoCard loreVariant="v11" html={getLoreNodeSeedBodyHtml("character", "v11")} />
+              <ul className={labStyles.spec}>
+                <li>
+                  1:1 with v10 shell (<code>charSkShellV11</code>); withheld fields mirror guest-check{" "}
+                  <code>.redaction-stroke</code> (26px, 5px inset, flat marker + masked radial sheen)—placeholder-driven.
+                  Portrait slot matches v9–v10.
                 </li>
               </ul>
             </div>

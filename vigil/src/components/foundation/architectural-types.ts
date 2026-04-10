@@ -4,8 +4,8 @@ export type ContentTheme = "default" | "code" | "task" | "media";
 
 /** Lore canvas nodes: stored as `note` rows with `entity_type` + `hgArch.loreCard`. */
 export type LoreCardKind = "character" | "faction" | "location";
-/** Faction/location: v1–v3. Character: v3 (passport strip), v8–v9 (protocol IDs). */
-export type LoreCardVariant = "v1" | "v2" | "v3" | "v8" | "v9";
+/** Faction/location: v1–v3. Character: v3 (passport strip), v8–v11 (protocol IDs). */
+export type LoreCardVariant = "v1" | "v2" | "v3" | "v8" | "v9" | "v10" | "v11";
 export type LoreCard = { kind: LoreCardKind; variant: LoreCardVariant };
 
 export type NodeTheme = ContentTheme | "folder" | LoreCardKind;

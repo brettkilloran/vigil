@@ -74,9 +74,9 @@ export function bodyUsesLorePortraitMediaSlot(bodyHtml: string): boolean {
   return /\bdata-hg-lore-portrait-root\s*=/i.test(bodyHtml);
 }
 
-/** v9 ID card portrait slot (distinct CSS class on committed `<img>`). */
+/** v9 / v10 / v11 ID card portrait slot (same `charSkPortraitImg` treatment on committed `<img>`). */
 export function lorePortraitSlotUsesV9(bodyHtml: string): boolean {
-  return /\bdata-hg-lore-portrait-root\s*=\s*(?:"v9"|'v9'|v9)\b/i.test(bodyHtml);
+  return /\bdata-hg-lore-portrait-root\s*=\s*(?:"v9"|"v10"|"v11"|'v9'|'v10'|'v11'|v9|v10|v11)\b/i.test(bodyHtml);
 }
 
 export function applyImageDataUrlToArchitecturalMediaBody(

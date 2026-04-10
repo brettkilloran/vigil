@@ -1626,14 +1626,16 @@
   width: 100%;
   box-sizing: border-box;
   min-width: 0;
-  --sk-id-surface: #101010;
+  /* Palette: sys neutrals + sem text only (avoids mixed ad-hoc warm/cool hex grays). */
+  --sk-id-surface: var(--sys-color-neutral-950);
   /* Softer rim + dividers: blend toward surface so lines read as low-contrast hairlines */
-  --sk-id-edge: color-mix(in oklch, var(--sk-id-surface) 74%, #2a2a2a);
-  --sk-id-line: color-mix(in oklch, #ffffff 3.2%, var(--sk-id-surface));
-  --sk-id-mute: #9ca3af;
-  --sk-id-text: #f4f4f5;
-  /* Full portrait well (matches footprint of committed `object-fit: cover` image). */
-  --sk-portrait-placeholder-surface: #3d424c;
+  --sk-id-edge: color-mix(in oklch, var(--sk-id-surface) 74%, var(--sys-color-neutral-800));
+  --sk-id-line: color-mix(in oklch, var(--sys-color-white) 3.2%, var(--sk-id-surface));
+  --sk-id-mute: var(--sem-text-muted);
+  --sk-id-text: var(--sem-text-primary);
+  --sk-id-notes-prose: color-mix(in oklch, var(--sem-text-primary) 90%, var(--sk-id-surface));
+  /* Match v8 black-ID credential typography (`char3dLabel` / `char3dAuthCode`). */
+  --sk-id-header-sans: var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
   /* Identity + notes horizontal rhythm (siblings under `.charSkGrid`). */
   --char-sk-id-pad-x: 14px;
   --char-sk-id-pad-y: 12px;
@@ -1657,8 +1659,254 @@
   background: var(--sk-id-surface);
   border: 1px solid var(--sk-id-edge);
   border-radius: 12px;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.48);
+  box-shadow: 0 14px 36px color-mix(in oklch, var(--sys-color-black) 48%, transparent);
   overflow: hidden;
+}
+
+/* Character v10 — matte plastic ID: beveled rim, top sheen, deeper portrait well (v9 + skeuo). */
+.charSkShellV10 {
+  --sk-id-surface: color-mix(in oklch, var(--sys-color-black) 14%, var(--sys-color-neutral-950));
+  --sk-id-edge: color-mix(in oklch, var(--sk-id-surface) 62%, var(--sys-color-neutral-700));
+  --sk-id-line: color-mix(in oklch, var(--sys-color-white) 4.5%, var(--sk-id-surface));
+}
+
+.charSkShellV10 .charSkCardMaterial {
+  background:
+    linear-gradient(
+      168deg,
+      color-mix(in oklch, var(--sys-color-white) 9%, var(--sk-id-surface)) 0%,
+      var(--sk-id-surface) 38%,
+      color-mix(in oklch, var(--sys-color-black) 42%, var(--sk-id-surface)) 100%
+    );
+  border: 1px solid var(--sk-id-edge);
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 65%, transparent),
+    0 1px 0 color-mix(in oklch, var(--sys-color-white) 7%, transparent) inset,
+    0 -1px 0 color-mix(in oklch, var(--sys-color-black) 35%, transparent) inset,
+    0 20px 48px color-mix(in oklch, var(--sys-color-black) 58%, transparent),
+    0 6px 16px color-mix(in oklch, var(--sys-color-black) 38%, transparent);
+  isolation: isolate;
+}
+
+.charSkShellV10 .charSkCardMaterial::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(
+      ellipse 120% 70% at 50% -8%,
+      color-mix(in oklch, var(--sys-color-white) 14%, transparent) 0%,
+      transparent 48%
+    ),
+    linear-gradient(180deg, color-mix(in oklch, var(--sys-color-white) 5%, transparent) 0%, transparent 28%);
+  mix-blend-mode: soft-light;
+  opacity: 0.85;
+}
+
+.charSkShellV10 .charSkCardMaterial::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.22;
+  background-image: repeating-linear-gradient(
+    -12deg,
+    transparent,
+    transparent 2px,
+    color-mix(in oklch, var(--sys-color-white) 2%, transparent) 2px,
+    color-mix(in oklch, var(--sys-color-white) 2%, transparent) 3px
+  );
+  mix-blend-mode: overlay;
+}
+
+.charSkShellV10 .charSkCardMaterial:hover {
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 65%, transparent),
+    0 1px 0 color-mix(in oklch, var(--sys-color-white) 9%, transparent) inset,
+    0 -1px 0 color-mix(in oklch, var(--sys-color-black) 35%, transparent) inset,
+    0 26px 56px color-mix(in oklch, var(--sys-color-black) 62%, transparent),
+    0 8px 20px color-mix(in oklch, var(--sys-color-black) 42%, transparent);
+}
+
+.charSkShellV10 .charSkCardMaterial:hover::before {
+  opacity: 1;
+}
+
+.charSkShellV10 .charSkGrid {
+  position: relative;
+  z-index: 1;
+}
+
+.charSkShellV10 .charSkHeaderCell {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--sys-color-white) 5%, var(--sk-id-surface)) 0%,
+    var(--sk-id-surface) 100%
+  );
+}
+
+.charSkShellV10 .charSkLanyard {
+  background: color-mix(in oklch, var(--sys-color-black) 22%, var(--sys-color-neutral-950));
+  box-shadow:
+    inset 0 4px 6px color-mix(in oklch, var(--sys-color-black) 92%, transparent),
+    inset 0 -1px 0 color-mix(in oklch, var(--sys-color-white) 6%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 75%, transparent),
+    0 2px 3px color-mix(in oklch, var(--sys-color-black) 55%, transparent),
+    0 1px 0 color-mix(in oklch, var(--sys-color-white) 6%, transparent);
+}
+
+.charSkShellV10 .charSkPhotoWrap {
+  border: none;
+  box-shadow: inset 0 2px 5px color-mix(in oklch, var(--sys-color-black) 42%, transparent);
+  background: color-mix(in oklch, var(--sys-color-black) 28%, var(--sk-id-surface));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .charSkShellV10 .charSkCardMaterial:hover {
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--sys-color-black) 65%, transparent),
+      0 1px 0 color-mix(in oklch, var(--sys-color-white) 7%, transparent) inset,
+      0 -1px 0 color-mix(in oklch, var(--sys-color-black) 35%, transparent) inset,
+      0 20px 48px color-mix(in oklch, var(--sys-color-black) 58%, transparent),
+      0 6px 16px color-mix(in oklch, var(--sys-color-black) 38%, transparent);
+  }
+
+  .charSkShellV10 .charSkCardMaterial:hover::before {
+    opacity: 0.85;
+  }
+}
+
+/* Character v11 — 1:1 shell with v10; placeholder styling overridden below (marker redaction). */
+.charSkShellV11 {
+  /* ~5% lighter plate than v10 so near-black marker strips read clearly (still sys neutrals + white). */
+  --sk-id-surface: color-mix(
+    in oklch,
+    color-mix(in oklch, var(--sys-color-black) 14%, var(--sys-color-neutral-950)) 95%,
+    var(--sys-color-white) 5%
+  );
+  --sk-id-edge: color-mix(in oklch, var(--sk-id-surface) 62%, var(--sys-color-neutral-700));
+  --sk-id-line: color-mix(in oklch, var(--sys-color-white) 4.5%, var(--sk-id-surface));
+  /* Snippet `--marker: #0a0a0a` (guest-check “Classified Guest Check - Redacted”). */
+  --sk-v11-marker: color-mix(in oklch, var(--sys-color-black) 88%, var(--sys-color-neutral-950));
+  /* `.redaction-stroke`: left 5px, height 26px, width calc(100% - 10px). */
+  --sk-v11-marker-inset-x: 5px;
+  --sk-v11-marker-h: 26px;
+}
+
+.charSkShellV11 .charSkCardMaterial {
+  background:
+    linear-gradient(
+      168deg,
+      color-mix(in oklch, var(--sys-color-white) 9%, var(--sk-id-surface)) 0%,
+      var(--sk-id-surface) 38%,
+      color-mix(in oklch, var(--sys-color-black) 42%, var(--sk-id-surface)) 100%
+    );
+  border: 1px solid var(--sk-id-edge);
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 65%, transparent),
+    0 1px 0 color-mix(in oklch, var(--sys-color-white) 7%, transparent) inset,
+    0 -1px 0 color-mix(in oklch, var(--sys-color-black) 35%, transparent) inset,
+    0 20px 48px color-mix(in oklch, var(--sys-color-black) 58%, transparent),
+    0 6px 16px color-mix(in oklch, var(--sys-color-black) 38%, transparent);
+  isolation: isolate;
+}
+
+.charSkShellV11 .charSkCardMaterial::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(
+      ellipse 120% 70% at 50% -8%,
+      color-mix(in oklch, var(--sys-color-white) 14%, transparent) 0%,
+      transparent 48%
+    ),
+    linear-gradient(180deg, color-mix(in oklch, var(--sys-color-white) 5%, transparent) 0%, transparent 28%);
+  mix-blend-mode: soft-light;
+  opacity: 0.85;
+}
+
+.charSkShellV11 .charSkCardMaterial::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.22;
+  background-image: repeating-linear-gradient(
+    -12deg,
+    transparent,
+    transparent 2px,
+    color-mix(in oklch, var(--sys-color-white) 2%, transparent) 2px,
+    color-mix(in oklch, var(--sys-color-white) 2%, transparent) 3px
+  );
+  mix-blend-mode: overlay;
+}
+
+.charSkShellV11 .charSkCardMaterial:hover {
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 65%, transparent),
+    0 1px 0 color-mix(in oklch, var(--sys-color-white) 9%, transparent) inset,
+    0 -1px 0 color-mix(in oklch, var(--sys-color-black) 35%, transparent) inset,
+    0 26px 56px color-mix(in oklch, var(--sys-color-black) 62%, transparent),
+    0 8px 20px color-mix(in oklch, var(--sys-color-black) 42%, transparent);
+}
+
+.charSkShellV11 .charSkCardMaterial:hover::before {
+  opacity: 1;
+}
+
+.charSkShellV11 .charSkGrid {
+  position: relative;
+  z-index: 1;
+}
+
+.charSkShellV11 .charSkHeaderCell {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--sys-color-white) 5%, var(--sk-id-surface)) 0%,
+    var(--sk-id-surface) 100%
+  );
+}
+
+.charSkShellV11 .charSkLanyard {
+  background: color-mix(in oklch, var(--sys-color-black) 22%, var(--sys-color-neutral-950));
+  box-shadow:
+    inset 0 4px 6px color-mix(in oklch, var(--sys-color-black) 92%, transparent),
+    inset 0 -1px 0 color-mix(in oklch, var(--sys-color-white) 6%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 75%, transparent),
+    0 2px 3px color-mix(in oklch, var(--sys-color-black) 55%, transparent),
+    0 1px 0 color-mix(in oklch, var(--sys-color-white) 6%, transparent);
+}
+
+.charSkShellV11 .charSkPhotoWrap {
+  border: none;
+  box-shadow: inset 0 2px 5px color-mix(in oklch, var(--sys-color-black) 42%, transparent);
+  background: color-mix(in oklch, var(--sys-color-black) 28%, var(--sk-id-surface));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .charSkShellV11 .charSkCardMaterial:hover {
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--sys-color-black) 65%, transparent),
+      0 1px 0 color-mix(in oklch, var(--sys-color-white) 7%, transparent) inset,
+      0 -1px 0 color-mix(in oklch, var(--sys-color-black) 35%, transparent) inset,
+      0 20px 48px color-mix(in oklch, var(--sys-color-black) 58%, transparent),
+      0 6px 16px color-mix(in oklch, var(--sys-color-black) 38%, transparent);
+  }
+
+  .charSkShellV11 .charSkCardMaterial:hover::before {
+    opacity: 0.85;
+  }
 }
 
 .charSkGrid {
@@ -1722,12 +1970,12 @@
 }
 
 .charSkHeaderMeta {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 13px;
-  font-weight: 350;
-  color: #e4e4e7;
+  font-family: var(--sk-id-header-sans);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--sem-text-muted);
   letter-spacing: 0;
-  line-height: 1.25;
+  line-height: 1.3;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1741,7 +1989,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: color-mix(in oklch, #ffffff 42%, transparent);
+  color: color-mix(in oklch, var(--sem-text-primary) 42%, transparent);
   margin-bottom: 0;
 }
 
@@ -1763,7 +2011,7 @@
   border: 1px solid var(--sk-id-line);
   border-radius: 6px;
   background: transparent;
-  color: #d4d4d8;
+  color: var(--sem-text-secondary);
   box-sizing: border-box;
 }
 
@@ -1773,8 +2021,8 @@
 }
 
 .charSkExpandBtn:hover {
-  color: #fafafa;
-  background: color-mix(in oklch, #ffffff 6%, transparent);
+  color: var(--sem-text-primary);
+  background: color-mix(in oklch, var(--sys-color-white) 6%, transparent);
 }
 
 .charSkExpandBtn:focus-visible {
@@ -1790,22 +2038,13 @@
   background: var(--sk-id-surface);
 }
 
-.charSkPhotoCell:has(.charSkPortraitImg[data-hg-portrait-placeholder="true"]) {
-  background: var(--sk-portrait-placeholder-surface);
-}
-
 .charSkPhotoWrap {
   position: absolute;
   inset: 14px;
   border-radius: 8px;
-  border: 1px solid var(--sk-id-line);
+  border: none;
   background: var(--sk-id-surface);
   overflow: hidden;
-}
-
-.charSkPhotoWrap:has(.charSkPortraitImg[data-hg-portrait-placeholder="true"]) {
-  background: var(--sk-portrait-placeholder-surface);
-  border-color: color-mix(in oklch, var(--sk-portrait-placeholder-surface) 78%, #ffffff 9%);
 }
 
 .charSkMediaRoot {
@@ -1813,10 +2052,6 @@
   inset: 0;
   overflow: hidden;
   border-radius: 7px;
-}
-
-.charSkMediaRoot:has(.charSkPortraitImg[data-hg-portrait-placeholder="true"]) {
-  background: var(--sk-portrait-placeholder-surface);
 }
 
 .charSkMediaPlaceholder {
@@ -1835,25 +2070,6 @@
   text-transform: uppercase;
   z-index: 5;
   pointer-events: none;
-}
-
-.charSkPortraitBarcode {
-  position: absolute;
-  left: 6px;
-  bottom: 7px;
-  width: min(54%, 168px);
-  height: 18px;
-  z-index: 16;
-  pointer-events: none;
-  color: rgba(255, 255, 255, 0.34);
-  opacity: 1;
-  box-sizing: border-box;
-}
-
-.charSkPortraitBarcode svg {
-  display: block;
-  width: 100%;
-  height: 100%;
 }
 
 .charSkMediaRoot [data-hg-portrait-actions="true"] {
@@ -1898,6 +2114,8 @@
   object-fit: cover;
   object-position: center center;
   box-sizing: border-box;
+  /* Slightly lighter than the ID plate — not a full “paper” gray. */
+  background-color: color-mix(in oklch, var(--sys-color-white) 4.5%, var(--sk-id-surface));
 }
 
 .charSkIdentityCell {
@@ -1920,28 +2138,34 @@
   min-height: 1.2em;
 }
 
+/* One composite column: label + name + role (no 50/50 split) so long names use full width. */
 .charSkNameBlock {
-  display: grid;
-  grid-template-rows: 1fr 1fr;
-  gap: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  /* Same as label → value in `.charSkMetaRow` (4px under caps labels). */
+  gap: 4px;
+  padding: var(--char-sk-id-pad-y) var(--char-sk-id-pad-x);
   border-right: 1px solid var(--sk-id-line);
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   box-sizing: border-box;
   background: var(--sk-id-surface);
 }
 
 .charSkNameHeading {
   min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  padding: var(--char-sk-id-pad-y) var(--char-sk-id-pad-x);
-  box-sizing: border-box;
+  flex: 0 1 auto;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: stretch;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .charSkNameHeading .charSkFieldLabel {
@@ -1958,22 +2182,18 @@
   color: var(--sk-id-text);
   min-width: 0;
   min-height: 0;
+  margin: 0;
   outline: none;
   overflow-wrap: anywhere;
-  overflow-y: auto;
 }
 
 .charSkNameTail {
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: stretch;
-  gap: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding: var(--char-sk-id-pad-y) var(--char-sk-id-pad-x);
-  border-top: 1px solid var(--sk-id-line);
+  flex: 0 0 auto;
+  min-width: 0;
+  display: block;
+  padding: 0;
+  margin: 0;
+  border: none;
   box-sizing: border-box;
 }
 
@@ -1982,8 +2202,10 @@
   font-size: 13px;
   font-weight: 350;
   line-height: 1.4;
-  color: color-mix(in oklch, #ffffff 78%, transparent);
+  color: color-mix(in oklch, var(--sem-text-primary) 78%, transparent);
   min-width: 0;
+  margin: 0;
+  display: block;
 }
 
 .charSkMetaBlock {
@@ -2044,7 +2266,7 @@
   font-size: 13px;
   line-height: 1.65;
   font-weight: 400;
-  color: color-mix(in oklch, #ffffff 87%, transparent);
+  color: color-mix(in oklch, var(--sem-text-primary) 87%, transparent);
   letter-spacing: 0;
   transition: background-color 0.15s ease;
 }
@@ -2058,6 +2280,154 @@
   margin-top: 0.45em;
 }
 
+/* v9 inline fields: withheld copy until user replaces the sentinel */
+.charSkShell [data-hg-lore-field][data-hg-lore-placeholder="true"] {
+  color: color-mix(in oklch, var(--sem-text-muted) 68%, var(--sk-id-surface));
+}
+
+.charSkShell [data-hg-lore-field][data-hg-lore-placeholder="true"]:focus,
+.charSkShell [data-hg-lore-field][data-hg-lore-placeholder="true"]:focus-within {
+  color: var(--sk-id-text);
+}
+
+.charSkShell .charSkNotesBody[data-hg-lore-placeholder="true"]:focus,
+.charSkShell .charSkNotesBody[data-hg-lore-placeholder="true"]:focus-within {
+  color: color-mix(in oklch, var(--sem-text-primary) 87%, transparent);
+}
+
+/*
+ * v11: faithful to guest-check `.redaction-stroke` + `.redaction-stroke::before`:
+ * flat `background: var(--marker)`; `::before` = radial rgba(255,255,255,0.05) @ 50% opacity (merged as one layer
+ * ~2.5% peak); `mask-image` fade right 95%; `box-shadow: 0 0 2px var(--marker)`; `border-radius: 2px`;
+ * `transform: translateY(-50%) rotate(-0.5deg)`; z 6 above text z 5. Placeholder-driven. Notes + CLGN-ID unmasked.
+ */
+
+/* Rotated marker strips must not paint over preceding caps labels (sibling stacking + bleed). */
+.charSkShellV11 .charSkNameHeading .charSkFieldLabel,
+.charSkShellV11 .charSkMetaRow .charSkFieldLabel {
+  position: relative;
+  z-index: 2;
+}
+
+.charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"],
+.charSkShellV11 .charSkMetaValue[data-hg-lore-placeholder="true"],
+.charSkShellV11 .charSkRole[data-hg-lore-placeholder="true"] {
+  overflow: hidden;
+  contain: paint;
+  border-radius: 2px;
+}
+
+.charSkShellV11 .charSkHeaderMeta[data-hg-lore-field][data-hg-lore-placeholder="true"] {
+  color: var(--sem-text-muted) !important;
+  -webkit-text-fill-color: unset;
+  font-family: var(--sk-id-header-sans);
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+
+.charSkShellV11 .charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"] {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-weight: 400;
+  color: color-mix(in oklch, var(--sem-text-muted) 68%, var(--sk-id-surface)) !important;
+  -webkit-text-fill-color: unset;
+}
+
+.charSkShellV11
+  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta) {
+  position: relative;
+  z-index: 0;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent;
+  caret-color: color-mix(in oklch, var(--sem-text-primary) 78%, var(--sk-id-surface));
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-weight: 500;
+}
+
+.charSkShellV11
+  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta)::after {
+  content: "";
+  position: absolute;
+  left: var(--sk-v11-marker-inset-x);
+  width: calc(100% - 2 * var(--sk-v11-marker-inset-x));
+  right: auto;
+  top: 50%;
+  height: var(--sk-v11-marker-h);
+  transform: translateY(-50%) rotate(-0.5deg);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 6;
+  /* `.redaction-stroke` + `::before` (single pseudo → merged layers; 0.05 white × 0.5 opacity ≈ 2.5% peak). */
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in oklch, var(--sys-color-white) 2.5%, transparent) 0%,
+      transparent 80%
+    ),
+    var(--sk-v11-marker);
+  box-shadow: 0 0 2px var(--sk-v11-marker);
+  mask-image: linear-gradient(to right, black 95%, transparent);
+  -webkit-mask-image: linear-gradient(to right, black 95%, transparent);
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+}
+
+.charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]::after {
+  top: 0;
+  bottom: 0;
+  left: var(--sk-v11-marker-inset-x);
+  width: calc(100% - 2 * var(--sk-v11-marker-inset-x));
+  height: auto;
+  min-height: 2.65em;
+  margin: 0;
+  transform: rotate(-0.5deg);
+  z-index: 6;
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in oklch, var(--sys-color-white) 2.5%, transparent) 0%,
+      transparent 80%
+    ),
+    var(--sk-v11-marker);
+  box-shadow: 0 0 2px var(--sk-v11-marker);
+  mask-image: linear-gradient(to right, black 95%, transparent);
+  -webkit-mask-image: linear-gradient(to right, black 95%, transparent);
+}
+
+.charSkShellV11
+  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):focus,
+.charSkShellV11
+  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):focus-within {
+  color: var(--sk-id-text) !important;
+  -webkit-text-fill-color: var(--sk-id-text);
+}
+
+.charSkShellV11
+  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):focus::after,
+.charSkShellV11
+  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):focus-within::after {
+  opacity: 0;
+}
+
+.charSkShellV11 .charSkHeaderMeta[data-hg-lore-placeholder="true"]:focus,
+.charSkShellV11 .charSkHeaderMeta[data-hg-lore-placeholder="true"]:focus-within {
+  color: var(--sem-text-primary) !important;
+  -webkit-text-fill-color: var(--sem-text-primary);
+}
+
+.charSkShellV11 .charSkRole[data-hg-lore-placeholder="true"]:focus,
+.charSkShellV11 .charSkRole[data-hg-lore-placeholder="true"]:focus-within {
+  color: color-mix(in oklch, var(--sem-text-primary) 78%, transparent) !important;
+  -webkit-text-fill-color: color-mix(in oklch, var(--sem-text-primary) 78%, transparent);
+}
+
+.charSkShellV11 .charSkNotesBody[data-hg-lore-placeholder="true"]:focus,
+.charSkShellV11 .charSkNotesBody[data-hg-lore-placeholder="true"]:focus-within {
+  color: color-mix(in oklch, var(--sem-text-primary) 87%, transparent) !important;
+  -webkit-text-fill-color: color-mix(in oklch, var(--sem-text-primary) 87%, transparent);
+}
+
 @media (max-width: 360px) {
   .charSkIdentityCell {
     grid-template-columns: 1fr;
@@ -2067,7 +2437,6 @@
   }
 
   .charSkNameBlock {
-    grid-template-rows: auto auto;
     border-right: none;
     border-bottom: 1px solid var(--sk-id-line);
     min-height: 100px;
@@ -2075,10 +2444,6 @@
 
   .charSkMetaBlock {
     grid-template-rows: auto auto;
-  }
-
-  .charSkNameTail {
-    overflow-y: visible;
   }
 
   .charSkGrid {
