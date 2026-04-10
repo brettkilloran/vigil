@@ -1839,7 +1839,7 @@
   --sk-id-edge: color-mix(in oklch, var(--sk-id-surface) 62%, var(--sys-color-neutral-700));
   --sk-id-line: color-mix(in oklch, var(--sys-color-white) 4.5%, var(--sk-id-surface));
   /* Snippet `--marker: #0a0a0a` (guest-check “Classified Guest Check - Redacted”). */
-  --sk-v11-marker: color-mix(in oklch, var(--sys-color-black) 88%, var(--sys-color-neutral-950));
+  --sk-v11-marker: color-mix(in oklch, var(--sys-color-black) 74%, var(--sys-color-neutral-900));
   /* Snippet uses 5px both sides; we bias ~2px left so rotation + mask read centered on the value. */
   --sk-v11-marker-inset-left: 2px;
   --sk-v11-marker-inset-right: 5px;
@@ -1856,9 +1856,11 @@
   --sk-v11-marker-trim-right-bottom: 0px;
   --sk-v11-marker-offset-x: 0px;
   --sk-v11-marker-noise-size: 74px;
-  --sk-v11-marker-gloss: 2.5%;
+  --sk-v11-marker-gloss: 0.95%;
   --sk-v11-marker-tail: 95%;
-  --sk-v11-marker-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 96 96' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.12' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' fill='%23ffffff' filter='url(%23m)' opacity='0.085'/%3E%3C/svg%3E");
+  --sk-v11-marker-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 96 96' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.12' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' fill='%23ffffff' filter='url(%23m)' opacity='0.05'/%3E%3C/svg%3E");
+  /* Full-card masks can clip/tear in some engines; render the slot with header pseudo chrome instead. */
+  --sk-v11-slot-ink: color-mix(in oklch, var(--sys-color-black) 86%, var(--theme-default-bg));
 }
 
 .charSkShellV11 .charSkCardMaterial {
@@ -1951,14 +1953,28 @@
   );
 }
 
-.charSkShellV11 .charSkLanyard {
-  background: color-mix(in oklch, var(--sys-color-black) 22%, var(--sys-color-neutral-950));
+/* Faux punch-through slot (replaces unstable full-card masking while preserving v11 silhouette). */
+.charSkShellV11 .charSkHeaderCell::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  width: 40px;
+  height: 8px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: var(--sk-v11-slot-ink);
   box-shadow:
-    inset 0 4px 6px color-mix(in oklch, var(--sys-color-black) 92%, transparent),
-    inset 0 -1px 0 color-mix(in oklch, var(--sys-color-white) 6%, transparent),
-    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 75%, transparent),
-    0 2px 3px color-mix(in oklch, var(--sys-color-black) 55%, transparent),
-    0 1px 0 color-mix(in oklch, var(--sys-color-white) 6%, transparent);
+    inset 0 1px 1px color-mix(in oklch, var(--sys-color-black) 75%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 55%, transparent);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.charSkShellV11 .charSkLanyard {
+  background: transparent;
+  box-shadow: none;
+  border: none;
 }
 
 .charSkShellV11 .charSkPhotoCell {
@@ -2203,11 +2219,11 @@
 .charSkPortraitImg[data-hg-heartgarden-media-placeholder="true"] {
   filter: none;
   mix-blend-mode: normal;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center center;
   box-sizing: border-box;
-  /* Slightly lighter than the ID plate — not a full “paper” gray. */
-  background-color: color-mix(in oklch, var(--sys-color-white) 4.5%, var(--sk-id-surface));
+  /* Unified neutral placeholder surface (same as HeartgardenMediaPlaceholderImg.neutral). */
+  background-color: color-mix(in oklch, var(--sys-color-white) 5%, var(--sys-color-neutral-925));
 }
 
 .charSkIdentityCell {
@@ -2437,6 +2453,32 @@
   }
 }
 
+@keyframes charSkV11MarkerDualLineWipe {
+  0% {
+    background-size:
+      0 calc(50% - 2px),
+      0 calc(50% - 2px),
+      var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px),
+      var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px);
+  }
+
+  56% {
+    background-size:
+      calc(100% - var(--sk-v11-marker-trim-right-top, 0px)) calc(50% - 2px),
+      0 calc(50% - 2px),
+      var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px),
+      var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px);
+  }
+
+  100% {
+    background-size:
+      calc(100% - var(--sk-v11-marker-trim-right-top, 0px)) calc(50% - 2px),
+      calc(100% - var(--sk-v11-marker-trim-right-bottom, 0px)) calc(50% - 2px),
+      var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px),
+      var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px);
+  }
+}
+
 /* Rotated marker strips must not paint over preceding caps labels (sibling stacking + bleed). */
 .charSkShellV11 .charSkNameHeading .charSkFieldLabel,
 .charSkShellV11 .charSkMetaRow .charSkFieldLabel {
@@ -2604,15 +2646,15 @@
   animation: charSkV11MarkerStripWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
   /* `.redaction-stroke` + `::before` (single pseudo → merged layers; 0.05 white × 0.5 opacity ≈ 2.5% peak). */
   background:
-    var(--sk-v11-marker-noise) 0 0 / var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px)
-      repeat,
+    var(--sk-v11-marker-noise) var(--sk-v11-marker-noise-x, 0px) var(--sk-v11-marker-noise-y, 0px) /
+      var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px) repeat,
     radial-gradient(
       circle at 50% 50%,
       color-mix(in oklch, var(--sys-color-white) var(--sk-v11-marker-gloss, 2.5%), transparent) 0%,
       transparent 80%
     ),
     var(--sk-v11-marker);
-  background-blend-mode: screen, normal, normal;
+  background-blend-mode: soft-light, normal, normal;
   box-shadow: 0 0 2px var(--sk-v11-marker);
   mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
   -webkit-mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
@@ -2636,22 +2678,24 @@
   border-radius: 2px;
   pointer-events: none;
   z-index: 6;
-  animation: charSkV11MarkerBlockWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
+  animation: charSkV11MarkerDualLineWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
   background:
-    linear-gradient(var(--sk-v11-marker), var(--sk-v11-marker)) left top / calc(100% - var(--sk-v11-marker-trim-right-top, 0px))
-      calc(50% - 2px) no-repeat,
+    linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--sys-color-white) var(--sk-v11-marker-gloss, 0.95%), var(--sk-v11-marker)) 0%,
+      var(--sk-v11-marker) 100%
+    )
+      left top / calc(100% - var(--sk-v11-marker-trim-right-top, 0px)) calc(50% - 2px) no-repeat,
     linear-gradient(var(--sk-v11-marker), var(--sk-v11-marker)) left bottom /
       calc(100% - var(--sk-v11-marker-trim-right-bottom, 0px)) calc(50% - 2px) no-repeat,
-    var(--sk-v11-marker-noise) 0 0 / var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px)
-      repeat,
-    radial-gradient(
-      circle at 50% 50%,
-      color-mix(in oklch, var(--sys-color-white) var(--sk-v11-marker-gloss, 2.5%), transparent) 0%,
-      transparent 80%
-    ),
-    transparent;
-  background-blend-mode: normal, normal, screen, normal, normal;
-  box-shadow: 0 0 2px var(--sk-v11-marker);
+    var(--sk-v11-marker-noise) var(--sk-v11-marker-noise-x-top, 0px) var(--sk-v11-marker-noise-y-top, 0px) /
+      var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px) repeat,
+    var(--sk-v11-marker-noise) var(--sk-v11-marker-noise-x-bottom, 0px)
+      var(--sk-v11-marker-noise-y-bottom, 0px) / var(--sk-v11-marker-noise-size, 74px)
+      var(--sk-v11-marker-noise-size, 74px) repeat;
+  background-blend-mode: normal, normal, soft-light, soft-light;
+  box-shadow: none;
+  filter: drop-shadow(0 0 1px color-mix(in oklch, var(--sk-v11-marker) 90%, transparent));
   mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
   -webkit-mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
 }
@@ -2681,7 +2725,7 @@
 .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus-within::after {
   animation: none;
   transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
-  transition: transform var(--sk-v11-marker-hide-ms) var(--sk-v11-marker-hide-ease);
+  transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,81 +1,88 @@
 /**
- * v11 guest-check redaction strokes: each field gets a one-time random slight rotation so
- * markers feel hand-drawn rather than identical. Sets `--sk-v11-marker-rotate` on the host
- * (inherited by `::after`); see `lore-entity-card.module.css` `.charSkShellV11`.
+ * v11 guest-check redaction strokes: per-field deterministic jitter so cards keep their
+ * distinct look across rerenders/interactions instead of "changing shape" after focus/edit.
+ * Values are written as CSS vars consumed by `lore-entity-card.module.css` `.charSkShellV11`.
  */
 
-function randomV11MarkerTilt(): string {
-  /* ~±0.32° jitter around -0.52° — always a faint CCW lean, never harsh. */
-  const base = -0.52;
-  const spread = 0.32;
-  const r = base + (Math.random() * 2 - 1) * spread;
-  return `${r.toFixed(3)}deg`;
+const seededV11Shells = new WeakSet<HTMLElement>();
+
+function fnv1aHash32(input: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
 }
 
-function randomV11MarkerTrimPx(): string {
-  /* Slight right-edge length variance so redactions are not perfectly uniform. */
-  const min = 1.5;
-  const max = 10.5;
-  const px = min + Math.random() * (max - min);
-  return `${px.toFixed(2)}px`;
-}
-
-function randomInRange(min: number, max: number): number {
-  return min + Math.random() * (max - min);
+function seededFloat(seed: string, key: string, min: number, max: number): number {
+  const n = fnv1aHash32(`${seed}:${key}`);
+  const t = n / 0xffffffff;
+  return min + (max - min) * t;
 }
 
 /**
- * Assigns a stable random `--sk-v11-marker-rotate` on each redacted inline field under a v11 shell.
- * Skips notes + header catalog line. Idempotent via `data-hg-v11-marker-tilt`.
+ * Assigns per-field marker jitter vars once per mounted v11 shell.
+ * Skips notes + header catalog line. Uses WeakSet idempotence so stale serialized attrs/styles
+ * from saved HTML never freeze all strokes into one repeated look.
  */
 export function syncLoreV11MarkerTilts(host: HTMLElement | null): void {
   if (!host || typeof document === "undefined") return;
-  const shell = host.querySelector<HTMLElement>('[class*="charSkShellV11"]');
+  const shell = host.matches?.('[class*="charSkShellV11"]')
+    ? host
+    : host.querySelector<HTMLElement>('[class*="charSkShellV11"]');
   if (!shell) return;
+  if (seededV11Shells.has(shell)) return;
+  seededV11Shells.add(shell);
 
+  const headerMeta = shell.querySelector<HTMLElement>('[class*="charSkHeaderMeta"]');
+  const shellSeed =
+    headerMeta?.getAttribute("data-hg-object-id-full")?.trim() ||
+    headerMeta?.textContent?.trim() ||
+    "v11-shell";
+
+  let fieldIndex = 0;
   for (const el of shell.querySelectorAll<HTMLElement>("[data-hg-lore-field]")) {
     if (el.matches?.('[class*="charSkNotesBody"]') || el.matches?.('[class*="charSkHeaderMeta"]')) {
       continue;
     }
-    if (!el.hasAttribute("data-hg-v11-marker-tilt")) {
-      const deg = randomV11MarkerTilt();
-      el.setAttribute("data-hg-v11-marker-tilt", deg);
-      el.style.setProperty("--sk-v11-marker-rotate", deg);
-    }
-    if (!el.hasAttribute("data-hg-v11-marker-trim")) {
-      const trim = randomV11MarkerTrimPx();
-      el.setAttribute("data-hg-v11-marker-trim", trim);
-      el.style.setProperty("--sk-v11-marker-trim-right", trim);
-    }
-    if (!el.hasAttribute("data-hg-v11-marker-trim-top")) {
-      const trimTop = `${randomInRange(0.8, 16).toFixed(2)}px`;
-      el.setAttribute("data-hg-v11-marker-trim-top", trimTop);
-      el.style.setProperty("--sk-v11-marker-trim-right-top", trimTop);
-    }
-    if (!el.hasAttribute("data-hg-v11-marker-trim-bottom")) {
-      const trimBottom = `${randomInRange(1.4, 19).toFixed(2)}px`;
-      el.setAttribute("data-hg-v11-marker-trim-bottom", trimBottom);
-      el.style.setProperty("--sk-v11-marker-trim-right-bottom", trimBottom);
-    }
-    if (!el.hasAttribute("data-hg-v11-marker-x")) {
-      const shiftX = `${randomInRange(-1.25, 1.25).toFixed(2)}px`;
-      el.setAttribute("data-hg-v11-marker-x", shiftX);
-      el.style.setProperty("--sk-v11-marker-offset-x", shiftX);
-    }
-    if (!el.hasAttribute("data-hg-v11-marker-noise")) {
-      const noiseSize = `${Math.round(randomInRange(58, 94))}px`;
-      el.setAttribute("data-hg-v11-marker-noise", noiseSize);
-      el.style.setProperty("--sk-v11-marker-noise-size", noiseSize);
-    }
-    if (!el.hasAttribute("data-hg-v11-marker-gloss")) {
-      const gloss = `${randomInRange(1.7, 4.2).toFixed(2)}%`;
-      el.setAttribute("data-hg-v11-marker-gloss", gloss);
-      el.style.setProperty("--sk-v11-marker-gloss", gloss);
-    }
-    if (!el.hasAttribute("data-hg-v11-marker-tail")) {
-      const tail = `${randomInRange(91.5, 98.2).toFixed(2)}%`;
-      el.setAttribute("data-hg-v11-marker-tail", tail);
-      el.style.setProperty("--sk-v11-marker-tail", tail);
-    }
+
+    const fieldSeed = `${shellSeed}|${fieldIndex}|${el.getAttribute("data-hg-lore-ph") ?? ""}|${el.className}`;
+    fieldIndex += 1;
+
+    const deg = `${seededFloat(fieldSeed, "rotate", -0.84, -0.2).toFixed(3)}deg`;
+    const trim = `${seededFloat(fieldSeed, "trim", 1.5, 10.5).toFixed(2)}px`;
+    const trimTop = `${seededFloat(fieldSeed, "trim-top", 0.8, 16).toFixed(2)}px`;
+    const trimBottom = `${seededFloat(fieldSeed, "trim-bottom", 1.4, 19).toFixed(2)}px`;
+    const shiftX = `${seededFloat(fieldSeed, "offset-x", -1.25, 1.25).toFixed(2)}px`;
+    const noisePx = Math.round(seededFloat(fieldSeed, "noise-size", 58, 94));
+    const noiseSize = `${noisePx}px`;
+    const noiseX = `${Math.round(seededFloat(fieldSeed, "noise-x", -noisePx * 0.9, noisePx * 0.9))}px`;
+    const noiseY = `${Math.round(seededFloat(fieldSeed, "noise-y", -noisePx * 0.9, noisePx * 0.9))}px`;
+    const noiseXTop = `${Math.round(seededFloat(fieldSeed, "noise-x-top", -noisePx * 0.95, noisePx * 0.95))}px`;
+    const noiseYTop = `${Math.round(seededFloat(fieldSeed, "noise-y-top", -noisePx * 0.95, noisePx * 0.95))}px`;
+    const noiseXBottom = `${Math.round(
+      seededFloat(fieldSeed, "noise-x-bottom", -noisePx * 0.95, noisePx * 0.95),
+    )}px`;
+    const noiseYBottom = `${Math.round(
+      seededFloat(fieldSeed, "noise-y-bottom", -noisePx * 0.95, noisePx * 0.95),
+    )}px`;
+    const gloss = `${seededFloat(fieldSeed, "gloss", 0.55, 1.8).toFixed(2)}%`;
+    const tail = `${seededFloat(fieldSeed, "tail", 91.5, 98.2).toFixed(2)}%`;
+
+    el.style.setProperty("--sk-v11-marker-rotate", deg);
+    el.style.setProperty("--sk-v11-marker-trim-right", trim);
+    el.style.setProperty("--sk-v11-marker-trim-right-top", trimTop);
+    el.style.setProperty("--sk-v11-marker-trim-right-bottom", trimBottom);
+    el.style.setProperty("--sk-v11-marker-offset-x", shiftX);
+    el.style.setProperty("--sk-v11-marker-noise-size", noiseSize);
+    el.style.setProperty("--sk-v11-marker-noise-x", noiseX);
+    el.style.setProperty("--sk-v11-marker-noise-y", noiseY);
+    el.style.setProperty("--sk-v11-marker-noise-x-top", noiseXTop);
+    el.style.setProperty("--sk-v11-marker-noise-y-top", noiseYTop);
+    el.style.setProperty("--sk-v11-marker-noise-x-bottom", noiseXBottom);
+    el.style.setProperty("--sk-v11-marker-noise-y-bottom", noiseYBottom);
+    el.style.setProperty("--sk-v11-marker-gloss", gloss);
+    el.style.setProperty("--sk-v11-marker-tail", tail);
   }
 }
