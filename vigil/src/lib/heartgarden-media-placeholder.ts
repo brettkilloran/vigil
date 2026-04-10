@@ -26,7 +26,8 @@ export const HEARTGARDEN_MEDIA_PLACEHOLDER_SRC =
 /** Canonical attribute for placeholder `<img>` (lore still sets `data-hg-portrait-placeholder` for legacy HTML). */
 export const HG_MEDIA_PLACEHOLDER_ATTR = "data-hg-heartgarden-media-placeholder";
 
-export type HeartgardenMediaPlaceholderVariant = "mediaWell" | "loreCredential" | "neutral";
+/** Canonical placeholder surface (standardized across media/lore contexts). */
+export type HeartgardenMediaPlaceholderVariant = "neutral";
 
 export function isHeartgardenMediaPlaceholderSrc(src: string | null | undefined): boolean {
   if (!src) return false;

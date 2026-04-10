@@ -239,6 +239,7 @@ import {
 import {
   characterV11BodyToFocusDocumentHtml,
   focusDocumentHtmlToCharacterV11Body,
+  normalizeCharacterV11BodyHtmlForCurrentBuild,
   withCharacterV11ObjectIdInHeader,
 } from "@/src/lib/lore-character-focus-document-html";
 import {
@@ -1299,7 +1300,15 @@ function canonicalizeCharacterBodyHtml(
   bodyHtml: string,
 ): string {
   if (!shouldRenderLoreCharacterCredentialCanvasNode(entity)) return bodyHtml;
-  return withCharacterV11ObjectIdInHeader(bodyHtml, entity.id);
+  const normalizedBody =
+    bodyHtml.includes(loreEntityCardStyles.charSkShellV11) &&
+    bodyHtml.includes(loreEntityCardStyles.charSkCardMaterial)
+      ? bodyHtml
+      : normalizeCharacterV11BodyHtmlForCurrentBuild(bodyHtml);
+  return withCharacterV11ObjectIdInHeader(
+    normalizedBody,
+    entity.id,
+  );
 }
 
 type LassoRectScreen = { x1: number; y1: number; x2: number; y2: number };
@@ -1315,12 +1324,25 @@ type LassoRectScreen = { x1: number; y1: number; x2: number; y2: number };
 function targetIsLoreCharacterV11CanvasDragChrome(target: Element): boolean {
   const cred = target.closest('[data-hg-canvas-role="lore-character-v11"]');
   if (!cred) return false;
-  const header =
-    target.closest("[data-hg-lore-canvas-drag-header='true']") ||
-    target.closest('[class*="charSkHeaderCell"]');
-  if (!header || !cred.contains(header)) return false;
   if (target.closest("[data-expand-btn='true']")) return false;
+  if (target.closest("[data-architectural-media-upload='true']")) return false;
   if (target.closest("[data-hg-lore-field]")) return false;
+  /*
+   * Regression guard:
+   * `BufferedContentEditable` wraps the whole lore plate with
+   * `[data-hg-rich-editor-inner="true"][contenteditable="true"]`. Rejecting
+   * generic `[contenteditable='true']` here would make every hit look
+   * "editable" and block drag-start for the entire character card.
+   */
+  if (
+    target.closest(
+      "button, a, input, textarea, select, [role='button']",
+    )
+  ) {
+    return false;
+  }
+  // Treat any non-editable surface in the credential shell as card chrome so legacy/drifted
+  // class names still allow selection + deletion from click/drag.
   return true;
 }
 
@@ -3894,7 +3916,6 @@ export function ArchitecturalCanvasApp({
     enabled: collabNeonActive,
     hasRemotePeers: presencePeers.length > 0,
     activeSpaceId,
-    graphRef,
     syncCursorRef,
     focusOpenRef,
     focusDirtyRef,
@@ -5935,7 +5956,7 @@ export function ArchitecturalCanvasApp({
           bodyHtml = buildEmptyArchitecturalMediaBodyHtml({
             mediaFrameClass: styles.mediaFrame,
             imageSlotImgClass: styles.imageSlotImg,
-            placeholderImgClasses: heartgardenMediaPlaceholderClassList("mediaWell"),
+            placeholderImgClasses: heartgardenMediaPlaceholderClassList("neutral"),
             mediaImageActionsClass: styles.mediaImageActions,
             mediaUploadBtnClass: styles.mediaUploadBtn,
             uploadLabel: mediaUploadActionLabel(false),
@@ -6107,7 +6128,7 @@ export function ArchitecturalCanvasApp({
       bodyHtml = buildEmptyArchitecturalMediaBodyHtml({
         mediaFrameClass: styles.mediaFrame,
         imageSlotImgClass: styles.imageSlotImg,
-        placeholderImgClasses: heartgardenMediaPlaceholderClassList("mediaWell"),
+        placeholderImgClasses: heartgardenMediaPlaceholderClassList("neutral"),
         mediaImageActionsClass: styles.mediaImageActions,
         mediaUploadBtnClass: styles.mediaUploadBtn,
         uploadLabel: mediaUploadActionLabel(false),
@@ -8588,6 +8609,26 @@ export function ArchitecturalCanvasApp({
     unstackWhollySelectedStacks,
   ]);
 
+  const copySelectedNodeId = useCallback(() => {
+    const selectedId = selectedNodeIdsRef.current[0];
+    if (!selectedId) return;
+    void navigator.clipboard.writeText(selectedId).catch(() => {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = selectedId;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      } catch {
+        window.alert("Could not copy node ID automatically.");
+      }
+    });
+  }, []);
+
   const selectionContextMenuItems = useMemo<ContextMenuItem[]>(
     () => [
       {
@@ -8619,9 +8660,16 @@ export function ArchitecturalCanvasApp({
         icon: <CopySimple size={18} weight="bold" aria-hidden />,
         onSelect: () => duplicateSelectedEntities(),
       },
+      {
+        label: "Copy ID",
+        icon: <CopySimple size={18} weight="bold" aria-hidden />,
+        disabled: selectedNodeIds.length !== 1,
+        onSelect: copySelectedNodeId,
+      },
     ],
     [
       alignSelectedInGrid,
+      copySelectedNodeId,
       deleteEntitySelection,
       duplicateSelectedEntities,
       selectedNodeIds,

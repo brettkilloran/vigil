@@ -8,9 +8,7 @@ import { heartgardenMediaPlaceholderClassList } from "@/src/lib/heartgarden-medi
 
 export type { HeartgardenMediaPlaceholderVariant } from "@/src/lib/heartgarden-media-placeholder";
 
-/**
- * Design-system empty image: same SVG grid as lore v11 portrait placeholders, with variant surface tints.
- */
+/** Design-system empty image: same SVG grid + standardized neutral placeholder surface. */
 export function HeartgardenMediaPlaceholderImg({
   variant = "neutral",
   className,

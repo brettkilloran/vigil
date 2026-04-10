@@ -3,13 +3,9 @@ import styles from "@/src/components/ui/HeartgardenMediaPlaceholderImg.module.cs
 
 /** CSS module class string for seed HTML / `bodyHtml` templates (no React). */
 export function heartgardenMediaPlaceholderClassList(
-  variant: HeartgardenMediaPlaceholderVariant,
+  _variant: HeartgardenMediaPlaceholderVariant,
 ): string {
-  const surface =
-    variant === "mediaWell"
-      ? styles.mediaWell
-      : variant === "loreCredential"
-        ? styles.loreCredential
-        : styles.neutral;
+  void _variant;
+  const surface = styles.neutral;
   return `${styles.base} ${surface}`.trim();
 }

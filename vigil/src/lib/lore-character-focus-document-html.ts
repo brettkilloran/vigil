@@ -1,5 +1,6 @@
 import { HEARTGARDEN_MEDIA_PLACEHOLDER_SRC } from "@/src/lib/heartgarden-media-placeholder";
 import { mediaUploadActionLabel } from "@/src/components/foundation/architectural-media-html";
+import { getLoreNodeSeedBodyHtml } from "@/src/lib/lore-node-seed-html";
 
 const DEFAULT_NOTES_HTML = "<p><br></p>";
 
@@ -78,6 +79,107 @@ function focusFieldHtml(root: ParentNode, selector: string): string {
   return isEmptyEditableHtml(raw) ? "" : raw;
 }
 
+function findLoreFieldByPlaceholder(root: ParentNode, placeholder: string): HTMLElement | null {
+  return root.querySelector<HTMLElement>(`[data-hg-lore-ph="${placeholder}"]`);
+}
+
+function firstLoreField(
+  root: ParentNode,
+  predicate: (el: HTMLElement) => boolean,
+): HTMLElement | null {
+  for (const el of root.querySelectorAll<HTMLElement>("[data-hg-lore-field]")) {
+    if (predicate(el)) return el;
+  }
+  return null;
+}
+
+function innerHtmlOrFallback(el: HTMLElement | null, fallback: string): string {
+  if (!el) return fallback;
+  const html = (el.innerHTML || "").trim();
+  return html || fallback;
+}
+
+/**
+ * Rebuild a character v11 body from stable data attributes so cards saved from another build/device
+ * (different CSS-module hashes) regain the local style classes.
+ */
+export function normalizeCharacterV11BodyHtmlForCurrentBuild(bodyHtml: string): string {
+  const root = parseWrapped(bodyHtml);
+  if (!root) return bodyHtml;
+
+  const templateRoot = parseWrapped(getLoreNodeSeedBodyHtml("character", "v11"));
+  if (!templateRoot) return bodyHtml;
+
+  const allFields = [...root.querySelectorAll<HTMLElement>("[data-hg-lore-field]")];
+  if (allFields.length === 0) return bodyHtml;
+
+  const header =
+    root.querySelector<HTMLElement>("[data-hg-object-id-full]") ??
+    root.querySelector<HTMLElement>('[data-hg-lore-field][title="Catalog ID"]') ??
+    firstLoreField(root, (el) => !el.hasAttribute("data-hg-lore-ph"));
+
+  const notes =
+    findLoreFieldByPlaceholder(root, "Notes") ??
+    firstLoreField(root, (el) => el.querySelector("p") != null) ??
+    allFields[allFields.length - 1] ??
+    null;
+
+  const claimed = new Set<HTMLElement>();
+  if (header) claimed.add(header);
+  if (notes) claimed.add(notes);
+
+  const remaining = allFields.filter((el) => !claimed.has(el));
+  const name = findLoreFieldByPlaceholder(root, "Name") ?? remaining[0] ?? null;
+  const role = findLoreFieldByPlaceholder(root, "Role") ?? remaining[1] ?? null;
+  const affiliation = findLoreFieldByPlaceholder(root, "Group") ?? remaining[2] ?? null;
+  const nationality = findLoreFieldByPlaceholder(root, "Origin") ?? remaining[3] ?? null;
+
+  setInnerHtml(templateRoot, '[class*="charSkHeaderMeta"]', innerHtmlOrFallback(header, "<br>"));
+  setInnerHtml(templateRoot, '[class*="charSkDisplayName"]', innerHtmlOrFallback(name, "<br>"));
+  setInnerHtml(templateRoot, '[class*="charSkRole"]', innerHtmlOrFallback(role, "<br>"));
+  setInnerHtml(
+    templateRoot,
+    '[class*="charSkMetaRow"]:nth-of-type(1) [class*="charSkMetaValue"]',
+    innerHtmlOrFallback(affiliation, "<br>"),
+  );
+  setInnerHtml(
+    templateRoot,
+    '[class*="charSkMetaRow"]:nth-of-type(2) [class*="charSkMetaValue"]',
+    innerHtmlOrFallback(nationality, "<br>"),
+  );
+  setInnerHtml(
+    templateRoot,
+    '[class*="charSkNotesBody"]',
+    innerHtmlOrFallback(notes, DEFAULT_NOTES_HTML),
+  );
+
+  const templatePortrait = templateRoot.querySelector<HTMLImageElement>(
+    '[data-hg-lore-portrait-root="v11"] img',
+  );
+  const sourcePortrait = root.querySelector<HTMLImageElement>('[data-hg-lore-portrait-root="v11"] img');
+  if (templatePortrait && sourcePortrait) {
+    const src = sourcePortrait.getAttribute("src")?.trim() ?? "";
+    const alt = sourcePortrait.getAttribute("alt") ?? "";
+    if (src) {
+      templatePortrait.setAttribute("src", src);
+    }
+    templatePortrait.setAttribute("alt", alt);
+    const isPlaceholder =
+      sourcePortrait.hasAttribute("data-hg-portrait-placeholder") ||
+      sourcePortrait.hasAttribute("data-hg-heartgarden-media-placeholder") ||
+      src === HEARTGARDEN_MEDIA_PLACEHOLDER_SRC;
+    if (isPlaceholder) {
+      templatePortrait.setAttribute("data-hg-portrait-placeholder", "true");
+      templatePortrait.setAttribute("data-hg-heartgarden-media-placeholder", "true");
+    } else {
+      templatePortrait.removeAttribute("data-hg-portrait-placeholder");
+      templatePortrait.removeAttribute("data-hg-heartgarden-media-placeholder");
+    }
+  }
+
+  return templateRoot.innerHTML;
+}
+
 /**
  * Build a focus-first character document from canonical v11 credential HTML.
  * Output stays a single rich-editable body and keeps portrait upload hooks.
@@ -121,7 +223,7 @@ export function characterV11BodyToFocusDocumentHtml(bodyHtml: string): string {
 <div data-hg-character-focus-portrait="true" contenteditable="false">
 <div data-hg-character-focus-portrait-frame="true" contenteditable="false">
 <div data-architectural-media-root="true" data-hg-lore-portrait-root="v11" contenteditable="false">
-<img data-hg-character-focus-portrait-img="true" class="${escapeAttr(portraitClass)}" src="${escapeAttr(portraitSrc)}" alt="${escapeAttr(portraitAlt)}" contenteditable="false" draggable="false"${portraitIsPlaceholder ? ' data-hg-portrait-placeholder="true"' : ""} />
+<img data-hg-character-focus-portrait-img="true" class="${escapeAttr(portraitClass)}" src="${escapeAttr(portraitSrc)}" alt="${escapeAttr(portraitAlt)}" contenteditable="false" draggable="false"${portraitIsPlaceholder ? ' data-hg-portrait-placeholder="true" data-hg-heartgarden-media-placeholder="true"' : ""} />
 <div data-hg-portrait-actions="true" contenteditable="false"><button type="button" class="${escapeAttr(portraitUploadClassWithVigil)}" data-variant="ghost" data-size="sm" data-tone="glass" data-architectural-media-upload="true">${portraitUploadLabel || mediaUploadActionLabel(!portraitIsPlaceholder && !!portraitSrc)}</button></div>
 </div>
 </div>
@@ -203,7 +305,13 @@ export function focusDocumentHtmlToCharacterV11Body(
       focusRoot,
       '[data-hg-character-focus-portrait-img="true"]',
       "data-hg-portrait-placeholder",
-    ) || nextPortraitSrc === HEARTGARDEN_MEDIA_PLACEHOLDER_SRC;
+    ) ||
+    hasAttr(
+      focusRoot,
+      '[data-hg-character-focus-portrait-img="true"]',
+      "data-hg-heartgarden-media-placeholder",
+    ) ||
+    nextPortraitSrc === HEARTGARDEN_MEDIA_PLACEHOLDER_SRC;
   if (nextPortraitSrc) {
     const templatePortraitRoot = templateRoot.querySelector<HTMLElement>('[data-hg-lore-portrait-root="v11"]');
     if (templatePortraitRoot) {
@@ -217,8 +325,10 @@ export function focusDocumentHtmlToCharacterV11Body(
       img.setAttribute("alt", nextPortraitAlt);
       if (nextPortraitIsPlaceholder) {
         img.setAttribute("data-hg-portrait-placeholder", "true");
+        img.setAttribute("data-hg-heartgarden-media-placeholder", "true");
       } else {
         img.removeAttribute("data-hg-portrait-placeholder");
+        img.removeAttribute("data-hg-heartgarden-media-placeholder");
       }
     }
   }
@@ -258,6 +368,7 @@ export function withCharacterV11ObjectIdInHeader(bodyHtml: string, objectId: str
       portrait.setAttribute("width", "240");
       portrait.setAttribute("height", "180");
       portrait.setAttribute("data-hg-portrait-placeholder", "true");
+      portrait.setAttribute("data-hg-heartgarden-media-placeholder", "true");
     }
   }
   return root.innerHTML;

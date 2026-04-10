@@ -68,7 +68,7 @@ export function parseArchitecturalMediaFromBody(bodyHtml: string): {
   return fallback;
 }
 
-/** Empty media card / API bootstrap: SVG grid placeholder + upload (matches `HeartgardenMediaPlaceholderImg` mediaWell). */
+/** Empty media card / API bootstrap: SVG grid placeholder + upload (matches standardized neutral placeholder). */
 export function buildEmptyArchitecturalMediaBodyHtml(parts: {
   mediaFrameClass: string;
   imageSlotImgClass: string;

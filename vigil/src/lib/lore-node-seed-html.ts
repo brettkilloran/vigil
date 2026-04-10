@@ -69,7 +69,7 @@ function characterV11(): string {
 <div class="${s.charSkPhotoCell}">
 <div class="${s.charSkPhotoWrap}" contenteditable="false">
 <div class="${s.charSkMediaRoot}" data-architectural-media-root="true" data-hg-lore-portrait-root="v11" contenteditable="false">
-<img class="${s.charSkPortraitImg} ${heartgardenMediaPlaceholderClassList("loreCredential")}" src="${HEARTGARDEN_MEDIA_PLACEHOLDER_SRC}" alt="" width="240" height="180" contenteditable="false" draggable="false" data-hg-heartgarden-media-placeholder="true" data-hg-portrait-placeholder="true" />
+<img class="${s.charSkPortraitImg} ${heartgardenMediaPlaceholderClassList("neutral")}" src="${HEARTGARDEN_MEDIA_PLACEHOLDER_SRC}" alt="" width="240" height="180" contenteditable="false" draggable="false" data-hg-heartgarden-media-placeholder="true" data-hg-portrait-placeholder="true" />
 <div data-hg-portrait-actions="true" contenteditable="false">
 <button type="button" class="vigil-btn ${archBodyStyles.mediaUploadBtn}" data-variant="ghost" data-size="sm" data-tone="glass" data-architectural-media-upload="true">${mediaUploadActionLabel(false)}</button>
 </div>

@@ -262,7 +262,7 @@ export function ArchitecturalNodeCard({
                 />
               ) : (
                 <HeartgardenMediaPlaceholderImg
-                  variant="mediaWell"
+                  variant="neutral"
                   className={styles.imageSlotImg}
                   alt=""
                   aria-hidden

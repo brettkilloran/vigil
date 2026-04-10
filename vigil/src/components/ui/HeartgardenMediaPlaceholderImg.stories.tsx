@@ -15,7 +15,7 @@ const meta: Meta<typeof HeartgardenMediaPlaceholderImg> = {
     ),
   ],
   args: {
-    variant: "mediaWell",
+    variant: "neutral",
     alt: "",
   },
 };
@@ -23,33 +23,23 @@ const meta: Meta<typeof HeartgardenMediaPlaceholderImg> = {
 export default meta;
 type Story = StoryObj<typeof HeartgardenMediaPlaceholderImg>;
 
-export const MediaWell: Story = {
+export const NeutralDefault: Story = {
   args: {
-    variant: "mediaWell",
+    variant: "neutral",
     style: { width: 240, height: 160 },
   },
 };
 
-export const LoreCredential: Story = {
+export const NeutralPortrait: Story = {
   args: {
-    variant: "loreCredential",
+    variant: "neutral",
     style: { width: 142, height: 168 },
   },
 };
 
-export const Neutral: Story = {
+export const NeutralCompact: Story = {
   args: {
     variant: "neutral",
     style: { width: 200, height: 140 },
   },
-};
-
-export const AllVariants: Story = {
-  render: () => (
-    <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
-      <HeartgardenMediaPlaceholderImg variant="mediaWell" alt="" style={{ width: 240, height: 160 }} />
-      <HeartgardenMediaPlaceholderImg variant="loreCredential" alt="" style={{ width: 142, height: 168 }} />
-      <HeartgardenMediaPlaceholderImg variant="neutral" alt="" style={{ width: 200, height: 140 }} />
-    </div>
-  ),
 };
