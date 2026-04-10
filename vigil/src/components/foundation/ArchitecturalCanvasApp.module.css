@@ -17,6 +17,8 @@
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
+  /* Prevent macOS two-finger horizontal swipe from triggering browser history navigation. */
+  overscroll-behavior-x: none;
   background-color: var(--bg-base);
   color: var(--text-main);
   user-select: none;
@@ -103,6 +105,8 @@
   height: 100vh;
   height: 100dvh;
   position: relative;
+  /* Keep infinite-canvas gestures inside the app surface (no back/forward swipe). */
+  overscroll-behavior-x: none;
   transition: filter 0.28s ease;
   will-change: filter;
   /* Solid plane so the dot grid reads consistently under cards and overlays. */
