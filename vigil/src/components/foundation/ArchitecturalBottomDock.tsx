@@ -3,6 +3,7 @@
 import {
   ArrowClockwise,
   ArrowCounterClockwise,
+  Buildings,
   CaretDown,
   CheckSquare,
   Code,
@@ -11,6 +12,7 @@ import {
   Image as ImageIcon,
   ListBullets,
   ListNumbers,
+  MapPin,
   Minus,
   Quotes,
   ArrowsOut,
@@ -21,6 +23,7 @@ import {
   TextStrikethrough,
   TextUnderline,
   Trash,
+  User,
 } from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -93,6 +96,9 @@ function createIcon(nodeType: NodeTheme): ReactNode {
   if (nodeType === "task") return <CheckSquare size={16} />;
   if (nodeType === "code") return <Code size={16} />;
   if (nodeType === "media") return <ImageIcon size={16} />;
+  if (nodeType === "character") return <User size={16} />;
+  if (nodeType === "faction") return <Buildings size={16} />;
+  if (nodeType === "location") return <MapPin size={16} />;
   return <FileText size={16} />;
 }
 
@@ -120,6 +126,9 @@ export const DEFAULT_CREATE_ACTIONS: DockCreateAction[] = [
   { id: "code", label: "Code", nodeType: "code" },
   { id: "media", label: "Media", nodeType: "media" },
   { id: "folder", label: "Folder", nodeType: "folder" },
+  { id: "character", label: "Character", nodeType: "character" },
+  { id: "faction", label: "Organization", nodeType: "faction" },
+  { id: "location", label: "Location", nodeType: "location" },
 ];
 
 export type ConnectionDockMode = "move" | "draw" | "cut";
