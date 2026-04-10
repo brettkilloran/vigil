@@ -29,7 +29,12 @@ import {
 import hostStyles from "@/src/components/editing/BufferedContentEditable.module.css";
 import { applySpellcheckToNestedEditables } from "@/src/lib/contenteditable-spellcheck";
 import { syncCharSkDisplayNameStack } from "@/src/lib/lore-char-sk-display-name";
-import { syncLoreV9RedactedPlaceholderState } from "@/src/lib/lore-v9-placeholder";
+import {
+  consumeLorePlaceholderBeforeInput,
+  installLorePlaceholderSelectionGuards,
+  placeCaretAfterLorePlaceholderReplace,
+  syncLoreV9RedactedPlaceholderState,
+} from "@/src/lib/lore-v9-placeholder";
 
 function isCaretAtStartOfHost(host: HTMLElement, range: Range): boolean {
   if (!range.collapsed) return false;
@@ -503,7 +508,8 @@ export function BufferedContentEditable({
     if (!el) return;
     const current = plainText ? el.innerText : el.innerHTML;
     if (current === draft) return;
-    if (document.activeElement === el) return;
+    /* Nested lore fields (`data-hg-lore-field`) focus the inner node, not this host — still “editing”. */
+    if (el.contains(document.activeElement)) return;
     if (plainText) {
       el.innerText = draft;
     } else {
@@ -519,9 +525,18 @@ export function BufferedContentEditable({
     const el = ref.current;
     if (!el || plainText) return;
     applySpellcheckToNestedEditables(el, spellCheck);
-    syncCharSkDisplayNameStack(el);
+    /* Don’t rewrite display-name markup while the user is typing inside the host — preserves caret. */
+    if (!el.contains(document.activeElement)) {
+      syncCharSkDisplayNameStack(el);
+    }
     syncLoreV9RedactedPlaceholderState(el);
   }, [draft, plainText, spellCheck]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || plainText) return;
+    return installLorePlaceholderSelectionGuards(el);
+  }, [plainText]);
 
   useEffect(() => {
     const el = ref.current;
@@ -657,6 +672,30 @@ export function BufferedContentEditable({
         onCompositionEnd={() => {
           composingRef.current = false;
           requestAnimationFrame(() => {
+            refreshWikiAssist();
+            refreshSlashAssist();
+          });
+        }}
+        onBeforeInputCapture={(e) => {
+          if (plainText || !editable) return;
+          const field = (e.target as HTMLElement | null)?.closest?.(
+            "[data-hg-lore-field]",
+          ) as HTMLElement | null;
+          if (!field) return;
+          const native = e.nativeEvent as InputEvent;
+          if (!consumeLorePlaceholderBeforeInput(field, native)) return;
+          const next = readElementValue();
+          onDraftChange(next);
+          syncLoreV9RedactedPlaceholderState(ref.current);
+          syncCharSkDisplayNameStack(ref.current);
+          /* Stack sync can touch display-name HTML after first character — restore caret after layout. */
+          queueMicrotask(() => {
+            if (field.isConnected) placeCaretAfterLorePlaceholderReplace(field);
+          });
+          requestAnimationFrame(() => {
+            if (documentBlockDrag && ref.current && !plainText) {
+              ensureDocumentBlockDragHandles(ref.current, documentBlockDrag);
+            }
             refreshWikiAssist();
             refreshSlashAssist();
           });

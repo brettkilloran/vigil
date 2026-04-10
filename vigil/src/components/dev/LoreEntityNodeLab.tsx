@@ -34,7 +34,12 @@ import {
   locationStripVariantFromSeed,
 } from "@/src/lib/lore-node-seed-html";
 import { syncCharSkDisplayNameStack } from "@/src/lib/lore-char-sk-display-name";
-import { syncLoreV9RedactedPlaceholderState } from "@/src/lib/lore-v9-placeholder";
+import {
+  consumeLorePlaceholderBeforeInput,
+  installLorePlaceholderSelectionGuards,
+  placeCaretAfterLorePlaceholderReplace,
+  syncLoreV9RedactedPlaceholderState,
+} from "@/src/lib/lore-v9-placeholder";
 import { applyImageDataUrlToArchitecturalMediaBody } from "@/src/components/foundation/architectural-media-html";
 import { applySpellcheckToNestedEditables } from "@/src/lib/contenteditable-spellcheck";
 
@@ -160,8 +165,20 @@ function LabSkeuoCard({
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
+    const removeGuards = installLorePlaceholderSelectionGuards(root);
     const onInput = () => {
       syncLoreV9RedactedPlaceholderState(root);
+    };
+    const onBeforeInput = (e: Event) => {
+      const ie = e as InputEvent;
+      const field = (ie.target as HTMLElement | null)?.closest?.("[data-hg-lore-field]");
+      if (!field || !(field instanceof HTMLElement)) return;
+      if (!consumeLorePlaceholderBeforeInput(field, ie)) return;
+      syncCharSkDisplayNameStack(root);
+      syncLoreV9RedactedPlaceholderState(root);
+      queueMicrotask(() => {
+        if (field.isConnected) placeCaretAfterLorePlaceholderReplace(field);
+      });
     };
     const onFocusOut = (e: FocusEvent) => {
       const t = (e.target as HTMLElement | null)?.closest?.(
@@ -173,9 +190,12 @@ function LabSkeuoCard({
         syncLoreV9RedactedPlaceholderState(root);
       });
     };
+    root.addEventListener("beforeinput", onBeforeInput, true);
     root.addEventListener("input", onInput, true);
     root.addEventListener("focusout", onFocusOut);
     return () => {
+      removeGuards();
+      root.removeEventListener("beforeinput", onBeforeInput, true);
       root.removeEventListener("input", onInput, true);
       root.removeEventListener("focusout", onFocusOut);
     };
@@ -267,7 +287,7 @@ function LoreEntityNodeLabInner() {
           </h2>
           <p className={labStyles.sectionHint}>
             Supported templates: passport strip with canvas tape (v3), or protocol IDs without tape (v8–v9).
-            Affiliation and nationality stay free text until structured fields land.
+            Affiliation, nationality, and alias stay free text until structured fields land.
           </p>
           <div className={labStyles.grid}>
             <div className={labStyles.cell}>

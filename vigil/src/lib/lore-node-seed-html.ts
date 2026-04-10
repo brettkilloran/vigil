@@ -110,7 +110,7 @@ function characterV8(): string {
 <div class="${s.char3dIdentityCell}">
 <div class="${s.char3dNameBlock}">
 <div class="${s.char3dNameHeading}">
-<span class="${s.char3dLabel}">Identification</span>
+<span class="${s.char3dLabel}">Name</span>
 <div class="${s.char3dName}">
 <span contenteditable="true" spellcheck="false">Given</span>
 <span contenteditable="true" spellcheck="false">Family</span>
@@ -138,6 +138,10 @@ function characterV8(): string {
 <div class="${s.char3dMetaRow}">
 <span class="${s.char3dLabel}">Nationality</span>
 <span class="${s.char3dMetaValue}" contenteditable="true" spellcheck="false">Fictional nation</span>
+</div>
+<div class="${s.char3dMetaRow}">
+<span class="${s.char3dLabel}">Alias</span>
+<span class="${s.char3dMetaValue}" contenteditable="true" spellcheck="false">Nicknames, callsigns, handles</span>
 </div>
 </div>
 </div>
@@ -185,7 +189,7 @@ function characterV9(): string {
 <div class="${s.charSkIdentityCell}">
 <div class="${s.charSkNameBlock}">
 <div class="${s.charSkNameHeading}">
-<span class="${s.charSkFieldLabel}">Identification</span>
+<span class="${s.charSkFieldLabel}">Name</span>
 <div class="${s.charSkDisplayName}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</div>
 </div>
 <div class="${s.charSkNameTail}">
@@ -199,6 +203,10 @@ function characterV9(): string {
 </div>
 <div class="${s.charSkMetaRow}">
 <span class="${s.charSkFieldLabel}">Nationality</span>
+<span class="${s.charSkMetaValue}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</span>
+</div>
+<div class="${s.charSkMetaRow}">
+<span class="${s.charSkFieldLabel}">Alias</span>
 <span class="${s.charSkMetaValue}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</span>
 </div>
 </div>
@@ -243,7 +251,7 @@ function characterV10(): string {
 <div class="${s.charSkIdentityCell}">
 <div class="${s.charSkNameBlock}">
 <div class="${s.charSkNameHeading}">
-<span class="${s.charSkFieldLabel}">Identification</span>
+<span class="${s.charSkFieldLabel}">Name</span>
 <div class="${s.charSkDisplayName}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</div>
 </div>
 <div class="${s.charSkNameTail}">
@@ -257,6 +265,10 @@ function characterV10(): string {
 </div>
 <div class="${s.charSkMetaRow}">
 <span class="${s.charSkFieldLabel}">Nationality</span>
+<span class="${s.charSkMetaValue}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</span>
+</div>
+<div class="${s.charSkMetaRow}">
+<span class="${s.charSkFieldLabel}">Alias</span>
 <span class="${s.charSkMetaValue}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</span>
 </div>
 </div>
@@ -301,7 +313,7 @@ function characterV11(): string {
 <div class="${s.charSkIdentityCell}">
 <div class="${s.charSkNameBlock}">
 <div class="${s.charSkNameHeading}">
-<span class="${s.charSkFieldLabel}">Identification</span>
+<span class="${s.charSkFieldLabel}">Name</span>
 <div class="${s.charSkDisplayName}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</div>
 </div>
 <div class="${s.charSkNameTail}">
@@ -315,6 +327,10 @@ function characterV11(): string {
 </div>
 <div class="${s.charSkMetaRow}">
 <span class="${s.charSkFieldLabel}">Nationality</span>
+<span class="${s.charSkMetaValue}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</span>
+</div>
+<div class="${s.charSkMetaRow}">
+<span class="${s.charSkFieldLabel}">Alias</span>
 <span class="${s.charSkMetaValue}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true">REDACTED</span>
 </div>
 </div>

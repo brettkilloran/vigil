@@ -991,7 +991,7 @@
 
 .char3dGrid {
   display: grid;
-  grid-template-rows: 48px minmax(180px, 300px) 140px 60px auto;
+  grid-template-rows: 48px minmax(180px, 300px) 160px 60px auto;
   border-radius: 12px;
   min-height: 0;
   width: 100%;
@@ -1211,9 +1211,9 @@
   grid-template-rows: minmax(0, 1fr);
   align-items: stretch;
   border-bottom: 1px solid var(--hg-id-border);
-  height: 140px;
-  min-height: 140px;
-  max-height: 140px;
+  height: 160px;
+  min-height: 160px;
+  max-height: 160px;
   overflow: hidden;
   min-width: 0;
   box-sizing: border-box;
@@ -1639,6 +1639,8 @@
   /* Identity + notes horizontal rhythm (siblings under `.charSkGrid`). */
   --char-sk-id-pad-x: 14px;
   --char-sk-id-pad-y: 12px;
+  /* SVG fractal noise (same family as image nodes / paper badge); tiled under plate paint. */
+  --sk-id-card-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='skIdGrain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23skIdGrain)' opacity='0.035'/%3E%3C/svg%3E");
   display: flex;
   justify-content: center;
 }
@@ -1663,6 +1665,12 @@
   overflow: hidden;
 }
 
+.charSkShell:not(.charSkShellV10):not(.charSkShellV11) .charSkCardMaterial {
+  background:
+    var(--sk-id-card-noise) 0 0 / 200px 200px repeat,
+    var(--sk-id-surface);
+}
+
 /* Character v10 — matte plastic ID: beveled rim, top sheen, deeper portrait well (v9 + skeuo). */
 .charSkShellV10 {
   --sk-id-surface: color-mix(in oklch, var(--sys-color-black) 14%, var(--sys-color-neutral-950));
@@ -1672,6 +1680,7 @@
 
 .charSkShellV10 .charSkCardMaterial {
   background:
+    var(--sk-id-card-noise) 0 0 / 200px 200px repeat,
     linear-gradient(
       168deg,
       color-mix(in oklch, var(--sys-color-white) 9%, var(--sk-id-surface)) 0%,
@@ -1793,13 +1802,22 @@
   --sk-id-line: color-mix(in oklch, var(--sys-color-white) 4.5%, var(--sk-id-surface));
   /* Snippet `--marker: #0a0a0a` (guest-check “Classified Guest Check - Redacted”). */
   --sk-v11-marker: color-mix(in oklch, var(--sys-color-black) 88%, var(--sys-color-neutral-950));
-  /* `.redaction-stroke`: left 5px, height 26px, width calc(100% - 10px). */
-  --sk-v11-marker-inset-x: 5px;
+  /* Snippet uses 5px both sides; we bias ~2px left so rotation + mask read centered on the value. */
+  --sk-v11-marker-inset-left: 2px;
+  --sk-v11-marker-inset-right: 5px;
   --sk-v11-marker-h: 26px;
+  /* Guest-check row: `transition: width 0.4s cubic-bezier(0.19, 1, 0.22, 1)` → scaleX wipe. */
+  --sk-v11-marker-wipe-ms: 400ms;
+  --sk-v11-marker-wipe-ease: cubic-bezier(0.19, 1, 0.22, 1);
+  --sk-v11-marker-hide-ms: 320ms;
+  --sk-v11-marker-hide-ease: cubic-bezier(0.55, 0, 1, 0.45);
+  /* Per-field random slight slant from `syncLoreV11MarkerTilts` (hand-drawn redaction). */
+  --sk-v11-marker-rotate: -0.5deg;
 }
 
 .charSkShellV11 .charSkCardMaterial {
   background:
+    var(--sk-id-card-noise) 0 0 / 200px 200px repeat,
     linear-gradient(
       168deg,
       color-mix(in oklch, var(--sys-color-white) 9%, var(--sk-id-surface)) 0%,
@@ -1911,7 +1929,7 @@
 
 .charSkGrid {
   display: grid;
-  grid-template-rows: 44px minmax(188px, 300px) 144px auto;
+  grid-template-rows: 44px minmax(188px, 300px) 168px auto;
   border-radius: 12px;
   min-height: 0;
   width: 100%;
@@ -2123,9 +2141,9 @@
   grid-template-columns: minmax(0, 1fr) 142px;
   align-items: stretch;
   border-bottom: 1px solid var(--sk-id-line);
-  min-height: 144px;
-  height: 144px;
-  max-height: 144px;
+  min-height: 168px;
+  height: 168px;
+  max-height: 168px;
   overflow: hidden;
   min-width: 0;
   box-sizing: border-box;
@@ -2210,7 +2228,7 @@
 
 .charSkMetaBlock {
   display: grid;
-  grid-template-rows: 1fr 1fr;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -2299,8 +2317,29 @@
  * v11: faithful to guest-check `.redaction-stroke` + `.redaction-stroke::before`:
  * flat `background: var(--marker)`; `::before` = radial rgba(255,255,255,0.05) @ 50% opacity (merged as one layer
  * ~2.5% peak); `mask-image` fade right 95%; `box-shadow: 0 0 2px var(--marker)`; `border-radius: 2px`;
- * `transform: translateY(-50%) rotate(-0.5deg)`; z 6 above text z 5. Placeholder-driven. Notes + CLGN-ID unmasked.
+ * `transform` + `transform-origin: left center`; asymmetric horizontal inset (2px / 5px) + 1px left nudge vs snippet.
+ * Wipe: guest-check `width` transition → `scaleX` + keyframes (snippet easing). z 6. Notes + CLGN-ID unmasked.
  */
+
+@keyframes charSkV11MarkerStripWipe {
+  from {
+    transform: translate(-1px, -50%) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
+  }
+
+  to {
+    transform: translate(-1px, -50%) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+  }
+}
+
+@keyframes charSkV11MarkerBlockWipe {
+  from {
+    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
+  }
+
+  to {
+    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+  }
+}
 
 /* Rotated marker strips must not paint over preceding caps labels (sibling stacking + bleed). */
 .charSkShellV11 .charSkNameHeading .charSkFieldLabel,
@@ -2334,6 +2373,8 @@
   -webkit-text-fill-color: unset;
 }
 
+/* Keep each field’s normal font (display name / meta / role) — only the ::after marker reads as redaction;
+ * mono here made the first real character jump type when placeholder cleared. */
 .charSkShellV11
   [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta) {
   position: relative;
@@ -2341,23 +2382,27 @@
   color: transparent !important;
   -webkit-text-fill-color: transparent;
   caret-color: color-mix(in oklch, var(--sem-text-primary) 78%, var(--sk-id-surface));
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-weight: 500;
 }
 
 .charSkShellV11
-  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta)::after {
+  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):not(
+    .charSkDisplayName
+  )::after {
   content: "";
   position: absolute;
-  left: var(--sk-v11-marker-inset-x);
-  width: calc(100% - 2 * var(--sk-v11-marker-inset-x));
+  left: var(--sk-v11-marker-inset-left);
+  width: calc(
+    100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right)
+  );
   right: auto;
   top: 50%;
   height: var(--sk-v11-marker-h);
-  transform: translateY(-50%) rotate(-0.5deg);
+  transform: translate(-1px, -50%) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+  transform-origin: left center;
   border-radius: 2px;
   pointer-events: none;
   z-index: 6;
+  animation: charSkV11MarkerStripWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
   /* `.redaction-stroke` + `::before` (single pseudo → merged layers; 0.05 white × 0.5 opacity ≈ 2.5% peak). */
   background:
     radial-gradient(
@@ -2374,15 +2419,23 @@
 }
 
 .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]::after {
+  content: "";
+  position: absolute;
   top: 0;
   bottom: 0;
-  left: var(--sk-v11-marker-inset-x);
-  width: calc(100% - 2 * var(--sk-v11-marker-inset-x));
+  left: var(--sk-v11-marker-inset-left);
+  width: calc(
+    100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right)
+  );
   height: auto;
   min-height: 2.65em;
   margin: 0;
-  transform: rotate(-0.5deg);
+  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+  transform-origin: left center;
+  border-radius: 2px;
+  pointer-events: none;
   z-index: 6;
+  animation: charSkV11MarkerBlockWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
   background:
     radial-gradient(
       circle at 50% 50%,
@@ -2404,10 +2457,58 @@
 }
 
 .charSkShellV11
-  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):focus::after,
+  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):not(
+    .charSkDisplayName
+  ):focus::after,
 .charSkShellV11
-  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):focus-within::after {
-  opacity: 0;
+  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):not(
+    .charSkDisplayName
+  ):focus-within::after {
+  animation: none;
+  transform: translate(-1px, -50%) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
+  transition: transform var(--sk-v11-marker-hide-ms) var(--sk-v11-marker-hide-ease);
+}
+
+.charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus::after,
+.charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus-within::after {
+  animation: none;
+  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
+  transition: transform var(--sk-v11-marker-hide-ms) var(--sk-v11-marker-hide-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .charSkShellV11
+    [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):not(
+      .charSkDisplayName
+    )::after,
+  .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]::after {
+    animation: none;
+    transform: translate(-1px, -50%) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+  }
+
+  .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]::after {
+    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+  }
+
+  .charSkShellV11
+    [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):not(
+      .charSkDisplayName
+    ):focus::after,
+  .charSkShellV11
+    [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):not(
+      .charSkDisplayName
+    ):focus-within::after,
+  .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus::after,
+  .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus-within::after {
+    transform: translate(-1px, -50%) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+    opacity: 0;
+    transition: opacity 0.12s ease;
+  }
+
+  .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus::after,
+  .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus-within::after {
+    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+  }
 }
 
 .charSkShellV11 .charSkHeaderMeta[data-hg-lore-placeholder="true"]:focus,
@@ -2443,7 +2544,7 @@
   }
 
   .charSkMetaBlock {
-    grid-template-rows: auto auto;
+    grid-template-rows: auto auto auto;
   }
 
   .charSkGrid {
