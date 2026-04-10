@@ -1851,6 +1851,14 @@
   --sk-v11-marker-hide-ease: cubic-bezier(0.55, 0, 1, 0.45);
   /* Per-field random slight slant from `syncLoreV11MarkerTilts` (hand-drawn redaction). */
   --sk-v11-marker-rotate: -0.5deg;
+  --sk-v11-marker-trim-right: 0px;
+  --sk-v11-marker-trim-right-top: 0px;
+  --sk-v11-marker-trim-right-bottom: 0px;
+  --sk-v11-marker-offset-x: 0px;
+  --sk-v11-marker-noise-size: 74px;
+  --sk-v11-marker-gloss: 2.5%;
+  --sk-v11-marker-tail: 95%;
+  --sk-v11-marker-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 96 96' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.12' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' fill='%23ffffff' filter='url(%23m)' opacity='0.085'/%3E%3C/svg%3E");
 }
 
 .charSkShellV11 .charSkCardMaterial {
@@ -1956,7 +1964,8 @@
 .charSkShellV11 .charSkPhotoCell {
   aspect-ratio: 4 / 3;
   width: 100%;
-  min-height: 0;
+  /* Floor when aspect-ratio fails to resolve inside nested grid/flex (common on WebKit). */
+  min-height: 200px;
 }
 
 .charSkShellV11 .charSkPhotoWrap {
@@ -2019,10 +2028,17 @@
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(40px, 12cqi, 52px) auto;
+  /* Plain-px fallback: unsupported `cqi` invalidates the whole `grid-template-columns` in WebKit. */
+  grid-template-columns: minmax(0, 1fr) 46px auto;
   align-items: center;
   column-gap: 8px;
   min-height: 44px;
+}
+
+@supports (width: 1cqi) {
+  .charSkHeaderRow {
+    grid-template-columns: minmax(0, 1fr) clamp(40px, 12cqi, 52px) auto;
+  }
 }
 
 .charSkHeaderLeft {
@@ -2182,7 +2198,9 @@
   display: block;
 }
 
-.charSkPortraitImg[data-hg-portrait-placeholder="true"] {
+/* Fallback when stored HTML predates `HeartgardenMediaPlaceholderImg` module classes. */
+.charSkPortraitImg[data-hg-portrait-placeholder="true"],
+.charSkPortraitImg[data-hg-heartgarden-media-placeholder="true"] {
   filter: none;
   mix-blend-mode: normal;
   object-fit: cover;
@@ -2249,7 +2267,7 @@
 
 .charSkDisplayName {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: clamp(1.1rem, 0.48rem + 5cqi, 1.55rem);
+  font-size: 1.35rem;
   font-weight: 650;
   letter-spacing: -0.025em;
   line-height: 1.14;
@@ -2259,6 +2277,12 @@
   margin: 0;
   outline: none;
   overflow-wrap: anywhere;
+}
+
+@supports (width: 1cqi) {
+  .charSkDisplayName {
+    font-size: clamp(1.1rem, 0.48rem + 5cqi, 1.55rem);
+  }
 }
 
 .charSkNameTail {
@@ -2564,9 +2588,10 @@
   )::after {
   content: "";
   position: absolute;
-  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px));
+  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px) + var(--sk-v11-marker-offset-x, 0px));
   width: calc(
-    100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right) - var(--hg-lore-ph-x, 0px)
+    100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right) - var(--hg-lore-ph-x, 0px) -
+      var(--sk-v11-marker-trim-right, 0px)
   );
   right: auto;
   top: var(--hg-lore-ph-y, 0px);
@@ -2579,15 +2604,18 @@
   animation: charSkV11MarkerStripWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
   /* `.redaction-stroke` + `::before` (single pseudo → merged layers; 0.05 white × 0.5 opacity ≈ 2.5% peak). */
   background:
+    var(--sk-v11-marker-noise) 0 0 / var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px)
+      repeat,
     radial-gradient(
       circle at 50% 50%,
-      color-mix(in oklch, var(--sys-color-white) 2.5%, transparent) 0%,
+      color-mix(in oklch, var(--sys-color-white) var(--sk-v11-marker-gloss, 2.5%), transparent) 0%,
       transparent 80%
     ),
     var(--sk-v11-marker);
+  background-blend-mode: screen, normal, normal;
   box-shadow: 0 0 2px var(--sk-v11-marker);
-  mask-image: linear-gradient(to right, black 95%, transparent);
-  -webkit-mask-image: linear-gradient(to right, black 95%, transparent);
+  mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
+  -webkit-mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
   mask-size: 100% 100%;
   -webkit-mask-size: 100% 100%;
 }
@@ -2595,31 +2623,37 @@
 .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]::after {
   content: "";
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: var(--sk-v11-marker-inset-left);
+  top: var(--hg-lore-ph-y, 0px);
+  bottom: auto;
+  left: calc(var(--sk-v11-marker-inset-left) + var(--sk-v11-marker-offset-x, 0px));
   width: calc(
-    100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right)
+    100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right) - var(--sk-v11-marker-trim-right, 0px)
   );
-  height: auto;
-  min-height: 2.65em;
+  height: calc((var(--hg-lore-ph-lh, var(--sk-v11-marker-h)) * 2) + 4px);
   margin: 0;
   transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
-  transform-origin: left center;
+  transform-origin: left top;
   border-radius: 2px;
   pointer-events: none;
   z-index: 6;
   animation: charSkV11MarkerBlockWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
   background:
+    linear-gradient(var(--sk-v11-marker), var(--sk-v11-marker)) left top / calc(100% - var(--sk-v11-marker-trim-right-top, 0px))
+      calc(50% - 2px) no-repeat,
+    linear-gradient(var(--sk-v11-marker), var(--sk-v11-marker)) left bottom /
+      calc(100% - var(--sk-v11-marker-trim-right-bottom, 0px)) calc(50% - 2px) no-repeat,
+    var(--sk-v11-marker-noise) 0 0 / var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px)
+      repeat,
     radial-gradient(
       circle at 50% 50%,
-      color-mix(in oklch, var(--sys-color-white) 2.5%, transparent) 0%,
+      color-mix(in oklch, var(--sys-color-white) var(--sk-v11-marker-gloss, 2.5%), transparent) 0%,
       transparent 80%
     ),
-    var(--sk-v11-marker);
+    transparent;
+  background-blend-mode: normal, normal, screen, normal, normal;
   box-shadow: 0 0 2px var(--sk-v11-marker);
-  mask-image: linear-gradient(to right, black 95%, transparent);
-  -webkit-mask-image: linear-gradient(to right, black 95%, transparent);
+  mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
+  -webkit-mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
 }
 
 .charSkShellV11

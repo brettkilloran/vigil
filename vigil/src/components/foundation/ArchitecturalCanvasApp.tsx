@@ -78,12 +78,14 @@ import { ArchitecturalToolRail } from "@/src/components/foundation/Architectural
 import {
   applyImageDataUrlToArchitecturalMediaBody,
   bodyUsesLorePortraitMediaSlot,
+  buildEmptyArchitecturalMediaBodyHtml,
   lorePortraitSlotUsesV9,
   getArchitecturalMediaNotes,
   mediaUploadActionLabel,
   parseArchitecturalMediaFromBody,
   setArchitecturalMediaNotes,
 } from "@/src/components/foundation/architectural-media-html";
+import { heartgardenMediaPlaceholderClassList } from "@/src/lib/heartgarden-media-placeholder-classes";
 import loreEntityCardStyles from "@/src/components/foundation/lore-entity-card.module.css";
 import {
   FOLDER_COLOR_SCHEMES,
@@ -231,6 +233,7 @@ import {
   defaultTitleForLoreKind,
   getLoreNodeSeedBodyHtml,
   shouldRenderLoreCharacterCredentialCanvasNode,
+  shouldRenderLoreLocationCanvasNode,
   tapeVariantForLoreCard,
 } from "@/src/lib/lore-node-seed-html";
 import {
@@ -238,6 +241,11 @@ import {
   focusDocumentHtmlToCharacterV11Body,
   withCharacterV11ObjectIdInHeader,
 } from "@/src/lib/lore-character-focus-document-html";
+import {
+  focusDocumentHtmlToLocationBody,
+  locationBodyToFocusDocumentHtml,
+  plainPlaceNameFromLocationBodyHtml,
+} from "@/src/lib/lore-location-focus-document-html";
 const VigilFlowRevealOverlay = dynamic(
   () =>
     import("@/src/components/transition-experiment/VigilFlowRevealOverlay").then((mod) => ({
@@ -555,6 +563,35 @@ function snapStackBoundsRect(r: {
     width: Math.round(r.width),
     height: Math.round(r.height),
   };
+}
+
+/** Client rect union of `[data-stack-layer]` — tall lore cards exceed `.stackContainer`’s CSS min box. */
+function unionBoundingRectFromStackLayers(container: HTMLElement): DOMRect | null {
+  const layers = Array.from(container.querySelectorAll<HTMLElement>("[data-stack-layer='true']"));
+  if (layers.length === 0) return null;
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  for (const layer of layers) {
+    const r = layer.getBoundingClientRect();
+    minX = Math.min(minX, r.left);
+    minY = Math.min(minY, r.top);
+    maxX = Math.max(maxX, r.right);
+    maxY = Math.max(maxY, r.bottom);
+  }
+  if (!Number.isFinite(minX) || !Number.isFinite(minY)) return null;
+  return {
+    left: minX,
+    top: minY,
+    right: maxX,
+    bottom: maxY,
+    width: maxX - minX,
+    height: maxY - minY,
+    x: minX,
+    y: minY,
+    toJSON: () => ({}),
+  } as DOMRect;
 }
 
 /** Avoid setState loops: layout can still jitter by 1px between frames after rounding. */
@@ -1080,14 +1117,13 @@ function buildPathToSpace(
 }
 
 function isEditableTarget(target: EventTarget | null) {
-  const el = target as HTMLElement | null;
+  const el = pointerEventTargetElement(target);
   if (!el) return false;
-  return (
-    el.isContentEditable ||
-    el.tagName === "INPUT" ||
-    el.tagName === "TEXTAREA" ||
-    el.tagName === "SELECT"
-  );
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
+    return true;
+  }
+  /* Text nodes have no isContentEditable; host uses React contenteditable="" (not [contenteditable="true"]). */
+  return el instanceof HTMLElement && el.isContentEditable === true;
 }
 
 /**
@@ -1111,6 +1147,9 @@ function isRichDocBodyFormattingTarget(focusEl: Element | null): boolean {
   /* Character focus document: block/slash insert only in notes, not metadata fields. */
   if (inNodeOrFocus.querySelector('[data-hg-character-focus-doc="v1"]')) {
     return !!focusEl.closest('[data-hg-character-focus-notes="true"]');
+  }
+  if (inNodeOrFocus.querySelector('[data-hg-location-focus-doc="v1"]')) {
+    return !!focusEl.closest('[data-hg-lore-location-focus-notes="true"]');
   }
   return true;
 }
@@ -1239,10 +1278,15 @@ function projectBodyHtmlForFocus(
   entity: Pick<CanvasContentEntity, "id" | "kind" | "bodyHtml" | "loreCard">,
   bodyHtml: string,
 ): string {
-  if (!shouldRenderLoreCharacterCredentialCanvasNode(entity)) return bodyHtml;
-  return characterV11BodyToFocusDocumentHtml(
-    withCharacterV11ObjectIdInHeader(bodyHtml, entity.id),
-  );
+  if (shouldRenderLoreCharacterCredentialCanvasNode(entity)) {
+    return characterV11BodyToFocusDocumentHtml(
+      withCharacterV11ObjectIdInHeader(bodyHtml, entity.id),
+    );
+  }
+  if (shouldRenderLoreLocationCanvasNode(entity)) {
+    return locationBodyToFocusDocumentHtml(bodyHtml);
+  }
+  return bodyHtml;
 }
 
 function canonicalizeCharacterBodyHtml(
@@ -3741,11 +3785,16 @@ export function ArchitecturalCanvasApp({
     if (activeNodeId) {
       const entity = graphRef.current.entities[activeNodeId];
       if (entity && entity.kind === "content") {
-        const nextTitle = focusTitle.trim() || "Untitled";
-        const nextBody = shouldRenderLoreCharacterCredentialCanvasNode(entity)
+        const nextBodyResolved = shouldRenderLoreCharacterCredentialCanvasNode(entity)
           ? focusDocumentHtmlToCharacterV11Body(normalizedFocusBody, entity.bodyHtml, entity.id)
-          : normalizedFocusBody;
-        if (entity.title !== nextTitle || entity.bodyHtml !== nextBody) {
+          : shouldRenderLoreLocationCanvasNode(entity)
+            ? focusDocumentHtmlToLocationBody(normalizedFocusBody, entity.bodyHtml)
+            : normalizedFocusBody;
+        const nextTitleResolved = shouldRenderLoreLocationCanvasNode(entity)
+          ? plainPlaceNameFromLocationBodyHtml(nextBodyResolved).trim() ||
+            defaultTitleForLoreKind("location")
+          : focusTitle.trim() || "Untitled";
+        if (entity.title !== nextTitleResolved || entity.bodyHtml !== nextBodyResolved) {
           recordUndoBeforeMutation();
         }
       }
@@ -3754,14 +3803,20 @@ export function ArchitecturalCanvasApp({
         if (!entity || entity.kind !== "content") return prev;
         const nextBody = shouldRenderLoreCharacterCredentialCanvasNode(entity)
           ? focusDocumentHtmlToCharacterV11Body(normalizedFocusBody, entity.bodyHtml, entity.id)
-          : normalizedFocusBody;
+          : shouldRenderLoreLocationCanvasNode(entity)
+            ? focusDocumentHtmlToLocationBody(normalizedFocusBody, entity.bodyHtml)
+            : normalizedFocusBody;
+        const nextTitle =
+          shouldRenderLoreLocationCanvasNode(entity)
+            ? plainPlaceNameFromLocationBodyHtml(nextBody).trim() || defaultTitleForLoreKind("location")
+            : focusTitle.trim() || "Untitled";
         return {
           ...prev,
           entities: {
             ...prev.entities,
             [activeNodeId]: {
               ...entity,
-              title: focusTitle.trim() || "Untitled",
+              title: nextTitle,
               bodyHtml: nextBody,
             },
           },
@@ -3769,13 +3824,18 @@ export function ArchitecturalCanvasApp({
       });
       if (persistNeonRef.current && isUuidLike(activeNodeId)) {
         const aid = activeNodeId;
-        const nextTitle = focusTitle.trim() || "Untitled";
         queueMicrotask(() => {
           const ent = graphRef.current.entities[aid];
           if (!ent || ent.kind !== "content") return;
           const nextBody = shouldRenderLoreCharacterCredentialCanvasNode(ent)
             ? focusDocumentHtmlToCharacterV11Body(normalizedFocusBody, ent.bodyHtml, ent.id)
-            : normalizedFocusBody;
+            : shouldRenderLoreLocationCanvasNode(ent)
+              ? focusDocumentHtmlToLocationBody(normalizedFocusBody, ent.bodyHtml)
+              : normalizedFocusBody;
+          const nextTitle =
+            shouldRenderLoreLocationCanvasNode(ent)
+              ? plainPlaceNameFromLocationBodyHtml(nextBody).trim() || defaultTitleForLoreKind("location")
+              : focusTitle.trim() || "Untitled";
           void patchItemWithVersion(aid, {
             title: nextTitle,
             contentText: htmlToPlainText(nextBody),
@@ -3805,11 +3865,12 @@ export function ArchitecturalCanvasApp({
   );
 
   /** What kind of focus overlay to render for the active content node. */
-  const focusSurface = useMemo((): "default-doc" | "code" | "character-hybrid" => {
+  const focusSurface = useMemo((): "default-doc" | "code" | "character-hybrid" | "location-hybrid" => {
     if (!focusOpen || !activeNodeId) return "default-doc";
     const ent = graph.entities[activeNodeId];
     if (!ent || ent.kind !== "content") return "default-doc";
     if (shouldRenderLoreCharacterCredentialCanvasNode(ent)) return "character-hybrid";
+    if (shouldRenderLoreLocationCanvasNode(ent)) return "location-hybrid";
     if (ent.theme === "code") return "code";
     return "default-doc";
   }, [focusOpen, activeNodeId, graph.entities]);
@@ -5375,7 +5436,8 @@ export function ArchitecturalCanvasApp({
         !ent ||
         ent.kind !== "content" ||
         ent.theme === "media" ||
-        shouldRenderLoreCharacterCredentialCanvasNode(ent)
+        shouldRenderLoreCharacterCredentialCanvasNode(ent) ||
+        shouldRenderLoreLocationCanvasNode(ent)
       ) {
         return null;
       }
@@ -5395,7 +5457,8 @@ export function ArchitecturalCanvasApp({
         !ent ||
         ent.kind !== "content" ||
         ent.theme === "media" ||
-        shouldRenderLoreCharacterCredentialCanvasNode(ent)
+        shouldRenderLoreCharacterCredentialCanvasNode(ent) ||
+        shouldRenderLoreLocationCanvasNode(ent)
       ) {
         return null;
       }
@@ -5864,15 +5927,14 @@ export function ArchitecturalCanvasApp({
           bodyHtml = `// [IN] Compose shard at cursor…`;
         } else if (type === "media") {
           title = "Untitled photo";
-          bodyHtml = `
-        <div class="${styles.mediaFrame}" data-architectural-media-root="true">
-          <div class="${styles.mediaPlaceholder}" data-architectural-media-fallback="true">Upload an image</div>
-          <div class="${styles.mediaImageActions}" contenteditable="false">
-            <button type="button" class="vigil-btn ${styles.mediaUploadBtn}" data-variant="ghost" data-size="sm" data-tone="glass" data-architectural-media-upload="true">${mediaUploadActionLabel(false)}</button>
-          </div>
-        </div>
-        <div data-architectural-media-notes="true"></div>
-      `;
+          bodyHtml = buildEmptyArchitecturalMediaBodyHtml({
+            mediaFrameClass: styles.mediaFrame,
+            imageSlotImgClass: styles.imageSlotImg,
+            placeholderImgClasses: heartgardenMediaPlaceholderClassList("mediaWell"),
+            mediaImageActionsClass: styles.mediaImageActions,
+            mediaUploadBtnClass: styles.mediaUploadBtn,
+            uploadLabel: mediaUploadActionLabel(false),
+          });
         } else if (isLoreCreateNodeType(type)) {
           title = defaultTitleForLoreKind(type);
           const loreVariant = defaultLoreCardVariantForKind(type);
@@ -6037,15 +6099,14 @@ export function ArchitecturalCanvasApp({
       bodyHtml = `// [IN] Compose shard at cursor…`;
     } else if (type === "media") {
       title = "Untitled photo";
-      bodyHtml = `
-        <div class="${styles.mediaFrame}" data-architectural-media-root="true">
-          <div class="${styles.mediaPlaceholder}" data-architectural-media-fallback="true">Upload an image</div>
-          <div class="${styles.mediaImageActions}" contenteditable="false">
-            <button type="button" class="vigil-btn ${styles.mediaUploadBtn}" data-variant="ghost" data-size="sm" data-tone="glass" data-architectural-media-upload="true">${mediaUploadActionLabel(false)}</button>
-          </div>
-        </div>
-        <div data-architectural-media-notes="true"></div>
-      `;
+      bodyHtml = buildEmptyArchitecturalMediaBodyHtml({
+        mediaFrameClass: styles.mediaFrame,
+        imageSlotImgClass: styles.imageSlotImg,
+        placeholderImgClasses: heartgardenMediaPlaceholderClassList("mediaWell"),
+        mediaImageActionsClass: styles.mediaImageActions,
+        mediaUploadBtnClass: styles.mediaUploadBtn,
+        uploadLabel: mediaUploadActionLabel(false),
+      });
     } else if (isLoreCreateNodeType(type)) {
       title = defaultTitleForLoreKind(type);
       const loreVariant = defaultLoreCardVariantForKind(type);
@@ -6394,7 +6455,13 @@ export function ArchitecturalCanvasApp({
       const draggedEl = sharedStackId
         ? document.querySelector<HTMLElement>(`[data-stack-container='true'][data-stack-id='${sharedStackId}']`)
         : document.querySelector<HTMLElement>(`[data-node-id="${draggedEntityId}"]`);
-      let dragRect: DOMRect | null = draggedEl?.getBoundingClientRect() ?? null;
+      let dragRect: DOMRect | null = null;
+      if (sharedStackId && draggedEl) {
+        dragRect = unionBoundingRectFromStackLayers(draggedEl);
+      }
+      if (!dragRect && draggedEl) {
+        dragRect = draggedEl.getBoundingClientRect();
+      }
       if (!dragRect) {
         const rects = draggedGroup
           .map((id) => document.querySelector<HTMLElement>(`[data-node-id="${id}"]`)?.getBoundingClientRect())
@@ -7456,9 +7523,25 @@ export function ArchitecturalCanvasApp({
         return;
       }
 
+      /* Lore character plate has no `.nodeHeader`; treat the body like other cards (dblclick → focus). */
+      const inLoreCharCanvas =
+        node?.kind === "content" &&
+        !!target.closest('[data-hg-canvas-role="lore-character-v11"]') &&
+        !!target.closest(`.${styles.nodeBody}`);
+      if (inLoreCharCanvas) {
+        if (
+          target.closest("[data-expand-btn='true']") ||
+          target.closest("[data-architectural-media-upload='true']")
+        ) {
+          return;
+        }
+        openFocusMode(id);
+        return;
+      }
+
       const editableWithinNode =
         isEditableTarget(event.target) ||
-        !!target.closest("input, textarea, select, [contenteditable='true']");
+        !!target.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']");
       if (editableWithinNode) {
         if (node?.kind === "content" && node.theme !== "media") {
           openFocusMode(id);
@@ -9269,6 +9352,18 @@ export function ArchitecturalCanvasApp({
                           selected={false}
                           bodyEditable={false}
                           onBodyCommit={updateNodeBody}
+                          onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
+                          wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                          onRichDocCommand={
+                            entity.theme === "default" || entity.theme === "task"
+                              ? (command, value) => runFormat(command, value)
+                              : undefined
+                          }
+                          emptyPlaceholder={
+                            entity.theme === "default" || entity.theme === "task"
+                              ? "Write here, or type / for blocks…"
+                              : undefined
+                          }
                         />
                       ) : (
                         <ArchitecturalNodeCard
@@ -10750,7 +10845,9 @@ export function ArchitecturalCanvasApp({
 
       <div
         className={`${styles.focusOverlay} ${focusOpen ? styles.focusActive : ""} ${
-          focusSurface === "code" || focusSurface === "character-hybrid"
+          focusSurface === "code" ||
+          focusSurface === "character-hybrid" ||
+          focusSurface === "location-hybrid"
             ? styles.focusEditorDark
             : ""
         }`}
@@ -10760,7 +10857,9 @@ export function ArchitecturalCanvasApp({
           <div className={styles.focusHeader}>
             <div
               className={`${styles.focusMeta} ${
-                focusSurface === "character-hybrid" ? styles.focusMetaReadable : ""
+                focusSurface === "character-hybrid" || focusSurface === "location-hybrid"
+                  ? styles.focusMetaReadable
+                  : ""
               }`}
             >
               {`EDITING // ${activeNodeId ? activeNodeId.slice(0, 8).toUpperCase() : "NODE"}`}
@@ -10773,7 +10872,7 @@ export function ArchitecturalCanvasApp({
             />
           </div>
           <div className={styles.focusContent}>
-            {focusSurface === "character-hybrid" ? null : (
+            {focusSurface === "character-hybrid" || focusSurface === "location-hybrid" ? null : (
               <BufferedTextInput
                 type="text"
                 className={styles.focusTitle}
@@ -10791,7 +10890,9 @@ export function ArchitecturalCanvasApp({
                   ? styles.focusCode
                   : focusSurface === "character-hybrid"
                     ? styles.focusCharacterDocument
-                    : ""
+                    : focusSurface === "location-hybrid"
+                      ? styles.focusLocationDocument
+                      : ""
               }`}
               editable
               spellCheck={false}

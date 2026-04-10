@@ -1,0 +1,20 @@
+.base {
+  filter: none;
+  mix-blend-mode: normal;
+  object-fit: cover;
+  object-position: center center;
+  box-sizing: border-box;
+  display: block;
+}
+
+.mediaWell {
+  background-color: color-mix(in oklch, var(--theme-image-text) 7%, var(--theme-image-bg));
+}
+
+.loreCredential {
+  background-color: color-mix(in oklch, var(--sys-color-white) 4.5%, var(--sk-id-surface));
+}
+
+.neutral {
+  background-color: color-mix(in oklch, var(--sys-color-white) 5%, var(--sys-color-neutral-925));
+}

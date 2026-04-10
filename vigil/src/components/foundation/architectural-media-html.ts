@@ -3,6 +3,12 @@
  * after local file pick. Data URLs keep the foundation demo self-contained; a
  * real app would upload to storage and persist an HTTPS `src` instead.
  */
+import {
+  HEARTGARDEN_MEDIA_PLACEHOLDER_SRC,
+  HG_MEDIA_PLACEHOLDER_ATTR,
+  isHeartgardenMediaPlaceholderSrc,
+} from "@/src/lib/heartgarden-media-placeholder";
+
 const MEDIA_ROOT_SEL = "[data-architectural-media-root]";
 const MEDIA_NOTES_SEL = "[data-architectural-media-notes]";
 const MEDIA_UPLOAD_BTN_SEL = "[data-architectural-media-upload]";
@@ -50,9 +56,36 @@ export function parseArchitecturalMediaFromBody(bodyHtml: string): {
   if (rootOpen && rootOpen.index !== undefined) {
     const inner = bodyHtml.slice(rootOpen.index + rootOpen[0].length);
     const parsed = parseFirstImgFromHtmlFragment(inner);
-    if (parsed.src) return parsed;
+    if (parsed.src) {
+      if (isHeartgardenMediaPlaceholderSrc(parsed.src)) return { src: null, alt: parsed.alt };
+      return parsed;
+    }
   }
-  return parseFirstImgFromHtmlFragment(bodyHtml);
+  const fallback = parseFirstImgFromHtmlFragment(bodyHtml);
+  if (fallback.src && isHeartgardenMediaPlaceholderSrc(fallback.src)) {
+    return { src: null, alt: fallback.alt };
+  }
+  return fallback;
+}
+
+/** Empty media card / API bootstrap: SVG grid placeholder + upload (matches `HeartgardenMediaPlaceholderImg` mediaWell). */
+export function buildEmptyArchitecturalMediaBodyHtml(parts: {
+  mediaFrameClass: string;
+  imageSlotImgClass: string;
+  placeholderImgClasses: string;
+  mediaImageActionsClass: string;
+  mediaUploadBtnClass: string;
+  uploadLabel: string;
+}): string {
+  return `
+        <div class="${parts.mediaFrameClass}" data-architectural-media-root="true">
+          <img class="${parts.imageSlotImgClass} ${parts.placeholderImgClasses}" src="${HEARTGARDEN_MEDIA_PLACEHOLDER_SRC}" alt="" draggable="false" ${HG_MEDIA_PLACEHOLDER_ATTR}="true" data-hg-portrait-placeholder="true" />
+          <div class="${parts.mediaImageActionsClass}" contenteditable="false">
+            <button type="button" class="vigil-btn ${parts.mediaUploadBtnClass}" data-variant="ghost" data-size="sm" data-tone="glass" data-architectural-media-upload="true">${parts.uploadLabel}</button>
+          </div>
+        </div>
+        <div data-architectural-media-notes="true"></div>
+      `;
 }
 
 /** Rich HTML notes stored in `data-architectural-media-notes` after the media root in `bodyHtml`. */
@@ -122,6 +155,7 @@ export function applyImageDataUrlToArchitecturalMediaBody(
   img.setAttribute("alt", alt.replace(/"/g, ""));
   if (imageClass) img.setAttribute("class", imageClass);
   img.removeAttribute("data-hg-portrait-placeholder");
+  img.removeAttribute(HG_MEDIA_PLACEHOLDER_ATTR);
   const uploadBtn = root.querySelector<HTMLElement>(MEDIA_UPLOAD_BTN_SEL);
   if (uploadBtn) {
     uploadBtn.textContent = mediaUploadActionLabel(true);

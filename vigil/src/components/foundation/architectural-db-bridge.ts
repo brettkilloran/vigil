@@ -26,6 +26,8 @@ const FOLDER_CARD_WIDTH = 420;
 const FOLDER_CARD_HEIGHT = 280;
 /** Default when `items.height` is missing (matches canvas placement fallback). */
 const DEFAULT_CONTENT_CARD_HEIGHT = 280;
+/** v11 character plates are taller than default notes; culling / bounds use `entityGeometryOnSpace`. */
+const LORE_CHARACTER_MIN_GEOMETRY_HEIGHT = 520;
 const DEFAULT_NOTE_HTML = `<div contenteditable="true">Start typing...</div>`;
 
 export type BootstrapSpaceRow = {
@@ -561,17 +563,25 @@ export function architecturalItemType(entity: CanvasEntity): CanvasItem["itemTyp
 
 export function entityGeometryOnSpace(entity: CanvasEntity, spaceId: string) {
   const slot = entity.slots[spaceId];
+  const width =
+    entity.kind === "folder"
+      ? entity.width ?? FOLDER_CARD_WIDTH
+      : entity.width ?? UNIFIED_NODE_WIDTH;
+  let height =
+    entity.kind === "folder"
+      ? entity.height ?? FOLDER_CARD_HEIGHT
+      : entity.height ?? DEFAULT_CONTENT_CARD_HEIGHT;
+  if (entity.kind === "content") {
+    const lc = entity.loreCard;
+    if (lc?.kind === "character") {
+      height = Math.max(height, LORE_CHARACTER_MIN_GEOMETRY_HEIGHT);
+    }
+  }
   return {
     x: slot?.x ?? 0,
     y: slot?.y ?? 0,
-    width:
-      entity.kind === "folder"
-        ? entity.width ?? FOLDER_CARD_WIDTH
-        : entity.width ?? UNIFIED_NODE_WIDTH,
-    height:
-      entity.kind === "folder"
-        ? entity.height ?? FOLDER_CARD_HEIGHT
-        : entity.height ?? DEFAULT_CONTENT_CARD_HEIGHT,
+    width,
+    height,
   };
 }
 

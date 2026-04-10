@@ -613,7 +613,9 @@
 .stackContainer {
   position: absolute;
   width: 340px;
-  height: 220px;
+  /* Min footprint for empty/short stacks; tall cards (e.g. lore character v11) overflow visually.
+     Hit testing and drag-center math use `[data-stack-layer]` unions, not this box. */
+  min-height: 220px;
   cursor: grab;
   transition: transform 0.14s ease;
   --stack-fan-mult: 1;
@@ -1246,6 +1248,11 @@
   display: none !important;
 }
 
+/* Location: long-form notes are edited in focus; body still stores `data-hg-lore-location-notes`. */
+.loreLocationCanvasRoot :global([data-hg-lore-location-notes-cell]) {
+  display: none !important;
+}
+
 .unboundedMediaNode {
   max-height: none;
 }
@@ -1339,14 +1346,6 @@
   height: auto;
   display: block;
   vertical-align: middle;
-}
-
-.imagePlaceholderIcon {
-  color: color-mix(in oklch, var(--theme-image-text) 25%, transparent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
 }
 
 @media (hover: none) {
@@ -1468,6 +1467,16 @@
 }
 
 .entityNode[data-hg-canvas-role="lore-character-v11"] :global([data-hg-rich-editor-host="true"]) {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+/*
+ * Inner host defaults to flex:1 (see BufferedContentEditable.module.css). With a parent sized by
+ * intrinsic content only, WebKit often resolves that flex item to ~0px height — the credential
+ * plate disappears on Safari / iOS while Chromium looks fine. Size from content instead.
+ */
+.entityNode[data-hg-canvas-role="lore-character-v11"] :global([data-hg-rich-editor-inner="true"]) {
   flex: 0 0 auto;
   min-height: 0;
 }
@@ -1605,6 +1614,44 @@
   flex-grow: 0;
   align-self: stretch;
   min-height: 0;
+}
+
+/*
+ * Lore portrait Upload lives in rich HTML; contenteditable round-trip can drop `vigil-btn`.
+ * Without it, only `.mediaUploadBtn` applies → frosted white chip. Match `.shell .vigil-btn`[+glass]
+ * for the same control when `vigil-btn` is absent (see `docs` / shell block ~3987).
+ */
+.nodeBody.loreCharacterBody [data-hg-lore-portrait-root] button.mediaUploadBtn:not(:global(.vigil-btn)),
+.focusBody.focusCharacterDocument [data-hg-lore-portrait-root] button.mediaUploadBtn:not(:global(.vigil-btn)) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--sys-color-neutral-400);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.nodeBody.loreCharacterBody [data-hg-lore-portrait-root] button.mediaUploadBtn:not(:global(.vigil-btn)):hover,
+.focusBody.focusCharacterDocument [data-hg-lore-portrait-root] button.mediaUploadBtn:not(:global(.vigil-btn)):hover {
+  background: var(--sem-overlay-white-08);
+  color: var(--sys-color-neutral-100);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.nodeBody.loreCharacterBody [data-hg-lore-portrait-root] button.mediaUploadBtn:not(:global(.vigil-btn)):active,
+.focusBody.focusCharacterDocument [data-hg-lore-portrait-root] button.mediaUploadBtn:not(:global(.vigil-btn)):active {
+  background: var(--sem-surface-muted-press);
+  color: var(--sys-color-neutral-100);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.nodeBody.loreCharacterBody [data-hg-lore-portrait-root] button.mediaUploadBtn:not(:global(.vigil-btn)):focus-visible,
+.focusBody.focusCharacterDocument [data-hg-lore-portrait-root] button.mediaUploadBtn:not(:global(.vigil-btn)):focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sem-focus-ring) 35%, transparent);
 }
 
 .a4DocumentBody {
@@ -1975,19 +2022,6 @@
 .nodeBody > pre:has(.archBlockDragHandle),
 .focusBody > pre:has(.archBlockDragHandle) {
   overflow-x: visible;
-}
-
-.mediaPlaceholder {
-  width: 100%;
-  height: 160px;
-  background: var(--sem-overlay-black-05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--sem-overlay-black-30);
-  margin-bottom: 12px;
-  border-radius: 2px;
-  border: 1px dashed var(--sem-overlay-black-10);
 }
 
 /* Raster embed + replace control (bodyHtml `data-architectural-media-root`). */
@@ -4364,26 +4398,26 @@ button.rootDockPanel.viewportMetricsPanel {
  * Document-style prose on dark scrim (media gallery notes share `.focusBody` with the sheet editor).
  * Exclude v11 lore credential: the plate brings its own palette.
  */
-.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument) {
+.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument) {
   color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
 }
 
-.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument) h1 {
+.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument) h1 {
   color: color-mix(in oklch, var(--sys-color-white) 96%, transparent);
 }
 
-.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument) h2,
-.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument) h3 {
+.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument) h2,
+.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument) h3 {
   color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
 }
 
-.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument) pre {
+.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument) pre {
   background: color-mix(in oklch, var(--sys-color-neutral-900) 85%, transparent);
   border-color: color-mix(in oklch, var(--sys-color-white) 12%, transparent);
   color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
 }
 
-.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument) hr {
+.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument) hr {
   border-top-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
 }
 
@@ -4499,8 +4533,11 @@ button.rootDockPanel.viewportMetricsPanel {
 
 /* Only widen when the sheet is actually shown (overlay stays mounted with opacity 0 when closed). */
 .focusOverlay.focusActive
-  .focusSheet:has(.focusBody:not(.focusCode):not(.focusCharacterDocument)),
-.focusOverlay.focusActive .focusSheet:has(.focusBody.focusCharacterDocument) {
+  .focusSheet:has(
+    .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument)
+  ),
+.focusOverlay.focusActive .focusSheet:has(.focusBody.focusCharacterDocument),
+.focusOverlay.focusActive .focusSheet:has(.focusBody.focusLocationDocument) {
   --focus-doc-gutter-left: 62px;
 }
 
@@ -4918,6 +4955,122 @@ button.rootDockPanel.viewportMetricsPanel {
   margin-top: 0;
   align-self: auto;
   z-index: 1;
+}
+
+/*
+ * Location — focus: structured lines + notes (same progressive disclosure as character).
+ */
+.focusBody.focusLocationDocument {
+  min-height: 50vh;
+  padding: 0;
+}
+
+.focusBody.focusLocationDocument :global([data-hg-location-focus-doc="v1"]) {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.focusBody.focusLocationDocument :global([data-hg-lore-location-focus-meta="true"]) {
+  border-bottom: 1px solid color-mix(in oklch, var(--sys-color-white) 10%, transparent);
+  padding: 0 0 28px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.focusBody.focusLocationDocument :global([data-hg-lore-location-focus-row]) {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.focusBody.focusLocationDocument :global([data-hg-lore-location-focus-label="true"]) {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sem-text-muted);
+}
+
+.focusBody.focusLocationDocument :global([data-hg-lore-location-focus-field]) {
+  min-height: 1.2em;
+  outline: none;
+  width: 100%;
+  max-width: min(100%, 76ch);
+  font-size: 16px;
+  line-height: 1.45;
+  color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
+  caret-color: color-mix(in oklch, var(--sem-focus-ring) 72%, var(--sys-color-white));
+}
+
+.focusBody.focusLocationDocument
+  :global([data-hg-lore-location-focus-field][data-placeholder]:not(:focus):empty)::before,
+.focusBody.focusLocationDocument
+  :global(
+    [data-hg-lore-location-focus-field][data-placeholder]:not(:focus):has(> br:only-child)
+  )::before {
+  content: attr(data-placeholder);
+  color: color-mix(in oklch, var(--sem-text-muted) 80%, transparent);
+  pointer-events: none;
+}
+
+.focusBody.focusLocationDocument
+  :global([data-hg-lore-location-focus-row="name"] [data-hg-lore-location-focus-field="name"]) {
+  font-size: clamp(26px, 3.6vw, 38px);
+  line-height: 1.12;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: color-mix(in oklch, var(--sys-color-white) 97%, transparent);
+}
+
+.focusBody.focusLocationDocument :global([data-hg-lore-location-focus-notes-shell="true"]) {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.focusBody.focusLocationDocument :global([data-hg-lore-location-focus-notes="true"]) {
+  min-height: min(50vh, 720px);
+  outline: none;
+  max-width: min(100%, 76ch);
+  font-size: 18px;
+  line-height: 1.72;
+  color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
+  caret-color: color-mix(in oklch, var(--sem-focus-ring) 72%, var(--sys-color-white));
+}
+
+.focusEditorDark
+  .focusBody.focusLocationDocument
+  :global([data-hg-lore-location-focus-notes="true"] h1) {
+  color: color-mix(in oklch, var(--sys-color-white) 96%, transparent);
+}
+
+.focusEditorDark
+  .focusBody.focusLocationDocument
+  :global([data-hg-lore-location-focus-notes="true"] h2),
+.focusEditorDark
+  .focusBody.focusLocationDocument
+  :global([data-hg-lore-location-focus-notes="true"] h3) {
+  color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
+}
+
+.focusEditorDark
+  .focusBody.focusLocationDocument
+  :global([data-hg-lore-location-focus-notes="true"] pre) {
+  background: color-mix(in oklch, var(--sys-color-neutral-900) 85%, transparent);
+  border-color: color-mix(in oklch, var(--sys-color-white) 12%, transparent);
+  color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
+}
+
+.focusEditorDark
+  .focusBody.focusLocationDocument
+  :global([data-hg-lore-location-focus-notes="true"] hr) {
+  border-top-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
 }
 
 .focusBody p {

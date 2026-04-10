@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowsOutSimple, Image as ImageIcon } from "@phosphor-icons/react";
+import { ArrowsOutSimple } from "@phosphor-icons/react";
 import type { CSSProperties, ReactNode } from "react";
 import { useMemo, useState } from "react";
 
@@ -18,6 +18,7 @@ import type {
 import type { ButtonTone } from "@/src/components/ui/Button";
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
+import { HeartgardenMediaPlaceholderImg } from "@/src/components/ui/HeartgardenMediaPlaceholderImg";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
 import { resolveImageDisplayUrl } from "@/src/lib/heartgarden-image-display-url";
@@ -260,9 +261,12 @@ export function ArchitecturalNodeCard({
                   draggable={false}
                 />
               ) : (
-                <div className={styles.imagePlaceholderIcon} aria-hidden>
-                  <ImageIcon size={48} weight="regular" />
-                </div>
+                <HeartgardenMediaPlaceholderImg
+                  variant="mediaWell"
+                  className={styles.imageSlotImg}
+                  alt=""
+                  aria-hidden
+                />
               )}
               <div className={styles.mediaImageActions} contentEditable={false}>
                 <Button
@@ -287,8 +291,8 @@ export function ArchitecturalNodeCard({
   return (
     <div
       className={`${styles.entityNode} ${themeClass(theme)} ${styles.a4DocumentNode} ${
-        dragged ? styles.dragging : ""
-      } ${selected ? styles.selectedNode : ""}`}
+        loreCard?.kind === "location" ? styles.loreLocationCanvasRoot : ""
+      } ${dragged ? styles.dragging : ""} ${selected ? styles.selectedNode : ""}`}
       style={cardStyle}
       data-lore-kind={loreCard?.kind}
       data-lore-variant={loreCard?.variant}

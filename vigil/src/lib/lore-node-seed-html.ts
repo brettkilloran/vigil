@@ -10,28 +10,11 @@ import { LORE_V9_HEADER_META_PLACEHOLDER } from "@/src/lib/lore-v9-placeholder";
 import archBodyStyles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import loreCardStyles from "@/src/components/foundation/lore-entity-card.module.css";
 import { mediaUploadActionLabel } from "@/src/components/foundation/architectural-media-html";
+import { HEARTGARDEN_MEDIA_PLACEHOLDER_SRC } from "@/src/lib/heartgarden-media-placeholder";
+import { heartgardenMediaPlaceholderClassList } from "@/src/lib/heartgarden-media-placeholder-classes";
 
-/** v11 portrait placeholder (4:3); base tone comes from CSS on the `img` (plate-relative). */
-export const LORE_PORTRAIT_PLACEHOLDER_DARK =
-  "data:image/svg+xml," +
-  encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180">
-<g opacity="0.5" stroke="rgba(255,255,255,0.09)" stroke-width="0.55" stroke-linecap="square">
-<line x1="0" y1="45" x2="240" y2="45"/><line x1="0" y1="90" x2="240" y2="90"/><line x1="0" y1="135" x2="240" y2="135"/>
-<line x1="60" y1="0" x2="60" y2="180"/><line x1="120" y1="0" x2="120" y2="180"/><line x1="180" y1="0" x2="180" y2="180"/>
-</g>
-<g fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter">
-<path d="M10 20 L10 8 L22 8"/><path d="M218 8 L230 8 L230 20"/><path d="M10 160 L10 172 L22 172"/><path d="M230 160 L230 172 L218 172"/>
-</g>
-<g stroke="rgba(255,255,255,0.14)" stroke-width="1" stroke-linecap="square">
-<line x1="112" y1="90" x2="128" y2="90"/><line x1="120" y1="82" x2="120" y2="98"/>
-</g>
-<g opacity="0.55" stroke="rgba(255,255,255,0.08)" stroke-width="0.5" stroke-linecap="square">
-<line x1="6" y1="90" x2="16" y2="90"/><line x1="224" y1="90" x2="234" y2="90"/>
-<line x1="120" y1="6" x2="120" y2="16"/><line x1="120" y1="164" x2="120" y2="174"/>
-</g>
-</svg>`,
-  );
+/** @deprecated Prefer `HEARTGARDEN_MEDIA_PLACEHOLDER_SRC` from `@/src/lib/heartgarden-media-placeholder`. */
+export const LORE_PORTRAIT_PLACEHOLDER_DARK = HEARTGARDEN_MEDIA_PLACEHOLDER_SRC;
 
 const s = loreCardStyles;
 
@@ -86,7 +69,7 @@ function characterV11(): string {
 <div class="${s.charSkPhotoCell}">
 <div class="${s.charSkPhotoWrap}" contenteditable="false">
 <div class="${s.charSkMediaRoot}" data-architectural-media-root="true" data-hg-lore-portrait-root="v11" contenteditable="false">
-<img class="${s.charSkPortraitImg}" src="${LORE_PORTRAIT_PLACEHOLDER_DARK}" alt="" width="240" height="180" contenteditable="false" draggable="false" data-hg-portrait-placeholder="true" />
+<img class="${s.charSkPortraitImg} ${heartgardenMediaPlaceholderClassList("loreCredential")}" src="${HEARTGARDEN_MEDIA_PLACEHOLDER_SRC}" alt="" width="240" height="180" contenteditable="false" draggable="false" data-hg-heartgarden-media-placeholder="true" data-hg-portrait-placeholder="true" />
 <div data-hg-portrait-actions="true" contenteditable="false">
 <button type="button" class="vigil-btn ${archBodyStyles.mediaUploadBtn}" data-variant="ghost" data-size="sm" data-tone="glass" data-architectural-media-upload="true">${mediaUploadActionLabel(false)}</button>
 </div>
@@ -163,27 +146,31 @@ function factionV3(): string {
 }
 
 function locationV1(): string {
-  return `<div class="${s.locHeader}" contenteditable="false">
-<div class="${s.locName}" contenteditable="true" spellcheck="false">Place name</div>
-<div class="${s.locMetaLine}"><span class="${s.locMetaKey}">Nation</span><span contenteditable="true" spellcheck="false">Fictional nation</span></div>
-<div class="${s.locMetaLine}"><span class="${s.locMetaKey}">Site</span><span contenteditable="true" spellcheck="false">Ward, building type, coordinates…</span></div>
+  return `<div data-hg-canvas-role="lore-location" data-hg-lore-location-variant="v1">
+<div class="${s.locHeader}" contenteditable="false">
+<div class="${s.locName}" data-hg-lore-location-field="name" contenteditable="true" spellcheck="false">Place name</div>
+<div class="${s.locMetaLine}" data-hg-lore-location-optional="true"><span class="${s.locMetaKey}">Nation</span><span data-hg-lore-location-field="context" contenteditable="true" spellcheck="false"><br></span></div>
+<div class="${s.locMetaLine}" data-hg-lore-location-optional="true"><span class="${s.locMetaKey}">Site</span><span data-hg-lore-location-field="detail" contenteditable="true" spellcheck="false"><br></span></div>
 </div>
-<div class="${s.notesBlock}">
+<div class="${s.notesBlock}" data-hg-lore-location-notes-cell="true">
 <span class="${s.fieldLabel}">Notes</span>
-<div class="${s.notesText}" contenteditable="true" spellcheck="false"><p>Sensory detail, rumors, clocks — unstructured.</p></div>
+<div class="${s.notesText}" data-hg-lore-location-notes="true" contenteditable="true" spellcheck="false"><p><br></p></div>
+</div>
 </div>`;
 }
 
 function locationV2(): string {
-  return `<div class="${s.postcardBand}" aria-hidden="true"></div>
+  return `<div data-hg-canvas-role="lore-location" data-hg-lore-location-variant="v2">
+<div class="${s.postcardBand}" aria-hidden="true"></div>
 <div class="${s.locHeader}" contenteditable="false">
-<div class="${s.locName}" contenteditable="true" spellcheck="false">Place name</div>
-<div class="${s.locMetaLine}" contenteditable="true" spellcheck="false">Fictional nation</div>
-<div class="${s.locMetaLine}"><span class="${s.locMetaKey}">Detail</span><span contenteditable="true" spellcheck="false">District, level, site type…</span></div>
+<div class="${s.locName}" data-hg-lore-location-field="name" contenteditable="true" spellcheck="false">Place name</div>
+<div class="${s.locMetaLine}" data-hg-lore-location-optional="true"><span data-hg-lore-location-field="context" contenteditable="true" spellcheck="false"><br></span></div>
+<div class="${s.locMetaLine}" data-hg-lore-location-optional="true"><span class="${s.locMetaKey}">Detail</span><span data-hg-lore-location-field="detail" contenteditable="true" spellcheck="false"><br></span></div>
 </div>
-<div class="${s.notesBlock}">
+<div class="${s.notesBlock}" data-hg-lore-location-notes-cell="true">
 <span class="${s.fieldLabel}">Notes</span>
-<div class="${s.notesText}" contenteditable="true" spellcheck="false"><p>Sensory detail, rumors, clocks — unstructured.</p></div>
+<div class="${s.notesText}" data-hg-lore-location-notes="true" contenteditable="true" spellcheck="false"><p><br></p></div>
+</div>
 </div>`;
 }
 
@@ -202,16 +189,18 @@ export function locationStripVariantFromSeed(seed: string): number {
 function locationV3(stripIndex: number): string {
   const si =
     ((stripIndex % LOC_PLAQUE_STRIP_VARIANTS) + LOC_PLAQUE_STRIP_VARIANTS) % LOC_PLAQUE_STRIP_VARIANTS;
-  return `<div class="${s.locPlaqueStrip}" data-loc-strip="${si}" aria-hidden="true"></div>
-<div class="${s.plaqueCorner}" contenteditable="true" spellcheck="false">REF · optional code</div>
+  return `<div data-hg-canvas-role="lore-location" data-hg-lore-location-variant="v3">
+<div class="${s.locPlaqueStrip}" data-loc-strip="${si}" aria-hidden="true"></div>
+<div class="${s.plaqueCorner}" data-hg-lore-location-field="ref" contenteditable="true" spellcheck="false"><br></div>
 <div class="${s.locHeader}" contenteditable="false">
-<div class="${s.locName}" contenteditable="true" spellcheck="false">Place name</div>
-<div class="${s.locMetaLine}"><span class="${s.locMetaKey}">Nation</span><span contenteditable="true" spellcheck="false">Fictional nation</span></div>
-<div class="${s.locMetaLine}"><span class="${s.locMetaKey}">Kind</span><span contenteditable="true" spellcheck="false">City, building, dungeon layer…</span></div>
+<div class="${s.locName}" data-hg-lore-location-field="name" contenteditable="true" spellcheck="false">Place name</div>
+<div class="${s.locMetaLine}" data-hg-lore-location-optional="true"><span class="${s.locMetaKey}">Nation</span><span data-hg-lore-location-field="context" contenteditable="true" spellcheck="false"><br></span></div>
+<div class="${s.locMetaLine}" data-hg-lore-location-optional="true"><span class="${s.locMetaKey}">Kind</span><span data-hg-lore-location-field="detail" contenteditable="true" spellcheck="false"><br></span></div>
 </div>
-<div class="${s.notesBlock}">
+<div class="${s.notesBlock}" data-hg-lore-location-notes-cell="true">
 <span class="${s.fieldLabel}">Notes</span>
-<div class="${s.notesText}" contenteditable="true" spellcheck="false"><p>Sensory detail, rumors, clocks — unstructured.</p></div>
+<div class="${s.notesText}" data-hg-lore-location-notes="true" contenteditable="true" spellcheck="false"><p><br></p></div>
+</div>
 </div>`;
 }
 
@@ -278,4 +267,23 @@ export function shouldRenderLoreCharacterCredentialCanvasNode(
   if (entity.kind !== "content") return false;
   if (entity.loreCard?.kind === "character") return true;
   return bodyHtmlImpliesLoreCharacterV11(entity.bodyHtml);
+}
+
+/** Saved HTML from an older location template (before `data-hg-canvas-role`). */
+function bodyHtmlImpliesLoreLocationLegacy(html: string): boolean {
+  if (!html) return false;
+  if (html.includes('data-hg-canvas-role="lore-location"')) return false;
+  return html.includes("locHeader") && html.includes("locName") && html.includes("notesText");
+}
+
+/** Location nodes: structured lines on canvas; notes edited in focus (hidden on canvas via CSS). */
+export function shouldRenderLoreLocationCanvasNode(
+  entity: Pick<CanvasContentEntity, "kind" | "bodyHtml" | "loreCard">,
+): boolean {
+  if (entity.kind !== "content") return false;
+  if (entity.loreCard?.kind === "location") return true;
+  return (
+    entity.bodyHtml.includes('data-hg-canvas-role="lore-location"') ||
+    bodyHtmlImpliesLoreLocationLegacy(entity.bodyHtml)
+  );
 }

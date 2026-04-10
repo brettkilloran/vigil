@@ -12,6 +12,18 @@ function randomV11MarkerTilt(): string {
   return `${r.toFixed(3)}deg`;
 }
 
+function randomV11MarkerTrimPx(): string {
+  /* Slight right-edge length variance so redactions are not perfectly uniform. */
+  const min = 1.5;
+  const max = 10.5;
+  const px = min + Math.random() * (max - min);
+  return `${px.toFixed(2)}px`;
+}
+
+function randomInRange(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
 /**
  * Assigns a stable random `--sk-v11-marker-rotate` on each redacted inline field under a v11 shell.
  * Skips notes + header catalog line. Idempotent via `data-hg-v11-marker-tilt`.
@@ -25,9 +37,45 @@ export function syncLoreV11MarkerTilts(host: HTMLElement | null): void {
     if (el.matches?.('[class*="charSkNotesBody"]') || el.matches?.('[class*="charSkHeaderMeta"]')) {
       continue;
     }
-    if (el.hasAttribute("data-hg-v11-marker-tilt")) continue;
-    const deg = randomV11MarkerTilt();
-    el.setAttribute("data-hg-v11-marker-tilt", deg);
-    el.style.setProperty("--sk-v11-marker-rotate", deg);
+    if (!el.hasAttribute("data-hg-v11-marker-tilt")) {
+      const deg = randomV11MarkerTilt();
+      el.setAttribute("data-hg-v11-marker-tilt", deg);
+      el.style.setProperty("--sk-v11-marker-rotate", deg);
+    }
+    if (!el.hasAttribute("data-hg-v11-marker-trim")) {
+      const trim = randomV11MarkerTrimPx();
+      el.setAttribute("data-hg-v11-marker-trim", trim);
+      el.style.setProperty("--sk-v11-marker-trim-right", trim);
+    }
+    if (!el.hasAttribute("data-hg-v11-marker-trim-top")) {
+      const trimTop = `${randomInRange(0.8, 16).toFixed(2)}px`;
+      el.setAttribute("data-hg-v11-marker-trim-top", trimTop);
+      el.style.setProperty("--sk-v11-marker-trim-right-top", trimTop);
+    }
+    if (!el.hasAttribute("data-hg-v11-marker-trim-bottom")) {
+      const trimBottom = `${randomInRange(1.4, 19).toFixed(2)}px`;
+      el.setAttribute("data-hg-v11-marker-trim-bottom", trimBottom);
+      el.style.setProperty("--sk-v11-marker-trim-right-bottom", trimBottom);
+    }
+    if (!el.hasAttribute("data-hg-v11-marker-x")) {
+      const shiftX = `${randomInRange(-1.25, 1.25).toFixed(2)}px`;
+      el.setAttribute("data-hg-v11-marker-x", shiftX);
+      el.style.setProperty("--sk-v11-marker-offset-x", shiftX);
+    }
+    if (!el.hasAttribute("data-hg-v11-marker-noise")) {
+      const noiseSize = `${Math.round(randomInRange(58, 94))}px`;
+      el.setAttribute("data-hg-v11-marker-noise", noiseSize);
+      el.style.setProperty("--sk-v11-marker-noise-size", noiseSize);
+    }
+    if (!el.hasAttribute("data-hg-v11-marker-gloss")) {
+      const gloss = `${randomInRange(1.7, 4.2).toFixed(2)}%`;
+      el.setAttribute("data-hg-v11-marker-gloss", gloss);
+      el.style.setProperty("--sk-v11-marker-gloss", gloss);
+    }
+    if (!el.hasAttribute("data-hg-v11-marker-tail")) {
+      const tail = `${randomInRange(91.5, 98.2).toFixed(2)}%`;
+      el.setAttribute("data-hg-v11-marker-tail", tail);
+      el.style.setProperty("--sk-v11-marker-tail", tail);
+    }
   }
 }

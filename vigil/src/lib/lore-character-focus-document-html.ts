@@ -1,4 +1,4 @@
-import { LORE_PORTRAIT_PLACEHOLDER_DARK } from "@/src/lib/lore-node-seed-html";
+import { HEARTGARDEN_MEDIA_PLACEHOLDER_SRC } from "@/src/lib/heartgarden-media-placeholder";
 import { mediaUploadActionLabel } from "@/src/components/foundation/architectural-media-html";
 
 const DEFAULT_NOTES_HTML = "<p><br></p>";
@@ -102,7 +102,7 @@ export function characterV11BodyToFocusDocumentHtml(bodyHtml: string): string {
   const portraitUploadClassWithVigil = ensureVigilMediaUploadButtonClass(portraitUploadClass);
   const portraitIsPlaceholder =
     hasAttr(portraitDoc ?? root, "img", "data-hg-portrait-placeholder") ||
-    portraitSrc === LORE_PORTRAIT_PLACEHOLDER_DARK;
+    portraitSrc === HEARTGARDEN_MEDIA_PLACEHOLDER_SRC;
   const displayName = focusFieldHtml(root, '[class*="charSkDisplayName"]');
   const role = focusFieldHtml(root, '[class*="charSkRole"]');
   const affiliation = focusFieldHtml(
@@ -203,7 +203,7 @@ export function focusDocumentHtmlToCharacterV11Body(
       focusRoot,
       '[data-hg-character-focus-portrait-img="true"]',
       "data-hg-portrait-placeholder",
-    ) || nextPortraitSrc === LORE_PORTRAIT_PLACEHOLDER_DARK;
+    ) || nextPortraitSrc === HEARTGARDEN_MEDIA_PLACEHOLDER_SRC;
   if (nextPortraitSrc) {
     const templatePortraitRoot = templateRoot.querySelector<HTMLElement>('[data-hg-lore-portrait-root="v11"]');
     if (templatePortraitRoot) {
@@ -254,7 +254,7 @@ export function withCharacterV11ObjectIdInHeader(bodyHtml: string, objectId: str
       legacyPlaceholderBySrc ||
       legacyPlaceholderByDims;
     if (shouldNormalizePlaceholder) {
-      portrait.setAttribute("src", LORE_PORTRAIT_PLACEHOLDER_DARK);
+      portrait.setAttribute("src", HEARTGARDEN_MEDIA_PLACEHOLDER_SRC);
       portrait.setAttribute("width", "240");
       portrait.setAttribute("height", "180");
       portrait.setAttribute("data-hg-portrait-placeholder", "true");
