@@ -601,12 +601,20 @@ export function ArchitecturalViewportMetrics({
   minimapOpen?: boolean;
   onToggleMinimap?: () => void;
 }) {
+  /** Viewport-derived X/Y differ SSR vs first client paint (`window` / ref size). Show stable 0,0 until mounted. */
+  const [viewportMetricsMounted, setViewportMetricsMounted] = useState(false);
+  useEffect(() => {
+    setViewportMetricsMounted(true);
+  }, []);
+  const displayWorldX = viewportMetricsMounted ? centerWorldX : 0;
+  const displayWorldY = viewportMetricsMounted ? centerWorldY : 0;
+
   const metricsReadout = (
     <>
       <ArchitecturalStatusMetric>
         X:
-        <span className={styles.metric}>{centerWorldX}</span> Y:
-        <span className={styles.metric}>{centerWorldY}</span>
+        <span className={styles.metric}>{displayWorldX}</span> Y:
+        <span className={styles.metric}>{displayWorldY}</span>
       </ArchitecturalStatusMetric>
       <div className={styles.sep} />
       <ArchitecturalStatusMetric
