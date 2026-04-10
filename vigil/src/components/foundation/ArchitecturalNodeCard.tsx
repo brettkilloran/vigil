@@ -11,6 +11,7 @@ import {
 import { parseArchitecturalMediaFromBody } from "@/src/components/foundation/architectural-media-html";
 import type {
   CanvasTool,
+  LoreCard,
   NodeTheme,
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
@@ -136,10 +137,6 @@ export function ArchitecturalNodeBody({
         taskText: styles.taskText,
         taskCheckbox: styles.taskCheckbox,
       }}
-      documentBlockDrag={{
-        handleClass: styles.archBlockDragHandle,
-        taskItemClass: styles.taskItem,
-      }}
       richDocCommand={onRichDocCommand}
       emptyPlaceholder={emptyPlaceholder ?? null}
       onCommit={(nextHtml) => onHtmlCommit?.(nextHtml)}
@@ -172,6 +169,7 @@ export function ArchitecturalNodeCard({
   wikiLinkAssist,
   onRichDocCommand,
   emptyPlaceholder,
+  loreCard,
 }: {
   id: string;
   title: string;
@@ -194,6 +192,7 @@ export function ArchitecturalNodeCard({
   wikiLinkAssist?: WikiLinkAssistConfig | null;
   onRichDocCommand?: (command: string, value?: string) => void;
   emptyPlaceholder?: string | null;
+  loreCard?: LoreCard | null;
 }) {
   const isMediaNode = theme === "media";
   const nodeWidth = width ?? 340;
@@ -291,6 +290,8 @@ export function ArchitecturalNodeCard({
         dragged ? styles.dragging : ""
       } ${selected ? styles.selectedNode : ""}`}
       style={cardStyle}
+      data-lore-kind={loreCard?.kind}
+      data-lore-variant={loreCard?.variant}
     >
       {showTape ? <ArchitecturalNodeTape variant={tapeVariant} rotationDeg={tapeRotation} /> : null}
       <ArchitecturalNodeHeader
