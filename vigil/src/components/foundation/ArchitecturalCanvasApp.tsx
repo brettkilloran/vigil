@@ -291,6 +291,11 @@ function canScrollableBodyConsumeWheel(body: HTMLElement | null, event: WheelEve
   const atBottom = body.scrollTop >= maxScrollTop - 1;
   return (goingDown && !atBottom) || (goingUp && !atTop);
 }
+
+/** Trackpads usually emit pixel-mode wheel deltas; prefer canvas pan over passive body scroll on hover. */
+function isLikelyTrackpadWheel(event: WheelEvent): boolean {
+  return event.deltaMode === WheelEvent.DOM_DELTA_PIXEL;
+}
 /** Scene fade-out / fade-in duration (ms); keep in sync with `.viewportSceneLayer` in ArchitecturalCanvasApp.module.css */
 const VIEWPORT_SCENE_FADE_MS = 760;
 /** Hold at opacity 0 while flow overlay peaks (between fade-out and fade-in). */
@@ -7859,9 +7864,11 @@ export function ArchitecturalCanvasApp({
         !!activeEl &&
         (editableRoot === activeEl || editableRoot.contains(activeEl));
       const bodyCanConsumeWheel = canScrollableBodyConsumeWheel(scrollBody, event);
+      const trackpadWheel = isLikelyTrackpadWheel(event);
 
       const pinchZoom = event.ctrlKey || event.metaKey;
-      if (!pinchZoom && (editableIsActivelyFocused || bodyCanConsumeWheel)) return;
+      if (!pinchZoom && editableIsActivelyFocused) return;
+      if (!pinchZoom && bodyCanConsumeWheel && !trackpadWheel) return;
       // Preserve native wheel behavior for non-focused form fields outside the canvas editor surfaces.
       if (!pinchZoom && inEditable && !inScrollableBody && !editableIsActivelyFocused) return;
 
