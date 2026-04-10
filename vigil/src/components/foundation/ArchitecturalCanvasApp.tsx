@@ -626,6 +626,32 @@ function clampFollowCamera(cam: CameraState): CameraState {
   };
 }
 
+/** CSS pixel size of the canvas viewport for `defaultCamera` / recenter — prefer the element over window. */
+function viewportCssSizeForDefaultCamera(
+  viewportEl: HTMLDivElement | null,
+  fallbackWidth: number,
+  fallbackHeight: number,
+): { width: number; height: number } {
+  const rect = viewportEl?.getBoundingClientRect();
+  const w =
+    rect && rect.width > 0
+      ? rect.width
+      : fallbackWidth > 0
+        ? fallbackWidth
+        : typeof window !== "undefined"
+          ? window.innerWidth
+          : 0;
+  const h =
+    rect && rect.height > 0
+      ? rect.height
+      : fallbackHeight > 0
+        ? fallbackHeight
+        : typeof window !== "undefined"
+          ? window.innerHeight
+          : 0;
+  return { width: Math.max(1, w), height: Math.max(1, h) };
+}
+
 function collectDeletionClosure(
   graph: CanvasGraph,
   roots: string[],
@@ -3804,9 +3830,14 @@ export function ArchitecturalCanvasApp({
     [updateTransformFromMouse],
   );
 
-  /** Resets to `defaultCamera()` and syncs storage for the active UUID space — see `AGENTS.md` (Canvas camera). */
+  /** Resets so world (0,0) is viewport-centered (`defaultCamera`) and syncs storage — see `AGENTS.md` (Canvas camera). */
   const recenterToOrigin = useCallback(() => {
-    const cam = defaultCamera();
+    const { width, height } = viewportCssSizeForDefaultCamera(
+      viewportRef.current,
+      viewportSizeRef.current.width,
+      viewportSizeRef.current.height,
+    );
+    const cam = defaultCamera(width, height);
     setTranslateX(cam.x);
     setTranslateY(cam.y);
     setScale(cam.zoom);
@@ -3961,7 +3992,7 @@ export function ArchitecturalCanvasApp({
     [translateX, translateY, scale],
   );
 
-  /** Hydrates graph from bootstrap and sets camera to `defaultCamera()` (arrival at origin — see `AGENTS.md`). */
+  /** Hydrates graph from bootstrap and sets camera to `defaultCamera` (world origin centered — see `AGENTS.md`). */
   const applyBootstrapData = useCallback((data: BootstrapResponse, maxZi: number) => {
     if (!data.spaceId) return;
     const nextGraph = buildCanvasGraphFromBootstrap(data);
@@ -3979,7 +4010,12 @@ export function ArchitecturalCanvasApp({
       }
     }
     syncCursorRef.current = maxMs > 0 ? new Date(maxMs).toISOString() : new Date(0).toISOString();
-    const cam = defaultCamera();
+    const { width, height } = viewportCssSizeForDefaultCamera(
+      viewportRef.current,
+      viewportSizeRef.current.width,
+      viewportSizeRef.current.height,
+    );
+    const cam = defaultCamera(width, height);
     setTranslateX(cam.x);
     setTranslateY(cam.y);
     setScale(cam.zoom);
@@ -4014,7 +4050,12 @@ export function ArchitecturalCanvasApp({
     setGraph(freshGraph);
     setActiveSpaceId(freshGraph.rootSpaceId);
     setNavigationPath([freshGraph.rootSpaceId]);
-    const demoCam = defaultCamera();
+    const { width, height } = viewportCssSizeForDefaultCamera(
+      viewportRef.current,
+      viewportSizeRef.current.width,
+      viewportSizeRef.current.height,
+    );
+    const demoCam = defaultCamera(width, height);
     setTranslateX(demoCam.x);
     setTranslateY(demoCam.y);
     setScale(demoCam.zoom);
@@ -4128,9 +4169,12 @@ export function ArchitecturalCanvasApp({
           setGraph(createBootstrapPendingGraph());
           setActiveSpaceId(ROOT_SPACE_ID);
           setNavigationPath([ROOT_SPACE_ID]);
-          setTranslateX(0);
-          setTranslateY(0);
-          setScale(1);
+          {
+            const cam = defaultCamera();
+            setTranslateX(cam.x);
+            setTranslateY(cam.y);
+            setScale(cam.zoom);
+          }
         } else {
           const tier = workspaceCacheTierForNeonSession(b);
           const cached = readWorkspaceViewCache(tier);
@@ -4151,9 +4195,12 @@ export function ArchitecturalCanvasApp({
             setGraph(createBootstrapPendingGraph());
             setActiveSpaceId(ROOT_SPACE_ID);
             setNavigationPath([ROOT_SPACE_ID]);
-            setTranslateX(0);
-            setTranslateY(0);
-            setScale(1);
+            {
+              const cam = defaultCamera();
+              setTranslateX(cam.x);
+              setTranslateY(cam.y);
+              setScale(cam.zoom);
+            }
           }
         }
       }
@@ -4203,11 +4250,13 @@ export function ArchitecturalCanvasApp({
 
   useLayoutEffect(() => {
     setViewportSize({ width: window.innerWidth, height: window.innerHeight });
-    // Non-default shell: seed translate at world origin (not half-window) — `AGENTS.md` (Canvas camera).
+    // Non-default shell: seed camera so world (0,0) is centered — `AGENTS.md` (Canvas camera).
     // Default scenario: leave translate to bootstrap, which applies camera in one batch.
     if (scenario !== "default") {
-      setTranslateX(0);
-      setTranslateY(0);
+      const cam = defaultCamera(window.innerWidth, window.innerHeight);
+      setTranslateX(cam.x);
+      setTranslateY(cam.y);
+      setScale(cam.zoom);
     }
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -4399,9 +4448,14 @@ export function ArchitecturalCanvasApp({
   }, [scenario]);
 
   const centerCoords = useCallback(() => {
+    const { width: w, height: h } = viewportCssSizeForDefaultCamera(
+      viewportRef.current,
+      viewportSizeRef.current.width,
+      viewportSizeRef.current.height,
+    );
     return {
-      x: (window.innerWidth / 2 - translateX) / scale,
-      y: (window.innerHeight / 2 - translateY) / scale,
+      x: (w / 2 - translateX) / scale,
+      y: (h / 2 - translateY) / scale,
     };
   }, [scale, translateX, translateY]);
 
@@ -4941,16 +4995,26 @@ export function ArchitecturalCanvasApp({
           }
         }
         if (isUuidLike(targetSpaceId)) {
-          // Arrival at origin unless following a remote viewport (`heartgarden-space-camera` + AGENTS.md).
+          // Arrival: world (0,0) centered unless following a remote viewport (`heartgarden-space-camera` + AGENTS.md).
+          const { width, height } = viewportCssSizeForDefaultCamera(
+            viewportRef.current,
+            viewportSizeRef.current.width,
+            viewportSizeRef.current.height,
+          );
           const cam: CameraState =
-            cameraOverride != null ? clampFollowCamera(cameraOverride) : defaultCamera();
+            cameraOverride != null ? clampFollowCamera(cameraOverride) : defaultCamera(width, height);
           setTranslateX(cam.x);
           setTranslateY(cam.y);
           setScale(cam.zoom);
           writeSpaceCamera(targetSpaceId, cam);
         } else if (!merged) {
-          /* Local seed spaces use string ids; match defaultCamera (0,0) where showcase cards are authored. */
-          const cam = defaultCamera();
+          /* Local seed spaces use string ids; same centered default as UUID spaces. */
+          const { width, height } = viewportCssSizeForDefaultCamera(
+            viewportRef.current,
+            viewportSizeRef.current.width,
+            viewportSizeRef.current.height,
+          );
+          const cam = defaultCamera(width, height);
           setTranslateX(cam.x);
           setTranslateY(cam.y);
           setScale(cam.zoom);
@@ -8397,8 +8461,14 @@ export function ArchitecturalCanvasApp({
     }
   }, [activeNodeId, activeSpaceEntityIds]);
 
-  const centerWorldX = Math.round((viewportSize.width / 2 - translateX) / scale);
-  const centerWorldY = Math.round((viewportSize.height / 2 - translateY) / scale);
+  const { width: camVw, height: camVh } = viewportCssSizeForDefaultCamera(
+    viewportRef.current,
+    viewportSize.width,
+    viewportSize.height,
+  );
+  /** Viewport center in world space — same box as `defaultCamera` / recenter → 0,0. */
+  const centerWorldX = Math.round((camVw / 2 - translateX) / scale);
+  const centerWorldY = Math.round((camVh / 2 - translateY) / scale);
   const stackModalEntities = stackModal
     ? stackModal.orderedIds
         .map((id) => graph.entities[id])
@@ -9201,8 +9271,8 @@ export function ArchitecturalCanvasApp({
                   translateX={translateX}
                   translateY={translateY}
                   scale={scale}
-                  viewportWidth={Math.max(1, viewportSize.width)}
-                  viewportHeight={Math.max(1, viewportSize.height)}
+                  viewportWidth={camVw}
+                  viewportHeight={camVh}
                   selectedNodeIds={selectedNodeIds}
                   minZoom={MIN_ZOOM}
                   maxZoom={MAX_ZOOM}

@@ -585,7 +585,7 @@ export function ArchitecturalCanvasEffectsToggle({
   );
 }
 
-/** Bottom-right glass chip: map icon toggles canvas minimap; X/Y/zoom are read-only status. */
+/** Bottom-right glass chip: map icon toggles canvas minimap; X/Y = viewport center in world space (0,0 when recentered); zoom read-only. */
 export function ArchitecturalViewportMetrics({
   centerWorldX,
   centerWorldY,
@@ -619,7 +619,11 @@ export function ArchitecturalViewportMetrics({
 
   const panel = onToggleMinimap ? (
     <div className={cx(styles.rootDockPanel, styles.viewportMetricsPanel)}>
-      <div className={styles.viewportMetricsReadout} role="status" aria-label="Viewport center and zoom">
+      <div
+        className={styles.viewportMetricsReadout}
+        role="status"
+        aria-label="Viewport center in world coordinates and zoom"
+      >
         {metricsReadout}
       </div>
       <div className={styles.sep} aria-hidden />
@@ -657,8 +661,8 @@ export function ArchitecturalViewportMetrics({
       data-hg-chrome="viewport-metrics"
       aria-label={
         onToggleMinimap
-          ? "Viewport position, zoom, and canvas map toggle"
-          : "Viewport position and zoom"
+          ? "Viewport center in world space, zoom, and canvas map toggle"
+          : "Viewport center in world space and zoom"
       }
     >
       {panel}

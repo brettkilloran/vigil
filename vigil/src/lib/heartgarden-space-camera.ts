@@ -9,14 +9,14 @@ import type { CameraState } from "@/src/model/canvas-types";
  *
  * **Arrival (bootstrap, open folder / `enterSpace`, non-default shell first paint,
  * explicit recenter)** — The shell applies {@link defaultCamera} from
- * `canvas-types.ts` and **does not** call {@link readSpaceCamera} to restore a prior
- * offset. That avoids landing shifted **down/right** from stale values or the old
- * half-window placeholder. {@link writeSpaceCamera} is still invoked so storage
- * matches the view we actually showed.
+ * `canvas-types.ts` (world **(0,0)** at **viewport center**, zoom 1) and **does not**
+ * call {@link readSpaceCamera} to restore a prior offset. That avoids stale pans
+ * overriding the intentional home view. {@link writeSpaceCamera} is still invoked
+ * so storage matches the view we actually showed.
  *
  * **Follow / presence** — When entering a space with a remote viewport override
  * (e.g. follow another tab), the shell may use a **clamped** camera instead of
- * `defaultCamera()`; see `enterSpace` in `ArchitecturalCanvasApp.tsx`.
+ * `defaultCamera` with measured viewport size; see `enterSpace` in `ArchitecturalCanvasApp.tsx`.
  *
  * **Read API** — {@link readSpaceCamera} remains available for tooling or future
  * product rules (e.g. optional “restore last position”); the main shell paths above

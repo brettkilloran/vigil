@@ -9,10 +9,9 @@ export type ItemType =
 /**
  * Logical camera for the infinite canvas. **`x` / `y`** are the **CSS transform
  * translate** applied to the scene in screen pixels (same units as React state
- * `translateX` / `translateY` in `ArchitecturalCanvasApp`). World `(0, 0)` sits at
- * the canvas origin; **`defaultCamera()`** is the intentional home position for
- * arrival (bootstrap, open folder, recenter) — not “center of the viewport,” which
- * would shift content down/right. Policy: **`vigil/AGENTS.md`** (Canvas camera).
+ * `translateX` / `translateY` in `ArchitecturalCanvasApp`). With **`defaultCamera`**,
+ * world `(0, 0)` is at the **center** of the viewport (measured CSS pixels). Policy:
+ * **`vigil/AGENTS.md`** (Canvas camera).
  */
 export interface CameraState {
   x: number;
@@ -20,8 +19,26 @@ export interface CameraState {
   zoom: number;
 }
 
-/** World origin, zoom 1 — default when entering a space or loading bootstrap data. */
-export function defaultCamera(): CameraState {
+/**
+ * Home camera: world origin centered in the viewport, zoom 1.
+ * Pass measured viewport width/height when known; otherwise uses `window` on the client, else `{0,0,1}`.
+ */
+export function defaultCamera(viewportWidth?: number, viewportHeight?: number): CameraState {
+  const w =
+    viewportWidth != null && viewportWidth > 0
+      ? viewportWidth
+      : typeof window !== "undefined" && window.innerWidth > 0
+        ? window.innerWidth
+        : 0;
+  const h =
+    viewportHeight != null && viewportHeight > 0
+      ? viewportHeight
+      : typeof window !== "undefined" && window.innerHeight > 0
+        ? window.innerHeight
+        : 0;
+  if (w > 0 && h > 0) {
+    return { x: w / 2, y: h / 2, zoom: 1 };
+  }
   return { x: 0, y: 0, zoom: 1 };
 }
 
