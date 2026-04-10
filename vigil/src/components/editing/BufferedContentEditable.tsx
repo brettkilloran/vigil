@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import {
   SlashCommandAssistPopover,
@@ -27,6 +27,12 @@ import {
 } from "@/src/lib/wiki-link-caret";
 
 import hostStyles from "@/src/components/editing/BufferedContentEditable.module.css";
+import { applySpellcheckToNestedEditables } from "@/src/lib/contenteditable-spellcheck";
+import {
+  BARCODE_DEBOUNCE_MS,
+  flushLoreCharSkPortraitBarcode,
+  syncLoreCharSkPortraitBarcode,
+} from "@/src/lib/lore-char-sk-barcode";
 
 function isCaretAtStartOfHost(host: HTMLElement, range: Range): boolean {
   if (!range.collapsed) return false;
@@ -337,10 +343,11 @@ export function BufferedContentEditable({
 
   const mergedNormalizeOnCommit = useCallback(
     (html: string) => {
-      const h = documentBlockDrag ? stripArchDragHandles(html) : html;
-      return normalizeOnCommit ? normalizeOnCommit(h) : h;
+      /* Strip ephemeral drag handles on every commit — canvas no longer injects them, focus/gallery do. */
+      const stripped = stripArchDragHandles(html);
+      return normalizeOnCommit ? normalizeOnCommit(stripped) : stripped;
     },
-    [documentBlockDrag, normalizeOnCommit],
+    [normalizeOnCommit],
   );
 
   const {
@@ -504,9 +511,17 @@ export function BufferedContentEditable({
       el.innerText = draft;
     } else {
       el.innerHTML = draft;
+      applySpellcheckToNestedEditables(el, spellCheck);
       if (documentBlockDrag) ensureDocumentBlockDragHandles(el, documentBlockDrag);
+      syncLoreCharSkPortraitBarcode(el);
     }
-  }, [draft, plainText, documentBlockDrag]);
+  }, [draft, plainText, documentBlockDrag, spellCheck]);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || plainText) return;
+    applySpellcheckToNestedEditables(el, spellCheck);
+  }, [draft, plainText, spellCheck]);
 
   const readElementValue = useCallback(() => {
     const el = ref.current;
@@ -615,6 +630,7 @@ export function BufferedContentEditable({
         onBlur={() => {
           closeWiki();
           closeSlash();
+          flushLoreCharSkPortraitBarcode(ref.current);
           commitNow("blur");
         }}
         onCompositionStart={() => {
@@ -630,6 +646,7 @@ export function BufferedContentEditable({
         onInput={() => {
           const next = readElementValue();
           onDraftChange(next);
+          syncLoreCharSkPortraitBarcode(ref.current, { debounceMs: BARCODE_DEBOUNCE_MS });
           requestAnimationFrame(() => {
             if (documentBlockDrag && ref.current && !plainText) {
               ensureDocumentBlockDragHandles(ref.current, documentBlockDrag);
@@ -943,7 +960,10 @@ export function BufferedContentEditable({
             const reset = cancelEditing();
             if (ref.current) {
               if (plainText) ref.current.innerText = reset;
-              else ref.current.innerHTML = reset;
+              else {
+                ref.current.innerHTML = reset;
+                syncLoreCharSkPortraitBarcode(ref.current);
+              }
               ref.current.blur();
             }
             onEscape?.();
