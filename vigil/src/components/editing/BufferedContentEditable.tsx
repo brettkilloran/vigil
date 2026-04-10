@@ -29,6 +29,7 @@ import {
 import hostStyles from "@/src/components/editing/BufferedContentEditable.module.css";
 import { applySpellcheckToNestedEditables } from "@/src/lib/contenteditable-spellcheck";
 import { syncCharSkDisplayNameStack } from "@/src/lib/lore-char-sk-display-name";
+import { installLoreV11PlaceholderCaretSync } from "@/src/lib/lore-v11-ph-caret";
 import {
   consumeLorePlaceholderBeforeInput,
   installLorePlaceholderSelectionGuards,
@@ -115,6 +116,12 @@ function contiguousTaskItemsFrom(taskItem: HTMLElement, taskItemClass: string): 
   return out;
 }
 
+/** Horizontal split between “insert before this block” vs “after” — biased so gaps feel less twitchy. */
+function archBlockDropInsertBeforeY(rect: DOMRect): number {
+  const biasPx = Math.min(18, Math.max(8, rect.height * 0.14));
+  return rect.top + rect.height * 0.5 + biasPx;
+}
+
 function findArchBlockDropInsertBefore(
   root: HTMLElement,
   clientY: number,
@@ -123,7 +130,7 @@ function findArchBlockDropInsertBefore(
   const kids = [...root.children].filter((c) => c !== dragging);
   for (const c of kids) {
     const r = c.getBoundingClientRect();
-    if (clientY < r.top + r.height / 2) return c;
+    if (clientY < archBlockDropInsertBeforeY(r)) return c;
   }
   return null;
 }
@@ -535,7 +542,12 @@ export function BufferedContentEditable({
   useEffect(() => {
     const el = ref.current;
     if (!el || plainText) return;
-    return installLorePlaceholderSelectionGuards(el);
+    const removeGuards = installLorePlaceholderSelectionGuards(el);
+    const removePhCaret = installLoreV11PlaceholderCaretSync(el);
+    return () => {
+      removeGuards();
+      removePhCaret();
+    };
   }, [plainText]);
 
   useEffect(() => {
@@ -641,13 +653,62 @@ export function BufferedContentEditable({
 
   return (
     <>
-      <div ref={wrapRef} className={hostStyles.richEditorHost}>
+      <div
+        ref={wrapRef}
+        className={hostStyles.richEditorHost}
+        data-hg-rich-editor-host="true"
+        onDragOver={(event) => {
+          if (!documentBlockDrag || plainText || !editable || !draggedArchBlockRef.current) {
+            setDropLineY(null);
+            return;
+          }
+          const root = ref.current;
+          const wrap = wrapRef.current;
+          if (!root || !wrap) return;
+          /* Host / margins / chrome: must still preventDefault or the cursor flips to “not allowed”. */
+          if (!wrap.contains(event.target as Node)) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
+          setDropLineY(
+            dropIndicatorTopRelative(wrap, root, event.clientY, draggedArchBlockRef.current),
+          );
+        }}
+        onDragLeave={(event) => {
+          if (!documentBlockDrag || plainText) return;
+          const wrap = wrapRef.current;
+          const rel = event.relatedTarget as Node | null;
+          if (wrap && rel && !wrap.contains(rel)) {
+            setDropLineY(null);
+          }
+        }}
+        onDrop={(event) => {
+          setDropLineY(null);
+          if (!documentBlockDrag || plainText || !editable) return;
+          const root = ref.current;
+          const wrap = wrapRef.current;
+          if (!wrap?.contains(event.target as Node)) return;
+          const dragEl = draggedArchBlockRef.current;
+          if (!root || !dragEl || !root.contains(dragEl)) {
+            draggedArchBlockRef.current = null;
+            return;
+          }
+          event.preventDefault();
+          event.stopPropagation();
+          const insertBefore = findArchBlockDropInsertBefore(root, event.clientY, dragEl);
+          if (insertBefore) root.insertBefore(dragEl, insertBefore);
+          else root.appendChild(dragEl);
+          draggedArchBlockRef.current = null;
+          ensureDocumentBlockDragHandles(root, documentBlockDrag);
+          onDraftChange(readElementValue());
+        }}
+      >
         {dropLineY !== null ? (
           <div className={hostStyles.dropIndicator} style={{ top: dropLineY }} aria-hidden />
         ) : null}
         <div
         ref={ref}
         className={`${hostStyles.richEditorHostInner} ${className ?? ""}`.trim()}
+        data-hg-rich-editor-inner="true"
         contentEditable={editable}
         suppressContentEditableWarning
         spellCheck={spellCheck}
@@ -742,46 +803,6 @@ export function BufferedContentEditable({
         onDragEndCapture={() => {
           draggedArchBlockRef.current = null;
           setDropLineY(null);
-        }}
-        onDragOver={(event) => {
-          if (!documentBlockDrag || plainText || !editable || !draggedArchBlockRef.current) {
-            setDropLineY(null);
-            return;
-          }
-          const root = ref.current;
-          const wrap = wrapRef.current;
-          if (!root || !wrap || !root.contains(event.target as Node)) return;
-          event.preventDefault();
-          event.dataTransfer.dropEffect = "move";
-          setDropLineY(
-            dropIndicatorTopRelative(wrap, root, event.clientY, draggedArchBlockRef.current),
-          );
-        }}
-        onDragLeave={(event) => {
-          if (!documentBlockDrag || plainText) return;
-          const wrap = wrapRef.current;
-          const rel = event.relatedTarget as Node | null;
-          if (wrap && rel && !wrap.contains(rel)) {
-            setDropLineY(null);
-          }
-        }}
-        onDrop={(event) => {
-          setDropLineY(null);
-          if (!documentBlockDrag || plainText || !editable) return;
-          const root = ref.current;
-          const dragEl = draggedArchBlockRef.current;
-          if (!root || !dragEl || !root.contains(dragEl)) {
-            draggedArchBlockRef.current = null;
-            return;
-          }
-          event.preventDefault();
-          event.stopPropagation();
-          const insertBefore = findArchBlockDropInsertBefore(root, event.clientY, dragEl);
-          if (insertBefore) root.insertBefore(dragEl, insertBefore);
-          else root.appendChild(dragEl);
-          draggedArchBlockRef.current = null;
-          ensureDocumentBlockDragHandles(root, documentBlockDrag);
-          onDraftChange(readElementValue());
         }}
         onPointerDownCapture={(event) => {
           if (!checklistDeletion || plainText || !editable || event.button !== 0) return;

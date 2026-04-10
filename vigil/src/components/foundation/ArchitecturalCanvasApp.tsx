@@ -63,6 +63,7 @@ import {
 import { ArchitecturalParentExitThreshold } from "@/src/components/foundation/ArchitecturalParentExitThreshold";
 import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
 import { ArchitecturalFolderCard } from "@/src/components/foundation/ArchitecturalFolderCard";
+import { ArchitecturalLoreCharacterCanvasNode } from "@/src/components/foundation/ArchitecturalLoreCharacterCanvasNode";
 import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";
 import { CanvasMinimap } from "@/src/components/foundation/CanvasMinimap";
 import { CanvasViewportToast } from "@/src/components/foundation/CanvasViewportToast";
@@ -228,8 +229,33 @@ import {
   defaultLoreCardVariantForKind,
   defaultTitleForLoreKind,
   getLoreNodeSeedBodyHtml,
+  shouldRenderLoreCharacterCredentialCanvasNode,
   tapeVariantForLoreCard,
 } from "@/src/lib/lore-node-seed-html";
+import {
+  mergeCharacterV11FocusDrafts,
+  splitCharacterV11BodyForFocus,
+} from "@/src/lib/lore-character-focus-html";
+import {
+  ArchitecturalCharacterFocusPanel,
+  type ArchitecturalCanvasFocusStyles,
+} from "@/src/components/foundation/ArchitecturalCharacterFocusPanel";
+
+function hydrateCharacterFocusDraftSlicesFromBody(
+  entity: Pick<CanvasContentEntity, "kind" | "bodyHtml" | "loreCard">,
+  bodyHtml: string,
+  setStructured: (html: string) => void,
+  setPaper: (html: string) => void,
+) {
+  if (!shouldRenderLoreCharacterCredentialCanvasNode(entity)) {
+    setStructured("");
+    setPaper("");
+    return;
+  }
+  const { structured, paper } = splitCharacterV11BodyForFocus(bodyHtml);
+  setStructured(structured);
+  setPaper(paper);
+}
 
 const VigilFlowRevealOverlay = dynamic(
   () =>
@@ -1087,7 +1113,13 @@ function isRichDocBodyFormattingTarget(focusEl: Element | null): boolean {
   if (!focusEl || !(focusEl instanceof HTMLElement)) return false;
   const root = focusEl.closest("[contenteditable='true']");
   if (!root) return false;
-  return !!root.closest("[data-node-body-editor], [data-focus-body-editor]");
+  const inNodeOrFocus = root.closest("[data-node-body-editor], [data-focus-body-editor]");
+  if (!inNodeOrFocus) return false;
+  /* Character hybrid: slash/insert only in the paper region, not the ID plate fields. */
+  if (root.closest("[data-hg-character-focus='true']")) {
+    return !!focusEl.closest("[data-hg-rich-prose-body='true']");
+  }
+  return true;
 }
 
 function normalizeFormatBlockTag(value: string | null | undefined): "p" | "h1" | "h2" | "h3" | "blockquote" {
@@ -1216,6 +1248,22 @@ type LassoRectScreen = { x1: number; y1: number; x2: number; y2: number };
  * Whether a pointer event target is “canvas chrome” for pan / marquee lasso (not on an entity, stack, or thread).
  * Entity surfaces win over raw svg/path (e.g. icons inside cards). Connection threads are not marquee targets.
  */
+/**
+ * v11 character nodes wrap the plate inside `.nodeBody`; the catalog header strip should still
+ * arm canvas drag like `.nodeHeader` on note cards (mousedown uses `inContent` / `nodeBody`).
+ */
+function targetIsLoreCharacterV11CanvasDragChrome(target: Element): boolean {
+  const cred = target.closest('[data-hg-canvas-role="lore-character-v11"]');
+  if (!cred) return false;
+  const header =
+    target.closest("[data-hg-lore-canvas-drag-header='true']") ||
+    target.closest('[class*="charSkHeaderCell"]');
+  if (!header || !cred.contains(header)) return false;
+  if (target.closest("[data-expand-btn='true']")) return false;
+  if (target.closest("[data-hg-lore-field]")) return false;
+  return true;
+}
+
 function isCanvasPointerMarqueeOrPanSurface(
   target: Element,
   viewportEl: HTMLElement | null,
@@ -1720,7 +1768,10 @@ export function ArchitecturalCanvasApp({
   const [focusBody, setFocusBody] = useState("");
   const [focusBaselineTitle, setFocusBaselineTitle] = useState("");
   const [focusBaselineBody, setFocusBaselineBody] = useState("");
-  const [focusCodeTheme, setFocusCodeTheme] = useState(false);
+  /** v11 character focus: structured ID plate HTML (notes body emptied). */
+  const [focusCharacterStructuredHtml, setFocusCharacterStructuredHtml] = useState("");
+  /** v11 character focus: inner HTML for `charSkNotesBody` only. */
+  const [focusCharacterPaperHtml, setFocusCharacterPaperHtml] = useState("");
   const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null);
   const [hoveredStackTargetId, setHoveredStackTargetId] = useState<string | null>(null);
   const [parentDropHovered, setParentDropHovered] = useState(false);
@@ -2398,7 +2449,12 @@ export function ArchitecturalCanvasApp({
         setFocusBody(restored.bodyHtml);
         setFocusBaselineTitle(restored.title);
         setFocusBaselineBody(restored.bodyHtml);
-        setFocusCodeTheme(restored.theme === "code");
+        hydrateCharacterFocusDraftSlicesFromBody(
+          restored,
+          restored.bodyHtml,
+          setFocusCharacterStructuredHtml,
+          setFocusCharacterPaperHtml,
+        );
         setFocusOpen(true);
       } else {
         setFocusOpen(false);
@@ -2452,7 +2508,12 @@ export function ArchitecturalCanvasApp({
         setFocusBody(restored.bodyHtml);
         setFocusBaselineTitle(restored.title);
         setFocusBaselineBody(restored.bodyHtml);
-        setFocusCodeTheme(restored.theme === "code");
+        hydrateCharacterFocusDraftSlicesFromBody(
+          restored,
+          restored.bodyHtml,
+          setFocusCharacterStructuredHtml,
+          setFocusCharacterPaperHtml,
+        );
         setFocusOpen(true);
       } else {
         setFocusOpen(false);
@@ -3541,7 +3602,12 @@ export function ArchitecturalCanvasApp({
     setFocusBody(normalizedBody);
     setFocusBaselineTitle(entity.title);
     setFocusBaselineBody(normalizedBody);
-    setFocusCodeTheme(entity.theme === "code");
+    hydrateCharacterFocusDraftSlicesFromBody(
+      entity,
+      normalizedBody,
+      setFocusCharacterStructuredHtml,
+      setFocusCharacterPaperHtml,
+    );
     setFocusOpen(true);
   }, [graph.entities, graph.spaces, pushRecentItem]);
 
@@ -3727,6 +3793,44 @@ export function ArchitecturalCanvasApp({
       focusBody !== focusBaselineBody,
     [focusTitle, focusBody, focusBaselineTitle, focusBaselineBody],
   );
+
+  /** What kind of focus overlay to render for the active content node. */
+  const focusSurface = useMemo((): "default-doc" | "code" | "character-hybrid" => {
+    if (!focusOpen || !activeNodeId) return "default-doc";
+    const ent = graph.entities[activeNodeId];
+    if (!ent || ent.kind !== "content") return "default-doc";
+    if (shouldRenderLoreCharacterCredentialCanvasNode(ent)) return "character-hybrid";
+    if (ent.theme === "code") return "code";
+    return "default-doc";
+  }, [focusOpen, activeNodeId, graph.entities]);
+
+  const normalizeFocusBodyForDock = useCallback(
+    (html: string) =>
+      normalizeChecklistMarkup(html, {
+        taskItem: styles.taskItem,
+        taskCheckbox: styles.taskCheckbox,
+        taskText: styles.taskText,
+        done: styles.done,
+      }),
+    // CSS module class names are stable for the app lifetime.
+    [],
+  );
+
+  const onCharacterStructuredCommit = useCallback((nextHtml: string) => {
+    setFocusCharacterStructuredHtml(nextHtml);
+    setFocusCharacterPaperHtml((paper) => {
+      setFocusBody(mergeCharacterV11FocusDrafts(nextHtml, paper));
+      return paper;
+    });
+  }, []);
+
+  const onCharacterPaperCommit = useCallback((nextHtml: string) => {
+    setFocusCharacterPaperHtml(nextHtml);
+    setFocusCharacterStructuredHtml((structured) => {
+      setFocusBody(mergeCharacterV11FocusDrafts(structured, nextHtml));
+      return structured;
+    });
+  }, []);
 
   useEffect(() => {
     focusDirtyRef.current = focusDirty;
@@ -5285,7 +5389,14 @@ export function ArchitecturalCanvasApp({
     if (!cloudLinksBar || !isUuidLike(activeSpaceId)) return null;
     if (focusOpen && activeNodeId) {
       const ent = graph.entities[activeNodeId];
-      if (!ent || ent.kind !== "content" || ent.theme === "media") return null;
+      if (
+        !ent ||
+        ent.kind !== "content" ||
+        ent.theme === "media" ||
+        shouldRenderLoreCharacterCredentialCanvasNode(ent)
+      ) {
+        return null;
+      }
       return {
         title: focusTitle.trim(),
         bodyText: stripHtmlToPlain(focusBody),
@@ -5298,7 +5409,14 @@ export function ArchitecturalCanvasApp({
     }
     if (selectedNodeIds.length === 1) {
       const ent = graph.entities[selectedNodeIds[0]!];
-      if (!ent || ent.kind !== "content" || ent.theme === "media") return null;
+      if (
+        !ent ||
+        ent.kind !== "content" ||
+        ent.theme === "media" ||
+        shouldRenderLoreCharacterCredentialCanvasNode(ent)
+      ) {
+        return null;
+      }
       return {
         title: (ent.title ?? "").trim(),
         bodyText: stripHtmlToPlain(ent.bodyHtml),
@@ -7231,8 +7349,9 @@ export function ArchitecturalCanvasApp({
       /* Folder face (.folderFront) must arm drag/select like other cards; only the title
        * editor, chrome buttons, and note bodies opt out. Double-click to open uses React
        * onDoubleClick on ArchitecturalFolderCard (with stopPropagation). */
+      const inBody = !!target.closest(`.${styles.nodeBody}`);
       const inContent =
-        target.closest(`.${styles.nodeBody}`) ||
+        (inBody && !targetIsLoreCharacterV11CanvasDragChrome(target)) ||
         target.closest(`.${styles.nodeBtn}`) ||
         target.closest(`.${styles.folderTitleInput}`) ||
         target.closest("[data-folder-open-btn='true']");
@@ -7913,7 +8032,18 @@ export function ArchitecturalCanvasApp({
     const shell = shellRef.current;
     if (!shell) return null;
     if (focusOpenRef.current && activeNodeIdRef.current) {
-      return shell.querySelector<HTMLElement>('[data-focus-body-editor="true"]');
+      const hosts = Array.from(
+        shell.querySelectorAll<HTMLElement>('[data-focus-body-editor="true"]'),
+      );
+      const ae = document.activeElement;
+      if (ae instanceof HTMLElement) {
+        for (const host of hosts) {
+          if (host === ae || host.contains(ae)) return host;
+        }
+      }
+      /* Character hybrid: default dock formatting to the paper editor (second host). */
+      if (hosts.length >= 2) return hosts[hosts.length - 1]!;
+      return hosts[0] ?? null;
     }
     const ids = selectedNodeIdsRef.current;
     if (ids.length !== 1) return null;
@@ -8944,36 +9074,62 @@ export function ArchitecturalCanvasApp({
               >
                 {hoveredStackTargetId === entity.id ? <div className={styles.nodeStackHoverFrame} /> : null}
                 {entity.kind === "content" ? (
-                  <ArchitecturalNodeCard
-                    id={entity.id}
-                    title={entity.title}
-                    width={entity.width}
-                    theme={entity.theme}
-                    tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
-                    tapeRotation={entity.tapeRotation}
-                    bodyHtml={entity.bodyHtml}
-                    activeTool={activeTool}
-                    dragged={dragged}
-                    selected={selected}
-                    showTape={!entity.stackId && entity.loreCard?.kind !== "character"}
-                    onBodyCommit={updateNodeBody}
-                    onExpand={handleNodeExpand}
-                    onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
-                    canvasPanZoomScale={scale}
-                    useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
-                    wikiLinkAssist={makeWikiLinkAssist(entity.id)}
-                    onRichDocCommand={
-                      entity.theme === "default" || entity.theme === "task"
-                        ? (command, value) => runFormat(command, value)
-                        : undefined
-                    }
-                    emptyPlaceholder={
-                      entity.theme === "default" || entity.theme === "task"
-                        ? "Write here, or type / for blocks…"
-                        : undefined
-                    }
-                    loreCard={entity.loreCard}
-                  />
+                  shouldRenderLoreCharacterCredentialCanvasNode(entity) ? (
+                    <ArchitecturalLoreCharacterCanvasNode
+                      id={entity.id}
+                      width={entity.width}
+                      tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
+                      tapeRotation={entity.tapeRotation}
+                      bodyHtml={entity.bodyHtml}
+                      activeTool={activeTool}
+                      dragged={dragged}
+                      selected={selected}
+                      onBodyCommit={updateNodeBody}
+                      onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
+                      wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                      onRichDocCommand={
+                        entity.theme === "default" || entity.theme === "task"
+                          ? (command, value) => runFormat(command, value)
+                          : undefined
+                      }
+                      emptyPlaceholder={
+                        entity.theme === "default" || entity.theme === "task"
+                          ? "Write here, or type / for blocks…"
+                          : undefined
+                      }
+                    />
+                  ) : (
+                    <ArchitecturalNodeCard
+                      id={entity.id}
+                      title={entity.title}
+                      width={entity.width}
+                      theme={entity.theme}
+                      tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
+                      tapeRotation={entity.tapeRotation}
+                      bodyHtml={entity.bodyHtml}
+                      activeTool={activeTool}
+                      dragged={dragged}
+                      selected={selected}
+                      showTape={!entity.stackId}
+                      onBodyCommit={updateNodeBody}
+                      onExpand={handleNodeExpand}
+                      onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
+                      canvasPanZoomScale={scale}
+                      useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
+                      wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                      onRichDocCommand={
+                        entity.theme === "default" || entity.theme === "task"
+                          ? (command, value) => runFormat(command, value)
+                          : undefined
+                      }
+                      emptyPlaceholder={
+                        entity.theme === "default" || entity.theme === "task"
+                          ? "Write here, or type / for blocks…"
+                          : undefined
+                      }
+                      loreCard={entity.loreCard}
+                    />
+                  )
                 ) : (
                   <ArchitecturalFolderCard
                     id={entity.id}
@@ -9123,25 +9279,40 @@ export function ArchitecturalCanvasApp({
                     }
                   >
                     {entity.kind === "content" ? (
-                      <ArchitecturalNodeCard
-                        id={entity.id}
-                        title={entity.title}
-                        width={entity.width}
-                        theme={entity.theme}
-                        tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
-                        tapeRotation={entity.tapeRotation}
-                        bodyHtml={entity.bodyHtml}
-                        activeTool={activeTool}
-                        dragged={draggingStack}
-                        selected={false}
-                        showTape={!entity.stackId && entity.loreCard?.kind !== "character"}
-                        onBodyCommit={updateNodeBody}
-                        onExpand={handleNodeExpand}
-                        bodyEditable={false}
-                        canvasPanZoomScale={scale}
-                        useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
-                        loreCard={entity.loreCard}
-                      />
+                      shouldRenderLoreCharacterCredentialCanvasNode(entity) ? (
+                        <ArchitecturalLoreCharacterCanvasNode
+                          id={entity.id}
+                          width={entity.width}
+                          tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
+                          tapeRotation={entity.tapeRotation}
+                          bodyHtml={entity.bodyHtml}
+                          activeTool={activeTool}
+                          dragged={draggingStack}
+                          selected={false}
+                          bodyEditable={false}
+                          onBodyCommit={updateNodeBody}
+                        />
+                      ) : (
+                        <ArchitecturalNodeCard
+                          id={entity.id}
+                          title={entity.title}
+                          width={entity.width}
+                          theme={entity.theme}
+                          tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
+                          tapeRotation={entity.tapeRotation}
+                          bodyHtml={entity.bodyHtml}
+                          activeTool={activeTool}
+                          dragged={draggingStack}
+                          selected={false}
+                          showTape={!entity.stackId}
+                          onBodyCommit={updateNodeBody}
+                          onExpand={handleNodeExpand}
+                          bodyEditable={false}
+                          canvasPanZoomScale={scale}
+                          useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
+                          loreCard={entity.loreCard}
+                        />
+                      )
                     ) : (
                       <ArchitecturalFolderCard
                         id={entity.id}
@@ -10397,36 +10568,62 @@ export function ArchitecturalCanvasApp({
                 }}
               >
                 {entity.kind === "content" ? (
-                  <ArchitecturalNodeCard
-                    id={entity.id}
-                    title={entity.title}
-                    width={entity.width}
-                    theme={entity.theme}
-                    tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
-                    tapeRotation={entity.tapeRotation}
-                    bodyHtml={entity.bodyHtml}
-                    activeTool={activeTool}
-                    dragged={!!drag}
-                    selected={false}
-                    showTape={!entity.stackId && entity.loreCard?.kind !== "character"}
-                    onBodyCommit={updateNodeBody}
-                    onExpand={handleNodeExpand}
-                    onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
-                    canvasPanZoomScale={1}
-                    useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
-                    wikiLinkAssist={makeWikiLinkAssist(entity.id)}
-                    onRichDocCommand={
-                      entity.theme === "default" || entity.theme === "task"
-                        ? (command, value) => runFormat(command, value)
-                        : undefined
-                    }
-                    emptyPlaceholder={
-                      entity.theme === "default" || entity.theme === "task"
-                        ? "Write here, or type / for blocks…"
-                        : undefined
-                    }
-                    loreCard={entity.loreCard}
-                  />
+                  shouldRenderLoreCharacterCredentialCanvasNode(entity) ? (
+                    <ArchitecturalLoreCharacterCanvasNode
+                      id={entity.id}
+                      width={entity.width}
+                      tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
+                      tapeRotation={entity.tapeRotation}
+                      bodyHtml={entity.bodyHtml}
+                      activeTool={activeTool}
+                      dragged={!!drag}
+                      selected={false}
+                      onBodyCommit={updateNodeBody}
+                      onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
+                      wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                      onRichDocCommand={
+                        entity.theme === "default" || entity.theme === "task"
+                          ? (command, value) => runFormat(command, value)
+                          : undefined
+                      }
+                      emptyPlaceholder={
+                        entity.theme === "default" || entity.theme === "task"
+                          ? "Write here, or type / for blocks…"
+                          : undefined
+                      }
+                    />
+                  ) : (
+                    <ArchitecturalNodeCard
+                      id={entity.id}
+                      title={entity.title}
+                      width={entity.width}
+                      theme={entity.theme}
+                      tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
+                      tapeRotation={entity.tapeRotation}
+                      bodyHtml={entity.bodyHtml}
+                      activeTool={activeTool}
+                      dragged={!!drag}
+                      selected={false}
+                      showTape={!entity.stackId}
+                      onBodyCommit={updateNodeBody}
+                      onExpand={handleNodeExpand}
+                      onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
+                      canvasPanZoomScale={1}
+                      useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
+                      wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                      onRichDocCommand={
+                        entity.theme === "default" || entity.theme === "task"
+                          ? (command, value) => runFormat(command, value)
+                          : undefined
+                      }
+                      emptyPlaceholder={
+                        entity.theme === "default" || entity.theme === "task"
+                          ? "Write here, or type / for blocks…"
+                          : undefined
+                      }
+                      loreCard={entity.loreCard}
+                    />
+                  )
                 ) : (
                   <ArchitecturalFolderCard
                     id={entity.id}
@@ -10572,14 +10769,18 @@ export function ArchitecturalCanvasApp({
 
       <div
         className={`${styles.focusOverlay} ${focusOpen ? styles.focusActive : ""} ${
-          focusCodeTheme ? styles.focusEditorDark : ""
+          focusSurface === "code" || focusSurface === "character-hybrid"
+            ? styles.focusEditorDark
+            : ""
         }`}
         onPointerDownCapture={onFocusOverlayPointerDownCapture}
       >
         <div className={styles.focusSheet}>
           <div className={styles.focusHeader}>
             <div className={styles.focusMeta}>
-              EDITING // {activeNodeId ? activeNodeId.toUpperCase() : "NODE"}
+              {focusSurface === "character-hybrid"
+                ? `ID PLATE // ${activeNodeId ? activeNodeId.toUpperCase() : "NODE"}`
+                : `EDITING // ${activeNodeId ? activeNodeId.toUpperCase() : "NODE"}`}
             </div>
             <ArchitecturalFocusCloseButton
               dirty={focusDirty}
@@ -10588,54 +10789,89 @@ export function ArchitecturalCanvasApp({
               onDiscard={discardFocusAndClose}
             />
           </div>
-          <div className={styles.focusContent}>
-            <BufferedTextInput
-              type="text"
-              className={styles.focusTitle}
-              value={focusTitle}
-              debounceMs={150}
-              onCommit={(next) => setFocusTitle(next)}
-              placeholder="Untitled brief"
-              data-focus-title-editor="true"
-            />
-            <BufferedContentEditable
-              value={focusBody}
-              className={`${styles.focusBody} ${focusCodeTheme ? styles.focusCode : ""}`}
-              editable
-              spellCheck={false}
-              debounceMs={150}
-              dataAttribute="data-focus-body-editor"
-              checklistDeletion={{
-                taskItem: styles.taskItem,
-                taskText: styles.taskText,
-                taskCheckbox: styles.taskCheckbox,
-              }}
-              documentBlockDrag={
-                focusCodeTheme
-                  ? null
-                  : {
-                      handleClass: styles.archBlockDragHandle,
-                      taskItemClass: styles.taskItem,
-                    }
-              }
-              richDocCommand={
-                focusCodeTheme ? undefined : (command, value) => runFormat(command, value)
-              }
-              emptyPlaceholder={
-                focusCodeTheme ? null : "Write here, or type / for blocks…"
-              }
-              onCommit={(nextHtml) =>
-                setFocusBody(
-                  normalizeChecklistMarkup(nextHtml, {
-                    taskItem: styles.taskItem,
-                    taskCheckbox: styles.taskCheckbox,
-                    taskText: styles.taskText,
-                    done: styles.done,
-                  }),
-                )
-              }
-              wikiLinkAssist={!focusCodeTheme ? makeWikiLinkAssist(activeNodeId ?? undefined) : null}
-            />
+          <div
+            className={`${styles.focusContent} ${
+              focusSurface === "character-hybrid" ? styles.focusContentLoreCredential : ""
+            }`}
+          >
+            {focusSurface === "character-hybrid" ? null : (
+              <BufferedTextInput
+                type="text"
+                className={styles.focusTitle}
+                value={focusTitle}
+                debounceMs={150}
+                onCommit={(next) => setFocusTitle(next)}
+                placeholder="Untitled brief"
+                data-focus-title-editor="true"
+              />
+            )}
+            {focusSurface === "character-hybrid" ? (
+              <ArchitecturalCharacterFocusPanel
+                styles={styles as ArchitecturalCanvasFocusStyles}
+                structuredHtml={focusCharacterStructuredHtml}
+                paperHtml={focusCharacterPaperHtml}
+                onStructuredCommit={onCharacterStructuredCommit}
+                onPaperCommit={onCharacterPaperCommit}
+                checklistDeletion={{
+                  taskItem: styles.taskItem,
+                  taskText: styles.taskText,
+                  taskCheckbox: styles.taskCheckbox,
+                }}
+                normalizeBody={normalizeFocusBodyForDock}
+                richDocCommand={(command, value) => runFormat(command, value)}
+                wikiLinkAssist={makeWikiLinkAssist(activeNodeId ?? undefined)}
+                documentBlockDrag={{
+                  handleClass: styles.archBlockDragHandle,
+                  taskItemClass: styles.taskItem,
+                }}
+                paperEmptyPlaceholder="Write here, or type / for blocks…"
+              />
+            ) : (
+              <BufferedContentEditable
+                value={focusBody}
+                className={`${styles.focusBody} ${focusSurface === "code" ? styles.focusCode : ""}`}
+                editable
+                spellCheck={false}
+                debounceMs={150}
+                dataAttribute="data-focus-body-editor"
+                checklistDeletion={{
+                  taskItem: styles.taskItem,
+                  taskText: styles.taskText,
+                  taskCheckbox: styles.taskCheckbox,
+                }}
+                documentBlockDrag={
+                  focusSurface === "code"
+                    ? null
+                    : {
+                        handleClass: styles.archBlockDragHandle,
+                        taskItemClass: styles.taskItem,
+                      }
+                }
+                richDocCommand={
+                  focusSurface === "code"
+                    ? undefined
+                    : (command, value) => runFormat(command, value)
+                }
+                emptyPlaceholder={
+                  focusSurface === "code" ? null : "Write here, or type / for blocks…"
+                }
+                onCommit={(nextHtml) =>
+                  setFocusBody(
+                    normalizeChecklistMarkup(nextHtml, {
+                      taskItem: styles.taskItem,
+                      taskCheckbox: styles.taskCheckbox,
+                      taskText: styles.taskText,
+                      done: styles.done,
+                    }),
+                  )
+                }
+                wikiLinkAssist={
+                  focusSurface === "code"
+                    ? null
+                    : makeWikiLinkAssist(activeNodeId ?? undefined)
+                }
+              />
+            )}
           </div>
         </div>
       </div>
@@ -10643,8 +10879,8 @@ export function ArchitecturalCanvasApp({
         <div className={styles.focusBottomDock}>
           <ArchitecturalBottomDock
             variant="editor"
-            showFormatToolbar={!focusCodeTheme}
-            showDocInsertCluster={!focusCodeTheme}
+            showFormatToolbar={focusSurface !== "code"}
+            showDocInsertCluster={focusSurface !== "code"}
             showCreateMenu={false}
             insertDocActions={dockInsertActions}
             formatActions={dockFormatActions}

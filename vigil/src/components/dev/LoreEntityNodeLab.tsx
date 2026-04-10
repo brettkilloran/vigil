@@ -25,7 +25,7 @@ import canvasStyles from "@/src/components/foundation/ArchitecturalCanvasApp.mod
 import cardStyles from "@/src/components/foundation/lore-entity-card.module.css";
 import { VigilThemeProvider, useVigilThemeContext } from "@/src/contexts/vigil-theme-context";
 import { cx } from "@/src/lib/cx";
-import type { LoreCardVariant, TapeVariant } from "@/src/components/foundation/architectural-types";
+import type { TapeVariant } from "@/src/components/foundation/architectural-types";
 import { Button } from "@/src/components/ui/Button";
 
 import labStyles from "./lore-entity-node-lab.module.css";
@@ -34,6 +34,7 @@ import {
   locationStripVariantFromSeed,
 } from "@/src/lib/lore-node-seed-html";
 import { syncCharSkDisplayNameStack } from "@/src/lib/lore-char-sk-display-name";
+import { installLoreV11PlaceholderCaretSync } from "@/src/lib/lore-v11-ph-caret";
 import {
   consumeLorePlaceholderBeforeInput,
   installLorePlaceholderSelectionGuards,
@@ -42,13 +43,6 @@ import {
 } from "@/src/lib/lore-v9-placeholder";
 import { applyImageDataUrlToArchitecturalMediaBody } from "@/src/components/foundation/architectural-media-html";
 import { applySpellcheckToNestedEditables } from "@/src/lib/contenteditable-spellcheck";
-
-/** Lab-only portrait placeholder (no network) — real nodes would use uploaded URLs. */
-const SAMPLE_PORTRAIT =
-  "data:image/svg+xml," +
-  encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#c5d0dc"/><stop offset="100%" stop-color="#8e9daf"/></linearGradient></defs><rect width="120" height="160" fill="url(#g)"/><ellipse cx="60" cy="56" rx="24" ry="28" fill="rgba(255,255,255,.4)"/><path d="M28 120 Q60 92 92 120 L92 160 L28 160 Z" fill="rgba(255,255,255,.32)"/></svg>`,
-  );
 
 function LabCard({
   headerTitle,
@@ -85,31 +79,20 @@ function LabCard({
   );
 }
 
-type LoreSkeuoProtocolVariant = Extract<LoreCardVariant, "v8" | "v9" | "v10" | "v11">;
-
-function loreProtocolUsesPortraitPicker(v: LoreSkeuoProtocolVariant): boolean {
-  return v === "v8" || v === "v9" || v === "v10" || v === "v11";
-}
-
-/** Canvas-style shell without tape or header — for posterity iterations that read as physical objects. */
+/** Canvas-style shell without tape or header — production character v11 body. */
 function LabSkeuoCard({
   className,
   html,
-  loreVariant,
 }: {
   className?: string;
   html: string;
-  loreVariant: LoreSkeuoProtocolVariant;
 }) {
   const [bodyAfterUpload, setBodyAfterUpload] = useState(html);
   const rootRef = useRef<HTMLDivElement>(null);
   const labBodyRef = useRef<HTMLDivElement>(null);
   const portraitFileRef = useRef<HTMLInputElement>(null);
 
-  const portraitCommittedClass =
-    loreVariant === "v9" || loreVariant === "v10" || loreVariant === "v11"
-      ? cardStyles.charSkPortraitImg
-      : cardStyles.char3dPortraitImg;
+  const portraitCommittedClass = cardStyles.charSkPortraitImg;
 
   const onPortraitFile = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -131,7 +114,6 @@ function LabSkeuoCard({
   );
 
   useEffect(() => {
-    if (!loreProtocolUsesPortraitPicker(loreVariant)) return;
     const root = rootRef.current;
     if (!root) return;
     const stopCaretDrift = (e: MouseEvent) => {
@@ -151,9 +133,9 @@ function LabSkeuoCard({
       root.removeEventListener("mousedown", stopCaretDrift, true);
       root.removeEventListener("click", onUploadClick, true);
     };
-  }, [loreVariant, bodyAfterUpload]);
+  }, [bodyAfterUpload]);
 
-  const displayHtml = loreProtocolUsesPortraitPicker(loreVariant) ? bodyAfterUpload : html;
+  const displayHtml = bodyAfterUpload;
 
   useLayoutEffect(() => {
     const body = labBodyRef.current;
@@ -166,6 +148,7 @@ function LabSkeuoCard({
     const root = rootRef.current;
     if (!root) return;
     const removeGuards = installLorePlaceholderSelectionGuards(root);
+    const removePhCaret = installLoreV11PlaceholderCaretSync(root);
     const onInput = () => {
       syncLoreV9RedactedPlaceholderState(root);
     };
@@ -195,6 +178,7 @@ function LabSkeuoCard({
     root.addEventListener("focusout", onFocusOut);
     return () => {
       removeGuards();
+      removePhCaret();
       root.removeEventListener("beforeinput", onBeforeInput, true);
       root.removeEventListener("input", onInput, true);
       root.removeEventListener("focusout", onFocusOut);
@@ -204,15 +188,10 @@ function LabSkeuoCard({
   return (
     <div
       ref={rootRef}
-      className={cx(
-        canvasStyles.entityNode,
-        canvasStyles.themeDefault,
-        canvasStyles.a4DocumentNode,
-        className,
-      )}
+      className={cx(canvasStyles.entityNode, canvasStyles.loreCharacterCanvasRoot, className)}
+      data-hg-canvas-role="lore-character-v11"
       data-lore-kind="character"
-      data-lore-variant={loreVariant}
-      data-lore-chrome="skeuo"
+      data-lore-variant="v11"
       style={
         {
           width: 340,
@@ -221,21 +200,19 @@ function LabSkeuoCard({
         } as CSSProperties
       }
     >
-      {loreProtocolUsesPortraitPicker(loreVariant) ? (
-        <input
-          ref={portraitFileRef}
-          type="file"
-          accept="image/*"
-          className={labStyles.visuallyHidden}
-          aria-hidden
-          tabIndex={-1}
-          onChange={onPortraitFile}
-        />
-      ) : null}
-      {/* Lab-only static HTML; uses canvas `nodeBody` + `a4DocumentBody` so v4–v9 full-bleed rules apply */}
+      <input
+        ref={portraitFileRef}
+        type="file"
+        accept="image/*"
+        className={labStyles.visuallyHidden}
+        aria-hidden
+        tabIndex={-1}
+        onChange={onPortraitFile}
+      />
+      {/* Lab-only static HTML; uses canvas `nodeBody` + `loreCharacterBody` (same as production character v11). */}
       <div
         ref={labBodyRef}
-        className={cx(canvasStyles.nodeBody, canvasStyles.a4DocumentBody, labStyles.labSkeuoBleed)}
+        className={cx(canvasStyles.nodeBody, canvasStyles.loreCharacterBody, labStyles.labSkeuoBleed)}
         dangerouslySetInnerHTML={{ __html: displayHtml }}
       />
     </div>
@@ -272,9 +249,8 @@ function LoreEntityNodeLabInner() {
         <div className={labStyles.titleBlock}>
           <h1>Lore entity nodes</h1>
           <p>
-            Design lab: three visual passes each for character (ID + document), faction letterhead,
-            and location site cards. Same canvas shell as production nodes; body layouts are
-            suggestions for HTML templates and future structured fields.
+            Design lab: character ID plate (same v11 seed as the canvas), faction letterhead, and
+            location site cards. Same node shell as production; bodies mirror seeded HTML templates.
           </p>
         </div>
         <ThemeToolbar />
@@ -286,92 +262,18 @@ function LoreEntityNodeLabInner() {
             Character
           </h2>
           <p className={labStyles.sectionHint}>
-            Supported templates: passport strip with canvas tape (v3), or protocol IDs without tape (v8–v9).
-            Affiliation, nationality, and alias stay free text until structured fields land.
+            Production template: <code>loreCard: {"{"} kind: &quot;character&quot;, variant: &quot;v11&quot; {"}"}</code>
+            , seeded from <code>getLoreNodeSeedBodyHtml</code>. No canvas tape on character nodes; portrait uses the
+            same media-root + Upload path as image entities.
           </p>
           <div className={labStyles.grid}>
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>V3 · Passport strip</span>
-              <LabCard headerTitle="Character" tapeVariant="dark" tapeRotation={-1}>
-                <div className={cardStyles.passportStrip}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    className={cardStyles.passportPhoto}
-                    src={SAMPLE_PORTRAIT}
-                    alt=""
-                    width={64}
-                    height={80}
-                  />
-                  <div className={cardStyles.passportMeta}>
-                    <div>
-                      Given / Family
-                      <strong>Mara · Vance</strong>
-                    </div>
-                    <div>
-                      Affiliation
-                      <strong>Aegis Transit Coop.</strong>
-                    </div>
-                    <div>
-                      Nationality
-                      <strong>Saltmere Cantons</strong>
-                    </div>
-                  </div>
-                </div>
-                <div className={cardStyles.notesBlock}>
-                  <span className={cardStyles.fieldLabel}>Notes</span>
-                  <p className={cardStyles.notesText}>
-                    Monospace strip suggests official record; body returns to comfortable prose for
-                    long-form lore.
-                  </p>
-                </div>
-              </LabCard>
-              <ul className={labStyles.spec}>
-                <li>Dark tape pairs with the “bureaucratic” header; production seed matches <code>loreCard</code> v3.</li>
-              </ul>
-            </div>
-            <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>V8 · Black minimal ID (reference layout)</span>
-              <LabSkeuoCard loreVariant="v8" html={getLoreNodeSeedBodyHtml("character", "v8")} />
+              <span className={labStyles.variantLabel}>Character · v11 ID plate</span>
+              <LabSkeuoCard html={getLoreNodeSeedBodyHtml("character", "v11")} />
               <ul className={labStyles.spec}>
                 <li>
-                  Same structure as the snippet: header, photo, 140px identity, barcode footer, then notes in the
-                  same plate (char3dLabel + body type like meta values). Portrait well uses the same media-root +
-                  Upload control as image nodes (data URL in body; on canvas the app shell handles the picker).
-                  20px photo inset, 120px meta column, barcode gradient, glare on hover — no 3D angle.
-                </li>
-              </ul>
-            </div>
-            <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>V9 · Dark ID (skeuo)</span>
-              <LabSkeuoCard loreVariant="v9" html={getLoreNodeSeedBodyHtml("character", "v9")} />
-              <ul className={labStyles.spec}>
-                <li>
-                  Evolves v8: same portrait media slot and notes-on-plate editing story; typography aligns with shared
-                  document field labels; deeper inset photo well; layered plastic material (no footer barcode band).
-                  Committed portrait uses <code>charSkPortraitImg</code> (v8 keeps <code>char3dPortraitImg</code>).
-                </li>
-              </ul>
-            </div>
-            <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>V10 · Dark ID (plastic skeuo)</span>
-              <LabSkeuoCard loreVariant="v10" html={getLoreNodeSeedBodyHtml("character", "v10")} />
-              <ul className={labStyles.spec}>
-                <li>
-                  Same HTML story as v9; <code>charSkShellV10</code> adds matte-plastic gradients, rim light, fine
-                  grain, and a deeper recessed portrait well—closer to v8’s tactile language without the barcode
-                  footer band. Portrait root <code>data-hg-lore-portrait-root=&quot;v10&quot;</code> shares v9 image
-                  treatment.
-                </li>
-              </ul>
-            </div>
-            <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>V11 · Dark ID (marker redaction)</span>
-              <LabSkeuoCard loreVariant="v11" html={getLoreNodeSeedBodyHtml("character", "v11")} />
-              <ul className={labStyles.spec}>
-                <li>
-                  1:1 with v10 shell (<code>charSkShellV11</code>); withheld fields mirror guest-check{" "}
-                  <code>.redaction-stroke</code> (26px, 5px inset, flat marker + masked radial sheen)—placeholder-driven.
-                  Portrait slot matches v9–v10.
+                  <code>charSkShellV11</code> guest-check placeholders (<code>data-hg-lore-ph</code> + marker strokes).
+                  Affiliation and nationality stay inline until structured fields land.
                 </li>
               </ul>
             </div>

@@ -1,3 +1,4 @@
+import { syncLoreV11PhCaretOffsetsInHost } from "@/src/lib/lore-v11-ph-caret";
 import { LORE_V9_REDACTED_SENTINEL } from "@/src/lib/lore-v9-placeholder";
 
 function escapeHtml(text: string): string {
@@ -12,19 +13,16 @@ function logicalLineFromDisplayName(el: HTMLElement): string {
   return el.textContent?.replace(/\s+/g, " ").trim() ?? "";
 }
 
-/** HTML for one contenteditable display name: line 1 = first word, line 2 = remainder. */
+/** HTML for `.charSkDisplayName`: one logical line, escaped (no forced `<br>` between words). */
 export function buildCharSkDisplayNameInnerHtml(logical: string): string {
   const s = logical;
   if (s === "") return "";
   if (s === LORE_V9_REDACTED_SENTINEL) return escapeHtml(s);
-  const words = s.split(/\s+/).filter(Boolean);
-  if (words.length <= 1) return escapeHtml(words[0] ?? "");
-  return `${escapeHtml(words[0]!)}<br>${escapeHtml(words.slice(1).join(" "))}`;
+  return escapeHtml(s);
 }
 
 /**
- * Normalize v9 `.charSkDisplayName` markup so the first word sits on its own line
- * and the rest wrap below — still one field, one value in plain text / exports.
+ * Normalize `.charSkDisplayName` inner HTML from `textContent` (flattens legacy `<br>` layouts to one line).
  */
 export function syncCharSkDisplayNameStack(host: HTMLElement | null): void {
   if (!host) return;
@@ -35,4 +33,5 @@ export function syncCharSkDisplayNameStack(host: HTMLElement | null): void {
   const logical = logicalLineFromDisplayName(el);
   const next = buildCharSkDisplayNameInnerHtml(logical);
   if (el.innerHTML !== next) el.innerHTML = next;
+  syncLoreV11PhCaretOffsetsInHost(host);
 }

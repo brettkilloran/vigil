@@ -14,6 +14,7 @@ import type {
 } from "@/src/components/foundation/architectural-types";
 import type { CanvasItem } from "@/src/model/canvas-types";
 import {
+  bodyHtmlImpliesLoreCharacterV11,
   defaultLoreCardVariantForKind,
   parseLoreCard,
   tapeVariantForLoreCard,
@@ -167,6 +168,7 @@ export function canvasItemToEntity(
   }
 
   const theme = themeFromItemType(item, hg);
+  const bodyHtml = bodyHtmlFromCanvasItem(item);
   const loreFromHg = hg?.loreCard;
   const loreFromEntityType =
     item.entityType === "character" || item.entityType === "faction" || item.entityType === "location"
@@ -175,7 +177,12 @@ export function canvasItemToEntity(
           variant: defaultLoreCardVariantForKind(item.entityType),
         } satisfies LoreCard)
       : undefined;
-  const loreCard = loreFromHg ?? loreFromEntityType;
+  const loreCard =
+    loreFromHg ??
+    loreFromEntityType ??
+    (bodyHtmlImpliesLoreCharacterV11(bodyHtml)
+      ? ({ kind: "character", variant: "v11" } satisfies LoreCard)
+      : undefined);
 
   const entity: CanvasContentEntity = {
     id: item.id,
@@ -190,7 +197,7 @@ export function canvasItemToEntity(
         : DEFAULT_CONTENT_CARD_HEIGHT,
     tapeRotation: hg?.tapeRotation ?? 0,
     tapeVariant: hg?.tapeVariant ?? tapeVariantForTheme(theme),
-    bodyHtml: bodyHtmlFromCanvasItem(item),
+    bodyHtml,
     stackId: item.stackId ?? null,
     stackOrder: item.stackOrder ?? null,
     slots: {

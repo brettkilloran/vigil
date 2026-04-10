@@ -1233,6 +1233,11 @@
   max-height: calc(var(--entity-width, 340px) * 1.41421356237);
 }
 
+/* v11 character credential root: no `themeDefault` in React — this class is the shell hook only. */
+.loreCharacterCanvasRoot {
+  max-height: none;
+}
+
 .unboundedMediaNode {
   max-height: none;
 }
@@ -1466,56 +1471,40 @@
   border-top-color: color-mix(in oklch, var(--accent) 28%, var(--theme-default-border));
 }
 
-/* Character v8–v11: credential HTML is the surface — no extra document mat inside the body */
-.entityNode.themeDefault[data-lore-kind="character"]:is(
-    [data-lore-variant="v8"],
-    [data-lore-variant="v9"],
-    [data-lore-variant="v10"],
-    [data-lore-variant="v11"]
-  )
-  .a4DocumentBody {
-  padding: 0;
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  background: transparent;
-  /* Full-bleed credential: `stable` reserves inline-end gutter with no scrollbar → empty strip vs plate */
-  scrollbar-gutter: auto;
-}
-
 /*
- * Credential shells (v8–v11): the rich editor inner host defaults to flex:1 + min-height:0.
+ * Character v11 credential: the rich editor inner host defaults to flex:1 + min-height:0.
  * Layouts whose outer plate height comes only from aspect-ratio + absolutely positioned innards
  * otherwise collapse to ~0px in the column flex chain — the card “does not render”.
  */
-.entityNode.themeDefault[data-lore-kind="character"]:is(
-    [data-lore-variant="v8"],
-    [data-lore-variant="v9"],
-    [data-lore-variant="v10"],
-    [data-lore-variant="v11"]
-  )
-  :global([data-node-body-editor="true"]) {
+.entityNode[data-hg-canvas-role="lore-character-v11"] :global([data-node-body-editor="true"]) {
   flex: 0 0 auto;
   align-self: stretch;
   width: 100%;
 }
 
-/* v8 / v9 / v10 / v11 portrait ID: tall plate + notes — avoid clipping the card */
-.entityNode.themeDefault[data-lore-kind="character"][data-lore-variant="v8"].a4DocumentNode,
-.entityNode.themeDefault[data-lore-kind="character"][data-lore-variant="v9"].a4DocumentNode,
-.entityNode.themeDefault[data-lore-kind="character"][data-lore-variant="v10"].a4DocumentNode,
-.entityNode.themeDefault[data-lore-kind="character"][data-lore-variant="v11"].a4DocumentNode {
-  max-height: none;
+.entityNode[data-hg-canvas-role="lore-character-v11"] :global([data-hg-rich-editor-host="true"]) {
+  flex: 0 0 auto;
+  min-height: 0;
 }
 
-.entityNode.themeDefault[data-lore-kind="character"][data-lore-variant="v8"] .a4DocumentBody,
-.entityNode.themeDefault[data-lore-kind="character"][data-lore-variant="v9"] .a4DocumentBody,
-.entityNode.themeDefault[data-lore-kind="character"][data-lore-variant="v10"] .a4DocumentBody,
-.entityNode.themeDefault[data-lore-kind="character"][data-lore-variant="v11"] .a4DocumentBody {
-  max-height: none;
-  overflow-y: visible;
-  -webkit-mask-image: none;
-  mask-image: none;
+/* Drag chrome: same affordance as `.nodeHeader` (grab), while fields / expand keep their cursors. */
+.entityNode[data-hg-canvas-role="lore-character-v11"] :global([data-hg-lore-canvas-drag-header="true"]),
+.entityNode[data-hg-canvas-role="lore-character-v11"] :global([class*="charSkHeaderCell"]) {
+  cursor: grab;
+}
+
+.entityNode[data-hg-canvas-role="lore-character-v11"]
+  :global([data-hg-lore-canvas-drag-header="true"] [data-hg-lore-field]),
+.entityNode[data-hg-canvas-role="lore-character-v11"]
+  :global([class*="charSkHeaderCell"] [data-hg-lore-field]) {
+  cursor: text;
+}
+
+.entityNode[data-hg-canvas-role="lore-character-v11"]
+  :global([data-hg-lore-canvas-drag-header="true"] [data-expand-btn="true"]),
+.entityNode[data-hg-canvas-role="lore-character-v11"]
+  :global([class*="charSkHeaderCell"] [data-expand-btn="true"]) {
+  cursor: pointer;
 }
 
 /* Lab skeuo previews (no header): let the object read as one thing on the page */
@@ -1613,6 +1602,24 @@
   color: color-mix(in oklch, currentColor 38%, transparent);
   font-size: 14px;
   line-height: 1.68;
+}
+
+/* Beats later `.nodeBody { padding: … }` — credential HTML is the full node surface. */
+.nodeBody.loreCharacterBody {
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  background: transparent;
+  scrollbar-gutter: auto;
+  max-height: none;
+  overflow-y: visible;
+  -webkit-mask-image: none;
+  mask-image: none;
+  flex: 0 0 auto;
+  flex-grow: 0;
+  align-self: stretch;
+  min-height: 0;
 }
 
 .a4DocumentBody {
@@ -1852,28 +1859,36 @@
   outline: none;
 }
 
-/* Paper-style block drag handle (ephemeral in DOM; stripped before save). */
+/* Paper-style block drag handle (ephemeral in DOM; stripped before save). Notion-like 6-dot grip. */
 .archBlockDragHandle {
+  --arch-block-drag-grip-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 14'%3E%3Ccircle cx='2.5' cy='2.5' r='1.25' fill='%23000'/%3E%3Ccircle cx='7.5' cy='2.5' r='1.25' fill='%23000'/%3E%3Ccircle cx='2.5' cy='7' r='1.25' fill='%23000'/%3E%3Ccircle cx='7.5' cy='7' r='1.25' fill='%23000'/%3E%3Ccircle cx='2.5' cy='11.5' r='1.25' fill='%23000'/%3E%3Ccircle cx='7.5' cy='11.5' r='1.25' fill='%23000'/%3E%3C/svg%3E");
+
   box-sizing: border-box;
   flex-shrink: 0;
-  width: 14px;
+  width: 18px;
   min-height: 1.2em;
   margin-top: 3px;
-  margin-top: max(0px, calc((1lh - 12px) / 2));
+  margin-top: max(0px, calc((1lh - 14px) / 2));
   align-self: flex-start;
   border: 0;
   padding: 0;
   border-radius: 3px;
   cursor: grab;
-  /* Strong enough for dot grid to read at ~0.35 opacity (was 38% — often invisible). */
-  color: color-mix(in oklch, currentColor 55%, transparent);
-  background:
-    radial-gradient(currentColor 1.1px, transparent 1.2px) 0 0 / 4px 4px repeat,
-    radial-gradient(currentColor 1.1px, transparent 1.2px) 2px 2px / 4px 4px repeat;
+  color: inherit;
+  background-color: color-mix(in oklch, currentColor 48%, transparent);
+  background-image: none;
+  -webkit-mask-image: var(--arch-block-drag-grip-mask);
+  mask-image: var(--arch-block-drag-grip-mask);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: 10px 14px;
+  mask-size: 10px 14px;
   opacity: 0;
   transition:
     opacity var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
-    color var(--sys-motion-duration-fast) var(--sys-motion-ease-standard);
+    background-color var(--sys-motion-duration-fast) var(--sys-motion-ease-standard);
   user-select: none;
   -webkit-user-drag: element;
 }
@@ -1901,13 +1916,13 @@
 
 .archBlockDragHandle:hover {
   opacity: 0.85;
-  color: color-mix(in oklch, var(--accent) 55%, currentColor);
+  background-color: color-mix(in oklch, var(--accent) 52%, currentColor);
 }
 
 /* Beat `.focusActive .focusBody:hover .archBlockDragHandle` so the handle brightens when targeted. */
 .focusActive .focusBody .archBlockDragHandle:hover {
   opacity: 0.88;
-  color: color-mix(in oklch, var(--accent) 55%, currentColor);
+  background-color: color-mix(in oklch, var(--accent) 55%, currentColor);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1916,7 +1931,11 @@
   }
 }
 
-/* Prose blocks: handle sits in the left gutter (task rows use flex; see .taskItem). */
+/*
+ * Prose blocks: handle sits in the sheet/node margin to the LEFT of the block (Notion-style),
+ * outside the quote border / text — not inside the paragraph box on the canvas.
+ * Task rows keep the handle in flex flow (see .taskItem).
+ */
 .nodeBody > p:has(.archBlockDragHandle),
 .nodeBody > h1:has(.archBlockDragHandle),
 .nodeBody > h2:has(.archBlockDragHandle),
@@ -1924,7 +1943,6 @@
 .nodeBody > blockquote:has(.archBlockDragHandle),
 .nodeBody > pre:has(.archBlockDragHandle) {
   position: relative;
-  padding-left: 22px;
 }
 
 .nodeBody > p:has(.archBlockDragHandle) .archBlockDragHandle,
@@ -1934,10 +1952,13 @@
 .nodeBody > blockquote:has(.archBlockDragHandle) .archBlockDragHandle,
 .nodeBody > pre:has(.archBlockDragHandle) .archBlockDragHandle {
   position: absolute;
-  left: 2px;
+  left: auto;
+  right: 100%;
+  margin-right: 8px;
   top: 0.2em;
   margin-top: 0;
   align-self: auto;
+  z-index: 1;
 }
 
 .focusBody > p:has(.archBlockDragHandle),
@@ -1947,7 +1968,6 @@
 .focusBody > blockquote:has(.archBlockDragHandle),
 .focusBody > pre:has(.archBlockDragHandle) {
   position: relative;
-  padding-left: 22px;
 }
 
 .focusBody > p:has(.archBlockDragHandle) .archBlockDragHandle,
@@ -1957,10 +1977,19 @@
 .focusBody > blockquote:has(.archBlockDragHandle) .archBlockDragHandle,
 .focusBody > pre:has(.archBlockDragHandle) .archBlockDragHandle {
   position: absolute;
-  left: 2px;
+  left: auto;
+  right: 100%;
+  margin-right: 8px;
   top: 0.2em;
   margin-top: 0;
   align-self: auto;
+  z-index: 1;
+}
+
+/* `pre` uses horizontal scroll; abs handles sit outside the box and would be clipped otherwise. */
+.nodeBody > pre:has(.archBlockDragHandle),
+.focusBody > pre:has(.archBlockDragHandle) {
+  overflow-x: visible;
 }
 
 .mediaPlaceholder {
@@ -4257,8 +4286,8 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 /*
- * Dark focus editor — shared by media gallery and code-node focus mode.
- * Same layout as the light document editor; dark scrim + light type + sticky header gradient.
+ * Dark focus editor — shared by media gallery, code focus, and v11 character ID plate focus.
+ * Dark scrim + sticky header; credential plate keeps its own surface (not light “document” prose).
  * Chained selectors beat `.focusOverlay` / `.focusActive` (declared below).
  */
 
@@ -4346,27 +4375,37 @@ button.rootDockPanel.viewportMetricsPanel {
     0 20px 48px color-mix(in oklch, var(--sys-color-black) 45%, transparent);
 }
 
-/* Document-style prose on dark scrim (media gallery notes share `.focusBody` with the sheet editor). */
-.focusEditorDark .focusBody:not(.focusCode) {
+.focusEditorDark .focusLoreCredentialStage {
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--sys-color-white) 8%, transparent),
+    0 20px 48px color-mix(in oklch, var(--sys-color-black) 45%, transparent);
+  border-radius: 14px;
+}
+
+/*
+ * Document-style prose on dark scrim (media gallery notes share `.focusBody` with the sheet editor).
+ * Exclude v11 lore credential: the plate brings its own palette.
+ */
+.focusEditorDark .focusBody:not(.focusCode):not(.focusLoreCharacterCredential) {
   color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
 }
 
-.focusEditorDark .focusBody:not(.focusCode) h1 {
+.focusEditorDark .focusBody:not(.focusCode):not(.focusLoreCharacterCredential) h1 {
   color: color-mix(in oklch, var(--sys-color-white) 96%, transparent);
 }
 
-.focusEditorDark .focusBody:not(.focusCode) h2,
-.focusEditorDark .focusBody:not(.focusCode) h3 {
+.focusEditorDark .focusBody:not(.focusCode):not(.focusLoreCharacterCredential) h2,
+.focusEditorDark .focusBody:not(.focusCode):not(.focusLoreCharacterCredential) h3 {
   color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
 }
 
-.focusEditorDark .focusBody:not(.focusCode) pre {
+.focusEditorDark .focusBody:not(.focusCode):not(.focusLoreCharacterCredential) pre {
   background: color-mix(in oklch, var(--sys-color-neutral-900) 85%, transparent);
   border-color: color-mix(in oklch, var(--sys-color-white) 12%, transparent);
   color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
 }
 
-.focusEditorDark .focusBody:not(.focusCode) hr {
+.focusEditorDark .focusBody:not(.focusCode):not(.focusLoreCharacterCredential) hr {
   border-top-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
 }
 
@@ -4468,6 +4507,15 @@ button.rootDockPanel.viewportMetricsPanel {
   overflow-x: visible;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /* Left rail for Notion-style block drag handles (matches prior 40px + 22px block gutter). */
+  --focus-doc-gutter-left: 40px;
+}
+
+/* Only widen when the sheet is actually shown (overlay stays mounted with opacity 0 when closed). */
+.focusOverlay.focusActive
+  .focusSheet:has(.focusBody:not(.focusCode):not(.focusLoreCharacterCredential)),
+.focusOverlay.focusActive .focusSheet:has(.focusBody.focusCharacterPaperBody) {
+  --focus-doc-gutter-left: 62px;
 }
 
 /* Document focus mode: keep scroll affordance but make it visually quiet. */
@@ -4507,7 +4555,7 @@ button.rootDockPanel.viewportMetricsPanel {
 .focusHeader {
   position: sticky;
   top: 0;
-  padding: 20px 40px;
+  padding: 20px 40px 20px var(--focus-doc-gutter-left, 40px);
   display: flex;
   justify-content: space-between;
   background: transparent;
@@ -4534,13 +4582,13 @@ button.rootDockPanel.viewportMetricsPanel {
   font-family: var(--font-geist-mono), monospace;
 }
 
-/* Full sheet width; 40px horizontal padding matches `.focusHeader` so body aligns with meta / actions. */
+/* Full sheet width; horizontal padding matches `.focusHeader` (see `--focus-doc-gutter-left`). */
 .focusContent {
   max-width: 100%;
   width: 100%;
   box-sizing: border-box;
   margin: 40px 0 100px;
-  padding: 0 40px;
+  padding: 0 40px 0 var(--focus-doc-gutter-left, 40px);
   opacity: 0;
   transform: translateY(12px) scale(0.992);
   transition:
@@ -4624,6 +4672,119 @@ button.rootDockPanel.viewportMetricsPanel {
   opacity: 1;
   transform: translateY(0);
   transition-delay: 0.14s;
+}
+
+/*
+ * v11 character credential focus: dedicated stage (like media asset frame) so the rich-editor
+ * flex chain cannot collapse to 0px tall — previous rules targeted `[data-focus-body-editor]` as a
+ * descendant of `.focusBody`, but that attribute lives on the same node as `.focusBody`.
+ */
+.focusContentLoreCredential {
+  margin-top: 16px;
+  margin-bottom: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.focusLoreCredentialStage {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.focusLoreCredentialStage :global([data-hg-rich-editor-host="true"]) {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: min(62vh, 820px);
+}
+
+.focusLoreCredentialStage :global([data-hg-rich-editor-inner="true"]) {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.focusBody.focusLoreCharacterCredential {
+  min-height: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+}
+
+/* Character hybrid focus: structured plate + Paper-style notes column */
+.focusCharacterHybridRoot {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.focusCharacterStructuredWrap :global([data-expand-btn="true"]) {
+  display: none !important;
+}
+
+.focusCharacterPaperSection {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.focusCharacterPaperLabel {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sem-text-muted);
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.focusCharacterPaperStage {
+  flex: 1 1 auto;
+  min-height: min(50vh, 720px);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.focusCharacterPaperStage :global([data-hg-rich-editor-host="true"]) {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: min(42vh, 560px);
+}
+
+.focusCharacterPaperStage :global([data-hg-rich-editor-inner="true"]) {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.focusBody.focusCharacterPaperBody {
+  min-height: 0;
+  max-width: 100%;
+  margin: 0;
+  padding-top: 4px;
+  font-size: 17px;
+  line-height: 1.75;
 }
 
 .focusBody p {

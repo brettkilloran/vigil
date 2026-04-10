@@ -25,7 +25,7 @@ const lora = Lora({
   style: ["normal", "italic"],
 });
 
-/** Lore character v8 (minimal ID card) — matches reference Inter + Playfair pairing. */
+/** Lore character ID plate (v11) — Inter + Playfair for caps / display contrast. */
 const hgIdInter = Inter({
   variable: "--font-hg-id-inter",
   subsets: ["latin"],

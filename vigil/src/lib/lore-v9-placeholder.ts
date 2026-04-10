@@ -1,4 +1,5 @@
 import { syncLoreV11MarkerTilts } from "@/src/lib/lore-v11-marker-tilt";
+import { syncLoreV11PhCaretOffsetsInHost } from "@/src/lib/lore-v11-ph-caret";
 
 /** Move caret to the end of replaced placeholder content (browser often leaves it at offset 0). */
 export function placeCaretAfterLorePlaceholderReplace(field: HTMLElement): void {
@@ -43,7 +44,7 @@ export const LORE_V9_REDACTED_SENTINEL = "REDACTED";
 /** Default header line (catalog-style id); keeps muted styling like REDACTED until edited. */
 export const LORE_V9_HEADER_META_PLACEHOLDER = "CLGN-ID";
 
-/** Same sentinel/empty/header rules as `syncLoreV9RedactedPlaceholderState`, for one field. */
+/** Same sentinel / empty / header rules as `syncLoreV9RedactedPlaceholderState`, for one field (empty includes `<br>`-only inline bodies — `textContent` trims to ""). */
 export function isLoreFieldPlaceholderContent(el: HTMLElement): boolean {
   const raw = el.textContent?.replace(/\s+/g, " ").trim() ?? "";
   const isHeaderMeta = el.matches?.('[class*="charSkHeaderMeta"]') === true;
@@ -70,7 +71,7 @@ function selectionFullyCoversPlaceholder(field: HTMLElement, sel: Selection): bo
 }
 
 /**
- * Select the entire placeholder copy (REDACTED, CLGN-ID, or notes’ first block) so the browser never
+ * Select the entire placeholder copy (REDACTED sentinel, CLGN-ID, empty field, or notes’ first block) so the browser never
  * leaves a collapsed caret between letters — matches real placeholder semantics.
  */
 export function selectLoreRedactedPlaceholderAtomically(field: HTMLElement): void {
@@ -163,6 +164,7 @@ export function installLorePlaceholderSelectionGuards(host: HTMLElement): () => 
 /**
  * Toggle `data-hg-lore-placeholder` on `[data-hg-lore-field]` nodes under `host`
  * when text is empty or still the sentinel.
+ * Optional `data-hg-lore-ph` (v11 character seed): succinct placeholder caption via CSS only — not indexed as body text.
  */
 export function syncLoreV9RedactedPlaceholderState(host: HTMLElement | null): void {
   if (!host) return;
@@ -176,6 +178,7 @@ export function syncLoreV9RedactedPlaceholderState(host: HTMLElement | null): vo
     }
   }
   syncLoreV11MarkerTilts(host);
+  syncLoreV11PhCaretOffsetsInHost(host);
 }
 
 /**

@@ -5,6 +5,8 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  /* Block drag handles use negative horizontal inset; do not clip them. */
+  overflow-x: visible;
 }
 
 .richEditorHostInner {

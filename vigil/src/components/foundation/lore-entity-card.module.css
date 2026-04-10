@@ -1,5 +1,12 @@
 /* Shared lore entity card body chrome (canvas nodes + /dev/lore-entity-nodes lab). */
 
+/* Character focus overlay only — clearer field rings without affecting canvas cards */
+.characterFocusFieldHost :global([data-hg-lore-field="1"]:focus-within) {
+  outline: 2px solid color-mix(in oklch, var(--accent) 62%, transparent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .fieldLabel {
   display: block;
   font-size: 9px;
@@ -1572,6 +1579,16 @@
     0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sem-focus-ring) 38%, transparent);
 }
 
+/* v11 empty notes: no notes-well inset / focus ring while still placeholder — same quiet preview as blur. */
+.charSkShellV11 .charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"]:focus-within {
+  background: transparent;
+  box-shadow: none;
+}
+
+.charSkShellV11 .charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"]:focus-visible {
+  box-shadow: none;
+}
+
 /* v8 inline editables (name lines, meta, role, aux…): accent ring. */
 .char3dShell [contenteditable="true"]:not(.char3dNotesBody):focus-visible {
   border-radius: 3px;
@@ -1585,6 +1602,27 @@
 .charSkShell [contenteditable="true"]:not(.charSkNotesBody):focus-visible {
   outline: none;
   box-shadow: none;
+}
+
+/*
+ * Fullscreen focus (dark scrim): restore clear rings on v11 fields — canvas keeps rings off for the
+ * quiet plate; in focus, fields must read as first-class controls.
+ */
+[data-focus-body-editor="true"] .charSkShellV11 [data-hg-lore-field]:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color-mix(in oklch, var(--sem-focus-ring) 72%, transparent),
+    0 0 0 5px color-mix(in oklch, var(--sem-focus-ring) 18%, transparent);
+  border-radius: 4px;
+}
+
+[data-focus-body-editor="true"]
+  .charSkShellV11
+  .charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"]:focus-visible {
+  box-shadow:
+    0 0 0 2px color-mix(in oklch, var(--sem-focus-ring) 62%, transparent),
+    0 0 0 5px color-mix(in oklch, var(--sem-focus-ring) 16%, transparent);
+  border-radius: 6px;
 }
 
 @media (max-width: 360px) {
@@ -1886,6 +1924,15 @@
 .charSkShellV11 .charSkGrid {
   position: relative;
   z-index: 1;
+  /* Photo row height follows 4:3 plate (`.charSkPhotoCell` aspect-ratio), not a tall portrait band. */
+  grid-template-rows: 44px auto auto auto;
+}
+
+.charSkShellV11 .charSkIdentityCell {
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  align-items: start;
 }
 
 .charSkShellV11 .charSkHeaderCell {
@@ -1904,6 +1951,12 @@
     0 0 0 1px color-mix(in oklch, var(--sys-color-black) 75%, transparent),
     0 2px 3px color-mix(in oklch, var(--sys-color-black) 55%, transparent),
     0 1px 0 color-mix(in oklch, var(--sys-color-white) 6%, transparent);
+}
+
+.charSkShellV11 .charSkPhotoCell {
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  min-height: 0;
 }
 
 .charSkShellV11 .charSkPhotoWrap {
@@ -2235,6 +2288,22 @@
   background: var(--sk-id-surface);
 }
 
+.charSkShellV11 .charSkMetaBlock {
+  grid-template-rows: auto auto;
+  align-content: start;
+}
+
+/* v11: gap between display-name stack and role; do not grow to fill the old 168px identity band. */
+.charSkShellV11 .charSkNameBlock {
+  flex: 0 1 auto;
+  gap: 7px;
+}
+
+/* v11: meta value is a span — block box so marker / placeholder align to the real typing line. */
+.charSkShellV11 .charSkMetaValue[data-hg-lore-field] {
+  display: block;
+}
+
 .charSkMetaRow {
   min-height: 0;
   padding: var(--char-sk-id-pad-y) var(--char-sk-id-pad-x);
@@ -2323,11 +2392,11 @@
 
 @keyframes charSkV11MarkerStripWipe {
   from {
-    transform: translate(-1px, -50%) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
   }
 
   to {
-    transform: translate(-1px, -50%) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
   }
 }
 
@@ -2354,6 +2423,108 @@
   overflow: hidden;
   contain: paint;
   border-radius: 2px;
+}
+
+/* Empty v11 fields have no text line box — keep height so markers + caret land predictably. */
+.charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"] {
+  min-height: 2.65em;
+}
+
+.charSkShellV11 .charSkRole[data-hg-lore-placeholder="true"],
+.charSkShellV11 .charSkMetaValue[data-hg-lore-placeholder="true"] {
+  min-height: max(1.35em, var(--sk-v11-marker-h));
+}
+
+/*
+ * v11 `data-hg-lore-ph`: position from JS (`--hg-lore-ph-*`) = collapsed selection when focused, else start of field.
+ * Strip marker band uses the same vars so stroke and caption share the caret line box.
+ */
+.charSkShellV11 .charSkRole[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before,
+.charSkShellV11 .charSkMetaValue[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
+  content: attr(data-hg-lore-ph);
+  position: absolute;
+  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px));
+  right: var(--sk-v11-marker-inset-right);
+  top: var(--hg-lore-ph-y, 0px);
+  height: var(--hg-lore-ph-lh, var(--sk-v11-marker-h));
+  transform: none;
+  display: flex;
+  align-items: center;
+  z-index: 1;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 450;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  color: color-mix(in oklch, var(--sem-text-muted) 68%, var(--sk-id-surface)) !important;
+  -webkit-text-fill-color: color-mix(in oklch, var(--sem-text-muted) 68%, var(--sk-id-surface));
+  opacity: 1;
+  transition: opacity 0.12s ease;
+}
+
+.charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
+  content: attr(data-hg-lore-ph);
+  position: absolute;
+  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px));
+  right: var(--sk-v11-marker-inset-right);
+  top: var(--hg-lore-ph-y, 0px);
+  height: var(--hg-lore-ph-lh, 1.14em);
+  transform: none;
+  display: flex;
+  align-items: center;
+  z-index: 1;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.14;
+  letter-spacing: 0.03em;
+  color: color-mix(in oklch, var(--sem-text-muted) 66%, var(--sk-id-surface)) !important;
+  -webkit-text-fill-color: color-mix(in oklch, var(--sem-text-muted) 66%, var(--sk-id-surface));
+  opacity: 1;
+  transition: opacity 0.12s ease;
+}
+
+.charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"][data-hg-lore-ph] {
+  min-height: 2.65em;
+}
+
+.charSkShellV11 .charSkNotesBody[data-hg-lore-placeholder="true"][data-hg-lore-ph] {
+  position: relative;
+}
+
+.charSkShellV11 .charSkNotesBody[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
+  content: attr(data-hg-lore-ph);
+  position: absolute;
+  left: var(--hg-lore-ph-x, 0px);
+  right: 0;
+  top: var(--hg-lore-ph-y, 0px);
+  height: var(--hg-lore-ph-lh, 1.65em);
+  transform: none;
+  display: flex;
+  align-items: center;
+  z-index: 1;
+  pointer-events: none;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.65rem;
+  font-weight: 400;
+  line-height: 1.65;
+  letter-spacing: 0.03em;
+  color: color-mix(in oklch, var(--sem-text-muted) 72%, var(--sk-id-surface)) !important;
+  -webkit-text-fill-color: color-mix(in oklch, var(--sem-text-muted) 72%, var(--sk-id-surface));
+  opacity: 1;
+  transition: opacity 0.12s ease;
 }
 
 .charSkShellV11 .charSkHeaderMeta[data-hg-lore-field][data-hg-lore-placeholder="true"] {
@@ -2390,15 +2561,15 @@
   )::after {
   content: "";
   position: absolute;
-  left: var(--sk-v11-marker-inset-left);
+  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px));
   width: calc(
-    100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right)
+    100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right) - var(--hg-lore-ph-x, 0px)
   );
   right: auto;
-  top: 50%;
-  height: var(--sk-v11-marker-h);
-  transform: translate(-1px, -50%) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
-  transform-origin: left center;
+  top: var(--hg-lore-ph-y, 0px);
+  height: var(--hg-lore-ph-lh, var(--sk-v11-marker-h));
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+  transform-origin: left top;
   border-radius: 2px;
   pointer-events: none;
   z-index: 6;
@@ -2465,7 +2636,7 @@
     .charSkDisplayName
   ):focus-within::after {
   animation: none;
-  transform: translate(-1px, -50%) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
   transition: transform var(--sk-v11-marker-hide-ms) var(--sk-v11-marker-hide-ease);
 }
 
@@ -2481,9 +2652,9 @@
     [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):not(
       .charSkDisplayName
     )::after,
-  .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]::after {
+    .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]::after {
     animation: none;
-    transform: translate(-1px, -50%) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
   }
 
   .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]::after {
@@ -2500,7 +2671,7 @@
     ):focus-within::after,
   .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus::after,
   .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus-within::after {
-    transform: translate(-1px, -50%) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
     opacity: 0;
     transition: opacity 0.12s ease;
   }
@@ -2523,10 +2694,10 @@
   -webkit-text-fill-color: color-mix(in oklch, var(--sem-text-primary) 78%, transparent);
 }
 
-.charSkShellV11 .charSkNotesBody[data-hg-lore-placeholder="true"]:focus,
-.charSkShellV11 .charSkNotesBody[data-hg-lore-placeholder="true"]:focus-within {
-  color: color-mix(in oklch, var(--sem-text-primary) 87%, transparent) !important;
-  -webkit-text-fill-color: color-mix(in oklch, var(--sem-text-primary) 87%, transparent);
+.charSkShellV11 .charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"]:focus,
+.charSkShellV11 .charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"]:focus-within {
+  color: color-mix(in oklch, var(--sem-text-muted) 68%, var(--sk-id-surface)) !important;
+  -webkit-text-fill-color: unset;
 }
 
 @media (max-width: 360px) {
@@ -2547,8 +2718,16 @@
     grid-template-rows: auto auto auto;
   }
 
+  .charSkShellV11 .charSkMetaBlock {
+    grid-template-rows: auto auto;
+  }
+
   .charSkGrid {
     grid-template-rows: 44px minmax(160px, 240px) auto auto;
+  }
+
+  .charSkShellV11 .charSkGrid {
+    grid-template-rows: 44px auto auto auto;
   }
 }
 
