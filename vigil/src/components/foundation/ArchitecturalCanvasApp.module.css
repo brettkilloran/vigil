@@ -1454,6 +1454,61 @@
   border-top: 3px solid var(--theme-default-border);
 }
 
+.entityNode.themeDefault[data-lore-kind="character"] {
+  border-top-color: color-mix(in oklch, var(--accent) 22%, var(--theme-default-border));
+}
+
+.entityNode.themeDefault[data-lore-kind="faction"] {
+  border-top-color: color-mix(in oklch, var(--accent) 14%, var(--theme-default-border));
+}
+
+.entityNode.themeDefault[data-lore-kind="location"] {
+  border-top-color: color-mix(in oklch, var(--accent) 28%, var(--theme-default-border));
+}
+
+/* Character v8–v9: credential HTML is the surface — no extra document mat inside the body */
+.entityNode.themeDefault[data-lore-kind="character"]:is([data-lore-variant="v8"], [data-lore-variant="v9"])
+  .a4DocumentBody {
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  background: transparent;
+  /* Full-bleed credential: `stable` reserves inline-end gutter with no scrollbar → empty strip vs plate */
+  scrollbar-gutter: auto;
+}
+
+/*
+ * Credential shells (v8–v9): the rich editor inner host defaults to flex:1 + min-height:0.
+ * Layouts whose outer plate height comes only from aspect-ratio + absolutely positioned innards
+ * otherwise collapse to ~0px in the column flex chain — the card “does not render”.
+ */
+.entityNode.themeDefault[data-lore-kind="character"]:is([data-lore-variant="v8"], [data-lore-variant="v9"])
+  :global([data-node-body-editor="true"]) {
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 100%;
+}
+
+/* v8 / v9 portrait ID: tall plate + notes — avoid clipping the card */
+.entityNode.themeDefault[data-lore-kind="character"][data-lore-variant="v8"].a4DocumentNode,
+.entityNode.themeDefault[data-lore-kind="character"][data-lore-variant="v9"].a4DocumentNode {
+  max-height: none;
+}
+
+.entityNode.themeDefault[data-lore-kind="character"][data-lore-variant="v8"] .a4DocumentBody,
+.entityNode.themeDefault[data-lore-kind="character"][data-lore-variant="v9"] .a4DocumentBody {
+  max-height: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+/* Lab skeuo previews (no header): let the object read as one thing on the page */
+.entityNode.themeDefault[data-lore-chrome="skeuo"] {
+  background: transparent;
+  border-top: none;
+}
+
 .themeCode {
   background: var(--theme-code-bg);
   color: var(--theme-code-text);
@@ -1516,6 +1571,9 @@
 }
 
 .nodeBody {
+  /* Used by location v3 `.locPlaqueStrip` to bleed to the card edges. */
+  --arch-body-pad-x: 22px;
+  --arch-body-pad-y: 20px;
   padding: 20px 22px 22px;
   font-size: 14px;
   line-height: 1.68;
@@ -1792,7 +1850,8 @@
   padding: 0;
   border-radius: 3px;
   cursor: grab;
-  color: color-mix(in oklch, currentColor 38%, transparent);
+  /* Strong enough for dot grid to read at ~0.35 opacity (was 38% — often invisible). */
+  color: color-mix(in oklch, currentColor 55%, transparent);
   background:
     radial-gradient(currentColor 1.1px, transparent 1.2px) 0 0 / 4px 4px repeat,
     radial-gradient(currentColor 1.1px, transparent 1.2px) 2px 2px / 4px 4px repeat;
@@ -1809,13 +1868,30 @@
 }
 
 .nodeBody:hover .archBlockDragHandle,
-.focusBody:hover .archBlockDragHandle,
 .taskItem:hover .archBlockDragHandle {
   opacity: 0.4;
 }
 
+/*
+ * Focus sheet: keep handles visible while editing. Relying only on `.focusBody:hover` leaves them
+ * fully invisible for touch, reduced-motion inspection, and when hover is stuck on a child.
+ */
+.focusActive .focusBody .archBlockDragHandle {
+  opacity: 0.36;
+}
+
+.focusActive .focusBody:hover .archBlockDragHandle {
+  opacity: 0.48;
+}
+
 .archBlockDragHandle:hover {
   opacity: 0.85;
+  color: color-mix(in oklch, var(--accent) 55%, currentColor);
+}
+
+/* Beat `.focusActive .focusBody:hover .archBlockDragHandle` so the handle brightens when targeted. */
+.focusActive .focusBody .archBlockDragHandle:hover {
+  opacity: 0.88;
   color: color-mix(in oklch, var(--accent) 55%, currentColor);
 }
 
