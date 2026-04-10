@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Lora, Noto_Sans_JP } from "next/font/google";
+import { Geist, Geist_Mono, Inter, Lora, Noto_Sans_JP, Playfair_Display } from "next/font/google";
 
 import { RegisterSw } from "@/src/components/RegisterSw";
 import { HEARTGARDEN_BRAND_ICON_PATH } from "@/src/lib/brand-mark";
@@ -23,6 +23,21 @@ const lora = Lora({
   subsets: ["latin"],
   display: "swap",
   style: ["normal", "italic"],
+});
+
+/** Lore character v8 (minimal ID card) — matches reference Inter + Playfair pairing. */
+const hgIdInter = Inter({
+  variable: "--font-hg-id-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+});
+
+const hgIdPlayfair = Playfair_Display({
+  variable: "--font-hg-id-playfair",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 const notoSansJP = Noto_Sans_JP({
@@ -68,7 +83,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${lora.variable} ${notoSansJP.variable}`}
+      className={`${geistSans.variable} ${geistMono.variable} ${lora.variable} ${notoSansJP.variable} ${hgIdInter.variable} ${hgIdPlayfair.variable}`}
     >
       <body>
         {children}
