@@ -161,6 +161,17 @@ export function neonSyncClearLastErrorIfContains(fragment: string) {
   emit();
 }
 
+/**
+ * Dev-only breadcrumb for space delta sync / bootstrap repair (no PII; safe for console).
+ * Avoids spamming production builds.
+ */
+export function neonSyncSpaceChangeSyncBreadcrumb(message: string) {
+  if (process.env.NODE_ENV !== "development") return;
+  const m = message.trim();
+  if (!m) return;
+  console.debug(`[heartgarden space sync] ${m}`);
+}
+
 export function formatSavedRelative(ts: number | null): string {
   if (ts == null) return "";
   const sec = Math.floor((Date.now() - ts) / 1000);

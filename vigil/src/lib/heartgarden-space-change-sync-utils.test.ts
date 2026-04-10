@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { buildCollabMergeProtectedContentIds } from "@/src/lib/heartgarden-space-change-sync-utils";
+import {
+  buildCanvasGraphFromBootstrap,
+  type BootstrapResponse,
+} from "@/src/components/foundation/architectural-db-bridge";
+import {
+  applySpaceChangeGraphMerge,
+  buildCollabMergeProtectedContentIds,
+  collectItemServerUpdatedAtBumps,
+  mergeLatestIsoCursor,
+  parseSpaceChangesResponseJson,
+} from "@/src/lib/heartgarden-space-change-sync-utils";
+import type { CanvasItem } from "@/src/model/canvas-types";
 
 describe("buildCollabMergeProtectedContentIds", () => {
   it("is empty when focus is closed", () => {
@@ -64,5 +75,96 @@ describe("buildCollabMergeProtectedContentIds", () => {
       inlineContentDirtyIds: new Set(["x"]),
     });
     expect([...s]).toEqual(["x"]);
+  });
+});
+
+describe("mergeLatestIsoCursor", () => {
+  it("never moves backward when server sends older cursor", () => {
+    const cur = "2024-06-01T12:00:00.000Z";
+    expect(mergeLatestIsoCursor(cur, "2020-01-01T00:00:00.000Z")).toBe(cur);
+  });
+
+  it("advances when server cursor is newer", () => {
+    const next = "2024-07-01T00:00:00.000Z";
+    expect(mergeLatestIsoCursor("2024-06-01T00:00:00.000Z", next)).toBe(next);
+  });
+});
+
+describe("parseSpaceChangesResponseJson", () => {
+  it("rejects when itemIds required but missing", () => {
+    expect(
+      parseSpaceChangesResponseJson({ ok: true, items: [] }, { requireItemIds: true }),
+    ).toBeNull();
+  });
+
+  it("accepts when itemIds present", () => {
+    const p = parseSpaceChangesResponseJson(
+      { ok: true, items: [], itemIds: ["x"] },
+      { requireItemIds: true },
+    );
+    expect(p?.itemIds).toEqual(["x"]);
+  });
+});
+
+describe("applySpaceChangeGraphMerge", () => {
+  function note(id: string, spaceId: string, title: string, updatedAt: string): CanvasItem {
+    return {
+      id,
+      spaceId,
+      itemType: "note",
+      x: 0,
+      y: 0,
+      width: 280,
+      height: 200,
+      zIndex: 1,
+      title,
+      contentText: "",
+      contentJson: { format: "html", html: "<div>x</div>" },
+      updatedAt,
+    };
+  }
+
+  it("applies tombstones from server id set", () => {
+    const boot: BootstrapResponse = {
+      ok: true,
+      demo: false,
+      spaceId: "space-1",
+      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
+      items: [note("a", "space-1", "A", "2020-01-01T00:00:00.000Z"), note("b", "space-1", "B", "2020-01-01T00:00:00.000Z")],
+      camera: { x: 0, y: 0, zoom: 1 },
+    };
+    const prev = buildCanvasGraphFromBootstrap(boot);
+    const next = applySpaceChangeGraphMerge({
+      prev,
+      activeSpaceId: "space-1",
+      rawItems: [note("a", "space-1", "A2", "2020-01-02T00:00:00.000Z")],
+      rawSpaceRows: [],
+      serverItemIds: new Set(["a"]),
+      protectedContentIds: new Set(),
+      tombstoneExemptIds: new Set(),
+    });
+    expect(next.entities.b).toBeUndefined();
+    expect(next.spaces["space-1"]?.entityIds).toEqual(["a"]);
+  });
+});
+
+describe("collectItemServerUpdatedAtBumps", () => {
+  it("skips protected ids", () => {
+    const items: CanvasItem[] = [
+      {
+        id: "a",
+        spaceId: "s",
+        itemType: "note",
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+        zIndex: 1,
+        title: "",
+        contentText: "",
+        updatedAt: "2024-01-01T00:00:00.000Z",
+      },
+    ];
+    expect(collectItemServerUpdatedAtBumps(items, new Set(["a"]))).toEqual([]);
   });
 });

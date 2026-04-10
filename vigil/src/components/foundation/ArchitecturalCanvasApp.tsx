@@ -1734,6 +1734,22 @@ export function ArchitecturalCanvasApp({
   );
   /** Hide GM-only affordances (Players + Demo local canvas). */
   const isRestrictedLayer = isPlayersTier || isDemoTier;
+  /**
+   * GM contexts (open gate dev or Bishop/access tier) should mirror deployed behavior:
+   * require live workspace bootstrap and persistence paths; no silent demo/cache fallback.
+   */
+  const strictGmWorkspaceSession = useMemo(
+    () =>
+      scenario === "default" &&
+      heartgardenBootApi.loaded &&
+      (!heartgardenBootApi.gateEnabled || heartgardenBootApi.sessionTier === "access"),
+    [
+      scenario,
+      heartgardenBootApi.loaded,
+      heartgardenBootApi.gateEnabled,
+      heartgardenBootApi.sessionTier,
+    ],
+  );
   const heartgardenBootApiRef = useRef(heartgardenBootApi);
   heartgardenBootApiRef.current = heartgardenBootApi;
 
@@ -4375,7 +4391,9 @@ export function ArchitecturalCanvasApp({
       } catch {
         if (cancelled) return;
         const b = heartgardenBootApiRef.current;
+        const strictGmWorkspace = !b.gateEnabled || b.sessionTier === "access";
         const skipCache =
+          strictGmWorkspace ||
           !b.loaded ||
           (b.gateEnabled && !b.sessionValid) ||
           (b.gateEnabled && b.sessionTier === "demo");
@@ -4402,7 +4420,7 @@ export function ArchitecturalCanvasApp({
             persistNeonRef.current = false;
             neonSyncSetCloudEnabled(false);
             applyBootstrapDataRef.current(cached.bootstrap, cached.maxZIndex);
-          } else if (!b.gateEnabled) {
+          } else if (!b.gateEnabled && !strictGmWorkspace) {
             /* README: without Neon, open gate runs local-only demo — same as demo PIN tier. */
             applyDemoLocalCanvas();
           } else {
@@ -5828,6 +5846,12 @@ export function ArchitecturalCanvasApp({
 
   const createNewNode = useCallback((type: NodeTheme) => {
     if (isRestrictedLayer && type === "media") return;
+    if (strictGmWorkspaceSession && !(persistNeonRef.current && isUuidLike(activeSpaceId))) {
+      window.alert(
+        "This GM workspace is in strict sync mode. New items are disabled until a live Neon workspace is connected.",
+      );
+      return;
+    }
     if (
       persistNeonRef.current &&
       isUuidLike(activeSpaceId) &&
@@ -6178,7 +6202,14 @@ export function ArchitecturalCanvasApp({
       }
       return next;
     });
-  }, [activeSpaceId, centerCoords, createId, isRestrictedLayer, recordUndoBeforeMutation]);
+  }, [
+    activeSpaceId,
+    centerCoords,
+    createId,
+    isRestrictedLayer,
+    recordUndoBeforeMutation,
+    strictGmWorkspaceSession,
+  ]);
 
   const onLoreImportFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -9029,6 +9060,37 @@ export function ArchitecturalCanvasApp({
   /** Same moment as top-left chrome after Enter — do not wait for boot tear-down / ambient fade. */
   const showLogOutToAuth = scenario === "default" && canvasSessionActivated;
 
+  const environmentSessionLabel = !heartgardenBootApi.loaded
+    ? "Session: detecting"
+    : !heartgardenBootApi.gateEnabled
+      ? "Session: GM (open gate)"
+      : heartgardenBootApi.sessionTier === "access"
+        ? "Session: GM (access)"
+        : heartgardenBootApi.sessionTier === "player"
+          ? "Session: players"
+          : heartgardenBootApi.sessionTier === "demo"
+            ? "Session: demo"
+            : heartgardenBootApi.sessionValid
+              ? "Session: authenticated"
+              : "Session: unauthenticated";
+
+  const environmentSourceLabel =
+    scenario !== "default"
+      ? `Source: scenario (${scenario})`
+      : !canvasBootstrapResolved
+        ? "Source: bootstrapping"
+        : workspaceViewFromCache
+          ? "Source: local cache"
+          : neonWorkspaceOk === true
+            ? "Source: Neon live"
+            : heartgardenBootApi.gateEnabled && heartgardenBootApi.sessionTier === "demo"
+              ? "Source: demo local"
+              : neonWorkspaceOk === false
+                ? "Source: unavailable"
+                : "Source: pending";
+
+  const environmentSpaceLabel = activeSpaceId?.trim() ? activeSpaceId : ROOT_SPACE_ID;
+
   return (
     <>
       {itemConflictQueue.length > 0 ? (
@@ -11060,6 +11122,22 @@ export function ArchitecturalCanvasApp({
                 onExportGraphJson={exportGraphJson}
                 exportGraphPaletteHint={`${modKeyHints.search} → Export graph JSON`}
               />
+              <div className={styles.workspaceContextWrap} data-hg-chrome="workspace-context">
+                <div
+                  className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.workspaceContextPanel}`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span className={styles.workspaceContextLine}>{environmentSessionLabel}</span>
+                  <span className={styles.workspaceContextLine}>{environmentSourceLabel}</span>
+                  <span
+                    className={styles.workspaceContextLine}
+                  >{`Space: ${environmentSpaceLabel}`}</span>
+                  {strictGmWorkspaceSession ? (
+                    <span className={styles.workspaceContextStrict}>Strict GM sync</span>
+                  ) : null}
+                </div>
+              </div>
               {showLogOutToAuth ? (
                 <div className={styles.shellTopLogOutWrap} data-hg-chrome="log-out">
                   <div

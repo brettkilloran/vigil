@@ -13,6 +13,10 @@ import {
   vaultIndexMarkPending,
   vaultIndexSetError,
 } from "@/src/lib/vault-index-status-bus";
+import {
+  parseSpaceChangesResponseJson,
+  type SpaceChangePayloadRow,
+} from "@/src/lib/heartgarden-space-change-sync-utils";
 
 const vaultIndexTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const VAULT_INDEX_DEBOUNCE_MS = 2800;
@@ -141,12 +145,7 @@ export async function fetchBootstrap(spaceId?: string): Promise<BootstrapRespons
   return data.ok ? data : null;
 }
 
-export type SpaceChangePayloadRow = {
-  id: string;
-  name: string;
-  parentSpaceId: string | null;
-  updatedAt?: string;
-};
+export type { SpaceChangePayloadRow };
 
 export type SpaceChangesResponse = {
   ok: boolean;
@@ -170,8 +169,22 @@ export async function fetchSpaceChanges(
     const res = await fetch(
       `/api/spaces/${encodeURIComponent(spaceId)}/changes?${q.toString()}`,
     );
-    const data = (await res.json()) as SpaceChangesResponse;
-    return res.ok && data.ok ? data : null;
+    const raw: unknown = await res.json();
+    if (!res.ok) return null;
+    if (typeof raw !== "object" || raw === null || (raw as { ok?: unknown }).ok !== true) {
+      return null;
+    }
+    const parsed = parseSpaceChangesResponseJson(raw, {
+      requireItemIds: options?.includeItemIds === true,
+    });
+    if (!parsed) return null;
+    return {
+      ok: true,
+      items: parsed.items,
+      ...(parsed.spaces.length > 0 ? { spaces: parsed.spaces } : {}),
+      ...(parsed.itemIds !== undefined ? { itemIds: parsed.itemIds } : {}),
+      ...(parsed.cursor !== undefined ? { cursor: parsed.cursor } : {}),
+    };
   } catch {
     return null;
   }

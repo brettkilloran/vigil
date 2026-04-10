@@ -2,12 +2,9 @@
 
 import { useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 
-import {
-  mergeRemoteItemPatches,
-  mergeRemoteSpaceRowsIntoGraph,
-} from "@/src/components/foundation/architectural-db-bridge";
+import { mergeBootstrapView } from "@/src/components/foundation/architectural-db-bridge";
 import type { CanvasGraph } from "@/src/components/foundation/architectural-types";
-import { fetchSpaceChanges } from "@/src/components/foundation/architectural-neon-api";
+import { fetchBootstrap, fetchSpaceChanges } from "@/src/components/foundation/architectural-neon-api";
 import {
   HEARTGARDEN_COLLA_POLL_ERROR_SNIPPET,
   HEARTGARDEN_COLLA_POLL_FAILURE_USER_MESSAGE,
@@ -15,11 +12,16 @@ import {
   HEARTGARDEN_SPACE_CHANGE_POLL_MS_SOLO,
 } from "@/src/lib/heartgarden-collab-constants";
 import {
+  applySpaceChangeGraphMerge,
+  buildCollabMergeProtectedContentIds,
+  collectItemServerUpdatedAtBumps,
+  mergeLatestIsoCursor,
+} from "@/src/lib/heartgarden-space-change-sync-utils";
+import {
   neonSyncClearLastErrorIfContains,
   neonSyncReportAuxiliaryFailure,
+  neonSyncSpaceChangeSyncBreadcrumb,
 } from "@/src/lib/neon-sync-bus";
-import { buildCollabMergeProtectedContentIds } from "@/src/lib/heartgarden-space-change-sync-utils";
-import { collectSpaceSubtreeIds } from "@/src/lib/spaces";
 
 const AUX_FAILURE_AFTER_CONSECUTIVE_MISSES = 3;
 
@@ -28,7 +30,6 @@ export function useHeartgardenSpaceChangeSync(options: {
   /** True when presence lists at least one other client in this space (excludes self). */
   hasRemotePeers: boolean;
   activeSpaceId: string;
-  graphRef: MutableRefObject<CanvasGraph>;
   syncCursorRef: MutableRefObject<string>;
   focusOpenRef: MutableRefObject<boolean>;
   focusDirtyRef: MutableRefObject<boolean>;
@@ -43,7 +44,6 @@ export function useHeartgardenSpaceChangeSync(options: {
     enabled,
     hasRemotePeers,
     activeSpaceId,
-    graphRef,
     syncCursorRef,
     focusOpenRef,
     focusDirtyRef,
@@ -55,7 +55,6 @@ export function useHeartgardenSpaceChangeSync(options: {
   } = options;
 
   const consecutiveMissesRef = useRef(0);
-  const needFullItemIdsRef = useRef(true);
 
   useEffect(() => {
     if (!enabled) {
@@ -63,55 +62,62 @@ export function useHeartgardenSpaceChangeSync(options: {
       return;
     }
 
-    needFullItemIdsRef.current = true;
-
     let cancelled = false;
     let inFlight = false;
     let pollTimer: number | null = null;
+
+    const tryBootstrapRepair = async (): Promise<boolean> => {
+      neonSyncSpaceChangeSyncBreadcrumb("bootstrap repair attempt");
+      const boot = await fetchBootstrap(activeSpaceId);
+      if (cancelled || !boot || boot.demo !== false || !boot.spaceId) {
+        neonSyncSpaceChangeSyncBreadcrumb("bootstrap repair skipped (no cloud payload)");
+        return false;
+      }
+      setGraph((prev) => mergeBootstrapView(prev, boot));
+      let maxMs = Date.parse(syncCursorRef.current);
+      if (!Number.isFinite(maxMs)) maxMs = 0;
+      for (const it of boot.items) {
+        if (!it.updatedAt) continue;
+        itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
+        const t = Date.parse(it.updatedAt);
+        if (Number.isFinite(t) && t > maxMs) maxMs = t;
+      }
+      syncCursorRef.current = new Date(maxMs).toISOString();
+      neonSyncClearLastErrorIfContains(HEARTGARDEN_COLLA_POLL_ERROR_SNIPPET);
+      neonSyncSpaceChangeSyncBreadcrumb("bootstrap repair applied");
+      return true;
+    };
+
+    const onRepeatedPollFailure = () => {
+      consecutiveMissesRef.current += 1;
+      if (consecutiveMissesRef.current < AUX_FAILURE_AFTER_CONSECUTIVE_MISSES) return;
+      neonSyncReportAuxiliaryFailure(HEARTGARDEN_COLLA_POLL_FAILURE_USER_MESSAGE);
+      neonSyncSpaceChangeSyncBreadcrumb(
+        `poll contract failure x${AUX_FAILURE_AFTER_CONSECUTIVE_MISSES}; scheduling bootstrap repair`,
+      );
+      void tryBootstrapRepair();
+      consecutiveMissesRef.current = 0;
+    };
 
     const run = async () => {
       if (cancelled || document.visibilityState === "hidden" || inFlight) return;
       inFlight = true;
       try {
         const since = syncCursorRef.current;
-        const wantFull = needFullItemIdsRef.current;
         const data = await fetchSpaceChanges(activeSpaceId, since, {
-          includeItemIds: wantFull,
+          // Always request full subtree ids so remote tombstones propagate while peers stay active.
+          includeItemIds: true,
         });
         if (cancelled) return;
         if (!data) {
-          consecutiveMissesRef.current += 1;
-          if (consecutiveMissesRef.current >= AUX_FAILURE_AFTER_CONSECUTIVE_MISSES) {
-            neonSyncReportAuxiliaryFailure(HEARTGARDEN_COLLA_POLL_FAILURE_USER_MESSAGE);
-            consecutiveMissesRef.current = 0;
-          }
-          return;
-        }
-        if (wantFull && !Array.isArray(data.itemIds)) {
-          consecutiveMissesRef.current += 1;
-          if (consecutiveMissesRef.current >= AUX_FAILURE_AFTER_CONSECUTIVE_MISSES) {
-            neonSyncReportAuxiliaryFailure(HEARTGARDEN_COLLA_POLL_FAILURE_USER_MESSAGE);
-            consecutiveMissesRef.current = 0;
-          }
+          onRepeatedPollFailure();
           return;
         }
         consecutiveMissesRef.current = 0;
         neonSyncClearLastErrorIfContains(HEARTGARDEN_COLLA_POLL_ERROR_SNIPPET);
-        if (typeof data.cursor === "string" && data.cursor.length > 0) {
-          syncCursorRef.current = data.cursor;
-        }
-        if (Array.isArray(data.itemIds)) {
-          needFullItemIdsRef.current = false;
-        }
-        const serverIds: ReadonlySet<string> | null = Array.isArray(data.itemIds)
-          ? new Set(data.itemIds)
-          : null;
-        const graphSnap = graphRef.current;
-        const spaceRows = Object.values(graphSnap.spaces).map((s) => ({
-          id: s.id,
-          parentSpaceId: s.parentSpaceId ?? null,
-        }));
-        const subtree = collectSpaceSubtreeIds(activeSpaceId, spaceRows);
+        const nextCursor = mergeLatestIsoCursor(since, data.cursor);
+        syncCursorRef.current = nextCursor;
+        const serverIds: ReadonlySet<string> = new Set(data.itemIds ?? []);
         const protectedContentIds = buildCollabMergeProtectedContentIds({
           focusOpen: focusOpenRef.current,
           focusDirty: focusDirtyRef.current,
@@ -124,23 +130,19 @@ export function useHeartgardenSpaceChangeSync(options: {
           name: s.name,
           parentSpaceId: s.parentSpaceId ?? null,
         }));
-        setGraph((prev) => {
-          const mergedItems = mergeRemoteItemPatches(
+        setGraph((prev) =>
+          applySpaceChangeGraphMerge({
             prev,
+            activeSpaceId,
             rawItems,
-            serverIds,
-            subtree,
+            rawSpaceRows: rawSpaces,
+            serverItemIds: serverIds,
             protectedContentIds,
-            remoteTombstoneExemptIdsRef.current,
-          );
-          return mergeRemoteSpaceRowsIntoGraph(mergedItems, rawSpaces);
-        });
-        // Do not bump baseUpdatedAt for cards with local draft — avoids 409 races with debounced saves
-        // and our own echo on the delta feed while the editor is dirty (merge already skips body for these).
-        for (const it of rawItems) {
-          if (it.updatedAt && !protectedContentIds.has(it.id)) {
-            itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
-          }
+            tombstoneExemptIds: remoteTombstoneExemptIdsRef.current,
+          }),
+        );
+        for (const bump of collectItemServerUpdatedAtBumps(rawItems, protectedContentIds)) {
+          itemServerUpdatedAtRef.current.set(bump.id, bump.updatedAt);
         }
       } finally {
         inFlight = false;
@@ -169,7 +171,6 @@ export function useHeartgardenSpaceChangeSync(options: {
         stopPoll();
         return;
       }
-      needFullItemIdsRef.current = true;
       startPoll();
       void run();
     };
@@ -189,7 +190,6 @@ export function useHeartgardenSpaceChangeSync(options: {
     enabled,
     hasRemotePeers,
     activeSpaceId,
-    graphRef,
     syncCursorRef,
     focusOpenRef,
     focusDirtyRef,

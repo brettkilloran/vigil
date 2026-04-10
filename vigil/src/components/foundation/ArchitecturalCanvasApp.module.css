@@ -2247,6 +2247,48 @@
   min-height: 100%;
 }
 
+.workspaceContextWrap {
+  flex: 0 0 auto;
+  align-self: stretch;
+  display: flex;
+  min-width: 0;
+  pointer-events: auto;
+}
+
+.workspaceContextPanel.glassPanel.shellTopChromePanel {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+  align-content: center;
+  min-height: 100%;
+  padding: 4px 10px;
+}
+
+.workspaceContextLine {
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--sem-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
+.workspaceContextStrict {
+  display: inline-flex;
+  align-self: start;
+  margin-top: 1px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  line-height: 1.3;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--sys-color-white) 84%, var(--sem-accent-primary));
+  background: color-mix(in oklch, var(--sem-accent-primary) 30%, transparent);
+  border: 1px solid color-mix(in oklch, var(--sem-accent-primary) 44%, transparent);
+}
+
 /* Tight frosted chip: one dock-style icon between save strip and breadcrumb. */
 .shellTopLogOutPanel.glassPanel.shellTopChromePanel {
   gap: 0;
@@ -4768,8 +4810,9 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusCharacterDocument
+  :global([data-hg-character-focus-portrait-img="true"][data-hg-portrait-placeholder="true"]),
+.focusBody.focusCharacterDocument
   :global(
-    [data-hg-character-focus-portrait-img="true"][data-hg-portrait-placeholder="true"],
     [data-hg-character-focus-portrait-img="true"][data-hg-heartgarden-media-placeholder="true"]
   ) {
   object-fit: contain;

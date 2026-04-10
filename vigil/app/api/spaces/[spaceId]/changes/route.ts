@@ -8,6 +8,12 @@ import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { fetchPlayerSubtreeSpaceRows } from "@/src/lib/heartgarden-space-subtree";
 import { collectSpaceSubtreeIds, listGmWorkspaceSpaces } from "@/src/lib/spaces";
 
+/**
+ * Delta feed for GM/player spaces. Contract:
+ * - `includeItemIds=1` → response **must** include `itemIds` (full subtree snapshot for tombstones).
+ * - `cursor` is the max updatedAt across changed items/spaces (never before `since` when nothing changed).
+ * - Invalid `since` → 400 (client must recover via bootstrap, not guess a cursor).
+ */
 function maxIsoCursor(rows: { updatedAt: Date | null }[], fallbackMs: number): string {
   let ms = fallbackMs;
   for (const r of rows) {

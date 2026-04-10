@@ -168,7 +168,9 @@ export function installLorePlaceholderSelectionGuards(host: HTMLElement): () => 
  */
 export function syncLoreV9RedactedPlaceholderState(host: HTMLElement | null): void {
   if (!host) return;
-  const shell = host.querySelector<HTMLElement>('[class*="charSkShell"]');
+  const shell = host.matches?.('[class*="charSkShell"]')
+    ? host
+    : host.querySelector<HTMLElement>('[class*="charSkShell"]');
   if (!shell) return;
   for (const el of shell.querySelectorAll<HTMLElement>("[data-hg-lore-field]")) {
     if (isLoreFieldPlaceholderContent(el)) {
