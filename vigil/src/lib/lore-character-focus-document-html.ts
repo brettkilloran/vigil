@@ -230,7 +230,7 @@ export function characterV11BodyToFocusDocumentHtml(bodyHtml: string): string {
 </div>
 <div data-hg-character-focus-fields="true" contenteditable="false">
 <div data-hg-character-focus-line="name"><span data-hg-character-focus-label="true">Name</span><div data-hg-character-focus-field="name" data-placeholder="Name" contenteditable="true" spellcheck="false">${displayName}</div></div>
-<div data-hg-character-focus-line="role"><span data-hg-character-focus-label="true">Role</span><div data-hg-character-focus-field="role" data-placeholder="Role" contenteditable="true" spellcheck="false">${role}</div></div>
+<div data-hg-character-focus-line="role"><span data-hg-character-focus-label="true">Role</span><div data-hg-character-focus-field="role" data-placeholder="Affiliation" contenteditable="true" spellcheck="false">${role}</div></div>
 <div data-hg-character-focus-line="affiliation"><span data-hg-character-focus-label="true">Affiliation</span><div data-hg-character-focus-field="affiliation" data-placeholder="Affiliation" contenteditable="true" spellcheck="false">${affiliation}</div></div>
 <div data-hg-character-focus-line="nationality"><span data-hg-character-focus-label="true">Nationality</span><div data-hg-character-focus-field="nationality" data-placeholder="Nationality" contenteditable="true" spellcheck="false">${nationality}</div></div>
 </div>
@@ -345,6 +345,8 @@ export function withCharacterV11ObjectIdInHeader(bodyHtml: string, objectId: str
     headerMeta.textContent = compactObjectIdForHeader(full);
     headerMeta.setAttribute("title", full);
     headerMeta.setAttribute("data-hg-object-id-full", full);
+    headerMeta.setAttribute("contenteditable", "false");
+    headerMeta.removeAttribute("data-hg-lore-field");
     headerMeta.removeAttribute("data-hg-lore-placeholder");
   }
   const portrait = root.querySelector<HTMLImageElement>(

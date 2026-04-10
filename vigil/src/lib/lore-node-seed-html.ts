@@ -59,7 +59,7 @@ function characterV11(): string {
 <div class="${s.charSkLanyard}" aria-hidden="true"></div>
 <div class="${s.charSkHeaderRow}">
 <div class="${s.charSkHeaderLeft}">
-<span class="${s.charSkHeaderMeta}" contenteditable="true" spellcheck="false" data-hg-lore-field="1" data-hg-lore-placeholder="true" title="Catalog ID">${LORE_V9_HEADER_META_PLACEHOLDER}</span>
+<span class="${s.charSkHeaderMeta}" contenteditable="false" spellcheck="false" title="Catalog ID">${LORE_V9_HEADER_META_PLACEHOLDER}</span>
 </div>
 <span role="button" tabindex="0" class="${s.charSkExpandBtn}" data-expand-btn="true" aria-label="Focus mode" title="Focus mode" contenteditable="false">
 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M200 64v64a8 8 0 0 1-16 0V83.3l-45.2 45.1a8 8 0 0 1-11.3-11.3L172.7 72H136a8 8 0 0 1 0-16h64a8 8 0 0 1 8 8Zm-88 88H72v36.7l45.2-45.1a8 8 0 0 1 11.3 11.3L83.3 200H120a8 8 0 0 1 0 16H56a8 8 0 0 1-8-8v-64a8 8 0 0 1 16 0Z"/></svg>

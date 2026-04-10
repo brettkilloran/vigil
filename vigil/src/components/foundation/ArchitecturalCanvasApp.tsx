@@ -11118,26 +11118,14 @@ export function ArchitecturalCanvasApp({
                 syncOfflineNoSnapshot={
                   scenario === "default" && showWorkspaceBlockingOverlay
                 }
+                syncSessionLabel={environmentSessionLabel.replace(/^Session:\s*/i, "")}
+                syncSourceLabel={environmentSourceLabel.replace(/^Source:\s*/i, "")}
+                syncSpaceLabel={environmentSpaceLabel}
+                syncStrictGm={strictGmWorkspaceSession}
                 collabPeers={collabPeerChips}
                 onExportGraphJson={exportGraphJson}
                 exportGraphPaletteHint={`${modKeyHints.search} → Export graph JSON`}
               />
-              <div className={styles.workspaceContextWrap} data-hg-chrome="workspace-context">
-                <div
-                  className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.workspaceContextPanel}`}
-                  role="status"
-                  aria-live="polite"
-                >
-                  <span className={styles.workspaceContextLine}>{environmentSessionLabel}</span>
-                  <span className={styles.workspaceContextLine}>{environmentSourceLabel}</span>
-                  <span
-                    className={styles.workspaceContextLine}
-                  >{`Space: ${environmentSpaceLabel}`}</span>
-                  {strictGmWorkspaceSession ? (
-                    <span className={styles.workspaceContextStrict}>Strict GM sync</span>
-                  ) : null}
-                </div>
-              </div>
               {showLogOutToAuth ? (
                 <div className={styles.shellTopLogOutWrap} data-hg-chrome="log-out">
                   <div

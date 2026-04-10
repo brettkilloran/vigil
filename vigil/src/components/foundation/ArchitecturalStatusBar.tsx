@@ -1,6 +1,6 @@
 "use client";
 
-import { MagnifyingGlass, PictureInPicture, Waves, WarningCircle } from "@phosphor-icons/react";
+import { CircleNotch, MagnifyingGlass, PictureInPicture, Waves, WarningCircle } from "@phosphor-icons/react";
 import {
   useCallback,
   useEffect,
@@ -82,6 +82,10 @@ const POPOVER_SHIFT_DOWN = 4;
 function SaveAndVersionPopover({
   popoverAnchorRef,
   envLabel,
+  sessionLabel,
+  sourceLabel,
+  spaceLabel,
+  strictSync,
   showPulse = true,
   awaitingBootAuth = false,
   bootstrapPending,
@@ -93,6 +97,10 @@ function SaveAndVersionPopover({
   /** Bottom edge of this element (status glass strip) aligns the popover; trigger ref still sets horizontal origin. */
   popoverAnchorRef: RefObject<HTMLDivElement | null>;
   envLabel: string;
+  sessionLabel?: string;
+  sourceLabel?: string;
+  spaceLabel?: string;
+  strictSync?: boolean;
   showPulse?: boolean;
   /** Boot PIN gate is on and this browser has not completed sign-in — not a database outage. */
   awaitingBootAuth?: boolean;
@@ -114,10 +122,12 @@ function SaveAndVersionPopover({
   const {
     pulseToneClass,
     statusLine,
+    statusSeverity,
     showWarningIcon,
     detailTitle,
     detailBody,
     detailPasteText,
+    recommendedAction,
     liveAnnouncement,
     triggerAriaLabel,
     relSaved,
@@ -134,41 +144,57 @@ function SaveAndVersionPopover({
 
     let pulseToneClass = styles.pulseDotToneLocal;
     let statusLine = "";
+    let statusSeverity: "ok" | "warn" | "error" | "loading" = "warn";
     let showWarningIcon = false;
     let detailTitle = "Local session";
     /** Full multi-line diagnostic when present (structured sync errors). */
     let detailPasteText: string | null = null;
     let detailBody =
       "Not connected to Neon — no database URL or bootstrap failed. Changes stay in this session. Use Export graph JSON below for a file checkpoint.";
+    let recommendedAction =
+      "Verify database env vars, reload, then use Copy support snapshot if this persists.";
 
     if (awaitingBootAuth) {
       pulseToneClass = styles.pulseDotToneLocal;
       statusLine = "Awaiting sign-in";
+      statusSeverity = "warn";
       detailTitle = "No active session";
       detailBody =
         "Save and sync information applies only after you authenticate. Continue from the welcome screen, then enter your access code when the gate requests it. Until a session is established, the workspace does not load from the server and this panel does not reflect database state.";
+      recommendedAction = "Complete sign-in from the welcome screen.";
     } else if (bootstrapPending) {
       pulseToneClass = styles.pulseDotToneLoading;
       statusLine = "Loading workspace…";
+      statusSeverity = "loading";
       detailTitle = "Loading workspace";
       detailBody = "Resolving demo vs Neon and hydrating the canvas…";
+      recommendedAction = "Wait for bootstrap to finish.";
     } else if (offlineNoSnapshot) {
       pulseToneClass = styles.pulseDotToneLocal;
       statusLine = "Database not reachable";
+      statusSeverity = "error";
       detailTitle = "Workspace not loaded";
       detailBody =
         "Heartgarden could not open a database-backed workspace from this session, and this browser does not have a prior snapshot yet. Configure NEON_DATABASE_URL, fix network access, and reload. Once you load successfully, we cache a view so brief outages still look like your garden.";
+      recommendedAction =
+        "Check Neon/database connectivity, then reload. No cached workspace is available yet.";
     } else if (!sync.cloudEnabled && showingCachedWorkspace) {
       pulseToneClass = styles.pulseDotToneSaving;
       statusLine = "Offline · showing saved view";
+      statusSeverity = "warn";
       detailTitle = "Cached workspace";
       detailBody =
         "You are seeing the last workspace snapshot stored in this browser. We retry automatically and when the network comes back. New changes are kept on this device until Neon is reachable again.";
+      recommendedAction =
+        "Keep working locally or reconnect network/DB; the app will auto-resync when Neon is reachable.";
     } else if (!sync.cloudEnabled) {
       pulseToneClass = styles.pulseDotToneLocal;
       statusLine = "Local only · not connected";
+      statusSeverity = "warn";
+      recommendedAction = "Connect a database-backed workspace to enable sync.";
     } else if (sync.lastError) {
       pulseToneClass = styles.pulseDotToneError;
+      statusSeverity = "error";
       showWarningIcon = true;
       const err = sync.lastError.trim();
       statusLine = syncErrorSummaryLine(err);
@@ -176,22 +202,28 @@ function SaveAndVersionPopover({
       if (err.includes(SYNC_ERROR_DIAGNOSTIC_SEP)) {
         detailPasteText = err;
         detailBody =
-          "Edits stay local until the next successful save. Undo/redo only affects the canvas in memory, not the database. Copy the full report below when asking for help — it includes the request, HTTP status, and response snippet.";
+          "Edits stay local until the next successful save. Undo/redo only affects the canvas in memory, not the database. Use Copy support snapshot when asking for help — it includes request, HTTP status, and response snippet context.";
       } else {
         detailBody = `${sync.lastError} Edits stay local until the next successful save. Undo/redo only affects the canvas in memory, not the database.`;
       }
+      recommendedAction =
+        "Use Copy support snapshot and retry an edit/save; if the error repeats, share the snapshot.";
     } else if (busy) {
       pulseToneClass = styles.pulseDotToneSaving;
       statusLine = "Saving…";
+      statusSeverity = "loading";
       detailTitle = "Writing to Neon";
       detailBody =
         "Saving changes (including debounced note edits). Undo restores local canvas state; Neon keeps the last successful write until you edit again.";
+      recommendedAction = "Wait for writes to settle before large navigation or refresh.";
     } else {
       pulseToneClass = styles.pulseDotToneOk;
       statusLine = rel ? `Saved · ${rel}` : "Synced with Neon";
+      statusSeverity = "ok";
       detailTitle = "Synced with Neon";
       detailBody =
         "All pending changes are written to Neon. Undo/redo changes the canvas in memory only — it does not revert the server. Edit again to push a new save.";
+      recommendedAction = "No action needed.";
     }
 
     const live = awaitingBootAuth
@@ -223,10 +255,12 @@ function SaveAndVersionPopover({
     return {
       pulseToneClass,
       statusLine,
+      statusSeverity,
       showWarningIcon,
       detailTitle,
       detailBody,
       detailPasteText,
+      recommendedAction,
       liveAnnouncement: live,
       triggerAriaLabel: aria,
       relSaved: rel,
@@ -244,7 +278,7 @@ function SaveAndVersionPopover({
   ]);
 
   const [open, setOpen] = useState(false);
-  const [copyReportHint, setCopyReportHint] = useState<"idle" | "copied" | "failed">("idle");
+  const [copySnapshotHint, setCopySnapshotHint] = useState<"idle" | "copied" | "failed">("idle");
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const popoverId = useId();
@@ -302,9 +336,75 @@ function SaveAndVersionPopover({
   }, [open, reposition]);
 
   const closeSyncPopover = useCallback(() => {
-    setCopyReportHint("idle");
+    setCopySnapshotHint("idle");
     setOpen(false);
   }, []);
+
+  const supportSnapshotText = useMemo(() => {
+    const lines: string[] = [];
+    lines.push("Heartgarden sync snapshot");
+    lines.push(`Status: ${statusLine}`);
+    lines.push(`Detail: ${detailTitle}`);
+    lines.push(`Cloud enabled: ${sync.cloudEnabled ? "yes" : "no"}`);
+    lines.push(`Pending writes: ${sync.pending}`);
+    lines.push(`In-flight requests: ${sync.inFlight}`);
+    lines.push(`Awaiting boot auth: ${awaitingBootAuth ? "yes" : "no"}`);
+    lines.push(`Bootstrap pending: ${bootstrapPending ? "yes" : "no"}`);
+    lines.push(`Cached workspace view: ${showingCachedWorkspace ? "yes" : "no"}`);
+    lines.push(`Offline no snapshot: ${offlineNoSnapshot ? "yes" : "no"}`);
+    if (sessionLabel) lines.push(`Session: ${sessionLabel}`);
+    if (sourceLabel) lines.push(`Source: ${sourceLabel}`);
+    if (spaceLabel) lines.push(`Space: ${spaceLabel}`);
+    if (strictSync) lines.push("Strict GM sync: yes");
+    if (absSaved) lines.push(`Last successful write: ${absSaved}`);
+    if (relSaved) lines.push(`Last write relative: ${relSaved}`);
+    lines.push(`Recommended next step: ${recommendedAction}`);
+    const rawError = sync.lastError?.trim() ?? "";
+    const structuredDiagnostic = detailPasteText?.trim() ?? "";
+    if (sync.lastError?.trim()) {
+      lines.push("");
+      lines.push("Sync error:");
+      lines.push(rawError);
+    }
+    if (structuredDiagnostic && structuredDiagnostic !== rawError) {
+      lines.push("");
+      lines.push("Structured diagnostic:");
+      lines.push(structuredDiagnostic);
+    }
+    return lines.join("\n");
+  }, [
+    statusLine,
+    detailTitle,
+    sync.cloudEnabled,
+    sync.pending,
+    sync.inFlight,
+    sync.lastError,
+    awaitingBootAuth,
+    bootstrapPending,
+    showingCachedWorkspace,
+    offlineNoSnapshot,
+    sessionLabel,
+    sourceLabel,
+    spaceLabel,
+    strictSync,
+    absSaved,
+    relSaved,
+    recommendedAction,
+    detailPasteText,
+  ]);
+
+  const copySupportSnapshot = useCallback(() => {
+    const text = supportSnapshotText.trim();
+    if (!text) return;
+    void navigator.clipboard.writeText(text).then(
+      () => {
+        playVigilUiSound("tap");
+        setCopySnapshotHint("copied");
+        window.setTimeout(() => setCopySnapshotHint("idle"), 2200);
+      },
+      () => setCopySnapshotHint("failed"),
+    );
+  }, [supportSnapshotText]);
 
   useEffect(() => {
     if (!open) return;
@@ -352,8 +452,71 @@ function SaveAndVersionPopover({
             <div id={`${popoverId}-title`} className={styles.syncPopoverTitle}>
               {detailTitle}
             </div>
-            <div className={styles.syncPopoverStatusLine}>{statusLine}</div>
+            <div className={styles.syncPopoverStatusLineWrap}>
+              <span
+                className={`${styles.syncPopoverSeverity} ${
+                  statusSeverity === "ok"
+                    ? styles.syncPopoverSeverityOk
+                    : statusSeverity === "error"
+                      ? styles.syncPopoverSeverityError
+                      : statusSeverity === "loading"
+                        ? styles.syncPopoverSeverityLoading
+                        : styles.syncPopoverSeverityWarn
+                }`}
+              >
+                {statusSeverity === "ok"
+                  ? "Healthy"
+                  : statusSeverity === "error"
+                    ? "Error"
+                    : statusSeverity === "loading"
+                      ? "Active"
+                      : "Attention"}
+              </span>
+              <span className={styles.syncPopoverStatusLine}>{statusLine}</span>
+            </div>
             <p className={styles.syncPopoverBody}>{detailBody}</p>
+            <p className={styles.syncPopoverAction}>{recommendedAction}</p>
+            {sessionLabel || sourceLabel || spaceLabel ? (
+              <div className={styles.syncPopoverContext}>
+                {sessionLabel ? (
+                  <div className={styles.syncPopoverContextRow}>
+                    <span className={styles.syncPopoverContextKey}>Session</span>
+                    <span className={styles.syncPopoverContextVal}>{sessionLabel}</span>
+                  </div>
+                ) : null}
+                {sourceLabel ? (
+                  <div className={styles.syncPopoverContextRow}>
+                    <span className={styles.syncPopoverContextKey}>Source</span>
+                    <span className={styles.syncPopoverContextVal}>{sourceLabel}</span>
+                  </div>
+                ) : null}
+                {spaceLabel ? (
+                  <div className={styles.syncPopoverContextRow}>
+                    <span className={styles.syncPopoverContextKey}>Space</span>
+                    <span className={styles.syncPopoverContextVal}>{spaceLabel}</span>
+                  </div>
+                ) : null}
+                {strictSync ? (
+                  <div className={styles.syncPopoverContextBadge}>Strict GM sync</div>
+                ) : null}
+              </div>
+            ) : null}
+            <div className={styles.syncPopoverQuickActions}>
+              <Button
+                type="button"
+                size="md"
+                variant="neutral"
+                tone="glass"
+                className={styles.syncPopoverCopySnapshot}
+                onClick={copySupportSnapshot}
+              >
+                {copySnapshotHint === "copied"
+                  ? "Snapshot copied"
+                  : copySnapshotHint === "failed"
+                    ? "Copy failed"
+                    : "Copy support snapshot"}
+              </Button>
+            </div>
             {sync.lastError ? (
               <div className={styles.syncPopoverCopyRow}>
                 {detailPasteText ? (
@@ -361,31 +524,6 @@ function SaveAndVersionPopover({
                     {detailPasteText}
                   </pre>
                 ) : null}
-                <Button
-                  type="button"
-                  size="md"
-                  variant="neutral"
-                  tone="glass"
-                  className={styles.syncPopoverCopyReport}
-                  onClick={() => {
-                    const text = (sync.lastError ?? "").trim();
-                    if (!text) return;
-                    void navigator.clipboard.writeText(text).then(
-                      () => {
-                        playVigilUiSound("tap");
-                        setCopyReportHint("copied");
-                        window.setTimeout(() => setCopyReportHint("idle"), 2200);
-                      },
-                      () => setCopyReportHint("failed"),
-                    );
-                  }}
-                >
-                  {copyReportHint === "copied"
-                    ? "Copied"
-                    : copyReportHint === "failed"
-                      ? "Copy failed"
-                      : "Copy error report"}
-                </Button>
               </div>
             ) : null}
             {sync.cloudEnabled && !bootstrapPending ? (
@@ -458,7 +596,7 @@ function SaveAndVersionPopover({
         aria-haspopup="dialog"
         aria-controls={open ? popoverId : undefined}
         onClick={() => {
-          setCopyReportHint("idle");
+          setCopySnapshotHint("idle");
           setOpen((v) => !v);
         }}
       >
@@ -691,21 +829,23 @@ function VaultIndexStatusInline() {
 
   if (!vaultBusy && !errorLine) return null;
 
-  return (
-    <>
-      <div className={styles.sep} />
-      <ArchitecturalStatusMetric
-        icon={
-          errorLine ? (
-            <WarningCircle className={styles.statusSaveWarningIcon} size={14} weight="bold" aria-hidden />
-          ) : undefined
-        }
-      >
-        <span className={styles.monoSmall} aria-live="polite">
-          {errorLine ?? "Indexing notes for search…"}
-        </span>
-      </ArchitecturalStatusMetric>
-    </>
+  const isError = Boolean(errorLine);
+  const label = errorLine ?? "Indexing notes for search…";
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className={styles.vaultIndexToastWrap} role="status" aria-live="polite" aria-atomic="true">
+      <div className={cx(styles.vaultIndexToast, isError ? styles.vaultIndexToastError : undefined)}>
+        {isError ? (
+          <WarningCircle className={styles.statusSaveWarningIcon} size={14} weight="bold" aria-hidden />
+        ) : (
+          <CircleNotch className={cx(styles.vaultIndexToastSpinner, styles.syncSpin)} size={14} />
+        )}
+        <span className={styles.vaultIndexToastText}>{label}</span>
+      </div>
+    </div>,
+    getVigilPortalRoot(),
   );
 }
 
@@ -720,6 +860,10 @@ export type CollabPeerPresenceChip = {
 
 export function ArchitecturalStatusBar({
   envLabel = "波途画電",
+  syncSessionLabel,
+  syncSourceLabel,
+  syncSpaceLabel,
+  syncStrictGm,
   showPulse = true,
   syncAwaitingBootAuth = false,
   syncBootstrapPending = false,
@@ -730,6 +874,10 @@ export function ArchitecturalStatusBar({
   exportGraphPaletteHint,
 }: {
   envLabel?: string;
+  syncSessionLabel?: string;
+  syncSourceLabel?: string;
+  syncSpaceLabel?: string;
+  syncStrictGm?: boolean;
   showPulse?: boolean;
   /** Boot PIN gate on and no valid session yet — show sign-in copy instead of “offline / Neon”. */
   syncAwaitingBootAuth?: boolean;
@@ -752,6 +900,10 @@ export function ArchitecturalStatusBar({
         <SaveAndVersionPopover
           popoverAnchorRef={syncChromeRef}
           envLabel={envLabel}
+          sessionLabel={syncSessionLabel}
+          sourceLabel={syncSourceLabel}
+          spaceLabel={syncSpaceLabel}
+          strictSync={syncStrictGm}
           showPulse={showPulse}
           awaitingBootAuth={syncAwaitingBootAuth}
           bootstrapPending={syncBootstrapPending}
@@ -760,7 +912,6 @@ export function ArchitecturalStatusBar({
           onExportGraphJson={onExportGraphJson}
           exportGraphPaletteHint={exportGraphPaletteHint}
         />
-        <VaultIndexStatusInline />
         {collabPeers.length > 0 ? (
           <>
             <div className={styles.sep} />
@@ -784,6 +935,7 @@ export function ArchitecturalStatusBar({
           </>
         ) : null}
       </div>
+      <VaultIndexStatusInline />
     </div>
   );
 }

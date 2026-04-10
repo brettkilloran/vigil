@@ -2247,48 +2247,6 @@
   min-height: 100%;
 }
 
-.workspaceContextWrap {
-  flex: 0 0 auto;
-  align-self: stretch;
-  display: flex;
-  min-width: 0;
-  pointer-events: auto;
-}
-
-.workspaceContextPanel.glassPanel.shellTopChromePanel {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2px;
-  align-content: center;
-  min-height: 100%;
-  padding: 4px 10px;
-}
-
-.workspaceContextLine {
-  font-size: 10px;
-  line-height: 1.2;
-  color: var(--sem-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 260px;
-}
-
-.workspaceContextStrict {
-  display: inline-flex;
-  align-self: start;
-  margin-top: 1px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  font-size: 9px;
-  line-height: 1.3;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: color-mix(in oklch, var(--sys-color-white) 84%, var(--sem-accent-primary));
-  background: color-mix(in oklch, var(--sem-accent-primary) 30%, transparent);
-  border: 1px solid color-mix(in oklch, var(--sem-accent-primary) 44%, transparent);
-}
-
 /* Tight frosted chip: one dock-style icon between save strip and breadcrumb. */
 .shellTopLogOutPanel.glassPanel.shellTopChromePanel {
   gap: 0;
@@ -2407,6 +2365,62 @@
   color: oklch(0.72 0.2 25);
 }
 
+.vaultIndexToastWrap {
+  position: fixed;
+  top: max(18px, calc(env(safe-area-inset-top, 0px) + 8px));
+  left: max(24px, env(safe-area-inset-left, 0px));
+  z-index: calc(var(--layer-ui-chrome-elevated, 60) + 2);
+  pointer-events: none;
+}
+
+.vaultIndexToast {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(320px, calc(100vw - 48px));
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--ui-glass-border);
+  background: color-mix(in oklch, var(--ui-glass-bg) 96%, transparent);
+  box-shadow: var(--chrome-glass-shadow);
+  backdrop-filter: var(--chrome-glass-filter);
+  -webkit-backdrop-filter: var(--chrome-glass-filter);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--sys-color-neutral-300);
+  animation: arch-vault-index-toast-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.vaultIndexToastError {
+  border-color: color-mix(in oklch, var(--sys-color-danger-500) 45%, var(--ui-glass-border));
+  color: var(--sys-color-neutral-100);
+}
+
+.vaultIndexToastSpinner {
+  color: oklch(0.78 0.1 85);
+  flex-shrink: 0;
+}
+
+.vaultIndexToastText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+@keyframes arch-vault-index-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .syncPopover {
   position: fixed;
   width: min(328px, calc(100vw - 24px));
@@ -2440,14 +2454,60 @@
   min-width: 0;
 }
 
+.syncPopoverStatusLineWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  min-width: 0;
+}
+
+.syncPopoverSeverity {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.syncPopoverSeverityOk {
+  color: color-mix(in oklch, var(--sys-color-white) 88%, var(--sys-color-success-foreground));
+  background: color-mix(in oklch, var(--sys-color-success-foreground) 30%, transparent);
+  border-color: color-mix(in oklch, var(--sys-color-success-foreground) 45%, transparent);
+}
+
+.syncPopoverSeverityWarn {
+  color: color-mix(in oklch, var(--sys-color-white) 88%, var(--sys-color-warning-foreground));
+  background: color-mix(in oklch, var(--sys-color-warning-foreground) 26%, transparent);
+  border-color: color-mix(in oklch, var(--sys-color-warning-foreground) 42%, transparent);
+}
+
+.syncPopoverSeverityError {
+  color: color-mix(in oklch, var(--sys-color-white) 88%, var(--sys-color-danger-foreground));
+  background: color-mix(in oklch, var(--sys-color-danger-foreground) 28%, transparent);
+  border-color: color-mix(in oklch, var(--sys-color-danger-foreground) 42%, transparent);
+}
+
+.syncPopoverSeverityLoading {
+  color: color-mix(in oklch, var(--sys-color-white) 88%, var(--sem-accent-primary));
+  background: color-mix(in oklch, var(--sem-accent-primary) 28%, transparent);
+  border-color: color-mix(in oklch, var(--sem-accent-primary) 42%, transparent);
+}
+
 .syncPopoverStatusLine {
+  flex: 1 1 auto;
+  min-width: 0;
   font-family: var(--font-geist-mono), monospace;
   font-size: 12px;
   line-height: 1.45;
   color: var(--sys-color-neutral-400);
-  margin: 0 0 14px;
   word-break: break-word;
-  min-width: 0;
+  margin: 0;
 }
 
 .syncPopoverBody {
@@ -2456,6 +2516,74 @@
   line-height: 1.55;
   color: color-mix(in oklch, var(--vigil-muted) 88%, var(--vigil-label) 12%);
   min-width: 0;
+}
+
+.syncPopoverAction {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--vigil-label);
+  min-width: 0;
+}
+
+.syncPopoverContext {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklch, var(--vigil-border) 78%, transparent);
+  background: color-mix(in oklch, var(--vigil-surface) 90%, transparent);
+}
+
+.syncPopoverContextRow {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+
+.syncPopoverContextKey {
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--sys-color-neutral-400);
+}
+
+.syncPopoverContextVal {
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--vigil-label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.syncPopoverContextBadge {
+  display: inline-flex;
+  align-self: start;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  line-height: 1.3;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--sys-color-white) 84%, var(--sem-accent-primary));
+  background: color-mix(in oklch, var(--sem-accent-primary) 30%, transparent);
+  border: 1px solid color-mix(in oklch, var(--sem-accent-primary) 44%, transparent);
+}
+
+.syncPopoverQuickActions {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.syncPopoverCopySnapshot {
+  align-self: flex-start;
 }
 
 .syncPopoverCopyRow {
@@ -2481,10 +2609,6 @@
   background: color-mix(in oklch, var(--vigil-surface) 92%, var(--vigil-border) 8%);
   border-radius: 8px;
   border: 1px solid color-mix(in oklch, var(--vigil-border) 80%, transparent);
-}
-
-.syncPopoverCopyReport {
-  align-self: flex-start;
 }
 
 .syncPopoverMeta {
