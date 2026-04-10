@@ -1,3 +1,13 @@
+---
+title: heartgarden naming vs repo paths
+status: canonical
+audience: [agent, human]
+last_reviewed: 2026-04-10
+canonical: true
+related:
+  - vigil/AGENTS.md
+---
+
 # heartgarden naming vs repo paths
 
 **Product and package name:** **heartgarden** (UI metadata, `package.json`, Vercel project name, marketing).

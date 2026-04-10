@@ -2,6 +2,8 @@
 
 Schema and extensions apply **on Neon**, not inside Vercel’s build. Use this when following the deploy plan’s **separate Preview database** decision.
 
+**Environment variable definitions** (what to paste into Vercel, boot PIN semantics, etc.) live only in **[`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md)** — not duplicated here.
+
 ## 1. Production database
 
 1. In [Neon](https://neon.tech), create a project (or use an existing one) for **production**.

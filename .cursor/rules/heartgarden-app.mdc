@@ -1,9 +1,9 @@
 ---
-description: heartgarden Next.js app — dev and Storybook guardrails (app directory is vigil/)
+description: heartgarden Next.js app — dev, Storybook, and CSS guardrails (app directory is vigil/)
 globs: vigil/**
 alwaysApply: false
 ---
 
-When working under the **heartgarden** app (folder **`vigil/`** in git — see `vigil/docs/NAMING.md`), read **`vigil/AGENTS.md`** → **"Local dev, Node, and Storybook (guardrails)"** before changing dev scripts, Storybook, or CSS-module vs global token layout.
+When working under the **heartgarden** app (folder **`vigil/`** in git — see `vigil/docs/NAMING.md`), read **`vigil/AGENTS.md`** → **"Local dev, Node, and Storybook (guardrails)"** before changing **`package.json` dev scripts**, **`.storybook/`**, **`*.stories.*`**, **`next.config.ts`**, or **token/CSS architecture** (`*.module.css` vs `app/globals.css`). Keep those invariants unless you intentionally replace them and re-verify on Windows.
 
-For **running or restarting `npm run dev`**, **localhost preview**, and **boot gate defaults**, the repo also has **`alwaysApply`** rule **`.cursor/rules/heartgarden-local-dev.mdc`** — follow it for those requests.
+**Run / restart / localhost:** repo root **`.cursor/rules/heartgarden-local-dev.mdc`** (`alwaysApply`) — use **`npm run dev`** from **`vigil/`** and **`http://localhost:3000`**; boot gate is off by default in dev unless **`HEARTGARDEN_DEV_ENFORCE_BOOT_GATE=1`**.

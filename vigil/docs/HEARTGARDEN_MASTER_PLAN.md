@@ -1,33 +1,49 @@
+---
+title: heartgarden — documentation index
+status: canonical
+audience: [agent, human]
+last_reviewed: 2026-04-10
+canonical: true
+related:
+  - vigil/AGENTS.md
+  - vigil/docs/API.md
+  - vigil/docs/BUILD_PLAN.md
+---
+
 # heartgarden — documentation index
 
-## Source of truth for **what to do next**
+**This file is an index only** (no duplicate SoT paragraphs). **Start here for orientation**, then read **`AGENTS.md`** for depth.
 
-| Priority | Document |
-|----------|----------|
-| **1 — Task list & phases (lore engine + bridge + MCP expansion)** | **Cursor:** `.cursor/plans/heartgarden_lore_engine_7fc1fb56.plan.md` (YAML todos + narrative). This is the completion ledger you want agents to follow. |
-| **2 — Repo snapshot & hardening backlog** | **`docs/BUILD_PLAN.md`** — architecture table, shipped tranches, near/mid/later items (lore hardening, embeddings, version history, etc.). |
+## Read order
 
-## Supporting docs (not task ledgers)
+1. [`AGENTS.md`](../AGENTS.md) — product/code reality, dev guardrails, MCP, tests  
+2. [`API.md`](./API.md) — HTTP contracts  
+3. [`FEATURES.md`](./FEATURES.md) — shipped capabilities → code  
+4. [`CODEMAP.md`](./CODEMAP.md) — subsystem → files  
+5. [`BUILD_PLAN.md`](./BUILD_PLAN.md) — backlog and architecture snapshot  
+6. [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md) — deploy env matrix (SoT for variable definitions)  
+7. [`PLAYER_LAYER.md`](./PLAYER_LAYER.md) — GM / Players / demo tiers and collab  
 
-| Document | Purpose |
-|----------|---------|
-| **`docs/FEATURES.md`** | **Shipped capabilities** → docs + code paths (collab, canvas chrome, vault UI, editing, media, boot). Start here for “where is X implemented?” |
-| **`docs/CODEMAP.md`** | Subsystem → file map (canvas, sync, search, vault, lore, import, MCP). |
-| **`docs/API.md`** | `app/api/**` routes (methods, purpose, secrets / env). |
-| **`docs/STRATEGY.md`** | Engineering delta, phase map notes; points at BUILD_PLAN + Cursor plan. |
-| **`docs/NAMING.md`** | Product name **heartgarden** vs **`vigil/`** folder; stable `vigil:*` IDs; optional folder rename checklist. |
-| **`docs/FOLLOW_UP.md`** | API keys, human decisions, infra. |
-| **`docs/DEPLOY_VERCEL.md`** | Vercel project setup, env vars, Neon/R2, previews, troubleshooting. |
-| **`docs/DEPLOY_VERCEL_CHECKLIST.md`**, **`docs/NEON_VERCEL_SETUP.md`**, **`docs/VERCEL_ENV_VARS.md`** | Dashboard checklist; Neon prod/preview; env scope matrix. |
-| **`docs/VERSIONING.md`** | App semver (`package.json`), release scripts, deploy label (`+git` on Vercel). |
-| **`docs/DESIGN_SYSTEM_TOKENS.md`** | Token reference. |
-| **`docs/VISUAL_REVAMP_PLAN.md`** | UI polish / revamp ideas. |
-| **`docs/MIGRATION.md`**, **`docs/FUNCTIONAL_PRD_REBUILD.md`** | Historical context. |
+## Canonical pointers
+
+| Topic | Document |
+|-------|----------|
+| Lore vertical + Cursor plans index | [`LORE_ENGINE_ROADMAP.md`](./LORE_ENGINE_ROADMAP.md), [`.cursor/plans/README.md`](../../.cursor/plans/README.md) |
+| Naming (`vigil/` folder) | [`NAMING.md`](./NAMING.md) |
+| Engineering strategy / phase map | [`STRATEGY.md`](./STRATEGY.md) |
+| Human / keys / infra | [`FOLLOW_UP.md`](./FOLLOW_UP.md) |
+| Deploy (narrative) | [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md), [`DEPLOY_VERCEL_CHECKLIST.md`](./DEPLOY_VERCEL_CHECKLIST.md), [`NEON_VERCEL_SETUP.md`](./NEON_VERCEL_SETUP.md) |
+| Versioning / design tokens / visual ideas | [`VERSIONING.md`](./VERSIONING.md), [`DESIGN_SYSTEM_TOKENS.md`](./DESIGN_SYSTEM_TOKENS.md), [`VISUAL_REVAMP_PLAN.md`](./VISUAL_REVAMP_PLAN.md) |
+| DB migration notes | [`MIGRATION.md`](./MIGRATION.md) |
+| Historical functional PRD | Stub [`FUNCTIONAL_PRD_REBUILD.md`](./FUNCTIONAL_PRD_REBUILD.md) → full text [`archive/FUNCTIONAL_PRD_REBUILD.md`](./archive/FUNCTIONAL_PRD_REBUILD.md) |
 
 ## Archived
 
-| Document | Location |
-|----------|----------|
-| Former **full** master build plan (~Phases 1–8, sessions, old paths) | **`docs/archive/vigil-master-plan-legacy.md`** — see **`docs/archive/README.md`**. |
+| Document | Notes |
+|----------|--------|
+| [`archive/vigil-master-plan-legacy.md`](./archive/vigil-master-plan-legacy.md) | Long legacy product bible; dated paths |
+| [`VIGIL_MASTER_PLAN.md`](./VIGIL_MASTER_PLAN.md) | Stub redirect |
 
-**Agent onboarding:** `AGENTS.md` in the app directory (**`vigil/`**; **`docs/NAMING.md`** if you rename the folder).
+## Licensing
+
+Prefer **MIT** libraries when adding dependencies (see [`AGENTS.md`](../AGENTS.md) licensing section).

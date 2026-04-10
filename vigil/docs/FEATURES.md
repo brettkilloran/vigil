@@ -1,3 +1,15 @@
+---
+title: heartgarden — shipped features
+status: canonical
+audience: [agent, human]
+last_reviewed: 2026-04-10
+canonical: true
+related:
+  - vigil/docs/API.md
+  - vigil/docs/CODEMAP.md
+  - vigil/docs/BUILD_PLAN.md
+---
+
 # heartgarden — shipped features (reference)
 
 Single place to **look up what exists** and where it lives. For **HTTP contracts**, see **`docs/API.md`**. For **subsystem file maps**, see **`docs/CODEMAP.md`**. For **player / GM boot rules**, see **`docs/PLAYER_LAYER.md`**. For **backlog**, see **`docs/BUILD_PLAN.md`**.

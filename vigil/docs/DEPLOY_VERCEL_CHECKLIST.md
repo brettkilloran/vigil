@@ -2,7 +2,7 @@
 
 Use this **click-by-click** list with the narrative in [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md). Check items off as you go.
 
-**Env scope matrix:** [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md).
+**Do not duplicate env semantics here.** Variable names, required combinations, and edge cases (e.g. Players PIN + optional player space UUID) are defined in **[`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md)** — that file is the **source of truth**; this checklist and [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md) only repeat **what to click** and high-level groupings.
 
 ## A. Create the project
 

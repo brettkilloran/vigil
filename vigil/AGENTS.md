@@ -1,3 +1,17 @@
+---
+title: heartgarden — agent notes
+status: canonical
+audience: [agent, human]
+last_reviewed: 2026-04-10
+canonical: true
+related:
+  - docs/API.md
+  - docs/BUILD_PLAN.md
+  - docs/FEATURES.md
+  - docs/CODEMAP.md
+  - docs/LORE_ENGINE_ROADMAP.md
+---
+
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
@@ -6,24 +20,44 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # heartgarden — agent notes
 
+**Read order (LLM / onboarding):** `AGENTS.md` (this file) → `docs/API.md` → `docs/FEATURES.md` → `docs/CODEMAP.md` → `docs/BUILD_PLAN.md`. **Env matrix (deploy):** `docs/VERCEL_ENV_VARS.md`. **Lore vertical pointer:** `docs/LORE_ENGINE_ROADMAP.md` + repo `.cursor/plans/README.md`.
+
 ## Naming (product vs `vigil/` folder)
 
 **heartgarden** is the app name. The Next.js tree is in **`vigil/`** (legacy directory name). **Vercel** and **CI** use that path until you rename it — steps and stable `vigil:*` IDs (links, MCP tools, CSS tokens, localStorage) are documented in **`docs/NAMING.md`**.
 
-## Source of truth
+## Source of truth (canonical docs)
 
-- **Lore-engine task order (Phases A–D, UX2):** Cursor plan `heartgarden_lore_engine_7fc1fb56.plan.md` under `.cursor/plans/` (YAML todos + narrative).
-- **Subsystem → files:** `docs/CODEMAP.md`
-- **Shipped features → docs + code:** `docs/FEATURES.md` (collab, canvas chrome, vault UI, editing, media, boot)
-- **HTTP API catalog:** `docs/API.md`
-- **Product vs repo folder / rename checklist:** `docs/NAMING.md`
-- **Repo-wide shipped vs next + hardening backlog:** `docs/BUILD_PLAN.md`
-- **Doc index:** `docs/HEARTGARDEN_MASTER_PLAN.md`
-- **Historical product bible (dated paths):** `docs/archive/vigil-master-plan-legacy.md` — `docs/VIGIL_MASTER_PLAN.md` is a stub pointer.
-- **How the repo should move from here:** `docs/STRATEGY.md`
-- **Blocked / account / infra follow-ups:** `docs/FOLLOW_UP.md`
+| Concern | Document |
+|--------|----------|
+| **Onboarding + architecture reality** | This file (`AGENTS.md`) |
+| **HTTP routes** | `docs/API.md` |
+| **Shipped behavior → code** | `docs/FEATURES.md` |
+| **Subsystem → files** | `docs/CODEMAP.md` |
+| **Backlog / architecture table** | `docs/BUILD_PLAN.md` |
+| **Env vars (Vercel)** | `docs/VERCEL_ENV_VARS.md` |
+| **Players / GM / collab** | `docs/PLAYER_LAYER.md` |
+| **Naming (`vigil/` vs heartgarden)** | `docs/NAMING.md` |
+| **Lore vertical + plan index** | `docs/LORE_ENGINE_ROADMAP.md`, repo `.cursor/plans/README.md` |
+| **Lore node UI patterns** | `docs/CANVAS_LORE_NODE_PATTERNS.md` |
+| **Character focus + data model / sync / migration plan** | `docs/CHARACTER_FOCUS_AND_DATA_MODEL_PLAN.md` |
+| **Doc index (links only)** | `docs/HEARTGARDEN_MASTER_PLAN.md` |
+| **Engineering delta / phase notes** | `docs/STRATEGY.md` |
+| **Human / keys / infra** | `docs/FOLLOW_UP.md` |
+| **Historical product bible** | `docs/archive/vigil-master-plan-legacy.md` — stub: `docs/VIGIL_MASTER_PLAN.md` |
 
-Read **STRATEGY** for the current-vs-target delta, **BUILD_PLAN** for architecture and backlog, and the **Cursor plan** for ordered lore/import/MCP work. The legacy master plan still describes **custom DOM canvas** (no tldraw), **no auth**, **MIT stack**, and phases **1–8** at a product level.
+Read **STRATEGY** for current-vs-target delta and **BUILD_PLAN** for backlog. **Do not** treat a single missing `.cursor/plans/*.plan.md` filename as SoT — use **LORE_ENGINE_ROADMAP** + **plans README** + **BUILD_PLAN**. The legacy master plan still describes **custom DOM canvas** (no tldraw), **boot-tier access** (not full user accounts), **MIT stack**, and phases **1–8** at a product level.
+
+## Documentation update checklist
+
+When you change behavior or contracts:
+
+1. Update **`docs/API.md`** if any `app/api/**` route shape or env requirement changed.
+2. Update **`docs/FEATURES.md`** and/or **`docs/CODEMAP.md`** if user-visible behavior or primary file locations changed.
+3. Update **`docs/BUILD_PLAN.md`** if you close or add a tranche/backlog item.
+4. Update **`docs/VERCEL_ENV_VARS.md`** if a new env var ships (narrative deploy docs should **link** here, not duplicate the full matrix).
+5. Keep **`AGENTS.md`** “Current code reality” in sync for shell/bootstrap/camera/lore **only** when those subsystems change.
+6. The historical functional PRD lives under **`docs/archive/FUNCTIONAL_PRD_REBUILD.md`** (stub: **`docs/FUNCTIONAL_PRD_REBUILD.md`**). Update it only when intentionally revisiting that archived spec.
 
 ## Current code reality
 

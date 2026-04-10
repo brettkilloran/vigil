@@ -1,6 +1,18 @@
+---
+title: heartgarden — execution build plan
+status: canonical
+audience: [agent, human]
+last_reviewed: 2026-04-10
+canonical: true
+related:
+  - vigil/docs/FEATURES.md
+  - vigil/docs/CODEMAP.md
+  - vigil/docs/LORE_ENGINE_ROADMAP.md
+---
+
 # heartgarden — execution build plan (living)
 
-This is the **repo-wide checklist**: architecture snapshot, shipped tranches, and backlog (hardening, embeddings, e2e, later phases). **Ordered lore-engine work** (import pipeline, link phases, MCP expansion) lives in the **Cursor plan** `heartgarden_lore_engine_7fc1fb56.plan.md` under `.cursor/plans/` — treat that as the completion ledger for Phases A–D + UX2 unless you explicitly reprioritize here.
+This is the **repo-wide checklist**: architecture snapshot, shipped tranches, and backlog (hardening, embeddings, e2e, later phases). **Lore vertical** work (import pipeline, link phases, MCP expansion) is summarized in **`docs/LORE_ENGINE_ROADMAP.md`**; detailed notes live in **`.cursor/plans/README.md`** (index of workspace plans). Reprioritize here vs ad-hoc plans as needed.
 
 **Historical product bible** (Spatial-style sessions, old paths): **`docs/archive/vigil-master-plan-legacy.md`**. Stub at **`VIGIL_MASTER_PLAN.md`** points there. Honest engineering delta: **`STRATEGY.md`**. Human / account items: **`FOLLOW_UP.md`**.
 
@@ -38,7 +50,7 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 |---------|--------|
 | Custom DOM surface (no tldraw) | Transform-based pan/zoom, cards, folders, stacks, connections. |
 | Drizzle + Neon + pgvector | `spaces`, `items`, `item_links`, `item_embeddings`; self-FK on `spaces.parent_space_id`. |
-| **Neon persistence bridge** | Bootstrap hydrate, create/patch/delete items & spaces, camera persistence, folder child spaces (Phase “A” in recent work). |
+| **Neon persistence bridge** | Bootstrap hydrate, create/patch/delete items & spaces; **viewport pan/zoom is browser-local** (not persisted to Neon by the shell — see **`docs/API.md`**); folder child spaces (Phase “A” in recent work). |
 | Cmd+K palette | Local filter + `/api/search/suggest`, spaces, actions, recent items, export (action list expanded over time). |
 | **Canvas minimap + fit** | Toggle map from viewport metrics; fit-to-content / fit-selection math shared via **`canvas-view-bounds.ts`**. |
 | **Vault index status UI** | Status bar shows embedding/index busy + error state (event bus). |

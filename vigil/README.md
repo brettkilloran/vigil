@@ -2,7 +2,7 @@ This is a [Next.js](https://nextjs.org) app: **heartgarden** — a custom DOM in
 
 ## Product direction
 
-Full spec: **`docs/HEARTGARDEN_MASTER_PLAN.md`**. Engineering bridge: **`docs/STRATEGY.md`**.
+**Agent / contributor onboarding:** **`AGENTS.md`**. **Documentation index (links only):** **`docs/HEARTGARDEN_MASTER_PLAN.md`**. Engineering bridge: **`docs/STRATEGY.md`**.
 
 **Stack:** Next.js App Router, React, Tailwind CSS 4, buffered **contentEditable** notes, Drizzle + Neon, **d3-force** (graph overlay).
 

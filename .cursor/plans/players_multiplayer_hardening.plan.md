@@ -17,7 +17,7 @@ This matches **shared PIN, no user accounts:** each **browser profile** remember
 - **Add** a tiny helper (new file under `vigil/src/lib/` or colocate): `readSpaceCamera(spaceId)`, `writeSpaceCamera(spaceId, camera)` with try/catch for quota/private mode.
 - **Apply order:** After graph is ready for a given `activeSpaceId`, set translate/scale from **localStorage** for that id, else `defaultCamera()`. On pan/zoom (existing state updates), **debounce** writes to localStorage (~300–700ms, similar to current server debounce).
 - **Space navigation:** When `activeSpaceId` changes (including into a folder child space), load camera for **that** id from localStorage or default.
-- **API:** Ignore or reject `camera` on [`PATCH /api/spaces/[spaceId]`](vigil/app/api/spaces/[spaceId]/route.ts); stop persisting viewport server-side. Update **docs** ([`AGENTS.md`](vigil/AGENTS.md), [`FUNCTIONAL_PRD_REBUILD.md`](vigil/docs/FUNCTIONAL_PRD_REBUILD.md), [`PLAYER_LAYER.md`](vigil/docs/PLAYER_LAYER.md) if needed): camera is **client-local**, not Neon.
+- **API:** Ignore or reject `camera` on [`PATCH /api/spaces/[spaceId]`](vigil/app/api/spaces/[spaceId]/route.ts); stop persisting viewport server-side. Update **docs** ([`AGENTS.md`](vigil/AGENTS.md), [`docs/archive/FUNCTIONAL_PRD_REBUILD.md`](vigil/docs/archive/FUNCTIONAL_PRD_REBUILD.md) if still relevant, [`PLAYER_LAYER.md`](vigil/docs/PLAYER_LAYER.md) if needed): camera is **client-local**, not Neon.
 - **DB:** `canvas_state` unused for camera going forward; no migration required for MVP.
 
 ## Phase 2 — Delta sync (unchanged intent)

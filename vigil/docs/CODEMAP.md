@@ -1,3 +1,14 @@
+---
+title: heartgarden — code map
+status: canonical
+audience: [agent, human]
+last_reviewed: 2026-04-10
+canonical: true
+related:
+  - vigil/docs/FEATURES.md
+  - vigil/docs/API.md
+---
+
 # heartgarden — code map
 
 High-level map from **feature / subsystem** to **primary files**. This does not list every symbol; use `docs/API.md` for HTTP routes and jump-to-definition for details. **Keep this file updated** when you add a new vertical (major API family, new sync path, or new shell concern).
@@ -25,6 +36,17 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Buffered rich text + wiki `[[` assist | `src/components/editing/BufferedContentEditable.tsx`, `WikiLinkAssistPopover.tsx`, `src/lib/wiki-link-caret.ts` |
 | Resolved image URLs (zoom / CDN template) | `src/lib/heartgarden-image-display-url.ts` |
 | Viewport culling (entities, stacks, connections) | `src/lib/canvas-viewport-cull.ts` |
+
+## Lore canvas node variants (custom bodies, ID cards)
+
+| Concern | Location |
+|--------|-----------|
+| **Patterns & checklist for new node types** | **`docs/CANVAS_LORE_NODE_PATTERNS.md`** |
+| **Character focus + persistence / migration plan** | **`docs/CHARACTER_FOCUS_AND_DATA_MODEL_PLAN.md`** |
+| Lore seed HTML, `loreCard`, body detection | `src/lib/lore-node-seed-html.ts` |
+| Shared card markup CSS (portable `bodyHtml`) | `src/components/foundation/lore-entity-card.module.css` |
+| Example: character v11 canvas shell | `src/components/foundation/ArchitecturalLoreCharacterCanvasNode.tsx` |
+| Example: character focus = same `BufferedContentEditable` + `focusCharacterDocument` shell as default doc | `ArchitecturalCanvasApp.tsx`, `ArchitecturalCanvasApp.module.css` |
 
 ## Persistence (Neon) & canvas sync
 

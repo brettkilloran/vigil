@@ -1,3 +1,15 @@
+---
+title: heartgarden — HTTP API reference
+status: canonical
+audience: [agent, human]
+last_reviewed: 2026-04-10
+canonical: true
+related:
+  - vigil/docs/FEATURES.md
+  - vigil/docs/PLAYER_LAYER.md
+  - vigil/docs/VERCEL_ENV_VARS.md
+---
+
 # heartgarden — HTTP API reference
 
 Hand-maintained catalog of **`app/api/**`** routes. **Auth:** the app is single-user / local-first today; most routes do **not** verify a user session. Exceptions that require secrets are called out.
@@ -10,7 +22,11 @@ Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: f
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/bootstrap` | Active space, spaces list, items (subtree), camera (legacy field; shell uses **browser-local** pan/zoom per space). **`PLAYWRIGHT_E2E=1`** forces empty demo payload (tests only). With boot gate on, **`middleware`** returns **403** without a valid **`hg_boot`** cookie (except **`/api/heartgarden/boot`**). With a valid **`player`** tier cookie, scopes to the resolved Players root (env UUID if set, else implicit dedicated space; 403 if misconfigured). **`demo`** tier should not call this in normal clients (local canvas only). |
+| GET | `/api/bootstrap` | Active space, spaces list, items (subtree), **`camera`** (see subsection below). **`PLAYWRIGHT_E2E=1`** forces empty demo payload (tests only). With boot gate on, **`middleware`** returns **403** without a valid **`hg_boot`** cookie (except **`/api/heartgarden/boot`**). With a valid **`player`** tier cookie, scopes to the resolved Players root (env UUID if set, else implicit dedicated space; 403 if misconfigured). **`demo`** tier should not call this in normal clients (local canvas only). |
+
+### `camera` in the bootstrap JSON
+
+Responses include **`camera`**: `{ x, y, zoom }` parsed from legacy **`spaces.canvas_state`**. The **shipped heartgarden web shell** does **not** use this value for the initial viewport — it applies **`defaultCamera()`** (world origin centered, zoom 1) and persists pan/zoom in **browser-local storage** per space while you work (`heartgarden-space-camera-v1`; see **`AGENTS.md`** → Canvas camera). Treat **`camera`** as **compatibility / debugging** for API consumers; do not assume it matches first paint in the official UI. The shell does not write viewport back to **`canvas_state`**.
 
 ## Boot gate (splash PIN)
 

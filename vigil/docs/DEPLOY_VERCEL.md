@@ -2,6 +2,8 @@
 
 This is the **step-by-step** companion to the short notes in [`README.md`](../README.md). I can’t log into your Vercel or Neon accounts from here; use this as a checklist while you click through the dashboards (or run the Vercel CLI on your machine after `vercel login`).
 
+**Env variable meanings and edge cases** are defined only in **[`docs/VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md)**. The tables in §3 below are a deploy-oriented summary; if anything disagrees, **`VERCEL_ENV_VARS.md`** wins.
+
 ## 1. What you’re deploying
 
 - **Framework:** Next.js (App Router), detected automatically by Vercel.
@@ -24,6 +26,8 @@ Deploy once **without** secrets if you only want to confirm the build; the app w
 
 ## 3. Environment variables
 
+**Authoritative matrix (definitions and edge cases):** [`docs/VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md). The table below is a deploy-oriented summary — if anything disagrees, **`VERCEL_ENV_VARS.md`** wins.
+
 Add these in **Project → Settings → Environment Variables**. Mark secrets as **Sensitive** where offered.
 
 | Variable | Environments | Required | Notes |
@@ -40,7 +44,7 @@ Add these in **Project → Settings → Environment Variables**. Mark secrets as
 | `R2_PUBLIC_BASE_URL` | Same | For R2 | Public origin for GET of uploaded objects, **no trailing slash** (e.g. `https://pub-xxxx.r2.dev`). |
 | `HEARTGARDEN_LORE_QUERY_DISABLED` | Production, Preview (optional) | Hardening | Set to **`1`** to disable **`POST /api/lore/query`** (**503**) while the rest of the app stays up. Remove when auth / stronger limits are in place. |
 | `HEARTGARDEN_BOOT_PIN_BISHOP` | Production, Preview (optional) | Boot gate | Exactly **8** characters if set; GM tier (`access`) in signed **`hg_boot`**. With **`HEARTGARDEN_BOOT_SESSION_SECRET`** (16+ chars), the gate turns on when **this and/or** Players / demo PIN is 8 chars. Sensitive. |
-| `HEARTGARDEN_BOOT_PIN_PLAYERS` | Same | Players tier PIN | Exactly **8** characters if set; **`player`** tier in signed **`hg_boot`**. Requires valid **`HEARTGARDEN_PLAYER_SPACE_ID`**. Sensitive. |
+| `HEARTGARDEN_BOOT_PIN_PLAYERS` | Same | Players tier PIN | Exactly **8** characters if set; **`player`** tier in signed **`hg_boot`**. **`HEARTGARDEN_PLAYER_SPACE_ID`** is **optional** — if unset, the server uses an implicit dedicated Players root (see **`docs/PLAYER_LAYER.md`** and **`docs/VERCEL_ENV_VARS.md`**). Sensitive. |
 | `HEARTGARDEN_BOOT_PIN_DEMO` | Same | Demo tier PIN | Exactly **8** characters if set; **`demo`** tier (local-seeded canvas). Sensitive. |
 | `HEARTGARDEN_BOOT_SESSION_SECRET` | Same | Required if gate on | HMAC secret for boot session cookie. Sensitive. |
 | `HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC` | Same | Optional | Cookie TTL (**60–31536000** seconds); default **30 days**. |

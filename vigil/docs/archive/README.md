@@ -6,7 +6,7 @@ Files here are **kept for history** (product intent, old session breakdowns, dat
 
 | What | Where |
 |------|--------|
-| **Remaining engineering tasks (lore vertical + ordered phases)** | Cursor plan: `.cursor/plans/heartgarden_lore_engine_7fc1fb56.plan.md` (or your copy under the user’s `.cursor/plans/` path). |
+| **Remaining engineering tasks (lore vertical + ordered phases)** | `vigil/docs/LORE_ENGINE_ROADMAP.md` + `.cursor/plans/README.md` (index of workspace `.plan.md` files). |
 | **Repo reality: architecture, shipped tranches, hardening backlog** | `vigil/docs/BUILD_PLAN.md` (paths use **`vigil/`**; product is **heartgarden** — **`../NAMING.md`**) |
 | **Human / keys / infra** | `vigil/docs/FOLLOW_UP.md` |
 | **Contributor onboarding** | `vigil/AGENTS.md` |
@@ -19,8 +19,9 @@ Files here are **kept for history** (product intent, old session breakdowns, dat
 | File | Notes |
 |------|--------|
 | **`vigil-master-plan-legacy.md`** | Former `docs/VIGIL_MASTER_PLAN.md` (~1k lines). Spatial-inspired product bible + Phases 1–8 + session list. **Outdated paths** (`VigilCanvas`, `components/canvas/`). Stack callouts predate Anthropic-first lore; vector embeddings are no longer generated in-app. |
+| **`FUNCTIONAL_PRD_REBUILD.md`** | UI-agnostic functional PRD (historical). Stub: **`docs/FUNCTIONAL_PRD_REBUILD.md`**. |
 
 ## Not moved (yet)
 
 - **`VISUAL_REVAMP_PLAN.md`** — Still useful as a polish checklist; not a master “build from scratch” doc.
-- **`FUNCTIONAL_PRD_REBUILD.md`**, **`MIGRATION.md`** — Historical; consider moving here if you want `docs/` minimal.
+- **`MIGRATION.md`** — Historical migration notes; still in **`docs/`** for visibility.

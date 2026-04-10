@@ -1,3 +1,14 @@
+---
+title: Players layer
+status: canonical
+audience: [agent, human]
+last_reviewed: 2026-04-10
+canonical: true
+related:
+  - vigil/docs/API.md
+  - vigil/docs/VERCEL_ENV_VARS.md
+---
+
 # Players layer (Players PIN + optional `HEARTGARDEN_PLAYER_SPACE_ID`)
 
 ## What `HEARTGARDEN_PLAYER_SPACE_ID` is (optional)

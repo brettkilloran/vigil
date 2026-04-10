@@ -1,6 +1,17 @@
+---
+title: Vercel environment variables
+status: canonical
+audience: [agent, human]
+last_reviewed: 2026-04-10
+canonical: true
+related:
+  - vigil/docs/DEPLOY_VERCEL.md
+  - vigil/docs/PLAYER_LAYER.md
+---
+
 # Vercel environment variables — reference
 
-Use with **[`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)** and the **[dashboard checklist](./DEPLOY_VERCEL_CHECKLIST.md)**. Set each key in **Project → Settings → Environment Variables** and choose **Production**, **Preview**, **Development** (or combinations) per cell below.
+Use with **[`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)** and the **[dashboard checklist](./DEPLOY_VERCEL_CHECKLIST.md)**. This file is the **source of truth** for env semantics; narrative deploy docs link here instead of duplicating edge cases. Set each key in **Project → Settings → Environment Variables** and choose **Production**, **Preview**, **Development** (or combinations) per cell below.
 
 | Variable | Typical Production | Typical Preview (isolated DB) | Notes |
 |----------|-------------------|-------------------------------|--------|

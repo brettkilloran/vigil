@@ -27,8 +27,8 @@ Restart the heartgarden dev server quickly on the same port, verify it is health
 
 3. Restart the app:
    - Stop the process currently bound to the selected port.
-   - Start dev server from the app directory (**`vigil/`** today — see **`docs/NAMING.md`** if renamed) using the portable Node path when applicable:
-     - `cmd /c "set PATH=C:\Users\Brett\AppData\Local\node-portable\node-v24.11.0-win-x64;%PATH%&& npm run dev -- --port <PORT> --hostname 127.0.0.1"`
+   - Start dev server from the app directory (**`vigil/`** today — see **`docs/NAMING.md`** if renamed). On Windows with a portable Node install, ensure **`node`** / **`npm`** are on `PATH` (see **`vigil/AGENTS.md`** → Node on PATH / `pin-portable-node-user-path.ps1`), then run:
+     - `npm run dev -- --port <PORT> --hostname 127.0.0.1`
 
 4. Verify health before opening:
    - Probe `http://127.0.0.1:<PORT>` and confirm status `200`.

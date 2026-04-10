@@ -6,7 +6,7 @@ The long-form Spatial-style specification that used to live at this path is **ar
 
 **Use instead:**
 
-1. **Task order & lore-engine phases (SoT for completion):** Cursor plan `heartgarden_lore_engine_7fc1fb56.plan.md` under your `.cursor/plans/` directory.
+1. **Lore vertical + plan index:** [`LORE_ENGINE_ROADMAP.md`](./LORE_ENGINE_ROADMAP.md) and repo [`.cursor/plans/README.md`](../../.cursor/plans/README.md)
 2. **What the repo actually ships + architecture + backlog:** [`BUILD_PLAN.md`](./BUILD_PLAN.md)
 3. **Index of all doc types:** [`HEARTGARDEN_MASTER_PLAN.md`](./HEARTGARDEN_MASTER_PLAN.md)
 
