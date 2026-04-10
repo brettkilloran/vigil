@@ -24,7 +24,7 @@ let bad = false;
 for (const rel of mustExist) {
   const abs = path.join(root, "node_modules", rel);
   if (!existsSync(abs)) {
-    // eslint-disable-next-line no-console -- CLI diagnostics
+     
     console.error(`Missing: node_modules/${rel}`);
     bad = true;
   }
@@ -35,7 +35,7 @@ if (!bad) {
     try {
       require.resolve(name, { paths: [root] });
     } catch {
-      // eslint-disable-next-line no-console -- CLI diagnostics
+       
       console.error(`Cannot resolve package: ${name}`);
       bad = true;
     }
@@ -43,10 +43,10 @@ if (!bad) {
 }
 
 if (bad) {
-  // eslint-disable-next-line no-console -- CLI diagnostics
+   
   console.error("\nFix: stop dev servers, then from vigil/ run: npm run reinstall\n");
   process.exit(1);
 }
 
-// eslint-disable-next-line no-console -- CLI diagnostics
+ 
 console.log("Storybook doctor: node_modules looks OK for react, storybook, webpack.");

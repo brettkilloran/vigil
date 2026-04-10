@@ -7,7 +7,7 @@ import {
   getHeartgardenApiBootContext,
   gmMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
-import { refreshItemEmbedding } from "@/src/lib/item-embedding";
+import { refreshItemEmbedding } from "@/src/lib/item-vault-index";
 
 /** Clears stale `item_embeddings` rows only; vector search is not used. */
 export async function POST(

@@ -17,7 +17,7 @@ const pkgSrc = join(root, "package.json");
 const lockSrc = join(root, "package-lock.json");
 
 if (!existsSync(lockSrc)) {
-  // eslint-disable-next-line no-console -- CLI diagnostics
+   
   console.error("Missing package-lock.json — run npm install in vigil/ first.");
   process.exit(1);
 }
@@ -31,13 +31,13 @@ try {
   const cmd = `npx -y npm@${NPM_CI_VERSION} ci --ignore-scripts`;
   const r = spawnSync(cmd, { stdio: "inherit", cwd: tmp, env, shell: true });
   if (r.status !== 0) {
-    // eslint-disable-next-line no-console -- CLI diagnostics
+     
     console.error(
       "\nLockfile would fail GitHub Actions npm ci. From vigil/ run:\n  npm run lockfile:regenerate-linux\nThen commit package-lock.json.\n",
     );
     process.exit(r.status ?? 1);
   }
-  // eslint-disable-next-line no-console -- CLI progress
+   
   console.log("\nverify:package-lock-ci OK (clean npm ci with npm " + NPM_CI_VERSION + ").");
 } finally {
   rmSync(tmp, { recursive: true, force: true });

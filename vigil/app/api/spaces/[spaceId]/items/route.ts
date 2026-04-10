@@ -10,7 +10,7 @@ import {
   playersMayCreateItemType,
   stripGmOnlyEntityMetaPatch,
 } from "@/src/lib/player-item-policy";
-import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
+import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-vault-index";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";

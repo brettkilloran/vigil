@@ -316,7 +316,7 @@ These are good opportunities to improve during rebuild while preserving compatib
 - Bootstrap + space resolution: `app/api/bootstrap/route.ts`, `src/lib/spaces.ts`
 - Items/spaces routes: `app/api/spaces/[spaceId]/items/route.ts`, `app/api/items/[itemId]/route.ts`, `app/api/spaces/[spaceId]/route.ts`
 - Links/backlinks routes: `app/api/items/[itemId]/links/route.ts`, `app/api/item-links/sync/route.ts`
-- Search (FTS / hybrid lexical): `app/api/search/route.ts`; embedding cleanup: `src/lib/item-embedding.ts`
+- Search (FTS / hybrid lexical): `app/api/search/route.ts`; embedding cleanup: `src/lib/item-vault-index.ts`
 - Graph route: `app/api/spaces/[spaceId]/graph/route.ts`
 - Upload/webclip routes: `app/api/upload/presign/route.ts`, `app/api/webclip/preview/route.ts`
 

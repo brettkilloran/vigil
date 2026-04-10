@@ -53,7 +53,7 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Chunk + embed + lore meta on item | `app/api/items/[itemId]/index/route.ts`, `src/lib/item-vault-index.ts`, `lore-item-meta.ts` |
 | Vault index UI status (status bar) | `src/lib/vault-index-status-bus.ts` → `ArchitecturalStatusBar.tsx` (`VaultIndexStatusInline`) |
 | Debounced / `after()` reindex | `src/lib/schedule-vault-index-after.ts` |
-| Embeddings provider | `src/lib/embedding-provider.ts`, `item-embedding.ts` |
+| Embeddings provider | `src/lib/embedding-provider.ts`, `item-vault-index.ts` |
 | DB tables | `src/db/schema.ts` (`items`, `item_embeddings`, …) |
 
 ## Lore Q&A

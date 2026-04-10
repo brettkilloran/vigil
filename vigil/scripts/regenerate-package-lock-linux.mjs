@@ -35,14 +35,14 @@ try {
     process.exit(r.status ?? 1);
   }
   if (!existsSync(lockTmp)) {
-    // eslint-disable-next-line no-console -- CLI diagnostics
+     
     console.error("Expected package-lock.json in temp dir; npm did not create it.");
     process.exit(1);
   }
   copyFileSync(lockTmp, lockDest);
-  // eslint-disable-next-line no-console -- CLI progress
+   
   console.log(`\nWrote ${lockDest}`);
-  // eslint-disable-next-line no-console -- CLI progress
+   
   console.log("Next: npm run verify:package-lock-ci  →  git diff package-lock.json  →  commit");
 } finally {
   rmSync(tmp, { recursive: true, force: true });

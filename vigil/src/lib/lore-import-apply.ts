@@ -6,7 +6,7 @@ import { importReviewItems, itemLinks, items, spaces } from "@/src/db/schema";
 import { buildContentJsonForFolderEntity } from "@/src/components/foundation/architectural-db-bridge";
 import type { CanvasFolderEntity } from "@/src/components/foundation/architectural-types";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
-import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
+import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-vault-index";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 import {
   buildLoreNoteContentJson,

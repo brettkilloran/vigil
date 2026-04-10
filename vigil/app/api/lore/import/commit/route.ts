@@ -8,7 +8,7 @@ import {
   getHeartgardenApiBootContext,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
-import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-embedding";
+import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-vault-index";
 import {
   buildLoreNoteContentJson,
   planLoreImportCardLayout,

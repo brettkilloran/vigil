@@ -14,7 +14,7 @@ vi.mock("@/src/lib/heartgarden-api-boot-context", async (importOriginal) => {
   };
 });
 
-vi.mock("@/src/lib/item-embedding", () => ({
+vi.mock("@/src/lib/item-vault-index", () => ({
   scheduleItemEmbeddingRefresh: vi.fn(),
 }));
 

@@ -200,6 +200,3 @@ export function useHeartgardenSpaceChangeSync(options: {
     itemServerUpdatedAtRef,
   ]);
 }
-
-/** Plan / collab docs alias — same as {@link useHeartgardenSpaceChangeSync}. */
-export { useHeartgardenSpaceChangeSync as useSpaceChangeSync };

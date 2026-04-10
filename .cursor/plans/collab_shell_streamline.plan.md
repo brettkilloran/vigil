@@ -22,8 +22,8 @@ isProject: false
 **Work:**
 
 1. Extract **custom hooks** (names indicative only):
-  - `useSpaceChangeSync` — `syncCursorRef`, `fetchSpaceChanges`, `mergeRemoteItemPatches`, interval, visibility guard, `focusDirty` skip rule.
-  - `usePresenceHeartbeat` — `getOrCreatePresenceClientId`, POST interval, peer poll interval, `setPresencePeerCount`.
+  - `useHeartgardenSpaceChangeSync` — `syncCursorRef`, `fetchSpaceChanges`, `mergeRemoteItemPatches`, interval, visibility guard, `focusDirty` skip rule.
+  - `useHeartgardenPresenceHeartbeat` — `getOrCreatePresenceClientId`, POST interval, peer poll interval, `setPresencePeerCount`.
 2. Keep **public behavior identical** (8s poll, 25s heartbeat, 12s presence poll unless you unify in Phase C).
 3. Optionally extract **small pure helpers** next to hooks if they need unit tests without mounting the shell.
 

@@ -20,9 +20,6 @@ export const HEARTGARDEN_SPACE_CHANGE_POLL_MS_SOLO = 5_500;
  */
 export const HEARTGARDEN_SPACE_CHANGE_POLL_MS_COLLAB = 2_200;
 
-/** @deprecated Prefer SOLO/COLLAB; kept for callers that need a single default. */
-export const HEARTGARDEN_SPACE_CHANGE_POLL_MS = HEARTGARDEN_SPACE_CHANGE_POLL_MS_SOLO;
-
 /** Presence heartbeat POST interval. */
 export const HEARTGARDEN_PRESENCE_HEARTBEAT_MS = 25_000;
 
