@@ -1,8 +1,8 @@
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
-import { items } from "@/src/db/schema";
+import { itemEmbeddings, itemLinks, items } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
   gmMayAccessItemSpaceAsync,
@@ -294,7 +294,14 @@ export async function DELETE(
   if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, existing.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
   }
-  const deleted = await db.delete(items).where(eq(items.id, itemId)).returning();
+  const deleted = await db.transaction(async (tx) => {
+    // Defensive cleanup for older deployments where FK cascades may be absent.
+    await tx
+      .delete(itemLinks)
+      .where(or(eq(itemLinks.sourceItemId, itemId), eq(itemLinks.targetItemId, itemId)));
+    await tx.delete(itemEmbeddings).where(eq(itemEmbeddings.itemId, itemId));
+    return tx.delete(items).where(eq(items.id, itemId)).returning();
+  });
   if (deleted.length === 0) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
