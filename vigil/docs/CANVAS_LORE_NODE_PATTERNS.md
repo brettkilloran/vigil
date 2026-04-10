@@ -18,7 +18,7 @@ This guide is for adding **new alternate canvas item presentations** (lore cards
 | Portable card “DNA” (grid, fields, typography) | `src/components/foundation/lore-entity-card.module.css` | Canvas-only hacks inside the card CSS when they should be viewport-specific |
 | Canvas chrome (selection, max-height, **canvas-only hiding** of sections) | `src/components/foundation/ArchitecturalCanvasApp.module.css` | Hiding focus content here — use focus overlay classes |
 | Canvas-specific React shell (tape, width, body host) | `src/components/foundation/Architectural*CanvasNode.tsx` (one component per variant) | Inlining huge JSX branches inside `ArchitecturalCanvasApp.tsx` |
-| Focus-only draft split / merge | `src/lib/*-focus-html.ts` (pure functions + `DOMParser`) | Ad-hoc string split in the shell that drifts from seed HTML |
+| Focus projection merge (canonical ↔ focus document) | `src/lib/lore-character-focus-document-html.ts` (pure functions + `DOMParser`) | Split-draft state in React + two editors (abandoned — “card in a card”) |
 | “Is this entity our variant?” | **One** exported helper per family, e.g. `shouldRenderLoreCharacterCredentialCanvasNode` | Repeated `entity.theme === … && html.includes(…)` across files |
 
 ---
@@ -55,21 +55,22 @@ Decide explicitly for each region of the template:
 | Region | Typical canvas | Typical focus |
 |--------|----------------|---------------|
 | Identity / metadata / portrait | Shown, compact | Shown, may mirror or expand |
-| Long-form narrative / “document” | **Optional: hidden** on canvas (CSS under canvas root) | Full editor, second column, or merged body |
+| Long-form narrative / “document” | **Optional: hidden** on canvas (CSS under canvas root) | **One** full-width editor region in focus (notes at the bottom of the same surface — not a second column) |
 
-**Pattern used for character v11:** body HTML still contains the full grid (including notes) for **persistence**; the **canvas** root (e.g. `.loreCharacterCanvasRoot`) hides the notes row with CSS so the card stays scannable. **Focus** uses the **same global** `focusSheet` + **one** `BufferedContentEditable` (`focusBody`) as default document focus; `.focusCharacterDocument` softens v11 “card” chrome so it reads as a **single scrollable document** (metadata + notes in one flow).
+**Pattern used for character v11:** body HTML still contains the full grid (including notes) for **persistence**; the **canvas** root (e.g. `.loreCharacterCanvasRoot`) hides the notes row with CSS so the card stays scannable. **Focus** uses the **same global** `focusSheet` + **one** `BufferedContentEditable` (`focusBody`) as default document focus. **Do not** mount a separate “character panel” editor: that read as a **card inside the sheet**. Instead, **project** canonical v11 HTML to a flatter focus-document HTML (`lore-character-focus-document-html.ts`) and merge back on save; `.focusCharacterDocument` strips ID-card shadows/badges so the page reads as **one document** (metadata + portrait + notes).
 
-Avoid removing nodes from `bodyHtml` only on canvas in JS — you’ll fight sync and undo. Prefer **display:none** under a **canvas-only** wrapper class or `data-hg-canvas-role`.
+**Product constraints called out in review:** no two-column focus layout for this flow; no physical-ID metaphor in focus; **object id** is backend-derived and **shortened** in chrome — not an editable catalog field or monospace UUID block. Avoid removing nodes from `bodyHtml` only on canvas in JS — prefer **display:none** under a **canvas-only** wrapper class or `data-hg-canvas-role`.
 
 ---
 
 ## 5. Focus: same interaction shell for every surface
 
-**Intent:** Custom card bodies on the canvas can diverge, but **focus** should feel like the **same full-screen document editor** (`focusOverlay` → `focusSheet` → header + body + dock): one continuous region where possible, same formatting affordances as default notes.
+**Intent:** Custom card bodies on the canvas can diverge, but **focus** should feel like the **same full-screen document editor** (`focusOverlay` → `focusSheet` → header + body + dock): one continuous region where possible, same formatting affordances as default notes **for long-form prose**.
 
-- **Resolver:** Map `(focusOpen, activeEntity)` → `focusSurface` (e.g. `character-hybrid`). Branch for dark scrim, **hidden title** (when title comes from elsewhere), and **body classNames** — not for mounting a second parallel editor tree unless truly necessary.
-- **One `focusBody` host:** Prefer a **single** `BufferedContentEditable` + `setFocusBody` / save path. Use CSS (e.g. `.focusCharacterDocument`) to de-emphasize canvas-oriented chrome (badges, lanyards, heavy card shadows) in focus — not a second stacked “card UI.”
-- **Slash / block insert on v11 HTML:** Nested `contenteditable` fields (name, meta) vs notes body — scope **rich insert** to the notes region via `isRichDocBodyFormattingTarget` (e.g. caret inside `[class*="charSkNotesBody"]`).
+- **Resolver:** Map `(focusOpen, activeEntity)` → `focusSurface` (e.g. `default-doc` | `code` | `character-hybrid`). Branch for dark scrim, **hidden title** (when the card carries the title elsewhere), and **body classNames** — **not** for mounting a second parallel editor tree (that pattern was tried and rejected).
+- **One `focusBody` host:** A **single** `BufferedContentEditable` + `setFocusBody` / save path. For character v11, **project** body HTML to focus-document markup and **merge** on save — do not embed the full credential grid DOM in focus if it recreates “card in a card” visuals. Use `.focusCharacterDocument` to flatten chrome.
+- **Slash / block insert:** For character focus, scope **rich insert** to the notes subtree via `isRichDocBodyFormattingTarget` — caret inside **`[data-hg-character-focus-notes="true"]`** when the body contains `[data-hg-character-focus-doc="v1"]`. (Canvas v11 still uses `charSkNotesBody` in canonical HTML; focus projection uses stable `data-hg-*` hooks for the parser and for editor rules.)
+- **Portrait / media:** Reuse the same upload affordance pattern as image cards (`data-architectural-media-upload`, shared button styling); position upload **in-frame** so it does not displace placeholder layout.
 
 ---
 
@@ -92,8 +93,8 @@ When graph state is restored while focus is open, **`focusBody` / baselines** al
 2. [ ] **Seed HTML** function; wire `getLoreNodeSeedBodyHtml` / creation paths.
 3. [ ] **`Architectural…CanvasNode`** component + canvas root class + `data-hg-canvas-role` for debugging.
 4. [ ] **Canvas-only CSS** under that root where the canvas must stay compact.
-5. [ ] **Focus surface** in resolver; prefer **one** `focusBody` editor + document-style body class over split editors unless the data model truly requires it.
-6. [ ] **`isRichDocBodyFormattingTarget`** (or equivalent) if nested editables need block/slash scoped to a prose region.
+5. [ ] **Focus surface** in resolver; **one** `focusBody` editor + document-style body class; for character-like shells prefer **HTML projection** (`*-focus-document-html.ts`) over split React editors unless the data model truly requires a separate tree.
+6. [ ] **`isRichDocBodyFormattingTarget`** scoped to the **prose** region (e.g. focus notes `data-hg-*` or canonical notes body class) so metadata fields do not receive block/slash.
 7. [ ] **Lab page** smoke path + `npm run check`.
 
 ---
@@ -105,5 +106,8 @@ The **character v11** path:
 - Detection: `shouldRenderLoreCharacterCredentialCanvasNode`, `bodyHtmlImpliesLoreCharacterV11`
 - Canvas shell: `ArchitecturalLoreCharacterCanvasNode`, `.loreCharacterCanvasRoot` (notes row hidden on canvas for height)
 - Focus: `focusSurface === "character-hybrid"`, **same** `BufferedContentEditable` as default doc, class **`focusCharacterDocument`**, readable header **`focusMetaReadable`**
+- **Projection:** `lore-character-focus-document-html.ts` (open → focus HTML, save → merge into canonical v11); **`withCharacterV11ObjectIdInHeader`** keeps canvas/focus header id + portrait placeholders consistent with the item id
+
+See **`CHARACTER_FOCUS_AND_DATA_MODEL_PLAN.md`** for data invariants, phased work, and post-implementation learnings.
 
 Treat new types as parallel tracks with the same **seams**, not copy-paste of one-off fixes.

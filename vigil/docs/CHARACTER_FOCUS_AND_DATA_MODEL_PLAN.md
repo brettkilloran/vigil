@@ -2,6 +2,22 @@
 
 This plan aligns **UI**, **editor behavior**, and **persistence** so character nodes stay correct across canvas, focus, Neon sync, search, and future tooling. It assumes the product direction you confirmed: **one global focus shell** (document editor interaction model), **canvas may diverge visually**, **notes belong in focus** (hidden on canvas only for height), and **no reliance on split-draft hacks** unless the stored model truly requires them.
 
+### Learnings since initial plan (feedback + implementation)
+
+These points came from direct product feedback and what worked (or failed) in code:
+
+1. **Split focus UI was the wrong abstraction** — A dedicated React panel plus **two** draft slices (structured vs “paper”) produced a **“card in a card”** inside the global `focusSheet`, fought the document metaphor, and duplicated merge logic. **Current approach:** one `BufferedContentEditable` in focus; **canonical v11 `bodyHtml` is projected** to a flatter focus-document HTML on open and **merged back** on save via `lore-character-focus-document-html.ts` (`characterV11BodyToFocusDocumentHtml` / `focusDocumentHtmlToCharacterV11Body`). The stored row is still **one** HTML string.
+
+2. **Surface / metaphor** — Focus should read as **entering a different mode** where canvas chrome is irrelevant; the shell stays **global** (`focusOverlay` → `focusSheet` → header + body + dock). The body is **one continuous scroll** (metadata + portrait + notes), not a two-column split; avoid anything that looks like a **physical ID card** or badge stack in focus.
+
+3. **Identity in the header** — Do not expose an editable “catalog id” or monospace UUID line in focus. **Backend object id** drives display: **shortened** in the focus meta line (and on-canvas header via `withCharacterV11ObjectIdInHeader`), with full id in attributes where needed — not legacy “CLGN-*” copy baked into body HTML.
+
+4. **Rich editing scope** — Slash / block insert and “document” chrome must apply only to **long-form notes**, not metadata fields. Scope via **`[data-hg-character-focus-notes="true"]`** inside the focus document root (`data-hg-character-focus-doc="v1"`), implemented in `isRichDocBodyFormattingTarget`. **Notes prose** should match default document readability (size, contrast, optional measure) and block-handle behavior in that region — not the tiny nested-field feel.
+
+5. **Portrait pipeline** — Same **`data-architectural-media-root`** + upload hook as media cards; **placeholder** must normalize for legacy SVG/dims; upload control is **overlaid** (e.g. bottom-right in frame) so it does not reflow the placeholder. **Media upload UX** is standardized (shared button tokens, `Upload` vs `Replace` by state, single file-picker flow).
+
+6. **Track A, not B, for now** — The shipped path is **HTML-first + projection**, not a separate React-only focus tree or new JSON sidecar. Track B remains optional if focus UX still hits nested-CE limits after this baseline.
+
 ---
 
 ## 1. Current data model (invariants to preserve)
@@ -71,12 +87,12 @@ Store character as **structured fields + notes HTML** in `content_json` (not onl
    - `htmlToPlainText` does not throw
 3. **Optional:** `data-hg-lore-region` on seed + non-breaking **migration** that only **inserts attributes** into existing HTML on next save (idempotent).
 
-### Phase 2 — **Focus UX + editor behavior (Track A)**
+### Phase 2 — **Focus UX + editor behavior (Track A)** — largely implemented
 
-1. **Header** — Keep aligned with global focus (readable meta, no ID-card copy).
-2. **Single editor** — Maintain one `BufferedContentEditable`; refine **`isRichDocBodyFormattingTarget`** if regions are tagged (`data-hg-lore-region="notes"`).
-3. **Canvas** — Keep notes hidden for height; document that **full** body still syncs.
-4. **Accessibility** — Tab order through nested fields + notes; spot-check screen reader labels on portrait upload.
+1. **Header** — Global focus meta (`focusMetaReadable` for character); short object-id fragment, not full UUID or catalog field.
+2. **Single editor** — One `BufferedContentEditable` with `focusSurface === "character-hybrid"` → `focusCharacterDocument`; projection from `lore-character-focus-document-html.ts`. **`isRichDocBodyFormattingTarget`** uses `data-hg-character-focus-notes="true"` (not only `charSkNotesBody`, since focus HTML is projected).
+3. **Canvas** — Notes row hidden on canvas for height; full body still syncs; optional **`withCharacterV11ObjectIdInHeader`** on save/render for id + portrait placeholder normalization.
+4. **Accessibility** — Continue to validate tab order through metadata fields + notes; portrait upload remains a real control with stable `data-architectural-media-upload`.
 
 ### Phase 3 — **Sync & edge cases**
 
