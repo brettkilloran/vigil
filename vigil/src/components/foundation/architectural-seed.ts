@@ -19,18 +19,25 @@ type StyleTokens = {
   mediaUploadBtn: string;
 };
 
+/**
+ * World-space offsets so the onboarding cluster sits around **world (0,0)** — matches how a
+ * real GM “Main space” feels with viewport-centered `defaultCamera` (cards are not shoved into
+ * the lower-right quadrant). Same 2×2 rhythm as before: ~160px gutters, 600px row step.
+ */
+const DEMO_ROOT_GRID_OX = -420;
+const DEMO_ROOT_GRID_OY = -440;
+/** 420px-wide folder centered under the 2×2 grid (grid spans x ≈ −420…420). */
+const DEMO_ROOT_FOLDER_LEFT = DEMO_ROOT_GRID_OX + 210;
+
 export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
-  /* Root demo layout: 2×2 grid of 340×280 cards from world (0,0), then the Research
-   * folder on a third row (420×280). With default camera (translate 0,0), world x/y
-   * map to the viewport from the top-left, so we keep coords ≥0 so nothing clips.
-   * Right column at x=500 (160px gutter) gives rotated cards room so they do not
-   * visually collide. The Research folder uses x=40 so it stays left of that column. */
+  /* Root demo: 2×2 grid of 340×280 cards centered on the viewport focal point, then the Research
+   * folder on a third row (420×280) under the grid — mirrors typical live-board composition. */
   return [
     {
       id: "node-1",
       title: "Welcome to this board",
-      x: 0,
-      y: 0,
+      x: DEMO_ROOT_GRID_OX,
+      y: DEMO_ROOT_GRID_OY,
       rotation: -2.6,
       theme: "default",
       tapeRotation: -2.2,
@@ -45,8 +52,8 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
     {
       id: "node-2",
       title: "Sample sync config",
-      x: 500,
-      y: 0,
+      x: DEMO_ROOT_GRID_OX + 500,
+      y: DEMO_ROOT_GRID_OY,
       rotation: 2.4,
       width: 340,
       theme: "code",
@@ -65,8 +72,8 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
     {
       id: "node-3",
       title: "Try these next",
-      x: 500,
-      y: 600,
+      x: DEMO_ROOT_GRID_OX + 500,
+      y: DEMO_ROOT_GRID_OY + 600,
       rotation: -3.1,
       width: 340,
       theme: "task",
@@ -94,8 +101,8 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
     {
       id: "node-4",
       title: "Reference image",
-      x: 0,
-      y: 600,
+      x: DEMO_ROOT_GRID_OX,
+      y: DEMO_ROOT_GRID_OY + 600,
       rotation: 2.2,
       width: 340,
       theme: "media",
@@ -159,18 +166,22 @@ export function buildArchitecturalSeedGraph(
     rotation: -4.2,
     width: 420,
     tapeRotation: 0,
-    /* Full width below the two columns; x=40 keeps 40…460 clear of the right column */
+    /* Third row: centered under the 2×2 grid (same relative placement as before, shifted with grid). */
     slots: {
-      root: { x: 40, y: 960 },
+      root: { x: DEMO_ROOT_FOLDER_LEFT, y: DEMO_ROOT_GRID_OY + 960 },
     },
   };
+
+  const DEMO_RESEARCH_OX = -420;
+  const DEMO_RESEARCH_OY = -140;
+  const DEMO_RESEARCH_FOLDER_LEFT = DEMO_RESEARCH_OX + 210;
 
   const folderMockNodes: CanvasNode[] = [
     {
       id: "dossier-01",
       title: "Source list",
-      x: 0,
-      y: 0,
+      x: DEMO_RESEARCH_OX,
+      y: DEMO_RESEARCH_OY,
       rotation: -1.2,
       width: 340,
       theme: "default",
@@ -182,8 +193,8 @@ export function buildArchitecturalSeedGraph(
     {
       id: "dossier-02",
       title: "Snippet: normalizer",
-      x: 500,
-      y: 0,
+      x: DEMO_RESEARCH_OX + 500,
+      y: DEMO_RESEARCH_OY,
       rotation: 0.7,
       width: 340,
       theme: "code",
@@ -223,9 +234,9 @@ export function buildArchitecturalSeedGraph(
       rotation: 0.5,
       width: 420,
       tapeRotation: 0,
-      /* Third row, same horizontal idea as root folder — left span only */
+      /* Below the two research cards, centered like the root folder */
       slots: {
-        "space-project-thesis": { x: 40, y: 360 },
+        "space-project-thesis": { x: DEMO_RESEARCH_FOLDER_LEFT, y: DEMO_RESEARCH_OY + 360 },
       },
     };
 
@@ -240,7 +251,8 @@ export function buildArchitecturalSeedGraph(
       bodyHtml:
         "<p>You are two folders deep. Breadcrumbs at the top of the canvas show the path; use them to jump up without losing your place.</p><p>This card only exists here—nothing on the outer canvas repeats it—so nested spaces stay easy to tell apart.</p>",
       slots: {
-        "space-subsystems": { x: 0, y: 0 },
+        /* Single card centered on the archive’s focal point */
+        "space-subsystems": { x: -170, y: -140 },
       },
     };
 
