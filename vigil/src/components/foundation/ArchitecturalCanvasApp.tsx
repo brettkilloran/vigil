@@ -76,10 +76,13 @@ import { ArchitecturalRemotePresenceCursors } from "@/src/components/foundation/
 import { ArchitecturalToolRail } from "@/src/components/foundation/ArchitecturalToolRail";
 import {
   applyImageDataUrlToArchitecturalMediaBody,
+  bodyUsesLorePortraitMediaSlot,
+  lorePortraitSlotUsesV9,
   getArchitecturalMediaNotes,
   parseArchitecturalMediaFromBody,
   setArchitecturalMediaNotes,
 } from "@/src/components/foundation/architectural-media-html";
+import loreEntityCardStyles from "@/src/components/foundation/lore-entity-card.module.css";
 import {
   FOLDER_COLOR_SCHEMES,
   type FolderColorSchemeId,
@@ -215,10 +218,18 @@ import {
   type CanvasSpace,
   type CanvasTool,
   type DockFormatAction,
+  type LoreCard,
+  type LoreCardKind,
   type NodeTheme,
   type TapeVariant,
   ROOT_SPACE_DISPLAY_NAME,
 } from "@/src/components/foundation/architectural-types";
+import {
+  defaultLoreCardVariantForKind,
+  defaultTitleForLoreKind,
+  getLoreNodeSeedBodyHtml,
+  tapeVariantForLoreCard,
+} from "@/src/lib/lore-node-seed-html";
 
 const VigilFlowRevealOverlay = dynamic(
   () =>
@@ -854,6 +865,10 @@ function measureArchitecturalNodePlacement(
 function tapeVariantForTheme(theme: ContentTheme): TapeVariant {
   if (theme === "code" || theme === "media") return "dark";
   return "clear";
+}
+
+function isLoreCreateNodeType(type: NodeTheme): type is LoreCardKind {
+  return type === "character" || type === "faction" || type === "location";
 }
 
 function normalizedFocusTitle(raw: string): string {
@@ -3428,21 +3443,25 @@ export function ArchitecturalCanvasApp({
               prev,
               dataUrl,
               alt,
-              styles.mediaImage,
+              bodyUsesLorePortraitMediaSlot(prev)
+                ? lorePortraitSlotUsesV9(prev)
+                  ? loreEntityCardStyles.charSkPortraitImg
+                  : loreEntityCardStyles.char3dPortraitImg
+                : styles.mediaImage,
             ),
           );
           return;
         }
         const entity = graphRef.current.entities[pending.id];
         if (!entity || entity.kind !== "content") return;
+        const portraitClass = bodyUsesLorePortraitMediaSlot(entity.bodyHtml)
+          ? lorePortraitSlotUsesV9(entity.bodyHtml)
+            ? loreEntityCardStyles.charSkPortraitImg
+            : loreEntityCardStyles.char3dPortraitImg
+          : styles.mediaImage;
         updateNodeBody(
           pending.id,
-          applyImageDataUrlToArchitecturalMediaBody(
-            entity.bodyHtml,
-            dataUrl,
-            alt,
-            styles.mediaImage,
-          ),
+          applyImageDataUrlToArchitecturalMediaBody(entity.bodyHtml, dataUrl, alt, portraitClass),
           { immediate: true },
         );
       };
@@ -3457,6 +3476,8 @@ export function ArchitecturalCanvasApp({
     const stopCaretDriftOnButton = (e: MouseEvent) => {
       const t = (e.target as HTMLElement).closest("[data-architectural-media-upload]");
       if (t) e.preventDefault();
+      const ex = (e.target as HTMLElement).closest(`[data-expand-btn="true"]`);
+      if (ex && !ex.closest(`.${styles.nodeHeader}`)) e.preventDefault();
     };
     const onUploadClick = (e: MouseEvent) => {
       const t = (e.target as HTMLElement).closest("[data-architectural-media-upload]");
@@ -3610,6 +3631,30 @@ export function ArchitecturalCanvasApp({
     },
     [graph.entities, openFocusMode, openMediaGallery],
   );
+
+  const handleNodeExpandRef = useRef(handleNodeExpand);
+  handleNodeExpandRef.current = handleNodeExpand;
+
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    const onExpandKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      const t = (e.target as HTMLElement).closest(`[data-expand-btn="true"]`);
+      if (!t || !shell.contains(t) || t.closest(`.${styles.nodeHeader}`)) return;
+      e.preventDefault();
+      const inFocus = t.closest("[data-focus-body-editor='true']");
+      if (inFocus && focusOpenRef.current && activeNodeIdRef.current) {
+        handleNodeExpandRef.current(activeNodeIdRef.current);
+        return;
+      }
+      const node = t.closest<HTMLElement>("[data-node-id]");
+      const id = node?.dataset.nodeId;
+      if (id) handleNodeExpandRef.current(id);
+    };
+    shell.addEventListener("keydown", onExpandKeyDown, true);
+    return () => shell.removeEventListener("keydown", onExpandKeyDown, true);
+  }, []);
 
   useEffect(() => {
     if (!galleryOpen || !galleryNodeId) return;
@@ -5694,13 +5739,16 @@ export function ArchitecturalCanvasApp({
 
         let title = "New Note";
         const width = UNIFIED_NODE_WIDTH;
-        let contentTheme: ContentTheme =
-          type === "task" ? "default" : (type as ContentTheme);
+        let contentTheme: ContentTheme = "default";
+        if (type === "code") contentTheme = "code";
+        else if (type === "media") contentTheme = "media";
+        else if (type === "task") contentTheme = "task";
+
         let bodyHtml = `<div contenteditable="true">Start typing...</div>`;
+        let loreCard: LoreCard | undefined;
 
         if (type === "task") {
           title = "Checklist";
-          contentTheme = "task";
           bodyHtml = `
         <div class="${styles.taskItem}" contenteditable="false">
           <div class="${styles.taskCheckbox}" contenteditable="false"></div>
@@ -5713,11 +5761,9 @@ export function ArchitecturalCanvasApp({
       `;
         } else if (type === "code") {
           title = "Snippet";
-          contentTheme = "code";
           bodyHtml = `// [IN] Compose shard at cursor…`;
         } else if (type === "media") {
           title = "Untitled photo";
-          contentTheme = "media";
           bodyHtml = `
         <div class="${styles.mediaFrame}" data-architectural-media-root="true">
           <div class="${styles.mediaPlaceholder}" data-architectural-media-fallback="true">Upload an image</div>
@@ -5727,6 +5773,19 @@ export function ArchitecturalCanvasApp({
         </div>
         <div data-architectural-media-notes="true"></div>
       `;
+        } else if (isLoreCreateNodeType(type)) {
+          title = defaultTitleForLoreKind(type);
+          const loreVariant = defaultLoreCardVariantForKind(type);
+          loreCard = { kind: type, variant: loreVariant };
+          const locationStripSeed =
+            type === "location" && loreVariant === "v3"
+              ? globalThis.crypto?.randomUUID?.() ?? `loc-${Date.now()}`
+              : undefined;
+          bodyHtml = getLoreNodeSeedBodyHtml(
+            type,
+            loreVariant,
+            locationStripSeed != null ? { locationStripSeed } : undefined,
+          );
         }
 
         const tempNode: CanvasContentEntity = {
@@ -5737,14 +5796,18 @@ export function ArchitecturalCanvasApp({
           width,
           height: 280,
           theme: contentTheme,
-          tapeVariant: tapeVariantForTheme(contentTheme),
+          tapeVariant:
+            loreCard != null
+              ? tapeVariantForLoreCard(loreCard.kind, loreCard.variant)
+              : tapeVariantForTheme(contentTheme),
           tapeRotation,
           bodyHtml,
+          loreCard,
           stackId: null,
           stackOrder: null,
           slots: { [spaceId]: { x, y } },
         };
-        const itemRes = await apiCreateItem(spaceId, {
+        const createItemBody: Record<string, unknown> = {
           itemType: architecturalItemType(tempNode),
           x,
           y,
@@ -5754,7 +5817,9 @@ export function ArchitecturalCanvasApp({
           contentText: htmlToPlainText(bodyHtml),
           contentJson: buildContentJsonForContentEntity(tempNode),
           zIndex: nextZ,
-        });
+        };
+        if (loreCard) createItemBody.entityType = loreCard.kind;
+        const itemRes = await apiCreateItem(spaceId, createItemBody);
         if (!itemRes.ok || !itemRes.item) {
           window.alert(
             itemRes.error?.trim() ||
@@ -5847,9 +5912,13 @@ export function ArchitecturalCanvasApp({
     const id = createId();
     let title = "New Note";
     const width = UNIFIED_NODE_WIDTH;
-    let contentTheme: ContentTheme =
-      type === "task" ? "default" : (type as ContentTheme);
+    let contentTheme: ContentTheme = "default";
+    if (type === "code") contentTheme = "code";
+    else if (type === "media") contentTheme = "media";
+    else if (type === "task") contentTheme = "task";
+
     let bodyHtml = `<div contenteditable="true">Start typing...</div>`;
+    let loreCard: LoreCard | undefined;
 
     if (type === "task") {
       title = "Checklist";
@@ -5865,11 +5934,9 @@ export function ArchitecturalCanvasApp({
       `;
     } else if (type === "code") {
       title = "Snippet";
-      contentTheme = "code";
       bodyHtml = `// [IN] Compose shard at cursor…`;
     } else if (type === "media") {
       title = "Untitled photo";
-      contentTheme = "media";
       bodyHtml = `
         <div class="${styles.mediaFrame}" data-architectural-media-root="true">
           <div class="${styles.mediaPlaceholder}" data-architectural-media-fallback="true">Upload an image</div>
@@ -5879,6 +5946,16 @@ export function ArchitecturalCanvasApp({
         </div>
         <div data-architectural-media-notes="true"></div>
       `;
+    } else if (isLoreCreateNodeType(type)) {
+      title = defaultTitleForLoreKind(type);
+      const loreVariant = defaultLoreCardVariantForKind(type);
+      loreCard = { kind: type, variant: loreVariant };
+      const locationStripSeed = type === "location" && loreVariant === "v3" ? id : undefined;
+      bodyHtml = getLoreNodeSeedBodyHtml(
+        type,
+        loreVariant,
+        locationStripSeed != null ? { locationStripSeed } : undefined,
+      );
     }
 
     const nextNode = {
@@ -5889,9 +5966,13 @@ export function ArchitecturalCanvasApp({
       width,
       height: 280,
       theme: contentTheme,
-      tapeVariant: tapeVariantForTheme(contentTheme),
+      tapeVariant:
+        loreCard != null
+          ? tapeVariantForLoreCard(loreCard.kind, loreCard.variant)
+          : tapeVariantForTheme(contentTheme),
       tapeRotation,
       bodyHtml,
+      loreCard,
       stackId: null,
       stackOrder: null,
       slots: {
@@ -7207,10 +7288,20 @@ export function ArchitecturalCanvasApp({
       if (connectionMode !== "move") return;
       const target = event.target as HTMLElement;
       const expandBtn = target.closest<HTMLElement>(`[data-expand-btn="true"]`);
-      if (!expandBtn) return;
+      if (!expandBtn || expandBtn.closest(`.${styles.nodeHeader}`)) return;
       const entity = expandBtn.closest<HTMLElement>(`[data-node-id]`);
       const id = entity?.dataset.nodeId;
-      if (id) handleNodeExpand(id);
+      if (id) {
+        handleNodeExpand(id);
+        return;
+      }
+      if (
+        expandBtn.closest("[data-focus-body-editor='true']") &&
+        focusOpenRef.current &&
+        activeNodeIdRef.current
+      ) {
+        handleNodeExpand(activeNodeIdRef.current);
+      }
     };
 
     const onDoubleClick = (event: MouseEvent) => {
@@ -7766,7 +7857,7 @@ export function ArchitecturalCanvasApp({
         return;
       }
 
-      // Creation hotkeys (1-5) map to dock create actions.
+      // Creation hotkeys (1–8) map to dock create actions.
       if (key === "1") {
         event.preventDefault();
         createNewNode("default");
@@ -7791,6 +7882,21 @@ export function ArchitecturalCanvasApp({
       if (key === "5") {
         event.preventDefault();
         createNewNode("folder");
+        return;
+      }
+      if (key === "6") {
+        event.preventDefault();
+        createNewNode("character");
+        return;
+      }
+      if (key === "7") {
+        event.preventDefault();
+        createNewNode("faction");
+        return;
+      }
+      if (key === "8") {
+        event.preventDefault();
+        createNewNode("location");
         return;
       }
 
@@ -8849,7 +8955,7 @@ export function ArchitecturalCanvasApp({
                     activeTool={activeTool}
                     dragged={dragged}
                     selected={selected}
-                    showTape={!entity.stackId}
+                    showTape={!entity.stackId && entity.loreCard?.kind !== "character"}
                     onBodyCommit={updateNodeBody}
                     onExpand={handleNodeExpand}
                     onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
@@ -8866,6 +8972,7 @@ export function ArchitecturalCanvasApp({
                         ? "Write here, or type / for blocks…"
                         : undefined
                     }
+                    loreCard={entity.loreCard}
                   />
                 ) : (
                   <ArchitecturalFolderCard
@@ -9027,12 +9134,13 @@ export function ArchitecturalCanvasApp({
                         activeTool={activeTool}
                         dragged={draggingStack}
                         selected={false}
-                        showTape={!entity.stackId}
+                        showTape={!entity.stackId && entity.loreCard?.kind !== "character"}
                         onBodyCommit={updateNodeBody}
                         onExpand={handleNodeExpand}
                         bodyEditable={false}
                         canvasPanZoomScale={scale}
                         useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
+                        loreCard={entity.loreCard}
                       />
                     ) : (
                       <ArchitecturalFolderCard
@@ -10300,7 +10408,7 @@ export function ArchitecturalCanvasApp({
                     activeTool={activeTool}
                     dragged={!!drag}
                     selected={false}
-                    showTape={!entity.stackId}
+                    showTape={!entity.stackId && entity.loreCard?.kind !== "character"}
                     onBodyCommit={updateNodeBody}
                     onExpand={handleNodeExpand}
                     onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
@@ -10317,6 +10425,7 @@ export function ArchitecturalCanvasApp({
                         ? "Write here, or type / for blocks…"
                         : undefined
                     }
+                    loreCard={entity.loreCard}
                   />
                 ) : (
                   <ArchitecturalFolderCard
