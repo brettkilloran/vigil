@@ -7,6 +7,7 @@ import {
   type CanvasSpace,
 } from "@/src/components/foundation/architectural-types";
 import { mediaUploadActionLabel } from "@/src/components/foundation/architectural-media-html";
+import { legacyCodeBodyHtmlToHgDocSeed } from "@/src/lib/hg-doc/html-to-doc";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
 import {
   DEMO_ARCHIVE_NOTE_DOC,
@@ -37,6 +38,27 @@ const DEMO_ROOT_GRID_OY = -440;
 /** 420px-wide folder centered under the 2×2 grid (grid spans x ≈ −420…420). */
 const DEMO_ROOT_FOLDER_LEFT = DEMO_ROOT_GRID_OX + 210;
 
+/** Styled HTML from the pre-hgDoc era; canvas code cards now use hgDoc (`legacyCodeBodyHtmlToHgDocSeed`). */
+const DEMO_NODE_2_CODE_HTML = `
+        <span style="color: ${DS_COLOR.codeSampleComment};">// Example: how a small client might describe its session</span><br>
+        <span style="color: ${DS_COLOR.codeSampleKeyword};">export const</span> <span style="color: ${DS_COLOR.codeSampleName};">workspaceSession</span> = {<br>
+        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">id</span>: <span style="color: ${DS_COLOR.codeSampleString};">'hg-demo-01'</span>,<br>
+        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">region</span>: <span style="color: ${DS_COLOR.codeSampleString};">'us-east'</span>,<br>
+        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">lastSyncedAt</span>: <span style="color: ${DS_COLOR.codeSampleKeyword};">new</span> <span style="color: ${DS_COLOR.codeSampleName};">Date</span>(<span style="color: ${DS_COLOR.codeSampleString};">'2026-04-01T12:00:00Z'</span>),<br>
+        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">status</span>: <span style="color: ${DS_COLOR.codeSampleString};">'idle'</span>,<br>
+        } <span style="color: ${DS_COLOR.codeSampleKeyword};">as const</span>;<br>
+      `;
+
+const DEMO_NODE_2_BODY_DOC = legacyCodeBodyHtmlToHgDocSeed(DEMO_NODE_2_CODE_HTML);
+const DEMO_NODE_2_BODY_HTML = hgDocToHtml(DEMO_NODE_2_BODY_DOC);
+
+const DEMO_DOSSIER_02_CODE_HTML = `<span style="color: ${DS_COLOR.codeSampleComment};">// Strip noise from pasted text before indexing</span><br><span style="color: ${DS_COLOR.codeSampleKeyword};">function</span> <span style="color: ${DS_COLOR.codeSampleName};">normalize</span>(s: <span style="color: ${DS_COLOR.codeSampleName};">string</span>) {<br>
+&nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleKeyword};">return</span> s.<span style="color: ${DS_COLOR.codeSampleName};">replace</span>(<span style="color: ${DS_COLOR.codeSampleString};">/\\s+/g</span>, <span style="color: ${DS_COLOR.codeSampleString};">' '</span>).<span style="color: ${DS_COLOR.codeSampleName};">trim</span>();<br>
+}`;
+
+const DEMO_DOSSIER_02_BODY_DOC = legacyCodeBodyHtmlToHgDocSeed(DEMO_DOSSIER_02_CODE_HTML);
+const DEMO_DOSSIER_02_BODY_HTML = hgDocToHtml(DEMO_DOSSIER_02_BODY_DOC);
+
 export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
   /* Root demo: 2×2 grid of 340×280 cards centered on the viewport focal point, then the Research
    * folder on a third row (420×280) under the grid — mirrors typical live-board composition. */
@@ -63,15 +85,8 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       theme: "code",
       tapeRotation: 2.8,
       tapeVariant: "dark",
-      bodyHtml: `
-        <span style="color: ${DS_COLOR.codeSampleComment};">// Example: how a small client might describe its session</span><br>
-        <span style="color: ${DS_COLOR.codeSampleKeyword};">export const</span> <span style="color: ${DS_COLOR.codeSampleName};">workspaceSession</span> = {<br>
-        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">id</span>: <span style="color: ${DS_COLOR.codeSampleString};">'hg-demo-01'</span>,<br>
-        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">region</span>: <span style="color: ${DS_COLOR.codeSampleString};">'us-east'</span>,<br>
-        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">lastSyncedAt</span>: <span style="color: ${DS_COLOR.codeSampleKeyword};">new</span> <span style="color: ${DS_COLOR.codeSampleName};">Date</span>(<span style="color: ${DS_COLOR.codeSampleString};">'2026-04-01T12:00:00Z'</span>),<br>
-        &nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleProperty};">status</span>: <span style="color: ${DS_COLOR.codeSampleString};">'idle'</span>,<br>
-        } <span style="color: ${DS_COLOR.codeSampleKeyword};">as const</span>;<br>
-      `,
+      bodyDoc: DEMO_NODE_2_BODY_DOC,
+      bodyHtml: DEMO_NODE_2_BODY_HTML,
     },
     {
       id: "node-3",
@@ -188,9 +203,8 @@ export function buildArchitecturalSeedGraph(
       theme: "code",
       tapeRotation: 1.4,
       tapeVariant: "dark",
-      bodyHtml: `<span style="color: ${DS_COLOR.codeSampleComment};">// Strip noise from pasted text before indexing</span><br><span style="color: ${DS_COLOR.codeSampleKeyword};">function</span> <span style="color: ${DS_COLOR.codeSampleName};">normalize</span>(s: <span style="color: ${DS_COLOR.codeSampleName};">string</span>) {<br>
-&nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleKeyword};">return</span> s.<span style="color: ${DS_COLOR.codeSampleName};">replace</span>(<span style="color: ${DS_COLOR.codeSampleString};">/\\s+/g</span>, <span style="color: ${DS_COLOR.codeSampleString};">' '</span>).<span style="color: ${DS_COLOR.codeSampleName};">trim</span>();<br>
-}`,
+      bodyDoc: DEMO_DOSSIER_02_BODY_DOC,
+      bodyHtml: DEMO_DOSSIER_02_BODY_HTML,
     },
   ];
 
