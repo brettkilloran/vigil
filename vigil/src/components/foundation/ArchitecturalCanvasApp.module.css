@@ -2644,12 +2644,14 @@
 .syncPopoverQuickActions {
   margin-top: 10px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
 }
 
 .syncPopoverCopySnapshot {
-  align-self: flex-start;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .syncPopoverCopyRow {
@@ -3557,7 +3559,8 @@ button.rootDockPanel.viewportMetricsPanel {
 
 .formatToolbarInsertSlotOpen {
   grid-template-columns: 1fr;
-  margin-inline-end: 8px;
+  /* Gap between inline-format cluster (first) and this insert strip */
+  margin-inline-start: 8px;
 }
 
 .bottomDock .formatToolbarInsertSlotOpen {
@@ -4548,15 +4551,9 @@ button.rootDockPanel.viewportMetricsPanel {
 
 .focusEditorDark.focusOverlay {
   color: var(--sem-text-primary);
-  background: color-mix(in oklch, var(--sys-color-black) 82%, transparent);
-  backdrop-filter: blur(22px) saturate(115%);
-  -webkit-backdrop-filter: blur(22px) saturate(115%);
-}
-
-.focusEditorDark.focusOverlay.focusActive {
-  background: color-mix(in oklch, var(--sys-color-neutral-950) 96%, transparent);
-  backdrop-filter: blur(30px) saturate(118%);
-  -webkit-backdrop-filter: blur(30px) saturate(118%);
+  /* Tint + blur live on `::before` so `backdrop-filter` is not on a fixed-position ancestor of the doc editor
+     (that would trap TipTap’s floating drag handle and mis-place it off-screen). */
+  background: transparent;
 }
 
 .focusEditorDark .focusHeader {
@@ -4700,16 +4697,13 @@ button.rootDockPanel.viewportMetricsPanel {
   position: fixed;
   inset: 0;
   z-index: var(--layer-focus-overlay);
-  background: var(--sem-surface-focus-scrim);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  /* Backdrop blur must not live on this element: it establishes a containing block for `position: fixed`
+     descendants (TipTap drag handle uses viewport coords + fixed). Frosted scrim is `::before`. */
+  background: transparent;
   opacity: 0;
   pointer-events: none;
   /* Do not animate background-color: opening code focus would interpolate light scrim → dark and flash white. */
-  transition:
-    opacity 0.26s cubic-bezier(0.33, 1, 0.68, 1),
-    backdrop-filter 0.34s ease,
-    -webkit-backdrop-filter 0.34s ease;
+  transition: opacity 0.26s cubic-bezier(0.33, 1, 0.68, 1);
   /* Scroll lives on `.focusSheet` so fixed UI (e.g. bottom dock) is not a descendant of overflow; avoids clipped shadows. */
   overflow: visible;
   display: flex;
@@ -4718,12 +4712,39 @@ button.rootDockPanel.viewportMetricsPanel {
   color: var(--sys-color-black);
 }
 
-.focusActive {
-  opacity: 1;
-  pointer-events: auto;
+.focusOverlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--sem-surface-focus-scrim);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: background 0.34s ease, backdrop-filter 0.34s ease, -webkit-backdrop-filter 0.34s ease;
+}
+
+.focusOverlay.focusActive::before {
   background: var(--sem-surface-focus-scrim-solid);
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
+}
+
+.focusEditorDark.focusOverlay::before {
+  background: color-mix(in oklch, var(--sys-color-black) 82%, transparent);
+  backdrop-filter: blur(22px) saturate(115%);
+  -webkit-backdrop-filter: blur(22px) saturate(115%);
+}
+
+.focusEditorDark.focusOverlay.focusActive::before {
+  background: color-mix(in oklch, var(--sys-color-neutral-950) 96%, transparent);
+  backdrop-filter: blur(30px) saturate(118%);
+  -webkit-backdrop-filter: blur(30px) saturate(118%);
+}
+
+.focusActive {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* Column that counts as “the document”; scrim absorbs stray clicks (does not dismiss). */
@@ -4733,6 +4754,8 @@ button.rootDockPanel.viewportMetricsPanel {
   width: 100%;
   box-sizing: border-box;
   position: relative;
+  /* Above frosted `::before` so sheet chrome and the editor (incl. TipTap drag UI) paint in front. */
+  z-index: 1;
   flex: 1 1 auto;
   min-height: 0;
   max-height: 100%;
@@ -4896,25 +4919,26 @@ button.rootDockPanel.viewportMetricsPanel {
 
 .focusActive .focusHeader {
   opacity: 1;
-  transform: translateY(0);
+  /* `none` avoids a transform-containing-block (identity translate still counts) so fixed UI positions vs viewport. */
+  transform: none;
   transition-delay: 0.04s;
 }
 
 .focusActive .focusContent {
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: none;
   transition-delay: 0.08s;
 }
 
 .focusActive .focusTitle {
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
   transition-delay: 0.12s;
 }
 
 .focusActive .focusBody {
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
   transition-delay: 0.14s;
 }
 

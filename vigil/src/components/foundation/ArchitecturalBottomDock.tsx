@@ -102,22 +102,26 @@ function createIcon(nodeType: NodeTheme): ReactNode {
   return <FileText size={16} />;
 }
 
-/** In-document blocks (Dropbox Paper–style insert strip). Handled in `ArchitecturalCanvasApp` `runFormat`. */
+/**
+ * In-document blocks (insert strip). Order follows common rich-text docks: list family
+ * (bullet → numbered → task), then media/divider. Handled in `ArchitecturalCanvasApp` `runFormat`.
+ */
 export const DEFAULT_DOC_INSERT_ACTIONS: DockFormatAction[] = [
   { id: "quote", label: "Quote", command: "formatBlock", value: "blockquote" },
-  { id: "checklist", label: "Checklist", command: "arch:checklist" },
   { id: "list", label: "Bulleted list", command: "insertUnorderedList" },
   { id: "numberedList", label: "Numbered list", command: "insertOrderedList" },
+  { id: "checklist", label: "Checklist", command: "arch:checklist" },
   { id: "insertImage", label: "Insert image", command: "arch:insertImage" },
   { id: "divider", label: "Divider", command: "insertHorizontalRule" },
 ];
 
+/** Inline styles first, then block level (matches Word / Google Docs / CKEditor-style toolbars). */
 export const DEFAULT_FORMAT_ACTIONS: DockFormatAction[] = [
-  { id: "heading", label: "Heading", command: "formatBlock", value: "h1" },
   { id: "bold", label: "Bold", command: "bold" },
   { id: "italic", label: "Italic", command: "italic" },
   { id: "underline", label: "Underline", command: "underline" },
   { id: "strikeThrough", label: "Strikethrough", command: "strikeThrough" },
+  { id: "heading", label: "Heading", command: "formatBlock", value: "h1" },
 ];
 
 export const DEFAULT_CREATE_ACTIONS: DockCreateAction[] = [
@@ -175,46 +179,6 @@ export function ArchitecturalFormatToolbar({
 
   return (
     <div className={styles.formatToolbarWrap}>
-      <div
-        className={cx(
-          styles.formatToolbarInsertSlot,
-          showDocInsertCluster && styles.formatToolbarInsertSlotOpen,
-        )}
-      >
-        <div
-          className={styles.formatToolbarInsertSlotInner}
-          inert={showDocInsertCluster ? undefined : true}
-        >
-          <div
-            className={`${styles.formatToolbar} ${styles.dockInsertToolbar}`}
-            role="toolbar"
-            aria-label="Insert blocks"
-          >
-            {insertDocActions.map((action) => (
-              <DockChromeTooltip key={action.id} content={action.label}>
-                <ArchitecturalButton
-                  size="icon"
-                  tone={actionTone}
-                  active={action.active}
-                  iconOnly
-                  aria-label={action.label}
-                  disabled={action.disabled}
-                  leadingIcon={formatIcon(action.command, action.value)}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    if (action.disabled) return;
-                    onFormat(action.command, action.value);
-                  }}
-                />
-              </DockChromeTooltip>
-            ))}
-          </div>
-          <div
-            className={`${styles.toolbarClusterSep} ${styles.toolbarClusterSepDock}`}
-            aria-hidden
-          />
-        </div>
-      </div>
       <div
         className={`${styles.formatToolbar} ${styles.dockFormatToolbar}`}
         role="toolbar"
@@ -289,6 +253,46 @@ export function ArchitecturalFormatToolbar({
             </DockChromeTooltip>
           );
         })}
+      </div>
+      <div
+        className={cx(
+          styles.formatToolbarInsertSlot,
+          showDocInsertCluster && styles.formatToolbarInsertSlotOpen,
+        )}
+      >
+        <div
+          className={styles.formatToolbarInsertSlotInner}
+          inert={showDocInsertCluster ? undefined : true}
+        >
+          <div
+            className={`${styles.toolbarClusterSep} ${styles.toolbarClusterSepDock}`}
+            aria-hidden
+          />
+          <div
+            className={`${styles.formatToolbar} ${styles.dockInsertToolbar}`}
+            role="toolbar"
+            aria-label="Insert blocks"
+          >
+            {insertDocActions.map((action) => (
+              <DockChromeTooltip key={action.id} content={action.label}>
+                <ArchitecturalButton
+                  size="icon"
+                  tone={actionTone}
+                  active={action.active}
+                  iconOnly
+                  aria-label={action.label}
+                  disabled={action.disabled}
+                  leadingIcon={formatIcon(action.command, action.value)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    if (action.disabled) return;
+                    onFormat(action.command, action.value);
+                  }}
+                />
+              </DockChromeTooltip>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
