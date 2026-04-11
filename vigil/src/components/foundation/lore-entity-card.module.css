@@ -1855,12 +1855,15 @@
   --sk-v11-marker-trim-right-top: 0px;
   --sk-v11-marker-trim-right-bottom: 0px;
   --sk-v11-marker-offset-x: 0px;
-  --sk-v11-marker-noise-size: 74px;
   --sk-v11-marker-gloss: 0.95%;
   --sk-v11-marker-tail: 95%;
-  --sk-v11-marker-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 96 96' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.12' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' fill='%23ffffff' filter='url(%23m)' opacity='0.05'/%3E%3C/svg%3E");
   /* Slot color matches the scene behind the card so the notch reads as a real passthrough. */
   --sk-v11-slot-ink: color-mix(in oklch, var(--sys-color-black) 84%, var(--sys-color-neutral-950));
+  /*
+   * Identity band: literal px width for the name column (tune here only).
+   * Default ≈ max card inner width − 142px meta column − 2×1px card material border @ 340px entity width.
+   */
+  --char-sk-v11-name-col-w: 196px;
 }
 
 .charSkShellV11 .charSkCardMaterial {
@@ -1935,14 +1938,18 @@
   position: relative;
   z-index: 1;
   /* Photo row height follows 4:3 plate (`.charSkPhotoCell` aspect-ratio), not a tall portrait band. */
-  grid-template-rows: 44px auto auto auto;
+  /* Identity row must be max-content, not auto — otherwise leftover grid height stretches the band and the meta rows. */
+  grid-template-rows: 44px auto max-content auto;
 }
 
+/* Identity band: min fits two 148px meta rows + divider (~297px); grows if content needs more. */
 .charSkShellV11 .charSkIdentityCell {
-  min-height: 0;
+  grid-template-columns: var(--char-sk-v11-name-col-w) 142px;
+  min-height: 297px;
   height: auto;
   max-height: none;
-  align-items: start;
+  align-items: stretch;
+  grid-template-rows: minmax(0, auto);
 }
 
 .charSkShellV11 .charSkHeaderCell {
@@ -2339,13 +2346,48 @@
 }
 
 .charSkShellV11 .charSkMetaBlock {
-  grid-template-rows: auto auto;
+  grid-template-rows: 148px 148px;
   align-content: start;
+  align-self: stretch;
+  justify-self: stretch;
+  width: 100%;
+  min-height: 0;
 }
 
-/* v11: gap between display-name stack and role; do not grow to fill the old 168px identity band. */
+/* Both meta rows fixed 148px so Affiliation and Nationality match (avoid 1fr squeezing row 1). */
+.charSkShellV11 .charSkMetaBlock > .charSkMetaRow {
+  min-height: 0;
+  height: 148px;
+  max-height: 148px;
+  box-sizing: border-box;
+}
+
+/*
+ * Row border box is 148px incl. padding; grow the value + stretch the v11 strip to fill each slot.
+ */
+.charSkShellV11 .charSkMetaBlock > .charSkMetaRow .charSkMetaValue[data-hg-lore-field] {
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-height: max(1.35em, var(--sk-v11-marker-h));
+  height: auto;
+}
+
+.charSkShellV11
+  .charSkMetaBlock
+  > .charSkMetaRow
+  .charSkMetaValue[data-hg-lore-placeholder="true"]::after {
+  height: auto;
+  bottom: 0;
+}
+
+/* v11: name column fills identity row height; width is literal px on `.charSkIdentityCell`. */
 .charSkShellV11 .charSkNameBlock {
-  flex: 0 1 auto;
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  max-height: none;
   gap: 7px;
 }
 
@@ -2363,6 +2405,11 @@
   align-items: stretch;
   box-sizing: border-box;
   background: var(--sk-id-surface);
+}
+
+.charSkShellV11 .charSkMetaRow {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .charSkMetaRow .charSkFieldLabel {
@@ -2464,25 +2511,19 @@
   0% {
     background-size:
       0 calc(50% - 2px),
-      0 calc(50% - 2px),
-      var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px),
-      var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px);
+      0 calc(50% - 2px);
   }
 
   56% {
     background-size:
       calc(100% - var(--sk-v11-marker-trim-right-top, 0px)) calc(50% - 2px),
-      0 calc(50% - 2px),
-      var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px),
-      var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px);
+      0 calc(50% - 2px);
   }
 
   100% {
     background-size:
       calc(100% - var(--sk-v11-marker-trim-right-top, 0px)) calc(50% - 2px),
-      calc(100% - var(--sk-v11-marker-trim-right-bottom, 0px)) calc(50% - 2px),
-      var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px),
-      var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px);
+      calc(100% - var(--sk-v11-marker-trim-right-bottom, 0px)) calc(50% - 2px);
   }
 }
 
@@ -2506,13 +2547,22 @@
   min-height: 2.65em;
 }
 
+/* Single-line strips: stable box aligned to marker line height (no shrink when placeholder clears). */
 .charSkShellV11 .charSkRole[data-hg-lore-placeholder="true"],
 .charSkShellV11 .charSkMetaValue[data-hg-lore-placeholder="true"] {
   min-height: max(1.35em, var(--sk-v11-marker-h));
+  height: max(1.35em, var(--sk-v11-marker-h));
+  box-sizing: border-box;
+}
+
+.charSkShellV11 .charSkRole[data-hg-lore-field]:not([data-hg-lore-placeholder="true"]),
+.charSkShellV11 .charSkMetaValue[data-hg-lore-field]:not([data-hg-lore-placeholder="true"]) {
+  min-height: max(1.35em, var(--sk-v11-marker-h));
+  box-sizing: border-box;
 }
 
 /*
- * v11 `data-hg-lore-ph`: position from JS (`--hg-lore-ph-*`) = collapsed selection when focused, else start of field.
+ * v11 `data-hg-lore-ph`: position from JS (`--hg-lore-ph-*`); logical start of field (stable vs mount).
  * Strip marker band uses the same vars so stroke and caption share the caret line box.
  */
 .charSkShellV11 .charSkRole[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before,
@@ -2544,6 +2594,7 @@
   transition: opacity 0.12s ease;
 }
 
+/* Display name: caption only on ::before (under z-6 strip); dual-line redaction on ::after (guest-check wipe). */
 .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
   content: attr(data-hg-lore-ph);
   position: absolute;
@@ -2651,17 +2702,14 @@
   pointer-events: none;
   z-index: 6;
   animation: charSkV11MarkerStripWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
-  /* `.redaction-stroke` + `::before` (single pseudo → merged layers; 0.05 white × 0.5 opacity ≈ 2.5% peak). */
   background:
-    var(--sk-v11-marker-noise) var(--sk-v11-marker-noise-x, 0px) var(--sk-v11-marker-noise-y, 0px) /
-      var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px) repeat,
     radial-gradient(
       circle at 50% 50%,
       color-mix(in oklch, var(--sys-color-white) var(--sk-v11-marker-gloss, 2.5%), transparent) 0%,
       transparent 80%
     ),
     var(--sk-v11-marker);
-  background-blend-mode: soft-light, normal, normal;
+  background-blend-mode: soft-light, normal;
   box-shadow: 0 0 2px var(--sk-v11-marker);
   mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
   -webkit-mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
@@ -2694,17 +2742,14 @@
     )
       left top / calc(100% - var(--sk-v11-marker-trim-right-top, 0px)) calc(50% - 2px) no-repeat,
     linear-gradient(var(--sk-v11-marker), var(--sk-v11-marker)) left bottom /
-      calc(100% - var(--sk-v11-marker-trim-right-bottom, 0px)) calc(50% - 2px) no-repeat,
-    var(--sk-v11-marker-noise) var(--sk-v11-marker-noise-x-top, 0px) var(--sk-v11-marker-noise-y-top, 0px) /
-      var(--sk-v11-marker-noise-size, 74px) var(--sk-v11-marker-noise-size, 74px) repeat,
-    var(--sk-v11-marker-noise) var(--sk-v11-marker-noise-x-bottom, 0px)
-      var(--sk-v11-marker-noise-y-bottom, 0px) / var(--sk-v11-marker-noise-size, 74px)
-      var(--sk-v11-marker-noise-size, 74px) repeat;
-  background-blend-mode: normal, normal, soft-light, soft-light;
+      calc(100% - var(--sk-v11-marker-trim-right-bottom, 0px)) calc(50% - 2px) no-repeat;
+  background-blend-mode: normal, normal;
   box-shadow: none;
   filter: drop-shadow(0 0 1px color-mix(in oklch, var(--sk-v11-marker) 90%, transparent));
   mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
   -webkit-mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
 }
 
 .charSkShellV11
@@ -2745,8 +2790,12 @@
     transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
   }
 
+  /* Dual-line name: match `translateX` + `charSkV11MarkerDualLineWipe` end-state. */
   .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]::after {
     transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+    background-size:
+      calc(100% - var(--sk-v11-marker-trim-right-top, 0px)) calc(50% - 2px),
+      calc(100% - var(--sk-v11-marker-trim-right-bottom, 0px)) calc(50% - 2px);
   }
 
   .charSkShellV11
@@ -2796,6 +2845,10 @@
     max-height: none;
   }
 
+  .charSkShellV11 .charSkIdentityCell {
+    grid-template-columns: 1fr;
+  }
+
   .charSkNameBlock {
     border-right: none;
     border-bottom: 1px solid var(--sk-id-line);
@@ -2807,7 +2860,7 @@
   }
 
   .charSkShellV11 .charSkMetaBlock {
-    grid-template-rows: auto auto;
+    grid-template-rows: 148px 148px;
   }
 
   .charSkGrid {
@@ -2815,7 +2868,7 @@
   }
 
   .charSkShellV11 .charSkGrid {
-    grid-template-rows: 44px auto auto auto;
+    grid-template-rows: 44px auto max-content auto;
   }
 }
 

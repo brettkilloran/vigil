@@ -1,6 +1,6 @@
 /**
- * v11 `data-hg-lore-ph`: position placeholder `::before` (and strip marker band) from the
- * collapsed selection when the field is focused; otherwise from the logical start of the field.
+ * v11 `data-hg-lore-ph`: position placeholder `::before` (and strip marker bands) from the
+ * logical start of the field so markers stay stable across mount, focus, and idle repaint.
  */
 
 import { LORE_V11_PH_DISPLAY_NAME } from "@/src/lib/lore-node-seed-html";
@@ -69,20 +69,6 @@ function rangeAtFieldStart(field: HTMLElement): Range | null {
   }
 }
 
-function rangeForPlaceholderAlign(field: HTMLElement): Range | null {
-  const ae = document.activeElement;
-  if (ae === field || (ae instanceof Node && field.contains(ae))) {
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
-      const r = sel.getRangeAt(0);
-      if (r.collapsed && field.contains(r.startContainer)) {
-        return r.cloneRange();
-      }
-    }
-  }
-  return rangeAtFieldStart(field);
-}
-
 /** When the collapsed caret has no measurable box (common on `<br>`-only editables), still set `--hg-lore-ph-*`. */
 function fallbackCaretLineBox(field: HTMLElement): { x: number; y: number; h: number } {
   const cs = getComputedStyle(field);
@@ -94,12 +80,19 @@ function fallbackCaretLineBox(field: HTMLElement): { x: number; y: number; h: nu
   return { x: 0, y: 0, h: lh };
 }
 
-function caretBoxForField(field: HTMLElement): { x: number; y: number; h: number } | null {
-  const range = rangeForPlaceholderAlign(field);
-  if (!range) return null;
+/**
+ * Caret line box for v11 placeholder strips + caption. Always uses the logical **start** of the field
+ * (not the live selection) so marker bands do not jump between idle mount and focus/interaction.
+ */
+function caretBoxForField(field: HTMLElement): { x: number; y: number; h: number } {
+  const fb = fallbackCaretLineBox(field);
+  const range = rangeAtFieldStart(field);
+  if (!range) return fb;
 
   const fr = field.getBoundingClientRect();
-  if (fr.width <= 0 || fr.height <= 0) return null;
+  if (fr.width <= 0 || fr.height <= 0) {
+    return { x: 0, y: 0, h: fb.h };
+  }
 
   let rr = range.getBoundingClientRect();
   if (rr.width === 0 && rr.height === 0) {
@@ -107,7 +100,7 @@ function caretBoxForField(field: HTMLElement): { x: number; y: number; h: number
     if (cr.length > 0) rr = cr[0]!;
   }
   if (rr.width === 0 && rr.height === 0) {
-    return fallbackCaretLineBox(field);
+    return { x: 0, y: 0, h: fb.h };
   }
 
   const x = rr.left - fr.left;
@@ -132,10 +125,6 @@ export function syncLoreV11PhCaretOffsetsInHost(host: HTMLElement | null): void 
         continue;
       }
       const box = caretBoxForField(el);
-      if (!box) {
-        clearLoreV11PhCaretVars(el);
-        continue;
-      }
       /* Match by `data-hg-lore-ph`, not DOM class: CSS-module hashes may omit the readable `charSkDisplayName` substring. */
       const yOff =
         el.getAttribute("data-hg-lore-ph") === LORE_V11_PH_DISPLAY_NAME
@@ -158,6 +147,7 @@ export function installLoreV11PlaceholderCaretSync(host: HTMLElement): () => voi
     raf = requestAnimationFrame(() => syncLoreV11PhCaretOffsetsInHost(host));
   };
 
+  syncLoreV11PhCaretOffsetsInHost(host);
   queueMicrotask(run);
 
   document.addEventListener("selectionchange", run);

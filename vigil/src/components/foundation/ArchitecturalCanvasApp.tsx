@@ -249,8 +249,12 @@ import {
   plainPlaceNameFromLocationBodyHtml,
 } from "@/src/lib/lore-location-focus-document-html";
 import {
+  ARCH_TASK_TEXT_SELECTOR,
   caretIsWithinRichDocInsertRegion,
+  moveCaretAfterTaskItemForBlockInsert,
   resolveActiveRichEditorSurface,
+  resolveProseCommandTarget,
+  unwrapTaskTextBlockHost,
 } from "@/src/lib/rich-editor-surface";
 const VigilFlowRevealOverlay = dynamic(
   () =>
@@ -1220,6 +1224,7 @@ function normalizeChecklistMarkup(
       const text = doc.createElement("div");
       text.setAttribute("class", classes.taskText);
       text.setAttribute("contenteditable", "true");
+      text.setAttribute("data-arch-task-text", "true");
       text.innerHTML = li.innerHTML.replace(/<input[^>]*>/gi, "").trim() || "New item";
       item.appendChild(text);
       frag.appendChild(item);
@@ -1243,6 +1248,7 @@ function normalizeChecklistMarkup(
       taskText = doc.createElement("div");
       taskText.setAttribute("class", classes.taskText);
       taskText.setAttribute("contenteditable", "true");
+      taskText.setAttribute("data-arch-task-text", "true");
 
       const textParts: string[] = [];
       Array.from(taskItem.childNodes).forEach((node) => {
@@ -1267,6 +1273,8 @@ function normalizeChecklistMarkup(
       });
       taskText.textContent = textParts.join(" ") || "New item";
       taskItem.appendChild(taskText);
+    } else {
+      taskText.setAttribute("data-arch-task-text", "true");
     }
   });
 
@@ -8156,23 +8164,28 @@ export function ArchitecturalCanvasApp({
   const resolveRichTextFormatTarget = useCallback((): HTMLElement | null => {
     const shell = shellRef.current;
     if (!shell) return null;
+
     const activeEl = document.activeElement as Element | null;
-    const activeSurface = resolveActiveRichEditorSurface(activeEl);
-    if (activeSurface.root && shell.contains(activeSurface.root)) {
-      return activeSurface.root;
-    }
+    const fromCaret = resolveProseCommandTarget(shell, activeEl);
+    if (fromCaret) return fromCaret;
+
     if (galleryOpenRef.current && activeNodeIdRef.current) {
-      return shell.querySelector<HTMLElement>('[data-architectural-media-gallery-notes="true"]');
+      const gallery = shell.querySelector<HTMLElement>('[data-architectural-media-gallery-notes="true"]');
+      return gallery ? resolveProseCommandTarget(shell, gallery) : null;
     }
     if (focusOpenRef.current && activeNodeIdRef.current) {
-      return shell.querySelector<HTMLElement>('[data-focus-body-editor="true"]');
+      const focusBody = shell.querySelector<HTMLElement>('[data-focus-body-editor="true"]');
+      return focusBody ? resolveProseCommandTarget(shell, focusBody) : null;
     }
     const ids = selectedNodeIdsRef.current;
     if (ids.length !== 1) return null;
     const entity = graphRef.current.entities[ids[0]!];
     if (!entity || entity.kind !== "content") return null;
     if (entity.theme !== "default" && entity.theme !== "task") return null;
-    return shell.querySelector<HTMLElement>(`[data-node-id="${ids[0]!}"] [data-node-body-editor="true"]`);
+    const nodeBody = shell.querySelector<HTMLElement>(
+      `[data-node-id="${ids[0]!}"] [data-node-body-editor="true"]`,
+    );
+    return nodeBody ? resolveProseCommandTarget(shell, nodeBody) : null;
   }, []);
 
   const canInsertImageAtCurrentTarget = useCallback(() => {
@@ -8309,17 +8322,36 @@ export function ArchitecturalCanvasApp({
       }
 
       if (!target) return;
-      if (!restoreSelection(target)) {
-        placeCaretAtEnd(target);
+
+      const inTaskTextCell = target.matches(ARCH_TASK_TEXT_SELECTOR);
+      if (inTaskTextCell && command === "formatBlock") {
+        refreshTextFormatChrome();
+        return;
+      }
+
+      const isBlockStructureCommand =
+        command === "arch:checklist" ||
+        command === "insertUnorderedList" ||
+        command === "insertOrderedList" ||
+        command === "insertHorizontalRule" ||
+        command === "formatBlock";
+
+      const execTarget = isBlockStructureCommand ? unwrapTaskTextBlockHost(target) ?? target : target;
+
+      if (!restoreSelection(execTarget)) {
+        placeCaretAtEnd(execTarget);
+      }
+      if (isBlockStructureCommand && inTaskTextCell) {
+        moveCaretAfterTaskItemForBlockInsert(execTarget, target);
       }
 
       if (command === "arch:checklist") {
         document.execCommand(
           "insertHTML",
           false,
-          `<div class="${styles.taskItem}" contenteditable="false"><div class="${styles.taskCheckbox}" contenteditable="false"></div><div class="${styles.taskText}" contenteditable="true">New item</div></div>`,
+          `<div class="${styles.taskItem}" contenteditable="false"><div class="${styles.taskCheckbox}" contenteditable="false"></div><div class="${styles.taskText}" contenteditable="true" data-arch-task-text="true">New item</div></div>`,
         );
-        dispatchInput(target);
+        dispatchInput(execTarget);
         refreshTextFormatChrome();
         return;
       }
@@ -8328,7 +8360,7 @@ export function ArchitecturalCanvasApp({
         const current = normalizeFormatBlockTag(document.queryCommandValue("formatBlock"));
         const next = current === "h1" || current === "h2" || current === "h3" ? "p" : "h1";
         document.execCommand("formatBlock", false, next);
-        dispatchInput(target);
+        dispatchInput(execTarget);
         refreshTextFormatChrome();
         return;
       }
@@ -8336,13 +8368,13 @@ export function ArchitecturalCanvasApp({
       if (command === "formatBlock" && value === "blockquote") {
         const current = normalizeFormatBlockTag(document.queryCommandValue("formatBlock"));
         document.execCommand("formatBlock", false, current === "blockquote" ? "p" : "blockquote");
-        dispatchInput(target);
+        dispatchInput(execTarget);
         refreshTextFormatChrome();
         return;
       }
 
       document.execCommand(command, false, value);
-      dispatchInput(target);
+      dispatchInput(execTarget);
       refreshTextFormatChrome();
     },
     [canInsertImageAtCurrentTarget, refreshTextFormatChrome, resolveRichTextFormatTarget, queueMediaUploadPick],

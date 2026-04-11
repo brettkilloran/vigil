@@ -1895,7 +1895,10 @@
   outline: none;
 }
 
-/* Paper-style block drag handle (ephemeral in DOM; stripped before save). Notion-like 6-dot grip. */
+/*
+ * Nested rich notes (character/location focus, canvas `charSk*`) — left inset so `right: 100%` block
+ * handles sit in the margin like `.nodeBody` / top-level `.focusBody`, not flush on the prose edge.
+ */
 .archBlockDragHandle {
   --arch-block-drag-grip-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 14'%3E%3Ccircle cx='2.5' cy='2.5' r='1.25' fill='%23000'/%3E%3Ccircle cx='7.5' cy='2.5' r='1.25' fill='%23000'/%3E%3Ccircle cx='2.5' cy='7' r='1.25' fill='%23000'/%3E%3Ccircle cx='7.5' cy='7' r='1.25' fill='%23000'/%3E%3Ccircle cx='2.5' cy='11.5' r='1.25' fill='%23000'/%3E%3Ccircle cx='7.5' cy='11.5' r='1.25' fill='%23000'/%3E%3C/svg%3E");
 
@@ -2026,6 +2029,64 @@
 .nodeBody > pre:has(.archBlockDragHandle),
 .focusBody > pre:has(.archBlockDragHandle) {
   overflow-x: visible;
+}
+
+/* Lore v11 canvas: prose lives in nested `charSkNotesBody` / `char3dNotesBody` (not `.nodeBody > p`). */
+.nodeBody.loreCharacterBody :global([class*="charSkNotesBody"]),
+.nodeBody.loreCharacterBody :global([class*="char3dNotesBody"]) {
+  padding-left: 32px;
+  box-sizing: border-box;
+  overflow-x: visible;
+}
+
+.nodeBody.loreCharacterBody :global([class*="charSkNotesBody"] > p:has(.archBlockDragHandle)),
+.nodeBody.loreCharacterBody :global([class*="charSkNotesBody"] > h1:has(.archBlockDragHandle)),
+.nodeBody.loreCharacterBody :global([class*="charSkNotesBody"] > h2:has(.archBlockDragHandle)),
+.nodeBody.loreCharacterBody :global([class*="charSkNotesBody"] > h3:has(.archBlockDragHandle)),
+.nodeBody.loreCharacterBody :global([class*="charSkNotesBody"] > blockquote:has(.archBlockDragHandle)),
+.nodeBody.loreCharacterBody :global([class*="charSkNotesBody"] > pre:has(.archBlockDragHandle)),
+.nodeBody.loreCharacterBody :global([class*="char3dNotesBody"] > p:has(.archBlockDragHandle)),
+.nodeBody.loreCharacterBody :global([class*="char3dNotesBody"] > h1:has(.archBlockDragHandle)),
+.nodeBody.loreCharacterBody :global([class*="char3dNotesBody"] > h2:has(.archBlockDragHandle)),
+.nodeBody.loreCharacterBody :global([class*="char3dNotesBody"] > h3:has(.archBlockDragHandle)),
+.nodeBody.loreCharacterBody :global([class*="char3dNotesBody"] > blockquote:has(.archBlockDragHandle)),
+.nodeBody.loreCharacterBody :global([class*="char3dNotesBody"] > pre:has(.archBlockDragHandle)) {
+  position: relative;
+}
+
+.nodeBody.loreCharacterBody :global([class*="charSkNotesBody"] > p:has(.archBlockDragHandle) .archBlockDragHandle),
+.nodeBody.loreCharacterBody :global([class*="charSkNotesBody"] > h1:has(.archBlockDragHandle) .archBlockDragHandle),
+.nodeBody.loreCharacterBody :global([class*="charSkNotesBody"] > h2:has(.archBlockDragHandle) .archBlockDragHandle),
+.nodeBody.loreCharacterBody :global([class*="charSkNotesBody"] > h3:has(.archBlockDragHandle) .archBlockDragHandle),
+.nodeBody.loreCharacterBody :global([class*="charSkNotesBody"] > blockquote:has(.archBlockDragHandle) .archBlockDragHandle),
+.nodeBody.loreCharacterBody :global([class*="charSkNotesBody"] > pre:has(.archBlockDragHandle) .archBlockDragHandle),
+.nodeBody.loreCharacterBody :global([class*="char3dNotesBody"] > p:has(.archBlockDragHandle) .archBlockDragHandle),
+.nodeBody.loreCharacterBody :global([class*="char3dNotesBody"] > h1:has(.archBlockDragHandle) .archBlockDragHandle),
+.nodeBody.loreCharacterBody :global([class*="char3dNotesBody"] > h2:has(.archBlockDragHandle) .archBlockDragHandle),
+.nodeBody.loreCharacterBody :global([class*="char3dNotesBody"] > h3:has(.archBlockDragHandle) .archBlockDragHandle),
+.nodeBody.loreCharacterBody :global([class*="char3dNotesBody"] > blockquote:has(.archBlockDragHandle) .archBlockDragHandle),
+.nodeBody.loreCharacterBody :global([class*="char3dNotesBody"] > pre:has(.archBlockDragHandle) .archBlockDragHandle) {
+  position: absolute;
+  left: auto;
+  right: 100%;
+  margin-right: 8px;
+  top: 0.2em;
+  margin-top: 0;
+  align-self: auto;
+  z-index: 1;
+}
+
+.nodeBody.loreCharacterBody :global([class*="charSkNotesBody"] > pre:has(.archBlockDragHandle)),
+.nodeBody.loreCharacterBody :global([class*="char3dNotesBody"] > pre:has(.archBlockDragHandle)) {
+  overflow-x: visible;
+}
+
+.nodeBody.loreCharacterBody :global([class*="charSkNotesBody"] > ul[data-arch-checklist="true"]),
+.nodeBody.loreCharacterBody :global([class*="char3dNotesBody"] > ul[data-arch-checklist="true"]) {
+  margin-left: -32px;
+  width: calc(100% + 32px);
+  max-width: none;
+  box-sizing: border-box;
 }
 
 /* Raster embed + replace control (bodyHtml `data-architectural-media-root`). */
@@ -4635,30 +4696,6 @@ button.rootDockPanel.viewportMetricsPanel {
     0 20px 48px color-mix(in oklch, var(--sys-color-black) 55%, transparent);
 }
 
-.mediaGalleryEmpty {
-  text-align: center;
-  padding: 56px 28px;
-  max-width: 340px;
-  margin: 0 auto;
-}
-
-.mediaGalleryEmptyTitle {
-  margin: 0 0 10px;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--sem-text-muted);
-}
-
-.mediaGalleryEmptyHint {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: color-mix(in oklch, var(--sem-text-muted) 88%, transparent);
-}
-
 .focusOverlay {
   position: fixed;
   inset: 0;
@@ -5058,6 +5095,7 @@ button.rootDockPanel.viewportMetricsPanel {
   flex-direction: column;
   gap: 12px;
   padding-top: 8px;
+  overflow-x: visible;
 }
 
 .focusBody.focusCharacterDocument :global([data-hg-character-focus-notes-shell="true"] [data-hg-character-focus-label="true"]) {
@@ -5073,6 +5111,17 @@ button.rootDockPanel.viewportMetricsPanel {
   line-height: 1.72;
   color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
   caret-color: color-mix(in oklch, var(--sem-focus-ring) 72%, var(--sys-color-white));
+  /* Same role as `.nodeBody` horizontal padding: room for `right: 100%` drag handles in the margin. */
+  padding-left: 32px;
+  box-sizing: border-box;
+  overflow-x: visible;
+}
+
+.focusBody.focusCharacterDocument :global([data-hg-character-focus-notes="true"] > ul[data-arch-checklist="true"]) {
+  margin-left: -32px;
+  width: calc(100% + 32px);
+  max-width: none;
+  box-sizing: border-box;
 }
 
 @media (max-width: 860px) {
@@ -5120,7 +5169,6 @@ button.rootDockPanel.viewportMetricsPanel {
   position: relative;
 }
 
-.focusBody.focusCharacterDocument
 .focusBody.focusCharacterDocument
   :global([data-hg-character-focus-notes="true"] > p:has(.archBlockDragHandle) .archBlockDragHandle),
 .focusBody.focusCharacterDocument
@@ -5218,6 +5266,7 @@ button.rootDockPanel.viewportMetricsPanel {
   flex-direction: column;
   gap: 12px;
   padding-top: 8px;
+  overflow-x: visible;
 }
 
 .focusBody.focusLocationDocument :global([data-hg-lore-location-focus-notes="true"]) {
@@ -5228,6 +5277,16 @@ button.rootDockPanel.viewportMetricsPanel {
   line-height: 1.72;
   color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
   caret-color: color-mix(in oklch, var(--sem-focus-ring) 72%, var(--sys-color-white));
+  padding-left: 32px;
+  box-sizing: border-box;
+  overflow-x: visible;
+}
+
+.focusBody.focusLocationDocument :global([data-hg-lore-location-focus-notes="true"] > ul[data-arch-checklist="true"]) {
+  margin-left: -32px;
+  width: calc(100% + 32px);
+  max-width: none;
+  box-sizing: border-box;
 }
 
 .focusEditorDark
@@ -5257,6 +5316,42 @@ button.rootDockPanel.viewportMetricsPanel {
   .focusBody.focusLocationDocument
   :global([data-hg-lore-location-focus-notes="true"] hr) {
   border-top-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
+}
+
+.focusBody.focusLocationDocument :global([data-hg-lore-location-focus-notes="true"] > p:has(.archBlockDragHandle)),
+.focusBody.focusLocationDocument :global([data-hg-lore-location-focus-notes="true"] > h1:has(.archBlockDragHandle)),
+.focusBody.focusLocationDocument :global([data-hg-lore-location-focus-notes="true"] > h2:has(.archBlockDragHandle)),
+.focusBody.focusLocationDocument :global([data-hg-lore-location-focus-notes="true"] > h3:has(.archBlockDragHandle)),
+.focusBody.focusLocationDocument
+  :global([data-hg-lore-location-focus-notes="true"] > blockquote:has(.archBlockDragHandle)),
+.focusBody.focusLocationDocument :global([data-hg-lore-location-focus-notes="true"] > pre:has(.archBlockDragHandle)) {
+  position: relative;
+}
+
+.focusBody.focusLocationDocument
+  :global([data-hg-lore-location-focus-notes="true"] > p:has(.archBlockDragHandle) .archBlockDragHandle),
+.focusBody.focusLocationDocument
+  :global([data-hg-lore-location-focus-notes="true"] > h1:has(.archBlockDragHandle) .archBlockDragHandle),
+.focusBody.focusLocationDocument
+  :global([data-hg-lore-location-focus-notes="true"] > h2:has(.archBlockDragHandle) .archBlockDragHandle),
+.focusBody.focusLocationDocument
+  :global([data-hg-lore-location-focus-notes="true"] > h3:has(.archBlockDragHandle) .archBlockDragHandle),
+.focusBody.focusLocationDocument
+  :global([data-hg-lore-location-focus-notes="true"] > blockquote:has(.archBlockDragHandle) .archBlockDragHandle),
+.focusBody.focusLocationDocument
+  :global([data-hg-lore-location-focus-notes="true"] > pre:has(.archBlockDragHandle) .archBlockDragHandle) {
+  position: absolute;
+  left: auto;
+  right: 100%;
+  margin-right: 8px;
+  top: 0.2em;
+  margin-top: 0;
+  align-self: auto;
+  z-index: 1;
+}
+
+.focusBody.focusLocationDocument :global([data-hg-lore-location-focus-notes="true"] > pre:has(.archBlockDragHandle)) {
+  overflow-x: visible;
 }
 
 .focusBody p {

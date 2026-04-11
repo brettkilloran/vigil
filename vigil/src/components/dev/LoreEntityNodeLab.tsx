@@ -146,7 +146,7 @@ function LabSkeuoCard({
     syncLoreV9RedactedPlaceholderState(rootRef.current);
   }, [displayHtml]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = rootRef.current;
     if (!root) return;
     const removeGuards = installLorePlaceholderSelectionGuards(root);

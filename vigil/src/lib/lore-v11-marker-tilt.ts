@@ -55,18 +55,6 @@ export function syncLoreV11MarkerTilts(host: HTMLElement | null): void {
     const trimTop = `${seededFloat(fieldSeed, "trim-top", 0.8, 16).toFixed(2)}px`;
     const trimBottom = `${seededFloat(fieldSeed, "trim-bottom", 1.4, 19).toFixed(2)}px`;
     const shiftX = `${seededFloat(fieldSeed, "offset-x", -1.25, 1.25).toFixed(2)}px`;
-    const noisePx = Math.round(seededFloat(fieldSeed, "noise-size", 58, 94));
-    const noiseSize = `${noisePx}px`;
-    const noiseX = `${Math.round(seededFloat(fieldSeed, "noise-x", -noisePx * 0.9, noisePx * 0.9))}px`;
-    const noiseY = `${Math.round(seededFloat(fieldSeed, "noise-y", -noisePx * 0.9, noisePx * 0.9))}px`;
-    const noiseXTop = `${Math.round(seededFloat(fieldSeed, "noise-x-top", -noisePx * 0.95, noisePx * 0.95))}px`;
-    const noiseYTop = `${Math.round(seededFloat(fieldSeed, "noise-y-top", -noisePx * 0.95, noisePx * 0.95))}px`;
-    const noiseXBottom = `${Math.round(
-      seededFloat(fieldSeed, "noise-x-bottom", -noisePx * 0.95, noisePx * 0.95),
-    )}px`;
-    const noiseYBottom = `${Math.round(
-      seededFloat(fieldSeed, "noise-y-bottom", -noisePx * 0.95, noisePx * 0.95),
-    )}px`;
     const gloss = `${seededFloat(fieldSeed, "gloss", 0.55, 1.8).toFixed(2)}%`;
     const tail = `${seededFloat(fieldSeed, "tail", 91.5, 98.2).toFixed(2)}%`;
 
@@ -75,13 +63,6 @@ export function syncLoreV11MarkerTilts(host: HTMLElement | null): void {
     el.style.setProperty("--sk-v11-marker-trim-right-top", trimTop);
     el.style.setProperty("--sk-v11-marker-trim-right-bottom", trimBottom);
     el.style.setProperty("--sk-v11-marker-offset-x", shiftX);
-    el.style.setProperty("--sk-v11-marker-noise-size", noiseSize);
-    el.style.setProperty("--sk-v11-marker-noise-x", noiseX);
-    el.style.setProperty("--sk-v11-marker-noise-y", noiseY);
-    el.style.setProperty("--sk-v11-marker-noise-x-top", noiseXTop);
-    el.style.setProperty("--sk-v11-marker-noise-y-top", noiseYTop);
-    el.style.setProperty("--sk-v11-marker-noise-x-bottom", noiseXBottom);
-    el.style.setProperty("--sk-v11-marker-noise-y-bottom", noiseYBottom);
     el.style.setProperty("--sk-v11-marker-gloss", gloss);
     el.style.setProperty("--sk-v11-marker-tail", tail);
   }
