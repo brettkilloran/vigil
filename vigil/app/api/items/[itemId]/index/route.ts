@@ -8,7 +8,10 @@ import {
   gmMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { reindexItemVault } from "@/src/lib/item-vault-index";
-import { vaultItemIndexRateLimitExceeded } from "@/src/lib/vault-index-rate-limit";
+import {
+  vaultIndexRateLimitMeta,
+  vaultItemIndexRateLimitExceeded,
+} from "@/src/lib/vault-index-rate-limit";
 
 export async function POST(
   req: Request,
@@ -19,9 +22,17 @@ export async function POST(
   if (deniedEarly) return deniedEarly;
 
   if (vaultItemIndexRateLimitExceeded(req)) {
+    const retry = vaultIndexRateLimitMeta.retry_after_seconds;
     return Response.json(
-      { ok: false, error: "Too many index requests. Try again in a minute." },
-      { status: 429 },
+      {
+        ok: false,
+        error: "Too many index requests. Try again in a minute.",
+        rate_limit: vaultIndexRateLimitMeta,
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(retry) },
+      },
     );
   }
 

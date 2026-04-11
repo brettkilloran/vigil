@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
@@ -8,7 +8,7 @@ import { parseSlackMultiplierFromLinkMeta } from "@/src/lib/item-link-meta";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   context: { params: Promise<{ spaceId: string }> },
 ) {
   const db = tryGetDb();
@@ -23,23 +23,71 @@ export async function GET(
   const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
   if (!access.ok) return access.response;
 
-  const rows = await db
-    .select({
-      id: items.id,
-      title: items.title,
-      itemType: items.itemType,
-      entityType: items.entityType,
-    })
+  const url = new URL(req.url);
+  const limitRaw = url.searchParams.get("limit");
+  const offset = Math.max(0, parseInt(url.searchParams.get("offset") ?? "0", 10) || 0);
+  if (limitRaw == null && offset > 0) {
+    return Response.json(
+      {
+        ok: false,
+        error: "offset requires limit",
+        nodes: [] as GraphNode[],
+        edges: [] as GraphEdge[],
+      },
+      { status: 400 },
+    );
+  }
+
+  const [totalRow] = await db
+    .select({ c: sql<number>`count(*)::int` })
     .from(items)
     .where(eq(items.spaceId, spaceId));
+  const totalNodes = totalRow?.c ?? 0;
+
+  let rows;
+  let pageLimit: number | undefined;
+  if (limitRaw == null) {
+    rows = await db
+      .select({
+        id: items.id,
+        title: items.title,
+        itemType: items.itemType,
+        entityType: items.entityType,
+      })
+      .from(items)
+      .where(eq(items.spaceId, spaceId))
+      .orderBy(asc(items.zIndex), asc(items.createdAt));
+  } else {
+    pageLimit = Math.min(Math.max(1, parseInt(limitRaw, 10) || 500), 2000);
+    rows = await db
+      .select({
+        id: items.id,
+        title: items.title,
+        itemType: items.itemType,
+        entityType: items.entityType,
+      })
+      .from(items)
+      .where(eq(items.spaceId, spaceId))
+      .orderBy(asc(items.zIndex), asc(items.createdAt))
+      .limit(pageLimit)
+      .offset(offset);
+  }
 
   const idList = rows.map((r) => r.id);
   if (idList.length === 0) {
-    return Response.json({
+    const emptyPayload: Record<string, unknown> = {
       ok: true,
       nodes: [] as GraphNode[],
       edges: [] as GraphEdge[],
-    });
+      total_nodes: totalNodes,
+    };
+    if (limitRaw != null && pageLimit != null) {
+      emptyPayload.limit = pageLimit;
+      emptyPayload.offset = offset;
+      emptyPayload.note =
+        "Edges only connect nodes on this page; cross-page links are omitted when limit is set.";
+    }
+    return Response.json(emptyPayload);
   }
 
   const linkRows = await db
@@ -79,5 +127,17 @@ export async function GET(
     slackMultiplier: parseSlackMultiplierFromLinkMeta(l.meta),
   }));
 
-  return Response.json({ ok: true, nodes, edges });
+  const payload: Record<string, unknown> = {
+    ok: true,
+    nodes,
+    edges,
+    total_nodes: totalNodes,
+  };
+  if (limitRaw != null && pageLimit != null) {
+    payload.limit = pageLimit;
+    payload.offset = offset;
+    payload.note =
+      "Edges only connect nodes on this page; cross-page links are omitted when limit is set.";
+  }
+  return Response.json(payload);
 }

@@ -93,6 +93,7 @@ async function handleMcpRequest(request: NextRequest): Promise<Response> {
     serviceKey,
     playerSpaceExcluded: (process.env.HEARTGARDEN_PLAYER_SPACE_ID ?? "").trim().toLowerCase(),
     gmBreakGlass: (process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE ?? "").trim() === "1",
+    readOnly: (process.env.HEARTGARDEN_MCP_READ_ONLY ?? "").trim() === "1",
   });
 
   const transport = new WebStandardStreamableHTTPServerTransport({

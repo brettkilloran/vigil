@@ -7,6 +7,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { tryGetDb } from "@/src/db/index";
 import type { SearchFilters, SearchRow } from "@/src/lib/spaces";
 import { LORE_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
+import { sanitizeRetrievedTextForLorePrompt } from "@/src/lib/lore-prompt-sanitize";
 import {
   budgetPerSource,
   excerptForLore,
@@ -122,10 +123,10 @@ export async function synthesizeLoreAnswer(
   sources: LoreSource[],
 ): Promise<string> {
   const client = new Anthropic({ apiKey });
-  const blocks = sources.map(
-    (s, i) =>
-      `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${s.viaGraph ? "\n- context: linked neighbor" : ""}\n\n${s.excerpt}`,
-  );
+  const blocks = sources.map((s, i) => {
+    const body = sanitizeRetrievedTextForLorePrompt(s.excerpt);
+    return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${s.viaGraph ? "\n- context: linked neighbor" : ""}\n\n${body}`;
+  });
   const user = `Question:\n${question.trim()}\n\n---\n\nCanvas excerpts (your only ground truth):\n\n${blocks.join("\n\n---\n\n")}`;
 
   const res = await client.messages.create({

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   canonicalHeartgardenMcpToolName,
+  mcpCoerceTruthyFlag,
   mcpWriteKeyError,
   resolveHeartgardenMcpBaseUrl,
 } from "./heartgarden-mcp-server";
@@ -28,6 +29,9 @@ describe("canonicalHeartgardenMcpToolName", () => {
       ["vigil_create_item", "heartgarden_create_item"],
       ["vigil_create_link", "heartgarden_create_link"],
       ["vigil_create_folder", "heartgarden_create_folder"],
+      ["vigil_update_link", "heartgarden_update_link"],
+      ["vigil_delete_item", "heartgarden_delete_item"],
+      ["vigil_delete_link", "heartgarden_delete_link"],
     ];
     for (const [legacy, canonical] of pairs) {
       expect(canonicalHeartgardenMcpToolName(legacy)).toBe(canonical);
@@ -44,6 +48,21 @@ describe("canonicalHeartgardenMcpToolName", () => {
 
   it("does not rewrite unrelated tool names", () => {
     expect(canonicalHeartgardenMcpToolName("other_connector_tool")).toBe("other_connector_tool");
+  });
+});
+
+describe("mcpCoerceTruthyFlag", () => {
+  it("treats common LLM truthy forms as true", () => {
+    expect(mcpCoerceTruthyFlag(true)).toBe(true);
+    expect(mcpCoerceTruthyFlag("true")).toBe(true);
+    expect(mcpCoerceTruthyFlag(1)).toBe(true);
+    expect(mcpCoerceTruthyFlag("1")).toBe(true);
+  });
+  it("rejects other values", () => {
+    expect(mcpCoerceTruthyFlag(false)).toBe(false);
+    expect(mcpCoerceTruthyFlag("false")).toBe(false);
+    expect(mcpCoerceTruthyFlag(undefined)).toBe(false);
+    expect(mcpCoerceTruthyFlag(0)).toBe(false);
   });
 });
 

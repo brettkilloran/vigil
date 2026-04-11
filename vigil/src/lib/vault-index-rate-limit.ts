@@ -2,9 +2,19 @@
  * In-memory rate limit for vault index / reindex POST routes (serverless: per-instance).
  */
 
-const WINDOW_MS = 60_000;
-const MAX_INDEX_PER_WINDOW = 40;
-const MAX_REINDEX_PER_WINDOW = 4;
+export const VAULT_INDEX_WINDOW_MS = 60_000;
+const WINDOW_MS = VAULT_INDEX_WINDOW_MS;
+export const VAULT_MAX_INDEX_PER_WINDOW = 40;
+const MAX_INDEX_PER_WINDOW = VAULT_MAX_INDEX_PER_WINDOW;
+export const VAULT_MAX_REINDEX_PER_WINDOW = 4;
+const MAX_REINDEX_PER_WINDOW = VAULT_MAX_REINDEX_PER_WINDOW;
+
+export const vaultIndexRateLimitMeta = {
+  window_ms: WINDOW_MS,
+  max_index_requests_per_window: MAX_INDEX_PER_WINDOW,
+  max_reindex_requests_per_window: MAX_REINDEX_PER_WINDOW,
+  retry_after_seconds: Math.ceil(WINDOW_MS / 1000),
+} as const;
 
 type Bucket = { windowStart: number; count: number };
 
