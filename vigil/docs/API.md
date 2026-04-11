@@ -50,7 +50,15 @@ Responses include **`camera`**: `{ x, y, zoom }` parsed from legacy **`spaces.ca
 |--------|------|---------|
 | GET, POST, DELETE | `/api/mcp` | **Streamable HTTP** MCP transport (same JSON-RPC surface as **`npm run mcp`** stdio). **Auth (any one):** header **`Authorization: Bearer <HEARTGARDEN_MCP_SERVICE_KEY>`**, or query **`?token=`** / **`?key=`** (same secret), or header **`X-Heartgarden-Mcp-Token`**. Returns **503** if **`HEARTGARDEN_MCP_SERVICE_KEY`** is unset. **401** if none match. Middleware allows this path through the boot gate without **`hg_boot`** so the route can respond; auth is enforced in the handler. Stateless (**no** session stickiness) for serverless. |
 
-**Tooling:** Shared logic lives in **`src/lib/mcp/heartgarden-mcp-server.ts`**. **Claude Desktop → Add custom connector:** use **`https://<host>/api/mcp?token=<HEARTGARDEN_MCP_SERVICE_KEY>`** in the URL field (percent-encode the token if needed). Prefer **`Authorization: Bearer`** for clients that support it.
+**Tooling:** Shared logic lives in **`src/lib/mcp/heartgarden-mcp-server.ts`**.
+
+**Claude Desktop (remote connector):** Add the server under **Settings → Customize → Connectors** (not only `claude_desktop_config.json` for remote URLs). Set **Remote MCP server URL** to **`https://<host>/api/mcp?token=<HEARTGARDEN_MCP_SERVICE_KEY>`** (percent-encode the token if it contains **`&`**, **`+`**, **`#`**, etc.). Remote traffic is brokered from **Anthropic’s cloud**; your deployment must be **public HTTPS** (see Anthropic’s published egress IP ranges). **Do not** use a normal browser tab as the test: address-bar navigation is not an MCP client; use **`npm run mcp:smoke`** (below) or MCP Inspector.
+
+**Verify from CLI (recommended):** From **`vigil/`**, with the same secret as Production:
+
+`HEARTGARDEN_MCP_SERVICE_KEY=… npm run mcp:smoke`
+
+Optional **`HEARTGARDEN_MCP_URL`** (default `https://heartgarden.vercel.app/api/mcp`) points at **`/api/mcp`**. Uses **`@modelcontextprotocol/sdk`** `StreamableHTTPClientTransport` + **`Client`** — same wire protocol as Claude Desktop. Success prints server info and a tool count; failure usually means wrong key, missing env on the server (**503**), or network.
 
 ## Spaces
 

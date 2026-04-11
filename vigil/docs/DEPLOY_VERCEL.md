@@ -54,6 +54,8 @@ Add these in **Project → Settings → Environment Variables**. Mark secrets as
 
 **MCP:** Set **`HEARTGARDEN_MCP_SERVICE_KEY`** on the **Vercel** deployment if you use **`GET|POST|DELETE /api/mcp`** (hosted Streamable HTTP) or need stdio **`npm run mcp`** to call **`fetch`** into production with the boot gate on. Optional on the laptop: **`HEARTGARDEN_APP_URL`**, **`HEARTGARDEN_DEFAULT_SPACE_ID`**, **`HEARTGARDEN_MCP_WRITE_KEY`** when running the stdio MCP client against production.
 
+**Debugging `/api/mcp` in production:** In **Vercel → Project → Logs**, filter by path **`/api/mcp`** (or search `mcp`). Expect **401** when the service key is missing or wrong, **503** when **`HEARTGARDEN_MCP_SERVICE_KEY`** is unset in that environment, and **200** for successful MCP **`POST`**s. Do not paste tokens into tickets; use **`npm run mcp:smoke`** from **`vigil/`** with a local env var to verify end-to-end (see **`docs/API.md`** § MCP).
+
 ### Preview vs Production
 
 - **Recommended (isolated previews):** Create a **separate Neon branch / database** for **Preview**; set **only** that pooled URL on the **Preview** environment in Vercel. Run `db:ensure-pgvector` and schema push/migrate against that branch too. Production and Preview stay independent (no PR tests touching prod data).
