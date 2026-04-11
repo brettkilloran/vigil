@@ -506,7 +506,7 @@ function SaveAndVersionPopover({
                 type="button"
                 size="md"
                 variant="neutral"
-                tone="glass"
+                tone="focus-light"
                 className={styles.syncPopoverCopySnapshot}
                 onClick={copySupportSnapshot}
               >
@@ -561,8 +561,8 @@ function SaveAndVersionPopover({
                 <Button
                   type="button"
                   size="md"
-                  variant="primary"
-                  tone="solid"
+                  variant="neutral"
+                  tone="focus-light"
                   className={styles.syncPopoverExport}
                   onClick={handleExport}
                 >
