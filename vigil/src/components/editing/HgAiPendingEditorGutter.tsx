@@ -13,8 +13,8 @@ import styles from "@/src/components/editing/HgAiPendingEditorGutter.module.css"
 
 const HOVER_CLASS = "hgAiPending--gutter-hover";
 
-/** Top inset vs pending span — mirrors `.archBlockDragHandle` `top: 0.2em` on focus blocks. */
-const BIND_TOP_INSET_PX = 3;
+/** Top offset vs pending span top edge (negative = nudge up vs first implementation). */
+const BIND_TOP_INSET_PX = -4;
 
 /** Min vertical gap between stacked Bind controls when several pending runs sit on one line. */
 const MIN_BIND_STACK_GAP_PX = 26;
