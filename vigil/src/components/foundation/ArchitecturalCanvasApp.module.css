@@ -2531,38 +2531,47 @@
 .syncPopoverSeverity {
   display: inline-flex;
   align-items: center;
-  padding: 1px 6px;
+  justify-content: center;
+  padding: 4px 10px;
+  min-height: 22px;
+  box-sizing: border-box;
   border-radius: 999px;
   font-size: 10px;
-  line-height: 1.25;
-  letter-spacing: 0.04em;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   white-space: nowrap;
+  flex-shrink: 0;
   border: 1px solid transparent;
+  box-shadow:
+    0 1px 2px color-mix(in oklch, var(--sys-color-black) 38%, transparent),
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 10%, transparent);
 }
 
+/* Tokens `--sys-color-*-foreground` for success/warn are not on `:root`; use explicit hues so pills read on glass. */
 .syncPopoverSeverityOk {
-  color: color-mix(in oklch, var(--sys-color-white) 88%, var(--sys-color-success-foreground));
-  background: color-mix(in oklch, var(--sys-color-success-foreground) 30%, transparent);
-  border-color: color-mix(in oklch, var(--sys-color-success-foreground) 45%, transparent);
+  color: oklch(0.94 0.05 158);
+  background: color-mix(in oklch, oklch(0.44 0.14 158) 58%, oklch(0.16 0.04 158));
+  border-color: color-mix(in oklch, oklch(0.62 0.12 158) 52%, transparent);
 }
 
 .syncPopoverSeverityWarn {
-  color: color-mix(in oklch, var(--sys-color-white) 88%, var(--sys-color-warning-foreground));
-  background: color-mix(in oklch, var(--sys-color-warning-foreground) 26%, transparent);
-  border-color: color-mix(in oklch, var(--sys-color-warning-foreground) 42%, transparent);
+  color: oklch(0.97 0.06 92);
+  background: color-mix(in oklch, oklch(0.52 0.14 92) 52%, oklch(0.2 0.04 85));
+  border-color: color-mix(in oklch, oklch(0.68 0.12 92) 48%, transparent);
 }
 
 .syncPopoverSeverityError {
-  color: color-mix(in oklch, var(--sys-color-white) 88%, var(--sys-color-danger-foreground));
-  background: color-mix(in oklch, var(--sys-color-danger-foreground) 28%, transparent);
-  border-color: color-mix(in oklch, var(--sys-color-danger-foreground) 42%, transparent);
+  color: color-mix(in oklch, var(--sys-color-white) 14%, var(--sys-color-danger-300));
+  background: color-mix(in oklch, var(--sys-color-danger-500) 42%, oklch(0.16 0.04 25));
+  border-color: color-mix(in oklch, var(--sys-color-danger-400) 55%, transparent);
 }
 
 .syncPopoverSeverityLoading {
-  color: color-mix(in oklch, var(--sys-color-white) 88%, var(--sem-accent-primary));
-  background: color-mix(in oklch, var(--sem-accent-primary) 28%, transparent);
-  border-color: color-mix(in oklch, var(--sem-accent-primary) 42%, transparent);
+  color: color-mix(in oklch, var(--sys-color-white) 18%, var(--sys-color-accent-500));
+  background: color-mix(in oklch, var(--sys-color-accent-500) 36%, oklch(0.18 0.04 55));
+  border-color: color-mix(in oklch, var(--sys-color-accent-500) 52%, transparent);
 }
 
 .syncPopoverStatusLine {
