@@ -22,7 +22,10 @@ import {
 import type { CameraState } from "@/src/model/canvas-types";
 import { EMPTY_HG_DOC, HG_DOC_FORMAT } from "@/src/lib/hg-doc/constants";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
-import { legacyCodeBodyHtmlToHgDocSeed } from "@/src/lib/hg-doc/html-to-doc";
+import {
+  legacyCodeBodyHtmlToHgDocSeed,
+  stripLegacyHtmlToPlainText,
+} from "@/src/lib/hg-doc/html-to-doc";
 import {
   hgDocToPlainText,
   isHgDocContentJson,
@@ -71,10 +74,7 @@ export function htmlToPlainText(html: string): string {
     const t = d.textContent ?? d.innerText ?? "";
     return t.replace(/\s+/g, " ").trim();
   }
-  return html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return stripLegacyHtmlToPlainText(html);
 }
 
 function readRecord(obj: unknown): Record<string, unknown> | null {

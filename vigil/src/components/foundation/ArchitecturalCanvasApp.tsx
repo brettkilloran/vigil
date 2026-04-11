@@ -237,7 +237,11 @@ import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
 import { contentEntityUsesHgDoc } from "@/src/lib/hg-doc/entity-uses-hg-doc";
 import { findHgDocSurfaceKeyFromSelection, getHgDocEditor } from "@/src/lib/hg-doc/editor-registry";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
-import { htmlFragmentToHgDocDoc, legacyCodeBodyHtmlToHgDocSeed } from "@/src/lib/hg-doc/html-to-doc";
+import {
+  htmlFragmentToHgDocDoc,
+  legacyCodeBodyHtmlToHgDocSeed,
+  stripLegacyHtmlToPlainText,
+} from "@/src/lib/hg-doc/html-to-doc";
 import { newDefaultHgDocSeed, newTaskHgDocSeed } from "@/src/lib/hg-doc/new-node-seeds";
 import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
 import {
@@ -529,15 +533,6 @@ async function postItemLinkFromConnectionSnapshot(
     }
     return { ok: false, dbLinkId: null };
   }
-}
-
-function stripHtmlToPlain(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 const ROOT_SPACE_ID = "root";
@@ -5664,7 +5659,7 @@ export function ArchitecturalCanvasApp({
       const focusPlain =
         ent.kind === "content" && contentEntityUsesHgDoc(ent)
           ? hgDocToPlainText(getHgDocEditor("focus-body")?.getJSON() ?? focusBodyDoc)
-          : stripHtmlToPlain(focusBody);
+          : stripLegacyHtmlToPlainText(focusBody);
       return {
         title: focusTitle.trim(),
         bodyText: focusPlain,
