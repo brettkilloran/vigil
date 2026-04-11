@@ -14,31 +14,58 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
-  border-radius: 999px;
-  border: 1px solid color-mix(in oklab, currentColor 12%, transparent);
-  background: color-mix(in oklab, var(--sem-surface-raised) 86%, transparent);
+  /* Comfortable hit target without a loud “accent pill”. */
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  margin: 0;
+  border-radius: 6px;
+  border: 1px solid color-mix(in oklab, currentColor 10%, transparent);
+  background: color-mix(in oklab, var(--sem-surface-raised) 82%, transparent);
   color: var(--sem-text-muted);
   cursor: grab;
   opacity: 0;
+  outline: none;
+  box-shadow: none;
   transition: opacity 120ms ease, background 120ms ease, border-color 120ms ease;
   backdrop-filter: blur(2px);
 }
 
+.dragHandle:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.dragHandle:focus-visible {
+  outline: var(--sem-focus-ring-width) solid color-mix(in oklab, currentColor 22%, transparent);
+  outline-offset: 2px;
+}
+
+.dragHandleIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
 .host:hover .dragHandle,
 .host:focus-within .dragHandle {
-  opacity: 0.85;
+  opacity: 0.88;
 }
 
 .dragHandle:hover {
   opacity: 1;
-  border-color: color-mix(in oklab, var(--sem-focus-ring) 30%, transparent);
-  background: color-mix(in oklab, var(--sem-focus-ring) 10%, transparent);
+  border-color: color-mix(in oklab, currentColor 18%, transparent);
+  background: color-mix(in oklab, var(--sem-surface-raised) 92%, transparent);
 }
 
 .dragHandle:active {
   cursor: grabbing;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dragHandle {
+    transition: none;
+  }
 }
 
 /* ProseMirror root — typography aligned with `.focusBody` / `.nodeBody` rhythm */
@@ -49,14 +76,48 @@
   color: inherit;
 }
 
+/* Room for the floating drag handle + easier gap targeting (TipTap guidance). */
+.proseRoot :global(.ProseMirror) {
+  padding-left: 30px;
+  box-sizing: border-box;
+}
+
 .proseRoot :global(.hgDropcursor) {
-  background: color-mix(in oklab, var(--sem-focus-ring) 68%, transparent);
-  border-radius: 999px;
+  background: color-mix(in oklch, var(--sem-focus-ring) 52%, transparent);
+  border-radius: 1px;
 }
 
 .proseRoot :global(.ProseMirror-selectednode) {
-  outline: 1px dashed color-mix(in oklab, var(--sem-focus-ring) 34%, transparent);
-  outline-offset: 2px;
+  position: relative;
+  outline: none;
+  border-radius: 6px;
+}
+
+.proseRoot :global(.ProseMirror-selectednode)::before {
+  content: "";
+  position: absolute;
+  inset: -2px -3px -2px -8px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  background: color-mix(in oklch, var(--sem-focus-ring) 9%, transparent);
+  box-shadow: inset 3px 0 0 0 color-mix(in oklch, var(--sem-focus-ring) 38%, transparent);
+}
+
+/* Drag-handle hover target (via onNodeChange) — softer than full node selection. */
+.rowDragHover {
+  position: relative;
+}
+
+.rowDragHover::before {
+  content: "";
+  position: absolute;
+  inset: -1px -2px -1px -6px;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: -1;
+  background: color-mix(in oklch, var(--sem-focus-ring) 5%, transparent);
+  box-shadow: inset 2px 0 0 0 color-mix(in oklch, var(--sem-focus-ring) 22%, transparent);
 }
 
 .proseRoot :global(p) {

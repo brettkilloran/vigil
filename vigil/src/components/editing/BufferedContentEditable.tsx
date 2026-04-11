@@ -30,7 +30,6 @@ import hostStyles from "@/src/components/editing/BufferedContentEditable.module.
 import { applySpellcheckToNestedEditables } from "@/src/lib/contenteditable-spellcheck";
 import { syncCharSkDisplayNameStack } from "@/src/lib/lore-char-sk-display-name";
 import { installLoreV11PlaceholderCaretSync } from "@/src/lib/lore-v11-ph-caret";
-import { findFirstEditableNestedNotesRoot } from "@/src/lib/rich-editor-surface";
 import {
   consumeLorePlaceholderBeforeInput,
   installLorePlaceholderSelectionGuards,
@@ -65,78 +64,6 @@ function isCaretAtEndOfHost(host: HTMLElement, range: Range): boolean {
   }
 }
 
-const ARCH_BLOCK_DRAG_ATTR = "data-arch-drag-handle";
-
-function stripArchDragHandles(html: string): string {
-  if (typeof document === "undefined" || !html.includes(ARCH_BLOCK_DRAG_ATTR)) return html;
-  const doc = new DOMParser().parseFromString(`<div id="__arch_strip">${html}</div>`, "text/html");
-  const wrap = doc.getElementById("__arch_strip");
-  if (!wrap) return html;
-  wrap.querySelectorAll(`[${ARCH_BLOCK_DRAG_ATTR}]`).forEach((el) => el.remove());
-  return wrap.innerHTML;
-}
-
-function ensureDocumentBlockDragHandles(
-  root: HTMLElement,
-  cfg: { handleClass: string; taskItemClass: string },
-) {
-  /* Avoid `hr` / generic `ul|ol` — void or `li`-only content models cannot host a handle as first child. */
-  const blockish =
-    "p,h1,h2,h3,blockquote,pre,div[data-arch-checklist='true'],ul[data-arch-checklist='true']";
-  for (const child of [...root.children]) {
-    const isTask = child instanceof HTMLElement && child.classList.contains(cfg.taskItemClass);
-    const isBlock =
-      isTask || (child instanceof HTMLElement && child.matches(blockish));
-    if (!isBlock) continue;
-    if (child.querySelector(`:scope > [${ARCH_BLOCK_DRAG_ATTR}]`)) continue;
-    const h = document.createElement("span");
-    h.className = cfg.handleClass;
-    h.setAttribute(ARCH_BLOCK_DRAG_ATTR, "true");
-    h.setAttribute("contenteditable", "false");
-    h.setAttribute("draggable", "true");
-    h.setAttribute("role", "button");
-    h.setAttribute("aria-label", "Drag to reorder");
-    child.insertBefore(h, child.firstChild);
-  }
-}
-
-function pruneDocumentBlockDragHandles(root: HTMLElement) {
-  root.querySelectorAll(`[${ARCH_BLOCK_DRAG_ATTR}]`).forEach((el) => el.remove());
-}
-
-function hasDirectDraggableBlocks(
-  root: HTMLElement,
-  cfg: { taskItemClass: string },
-): boolean {
-  const blockish = "p,h1,h2,h3,blockquote,pre,div[data-arch-checklist='true'],ul[data-arch-checklist='true']";
-  for (const child of [...root.children]) {
-    if (!(child instanceof HTMLElement)) continue;
-    if (child.classList.contains(cfg.taskItemClass)) return true;
-    if (child.matches(blockish)) return true;
-  }
-  return false;
-}
-
-function resolveDocumentBlockDragRoot(
-  root: HTMLElement,
-  cfg: { taskItemClass: string },
-) {
-  if (hasDirectDraggableBlocks(root, cfg)) return root;
-  const nested = findFirstEditableNestedNotesRoot(root);
-  if (nested && hasDirectDraggableBlocks(nested, cfg)) {
-    return nested;
-  }
-  return root;
-}
-
-function ensureDocumentBlockDragHandlesForAllRoots(
-  root: HTMLElement,
-  cfg: { handleClass: string; taskItemClass: string },
-) {
-  pruneDocumentBlockDragHandles(root);
-  ensureDocumentBlockDragHandles(resolveDocumentBlockDragRoot(root, cfg), cfg);
-}
-
 function contiguousTaskItemsFrom(taskItem: HTMLElement, taskItemClass: string): HTMLElement[] {
   const sel = `.${taskItemClass}`;
   const parent = taskItem.parentElement;
@@ -152,46 +79,6 @@ function contiguousTaskItemsFrom(taskItem: HTMLElement, taskItemClass: string): 
     el = el.nextElementSibling as HTMLElement | null;
   }
   return out;
-}
-
-/** Horizontal split between “insert before this block” vs “after” — biased so gaps feel less twitchy. */
-function archBlockDropInsertBeforeY(rect: DOMRect): number {
-  const biasPx = Math.min(18, Math.max(8, rect.height * 0.14));
-  return rect.top + rect.height * 0.5 + biasPx;
-}
-
-function findArchBlockDropInsertBefore(
-  root: HTMLElement,
-  clientY: number,
-  dragging: Element | null,
-): Element | null {
-  const kids = [...root.children].filter((c) => c !== dragging);
-  for (const c of kids) {
-    const r = c.getBoundingClientRect();
-    if (clientY < archBlockDropInsertBeforeY(r)) return c;
-  }
-  return null;
-}
-
-function dropIndicatorTopRelative(
-  wrap: HTMLElement,
-  root: HTMLElement,
-  clientY: number,
-  dragging: Element | null,
-): number {
-  const wr = wrap.getBoundingClientRect();
-  const insertBefore = findArchBlockDropInsertBefore(root, clientY, dragging);
-  if (insertBefore) {
-    const r = insertBefore.getBoundingClientRect();
-    return r.top - wr.top - 3;
-  }
-  const kids = [...root.children].filter((c) => c !== dragging);
-  const last = kids[kids.length - 1];
-  if (last) {
-    const r = last.getBoundingClientRect();
-    return r.bottom - wr.top + 3;
-  }
-  return 12;
 }
 
 function isDocHtmlVisuallyEmpty(html: string): boolean {
@@ -352,12 +239,6 @@ export type ChecklistDeletionClassNames = {
   taskCheckbox: string;
 };
 
-/** Enables Paper-style drag handles on top-level blocks (stripped before commit). */
-export type DocumentBlockDragConfig = {
-  handleClass: string;
-  taskItemClass: string;
-};
-
 type BufferedContentEditableProps = {
   value: string;
   editable?: boolean;
@@ -377,11 +258,8 @@ type BufferedContentEditableProps = {
    * (2) Pointer hits on the row outside the text cell (e.g. beside the checkbox) move the caret into the text.
    */
   checklistDeletion?: ChecklistDeletionClassNames | null;
-  /** Drag handles on direct block children + reorder via native DnD. */
-  documentBlockDrag?: DocumentBlockDragConfig | null;
   /** `/` slash menu — same commands as the format dock (`runFormat` in shell). */
   richDocCommand?: (command: string, value?: string) => void;
-  slashCommandItems?: SlashCommandItem[] | null;
   /** Shown when the document body is empty (Paper-style hint). */
   emptyPlaceholder?: string | null;
 };
@@ -390,9 +268,9 @@ type BufferedContentEditableProps = {
  * Legacy rich-text editor surface.
  *
  * Cutover policy:
- * - Default/task note bodies must use `HeartgardenDocEditor` (`hgDoc`) in canvas/focus.
- * - Keep this component only for non-hgDoc surfaces (lore hybrid shells, code body, gallery notes,
- *   folder title inline editing) until those are migrated.
+ * - Default/task/code note bodies and media gallery notes use `HeartgardenDocEditor` (`hgDoc`).
+ * - Keep this component for lore hybrid **canvas** shells (full HTML plate), folder title
+ *   (`plainText`), and any remaining HTML-only surfaces — see `docs/EDITOR_SURFACE_CUTOVER.md`.
  */
 export function BufferedContentEditable({
   value,
@@ -409,15 +287,10 @@ export function BufferedContentEditable({
   dataAttribute,
   wikiLinkAssist,
   checklistDeletion,
-  documentBlockDrag,
   richDocCommand,
-  slashCommandItems = null,
   emptyPlaceholder = null,
 }: BufferedContentEditableProps) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const wrapRef = useRef<HTMLDivElement | null>(null);
-  const draggedArchBlockRef = useRef<Element | null>(null);
-  const draggedArchBlockRootRef = useRef<HTMLElement | null>(null);
   const pastePlainNextRef = useRef(false);
   const composingRef = useRef(false);
   const slashPlainRangeRef = useRef<{ start: number; end: number } | null>(null);
@@ -426,27 +299,6 @@ export function BufferedContentEditable({
   const [slashAnchor, setSlashAnchor] = useState<DOMRect | null>(null);
   const [slashCandidates, setSlashCandidates] = useState<SlashCommandItem[]>([]);
   const [slashIndex, setSlashIndex] = useState(0);
-  const [dropLineY, setDropLineY] = useState<number | null>(null);
-  const dropLineYRef = useRef<number | null>(null);
-
-  const resolvedSlashItems = slashCommandItems ?? DEFAULT_SLASH_COMMAND_ITEMS;
-
-  const updateDropLineY = useCallback((next: number | null) => {
-    const prev = dropLineYRef.current;
-    if (prev === next) return;
-    if (prev != null && next != null && Math.abs(prev - next) < 0.5) return;
-    dropLineYRef.current = next;
-    setDropLineY(next);
-  }, []);
-
-  const mergedNormalizeOnCommit = useCallback(
-    (html: string) => {
-      /* Strip ephemeral drag handles on every commit — canvas no longer injects them, focus/gallery do. */
-      const stripped = stripArchDragHandles(html);
-      return normalizeOnCommit ? normalizeOnCommit(stripped) : stripped;
-    },
-    [normalizeOnCommit],
-  );
 
   const {
     draft,
@@ -457,7 +309,7 @@ export function BufferedContentEditable({
   } = useEditorSession({
     value,
     debounceMs,
-    normalizeOnCommit: mergedNormalizeOnCommit,
+    normalizeOnCommit,
     onCommit,
     onDraftDirtyChange,
   });
@@ -517,7 +369,7 @@ export function BufferedContentEditable({
     }
     const caretPlain = plain.length;
     slashPlainRangeRef.current = { start: slash.startPlainOffset, end: caretPlain };
-    const filtered = filterSlashCommands(resolvedSlashItems, slash.query);
+    const filtered = filterSlashCommands(DEFAULT_SLASH_COMMAND_ITEMS, slash.query);
     if (filtered.length === 0) {
       closeSlash();
       return;
@@ -532,7 +384,7 @@ export function BufferedContentEditable({
         setSlashAnchor(rect);
       }
     }
-  }, [closeSlash, plainText, resolvedSlashItems, richDocCommand]);
+  }, [closeSlash, plainText, richDocCommand]);
 
   const refreshWikiAssist = useCallback(() => {
     const cfg = wikiLinkAssist;
@@ -614,11 +466,10 @@ export function BufferedContentEditable({
     } else {
       el.innerHTML = draft;
       applySpellcheckToNestedEditables(el, spellCheck);
-      if (documentBlockDrag) ensureDocumentBlockDragHandlesForAllRoots(el, documentBlockDrag);
       syncCharSkDisplayNameStack(el);
       syncLoreV9RedactedPlaceholderState(el);
     }
-  }, [draft, plainText, documentBlockDrag, spellCheck]);
+  }, [draft, plainText, spellCheck]);
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -746,69 +597,9 @@ export function BufferedContentEditable({
   return (
     <>
       <div
-        ref={wrapRef}
-        className={hostStyles.richEditorHost}
-        data-hg-rich-editor-host="true"
-        onDragOver={(event) => {
-          if (!documentBlockDrag || plainText || !editable || !draggedArchBlockRef.current) {
-            updateDropLineY(null);
-            return;
-          }
-          const root = ref.current;
-          const wrap = wrapRef.current;
-          if (!root || !wrap) return;
-          /* Host / margins / chrome: must still preventDefault or the cursor flips to “not allowed”. */
-          if (!wrap.contains(event.target as Node)) return;
-          event.preventDefault();
-          event.dataTransfer.dropEffect = "move";
-          const activeRoot = draggedArchBlockRootRef.current ?? root;
-          if (!activeRoot.contains(event.target as Node)) {
-            updateDropLineY(null);
-            return;
-          }
-          updateDropLineY(
-            dropIndicatorTopRelative(wrap, activeRoot, event.clientY, draggedArchBlockRef.current),
-          );
-        }}
-        onDragLeave={(event) => {
-          if (!documentBlockDrag || plainText) return;
-          const wrap = wrapRef.current;
-          const rel = event.relatedTarget as Node | null;
-          if (wrap && rel && !wrap.contains(rel)) {
-            updateDropLineY(null);
-          }
-        }}
-        onDrop={(event) => {
-          updateDropLineY(null);
-          if (!documentBlockDrag || plainText || !editable) return;
-          const root = ref.current;
-          const wrap = wrapRef.current;
-          if (!wrap?.contains(event.target as Node)) return;
-          const dragEl = draggedArchBlockRef.current;
-          const dragRoot = draggedArchBlockRootRef.current;
-          if (!root || !dragEl || !dragRoot || !root.contains(dragRoot) || !dragRoot.contains(dragEl)) {
-            draggedArchBlockRef.current = null;
-            draggedArchBlockRootRef.current = null;
-            return;
-          }
-          if (!dragRoot.contains(event.target as Node)) return;
-          event.preventDefault();
-          event.stopPropagation();
-          const insertBefore = findArchBlockDropInsertBefore(dragRoot, event.clientY, dragEl);
-          if (insertBefore) dragRoot.insertBefore(dragEl, insertBefore);
-          else dragRoot.appendChild(dragEl);
-          draggedArchBlockRef.current = null;
-          draggedArchBlockRootRef.current = null;
-          ensureDocumentBlockDragHandlesForAllRoots(root, documentBlockDrag);
-          onDraftChange(readElementValue());
-        }}
-      >
-        {dropLineY !== null ? (
-          <div className={hostStyles.dropIndicator} style={{ top: dropLineY }} aria-hidden />
-        ) : null}
-        <div
         ref={ref}
-        className={`${hostStyles.richEditorHostInner} ${className ?? ""}`.trim()}
+        className={`${hostStyles.richEditorHost} ${hostStyles.richEditorHostInner} ${className ?? ""}`.trim()}
+        data-hg-rich-editor-host="true"
         data-hg-rich-editor-inner="true"
         contentEditable={editable}
         suppressContentEditableWarning
@@ -817,9 +608,6 @@ export function BufferedContentEditable({
         data-placeholder={docEmpty ? emptyPlaceholder ?? undefined : undefined}
         onFocus={() => {
           beginEditing();
-          if (documentBlockDrag && ref.current && !plainText) {
-            ensureDocumentBlockDragHandlesForAllRoots(ref.current, documentBlockDrag);
-          }
         }}
         onBlur={() => {
           closeWiki();
@@ -855,9 +643,6 @@ export function BufferedContentEditable({
             if (field.isConnected) placeCaretAfterLorePlaceholderReplace(field);
           });
           requestAnimationFrame(() => {
-            if (documentBlockDrag && ref.current && !plainText) {
-              ensureDocumentBlockDragHandlesForAllRoots(ref.current, documentBlockDrag);
-            }
             refreshWikiAssist();
             refreshSlashAssist();
           });
@@ -867,9 +652,6 @@ export function BufferedContentEditable({
           onDraftChange(next);
           syncLoreV9RedactedPlaceholderState(ref.current);
           requestAnimationFrame(() => {
-            if (documentBlockDrag && ref.current && !plainText) {
-              ensureDocumentBlockDragHandlesForAllRoots(ref.current, documentBlockDrag);
-            }
             refreshWikiAssist();
             refreshSlashAssist();
           });
@@ -887,33 +669,11 @@ export function BufferedContentEditable({
             });
           }
         }}
-        onDragStartCapture={(event) => {
-          if (!documentBlockDrag || plainText || !editable) return;
-          const t = event.target as HTMLElement | null;
-          if (!t) return;
-          const handle = t.closest(`[${ARCH_BLOCK_DRAG_ATTR}]`) as HTMLElement | null;
-          if (!handle) return;
-          const block = handle.parentElement;
-          const root = ref.current;
-          const dragRoot = block?.parentElement as HTMLElement | null;
-          if (!block || !root || !dragRoot || !root.contains(dragRoot)) return;
-          event.stopPropagation();
-          draggedArchBlockRef.current = block;
-          draggedArchBlockRootRef.current = dragRoot;
-          event.dataTransfer.effectAllowed = "move";
-          event.dataTransfer.setData("text/plain", "heartgarden-arch-block");
-        }}
-        onDragEndCapture={() => {
-          draggedArchBlockRef.current = null;
-          draggedArchBlockRootRef.current = null;
-          updateDropLineY(null);
-        }}
         onPointerDownCapture={(event) => {
           if (!checklistDeletion || plainText || !editable || event.button !== 0) return;
           const root = ref.current;
           if (!root || !root.contains(event.target as Node)) return;
           const t = event.target as HTMLElement;
-          if (t.closest(`[${ARCH_BLOCK_DRAG_ATTR}]`)) return;
           const taskItemSel = `.${checklistDeletion.taskItem}`;
           const taskTextSel = `.${checklistDeletion.taskText}`;
           const taskCheckboxSel = `.${checklistDeletion.taskCheckbox}`;
@@ -1026,9 +786,6 @@ export function BufferedContentEditable({
                           else r.appendChild(p);
                           r.focus({ preventScroll: true });
                           placeCaretAtStart(p);
-                          if (documentBlockDrag) {
-                            ensureDocumentBlockDragHandlesForAllRoots(r, documentBlockDrag);
-                          }
                         }
                       });
                       return;
@@ -1043,9 +800,6 @@ export function BufferedContentEditable({
                       root.focus({ preventScroll: true });
                       placeCaretAtStart(p);
                       onDraftChange(readElementValue());
-                      if (documentBlockDrag) {
-                        ensureDocumentBlockDragHandlesForAllRoots(root, documentBlockDrag);
-                      }
                       return;
                     }
                     event.preventDefault();
@@ -1263,7 +1017,6 @@ export function BufferedContentEditable({
         }}
         {...(dataAttribute ? { [dataAttribute]: "true" } : {})}
       />
-      </div>
       <SlashCommandAssistPopover
         open={slashOpen && slashCandidates.length > 0}
         anchorRect={slashAnchor}

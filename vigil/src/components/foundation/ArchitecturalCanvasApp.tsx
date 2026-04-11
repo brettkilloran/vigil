@@ -8985,9 +8985,21 @@ export function ArchitecturalCanvasApp({
         if (action.command === "formatBlock" && action.value === "blockquote") {
           return { ...action, active: formatCommandState.blockTag === "blockquote" };
         }
+        if (action.command === "insertUnorderedList") {
+          return { ...action, active: formatCommandState.unorderedList };
+        }
+        if (action.command === "insertOrderedList") {
+          return { ...action, active: formatCommandState.orderedList };
+        }
         return action;
       }),
-    [canInsertImage, formatCommandState.blockTag, isRestrictedLayer],
+    [
+      canInsertImage,
+      formatCommandState.blockTag,
+      formatCommandState.orderedList,
+      formatCommandState.unorderedList,
+      isRestrictedLayer,
+    ],
   );
 
   const dockCreateActions = useMemo(
@@ -9006,12 +9018,6 @@ export function ArchitecturalCanvasApp({
         if (action.command === "underline") return { ...action, active: formatCommandState.underline };
         if (action.command === "strikeThrough") {
           return { ...action, active: formatCommandState.strikeThrough };
-        }
-        if (action.command === "insertUnorderedList") {
-          return { ...action, active: formatCommandState.unorderedList };
-        }
-        if (action.command === "insertOrderedList") {
-          return { ...action, active: formatCommandState.orderedList };
         }
         if (action.command === "formatBlock" && action.value === "h1") {
           const level = formatCommandState.blockTag;

@@ -1,9 +1,6 @@
 export const RICH_EDITOR_SURFACE_SELECTOR =
   "[data-node-body-editor], [data-focus-body-editor], [data-hg-doc-editor], [data-architectural-media-gallery-notes]";
 
-export const RICH_EDITOR_NESTED_NOTES_SELECTOR =
-  '[data-hg-character-focus-notes="true"], [data-hg-lore-location-focus-notes="true"], [class*="charSkNotesBody"], [class*="char3dNotesBody"]';
-
 export type RichEditorSurfaceKind =
   | "node-body"
   | "focus-body"
@@ -43,13 +40,6 @@ export function caretIsWithinRichDocInsertRegion(
     return !!focusEl.closest('[data-hg-lore-location-focus-notes="true"]');
   }
   return true;
-}
-
-export function findFirstEditableNestedNotesRoot(root: ParentNode): HTMLElement | null {
-  for (const node of root.querySelectorAll<HTMLElement>(RICH_EDITOR_NESTED_NOTES_SELECTOR)) {
-    if (node.isContentEditable) return node;
-  }
-  return null;
 }
 
 /**

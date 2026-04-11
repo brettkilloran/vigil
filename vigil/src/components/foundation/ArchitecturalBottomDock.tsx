@@ -106,6 +106,8 @@ function createIcon(nodeType: NodeTheme): ReactNode {
 export const DEFAULT_DOC_INSERT_ACTIONS: DockFormatAction[] = [
   { id: "quote", label: "Quote", command: "formatBlock", value: "blockquote" },
   { id: "checklist", label: "Checklist", command: "arch:checklist" },
+  { id: "list", label: "Bulleted list", command: "insertUnorderedList" },
+  { id: "numberedList", label: "Numbered list", command: "insertOrderedList" },
   { id: "insertImage", label: "Insert image", command: "arch:insertImage" },
   { id: "divider", label: "Divider", command: "insertHorizontalRule" },
 ];
@@ -116,8 +118,6 @@ export const DEFAULT_FORMAT_ACTIONS: DockFormatAction[] = [
   { id: "italic", label: "Italic", command: "italic" },
   { id: "underline", label: "Underline", command: "underline" },
   { id: "strikeThrough", label: "Strikethrough", command: "strikeThrough" },
-  { id: "list", label: "Bulleted list", command: "insertUnorderedList" },
-  { id: "numberedList", label: "Numbered list", command: "insertOrderedList" },
 ];
 
 export const DEFAULT_CREATE_ACTIONS: DockCreateAction[] = [
