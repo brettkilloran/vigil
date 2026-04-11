@@ -49,6 +49,31 @@ function isCaretAtStartOfHost(host: HTMLElement, range: Range): boolean {
   return probe.toString().length === 0;
 }
 
+/** Pixels left of the host rect to treat as in-row “gutter” for checklist hit-testing (handles sit in the margin). */
+const RICH_EDITOR_LEFT_GUTTER_HIT_PX = 36;
+
+/**
+ * True when the pointer is inside the host, or in the left gutter band aligned with the host
+ * vertically while still resolving to a row under the host (e.g. `elementFromPoint` hits a
+ * task row). Avoids `root.contains(event.target)` missing nodes painted in the gutter.
+ */
+function pointerInRichEditorHostOrLeftGutter(
+  root: HTMLElement,
+  clientX: number,
+  clientY: number,
+  taskItemSelector: string,
+): boolean {
+  const r = root.getBoundingClientRect();
+  const effLeft = r.left - RICH_EDITOR_LEFT_GUTTER_HIT_PX;
+  if (clientY < r.top || clientY > r.bottom) return false;
+  if (clientX < effLeft || clientX > r.right) return false;
+  const hit = root.ownerDocument.elementFromPoint(clientX, clientY);
+  if (!hit) return false;
+  if (root.contains(hit)) return true;
+  const taskItem = hit.closest(taskItemSelector);
+  return !!(taskItem && root.contains(taskItem));
+}
+
 function isCaretAtEndOfHost(host: HTMLElement, range: Range): boolean {
   if (!range.collapsed || !host.contains(range.startContainer)) return false;
   const end = document.createRange();
@@ -672,9 +697,14 @@ export function BufferedContentEditable({
         onPointerDownCapture={(event) => {
           if (!checklistDeletion || plainText || !editable || event.button !== 0) return;
           const root = ref.current;
-          if (!root || !root.contains(event.target as Node)) return;
-          const t = event.target as HTMLElement;
           const taskItemSel = `.${checklistDeletion.taskItem}`;
+          if (
+            !root ||
+            !pointerInRichEditorHostOrLeftGutter(root, event.clientX, event.clientY, taskItemSel)
+          ) {
+            return;
+          }
+          const t = event.target as HTMLElement;
           const taskTextSel = `.${checklistDeletion.taskText}`;
           const taskCheckboxSel = `.${checklistDeletion.taskCheckbox}`;
           const taskItem = t.closest(taskItemSel) as HTMLElement | null;

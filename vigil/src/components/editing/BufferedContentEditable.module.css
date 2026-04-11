@@ -6,6 +6,9 @@
   display: flex;
   flex-direction: column;
   overflow-x: visible;
+  /* Structural chrome aligned with HeartgardenDocEditor `.proseRoot` (drop lines, gutters). */
+  --hg-rich-structure-edge: color-mix(in oklch, var(--sem-text-muted) 40%, transparent);
+  --hg-rich-structure-fill: color-mix(in oklch, var(--sem-text-muted) 7%, transparent);
 }
 
 .richEditorHostInner {

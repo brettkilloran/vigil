@@ -1,5 +1,6 @@
 import HorizontalRule from "@tiptap/extension-horizontal-rule";
 import Image from "@tiptap/extension-image";
+import NodeRange from "@tiptap/extension-node-range";
 import Placeholder from "@tiptap/extension-placeholder";
 import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
@@ -29,6 +30,8 @@ export function getHgDocExtensions(options?: {
   const placeholder = options?.placeholder ?? "Write here, or type / for blocks…";
 
   return [
+    /* Required for `@tiptap/extension-drag-handle` block drags (`NodeRangeSelection`). */
+    NodeRange,
     StarterKit.configure({
       codeBlock: false,
       heading: { levels: [1, 2, 3] },

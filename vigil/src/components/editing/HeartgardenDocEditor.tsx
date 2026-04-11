@@ -1,6 +1,6 @@
 "use client";
 
-import { offset } from "@floating-ui/dom";
+import { offset, shift } from "@floating-ui/dom";
 
 import { DotsSixVertical } from "@phosphor-icons/react";
 
@@ -36,9 +36,17 @@ const HG_DOC_DRAG_HANDLE_FLOAT = {
   /* `absolute` is clipped by `.focusSheet { overflow-y: auto }` (horizontal overflow becomes non-visible). */
   strategy: "fixed" as const,
   middleware: [
-    /* Sit in the left gutter; slight vertical nudge toward first-line cap height. */
-    offset({ mainAxis: 4, crossAxis: -1 }),
+    /* Sit in the left gutter; nudge toward first-line cap height. */
+    offset({ mainAxis: 8, crossAxis: -2 }),
+    /* Keep the handle on-screen when the block sits near viewport edges. */
+    shift({ padding: 8, crossAxis: true, mainAxis: true }),
   ],
+};
+
+/** Nested handles only inside list-like containers (avoids whole-doc “nested” ambiguity). */
+const HG_DOC_DRAG_HANDLE_NESTED = {
+  edgeDetection: "left" as const,
+  allowedContainers: ["taskList", "bulletList", "orderedList", "blockquote"],
 };
 
 export type HeartgardenDocChromeRole = "focus" | "canvas";
@@ -232,11 +240,12 @@ export function HeartgardenDocEditor({
           editor={editor}
           className={styles.dragHandle}
           computePositionConfig={HG_DOC_DRAG_HANDLE_FLOAT}
+          nested={HG_DOC_DRAG_HANDLE_NESTED}
           onNodeChange={onDragHandleNodeChange}
           onElementDragEnd={onDragHandleDragEnd}
         >
           <span className={styles.dragHandleIcon}>
-            <DotsSixVertical aria-hidden size={14} weight="bold" />
+            <DotsSixVertical aria-hidden size={16} weight="bold" />
           </span>
         </DragHandle>
       ) : null}

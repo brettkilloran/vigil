@@ -15,18 +15,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Comfortable hit target without a loud “accent pill”. */
-  min-width: 32px;
-  min-height: 32px;
-  padding: 0;
+  /* Wide short grip: larger hit target, not a pill. */
+  min-width: 36px;
+  min-height: 40px;
+  padding: 0 2px;
   margin: 0;
-  border-radius: 6px;
-  border: 1px solid color-mix(in oklab, currentColor 10%, transparent);
-  background: color-mix(in oklab, var(--sem-surface-raised) 82%, transparent);
+  border-radius: 2px;
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 85%, currentColor);
+  background: color-mix(in oklch, var(--sem-text-primary) 5%, transparent);
   color: var(--sem-text-muted);
   cursor: grab;
   /* TipTap keeps the handle `visibility:hidden` until a block is targeted; once shown, stay discoverable. */
-  opacity: 0.42;
+  opacity: 0.38;
   outline: none;
   box-shadow: none;
   transition: opacity 120ms ease, background 120ms ease, border-color 120ms ease;
@@ -38,8 +38,8 @@
 }
 
 .dragHandle:focus-visible {
-  outline: var(--sem-focus-ring-width) solid color-mix(in oklab, currentColor 22%, transparent);
-  outline-offset: 2px;
+  outline: var(--sem-focus-ring-width) solid color-mix(in oklch, var(--sem-text-muted) 42%, transparent);
+  outline-offset: var(--sem-focus-ring-offset);
 }
 
 .dragHandleIcon {
@@ -51,13 +51,13 @@
 
 .host:hover .dragHandle,
 .host:focus-within .dragHandle {
-  opacity: 0.88;
+  opacity: 0.72;
 }
 
 .dragHandle:hover {
-  opacity: 1;
-  border-color: color-mix(in oklab, currentColor 18%, transparent);
-  background: color-mix(in oklab, var(--sem-surface-raised) 92%, transparent);
+  opacity: 0.92;
+  border-color: color-mix(in oklch, var(--sem-border-strong) 70%, currentColor);
+  background: color-mix(in oklch, var(--sem-text-primary) 8%, transparent);
 }
 
 .dragHandle:active {
@@ -76,23 +76,27 @@
   font-size: inherit;
   line-height: inherit;
   color: inherit;
+  /* Shared structural chrome (drop cursor, node selection, drag-row hover) — `sem/*` so light/dark tracks shell. */
+  --hg-doc-structure-edge: color-mix(in oklch, var(--sem-text-muted) 40%, transparent);
+  --hg-doc-structure-fill: color-mix(in oklch, var(--sem-text-muted) 7%, transparent);
+  --hg-doc-structure-fill-strong: color-mix(in oklch, var(--sem-text-muted) 11%, transparent);
 }
 
 /* Room for the floating drag handle + easier gap targeting (TipTap guidance). */
 .proseRoot :global(.ProseMirror) {
-  padding-left: 30px;
+  padding-left: 42px;
   box-sizing: border-box;
 }
 
 .proseRoot :global(.hgDropcursor) {
-  background: color-mix(in oklch, var(--sem-focus-ring) 52%, transparent);
+  background: var(--hg-doc-structure-edge);
   border-radius: 1px;
 }
 
 .proseRoot :global(.ProseMirror-selectednode) {
   position: relative;
   outline: none;
-  border-radius: 6px;
+  border-radius: 4px;
 }
 
 .proseRoot :global(.ProseMirror-selectednode)::before {
@@ -102,8 +106,8 @@
   border-radius: inherit;
   pointer-events: none;
   z-index: -1;
-  background: color-mix(in oklch, var(--sem-focus-ring) 9%, transparent);
-  box-shadow: inset 3px 0 0 0 color-mix(in oklch, var(--sem-focus-ring) 38%, transparent);
+  background: var(--hg-doc-structure-fill-strong);
+  box-shadow: inset 3px 0 0 0 var(--hg-doc-structure-edge);
 }
 
 /* Drag-handle hover target (via onNodeChange) — softer than full node selection. */
@@ -115,11 +119,11 @@
   content: "";
   position: absolute;
   inset: -1px -2px -1px -6px;
-  border-radius: 6px;
+  border-radius: 4px;
   pointer-events: none;
   z-index: -1;
-  background: color-mix(in oklch, var(--sem-focus-ring) 5%, transparent);
-  box-shadow: inset 2px 0 0 0 color-mix(in oklch, var(--sem-focus-ring) 22%, transparent);
+  background: var(--hg-doc-structure-fill);
+  box-shadow: inset 2px 0 0 0 var(--hg-doc-structure-edge);
 }
 
 .proseRoot :global(p) {
@@ -176,7 +180,7 @@
   margin: 0.55em 0;
   padding: 0.45em 0.85em;
   border-left: 3px solid var(--sys-color-accent-500);
-  background: color-mix(in oklab, var(--sem-surface-raised) 88%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 6%, transparent);
   border-radius: 0 6px 6px 0;
 }
 
