@@ -13,6 +13,12 @@ import styles from "@/src/components/editing/HgAiPendingEditorGutter.module.css"
 
 const HOVER_CLASS = "hgAiPending--gutter-hover";
 
+/** Top inset vs pending span — mirrors `.archBlockDragHandle` `top: 0.2em` on focus blocks. */
+const BIND_TOP_INSET_PX = 3;
+
+/** Min vertical gap between stacked Bind controls when several pending runs sit on one line. */
+const MIN_BIND_STACK_GAP_PX = 26;
+
 function findPendingSpanForRange(editor: Editor, from: number): HTMLElement | null {
   const maxPos = Math.max(0, editor.state.doc.content.size - 1);
   const candidates = [from, from + 1, Math.max(0, from - 1)].filter((p) => p <= maxPos);
@@ -97,19 +103,27 @@ export function HgAiPendingEditorGutter({ editor, wrapRef }: HgAiPendingEditorGu
       return;
     }
     const wr = wrap.getBoundingClientRect();
-    const next: number[] = [];
-    for (const { from, to } of ranges) {
+    const raw: number[] = [];
+    for (const { from } of ranges) {
       const span = findPendingSpanForRange(editor, from);
       if (span) {
         const sr = span.getBoundingClientRect();
-        const mid = (sr.top + sr.bottom) / 2 - wr.top + wrap.scrollTop;
-        next.push(mid);
+        raw.push(sr.top - wr.top + wrap.scrollTop + BIND_TOP_INSET_PX);
       } else {
         const start = editor.view.coordsAtPos(from);
-        const end = editor.view.coordsAtPos(Math.max(from, to - 1));
-        const mid = (start.top + end.bottom) / 2 - wr.top + wrap.scrollTop;
-        next.push(mid);
+        raw.push(start.top - wr.top + wrap.scrollTop + BIND_TOP_INSET_PX);
       }
+    }
+    const indexed = raw.map((top, i) => ({ i, top }));
+    indexed.sort((a, b) => (a.top !== b.top ? a.top - b.top : a.i - b.i));
+    for (let j = 1; j < indexed.length; j++) {
+      const prev = indexed[j - 1]!;
+      const cur = indexed[j]!;
+      cur.top = Math.max(cur.top, prev.top + MIN_BIND_STACK_GAP_PX);
+    }
+    const next: number[] = new Array(ranges.length);
+    for (const { i, top } of indexed) {
+      next[i] = top;
     }
     setTops(next);
   }, [editor, ranges, layoutTick, wrapRef]);

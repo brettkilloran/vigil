@@ -131,7 +131,9 @@ export const HgAiPending = Mark.create({
             modified = true;
           }
 
-          return modified ? tr.setMeta(HG_AI_PENDING_CLEAR_META, true) : null;
+          return modified
+            ? tr.setMeta(HG_AI_PENDING_CLEAR_META, true).setMeta("addToHistory", true)
+            : null;
         },
       }),
     ];
