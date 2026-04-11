@@ -9,7 +9,9 @@
   margin-bottom: 0.25rem;
 }
 
-.portraitHost [contenteditable="false"] {
+/* Avoid matching `[data-hg-character-focus-fields]` (contenteditable=false): inherited
+   user-select:none breaks caret and typing in the nested contenteditable field cells. */
+.portraitHost :global([data-hg-character-focus-portrait="true"]) {
   user-select: none;
 }
 
@@ -42,4 +44,11 @@
   margin-top: 0.5rem;
   flex: 1;
   min-height: 10rem;
+}
+
+/* Character hybrid: divider between injected identity row (portrait + fields) and Notes — legacy shell used `data-hg-character-focus-meta` border-bottom. */
+.host[data-hg-lore-hybrid-focus="character"] .notesWrap {
+  margin-top: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in oklch, var(--sys-color-white) 18%, transparent);
 }

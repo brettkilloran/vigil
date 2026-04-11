@@ -1,18 +1,12 @@
 "use client";
 
-import { offset, shift } from "@floating-ui/dom";
-
-import { DotsSixVertical } from "@phosphor-icons/react";
-
-import type { Editor, JSONContent } from "@tiptap/core";
-
-import DragHandle from "@tiptap/extension-drag-handle-react";
-
-import type { Node as PmNode } from "@tiptap/pm/model";
+import type { JSONContent } from "@tiptap/core";
 
 import { EditorContent, useEditor } from "@tiptap/react";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+
+import { HgDocPointerBlockDrag } from "@/src/components/editing/HgDocPointerBlockDrag";
 
 import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
 
@@ -28,26 +22,6 @@ import {
 } from "@/src/lib/hg-doc/tiptap-format";
 
 import styles from "@/src/components/editing/HeartgardenDocEditor.module.css";
-
-/** Stable floating-ui config for DragHandle (avoid churning the TipTap extension on parent re-render). */
-
-const HG_DOC_DRAG_HANDLE_FLOAT = {
-  placement: "left-start" as const,
-  /* `absolute` is clipped by `.focusSheet { overflow-y: auto }` (horizontal overflow becomes non-visible). */
-  strategy: "fixed" as const,
-  middleware: [
-    /* Sit in the left gutter; nudge toward first-line cap height. */
-    offset({ mainAxis: 8, crossAxis: -2 }),
-    /* Keep the handle on-screen when the block sits near viewport edges. */
-    shift({ padding: 8, crossAxis: true, mainAxis: true }),
-  ],
-};
-
-/** Nested handles only inside list-like containers (avoids whole-doc “nested” ambiguity). */
-const HG_DOC_DRAG_HANDLE_NESTED = {
-  edgeDetection: "left" as const,
-  allowedContainers: ["taskList", "bulletList", "orderedList", "blockquote"],
-};
 
 export type HeartgardenDocChromeRole = "focus" | "canvas";
 
@@ -66,7 +40,11 @@ export type HeartgardenDocEditorProps = {
 
   className?: string;
 
+  /** Block reorder grip — **focus / document sheet only**; ignored when `chromeRole="canvas"`. */
   enableDragHandle?: boolean;
+
+  /** Syntax token colors tuned for dark code panels (snippet focus + canvas code cards). */
+  codeSyntaxDark?: boolean;
 };
 
 export function HeartgardenDocEditor({
@@ -85,15 +63,9 @@ export function HeartgardenDocEditor({
   className,
 
   enableDragHandle = false,
+
+  codeSyntaxDark = false,
 }: HeartgardenDocEditorProps) {
-  const dragRowHoverElRef = useRef<HTMLElement | null>(null);
-
-  const clearDragRowHover = useCallback(() => {
-    dragRowHoverElRef.current?.classList.remove(styles.rowDragHover);
-
-    dragRowHoverElRef.current = null;
-  }, []);
-
   const extensions = useMemo(
     () =>
       getHgDocExtensions({
@@ -104,6 +76,10 @@ export function HeartgardenDocEditor({
 
     [placeholder],
   );
+
+  const hostRef = useRef<HTMLDivElement | null>(null);
+
+  const showBlockDragHandle = Boolean(enableDragHandle && chromeRole === "focus");
 
   const editor = useEditor(
     {
@@ -131,36 +107,6 @@ export function HeartgardenDocEditor({
     [extensions],
   );
 
-  const onDragHandleNodeChange = useCallback(
-    ({
-      node,
-      editor: ed,
-      pos,
-    }: {
-      node: PmNode | null;
-      editor: Editor;
-      pos: number | null;
-    }) => {
-      clearDragRowHover();
-
-      if (!node || pos == null) return;
-
-      const dom = ed.view.nodeDOM(pos);
-
-      if (dom instanceof HTMLElement) {
-        dom.classList.add(styles.rowDragHover);
-
-        dragRowHoverElRef.current = dom;
-      }
-    },
-
-    [clearDragRowHover],
-  );
-
-  const onDragHandleDragEnd = useCallback(() => {
-    clearDragRowHover();
-  }, [clearDragRowHover]);
-
   useEffect(() => {
     if (!editor) return;
 
@@ -178,12 +124,6 @@ export function HeartgardenDocEditor({
 
     editor.setEditable(editable);
   }, [editor, editable]);
-
-  useEffect(() => {
-    return () => {
-      clearDragRowHover();
-    };
-  }, [clearDragRowHover]);
 
   useEffect(() => {
     if (!editor) return;
@@ -230,26 +170,16 @@ export function HeartgardenDocEditor({
 
   return (
     <div
+      ref={hostRef}
       className={`${styles.host} ${className ?? ""}`.trim()}
       data-hg-doc-editor="true"
       data-hg-doc-surface={surfaceKey}
+      {...(codeSyntaxDark ? { "data-hg-doc-syntax": "dark" as const } : {})}
       {...dataAttrs}
     >
-      {enableDragHandle ? (
-        <DragHandle
-          editor={editor}
-          className={styles.dragHandle}
-          computePositionConfig={HG_DOC_DRAG_HANDLE_FLOAT}
-          nested={HG_DOC_DRAG_HANDLE_NESTED}
-          onNodeChange={onDragHandleNodeChange}
-          onElementDragEnd={onDragHandleDragEnd}
-        >
-          <span className={styles.dragHandleIcon}>
-            <DotsSixVertical aria-hidden size={16} weight="bold" />
-          </span>
-        </DragHandle>
+      {showBlockDragHandle ? (
+        <HgDocPointerBlockDrag editor={editor} hostRef={hostRef} chromeRole={chromeRole} enabled />
       ) : null}
-
       <EditorContent editor={editor} className={styles.editorContent} />
     </div>
   );

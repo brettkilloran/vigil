@@ -43,8 +43,8 @@ export function stripLegacyHtmlToPlainText(html: string): string {
 }
 
 /**
- * Legacy code-theme bodies were stored as decorated HTML; produce a single hgDoc paragraph
- * of plain text (no syntax highlighting in the doc model).
+ * Legacy code-theme bodies were stored as decorated HTML; produce a single hgDoc `codeBlock`
+ * so the TipTap + lowlight surface can highlight it.
  */
 export function legacyCodeBodyHtmlToHgDocSeed(html: string): JSONContent {
   const plain = stripLegacyHtmlToPlainText(html);
@@ -54,7 +54,8 @@ export function legacyCodeBodyHtmlToHgDocSeed(html: string): JSONContent {
     type: "doc",
     content: [
       {
-        type: "paragraph",
+        type: "codeBlock",
+        attrs: { language: "typescript" },
         content: [{ type: "text", text }],
       },
     ],

@@ -468,10 +468,32 @@ a {
   padding-left: 0;
 }
 
-.ProseMirror li[data-type="taskItem"] {
+.ProseMirror li[data-type="taskItem"],
+.ProseMirror li[data-hg-task-item="true"] {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.75rem;
   align-items: flex-start;
+}
+
+/*
+ * Heartgarden hg-doc: `HeartgardenDocEditor` sets `data-hg-doc-editor` on the host. Canvas cards
+ * also apply `.nodeBody` on that host, so generic `.nodeBody ul` / `.nodeBody li` can tie or
+ * interleave with `.ProseMirror …` in the merged stylesheet — use this scope so task rows keep
+ * a clear checkbox↔text gap and looser vertical rhythm on the preview card.
+ */
+[data-hg-doc-editor="true"] .ProseMirror ul[data-type="taskList"],
+[data-hg-doc-editor="true"] .ProseMirror ul[data-hg-task-list="true"] {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.4em 0 0.55em;
+}
+
+[data-hg-doc-editor="true"] .ProseMirror li[data-type="taskItem"],
+[data-hg-doc-editor="true"] .ProseMirror li[data-hg-task-item="true"] {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-block: 0.42em;
 }
 
 .ProseMirror li[data-type="taskItem"] > label {
@@ -1391,4 +1413,17 @@ a {
   --btn-border-hover: transparent;
   --btn-border-active: transparent;
   --btn-border-disabled: transparent;
+}
+
+/* hgDoc block reorder grip — portaled to `#hg-portal-root` (see `getVigilPortalRoot`); tones: focus-light / focus-dark / card (HgDocPointerBlockDrag). */
+.vigil-btn[data-hg-doc-block-drag-grip="true"] {
+  touch-action: none;
+  user-select: none;
+  pointer-events: auto;
+}
+
+/* In-doc slot while block-dragging — survives PM/TipTap DOM sync that strips inline `style`. */
+[data-hg-doc-editor="true"] [data-hg-doc-drag-dimmed="true"] {
+  opacity: 0.34 !important;
+  pointer-events: none !important;
 }

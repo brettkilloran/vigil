@@ -1,12 +1,14 @@
 "use client";
 
 import type { JSONContent } from "@tiptap/core";
-import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { HeartgardenDocEditor } from "@/src/components/editing/HeartgardenDocEditor";
 import {
   buildCharacterFocusDocumentHtml,
+  extractCharacterIdentityRowHtml,
   parseCharacterFocusDocumentHtml,
+  readCharacterFocusPartsFromIdentityRow,
   type CharacterFocusParts,
 } from "@/src/lib/lore-character-focus-document-html";
 import {
@@ -37,24 +39,14 @@ function plainToFieldHtml(text: string): string {
   return esc ? `<p>${esc}</p>` : "<br>";
 }
 
-function extractCharacterPortraitRowHtml(html: string): string {
-  if (typeof DOMParser === "undefined") return "";
-  try {
-    const doc = new DOMParser().parseFromString(`<div id="__hg_cf_meta">${html}</div>`, "text/html");
-    const root = doc.getElementById("__hg_cf_meta");
-    const row = root?.querySelector('[data-hg-character-focus-row="identity"]');
-    return row?.outerHTML ?? "";
-  } catch {
-    return "";
-  }
-}
-
 export type LoreHybridFocusEditorProps = {
   variant: "character" | "location";
   focusHtml: string;
   onChangeFocusHtml: (next: string) => void;
   className?: string;
   notesSurfaceKey?: string;
+  /** When this changes (e.g. active node id), identity row HTML is re-injected once; same key avoids wiping contenteditable while typing. */
+  focusDocumentKey?: string | null;
 };
 
 export function LoreHybridFocusEditor({
@@ -63,6 +55,7 @@ export function LoreHybridFocusEditor({
   onChangeFocusHtml,
   className,
   notesSurfaceKey = "focus-lore-notes",
+  focusDocumentKey = null,
 }: LoreHybridFocusEditorProps) {
   const [characterParts, setCharacterParts] = useState<CharacterFocusParts | null>(null);
   const [locationParts, setLocationParts] = useState<LocationFocusParts | null>(null);
@@ -70,6 +63,10 @@ export function LoreHybridFocusEditor({
   const characterPartsRef = useRef<CharacterFocusParts | null>(null);
   const locationPartsRef = useRef<LocationFocusParts | null>(null);
   const notesDocRef = useRef(notesDoc);
+  const identityShellRef = useRef<HTMLDivElement | null>(null);
+  const lastInjectedIdentityDocKeyRef = useRef<string | null>(null);
+  /** When notes emit updates `focusHtml`, re-parsing in the sync effect must not push `notesDoc` back through TipTap or `setContent` clears focus after each key. */
+  const skipNotesResyncFromFocusHtmlRef = useRef(0);
 
   useEffect(() => {
     notesDocRef.current = notesDoc;
@@ -87,7 +84,14 @@ export function LoreHybridFocusEditor({
         const p = parseCharacterFocusDocumentHtml(focusHtml);
         if (p) {
           setCharacterParts(p);
-          setNotesDoc(htmlFragmentToHgDocDoc(p.notesHtml));
+          if (skipNotesResyncFromFocusHtmlRef.current > 0) {
+            skipNotesResyncFromFocusHtmlRef.current = 0;
+          } else {
+            const nextNotes = htmlFragmentToHgDocDoc(p.notesHtml);
+            if (JSON.stringify(notesDocRef.current) !== JSON.stringify(nextNotes)) {
+              setNotesDoc(nextNotes);
+            }
+          }
         } else {
           setCharacterParts(null);
         }
@@ -95,13 +99,40 @@ export function LoreHybridFocusEditor({
         const lp = parseLocationFocusDocumentHtml(focusHtml);
         if (lp) {
           setLocationParts(lp);
-          setNotesDoc(htmlFragmentToHgDocDoc(lp.notesHtml));
+          if (skipNotesResyncFromFocusHtmlRef.current > 0) {
+            skipNotesResyncFromFocusHtmlRef.current = 0;
+          } else {
+            const nextNotes = htmlFragmentToHgDocDoc(lp.notesHtml);
+            if (JSON.stringify(notesDocRef.current) !== JSON.stringify(nextNotes)) {
+              setNotesDoc(nextNotes);
+            }
+          }
         } else {
           setLocationParts(null);
         }
       }
     });
   }, [variant, focusHtml]);
+
+  useLayoutEffect(() => {
+    if (variant !== "character") {
+      lastInjectedIdentityDocKeyRef.current = null;
+      return;
+    }
+    if (!characterParts) {
+      lastInjectedIdentityDocKeyRef.current = null;
+      return;
+    }
+    const host = identityShellRef.current;
+    if (!host) return;
+    const k = focusDocumentKey ?? "";
+    if (lastInjectedIdentityDocKeyRef.current != null && lastInjectedIdentityDocKeyRef.current === k) {
+      return;
+    }
+    lastInjectedIdentityDocKeyRef.current = k;
+    const rowHtml = extractCharacterIdentityRowHtml(focusHtml);
+    if (rowHtml) host.innerHTML = rowHtml;
+  }, [variant, characterParts, focusDocumentKey, focusHtml]);
 
   const emitCharacter = useCallback(
     (nextParts: CharacterFocusParts, doc: JSONContent) => {
@@ -119,9 +150,29 @@ export function LoreHybridFocusEditor({
     [onChangeFocusHtml],
   );
 
+  useEffect(() => {
+    if (variant !== "character") return;
+    const host = identityShellRef.current;
+    if (!host) return;
+    const onInput = (ev: Event) => {
+      const t = ev.target;
+      if (!(t instanceof Element)) return;
+      if (!t.closest("[data-hg-character-focus-field]")) return;
+      const row = host.querySelector<HTMLElement>('[data-hg-character-focus-row="identity"]');
+      if (!row) return;
+      const next = readCharacterFocusPartsFromIdentityRow(row, hgDocToHtml(notesDocRef.current));
+      setCharacterParts(next);
+      characterPartsRef.current = next;
+      emitCharacter(next, notesDocRef.current);
+    };
+    host.addEventListener("input", onInput, true);
+    return () => host.removeEventListener("input", onInput, true);
+  }, [variant, emitCharacter, focusDocumentKey]);
+
   const onNotesChange = useCallback(
     (doc: JSONContent) => {
       setNotesDoc(doc);
+      skipNotesResyncFromFocusHtmlRef.current += 1;
       if (variant === "character") {
         const p = characterPartsRef.current;
         if (p) emitCharacter(p, doc);
@@ -141,73 +192,14 @@ export function LoreHybridFocusEditor({
   }
 
   if (variant === "character" && characterParts) {
-    const p = characterParts;
-    const portraitRowHtml = extractCharacterPortraitRowHtml(focusHtml);
     return (
       <div
         className={`${styles.host} ${className ?? ""}`.trim()}
         data-focus-body-editor="true"
         data-hg-lore-hybrid-focus="character"
       >
-        {portraitRowHtml ? (
-          <div
-            className={styles.portraitHost}
-            // Portrait + upload wiring matches legacy focus shell (mousedown on canvas handles upload).
-            dangerouslySetInnerHTML={{ __html: portraitRowHtml }}
-          />
-        ) : null}
-        <div className={styles.fieldRow}>
-          <span className={styles.label}>Name</span>
-          <textarea
-            className={styles.textarea}
-            rows={2}
-            value={htmlToPlainOneLine(p.displayName)}
-            onChange={(e) => {
-              const next = { ...p, displayName: plainToFieldHtml(e.target.value) };
-              setCharacterParts(next);
-              emitCharacter(next, notesDocRef.current);
-            }}
-          />
-        </div>
-        <div className={styles.fieldRow}>
-          <span className={styles.label}>Role</span>
-          <textarea
-            className={styles.textarea}
-            rows={2}
-            value={htmlToPlainOneLine(p.role)}
-            onChange={(e) => {
-              const next = { ...p, role: plainToFieldHtml(e.target.value) };
-              setCharacterParts(next);
-              emitCharacter(next, notesDocRef.current);
-            }}
-          />
-        </div>
-        <div className={styles.fieldRow}>
-          <span className={styles.label}>Affiliation</span>
-          <textarea
-            className={styles.textarea}
-            rows={2}
-            value={htmlToPlainOneLine(p.affiliation)}
-            onChange={(e) => {
-              const next = { ...p, affiliation: plainToFieldHtml(e.target.value) };
-              setCharacterParts(next);
-              emitCharacter(next, notesDocRef.current);
-            }}
-          />
-        </div>
-        <div className={styles.fieldRow}>
-          <span className={styles.label}>Nationality</span>
-          <textarea
-            className={styles.textarea}
-            rows={2}
-            value={htmlToPlainOneLine(p.nationality)}
-            onChange={(e) => {
-              const next = { ...p, nationality: plainToFieldHtml(e.target.value) };
-              setCharacterParts(next);
-              emitCharacter(next, notesDocRef.current);
-            }}
-          />
-        </div>
+        {/* Portrait + meta fields: HTML injected in useLayoutEffect when `focusDocumentKey` changes (grid layout from global CSS). */}
+        <div ref={identityShellRef} className={styles.portraitHost} />
         <div className={styles.notesWrap}>
           <span className={styles.label}>Notes</span>
           <HeartgardenDocEditor

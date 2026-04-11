@@ -24,6 +24,9 @@
 # production
 /build
 
+# local scratch (e.g. dev log mirrors); never commit
+/tmp/
+
 # misc
 .DS_Store
 *.pem

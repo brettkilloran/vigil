@@ -26,6 +26,7 @@ import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.cs
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
 import { resolveImageDisplayUrl } from "@/src/lib/heartgarden-image-display-url";
 import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
+import { normalizeHgDocForCodeTheme } from "@/src/lib/hg-doc/code-theme-doc";
 
 function themeClass(theme: NodeTheme): string {
   if (theme === "code") return styles.themeCode;
@@ -121,6 +122,7 @@ export function ArchitecturalNodeBody({
   wikiLinkAssist,
   onRichDocCommand,
   emptyPlaceholder,
+  codeTheme = false,
 }: {
   nodeId: string;
   documentVariant: "hgDoc" | "html";
@@ -134,6 +136,8 @@ export function ArchitecturalNodeBody({
   wikiLinkAssist?: WikiLinkAssistConfig | null;
   onRichDocCommand?: (command: string, value?: string) => void;
   emptyPlaceholder?: string | null;
+  /** Canvas code/snippet cards — normalize legacy plain-paragraph bodies and use the dark syntax palette. */
+  codeTheme?: boolean;
 }) {
   if (documentVariant === "hgDoc") {
     return (
@@ -141,10 +145,10 @@ export function ArchitecturalNodeBody({
         surfaceKey={`canvas-${nodeId}`}
         chromeRole="canvas"
         className={`${styles.nodeBody} ${className ?? ""}`.trim()}
-        value={bodyDoc ?? EMPTY_HG_DOC}
+        value={codeTheme ? normalizeHgDocForCodeTheme(bodyDoc ?? EMPTY_HG_DOC) : bodyDoc ?? EMPTY_HG_DOC}
+        codeSyntaxDark={codeTheme}
         editable={editable}
         placeholder={emptyPlaceholder ?? "Write here, or type / for blocks…"}
-        enableDragHandle
         onChange={(doc) => onCommitPayload?.({ kind: "hgDoc", doc })}
       />
     );
@@ -347,6 +351,7 @@ export function ArchitecturalNodeCard({
         }
         onRichDocCommand={onRichDocCommand}
         emptyPlaceholder={emptyPlaceholder}
+        codeTheme={theme === "code"}
       />
     </div>
   );

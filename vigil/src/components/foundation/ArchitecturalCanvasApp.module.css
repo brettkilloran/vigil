@@ -5120,19 +5120,14 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-line="role"] [data-hg-character-focus-field="role"]) {
-  font-size: 18px;
-  line-height: 1.3;
-  font-weight: 500;
-  color: color-mix(in oklch, var(--sys-color-white) 94%, transparent);
-}
-
-.focusBody.focusCharacterDocument
+  :global([data-hg-character-focus-line="role"] [data-hg-character-focus-field="role"]),
 .focusBody.focusCharacterDocument
   :global([data-hg-character-focus-line="affiliation"] [data-hg-character-focus-field="affiliation"]),
 .focusBody.focusCharacterDocument
   :global([data-hg-character-focus-line="nationality"] [data-hg-character-focus-field="nationality"]) {
   font-size: 16px;
+  line-height: 1.4;
+  font-weight: 400;
   color: color-mix(in oklch, var(--sys-color-white) 82%, transparent);
 }
 
@@ -5202,6 +5197,44 @@ button.rootDockPanel.viewportMetricsPanel {
 .focusEditorDark
   .focusBody.focusCharacterDocument
   :global([data-hg-character-focus-notes="true"] hr) {
+  border-top-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
+}
+
+/* Lore hybrid: TipTap notes sit outside legacy `[data-hg-character-focus-notes]` — inherit
+ * `.focusBody` ink (`--sem-text-focus-body`) unless we match the old notes surface. */
+.focusEditorDark
+  .focusBody.focusCharacterDocument
+  :global([data-hg-lore-hybrid-focus="character"] [data-hg-doc-editor="true"]) {
+  color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
+  caret-color: color-mix(in oklch, var(--sem-focus-ring) 72%, var(--sys-color-white));
+}
+
+.focusEditorDark
+  .focusBody.focusCharacterDocument
+  :global([data-hg-lore-hybrid-focus="character"] [data-hg-doc-editor="true"] .ProseMirror h1) {
+  color: color-mix(in oklch, var(--sys-color-white) 96%, transparent);
+}
+
+.focusEditorDark
+  .focusBody.focusCharacterDocument
+  :global([data-hg-lore-hybrid-focus="character"] [data-hg-doc-editor="true"] .ProseMirror h2),
+.focusEditorDark
+  .focusBody.focusCharacterDocument
+  :global([data-hg-lore-hybrid-focus="character"] [data-hg-doc-editor="true"] .ProseMirror h3) {
+  color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
+}
+
+.focusEditorDark
+  .focusBody.focusCharacterDocument
+  :global([data-hg-lore-hybrid-focus="character"] [data-hg-doc-editor="true"] .ProseMirror pre) {
+  background: color-mix(in oklch, var(--sys-color-neutral-900) 85%, transparent);
+  border-color: color-mix(in oklch, var(--sys-color-white) 12%, transparent);
+  color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
+}
+
+.focusEditorDark
+  .focusBody.focusCharacterDocument
+  :global([data-hg-lore-hybrid-focus="character"] [data-hg-doc-editor="true"] .ProseMirror hr) {
   border-top-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
 }
 
@@ -5361,6 +5394,42 @@ button.rootDockPanel.viewportMetricsPanel {
 .focusEditorDark
   .focusBody.focusLocationDocument
   :global([data-hg-lore-location-focus-notes="true"] hr) {
+  border-top-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
+}
+
+.focusEditorDark
+  .focusBody.focusLocationDocument
+  :global([data-hg-lore-hybrid-focus="location"] [data-hg-doc-editor="true"]) {
+  color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
+  caret-color: color-mix(in oklch, var(--sem-focus-ring) 72%, var(--sys-color-white));
+}
+
+.focusEditorDark
+  .focusBody.focusLocationDocument
+  :global([data-hg-lore-hybrid-focus="location"] [data-hg-doc-editor="true"] .ProseMirror h1) {
+  color: color-mix(in oklch, var(--sys-color-white) 96%, transparent);
+}
+
+.focusEditorDark
+  .focusBody.focusLocationDocument
+  :global([data-hg-lore-hybrid-focus="location"] [data-hg-doc-editor="true"] .ProseMirror h2),
+.focusEditorDark
+  .focusBody.focusLocationDocument
+  :global([data-hg-lore-hybrid-focus="location"] [data-hg-doc-editor="true"] .ProseMirror h3) {
+  color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
+}
+
+.focusEditorDark
+  .focusBody.focusLocationDocument
+  :global([data-hg-lore-hybrid-focus="location"] [data-hg-doc-editor="true"] .ProseMirror pre) {
+  background: color-mix(in oklch, var(--sys-color-neutral-900) 85%, transparent);
+  border-color: color-mix(in oklch, var(--sys-color-white) 12%, transparent);
+  color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
+}
+
+.focusEditorDark
+  .focusBody.focusLocationDocument
+  :global([data-hg-lore-hybrid-focus="location"] [data-hg-doc-editor="true"] .ProseMirror hr) {
   border-top-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
 }
 

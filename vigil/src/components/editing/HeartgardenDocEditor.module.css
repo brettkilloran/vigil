@@ -8,68 +8,6 @@
   width: 100%;
 }
 
-.dragHandle {
-  position: absolute;
-  /* Above sticky `.focusHeader` (z-index 10) when overlapping; TipTap sets `position: fixed` inline when configured. */
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* Wide short grip: larger hit target, not a pill. */
-  min-width: 36px;
-  min-height: 40px;
-  padding: 0 2px;
-  margin: 0;
-  border-radius: 2px;
-  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 85%, currentColor);
-  background: color-mix(in oklch, var(--sem-text-primary) 5%, transparent);
-  color: var(--sem-text-muted);
-  cursor: grab;
-  /* TipTap keeps the handle `visibility:hidden` until a block is targeted; once shown, stay discoverable. */
-  opacity: 0.38;
-  outline: none;
-  box-shadow: none;
-  transition: opacity 120ms ease, background 120ms ease, border-color 120ms ease;
-  backdrop-filter: blur(2px);
-}
-
-.dragHandle:focus:not(:focus-visible) {
-  outline: none;
-}
-
-.dragHandle:focus-visible {
-  outline: var(--sem-focus-ring-width) solid color-mix(in oklch, var(--sem-text-muted) 42%, transparent);
-  outline-offset: var(--sem-focus-ring-offset);
-}
-
-.dragHandleIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.host:hover .dragHandle,
-.host:focus-within .dragHandle {
-  opacity: 0.72;
-}
-
-.dragHandle:hover {
-  opacity: 0.92;
-  border-color: color-mix(in oklch, var(--sem-border-strong) 70%, currentColor);
-  background: color-mix(in oklch, var(--sem-text-primary) 8%, transparent);
-}
-
-.dragHandle:active {
-  cursor: grabbing;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dragHandle {
-    transition: none;
-  }
-}
-
 /* ProseMirror root — typography aligned with `.focusBody` / `.nodeBody` rhythm */
 .proseRoot {
   outline: none;
@@ -80,12 +18,6 @@
   --hg-doc-structure-edge: color-mix(in oklch, var(--sem-text-muted) 40%, transparent);
   --hg-doc-structure-fill: color-mix(in oklch, var(--sem-text-muted) 7%, transparent);
   --hg-doc-structure-fill-strong: color-mix(in oklch, var(--sem-text-muted) 11%, transparent);
-}
-
-/* Room for the floating drag handle + easier gap targeting (TipTap guidance). */
-.proseRoot :global(.ProseMirror) {
-  padding-left: 42px;
-  box-sizing: border-box;
 }
 
 .proseRoot :global(.hgDropcursor) {
@@ -108,22 +40,6 @@
   z-index: -1;
   background: var(--hg-doc-structure-fill-strong);
   box-shadow: inset 3px 0 0 0 var(--hg-doc-structure-edge);
-}
-
-/* Drag-handle hover target (via onNodeChange) — softer than full node selection. */
-.rowDragHover {
-  position: relative;
-}
-
-.rowDragHover::before {
-  content: "";
-  position: absolute;
-  inset: -1px -2px -1px -6px;
-  border-radius: 4px;
-  pointer-events: none;
-  z-index: -1;
-  background: var(--hg-doc-structure-fill);
-  box-shadow: inset 2px 0 0 0 var(--hg-doc-structure-edge);
 }
 
 .proseRoot :global(p) {
@@ -210,7 +126,7 @@
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 0.45em;
+  gap: 0.75rem;
   margin: 0.2em 0;
   list-style: none;
 }
@@ -218,7 +134,12 @@
 .proseRoot :global(li[data-type="taskItem"] > label),
 .proseRoot :global(li[data-hg-task-item="true"] > label) {
   flex: 0 0 auto;
-  margin-top: 0.2em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Match first text line box; centers the box vs paragraph `lh` (label `margin-top: 0.2em` + input `1lh` used wrong metrics and sat low). */
+  min-height: 1lh;
+  margin-top: 0;
   user-select: none;
   cursor: pointer;
 }
@@ -250,7 +171,7 @@
   border: 1px solid color-mix(in oklch, currentColor 30%, transparent);
   border-radius: var(--cmp-task-checkbox-radius);
   background: color-mix(in oklch, currentColor 6%, transparent);
-  margin: max(0px, calc((1lh - var(--cmp-task-checkbox-size)) / 2)) 0 0;
+  margin: 0;
   line-height: 1;
   cursor: pointer;
   transition:
@@ -297,4 +218,129 @@
   color: color-mix(in oklab, currentColor 72%, transparent);
   text-decoration: line-through;
   text-decoration-thickness: 1px;
+}
+
+/* --- Code blocks (TipTap `codeBlock` + lowlight / highlight.js decorations) --- */
+
+.proseRoot :global(pre.hgCodeBlock) {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.88em;
+  line-height: 1.55;
+  padding: 0.85em 1em;
+  margin: 0.65em 0;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--sem-text-primary) 7%, var(--sem-surface-muted));
+  border: 1px solid var(--sem-border-subtle);
+  overflow-x: auto;
+  tab-size: 4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.proseRoot :global(pre.hgCodeBlock code) {
+  display: block;
+  width: 100%;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+.proseRoot :global(p code),
+.proseRoot :global(li code) {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.9em;
+  padding: 0.12em 0.38em;
+  border-radius: 4px;
+  background: color-mix(in oklch, var(--sem-text-primary) 9%, transparent);
+  border: 1px solid color-mix(in oklch, var(--sem-text-primary) 12%, transparent);
+}
+
+/* Light surface — highlight.js token colors */
+.proseRoot :global(pre.hgCodeBlock .hljs-keyword),
+.proseRoot :global(pre.hgCodeBlock .hljs-selector-tag),
+.proseRoot :global(pre.hgCodeBlock .hljs-section),
+.proseRoot :global(pre.hgCodeBlock .hljs-deletion) {
+  color: color-mix(in oklch, var(--sys-color-accent-600) 88%, var(--sem-text-primary));
+}
+
+.proseRoot :global(pre.hgCodeBlock .hljs-title),
+.proseRoot :global(pre.hgCodeBlock .hljs-name),
+.proseRoot :global(pre.hgCodeBlock .hljs-function),
+.proseRoot :global(pre.hgCodeBlock .hljs-attr) {
+  color: color-mix(in oklch, var(--sys-color-accent-500) 72%, var(--sem-text-primary));
+}
+
+.proseRoot :global(pre.hgCodeBlock .hljs-string),
+.proseRoot :global(pre.hgCodeBlock .hljs-attr-value),
+.proseRoot :global(pre.hgCodeBlock .hljs-template-variable),
+.proseRoot :global(pre.hgCodeBlock .hljs-regexp) {
+  color: color-mix(in oklch, var(--sys-color-success-600) 55%, var(--sem-text-primary));
+}
+
+.proseRoot :global(pre.hgCodeBlock .hljs-number),
+.proseRoot :global(pre.hgCodeBlock .hljs-literal) {
+  color: color-mix(in oklch, var(--sys-color-warning-600) 52%, var(--sem-text-primary));
+}
+
+.proseRoot :global(pre.hgCodeBlock .hljs-comment),
+.proseRoot :global(pre.hgCodeBlock .hljs-quote) {
+  color: color-mix(in oklch, var(--sem-text-muted) 92%, transparent);
+  font-style: italic;
+}
+
+.proseRoot :global(pre.hgCodeBlock .hljs-built_in),
+.proseRoot :global(pre.hgCodeBlock .hljs-type) {
+  color: color-mix(in oklch, var(--sys-color-accent-400) 65%, var(--sem-text-primary));
+}
+
+.proseRoot :global(pre.hgCodeBlock .hljs-variable),
+.proseRoot :global(pre.hgCodeBlock .hljs-params) {
+  color: inherit;
+}
+
+/* Dark code panels (snippet focus + canvas `.themeCode`) */
+.host[data-hg-doc-syntax="dark"] .proseRoot :global(pre.hgCodeBlock) {
+  background: color-mix(in oklch, var(--sys-color-black) 22%, var(--theme-code-bg, var(--sys-color-neutral-920)));
+  border-color: color-mix(in oklch, var(--sys-color-white) 12%, transparent);
+  color: color-mix(in oklch, var(--theme-code-text, var(--sys-color-neutral-200)) 96%, transparent);
+}
+
+.host[data-hg-doc-syntax="dark"] .proseRoot :global(p code),
+.host[data-hg-doc-syntax="dark"] .proseRoot :global(li code) {
+  background: color-mix(in oklch, var(--sys-color-white) 10%, transparent);
+  border-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
+}
+
+.host[data-hg-doc-syntax="dark"] .proseRoot :global(pre.hgCodeBlock .hljs-keyword),
+.host[data-hg-doc-syntax="dark"] .proseRoot :global(pre.hgCodeBlock .hljs-selector-tag) {
+  color: color-mix(in oklch, var(--sys-color-accent-300) 82%, var(--sys-color-white));
+}
+
+.host[data-hg-doc-syntax="dark"] .proseRoot :global(pre.hgCodeBlock .hljs-title),
+.host[data-hg-doc-syntax="dark"] .proseRoot :global(pre.hgCodeBlock .hljs-function) {
+  color: color-mix(in oklch, var(--sys-color-accent-200) 75%, var(--sys-color-white));
+}
+
+.host[data-hg-doc-syntax="dark"] .proseRoot :global(pre.hgCodeBlock .hljs-string),
+.host[data-hg-doc-syntax="dark"] .proseRoot :global(pre.hgCodeBlock .hljs-attr-value) {
+  color: color-mix(in oklch, var(--sys-color-success-300) 62%, var(--sys-color-white));
+}
+
+.host[data-hg-doc-syntax="dark"] .proseRoot :global(pre.hgCodeBlock .hljs-number),
+.host[data-hg-doc-syntax="dark"] .proseRoot :global(pre.hgCodeBlock .hljs-literal) {
+  color: color-mix(in oklch, var(--sys-color-warning-300) 58%, var(--sys-color-white));
+}
+
+.host[data-hg-doc-syntax="dark"] .proseRoot :global(pre.hgCodeBlock .hljs-comment),
+.host[data-hg-doc-syntax="dark"] .proseRoot :global(pre.hgCodeBlock .hljs-quote) {
+  color: color-mix(in oklch, var(--sys-color-neutral-500) 88%, transparent);
+  font-style: italic;
+}
+
+.host[data-hg-doc-syntax="dark"] .proseRoot :global(pre.hgCodeBlock .hljs-built_in),
+.host[data-hg-doc-syntax="dark"] .proseRoot :global(pre.hgCodeBlock .hljs-type) {
+  color: color-mix(in oklch, var(--sys-color-accent-200) 55%, var(--sys-color-white));
 }

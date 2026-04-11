@@ -2,7 +2,7 @@
 title: heartgarden — HTTP API reference
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-10
+last_reviewed: 2026-04-11
 canonical: true
 related:
   - vigil/docs/FEATURES.md
@@ -17,6 +17,12 @@ Hand-maintained catalog of **`app/api/**`** routes. **Auth:** the app is single-
 **Non-HTTP product behavior** (minimap, presence, vault index strip, wiki `[[` assist, culling, etc.) is indexed in **`docs/FEATURES.md`** with pointers into this file where APIs apply.
 
 Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: false, error: string }` (legacy **`/api/v1/*`** uses `{ error: string }` only).
+
+## Client-only editor behavior (not HTTP)
+
+**hgDoc** block reorder (six-dot grip in the focus / document sheet) runs entirely in the browser (`HgDocPointerBlockDrag`). It does **not** call a heartgarden API and is **not** listed in the tables below.
+
+There is **no** supported **`/api/dev/*`** route in this catalog for editor or block-drag diagnostics. Use browser DevTools or ad-hoc logging during development.
 
 ## Bootstrap
 

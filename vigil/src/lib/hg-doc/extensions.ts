@@ -1,11 +1,13 @@
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import HorizontalRule from "@tiptap/extension-horizontal-rule";
 import Image from "@tiptap/extension-image";
-import NodeRange from "@tiptap/extension-node-range";
 import Placeholder from "@tiptap/extension-placeholder";
 import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
 import StarterKit from "@tiptap/starter-kit";
 import type { ResolvedPos } from "@tiptap/pm/model";
+
+import { hgDocLowlight } from "@/src/lib/hg-doc/hg-doc-lowlight";
 
 function activeTaskItemText($from: ResolvedPos): string {
   for (let depth = $from.depth; depth >= 0; depth--) {
@@ -30,8 +32,6 @@ export function getHgDocExtensions(options?: {
   const placeholder = options?.placeholder ?? "Write here, or type / for blocks…";
 
   return [
-    /* Required for `@tiptap/extension-drag-handle` block drags (`NodeRangeSelection`). */
-    NodeRange,
     StarterKit.configure({
       codeBlock: false,
       heading: { levels: [1, 2, 3] },
@@ -76,6 +76,13 @@ export function getHgDocExtensions(options?: {
     TaskList.configure({
       HTMLAttributes: {
         "data-hg-task-list": "true",
+      },
+    }),
+    CodeBlockLowlight.configure({
+      lowlight: hgDocLowlight,
+      defaultLanguage: "typescript",
+      HTMLAttributes: {
+        class: "hgCodeBlock",
       },
     }),
     TaskItem.extend({

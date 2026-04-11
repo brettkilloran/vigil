@@ -243,6 +243,7 @@ import {
   stripLegacyHtmlToPlainText,
 } from "@/src/lib/hg-doc/html-to-doc";
 import { newDefaultHgDocSeed, newTaskHgDocSeed } from "@/src/lib/hg-doc/new-node-seeds";
+import { hgDocForContentEntity } from "@/src/lib/hg-doc/code-theme-doc";
 import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
 import {
   defaultLoreCardVariantForKind,
@@ -2249,7 +2250,7 @@ export function ArchitecturalCanvasApp({
       if (e && e.kind === "content" && activeNodeIdRef.current === it.id) {
         const projected = projectBodyHtmlForFocus(e, e.bodyHtml);
         if (contentEntityUsesHgDoc(e)) {
-          const doc = e.bodyDoc ?? structuredClone(EMPTY_HG_DOC);
+          const doc = hgDocForContentEntity(e);
           setFocusBodyDoc(structuredClone(doc));
           setFocusBaselineBodyDoc(structuredClone(doc));
           setFocusBody("");
@@ -2563,7 +2564,7 @@ export function ArchitecturalCanvasApp({
         setFocusTitle(restored.title);
         const projected = projectBodyHtmlForFocus(restored, restored.bodyHtml);
         if (contentEntityUsesHgDoc(restored)) {
-          const doc = restored.bodyDoc ?? structuredClone(EMPTY_HG_DOC);
+          const doc = hgDocForContentEntity(restored);
           setFocusBodyDoc(structuredClone(doc));
           setFocusBaselineBodyDoc(structuredClone(doc));
           setFocusBody("");
@@ -2625,7 +2626,7 @@ export function ArchitecturalCanvasApp({
         setFocusTitle(restored.title);
         const projected = projectBodyHtmlForFocus(restored, restored.bodyHtml);
         if (contentEntityUsesHgDoc(restored)) {
-          const doc = restored.bodyDoc ?? structuredClone(EMPTY_HG_DOC);
+          const doc = hgDocForContentEntity(restored);
           setFocusBodyDoc(structuredClone(doc));
           setFocusBaselineBodyDoc(structuredClone(doc));
           setFocusBody("");
@@ -3808,7 +3809,7 @@ export function ArchitecturalCanvasApp({
     setFocusTitle(entity.title);
     const projected = projectBodyHtmlForFocus(entity, normalizedBody);
     if (contentEntityUsesHgDoc(entity)) {
-      const doc = entity.bodyDoc ?? structuredClone(EMPTY_HG_DOC);
+      const doc = hgDocForContentEntity(entity);
       setFocusBodyDoc(structuredClone(doc));
       setFocusBaselineBodyDoc(structuredClone(doc));
       setFocusBody("");
@@ -11219,10 +11220,11 @@ export function ArchitecturalCanvasApp({
             )}
             {focusSurface === "character-hybrid" || focusSurface === "location-hybrid" ? (
               <LoreHybridFocusEditor
-                key={`${activeNodeId ?? "x"}-${focusBody.length}-${focusBody.slice(0, 24)}`}
+                key={`lore-hybrid-${activeNodeId ?? "none"}-${focusSurface}`}
                 variant={focusSurface === "character-hybrid" ? "character" : "location"}
                 focusHtml={focusBody}
                 onChangeFocusHtml={setFocusBody}
+                focusDocumentKey={activeNodeId ?? ""}
                 className={`${styles.focusBody} ${
                   focusSurface === "character-hybrid"
                     ? styles.focusCharacterDocument
@@ -11240,7 +11242,8 @@ export function ArchitecturalCanvasApp({
                 onChange={(doc) => setFocusBodyDoc(doc)}
                 editable
                 placeholder="Write here, or type / for blocks…"
-                enableDragHandle
+                enableDragHandle={focusOpen && focusSurface !== "code"}
+                codeSyntaxDark={focusSurface === "code"}
               />
             )}
           </div>

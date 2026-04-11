@@ -230,7 +230,7 @@ export function characterV11BodyToFocusDocumentHtml(bodyHtml: string): string {
 </div>
 <div data-hg-character-focus-fields="true" contenteditable="false">
 <div data-hg-character-focus-line="name"><span data-hg-character-focus-label="true">Name</span><div data-hg-character-focus-field="name" data-placeholder="Name" contenteditable="true" spellcheck="false">${displayName}</div></div>
-<div data-hg-character-focus-line="role"><span data-hg-character-focus-label="true">Role</span><div data-hg-character-focus-field="role" data-placeholder="Affiliation" contenteditable="true" spellcheck="false">${role}</div></div>
+<div data-hg-character-focus-line="role"><span data-hg-character-focus-label="true">Role</span><div data-hg-character-focus-field="role" data-placeholder="Role" contenteditable="true" spellcheck="false">${role}</div></div>
 <div data-hg-character-focus-line="affiliation"><span data-hg-character-focus-label="true">Affiliation</span><div data-hg-character-focus-field="affiliation" data-placeholder="Affiliation" contenteditable="true" spellcheck="false">${affiliation}</div></div>
 <div data-hg-character-focus-line="nationality"><span data-hg-character-focus-label="true">Nationality</span><div data-hg-character-focus-field="nationality" data-placeholder="Nationality" contenteditable="true" spellcheck="false">${nationality}</div></div>
 </div>
@@ -440,6 +440,61 @@ export function parseCharacterFocusDocumentHtml(html: string): CharacterFocusPar
   };
 }
 
+/** `data-hg-character-focus-row="identity"` outer HTML (portrait column + field column) for hybrid shell. */
+export function extractCharacterIdentityRowHtml(html: string): string {
+  if (typeof DOMParser === "undefined") return "";
+  try {
+    const doc = new DOMParser().parseFromString(`<div id="__hg_cf_identity">${html}</div>`, "text/html");
+    const root = doc.getElementById("__hg_cf_identity");
+    const row = root?.querySelector('[data-hg-character-focus-row="identity"]');
+    return row?.outerHTML ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Read structured parts from a live identity row node. Pass `notesHtml` from TipTap (`hgDocToHtml`);
+ * notes are not stored inside this row.
+ */
+export function readCharacterFocusPartsFromIdentityRow(
+  row: HTMLElement,
+  notesHtml: string,
+): CharacterFocusParts {
+  const root = row as unknown as ParentNode;
+  const portraitSrc = takeAttr(root, '[data-hg-character-focus-portrait-img="true"]', "src");
+  const portraitAlt = takeAttr(root, '[data-hg-character-focus-portrait-img="true"]', "alt");
+  const portraitClass = takeAttr(root, '[data-hg-character-focus-portrait-img="true"]', "class");
+  const portraitUploadClass = takeAttr(
+    root,
+    '[data-hg-portrait-actions="true"] [data-architectural-media-upload="true"]',
+    "class",
+  );
+  const portraitUploadLabel = takeText(
+    root,
+    '[data-hg-portrait-actions="true"] [data-architectural-media-upload="true"]',
+    "",
+  );
+  const portraitIsPlaceholder =
+    hasAttr(root, '[data-hg-character-focus-portrait-img="true"]', "data-hg-portrait-placeholder") ||
+    hasAttr(root, '[data-hg-character-focus-portrait-img="true"]', "data-hg-heartgarden-media-placeholder") ||
+    portraitSrc === HEARTGARDEN_MEDIA_PLACEHOLDER_SRC;
+
+  return {
+    portraitSrc,
+    portraitAlt,
+    portraitClass,
+    portraitUploadClass,
+    portraitUploadLabel,
+    portraitIsPlaceholder,
+    displayName: takeInnerHtml(root, '[data-hg-character-focus-field="name"]', "<br>"),
+    role: takeInnerHtml(root, '[data-hg-character-focus-field="role"]', "<br>"),
+    affiliation: takeInnerHtml(root, '[data-hg-character-focus-field="affiliation"]', "<br>"),
+    nationality: takeInnerHtml(root, '[data-hg-character-focus-field="nationality"]', "<br>"),
+    notesHtml,
+  };
+}
+
 /** Rebuild focus document HTML from structured parts (matches `characterV11BodyToFocusDocumentHtml`). */
 export function buildCharacterFocusDocumentHtml(parts: CharacterFocusParts): string {
   const portraitIsPlaceholder = parts.portraitIsPlaceholder;
@@ -457,7 +512,7 @@ export function buildCharacterFocusDocumentHtml(parts: CharacterFocusParts): str
 </div>
 <div data-hg-character-focus-fields="true" contenteditable="false">
 <div data-hg-character-focus-line="name"><span data-hg-character-focus-label="true">Name</span><div data-hg-character-focus-field="name" data-placeholder="Name" contenteditable="true" spellcheck="false">${parts.displayName}</div></div>
-<div data-hg-character-focus-line="role"><span data-hg-character-focus-label="true">Role</span><div data-hg-character-focus-field="role" data-placeholder="Affiliation" contenteditable="true" spellcheck="false">${parts.role}</div></div>
+<div data-hg-character-focus-line="role"><span data-hg-character-focus-label="true">Role</span><div data-hg-character-focus-field="role" data-placeholder="Role" contenteditable="true" spellcheck="false">${parts.role}</div></div>
 <div data-hg-character-focus-line="affiliation"><span data-hg-character-focus-label="true">Affiliation</span><div data-hg-character-focus-field="affiliation" data-placeholder="Affiliation" contenteditable="true" spellcheck="false">${parts.affiliation}</div></div>
 <div data-hg-character-focus-line="nationality"><span data-hg-character-focus-label="true">Nationality</span><div data-hg-character-focus-field="nationality" data-placeholder="Nationality" contenteditable="true" spellcheck="false">${parts.nationality}</div></div>
 </div>
