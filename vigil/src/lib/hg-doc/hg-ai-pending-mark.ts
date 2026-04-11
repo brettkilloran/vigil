@@ -33,7 +33,7 @@ export const HgAiPending = Mark.create({
     return [
       new Plugin({
         key: hgAiPendingClearKey,
-        appendTransaction(transactions, _oldState, newState) {
+        appendTransaction(transactions, oldState, newState) {
           if (transactions.some((t) => t.getMeta(HG_AI_PENDING_CLEAR_META))) {
             return null;
           }
@@ -46,10 +46,19 @@ export const HgAiPending = Mark.create({
           for (const tx of transactions) {
             if (!tx.docChanged) continue;
             if (tx.getMeta(HG_AI_PENDING_CLEAR_META)) continue;
+            /** `setContent({ emitUpdate: false })` — do not treat as typing inside a pending span. */
+            if (tx.getMeta("preventUpdate")) continue;
             /** Typing is a single ReplaceStep; multi-step (e.g. some pastes) skips here. */
             if (tx.steps.length !== 1) continue;
             const step = tx.steps[0]!;
             if (!(step instanceof ReplaceStep)) continue;
+            /**
+             * Full-document replace (initial `setContent`, programmatic loads) uses one ReplaceStep
+             * from 0 to `doc.content.size` — same shape as a keypress in isolation, but must not strip marks.
+             */
+            if (step.from === 0 && step.to === oldState.doc.content.size) {
+              continue;
+            }
             const from = tx.mapping.map(step.from, -1);
             const end = from + step.slice.content.size;
             if (end <= from) continue;
