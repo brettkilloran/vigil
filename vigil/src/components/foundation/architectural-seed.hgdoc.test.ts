@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildArchitecturalSeedGraph } from "@/src/components/foundation/architectural-seed";
+import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
 
 const TOKENS = {
   taskItem: "taskItem",
@@ -20,6 +21,7 @@ describe("architectural seed hgDoc migration", () => {
     for (const entity of content) {
       if (entity.theme === "default" || entity.theme === "task" || entity.theme === "code") {
         expect(entity.bodyDoc).toBeTruthy();
+        expect(hgDocToPlainText(entity.bodyDoc!).trim().length).toBeGreaterThan(0);
       }
     }
   });
@@ -33,6 +35,7 @@ describe("architectural seed hgDoc migration", () => {
     expect(proseAndCode.length).toBeGreaterThan(0);
     for (const entity of proseAndCode) {
       expect(entity.bodyDoc).toBeTruthy();
+      expect(hgDocToPlainText(entity.bodyDoc!).trim().length).toBeGreaterThan(0);
     }
   });
 });
