@@ -22,6 +22,7 @@ import {
 import type { CameraState } from "@/src/model/canvas-types";
 import { EMPTY_HG_DOC, HG_DOC_FORMAT } from "@/src/lib/hg-doc/constants";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
+import { legacyCodeBodyHtmlToHgDocSeed } from "@/src/lib/hg-doc/html-to-doc";
 import {
   hgDocToPlainText,
   isHgDocContentJson,
@@ -216,10 +217,12 @@ export function canvasItemToEntity(
     bodyDoc = readHgDocFromContentJson(cj);
     bodyHtml = hgDocToHtml(bodyDoc);
   } else {
-    const usesHtmlBody =
-      theme === "code" || theme === "media" || Boolean(loreCard) || isLoreEntityItem(item);
+    const usesHtmlBody = theme === "media" || Boolean(loreCard) || isLoreEntityItem(item);
     if (usesHtmlBody) {
       bodyDoc = undefined;
+    } else if (theme === "code" && workHtml.trim()) {
+      bodyDoc = legacyCodeBodyHtmlToHgDocSeed(workHtml);
+      bodyHtml = hgDocToHtml(bodyDoc);
     } else {
       bodyDoc = structuredClone(EMPTY_HG_DOC);
       bodyHtml = hgDocToHtml(bodyDoc);

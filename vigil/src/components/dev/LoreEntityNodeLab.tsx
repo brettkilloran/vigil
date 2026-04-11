@@ -342,8 +342,9 @@ function LabLocationConceptPolaroid({ testId }: { testId: string }) {
       />
       <div className={labStyles.locConceptPolaroidOuter}>
         <div className={labStyles.locConceptPolaroidFrame}>
-          <button
+          <Button
             type="button"
+            variant="ghost"
             className={labStyles.locConceptPolaroidWell}
             onClick={() => inputRef.current?.click()}
           >
@@ -353,7 +354,7 @@ function LabLocationConceptPolaroid({ testId }: { testId: string }) {
             ) : (
               <span className={labStyles.locConceptPolaroidPlaceholder}>Click to add field photograph</span>
             )}
-          </button>
+          </Button>
           <p className={labStyles.locConceptPolaroidCaption}>Blackwater hinge — tide took the pier in one night.</p>
         </div>
         <div className={labStyles.locConceptPolaroidChin}>
@@ -429,8 +430,9 @@ function LabLocationConceptSpecimen({ testId }: { testId: string }) {
           <br />
           HOLD
         </div>
-        <button
+        <Button
           type="button"
+          variant="ghost"
           className={labStyles.locConceptSpecimenThumb}
           onClick={() => inputRef.current?.click()}
         >
@@ -440,7 +442,7 @@ function LabLocationConceptSpecimen({ testId }: { testId: string }) {
           ) : (
             <span className={labStyles.locConceptSpecimenThumbLabel}>Thumb image</span>
           )}
-        </button>
+        </Button>
         <div className={labStyles.locConceptSpecimenCopy}>
           <div className={labStyles.locConceptSpecimenId}>HG-SPC-09-λ</div>
           <div className={labStyles.locConceptSpecimenTitle}>Glass lung well</div>

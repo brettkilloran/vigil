@@ -144,7 +144,7 @@ export function ArchitecturalNodeBody({
         value={bodyDoc ?? EMPTY_HG_DOC}
         editable={editable}
         placeholder={emptyPlaceholder ?? "Write here, or type / for blocks…"}
-        enableDragHandle={false}
+        enableDragHandle
         onChange={(doc) => onCommitPayload?.({ kind: "hgDoc", doc })}
       />
     );
@@ -223,7 +223,7 @@ export function ArchitecturalNodeCard({
 }) {
   const isMediaNode = theme === "media";
   const documentVariant: "hgDoc" | "html" =
-    !loreCard && (theme === "default" || theme === "task") ? "hgDoc" : "html";
+    !loreCard && (theme === "default" || theme === "task" || theme === "code") ? "hgDoc" : "html";
   const nodeWidth = width ?? 340;
   const [imageDpr] = useState(() =>
     typeof window !== "undefined" ? Math.min(window.devicePixelRatio ?? 1, 2.5) : 1,

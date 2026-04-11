@@ -263,3 +263,59 @@ export function focusDocumentHtmlToLocationBody(focusHtml: string, canonicalTemp
 
   return templateRoot.innerHTML;
 }
+
+/** Parsed location focus shell (`locationBodyToFocusDocumentHtml` shape) for hgDoc migration. */
+export type LocationFocusParts = {
+  name: string;
+  context: string;
+  detail: string;
+  ref: string;
+  hasRef: boolean;
+  notesHtml: string;
+};
+
+export function parseLocationFocusDocumentHtml(html: string): LocationFocusParts | null {
+  const root = parseWrapped(html);
+  if (!root || !root.querySelector("[data-hg-lore-location-focus-notes]")) return null;
+  const refField = root.querySelector('[data-hg-lore-location-focus-field="ref"]');
+  const hasRef = !!refField;
+  return {
+    name: takeInnerHtml(root, '[data-hg-lore-location-focus-field="name"]', "<br>"),
+    context: takeInnerHtml(root, '[data-hg-lore-location-focus-field="context"]', "<br>"),
+    detail: takeInnerHtml(root, '[data-hg-lore-location-focus-field="detail"]', "<br>"),
+    ref: refField ? takeInnerHtml(root, '[data-hg-lore-location-focus-field="ref"]', "<br>") : "",
+    hasRef,
+    notesHtml: takeInnerHtml(root, "[data-hg-lore-location-focus-notes]", DEFAULT_NOTES_HTML),
+  };
+}
+
+export function buildLocationFocusDocumentHtml(parts: LocationFocusParts): string {
+  const refBlock = parts.hasRef
+    ? `<div data-hg-lore-location-focus-row="ref">
+<span data-hg-lore-location-focus-label="true">Reference</span>
+<div data-hg-lore-location-focus-field="ref" data-placeholder="Optional code" contenteditable="true" spellcheck="false">${parts.ref}</div>
+</div>`
+    : "";
+
+  return `<div data-hg-location-focus-doc="v1">
+<div data-hg-lore-location-focus-meta="true" contenteditable="false">
+<div data-hg-lore-location-focus-row="name">
+<span data-hg-lore-location-focus-label="true">Place</span>
+<div data-hg-lore-location-focus-field="name" data-placeholder="Place name" contenteditable="true" spellcheck="false">${parts.name}</div>
+</div>
+<div data-hg-lore-location-focus-row="context">
+<span data-hg-lore-location-focus-label="true">Context</span>
+<div data-hg-lore-location-focus-field="context" data-placeholder="Region, polity, parent place (optional)" contenteditable="true" spellcheck="false">${parts.context}</div>
+</div>
+<div data-hg-lore-location-focus-row="detail">
+<span data-hg-lore-location-focus-label="true">Detail</span>
+<div data-hg-lore-location-focus-field="detail" data-placeholder="District, site type, layer (optional)" contenteditable="true" spellcheck="false">${parts.detail}</div>
+</div>
+${refBlock}
+</div>
+<div data-hg-lore-location-focus-notes-shell="true" contenteditable="false">
+<span data-hg-lore-location-focus-label="true">Notes</span>
+<div data-hg-lore-location-focus-notes="true" contenteditable="true" spellcheck="false">${parts.notesHtml}</div>
+</div>
+</div>`;
+}

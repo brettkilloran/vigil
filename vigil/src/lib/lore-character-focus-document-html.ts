@@ -375,3 +375,97 @@ export function withCharacterV11ObjectIdInHeader(bodyHtml: string, objectId: str
   }
   return root.innerHTML;
 }
+
+/** Parsed character focus shell (`characterV11BodyToFocusDocumentHtml` shape) for hgDoc migration. */
+export type CharacterFocusParts = {
+  portraitSrc: string;
+  portraitAlt: string;
+  portraitClass: string;
+  portraitUploadClass: string;
+  portraitUploadLabel: string;
+  portraitIsPlaceholder: boolean;
+  displayName: string;
+  role: string;
+  affiliation: string;
+  nationality: string;
+  notesHtml: string;
+};
+
+function parseFocusShellRoot(html: string): HTMLElement | null {
+  if (typeof document === "undefined") return null;
+  try {
+    const tpl = document.createElement("template");
+    tpl.innerHTML = html.trim();
+    const el = tpl.content.firstElementChild;
+    return el instanceof HTMLElement ? el : null;
+  } catch {
+    return null;
+  }
+}
+
+export function parseCharacterFocusDocumentHtml(html: string): CharacterFocusParts | null {
+  const root = parseFocusShellRoot(html);
+  if (!root || !root.querySelector("[data-hg-character-focus-notes]")) return null;
+
+  const portraitSrc = takeAttr(root, '[data-hg-character-focus-portrait-img="true"]', "src");
+  const portraitAlt = takeAttr(root, '[data-hg-character-focus-portrait-img="true"]', "alt");
+  const portraitClass = takeAttr(root, '[data-hg-character-focus-portrait-img="true"]', "class");
+  const portraitUploadClass = takeAttr(
+    root,
+    '[data-hg-portrait-actions="true"] [data-architectural-media-upload="true"]',
+    "class",
+  );
+  const portraitUploadLabel = takeText(
+    root,
+    '[data-hg-portrait-actions="true"] [data-architectural-media-upload="true"]',
+    "",
+  );
+  const portraitIsPlaceholder =
+    hasAttr(root, '[data-hg-character-focus-portrait-img="true"]', "data-hg-portrait-placeholder") ||
+    hasAttr(root, '[data-hg-character-focus-portrait-img="true"]', "data-hg-heartgarden-media-placeholder") ||
+    portraitSrc === HEARTGARDEN_MEDIA_PLACEHOLDER_SRC;
+
+  return {
+    portraitSrc,
+    portraitAlt,
+    portraitClass,
+    portraitUploadClass,
+    portraitUploadLabel,
+    portraitIsPlaceholder,
+    displayName: takeInnerHtml(root, '[data-hg-character-focus-field="name"]', "<br>"),
+    role: takeInnerHtml(root, '[data-hg-character-focus-field="role"]', "<br>"),
+    affiliation: takeInnerHtml(root, '[data-hg-character-focus-field="affiliation"]', "<br>"),
+    nationality: takeInnerHtml(root, '[data-hg-character-focus-field="nationality"]', "<br>"),
+    notesHtml: takeInnerHtml(root, "[data-hg-character-focus-notes]", DEFAULT_NOTES_HTML),
+  };
+}
+
+/** Rebuild focus document HTML from structured parts (matches `characterV11BodyToFocusDocumentHtml`). */
+export function buildCharacterFocusDocumentHtml(parts: CharacterFocusParts): string {
+  const portraitIsPlaceholder = parts.portraitIsPlaceholder;
+  const portraitUploadClassWithVigil = ensureVigilMediaUploadButtonClass(parts.portraitUploadClass);
+  return `<div data-hg-character-focus-doc="v1">
+<div data-hg-character-focus-meta="true" contenteditable="false">
+<div data-hg-character-focus-row="identity">
+<div data-hg-character-focus-portrait="true" contenteditable="false">
+<div data-hg-character-focus-portrait-frame="true" contenteditable="false">
+<div data-architectural-media-root="true" data-hg-lore-portrait-root="v11" contenteditable="false">
+<img data-hg-character-focus-portrait-img="true" class="${escapeAttr(parts.portraitClass)}" src="${escapeAttr(parts.portraitSrc)}" alt="${escapeAttr(parts.portraitAlt)}" contenteditable="false" draggable="false"${portraitIsPlaceholder ? ' data-hg-portrait-placeholder="true" data-hg-heartgarden-media-placeholder="true"' : ""} />
+<div data-hg-portrait-actions="true" contenteditable="false"><button type="button" class="${escapeAttr(portraitUploadClassWithVigil)}" data-variant="ghost" data-size="sm" data-tone="glass" data-architectural-media-upload="true">${parts.portraitUploadLabel || mediaUploadActionLabel(!portraitIsPlaceholder && !!parts.portraitSrc)}</button></div>
+</div>
+</div>
+</div>
+<div data-hg-character-focus-fields="true" contenteditable="false">
+<div data-hg-character-focus-line="name"><span data-hg-character-focus-label="true">Name</span><div data-hg-character-focus-field="name" data-placeholder="Name" contenteditable="true" spellcheck="false">${parts.displayName}</div></div>
+<div data-hg-character-focus-line="role"><span data-hg-character-focus-label="true">Role</span><div data-hg-character-focus-field="role" data-placeholder="Affiliation" contenteditable="true" spellcheck="false">${parts.role}</div></div>
+<div data-hg-character-focus-line="affiliation"><span data-hg-character-focus-label="true">Affiliation</span><div data-hg-character-focus-field="affiliation" data-placeholder="Affiliation" contenteditable="true" spellcheck="false">${parts.affiliation}</div></div>
+<div data-hg-character-focus-line="nationality"><span data-hg-character-focus-label="true">Nationality</span><div data-hg-character-focus-field="nationality" data-placeholder="Nationality" contenteditable="true" spellcheck="false">${parts.nationality}</div></div>
+</div>
+</div>
+</div>
+<div data-hg-character-focus-notes-shell="true" contenteditable="false">
+<span data-hg-character-focus-label="true">Notes</span>
+<div data-hg-character-focus-notes="true" contenteditable="true" spellcheck="false">${parts.notesHtml}</div>
+</div>
+</div>`;
+}

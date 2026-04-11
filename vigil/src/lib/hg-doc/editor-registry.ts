@@ -16,6 +16,11 @@ export type HgDocEditorApi = {
   getJSON: () => JSONContent;
   focus: () => void;
   insertImageFromDataUrl: (src: string, alt: string) => void;
+  /** ProseMirror history undo (document-local). */
+  undo: () => boolean;
+  redo: () => boolean;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
 };
 
 const registry = new Map<string, HgDocEditorApi>();

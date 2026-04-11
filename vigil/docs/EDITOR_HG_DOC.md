@@ -29,12 +29,12 @@
 
 ## Surfaces
 
-- **hgDoc:** default + task note bodies (canvas + focus), excluding code theme, lore hybrid shells, and media card chrome.
-- **HTML:** gallery captions, lore hybrid documents, code-theme body (unchanged).
+- **hgDoc (TipTap):** default, task, and **code** note bodies (canvas + focus); media **gallery** captions; lore character/location **focus** hybrid (`LoreHybridFocusEditor` + `focus-lore-notes` surface).
+- **HTML / legacy:** lore character + location **canvas** plates (full hybrid shell) still use `BufferedContentEditable` until the shell is split into isolated React regions — see `docs/EDITOR_SURFACE_CUTOVER.md`.
 
 ## Deprecation posture
 
-- `BufferedContentEditable` is now legacy-only for non-hgDoc surfaces.
+- `BufferedContentEditable` is **legacy-only** for lore hybrid **canvas** cards and plain-text folder titles.
 - Toolbar command routing prefers hgDoc editor registry and must not fall back to `document.execCommand`
   while the active target is inside `[data-hg-doc-editor]`.
 - Behavioral acceptance tracking lives in `docs/EDITOR_ACCEPTANCE_MATRIX.md`.

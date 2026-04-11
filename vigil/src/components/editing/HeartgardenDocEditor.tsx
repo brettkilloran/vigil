@@ -43,7 +43,7 @@ export function HeartgardenDocEditor({
         placeholder: placeholder ?? "Write here, or type / for blocks…",
         withPlaceholder: true,
       }),
-    [],
+    [placeholder],
   );
 
   const editor = useEditor(
@@ -62,7 +62,7 @@ export function HeartgardenDocEditor({
         onChange?.(ed.getJSON());
       },
     },
-    [],
+    [extensions],
   );
 
   useEffect(() => {
@@ -90,6 +90,10 @@ export function HeartgardenDocEditor({
       insertImageFromDataUrl: (src, alt) => {
         editor.chain().focus().setImage({ src, alt: alt || "" }).run();
       },
+      undo: () => editor.commands.undo(),
+      redo: () => editor.commands.redo(),
+      canUndo: () => editor.can().undo(),
+      canRedo: () => editor.can().redo(),
     };
     registerHgDocEditor(surfaceKey, api);
     return () => registerHgDocEditor(surfaceKey, null);

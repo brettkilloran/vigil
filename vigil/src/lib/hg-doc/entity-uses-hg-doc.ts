@@ -4,10 +4,9 @@ import {
   shouldRenderLoreLocationCanvasNode,
 } from "@/src/lib/lore-node-seed-html";
 
-/** Default/task prose cards use TipTap hgDoc; lore templates, code, and media use HTML paths. */
+/** Default/task/code prose cards use TipTap hgDoc; lore hybrid shells and media stay HTML-backed. */
 export function contentEntityUsesHgDoc(entity: CanvasContentEntity): boolean {
-  if (entity.theme !== "default" && entity.theme !== "task") return false;
   if (shouldRenderLoreCharacterCredentialCanvasNode(entity)) return false;
   if (shouldRenderLoreLocationCanvasNode(entity)) return false;
-  return true;
+  return entity.theme === "default" || entity.theme === "task" || entity.theme === "code";
 }

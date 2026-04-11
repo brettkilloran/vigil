@@ -45,7 +45,7 @@ describe("hgDoc persistence cutover", () => {
     });
   });
 
-  it("html-only themes persist as format=html when bodyDoc is absent", () => {
+  it("code theme with legacy html migrates to hgDoc persistence", () => {
     const mapped = canvasItemToEntity(
       baseItem({
         itemType: "note",
@@ -56,12 +56,12 @@ describe("hgDoc persistence cutover", () => {
     expect(mapped?.kind).toBe("content");
     if (!mapped || mapped.kind !== "content") return;
     expect(mapped.theme).toBe("code");
-    expect(mapped.bodyDoc).toBeUndefined();
+    expect(mapped.bodyDoc).toBeTruthy();
 
     const contentJson = buildContentJsonForContentEntity(mapped);
     expect(contentJson).toMatchObject({
-      format: "html",
-      html: mapped.bodyHtml,
+      format: "hgDoc",
+      doc: mapped.bodyDoc,
     });
   });
 

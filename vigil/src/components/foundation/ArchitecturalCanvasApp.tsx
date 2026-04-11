@@ -43,10 +43,10 @@ import {
 import { VigilAppBootScreen } from "./VigilAppBootScreen";
 import { VigilAppChromeAudioMuteButton } from "./VigilAppChromeAudioMuteButton";
 import styles from "./ArchitecturalCanvasApp.module.css";
-import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import type { WikiLinkAssistConfig } from "@/src/components/editing/BufferedContentEditable";
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
 import { HeartgardenDocEditor } from "@/src/components/editing/HeartgardenDocEditor";
+import { LoreHybridFocusEditor } from "@/src/components/editing/LoreHybridFocusEditor";
 import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
 import {
   ArchitecturalTooltip,
@@ -237,6 +237,7 @@ import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
 import { contentEntityUsesHgDoc } from "@/src/lib/hg-doc/entity-uses-hg-doc";
 import { findHgDocSurfaceKeyFromSelection, getHgDocEditor } from "@/src/lib/hg-doc/editor-registry";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
+import { htmlFragmentToHgDocDoc, legacyCodeBodyHtmlToHgDocSeed } from "@/src/lib/hg-doc/html-to-doc";
 import { newDefaultHgDocSeed, newTaskHgDocSeed } from "@/src/lib/hg-doc/new-node-seeds";
 import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
 import {
@@ -1865,14 +1866,18 @@ export function ArchitecturalCanvasApp({
   const [galleryNodeId, setGalleryNodeId] = useState<string | null>(null);
   const galleryNodeIdRef = useRef<string | null>(null);
   const [galleryDraftTitle, setGalleryDraftTitle] = useState("");
-  const [galleryDraftNotes, setGalleryDraftNotes] = useState("");
+  const [galleryDraftNotesDoc, setGalleryDraftNotesDoc] = useState<JSONContent>(() =>
+    structuredClone(EMPTY_HG_DOC),
+  );
   const [galleryBaselineTitle, setGalleryBaselineTitle] = useState("");
-  const [galleryBaselineNotes, setGalleryBaselineNotes] = useState("");
+  const [galleryBaselineNotesDoc, setGalleryBaselineNotesDoc] = useState<JSONContent>(() =>
+    structuredClone(EMPTY_HG_DOC),
+  );
   const [galleryDimsLabel, setGalleryDimsLabel] = useState("— × —");
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [focusTitle, setFocusTitle] = useState("");
   const [focusBody, setFocusBody] = useState("");
-  /** TipTap JSON for default/task focus editor (hybrid/code still use `focusBody` HTML). */
+  /** TipTap JSON for hgDoc focus editor; lore hybrid focus uses `focusBody` HTML + `focus-lore-notes` surface. */
   const [focusBodyDoc, setFocusBodyDoc] = useState<JSONContent>(() => structuredClone(EMPTY_HG_DOC));
   const [focusBaselineTitle, setFocusBaselineTitle] = useState("");
   const [focusBaselineBody, setFocusBaselineBody] = useState("");
@@ -2207,9 +2212,9 @@ export function ArchitecturalCanvasApp({
           setGalleryOpen(false);
           setGalleryNodeId(null);
           setGalleryDraftTitle("");
-          setGalleryDraftNotes("");
+          setGalleryDraftNotesDoc(structuredClone(EMPTY_HG_DOC));
           setGalleryBaselineTitle("");
-          setGalleryBaselineNotes("");
+          setGalleryBaselineNotesDoc(structuredClone(EMPTY_HG_DOC));
         }
         return false;
       }
@@ -2654,20 +2659,46 @@ export function ArchitecturalCanvasApp({
   }, [closeStackModal, syncNeonAfterHistoryTransition]);
 
   const undoFromDock = useCallback(() => {
+    const key = findHgDocSurfaceKeyFromSelection();
+    const api = key ? getHgDocEditor(key) : null;
+    if (api?.undo()) {
+      playVigilUiSound("tap");
+      return;
+    }
     if (undoPastRef.current.length === 0) return;
     undo();
     playVigilUiSound("tap");
   }, [undo]);
 
   const redoFromDock = useCallback(() => {
+    const key = findHgDocSurfaceKeyFromSelection();
+    const api = key ? getHgDocEditor(key) : null;
+    if (api?.redo()) {
+      playVigilUiSound("tap");
+      return;
+    }
     if (undoFutureRef.current.length === 0) return;
     redo();
     playVigilUiSound("tap");
   }, [redo]);
 
   void historyEpoch;
-  const canUndo = undoPastRef.current.length > 0;
-  const canRedo = undoFutureRef.current.length > 0;
+  const canUndo =
+    undoPastRef.current.length > 0 ||
+    !!getHgDocEditor("focus-body")?.canUndo?.() ||
+    !!getHgDocEditor("focus-lore-notes")?.canUndo?.() ||
+    !!getHgDocEditor("gallery-notes")?.canUndo?.() ||
+    (selectedNodeIds.length === 1
+      ? !!getHgDocEditor(`canvas-${selectedNodeIds[0]!}`)?.canUndo?.()
+      : false);
+  const canRedo =
+    undoFutureRef.current.length > 0 ||
+    !!getHgDocEditor("focus-body")?.canRedo?.() ||
+    !!getHgDocEditor("focus-lore-notes")?.canRedo?.() ||
+    !!getHgDocEditor("gallery-notes")?.canRedo?.() ||
+    (selectedNodeIds.length === 1
+      ? !!getHgDocEditor(`canvas-${selectedNodeIds[0]!}`)?.canRedo?.()
+      : false);
 
   const queueGraphCommit = useCallback(
     (key: string, applyCommit: () => void, delayMs: number) => {
@@ -3799,9 +3830,9 @@ export function ArchitecturalCanvasApp({
     setGalleryOpen(false);
     setGalleryNodeId(null);
     setGalleryDraftTitle("");
-    setGalleryDraftNotes("");
+    setGalleryDraftNotesDoc(structuredClone(EMPTY_HG_DOC));
     setGalleryBaselineTitle("");
-    setGalleryBaselineNotes("");
+    setGalleryBaselineNotesDoc(structuredClone(EMPTY_HG_DOC));
   }, []);
 
   const openMediaGallery = useCallback((id: string) => {
@@ -3810,9 +3841,10 @@ export function ArchitecturalCanvasApp({
     const notes = getArchitecturalMediaNotes(entity.bodyHtml);
     setGalleryNodeId(id);
     setGalleryDraftTitle(entity.title);
-    setGalleryDraftNotes(notes);
+    const notesDoc = htmlFragmentToHgDocDoc(notes);
+    setGalleryDraftNotesDoc(structuredClone(notesDoc));
     setGalleryBaselineTitle(entity.title);
-    setGalleryBaselineNotes(notes);
+    setGalleryBaselineNotesDoc(structuredClone(notesDoc));
     setGalleryOpen(true);
   }, [graph.entities]);
 
@@ -3824,7 +3856,10 @@ export function ArchitecturalCanvasApp({
       return;
     }
     const nextTitle = normalizedFocusTitle(galleryDraftTitle);
-    const nextBody = setArchitecturalMediaNotes(entity.bodyHtml, galleryDraftNotes);
+    const notesHtml = hgDocToHtml(
+      getHgDocEditor("gallery-notes")?.getJSON() ?? galleryDraftNotesDoc,
+    );
+    const nextBody = setArchitecturalMediaNotes(entity.bodyHtml, notesHtml);
     if (entity.title === nextTitle && entity.bodyHtml === nextBody) {
       closeMediaGallery();
       return;
@@ -3840,24 +3875,24 @@ export function ArchitecturalCanvasApp({
             [galleryNodeId]: {
               ...e,
               title: nextTitle,
-              bodyHtml: setArchitecturalMediaNotes(e.bodyHtml, galleryDraftNotes),
+              bodyHtml: setArchitecturalMediaNotes(e.bodyHtml, notesHtml),
             },
           },
         };
       });
       if (persistNeonRef.current && isUuidLike(galleryNodeId)) {
         const gid = galleryNodeId;
-        const nextBody = setArchitecturalMediaNotes(entity.bodyHtml, galleryDraftNotes);
+        const nextBodyPersist = setArchitecturalMediaNotes(entity.bodyHtml, notesHtml);
         queueMicrotask(() => {
           const ent = graphRef.current.entities[gid];
           if (!ent || ent.kind !== "content") return;
           void patchItemWithVersion(gid, {
             title: nextTitle,
-            contentText: htmlToPlainText(nextBody),
+            contentText: htmlToPlainText(nextBodyPersist),
             contentJson: buildContentJsonForContentEntity({
               ...ent,
               title: nextTitle,
-              bodyHtml: nextBody,
+              bodyHtml: nextBodyPersist,
             }),
           });
         });
@@ -3865,7 +3900,7 @@ export function ArchitecturalCanvasApp({
     closeMediaGallery();
   }, [
     closeMediaGallery,
-    galleryDraftNotes,
+    galleryDraftNotesDoc,
     galleryDraftTitle,
     galleryNodeId,
     patchItemWithVersion,
@@ -3922,7 +3957,9 @@ export function ArchitecturalCanvasApp({
     }
     const entityPre = graphRef.current.entities[activeNodeId];
     const hgDefault = entityPre?.kind === "content" && contentEntityUsesHgDoc(entityPre);
-    const focusDoc = getHgDocEditor("focus-body")?.getJSON() ?? focusBodyDoc;
+    const focusDoc = hgDefault
+      ? getHgDocEditor("focus-body")?.getJSON() ?? focusBodyDoc
+      : focusBodyDoc;
     const normalizedFocusBody = hgDefault
       ? hgDocToHtml(focusDoc)
       : normalizeChecklistMarkup(focusBody, {
@@ -4145,11 +4182,11 @@ export function ArchitecturalCanvasApp({
       !!galleryOpen &&
       !!galleryNodeId &&
       (normalizedFocusTitle(galleryDraftTitle) !== normalizedFocusTitle(galleryBaselineTitle) ||
-        galleryDraftNotes !== galleryBaselineNotes),
+        JSON.stringify(galleryDraftNotesDoc) !== JSON.stringify(galleryBaselineNotesDoc)),
     [
-      galleryBaselineNotes,
+      galleryBaselineNotesDoc,
       galleryBaselineTitle,
-      galleryDraftNotes,
+      galleryDraftNotesDoc,
       galleryDraftTitle,
       galleryNodeId,
       galleryOpen,
@@ -6126,7 +6163,8 @@ export function ArchitecturalCanvasApp({
           );
         } else if (type === "code") {
           title = "Snippet";
-          bodyHtml = `// [IN] Compose shard at cursor…`;
+          bodyDoc = legacyCodeBodyHtmlToHgDocSeed("// [IN] Compose shard at cursor…");
+          bodyHtml = hgDocToHtml(bodyDoc);
         } else if (type === "media") {
           title = "Untitled photo";
           bodyHtml = buildEmptyArchitecturalMediaBodyHtml({
@@ -6292,7 +6330,8 @@ export function ArchitecturalCanvasApp({
       );
     } else if (type === "code") {
       title = "Snippet";
-      bodyHtml = `// [IN] Compose shard at cursor…`;
+      bodyDoc = legacyCodeBodyHtmlToHgDocSeed("// [IN] Compose shard at cursor…");
+      bodyHtml = hgDocToHtml(bodyDoc);
     } else if (type === "media") {
       title = "Untitled photo";
       bodyHtml = buildEmptyArchitecturalMediaBodyHtml({
@@ -8327,7 +8366,8 @@ export function ArchitecturalCanvasApp({
     if (ids.length !== 1) return null;
     const entity = graphRef.current.entities[ids[0]!];
     if (!entity || entity.kind !== "content") return null;
-    if (entity.theme !== "default" && entity.theme !== "task") return null;
+    if (entity.theme !== "default" && entity.theme !== "task" && entity.theme !== "code")
+      return null;
     const nodeBody = shell.querySelector<HTMLElement>(
       `[data-node-id="${ids[0]!}"] [data-node-body-editor="true"]`,
     );
@@ -8341,7 +8381,7 @@ export function ArchitecturalCanvasApp({
     }
     if (focusOpenRef.current && activeNodeIdRef.current) {
       const entity = graphRef.current.entities[activeNodeIdRef.current];
-      return !!entity && entity.kind === "content" && entity.theme !== "code";
+      return !!entity && entity.kind === "content" && entity.theme !== "media";
     }
     const ids = selectedNodeIdsRef.current;
     if (ids.length !== 1) return false;
@@ -8349,7 +8389,7 @@ export function ArchitecturalCanvasApp({
     return (
       !!entity &&
       entity.kind === "content" &&
-      (entity.theme === "default" || entity.theme === "task")
+      (entity.theme === "default" || entity.theme === "task" || entity.theme === "code")
     );
   }, []);
 
@@ -8925,14 +8965,14 @@ export function ArchitecturalCanvasApp({
   const canInsertImage = useMemo(() => {
     if (focusOpen && activeNodeId) {
       const entity = graph.entities[activeNodeId];
-      return !!entity && entity.kind === "content" && entity.theme !== "code";
+      return !!entity && entity.kind === "content" && entity.theme !== "media";
     }
     if (selectedNodeIds.length !== 1) return false;
     const entity = graph.entities[selectedNodeIds[0]!];
     return (
       !!entity &&
       entity.kind === "content" &&
-      (entity.theme === "default" || entity.theme === "task")
+      (entity.theme === "default" || entity.theme === "task" || entity.theme === "code")
     );
   }, [activeNodeId, focusOpen, graph.entities, selectedNodeIds]);
 
@@ -11119,25 +11159,18 @@ export function ArchitecturalCanvasApp({
                   </Button>
                 </div>
               </div>
-              <BufferedContentEditable
-                value={galleryDraftNotes}
-                className={styles.focusBody}
-                spellCheck={false}
-                debounceMs={150}
-                dataAttribute="data-architectural-media-gallery-notes"
-                checklistDeletion={{
-                  taskItem: styles.taskItem,
-                  taskText: styles.taskText,
-                  taskCheckbox: styles.taskCheckbox,
-                }}
-                documentBlockDrag={{
-                  handleClass: styles.archBlockDragHandle,
-                  taskItemClass: styles.taskItem,
-                }}
-                emptyPlaceholder="Write a caption, or type / for blocks…"
-                onCommit={(nextHtml) => setGalleryDraftNotes(nextHtml)}
-                wikiLinkAssist={makeWikiLinkAssist(galleryNodeId ?? undefined)}
-              />
+              <div data-architectural-media-gallery-notes="true">
+                <HeartgardenDocEditor
+                  surfaceKey="gallery-notes"
+                  chromeRole="focus"
+                  className={styles.focusBody}
+                  value={galleryDraftNotesDoc}
+                  onChange={(doc) => setGalleryDraftNotesDoc(doc)}
+                  editable
+                  placeholder="Write a caption, or type / for blocks…"
+                  enableDragHandle
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -11183,59 +11216,25 @@ export function ArchitecturalCanvasApp({
                 data-focus-title-editor="true"
               />
             )}
-            {focusSurface === "code" ||
-            focusSurface === "character-hybrid" ||
-            focusSurface === "location-hybrid" ? (
-              <BufferedContentEditable
-                value={focusBody}
+            {focusSurface === "character-hybrid" || focusSurface === "location-hybrid" ? (
+              <LoreHybridFocusEditor
+                key={`${activeNodeId ?? "x"}-${focusBody.length}-${focusBody.slice(0, 24)}`}
+                variant={focusSurface === "character-hybrid" ? "character" : "location"}
+                focusHtml={focusBody}
+                onChangeFocusHtml={setFocusBody}
                 className={`${styles.focusBody} ${
-                  focusSurface === "code"
-                    ? styles.focusCode
-                    : focusSurface === "character-hybrid"
-                      ? styles.focusCharacterDocument
-                      : styles.focusLocationDocument
+                  focusSurface === "character-hybrid"
+                    ? styles.focusCharacterDocument
+                    : styles.focusLocationDocument
                 }`}
-                editable
-                spellCheck={false}
-                debounceMs={150}
-                dataAttribute="data-focus-body-editor"
-                checklistDeletion={{
-                  taskItem: styles.taskItem,
-                  taskText: styles.taskText,
-                  taskCheckbox: styles.taskCheckbox,
-                }}
-                documentBlockDrag={
-                  focusSurface === "code"
-                    ? null
-                    : {
-                        handleClass: styles.archBlockDragHandle,
-                        taskItemClass: styles.taskItem,
-                      }
-                }
-                emptyPlaceholder={
-                  focusSurface === "code" ? null : "Write here, or type / for blocks…"
-                }
-                onCommit={(nextHtml) =>
-                  setFocusBody(
-                    normalizeChecklistMarkup(nextHtml, {
-                      taskItem: styles.taskItem,
-                      taskCheckbox: styles.taskCheckbox,
-                      taskText: styles.taskText,
-                      done: styles.done,
-                    }),
-                  )
-                }
-                wikiLinkAssist={
-                  focusSurface === "code"
-                    ? null
-                    : makeWikiLinkAssist(activeNodeId ?? undefined)
-                }
               />
             ) : (
               <HeartgardenDocEditor
                 surfaceKey="focus-body"
                 chromeRole="focus"
-                className={styles.focusBody}
+                className={`${styles.focusBody} ${
+                  focusSurface === "code" ? styles.focusCode : ""
+                }`.trim()}
                 value={focusBodyDoc}
                 onChange={(doc) => setFocusBodyDoc(doc)}
                 editable
@@ -11250,8 +11249,8 @@ export function ArchitecturalCanvasApp({
         <div className={styles.focusBottomDock}>
           <ArchitecturalBottomDock
             variant="editor"
-            showFormatToolbar={focusSurface !== "code"}
-            showDocInsertCluster={focusSurface !== "code"}
+            showFormatToolbar
+            showDocInsertCluster
             showCreateMenu={false}
             insertDocActions={dockInsertActions}
             formatActions={dockFormatActions}

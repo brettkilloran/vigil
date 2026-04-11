@@ -242,4 +242,12 @@ test.describe("text editing hardening", () => {
     });
     await expect(focusBody).toContainText("focus-stability");
   });
+
+  test("hgDoc focus body mounts TipTap chrome with ProseMirror root", async ({ page }) => {
+    const { node } = await createFirstNoteAndGetBodyEditor(page);
+    await node.locator('[data-expand-btn="true"]').click();
+    const focusHost = page.locator('[data-focus-body-editor="true"][data-hg-doc-editor="true"]');
+    await expect(focusHost).toBeVisible({ timeout: 15_000 });
+    await expect(focusHost.locator(".ProseMirror")).toBeVisible({ timeout: 15_000 });
+  });
 });
