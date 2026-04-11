@@ -374,7 +374,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       {
         name: "heartgarden_patch_item",
         description:
-          "PATCH fields on an item. Requires HEARTGARDEN_MCP_WRITE_KEY on the server and matching write_key argument.",
+          "PATCH an item (geometry, content, entity fields, move between spaces). Maps snake_case args to API camelCase. Requires write_key (or omit when HEARTGARDEN_MCP_WRITE_KEY is set on the MCP server).",
         inputSchema: {
           type: "object",
           properties: {
@@ -382,14 +382,34 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             item_id: { type: "string" },
             title: { type: "string" },
             content_text: { type: "string", description: "Plain text body" },
+            content_json: { description: "Raw contentJson object (TipTap / hgArch)" },
+            entity_type: { type: "string", description: "items.entity_type" },
+            entity_meta: { description: "Replaces entity_meta JSON object" },
+            entity_meta_merge: { description: "Shallow merge into entity_meta" },
+            space_id: { type: "string", description: "Move item to this space UUID" },
+            x: { type: "number" },
+            y: { type: "number" },
+            width: { type: "number" },
+            height: { type: "number" },
+            z_index: { type: "integer" },
+            color: { type: "string" },
+            item_type: {
+              type: "string",
+              enum: ["note", "sticky", "image", "checklist", "webclip", "folder"],
+            },
+            image_url: { type: "string" },
+            image_meta: { description: "JSON object" },
+            stack_id: { type: "string", description: "UUID or null to clear" },
+            stack_order: { type: "integer" },
+            base_updated_at: { type: "string", description: "ISO optimistic concurrency" },
           },
-          required: ["write_key", "item_id"],
+          required: ["item_id"],
         },
       },
       {
         name: "heartgarden_create_item",
         description:
-          "Create a canvas item in a space (POST /api/spaces/:id/items). Requires write_key (or omit when HEARTGARDEN_MCP_WRITE_KEY is set on the MCP server). item_type 'character' creates a lore entity card (note + entityType=character).",
+          "Create a canvas item (POST /api/spaces/:id/items). canvas_item_type: note|sticky|image|checklist|webclip (not folder — use heartgarden_create_folder). For lore shells set lore_entity: character|faction|location (same as entity_type on DB) or canonical_entity_kind (npc|faction|location|…). Legacy item_type character → note + lore character.",
         inputSchema: {
           type: "object",
           properties: {
@@ -398,20 +418,56 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
               description: "Must match HEARTGARDEN_MCP_WRITE_KEY; may be omitted if the MCP process has that env set",
             },
             space_id: { type: "string", description: "Target space UUID" },
+            canvas_item_type: {
+              type: "string",
+              enum: ["note", "sticky", "image", "checklist", "webclip", "folder"],
+              description: "Maps to items.item_type. Use heartgarden_create_folder instead of folder.",
+            },
             item_type: {
               type: "string",
-              enum: ["note", "checklist", "character"],
-              description: "character → note row with entityType=character",
+              description: "Deprecated: use canvas_item_type. Value 'character' means note + lore character.",
             },
             title: { type: "string" },
-            content_text: { type: "string", description: "Plain text; required for notes (not checklists)" },
+            content_text: { type: "string" },
+            lore_entity: {
+              type: "string",
+              enum: ["character", "faction", "location"],
+              description: "Lore card shell; implies entityType and server-side lore HTML",
+            },
+            lore_variant: { type: "string", enum: ["v1", "v2", "v3", "v11"] },
+            canonical_entity_kind: {
+              type: "string",
+              enum: ["npc", "location", "faction", "quest", "item", "lore", "other"],
+              description: "Maps to entity_type when lore_entity omitted",
+            },
+            entity_type: { type: "string", description: "Raw entity_type (quest, item, …) when not using lore_entity" },
+            entity_meta: { description: "JSON object stored on the item" },
             x: { type: "number" },
             y: { type: "number" },
-            color: { type: "string", description: "CSS color; defaults server-side" },
-            theme: { type: "string", enum: ["default", "code", "task"], description: "Card theme for synthesized contentJson" },
-            auto_index: { type: "boolean", description: "If true, POST /api/items/:id/index after create" },
+            color: { type: "string" },
+            theme: { type: "string", enum: ["default", "code", "task"] },
+            image_url: { type: "string" },
+            image_meta: { description: "JSON object" },
+            auto_index: { type: "boolean", description: "POST /api/items/:id/index after create" },
           },
-          required: ["space_id", "item_type", "title"],
+          required: ["space_id", "title"],
+        },
+      },
+      {
+        name: "heartgarden_create_folder",
+        description:
+          "Create a folder card and child space (POST /api/spaces with parentSpaceId, then POST folder item on the parent canvas).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            write_key: { type: "string" },
+            space_id: { type: "string", description: "Parent space UUID" },
+            title: { type: "string" },
+            x: { type: "number" },
+            y: { type: "number" },
+            auto_index: { type: "boolean" },
+          },
+          required: ["space_id", "title"],
         },
       },
       {
@@ -731,22 +787,9 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
     }
 
     if (name === "heartgarden_patch_item") {
-      if (!WRITE_KEY) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: "HEARTGARDEN_MCP_WRITE_KEY is not set on the MCP server process.",
-            },
-          ],
-          isError: true,
-        };
-      }
-      if (String(args.write_key ?? "") !== WRITE_KEY) {
-        return {
-          content: [{ type: "text", text: "Invalid write_key" }],
-          isError: true,
-        };
+      const wkErr = mcpWriteKeyError(args, WRITE_KEY, { allowOmitWhenConfigSet: true });
+      if (wkErr) {
+        return { content: [{ type: "text", text: wkErr }], isError: true };
       }
       const itemId = String(args.item_id ?? "").trim();
       if (!itemId) {
@@ -755,12 +798,61 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           isError: true,
         };
       }
-      const patch: { title?: string; contentText?: string } = {};
+      const patch: Record<string, unknown> = {};
       if (typeof args.title === "string") patch.title = args.title;
       if (typeof args.content_text === "string") patch.contentText = args.content_text;
+      if (args.content_json != null && typeof args.content_json === "object") {
+        patch.contentJson = args.content_json as Record<string, unknown>;
+      }
+      if (typeof args.entity_type === "string") patch.entityType = args.entity_type;
+      if (args.entity_meta != null && typeof args.entity_meta === "object") {
+        patch.entityMeta = args.entity_meta as Record<string, unknown>;
+      }
+      if (args.entity_meta_merge != null && typeof args.entity_meta_merge === "object") {
+        patch.entityMetaMerge = args.entity_meta_merge as Record<string, unknown>;
+      }
+      if (typeof args.space_id === "string" && args.space_id.trim()) patch.spaceId = args.space_id.trim();
+      if (typeof args.x === "number") patch.x = args.x;
+      if (typeof args.y === "number") patch.y = args.y;
+      if (typeof args.width === "number") patch.width = args.width;
+      if (typeof args.height === "number") patch.height = args.height;
+      if (typeof args.z_index === "number") patch.zIndex = args.z_index;
+      if (typeof args.color === "string") patch.color = args.color;
+      if (
+        args.item_type === "note" ||
+        args.item_type === "sticky" ||
+        args.item_type === "image" ||
+        args.item_type === "checklist" ||
+        args.item_type === "webclip" ||
+        args.item_type === "folder"
+      ) {
+        patch.itemType = args.item_type;
+      }
+      if (typeof args.image_url === "string") patch.imageUrl = args.image_url;
+      if (args.image_meta != null && typeof args.image_meta === "object") {
+        patch.imageMeta = args.image_meta as Record<string, unknown>;
+      }
+      if (args.stack_id === null) {
+        patch.stackId = null;
+      } else if (typeof args.stack_id === "string" && args.stack_id.trim()) {
+        patch.stackId = args.stack_id.trim();
+      }
+      if (args.stack_order === null) {
+        patch.stackOrder = null;
+      } else if (typeof args.stack_order === "number") {
+        patch.stackOrder = args.stack_order;
+      }
+      if (typeof args.base_updated_at === "string" && args.base_updated_at.trim()) {
+        patch.baseUpdatedAt = args.base_updated_at.trim();
+      }
       if (Object.keys(patch).length === 0) {
         return {
-          content: [{ type: "text", text: "Provide title and/or content_text to patch" }],
+          content: [
+            {
+              type: "text",
+              text: "Provide at least one field to patch (title, content_text, geometry, entity_*, space_id, …)",
+            },
+          ],
           isError: true,
         };
       }
@@ -781,31 +873,92 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       if (!spaceId) {
         return { content: [{ type: "text", text: "space_id is required" }], isError: true };
       }
-      const itemTypeRaw = String(args.item_type ?? "").trim();
       const title = String(args.title ?? "").trim();
       if (!title) {
         return { content: [{ type: "text", text: "title is required" }], isError: true };
       }
-      let itemType: "note" | "checklist";
-      let entityType: string | undefined;
-      if (itemTypeRaw === "character") {
+
+      const canvasRaw = String(args.canvas_item_type ?? "").trim();
+      const legacyRaw = String(args.item_type ?? "").trim();
+      let itemType = canvasRaw || legacyRaw;
+      if (!itemType) {
+        return {
+          content: [{ type: "text", text: "canvas_item_type is required (or legacy item_type)" }],
+          isError: true,
+        };
+      }
+
+      if (itemType === "character") {
         itemType = "note";
-        entityType = "character";
-      } else if (itemTypeRaw === "note" || itemTypeRaw === "checklist") {
-        itemType = itemTypeRaw;
-      } else {
+      }
+      if (itemType === "folder") {
         return {
-          content: [{ type: "text", text: "item_type must be note, checklist, or character" }],
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                ok: false,
+                error: "Use heartgarden_create_folder to create folder cards (child space + item).",
+              }),
+            },
+          ],
           isError: true,
         };
       }
+
+      const validItemTypes = ["note", "sticky", "image", "checklist", "webclip"];
+      if (!validItemTypes.includes(itemType)) {
+        return {
+          content: [{ type: "text", text: `Invalid canvas_item_type: ${itemType}` }],
+          isError: true,
+        };
+      }
+
+      const loreEntity = String(args.lore_entity ?? "").trim();
+      const legacyCharacter = legacyRaw === "character" || canvasRaw === "character";
+      let resolvedLore: string | undefined;
+      if (loreEntity === "character" || loreEntity === "faction" || loreEntity === "location") {
+        resolvedLore = loreEntity;
+      } else if (legacyCharacter) {
+        resolvedLore = "character";
+      }
+
+      if (
+        resolvedLore &&
+        itemType !== "note" &&
+        itemType !== "sticky"
+      ) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "lore_entity requires canvas_item_type note or sticky",
+            },
+          ],
+          isError: true,
+        };
+      }
+
       const contentText = typeof args.content_text === "string" ? args.content_text : "";
-      if (itemType === "note" && contentText.trim() === "") {
+      if (
+        itemType === "note" &&
+        contentText.trim() === "" &&
+        !resolvedLore &&
+        !args.canonical_entity_kind &&
+        !String(args.entity_type ?? "").trim()
+      ) {
         return {
-          content: [{ type: "text", text: "content_text is required for notes and character cards" }],
+          content: [
+            {
+              type: "text",
+              text:
+                "content_text is required for plain notes (or set lore_entity, canonical_entity_kind, or entity_type)",
+            },
+          ],
           isError: true,
         };
       }
+
       const body: Record<string, unknown> = {
         itemType,
         title,
@@ -813,11 +966,30 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         x: typeof args.x === "number" ? args.x : 0,
         y: typeof args.y === "number" ? args.y : 0,
       };
-      if (entityType) body.entityType = entityType;
+
+      if (resolvedLore) {
+        body.entityType = resolvedLore;
+      } else if (typeof args.entity_type === "string" && args.entity_type.trim()) {
+        body.entityType = args.entity_type.trim();
+      }
+      if (typeof args.canonical_entity_kind === "string" && args.canonical_entity_kind.trim()) {
+        body.canonical_entity_kind = args.canonical_entity_kind.trim();
+      }
+      if (args.lore_variant === "v1" || args.lore_variant === "v2" || args.lore_variant === "v3" || args.lore_variant === "v11") {
+        body.lore_variant = args.lore_variant;
+      }
       if (typeof args.color === "string" && args.color.trim()) body.color = args.color.trim();
       if (args.theme === "default" || args.theme === "code" || args.theme === "task") {
         body.theme = args.theme;
       }
+      if (typeof args.image_url === "string" && args.image_url.trim()) body.imageUrl = args.image_url.trim();
+      if (args.image_meta != null && typeof args.image_meta === "object") {
+        body.imageMeta = args.image_meta as Record<string, unknown>;
+      }
+      if (args.entity_meta != null && typeof args.entity_meta === "object") {
+        body.entityMeta = args.entity_meta as Record<string, unknown>;
+      }
+
       const res = await api(`${BASE}/api/spaces/${encodeURIComponent(spaceId)}/items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -855,6 +1027,122 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         };
       } catch {
         return { content: [{ type: "text", text: createText }] };
+      }
+    }
+
+    if (name === "heartgarden_create_folder") {
+      const wkErr = mcpWriteKeyError(args, WRITE_KEY, { allowOmitWhenConfigSet: true });
+      if (wkErr) {
+        return { content: [{ type: "text", text: wkErr }], isError: true };
+      }
+      const parentSpaceId = String(args.space_id ?? "").trim();
+      const title = String(args.title ?? "").trim();
+      if (!parentSpaceId || !title) {
+        return {
+          content: [{ type: "text", text: "space_id and title are required" }],
+          isError: true,
+        };
+      }
+      const spaceRes = await api(`${BASE}/api/spaces`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: title, parentSpaceId }),
+      });
+      const spaceText = await spaceRes.text();
+      let childSpaceId = "";
+      try {
+        const sj = JSON.parse(spaceText) as { ok?: boolean; space?: { id?: string } };
+        if (sj?.ok && sj.space?.id) childSpaceId = sj.space.id;
+      } catch {
+        /* below */
+      }
+      if (!childSpaceId) {
+        return { content: [{ type: "text", text: spaceText }], isError: true };
+      }
+      const rotation = (Math.random() - 0.5) * 4;
+      const folderContentJson = {
+        folder: { childSpaceId },
+        hgArch: { rotation, tapeRotation: 0 },
+      };
+      const itemRes = await api(`${BASE}/api/spaces/${encodeURIComponent(parentSpaceId)}/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemType: "folder",
+          x: typeof args.x === "number" ? args.x : 0,
+          y: typeof args.y === "number" ? args.y : 0,
+          width: 420,
+          height: 280,
+          title,
+          contentText: title,
+          contentJson: folderContentJson,
+        }),
+      });
+      const itemText = await itemRes.text();
+      if (args.auto_index !== true) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                { space: JSON.parse(spaceText) as object, item: JSON.parse(itemText) as object },
+                null,
+                2,
+              ),
+            },
+          ],
+        };
+      }
+      try {
+        const itemJson = JSON.parse(itemText) as { ok?: boolean; item?: { id?: string } };
+        const newId = itemJson?.item?.id;
+        if (!itemJson?.ok || !newId) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({ space: JSON.parse(spaceText), item: itemJson }, null, 2),
+              },
+            ],
+          };
+        }
+        const idxRes = await api(`${BASE}/api/items/${encodeURIComponent(newId)}/index`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+        const indexText = await idxRes.text();
+        let indexPayload: unknown = indexText;
+        try {
+          indexPayload = JSON.parse(indexText);
+        } catch {
+          /* raw */
+        }
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  space: JSON.parse(spaceText),
+                  item: itemJson,
+                  index: indexPayload,
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+        };
+      } catch {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ space: JSON.parse(spaceText), rawItem: itemText }, null, 2),
+            },
+          ],
+        };
       }
     }
 

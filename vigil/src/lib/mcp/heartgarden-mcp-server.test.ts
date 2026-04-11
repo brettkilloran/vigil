@@ -27,6 +27,7 @@ describe("canonicalHeartgardenMcpToolName", () => {
       ["vigil_patch_item", "heartgarden_patch_item"],
       ["vigil_create_item", "heartgarden_create_item"],
       ["vigil_create_link", "heartgarden_create_link"],
+      ["vigil_create_folder", "heartgarden_create_folder"],
     ];
     for (const [legacy, canonical] of pairs) {
       expect(canonicalHeartgardenMcpToolName(legacy)).toBe(canonical);

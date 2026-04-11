@@ -42,6 +42,8 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Buffered rich text + wiki `[[` assist (lore, code, media captions) | `src/components/editing/BufferedContentEditable.tsx`, `WikiLinkAssistPopover.tsx`, `src/lib/wiki-link-caret.ts` |
 | Resolved image URLs (zoom / CDN template) | `src/lib/heartgarden-image-display-url.ts` |
 | Viewport culling (entities, stacks, connections) | `src/lib/canvas-viewport-cull.ts` |
+| **Canvas threads + link-type taxonomy** (grouped relationship vs legacy role tags, endpoint-aware ordering) | `src/lib/lore-link-types.ts`, `mergeHydratedDbConnections` in `src/lib/architectural-item-link-graph.ts`, `ArchitecturalCanvasApp.tsx` (draw/cut, thread context menu) |
+| **Connections inspector** (threads vs wiki vs Neon vs FTS — summary + lists) | `src/components/ui/ArchitecturalLinksPanel.tsx` |
 
 ## Lore canvas node variants (custom bodies, ID cards)
 

@@ -715,34 +715,58 @@ export function ArchitecturalConnectionToolbar({
   const tone = isEditor ? "card-dark" : "glass";
   return (
     <div className={styles.connectionToolbarWrap}>
-      <div className={styles.connectionModeStrip} role="toolbar" aria-label="Connections">
-        <ArchitecturalButton
-          size="menu"
-          tone={tone}
-          active={mode === "move"}
-          disabled={disabled}
-          onClick={() => onSetMode("move")}
+      <div className={styles.connectionModeStrip} role="toolbar" aria-label="Threads">
+        <ArchitecturalTooltip
+          content="Move — select and pan cards. Canvas threads stay inactive until you choose Draw."
+          side="top"
+          delayMs={420}
+          avoidSides={ARCH_TOOLTIP_AVOID_BOTTOM}
         >
-          Move
-        </ArchitecturalButton>
-        <ArchitecturalButton
-          size="menu"
-          tone={tone}
-          active={mode === "draw"}
-          disabled={disabled}
-          onClick={() => onSetMode("draw")}
+          <ArchitecturalButton
+            size="menu"
+            tone={tone}
+            active={mode === "move"}
+            disabled={disabled}
+            aria-label="Move"
+            onClick={() => onSetMode("move")}
+          >
+            Move
+          </ArchitecturalButton>
+        </ArchitecturalTooltip>
+        <ArchitecturalTooltip
+          content="Draw thread — click two cards to connect. Right-click a thread to tag the relationship. Wiki mentions in prose are separate."
+          side="top"
+          delayMs={420}
+          avoidSides={ARCH_TOOLTIP_AVOID_BOTTOM}
         >
-          Draw
-        </ArchitecturalButton>
-        <ArchitecturalButton
-          size="menu"
-          tone={tone}
-          active={mode === "cut"}
-          disabled={disabled}
-          onClick={() => onSetMode("cut")}
+          <ArchitecturalButton
+            size="menu"
+            tone={tone}
+            active={mode === "draw"}
+            disabled={disabled}
+            aria-label="Draw thread"
+            onClick={() => onSetMode("draw")}
+          >
+            Draw
+          </ArchitecturalButton>
+        </ArchitecturalTooltip>
+        <ArchitecturalTooltip
+          content="Cut thread — click ropes to remove them."
+          side="top"
+          delayMs={420}
+          avoidSides={ARCH_TOOLTIP_AVOID_BOTTOM}
         >
-          Cut
-        </ArchitecturalButton>
+          <ArchitecturalButton
+            size="menu"
+            tone={tone}
+            active={mode === "cut"}
+            disabled={disabled}
+            aria-label="Cut thread"
+            onClick={() => onSetMode("cut")}
+          >
+            Cut
+          </ArchitecturalButton>
+        </ArchitecturalTooltip>
       </div>
       <ArchitecturalFolderColorStrip
         value={colorScheme}

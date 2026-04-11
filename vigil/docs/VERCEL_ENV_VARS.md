@@ -37,7 +37,7 @@ Use with **[`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)** and the **[dashboard check
 | `HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_WINDOW_MS` | Optional | Optional | Presence rate-limit window in ms (default **900000** = 15 min; clamped **60000–3600000**). |
 | `HEARTGARDEN_PLAYER_SPACE_ID` | Optional with Players PIN | Optional with Players PIN | When set: UUID of the Neon **`spaces`** row for the Players canvas (must exist in DB). When unset with Players PIN: server uses an auto-created implicit Players root (isolated from GM). Use this to pick a **specific** UUID or to **hide** that space from GM lists. See **`docs/PLAYER_LAYER.md`**. Not required for Bishop-only gate. |
 | `HEARTGARDEN_MCP_SERVICE_KEY` | If using **`/api/mcp`** or MCP clients against prod APIs | Same | Long random Bearer secret. Enables **Streamable HTTP** MCP at **`GET|POST|DELETE /api/mcp`**, allows **`Authorization: Bearer`** through the boot gate for **`/api/*`**, and lets **`npm run mcp`** (stdio) call **`fetch`** to the deployed app when the PIN gate is on. Mark **Sensitive**. |
-| `HEARTGARDEN_MCP_WRITE_KEY` | If using MCP write tools / reindex API | Same | Must match **`write_key`** in **`heartgarden_patch_item`**, **`heartgarden_create_item`**, **`heartgarden_create_link`**, and **`POST /api/spaces/:id/reindex`**. Sensitive. |
+| `HEARTGARDEN_MCP_WRITE_KEY` | If using MCP write tools / reindex API | Same | Must match **`write_key`** in **`heartgarden_patch_item`**, **`heartgarden_create_item`**, **`heartgarden_create_folder`**, **`heartgarden_create_link`**, and **`POST /api/spaces/:id/reindex`**. Sensitive. |
 
 **Do not set:** `PLAYWRIGHT_E2E` (also forces the boot gate **off** in **`/api/heartgarden/boot`** for E2E).
 

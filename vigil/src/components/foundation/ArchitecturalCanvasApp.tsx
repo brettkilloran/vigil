@@ -134,7 +134,11 @@ import {
   clampLinkMetaSlackMultiplier,
   DEFAULT_LINK_SLACK_MULTIPLIER,
 } from "@/src/lib/item-link-meta";
-import { LORE_LINK_TYPE_OPTIONS } from "@/src/lib/lore-link-types";
+import {
+  groupedOrderedLinkOptionsForEndpoints,
+  LINK_TYPE_GROUP_HEADINGS,
+  LORE_LINK_TYPE_OPTIONS,
+} from "@/src/lib/lore-link-types";
 import { validateClarificationAnswersForApply } from "@/src/lib/lore-import-clarifications";
 import type {
   ClarificationAnswer,
@@ -9203,31 +9207,48 @@ export function ArchitecturalCanvasApp({
   const connectionContextMenuItems = useMemo<ContextMenuItem[]>(() => {
     if (!selectedConnectionId) return [];
     const selected = graph.connections[selectedConnectionId];
-    const currentSlack = selected?.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER;
-    const currentLt = selected?.linkType ?? "pin";
-    const typeItems: ContextMenuItem[] = LORE_LINK_TYPE_OPTIONS.map((opt) => ({
-      label: `${currentLt === opt.value ? "✓ " : ""}Link: ${opt.label}`,
-      onSelect: () => setConnectionLinkType(selectedConnectionId, opt.value),
-    }));
-    const base: ContextMenuItem[] = [
+    if (!selected) return [];
+    const currentSlack = selected.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER;
+    const currentLt = selected.linkType ?? "pin";
+    const sourceEntity = graph.entities[selected.sourceEntityId];
+    const targetEntity = graph.entities[selected.targetEntityId];
+    const grouped = groupedOrderedLinkOptionsForEndpoints(sourceEntity, targetEntity);
+
+    const out: ContextMenuItem[] = [
+      { type: "heading", label: "Thread" },
       {
-        label: "Cut connection",
+        label: "Cut thread",
         onSelect: () => cutConnection(selectedConnectionId),
       },
       {
-        label: "Make thread taught",
+        label: "Make thread taut",
         disabled: currentSlack <= 1.01,
         onSelect: () => setConnectionSlack(selectedConnectionId, 1.02),
       },
       {
-        label: "Loosten thread",
+        label: "Loosen thread",
         disabled: currentSlack >= 1.29,
         onSelect: () => setConnectionSlack(selectedConnectionId, 1.28),
       },
-      ...typeItems,
     ];
-    return base;
-  }, [cutConnection, graph.connections, selectedConnectionId, setConnectionLinkType, setConnectionSlack]);
+    for (const { group, options } of grouped) {
+      out.push({ type: "heading", label: LINK_TYPE_GROUP_HEADINGS[group] });
+      for (const opt of options) {
+        out.push({
+          label: `${currentLt === opt.value ? "✓ " : ""}${opt.menuLabel}`,
+          onSelect: () => setConnectionLinkType(selectedConnectionId, opt.value),
+        });
+      }
+    }
+    return out;
+  }, [
+    cutConnection,
+    graph.connections,
+    graph.entities,
+    selectedConnectionId,
+    setConnectionLinkType,
+    setConnectionSlack,
+  ]);
 
   const canInsertImage = useMemo(() => {
     if (focusOpen && activeNodeId) {
@@ -10115,7 +10136,7 @@ export function ArchitecturalCanvasApp({
                         setConnectionContextMenu(
                           clampContextMenuPosition(
                             { x: event.clientX, y: event.clientY },
-                            { maxWidth: 260, maxHeight: 520, edgePadding: 8 },
+                            { maxWidth: 280, maxHeight: 680, edgePadding: 8 },
                           ),
                         );
                       }}
@@ -10148,7 +10169,7 @@ export function ArchitecturalCanvasApp({
                       setConnectionContextMenu(
                         clampContextMenuPosition(
                           { x: event.clientX, y: event.clientY },
-                          { maxWidth: 260, maxHeight: 520, edgePadding: 8 },
+                          { maxWidth: 280, maxHeight: 680, edgePadding: 8 },
                         ),
                       );
                     }}
@@ -10881,7 +10902,7 @@ export function ArchitecturalCanvasApp({
             </datalist>
             <datalist id="hg-lore-import-linktypes">
               {LORE_LINK_TYPE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value} label={o.label} />
+                <option key={o.value} value={o.value} label={o.menuLabel} />
               ))}
             </datalist>
             <div className="flex max-h-[min(90vh,720px)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-panel)] p-4 shadow-xl">

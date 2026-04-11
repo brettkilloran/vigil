@@ -48,7 +48,7 @@ Rules:
 - Use 1–12 folders max unless the document clearly needs more.
 - Titles must be stable proper nouns or section names when possible.
 - If the document is tiny, one folder and one note is fine.
-- **Links:** Only connect two notes that share the same folderClientId (same canvas space). Never use linkType "pin" — that is reserved for user-drawn pin threads on the canvas; use semantic types (npc, faction, location, ally, …) so relationship styling works.
+- **Links:** Only connect two notes that share the same folderClientId (same canvas space). Never use linkType "pin" — that is reserved for user-drawn canvas threads. Prefer **relationship** linkTypes (ally, enemy, neutral, reference, quest, lore) when the edge describes how two notes relate. Use **role tags** (npc, faction, location) only when the import needs an explicit story role that is not already obvious from each note's entity kind — do not set linkType to duplicate both endpoints' kinds (e.g. avoid faction→faction with linkType "faction" unless it adds meaning).
 - Keep each note focused (one topic or tight cluster) so entity kinds and link types stay accurate.`;
 
 const MERGE_SYSTEM = `You match new imported notes to existing canvas items (candidates from search).

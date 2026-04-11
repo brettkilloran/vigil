@@ -4,6 +4,7 @@ import { TreeStructure } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { CanvasContentEntity, CanvasGraph } from "@/src/components/foundation/architectural-types";
+import { menuLabelForLinkType } from "@/src/lib/lore-link-types";
 import { Button } from "@/src/components/ui/Button";
 import { CanvasDebugInspectorShell } from "@/src/components/ui/CanvasDebugInspectorShell";
 import debugInspectorStyles from "@/src/components/ui/CanvasDebugInspectorShell.module.css";
@@ -63,7 +64,9 @@ function RowList({
 }
 
 /**
- * Links + related items for the architectural canvas (Neon `item_links`, wiki targets in HTML, FTS “related”).
+ * Three surfaces in one inspector: **canvas threads** (spatial ropes), **wiki mentions** (`vigil:item` /
+ * `[[` in note HTML), **persisted edges** (Neon `item_links`, overlaps threads when synced), plus **FTS
+ * related** (discovery, not authored links).
  */
 export function ArchitecturalLinksPanel({
   graph,
@@ -203,6 +206,34 @@ export function ArchitecturalLinksPanel({
     return { outgoing, incoming };
   }, [entity, entityId, graph, visibleIds]);
 
+  const canvasThreads = useMemo(() => {
+    if (!entityId) return { count: 0, rows: [] as { peerId: string; title: string; tag: string }[] };
+    const rows: { peerId: string; title: string; tag: string }[] = [];
+    for (const c of Object.values(graph.connections)) {
+      if (c.sourceEntityId === entityId) {
+        const peer = graph.entities[c.targetEntityId];
+        if (peer) {
+          rows.push({
+            peerId: peer.id,
+            title: peer.title,
+            tag: menuLabelForLinkType(c.linkType ?? "pin"),
+          });
+        }
+      } else if (c.targetEntityId === entityId) {
+        const peer = graph.entities[c.sourceEntityId];
+        if (peer) {
+          rows.push({
+            peerId: peer.id,
+            title: peer.title,
+            tag: menuLabelForLinkType(c.linkType ?? "pin"),
+          });
+        }
+      }
+    }
+    rows.sort((a, b) => a.title.localeCompare(b.title));
+    return { count: rows.length, rows };
+  }, [entityId, graph.connections, graph.entities]);
+
   const focus = useCallback(
     (id: string) => {
       onFocusEntity(id);
@@ -212,31 +243,75 @@ export function ArchitecturalLinksPanel({
 
   if (!entityId) return null;
 
+  const wikiTotal = localWiki.outgoing.length + localWiki.incoming.length;
+  const serverTotal =
+    cloud && !cloud.err ? cloud.outgoing.length + cloud.incoming.length : null;
+
   return (
-    <CanvasDebugInspectorShell storageKey="hg-canvas-debug-links" title="Debug // Link inspector" defaultOpen={false}>
+    <CanvasDebugInspectorShell
+      storageKey="hg-canvas-debug-links"
+      title="Connections · inspector"
+      defaultOpen={false}
+    >
+      <p className={`${debugInspectorStyles.debugInspectorIntro} mb-2`}>
+        <span className="text-[var(--vigil-label)]">
+          Canvas threads: {canvasThreads.count} · Wiki mentions: {wikiTotal} · Persisted (Neon):{" "}
+          {cloudEnabled && serverTotal !== null ? serverTotal : "—"}
+        </span>
+      </p>
       {!cloudEnabled ? (
         <p className={debugInspectorStyles.debugInspectorIntro}>
           Local canvas — <code className={debugInspectorStyles.debugInspectorCode}>[[</code> wiki
           targets and <code className={debugInspectorStyles.debugInspectorCode}>vigil:item:</code> in
-          note HTML. Sync to Neon for server links.
+          note HTML. Sync to Neon for persisted <code className={debugInspectorStyles.debugInspectorCode}>
+            item_links
+          </code>{" "}
+          (same store as drawn threads when saved).
         </p>
       ) : (
         <p className={debugInspectorStyles.debugInspectorIntro}>
-          Neon <code className={debugInspectorStyles.debugInspectorCode}>item_links</code>, wiki
-          targets, and FTS-related cards in this space.
+          Persisted rows mirror drawn threads after sync; wiki targets in note bodies are separate from
+          ropes. FTS &quot;related&quot; is discovery, not an authored link.
         </p>
       )}
 
+      <div className={debugInspectorStyles.debugInspectorDivider}>
+        <div className={debugInspectorStyles.debugInspectorSectionLabel}>Canvas threads (this space)</div>
+        {canvasThreads.rows.length === 0 ? (
+          <p className={debugInspectorStyles.debugInspectorMuted}>No threads touch this card.</p>
+        ) : (
+          <ul className={debugInspectorStyles.debugInspectorList}>
+            {canvasThreads.rows.map((r, i) => (
+              <li key={`${r.peerId}-${i}`}>
+                <Button
+                  size="sm"
+                  variant="subtle"
+                  tone="menu"
+                  className="w-full justify-start truncate"
+                  onClick={() => focus(r.peerId)}
+                >
+                  {r.title}
+                  <span className="ml-1 text-[var(--vigil-muted)]">· {r.tag}</span>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       {cloudEnabled && itemIdForCloud ? (
         cloudLoading && !cloud ? (
-          <p className={debugInspectorStyles.debugInspectorMuted}>Loading server links…</p>
+          <p className={debugInspectorStyles.debugInspectorMuted}>Loading persisted edges…</p>
         ) : cloud?.err ? (
           <p className={debugInspectorStyles.debugInspectorError}>{cloud.err}</p>
         ) : cloud ? (
           <div className={debugInspectorStyles.debugInspectorStack}>
+            <div className={debugInspectorStyles.debugInspectorSectionLabel}>
+              Persisted edges (Neon item_links)
+            </div>
             {cloud.outgoing.length > 0 ? (
               <div>
-                <div className={debugInspectorStyles.debugInspectorSectionLabel}>To (server)</div>
+                <div className={debugInspectorStyles.debugInspectorSectionLabel}>Outgoing</div>
                 <ul className={debugInspectorStyles.debugInspectorList}>
                   {cloud.outgoing.map((r) => (
                     <li key={r.linkId}>
@@ -249,7 +324,7 @@ export function ArchitecturalLinksPanel({
                       >
                         {r.to.title}
                         <span className="ml-1 text-[var(--vigil-muted)]">
-                          ({r.linkType}) · {r.to.itemType}
+                          ({menuLabelForLinkType(r.linkType)}) · {r.to.itemType}
                         </span>
                       </Button>
                     </li>
@@ -259,7 +334,7 @@ export function ArchitecturalLinksPanel({
             ) : null}
             {cloud.incoming.length > 0 ? (
               <div>
-                <div className={debugInspectorStyles.debugInspectorSectionLabel}>From (server)</div>
+                <div className={debugInspectorStyles.debugInspectorSectionLabel}>Incoming</div>
                 <ul className={debugInspectorStyles.debugInspectorList}>
                   {cloud.incoming.map((r) => (
                     <li key={r.linkId}>
@@ -272,7 +347,7 @@ export function ArchitecturalLinksPanel({
                       >
                         {r.from.title}
                         <span className="ml-1 text-[var(--vigil-muted)]">
-                          ({r.linkType}) · {r.from.itemType}
+                          ({menuLabelForLinkType(r.linkType)}) · {r.from.itemType}
                         </span>
                       </Button>
                     </li>
@@ -282,7 +357,7 @@ export function ArchitecturalLinksPanel({
             ) : null}
             {cloud.outgoing.length === 0 && cloud.incoming.length === 0 ? (
               <p className={debugInspectorStyles.debugInspectorMuted}>
-                No server links for this card yet.
+                No persisted edges for this item yet.
               </p>
             ) : null}
           </div>
@@ -291,7 +366,7 @@ export function ArchitecturalLinksPanel({
 
       {entity?.kind === "content" ? (
         <div className={debugInspectorStyles.debugInspectorDivider}>
-          <div className={debugInspectorStyles.debugInspectorSectionLabel}>Wiki on this space</div>
+          <div className={debugInspectorStyles.debugInspectorSectionLabel}>Wiki mentions (note HTML)</div>
           <div className={debugInspectorStyles.debugInspectorStack}>
             <RowList label="Out" rows={localWiki.outgoing} onPick={focus} />
             <RowList label="In" rows={localWiki.incoming} onPick={focus} />
@@ -308,7 +383,7 @@ export function ArchitecturalLinksPanel({
         <div className={debugInspectorStyles.debugInspectorDivider}>
           <div className={debugInspectorStyles.debugInspectorRelatedHeading}>
             <TreeStructure size={14} weight="bold" aria-hidden />
-            <span>Related (FTS)</span>
+            <span>Related (discovery · FTS)</span>
           </div>
           {relatedLoading ? (
             <p className={debugInspectorStyles.debugInspectorMuted}>Loading…</p>

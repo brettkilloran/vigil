@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import type { LoreCardKind } from "@/src/components/foundation/architectural-types";
 import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
 import { getHeartgardenApiBootContext, heartgardenApiForbiddenJsonResponse } from "@/src/lib/heartgarden-api-boot-context";
@@ -9,6 +10,15 @@ import {
   nextZIndexForSpace,
   synthesizeContentJsonForCreateItem,
 } from "@/src/lib/item-create-defaults";
+import { normalizeCanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
+import {
+  isLoreCardPersistedEntityType,
+  persistedEntityTypeFromCanonical,
+} from "@/src/lib/lore-object-registry";
+import {
+  resolveLoreCardForCreate,
+  synthesizeLoreCardContentJsonAndPlainText,
+} from "@/src/lib/lore-item-create-synthesis";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
 import {
@@ -44,6 +54,12 @@ const createBody = z.object({
   zIndex: z.number().int().optional(),
   stackId: z.string().uuid().nullable().optional(),
   stackOrder: z.number().int().nullable().optional(),
+  /** Maps to `items.entity_type` via `persistedEntityTypeFromCanonical` when `entityType` is omitted. */
+  canonical_entity_kind: z
+    .enum(["npc", "location", "faction", "quest", "item", "lore", "other"])
+    .optional(),
+  /** Shell layout for character (v11) / faction / location (v1–v3). */
+  lore_variant: z.enum(["v1", "v2", "v3", "v11"]).optional(),
 });
 
 export async function GET(
@@ -122,19 +138,60 @@ export async function POST(
         null
       : (parsed.data.entityMeta ?? null);
 
-  const entityType = parsed.data.entityType ?? null;
-  const contentText = parsed.data.contentText ?? "";
-  const theme = parsed.data.theme ?? "default";
+  let entityType: string | null = parsed.data.entityType?.trim() ?? null;
+  if (!entityType && parsed.data.canonical_entity_kind) {
+    const ck = normalizeCanonicalEntityKind(parsed.data.canonical_entity_kind);
+    entityType = persistedEntityTypeFromCanonical(ck);
+  }
 
-  if (parsed.data.contentJson === undefined && t === "note" && contentText.trim() === "") {
+  if (isLoreCardPersistedEntityType(entityType) && t !== "note" && t !== "sticky") {
     return Response.json(
-      { ok: false, error: "contentText is required when contentJson is omitted for notes" },
+      {
+        ok: false,
+        error: "Lore shells (character / faction / location) require itemType note or sticky",
+      },
       { status: 400 },
     );
   }
 
+  let contentText = parsed.data.contentText ?? "";
+  const theme = parsed.data.theme ?? "default";
+
   let contentJson: Record<string, unknown> | null =
     (parsed.data.contentJson as Record<string, unknown> | undefined) ?? null;
+
+  const loreVariantRaw = parsed.data.lore_variant;
+  const loreVariantForResolve =
+    loreVariantRaw === "v1" || loreVariantRaw === "v2" || loreVariantRaw === "v3" || loreVariantRaw === "v11"
+      ? loreVariantRaw
+      : undefined;
+
+  if (
+    contentJson === null &&
+    isLoreCardPersistedEntityType(entityType) &&
+    (t === "note" || t === "sticky")
+  ) {
+    const kind = entityType as LoreCardKind;
+    const loreCard = resolveLoreCardForCreate({
+      kind,
+      loreVariant: loreVariantForResolve,
+    });
+    const synth = synthesizeLoreCardContentJsonAndPlainText({ loreCard });
+    contentJson = synth.contentJson;
+    if (contentText.trim() === "") {
+      contentText = synth.plainText;
+    }
+  }
+
+  if (parsed.data.contentJson === undefined && t === "note" && contentText.trim() === "") {
+    if (!isLoreCardPersistedEntityType(entityType)) {
+      return Response.json(
+        { ok: false, error: "contentText is required when contentJson is omitted for notes" },
+        { status: 400 },
+      );
+    }
+  }
+
   if (contentJson === null && (t === "note" || t === "sticky" || t === "checklist")) {
     const synthesized = synthesizeContentJsonForCreateItem({
       itemType: t,

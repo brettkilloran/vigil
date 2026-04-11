@@ -28,8 +28,8 @@ export function defaultItemDimensions(
   itemType: string,
   entityType: string | null | undefined,
 ): { width: number; height: number } {
-  if (entityType === "character") {
-    return { width: 340, height: 453 };
+  if (entityType === "character" || entityType === "faction" || entityType === "location") {
+    return { width: 340, height: 280 };
   }
   switch (itemType) {
     case "note":

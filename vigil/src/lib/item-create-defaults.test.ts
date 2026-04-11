@@ -7,8 +7,8 @@ import {
 } from "./item-create-defaults";
 
 describe("defaultItemDimensions", () => {
-  it("uses character entity size", () => {
-    expect(defaultItemDimensions("note", "character")).toEqual({ width: 340, height: 453 });
+  it("uses lore shell size for character", () => {
+    expect(defaultItemDimensions("note", "character")).toEqual({ width: 340, height: 280 });
   });
   it("uses note size without character entity", () => {
     expect(defaultItemDimensions("note", null)).toEqual({ width: 340, height: 270 });

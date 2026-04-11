@@ -66,6 +66,7 @@ Single place to **look up what exists** and where it lives. For **HTTP contracts
 | **Dev: AI pending style** | `/dev/ai-pending-style` — static + live hgDoc samples for pending styling | — | `app/dev/ai-pending-style/*` |
 | **Wiki link `[[` assist** | Typing `[[` in rich text opens popover to pick / create wiki targets | — | `BufferedContentEditable.tsx`, `WikiLinkAssistPopover.tsx`, `wiki-link-caret.ts`, `wiki-link-caret.test.ts` |
 | **Internal links** | `vigil:item:` resolution in shell | [`AGENTS.md`](../AGENTS.md) | `ArchitecturalLinksPanel` / link resolution paths in foundation |
+| **Connections (three surfaces)** | **Canvas threads** (drawn ropes, `item_links` + pins); **wiki mentions** (`vigil:item` / `[[` in note HTML, not ropes); **FTS related** (discovery in space, not an authored link). Relationship tags on threads use grouped pickers (`src/lib/lore-link-types.ts`). | [`CODEMAP.md`](./CODEMAP.md) | `ArchitecturalCanvasApp.tsx`, `ArchitecturalToolRail.tsx`, `ArchitecturalLinksPanel.tsx`, `lore-link-types.ts` |
 
 ---
 

@@ -19,17 +19,22 @@ import { cx } from "@/src/lib/cx";
 
 export function ArchitecturalToolButton({
   label,
+  tooltip,
   active = false,
   icon,
   onClick,
 }: {
+  /** Short name for `aria-label` and toolbar affordance. */
   label: string;
+  /** Optional longer hover explanation (defaults to `label`). */
+  tooltip?: string;
   active?: boolean;
   icon: ReactNode;
   onClick?: () => void;
 }) {
+  const hover = tooltip ?? label;
   return (
-    <ArchitecturalTooltip content={label} side="right" delayMs={420}>
+    <ArchitecturalTooltip content={hover} side="right" delayMs={420}>
       <ArchitecturalButton
         size="icon"
         tone="glass"
@@ -75,7 +80,8 @@ export function ArchitecturalToolRail({
 
   const drawConnectionButton = (
     <ArchitecturalToolButton
-      label="Draw connection"
+      label="Draw thread"
+      tooltip="Draw thread — click two cards to connect with a rope. Right-click a thread to tag the relationship. Wiki mentions in prose ([[ or vigil:item) are separate."
       active={connectionMode === "draw"}
       icon={<PushPin size={18} />}
       onClick={() => onSetConnectionMode?.("draw")}
@@ -103,12 +109,14 @@ export function ArchitecturalToolRail({
               <>
                 <ArchitecturalToolButton
                   label="Select"
+                  tooltip="Select — click and drag cards. Canvas threads stay inactive while Move mode is on."
                   active={canvasToolActive && activeTool === "select"}
                   icon={<CursorClick size={18} />}
                   onClick={() => onSetTool("select")}
                 />
                 <ArchitecturalToolButton
-                  label="Pan Hand"
+                  label="Pan"
+                  tooltip="Pan — drag the empty canvas to move the view."
                   active={canvasToolActive && activeTool === "pan"}
                   icon={<HandGrabbing size={18} />}
                   onClick={() => onSetTool("pan")}
@@ -140,7 +148,8 @@ export function ArchitecturalToolRail({
                   drawConnectionButton
                 )}
                 <ArchitecturalToolButton
-                  label="Cut connection"
+                  label="Cut thread"
+                  tooltip="Cut thread — click ropes to remove them."
                   active={connectionMode === "cut"}
                   icon={<Scissors size={18} />}
                   onClick={() => onSetConnectionMode?.("cut")}
