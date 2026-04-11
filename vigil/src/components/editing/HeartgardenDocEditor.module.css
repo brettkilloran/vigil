@@ -24,7 +24,8 @@
   background: color-mix(in oklab, var(--sem-surface-raised) 82%, transparent);
   color: var(--sem-text-muted);
   cursor: grab;
-  opacity: 0;
+  /* TipTap keeps the handle `visibility:hidden` until a block is targeted; once shown, stay discoverable. */
+  opacity: 0.42;
   outline: none;
   box-shadow: none;
   transition: opacity 120ms ease, background 120ms ease, border-color 120ms ease;
