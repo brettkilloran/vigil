@@ -7,24 +7,37 @@ test.describe("/dev/lore-entity-nodes", () => {
     await prepDemoSession(page);
   });
 
-  test("shows three high-concept location lab bodies (not seeded card IA)", async ({ page }) => {
+  test("shows three lab-only location skin previews (not seeded)", async ({ page }) => {
     await page.goto("/dev/lore-entity-nodes");
     await expect(page.getByRole("heading", { name: "Lore entity nodes", level: 1 })).toBeVisible({
       timeout: 60_000,
     });
 
-    await expect(page.getByRole("heading", { name: "Location · high-concept lab", level: 3 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Location lab skins", level: 3 })).toBeVisible();
 
-    await expect(page.getByTestId("loc-lab-concept-survey")).toBeVisible();
-    await expect(page.getByTestId("loc-lab-concept-departures")).toBeVisible();
-    await expect(page.getByTestId("loc-lab-concept-polaroid")).toBeVisible();
+    await expect(page.getByTestId("loc-lab-skin-blueprint")).toBeVisible();
+    await expect(page.getByTestId("loc-lab-skin-waypoint")).toBeVisible();
+    await expect(page.getByTestId("loc-lab-skin-deed")).toBeVisible();
 
-    await expect(page.getByText("LAB · Survey datum sheet")).toBeVisible();
-    await expect(page.getByText("LAB · Night departures board")).toBeVisible();
-    await expect(page.getByText("LAB · Polaroid caption stub")).toBeVisible();
+    await expect(page.getByText("LAB · Blueprint site sheet")).toBeVisible();
+    await expect(page.getByText("LAB · Waypoint board")).toBeVisible();
+    await expect(page.getByText("LAB · Deed cadastral slip")).toBeVisible();
+  });
 
-    await expect(page.getByText("OBQ-CRY-B")).toBeVisible();
-    await expect(page.getByText("Salt spine express")).toBeVisible();
-    await expect(page.getByText("HG-LOC-LAB")).toBeVisible();
+  test("shows concept-next row with polaroid / poster / specimen (image slots)", async ({ page }) => {
+    await page.goto("/dev/lore-entity-nodes");
+    await expect(page.getByRole("heading", { name: "Lore entity nodes", level: 1 })).toBeVisible({
+      timeout: 60_000,
+    });
+
+    await expect(page.getByRole("heading", { name: "Location · concept next", level: 3 })).toBeVisible();
+
+    await expect(page.getByTestId("loc-concept-polaroid")).toBeVisible();
+    await expect(page.getByTestId("loc-concept-poster")).toBeVisible();
+    await expect(page.getByTestId("loc-concept-specimen")).toBeVisible();
+
+    await expect(page.getByText("NEXT · Polaroid field slip")).toBeVisible();
+    await expect(page.getByText("NEXT · Night-line poster")).toBeVisible();
+    await expect(page.getByText("NEXT · Museum specimen tag")).toBeVisible();
   });
 });

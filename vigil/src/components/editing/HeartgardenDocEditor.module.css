@@ -18,8 +18,8 @@
   height: 1.25rem;
   border-radius: 999px;
   border: 1px solid color-mix(in oklab, currentColor 12%, transparent);
-  background: color-mix(in oklab, var(--sem-surface-raised, #f4f4f4) 86%, transparent);
-  color: var(--sem-text-muted, oklch(0.5 0 0));
+  background: color-mix(in oklab, var(--sem-surface-raised) 86%, transparent);
+  color: var(--sem-text-muted);
   cursor: grab;
   opacity: 0;
   transition: opacity 120ms ease, background 120ms ease, border-color 120ms ease;
@@ -33,8 +33,8 @@
 
 .dragHandle:hover {
   opacity: 1;
-  border-color: color-mix(in oklab, var(--sem-accent, #06c) 30%, transparent);
-  background: color-mix(in oklab, var(--sem-accent, #06c) 10%, transparent);
+  border-color: color-mix(in oklab, var(--sem-focus-ring) 30%, transparent);
+  background: color-mix(in oklab, var(--sem-focus-ring) 10%, transparent);
 }
 
 .dragHandle:active {
@@ -50,12 +50,12 @@
 }
 
 .proseRoot :global(.hgDropcursor) {
-  background: color-mix(in oklab, var(--sem-accent, #06c) 68%, transparent);
+  background: color-mix(in oklab, var(--sem-focus-ring) 68%, transparent);
   border-radius: 999px;
 }
 
 .proseRoot :global(.ProseMirror-selectednode) {
-  outline: 1px dashed color-mix(in oklab, var(--sem-accent, #06c) 34%, transparent);
+  outline: 1px dashed color-mix(in oklab, var(--sem-focus-ring) 34%, transparent);
   outline-offset: 2px;
 }
 
@@ -112,8 +112,8 @@
 .proseRoot :global(blockquote) {
   margin: 0.55em 0;
   padding: 0.45em 0.85em;
-  border-left: 3px solid color-mix(in oklab, var(--sem-accent, #06c) 55%, transparent);
-  background: color-mix(in oklab, var(--sem-surface-raised, #f4f4f4) 88%, transparent);
+  border-left: 3px solid var(--sys-color-accent-500);
+  background: color-mix(in oklab, var(--sem-surface-raised) 88%, transparent);
   border-radius: 0 6px 6px 0;
 }
 
@@ -173,11 +173,56 @@
 
 .proseRoot :global(li[data-type="taskItem"] input[type="checkbox"]),
 .proseRoot :global(li[data-hg-task-item="true"] input[type="checkbox"]) {
-  width: 1rem;
-  height: 1rem;
-  margin: 0;
-  accent-color: var(--sem-accent, #0ea5e9);
+  /* Keep native checkbox semantics; restyle only visual paint layer. */
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  width: var(--cmp-task-checkbox-size);
+  height: var(--cmp-task-checkbox-size);
+  border: 1px solid color-mix(in oklch, currentColor 30%, transparent);
+  border-radius: var(--cmp-task-checkbox-radius);
+  background: color-mix(in oklch, currentColor 6%, transparent);
+  margin: max(0px, calc((1lh - var(--cmp-task-checkbox-size)) / 2)) 0 0;
+  line-height: 1;
   cursor: pointer;
+  transition:
+    background var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
+    border-color var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
+    box-shadow var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
+    transform var(--sys-motion-duration-fast) var(--sys-motion-ease-standard);
+}
+
+.proseRoot :global(li[data-type="taskItem"] input[type="checkbox"]:hover),
+.proseRoot :global(li[data-hg-task-item="true"] input[type="checkbox"]:hover) {
+  border-color: color-mix(in oklch, var(--sys-color-accent-500) 42%, currentColor);
+  background: color-mix(in oklch, currentColor 9%, transparent);
+}
+
+.proseRoot :global(li[data-type="taskItem"] input[type="checkbox"]:focus-visible),
+.proseRoot :global(li[data-hg-task-item="true"] input[type="checkbox"]:focus-visible) {
+  outline: var(--sem-focus-ring-width) solid color-mix(in oklch, var(--sem-focus-ring) 42%, transparent);
+  outline-offset: 2px;
+}
+
+.proseRoot :global(li[data-type="taskItem"] input[type="checkbox"]:checked),
+.proseRoot :global(li[data-hg-task-item="true"] input[type="checkbox"]:checked) {
+  background-color: var(--cmp-task-checkbox-checked-bg);
+  border-color: transparent;
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 28%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 14%, transparent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M1%205.5L4.5%209L11%201.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 62.5% 52.5%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proseRoot :global(li[data-type="taskItem"] input[type="checkbox"]),
+  .proseRoot :global(li[data-hg-task-item="true"] input[type="checkbox"]) {
+    transition: none;
+  }
 }
 
 .proseRoot :global(li[data-type="taskItem"][data-checked="true"] > div),
