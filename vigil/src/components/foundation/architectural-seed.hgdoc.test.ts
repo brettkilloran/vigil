@@ -14,22 +14,24 @@ const TOKENS = {
 };
 
 describe("architectural seed hgDoc migration", () => {
-  it("default/task demo cards carry bodyDoc in default scenario", () => {
+  it("default/task/code demo cards carry bodyDoc in default scenario", () => {
     const graph = buildArchitecturalSeedGraph(TOKENS, "default");
     const content = Object.values(graph.entities).filter((e) => e.kind === "content");
     for (const entity of content) {
-      if (entity.theme === "default" || entity.theme === "task") {
+      if (entity.theme === "default" || entity.theme === "task" || entity.theme === "code") {
         expect(entity.bodyDoc).toBeTruthy();
       }
     }
   });
 
-  it("nested scenario default cards also carry bodyDoc", () => {
+  it("nested scenario default/task/code cards also carry bodyDoc", () => {
     const graph = buildArchitecturalSeedGraph(TOKENS, "nested");
     const content = Object.values(graph.entities).filter((e) => e.kind === "content");
-    const defaults = content.filter((e) => e.theme === "default" || e.theme === "task");
-    expect(defaults.length).toBeGreaterThan(0);
-    for (const entity of defaults) {
+    const proseAndCode = content.filter(
+      (e) => e.theme === "default" || e.theme === "task" || e.theme === "code",
+    );
+    expect(proseAndCode.length).toBeGreaterThan(0);
+    for (const entity of proseAndCode) {
       expect(entity.bodyDoc).toBeTruthy();
     }
   });
