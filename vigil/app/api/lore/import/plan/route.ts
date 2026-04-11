@@ -12,6 +12,8 @@ import { assertSpaceExists } from "@/src/lib/spaces";
 
 export const runtime = "nodejs";
 
+export const maxDuration = 300;
+
 const bodySchema = z.object({
   text: z.string().min(1).max(500_000),
   spaceId: z.string().uuid(),

@@ -35,8 +35,6 @@ Add these in **Project → Settings → Environment Variables**. Mark secrets as
 | `NEON_DATABASE_URL` | Production, Preview (optional) | For cloud sync | Postgres URL from Neon. Prefer the **pooled / serverless** connection string Neon documents for **many short-lived connections** (fits Vercel functions). Include SSL if Neon gives it (`?sslmode=require` etc.). |
 | `ANTHROPIC_API_KEY` | Production, Preview (optional) | For lore | Powers **`/api/lore/query`** and lore import extract. **Never** prefix with `NEXT_PUBLIC_`. |
 | `ANTHROPIC_LORE_MODEL` | Same | Optional | Default in code if unset. |
-| `OPENAI_API_KEY` | Production, Preview (optional) | For semantic search + embeddings | Enables chunk embeddings, hybrid / semantic [`/api/search`](../app/api/search/route.ts) and richer lore retrieval. Without it, search stays lexical-only. **Never** `NEXT_PUBLIC_`. |
-| `HEARTGARDEN_EMBEDDING_MODEL` | Same | Optional | Default `text-embedding-3-small` in code if unset. |
 | `R2_ACCOUNT_ID` | Production, Preview | For R2 uploads | With the other `R2_*` vars, enables [`/api/upload/presign`](../app/api/upload/presign/route.ts). |
 | `R2_ACCESS_KEY_ID` | Same | For R2 | |
 | `R2_SECRET_ACCESS_KEY` | Same | For R2 | Sensitive. |
@@ -54,13 +52,13 @@ Add these in **Project → Settings → Environment Variables**. Mark secrets as
 - `PLAYWRIGHT_E2E` — would force empty bootstrap (tests only) and disables the boot PIN gate in **`/api/heartgarden/boot`**.
 - `NEXT_PUBLIC_*` for database or Anthropic keys — not used for those; keep server secrets server-only.
 
-**MCP-only (local `npm run mcp`, not the web deploy):** `HEARTGARDEN_APP_URL`, `HEARTGARDEN_DEFAULT_SPACE_ID`, `HEARTGARDEN_MCP_WRITE_KEY` — optional on Vercel for the running site; set them on the machine where you run the MCP process if you point it at production.
+**MCP:** Set **`HEARTGARDEN_MCP_SERVICE_KEY`** on the **Vercel** deployment if you use **`GET|POST|DELETE /api/mcp`** (hosted Streamable HTTP) or need stdio **`npm run mcp`** to call **`fetch`** into production with the boot gate on. Optional on the laptop: **`HEARTGARDEN_APP_URL`**, **`HEARTGARDEN_DEFAULT_SPACE_ID`**, **`HEARTGARDEN_MCP_WRITE_KEY`** when running the stdio MCP client against production.
 
 ### Preview vs Production
 
 - **Recommended (isolated previews):** Create a **separate Neon branch / database** for **Preview**; set **only** that pooled URL on the **Preview** environment in Vercel. Run `db:ensure-pgvector` and schema push/migrate against that branch too. Production and Preview stay independent (no PR tests touching prod data).
 - **Simplest (not recommended for active development):** Use the same `NEON_DATABASE_URL` on **Preview** as Production — easy, but destructive or noisy tests can affect shared data.
-- **Lore / R2:** Omit Anthropic, OpenAI, and R2 on Preview if you want cheaper/safer PR previews (canvas still works in demo/local-style modes depending on what’s set).
+- **Lore / R2:** Omit Anthropic and R2 on Preview if you want cheaper/safer PR previews (canvas still works in demo/local-style modes depending on what’s set).
 
 After changing env vars, **redeploy** (Deployments → … → Redeploy) so new values apply.
 
@@ -117,7 +115,7 @@ Lore and several APIs are **unauthenticated** today. Before sharing a wide audie
 | **Vercel Deployment Protection** | Password or SSO on **Preview** (and optionally Production) so random visitors cannot load the app — [Vercel docs](https://vercel.com/docs/security/deployment-protection). |
 | **Disable lore until hardened** | Set **`HEARTGARDEN_LORE_QUERY_DISABLED=1`** on the server → **`POST /api/lore/query`** returns **503** (“Lore query disabled”). Canvas and other features keep working if the DB is configured. Remove or unset when you add proper auth / limits. |
 | **Rate limits / KV** | In-process limits exist for lore query; for **global** limits use Redis or **Vercel KV** — see [`BUILD_PLAN.md`](./BUILD_PLAN.md) and [`FOLLOW_UP.md`](./FOLLOW_UP.md). |
-| **API spend caps** | Use provider dashboards (Anthropic, OpenAI) for billing alerts and caps. |
+| **API spend caps** | Use provider dashboards (Anthropic, etc.) for billing alerts and caps. |
 
 Env var (optional, Production / Preview):
 

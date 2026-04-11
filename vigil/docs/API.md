@@ -28,7 +28,7 @@ There is **no** supported **`/api/dev/*`** route in this catalog for editor or b
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/bootstrap` | Active space, spaces list, items (subtree), **`camera`** (see subsection below). **`PLAYWRIGHT_E2E=1`** forces empty demo payload (tests only). With boot gate on, **`middleware`** returns **403** without a valid **`hg_boot`** cookie (except **`/api/heartgarden/boot`**). With a valid **`player`** tier cookie, scopes to the resolved Players root (env UUID if set, else implicit dedicated space; 403 if misconfigured). **`demo`** tier should not call this in normal clients (local canvas only). |
+| GET | `/api/bootstrap` | Active space, spaces list, items (subtree), **`camera`** (see subsection below). **`PLAYWRIGHT_E2E=1`** forces empty demo payload (tests only). With boot gate on, **`middleware`** returns **403** without a valid **`hg_boot`** cookie (except **`/api/heartgarden/boot`**), unless **`Authorization: Bearer`** matches **`HEARTGARDEN_MCP_SERVICE_KEY`**. With a valid **`player`** tier cookie, scopes to the resolved Players root (env UUID if set, else implicit dedicated space; 403 if misconfigured). **`demo`** tier should not call this in normal clients (local canvas only). |
 
 ### `camera` in the bootstrap JSON
 
@@ -43,6 +43,14 @@ Responses include **`camera`**: `{ x, y, zoom }` parsed from legacy **`spaces.ca
 | DELETE | `/api/heartgarden/boot` | Clears **`hg_boot`** (e.g. after in-app **Log out**). **204**. |
 
 **Env:** **`HEARTGARDEN_BOOT_PIN_BISHOP`**, optional **`HEARTGARDEN_BOOT_PIN_PLAYERS`**, optional **`HEARTGARDEN_BOOT_PIN_DEMO`**, **`HEARTGARDEN_BOOT_SESSION_SECRET`**, optional **`HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC`**, optional **`HEARTGARDEN_PLAYER_SPACE_ID`**, optional **`HEARTGARDEN_GM_ALLOW_PLAYER_SPACE=1`** (GM break-glass). See **`docs/VERCEL_ENV_VARS.md`** and **`docs/PLAYER_LAYER.md`**.
+
+## MCP (Model Context Protocol)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET, POST, DELETE | `/api/mcp` | **Streamable HTTP** MCP transport (same JSON-RPC surface as **`npm run mcp`** stdio). **Requires** header **`Authorization: Bearer <HEARTGARDEN_MCP_SERVICE_KEY>`**. Returns **503** if **`HEARTGARDEN_MCP_SERVICE_KEY`** is unset. **401** if the header is missing or wrong. Middleware allows this path through the boot gate without **`hg_boot`** so the route can respond; auth is enforced in the handler. Stateless (**no** session stickiness) for serverless. |
+
+**Tooling:** Shared logic lives in **`src/lib/mcp/heartgarden-mcp-server.ts`**. **Claude Desktop** with only a URL field may need a stdio bridge (e.g. **`npx mcp-remote https://<host>/api/mcp --header "Authorization: Bearer …"`** in **`claude_desktop_config.json`**) to attach the Bearer header.
 
 ## Spaces
 
@@ -68,7 +76,7 @@ Responses include **`camera`**: `{ x, y, zoom }` parsed from legacy **`spaces.ca
 | PATCH | `/api/items/[itemId]` | Partial update (geometry, content, entity meta, stack, …). Optional **`baseUpdatedAt`** (ISO) must match the row’s **`updated_at`** or the handler returns **409** **`{ ok: false, error: "conflict", item }`**. Missing item → **404**; the shell drops the entity locally (remote delete). Success returns **`{ ok: true, item }`** (includes **`updatedAt`**). Triggers search blob / optional vault scheduling per implementation. |
 | DELETE | `/api/items/[itemId]` | Delete item. |
 | POST | `/api/items/[itemId]/embed` | Clear stale `item_embeddings` rows for item (does not embed). |
-| POST | `/api/items/[itemId]/index` | Chunk + embed + optional lore meta. Needs **`OPENAI_API_KEY`** for vectors; lore meta may use Anthropic. Rate-limited. |
+| POST | `/api/items/[itemId]/index` | Chunk + optional lore meta (Anthropic). Vector rows require a future embedding provider in **`src/lib/embedding-provider.ts`** (none wired). Rate-limited. |
 | GET | `/api/items/[itemId]/links` | Link neighbors. |
 | GET | `/api/items/[itemId]/related` | Related-items heuristic. |
 
@@ -76,7 +84,7 @@ Responses include **`camera`**: `{ x, y, zoom }` parsed from legacy **`spaces.ca
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/search` | Query params: `q`, `spaceId`, mode (`hybrid` / `semantic` / FTS), filters. Uses pgvector when configured. **Players** tier: `spaceId` forced to player space; hybrid/semantic downgraded to FTS. |
+| GET | `/api/search` | Query params: `q`, `spaceId`, mode (`hybrid` / `semantic` / FTS), filters (`types`, `entityTypes`, `limit`, …). **Hybrid / semantic** (when embeddings are configured): optional retrieval tuning — `ftsLimit` (8–200), `fuzzyLimitEmpty` / `fuzzyLimitSparse` (8–100), `ftsSparseThreshold` (2–64), `vectorChunkLimit` (8–200), `maxChunksPerItem` (1–12), `retrievalMaxItems` (8–80, caps RRF output; defaults from `limit` or 24). Uses pgvector when embeddings are configured. **Players** tier: `spaceId` forced to player space; hybrid/semantic downgraded to FTS. |
 | GET | `/api/search/suggest` | Prefix / palette suggestions. |
 | GET | `/api/search/chunks` | Raw chunk-level hits (debug / advanced clients). |
 
@@ -131,7 +139,7 @@ Responses include **`camera`**: `{ x, y, zoom }` parsed from legacy **`spaces.ca
 | `NEON_DATABASE_URL` / `DATABASE_URL` | DB |
 | `ANTHROPIC_API_KEY` | Lore query, import planning, index lore meta |
 | `ANTHROPIC_LORE_MODEL` | Optional model override |
-| `OPENAI_API_KEY` | Embeddings / semantic search |
+| `HEARTGARDEN_MCP_SERVICE_KEY` | Bearer for **`GET|POST|DELETE /api/mcp`**, stdio MCP internal `fetch` to **`/api/*`** when the boot gate is on, and boot-context GM resolution for those requests |
 | `HEARTGARDEN_MCP_WRITE_KEY` | Reindex + MCP write tools (must match client `write_key`) |
 | `R2_*` | Image presign |
 | `PLAYWRIGHT_E2E` | Bootstrap empty demo (tests only); boot gate forced off in **`/api/heartgarden/boot`** |

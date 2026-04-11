@@ -126,7 +126,7 @@ export async function POST(req: Request) {
     return Response.json({
       ok: true,
       answer:
-        "No canvas items matched that question (lexical + semantic if configured). Try different wording, index notes (OPENAI_API_KEY + POST /api/items/:id/index), or add content to the space.",
+        "No canvas items matched that question (lexical retrieval). Try different wording, ensure notes have searchable text, or add content to the space.",
       sources: [],
       model: null,
     });

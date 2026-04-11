@@ -7,6 +7,13 @@ import {
 import type { SourceTextChunk } from "@/src/lib/lore-import-chunk";
 import type { IngestionSignals } from "@/src/lib/lore-import-plan-types";
 
+/** Keep chunk list JSON under this so long docs still send every chunk id to the model. */
+export const OUTLINE_CHUNK_LIST_JSON_MAX = 650_000;
+const OUTLINE_SOURCE_SAMPLE_MAX = 120_000;
+/** Merge / clarify payloads can be large when many notes exist; batch merge separately. */
+const MERGE_USER_JSON_MAX = 420_000;
+const CLARIFY_USER_JSON_MAX = 420_000;
+
 const OUTLINE_SYSTEM = `You structure TTRPG / worldbuilding documents for a canvas notes app.
 
 Return ONLY valid JSON (no markdown fence) with this exact shape:
@@ -134,6 +141,29 @@ export type OutlineLlmResult = {
   links: { fromClientId: string; toClientId: string; linkType?: string }[];
 };
 
+/** Shrink per-chunk excerpts until the full chunk id list fits in the outline prompt. */
+export function buildOutlineChunkListPayload(
+  chunks: SourceTextChunk[],
+): { id: string; heading: string; excerpt: string }[] {
+  const MIN_EXCERPT = 80;
+  const MAX_EXCERPT = 1800;
+  let excerptCap = MAX_EXCERPT;
+  for (let attempt = 0; attempt < 14; attempt++) {
+    const list = chunks.map((c) => ({
+      id: c.id,
+      heading: c.heading,
+      excerpt: c.body.slice(0, excerptCap),
+    }));
+    if (JSON.stringify(list).length <= OUTLINE_CHUNK_LIST_JSON_MAX) return list;
+    excerptCap = Math.max(MIN_EXCERPT, Math.floor(excerptCap * 0.62));
+  }
+  return chunks.map((c) => ({
+    id: c.id,
+    heading: c.heading,
+    excerpt: c.body.slice(0, MIN_EXCERPT),
+  }));
+}
+
 export async function runLoreImportOutlineLlm(
   apiKey: string,
   model: string,
@@ -141,12 +171,8 @@ export async function runLoreImportOutlineLlm(
   sourceSample: string,
 ): Promise<OutlineLlmResult> {
   const client = new Anthropic({ apiKey });
-  const chunkList = chunks.map((c) => ({
-    id: c.id,
-    heading: c.heading,
-    excerpt: c.body.slice(0, 1800),
-  }));
-  const user = `CHUNK LIST (JSON):\n${JSON.stringify(chunkList).slice(0, 110_000)}\n\nSOURCE SAMPLE (first ~100k chars, for tone — chunk ids above are authoritative for assignment):\n${sourceSample.slice(0, 100_000)}`;
+  const chunkList = buildOutlineChunkListPayload(chunks);
+  const user = `CHUNK LIST (JSON):\n${JSON.stringify(chunkList)}\n\nSOURCE SAMPLE (first ~${OUTLINE_SOURCE_SAMPLE_MAX} chars, for tone — chunk ids above are authoritative for assignment):\n${sourceSample.slice(0, OUTLINE_SOURCE_SAMPLE_MAX)}`;
 
   const res = await client.messages.create({
     model,
@@ -241,19 +267,47 @@ function fillNoteBodiesFromChunks(
   chunks: SourceTextChunk[],
 ): void {
   const byId = new Map(chunks.map((c) => [c.id, c]));
+  const assignedIds = new Set<string>();
   for (const n of notes) {
+    for (const cid of n.sourceChunkIds) {
+      if (byId.has(cid)) assignedIds.add(cid);
+    }
+  }
+  const unassigned = chunks.filter((c) => !assignedIds.has(c.id));
+
+  for (let i = 0; i < notes.length; i++) {
+    const n = notes[i]!;
     const bodies: string[] = [];
     for (const cid of n.sourceChunkIds) {
       const ch = byId.get(cid);
       if (ch) bodies.push(`## ${ch.heading}\n\n${ch.body}`);
     }
     if (bodies.length === 0 && chunks.length > 0) {
-      bodies.push(
-        ...chunks.map((ch) => `## ${ch.heading}\n\n${ch.body}`),
-      );
+      if (i === 0) {
+        const toAdd = unassigned.length > 0 ? unassigned : chunks;
+        bodies.push(
+          ...toAdd.map((ch) => `## ${ch.heading}\n\n${ch.body}`),
+        );
+      } else {
+        bodies.push(
+          "_(No matching chunks — review the source card or split.)_",
+        );
+      }
     }
     const joined = bodies.join("\n\n---\n\n").slice(0, 120_000);
     (n as { bodyText?: string }).bodyText = joined;
+  }
+
+  if (notes.length > 0 && unassigned.length > 0) {
+    const first = notes[0]!;
+    const hadDirectIds = first.sourceChunkIds.some((id) => byId.has(id));
+    if (hadDirectIds) {
+      const n = first as { bodyText?: string };
+      const extra = unassigned
+        .map((ch) => `## ${ch.heading}\n\n${ch.body}`)
+        .join("\n\n---\n\n");
+      n.bodyText = `${String(n.bodyText ?? "")}\n\n---\n\n${extra}`.slice(0, 120_000);
+    }
   }
 }
 
@@ -289,7 +343,7 @@ export async function runLoreImportMergeLlm(
     bodyPreview: n.bodyPreview,
     candidates: candidatesByNoteClientId[n.clientId] ?? [],
   }));
-  const user = `NOTES AND CANDIDATES (JSON):\n${JSON.stringify(payload).slice(0, 110_000)}`;
+  const user = `NOTES AND CANDIDATES (JSON):\n${JSON.stringify(payload).slice(0, MERGE_USER_JSON_MAX)}`;
 
   const res = await client.messages.create({
     model,
@@ -355,6 +409,54 @@ export async function runLoreImportMergeLlm(
   }
 }
 
+const MERGE_NOTE_BATCH = 10;
+
+/** Long imports produce many notes; one merge call can exceed context — run in batches. */
+export async function runLoreImportMergeLlmBatched(
+  apiKey: string,
+  model: string,
+  mergeInput: {
+    clientId: string;
+    title: string;
+    summary: string;
+    bodyPreview: string;
+  }[],
+  candidatesByNoteClientId: Record<string, CandidateRow[]>,
+): Promise<{
+  mergeProposals: {
+    noteClientId: string;
+    targetItemId: string;
+    strategy: "append_dated" | "append_section";
+    proposedText: string;
+    rationale?: string;
+  }[];
+  contradictions: { noteClientId?: string; summary: string; details?: string }[];
+}> {
+  const mergeProposals: {
+    noteClientId: string;
+    targetItemId: string;
+    strategy: "append_dated" | "append_section";
+    proposedText: string;
+    rationale?: string;
+  }[] = [];
+  const contradictions: {
+    noteClientId?: string;
+    summary: string;
+    details?: string;
+  }[] = [];
+  for (let i = 0; i < mergeInput.length; i += MERGE_NOTE_BATCH) {
+    const batch = mergeInput.slice(i, i + MERGE_NOTE_BATCH);
+    const cand: Record<string, CandidateRow[]> = {};
+    for (const n of batch) {
+      cand[n.clientId] = candidatesByNoteClientId[n.clientId] ?? [];
+    }
+    const r = await runLoreImportMergeLlm(apiKey, model, batch, cand);
+    mergeProposals.push(...r.mergeProposals);
+    contradictions.push(...r.contradictions);
+  }
+  return { mergeProposals, contradictions };
+}
+
 export type LoreImportClarifyContext = {
   folders: {
     clientId: string;
@@ -394,7 +496,7 @@ export async function runLoreImportClarifyLlm(
   context: LoreImportClarifyContext,
 ): Promise<unknown[]> {
   const client = new Anthropic({ apiKey });
-  const user = `IMPORT PLAN CONTEXT (JSON):\n${JSON.stringify(context).slice(0, 110_000)}`;
+  const user = `IMPORT PLAN CONTEXT (JSON):\n${JSON.stringify(context).slice(0, CLARIFY_USER_JSON_MAX)}`;
   const res = await client.messages.create({
     model,
     max_tokens: 8192,

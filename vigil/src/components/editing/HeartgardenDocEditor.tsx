@@ -7,6 +7,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect, useMemo, useRef } from "react";
 
 import { HgDocPointerBlockDrag } from "@/src/components/editing/HgDocPointerBlockDrag";
+import { HgAiPendingEditorGutter } from "@/src/components/editing/HgAiPendingEditorGutter";
 
 import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
 
@@ -45,6 +46,9 @@ export type HeartgardenDocEditorProps = {
 
   /** Syntax token colors tuned for dark code panels (snippet focus + canvas code cards). */
   codeSyntaxDark?: boolean;
+
+  /** Right margin: one Accept control per pending AI span (hgAiPending mark). Default true. */
+  showAiPendingGutter?: boolean;
 };
 
 export function HeartgardenDocEditor({
@@ -65,7 +69,11 @@ export function HeartgardenDocEditor({
   enableDragHandle = false,
 
   codeSyntaxDark = false,
+
+  showAiPendingGutter = true,
 }: HeartgardenDocEditorProps) {
+  const gutterWrapRef = useRef<HTMLDivElement | null>(null);
+
   const extensions = useMemo(
     () =>
       getHgDocExtensions({
@@ -180,7 +188,16 @@ export function HeartgardenDocEditor({
       {showBlockDragHandle ? (
         <HgDocPointerBlockDrag editor={editor} hostRef={hostRef} chromeRole={chromeRole} enabled />
       ) : null}
-      <EditorContent editor={editor} className={styles.editorContent} />
+      {showAiPendingGutter ? (
+        <div className={styles.editorGutterRow} ref={gutterWrapRef}>
+          <div className={styles.editorColumn}>
+            <EditorContent editor={editor} className={styles.editorContent} />
+          </div>
+          <HgAiPendingEditorGutter editor={editor} wrapRef={gutterWrapRef} />
+        </div>
+      ) : (
+        <EditorContent editor={editor} className={styles.editorContent} />
+      )}
     </div>
   );
 }

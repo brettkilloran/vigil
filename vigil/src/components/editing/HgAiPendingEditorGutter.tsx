@@ -1,0 +1,156 @@
+"use client";
+
+import type { Editor } from "@tiptap/core";
+import { Check } from "@phosphor-icons/react";
+import type { RefObject } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+
+import { Button } from "@/src/components/ui/Button";
+import { collectHgAiPendingRanges } from "@/src/lib/hg-doc/collect-hg-ai-pending-ranges";
+import { removeHgAiPendingRange } from "@/src/lib/hg-doc/remove-hg-ai-pending-range";
+
+import styles from "@/src/components/editing/HgAiPendingEditorGutter.module.css";
+
+const HOVER_CLASS = "hgAiPending--gutter-hover";
+
+function findPendingSpanForRange(editor: Editor, from: number): HTMLElement | null {
+  const maxPos = Math.max(0, editor.state.doc.content.size - 1);
+  const candidates = [from, from + 1, Math.max(0, from - 1)].filter((p) => p <= maxPos);
+  for (const p of candidates) {
+    try {
+      const domAt = editor.view.domAtPos(p);
+      let n: Node | null = domAt.node;
+      if (n.nodeType === Node.TEXT_NODE) n = n.parentElement;
+      while (n && n !== editor.view.dom) {
+        if (n instanceof HTMLElement) {
+          if (n.matches("[data-hg-ai-pending], span.hgAiPending")) {
+            return n;
+          }
+        }
+        n = n.parentElement;
+      }
+    } catch {
+      /* domAtPos can throw at invalid positions */
+    }
+  }
+  return null;
+}
+
+function clearHoverClasses(root: HTMLElement) {
+  root.querySelectorAll(`.${HOVER_CLASS}`).forEach((el) => el.classList.remove(HOVER_CLASS));
+}
+
+export type HgAiPendingEditorGutterProps = {
+  editor: Editor;
+  /** Row that contains the editor column + this rail (for `top` positioning). */
+  wrapRef: RefObject<HTMLElement | null>;
+};
+
+export function HgAiPendingEditorGutter({ editor, wrapRef }: HgAiPendingEditorGutterProps) {
+  const railRef = useRef<HTMLDivElement | null>(null);
+  const [docVersion, setDocVersion] = useState(0);
+  const [layoutTick, setLayoutTick] = useState(0);
+  const [tops, setTops] = useState<number[]>([]);
+  const [hovered, setHovered] = useState<number | null>(null);
+
+  const ranges = useMemo(
+    () => collectHgAiPendingRanges(editor),
+    // docVersion bumps on TipTap update/selectionUpdate; editor ref is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- docVersion
+    [editor, docVersion],
+  );
+
+  useEffect(() => {
+    const bump = () => setDocVersion((v) => v + 1);
+    editor.on("update", bump);
+    editor.on("selectionUpdate", bump);
+    return () => {
+      editor.off("update", bump);
+      editor.off("selectionUpdate", bump);
+    };
+  }, [editor]);
+
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const ro = new ResizeObserver(() => setLayoutTick((t) => t + 1));
+    ro.observe(wrap);
+    const onWin = () => setLayoutTick((t) => t + 1);
+    window.addEventListener("scroll", onWin, true);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("scroll", onWin, true);
+    };
+  }, [wrapRef]);
+
+  useLayoutEffect(() => {
+    const wrap = wrapRef.current;
+    const rail = railRef.current;
+    if (!wrap || !rail || ranges.length === 0) {
+      setTops([]);
+      return;
+    }
+    const wr = wrap.getBoundingClientRect();
+    const next: number[] = [];
+    for (const { from, to } of ranges) {
+      const span = findPendingSpanForRange(editor, from);
+      if (span) {
+        const sr = span.getBoundingClientRect();
+        const mid = (sr.top + sr.bottom) / 2 - wr.top + wrap.scrollTop;
+        next.push(mid);
+      } else {
+        const start = editor.view.coordsAtPos(from);
+        const end = editor.view.coordsAtPos(Math.max(from, to - 1));
+        const mid = (start.top + end.bottom) / 2 - wr.top + wrap.scrollTop;
+        next.push(mid);
+      }
+    }
+    setTops(next);
+  }, [editor, ranges, layoutTick, wrapRef]);
+
+  const safeHovered =
+    hovered !== null && hovered < ranges.length && hovered >= 0 ? hovered : null;
+
+  useLayoutEffect(() => {
+    const root = editor.view.dom as HTMLElement;
+    clearHoverClasses(root);
+    if (safeHovered == null) return;
+    const span = findPendingSpanForRange(editor, ranges[safeHovered]?.from ?? 0);
+    if (span) span.classList.add(HOVER_CLASS);
+    return () => {
+      clearHoverClasses(root);
+    };
+  }, [editor, safeHovered, ranges]);
+
+  if (ranges.length === 0) return null;
+
+  return (
+    <div className={styles.rail} ref={railRef}>
+      {ranges.map((r, i) => (
+        <Button
+          key={`${r.from}-${r.to}-${i}`}
+          type="button"
+          size="icon"
+          iconOnly
+          variant="subtle"
+          tone="card-light"
+          className={styles.acceptBtn}
+          style={{ top: tops[i] ?? 0 }}
+          title="Accept this section"
+          aria-label="Accept AI text in this section"
+          leadingIcon={<Check size={16} weight="bold" aria-hidden />}
+          onMouseEnter={() => setHovered(i)}
+          onMouseLeave={() => setHovered(null)}
+          onFocus={() => setHovered(i)}
+          onBlur={() => setHovered(null)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            removeHgAiPendingRange(editor, r.from, r.to);
+            setHovered(null);
+          }}
+        />
+      ))}
+    </div>
+  );
+}

@@ -46,21 +46,19 @@ These were aligned earlier; you normally **do not** redo them unless something b
 
 ---
 
-## Phase 3 — Optional: lore + embeddings (you + assistant)
+## Phase 3 — Optional: lore (you + assistant)
 
 **You (Vercel Production, sensitive):**
 
 - `ANTHROPIC_API_KEY` — lore Q&A / import extract.
 - Optionally `ANTHROPIC_LORE_MODEL`.
-- `OPENAI_API_KEY` — semantic search / embeddings (optional but recommended for search quality).
-- Optionally `HEARTGARDEN_EMBEDDING_MODEL`.
 - If the site is public and lore should stay off: `HEARTGARDEN_LORE_QUERY_DISABLED=1` (see [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md) §7).
 
 Redeploy after changes.
 
 **Prompt to send:**
 
-> Production env now has [list which: Anthropic / OpenAI / lore disabled]. Please confirm `/api/bootstrap`, smoke `/api/lore/query` or confirm 503 if disabled, and note anything missing from [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md).
+> Production env now has [list which: Anthropic / lore disabled]. Please confirm `/api/bootstrap`, smoke `/api/lore/query` or confirm 503 if disabled, and note anything missing from [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md).
 
 ---
 
@@ -99,7 +97,7 @@ NEON_VERCEL_SETUP.md
 ## Phase 7 — Before wide sharing (you)
 
 - **Vercel Deployment Protection:** keep or relax Preview/Production per your audience ([`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md) §7).
-- **Anthropic / OpenAI:** billing alerts and spend caps in **their** dashboards.
+- **Anthropic:** billing alerts and spend caps in **their** dashboard.
 - Lore: keep **`HEARTGARDEN_LORE_QUERY_DISABLED=1`** until you trust access control and rate limits.
 
 **Prompt to send:**
@@ -108,13 +106,13 @@ NEON_VERCEL_SETUP.md
 
 ---
 
-## Phase 8 — Optional: embeddings backfill (assistant + you)
+## Phase 8 — Optional: vault reindex (assistant + you)
 
-After production is up with **`OPENAI_API_KEY`** on the server, you may run **`npm run vault:reindex`** locally with **`HEARTGARDEN_APP_URL`** pointing at production — see [`NEON_VERCEL_SETUP.md`](./NEON_VERCEL_SETUP.md) §4 and [`FOLLOW_UP.md`](./FOLLOW_UP.md).
+You may run **`npm run vault:reindex`** locally with **`HEARTGARDEN_APP_URL`** pointing at production — see [`NEON_VERCEL_SETUP.md`](./NEON_VERCEL_SETUP.md) §4 and [`FOLLOW_UP.md`](./FOLLOW_UP.md). Vector chunk rows require a future embedding provider in **`src/lib/embedding-provider.ts`**.
 
 **Prompt to send:**
 
-> Production is live with OpenAI on Vercel. Walk me through `vault:reindex` safely and what to verify after.
+> Production is live. Walk me through `vault:reindex` safely and what to verify after.
 
 ---
 

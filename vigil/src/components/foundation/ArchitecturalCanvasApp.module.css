@@ -1547,6 +1547,15 @@
   border-bottom: 1px solid var(--sem-overlay-white-05);
 }
 
+.nodeTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .nodeTitle {
   font-size: 10px;
   font-weight: 600;
@@ -1570,6 +1579,24 @@
 
 .nodeBtn:hover {
   transform: translateY(-0.5px);
+}
+
+/* Light default/task cards: pending-AI tint on paper (not link underline) */
+.themeDefault .nodeBody :global([data-hg-ai-pending="true"]),
+.themeDefault .nodeBody :global(span.hgAiPending),
+.themeTask .nodeBody :global([data-hg-ai-pending="true"]),
+.themeTask .nodeBody :global(span.hgAiPending) {
+  color: var(--sem-text-llm-accent);
+  text-decoration: none;
+  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--theme-default-bg));
+}
+
+/* Dark code cards on canvas */
+.themeCode .nodeBody :global([data-hg-ai-pending="true"]),
+.themeCode .nodeBody :global(span.hgAiPending) {
+  color: var(--sem-text-llm-accent-bright);
+  text-decoration: none;
+  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--theme-code-bg));
 }
 
 .nodeBody {
@@ -4848,6 +4875,82 @@ button.rootDockPanel.viewportMetricsPanel {
     transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.focusHeaderLead {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.focusAiReviewBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+}
+
+/* Accept in focus bar — ghost “glass” otherwise reads gray; align with LLM purple system */
+.focusAiReviewBar :global(.vigil-btn) {
+  color: var(--sem-text-llm-accent);
+  border-color: var(--sem-border-llm-pending);
+  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--sys-color-neutral-100));
+}
+
+.focusAiReviewBar :global(.vigil-btn:hover:not([data-disabled="true"])) {
+  color: var(--sem-text-llm-accent);
+  border-color: var(--sem-text-llm-accent);
+  background: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 100%, var(--sys-color-neutral-100));
+}
+
+.focusEditorDark .focusAiReviewBar :global(.vigil-btn) {
+  color: var(--sem-text-llm-accent-bright);
+  border-color: color-mix(in oklch, var(--sem-text-llm-accent-bright) 42%, transparent);
+  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, transparent);
+}
+
+.focusEditorDark .focusAiReviewBar :global(.vigil-btn:hover:not([data-disabled="true"])) {
+  border-color: var(--sem-text-llm-accent-bright);
+  background: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 100%, transparent);
+}
+
+/* Canvas card header — Accept next to chip (see `data-accept-ai-btn` on ArchitecturalNodeCard) */
+.nodeActions :global([data-accept-ai-btn="true"]) {
+  color: var(--sem-text-llm-accent);
+  border-color: var(--sem-border-llm-pending);
+  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--theme-default-bg));
+}
+
+.nodeActions :global([data-accept-ai-btn="true"]:hover:not([data-disabled="true"])) {
+  border-color: var(--sem-text-llm-accent);
+  background: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 100%, var(--theme-default-bg));
+}
+
+.themeCode .nodeActions :global([data-accept-ai-btn="true"]) {
+  color: var(--sem-text-llm-accent-bright);
+  border-color: color-mix(in oklch, var(--sem-text-llm-accent-bright) 40%, transparent);
+  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--theme-code-bg));
+}
+
+.themeCode .nodeActions :global([data-accept-ai-btn="true"]:hover:not([data-disabled="true"])) {
+  border-color: var(--sem-text-llm-accent-bright);
+  background: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 100%, var(--theme-code-bg));
+}
+
+.focusAiReviewHint {
+  font-size: 12px;
+  line-height: 1.35;
+  color: color-mix(in oklch, var(--sys-color-neutral-400) 92%, transparent);
+  font-family: var(--font-geist-sans), sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.focusEditorDark .focusAiReviewHint {
+  color: color-mix(in oklch, var(--sys-color-white) 55%, transparent);
+}
+
 .focusHeaderActions {
   display: flex;
   flex-wrap: wrap;
@@ -4921,6 +5024,21 @@ button.rootDockPanel.viewportMetricsPanel {
   transition:
     opacity 0.26s ease,
     transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Focus sheet — same tinted highlight as canvas (not hyperlinks) */
+.focusOverlay:not(.focusEditorDark) .focusBody :global([data-hg-ai-pending="true"]),
+.focusOverlay:not(.focusEditorDark) .focusBody :global(span.hgAiPending) {
+  color: var(--sem-text-llm-accent);
+  text-decoration: none;
+  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--sys-color-neutral-100));
+}
+
+.focusEditorDark .focusBody :global([data-hg-ai-pending="true"]),
+.focusEditorDark .focusBody :global(span.hgAiPending) {
+  color: var(--sem-text-llm-accent-bright);
+  text-decoration: none;
+  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, transparent);
 }
 
 .focusBody[data-arch-doc-empty="true"] {

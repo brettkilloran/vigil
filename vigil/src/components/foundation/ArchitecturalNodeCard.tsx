@@ -21,6 +21,7 @@ import type { JSONContent } from "@tiptap/core";
 import type { ButtonTone } from "@/src/components/ui/Button";
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
+import { Tag } from "@/src/components/ui/Tag";
 import { HeartgardenMediaPlaceholderImg } from "@/src/components/ui/HeartgardenMediaPlaceholderImg";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
@@ -64,12 +65,17 @@ export function ArchitecturalNodeHeader({
   expandLabel = "Focus Mode",
   buttonTone = "card-light",
   onExpand,
+  aiReviewPending = false,
+  onAcceptAi,
 }: {
   title: ReactNode;
   showExpand?: boolean;
   expandLabel?: string;
   buttonTone?: ButtonTone;
   onExpand?: () => void;
+  /** When true, show a small badge and optional Accept control for import / LLM text. */
+  aiReviewPending?: boolean;
+  onAcceptAi?: () => void;
 }) {
   return (
     <div
@@ -87,8 +93,37 @@ export function ArchitecturalNodeHeader({
         data-content-connection-pin-anchor="true"
         aria-hidden
       />
-      <span className={styles.nodeTitle}>{title}</span>
+      <div className={styles.nodeTitleRow}>
+        {aiReviewPending ? (
+          <Tag
+            variant={buttonTone === "card-dark" ? "llmCode" : "llmLight"}
+            title="Heartgarden AI or import text — not yet reviewed"
+          >
+            Unreviewed
+          </Tag>
+        ) : null}
+        <span className={styles.nodeTitle}>{title}</span>
+      </div>
       <div className={styles.nodeActions}>
+        {aiReviewPending && onAcceptAi ? (
+          <ArchitecturalTooltip content="Mark AI/import text as reviewed (clears highlight)" side="bottom">
+            <Button
+              type="button"
+              size="xs"
+              variant="ghost"
+              tone={buttonTone}
+              className={styles.nodeBtn}
+              data-accept-ai-btn="true"
+              aria-label="Accept AI text"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAcceptAi();
+              }}
+            >
+              Accept
+            </Button>
+          </ArchitecturalTooltip>
+        ) : null}
         {showExpand ? (
           <ArchitecturalTooltip content={expandLabel} side="bottom" delayMs={320}>
             <Button
@@ -200,6 +235,8 @@ export function ArchitecturalNodeCard({
   emptyPlaceholder,
   loreCard,
   bodyDoc,
+  aiReviewPending = false,
+  onAcceptAiReview,
 }: {
   id: string;
   title: string;
@@ -224,6 +261,9 @@ export function ArchitecturalNodeCard({
   onRichDocCommand?: (command: string, value?: string) => void;
   emptyPlaceholder?: string | null;
   loreCard?: LoreCard | null;
+  /** From `items.entity_meta.aiReview` — show Unreviewed chip + Accept when pending. */
+  aiReviewPending?: boolean;
+  onAcceptAiReview?: () => void;
 }) {
   const isMediaNode = theme === "media";
   const documentVariant: "hgDoc" | "html" =
@@ -335,6 +375,8 @@ export function ArchitecturalNodeCard({
         showExpand={showExpandButton}
         buttonTone={theme === "code" ? "card-dark" : "card-light"}
         onExpand={() => onExpand(id)}
+        aiReviewPending={aiReviewPending}
+        onAcceptAi={onAcceptAiReview}
       />
       <ArchitecturalNodeBody
         nodeId={id}

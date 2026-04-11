@@ -36,6 +36,7 @@ related:
 | Versioning / design tokens / visual ideas | [`VERSIONING.md`](./VERSIONING.md), [`DESIGN_SYSTEM_TOKENS.md`](./DESIGN_SYSTEM_TOKENS.md), [`VISUAL_REVAMP_PLAN.md`](./VISUAL_REVAMP_PLAN.md) |
 | DB migration notes | [`MIGRATION.md`](./MIGRATION.md) |
 | Historical functional PRD | Stub [`FUNCTIONAL_PRD_REBUILD.md`](./FUNCTIONAL_PRD_REBUILD.md) → full text [`archive/FUNCTIONAL_PRD_REBUILD.md`](./archive/FUNCTIONAL_PRD_REBUILD.md) |
+| Data pipeline audit (intent, modes, import, registry) | [`DATA_PIPELINE_AUDIT_2026-04-11.md`](./DATA_PIPELINE_AUDIT_2026-04-11.md) |
 
 ## Archived
 

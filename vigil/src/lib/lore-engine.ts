@@ -6,6 +6,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 import type { tryGetDb } from "@/src/db/index";
 import type { SearchFilters, SearchRow } from "@/src/lib/spaces";
+import { LORE_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 import {
   budgetPerSource,
   excerptForLore,
@@ -57,6 +58,7 @@ export async function retrieveLoreSources(
   const base: SearchFilters = { ...filters, limit: cap };
 
   const { rows, itemIdToChunks, itemIdToFtsSnippet } = await hybridRetrieveItems(db, q, base, {
+    ...LORE_HYBRID_OPTIONS,
     maxItems: cap,
     includeVector: true,
   });
@@ -65,7 +67,7 @@ export async function retrieveLoreSources(
     db,
     rows.map((r) => r.item.id),
     base,
-    Math.min(8, Math.max(0, 20 - rows.length)),
+    Math.min(10, Math.max(0, 20 - rows.length)),
   );
   const maxOut = 20;
 

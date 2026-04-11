@@ -39,6 +39,6 @@ export async function POST(
 
   return Response.json({
     ok: true,
-    note: "Stale embedding rows cleared. POST /api/items/:id/index to chunk + embed (requires OPENAI_API_KEY).",
+    note: "Stale embedding rows cleared. POST /api/items/:id/index re-chunks when an embedding provider is configured.",
   });
 }

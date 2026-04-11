@@ -52,6 +52,15 @@
   --sem-text-primary: oklch(0.967 0 0);
   --sem-text-secondary: oklch(0.868 0 0);
   --sem-text-muted: oklch(0.62 0 0);
+  /* LLM / ingestion — deep saturated purple (OKLCH; distinct from orange accent). Used by Tag (Storybook: UI/Tag), pending spans, margin Accept. */
+  --sem-text-llm-accent: oklch(0.30 0.22 294);
+  --sem-text-llm-accent-bright: oklch(0.80 0.13 294);
+  --sem-surface-llm-pending: color-mix(in oklch, oklch(0.38 0.20 294) 20%, transparent);
+  --sem-surface-llm-pending-hover: color-mix(in oklch, oklch(0.34 0.22 294) 34%, transparent);
+  --sem-border-llm-pending: color-mix(in oklch, oklch(0.32 0.20 294) 52%, transparent);
+  /* Back-compat aliases */
+  --sem-text-ai-pending: var(--sem-text-llm-accent-bright);
+  --sem-border-ai-pending: var(--sem-border-llm-pending);
   --sem-text-onAccent: oklch(0.145 0 0);
   --sem-border-subtle: oklch(1 0 0 / 0.06);
   --sem-border-strong: oklch(1 0 0 / 0.1);
@@ -1426,4 +1435,26 @@ a {
 [data-hg-doc-editor="true"] [data-hg-doc-drag-dimmed="true"] {
   opacity: 0.34 !important;
   pointer-events: none !important;
+}
+
+/*
+ * Lore import / LLM text not yet reviewed — inline mark + HTML span.
+ * Use a soft tint (not underline) so it does not read as a hyperlink.
+ */
+[data-hg-ai-pending="true"],
+span.hgAiPending {
+  color: var(--sem-text-llm-accent);
+  text-decoration: none;
+  background: var(--sem-surface-llm-pending);
+  border-radius: 3px;
+  padding: 0.06em 0.28em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* Stronger preview when a gutter “Accept” control targets this span */
+[data-hg-ai-pending="true"].hgAiPending--gutter-hover,
+span.hgAiPending.hgAiPending--gutter-hover {
+  background: var(--sem-surface-llm-pending-hover);
+  box-shadow: 0 0 0 1px var(--sem-border-llm-pending);
 }

@@ -16,9 +16,28 @@ import {
   type SearchRow,
 } from "@/src/lib/spaces";
 
-const DEFAULT_VECTOR_CHUNK_LIMIT = 56;
-const DEFAULT_MAX_ITEMS = 16;
-const MAX_CHUNKS_PER_ITEM = 4;
+export const DEFAULT_VECTOR_CHUNK_LIMIT = 56;
+export const DEFAULT_MAX_ITEMS = 16;
+export const DEFAULT_FTS_LIMIT = 36;
+export const DEFAULT_FUZZY_LIMIT_WHEN_EMPTY = 20;
+export const DEFAULT_FUZZY_LIMIT_WHEN_SPARSE = 16;
+/** When FTS hit count is below this, merge fuzzy supplement rows. */
+export const DEFAULT_FTS_SPARSE_THRESHOLD = 8;
+export const DEFAULT_MAX_CHUNKS_PER_ITEM = 4;
+
+/**
+ * Options for `hybridRetrieveItems`. Omitted fields use defaults matching pre-tuning behavior.
+ */
+export type HybridRetrieveOptions = {
+  maxItems?: number;
+  vectorChunkLimit?: number;
+  includeVector?: boolean;
+  ftsLimit?: number;
+  fuzzyLimitWhenEmpty?: number;
+  fuzzyLimitWhenSparse?: number;
+  ftsSparseThreshold?: number;
+  maxChunksPerItem?: number;
+};
 
 function vectorSqlLiteral(embedding: number[]): string {
   if (embedding.length !== 1536 || !embedding.every((n) => Number.isFinite(n))) {
@@ -97,16 +116,17 @@ export async function hybridRetrieveItems(
   db: VigilDb,
   query: string,
   filters: SearchFilters = {},
-  options: {
-    maxItems?: number;
-    vectorChunkLimit?: number;
-    includeVector?: boolean;
-  } = {},
+  options: HybridRetrieveOptions = {},
 ): Promise<HybridRetrieveResult> {
   const q = query.trim();
   const maxItems = options.maxItems ?? DEFAULT_MAX_ITEMS;
   const vecLimit = options.vectorChunkLimit ?? DEFAULT_VECTOR_CHUNK_LIMIT;
   const useVector = options.includeVector !== false && isEmbeddingApiConfigured();
+  const ftsLimit = options.ftsLimit ?? DEFAULT_FTS_LIMIT;
+  const fuzzyLimitWhenEmpty = options.fuzzyLimitWhenEmpty ?? DEFAULT_FUZZY_LIMIT_WHEN_EMPTY;
+  const fuzzyLimitWhenSparse = options.fuzzyLimitWhenSparse ?? DEFAULT_FUZZY_LIMIT_WHEN_SPARSE;
+  const ftsSparseThreshold = options.ftsSparseThreshold ?? DEFAULT_FTS_SPARSE_THRESHOLD;
+  const maxChunksPerItem = options.maxChunksPerItem ?? DEFAULT_MAX_CHUNKS_PER_ITEM;
 
   const itemIdToChunks = new Map<string, string[]>();
   const itemIdToFtsSnippet = new Map<string, string>();
@@ -115,16 +135,16 @@ export async function hybridRetrieveItems(
     return { rows: [], itemIdToChunks, itemIdToFtsSnippet };
   }
 
-  const ftsRows = await searchItemsFTSWithSnippets(db, q, { ...filters, limit: 36 });
+  const ftsRows = await searchItemsFTSWithSnippets(db, q, { ...filters, limit: ftsLimit });
   for (const r of ftsRows) {
     if (r.snippet) itemIdToFtsSnippet.set(r.item.id, r.snippet);
   }
 
   let lexicalRows: SearchRow[] = ftsRows;
   if (ftsRows.length === 0) {
-    lexicalRows = await searchItemsFuzzy(db, q, { ...filters, limit: 20 });
-  } else if (ftsRows.length < 8) {
-    const fuzzyRows = await searchItemsFuzzy(db, q, { ...filters, limit: 16 });
+    lexicalRows = await searchItemsFuzzy(db, q, { ...filters, limit: fuzzyLimitWhenEmpty });
+  } else if (ftsRows.length < ftsSparseThreshold) {
+    const fuzzyRows = await searchItemsFuzzy(db, q, { ...filters, limit: fuzzyLimitWhenSparse });
     const seen = new Set(ftsRows.map((r) => r.item.id));
     lexicalRows = [...ftsRows];
     for (const fr of fuzzyRows) {
@@ -146,7 +166,7 @@ export async function hybridRetrieveItems(
 
   for (const h of vecHits) {
     const list = itemIdToChunks.get(h.itemId) ?? [];
-    if (list.length < MAX_CHUNKS_PER_ITEM) {
+    if (list.length < maxChunksPerItem) {
       list.push(h.chunkText);
       itemIdToChunks.set(h.itemId, list);
     }
@@ -183,9 +203,16 @@ export async function hybridRetrieveItems(
     queryPreview: q.slice(0, 240),
     maxItems,
     useVector,
+    ftsLimit,
+    fuzzyLimitWhenEmpty,
+    fuzzyLimitWhenSparse,
+    ftsSparseThreshold,
+    maxChunksPerItem,
+    vecLimit,
     ftsHits: ftsRows.length,
     lexicalRows: lexicalRows.length,
     vectorChunkHits: vecHits.length,
+    filtersSummary: summarizeSearchFiltersForDebug(filters),
     top: topIds.slice(0, 12).map((id) => {
       const s = scores.get(id);
       const title = rowById.get(id)?.item.title?.trim() || "Untitled";
@@ -200,6 +227,20 @@ export async function hybridRetrieveItems(
   });
 
   return { rows, itemIdToChunks, itemIdToFtsSnippet };
+}
+
+function summarizeSearchFiltersForDebug(f: SearchFilters): Record<string, unknown> {
+  return {
+    spaceId: f.spaceId ?? null,
+    spaceIdsCount: f.spaceIds?.length ?? 0,
+    excludeSpaceId: f.excludeSpaceId ?? null,
+    excludeSpaceIdsCount: f.excludeSpaceIds?.length ?? 0,
+    itemTypes: f.itemTypes?.length ? f.itemTypes : undefined,
+    entityTypes: f.entityTypes?.length ? f.entityTypes : undefined,
+    minCampaignEpoch: f.minCampaignEpoch,
+    excludeLoreHistorical: f.excludeLoreHistorical,
+    limit: f.limit,
+  };
 }
 
 /**

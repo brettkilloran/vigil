@@ -18,18 +18,55 @@ export function escapeHtmlForNoteBody(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/** Escaped HTML fragment with newlines preserved as `<br />` (merge / rich display). */
+export function escapePlainBodyToHtmlFragment(plain: string): string {
+  return escapeHtmlForNoteBody(plain).replace(/\n/g, "<br />");
+}
+
+const HG_ARCH_DEFAULT = {
+  theme: "default",
+  tapeVariant: "clear",
+  rotation: 0,
+  tapeRotation: 0,
+} as const;
+
+export type BuildLoreNoteContentJsonOptions = {
+  /** When true, entire body is LLM/import output pending review. */
+  aiPending?: boolean;
+};
+
 /** Matches `buildContentJsonForContentEntity` defaults for a simple note card. */
-export function buildLoreNoteContentJson(plainBody: string): Record<string, unknown> {
-  const bodyHtml = `<div contenteditable="true">${escapeHtmlForNoteBody(plainBody)}</div>`;
+export function buildLoreNoteContentJson(
+  plainBody: string,
+  options?: BuildLoreNoteContentJsonOptions,
+): Record<string, unknown> {
+  const inner =
+    options?.aiPending === true
+      ? `<span data-hg-ai-pending="true">${escapeHtmlForNoteBody(plainBody)}</span>`
+      : escapeHtmlForNoteBody(plainBody);
+  const bodyHtml = `<div contenteditable="true">${inner}</div>`;
   return {
     format: "html",
     html: bodyHtml,
-    hgArch: {
-      theme: "default",
-      tapeVariant: "clear",
-      rotation: 0,
-      tapeRotation: 0,
-    },
+    hgArch: { ...HG_ARCH_DEFAULT },
+  };
+}
+
+/**
+ * Merge append: approved plain text stays unmarked; proposed import text is wrapped as pending AI.
+ */
+export function buildLoreNoteContentJsonMerged(
+  approvedPlain: string,
+  proposedPlain: string,
+): Record<string, unknown> {
+  const approved = escapePlainBodyToHtmlFragment(approvedPlain.trim());
+  const proposed = escapePlainBodyToHtmlFragment(proposedPlain.trim());
+  const inner = `${approved}<br /><br /><span data-hg-ai-pending="true">${proposed}</span>`;
+  const bodyHtml = `<div contenteditable="true">${inner}</div>`;
+  return {
+    format: "html",
+    html: bodyHtml,
+    hgArch: { ...HG_ARCH_DEFAULT },
   };
 }
 

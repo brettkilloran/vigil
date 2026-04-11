@@ -8,6 +8,7 @@ import StarterKit from "@tiptap/starter-kit";
 import type { ResolvedPos } from "@tiptap/pm/model";
 
 import { hgDocLowlight } from "@/src/lib/hg-doc/hg-doc-lowlight";
+import { HgAiPending } from "@/src/lib/hg-doc/hg-ai-pending-mark";
 
 function activeTaskItemText($from: ResolvedPos): string {
   for (let depth = $from.depth; depth >= 0; depth--) {
@@ -85,6 +86,7 @@ export function getHgDocExtensions(options?: {
         class: "hgCodeBlock",
       },
     }),
+    HgAiPending,
     TaskItem.extend({
       addKeyboardShortcuts() {
         return {

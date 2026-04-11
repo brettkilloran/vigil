@@ -10,6 +10,7 @@ import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-vault-index";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 import {
   buildLoreNoteContentJson,
+  buildLoreNoteContentJsonMerged,
   planLoreImportCardLayout,
 } from "@/src/lib/lore-import-commit";
 import {
@@ -295,17 +296,21 @@ export async function applyLoreImportPlan(
         linkWarnings.push(`Merge skipped — target ${m.targetItemId} not found`);
         continue;
       }
-      const mergedText = `${existing.contentText.trim()}\n\n${m.proposedText.trim()}`.slice(
-        0,
-        500_000,
-      );
-      const contentJson = buildLoreNoteContentJson(mergedText.slice(0, 120_000));
+      const approved = existing.contentText.trim().slice(0, 120_000);
+      const proposed = m.proposedText.trim().slice(0, 120_000);
+      const mergedText = `${approved}\n\n${proposed}`.slice(0, 500_000);
+      const contentJson = buildLoreNoteContentJsonMerged(approved, proposed);
+      const prevMeta =
+        existing.entityMeta && typeof existing.entityMeta === "object"
+          ? (existing.entityMeta as Record<string, unknown>)
+          : {};
+      const mergedEntityMeta = { ...prevMeta, aiReview: "pending" };
       const searchBlob = buildSearchBlob({
         title: existing.title,
         contentText: mergedText.slice(0, 120_000),
         contentJson,
         entityType: existing.entityType,
-        entityMeta: existing.entityMeta,
+        entityMeta: mergedEntityMeta,
         imageUrl: existing.imageUrl,
         imageMeta: existing.imageMeta,
         loreSummary: existing.loreSummary,
@@ -318,6 +323,7 @@ export async function applyLoreImportPlan(
           contentText: mergedText.slice(0, 120_000),
           contentJson,
           searchBlob,
+          entityMeta: mergedEntityMeta,
           updatedAt: new Date(),
         })
         .where(eq(items.id, m.targetItemId))
@@ -347,13 +353,19 @@ export async function applyLoreImportPlan(
         body.sourceDocument?.title?.trim() ||
         plan.fileName ||
         "Import source";
-      const contentJson = buildLoreNoteContentJson(sourceText.slice(0, 120_000));
+      const contentJson = buildLoreNoteContentJson(sourceText.slice(0, 120_000), {
+        aiPending: true,
+      });
       const searchBlob = buildSearchBlob({
         title: title.slice(0, 255),
         contentText: sourceText.slice(0, 120_000),
         contentJson,
         entityType: "lore_source",
-        entityMeta: { import: true, importBatchId: plan.importBatchId },
+        entityMeta: {
+          import: true,
+          importBatchId: plan.importBatchId,
+          aiReview: "pending",
+        },
         imageUrl: null,
         imageMeta: null,
         loreSummary: null,
@@ -397,7 +409,7 @@ export async function applyLoreImportPlan(
       const z = await nextZIndex(dbx, targetSpaceId);
 
       const bodyText = note.bodyText.slice(0, 120_000);
-      const contentJson = buildLoreNoteContentJson(bodyText);
+      const contentJson = buildLoreNoteContentJson(bodyText, { aiPending: true });
       const entityMeta = {
         ...buildDefaultEntityMeta(note),
         importBatchId: plan.importBatchId,

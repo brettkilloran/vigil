@@ -22,6 +22,13 @@ import { htmlFragmentToHgDocDoc } from "@/src/lib/hg-doc/html-to-doc";
 
 import styles from "@/src/components/editing/LoreHybridFocusEditor.module.css";
 
+function eventTargetElement(ev: Event): Element | null {
+  const t = ev.target;
+  if (t instanceof Element) return t;
+  if (t instanceof Text && t.parentElement) return t.parentElement;
+  return null;
+}
+
 function htmlToPlainOneLine(html: string): string {
   if (typeof document === "undefined") {
     return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -65,6 +72,8 @@ export function LoreHybridFocusEditor({
   const notesDocRef = useRef(notesDoc);
   const identityShellRef = useRef<HTMLDivElement | null>(null);
   const lastInjectedIdentityDocKeyRef = useRef<string | null>(null);
+  /** Dedupes `onChangeFocusHtml` when rebuild matches current parent `focusHtml`. */
+  const lastEmittedFocusHtmlRef = useRef<string | null>(null);
   /** When notes emit updates `focusHtml`, re-parsing in the sync effect must not push `notesDoc` back through TipTap or `setContent` clears focus after each key. */
   const skipNotesResyncFromFocusHtmlRef = useRef(0);
 
@@ -77,6 +86,10 @@ export function LoreHybridFocusEditor({
   useEffect(() => {
     locationPartsRef.current = locationParts;
   }, [locationParts]);
+
+  useEffect(() => {
+    lastEmittedFocusHtmlRef.current = focusHtml;
+  }, [focusHtml]);
 
   useEffect(() => {
     startTransition(() => {
@@ -137,7 +150,10 @@ export function LoreHybridFocusEditor({
   const emitCharacter = useCallback(
     (nextParts: CharacterFocusParts, doc: JSONContent) => {
       const notesHtml = hgDocToHtml(doc);
-      onChangeFocusHtml(buildCharacterFocusDocumentHtml({ ...nextParts, notesHtml }));
+      const nextHtml = buildCharacterFocusDocumentHtml({ ...nextParts, notesHtml });
+      if (lastEmittedFocusHtmlRef.current === nextHtml) return;
+      lastEmittedFocusHtmlRef.current = nextHtml;
+      onChangeFocusHtml(nextHtml);
     },
     [onChangeFocusHtml],
   );
@@ -145,19 +161,22 @@ export function LoreHybridFocusEditor({
   const emitLocation = useCallback(
     (nextParts: LocationFocusParts, doc: JSONContent) => {
       const notesHtml = hgDocToHtml(doc);
-      onChangeFocusHtml(buildLocationFocusDocumentHtml({ ...nextParts, notesHtml }));
+      const nextHtml = buildLocationFocusDocumentHtml({ ...nextParts, notesHtml });
+      if (lastEmittedFocusHtmlRef.current === nextHtml) return;
+      lastEmittedFocusHtmlRef.current = nextHtml;
+      onChangeFocusHtml(nextHtml);
     },
     [onChangeFocusHtml],
   );
 
+  const hasCharacterShell = characterParts != null;
+
   useEffect(() => {
-    if (variant !== "character") return;
+    if (variant !== "character" || !hasCharacterShell) return;
     const host = identityShellRef.current;
     if (!host) return;
-    const onInput = (ev: Event) => {
-      const t = ev.target;
-      if (!(t instanceof Element)) return;
-      if (!t.closest("[data-hg-character-focus-field]")) return;
+
+    const flushFromIdentityDom = () => {
       const row = host.querySelector<HTMLElement>('[data-hg-character-focus-row="identity"]');
       if (!row) return;
       const next = readCharacterFocusPartsFromIdentityRow(row, hgDocToHtml(notesDocRef.current));
@@ -165,9 +184,20 @@ export function LoreHybridFocusEditor({
       characterPartsRef.current = next;
       emitCharacter(next, notesDocRef.current);
     };
-    host.addEventListener("input", onInput, true);
-    return () => host.removeEventListener("input", onInput, true);
-  }, [variant, emitCharacter, focusDocumentKey]);
+
+    const onMaybeIdentityEdit = (ev: Event) => {
+      const el = eventTargetElement(ev);
+      if (!el?.closest("[data-hg-character-focus-field]")) return;
+      flushFromIdentityDom();
+    };
+
+    host.addEventListener("input", onMaybeIdentityEdit, true);
+    host.addEventListener("compositionend", onMaybeIdentityEdit, true);
+    return () => {
+      host.removeEventListener("input", onMaybeIdentityEdit, true);
+      host.removeEventListener("compositionend", onMaybeIdentityEdit, true);
+    };
+  }, [variant, hasCharacterShell, emitCharacter, focusDocumentKey]);
 
   const onNotesChange = useCallback(
     (doc: JSONContent) => {

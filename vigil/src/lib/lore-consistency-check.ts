@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 import { extractJsonObject } from "@/src/lib/lore-import-plan-llm";
 import type { VigilDb } from "@/src/lib/spaces";
+import { LORE_CONSISTENCY_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 import { hybridRetrieveItems } from "@/src/lib/vault-retrieval";
 
 const SYSTEM = `You review a draft note for a TTRPG / worldbuilding canvas.
@@ -54,12 +55,10 @@ export async function runLoreConsistencyCheck(args: {
     return { issues: [], suggestedNoteTags: [], semanticSummary: null };
   }
 
-  const hybrid = await hybridRetrieveItems(
-    args.db,
-    q,
-    { spaceId: args.spaceId },
-    { maxItems: 12, includeVector: true },
-  );
+  const hybrid = await hybridRetrieveItems(args.db, q, { spaceId: args.spaceId }, {
+    ...LORE_CONSISTENCY_HYBRID_OPTIONS,
+    includeVector: true,
+  });
 
   const candidates = hybrid.rows
     .filter((r) => r.item.id !== args.excludeItemId)

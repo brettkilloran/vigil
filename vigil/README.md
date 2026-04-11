@@ -15,11 +15,11 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). Without `NEON_DATABASE_URL`, the app runs in **local-only** mode (data in `localStorage`). With Neon configured, use **`docs/STRATEGY.md`** migration notes if upgrading from older schemas (removed `users` / `source_shape_id` / tldraw snapshots).
 
-Copy [`.env.local.example`](.env.local.example) to `.env.local` for database, optional **Anthropic** (lore Q&A), optional **OpenAI** (vault embeddings / hybrid search), and optional R2.
+Copy [`.env.local.example`](.env.local.example) to `.env.local` for database, optional **Anthropic** (lore Q&A, imports), and optional R2.
 
 Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 
-**Neon + vault index (automated):** From this folder, **`npm run db:vault-setup`** runs pgvector, **`drizzle-kit push --force`**, and the vault SQL migration (see [`docs/FOLLOW_UP.md`](docs/FOLLOW_UP.md)). With the dev server running and **`OPENAI_API_KEY`** set for the app, **`npm run vault:reindex`** backfills chunk embeddings for all items. GitHub: manual workflow **`heartgarden-db-vault.yml`** + secret **`HEARTGARDEN_NEON_DATABASE_URL`**.
+**Neon + vault index (automated):** From this folder, **`npm run db:vault-setup`** runs pgvector, **`drizzle-kit push --force`**, and the vault SQL migration (see [`docs/FOLLOW_UP.md`](docs/FOLLOW_UP.md)). Chunk **vector** embeddings are not wired to an external API in this repo (see **`src/lib/embedding-provider.ts`**); search uses Postgres FTS + trigram. **`npm run vault:reindex`** still refreshes lore meta when configured. GitHub: manual workflow **`heartgarden-db-vault.yml`** + secret **`HEARTGARDEN_NEON_DATABASE_URL`**.
 
 ## Scripts
 
@@ -35,7 +35,7 @@ Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 | `npm run db:vault-sql` | Apply `drizzle/migrations/0003_vault_embeddings_lore_meta.sql` via `pg` (HNSW fallback if unsupported) |
 | `npm run db:vault-setup` | **`db:ensure-pgvector`** → **`db:push:force`** → **`db:vault-sql`** |
 | `npm run vault:reindex` | HTTP fan-out to **`POST /api/items/:id/index`** for every item (app must be up; see `.env.local.example` for `VAULT_REINDEX_*`) |
-| `npm run mcp` | MCP stdio tools (legacy names **`vigil_*`**, e.g. **`vigil_list_items`**, **`vigil_search`**, **`vigil_graph`**) — needs app reachable at `HEARTGARDEN_APP_URL` (default `http://localhost:3000`). Do not rename tool strings without updating MCP client configs. |
+| `npm run mcp` | MCP stdio tools (legacy names **`vigil_*`**, e.g. **`vigil_list_items`**, **`vigil_search`**, **`vigil_graph`**) — needs app reachable at `HEARTGARDEN_APP_URL` (default `http://localhost:3000`). Hosted Streamable HTTP: **`GET|POST|DELETE /api/mcp`** with **`Authorization: Bearer HEARTGARDEN_MCP_SERVICE_KEY`** (see **`AGENTS.md`**). Do not rename tool strings without updating MCP client configs. |
 
 ### Keyboard (canvas, not typing in a note)
 

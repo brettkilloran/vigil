@@ -148,7 +148,7 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 
 | Concern | Location |
 |--------|-----------|
-| Tool definitions & HTTP to app | `scripts/mcp-server.mjs` |
+| Tool definitions & HTTP to app | `src/lib/mcp/heartgarden-mcp-server.ts`, `scripts/mcp-server.ts`, `app/api/mcp/route.ts` |
 | Write-guarded routes | e.g. `write_key` on reindex / patch (see `docs/API.md`) |
 
 ## Tests & CI

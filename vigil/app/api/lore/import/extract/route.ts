@@ -9,7 +9,7 @@ import { extractLoreEntitiesWithAnthropic } from "@/src/lib/lore-import-extract"
 export const runtime = "nodejs";
 
 const bodySchema = z.object({
-  text: z.string().max(120_000),
+  text: z.string().max(500_000),
 });
 
 export async function POST(req: Request) {

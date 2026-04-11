@@ -18,8 +18,6 @@ Use with **[`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)** and the **[dashboard check
 | `NEON_DATABASE_URL` | Yes | Yes (**different** pooled URL than prod) | Required for cloud sync; omit both → demo bootstrap. |
 | `ANTHROPIC_API_KEY` | If lore needed | Optional / omit | Server-only. |
 | `ANTHROPIC_LORE_MODEL` | Optional | Optional | |
-| `OPENAI_API_KEY` | If semantic search / index | Optional / omit | Server-only. |
-| `HEARTGARDEN_EMBEDDING_MODEL` | Optional | Optional | |
 | `R2_ACCOUNT_ID` | If uploads | If uploads | Full `R2_*` set required together. |
 | `R2_ACCESS_KEY_ID` | If uploads | If uploads | |
 | `R2_SECRET_ACCESS_KEY` | If uploads | If uploads | Mark **Sensitive**. |
@@ -38,9 +36,11 @@ Use with **[`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)** and the **[dashboard check
 | `HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_MAX` | Optional | Optional | Max **`POST /api/spaces/[id]/presence`** per **public IP** per window (default **4000**; clamped **10–100000**). **Roommates / family on the same home Wi‑Fi** share one IP — the default is already safe for that; raise only for unusually many devices on one network (see **`docs/PLAYER_LAYER.md`**). In-memory per server instance. |
 | `HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_WINDOW_MS` | Optional | Optional | Presence rate-limit window in ms (default **900000** = 15 min; clamped **60000–3600000**). |
 | `HEARTGARDEN_PLAYER_SPACE_ID` | Optional with Players PIN | Optional with Players PIN | When set: UUID of the Neon **`spaces`** row for the Players canvas (must exist in DB). When unset with Players PIN: server uses an auto-created implicit Players root (isolated from GM). Use this to pick a **specific** UUID or to **hide** that space from GM lists. See **`docs/PLAYER_LAYER.md`**. Not required for Bishop-only gate. |
+| `HEARTGARDEN_MCP_SERVICE_KEY` | If using **`/api/mcp`** or MCP clients against prod APIs | Same | Long random Bearer secret. Enables **Streamable HTTP** MCP at **`GET|POST|DELETE /api/mcp`**, allows **`Authorization: Bearer`** through the boot gate for **`/api/*`**, and lets **`npm run mcp`** (stdio) call **`fetch`** to the deployed app when the PIN gate is on. Mark **Sensitive**. |
+| `HEARTGARDEN_MCP_WRITE_KEY` | If using MCP write tools / reindex API | Same | Must match **`write_key`** in **`vigil_patch_item`** / **`POST /api/spaces/:id/reindex`**. Sensitive. |
 
 **Do not set:** `PLAYWRIGHT_E2E` (also forces the boot gate **off** in **`/api/heartgarden/boot`** for E2E).
 
-**Usually not needed on Vercel (MCP / local scripts):** `HEARTGARDEN_APP_URL`, `HEARTGARDEN_MCP_WRITE_KEY` — set on the machine running `npm run mcp` when pointing at production. **`HEARTGARDEN_DEFAULT_SPACE_ID`** is optional on Vercel too: if **`HEARTGARDEN_PLAYER_SPACE_ID`** is empty, it can supply the Players space UUID (same format as MCP).
+**MCP env:** For **local** stdio only against **`next dev`**, you can omit **`HEARTGARDEN_MCP_SERVICE_KEY`** (boot gate is off by default). For **production** or **`HEARTGARDEN_DEV_ENFORCE_BOOT_GATE=1`**, set **`HEARTGARDEN_MCP_SERVICE_KEY`** on the server **and** in the environment of **`npm run mcp`** so tool **`fetch`** calls include **`Authorization: Bearer`**. Optional: **`HEARTGARDEN_APP_URL`**, **`HEARTGARDEN_DEFAULT_SPACE_ID`** on the machine running **`npm run mcp`** when not using same-origin defaults.
 
 After changes, **Redeploy** so functions pick up new values.

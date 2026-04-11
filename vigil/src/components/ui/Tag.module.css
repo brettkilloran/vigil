@@ -1,0 +1,43 @@
+/* Small uppercase chip — LLM / ingestion review uses shared globals tokens (--sem-*-llm-*). */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1.2;
+  box-sizing: border-box;
+}
+
+/* “Unreviewed” on default/task/media cards + light focus sheet */
+.llmLight {
+  color: var(--sem-text-llm-accent);
+  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--theme-default-bg));
+  border: 1px solid var(--sem-border-llm-pending);
+}
+
+/* Code-themed canvas card header (dark paper) */
+.llmCode {
+  color: var(--sem-text-llm-accent-bright);
+  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--theme-code-bg));
+  border: 1px solid color-mix(in oklch, var(--sem-text-llm-accent-bright) 38%, transparent);
+}
+
+/* Dark focus (code / lore hybrid) */
+.llmFocusDark {
+  color: var(--sem-text-llm-accent-bright);
+  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, transparent);
+  border: 1px solid color-mix(in oklch, var(--sem-text-llm-accent-bright) 36%, transparent);
+}
+
+/* Generic muted chip (Storybook / non-LLM labels) */
+.neutral {
+  color: var(--sem-text-muted);
+  background: color-mix(in oklch, var(--sem-text-primary) 6%, transparent);
+  border: 1px solid var(--sem-border-subtle);
+}

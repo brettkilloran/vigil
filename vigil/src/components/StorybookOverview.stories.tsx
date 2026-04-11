@@ -40,8 +40,8 @@ export const AboutThisStorybook: Story = {
       <p style={{ marginBottom: 8 }}>
         <strong>UI catalog:</strong>{" "}
         <span style={{ color: "var(--sem-text-secondary)" }}>
-          Heartgarden → UI — tokens, shared controls, canvas chrome, and full-canvas integration in one list
-          (sorted by name).
+          Heartgarden → UI — tokens (including LLM / ingestion <code style={{ fontSize: "0.88em" }}>--sem-*-llm-*</code>),
+          shared controls (e.g. Tag, Button), canvas chrome, and full-canvas integration (sorted by name).
         </span>
       </p>
       <p style={{ marginBottom: 0 }}>

@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { tryGetDb } from "@/src/db/index";
@@ -18,6 +18,7 @@ import {
 } from "@/src/lib/spaces";
 import { isHeartgardenGmPlayerSpaceBreakGlassEnabled } from "@/src/lib/heartgarden-gm-break-glass";
 import { spaceIsUnderPlayerRoot } from "@/src/lib/heartgarden-space-subtree";
+import { authorizationBearerMatchesMcpServiceKey } from "@/src/lib/heartgarden-mcp-service-key";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
@@ -199,6 +200,11 @@ export async function playerMayAccessSpaceIdAsync(
 
 /** Use at the top of Route Handlers that support the player layer. */
 export async function getHeartgardenApiBootContext(): Promise<HeartgardenApiBootContext> {
+  const h = await headers();
+  if (authorizationBearerMatchesMcpServiceKey(h.get("authorization"))) {
+    return { role: "gm" };
+  }
+
   const jar = await cookies();
   const ctx = parseHeartgardenApiBootContext(jar);
   if (ctx.role !== "player_resolve_from_db") return ctx;

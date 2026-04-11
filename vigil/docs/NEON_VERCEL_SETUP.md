@@ -34,4 +34,4 @@ To apply vault SQL from CI against a chosen database, use **`.github/workflows/h
 
 ## 4. After deploy
 
-- Backfill embeddings (optional): with the **deployed** app URL and **`OPENAI_API_KEY`** on the server, run **`npm run vault:reindex`** locally with **`HEARTGARDEN_APP_URL`** set to your Vercel origin (see [`FOLLOW_UP.md`](./FOLLOW_UP.md)).
+- Vault reindex (optional): with the **deployed** app URL, run **`npm run vault:reindex`** locally with **`HEARTGARDEN_APP_URL`** set to your Vercel origin (see [`FOLLOW_UP.md`](./FOLLOW_UP.md)).

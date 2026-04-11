@@ -42,4 +42,22 @@ describe("middleware boot gate", () => {
     const res = await middleware(req);
     expect(res.status).toBe(403);
   });
+
+  it("allows /api/bootstrap when Authorization Bearer matches HEARTGARDEN_MCP_SERVICE_KEY", async () => {
+    process.env.HEARTGARDEN_MCP_SERVICE_KEY = "mcp-service-test-secret";
+    const { middleware } = await import("../../middleware");
+    const req = new NextRequest(new URL("http://localhost/api/bootstrap"), {
+      headers: { authorization: "Bearer mcp-service-test-secret" },
+    });
+    const res = await middleware(req);
+    expect(res.status).toBe(200);
+    delete process.env.HEARTGARDEN_MCP_SERVICE_KEY;
+  });
+
+  it("allows /api/mcp without cookie when gate is on (handler enforces Bearer)", async () => {
+    const { middleware } = await import("../../middleware");
+    const req = new NextRequest(new URL("http://localhost/api/mcp"));
+    const res = await middleware(req);
+    expect(res.status).toBe(200);
+  });
 });

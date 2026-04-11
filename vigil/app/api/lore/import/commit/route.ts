@@ -188,7 +188,7 @@ export async function POST(req: Request) {
     const title =
       sourceDocument?.title?.trim() ||
       (deduped.length ? "Import source" : "Imported note");
-    const contentJson = buildLoreNoteContentJson(sourceText);
+    const contentJson = buildLoreNoteContentJson(sourceText, { aiPending: true });
     const id = await insertNote({
       title,
       contentText: sourceText.slice(0, 120_000),
@@ -198,7 +198,7 @@ export async function POST(req: Request) {
       width: layout.source.width,
       height: layout.source.height,
       entityType: "lore_source",
-      entityMeta: { import: true },
+      entityMeta: { import: true, aiReview: "pending" },
     });
     sourceItemId = id;
   }
@@ -207,7 +207,7 @@ export async function POST(req: Request) {
     const e = deduped[i]!;
     const pos = layout.entities[i]!;
     const summary = e.summary ?? "";
-    const contentJson = buildLoreNoteContentJson(summary || "—");
+    const contentJson = buildLoreNoteContentJson(summary || "—", { aiPending: true });
     const id = await insertNote({
       title: e.canonicalName.slice(0, 255),
       contentText: summary.slice(0, 120_000),
@@ -217,7 +217,7 @@ export async function POST(req: Request) {
       width: pos.width,
       height: pos.height,
       entityType: e.kind ?? "lore",
-      entityMeta: { import: true, kind: e.kind ?? null },
+      entityMeta: { import: true, kind: e.kind ?? null, aiReview: "pending" },
     });
     if (id) {
       nameToId.set(e.canonicalName.toLowerCase(), id);

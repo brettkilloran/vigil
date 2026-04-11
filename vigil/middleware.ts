@@ -7,6 +7,7 @@ import {
   readBootGateEnvEdge,
   verifyBootSessionCookieEdge,
 } from "@/src/lib/heartgarden-boot-edge";
+import { authorizationBearerMatchesMcpServiceKey } from "@/src/lib/heartgarden-mcp-service-key";
 
 const FORBIDDEN = { ok: false, error: "Forbidden." };
 
@@ -22,6 +23,15 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isHeartgardenBootApiAllowlisted(pathname)) {
+    return NextResponse.next();
+  }
+
+  /** Remote MCP endpoint: route returns 401 if Authorization is missing/invalid. */
+  if (pathname === "/api/mcp" || pathname.startsWith("/api/mcp/")) {
+    return NextResponse.next();
+  }
+
+  if (authorizationBearerMatchesMcpServiceKey(request.headers.get("authorization"))) {
     return NextResponse.next();
   }
 

@@ -167,7 +167,7 @@ export function LoreAskPanel({
     try {
       const body: { question: string; spaceId?: string; limit?: number } = {
         question: q,
-        limit: 14,
+        limit: 18,
       };
       if (spaceScopedAllowed && scopeCurrentSpace && spaceId) {
         body.spaceId = spaceId;
@@ -271,9 +271,7 @@ export function LoreAskPanel({
           </div>
 
           <p data-hg-lore="lede">
-            Retrieval uses lexical search plus vector chunks (when{" "}
-            <code className="text-[12px] opacity-90">OPENAI_API_KEY</code> is set and notes are
-            indexed), linked neighbors, then Claude. Requires{" "}
+            Retrieval uses lexical search, linked neighbors, then Claude. Requires{" "}
             <code className="text-[12px] opacity-90">ANTHROPIC_API_KEY</code>.
           </p>
 
@@ -288,14 +286,24 @@ export function LoreAskPanel({
           />
 
           {spaceScopedAllowed && spaceId ? (
-            <label data-hg-lore="scope">
-              <input
-                type="checkbox"
-                checked={scopeCurrentSpace}
-                onChange={(e) => setScopeCurrentSpace(e.target.checked)}
-                disabled={loading}
-              />
-              <span>Limit retrieval to current space</span>
+            <label data-hg-lore="scope" className="flex max-w-md flex-col gap-1">
+              <span className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={scopeCurrentSpace}
+                  onChange={(e) => setScopeCurrentSpace(e.target.checked)}
+                  disabled={loading}
+                />
+                <span>
+                  <span className="font-medium">Current space only</span>
+                  <span className="block text-[11px] leading-snug text-[var(--sem-text-muted)]">
+                    {scopeCurrentSpace
+                      ? "Recommended on large canvases — searches notes in this space."
+                      : "Whole GM workspace — broader, may include more noise."}
+                  </span>
+                </span>
+              </span>
             </label>
           ) : null}
 

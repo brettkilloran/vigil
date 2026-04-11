@@ -19,6 +19,8 @@ import {
   searchItemsFuzzy,
   searchItemsHybrid,
 } from "@/src/lib/spaces";
+import { parseHybridRetrieveQueryParams } from "@/src/lib/vault-retrieval-query-params";
+import { API_SEARCH_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 import { hybridRetrieveItems } from "@/src/lib/vault-retrieval";
 
 const HYBRID_FTS_SHORT_CIRCUIT_LIMIT = 12;
@@ -129,6 +131,15 @@ export async function GET(req: Request) {
     return Response.json({ ok: true, items: mapRows(rows), mode: "fuzzy" });
   }
 
+  const hybridQueryOverrides = parseHybridRetrieveQueryParams(url.searchParams);
+  const retrievalBaseLimit = Math.min(80, Math.max(8, filters.limit ?? 24));
+  const hybridRetrieveOpts = {
+    ...API_SEARCH_HYBRID_OPTIONS,
+    ...hybridQueryOverrides,
+    maxItems: hybridQueryOverrides.maxItems ?? retrievalBaseLimit,
+    includeVector: true as const,
+  };
+
   if (mode === "semantic") {
     if (!isEmbeddingApiConfigured()) {
       const rows = await searchItemsFTS(db, q, filters);
@@ -136,14 +147,10 @@ export async function GET(req: Request) {
         ok: true,
         items: mapRows(rows),
         mode: "fts",
-        note: "OPENAI_API_KEY not set; fell back to full-text search.",
+        note: "Vector search unavailable; fell back to full-text search.",
       });
     }
-    const limit = Math.min(80, Math.max(8, filters.limit ?? 24));
-    const { rows } = await hybridRetrieveItems(db, q, filters, {
-      maxItems: limit,
-      includeVector: true,
-    });
+    const { rows } = await hybridRetrieveItems(db, q, filters, hybridRetrieveOpts);
     return Response.json({
       ok: true,
       items: mapRows(rows),
@@ -153,11 +160,7 @@ export async function GET(req: Request) {
 
   if (mode === "hybrid") {
     if (isEmbeddingApiConfigured()) {
-      const limit = Math.min(80, Math.max(8, filters.limit ?? 24));
-      const { rows } = await hybridRetrieveItems(db, q, filters, {
-        maxItems: limit,
-        includeVector: true,
-      });
+      const { rows } = await hybridRetrieveItems(db, q, filters, hybridRetrieveOpts);
       return Response.json({
         ok: true,
         items: mapRows(rows),
@@ -171,7 +174,7 @@ export async function GET(req: Request) {
         ok: true,
         items: mapRows(ftsRows),
         mode: "hybrid",
-        note: "Lexical hybrid only (set OPENAI_API_KEY for vector fusion).",
+        note: "Lexical hybrid only (no embedding provider; vector fusion disabled).",
       });
     }
     const rows = await searchItemsHybrid(db, q, filters);
@@ -179,7 +182,7 @@ export async function GET(req: Request) {
       ok: true,
       items: mapRows(rows),
       mode: "hybrid",
-      note: "Lexical hybrid only (set OPENAI_API_KEY for vector fusion).",
+      note: "Lexical hybrid only (no embedding provider; vector fusion disabled).",
     });
   }
 

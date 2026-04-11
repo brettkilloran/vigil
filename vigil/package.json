@@ -41,7 +41,7 @@
     "db:sever-worlds": "npx --no-install tsx ./scripts/sever-player-gm-worlds.ts",
     "db:studio": "drizzle-kit studio",
     "db:migrate": "drizzle-kit migrate",
-    "mcp": "node ./scripts/mcp-server.mjs",
+    "mcp": "npx tsx ./scripts/mcp-server.ts",
     "prestorybook": "node ./scripts/storybook-start-hint.mjs",
     "storybook": "npx --no-install storybook dev -p 6006 --host 127.0.0.1 --disable-telemetry --no-open --ci",
     "storybook:lan": "npx --no-install storybook dev -p 6006 --host 0.0.0.0 --disable-telemetry --no-open --ci",

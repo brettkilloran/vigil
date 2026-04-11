@@ -5,7 +5,7 @@ import { chunkSourceText } from "@/src/lib/lore-import-chunk";
 import {
   attachBodiesToOutline,
   runLoreImportClarifyLlm,
-  runLoreImportMergeLlm,
+  runLoreImportMergeLlmBatched,
   runLoreImportOutlineLlm,
   type CandidateRow,
 } from "@/src/lib/lore-import-plan-llm";
@@ -20,9 +20,12 @@ import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
 import type { HeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
 import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
 import type { SearchFilters, VigilDb } from "@/src/lib/spaces";
+import { IMPORT_MERGE_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 import { hybridRetrieveItems } from "@/src/lib/vault-retrieval";
 
 const GM_LORE_IMPORT_SEARCH: HeartgardenApiBootContext = { role: "gm" };
+
+const VAULT_SEARCH_CONCURRENCY = 5;
 
 type OutlineNoteInternal = {
   clientId: string;
@@ -63,25 +66,34 @@ export async function buildLoreImportPlan(args: {
     (await finalizeHeartgardenSearchFiltersForDb(args.db, GM_LORE_IMPORT_SEARCH, {})) ?? {};
 
   const candidatesByNoteClientId: Record<string, CandidateRow[]> = {};
-  for (const n of notesInternal) {
-    const q = `${n.title} ${n.summary}`.trim().slice(0, 800);
-    const hybrid = await hybridRetrieveItems(args.db, q, vaultSearchFilters, {
-      maxItems: 8,
-      includeVector: true,
-    });
-    candidatesByNoteClientId[n.clientId] = hybrid.rows.map((r) => {
-      const snippet =
-        hybrid.itemIdToFtsSnippet.get(r.item.id) ??
-        (hybrid.itemIdToChunks.get(r.item.id)?.[0] ?? undefined);
-      return {
-        itemId: r.item.id,
-        title: r.item.title ?? "",
-        spaceName: r.space.name,
-        snippet,
-        itemType: r.item.itemType,
-        entityType: r.item.entityType,
-      };
-    });
+  for (let i = 0; i < notesInternal.length; i += VAULT_SEARCH_CONCURRENCY) {
+    const slice = notesInternal.slice(i, i + VAULT_SEARCH_CONCURRENCY);
+    const results = await Promise.all(
+      slice.map(async (n) => {
+        const q = `${n.title} ${n.summary}`.trim().slice(0, 800);
+        const hybrid = await hybridRetrieveItems(args.db, q, vaultSearchFilters, {
+          ...IMPORT_MERGE_HYBRID_OPTIONS,
+          includeVector: true,
+        });
+        const rows = hybrid.rows.map((r) => {
+          const snippet =
+            hybrid.itemIdToFtsSnippet.get(r.item.id) ??
+            (hybrid.itemIdToChunks.get(r.item.id)?.[0] ?? undefined);
+          return {
+            itemId: r.item.id,
+            title: r.item.title ?? "",
+            spaceName: r.space.name,
+            snippet,
+            itemType: r.item.itemType,
+            entityType: r.item.entityType,
+          };
+        });
+        return { clientId: n.clientId, rows };
+      }),
+    );
+    for (const r of results) {
+      candidatesByNoteClientId[r.clientId] = r.rows;
+    }
   }
 
   const mergeInput = notesInternal.map((n) => ({
@@ -92,7 +104,7 @@ export async function buildLoreImportPlan(args: {
   }));
 
   const { mergeProposals: rawMerges, contradictions: rawContra } =
-    await runLoreImportMergeLlm(
+    await runLoreImportMergeLlmBatched(
       args.apiKey,
       args.model,
       mergeInput,

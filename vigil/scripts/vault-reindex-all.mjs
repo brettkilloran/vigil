@@ -4,7 +4,7 @@
  * Requires:
  * - NEON_DATABASE_URL in .env.local (to list item ids)
  * - `npm run dev` or `npm start` on HEARTGARDEN_APP_URL (default http://127.0.0.1:3000)
- * - OPENAI_API_KEY on the server for embeddings
+ * - Embedding provider on the server when vector indexing is wired (currently disabled in app)
  *
  * Env:
  * - HEARTGARDEN_APP_URL — base URL (no trailing slash)

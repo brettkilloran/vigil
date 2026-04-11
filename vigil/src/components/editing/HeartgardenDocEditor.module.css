@@ -4,6 +4,19 @@
   min-height: 1.5em;
 }
 
+.editorGutterRow {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+}
+
+.editorColumn {
+  flex: 1;
+  min-width: 0;
+}
+
 .editorContent {
   width: 100%;
 }

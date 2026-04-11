@@ -20,7 +20,7 @@ related:
 
 - **Neon:** `NEON_DATABASE_URL` in `.env.local` (and Vercel) for cloud sync, search, graph, MCP against production. Enable **`CREATE EXTENSION vector`** before schema that uses embeddings (`npm run db:ensure-pgvector` from app root **`vigil/`**; see **`docs/NAMING.md`** if you rename the folder).
 - **Anthropic:** `ANTHROPIC_API_KEY` for **`POST /api/lore/query`**, lore import extract, per-item lore meta on vault index, **Ask lore**. Optional: `ANTHROPIC_LORE_MODEL`. **Unauthenticated** today — baseline IP rate limit in `lore-query-rate-limit.ts`; add auth or edge protection before a wide public URL. Optional kill-switch: **`HEARTGARDEN_LORE_QUERY_DISABLED=1`** on Vercel → **`503`** on lore query (see **`docs/DEPLOY_VERCEL.md`**).
-- **OpenAI (embeddings):** `OPENAI_API_KEY` enables chunk embeddings and hybrid / semantic search. Optional `HEARTGARDEN_EMBEDDING_MODEL` (default `text-embedding-3-small`, 1536 dims). Without it, search stays lexical-only where applicable.
+- **Vector embeddings:** Not wired to an external API in this repo (`src/lib/embedding-provider.ts`). Hybrid / semantic search use lexical fusion until a provider is added.
 - **Vault env (optional):** `HEARTGARDEN_VAULT_DEBUG`, `HEARTGARDEN_INDEX_AFTER_PATCH`, `HEARTGARDEN_INDEX_SKIP_LORE_META` — see **`vigil/AGENTS.md`** (vault / index) and **`.env.local.example`**.
 - **Cloudflare R2:** Bucket, CORS, optional public URL for image uploads; align with **`.env.local.example`**.
 
@@ -38,7 +38,7 @@ related:
 - **`canvas_presence`:** Required in Postgres for **`/api/spaces/[spaceId]/presence`**. After schema changes, **`npm run db:push`** from **`vigil/`**. Legacy **`space_presence`** is obsolete; code uses **`canvas_presence`** only.
 - **Legacy `canvas_state`:** Old DBs may still hold full tldraw JSON — migrate or reset per **`docs/STRATEGY.md`** / **`docs/MIGRATION.md`**.
 - **Vault setup:** **`npm run db:vault-setup`** from **`vigil/`** (pgvector + Drizzle push + vault SQL). See **`vigil/AGENTS.md`** for full sequence.
-- **Backfill embeddings:** App running + server **`OPENAI_API_KEY`** → **`npm run vault:reindex`**. Optional: **`VAULT_REINDEX_*`**, **`HEARTGARDEN_APP_URL`**, **`VAULT_REINDEX_DRY=1`**.
+- **Vault reindex:** **`npm run vault:reindex`** (app running) refreshes per-item index / lore meta per implementation. Optional: **`VAULT_REINDEX_*`**, **`HEARTGARDEN_APP_URL`**, **`VAULT_REINDEX_DRY=1`**.
 
 ---
 

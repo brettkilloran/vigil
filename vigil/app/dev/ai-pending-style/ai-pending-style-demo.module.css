@@ -1,0 +1,126 @@
+.shell {
+  min-height: 100vh;
+  padding: 32px 24px 48px;
+  background: var(--sem-surface-base);
+  color: var(--sem-text-primary);
+}
+
+.intro {
+  max-width: 52rem;
+  margin: 0 0 28px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--sem-text-secondary);
+}
+
+.intro code {
+  font-size: 0.92em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: color-mix(in oklch, var(--sem-text-primary) 8%, transparent);
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  align-items: flex-start;
+}
+
+.sectionTitle {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sem-text-muted);
+  margin: 0 0 12px;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Dev-only: cards are for preview, not canvas drag */
+.demoCard {
+  cursor: default;
+}
+
+.url {
+  font-size: 12px;
+  color: var(--sem-text-muted);
+  margin-bottom: 20px;
+}
+
+.url a {
+  color: var(--sem-text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.flowList {
+  max-width: 44rem;
+  margin: 0 0 24px;
+  padding-left: 1.25rem;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--sem-text-secondary);
+}
+
+.flowList li {
+  margin: 0.35em 0;
+}
+
+.focusMockSheet {
+  max-width: 640px;
+  background: var(--sys-color-neutral-100);
+  border-radius: 8px;
+  box-shadow: var(--sem-shadow-md);
+  border: 1px solid color-mix(in oklch, var(--sys-color-black) 8%, transparent);
+  overflow: hidden;
+}
+
+.focusMockHeader {
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  border-bottom: 1px solid color-mix(in oklch, var(--sys-color-black) 6%, transparent);
+  background: color-mix(in oklch, var(--sys-color-white) 40%, var(--sys-color-neutral-100));
+}
+
+.focusMockBody {
+  padding: 20px 24px 28px;
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--sem-text-focus-body);
+}
+
+/* Live TipTap preview: real margin Accept rail (outside focus overlay, so visibility is forced here). */
+.tiptapMarginPreviewSheet {
+  max-width: 640px;
+  margin-bottom: 32px;
+}
+
+.tiptapMarginPreviewBody {
+  background: var(--sys-color-neutral-100);
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklch, var(--sys-color-black) 8%, transparent);
+  box-shadow: var(--sem-shadow-md);
+  /* ~focus content: left gutter for block drag handle + right padding for sheet edge */
+  padding: 20px 40px 28px 62px;
+  box-sizing: border-box;
+}
+
+/*
+ * HeartgardenDocEditor applies canvas `.focusBody` which is opacity:0 until `.focusActive`;
+ * this page is not inside `.focusOverlay`, so we restore visibility on the editor host.
+ */
+.tiptapMarginPreviewBody :global([data-hg-doc-editor="true"]) {
+  opacity: 1 !important;
+  transform: none !important;
+  min-height: 220px;
+}
+

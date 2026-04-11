@@ -4,6 +4,7 @@ import {
   buildContentJsonForContentEntity,
   canvasItemToEntity,
 } from "@/src/components/foundation/architectural-db-bridge";
+import type { CanvasContentEntity } from "@/src/components/foundation/architectural-types";
 import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
 import type { CanvasItem } from "@/src/model/canvas-types";
 
@@ -79,6 +80,31 @@ describe("hgDoc persistence cutover", () => {
 
     const contentJson = buildContentJsonForContentEntity(mapped);
     expect(contentJson).toMatchObject({ format: "hgDoc", doc: EMPTY_HG_DOC });
+  });
+
+  it("lore character HTML body wins over stray bodyDoc when serializing PATCH payload", () => {
+    const html = '<div data-hg-lore-portrait-root="v11"></div>';
+    const strayDoc = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "stale" }] }] };
+    const entity: CanvasContentEntity = {
+      id: "char-1",
+      title: "Agent",
+      kind: "content",
+      theme: "default",
+      rotation: 0,
+      width: 320,
+      height: 400,
+      tapeRotation: 0,
+      tapeVariant: "clear",
+      bodyHtml: html,
+      bodyDoc: strayDoc,
+      loreCard: { kind: "character", variant: "v11" },
+      stackId: null,
+      stackOrder: null,
+      slots: { "space-1": { x: 0, y: 0 } },
+    };
+    const contentJson = buildContentJsonForContentEntity(entity);
+    expect(contentJson).toMatchObject({ format: "html", html });
+    expect(contentJson).not.toHaveProperty("doc");
   });
 });
 

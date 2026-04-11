@@ -202,5 +202,6 @@ export function buildDefaultEntityMeta(note: LoreImportPlanNote): Record<string,
     campaignEpoch: note.campaignEpoch ?? undefined,
     loreHistorical: note.loreHistorical ?? false,
     ingestionSignals: note.ingestionSignals ?? {},
+    aiReview: "pending" as const,
   };
 }

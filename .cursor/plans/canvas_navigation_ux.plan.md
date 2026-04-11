@@ -129,7 +129,7 @@ isProject: false
   - **In flight / done / error:** when the POST resolves (parse JSON; map 429 to “rate limited”).
 - **Status bar** ([`ArchitecturalStatusBar.tsx`](c:/Users/Brett/Desktop/Cursor/vigil/src/components/foundation/ArchitecturalStatusBar.tsx)): additive strip when `pendingCount > 0` (“Indexing notes for search…”) and brief success/error toast-line when batch completes (without fighting existing neon sync copy—use a second segment or tooltip).
 - **Per-card (optional v1.1):** subtle icon or dot on card chrome when that `itemId` is pending/failed; clears on success. Keeps power users confident without cluttering empty canvases.
-- **No OpenAI key / skipped:** surface “Search is lexical only” or use `skipped` from API when present so users do not assume vectors updated.
+- **No embedding provider / skipped:** surface “Search is lexical only” or use `skipped` from API when present so users do not assume vectors updated.
 
 ## 7. Editor-assisted linking
 

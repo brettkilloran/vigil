@@ -64,7 +64,7 @@ export async function reindexItemVault(
 
   if (!isEmbeddingApiConfigured()) {
     await clearItemEmbeddings(db, itemId);
-    return { ok: true, chunks: 0, loreMetaUpdated: false, skipped: "no_openai_key" };
+    return { ok: true, chunks: 0, loreMetaUpdated: false, skipped: "no_embedding_provider" };
   }
 
   let loreMetaUpdated = false;

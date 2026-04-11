@@ -57,7 +57,7 @@ export async function GET(req: Request) {
     return Response.json({
       ok: true,
       chunks: [],
-      note: "OPENAI_API_KEY not set; semantic chunk search unavailable.",
+      note: "Vector chunk search unavailable (no embedding provider configured).",
     });
   }
 

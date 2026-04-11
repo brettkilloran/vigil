@@ -31,6 +31,7 @@ import {
   isHgDocContentJson,
   readHgDocFromContentJson,
 } from "@/src/lib/hg-doc/serialize";
+import { contentEntityUsesHgDoc } from "@/src/lib/hg-doc/entity-uses-hg-doc";
 
 const UNIFIED_NODE_WIDTH = 340;
 const FOLDER_CARD_WIDTH = 420;
@@ -182,6 +183,7 @@ export function canvasItemToEntity(
       height:
         typeof item.height === "number" && item.height > 0 ? item.height : FOLDER_CARD_HEIGHT,
       tapeRotation: hg?.tapeRotation ?? 0,
+      entityMeta: item.entityMeta ?? null,
       stackId: item.stackId ?? null,
       stackOrder: item.stackOrder ?? null,
       slots: {
@@ -244,6 +246,7 @@ export function canvasItemToEntity(
     tapeVariant: hg?.tapeVariant ?? tapeVariantForTheme(theme),
     bodyHtml,
     bodyDoc,
+    entityMeta: item.entityMeta ?? null,
     stackId: item.stackId ?? null,
     stackOrder: item.stackOrder ?? null,
     slots: {
@@ -580,7 +583,7 @@ export function buildContentJsonForContentEntity(
   if (entity.loreCard) {
     hgArch.loreCard = entity.loreCard;
   }
-  if (entity.bodyDoc != null) {
+  if (entity.bodyDoc != null && contentEntityUsesHgDoc(entity)) {
     return {
       format: HG_DOC_FORMAT,
       doc: entity.bodyDoc,

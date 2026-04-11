@@ -53,6 +53,7 @@ import {
   ARCH_TOOLTIP_AVOID_TOP,
 } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
+import { Tag } from "@/src/components/ui/Tag";
 import { HeartgardenMediaPlaceholderImg } from "@/src/components/ui/HeartgardenMediaPlaceholderImg";
 import {
   ArchitecturalBottomDock,
@@ -237,6 +238,13 @@ import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
 import { contentEntityUsesHgDoc } from "@/src/lib/hg-doc/entity-uses-hg-doc";
 import { findHgDocSurfaceKeyFromSelection, getHgDocEditor } from "@/src/lib/hg-doc/editor-registry";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
+import {
+  contentEntityHasHgAiPending,
+  hgDocJsonHasHgAiPending,
+  htmlStringHasHgAiPending,
+  stripHgAiPendingFromHgDocJson,
+  stripHgAiPendingFromHtml,
+} from "@/src/lib/hg-doc/strip-hg-ai-pending";
 import {
   htmlFragmentToHgDocDoc,
   legacyCodeBodyHtmlToHgDocSeed,
@@ -2282,10 +2290,30 @@ export function ArchitecturalCanvasApp({
         neonSyncUnbumpPending();
         const ent = graphRef.current.entities[entityId];
         if (!ent || ent.kind !== "content") return;
-        void patchItemWithVersion(entityId, {
+        const clearAiMeta =
+          ent.entityMeta?.aiReview === "pending" && !contentEntityHasHgAiPending(ent);
+        const patch: Record<string, unknown> = {
           contentText: contentPlainTextForEntity(ent),
           contentJson: buildContentJsonForContentEntity(ent),
-        });
+        };
+        if (clearAiMeta) {
+          patch.entityMetaMerge = { aiReview: "cleared" };
+          setGraph((p) => {
+            const cur = p.entities[entityId];
+            if (!cur || cur.kind !== "content") return p;
+            return {
+              ...p,
+              entities: {
+                ...p.entities,
+                [entityId]: {
+                  ...cur,
+                  entityMeta: { ...cur.entityMeta, aiReview: "cleared" },
+                },
+              },
+            };
+          });
+        }
+        void patchItemWithVersion(entityId, patch);
       }, 450);
       itemContentPatchTimersRef.current.set(entityId, t);
     },
@@ -3671,6 +3699,83 @@ export function ArchitecturalCanvasApp({
     [updateNodeBody, updateNodeHgDoc],
   );
 
+  const acceptAiReviewForEntity = useCallback(
+    (entityId: string) => {
+      const ent = graphRef.current.entities[entityId];
+      if (!ent || ent.kind !== "content") return;
+      const docPending = ent.bodyDoc != null && hgDocJsonHasHgAiPending(ent.bodyDoc);
+      const htmlPending = htmlStringHasHgAiPending(ent.bodyHtml);
+      if (!docPending && !htmlPending) return;
+      recordUndoBeforeMutation();
+      const useHg = contentEntityUsesHgDoc(ent);
+      let nextDoc: JSONContent | null | undefined = ent.bodyDoc;
+      let nextHtml = ent.bodyHtml;
+      if (docPending && useHg && ent.bodyDoc) {
+        nextDoc = stripHgAiPendingFromHgDocJson(structuredClone(ent.bodyDoc));
+        nextHtml = hgDocToHtml(nextDoc);
+      } else if (htmlPending) {
+        nextHtml = stripHgAiPendingFromHtml(ent.bodyHtml);
+        nextDoc = useHg ? htmlFragmentToHgDocDoc(nextHtml) : undefined;
+      } else {
+        if (ent.bodyDoc) {
+          nextDoc = stripHgAiPendingFromHgDocJson(structuredClone(ent.bodyDoc));
+        }
+        nextHtml = stripHgAiPendingFromHtml(ent.bodyHtml);
+        nextDoc = undefined;
+      }
+      const merged: CanvasContentEntity = {
+        ...ent,
+        bodyDoc: useHg ? nextDoc ?? undefined : undefined,
+        bodyHtml: nextHtml,
+        entityMeta: { ...ent.entityMeta, aiReview: "cleared" },
+      };
+      setGraph((p) => {
+        const cur = p.entities[entityId];
+        if (!cur || cur.kind !== "content") return p;
+        return {
+          ...p,
+          entities: {
+            ...p.entities,
+            [entityId]: merged,
+          },
+        };
+      });
+      if (focusOpenRef.current && activeNodeIdRef.current === entityId) {
+        if (contentEntityUsesHgDoc(merged)) {
+          const doc = hgDocForContentEntity(merged);
+          setFocusBodyDoc(structuredClone(doc));
+          setFocusBaselineBodyDoc(structuredClone(doc));
+        } else {
+          const normalizedBody =
+            merged.theme === "task"
+              ? normalizeChecklistMarkup(merged.bodyHtml, {
+                  taskItem: styles.taskItem,
+                  taskCheckbox: styles.taskCheckbox,
+                  taskText: styles.taskText,
+                  done: styles.done,
+                })
+              : merged.bodyHtml;
+          const projected = projectBodyHtmlForFocus(merged, normalizedBody);
+          setFocusBody(projected);
+          setFocusBaselineBody(projected);
+        }
+      }
+      void patchItemWithVersion(entityId, {
+        contentText: contentPlainTextForEntity(merged),
+        contentJson: buildContentJsonForContentEntity(merged),
+        entityMetaMerge: { aiReview: "cleared" },
+      });
+    },
+    [
+      patchItemWithVersion,
+      recordUndoBeforeMutation,
+      setFocusBaselineBody,
+      setFocusBaselineBodyDoc,
+      setFocusBody,
+      setFocusBodyDoc,
+    ],
+  );
+
   const setInlineBodyDraftDirty = useCallback((entityId: string, dirty: boolean) => {
     const s = inlineContentDirtyIdsRef.current;
     if (dirty) s.add(entityId);
@@ -4004,7 +4109,7 @@ export function ArchitecturalCanvasApp({
               ...entity,
               title: nextTitle,
               bodyHtml: nextBody,
-              ...(hgDefault ? { bodyDoc: structuredClone(focusDoc) } : {}),
+              bodyDoc: hgDefault ? structuredClone(focusDoc) : undefined,
             },
           },
         };
@@ -4027,7 +4132,7 @@ export function ArchitecturalCanvasApp({
             ...ent,
             title: nextTitle,
             bodyHtml: nextBody,
-            ...(hgDefault ? { bodyDoc: structuredClone(focusDoc) } : {}),
+            bodyDoc: hgDefault ? structuredClone(focusDoc) : undefined,
           };
           void patchItemWithVersion(aid, {
             title: nextTitle,
@@ -6446,7 +6551,8 @@ export function ArchitecturalCanvasApp({
               );
             } else {
               const jobId = jobBody.jobId;
-              const maxAttempts = 240;
+              /** ~12 min — smart planning can run many LLM + vault passes on large sources. */
+              const maxAttempts = 720;
               let planReady = false;
               for (let attempt = 0; attempt < maxAttempts; attempt++) {
                 const poll = await fetch(
@@ -6493,11 +6599,11 @@ export function ArchitecturalCanvasApp({
                   );
                   break;
                 }
-                await new Promise((r) => setTimeout(r, 900));
+                await new Promise((r) => setTimeout(r, 1000));
               }
               if (!planReady) {
                 window.alert(
-                  "Import planning is taking too long (the server may still be working). Try again with a shorter file, or use legacy import.",
+                  "Import planning is taking too long (the server may still be working). Try again in a minute, split the file, or use legacy import.",
                 );
               }
             }
@@ -9530,6 +9636,8 @@ export function ArchitecturalCanvasApp({
                           : undefined
                       }
                       loreCard={entity.loreCard}
+                      aiReviewPending={entity.entityMeta?.aiReview === "pending"}
+                      onAcceptAiReview={() => acceptAiReviewForEntity(entity.id)}
                     />
                   )
                 ) : (
@@ -9726,6 +9834,8 @@ export function ArchitecturalCanvasApp({
                           canvasPanZoomScale={scale}
                           useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
                           loreCard={entity.loreCard}
+                          aiReviewPending={entity.entityMeta?.aiReview === "pending"}
+                          onAcceptAiReview={() => acceptAiReviewForEntity(entity.id)}
                         />
                       )
                     ) : (
@@ -11038,6 +11148,8 @@ export function ArchitecturalCanvasApp({
                           : undefined
                       }
                       loreCard={entity.loreCard}
+                      aiReviewPending={entity.entityMeta?.aiReview === "pending"}
+                      onAcceptAiReview={() => acceptAiReviewForEntity(entity.id)}
                     />
                   )
                 ) : (
@@ -11190,14 +11302,54 @@ export function ArchitecturalCanvasApp({
       >
         <div className={styles.focusSheet}>
           <div className={styles.focusHeader}>
-            <div
-              className={`${styles.focusMeta} ${
-                focusSurface === "character-hybrid" || focusSurface === "location-hybrid"
-                  ? styles.focusMetaReadable
-                  : ""
-              }`}
-            >
-              {`EDITING // ${activeNodeId ? activeNodeId.slice(0, 8).toUpperCase() : "NODE"}`}
+            <div className={styles.focusHeaderLead}>
+              <div
+                className={`${styles.focusMeta} ${
+                  focusSurface === "character-hybrid" || focusSurface === "location-hybrid"
+                    ? styles.focusMetaReadable
+                    : ""
+                }`}
+              >
+                {`EDITING // ${activeNodeId ? activeNodeId.slice(0, 8).toUpperCase() : "NODE"}`}
+              </div>
+              {focusOpen &&
+              activeNodeId &&
+              graph.entities[activeNodeId]?.kind === "content" &&
+              graph.entities[activeNodeId].entityMeta?.aiReview === "pending" ? (
+                <div className={styles.focusAiReviewBar} role="status" aria-live="polite">
+                  <Tag
+                    variant={
+                      focusSurface === "code" ||
+                      focusSurface === "character-hybrid" ||
+                      focusSurface === "location-hybrid"
+                        ? "llmFocusDark"
+                        : "llmLight"
+                    }
+                  >
+                    Unreviewed
+                  </Tag>
+                  <ArchitecturalTooltip
+                    content="Clear AI/import highlights and mark this note reviewed"
+                    side="bottom"
+                    delayMs={280}
+                  >
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="ghost"
+                      tone="glass"
+                      className={styles.nodeBtn}
+                      aria-label="Accept AI and import text"
+                      onClick={() => acceptAiReviewForEntity(activeNodeId)}
+                    >
+                      Accept
+                    </Button>
+                  </ArchitecturalTooltip>
+                  <span className={styles.focusAiReviewHint}>
+                    Typing in highlighted text also clears it; Save applies like any edit.
+                  </span>
+                </div>
+              ) : null}
             </div>
             <ArchitecturalFocusCloseButton
               dirty={focusDirty}

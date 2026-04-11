@@ -42,6 +42,8 @@ export type CanvasEntityBase = {
   persistedItemId?: string | null;
   stackId?: string | null;
   stackOrder?: number | null;
+  /** Mirrors `items.entity_meta` (import signals, AI review flags, etc.). */
+  entityMeta?: Record<string, unknown> | null;
 };
 
 export type CanvasContentEntity = CanvasEntityBase & {

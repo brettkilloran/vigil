@@ -74,7 +74,8 @@ function swatchStyle(name: string): CSSProperties {
     name.includes("snap") ||
     name.includes("foreground") ||
     name.includes("background") ||
-    name.includes("canvas");
+    name.includes("canvas") ||
+    name.includes("llm");
 
   if (looksColorLike) {
     return {
