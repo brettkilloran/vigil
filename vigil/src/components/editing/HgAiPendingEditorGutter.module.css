@@ -1,47 +1,39 @@
 .rail {
   position: relative;
   z-index: 1;
-  flex: 0 0 var(--hg-ai-gutter-width, 36px);
-  width: var(--hg-ai-gutter-width, 36px);
+  flex: 0 0 auto;
+  width: max-content;
+  min-width: var(--hg-ai-gutter-width, 72px);
   min-height: 100%;
   pointer-events: none;
 }
 
-.acceptBtn {
+.acceptAnchor {
   position: absolute;
   left: 50%;
-  width: 28px;
-  height: 28px;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   transform: translate(-50%, -50%);
   pointer-events: auto;
+}
+
+.acceptAnchor :global(.hg-tooltip-hitbox) {
+  display: inline-flex;
+}
+
+/* Compact chip: aligns with Tag llmLight typography; colors from globals [data-hg-ai-bind]. */
+.bindBtn {
+  margin: 0;
+  white-space: nowrap;
   cursor: pointer;
-  border-radius: var(--sys-radius-sm);
-  border: 1px solid var(--sem-border-llm-pending);
-  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--sys-color-neutral-100));
-  color: var(--sem-text-llm-accent);
-  box-shadow: var(--sem-shadow-sm);
-  transition:
-    background var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
-    border-color var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
-    transform 0.12s ease;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  min-height: 22px;
+  padding-block: 2px;
+  transition: transform 0.16s ease;
 }
 
-.acceptBtn:hover,
-.acceptBtn:focus-visible {
-  background: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 88%, var(--sys-color-white));
-  border-color: var(--sem-text-llm-accent);
-  outline: none;
-}
-
-.acceptBtn:focus-visible {
-  box-shadow: 0 0 0 2px color-mix(in oklch, var(--sem-text-llm-accent) 35%, transparent);
-}
-
-.acceptBtn:active {
-  transform: translate(-50%, -50%) scale(0.96);
+.bindBtn:hover {
+  transform: translateY(-0.5px);
 }

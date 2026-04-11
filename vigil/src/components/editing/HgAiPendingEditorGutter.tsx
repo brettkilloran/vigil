@@ -1,10 +1,10 @@
 "use client";
 
 import type { Editor } from "@tiptap/core";
-import { Check } from "@phosphor-icons/react";
 import type { RefObject } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 import { collectHgAiPendingRanges } from "@/src/lib/hg-doc/collect-hg-ai-pending-ranges";
 import { removeHgAiPendingRange } from "@/src/lib/hg-doc/remove-hg-ai-pending-range";
@@ -133,29 +133,38 @@ export function HgAiPendingEditorGutter({ editor, wrapRef }: HgAiPendingEditorGu
   return (
     <div className={styles.rail} ref={railRef}>
       {ranges.map((r, i) => (
-        <Button
+        <div
           key={`${r.from}-${r.to}-${i}`}
-          type="button"
-          size="icon"
-          iconOnly
-          variant="subtle"
-          tone="card-light"
-          className={styles.acceptBtn}
+          className={styles.acceptAnchor}
           style={{ top: tops[i] ?? 0 }}
-          title="Accept this section"
-          aria-label="Accept AI text in this section"
-          leadingIcon={<Check size={16} weight="bold" aria-hidden />}
-          onMouseEnter={() => setHovered(i)}
-          onMouseLeave={() => setHovered(null)}
-          onFocus={() => setHovered(i)}
-          onBlur={() => setHovered(null)}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            removeHgAiPendingRange(editor, r.from, r.to);
-            setHovered(null);
-          }}
-        />
+        >
+          <ArchitecturalTooltip
+            content="Bind this passage into your note (clears pending highlight)"
+            side="left"
+            delayMs={280}
+          >
+            <Button
+              type="button"
+              size="xs"
+              variant="subtle"
+              className={styles.bindBtn}
+              aria-label="Bind AI text in this section"
+              data-hg-ai-bind="true"
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+              onFocus={() => setHovered(i)}
+              onBlur={() => setHovered(null)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                removeHgAiPendingRange(editor, r.from, r.to);
+                setHovered(null);
+              }}
+            >
+              Bind
+            </Button>
+          </ArchitecturalTooltip>
+        </div>
       ))}
     </div>
   );

@@ -8,8 +8,9 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 2px 6px;
-  border-radius: 4px;
+  /* Pill shape reads as a status label, not a rectangular control. */
+  padding: 2px 8px;
+  border-radius: var(--sys-radius-full);
   line-height: 1.2;
   box-sizing: border-box;
 }

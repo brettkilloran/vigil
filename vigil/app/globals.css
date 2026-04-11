@@ -1424,6 +1424,56 @@ a {
   --btn-border-disabled: transparent;
 }
 
+/*
+ * hgDoc pending margin rail — must win over variant + tone (placed after card-*).
+ * Same palette as Tag `llmLight` (see Tag.module.css).
+ */
+.vigil-btn[data-hg-ai-bind="true"] {
+  --btn-bg-default: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--sys-color-neutral-100));
+  --btn-bg-hover: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 88%, var(--sys-color-white));
+  --btn-bg-active: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--sys-color-neutral-100));
+  --btn-bg-disabled: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--sys-color-neutral-100));
+  --btn-fg-default: var(--sem-text-llm-accent);
+  --btn-fg-hover: var(--sem-text-llm-accent);
+  --btn-fg-active: var(--sem-text-llm-accent);
+  --btn-fg-disabled: color-mix(in oklch, var(--sem-text-llm-accent) 55%, transparent);
+  --btn-border-default: var(--sem-border-llm-pending);
+  --btn-border-hover: var(--sem-text-llm-accent);
+  --btn-border-active: var(--sem-text-llm-accent);
+  --btn-border-disabled: var(--sem-border-llm-pending);
+  --btn-radius: var(--sys-radius-sm);
+  /* Neutral contact + soft violet bloom (surface reflection) — reads as blocking light + purple bounce. */
+  box-shadow:
+    0 0.5px 1px color-mix(in oklch, var(--sys-color-black) 14%, transparent),
+    0 1px 2px color-mix(in oklch, var(--sys-color-black) 7%, transparent),
+    0 3px 10px color-mix(in oklch, var(--sem-text-llm-accent) 24%, transparent),
+    0 10px 26px color-mix(in oklch, var(--sem-text-llm-accent) 14%, transparent);
+}
+
+.vigil-btn[data-hg-ai-bind="true"]:hover {
+  box-shadow:
+    0 0.5px 1px color-mix(in oklch, var(--sys-color-black) 16%, transparent),
+    0 2px 4px color-mix(in oklch, var(--sys-color-black) 9%, transparent),
+    0 4px 14px color-mix(in oklch, var(--sem-text-llm-accent) 30%, transparent),
+    0 14px 32px color-mix(in oklch, var(--sem-text-llm-accent) 18%, transparent);
+}
+
+.vigil-btn[data-hg-ai-bind="true"]:active {
+  box-shadow:
+    0 0.5px 1px color-mix(in oklch, var(--sys-color-black) 12%, transparent),
+    0 1px 3px color-mix(in oklch, var(--sem-text-llm-accent) 18%, transparent),
+    0 4px 12px color-mix(in oklch, var(--sem-text-llm-accent) 12%, transparent);
+}
+
+.vigil-btn[data-hg-ai-bind="true"]:focus-visible {
+  box-shadow:
+    0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sem-text-llm-accent) 36%, transparent),
+    0 0.5px 1px color-mix(in oklch, var(--sys-color-black) 14%, transparent),
+    0 1px 2px color-mix(in oklch, var(--sys-color-black) 7%, transparent),
+    0 3px 10px color-mix(in oklch, var(--sem-text-llm-accent) 24%, transparent),
+    0 10px 26px color-mix(in oklch, var(--sem-text-llm-accent) 14%, transparent);
+}
+
 /* hgDoc block reorder grip — portaled to `#hg-portal-root` (see `getVigilPortalRoot`); tones: focus-light / focus-dark / card (HgDocPointerBlockDrag). */
 .vigil-btn[data-hg-doc-block-drag-grip="true"] {
   touch-action: none;
