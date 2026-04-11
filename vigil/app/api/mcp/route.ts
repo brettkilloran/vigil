@@ -6,10 +6,31 @@ import {
   createHeartgardenMcpServer,
   resolveHeartgardenMcpBaseUrl,
 } from "@/src/lib/mcp/heartgarden-mcp-server";
+import { mergeStreamableHttpAcceptHeader } from "@/src/lib/mcp/mcp-streamable-http-accept";
 
 export const runtime = "nodejs";
 
 export const dynamic = "force-dynamic";
+
+function requestWithStreamableHttpAccept(request: NextRequest): Request {
+  const raw = request.headers.get("accept");
+  const merged = mergeStreamableHttpAcceptHeader(request.method, raw);
+  if (merged === (raw ?? "").trim()) {
+    return request;
+  }
+  const headers = new Headers(request.headers);
+  headers.set("accept", merged);
+  const init: RequestInit & { duplex?: "half" } = {
+    method: request.method,
+    headers,
+    body: request.body,
+    signal: request.signal ?? undefined,
+  };
+  if (request.body) {
+    init.duplex = "half";
+  }
+  return new Request(request.url, init);
+}
 
 async function handleMcpRequest(request: NextRequest): Promise<Response> {
   if (!heartgardenMcpServiceKeyFromEnv()) {
@@ -47,7 +68,7 @@ async function handleMcpRequest(request: NextRequest): Promise<Response> {
   });
 
   await server.connect(transport);
-  return transport.handleRequest(request);
+  return transport.handleRequest(requestWithStreamableHttpAccept(request));
 }
 
 export async function GET(request: NextRequest) {
