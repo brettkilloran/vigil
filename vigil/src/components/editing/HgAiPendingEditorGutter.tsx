@@ -70,6 +70,12 @@ export function HgAiPendingEditorGutter({ editor, wrapRef }: HgAiPendingEditorGu
     };
   }, [editor]);
 
+  /* Initial content does not always emit `update`; re-collect ranges after first layout frame. */
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setDocVersion((v) => v + 1));
+    return () => cancelAnimationFrame(id);
+  }, [editor]);
+
   useEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return;

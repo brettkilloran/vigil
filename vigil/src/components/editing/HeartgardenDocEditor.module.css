@@ -357,3 +357,25 @@
 .host[data-hg-doc-syntax="dark"] .proseRoot :global(pre.hgCodeBlock .hljs-type) {
   color: color-mix(in oklch, var(--sys-color-accent-200) 55%, var(--sys-color-white));
 }
+
+/*
+ * hgAiPending mark — scoped under .host + .ProseMirror so we beat Tailwind/preflight and `.focusBody`
+ * inheritance on dev previews (e.g. /dev/ai-pending-style) that are not inside `.focusOverlay`.
+ * Canvas/focus overlays may still override via ArchitecturalCanvasApp (theme / dark focus).
+ */
+.host :global(.ProseMirror [data-hg-ai-pending="true"]),
+.host :global(.ProseMirror span.hgAiPending) {
+  color: var(--sem-text-llm-accent);
+  text-decoration: none;
+  background: var(--sem-surface-llm-pending);
+  border-radius: 3px;
+  padding: 0.06em 0.28em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.host :global(.ProseMirror [data-hg-ai-pending="true"].hgAiPending--gutter-hover),
+.host :global(.ProseMirror span.hgAiPending.hgAiPending--gutter-hover) {
+  background: var(--sem-surface-llm-pending-hover);
+  box-shadow: 0 0 0 1px var(--sem-border-llm-pending);
+}
