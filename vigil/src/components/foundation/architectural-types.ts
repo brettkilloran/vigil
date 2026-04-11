@@ -124,6 +124,8 @@ export type DockCreateAction = {
   id: string;
   label: string;
   nodeType: NodeTheme;
+  /** Faction / location: show v1–v3 picker in the create strip (see `DEFAULT_CREATE_ACTIONS`). */
+  loreVariantSubmenu?: LoreCardVariant[];
 };
 
 /** Inline canvas body commits — HTML lore/code/media vs hgDoc default/task. */

@@ -21,6 +21,7 @@ import {
   Folder,
   Graph,
   ImageSquare,
+  MapPin,
   Lightning,
   MagnifyingGlass,
   NotePencil,
@@ -32,6 +33,8 @@ import {
   Stack,
   Trash,
   UploadSimple,
+  User,
+  UsersThree,
   WarningCircle,
 } from "@phosphor-icons/react";
 
@@ -61,6 +64,7 @@ import {
   DEFAULT_CREATE_ACTIONS,
   DEFAULT_DOC_INSERT_ACTIONS,
   DEFAULT_FORMAT_ACTIONS,
+  loreVariantChoiceLabel,
   type ConnectionDockMode,
 } from "@/src/components/foundation/ArchitecturalBottomDock";
 import { ArchitecturalParentExitThreshold } from "@/src/components/foundation/ArchitecturalParentExitThreshold";
@@ -229,6 +233,7 @@ import {
   type DockFormatAction,
   type LoreCard,
   type LoreCardKind,
+  type LoreCardVariant,
   type NodeTheme,
   type TapeVariant,
   ROOT_SPACE_DISPLAY_NAME,
@@ -952,6 +957,20 @@ function tapeVariantForTheme(theme: ContentTheme): TapeVariant {
 
 function isLoreCreateNodeType(type: NodeTheme): type is LoreCardKind {
   return type === "character" || type === "faction" || type === "location";
+}
+
+/** Character is always v11; faction/location accept v1–v3 from the dock (or default). */
+function resolveLoreVariantForCreate(
+  type: LoreCardKind,
+  requested: LoreCardVariant | undefined,
+): LoreCardVariant {
+  if (type === "character") {
+    return defaultLoreCardVariantForKind(type);
+  }
+  if (requested === "v1" || requested === "v2" || requested === "v3") {
+    return requested;
+  }
+  return defaultLoreCardVariantForKind(type);
 }
 
 function normalizedFocusTitle(raw: string): string {
@@ -1949,6 +1968,7 @@ export function ArchitecturalCanvasApp({
   const stackDragRef = useRef(stackDrag);
   const stackModalCardHeightsRef = useRef(stackModalCardHeights);
   const [selectionContextMenu, setSelectionContextMenu] = useState<ContextMenuPosition>(null);
+  const [canvasEmptyContextMenu, setCanvasEmptyContextMenu] = useState<ContextMenuPosition>(null);
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
   const [connectionContextMenu, setConnectionContextMenu] = useState<ContextMenuPosition>(null);
   /** Canvas/stack: show dock format cluster only while focus is in a rich-text surface (card/folder title or body). */
@@ -5907,6 +5927,55 @@ export function ArchitecturalCanvasApp({
       { id: "create-checklist", label: "Create checklist", hint: "Add a checklist card", icon: <NotePencil size={14} weight="bold" /> },
       { id: "create-media", label: "Create image card", hint: "Add a media card", icon: <ImageSquare size={14} weight="bold" /> },
       { id: "create-folder", label: "Create folder", hint: "Add folder and child space", icon: <Folder size={14} weight="bold" /> },
+      {
+        id: "create-character",
+        label: "Create character",
+        hint: "Lore character card (ID plate layout)",
+        keywords: ["lore", "character", "person", "npc", "cast"],
+        icon: <User size={14} weight="bold" />,
+      },
+      {
+        id: "create-org-letterhead",
+        label: "Create organization (letterhead)",
+        hint: `Lore org — ${loreVariantChoiceLabel("faction", "v1")} layout`,
+        keywords: ["lore", "organization", "faction", "company", "guild", "letterhead"],
+        icon: <UsersThree size={14} weight="bold" />,
+      },
+      {
+        id: "create-org-monogram",
+        label: "Create organization (monogram rail)",
+        hint: `Lore org — ${loreVariantChoiceLabel("faction", "v2")} layout`,
+        keywords: ["lore", "organization", "faction", "monogram", "rail"],
+        icon: <UsersThree size={14} weight="bold" />,
+      },
+      {
+        id: "create-org-framed",
+        label: "Create organization (framed memo)",
+        hint: `Lore org — ${loreVariantChoiceLabel("faction", "v3")} layout`,
+        keywords: ["lore", "organization", "faction", "framed", "memo"],
+        icon: <UsersThree size={14} weight="bold" />,
+      },
+      {
+        id: "create-location-plaque",
+        label: "Create location (site plaque)",
+        hint: `Lore place — ${loreVariantChoiceLabel("location", "v1")} layout`,
+        keywords: ["lore", "location", "place", "site", "plaque"],
+        icon: <MapPin size={14} weight="bold" />,
+      },
+      {
+        id: "create-location-postcard",
+        label: "Create location (postcard band)",
+        hint: `Lore place — ${loreVariantChoiceLabel("location", "v2")} layout`,
+        keywords: ["lore", "location", "place", "postcard"],
+        icon: <MapPin size={14} weight="bold" />,
+      },
+      {
+        id: "create-location-survey",
+        label: "Create location (survey tag)",
+        hint: `Lore place — ${loreVariantChoiceLabel("location", "v3")} layout`,
+        keywords: ["lore", "location", "place", "survey", "tag"],
+        icon: <MapPin size={14} weight="bold" />,
+      },
       { id: "export-json", label: "Export graph JSON", hint: "Download the current graph", icon: <DownloadSimple size={14} weight="bold" /> },
       {
         id: "toggle-canvas-effects",
@@ -6126,7 +6195,7 @@ export function ArchitecturalCanvasApp({
     };
   }, [focusOpen, galleryOpen, graph.entities, selectedNodeIds, setFolderColorScheme]);
 
-  const createNewNode = useCallback((type: NodeTheme) => {
+  const createNewNode = useCallback((type: NodeTheme, loreVariant?: LoreCardVariant) => {
     if (isRestrictedLayer && type === "media") return;
     // Strict GM is for mirroring production when Neon persistence is on; local-only / demo / E2E
     // (`persistNeonRef` false) must still be able to mutate the canvas.
@@ -6251,15 +6320,15 @@ export function ArchitecturalCanvasApp({
 
         if (isLoreCreateNodeType(type)) {
           title = defaultTitleForLoreKind(type);
-          const loreVariant = defaultLoreCardVariantForKind(type);
-          loreCard = { kind: type, variant: loreVariant };
+          const resolvedVariant = resolveLoreVariantForCreate(type, loreVariant);
+          loreCard = { kind: type, variant: resolvedVariant };
           const locationStripSeed =
-            type === "location" && loreVariant === "v3"
+            type === "location" && resolvedVariant === "v3"
               ? globalThis.crypto?.randomUUID?.() ?? `loc-${Date.now()}`
               : undefined;
           bodyHtml = getLoreNodeSeedBodyHtml(
             type,
-            loreVariant,
+            resolvedVariant,
             locationStripSeed != null ? { locationStripSeed } : undefined,
           );
         } else if (type === "code") {
@@ -6421,12 +6490,12 @@ export function ArchitecturalCanvasApp({
 
     if (isLoreCreateNodeType(type)) {
       title = defaultTitleForLoreKind(type);
-      const loreVariant = defaultLoreCardVariantForKind(type);
-      loreCard = { kind: type, variant: loreVariant };
-      const locationStripSeed = type === "location" && loreVariant === "v3" ? id : undefined;
+      const resolvedVariant = resolveLoreVariantForCreate(type, loreVariant);
+      loreCard = { kind: type, variant: resolvedVariant };
+      const locationStripSeed = type === "location" && resolvedVariant === "v3" ? id : undefined;
       bodyHtml = getLoreNodeSeedBodyHtml(
         type,
-        loreVariant,
+        resolvedVariant,
         locationStripSeed != null ? { locationStripSeed } : undefined,
       );
     } else if (type === "code") {
@@ -6695,6 +6764,41 @@ export function ArchitecturalCanvasApp({
     }
     if (actionId === "create-folder") {
       createNewNode("folder");
+      playVigilUiSound("select");
+      return;
+    }
+    if (actionId === "create-character") {
+      createNewNode("character");
+      playVigilUiSound("select");
+      return;
+    }
+    if (actionId === "create-org-letterhead") {
+      createNewNode("faction", "v1");
+      playVigilUiSound("select");
+      return;
+    }
+    if (actionId === "create-org-monogram") {
+      createNewNode("faction", "v2");
+      playVigilUiSound("select");
+      return;
+    }
+    if (actionId === "create-org-framed") {
+      createNewNode("faction", "v3");
+      playVigilUiSound("select");
+      return;
+    }
+    if (actionId === "create-location-plaque") {
+      createNewNode("location", "v1");
+      playVigilUiSound("select");
+      return;
+    }
+    if (actionId === "create-location-postcard") {
+      createNewNode("location", "v2");
+      playVigilUiSound("select");
+      return;
+    }
+    if (actionId === "create-location-survey") {
+      createNewNode("location", "v3");
       playVigilUiSound("select");
       return;
     }
@@ -8687,6 +8791,10 @@ export function ArchitecturalCanvasApp({
     setSelectionContextMenu(null);
   }, []);
 
+  const closeCanvasEmptyContextMenu = useCallback(() => {
+    setCanvasEmptyContextMenu(null);
+  }, []);
+
   const closeConnectionContextMenu = useCallback(() => {
     setConnectionContextMenu(null);
   }, []);
@@ -8715,10 +8823,26 @@ export function ArchitecturalCanvasApp({
         if (members.length > 0) hitIds = members;
       }
 
-      if (!hitIds || hitIds.length < 1) return;
+      if (!hitIds || hitIds.length < 1) {
+        if (target.closest("[data-node-id]") || target.closest("[data-stack-container='true']")) return;
+        const inCanvas = target.closest("[data-vigil-canvas='true']");
+        if (!inCanvas) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setSelectionContextMenu(null);
+        setCanvasEmptyContextMenu(
+          clampContextMenuPosition(
+            { x: event.clientX, y: event.clientY },
+            { maxWidth: 280, maxHeight: 400, edgePadding: 8 },
+          ),
+        );
+        setSelectedNodeIds([]);
+        return;
+      }
 
       event.preventDefault();
       event.stopPropagation();
+      setCanvasEmptyContextMenu(null);
       setSelectedNodeIds(hitIds);
       setSelectionContextMenu(
         clampContextMenuPosition(
@@ -9035,6 +9159,47 @@ export function ArchitecturalCanvasApp({
     ],
   );
 
+  const canvasEmptyContextMenuItems = useMemo<ContextMenuItem[]>(
+    () => [
+      {
+        label: "Create character",
+        icon: <User size={18} weight="bold" aria-hidden />,
+        onSelect: () => createNewNode("character"),
+      },
+      {
+        label: `Organization — ${loreVariantChoiceLabel("faction", "v1")}`,
+        icon: <UsersThree size={18} weight="bold" aria-hidden />,
+        onSelect: () => createNewNode("faction", "v1"),
+      },
+      {
+        label: `Organization — ${loreVariantChoiceLabel("faction", "v2")}`,
+        icon: <UsersThree size={18} weight="bold" aria-hidden />,
+        onSelect: () => createNewNode("faction", "v2"),
+      },
+      {
+        label: `Organization — ${loreVariantChoiceLabel("faction", "v3")}`,
+        icon: <UsersThree size={18} weight="bold" aria-hidden />,
+        onSelect: () => createNewNode("faction", "v3"),
+      },
+      {
+        label: `Location — ${loreVariantChoiceLabel("location", "v1")}`,
+        icon: <MapPin size={18} weight="bold" aria-hidden />,
+        onSelect: () => createNewNode("location", "v1"),
+      },
+      {
+        label: `Location — ${loreVariantChoiceLabel("location", "v2")}`,
+        icon: <MapPin size={18} weight="bold" aria-hidden />,
+        onSelect: () => createNewNode("location", "v2"),
+      },
+      {
+        label: `Location — ${loreVariantChoiceLabel("location", "v3")}`,
+        icon: <MapPin size={18} weight="bold" aria-hidden />,
+        onSelect: () => createNewNode("location", "v3"),
+      },
+    ],
+    [createNewNode],
+  );
+
   const connectionContextMenuItems = useMemo<ContextMenuItem[]>(() => {
     if (!selectedConnectionId) return [];
     const selected = graph.connections[selectedConnectionId];
@@ -9141,6 +9306,12 @@ export function ArchitecturalCanvasApp({
   useEffect(() => {
     if (selectedNodeIds.length >= 1) return;
     setSelectionContextMenu((prev) => (prev === null ? prev : null));
+  }, [selectedNodeIds.length]);
+
+  useEffect(() => {
+    if (selectedNodeIds.length >= 1) {
+      setCanvasEmptyContextMenu(null);
+    }
   }, [selectedNodeIds.length]);
 
   useEffect(() => {
@@ -10987,6 +11158,11 @@ export function ArchitecturalCanvasApp({
         position={selectionContextMenu}
         onClose={closeSelectionContextMenu}
         items={selectionContextMenuItems}
+      />
+      <ContextMenu
+        position={canvasEmptyContextMenu}
+        onClose={closeCanvasEmptyContextMenu}
+        items={canvasEmptyContextMenuItems}
       />
       <ContextMenu
         position={connectionContextMenu}
