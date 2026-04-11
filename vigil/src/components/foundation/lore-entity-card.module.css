@@ -1942,10 +1942,10 @@
   grid-template-rows: 44px auto max-content auto;
 }
 
-/* Identity band: min fits two 148px meta rows + divider (~297px); grows if content needs more. */
+/* Identity band: min fits two 76px meta rows + divider (~153px); grows if content needs more. */
 .charSkShellV11 .charSkIdentityCell {
   grid-template-columns: var(--char-sk-v11-name-col-w) 142px;
-  min-height: 297px;
+  min-height: 153px;
   height: auto;
   max-height: none;
   align-items: stretch;
@@ -2346,7 +2346,7 @@
 }
 
 .charSkShellV11 .charSkMetaBlock {
-  grid-template-rows: 148px 148px;
+  grid-template-rows: 76px 76px;
   align-content: start;
   align-self: stretch;
   justify-self: stretch;
@@ -2354,16 +2354,16 @@
   min-height: 0;
 }
 
-/* Both meta rows fixed 148px so Affiliation and Nationality match (avoid 1fr squeezing row 1). */
+/* Both meta rows fixed 76px so Affiliation and Nationality match (avoid 1fr squeezing row 1). */
 .charSkShellV11 .charSkMetaBlock > .charSkMetaRow {
   min-height: 0;
-  height: 148px;
-  max-height: 148px;
+  height: 76px;
+  max-height: 76px;
   box-sizing: border-box;
 }
 
 /*
- * Row border box is 148px incl. padding; grow the value + stretch the v11 strip to fill each slot.
+ * Row border box is 76px incl. padding; grow the value + stretch the v11 strip to fill each slot.
  */
 .charSkShellV11 .charSkMetaBlock > .charSkMetaRow .charSkMetaValue[data-hg-lore-field] {
   flex: 1 1 auto;
@@ -2860,7 +2860,7 @@
   }
 
   .charSkShellV11 .charSkMetaBlock {
-    grid-template-rows: 148px 148px;
+    grid-template-rows: 76px 76px;
   }
 
   .charSkGrid {
