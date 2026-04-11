@@ -6,8 +6,8 @@ todos:
     content: "Design lab route + previews ([app/dev/lore-entity-nodes/page.tsx](vigil/app/dev/lore-entity-nodes/page.tsx), [LoreEntityNodeLab.tsx](vigil/src/components/dev/LoreEntityNodeLab.tsx)) reflect canonical fields + 3 visual passes per type"
     status: completed
   - id: pick-winners
-    content: "Optional: expose v2/v3 in UI (palette, context menu); dock currently creates v1 only"
-    status: pending
+    content: "Dock create strip: Organization + Location open flyout for v1–v3 layouts (Character stays one-click v11)"
+    status: completed
   - id: persist-hgarch
     content: "HgArch `loreCard` { kind, variant } + `entity_type` on create/restore; bridge infers v1 from entity_type when hg omits loreCard"
     status: completed
