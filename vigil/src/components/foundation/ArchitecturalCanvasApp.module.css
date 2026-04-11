@@ -2461,7 +2461,13 @@
 .vaultIndexToastWrap {
   position: fixed;
   top: max(18px, calc(env(safe-area-inset-top, 0px) + 8px));
-  left: max(24px, env(safe-area-inset-left, 0px));
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  box-sizing: border-box;
   z-index: calc(var(--layer-ui-chrome-elevated, 60) + 2);
   pointer-events: none;
 }
