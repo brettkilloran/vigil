@@ -34,7 +34,6 @@ const HEARTGARDEN_MCP_WRITE_TOOL_NAMES = new Set([
   "heartgarden_update_link",
   "heartgarden_delete_item",
   "heartgarden_delete_link",
-  "heartgarden_reindex_space",
   "heartgarden_index_item",
 ]);
 
@@ -50,6 +49,13 @@ function mcpContentTextTooLong(fieldLabel: string, text: string): string | null 
 export function mcpCoerceTruthyFlag(v: unknown): boolean {
   return v === true || v === "true" || v === 1 || v === "1";
 }
+
+/** Use in inputSchema for optional space_id when tools fall back to HEARTGARDEN_DEFAULT_SPACE_ID. */
+const MCP_SPACE_ID_OPTIONAL_HINT =
+  "Space UUID. Required unless HEARTGARDEN_DEFAULT_SPACE_ID is set on this MCP process—call heartgarden_mcp_config to see if a default is configured.";
+
+const MCP_ERR_MISSING_SPACE =
+  "Missing space_id: pass space_id or set HEARTGARDEN_DEFAULT_SPACE_ID on the MCP process (check heartgarden_mcp_config).";
 
 function mergeAuthHeaders(serviceKey: string, headers?: HeadersInit): Headers {
   const h = new Headers(headers);
@@ -212,7 +218,14 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
     tools: [
       {
         name: "heartgarden_browse_spaces",
-        description: "List all spaces (id, name, parent). GET /api/spaces.",
+        description:
+          "List all spaces (id, name, parent). GET /api/spaces. Call this (or heartgarden_mcp_config) when you need a space UUID instead of assuming HEARTGARDEN_DEFAULT_SPACE_ID is set.",
+        inputSchema: { type: "object", properties: {} },
+      },
+      {
+        name: "heartgarden_mcp_config",
+        description:
+          "Return non-secret MCP runtime flags: whether a default space id is configured, whether write tools are allowed, and whether HEARTGARDEN_MCP_WRITE_KEY is set on the server (no values revealed). Call when unsure whether space_id can be omitted.",
         inputSchema: { type: "object", properties: {} },
       },
       {
@@ -221,7 +234,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         inputSchema: {
           type: "object",
           properties: {
-            space_id: { type: "string", description: "Space UUID" },
+            space_id: { type: "string", description: MCP_SPACE_ID_OPTIONAL_HINT },
           },
         },
       },
@@ -234,7 +247,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           properties: {
             space_id: {
               type: "string",
-              description: "UUID of the space (omit if HEARTGARDEN_DEFAULT_SPACE_ID is set)",
+              description: MCP_SPACE_ID_OPTIONAL_HINT,
             },
             limit: {
               type: "integer",
@@ -251,7 +264,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         inputSchema: {
           type: "object",
           properties: {
-            space_id: { type: "string", description: "Space UUID" },
+            space_id: { type: "string", description: MCP_SPACE_ID_OPTIONAL_HINT },
             q: { type: "string", description: "Query (at least 2 characters)" },
             mode: {
               type: "string",
@@ -269,7 +282,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         inputSchema: {
           type: "object",
           properties: {
-            space_id: { type: "string", description: "Space UUID" },
+            space_id: { type: "string", description: MCP_SPACE_ID_OPTIONAL_HINT },
             limit: {
               type: "integer",
               description: "Node page size when set (1–2000, default 500). Omit for full graph.",
@@ -335,7 +348,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             item_id: { type: "string" },
             space_id: {
               type: "string",
-              description: "Space UUID (omit if HEARTGARDEN_DEFAULT_SPACE_ID is set)",
+              description: MCP_SPACE_ID_OPTIONAL_HINT,
             },
           },
           required: ["item_id"],
@@ -344,12 +357,12 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       {
         name: "heartgarden_lore_query",
         description:
-          "Ask a natural-language question; hybrid retrieval (FTS + vectors + graph neighbors) then Claude synthesizes. POST /api/lore/query.",
+          "Q&A over the canvas: hybrid retrieval (FTS + vectors + graph neighbors) then Claude returns one synthesized natural-language answer plus source pointers. POST /api/lore/query. Use this for answering questions. For raw retrieved chunks (no synthesis) to feed your own reasoning, use heartgarden_semantic_search.",
         inputSchema: {
           type: "object",
           properties: {
             question: { type: "string" },
-            space_id: { type: "string", description: "Optional space UUID filter" },
+            space_id: { type: "string", description: "Optional: limit retrieval to this space UUID" },
             limit: { type: "integer", description: "Max sources 1–24, default 14" },
           },
           required: ["question"],
@@ -358,7 +371,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       {
         name: "heartgarden_semantic_search",
         description:
-          "Return top matching text chunks (vector) with item ids. GET /api/search/chunks. Requires embeddings. You must pass space_id, set HEARTGARDEN_DEFAULT_SPACE_ID on the MCP server, or set all_spaces: true (searches every space — use deliberately).",
+          "Raw semantic chunk retrieval: GET /api/search/chunks returns ranked text snippets and item ids (no LLM synthesis). Use for evidence, citations, or building your own context. For a single Claude-written answer to a question, use heartgarden_lore_query. Requires embeddings. You must pass space_id, set HEARTGARDEN_DEFAULT_SPACE_ID on the MCP server, or set all_spaces: true (searches every space—use deliberately).",
         inputSchema: {
           type: "object",
           properties: {
@@ -393,30 +406,9 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         },
       },
       {
-        name: "heartgarden_reindex_space",
-        description:
-          "Reindex all items in a space (embeddings + optional lore meta). POST /api/spaces/:id/reindex. Set dry_run: true first for item counts and cost estimates. write_key matches HEARTGARDEN_MCP_WRITE_KEY or may be omitted when that env is set on the MCP process.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            write_key: {
-              type: "string",
-              description: "Must match HEARTGARDEN_MCP_WRITE_KEY; may be omitted when set on the MCP server",
-            },
-            space_id: { type: "string", description: "Space UUID" },
-            refresh_lore_meta: { type: "boolean", description: "Default true" },
-            dry_run: {
-              type: "boolean",
-              description: "When true, returns item_count and estimated API calls without reindexing",
-            },
-          },
-          required: ["space_id"],
-        },
-      },
-      {
         name: "heartgarden_patch_item",
         description:
-          "PATCH an item (geometry, content, entity fields, move between spaces). Maps snake_case args to API camelCase. Requires write_key (or omit when HEARTGARDEN_MCP_WRITE_KEY is set on the MCP server). content_text is capped at ~2M characters per request.",
+          "PATCH an item (geometry, content, entity fields, move between spaces). Maps snake_case args to API camelCase. Requires write_key (or omit when HEARTGARDEN_MCP_WRITE_KEY is set on the MCP server). Prefer content_text for normal edits; content_json is the full TipTap document (see docs/API.md PATCH /api/items). content_text is capped at ~2M characters per request.",
         inputSchema: {
           type: "object",
           properties: {
@@ -425,9 +417,13 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             title: { type: "string" },
             content_text: {
               type: "string",
-              description: `Plain text body (max ${MCP_MAX_CONTENT_TEXT_CHARS} chars per request)`,
+              description: `Plain text body (max ${MCP_MAX_CONTENT_TEXT_CHARS} chars per request). Default choice for edits.`,
             },
-            content_json: { description: "Raw contentJson object (TipTap / hgArch)" },
+            content_json: {
+              type: "object",
+              description:
+                'Full TipTap/hgArch document (same shape as stored on the item); root is usually { type: "doc", content: [...] }. Use only when replacing whole editor state; see docs/API.md PATCH /api/items and docs/CANVAS_LORE_NODE_PATTERNS.md.',
+            },
             entity_type: { type: "string", description: "items.entity_type" },
             entity_meta: { description: "Replaces entity_meta JSON object" },
             entity_meta_merge: { description: "Shallow merge into entity_meta" },
@@ -454,7 +450,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       {
         name: "heartgarden_create_item",
         description:
-          "Create a canvas item (POST /api/spaces/:id/items). canvas_item_type: note|sticky|image|checklist|webclip (not folder — use heartgarden_create_folder). For lore shells set lore_entity: character|faction|location (same as entity_type on DB) or canonical_entity_kind (npc|faction|location|…). Legacy item_type character → note + lore character. content_text max ~2M characters per request.",
+          'Create a canvas item (POST /api/spaces/:id/items). canvas_item_type: note|sticky|image|checklist|webclip (not folder—use heartgarden_create_folder). Entity fields—pick one primary path: (1) lore_entity character|faction|location for built-in lore card shells on note/sticky—server generates template contentJson/HTML like the UI. (2) canonical_entity_kind (npc|location|faction|quest|item|lore|other) maps to items.entity_type via the registry when you are not using lore_entity. (3) entity_type is the raw DB string when you need a specific type. MCP sends entityType from lore_entity first, else entity_type; canonical_entity_kind is also sent but the API uses it only if entityType is still unset—avoid mixing lore_entity with redundant canonical_entity_kind. Legacy item_type character → note + lore character. content_text max ~2M characters per request.',
         inputSchema: {
           type: "object",
           properties: {
@@ -462,7 +458,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
               type: "string",
               description: "Must match HEARTGARDEN_MCP_WRITE_KEY; may be omitted if the MCP process has that env set",
             },
-            space_id: { type: "string", description: "Target space UUID" },
+            space_id: { type: "string", description: "Target canvas space UUID (always pass if unsure—see heartgarden_mcp_config)" },
             canvas_item_type: {
               type: "string",
               enum: ["note", "sticky", "image", "checklist", "webclip", "folder"],
@@ -480,15 +476,24 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             lore_entity: {
               type: "string",
               enum: ["character", "faction", "location"],
-              description: "Lore card shell; implies entityType and server-side lore HTML",
+              description:
+                "Lore card shell (note/sticky only): sets entityType and lets the server synthesize the lore HTML/contentJson template.",
             },
-            lore_variant: { type: "string", enum: ["v1", "v2", "v3", "v11"] },
+            lore_variant: {
+              type: "string",
+              enum: ["v1", "v2", "v3", "v11"],
+              description: "Shell layout variant when using lore_entity",
+            },
             canonical_entity_kind: {
               type: "string",
               enum: ["npc", "location", "faction", "quest", "item", "lore", "other"],
-              description: "Maps to entity_type when lore_entity omitted",
+              description:
+                "Maps to persisted entity_type via registry when lore_entity and entity_type are not used to set entityType.",
             },
-            entity_type: { type: "string", description: "Raw entity_type (quest, item, …) when not using lore_entity" },
+            entity_type: {
+              type: "string",
+              description: "Raw items.entity_type string (e.g. quest) when not using lore_entity as the primary path",
+            },
             entity_meta: { description: "JSON object stored on the item" },
             x: { type: "number" },
             y: { type: "number" },
@@ -630,11 +635,30 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       return { content: [{ type: "text", text }] };
     }
 
+    if (name === "heartgarden_mcp_config") {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                default_space_configured: SPACE.length > 0,
+                mcp_read_only: config.readOnly,
+                write_key_configured: WRITE_KEY.length > 0,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    }
+
     if (name === "heartgarden_space_summary") {
       const spaceId = String(args.space_id ?? "").trim() || SPACE;
       if (!spaceId) {
         return {
-          content: [{ type: "text", text: "Missing space_id and HEARTGARDEN_DEFAULT_SPACE_ID" }],
+          content: [{ type: "text", text: MCP_ERR_MISSING_SPACE }],
           isError: true,
         };
       }
@@ -647,7 +671,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       if (!spaceId) {
         return {
           content: [
-            { type: "text", text: "Missing space_id and HEARTGARDEN_DEFAULT_SPACE_ID" },
+            { type: "text", text: MCP_ERR_MISSING_SPACE },
           ],
           isError: true,
         };
@@ -667,7 +691,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       if (!spaceId) {
         return {
           content: [
-            { type: "text", text: "Missing space_id and HEARTGARDEN_DEFAULT_SPACE_ID" },
+            { type: "text", text: MCP_ERR_MISSING_SPACE },
           ],
           isError: true,
         };
@@ -691,7 +715,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       if (!spaceId) {
         return {
           content: [
-            { type: "text", text: "Missing space_id and HEARTGARDEN_DEFAULT_SPACE_ID" },
+            { type: "text", text: MCP_ERR_MISSING_SPACE },
           ],
           isError: true,
         };
@@ -787,7 +811,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       if (!spaceId) {
         return {
           content: [
-            { type: "text", text: "Missing space_id and HEARTGARDEN_DEFAULT_SPACE_ID" },
+            { type: "text", text: MCP_ERR_MISSING_SPACE },
           ],
           isError: true,
         };
@@ -851,7 +875,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           content: [
             {
               type: "text",
-              text: "Provide space_id, configure HEARTGARDEN_DEFAULT_SPACE_ID on the MCP server, or pass all_spaces: true to search every space.",
+              text: "Provide space_id, set HEARTGARDEN_DEFAULT_SPACE_ID on the MCP server (see heartgarden_mcp_config), or pass all_spaces: true to search every space.",
             },
           ],
           isError: true,
@@ -916,40 +940,6 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             null,
             2,
           );
-        }
-      }
-      return { content: [{ type: "text", text: out }] };
-    }
-
-    if (name === "heartgarden_reindex_space") {
-      const wkErr = mcpWriteKeyError(args, WRITE_KEY, { allowOmitWhenConfigSet: true });
-      if (wkErr) {
-        return { content: [{ type: "text", text: wkErr }], isError: true };
-      }
-      const spaceId = String(args.space_id ?? "").trim();
-      if (!spaceId) {
-        return {
-          content: [{ type: "text", text: "space_id is required" }],
-          isError: true,
-        };
-      }
-      const res = await api(`${BASE}/api/spaces/${encodeURIComponent(spaceId)}/reindex`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          write_key: WRITE_KEY,
-          refresh_lore_meta: args.refresh_lore_meta !== false,
-          dry_run: mcpCoerceTruthyFlag(args.dry_run),
-        }),
-      });
-      const bodyText = await res.text();
-      let out = bodyText;
-      if (res.status === 429) {
-        try {
-          const j = JSON.parse(bodyText) as Record<string, unknown>;
-          out = JSON.stringify({ httpStatus: res.status, ...j }, null, 2);
-        } catch {
-          out = JSON.stringify({ httpStatus: res.status, body: bodyText }, null, 2);
         }
       }
       return { content: [{ type: "text", text: out }] };

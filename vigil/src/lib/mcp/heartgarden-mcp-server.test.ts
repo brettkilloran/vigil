@@ -11,6 +11,7 @@ describe("canonicalHeartgardenMcpToolName", () => {
   it("maps vigil_ tool names to heartgarden_ (legacy tools/call aliases)", () => {
     const pairs: [string, string][] = [
       ["vigil_browse_spaces", "heartgarden_browse_spaces"],
+      ["vigil_mcp_config", "heartgarden_mcp_config"],
       ["vigil_space_summary", "heartgarden_space_summary"],
       ["vigil_list_items", "heartgarden_list_items"],
       ["vigil_search", "heartgarden_search"],
@@ -24,7 +25,6 @@ describe("canonicalHeartgardenMcpToolName", () => {
       ["vigil_lore_query", "heartgarden_lore_query"],
       ["vigil_semantic_search", "heartgarden_semantic_search"],
       ["vigil_index_item", "heartgarden_index_item"],
-      ["vigil_reindex_space", "heartgarden_reindex_space"],
       ["vigil_patch_item", "heartgarden_patch_item"],
       ["vigil_create_item", "heartgarden_create_item"],
       ["vigil_create_link", "heartgarden_create_link"],
