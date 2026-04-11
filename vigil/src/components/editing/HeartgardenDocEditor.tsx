@@ -33,12 +33,10 @@ import styles from "@/src/components/editing/HeartgardenDocEditor.module.css";
 
 const HG_DOC_DRAG_HANDLE_FLOAT = {
   placement: "left-start" as const,
-
-  strategy: "absolute" as const,
-
+  /* `absolute` is clipped by `.focusSheet { overflow-y: auto }` (horizontal overflow becomes non-visible). */
+  strategy: "fixed" as const,
   middleware: [
     /* Sit in the left gutter; slight vertical nudge toward first-line cap height. */
-
     offset({ mainAxis: 4, crossAxis: -1 }),
   ],
 };

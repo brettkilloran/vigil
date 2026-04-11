@@ -10,7 +10,8 @@
 
 .dragHandle {
   position: absolute;
-  z-index: 2;
+  /* Above sticky `.focusHeader` (z-index 10) when overlapping; TipTap sets `position: fixed` inline when configured. */
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: center;
