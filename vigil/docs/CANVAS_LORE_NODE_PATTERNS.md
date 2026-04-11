@@ -124,3 +124,16 @@ Canonical `bodyHtml` uses:
 Golden tests: **`src/lib/lore-location-focus-document-html.test.ts`**. Cursor plan: **`.cursor/plans/location_lore_data_model_and_focus.plan.md`**.
 
 Treat new types as parallel tracks with the same **seams**, not copy-paste of one-off fixes.
+
+---
+
+## Import taxonomy (`canonicalEntityKind`) — checklist
+
+When adding or renaming a **canonical** kind from the lore import / LLM planner:
+
+1. Add the string to [`src/lib/lore-import-canonical-kinds.ts`](../src/lib/lore-import-canonical-kinds.ts).
+2. Update the matrix in [`docs/LORE_IMPORT_KIND_MAPPING.md`](./LORE_IMPORT_KIND_MAPPING.md) and [`src/lib/lore-object-registry.ts`](../src/lib/lore-object-registry.ts) (`persistedEntityTypeFromCanonical`, `loreShellKindFromCanonical`).
+3. Extend Zod in [`src/lib/lore-import-plan-types.ts`](../src/lib/lore-import-plan-types.ts) if the kind is new.
+4. Run **`src/lib/lore-import-registry-wiring.test.ts`** once it exists (registry + `buildSearchBlob` smoke).
+
+Only **`character` / `faction` / `location`** (or `npc` → `character` at persist time) get dedicated lore **canvas** shells; other kinds remain default note cards with metadata for search.

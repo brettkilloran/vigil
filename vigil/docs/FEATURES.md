@@ -2,12 +2,14 @@
 title: heartgarden — shipped features
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-10
+last_reviewed: 2026-04-11
 canonical: true
 related:
   - vigil/docs/API.md
   - vigil/docs/CODEMAP.md
   - vigil/docs/BUILD_PLAN.md
+  - vigil/docs/EDITOR_HG_DOC.md
+  - vigil/docs/DATA_PIPELINE_AUDIT_2026-04-11.md
 ---
 
 # heartgarden — shipped features (reference)
@@ -37,6 +39,8 @@ Single place to **look up what exists** and where it lives. For **HTTP contracts
 | **Viewport toast** | Short-lived bottom message (e.g. nav hints) with cooldown | — | `CanvasViewportToast.tsx` |
 | **Space transitions** | Optional WebGL flow overlay when **canvas effects** on; dimmed scene during `enterSpace` fetch; **generation guard** drops stale async completions if user navigates again | [`BUILD_PLAN.md`](./BUILD_PLAN.md) | `VigilFlowRevealOverlay.tsx` (dynamic `next/dynamic`), `enterSpace` + `spaceNavGenerationRef` in `ArchitecturalCanvasApp.tsx` |
 | **Dock + stack modal** | Chrome layout safe when stack modal open (no clipped controls) | — | `ArchitecturalCanvasApp.tsx` + related CSS modules |
+| **Lore create (bottom dock)** | **Character** one-click; **Organization** / **Location** open a **layout flyout** (v1–v3 seeds) | [`CODEMAP.md`](./CODEMAP.md) | `ArchitecturalBottomDock.tsx` (`DEFAULT_CREATE_ACTIONS`, `loreVariantSubmenu`), `createNewNode` in `ArchitecturalCanvasApp.tsx` |
+| **Empty-canvas context menu** | Right-click **empty viewport** (not on a card) → create **character** or **organization** / **location** by layout variant | — | `canvasEmptyContextMenu` + `handleViewportContextMenuCapture` in `ArchitecturalCanvasApp.tsx` |
 
 ---
 
@@ -44,7 +48,7 @@ Single place to **look up what exists** and where it lives. For **HTTP contracts
 
 | Feature | What users see / behavior | Docs | Primary code |
 |--------|----------------------------|------|----------------|
-| **Cmd+K palette** | Search suggest, spaces, actions, export, recents (caps expanded over time) | [`API.md`](./API.md) (`/api/search/suggest`) | Command palette wiring in `ArchitecturalCanvasApp.tsx`, `app/api/search/suggest/route.ts` |
+| **Cmd+K palette** | Search suggest, spaces, actions, **lore create shortcuts** (character; organization letterhead/monogram/framed; location plaque/postcard/survey), export, recents (caps expanded over time) | [`API.md`](./API.md) (`/api/search/suggest`) | `paletteActions` / `runPaletteAction` in `ArchitecturalCanvasApp.tsx`, `app/api/search/suggest/route.ts` |
 | **Vault index status** | Status bar line for “indexing notes…” / errors (pending + in-flight) | — | `vault-index-status-bus.ts`, `VaultIndexStatusInline` in `ArchitecturalStatusBar.tsx`, debounced index in `architectural-neon-api.ts` |
 | **Hybrid / semantic search** | Palette + `/api/search` RRF when embeddings exist | [`API.md`](./API.md), [`BUILD_PLAN.md`](./BUILD_PLAN.md) | `app/api/search/route.ts`, `vault-retrieval-rrf.ts` |
 | **Ask lore** | Lore Q&A panel | [`API.md`](./API.md) (`/api/lore/query`) | `LoreAskPanel.tsx`, `lore-engine.ts` |
@@ -56,6 +60,10 @@ Single place to **look up what exists** and where it lives. For **HTTP contracts
 | Feature | What users see / behavior | Docs | Primary code |
 |--------|----------------------------|------|----------------|
 | **Modular note editor (hgDoc)** | Default/task cards + focus mode use TipTap blocks; body persists as `content_json.format: "hgDoc"` with derived HTML for links | [`EDITOR_HG_DOC.md`](./EDITOR_HG_DOC.md) | `HeartgardenDocEditor.tsx`, `src/lib/hg-doc/*`, `architectural-db-bridge.ts` |
+| **AI / import pending text (`hgAiPending`)** | Inline **pending** styling for AI or imported prose; per-span **Bind** in the editor margin (hgDoc); editing inside a span participates in undo/redo | [`EDITOR_HG_DOC.md`](./EDITOR_HG_DOC.md) | `hg-doc/hg-ai-pending-mark.ts`, `HgAiPendingEditorGutter.tsx`, `collect-hg-ai-pending-ranges.ts`, `remove-hg-ai-pending-range.ts`, `strip-hg-ai-pending.ts`, `app/globals.css` (`--sem-text-ai-pending`) |
+| **Unreviewed / Accept (cards)** | `items.entity_meta.aiReview === "pending"` shows **Unreviewed** + **Accept** when the body still has pending markup (hgDoc JSON or `data-hg-ai-pending` HTML); Accept strips marks and clears `aiReview` | [`DATA_PIPELINE_AUDIT_2026-04-11.md`](./DATA_PIPELINE_AUDIT_2026-04-11.md) | `ArchitecturalNodeCard.tsx`, `acceptAiReviewForEntity` + pending detection in `ArchitecturalCanvasApp.tsx` |
+| **Lore import + review flags** | Apply/commit paths can wrap bodies with pending spans and set **`aiReview: pending`**; merge flows extend structured HTML without flattening prior body when designed to | [`API.md`](./API.md) (lore import) | `lore-import-apply.ts`, `lore-import-commit.ts`, `app/api/lore/import/*` |
+| **Dev: AI pending style** | `/dev/ai-pending-style` — static + live hgDoc samples for pending styling | — | `app/dev/ai-pending-style/*` |
 | **Wiki link `[[` assist** | Typing `[[` in rich text opens popover to pick / create wiki targets | — | `BufferedContentEditable.tsx`, `WikiLinkAssistPopover.tsx`, `wiki-link-caret.ts`, `wiki-link-caret.test.ts` |
 | **Internal links** | `vigil:item:` resolution in shell | [`AGENTS.md`](../AGENTS.md) | `ArchitecturalLinksPanel` / link resolution paths in foundation |
 

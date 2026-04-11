@@ -2,7 +2,7 @@
 title: heartgarden — execution build plan
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-10
+last_reviewed: 2026-04-11
 canonical: true
 related:
   - vigil/docs/FEATURES.md
@@ -78,6 +78,10 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 5. **Canvas version history (UX2 — decision for v1)** — **Export-first:** the canvas already supports **Export graph JSON** (Cmd+K). Treat that as the supported “checkpoint” workflow until a DB snapshot or `item_revisions` table is justified. **Space / graph snapshots** and **per-item revision logs** remain future options; any in-app restore must not silently fight the local undo stack (explicit “restore from server snapshot” only).
 6. **Space nav hardening (residual)** — **`enterSpace`** already uses a **generation guard** so stale fetches do not apply. Optional: **abort** in-flight bootstrap fetch on newer navigation, or a **short CSS-only** nav cue when canvas effects are **off** for parity with the WebGL transition.
 7. **Collab delta API (beyond steady-state `includeItemIds=1`)** — Optional next tracks: **E2** tombstones / `deleted_item_ids` since cursor; **E3** monotonic subtree revision so clients never re-enumerate full id sets on recovery. **`GET …/changes`** today omits **`itemIds`** on steady-state polls per `docs/API.md` / `PLAYER_LAYER.md`.
+
+**Lore import + data pipeline (audit tranche):** [`DATA_PIPELINE_AUDIT_2026-04-11.md`](./DATA_PIPELINE_AUDIT_2026-04-11.md) §10–§12 (registry, conformance tests, smoke gate, multiplayer expectations). Execution tracks and YAML todos: [`.cursor/plans/data_pipeline_import_hardening.plan.md`](../../.cursor/plans/data_pipeline_import_hardening.plan.md).
+
+**Canonical kind → DB / canvas mapping (import):** [`LORE_IMPORT_KIND_MAPPING.md`](./LORE_IMPORT_KIND_MAPPING.md) — code: `src/lib/lore-object-registry.ts` (land with Agent mode if not present).
 
 ### Mid-term — master plan Phase 5 (TTRPG + intelligence)
 

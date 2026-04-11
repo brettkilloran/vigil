@@ -1,3 +1,7 @@
+---
+Status: shipped — Phase 1 demo (`/dev/ai-pending-style`) + Phase 2 product wiring landed. **SoT:** `vigil/docs/FEATURES.md`, `vigil/docs/EDITOR_HG_DOC.md`, `vigil/docs/CODEMAP.md`.
+---
+
 # Unreviewed AI / ingestion text — UX plan (revised)
 
 ## Overview
@@ -21,8 +25,8 @@ Some items are **100%** model output (new import notes, or merged content that r
 
 ## Current code reality (brief)
 
-- Import/merge today: [`vigil/src/lib/lore-import-commit.ts`](vigil/src/lib/lore-import-commit.ts), [`vigil/src/lib/lore-import-apply.ts`](vigil/src/lib/lore-import-apply.ts) — no inline provenance; merge flattens text.
-- Editors: hgDoc via [`vigil/src/lib/hg-doc/extensions.ts`](vigil/src/lib/hg-doc/extensions.ts); lore/HTML via `BufferedContentEditable` — see [`vigil/src/components/foundation/ArchitecturalNodeCard.tsx`](vigil/src/components/foundation/ArchitecturalNodeCard.tsx).
+- Import/merge: [`lore-import-commit.ts`](vigil/src/lib/lore-import-commit.ts), [`lore-import-apply.ts`](vigil/src/lib/lore-import-apply.ts) — can wrap proposed/imported bodies with pending spans and set `entity_meta.aiReview` (see **`docs/FEATURES.md`**).
+- hgDoc: TipTap **`hgAiPending`** mark + margin **Bind** in [`HeartgardenDocEditor`](vigil/src/components/editing/HeartgardenDocEditor.tsx); lore **canvas** HTML plates still use structured `BufferedContentEditable` — global pending styling applies to spans; full gutter is hgDoc-only (**`docs/EDITOR_HG_DOC.md`**).
 
 ## UX direction (for demo + final)
 
@@ -71,11 +75,11 @@ Detailed file list and rollout order follow Phase 1 sign-off.
 
 ### Phase 1
 
-- [ ] Add provisional CSS tokens (or local demo-only tokens) + prose styles for pending inline + full-body cases.
-- [ ] Build Storybook story or dev demo with mocked mixed paragraph, full-AI note, and optional intra-block scenario copy.
-- [ ] Review with you; capture feedback for Phase 2.
+- [x] Add provisional CSS tokens (or local demo-only tokens) + prose styles for pending inline + full-body cases.
+- [x] Dev demo: **`/dev/ai-pending-style`** (`app/dev/ai-pending-style/`).
+- [x] Reviewed; Phase 2 implemented.
 
 ### Phase 2 (post-approval)
 
-- [ ] Persist marks / HTML wrappers from import and merge; `entityMeta` chip if desired.
-- [ ] Editor commands + tests; production tokens finalized in `globals.css`.
+- [x] Persist marks / HTML wrappers from import and merge; `entityMeta` chip + Accept path.
+- [x] Editor + strip helpers + tests; production tokens in `app/globals.css`.

@@ -222,8 +222,10 @@ Notably thinner (or absent in this pass): deep import E2E behavior around merge/
   - post-apply search visibility
 3. **Institutionalize 3-track smoke run** (GM/demo/player) as release checklist.
 4. **Separate strategic multiplayer roadmap from bug backlog**:
-  - keep current polling path robust (E2/E3 style improvements)
-  - document what "Figma-like" would require before promising behavior changes.
+   - keep current polling path robust (E2/E3 style improvements)
+   - document what "Figma-like" would require before promising behavior changes.
+
+**Execution plan (tracks + YAML todos):** [`.cursor/plans/data_pipeline_import_hardening.plan.md`](../../.cursor/plans/data_pipeline_import_hardening.plan.md) (repo root `.cursor/plans/`).
 
 ## 12) Multiplayer consistency — decision brief (Figma-like vs shipped)
 

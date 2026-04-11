@@ -21,6 +21,7 @@ import {
   filterPlanLinksToSameCanvasSpace,
   normalizeImportItemLinkType,
 } from "@/src/lib/lore-import-item-link";
+import type { CanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
 import {
   buildDefaultEntityMeta,
   clarificationAnswerSchema,
@@ -29,6 +30,7 @@ import {
 } from "@/src/lib/lore-import-plan-types";
 import type { VigilDb } from "@/src/lib/spaces";
 import { assertSpaceExists } from "@/src/lib/spaces";
+import { persistedEntityTypeFromCanonical } from "@/src/lib/lore-object-registry";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
 
@@ -415,11 +417,14 @@ export async function applyLoreImportPlan(
         importBatchId: plan.importBatchId,
       };
 
+      const persistedEntityType = persistedEntityTypeFromCanonical(
+        note.canonicalEntityKind as CanonicalEntityKind,
+      );
       const searchBlob = buildSearchBlob({
         title: note.title.slice(0, 255),
         contentText: bodyText,
         contentJson,
-        entityType: note.canonicalEntityKind,
+        entityType: persistedEntityType,
         entityMeta,
         imageUrl: null,
         imageMeta: null,
@@ -442,7 +447,7 @@ export async function applyLoreImportPlan(
           searchBlob,
           contentJson,
           color: DS_COLOR.itemDefaultNote,
-          entityType: note.canonicalEntityKind,
+          entityType: persistedEntityType,
           entityMeta,
         })
         .returning();

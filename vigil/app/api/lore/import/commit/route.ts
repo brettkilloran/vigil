@@ -15,6 +15,8 @@ import {
 } from "@/src/lib/lore-import-commit";
 import { normalizeImportItemLinkType } from "@/src/lib/lore-import-item-link";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
+import { normalizeCanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
+import { persistedEntityTypeFromCanonical } from "@/src/lib/lore-object-registry";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
@@ -208,6 +210,8 @@ export async function POST(req: Request) {
     const pos = layout.entities[i]!;
     const summary = e.summary ?? "";
     const contentJson = buildLoreNoteContentJson(summary || "—", { aiPending: true });
+    const canonKind = normalizeCanonicalEntityKind(e.kind ?? "lore");
+    const persistedEntityType = persistedEntityTypeFromCanonical(canonKind);
     const id = await insertNote({
       title: e.canonicalName.slice(0, 255),
       contentText: summary.slice(0, 120_000),
@@ -216,8 +220,13 @@ export async function POST(req: Request) {
       y: pos.y,
       width: pos.width,
       height: pos.height,
-      entityType: e.kind ?? "lore",
-      entityMeta: { import: true, kind: e.kind ?? null, aiReview: "pending" },
+      entityType: persistedEntityType,
+      entityMeta: {
+        import: true,
+        kind: e.kind ?? null,
+        canonicalEntityKind: canonKind,
+        aiReview: "pending",
+      },
     });
     if (id) {
       nameToId.set(e.canonicalName.toLowerCase(), id);

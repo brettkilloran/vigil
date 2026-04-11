@@ -2,7 +2,7 @@
 title: Players layer
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-10
+last_reviewed: 2026-04-11
 canonical: true
 related:
   - vigil/docs/API.md
@@ -109,3 +109,12 @@ Any new **`app/api/**`** handler that reads **`spaceId`**, **`itemId`**, or link
 **Players misconfiguration**
 
 - [ ] Players cookie but **invalid** (non-empty, bad UUID) player/default space env → operator alert webhook optional (`HEARTGARDEN_PLAYER_LAYER_ALERT_WEBHOOK_URL`); bootstrap and mutating routes **403** (not GM data); boot screen shows configuration error when flagged. Empty env with valid Neon is **not** misconfigured.
+
+## Multiplayer consistency (what ships vs “Figma-like”)
+
+Collab in this shell is **polling** `GET …/changes`, **server rows as truth**, **409** on version conflicts, and optional full **`itemIds`** after navigation — **not** CRDT/OT ([`AGENTS.md`](../AGENTS.md)). That means **short inconsistency windows** under rapid concurrent edits are **expected**, not bugs to “fix” with UI polish alone.
+
+- **Near-term engineering** should harden this model (tombstones, cursor invalidation, E2/E3 delta ideas in [`BUILD_PLAN.md`](./BUILD_PLAN.md)) — see [`DATA_PIPELINE_AUDIT_2026-04-11.md`](./DATA_PIPELINE_AUDIT_2026-04-11.md) §12.
+- **“Figma-like” live cursors / instant merge** would require a **different architecture** (push/OT/CRDT); treat as a **product charter**, not an implied outcome of bug scrubbing.
+
+When triaging issues, separate **`collab-bug`** (missed tombstone, wrong 409 handling) from **`collab-roadmap`** (latency, feel, strategic consistency).

@@ -2,7 +2,7 @@
 title: heartgarden — agent notes
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-10
+last_reviewed: 2026-04-11
 canonical: true
 related:
   - docs/API.md
@@ -41,6 +41,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | **Lore vertical + plan index** | `docs/LORE_ENGINE_ROADMAP.md`, repo `.cursor/plans/README.md` |
 | **Lore node UI patterns** | `docs/CANVAS_LORE_NODE_PATTERNS.md` |
 | **Character focus + data model / sync / migration plan** | `docs/CHARACTER_FOCUS_AND_DATA_MODEL_PLAN.md` |
+| **hgDoc editor + AI / import pending marks (`hgAiPending`)** | `docs/EDITOR_HG_DOC.md` (see also `docs/FEATURES.md`, `docs/CODEMAP.md`) |
 | **Doc index (links only)** | `docs/HEARTGARDEN_MASTER_PLAN.md` |
 | **Engineering delta / phase notes** | `docs/STRATEGY.md` |
 | **Human / keys / infra** | `docs/FOLLOW_UP.md` |
@@ -68,6 +69,10 @@ Persistence: **`items`** rows; **`spaces.canvas_state`** is legacy (camera is **
 **Canvas camera (arrival vs persistence):** Pan/zoom are React state (`translateX` / `translateY` / `scale`) on the scene; **`defaultCamera(viewportW, viewportH)`** in **`src/model/canvas-types.ts`** places **world (0,0) at the viewport center** with zoom 1 (`translate` ≈ half the measured viewport in CSS pixels). **Bootstrap** (`applyBootstrapData`), **opening a folder** / **`enterSpace`**, **demo seed**, **recenter**, and **non-default shell** initial layout use that home camera (or a **presence follow** override clamped in `enterSpace`). **`src/lib/heartgarden-space-camera.ts`** persists the current view per space while you work; the shell **writes** on those arrivals so storage matches what we show, but **does not read** stored pan on bootstrap/enter — so stale offsets do not override the intentional centered landing.
 
 **Lore + vault index:** Cmd+K → **Ask lore** → `LoreAskPanel` → **`POST /api/lore/query`** (FTS + fuzzy + link neighbors + Anthropic; vector chunks only if an embedding provider is wired in **`src/lib/embedding-provider.ts`** — currently none). Debounced **`POST /api/items/:id/index`** from `architectural-neon-api.ts` after note writes. Optional **`HEARTGARDEN_INDEX_AFTER_PATCH=1`**: Next **`after()`** reindex from `schedule-vault-index-after.ts` on PATCH/create. **`HEARTGARDEN_VAULT_DEBUG=1`**: log hybrid RRF ranks. **`HEARTGARDEN_INDEX_SKIP_LORE_META=1`**: skip Anthropic lore meta on index (saves API calls on bulk reindex). **Search:** `/api/search` `hybrid` / `semantic` use RRF when embeddings exist; **`GET /api/search/chunks`** for raw chunk hits.
+
+**AI / import review (hgDoc):** Pending AI or import text uses the TipTap **`hgAiPending`** mark (serialized as `data-hg-ai-pending` spans). **`HeartgardenDocEditor`** can show a margin **Bind** control per pending range; **Unreviewed** / **Accept** on cards tie to **`items.entity_meta.aiReview`** when the body still has pending markup. Lore **canvas** HTML plates inherit global pending styling for wrapped spans but do not use the hgDoc gutter. Details: **`docs/EDITOR_HG_DOC.md`**, **`docs/FEATURES.md`**, **`docs/CODEMAP.md`**. Import HTTP surface: **`docs/API.md`** (lore import). Canonical kind → DB mapping: **`docs/LORE_IMPORT_KIND_MAPPING.md`**.
+
+**Multi-mode / release smoke:** Before shipping shell, sync, or import changes, run the **three-track** manual playbook in **`docs/DATA_PIPELINE_AUDIT_2026-04-11.md`** §4 — **Track A** (Neon GM), **Track B** (demo/local), **Track C** (Players tier). This is the closest thing to an integration gate for tier bleed; optional CI only covers slices (e.g. demo boot). **localStorage** camera keys are shared across tiers on one browser profile — see audit §5; namespacing is a roadmap item in **`.cursor/plans/data_pipeline_import_hardening.plan.md`**.
 
 **Neon sync strip:** Top status bar shows **Loading / Local / Saving / Saved / Sync error** via `neon-sync-bus.ts` + instrumented `architectural-neon-api.ts`. **Undo/redo** is in-memory only; tooltips spell out that the server keeps the **last successful write** until the next PATCH. Multiplayer merges and 409 handling reconcile against **server rows**, not a CRDT.
 

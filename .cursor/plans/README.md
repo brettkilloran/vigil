@@ -19,6 +19,7 @@ When a plan’s work lands or is cancelled, add **`Status:`** at the top of that
 | [`location_lore_data_model_and_focus.plan.md`](./location_lore_data_model_and_focus.plan.md) | Location **persistence/focus** (field contract, notes in focus)—not the visual card-type lab; see `lore_entity_node_lab.plan.md` for plaque/postcard/survey UI. **Pending:** collab smoke, optional lab parity, extensions. |
 | [`location_lore_variants_and_skins.plan.md`](./location_lore_variants_and_skins.plan.md) | Location **inventive skins / metaphors** (blueprint, deed, polaroid, etc.) constrained to the field contract; prototype picks + lab/canvas parity. **Pending:** product picks + implementation. |
 | [`players_multiplayer_hardening.plan.md`](./players_multiplayer_hardening.plan.md) | **Living** — camera/localStorage, presence, sync (verify against code before treating as unfinished). |
+| [`data_pipeline_import_hardening.plan.md`](./data_pipeline_import_hardening.plan.md) | **DATA_PIPELINE_AUDIT** tranche: import conformance + canonical-kind mapping, registry cohesion, three-track smoke, multiplayer expectations vs Figma-like (see audit §10–§12). |
 
 ---
 

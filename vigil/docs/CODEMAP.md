@@ -2,7 +2,7 @@
 title: heartgarden — code map
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-10
+last_reviewed: 2026-04-11
 canonical: true
 related:
   - vigil/docs/FEATURES.md
@@ -34,6 +34,11 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Default camera / `CameraState` | `src/model/canvas-types.ts` (`defaultCamera`) |
 | Transient viewport toasts | `src/components/foundation/CanvasViewportToast.tsx` |
 | Default/task note bodies (TipTap hgDoc) | `src/components/editing/HeartgardenDocEditor.tsx`, `src/lib/hg-doc/*`, `docs/EDITOR_HG_DOC.md` |
+| **hgDoc `hgAiPending` mark, margin Bind, strip pending** | `src/lib/hg-doc/hg-ai-pending-mark.ts`, `collect-hg-ai-pending-ranges.ts`, `remove-hg-ai-pending-range.ts`, `strip-hg-ai-pending.ts`, `src/components/editing/HgAiPendingEditorGutter.tsx`, tests in `hg-ai-pending-mark.test.ts` |
+| **Unreviewed / Accept** (`entity_meta.aiReview`, pending body detection) | `src/components/foundation/ArchitecturalNodeCard.tsx`, `ArchitecturalCanvasApp.tsx` (`acceptAiReviewForEntity`, `contentEntityHasHgAiPending`) |
+| **Cmd+K palette** (search, actions, **lore create shortcuts**, export, …) | `src/components/foundation/ArchitecturalCanvasApp.tsx` (`paletteActions`, `runPaletteAction`), `src/components/ui/CommandPalette.tsx` |
+| **Bottom dock** (create strip, lore layout flyouts for org/location) | `src/components/foundation/ArchitecturalBottomDock.tsx` (`DEFAULT_CREATE_ACTIONS`, `ArchitecturalCreateMenu`) |
+| **Empty-canvas context menu** (lore creates on right-click empty viewport) | `ArchitecturalCanvasApp.tsx` (`canvasEmptyContextMenu`, `canvasEmptyContextMenuItems`, `handleViewportContextMenuCapture`) |
 | Buffered rich text + wiki `[[` assist (lore, code, media captions) | `src/components/editing/BufferedContentEditable.tsx`, `WikiLinkAssistPopover.tsx`, `src/lib/wiki-link-caret.ts` |
 | Resolved image URLs (zoom / CDN template) | `src/lib/heartgarden-image-display-url.ts` |
 | Viewport culling (entities, stacks, connections) | `src/lib/canvas-viewport-cull.ts` |
@@ -97,6 +102,7 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Async job enqueue + poll | `app/api/lore/import/jobs/route.ts`, `jobs/[jobId]/route.ts` → `src/lib/lore-import-job-*.ts` |
 | Apply plan to canvas | `app/api/lore/import/apply/route.ts`, `src/lib/lore-import-apply.ts` |
 | Commit / review persistence | `app/api/lore/import/commit/route.ts`, `src/lib/lore-import-commit.ts`, `lore-import-persist-review.ts` |
+| Apply/commit: pending HTML wrappers + `entity_meta.aiReview` | `src/lib/lore-import-apply.ts`, `lore-import-commit.ts`, `app/api/lore/import/commit/route.ts` |
 | Plan types & Zod | `src/lib/lore-import-plan-types.ts` |
 | Consistency check (LLM) | `app/api/lore/consistency/check/route.ts` |
 
