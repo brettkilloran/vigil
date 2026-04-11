@@ -30,3 +30,31 @@ export function authorizationBearerMatchesMcpServiceKey(authorization: string | 
   if (!m) return false;
   return timingSafeEqualUtf8(m[1]!, key);
 }
+
+/**
+ * Same secret as Bearer, for clients that only support pasting a URL (e.g. Claude custom connector):
+ * `?token=` or `?key=` on /api/mcp, or header `X-Heartgarden-Mcp-Token`.
+ * Prefer Bearer when possible — query strings can appear in access logs.
+ */
+export function mcpUrlQueryOrHeaderMatchesServiceKey(request: Request): boolean {
+  const key = heartgardenMcpServiceKeyFromEnv();
+  if (!key.length) return false;
+  try {
+    const url = new URL(request.url);
+    const q = url.searchParams.get("token") ?? url.searchParams.get("key");
+    if (q && timingSafeEqualUtf8(q.trim(), key)) return true;
+  } catch {
+    /* invalid URL */
+  }
+  const h = request.headers.get("x-heartgarden-mcp-token");
+  if (h && timingSafeEqualUtf8(h.trim(), key)) return true;
+  return false;
+}
+
+/** Bearer, or URL query token/key, or X-Heartgarden-Mcp-Token header. */
+export function mcpRequestAuthorizedByServiceKey(request: Request): boolean {
+  return (
+    authorizationBearerMatchesMcpServiceKey(request.headers.get("authorization")) ||
+    mcpUrlQueryOrHeaderMatchesServiceKey(request)
+  );
+}

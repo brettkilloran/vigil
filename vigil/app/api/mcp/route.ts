@@ -1,6 +1,6 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 
-import { authorizationBearerMatchesMcpServiceKey, heartgardenMcpServiceKeyFromEnv } from "@/src/lib/heartgarden-mcp-service-key";
+import { heartgardenMcpServiceKeyFromEnv, mcpRequestAuthorizedByServiceKey } from "@/src/lib/heartgarden-mcp-service-key";
 import {
   createHeartgardenMcpServer,
   resolveHeartgardenMcpBaseUrl,
@@ -22,7 +22,7 @@ async function handleMcpRequest(request: Request): Promise<Response> {
       },
     );
   }
-  if (!authorizationBearerMatchesMcpServiceKey(request.headers.get("authorization"))) {
+  if (!mcpRequestAuthorizedByServiceKey(request)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },

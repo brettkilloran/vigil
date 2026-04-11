@@ -48,9 +48,9 @@ Responses include **`camera`**: `{ x, y, zoom }` parsed from legacy **`spaces.ca
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET, POST, DELETE | `/api/mcp` | **Streamable HTTP** MCP transport (same JSON-RPC surface as **`npm run mcp`** stdio). **Requires** header **`Authorization: Bearer <HEARTGARDEN_MCP_SERVICE_KEY>`**. Returns **503** if **`HEARTGARDEN_MCP_SERVICE_KEY`** is unset. **401** if the header is missing or wrong. Middleware allows this path through the boot gate without **`hg_boot`** so the route can respond; auth is enforced in the handler. Stateless (**no** session stickiness) for serverless. |
+| GET, POST, DELETE | `/api/mcp` | **Streamable HTTP** MCP transport (same JSON-RPC surface as **`npm run mcp`** stdio). **Auth (any one):** header **`Authorization: Bearer <HEARTGARDEN_MCP_SERVICE_KEY>`**, or query **`?token=`** / **`?key=`** (same secret), or header **`X-Heartgarden-Mcp-Token`**. Returns **503** if **`HEARTGARDEN_MCP_SERVICE_KEY`** is unset. **401** if none match. Middleware allows this path through the boot gate without **`hg_boot`** so the route can respond; auth is enforced in the handler. Stateless (**no** session stickiness) for serverless. |
 
-**Tooling:** Shared logic lives in **`src/lib/mcp/heartgarden-mcp-server.ts`**. **Claude Desktop** with only a URL field may need a stdio bridge (e.g. **`npx mcp-remote https://<host>/api/mcp --header "Authorization: Bearer …"`** in **`claude_desktop_config.json`**) to attach the Bearer header.
+**Tooling:** Shared logic lives in **`src/lib/mcp/heartgarden-mcp-server.ts`**. **Claude Desktop → Add custom connector:** use **`https://<host>/api/mcp?token=<HEARTGARDEN_MCP_SERVICE_KEY>`** in the URL field (percent-encode the token if needed). Prefer **`Authorization: Bearer`** for clients that support it.
 
 ## Spaces
 

@@ -129,7 +129,7 @@ The script picks the **newest** `node-v*-win-x64` under `%LOCALAPPDATA%\node-por
 
 Tools include **`vigil_browse_spaces`**, **`vigil_space_summary`**, **`vigil_list_items`**, **`vigil_search`** (default `hybrid`), **`vigil_semantic_search`**, **`vigil_graph`**, **`vigil_get_item`** / **`vigil_get_entity`**, **`vigil_item_links`**, **`vigil_traverse_links`**, **`vigil_related_items`**, **`vigil_title_mentions`**, **`vigil_lore_query`**, **`vigil_index_item`**, **`vigil_reindex_space`**, **`vigil_patch_item`**. **`HEARTGARDEN_MCP_WRITE_KEY`** must match `write_key` on **`vigil_patch_item`** and **`vigil_reindex_space`**. **`HEARTGARDEN_MCP_SERVICE_KEY`**: required on the server for **`/api/mcp`** (503 if unset); use the same value when calling tools so internal `fetch` calls pass the boot gate in production (**`Authorization: Bearer …`**). **Resources:** `lore://space/<uuid>`. Defaults: **`HEARTGARDEN_DEFAULT_SPACE_ID`**, **`HEARTGARDEN_APP_URL`**. The Next app must be reachable for HTTP tool calls.
 
-**Claude Desktop (remote URL):** point MCP at **`https://<your-domain>/api/mcp`** with header **`Authorization: Bearer <HEARTGARDEN_MCP_SERVICE_KEY>`** (if the UI only accepts a URL, use a stdio bridge such as **`mcp-remote`** with `--header` — see **`docs/API.md`**).
+**Claude Desktop (remote URL):** in **Add custom connector**, set **Remote MCP server URL** to **`https://<your-domain>/api/mcp?token=<HEARTGARDEN_MCP_SERVICE_KEY>`** (same value as in Vercel; if the secret contains `&` or other special characters, **percent-encode** the token). OAuth fields stay empty. Prefer **`Authorization: Bearer`** when the client supports it — query tokens may appear in access logs.
 
 ## Playwright (`npm run test:e2e`)
 
