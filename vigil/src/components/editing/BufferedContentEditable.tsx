@@ -30,6 +30,7 @@ import hostStyles from "@/src/components/editing/BufferedContentEditable.module.
 import { applySpellcheckToNestedEditables } from "@/src/lib/contenteditable-spellcheck";
 import { syncCharSkDisplayNameStack } from "@/src/lib/lore-char-sk-display-name";
 import { installLoreV11PlaceholderCaretSync } from "@/src/lib/lore-v11-ph-caret";
+import { findFirstEditableNestedNotesRoot } from "@/src/lib/rich-editor-surface";
 import {
   consumeLorePlaceholderBeforeInput,
   installLorePlaceholderSelectionGuards,
@@ -97,6 +98,43 @@ function ensureDocumentBlockDragHandles(
     h.setAttribute("aria-label", "Drag to reorder");
     child.insertBefore(h, child.firstChild);
   }
+}
+
+function pruneDocumentBlockDragHandles(root: HTMLElement) {
+  root.querySelectorAll(`[${ARCH_BLOCK_DRAG_ATTR}]`).forEach((el) => el.remove());
+}
+
+function hasDirectDraggableBlocks(
+  root: HTMLElement,
+  cfg: { taskItemClass: string },
+): boolean {
+  const blockish = "p,h1,h2,h3,blockquote,pre,div[data-arch-checklist='true'],ul[data-arch-checklist='true']";
+  for (const child of [...root.children]) {
+    if (!(child instanceof HTMLElement)) continue;
+    if (child.classList.contains(cfg.taskItemClass)) return true;
+    if (child.matches(blockish)) return true;
+  }
+  return false;
+}
+
+function resolveDocumentBlockDragRoot(
+  root: HTMLElement,
+  cfg: { taskItemClass: string },
+) {
+  if (hasDirectDraggableBlocks(root, cfg)) return root;
+  const nested = findFirstEditableNestedNotesRoot(root);
+  if (nested && hasDirectDraggableBlocks(nested, cfg)) {
+    return nested;
+  }
+  return root;
+}
+
+function ensureDocumentBlockDragHandlesForAllRoots(
+  root: HTMLElement,
+  cfg: { handleClass: string; taskItemClass: string },
+) {
+  pruneDocumentBlockDragHandles(root);
+  ensureDocumentBlockDragHandles(resolveDocumentBlockDragRoot(root, cfg), cfg);
 }
 
 function contiguousTaskItemsFrom(taskItem: HTMLElement, taskItemClass: string): HTMLElement[] {
@@ -186,6 +224,29 @@ function caretIsInsideNestedEditable(root: HTMLElement): boolean {
   return false;
 }
 
+function currentNestedEditableAtCaret(root: HTMLElement): HTMLElement | null {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return null;
+  const n: Node | null = sel.anchorNode;
+  if (!n || !root.contains(n)) return null;
+  let el: HTMLElement | null =
+    n.nodeType === Node.TEXT_NODE ? n.parentElement : (n as HTMLElement);
+  while (el && el !== root) {
+    if (el.isContentEditable) return el;
+    el = el.parentElement;
+  }
+  return null;
+}
+
+function nestedEditableAllowsSlashCommands(editable: HTMLElement): boolean {
+  return (
+    editable.matches('[data-hg-character-focus-notes="true"]') ||
+    editable.matches('[data-hg-lore-location-focus-notes="true"]') ||
+    editable.matches('[class*="charSkNotesBody"]') ||
+    editable.matches('[class*="char3dNotesBody"]')
+  );
+}
+
 function focusBlockBoundary(
   root: HTMLElement,
   block: Element,
@@ -232,6 +293,16 @@ function placeCaretAtStart(el: HTMLElement) {
 }
 
 function taskTextIsVisuallyEmpty(el: HTMLElement): boolean {
+  const t = el.innerText.replace(/\u00a0/g, " ").replace(/\uFEFF/g, "");
+  return t.replace(/\s+/g, "").length === 0;
+}
+
+function blockTextIsVisuallyEmpty(el: HTMLElement): boolean {
+  const t = el.innerText.replace(/\u00a0/g, " ").replace(/\uFEFF/g, "");
+  return t.replace(/\s+/g, "").length === 0;
+}
+
+function listItemIsVisuallyEmpty(el: HTMLElement): boolean {
   const t = el.innerText.replace(/\u00a0/g, " ").replace(/\uFEFF/g, "");
   return t.replace(/\s+/g, "").length === 0;
 }
@@ -338,6 +409,7 @@ export function BufferedContentEditable({
   const ref = useRef<HTMLDivElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const draggedArchBlockRef = useRef<Element | null>(null);
+  const draggedArchBlockRootRef = useRef<HTMLElement | null>(null);
   const pastePlainNextRef = useRef(false);
   const composingRef = useRef(false);
   const slashPlainRangeRef = useRef<{ start: number; end: number } | null>(null);
@@ -347,8 +419,17 @@ export function BufferedContentEditable({
   const [slashCandidates, setSlashCandidates] = useState<SlashCommandItem[]>([]);
   const [slashIndex, setSlashIndex] = useState(0);
   const [dropLineY, setDropLineY] = useState<number | null>(null);
+  const dropLineYRef = useRef<number | null>(null);
 
   const resolvedSlashItems = slashCommandItems ?? DEFAULT_SLASH_COMMAND_ITEMS;
+
+  const updateDropLineY = useCallback((next: number | null) => {
+    const prev = dropLineYRef.current;
+    if (prev === next) return;
+    if (prev != null && next != null && Math.abs(prev - next) < 0.5) return;
+    dropLineYRef.current = next;
+    setDropLineY(next);
+  }, []);
 
   const mergedNormalizeOnCommit = useCallback(
     (html: string) => {
@@ -410,8 +491,11 @@ export function BufferedContentEditable({
       return;
     }
     if (caretIsInsideNestedEditable(el)) {
-      closeSlash();
-      return;
+      const nested = currentNestedEditableAtCaret(el);
+      if (!nested || !nestedEditableAllowsSlashCommands(nested)) {
+        closeSlash();
+        return;
+      }
     }
     const plain = plainTextToCaret(el);
     if (findOpenWikiTrigger(plain)) {
@@ -522,7 +606,7 @@ export function BufferedContentEditable({
     } else {
       el.innerHTML = draft;
       applySpellcheckToNestedEditables(el, spellCheck);
-      if (documentBlockDrag) ensureDocumentBlockDragHandles(el, documentBlockDrag);
+      if (documentBlockDrag) ensureDocumentBlockDragHandlesForAllRoots(el, documentBlockDrag);
       syncCharSkDisplayNameStack(el);
       syncLoreV9RedactedPlaceholderState(el);
     }
@@ -539,7 +623,7 @@ export function BufferedContentEditable({
     syncLoreV9RedactedPlaceholderState(el);
   }, [draft, plainText, spellCheck]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current;
     if (!el || plainText) return;
     const removeGuards = installLorePlaceholderSelectionGuards(el);
@@ -659,7 +743,7 @@ export function BufferedContentEditable({
         data-hg-rich-editor-host="true"
         onDragOver={(event) => {
           if (!documentBlockDrag || plainText || !editable || !draggedArchBlockRef.current) {
-            setDropLineY(null);
+            updateDropLineY(null);
             return;
           }
           const root = ref.current;
@@ -669,8 +753,13 @@ export function BufferedContentEditable({
           if (!wrap.contains(event.target as Node)) return;
           event.preventDefault();
           event.dataTransfer.dropEffect = "move";
-          setDropLineY(
-            dropIndicatorTopRelative(wrap, root, event.clientY, draggedArchBlockRef.current),
+          const activeRoot = draggedArchBlockRootRef.current ?? root;
+          if (!activeRoot.contains(event.target as Node)) {
+            updateDropLineY(null);
+            return;
+          }
+          updateDropLineY(
+            dropIndicatorTopRelative(wrap, activeRoot, event.clientY, draggedArchBlockRef.current),
           );
         }}
         onDragLeave={(event) => {
@@ -678,27 +767,31 @@ export function BufferedContentEditable({
           const wrap = wrapRef.current;
           const rel = event.relatedTarget as Node | null;
           if (wrap && rel && !wrap.contains(rel)) {
-            setDropLineY(null);
+            updateDropLineY(null);
           }
         }}
         onDrop={(event) => {
-          setDropLineY(null);
+          updateDropLineY(null);
           if (!documentBlockDrag || plainText || !editable) return;
           const root = ref.current;
           const wrap = wrapRef.current;
           if (!wrap?.contains(event.target as Node)) return;
           const dragEl = draggedArchBlockRef.current;
-          if (!root || !dragEl || !root.contains(dragEl)) {
+          const dragRoot = draggedArchBlockRootRef.current;
+          if (!root || !dragEl || !dragRoot || !root.contains(dragRoot) || !dragRoot.contains(dragEl)) {
             draggedArchBlockRef.current = null;
+            draggedArchBlockRootRef.current = null;
             return;
           }
+          if (!dragRoot.contains(event.target as Node)) return;
           event.preventDefault();
           event.stopPropagation();
-          const insertBefore = findArchBlockDropInsertBefore(root, event.clientY, dragEl);
-          if (insertBefore) root.insertBefore(dragEl, insertBefore);
-          else root.appendChild(dragEl);
+          const insertBefore = findArchBlockDropInsertBefore(dragRoot, event.clientY, dragEl);
+          if (insertBefore) dragRoot.insertBefore(dragEl, insertBefore);
+          else dragRoot.appendChild(dragEl);
           draggedArchBlockRef.current = null;
-          ensureDocumentBlockDragHandles(root, documentBlockDrag);
+          draggedArchBlockRootRef.current = null;
+          ensureDocumentBlockDragHandlesForAllRoots(root, documentBlockDrag);
           onDraftChange(readElementValue());
         }}
       >
@@ -717,7 +810,7 @@ export function BufferedContentEditable({
         onFocus={() => {
           beginEditing();
           if (documentBlockDrag && ref.current && !plainText) {
-            ensureDocumentBlockDragHandles(ref.current, documentBlockDrag);
+            ensureDocumentBlockDragHandlesForAllRoots(ref.current, documentBlockDrag);
           }
         }}
         onBlur={() => {
@@ -755,7 +848,7 @@ export function BufferedContentEditable({
           });
           requestAnimationFrame(() => {
             if (documentBlockDrag && ref.current && !plainText) {
-              ensureDocumentBlockDragHandles(ref.current, documentBlockDrag);
+              ensureDocumentBlockDragHandlesForAllRoots(ref.current, documentBlockDrag);
             }
             refreshWikiAssist();
             refreshSlashAssist();
@@ -767,7 +860,7 @@ export function BufferedContentEditable({
           syncLoreV9RedactedPlaceholderState(ref.current);
           requestAnimationFrame(() => {
             if (documentBlockDrag && ref.current && !plainText) {
-              ensureDocumentBlockDragHandles(ref.current, documentBlockDrag);
+              ensureDocumentBlockDragHandlesForAllRoots(ref.current, documentBlockDrag);
             }
             refreshWikiAssist();
             refreshSlashAssist();
@@ -794,15 +887,18 @@ export function BufferedContentEditable({
           if (!handle) return;
           const block = handle.parentElement;
           const root = ref.current;
-          if (!block || !root || block.parentElement !== root) return;
+          const dragRoot = block?.parentElement as HTMLElement | null;
+          if (!block || !root || !dragRoot || !root.contains(dragRoot)) return;
           event.stopPropagation();
           draggedArchBlockRef.current = block;
+          draggedArchBlockRootRef.current = dragRoot;
           event.dataTransfer.effectAllowed = "move";
           event.dataTransfer.setData("text/plain", "heartgarden-arch-block");
         }}
         onDragEndCapture={() => {
           draggedArchBlockRef.current = null;
-          setDropLineY(null);
+          draggedArchBlockRootRef.current = null;
+          updateDropLineY(null);
         }}
         onPointerDownCapture={(event) => {
           if (!checklistDeletion || plainText || !editable || event.button !== 0) return;
@@ -922,7 +1018,9 @@ export function BufferedContentEditable({
                           else r.appendChild(p);
                           r.focus({ preventScroll: true });
                           placeCaretAtStart(p);
-                          if (documentBlockDrag) ensureDocumentBlockDragHandles(r, documentBlockDrag);
+                          if (documentBlockDrag) {
+                            ensureDocumentBlockDragHandlesForAllRoots(r, documentBlockDrag);
+                          }
                         }
                       });
                       return;
@@ -937,7 +1035,9 @@ export function BufferedContentEditable({
                       root.focus({ preventScroll: true });
                       placeCaretAtStart(p);
                       onDraftChange(readElementValue());
-                      if (documentBlockDrag) ensureDocumentBlockDragHandles(root, documentBlockDrag);
+                      if (documentBlockDrag) {
+                        ensureDocumentBlockDragHandlesForAllRoots(root, documentBlockDrag);
+                      }
                       return;
                     }
                     event.preventDefault();
@@ -1030,6 +1130,105 @@ export function BufferedContentEditable({
                   });
                   return;
                 }
+              }
+
+              const listItem = anchorEl?.closest("li") as HTMLElement | null;
+              if (
+                listItem &&
+                root.contains(listItem) &&
+                isCaretAtStartOfHost(listItem, range) &&
+                listItemIsVisuallyEmpty(listItem)
+              ) {
+                const list = listItem.closest("ul,ol") as HTMLElement | null;
+                if (list && root.contains(list)) {
+                  event.preventDefault();
+                  const prevLi = listItem.previousElementSibling as HTMLElement | null;
+                  const nextLi = listItem.nextElementSibling as HTMLElement | null;
+                  const listNext = list.nextElementSibling as HTMLElement | null;
+                  listItem.remove();
+                  if (!list.querySelector("li")) {
+                    list.remove();
+                  }
+                  onDraftChange(readElementValue());
+                  requestAnimationFrame(() => {
+                    const r = ref.current;
+                    if (!r?.isConnected) return;
+                    if (prevLi && prevLi.matches("li")) {
+                      r.focus({ preventScroll: true });
+                      placeCaretAtEnd(prevLi);
+                      return;
+                    }
+                    if (nextLi && nextLi.matches("li")) {
+                      r.focus({ preventScroll: true });
+                      placeCaretAtStart(nextLi);
+                      return;
+                    }
+                    if (listNext && listNext.matches("p,h1,h2,h3,blockquote,pre")) {
+                      r.focus({ preventScroll: true });
+                      placeCaretAtStart(listNext);
+                      return;
+                    }
+                    const p = document.createElement("p");
+                    p.appendChild(document.createElement("br"));
+                    if (listNext && r.contains(listNext)) r.insertBefore(p, listNext);
+                    else r.appendChild(p);
+                    r.focus({ preventScroll: true });
+                    placeCaretAtStart(p);
+                  });
+                  return;
+                }
+              }
+
+              const block = anchorEl?.closest("p,h1,h2,h3,blockquote,pre") as HTMLElement | null;
+              if (
+                block &&
+                root.contains(block) &&
+                isCaretAtStartOfHost(block, range) &&
+                blockTextIsVisuallyEmpty(block)
+              ) {
+                event.preventDefault();
+                const taskTextSel = `.${checklistDeletion.taskText}`;
+                const taskItemSel = `.${checklistDeletion.taskItem}`;
+                const prev = block.previousElementSibling as HTMLElement | null;
+                const next = block.nextElementSibling as HTMLElement | null;
+                block.remove();
+                onDraftChange(readElementValue());
+                requestAnimationFrame(() => {
+                  const r = ref.current;
+                  if (!r?.isConnected) return;
+                  const prevTaskText =
+                    prev?.matches(taskItemSel) === true
+                      ? (prev.querySelector(taskTextSel) as HTMLElement | null)
+                      : null;
+                  const nextTaskText =
+                    !prevTaskText && next?.matches(taskItemSel) === true
+                      ? (next.querySelector(taskTextSel) as HTMLElement | null)
+                      : null;
+                  if (prevTaskText) {
+                    placeCaretAtEnd(prevTaskText);
+                    return;
+                  }
+                  if (nextTaskText) {
+                    placeCaretAtStart(nextTaskText);
+                    return;
+                  }
+                  if (prev && prev.matches("p,h1,h2,h3,blockquote,pre")) {
+                    r.focus({ preventScroll: true });
+                    placeCaretAtEnd(prev);
+                    return;
+                  }
+                  if (next && next.matches("p,h1,h2,h3,blockquote,pre")) {
+                    r.focus({ preventScroll: true });
+                    placeCaretAtStart(next);
+                    return;
+                  }
+                  const p = document.createElement("p");
+                  p.appendChild(document.createElement("br"));
+                  r.appendChild(p);
+                  r.focus({ preventScroll: true });
+                  placeCaretAtStart(p);
+                });
+                return;
               }
             }
           }

@@ -52,6 +52,7 @@ import {
   ARCH_TOOLTIP_AVOID_TOP,
 } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
+import { HeartgardenMediaPlaceholderImg } from "@/src/components/ui/HeartgardenMediaPlaceholderImg";
 import {
   ArchitecturalBottomDock,
   ArchitecturalFolderColorStrip,
@@ -247,6 +248,10 @@ import {
   locationBodyToFocusDocumentHtml,
   plainPlaceNameFromLocationBodyHtml,
 } from "@/src/lib/lore-location-focus-document-html";
+import {
+  caretIsWithinRichDocInsertRegion,
+  resolveActiveRichEditorSurface,
+} from "@/src/lib/rich-editor-surface";
 const VigilFlowRevealOverlay = dynamic(
   () =>
     import("@/src/components/transition-experiment/VigilFlowRevealOverlay").then((mod) => ({
@@ -1137,27 +1142,15 @@ function isEditableTarget(target: EventTarget | null) {
  * Excludes titles (focus overlay, folder names), plain-text fields, and other inputs.
  */
 function isTextFormattingToolbarTarget(focusEl: Element | null): boolean {
-  if (!focusEl || !(focusEl instanceof HTMLElement)) return false;
-  const root = focusEl.closest("[contenteditable='true']");
-  if (!root) return false;
-  return !!root.closest("[data-node-body-editor], [data-focus-body-editor]");
+  const surface = resolveActiveRichEditorSurface(focusEl);
+  return !!surface.root;
 }
 
 /** Caret is in a prose body surface (not card titles) — in-document insert tools apply. */
 function isRichDocBodyFormattingTarget(focusEl: Element | null): boolean {
-  if (!focusEl || !(focusEl instanceof HTMLElement)) return false;
-  const root = focusEl.closest("[contenteditable='true']");
-  if (!root) return false;
-  const inNodeOrFocus = root.closest("[data-node-body-editor], [data-focus-body-editor]");
-  if (!inNodeOrFocus) return false;
-  /* Character focus document: block/slash insert only in notes, not metadata fields. */
-  if (inNodeOrFocus.querySelector('[data-hg-character-focus-doc="v1"]')) {
-    return !!focusEl.closest('[data-hg-character-focus-notes="true"]');
-  }
-  if (inNodeOrFocus.querySelector('[data-hg-location-focus-doc="v1"]')) {
-    return !!focusEl.closest('[data-hg-lore-location-focus-notes="true"]');
-  }
-  return true;
+  const surface = resolveActiveRichEditorSurface(focusEl);
+  if (!surface.root) return false;
+  return caretIsWithinRichDocInsertRegion(focusEl, surface.root, surface.kind);
 }
 
 function normalizeFormatBlockTag(value: string | null | undefined): "p" | "h1" | "h2" | "h3" | "blockquote" {
@@ -8163,6 +8156,14 @@ export function ArchitecturalCanvasApp({
   const resolveRichTextFormatTarget = useCallback((): HTMLElement | null => {
     const shell = shellRef.current;
     if (!shell) return null;
+    const activeEl = document.activeElement as Element | null;
+    const activeSurface = resolveActiveRichEditorSurface(activeEl);
+    if (activeSurface.root && shell.contains(activeSurface.root)) {
+      return activeSurface.root;
+    }
+    if (galleryOpenRef.current && activeNodeIdRef.current) {
+      return shell.querySelector<HTMLElement>('[data-architectural-media-gallery-notes="true"]');
+    }
     if (focusOpenRef.current && activeNodeIdRef.current) {
       return shell.querySelector<HTMLElement>('[data-focus-body-editor="true"]');
     }
@@ -8175,6 +8176,10 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   const canInsertImageAtCurrentTarget = useCallback(() => {
+    if (galleryOpenRef.current && activeNodeIdRef.current) {
+      const entity = graphRef.current.entities[activeNodeIdRef.current];
+      return !!entity && entity.kind === "content" && entity.theme === "media";
+    }
     if (focusOpenRef.current && activeNodeIdRef.current) {
       const entity = graphRef.current.entities[activeNodeIdRef.current];
       return !!entity && entity.kind === "content" && entity.theme !== "code";
@@ -10914,12 +10919,12 @@ export function ArchitecturalCanvasApp({
                     }}
                   />
                 ) : (
-                  <div className={styles.mediaGalleryEmpty}>
-                    <p className={styles.mediaGalleryEmptyTitle}>No image loaded</p>
-                    <p className={styles.mediaGalleryEmptyHint}>
-                      Use {mediaUploadActionLabel(false)} here or on the card.
-                    </p>
-                  </div>
+                  <HeartgardenMediaPlaceholderImg
+                    variant="neutral"
+                    className={styles.mediaGalleryAsset}
+                    alt=""
+                    aria-hidden
+                  />
                 )}
                 <div className={styles.mediaImageActions} contentEditable={false}>
                   <Button
