@@ -5,8 +5,8 @@ audience: [agent, human]
 last_reviewed: 2026-04-10
 canonical: true
 related:
-  - vigil/docs/DEPLOY_VERCEL.md
-  - vigil/docs/PLAYER_LAYER.md
+  - heartgarden/docs/DEPLOY_VERCEL.md
+  - heartgarden/docs/PLAYER_LAYER.md
 ---
 
 # Vercel environment variables — reference
@@ -37,10 +37,12 @@ Use with **[`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)** and the **[dashboard check
 | `HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_WINDOW_MS` | Optional | Optional | Presence rate-limit window in ms (default **900000** = 15 min; clamped **60000–3600000**). |
 | `HEARTGARDEN_PLAYER_SPACE_ID` | Optional with Players PIN | Optional with Players PIN | When set: UUID of the Neon **`spaces`** row for the Players canvas (must exist in DB). When unset with Players PIN: server uses an auto-created implicit Players root (isolated from GM). Use this to pick a **specific** UUID or to **hide** that space from GM lists. See **`docs/PLAYER_LAYER.md`**. Not required for Bishop-only gate. |
 | `HEARTGARDEN_MCP_SERVICE_KEY` | If using **`/api/mcp`** or MCP clients against prod APIs | Same | Long random Bearer secret. Enables **Streamable HTTP** MCP at **`GET|POST|DELETE /api/mcp`**, allows **`Authorization: Bearer`** through the boot gate for **`/api/*`**, and lets **`npm run mcp`** (stdio) call **`fetch`** to the deployed app when the PIN gate is on. Mark **Sensitive**. |
-| `HEARTGARDEN_MCP_WRITE_KEY` | If using MCP write tools / reindex API | Same | Must match **`write_key`** in **`vigil_patch_item`** / **`POST /api/spaces/:id/reindex`**. Sensitive. |
+| `HEARTGARDEN_MCP_WRITE_KEY` | If using MCP write tools / reindex API | Same | Must match **`write_key`** in **`heartgarden_patch_item`** / **`POST /api/spaces/:id/reindex`**. Sensitive. |
 
 **Do not set:** `PLAYWRIGHT_E2E` (also forces the boot gate **off** in **`/api/heartgarden/boot`** for E2E).
 
 **MCP env:** For **local** stdio only against **`next dev`**, you can omit **`HEARTGARDEN_MCP_SERVICE_KEY`** (boot gate is off by default). For **production** or **`HEARTGARDEN_DEV_ENFORCE_BOOT_GATE=1`**, set **`HEARTGARDEN_MCP_SERVICE_KEY`** on the server **and** in the environment of **`npm run mcp`** so tool **`fetch`** calls include **`Authorization: Bearer`**. Optional: **`HEARTGARDEN_APP_URL`**, **`HEARTGARDEN_DEFAULT_SPACE_ID`** on the machine running **`npm run mcp`** when not using same-origin defaults.
+
+**Vercel Deployment Protection:** Not an app env var — if **SSO / password protection** blocks the **hostname** you use for MCP, **Anthropic’s broker cannot reach `/api/mcp`**. Fix in **Vercel → Deployment Protection** (see **`docs/DEPLOY_VERCEL.md`** § MCP and Deployment Protection).
 
 After changes, **Redeploy** so functions pick up new values.

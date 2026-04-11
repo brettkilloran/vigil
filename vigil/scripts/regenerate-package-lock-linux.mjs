@@ -1,11 +1,11 @@
 /**
- * Rewrites `vigil/package-lock.json` using npm 10 with `--os linux --cpu x64`.
+ * Rewrites `heartgarden/package-lock.json` using npm 10 with `--os linux --cpu x64`.
  *
  * Why: `npm install` on Windows can omit Linux optional dependency entries (e.g.
  * `@emnapi/*` for `@img/sharp-wasm32`). Ubuntu `npm ci` then errors with
  * "Missing: … from lock file".
  *
- * Run from `vigil/`: `npm run lockfile:regenerate-linux`
+ * Run from `heartgarden/`: `npm run lockfile:regenerate-linux`
  * Then: `npm run verify:package-lock-ci` and commit `package-lock.json`.
  */
 import { copyFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";

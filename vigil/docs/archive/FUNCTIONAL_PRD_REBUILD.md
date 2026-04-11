@@ -1,6 +1,6 @@
 # heartgarden Functional PRD (UI-Agnostic Rebuild)
 
-> **Status: historical / non-canonical.** Archived from `docs/` so canonical docs stay lean. For **actual** architecture, persistence, and APIs, read **`vigil/AGENTS.md`**, **`vigil/docs/API.md`**, and **`vigil/docs/FEATURES.md`**. Do not treat the “Zustand as primary canvas store” line below as the production graph state model.
+> **Status: historical / non-canonical.** Archived from `docs/` so canonical docs stay lean. For **actual** architecture, persistence, and APIs, read **`heartgarden/AGENTS.md`**, **`heartgarden/docs/API.md`**, and **`heartgarden/docs/FEATURES.md`**. Do not treat the “Zustand as primary canvas store” line below as the production graph state model.
 
 ## Goal
 
@@ -188,7 +188,7 @@ This section defines behavior-level contracts the rebuild should preserve.
 
 ## Bootstrap and Spaces
 
-> **Current API note:** `PATCH /api/spaces/:spaceId` accepts **`camera`** in the JSON schema for compatibility but **does not persist** viewport to Neon. **`GET /api/bootstrap`** returns **`camera`** from legacy `canvas_state`; the web shell does not use it for initial pan/zoom. See **`vigil/docs/API.md`**.
+> **Current API note:** `PATCH /api/spaces/:spaceId` accepts **`camera`** in the JSON schema for compatibility but **does not persist** viewport to Neon. **`GET /api/bootstrap`** returns **`camera`** from legacy `canvas_state`; the web shell does not use it for initial pan/zoom. See **`heartgarden/docs/API.md`**.
 
 - `GET /api/bootstrap?space=<uuid?>`
   - Returns either local/demo payload or cloud payload with spaces/items/camera.

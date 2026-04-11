@@ -22,7 +22,7 @@ Creation **works** but takes a **long time** to show up. Users expect dock creat
 
 ## Root cause (code)
 
-In [`vigil/src/components/foundation/ArchitecturalCanvasApp.tsx`](vigil/src/components/foundation/ArchitecturalCanvasApp.tsx), when `persistNeonRef.current && isUuidLike(activeSpaceId)`:
+In [`heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx`](heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx), when `persistNeonRef.current && isUuidLike(activeSpaceId)`:
 
 - **Content nodes** (note, task, code, media): the handler starts an async IIFE, **`await apiCreateItem(...)`**, and only then calls `setGraph` to insert the entity (see ~4755–4785). Until the network returns, **nothing new appears on the canvas**.
 - **Folders**: **`await apiCreateSpace`** then **`await apiCreateItem`** — two sequential round trips before any `setGraph` (~4656–4705).
@@ -54,7 +54,7 @@ So the regression is **perceived latency from server-first persistence**, not mi
 
 ## Out of scope / optional
 
-- **Stack modal + dock**: Earlier analysis: `.viewportStackModalOpen { pointer-events: none }` on the whole `.viewport` blocks in-viewport chrome. If product wants dock usable while stack is open, narrow that rule to `.viewportSceneLayer` only in [`ArchitecturalCanvasApp.module.css`](vigil/src/components/foundation/ArchitecturalCanvasApp.module.css). This is **orthogonal** to latency.
+- **Stack modal + dock**: Earlier analysis: `.viewportStackModalOpen { pointer-events: none }` on the whole `.viewport` blocks in-viewport chrome. If product wants dock usable while stack is open, narrow that rule to `.viewportSceneLayer` only in [`ArchitecturalCanvasApp.module.css`](heartgarden/src/components/foundation/ArchitecturalCanvasApp.module.css). This is **orthogonal** to latency.
 
 ## Verification
 
@@ -64,6 +64,6 @@ So the regression is **perceived latency from server-first persistence**, not mi
 
 ## Key files
 
-- [`vigil/src/components/foundation/ArchitecturalCanvasApp.tsx`](vigil/src/components/foundation/ArchitecturalCanvasApp.tsx) — `createNewNode`  
-- [`vigil/src/components/foundation/architectural-neon-api.ts`](vigil/src/components/foundation/architectural-neon-api.ts) (or wherever `apiCreateItem` / `apiCreateSpace` live) — no change required unless batching helps  
-- [`vigil/src/lib/neon-sync-bus.ts`](vigil/src/lib/neon-sync-bus.ts) — optional error surfacing
+- [`heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx`](heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx) — `createNewNode`  
+- [`heartgarden/src/components/foundation/architectural-neon-api.ts`](heartgarden/src/components/foundation/architectural-neon-api.ts) (or wherever `apiCreateItem` / `apiCreateSpace` live) — no change required unless batching helps  
+- [`heartgarden/src/lib/neon-sync-bus.ts`](heartgarden/src/lib/neon-sync-bus.ts) — optional error surfacing

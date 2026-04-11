@@ -1,5 +1,5 @@
 /**
- * MCP stdio server: heartgarden lore + canvas helpers.
+ * MCP stdio server: heartgarden lore + canvas helpers (`tools/list` → heartgarden_*; `tools/call` accepts legacy vigil_*).
  * Run: npm run mcp (HEARTGARDEN_APP_URL, HEARTGARDEN_MCP_SERVICE_KEY for gated APIs,
  * optional HEARTGARDEN_DEFAULT_SPACE_ID, optional HEARTGARDEN_MCP_WRITE_KEY)
  */

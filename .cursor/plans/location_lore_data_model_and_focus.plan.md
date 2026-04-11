@@ -3,16 +3,16 @@ name: "Location lore data model & focus"
 overview: "Persistence + focus for location lore: one bodyHtml with name/context/detail (+ optional ref on v3), notes hidden on canvas and edited in location-hybrid focus. This is NOT the visual 'card type' lab (plaque/postcard/survey layouts)—see lore_entity_node_lab.plan.md for those nine explorations and palette wiring."
 todos:
   - id: shipped-seeds-hooks
-    content: "Seeds + stable data-* hooks in [lore-node-seed-html.ts](vigil/src/lib/lore-node-seed-html.ts); shouldRenderLoreLocationCanvasNode + legacy detection"
+    content: "Seeds + stable data-* hooks in [lore-node-seed-html.ts](heartgarden/src/lib/lore-node-seed-html.ts); shouldRenderLoreLocationCanvasNode + legacy detection"
     status: completed
   - id: shipped-focus-canvas
-    content: "Focus projection/merge + title sync in [lore-location-focus-document-html.ts](vigil/src/lib/lore-location-focus-document-html.ts); location-hybrid surface + save in [ArchitecturalCanvasApp.tsx](vigil/src/components/foundation/ArchitecturalCanvasApp.tsx); loreLocationCanvasRoot + CSS hide notes ([ArchitecturalNodeCard.tsx](vigil/src/components/foundation/ArchitecturalNodeCard.tsx), [ArchitecturalCanvasApp.module.css](vigil/src/components/foundation/ArchitecturalCanvasApp.module.css))"
+    content: "Focus projection/merge + title sync in [lore-location-focus-document-html.ts](heartgarden/src/lib/lore-location-focus-document-html.ts); location-hybrid surface + save in [ArchitecturalCanvasApp.tsx](heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx); loreLocationCanvasRoot + CSS hide notes ([ArchitecturalNodeCard.tsx](heartgarden/src/components/foundation/ArchitecturalNodeCard.tsx), [ArchitecturalCanvasApp.module.css](heartgarden/src/components/foundation/ArchitecturalCanvasApp.module.css))"
     status: completed
   - id: harden-golden-tests
     content: "Golden fixtures: projection round-trip, plainPlaceNameFromLocationBodyHtml / title on save, legacy + modern body samples"
     status: completed
   - id: docs-crosslink
-    content: "Short pointer + required data-* hooks in [CANVAS_LORE_NODE_PATTERNS.md](vigil/docs/CANVAS_LORE_NODE_PATTERNS.md) (same pattern as character v11)"
+    content: "Short pointer + required data-* hooks in [CANVAS_LORE_NODE_PATTERNS.md](heartgarden/docs/CANVAS_LORE_NODE_PATTERNS.md) (same pattern as character v11)"
     status: completed
   - id: collab-conflict-smoke
     content: "Smoke-test focus open + server PATCH / conflict queue re-projects location body via projectBodyHtmlForFocus"
@@ -46,7 +46,7 @@ This file is the **field contract + storage + focus merge** track (character par
 
 ---
 
-Aligns **UI**, **persistence**, and **future variants** with character-style rules: **one canonical `bodyHtml`**, **structured identity on the canvas**, **long-form notes primarily in focus**. Complements **[`vigil/docs/CHARACTER_FOCUS_AND_DATA_MODEL_PLAN.md`](../vigil/docs/CHARACTER_FOCUS_AND_DATA_MODEL_PLAN.md)** and **[`vigil/docs/CANVAS_LORE_NODE_PATTERNS.md`](../vigil/docs/CANVAS_LORE_NODE_PATTERNS.md)**.
+Aligns **UI**, **persistence**, and **future variants** with character-style rules: **one canonical `bodyHtml`**, **structured identity on the canvas**, **long-form notes primarily in focus**. Complements **[`heartgarden/docs/CHARACTER_FOCUS_AND_DATA_MODEL_PLAN.md`](../heartgarden/docs/CHARACTER_FOCUS_AND_DATA_MODEL_PLAN.md)** and **[`heartgarden/docs/CANVAS_LORE_NODE_PATTERNS.md`](../heartgarden/docs/CANVAS_LORE_NODE_PATTERNS.md)**.
 
 ## Content contract (canonical HTML)
 
@@ -68,7 +68,7 @@ Root: `data-hg-canvas-role="lore-location"`. Variant: `data-hg-lore-location-var
 
 ## Shipped (baseline) — see completed todos
 
-Implementation pointers: [`vigil/src/lib/lore-node-seed-html.ts`](../vigil/src/lib/lore-node-seed-html.ts), [`vigil/src/lib/lore-location-focus-document-html.ts`](../vigil/src/lib/lore-location-focus-document-html.ts), [`vigil/src/components/foundation/ArchitecturalCanvasApp.tsx`](../vigil/src/components/foundation/ArchitecturalCanvasApp.tsx), [`vigil/src/components/foundation/ArchitecturalNodeCard.tsx`](../vigil/src/components/foundation/ArchitecturalNodeCard.tsx), [`vigil/src/components/foundation/ArchitecturalCanvasApp.module.css`](../vigil/src/components/foundation/ArchitecturalCanvasApp.module.css).
+Implementation pointers: [`heartgarden/src/lib/lore-node-seed-html.ts`](../heartgarden/src/lib/lore-node-seed-html.ts), [`heartgarden/src/lib/lore-location-focus-document-html.ts`](../heartgarden/src/lib/lore-location-focus-document-html.ts), [`heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx`](../heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx), [`heartgarden/src/components/foundation/ArchitecturalNodeCard.tsx`](../heartgarden/src/components/foundation/ArchitecturalNodeCard.tsx), [`heartgarden/src/components/foundation/ArchitecturalCanvasApp.module.css`](../heartgarden/src/components/foundation/ArchitecturalCanvasApp.module.css).
 
 ## Success criteria
 

@@ -1,4 +1,4 @@
-# CI for the heartgarden Next.js app. Working directory is vigil/ until the folder is renamed — see vigil/docs/NAMING.md
+# CI for the heartgarden Next.js app (app root directory `heartgarden/` — see heartgarden/docs/NAMING.md).
 name: heartgarden CI
 
 env:
@@ -7,16 +7,16 @@ env:
 on:
   push:
     paths:
-      - "vigil/**"
+      - "heartgarden/**"
       - ".github/workflows/heartgarden-ci.yml"
   pull_request:
     paths:
-      - "vigil/**"
+      - "heartgarden/**"
       - ".github/workflows/heartgarden-ci.yml"
 
 defaults:
   run:
-    working-directory: vigil
+    working-directory: heartgarden
 
 jobs:
   check-and-e2e:
@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: vigil/package-lock.json
+          cache-dependency-path: heartgarden/package-lock.json
       - name: CI diagnostics
         run: |
           echo "::group::Environment"
@@ -39,7 +39,7 @@ jobs:
           echo "::endgroup::"
       - name: Install dependencies
         env:
-          # Avoid mutating .git/hooks in CI; prepare script respects this (see vigil/scripts/install-git-hooks.mjs).
+          # Avoid mutating .git/hooks in CI; prepare script respects this (see heartgarden/scripts/install-git-hooks.mjs).
           SKIP_INSTALL_GIT_HOOKS: "1"
         run: |
           echo "::group::Install dependencies"

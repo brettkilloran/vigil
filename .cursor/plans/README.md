@@ -4,8 +4,8 @@ Plans here are **optional engineering notes** (YAML todos, narratives). They are
 
 | Authority | Path |
 |-----------|------|
-| **Repo-wide backlog + architecture** | [`vigil/docs/BUILD_PLAN.md`](../vigil/docs/BUILD_PLAN.md) |
-| **Lore vertical pointer** | [`vigil/docs/LORE_ENGINE_ROADMAP.md`](../vigil/docs/LORE_ENGINE_ROADMAP.md) |
+| **Repo-wide backlog + architecture** | [`heartgarden/docs/BUILD_PLAN.md`](../heartgarden/docs/BUILD_PLAN.md) |
+| **Lore vertical pointer** | [`heartgarden/docs/LORE_ENGINE_ROADMAP.md`](../heartgarden/docs/LORE_ENGINE_ROADMAP.md) |
 
 When a plan’s work lands or is cancelled, add **`Status:`** at the top of that `.plan.md` **or** move its row to **Completed / parked** below so agents do not treat stale notes as current behavior.
 

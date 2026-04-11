@@ -1,5 +1,5 @@
 /**
- * Writes vigil/pre-commit into the real repo's .git/hooks (works when vigil/ is not the git root).
+ * Writes heartgarden/pre-commit into the real repo's .git/hooks (works when heartgarden/ is not the git root).
  * Skip with SKIP_INSTALL_GIT_HOOKS=1 or when not inside a git work tree (e.g. some CI).
  */
 import { execFileSync } from "node:child_process";
@@ -12,12 +12,12 @@ if (process.env.SKIP_INSTALL_GIT_HOOKS === "1") {
   process.exit(0);
 }
 
-const vigilRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+const appRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 let hooksDirRel;
 try {
   hooksDirRel = execFileSync("git", ["rev-parse", "--git-path", "hooks"], {
-    cwd: vigilRoot,
+    cwd: appRoot,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
   }).trim();
@@ -26,7 +26,7 @@ try {
   process.exit(0);
 }
 
-const hooksDir = path.resolve(vigilRoot, hooksDirRel);
+const hooksDir = path.resolve(appRoot, hooksDirRel);
 const hookPath = path.join(hooksDir, "pre-commit");
 
 const script = `#!/bin/sh
@@ -34,7 +34,14 @@ if [ "$SKIP_SECRET_HOOK" = "1" ]; then
   exit 0
 fi
 ROOT="$(git rev-parse --show-toplevel)"
-cd "$ROOT/vigil" && npm run secrets:protect
+if [ -d "$ROOT/heartgarden" ]; then
+  cd "$ROOT/heartgarden" && npm run secrets:protect
+elif [ -d "$ROOT/vigil" ]; then
+  cd "$ROOT/vigil" && npm run secrets:protect
+else
+  echo "[pre-commit] Neither heartgarden/ nor vigil/ found at repo root; skip secrets:protect" >&2
+  exit 0
+fi
 `;
 
 fs.mkdirSync(hooksDir, { recursive: true });

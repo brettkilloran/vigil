@@ -6,9 +6,9 @@ Use this **click-by-click** list with the narrative in [`DEPLOY_VERCEL.md`](./DE
 
 ## A. Create the project
 
-- [ ] [Vercel](https://vercel.com) → **Add New… → Project** → import the Git repo that contains **`vigil/`** (monorepo root is **not** the app folder).
+- [ ] [Vercel](https://vercel.com) → **Add New… → Project** → import the Git repo that contains **`heartgarden/`** (monorepo root is **not** the app folder).
 - [ ] **Project name** (slug): e.g. **`heartgarden`** → default URL **`https://heartgarden.vercel.app`**.
-- [ ] **Root Directory:** **`vigil`** (Edit → set folder; required for this repo).
+- [ ] **Root Directory:** **`heartgarden`** (Edit → set folder; required for this repo).
 - [ ] **Framework:** Next.js (auto).
 - [ ] **Build Command:** leave override **empty** (uses [`vercel.json`](../vercel.json) → `npm run check`) **or** set explicitly to `npm run check`.
 - [ ] **Install Command:** default **`npm install`** (or **`npm ci`** if you prefer and lockfile is healthy).

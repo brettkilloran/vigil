@@ -4,8 +4,8 @@ status: canonical
 audience: [agent, human]
 last_reviewed: 2026-04-11
 related:
-  - vigil/docs/DATA_PIPELINE_AUDIT_2026-04-11.md
-  - vigil/src/lib/lore-object-registry.ts
+  - heartgarden/docs/DATA_PIPELINE_AUDIT_2026-04-11.md
+  - heartgarden/src/lib/lore-object-registry.ts
 ---
 
 # Lore import — canonical kind mapping

@@ -1,4 +1,4 @@
-# Gitleaks config for the Cursor monorepo (heartgarden lives under vigil/).
+# Gitleaks config for the Cursor monorepo (heartgarden lives under heartgarden/).
 # https://github.com/gitleaks/gitleaks
 
 title = "Cursor / heartgarden"

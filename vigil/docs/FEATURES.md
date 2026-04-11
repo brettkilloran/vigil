@@ -5,11 +5,11 @@ audience: [agent, human]
 last_reviewed: 2026-04-11
 canonical: true
 related:
-  - vigil/docs/API.md
-  - vigil/docs/CODEMAP.md
-  - vigil/docs/BUILD_PLAN.md
-  - vigil/docs/EDITOR_HG_DOC.md
-  - vigil/docs/DATA_PIPELINE_AUDIT_2026-04-11.md
+  - heartgarden/docs/API.md
+  - heartgarden/docs/CODEMAP.md
+  - heartgarden/docs/BUILD_PLAN.md
+  - heartgarden/docs/EDITOR_HG_DOC.md
+  - heartgarden/docs/DATA_PIPELINE_AUDIT_2026-04-11.md
 ---
 
 # heartgarden — shipped features (reference)

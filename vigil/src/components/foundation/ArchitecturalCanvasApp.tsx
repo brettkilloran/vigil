@@ -1504,7 +1504,7 @@ const WORKSPACE_BOOTSTRAP_ERROR_COPY = `Heartgarden — Could not load workspace
 No account data was deleted. This browser session could not open a Postgres workspace.
 
 Local dev:
-1. Add NEON_DATABASE_URL, DATABASE_URL, POSTGRES_URL, or POSTGRES_PRISMA_URL to vigil/.env.local (Neon connection string).
+1. Add NEON_DATABASE_URL, DATABASE_URL, POSTGRES_URL, or POSTGRES_PRISMA_URL to heartgarden/.env.local (Neon connection string).
 2. Restart the dev server from the vigil folder: npm run dev
 3. Reload this page.
 

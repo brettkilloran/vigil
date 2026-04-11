@@ -1,5 +1,5 @@
 ---
-Status: shipped — Phase 1 demo (`/dev/ai-pending-style`) + Phase 2 product wiring landed. **SoT:** `vigil/docs/FEATURES.md`, `vigil/docs/EDITOR_HG_DOC.md`, `vigil/docs/CODEMAP.md`.
+Status: shipped — Phase 1 demo (`/dev/ai-pending-style`) + Phase 2 product wiring landed. **SoT:** `heartgarden/docs/FEATURES.md`, `heartgarden/docs/EDITOR_HG_DOC.md`, `heartgarden/docs/CODEMAP.md`.
 ---
 
 # Unreviewed AI / ingestion text — UX plan (revised)
@@ -25,8 +25,8 @@ Some items are **100%** model output (new import notes, or merged content that r
 
 ## Current code reality (brief)
 
-- Import/merge: [`lore-import-commit.ts`](vigil/src/lib/lore-import-commit.ts), [`lore-import-apply.ts`](vigil/src/lib/lore-import-apply.ts) — can wrap proposed/imported bodies with pending spans and set `entity_meta.aiReview` (see **`docs/FEATURES.md`**).
-- hgDoc: TipTap **`hgAiPending`** mark + margin **Bind** in [`HeartgardenDocEditor`](vigil/src/components/editing/HeartgardenDocEditor.tsx); lore **canvas** HTML plates still use structured `BufferedContentEditable` — global pending styling applies to spans; full gutter is hgDoc-only (**`docs/EDITOR_HG_DOC.md`**).
+- Import/merge: [`lore-import-commit.ts`](heartgarden/src/lib/lore-import-commit.ts), [`lore-import-apply.ts`](heartgarden/src/lib/lore-import-apply.ts) — can wrap proposed/imported bodies with pending spans and set `entity_meta.aiReview` (see **`docs/FEATURES.md`**).
+- hgDoc: TipTap **`hgAiPending`** mark + margin **Bind** in [`HeartgardenDocEditor`](heartgarden/src/components/editing/HeartgardenDocEditor.tsx); lore **canvas** HTML plates still use structured `BufferedContentEditable` — global pending styling applies to spans; full gutter is hgDoc-only (**`docs/EDITOR_HG_DOC.md`**).
 
 ## UX direction (for demo + final)
 
@@ -50,7 +50,7 @@ Some items are **100%** model output (new import notes, or merged content that r
 
 **Suggested surface (pick one in implementation):**
 
-- **Storybook** story under `vigil/` (aligns with [`vigil/AGENTS.md`](vigil/AGENTS.md) Storybook guardrails), or
+- **Storybook** story under `heartgarden/` (aligns with [`heartgarden/AGENTS.md`](heartgarden/AGENTS.md) Storybook guardrails), or
 - A **dev-only** route/component gated behind an existing dev pattern, if you prefer in-app preview.
 
 **Deliverable:** Tokens + CSS classes applied to **mock** markup (and optionally a throwaway TipTap instance) so you can sign off on **color, weight, border, and density**.

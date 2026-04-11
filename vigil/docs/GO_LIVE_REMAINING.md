@@ -10,11 +10,11 @@ Use this after the initial Vercel project work. It lists **only what you must do
 
 These were aligned earlier; you normally **do not** redo them unless something broke:
 
-- Vercel project **heartgarden**: **Root Directory** `vigil`, **Next.js**, **Node 22.x**, monorepo GitHub **`brettkilloran/vigil`**, production branch **`main`**.
+- Vercel project **heartgarden**: **Root Directory** **`heartgarden`**, **Next.js**, **Node 22.x**, monorepo GitHub (your repo), production branch **`main`**.
 - [`vercel.json`](../vercel.json) uses **`framework: nextjs`** and **`npm run check`**.
 - **Do not** set **`PLAYWRIGHT_E2E`** on Vercel.
 
-**CLI habit:** link and deploy from the **monorepo root** (`Cursor/`), not from `vigil/` alone, so paths stay consistent with **Root Directory `vigil`**. See root `.vercel` / `.gitignore`.
+**CLI habit:** link and deploy from the **monorepo root** (`Cursor/`), not from `heartgarden/` alone, so paths stay consistent with **Root Directory `heartgarden`**. See root `.vercel` / `.gitignore`.
 
 ---
 
@@ -22,7 +22,7 @@ These were aligned earlier; you normally **do not** redo them unless something b
 
 1. In [Neon](https://neon.tech), create or pick a **production** project/branch.
 2. Copy the **pooled / serverless** Postgres URL (Neon’s recommendation for serverless clients).
-3. On your PC, from **`vigil/`**, with that URL in the environment:
+3. On your PC, from **`heartgarden/`**, with that URL in the environment:
 
    ```powershell
    $env:NEON_DATABASE_URL = "postgresql://..."   # your pooled URL
@@ -131,7 +131,7 @@ Use this as your done criteria:
 
 **Final prompt when you think you’re done:**
 
-> Run a full go-live audit against `vigil/docs/GO_LIVE_REMAINING.md` “Live and complete” table: check bootstrap, optional lore/R2/preview, and call out any gaps.
+> Run a full go-live audit against `heartgarden/docs/GO_LIVE_REMAINING.md` “Live and complete” table: check bootstrap, optional lore/R2/preview, and call out any gaps.
 
 ---
 
@@ -141,11 +141,11 @@ Use this as your done criteria:
   > Latest Vercel build failed for heartgarden. Here’s the build log excerpt: [paste]. Fix what’s needed in the repo or tell me the exact dashboard change.
 
 - **404 / wrong app:**  
-  > Production URL returns 404 or wrong site. Verify Vercel Root Directory `vigil`, framework Next.js, and [`vercel.json`](../vercel.json); suggest `vercel deploy` from monorepo root if needed.
+  > Production URL returns 404 or wrong site. Verify Vercel Root Directory `heartgarden`, framework Next.js, and [`vercel.json`](../vercel.json); suggest `vercel deploy` from monorepo root if needed.
 
 - **Bootstrap still `demo: true`:**  
   > `NEON_DATABASE_URL` is set but bootstrap is still demo. Help trace env visibility on Vercel and server-side bootstrap code.
 
 ---
 
-*Last aligned with repo layout: monorepo root contains `vigil/`; Vercel **Root Directory** is `vigil`.*
+*Last aligned with repo layout: monorepo root contains `heartgarden/`; Vercel **Root Directory** is **`heartgarden`**.*

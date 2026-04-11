@@ -5,9 +5,9 @@ audience: [agent, human]
 last_reviewed: 2026-04-11
 canonical: true
 related:
-  - vigil/docs/FEATURES.md
-  - vigil/docs/CODEMAP.md
-  - vigil/docs/LORE_ENGINE_ROADMAP.md
+  - heartgarden/docs/FEATURES.md
+  - heartgarden/docs/CODEMAP.md
+  - heartgarden/docs/LORE_ENGINE_ROADMAP.md
 ---
 
 # heartgarden — execution build plan (living)
@@ -38,7 +38,7 @@ This is the **repo-wide checklist**: architecture snapshot, shipped tranches, an
 
 **Code / API maps:** **`docs/FEATURES.md`** (shipped capability index), **`docs/CODEMAP.md`** (where logic lives by feature), **`docs/API.md`** (route catalog). Update them when you ship a user-facing feature or a new API vertical.
 
-**Health check:** From the app root (**`vigil/`** unless renamed — **`docs/NAMING.md`**), run `npm run check` (lint + production build). After UX / DB / stacking changes, run `npm run test:unit` and targeted `npm run test:e2e` if flows touched. **Neon vault schema:** `npm run db:vault-setup`; **embedding backfill:** app up + `npm run vault:reindex` (see **`docs/FOLLOW_UP.md`**).
+**Health check:** From the app root (**`heartgarden/`** unless renamed — **`docs/NAMING.md`**), run `npm run check` (lint + production build). After UX / DB / stacking changes, run `npm run test:unit` and targeted `npm run test:e2e` if flows touched. **Neon vault schema:** `npm run db:vault-setup`; **embedding backfill:** app up + `npm run vault:reindex` (see **`docs/FOLLOW_UP.md`**).
 
 ---
 

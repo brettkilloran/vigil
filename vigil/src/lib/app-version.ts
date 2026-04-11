@@ -1,8 +1,8 @@
 import packageJson from "../../package.json";
 
 /**
- * Shipped app semver — single source of truth is `vigil/package.json` → `version`.
- * Bump with `npm run release:patch` (or minor/major) from `vigil/`; see `docs/VERSIONING.md`.
+ * Shipped app semver — single source of truth is app-root `package.json` → `version`.
+ * Bump with `npm run release:patch` (or minor/major) from the Next app directory; see `docs/VERSIONING.md`.
  */
 export const HEARTGARDEN_APP_VERSION: string = packageJson.version;
 

@@ -37,7 +37,7 @@ isProject: false
 
 **Work:**
 
-1. Add something like `assertHeartgardenSpaceRouteAccess({ db, bootCtx, spaceId })` in `vigil/src/lib/` (or next to `heartgarden-api-boot-context.ts`) that returns either `{ space }` or a `Response` to return early.
+1. Add something like `assertHeartgardenSpaceRouteAccess({ db, bootCtx, spaceId })` in `heartgarden/src/lib/` (or next to `heartgarden-api-boot-context.ts`) that returns either `{ space }` or a `Response` to return early.
 2. Refactor **changes** and **presence** routes to use it; extend to other space routes only where it stays a clear win (avoid a mega-abstraction).
 
 **Done when:** Space route handlers read as “authorize → business logic,” with one place to update policy.
@@ -50,7 +50,7 @@ isProject: false
 
 **Work:**
 
-1. Single module (e.g. `vigil/src/lib/heartgarden-collab-constants.ts`) exporting:
+1. Single module (e.g. `heartgarden/src/lib/heartgarden-collab-constants.ts`) exporting:
   - `PRESENCE_TTL_MS` (or server-only re-export if you must avoid client import of server file),
   - client heartbeat / poll intervals documented as **must stay under TTL with margin**.
 2. **Server:** `presence/route.ts` imports TTL from that shared constant (or a `*-server.ts` sibling if tree-shaking / boundary matters).
@@ -129,7 +129,7 @@ isProject: false
 
 ## Verification
 
-- `npm run check` from `vigil/` after refactors.
+- `npm run check` from `heartgarden/` after refactors.
 - Two-browser smoke: delta still merges; presence still counts peers; no camera regression (per existing plan).
 - If E changes response shape: update `docs/API.md` and any client types in `architectural-neon-api.ts` / `canvas-types.ts`.
 

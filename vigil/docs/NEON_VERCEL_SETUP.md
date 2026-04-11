@@ -8,7 +8,7 @@ Schema and extensions apply **on Neon**, not inside Vercel’s build. Use this w
 
 1. In [Neon](https://neon.tech), create a project (or use an existing one) for **production**.
 2. Copy the **pooled** / **serverless** connection string (Neon documents this for serverless drivers — fits Vercel functions).
-3. On your machine, from **`vigil/`**:
+3. On your machine, from **`heartgarden/`**:
 
    ```bash
    set NEON_DATABASE_URL=postgresql://...   # Windows PowerShell: $env:NEON_DATABASE_URL="..."
@@ -24,7 +24,7 @@ Schema and extensions apply **on Neon**, not inside Vercel’s build. Use this w
 
 1. In the same Neon project, create a **branch** (e.g. `preview` or `vercel-preview`) — Neon treats branches as isolated databases.
 2. Copy that branch’s **pooled** connection string.
-3. From **`vigil/`**, point **`NEON_DATABASE_URL`** at the **Preview** branch URL and run the **same** commands as step 1 (`db:ensure-pgvector`, then `db:vault-setup` or equivalent). Preview must have **`pgvector`** and the same schema before PR apps can use embeddings/search safely.
+3. From **`heartgarden/`**, point **`NEON_DATABASE_URL`** at the **Preview** branch URL and run the **same** commands as step 1 (`db:ensure-pgvector`, then `db:vault-setup` or equivalent). Preview must have **`pgvector`** and the same schema before PR apps can use embeddings/search safely.
 
 4. In Vercel, add **`NEON_DATABASE_URL`** scoped to **Preview** only with the Preview branch URL. **Do not** reuse Production’s URL on Preview if you want isolation.
 

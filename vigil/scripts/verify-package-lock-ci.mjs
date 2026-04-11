@@ -2,7 +2,7 @@
  * Simulates GitHub Actions `npm ci` in a clean temp directory (npm 10.x, no hooks).
  * Catches "package.json and package-lock.json … out of sync" before push.
  *
- * Run from `vigil/`: `npm run verify:package-lock-ci`
+ * Run from `heartgarden/`: `npm run verify:package-lock-ci`
  */
 import { copyFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -18,7 +18,7 @@ const lockSrc = join(root, "package-lock.json");
 
 if (!existsSync(lockSrc)) {
    
-  console.error("Missing package-lock.json — run npm install in vigil/ first.");
+  console.error("Missing package-lock.json — run npm install in heartgarden/ first.");
   process.exit(1);
 }
 
@@ -33,7 +33,7 @@ try {
   if (r.status !== 0) {
      
     console.error(
-      "\nLockfile would fail GitHub Actions npm ci. From vigil/ run:\n  npm run lockfile:regenerate-linux\nThen commit package-lock.json.\n",
+      "\nLockfile would fail GitHub Actions npm ci. From heartgarden/ run:\n  npm run lockfile:regenerate-linux\nThen commit package-lock.json.\n",
     );
     process.exit(r.status ?? 1);
   }

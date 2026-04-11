@@ -1,7 +1,7 @@
 # Plan: Heartgarden MCP works with Claude Desktop (remote connector)
 
 **Status:** draft execution plan  
-**Product goal:** A paid Claude user can add Heartgarden as a **remote MCP connector** in **Claude Desktop** and reliably use **`vigil_*` tools** against the deployed app (e.g. `heartgarden.vercel.app`), authenticated with **`HEARTGARDEN_MCP_SERVICE_KEY`**.
+**Product goal:** A paid Claude user can add Heartgarden as a **remote MCP connector** in **Claude Desktop** and reliably use **`heartgarden_*` tools** against the deployed app (e.g. `heartgarden.vercel.app`), authenticated with **`HEARTGARDEN_MCP_SERVICE_KEY`**.
 
 **Non-goals (for this plan):** OAuth/DCR for third-party IdPs (only if product later requires it); replacing stdio **`npm run mcp`** for local dev.
 
@@ -12,21 +12,21 @@
 | # | Criterion |
 |---|-----------|
 | A | **Claude Desktop** (current release) can **register** the connector using the documented URL shape without opaque “Server not found” / broker errors attributable to misconfiguration on our side. |
-| B | After registration, **tools list** includes Heartgarden tools (names match `vigil_*` / server implementation). |
+| B | After registration, **tools list** includes Heartgarden tools (names match `heartgarden_*` / server implementation; legacy `vigil_*` still works on **call**). |
 | C | Invoking at least **one read tool** (e.g. search or list) returns a **successful tool result** against **production** data (or documented test space). |
 | D | **Write** tools remain gated by **`HEARTGARDEN_MCP_WRITE_KEY`** as today; documented and tested. |
 | E | **Vercel Production** has **`HEARTGARDEN_MCP_SERVICE_KEY`** set; boot gate behavior for **`/api/*`** with Bearer is unchanged and documented. |
-| F | A **repeatable QA checklist** lives in-repo (this plan + **`vigil/docs/API.md`** pointers) so any engineer can verify after a deploy. |
+| F | A **repeatable QA checklist** lives in-repo (this plan + **`heartgarden/docs/API.md`** pointers) so any engineer can verify after a deploy. |
 
 ---
 
 ## 2. Current implementation (baseline)
 
-- **Transport:** `GET|POST|DELETE` **`/api/mcp`** — **`WebStandardStreamableHTTPServerTransport`**, **stateless** (`sessionIdGenerator: undefined`) — [`vigil/app/api/mcp/route.ts`](../../vigil/app/api/mcp/route.ts).
-- **Auth (handler):** Bearer, `?token=` / `?key=`, or `X-Heartgarden-Mcp-Token` — [`vigil/src/lib/heartgarden-mcp-service-key.ts`](../../vigil/src/lib/heartgarden-mcp-service-key.ts).
-- **Middleware:** `/api/mcp` allowed through boot gate — [`vigil/middleware.ts`](../../vigil/middleware.ts).
+- **Transport:** `GET|POST|DELETE` **`/api/mcp`** — **`WebStandardStreamableHTTPServerTransport`**, **stateless** (`sessionIdGenerator: undefined`) — [`heartgarden/app/api/mcp/route.ts`](../../heartgarden/app/api/mcp/route.ts).
+- **Auth (handler):** Bearer, `?token=` / `?key=`, or `X-Heartgarden-Mcp-Token` — [`heartgarden/src/lib/heartgarden-mcp-service-key.ts`](../../heartgarden/src/lib/heartgarden-mcp-service-key.ts).
+- **Middleware:** `/api/mcp` allowed through boot gate — [`heartgarden/middleware.ts`](../../heartgarden/middleware.ts).
 - **Client quirks addressed:** `Accept` merging for Streamable HTTP; path-only `request.url` query parsing; **browser tab** GET returns HTML info page (Sec-Fetch `navigate` + `document`) so humans are not confused with MCP errors.
-- **Shared tool surface:** [`vigil/src/lib/mcp/heartgarden-mcp-server.ts`](../../vigil/src/lib/mcp/heartgarden-mcp-server.ts); stdio [`vigil/scripts/mcp-server.ts`](../../vigil/scripts/mcp-server.ts).
+- **Shared tool surface:** [`heartgarden/src/lib/mcp/heartgarden-mcp-server.ts`](../../heartgarden/src/lib/mcp/heartgarden-mcp-server.ts); stdio [`heartgarden/scripts/mcp-server.ts`](../../heartgarden/scripts/mcp-server.ts).
 
 ---
 
@@ -63,13 +63,13 @@ Per **Anthropic docs** (remote connectors):
 2. Steps: **Claude Desktop → Customize / Connectors → Add** → URL = `https://<prod-host>/api/mcp?token=<URL-encoded key>` (or Bearer if UI supports custom headers — if not, token-in-URL is canonical).
 3. Note **Free vs Pro** limits (connectors count); confirm test on **paid** account per product requirement.
 
-**Deliverable:** Short **“Claude Desktop + Heartgarden MCP”** subsection in **`vigil/docs/API.md`** or **`vigil/AGENTS.md`** (pointer only; avoid duplicating env matrix). Links: [`vigil/docs/API.md`](../../vigil/docs/API.md), [`vigil/AGENTS.md`](../../vigil/AGENTS.md).
+**Deliverable:** Short **“Claude Desktop + Heartgarden MCP”** subsection in **`heartgarden/docs/API.md`** or **`heartgarden/AGENTS.md`** (pointer only; avoid duplicating env matrix). Links: [`heartgarden/docs/API.md`](../../heartgarden/docs/API.md), [`heartgarden/AGENTS.md`](../../heartgarden/AGENTS.md).
 
 ### WS-B — Automated / scripted verification (owner: engineering)
 
-1. **Contract tests** (existing + extend): keep **`vigil/app/api/mcp/route.test.ts`** and service-key tests green; add cases for **POST initialize** mock if feasible without full SDK integration (or lightweight integration test hitting handler with **fake** key in test env).
+1. **Contract tests** (existing + extend): keep **`heartgarden/app/api/mcp/route.test.ts`** and service-key tests green; add cases for **POST initialize** mock if feasible without full SDK integration (or lightweight integration test hitting handler with **fake** key in test env).
 2. **MCP Inspector** (optional): [MCP Inspector](https://github.com/modelcontextprotocol/inspector) against **`https://heartgarden.vercel.app/api/mcp?token=…`** — initialize OK, tools listed.
-3. **Shipped:** **`npm run mcp:smoke`** → **`vigil/scripts/mcp-prod-smoke.ts`** (SDK **`StreamableHTTPClientTransport`** + **`Client`**; env **`HEARTGARDEN_MCP_SERVICE_KEY`**, optional **`HEARTGARDEN_MCP_URL`**).
+3. **Shipped:** **`npm run mcp:smoke`** → **`heartgarden/scripts/mcp-prod-smoke.ts`** (SDK **`StreamableHTTPClientTransport`** + **`Client`**; env **`HEARTGARDEN_MCP_SERVICE_KEY`**, optional **`HEARTGARDEN_MCP_URL`**).
 
 **Deliverable:** `mcp:smoke` + docs (**`docs/API.md`**, **`AGENTS.md`**, **`docs/DEPLOY_VERCEL.md`**); CI optional (secret not in CI).
 
@@ -126,8 +126,8 @@ If WS-B proves our endpoint **initialize + tools/list** works but Desktop still 
 
 ## References (in-repo)
 
-- [`vigil/docs/API.md`](../../vigil/docs/API.md) — MCP route + env vars  
-- [`vigil/docs/VERCEL_ENV_VARS.md`](../../vigil/docs/VERCEL_ENV_VARS.md) — `HEARTGARDEN_MCP_*`  
-- [`vigil/app/api/mcp/route.ts`](../../vigil/app/api/mcp/route.ts) — HTTP transport  
+- [`heartgarden/docs/API.md`](../../heartgarden/docs/API.md) — MCP route + env vars  
+- [`heartgarden/docs/VERCEL_ENV_VARS.md`](../../heartgarden/docs/VERCEL_ENV_VARS.md) — `HEARTGARDEN_MCP_*`  
+- [`heartgarden/app/api/mcp/route.ts`](../../heartgarden/app/api/mcp/route.ts) — HTTP transport  
 
 External: [Build custom connectors via remote MCP servers](https://support.claude.com/en/articles/11503834-build-custom-connectors-via-remote-mcp-servers), [Anthropic IP addresses](https://docs.anthropic.com/en/api/ip-addresses).

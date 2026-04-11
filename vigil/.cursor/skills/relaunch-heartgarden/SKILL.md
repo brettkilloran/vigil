@@ -1,6 +1,6 @@
 ---
 name: relaunch-heartgarden
-description: Relaunch the heartgarden Next.js dev app on its existing port and open it immediately, including a specific route when provided. Use when the user asks to relaunch/restart the app, keep the same port, open in Cursor/browser, or mentions a target page like /, /foo, or /spaces/123. The app directory in git is vigil/ unless renamed (see vigil/docs/NAMING.md).
+description: Relaunch the heartgarden Next.js dev app on its existing port and open it immediately, including a specific route when provided. Use when the user asks to relaunch/restart the app, keep the same port, open in Cursor/browser, or mentions a target page like /, /foo, or /spaces/123. The app directory in git is heartgarden/ unless renamed (see heartgarden/docs/NAMING.md).
 ---
 
 # Relaunch heartgarden
@@ -27,7 +27,7 @@ Restart the heartgarden dev server quickly on the same port, verify it is health
 
 3. Restart the app:
    - Stop the process currently bound to the selected port.
-   - Start dev server from the app directory (**`vigil/`** today — see **`docs/NAMING.md`** if renamed). On Windows with a portable Node install, ensure **`node`** / **`npm`** are on `PATH` (see **`vigil/AGENTS.md`** → Node on PATH / `pin-portable-node-user-path.ps1`), then run:
+   - Start dev server from the app directory (**`heartgarden/`** today — see **`docs/NAMING.md`** if renamed). On Windows with a portable Node install, ensure **`node`** / **`npm`** are on `PATH` (see **`heartgarden/AGENTS.md`** → Node on PATH / `pin-portable-node-user-path.ps1`), then run:
      - `npm run dev -- --port <PORT> --hostname 127.0.0.1`
 
 4. Verify health before opening:

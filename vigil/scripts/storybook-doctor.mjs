@@ -1,6 +1,6 @@
 /**
  * Quick sanity check for a broken `node_modules` tree (common cause of a blank Storybook UI).
- * Run: `node ./scripts/storybook-doctor.mjs` from `vigil/`.
+ * Run: `node ./scripts/storybook-doctor.mjs` from `heartgarden/`.
  */
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -44,7 +44,7 @@ if (!bad) {
 
 if (bad) {
    
-  console.error("\nFix: stop dev servers, then from vigil/ run: npm run reinstall\n");
+  console.error("\nFix: stop dev servers, then from heartgarden/ run: npm run reinstall\n");
   process.exit(1);
 }
 

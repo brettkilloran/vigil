@@ -5,9 +5,9 @@ audience: [agent, human]
 last_reviewed: 2026-04-11
 canonical: true
 related:
-  - vigil/AGENTS.md
-  - vigil/docs/API.md
-  - vigil/docs/BUILD_PLAN.md
+  - heartgarden/AGENTS.md
+  - heartgarden/docs/API.md
+  - heartgarden/docs/BUILD_PLAN.md
 ---
 
 # heartgarden — documentation index
@@ -29,7 +29,7 @@ related:
 | Topic | Document |
 |-------|----------|
 | Lore vertical + Cursor plans index | [`LORE_ENGINE_ROADMAP.md`](./LORE_ENGINE_ROADMAP.md), [`.cursor/plans/README.md`](../../.cursor/plans/README.md) |
-| Naming (`vigil/` folder) | [`NAMING.md`](./NAMING.md) |
+| Naming (`heartgarden/` folder) | [`NAMING.md`](./NAMING.md) |
 | Engineering strategy / phase map | [`STRATEGY.md`](./STRATEGY.md) |
 | Human / keys / infra | [`FOLLOW_UP.md`](./FOLLOW_UP.md) |
 | Deploy (narrative) | [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md), [`DEPLOY_VERCEL_CHECKLIST.md`](./DEPLOY_VERCEL_CHECKLIST.md), [`NEON_VERCEL_SETUP.md`](./NEON_VERCEL_SETUP.md) |

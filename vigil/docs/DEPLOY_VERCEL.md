@@ -7,7 +7,7 @@ This is the **step-by-step** companion to the short notes in [`README.md`](../RE
 ## 1. What you’re deploying
 
 - **Framework:** Next.js (App Router), detected automatically by Vercel.
-- **Monorepo:** The Next app is **not** at the repository root. It lives in **`vigil/`** until you rename it ([`NAMING.md`](./NAMING.md)).
+- **Monorepo:** The Next app is **not** at the repository root. It lives in **`heartgarden/`** ([`NAMING.md`](./NAMING.md)).
 - **Build:** After install, Vercel runs **`npm run check`** (lint + production build) via [`vercel.json`](../vercel.json) — same gate as local CI. Local **`npm run build`** remains **`next build` only** for quick iteration.
 
 ## 2. Create the Vercel project
@@ -15,10 +15,9 @@ This is the **step-by-step** companion to the short notes in [`README.md`](../RE
 1. In [Vercel](https://vercel.com), **Add New… → Project** and import the **Git** repo that contains this tree.
 2. Under **Configure Project**:
    - **Framework Preset:** Next.js (auto).
-   - **Root Directory:** **`vigil`** → *Edit* → set to `vigil` (so Vercel runs install/build inside that folder).  
-     If you already renamed the folder to `heartgarden`, use **`heartgarden`** instead and update path filters in [`.github/workflows/heartgarden-ci.yml`](../../.github/workflows/heartgarden-ci.yml) to match.
+   - **Root Directory:** **`heartgarden`** → *Edit* → set to **`heartgarden`** (so Vercel runs install/build inside that folder).
    - **Build Command:** leave **Override** empty so Vercel uses [`vercel.json`](../vercel.json) → **`npm run check`**. If you override in the dashboard, set it to **`npm run check`** to match (lint + `next build`).
-   - **Install Command:** leave default (`npm install`) or use **`npm ci`** only if you enable a setting that skips lockfile issues; this repo ships `package-lock.json` under `vigil/`.
+   - **Install Command:** leave default (`npm install`) or use **`npm ci`** only if you enable a setting that skips lockfile issues; this repo ships `package-lock.json` under `heartgarden/`.
    - **Output Directory:** leave default (Next handles this).
 3. **Node.js version:** In **Project → Settings → General → Node.js Version**, pick **22.x** (matches CI) or at least **20.x** (`package.json` has `"engines": { "node": ">=20" }`).
 
@@ -54,7 +53,19 @@ Add these in **Project → Settings → Environment Variables**. Mark secrets as
 
 **MCP:** Set **`HEARTGARDEN_MCP_SERVICE_KEY`** on the **Vercel** deployment if you use **`GET|POST|DELETE /api/mcp`** (hosted Streamable HTTP) or need stdio **`npm run mcp`** to call **`fetch`** into production with the boot gate on. Optional on the laptop: **`HEARTGARDEN_APP_URL`**, **`HEARTGARDEN_DEFAULT_SPACE_ID`**, **`HEARTGARDEN_MCP_WRITE_KEY`** when running the stdio MCP client against production.
 
-**Debugging `/api/mcp` in production:** In **Vercel → Project → Logs**, filter by path **`/api/mcp`** (or search `mcp`). Expect **401** when the service key is missing or wrong, **503** when **`HEARTGARDEN_MCP_SERVICE_KEY`** is unset in that environment, and **200** for successful MCP **`POST`**s. Do not paste tokens into tickets; use **`npm run mcp:smoke`** from **`vigil/`** with a local env var to verify end-to-end (see **`docs/API.md`** § MCP).
+**Debugging `/api/mcp` in production:** In **Vercel → Project → Logs**, filter by path **`/api/mcp`** (or search `mcp`). Expect **401** when the service key is missing or wrong, **503** when **`HEARTGARDEN_MCP_SERVICE_KEY`** is unset in that environment, and **200** for successful MCP **`POST`**s. Do not paste tokens into tickets; use **`npm run mcp:smoke`** from **`heartgarden/`** with a local env var to verify end-to-end (see **`docs/API.md`** § MCP).
+
+### MCP and Vercel Deployment Protection (SSO / auth wall)
+
+**Symptom:** Remote MCP (Claude Desktop, **`mcp:smoke`**) fails or never reaches your app; responses mention **Vercel login**, **SSO**, or **`x-vercel-protection-bypass`**.
+
+**Cause:** **Deployment Protection** (Vercel Authentication, password protection, etc.) runs **at Vercel’s edge**, before your Next.js route. Anthropic’s MCP broker **cannot** complete a browser SSO flow. **Heartgarden never runs** — this is not a Heartgarden `401` / boot gate issue.
+
+**Recommended fix (production MCP):** In **Vercel → Project → Settings → Deployment Protection**, scope protection so **Production** is **publicly reachable** (many teams protect **Preview** only). Remote MCP **requires** a URL that **does not** show Vercel’s login page to unauthenticated server-to-server traffic.
+
+**Optional workaround (not ideal):** Vercel supports **Protection Bypass for Automation** (see [Protection bypass for automation](https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation)). You can pass the bypass secret as a **query parameter** on the same URL as MCP (Claude does not let you set arbitrary headers). Append **`&x-vercel-protection-bypass=<secret>`** after **`?token=…`** and **percent-encode** the value if needed. **Treat this as a second secret** (leaks in logs like any query string). Prefer fixing Deployment Protection on Production instead.
+
+**Preview URLs:** Deployments like **`*-git-*-*.vercel.app`** are often protected by default. Use the **production** hostname for the MCP connector unless you intentionally test protected previews.
 
 ### Preview vs Production
 
@@ -69,7 +80,7 @@ After changing env vars, **redeploy** (Deployments → … → Redeploy) so new 
 From your laptop, with production URL in env (or pasted for one command):
 
 1. Enable **`pgvector`** if your schema uses embeddings:  
-   `npm run db:ensure-pgvector` from **`vigil/`** with `NEON_DATABASE_URL` pointing at that database.
+   `npm run db:ensure-pgvector` from **`heartgarden/`** with `NEON_DATABASE_URL` pointing at that database.
 2. Apply schema: **`npm run db:push`** or **`npm run db:migrate`** (whatever you use for this project — see [`docs/MIGRATION.md`](./MIGRATION.md) if upgrading).
 
 Order matters: extensions and migrations run **against Neon**, not inside Vercel’s build step, unless you deliberately add a migration step to CI/CD.
@@ -130,7 +141,7 @@ Env var (optional, Production / Preview):
 On your machine:
 
 ```bash
-cd vigil
+cd heartgarden
 npx vercel login
 npx vercel link    # connect repo directory to the Vercel project
 npx vercel env pull .env.local   # optional: pull non-production env for local parity
@@ -142,7 +153,7 @@ Production deploys are usually triggered by **git push** once the Git integratio
 
 | Symptom | Things to check |
 |--------|-------------------|
-| Build fails on Vercel | Root Directory **`vigil`**, Node **20+**, same branch as local; run **`npm run check`** locally from `vigil/`. If only lint fails, fix ESLint or align dashboard **Build Command** with **`npm run check`**. |
+| Build fails on Vercel | Root Directory **`heartgarden`**, Node **20+**, same branch as local; run **`npm run check`** locally from `heartgarden/`. If only lint fails, fix ESLint or align dashboard **Build Command** with **`npm run check`**. |
 | Site loads but always “demo” / empty cloud | `NEON_DATABASE_URL` missing or wrong environment; redeploy after fixing. |
 | DB errors / too many connections | Use Neon’s **pooled** connection string for serverless. |
 | R2 upload fails in browser | CORS on bucket for your Vercel URL; `R2_PUBLIC_BASE_URL` matches how objects are read. |

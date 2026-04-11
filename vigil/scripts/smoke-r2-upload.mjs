@@ -1,6 +1,6 @@
 /**
  * One-shot: presign (via Vercel CLI curl) → PUT 1×1 PNG → GET public URL.
- * Run from repo root: node vigil/scripts/smoke-r2-upload.mjs
+ * Run from repo root: node heartgarden/scripts/smoke-r2-upload.mjs
  */
 import { execSync } from "node:child_process";
 import { unlinkSync, writeFileSync } from "node:fs";

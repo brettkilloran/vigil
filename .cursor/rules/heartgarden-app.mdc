@@ -1,9 +1,11 @@
 ---
-description: heartgarden Next.js app — dev, Storybook, and CSS guardrails (app directory is vigil/)
-globs: vigil/**
+description: heartgarden Next.js app — dev, Storybook, and CSS guardrails (app directory is heartgarden/)
+globs:
+  - vigil/**
+  - heartgarden/**
 alwaysApply: false
 ---
 
-When working under the **heartgarden** app (folder **`vigil/`** in git — see `vigil/docs/NAMING.md`), read **`vigil/AGENTS.md`** → **"Local dev, Node, and Storybook (guardrails)"** before changing **`package.json` dev scripts**, **`.storybook/`**, **`*.stories.*`**, **`next.config.ts`**, or **token/CSS architecture** (`*.module.css` vs `app/globals.css`). Keep those invariants unless you intentionally replace them and re-verify on Windows.
+When working under the **heartgarden** app (folder **`heartgarden/`** in git — see `heartgarden/docs/NAMING.md`), read **`heartgarden/AGENTS.md`** → **"Local dev, Node, and Storybook (guardrails)"** before changing **`package.json` dev scripts**, **`.storybook/`**, **`*.stories.*`**, **`next.config.ts`**, or **token/CSS architecture** (`*.module.css` vs `app/globals.css`). Keep those invariants unless you intentionally replace them and re-verify on Windows.
 
-**Run / restart / localhost:** repo root **`.cursor/rules/heartgarden-local-dev.mdc`** (`alwaysApply`) — use **`npm run dev`** from **`vigil/`** and **`http://localhost:3000`**; boot gate is off by default in dev unless **`HEARTGARDEN_DEV_ENFORCE_BOOT_GATE=1`**.
+**Run / restart / localhost:** repo root **`.cursor/rules/heartgarden-local-dev.mdc`** (`alwaysApply`) — use **`npm run dev`** from **`heartgarden/`** and **`http://localhost:3000`**; boot gate is off by default in dev unless **`HEARTGARDEN_DEV_ENFORCE_BOOT_GATE=1`**.

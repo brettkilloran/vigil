@@ -26,7 +26,7 @@ isProject: false
 
 # Data pipeline & lore import hardening
 
-**Authority:** Execution backlog remains **`vigil/docs/BUILD_PLAN.md`**. This file is the **focused tranche** for [`vigil/docs/DATA_PIPELINE_AUDIT_2026-04-11.md`](../../vigil/docs/DATA_PIPELINE_AUDIT_2026-04-11.md) §6 (registry), §8–§9 (gaps), §10 (recommended tranche), §12 (multiplayer brief), and §4 (three-track smoke).
+**Authority:** Execution backlog remains **`heartgarden/docs/BUILD_PLAN.md`**. This file is the **focused tranche** for [`heartgarden/docs/DATA_PIPELINE_AUDIT_2026-04-11.md`](../../heartgarden/docs/DATA_PIPELINE_AUDIT_2026-04-11.md) §6 (registry), §8–§9 (gaps), §10 (recommended tranche), §12 (multiplayer brief), and §4 (three-track smoke).
 
 **Non-goals here:** Replacing polling with CRDT/OT, or promising Figma-class live collaboration without an explicit architecture program.
 
@@ -110,8 +110,8 @@ isProject: false
 
 The following must be added in **Agent** (or normal edit) mode:
 
-1. **Create** [`vigil/src/lib/lore-object-registry.ts`](../../vigil/src/lib/lore-object-registry.ts) — exports `persistedEntityTypeFromCanonical`, `loreShellKindFromCanonical`, `isLoreCardPersistedEntityType`, `ALL_CANONICAL_KINDS` (see matrix in [`LORE_IMPORT_KIND_MAPPING.md`](../../vigil/docs/LORE_IMPORT_KIND_MAPPING.md)).
-2. **Wire** [`vigil/src/lib/lore-import-apply.ts`](../../vigil/src/lib/lore-import-apply.ts) — replace `entityType: note.canonicalEntityKind` and `buildSearchBlob` `entityType` with `persistedEntityTypeFromCanonical(note.canonicalEntityKind)`.
+1. **Create** [`heartgarden/src/lib/lore-object-registry.ts`](../../heartgarden/src/lib/lore-object-registry.ts) — exports `persistedEntityTypeFromCanonical`, `loreShellKindFromCanonical`, `isLoreCardPersistedEntityType`, `ALL_CANONICAL_KINDS` (see matrix in [`LORE_IMPORT_KIND_MAPPING.md`](../../heartgarden/docs/LORE_IMPORT_KIND_MAPPING.md)).
+2. **Wire** [`heartgarden/src/lib/lore-import-apply.ts`](../../heartgarden/src/lib/lore-import-apply.ts) — replace `entityType: note.canonicalEntityKind` and `buildSearchBlob` `entityType` with `persistedEntityTypeFromCanonical(note.canonicalEntityKind)`.
 3. **Tests** — `lore-object-registry.test.ts`, `lore-import-registry-wiring.test.ts` (iterate `ALL_CANONICAL_KINDS` + `buildSearchBlob`), optional `lore-import-conformance.test.ts` for `planLoreImportCardLayout` non-overlap.
 4. **Optional** — `npm run smoke:three-track` script echoing §4 checklist; **localStorage** namespacing remains deferred unless product approves migration.
 
@@ -119,7 +119,7 @@ Remove the **Status** handoff line above once code ships.
 
 ## Related documents
 
-- [`vigil/docs/DATA_PIPELINE_AUDIT_2026-04-11.md`](../../vigil/docs/DATA_PIPELINE_AUDIT_2026-04-11.md)
-- [`vigil/docs/BUILD_PLAN.md`](../../vigil/docs/BUILD_PLAN.md) (E2/E3, near-term hardening)
-- [`vigil/docs/PLAYER_LAYER.md`](../../vigil/docs/PLAYER_LAYER.md)
-- [`vigil/docs/CANVAS_LORE_NODE_PATTERNS.md`](../../vigil/docs/CANVAS_LORE_NODE_PATTERNS.md)
+- [`heartgarden/docs/DATA_PIPELINE_AUDIT_2026-04-11.md`](../../heartgarden/docs/DATA_PIPELINE_AUDIT_2026-04-11.md)
+- [`heartgarden/docs/BUILD_PLAN.md`](../../heartgarden/docs/BUILD_PLAN.md) (E2/E3, near-term hardening)
+- [`heartgarden/docs/PLAYER_LAYER.md`](../../heartgarden/docs/PLAYER_LAYER.md)
+- [`heartgarden/docs/CANVAS_LORE_NODE_PATTERNS.md`](../../heartgarden/docs/CANVAS_LORE_NODE_PATTERNS.md)

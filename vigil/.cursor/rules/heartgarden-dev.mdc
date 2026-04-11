@@ -1,7 +1,9 @@
 ---
-description: Pointer to canonical vigil/ Cursor rule (avoid duplicate instructions)
-globs: vigil/**
+description: Pointer to canonical heartgarden/ Cursor rule (avoid duplicate instructions)
+globs:
+  - vigil/**
+  - heartgarden/**
 alwaysApply: false
 ---
 
-**Canonical guardrails** for this app live in **`.cursor/rules/heartgarden-app.mdc`** at the **repository root** (same `vigil/**` globs). Read that file plus **`vigil/AGENTS.md`** before changing dev scripts, Storybook, or CSS layout.
+**Canonical guardrails** for this app live in **`.cursor/rules/heartgarden-app.mdc`** at the **repository root** (same `heartgarden/**` globs). Read that file plus **`heartgarden/AGENTS.md`** before changing dev scripts, Storybook, or CSS layout.

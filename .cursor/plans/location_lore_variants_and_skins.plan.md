@@ -91,4 +91,4 @@ Canonical **`bodyHtml`** (one string per item). Aligned with shipped seeds / foc
 
 - **[`location_lore_data_model_and_focus.plan.md`](./location_lore_data_model_and_focus.plan.md)** — shipped focus, notes hiding, merge, tests.
 - **[`lore_entity_node_lab.plan.md`](./lore_entity_node_lab.plan.md)** — lab route, nine layouts, palette/create follow-ups.
-- **[`vigil/docs/CANVAS_LORE_NODE_PATTERNS.md`](../vigil/docs/CANVAS_LORE_NODE_PATTERNS.md)** — hooks and canvas vs focus patterns.
+- **[`heartgarden/docs/CANVAS_LORE_NODE_PATTERNS.md`](../heartgarden/docs/CANVAS_LORE_NODE_PATTERNS.md)** — hooks and canvas vs focus patterns.

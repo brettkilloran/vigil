@@ -58,7 +58,7 @@ Pass/fail invariants tested against code:
 
 ## 4) Three-track E2E smoke playbook
 
-Run from `vigil/` with `npm run dev`.
+Run from `heartgarden/` with `npm run dev`.
 
 ### Track A: Neon workspace (GM/full)
 
@@ -279,7 +279,7 @@ The full-scope plan is **closed** when:
 
 ## 11) Commands for follow-up verification
 
-From `vigil/`:
+From `heartgarden/`:
 
 - `npm run check`
 - `npm run test:unit`

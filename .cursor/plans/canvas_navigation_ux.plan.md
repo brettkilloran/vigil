@@ -33,20 +33,20 @@ isProject: false
 
 ## Context (current code)
 
-- **Camera model:** The scene uses `transform: translate(${translateX}px, ${translateY}px) scale(${scale})` on the canvas root ([ArchitecturalCanvasApp.tsx](c:/Users/Brett/Desktop/Cursor/vigil/src/components/foundation/ArchitecturalCanvasApp.tsx) ~7548). Screen-to-world for a viewport-local point is consistent with existing helpers such as `centerWorldX` / `centerWorldY` (~7302): `world = (screen - translate) / scale`.
-- **Top-left chrome:** Fixed column [`shellTopLeftStack`](c:/Users/Brett/Desktop/Cursor/vigil/src/components/foundation/ArchitecturalCanvasApp.module.css) (flex column) holds `shellTopCluster` → `shellTopClusterRow` (status bar, optional log out, breadcrumbs). This is the correct anchor for “top left, under” the existing strip—add a **second block below** the cluster (sibling inside `shellTopLeftStack`), not under the right-side [`ArchitecturalToolRail`](c:/Users/Brett/Desktop/Cursor/vigil/src/components/foundation/ArchitecturalCanvasApp.tsx).
+- **Camera model:** The scene uses `transform: translate(${translateX}px, ${translateY}px) scale(${scale})` on the canvas root ([ArchitecturalCanvasApp.tsx](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx) ~7548). Screen-to-world for a viewport-local point is consistent with existing helpers such as `centerWorldX` / `centerWorldY` (~7302): `world = (screen - translate) / scale`.
+- **Top-left chrome:** Fixed column [`shellTopLeftStack`](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/foundation/ArchitecturalCanvasApp.module.css) (flex column) holds `shellTopCluster` → `shellTopClusterRow` (status bar, optional log out, breadcrumbs). This is the correct anchor for “top left, under” the existing strip—add a **second block below** the cluster (sibling inside `shellTopLeftStack`), not under the right-side [`ArchitecturalToolRail`](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx).
 - **Stacks:** `collapsedStacks` groups multi-card stacks; each stack is positioned at `top.slots[activeSpaceId]` with CSS fan-out (`--stack-x` / `--stack-y`). The minimap and bounds logic must treat a **collapsed stack as one footprint**, not N overlapping cards at the same slot.
 - **Zoom-to-fit today:** Palette action `zoom-fit` (~5041–5077) uses **fixed** `UNIFIED_NODE_WIDTH` and `260` height for every entity—wrong for folders and stacks. This plan replaces that with a **shared bounds + fit** helper used by palette, minimap click-drag, and the toast action.
-- **Note bodies:** Card and focus editing use [`BufferedContentEditable`](c:/Users/Brett/Desktop/Cursor/vigil/src/components/editing/BufferedContentEditable.tsx), not TipTap—editor-assisted linking must work in **HTML contentEditable** (selection, ranges, IME).
-- **Vault index:** Debounced client trigger in [`architectural-neon-api.ts`](c:/Users/Brett/Desktop/Cursor/vigil/src/components/foundation/architectural-neon-api.ts) (`scheduleVaultIndexForItem`, `VAULT_INDEX_DEBOUNCE_MS` ~2800) POSTs to [`/api/items/[itemId]/index`](c:/Users/Brett/Desktop/Cursor/vigil/app/api/items/[itemId]/index/route.ts) (returns `ok`, `chunks`, `loreMetaUpdated`, `skipped`, or errors / 429).
+- **Note bodies:** Card and focus editing use [`BufferedContentEditable`](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/editing/BufferedContentEditable.tsx), not TipTap—editor-assisted linking must work in **HTML contentEditable** (selection, ranges, IME).
+- **Vault index:** Debounced client trigger in [`architectural-neon-api.ts`](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/foundation/architectural-neon-api.ts) (`scheduleVaultIndexForItem`, `VAULT_INDEX_DEBOUNCE_MS` ~2800) POSTs to [`/api/items/[itemId]/index`](c:/Users/Brett/Desktop/Cursor/heartgarden/app/api/items/[itemId]/index/route.ts) (returns `ok`, `chunks`, `loreMetaUpdated`, `skipped`, or errors / 429).
 
 ## 1. Shared world bounds and “fit camera” helper
 
-**New module** (keeps [ArchitecturalCanvasApp.tsx](c:/Users/Brett/Desktop/Cursor/vigil/src/components/foundation/ArchitecturalCanvasApp.tsx) from growing further): e.g. [`vigil/src/lib/canvas-view-bounds.ts`](c:/Users/Brett/Desktop/Cursor/vigil/src/lib/canvas-view-bounds.ts).
+**New module** (keeps [ArchitecturalCanvasApp.tsx](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx) from growing further): e.g. [`heartgarden/src/lib/canvas-view-bounds.ts`](c:/Users/Brett/Desktop/Cursor/heartgarden/src/lib/canvas-view-bounds.ts).
 
 - **Inputs:** `CanvasGraph`, `activeSpaceId`, `collapsedStacks` (or derive from the same `stackGroups` logic the shell already uses), viewport pixel size, optional `entityIds` subset (for “selection only”).
 - **Per-entity axis-aligned box in world space:**
-  - **Folder:** `FOLDER_CARD_WIDTH` / `FOLDER_CARD_HEIGHT` ([constants in ArchitecturalCanvasApp.tsx](c:/Users/Brett/Desktop/Cursor/vigil/src/components/foundation/ArchitecturalCanvasApp.tsx) ~184–187).
+  - **Folder:** `FOLDER_CARD_WIDTH` / `FOLDER_CARD_HEIGHT` ([constants in ArchitecturalCanvasApp.tsx](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx) ~184–187).
   - **Content:** `entity.width ?? UNIFIED_NODE_WIDTH`, default height **280** (match zoom-fit and placement fallbacks).
   - **Rotation:** expand using the four corners of the local rect rotated by `entity.rotation` (simple trig); avoids underestimating hit area for rotated cards.
 - **Stacks (collapsed, len > 1):** one box anchored at the **stack container slot** (`top` of `collapsedStacks` entry). Footprint = card box plus **diagonal spill** from fan-out: e.g. extra `(n - 1) * 6` px on right/bottom (aligned with `--stack-x` / `--stack-y` in JSX ~7673–7675), capped to a reasonable max so pathological stacks do not explode the minimap. Optionally union with the same rotation expansion as the **top** card if you want tighter accuracy later.
@@ -59,9 +59,9 @@ isProject: false
 
 ## 2. Top-left minimap component
 
-**New component** + CSS module: e.g. [`vigil/src/components/foundation/CanvasMinimap.tsx`](c:/Users/Brett/Desktop/Cursor/vigil/src/components/foundation/CanvasMinimap.tsx) + `CanvasMinimap.module.css`.
+**New component** + CSS module: e.g. [`heartgarden/src/components/foundation/CanvasMinimap.tsx`](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/foundation/CanvasMinimap.tsx) + `CanvasMinimap.module.css`.
 
-- **Placement:** Render inside [`shellTopLeftStack`](c:/Users/Brett/Desktop/Cursor/vigil/src/components/foundation/ArchitecturalCanvasApp.tsx) **after** the existing `shellTopCluster` block (~9215–9311), wrapped in a glass panel consistent with `shellTopChromePanel` / tokens. Apply `pointer-events: auto` on the minimap only (parent column uses `pointer-events: none` except rows).
+- **Placement:** Render inside [`shellTopLeftStack`](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx) **after** the existing `shellTopCluster` block (~9215–9311), wrapped in a glass panel consistent with `shellTopChromePanel` / tokens. Apply `pointer-events: auto` on the minimap only (parent column uses `pointer-events: none` except rows).
 - **Visual (best-practice pattern):** Fixed **~168–200px** wide (height ~112–140), `border-radius` matching chrome, subtle border. **SVG** `viewBox` set to `contentBounds` plus **~8–12% padding** (or minimum absolute padding in world units so tiny gardens still breathe). Inside SVG:
   - **Fill rects** per atom (standalone node or stack): low-contrast fill; **slightly stronger** for selected entities (derive selected set from `selectedNodeIds` + stack membership).
   - **Viewport quad:** rectangle for the visible world rect:
@@ -88,23 +88,23 @@ isProject: false
 
 ## 4. Cmd+K as universal escape hatch
 
-**Files:** [CommandPalette.tsx](c:/Users/Brett/Desktop/Cursor/vigil/src/components/ui/CommandPalette.tsx), [ArchitecturalCanvasApp.tsx](c:/Users/Brett/Desktop/Cursor/vigil/src/components/foundation/ArchitecturalCanvasApp.tsx) (`paletteActions`, `runPaletteAction`).
+**Files:** [CommandPalette.tsx](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/ui/CommandPalette.tsx), [ArchitecturalCanvasApp.tsx](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx) (`paletteActions`, `runPaletteAction`).
 
 - **Raise visibility when query is empty:** Today `filteredActions` caps at **6** rows when `qq` is empty (~299–307)—too aggressive as the action list grows. Increase cap (e.g. **12–16**) or split **“Actions”** into always-visible section headers (Recent / Actions / Navigate) without shrinking actions below usability.
 - **New / clarified actions** (wire to existing state setters where they already exist):
   - **Zoom to selection** — disabled when selection empty; uses bounds helper on selected ids (+ stack expansion: if any selected id is in a multi-stack, include whole stack for a sensible frame).
-  - **Toggle canvas effects** — `setCanvasEffectsEnabled` + persist key `VIGIL_CANVAS_EFFECTS_STORAGE_KEY` ([vigil-canvas-prefs.ts](c:/Users/Brett/Desktop/Cursor/vigil/src/lib/vigil-canvas-prefs.ts)); keywords: `motion`, `transition`, `performance`.
+  - **Toggle canvas effects** — `setCanvasEffectsEnabled` + persist key `VIGIL_CANVAS_EFFECTS_STORAGE_KEY` ([vigil-canvas-prefs.ts](c:/Users/Brett/Desktop/Cursor/heartgarden/src/lib/vigil-canvas-prefs.ts)); keywords: `motion`, `transition`, `performance`.
   - **Toggle link graph** — toggle `graphOverlayOpen` (not only open).
   - **Open / close Ask lore** — toggle `lorePanelOpen`.
-  - **Recenter / Zoom to fit** — keep; ensure hints reference Cmd+K ([mod-keys](c:/Users/Brett/Desktop/Cursor/vigil/src/lib/mod-keys.ts)).
+  - **Recenter / Zoom to fit** — keep; ensure hints reference Cmd+K ([mod-keys](c:/Users/Brett/Desktop/Cursor/heartgarden/src/lib/mod-keys.ts)).
 - **Icon hygiene:** Replace incorrect / duplicate icons (e.g. `toggle-theme` and `create-media` both using misleading glyphs per current code ~4359–4365) so scanability matches labels.
-- **Optional (if low cost):** **Open links inspector** — today [ArchitecturalLinksPanel](c:/Users/Brett/Desktop/Cursor/vigil/src/components/ui/ArchitecturalLinksPanel.tsx) owns UI state internally; either add controlled `open` / `onOpenChange` + refocus, or defer and document as follow-up.
+- **Optional (if low cost):** **Open links inspector** — today [ArchitecturalLinksPanel](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/ui/ArchitecturalLinksPanel.tsx) owns UI state internally; either add controlled `open` / `onOpenChange` + refocus, or defer and document as follow-up.
 
 **Restricted layer:** Continue to filter actions with the same `deny` set as today for `isRestrictedLayer`.
 
 ## 5. Space navigation hardening
 
-**Problem:** [`enterSpace`](c:/Users/Brett/Desktop/Cursor/vigil/src/components/foundation/ArchitecturalCanvasApp.tsx) kicks off `fetchBootstrap(spaceId)` in two async paths (canvas effects off ~4071–4099, effects on ~4103–4144). Rapid breadcrumb or folder hops can complete **out of order**; an older response can call `applySpaceNavigation` last and overwrite graph + camera with the wrong space (noted in [BUILD_PLAN.md](c:/Users/Brett/Desktop/Cursor/vigil/docs/BUILD_PLAN.md) near-term item).
+**Problem:** [`enterSpace`](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx) kicks off `fetchBootstrap(spaceId)` in two async paths (canvas effects off ~4071–4099, effects on ~4103–4144). Rapid breadcrumb or folder hops can complete **out of order**; an older response can call `applySpaceNavigation` last and overwrite graph + camera with the wrong space (noted in [BUILD_PLAN.md](c:/Users/Brett/Desktop/Cursor/heartgarden/docs/BUILD_PLAN.md) near-term item).
 
 **Approach:**
 
@@ -120,33 +120,33 @@ isProject: false
 
 **Goal:** Users understand when semantic / hybrid search and lore retrieval reflect their latest edits.
 
-**Server:** [`POST /api/items/[itemId]/index`](c:/Users/Brett/Desktop/Cursor/vigil/app/api/items/[itemId]/index/route.ts) already returns structured JSON (`ok`, `chunks`, `loreMetaUpdated`, `skipped`, errors, 429). Client today **fire-and-forgets** in `scheduleVaultIndexForItem`.
+**Server:** [`POST /api/items/[itemId]/index`](c:/Users/Brett/Desktop/Cursor/heartgarden/app/api/items/[itemId]/index/route.ts) already returns structured JSON (`ok`, `chunks`, `loreMetaUpdated`, `skipped`, errors, 429). Client today **fire-and-forgets** in `scheduleVaultIndexForItem`.
 
 **Client / UX:**
 
-- Extend [`architectural-neon-api.ts`](c:/Users/Brett/Desktop/Cursor/vigil/src/components/foundation/architectural-neon-api.ts) (or a tiny [`vault-index-status-bus.ts`](c:/Users/Brett/Desktop/Cursor/vigil/src/lib/vault-index-status-bus.ts)) to emit:
+- Extend [`architectural-neon-api.ts`](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/foundation/architectural-neon-api.ts) (or a tiny [`vault-index-status-bus.ts`](c:/Users/Brett/Desktop/Cursor/heartgarden/src/lib/vault-index-status-bus.ts)) to emit:
   - **Pending:** when a debounce timer is scheduled for `itemId`.
   - **In flight / done / error:** when the POST resolves (parse JSON; map 429 to “rate limited”).
-- **Status bar** ([`ArchitecturalStatusBar.tsx`](c:/Users/Brett/Desktop/Cursor/vigil/src/components/foundation/ArchitecturalStatusBar.tsx)): additive strip when `pendingCount > 0` (“Indexing notes for search…”) and brief success/error toast-line when batch completes (without fighting existing neon sync copy—use a second segment or tooltip).
+- **Status bar** ([`ArchitecturalStatusBar.tsx`](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/foundation/ArchitecturalStatusBar.tsx)): additive strip when `pendingCount > 0` (“Indexing notes for search…”) and brief success/error toast-line when batch completes (without fighting existing neon sync copy—use a second segment or tooltip).
 - **Per-card (optional v1.1):** subtle icon or dot on card chrome when that `itemId` is pending/failed; clears on success. Keeps power users confident without cluttering empty canvases.
 - **No embedding provider / skipped:** surface “Search is lexical only” or use `skipped` from API when present so users do not assume vectors updated.
 
 ## 7. Editor-assisted linking
 
-**Goal:** When typing wiki-style links, suggest targets and insert correct **`vigil:item:`** markup so [ArchitecturalLinksPanel](c:/Users/Brett/Desktop/Cursor/vigil/src/components/ui/ArchitecturalLinksPanel.tsx) and cloud tooling stay consistent.
+**Goal:** When typing wiki-style links, suggest targets and insert correct **`vigil:item:`** markup so [ArchitecturalLinksPanel](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/ui/ArchitecturalLinksPanel.tsx) and cloud tooling stay consistent.
 
-**Trigger:** Detect `[[` in the active editable surface ([`BufferedContentEditable`](c:/Users/Brett/Desktop/Cursor/vigil/src/components/editing/BufferedContentEditable.tsx) on cards and focus sheet in `ArchitecturalCanvasApp`). On `[[`, open a **positioned popover** anchored to the caret (`getBoundingClientRect` from `Selection.getRangeAt(0)`), filtered as the user types until `]]`, Enter, or Escape.
+**Trigger:** Detect `[[` in the active editable surface ([`BufferedContentEditable`](c:/Users/Brett/Desktop/Cursor/heartgarden/src/components/editing/BufferedContentEditable.tsx) on cards and focus sheet in `ArchitecturalCanvasApp`). On `[[`, open a **positioned popover** anchored to the caret (`getBoundingClientRect` from `Selection.getRangeAt(0)`), filtered as the user types until `]]`, Enter, or Escape.
 
 **Candidates (tiered):**
 
 1. **Local fast path:** Titles (and optional aliases) of **entities in `activeSpaceId`** matching prefix (case-insensitive).
-2. **Remote (when cloud + UUID space):** Reuse [`/api/search/suggest`](c:/Users/Brett/Desktop/Cursor/vigil) (same as palette) for query ≥ 2 chars to pull in cross-folder items if desired; throttle to avoid spam.
+2. **Remote (when cloud + UUID space):** Reuse **`/api/search/suggest`** (same as palette) for query ≥ 2 chars to pull in cross-folder items if desired; throttle to avoid spam.
 
 **Insertion:** Replace the `[[query` segment with HTML that existing parsers treat as wiki targets—e.g. `<a href="vigil:item:UUID">Title</a>` (validate against how `extractVigilIdsFromHtml` / consumers expect attributes). Handle **IME composition** (`isComposing`) and **undo**: prefer one atomic `onCommit` path via existing buffer where possible.
 
 **Scope control:** Only **content** notes (not media/code if inappropriate); respect `isRestrictedLayer` / Players tier if those editors are read-only.
 
-**Follow-ups (out of scope unless time):** Auto-suggest `@mentions` without `[[`; LLM-ranked suggestions ([FOLLOW_UP.md](c:/Users/Brett/Desktop/Cursor/vigil/docs/FOLLOW_UP.md) Phase 5 themes).
+**Follow-ups (out of scope unless time):** Auto-suggest `@mentions` without `[[`; LLM-ranked suggestions ([FOLLOW_UP.md](c:/Users/Brett/Desktop/Cursor/heartgarden/docs/FOLLOW_UP.md) Phase 5 themes).
 
 ## 8. Verification
 

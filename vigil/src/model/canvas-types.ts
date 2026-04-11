@@ -11,7 +11,7 @@ export type ItemType =
  * translate** applied to the scene in screen pixels (same units as React state
  * `translateX` / `translateY` in `ArchitecturalCanvasApp`). With **`defaultCamera`**,
  * world `(0, 0)` is at the **center** of the viewport (measured CSS pixels). Policy:
- * **`vigil/AGENTS.md`** (Canvas camera).
+ * **`AGENTS.md`** (Canvas camera).
  */
 export interface CameraState {
   x: number;

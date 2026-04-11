@@ -5,9 +5,9 @@ audience: [agent, human]
 last_reviewed: 2026-04-11
 canonical: true
 related:
-  - vigil/docs/FEATURES.md
-  - vigil/docs/PLAYER_LAYER.md
-  - vigil/docs/VERCEL_ENV_VARS.md
+  - heartgarden/docs/FEATURES.md
+  - heartgarden/docs/PLAYER_LAYER.md
+  - heartgarden/docs/VERCEL_ENV_VARS.md
 ---
 
 # heartgarden — HTTP API reference
@@ -52,13 +52,17 @@ Responses include **`camera`**: `{ x, y, zoom }` parsed from legacy **`spaces.ca
 
 **Tooling:** Shared logic lives in **`src/lib/mcp/heartgarden-mcp-server.ts`**.
 
+**Tool names:** **`tools/list`** advertises only **`heartgarden_*`** (e.g. **`heartgarden_search`**, **`heartgarden_patch_item`**). **`tools/call`** still accepts legacy **`vigil_*`** names and maps them to **`heartgarden_*`** via **`canonicalHeartgardenMcpToolName`** (see unit tests in **`heartgarden-mcp-server.test.ts`**).
+
 **Claude Desktop (remote connector):** Add the server under **Settings → Customize → Connectors** (not only `claude_desktop_config.json` for remote URLs). Set **Remote MCP server URL** to **`https://<host>/api/mcp?token=<HEARTGARDEN_MCP_SERVICE_KEY>`** (percent-encode the token if it contains **`&`**, **`+`**, **`#`**, etc.). Remote traffic is brokered from **Anthropic’s cloud**; your deployment must be **public HTTPS** (see Anthropic’s published egress IP ranges). **Do not** use a normal browser tab as the test: address-bar navigation is not an MCP client; use **`npm run mcp:smoke`** (below) or MCP Inspector.
 
-**Verify from CLI (recommended):** From **`vigil/`**, with the same secret as Production:
+**Vercel Deployment Protection:** If **Vercel Authentication** / SSO / password protection is enabled on the hostname you use, **MCP requests never reach this app** (the edge shows a login wall). **Turn off protection for Production** (or protect Preview only), or use Vercel’s **automation bypass** as an extra **`&x-vercel-protection-bypass=`** query param (see **`docs/DEPLOY_VERCEL.md`** § MCP and Deployment Protection). Claude cannot send **`x-vercel-protection-bypass`** as a header.
+
+**Verify from CLI (recommended):** From **`heartgarden/`**, with the same secret as Production:
 
 `HEARTGARDEN_MCP_SERVICE_KEY=… npm run mcp:smoke`
 
-Optional **`HEARTGARDEN_MCP_URL`** (default `https://heartgarden.vercel.app/api/mcp`) points at **`/api/mcp`**. Uses **`@modelcontextprotocol/sdk`** `StreamableHTTPClientTransport` + **`Client`** — same wire protocol as Claude Desktop. Success prints server info and a tool count; failure usually means wrong key, missing env on the server (**503**), or network.
+Optional **`HEARTGARDEN_MCP_URL`** (default `https://heartgarden.vercel.app/api/mcp`) points at **`/api/mcp`**. Optional **`HEARTGARDEN_VERCEL_PROTECTION_BYPASS`** adds Vercel’s **`x-vercel-protection-bypass`** query param for smoke tests against a protected deployment. Uses **`@modelcontextprotocol/sdk`** `StreamableHTTPClientTransport` + **`Client`** — same wire protocol as Claude Desktop. Success prints server info and a tool count; failure usually means wrong key, missing env on the server (**503**), or network.
 
 ## Spaces
 

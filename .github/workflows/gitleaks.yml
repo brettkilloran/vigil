@@ -1,4 +1,4 @@
-# Secret scanning for the whole repository (not only vigil/). Uses .gitleaks.toml at repo root.
+# Secret scanning for the whole repository (not only the Next app subtree). Uses .gitleaks.toml at repo root.
 # Also enable GitHub "Secret scanning" + "Push protection" under repo Settings → Code security and analysis.
 name: gitleaks
 

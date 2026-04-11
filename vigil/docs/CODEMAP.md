@@ -5,8 +5,8 @@ audience: [agent, human]
 last_reviewed: 2026-04-11
 canonical: true
 related:
-  - vigil/docs/FEATURES.md
-  - vigil/docs/API.md
+  - heartgarden/docs/FEATURES.md
+  - heartgarden/docs/API.md
 ---
 
 # heartgarden — code map

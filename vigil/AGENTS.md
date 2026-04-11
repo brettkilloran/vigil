@@ -22,9 +22,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 **Read order (LLM / onboarding):** `AGENTS.md` (this file) → `docs/API.md` → `docs/FEATURES.md` → `docs/CODEMAP.md` → `docs/BUILD_PLAN.md`. **Env matrix (deploy):** `docs/VERCEL_ENV_VARS.md`. **Lore vertical pointer:** `docs/LORE_ENGINE_ROADMAP.md` + repo `.cursor/plans/README.md`.
 
-## Naming (product vs `vigil/` folder)
+## Naming (product vs `heartgarden/` folder)
 
-**heartgarden** is the app name. The Next.js tree is in **`vigil/`** (legacy directory name). **Vercel** and **CI** use that path until you rename it — steps and stable `vigil:*` IDs (links, MCP tools, CSS tokens, localStorage) are documented in **`docs/NAMING.md`**.
+**heartgarden** is the app name. The Next.js tree lives in **`heartgarden/`** in git (rename from `vigil/` if your checkout still uses the old folder name). **Vercel** and **CI** use that path. Stable **`vigil:*`** link scheme, CSS tokens, and localStorage keys are documented in **`docs/NAMING.md`** (MCP tools are **`heartgarden_*`**; **`vigil_*`** tool names are still accepted as aliases).
 
 ## Source of truth (canonical docs)
 
@@ -37,7 +37,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | **Backlog / architecture table** | `docs/BUILD_PLAN.md` |
 | **Env vars (Vercel)** | `docs/VERCEL_ENV_VARS.md` |
 | **Players / GM / collab** | `docs/PLAYER_LAYER.md` |
-| **Naming (`vigil/` vs heartgarden)** | `docs/NAMING.md` |
+| **Naming (paths vs stable `vigil:*` data)** | `docs/NAMING.md` |
 | **Lore vertical + plan index** | `docs/LORE_ENGINE_ROADMAP.md`, repo `.cursor/plans/README.md` |
 | **Lore node UI patterns** | `docs/CANVAS_LORE_NODE_PATTERNS.md` |
 | **Character focus + data model / sync / migration plan** | `docs/CHARACTER_FOCUS_AND_DATA_MODEL_PLAN.md` |
@@ -82,11 +82,11 @@ Persistence: **`items`** rows; **`spaces.canvas_state`** is legacy (camera is **
 
 ## Local dev, Node, and Storybook (guardrails)
 
-**Cursor / new agent sessions:** Local run, restart, and **`http://localhost:3000`** defaults (boot gate off in `next dev`, no `dev:preview`) are spelled out in repo root **`.cursor/rules/heartgarden-local-dev.mdc`** — that rule is **`alwaysApply: true`** so agents pick it up without opening `vigil/` first.
+**Cursor / new agent sessions:** Local run, restart, and **`http://localhost:3000`** defaults (boot gate off in `next dev`, no `dev:preview`) are spelled out in repo root **`.cursor/rules/heartgarden-local-dev.mdc`** — that rule is **`alwaysApply: true`** so agents pick it up without opening `heartgarden/` first.
 
-**Package manager:** Use **npm** only in the app directory (**`vigil/`** today — see **`docs/NAMING.md`** if renamed) (`package-lock.json`). Do not mix pnpm/yarn in the same tree without a deliberate migration.
+**Package manager:** Use **npm** only in the app directory (**`heartgarden/`** today — see **`docs/NAMING.md`** if renamed) (`package-lock.json`). Do not mix pnpm/yarn in the same tree without a deliberate migration.
 
-**`package-lock.json` vs Ubuntu CI (`npm ci` / “Missing … from lock file”):** A normal **`npm install` on Windows** can drop **Linux-only optional** resolutions (e.g. **`@emnapi/*`** under **`@img/sharp-wasm32`**). GitHub Actions then fails **`npm ci`**. From **`vigil/`**: run **`npm run verify:package-lock-ci`** before pushing (clean temp install with **npm 10.x**, same major as **Node 22** on Actions). If it fails, run **`npm run lockfile:regenerate-linux`**, re-run verify, then **commit `package-lock.json`**.
+**`package-lock.json` vs Ubuntu CI (`npm ci` / “Missing … from lock file”):** A normal **`npm install` on Windows** can drop **Linux-only optional** resolutions (e.g. **`@emnapi/*`** under **`@img/sharp-wasm32`**). GitHub Actions then fails **`npm ci`**. From **`heartgarden/`**: run **`npm run verify:package-lock-ci`** before pushing (clean temp install with **npm 10.x**, same major as **Node 22** on Actions). If it fails, run **`npm run lockfile:regenerate-linux`**, re-run verify, then **commit `package-lock.json`**.
 
 **Node on PATH (Windows portable installs):** If `npm`/`node` are missing in a new terminal or in Cursor, the portable Node folder is probably not on **User** `PATH`.
 
@@ -96,13 +96,13 @@ Persistence: **`items`** rows; **`spaces.canvas_state`** is legacy (camera is **
 2. Extract the zip so you have a folder like  
    `%LOCALAPPDATA%\node-portable\node-v24.x.x-win-x64`  
    (sibling to any older `node-v*-win-x64` folders is fine).
-3. From the `vigil/` folder, run:
+3. From the `heartgarden/` folder, run:
    - `powershell -ExecutionPolicy Bypass -File scripts/pin-portable-node-user-path.ps1`
 4. **Restart Cursor** (or close all integrated terminals and open a new one) so they read the updated User `PATH`.
 
 The script picks the **newest** `node-v*-win-x64` under `%LOCALAPPDATA%\node-portable\`, points `%LOCALAPPDATA%\node-portable\current` at it (junction), and prepends `current` to your **User** `PATH` — so the next upgrade is always: **unzip new version → run script again → restart Cursor**.
 
-**Daily dev URLs:** From `vigil/`, prefer **`npm run dev:surfaces`** (app + Storybook). Use a normal browser (**Chrome / Edge**), not the editor’s embedded browser, for Storybook.
+**Daily dev URLs:** From `heartgarden/`, prefer **`npm run dev:surfaces`** (app + Storybook). Use a normal browser (**Chrome / Edge**), not the editor’s embedded browser, for Storybook.
 
 | Surface | URL | Notes |
 |--------|-----|--------|
@@ -116,9 +116,9 @@ The script picks the **newest** `node-v*-win-x64` under `%LOCALAPPDATA%\node-por
 
 **CI:** GitHub Actions runs **`npm run build-storybook`** after **`npm run check`** so broken Storybook config or stories fail the pipeline. Locally you can run **`npm run check:all`** (lint + Next build + Storybook build) before pushing.
 
-**Corrupt `node_modules` (Storybook/Webpack `ENOENT` for `@storybook/*`, `react-refresh`, `html-webpack-plugin`, etc.):** That pattern is almost always a **partial or broken install**, not bad app code. Stop **Next**, **Storybook**, and **Playwright** (anything holding `node_modules`), then from **`vigil/`** run **`npm run reinstall`** (removes **`node_modules`** and runs **`npm ci`**). On Windows, if delete hits **EBUSY** / **EPERM**, close integrated terminals, exit stray **`node.exe`** processes, and retry. **`npm run storybook:doctor`** checks that key packages exist before you spend time on webpack config.
+**Corrupt `node_modules` (Storybook/Webpack `ENOENT` for `@storybook/*`, `react-refresh`, `html-webpack-plugin`, etc.):** That pattern is almost always a **partial or broken install**, not bad app code. Stop **Next**, **Storybook**, and **Playwright** (anything holding `node_modules`), then from **`heartgarden/`** run **`npm run reinstall`** (removes **`node_modules`** and runs **`npm ci`**). On Windows, if delete hits **EBUSY** / **EPERM**, close integrated terminals, exit stray **`node.exe`** processes, and retry. **`npm run storybook:doctor`** checks that key packages exist before you spend time on webpack config.
 
-**Database (Neon + vault index):** From **`vigil/`**, **`npm run db:vault-setup`** — pgvector extension, **`drizzle-kit push --force`**, then **`scripts/vault-sql-migrate.mjs`**. **`npm run vault:reindex`** hits **`POST /api/items/:id/index`** for all rows (needs dev server). GitHub: manual workflow **`heartgarden-db-vault.yml`** + secret **`HEARTGARDEN_NEON_DATABASE_URL`**. Details: **`docs/FOLLOW_UP.md`**.
+**Database (Neon + vault index):** From **`heartgarden/`**, **`npm run db:vault-setup`** — pgvector extension, **`drizzle-kit push --force`**, then **`scripts/vault-sql-migrate.mjs`**. **`npm run vault:reindex`** hits **`POST /api/items/:id/index`** for all rows (needs dev server). GitHub: manual workflow **`heartgarden-db-vault.yml`** + secret **`HEARTGARDEN_NEON_DATABASE_URL`**. Details: **`docs/FOLLOW_UP.md`**.
 
 ## Terminals (Cursor / agents)
 
@@ -132,9 +132,11 @@ The script picks the **newest** `node-v*-win-x64` under `%LOCALAPPDATA%\node-por
 
 **Implementation:** shared server logic in **`src/lib/mcp/heartgarden-mcp-server.ts`**; **stdio** entry **`scripts/mcp-server.ts`** (`npm run mcp`); **Streamable HTTP** endpoint **`GET|POST|DELETE /api/mcp`** (Bearer auth, stateless transport).
 
-Tools include **`vigil_browse_spaces`**, **`vigil_space_summary`**, **`vigil_list_items`**, **`vigil_search`** (default `hybrid`), **`vigil_semantic_search`**, **`vigil_graph`**, **`vigil_get_item`** / **`vigil_get_entity`**, **`vigil_item_links`**, **`vigil_traverse_links`**, **`vigil_related_items`**, **`vigil_title_mentions`**, **`vigil_lore_query`**, **`vigil_index_item`**, **`vigil_reindex_space`**, **`vigil_patch_item`**. **`HEARTGARDEN_MCP_WRITE_KEY`** must match `write_key` on **`vigil_patch_item`** and **`vigil_reindex_space`**. **`HEARTGARDEN_MCP_SERVICE_KEY`**: required on the server for **`/api/mcp`** (503 if unset); use the same value when calling tools so internal `fetch` calls pass the boot gate in production (**`Authorization: Bearer …`**). **Resources:** `lore://space/<uuid>`. Defaults: **`HEARTGARDEN_DEFAULT_SPACE_ID`**, **`HEARTGARDEN_APP_URL`**. The Next app must be reachable for HTTP tool calls.
+Tools include **`heartgarden_browse_spaces`**, **`heartgarden_space_summary`**, **`heartgarden_list_items`**, **`heartgarden_search`** (default `hybrid`), **`heartgarden_semantic_search`**, **`heartgarden_graph`**, **`heartgarden_get_item`** / **`heartgarden_get_entity`**, **`heartgarden_item_links`**, **`heartgarden_traverse_links`**, **`heartgarden_related_items`**, **`heartgarden_title_mentions`**, **`heartgarden_lore_query`**, **`heartgarden_index_item`**, **`heartgarden_reindex_space`**, **`heartgarden_patch_item`**. **`HEARTGARDEN_MCP_WRITE_KEY`** must match `write_key` on **`heartgarden_patch_item`** and **`heartgarden_reindex_space`**. **`HEARTGARDEN_MCP_SERVICE_KEY`**: required on the server for **`/api/mcp`** (503 if unset); use the same value when calling tools so internal `fetch` calls pass the boot gate in production (**`Authorization: Bearer …`**). **Resources:** `lore://space/<uuid>`. Defaults: **`HEARTGARDEN_DEFAULT_SPACE_ID`**, **`HEARTGARDEN_APP_URL`**. The Next app must be reachable for HTTP tool calls. **Legacy:** clients may still invoke **`vigil_*`** tool names; the server maps them to **`heartgarden_*`**.
 
-**Claude Desktop (remote URL):** in **Customize → Connectors**, add **Remote MCP server URL** **`https://<your-domain>/api/mcp?token=<HEARTGARDEN_MCP_SERVICE_KEY>`** (same value as in Vercel; percent-encode the token if needed). OAuth fields stay empty. **Smoke test (same SDK transport as Desktop):** from **`vigil/`**, `HEARTGARDEN_MCP_SERVICE_KEY=… npm run mcp:smoke` (optional **`HEARTGARDEN_MCP_URL`** for non-prod). Prefer **`Authorization: Bearer`** when the client supports it — query tokens may appear in access logs.
+**Claude Desktop (remote URL):** in **Customize → Connectors**, add **Remote MCP server URL** **`https://<your-domain>/api/mcp?token=<HEARTGARDEN_MCP_SERVICE_KEY>`** (same value as in Vercel; percent-encode the token if needed). OAuth fields stay empty. **Smoke test (same SDK transport as Desktop):** from **`heartgarden/`**, `HEARTGARDEN_MCP_SERVICE_KEY=… npm run mcp:smoke` (optional **`HEARTGARDEN_MCP_URL`** for non-prod; optional **`HEARTGARDEN_VERCEL_PROTECTION_BYPASS`** if testing a protected deployment). Prefer **`Authorization: Bearer`** when the client supports it — query tokens may appear in access logs.
+
+**Vercel:** If **Deployment Protection** / SSO is on for that hostname, **no MCP traffic reaches the app** (Claude cannot log in to Vercel). Use a **public Production** URL or configure protection in **`docs/DEPLOY_VERCEL.md`** (MCP and Deployment Protection).
 
 ## Playwright (`npm run test:e2e`)
 

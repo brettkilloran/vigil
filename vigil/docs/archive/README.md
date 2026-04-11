@@ -6,13 +6,13 @@ Files here are **kept for history** (product intent, old session breakdowns, dat
 
 | What | Where |
 |------|--------|
-| **Remaining engineering tasks (lore vertical + ordered phases)** | `vigil/docs/LORE_ENGINE_ROADMAP.md` + `.cursor/plans/README.md` (index of workspace `.plan.md` files). |
-| **Repo reality: architecture, shipped tranches, hardening backlog** | `vigil/docs/BUILD_PLAN.md` (paths use **`vigil/`**; product is **heartgarden** — **`../NAMING.md`**) |
-| **Human / keys / infra** | `vigil/docs/FOLLOW_UP.md` |
-| **Contributor onboarding** | `vigil/AGENTS.md` |
-| **Engineering delta notes** | `vigil/docs/STRATEGY.md` (being slimmed to reference the above) |
-| **Design tokens** | `vigil/docs/DESIGN_SYSTEM_TOKENS.md` |
-| **UI polish ideas** | `vigil/docs/VISUAL_REVAMP_PLAN.md` (still active; not a task ledger) |
+| **Remaining engineering tasks (lore vertical + ordered phases)** | `heartgarden/docs/LORE_ENGINE_ROADMAP.md` + `.cursor/plans/README.md` (index of workspace `.plan.md` files). |
+| **Repo reality: architecture, shipped tranches, hardening backlog** | `heartgarden/docs/BUILD_PLAN.md` (paths use **`heartgarden/`**; product is **heartgarden** — **`../NAMING.md`**) |
+| **Human / keys / infra** | `heartgarden/docs/FOLLOW_UP.md` |
+| **Contributor onboarding** | `heartgarden/AGENTS.md` |
+| **Engineering delta notes** | `heartgarden/docs/STRATEGY.md` (being slimmed to reference the above) |
+| **Design tokens** | `heartgarden/docs/DESIGN_SYSTEM_TOKENS.md` |
+| **UI polish ideas** | `heartgarden/docs/VISUAL_REVAMP_PLAN.md` (still active; not a task ledger) |
 
 ## Contents of this folder
 

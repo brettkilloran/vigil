@@ -4,8 +4,8 @@ status: canonical
 audience: [agent, human]
 last_reviewed: 2026-04-10
 related:
-  - vigil/docs/BUILD_PLAN.md
-  - vigil/docs/LORE_ENGINE_ROADMAP.md
+  - heartgarden/docs/BUILD_PLAN.md
+  - heartgarden/docs/LORE_ENGINE_ROADMAP.md
 ---
 
 # heartgarden — Engineering strategy (living)
@@ -21,7 +21,7 @@ This file is the **short bridge** between the repo today and planning docs. **Lo
 
 ## Current repo vs target (honest delta)
 
-| Area | Today (heartgarden app in **`vigil/`** — see **`docs/NAMING.md`**) | Target (master plan) |
+| Area | Today (heartgarden app in **`heartgarden/`** — see **`docs/NAMING.md`**) | Target (master plan) |
 |------|------------------|----------------------|
 | Canvas | **tldraw removed**; **production shell = `ArchitecturalCanvasApp`** (`src/components/foundation/`) | Custom DOM + CSS transform layer + item cards (same intent as plan’s `VigilCanvas`) |
 | Persistence | **`items`** + legacy **`spaces.canvas_state`** (not used by shell for viewport); Neon **bootstrap + CRUD bridge** for architectural graph when not in demo mode | Same; legacy DB rows may still hold old tldraw JSON in `canvas_state` until migrated |

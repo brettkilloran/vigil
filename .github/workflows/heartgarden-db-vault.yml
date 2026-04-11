@@ -6,7 +6,7 @@ on:
 
 defaults:
   run:
-    working-directory: vigil
+    working-directory: heartgarden
 
 jobs:
   vault-db:
@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: vigil/package-lock.json
+          cache-dependency-path: heartgarden/package-lock.json
       - name: Install dependencies
         run: npm ci
       - name: Write NEON_DATABASE_URL for scripts

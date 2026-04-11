@@ -2,14 +2,14 @@
 
 ## Source of truth
 
-- **Semver** lives in **`vigil/package.json`** → `version` (currently the product line **0.9.x** on the road to 1.0).
+- **Semver** lives in the app root **`package.json`** → `version` (currently the product line **0.9.x** on the road to 1.0).
 - Runtime imports use **`src/lib/app-version.ts`**:
   - **`HEARTGARDEN_APP_VERSION`** — semver only.
   - **`HEARTGARDEN_APP_VERSION_LABEL`** — semver plus optional build suffix **`+` + first 7 hex chars of the deploy commit** on Vercel when `VERCEL_GIT_COMMIT_SHA` is present (wired via `next.config.ts` → `NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA`).
 
 ## Bumping the version (human / release)
 
-From **`vigil/`**:
+From **`heartgarden/`**:
 
 | Goal | Command |
 |------|---------|

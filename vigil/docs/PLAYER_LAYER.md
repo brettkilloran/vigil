@@ -5,8 +5,8 @@ audience: [agent, human]
 last_reviewed: 2026-04-11
 canonical: true
 related:
-  - vigil/docs/API.md
-  - vigil/docs/VERCEL_ENV_VARS.md
+  - heartgarden/docs/API.md
+  - heartgarden/docs/VERCEL_ENV_VARS.md
 ---
 
 # Players layer (Players PIN + optional `HEARTGARDEN_PLAYER_SPACE_ID`)
@@ -36,7 +36,7 @@ Full detail lives in server helper [`src/lib/heartgarden-api-boot-context.ts`](.
 
 If Bishop and Players ever shared a space (legacy behavior) or you need to guarantee **no** `item_links` edges between the GM world and the player world:
 
-1. From **`vigil/`**, preview impact:  
+1. From **`heartgarden/`**, preview impact:  
    `HEARTGARDEN_SEVER_WORLDS_DRY=1 npm run db:sever-worlds`
 2. Destructive run (deletes all **items** and **folder spaces** under player roots, removes **cross-world** links; keeps implicit / env root **space rows** empty):  
    `HEARTGARDEN_SEVER_WORLDS_CONFIRM=1 npm run db:sever-worlds`

@@ -3,7 +3,7 @@ name: Lore entity node lab
 overview: "Canvas-adjacent lore nodes for Character, Faction/org/company, and Location: fixed minimal field sets per type (per product feedback), plus nine visual explorations (three layouts per type). No extra RPG/social fields unless added later. Lab at /dev/lore-entity-nodes; future persistence via entity_type + hgArch."
 todos:
   - id: lab-shipped
-    content: "Design lab route + previews ([app/dev/lore-entity-nodes/page.tsx](vigil/app/dev/lore-entity-nodes/page.tsx), [LoreEntityNodeLab.tsx](vigil/src/components/dev/LoreEntityNodeLab.tsx)) reflect canonical fields + 3 visual passes per type"
+    content: "Design lab route + previews ([app/dev/lore-entity-nodes/page.tsx](heartgarden/app/dev/lore-entity-nodes/page.tsx), [LoreEntityNodeLab.tsx](heartgarden/src/components/dev/LoreEntityNodeLab.tsx)) reflect canonical fields + 3 visual passes per type"
     status: completed
   - id: pick-winners
     content: "Dock create strip: Organization + Location open flyout for v1–v3 layouts (Character stays one-click v11)"
@@ -59,9 +59,9 @@ Letterhead should stay **versatile and reusable**: not bland default note, but *
 
 ## Nine variants = visual only
 
-Each row shares **one** data model; columns differ by **layout, typography, tape choice, and decorative vocabulary** while keeping the shared canvas shell ([`ArchitecturalCanvasApp.module.css`](vigil/src/components/foundation/ArchitecturalCanvasApp.module.css) `.entityNode`, header, tape, shadows, selection affordances).
+Each row shares **one** data model; columns differ by **layout, typography, tape choice, and decorative vocabulary** while keeping the shared canvas shell ([`ArchitecturalCanvasApp.module.css`](heartgarden/src/components/foundation/ArchitecturalCanvasApp.module.css) `.entityNode`, header, tape, shadows, selection affordances).
 
-Implementation labels in the lab ([`LoreEntityNodeLab.tsx`](vigil/src/components/dev/LoreEntityNodeLab.tsx)):
+Implementation labels in the lab ([`LoreEntityNodeLab.tsx`](heartgarden/src/components/dev/LoreEntityNodeLab.tsx)):
 
 | Type | V1 | V2 | V3 |
 |------|----|----|-----|
@@ -74,11 +74,11 @@ No variant adds pronouns, voice, stats, motto blocks, or other fields unless the
 ## Technical consistency (unchanged)
 
 - **Body editing on canvas** can stay `ContentTheme: "default"` for rich notes; visual profile is orthogonal (e.g. `content_json.hgArch.cardVariant` + `items.entity_type`).
-- **Persistence direction:** [`HgArchPayload`](vigil/src/components/foundation/architectural-db-bridge.ts) gains optional keys for variant; [`entityType`](vigil/src/model/canvas-types.ts) uses values such as `character`, `faction`, `location` (or your final enum strings).
-- **Lab route:** [`/dev/lore-entity-nodes`](vigil/app/dev/lore-entity-nodes/page.tsx), `robots: noindex`.
+- **Persistence direction:** [`HgArchPayload`](heartgarden/src/components/foundation/architectural-db-bridge.ts) gains optional keys for variant; [`entityType`](heartgarden/src/model/canvas-types.ts) uses values such as `character`, `faction`, `location` (or your final enum strings).
+- **Lab route:** [`/dev/lore-entity-nodes`](heartgarden/app/dev/lore-entity-nodes/page.tsx), `robots: noindex`.
 
 ## Follow-up (after design sign-off)
 
-1. Map chosen variant(s) to `hgArch` and render extra classes on [`ArchitecturalNodeCard`](vigil/src/components/foundation/ArchitecturalNodeCard.tsx) (or a thin wrapper).
-2. Seed `bodyHtml` templates in [`createNewNode`](vigil/src/components/foundation/ArchitecturalCanvasApp.tsx) / dock ([`ArchitecturalBottomDock`](vigil/src/components/foundation/ArchitecturalBottomDock.tsx)) for the three kinds.
+1. Map chosen variant(s) to `hgArch` and render extra classes on [`ArchitecturalNodeCard`](heartgarden/src/components/foundation/ArchitecturalNodeCard.tsx) (or a thin wrapper).
+2. Seed `bodyHtml` templates in [`createNewNode`](heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx) / dock ([`ArchitecturalBottomDock`](heartgarden/src/components/foundation/ArchitecturalBottomDock.tsx)) for the three kinds.
 3. Optional: Storybook story that reuses the lab grid component for regression visibility.

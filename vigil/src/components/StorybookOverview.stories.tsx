@@ -9,7 +9,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Entry point for Storybook. heartgarden: app directory in git is `vigil/` (see docs/NAMING.md); component source is `src/components/`. Global tokens come from `app/globals.css`.",
+          "Entry point for Storybook. heartgarden: app directory in git is `heartgarden/` (see docs/NAMING.md); component source is `src/components/`. Global tokens come from `app/globals.css`.",
       },
     },
   },

@@ -35,7 +35,7 @@ Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 | `npm run db:vault-sql` | Apply `drizzle/migrations/0003_vault_embeddings_lore_meta.sql` via `pg` (HNSW fallback if unsupported) |
 | `npm run db:vault-setup` | **`db:ensure-pgvector`** → **`db:push:force`** → **`db:vault-sql`** |
 | `npm run vault:reindex` | HTTP fan-out to **`POST /api/items/:id/index`** for every item (app must be up; see `.env.local.example` for `VAULT_REINDEX_*`) |
-| `npm run mcp` | MCP stdio tools (legacy names **`vigil_*`**, e.g. **`vigil_list_items`**, **`vigil_search`**, **`vigil_graph`**) — needs app reachable at `HEARTGARDEN_APP_URL` (default `http://localhost:3000`). Hosted Streamable HTTP: **`GET|POST|DELETE /api/mcp`** with **`Authorization: Bearer HEARTGARDEN_MCP_SERVICE_KEY`** (see **`AGENTS.md`**). Do not rename tool strings without updating MCP client configs. |
+| `npm run mcp` | MCP stdio tools (**`heartgarden_*`**, e.g. **`heartgarden_list_items`**, **`heartgarden_search`**, **`heartgarden_graph`**; legacy **`vigil_*`** aliases still work on call) — needs app reachable at `HEARTGARDEN_APP_URL` (default `http://localhost:3000`). Hosted Streamable HTTP: **`GET|POST|DELETE /api/mcp`** with **`Authorization: Bearer HEARTGARDEN_MCP_SERVICE_KEY`** (see **`AGENTS.md`**). |
 
 ### Keyboard (canvas, not typing in a note)
 
@@ -76,8 +76,8 @@ If one view looks stale:
 
 ## Deploy on Vercel
 
-**Short version:** Vercel **Root Directory** = **`vigil`**. Set `NEON_DATABASE_URL` (and optional Anthropic / R2 per [`.env.local.example`](.env.local.example)). Do **not** set `PLAYWRIGHT_E2E`. No tldraw license is required.
+**Short version:** Vercel **Root Directory** = **`heartgarden`**. Set `NEON_DATABASE_URL` (and optional Anthropic / R2 per [`.env.local.example`](.env.local.example)). Do **not** set `PLAYWRIGHT_E2E`. No tldraw license is required.
 
 **Full guide:** **[`docs/DEPLOY_VERCEL.md`](docs/DEPLOY_VERCEL.md)**. **Dashboard checklist:** **[`docs/DEPLOY_VERCEL_CHECKLIST.md`](docs/DEPLOY_VERCEL_CHECKLIST.md)**. **Neon prod + Preview branches:** **[`docs/NEON_VERCEL_SETUP.md`](docs/NEON_VERCEL_SETUP.md)**.
 
-**Naming:** **`docs/NAMING.md`** (heartgarden vs `vigil/` folder, stable `vigil:*` IDs).
+**Naming:** **`docs/NAMING.md`** (product name, app path **`heartgarden/`**, stable **`vigil:*`** data where applicable).

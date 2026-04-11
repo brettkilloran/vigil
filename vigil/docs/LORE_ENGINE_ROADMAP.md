@@ -5,7 +5,7 @@ audience: [agent, human]
 last_reviewed: 2026-04-11
 canonical: true
 related:
-  - vigil/docs/BUILD_PLAN.md
+  - heartgarden/docs/BUILD_PLAN.md
   - .cursor/plans/README.md
 ---
 
