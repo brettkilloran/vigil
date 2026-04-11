@@ -3191,13 +3191,15 @@
 }
 
 .rootDockCluster {
+  position: relative;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
   /* Stretch so every open chip shares one row height; center toolbars inside each panel below. */
   align-items: stretch;
   justify-content: center;
-  gap: 6px;
+  /* Closed slots no longer sit in flex flow; keep a modest gap only between visible chips. */
+  gap: 4px;
   pointer-events: auto;
   max-width: min(96vw, 920px);
   transform-origin: center bottom;
@@ -3680,6 +3682,17 @@ button.rootDockPanel.viewportMetricsPanel {
   max-height: 0;
   min-height: 0;
   align-self: center;
+  /*
+   * Flex `gap` still applies between zero-width siblings, which left large empty bands between
+   * create / history / format while selection strips stayed mounted-but-closed. Absolutely
+   * positioned flex items do not participate in flex layout, so gaps only appear between
+   * visible chips (parent is `position: relative` on `.rootDockCluster`).
+   */
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .rootDockPanelSlotInner {
