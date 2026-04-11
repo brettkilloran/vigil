@@ -5,6 +5,7 @@ import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
 import {
   htmlFragmentToHgDocDoc,
   legacyCodeBodyHtmlToHgDocSeed,
+  stripLegacyHtmlToPlainText,
 } from "@/src/lib/hg-doc/html-to-doc";
 
 describe("html-to-doc", () => {
@@ -21,6 +22,11 @@ describe("html-to-doc", () => {
     expect(doc.type).toBe("doc");
     const text = hgDocToHtml(doc);
     expect(text).toContain("// line");
+  });
+
+  it("stripLegacyHtmlToPlainText removes script and decodes entities", () => {
+    const evil = '<script>alert(1)</script><p>a&nbsp;&amp;b</p>';
+    expect(stripLegacyHtmlToPlainText(evil)).toBe("a &b");
   });
 
   it("legacyCodeBodyHtmlToHgDocSeed decodes nbsp and basic entities", () => {

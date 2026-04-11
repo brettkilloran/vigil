@@ -20,8 +20,11 @@ export function htmlFragmentToHgDocDoc(fragmentHtml: string): JSONContent {
   }
 }
 
-/** Strip legacy code-card HTML to a single plain paragraph (TipTap hgDoc). */
-function legacyCodeHtmlToPlainParagraphText(html: string): string {
+/**
+ * Best-effort HTML → plain string for migration and previews (not a full HTML parser).
+ * Strips `script` / `style`, removes tags, decodes a small set of entities, collapses whitespace.
+ */
+export function stripLegacyHtmlToPlainText(html: string): string {
   const stripped = (html ?? "")
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -39,9 +42,12 @@ function legacyCodeHtmlToPlainParagraphText(html: string): string {
     .trim();
 }
 
-/** Legacy code-theme bodies were stored as raw HTML; seed a simple hgDoc paragraph. */
+/**
+ * Legacy code-theme bodies were stored as decorated HTML; produce a single hgDoc paragraph
+ * of plain text (no syntax highlighting in the doc model).
+ */
 export function legacyCodeBodyHtmlToHgDocSeed(html: string): JSONContent {
-  const plain = legacyCodeHtmlToPlainParagraphText(html);
+  const plain = stripLegacyHtmlToPlainText(html);
   if (!plain) return structuredClone(EMPTY_HG_DOC);
   const text = plain.length > 50_000 ? plain.slice(0, 50_000) : plain;
   return {
