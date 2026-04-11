@@ -1,3 +1,4 @@
+import { NextRequest } from "next/server";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 
 import { heartgardenMcpServiceKeyFromEnv, mcpRequestAuthorizedByServiceKey } from "@/src/lib/heartgarden-mcp-service-key";
@@ -10,7 +11,7 @@ export const runtime = "nodejs";
 
 export const dynamic = "force-dynamic";
 
-async function handleMcpRequest(request: Request): Promise<Response> {
+async function handleMcpRequest(request: NextRequest): Promise<Response> {
   if (!heartgardenMcpServiceKeyFromEnv()) {
     return new Response(
       JSON.stringify({
@@ -49,14 +50,14 @@ async function handleMcpRequest(request: Request): Promise<Response> {
   return transport.handleRequest(request);
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   return handleMcpRequest(request);
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   return handleMcpRequest(request);
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
   return handleMcpRequest(request);
 }

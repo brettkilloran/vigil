@@ -4,6 +4,7 @@ import {
   authorizationBearerMatchesMcpServiceKey,
   heartgardenMcpServiceKeyFromEnv,
   mcpRequestAuthorizedByServiceKey,
+  mcpTokenFromRequestUrlString,
   timingSafeEqualUtf8,
 } from "./heartgarden-mcp-service-key";
 
@@ -30,6 +31,17 @@ describe("heartgarden-mcp-service-key", () => {
   });
 });
 
+describe("mcpTokenFromRequestUrlString", () => {
+  it("parses path-only Next-style URL", () => {
+    expect(mcpTokenFromRequestUrlString("/api/mcp?token=abc&x=1")).toBe("abc");
+    expect(mcpTokenFromRequestUrlString("/api/mcp")).toBe(null);
+  });
+
+  it("parses absolute URL", () => {
+    expect(mcpTokenFromRequestUrlString("https://x.com/api/mcp?token=z")).toBe("z");
+  });
+});
+
 describe("mcpRequestAuthorizedByServiceKey", () => {
   afterEach(() => {
     delete process.env.HEARTGARDEN_MCP_SERVICE_KEY;
@@ -38,6 +50,15 @@ describe("mcpRequestAuthorizedByServiceKey", () => {
   it("accepts matching token query param", () => {
     process.env.HEARTGARDEN_MCP_SERVICE_KEY = "q-secret";
     const req = new Request("https://example.com/api/mcp?token=q-secret");
+    expect(mcpRequestAuthorizedByServiceKey(req)).toBe(true);
+  });
+
+  it("accepts path-only request.url with token (Next.js shape)", () => {
+    process.env.HEARTGARDEN_MCP_SERVICE_KEY = "path-only-secret";
+    const req = {
+      url: "/api/mcp?token=path-only-secret",
+      headers: new Headers(),
+    } as unknown as Request;
     expect(mcpRequestAuthorizedByServiceKey(req)).toBe(true);
   });
 

@@ -32,6 +32,33 @@ export function authorizationBearerMatchesMcpServiceKey(authorization: string | 
 }
 
 /**
+ * Read ?token= / ?key= from a request URL string.
+ * Next.js often passes **path-only** `request.url` (e.g. `/api/mcp?token=...`); `new URL()` throws on that
+ * without a base, so we must parse the query substring explicitly.
+ */
+export function mcpTokenFromRequestUrlString(urlString: string): string | null {
+  const qi = urlString.indexOf("?");
+  if (qi !== -1) {
+    const sp = new URLSearchParams(urlString.slice(qi + 1));
+    return sp.get("token") ?? sp.get("key");
+  }
+  try {
+    const u = new URL(urlString);
+    return u.searchParams.get("token") ?? u.searchParams.get("key");
+  } catch {
+    return null;
+  }
+}
+
+function tokenFromNextRequestIfPresent(request: Request): string | null {
+  const r = request as Request & { nextUrl?: { searchParams: URLSearchParams } };
+  if (r.nextUrl?.searchParams) {
+    return r.nextUrl.searchParams.get("token") ?? r.nextUrl.searchParams.get("key");
+  }
+  return null;
+}
+
+/**
  * Same secret as Bearer, for clients that only support pasting a URL (e.g. Claude custom connector):
  * `?token=` or `?key=` on /api/mcp, or header `X-Heartgarden-Mcp-Token`.
  * Prefer Bearer when possible — query strings can appear in access logs.
@@ -39,13 +66,13 @@ export function authorizationBearerMatchesMcpServiceKey(authorization: string | 
 export function mcpUrlQueryOrHeaderMatchesServiceKey(request: Request): boolean {
   const key = heartgardenMcpServiceKeyFromEnv();
   if (!key.length) return false;
-  try {
-    const url = new URL(request.url);
-    const q = url.searchParams.get("token") ?? url.searchParams.get("key");
-    if (q && timingSafeEqualUtf8(q.trim(), key)) return true;
-  } catch {
-    /* invalid URL */
-  }
+
+  const fromNext = tokenFromNextRequestIfPresent(request);
+  if (fromNext && timingSafeEqualUtf8(fromNext.trim(), key)) return true;
+
+  const fromUrl = mcpTokenFromRequestUrlString(request.url);
+  if (fromUrl && timingSafeEqualUtf8(fromUrl.trim(), key)) return true;
+
   const h = request.headers.get("x-heartgarden-mcp-token");
   if (h && timingSafeEqualUtf8(h.trim(), key)) return true;
   return false;
