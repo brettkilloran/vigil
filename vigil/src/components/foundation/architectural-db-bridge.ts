@@ -20,6 +20,13 @@ import {
   tapeVariantForLoreCard,
 } from "@/src/lib/lore-node-seed-html";
 import type { CameraState } from "@/src/model/canvas-types";
+import { EMPTY_HG_DOC, HG_DOC_FORMAT } from "@/src/lib/hg-doc/constants";
+import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
+import {
+  hgDocToPlainText,
+  isHgDocContentJson,
+  readHgDocFromContentJson,
+} from "@/src/lib/hg-doc/serialize";
 
 const UNIFIED_NODE_WIDTH = 340;
 const FOLDER_CARD_WIDTH = 420;
@@ -104,8 +111,25 @@ function readHtmlFromContentJson(cj: Record<string, unknown> | null): string | n
   return null;
 }
 
+function isLoreEntityItem(item: CanvasItem): boolean {
+  return (
+    item.entityType === "character" ||
+    item.entityType === "faction" ||
+    item.entityType === "location"
+  );
+}
+
+/** Plain text for search / `content_text` / restore payloads. */
+export function contentPlainTextForEntity(entity: CanvasContentEntity): string {
+  if (entity.bodyDoc != null) return hgDocToPlainText(entity.bodyDoc);
+  return htmlToPlainText(entity.bodyHtml);
+}
+
 function bodyHtmlFromCanvasItem(item: CanvasItem): string {
   const cj = readRecord(item.contentJson ?? null);
+  if (isHgDocContentJson(cj)) {
+    return hgDocToHtml(readHgDocFromContentJson(cj));
+  }
   const fromJson = readHtmlFromContentJson(cj);
   if (fromJson) return fromJson;
   if (item.itemType === "image" && item.imageUrl) {
@@ -170,7 +194,7 @@ export function canvasItemToEntity(
   }
 
   const theme = themeFromItemType(item, hg);
-  const bodyHtml = bodyHtmlFromCanvasItem(item);
+  const workHtml = bodyHtmlFromCanvasItem(item);
   const loreFromHg = hg?.loreCard;
   const loreFromEntityType =
     item.entityType === "character" || item.entityType === "faction" || item.entityType === "location"
@@ -182,9 +206,25 @@ export function canvasItemToEntity(
   const loreCard =
     loreFromHg ??
     loreFromEntityType ??
-    (bodyHtmlImpliesLoreCharacterV11(bodyHtml)
+    (bodyHtmlImpliesLoreCharacterV11(workHtml)
       ? ({ kind: "character", variant: "v11" } satisfies LoreCard)
       : undefined);
+
+  let bodyHtml = workHtml;
+  let bodyDoc: CanvasContentEntity["bodyDoc"];
+  if (isHgDocContentJson(cj)) {
+    bodyDoc = readHgDocFromContentJson(cj);
+    bodyHtml = hgDocToHtml(bodyDoc);
+  } else {
+    const usesHtmlBody =
+      theme === "code" || theme === "media" || Boolean(loreCard) || isLoreEntityItem(item);
+    if (usesHtmlBody) {
+      bodyDoc = undefined;
+    } else {
+      bodyDoc = structuredClone(EMPTY_HG_DOC);
+      bodyHtml = hgDocToHtml(bodyDoc);
+    }
+  }
 
   const entity: CanvasContentEntity = {
     id: item.id,
@@ -200,6 +240,7 @@ export function canvasItemToEntity(
     tapeRotation: hg?.tapeRotation ?? 0,
     tapeVariant: hg?.tapeVariant ?? tapeVariantForTheme(theme),
     bodyHtml,
+    bodyDoc,
     stackId: item.stackId ?? null,
     stackOrder: item.stackOrder ?? null,
     slots: {
@@ -285,7 +326,12 @@ function mergeEntityFromItemProtectingText(
   const merged = mergeEntityFromItem(prevEntity, item);
   if (!merged || !prevEntity) return merged;
   if (prevEntity.kind === "content" && merged.kind === "content") {
-    return { ...merged, title: prevEntity.title, bodyHtml: prevEntity.bodyHtml };
+    return {
+      ...merged,
+      title: prevEntity.title,
+      bodyHtml: prevEntity.bodyHtml,
+      bodyDoc: prevEntity.bodyDoc,
+    };
   }
   if (prevEntity.kind === "folder" && merged.kind === "folder") {
     return { ...merged, title: prevEntity.title };
@@ -531,6 +577,13 @@ export function buildContentJsonForContentEntity(
   if (entity.loreCard) {
     hgArch.loreCard = entity.loreCard;
   }
+  if (entity.bodyDoc != null) {
+    return {
+      format: HG_DOC_FORMAT,
+      doc: entity.bodyDoc,
+      hgArch,
+    };
+  }
   return {
     format: "html",
     html: entity.bodyHtml,
@@ -640,7 +693,7 @@ export function buildContentItemRestorePayload(
     width: geom.width,
     height: geom.height,
     title: entity.title,
-    contentText: htmlToPlainText(entity.bodyHtml),
+    contentText: contentPlainTextForEntity(entity),
     contentJson: buildContentJsonForContentEntity(entity),
   };
   if (entity.loreCard) body.entityType = entity.loreCard.kind;

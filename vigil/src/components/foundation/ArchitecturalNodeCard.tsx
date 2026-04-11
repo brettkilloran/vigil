@@ -8,13 +8,16 @@ import {
   BufferedContentEditable,
   type WikiLinkAssistConfig,
 } from "@/src/components/editing/BufferedContentEditable";
+import { HeartgardenDocEditor } from "@/src/components/editing/HeartgardenDocEditor";
 import { parseArchitecturalMediaFromBody } from "@/src/components/foundation/architectural-media-html";
 import type {
+  CanvasBodyCommitPayload,
   CanvasTool,
   LoreCard,
   NodeTheme,
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
+import type { JSONContent } from "@tiptap/core";
 import type { ButtonTone } from "@/src/components/ui/Button";
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
@@ -22,6 +25,7 @@ import { HeartgardenMediaPlaceholderImg } from "@/src/components/ui/HeartgardenM
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
 import { resolveImageDisplayUrl } from "@/src/lib/heartgarden-image-display-url";
+import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
 
 function themeClass(theme: NodeTheme): string {
   if (theme === "code") return styles.themeCode;
@@ -105,26 +109,46 @@ export function ArchitecturalNodeHeader({
 }
 
 export function ArchitecturalNodeBody({
+  nodeId,
+  documentVariant,
+  bodyDoc,
   html,
   className,
   editable,
   spellCheck = false,
-  onHtmlCommit,
+  onCommitPayload,
   onDraftDirtyChange,
   wikiLinkAssist,
   onRichDocCommand,
   emptyPlaceholder,
 }: {
+  nodeId: string;
+  documentVariant: "hgDoc" | "html";
+  bodyDoc?: JSONContent | null;
   html: string;
   className?: string;
   editable: boolean;
   spellCheck?: boolean;
-  onHtmlCommit?: (html: string) => void;
+  onCommitPayload?: (payload: CanvasBodyCommitPayload) => void;
   onDraftDirtyChange?: (dirty: boolean) => void;
   wikiLinkAssist?: WikiLinkAssistConfig | null;
   onRichDocCommand?: (command: string, value?: string) => void;
   emptyPlaceholder?: string | null;
 }) {
+  if (documentVariant === "hgDoc") {
+    return (
+      <HeartgardenDocEditor
+        surfaceKey={`canvas-${nodeId}`}
+        chromeRole="canvas"
+        className={`${styles.nodeBody} ${className ?? ""}`.trim()}
+        value={bodyDoc ?? EMPTY_HG_DOC}
+        editable={editable}
+        placeholder={emptyPlaceholder ?? "Write here, or type / for blocks…"}
+        enableDragHandle={false}
+        onChange={(doc) => onCommitPayload?.({ kind: "hgDoc", doc })}
+      />
+    );
+  }
   return (
     <BufferedContentEditable
       value={html}
@@ -140,7 +164,7 @@ export function ArchitecturalNodeBody({
       }}
       richDocCommand={onRichDocCommand}
       emptyPlaceholder={emptyPlaceholder ?? null}
-      onCommit={(nextHtml) => onHtmlCommit?.(nextHtml)}
+      onCommit={(nextHtml) => onCommitPayload?.({ kind: "html", html: nextHtml })}
       onDraftDirtyChange={onDraftDirtyChange}
       wikiLinkAssist={wikiLinkAssist ?? null}
     />
@@ -171,6 +195,7 @@ export function ArchitecturalNodeCard({
   onRichDocCommand,
   emptyPlaceholder,
   loreCard,
+  bodyDoc,
 }: {
   id: string;
   title: string;
@@ -178,10 +203,11 @@ export function ArchitecturalNodeCard({
   theme: NodeTheme;
   tapeRotation: number;
   bodyHtml: string;
+  bodyDoc?: JSONContent | null;
   activeTool: CanvasTool;
   dragged: boolean;
   selected: boolean;
-  onBodyCommit: (id: string, html: string) => void;
+  onBodyCommit: (id: string, payload: CanvasBodyCommitPayload) => void;
   onExpand: (id: string) => void;
   tapeVariant?: TapeVariant;
   showExpandButton?: boolean;
@@ -196,6 +222,8 @@ export function ArchitecturalNodeCard({
   loreCard?: LoreCard | null;
 }) {
   const isMediaNode = theme === "media";
+  const documentVariant: "hgDoc" | "html" =
+    !loreCard && (theme === "default" || theme === "task") ? "hgDoc" : "html";
   const nodeWidth = width ?? 340;
   const [imageDpr] = useState(() =>
     typeof window !== "undefined" ? Math.min(window.devicePixelRatio ?? 1, 2.5) : 1,
@@ -305,11 +333,14 @@ export function ArchitecturalNodeCard({
         onExpand={() => onExpand(id)}
       />
       <ArchitecturalNodeBody
+        nodeId={id}
+        documentVariant={documentVariant}
+        bodyDoc={bodyDoc}
         html={bodyHtml}
         className={styles.a4DocumentBody}
         editable={bodyEditable ?? activeTool === "select"}
         spellCheck={false}
-        onHtmlCommit={(html) => onBodyCommit(id, html)}
+        onCommitPayload={(payload) => onBodyCommit(id, payload)}
         onDraftDirtyChange={onBodyDraftDirty}
         wikiLinkAssist={
           theme === "default" || theme === "task" ? wikiLinkAssist ?? null : null

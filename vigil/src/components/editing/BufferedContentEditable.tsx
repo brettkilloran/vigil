@@ -386,6 +386,14 @@ type BufferedContentEditableProps = {
   emptyPlaceholder?: string | null;
 };
 
+/**
+ * Legacy rich-text editor surface.
+ *
+ * Cutover policy:
+ * - Default/task note bodies must use `HeartgardenDocEditor` (`hgDoc`) in canvas/focus.
+ * - Keep this component only for non-hgDoc surfaces (lore hybrid shells, code body, gallery notes,
+ *   folder title inline editing) until those are migrated.
+ */
 export function BufferedContentEditable({
   value,
   editable = true,

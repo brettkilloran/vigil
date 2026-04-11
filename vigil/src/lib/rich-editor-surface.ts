@@ -1,5 +1,5 @@
 export const RICH_EDITOR_SURFACE_SELECTOR =
-  "[data-node-body-editor], [data-focus-body-editor], [data-architectural-media-gallery-notes]";
+  "[data-node-body-editor], [data-focus-body-editor], [data-hg-doc-editor], [data-architectural-media-gallery-notes]";
 
 export const RICH_EDITOR_NESTED_NOTES_SELECTOR =
   '[data-hg-character-focus-notes="true"], [data-hg-lore-location-focus-notes="true"], [class*="charSkNotesBody"], [class*="char3dNotesBody"]';
@@ -21,6 +21,7 @@ export function resolveActiveRichEditorSurface(startEl: Element | null): {
   if (!root) return { root: null, kind: "unknown" };
   if (root.matches("[data-node-body-editor]")) return { root, kind: "node-body" };
   if (root.matches("[data-focus-body-editor]")) return { root, kind: "focus-body" };
+  if (root.matches("[data-hg-doc-editor]")) return { root, kind: "focus-body" };
   if (root.matches("[data-architectural-media-gallery-notes]")) {
     return { root, kind: "media-gallery-notes" };
   }

@@ -46,6 +46,7 @@ import styles from "./ArchitecturalCanvasApp.module.css";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import type { WikiLinkAssistConfig } from "@/src/components/editing/BufferedContentEditable";
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
+import { HeartgardenDocEditor } from "@/src/components/editing/HeartgardenDocEditor";
 import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
 import {
   ArchitecturalTooltip,
@@ -98,6 +99,7 @@ import {
   buildContentJsonForContentEntity,
   buildContentJsonForFolderEntity,
   canvasItemToEntity,
+  contentPlainTextForEntity,
   htmlToPlainText,
   mergeBootstrapView,
   applyServerCanvasItemToGraph,
@@ -213,6 +215,7 @@ import { ArchitecturalLinksPanel } from "@/src/components/ui/ArchitecturalLinksP
 import { LinkGraphOverlay } from "@/src/components/ui/LinkGraphOverlay";
 import { LoreAskPanel } from "@/src/components/ui/LoreAskPanel";
 import {
+  type CanvasBodyCommitPayload,
   type CanvasConnectionPin,
   type CanvasContentEntity,
   type CanvasEntity,
@@ -229,6 +232,13 @@ import {
   type TapeVariant,
   ROOT_SPACE_DISPLAY_NAME,
 } from "@/src/components/foundation/architectural-types";
+import type { JSONContent } from "@tiptap/core";
+import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
+import { contentEntityUsesHgDoc } from "@/src/lib/hg-doc/entity-uses-hg-doc";
+import { findHgDocSurfaceKeyFromSelection, getHgDocEditor } from "@/src/lib/hg-doc/editor-registry";
+import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
+import { newDefaultHgDocSeed, newTaskHgDocSeed } from "@/src/lib/hg-doc/new-node-seeds";
+import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
 import {
   defaultLoreCardVariantForKind,
   defaultTitleForLoreKind,
@@ -1865,8 +1875,13 @@ export function ArchitecturalCanvasApp({
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [focusTitle, setFocusTitle] = useState("");
   const [focusBody, setFocusBody] = useState("");
+  /** TipTap JSON for default/task focus editor (hybrid/code still use `focusBody` HTML). */
+  const [focusBodyDoc, setFocusBodyDoc] = useState<JSONContent>(() => structuredClone(EMPTY_HG_DOC));
   const [focusBaselineTitle, setFocusBaselineTitle] = useState("");
   const [focusBaselineBody, setFocusBaselineBody] = useState("");
+  const [focusBaselineBodyDoc, setFocusBaselineBodyDoc] = useState<JSONContent>(() =>
+    structuredClone(EMPTY_HG_DOC),
+  );
   const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null);
   const [hoveredStackTargetId, setHoveredStackTargetId] = useState<string | null>(null);
   const [parentDropHovered, setParentDropHovered] = useState(false);
@@ -2236,8 +2251,16 @@ export function ArchitecturalCanvasApp({
       const e = graphRef.current.entities[it.id];
       if (e && e.kind === "content" && activeNodeIdRef.current === it.id) {
         const projected = projectBodyHtmlForFocus(e, e.bodyHtml);
-        setFocusBody(projected);
-        setFocusBaselineBody(projected);
+        if (contentEntityUsesHgDoc(e)) {
+          const doc = e.bodyDoc ?? structuredClone(EMPTY_HG_DOC);
+          setFocusBodyDoc(structuredClone(doc));
+          setFocusBaselineBodyDoc(structuredClone(doc));
+          setFocusBody("");
+          setFocusBaselineBody("");
+        } else {
+          setFocusBody(projected);
+          setFocusBaselineBody(projected);
+        }
         setFocusTitle(e.title);
         setFocusBaselineTitle(e.title);
       }
@@ -2250,7 +2273,7 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   const schedulePersistContentBody = useCallback(
-    (entityId: string, bodyHtml: string) => {
+    (entityId: string) => {
       if (!persistNeonRef.current || !isUuidLike(entityId)) return;
       const prevT = itemContentPatchTimersRef.current.get(entityId);
       const isFirstTimerForEntity = !prevT;
@@ -2261,10 +2284,9 @@ export function ArchitecturalCanvasApp({
         neonSyncUnbumpPending();
         const ent = graphRef.current.entities[entityId];
         if (!ent || ent.kind !== "content") return;
-        const contentJson = buildContentJsonForContentEntity({ ...ent, bodyHtml });
         void patchItemWithVersion(entityId, {
-          contentText: htmlToPlainText(bodyHtml),
-          contentJson,
+          contentText: contentPlainTextForEntity(ent),
+          contentJson: buildContentJsonForContentEntity(ent),
         });
       }, 450);
       itemContentPatchTimersRef.current.set(entityId, t);
@@ -2543,9 +2565,17 @@ export function ArchitecturalCanvasApp({
         setActiveNodeId(restoredFocusNodeId);
         setFocusTitle(restored.title);
         const projected = projectBodyHtmlForFocus(restored, restored.bodyHtml);
-        setFocusBody(projected);
+        if (contentEntityUsesHgDoc(restored)) {
+          const doc = restored.bodyDoc ?? structuredClone(EMPTY_HG_DOC);
+          setFocusBodyDoc(structuredClone(doc));
+          setFocusBaselineBodyDoc(structuredClone(doc));
+          setFocusBody("");
+          setFocusBaselineBody("");
+        } else {
+          setFocusBody(projected);
+          setFocusBaselineBody(projected);
+        }
         setFocusBaselineTitle(restored.title);
-        setFocusBaselineBody(projected);
         setFocusOpen(true);
       } else {
         setFocusOpen(false);
@@ -2597,9 +2627,17 @@ export function ArchitecturalCanvasApp({
         setActiveNodeId(restoredFocusNodeId);
         setFocusTitle(restored.title);
         const projected = projectBodyHtmlForFocus(restored, restored.bodyHtml);
-        setFocusBody(projected);
+        if (contentEntityUsesHgDoc(restored)) {
+          const doc = restored.bodyDoc ?? structuredClone(EMPTY_HG_DOC);
+          setFocusBodyDoc(structuredClone(doc));
+          setFocusBaselineBodyDoc(structuredClone(doc));
+          setFocusBody("");
+          setFocusBaselineBody("");
+        } else {
+          setFocusBody(projected);
+          setFocusBaselineBody(projected);
+        }
         setFocusBaselineTitle(restored.title);
-        setFocusBaselineBody(projected);
         setFocusOpen(true);
       } else {
         setFocusOpen(false);
@@ -3549,22 +3587,64 @@ export function ArchitecturalCanvasApp({
           setGraph((p) => {
             const e = p.entities[id];
             if (!e || e.kind !== "content") return p;
-            const nextHtml = canonicalizeCharacterBodyHtml(e, normalizedHtml);
-            if (e.bodyHtml === nextHtml) return p;
+            const nextHtmlInner = canonicalizeCharacterBodyHtml(e, normalizedHtml);
+            if (e.bodyHtml === nextHtmlInner) return p;
             return {
               ...p,
               entities: {
                 ...p.entities,
-                [id]: { ...e, bodyHtml: nextHtml },
+                [id]: { ...e, bodyHtml: nextHtmlInner, bodyDoc: undefined },
               },
             };
           });
-          schedulePersistContentBody(id, nextHtml);
+          schedulePersistContentBody(id);
         },
         options?.immediate ? 0 : 120,
       );
     },
     [queueGraphCommit, recordUndoBeforeMutation, schedulePersistContentBody],
+  );
+
+  const updateNodeHgDoc = useCallback(
+    (id: string, doc: JSONContent, options?: { immediate?: boolean }) => {
+      const html = hgDocToHtml(doc);
+      queueGraphCommit(
+        `content-body:${id}`,
+        () => {
+          const entity = graphRef.current.entities[id];
+          if (!entity || entity.kind !== "content") return;
+          if (JSON.stringify(entity.bodyDoc) === JSON.stringify(doc) && entity.bodyHtml === html)
+            return;
+          recordUndoBeforeMutation();
+          setGraph((p) => {
+            const e = p.entities[id];
+            if (!e || e.kind !== "content") return p;
+            if (JSON.stringify(e.bodyDoc) === JSON.stringify(doc) && e.bodyHtml === html) return p;
+            return {
+              ...p,
+              entities: {
+                ...p.entities,
+                [id]: { ...e, bodyDoc: doc, bodyHtml: html },
+              },
+            };
+          });
+          schedulePersistContentBody(id);
+        },
+        options?.immediate ? 0 : 120,
+      );
+    },
+    [queueGraphCommit, recordUndoBeforeMutation, schedulePersistContentBody],
+  );
+
+  const handleNodeBodyCommit = useCallback(
+    (id: string, payload: CanvasBodyCommitPayload) => {
+      if (payload.kind === "hgDoc") {
+        updateNodeHgDoc(id, payload.doc);
+      } else {
+        updateNodeBody(id, payload.html);
+      }
+    },
+    [updateNodeBody, updateNodeHgDoc],
   );
 
   const setInlineBodyDraftDirty = useCallback((entityId: string, dirty: boolean) => {
@@ -3592,6 +3672,12 @@ export function ArchitecturalCanvasApp({
           file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() ||
           "Uploaded image";
         if (pending.mode === "focus") {
+          const aid = activeNodeIdRef.current;
+          const ent = aid ? graphRef.current.entities[aid] : null;
+          if (ent?.kind === "content" && contentEntityUsesHgDoc(ent)) {
+            getHgDocEditor("focus-body")?.insertImageFromDataUrl(dataUrl, alt);
+            return;
+          }
           setFocusBody((prev) =>
             applyImageDataUrlToArchitecturalMediaBody(
               prev,
@@ -3609,6 +3695,10 @@ export function ArchitecturalCanvasApp({
         }
         const entity = graphRef.current.entities[pending.id];
         if (!entity || entity.kind !== "content") return;
+        if (contentEntityUsesHgDoc(entity)) {
+          getHgDocEditor(`canvas-${pending.id}`)?.insertImageFromDataUrl(dataUrl, alt);
+          return;
+        }
         const portraitClass = bodyUsesLorePortraitMediaSlot(entity.bodyHtml)
           ? lorePortraitSlotUsesV9(entity.bodyHtml)
             ? loreEntityCardStyles.charSkPortraitImg
@@ -3646,7 +3736,7 @@ export function ArchitecturalCanvasApp({
         queueMediaUploadPick({ mode: "canvas", id: ownerFromBtn });
         return;
       }
-      const inFocusBody = t.closest("[data-focus-body-editor]");
+      const inFocusBody = t.closest("[data-focus-body-editor], [data-hg-doc-editor]");
       const nodeHost = t.closest("[data-node-id]");
       if (inFocusBody && focusOpenRef.current && activeNodeIdRef.current) {
         queueMediaUploadPick({
@@ -3694,9 +3784,17 @@ export function ArchitecturalCanvasApp({
     setActiveNodeId(id);
     setFocusTitle(entity.title);
     const projected = projectBodyHtmlForFocus(entity, normalizedBody);
-    setFocusBody(projected);
+    if (contentEntityUsesHgDoc(entity)) {
+      const doc = entity.bodyDoc ?? structuredClone(EMPTY_HG_DOC);
+      setFocusBodyDoc(structuredClone(doc));
+      setFocusBaselineBodyDoc(structuredClone(doc));
+      setFocusBody("");
+      setFocusBaselineBody("");
+    } else {
+      setFocusBody(projected);
+      setFocusBaselineBody(projected);
+    }
     setFocusBaselineTitle(entity.title);
-    setFocusBaselineBody(projected);
     setFocusOpen(true);
   }, [graph.entities, graph.spaces, pushRecentItem]);
 
@@ -3820,12 +3918,23 @@ export function ArchitecturalCanvasApp({
   }, [closeMediaGallery, galleryNodeId, galleryOpen, graph.entities]);
 
   const saveFocusAndClose = useCallback(() => {
-    const normalizedFocusBody = normalizeChecklistMarkup(focusBody, {
-      taskItem: styles.taskItem,
-      taskCheckbox: styles.taskCheckbox,
-      taskText: styles.taskText,
-      done: styles.done,
-    });
+    if (!activeNodeId) {
+      setFocusOpen(false);
+      setActiveNodeId(null);
+      return;
+    }
+    const entityPre = graphRef.current.entities[activeNodeId];
+    const hgDefault = entityPre?.kind === "content" && contentEntityUsesHgDoc(entityPre);
+    const focusDoc = getHgDocEditor("focus-body")?.getJSON() ?? focusBodyDoc;
+    const normalizedFocusBody = hgDefault
+      ? hgDocToHtml(focusDoc)
+      : normalizeChecklistMarkup(focusBody, {
+          taskItem: styles.taskItem,
+          taskCheckbox: styles.taskCheckbox,
+          taskText: styles.taskText,
+          done: styles.done,
+        });
+
     if (activeNodeId) {
       const entity = graphRef.current.entities[activeNodeId];
       if (entity && entity.kind === "content") {
@@ -3838,7 +3947,10 @@ export function ArchitecturalCanvasApp({
           ? plainPlaceNameFromLocationBodyHtml(nextBodyResolved).trim() ||
             defaultTitleForLoreKind("location")
           : focusTitle.trim() || "Untitled";
-        if (entity.title !== nextTitleResolved || entity.bodyHtml !== nextBodyResolved) {
+        const bodyChanged = hgDefault
+          ? JSON.stringify(focusDoc) !== JSON.stringify(focusBaselineBodyDoc)
+          : entity.bodyHtml !== nextBodyResolved;
+        if (entity.title !== nextTitleResolved || bodyChanged) {
           recordUndoBeforeMutation();
         }
       }
@@ -3862,6 +3974,7 @@ export function ArchitecturalCanvasApp({
               ...entity,
               title: nextTitle,
               bodyHtml: nextBody,
+              ...(hgDefault ? { bodyDoc: structuredClone(focusDoc) } : {}),
             },
           },
         };
@@ -3880,33 +3993,56 @@ export function ArchitecturalCanvasApp({
             shouldRenderLoreLocationCanvasNode(ent)
               ? plainPlaceNameFromLocationBodyHtml(nextBody).trim() || defaultTitleForLoreKind("location")
               : focusTitle.trim() || "Untitled";
+          const merged: CanvasContentEntity = {
+            ...ent,
+            title: nextTitle,
+            bodyHtml: nextBody,
+            ...(hgDefault ? { bodyDoc: structuredClone(focusDoc) } : {}),
+          };
           void patchItemWithVersion(aid, {
             title: nextTitle,
-            contentText: htmlToPlainText(nextBody),
-            contentJson: buildContentJsonForContentEntity({
-              ...ent,
-              title: nextTitle,
-              bodyHtml: nextBody,
-            }),
+            contentText: contentPlainTextForEntity(merged),
+            contentJson: buildContentJsonForContentEntity(merged),
           });
         });
       }
     }
     setFocusOpen(false);
     setActiveNodeId(null);
-  }, [activeNodeId, focusBody, focusTitle, patchItemWithVersion, recordUndoBeforeMutation]);
+  }, [
+    activeNodeId,
+    focusBody,
+    focusBodyDoc,
+    focusBaselineBodyDoc,
+    focusTitle,
+    patchItemWithVersion,
+    recordUndoBeforeMutation,
+  ]);
 
   const discardFocusAndClose = useCallback(() => {
     setFocusOpen(false);
     setActiveNodeId(null);
   }, []);
 
-  const focusDirty = useMemo(
-    () =>
-      normalizedFocusTitle(focusTitle) !== normalizedFocusTitle(focusBaselineTitle) ||
-      focusBody !== focusBaselineBody,
-    [focusTitle, focusBody, focusBaselineTitle, focusBaselineBody],
-  );
+  const focusDirty = useMemo(() => {
+    const ent = activeNodeId ? graph.entities[activeNodeId] : null;
+    const hgDefault = ent?.kind === "content" && contentEntityUsesHgDoc(ent);
+    const bodyDirty = hgDefault
+      ? JSON.stringify(focusBodyDoc) !== JSON.stringify(focusBaselineBodyDoc)
+      : focusBody !== focusBaselineBody;
+    return (
+      normalizedFocusTitle(focusTitle) !== normalizedFocusTitle(focusBaselineTitle) || bodyDirty
+    );
+  }, [
+    activeNodeId,
+    graph.entities,
+    focusTitle,
+    focusBaselineTitle,
+    focusBody,
+    focusBaselineBody,
+    focusBodyDoc,
+    focusBaselineBodyDoc,
+  ]);
 
   /** What kind of focus overlay to render for the active content node. */
   const focusSurface = useMemo((): "default-doc" | "code" | "character-hybrid" | "location-hybrid" => {
@@ -4399,18 +4535,23 @@ export function ArchitecturalCanvasApp({
           (b.gateEnabled && !b.sessionValid) ||
           (b.gateEnabled && b.sessionTier === "demo");
         if (skipCache) {
-          setNeonWorkspaceOk(false);
-          setWorkspaceViewFromCache(false);
-          persistNeonRef.current = false;
-          neonSyncSetCloudEnabled(false);
-          setGraph(createBootstrapPendingGraph());
-          setActiveSpaceId(ROOT_SPACE_ID);
-          setNavigationPath([ROOT_SPACE_ID]);
-          {
-            const cam = defaultCamera();
-            setTranslateX(cam.x);
-            setTranslateY(cam.y);
-            setScale(cam.zoom);
+          /* Open gate + no Neon: README local-only demo — avoids an empty board + blocking overlay. */
+          if (!b.gateEnabled) {
+            applyDemoLocalCanvas();
+          } else {
+            setNeonWorkspaceOk(false);
+            setWorkspaceViewFromCache(false);
+            persistNeonRef.current = false;
+            neonSyncSetCloudEnabled(false);
+            setGraph(createBootstrapPendingGraph());
+            setActiveSpaceId(ROOT_SPACE_ID);
+            setNavigationPath([ROOT_SPACE_ID]);
+            {
+              const cam = defaultCamera();
+              setTranslateX(cam.x);
+              setTranslateY(cam.y);
+              setScale(cam.zoom);
+            }
           }
         } else {
           const tier = workspaceCacheTierForNeonSession(b);
@@ -5486,9 +5627,13 @@ export function ArchitecturalCanvasApp({
       ) {
         return null;
       }
+      const focusPlain =
+        ent.kind === "content" && contentEntityUsesHgDoc(ent)
+          ? hgDocToPlainText(getHgDocEditor("focus-body")?.getJSON() ?? focusBodyDoc)
+          : stripHtmlToPlain(focusBody);
       return {
         title: focusTitle.trim(),
-        bodyText: stripHtmlToPlain(focusBody),
+        bodyText: focusPlain,
         excludeItemId:
           ent.persistedItemId && isUuidLike(ent.persistedItemId)
             ? ent.persistedItemId
@@ -5509,7 +5654,7 @@ export function ArchitecturalCanvasApp({
       }
       return {
         title: (ent.title ?? "").trim(),
-        bodyText: stripHtmlToPlain(ent.bodyHtml),
+        bodyText: contentPlainTextForEntity(ent),
         excludeItemId:
           ent.persistedItemId && isUuidLike(ent.persistedItemId)
             ? ent.persistedItemId
@@ -5523,6 +5668,7 @@ export function ArchitecturalCanvasApp({
     activeSpaceId,
     cloudLinksBar,
     focusBody,
+    focusBodyDoc,
     focusOpen,
     focusTitle,
     graph.entities,
@@ -5847,7 +5993,13 @@ export function ArchitecturalCanvasApp({
 
   const createNewNode = useCallback((type: NodeTheme) => {
     if (isRestrictedLayer && type === "media") return;
-    if (strictGmWorkspaceSession && !(persistNeonRef.current && isUuidLike(activeSpaceId))) {
+    // Strict GM is for mirroring production when Neon persistence is on; local-only / demo / E2E
+    // (`persistNeonRef` false) must still be able to mutate the canvas.
+    if (
+      strictGmWorkspaceSession &&
+      persistNeonRef.current &&
+      !isUuidLike(activeSpaceId)
+    ) {
       window.alert(
         "This GM workspace is in strict sync mode. New items are disabled until a live Neon workspace is connected.",
       );
@@ -5958,21 +6110,23 @@ export function ArchitecturalCanvasApp({
         else if (type === "media") contentTheme = "media";
         else if (type === "task") contentTheme = "task";
 
-        let bodyHtml = `<div contenteditable="true">Start typing...</div>`;
+        let bodyHtml = "";
+        let bodyDoc: JSONContent | undefined;
         let loreCard: LoreCard | undefined;
 
-        if (type === "task") {
-          title = "Checklist";
-          bodyHtml = `
-        <div class="${styles.taskItem}" contenteditable="false">
-          <div class="${styles.taskCheckbox}" contenteditable="false"></div>
-          <div class="${styles.taskText}" contenteditable="true">Clarify objective and acceptance criteria</div>
-        </div>
-        <div class="${styles.taskItem}" contenteditable="false">
-          <div class="${styles.taskCheckbox}" contenteditable="false"></div>
-          <div class="${styles.taskText}" contenteditable="true">Break work into two focused steps</div>
-        </div>
-      `;
+        if (isLoreCreateNodeType(type)) {
+          title = defaultTitleForLoreKind(type);
+          const loreVariant = defaultLoreCardVariantForKind(type);
+          loreCard = { kind: type, variant: loreVariant };
+          const locationStripSeed =
+            type === "location" && loreVariant === "v3"
+              ? globalThis.crypto?.randomUUID?.() ?? `loc-${Date.now()}`
+              : undefined;
+          bodyHtml = getLoreNodeSeedBodyHtml(
+            type,
+            loreVariant,
+            locationStripSeed != null ? { locationStripSeed } : undefined,
+          );
         } else if (type === "code") {
           title = "Snippet";
           bodyHtml = `// [IN] Compose shard at cursor…`;
@@ -5986,19 +6140,13 @@ export function ArchitecturalCanvasApp({
             mediaUploadBtnClass: styles.mediaUploadBtn,
             uploadLabel: mediaUploadActionLabel(false),
           });
-        } else if (isLoreCreateNodeType(type)) {
-          title = defaultTitleForLoreKind(type);
-          const loreVariant = defaultLoreCardVariantForKind(type);
-          loreCard = { kind: type, variant: loreVariant };
-          const locationStripSeed =
-            type === "location" && loreVariant === "v3"
-              ? globalThis.crypto?.randomUUID?.() ?? `loc-${Date.now()}`
-              : undefined;
-          bodyHtml = getLoreNodeSeedBodyHtml(
-            type,
-            loreVariant,
-            locationStripSeed != null ? { locationStripSeed } : undefined,
-          );
+        } else if (type === "task") {
+          title = "Checklist";
+          bodyDoc = newTaskHgDocSeed();
+          bodyHtml = hgDocToHtml(bodyDoc);
+        } else {
+          bodyDoc = newDefaultHgDocSeed();
+          bodyHtml = hgDocToHtml(bodyDoc);
         }
 
         const tempNode: CanvasContentEntity = {
@@ -6015,6 +6163,7 @@ export function ArchitecturalCanvasApp({
               : tapeVariantForTheme(contentTheme),
           tapeRotation,
           bodyHtml,
+          ...(bodyDoc != null ? { bodyDoc } : {}),
           loreCard,
           stackId: null,
           stackOrder: null,
@@ -6027,7 +6176,7 @@ export function ArchitecturalCanvasApp({
           width,
           height: 280,
           title,
-          contentText: htmlToPlainText(bodyHtml),
+          contentText: contentPlainTextForEntity(tempNode),
           contentJson: buildContentJsonForContentEntity(tempNode),
           zIndex: nextZ,
         };
@@ -6130,21 +6279,20 @@ export function ArchitecturalCanvasApp({
     else if (type === "media") contentTheme = "media";
     else if (type === "task") contentTheme = "task";
 
-    let bodyHtml = `<div contenteditable="true">Start typing...</div>`;
+    let bodyHtml = "";
+    let bodyDoc: JSONContent | undefined;
     let loreCard: LoreCard | undefined;
 
-    if (type === "task") {
-      title = "Checklist";
-      bodyHtml = `
-        <div class="${styles.taskItem}" contenteditable="false">
-          <div class="${styles.taskCheckbox}" contenteditable="false"></div>
-          <div class="${styles.taskText}" contenteditable="true">Clarify objective and acceptance criteria</div>
-        </div>
-        <div class="${styles.taskItem}" contenteditable="false">
-          <div class="${styles.taskCheckbox}" contenteditable="false"></div>
-          <div class="${styles.taskText}" contenteditable="true">Break work into two focused steps</div>
-        </div>
-      `;
+    if (isLoreCreateNodeType(type)) {
+      title = defaultTitleForLoreKind(type);
+      const loreVariant = defaultLoreCardVariantForKind(type);
+      loreCard = { kind: type, variant: loreVariant };
+      const locationStripSeed = type === "location" && loreVariant === "v3" ? id : undefined;
+      bodyHtml = getLoreNodeSeedBodyHtml(
+        type,
+        loreVariant,
+        locationStripSeed != null ? { locationStripSeed } : undefined,
+      );
     } else if (type === "code") {
       title = "Snippet";
       bodyHtml = `// [IN] Compose shard at cursor…`;
@@ -6158,16 +6306,13 @@ export function ArchitecturalCanvasApp({
         mediaUploadBtnClass: styles.mediaUploadBtn,
         uploadLabel: mediaUploadActionLabel(false),
       });
-    } else if (isLoreCreateNodeType(type)) {
-      title = defaultTitleForLoreKind(type);
-      const loreVariant = defaultLoreCardVariantForKind(type);
-      loreCard = { kind: type, variant: loreVariant };
-      const locationStripSeed = type === "location" && loreVariant === "v3" ? id : undefined;
-      bodyHtml = getLoreNodeSeedBodyHtml(
-        type,
-        loreVariant,
-        locationStripSeed != null ? { locationStripSeed } : undefined,
-      );
+    } else if (type === "task") {
+      title = "Checklist";
+      bodyDoc = newTaskHgDocSeed();
+      bodyHtml = hgDocToHtml(bodyDoc);
+    } else {
+      bodyDoc = newDefaultHgDocSeed();
+      bodyHtml = hgDocToHtml(bodyDoc);
     }
 
     const nextNode = {
@@ -6184,6 +6329,7 @@ export function ArchitecturalCanvasApp({
           : tapeVariantForTheme(contentTheme),
       tapeRotation,
       bodyHtml,
+      ...(bodyDoc != null ? { bodyDoc } : {}),
       loreCard,
       stackId: null,
       stackOrder: null,
@@ -7386,6 +7532,9 @@ export function ArchitecturalCanvasApp({
     const onMouseDown = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (target.closest("[data-hg-sync-popover='true']")) return;
+      if (target.closest("[data-hg-doc-editor]")) {
+        return;
+      }
       const taskCheckbox = target.closest(`.${styles.taskCheckbox}`);
       if (taskCheckbox) {
         event.preventDefault();
@@ -8224,6 +8373,14 @@ export function ArchitecturalCanvasApp({
       });
       return;
     }
+    const hgKey = findHgDocSurfaceKeyFromSelection();
+    const hgApi = hgKey ? getHgDocEditor(hgKey) : null;
+    if (hgApi && ae instanceof HTMLElement && ae.closest("[data-hg-doc-editor]")) {
+      setTextFormatChromeActive(true);
+      setRichDocInsertChromeActive(true);
+      setFormatCommandState(hgApi.getFormatState());
+      return;
+    }
     const fmt = isTextFormattingToolbarTarget(ae);
     setTextFormatChromeActive(fmt);
     setRichDocInsertChromeActive(fmt && isRichDocBodyFormattingTarget(ae));
@@ -8308,6 +8465,22 @@ export function ArchitecturalCanvasApp({
       };
 
       const target = resolveRichTextFormatTarget();
+      const hgKeyFromTarget =
+        target?.closest<HTMLElement>("[data-hg-doc-surface]")?.getAttribute("data-hg-doc-surface") ??
+        null;
+      const hgKey = findHgDocSurfaceKeyFromSelection() ?? hgKeyFromTarget;
+      const hgApi = hgKey ? getHgDocEditor(hgKey) : null;
+      if (hgApi && command !== "arch:insertImage") {
+        if (hgApi.runFormat(command, value)) {
+          refreshTextFormatChrome();
+          return;
+        }
+      }
+      if (target?.closest("[data-hg-doc-editor]") && command !== "arch:insertImage") {
+        // Never fall through to legacy execCommand path inside TipTap surfaces.
+        return;
+      }
+
       if (command === "arch:insertImage") {
         if (!canInsertImageAtCurrentTarget()) return;
         if (focusOpenRef.current && activeNodeIdRef.current) {
@@ -9322,11 +9495,12 @@ export function ArchitecturalCanvasApp({
                       tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
                       tapeRotation={entity.tapeRotation}
                       bodyHtml={entity.bodyHtml}
+                      bodyDoc={entity.bodyDoc ?? null}
                       activeTool={activeTool}
                       dragged={dragged}
                       selected={selected}
                       showTape={!entity.stackId}
-                      onBodyCommit={updateNodeBody}
+                      onBodyCommit={handleNodeBodyCommit}
                       onExpand={handleNodeExpand}
                       onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
                       canvasPanZoomScale={scale}
@@ -9528,11 +9702,12 @@ export function ArchitecturalCanvasApp({
                           tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
                           tapeRotation={entity.tapeRotation}
                           bodyHtml={entity.bodyHtml}
+                          bodyDoc={entity.bodyDoc ?? null}
                           activeTool={activeTool}
                           dragged={draggingStack}
                           selected={false}
                           showTape={!entity.stackId}
-                          onBodyCommit={updateNodeBody}
+                          onBodyCommit={handleNodeBodyCommit}
                           onExpand={handleNodeExpand}
                           bodyEditable={false}
                           canvasPanZoomScale={scale}
@@ -10828,11 +11003,12 @@ export function ArchitecturalCanvasApp({
                       tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
                       tapeRotation={entity.tapeRotation}
                       bodyHtml={entity.bodyHtml}
+                      bodyDoc={entity.bodyDoc ?? null}
                       activeTool={activeTool}
                       dragged={!!drag}
                       selected={false}
                       showTape={!entity.stackId}
-                      onBodyCommit={updateNodeBody}
+                      onBodyCommit={handleNodeBodyCommit}
                       onExpand={handleNodeExpand}
                       onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
                       canvasPanZoomScale={1}
@@ -11037,58 +11213,71 @@ export function ArchitecturalCanvasApp({
                 data-focus-title-editor="true"
               />
             )}
-            <BufferedContentEditable
-              value={focusBody}
-              className={`${styles.focusBody} ${
-                focusSurface === "code"
-                  ? styles.focusCode
-                  : focusSurface === "character-hybrid"
-                    ? styles.focusCharacterDocument
-                    : focusSurface === "location-hybrid"
-                      ? styles.focusLocationDocument
-                      : ""
-              }`}
-              editable
-              spellCheck={false}
-              debounceMs={150}
-              dataAttribute="data-focus-body-editor"
-              checklistDeletion={{
-                taskItem: styles.taskItem,
-                taskText: styles.taskText,
-                taskCheckbox: styles.taskCheckbox,
-              }}
-              documentBlockDrag={
-                focusSurface === "code"
-                  ? null
-                  : {
-                      handleClass: styles.archBlockDragHandle,
-                      taskItemClass: styles.taskItem,
-                    }
-              }
-              richDocCommand={
-                focusSurface === "code"
-                  ? undefined
-                  : (command, value) => runFormat(command, value)
-              }
-              emptyPlaceholder={
-                focusSurface === "code" ? null : "Write here, or type / for blocks…"
-              }
-              onCommit={(nextHtml) =>
-                setFocusBody(
-                  normalizeChecklistMarkup(nextHtml, {
-                    taskItem: styles.taskItem,
-                    taskCheckbox: styles.taskCheckbox,
-                    taskText: styles.taskText,
-                    done: styles.done,
-                  }),
-                )
-              }
-              wikiLinkAssist={
-                focusSurface === "code"
-                  ? null
-                  : makeWikiLinkAssist(activeNodeId ?? undefined)
-              }
-            />
+            {focusSurface === "code" ||
+            focusSurface === "character-hybrid" ||
+            focusSurface === "location-hybrid" ? (
+              <BufferedContentEditable
+                value={focusBody}
+                className={`${styles.focusBody} ${
+                  focusSurface === "code"
+                    ? styles.focusCode
+                    : focusSurface === "character-hybrid"
+                      ? styles.focusCharacterDocument
+                      : styles.focusLocationDocument
+                }`}
+                editable
+                spellCheck={false}
+                debounceMs={150}
+                dataAttribute="data-focus-body-editor"
+                checklistDeletion={{
+                  taskItem: styles.taskItem,
+                  taskText: styles.taskText,
+                  taskCheckbox: styles.taskCheckbox,
+                }}
+                documentBlockDrag={
+                  focusSurface === "code"
+                    ? null
+                    : {
+                        handleClass: styles.archBlockDragHandle,
+                        taskItemClass: styles.taskItem,
+                      }
+                }
+                richDocCommand={
+                  focusSurface === "code"
+                    ? undefined
+                    : (command, value) => runFormat(command, value)
+                }
+                emptyPlaceholder={
+                  focusSurface === "code" ? null : "Write here, or type / for blocks…"
+                }
+                onCommit={(nextHtml) =>
+                  setFocusBody(
+                    normalizeChecklistMarkup(nextHtml, {
+                      taskItem: styles.taskItem,
+                      taskCheckbox: styles.taskCheckbox,
+                      taskText: styles.taskText,
+                      done: styles.done,
+                    }),
+                  )
+                }
+                wikiLinkAssist={
+                  focusSurface === "code"
+                    ? null
+                    : makeWikiLinkAssist(activeNodeId ?? undefined)
+                }
+              />
+            ) : (
+              <HeartgardenDocEditor
+                surfaceKey="focus-body"
+                chromeRole="focus"
+                className={styles.focusBody}
+                value={focusBodyDoc}
+                onChange={(doc) => setFocusBodyDoc(doc)}
+                editable
+                placeholder="Write here, or type / for blocks…"
+                enableDragHandle
+              />
+            )}
           </div>
         </div>
       </div>

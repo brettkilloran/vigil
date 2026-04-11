@@ -33,7 +33,8 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Fit camera / world bounds for UI | `src/lib/canvas-view-bounds.ts` |
 | Default camera / `CameraState` | `src/model/canvas-types.ts` (`defaultCamera`) |
 | Transient viewport toasts | `src/components/foundation/CanvasViewportToast.tsx` |
-| Buffered rich text + wiki `[[` assist | `src/components/editing/BufferedContentEditable.tsx`, `WikiLinkAssistPopover.tsx`, `src/lib/wiki-link-caret.ts` |
+| Default/task note bodies (TipTap hgDoc) | `src/components/editing/HeartgardenDocEditor.tsx`, `src/lib/hg-doc/*`, `docs/EDITOR_HG_DOC.md` |
+| Buffered rich text + wiki `[[` assist (lore, code, media captions) | `src/components/editing/BufferedContentEditable.tsx`, `WikiLinkAssistPopover.tsx`, `src/lib/wiki-link-caret.ts` |
 | Resolved image URLs (zoom / CDN template) | `src/lib/heartgarden-image-display-url.ts` |
 | Viewport culling (entities, stacks, connections) | `src/lib/canvas-viewport-cull.ts` |
 

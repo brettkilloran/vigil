@@ -6,8 +6,14 @@ import {
   type CanvasNode,
   type CanvasSpace,
 } from "@/src/components/foundation/architectural-types";
-import { DS_COLOR } from "@/src/lib/design-system-tokens";
 import { mediaUploadActionLabel } from "@/src/components/foundation/architectural-media-html";
+import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
+import {
+  DEMO_RESEARCH_DOSSIER_DOC,
+  DEMO_ROOT_WELCOME_DOC,
+  demoRootTaskDoc,
+} from "@/src/lib/hg-doc/seed-docs";
+import { DS_COLOR } from "@/src/lib/design-system-tokens";
 
 type StyleTokens = {
   taskItem: string;
@@ -43,12 +49,8 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       theme: "default",
       tapeRotation: -2.2,
       tapeVariant: "masking",
-      bodyHtml: `
-        <h1>Start here</h1>
-        <p>Heartgarden is a canvas for notes, tasks, images, and nested spaces. Drag cards, open folders to move inward, and use the trail at the top to climb back out.</p>
-        <blockquote>Everything saves to the workspace you are signed into. Pinch or scroll to zoom; drag the background to pan.</blockquote>
-        <p>Open the <strong>Research folder</strong> on the right when you are ready—the cards inside are different from what you see out here, so nothing is duplicated for the sake of a demo.</p>
-      `,
+      bodyDoc: DEMO_ROOT_WELCOME_DOC,
+      bodyHtml: hgDocToHtml(DEMO_ROOT_WELCOME_DOC),
     },
     {
       id: "node-2",
@@ -80,24 +82,8 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
       theme: "task",
       tapeRotation: -2.4,
       tapeVariant: "masking",
-      bodyHtml: `
-        <div class="${tokens.taskItem} ${tokens.done}" contenteditable="false">
-          <div class="${tokens.taskCheckbox}" contenteditable="false"></div>
-          <div class="${tokens.taskText}" contenteditable="true">Pan and zoom until the layout feels comfortable</div>
-        </div>
-        <div class="${tokens.taskItem} ${tokens.done}" contenteditable="false">
-          <div class="${tokens.taskCheckbox}" contenteditable="false"></div>
-          <div class="${tokens.taskText}" contenteditable="true">Double-click the background to create a quick note</div>
-        </div>
-        <div class="${tokens.taskItem}" contenteditable="false">
-          <div class="${tokens.taskCheckbox}" contenteditable="false"></div>
-          <div class="${tokens.taskText}" contenteditable="true">Open the Research folder and read the cards one level down</div>
-        </div>
-        <div class="${tokens.taskItem}" contenteditable="false">
-          <div class="${tokens.taskCheckbox}" contenteditable="false"></div>
-          <div class="${tokens.taskText}" contenteditable="true">Use search (keyboard shortcut in the status bar) when the board grows</div>
-        </div>
-      `,
+      bodyDoc: demoRootTaskDoc(),
+      bodyHtml: hgDocToHtml(demoRootTaskDoc()),
     },
     {
       id: "node-4",
@@ -188,8 +174,8 @@ export function buildArchitecturalSeedGraph(
       theme: "default",
       tapeRotation: -1.1,
       tapeVariant: "clear",
-      bodyHtml:
-        "<p><strong>Curated inputs</strong> for the demo workspace—articles, interview notes, and exports you would normally link from a real project.</p><p>In practice you might tag these, link cards together, or move them into a shared folder for review.</p>",
+      bodyDoc: DEMO_RESEARCH_DOSSIER_DOC,
+      bodyHtml: hgDocToHtml(DEMO_RESEARCH_DOSSIER_DOC),
     },
     {
       id: "dossier-02",

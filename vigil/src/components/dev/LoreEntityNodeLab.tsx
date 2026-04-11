@@ -4,6 +4,11 @@
  * Lore entity node design lab. Previews are static HTML; production wiring can use
  * `items.entity_type` (character | faction | location) plus optional `content_json.hgArch`
  * keys such as `cardVariant` once a direction is chosen.
+ *
+ * **Body vs document shell:** Character v11 and “Location lab skins” use a **body-only canvas plate**
+ * (`LabSkeuoCard` / `LabLocationConceptPlate`) — same stack as character lab (`data-lore-chrome="skeuo"`, zero-pad
+ * `nodeBody` + `loreCharacterBody` + `labSkeuoBleed`), no tape/header and no extra `a4DocumentBody` sheet.
+ * Faction + seeded location v1–v3 use **`LabCard`** (tape + header + `a4DocumentBody`) to match A4 lore nodes on canvas.
  */
 
 import {
@@ -221,6 +226,51 @@ function LabSkeuoCard({
   );
 }
 
+/** High-concept location lab bodies only (not seeded card IA). */
+type LabLocationConceptId = "survey" | "departures" | "polaroid";
+
+/**
+ * Body plate for **overhauled** location concepts — same outer stack as `LabSkeuoCard` (no tape/header).
+ * Children are free-form layout (not `locName` / `locMetaLine` document stacks).
+ */
+function LabLocationConceptPlate({
+  concept,
+  testId,
+  children,
+}: {
+  concept: LabLocationConceptId;
+  testId: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      data-testid={testId}
+      className={cx(canvasStyles.entityNode, canvasStyles.themeDefault, labStyles.locLabSkinPlate)}
+      data-lore-chrome="skeuo"
+      data-hg-heartgarden-lab-location-concept={concept}
+      data-lore-kind="location"
+      data-lore-variant="lab-visual-exploration"
+      style={
+        {
+          width: 340,
+          "--entity-width": "340px",
+        } as CSSProperties
+      }
+    >
+      <div
+        className={cx(
+          canvasStyles.nodeBody,
+          canvasStyles.loreCharacterBody,
+          labStyles.labSkeuoBleed,
+          labStyles.locLabSkinBodyFlush,
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function ThemeToolbar() {
   const { preference, setPreference } = useVigilThemeContext();
   return (
@@ -371,91 +421,319 @@ function LoreEntityNodeLabInner() {
             Location
           </h2>
           <p className={labStyles.sectionHint}>
-            Works for nations, cities, neighborhoods, buildings, or any site. Three header lines:
-            name, nation, then a flexible third line (type, ward, grid ref, whatever fits the story).
-            Everything below is free-form document.
+            Same <code>bodyHtml</code> contract as seeded canvas nodes:{" "}
+            <code>data-hg-canvas-role=&quot;lore-location&quot;</code> +{" "}
+            <code>data-hg-lore-location-variant</code>, fields <code>name</code> / <code>context</code> /{" "}
+            <code>detail</code>, optional <code>ref</code> on v3, and notes in{" "}
+            <code>data-hg-lore-location-notes-cell</code>. Previews use sample copy; production seeds live in{" "}
+            <code>getLoreNodeSeedBodyHtml(&quot;location&quot;, …)</code>.
           </p>
           <div className={labStyles.grid}>
             <div className={labStyles.cell}>
               <span className={labStyles.variantLabel}>V1 · Site plaque</span>
               <LabCard headerTitle="Location" tapeVariant="masking" tapeRotation={1.5}>
-                <div className={cardStyles.locHeader}>
-                  <div className={cardStyles.locName}>Old Harbor Kiln No. 4</div>
-                  <div className={cardStyles.locMetaLine}>
-                    <span className={cardStyles.locMetaKey}>Nation</span>
-                    Kestrel Free City
+                <div data-hg-canvas-role="lore-location" data-hg-lore-location-variant="v1">
+                  <div className={cardStyles.locHeader} contentEditable={false}>
+                    <div
+                      className={cardStyles.locName}
+                      data-hg-lore-location-field="name"
+                      contentEditable={false}
+                    >
+                      Old Harbor Kiln No. 4
+                    </div>
+                    <div
+                      className={cardStyles.locMetaLine}
+                      data-hg-lore-location-optional="true"
+                      contentEditable={false}
+                    >
+                      <span className={cardStyles.locMetaKey}>Nation</span>
+                      <span data-hg-lore-location-field="context" contentEditable={false}>
+                        Kestrel Free City
+                      </span>
+                    </div>
+                    <div
+                      className={cardStyles.locMetaLine}
+                      data-hg-lore-location-optional="true"
+                      contentEditable={false}
+                    >
+                      <span className={cardStyles.locMetaKey}>Site</span>
+                      <span data-hg-lore-location-field="detail" contentEditable={false}>
+                        Dock ward · industrial brick
+                      </span>
+                    </div>
                   </div>
-                  <div className={cardStyles.locMetaLine}>
-                    <span className={cardStyles.locMetaKey}>Site</span>
-                    Dock ward · industrial brick
+                  <div
+                    className={cardStyles.notesBlock}
+                    data-hg-lore-location-notes-cell="true"
+                    contentEditable={false}
+                  >
+                    <span className={cardStyles.fieldLabel}>Notes</span>
+                    <div
+                      className={cardStyles.notesText}
+                      data-hg-lore-location-notes="true"
+                      contentEditable={false}
+                    >
+                      <p>
+                        Rumored meeting spot for the Exchange. Labels are presentation—swap “Site”
+                        for “Region”, “Floor”, “Dungeon level”, etc.
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className={cardStyles.notesBlock}>
-                  <span className={cardStyles.fieldLabel}>Notes</span>
-                  <p className={cardStyles.notesText}>
-                    Rumored meeting spot for the Exchange. Third line is intentionally generic so you
-                    can use “Region”, “Floor”, “Dungeon level”, etc.
-                  </p>
                 </div>
               </LabCard>
               <ul className={labStyles.spec}>
-                <li>Serif name = “place as title”; pair with any scale of location.</li>
+                <li>
+                  <code>v1</code> seed: labeled <code>context</code> + <code>detail</code> lines under serif{" "}
+                  <code>name</code>.
+                </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
               <span className={labStyles.variantLabel}>V2 · Postcard band</span>
               <LabCard headerTitle="Location" tapeVariant="clear" tapeRotation={-2}>
-                <div className={cardStyles.postcardBand} aria-hidden />
-                <div className={cardStyles.locHeader}>
-                  <div className={cardStyles.locName}>Old Harbor Kiln No. 4</div>
-                  <div className={cardStyles.locMetaLine}>Kestrel Free City</div>
-                  <div className={cardStyles.locMetaLine}>
-                    <span className={cardStyles.locMetaKey}>Detail</span>
-                    Dock ward · industrial brick
+                <div data-hg-canvas-role="lore-location" data-hg-lore-location-variant="v2">
+                  <div className={cardStyles.postcardBand} aria-hidden />
+                  <div className={cardStyles.locHeader} contentEditable={false}>
+                    <div
+                      className={cardStyles.locName}
+                      data-hg-lore-location-field="name"
+                      contentEditable={false}
+                    >
+                      Old Harbor Kiln No. 4
+                    </div>
+                    <div
+                      className={cardStyles.locMetaLine}
+                      data-hg-lore-location-optional="true"
+                      contentEditable={false}
+                    >
+                      <span data-hg-lore-location-field="context" contentEditable={false}>
+                        Kestrel Free City
+                      </span>
+                    </div>
+                    <div
+                      className={cardStyles.locMetaLine}
+                      data-hg-lore-location-optional="true"
+                      contentEditable={false}
+                    >
+                      <span className={cardStyles.locMetaKey}>Detail</span>
+                      <span data-hg-lore-location-field="detail" contentEditable={false}>
+                        Dock ward · industrial brick
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div className={cardStyles.notesBlock}>
-                  <span className={cardStyles.fieldLabel}>Notes</span>
-                  <p className={cardStyles.notesText}>
-                    Color band suggests landscape / atmosphere without requiring an image asset.
-                  </p>
+                  <div
+                    className={cardStyles.notesBlock}
+                    data-hg-lore-location-notes-cell="true"
+                    contentEditable={false}
+                  >
+                    <span className={cardStyles.fieldLabel}>Notes</span>
+                    <div
+                      className={cardStyles.notesText}
+                      data-hg-lore-location-notes="true"
+                      contentEditable={false}
+                    >
+                      <p>
+                        Color band suggests landscape / atmosphere without an image asset. Strip uses the
+                        same full-bleed inset as the v3 survey bar.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </LabCard>
               <ul className={labStyles.spec}>
-                <li>Band can sample accent or biome hue per location later.</li>
+                <li>
+                  <code>v2</code> seed: optional <code>context</code> line without a key (reads as subtitle).
+                </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
               <span className={labStyles.variantLabel}>V3 · Survey tag</span>
               <LabCard headerTitle="Location" tapeVariant="dark" tapeRotation={0.8}>
-                <div
-                  className={cardStyles.locPlaqueStrip}
-                  data-loc-strip={locationStripVariantFromSeed("lab-survey-tag-v3")}
-                  aria-hidden={true}
-                />
-                <div className={cardStyles.plaqueCorner}>REF · KFC-DOCK-0847</div>
-                <div className={cardStyles.locHeader}>
-                  <div className={cardStyles.locName}>Old Harbor Kiln No. 4</div>
-                  <div className={cardStyles.locMetaLine}>
-                    <span className={cardStyles.locMetaKey}>Nation</span>
-                    Kestrel Free City
+                <div data-hg-canvas-role="lore-location" data-hg-lore-location-variant="v3">
+                  <div
+                    className={cardStyles.locPlaqueStrip}
+                    data-loc-strip={locationStripVariantFromSeed("lab-survey-tag-v3")}
+                    aria-hidden
+                  />
+                  <div
+                    className={cardStyles.plaqueCorner}
+                    data-hg-lore-location-field="ref"
+                    contentEditable={false}
+                  >
+                    REF · KFC-DOCK-0847
                   </div>
-                  <div className={cardStyles.locMetaLine}>
-                    <span className={cardStyles.locMetaKey}>Kind</span>
-                    Warehouse · abandoned ceramic works
+                  <div className={cardStyles.locHeader} contentEditable={false}>
+                    <div
+                      className={cardStyles.locName}
+                      data-hg-lore-location-field="name"
+                      contentEditable={false}
+                    >
+                      Old Harbor Kiln No. 4
+                    </div>
+                    <div
+                      className={cardStyles.locMetaLine}
+                      data-hg-lore-location-optional="true"
+                      contentEditable={false}
+                    >
+                      <span className={cardStyles.locMetaKey}>Nation</span>
+                      <span data-hg-lore-location-field="context" contentEditable={false}>
+                        Kestrel Free City
+                      </span>
+                    </div>
+                    <div
+                      className={cardStyles.locMetaLine}
+                      data-hg-lore-location-optional="true"
+                      contentEditable={false}
+                    >
+                      <span className={cardStyles.locMetaKey}>Kind</span>
+                      <span data-hg-lore-location-field="detail" contentEditable={false}>
+                        Warehouse · abandoned ceramic works
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div className={cardStyles.notesBlock}>
-                  <span className={cardStyles.fieldLabel}>Notes</span>
-                  <p className={cardStyles.notesText}>
-                    Optional reference code for GMs; third line names the specific “kind” of place.
-                  </p>
+                  <div
+                    className={cardStyles.notesBlock}
+                    data-hg-lore-location-notes-cell="true"
+                    contentEditable={false}
+                  >
+                    <span className={cardStyles.fieldLabel}>Notes</span>
+                    <div
+                      className={cardStyles.notesText}
+                      data-hg-lore-location-notes="true"
+                      contentEditable={false}
+                    >
+                      <p>
+                        Thin strip color is stable per item id via <code>data-loc-strip</code> + seed hash;
+                        the <code>ref</code> field is an optional monospace stamp for GMs.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </LabCard>
               <ul className={labStyles.spec}>
-                <li>Field labels stay editable copy—swap “Kind” for “District”, “Floor”, etc.</li>
+                <li>
+                  <code>v3</code> seed order: strip → <code>ref</code> → header → notes (matches{" "}
+                  <code>lore-node-seed-html</code>).
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <h3 id="sec-location-lab-skins" className={labStyles.subsectionTitle}>
+            Location · high-concept lab
+          </h3>
+          <p className={labStyles.sectionHint}>
+            Three <strong>different information architectures</strong> (this page only)—not another pass at the
+            document-lore “title + labeled lines + notes” card. Same eventual field contract can still back them; the
+            point here is <strong>spatial metaphor</strong> (survey sheet, departures board, polaroid).
+          </p>
+          <div className={labStyles.grid}>
+            <div className={labStyles.cell}>
+              <span className={labStyles.variantLabel}>LAB · Survey datum sheet</span>
+              <LabLocationConceptPlate concept="survey" testId="loc-lab-concept-survey">
+                <div className={labStyles.locLabConceptSurveyRoot}>
+                  <div className={labStyles.locLabConceptSurveyShell}>
+                    <aside className={labStyles.locLabConceptSurveyRail} aria-label="Survey marginalia">
+                      <span className={labStyles.locLabConceptSurveyRailText}>
+                        OBS GLASS · TRV-Q9 · REV AS-BUILT
+                      </span>
+                    </aside>
+                    <div className={labStyles.locLabConceptSurveyMain}>
+                      <div className={labStyles.locLabConceptSurveyStamp}>Revised as-built</div>
+                      <div className={labStyles.locLabConceptSurveyStencil}>OBQ-CRY-B</div>
+                      <div className={labStyles.locLabConceptSurveySubtitle}>
+                        Oblique cistern · pressure collar (dive envelope)
+                      </div>
+                      <div className={labStyles.locLabConceptSurveyGrid}>
+                        <div className={labStyles.locLabConceptSurveyCell}>
+                          <span className={labStyles.locLabConceptSurveyCellLab}>Depth datum</span>
+                          <span className={labStyles.locLabConceptSurveyCellVal}>−42 m sill</span>
+                        </div>
+                        <div className={labStyles.locLabConceptSurveyCell}>
+                          <span className={labStyles.locLabConceptSurveyCellLab}>Bearing</span>
+                          <span className={labStyles.locLabConceptSurveyCellVal}>118° mag</span>
+                        </div>
+                        <div className={labStyles.locLabConceptSurveyCell}>
+                          <span className={labStyles.locLabConceptSurveyCellLab}>Phase</span>
+                          <span className={labStyles.locLabConceptSurveyCellVal}>IV — voided</span>
+                        </div>
+                        <div className={labStyles.locLabConceptSurveyCell}>
+                          <span className={labStyles.locLabConceptSurveyCellLab}>Witness</span>
+                          <span className={labStyles.locLabConceptSurveyCellVal}>H. Vellum / 09</span>
+                        </div>
+                      </div>
+                      <div className={labStyles.locLabConceptSurveyRuler} aria-hidden />
+                      <p className={labStyles.locLabConceptSurveyFoot}>
+                        Margin rail + stencil code + 2×2 datum grid — not the seeded location header stack.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </LabLocationConceptPlate>
+              <ul className={labStyles.spec}>
+                <li>Survey sheet metaphor: drafting grid, registration ticks, engineer ruler strip.</li>
+              </ul>
+            </div>
+
+            <div className={labStyles.cell}>
+              <span className={labStyles.variantLabel}>LAB · Night departures board</span>
+              <LabLocationConceptPlate concept="departures" testId="loc-lab-concept-departures">
+                <div className={labStyles.locLabConceptDepartRoot}>
+                  <div className={labStyles.locLabConceptDepartBrand}>Glassway interchange · night board</div>
+                  <div className={labStyles.locLabConceptDepartHead}>
+                    <span>Line</span>
+                    <span>Toward</span>
+                    <span>State</span>
+                  </div>
+                  <div className={labStyles.locLabConceptDepartRow}>
+                    <span className={labStyles.locLabConceptDepartLine}>Salt spine express</span>
+                    <span className={labStyles.locLabConceptDepartToward}>Mirage well · stall 6</span>
+                    <span className={labStyles.locLabConceptDepartStateLive}>live</span>
+                  </div>
+                  <div className={labStyles.locLabConceptDepartRow}>
+                    <span className={labStyles.locLabConceptDepartLine}>Glass choir local</span>
+                    <span className={labStyles.locLabConceptDepartToward}>Courtyard thread · seal lit</span>
+                    <span className={labStyles.locLabConceptDepartStateDelay}>delay</span>
+                  </div>
+                  <div className={labStyles.locLabConceptDepartRow}>
+                    <span className={labStyles.locLabConceptDepartLine}>Crown liturgy shuttle</span>
+                    <span className={labStyles.locLabConceptDepartToward}>Sealed wing · vestry</span>
+                    <span className={labStyles.locLabConceptDepartStateLive}>live</span>
+                  </div>
+                  <p className={labStyles.locLabConceptDepartFoot}>
+                    LED / split-flap IA: three-column rows — not serif title + meta lines.
+                  </p>
+                </div>
+              </LabLocationConceptPlate>
+              <ul className={labStyles.spec}>
+                <li>Transit board metaphor: phosphor mono on near-black slab.</li>
+              </ul>
+            </div>
+
+            <div className={labStyles.cell}>
+              <span className={labStyles.variantLabel}>LAB · Polaroid caption stub</span>
+              <LabLocationConceptPlate concept="polaroid" testId="loc-lab-concept-polaroid">
+                <div className={labStyles.locLabConceptPolaroidRoot}>
+                  <div className={labStyles.locLabConceptPolaroidPerf} aria-hidden />
+                  <div className={labStyles.locLabConceptPolaroidFrame}>
+                    <div className={labStyles.locLabConceptPolaroidFilm} aria-hidden />
+                    <div className={labStyles.locLabConceptPolaroidMeta}>
+                      <span className={labStyles.locLabConceptPolaroidStamp}>HG-LOC-LAB</span>
+                      <span className={labStyles.locLabConceptPolaroidDate}>Apr · fog roll 04:12</span>
+                    </div>
+                    <p className={labStyles.locLabConceptPolaroidCaption}>
+                      “We only ever saw the courtyard from this angle once — then the thread closed.”
+                    </p>
+                  </div>
+                  <p className={labStyles.locLabConceptPolaroidFoot}>
+                    Hero well + thick caption margin: memory-shard layout, not A4 prose blocks.
+                  </p>
+                </div>
+              </LabLocationConceptPlate>
+              <ul className={labStyles.spec}>
+                <li>Polaroid metaphor: perforation, instant-film well, stamp + handwriting caption.</li>
               </ul>
             </div>
           </div>

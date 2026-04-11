@@ -39,9 +39,12 @@ test.describe("heartgarden smoke", () => {
   test("keeps code-card tape variant and dark treatment in app shell", async ({ page }) => {
     await gotoCanvasAfterBoot(page);
 
+    const nodes = page.locator("[data-node-id]");
+    const before = await nodes.count();
     await page.getByRole("button", { name: "Code" }).click();
+    await expect(nodes).toHaveCount(before + 1);
 
-    const codeCard = page.locator("[data-node-id]").first();
+    const codeCard = nodes.nth(before);
     await expect(codeCard).toBeVisible();
 
     const tape = codeCard.locator('[data-node-tape="true"]');

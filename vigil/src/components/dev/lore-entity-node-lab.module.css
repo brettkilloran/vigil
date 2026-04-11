@@ -77,6 +77,10 @@
   max-width: 70ch;
 }
 
+.sectionHint code {
+  word-break: break-word;
+}
+
 .subsectionTitle {
   margin: 36px 0 6px;
   font-size: 10px;
@@ -157,4 +161,335 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/*
+ * Location high-concept lab — `/dev/lore-entity-nodes` only.
+ * Outer plate: `locLabSkinPlate` + flush body host. Inner layouts are **not** seeded lore card IA.
+ */
+
+.locLabSkinPlate {
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--sem-text-primary) 10%, transparent),
+    0 16px 40px color-mix(in oklch, var(--sys-color-black) 22%, transparent);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.locLabSkinBodyFlush {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  align-self: stretch;
+  cursor: default;
+  user-select: text;
+}
+
+/* —— 1 · Survey datum sheet (margin rail + stencil + 2×2 datum grid) —— */
+.locLabConceptSurveyRoot {
+  flex: 1 1 auto;
+  min-height: 268px;
+  display: flex;
+}
+
+.locLabConceptSurveyShell {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.locLabConceptSurveyRail {
+  flex: 0 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid color-mix(in oklch, var(--accent) 35%, var(--sem-border-subtle));
+  background: color-mix(in oklch, oklch(0.88 0.03 250) 70%, var(--sem-surface-base) 30%);
+}
+
+.locLabConceptSurveyRailText {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 6.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--sem-text-primary) 55%, var(--sem-text-muted));
+  white-space: nowrap;
+}
+
+.locLabConceptSurveyMain {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px 14px;
+  position: relative;
+  color: oklch(0.22 0.04 260);
+  background-color: color-mix(in oklch, oklch(0.94 0.035 245) 88%, var(--sem-surface-base) 12%);
+  background-image:
+    linear-gradient(to right, color-mix(in oklch, var(--accent) 20%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklch, var(--accent) 16%, transparent) 1px, transparent 1px);
+  background-size: 11px 11px;
+  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 25%, transparent);
+}
+
+.locLabConceptSurveyMain::before,
+.locLabConceptSurveyMain::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid color-mix(in oklch, oklch(0.22 0.04 260) 35%, transparent);
+  pointer-events: none;
+}
+
+.locLabConceptSurveyMain::before {
+  top: 6px;
+  right: 8px;
+  border-left: none;
+  border-bottom: none;
+}
+
+.locLabConceptSurveyMain::after {
+  bottom: 8px;
+  left: 8px;
+  border-right: none;
+  border-top: none;
+}
+
+.locLabConceptSurveyStamp {
+  display: inline-block;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: oklch(0.45 0.2 25);
+  border: 1px solid color-mix(in oklch, oklch(0.45 0.2 25) 70%, transparent);
+  padding: 2px 6px;
+  margin-bottom: 8px;
+}
+
+.locLabConceptSurveyStencil {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  line-height: 1.05;
+  color: oklch(0.18 0.05 260);
+}
+
+.locLabConceptSurveySubtitle {
+  margin: 8px 0 12px;
+  font-family: var(--font-lora), Georgia, serif;
+  font-size: 11px;
+  font-weight: 600;
+  font-style: italic;
+  line-height: 1.35;
+  color: color-mix(in oklch, oklch(0.22 0.04 260) 78%, oklch(0.5 0.02 260));
+}
+
+.locLabConceptSurveyGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.locLabConceptSurveyCell {
+  padding: 7px 9px;
+  border: 1px dashed color-mix(in oklch, oklch(0.22 0.04 260) 22%, transparent);
+  background: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
+}
+
+.locLabConceptSurveyCellLab {
+  display: block;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 6.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, oklch(0.22 0.04 260) 45%, transparent);
+  margin-bottom: 4px;
+}
+
+.locLabConceptSurveyCellVal {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: oklch(0.2 0.04 260);
+}
+
+.locLabConceptSurveyRuler {
+  margin-top: 12px;
+  height: 10px;
+  border-top: 1px solid color-mix(in oklch, oklch(0.22 0.04 260) 25%, transparent);
+  background: repeating-linear-gradient(
+    90deg,
+    color-mix(in oklch, oklch(0.22 0.04 260) 38%, transparent) 0 1px,
+    transparent 1px 6px
+  );
+}
+
+.locLabConceptSurveyFoot {
+  margin: 10px 0 0;
+  font-size: 10px;
+  line-height: 1.45;
+  color: color-mix(in oklch, oklch(0.22 0.04 260) 48%, transparent);
+}
+
+/* —— 2 · Night departures board (fixed “LED slab” palette — not document theme tokens) —— */
+.locLabConceptDepartRoot {
+  flex: 1 1 auto;
+  min-height: 268px;
+  padding: 14px 14px 16px;
+  font-family: var(--font-geist-mono), monospace;
+  background: radial-gradient(120% 80% at 50% 0%, oklch(0.2 0.04 265) 0%, oklch(0.11 0.02 265) 55%);
+  color: oklch(0.88 0.14 160);
+  border: 1px solid oklch(0.32 0.04 265);
+  box-shadow: inset 0 0 0 1px oklch(0.22 0.03 265);
+}
+
+.locLabConceptDepartBrand {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: oklch(0.82 0.12 75);
+  margin-bottom: 12px;
+}
+
+.locLabConceptDepartHead {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.35fr) 52px;
+  gap: 8px;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: oklch(0.78 0.1 85);
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+  border-bottom: 2px solid oklch(0.55 0.14 75);
+}
+
+.locLabConceptDepartRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.35fr) 52px;
+  gap: 8px;
+  align-items: baseline;
+  padding: 9px 0;
+  border-bottom: 1px solid oklch(0.22 0.04 160 / 0.35);
+}
+
+.locLabConceptDepartLine {
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  color: oklch(0.9 0.1 165);
+}
+
+.locLabConceptDepartToward {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: oklch(0.78 0.06 165);
+}
+
+.locLabConceptDepartStateLive,
+.locLabConceptDepartStateDelay {
+  justify-self: end;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 6px;
+  border-radius: 2px;
+}
+
+.locLabConceptDepartStateLive {
+  color: oklch(0.14 0.02 265);
+  background: oklch(0.78 0.18 155);
+}
+
+.locLabConceptDepartStateDelay {
+  color: oklch(0.14 0.02 265);
+  background: oklch(0.78 0.14 75);
+}
+
+.locLabConceptDepartFoot {
+  margin: 14px 0 0;
+  font-size: 10px;
+  line-height: 1.45;
+  color: oklch(0.55 0.06 165);
+}
+
+/* —— 3 · Polaroid caption stub —— */
+.locLabConceptPolaroidRoot {
+  flex: 1 1 auto;
+  min-height: 268px;
+  padding: 14px;
+  background: color-mix(in oklch, oklch(0.9 0.02 95) 85%, var(--sem-surface-base) 15%);
+}
+
+.locLabConceptPolaroidPerf {
+  height: 0;
+  margin: -14px -14px 14px;
+  border-top: 2px dashed color-mix(in oklch, var(--sem-text-primary) 22%, transparent);
+}
+
+.locLabConceptPolaroidFrame {
+  background: oklch(0.99 0 0);
+  padding: 10px 10px 28px;
+  border-radius: 3px;
+  box-shadow:
+    0 1px 0 oklch(0.95 0 0),
+    0 14px 28px oklch(0 0 0 / 0.18);
+}
+
+.locLabConceptPolaroidFilm {
+  aspect-ratio: 1.05;
+  width: 100%;
+  border-radius: 2px;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 45%, oklch(0.35 0.02 260) 0%, oklch(0.18 0.02 260) 72%),
+    linear-gradient(165deg, oklch(0.42 0.03 260) 0%, oklch(0.22 0.02 260) 100%);
+  box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.12);
+}
+
+.locLabConceptPolaroidMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: oklch(0.35 0.02 260);
+}
+
+.locLabConceptPolaroidDate {
+  opacity: 0.75;
+}
+
+.locLabConceptPolaroidCaption {
+  margin: 14px 6px 0;
+  font-family: var(--font-lora), Georgia, serif;
+  font-size: 0.92rem;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: center;
+  color: oklch(0.22 0.03 260);
+}
+
+.locLabConceptPolaroidFoot {
+  margin: 12px 0 0;
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--sem-text-muted);
 }

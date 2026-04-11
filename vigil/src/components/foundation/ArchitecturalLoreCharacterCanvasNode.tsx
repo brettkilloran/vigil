@@ -70,11 +70,15 @@ export function ArchitecturalLoreCharacterCanvasNode({
         <ArchitecturalNodeTape variant={tapeVariant} rotationDeg={tapeRotation} />
       ) : null}
       <ArchitecturalNodeBody
+        nodeId={id}
+        documentVariant="html"
         html={bodyHtml}
         className={styles.loreCharacterBody}
         editable={bodyEditable ?? activeTool === "select"}
         spellCheck={false}
-        onHtmlCommit={(html) => onBodyCommit(id, html)}
+        onCommitPayload={(p) => {
+          if (p.kind === "html") onBodyCommit(id, p.html);
+        }}
         onDraftDirtyChange={onBodyDraftDirty}
         wikiLinkAssist={wikiLinkAssist ?? null}
         onRichDocCommand={onRichDocCommand}

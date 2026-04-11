@@ -18,7 +18,7 @@ This guide is for adding **new alternate canvas item presentations** (lore cards
 | Portable card “DNA” (grid, fields, typography) | `src/components/foundation/lore-entity-card.module.css` | Canvas-only hacks inside the card CSS when they should be viewport-specific |
 | Canvas chrome (selection, max-height, **canvas-only hiding** of sections) | `src/components/foundation/ArchitecturalCanvasApp.module.css` | Hiding focus content here — use focus overlay classes |
 | Canvas-specific React shell (tape, width, body host) | `src/components/foundation/Architectural*CanvasNode.tsx` (one component per variant) | Inlining huge JSX branches inside `ArchitecturalCanvasApp.tsx` |
-| Focus projection merge (canonical ↔ focus document) | `src/lib/lore-character-focus-document-html.ts` (pure functions + `DOMParser`) | Split-draft state in React + two editors (abandoned — “card in a card”) |
+| Focus projection merge (canonical ↔ focus document) | Character: `src/lib/lore-character-focus-document-html.ts`. Location: `src/lib/lore-location-focus-document-html.ts` (same pure `DOMParser` pattern) | Split-draft state in React + two editors (abandoned — “card in a card”) |
 | “Is this entity our variant?” | **One** exported helper per family, e.g. `shouldRenderLoreCharacterCredentialCanvasNode` | Repeated `entity.theme === … && html.includes(…)` across files |
 
 ---
@@ -30,7 +30,9 @@ Export a single predicate (plus optional `bodyHtmlImplies…` for legacy HTML):
 - Inputs: at least `kind`, `bodyHtml`, and `loreCard` from `CanvasContentEntity`.
 - Call sites: canvas rendering, focus **surface** resolution, palette creation, undo/focus restore, labs.
 
-Then drive UI from a **small enum** (e.g. `focusSurface`: `default-doc` | `code` | `character-hybrid` | …) instead of combining multiple booleans (`focusCodeTheme && !focusLore…`). New surfaces extend the enum and the resolver in **one place**.
+Then drive UI from a **small enum** (e.g. `focusSurface`: `default-doc` | `code` | `character-hybrid` | `location-hybrid` | …) instead of combining multiple booleans (`focusCodeTheme && !focusLore…`). New surfaces extend the enum and the resolver in **one place**.
+
+**Location** uses `shouldRenderLoreLocationCanvasNode` in `lore-node-seed-html.ts` (same “one helper” rule as character).
 
 ---
 
@@ -70,6 +72,7 @@ Decide explicitly for each region of the template:
 - **Resolver:** Map `(focusOpen, activeEntity)` → `focusSurface` (e.g. `default-doc` | `code` | `character-hybrid`). Branch for dark scrim, **hidden title** (when the card carries the title elsewhere), and **body classNames** — **not** for mounting a second parallel editor tree (that pattern was tried and rejected).
 - **One `focusBody` host:** A **single** `BufferedContentEditable` + `setFocusBody` / save path. For character v11, **project** body HTML to focus-document markup and **merge** on save — do not embed the full credential grid DOM in focus if it recreates “card in a card” visuals. Use `.focusCharacterDocument` to flatten chrome.
 - **Slash / block insert:** For character focus, scope **rich insert** to the notes subtree via `isRichDocBodyFormattingTarget` — caret inside **`[data-hg-character-focus-notes="true"]`** when the body contains `[data-hg-character-focus-doc="v1"]`. (Canvas v11 still uses `charSkNotesBody` in canonical HTML; focus projection uses stable `data-hg-*` hooks for the parser and for editor rules.)
+- **Location focus** (`location-hybrid`): same idea — prose tools only when caret is in **`[data-hg-lore-location-focus-notes="true"]`** inside **`[data-hg-location-focus-doc="v1"]`**. Canonical notes use **`data-hg-lore-location-notes`** inside **`data-hg-lore-location-notes-cell`**; the canvas root **`loreLocationCanvasRoot`** hides that cell (see `ArchitecturalCanvasApp.module.css`).
 - **Portrait / media:** Reuse the same upload affordance pattern as image cards (`data-architectural-media-upload`, shared button styling); position upload **in-frame** so it does not displace placeholder layout.
 
 ---
@@ -109,5 +112,15 @@ The **character v11** path:
 - **Projection:** `lore-character-focus-document-html.ts` (open → focus HTML, save → merge into canonical v11); **`withCharacterV11ObjectIdInHeader`** keeps canvas/focus header id + portrait placeholders consistent with the item id
 
 See **`CHARACTER_FOCUS_AND_DATA_MODEL_PLAN.md`** for data invariants, phased work, and post-implementation learnings.
+
+### Location (shipped hooks)
+
+Canonical `bodyHtml` uses:
+
+- **`data-hg-canvas-role="lore-location"`** and **`data-hg-lore-location-variant`** (`v1` | `v2` | `v3`).
+- **Fields:** `data-hg-lore-location-field="name"` (required; plain text syncs graph **title** on focus save), **`context`** and **`detail`** optional, **`ref`** optional on v3.
+- **Notes:** `data-hg-lore-location-notes` inside `data-hg-lore-location-notes-cell` — stored in HTML, hidden on canvas, edited in focus via **`lore-location-focus-document-html.ts`**.
+
+Golden tests: **`src/lib/lore-location-focus-document-html.test.ts`**. Cursor plan: **`.cursor/plans/location_lore_data_model_and_focus.plan.md`**.
 
 Treat new types as parallel tracks with the same **seams**, not copy-paste of one-off fixes.

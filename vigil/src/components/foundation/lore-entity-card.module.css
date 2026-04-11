@@ -40,6 +40,10 @@
   color: color-mix(in oklch, var(--theme-default-text) 88%, transparent);
 }
 
+.notesText p {
+  margin: 0;
+}
+
 /* —— Legacy character v1–v3 (original iterations; keep for posterity) —— */
 .charSplit {
   display: grid;
@@ -3558,19 +3562,24 @@
   margin-right: 6px;
 }
 
+/* Full-bleed top band: same body inset contract as `.locPlaqueStrip` (canvas + lab `a4DocumentBody`). */
 .postcardBand {
-  margin: -8px -10px 14px;
+  display: block;
+  width: calc(100% + 2 * var(--arch-body-pad-x, 18px));
+  margin: calc(-1 * var(--arch-body-pad-y, 16px)) calc(-1 * var(--arch-body-pad-x, 18px)) 14px;
   height: 56px;
-  border-radius: 4px 4px 0 0;
+  border-radius: 2px 2px 0 0;
   background: linear-gradient(
     105deg,
     color-mix(in oklch, var(--accent) 28%, var(--sys-color-neutral-500)) 0%,
     color-mix(in oklch, var(--theme-default-text) 25%, var(--theme-default-bg)) 45%,
     color-mix(in oklch, var(--accent) 15%, var(--theme-default-bg)) 100%
   );
-  opacity: 0.92;
+  opacity: 0.94;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 1px 0 color-mix(in oklch, var(--theme-default-text) 8%, transparent);
+  flex-shrink: 0;
 }
 
 .postcardBand::after {
@@ -3679,10 +3688,43 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 9px;
   letter-spacing: 0.04em;
-  color: color-mix(in oklch, var(--theme-default-text) 38%, transparent);
+  color: color-mix(in oklch, var(--theme-default-text) 42%, transparent);
   margin-bottom: 10px;
-  padding: 4px 8px;
+  padding: 5px 9px;
   display: inline-block;
-  border: 1px dashed color-mix(in oklch, var(--theme-default-text) 18%, transparent);
+  border: 1px dashed color-mix(in oklch, var(--theme-default-text) 20%, transparent);
   border-radius: 2px;
+  background: color-mix(in oklch, var(--theme-default-text) 4%, transparent);
+}
+
+/* Location v1 · brass / stone plaque — frame the metadata block only (matches seeded `locHeader`). */
+[data-hg-canvas-role="lore-location"][data-hg-lore-location-variant="v1"] .locHeader {
+  padding: 12px 14px 14px;
+  margin: 0 0 2px;
+  border: 1px solid color-mix(in oklch, var(--theme-default-text) 14%, transparent);
+  border-radius: 4px;
+  background: linear-gradient(
+    185deg,
+    color-mix(in oklch, var(--theme-default-text) 5%, var(--theme-default-bg)) 0%,
+    transparent 62%
+  );
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 28%, transparent),
+    0 1px 0 color-mix(in oklch, var(--theme-default-text) 6%, transparent);
+}
+
+[data-hg-canvas-role="lore-location"][data-hg-lore-location-variant="v1"] .locName {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid color-mix(in oklch, var(--accent) 35%, var(--theme-default-border));
+}
+
+/* Location v2 · postcard: tuck header under band edge slightly. */
+[data-hg-canvas-role="lore-location"][data-hg-lore-location-variant="v2"] .locHeader {
+  margin-top: -2px;
+}
+
+/* Location v3 · survey tag: ref stamp reads as inventory label. */
+[data-hg-canvas-role="lore-location"][data-hg-lore-location-variant="v3"] .plaqueCorner {
+  margin-top: 2px;
 }

@@ -38,6 +38,7 @@ const meta: Meta<typeof ArchitecturalNodeCard> = {
     theme: seedDefault.theme,
     tapeRotation: seedDefault.tapeRotation,
     bodyHtml: seedDefault.bodyHtml,
+    bodyDoc: seedDefault.bodyDoc ?? null,
     activeTool: "select",
     dragged: false,
     selected: true,
@@ -103,6 +104,7 @@ export const Task: Story = {
     theme: seedTask.theme,
     tapeRotation: seedTask.tapeRotation,
     bodyHtml: seedTask.bodyHtml,
+    bodyDoc: seedTask.bodyDoc ?? null,
     tapeVariant: "masking",
   },
 };

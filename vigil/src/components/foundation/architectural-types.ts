@@ -1,3 +1,5 @@
+import type { JSONContent } from "@tiptap/core";
+
 import type { FolderColorSchemeId } from "@/src/components/foundation/architectural-folder-schemes";
 
 export type ContentTheme = "default" | "code" | "task" | "media";
@@ -47,6 +49,11 @@ export type CanvasContentEntity = CanvasEntityBase & {
   theme: ContentTheme;
   tapeVariant?: TapeVariant;
   bodyHtml: string;
+  /**
+   * TipTap document for default/task prose cards (persisted as `content_json.format === "hgDoc"`).
+   * Omitted for HTML-only bodies (code, media, lore templates).
+   */
+  bodyDoc?: JSONContent | null;
   /** When set, card chrome + `entity_type` on sync; body uses shared lore templates. */
   loreCard?: LoreCard;
 };
@@ -116,6 +123,11 @@ export type DockCreateAction = {
   label: string;
   nodeType: NodeTheme;
 };
+
+/** Inline canvas body commits — HTML lore/code/media vs hgDoc default/task. */
+export type CanvasBodyCommitPayload =
+  | { kind: "html"; html: string }
+  | { kind: "hgDoc"; doc: JSONContent };
 
 /** Bottom dock: frosted glass on canvas vs solid black in focus editor. */
 export type ArchitecturalBottomDockVariant = "canvas" | "editor";

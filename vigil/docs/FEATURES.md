@@ -55,6 +55,7 @@ Single place to **look up what exists** and where it lives. For **HTTP contracts
 
 | Feature | What users see / behavior | Docs | Primary code |
 |--------|----------------------------|------|----------------|
+| **Modular note editor (hgDoc)** | Default/task cards + focus mode use TipTap blocks; body persists as `content_json.format: "hgDoc"` with derived HTML for links | [`EDITOR_HG_DOC.md`](./EDITOR_HG_DOC.md) | `HeartgardenDocEditor.tsx`, `src/lib/hg-doc/*`, `architectural-db-bridge.ts` |
 | **Wiki link `[[` assist** | Typing `[[` in rich text opens popover to pick / create wiki targets | — | `BufferedContentEditable.tsx`, `WikiLinkAssistPopover.tsx`, `wiki-link-caret.ts`, `wiki-link-caret.test.ts` |
 | **Internal links** | `vigil:item:` resolution in shell | [`AGENTS.md`](../AGENTS.md) | `ArchitecturalLinksPanel` / link resolution paths in foundation |
 
