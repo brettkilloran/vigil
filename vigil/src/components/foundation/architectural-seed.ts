@@ -9,6 +9,7 @@ import {
 import { mediaUploadActionLabel } from "@/src/components/foundation/architectural-media-html";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
 import {
+  DEMO_ARCHIVE_NOTE_DOC,
   DEMO_RESEARCH_DOSSIER_DOC,
   DEMO_ROOT_WELCOME_DOC,
   demoRootTaskDoc,
@@ -235,8 +236,8 @@ export function buildArchitecturalSeedGraph(
       rotation: -0.6,
       tapeRotation: 1.2,
       tapeVariant: "clear",
-      bodyHtml:
-        "<p>You are two folders deep. Breadcrumbs at the top of the canvas show the path; use them to jump up without losing your place.</p><p>This card only exists here—nothing on the outer canvas repeats it—so nested spaces stay easy to tell apart.</p>",
+      bodyDoc: DEMO_ARCHIVE_NOTE_DOC,
+      bodyHtml: hgDocToHtml(DEMO_ARCHIVE_NOTE_DOC),
       slots: {
         /* Single card centered on the archive’s focal point */
         "space-subsystems": { x: -170, y: -140 },

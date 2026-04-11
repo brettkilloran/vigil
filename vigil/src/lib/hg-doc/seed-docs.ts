@@ -58,3 +58,8 @@ export const DEMO_RESEARCH_DOSSIER_DOC: JSONContent = generateJSON(
   "<p><strong>Curated inputs</strong> for the demo workspace—articles, interview notes, and exports you would normally link from a real project.</p><p>In practice you might tag these, link cards together, or move them into a shared folder for review.</p>",
   ext,
 );
+
+export const DEMO_ARCHIVE_NOTE_DOC: JSONContent = generateJSON(
+  "<p>You are two folders deep. Breadcrumbs at the top of the canvas show the path; use them to jump up without losing your place.</p><p>This card only exists here—nothing on the outer canvas repeats it—so nested spaces stay easy to tell apart.</p>",
+  ext,
+);

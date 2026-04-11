@@ -6,6 +6,13 @@ Retire legacy rich-text editing paths after the hgDoc cutover, without reintrodu
 
 This document is the cleanup playbook for post-cutover deletion and hardening work.
 
+## Execution Status (current)
+
+- Phase A (guardrails): complete
+- Phase B (legacy path isolation): complete (`runHgDocFormat` / `runLegacyFormat` split in `ArchitecturalCanvasApp.tsx`)
+- Phase C (dead-code deletion): partial (legacy checklist insertion path removed from legacy formatter; additional non-hgDoc surface cleanup is optional and can proceed incrementally)
+- Phase D (hard enforcement): complete for automated gates (`verify:editor-cutover`, acceptance matrix automation, text-editing E2E)
+
 ## Scope
 
 - In scope:

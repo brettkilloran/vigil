@@ -48,7 +48,11 @@ function run() {
   // hgDoc command routing must not fall through to legacy execCommand inside hg surfaces.
   mustContain(
     "src/components/foundation/ArchitecturalCanvasApp.tsx",
-    "target?.closest(\"[data-hg-doc-editor]\") && command !== \"arch:insertImage\"",
+    "const runHgDocFormat = useCallback(",
+  );
+  mustContain(
+    "src/components/foundation/ArchitecturalCanvasApp.tsx",
+    "if (target?.closest(\"[data-hg-doc-editor]\")) return true;",
   );
 
   // Keep the deprecation annotation near the legacy editor implementation.

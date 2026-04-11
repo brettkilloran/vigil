@@ -6,7 +6,7 @@
  * keys such as `cardVariant` once a direction is chosen.
  *
  * **Body vs document shell:** Character v11 and “Location lab skins” use a **body-only canvas plate**
- * (`LabSkeuoCard` / `LabLocationConceptPlate`) — same stack as character lab (`data-lore-chrome="skeuo"`, zero-pad
+ * (`LabSkeuoCard` / `LabLocationSkinPlate`) — same stack as character lab (`data-lore-chrome="skeuo"`, zero-pad
  * `nodeBody` + `loreCharacterBody` + `labSkeuoBleed`), no tape/header and no extra `a4DocumentBody` sheet.
  * Faction + seeded location v1–v3 use **`LabCard`** (tape + header + `a4DocumentBody`) to match A4 lore nodes on canvas.
  */
@@ -226,19 +226,19 @@ function LabSkeuoCard({
   );
 }
 
-/** High-concept location lab bodies only (not seeded card IA). */
-type LabLocationConceptId = "survey" | "departures" | "polaroid";
+type LabLocationSkinId = "blueprint" | "waypoint" | "deed";
 
 /**
- * Body plate for **overhauled** location concepts — same outer stack as `LabSkeuoCard` (no tape/header).
- * Children are free-form layout (not `locName` / `locMetaLine` document stacks).
+ * Location visual explorations only: match `LabSkeuoCard` shell exactly —
+ * `entityNode` + `themeDefault` + `data-lore-chrome="skeuo"` (transparent plate, no faux document sheet),
+ * inner `nodeBody` + `loreCharacterBody` + `labSkeuoBleed` (zero body padding, no `a4DocumentBody` mask/scroll).
  */
-function LabLocationConceptPlate({
-  concept,
+function LabLocationSkinPlate({
+  skin,
   testId,
   children,
 }: {
-  concept: LabLocationConceptId;
+  skin: LabLocationSkinId;
   testId: string;
   children: ReactNode;
 }) {
@@ -247,7 +247,7 @@ function LabLocationConceptPlate({
       data-testid={testId}
       className={cx(canvasStyles.entityNode, canvasStyles.themeDefault, labStyles.locLabSkinPlate)}
       data-lore-chrome="skeuo"
-      data-hg-heartgarden-lab-location-concept={concept}
+      data-hg-heartgarden-lab-location-skin={skin}
       data-lore-kind="location"
       data-lore-variant="lab-visual-exploration"
       style={
@@ -268,6 +268,189 @@ function LabLocationConceptPlate({
         {children}
       </div>
     </div>
+  );
+}
+
+type LabLocationConceptId = "polaroid" | "poster" | "specimen";
+
+/** High-concept location lab row: same skeuo body shell as skins, separate shell chrome + `data-hg-heartgarden-lab-location-concept`. */
+function LabLocationConceptPlate({
+  conceptId,
+  testId,
+  children,
+}: {
+  conceptId: LabLocationConceptId;
+  testId: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      data-testid={testId}
+      className={cx(canvasStyles.entityNode, canvasStyles.themeDefault, labStyles.locConceptShell)}
+      data-lore-chrome="skeuo"
+      data-hg-heartgarden-lab-location-concept={conceptId}
+      data-lore-kind="location"
+      data-lore-variant="lab-concept-next"
+      style={
+        {
+          width: 340,
+          "--entity-width": "340px",
+        } as CSSProperties
+      }
+    >
+      <div
+        className={cx(
+          canvasStyles.nodeBody,
+          canvasStyles.loreCharacterBody,
+          labStyles.labSkeuoBleed,
+          labStyles.locLabSkinBodyFlush,
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function useLabImagePick() {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const onFile = useCallback((event: ChangeEvent<HTMLInputElement>, onDataUrl: (url: string) => void) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => onDataUrl(reader.result as string);
+    reader.readAsDataURL(file);
+  }, []);
+  return { inputRef, onFile };
+}
+
+function LabLocationConceptPolaroid({ testId }: { testId: string }) {
+  const [photo, setPhoto] = useState<string | null>(null);
+  const { inputRef, onFile } = useLabImagePick();
+
+  return (
+    <LabLocationConceptPlate conceptId="polaroid" testId={testId}>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className={labStyles.visuallyHidden}
+        aria-hidden
+        tabIndex={-1}
+        onChange={(e) => onFile(e, setPhoto)}
+      />
+      <div className={labStyles.locConceptPolaroidOuter}>
+        <div className={labStyles.locConceptPolaroidFrame}>
+          <button
+            type="button"
+            className={labStyles.locConceptPolaroidWell}
+            onClick={() => inputRef.current?.click()}
+          >
+            {photo ? (
+              // eslint-disable-next-line @next/next/no-img-element -- lab data URL preview
+              <img src={photo} alt="Field photograph" className={labStyles.locConceptPolaroidImg} />
+            ) : (
+              <span className={labStyles.locConceptPolaroidPlaceholder}>Click to add field photograph</span>
+            )}
+          </button>
+          <p className={labStyles.locConceptPolaroidCaption}>Blackwater hinge — tide took the pier in one night.</p>
+        </div>
+        <div className={labStyles.locConceptPolaroidChin}>
+          <span className={labStyles.locConceptPolaroidStamp}>BRINE 17 · AUG 04</span>
+          <Button type="button" size="sm" variant="neutral" tone="glass" onClick={() => inputRef.current?.click()}>
+            {photo ? "Replace photo" : "Upload photo"}
+          </Button>
+        </div>
+      </div>
+    </LabLocationConceptPlate>
+  );
+}
+
+function LabLocationConceptPoster({ testId }: { testId: string }) {
+  const [backdrop, setBackdrop] = useState<string | null>(null);
+  const { inputRef, onFile } = useLabImagePick();
+
+  return (
+    <LabLocationConceptPlate conceptId="poster" testId={testId}>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className={labStyles.visuallyHidden}
+        aria-hidden
+        tabIndex={-1}
+        onChange={(e) => onFile(e, setBackdrop)}
+      />
+      <div className={cx(labStyles.locConceptPosterRoot, backdrop && labStyles.locConceptPosterRootHasPhoto)}>
+        {backdrop ? (
+          <div
+            className={labStyles.locConceptPosterPhoto}
+            style={{ backgroundImage: `url(${backdrop})` } as CSSProperties}
+            aria-hidden
+          />
+        ) : null}
+        <div className={labStyles.locConceptPosterScrim} aria-hidden />
+        <div className={labStyles.locConceptPosterBody}>
+          <p className={labStyles.locConceptPosterEyebrow}>Night-line terminus</p>
+          <p className={labStyles.locConceptPosterTitle}>Stations of the last warm current</p>
+          <p className={labStyles.locConceptPosterLead}>
+            Poster-scale type + optional billboard backdrop — not a letterhead, not a plaque meta stack.
+          </p>
+        </div>
+        <div className={labStyles.locConceptPosterActions}>
+          <Button type="button" size="sm" variant="neutral" tone="glass" onClick={() => inputRef.current?.click()}>
+            {backdrop ? "Replace backdrop" : "Add backdrop image"}
+          </Button>
+        </div>
+      </div>
+    </LabLocationConceptPlate>
+  );
+}
+
+function LabLocationConceptSpecimen({ testId }: { testId: string }) {
+  const [thumb, setThumb] = useState<string | null>(null);
+  const { inputRef, onFile } = useLabImagePick();
+
+  return (
+    <LabLocationConceptPlate conceptId="specimen" testId={testId}>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className={labStyles.visuallyHidden}
+        aria-hidden
+        tabIndex={-1}
+        onChange={(e) => onFile(e, setThumb)}
+      />
+      <div className={labStyles.locConceptSpecimenRoot}>
+        <div className={labStyles.locConceptSpecimenRail} aria-hidden>
+          SPECIMEN
+          <br />
+          HOLD
+        </div>
+        <button
+          type="button"
+          className={labStyles.locConceptSpecimenThumb}
+          onClick={() => inputRef.current?.click()}
+        >
+          {thumb ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={thumb} alt="Specimen capture" className={labStyles.locConceptSpecimenImg} />
+          ) : (
+            <span className={labStyles.locConceptSpecimenThumbLabel}>Thumb image</span>
+          )}
+        </button>
+        <div className={labStyles.locConceptSpecimenCopy}>
+          <div className={labStyles.locConceptSpecimenId}>HG-SPC-09-λ</div>
+          <div className={labStyles.locConceptSpecimenTitle}>Glass lung well</div>
+          <div className={labStyles.locConceptSpecimenMeta}>Accretion sublevel · vapor class IV · do not vent</div>
+          <Button type="button" size="sm" variant="neutral" tone="glass" onClick={() => inputRef.current?.click()}>
+            {thumb ? "Replace thumb" : "Upload thumb"}
+          </Button>
+        </div>
+      </div>
+    </LabLocationConceptPlate>
   );
 }
 
@@ -622,118 +805,131 @@ function LoreEntityNodeLabInner() {
           </div>
 
           <h3 id="sec-location-lab-skins" className={labStyles.subsectionTitle}>
-            Location · high-concept lab
+            Location lab skins
           </h3>
           <p className={labStyles.sectionHint}>
-            Three <strong>different information architectures</strong> (this page only)—not another pass at the
-            document-lore “title + labeled lines + notes” card. Same eventual field contract can still back them; the
-            point here is <strong>spatial metaphor</strong> (survey sheet, departures board, polaroid).
+            Three <strong>lab-only</strong> chrome explorations (this route +{" "}
+            <code>lore-entity-node-lab.module.css</code> only)—not seeds, not new <code>hgArch</code> types. Shown on the
+            same <strong>body plate</strong> as the character row: <code>data-lore-chrome=&quot;skeuo&quot;</code>,{" "}
+            <code>nodeBody</code> + <code>loreCharacterBody</code> + <code>labSkeuoBleed</code> (no{" "}
+            <code>a4DocumentBody</code> scroll sheet), <em>no</em> tape or “Location” header.
           </p>
           <div className={labStyles.grid}>
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>LAB · Survey datum sheet</span>
-              <LabLocationConceptPlate concept="survey" testId="loc-lab-concept-survey">
-                <div className={labStyles.locLabConceptSurveyRoot}>
-                  <div className={labStyles.locLabConceptSurveyShell}>
-                    <aside className={labStyles.locLabConceptSurveyRail} aria-label="Survey marginalia">
-                      <span className={labStyles.locLabConceptSurveyRailText}>
-                        OBS GLASS · TRV-Q9 · REV AS-BUILT
-                      </span>
-                    </aside>
-                    <div className={labStyles.locLabConceptSurveyMain}>
-                      <div className={labStyles.locLabConceptSurveyStamp}>Revised as-built</div>
-                      <div className={labStyles.locLabConceptSurveyStencil}>OBQ-CRY-B</div>
-                      <div className={labStyles.locLabConceptSurveySubtitle}>
-                        Oblique cistern · pressure collar (dive envelope)
-                      </div>
-                      <div className={labStyles.locLabConceptSurveyGrid}>
-                        <div className={labStyles.locLabConceptSurveyCell}>
-                          <span className={labStyles.locLabConceptSurveyCellLab}>Depth datum</span>
-                          <span className={labStyles.locLabConceptSurveyCellVal}>−42 m sill</span>
-                        </div>
-                        <div className={labStyles.locLabConceptSurveyCell}>
-                          <span className={labStyles.locLabConceptSurveyCellLab}>Bearing</span>
-                          <span className={labStyles.locLabConceptSurveyCellVal}>118° mag</span>
-                        </div>
-                        <div className={labStyles.locLabConceptSurveyCell}>
-                          <span className={labStyles.locLabConceptSurveyCellLab}>Phase</span>
-                          <span className={labStyles.locLabConceptSurveyCellVal}>IV — voided</span>
-                        </div>
-                        <div className={labStyles.locLabConceptSurveyCell}>
-                          <span className={labStyles.locLabConceptSurveyCellLab}>Witness</span>
-                          <span className={labStyles.locLabConceptSurveyCellVal}>H. Vellum / 09</span>
-                        </div>
-                      </div>
-                      <div className={labStyles.locLabConceptSurveyRuler} aria-hidden />
-                      <p className={labStyles.locLabConceptSurveyFoot}>
-                        Margin rail + stencil code + 2×2 datum grid — not the seeded location header stack.
-                      </p>
-                    </div>
+              <span className={labStyles.variantLabel}>LAB · Blueprint site sheet</span>
+              <LabLocationSkinPlate skin="blueprint" testId="loc-lab-skin-blueprint">
+                <div className={labStyles.locLabSkinBlueRoot}>
+                  <div className={labStyles.locLabSkinBlueScale} aria-hidden />
+                  <div className={labStyles.locLabSkinTitle}>Oblique Cistern · Access B</div>
+                  <div className={labStyles.locLabSkinMetaRow}>
+                    <span className={labStyles.locLabSkinMetaKey}>Survey</span>
+                    Vashti traverse · fault ribbon Q-9
                   </div>
-                </div>
-              </LabLocationConceptPlate>
-              <ul className={labStyles.spec}>
-                <li>Survey sheet metaphor: drafting grid, registration ticks, engineer ruler strip.</li>
-              </ul>
-            </div>
-
-            <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>LAB · Night departures board</span>
-              <LabLocationConceptPlate concept="departures" testId="loc-lab-concept-departures">
-                <div className={labStyles.locLabConceptDepartRoot}>
-                  <div className={labStyles.locLabConceptDepartBrand}>Glassway interchange · night board</div>
-                  <div className={labStyles.locLabConceptDepartHead}>
-                    <span>Line</span>
-                    <span>Toward</span>
-                    <span>State</span>
+                  <div className={labStyles.locLabSkinMetaRow}>
+                    <span className={labStyles.locLabSkinMetaKey}>Station</span>
+                    Pressure collar · two-meter sill (dive-rated)
                   </div>
-                  <div className={labStyles.locLabConceptDepartRow}>
-                    <span className={labStyles.locLabConceptDepartLine}>Salt spine express</span>
-                    <span className={labStyles.locLabConceptDepartToward}>Mirage well · stall 6</span>
-                    <span className={labStyles.locLabConceptDepartStateLive}>live</span>
-                  </div>
-                  <div className={labStyles.locLabConceptDepartRow}>
-                    <span className={labStyles.locLabConceptDepartLine}>Glass choir local</span>
-                    <span className={labStyles.locLabConceptDepartToward}>Courtyard thread · seal lit</span>
-                    <span className={labStyles.locLabConceptDepartStateDelay}>delay</span>
-                  </div>
-                  <div className={labStyles.locLabConceptDepartRow}>
-                    <span className={labStyles.locLabConceptDepartLine}>Crown liturgy shuttle</span>
-                    <span className={labStyles.locLabConceptDepartToward}>Sealed wing · vestry</span>
-                    <span className={labStyles.locLabConceptDepartStateLive}>live</span>
-                  </div>
-                  <p className={labStyles.locLabConceptDepartFoot}>
-                    LED / split-flap IA: three-column rows — not serif title + meta lines.
-                  </p>
-                </div>
-              </LabLocationConceptPlate>
-              <ul className={labStyles.spec}>
-                <li>Transit board metaphor: phosphor mono on near-black slab.</li>
-              </ul>
-            </div>
-
-            <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>LAB · Polaroid caption stub</span>
-              <LabLocationConceptPlate concept="polaroid" testId="loc-lab-concept-polaroid">
-                <div className={labStyles.locLabConceptPolaroidRoot}>
-                  <div className={labStyles.locLabConceptPolaroidPerf} aria-hidden />
-                  <div className={labStyles.locLabConceptPolaroidFrame}>
-                    <div className={labStyles.locLabConceptPolaroidFilm} aria-hidden />
-                    <div className={labStyles.locLabConceptPolaroidMeta}>
-                      <span className={labStyles.locLabConceptPolaroidStamp}>HG-LOC-LAB</span>
-                      <span className={labStyles.locLabConceptPolaroidDate}>Apr · fog roll 04:12</span>
-                    </div>
-                    <p className={labStyles.locLabConceptPolaroidCaption}>
-                      “We only ever saw the courtyard from this angle once — then the thread closed.”
+                  <div className={labStyles.locLabSkinNotesWrap}>
+                    <span className={labStyles.locLabSkinNotesLabel}>Notes</span>
+                    <p className={labStyles.locLabSkinNotesBody}>
+                      Chrome only: grid + scale bar read as “measured ruin” without inventing new stored columns.
                     </p>
                   </div>
-                  <p className={labStyles.locLabConceptPolaroidFoot}>
-                    Hero well + thick caption margin: memory-shard layout, not A4 prose blocks.
-                  </p>
                 </div>
-              </LabLocationConceptPlate>
+              </LabLocationSkinPlate>
               <ul className={labStyles.spec}>
-                <li>Polaroid metaphor: perforation, instant-film well, stamp + handwriting caption.</li>
+                <li>Blueprint: cool paper + accent grid; type uses <code>--sem-*</code> (not canvas document tokens).</li>
+              </ul>
+            </div>
+
+            <div className={labStyles.cell}>
+              <span className={labStyles.variantLabel}>LAB · Waypoint board</span>
+              <LabLocationSkinPlate skin="waypoint" testId="loc-lab-skin-waypoint">
+                <div className={labStyles.locLabSkinWayRoot}>
+                  <div className={labStyles.locLabSkinWayFork} aria-hidden>
+                    ◀ Salt clock · Glass spine · Mirage well ▶
+                  </div>
+                  <div className={labStyles.locLabSkinTitle}>Salt Clock Relay · Mile 44</div>
+                  <div className={labStyles.locLabSkinMetaRow}>
+                    <span className={labStyles.locLabSkinMetaKey}>Region</span>
+                    Glass Dune Protectorate · caravan lane
+                  </div>
+                  <div className={labStyles.locLabSkinMetaRow}>
+                    <span className={labStyles.locLabSkinMetaKey}>Detail</span>
+                    Last hand-painted sign before the horizon eats the road
+                  </div>
+                  <div className={labStyles.locLabSkinNotesWrap}>
+                    <span className={labStyles.locLabSkinNotesLabel}>Notes</span>
+                    <p className={labStyles.locLabSkinNotesBody}>
+                      Warm board + rail: fork copy stays prose until item links can echo real graph edges.
+                    </p>
+                  </div>
+                </div>
+              </LabLocationSkinPlate>
+              <ul className={labStyles.spec}>
+                <li>Waypoint: warm field + mono fork strip; distinct fiction from the other two swatches.</li>
+              </ul>
+            </div>
+
+            <div className={labStyles.cell}>
+              <span className={labStyles.variantLabel}>LAB · Deed cadastral slip</span>
+              <LabLocationSkinPlate skin="deed" testId="loc-lab-skin-deed">
+                <div className={labStyles.locLabSkinDeedRoot}>
+                  <div className={labStyles.locLabSkinDeedSeal} aria-hidden>
+                    Crown cadastre · excerpt (fictional)
+                  </div>
+                  <div className={labStyles.locLabSkinDeedRibbon}>ROLL 442-Q · BOUNDARY DISPUTE (OPEN)</div>
+                  <div className={labStyles.locLabSkinTitle}>Threadable Courtyard · Sealed wing</div>
+                  <div className={labStyles.locLabSkinMetaRow}>
+                    <span className={labStyles.locLabSkinMetaKey}>Jurisdiction</span>
+                    Magistrate circuit VII · liturgy vaults
+                  </div>
+                  <div className={labStyles.locLabSkinMetaRow}>
+                    <span className={labStyles.locLabSkinMetaKey}>Tenure</span>
+                    Crown leasehold · choir hours only
+                  </div>
+                  <div className={labStyles.locLabSkinNotesWrap}>
+                    <span className={labStyles.locLabSkinNotesLabel}>Notes</span>
+                    <p className={labStyles.locLabSkinNotesBody}>
+                      Parchment + double rule: ribbon plays the optional <code>ref</code> stamp role without a new DB field.
+                    </p>
+                  </div>
+                </div>
+              </LabLocationSkinPlate>
+              <ul className={labStyles.spec}>
+                <li>Deed: parchment gradient + double border; ribbon = optional ref slot, still lab-only.</li>
+              </ul>
+            </div>
+          </div>
+
+          <h3 id="sec-location-concept-next" className={labStyles.subsectionTitle}>
+            Location · concept next
+          </h3>
+          <p className={labStyles.sectionHint}>
+            <strong>Additive only:</strong> new IA shapes here; rows above (seeds + lab skins) stay as-is. Polaroid
+            memory slip, night-line poster (optional full-bleed backdrop), and museum specimen tag — each includes at
+            least one image slot via local file pick (data URL lab preview, not persisted).
+          </p>
+          <div className={labStyles.grid}>
+            <div className={labStyles.cell}>
+              <span className={labStyles.variantLabel}>NEXT · Polaroid field slip</span>
+              <LabLocationConceptPolaroid testId="loc-concept-polaroid" />
+              <ul className={labStyles.spec}>
+                <li>Memory / evidence metaphor: fat white frame, chin strip, hero photo drives the card.</li>
+              </ul>
+            </div>
+            <div className={labStyles.cell}>
+              <span className={labStyles.variantLabel}>NEXT · Night-line poster</span>
+              <LabLocationConceptPoster testId="loc-concept-poster" />
+              <ul className={labStyles.spec}>
+                <li>Transit-poster scale: scrim + display type; backdrop image optional.</li>
+              </ul>
+            </div>
+            <div className={labStyles.cell}>
+              <span className={labStyles.variantLabel}>NEXT · Museum specimen tag</span>
+              <LabLocationConceptSpecimen testId="loc-concept-specimen" />
+              <ul className={labStyles.spec}>
+                <li>Collection rail + thumb + monospace ID — vertical authority strip, not document meta rows.</li>
               </ul>
             </div>
           </div>

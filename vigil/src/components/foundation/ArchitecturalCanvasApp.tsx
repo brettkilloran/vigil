@@ -259,12 +259,9 @@ import {
   plainPlaceNameFromLocationBodyHtml,
 } from "@/src/lib/lore-location-focus-document-html";
 import {
-  ARCH_TASK_TEXT_SELECTOR,
   caretIsWithinRichDocInsertRegion,
-  moveCaretAfterTaskItemForBlockInsert,
   resolveActiveRichEditorSurface,
   resolveProseCommandTarget,
-  unwrapTaskTextBlockHost,
 } from "@/src/lib/rich-editor-surface";
 const VigilFlowRevealOverlay = dynamic(
   () =>
@@ -1156,14 +1153,14 @@ function isEditableTarget(target: EventTarget | null) {
  * Excludes titles (focus overlay, folder names), plain-text fields, and other inputs.
  */
 function isTextFormattingToolbarTarget(focusEl: Element | null): boolean {
-  const surface = resolveActiveRichEditorSurface(focusEl);
-  return !!surface.root;
+  return !!(focusEl instanceof HTMLElement && focusEl.closest("[data-hg-doc-editor]"));
 }
 
 /** Caret is in a prose body surface (not card titles) — in-document insert tools apply. */
 function isRichDocBodyFormattingTarget(focusEl: Element | null): boolean {
   const surface = resolveActiveRichEditorSurface(focusEl);
   if (!surface.root) return false;
+  if (!surface.root.matches("[data-hg-doc-editor]")) return false;
   return caretIsWithinRichDocInsertRegion(focusEl, surface.root, surface.kind);
 }
 
@@ -8445,41 +8442,61 @@ export function ArchitecturalCanvasApp({
     return () => document.removeEventListener("selectionchange", onSelectionChange);
   }, [refreshTextFormatChrome]);
 
-  const runFormat = useCallback(
-    (command: string, value?: string) => {
-      const shell = shellRef.current;
-      if (!shell) return;
-
-      const dispatchInput = (target: HTMLElement | null) => {
-        target?.dispatchEvent(new Event("input", { bubbles: true }));
-      };
-
-      const restoreSelection = (target: HTMLElement | null) => {
-        const selection = window.getSelection();
-        const saved = lastFormatRangeRef.current;
-        if (!selection || !saved || !target) return false;
-        if (!isNodeWithin(target, saved.commonAncestorContainer)) return false;
-        selection.removeAllRanges();
-        selection.addRange(saved);
-        return true;
-      };
-
-      const target = resolveRichTextFormatTarget();
+  const runHgDocFormat = useCallback(
+    (command: string, value: string | undefined, target: HTMLElement | null): boolean => {
+      if (command === "arch:insertImage") return false;
       const hgKeyFromTarget =
         target?.closest<HTMLElement>("[data-hg-doc-surface]")?.getAttribute("data-hg-doc-surface") ??
         null;
       const hgKey = findHgDocSurfaceKeyFromSelection() ?? hgKeyFromTarget;
       const hgApi = hgKey ? getHgDocEditor(hgKey) : null;
-      if (hgApi && command !== "arch:insertImage") {
-        if (hgApi.runFormat(command, value)) {
-          refreshTextFormatChrome();
-          return;
-        }
+      if (hgApi?.runFormat(command, value)) {
+        refreshTextFormatChrome();
+        return true;
       }
-      if (target?.closest("[data-hg-doc-editor]") && command !== "arch:insertImage") {
-        // Never fall through to legacy execCommand path inside TipTap surfaces.
-        return;
+      // Structural routing rule: never fall back to legacy execCommand in hgDoc surfaces.
+      if (target?.closest("[data-hg-doc-editor]")) return true;
+      return false;
+    },
+    [refreshTextFormatChrome],
+  );
+
+  const runLegacyFormat = useCallback(
+    (command: string, value: string | undefined, target: HTMLElement) => {
+      const dispatchInput = (el: HTMLElement | null) => {
+        el?.dispatchEvent(new Event("input", { bubbles: true }));
+      };
+      const restoreSelection = (el: HTMLElement | null) => {
+        const selection = window.getSelection();
+        const saved = lastFormatRangeRef.current;
+        if (!selection || !saved || !el) return false;
+        if (!isNodeWithin(el, saved.commonAncestorContainer)) return false;
+        selection.removeAllRanges();
+        selection.addRange(saved);
+        return true;
+      };
+
+      const execTarget = target;
+      if (!restoreSelection(execTarget)) {
+        placeCaretAtEnd(execTarget);
       }
+
+      // hgDoc owns structured block semantics; legacy surfaces keep only minimal inline formatting.
+      if (command === "arch:checklist") return;
+
+      document.execCommand(command, false, value);
+      dispatchInput(execTarget);
+      refreshTextFormatChrome();
+    },
+    [refreshTextFormatChrome],
+  );
+
+  const runFormat = useCallback(
+    (command: string, value?: string) => {
+      const shell = shellRef.current;
+      if (!shell) return;
+
+      const target = resolveRichTextFormatTarget();
 
       if (command === "arch:insertImage") {
         if (!canInsertImageAtCurrentTarget()) return;
@@ -8494,63 +8511,17 @@ export function ArchitecturalCanvasApp({
         return;
       }
 
+      if (runHgDocFormat(command, value, target)) return;
       if (!target) return;
-
-      const inTaskTextCell = target.matches(ARCH_TASK_TEXT_SELECTOR);
-      if (inTaskTextCell && command === "formatBlock") {
-        refreshTextFormatChrome();
-        return;
-      }
-
-      const isBlockStructureCommand =
-        command === "arch:checklist" ||
-        command === "insertUnorderedList" ||
-        command === "insertOrderedList" ||
-        command === "insertHorizontalRule" ||
-        command === "formatBlock";
-
-      const execTarget = isBlockStructureCommand ? unwrapTaskTextBlockHost(target) ?? target : target;
-
-      if (!restoreSelection(execTarget)) {
-        placeCaretAtEnd(execTarget);
-      }
-      if (isBlockStructureCommand && inTaskTextCell) {
-        moveCaretAfterTaskItemForBlockInsert(execTarget, target);
-      }
-
-      if (command === "arch:checklist") {
-        document.execCommand(
-          "insertHTML",
-          false,
-          `<div class="${styles.taskItem}" contenteditable="false"><div class="${styles.taskCheckbox}" contenteditable="false"></div><div class="${styles.taskText}" contenteditable="true" data-arch-task-text="true">New item</div></div>`,
-        );
-        dispatchInput(execTarget);
-        refreshTextFormatChrome();
-        return;
-      }
-
-      if (command === "formatBlock" && value === "h1") {
-        const current = normalizeFormatBlockTag(document.queryCommandValue("formatBlock"));
-        const next = current === "h1" || current === "h2" || current === "h3" ? "p" : "h1";
-        document.execCommand("formatBlock", false, next);
-        dispatchInput(execTarget);
-        refreshTextFormatChrome();
-        return;
-      }
-
-      if (command === "formatBlock" && value === "blockquote") {
-        const current = normalizeFormatBlockTag(document.queryCommandValue("formatBlock"));
-        document.execCommand("formatBlock", false, current === "blockquote" ? "p" : "blockquote");
-        dispatchInput(execTarget);
-        refreshTextFormatChrome();
-        return;
-      }
-
-      document.execCommand(command, false, value);
-      dispatchInput(execTarget);
-      refreshTextFormatChrome();
+      runLegacyFormat(command, value, target);
     },
-    [canInsertImageAtCurrentTarget, refreshTextFormatChrome, resolveRichTextFormatTarget, queueMediaUploadPick],
+    [
+      canInsertImageAtCurrentTarget,
+      resolveRichTextFormatTarget,
+      queueMediaUploadPick,
+      runHgDocFormat,
+      runLegacyFormat,
+    ],
   );
 
   useEffect(() => {
@@ -11163,7 +11134,6 @@ export function ArchitecturalCanvasApp({
                   handleClass: styles.archBlockDragHandle,
                   taskItemClass: styles.taskItem,
                 }}
-                richDocCommand={(command, value) => runFormat(command, value)}
                 emptyPlaceholder="Write a caption, or type / for blocks…"
                 onCommit={(nextHtml) => setGalleryDraftNotes(nextHtml)}
                 wikiLinkAssist={makeWikiLinkAssist(galleryNodeId ?? undefined)}
@@ -11241,11 +11211,6 @@ export function ArchitecturalCanvasApp({
                         handleClass: styles.archBlockDragHandle,
                         taskItemClass: styles.taskItem,
                       }
-                }
-                richDocCommand={
-                  focusSurface === "code"
-                    ? undefined
-                    : (command, value) => runFormat(command, value)
                 }
                 emptyPlaceholder={
                   focusSurface === "code" ? null : "Write here, or type / for blocks…"
