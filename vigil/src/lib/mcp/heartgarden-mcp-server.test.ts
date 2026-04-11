@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   canonicalHeartgardenMcpToolName,
+  mcpWriteKeyError,
   resolveHeartgardenMcpBaseUrl,
 } from "./heartgarden-mcp-server";
 
@@ -24,6 +25,8 @@ describe("canonicalHeartgardenMcpToolName", () => {
       ["vigil_index_item", "heartgarden_index_item"],
       ["vigil_reindex_space", "heartgarden_reindex_space"],
       ["vigil_patch_item", "heartgarden_patch_item"],
+      ["vigil_create_item", "heartgarden_create_item"],
+      ["vigil_create_link", "heartgarden_create_link"],
     ];
     for (const [legacy, canonical] of pairs) {
       expect(canonicalHeartgardenMcpToolName(legacy)).toBe(canonical);
@@ -40,6 +43,23 @@ describe("canonicalHeartgardenMcpToolName", () => {
 
   it("does not rewrite unrelated tool names", () => {
     expect(canonicalHeartgardenMcpToolName("other_connector_tool")).toBe("other_connector_tool");
+  });
+});
+
+describe("mcpWriteKeyError", () => {
+  it("returns error when server key is unset", () => {
+    expect(mcpWriteKeyError({}, "", { allowOmitWhenConfigSet: true })).toMatch(/not set/);
+  });
+  it("allows omit when configured and allowOmitWhenConfigSet", () => {
+    expect(mcpWriteKeyError({}, "secret", { allowOmitWhenConfigSet: true })).toBe(null);
+  });
+  it("rejects wrong key", () => {
+    expect(mcpWriteKeyError({ write_key: "bad" }, "good", { allowOmitWhenConfigSet: true })).toBe(
+      "Invalid write_key",
+    );
+  });
+  it("requires explicit key when omit not allowed", () => {
+    expect(mcpWriteKeyError({}, "secret", { allowOmitWhenConfigSet: false })).toMatch(/required/);
   });
 });
 

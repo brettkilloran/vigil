@@ -4,6 +4,11 @@ import { z } from "zod";
 import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
 import { getHeartgardenApiBootContext, heartgardenApiForbiddenJsonResponse } from "@/src/lib/heartgarden-api-boot-context";
+import {
+  defaultItemDimensions,
+  nextZIndexForSpace,
+  synthesizeContentJsonForCreateItem,
+} from "@/src/lib/item-create-defaults";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
 import {
@@ -22,16 +27,20 @@ const createBody = z.object({
   itemType: z.enum(["note", "sticky", "image", "checklist", "webclip", "folder"]),
   x: z.number().default(0),
   y: z.number().default(0),
-  width: z.number().positive().max(4000).default(280),
-  height: z.number().positive().max(4000).default(200),
+  /** Omit for type-based defaults (e.g. note 340×270, checklist 340×188, character 340×453). */
+  width: z.number().positive().max(4000).optional(),
+  height: z.number().positive().max(4000).optional(),
   title: z.string().max(255).optional(),
   contentText: z.string().optional(),
   contentJson: z.record(z.string(), z.any()).optional(),
+  /** Applied when synthesizing `contentJson` for note/sticky (default/code/task). */
+  theme: z.enum(["default", "code", "task"]).optional(),
   color: z.string().max(64).optional(),
   entityType: z.string().max(64).optional(),
   entityMeta: z.record(z.string(), z.any()).optional(),
   imageUrl: z.string().max(8192).optional(),
   imageMeta: z.record(z.string(), z.any()).optional(),
+  /** Omit for max(existing zIndex)+1 in this space (starts at 101 if empty). */
   zIndex: z.number().int().optional(),
   stackId: z.string().uuid().nullable().optional(),
   stackOrder: z.number().int().nullable().optional(),
@@ -113,6 +122,28 @@ export async function POST(
         null
       : (parsed.data.entityMeta ?? null);
 
+  const entityType = parsed.data.entityType ?? null;
+  const contentText = parsed.data.contentText ?? "";
+  const theme = parsed.data.theme ?? "default";
+
+  if (parsed.data.contentJson === undefined && t === "note" && contentText.trim() === "") {
+    return Response.json(
+      { ok: false, error: "contentText is required when contentJson is omitted for notes" },
+      { status: 400 },
+    );
+  }
+
+  let contentJson: Record<string, unknown> | null =
+    (parsed.data.contentJson as Record<string, unknown> | undefined) ?? null;
+  if (contentJson === null && (t === "note" || t === "sticky" || t === "checklist")) {
+    const synthesized = synthesizeContentJsonForCreateItem({
+      itemType: t,
+      contentText,
+      theme,
+    });
+    if (synthesized) contentJson = synthesized;
+  }
+
   const defaultTitle =
     t === "note"
       ? "Note"
@@ -126,15 +157,20 @@ export async function POST(
               ? "Web clip"
               : "Item";
   const title = parsed.data.title?.trim() || defaultTitle;
-  const contentText = parsed.data.contentText ?? "";
   const color =
     parsed.data.color ??
     (t === "sticky" ? DS_COLOR.itemDefaultSticky : t === "note" ? DS_COLOR.itemDefaultNote : null);
+  const { width: dimW, height: dimH } = defaultItemDimensions(t, entityType);
+  const width = parsed.data.width ?? dimW;
+  const height = parsed.data.height ?? dimH;
+  const zIndex =
+    parsed.data.zIndex !== undefined ? parsed.data.zIndex : await nextZIndexForSpace(db, spaceId);
+
   const searchBlob = buildSearchBlob({
     title,
     contentText,
-    contentJson: parsed.data.contentJson ?? null,
-    entityType: parsed.data.entityType ?? null,
+    contentJson,
+    entityType,
     entityMeta: entityMetaForRow,
     imageUrl: parsed.data.imageUrl ?? null,
     imageMeta: parsed.data.imageMeta ?? null,
@@ -150,18 +186,18 @@ export async function POST(
       itemType: t,
       x: parsed.data.x,
       y: parsed.data.y,
-      width: parsed.data.width,
-      height: parsed.data.height,
+      width,
+      height,
       title,
       contentText,
       searchBlob,
-      contentJson: parsed.data.contentJson ?? null,
+      contentJson,
       color,
-      entityType: parsed.data.entityType ?? null,
+      entityType,
       entityMeta: entityMetaForRow,
       imageUrl: parsed.data.imageUrl ?? null,
       imageMeta: parsed.data.imageMeta ?? null,
-      ...(parsed.data.zIndex !== undefined ? { zIndex: parsed.data.zIndex } : {}),
+      zIndex,
       ...(parsed.data.stackId !== undefined ? { stackId: parsed.data.stackId } : {}),
       ...(parsed.data.stackOrder !== undefined ? { stackOrder: parsed.data.stackOrder } : {}),
     })

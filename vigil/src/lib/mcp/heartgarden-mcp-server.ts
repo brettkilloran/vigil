@@ -58,6 +58,29 @@ export function canonicalHeartgardenMcpToolName(raw: string): string {
   return s;
 }
 
+/** write_key must match config; empty string means “use server HEARTGARDEN_MCP_WRITE_KEY” when allowed. */
+export function mcpWriteKeyError(
+  args: Record<string, unknown>,
+  writeKeyFromConfig: string,
+  options: { allowOmitWhenConfigSet: boolean },
+): string | null {
+  const expected = writeKeyFromConfig.trim();
+  if (!expected) {
+    return "HEARTGARDEN_MCP_WRITE_KEY is not set on the MCP server process.";
+  }
+  const provided = String(args.write_key ?? "").trim();
+  if (provided === "" && options.allowOmitWhenConfigSet) {
+    return null;
+  }
+  if (provided === "") {
+    return "write_key is required (or omit it when HEARTGARDEN_MCP_WRITE_KEY is set on the MCP server).";
+  }
+  if (provided !== expected) {
+    return "Invalid write_key";
+  }
+  return null;
+}
+
 function filterGmSpaces(
   spaces: unknown[],
   playerSpaceExcluded: string,
@@ -361,6 +384,54 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             content_text: { type: "string", description: "Plain text body" },
           },
           required: ["write_key", "item_id"],
+        },
+      },
+      {
+        name: "heartgarden_create_item",
+        description:
+          "Create a canvas item in a space (POST /api/spaces/:id/items). Requires write_key (or omit when HEARTGARDEN_MCP_WRITE_KEY is set on the MCP server). item_type 'character' creates a lore entity card (note + entityType=character).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            write_key: {
+              type: "string",
+              description: "Must match HEARTGARDEN_MCP_WRITE_KEY; may be omitted if the MCP process has that env set",
+            },
+            space_id: { type: "string", description: "Target space UUID" },
+            item_type: {
+              type: "string",
+              enum: ["note", "checklist", "character"],
+              description: "character → note row with entityType=character",
+            },
+            title: { type: "string" },
+            content_text: { type: "string", description: "Plain text; required for notes (not checklists)" },
+            x: { type: "number" },
+            y: { type: "number" },
+            color: { type: "string", description: "CSS color; defaults server-side" },
+            theme: { type: "string", enum: ["default", "code", "task"], description: "Card theme for synthesized contentJson" },
+            auto_index: { type: "boolean", description: "If true, POST /api/items/:id/index after create" },
+          },
+          required: ["space_id", "item_type", "title"],
+        },
+      },
+      {
+        name: "heartgarden_create_link",
+        description:
+          "Create a directed item_link (POST /api/item-links). source_item_id → target_item_id. relationship_type maps to the API linkType field. Both items must be in the same space as space_id.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            write_key: {
+              type: "string",
+              description: "Must match HEARTGARDEN_MCP_WRITE_KEY; may be omitted if the MCP process has that env set",
+            },
+            space_id: { type: "string", description: "Space UUID (both items must belong here)" },
+            source_item_id: { type: "string" },
+            target_item_id: { type: "string" },
+            label: { type: "string", description: "Edge label shown on the canvas" },
+            relationship_type: { type: "string", description: "Stored as linkType (e.g. faction_membership)" },
+          },
+          required: ["space_id", "source_item_id", "target_item_id"],
         },
       },
     ],
@@ -697,6 +768,155 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
+      });
+      return { content: [{ type: "text", text: await res.text() }] };
+    }
+
+    if (name === "heartgarden_create_item") {
+      const wkErr = mcpWriteKeyError(args, WRITE_KEY, { allowOmitWhenConfigSet: true });
+      if (wkErr) {
+        return { content: [{ type: "text", text: wkErr }], isError: true };
+      }
+      const spaceId = String(args.space_id ?? "").trim();
+      if (!spaceId) {
+        return { content: [{ type: "text", text: "space_id is required" }], isError: true };
+      }
+      const itemTypeRaw = String(args.item_type ?? "").trim();
+      const title = String(args.title ?? "").trim();
+      if (!title) {
+        return { content: [{ type: "text", text: "title is required" }], isError: true };
+      }
+      let itemType: "note" | "checklist";
+      let entityType: string | undefined;
+      if (itemTypeRaw === "character") {
+        itemType = "note";
+        entityType = "character";
+      } else if (itemTypeRaw === "note" || itemTypeRaw === "checklist") {
+        itemType = itemTypeRaw;
+      } else {
+        return {
+          content: [{ type: "text", text: "item_type must be note, checklist, or character" }],
+          isError: true,
+        };
+      }
+      const contentText = typeof args.content_text === "string" ? args.content_text : "";
+      if (itemType === "note" && contentText.trim() === "") {
+        return {
+          content: [{ type: "text", text: "content_text is required for notes and character cards" }],
+          isError: true,
+        };
+      }
+      const body: Record<string, unknown> = {
+        itemType,
+        title,
+        contentText,
+        x: typeof args.x === "number" ? args.x : 0,
+        y: typeof args.y === "number" ? args.y : 0,
+      };
+      if (entityType) body.entityType = entityType;
+      if (typeof args.color === "string" && args.color.trim()) body.color = args.color.trim();
+      if (args.theme === "default" || args.theme === "code" || args.theme === "task") {
+        body.theme = args.theme;
+      }
+      const res = await api(`${BASE}/api/spaces/${encodeURIComponent(spaceId)}/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const createText = await res.text();
+      if (args.auto_index !== true) {
+        return { content: [{ type: "text", text: createText }] };
+      }
+      try {
+        const created = JSON.parse(createText) as { ok?: boolean; item?: { id?: string } };
+        const newId = created?.item?.id;
+        if (!created?.ok || !newId) {
+          return { content: [{ type: "text", text: createText }] };
+        }
+        const idxRes = await api(`${BASE}/api/items/${encodeURIComponent(newId)}/index`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+        const indexText = await idxRes.text();
+        let indexPayload: unknown = indexText;
+        try {
+          indexPayload = JSON.parse(indexText);
+        } catch {
+          /* keep raw string */
+        }
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ create: created, index: indexPayload }, null, 2),
+            },
+          ],
+        };
+      } catch {
+        return { content: [{ type: "text", text: createText }] };
+      }
+    }
+
+    if (name === "heartgarden_create_link") {
+      const wkErr = mcpWriteKeyError(args, WRITE_KEY, { allowOmitWhenConfigSet: true });
+      if (wkErr) {
+        return { content: [{ type: "text", text: wkErr }], isError: true };
+      }
+      const spaceId = String(args.space_id ?? "").trim();
+      const sourceId = String(args.source_item_id ?? "").trim();
+      const targetId = String(args.target_item_id ?? "").trim();
+      if (!spaceId || !sourceId || !targetId) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "space_id, source_item_id, and target_item_id are required",
+            },
+          ],
+          isError: true,
+        };
+      }
+      const [srcRes, tgtRes] = await Promise.all([
+        api(`${BASE}/api/v1/items/${encodeURIComponent(sourceId)}`),
+        api(`${BASE}/api/v1/items/${encodeURIComponent(targetId)}`),
+      ]);
+      if (!srcRes.ok || !tgtRes.ok) {
+        return {
+          content: [{ type: "text", text: "Could not load source or target item" }],
+          isError: true,
+        };
+      }
+      const srcJson = (await srcRes.json()) as { item?: { spaceId?: string } };
+      const tgtJson = (await tgtRes.json()) as { item?: { spaceId?: string } };
+      const s1 = srcJson?.item?.spaceId;
+      const s2 = tgtJson?.item?.spaceId;
+      if (!s1 || !s2 || s1 !== spaceId || s2 !== spaceId) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                ok: false,
+                error: "Source and target items must exist and belong to space_id",
+              }),
+            },
+          ],
+          isError: true,
+        };
+      }
+      const linkBody: Record<string, unknown> = {
+        sourceItemId: sourceId,
+        targetItemId: targetId,
+      };
+      if (typeof args.label === "string" && args.label.trim()) linkBody.label = args.label.trim();
+      if (typeof args.relationship_type === "string" && args.relationship_type.trim()) {
+        linkBody.linkType = args.relationship_type.trim();
+      }
+      const res = await api(`${BASE}/api/item-links`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(linkBody),
       });
       return { content: [{ type: "text", text: await res.text() }] };
     }
