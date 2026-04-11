@@ -23,6 +23,16 @@ describe("html-to-doc", () => {
     expect(text).toContain("// line");
   });
 
+  it("legacyCodeBodyHtmlToHgDocSeed decodes nbsp and basic entities", () => {
+    const doc = legacyCodeBodyHtmlToHgDocSeed("<span>a</span>&nbsp;&nbsp;<span>b</span>");
+    const plain = hgDocToPlainText(doc);
+    expect(plain).toMatch(/a\s+b/);
+    expect(plain).not.toContain("&nbsp");
+
+    const amp = legacyCodeBodyHtmlToHgDocSeed("<span>1 &lt; 2 &amp; 3</span>");
+    expect(hgDocToPlainText(amp)).toContain("1 < 2 & 3");
+  });
+
   it("htmlFragmentToHgDocDoc returns empty doc for blank input", () => {
     const d = htmlFragmentToHgDocDoc("   ");
     expect(d.type).toBe("doc");
