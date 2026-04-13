@@ -11,3 +11,7 @@ npm run dev -- -p 3000
 Then open [http://localhost:3000](http://localhost:3000). For a **finite** verification run (lint + build), use **`npm run check`** from the same directory instead of leaving `dev` running in a background terminal.
 
 See [`heartgarden/README.md`](heartgarden/README.md) for product docs, environment variables, and Vercel notes.
+
+### If production deploy fails on Vercel
+
+Usually **Root Directory** in the Vercel project must be **`heartgarden`** (not `vigil`). See [`heartgarden/docs/DEPLOY_VERCEL.md`](heartgarden/docs/DEPLOY_VERCEL.md) § “Root Directory must be `heartgarden`” and [`heartgarden/docs/NAMING.md`](heartgarden/docs/NAMING.md) § “If something breaks later”.

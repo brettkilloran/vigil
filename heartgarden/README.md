@@ -79,6 +79,8 @@ If one view looks stale:
 
 **Short version:** Vercel **Root Directory** = **`heartgarden`**. Set `NEON_DATABASE_URL` (and optional Anthropic / R2 per [`.env.local.example`](.env.local.example)). Do **not** set `PLAYWRIGHT_E2E`. No tldraw license is required.
 
+**Build error *Root Directory `vigil` does not exist*:** the dashboard still points at the old folder name — set **Root Directory** to **`heartgarden`** and redeploy ([`docs/DEPLOY_VERCEL.md`](docs/DEPLOY_VERCEL.md) § “Root Directory must be `heartgarden`”).
+
 **Full guide:** **[`docs/DEPLOY_VERCEL.md`](docs/DEPLOY_VERCEL.md)**. **Dashboard checklist:** **[`docs/DEPLOY_VERCEL_CHECKLIST.md`](docs/DEPLOY_VERCEL_CHECKLIST.md)**. **Neon prod + Preview branches:** **[`docs/NEON_VERCEL_SETUP.md`](docs/NEON_VERCEL_SETUP.md)**.
 
 **Naming:** **`docs/NAMING.md`** (product name, app path **`heartgarden/`**, stable **`vigil:*`** data where applicable).

@@ -21,6 +21,10 @@ This is the **step-by-step** companion to the short notes in [`README.md`](../RE
    - **Output Directory:** leave default (Next handles this).
 3. **Node.js version:** In **Project → Settings → General → Node.js Version**, pick **22.x** (matches CI) or at least **20.x** (`package.json` has `"engines": { "node": ">=20" }`).
 
+### Root Directory must be `heartgarden` (not `vigil`)
+
+The Next.js app directory in git is **`heartgarden/`**. If the Vercel project still has **Root Directory** set to **`vigil`**, production builds fail at clone time with an error like **“The specified Root Directory `vigil` does not exist”**. Update **Root Directory** to **`heartgarden`**, save, and **Redeploy**. You do **not** need to re-enter environment variables.
+
 Deploy once **without** secrets if you only want to confirm the build; the app will run in **demo / local-only** mode until `NEON_DATABASE_URL` is set (see [`app/api/bootstrap/route.ts`](../app/api/bootstrap/route.ts)).
 
 ## 3. Environment variables

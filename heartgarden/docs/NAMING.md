@@ -33,3 +33,11 @@ Internal module/file names such as `VigilApp.tsx` or `vigil-ui-classes.ts` are l
 ## Deploying
 
 Step-by-step Vercel setup (root directory, env tables, Neon/R2, previews): **`docs/DEPLOY_VERCEL.md`**.
+
+## If something breaks later
+
+**Vercel build fails immediately** with *“The specified Root Directory `vigil` does not exist”* (or similar): the project still points at the old folder name. In **Vercel → Project → Settings → General → Root Directory**, set **`heartgarden`**, save, then **Redeploy**. Environment variables stay on the project; only the subfolder for install/build changes.
+
+**Stale `vigil/` folder on disk (Windows):** The repo app path is **`heartgarden/`**. If a leftover **`vigil`** directory exists at the monorepo root (e.g. locks during a rename), it may be listed in the **root** `.gitignore` as **`/vigil/`**. Close editors/dev servers using it, then delete the folder manually if you want it gone.
+
+**`package-lock.json` looks different after `npm install` on Windows:** Optional Linux-only entries can differ from CI. Before pushing lockfile changes, run **`npm run verify:package-lock-ci`** from **`heartgarden/`** (see **`AGENTS.md`**).
