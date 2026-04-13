@@ -2067,6 +2067,8 @@ export function ArchitecturalCanvasApp({
   const syncCursorRef = useRef<string>(new Date(0).toISOString());
   const focusDirtyRef = useRef(false);
   const inlineContentDirtyIdsRef = useRef<Set<string>>(new Set());
+  /** Item ids with an in-flight `apiPatchItem` (versioned PATCH from `patchItemWithVersion`). */
+  const savingContentIdsRef = useRef<Set<string>>(new Set());
   const mediaFileInputRef = useRef<HTMLInputElement | null>(null);
   const lastFormatRangeRef = useRef<Range | null>(null);
   const [historyEpoch, setHistoryEpoch] = useState(0);
@@ -2213,63 +2215,68 @@ export function ArchitecturalCanvasApp({
 
   const patchItemWithVersion = useCallback(
     async (itemId: string, patch: Record<string, unknown>) => {
-      const base = itemServerUpdatedAtRef.current.get(itemId);
-      const body: Record<string, unknown> = base ? { ...patch, baseUpdatedAt: base } : { ...patch };
-      const r = await apiPatchItem(itemId, body);
-      if (r.ok) {
-        if (r.item.updatedAt) itemServerUpdatedAtRef.current.set(itemId, r.item.updatedAt);
-        return true;
-      }
-      if (!r.ok && "gone" in r && r.gone) {
-        itemServerUpdatedAtRef.current.delete(itemId);
-        const prevT = itemContentPatchTimersRef.current.get(itemId);
-        if (prevT) {
-          clearTimeout(prevT);
-          itemContentPatchTimersRef.current.delete(itemId);
-          neonSyncUnbumpPending();
+      savingContentIdsRef.current.add(itemId);
+      try {
+        const base = itemServerUpdatedAtRef.current.get(itemId);
+        const body: Record<string, unknown> = base ? { ...patch, baseUpdatedAt: base } : { ...patch };
+        const r = await apiPatchItem(itemId, body);
+        if (r.ok) {
+          if (r.item.updatedAt) itemServerUpdatedAtRef.current.set(itemId, r.item.updatedAt);
+          return true;
         }
-        inlineContentDirtyIdsRef.current.delete(itemId);
-        setItemConflictQueue((q) => q.filter((i) => i.id !== itemId));
-        setGraph((prev) => removeEntitiesFromGraphAfterRemoteDelete(prev, [itemId]));
-        pruneRecentItems(new Set([itemId]));
-        pruneRecentFolders(new Set([itemId]));
-        setSelectedNodeIds((p) => p.filter((id) => id !== itemId));
-        if (activeNodeIdRef.current === itemId) {
-          setFocusOpen(false);
-          setActiveNodeId(null);
-        }
-        if (galleryNodeIdRef.current === itemId) {
-          setGalleryOpen(false);
-          setGalleryNodeId(null);
-          setGalleryDraftTitle("");
-          setGalleryDraftNotesDoc(structuredClone(EMPTY_HG_DOC));
-          setGalleryBaselineTitle("");
-          setGalleryBaselineNotesDoc(structuredClone(EMPTY_HG_DOC));
-        }
-        return false;
-      }
-      if (!r.ok && "conflict" in r && r.conflict) {
-        if (!patchTouchesItemContent(patch)) {
-          setGraph((prev) => applyServerCanvasItemToGraph(prev, r.item));
-          if (r.item.updatedAt) itemServerUpdatedAtRef.current.set(r.item.id, r.item.updatedAt);
+        if (!r.ok && "gone" in r && r.gone) {
+          itemServerUpdatedAtRef.current.delete(itemId);
+          const prevT = itemContentPatchTimersRef.current.get(itemId);
+          if (prevT) {
+            clearTimeout(prevT);
+            itemContentPatchTimersRef.current.delete(itemId);
+            neonSyncUnbumpPending();
+          }
+          inlineContentDirtyIdsRef.current.delete(itemId);
+          setItemConflictQueue((q) => q.filter((i) => i.id !== itemId));
+          setGraph((prev) => removeEntitiesFromGraphAfterRemoteDelete(prev, [itemId]));
+          pruneRecentItems(new Set([itemId]));
+          pruneRecentFolders(new Set([itemId]));
+          setSelectedNodeIds((p) => p.filter((id) => id !== itemId));
+          if (activeNodeIdRef.current === itemId) {
+            setFocusOpen(false);
+            setActiveNodeId(null);
+          }
+          if (galleryNodeIdRef.current === itemId) {
+            setGalleryOpen(false);
+            setGalleryNodeId(null);
+            setGalleryDraftTitle("");
+            setGalleryDraftNotesDoc(structuredClone(EMPTY_HG_DOC));
+            setGalleryBaselineTitle("");
+            setGalleryBaselineNotesDoc(structuredClone(EMPTY_HG_DOC));
+          }
           return false;
         }
-        const serverAt = r.item.updatedAt;
-        if (typeof serverAt === "string" && serverAt.length > 0) {
-          itemServerUpdatedAtRef.current.set(itemId, serverAt);
-          const r2 = await apiPatchItem(itemId, { ...patch, baseUpdatedAt: serverAt });
-          if (r2.ok) {
-            if (r2.item.updatedAt) itemServerUpdatedAtRef.current.set(itemId, r2.item.updatedAt);
-            return true;
-          }
-          if (!r2.ok && "conflict" in r2 && r2.conflict) {
-            enqueueItemConflict(r2.item);
+        if (!r.ok && "conflict" in r && r.conflict) {
+          if (!patchTouchesItemContent(patch)) {
+            setGraph((prev) => applyServerCanvasItemToGraph(prev, r.item));
+            if (r.item.updatedAt) itemServerUpdatedAtRef.current.set(r.item.id, r.item.updatedAt);
             return false;
           }
+          const serverAt = r.item.updatedAt;
+          if (typeof serverAt === "string" && serverAt.length > 0) {
+            itemServerUpdatedAtRef.current.set(itemId, serverAt);
+            const r2 = await apiPatchItem(itemId, { ...patch, baseUpdatedAt: serverAt });
+            if (r2.ok) {
+              if (r2.item.updatedAt) itemServerUpdatedAtRef.current.set(itemId, r2.item.updatedAt);
+              return true;
+            }
+            if (!r2.ok && "conflict" in r2 && r2.conflict) {
+              enqueueItemConflict(r2.item);
+              return false;
+            }
+          }
+          enqueueItemConflict(r.item);
         }
-        enqueueItemConflict(r.item);
+        return false;
+      } finally {
+        savingContentIdsRef.current.delete(itemId);
       }
-      return false;
     },
     [enqueueItemConflict, pruneRecentFolders, pruneRecentItems],
   );
@@ -4236,6 +4243,7 @@ export function ArchitecturalCanvasApp({
     focusDirtyRef,
     activeNodeIdRef,
     inlineContentDirtyIdsRef,
+    savingContentIdsRef,
     remoteTombstoneExemptIdsRef,
     setGraph,
     itemServerUpdatedAtRef,
@@ -9628,8 +9636,7 @@ export function ArchitecturalCanvasApp({
       {itemConflictQueue.length > 0 ? (
         <div className={styles.collabConflictBanner} role="alert">
           <span>
-            Another session updated this card while you were editing. Load the server copy or dismiss to
-            keep your draft.
+            {`Another session updated "${(itemConflictQueue[0]?.title ?? "").trim() || "this card"}" while you were editing. Load the server copy or dismiss to keep your draft.`}
             {itemConflictQueue.length > 1
               ? ` (${itemConflictQueue.length - 1} more in queue)`
               : ""}

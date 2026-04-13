@@ -2,7 +2,7 @@
 title: heartgarden — shipped features
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-11
+last_reviewed: 2026-04-13
 canonical: true
 related:
   - heartgarden/docs/API.md
@@ -22,10 +22,10 @@ Single place to **look up what exists** and where it lives. For **HTTP contracts
 
 | Feature | What users see / behavior | Docs | Primary code |
 |--------|----------------------------|------|----------------|
-| **Delta sync** | Other tabs’ edits merge via polling; optional full **item id** list after nav or tab focus for delete tombstones; **spaces** rows when folders reparent/rename | [`API.md`](./API.md) (`GET …/changes`), [`PLAYER_LAYER.md`](./PLAYER_LAYER.md) | `use-heartgarden-space-change-sync.ts`, `architectural-neon-api.ts` `fetchSpaceChanges`, `app/api/spaces/[spaceId]/changes/route.ts`, `heartgarden-space-change-sync-utils.ts` |
+| **Delta sync** | Other tabs’ edits merge via polling; **interval polls defer** while inline content is dirty or an item PATCH is in flight (scheduled catch-up after idle); optional full **item id** list after nav or tab focus for delete tombstones; **spaces** rows when folders reparent/rename | [`API.md`](./API.md) (`GET …/changes`), [`PLAYER_LAYER.md`](./PLAYER_LAYER.md) | `use-heartgarden-space-change-sync.ts`, `architectural-neon-api.ts` `fetchSpaceChanges`, `app/api/spaces/[spaceId]/changes/route.ts`, `heartgarden-space-change-sync-utils.ts` |
 | **Soft presence** | Emoji chips in status bar (subtree peers), remote cursors, **follow** another tab’s view (confirm if focus/stack open) | [`PLAYER_LAYER.md`](./PLAYER_LAYER.md), [`API.md`](./API.md) (`…/presence`) | `canvas_presence` in `schema.ts`, `presence/route.ts`, `use-heartgarden-presence-heartbeat.ts`, `ArchitecturalRemotePresenceLayer.tsx`, `collab-presence-identity.ts` |
-| **PATCH conflict (409)** | Server version wins; shell can surface conflict UX; rapid solo edits avoid spurious toasts where fixed | [`API.md`](./API.md) (Items PATCH) | `app/api/items/[itemId]/route.ts`, item patch flow in `ArchitecturalCanvasApp.tsx` / `architectural-neon-api.ts` |
-| **Remote merge / protected ids** | Graph merge skips protected server rows when applying remote patches | — | `architectural-db-bridge.ts`, `architectural-db-bridge.merge-remote.test.ts` |
+| **PATCH conflict (409)** | Server version wins; shell surfaces a **conflict banner** with server copy vs dismiss (keep local draft); dev-only `NEXT_PUBLIC_HEARTGARDEN_SYNC_DEBUG=1` logs PATCH timing | [`API.md`](./API.md) (Items PATCH) | `app/api/items/[itemId]/route.ts`, item patch flow in `ArchitecturalCanvasApp.tsx` / `architectural-neon-api.ts`, `heartgarden-sync-debug.ts` |
+| **Remote merge / protected ids** | Graph merge preserves local title/body for focus overlay, **inline** drafts, and **in-flight PATCH** ids; poll `updatedAt` map only advances when newer (no regress) | [`API.md`](./API.md) (browser shell — delta sync) | `architectural-db-bridge.ts`, `architectural-db-bridge.merge-remote.test.ts`, `heartgarden-space-change-sync-utils.ts` |
 
 ---
 

@@ -2,7 +2,7 @@
 title: Players layer
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-11
+last_reviewed: 2026-04-13
 canonical: true
 related:
   - heartgarden/docs/API.md
@@ -56,8 +56,8 @@ The script uses the same env as the app (`.env.local` + `HEARTGARDEN_PLAYER_SPAC
 ## Collaboration (multiplayer)
 
 - **Viewport:** Pan/zoom is **per browser** (`localStorage` key map `heartgarden-space-camera-v1`), not `spaces.canvas_state`.
-- **Remote edits:** The shell **polls** `GET /api/spaces/[spaceId]/changes?since=…` on an interval from [`src/lib/heartgarden-collab-constants.ts`](../src/lib/heartgarden-collab-constants.ts): **~2.2s** when another client has **presence** in the space, **~5.5s** when alone (fewer Neon round-trips). Presence heartbeat POST **25s**, peer list GET **3s**, optional throttled pointer POSTs ~every **2s** while the pointer moves, **120s** server presence TTL. Responses can include **`spaces`** rows updated since **`since`** (e.g. folder reparent) so peers merge **`parentSpaceId`** / name without reloading bootstrap. Steady-state polls omit the heavy **`itemIds`** list; **`includeItemIds=1`** is sent after **space navigation** and when the tab becomes **visible** again so remote deletes can reconcile. **Timers pause while the tab is hidden**; when the tab becomes **visible** again, it **polls immediately** (does not wait for the next interval).
-- **Drafts vs remote:** While the **focus overlay** or an **inline card body** has unpersisted text, merges **keep local title/body** but still apply **layout** from the server for that card. The protected-id set is built by **`buildCollabMergeProtectedContentIds`** (`src/lib/heartgarden-space-change-sync-utils.ts`) and used inside **`useHeartgardenSpaceChangeSync`**.
+- **Remote edits:** The shell **polls** `GET /api/spaces/[spaceId]/changes?since=…&includeItemIds=1` on an interval from [`src/lib/heartgarden-collab-constants.ts`](../src/lib/heartgarden-collab-constants.ts): **~2.2s** when another client has **presence** in the space, **~5.5s** when alone (fewer Neon round-trips). Every poll includes the full subtree **`itemIds`** list for tombstone sync. Presence heartbeat POST **25s**, peer list GET **3s**, optional throttled pointer POSTs ~every **2s** while the pointer moves, **120s** server presence TTL. Responses can include **`spaces`** rows updated since **`since`** (e.g. folder reparent) so peers merge **`parentSpaceId`** / name without reloading bootstrap. **Timers pause while the tab is hidden**; when the tab becomes **visible** again, it **polls immediately** (does not wait for the next interval).
+- **Drafts vs remote:** While the **focus overlay** or an **inline card body** has unpersisted text, or an item **PATCH is in flight**, merges **keep local title/body** (and skip advancing the client’s `updatedAt` guard for that id) but still apply **layout** from the server for that card. **Interval** polls **defer** while dirty or saving and **catch up** shortly after idle. The protected-id set is built by **`buildCollabMergeProtectedContentIds`** (`src/lib/heartgarden-space-change-sync-utils.ts`) and used inside **`useHeartgardenSpaceChangeSync`**.
 - **Concurrent edits on one card:** PATCH may return **409** if **`baseUpdatedAt`** does not match; the UI queues conflicts and can **Use server version** per item. **Geometry-only** conflicts may **apply the server row** without blocking. **404** on PATCH means the item was deleted elsewhere; the shell removes it locally. There is still **no** Google-Docs-style live merged typing (CRDT/OT would be a separate project).
 - **Presence:** Optional **`canvas_presence`** table + heartbeat routes; status bar shows **collaborator emoji chips** (subtree of the current space by default) and **remote cursors** on the shared canvas when pointers are reported. **Follow** (chip click) applies the peer’s last **camera** and switches **active space** if needed; a **confirm** runs if a focus sheet, gallery, or stack modal is open. The server rate-limits POSTs **by the client’s public IP**. **Two (or more) players in one household on the same Wi‑Fi** share that single IP — defaults stay well above a few tabs. Very large groups on one network can raise **`HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_*`** — see [`docs/API.md`](./API.md) and [`docs/VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md).
 
@@ -112,7 +112,7 @@ Any new **`app/api/**`** handler that reads **`spaceId`**, **`itemId`**, or link
 
 ## Multiplayer consistency (what ships vs “Figma-like”)
 
-Collab in this shell is **polling** `GET …/changes`, **server rows as truth**, **409** on version conflicts, and optional full **`itemIds`** after navigation — **not** CRDT/OT ([`AGENTS.md`](../AGENTS.md)). That means **short inconsistency windows** under rapid concurrent edits are **expected**, not bugs to “fix” with UI polish alone.
+Collab in this shell is **polling** `GET …/changes?includeItemIds=1`, **server rows as truth**, **409** on version conflicts, and **full subtree `itemIds`** on every poll (tombstones) — **not** CRDT/OT ([`AGENTS.md`](../AGENTS.md)). That means **short inconsistency windows** under rapid concurrent edits are **expected**, not bugs to “fix” with UI polish alone.
 
 - **Near-term engineering** should harden this model (tombstones, cursor invalidation, E2/E3 delta ideas in [`BUILD_PLAN.md`](./BUILD_PLAN.md)) — see [`DATA_PIPELINE_AUDIT_2026-04-11.md`](./DATA_PIPELINE_AUDIT_2026-04-11.md) §12.
 - **“Figma-like” live cursors / instant merge** would require a **different architecture** (push/OT/CRDT); treat as a **product charter**, not an implied outcome of bug scrubbing.

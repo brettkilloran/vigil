@@ -35,14 +35,32 @@ export function buildCollabMergeProtectedContentIds(options: {
   focusDirty: boolean;
   activeNodeId: string | null;
   inlineContentDirtyIds: ReadonlySet<string>;
+  /** Item ids with a PATCH in flight — keep local text and skip poll `updatedAt` bumps until the save settles. */
+  savingContentIds?: ReadonlySet<string>;
 }): Set<string> {
   const out = new Set<string>();
-  const { focusOpen, focusDirty, activeNodeId, inlineContentDirtyIds } = options;
+  const { focusOpen, focusDirty, activeNodeId, inlineContentDirtyIds, savingContentIds } = options;
   if (focusOpen && focusDirty && activeNodeId) {
     out.add(activeNodeId);
   }
   inlineContentDirtyIds.forEach((id) => out.add(id));
+  savingContentIds?.forEach((id) => out.add(id));
   return out;
+}
+
+/** Apply poll/bootstrap `updatedAt` only when newer than the client map (avoids regressing `baseUpdatedAt`). */
+export function mergeItemServerUpdatedAtIfNewer(
+  map: Map<string, string>,
+  id: string,
+  incoming: string,
+): void {
+  const cur = map.get(id);
+  const prevMs = cur ? Date.parse(cur) : NaN;
+  const nextMs = Date.parse(incoming);
+  if (!Number.isFinite(nextMs)) return;
+  if (!Number.isFinite(prevMs) || nextMs > prevMs) {
+    map.set(id, incoming);
+  }
 }
 
 /** Advance cursor only forward; ignore absent, invalid, or regressive server cursors. */

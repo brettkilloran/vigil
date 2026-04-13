@@ -1,6 +1,8 @@
 import { createServer, type IncomingMessage } from "node:http";
+import { resolve } from "node:path";
 import { URL } from "node:url";
 
+import { config } from "dotenv";
 import { createClient } from "redis";
 import { WebSocket, WebSocketServer } from "ws";
 
@@ -10,6 +12,8 @@ import {
   heartgardenRealtimeSpaceChannel,
 } from "../src/lib/heartgarden-realtime-config";
 import { verifyHeartgardenRealtimeRoomToken } from "../src/lib/heartgarden-realtime-token";
+
+config({ path: resolve(process.cwd(), ".env.local") });
 
 const port = Number.parseInt(process.env.HEARTGARDEN_REALTIME_PORT ?? "3002", 10);
 const redisUrl = heartgardenRealtimeRedisUrlFromEnv();

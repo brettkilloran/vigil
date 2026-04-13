@@ -2,7 +2,7 @@
 title: heartgarden — HTTP API reference
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-11
+last_reviewed: 2026-04-13
 canonical: true
 related:
   - heartgarden/docs/FEATURES.md
@@ -76,7 +76,7 @@ Optional **`HEARTGARDEN_MCP_URL`** (default `https://heartgarden.vercel.app/api/
 | POST | `/api/spaces` | Create space. **GM:** optional top-level row (`parentSpaceId` omitted) or child of an allowed parent. **Player:** **`parentSpaceId` required** — must be the Players root or a folder space under it (`spaceIsUnderPlayerRoot`); cannot supply **`id`** (no client-chosen UUID). |
 | PATCH | `/api/spaces/[spaceId]` | Update **name** and/or **`parentSpaceId`** (UUID or `null`). A **`camera`** field in the body is accepted for backward compatibility but **ignored** (viewport is not persisted server-side). **`parentSpaceId`** is **GM-only** (rejected for **player**); requires access to both this space and the new parent; the server rejects moves that would create a **parent cycle**. Use this to keep a folder’s inner space aligned when its folder card moves between canvases. |
 | DELETE | `/api/spaces/[spaceId]` | Delete space (cascade per schema). |
-| GET | `/api/spaces/[spaceId]/changes` | Query **`since`** (ISO timestamp). Response includes **`items`** (changed item rows) and **`cursor`** (max of item + space `updated_at` in range). When any subtree **`spaces`** row changed since **`since`** (e.g. folder reparent / rename), **`spaces`** lists **`{ id, name, parentSpaceId, updatedAt }`** so other clients can merge without a full bootstrap. Optional **`includeItemIds=1`**: when set, includes **`itemIds`** (full subtree id list for tombstone sync). When omitted, **`itemIds` is omitted** — the shell sends **`includeItemIds=1`** after navigation or when the tab becomes visible again, then steady-state polls omit it. |
+| GET | `/api/spaces/[spaceId]/changes` | Query **`since`** (ISO timestamp). Response includes **`items`** (changed item rows) and **`cursor`** (max of item + space `updated_at` in range). When any subtree **`spaces`** row changed since **`since`** (e.g. folder reparent / rename), **`spaces`** lists **`{ id, name, parentSpaceId, updatedAt }`** so other clients can merge without a full bootstrap. Optional **`includeItemIds=1`**: when set, response **must** include **`itemIds`** (full subtree id list for tombstone sync). When omitted, **`itemIds`** is omitted — lighter for non-shell clients. The **official web shell** always sends **`includeItemIds=1`** on delta polls (see **Browser shell — delta sync** under **Items**). |
 | GET | `/api/spaces/[spaceId]/presence` | Optional **`?except=<clientUuid>`**. Optional **`scope=local`** — restrict to peers whose **`activeSpaceId`** equals **`spaceId`**; **default** (omit param) returns peers in **`spaceId`’s entire subtree** (descendant child spaces included). Each peer: **`clientId`**, **`activeSpaceId`**, **`camera`** `{ x, y, zoom }`, **`pointer`** `{ x, y } \| null` (world coordinates), **`updatedAt`** (ISO). TTL **~2 minutes**. |
 | POST | `/api/spaces/[spaceId]/presence` | Body **`{ clientId: uuid, camera: { x, y, zoom }, pointer?: { x, y } \| null }`**. URL **`spaceId`** is the client’s active canvas space (must match access rules). Upserts **one row per `clientId`** in **`canvas_presence`**. Rate-limited **per public IP** (in-memory per server instance). **`PLAYWRIGHT_E2E=1`** bypasses. Deletes stale rows globally (older than server TTL). **`429`** if rate limited. Requires **`canvas_presence`** in Postgres (`npm run db:push` after schema pull). |
 | GET | `/api/spaces/[spaceId]/items` | Items for space. |
@@ -89,12 +89,24 @@ Optional **`HEARTGARDEN_MCP_URL`** (default `https://heartgarden.vercel.app/api/
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| PATCH | `/api/items/[itemId]` | Partial update (geometry, content, entity meta, stack, …). Body may include **`contentText`** (plain) and/or **`contentJson`** (TipTap / hgArch document root, typically **`{ type: "doc", content: [...] }`**—same shape as stored on the item). Prefer patching **`contentText`** unless replacing full editor state. Optional **`baseUpdatedAt`** (ISO) must match the row’s **`updated_at`** or the handler returns **409** **`{ ok: false, error: "conflict", item }`**. Missing item → **404**; the shell drops the entity locally (remote delete). Success returns **`{ ok: true, item }`** (includes **`updatedAt`**). Triggers search blob / optional vault scheduling per implementation. |
+| PATCH | `/api/items/[itemId]` | Partial update (geometry, content, entity meta, stack, …). Body may include **`contentText`** (plain) and/or **`contentJson`** (TipTap / hgArch document root, typically **`{ type: "doc", content: [...] }`**—same shape as stored on the item). Prefer patching **`contentText`** unless replacing full editor state. Optional **`baseUpdatedAt`** (ISO) must match the row’s **`updated_at`** or the handler returns **409** **`{ ok: false, error: "conflict", item }`**. Missing item → **404**; the shell drops the entity locally (remote delete). Success returns **`{ ok: true, item }`** (includes **`updatedAt`**). Triggers search blob / optional vault scheduling per implementation. **Browser shell** behavior: see **Browser shell — PATCH versioning and conflicts** (after this table). |
 | DELETE | `/api/items/[itemId]` | Delete item. |
 | POST | `/api/items/[itemId]/embed` | Clear stale `item_embeddings` rows for item (does not embed). |
 | POST | `/api/items/[itemId]/index` | Chunk + optional lore meta (Anthropic). Vector rows require a future embedding provider in **`src/lib/embedding-provider.ts`** (none wired). Rate-limited. |
 | GET | `/api/items/[itemId]/links` | Link neighbors. |
 | GET | `/api/items/[itemId]/related` | Related-items heuristic. |
+
+### Browser shell — PATCH versioning and conflicts
+
+The shipped canvas (`ArchitecturalCanvasApp` → **`patchItemWithVersion`**) keeps a client map of each item’s last known server **`updatedAt`** and sends **`baseUpdatedAt`** on PATCH when available. **`apiPatchItem`** runs **at most one in-flight fetch per item id** (serialized queue). On **409 conflict**, the UI may **retry once** using **`item.updatedAt`** from the error body; if the second write still conflicts, it queues a **conflict banner** (load server row vs dismiss and keep local draft). **`recordItemPatchOk`** / **`recordItemPatchConflict`** in **`heartgarden-collab-metrics.ts`** count successful PATCHes vs 409 conflicts; **`window.__heartgardenCollabMetrics`** exposes space-sync run counts (including **`poll_catchup`**) for ad-hoc debugging.
+
+Set **`NEXT_PUBLIC_HEARTGARDEN_SYNC_DEBUG=1`** in **`.env.local`** to **`console.debug`** each PATCH’s latency, HTTP status, and **`baseUpdatedAt`** from the client (`src/lib/heartgarden-sync-debug.ts`).
+
+### Browser shell — delta sync (`GET …/changes`)
+
+The **`useHeartgardenSpaceChangeSync`** hook polls with **`includeItemIds=1`** so every poll carries a full subtree **`itemIds`** snapshot for tombstone deletes. While **inline body** edits are dirty, the **focus overlay** is dirty, or an item **PATCH is in flight**, **interval** polls are **deferred**; a **debounced catch-up** runs shortly after idle. Remote item rows are merged with **protected content ids** (those cases) so local title/body are not overwritten; the client’s **`updatedAt` map** for conflict bases only **advances forward** when the server timestamp is **newer** than the stored value (no regressions from stale polls).
+
+See **`docs/FEATURES.md`** (Collaboration & sync), **`docs/PLAYER_LAYER.md`**, and **`src/lib/heartgarden-space-change-sync-utils.ts`**.
 
 ## Search
 

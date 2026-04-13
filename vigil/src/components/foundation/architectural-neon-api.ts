@@ -14,9 +14,14 @@ import {
   vaultIndexSetError,
 } from "@/src/lib/vault-index-status-bus";
 import {
+  recordItemPatchConflict,
+  recordItemPatchOk,
+} from "@/src/lib/heartgarden-collab-metrics";
+import {
   parseSpaceChangesResponseJson,
   type SpaceChangePayloadRow,
 } from "@/src/lib/heartgarden-space-change-sync-utils";
+import { heartgardenSyncDebugLog, isHeartgardenSyncDebugEnabled } from "@/src/lib/heartgarden-sync-debug";
 
 const vaultIndexTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const VAULT_INDEX_DEBOUNCE_MS = 2800;
@@ -117,6 +122,7 @@ function finishNeonTrack(
   );
 }
 
+/** One logical PATCH at a time per item; the next call runs after the previous finishes (incl. 409 retry in the shell). */
 const itemPatchChains = new Map<string, Promise<unknown>>();
 
 function runSerializedItemPatch<T>(itemId: string, fn: () => Promise<T>): Promise<T> {
@@ -362,6 +368,8 @@ export async function apiPatchItem(
     const track = getNeonSyncSnapshot().cloudEnabled;
     if (track) neonSyncBeginRequest();
     const op = `PATCH /api/items/${itemId}`;
+    const debug = isHeartgardenSyncDebugEnabled();
+    const t0 = debug && typeof performance !== "undefined" ? performance.now() : 0;
     try {
       const res = await fetch(`/api/items/${itemId}`, {
         method: "PATCH",
@@ -375,6 +383,15 @@ export async function apiPatchItem(
         item?: CanvasItem;
       };
 
+      if (debug && typeof performance !== "undefined") {
+        heartgardenSyncDebugLog(`PATCH ${itemId}`, {
+          ms: Math.round(performance.now() - t0),
+          status: res.status,
+          baseUpdatedAt:
+            typeof patch.baseUpdatedAt === "string" ? patch.baseUpdatedAt : undefined,
+        });
+      }
+
       if (res.status === 404) {
         finishNeonTrack(track, op, res, rawText, body, false);
         return { ok: false, gone: true };
@@ -382,6 +399,7 @@ export async function apiPatchItem(
 
       if (res.status === 409 && body.error === "conflict" && body.item) {
         if (track) neonSyncEndRequest(true);
+        recordItemPatchConflict();
         return { ok: false, conflict: true, item: body.item };
       }
 
@@ -391,6 +409,7 @@ export async function apiPatchItem(
         scheduleVaultIndexForItem(itemId);
       }
       if (logicalOk && body.item) {
+        recordItemPatchOk();
         return { ok: true, item: body.item };
       }
       if (logicalOk) {

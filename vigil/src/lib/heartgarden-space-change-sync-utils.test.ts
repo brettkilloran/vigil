@@ -8,6 +8,7 @@ import {
   applySpaceChangeGraphMerge,
   buildCollabMergeProtectedContentIds,
   collectItemServerUpdatedAtBumps,
+  mergeItemServerUpdatedAtIfNewer,
   mergeLatestIsoCursor,
   parseSpaceChangesResponseJson,
 } from "@/src/lib/heartgarden-space-change-sync-utils";
@@ -75,6 +76,37 @@ describe("buildCollabMergeProtectedContentIds", () => {
       inlineContentDirtyIds: new Set(["x"]),
     });
     expect([...s]).toEqual(["x"]);
+  });
+
+  it("includes saving content ids", () => {
+    const s = buildCollabMergeProtectedContentIds({
+      focusOpen: false,
+      focusDirty: false,
+      activeNodeId: null,
+      inlineContentDirtyIds: new Set(),
+      savingContentIds: new Set(["s1"]),
+    });
+    expect([...s]).toEqual(["s1"]);
+  });
+});
+
+describe("mergeItemServerUpdatedAtIfNewer", () => {
+  it("sets when missing", () => {
+    const m = new Map<string, string>();
+    mergeItemServerUpdatedAtIfNewer(m, "a", "2025-01-02T00:00:00.000Z");
+    expect(m.get("a")).toBe("2025-01-02T00:00:00.000Z");
+  });
+
+  it("advances when incoming is newer", () => {
+    const m = new Map<string, string>([["a", "2025-01-01T00:00:00.000Z"]]);
+    mergeItemServerUpdatedAtIfNewer(m, "a", "2025-01-03T00:00:00.000Z");
+    expect(m.get("a")).toBe("2025-01-03T00:00:00.000Z");
+  });
+
+  it("does not regress when incoming is older", () => {
+    const m = new Map<string, string>([["a", "2025-01-03T00:00:00.000Z"]]);
+    mergeItemServerUpdatedAtIfNewer(m, "a", "2025-01-01T00:00:00.000Z");
+    expect(m.get("a")).toBe("2025-01-03T00:00:00.000Z");
   });
 });
 

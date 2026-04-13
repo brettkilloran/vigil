@@ -2,7 +2,7 @@
 title: Vercel environment variables
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-10
+last_reviewed: 2026-04-13
 canonical: true
 related:
   - heartgarden/docs/DEPLOY_VERCEL.md
@@ -24,6 +24,7 @@ Use with **[`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)** and the **[dashboard check
 | `R2_BUCKET_NAME` | If uploads | If uploads | |
 | `R2_PUBLIC_BASE_URL` | If uploads | If uploads | No trailing slash. |
 | `NEXT_PUBLIC_HEARTGARDEN_IMAGE_URL_TEMPLATE` | Optional | Optional | Client-side **zoom-aware** image URLs for media cards (`{w}` / `{url}` placeholders). See **`.env.local.example`** and **`docs/FEATURES.md`** (Media). |
+| `NEXT_PUBLIC_HEARTGARDEN_SYNC_DEBUG` | Omit | Optional | Set to **`1`** in **Preview / local** only: browser **`console.debug`** for each item **PATCH** (latency, status, `baseUpdatedAt`). No server behavior. See **`docs/API.md`** (browser shell — PATCH versioning). |
 | `HEARTGARDEN_LORE_QUERY_DISABLED` | Optional (`1` to harden) | Optional | Disables **`POST /api/lore/query`** only. |
 | `HEARTGARDEN_BOOT_PIN_BISHOP` | Optional | Optional | Exactly **8** characters if set; GM tier (**`access`**) in the signed cookie. With **`HEARTGARDEN_BOOT_SESSION_SECRET`** (16+ chars), at least one of Bishop / Players / demo PIN must be 8 chars to enable the gate. Sensitive. |
 | `HEARTGARDEN_BOOT_PIN_PLAYERS` | Optional | Optional | Players PIN (**8** chars). Cookie tier **`player`**. If **`HEARTGARDEN_PLAYER_SPACE_ID`** / **`HEARTGARDEN_DEFAULT_SPACE_ID`** are non-empty, they must be valid UUIDs. If both are unset, Players use a dedicated implicit Neon root space (not Bishop’s GM workspace; see **`docs/PLAYER_LAYER.md`**). Sensitive. **`HEARTGARDEN_BOOT_PIN_PLAYER`** (singular) is also read as an alias if `…_PLAYERS` is unset — prefer the plural name in new setups. |

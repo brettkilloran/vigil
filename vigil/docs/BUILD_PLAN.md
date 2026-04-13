@@ -2,7 +2,7 @@
 title: heartgarden — execution build plan
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-11
+last_reviewed: 2026-04-13
 canonical: true
 related:
   - heartgarden/docs/FEATURES.md
@@ -27,7 +27,7 @@ This is the **repo-wide checklist**: architecture snapshot, shipped tranches, an
 | **Space nav timing (effects on)** | `enterSpace` sets `navTransitionActive`; scene layer uses `viewportSceneLayerDimmed` until fetch + `VIEWPORT_SCENE_FADE_MS` / `VIEWPORT_TRANSITION_CENTER_MS` elide (see `ArchitecturalCanvasApp.tsx`). A **generation counter** drops stale async completions when the user navigates again before the prior fetch finishes; optional future work: cancel in-flight fetch or a CSS-only nav cue when effects are **off**. |
 | **Suspense shell** | `app/page.tsx` — dark `#0c0c0e` fallback to reduce flash before client boot UI. |
 | **Graph state** | In-component React state + **undo/redo** stack (`architectural-undo.ts`); Neon sync via `architectural-db-bridge.ts`, `architectural-neon-api.ts`, `/api/bootstrap`, item/space routes. |
-| **Save / sync indicator** | `neon-sync-bus.ts` + instrumented `architectural-neon-api.ts` + debounced note body bumps. Status strip in **`ArchitecturalStatusBar`**: Loading → Local (demo) → Saving… → Saved / Sync error; optional **vault index** busy/error line via **`vault-index-status-bus.ts`**. Tooltips document **undo vs server** semantics. |
+| **Save / sync indicator** | `neon-sync-bus.ts` + instrumented `architectural-neon-api.ts` + debounced note body bumps. Status strip in **`ArchitecturalStatusBar`**: Loading → Local (demo) → Saving… → Saved / Sync error; optional **vault index** busy/error line via **`vault-index-status-bus.ts`**. Tooltips document **undo vs server** semantics. Delta sync **defers** interval polls while inline/focus is dirty or a PATCH is in flight; **`apiPatchItem`** serializes per-item PATCHes; optional **`NEXT_PUBLIC_HEARTGARDEN_SYNC_DEBUG=1`** logs PATCH timing — **`docs/API.md`**, **`docs/FEATURES.md`**. |
 | **Canvas navigation aids** | **Minimap** (viewport metrics strip toggle), **fit / frame** helpers (`canvas-view-bounds.ts`), optional **viewport toast** (`CanvasViewportToast.tsx`). See **`docs/FEATURES.md`**. |
 | **Rich note editing** | **`BufferedContentEditable`** + **`[[` wiki link assist** (`WikiLinkAssistPopover.tsx`, `wiki-link-caret.ts`). |
 | **Search** | Postgres FTS + trigram on `search_blob`. **`/api/search`**: `hybrid` / `semantic` use **RRF** of FTS + fuzzy + **pgvector** chunks when embeddings are configured (`src/lib/embedding-provider.ts`); `GET /api/search/chunks` returns raw chunk hits. **`/api/search/suggest`** remains prefix-FTS. |
@@ -57,7 +57,7 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 | **`[[` wiki link assist** | Popover while typing wiki links in buffered rich text. |
 | **Viewport culling + dynamic flow overlay** | Off-screen DOM skipped; **`VigilFlowRevealOverlay`** loaded with **`next/dynamic`** (`ssr: false`). |
 | **Zoom-aware media URLs** | Optional **`NEXT_PUBLIC_HEARTGARDEN_IMAGE_URL_TEMPLATE`** for CDN-sized images on cards. |
-| **Delta sync + space rows** | **`GET …/changes`** returns **`spaces`** patches for subtree reparents; steady-state **`itemIds`** omission with refresh on nav / visibility. |
+| **Delta sync + space rows** | **`GET …/changes`** returns **`spaces`** patches for subtree reparents; the **shell** always requests **`includeItemIds=1`** so each poll carries the full subtree id list for tombstones (other clients may omit for lighter payloads — **`docs/API.md`**). |
 | **Lore engine + vault retrieval** | `lore-engine.ts`, `vault-retrieval.ts`, `item-vault-index.ts`, `/api/lore/query`, `/api/search`, `/api/search/chunks`, index + reindex routes. Client: `LoreAskPanel`. |
 | **Neon save indicator** | Live sync line in status bar; tracks in-flight mutations + debounced content patches. |
 | **Soft presence + follow view** | Ephemeral **`canvas_presence`** rows; status bar collaborator chips + in-canvas remote pointers; **follow** applies peer camera / space (confirm if focus or stack UI is open). |
@@ -77,7 +77,7 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 4. **E2E** — Optional: palette → lore panel smoke (skip or mock LLM in CI).
 5. **Canvas version history (UX2 — decision for v1)** — **Export-first:** the canvas already supports **Export graph JSON** (Cmd+K). Treat that as the supported “checkpoint” workflow until a DB snapshot or `item_revisions` table is justified. **Space / graph snapshots** and **per-item revision logs** remain future options; any in-app restore must not silently fight the local undo stack (explicit “restore from server snapshot” only).
 6. **Space nav hardening (residual)** — **`enterSpace`** already uses a **generation guard** so stale fetches do not apply. Optional: **abort** in-flight bootstrap fetch on newer navigation, or a **short CSS-only** nav cue when canvas effects are **off** for parity with the WebGL transition.
-7. **Collab delta API (beyond steady-state `includeItemIds=1`)** — Optional next tracks: **E2** tombstones / `deleted_item_ids` since cursor; **E3** monotonic subtree revision so clients never re-enumerate full id sets on recovery. **`GET …/changes`** today omits **`itemIds`** on steady-state polls per `docs/API.md` / `PLAYER_LAYER.md`.
+7. **Collab delta API (beyond full `itemIds` every poll)** — Optional next tracks: **E2** tombstones / `deleted_item_ids` since cursor; **E3** monotonic subtree revision so thin clients never re-enumerate full id sets on recovery. The **official shell** already sends **`includeItemIds=1`** every poll (`docs/API.md`); lighter integrations may omit it.
 
 **Lore import + data pipeline (audit tranche):** [`DATA_PIPELINE_AUDIT_2026-04-11.md`](./DATA_PIPELINE_AUDIT_2026-04-11.md) §10–§12 (registry, conformance tests, smoke gate, multiplayer expectations). Execution tracks and YAML todos: [`.cursor/plans/data_pipeline_import_hardening.plan.md`](../../.cursor/plans/data_pipeline_import_hardening.plan.md).
 

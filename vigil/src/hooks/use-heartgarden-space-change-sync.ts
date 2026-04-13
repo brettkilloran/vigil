@@ -21,6 +21,7 @@ import {
   applySpaceChangeGraphMerge,
   buildCollabMergeProtectedContentIds,
   collectItemServerUpdatedAtBumps,
+  mergeItemServerUpdatedAtIfNewer,
   mergeLatestIsoCursor,
 } from "@/src/lib/heartgarden-space-change-sync-utils";
 import {
@@ -42,6 +43,8 @@ export function useHeartgardenSpaceChangeSync(options: {
   focusDirtyRef: MutableRefObject<boolean>;
   activeNodeIdRef: MutableRefObject<string | null>;
   inlineContentDirtyIdsRef: MutableRefObject<Set<string>>;
+  /** Item ids with an in-flight item PATCH (see `patchItemWithVersion` in the shell). */
+  savingContentIdsRef: MutableRefObject<Set<string>>;
   /** Skips remote tombstone deletes for these item ids (undo restore in flight). */
   remoteTombstoneExemptIdsRef: MutableRefObject<Set<string>>;
   setGraph: Dispatch<SetStateAction<CanvasGraph>>;
@@ -57,6 +60,7 @@ export function useHeartgardenSpaceChangeSync(options: {
     focusDirtyRef,
     activeNodeIdRef,
     inlineContentDirtyIdsRef,
+    savingContentIdsRef,
     remoteTombstoneExemptIdsRef,
     setGraph,
     itemServerUpdatedAtRef,
@@ -75,6 +79,10 @@ export function useHeartgardenSpaceChangeSync(options: {
     let cancelled = false;
     let inFlight = false;
     let pollTimer: number | null = null;
+    let pollCatchupTimer: number | null = null;
+
+    const shouldDeferPollForBusyEditing = () =>
+      inlineContentDirtyIdsRef.current.size > 0 || savingContentIdsRef.current.size > 0;
 
     const tryBootstrapRepair = async (): Promise<boolean> => {
       recordBootstrapRepairAttempt();
@@ -89,7 +97,7 @@ export function useHeartgardenSpaceChangeSync(options: {
       if (!Number.isFinite(maxMs)) maxMs = 0;
       for (const it of boot.items) {
         if (!it.updatedAt) continue;
-        itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
+        mergeItemServerUpdatedAtIfNewer(itemServerUpdatedAtRef.current, it.id, it.updatedAt);
         const t = Date.parse(it.updatedAt);
         if (Number.isFinite(t) && t > maxMs) maxMs = t;
       }
@@ -111,8 +119,15 @@ export function useHeartgardenSpaceChangeSync(options: {
       consecutiveMissesRef.current = 0;
     };
 
-    const run = async (source: HeartgardenSpaceSyncRunSource) => {
+    async function run(source: HeartgardenSpaceSyncRunSource) {
       if (cancelled || document.visibilityState === "hidden" || inFlight) return;
+      if (
+        shouldDeferPollForBusyEditing() &&
+        (source === "poll_interval" || source === "poll_catchup")
+      ) {
+        scheduleDeferredPollCatchup();
+        return;
+      }
       recordHeartgardenSpaceSyncRun(source);
       inFlight = true;
       try {
@@ -136,6 +151,7 @@ export function useHeartgardenSpaceChangeSync(options: {
           focusDirty: focusDirtyRef.current,
           activeNodeId: activeNodeIdRef.current,
           inlineContentDirtyIds: inlineContentDirtyIdsRef.current,
+          savingContentIds: savingContentIdsRef.current,
         });
         const rawItems = data.items ?? [];
         const rawSpaces = (data.spaces ?? []).map((s) => ({
@@ -155,11 +171,20 @@ export function useHeartgardenSpaceChangeSync(options: {
           }),
         );
         for (const bump of collectItemServerUpdatedAtBumps(rawItems, protectedContentIds)) {
-          itemServerUpdatedAtRef.current.set(bump.id, bump.updatedAt);
+          mergeItemServerUpdatedAtIfNewer(itemServerUpdatedAtRef.current, bump.id, bump.updatedAt);
         }
       } finally {
         inFlight = false;
       }
+    }
+
+    const scheduleDeferredPollCatchup = () => {
+      if (pollCatchupTimer != null) window.clearTimeout(pollCatchupTimer);
+      pollCatchupTimer = window.setTimeout(() => {
+        pollCatchupTimer = null;
+        if (cancelled || document.visibilityState === "hidden") return;
+        void run("poll_catchup");
+      }, 650);
     };
 
     runRef.current = run;
@@ -201,6 +226,10 @@ export function useHeartgardenSpaceChangeSync(options: {
     return () => {
       cancelled = true;
       stopPoll();
+      if (pollCatchupTimer != null) {
+        window.clearTimeout(pollCatchupTimer);
+        pollCatchupTimer = null;
+      }
       runRef.current = null;
       document.removeEventListener("visibilitychange", onVisibility);
     };
@@ -213,6 +242,7 @@ export function useHeartgardenSpaceChangeSync(options: {
     focusDirtyRef,
     activeNodeIdRef,
     inlineContentDirtyIdsRef,
+    savingContentIdsRef,
     remoteTombstoneExemptIdsRef,
     setGraph,
     itemServerUpdatedAtRef,

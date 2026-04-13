@@ -3,7 +3,7 @@
 ## title: heartgarden — code map
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-11
+last_reviewed: 2026-04-13
 canonical: true
 related:
   - heartgarden/docs/FEATURES.md
@@ -69,7 +69,8 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Hydrate / active space + items          | `app/api/bootstrap/route.ts` → `src/lib/spaces.ts`                                                                                                  |
 | Client ↔ API bridge                     | `src/components/foundation/architectural-neon-api.ts`, `architectural-db-bridge.ts`                                                                 |
-| Delta poll + merge (space changes hook) | `src/hooks/use-heartgarden-space-change-sync.ts`, `src/lib/heartgarden-space-change-sync-utils.ts`                                                  |
+| Delta poll + merge (space changes hook) | `src/hooks/use-heartgarden-space-change-sync.ts`, `src/lib/heartgarden-space-change-sync-utils.ts`, opt-in PATCH debug `src/lib/heartgarden-sync-debug.ts` |
+| Collab metrics (poll / PATCH counters)  | `src/lib/heartgarden-collab-metrics.ts` (`installHeartgardenCollabMetricsGlobal` → `window.__heartgardenCollabMetrics`)                               |
 | Sync status bus                         | `src/lib/neon-sync-bus.ts`                                                                                                                          |
 | Undo / redo (in-memory)                 | `src/components/foundation/architectural-undo.ts`                                                                                                   |
 | Item row ↔ canvas shape                 | `src/lib/item-mapper.ts`, `src/model/canvas-types.ts`                                                                                               |

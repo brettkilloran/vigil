@@ -2,7 +2,7 @@
 title: heartgarden — agent notes
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-11
+last_reviewed: 2026-04-13
 canonical: true
 related:
   - docs/API.md
@@ -74,7 +74,7 @@ Persistence: **`items`** rows; **`spaces.canvas_state`** is legacy (camera is **
 
 **Multi-mode / release smoke:** Before shipping shell, sync, or import changes, run the **three-track** manual playbook in **`docs/DATA_PIPELINE_AUDIT_2026-04-11.md`** §4 — **Track A** (Neon GM), **Track B** (demo/local), **Track C** (Players tier). This is the closest thing to an integration gate for tier bleed; optional CI only covers slices (e.g. demo boot). **localStorage** camera keys are shared across tiers on one browser profile — see audit §5; namespacing is a roadmap item in **`.cursor/plans/data_pipeline_import_hardening.plan.md`**.
 
-**Neon sync strip:** Top status bar shows **Loading / Local / Saving / Saved / Sync error** via `neon-sync-bus.ts` + instrumented `architectural-neon-api.ts`. **Undo/redo** is in-memory only; tooltips spell out that the server keeps the **last successful write** until the next PATCH. Multiplayer merges and 409 handling reconcile against **server rows**, not a CRDT.
+**Neon sync strip:** Top status bar shows **Loading / Local / Saving / Saved / Sync error** via `neon-sync-bus.ts` + instrumented `architectural-neon-api.ts`. **Undo/redo** is in-memory only; tooltips spell out that the server keeps the **last successful write** until the next PATCH. Multiplayer merges and 409 handling reconcile against **server rows**, not a CRDT. **`useHeartgardenSpaceChangeSync`** defers **interval** delta polls while inline/focus is dirty or a **`PATCH`** is in flight (catch-up after idle); protected merges preserve local title/body for those ids; **`apiPatchItem`** serializes in-flight **PATCH** requests per item. Optional **`NEXT_PUBLIC_HEARTGARDEN_SYNC_DEBUG=1`** enables browser **`console.debug`** for PATCH latency — **`docs/API.md`** (browser shell subsections), **`docs/FEATURES.md`** (Collaboration & sync).
 
 **Theme:** `useVigilTheme` sets `data-vigil-theme` when the user picks light/dark, and toggles **`class="dark"` on `<html>`** whenever the **resolved** appearance is dark (including “Match OS”). Tailwind `dark:*` is overridden in `app/globals.css` (`@custom-variant dark`) to follow that class—not only `prefers-color-scheme`—so chips, glass panels, and hovers match CSS variables.
 

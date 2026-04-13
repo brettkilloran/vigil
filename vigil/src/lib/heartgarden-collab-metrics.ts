@@ -5,6 +5,7 @@
 
 export type HeartgardenSpaceSyncRunSource =
   | "poll_interval"
+  | "poll_catchup"
   | "realtime_invalidate"
   | "initial"
   | "visibility";
@@ -16,10 +17,13 @@ type Snapshot = {
   realtimeMessagesReceived: number;
   pollContractFailures: number;
   bootstrapRepairAttempts: number;
+  itemPatchOk: number;
+  itemPatchConflict: number;
 };
 
 const spaceSyncRuns: Record<HeartgardenSpaceSyncRunSource, number> = {
   poll_interval: 0,
+  poll_catchup: 0,
   realtime_invalidate: 0,
   initial: 0,
   visibility: 0,
@@ -30,6 +34,8 @@ let realtimeWsDisconnects = 0;
 let realtimeMessagesReceived = 0;
 let pollContractFailures = 0;
 let bootstrapRepairAttempts = 0;
+let itemPatchOk = 0;
+let itemPatchConflict = 0;
 
 const listeners = new Set<() => void>();
 
@@ -72,6 +78,16 @@ export function recordBootstrapRepairAttempt(): void {
   emit();
 }
 
+export function recordItemPatchOk(): void {
+  itemPatchOk += 1;
+  emit();
+}
+
+export function recordItemPatchConflict(): void {
+  itemPatchConflict += 1;
+  emit();
+}
+
 export function getHeartgardenCollabMetricsSnapshot(): Snapshot {
   return {
     spaceSyncRuns: { ...spaceSyncRuns },
@@ -80,6 +96,8 @@ export function getHeartgardenCollabMetricsSnapshot(): Snapshot {
     realtimeMessagesReceived,
     pollContractFailures,
     bootstrapRepairAttempts,
+    itemPatchOk,
+    itemPatchConflict,
   };
 }
 
@@ -94,6 +112,7 @@ export function installHeartgardenCollabMetricsGlobal(): void {
     snapshot: () => getHeartgardenCollabMetricsSnapshot(),
     reset: () => {
       spaceSyncRuns.poll_interval = 0;
+      spaceSyncRuns.poll_catchup = 0;
       spaceSyncRuns.realtime_invalidate = 0;
       spaceSyncRuns.initial = 0;
       spaceSyncRuns.visibility = 0;
@@ -102,6 +121,8 @@ export function installHeartgardenCollabMetricsGlobal(): void {
       realtimeMessagesReceived = 0;
       pollContractFailures = 0;
       bootstrapRepairAttempts = 0;
+      itemPatchOk = 0;
+      itemPatchConflict = 0;
       emit();
     },
   };
