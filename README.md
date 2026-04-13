@@ -1,6 +1,6 @@
 # Cursor workspace
 
-**heartgarden** is the app name. The Next.js project lives in **`heartgarden/`** in git (see [`heartgarden/docs/NAMING.md`](heartgarden/docs/NAMING.md); if your checkout still shows **`vigil/`**, rename it when the folder is not locked). Run the dev server from that folder so it binds to port **3000**:
+**heartgarden** is the app name. The Next.js project lives in **`heartgarden/`** in git (see [`heartgarden/docs/NAMING.md`](heartgarden/docs/NAMING.md)). Run the dev server from that folder so it binds to port **3000**:
 
 ```bash
 cd heartgarden

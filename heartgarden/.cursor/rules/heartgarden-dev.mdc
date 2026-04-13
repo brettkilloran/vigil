@@ -1,7 +1,6 @@
 ---
 description: Pointer to canonical heartgarden/ Cursor rule (avoid duplicate instructions)
 globs:
-  - vigil/**
   - heartgarden/**
 alwaysApply: false
 ---

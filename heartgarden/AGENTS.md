@@ -24,7 +24,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Naming (product vs `heartgarden/` folder)
 
-**heartgarden** is the app name. The Next.js tree lives in **`heartgarden/`** in git (rename from `vigil/` if your checkout still uses the old folder name). **Vercel** and **CI** use that path. Stable **`vigil:*`** link scheme, CSS tokens, and localStorage keys are documented in **`docs/NAMING.md`** (MCP tools are **`heartgarden_*`**; **`vigil_*`** tool names are still accepted as aliases).
+**heartgarden** is the app name. The Next.js tree lives in **`heartgarden/`** in git. **Vercel** and **CI** use that path. Stable **`vigil:*`** link scheme, CSS tokens, and localStorage keys are documented in **`docs/NAMING.md`** (MCP tools are **`heartgarden_*`**; **`vigil_*`** tool names are still accepted as aliases).
 
 ## Source of truth (canonical docs)
 
@@ -84,7 +84,7 @@ Persistence: **`items`** rows; **`spaces.canvas_state`** is legacy (camera is **
 
 **Cursor / new agent sessions:** Local run, restart, and **`http://localhost:3000`** defaults (boot gate off in `next dev`, no `dev:preview`) are spelled out in repo root **`.cursor/rules/heartgarden-local-dev.mdc`** — that rule is **`alwaysApply: true`** so agents pick it up without opening `heartgarden/` first.
 
-**Package manager:** Use **npm** only in the app directory (**`heartgarden/`** today — see **`docs/NAMING.md`** if renamed) (`package-lock.json`). Do not mix pnpm/yarn in the same tree without a deliberate migration.
+**Package manager:** Use **npm** only in the app directory (**`heartgarden/`**) (`package-lock.json`). Do not mix pnpm/yarn in the same tree without a deliberate migration.
 
 **`package-lock.json` vs Ubuntu CI (`npm ci` / “Missing … from lock file”):** A normal **`npm install` on Windows** can drop **Linux-only optional** resolutions (e.g. **`@emnapi/*`** under **`@img/sharp-wasm32`**). GitHub Actions then fails **`npm ci`**. From **`heartgarden/`**: run **`npm run verify:package-lock-ci`** before pushing (clean temp install with **npm 10.x**, same major as **Node 22** on Actions). If it fails, run **`npm run lockfile:regenerate-linux`**, re-run verify, then **commit `package-lock.json`**.
 
@@ -115,6 +115,8 @@ The script picks the **newest** `node-v*-win-x64` under `%LOCALAPPDATA%\node-por
 **CSS modules:** Do not put **`:root { … }`** in `*.module.css` (Webpack CSS modules reject global selectors and the app/Storybook build can fail). Shared token blocks live in **`app/globals.css`**.
 
 **CI:** GitHub Actions runs **`npm run build-storybook`** after **`npm run check`** so broken Storybook config or stories fail the pipeline. Locally you can run **`npm run check:all`** (lint + Next build + Storybook build) before pushing.
+
+**Unit tests (`npm run test:unit`):** Vitest is configured for **Node** only (`vitest.config.ts`); there is no browser Vitest project unless we add one later. **`drizzle-kit`** is a **devDependency** (CLI + `drizzle.config.ts`); run **`npm run db:*`** from a tree with dev dependencies installed (local dev or CI), not from a production-only install that omits dev deps.
 
 **Corrupt `node_modules` (Storybook/Webpack `ENOENT` for `@storybook/*`, `react-refresh`, `html-webpack-plugin`, etc.):** That pattern is almost always a **partial or broken install**, not bad app code. Stop **Next**, **Storybook**, and **Playwright** (anything holding `node_modules`), then from **`heartgarden/`** run **`npm run reinstall`** (removes **`node_modules`** and runs **`npm ci`**). On Windows, if delete hits **EBUSY** / **EPERM**, close integrated terminals, exit stray **`node.exe`** processes, and retry. **`npm run storybook:doctor`** checks that key packages exist before you spend time on webpack config.
 

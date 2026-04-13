@@ -1,7 +1,6 @@
 ---
 description: heartgarden Next.js app — dev, Storybook, and CSS guardrails (app directory is heartgarden/)
 globs:
-  - vigil/**
   - heartgarden/**
 alwaysApply: false
 ---

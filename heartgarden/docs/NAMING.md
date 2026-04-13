@@ -2,7 +2,7 @@
 title: heartgarden naming vs repo paths
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-11
+last_reviewed: 2026-04-13
 canonical: true
 related:
   - ../AGENTS.md
@@ -12,7 +12,7 @@ related:
 
 **Product and package name:** **heartgarden** (UI metadata, `package.json`, Vercel project name, marketing).
 
-**App directory in git:** **`heartgarden/`** — the Next.js app root. All commands (`npm install`, `npm run check`, Vercel **Root Directory**) use this path. If your checkout still has **`vigil/`**, rename it when nothing holds the folder open (Windows: `git mv vigil heartgarden` from the repo root).
+**App directory in git:** **`heartgarden/`** — the Next.js app root. All commands (`npm install`, `npm run check`, Vercel **Root Directory**) use this path.
 
 ## MCP tools
 

@@ -36,10 +36,8 @@ fi
 ROOT="$(git rev-parse --show-toplevel)"
 if [ -d "$ROOT/heartgarden" ]; then
   cd "$ROOT/heartgarden" && npm run secrets:protect
-elif [ -d "$ROOT/vigil" ]; then
-  cd "$ROOT/vigil" && npm run secrets:protect
 else
-  echo "[pre-commit] Neither heartgarden/ nor vigil/ found at repo root; skip secrets:protect" >&2
+  echo "[pre-commit] heartgarden/ not found at repo root; skip secrets:protect" >&2
   exit 0
 fi
 `;

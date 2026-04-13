@@ -22,6 +22,10 @@ vi.mock("@/src/lib/schedule-vault-index-after", () => ({
   scheduleVaultReindexAfterResponse: vi.fn(),
 }));
 
+vi.mock("@/src/lib/heartgarden-realtime-invalidation", () => ({
+  publishHeartgardenSpaceInvalidation: vi.fn().mockResolvedValue(undefined),
+}));
+
 const ITEM_ID = "00000000-0000-4000-8000-0000000000aa";
 const SPACE_ID = "00000000-0000-4000-8000-0000000000bb";
 
