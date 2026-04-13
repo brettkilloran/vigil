@@ -143,11 +143,11 @@ export const DEFAULT_CREATE_ACTIONS: DockCreateAction[] = [
     id: "location",
     label: "Location",
     nodeType: "location",
-    loreVariantSubmenu: ["v1", "v2", "v3"],
+    loreVariantSubmenu: ["v2", "v3"],
   },
 ];
 
-/** Labels for faction/location v1–v3 (dock flyout, palette, canvas menu). */
+/** Labels for faction v1–v3 and location v2–v3 (dock flyout, palette, canvas menu). */
 export function loreVariantChoiceLabel(kind: LoreCardKind, v: LoreCardVariant): string {
   if (kind === "faction") {
     if (v === "v1") return "Letterhead";
@@ -155,7 +155,6 @@ export function loreVariantChoiceLabel(kind: LoreCardKind, v: LoreCardVariant): 
     return "Framed memo";
   }
   if (kind === "location") {
-    if (v === "v1") return "Site plaque";
     if (v === "v2") return "Postcard band";
     return "Survey tag";
   }

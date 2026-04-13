@@ -33,7 +33,9 @@ export function defaultTitleForLoreKind(kind: LoreCardKind): string {
 
 /** Default `loreCard.variant` when creating nodes or inferring from `entity_type` without `hgArch`. */
 export function defaultLoreCardVariantForKind(kind: LoreCardKind): LoreCardVariant {
-  return kind === "character" ? "v11" : "v1";
+  if (kind === "character") return "v11";
+  if (kind === "location") return "v2";
+  return "v1";
 }
 
 export function tapeVariantForLoreCard(kind: LoreCardKind, variant: LoreCardVariant): TapeVariant {
@@ -44,7 +46,7 @@ export function tapeVariantForLoreCard(kind: LoreCardKind, variant: LoreCardVari
     if (variant === "v2") return "masking";
     return "clear";
   }
-  if (variant === "v1") return "masking";
+  /* location: v2 postcard band, v3 survey tag */
   if (variant === "v2") return "clear";
   return "dark";
 }
@@ -145,20 +147,6 @@ function factionV3(): string {
 </div>`;
 }
 
-function locationV1(): string {
-  return `<div data-hg-canvas-role="lore-location" data-hg-lore-location-variant="v1">
-<div class="${s.locHeader}" contenteditable="false">
-<div class="${s.locName}" data-hg-lore-location-field="name" contenteditable="true" spellcheck="false">Place name</div>
-<div class="${s.locMetaLine}" data-hg-lore-location-optional="true"><span class="${s.locMetaKey}">Nation</span><span data-hg-lore-location-field="context" contenteditable="true" spellcheck="false"><br></span></div>
-<div class="${s.locMetaLine}" data-hg-lore-location-optional="true"><span class="${s.locMetaKey}">Site</span><span data-hg-lore-location-field="detail" contenteditable="true" spellcheck="false"><br></span></div>
-</div>
-<div class="${s.notesBlock}" data-hg-lore-location-notes-cell="true">
-<span class="${s.fieldLabel}">Notes</span>
-<div class="${s.notesText}" data-hg-lore-location-notes="true" contenteditable="true" spellcheck="false"><p><br></p></div>
-</div>
-</div>`;
-}
-
 function locationV2(): string {
   return `<div data-hg-canvas-role="lore-location" data-hg-lore-location-variant="v2">
 <div class="${s.postcardBand}" aria-hidden="true"></div>
@@ -222,12 +210,11 @@ export function getLoreNodeSeedBodyHtml(
     if (variant === "v3") return factionV3();
     return factionV1();
   }
-  if (variant === "v2") return locationV2();
   if (variant === "v3") {
     const seed = options?.locationStripSeed ?? "__hg-loc-v3-default__";
     return locationV3(locationStripVariantFromSeed(seed));
   }
-  return locationV1();
+  return locationV2();
 }
 
 export function isLoreCardKind(value: string): value is LoreCardKind {
@@ -246,6 +233,11 @@ export function parseLoreCard(raw: unknown): LoreCard | undefined {
     /* Legacy stored variants (v3 passport, v8–v10, etc.) normalize to the canonical character template. */
     if (!v.length) return;
     return { kind: "character", variant: "v11" };
+  }
+  if (kind === "location") {
+    if (v === "v1") return { kind: "location", variant: "v2" };
+    if (v !== "v2" && v !== "v3") return;
+    return { kind: "location", variant: v };
   }
   if (v !== "v1" && v !== "v2" && v !== "v3") return;
   return { kind, variant: v };

@@ -964,13 +964,16 @@ function isLoreCreateNodeType(type: NodeTheme): type is LoreCardKind {
   return type === "character" || type === "faction" || type === "location";
 }
 
-/** Character is always v11; faction/location accept v1–v3 from the dock (or default). */
+/** Character is always v11; faction accepts v1–v3; location accepts v2–v3 (v1 maps to v2). */
 function resolveLoreVariantForCreate(
   type: LoreCardKind,
   requested: LoreCardVariant | undefined,
 ): LoreCardVariant {
   if (type === "character") {
     return defaultLoreCardVariantForKind(type);
+  }
+  if (type === "location" && requested === "v1") {
+    return "v2";
   }
   if (requested === "v1" || requested === "v2" || requested === "v3") {
     return requested;
@@ -5979,13 +5982,6 @@ export function ArchitecturalCanvasApp({
         icon: <UsersThree size={14} weight="bold" />,
       },
       {
-        id: "create-location-plaque",
-        label: "Create location (site plaque)",
-        hint: `Lore place — ${loreVariantChoiceLabel("location", "v1")} layout`,
-        keywords: ["lore", "location", "place", "site", "plaque"],
-        icon: <MapPin size={14} weight="bold" />,
-      },
-      {
         id: "create-location-postcard",
         label: "Create location (postcard band)",
         hint: `Lore place — ${loreVariantChoiceLabel("location", "v2")} layout`,
@@ -6807,11 +6803,6 @@ export function ArchitecturalCanvasApp({
     }
     if (actionId === "create-org-framed") {
       createNewNode("faction", "v3");
-      playVigilUiSound("select");
-      return;
-    }
-    if (actionId === "create-location-plaque") {
-      createNewNode("location", "v1");
       playVigilUiSound("select");
       return;
     }
@@ -9203,11 +9194,6 @@ export function ArchitecturalCanvasApp({
         label: `Organization — ${loreVariantChoiceLabel("faction", "v3")}`,
         icon: <UsersThree size={18} weight="bold" aria-hidden />,
         onSelect: () => createNewNode("faction", "v3"),
-      },
-      {
-        label: `Location — ${loreVariantChoiceLabel("location", "v1")}`,
-        icon: <MapPin size={18} weight="bold" aria-hidden />,
-        onSelect: () => createNewNode("location", "v1"),
       },
       {
         label: `Location — ${loreVariantChoiceLabel("location", "v2")}`,

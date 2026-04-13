@@ -170,495 +170,12 @@
   border: 0;
 }
 
-/*
- * Location lab-only skins — `/dev/lore-entity-nodes` only.
- * Typography lives here (not `lore-entity-card`): canvas document tokens (`--theme-default-*`) read as
- * mud-on-mud on `data-lore-chrome="skeuo"` + lab page; these use `--sem-*` for theme-correct contrast.
- */
-
-.locLabSkinPlate {
-  box-shadow:
-    0 0 0 1px color-mix(in oklch, var(--sem-text-primary) 10%, transparent),
-    0 16px 40px color-mix(in oklch, var(--sys-color-black) 22%, transparent);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.locLabSkinBodyFlush {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  align-self: stretch;
-  cursor: default;
-  user-select: text;
-}
-
-/* Shared type ramp (sem tokens — works light/dark lab page). */
-.locLabSkinTitle {
-  font-family: var(--font-lora), var(--font-geist-sans), serif;
-  font-size: 1.12rem;
-  font-weight: 650;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-  color: var(--sem-text-primary);
-  margin: 0 0 10px;
-}
-
-.locLabSkinMetaRow {
-  font-size: 12px;
-  line-height: 1.45;
-  color: color-mix(in oklch, var(--sem-text-primary) 88%, var(--sem-surface-base));
-  margin-bottom: 5px;
-}
-
-.locLabSkinMetaRow:last-of-type {
-  margin-bottom: 0;
-}
-
-.locLabSkinMetaKey {
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--sem-text-muted);
-  margin-right: 6px;
-}
-
-.locLabSkinNotesWrap {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid color-mix(in oklch, var(--sem-text-primary) 14%, transparent);
-}
-
-.locLabSkinNotesLabel {
-  display: block;
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.11em;
-  color: var(--sem-text-muted);
-  margin-bottom: 6px;
-}
-
-.locLabSkinNotesBody {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: color-mix(in oklch, var(--sem-text-primary) 90%, var(--sem-surface-base));
-}
-
-/* 1 · Cool blueprint paper + ink grid (high-L* paper so type never sits on near-black). */
-.locLabSkinBlueRoot {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  padding: 16px 16px 18px;
-  border-radius: 0;
-  color: var(--sem-text-primary);
-  border: 1px solid color-mix(in oklch, var(--accent) 32%, var(--sem-border-subtle));
-  background-color: color-mix(in oklch, oklch(0.93 0.04 245) 82%, var(--sem-surface-base) 18%);
-  background-image:
-    linear-gradient(to right, color-mix(in oklch, var(--accent) 26%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in oklch, var(--accent) 22%, transparent) 1px, transparent 1px);
-  background-size: 12px 12px;
-  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 22%, transparent);
-}
-
-.locLabSkinBlueRoot::before,
-.locLabSkinBlueRoot::after {
-  content: "";
-  position: absolute;
-  width: 11px;
-  height: 11px;
-  border: 1px solid color-mix(in oklch, var(--sem-text-primary) 28%, transparent);
-  pointer-events: none;
-}
-
-.locLabSkinBlueRoot::before {
-  top: 8px;
-  left: 8px;
-  border-right: none;
-  border-bottom: none;
-}
-
-.locLabSkinBlueRoot::after {
-  top: 8px;
-  right: 8px;
-  border-left: none;
-  border-bottom: none;
-}
-
-.locLabSkinBlueScale {
-  margin: 8px 0 14px;
-  height: 7px;
-  border-radius: 2px;
-  background: repeating-linear-gradient(
-    90deg,
-    color-mix(in oklch, var(--sem-text-primary) 42%, transparent) 0 2px,
-    transparent 2px 8px
-  );
-  opacity: 0.9;
-}
-
-/* 2 · Warm signboard + strong rail */
-.locLabSkinWayRoot {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  padding: 14px 16px 16px;
-  border-radius: 0;
-  color: var(--sem-text-primary);
-  border: 1px solid color-mix(in oklch, var(--sem-text-primary) 18%, transparent);
-  background: linear-gradient(
-    118deg,
-    color-mix(in oklch, oklch(0.9 0.06 78) 78%, var(--sem-surface-base) 22%) 0%,
-    color-mix(in oklch, oklch(0.94 0.03 95) 88%, var(--sem-surface-base) 12%) 100%
-  );
-  box-shadow:
-    inset 5px 0 0 color-mix(in oklch, var(--accent) 72%, oklch(0.55 0.2 55) 28%),
-    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 18%, transparent);
-}
-
-.locLabSkinWayFork {
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: color-mix(in oklch, var(--sem-text-primary) 72%, var(--sem-surface-base));
-  margin-bottom: 12px;
-  padding: 6px 8px;
-  border-radius: 3px;
-  background: color-mix(in oklch, var(--sem-text-primary) 8%, transparent);
-}
-
-/* 3 · Parchment deed */
-.locLabSkinDeedRoot {
-  flex: 1 1 auto;
-  min-height: 0;
-  padding: 16px 18px 18px;
-  border-radius: 0;
-  color: var(--sem-text-primary);
-  border: 3px double color-mix(in oklch, var(--sem-text-primary) 28%, var(--accent));
-  background: linear-gradient(
-    165deg,
-    color-mix(in oklch, oklch(0.92 0.035 95) 80%, var(--sem-surface-base) 20%) 0%,
-    color-mix(in oklch, oklch(0.88 0.05 75) 75%, var(--sem-surface-base) 25%) 100%
-  );
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--sys-color-white) 14%, transparent);
-}
-
-.locLabSkinDeedSeal {
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: color-mix(in oklch, var(--sem-text-primary) 55%, var(--sem-text-muted));
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid color-mix(in oklch, var(--sem-text-primary) 16%, transparent);
-}
-
-.locLabSkinDeedRibbon {
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  color: color-mix(in oklch, var(--sem-text-primary) 78%, var(--sem-surface-base));
-  margin-bottom: 12px;
-  padding: 5px 10px;
-  display: inline-block;
-  border: 1px dashed color-mix(in oklch, var(--sem-text-primary) 28%, transparent);
-  border-radius: 2px;
-  background: color-mix(in oklch, var(--sem-text-primary) 6%, transparent);
-}
-
-/* —— Location · concept next (high-IA lab only; separate shell from `.locLabSkinPlate`) —— */
-
-.locConceptShell {
-  box-shadow:
-    0 0 0 1px color-mix(in oklch, var(--accent) 26%, transparent),
-    0 22px 56px color-mix(in oklch, var(--sys-color-black) 38%, transparent);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-/* Polaroid */
-.locConceptPolaroidOuter {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 10px 10px 12px;
-  background: linear-gradient(
-    165deg,
-    color-mix(in oklch, oklch(0.97 0.01 95) 88%, var(--sem-surface-base) 12%),
-    color-mix(in oklch, oklch(0.9 0.02 240) 55%, var(--sem-surface-base) 45%)
-  );
-}
-
-.locConceptPolaroidFrame {
-  background: oklch(0.99 0 0);
-  padding: 14px 14px 18px;
-  border-radius: 3px;
-  box-shadow:
-    0 1px 0 color-mix(in oklch, var(--sys-color-black) 8%, transparent),
-    0 14px 28px color-mix(in oklch, var(--sys-color-black) 18%, transparent);
-}
-
-.locConceptPolaroidWell {
-  display: block;
-  width: 100%;
-  padding: 0;
-  margin: 0;
-  border: none;
-  border-radius: 2px;
-  overflow: hidden;
-  cursor: pointer;
-  background: oklch(0.2 0.02 260);
-  aspect-ratio: 1;
-  max-height: 240px;
-}
-
-.locConceptPolaroidWell:focus-visible {
-  outline: 2px solid color-mix(in oklch, var(--sem-focus-ring) 70%, transparent);
-  outline-offset: 2px;
-}
-
-.locConceptPolaroidImg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.locConceptPolaroidPlaceholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  min-height: 160px;
-  padding: 16px;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.45;
-  color: oklch(0.78 0.02 260);
-}
-
-.locConceptPolaroidCaption {
-  margin: 14px 0 0;
-  font-family: var(--font-lora), Georgia, serif;
-  font-size: 14px;
-  font-style: italic;
-  line-height: 1.45;
-  color: oklch(0.28 0.03 260);
-}
-
-.locConceptPolaroidChin {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.locConceptPolaroidStamp {
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  color: color-mix(in oklch, var(--sem-text-primary) 55%, var(--sem-text-muted));
-}
-
-/* Poster */
-.locConceptPosterRoot {
-  position: relative;
-  min-height: 300px;
-  border-radius: 6px;
-  overflow: hidden;
-  background-color: oklch(0.22 0.14 285);
-  background-image: linear-gradient(125deg, oklch(0.2 0.16 285), oklch(0.38 0.18 35));
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-.locConceptPosterRootHasPhoto {
-  background-image: none;
-  background-color: oklch(0.12 0.02 260);
-}
-
-.locConceptPosterPhoto {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-.locConceptPosterScrim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    190deg,
-    color-mix(in oklch, var(--sys-color-black) 12%, transparent) 0%,
-    color-mix(in oklch, var(--sys-color-black) 55%, transparent) 100%
-  );
-  pointer-events: none;
-}
-
-.locConceptPosterBody {
-  position: relative;
-  z-index: 1;
-  padding: 22px 18px 52px;
-  color: oklch(0.98 0.01 95);
-}
-
-.locConceptPosterEyebrow {
-  margin: 0 0 8px;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  opacity: 0.88;
-}
-
-.locConceptPosterTitle {
-  margin: 0 0 12px;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: clamp(1.35rem, 0.6rem + 3.2vw, 1.75rem);
-  font-weight: 850;
-  line-height: 0.98;
-  letter-spacing: -0.04em;
-  text-transform: uppercase;
-  max-width: 16ch;
-}
-
-.locConceptPosterLead {
-  margin: 0;
-  max-width: 32ch;
-  font-size: 12px;
-  line-height: 1.55;
-  opacity: 0.9;
-}
-
-.locConceptPosterActions {
-  position: absolute;
-  z-index: 2;
-  right: 12px;
-  bottom: 12px;
-}
-
-/* Specimen */
-.locConceptSpecimenRoot {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  min-height: 220px;
-  background: oklch(0.12 0.02 260);
-  color: oklch(0.95 0.02 95);
-  border-radius: 4px;
-  overflow: hidden;
-  border: 1px solid color-mix(in oklch, var(--accent) 45%, oklch(0.35 0.12 55));
-}
-
-.locConceptSpecimenRail {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  flex: 0 0 34px;
-  padding: 10px 0;
-  text-align: center;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  background: linear-gradient(180deg, oklch(0.55 0.18 55), oklch(0.42 0.14 40));
-  color: oklch(0.12 0.02 40);
-}
-
-.locConceptSpecimenThumb {
-  flex: 0 0 108px;
-  width: 108px;
-  min-height: 0;
-  border: none;
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
-  background: oklch(0.18 0.02 260);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.locConceptSpecimenThumb:focus-visible {
-  outline: 2px solid color-mix(in oklch, var(--sem-focus-ring) 65%, transparent);
-  outline-offset: -2px;
-}
-
-.locConceptSpecimenImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.locConceptSpecimenThumbLabel {
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  text-align: center;
-  line-height: 1.35;
-  color: oklch(0.65 0.03 260);
-  padding: 8px;
-}
-
-.locConceptSpecimenCopy {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 14px 14px 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  justify-content: center;
-}
-
-.locConceptSpecimenId {
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: oklch(0.72 0.08 75);
-}
-
-.locConceptSpecimenTitle {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 1.15rem;
-  font-weight: 750;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
-  text-transform: lowercase;
-}
-
-.locConceptSpecimenMeta {
-  font-size: 11px;
-  line-height: 1.45;
-  color: oklch(0.78 0.02 95);
-  opacity: 0.92;
-}
-
-/* V3 survey tag — lab hero wash (gradient default; image + scrim when a file is picked). */
+/* V3 survey tag — optional hero image + scrim when a file is picked. */
 .locSurveyV3Shell {
   position: relative;
   isolation: isolate;
 }
 
-.locSurveyV3HeroWash,
 .locSurveyV3HeroPhoto,
 .locSurveyV3HeroScrim {
   position: absolute;
@@ -670,24 +187,6 @@
   pointer-events: none;
   z-index: 0;
   border-radius: 0 0 4px 4px;
-}
-
-/* Theme-aware cool paper: radial “sky” + vertical falloff so it reads as a wash, not flat paper. */
-.locSurveyV3HeroWash {
-  background:
-    radial-gradient(
-      120% 85% at 50% -8%,
-      color-mix(in oklch, oklch(0.72 0.11 245) 42%, var(--theme-default-bg)) 0%,
-      transparent 58%
-    ),
-    linear-gradient(
-      188deg,
-      color-mix(in oklch, oklch(0.82 0.08 248) 28%, var(--theme-default-bg)) 0%,
-      color-mix(in oklch, oklch(0.94 0.035 235) 12%, var(--theme-default-bg)) 38%,
-      color-mix(in oklch, var(--theme-default-bg) 82%, oklch(0.97 0.02 230)) 68%,
-      transparent 100%
-    );
-  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 18%, transparent);
 }
 
 .locSurveyV3HeroPhoto {
@@ -728,4 +227,811 @@
   align-items: center;
   gap: 8px;
   margin-top: 2px;
+}
+
+/* Faction lab plates — not canvas `LabCard` / A4 document stack (see `FactionLabPlate` in TS). */
+
+.factionLabPlate {
+  position: relative;
+  box-sizing: border-box;
+  max-width: 100%;
+  border-radius: 8px;
+  box-shadow:
+    0 1px 0 color-mix(in oklch, var(--sys-color-white) 10%, transparent),
+    0 14px 36px color-mix(in oklch, var(--sys-color-black) 22%, transparent);
+}
+
+.factionLabPlate_slip {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  min-height: 320px;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, var(--sys-color-white) 12%, var(--sys-color-neutral-920));
+  background: var(--sys-color-neutral-920);
+  color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
+}
+
+.factionLabPlate_nameplate {
+  padding: 10px 12px 12px;
+  border: 1px solid color-mix(in oklch, var(--accent) 35%, var(--sys-color-neutral-800));
+  background: linear-gradient(
+    175deg,
+    color-mix(in oklch, var(--accent) 40%, var(--sys-color-neutral-920)) 0%,
+    color-mix(in oklch, var(--sys-color-neutral-920) 90%, var(--accent)) 100%
+  );
+  color: color-mix(in oklch, var(--sys-color-white) 93%, var(--accent));
+}
+
+.factionLabPlate_stub {
+  border: 1px solid color-mix(in oklch, var(--accent) 32%, var(--theme-default-border));
+  background: color-mix(in oklch, var(--accent) 16%, var(--theme-default-bg));
+  color: var(--theme-default-text);
+  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 16%, transparent);
+}
+
+.facSlipEdge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  color: color-mix(in oklch, var(--sys-color-white) 38%, transparent);
+  border-right: 1px solid color-mix(in oklch, var(--sys-color-white) 10%, transparent);
+  background: color-mix(in oklch, var(--sys-color-black) 35%, transparent);
+}
+
+.facSlipMain {
+  padding: 14px 16px 18px 14px;
+}
+
+.facSlipHoles {
+  display: flex;
+  gap: 22px;
+  margin-bottom: 12px;
+}
+
+.facSlipHoles span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--sys-color-black) 55%, transparent);
+  box-shadow:
+    inset 0 1px 2px color-mix(in oklch, var(--sys-color-white) 18%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--sys-color-white) 8%, transparent);
+}
+
+.facSlipMeta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 10px;
+  margin-bottom: 12px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--sys-color-white) 48%, transparent);
+}
+
+.facSlipHot {
+  color: color-mix(in oklch, var(--accent) 70%, var(--sys-color-white));
+}
+
+.facSlipOrg {
+  font-family: var(--font-lora), var(--font-geist-sans), serif;
+  font-size: 1.18rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-bottom: 8px;
+}
+
+.facSlipNation {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--sys-color-white) 42%, transparent);
+  margin-bottom: 16px;
+}
+
+.facSlipTeletype {
+  margin: 0;
+  padding: 12px 0 0;
+  border-top: 1px solid color-mix(in oklch, var(--sys-color-white) 12%, transparent);
+  list-style: none;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  line-height: 1.55;
+  color: color-mix(in oklch, var(--sys-color-white) 78%, transparent);
+}
+
+.facSlipTeletype li {
+  position: relative;
+  padding-left: 14px;
+  margin-bottom: 6px;
+}
+
+.facSlipTeletype li::before {
+  content: ">";
+  position: absolute;
+  left: 0;
+  color: color-mix(in oklch, var(--accent) 65%, var(--sys-color-white));
+  font-weight: 700;
+}
+
+.facPlateFrame {
+  position: relative;
+  text-align: center;
+  padding: 18px 14px 16px;
+  border-radius: 6px;
+  box-shadow:
+    inset 0 2px 0 color-mix(in oklch, var(--sys-color-white) 12%, transparent),
+    inset 0 -3px 8px color-mix(in oklch, var(--sys-color-black) 35%, transparent);
+}
+
+.facPlateRivet {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 30%,
+    color-mix(in oklch, var(--sys-color-white) 45%, transparent),
+    color-mix(in oklch, var(--sys-color-black) 55%, transparent)
+  );
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--sys-color-black) 40%, transparent);
+}
+
+.facPlateRivet:nth-of-type(1) {
+  top: 8px;
+  left: 10px;
+}
+
+.facPlateRivet:nth-of-type(2) {
+  top: 8px;
+  right: 10px;
+}
+
+.facPlateRivet:nth-of-type(3) {
+  bottom: 8px;
+  left: 10px;
+}
+
+.facPlateRivet:nth-of-type(4) {
+  bottom: 8px;
+  right: 10px;
+}
+
+.facPlateBevel {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 4px 12px;
+  border-radius: 3px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--sys-color-white) 55%, transparent);
+  background: color-mix(in oklch, var(--sys-color-black) 28%, transparent);
+  border: 1px solid color-mix(in oklch, var(--sys-color-white) 10%, transparent);
+}
+
+.facPlateOrg {
+  font-family: var(--font-lora), var(--font-geist-sans), serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.18;
+  text-shadow: 0 1px 0 color-mix(in oklch, var(--sys-color-black) 45%, transparent);
+}
+
+.facPlateNation {
+  margin-top: 6px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--sys-color-white) 52%, transparent);
+}
+
+.facPlateSerial {
+  margin-top: 12px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: color-mix(in oklch, var(--sys-color-white) 45%, transparent);
+}
+
+.facPlateBarcode {
+  height: 24px;
+  margin-top: 12px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--sys-color-black) 55%, transparent) 0 2px,
+    transparent 2px 5px
+  );
+  opacity: 0.85;
+}
+
+.facStubRoot {
+  padding: 16px 18px 0;
+}
+
+.facStubEyebrow {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--theme-default-text) 48%, transparent);
+  margin-bottom: 10px;
+}
+
+.facStubOrg {
+  font-family: var(--font-lora), var(--font-geist-sans), serif;
+  font-size: 1.14rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.14;
+}
+
+.facStubNation {
+  margin-top: 6px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--theme-default-text) 44%, transparent);
+}
+
+.facStubPerf {
+  margin: 16px 0 12px;
+  border-top: 2px dashed color-mix(in oklch, var(--accent) 45%, var(--theme-default-border));
+}
+
+.facStubAgenda {
+  padding-bottom: 14px;
+}
+
+.facStubAgendaTitle {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: color-mix(in oklch, var(--accent) 55%, var(--theme-default-text));
+  margin-bottom: 8px;
+}
+
+.facStubAgenda ul {
+  margin: 0;
+  padding-left: 1.1em;
+  font-size: 12px;
+  line-height: 1.5;
+  color: color-mix(in oklch, var(--theme-default-text) 88%, transparent);
+}
+
+.facStubAgenda li {
+  margin-bottom: 4px;
+}
+
+.facStubTear {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 18px 12px;
+  margin: 0 -18px;
+  border-top: 1px solid color-mix(in oklch, var(--accent) 28%, var(--theme-default-border));
+  background: color-mix(in oklch, var(--accent) 22%, var(--theme-default-bg));
+  border-radius: 0 0 7px 7px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.facStubTearCode {
+  color: var(--theme-default-text);
+}
+
+.facStubTearHint {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: none;
+  color: color-mix(in oklch, var(--theme-default-text) 42%, transparent);
+}
+
+.factionLabPlate_carboncopy {
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, var(--sys-color-neutral-600) 30%, var(--theme-default-border));
+  background: color-mix(in oklch, var(--sys-color-neutral-400) 14%, var(--theme-default-bg));
+  color: var(--theme-default-text);
+}
+
+.facCarbRoot {
+  min-height: 312px;
+  padding: 24px 18px 28px;
+}
+
+.facCarbStack {
+  position: relative;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.facCarbUnder {
+  position: absolute;
+  z-index: 0;
+  left: 6px;
+  top: 8px;
+  right: -4px;
+  bottom: -8px;
+  border-radius: 3px;
+  border: 1px solid color-mix(in oklch, var(--sys-color-neutral-600) 25%, var(--theme-default-border));
+  background: linear-gradient(
+    165deg,
+    color-mix(in oklch, oklch(0.9 0.09 95) 55%, var(--theme-default-bg)) 0%,
+    color-mix(in oklch, oklch(0.82 0.07 88) 60%, var(--theme-default-bg)) 100%
+  );
+  box-shadow: 0 2px 0 color-mix(in oklch, var(--sys-color-black) 8%, transparent);
+}
+
+.facCarbSheet {
+  position: relative;
+  z-index: 1;
+  padding: 18px 16px 16px;
+  border-radius: 2px;
+  border: 1px solid color-mix(in oklch, var(--theme-default-text) 14%, var(--theme-default-border));
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--sys-color-white) 30%, var(--theme-default-bg)) 0%,
+    color-mix(in oklch, var(--sys-color-neutral-100) 40%, var(--theme-default-bg)) 100%
+  );
+  box-shadow:
+    0 1px 0 color-mix(in oklch, var(--sys-color-white) 45%, transparent),
+    0 10px 22px color-mix(in oklch, var(--sys-color-black) 10%, transparent);
+}
+
+.facCarbFlag {
+  margin-bottom: 12px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--accent) 40%, var(--theme-default-text));
+}
+
+.facCarbOrg {
+  font-family: var(--font-lora), var(--font-geist-sans), serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-bottom: 6px;
+}
+
+.facCarbSub {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--theme-default-text) 48%, transparent);
+}
+
+.facCarbPerf {
+  margin: 16px 0 12px;
+  border: none;
+  border-top: 1px dashed color-mix(in oklch, var(--theme-default-text) 28%, var(--theme-default-border));
+}
+
+.facCarbFine {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  color: color-mix(in oklch, var(--theme-default-text) 45%, transparent);
+}
+
+.factionLabPlate_iomemo {
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, var(--theme-default-text) 10%, var(--theme-default-border));
+  background: color-mix(in oklch, var(--sys-color-neutral-100) 55%, var(--theme-default-bg));
+  color: var(--theme-default-text);
+  box-shadow:
+    inset 4px 0 0 color-mix(in oklch, var(--accent) 55%, var(--sys-color-neutral-500)),
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 40%, transparent);
+}
+
+.facMemoRoot {
+  min-height: 312px;
+  padding: 18px 18px 20px 22px;
+}
+
+.facMemoMark {
+  margin-bottom: 14px;
+  text-align: center;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--theme-default-text) 48%, transparent);
+}
+
+.facMemoField {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+  min-height: 1.35em;
+  border-bottom: 1px dotted color-mix(in oklch, var(--theme-default-text) 22%, var(--theme-default-border));
+  padding-bottom: 4px;
+}
+
+.facMemoLabel {
+  flex: 0 0 2.75rem;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--accent) 35%, var(--theme-default-text));
+}
+
+.facMemoVal {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-lora), var(--font-geist-sans), serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.facMemoRule {
+  height: 0;
+  margin: 14px 0 12px;
+  border-top: 1px solid color-mix(in oklch, var(--theme-default-text) 14%, var(--theme-default-border));
+}
+
+.facMemoNote {
+  margin: 0;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: color-mix(in oklch, var(--theme-default-text) 62%, transparent);
+}
+
+.factionLabPlate_shelfcard {
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, oklch(0.42 0.06 65) 45%, var(--theme-default-border));
+  background: linear-gradient(
+    165deg,
+    color-mix(in oklch, oklch(0.82 0.04 78) 35%, var(--theme-default-bg)) 0%,
+    color-mix(in oklch, oklch(0.76 0.05 72) 55%, var(--theme-default-bg)) 100%
+  );
+  color: color-mix(in oklch, oklch(0.22 0.04 55) 55%, var(--theme-default-text));
+  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 25%, transparent);
+}
+
+.facShelfRoot {
+  position: relative;
+  min-height: 312px;
+  padding: 16px 16px 18px;
+}
+
+.facShelfCall {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in oklch, var(--theme-default-text) 25%, var(--theme-default-border));
+  border-radius: 2px;
+  background: color-mix(in oklch, var(--theme-default-bg) 70%, transparent);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: color-mix(in oklch, var(--theme-default-text) 72%, transparent);
+}
+
+.facShelfTitle {
+  margin: 0 96px 16px 0;
+  font-family: var(--font-lora), var(--font-geist-sans), serif;
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.facShelfLine {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+}
+
+.facShelfKey {
+  flex: 0 0 auto;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--theme-default-text) 55%, transparent);
+}
+
+.facShelfDots {
+  flex: 1 1 auto;
+  min-width: 12px;
+  border-bottom: 1px dotted color-mix(in oklch, var(--theme-default-text) 28%, var(--theme-default-border));
+  transform: translateY(-2px);
+}
+
+.facShelfVal {
+  flex: 0 1 auto;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: right;
+  color: color-mix(in oklch, var(--theme-default-text) 88%, transparent);
+}
+
+.facShelfStamp {
+  margin-top: 18px;
+  padding-top: 10px;
+  border-top: 1px dashed color-mix(in oklch, var(--theme-default-text) 22%, var(--theme-default-border));
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--theme-default-text) 38%, transparent);
+}
+
+.factionLabPlate_luggagetag {
+  padding: 0;
+  overflow: visible;
+  border: 1px solid color-mix(in oklch, var(--sys-color-neutral-600) 28%, var(--theme-default-border));
+  background: color-mix(in oklch, var(--sys-color-neutral-400) 18%, var(--theme-default-bg));
+  color: var(--theme-default-text);
+}
+
+.facTagRoot {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 312px;
+  padding: 28px 20px 24px;
+}
+
+.facTagCard {
+  width: min(240px, 100%);
+  padding: 36px 16px 22px;
+  clip-path: polygon(0% 0%, 100% 0%, 100% 86%, 50% 100%, 0% 86%);
+  border: 1px solid color-mix(in oklch, var(--theme-default-text) 16%, var(--theme-default-border));
+  background: linear-gradient(
+    175deg,
+    color-mix(in oklch, var(--sys-color-neutral-100) 55%, var(--theme-default-bg)) 0%,
+    color-mix(in oklch, oklch(0.9 0.02 85) 40%, var(--theme-default-bg)) 100%
+  );
+  box-shadow:
+    0 1px 0 color-mix(in oklch, var(--sys-color-white) 45%, transparent),
+    0 12px 24px color-mix(in oklch, var(--sys-color-black) 12%, transparent);
+  text-align: center;
+}
+
+.facTagHole {
+  display: flex;
+  justify-content: center;
+  margin: -8px 0 14px;
+}
+
+.facTagHoleRing {
+  display: block;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 3px solid color-mix(in oklch, var(--sys-color-neutral-600) 45%, var(--theme-default-border));
+  background: radial-gradient(
+    circle at 35% 35%,
+    color-mix(in oklch, var(--sys-color-white) 35%, transparent),
+    color-mix(in oklch, var(--sys-color-neutral-400) 25%, var(--theme-default-bg)) 55%,
+    color-mix(in oklch, var(--theme-default-bg) 80%, transparent) 56%
+  );
+  box-shadow:
+    inset 0 1px 2px color-mix(in oklch, var(--sys-color-white) 40%, transparent),
+    inset 0 -2px 4px color-mix(in oklch, var(--sys-color-black) 12%, transparent);
+}
+
+.facTagDest {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: color-mix(in oklch, var(--accent) 25%, var(--theme-default-text));
+}
+
+.facTagRoute {
+  margin-top: 8px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--theme-default-text) 52%, transparent);
+}
+
+.facTagOrg {
+  margin-top: 14px;
+  font-family: var(--font-lora), var(--font-geist-sans), serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.factionLabPlate_manilatab {
+  padding: 0;
+  overflow: visible;
+  border: 1px solid color-mix(in oklch, oklch(0.42 0.06 65) 35%, var(--theme-default-border));
+  background: color-mix(in oklch, var(--sys-color-neutral-400) 12%, var(--theme-default-bg));
+  color: color-mix(in oklch, oklch(0.28 0.05 55) 45%, var(--theme-default-text));
+}
+
+.facFolderRoot {
+  position: relative;
+  min-height: 312px;
+  padding: 32px 18px 22px;
+}
+
+.facFolderTab {
+  position: absolute;
+  top: 12px;
+  left: 18px;
+  z-index: 1;
+  min-width: 112px;
+  padding: 6px 12px 5px;
+  border-radius: 5px 5px 0 0;
+  border: 1px solid color-mix(in oklch, var(--sys-color-neutral-600) 35%, var(--theme-default-border));
+  border-bottom: none;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, oklch(0.86 0.045 78) 70%, var(--theme-default-bg)) 0%,
+    color-mix(in oklch, oklch(0.8 0.05 75) 65%, var(--theme-default-bg)) 100%
+  );
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--theme-default-text) 65%, transparent);
+  box-shadow: 0 -1px 0 color-mix(in oklch, var(--sys-color-white) 25%, transparent);
+}
+
+.facFolderBody {
+  position: relative;
+  z-index: 0;
+  padding: 22px 16px 18px;
+  border-radius: 0 4px 4px 4px;
+  border: 1px solid color-mix(in oklch, var(--sys-color-neutral-600) 32%, var(--theme-default-border));
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 11px,
+      color-mix(in oklch, var(--sys-color-black) 4%, transparent) 11px,
+      color-mix(in oklch, var(--sys-color-black) 4%, transparent) 12px
+    ),
+    linear-gradient(
+      185deg,
+      color-mix(in oklch, oklch(0.88 0.04 78) 55%, var(--theme-default-bg)) 0%,
+      color-mix(in oklch, oklch(0.8 0.055 72) 50%, var(--theme-default-bg)) 100%
+    );
+  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 22%, transparent);
+}
+
+.facFolderTitle {
+  font-family: var(--font-lora), var(--font-geist-sans), serif;
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.facFolderMeta {
+  margin-top: 10px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--theme-default-text) 48%, transparent);
+}
+
+.factionLabPlate_queuechit {
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, var(--theme-default-text) 12%, var(--theme-default-border));
+  background: color-mix(in oklch, var(--sys-color-neutral-400) 10%, var(--theme-default-bg));
+  color: var(--theme-default-text);
+}
+
+.facQRoot {
+  min-height: 312px;
+  padding: 10px 18px 22px;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 1px,
+      color-mix(in oklch, var(--sys-color-black) 3%, transparent) 1px,
+      color-mix(in oklch, var(--sys-color-black) 3%, transparent) 2px
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, oklch(0.94 0.04 95) 40%, var(--theme-default-bg)) 0%,
+      color-mix(in oklch, oklch(0.9 0.035 92) 55%, var(--theme-default-bg)) 100%
+    );
+  text-align: center;
+}
+
+.facQPerf {
+  height: 0;
+  margin: 0 -18px 18px;
+  border-top: 3px dashed color-mix(in oklch, var(--theme-default-text) 28%, var(--theme-default-border));
+  opacity: 0.85;
+}
+
+.facQNum {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 3.1rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: color-mix(in oklch, var(--theme-default-text) 88%, transparent);
+  text-shadow: 0 1px 0 color-mix(in oklch, var(--sys-color-white) 35%, transparent);
+}
+
+.facQLabel {
+  margin-top: 14px;
+  max-width: 16rem;
+  margin-left: auto;
+  margin-right: auto;
+  font-family: var(--font-lora), var(--font-geist-sans), serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.facQFine {
+  margin-top: 18px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--theme-default-text) 42%, transparent);
 }

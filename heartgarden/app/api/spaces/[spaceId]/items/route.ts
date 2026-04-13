@@ -59,7 +59,7 @@ const createBody = z.object({
   canonical_entity_kind: z
     .enum(["npc", "location", "faction", "quest", "item", "lore", "other"])
     .optional(),
-  /** Shell layout for character (v11) / faction / location (v1–v3). */
+  /** Shell layout for character (v11) / faction (v1–v3) / location (v2–v3). */
   lore_variant: z.enum(["v1", "v2", "v3", "v11"]).optional(),
 });
 

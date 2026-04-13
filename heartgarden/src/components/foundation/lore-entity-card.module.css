@@ -3699,7 +3699,7 @@
   background: color-mix(in oklch, var(--theme-default-text) 4%, transparent);
 }
 
-/* Location v1 · brass / stone plaque — frame the metadata block only (matches seeded `locHeader`). */
+/* Legacy v1 (no longer created): keep styling for older saved `bodyHtml` until migrated. */
 [data-hg-canvas-role="lore-location"][data-hg-lore-location-variant="v1"] .locHeader {
   padding: 12px 14px 14px;
   margin: 0 0 2px;

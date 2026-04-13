@@ -29,8 +29,8 @@ describe("plainPlaceNameFromLocationBodyHtml", () => {
 });
 
 describe("location focus projection round-trip", () => {
-  it("round-trips modern v1 seed: notes and fields merge back; chrome preserved", () => {
-    const canonical = getLoreNodeSeedBodyHtml("location", "v1");
+  it("round-trips modern v2 seed: notes and fields merge back; chrome preserved", () => {
+    const canonical = getLoreNodeSeedBodyHtml("location", "v2");
     const focus = locationBodyToFocusDocumentHtml(canonical);
     expect(focus).toContain("data-hg-location-focus-doc");
     expect(focus).toContain("data-hg-lore-location-focus-notes");
@@ -80,7 +80,7 @@ describe("shouldRenderLoreLocationCanvasNode", () => {
       shouldRenderLoreLocationCanvasNode({
         kind: "content",
         bodyHtml: "<p>x</p>",
-        loreCard: { kind: "location", variant: "v1" },
+        loreCard: { kind: "location", variant: "v2" },
       }),
     ).toBe(true);
   });

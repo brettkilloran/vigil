@@ -8,6 +8,12 @@ import {
 } from "@/src/lib/lore-link-types";
 
 function contentEntity(id: string, loreKind: "character" | "faction" | "location"): CanvasContentEntity {
+  const loreCard =
+    loreKind === "character"
+      ? { kind: "character" as const, variant: "v11" as const }
+      : loreKind === "location"
+        ? { kind: "location" as const, variant: "v2" as const }
+        : { kind: "faction" as const, variant: "v1" as const };
   return {
     id,
     kind: "content",
@@ -17,7 +23,7 @@ function contentEntity(id: string, loreKind: "character" | "faction" | "location
     tapeRotation: 0,
     slots: {},
     bodyHtml: "",
-    loreCard: { kind: loreKind, variant: "v1" },
+    loreCard,
   };
 }
 

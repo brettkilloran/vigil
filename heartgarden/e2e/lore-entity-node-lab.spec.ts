@@ -7,37 +7,43 @@ test.describe("/dev/lore-entity-nodes", () => {
     await prepDemoSession(page);
   });
 
-  test("shows three lab-only location skin previews (not seeded)", async ({ page }) => {
+  test("shows location v2 and v3 seeded previews", async ({ page }) => {
     await page.goto("/dev/lore-entity-nodes");
     await expect(page.getByRole("heading", { name: "Lore entity nodes", level: 1 })).toBeVisible({
       timeout: 60_000,
     });
 
-    await expect(page.getByRole("heading", { name: "Location lab skins", level: 3 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Location", level: 2 })).toBeVisible();
 
-    await expect(page.getByTestId("loc-lab-skin-blueprint")).toBeVisible();
-    await expect(page.getByTestId("loc-lab-skin-waypoint")).toBeVisible();
-    await expect(page.getByTestId("loc-lab-skin-deed")).toBeVisible();
-
-    await expect(page.getByText("LAB · Blueprint site sheet")).toBeVisible();
-    await expect(page.getByText("LAB · Waypoint board")).toBeVisible();
-    await expect(page.getByText("LAB · Deed cadastral slip")).toBeVisible();
+    await expect(page.getByText("V2 · Postcard band")).toBeVisible();
+    await expect(page.getByText("V3 · Survey tag")).toBeVisible();
+    await expect(page.getByTestId("loc-survey-v3")).toBeVisible();
   });
 
-  test("shows concept-next row with polaroid / poster / specimen (image slots)", async ({ page }) => {
+  test("shows faction lab plates I–IX", async ({ page }) => {
     await page.goto("/dev/lore-entity-nodes");
     await expect(page.getByRole("heading", { name: "Lore entity nodes", level: 1 })).toBeVisible({
       timeout: 60_000,
     });
 
-    await expect(page.getByRole("heading", { name: "Location · concept next", level: 3 })).toBeVisible();
-
-    await expect(page.getByTestId("loc-concept-polaroid")).toBeVisible();
-    await expect(page.getByTestId("loc-concept-poster")).toBeVisible();
-    await expect(page.getByTestId("loc-concept-specimen")).toBeVisible();
-
-    await expect(page.getByText("NEXT · Polaroid field slip")).toBeVisible();
-    await expect(page.getByText("NEXT · Night-line poster")).toBeVisible();
-    await expect(page.getByText("NEXT · Museum specimen tag")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Faction · org · company/i })).toBeVisible();
+    await expect(page.getByText("I · Dead-drop slip")).toBeVisible();
+    await expect(page.getByText("II · Rating plate")).toBeVisible();
+    await expect(page.getByText("III · Summit stub")).toBeVisible();
+    await expect(page.getByText("IV · Carbon copy")).toBeVisible();
+    await expect(page.getByText("V · Interoffice memo")).toBeVisible();
+    await expect(page.getByText("VI · Shelf card")).toBeVisible();
+    await expect(page.getByText("VII · Luggage tag")).toBeVisible();
+    await expect(page.getByText("VIII · Manila tab")).toBeVisible();
+    await expect(page.getByText("IX · Queue chit")).toBeVisible();
+    await expect(page.getByTestId("fac-sheet-docket")).toBeVisible();
+    await expect(page.getByTestId("fac-sheet-ember")).toBeVisible();
+    await expect(page.getByTestId("fac-sheet-buff")).toBeVisible();
+    await expect(page.getByTestId("fac-lab-carboncopy")).toBeVisible();
+    await expect(page.getByTestId("fac-lab-iomemo")).toBeVisible();
+    await expect(page.getByTestId("fac-lab-shelfcard")).toBeVisible();
+    await expect(page.getByTestId("fac-lab-luggagetag")).toBeVisible();
+    await expect(page.getByTestId("fac-lab-manilatab")).toBeVisible();
+    await expect(page.getByTestId("fac-lab-queuechit")).toBeVisible();
   });
 });
