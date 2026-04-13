@@ -86,6 +86,8 @@ Persistence: **`items`** rows; **`spaces.canvas_state`** is legacy (camera is **
 
 **Package manager:** Use **npm** only in the app directory (**`heartgarden/`**) (`package-lock.json`). Do not mix pnpm/yarn in the same tree without a deliberate migration.
 
+**`npm audit`:** Treat **`npm audit`** as advisory — many findings are in **dev-only** transitive chains and do not map directly to production risk. Prefer **`npm audit fix`** (without **`--force`**) when it stays within compatible ranges. Avoid **`npm audit fix --force`** unless you are ready to reconcile **peer dependencies** and to run **`npm run check`**, **`npm run build`**, and **`npm run build-storybook`** (or **`npm run check:all`**). A bad forced upgrade can leave **`package.json`** / **`package-lock.json`** and **`node_modules`** out of sync; **`npm run reinstall`** rebuilds **`node_modules`** from the lockfile after you restore the manifests from git.
+
 **`package-lock.json` vs Ubuntu CI (`npm ci` / “Missing … from lock file”):** A normal **`npm install` on Windows** can drop **Linux-only optional** resolutions (e.g. **`@emnapi/*`** under **`@img/sharp-wasm32`**). GitHub Actions then fails **`npm ci`**. From **`heartgarden/`**: run **`npm run verify:package-lock-ci`** before pushing (clean temp install with **npm 10.x**, same major as **Node 22** on Actions). If it fails, run **`npm run lockfile:regenerate-linux`**, re-run verify, then **commit `package-lock.json`**.
 
 **Node on PATH (Windows portable installs):** If `npm`/`node` are missing in a new terminal or in Cursor, the portable Node folder is probably not on **User** `PATH`.

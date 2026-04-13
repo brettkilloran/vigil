@@ -12,7 +12,7 @@ Use this whenever the user (or task) involves **running heartgarden**, **restart
 ## Commands (execute; do not only instruct)
 
 - **Working directory:** **`heartgarden/`** (Next app root; see `heartgarden/docs/NAMING.md`).
-- **Start or restart:** **`npm run dev`** (`next dev --webpack`). Run it in the integrated terminal; wait until the server is listening.
+- **Start or restart:** **`npm run dev`** (`next dev --webpack --port 3000`). Run it in the integrated terminal; wait until the server is listening.
 - **URL:** **`http://localhost:3000`** or **`http://127.0.0.1:3000`**. Same host the dev banner prints; avoid starting a second `next dev` on the same folder/port.
 - **Do not** recommend **`dev:preview`** or **`HEARTGARDEN_DEV_BOOT_NO_GATE`** — removed; default **`npm run dev`** is enough.
 
