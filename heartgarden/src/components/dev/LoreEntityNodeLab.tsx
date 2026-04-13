@@ -325,6 +325,121 @@ function useLabImagePick() {
   return { inputRef, onFile };
 }
 
+/** Lab-only: V3 survey tag with a theme-aware paper wash; optional hero image shows the image-swap path. */
+function LabLocationV3SurveyTagPreview() {
+  const [hero, setHero] = useState<string | null>(null);
+  const { inputRef, onFile } = useLabImagePick();
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className={labStyles.visuallyHidden}
+        aria-hidden
+        tabIndex={-1}
+        onChange={(e) => onFile(e, setHero)}
+      />
+      <LabCard headerTitle="Location" tapeVariant="dark" tapeRotation={0.8}>
+        <div
+          data-hg-canvas-role="lore-location"
+          data-hg-lore-location-variant="v3"
+          className={labStyles.locSurveyV3Shell}
+          data-testid="loc-survey-v3"
+        >
+          {hero ? (
+            <>
+              <div
+                className={labStyles.locSurveyV3HeroPhoto}
+                style={{ backgroundImage: `url(${JSON.stringify(hero)})` } as CSSProperties}
+                aria-hidden
+              />
+              <div className={labStyles.locSurveyV3HeroScrim} aria-hidden />
+            </>
+          ) : (
+            <div className={labStyles.locSurveyV3HeroWash} aria-hidden />
+          )}
+          <div className={labStyles.locSurveyV3Foreground}>
+            <div
+              className={cardStyles.locPlaqueStrip}
+              data-loc-strip={locationStripVariantFromSeed("lab-survey-tag-v3")}
+              aria-hidden
+            />
+            <div
+              className={cardStyles.plaqueCorner}
+              data-hg-lore-location-field="ref"
+              contentEditable={false}
+            >
+              REF · KFC-DOCK-0847
+            </div>
+            <div
+              className={cx(cardStyles.locHeader, hero ? labStyles.locSurveyV3HeaderOnHero : undefined)}
+              contentEditable={false}
+            >
+              <div
+                className={cardStyles.locName}
+                data-hg-lore-location-field="name"
+                contentEditable={false}
+              >
+                Old Harbor Kiln No. 4
+              </div>
+              <div
+                className={cardStyles.locMetaLine}
+                data-hg-lore-location-optional="true"
+                contentEditable={false}
+              >
+                <span className={cardStyles.locMetaKey}>Nation</span>
+                <span data-hg-lore-location-field="context" contentEditable={false}>
+                  Kestrel Free City
+                </span>
+              </div>
+              <div
+                className={cardStyles.locMetaLine}
+                data-hg-lore-location-optional="true"
+                contentEditable={false}
+              >
+                <span className={cardStyles.locMetaKey}>Kind</span>
+                <span data-hg-lore-location-field="detail" contentEditable={false}>
+                  Warehouse · abandoned ceramic works
+                </span>
+              </div>
+            </div>
+            <div
+              className={cardStyles.notesBlock}
+              data-hg-lore-location-notes-cell="true"
+              contentEditable={false}
+            >
+              <span className={cardStyles.fieldLabel}>Notes</span>
+              <div
+                className={cardStyles.notesText}
+                data-hg-lore-location-notes="true"
+                contentEditable={false}
+              >
+                <p>
+                  Thin strip color is stable per item id via <code>data-loc-strip</code> + seed hash; the{" "}
+                  <code>ref</code> field is an optional monospace stamp for GMs. Use the buttons under the card to try
+                  a hero image: same layering a future cover URL would use (photo, scrim, then type).
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </LabCard>
+      <div className={labStyles.locSurveyV3Chrome}>
+        <Button type="button" size="sm" variant="neutral" tone="glass" onClick={() => inputRef.current?.click()}>
+          {hero ? "Replace hero image" : "Add hero image"}
+        </Button>
+        {hero ? (
+          <Button type="button" size="sm" variant="neutral" tone="glass" onClick={() => setHero(null)}>
+            Clear hero
+          </Button>
+        ) : null}
+      </div>
+    </>
+  );
+}
+
 function LabLocationConceptPolaroid({ testId }: { testId: string }) {
   const [photo, setPhoto] = useState<string | null>(null);
   const { inputRef, onFile } = useLabImagePick();
@@ -735,72 +850,14 @@ function LoreEntityNodeLabInner() {
 
             <div className={labStyles.cell}>
               <span className={labStyles.variantLabel}>V3 · Survey tag</span>
-              <LabCard headerTitle="Location" tapeVariant="dark" tapeRotation={0.8}>
-                <div data-hg-canvas-role="lore-location" data-hg-lore-location-variant="v3">
-                  <div
-                    className={cardStyles.locPlaqueStrip}
-                    data-loc-strip={locationStripVariantFromSeed("lab-survey-tag-v3")}
-                    aria-hidden
-                  />
-                  <div
-                    className={cardStyles.plaqueCorner}
-                    data-hg-lore-location-field="ref"
-                    contentEditable={false}
-                  >
-                    REF · KFC-DOCK-0847
-                  </div>
-                  <div className={cardStyles.locHeader} contentEditable={false}>
-                    <div
-                      className={cardStyles.locName}
-                      data-hg-lore-location-field="name"
-                      contentEditable={false}
-                    >
-                      Old Harbor Kiln No. 4
-                    </div>
-                    <div
-                      className={cardStyles.locMetaLine}
-                      data-hg-lore-location-optional="true"
-                      contentEditable={false}
-                    >
-                      <span className={cardStyles.locMetaKey}>Nation</span>
-                      <span data-hg-lore-location-field="context" contentEditable={false}>
-                        Kestrel Free City
-                      </span>
-                    </div>
-                    <div
-                      className={cardStyles.locMetaLine}
-                      data-hg-lore-location-optional="true"
-                      contentEditable={false}
-                    >
-                      <span className={cardStyles.locMetaKey}>Kind</span>
-                      <span data-hg-lore-location-field="detail" contentEditable={false}>
-                        Warehouse · abandoned ceramic works
-                      </span>
-                    </div>
-                  </div>
-                  <div
-                    className={cardStyles.notesBlock}
-                    data-hg-lore-location-notes-cell="true"
-                    contentEditable={false}
-                  >
-                    <span className={cardStyles.fieldLabel}>Notes</span>
-                    <div
-                      className={cardStyles.notesText}
-                      data-hg-lore-location-notes="true"
-                      contentEditable={false}
-                    >
-                      <p>
-                        Thin strip color is stable per item id via <code>data-loc-strip</code> + seed hash;
-                        the <code>ref</code> field is an optional monospace stamp for GMs.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </LabCard>
+              <LabLocationV3SurveyTagPreview />
               <ul className={labStyles.spec}>
                 <li>
                   <code>v3</code> seed order: strip → <code>ref</code> → header → notes (matches{" "}
                   <code>lore-node-seed-html</code>).
+                </li>
+                <li>
+                  Lab wash / hero preview only — canvas seeds stay HTML + strip until a cover field exists.
                 </li>
               </ul>
             </div>

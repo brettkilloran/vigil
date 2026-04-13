@@ -138,6 +138,13 @@
   max-height: 340px;
   cursor: default;
   user-select: text;
+  /*
+   * Lab previews are short and non-editing: drop canvas document scrollbar reserve + bottom mask.
+   * Together those caused a persistent right “stripe” and muddy stacking with full-bleed lore layers.
+   */
+  scrollbar-gutter: auto;
+  mask-image: none;
+  -webkit-mask-image: none;
 }
 
 /* Protocol v4–v8 lab cards: same body classes as canvas so full-bleed lore rules apply */
@@ -643,4 +650,82 @@
   line-height: 1.45;
   color: oklch(0.78 0.02 95);
   opacity: 0.92;
+}
+
+/* V3 survey tag — lab hero wash (gradient default; image + scrim when a file is picked). */
+.locSurveyV3Shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.locSurveyV3HeroWash,
+.locSurveyV3HeroPhoto,
+.locSurveyV3HeroScrim {
+  position: absolute;
+  left: calc(-1 * var(--arch-body-pad-x, 18px));
+  right: calc(-1 * var(--arch-body-pad-x, 18px));
+  width: auto;
+  top: calc(-1 * var(--arch-body-pad-y, 16px));
+  height: min(188px, 60%);
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 0 0 4px 4px;
+}
+
+/* Theme-aware cool paper: radial “sky” + vertical falloff so it reads as a wash, not flat paper. */
+.locSurveyV3HeroWash {
+  background:
+    radial-gradient(
+      120% 85% at 50% -8%,
+      color-mix(in oklch, oklch(0.72 0.11 245) 42%, var(--theme-default-bg)) 0%,
+      transparent 58%
+    ),
+    linear-gradient(
+      188deg,
+      color-mix(in oklch, oklch(0.82 0.08 248) 28%, var(--theme-default-bg)) 0%,
+      color-mix(in oklch, oklch(0.94 0.035 235) 12%, var(--theme-default-bg)) 38%,
+      color-mix(in oklch, var(--theme-default-bg) 82%, oklch(0.97 0.02 230)) 68%,
+      transparent 100%
+    );
+  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 18%, transparent);
+}
+
+.locSurveyV3HeroPhoto {
+  background-size: cover;
+  background-position: center 32%;
+  background-repeat: no-repeat;
+  filter: saturate(1.04) contrast(1.02);
+}
+
+.locSurveyV3HeroScrim {
+  background: linear-gradient(
+    185deg,
+    color-mix(in oklch, var(--theme-default-bg) 38%, transparent) 0%,
+    color-mix(in oklch, var(--theme-default-bg) 82%, transparent) 48%,
+    var(--theme-default-bg) 88%,
+    transparent 100%
+  );
+}
+
+.locSurveyV3Foreground {
+  position: relative;
+  z-index: 1;
+}
+
+.locSurveyV3HeaderOnHero {
+  padding: 8px 10px 10px;
+  margin: 2px 0 0;
+  border-radius: 4px;
+  background: color-mix(in oklch, var(--theme-default-bg) 76%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 12%, transparent);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.locSurveyV3Chrome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
 }
