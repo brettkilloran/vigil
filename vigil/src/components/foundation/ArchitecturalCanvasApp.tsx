@@ -197,6 +197,7 @@ import {
 import { presenceEmojiForClientId } from "@/src/lib/collab-presence-identity";
 import { getOrCreatePresenceClientId } from "@/src/lib/heartgarden-presence-client";
 import { useHeartgardenPresenceHeartbeat } from "@/src/hooks/use-heartgarden-presence-heartbeat";
+import { useHeartgardenRealtimeSpaceSync } from "@/src/hooks/use-heartgarden-realtime-space-sync";
 import { useHeartgardenSpaceChangeSync } from "@/src/hooks/use-heartgarden-space-change-sync";
 import {
   clearWorkspaceViewCache,
@@ -1715,6 +1716,7 @@ export function ArchitecturalCanvasApp({
   const [itemConflictQueue, setItemConflictQueue] = useState<CanvasItem[]>([]);
   const itemConflictQueueRef = useRef<CanvasItem[]>([]);
   const [presencePeers, setPresencePeers] = useState<SpacePresencePeer[]>([]);
+  const [realtimeRefreshNonce, setRealtimeRefreshNonce] = useState(0);
   const localPointerWorldRef = useRef<{ x: number; y: number } | null>(null);
   const lastPointerPresencePostRef = useRef(0);
   const [canvasEffectsEnabled, setCanvasEffectsEnabled] = useState(true);
@@ -4227,6 +4229,7 @@ export function ArchitecturalCanvasApp({
   useHeartgardenSpaceChangeSync({
     enabled: collabNeonActive,
     hasRemotePeers: presencePeers.length > 0,
+    refreshNonce: realtimeRefreshNonce,
     activeSpaceId,
     syncCursorRef,
     focusOpenRef,
@@ -4236,6 +4239,14 @@ export function ArchitecturalCanvasApp({
     remoteTombstoneExemptIdsRef,
     setGraph,
     itemServerUpdatedAtRef,
+  });
+
+  useHeartgardenRealtimeSpaceSync({
+    enabled: collabNeonActive,
+    activeSpaceId,
+    onInvalidate: () => {
+      setRealtimeRefreshNonce((n) => n + 1);
+    },
   });
 
   const presencePayloadForHeartbeat = useCallback(() => {

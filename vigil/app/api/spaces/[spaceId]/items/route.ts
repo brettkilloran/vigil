@@ -25,6 +25,7 @@ import {
   playersMayCreateItemType,
   stripGmOnlyEntityMetaPatch,
 } from "@/src/lib/player-item-policy";
+import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
 import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-vault-index";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
@@ -265,6 +266,15 @@ export async function POST(
     if (contentText.trim().length > 0 || title.trim().length > 0) {
       scheduleVaultReindexAfterResponse(row.id);
     }
+  }
+
+  if (row) {
+    await publishHeartgardenSpaceInvalidation(db, {
+      originSpaceId: spaceId,
+      reason: "item.created",
+      itemId: row.id,
+      lookupSpaceIds: [spaceId],
+    });
   }
 
   return Response.json({ ok: true, item: rowToCanvasItem(row!) });

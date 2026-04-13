@@ -10,6 +10,7 @@ import {
   isHeartgardenPlayerBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { isHeartgardenImplicitPlayerRootSpaceName } from "@/src/lib/heartgarden-implicit-player-space";
+import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 import { assertSpaceReparentAllowed, deleteSpaceSubtree } from "@/src/lib/spaces";
 
@@ -107,7 +108,24 @@ export async function PATCH(
     setPayload.parentSpaceId = parsed.data.parentSpaceId;
   }
 
+  const previousParentSpaceId = access.space.parentSpaceId ?? null;
   await db.update(spaces).set(setPayload).where(eq(spaces.id, spaceId));
+
+  const reason =
+    parsed.data.parentSpaceId !== undefined ? "space.moved" : "space.updated";
+  const lookupSpaceIds = [spaceId];
+  if (parsed.data.parentSpaceId !== undefined && parsed.data.parentSpaceId !== null) {
+    lookupSpaceIds.push(parsed.data.parentSpaceId);
+  }
+  if (previousParentSpaceId) {
+    lookupSpaceIds.push(previousParentSpaceId);
+  }
+  await publishHeartgardenSpaceInvalidation(db, {
+    originSpaceId: spaceId,
+    reason,
+    lookupSpaceIds,
+    directSpaceIds: previousParentSpaceId ? [previousParentSpaceId] : undefined,
+  });
 
   return Response.json({ ok: true });
 }
@@ -135,5 +153,11 @@ export async function DELETE(
     const status = result.error === "Space not found" ? 404 : 400;
     return Response.json({ ok: false, error: result.error }, { status });
   }
+  await publishHeartgardenSpaceInvalidation(db, {
+    originSpaceId: spaceId,
+    reason: "space.deleted",
+    lookupSpaceIds: [spaceId],
+    directSpaceIds: access.space.parentSpaceId ? [access.space.parentSpaceId] : undefined,
+  });
   return Response.json({ ok: true, deletedSpaceIds: result.deletedIds });
 }

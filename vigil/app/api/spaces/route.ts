@@ -12,6 +12,7 @@ import {
   isHeartgardenPlayerBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { isHeartgardenImplicitPlayerRootSpaceName } from "@/src/lib/heartgarden-implicit-player-space";
+import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
 import { fetchPlayerSubtreeSpacesFull, spaceIsUnderPlayerRoot } from "@/src/lib/heartgarden-space-subtree";
 import { assertSpaceExists, listGmWorkspaceSpaces } from "@/src/lib/spaces";
 
@@ -116,6 +117,13 @@ export async function POST(req: Request) {
       })
       .returning();
 
+    await publishHeartgardenSpaceInvalidation(db, {
+      originSpaceId: created!.id,
+      reason: "space.created",
+      lookupSpaceIds: [created!.id, parentSpaceId],
+      directSpaceIds: [parentSpaceId],
+    });
+
     return Response.json({
       ok: true,
       space: {
@@ -164,6 +172,13 @@ export async function POST(req: Request) {
       ...(parentSpaceId !== undefined ? { parentSpaceId } : {}),
     })
     .returning();
+
+  await publishHeartgardenSpaceInvalidation(db, {
+    originSpaceId: created!.id,
+    reason: "space.created",
+    lookupSpaceIds: parentSpaceId ? [created!.id, parentSpaceId] : [created!.id],
+    directSpaceIds: parentSpaceId ? [parentSpaceId] : undefined,
+  });
 
   return Response.json({
     ok: true,

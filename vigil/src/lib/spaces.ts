@@ -216,6 +216,23 @@ export function collectSpaceSubtreeIds(
   return out;
 }
 
+export function collectSpaceAncestorIdsInclusive(
+  spaceId: string,
+  spaceRows: { id: string; parentSpaceId: string | null }[],
+): string[] {
+  const byId = new Map(spaceRows.map((row) => [row.id, row.parentSpaceId ?? null]));
+  if (!byId.has(spaceId)) return [spaceId];
+  const out: string[] = [];
+  let current: string | null = spaceId;
+  const seen = new Set<string>();
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    out.push(current);
+    current = byId.get(current) ?? null;
+  }
+  return out;
+}
+
 export async function listItemsForSpaceSubtree(
   db: VigilDb,
   rootSpaceId: string,

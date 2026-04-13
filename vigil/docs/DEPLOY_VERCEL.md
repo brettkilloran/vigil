@@ -45,6 +45,9 @@ Add these in **Project → Settings → Environment Variables**. Mark secrets as
 | `HEARTGARDEN_BOOT_PIN_DEMO` | Same | Demo tier PIN | Exactly **8** characters if set; **`demo`** tier (local-seeded canvas). Sensitive. |
 | `HEARTGARDEN_BOOT_SESSION_SECRET` | Same | Required if gate on | HMAC secret for boot session cookie. Sensitive. |
 | `HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC` | Same | Optional | Cookie TTL (**60–31536000** seconds); default **30 days**. |
+| `HEARTGARDEN_REALTIME_URL` | Production, Preview (optional) | Multiplayer realtime | **`wss://`** origin of the realtime server (see §5.5). Requires **`HEARTGARDEN_REALTIME_REDIS_URL`** and **`HEARTGARDEN_REALTIME_SECRET`**. |
+| `HEARTGARDEN_REALTIME_REDIS_URL` | Same | Realtime | Redis pub/sub URL; same value on Vercel and the **`npm run realtime`** host. |
+| `HEARTGARDEN_REALTIME_SECRET` | Same | Realtime | **≥ 16** characters; shared with the realtime server. |
 
 **Do not set on Vercel:**
 
@@ -115,6 +118,36 @@ Add a second origin line for every **stable** preview URL you care about, or tig
 
 **Checklist:** [`DEPLOY_VERCEL_CHECKLIST.md`](./DEPLOY_VERCEL_CHECKLIST.md) section D references Preview DB; align **CORS** with the same hostnames you use in the browser.
 
+### 5.5 Optional: multiplayer realtime (WebSocket + Redis)
+
+Without this, the canvas still syncs via **polling** (`GET /api/spaces/[id]/changes`). Turning realtime **on** makes remote edits **wake** peers immediately; **Neon remains the source of truth**.
+
+**What you need**
+
+1. **Redis** reachable from both **Vercel** (serverless publishes after writes) and the **realtime** process (subscribes and fans out). **Upstash** (or any Redis with `SUBSCRIBE`) works; use the **same** URL in both places.
+2. **A long-lived WebSocket server** — Vercel runs **`npm run check`** for the Next app only; **`npm run realtime`** must run **elsewhere** (container, VM, Fly.io, Railway, etc.).
+3. **TLS in front of the socket server** so browsers can use **`wss://`** (required when the app is served over **https://**).
+
+**Steps**
+
+1. Create Redis; copy the connection URL (often `rediss://…` with TLS).
+2. Generate a random string (**≥ 16** characters) for **`HEARTGARDEN_REALTIME_SECRET`** (same value everywhere).
+3. Deploy **`npm run realtime`** from **`heartgarden/`** with env:
+   - **`HEARTGARDEN_REALTIME_REDIS_URL`** — same as Vercel.
+   - **`HEARTGARDEN_REALTIME_SECRET`** — same as Vercel.
+   - **`HEARTGARDEN_REALTIME_PORT`** — optional (default **3002**); map the platform’s HTTP port to this process.
+4. Put a **reverse proxy** or platform TLS in front so the public URL is **`wss://your-realtime-host/…`** (no path; the server upgrades `GET /` to WebSocket). **Caddy**, **nginx**, or the platform’s **HTTPS** service is typical.
+5. On **Vercel** (Production, and Preview if you want previews to use realtime), set:
+   - **`HEARTGARDEN_REALTIME_REDIS_URL`**
+   - **`HEARTGARDEN_REALTIME_SECRET`**
+   - **`HEARTGARDEN_REALTIME_URL`** — the **exact** **`wss://`** origin clients use (see [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md)).
+
+6. **Redeploy** the Vercel project so serverless picks up the new env.
+
+**Smoke:** `GET https://<realtime-host>/healthz` → `{"ok":true}` (if exposed). In the app, two browsers in the same space should see edits propagate without waiting for the poll interval.
+
+**Container:** [`Dockerfile.realtime`](../Dockerfile.realtime) is an optional single-image build for the WebSocket process.
+
 ## 6. Custom domain
 
 **Project → Settings → Domains:** add your domain; point DNS as Vercel instructs. TLS is automatic.
@@ -158,6 +191,7 @@ Production deploys are usually triggered by **git push** once the Git integratio
 | DB errors / too many connections | Use Neon’s **pooled** connection string for serverless. |
 | R2 upload fails in browser | CORS on bucket for your Vercel URL; `R2_PUBLIC_BASE_URL` matches how objects are read. |
 | Lore always errors | `ANTHROPIC_API_KEY` set for **Production** (or Preview); check function logs in Vercel. |
+| Realtime never connects (falls back to poll) | **`HEARTGARDEN_REALTIME_*`** set on Vercel and **redeployed**; **`npm run realtime`** running with same Redis + secret; **`HEARTGARDEN_REALTIME_URL`** is **`wss://`** from the browser’s perspective; mixed-content blocks **`ws://`** on **https://** pages. |
 
 ## 10. Quick verification after deploy
 

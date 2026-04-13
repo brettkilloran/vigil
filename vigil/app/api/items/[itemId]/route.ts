@@ -18,6 +18,7 @@ import {
   playersPatchBodyViolatesPolicy,
   stripGmOnlyEntityMetaPatch,
 } from "@/src/lib/player-item-policy";
+import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
 import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-vault-index";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
@@ -262,6 +263,19 @@ export async function PATCH(
     }
   }
 
+  if (row) {
+    const changedSpaceIds =
+      updates.spaceId !== undefined && updates.spaceId !== existing.spaceId
+        ? [existing.spaceId, updates.spaceId]
+        : [row.spaceId];
+    await publishHeartgardenSpaceInvalidation(db, {
+      originSpaceId: row.spaceId,
+      reason: updates.spaceId !== undefined && updates.spaceId !== existing.spaceId ? "space.moved" : "item.updated",
+      itemId: row.id,
+      lookupSpaceIds: changedSpaceIds,
+    });
+  }
+
   return Response.json({ ok: true, item: rowToCanvasItem(row!) });
 }
 
@@ -308,5 +322,11 @@ export async function DELETE(
       Response.json({ ok: false, error: "Not found" }, { status: 404 }),
     );
   }
+  await publishHeartgardenSpaceInvalidation(db, {
+    originSpaceId: existing.spaceId,
+    reason: "item.deleted",
+    itemId,
+    lookupSpaceIds: [existing.spaceId],
+  });
   return Response.json({ ok: true });
 }

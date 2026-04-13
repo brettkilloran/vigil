@@ -12,6 +12,12 @@ import {
   HEARTGARDEN_SPACE_CHANGE_POLL_MS_SOLO,
 } from "@/src/lib/heartgarden-collab-constants";
 import {
+  recordBootstrapRepairAttempt,
+  recordHeartgardenSpaceSyncRun,
+  recordPollContractFailure,
+  type HeartgardenSpaceSyncRunSource,
+} from "@/src/lib/heartgarden-collab-metrics";
+import {
   applySpaceChangeGraphMerge,
   buildCollabMergeProtectedContentIds,
   collectItemServerUpdatedAtBumps,
@@ -29,6 +35,7 @@ export function useHeartgardenSpaceChangeSync(options: {
   enabled: boolean;
   /** True when presence lists at least one other client in this space (excludes self). */
   hasRemotePeers: boolean;
+  refreshNonce?: number;
   activeSpaceId: string;
   syncCursorRef: MutableRefObject<string>;
   focusOpenRef: MutableRefObject<boolean>;
@@ -43,6 +50,7 @@ export function useHeartgardenSpaceChangeSync(options: {
   const {
     enabled,
     hasRemotePeers,
+    refreshNonce = 0,
     activeSpaceId,
     syncCursorRef,
     focusOpenRef,
@@ -55,10 +63,12 @@ export function useHeartgardenSpaceChangeSync(options: {
   } = options;
 
   const consecutiveMissesRef = useRef(0);
+  const runRef = useRef<((source: HeartgardenSpaceSyncRunSource) => Promise<void>) | null>(null);
 
   useEffect(() => {
     if (!enabled) {
       consecutiveMissesRef.current = 0;
+      runRef.current = null;
       return;
     }
 
@@ -67,6 +77,7 @@ export function useHeartgardenSpaceChangeSync(options: {
     let pollTimer: number | null = null;
 
     const tryBootstrapRepair = async (): Promise<boolean> => {
+      recordBootstrapRepairAttempt();
       neonSyncSpaceChangeSyncBreadcrumb("bootstrap repair attempt");
       const boot = await fetchBootstrap(activeSpaceId);
       if (cancelled || !boot || boot.demo !== false || !boot.spaceId) {
@@ -91,6 +102,7 @@ export function useHeartgardenSpaceChangeSync(options: {
     const onRepeatedPollFailure = () => {
       consecutiveMissesRef.current += 1;
       if (consecutiveMissesRef.current < AUX_FAILURE_AFTER_CONSECUTIVE_MISSES) return;
+      recordPollContractFailure();
       neonSyncReportAuxiliaryFailure(HEARTGARDEN_COLLA_POLL_FAILURE_USER_MESSAGE);
       neonSyncSpaceChangeSyncBreadcrumb(
         `poll contract failure x${AUX_FAILURE_AFTER_CONSECUTIVE_MISSES}; scheduling bootstrap repair`,
@@ -99,8 +111,9 @@ export function useHeartgardenSpaceChangeSync(options: {
       consecutiveMissesRef.current = 0;
     };
 
-    const run = async () => {
+    const run = async (source: HeartgardenSpaceSyncRunSource) => {
       if (cancelled || document.visibilityState === "hidden" || inFlight) return;
+      recordHeartgardenSpaceSyncRun(source);
       inFlight = true;
       try {
         const since = syncCursorRef.current;
@@ -149,6 +162,8 @@ export function useHeartgardenSpaceChangeSync(options: {
       }
     };
 
+    runRef.current = run;
+
     const stopPoll = () => {
       if (pollTimer != null) {
         window.clearInterval(pollTimer);
@@ -162,7 +177,9 @@ export function useHeartgardenSpaceChangeSync(options: {
 
     const startPoll = () => {
       if (pollTimer != null || document.visibilityState === "hidden") return;
-      pollTimer = window.setInterval(run, pollMs);
+      pollTimer = window.setInterval(() => {
+        void run("poll_interval");
+      }, pollMs);
     };
 
     const onVisibility = () => {
@@ -172,18 +189,19 @@ export function useHeartgardenSpaceChangeSync(options: {
         return;
       }
       startPoll();
-      void run();
+      void run("visibility");
     };
 
     document.addEventListener("visibilitychange", onVisibility);
     if (document.visibilityState !== "hidden") {
       startPoll();
-      void run();
+      void run("initial");
     }
 
     return () => {
       cancelled = true;
       stopPoll();
+      runRef.current = null;
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [
@@ -199,4 +217,10 @@ export function useHeartgardenSpaceChangeSync(options: {
     setGraph,
     itemServerUpdatedAtRef,
   ]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (refreshNonce === 0) return;
+    void runRef.current?.("realtime_invalidate");
+  }, [enabled, refreshNonce]);
 }

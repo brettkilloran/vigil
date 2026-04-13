@@ -1,0 +1,22 @@
+# Long-lived WebSocket + Redis subscriber for multiplayer invalidation.
+# Build from the Next app root (heartgarden/): docker build -f Dockerfile.realtime -t heartgarden-realtime .
+# Run with HEARTGARDEN_REALTIME_REDIS_URL, HEARTGARDEN_REALTIME_SECRET (same as Vercel), optional HEARTGARDEN_REALTIME_PORT.
+# See docs/DEPLOY_VERCEL.md §5.5.
+
+FROM node:22-alpine
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+
+ENV NODE_ENV=production
+ENV HEARTGARDEN_REALTIME_PORT=3002
+
+EXPOSE 3002
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD node -e 'require("http").get("http://127.0.0.1:3002/healthz",r=>{let b="";r.on("data",c=>b+=c);r.on("end",()=>process.exit(r.statusCode===200&&b.includes("\"ok\":true")?0:1))}).on("error",()=>process.exit(1))'
+
+CMD ["npm", "run", "realtime"]

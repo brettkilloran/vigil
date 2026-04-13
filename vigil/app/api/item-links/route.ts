@@ -11,6 +11,7 @@ import {
   isHeartgardenPlayerBlocked,
   playerMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
 import { clampLinkMetaSlackMultiplier } from "@/src/lib/item-link-meta";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 
@@ -130,6 +131,12 @@ export async function POST(req: Request) {
       ...(existing ? { link: existing } : {}),
     });
   }
+  await publishHeartgardenSpaceInvalidation(db, {
+    originSpaceId: srcItem.spaceId,
+    reason: "item-links.changed",
+    itemId: sourceItemId,
+    lookupSpaceIds: [srcItem.spaceId],
+  });
   return Response.json({ ok: true, link: row });
 }
 
@@ -232,6 +239,14 @@ export async function PATCH(req: Request) {
       Response.json({ ok: false, error: "Link not found" }, { status: 404 }),
     );
   }
+  if (srcForLink?.spaceId) {
+    await publishHeartgardenSpaceInvalidation(db, {
+      originSpaceId: srcForLink.spaceId,
+      reason: "item-links.changed",
+      itemId: linkMeta.sourceItemId,
+      lookupSpaceIds: [srcForLink.spaceId],
+    });
+  }
   return Response.json({ ok: true, link: updated });
 }
 
@@ -295,6 +310,14 @@ export async function DELETE(req: Request) {
       bootCtx,
       Response.json({ ok: false, error: "Link not found" }, { status: 404 }),
     );
+  }
+  if (srcForLink?.spaceId) {
+    await publishHeartgardenSpaceInvalidation(db, {
+      originSpaceId: srcForLink.spaceId,
+      reason: "item-links.changed",
+      itemId: linkMeta.sourceItemId,
+      lookupSpaceIds: [srcForLink.spaceId],
+    });
   }
   return Response.json({ ok: true });
 }

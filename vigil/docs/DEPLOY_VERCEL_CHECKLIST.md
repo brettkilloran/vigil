@@ -35,6 +35,7 @@ Add under **Project → Settings → Environment Variables**; mark sensitive val
 - [ ] `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_BASE_URL` — if using uploads (see R2 CORS in [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md) §5).
 - [ ] `HEARTGARDEN_LORE_QUERY_DISABLED=1` — optional; disables **`POST /api/lore/query`** until you add stronger access control (see [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md) §7).
 - [ ] Boot PIN gate (optional): **`HEARTGARDEN_BOOT_SESSION_SECRET`** (16+ chars) + at least one of **`HEARTGARDEN_BOOT_PIN_BISHOP`** / **`HEARTGARDEN_BOOT_PIN_PLAYERS`** / **`HEARTGARDEN_BOOT_PIN_DEMO`** (each exactly **8** chars if set). Players-only is valid for a player-only deploy. If Players sign in, set **`HEARTGARDEN_PLAYER_SPACE_ID`** (see [`PLAYER_LAYER.md`](./PLAYER_LAYER.md)). See [`API.md`](./API.md) and [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md).
+- [ ] **Optional multiplayer realtime:** Redis + **`HEARTGARDEN_REALTIME_REDIS_URL`**, **`HEARTGARDEN_REALTIME_SECRET`** (≥ 16 chars), **`HEARTGARDEN_REALTIME_URL`** (**`wss://`**) on Vercel; deploy **`npm run realtime`** separately with the same Redis and secret (see [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md) §5.5).
 
 **Never set on Vercel:**
 
