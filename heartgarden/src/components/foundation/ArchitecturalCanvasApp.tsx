@@ -9920,6 +9920,7 @@ export function ArchitecturalCanvasApp({
                       dragged={dragged}
                       selected={selected}
                       showTape={false}
+                      showStaple={!entity.stackId}
                       onBodyCommit={updateNodeBody}
                       onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
                       wikiLinkAssist={makeWikiLinkAssist(entity.id)}
@@ -10154,6 +10155,7 @@ export function ArchitecturalCanvasApp({
                           dragged={draggingStack}
                           selected={false}
                           showTape={false}
+                          showStaple={!entity.stackId}
                           bodyEditable={false}
                           onBodyCommit={updateNodeBody}
                           onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
@@ -11488,6 +11490,7 @@ export function ArchitecturalCanvasApp({
                       dragged={!!drag}
                       selected={false}
                       showTape={false}
+                      showStaple={!entity.stackId}
                       onBodyCommit={updateNodeBody}
                       onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
                       wikiLinkAssist={makeWikiLinkAssist(entity.id)}
@@ -11677,11 +11680,7 @@ export function ArchitecturalCanvasApp({
 
       <div
         className={`${styles.focusOverlay} ${focusOpen ? styles.focusActive : ""} ${
-          focusSurface === "code" ||
-          focusSurface === "character-hybrid" ||
-          focusSurface === "location-hybrid"
-            ? styles.focusEditorDark
-            : ""
+          focusSurface === "code" ? styles.focusEditorDark : ""
         }`}
         onPointerDownCapture={onFocusOverlayPointerDownCapture}
       >
@@ -11703,13 +11702,7 @@ export function ArchitecturalCanvasApp({
               graph.entities[activeNodeId].entityMeta?.aiReview === "pending" ? (
                 <div className={styles.focusAiReviewBar} role="status" aria-live="polite">
                   <Tag
-                    variant={
-                      focusSurface === "code" ||
-                      focusSurface === "character-hybrid" ||
-                      focusSurface === "location-hybrid"
-                        ? "llmFocusDark"
-                        : "llmLight"
-                    }
+                    variant={focusSurface === "code" ? "llmFocusDark" : "llmLight"}
                   >
                     Unreviewed
                   </Tag>

@@ -84,7 +84,7 @@ const ORDO_V7_LOGO_PIXEL_GRID: readonly (0 | 1)[][] = [
 
 /**
  * Per-card staple position + tilt: stable from seed (SSR-safe), independent of tape-only ±3°.
- * Combines tape rotation with hashed extra angle and horizontal/vertical offset from center anchor.
+ * Combines tape rotation with hashed extra angle (~±7°; between prior ±11° and original ~±3°) and offset.
  */
 function ordoV7StaplePlacementFromSeed(seed: string, tapeRotationDeg?: number): CSSProperties {
   let h = 2166136261;
@@ -100,7 +100,7 @@ function ordoV7StaplePlacementFromSeed(seed: string, tapeRotationDeg?: number): 
   const hDeg = mix(0x5bd1e995);
   const hX = mix(0xcbf29ce4);
   const hY = mix(0x9e3779b9);
-  const extraDeg = ((hDeg % 1001) / 1001 - 0.5) * 22;
+  const extraDeg = ((hDeg % 1001) / 1001 - 0.5) * 14;
   const deg = (tapeRotationDeg ?? 0) + extraDeg;
   const offsetX = ((hX % 2001) / 2001 - 0.5) * 50;
   const offsetY = ((hY % 2001) / 2001 - 0.5) * 22;
@@ -296,6 +296,8 @@ DetailLine.displayName = "DetailLine";
 export type LoreLocationOrdoV7SlabProps = {
   nodeId: string;
   bodyHtml: string;
+  /** Canvas: hide with tape when grouped (`showTape` false). Lab defaults to true. */
+  showStaple?: boolean;
   /** Canvas: degrees match `entity.tapeRotation` (set on parent for staple CSS var). */
   tapeRotationDeg?: number;
   /** Lab: stable hashed staple tilt. */
@@ -312,6 +314,7 @@ export type LoreLocationOrdoV7SlabProps = {
 export function LoreLocationOrdoV7Slab({
   nodeId,
   bodyHtml,
+  showStaple = true,
   tapeRotationDeg,
   labTestId,
   editable,
@@ -419,7 +422,9 @@ export function LoreLocationOrdoV7Slab({
     >
       <div className={cardStyles.locOrdoV7Geo} aria-hidden />
       <div className={cardStyles.locOrdoV7Glow} aria-hidden />
-      <OrdoV7Staple nodeId={nodeId} labTestId={labTestId} tapeRotationDeg={tapeRotationDeg} />
+      {showStaple ? (
+        <OrdoV7Staple nodeId={nodeId} labTestId={labTestId} tapeRotationDeg={tapeRotationDeg} />
+      ) : null}
       <div className={cardStyles.locOrdoV7Inner}>
         <header
           className={cardStyles.locOrdoV7Header}

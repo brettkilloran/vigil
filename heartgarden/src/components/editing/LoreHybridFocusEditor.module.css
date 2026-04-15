@@ -40,7 +40,7 @@
 .host[data-hg-lore-hybrid-focus="character"] .notesWrap {
   margin-top: 0.75rem;
   padding-top: 1rem;
-  border-top: 1px solid color-mix(in oklch, var(--sys-color-white) 18%, transparent);
+  border-top: 1px solid color-mix(in oklch, var(--sys-color-black) 12%, transparent);
 }
 
 /* Location: `.focusLocationDocument [data-hg-lore-location-focus-meta]` already has border-bottom in

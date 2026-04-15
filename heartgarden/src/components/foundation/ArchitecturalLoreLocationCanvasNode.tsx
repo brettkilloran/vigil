@@ -27,6 +27,8 @@ export function ArchitecturalLoreLocationCanvasNode({
   onBodyCommit,
   tapeVariant = "clear",
   showTape = false,
+  /** Ordo staple bar; independent of `showTape` (location cards keep tape off but show staples when not grouped). */
+  showStaple = true,
   bodyEditable,
   onBodyDraftDirty,
   wikiLinkAssist,
@@ -43,6 +45,7 @@ export function ArchitecturalLoreLocationCanvasNode({
   selected: boolean;
   onBodyCommit: (id: string, html: string) => void;
   showTape?: boolean;
+  showStaple?: boolean;
   bodyEditable?: boolean;
   onBodyDraftDirty?: (dirty: boolean) => void;
   wikiLinkAssist?: WikiLinkAssistConfig | null;
@@ -74,6 +77,7 @@ export function ArchitecturalLoreLocationCanvasNode({
         <LoreLocationOrdoV7Slab
           nodeId={id}
           bodyHtml={bodyHtml}
+          showStaple={showStaple}
           tapeRotationDeg={tapeRotation}
           editable={editable}
           onCommit={(html) => onBodyCommit(id, html)}

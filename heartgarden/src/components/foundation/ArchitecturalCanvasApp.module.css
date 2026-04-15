@@ -5148,7 +5148,7 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusCharacterDocument :global([data-hg-character-focus-meta="true"]) {
-  border-bottom: 1px solid color-mix(in oklch, var(--sys-color-white) 10%, transparent);
+  border-bottom: 1px solid color-mix(in oklch, var(--sys-color-black) 10%, transparent);
   padding: 0 0 32px;
   margin-bottom: 12px;
 }
@@ -5177,8 +5177,8 @@ button.rootDockPanel.viewportMetricsPanel {
   width: 100%;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid color-mix(in oklch, var(--sys-color-white) 10%, transparent);
-  background: color-mix(in oklch, var(--sys-color-black) 78%, var(--sys-color-neutral-950));
+  border: 1px solid color-mix(in oklch, var(--sys-color-black) 10%, transparent);
+  background: color-mix(in oklch, var(--sys-color-neutral-100) 88%, var(--sys-color-white));
   box-shadow: none;
 }
 
@@ -5262,7 +5262,7 @@ button.rootDockPanel.viewportMetricsPanel {
   font-size: 16px;
   line-height: 1.4;
   letter-spacing: 0;
-  color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
+  color: var(--sem-text-primary);
   flex: 1 1 auto;
 }
 
@@ -5285,7 +5285,7 @@ button.rootDockPanel.viewportMetricsPanel {
   line-height: 1.1;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: color-mix(in oklch, var(--sys-color-white) 97%, transparent);
+  color: color-mix(in oklch, var(--sys-color-black) 88%, transparent);
 }
 
 .focusBody.focusCharacterDocument
@@ -5297,7 +5297,7 @@ button.rootDockPanel.viewportMetricsPanel {
   font-size: 16px;
   line-height: 1.4;
   font-weight: 400;
-  color: color-mix(in oklch, var(--sys-color-white) 82%, transparent);
+  color: var(--sem-text-secondary);
 }
 
 .focusBody.focusCharacterDocument :global([data-hg-character-focus-notes-shell="true"]) {
@@ -5319,8 +5319,8 @@ button.rootDockPanel.viewportMetricsPanel {
   max-width: min(100%, 76ch);
   font-size: 18px;
   line-height: 1.72;
-  color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
-  caret-color: color-mix(in oklch, var(--sem-focus-ring) 72%, var(--sys-color-white));
+  color: var(--sem-text-focus-body);
+  caret-color: color-mix(in oklch, var(--sem-focus-ring) 55%, var(--sys-color-black));
   /* Same role as `.nodeBody` horizontal padding: room for `right: 100%` drag handles in the margin. */
   padding-left: 32px;
   box-sizing: border-box;
@@ -5340,71 +5340,11 @@ button.rootDockPanel.viewportMetricsPanel {
   }
 }
 
-.focusEditorDark
-  .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] h1) {
-  color: color-mix(in oklch, var(--sys-color-white) 96%, transparent);
-}
-
-.focusEditorDark
-  .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] h2),
-.focusEditorDark
-  .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] h3) {
-  color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
-}
-
-.focusEditorDark
-  .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] pre) {
-  background: color-mix(in oklch, var(--sys-color-neutral-900) 85%, transparent);
-  border-color: color-mix(in oklch, var(--sys-color-white) 12%, transparent);
-  color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
-}
-
-.focusEditorDark
-  .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] hr) {
-  border-top-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
-}
-
-/* Lore hybrid: TipTap notes sit outside legacy `[data-hg-character-focus-notes]` — inherit
- * `.focusBody` ink (`--sem-text-focus-body`) unless we match the old notes surface. */
-.focusEditorDark
-  .focusBody.focusCharacterDocument
-  :global([data-hg-lore-hybrid-focus="character"] [data-hg-doc-editor="true"]) {
-  color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
-  caret-color: color-mix(in oklch, var(--sem-focus-ring) 72%, var(--sys-color-white));
-}
-
-.focusEditorDark
-  .focusBody.focusCharacterDocument
-  :global([data-hg-lore-hybrid-focus="character"] [data-hg-doc-editor="true"] .ProseMirror h1) {
-  color: color-mix(in oklch, var(--sys-color-white) 96%, transparent);
-}
-
-.focusEditorDark
-  .focusBody.focusCharacterDocument
-  :global([data-hg-lore-hybrid-focus="character"] [data-hg-doc-editor="true"] .ProseMirror h2),
-.focusEditorDark
-  .focusBody.focusCharacterDocument
-  :global([data-hg-lore-hybrid-focus="character"] [data-hg-doc-editor="true"] .ProseMirror h3) {
-  color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
-}
-
-.focusEditorDark
-  .focusBody.focusCharacterDocument
-  :global([data-hg-lore-hybrid-focus="character"] [data-hg-doc-editor="true"] .ProseMirror pre) {
-  background: color-mix(in oklch, var(--sys-color-neutral-900) 85%, transparent);
-  border-color: color-mix(in oklch, var(--sys-color-white) 12%, transparent);
-  color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
-}
-
-.focusEditorDark
-  .focusBody.focusCharacterDocument
-  :global([data-hg-lore-hybrid-focus="character"] [data-hg-doc-editor="true"] .ProseMirror hr) {
-  border-top-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
+/* Lore hybrid Notes (light focus, matches default doc / card ink) */
+.focusBody.focusCharacterDocument
+  :global([data-hg-lore-hybrid-focus="character"] [data-hg-doc-editor="true"] .tiptap.ProseMirror) {
+  color: var(--sem-text-focus-body);
+  -webkit-text-fill-color: var(--sem-text-focus-body);
 }
 
 .focusBody.focusCharacterDocument :global([data-hg-character-focus-notes="true"] > p:has(.archBlockDragHandle)),
@@ -5454,7 +5394,7 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusLocationDocument :global([data-hg-lore-location-focus-meta="true"]) {
-  border-bottom: 1px solid color-mix(in oklch, var(--sys-color-white) 10%, transparent);
+  border-bottom: 1px solid color-mix(in oklch, var(--sys-color-black) 10%, transparent);
   padding: 0 0 28px;
   margin-bottom: 8px;
   display: flex;
@@ -5492,8 +5432,8 @@ button.rootDockPanel.viewportMetricsPanel {
   max-width: min(100%, 76ch);
   font-size: 16px;
   line-height: 1.45;
-  color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
-  caret-color: color-mix(in oklch, var(--sem-focus-ring) 72%, var(--sys-color-white));
+  color: var(--sem-text-primary);
+  caret-color: color-mix(in oklch, var(--sem-focus-ring) 55%, var(--sys-color-black));
 }
 
 .focusBody.focusLocationDocument
@@ -5513,7 +5453,7 @@ button.rootDockPanel.viewportMetricsPanel {
   line-height: 1.12;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: color-mix(in oklch, var(--sys-color-white) 97%, transparent);
+  color: color-mix(in oklch, var(--sys-color-black) 88%, transparent);
 }
 
 .focusBody.focusLocationDocument :global([data-hg-lore-location-focus-notes-shell="true"]) {
@@ -5530,8 +5470,8 @@ button.rootDockPanel.viewportMetricsPanel {
   max-width: min(100%, 76ch);
   font-size: 18px;
   line-height: 1.72;
-  color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
-  caret-color: color-mix(in oklch, var(--sem-focus-ring) 72%, var(--sys-color-white));
+  color: var(--sem-text-focus-body);
+  caret-color: color-mix(in oklch, var(--sem-focus-ring) 55%, var(--sys-color-black));
   padding-left: 32px;
   box-sizing: border-box;
   overflow-x: visible;
@@ -5544,69 +5484,10 @@ button.rootDockPanel.viewportMetricsPanel {
   box-sizing: border-box;
 }
 
-.focusEditorDark
-  .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] h1) {
-  color: color-mix(in oklch, var(--sys-color-white) 96%, transparent);
-}
-
-.focusEditorDark
-  .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] h2),
-.focusEditorDark
-  .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] h3) {
-  color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
-}
-
-.focusEditorDark
-  .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] pre) {
-  background: color-mix(in oklch, var(--sys-color-neutral-900) 85%, transparent);
-  border-color: color-mix(in oklch, var(--sys-color-white) 12%, transparent);
-  color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
-}
-
-.focusEditorDark
-  .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] hr) {
-  border-top-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
-}
-
-.focusEditorDark
-  .focusBody.focusLocationDocument
-  :global([data-hg-lore-hybrid-focus="location"] [data-hg-doc-editor="true"]) {
-  color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
-  caret-color: color-mix(in oklch, var(--sem-focus-ring) 72%, var(--sys-color-white));
-}
-
-.focusEditorDark
-  .focusBody.focusLocationDocument
-  :global([data-hg-lore-hybrid-focus="location"] [data-hg-doc-editor="true"] .ProseMirror h1) {
-  color: color-mix(in oklch, var(--sys-color-white) 96%, transparent);
-}
-
-.focusEditorDark
-  .focusBody.focusLocationDocument
-  :global([data-hg-lore-hybrid-focus="location"] [data-hg-doc-editor="true"] .ProseMirror h2),
-.focusEditorDark
-  .focusBody.focusLocationDocument
-  :global([data-hg-lore-hybrid-focus="location"] [data-hg-doc-editor="true"] .ProseMirror h3) {
-  color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
-}
-
-.focusEditorDark
-  .focusBody.focusLocationDocument
-  :global([data-hg-lore-hybrid-focus="location"] [data-hg-doc-editor="true"] .ProseMirror pre) {
-  background: color-mix(in oklch, var(--sys-color-neutral-900) 85%, transparent);
-  border-color: color-mix(in oklch, var(--sys-color-white) 12%, transparent);
-  color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
-}
-
-.focusEditorDark
-  .focusBody.focusLocationDocument
-  :global([data-hg-lore-hybrid-focus="location"] [data-hg-doc-editor="true"] .ProseMirror hr) {
-  border-top-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
+.focusBody.focusLocationDocument
+  :global([data-hg-lore-hybrid-focus="location"] [data-hg-doc-editor="true"] .tiptap.ProseMirror) {
+  color: var(--sem-text-focus-body);
+  -webkit-text-fill-color: var(--sem-text-focus-body);
 }
 
 .focusBody.focusLocationDocument :global([data-hg-lore-location-focus-notes="true"] > p:has(.archBlockDragHandle)),

@@ -3,7 +3,8 @@
  * distinct look across rerenders/interactions instead of "changing shape" after focus/edit.
  * Values are written as CSS vars consumed by `lore-entity-card.module.css` (`.charSkShellV11`,
  * `.locOrdoV7Root`). Dual-line placename strips stagger via `--sk-v11-marker-trim-right-top` /
- * `--sk-v11-marker-trim-right-bottom` (see `syncLoreV11MarkerTilts` on character shells).
+ * `--sk-v11-marker-trim-right-bottom`; `skewY` + wide `rotate` ranges keep the two bars from
+ * reading as identical machine strokes.
  */
 
 /** Per `[data-hg-lore-field]` node — *not* the card root. Root-level idempotence breaks React remounts
@@ -26,18 +27,27 @@ function seededFloat(seed: string, key: string, min: number, max: number): numbe
 }
 
 function applyMarkerTiltVars(el: HTMLElement, fieldSeed: string): void {
-  const deg = `${seededFloat(fieldSeed, "rotate", -0.84, -0.2).toFixed(3)}deg`;
-  const trim = `${seededFloat(fieldSeed, "trim", 1.5, 10.5).toFixed(2)}px`;
-  const trimTop = `${seededFloat(fieldSeed, "trim-top", 0.8, 16).toFixed(2)}px`;
-  const trimBottom = `${seededFloat(fieldSeed, "trim-bottom", 1.4, 19).toFixed(2)}px`;
-  const shiftX = `${seededFloat(fieldSeed, "offset-x", -1.25, 1.25).toFixed(2)}px`;
-  const gloss = `${seededFloat(fieldSeed, "gloss", 0.55, 1.8).toFixed(2)}%`;
-  const tail = `${seededFloat(fieldSeed, "tail", 91.5, 98.2).toFixed(2)}%`;
+  const rotate = seededFloat(fieldSeed, "rotate", -2.55, 2.35);
+  const deg = `${rotate.toFixed(3)}deg`;
+
+  const trim = `${seededFloat(fieldSeed, "trim", 2, 22).toFixed(2)}px`;
+
+  let trimTop = seededFloat(fieldSeed, "trim-top", 0, 28);
+  let trimBottom = seededFloat(fieldSeed, "trim-bottom", 0, 36);
+  if (Math.abs(trimTop - trimBottom) < 10) {
+    trimBottom = Math.min(trimTop + 10 + seededFloat(fieldSeed, "trim-uniformity", 0, 22), 52);
+  }
+
+  const shiftX = `${seededFloat(fieldSeed, "offset-x", -3.75, 3.75).toFixed(2)}px`;
+  const skewY = `${seededFloat(fieldSeed, "skew-y", -0.72, 0.84).toFixed(3)}deg`;
+  const gloss = `${seededFloat(fieldSeed, "gloss", 0.4, 2.35).toFixed(2)}%`;
+  const tail = `${seededFloat(fieldSeed, "tail", 82.5, 99.5).toFixed(2)}%`;
 
   el.style.setProperty("--sk-v11-marker-rotate", deg);
+  el.style.setProperty("--sk-v11-marker-skew-y", skewY);
   el.style.setProperty("--sk-v11-marker-trim-right", trim);
-  el.style.setProperty("--sk-v11-marker-trim-right-top", trimTop);
-  el.style.setProperty("--sk-v11-marker-trim-right-bottom", trimBottom);
+  el.style.setProperty("--sk-v11-marker-trim-right-top", `${trimTop.toFixed(2)}px`);
+  el.style.setProperty("--sk-v11-marker-trim-right-bottom", `${trimBottom.toFixed(2)}px`);
   el.style.setProperty("--sk-v11-marker-offset-x", shiftX);
   el.style.setProperty("--sk-v11-marker-gloss", gloss);
   el.style.setProperty("--sk-v11-marker-tail", tail);

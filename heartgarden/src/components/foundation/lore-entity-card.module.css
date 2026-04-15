@@ -1855,6 +1855,7 @@
   --sk-v11-marker-hide-ease: cubic-bezier(0.55, 0, 1, 0.45);
   /* Per-field random slight slant from `syncLoreV11MarkerTilts` (hand-drawn redaction). */
   --sk-v11-marker-rotate: -0.5deg;
+  --sk-v11-marker-skew-y: 0deg;
   --sk-v11-marker-trim-right: 0px;
   --sk-v11-marker-trim-right-top: 0px;
   --sk-v11-marker-trim-right-bottom: 0px;
@@ -2493,21 +2494,21 @@
 
 @keyframes charSkV11MarkerStripWipe {
   from {
-    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
   }
 
   to {
-    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   }
 }
 
 @keyframes charSkV11MarkerBlockWipe {
   from {
-    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
+    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
   }
 
   to {
-    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   }
 }
 
@@ -2700,7 +2701,7 @@
   right: auto;
   top: var(--hg-lore-ph-y, 0px);
   height: var(--hg-lore-ph-lh, var(--sk-v11-marker-h));
-  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   transform-origin: left top;
   border-radius: 2px;
   pointer-events: none;
@@ -2732,7 +2733,7 @@
   );
   height: calc((var(--hg-lore-ph-lh, var(--sk-v11-marker-h)) * 2) + 4px);
   margin: 0;
-  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   transform-origin: left top;
   border-radius: 2px;
   pointer-events: none;
@@ -2773,14 +2774,14 @@
     .charSkDisplayName
   ):focus-within::after {
   animation: none;
-  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
   transition: transform var(--sk-v11-marker-hide-ms) var(--sk-v11-marker-hide-ease);
 }
 
 .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus::after,
 .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus-within::after {
   animation: none;
-  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
+  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
   transition: none;
 }
 
@@ -2791,12 +2792,12 @@
     )::after,
     .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]::after {
     animation: none;
-    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   }
 
   /* Dual-line name: match `translateX` + `charSkV11MarkerDualLineWipe` end-state. */
   .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]::after {
-    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
     background-size:
       calc(100% - var(--sk-v11-marker-trim-right-top, 0px)) calc(50% - 2px),
       calc(100% - var(--sk-v11-marker-trim-right-bottom, 0px)) calc(50% - 2px);
@@ -2812,14 +2813,14 @@
     ):focus-within::after,
   .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus::after,
   .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus-within::after {
-    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
     opacity: 0;
     transition: opacity 0.12s ease;
   }
 
   .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus::after,
   .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus-within::after {
-    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   }
 }
 
@@ -3748,6 +3749,7 @@
   --sk-v11-marker-hide-ms: 320ms;
   --sk-v11-marker-hide-ease: cubic-bezier(0.55, 0, 1, 0.45);
   --sk-v11-marker-rotate: -0.5deg;
+  --sk-v11-marker-skew-y: 0deg;
   --sk-v11-marker-trim-right: 0px;
   --sk-v11-marker-offset-x: 0px;
   --sk-v11-marker-gloss: 2.5%;
@@ -3819,15 +3821,68 @@
   transform-origin: 50% 50%;
 }
 
+/* Skeuomorphic wire staple: cylindrical specular + edge occlusion + pressed shadow */
 .locOrdoV7StapleMetal {
+  position: relative;
   display: block;
   width: 42px;
   height: 7px;
-  border-radius: 0;
-  background: linear-gradient(180deg, #b8b8b8 0%, #888 52%, #5a5a5a 100%);
+  isolation: isolate;
+  border-radius: 1px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.38) 0%,
+      rgba(255, 255, 255, 0.1) 28%,
+      transparent 52%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.42) 0%,
+      rgba(255, 255, 255, 0.07) 18%,
+      rgba(255, 255, 255, 0.14) 48%,
+      rgba(0, 0, 0, 0.1) 78%,
+      rgba(0, 0, 0, 0.48) 100%
+    ),
+    linear-gradient(180deg, #8f8f8f 0%, #5f5f5f 38%, #434343 68%, #2c2c2c 100%);
   box-shadow:
-    0 1px 1.5px oklch(0 0 0 / 0.28),
-    inset 0 0.5px 0 oklch(1 0 0 / 0.08);
+    0 1.5px 2.5px oklch(0 0 0 / 0.42),
+    0 4px 14px oklch(0 0 0 / 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.45),
+    inset 1.2px 0 0 rgba(0, 0, 0, 0.18),
+    inset -1.2px 0 0 rgba(0, 0, 0, 0.18);
+}
+
+.locOrdoV7StapleMetal::before {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 0;
+  height: 46%;
+  border-radius: 40% 40% 55% 55% / 90% 90% 120% 120%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.12) 55%, transparent 100%);
+  opacity: 0.65;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.locOrdoV7StapleMetal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 58%,
+    rgba(0, 0, 0, 0.12) 72%,
+    rgba(0, 0, 0, 0.28) 100%
+  );
+  pointer-events: none;
+  z-index: 2;
 }
 
 .locOrdoV7Inner {
@@ -4221,7 +4276,7 @@
   );
   height: calc((var(--hg-lore-ph-lh, var(--sk-v11-marker-h)) * 2) + 4px);
   margin: 0;
-  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   transform-origin: left top;
   border-radius: 2px;
   pointer-events: none;
@@ -4254,7 +4309,7 @@
 .locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus::after,
 .locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus-within::after {
   animation: none;
-  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
+  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
   transition: none;
 }
 
@@ -4327,7 +4382,7 @@
   top: calc(var(--hg-lore-ph-y, 0px) + 2px);
   /* Taller than measured caret line (`--hg-lore-ph-lh` ~11px) so the bar feels like a real censor band. */
   height: clamp(14px, calc(var(--hg-lore-ph-lh, 11px) * 1.55), 22px);
-  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   transform-origin: left top;
   border-radius: 2px;
   pointer-events: none;
@@ -4357,7 +4412,7 @@
 .locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus::after,
 .locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus-within::after {
   animation: none;
-  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
   transition: transform var(--sk-v11-marker-hide-ms) var(--sk-v11-marker-hide-ease);
 }
 
