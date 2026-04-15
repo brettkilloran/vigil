@@ -3,6 +3,8 @@
  * logical start of the field so markers stay stable across mount, focus, and idle repaint.
  */
 
+import { LORE_V11_PH_LOCATION_PLACEHOLDER } from "@/src/lib/lore-location-focus-document-html";
+import { syncLoreV11MarkerTilts } from "@/src/lib/lore-v11-marker-tilt";
 import { LORE_V11_PH_DISPLAY_NAME } from "@/src/lib/lore-node-seed-html";
 
 const PH_X = "--hg-lore-ph-x";
@@ -26,6 +28,12 @@ export function clearLoreV11PhCaretVars(el: HTMLElement): void {
 function charSkShellsV11Under(root: HTMLElement): HTMLElement[] {
   if (root.matches?.(`[class*="charSkShellV11"]`)) return [root];
   return [...root.querySelectorAll<HTMLElement>(`[class*="charSkShellV11"]`)];
+}
+
+/** Location ORDO v7 slab — same `data-hg-lore-ph` caret sync as character v11. */
+function locOrdoV7RootsUnder(root: HTMLElement): HTMLElement[] {
+  if (root.matches?.(`[class*="locOrdoV7Root"]`)) return [root];
+  return [...root.querySelectorAll<HTMLElement>(`[class*="locOrdoV7Root"]`)];
 }
 
 /** Collapsed range at the start of the field’s editable surface (when no usable selection). */
@@ -115,7 +123,7 @@ function caretBoxForField(field: HTMLElement): { x: number; y: number; h: number
  */
 export function syncLoreV11PhCaretOffsetsInHost(host: HTMLElement | null): void {
   if (!host || typeof document === "undefined") return;
-  const shells = charSkShellsV11Under(host);
+  const shells = [...charSkShellsV11Under(host), ...locOrdoV7RootsUnder(host)];
   if (!shells.length) return;
 
   for (const shell of shells) {
@@ -126,8 +134,9 @@ export function syncLoreV11PhCaretOffsetsInHost(host: HTMLElement | null): void 
       }
       const box = caretBoxForField(el);
       /* Match by `data-hg-lore-ph`, not DOM class: CSS-module hashes may omit the readable `charSkDisplayName` substring. */
+      const ph = el.getAttribute("data-hg-lore-ph");
       const yOff =
-        el.getAttribute("data-hg-lore-ph") === LORE_V11_PH_DISPLAY_NAME
+        ph === LORE_V11_PH_DISPLAY_NAME || ph === LORE_V11_PH_LOCATION_PLACEHOLDER
           ? PLACEHOLDER_Y_OFFSET_DISPLAY_NAME_PX
           : PLACEHOLDER_Y_OFFSET_OTHER_FIELDS_PX;
       el.style.setProperty(PH_X, px(box.x));
@@ -141,10 +150,15 @@ export function syncLoreV11PhCaretOffsetsInHost(host: HTMLElement | null): void 
  * Keeps v11 placeholder offsets in sync with selection, layout, and resize.
  */
 export function installLoreV11PlaceholderCaretSync(host: HTMLElement): () => void {
+  syncLoreV11MarkerTilts(host);
+
   let raf = 0;
   const run = () => {
     cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(() => syncLoreV11PhCaretOffsetsInHost(host));
+    raf = requestAnimationFrame(() => {
+      syncLoreV11MarkerTilts(host);
+      syncLoreV11PhCaretOffsetsInHost(host);
+    });
   };
 
   syncLoreV11PhCaretOffsetsInHost(host);

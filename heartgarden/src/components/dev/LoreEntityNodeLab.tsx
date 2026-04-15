@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Lore entity node design lab. Location v6 uses legacy rich HTML (`BufferedContentEditable`); v7 uses **`HeartgardenDocEditor`**
- * (hgDoc / TipTap) for notes. Production wiring can use
+ * Lore entity node design lab. Location v6 uses legacy rich HTML (`BufferedContentEditable`). Location v7 uses the same
+ * **`LoreLocationOrdoV7Slab`** as infinite canvas (canonical ORDO slab + hgDoc notes). Production wiring can use
  * `items.entity_type` (character | faction | location) plus optional `content_json.hgArch`
  * keys such as `cardVariant` once a direction is chosen.
  *
@@ -10,16 +10,13 @@
  * Faction lab previews use **`FactionLabPlate`** (lab-only chrome) — not **`LabCard`**, so they are not constrained to
  * tape or `a4DocumentBody`. Shelf variants use **`ArchitecturalNodeHeader`** for the expand affordance. Location v2–v3
  * use **`LabCard`** to match canvas A4 nodes; v4–v7 are lab-only **`FactionLabPlate`** ORDO mono slabs — v4 static fiction;
- * v5 dense field-mapped; v6 lean **`BufferedContentEditable`** body; v7 lean slab + TipTap notes (**`HeartgardenDocEditor`**) + lab `contentEditable` name/context/detail.
+ * v5 dense field-mapped; v6 lean **`BufferedContentEditable`** body; v7 matches canvas (**`LoreLocationOrdoV7Slab`**).
  */
 
 import {
-  forwardRef,
-  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
-  useId,
   useMemo,
   useRef,
   useState,
@@ -27,13 +24,12 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import type { JSONContent } from "@tiptap/core";
-
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import {
   ArchitecturalNodeHeader,
   ArchitecturalNodeTape,
 } from "@/src/components/foundation/ArchitecturalNodeCard";
+import { LoreLocationOrdoV7Slab } from "@/src/components/foundation/LoreLocationOrdoV7Slab";
 import { ArrowsOutSimple } from "@phosphor-icons/react";
 import canvasStyles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import cardStyles from "@/src/components/foundation/lore-entity-card.module.css";
@@ -42,9 +38,6 @@ import { cx } from "@/src/lib/cx";
 import type { TapeVariant } from "@/src/components/foundation/architectural-types";
 import { Button } from "@/src/components/ui/Button";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
-import { HeartgardenDocEditor } from "@/src/components/editing/HeartgardenDocEditor";
-import type { EditorCommitReason } from "@/src/components/editing/useEditorSession";
-
 import labStyles from "./lore-entity-node-lab.module.css";
 import {
   getLoreNodeSeedBodyHtml,
@@ -60,79 +53,6 @@ import {
 } from "@/src/lib/lore-v9-placeholder";
 import { applyImageDataUrlToArchitecturalMediaBody } from "@/src/components/foundation/architectural-media-html";
 import { applySpellcheckToNestedEditables } from "@/src/lib/contenteditable-spellcheck";
-
-/** Stable “hand-stapled” placement for lab-only chrome (SSR / hydration safe). */
-function labStaplePlacementFromTestId(testId: string): CSSProperties {
-  let h = 2166136261;
-  for (let i = 0; i < testId.length; i++) {
-    h = Math.imul(h ^ testId.charCodeAt(i), 16777619) >>> 0;
-  }
-  const h2 = Math.imul(h, 2246822519) >>> 0;
-  const tDeg = (h2 % 1000) / 1000;
-  const tNudge = (h % 1000) / 1000;
-  const deg = -8 + tDeg * 16;
-  const nudgePx = -5 + tNudge * 10;
-  return {
-    "--fac-ordo-v7-staple-deg": `${deg}deg`,
-    "--fac-ordo-v7-staple-nudge": `${nudgePx}px`,
-  } as CSSProperties;
-}
-
-/** Thin wire-style office staple on the slab “paper” (V7 lab only). */
-function LocOrdoV7Staple({ testId }: { testId: string }) {
-  const gid = useId().replace(/:/g, "");
-  return (
-    <span
-      className={labStyles.facOrdoLocV7Staple}
-      aria-hidden
-      data-hg-lore-location-staple="v7"
-      style={labStaplePlacementFromTestId(testId)}
-    >
-      <svg
-        className={labStyles.facOrdoLocV7StapleSvg}
-        viewBox="0 0 40 12"
-        width="40"
-        height="12"
-        aria-hidden
-        role="presentation"
-        focusable="false"
-      >
-        <defs>
-          <linearGradient id={`${gid}-crown`} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#d6d6d6" />
-            <stop offset="28%" stopColor="#9a9a9a" />
-            <stop offset="52%" stopColor="#4f4f4f" />
-            <stop offset="100%" stopColor="#8c8c8c" />
-          </linearGradient>
-          <linearGradient id={`${gid}-leg`} x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0%" stopColor="#2a2a2a" />
-            <stop offset="50%" stopColor="#4a4a4a" />
-            <stop offset="100%" stopColor="#2c2c2c" />
-          </linearGradient>
-        </defs>
-        {/* Contact shadow where legs press into paper */}
-        <ellipse cx="20" cy="10.2" rx="13" ry="1.6" fill="black" opacity="0.2" />
-        {/* Crown (top view of bent wire) */}
-        <rect
-          x="3"
-          y="4"
-          width="34"
-          height="2"
-          rx="0.45"
-          fill={`url(#${gid}-crown)`}
-          stroke="#0f0f0f"
-          strokeOpacity="0.72"
-          strokeWidth="0.35"
-        />
-        {/* Specular on crown — narrow highlight so wire reads solid */}
-        <path d="M 3.3 4.08 L 14 4.08 L 13.2 4.52 L 3.3 4.52 Z" fill="#f5f5f5" opacity="0.42" />
-        {/* Legs piercing the sheet */}
-        <rect x="3.1" y="6" width="1.15" height="4.2" fill={`url(#${gid}-leg)`} />
-        <rect x="35.75" y="6" width="1.15" height="4.2" fill={`url(#${gid}-leg)`} />
-      </svg>
-    </span>
-  );
-}
 
 function LabCard({
   headerTitle,
@@ -404,7 +324,7 @@ function FactionProtocolOrdoCompactBody({
           </div>
 
           <div className={labStyles.facOrdoFooterStrip}>
-            // LUNAR // ECHO // NODE 01 // PROTOCOL 09
+            {"// LUNAR // ECHO // NODE 01 // PROTOCOL 09"}
           </div>
         </div>
       </div>
@@ -449,13 +369,6 @@ function locOrdoV5SplitDisplayName(name: string): { line1: string; line2: string
 
 function escapeHtmlForOrdoDoc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function notesToHgDoc(text: string): JSONContent {
-  return {
-    type: "doc",
-    content: [{ type: "paragraph", content: text ? [{ type: "text", text }] : [] }],
-  };
 }
 
 /** Initial HTML for V6 slab document region — same field slots + classes as the static slab; edited via {@link BufferedContentEditable}. */
@@ -584,7 +497,7 @@ function LocationOrdoCoordinateSlabV5Body({ testId }: { testId: string }) {
           </div>
 
           <div className={labStyles.facOrdoFooterStrip}>
-            // {gridLabel} // {footerWard} // NODE {nodeTag}
+            {`// ${gridLabel} // ${footerWard} // NODE ${nodeTag}`}
           </div>
         </div>
       </div>
@@ -609,7 +522,7 @@ function LocationOrdoCoordinateSlabV6Body({ testId }: { testId: string }) {
     buildLocationOrdoV6DocHtml(labStyles, line1, line2, context, detail, notesExcerpt),
   );
 
-  const onDocCommit = useCallback((next: string, _reason: EditorCommitReason) => {
+  const onDocCommit = useCallback((next: string) => {
     setDocHtml(next);
   }, []);
 
@@ -677,221 +590,25 @@ function LocationOrdoCoordinateSlabV6Body({ testId }: { testId: string }) {
   );
 }
 
-/** Isolated from notes state so TipTap re-renders do not reset `contentEditable` primary fields mid-typing. */
-const LocOrdoV7TitleAndContext = memo(function LocOrdoV7TitleAndContext({
-  name,
-  context,
-  onNameCommit,
-  onContextCommit,
-}: {
-  name: string;
-  context: string;
-  onNameCommit: (next: string) => void;
-  onContextCommit: (next: string) => void;
-}) {
-  const { line1, line2 } = useMemo(() => locOrdoV5SplitDisplayName(name), [name]);
+function LocationOrdoCoordinateSlabV7LabBody() {
+  const seed = useMemo(() => getLoreNodeSeedBodyHtml("location", "v7"), []);
+  const [bodyHtml, setBodyHtml] = useState(seed);
   return (
-    <>
-      <div className={labStyles.facOrdoTitleRow}>
-        <h1
-          className={labStyles.facOrdoDisplayTitle}
-          data-hg-lore-location-field="name"
-          contentEditable
-          suppressContentEditableWarning
-          onBlur={(e) => {
-            const t = e.currentTarget.innerText.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
-            if (t) onNameCommit(t);
-          }}
-        >
-          {line1}
-          {line2 ? (
-            <>
-              <br />
-              {line2}
-            </>
-          ) : null}
-        </h1>
-      </div>
-      <p
-        className={labStyles.facOrdoLocV6ContextLine}
-        data-hg-lore-location-field="context"
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          onContextCommit(e.currentTarget.innerText.replace(/\s+/g, " ").trim());
-        }}
-      >
-        {context}
-      </p>
-    </>
-  );
-});
-
-const LocOrdoV7DetailLine = memo(
-  forwardRef<
-    HTMLParagraphElement,
-    {
-      detail: string;
-      onDetailCommit: (next: string) => void;
-    }
-  >(function LocOrdoV7DetailLine({ detail, onDetailCommit }, ref) {
-    return (
-      <p
-        ref={ref}
-        className={labStyles.facOrdoLocV5DetailLine}
-        data-hg-lore-location-field="detail"
-        data-placeholder="Ward · material · micro-context"
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          onDetailCommit(e.currentTarget.innerText.replace(/\s+/g, " ").trim());
-        }}
-      >
-        {detail}
-      </p>
-    );
-  }),
-);
-LocOrdoV7DetailLine.displayName = "LocOrdoV7DetailLine";
-
-/**
- * V7 · Same lean chrome as V6 (LOCATION + expand, achromatic mono plate), but **notes** use **`HeartgardenDocEditor`**
- * (hgDoc / TipTap: `/` blocks, full schema). **Name / context / detail** are structured `contentEditable` fields in the
- * lab (V6 uses one `BufferedContentEditable` HTML region instead).
- */
-function LocationOrdoCoordinateSlabV7Body({ testId }: { testId: string }) {
-  const [name, setName] = useState("Old Harbor Kiln No. 4");
-  const [context, setContext] = useState("Kestrel Free City");
-  const [detail, setDetail] = useState("Dock ward · industrial brick");
-  /** When true, show the detail slot even if `detail` is empty (user chose “add site detail”). */
-  const [detailSlotOpen, setDetailSlotOpen] = useState(false);
-  const detailLineRef = useRef<HTMLParagraphElement | null>(null);
-
-  const notesSeed =
-    "Color band suggests landscape / atmosphere without an image asset. Strip uses the same full-bleed inset as the v3 survey bar — kiln shell still radiates dusk heat.";
-
-  const [notesDoc, setNotesDoc] = useState<JSONContent>(() => notesToHgDoc(notesSeed));
-
-  const showDetailLine = detail.trim().length > 0 || detailSlotOpen;
-
-  useLayoutEffect(() => {
-    if (!detailSlotOpen || detail.trim().length > 0) return;
-    detailLineRef.current?.focus();
-  }, [detailSlotOpen, detail]);
-
-  return (
-    <div
-      className={labStyles.facOrdoRoot}
-      data-testid={testId}
-      data-hg-canvas-role="lore-location"
-      data-hg-lore-location-variant="v7"
-    >
-      <div className={labStyles.facOrdoGeo} aria-hidden />
-      <div className={labStyles.facOrdoGlow} aria-hidden />
-      <div className={labStyles.facOrdoInner}>
-        <LocOrdoV7Staple testId={testId} />
-        <header className={labStyles.facOrdoHeader}>
-          <div className={labStyles.facOrdoLogoBlock}>
-            <div className={labStyles.facOrdoPixelIcon} aria-hidden>
-              {FAC_ORDO_PIXEL_GRID.map((row, ri) =>
-                row.map((on, ci) => (
-                  <span
-                    key={`${ri}-${ci}`}
-                    className={cx(labStyles.facOrdoPx, !on && labStyles.facOrdoPxOff)}
-                  />
-                )),
-              )}
-            </div>
-            <span className={cx(labStyles.facOrdoBrand, labStyles.facOrdoLocV5BrandRef)}>LOCATION</span>
-          </div>
-          <div className={labStyles.facOrdoHeaderRight}>
-            <ArchitecturalTooltip content="Expand object" side="bottom" delayMs={320}>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                tone="card-light"
-                className={labStyles.facOrdoHeaderExpandBtn}
-                data-expand-btn="true"
-                aria-label="Expand object"
-                onClick={() => {}}
-              >
-                <ArrowsOutSimple size={14} />
-              </Button>
-            </ArchitecturalTooltip>
-          </div>
-        </header>
-
-        <div className={labStyles.facOrdoDocGrid}>
-          <LocOrdoV7TitleAndContext
-            name={name}
-            context={context}
-            onNameCommit={setName}
-            onContextCommit={setContext}
-          />
-
-          <div className={labStyles.facOrdoMain}>
-            <div className={cx(labStyles.facOrdoContentBlock, labStyles.facOrdoLocV5DocInline)}>
-              {showDetailLine ? (
-                <LocOrdoV7DetailLine
-                  ref={detailLineRef}
-                  detail={detail}
-                  onDetailCommit={(next) => {
-                    setDetail(next);
-                    if (!next.trim()) setDetailSlotOpen(false);
-                  }}
-                />
-              ) : (
-                <button
-                  type="button"
-                  className={labStyles.facOrdoLocV7DetailAdd}
-                  data-hg-lore-location-detail-add="true"
-                  aria-label="Add site detail line"
-                  onClick={() => {
-                    setDetail("");
-                    setDetailSlotOpen(true);
-                  }}
-                >
-                  // add site detail
-                </button>
-              )}
-              <div
-                className={labStyles.facOrdoLocV5NotesCell}
-                data-hg-lore-location-notes-cell="true"
-                contentEditable={false}
-              >
-                <div
-                  data-hg-lore-location-notes="true"
-                  contentEditable={false}
-                  className={labStyles.facOrdoLocV7NotesField}
-                >
-                  <HeartgardenDocEditor
-                    surfaceKey="lab-loc-ordo-v7-notes"
-                    chromeRole="canvas"
-                    value={notesDoc}
-                    onChange={setNotesDoc}
-                    showAiPendingGutter={false}
-                    placeholder="Notes… type / for blocks"
-                    className={labStyles.facOrdoLocV7HgHost}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <LoreLocationOrdoV7Slab
+      nodeId="loc-lab-ordo-coordinate-mono-v7"
+      labTestId="loc-lab-ordo-coordinate-mono-v7"
+      bodyHtml={bodyHtml}
+      editable
+      onCommit={setBodyHtml}
+    />
   );
 }
 
 /** Silent Synod — legible “brief” layout for the 340px plate (cream / blood accent; dossier + sigil motion omitted). */
 function FactionSilentSynodBody({ testId }: { testId: string }) {
-  const [dateStr, setDateStr] = useState("");
-  useEffect(() => {
-    setDateStr(
-      new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }),
-    );
-  }, []);
+  const [dateStr] = useState(() =>
+    new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }),
+  );
 
   return (
     <div className={labStyles.facSynodRoot} data-testid={testId}>
@@ -905,7 +622,7 @@ function FactionSilentSynodBody({ testId }: { testId: string }) {
           <div className={labStyles.facSynodBriefAside}>
             <span className={labStyles.facSynodBriefAsideLine}>DOC-774-B</span>
             <span className={labStyles.facSynodBriefAsideLine} suppressHydrationWarning>
-              {dateStr || "—"}
+              {dateStr}
             </span>
             <span className={labStyles.facSynodBriefStatus}>Unresolved</span>
           </div>
@@ -2014,7 +1731,7 @@ function LoreEntityNodeLabInner() {
             <div className={labStyles.cell}>
               <span className={labStyles.variantLabel}>V7 · Ordo · coordinate slab (mono, hgDoc notes)</span>
               <FactionLabPlate plateKind="protocolOrdoCompactMono">
-                <LocationOrdoCoordinateSlabV7Body testId="loc-lab-ordo-coordinate-mono-v7" />
+                <LocationOrdoCoordinateSlabV7LabBody />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>

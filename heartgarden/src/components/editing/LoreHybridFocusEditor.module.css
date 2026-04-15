@@ -5,8 +5,16 @@
   min-height: 12rem;
 }
 
+.host[data-hg-lore-hybrid-focus="location"] {
+  gap: 0.5rem;
+}
+
 .portraitHost {
   margin-bottom: 0.25rem;
+}
+
+.locationMetaHost {
+  margin-bottom: 0.125rem;
 }
 
 /* Avoid matching `[data-hg-character-focus-fields]` (contenteditable=false): inherited
@@ -15,29 +23,11 @@
   user-select: none;
 }
 
-.fieldRow {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
 .label {
   font-size: 0.7rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   opacity: 0.75;
-}
-
-.textarea {
-  width: 100%;
-  min-height: 2.25rem;
-  resize: vertical;
-  padding: 0.35rem 0.5rem;
-  border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--sem-border-subtle) 80%, transparent);
-  background: color-mix(in srgb, var(--sem-surface-elevated) 92%, transparent);
-  color: inherit;
-  font: inherit;
 }
 
 .notesWrap {
@@ -51,4 +41,11 @@
   margin-top: 0.75rem;
   padding-top: 1rem;
   border-top: 1px solid color-mix(in oklch, var(--sys-color-white) 18%, transparent);
+}
+
+/* Location: `.focusLocationDocument [data-hg-lore-location-focus-meta]` already has border-bottom in
+   ArchitecturalCanvasApp — do not add border-top here or meta + Notes read as a double rule. */
+.host[data-hg-lore-hybrid-focus="location"] .notesWrap {
+  margin-top: 0.375rem;
+  padding-top: 0.725rem;
 }

@@ -21,6 +21,8 @@ export type HgDocEditorApi = {
   redo: () => boolean;
   canUndo: () => boolean;
   canRedo: () => boolean;
+  /** True when the doc is empty — used for canvas delete vs inline backspace. */
+  isEmptyDocument?: () => boolean;
 };
 
 const registry = new Map<string, HgDocEditorApi>();

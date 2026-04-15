@@ -162,6 +162,8 @@ export function HeartgardenDocEditor({
       canUndo: () => editor.can().undo(),
 
       canRedo: () => editor.can().redo(),
+
+      isEmptyDocument: () => editor.isEmpty,
     };
 
     registerHgDocEditor(surfaceKey, api);

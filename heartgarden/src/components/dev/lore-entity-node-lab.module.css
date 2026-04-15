@@ -822,14 +822,27 @@
     0 12px 28px oklch(0 0 0 / 0.14);
 }
 
+/*
+ * LoreLocationOrdoV7Slab in lab: map FactionLabPlate ORDO tokens onto the shared slab (`lore-entity-card` `.locOrdoV7*`).
+ */
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) :global([class*="locOrdoV7Root"]) {
+  --loc-ordo-bg: var(--fac-ordo-bg);
+  --loc-ordo-accent: var(--fac-ordo-accent);
+  --loc-ordo-line: var(--fac-ordo-line);
+  --loc-ordo-line-strong: var(--fac-ordo-line-strong);
+  --loc-ordo-glow-mid: var(--fac-ordo-glow-mid);
+}
+
 .factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v5"]) .facOrdoGlow,
 .factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v6"]) .facOrdoGlow,
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoGlow {
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoGlow,
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) :global([class*="locOrdoV7Glow"]) {
   mix-blend-mode: normal;
   opacity: 0.52;
 }
 
-.factionLabPlate_protocolOrdoCompactMono .facOrdoGeo {
+.factionLabPlate_protocolOrdoCompactMono .facOrdoGeo,
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) :global([class*="locOrdoV7Geo"]) {
   opacity: 0.42;
 }
 
@@ -907,48 +920,6 @@
 .factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v6"]) .facOrdoLocV6ContextLine,
 .factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV6ContextLine {
   margin-top: 3px;
-}
-
-/* V7 — primary fields are contentEditable; beat `.facOrdoRoot { cursor: default }` for I-beam */
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
-  [data-hg-lore-location-field="name"][contenteditable="true"],
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
-  [data-hg-lore-location-field="context"][contenteditable="true"],
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
-  [data-hg-lore-location-field="detail"][contenteditable="true"] {
-  cursor: text;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* V7 — no browser / shell focus ring on editable primary fields or TipTap notes host */
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
-  [data-hg-lore-location-field="name"][contenteditable="true"]:focus,
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
-  [data-hg-lore-location-field="name"][contenteditable="true"]:focus-visible,
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
-  [data-hg-lore-location-field="context"][contenteditable="true"]:focus,
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
-  [data-hg-lore-location-field="context"][contenteditable="true"]:focus-visible,
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
-  [data-hg-lore-location-field="detail"][contenteditable="true"]:focus,
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
-  [data-hg-lore-location-field="detail"][contenteditable="true"]:focus-visible,
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7HgHost:focus-within {
-  outline: none;
-  box-shadow: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7DetailAdd:focus,
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7DetailAdd:focus-visible {
-  outline: none;
-  box-shadow: none;
-}
-
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
-  .facOrdoLocV7HgHost
-  :global(.ProseMirror:focus) {
-  outline: none;
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoDisplayTitle {
@@ -1108,11 +1079,17 @@
 /* V6 / V7 lean slab — detail reads as body, full ink (V5 keeps muted stamp tone). */
 .factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v6"])
   .facOrdoLocV5DocInline
-  .facOrdoLocV5DetailLine,
+  .facOrdoLocV5DetailLine {
+  margin-top: -2px;
+  color: var(--fac-ordo-accent);
+  font-weight: 400;
+}
+
+/* V7: no negative margin — parent column uses overflow:hidden; -2px clips the first row (add button / detail). */
 .factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
   .facOrdoLocV5DocInline
   .facOrdoLocV5DetailLine {
-  margin-top: -2px;
+  margin-top: 0;
   color: var(--fac-ordo-accent);
   font-weight: 400;
 }
@@ -1159,8 +1136,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* 1em = 12px here — one text line + bottom padding + border; shared by placeholder button + detail line */
-  --fac-ordo-v7-detail-slot-h: calc(0.92 * 1em * 1.55 + 0.55 * 0.92 * 1em + 1px);
+  /* Match one 0.92×12px detail line + bottom padding + border; use px so em context can’t shrink the slot. */
+  --fac-ordo-v7-detail-slot-h: calc(0.92 * 12px * 1.55 + 0.55 * 0.92 * 12px + 1px);
 }
 
 .factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV5DocInline > .facOrdoLocV5DetailLine {
@@ -1170,7 +1147,9 @@
   max-height: var(--fac-ordo-v7-detail-slot-h);
   box-sizing: border-box;
   overflow-x: hidden;
+  /* Long site-detail copy: scroll inside the fixed row instead of growing the slab. */
   overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV5NotesCell {
@@ -1179,7 +1158,8 @@
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
+  scrollbar-width: thin;
 }
 
 .factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7NotesField {
@@ -1205,16 +1185,17 @@
   box-sizing: border-box;
   overflow-x: hidden;
   overflow-y: hidden;
-  margin: -2px 0 0.65em;
-  padding: 0 0 0.55em;
+  margin: 0 0 0.65em;
+  /* Bottom padding matches `.facOrdoLocV5DetailLine` (0.55em of 0.92×12px body), not the button’s own font-size. */
+  padding: 0 0 calc(0.55 * 0.92 * 12px);
   border: none;
   border-bottom: 1px solid color-mix(in oklch, var(--fac-ordo-accent) 14%, transparent);
   background: transparent;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 500;
-  letter-spacing: 0.07em;
-  line-height: 1.45;
+  letter-spacing: 0.06em;
+  line-height: 1.35;
   text-align: left;
   text-transform: uppercase;
   color: color-mix(in oklch, var(--fac-ordo-accent) 48%, transparent);
@@ -1319,35 +1300,40 @@
 }
 
 /*
- * V7 · wire staple (SVG) — sits on the gray slab “paper”, centered in the top padding row (not in the dark margin
- * above the plate). Angle / nudge from test id in TS.
+ * V7 · metal bar — same angle range as tape (±3°); lab sets --fac-ordo-v7-staple-deg from hashed testId.
  */
 .facOrdoLocV7Staple {
   --fac-ordo-v7-staple-deg: 0deg;
-  --fac-ordo-v7-staple-nudge: 0px;
   position: absolute;
   left: 50%;
-  top: 10px;
+  top: 14px;
   z-index: 4;
-  display: block;
-  width: 40px;
-  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 11px;
   margin: 0;
   padding: 0;
   line-height: 0;
   box-sizing: border-box;
   pointer-events: none;
-  transform: translate(calc(-50% + var(--fac-ordo-v7-staple-nudge, 0px)), -50%)
-    rotate(var(--fac-ordo-v7-staple-deg, 0deg));
+  transform: translate(-50%, -50%) rotate(var(--fac-ordo-v7-staple-deg, 0deg));
   transform-origin: 50% 50%;
-  filter: drop-shadow(0 0.5px 0.35px oklch(0 0 0 / 0.45)) drop-shadow(0 1px 1.5px oklch(0 0 0 / 0.22));
 }
 
-.facOrdoLocV7StapleSvg {
+.facOrdoLocV7StapleMetal {
   display: block;
-  width: 40px;
-  height: auto;
-  vertical-align: top;
+  width: 42px;
+  height: 7px;
+  /* Squarer end caps so the vertical edges read straighter */
+  border-radius: 0.5px;
+  background: linear-gradient(180deg, #e2e2e2 0%, #a0a0a0 38%, #6a6a6a 72%, #4a4a4a 100%);
+  box-shadow:
+    0 1.5px 2.5px oklch(0 0 0 / 0.2),
+    inset 0 1.5px 0 oklch(1 0 0 / 0.32),
+    inset 0.6px 0 0 oklch(1 0 0 / 0.14),
+    inset -0.6px 0 0 oklch(0 0 0 / 0.18);
 }
 
 .facOrdoRoot::-webkit-scrollbar {

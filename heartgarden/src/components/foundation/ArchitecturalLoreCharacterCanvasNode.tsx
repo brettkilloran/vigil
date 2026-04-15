@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 import type {
   CanvasTool,
@@ -33,6 +34,7 @@ export function ArchitecturalLoreCharacterCanvasNode({
   wikiLinkAssist,
   onRichDocCommand,
   emptyPlaceholder,
+  onRequestCanvasBodyEdit,
 }: {
   id: string;
   width?: number;
@@ -49,12 +51,37 @@ export function ArchitecturalLoreCharacterCanvasNode({
   wikiLinkAssist?: WikiLinkAssistConfig | null;
   onRichDocCommand?: (command: string, value?: string) => void;
   emptyPlaceholder?: string | null;
+  /** Standalone canvas: double-click enters inline edit when the body is not yet editable. */
+  onRequestCanvasBodyEdit?: () => void;
 }) {
   const nodeWidth = width ?? 340;
   const cardStyle = {
     width: width != null ? `${width}px` : undefined,
     "--entity-width": `${nodeWidth}px`,
   } as CSSProperties;
+
+  const editable = bodyEditable ?? activeTool === "select";
+  const prevEditableRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (!editable) {
+      prevEditableRef.current = false;
+      const host = document.querySelector(
+        `[data-node-id="${CSS.escape(id)}"] [data-node-body-editor="true"]`,
+      ) as HTMLElement | null;
+      const ae = document.activeElement;
+      if (host && ae && host.contains(ae)) {
+        (ae as HTMLElement).blur();
+      }
+      return;
+    }
+    if (prevEditableRef.current) return;
+    prevEditableRef.current = true;
+    const host = document.querySelector(
+      `[data-node-id="${CSS.escape(id)}"] [data-node-body-editor="true"]`,
+    ) as HTMLElement | null;
+    host?.focus();
+  }, [editable, id]);
 
   return (
     <div
@@ -65,6 +92,13 @@ export function ArchitecturalLoreCharacterCanvasNode({
       data-hg-canvas-role="lore-character-v11"
       data-lore-kind="character"
       data-lore-variant="v11"
+      onDoubleClick={(event) => {
+        if (activeTool !== "select") return;
+        if (editable) return;
+        if (!onRequestCanvasBodyEdit) return;
+        event.stopPropagation();
+        onRequestCanvasBodyEdit();
+      }}
     >
       {showTape ? (
         <ArchitecturalNodeTape variant={tapeVariant} rotationDeg={tapeRotation} />
@@ -74,7 +108,7 @@ export function ArchitecturalLoreCharacterCanvasNode({
         documentVariant="html"
         html={bodyHtml}
         className={styles.loreCharacterBody}
-        editable={bodyEditable ?? activeTool === "select"}
+        editable={editable}
         spellCheck={false}
         onCommitPayload={(p) => {
           if (p.kind === "html") onBodyCommit(id, p.html);

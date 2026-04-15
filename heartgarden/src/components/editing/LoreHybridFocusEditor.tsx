@@ -13,7 +13,10 @@ import {
 } from "@/src/lib/lore-character-focus-document-html";
 import {
   buildLocationFocusDocumentHtml,
+  buildLocationFocusMetaShellHtml,
+  extractLocationMetaFocusShellHtml,
   parseLocationFocusDocumentHtml,
+  readLocationFocusPartsFromMetaHost,
   type LocationFocusParts,
 } from "@/src/lib/lore-location-focus-document-html";
 import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
@@ -27,23 +30,6 @@ function eventTargetElement(ev: Event): Element | null {
   if (t instanceof Element) return t;
   if (t instanceof Text && t.parentElement) return t.parentElement;
   return null;
-}
-
-function htmlToPlainOneLine(html: string): string {
-  if (typeof document === "undefined") {
-    return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  }
-  const d = document.createElement("div");
-  d.innerHTML = html;
-  return (d.textContent ?? "").replace(/\s+/g, " ").trim();
-}
-
-function plainToFieldHtml(text: string): string {
-  const esc = text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-  return esc ? `<p>${esc}</p>` : "<br>";
 }
 
 export type LoreHybridFocusEditorProps = {
@@ -71,7 +57,9 @@ export function LoreHybridFocusEditor({
   const locationPartsRef = useRef<LocationFocusParts | null>(null);
   const notesDocRef = useRef(notesDoc);
   const identityShellRef = useRef<HTMLDivElement | null>(null);
+  const locationMetaShellRef = useRef<HTMLDivElement | null>(null);
   const lastInjectedIdentityDocKeyRef = useRef<string | null>(null);
+  const lastInjectedLocationMetaDocKeyRef = useRef<string | null>(null);
   /** Dedupes `onChangeFocusHtml` when rebuild matches current parent `focusHtml`. */
   const lastEmittedFocusHtmlRef = useRef<string | null>(null);
   /** When notes emit updates `focusHtml`, re-parsing in the sync effect must not push `notesDoc` back through TipTap or `setContent` clears focus after each key. */
@@ -147,6 +135,27 @@ export function LoreHybridFocusEditor({
     if (rowHtml) host.innerHTML = rowHtml;
   }, [variant, characterParts, focusDocumentKey, focusHtml]);
 
+  useLayoutEffect(() => {
+    if (variant !== "location") {
+      lastInjectedLocationMetaDocKeyRef.current = null;
+      return;
+    }
+    if (!locationParts) {
+      lastInjectedLocationMetaDocKeyRef.current = null;
+      return;
+    }
+    const host = locationMetaShellRef.current;
+    if (!host) return;
+    const k = focusDocumentKey ?? "";
+    if (lastInjectedLocationMetaDocKeyRef.current != null && lastInjectedLocationMetaDocKeyRef.current === k) {
+      return;
+    }
+    lastInjectedLocationMetaDocKeyRef.current = k;
+    const shellHtml =
+      extractLocationMetaFocusShellHtml(focusHtml) || buildLocationFocusMetaShellHtml(locationParts);
+    if (shellHtml) host.innerHTML = shellHtml;
+  }, [variant, locationParts, focusDocumentKey, focusHtml]);
+
   const emitCharacter = useCallback(
     (nextParts: CharacterFocusParts, doc: JSONContent) => {
       const notesHtml = hgDocToHtml(doc);
@@ -170,6 +179,7 @@ export function LoreHybridFocusEditor({
   );
 
   const hasCharacterShell = characterParts != null;
+  const hasLocationShell = locationParts != null;
 
   useEffect(() => {
     if (variant !== "character" || !hasCharacterShell) return;
@@ -198,6 +208,34 @@ export function LoreHybridFocusEditor({
       host.removeEventListener("compositionend", onMaybeIdentityEdit, true);
     };
   }, [variant, hasCharacterShell, emitCharacter, focusDocumentKey]);
+
+  useEffect(() => {
+    if (variant !== "location" || !hasLocationShell) return;
+    const host = locationMetaShellRef.current;
+    if (!host) return;
+
+    const flushFromMetaDom = () => {
+      const meta = host.querySelector<HTMLElement>('[data-hg-lore-location-focus-meta="true"]');
+      if (!meta) return;
+      const next = readLocationFocusPartsFromMetaHost(meta, hgDocToHtml(notesDocRef.current));
+      setLocationParts(next);
+      locationPartsRef.current = next;
+      emitLocation(next, notesDocRef.current);
+    };
+
+    const onMaybeMetaEdit = (ev: Event) => {
+      const el = eventTargetElement(ev);
+      if (!el?.closest("[data-hg-lore-location-focus-field]")) return;
+      flushFromMetaDom();
+    };
+
+    host.addEventListener("input", onMaybeMetaEdit, true);
+    host.addEventListener("compositionend", onMaybeMetaEdit, true);
+    return () => {
+      host.removeEventListener("input", onMaybeMetaEdit, true);
+      host.removeEventListener("compositionend", onMaybeMetaEdit, true);
+    };
+  }, [variant, hasLocationShell, emitLocation, focusDocumentKey]);
 
   const onNotesChange = useCallback(
     (doc: JSONContent) => {
@@ -246,67 +284,14 @@ export function LoreHybridFocusEditor({
     );
   }
 
-  const lp = locationParts!;
   return (
     <div
       className={`${styles.host} ${className ?? ""}`.trim()}
       data-focus-body-editor="true"
       data-hg-lore-hybrid-focus="location"
     >
-      <div className={styles.fieldRow}>
-        <span className={styles.label}>Place</span>
-        <textarea
-          className={styles.textarea}
-          rows={2}
-          value={htmlToPlainOneLine(lp.name)}
-          onChange={(e) => {
-            const next = { ...lp, name: plainToFieldHtml(e.target.value) };
-            setLocationParts(next);
-            emitLocation(next, notesDocRef.current);
-          }}
-        />
-      </div>
-      <div className={styles.fieldRow}>
-        <span className={styles.label}>Context</span>
-        <textarea
-          className={styles.textarea}
-          rows={2}
-          value={htmlToPlainOneLine(lp.context)}
-          onChange={(e) => {
-            const next = { ...lp, context: plainToFieldHtml(e.target.value) };
-            setLocationParts(next);
-            emitLocation(next, notesDocRef.current);
-          }}
-        />
-      </div>
-      <div className={styles.fieldRow}>
-        <span className={styles.label}>Detail</span>
-        <textarea
-          className={styles.textarea}
-          rows={2}
-          value={htmlToPlainOneLine(lp.detail)}
-          onChange={(e) => {
-            const next = { ...lp, detail: plainToFieldHtml(e.target.value) };
-            setLocationParts(next);
-            emitLocation(next, notesDocRef.current);
-          }}
-        />
-      </div>
-      {lp.hasRef ? (
-        <div className={styles.fieldRow}>
-          <span className={styles.label}>Reference</span>
-          <textarea
-            className={styles.textarea}
-            rows={2}
-            value={htmlToPlainOneLine(lp.ref)}
-            onChange={(e) => {
-              const next = { ...lp, ref: plainToFieldHtml(e.target.value) };
-              setLocationParts(next);
-              emitLocation(next, notesDocRef.current);
-            }}
-          />
-        </div>
-      ) : null}
+      {/* Structured fields: HTML injected when `focusDocumentKey` changes — layout from `ArchitecturalCanvasApp` (`.focusLocationDocument`). */}
+      <div ref={locationMetaShellRef} className={styles.locationMetaHost} />
       <div className={styles.notesWrap}>
         <span className={styles.label}>Notes</span>
         <HeartgardenDocEditor

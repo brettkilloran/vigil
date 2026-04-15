@@ -129,25 +129,14 @@ export const DEFAULT_FORMAT_ACTIONS: DockFormatAction[] = [
 export const DEFAULT_CREATE_ACTIONS: DockCreateAction[] = [
   { id: "note", label: "Note", nodeType: "default" },
   { id: "task", label: "Task", nodeType: "task" },
-  { id: "code", label: "Code", nodeType: "code" },
   { id: "media", label: "Media", nodeType: "media" },
   { id: "folder", label: "Folder", nodeType: "folder" },
   { id: "character", label: "Character", nodeType: "character" },
-  {
-    id: "faction",
-    label: "Organization",
-    nodeType: "faction",
-    loreVariantSubmenu: ["v1", "v2", "v3"],
-  },
-  {
-    id: "location",
-    label: "Location",
-    nodeType: "location",
-    loreVariantSubmenu: ["v2", "v3"],
-  },
+  { id: "faction", label: "Organization", nodeType: "faction" },
+  { id: "location", label: "Location", nodeType: "location" },
 ];
 
-/** Labels for faction v1–v3 and location v2–v3 (dock flyout, palette, canvas menu). */
+/** Labels for lore layout variants (palette hints, import UI, etc.). */
 export function loreVariantChoiceLabel(kind: LoreCardKind, v: LoreCardVariant): string {
   if (kind === "faction") {
     if (v === "v1") return "Letterhead";
@@ -155,8 +144,10 @@ export function loreVariantChoiceLabel(kind: LoreCardKind, v: LoreCardVariant): 
     return "Framed memo";
   }
   if (kind === "location") {
+    if (v === "v7") return "ORDO coordinate slab";
     if (v === "v2") return "Postcard band";
-    return "Survey tag";
+    if (v === "v3") return "Survey tag";
+    return v;
   }
   return v;
 }
@@ -577,22 +568,8 @@ export function ArchitecturalCreateMenu({
   disabled?: boolean;
   /** Shown in tooltips and aria when `disabled` is true. */
   disabledReason?: string | null;
-  onCreateNode: (type: NodeTheme, loreVariant?: LoreCardVariant) => void;
+  onCreateNode: (type: NodeTheme) => void;
 }) {
-  const [openLoreVariantMenuId, setOpenLoreVariantMenuId] = useState<string | null>(null);
-  const loreVariantPickerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!openLoreVariantMenuId) return;
-    const onPointerDown = (event: PointerEvent) => {
-      const t = event.target as Node | null;
-      if (!t || loreVariantPickerRef.current?.contains(t)) return;
-      setOpenLoreVariantMenuId(null);
-    };
-    window.addEventListener("pointerdown", onPointerDown, true);
-    return () => window.removeEventListener("pointerdown", onPointerDown, true);
-  }, [openLoreVariantMenuId]);
-
   const toolbarAria =
     disabled && disabledReason?.trim()
       ? `Create items — ${disabledReason.trim()}`
@@ -603,101 +580,30 @@ export function ArchitecturalCreateMenu({
       role="toolbar"
       aria-label={toolbarAria}
     >
-      {actions.map((action) => {
-        const submenu = action.loreVariantSubmenu;
-        const hasLoreVariants =
-          Array.isArray(submenu) &&
-          submenu.length > 0 &&
-          (action.nodeType === "faction" || action.nodeType === "location");
-
-        if (hasLoreVariants && submenu) {
-          const kind = action.nodeType as LoreCardKind;
-          const open = openLoreVariantMenuId === action.id;
-          const tooltip =
+      {actions.map((action) => (
+        <DockChromeTooltip
+          key={action.id}
+          content={
             disabled && disabledReason?.trim()
               ? `${action.label} — ${disabledReason.trim()}`
-              : `${action.label} — choose layout`;
-          return (
-            <div
-              key={action.id}
-              className={styles.headingPicker}
-              ref={open ? loreVariantPickerRef : undefined}
-            >
-              <DockChromeTooltip content={tooltip}>
-                <ArchitecturalButton
-                  size="icon"
-                  tone={actionTone}
-                  iconOnly
-                  aria-haspopup="menu"
-                  aria-expanded={open}
-                  aria-label={
-                    disabled && disabledReason?.trim()
-                      ? `Create ${action.label}: ${disabledReason.trim()}`
-                      : `Create ${action.label}, choose layout`
-                  }
-                  disabled={disabled}
-                  leadingIcon={createIcon(action.nodeType)}
-                  onClick={() => {
-                    if (disabled) return;
-                    setOpenLoreVariantMenuId((id) => (id === action.id ? null : action.id));
-                  }}
-                />
-              </DockChromeTooltip>
-              {open ? (
-                <div
-                  className={styles.headingPickerMenu}
-                  role="menu"
-                  aria-label={`${action.label} layouts`}
-                >
-                  {submenu.map((v) => (
-                    <DockChromeTooltip key={v} content={loreVariantChoiceLabel(kind, v)}>
-                      <ArchitecturalButton
-                        size="menu"
-                        tone={actionTone}
-                        role="menuitem"
-                        aria-label={`Create ${action.label}: ${loreVariantChoiceLabel(kind, v)}`}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          if (disabled) return;
-                          onCreateNode(kind, v);
-                          setOpenLoreVariantMenuId(null);
-                        }}
-                      >
-                        {loreVariantChoiceLabel(kind, v)}
-                      </ArchitecturalButton>
-                    </DockChromeTooltip>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          );
-        }
-
-        return (
-          <DockChromeTooltip
-            key={action.id}
-            content={
+              : action.label
+          }
+        >
+          <ArchitecturalButton
+            size="icon"
+            tone={actionTone}
+            iconOnly
+            aria-label={
               disabled && disabledReason?.trim()
-                ? `${action.label} — ${disabledReason.trim()}`
-                : action.label
+                ? `Create ${action.label}: ${disabledReason.trim()}`
+                : `Create ${action.label}`
             }
-          >
-            <ArchitecturalButton
-              size="icon"
-              tone={actionTone}
-              iconOnly
-              aria-label={
-                disabled && disabledReason?.trim()
-                  ? `Create ${action.label}: ${disabledReason.trim()}`
-                  : `Create ${action.label}`
-              }
-              disabled={disabled}
-              leadingIcon={createIcon(action.nodeType)}
-              onClick={() => onCreateNode(action.nodeType)}
-            />
-          </DockChromeTooltip>
-        );
-      })}
+            disabled={disabled}
+            leadingIcon={createIcon(action.nodeType)}
+            onClick={() => onCreateNode(action.nodeType)}
+          />
+        </DockChromeTooltip>
+      ))}
     </div>
   );
 }
@@ -803,7 +709,7 @@ export function ArchitecturalBottomDock({
   /** `editor`: solid black panels + light icon controls (focus mode only). */
   variant?: ArchitecturalBottomDockVariant;
   onFormat: (command: string, value?: string) => void;
-  onCreateNode: (type: NodeTheme, loreVariant?: LoreCardVariant) => void;
+  onCreateNode: (type: NodeTheme) => void;
   onUndo?: () => void;
   onRedo?: () => void;
   canUndo?: boolean;

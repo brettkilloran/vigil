@@ -4,9 +4,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  extractLocationMetaFocusShellHtml,
   focusDocumentHtmlToLocationBody,
   locationBodyToFocusDocumentHtml,
+  parseLocationFocusDocumentHtml,
   plainPlaceNameFromLocationBodyHtml,
+  readLocationFocusPartsFromMetaHost,
 } from "@/src/lib/lore-location-focus-document-html";
 import { getLoreNodeSeedBodyHtml, shouldRenderLoreLocationCanvasNode } from "@/src/lib/lore-node-seed-html";
 
@@ -18,6 +21,20 @@ describe("plainPlaceNameFromLocationBodyHtml", () => {
     expect(plainPlaceNameFromLocationBodyHtml(body)).toBe("Harbor Kiln");
   });
 
+  it("treats literal ORDO v7 placeholder label as empty", () => {
+    const body = `<div data-hg-canvas-role="lore-location">
+<div data-hg-lore-location-field="name">PLACENAME</div>
+</div>`;
+    expect(plainPlaceNameFromLocationBodyHtml(body)).toBe("");
+  });
+
+  it("treats splitOrdoV7 empty sentinel as empty placename", () => {
+    const body = `<div data-hg-canvas-role="lore-location">
+<div data-hg-lore-location-field="name">UNTITLED</div>
+</div>`;
+    expect(plainPlaceNameFromLocationBodyHtml(body)).toBe("");
+  });
+
   it("reads legacy locName", () => {
     const body = `<div class="x_locHeader_y"><div class="x_locName_y">Old Pier</div></div>`;
     expect(plainPlaceNameFromLocationBodyHtml(body)).toBe("Old Pier");
@@ -25,6 +42,29 @@ describe("plainPlaceNameFromLocationBodyHtml", () => {
 
   it("returns empty when missing", () => {
     expect(plainPlaceNameFromLocationBodyHtml("<div></div>")).toBe("");
+  });
+});
+
+describe("location hybrid meta shell", () => {
+  it("extracts meta shell from full focus document and reads fields from live host", () => {
+    const canonical = getLoreNodeSeedBodyHtml("location", "v2");
+    const focus = locationBodyToFocusDocumentHtml(canonical);
+    const shell = extractLocationMetaFocusShellHtml(focus);
+    expect(shell).toContain("data-hg-location-focus-doc");
+    expect(shell).toContain("data-hg-lore-location-focus-meta");
+    expect(shell).not.toContain("data-hg-lore-location-focus-notes");
+
+    const doc = new DOMParser().parseFromString(`<div id="h">${shell}</div>`, "text/html");
+    const host = doc.getElementById("h");
+    const meta = host?.querySelector<HTMLElement>('[data-hg-lore-location-focus-meta="true"]');
+    expect(meta).not.toBeNull();
+    const parts = readLocationFocusPartsFromMetaHost(meta!, "<p><br></p>");
+    const full = parseLocationFocusDocumentHtml(focus);
+    expect(full).not.toBeNull();
+    expect(parts.name).toBe(full!.name);
+    expect(parts.context).toBe(full!.context);
+    expect(parts.detail).toBe(full!.detail);
+    expect(parts.hasRef).toBe(full!.hasRef);
   });
 });
 

@@ -6,8 +6,8 @@ export type ContentTheme = "default" | "code" | "task" | "media";
 
 /** Lore canvas nodes: stored as `note` rows with `entity_type` + `hgArch.loreCard`. */
 export type LoreCardKind = "character" | "faction" | "location";
-/** Faction: v1–v3. Location: v2–v3 (stored v1 normalizes to v2). Character: v11 only. */
-export type LoreCardVariant = "v1" | "v2" | "v3" | "v11";
+/** Faction: v1–v3. Location: v2–v3 (legacy), v7 ORDO slab (canonical). Character: v11 only. */
+export type LoreCardVariant = "v1" | "v2" | "v3" | "v7" | "v11";
 export type LoreCard = { kind: LoreCardKind; variant: LoreCardVariant };
 
 export type NodeTheme = ContentTheme | "folder" | LoreCardKind;
@@ -124,8 +124,6 @@ export type DockCreateAction = {
   id: string;
   label: string;
   nodeType: NodeTheme;
-  /** Faction: v1–v3; location: v2–v3 (see `DEFAULT_CREATE_ACTIONS`). */
-  loreVariantSubmenu?: LoreCardVariant[];
 };
 
 /** Inline canvas body commits — HTML lore/code/media vs hgDoc default/task. */

@@ -3730,3 +3730,678 @@
 [data-hg-canvas-role="lore-location"][data-hg-lore-location-variant="v3"] .plaqueCorner {
   margin-top: 2px;
 }
+
+/* —— Location v7 · ORDO LUNARIS mono coordinate slab (canonical canvas shell) —— */
+.locOrdoV7Root {
+  --loc-ordo-bg: oklch(0.855 0 0);
+  --loc-ordo-accent: oklch(0.145 0 0);
+  --loc-ordo-line: oklch(0 0 0 / 0.12);
+  --loc-ordo-line-strong: oklch(0.145 0 0);
+  --loc-ordo-glow-mid: oklch(0 0 0 / 0.22);
+  /* Empty context line: same guest-check marker tokens as `.charSkShellV11` (strip wipe + caption). */
+  --sk-v11-marker: color-mix(in oklch, var(--sys-color-black) 74%, var(--sys-color-neutral-900));
+  --sk-v11-marker-inset-left: 2px;
+  --sk-v11-marker-inset-right: 5px;
+  --sk-v11-marker-h: 26px;
+  --sk-v11-marker-wipe-ms: 400ms;
+  --sk-v11-marker-wipe-ease: cubic-bezier(0.19, 1, 0.22, 1);
+  --sk-v11-marker-hide-ms: 320ms;
+  --sk-v11-marker-hide-ease: cubic-bezier(0.55, 0, 1, 0.45);
+  --sk-v11-marker-rotate: -0.5deg;
+  --sk-v11-marker-trim-right: 0px;
+  --sk-v11-marker-offset-x: 0px;
+  --sk-v11-marker-gloss: 2.5%;
+  --sk-v11-marker-tail: 95%;
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  color: var(--loc-ordo-accent);
+  border: 1px solid oklch(0 0 0 / 0.2);
+  border-radius: 1px;
+  background: var(--loc-ordo-bg);
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.14),
+    0 10px 24px oklch(0 0 0 / 0.12);
+}
+
+.locOrdoV7Geo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    repeating-radial-gradient(
+      circle at 30% 42%,
+      transparent 0,
+      transparent 39px,
+      var(--loc-ordo-line) 39px,
+      var(--loc-ordo-line) 40px
+    );
+  opacity: 0.42;
+  mask-image: radial-gradient(circle at 30% 42%, black 55%, transparent 72%);
+  -webkit-mask-image: radial-gradient(circle at 30% 42%, black 55%, transparent 72%);
+}
+
+.locOrdoV7Glow {
+  position: absolute;
+  width: 130px;
+  height: 130px;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.38;
+  mix-blend-mode: normal;
+  background: radial-gradient(circle, var(--loc-ordo-glow-mid) 0%, transparent 68%);
+  filter: blur(16px);
+}
+
+.locOrdoV7Staple {
+  --loc-ordo-v7-staple-deg: 0deg;
+  --loc-ordo-v7-staple-ox: 0px;
+  --loc-ordo-v7-staple-oy: 0px;
+  position: absolute;
+  left: calc(50% + var(--loc-ordo-v7-staple-ox, 0px));
+  top: calc(14px + var(--loc-ordo-v7-staple-oy, 0px));
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 11px;
+  margin: 0;
+  padding: 0;
+  line-height: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) rotate(var(--loc-ordo-v7-staple-deg, 0deg));
+  transform-origin: 50% 50%;
+}
+
+.locOrdoV7StapleMetal {
+  display: block;
+  width: 42px;
+  height: 7px;
+  border-radius: 0;
+  background: linear-gradient(180deg, #b8b8b8 0%, #888 52%, #5a5a5a 100%);
+  box-shadow:
+    0 1px 1.5px oklch(0 0 0 / 0.28),
+    inset 0 0.5px 0 oklch(1 0 0 / 0.08);
+}
+
+.locOrdoV7Inner {
+  position: relative;
+  z-index: 2;
+  padding: 10px 10px 11px;
+  line-height: 1.1;
+  text-transform: uppercase;
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  max-height: 340px;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.locOrdoV7Header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 9px;
+  border-bottom: 0.5px solid var(--loc-ordo-line-strong);
+  flex-shrink: 0;
+}
+
+.locOrdoV7LogoBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 5px; /* +2px vs prior 3px: breathing room between pixel icon and LOCATION label */
+  flex-shrink: 0;
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+/* Match lab `facOrdoPixelIcon` (FactionLabPlate · ORDO mono). */
+.locOrdoV7PixelIcon {
+  display: grid;
+  grid-template-columns: repeat(8, 2.25px);
+  grid-template-rows: repeat(8, 2.25px);
+  gap: 1.25px;
+  width: calc(8 * 2.25px + 7 * 1.25px);
+  height: calc(8 * 2.25px + 7 * 1.25px);
+  box-sizing: content-box;
+  flex-shrink: 0;
+  isolation: isolate;
+}
+
+.locOrdoV7Px {
+  width: 2.25px;
+  height: 2.25px;
+  border-radius: 0.5px;
+  background: var(--loc-ordo-accent);
+}
+
+.locOrdoV7PxOff {
+  visibility: hidden;
+}
+
+/* Legacy seeded HTML — keep until migrated */
+.locOrdoV7LogoMark {
+  width: 22px;
+  height: 4px;
+  border: 1px solid oklch(0 0 0 / 0.35);
+  border-radius: 1px;
+  background: repeating-linear-gradient(90deg, oklch(0 0 0 / 0.2) 0 1px, transparent 1px 3px);
+}
+
+.locOrdoV7Brand {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  /* Match lab `factionLabPlate_protocolOrdoCompactMono .facOrdoBrand` — not inner’s 500 + tight tracking. */
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1.25;
+  font-synthesis: none;
+  text-transform: uppercase;
+}
+
+.locOrdoV7ExpandBtn {
+  flex-shrink: 0;
+  margin: -2px 0 0;
+  padding: 2px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: color-mix(in oklch, var(--loc-ordo-accent) 55%, transparent);
+  cursor: pointer;
+}
+
+.locOrdoV7ExpandBtn:hover {
+  color: var(--loc-ordo-accent);
+  background: oklch(0 0 0 / 0.06);
+}
+
+.locOrdoV7DocGrid {
+  display: flex;
+  flex-direction: column;
+  /* Tight stack: title row → context → main (extra margin here read as “padding below” the placename). */
+  gap: 3px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.locOrdoV7DocGrid > .locOrdoV7TitleRow,
+.locOrdoV7DocGrid > .locOrdoV7ContextSlot {
+  flex-shrink: 0;
+}
+
+.locOrdoV7DocGrid > .locOrdoV7Main {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* React slab + canvas: flex chain for fixed detail row + scrolling notes (parity with lab FactionLabPlate v7). */
+.locOrdoV7DocInline {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  --loc-ordo-v7-detail-slot-h: calc(0.92 * 12px * 1.55 + 0.55 * 0.92 * 12px + 1px);
+}
+
+.locOrdoV7Root .locOrdoV7DocInline > .locOrdoV7DetailLine {
+  flex-shrink: 0;
+  height: var(--loc-ordo-v7-detail-slot-h);
+  min-height: var(--loc-ordo-v7-detail-slot-h);
+  max-height: var(--loc-ordo-v7-detail-slot-h);
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.locOrdoV7Root .locOrdoV7DocInline > .locOrdoV7NotesCell {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: auto;
+  scrollbar-width: thin;
+}
+
+.locOrdoV7NotesField {
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.locOrdoV7HgHost {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  text-transform: none;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.68;
+  color: var(--loc-ordo-accent);
+}
+
+.locOrdoV7HgHost :global(.ProseMirror) {
+  outline: none;
+  font-size: inherit;
+  line-height: inherit;
+  font-family: inherit;
+  color: inherit;
+}
+
+.locOrdoV7HgHost :global(.ProseMirror p) {
+  margin: 0 0 0.55em;
+}
+
+.locOrdoV7HgHost :global(.ProseMirror p:last-child) {
+  margin-bottom: 0;
+}
+
+.locOrdoV7HgHost :global(.ProseMirror h1) {
+  font-size: 1.25em;
+  margin: 0.35em 0 0.45em;
+}
+
+.locOrdoV7HgHost :global(.ProseMirror h2) {
+  font-size: 1.1em;
+  margin: 0.4em 0 0.4em;
+}
+
+.locOrdoV7DetailAdd {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  height: var(--loc-ordo-v7-detail-slot-h);
+  min-height: var(--loc-ordo-v7-detail-slot-h);
+  max-height: var(--loc-ordo-v7-detail-slot-h);
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  margin: 0 0 0.65em;
+  padding: 0 0 calc(0.55 * 0.92 * 12px);
+  border: none;
+  border-bottom: 1px solid color-mix(in oklch, var(--loc-ordo-accent) 14%, transparent);
+  background: transparent;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1.35;
+  text-align: left;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--loc-ordo-accent) 48%, transparent);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.locOrdoV7DetailAdd:hover {
+  color: color-mix(in oklch, var(--loc-ordo-accent) 72%, transparent);
+}
+
+.locOrdoV7DetailAdd:focus,
+.locOrdoV7DetailAdd:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Inline fields: no focus “container” ring on canvas or lab — caret + ::selection only. */
+.locOrdoV7Root [data-hg-lore-location-field="name"][contenteditable="true"],
+.locOrdoV7Root [data-hg-lore-location-field="context"][contenteditable="true"],
+.locOrdoV7Root [data-hg-lore-location-field="detail"][contenteditable="true"] {
+  cursor: text;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.locOrdoV7Root [data-hg-lore-location-field="name"][contenteditable="true"]:focus,
+.locOrdoV7Root [data-hg-lore-location-field="name"][contenteditable="true"]:focus-visible,
+.locOrdoV7Root [data-hg-lore-location-field="context"][contenteditable="true"]:focus,
+.locOrdoV7Root [data-hg-lore-location-field="context"][contenteditable="true"]:focus-visible,
+.locOrdoV7Root [data-hg-lore-location-field="detail"][contenteditable="true"]:focus,
+.locOrdoV7Root [data-hg-lore-location-field="detail"][contenteditable="true"]:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.locOrdoV7Root .locOrdoV7TitleRow:focus-within,
+.locOrdoV7Root .locOrdoV7ContextSlot:focus-within,
+.locOrdoV7Root .locOrdoV7DocInline:focus-within {
+  outline: none;
+  box-shadow: none;
+}
+
+.locOrdoV7Root .locOrdoV7HgHost:focus-within {
+  outline: none;
+  box-shadow: none;
+}
+
+.locOrdoV7Root .locOrdoV7HgHost :global(.ProseMirror:focus),
+.locOrdoV7Root .locOrdoV7HgHost :global(.ProseMirror:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+.locOrdoV7Root [data-hg-lore-location-field="detail"][contenteditable="true"]:empty::before {
+  content: attr(data-placeholder);
+  color: color-mix(in oklch, var(--loc-ordo-accent) 40%, transparent);
+  pointer-events: none;
+}
+
+.locOrdoV7TitleRow {
+  min-width: 0;
+}
+
+/*
+ * Character v11: each field row is its own box; guest-check art stays inside the value row.
+ * Title row sits above the context slot (z-index) so the context placeholder `::after` strip cannot
+ * composite over the placename; ContextSlot uses overflow hidden. Do not paint an opaque slab fill
+ * here — it reads as a “white censor band” and hides the geo ink behind the title.
+ */
+.locOrdoV7Root .locOrdoV7TitleRow {
+  position: relative;
+  z-index: 2;
+  isolation: isolate;
+  background: transparent;
+}
+
+/* Editable title paints above any stray compositing from the row / siblings. */
+.locOrdoV7Root .locOrdoV7TitleRow .locOrdoV7DisplayTitle {
+  position: relative;
+  z-index: 1;
+}
+
+.locOrdoV7Root .locOrdoV7ContextSlot {
+  position: relative;
+  z-index: 0;
+  flex-shrink: 0;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.locOrdoV7Root .locOrdoV7ContextSlot .locOrdoV7ContextLine {
+  margin: 0;
+}
+
+.locOrdoV7Root .locOrdoV7ContextLine {
+  position: relative;
+  z-index: 0;
+}
+
+/* ORDO v7 placename — same scale as lab `factionLabPlate_protocolOrdoCompactMono` v7 slab. */
+.locOrdoV7DisplayTitle {
+  margin: 0;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 1.68rem;
+  font-weight: 900;
+  line-height: 0.86;
+  letter-spacing: -0.05em;
+  text-transform: none;
+  font-synthesis: none;
+  color: var(--loc-ordo-accent);
+}
+
+.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-location-field="name"] {
+  text-transform: uppercase;
+  font-variant-ligatures: none;
+  line-height: 0.92;
+}
+
+/* Empty placename: character v11 display-name parity — caption ::before + dual-line guest-check ::after. */
+.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"][data-hg-lore-ph] {
+  position: relative;
+  z-index: 0;
+  /* Match ::after strip stack (top + dual bands + 4px) so we don’t reserve extra dead space under the bars. */
+  min-height: max(
+    2.2em,
+    calc(var(--hg-lore-ph-y, 0px) + (var(--hg-lore-ph-lh, 1.14em) * 2) + 4px + 3px)
+  );
+  overflow: hidden;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent;
+  caret-color: color-mix(in oklch, var(--loc-ordo-accent) 78%, transparent);
+}
+
+.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
+  content: attr(data-hg-lore-ph);
+  position: absolute;
+  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px));
+  right: var(--sk-v11-marker-inset-right);
+  top: var(--hg-lore-ph-y, 0px);
+  height: var(--hg-lore-ph-lh, 1.14em);
+  transform: none;
+  display: flex;
+  align-items: center;
+  z-index: 1;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.14;
+  letter-spacing: 0.03em;
+  color: color-mix(in oklch, var(--loc-ordo-accent) 62%, transparent) !important;
+  -webkit-text-fill-color: color-mix(in oklch, var(--loc-ordo-accent) 62%, transparent);
+  opacity: 1;
+  transition: opacity 0.12s ease;
+}
+
+.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]::after {
+  content: "";
+  position: absolute;
+  top: var(--hg-lore-ph-y, 0px);
+  bottom: auto;
+  left: calc(var(--sk-v11-marker-inset-left) + var(--sk-v11-marker-offset-x, 0px));
+  width: calc(
+    100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right) - var(--sk-v11-marker-trim-right, 0px)
+  );
+  height: calc((var(--hg-lore-ph-lh, var(--sk-v11-marker-h)) * 2) + 4px);
+  margin: 0;
+  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+  transform-origin: left top;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 6;
+  animation: charSkV11MarkerDualLineWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
+  background:
+    linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--sys-color-white) var(--sk-v11-marker-gloss, 0.95%), var(--sk-v11-marker)) 0%,
+      var(--sk-v11-marker) 100%
+    )
+      left top / calc(100% - var(--sk-v11-marker-trim-right-top, 0px)) calc(50% - 2px) no-repeat,
+    linear-gradient(var(--sk-v11-marker), var(--sk-v11-marker)) left bottom /
+      calc(100% - var(--sk-v11-marker-trim-right-bottom, 0px)) calc(50% - 2px) no-repeat;
+  background-blend-mode: normal, normal;
+  box-shadow: none;
+  filter: drop-shadow(0 0 1px color-mix(in oklch, var(--sk-v11-marker) 90%, transparent));
+  mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
+  -webkit-mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+}
+
+.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus,
+.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus-within {
+  color: var(--loc-ordo-accent) !important;
+  -webkit-text-fill-color: var(--loc-ordo-accent);
+}
+
+.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus::after,
+.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus-within::after {
+  animation: none;
+  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
+  transition: none;
+}
+
+.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus::before,
+.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus-within::before {
+  opacity: 0;
+}
+
+.locOrdoV7ContextLine {
+  margin: 0;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.45;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-ligatures: none;
+  color: var(--loc-ordo-accent);
+}
+
+/* Empty context: character v11 meta parity — `data-hg-lore-ph` caption + marker strip (::after). */
+.locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"] {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  contain: paint;
+  border-radius: 2px;
+  /* Room for a taller censor strip than the raw caret line box (~10px). */
+  min-height: max(1.35em, 24px);
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
+  content: attr(data-hg-lore-ph);
+  position: absolute;
+  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px));
+  right: var(--sk-v11-marker-inset-right);
+  top: var(--hg-lore-ph-y, 0px);
+  height: var(--hg-lore-ph-lh, var(--sk-v11-marker-h));
+  transform: none;
+  display: flex;
+  align-items: center;
+  z-index: 1;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.45;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--loc-ordo-accent) 72%, transparent) !important;
+  -webkit-text-fill-color: color-mix(in oklch, var(--loc-ordo-accent) 72%, transparent);
+  opacity: 1;
+  transition: opacity 0.12s ease;
+}
+
+.locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"][data-hg-lore-ph]::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px) + var(--sk-v11-marker-offset-x, 0px));
+  /* Shorter than character full-bleed meta strip: reads as a stamp, not a second title rule. */
+  width: min(58%, 200px);
+  right: auto;
+  top: calc(var(--hg-lore-ph-y, 0px) + 2px);
+  /* Taller than measured caret line (`--hg-lore-ph-lh` ~11px) so the bar feels like a real censor band. */
+  height: clamp(14px, calc(var(--hg-lore-ph-lh, 11px) * 1.55), 22px);
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(1);
+  transform-origin: left top;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 6;
+  animation: charSkV11MarkerStripWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in oklch, var(--sys-color-white) var(--sk-v11-marker-gloss, 2.5%), transparent) 0%,
+      transparent 80%
+    ),
+    var(--sk-v11-marker);
+  background-blend-mode: soft-light, normal;
+  box-shadow: 0 0 2px var(--sk-v11-marker);
+  mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
+  -webkit-mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+}
+
+.locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus,
+.locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus-within {
+  color: color-mix(in oklch, var(--loc-ordo-accent) 88%, transparent) !important;
+  -webkit-text-fill-color: color-mix(in oklch, var(--loc-ordo-accent) 88%, transparent);
+}
+
+.locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus::after,
+.locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus-within::after {
+  animation: none;
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) scaleX(0);
+  transition: transform var(--sk-v11-marker-hide-ms) var(--sk-v11-marker-hide-ease);
+}
+
+.locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus::before,
+.locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus-within::before {
+  opacity: 0;
+}
+
+.locOrdoV7Main {
+  min-width: 0;
+}
+
+.locOrdoV7ContentBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.locOrdoV7DetailLine {
+  margin: -2px 0 0;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.92em;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.55;
+  text-transform: none;
+  color: var(--loc-ordo-accent);
+  padding: 0 0 0.55em;
+  border-bottom: 1px solid color-mix(in oklch, var(--loc-ordo-accent) 14%, transparent);
+}
+
+.locOrdoV7NotesCell {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-height: 0;
+}
+
+.locOrdoV7NotesInner {
+  margin: 0;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 10.5px;
+  line-height: 1.68;
+  text-transform: none;
+  color: inherit;
+}

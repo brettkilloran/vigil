@@ -1257,6 +1257,31 @@
   display: none !important;
 }
 
+/* Location v7 ORDO slab — same progressive-disclosure model as character v11 (no A4 chrome). */
+.loreLocationOrdoCanvasRoot {
+  max-height: none;
+  /* Inner slab (`.locOrdoV7Root`) already carries border + shadow like lab `FactionLabPlate`; drop the generic node shell. */
+  box-shadow: none;
+  background: transparent;
+}
+
+.loreLocationOrdoCanvasRoot :global([data-hg-lore-location-notes-cell]) {
+  display: none !important;
+}
+
+.nodeBody.loreLocationOrdoBody {
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  background: transparent;
+  scrollbar-gutter: auto;
+  max-height: none;
+  overflow-y: visible;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
 .unboundedMediaNode {
   max-height: none;
 }
@@ -5130,7 +5155,8 @@ button.rootDockPanel.viewportMetricsPanel {
 
 .focusBody.focusCharacterDocument :global([data-hg-character-focus-row="identity"]) {
   display: grid;
-  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+  /* Portrait column: large preview without dominating the sheet (4:3 img scales with column). */
+  grid-template-columns: minmax(240px, min(380px, 48vw)) minmax(0, 1fr);
   gap: 32px;
 }
 
@@ -5140,7 +5166,7 @@ button.rootDockPanel.viewportMetricsPanel {
 
 .focusBody.focusCharacterDocument :global([data-hg-character-focus-portrait-frame="true"]) {
   position: relative;
-  width: min(240px, 100%);
+  width: min(380px, 100%);
 }
 
 .focusBody.focusCharacterDocument
@@ -5434,6 +5460,13 @@ button.rootDockPanel.viewportMetricsPanel {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+/* Lore hybrid: Notes is a sibling below (TipTap). Split default 28/8 vs tight 10/0 so it isn’t as airy as full-doc nor as cramped as minimum. */
+.focusBody.focusLocationDocument[data-hg-lore-hybrid-focus="location"]
+  :global([data-hg-lore-location-focus-meta="true"]) {
+  padding: 0 0 19px;
+  margin-bottom: 4px;
 }
 
 .focusBody.focusLocationDocument :global([data-hg-lore-location-focus-row]) {

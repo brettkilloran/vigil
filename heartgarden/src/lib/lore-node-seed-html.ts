@@ -6,19 +6,117 @@ import type {
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
 
-import { LORE_V9_HEADER_META_PLACEHOLDER } from "@/src/lib/lore-v9-placeholder";
+import { LORE_V9_HEADER_META_PLACEHOLDER, LORE_V9_REDACTED_SENTINEL } from "@/src/lib/lore-v9-placeholder";
 import archBodyStyles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import loreCardStyles from "@/src/components/foundation/lore-entity-card.module.css";
 import { mediaUploadActionLabel } from "@/src/components/foundation/architectural-media-html";
 import { HEARTGARDEN_MEDIA_PLACEHOLDER_SRC } from "@/src/lib/heartgarden-media-placeholder";
 import { heartgardenMediaPlaceholderClassList } from "@/src/lib/heartgarden-media-placeholder-classes";
+import {
+  focusDocumentHtmlToLocationBody,
+  locationBodyToFocusDocumentHtml,
+  LORE_V11_PH_LOCATION_PLACEHOLDER,
+  normalizeLocOrdoV7NameField,
+} from "@/src/lib/lore-location-focus-document-html";
+import { splitOrdoV7DisplayName } from "@/src/lib/lore-location-ordo-display-name";
 
 /** @deprecated Prefer `HEARTGARDEN_MEDIA_PLACEHOLDER_SRC` from `@/src/lib/heartgarden-media-placeholder`. */
 export const LORE_PORTRAIT_PLACEHOLDER_DARK = HEARTGARDEN_MEDIA_PLACEHOLDER_SRC;
 
 const s = loreCardStyles;
 
-/** v11 only: succinct placeholders via `data-hg-lore-ph` + CSS (not saved as field text). */
+/** Same 8×8 masthead grid as lab `FAC_ORDO_PIXEL_GRID` (`LoreEntityNodeLab.tsx`). */
+const ORDO_V7_LOGO_PIXEL_GRID: readonly (0 | 1)[][] = [
+  [1, 1, 1, 1, 1, 1, 1, 1],
+  [1, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 1, 1, 1, 1, 0, 1],
+  [1, 0, 1, 0, 0, 1, 0, 1],
+  [1, 0, 1, 0, 0, 1, 0, 1],
+  [1, 0, 1, 1, 1, 1, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 1],
+  [1, 1, 1, 1, 1, 1, 1, 1],
+];
+
+function ordoV7LogoPixelHtml(): string {
+  const cells = ORDO_V7_LOGO_PIXEL_GRID.map((row) =>
+    row.map((on) => `<span class="${on ? s.locOrdoV7Px : s.locOrdoV7PxOff}" aria-hidden="true"></span>`).join(""),
+  ).join("");
+  return `<div class="${s.locOrdoV7PixelIcon}" aria-hidden="true">${cells}</div>`;
+}
+
+function escapeHtmlV7Field(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/**
+ * Canonical location v7 ORDO slab HTML — same shape as seeded `locationV7()` and `LoreLocationOrdoV7Slab`.
+ * `notesInnerHtml` is trusted hgDoc HTML (TipTap `generateHTML`); other fields are plain text escaped here.
+ */
+export function buildLocationOrdoV7BodyHtml(parts: {
+  name: string;
+  context: string;
+  detail: string;
+  notesInnerHtml: string;
+}): string {
+  const nameTrim = normalizeLocOrdoV7NameField(parts.name);
+  const namePlaceholder = !nameTrim;
+  const { line1, line2 } = namePlaceholder
+    ? { line1: "", line2: null as string | null }
+    : splitOrdoV7DisplayName(nameTrim);
+  const nameInner = namePlaceholder
+    ? "<br>"
+    : `${escapeHtmlV7Field(line1)}${line2 ? `<br />${escapeHtmlV7Field(line2)}` : ""}`;
+  const nameAttrs = namePlaceholder
+    ? ` data-hg-lore-field="name" data-hg-lore-placeholder="true" data-hg-lore-ph="${LORE_V11_PH_LOCATION_PLACEHOLDER}"`
+    : "";
+  const ctx = parts.context.trim();
+  const det = parts.detail.trim();
+  const notes = (parts.notesInnerHtml ?? "").trim() ? parts.notesInnerHtml : "<p><br></p>";
+  const ctxAttrs = ctx
+    ? ""
+    : ` data-hg-lore-field="1" data-hg-lore-placeholder="true" data-hg-lore-ph="${LORE_V11_PH_LOCATION_CONTEXT}"`;
+  return `<div data-hg-canvas-role="lore-location" data-hg-lore-location-variant="v7" class="${s.locOrdoV7Root}" contenteditable="false">
+<div class="${s.locOrdoV7Geo}" aria-hidden="true"></div>
+<div class="${s.locOrdoV7Glow}" aria-hidden="true"></div>
+<span class="${s.locOrdoV7Staple}" aria-hidden="true" data-hg-lore-location-staple="v7"><span class="${s.locOrdoV7StapleMetal}" aria-hidden="true"></span></span>
+<div class="${s.locOrdoV7Inner}">
+<header class="${s.locOrdoV7Header}">
+<div class="${s.locOrdoV7LogoBlock}">
+${ordoV7LogoPixelHtml()}
+<span class="${s.locOrdoV7Brand}">LOCATION</span>
+</div>
+<button type="button" class="${s.locOrdoV7ExpandBtn}" data-expand-btn="true" aria-label="Focus mode" title="Focus mode">
+<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M200 64v64a8 8 0 0 1-16 0V83.3l-45.2 45.1a8 8 0 0 1-11.3-11.3L172.7 72H136a8 8 0 0 1 0-16h64a8 8 0 0 1 8 8Zm-88 88H72v36.7l45.2-45.1a8 8 0 0 1 11.3 11.3L83.3 200H120a8 8 0 0 1 0 16H56a8 8 0 0 1-8-8v-64a8 8 0 0 1 16 0Z"/></svg>
+</button>
+</header>
+<div class="${s.locOrdoV7DocGrid}">
+<div class="${s.locOrdoV7TitleRow}">
+<h1 class="${s.locOrdoV7DisplayTitle}" data-hg-lore-location-field="name"${nameAttrs} contenteditable="true" spellcheck="false">${nameInner}</h1>
+</div>
+<p class="${s.locOrdoV7ContextLine}" data-hg-lore-location-field="context"${ctxAttrs} contenteditable="true" spellcheck="false">${ctx ? escapeHtmlV7Field(ctx) : "<br>"}</p>
+<div class="${s.locOrdoV7Main}">
+<div class="${s.locOrdoV7ContentBlock}">
+<p class="${s.locOrdoV7DetailLine}" data-hg-lore-location-field="detail" contenteditable="true" spellcheck="false">${det ? escapeHtmlV7Field(det) : "<br>"}</p>
+<div class="${s.locOrdoV7NotesCell}" data-hg-lore-location-notes-cell="true" contenteditable="false">
+<div data-hg-lore-location-notes="true" class="${s.locOrdoV7NotesInner}" contenteditable="true" spellcheck="false">${notes}</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>`;
+}
+
+/** Saved HTML uses the canonical v7 ORDO slab (React or seed). */
+export function bodyHtmlImpliesLoreLocationOrdoV7(html: string): boolean {
+  return html.includes('data-hg-lore-location-variant="v7"');
+}
+
+/**
+ * v11-style placeholders via `data-hg-lore-ph` + CSS (caption + strip; not persisted as field text).
+ * Location v7 context uses the same REDACTED sentinel as character inline fields.
+ */
+export const LORE_V11_PH_LOCATION_CONTEXT = LORE_V9_REDACTED_SENTINEL;
 export const LORE_V11_PH_DISPLAY_NAME = "Name";
 const LORE_V11_PH_ROLE = "Role";
 const LORE_V11_PH_AFFILIATION = "Group";
@@ -34,7 +132,7 @@ export function defaultTitleForLoreKind(kind: LoreCardKind): string {
 /** Default `loreCard.variant` when creating nodes or inferring from `entity_type` without `hgArch`. */
 export function defaultLoreCardVariantForKind(kind: LoreCardKind): LoreCardVariant {
   if (kind === "character") return "v11";
-  if (kind === "location") return "v2";
+  if (kind === "location") return "v7";
   return "v1";
 }
 
@@ -46,8 +144,8 @@ export function tapeVariantForLoreCard(kind: LoreCardKind, variant: LoreCardVari
     if (variant === "v2") return "masking";
     return "clear";
   }
-  /* location: v2 postcard band, v3 survey tag */
-  if (variant === "v2") return "clear";
+  /* location: v2 postcard band, v3 survey tag, v7 ORDO slab */
+  if (variant === "v7" || variant === "v2") return "clear";
   return "dark";
 }
 
@@ -162,6 +260,16 @@ function locationV2(): string {
 </div>`;
 }
 
+/** Location v7 · ORDO LUNARIS mono coordinate slab (canvas + focus; notes hidden on canvas). */
+function locationV7(): string {
+  return buildLocationOrdoV7BodyHtml({
+    name: "",
+    context: "",
+    detail: "",
+    notesInnerHtml: "<p><br></p>",
+  });
+}
+
 const LOC_PLAQUE_STRIP_VARIANTS = 8;
 
 /** FNV-1a → 0..7 for `data-loc-strip` gradient presets. */
@@ -210,9 +318,13 @@ export function getLoreNodeSeedBodyHtml(
     if (variant === "v3") return factionV3();
     return factionV1();
   }
-  if (variant === "v3") {
-    const seed = options?.locationStripSeed ?? "__hg-loc-v3-default__";
-    return locationV3(locationStripVariantFromSeed(seed));
+  if (kind === "location") {
+    if (variant === "v3") {
+      const seed = options?.locationStripSeed ?? "__hg-loc-v3-default__";
+      return locationV3(locationStripVariantFromSeed(seed));
+    }
+    if (variant === "v7") return locationV7();
+    return locationV2();
   }
   return locationV2();
 }
@@ -236,8 +348,8 @@ export function parseLoreCard(raw: unknown): LoreCard | undefined {
   }
   if (kind === "location") {
     if (v === "v1") return { kind: "location", variant: "v2" };
-    if (v !== "v2" && v !== "v3") return;
-    return { kind: "location", variant: v };
+    if (v === "v2" || v === "v3" || v === "v7") return { kind: "location", variant: v };
+    return;
   }
   if (v !== "v1" && v !== "v2" && v !== "v3") return;
   return { kind, variant: v };
@@ -278,4 +390,19 @@ export function shouldRenderLoreLocationCanvasNode(
     entity.bodyHtml.includes('data-hg-canvas-role="lore-location"') ||
     bodyHtmlImpliesLoreLocationLegacy(entity.bodyHtml)
   );
+}
+
+/**
+ * Migrates legacy v2/v3 (and older) location `bodyHtml` into the v7 ORDO shell; idempotent for v7.
+ * Uses the focus projection merge path so field extraction matches `locationBodyToFocusDocumentHtml`.
+ */
+export function migrateLocationBodyToOrdoV7(bodyHtml: string): string {
+  if (!bodyHtml.trim()) return locationV7();
+  if (bodyHtml.includes('data-hg-lore-location-variant="v7"')) return bodyHtml;
+  try {
+    const focus = locationBodyToFocusDocumentHtml(bodyHtml);
+    return focusDocumentHtmlToLocationBody(focus, locationV7());
+  } catch {
+    return bodyHtml;
+  }
 }

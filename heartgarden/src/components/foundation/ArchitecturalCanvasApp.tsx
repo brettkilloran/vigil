@@ -71,6 +71,7 @@ import { ArchitecturalParentExitThreshold } from "@/src/components/foundation/Ar
 import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
 import { ArchitecturalFolderCard } from "@/src/components/foundation/ArchitecturalFolderCard";
 import { ArchitecturalLoreCharacterCanvasNode } from "@/src/components/foundation/ArchitecturalLoreCharacterCanvasNode";
+import { ArchitecturalLoreLocationCanvasNode } from "@/src/components/foundation/ArchitecturalLoreLocationCanvasNode";
 import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";
 import { CanvasMinimap } from "@/src/components/foundation/CanvasMinimap";
 import { CanvasViewportToast } from "@/src/components/foundation/CanvasViewportToast";
@@ -584,6 +585,9 @@ function sameOrderedStringIds(a: readonly string[], b: readonly string[]): boole
 }
 /** Stable `collapsedStacks` when there are no multi-card stacks (avoids effect loops on new `[]` each render). */
 const EMPTY_COLLAPSED_STACKS: { stackId: string; entities: CanvasEntity[]; top: CanvasEntity }[] = [];
+/** Skip O(n) palette indexing when the command palette is closed (hot path on every node add / graph mutation). */
+const EMPTY_PALETTE_ITEMS: PaletteItem[] = [];
+const EMPTY_PALETTE_SPACES: PaletteSpace[] = [];
 const EMPTY_STACK_BOUNDS: Record<string, { left: number; top: number; width: number; height: number }> =
   {};
 
@@ -964,7 +968,7 @@ function isLoreCreateNodeType(type: NodeTheme): type is LoreCardKind {
   return type === "character" || type === "faction" || type === "location";
 }
 
-/** Character is always v11; faction accepts v1–v3; location accepts v2–v3 (v1 maps to v2). */
+/** Character is always v11. Location defaults to ORDO v7; v1 migrates to v7. Faction: explicit v1–v3 or default. */
 function resolveLoreVariantForCreate(
   type: LoreCardKind,
   requested: LoreCardVariant | undefined,
@@ -972,11 +976,18 @@ function resolveLoreVariantForCreate(
   if (type === "character") {
     return defaultLoreCardVariantForKind(type);
   }
-  if (type === "location" && requested === "v1") {
-    return "v2";
+  if (type === "location") {
+    if (requested === "v1") return "v7";
+    if (requested === "v2" || requested === "v3" || requested === "v7") {
+      return requested;
+    }
+    return defaultLoreCardVariantForKind(type);
   }
-  if (requested === "v1" || requested === "v2" || requested === "v3") {
-    return requested;
+  if (type === "faction") {
+    if (requested === "v1" || requested === "v2" || requested === "v3") {
+      return requested;
+    }
+    return defaultLoreCardVariantForKind(type);
   }
   return defaultLoreCardVariantForKind(type);
 }
@@ -1178,6 +1189,86 @@ function isEditableTarget(target: EventTarget | null) {
   }
   /* Text nodes have no isContentEditable; host uses React contenteditable="" (not [contenteditable="true"]). */
   return el instanceof HTMLElement && el.isContentEditable === true;
+}
+
+/** Mirrors `BufferedContentEditable` caret probes — canvas delete must not steal real text edits. */
+function canvasCaretIsAtStartOfHost(host: HTMLElement, range: Range): boolean {
+  if (!range.collapsed) return false;
+  const probe = document.createRange();
+  try {
+    probe.setStart(host, 0);
+    probe.setEnd(range.startContainer, range.startOffset);
+  } catch {
+    return false;
+  }
+  return probe.toString().length === 0;
+}
+
+function canvasCaretIsAtEndOfHost(host: HTMLElement, range: Range): boolean {
+  if (!range.collapsed || !host.contains(range.startContainer)) return false;
+  const end = document.createRange();
+  try {
+    end.selectNodeContents(host);
+    end.collapse(false);
+    const fromCaret = document.createRange();
+    fromCaret.setStart(range.startContainer, range.startOffset);
+    fromCaret.setEnd(end.startContainer, end.startOffset);
+    return fromCaret.toString().length === 0;
+  } catch {
+    return false;
+  }
+}
+
+function resolveCanvasDataNodeIdFromTarget(target: EventTarget | null): string | null {
+  const el = pointerEventTargetElement(target);
+  if (!el) return null;
+  const node = el.closest("[data-node-id]") as HTMLElement | null;
+  const id = node?.dataset.nodeId;
+  return id && id.length > 0 ? id : null;
+}
+
+function resolveCanvasRichBodyHostFromTarget(target: EventTarget | null): HTMLElement | null {
+  const el = pointerEventTargetElement(target);
+  if (!el) return null;
+  return el.closest("[data-hg-rich-editor-host], [data-hg-doc-editor]") as HTMLElement | null;
+}
+
+/**
+ * When focus is inside a node body editor, Delete/Backspace normally edit HTML/TipTap.
+ * Allow the canvas shortcut to remove the selected node(s) only when the key would not
+ * meaningfully edit (e.g. Delete at end of body, Backspace in an empty HTML body or empty HgDoc).
+ */
+function shouldAllowCanvasDeleteWhileEditableBodyFocused(
+  target: EventTarget | null,
+  selectedNodeIds: readonly string[],
+  event: KeyboardEvent,
+): boolean {
+  const nodeId = resolveCanvasDataNodeIdFromTarget(target);
+  if (!nodeId || !selectedNodeIds.includes(nodeId)) return false;
+
+  const host = resolveCanvasRichBodyHostFromTarget(target);
+  if (!host) return false;
+
+  const sel = typeof window !== "undefined" ? window.getSelection() : null;
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
+  const range = sel.getRangeAt(0);
+
+  if (event.key === "Delete") {
+    return canvasCaretIsAtEndOfHost(host, range);
+  }
+  if (event.key === "Backspace") {
+    if (!canvasCaretIsAtStartOfHost(host, range)) return false;
+    if (host.matches("[data-hg-rich-editor-host]")) {
+      return host.getAttribute("data-arch-doc-empty") === "true";
+    }
+    if (host.matches("[data-hg-doc-editor]")) {
+      const surfaceKey = host.getAttribute("data-hg-doc-surface");
+      const api = getHgDocEditor(surfaceKey);
+      return !!(api?.isEmptyDocument?.() ?? false);
+    }
+    return false;
+  }
+  return false;
 }
 
 /**
@@ -1383,6 +1474,22 @@ function targetIsLoreCharacterV11CanvasDragChrome(target: Element): boolean {
   }
   // Treat any non-editable surface in the credential shell as card chrome so legacy/drifted
   // class names still allow selection + deletion from click/drag.
+  return true;
+}
+
+/** Location ORDO v7 slab: drag only from the masthead strip (`data-hg-lore-ordo-drag-handle`); body fields stay text-first. */
+function targetIsLoreLocationOrdoCanvasDragChrome(target: Element): boolean {
+  const root = target.closest('[data-hg-canvas-role="lore-location"][data-lore-variant="v7"]');
+  if (!root) return false;
+  if (!target.closest("[data-hg-lore-ordo-drag-handle='true']")) return false;
+  if (target.closest("[data-expand-btn='true']")) return false;
+  if (
+    target.closest(
+      "button, a, input, textarea, select, [role='button']",
+    )
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -1693,6 +1800,8 @@ export function ArchitecturalCanvasApp({
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
   const [spacePanning, setSpacePanning] = useState(false);
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  /** Lore character canvas: body is read-only until double-click so Delete targets the node, not the editor. */
+  const [loreCanvasBodyEditEntityId, setLoreCanvasBodyEditEntityId] = useState<string | null>(null);
   const [connectionMode, setConnectionMode] = useState<ConnectionDockMode>("move");
   const connectionModeSoundPrevRef = useRef<ConnectionDockMode>("move");
   const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
@@ -2108,6 +2217,12 @@ export function ArchitecturalCanvasApp({
     useRecentItems(recentPaletteTier);
   const { items: recentFolders, push: pushRecentFolder, pruneIds: pruneRecentFolders } =
     useRecentFolders(recentPaletteTier);
+
+  useEffect(() => {
+    if (loreCanvasBodyEditEntityId && !selectedNodeIds.includes(loreCanvasBodyEditEntityId)) {
+      setLoreCanvasBodyEditEntityId(null);
+    }
+  }, [selectedNodeIds, loreCanvasBodyEditEntityId]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -3343,6 +3458,7 @@ export function ArchitecturalCanvasApp({
   const parentSpaceId = activeSpace?.parentSpaceId ?? null;
 
   const paletteItems = useMemo<PaletteItem[]>(() => {
+    if (!paletteOpen) return EMPTY_PALETTE_ITEMS;
     const out: PaletteItem[] = [];
     for (const entity of Object.values(graph.entities)) {
       const slotSpaceIds = Object.keys(entity.slots);
@@ -3366,9 +3482,10 @@ export function ArchitecturalCanvasApp({
       });
     }
     return out;
-  }, [activeSpaceId, graph.entities, graph.spaces]);
+  }, [paletteOpen, activeSpaceId, graph.entities, graph.spaces]);
 
   const paletteSpaces = useMemo<PaletteSpace[]>(() => {
+    if (!paletteOpen) return EMPTY_PALETTE_SPACES;
     return Object.values(graph.spaces).map((space) => {
       const path = buildPathToSpace(space.id, graph.spaces, graph.rootSpaceId)
         .map((id) =>
@@ -3377,7 +3494,7 @@ export function ArchitecturalCanvasApp({
         .join(" / ");
       return { id: space.id, name: space.name, pathLabel: path };
     });
-  }, [graph.rootSpaceId, graph.spaces]);
+  }, [paletteOpen, graph.rootSpaceId, graph.spaces]);
 
   const nodeZ = useMemo(() => {
     const zMap = new Map<string, number>();
@@ -5961,38 +6078,27 @@ export function ArchitecturalCanvasApp({
         icon: <User size={14} weight="bold" />,
       },
       {
-        id: "create-org-letterhead",
-        label: "Create organization (letterhead)",
-        hint: `Lore org — ${loreVariantChoiceLabel("faction", "v1")} layout`,
-        keywords: ["lore", "organization", "faction", "company", "guild", "letterhead"],
+        id: "create-organization",
+        label: "Create organization",
+        hint: `Lore organization — ${loreVariantChoiceLabel("faction", defaultLoreCardVariantForKind("faction"))} layout`,
+        keywords: [
+          "lore",
+          "organization",
+          "faction",
+          "company",
+          "guild",
+          "letterhead",
+          "monogram",
+          "framed",
+          "memo",
+        ],
         icon: <UsersThree size={14} weight="bold" />,
       },
       {
-        id: "create-org-monogram",
-        label: "Create organization (monogram rail)",
-        hint: `Lore org — ${loreVariantChoiceLabel("faction", "v2")} layout`,
-        keywords: ["lore", "organization", "faction", "monogram", "rail"],
-        icon: <UsersThree size={14} weight="bold" />,
-      },
-      {
-        id: "create-org-framed",
-        label: "Create organization (framed memo)",
-        hint: `Lore org — ${loreVariantChoiceLabel("faction", "v3")} layout`,
-        keywords: ["lore", "organization", "faction", "framed", "memo"],
-        icon: <UsersThree size={14} weight="bold" />,
-      },
-      {
-        id: "create-location-postcard",
-        label: "Create location (postcard band)",
-        hint: `Lore place — ${loreVariantChoiceLabel("location", "v2")} layout`,
-        keywords: ["lore", "location", "place", "postcard"],
-        icon: <MapPin size={14} weight="bold" />,
-      },
-      {
-        id: "create-location-survey",
-        label: "Create location (survey tag)",
-        hint: `Lore place — ${loreVariantChoiceLabel("location", "v3")} layout`,
-        keywords: ["lore", "location", "place", "survey", "tag"],
+        id: "create-location",
+        label: "Create location",
+        hint: `Lore place — ${loreVariantChoiceLabel("location", defaultLoreCardVariantForKind("location"))} layout`,
+        keywords: ["lore", "location", "place", "ordo", "coordinate", "slab"],
         icon: <MapPin size={14} weight="bold" />,
       },
       { id: "export-json", label: "Export graph JSON", hint: "Download the current graph", icon: <DownloadSimple size={14} weight="bold" /> },
@@ -6791,28 +6897,13 @@ export function ArchitecturalCanvasApp({
       playVigilUiSound("select");
       return;
     }
-    if (actionId === "create-org-letterhead") {
-      createNewNode("faction", "v1");
+    if (actionId === "create-organization") {
+      createNewNode("faction");
       playVigilUiSound("select");
       return;
     }
-    if (actionId === "create-org-monogram") {
-      createNewNode("faction", "v2");
-      playVigilUiSound("select");
-      return;
-    }
-    if (actionId === "create-org-framed") {
-      createNewNode("faction", "v3");
-      playVigilUiSound("select");
-      return;
-    }
-    if (actionId === "create-location-postcard") {
-      createNewNode("location", "v2");
-      playVigilUiSound("select");
-      return;
-    }
-    if (actionId === "create-location-survey") {
-      createNewNode("location", "v3");
+    if (actionId === "create-location") {
+      createNewNode("location");
       playVigilUiSound("select");
       return;
     }
@@ -7862,8 +7953,16 @@ export function ArchitecturalCanvasApp({
        * editor, chrome buttons, and note bodies opt out. Double-click to open uses React
        * onDoubleClick on ArchitecturalFolderCard (with stopPropagation). */
       const inBody = !!target.closest(`.${styles.nodeBody}`);
+      const loroOrdoDragChrome = targetIsLoreLocationOrdoCanvasDragChrome(target);
+      const inLoreLocationOrdoV7Canvas = !!target.closest(
+        '[data-hg-canvas-role="lore-location"][data-lore-variant="v7"]',
+      );
       const inContent =
-        (inBody && !targetIsLoreCharacterV11CanvasDragChrome(target)) ||
+        (inBody &&
+          !targetIsLoreCharacterV11CanvasDragChrome(target) &&
+          !loroOrdoDragChrome) ||
+        /* ORDO v7 uses LoreLocationOrdoV7Slab without `.nodeBody`; treat the slab as content unless the hit is the drag handle. */
+        (inLoreLocationOrdoV7Canvas && !loroOrdoDragChrome) ||
         target.closest(`.${styles.nodeBtn}`) ||
         target.closest(`.${styles.folderTitleInput}`) ||
         target.closest("[data-folder-open-btn='true']");
@@ -7996,6 +8095,17 @@ export function ArchitecturalCanvasApp({
           target.closest("[data-expand-btn='true']") ||
           target.closest("[data-architectural-media-upload='true']")
         ) {
+          return;
+        }
+        openFocusMode(id);
+        return;
+      }
+
+      const inLoreLocationOrdoCanvas =
+        node?.kind === "content" &&
+        !!target.closest('[data-hg-canvas-role="lore-location"][data-lore-variant="v7"]');
+      if (inLoreLocationOrdoCanvas) {
+        if (target.closest("[data-expand-btn='true']")) {
           return;
         }
         openFocusMode(id);
@@ -8163,6 +8273,12 @@ export function ArchitecturalCanvasApp({
     const onKeyDown = (event: KeyboardEvent) => {
       if (paletteOpenRef.current || lorePanelOpenRef.current) return;
       if (event.key !== "Escape") return;
+      const editId = loreCanvasBodyEditEntityId;
+      if (editId && selectedNodeIdsRef.current.includes(editId)) {
+        event.preventDefault();
+        setLoreCanvasBodyEditEntityId(null);
+        return;
+      }
       if (isEditableTarget(event.target)) return;
 
       if (galleryOpen) {
@@ -8211,6 +8327,7 @@ export function ArchitecturalCanvasApp({
     focusOpen,
     galleryOpen,
     goBack,
+    loreCanvasBodyEditEntityId,
     parentSpaceId,
     setParentDropHover,
     stackModal,
@@ -8221,15 +8338,24 @@ export function ArchitecturalCanvasApp({
       if (paletteOpenRef.current || lorePanelOpenRef.current) return;
       const isDeleteKey = event.key === "Delete" || event.key === "Backspace";
       if (!isDeleteKey) return;
-      if (isEditableTarget(event.target) || focusOpen || galleryOpen) return;
-      if (selectedNodeIds.length === 0) return;
-      event.preventDefault();
-      deleteEntitySelection(selectedNodeIds);
+      if (focusOpen || galleryOpen) return;
+      const ids = selectedNodeIdsRef.current;
+      if (ids.length === 0) return;
+      const target = event.target;
+      if (isEditableTarget(target)) {
+        if (!shouldAllowCanvasDeleteWhileEditableBodyFocused(target, ids, event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+      } else {
+        event.preventDefault();
+      }
+      deleteEntitySelection([...ids]);
     };
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [deleteEntitySelection, focusOpen, galleryOpen, selectedNodeIds]);
+    /* Capture: run before TipTap / contenteditable handlers so we can remove the node instead of editing. */
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [deleteEntitySelection, focusOpen, galleryOpen]);
 
   const onViewportPointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
@@ -8514,7 +8640,7 @@ export function ArchitecturalCanvasApp({
         return;
       }
 
-      // Creation hotkeys (1–8) map to dock create actions.
+      // Creation hotkeys (1–7) map to dock create actions (note → … → location).
       if (key === "1") {
         event.preventDefault();
         createNewNode("default");
@@ -8526,32 +8652,27 @@ export function ArchitecturalCanvasApp({
         return;
       }
       if (key === "3") {
-        event.preventDefault();
-        createNewNode("code");
-        return;
-      }
-      if (key === "4") {
         if (isRestrictedLayer) return;
         event.preventDefault();
         createNewNode("media");
         return;
       }
-      if (key === "5") {
+      if (key === "4") {
         event.preventDefault();
         createNewNode("folder");
         return;
       }
-      if (key === "6") {
+      if (key === "5") {
         event.preventDefault();
         createNewNode("character");
         return;
       }
-      if (key === "7") {
+      if (key === "6") {
         event.preventDefault();
         createNewNode("faction");
         return;
       }
-      if (key === "8") {
+      if (key === "7") {
         event.preventDefault();
         createNewNode("location");
         return;
@@ -9181,29 +9302,14 @@ export function ArchitecturalCanvasApp({
         onSelect: () => createNewNode("character"),
       },
       {
-        label: `Organization — ${loreVariantChoiceLabel("faction", "v1")}`,
+        label: "Create organization",
         icon: <UsersThree size={18} weight="bold" aria-hidden />,
-        onSelect: () => createNewNode("faction", "v1"),
+        onSelect: () => createNewNode("faction"),
       },
       {
-        label: `Organization — ${loreVariantChoiceLabel("faction", "v2")}`,
-        icon: <UsersThree size={18} weight="bold" aria-hidden />,
-        onSelect: () => createNewNode("faction", "v2"),
-      },
-      {
-        label: `Organization — ${loreVariantChoiceLabel("faction", "v3")}`,
-        icon: <UsersThree size={18} weight="bold" aria-hidden />,
-        onSelect: () => createNewNode("faction", "v3"),
-      },
-      {
-        label: `Location — ${loreVariantChoiceLabel("location", "v2")}`,
+        label: "Create location",
         icon: <MapPin size={18} weight="bold" aria-hidden />,
-        onSelect: () => createNewNode("location", "v2"),
-      },
-      {
-        label: `Location — ${loreVariantChoiceLabel("location", "v3")}`,
-        icon: <MapPin size={18} weight="bold" aria-hidden />,
-        onSelect: () => createNewNode("location", "v3"),
+        onSelect: () => createNewNode("location"),
       },
     ],
     [createNewNode],
@@ -9787,6 +9893,33 @@ export function ArchitecturalCanvasApp({
                       activeTool={activeTool}
                       dragged={dragged}
                       selected={selected}
+                      bodyEditable={activeTool === "select" && loreCanvasBodyEditEntityId === entity.id}
+                      onRequestCanvasBodyEdit={() => setLoreCanvasBodyEditEntityId(entity.id)}
+                      onBodyCommit={updateNodeBody}
+                      onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
+                      wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                      onRichDocCommand={
+                        entity.theme === "default" || entity.theme === "task"
+                          ? (command, value) => runFormat(command, value)
+                          : undefined
+                      }
+                      emptyPlaceholder={
+                        entity.theme === "default" || entity.theme === "task"
+                          ? "Write here, or type / for blocks…"
+                          : undefined
+                      }
+                    />
+                  ) : shouldRenderLoreLocationCanvasNode(entity) ? (
+                    <ArchitecturalLoreLocationCanvasNode
+                      id={entity.id}
+                      width={entity.width}
+                      tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
+                      tapeRotation={entity.tapeRotation}
+                      bodyHtml={entity.bodyHtml}
+                      activeTool={activeTool}
+                      dragged={dragged}
+                      selected={selected}
+                      showTape={false}
                       onBodyCommit={updateNodeBody}
                       onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
                       wikiLinkAssist={makeWikiLinkAssist(entity.id)}
@@ -9995,6 +10128,32 @@ export function ArchitecturalCanvasApp({
                           activeTool={activeTool}
                           dragged={draggingStack}
                           selected={false}
+                          bodyEditable={false}
+                          onBodyCommit={updateNodeBody}
+                          onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
+                          wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                          onRichDocCommand={
+                            entity.theme === "default" || entity.theme === "task"
+                              ? (command, value) => runFormat(command, value)
+                              : undefined
+                          }
+                          emptyPlaceholder={
+                            entity.theme === "default" || entity.theme === "task"
+                              ? "Write here, or type / for blocks…"
+                              : undefined
+                          }
+                        />
+                      ) : shouldRenderLoreLocationCanvasNode(entity) ? (
+                        <ArchitecturalLoreLocationCanvasNode
+                          id={entity.id}
+                          width={entity.width}
+                          tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
+                          tapeRotation={entity.tapeRotation}
+                          bodyHtml={entity.bodyHtml}
+                          activeTool={activeTool}
+                          dragged={draggingStack}
+                          selected={false}
+                          showTape={false}
                           bodyEditable={false}
                           onBodyCommit={updateNodeBody}
                           onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
@@ -11304,6 +11463,31 @@ export function ArchitecturalCanvasApp({
                       activeTool={activeTool}
                       dragged={!!drag}
                       selected={false}
+                      onBodyCommit={updateNodeBody}
+                      onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
+                      wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                      onRichDocCommand={
+                        entity.theme === "default" || entity.theme === "task"
+                          ? (command, value) => runFormat(command, value)
+                          : undefined
+                      }
+                      emptyPlaceholder={
+                        entity.theme === "default" || entity.theme === "task"
+                          ? "Write here, or type / for blocks…"
+                          : undefined
+                      }
+                    />
+                  ) : shouldRenderLoreLocationCanvasNode(entity) ? (
+                    <ArchitecturalLoreLocationCanvasNode
+                      id={entity.id}
+                      width={entity.width}
+                      tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
+                      tapeRotation={entity.tapeRotation}
+                      bodyHtml={entity.bodyHtml}
+                      activeTool={activeTool}
+                      dragged={!!drag}
+                      selected={false}
+                      showTape={false}
                       onBodyCommit={updateNodeBody}
                       onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
                       wikiLinkAssist={makeWikiLinkAssist(entity.id)}

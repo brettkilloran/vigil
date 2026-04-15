@@ -4,7 +4,21 @@
  * projects to a single scroll surface; notes are hidden on the canvas (CSS).
  */
 
+import { ORDO_V7_EMPTY_NAME_SENTINEL } from "@/src/lib/lore-location-ordo-display-name";
+
 const DEFAULT_NOTES_HTML = "<p><br></p>";
+
+/** v11 `data-hg-lore-ph` caption for empty ORDO v7 placename (guest-check strip + ::before; not real title text). */
+export const LORE_V11_PH_LOCATION_PLACEHOLDER = "PLACENAME";
+
+/** Normalize stored/plain name: empty, PLACENAME caption, or splitOrdoV7 empty sentinel → "". */
+export function normalizeLocOrdoV7NameField(raw: string): string {
+  const t = raw.replace(/\s+/g, " ").trim();
+  if (!t) return "";
+  if (t.toUpperCase() === LORE_V11_PH_LOCATION_PLACEHOLDER.toUpperCase()) return "";
+  if (t.toUpperCase() === ORDO_V7_EMPTY_NAME_SENTINEL.toUpperCase()) return "";
+  return t;
+}
 
 function parseWrapped(html: string): HTMLElement | null {
   if (typeof DOMParser === "undefined") return null;
@@ -30,7 +44,7 @@ export function plainPlaceNameFromLocationBodyHtml(bodyHtml: string): string {
   const modern = root.querySelector<HTMLElement>('[data-hg-lore-location-field="name"]');
   if (modern) {
     const t = (modern.textContent || "").trim();
-    return t || "";
+    return normalizeLocOrdoV7NameField(t);
   }
   const legacy = root.querySelector<HTMLElement>('[class*="locName"]');
   if (legacy) {
@@ -289,16 +303,17 @@ export function parseLocationFocusDocumentHtml(html: string): LocationFocusParts
   };
 }
 
-export function buildLocationFocusDocumentHtml(parts: LocationFocusParts): string {
-  const refBlock = parts.hasRef
-    ? `<div data-hg-lore-location-focus-row="ref">
+function locationFocusRefRowHtml(parts: LocationFocusParts): string {
+  if (!parts.hasRef) return "";
+  return `<div data-hg-lore-location-focus-row="ref">
 <span data-hg-lore-location-focus-label="true">Reference</span>
 <div data-hg-lore-location-focus-field="ref" data-placeholder="Optional code" contenteditable="true" spellcheck="false">${parts.ref}</div>
-</div>`
-    : "";
+</div>`;
+}
 
-  return `<div data-hg-location-focus-doc="v1">
-<div data-hg-lore-location-focus-meta="true" contenteditable="false">
+/** Inner `[data-hg-lore-location-focus-meta]` block (Place / Context / Detail / optional Reference). */
+function buildLocationFocusMetaBlockHtml(parts: LocationFocusParts): string {
+  return `<div data-hg-lore-location-focus-meta="true" contenteditable="false">
 <div data-hg-lore-location-focus-row="name">
 <span data-hg-lore-location-focus-label="true">Place</span>
 <div data-hg-lore-location-focus-field="name" data-placeholder="Place name" contenteditable="true" spellcheck="false">${parts.name}</div>
@@ -311,11 +326,75 @@ export function buildLocationFocusDocumentHtml(parts: LocationFocusParts): strin
 <span data-hg-lore-location-focus-label="true">Detail</span>
 <div data-hg-lore-location-focus-field="detail" data-placeholder="District, site type, layer (optional)" contenteditable="true" spellcheck="false">${parts.detail}</div>
 </div>
-${refBlock}
-</div>
+${locationFocusRefRowHtml(parts)}
+</div>`;
+}
+
+/**
+ * Place/Context/Detail/Reference shell for hybrid editors: same DOM + data attributes as the focus
+ * document, without the embedded Notes region (TipTap owns notes).
+ */
+export function buildLocationFocusMetaShellHtml(parts: LocationFocusParts): string {
+  return `<div data-hg-location-focus-doc="v1">${buildLocationFocusMetaBlockHtml(parts)}</div>`;
+}
+
+/**
+ * Extract meta shell from a full focus document string (for injecting into the hybrid shell on node switch).
+ */
+export function extractLocationMetaFocusShellHtml(html: string): string {
+  if (typeof DOMParser === "undefined") return "";
+  try {
+    const doc = new DOMParser().parseFromString(`<div id="__hg_loc_meta">${html}</div>`, "text/html");
+    const root = doc.getElementById("__hg_loc_meta");
+    const meta = root?.querySelector('[data-hg-lore-location-focus-meta="true"]');
+    if (!meta) return "";
+    return `<div data-hg-location-focus-doc="v1">${meta.outerHTML}</div>`;
+  } catch {
+    return "";
+  }
+}
+
+/** Read structured fields from a live `[data-hg-lore-location-focus-meta]` node; `notesHtml` comes from TipTap. */
+export function readLocationFocusPartsFromMetaHost(metaHost: HTMLElement, notesHtml: string): LocationFocusParts {
+  const root = metaHost as unknown as ParentNode;
+  const refField = root.querySelector('[data-hg-lore-location-focus-field="ref"]');
+  const hasRef = !!refField;
+  return {
+    name: takeInnerHtml(root, '[data-hg-lore-location-focus-field="name"]', "<br>"),
+    context: takeInnerHtml(root, '[data-hg-lore-location-focus-field="context"]', "<br>"),
+    detail: takeInnerHtml(root, '[data-hg-lore-location-focus-field="detail"]', "<br>"),
+    ref: refField ? takeInnerHtml(root, '[data-hg-lore-location-focus-field="ref"]', "<br>") : "",
+    hasRef,
+    notesHtml,
+  };
+}
+
+export function buildLocationFocusDocumentHtml(parts: LocationFocusParts): string {
+  return `<div data-hg-location-focus-doc="v1">${buildLocationFocusMetaBlockHtml(parts)}
 <div data-hg-lore-location-focus-notes-shell="true" contenteditable="false">
 <span data-hg-lore-location-focus-label="true">Notes</span>
 <div data-hg-lore-location-focus-notes="true" contenteditable="true" spellcheck="false">${parts.notesHtml}</div>
 </div>
 </div>`;
+}
+
+/** Plain-text fields + notes HTML fragment for hydrating `LoreLocationOrdoV7Slab` from canonical `bodyHtml`. */
+export function parseLocationOrdoV7BodyPlainFields(bodyHtml: string): {
+  name: string;
+  context: string;
+  detail: string;
+  notesHtml: string;
+} {
+  const root = parseWrapped(bodyHtml);
+  if (!root) {
+    return { name: "", context: "", detail: "", notesHtml: DEFAULT_NOTES_HTML };
+  }
+  const nameEl = root.querySelector('[data-hg-lore-location-field="name"]');
+  const name = normalizeLocOrdoV7NameField((nameEl?.textContent || "").replace(/\s+/g, " ").trim());
+  const ctxEl = root.querySelector('[data-hg-lore-location-field="context"]');
+  const context = (ctxEl?.textContent || "").replace(/\s+/g, " ").trim();
+  const detEl = root.querySelector('[data-hg-lore-location-field="detail"]');
+  const detail = (detEl?.textContent || "").replace(/\s+/g, " ").trim();
+  const notesHtml = extractNotesHtml(root);
+  return { name, context, detail, notesHtml };
 }

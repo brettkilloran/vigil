@@ -16,6 +16,7 @@ import type { CanvasItem } from "@/src/model/canvas-types";
 import {
   bodyHtmlImpliesLoreCharacterV11,
   defaultLoreCardVariantForKind,
+  migrateLocationBodyToOrdoV7,
   parseLoreCard,
   tapeVariantForLoreCard,
 } from "@/src/lib/lore-node-seed-html";
@@ -40,6 +41,7 @@ const FOLDER_CARD_HEIGHT = 280;
 const DEFAULT_CONTENT_CARD_HEIGHT = 280;
 /** v11 character plates are taller than default notes; culling / bounds use `entityGeometryOnSpace`. */
 const LORE_CHARACTER_MIN_GEOMETRY_HEIGHT = 520;
+const LORE_LOCATION_ORDO_MIN_GEOMETRY_HEIGHT = 360;
 const DEFAULT_NOTE_HTML = `<div contenteditable="true">Start typing...</div>`;
 
 export type BootstrapSpaceRow = {
@@ -206,7 +208,7 @@ export function canvasItemToEntity(
           variant: defaultLoreCardVariantForKind(item.entityType),
         } satisfies LoreCard)
       : undefined;
-  const loreCard =
+  let loreCard: LoreCard | undefined =
     loreFromHg ??
     loreFromEntityType ??
     (bodyHtmlImpliesLoreCharacterV11(workHtml)
@@ -229,6 +231,11 @@ export function canvasItemToEntity(
       bodyDoc = structuredClone(EMPTY_HG_DOC);
       bodyHtml = hgDocToHtml(bodyDoc);
     }
+  }
+
+  if (loreCard?.kind === "location") {
+    bodyHtml = migrateLocationBodyToOrdoV7(bodyHtml);
+    loreCard = { kind: "location", variant: "v7" };
   }
 
   const entity: CanvasContentEntity = {
@@ -634,6 +641,9 @@ export function entityGeometryOnSpace(entity: CanvasEntity, spaceId: string) {
     const lc = entity.loreCard;
     if (lc?.kind === "character") {
       height = Math.max(height, LORE_CHARACTER_MIN_GEOMETRY_HEIGHT);
+    }
+    if (lc?.kind === "location" && lc.variant === "v7") {
+      height = Math.max(height, LORE_LOCATION_ORDO_MIN_GEOMETRY_HEIGHT);
     }
   }
   return {

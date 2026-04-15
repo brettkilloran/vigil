@@ -8,6 +8,7 @@ import styles from "@/src/components/foundation/ArchitecturalLoreReviewPanel.mod
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 import { cx } from "@/src/lib/cx";
+import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
 import { HEARTGARDEN_CHROME_ICON } from "@/src/lib/vigil-ui-classes";
 import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
 
@@ -404,5 +405,5 @@ export function ArchitecturalLoreReviewPanel({
     </>
   );
 
-  return createPortal(modal, document.body);
+  return createPortal(modal, getVigilPortalRoot());
 }
