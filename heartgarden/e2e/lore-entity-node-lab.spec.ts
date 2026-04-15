@@ -25,7 +25,9 @@ test.describe("/dev/lore-entity-nodes", () => {
     await expect(page.getByTestId("loc-lab-ordo-coordinate-mono")).toBeVisible();
     await expect(page.getByTestId("loc-lab-ordo-coordinate-mono-v5")).toBeVisible();
     await expect(page.getByTestId("loc-lab-ordo-coordinate-mono-v6")).toBeVisible();
-    await expect(page.getByTestId("loc-lab-ordo-coordinate-mono-v7")).toBeVisible();
+    const v7Slab = page.getByTestId("loc-lab-ordo-coordinate-mono-v7");
+    await expect(v7Slab).toBeVisible();
+    await expect(v7Slab.locator('[data-hg-lore-location-staple="v7"]')).toBeVisible();
   });
 
   test("shows faction lab plates through XII including shelf, sleeve, and protocol specimens", async ({ page }) => {

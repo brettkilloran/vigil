@@ -1159,13 +1159,18 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* 1em = 12px here — one text line + bottom padding + border; shared by placeholder button + detail line */
+  --fac-ordo-v7-detail-slot-h: calc(0.92 * 1em * 1.55 + 0.55 * 0.92 * 1em + 1px);
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV5DocInline > .facOrdoLocV5DetailLine,
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV5DocInline > .facOrdoLocV7DetailAdd {
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV5DocInline > .facOrdoLocV5DetailLine {
   flex-shrink: 0;
-  /* One text line (1.55 line-height) + bottom padding band; keeps add button ≈ filled/empty detail */
-  min-height: calc(1.55em + 0.55em);
+  height: var(--fac-ordo-v7-detail-slot-h);
+  min-height: var(--fac-ordo-v7-detail-slot-h);
+  max-height: var(--fac-ordo-v7-detail-slot-h);
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV5NotesCell {
@@ -1186,25 +1191,30 @@
 }
 
 /*
- * V7 — optional detail: trigger uses the same box + type metrics as `.facOrdoLocV5DetailLine` so swapping
- * button ↔ contentEditable does not change slab height.
+ * V7 — optional detail: micro mono all-caps trigger; row height stays fixed via `--fac-ordo-v7-detail-slot-h` (filled detail line unchanged).
  */
 .factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7DetailAdd {
-  display: block;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
   width: 100%;
+  height: var(--fac-ordo-v7-detail-slot-h);
+  min-height: var(--fac-ordo-v7-detail-slot-h);
+  max-height: var(--fac-ordo-v7-detail-slot-h);
   box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: hidden;
   margin: -2px 0 0.65em;
   padding: 0 0 0.55em;
-  padding-inline: 0;
   border: none;
   border-bottom: 1px solid color-mix(in oklch, var(--fac-ordo-accent) 14%, transparent);
   background: transparent;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.92em;
-  font-style: normal;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  line-height: 1.55;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 7px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  line-height: 1.45;
   text-align: left;
   text-transform: uppercase;
   color: color-mix(in oklch, var(--fac-ordo-accent) 48%, transparent);
@@ -1306,6 +1316,38 @@
   cursor: default;
   color: var(--fac-ordo-accent);
   scrollbar-width: none;
+}
+
+/*
+ * V7 · wire staple (SVG) — sits on the gray slab “paper”, centered in the top padding row (not in the dark margin
+ * above the plate). Angle / nudge from test id in TS.
+ */
+.facOrdoLocV7Staple {
+  --fac-ordo-v7-staple-deg: 0deg;
+  --fac-ordo-v7-staple-nudge: 0px;
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  z-index: 4;
+  display: block;
+  width: 40px;
+  height: 12px;
+  margin: 0;
+  padding: 0;
+  line-height: 0;
+  box-sizing: border-box;
+  pointer-events: none;
+  transform: translate(calc(-50% + var(--fac-ordo-v7-staple-nudge, 0px)), -50%)
+    rotate(var(--fac-ordo-v7-staple-deg, 0deg));
+  transform-origin: 50% 50%;
+  filter: drop-shadow(0 0.5px 0.35px oklch(0 0 0 / 0.45)) drop-shadow(0 1px 1.5px oklch(0 0 0 / 0.22));
+}
+
+.facOrdoLocV7StapleSvg {
+  display: block;
+  width: 40px;
+  height: auto;
+  vertical-align: top;
 }
 
 .facOrdoRoot::-webkit-scrollbar {

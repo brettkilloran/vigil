@@ -19,6 +19,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -59,6 +60,79 @@ import {
 } from "@/src/lib/lore-v9-placeholder";
 import { applyImageDataUrlToArchitecturalMediaBody } from "@/src/components/foundation/architectural-media-html";
 import { applySpellcheckToNestedEditables } from "@/src/lib/contenteditable-spellcheck";
+
+/** Stable “hand-stapled” placement for lab-only chrome (SSR / hydration safe). */
+function labStaplePlacementFromTestId(testId: string): CSSProperties {
+  let h = 2166136261;
+  for (let i = 0; i < testId.length; i++) {
+    h = Math.imul(h ^ testId.charCodeAt(i), 16777619) >>> 0;
+  }
+  const h2 = Math.imul(h, 2246822519) >>> 0;
+  const tDeg = (h2 % 1000) / 1000;
+  const tNudge = (h % 1000) / 1000;
+  const deg = -8 + tDeg * 16;
+  const nudgePx = -5 + tNudge * 10;
+  return {
+    "--fac-ordo-v7-staple-deg": `${deg}deg`,
+    "--fac-ordo-v7-staple-nudge": `${nudgePx}px`,
+  } as CSSProperties;
+}
+
+/** Thin wire-style office staple on the slab “paper” (V7 lab only). */
+function LocOrdoV7Staple({ testId }: { testId: string }) {
+  const gid = useId().replace(/:/g, "");
+  return (
+    <span
+      className={labStyles.facOrdoLocV7Staple}
+      aria-hidden
+      data-hg-lore-location-staple="v7"
+      style={labStaplePlacementFromTestId(testId)}
+    >
+      <svg
+        className={labStyles.facOrdoLocV7StapleSvg}
+        viewBox="0 0 40 12"
+        width="40"
+        height="12"
+        aria-hidden
+        role="presentation"
+        focusable="false"
+      >
+        <defs>
+          <linearGradient id={`${gid}-crown`} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#d6d6d6" />
+            <stop offset="28%" stopColor="#9a9a9a" />
+            <stop offset="52%" stopColor="#4f4f4f" />
+            <stop offset="100%" stopColor="#8c8c8c" />
+          </linearGradient>
+          <linearGradient id={`${gid}-leg`} x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%" stopColor="#2a2a2a" />
+            <stop offset="50%" stopColor="#4a4a4a" />
+            <stop offset="100%" stopColor="#2c2c2c" />
+          </linearGradient>
+        </defs>
+        {/* Contact shadow where legs press into paper */}
+        <ellipse cx="20" cy="10.2" rx="13" ry="1.6" fill="black" opacity="0.2" />
+        {/* Crown (top view of bent wire) */}
+        <rect
+          x="3"
+          y="4"
+          width="34"
+          height="2"
+          rx="0.45"
+          fill={`url(#${gid}-crown)`}
+          stroke="#0f0f0f"
+          strokeOpacity="0.72"
+          strokeWidth="0.35"
+        />
+        {/* Specular on crown — narrow highlight so wire reads solid */}
+        <path d="M 3.3 4.08 L 14 4.08 L 13.2 4.52 L 3.3 4.52 Z" fill="#f5f5f5" opacity="0.42" />
+        {/* Legs piercing the sheet */}
+        <rect x="3.1" y="6" width="1.15" height="4.2" fill={`url(#${gid}-leg)`} />
+        <rect x="35.75" y="6" width="1.15" height="4.2" fill={`url(#${gid}-leg)`} />
+      </svg>
+    </span>
+  );
+}
 
 function LabCard({
   headerTitle,
@@ -715,6 +789,7 @@ function LocationOrdoCoordinateSlabV7Body({ testId }: { testId: string }) {
       <div className={labStyles.facOrdoGeo} aria-hidden />
       <div className={labStyles.facOrdoGlow} aria-hidden />
       <div className={labStyles.facOrdoInner}>
+        <LocOrdoV7Staple testId={testId} />
         <header className={labStyles.facOrdoHeader}>
           <div className={labStyles.facOrdoLogoBlock}>
             <div className={labStyles.facOrdoPixelIcon} aria-hidden>

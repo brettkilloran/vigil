@@ -11,7 +11,7 @@ import { authorizationBearerMatchesMcpServiceKey } from "@/src/lib/heartgarden-m
 
 const FORBIDDEN = { ok: false, error: "Forbidden." };
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { gateEnabled, sessionSecret } = readBootGateEnvEdge();
   if (!gateEnabled) {
     return NextResponse.next();

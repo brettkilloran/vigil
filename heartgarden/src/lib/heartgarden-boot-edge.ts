@@ -1,5 +1,5 @@
 /**
- * Edge-safe boot gate helpers for Next.js middleware (no `node:crypto`).
+ * Edge-safe boot gate helpers for Next.js proxy (no `node:crypto`).
  * Verification must match `verifyBootSessionCookie` in `heartgarden-boot-session.ts`.
  */
 
