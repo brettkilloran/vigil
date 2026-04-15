@@ -32,7 +32,7 @@ function applyMarkerTiltVars(el: HTMLElement, fieldSeed: string): void {
 
   const trim = `${seededFloat(fieldSeed, "trim", 2, 22).toFixed(2)}px`;
 
-  let trimTop = seededFloat(fieldSeed, "trim-top", 0, 28);
+  const trimTop = seededFloat(fieldSeed, "trim-top", 0, 28);
   let trimBottom = seededFloat(fieldSeed, "trim-bottom", 0, 36);
   if (Math.abs(trimTop - trimBottom) < 10) {
     trimBottom = Math.min(trimTop + 10 + seededFloat(fieldSeed, "trim-uniformity", 0, 22), 52);
