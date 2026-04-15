@@ -80,10 +80,28 @@ export async function resolveOrCreateImplicitPlayerRootSpace(db: VigilDb) {
 }
 
 /**
+ * `next dev` only: optional fixed UUID for a GM workspace row so local Neon always has a
+ * predictable space (bootstrap default) without re-seeding after wipes.
+ */
+export function parseDevGmWorkspaceSpaceIdFromEnv(): string | undefined {
+  if (process.env.NODE_ENV !== "development") return undefined;
+  return parseSpaceIdParam((process.env.HEARTGARDEN_DEV_GM_SPACE_ID ?? "").trim() || null);
+}
+
+async function ensureDevGmWorkspaceSpace(db: VigilDb): Promise<void> {
+  const id = parseDevGmWorkspaceSpaceIdFromEnv();
+  if (!id) return;
+  const existing = await assertSpaceExists(db, id);
+  if (existing) return;
+  await db.insert(spaces).values({ id, name: "Dev workspace" });
+}
+
+/**
  * Like `resolveActiveSpace` but never selects the Players-only space for GM.
  * If the DB only contains the hidden space, inserts a new “Main space” for GM.
  */
 export async function resolveActiveSpaceGmWorkspace(db: VigilDb, requestedSpaceId?: string) {
+  await ensureDevGmWorkspaceSpace(db);
   let allSpaces = await listGmWorkspaceSpaces(db);
   if (allSpaces.length === 0) {
     const [created] = await db
@@ -98,10 +116,13 @@ export async function resolveActiveSpaceGmWorkspace(db: VigilDb, requestedSpaceI
     requestedSpaceId &&
     allSpaces.some((s) => s.id === requestedSpaceId) &&
     (!hid || breakGlass || requestedSpaceId !== hid);
+  const devId = parseDevGmWorkspaceSpaceIdFromEnv();
   const defaultRoot =
-    allSpaces.find((s) => s.parentSpaceId == null) ??
-    allSpaces.find((s) => s.name.trim().toLowerCase() === "main space") ??
-    allSpaces[0];
+    devId && allSpaces.some((s) => s.id === devId)
+      ? allSpaces.find((s) => s.id === devId)!
+      : allSpaces.find((s) => s.parentSpaceId == null) ??
+        allSpaces.find((s) => s.name.trim().toLowerCase() === "main space") ??
+        allSpaces[0];
   const active = reqOk
     ? allSpaces.find((s) => s.id === requestedSpaceId)!
     : defaultRoot;

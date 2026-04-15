@@ -1543,6 +1543,25 @@
   cursor: grab;
 }
 
+/* Shorter bar: default icon control uses `--sys-control-height-md` (36px), which reads taller than title-only rows. */
+.nodeHeaderCompact {
+  padding: 6px 14px;
+}
+
+.nodeHeaderCompact .contentConnectionPinAnchor {
+  top: 11px;
+}
+
+.nodeHeaderCompact .nodeTitle {
+  line-height: 1.2;
+}
+
+.nodeHeaderCompact :global(.vigil-btn[data-size="icon"]) {
+  --btn-height: var(--sys-control-height-xs);
+  width: var(--sys-control-height-xs);
+  min-width: var(--sys-control-height-xs);
+}
+
 .themeCode .nodeHeader {
   border-bottom: 1px solid var(--sem-overlay-white-05);
 }

@@ -28,6 +28,7 @@ import { pointerEventTargetElement } from "@/src/components/foundation/pointer-e
 import { resolveImageDisplayUrl } from "@/src/lib/heartgarden-image-display-url";
 import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
 import { normalizeHgDocForCodeTheme } from "@/src/lib/hg-doc/code-theme-doc";
+import { cx } from "@/src/lib/cx";
 
 function themeClass(theme: NodeTheme): string {
   if (theme === "code") return styles.themeCode;
@@ -67,6 +68,7 @@ export function ArchitecturalNodeHeader({
   onExpand,
   aiReviewPending = false,
   onAcceptAi,
+  compact = false,
 }: {
   title: ReactNode;
   showExpand?: boolean;
@@ -76,10 +78,12 @@ export function ArchitecturalNodeHeader({
   /** When true, show a small badge and optional Accept control for import / LLM text. */
   aiReviewPending?: boolean;
   onAcceptAi?: () => void;
+  /** Tighter bar + smaller expand control — closer to title-only document headers. */
+  compact?: boolean;
 }) {
   return (
     <div
-      className={styles.nodeHeader}
+      className={cx(styles.nodeHeader, compact && styles.nodeHeaderCompact)}
       onDoubleClick={(event) => {
         if (!onExpand) return;
         const el = pointerEventTargetElement(event.target);
@@ -135,7 +139,7 @@ export function ArchitecturalNodeHeader({
               aria-label={expandLabel}
               onClick={onExpand}
             >
-              <ArrowsOutSimple size={14} />
+              <ArrowsOutSimple size={compact ? 12 : 14} />
             </Button>
           </ArchitecturalTooltip>
         ) : null}

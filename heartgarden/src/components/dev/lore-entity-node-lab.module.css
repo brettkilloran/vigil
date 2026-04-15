@@ -251,17 +251,6 @@
   color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
 }
 
-.factionLabPlate_nameplate {
-  padding: 10px 12px 12px;
-  border: 1px solid color-mix(in oklch, var(--accent) 35%, var(--sys-color-neutral-800));
-  background: linear-gradient(
-    175deg,
-    color-mix(in oklch, var(--accent) 40%, var(--sys-color-neutral-920)) 0%,
-    color-mix(in oklch, var(--sys-color-neutral-920) 90%, var(--accent)) 100%
-  );
-  color: color-mix(in oklch, var(--sys-color-white) 93%, var(--accent));
-}
-
 .factionLabPlate_stub {
   border: 1px solid color-mix(in oklch, var(--accent) 32%, var(--theme-default-border));
   background: color-mix(in oklch, var(--accent) 16%, var(--theme-default-bg));
@@ -368,103 +357,6 @@
   font-weight: 700;
 }
 
-.facPlateFrame {
-  position: relative;
-  text-align: center;
-  padding: 18px 14px 16px;
-  border-radius: 6px;
-  box-shadow:
-    inset 0 2px 0 color-mix(in oklch, var(--sys-color-white) 12%, transparent),
-    inset 0 -3px 8px color-mix(in oklch, var(--sys-color-black) 35%, transparent);
-}
-
-.facPlateRivet {
-  position: absolute;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 30% 30%,
-    color-mix(in oklch, var(--sys-color-white) 45%, transparent),
-    color-mix(in oklch, var(--sys-color-black) 55%, transparent)
-  );
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--sys-color-black) 40%, transparent);
-}
-
-.facPlateRivet:nth-of-type(1) {
-  top: 8px;
-  left: 10px;
-}
-
-.facPlateRivet:nth-of-type(2) {
-  top: 8px;
-  right: 10px;
-}
-
-.facPlateRivet:nth-of-type(3) {
-  bottom: 8px;
-  left: 10px;
-}
-
-.facPlateRivet:nth-of-type(4) {
-  bottom: 8px;
-  right: 10px;
-}
-
-.facPlateBevel {
-  display: inline-block;
-  margin-bottom: 10px;
-  padding: 4px 12px;
-  border-radius: 3px;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: color-mix(in oklch, var(--sys-color-white) 55%, transparent);
-  background: color-mix(in oklch, var(--sys-color-black) 28%, transparent);
-  border: 1px solid color-mix(in oklch, var(--sys-color-white) 10%, transparent);
-}
-
-.facPlateOrg {
-  font-family: var(--font-lora), var(--font-geist-sans), serif;
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  line-height: 1.18;
-  text-shadow: 0 1px 0 color-mix(in oklch, var(--sys-color-black) 45%, transparent);
-}
-
-.facPlateNation {
-  margin-top: 6px;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: color-mix(in oklch, var(--sys-color-white) 52%, transparent);
-}
-
-.facPlateSerial {
-  margin-top: 12px;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  color: color-mix(in oklch, var(--sys-color-white) 45%, transparent);
-}
-
-.facPlateBarcode {
-  height: 24px;
-  margin-top: 12px;
-  border-radius: 2px;
-  background: repeating-linear-gradient(
-    90deg,
-    color-mix(in oklch, var(--sys-color-black) 55%, transparent) 0 2px,
-    transparent 2px 5px
-  );
-  opacity: 0.85;
-}
-
 .facStubRoot {
   padding: 16px 18px 0;
 }
@@ -556,101 +448,6 @@
   color: color-mix(in oklch, var(--theme-default-text) 42%, transparent);
 }
 
-.factionLabPlate_carboncopy {
-  padding: 0;
-  overflow: hidden;
-  border: 1px solid color-mix(in oklch, var(--sys-color-neutral-600) 30%, var(--theme-default-border));
-  background: color-mix(in oklch, var(--sys-color-neutral-400) 14%, var(--theme-default-bg));
-  color: var(--theme-default-text);
-}
-
-.facCarbRoot {
-  min-height: 312px;
-  padding: 24px 18px 28px;
-}
-
-.facCarbStack {
-  position: relative;
-  max-width: 280px;
-  margin: 0 auto;
-}
-
-.facCarbUnder {
-  position: absolute;
-  z-index: 0;
-  left: 6px;
-  top: 8px;
-  right: -4px;
-  bottom: -8px;
-  border-radius: 3px;
-  border: 1px solid color-mix(in oklch, var(--sys-color-neutral-600) 25%, var(--theme-default-border));
-  background: linear-gradient(
-    165deg,
-    color-mix(in oklch, oklch(0.9 0.09 95) 55%, var(--theme-default-bg)) 0%,
-    color-mix(in oklch, oklch(0.82 0.07 88) 60%, var(--theme-default-bg)) 100%
-  );
-  box-shadow: 0 2px 0 color-mix(in oklch, var(--sys-color-black) 8%, transparent);
-}
-
-.facCarbSheet {
-  position: relative;
-  z-index: 1;
-  padding: 18px 16px 16px;
-  border-radius: 2px;
-  border: 1px solid color-mix(in oklch, var(--theme-default-text) 14%, var(--theme-default-border));
-  background: linear-gradient(
-    180deg,
-    color-mix(in oklch, var(--sys-color-white) 30%, var(--theme-default-bg)) 0%,
-    color-mix(in oklch, var(--sys-color-neutral-100) 40%, var(--theme-default-bg)) 100%
-  );
-  box-shadow:
-    0 1px 0 color-mix(in oklch, var(--sys-color-white) 45%, transparent),
-    0 10px 22px color-mix(in oklch, var(--sys-color-black) 10%, transparent);
-}
-
-.facCarbFlag {
-  margin-bottom: 12px;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: color-mix(in oklch, var(--accent) 40%, var(--theme-default-text));
-}
-
-.facCarbOrg {
-  font-family: var(--font-lora), var(--font-geist-sans), serif;
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
-  margin-bottom: 6px;
-}
-
-.facCarbSub {
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: color-mix(in oklch, var(--theme-default-text) 48%, transparent);
-}
-
-.facCarbPerf {
-  margin: 16px 0 12px;
-  border: none;
-  border-top: 1px dashed color-mix(in oklch, var(--theme-default-text) 28%, var(--theme-default-border));
-}
-
-.facCarbFine {
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 7px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  line-height: 1.4;
-  color: color-mix(in oklch, var(--theme-default-text) 45%, transparent);
-}
-
 .factionLabPlate_iomemo {
   padding: 0;
   overflow: hidden;
@@ -723,42 +520,73 @@
   color: color-mix(in oklch, var(--theme-default-text) 62%, transparent);
 }
 
-.factionLabPlate_shelfcard {
+/* Shelf — rosy accent gradient; summit-stub family (see `.factionLabPlate_stub`). */
+.factionLabPlate_shelfcard,
+.factionLabPlate_shelfcardSleeve {
+  display: flex;
+  flex-direction: column;
   padding: 0;
   overflow: hidden;
-  border: 1px solid color-mix(in oklch, oklch(0.42 0.06 65) 45%, var(--theme-default-border));
+  color: var(--theme-default-text);
+  border-radius: 0;
+  border: 1px solid color-mix(in oklch, var(--accent) 40%, var(--theme-default-border));
   background: linear-gradient(
     165deg,
-    color-mix(in oklch, oklch(0.82 0.04 78) 35%, var(--theme-default-bg)) 0%,
-    color-mix(in oklch, oklch(0.76 0.05 72) 55%, var(--theme-default-bg)) 100%
+    color-mix(in oklch, var(--accent) 18%, var(--theme-default-bg)) 0%,
+    color-mix(in oklch, var(--accent) 28%, var(--theme-default-bg)) 100%
   );
-  color: color-mix(in oklch, oklch(0.22 0.04 55) 55%, var(--theme-default-text));
-  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 25%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 18%, transparent);
+}
+
+/*
+ * V · Same single gradient + inset as IV; dashed edge on the outer shell.
+ * Mask MUST be on this outer plate (not an inner wrapper): the mask punches through the full painted layer
+ * (gradient + header + body) so holes reveal the lab behind the card. On an inner div, holes only sat above the
+ * parent gradient — same pink as the face, so perforation looked “gone”.
+ * Vertical padding + mask-origin/mask-clip: content-box insets the repeat so holes don’t sit flush on outer top/bottom.
+ */
+.factionLabPlate_shelfcardSleeve {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  box-sizing: border-box;
+  border-left: 2px dashed color-mix(in oklch, var(--theme-default-text) 10%, var(--theme-default-border));
+  mask-image: radial-gradient(circle at left center, transparent 6px, black 7px);
+  -webkit-mask-image: radial-gradient(circle at left center, transparent 6px, black 7px);
+  mask-size: 100% 24px;
+  -webkit-mask-size: 100% 24px;
+  mask-repeat: repeat-y;
+  -webkit-mask-repeat: repeat-y;
+  mask-origin: content-box;
+  -webkit-mask-origin: content-box;
+  mask-clip: content-box;
+  -webkit-mask-clip: content-box;
+}
+
+.facShelfSleeveStack {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.factionLabPlate_shelfcard > :first-child,
+.factionLabPlate_shelfcardSleeve > .facShelfSleeveStack > :first-child {
+  flex-shrink: 0;
+  border-bottom: 1px solid color-mix(in oklch, var(--accent) 28%, var(--theme-default-border));
+  background: transparent;
+  cursor: default;
 }
 
 .facShelfRoot {
   position: relative;
-  min-height: 312px;
-  padding: 16px 16px 18px;
-}
-
-.facShelfCall {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in oklch, var(--theme-default-text) 25%, var(--theme-default-border));
-  border-radius: 2px;
-  background: color-mix(in oklch, var(--theme-default-bg) 70%, transparent);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  color: color-mix(in oklch, var(--theme-default-text) 72%, transparent);
+  flex: 1 1 auto;
+  min-height: 268px;
+  padding: 14px 16px 18px;
 }
 
 .facShelfTitle {
-  margin: 0 96px 16px 0;
+  margin: 0 0 16px;
   font-family: var(--font-lora), var(--font-geist-sans), serif;
   font-size: 1.08rem;
   font-weight: 700;
@@ -810,228 +638,2298 @@
   color: color-mix(in oklch, var(--theme-default-text) 38%, transparent);
 }
 
-.factionLabPlate_luggagetag {
+/* VII · ORDO LUNARIS protocol — full specimen (VI uses `factionLabPlate_protocolOrdoCompact` + shared `.facOrdo*`). */
+.factionLabPlate_protocolOrdo {
+  --fac-ordo-bg: #d2ccc9;
+  --fac-ordo-accent: #ff4321;
+  --fac-ordo-line: rgba(255, 67, 33, 0.4);
+  --fac-ordo-line-strong: rgba(255, 67, 33, 1);
+
   padding: 0;
-  overflow: visible;
-  border: 1px solid color-mix(in oklch, var(--sys-color-neutral-600) 28%, var(--theme-default-border));
-  background: color-mix(in oklch, var(--sys-color-neutral-400) 18%, var(--theme-default-bg));
-  color: var(--theme-default-text);
-}
-
-.facTagRoot {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  min-height: 312px;
-  padding: 28px 20px 24px;
-}
-
-.facTagCard {
-  width: min(240px, 100%);
-  padding: 36px 16px 22px;
-  clip-path: polygon(0% 0%, 100% 0%, 100% 86%, 50% 100%, 0% 86%);
-  border: 1px solid color-mix(in oklch, var(--theme-default-text) 16%, var(--theme-default-border));
-  background: linear-gradient(
-    175deg,
-    color-mix(in oklch, var(--sys-color-neutral-100) 55%, var(--theme-default-bg)) 0%,
-    color-mix(in oklch, oklch(0.9 0.02 85) 40%, var(--theme-default-bg)) 100%
-  );
+  overflow: hidden;
+  border-radius: 0;
+  border: 1px solid color-mix(in oklch, var(--fac-ordo-accent) 55%, var(--sys-color-neutral-700));
+  background: var(--fac-ordo-bg);
   box-shadow:
-    0 1px 0 color-mix(in oklch, var(--sys-color-white) 45%, transparent),
-    0 12px 24px color-mix(in oklch, var(--sys-color-black) 12%, transparent);
-  text-align: center;
+    0 1px 0 color-mix(in oklch, var(--sys-color-white) 22%, transparent),
+    0 12px 28px color-mix(in oklch, var(--sys-color-black) 18%, transparent);
 }
 
-.facTagHole {
-  display: flex;
-  justify-content: center;
-  margin: -8px 0 14px;
-}
+/* VI · ORDO compact — same tokens as VII; sized for the 340px plate with legible type (not micro-print). */
+.factionLabPlate_protocolOrdoCompact {
+  --fac-ordo-bg: #d2ccc9;
+  --fac-ordo-accent: #ff4321;
+  --fac-ordo-line: rgba(255, 67, 33, 0.4);
+  --fac-ordo-line-strong: rgba(255, 67, 33, 1);
 
-.facTagHoleRing {
-  display: block;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 3px solid color-mix(in oklch, var(--sys-color-neutral-600) 45%, var(--theme-default-border));
-  background: radial-gradient(
-    circle at 35% 35%,
-    color-mix(in oklch, var(--sys-color-white) 35%, transparent),
-    color-mix(in oklch, var(--sys-color-neutral-400) 25%, var(--theme-default-bg)) 55%,
-    color-mix(in oklch, var(--theme-default-bg) 80%, transparent) 56%
-  );
+  padding: 0;
+  overflow: hidden;
+  border-radius: 0;
+  border: 1px solid color-mix(in oklch, var(--fac-ordo-accent) 55%, var(--sys-color-neutral-700));
+  background: var(--fac-ordo-bg);
   box-shadow:
-    inset 0 1px 2px color-mix(in oklch, var(--sys-color-white) 40%, transparent),
-    inset 0 -2px 4px color-mix(in oklch, var(--sys-color-black) 12%, transparent);
+    0 1px 0 color-mix(in oklch, var(--sys-color-white) 22%, transparent),
+    0 12px 28px color-mix(in oklch, var(--sys-color-black) 18%, transparent);
 }
 
-.facTagDest {
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 1.65rem;
-  font-weight: 800;
-  letter-spacing: 0.22em;
-  color: color-mix(in oklch, var(--accent) 25%, var(--theme-default-text));
+.factionLabPlate_protocolOrdoCompact .facOrdoGeo {
+  opacity: 0.42;
 }
 
-.facTagRoute {
-  margin-top: 8px;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: color-mix(in oklch, var(--theme-default-text) 52%, transparent);
+.factionLabPlate_protocolOrdoCompact .facOrdoGlow {
+  width: 130px;
+  height: 130px;
+  left: 50%;
+  top: 42%;
+  filter: blur(16px);
+  opacity: 0.68;
 }
 
-.facTagOrg {
-  margin-top: 14px;
-  font-family: var(--font-lora), var(--font-geist-sans), serif;
-  font-size: 0.88rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+.factionLabPlate_protocolOrdoCompact .facOrdoInner {
+  padding: 10px 10px 11px;
+  font-size: 11px;
   line-height: 1.2;
 }
 
-.factionLabPlate_manilatab {
+.factionLabPlate_protocolOrdoCompact .facOrdoHeader {
+  padding-bottom: 8px;
+  margin-bottom: 9px;
+  gap: 8px;
+}
+
+.factionLabPlate_protocolOrdoCompact .facOrdoLogoBlock {
+  flex-shrink: 0;
+  min-width: max-content;
+}
+
+.factionLabPlate_protocolOrdoCompact .facOrdoPixelIcon {
+  flex-shrink: 0;
+  isolation: isolate;
+  grid-template-columns: repeat(8, 2.25px);
+  grid-template-rows: repeat(8, 2.25px);
+  gap: 1.25px;
+  width: calc(8 * 2.25px + 7 * 1.25px);
+  height: calc(8 * 2.25px + 7 * 1.25px);
+  box-sizing: content-box;
+}
+
+.factionLabPlate_protocolOrdoCompact .facOrdoPx {
+  width: 2.25px;
+  height: 2.25px;
+}
+
+.factionLabPlate_protocolOrdoCompact .facOrdoBrand {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+
+.factionLabPlate_protocolOrdoCompact .facOrdoSystemData {
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  line-height: 1.42;
+}
+
+.factionLabPlate_protocolOrdoCompact .facOrdoDocGrid {
+  gap: 6px;
+}
+
+.factionLabPlate_protocolOrdoCompact .facOrdoDisplayTitle {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 1.68rem;
+  font-weight: 900;
+  line-height: 0.86;
+  letter-spacing: -0.05em;
+  text-transform: none;
+  font-synthesis: none;
+}
+
+.factionLabPlate_protocolOrdoCompact .facOrdoSecondaryTitle {
+  font-size: 0.72rem;
+  padding-top: 5px;
+}
+
+.factionLabPlate_protocolOrdoCompact .facOrdoMetaStamp {
+  font-size: 8px;
+  line-height: 1.45;
+  max-width: none;
+}
+
+.factionLabPlate_protocolOrdoCompact .facOrdoMain {
+  gap: 7px;
+}
+
+.factionLabPlate_protocolOrdoCompact .facOrdoContentBlock {
+  padding-left: 9px;
+}
+
+.factionLabPlate_protocolOrdoCompact .facOrdoSectionLabel {
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  margin: 0 0 5px;
+}
+
+.factionLabPlate_protocolOrdoCompact .facOrdoP {
+  margin: 0 0 6px;
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.factionLabPlate_protocolOrdoCompact .facOrdoBtn {
+  margin-top: 5px;
+  padding: 5px 10px;
+  font-size: 8px;
+}
+
+.factionLabPlate_protocolOrdoCompact .facOrdoFooterStrip {
+  margin-top: 7px;
+  padding-top: 6px;
+  font-size: 7px;
+  letter-spacing: 0.035em;
+}
+
+/* ORDO compact · monochrome (grayscale ink + neutral glow; same layout as VI). */
+.factionLabPlate_protocolOrdoCompactMono {
+  --fac-ordo-bg: #d4d4d4;
+  --fac-ordo-accent: #141414;
+  --fac-ordo-line: rgba(0, 0, 0, 0.12);
+  --fac-ordo-line-strong: #141414;
+  --fac-ordo-glow-mid: rgba(0, 0, 0, 0.22);
+
   padding: 0;
-  overflow: visible;
-  border: 1px solid color-mix(in oklch, oklch(0.42 0.06 65) 35%, var(--theme-default-border));
-  background: color-mix(in oklch, var(--sys-color-neutral-400) 12%, var(--theme-default-bg));
-  color: color-mix(in oklch, oklch(0.28 0.05 55) 45%, var(--theme-default-text));
+  overflow: hidden;
+  border-radius: 0;
+  border: 1px solid color-mix(in oklch, var(--fac-ordo-accent) 28%, var(--sys-color-neutral-600));
+  background: var(--fac-ordo-bg);
+  box-shadow:
+    0 1px 0 color-mix(in oklch, var(--sys-color-white) 28%, transparent),
+    0 12px 28px color-mix(in oklch, var(--sys-color-black) 16%, transparent);
 }
 
-.facFolderRoot {
+/* V5 / V6 / V7 — strictly achromatic grays (OKLCH C=0); glow uses normal blend so parent hues don’t tint */
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v5"]),
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v6"]),
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) {
+  --fac-ordo-bg: oklch(0.855 0 0);
+  --fac-ordo-accent: oklch(0.145 0 0);
+  --fac-ordo-line: oklch(0 0 0 / 0.12);
+  --fac-ordo-line-strong: oklch(0.145 0 0);
+  --fac-ordo-glow-mid: oklch(0 0 0 / 0.22);
+
+  border-color: oklch(0 0 0 / 0.2);
+  background: var(--fac-ordo-bg);
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.28),
+    0 12px 28px oklch(0 0 0 / 0.14);
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v5"]) .facOrdoGlow,
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v6"]) .facOrdoGlow,
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoGlow {
+  mix-blend-mode: normal;
+  opacity: 0.52;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoGeo {
+  opacity: 0.42;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoGlow {
+  width: 130px;
+  height: 130px;
+  left: 50%;
+  top: 42%;
+  filter: blur(16px);
+  opacity: 0.55;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoInner {
+  padding: 10px 10px 11px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoHeader {
+  padding-bottom: 8px;
+  margin-bottom: 9px;
+  gap: 8px;
+}
+
+/* Keep masthead mark from flex-shrinking when the right rail is narrow (lean v6); root has overflow:hidden. */
+.factionLabPlate_protocolOrdoCompactMono .facOrdoLogoBlock {
+  flex-shrink: 0;
+  min-width: max-content;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoPixelIcon {
+  flex-shrink: 0;
+  isolation: isolate;
+  grid-template-columns: repeat(8, 2.25px);
+  grid-template-rows: repeat(8, 2.25px);
+  gap: 1.25px;
+  width: calc(8 * 2.25px + 7 * 1.25px);
+  height: calc(8 * 2.25px + 7 * 1.25px);
+  box-sizing: content-box;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoPx {
+  width: 2.25px;
+  height: 2.25px;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoBrand {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoSystemData {
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  line-height: 1.42;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoDocGrid {
+  gap: 6px;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV6ContextLine {
+  margin: 0;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.45;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-ligatures: none;
+  color: var(--fac-ordo-accent);
+}
+
+/* Lean v6/v7 — extra air between display title and context (mono slab `facOrdoDocGrid` gap is tight). */
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v6"]) .facOrdoLocV6ContextLine,
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV6ContextLine {
+  margin-top: 3px;
+}
+
+/* V7 — primary fields are contentEditable; beat `.facOrdoRoot { cursor: default }` for I-beam */
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
+  [data-hg-lore-location-field="name"][contenteditable="true"],
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
+  [data-hg-lore-location-field="context"][contenteditable="true"],
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
+  [data-hg-lore-location-field="detail"][contenteditable="true"] {
+  cursor: text;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* V7 — no browser / shell focus ring on editable primary fields or TipTap notes host */
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
+  [data-hg-lore-location-field="name"][contenteditable="true"]:focus,
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
+  [data-hg-lore-location-field="name"][contenteditable="true"]:focus-visible,
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
+  [data-hg-lore-location-field="context"][contenteditable="true"]:focus,
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
+  [data-hg-lore-location-field="context"][contenteditable="true"]:focus-visible,
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
+  [data-hg-lore-location-field="detail"][contenteditable="true"]:focus,
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
+  [data-hg-lore-location-field="detail"][contenteditable="true"]:focus-visible,
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7HgHost:focus-within {
+  outline: none;
+  box-shadow: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7DetailAdd:focus,
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7DetailAdd:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
+  .facOrdoLocV7HgHost
+  :global(.ProseMirror:focus) {
+  outline: none;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoDisplayTitle {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 1.68rem;
+  font-weight: 900;
+  line-height: 0.86;
+  letter-spacing: -0.05em;
+  text-transform: none;
+  font-synthesis: none;
+}
+
+/* `data-hg-lore-location-field="name"` — always display caps (editable HTML may be mixed case). */
+.factionLabPlate_protocolOrdoCompactMono
+  .facOrdoDisplayTitle[data-hg-lore-location-field="name"] {
+  text-transform: uppercase;
+  font-variant-ligatures: none;
+}
+
+/* V7 — hair more leading between wrapped name lines (mono title still uses 0.86 elsewhere). */
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
+  .facOrdoDisplayTitle[data-hg-lore-location-field="name"] {
+  line-height: 0.92;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoSecondaryTitle {
+  font-size: 0.72rem;
+  padding-top: 5px;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoMetaStamp {
+  font-size: 8px;
+  line-height: 1.45;
+  max-width: none;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5MetaStamp {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5MetaStampSecond {
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1.35;
+  opacity: 0.9;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoMain {
+  gap: 7px;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoContentBlock {
+  padding-left: 9px;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoSectionLabel {
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  margin: 0 0 5px;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoP {
+  margin: 0 0 6px;
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoBtn {
+  margin-top: 5px;
+  padding: 5px 10px;
+  font-size: 8px;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoFooterStrip {
+  margin-top: 7px;
+  padding-top: 6px;
+  font-size: 7px;
+  letter-spacing: 0.035em;
+}
+
+/* V5 · same mono plate — LOCATION masthead (mono); detail + notes wired to `lore-location` fields */
+.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5BrandRef {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  max-width: 10.5em;
+  word-break: break-word;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5DetailLine {
+  margin: 0 0 6px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  color: color-mix(in oklch, var(--fac-ordo-accent) 88%, transparent);
+  text-transform: uppercase;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5NotesCell {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5NotesInner {
+  margin: 0;
+  padding: 0;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5NotesInner .facOrdoP {
+  margin-top: 0;
+}
+
+/* V5 · inline doc body — same Geist / line-height as canvas nodeBody, no inset panel */
+.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5DocInline.facOrdoContentBlock {
+  padding-left: 0;
+  border-left: none;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.68;
+  text-transform: none;
+  color: var(--fac-ordo-accent);
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5DocEyebrow {
+  margin: 0 0 0.45em;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 1.05em;
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  text-transform: none;
+  color: inherit;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5DocInline .facOrdoLocV5DetailLine {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.92em;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  line-height: 1.55;
+  color: color-mix(in oklch, var(--fac-ordo-accent) 72%, transparent);
+  margin: 0 0 0.65em;
+  padding: 0 0 0.55em;
+  border-bottom: 1px solid color-mix(in oklch, var(--fac-ordo-accent) 14%, transparent);
+}
+
+/* V6 / V7 lean slab — detail reads as body, full ink (V5 keeps muted stamp tone). */
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v6"])
+  .facOrdoLocV5DocInline
+  .facOrdoLocV5DetailLine,
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
+  .facOrdoLocV5DocInline
+  .facOrdoLocV5DetailLine {
+  margin-top: -2px;
+  color: var(--fac-ordo-accent);
+  font-weight: 400;
+}
+
+/*
+ * V7 — same max-height affordance as `labBody` / canvas document bodies (340px); header + readout + footer stay
+ * fixed; only the notes column scrolls (flex chain + min-height: 0).
+ */
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoInner {
+  display: flex;
+  flex-direction: column;
+  max-height: 340px;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoHeader {
+  flex-shrink: 0;
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoDocGrid {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoDocGrid > .facOrdoTitleRow,
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoDocGrid > .facOrdoLocV6ContextLine {
+  flex-shrink: 0;
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoDocGrid > .facOrdoMain {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
+  .facOrdoMain
+  > .facOrdoLocV5DocInline.facOrdoContentBlock {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV5DocInline > .facOrdoLocV5DetailLine,
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV5DocInline > .facOrdoLocV7DetailAdd {
+  flex-shrink: 0;
+  /* One text line (1.55 line-height) + bottom padding band; keeps add button ≈ filled/empty detail */
+  min-height: calc(1.55em + 0.55em);
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV5NotesCell {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7NotesField {
+  min-height: 0;
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7HgHost {
+  min-height: 0;
+}
+
+/*
+ * V7 — optional detail: trigger uses the same box + type metrics as `.facOrdoLocV5DetailLine` so swapping
+ * button ↔ contentEditable does not change slab height.
+ */
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7DetailAdd {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: -2px 0 0.65em;
+  padding: 0 0 0.55em;
+  padding-inline: 0;
+  border: none;
+  border-bottom: 1px solid color-mix(in oklch, var(--fac-ordo-accent) 14%, transparent);
+  background: transparent;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.92em;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.55;
+  text-align: left;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--fac-ordo-accent) 48%, transparent);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7DetailAdd:hover {
+  color: color-mix(in oklch, var(--fac-ordo-accent) 72%, transparent);
+}
+
+/* Empty detail line — muted placeholder (same slab tone as footer strip) */
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
+  [data-hg-lore-location-field="detail"][contenteditable="true"]:empty::before {
+  content: attr(data-placeholder);
+  color: color-mix(in oklch, var(--fac-ordo-accent) 40%, transparent);
+  pointer-events: none;
+}
+
+/* V6 — legacy rich host (BufferedContentEditable): same stack as canvas HTML node bodies; cancel parent uppercase. */
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v6"]) .facOrdoV6RichHost {
+  text-transform: none;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.68;
+  color: var(--fac-ordo-accent);
+  min-height: 140px;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV7NotesField {
+  min-width: 0;
+  width: 100%;
+}
+
+/* V7 — HeartgardenDocEditor (TipTap hgDoc) for notes; slab typography aligned with V6 body */
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7HgHost {
+  width: 100%;
+  min-width: 0;
+  text-transform: none;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.68;
+  color: var(--fac-ordo-accent);
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7HgHost :global(.ProseMirror) {
+  outline: none;
+  font-size: inherit;
+  line-height: inherit;
+  font-family: inherit;
+  color: inherit;
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7HgHost :global(.ProseMirror p) {
+  margin: 0 0 0.55em;
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7HgHost :global(.ProseMirror p:last-child) {
+  margin-bottom: 0;
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7HgHost :global(.ProseMirror h1) {
+  font-size: 1.25em;
+  margin: 0.35em 0 0.45em;
+}
+
+.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7HgHost :global(.ProseMirror h2) {
+  font-size: 1.1em;
+  margin: 0.4em 0 0.4em;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5DocInline .facOrdoLocV5NotesInner {
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5DocInline .facOrdoLocV5NotesInner .facOrdoP {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 1em;
+  line-height: 1.68;
+  font-style: normal;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  color: inherit;
+  margin: 0 0 0.55em;
+}
+
+.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5DocInline .facOrdoLocV5NotesInner .facOrdoP:last-child {
+  margin-bottom: 0;
+}
+
+.facOrdoRoot {
   position: relative;
-  min-height: 312px;
-  padding: 32px 18px 22px;
+  overflow: hidden;
+  cursor: default;
+  color: var(--fac-ordo-accent);
+  scrollbar-width: none;
 }
 
-.facFolderTab {
+.facOrdoRoot::-webkit-scrollbar {
+  display: none;
+}
+
+.facOrdoGeo {
   position: absolute;
-  top: 12px;
-  left: 18px;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    repeating-radial-gradient(
+      circle at 30% 42%,
+      transparent 0,
+      transparent 39px,
+      var(--fac-ordo-line) 39px,
+      var(--fac-ordo-line) 40px
+    );
+  opacity: 0.55;
+  mask-image: radial-gradient(circle at 30% 42%, black 55%, transparent 72%);
+  -webkit-mask-image: radial-gradient(circle at 30% 42%, black 55%, transparent 72%);
+}
+
+.facOrdoGlow {
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  left: 52%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
   z-index: 1;
-  min-width: 112px;
-  padding: 6px 12px 5px;
-  border-radius: 5px 5px 0 0;
-  border: 1px solid color-mix(in oklch, var(--sys-color-neutral-600) 35%, var(--theme-default-border));
-  border-bottom: none;
-  background: linear-gradient(
-    180deg,
-    color-mix(in oklch, oklch(0.86 0.045 78) 70%, var(--theme-default-bg)) 0%,
-    color-mix(in oklch, oklch(0.8 0.05 75) 65%, var(--theme-default-bg)) 100%
+  opacity: 0.75;
+  mix-blend-mode: multiply;
+  background: radial-gradient(
+    circle,
+    var(--fac-ordo-glow-mid, var(--fac-ordo-accent)) 0%,
+    transparent 68%
   );
+  filter: blur(22px);
+  will-change: opacity;
+  animation: facOrdoPulse 4s ease-in-out infinite;
+}
+
+@keyframes facOrdoPulse {
+  0%,
+  100% {
+    opacity: 0.62;
+  }
+  50% {
+    opacity: 0.88;
+  }
+}
+
+.facOrdoInner {
+  position: relative;
+  z-index: 2;
+  padding: 12px 10px 12px;
+  line-height: 1.1;
+  text-transform: uppercase;
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.facOrdoHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 0.5px solid var(--fac-ordo-line-strong);
+}
+
+.facOrdoHeaderRight {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.facOrdoHeaderExpandBtn {
+  flex-shrink: 0;
+  margin-top: -2px;
+}
+
+.facOrdoLogoBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.facOrdoPixelIcon {
+  display: grid;
+  grid-template-columns: repeat(8, 2px);
+  gap: 1px;
+  width: fit-content;
+}
+
+.facOrdoPx {
+  width: 2px;
+  height: 2px;
+  background: var(--fac-ordo-accent);
+}
+
+.facOrdoPxOff {
+  visibility: hidden;
+}
+
+.facOrdoBrand {
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+}
+
+.facOrdoSystemData {
+  flex: 0 0 auto;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 7px;
+  letter-spacing: 0.08em;
+  text-align: right;
+  line-height: 1.45;
+  opacity: 0.95;
+}
+
+.facOrdoDocGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.facOrdoTitleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.facOrdoDisplayTitle {
+  margin: 0;
+  font-family: var(--font-hg-id-playfair), var(--font-lora), serif;
+  font-size: 1.45rem;
+  font-weight: 600;
+  line-height: 0.88;
+  letter-spacing: -0.04em;
+  text-transform: none;
+}
+
+.facOrdoSecondaryTitle {
+  flex: 0 0 auto;
+  max-width: 42%;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.65rem;
+  line-height: 0.95;
+  text-align: right;
+  border-top: 0.5px solid var(--fac-ordo-line-strong);
+  padding-top: 6px;
+}
+
+.facOrdoMetaStamp {
+  font-size: 7px;
+  font-weight: 700;
+  max-width: 16em;
+  line-height: 1.5;
+  opacity: 0.92;
+}
+
+.facOrdoMain {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.facOrdoContentBlock {
+  border-left: 0.5px solid var(--fac-ordo-line-strong);
+  padding-left: 10px;
+}
+
+.facOrdoSectionLabel {
+  margin: 0 0 5px;
+  font-size: 7px;
+  letter-spacing: 0.2em;
+  font-weight: 800;
+}
+
+.facOrdoP {
+  margin: 0 0 5px;
+  font-size: 9px;
+  line-height: 1.32;
+  font-weight: 300;
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+
+.facOrdoRedacted {
+  background-color: var(--fac-ordo-accent);
+  color: var(--fac-ordo-accent);
+  padding: 0 3px;
+}
+
+.facOrdoBtn {
+  display: inline-block;
+  margin-top: 4px;
+  border: 0.5px solid var(--fac-ordo-line-strong);
+  padding: 4px 8px;
+  font-size: 7px;
+  font-weight: 700;
+  color: var(--fac-ordo-accent);
+}
+
+.facOrdoSidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.facOrdoBox {
+  border: 0.5px solid var(--fac-ordo-line-strong);
+  padding: 6px;
+  font-size: 6px;
+  line-height: 1.4;
+}
+
+.facOrdoBoxDashed {
+  border-style: dashed;
+}
+
+.facOrdoArrowSvg {
+  width: 22px;
+  height: 22px;
+  stroke: var(--fac-ordo-accent);
+  stroke-width: 1px;
+  fill: none;
+}
+
+.facOrdoBoxText {
+  margin-top: 4px;
+}
+
+.facOrdoFooterStrip {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 0.5px solid var(--fac-ordo-line);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 6px;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  opacity: 0.72;
+  word-break: break-word;
+}
+
+/* IV / V shelf: disable canvas node expand control hover nudge inside the lab grid only. */
+.factionLabPlate_shelfcard [data-expand-btn="true"],
+.factionLabPlate_shelfcardSleeve [data-expand-btn="true"] {
+  transition: none !important;
+}
+
+.factionLabPlate_shelfcard [data-expand-btn="true"]:hover,
+.factionLabPlate_shelfcardSleeve [data-expand-btn="true"]:hover {
+  transform: none !important;
+}
+
+/* VIII · Silent Synod — legible brief (cream / ink / blood accent; 340px plate; dense dossier layout removed). */
+.factionLabPlate_protocolSynod {
+  --fac-synod-bg: #f2f0e9;
+  --fac-synod-ink: #1a1a1a;
+  --fac-synod-border: #d1cec4;
+  --fac-synod-accent: #8b0000;
+
+  padding: 0;
+  overflow: hidden;
+  border-radius: 0;
+  border: 1px solid color-mix(in oklch, var(--fac-synod-border) 70%, var(--sys-color-neutral-700));
+  background: var(--fac-synod-bg);
+  color: var(--fac-synod-ink);
+  box-shadow: 0 12px 28px color-mix(in oklch, var(--sys-color-black) 14%, transparent);
+}
+
+.facSynodRoot {
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+}
+
+.facSynodBrief {
+  padding: 10px 11px 11px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.facSynodBriefHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 10px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 0.75px solid var(--fac-synod-border);
+}
+
+.facSynodBriefTitleBlock {
+  min-width: 0;
+  flex: 1 1 140px;
+}
+
+.facSynodBriefEyebrow {
+  margin: 0 0 4px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--fac-synod-ink) 58%, transparent);
+}
+
+.facSynodBriefH1 {
+  margin: 0;
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.facSynodBriefCode {
+  margin: 4px 0 0;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  color: var(--fac-synod-accent);
+}
+
+.facSynodBriefAside {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  text-align: right;
+}
+
+.facSynodBriefAsideLine {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.facSynodBriefStatus {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: color-mix(in oklch, var(--fac-synod-accent) 12%, transparent);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fac-synod-accent);
+}
+
+.facSynodBriefLead {
+  margin: 0 0 10px;
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.45;
+}
+
+.facSynodBriefLead strong {
+  font-weight: 800;
+}
+
+.facSynodBriefRedact {
+  padding: 0 3px;
+  background: var(--fac-synod-ink);
+  color: var(--fac-synod-ink);
+  user-select: none;
+}
+
+.facSynodBriefFacts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  margin: 0 0 10px;
+  padding: 8px 0 0;
+  border-top: 0.75px solid var(--fac-synod-border);
+}
+
+.facSynodBriefFact {
+  min-width: 0;
+}
+
+.facSynodBriefFact dt {
+  margin: 0 0 3px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: #666666;
+}
+
+.facSynodBriefFact dd {
+  margin: 0;
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.facSynodBriefSection {
+  margin: 0;
+  padding: 8px 0 0;
+  border-top: 0.75px solid var(--fac-synod-border);
+}
+
+.facSynodBriefH2 {
+  margin: 0 0 5px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--fac-synod-ink) 70%, transparent);
+}
+
+.facSynodBriefP {
+  margin: 0;
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+}
+
+.facSynodBriefFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 0.75px solid var(--fac-synod-ink);
+}
+
+.facSynodBriefFootText {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  line-height: 1.35;
+  text-transform: uppercase;
+  opacity: 0.88;
+}
+
+.facSynodBriefStamp {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border: 2px solid var(--fac-synod-accent);
   font-family: var(--font-geist-mono), monospace;
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: color-mix(in oklch, var(--theme-default-text) 65%, transparent);
-  box-shadow: 0 -1px 0 color-mix(in oklch, var(--sys-color-white) 25%, transparent);
+  color: var(--fac-synod-accent);
+  transform: rotate(-3deg);
 }
 
-.facFolderBody {
+/* IX · ARCHIVE-091 void internal (dark field, rails, arch + sigil; CSS grain, no canvas). */
+.factionLabPlate_protocolArchive091 {
+  --fac-arc-bg: #080808;
+  --fac-arc-fg: #f4f4f4;
+  --fac-arc-accent: #a0a0a0;
+  --fac-arc-border: rgba(244, 244, 244, 0.2);
+
+  padding: 0;
+  overflow: hidden;
+  border-radius: 0;
+  border: 1px solid color-mix(in oklch, var(--fac-arc-fg) 22%, var(--sys-color-neutral-900));
+  background: var(--fac-arc-bg);
+  color: var(--fac-arc-fg);
+  box-shadow: 0 14px 32px color-mix(in oklch, var(--sys-color-black) 45%, transparent);
+}
+
+.facArcRoot {
   position: relative;
-  z-index: 0;
-  padding: 22px 16px 18px;
-  border-radius: 0 4px 4px 4px;
-  border: 1px solid color-mix(in oklch, var(--sys-color-neutral-600) 32%, var(--theme-default-border));
-  background:
+  overflow: hidden;
+  cursor: default;
+}
+
+.facArcGrain {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image:
     repeating-linear-gradient(
       0deg,
-      transparent 0,
-      transparent 11px,
-      color-mix(in oklch, var(--sys-color-black) 4%, transparent) 11px,
-      color-mix(in oklch, var(--sys-color-black) 4%, transparent) 12px
+      transparent,
+      transparent 1px,
+      rgba(255, 255, 255, 0.04) 1px,
+      rgba(255, 255, 255, 0.04) 2px
     ),
-    linear-gradient(
-      185deg,
-      color-mix(in oklch, oklch(0.88 0.04 78) 55%, var(--theme-default-bg)) 0%,
-      color-mix(in oklch, oklch(0.8 0.055 72) 50%, var(--theme-default-bg)) 100%
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 1px,
+      rgba(255, 255, 255, 0.03) 1px,
+      rgba(255, 255, 255, 0.03) 2px
     );
-  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 22%, transparent);
 }
 
-.facFolderTitle {
-  font-family: var(--font-lora), var(--font-geist-sans), serif;
-  font-size: 1.02rem;
+.facArcPage {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 16px;
+  gap: 4px;
+  padding: 6px 4px 8px;
+  min-height: 0;
+}
+
+.facArcPage > aside:first-of-type {
+  border-right: 0.5px solid var(--fac-arc-border);
+}
+
+.facArcPage > aside:last-of-type {
+  border-left: 0.5px solid var(--fac-arc-border);
+}
+
+.facArcRail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  min-height: 120px;
+  color: var(--fac-arc-fg);
+}
+
+.facArcVertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 4px;
+  font-weight: 500;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--fac-arc-accent);
+  line-height: 1.2;
+}
+
+.facArcStar {
+  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+  opacity: 0.95;
+}
+
+.facArcBarcode {
+  width: 12px;
+  height: 5px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--fac-arc-fg) 0,
+    var(--fac-arc-fg) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: 0.85;
+}
+
+.facArcMain {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+}
+
+.facArcMetaStrip {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 6px;
+  padding: 4px 0 6px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.facArcBlink {
+  color: var(--fac-arc-accent);
+  animation: facArcPulse 2s ease-in-out infinite;
+}
+
+@keyframes facArcPulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.facArcLetterhead {
+  width: 100%;
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+  border-bottom: 0.5px solid var(--fac-arc-border);
+  text-align: center;
+}
+
+.facArcH1 {
+  margin: 0 0 2px;
+  font-family: var(--font-hg-id-playfair), var(--font-lora), serif;
+  font-size: 1.55rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 0.82;
+  text-transform: uppercase;
+}
+
+.facArcSubTitle {
+  font-family: var(--font-hg-id-playfair), var(--font-lora), serif;
+  font-size: 0.65rem;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--fac-arc-accent);
+}
+
+.facArcOrderLine {
+  margin-top: 6px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 5px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.facArcContentBody {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.facArcTextSection {
+  width: 100%;
+  min-width: 0;
+}
+
+.facArcH2 {
+  margin: 0 0 4px;
+  padding-bottom: 2px;
+  border-bottom: 0.5px solid var(--fac-arc-fg);
+  font-family: var(--font-hg-id-playfair), var(--font-lora), serif;
+  font-size: 0.58rem;
   font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.facArcP {
+  margin: 0 0 5px;
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
+  font-size: 7px;
+  font-weight: 300;
+  line-height: 1.38;
+  color: var(--fac-arc-accent);
+  text-align: justify;
+}
+
+.facArcEm {
+  font-style: italic;
+}
+
+.facArcPill {
+  display: inline-block;
+  padding: 2px 6px;
+  border: 0.5px solid var(--fac-arc-fg);
+  border-radius: 100px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 5px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.facArcPillVert {
+  display: inline-block;
+  padding: 4px 2px;
+  border: 0.5px solid var(--fac-arc-fg);
+  border-radius: 100px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  transform: rotate(-90deg);
+}
+
+.facArcTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 6px;
+  font-weight: 500;
+}
+
+.facArcTable td {
+  padding: 4px 0;
+  border-bottom: 0.5px solid var(--fac-arc-border);
+  vertical-align: top;
+}
+
+.facArcTdLabel {
+  width: 44%;
+  color: var(--fac-arc-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.facArcBtn {
+  display: block;
+  margin: 8px auto 0;
+  padding: 6px 12px;
+  border: 1px solid var(--fac-arc-fg);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 5px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--fac-arc-fg);
+  cursor: default;
+  pointer-events: none;
+  user-select: none;
+}
+
+.facArcFooter {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 0.5px solid var(--fac-arc-border);
+}
+
+.facArcFooterMid {
+  flex: 1 1 80px;
+  min-width: 0;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 4px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fac-arc-accent);
+  line-height: 1.35;
+}
+
+/* X · Lattice induction protocol (white sheet, blue accent; compact 340px lab plate). */
+.factionLabPlate_protocolLattice {
+  --fac-lat-bg: #ffffff;
+  --fac-lat-fg: #000000;
+  --fac-lat-accent: #1a66ff;
+  --fac-lat-border: #e2e2e2;
+  --fac-lat-meta: #888888;
+
+  padding: 0;
+  overflow: hidden;
+  border-radius: 0;
+  border: 1px solid color-mix(in oklch, var(--fac-lat-border) 85%, var(--sys-color-neutral-700));
+  background: var(--fac-lat-bg);
+  color: var(--fac-lat-fg);
+  box-shadow:
+    0 1px 0 color-mix(in oklch, var(--sys-color-white) 55%, transparent),
+    0 14px 36px color-mix(in oklch, var(--sys-color-black) 16%, transparent);
+}
+
+.facLatRoot {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  cursor: default;
+  -webkit-font-smoothing: antialiased;
+}
+
+.facLatScanlines {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  opacity: 0.28;
+  background:
+    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.02) 50%),
+    linear-gradient(90deg, rgba(255, 0, 0, 0.012), rgba(0, 255, 0, 0.006), rgba(0, 0, 255, 0.012));
+  background-size: 100% 2px, 3px 100%;
+}
+
+.facLatDoc {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  padding: 10px 10px 0;
+}
+
+.facLatMast {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 0.75px solid var(--fac-lat-border);
+}
+
+.facLatLogoMark {
+  position: relative;
+  display: flex;
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--fac-lat-fg);
+}
+
+.facLatLogoMark::after {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--fac-lat-accent);
+  animation: facLatPulse 2s infinite ease-in-out;
+}
+
+@keyframes facLatPulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.72;
+    transform: scale(0.92);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.facLatMastText {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.facLatMastTitle {
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.facLatMastSub {
+  margin-top: 3px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  line-height: 1.35;
+  text-transform: uppercase;
+  color: var(--fac-lat-meta);
+}
+
+.facLatLead {
+  margin: 0 0 9px;
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.45;
+}
+
+.facLatRedacted {
+  padding: 0 3px;
+  background: var(--fac-lat-fg);
+  color: var(--fac-lat-fg);
+  user-select: none;
+}
+
+.facLatStatList {
+  margin: 0 0 9px;
+  padding: 7px 0 0;
+  border-top: 0.75px solid var(--fac-lat-border);
+  list-style: none;
+}
+
+.facLatStatRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 0.75px solid var(--fac-lat-border);
+}
+
+.facLatStatRow:last-child {
+  border-bottom: none;
+}
+
+.facLatStatLabel {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  text-transform: uppercase;
+  color: var(--fac-lat-meta);
+}
+
+.facLatStatVal {
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
+  font-size: 12px;
+  font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.15;
+  text-align: right;
 }
 
-.facFolderMeta {
-  margin-top: 10px;
+.facLatOblig {
+  margin: 0 0 10px;
+  padding: 8px 0 0;
+  border-top: 0.75px solid var(--fac-lat-border);
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: #333333;
+}
+
+.facLatFooter {
+  display: flex;
+  flex: 0 0 auto;
+  height: 30px;
+  margin: 0 -10px;
+  border-top: 0.75px solid var(--fac-lat-border);
+}
+
+.facLatDecline {
+  display: flex;
+  width: 108px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 9px;
+  background: #111111;
+  color: #ffffff;
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 600;
   letter-spacing: 0.1em;
+  line-height: 1.2;
   text-transform: uppercase;
-  color: color-mix(in oklch, var(--theme-default-text) 48%, transparent);
+  user-select: none;
 }
 
-.factionLabPlate_queuechit {
+.facLatAccept {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: stretch;
+  overflow: hidden;
+  background: var(--fac-lat-accent);
+  color: #ffffff;
+}
+
+.facLatAcceptInner {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.facLatArrow {
+  display: inline-block;
+  transform: translateX(0);
+}
+
+/* XI · AEON Conclave terminal (pale field, crimson accent; 340px lab plate; static — no motion / pointer FX). */
+.factionLabPlate_protocolAeonConclave {
+  --fac-aeon-bg: #f7f7f7;
+  --fac-aeon-fg: #0a0a0a;
+  --fac-aeon-accent: #ff0031;
+  --fac-aeon-border: rgba(0, 0, 0, 0.1);
+  --fac-aeon-muted: #666666;
+
   padding: 0;
   overflow: hidden;
-  border: 1px solid color-mix(in oklch, var(--theme-default-text) 12%, var(--theme-default-border));
-  background: color-mix(in oklch, var(--sys-color-neutral-400) 10%, var(--theme-default-bg));
-  color: var(--theme-default-text);
+  border-radius: 0;
+  border: 1px solid color-mix(in oklch, var(--fac-aeon-fg) 12%, var(--sys-color-neutral-600));
+  background: var(--fac-aeon-bg);
+  color: var(--fac-aeon-fg);
+  box-shadow:
+    0 1px 0 color-mix(in oklch, var(--sys-color-white) 70%, transparent),
+    0 12px 28px color-mix(in oklch, var(--sys-color-black) 12%, transparent);
 }
 
-.facQRoot {
-  min-height: 312px;
-  padding: 10px 18px 22px;
-  background:
-    repeating-linear-gradient(
-      0deg,
-      transparent 0,
-      transparent 1px,
-      color-mix(in oklch, var(--sys-color-black) 3%, transparent) 1px,
-      color-mix(in oklch, var(--sys-color-black) 3%, transparent) 2px
-    ),
-    linear-gradient(
-      180deg,
-      color-mix(in oklch, oklch(0.94 0.04 95) 40%, var(--theme-default-bg)) 0%,
-      color-mix(in oklch, oklch(0.9 0.035 92) 55%, var(--theme-default-bg)) 100%
-    );
-  text-align: center;
+.facAeonRoot {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  padding: 9px 9px 8px;
+  cursor: default;
+  -webkit-font-smoothing: antialiased;
 }
 
-.facQPerf {
-  height: 0;
-  margin: 0 -18px 18px;
-  border-top: 3px dashed color-mix(in oklch, var(--theme-default-text) 28%, var(--theme-default-border));
-  opacity: 0.85;
+.facAeonTopBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px 8px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 0.75px solid var(--fac-aeon-fg);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 6.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1.35;
+  text-transform: uppercase;
 }
 
-.facQNum {
+.facAeonTopLeft {
+  display: inline-flex;
+  max-width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.facAeonStatusDot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--fac-aeon-accent);
+}
+
+.facAeonTopRight {
+  flex: 0 0 auto;
+  opacity: 0.88;
+  white-space: nowrap;
+}
+
+.facAeonLetterhead {
+  margin-bottom: 8px;
+}
+
+.facAeonDisplay {
+  margin: 0 0 5px;
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 0.86;
+  text-transform: uppercase;
+}
+
+.facAeonSubhead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 10px;
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
+  font-size: 7px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.facAeonGrid {
+  display: grid;
+  min-height: 0;
+  flex: 1 1 auto;
+  grid-template-columns: minmax(0, 0.38fr) minmax(0, 1fr);
+  gap: 6px 8px;
+  align-items: start;
+}
+
+.facAeonMeta {
+  border-top: 0.75px solid var(--fac-aeon-border);
+  padding-top: 5px;
   font-family: var(--font-geist-mono), monospace;
-  font-size: 3.1rem;
+  font-size: 6.25px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.facAeonMetaRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.facAeonMetaRow span:first-child {
+  flex: 0 1 auto;
+  color: var(--fac-aeon-muted);
+}
+
+.facAeonMetaRow span:last-child {
+  min-width: 0;
+  flex: 0 1 auto;
+  text-align: right;
+  color: var(--fac-aeon-fg);
+}
+
+.facAeonMetaBlock {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 0.75px solid var(--fac-aeon-border);
+}
+
+.facAeonContent {
+  min-width: 0;
+  padding-bottom: 2px;
+}
+
+.facAeonParaNum {
+  display: block;
+  margin-bottom: 3px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 6.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  color: var(--fac-aeon-accent);
+}
+
+.facAeonP {
+  margin: 0 0 7px;
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.42;
+  text-transform: none;
+}
+
+.facAeonRedacted {
+  padding: 0 2px;
+  background: var(--fac-aeon-fg);
+  color: var(--fac-aeon-fg);
+  user-select: none;
+}
+
+.facAeonStrong {
+  font-weight: 700;
+}
+
+.facAeonVisual {
+  position: relative;
+  height: 68px;
+  margin: 6px 0 8px;
+  overflow: hidden;
+  background: #000000;
+}
+
+.facAeonOrb,
+.facAeonOrbMid,
+.facAeonOrbSm {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  box-sizing: border-box;
+  border: 0.75px solid rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.facAeonOrb {
+  width: 36px;
+  height: 36px;
+}
+
+.facAeonOrbMid {
+  width: 22px;
+  height: 22px;
+  opacity: 0.52;
+}
+
+.facAeonOrbSm {
+  width: 11px;
+  height: 11px;
+  opacity: 0.24;
+}
+
+.facAeonFigCap {
+  position: absolute;
+  bottom: 5px;
+  left: 6px;
+  max-width: calc(100% - 12px);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 4.75px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.facAeonSignature {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 0.75px solid var(--fac-aeon-fg);
+}
+
+.facAeonSignCol {
+  min-width: 0;
+  flex: 1 1 120px;
+}
+
+.facAeonCertLabel {
+  margin-bottom: 4px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 5.25px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+
+.facAeonSignName {
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.facAeonSignRole {
+  margin-top: 3px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 5.75px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  color: var(--fac-aeon-accent);
+}
+
+.facAeonSeal {
+  display: flex;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--fac-aeon-accent);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 5.5px;
   font-weight: 800;
   line-height: 1;
-  letter-spacing: 0.08em;
-  color: color-mix(in oklch, var(--theme-default-text) 88%, transparent);
-  text-shadow: 0 1px 0 color-mix(in oklch, var(--sys-color-white) 35%, transparent);
+  color: var(--fac-aeon-accent);
+  transform: rotate(-12deg);
 }
 
-.facQLabel {
-  margin-top: 14px;
-  max-width: 16rem;
-  margin-left: auto;
-  margin-right: auto;
-  font-family: var(--font-lora), var(--font-geist-sans), serif;
-  font-size: 0.92rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+.facAeonFooterRail {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 0.75px solid var(--fac-aeon-border);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 4.75px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  line-height: 1.35;
+  text-align: center;
+  text-transform: uppercase;
+  color: #999999;
+}
+
+/* XII · AEON Protocol classified (concrete + red/mint aura, grain; 340px legible sheet; static only). */
+.factionLabPlate_protocolAeonProtocol {
+  --fac-ap-bg: #d4d4d4;
+  --fac-ap-fg: #141414;
+  --fac-ap-red: #ff1a40;
+  --fac-ap-mint: #00f5d4;
+
+  padding: 0;
+  overflow: hidden;
+  border-radius: 0;
+  border: 1px solid color-mix(in oklch, var(--fac-ap-fg) 14%, var(--sys-color-neutral-600));
+  background: color-mix(in oklch, var(--fac-ap-bg) 92%, var(--sys-color-neutral-500));
+  color: var(--fac-ap-fg);
+  box-shadow:
+    0 1px 0 color-mix(in oklch, var(--sys-color-white) 35%, transparent),
+    0 12px 28px color-mix(in oklch, var(--sys-color-black) 14%, transparent);
+}
+
+.facAeonProtoRoot {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  cursor: default;
+  -webkit-font-smoothing: antialiased;
+}
+
+.facAeonProtoAura {
+  pointer-events: none;
+  position: absolute;
+  inset: -20%;
+  z-index: 0;
+  opacity: 0.5;
+  filter: blur(32px);
+  mix-blend-mode: color-burn;
+  background:
+    radial-gradient(circle at 88% 12%, var(--fac-ap-red) 0%, transparent 58%),
+    radial-gradient(circle at 72% 82%, var(--fac-ap-mint) 0%, transparent 52%),
+    radial-gradient(circle at 100% 100%, #ffffff 0%, transparent 45%);
+}
+
+.facAeonProtoGrain {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.11;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+.facAeonProtoDoc {
+  position: relative;
+  z-index: 2;
+  margin: 7px;
+  padding: 10px 10px 9px;
+  border: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 12%, transparent);
+  background: color-mix(in oklch, var(--fac-ap-bg) 78%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.facAeonProtoChTL,
+.facAeonProtoChTR,
+.facAeonProtoChBL,
+.facAeonProtoChBR {
+  pointer-events: none;
+  position: absolute;
+  width: 11px;
+  height: 11px;
+}
+
+.facAeonProtoChTL {
+  top: 7px;
+  left: 7px;
+  border-top: 0.5px solid var(--fac-ap-fg);
+  border-left: 0.5px solid var(--fac-ap-fg);
+}
+
+.facAeonProtoChTR {
+  top: 7px;
+  right: 7px;
+  border-top: 0.5px solid var(--fac-ap-fg);
+  border-right: 0.5px solid var(--fac-ap-fg);
+}
+
+.facAeonProtoChBL {
+  bottom: 7px;
+  left: 7px;
+  border-bottom: 0.5px solid var(--fac-ap-fg);
+  border-left: 0.5px solid var(--fac-ap-fg);
+}
+
+.facAeonProtoChBR {
+  right: 7px;
+  bottom: 7px;
+  border-right: 0.5px solid var(--fac-ap-fg);
+  border-bottom: 0.5px solid var(--fac-ap-fg);
+}
+
+.facAeonProtoTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.facAeonProtoStampLeft {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 100px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.facAeonProtoSlashed {
+  font-variant-numeric: slashed-zero;
+}
+
+.facAeonProtoIndexNum {
+  margin-top: 2px;
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
+  font-size: 26px;
+  font-weight: 200;
+  letter-spacing: -0.06em;
+  line-height: 0.85;
+  opacity: 0.92;
+}
+
+.facAeonProtoHeaderRight {
+  display: flex;
+  flex: 1 1 120px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
   line-height: 1.2;
+  text-align: right;
+  text-transform: uppercase;
 }
 
-.facQFine {
-  margin-top: 18px;
+.facAeonProtoSubject {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.facAeonProtoSubjectDot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--fac-ap-red);
+}
+
+.facAeonProtoBody {
+  margin: 0 0 8px;
+}
+
+.facAeonProtoBody p {
+  margin: 0 0 7px;
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: -0.018em;
+  line-height: 1.48;
+}
+
+.facAeonProtoBody p:last-child {
+  margin-bottom: 0;
+}
+
+.facAeonProtoRedact {
+  padding: 0 2px;
+  background: var(--fac-ap-fg);
+  color: var(--fac-ap-fg);
+  user-select: none;
+}
+
+.facAeonProtoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  padding-top: 8px;
+  border-top: 0.5px solid var(--fac-ap-fg);
+}
+
+.facAeonProtoCell {
+  min-width: 0;
+}
+
+.facAeonProtoLabel {
+  display: block;
+  margin-bottom: 3px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  opacity: 0.62;
+}
+
+.facAeonProtoVal {
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+
+.facAeonProtoValItalic {
+  font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
+  font-size: 10px;
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.facAeonProtoBottom {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 35%, transparent);
+}
+
+.facAeonProtoStampBox {
+  display: inline-block;
+  padding: 5px 9px;
+  border: 1px solid var(--fac-ap-red);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  text-transform: uppercase;
+  color: var(--fac-ap-red);
+  transform: rotate(-4deg);
+}
+
+.facAeonProtoRegistry {
+  margin: 0;
+  max-width: 100%;
   font-family: var(--font-geist-mono), monospace;
   font-size: 7px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  line-height: 1.45;
+  text-align: right;
   text-transform: uppercase;
-  color: color-mix(in oklch, var(--theme-default-text) 42%, transparent);
+  opacity: 0.88;
+}
+
+.facAeonProtoCta {
+  margin-top: 8px;
+  padding: 7px 10px;
+  border: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 55%, transparent);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  text-align: center;
+  text-transform: uppercase;
+  user-select: none;
 }
