@@ -61,6 +61,20 @@ import {
 import { applyImageDataUrlToArchitecturalMediaBody } from "@/src/components/foundation/architectural-media-html";
 import { applySpellcheckToNestedEditables } from "@/src/lib/contenteditable-spellcheck";
 
+/**
+ * Multi-paragraph faction `document` regions use static HTML (not React element children) under `contentEditable`, so the
+ * runtime does not warn about React-managed children inside an editable host.
+ */
+const FACTION_LAB_INDIGO_DOCUMENT_HTML = `<p>The initiation begins in the silence between breaths. To perceive the cobalt frequency, one must first relinquish the warmth of the sun. Our roots reach into the abyssal indigo, seeking the nutrient of starlight. This document serves as the primary tether for all initiates of the Ninth Radial.</p><p>Prepare the vessel with water drawn from the silent springs. The petals must be arranged in a non-linear spiral, mimicking the movement of the celestial goldfish. When the blue light peaks—precisely at the transition of the fourth watch—the bloom will commence.</p><p><em>Warning: Exposure to the raw electric cobalt frequency without proper retinal shielding may cause permanent synesthesia.</em></p>`;
+
+const FACTION_LAB_TERMINAL_DOCUMENT_HTML = `<p>Canonical operating agreement for this organization. Roster below mirrors hgArch.${FACTION_ROSTER_HG_ARCH_KEY} (structured JSON, not this HTML body).</p><p>Quorum requires seven active signatures before the exchange may route external traffic. Degraded members stay listed but do not count toward vote weight until their heartbeat clears.</p>`;
+
+const FACTION_LAB_OCULAR_DOCUMENT_HTML = `<p>This document formalizes the shift from raw sight to disciplined perception. Acolytes observe the silence between frames; roster rows below mirror hgArch.${FACTION_ROSTER_HG_ARCH_KEY} (JSON), not pasted prose.</p><p>Visual noise is treated as hostile signal. The mandate is absolute; the eye is constant.</p>`;
+
+const FACTION_LAB_SYNTH_DOCUMENT_HTML = `<p>Canonical charter for this organization. The ledger below lists members from hgArch.${FACTION_ROSTER_HG_ARCH_KEY} (structured JSON); it is not duplicated as unstructured prose here.</p><p>Quorum and routing rules follow the mandate strip above; edits to mission language should stay aligned with stored roster rows.</p>`;
+
+const FACTION_LAB_ESSENTIALIST_CHARTER_HTML = `<p>Canonical operating charter (TipTap-capable in production). Membership below mirrors hgArch.${FACTION_ROSTER_HG_ARCH_KEY} — structured JSON, not pasted prose lists.</p><p>Quorum and succession rules bind all signatories; roster rows are the source of truth for who counts.</p>`;
+
 function factionRosterDemoDisplayName(row: FactionRosterEntry): string {
   if (row.kind === "character") {
     return row.displayNameOverride ?? `Character ${row.characterItemId.slice(0, 8)}…`;
@@ -68,13 +82,22 @@ function factionRosterDemoDisplayName(row: FactionRosterEntry): string {
   return row.label;
 }
 
-function factionRosterDemoRole(row: FactionRosterEntry): string {
-  if (row.kind === "character") return row.roleOverride?.trim() ? row.roleOverride : "—";
-  return row.role?.trim() ? row.role : "—";
+/** Role label for roster rows; omit when absent (no placeholder dash). */
+function factionRosterDemoRoleOptional(row: FactionRosterEntry): string | null {
+  if (row.kind === "character") {
+    const r = row.roleOverride?.trim();
+    return r ? r : null;
+  }
+  const r = row.role?.trim();
+  return r ? r : null;
 }
 
 /** `DEMO_FACTION_ROSTER` via `parseFactionRoster` — same shape as production `content_json.hgArch.factionRoster` (read-only demo in lab). */
-function FactionLabDemoHgArchRoster({ variant }: { variant: "indigo" | "terminal" | "ocular" | "synthesis" }) {
+function FactionLabDemoHgArchRoster({
+  variant,
+}: {
+  variant: "indigo" | "terminal" | "ocular" | "synthesis" | "essentialist";
+}) {
   const roster = parseFactionRoster(DEMO_FACTION_ROSTER);
   if (!roster?.length) {
     return (
@@ -98,32 +121,52 @@ function FactionLabDemoHgArchRoster({ variant }: { variant: "indigo" | "terminal
           <hr className={labStyles.facIndigoRosterHr} />
         </div>
         <ul className={labStyles.facIndigoRosterList}>
-          {roster.map((row) => (
-            <li
-              key={row.id}
-              className={labStyles.facIndigoRosterRow}
-              data-faction-roster-entry-id={row.id}
-              data-faction-roster-kind={row.kind}
-            >
-              <div className={labStyles.facIndigoRosterTop}>
-                <span className={labStyles.facIndigoRosterName}>{factionRosterDemoDisplayName(row)}</span>
-                <span className={labStyles.facIndigoRosterRole}>{factionRosterDemoRole(row)}</span>
-              </div>
-              <div className={labStyles.facIndigoRosterMeta}>
-                {row.kind === "character" ? (
-                  <>
-                    <span className={labStyles.facIndigoRosterPill}>link → character card</span>
-                    <span className={labStyles.facIndigoRosterId} title={row.characterItemId}>
-                      {row.characterItemId.slice(0, 8)}…
-                    </span>
-                  </>
-                ) : (
-                  <span className={labStyles.facIndigoRosterPill}>unlinked (no item id)</span>
-                )}
-              </div>
-            </li>
-          ))}
+          {roster.map((row) => {
+            const role = factionRosterDemoRoleOptional(row);
+            return (
+              <li
+                key={row.id}
+                className={labStyles.facIndigoRosterRow}
+                data-faction-roster-entry-id={row.id}
+                data-faction-roster-kind={row.kind}
+              >
+                <div className={labStyles.facIndigoRosterTop}>
+                  <span className={labStyles.facIndigoRosterName}>{factionRosterDemoDisplayName(row)}</span>
+                  {role ? <span className={labStyles.facIndigoRosterRole}>{role}</span> : null}
+                </div>
+              </li>
+            );
+          })}
         </ul>
+      </div>
+    );
+  }
+
+  if (variant === "essentialist") {
+    return (
+      <div
+        className={labStyles.facEssIdRoster}
+        data-hg-lore-faction-roster="1"
+        data-hg-arch-key={FACTION_ROSTER_HG_ARCH_KEY}
+      >
+        <div className={labStyles.facEssIdRosterLabel}>members · hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</div>
+        <div className={labStyles.facEssIdRosterList} role="list">
+          {roster.map((row) => {
+            const role = factionRosterDemoRoleOptional(row);
+            return (
+              <div
+                key={row.id}
+                className={labStyles.facEssIdRosterRow}
+                role="listitem"
+                data-faction-roster-entry-id={row.id}
+                data-faction-roster-kind={row.kind}
+              >
+                <span className={labStyles.facEssIdRosterName}>{factionRosterDemoDisplayName(row)}</span>
+                {role ? <span className={labStyles.facEssIdRosterRole}>{role}</span> : null}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -136,37 +179,20 @@ function FactionLabDemoHgArchRoster({ variant }: { variant: "indigo" | "terminal
         data-hg-arch-key={FACTION_ROSTER_HG_ARCH_KEY}
       >
         <div className={labStyles.facSynthRosterLabel}>ledger · hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</div>
-        {roster.map((row) => (
-          <div
-            key={row.id}
-            className={labStyles.facSynthLedgerRow}
-            data-faction-roster-entry-id={row.id}
-            data-faction-roster-kind={row.kind}
-          >
-            <div className={labStyles.facSynthLedgerCategory}>{factionRosterDemoDisplayName(row)}</div>
-            <div className={labStyles.facSynthLedgerId}>{row.id.replace(/-/g, "").slice(0, 8).toUpperCase()}</div>
-            <div className={labStyles.facSynthLedgerDetailGrid}>
-              <div className={labStyles.facSynthDetailItem}>
-                <span className={labStyles.facSynthDetailLabel}>role</span>
-                <span className={labStyles.facSynthDetailValue}>{factionRosterDemoRole(row)}</span>
-              </div>
-              <div className={labStyles.facSynthDetailItem}>
-                <span className={labStyles.facSynthDetailLabel}>kind</span>
-                <span className={labStyles.facSynthDetailValue}>
-                  {row.kind === "character" ? "character card" : "unlinked"}
-                </span>
-              </div>
-              {row.kind === "character" ? (
-                <div className={labStyles.facSynthDetailItem}>
-                  <span className={labStyles.facSynthDetailLabel}>item</span>
-                  <span className={labStyles.facSynthDetailValue} title={row.characterItemId}>
-                    {row.characterItemId.slice(0, 8)}…
-                  </span>
-                </div>
-              ) : null}
+        {roster.map((row) => {
+          const role = factionRosterDemoRoleOptional(row);
+          return (
+            <div
+              key={row.id}
+              className={labStyles.facSynthLedgerRow}
+              data-faction-roster-entry-id={row.id}
+              data-faction-roster-kind={row.kind}
+            >
+              <div className={labStyles.facSynthLedgerCategory}>{factionRosterDemoDisplayName(row)}</div>
+              {role ? <div className={labStyles.facSynthLedgerRole}>{role}</div> : null}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   }
@@ -185,42 +211,21 @@ function FactionLabDemoHgArchRoster({ variant }: { variant: "indigo" | "terminal
           </span>
         </div>
         <div className={labStyles.facOcularRosterList} role="list">
-          {roster.map((row) => (
-            <div
-              key={row.id}
-              className={labStyles.facOcularRosterCard}
-              role="listitem"
-              data-faction-roster-entry-id={row.id}
-              data-faction-roster-kind={row.kind}
-            >
-              <div className={labStyles.facOcularRosterCardTop}>
-                <span
-                  className={
-                    row.kind === "character"
-                      ? labStyles.facOcularRosterBadgeChar
-                      : labStyles.facOcularRosterBadgeUnlinked
-                  }
-                >
-                  {row.kind === "character" ? "character" : "unlinked"}
-                </span>
+          {roster.map((row) => {
+            const role = factionRosterDemoRoleOptional(row);
+            return (
+              <div
+                key={row.id}
+                className={labStyles.facOcularRosterCard}
+                role="listitem"
+                data-faction-roster-entry-id={row.id}
+                data-faction-roster-kind={row.kind}
+              >
+                <p className={labStyles.facOcularRosterCardName}>{factionRosterDemoDisplayName(row)}</p>
+                {role ? <p className={labStyles.facOcularRosterCardRole}>{role}</p> : null}
               </div>
-              <p className={labStyles.facOcularRosterCardName}>{factionRosterDemoDisplayName(row)}</p>
-              <dl className={labStyles.facOcularRosterDl}>
-                <div className={labStyles.facOcularRosterDlRow}>
-                  <dt>role</dt>
-                  <dd>{factionRosterDemoRole(row)}</dd>
-                </div>
-                {row.kind === "character" ? (
-                  <div className={labStyles.facOcularRosterDlRow}>
-                    <dt>item</dt>
-                    <dd className={labStyles.facOcularRosterId} title={row.characterItemId}>
-                      {row.characterItemId}
-                    </dd>
-                  </div>
-                ) : null}
-              </dl>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
@@ -239,42 +244,21 @@ function FactionLabDemoHgArchRoster({ variant }: { variant: "indigo" | "terminal
         </span>
       </div>
       <div className={labStyles.facTermXivRosterList} role="list">
-        {roster.map((row) => (
-          <div
-            key={row.id}
-            className={labStyles.facTermXivRosterCard}
-            role="listitem"
-            data-faction-roster-entry-id={row.id}
-            data-faction-roster-kind={row.kind}
-          >
-            <div className={labStyles.facTermXivRosterCardTop}>
-              <span
-                className={
-                  row.kind === "character"
-                    ? labStyles.facTermXivRosterBadgeChar
-                    : labStyles.facTermXivRosterBadgeUnlinked
-                }
-              >
-                {row.kind === "character" ? "character" : "unlinked"}
-              </span>
+        {roster.map((row) => {
+          const role = factionRosterDemoRoleOptional(row);
+          return (
+            <div
+              key={row.id}
+              className={labStyles.facTermXivRosterCard}
+              role="listitem"
+              data-faction-roster-entry-id={row.id}
+              data-faction-roster-kind={row.kind}
+            >
+              <p className={labStyles.facTermXivRosterCardName}>{factionRosterDemoDisplayName(row)}</p>
+              {role ? <p className={labStyles.facTermXivRosterCardRole}>{role}</p> : null}
             </div>
-            <p className={labStyles.facTermXivRosterCardName}>{factionRosterDemoDisplayName(row)}</p>
-            <dl className={labStyles.facTermXivRosterDl}>
-              <div className={labStyles.facTermXivRosterDlRow}>
-                <dt>role</dt>
-                <dd>{factionRosterDemoRole(row)}</dd>
-              </div>
-              {row.kind === "character" ? (
-                <div className={labStyles.facTermXivRosterDlRow}>
-                  <dt>item</dt>
-                  <dd className={labStyles.facTermXivRosterId} title={row.characterItemId}>
-                    {row.characterItemId}
-                  </dd>
-                </div>
-              ) : null}
-            </dl>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -346,7 +330,7 @@ function FactionLabPlate({
     | "protocolOcularMandate"
     /** XVI · Synthesis Archive — pale field, Playfair hero, glass pills, ledger roster demo. */
     | "protocolSynthesisArchive"
-    /** XVII · Essentialist ID — black field, white credential, biometric void, MRZ; no pointer tilt JS. */
+    /** XVII · Essentialist ID — faction identity + charter + hgArch roster demo (ID-badge chrome); no pointer tilt JS. */
     | "protocolEssentialistId"
     /** Data-model priming — roster + placeholder fields; not a production canvas seed. */
     | "rosterPriming";
@@ -397,7 +381,6 @@ function FactionRosterPrimingBody({ testId }: { testId: string }) {
                   <span className={labStyles.facRosterPrimingName}>
                     {row.displayNameOverride ?? `Character ${row.characterItemId.slice(0, 8)}…`}
                   </span>
-                  <span className={labStyles.facRosterPrimingMeta}>characterItemId · {row.characterItemId}</span>
                   {row.roleOverride ? (
                     <span className={labStyles.facRosterPrimingRole}>{row.roleOverride}</span>
                   ) : null}
@@ -1289,24 +1272,8 @@ function FactionIndigoBloomV13Body({ testId }: { testId: string }) {
               spellCheck={false}
               suppressHydrationWarning
               data-hg-lore-faction-field="document"
-            >
-              <p>
-                The initiation begins in the silence between breaths. To perceive the cobalt frequency, one must first
-                relinquish the warmth of the sun. Our roots reach into the abyssal indigo, seeking the nutrient of
-                starlight. This document serves as the primary tether for all initiates of the Ninth Radial.
-              </p>
-              <p>
-                Prepare the vessel with water drawn from the silent springs. The petals must be arranged in a non-linear
-                spiral, mimicking the movement of the celestial goldfish. When the blue light peaks—precisely at the
-                transition of the fourth watch—the bloom will commence.
-              </p>
-              <p>
-                <em>
-                  Warning: Exposure to the raw electric cobalt frequency without proper retinal shielding may cause
-                  permanent synesthesia.
-                </em>
-              </p>
-            </div>
+              dangerouslySetInnerHTML={{ __html: FACTION_LAB_INDIGO_DOCUMENT_HTML }}
+            />
             <FactionLabDemoHgArchRoster variant="indigo" />
             <div className={labStyles.facIndigoAck} aria-hidden>
               Acknowledge transmission
@@ -1381,16 +1348,8 @@ function FactionTerminalFleetV14Body({ testId }: { testId: string }) {
         spellCheck={false}
         suppressHydrationWarning
         data-hg-lore-faction-field="document"
-      >
-        <p>
-          Canonical operating agreement for this organization. Roster below mirrors hgArch.{FACTION_ROSTER_HG_ARCH_KEY} (
-          structured JSON, not this HTML body).
-        </p>
-        <p>
-          Quorum requires seven active signatures before the exchange may route external traffic. Degraded members stay
-          listed but do not count toward vote weight until their heartbeat clears.
-        </p>
-      </div>
+        dangerouslySetInnerHTML={{ __html: FACTION_LAB_TERMINAL_DOCUMENT_HTML }}
+      />
 
       <FactionLabDemoHgArchRoster variant="terminal" />
     </div>
@@ -1469,15 +1428,8 @@ function FactionOcularMandateV15Body({ testId }: { testId: string }) {
             spellCheck={false}
             suppressHydrationWarning
             data-hg-lore-faction-field="document"
-          >
-            <p>
-              This document formalizes the shift from raw sight to disciplined perception. Acolytes observe the silence
-              between frames; roster rows below mirror hgArch.{FACTION_ROSTER_HG_ARCH_KEY} (JSON), not pasted prose.
-            </p>
-            <p>
-              Visual noise is treated as hostile signal. The mandate is absolute; the eye is constant.
-            </p>
-          </div>
+            dangerouslySetInnerHTML={{ __html: FACTION_LAB_OCULAR_DOCUMENT_HTML }}
+          />
 
           <div className={labStyles.facOcularEvidence} aria-hidden>
             <span className={labStyles.facOcularEvidenceInner}>evidence slot · no image in lab</span>
@@ -1580,16 +1532,8 @@ function FactionSynthesisArchiveV16Body({ testId }: { testId: string }) {
             spellCheck={false}
             suppressHydrationWarning
             data-hg-lore-faction-field="document"
-          >
-            <p>
-              Canonical charter for this organization. The ledger below lists members from hgArch.{FACTION_ROSTER_HG_ARCH_KEY}{" "}
-              (structured JSON); it is not duplicated as unstructured prose here.
-            </p>
-            <p>
-              Quorum and routing rules follow the mandate strip above; edits to mission language should stay aligned with
-              stored roster rows.
-            </p>
-          </div>
+            dangerouslySetInnerHTML={{ __html: FACTION_LAB_SYNTH_DOCUMENT_HTML }}
+          />
 
           <FactionLabDemoHgArchRoster variant="synthesis" />
         </section>
@@ -1655,13 +1599,16 @@ const ESSENTIALIST_ID_BAR_STRIP: { w: 1 | 2 | 3 | 4; half?: boolean }[] = [
   { w: 1 },
 ];
 
-/** XVII · Essentialist Identification Protocol — Inter + Space Mono; white credential on black grid; static CSS glare (no pointer 3D). */
+/**
+ * XVII · Essentialist Identification Protocol — faction lab: org identity + charter (`document`) + hgArch roster demo.
+ * Visual reference: ID badge chrome; semantics match faction PRD (not character credential).
+ */
 function FactionEssentialistIdV17Body({ testId }: { testId: string }) {
   return (
     <div
       className={labStyles.facEssIdRoot}
       data-testid={testId}
-      data-hg-lab-faction-specimen="xvii-essentialist-id"
+      data-hg-lab-faction-specimen="xvii-essentialist-faction"
     >
       <div className={labStyles.facEssIdEnvGrid} aria-hidden />
       <div className={labStyles.facEssIdScene}>
@@ -1681,7 +1628,7 @@ function FactionEssentialistIdV17Body({ testId }: { testId: string }) {
                 suppressContentEditableWarning
                 data-hg-lore-faction-field="context"
               >
-                SYS_AUTH_NODE
+                FACTION_AUTH_NODE
               </span>
               <span
                 contentEditable
@@ -1689,16 +1636,15 @@ function FactionEssentialistIdV17Body({ testId }: { testId: string }) {
                 suppressContentEditableWarning
                 data-hg-lore-faction-field="orgNameAccent"
               >
-                ISSUER: CORE_X
+                PARENT: HEARTCORE
               </span>
             </div>
-            <div className={labStyles.facEssIdBiometricVoid} aria-hidden />
           </div>
 
           <div className={labStyles.facEssIdBodySection}>
             <div className={labStyles.facEssIdRowIdentity}>
               <div className={labStyles.facEssIdIdentityBlock}>
-                <span className={labStyles.facEssIdLabelMicro}>Subject Designation</span>
+                <span className={labStyles.facEssIdLabelMicro}>Organization</span>
                 <h1
                   className={labStyles.facEssIdNamePrimary}
                   contentEditable
@@ -1706,7 +1652,7 @@ function FactionEssentialistIdV17Body({ testId }: { testId: string }) {
                   suppressContentEditableWarning
                   data-hg-lore-faction-field="orgNamePrimary"
                 >
-                  K. Vane
+                  ESSENTIALIST DIRECTORATE
                 </h1>
               </div>
               <div
@@ -1716,30 +1662,41 @@ function FactionEssentialistIdV17Body({ testId }: { testId: string }) {
                 suppressContentEditableWarning
                 data-hg-lore-faction-field="subtitle"
               >
-                OMN-9
+                CHARTER · OMN-9
               </div>
             </div>
 
             <div className={labStyles.facEssIdRowData}>
               <div className={labStyles.facEssIdDataCell}>
-                <span className={labStyles.facEssIdLabelMicro}>Operative UID</span>
-                <span className={labStyles.facEssIdDataValue}>0x8F4B-9A</span>
+                <span className={labStyles.facEssIdLabelMicro}>Jurisdiction</span>
+                <span className={labStyles.facEssIdDataValue}>Obsidian Reach · Sector 7</span>
               </div>
               <div className={labStyles.facEssIdDataCell}>
-                <span className={labStyles.facEssIdLabelMicro}>Sector</span>
-                <span className={labStyles.facEssIdDataValue}>AEROSPACE</span>
+                <span className={labStyles.facEssIdLabelMicro}>Registry</span>
+                <span className={labStyles.facEssIdDataValue}>FAC-ORD-009</span>
               </div>
             </div>
             <div className={labStyles.facEssIdRowData}>
               <div className={labStyles.facEssIdDataCell}>
-                <span className={labStyles.facEssIdLabelMicro}>Status</span>
-                <span className={labStyles.facEssIdDataValue}>ACTIVE // P</span>
+                <span className={labStyles.facEssIdLabelMicro}>Standing</span>
+                <span className={labStyles.facEssIdDataValue}>ACTIVE</span>
               </div>
               <div className={labStyles.facEssIdDataCell}>
-                <span className={labStyles.facEssIdLabelMicro}>Cycle Exp</span>
+                <span className={labStyles.facEssIdLabelMicro}>Charter cycle</span>
                 <span className={labStyles.facEssIdDataValue}>2084.11.04</span>
               </div>
             </div>
+
+            <FactionLabDemoHgArchRoster variant="essentialist" />
+
+            <div
+              className={labStyles.facEssIdCharter}
+              contentEditable
+              spellCheck={false}
+              suppressHydrationWarning
+              data-hg-lore-faction-field="document"
+              dangerouslySetInnerHTML={{ __html: FACTION_LAB_ESSENTIALIST_CHARTER_HTML }}
+            />
 
             <div className={labStyles.facEssIdFooter}>
               <div className={labStyles.facEssIdBarcode} aria-hidden>
@@ -1751,15 +1708,8 @@ function FactionEssentialistIdV17Body({ testId }: { testId: string }) {
                   />
                 ))}
               </div>
-              <div
-                className={labStyles.facEssIdMrz}
-                contentEditable
-                spellCheck={false}
-                suppressHydrationWarning
-                data-hg-lore-faction-field="document"
-              >
-                <p>V&lt;SEC&lt;&lt;VANE&lt;&lt;K&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</p>
-                <p>0X8F4B9A&lt;OMN9&lt;&lt;&lt;20841104&lt;&lt;&lt;&lt;&lt;</p>
+              <div className={labStyles.facEssIdRegistryLine} aria-hidden>
+                FAC&lt;&lt;ESSENTIALIST&lt;&lt;DIR&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;
               </div>
             </div>
           </div>
@@ -2229,8 +2179,8 @@ function LoreEntityNodeLabInner() {
             mono: host / env / directive + charter + roster demo only — no telemetry chrome). XV: Ocular Mandate (grid
             dossier, Inter striped display type, Space Mono body, evidence placeholder, personnel index + hgArch roster demo —
             no images / pointer JS). XVI: Synthesis Archive (pale blue field, Playfair hero, glass corner pills, mission strip +
-            ledger roster from hgArch — no live clock / pointer motion). XVII: Essentialist ID (black grid, white credential,
-            biometric void, static barcode + MRZ; CSS-only glare — no pointer 3D tilt).
+            ledger roster from hgArch — no live clock / pointer motion). XVII: Essentialist ID (faction org + charter + roster
+            demo, ID-badge chrome; CSS-only glare — no pointer 3D tilt).
           </p>
           <div className={labStyles.grid}>
             <div className={labStyles.cell}>
@@ -2552,11 +2502,11 @@ function LoreEntityNodeLabInner() {
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Reference: Essentialist Identification Protocol — full-bleed black field + grid, white badge with reg marks,
-                  cut corners, biometric void, Inter display + Space Mono data, barcode + MRZ. <strong>Editable</strong>{" "}
-                  <code>context</code>, <code>orgNameAccent</code> (header meta), <code>orgNamePrimary</code>,{" "}
-                  <code>subtitle</code> (clearance), <code>document</code> (MRZ); demo grid cells read-only. No pointer
-                  parallax / <code>mousemove</code> tilt.
+                  Reference: Essentialist Identification Protocol — same <strong>faction</strong> shape as other plates:{" "}
+                  <strong>editable</strong> <code>context</code>, <code>orgNameAccent</code>, <code>orgNamePrimary</code>,{" "}
+                  <code>subtitle</code> (charter class), <code>document</code> (charter prose); read-only jurisdiction grid
+                  (demo); <code>variant=&quot;essentialist&quot;</code> roster from <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>;
+                  decorative seal void + barcode + registry line. CSS glare only — no pointer 3D tilt.
                 </li>
               </ul>
             </div>
