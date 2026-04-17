@@ -11680,7 +11680,11 @@ export function ArchitecturalCanvasApp({
 
       <div
         className={`${styles.focusOverlay} ${focusOpen ? styles.focusActive : ""} ${
-          focusSurface === "code" ? styles.focusEditorDark : ""
+          focusSurface === "code" ||
+          focusSurface === "character-hybrid" ||
+          focusSurface === "location-hybrid"
+            ? styles.focusEditorDark
+            : ""
         }`}
         onPointerDownCapture={onFocusOverlayPointerDownCapture}
       >
@@ -11702,7 +11706,13 @@ export function ArchitecturalCanvasApp({
               graph.entities[activeNodeId].entityMeta?.aiReview === "pending" ? (
                 <div className={styles.focusAiReviewBar} role="status" aria-live="polite">
                   <Tag
-                    variant={focusSurface === "code" ? "llmFocusDark" : "llmLight"}
+                    variant={
+                      focusSurface === "code" ||
+                      focusSurface === "character-hybrid" ||
+                      focusSurface === "location-hybrid"
+                        ? "llmFocusDark"
+                        : "llmLight"
+                    }
                   >
                     Unreviewed
                   </Tag>

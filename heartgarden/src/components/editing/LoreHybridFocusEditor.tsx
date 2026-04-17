@@ -268,8 +268,10 @@ export function LoreHybridFocusEditor({
       >
         {/* Portrait + meta fields: HTML injected in useLayoutEffect when `focusDocumentKey` changes (grid layout from global CSS). */}
         <div ref={identityShellRef} className={styles.portraitHost} />
-        <div className={styles.notesWrap}>
-          <span className={styles.label}>Notes</span>
+        <div className={styles.notesWrap} data-hg-lore-hybrid-notes-wrap="true">
+          <span className={styles.label} data-hg-lore-hybrid-notes-label="true">
+            Notes
+          </span>
           <HeartgardenDocEditor
             surfaceKey={notesSurfaceKey}
             chromeRole="focus"
@@ -292,8 +294,10 @@ export function LoreHybridFocusEditor({
     >
       {/* Structured fields: HTML injected when `focusDocumentKey` changes — layout from `ArchitecturalCanvasApp` (`.focusLocationDocument`). */}
       <div ref={locationMetaShellRef} className={styles.locationMetaHost} />
-      <div className={styles.notesWrap}>
-        <span className={styles.label}>Notes</span>
+      <div className={styles.notesWrap} data-hg-lore-hybrid-notes-wrap="true">
+        <span className={styles.label} data-hg-lore-hybrid-notes-label="true">
+          Notes
+        </span>
         <HeartgardenDocEditor
           surfaceKey={notesSurfaceKey}
           chromeRole="focus"

@@ -14,7 +14,7 @@ import { bodyHtmlImpliesLoreLocationOrdoV7 } from "@/src/lib/lore-node-seed-html
 
 /**
  * Location ORDO v7 slab on the infinite canvas: body-only plate (no generic A4 header), like character v11.
- * Long-form notes are stored in HTML but hidden on-canvas; edited in focus hybrid editor.
+ * Long-form notes are in `bodyHtml` and shown in the slab (`HeartgardenDocEditor`); focus hybrid editor edits the same document.
  */
 export function ArchitecturalLoreLocationCanvasNode({
   id,

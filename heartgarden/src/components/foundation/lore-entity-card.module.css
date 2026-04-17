@@ -4174,6 +4174,9 @@
   z-index: 2;
   isolation: isolate;
   background: transparent;
+  /* Slack for rotated guest-check ::after so the doc grid doesn’t clip the marker bars. */
+  padding-inline-end: 6px;
+  box-sizing: border-box;
 }
 
 /* Editable title paints above any stray compositing from the row / siblings. */
@@ -4231,7 +4234,8 @@
     2.2em,
     calc(var(--hg-lore-ph-y, 0px) + (var(--hg-lore-ph-lh, 1.14em) * 2) + 4px + 3px)
   );
-  overflow: hidden;
+  /* Visible so slight rotate/skew from `syncLoreV11MarkerTilts` (ordo profile) isn’t clipped; title row padding contains bleed. */
+  overflow: visible;
   color: transparent !important;
   -webkit-text-fill-color: transparent;
   caret-color: color-mix(in oklch, var(--loc-ordo-accent) 78%, transparent);

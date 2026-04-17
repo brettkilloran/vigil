@@ -3,8 +3,8 @@
  * distinct look across rerenders/interactions instead of "changing shape" after focus/edit.
  * Values are written as CSS vars consumed by `lore-entity-card.module.css` (`.charSkShellV11`,
  * `.locOrdoV7Root`). Dual-line placename strips stagger via `--sk-v11-marker-trim-right-top` /
- * `--sk-v11-marker-trim-right-bottom`; `skewY` + wide `rotate` ranges keep the two bars from
- * reading as identical machine strokes.
+ * `--sk-v11-marker-trim-right-bottom`. Character cards use a wider rotate range; ORDO v7 uses a
+ * subtler profile so the slab title does not read as over-tilted or clip under `overflow:hidden`.
  */
 
 /** Per `[data-hg-lore-field]` node — *not* the card root. Root-level idempotence breaks React remounts
@@ -26,7 +26,8 @@ function seededFloat(seed: string, key: string, min: number, max: number): numbe
   return min + (max - min) * t;
 }
 
-function applyMarkerTiltVars(el: HTMLElement, fieldSeed: string): void {
+/** Character v11: stronger jitter so strokes don’t look identical. */
+function applyCharacterMarkerTiltVars(el: HTMLElement, fieldSeed: string): void {
   const rotate = seededFloat(fieldSeed, "rotate", -2.55, 2.35);
   const deg = `${rotate.toFixed(3)}deg`;
 
@@ -42,6 +43,34 @@ function applyMarkerTiltVars(el: HTMLElement, fieldSeed: string): void {
   const skewY = `${seededFloat(fieldSeed, "skew-y", -0.72, 0.84).toFixed(3)}deg`;
   const gloss = `${seededFloat(fieldSeed, "gloss", 0.4, 2.35).toFixed(2)}%`;
   const tail = `${seededFloat(fieldSeed, "tail", 82.5, 99.5).toFixed(2)}%`;
+
+  el.style.setProperty("--sk-v11-marker-rotate", deg);
+  el.style.setProperty("--sk-v11-marker-skew-y", skewY);
+  el.style.setProperty("--sk-v11-marker-trim-right", trim);
+  el.style.setProperty("--sk-v11-marker-trim-right-top", `${trimTop.toFixed(2)}px`);
+  el.style.setProperty("--sk-v11-marker-trim-right-bottom", `${trimBottom.toFixed(2)}px`);
+  el.style.setProperty("--sk-v11-marker-offset-x", shiftX);
+  el.style.setProperty("--sk-v11-marker-gloss", gloss);
+  el.style.setProperty("--sk-v11-marker-tail", tail);
+}
+
+/** ORDO v7 location slab: subtler rotate/skew/trim so guest-check bars don’t clip the title box. */
+function applyOrdoV7MarkerTiltVars(el: HTMLElement, fieldSeed: string): void {
+  const rotate = seededFloat(fieldSeed, "rotate", -0.82, 0.72);
+  const deg = `${rotate.toFixed(3)}deg`;
+
+  const trim = `${seededFloat(fieldSeed, "trim", 0, 8).toFixed(2)}px`;
+
+  const trimTop = seededFloat(fieldSeed, "trim-top", 0, 14);
+  let trimBottom = seededFloat(fieldSeed, "trim-bottom", 0, 18);
+  if (Math.abs(trimTop - trimBottom) < 6) {
+    trimBottom = Math.min(trimTop + 6 + seededFloat(fieldSeed, "trim-uniformity", 0, 12), 28);
+  }
+
+  const shiftX = `${seededFloat(fieldSeed, "offset-x", -2.25, 2.25).toFixed(2)}px`;
+  const skewY = `${seededFloat(fieldSeed, "skew-y", -0.38, 0.42).toFixed(3)}deg`;
+  const gloss = `${seededFloat(fieldSeed, "gloss", 0.55, 2.1).toFixed(2)}%`;
+  const tail = `${seededFloat(fieldSeed, "tail", 88, 99.2).toFixed(2)}%`;
 
   el.style.setProperty("--sk-v11-marker-rotate", deg);
   el.style.setProperty("--sk-v11-marker-skew-y", skewY);
@@ -70,7 +99,7 @@ function seedCharShellV11(shell: HTMLElement): void {
     const fieldSeed = `${shellSeed}|${fieldIndex}|${el.getAttribute("data-hg-lore-ph") ?? ""}|${el.className}`;
     fieldIndex += 1;
     seededMarkerFieldElements.add(el);
-    applyMarkerTiltVars(el, fieldSeed);
+    applyCharacterMarkerTiltVars(el, fieldSeed);
   }
 }
 
@@ -88,7 +117,7 @@ function seedLocOrdoV7Root(root: HTMLElement): void {
     const fieldSeed = `${shellSeed}|${fieldIndex}|${el.getAttribute("data-hg-lore-ph") ?? ""}|${el.className}`;
     fieldIndex += 1;
     seededMarkerFieldElements.add(el);
-    applyMarkerTiltVars(el, fieldSeed);
+    applyOrdoV7MarkerTiltVars(el, fieldSeed);
   }
 }
 
