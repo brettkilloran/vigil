@@ -4,8 +4,9 @@
  */
 
 import { LORE_V11_PH_LOCATION_PLACEHOLDER } from "@/src/lib/lore-location-focus-document-html";
-import { syncLoreV11MarkerTilts } from "@/src/lib/lore-v11-marker-tilt";
 import { LORE_V11_PH_DISPLAY_NAME } from "@/src/lib/lore-node-seed-html";
+import { syncLoreV11MarkerTilts } from "@/src/lib/lore-v11-marker-tilt";
+import { LORE_V9_REDACTED_SENTINEL } from "@/src/lib/lore-v9-placeholder";
 
 const PH_X = "--hg-lore-ph-x";
 const PH_Y = "--hg-lore-ph-y";
@@ -135,8 +136,14 @@ export function syncLoreV11PhCaretOffsetsInHost(host: HTMLElement | null): void 
       const box = caretBoxForField(el);
       /* Match by `data-hg-lore-ph`, not DOM class: CSS-module hashes may omit the readable `charSkDisplayName` substring. */
       const ph = el.getAttribute("data-hg-lore-ph");
+      const isDisplayNameField =
+        ph === LORE_V11_PH_DISPLAY_NAME ||
+        ph === LORE_V11_PH_LOCATION_PLACEHOLDER ||
+        (ph === LORE_V9_REDACTED_SENTINEL && el.matches?.('[class*="charSkDisplayName"]') === true);
+      /* Faction archive letterhead org name: single-line strip marker (not dual-line display name block). */
+      const isFactionLetterheadPrimaryTitle = el.getAttribute("data-hg-lore-faction-field") === "orgNamePrimary";
       const yOff =
-        ph === LORE_V11_PH_DISPLAY_NAME || ph === LORE_V11_PH_LOCATION_PLACEHOLDER
+        isDisplayNameField && !isFactionLetterheadPrimaryTitle
           ? PLACEHOLDER_Y_OFFSET_DISPLAY_NAME_PX
           : PLACEHOLDER_Y_OFFSET_OTHER_FIELDS_PX;
       el.style.setProperty(PH_X, px(box.x));
