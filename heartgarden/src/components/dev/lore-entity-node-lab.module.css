@@ -2214,23 +2214,20 @@
   line-height: 1.35;
 }
 
-/* XX · ARCHIVE-091 readable — IX IA, larger type, blue frame, editable PRD + hgArch roster (no fiction metrics table). */
+/* XX · ARCHIVE-091 readable — IX IA, larger type, neutral plate chrome (match IX), editable PRD + hgArch roster (no fiction metrics table). */
 .factionLabPlate_protocolArchive091Readable {
   --fac-arxx-bg: #0a0a0c;
   --fac-arxx-fg: #f5f5f5;
   --fac-arxx-accent: #c4c8d4;
   --fac-arxx-border: rgba(245, 245, 245, 0.24);
-  --fac-arxx-blue: #5b8cff;
 
   padding: 0;
   overflow: hidden;
   border-radius: 0;
-  border: 1px solid color-mix(in oklch, var(--fac-arxx-blue) 42%, var(--fac-arxx-bg));
+  border: 1px solid color-mix(in oklch, var(--fac-arxx-fg) 22%, var(--sys-color-neutral-900));
   background: var(--fac-arxx-bg);
   color: var(--sem-text-primary);
-  box-shadow:
-    0 0 22px color-mix(in oklch, var(--fac-arxx-blue) 16%, transparent),
-    0 16px 38px color-mix(in oklch, var(--sys-color-black) 52%, transparent);
+  box-shadow: 0 14px 32px color-mix(in oklch, var(--sys-color-black) 45%, transparent);
 }
 
 .facArxxRoot {
@@ -2273,6 +2270,39 @@
   padding: 0 5px 0;
   min-height: 0;
   align-items: stretch;
+  /* Skeuomorphic sheet: cold top light, corner washes, paper tooth + micro-noise (`.facArxxGrain` still adds global grit). */
+  background-color: var(--fac-arxx-bg);
+  background-image:
+    radial-gradient(
+      ellipse 130% 72% at 50% -18%,
+      color-mix(in oklch, var(--fac-arxx-fg) 8%, var(--fac-arxx-bg)) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      95% 55% at 100% 0%,
+      color-mix(in oklch, var(--fac-arxx-fg) 5%, transparent) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      85% 60% at 0% 100%,
+      color-mix(in oklch, var(--sys-color-black) 45%, transparent) 0%,
+      transparent 52%
+    ),
+    repeating-linear-gradient(
+      -12deg,
+      transparent,
+      transparent 1px,
+      color-mix(in oklch, var(--fac-arxx-fg) 3.5%, transparent) 1px,
+      color-mix(in oklch, var(--fac-arxx-fg) 3.5%, transparent) 2px
+    ),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: auto, auto, auto, auto, 140px 140px;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
+  background-blend-mode: normal, soft-light, multiply, soft-light, overlay;
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, var(--fac-arxx-fg) 9%, transparent),
+    inset 0 -1px 0 color-mix(in oklch, var(--sys-color-black) 28%, transparent),
+    inset 0 0 72px color-mix(in oklch, var(--sys-color-black) 38%, transparent);
 }
 
 .facArxxPage > aside:first-of-type {
@@ -2287,8 +2317,8 @@
   justify-content: space-between;
   box-sizing: border-box;
   min-height: 0;
-  /* Match previous page vertical rhythm (was 12px / 14px on `.facArxxPage`). */
-  padding: 12px 4px 14px 0;
+  /* Match `.facArxxMain` vertical inset (top 12px, bottom 10px). */
+  padding: 12px 4px 10px 0;
   color: var(--sem-text-primary);
 }
 
@@ -2314,14 +2344,15 @@
 .facArxxBarcode {
   width: 13px;
   height: 6px;
+  --fac-arxx-barcode-stripe: color-mix(in oklch, var(--sem-text-muted) 52%, var(--sys-color-black));
   background: repeating-linear-gradient(
     90deg,
-    var(--sem-text-primary) 0,
-    var(--sem-text-primary) 1px,
+    var(--fac-arxx-barcode-stripe) 0,
+    var(--fac-arxx-barcode-stripe) 1px,
     transparent 1px,
     transparent 3px
   );
-  opacity: 0.85;
+  opacity: 0.95;
 }
 
 .facArxxMain {
@@ -2330,7 +2361,7 @@
   flex-direction: column;
   align-items: stretch;
   gap: var(--fac-arxx-stack-gap);
-  padding: 12px 6px 14px;
+  padding: 12px 6px 10px;
   box-sizing: border-box;
   --fac-arxx-stack-gap: 12px;
 }
@@ -2488,6 +2519,17 @@
   box-sizing: border-box;
 }
 
+/*
+ * Placeholder strip + caption: `charSkShellV11` positions ::after with `--hg-lore-ph-y` (caret line).
+ * This field is a flex row; caret metrics sit low in the box — center the marker band on the fixed min-height instead.
+ */
+.facArxxLetterheadPh
+  .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"][data-hg-lore-placeholder="true"],
+.facArxxLetterheadPh
+  .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"][data-hg-lore-placeholder="true"][data-hg-lore-ph] {
+  height: max(1.35em, var(--sk-v11-marker-h));
+}
+
 .facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"]:focus,
 .facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"]:focus-within {
   color: var(--fac-arxx-accent) !important;
@@ -2545,7 +2587,10 @@
   transition: transform var(--sk-v11-marker-hide-ms) var(--sk-v11-marker-hide-ease);
 }
 
-.facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-placeholder="true"]::after {
+.facArxxLetterheadPh
+  .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"][data-hg-lore-placeholder="true"]::after {
+  top: calc(50% - (var(--hg-lore-ph-lh, var(--sk-v11-marker-h)) / 2));
+  transform-origin: left center;
   left: var(--sk-v11-marker-inset-left) !important;
   width: calc(100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right)) !important;
 }
@@ -2589,7 +2634,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  margin: 0 0 6px;
+  margin: 0 0 10px;
 }
 
 .facArxxH2Row .facArxxH2 {
@@ -2703,7 +2748,7 @@
 .facArxxRosterList {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 10px;
 }
 
 .facArxxRosterEmpty {
@@ -2749,8 +2794,8 @@
 .facArxxRosterCard {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 9px 9px;
+  gap: 8px;
+  padding: 10px 11px 11px;
   border: 1px dashed var(--sem-border-subtle);
   border-radius: 2px;
 }
@@ -2760,7 +2805,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 7px;
 }
 
 .facArxxRosterField {
@@ -2802,7 +2847,7 @@
 .facArxxRosterAddBar {
   display: flex;
   width: 100%;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
 .facArxxRosterAddBtn {

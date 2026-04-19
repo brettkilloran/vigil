@@ -29,6 +29,7 @@ import { resolveImageDisplayUrl } from "@/src/lib/heartgarden-image-display-url"
 import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
 import { normalizeHgDocForCodeTheme } from "@/src/lib/hg-doc/code-theme-doc";
 import { cx } from "@/src/lib/cx";
+import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
 
 function themeClass(theme: NodeTheme): string {
   if (theme === "code") return styles.themeCode;
@@ -238,6 +239,7 @@ export function ArchitecturalNodeCard({
   onRichDocCommand,
   emptyPlaceholder,
   loreCard,
+  factionRoster,
   bodyDoc,
   aiReviewPending = false,
   onAcceptAiReview,
@@ -265,6 +267,8 @@ export function ArchitecturalNodeCard({
   onRichDocCommand?: (command: string, value?: string) => void;
   emptyPlaceholder?: string | null;
   loreCard?: LoreCard | null;
+  /** Roster rows for faction cards (`hgArch.factionRoster`) — thread targets use `data-faction-roster-entry-id`. */
+  factionRoster?: FactionRosterEntry[];
   /** From `items.entity_meta.aiReview` — show Unreviewed chip + Accept when pending. */
   aiReviewPending?: boolean;
   onAcceptAiReview?: () => void;
@@ -285,6 +289,11 @@ export function ArchitecturalNodeCard({
     () => (isMediaNode ? parseArchitecturalMediaFromBody(bodyHtml) : { src: null, alt: "" }),
     [bodyHtml, isMediaNode],
   );
+
+  const factionRosterRows = useMemo(() => {
+    if (loreCard?.kind !== "faction" || !factionRoster?.length) return null;
+    return factionRoster;
+  }, [factionRoster, loreCard?.kind]);
 
   const imageDisplaySrc = useMemo(() => {
     if (!imageCardMedia.src) return null;
@@ -399,6 +408,42 @@ export function ArchitecturalNodeCard({
         emptyPlaceholder={emptyPlaceholder}
         codeTheme={theme === "code"}
       />
+      {factionRosterRows ? (
+        <div
+          className={styles.factionRosterCanvas}
+          data-hg-lore-faction-roster="1"
+          contentEditable={false}
+        >
+          <p className={styles.factionRosterCanvasLabel}>Member index</p>
+          <div className={styles.factionRosterCanvasList} role="list">
+            {factionRosterRows.map((row) => {
+              const primary =
+                row.kind === "character"
+                  ? (row.displayNameOverride?.trim() ||
+                      `Character ${row.characterItemId.slice(0, 8)}…`)
+                  : row.label.trim() || "Member";
+              const secondary =
+                row.kind === "character"
+                  ? (row.roleOverride?.trim() || null)
+                  : (row.role?.trim() || null);
+              return (
+                <div
+                  key={row.id}
+                  className={styles.factionRosterCanvasRow}
+                  role="listitem"
+                  data-faction-roster-entry-id={row.id}
+                  data-faction-roster-kind={row.kind}
+                >
+                  <div className={styles.factionRosterCanvasRowText}>{primary}</div>
+                  {secondary ? (
+                    <div className={styles.factionRosterCanvasRowMeta}>{secondary}</div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

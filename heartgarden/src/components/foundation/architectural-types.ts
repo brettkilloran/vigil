@@ -1,6 +1,7 @@
 import type { JSONContent } from "@tiptap/core";
 
 import type { FolderColorSchemeId } from "@/src/components/foundation/architectural-folder-schemes";
+import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
 
 export type ContentTheme = "default" | "code" | "task" | "media";
 
@@ -58,6 +59,8 @@ export type CanvasContentEntity = CanvasEntityBase & {
   bodyDoc?: JSONContent | null;
   /** When set, card chrome + `entity_type` on sync; body uses shared lore templates. */
   loreCard?: LoreCard;
+  /** From `content_json.hgArch.factionRoster` when present (faction lore cards). */
+  factionRoster?: FactionRosterEntry[];
 };
 
 export type CanvasFolderEntity = CanvasEntityBase & {

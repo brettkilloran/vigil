@@ -83,7 +83,6 @@ export function buildLocationOrdoV7BodyHtml(parts: {
 <header class="${s.locOrdoV7Header}">
 <div class="${s.locOrdoV7LogoBlock}">
 ${ordoV7LogoPixelHtml()}
-<span class="${s.locOrdoV7Brand}">LOCATION</span>
 </div>
 <button type="button" class="${s.locOrdoV7ExpandBtn}" data-expand-btn="true" aria-label="Focus mode" title="Focus mode">
 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M200 64v64a8 8 0 0 1-16 0V83.3l-45.2 45.1a8 8 0 0 1-11.3-11.3L172.7 72H136a8 8 0 0 1 0-16h64a8 8 0 0 1 8 8Zm-88 88H72v36.7l45.2-45.1a8 8 0 0 1 11.3 11.3L83.3 200H120a8 8 0 0 1 0 16H56a8 8 0 0 1-8-8v-64a8 8 0 0 1 16 0Z"/></svg>

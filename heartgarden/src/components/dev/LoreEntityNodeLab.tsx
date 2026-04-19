@@ -113,6 +113,7 @@ function newFactionRosterEntryId(): string {
 /**
  * XX specimen: interactive `hgArch.factionRoster` preview — add/remove rows and edit fields that exist on
  * `FactionRosterEntry` (lab state only; production persists via `content_json.hgArch`).
+ * Canvas thread draw uses the same merge rules as `linkCharacterToFactionRosterRow` in `faction-roster-link.ts`.
  */
 function FactionArchive091ReadableRosterManager({
   roster,
@@ -127,7 +128,7 @@ function FactionArchive091ReadableRosterManager({
       {
         id: newFactionRosterEntryId(),
         kind: "unlinked",
-        label: "New member",
+        label: "",
       },
     ]);
   }, [setRoster]);
@@ -190,16 +191,6 @@ function FactionArchive091ReadableRosterManager({
                           }
                           return { ...r, label: v };
                         }),
-                      );
-                    }}
-                    onBlur={() => {
-                      if (row.kind !== "unlinked") return;
-                      setRoster((prev) =>
-                        prev.map((r) =>
-                          r.id === row.id && r.kind === "unlinked" && r.label.trim() === ""
-                            ? { ...r, label: "Unnamed member" }
-                            : r,
-                        ),
                       );
                     }}
                   />
@@ -558,7 +549,7 @@ function FactionLabPlate({
     | "protocolOrdoCompactMono"
     | "protocolSynod"
     | "protocolArchive091"
-    /** XX · Archive-091 readable — IX void archive with larger type, blue frame, editable PRD fields + hgArch roster. */
+    /** XX · Archive-091 readable — IX void archive with larger type, neutral plate chrome, editable PRD fields + hgArch roster. */
     | "protocolArchive091Readable"
     | "protocolLattice"
     | "protocolAeonConclave"
@@ -1281,7 +1272,7 @@ function FactionArchive091Body({ testId }: { testId: string }) {
 }
 
 /**
- * XX · Archive-091 (readable) — same void-archive IA as IX with larger type, subtle blue frame, and faction PRD wiring.
+ * XX · Archive-091 (readable) — same void-archive IA as IX with larger type, neutral plate chrome, and faction PRD wiring.
  * Top chrome: slim archive plate header (mono slug + focus affordance). Metrics table replaced by
  * hgArch roster demo; protocol body is `document`. No bottom serial/registry footer strip.
  */
@@ -1378,11 +1369,15 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
   }, []);
 
   return (
-    <div className={labStyles.facArxxRoot} data-testid={testId} data-hg-lab-faction-specimen="xx-archive-091-readable">
+    <div
+      className={labStyles.facArxxRoot}
+      data-testid={testId}
+      data-hg-lab-faction-specimen="xx-archive-091-readable"
+    >
       <div className={labStyles.facArxxGrain} aria-hidden />
       <div className={labStyles.facArxxPage}>
         <aside className={labStyles.facArxxRail} aria-hidden>
-          <div className={labStyles.facArxxVertical}>Restricted // Access // 091</div>
+          <div className={labStyles.facArxxVertical}>Faction // Roster // 091</div>
           <svg className={labStyles.facArxxStar} viewBox="0 0 24 24">
             <path d="M12 0L14 10L24 12L14 14L12 24L10 14L0 12L10 10L12 0Z" fill="currentColor" />
           </svg>
@@ -2835,7 +2830,7 @@ function LoreEntityNodeLabInner() {
             classified aura; XI clearance bar; XV grid, striped display, authorized stamp; editable PRD fields + hgArch
             roster — no images / pointer JS). XIX: Ocular Mandate light (XV dossier on pale grid field, no protocol rail,
             single-line Inter title on <code>orgNamePrimary</code> only, Space Mono body + roster — no images / pointer JS).
-            XX: Archive-091 readable (IX void archive, larger type + blue frame, slim plate header + focus affordance, editable PRD
+            XX: Archive-091 readable (IX void archive, larger type + neutral plate chrome, slim plate header + focus affordance, editable PRD
             fields, roster replaces fiction metrics table, no ritual CTA / serial footer — no canvas / pointer JS).
           </p>
           <div className={labStyles.grid}>
@@ -3207,8 +3202,8 @@ function LoreEntityNodeLabInner() {
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Readable successor to IX: left rail only (IX had both sides), grain, letterhead, protocol sections — larger type, blue-tinted
-                  frame, slim mono plate header + focus icon (lab-native, not canvas{" "}
+                  Readable successor to IX: left rail only (IX had both sides), grain, letterhead, protocol sections — larger type, same neutral
+                  plate border/shadow as IX, slim mono plate header + focus icon (lab-native, not canvas{" "}
                   <code>nodeHeader</code>). No serial/registry footer.{" "}
                   <strong>Editable</strong> <code>orgNamePrimary</code>, <code>orgNameAccent</code> (letterhead uses same
                   v11 guest-check markers as character cards: <code>charSkShellV11</code> + <code>charSkDisplayName</code> /{" "}

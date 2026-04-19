@@ -33,6 +33,11 @@ import {
   readHgDocFromContentJson,
 } from "@/src/lib/hg-doc/serialize";
 import { contentEntityUsesHgDoc } from "@/src/lib/hg-doc/entity-uses-hg-doc";
+import {
+  FACTION_ROSTER_HG_ARCH_KEY,
+  parseFactionRoster,
+  type FactionRosterEntry,
+} from "@/src/lib/faction-roster-schema";
 
 const UNIFIED_NODE_WIDTH = 340;
 const FOLDER_CARD_WIDTH = 420;
@@ -68,6 +73,7 @@ export type HgArchPayload = {
   tapeRotation?: number;
   folderColorScheme?: string;
   loreCard?: LoreCard;
+  factionRoster?: FactionRosterEntry[];
 };
 
 export function htmlToPlainText(html: string): string {
@@ -91,6 +97,8 @@ function readHgArch(cj: Record<string, unknown> | null): HgArchPayload | null {
   const raw = cj.hgArch;
   const o = readRecord(raw);
   if (!o) return null;
+  const factionRosterRaw = o[FACTION_ROSTER_HG_ARCH_KEY];
+  const factionRoster = parseFactionRoster(factionRosterRaw);
   return {
     theme: o.theme as ContentTheme | undefined,
     tapeVariant: o.tapeVariant as TapeVariant | undefined,
@@ -99,6 +107,7 @@ function readHgArch(cj: Record<string, unknown> | null): HgArchPayload | null {
     folderColorScheme:
       typeof o.folderColorScheme === "string" ? o.folderColorScheme : undefined,
     loreCard: parseLoreCard(o.loreCard),
+    ...(factionRoster ? { factionRoster } : {}),
   };
 }
 
@@ -265,6 +274,9 @@ export function canvasItemToEntity(
     if (!hg?.tapeVariant) {
       entity.tapeVariant = tapeVariantForLoreCard(loreCard.kind, loreCard.variant);
     }
+  }
+  if (loreCard?.kind === "faction" && hg?.factionRoster) {
+    entity.factionRoster = hg.factionRoster;
   }
   return entity;
 }
@@ -589,6 +601,9 @@ export function buildContentJsonForContentEntity(
   };
   if (entity.loreCard) {
     hgArch.loreCard = entity.loreCard;
+  }
+  if (entity.loreCard?.kind === "faction" && entity.factionRoster !== undefined) {
+    hgArch.factionRoster = entity.factionRoster;
   }
   if (entity.bodyDoc != null && contentEntityUsesHgDoc(entity)) {
     return {

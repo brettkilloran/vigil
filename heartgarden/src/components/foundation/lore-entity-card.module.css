@@ -3916,7 +3916,7 @@
 .locOrdoV7LogoBlock {
   display: flex;
   flex-direction: column;
-  gap: 5px; /* +2px vs prior 3px: breathing room between pixel icon and LOCATION label */
+  gap: 5px;
   flex-shrink: 0;
   padding: 2px;
   box-sizing: border-box;

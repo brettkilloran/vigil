@@ -441,7 +441,6 @@ export function LoreLocationOrdoV7Slab({
                 )),
               )}
             </div>
-            <span className={cardStyles.locOrdoV7Brand}>LOCATION</span>
           </div>
           <div>
             <ArchitecturalTooltip content="Expand object" side="bottom" delayMs={320}>

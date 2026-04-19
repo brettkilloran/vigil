@@ -265,6 +265,11 @@ import { newDefaultHgDocSeed, newTaskHgDocSeed } from "@/src/lib/hg-doc/new-node
 import { hgDocForContentEntity } from "@/src/lib/hg-doc/code-theme-doc";
 import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
 import {
+  createDefaultFactionRosterSeed,
+  linkCharacterToFactionRosterRow,
+} from "@/src/lib/faction-roster-link";
+import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
+import {
   defaultLoreCardVariantForKind,
   defaultTitleForLoreKind,
   getLoreNodeSeedBodyHtml,
@@ -718,6 +723,81 @@ type ConnectionPinViewContext = {
 function isUuidLike(value: string | null | undefined): value is string {
   if (!value) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function resolvedPersistedContentItemId(entity: CanvasContentEntity): string | null {
+  const id =
+    entity.persistedItemId && isUuidLike(entity.persistedItemId) ? entity.persistedItemId : entity.id;
+  return isUuidLike(id) ? id : null;
+}
+
+function resolveFactionRosterEntryIdFromDrawTarget(
+  target: HTMLElement,
+  endpointA: string,
+  endpointB: string,
+): string | null {
+  const row = target.closest<HTMLElement>("[data-faction-roster-entry-id]");
+  if (!row) return null;
+  const rosterId = row.dataset.factionRosterEntryId;
+  const host = row.closest<HTMLElement>("[data-node-id]")?.dataset.nodeId;
+  if (!rosterId || !host || (host !== endpointA && host !== endpointB)) return null;
+  return rosterId;
+}
+
+type FactionRosterThreadEval =
+  | { kind: "none" }
+  | { kind: "block"; message: string }
+  | { kind: "connect_and_patch"; factionEntityId: string; nextRoster: FactionRosterEntry[] }
+  | { kind: "connect_only"; notice?: string };
+
+function evaluateFactionRosterThreadLink(
+  entities: Record<string, CanvasEntity>,
+  endpointA: string,
+  endpointB: string,
+  rosterEntryId: string | null,
+): FactionRosterThreadEval {
+  if (!rosterEntryId) return { kind: "none" };
+  const ea = entities[endpointA];
+  const eb = entities[endpointB];
+  const char =
+    ea?.kind === "content" && ea.loreCard?.kind === "character"
+      ? ea
+      : eb?.kind === "content" && eb.loreCard?.kind === "character"
+        ? eb
+        : null;
+  const fac =
+    ea?.kind === "content" && ea.loreCard?.kind === "faction"
+      ? ea
+      : eb?.kind === "content" && eb.loreCard?.kind === "faction"
+        ? eb
+        : null;
+  if (!char || !fac) return { kind: "none" };
+
+  const characterItemId = resolvedPersistedContentItemId(char);
+  if (!characterItemId) {
+    return {
+      kind: "connect_only",
+      notice:
+        "Could not link roster — this character card needs a saved item id. Try again after the card finishes syncing.",
+    };
+  }
+
+  const prevRoster = fac.factionRoster ?? [];
+  const result = linkCharacterToFactionRosterRow(prevRoster, rosterEntryId, characterItemId);
+  if (!result.ok) {
+    if (result.code === "replace_blocked") {
+      return { kind: "block", message: result.message };
+    }
+    return { kind: "connect_only", notice: result.message };
+  }
+  if (JSON.stringify(result.roster) === JSON.stringify(prevRoster)) {
+    return { kind: "none" };
+  }
+  return {
+    kind: "connect_and_patch",
+    factionEntityId: fac.id,
+    nextRoster: result.roster,
+  };
 }
 
 function clampFollowCamera(cam: CameraState): CameraState {
@@ -1805,6 +1885,7 @@ export function ArchitecturalCanvasApp({
   const [connectionMode, setConnectionMode] = useState<ConnectionDockMode>("move");
   const connectionModeSoundPrevRef = useRef<ConnectionDockMode>("move");
   const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
+  const [threadRosterNotice, setThreadRosterNotice] = useState<string | null>(null);
   const [connectionColor, setConnectionColor] = useState(CONNECTION_DEFAULT_COLOR);
   const [connectionCursorWorld, setConnectionCursorWorld] = useState<{ x: number; y: number } | null>(
     null,
@@ -2153,6 +2234,9 @@ export function ArchitecturalCanvasApp({
   const navigationPathRef = useRef(navigationPath);
   const selectedNodeIdsRef = useRef(selectedNodeIds);
   const connectionSourceIdRef = useRef<string | null>(null);
+  const connectionRosterAnchorRef = useRef<{ factionNodeId: string; rosterEntryId: string } | null>(
+    null,
+  );
   const selectionBeforeConnectionModeRef = useRef<string[] | null>(null);
   const alignSelectedInGridRef = useRef<() => void>(() => {});
   const undoPastRef = useRef<ArchitecturalUndoSnapshot[]>([]);
@@ -2223,6 +2307,16 @@ export function ArchitecturalCanvasApp({
       setLoreCanvasBodyEditEntityId(null);
     }
   }, [selectedNodeIds, loreCanvasBodyEditEntityId]);
+
+  useEffect(() => {
+    if (!connectionSourceId) connectionRosterAnchorRef.current = null;
+  }, [connectionSourceId]);
+
+  useEffect(() => {
+    if (!threadRosterNotice) return;
+    const t = window.setTimeout(() => setThreadRosterNotice(null), 6500);
+    return () => window.clearTimeout(t);
+  }, [threadRosterNotice]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -3138,9 +3232,13 @@ export function ArchitecturalCanvasApp({
   );
 
   const createConnection = useCallback(
-    (sourceEntityId: string, targetEntityId: string) => {
+    (
+      sourceEntityId: string,
+      targetEntityId: string,
+      opts?: { skipUndo?: boolean },
+    ) => {
       const connectionId = createId();
-      recordUndoBeforeMutation();
+      if (!opts?.skipUndo) recordUndoBeforeMutation();
       setGraph((prev) => {
         const sourceExists = !!prev.entities[sourceEntityId];
         const targetExists = !!prev.entities[targetEntityId];
@@ -6495,6 +6593,7 @@ export function ArchitecturalCanvasApp({
           bodyHtml,
           ...(bodyDoc != null ? { bodyDoc } : {}),
           loreCard,
+          ...(loreCard?.kind === "faction" ? { factionRoster: createDefaultFactionRosterSeed() } : {}),
           stackId: null,
           stackOrder: null,
           slots: { [spaceId]: { x, y } },
@@ -6662,6 +6761,7 @@ export function ArchitecturalCanvasApp({
       bodyHtml,
       ...(bodyDoc != null ? { bodyDoc } : {}),
       loreCard,
+      ...(loreCard?.kind === "faction" ? { factionRoster: createDefaultFactionRosterSeed() } : {}),
       stackId: null,
       stackOrder: null,
       slots: {
@@ -7931,12 +8031,80 @@ export function ArchitecturalCanvasApp({
           event.preventDefault();
           event.stopPropagation();
           if (!connectionSourceId) {
+            const row = target.closest<HTMLElement>("[data-faction-roster-entry-id]");
+            const rowHost = row?.closest<HTMLElement>("[data-node-id]")?.dataset.nodeId;
+            if (row?.dataset.factionRosterEntryId && rowHost === nodeId) {
+              connectionRosterAnchorRef.current = {
+                factionNodeId: nodeId,
+                rosterEntryId: row.dataset.factionRosterEntryId,
+              };
+            } else {
+              connectionRosterAnchorRef.current = null;
+            }
             setConnectionSourceId(nodeId);
           } else if (connectionSourceId === nodeId) {
             setConnectionSourceId(null);
           } else {
-            createConnection(connectionSourceId, nodeId);
+            const endpointA = connectionSourceId;
+            const endpointB = nodeId;
+            let rosterEntryId = resolveFactionRosterEntryIdFromDrawTarget(
+              target,
+              endpointA,
+              endpointB,
+            );
+            if (!rosterEntryId && connectionRosterAnchorRef.current) {
+              const anchor = connectionRosterAnchorRef.current;
+              if (anchor.factionNodeId === endpointA || anchor.factionNodeId === endpointB) {
+                rosterEntryId = anchor.rosterEntryId;
+              }
+            }
+            connectionRosterAnchorRef.current = null;
             setConnectionSourceId(null);
+
+            const rosterEval = evaluateFactionRosterThreadLink(
+              graphRef.current.entities,
+              endpointA,
+              endpointB,
+              rosterEntryId,
+            );
+
+            if (rosterEval.kind === "block") {
+              setThreadRosterNotice(rosterEval.message);
+              return;
+            }
+
+            if (rosterEval.kind === "connect_and_patch") {
+              recordUndoBeforeMutation();
+              createConnection(endpointA, endpointB, { skipUndo: true });
+              const { factionEntityId, nextRoster } = rosterEval;
+              const base = graphRef.current.entities[factionEntityId];
+              if (base?.kind === "content") {
+                const merged: CanvasContentEntity = { ...base, factionRoster: nextRoster };
+                setGraph((prev) => {
+                  const cur = prev.entities[factionEntityId];
+                  if (!cur || cur.kind !== "content") return prev;
+                  return {
+                    ...prev,
+                    entities: {
+                      ...prev.entities,
+                      [factionEntityId]: { ...cur, factionRoster: nextRoster },
+                    },
+                  };
+                });
+                if (persistNeonRef.current && isUuidLike(factionEntityId)) {
+                  void patchItemWithVersion(factionEntityId, {
+                    contentText: contentPlainTextForEntity(merged),
+                    contentJson: buildContentJsonForContentEntity(merged),
+                  });
+                }
+              }
+            } else {
+              createConnection(endpointA, endpointB);
+            }
+
+            if (rosterEval.kind === "connect_only" && rosterEval.notice) {
+              setThreadRosterNotice(rosterEval.notice);
+            }
           }
           return;
         }
@@ -8143,7 +8311,10 @@ export function ArchitecturalCanvasApp({
     handleNodeExpand,
     openFocusMode,
     openFolder,
+    patchItemWithVersion,
     recordUndoBeforeMutation,
+    setGraph,
+    setThreadRosterNotice,
     updateNodeBody,
   ]);
 
@@ -9966,6 +10137,7 @@ export function ArchitecturalCanvasApp({
                           : undefined
                       }
                       loreCard={entity.loreCard}
+                      factionRoster={entity.loreCard?.kind === "faction" ? entity.factionRoster : undefined}
                       aiReviewPending={entity.entityMeta?.aiReview === "pending"}
                       onAcceptAiReview={() => acceptAiReviewForEntity(entity.id)}
                     />
@@ -10191,6 +10363,7 @@ export function ArchitecturalCanvasApp({
                           canvasPanZoomScale={scale}
                           useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
                           loreCard={entity.loreCard}
+                          factionRoster={entity.loreCard?.kind === "faction" ? entity.factionRoster : undefined}
                           aiReviewPending={entity.entityMeta?.aiReview === "pending"}
                           onAcceptAiReview={() => acceptAiReviewForEntity(entity.id)}
                         />
@@ -11536,6 +11709,7 @@ export function ArchitecturalCanvasApp({
                           : undefined
                       }
                       loreCard={entity.loreCard}
+                      factionRoster={entity.loreCard?.kind === "faction" ? entity.factionRoster : undefined}
                       aiReviewPending={entity.entityMeta?.aiReview === "pending"}
                       onAcceptAiReview={() => acceptAiReviewForEntity(entity.id)}
                     />
@@ -12037,6 +12211,11 @@ export function ArchitecturalCanvasApp({
         </div>
         {viewportToastOpen ? (
           <CanvasViewportToast onShow={onViewportToastShow} onDismiss={onViewportToastDismiss} />
+        ) : null}
+        {threadRosterNotice ? (
+          <div className={styles.threadRosterNotice} role="status" aria-live="polite">
+            {threadRosterNotice}
+          </div>
         ) : null}
       </div>
     </>
