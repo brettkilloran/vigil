@@ -23,7 +23,9 @@ import {
   useState,
   type ChangeEvent,
   type CSSProperties,
+  type Dispatch,
   type ReactNode,
+  type SetStateAction,
 } from "react";
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import {
@@ -31,7 +33,7 @@ import {
   ArchitecturalNodeTape,
 } from "@/src/components/foundation/ArchitecturalNodeCard";
 import { LoreLocationOrdoV7Slab } from "@/src/components/foundation/LoreLocationOrdoV7Slab";
-import { ArrowsOutSimple } from "@phosphor-icons/react";
+import { ArrowsOutSimple, Plus, Trash } from "@phosphor-icons/react";
 import canvasStyles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import cardStyles from "@/src/components/foundation/lore-entity-card.module.css";
 import { VigilThemeProvider, useVigilThemeContext } from "@/src/contexts/vigil-theme-context";
@@ -55,6 +57,7 @@ import { installLoreV11PlaceholderCaretSync } from "@/src/lib/lore-v11-ph-caret"
 import {
   consumeLorePlaceholderBeforeInput,
   installLorePlaceholderSelectionGuards,
+  LORE_V9_REDACTED_SENTINEL,
   placeCaretAfterLorePlaceholderReplace,
   syncLoreV9RedactedPlaceholderState,
 } from "@/src/lib/lore-v9-placeholder";
@@ -96,6 +99,163 @@ function factionRosterDemoRoleOptional(row: FactionRosterEntry): string | null {
   return r ? r : null;
 }
 
+function newFactionRosterEntryId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+/**
+ * XX specimen: interactive `hgArch.factionRoster` preview — add/remove rows and edit fields that exist on
+ * `FactionRosterEntry` (lab state only; production persists via `content_json.hgArch`).
+ */
+function FactionArchive091ReadableRosterManager({
+  roster,
+  setRoster,
+}: {
+  roster: FactionRosterEntry[];
+  setRoster: Dispatch<SetStateAction<FactionRosterEntry[]>>;
+}) {
+  const addUnlinkedMember = useCallback(() => {
+    setRoster((prev) => [
+      ...prev,
+      {
+        id: newFactionRosterEntryId(),
+        kind: "unlinked",
+        label: "New member",
+      },
+    ]);
+  }, [setRoster]);
+
+  const removeMember = useCallback(
+    (id: string) => {
+      setRoster((prev) => prev.filter((r) => r.id !== id));
+    },
+    [setRoster],
+  );
+
+  return (
+    <div
+      className={labStyles.facArxxRoster}
+      data-hg-lore-faction-roster="1"
+      data-hg-arch-key={FACTION_ROSTER_HG_ARCH_KEY}
+    >
+      <div
+        className={labStyles.facArxxRosterList}
+        role={roster.length > 0 ? "list" : undefined}
+        aria-label={roster.length > 0 ? "Faction roster entries" : undefined}
+      >
+        {roster.length === 0 ? (
+          <div className={labStyles.facArxxRosterEmpty} role="status">
+            <p className={labStyles.facArxxRosterEmptyTitle}>No member rows</p>
+            <p className={labStyles.facArxxRosterEmptyHint}>
+              Use <strong>Add member</strong> — lab state mirrors{" "}
+              <span className={labStyles.facArxxRosterEmptyKey}>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</span>.
+            </p>
+          </div>
+        ) : (
+          roster.map((row) => {
+            const roleVal =
+              row.kind === "character" ? (row.roleOverride ?? "") : (row.role ?? "");
+            const nameVal =
+              row.kind === "character" ? (row.displayNameOverride ?? "") : row.label;
+
+            return (
+              <div
+                key={row.id}
+                className={labStyles.facArxxRosterCard}
+                role="listitem"
+                data-faction-roster-entry-id={row.id}
+                data-faction-roster-kind={row.kind}
+              >
+                <div className={labStyles.facArxxRosterCardBody}>
+                  <input
+                    type="text"
+                    className={labStyles.facArxxRosterField}
+                    aria-label={row.kind === "character" ? "Display name override" : "Roster label"}
+                    value={nameVal}
+                    placeholder={row.kind === "character" ? "Display name (optional)" : "Member name"}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setRoster((prev) =>
+                        prev.map((r) => {
+                          if (r.id !== row.id) return r;
+                          if (r.kind === "character") {
+                            return { ...r, displayNameOverride: v ? v : undefined };
+                          }
+                          return { ...r, label: v };
+                        }),
+                      );
+                    }}
+                    onBlur={() => {
+                      if (row.kind !== "unlinked") return;
+                      setRoster((prev) =>
+                        prev.map((r) =>
+                          r.id === row.id && r.kind === "unlinked" && r.label.trim() === ""
+                            ? { ...r, label: "Unnamed member" }
+                            : r,
+                        ),
+                      );
+                    }}
+                  />
+                  <input
+                    type="text"
+                    className={cx(labStyles.facArxxRosterField, labStyles.facArxxRosterFieldRole)}
+                    aria-label="Role"
+                    value={roleVal}
+                    placeholder="Role (optional)"
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setRoster((prev) =>
+                        prev.map((r) => {
+                          if (r.id !== row.id) return r;
+                          if (r.kind === "character") {
+                            return { ...r, roleOverride: v === "" ? undefined : v };
+                          }
+                          return { ...r, role: v === "" ? undefined : v };
+                        }),
+                      );
+                    }}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  tone="card-dark"
+                  className={labStyles.facArxxRosterRemoveBtn}
+                  aria-label="Remove member from roster"
+                  onClick={() => removeMember(row.id)}
+                >
+                  <Trash size={14} weight="regular" />
+                </Button>
+              </div>
+            );
+          })
+        )}
+      </div>
+      <div className={labStyles.facArxxRosterAddBar}>
+        <Button
+          type="button"
+          variant="ghost"
+          tone="card-dark"
+          size="sm"
+          className={labStyles.facArxxRosterAddBtn}
+          leadingIcon={<Plus size={14} weight="regular" />}
+          onClick={addUnlinkedMember}
+        >
+          Add member
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /** `DEMO_FACTION_ROSTER` via `parseFactionRoster` — same shape as production `content_json.hgArch.factionRoster` (read-only demo in lab). */
 function FactionLabDemoHgArchRoster({
   variant,
@@ -105,7 +265,6 @@ function FactionLabDemoHgArchRoster({
     | "terminal"
     | "ocular"
     | "ocularLight"
-    | "archive091Readable"
     | "synthesis"
     | "essentialist"
     | "clandestine";
@@ -269,34 +428,6 @@ function FactionLabDemoHgArchRoster({
               >
                 <p className={labStyles.facOclmRosterCardName}>{factionRosterDemoDisplayName(row)}</p>
                 {role ? <p className={labStyles.facOclmRosterCardRole}>{role}</p> : null}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  if (variant === "archive091Readable") {
-    return (
-      <div
-        className={labStyles.facArxxRoster}
-        data-hg-lore-faction-roster="1"
-        data-hg-arch-key={FACTION_ROSTER_HG_ARCH_KEY}
-      >
-        <div className={labStyles.facArxxRosterList} role="list">
-          {roster.map((row) => {
-            const role = factionRosterDemoRoleOptional(row);
-            return (
-              <div
-                key={row.id}
-                className={labStyles.facArxxRosterCard}
-                role="listitem"
-                data-faction-roster-entry-id={row.id}
-                data-faction-roster-kind={row.kind}
-              >
-                <p className={labStyles.facArxxRosterCardName}>{factionRosterDemoDisplayName(row)}</p>
-                {role ? <p className={labStyles.facArxxRosterCardRole}>{role}</p> : null}
               </div>
             );
           })}
@@ -1155,7 +1286,54 @@ function FactionArchive091Body({ testId }: { testId: string }) {
  * hgArch roster demo; protocol body is `document`. No bottom serial/registry footer strip.
  */
 function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
-  const archiveMemberCount = parseFactionRoster(DEMO_FACTION_ROSTER)?.length ?? 0;
+  const [archiveRoster, setArchiveRoster] = useState<FactionRosterEntry[]>(() => {
+    const parsed = parseFactionRoster(DEMO_FACTION_ROSTER);
+    return parsed?.length ? parsed : [];
+  });
+  const archiveMemberCount = archiveRoster.length;
+  const archiveDocumentRef = useRef<HTMLDivElement>(null);
+  const facArxxLetterheadPhRef = useRef<HTMLDivElement>(null);
+
+  /** Do not combine `dangerouslySetInnerHTML` with `contentEditable` — React reconciliation can throw (removeChild on null). */
+  useLayoutEffect(() => {
+    const el = archiveDocumentRef.current;
+    if (!el) return;
+    el.innerHTML = FACTION_LAB_ARCHIVE091_READABLE_DOCUMENT_HTML;
+  }, []);
+
+  useLayoutEffect(() => {
+    const shell = facArxxLetterheadPhRef.current;
+    if (!shell) return;
+    syncLoreV9RedactedPlaceholderState(shell);
+    const removeGuards = installLorePlaceholderSelectionGuards(shell);
+    const removePhCaret = installLoreV11PlaceholderCaretSync(shell);
+    const onInput = () => {
+      syncLoreV9RedactedPlaceholderState(shell);
+    };
+    const onBeforeInput = (e: Event) => {
+      const ie = e as InputEvent;
+      const field = (ie.target as HTMLElement | null)?.closest?.("[data-hg-lore-field]");
+      if (!field || !(field instanceof HTMLElement) || !shell.contains(field)) return;
+      if (!consumeLorePlaceholderBeforeInput(field, ie)) return;
+      syncLoreV9RedactedPlaceholderState(shell);
+      queueMicrotask(() => {
+        if (field.isConnected) placeCaretAfterLorePlaceholderReplace(field);
+      });
+    };
+    const onFocusOut = () => {
+      queueMicrotask(() => syncLoreV9RedactedPlaceholderState(shell));
+    };
+    shell.addEventListener("beforeinput", onBeforeInput, true);
+    shell.addEventListener("input", onInput, true);
+    shell.addEventListener("focusout", onFocusOut);
+    return () => {
+      removeGuards();
+      removePhCaret();
+      shell.removeEventListener("beforeinput", onBeforeInput, true);
+      shell.removeEventListener("input", onInput, true);
+      shell.removeEventListener("focusout", onFocusOut);
+    };
+  }, []);
 
   return (
     <div className={labStyles.facArxxRoot} data-testid={testId} data-hg-lab-faction-specimen="xx-archive-091-readable">
@@ -1173,7 +1351,7 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
         <div className={labStyles.facArxxMain}>
           <div className={labStyles.facArxxFocusTop} data-hg-lab-arxx-focus-chrome="1">
             <div className={labStyles.facArxxPlateHeader}>
-              <span className={labStyles.facArxxPlateHeaderTitle}>Archive · 091</span>
+              <span className={labStyles.facArxxPlateHeaderTitle}>Faction</span>
               <div className={labStyles.facArxxPlateHeaderActions}>
                 <ArchitecturalTooltip content="Focus Mode" side="bottom" delayMs={320}>
                   <Button
@@ -1193,51 +1371,67 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
             </div>
           </div>
 
+          <div className={labStyles.facArxxRule} role="presentation" aria-hidden />
+
           <header className={labStyles.facArxxLetterhead}>
-            <h1
-              className={labStyles.facArxxH1}
-              contentEditable
-              spellCheck={false}
-              suppressContentEditableWarning
-              data-hg-lore-faction-field="orgNamePrimary"
-            >
-              Absence
-            </h1>
             <div
-              className={labStyles.facArxxSubTitle}
-              contentEditable
-              spellCheck={false}
-              suppressContentEditableWarning
-              data-hg-lore-faction-field="orgNameAccent"
+              ref={facArxxLetterheadPhRef}
+              className={cx(cardStyles.charSkShellV11, labStyles.facArxxLetterheadPh)}
             >
-              Of Mind
+              <h1
+                className={cx(cardStyles.charSkDisplayName, labStyles.facArxxLetterheadPrimary)}
+                contentEditable
+                spellCheck={false}
+                suppressContentEditableWarning
+                data-hg-lore-field="1"
+                data-hg-lore-placeholder="true"
+                data-hg-lore-ph={LORE_V9_REDACTED_SENTINEL}
+                data-hg-lore-faction-field="orgNamePrimary"
+              >
+                {LORE_V9_REDACTED_SENTINEL}
+              </h1>
+              <div
+                className={cx(cardStyles.charSkRole, labStyles.facArxxLetterheadSecondary)}
+                contentEditable
+                spellCheck={false}
+                suppressContentEditableWarning
+                data-hg-lore-field="1"
+                data-hg-lore-placeholder="true"
+                data-hg-lore-ph={LORE_V9_REDACTED_SENTINEL}
+                data-hg-lore-faction-field="orgNameAccent"
+              >
+                {LORE_V9_REDACTED_SENTINEL}
+              </div>
             </div>
           </header>
 
-          <div className={labStyles.facArxxContentBody}>
-            <div className={labStyles.facArxxTextSection}>
-              <div className={labStyles.facArxxH2Row}>
-                <h2 className={labStyles.facArxxH2}>Member index</h2>
-                <span
-                  className={labStyles.facArxxH2Meta}
-                  title={`hgArch.${FACTION_ROSTER_HG_ARCH_KEY}`}
-                >
-                  {archiveMemberCount} record{archiveMemberCount === 1 ? "" : "s"}
-                </span>
-              </div>
-              <FactionLabDemoHgArchRoster variant="archive091Readable" />
+          <div className={labStyles.facArxxRule} role="presentation" aria-hidden />
+
+          <div className={labStyles.facArxxTextSection}>
+            <div className={labStyles.facArxxH2Row}>
+              <h2 className={labStyles.facArxxH2}>Member index</h2>
+              <span
+                className={labStyles.facArxxH2Meta}
+                title={`hgArch.${FACTION_ROSTER_HG_ARCH_KEY}`}
+              >
+                {archiveMemberCount} record{archiveMemberCount === 1 ? "" : "s"}
+              </span>
             </div>
-            <div className={labStyles.facArxxTextSection}>
-              <h2 className={labStyles.facArxxH2}>Record</h2>
-              <div
-                className={labStyles.facArxxDocument}
-                contentEditable
-                spellCheck={false}
-                suppressHydrationWarning
-                data-hg-lore-faction-field="document"
-                dangerouslySetInnerHTML={{ __html: FACTION_LAB_ARCHIVE091_READABLE_DOCUMENT_HTML }}
-              />
-            </div>
+            <FactionArchive091ReadableRosterManager roster={archiveRoster} setRoster={setArchiveRoster} />
+          </div>
+
+          <div className={labStyles.facArxxRule} role="presentation" aria-hidden />
+
+          <div className={labStyles.facArxxTextSection}>
+            <h2 className={labStyles.facArxxH2}>Record</h2>
+            <div
+              ref={archiveDocumentRef}
+              className={labStyles.facArxxDocument}
+              contentEditable
+              spellCheck={false}
+              suppressHydrationWarning
+              data-hg-lore-faction-field="document"
+            />
           </div>
         </div>
       </div>
@@ -2974,11 +3168,13 @@ function LoreEntityNodeLabInner() {
                   Readable successor to IX: left rail only (IX had both sides), grain, letterhead, protocol sections — larger type, blue-tinted
                   frame, slim mono plate header + focus icon (lab-native, not canvas{" "}
                   <code>nodeHeader</code>). No serial/registry footer.{" "}
-                  <strong>Editable</strong> <code>orgNamePrimary</code>, <code>orgNameAccent</code>, <code>document</code>{" "}
-                  (no separate <code>context</code> strip — fold registry copy into{" "}
-                  <code>document</code> or another field in production if needed).
-                  Fiction metrics table replaced by <code>variant=&quot;archive091Readable&quot;</code> roster +{" "}
-                  <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>. CSS grain only.
+                  <strong>Editable</strong> <code>orgNamePrimary</code>, <code>orgNameAccent</code> (letterhead uses same
+                  v11 guest-check markers as character cards: <code>charSkShellV11</code> + <code>charSkDisplayName</code> /{" "}
+                  <code>charSkRole</code>), <code>document</code> (no separate <code>context</code> strip in lab — fold
+                  registry copy into <code>document</code> or another field in production if needed).
+                  Fiction metrics table replaced by an interactive <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code> roster
+                  (add unlinked rows, edit label/role, remove). Linked character rows still carry <code>characterItemId</code>{" "}
+                  in data; no item picker in lab yet. Lab state only. CSS grain only.
                 </li>
               </ul>
             </div>
