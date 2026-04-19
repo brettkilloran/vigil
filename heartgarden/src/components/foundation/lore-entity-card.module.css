@@ -4757,7 +4757,7 @@
   overflow: visible;
   --sk-id-surface: var(--fac-arxx-bg);
   --sk-id-text: var(--fac-arxx-fg);
-  --sk-v11-marker: color-mix(in oklch, var(--fac-arxx-fg) 32%, var(--fac-arxx-bg));
+  --sk-v11-marker: #000;
   --sk-v11-marker-h: 22px;
   --sk-v11-marker-tail: 100%;
   --sem-text-primary: var(--fac-arxx-fg);
