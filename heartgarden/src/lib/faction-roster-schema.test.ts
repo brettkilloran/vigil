@@ -19,7 +19,7 @@ describe("factionRosterSchema", () => {
 
   it("parseFactionRosterFromHgArch reads hgArch key", () => {
     const roster = parseFactionRosterFromHgArch({
-      loreCard: { kind: "faction", variant: "v1" },
+      loreCard: { kind: "faction", variant: "v4" },
       [FACTION_ROSTER_HG_ARCH_KEY]: DEMO_FACTION_ROSTER,
     });
     expect(roster).toEqual(DEMO_FACTION_ROSTER);

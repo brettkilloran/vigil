@@ -2452,6 +2452,7 @@
   padding: 0;
   border: none;
   text-align: center;
+  overflow: visible;
 }
 
 .facArxxLetterheadPh {
@@ -2460,6 +2461,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  overflow: visible;
   --sk-id-surface: var(--fac-arxx-bg);
   --sk-id-text: var(--fac-arxx-fg);
   --sk-v11-marker: color-mix(in oklch, var(--fac-arxx-fg) 32%, var(--fac-arxx-bg));
@@ -2467,6 +2469,12 @@
   --sk-v11-marker-tail: 100%;
   --sem-text-primary: var(--fac-arxx-fg);
   --sem-text-muted: var(--fac-arxx-accent);
+}
+
+.charSkShellV11.facArxxLetterheadPh .charSkDisplayName[data-hg-lore-placeholder="true"],
+.charSkShellV11.facArxxLetterheadPh .charSkRole[data-hg-lore-placeholder="true"] {
+  overflow: visible;
+  contain: none;
 }
 
 /*

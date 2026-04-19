@@ -12,6 +12,14 @@ import {
   type CharacterFocusParts,
 } from "@/src/lib/lore-character-focus-document-html";
 import {
+  buildFactionFocusDocumentHtml,
+  buildFactionFocusMetaShellHtml,
+  extractFactionMetaFocusShellHtml,
+  parseFactionFocusDocumentHtml,
+  readFactionFocusPartsFromMetaHost,
+  type FactionFocusParts,
+} from "@/src/lib/lore-faction-focus-document-html";
+import {
   buildLocationFocusDocumentHtml,
   buildLocationFocusMetaShellHtml,
   extractLocationMetaFocusShellHtml,
@@ -33,7 +41,7 @@ function eventTargetElement(ev: Event): Element | null {
 }
 
 export type LoreHybridFocusEditorProps = {
-  variant: "character" | "location";
+  variant: "character" | "location" | "faction";
   focusHtml: string;
   onChangeFocusHtml: (next: string) => void;
   className?: string;
@@ -52,14 +60,18 @@ export function LoreHybridFocusEditor({
 }: LoreHybridFocusEditorProps) {
   const [characterParts, setCharacterParts] = useState<CharacterFocusParts | null>(null);
   const [locationParts, setLocationParts] = useState<LocationFocusParts | null>(null);
+  const [factionParts, setFactionParts] = useState<FactionFocusParts | null>(null);
   const [notesDoc, setNotesDoc] = useState<JSONContent>(() => structuredClone(EMPTY_HG_DOC));
   const characterPartsRef = useRef<CharacterFocusParts | null>(null);
   const locationPartsRef = useRef<LocationFocusParts | null>(null);
+  const factionPartsRef = useRef<FactionFocusParts | null>(null);
   const notesDocRef = useRef(notesDoc);
   const identityShellRef = useRef<HTMLDivElement | null>(null);
   const locationMetaShellRef = useRef<HTMLDivElement | null>(null);
+  const factionMetaShellRef = useRef<HTMLDivElement | null>(null);
   const lastInjectedIdentityDocKeyRef = useRef<string | null>(null);
   const lastInjectedLocationMetaDocKeyRef = useRef<string | null>(null);
+  const lastInjectedFactionMetaDocKeyRef = useRef<string | null>(null);
   /** Dedupes `onChangeFocusHtml` when rebuild matches current parent `focusHtml`. */
   const lastEmittedFocusHtmlRef = useRef<string | null>(null);
   /** When notes emit updates `focusHtml`, re-parsing in the sync effect must not push `notesDoc` back through TipTap or `setContent` clears focus after each key. */
@@ -74,6 +86,9 @@ export function LoreHybridFocusEditor({
   useEffect(() => {
     locationPartsRef.current = locationParts;
   }, [locationParts]);
+  useEffect(() => {
+    factionPartsRef.current = factionParts;
+  }, [factionParts]);
 
   useEffect(() => {
     lastEmittedFocusHtmlRef.current = focusHtml;
@@ -96,7 +111,7 @@ export function LoreHybridFocusEditor({
         } else {
           setCharacterParts(null);
         }
-      } else {
+      } else if (variant === "location") {
         const lp = parseLocationFocusDocumentHtml(focusHtml);
         if (lp) {
           setLocationParts(lp);
@@ -110,6 +125,21 @@ export function LoreHybridFocusEditor({
           }
         } else {
           setLocationParts(null);
+        }
+      } else {
+        const fp = parseFactionFocusDocumentHtml(focusHtml);
+        if (fp) {
+          setFactionParts(fp);
+          if (skipNotesResyncFromFocusHtmlRef.current > 0) {
+            skipNotesResyncFromFocusHtmlRef.current = 0;
+          } else {
+            const nextRecord = htmlFragmentToHgDocDoc(fp.recordHtml);
+            if (JSON.stringify(notesDocRef.current) !== JSON.stringify(nextRecord)) {
+              setNotesDoc(nextRecord);
+            }
+          }
+        } else {
+          setFactionParts(null);
         }
       }
     });
@@ -134,6 +164,27 @@ export function LoreHybridFocusEditor({
     const rowHtml = extractCharacterIdentityRowHtml(focusHtml);
     if (rowHtml) host.innerHTML = rowHtml;
   }, [variant, characterParts, focusDocumentKey, focusHtml]);
+
+  useLayoutEffect(() => {
+    if (variant !== "faction") {
+      lastInjectedFactionMetaDocKeyRef.current = null;
+      return;
+    }
+    if (!factionParts) {
+      lastInjectedFactionMetaDocKeyRef.current = null;
+      return;
+    }
+    const host = factionMetaShellRef.current;
+    if (!host) return;
+    const k = focusDocumentKey ?? "";
+    if (lastInjectedFactionMetaDocKeyRef.current != null && lastInjectedFactionMetaDocKeyRef.current === k) {
+      return;
+    }
+    lastInjectedFactionMetaDocKeyRef.current = k;
+    const shellHtml =
+      extractFactionMetaFocusShellHtml(focusHtml) || buildFactionFocusMetaShellHtml(factionParts);
+    if (shellHtml) host.innerHTML = shellHtml;
+  }, [variant, factionParts, focusDocumentKey, focusHtml]);
 
   useLayoutEffect(() => {
     if (variant !== "location") {
@@ -178,8 +229,20 @@ export function LoreHybridFocusEditor({
     [onChangeFocusHtml],
   );
 
+  const emitFaction = useCallback(
+    (nextParts: FactionFocusParts, doc: JSONContent) => {
+      const recordHtml = hgDocToHtml(doc);
+      const nextHtml = buildFactionFocusDocumentHtml({ ...nextParts, recordHtml });
+      if (lastEmittedFocusHtmlRef.current === nextHtml) return;
+      lastEmittedFocusHtmlRef.current = nextHtml;
+      onChangeFocusHtml(nextHtml);
+    },
+    [onChangeFocusHtml],
+  );
+
   const hasCharacterShell = characterParts != null;
   const hasLocationShell = locationParts != null;
+  const hasFactionShell = factionParts != null;
 
   useEffect(() => {
     if (variant !== "character" || !hasCharacterShell) return;
@@ -237,6 +300,34 @@ export function LoreHybridFocusEditor({
     };
   }, [variant, hasLocationShell, emitLocation, focusDocumentKey]);
 
+  useEffect(() => {
+    if (variant !== "faction" || !hasFactionShell) return;
+    const host = factionMetaShellRef.current;
+    if (!host) return;
+
+    const flushFromMetaDom = () => {
+      const meta = host.querySelector<HTMLElement>('[data-hg-faction-focus-meta="true"]');
+      if (!meta) return;
+      const next = readFactionFocusPartsFromMetaHost(meta, hgDocToHtml(notesDocRef.current));
+      setFactionParts(next);
+      factionPartsRef.current = next;
+      emitFaction(next, notesDocRef.current);
+    };
+
+    const onMaybeMetaEdit = (ev: Event) => {
+      const el = eventTargetElement(ev);
+      if (!el?.closest("[data-hg-faction-focus-field]")) return;
+      flushFromMetaDom();
+    };
+
+    host.addEventListener("input", onMaybeMetaEdit, true);
+    host.addEventListener("compositionend", onMaybeMetaEdit, true);
+    return () => {
+      host.removeEventListener("input", onMaybeMetaEdit, true);
+      host.removeEventListener("compositionend", onMaybeMetaEdit, true);
+    };
+  }, [variant, hasFactionShell, emitFaction, focusDocumentKey]);
+
   const onNotesChange = useCallback(
     (doc: JSONContent) => {
       setNotesDoc(doc);
@@ -244,18 +335,24 @@ export function LoreHybridFocusEditor({
       if (variant === "character") {
         const p = characterPartsRef.current;
         if (p) emitCharacter(p, doc);
-      } else {
+      } else if (variant === "location") {
         const lp = locationPartsRef.current;
         if (lp) emitLocation(lp, doc);
+      } else {
+        const fp = factionPartsRef.current;
+        if (fp) emitFaction(fp, doc);
       }
     },
-    [variant, emitCharacter, emitLocation],
+    [variant, emitCharacter, emitLocation, emitFaction],
   );
 
   if (variant === "character" && !characterParts) {
     return <div className={className} data-focus-body-editor="true" />;
   }
   if (variant === "location" && !locationParts) {
+    return <div className={className} data-focus-body-editor="true" />;
+  }
+  if (variant === "faction" && !factionParts) {
     return <div className={className} data-focus-body-editor="true" />;
   }
 
@@ -271,6 +368,32 @@ export function LoreHybridFocusEditor({
         <div className={styles.notesWrap} data-hg-lore-hybrid-notes-wrap="true">
           <span className={styles.label} data-hg-lore-hybrid-notes-label="true">
             Notes
+          </span>
+          <HeartgardenDocEditor
+            surfaceKey={notesSurfaceKey}
+            chromeRole="focus"
+            value={notesDoc}
+            onChange={onNotesChange}
+            editable
+            placeholder="Write here, or type / for blocks…"
+            enableDragHandle
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === "faction" && factionParts) {
+    return (
+      <div
+        className={`${styles.host} ${className ?? ""}`.trim()}
+        data-focus-body-editor="true"
+        data-hg-lore-hybrid-focus="faction"
+      >
+        <div ref={factionMetaShellRef} className={styles.factionMetaHost} />
+        <div className={styles.notesWrap} data-hg-lore-hybrid-notes-wrap="true">
+          <span className={styles.label} data-hg-lore-hybrid-notes-label="true">
+            Record
           </span>
           <HeartgardenDocEditor
             surfaceKey={notesSurfaceKey}

@@ -7,8 +7,8 @@ export type ContentTheme = "default" | "code" | "task" | "media";
 
 /** Lore canvas nodes: stored as `note` rows with `entity_type` + `hgArch.loreCard`. */
 export type LoreCardKind = "character" | "faction" | "location";
-/** Faction: v1–v3. Location: v2–v3 (legacy), v7 ORDO slab (canonical). Character: v11 only. */
-export type LoreCardVariant = "v1" | "v2" | "v3" | "v7" | "v11";
+/** Faction: v4 Archive-091 (canonical). Location: v2–v3 (legacy), v7 ORDO slab. Character: v11 only. */
+export type LoreCardVariant = "v1" | "v2" | "v3" | "v4" | "v7" | "v11";
 export type LoreCard = { kind: LoreCardKind; variant: LoreCardVariant };
 
 export type NodeTheme = ContentTheme | "folder" | LoreCardKind;

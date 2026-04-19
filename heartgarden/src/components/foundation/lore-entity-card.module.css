@@ -4530,3 +4530,625 @@
   text-transform: none;
   color: inherit;
 }
+
+/* --- Faction Archive-091 readable (production canvas + focus) --- */
+.facArxxRoot {
+  position: relative;
+  overflow: visible;
+  cursor: default;
+  --fac-arxx-bg: #0a0a0c;
+  --fac-arxx-fg: #f5f5f5;
+  --fac-arxx-accent: #c4c8d4;
+  color: var(--sem-text-primary);
+  /* Match `FactionLabPlate` XX specimen — plate chrome lives on `.facArxxRoot` (canvas `entityNode` shadow is cleared). */
+  border: 1px solid color-mix(in oklch, var(--fac-arxx-fg) 22%, var(--sys-color-neutral-900));
+  border-radius: 0;
+  box-shadow: 0 14px 32px color-mix(in oklch, var(--sys-color-black) 45%, transparent);
+}
+
+.facArxxGrain {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0.08;
+  mix-blend-mode: overlay;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 1px,
+      rgba(255, 255, 255, 0.045) 1px,
+      rgba(255, 255, 255, 0.045) 2px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 1px,
+      rgba(255, 255, 255, 0.035) 1px,
+      rgba(255, 255, 255, 0.035) 2px
+    );
+}
+
+.facArxxPage {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 23px minmax(0, 1fr);
+  gap: 8px;
+  padding: 0 5px 0;
+  min-height: 0;
+  align-items: stretch;
+  background-color: var(--fac-arxx-bg);
+  background-image:
+    radial-gradient(
+      ellipse 130% 72% at 50% -18%,
+      color-mix(in oklch, var(--fac-arxx-fg) 8%, var(--fac-arxx-bg)) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      95% 55% at 100% 0%,
+      color-mix(in oklch, var(--fac-arxx-fg) 5%, transparent) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      85% 60% at 0% 100%,
+      color-mix(in oklch, var(--sys-color-black) 45%, transparent) 0%,
+      transparent 52%
+    ),
+    repeating-linear-gradient(
+      -12deg,
+      transparent,
+      transparent 1px,
+      color-mix(in oklch, var(--fac-arxx-fg) 2.8%, transparent) 1px,
+      color-mix(in oklch, var(--fac-arxx-fg) 2.8%, transparent) 2px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 3px,
+      color-mix(in oklch, var(--fac-arxx-fg) 1.1%, transparent) 3px,
+      color-mix(in oklch, var(--fac-arxx-fg) 1.1%, transparent) 4px
+    ),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: auto, auto, auto, auto, auto, 148px 148px;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat, repeat;
+  background-blend-mode: normal, soft-light, multiply, soft-light, soft-light, soft-light;
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, var(--fac-arxx-fg) 9%, transparent),
+    inset 0 -1px 0 color-mix(in oklch, var(--sys-color-black) 28%, transparent),
+    inset 0 0 72px color-mix(in oklch, var(--sys-color-black) 38%, transparent);
+}
+
+.facArxxPage > aside:first-of-type {
+  align-self: stretch;
+  border-right: 0.5px solid var(--sem-border-subtle);
+}
+
+.facArxxRail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  min-height: 0;
+  padding: 12px 4px 10px 0;
+  color: var(--sem-text-primary);
+}
+
+.facArxxVertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 6.5px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sem-text-muted);
+  line-height: 1.25;
+  margin: 3px 0;
+  padding: 3px 1px;
+  box-sizing: border-box;
+}
+
+.facArxxStar {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  opacity: 0.95;
+}
+
+.facArxxBarcode {
+  width: 13px;
+  height: 6px;
+  --fac-arxx-barcode-stripe: color-mix(in oklch, var(--sem-text-muted) 52%, var(--sys-color-black));
+  background: repeating-linear-gradient(
+    90deg,
+    var(--fac-arxx-barcode-stripe) 0,
+    var(--fac-arxx-barcode-stripe) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: 0.95;
+}
+
+.facArxxMain {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--fac-arxx-stack-gap);
+  padding: 12px 6px 10px;
+  box-sizing: border-box;
+  --fac-arxx-stack-gap: 12px;
+}
+
+.facArxxRule {
+  flex-shrink: 0;
+  width: 100%;
+  height: 0.5px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: var(--sem-border-strong);
+  box-sizing: border-box;
+}
+
+.facArxxFocusTop {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.facArxxPlateHeader {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+  border-bottom: none;
+}
+
+.facArxxPlateHeaderTitle {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sem-text-muted);
+}
+
+.facArxxPlateHeaderActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.facArxxPlateHeaderBtn {
+  opacity: 0.92;
+}
+
+.facArxxPlateHeaderBtn:global(.vigil-btn[data-size="icon"]) {
+  --btn-height: var(--sys-control-height-xs);
+  width: var(--sys-control-height-xs);
+  min-width: var(--sys-control-height-xs);
+}
+
+.facArxxLetterhead {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  text-align: center;
+  overflow: visible;
+}
+
+.facArxxLetterheadPh {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: visible;
+  --sk-id-surface: var(--fac-arxx-bg);
+  --sk-id-text: var(--fac-arxx-fg);
+  --sk-v11-marker: color-mix(in oklch, var(--fac-arxx-fg) 32%, var(--fac-arxx-bg));
+  --sk-v11-marker-h: 22px;
+  --sk-v11-marker-tail: 100%;
+  --sem-text-primary: var(--fac-arxx-fg);
+  --sem-text-muted: var(--fac-arxx-accent);
+}
+
+/*
+ * Character v11 placeholders use overflow:hidden + contain:paint so marker UI stays tidy on credentials.
+ * Faction letterhead reuses those classes but rotated/skewed ::after strips must paint outside the content box.
+ */
+.charSkShellV11.facArxxLetterheadPh .charSkDisplayName[data-hg-lore-placeholder="true"],
+.charSkShellV11.facArxxLetterheadPh .charSkRole[data-hg-lore-placeholder="true"] {
+  overflow: visible;
+  contain: none;
+}
+
+.facArxxLetterheadPh .facArxxLetterheadPrimary,
+.facArxxLetterheadPh .facArxxLetterheadSecondary {
+  align-self: stretch;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.facArxxLetterheadPrimary {
+  margin: 0 0 8px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.facArxxLetterheadSecondary {
+  text-align: center;
+  outline: none;
+  overflow-wrap: anywhere;
+}
+
+@keyframes facArxxLetterheadPrimaryStripWipe {
+  from {
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg))
+      scaleX(0);
+  }
+
+  to {
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg))
+      scaleX(1);
+  }
+}
+
+.facArxxLetterheadPh .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"] {
+  font-family: var(--font-hg-id-playfair), var(--font-lora), serif;
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+  text-transform: uppercase;
+  color: var(--fac-arxx-fg);
+  -webkit-text-fill-color: var(--fac-arxx-fg);
+}
+
+@supports (width: 1cqi) {
+  .facArxxLetterheadPh .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"] {
+    font-size: 1.5rem;
+  }
+}
+
+.facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  font-family: var(--font-hg-id-playfair), var(--font-lora), serif;
+  font-size: 0.8125rem;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--fac-arxx-accent);
+  -webkit-text-fill-color: var(--fac-arxx-accent);
+  min-height: max(1.35em, var(--sk-v11-marker-h));
+  box-sizing: border-box;
+}
+
+.facArxxLetterheadPh
+  .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"][data-hg-lore-placeholder="true"],
+.facArxxLetterheadPh
+  .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"][data-hg-lore-placeholder="true"][data-hg-lore-ph] {
+  height: max(1.35em, var(--sk-v11-marker-h));
+}
+
+.facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"]:focus,
+.facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"]:focus-within {
+  color: var(--fac-arxx-accent) !important;
+  -webkit-text-fill-color: var(--fac-arxx-accent) !important;
+}
+
+.facArxxLetterheadPh
+  .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"][data-hg-lore-ph]::before,
+.facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
+  content: none !important;
+}
+
+.facArxxLetterheadPh
+  .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"],
+.facArxxLetterheadPh
+  .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"][data-hg-lore-ph] {
+  min-height: max(1.62em, calc(var(--sk-v11-marker-h) + 8px));
+  height: max(1.62em, calc(var(--sk-v11-marker-h) + 8px));
+  box-sizing: border-box;
+}
+
+.facArxxLetterheadPh
+  .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]::after {
+  top: var(--hg-lore-ph-y, 0px);
+  bottom: auto;
+  left: var(--sk-v11-marker-inset-left) !important;
+  width: calc(100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right)) !important;
+  height: calc(var(--hg-lore-ph-lh, var(--sk-v11-marker-h)) + 6px);
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg))
+    scaleX(1);
+  transform-origin: left top;
+  animation: facArxxLetterheadPrimaryStripWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in oklch, var(--sys-color-white) var(--sk-v11-marker-gloss, 2.5%), transparent) 0%,
+      transparent 80%
+    ),
+    var(--sk-v11-marker);
+  background-blend-mode: soft-light, normal;
+  box-shadow: 0 0 2px var(--sk-v11-marker);
+  filter: none;
+}
+
+.facArxxLetterheadPh
+  .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]:focus::after,
+.facArxxLetterheadPh
+  .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]:focus-within::after {
+  animation: none;
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg))
+    scaleX(0);
+  transition: transform var(--sk-v11-marker-hide-ms) var(--sk-v11-marker-hide-ease);
+}
+
+.facArxxLetterheadPh
+  .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"][data-hg-lore-placeholder="true"]::after {
+  top: auto !important;
+  bottom: 3px !important;
+  transform-origin: left center !important;
+  left: var(--sk-v11-marker-inset-left) !important;
+  width: calc(100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right)) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .facArxxLetterheadPh
+    .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]::after {
+    animation: none;
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg))
+      scaleX(1);
+  }
+
+  .facArxxLetterheadPh
+    .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]:focus::after,
+  .facArxxLetterheadPh
+    .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]:focus-within::after {
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg))
+      scaleX(1);
+    opacity: 0;
+    transition: opacity 0.12s ease;
+  }
+}
+
+.facArxxRoot .facArxxLetterheadPh [data-hg-lore-faction-field="orgNamePrimary"][contenteditable="true"],
+.facArxxRoot .facArxxLetterheadPh [data-hg-lore-faction-field="orgNameAccent"][contenteditable="true"] {
+  cursor: text;
+  outline: none;
+  box-shadow: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.facArxxTextSection {
+  width: 100%;
+  min-width: 0;
+}
+
+.facArxxH2 {
+  margin: 0 0 10px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sem-text-muted);
+}
+
+.facArxxH2Row {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.facArxxH2Row .facArxxH2 {
+  margin: 0;
+  padding: 0;
+  border-bottom: none;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.facArxxH2Meta {
+  flex-shrink: 0;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--sem-text-muted);
+}
+
+.facArxxRecordCell {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-height: 0;
+}
+
+.facArxxRecordInner {
+  margin: 0;
+  min-height: 48px;
+}
+
+.facArxxHgHost {
+  --fac-arxx-doc-edge-fade: 16px;
+
+  max-height: 132px;
+  margin-bottom: 10px;
+  padding: 2px 12px 0 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--sem-text-secondary);
+  text-align: justify;
+  outline: none;
+  scrollbar-color: var(--sem-border-subtle) transparent;
+  scrollbar-width: thin;
+}
+
+.facArxxHgHost[data-hg-fac-arxx-doc-mask] {
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+}
+
+.facArxxHgHost[data-hg-fac-arxx-doc-mask="both"] {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 var(--fac-arxx-doc-edge-fade),
+    #000 calc(100% - var(--fac-arxx-doc-edge-fade)),
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 var(--fac-arxx-doc-edge-fade),
+    #000 calc(100% - var(--fac-arxx-doc-edge-fade)),
+    transparent
+  );
+}
+
+.facArxxHgHost[data-hg-fac-arxx-doc-mask="end"] {
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - var(--fac-arxx-doc-edge-fade)),
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - var(--fac-arxx-doc-edge-fade)),
+    transparent
+  );
+}
+
+.facArxxHgHost[data-hg-fac-arxx-doc-mask="start"] {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 var(--fac-arxx-doc-edge-fade),
+    #000 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 var(--fac-arxx-doc-edge-fade),
+    #000 100%
+  );
+}
+
+.facArxxHgHost :global(.ProseMirror) {
+  min-height: 44px;
+  outline: none;
+}
+
+.facArxxHgHost :global(.ProseMirror p) {
+  margin: 0 0 10px;
+}
+
+.facArxxHgHost :global(.ProseMirror p:last-child) {
+  margin-bottom: 0;
+}
+
+.facArxxHgHost :global(.ProseMirror em) {
+  font-style: italic;
+}
+
+.facArxxRoot .facArxxHgHost:focus-within {
+  outline: none;
+  box-shadow: none;
+}
+
+.facArxxRosterCanvasList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.facArxxRosterCanvasEmpty {
+  padding: 14px 12px;
+  border: 1px dashed var(--sem-border-subtle);
+  border-radius: 2px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.facArxxRosterCanvasEmptyTitle {
+  margin: 0 0 8px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sem-text-muted);
+}
+
+.facArxxRosterCanvasEmptyHint {
+  margin: 0;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--sem-text-secondary);
+}
+
+.facArxxRosterCanvasEmptyHint strong {
+  font-weight: 600;
+  color: var(--sem-text-primary);
+}
+
+.facArxxRosterCanvasEmptyKey {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  color: var(--sem-text-muted);
+}
+
+.facArxxRosterCanvasRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 11px 11px;
+  border: 1px dashed var(--sem-border-subtle);
+  border-radius: 2px;
+}
+
+.facArxxRosterCanvasRowText {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--sem-text-primary);
+}
+
+.facArxxRosterCanvasRowMeta {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--sem-text-muted);
+}

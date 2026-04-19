@@ -481,7 +481,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             },
             lore_variant: {
               type: "string",
-              enum: ["v1", "v2", "v3", "v11"],
+              enum: ["v1", "v2", "v3", "v4", "v11"],
               description: "Shell layout variant when using lore_entity",
             },
             canonical_entity_kind: {
@@ -1144,7 +1144,13 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       if (typeof args.canonical_entity_kind === "string" && args.canonical_entity_kind.trim()) {
         body.canonical_entity_kind = args.canonical_entity_kind.trim();
       }
-      if (args.lore_variant === "v1" || args.lore_variant === "v2" || args.lore_variant === "v3" || args.lore_variant === "v11") {
+      if (
+        args.lore_variant === "v1" ||
+        args.lore_variant === "v2" ||
+        args.lore_variant === "v3" ||
+        args.lore_variant === "v4" ||
+        args.lore_variant === "v11"
+      ) {
         body.lore_variant = args.lore_variant;
       }
       if (typeof args.color === "string" && args.color.trim()) body.color = args.color.trim();

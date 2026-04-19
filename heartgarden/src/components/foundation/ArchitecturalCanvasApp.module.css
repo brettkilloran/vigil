@@ -1265,6 +1265,14 @@
   background: transparent;
 }
 
+/* Faction Archive-091 slab — inner `.facArxxRoot` carries plate chrome; drop generic entity shell fill. */
+.loreFactionArchiveCanvasRoot {
+  max-height: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
 .nodeBody.loreLocationOrdoBody {
   padding: 0;
   width: 100%;
@@ -4726,26 +4734,26 @@ button.rootDockPanel.viewportMetricsPanel {
  * Document-style prose on dark scrim (media gallery notes share `.focusBody` with the sheet editor).
  * Exclude v11 lore credential: the plate brings its own palette.
  */
-.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument) {
+.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument):not(.focusFactionDocument) {
   color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
 }
 
-.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument) h1 {
+.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument):not(.focusFactionDocument) h1 {
   color: color-mix(in oklch, var(--sys-color-white) 96%, transparent);
 }
 
-.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument) h2,
-.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument) h3 {
+.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument):not(.focusFactionDocument) h2,
+.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument):not(.focusFactionDocument) h3 {
   color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
 }
 
-.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument) pre {
+.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument):not(.focusFactionDocument) pre {
   background: color-mix(in oklch, var(--sys-color-neutral-900) 85%, transparent);
   border-color: color-mix(in oklch, var(--sys-color-white) 12%, transparent);
   color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
 }
 
-.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument) hr {
+.focusEditorDark .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument):not(.focusFactionDocument) hr {
   border-top-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
 }
 
@@ -4864,10 +4872,11 @@ button.rootDockPanel.viewportMetricsPanel {
 /* Only widen when the sheet is actually shown (overlay stays mounted with opacity 0 when closed). */
 .focusOverlay.focusActive
   .focusSheet:has(
-    .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument)
+    .focusBody:not(.focusCode):not(.focusCharacterDocument):not(.focusLocationDocument):not(.focusFactionDocument)
   ),
 .focusOverlay.focusActive .focusSheet:has(.focusBody.focusCharacterDocument),
-.focusOverlay.focusActive .focusSheet:has(.focusBody.focusLocationDocument) {
+.focusOverlay.focusActive .focusSheet:has(.focusBody.focusLocationDocument),
+.focusOverlay.focusActive .focusSheet:has(.focusBody.focusFactionDocument) {
   --focus-doc-gutter-left: 62px;
 }
 
@@ -5654,6 +5663,253 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusLocationDocument :global([data-hg-lore-location-focus-notes="true"] > pre:has(.archBlockDragHandle)) {
+  overflow-x: visible;
+}
+
+/*
+ * Faction Archive-091 — focus: org letterhead + Record (TipTap hybrid).
+ */
+.focusBody.focusFactionDocument {
+  min-height: 50vh;
+  padding: 0;
+}
+
+.focusBody.focusFactionDocument :global([data-hg-faction-focus-doc="v1"]) {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.focusBody.focusFactionDocument :global([data-hg-faction-focus-meta="true"]) {
+  border-bottom: 1px solid color-mix(in oklch, var(--sys-color-black) 10%, transparent);
+  padding: 0 0 28px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.focusBody.focusFactionDocument[data-hg-lore-hybrid-focus="faction"] :global([data-hg-faction-focus-meta="true"]) {
+  padding: 0 0 19px;
+  margin-bottom: 4px;
+}
+
+.focusBody.focusFactionDocument :global([data-hg-faction-focus-row]) {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.focusBody.focusFactionDocument :global([data-hg-faction-focus-label="true"]) {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sem-text-muted);
+}
+
+.focusBody.focusFactionDocument :global([data-hg-faction-focus-field]) {
+  min-height: 1.2em;
+  outline: none;
+  width: 100%;
+  max-width: min(100%, 76ch);
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--sem-text-primary);
+  caret-color: color-mix(in oklch, var(--sem-focus-ring) 55%, var(--sys-color-black));
+}
+
+.focusBody.focusFactionDocument
+  :global([data-hg-faction-focus-field][data-placeholder]:not(:focus):empty)::before,
+.focusBody.focusFactionDocument
+  :global(
+    [data-hg-faction-focus-field][data-placeholder]:not(:focus):has(> br:only-child)
+  )::before {
+  content: attr(data-placeholder);
+  color: color-mix(in oklch, var(--sem-text-muted) 80%, transparent);
+  pointer-events: none;
+}
+
+.focusBody.focusFactionDocument
+  :global([data-hg-faction-focus-row="primary"] [data-hg-faction-focus-field="orgNamePrimary"]) {
+  font-size: clamp(26px, 3.6vw, 38px);
+  line-height: 1.12;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: color-mix(in oklch, var(--sys-color-black) 88%, transparent);
+}
+
+.focusBody.focusFactionDocument :global([data-hg-faction-focus-record-shell="true"]) {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+  overflow-x: visible;
+}
+
+.focusBody.focusFactionDocument :global([data-hg-faction-focus-record="true"]) {
+  min-height: min(50vh, 720px);
+  outline: none;
+  max-width: min(100%, 76ch);
+  font-size: 18px;
+  line-height: 1.72;
+  color: var(--sem-text-focus-body);
+  caret-color: color-mix(in oklch, var(--sem-focus-ring) 55%, var(--sys-color-black));
+  padding-left: 32px;
+  box-sizing: border-box;
+  overflow-x: visible;
+}
+
+.focusBody.focusFactionDocument :global([data-hg-faction-focus-record="true"] > ul[data-arch-checklist="true"]) {
+  margin-left: -32px;
+  width: calc(100% + 32px);
+  max-width: none;
+  box-sizing: border-box;
+}
+
+.focusBody.focusFactionDocument :global([data-hg-doc-editor="true"] .tiptap.ProseMirror) {
+  color: var(--sem-text-focus-body);
+  -webkit-text-fill-color: var(--sem-text-focus-body);
+}
+
+.focusEditorDark .focusBody.focusFactionDocument :global([data-hg-faction-focus-meta="true"]) {
+  border-bottom-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
+}
+
+.focusEditorDark .focusBody.focusFactionDocument :global([data-hg-lore-hybrid-notes-wrap="true"]) {
+  border-top-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
+}
+
+.focusEditorDark .focusBody.focusFactionDocument :global([data-hg-lore-hybrid-notes-label="true"]) {
+  color: color-mix(in oklch, var(--sys-color-white) 55%, transparent);
+  opacity: 0.95;
+}
+
+.focusEditorDark .focusBody.focusFactionDocument :global([data-hg-faction-focus-label="true"]) {
+  color: color-mix(in oklch, var(--sys-color-white) 55%, transparent);
+}
+
+.focusEditorDark .focusBody.focusFactionDocument :global([data-hg-faction-focus-field]) {
+  color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
+}
+
+.focusEditorDark
+  .focusBody.focusFactionDocument
+  :global([data-hg-faction-focus-row="primary"] [data-hg-faction-focus-field="orgNamePrimary"]) {
+  color: color-mix(in oklch, var(--sys-color-white) 96%, transparent);
+}
+
+.focusEditorDark .focusBody.focusFactionDocument :global([data-hg-faction-focus-field][data-placeholder]:not(:focus):empty)::before,
+.focusEditorDark
+  .focusBody.focusFactionDocument
+  :global([data-hg-faction-focus-field][data-placeholder]:not(:focus):has(> br:only-child))::before {
+  color: color-mix(in oklch, var(--sys-color-white) 45%, transparent);
+}
+
+.focusEditorDark .focusBody.focusFactionDocument :global([data-hg-faction-focus-record="true"]) {
+  color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
+  caret-color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
+}
+
+.focusEditorDark .focusBody.focusFactionDocument :global([data-hg-doc-editor="true"] .tiptap.ProseMirror) {
+  color: var(--sys-color-white);
+  -webkit-text-fill-color: var(--sys-color-white);
+}
+
+.focusEditorDark
+  .focusBody.focusFactionDocument
+  :global([data-hg-faction-focus-record="true"] .tiptap.ProseMirror) :where(h1, h2, h3) {
+  color: color-mix(in oklch, var(--sys-color-white) 94%, transparent);
+}
+
+.focusEditorDark
+  .focusBody.focusFactionDocument
+  :global([data-hg-faction-focus-record="true"] .tiptap.ProseMirror) blockquote {
+  border-left-color: color-mix(in oklch, var(--sys-color-white) 28%, transparent);
+  color: color-mix(in oklch, var(--sys-color-white) 82%, transparent);
+}
+
+.focusEditorDark
+  .focusBody.focusFactionDocument
+  :global([data-hg-faction-focus-record="true"] .tiptap.ProseMirror) pre {
+  background: color-mix(in oklch, var(--sys-color-neutral-900) 88%, transparent);
+  color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
+  border: 1px solid color-mix(in oklch, var(--sys-color-white) 12%, transparent);
+}
+
+.focusEditorDark
+  .focusBody.focusFactionDocument
+  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror) :where(h1, h2, h3) {
+  color: color-mix(in oklch, var(--sys-color-white) 94%, transparent);
+}
+
+.focusEditorDark .focusBody.focusFactionDocument :global([data-hg-doc-editor="true"] .tiptap.ProseMirror) blockquote {
+  border-left-color: color-mix(in oklch, var(--sys-color-white) 28%, transparent);
+  color: color-mix(in oklch, var(--sys-color-white) 82%, transparent);
+}
+
+.focusEditorDark .focusBody.focusFactionDocument :global([data-hg-doc-editor="true"] .tiptap.ProseMirror) pre {
+  background: color-mix(in oklch, var(--sys-color-neutral-900) 88%, transparent);
+  color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
+  border: 1px solid color-mix(in oklch, var(--sys-color-white) 12%, transparent);
+}
+
+.focusBody.focusFactionDocument :global([data-hg-faction-focus-record="true"] > p:has(.archBlockDragHandle)),
+.focusBody.focusFactionDocument :global([data-hg-faction-focus-record="true"] > h1:has(.archBlockDragHandle)),
+.focusBody.focusFactionDocument :global([data-hg-faction-focus-record="true"] > h2:has(.archBlockDragHandle)),
+.focusBody.focusFactionDocument :global([data-hg-faction-focus-record="true"] > h3:has(.archBlockDragHandle)),
+.focusBody.focusFactionDocument
+  :global([data-hg-faction-focus-record="true"] > blockquote:has(.archBlockDragHandle)),
+.focusBody.focusFactionDocument :global([data-hg-faction-focus-record="true"] > pre:has(.archBlockDragHandle)),
+.focusBody.focusFactionDocument :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > p:has(.archBlockDragHandle)),
+.focusBody.focusFactionDocument :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > h1:has(.archBlockDragHandle)),
+.focusBody.focusFactionDocument :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > h2:has(.archBlockDragHandle)),
+.focusBody.focusFactionDocument :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > h3:has(.archBlockDragHandle)),
+.focusBody.focusFactionDocument
+  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > blockquote:has(.archBlockDragHandle)),
+.focusBody.focusFactionDocument
+  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > pre:has(.archBlockDragHandle)) {
+  position: relative;
+}
+
+.focusBody.focusFactionDocument
+  :global([data-hg-faction-focus-record="true"] > p:has(.archBlockDragHandle) .archBlockDragHandle),
+.focusBody.focusFactionDocument
+  :global([data-hg-faction-focus-record="true"] > h1:has(.archBlockDragHandle) .archBlockDragHandle),
+.focusBody.focusFactionDocument
+  :global([data-hg-faction-focus-record="true"] > h2:has(.archBlockDragHandle) .archBlockDragHandle),
+.focusBody.focusFactionDocument
+  :global([data-hg-faction-focus-record="true"] > h3:has(.archBlockDragHandle) .archBlockDragHandle),
+.focusBody.focusFactionDocument
+  :global([data-hg-faction-focus-record="true"] > blockquote:has(.archBlockDragHandle) .archBlockDragHandle),
+.focusBody.focusFactionDocument
+  :global([data-hg-faction-focus-record="true"] > pre:has(.archBlockDragHandle) .archBlockDragHandle),
+.focusBody.focusFactionDocument
+  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > p:has(.archBlockDragHandle) .archBlockDragHandle),
+.focusBody.focusFactionDocument
+  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > h1:has(.archBlockDragHandle) .archBlockDragHandle),
+.focusBody.focusFactionDocument
+  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > h2:has(.archBlockDragHandle) .archBlockDragHandle),
+.focusBody.focusFactionDocument
+  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > h3:has(.archBlockDragHandle) .archBlockDragHandle),
+.focusBody.focusFactionDocument
+  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > blockquote:has(.archBlockDragHandle) .archBlockDragHandle),
+.focusBody.focusFactionDocument
+  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > pre:has(.archBlockDragHandle) .archBlockDragHandle) {
+  position: absolute;
+  left: auto;
+  right: 100%;
+  margin-right: 8px;
+  top: 0.2em;
+  margin-top: 0;
+  align-self: auto;
+  z-index: 1;
+}
+
+.focusBody.focusFactionDocument :global([data-hg-faction-focus-record="true"] > pre:has(.archBlockDragHandle)),
+.focusBody.focusFactionDocument :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > pre:has(.archBlockDragHandle)) {
   overflow-x: visible;
 }
 

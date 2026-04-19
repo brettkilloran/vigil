@@ -19,6 +19,10 @@ import {
   normalizeLocOrdoV7NameField,
 } from "@/src/lib/lore-location-focus-document-html";
 import { splitOrdoV7DisplayName } from "@/src/lib/lore-location-ordo-display-name";
+import {
+  buildFactionArchive091BodyHtml,
+  factionArchiveRailTextsFromObjectId,
+} from "@/src/lib/lore-faction-archive-html";
 
 /** @deprecated Prefer `HEARTGARDEN_MEDIA_PLACEHOLDER_SRC` from `@/src/lib/heartgarden-media-placeholder`. */
 export const LORE_PORTRAIT_PLACEHOLDER_DARK = HEARTGARDEN_MEDIA_PLACEHOLDER_SRC;
@@ -132,6 +136,7 @@ export function defaultTitleForLoreKind(kind: LoreCardKind): string {
 export function defaultLoreCardVariantForKind(kind: LoreCardKind): LoreCardVariant {
   if (kind === "character") return "v11";
   if (kind === "location") return "v7";
+  if (kind === "faction") return "v4";
   return "v1";
 }
 
@@ -141,7 +146,7 @@ export function tapeVariantForLoreCard(kind: LoreCardKind, variant: LoreCardVari
   }
   if (kind === "faction") {
     if (variant === "v2") return "masking";
-    return "clear";
+    return "dark";
   }
   /* location: v2 postcard band, v3 survey tag, v7 ORDO slab */
   if (variant === "v7" || variant === "v2") return "clear";
@@ -206,42 +211,16 @@ function characterV11(): string {
 </div>`;
 }
 
-function factionV1(): string {
-  return `<div class="${s.letterheadCenter}" contenteditable="false">
-<div class="${s.letterheadMark}" aria-hidden="true"></div>
-<div class="${s.orgName}" contenteditable="true" spellcheck="false">Organization name</div>
-<div class="${s.orgRule}" aria-hidden="true"></div>
-<div class="${s.nationLine}" contenteditable="true" spellcheck="false">Fictional nation</div>
-</div>
-<div class="${s.notesBlock}">
-<span class="${s.fieldLabel}">Document</span>
-<div class="${s.notesText}" contenteditable="true" spellcheck="false"><p>Charter, structure, relationships — keep this open-ended.</p></div>
-</div>`;
-}
-
-function factionV2(): string {
-  return `<div class="${s.letterheadAsym}" contenteditable="false">
-<div class="${s.monogram}" aria-hidden="true">N</div>
-<div>
-<div class="${s.orgName}" contenteditable="true" spellcheck="false">Organization name</div>
-<div class="${s.nationLine}" style="margin-top:8px;text-align:left" contenteditable="true" spellcheck="false">Fictional nation</div>
-</div>
-</div>
-<div class="${s.notesBlock}">
-<span class="${s.fieldLabel}">Document</span>
-<div class="${s.notesText}" contenteditable="true" spellcheck="false"><p>Charter, structure, relationships — keep this open-ended.</p></div>
-</div>`;
-}
-
-function factionV3(): string {
-  return `<div class="${s.letterheadFrame}" contenteditable="false">
-<div class="${s.orgName}" contenteditable="true" spellcheck="false">Organization name</div>
-<div class="${s.nationLine}" style="margin-top:10px" contenteditable="true" spellcheck="false">Fictional nation</div>
-</div>
-<div class="${s.notesBlock}">
-<span class="${s.fieldLabel}">Document</span>
-<div class="${s.notesText}" contenteditable="true" spellcheck="false"><p>Charter, structure, relationships — keep this open-ended.</p></div>
-</div>`;
+/** Faction Archive-091 readable — canonical canvas/focus body (rails + letterhead + record). */
+function factionArchive091Seed(seedForRails = "__hg-faction-archive__"): string {
+  const { upper, lower } = factionArchiveRailTextsFromObjectId(seedForRails);
+  return buildFactionArchive091BodyHtml({
+    orgPrimaryInnerHtml: "",
+    orgAccentInnerHtml: "",
+    recordInnerHtml: "",
+    railUpper: upper,
+    railLower: lower,
+  });
 }
 
 function locationV2(): string {
@@ -302,6 +281,8 @@ function locationV3(stripIndex: number): string {
 export type LoreNodeSeedOptions = {
   /** Stable id (or uuid) → one of eight thin gradient strips on location v3. */
   locationStripSeed?: string;
+  /** Optional seed for faction Archive-091 rail text split (defaults when omitted). */
+  factionRailSeed?: string;
 };
 
 export function getLoreNodeSeedBodyHtml(
@@ -313,9 +294,7 @@ export function getLoreNodeSeedBodyHtml(
     return characterV11();
   }
   if (kind === "faction") {
-    if (variant === "v2") return factionV2();
-    if (variant === "v3") return factionV3();
-    return factionV1();
+    return factionArchive091Seed(options?.factionRailSeed ?? "__hg-faction-archive__");
   }
   if (kind === "location") {
     if (variant === "v3") {
@@ -350,13 +329,18 @@ export function parseLoreCard(raw: unknown): LoreCard | undefined {
     if (v === "v2" || v === "v3" || v === "v7") return { kind: "location", variant: v };
     return;
   }
-  if (v !== "v1" && v !== "v2" && v !== "v3") return;
-  return { kind, variant: v };
+  if (kind === "faction") {
+    if (v === "v1" || v === "v2" || v === "v3" || v === "v4") return { kind: "faction", variant: "v4" };
+    return;
+  }
+  return;
 }
 
 /** True when saved HTML is the v11 character ID plate (CSS-module class names still contain this segment). */
 export function bodyHtmlImpliesLoreCharacterV11(html: string): boolean {
   if (!html) return false;
+  /* Faction Archive-091 letterhead composes `charSkShellV11` for typography — not a character card. */
+  if (html.includes('data-hg-lore-faction-variant="archive091"')) return false;
   return (
     html.includes("charSkShellV11") ||
     html.includes('data-hg-lore-portrait-root="v11"')
@@ -368,6 +352,7 @@ export function shouldRenderLoreCharacterCredentialCanvasNode(
   entity: Pick<CanvasContentEntity, "kind" | "bodyHtml" | "loreCard">,
 ): boolean {
   if (entity.kind !== "content") return false;
+  if (entity.loreCard?.kind === "faction") return false;
   if (entity.loreCard?.kind === "character") return true;
   return bodyHtmlImpliesLoreCharacterV11(entity.bodyHtml);
 }
@@ -389,6 +374,15 @@ export function shouldRenderLoreLocationCanvasNode(
     entity.bodyHtml.includes('data-hg-canvas-role="lore-location"') ||
     bodyHtmlImpliesLoreLocationLegacy(entity.bodyHtml)
   );
+}
+
+/** Faction Archive-091 slab (rails + letterhead + record); roster from `factionRoster`. */
+export function shouldRenderLoreFactionArchive091CanvasNode(
+  entity: Pick<CanvasContentEntity, "kind" | "bodyHtml" | "loreCard">,
+): boolean {
+  if (entity.kind !== "content") return false;
+  if (entity.loreCard?.kind === "faction") return true;
+  return entity.bodyHtml.includes('data-hg-lore-faction-variant="archive091"');
 }
 
 /**

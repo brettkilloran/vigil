@@ -17,6 +17,10 @@
   margin-bottom: 0.125rem;
 }
 
+.factionMetaHost {
+  margin-bottom: 0.125rem;
+}
+
 /* Avoid matching `[data-hg-character-focus-fields]` (contenteditable=false): inherited
    user-select:none breaks caret and typing in the nested contenteditable field cells. */
 .portraitHost :global([data-hg-character-focus-portrait="true"]) {
@@ -46,6 +50,11 @@
 /* Location: `.focusLocationDocument [data-hg-lore-location-focus-meta]` already has border-bottom in
    ArchitecturalCanvasApp — do not add border-top here or meta + Notes read as a double rule. */
 .host[data-hg-lore-hybrid-focus="location"] .notesWrap {
+  margin-top: 0.375rem;
+  padding-top: 0.725rem;
+}
+
+.host[data-hg-lore-hybrid-focus="faction"] .notesWrap {
   margin-top: 0.375rem;
   padding-top: 0.725rem;
 }

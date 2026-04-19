@@ -1,4 +1,9 @@
-import { factionRosterSchema, type FactionRosterEntry } from "@/src/lib/faction-roster-schema";
+import {
+  DEMO_FACTION_ROSTER,
+  factionRosterSchema,
+  parseFactionRoster,
+  type FactionRosterEntry,
+} from "@/src/lib/faction-roster-schema";
 
 export type LinkCharacterToRosterRowFailureCode =
   | "entry_not_found"
@@ -78,8 +83,10 @@ export function linkCharacterToFactionRosterRow(
   return { ok: true, roster: parsed.data };
 }
 
-/** One placeholder row so new faction cards can accept thread links without extra setup. */
+/** Demo roster — matches XX · Archive-091 readable lab specimen (`DEMO_FACTION_ROSTER`). */
 export function createDefaultFactionRosterSeed(): FactionRosterEntry[] {
+  const demo = parseFactionRoster(DEMO_FACTION_ROSTER);
+  if (demo?.length) return demo.map((r) => ({ ...r }));
   const id =
     typeof globalThis.crypto?.randomUUID === "function"
       ? globalThis.crypto.randomUUID()

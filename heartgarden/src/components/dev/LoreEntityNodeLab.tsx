@@ -63,6 +63,7 @@ import {
 } from "@/src/lib/lore-v9-placeholder";
 import { applyImageDataUrlToArchitecturalMediaBody } from "@/src/components/foundation/architectural-media-html";
 import { applySpellcheckToNestedEditables } from "@/src/lib/contenteditable-spellcheck";
+import { FACTION_ARCHIVE091_READABLE_DEFAULT_RECORD_HTML } from "@/src/lib/lore-faction-archive-html";
 
 /**
  * Multi-paragraph faction `document` regions use static HTML (not React element children) under `contentEditable`, so the
@@ -79,8 +80,6 @@ const FACTION_LAB_SYNTH_DOCUMENT_HTML = `<p>Canonical charter for this organizat
 const FACTION_LAB_ESSENTIALIST_CHARTER_HTML = `<p>Canonical operating charter (TipTap-capable in production). Membership below mirrors hgArch.${FACTION_ROSTER_HG_ARCH_KEY} — structured JSON, not pasted prose lists.</p><p>Quorum and succession rules bind all signatories; roster rows are the source of truth for who counts.</p>`;
 
 const FACTION_LAB_CLANDESTINE_DOCUMENT_HTML = `<p>Internal circulation only. This annex merges terminal clearance language with registry protocol: roster rows below are hgArch.${FACTION_ROSTER_HG_ARCH_KEY} (JSON), not transcribed into this body.</p><p>Do not route externally. File under the bureau docket referenced in the subject line; deviations require countersign from the archive clerk of record.</p>`;
-
-const FACTION_LAB_ARCHIVE091_READABLE_DOCUMENT_HTML = `<p>To reach <em>the Absolute Neutral</em>, surrender the chronological anchor. Catalog the exterior, then displace it in the ledger furnace — Ironwood tariff binders only.</p><p>The horizon does not curve for the eye; it curves for the soul. We are the quiet space between charter clauses.</p><p><em>Structured members: use hgArch.${FACTION_ROSTER_HG_ARCH_KEY} (JSON) in the index below — not ad-hoc metrics rows.</em></p>`;
 
 function factionRosterDemoDisplayName(row: FactionRosterEntry): string {
   if (row.kind === "character") {
@@ -1302,7 +1301,7 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
   useLayoutEffect(() => {
     const el = archiveDocumentRef.current;
     if (!el) return;
-    el.innerHTML = FACTION_LAB_ARCHIVE091_READABLE_DOCUMENT_HTML;
+    el.innerHTML = FACTION_ARCHIVE091_READABLE_DEFAULT_RECORD_HTML;
 
     /** Tolerance for “flush” with top / bottom of scrollable content (px). */
     const edgePx = 1;

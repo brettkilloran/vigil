@@ -71,6 +71,7 @@ import { ArchitecturalParentExitThreshold } from "@/src/components/foundation/Ar
 import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
 import { ArchitecturalFolderCard } from "@/src/components/foundation/ArchitecturalFolderCard";
 import { ArchitecturalLoreCharacterCanvasNode } from "@/src/components/foundation/ArchitecturalLoreCharacterCanvasNode";
+import { ArchitecturalLoreFactionArchiveCanvasNode } from "@/src/components/foundation/ArchitecturalLoreFactionArchiveCanvasNode";
 import { ArchitecturalLoreLocationCanvasNode } from "@/src/components/foundation/ArchitecturalLoreLocationCanvasNode";
 import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";
 import { CanvasMinimap } from "@/src/components/foundation/CanvasMinimap";
@@ -274,6 +275,7 @@ import {
   defaultTitleForLoreKind,
   getLoreNodeSeedBodyHtml,
   shouldRenderLoreCharacterCredentialCanvasNode,
+  shouldRenderLoreFactionArchive091CanvasNode,
   shouldRenderLoreLocationCanvasNode,
   tapeVariantForLoreCard,
 } from "@/src/lib/lore-node-seed-html";
@@ -288,6 +290,15 @@ import {
   locationBodyToFocusDocumentHtml,
   plainPlaceNameFromLocationBodyHtml,
 } from "@/src/lib/lore-location-focus-document-html";
+import {
+  factionBodyToFocusDocumentHtml,
+  focusDocumentHtmlToFactionBody,
+} from "@/src/lib/lore-faction-focus-document-html";
+import {
+  bodyHtmlImpliesFactionArchive091,
+  plainFactionPrimaryNameFromArchiveBodyHtml,
+  withFactionArchiveObjectIdInRails,
+} from "@/src/lib/lore-faction-archive-html";
 import {
   caretIsWithinRichDocInsertRegion,
   resolveActiveRichEditorSurface,
@@ -1064,8 +1075,8 @@ function resolveLoreVariantForCreate(
     return defaultLoreCardVariantForKind(type);
   }
   if (type === "faction") {
-    if (requested === "v1" || requested === "v2" || requested === "v3") {
-      return requested;
+    if (requested === "v1" || requested === "v2" || requested === "v3" || requested === "v4") {
+      return "v4";
     }
     return defaultLoreCardVariantForKind(type);
   }
@@ -1503,6 +1514,11 @@ function projectBodyHtmlForFocus(
   if (shouldRenderLoreLocationCanvasNode(entity)) {
     return locationBodyToFocusDocumentHtml(bodyHtml);
   }
+  if (shouldRenderLoreFactionArchive091CanvasNode(entity)) {
+    return factionBodyToFocusDocumentHtml(
+      withFactionArchiveObjectIdInRails(bodyHtml, entity.id),
+    );
+  }
   return bodyHtml;
 }
 
@@ -1520,6 +1536,17 @@ function canonicalizeCharacterBodyHtml(
     normalizedBody,
     entity.id,
   );
+}
+
+function canonicalizeFactionBodyHtml(
+  entity: Pick<CanvasContentEntity, "id" | "kind" | "bodyHtml" | "loreCard">,
+  bodyHtml: string,
+): string {
+  if (!shouldRenderLoreFactionArchive091CanvasNode(entity)) return bodyHtml;
+  const base = bodyHtmlImpliesFactionArchive091(bodyHtml)
+    ? bodyHtml
+    : getLoreNodeSeedBodyHtml("faction", "v4", { factionRailSeed: entity.id });
+  return withFactionArchiveObjectIdInRails(base, entity.id);
 }
 
 type LassoRectScreen = { x1: number; y1: number; x2: number; y2: number };
@@ -1562,6 +1589,22 @@ function targetIsLoreLocationOrdoCanvasDragChrome(target: Element): boolean {
   const root = target.closest('[data-hg-canvas-role="lore-location"][data-lore-variant="v7"]');
   if (!root) return false;
   if (!target.closest("[data-hg-lore-ordo-drag-handle='true']")) return false;
+  if (target.closest("[data-expand-btn='true']")) return false;
+  if (
+    target.closest(
+      "button, a, input, textarea, select, [role='button']",
+    )
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/** Faction Archive-091: drag from plate header strip only (`data-hg-faction-archive-drag-handle`). */
+function targetIsLoreFactionArchiveCanvasDragChrome(target: Element): boolean {
+  const root = target.closest('[data-hg-canvas-role="lore-faction"][data-lore-variant="v4"]');
+  if (!root) return false;
+  if (!target.closest("[data-hg-faction-archive-drag-handle='true']")) return false;
   if (target.closest("[data-expand-btn='true']")) return false;
   if (
     target.closest(
@@ -4324,15 +4367,27 @@ export function ArchitecturalCanvasApp({
     if (activeNodeId) {
       const entity = graphRef.current.entities[activeNodeId];
       if (entity && entity.kind === "content") {
+        const factionTemplate =
+          bodyHtmlImpliesFactionArchive091(entity.bodyHtml)
+            ? entity.bodyHtml
+            : getLoreNodeSeedBodyHtml("faction", "v4", { factionRailSeed: entity.id });
         const nextBodyResolved = shouldRenderLoreCharacterCredentialCanvasNode(entity)
           ? focusDocumentHtmlToCharacterV11Body(normalizedFocusBody, entity.bodyHtml, entity.id)
           : shouldRenderLoreLocationCanvasNode(entity)
             ? focusDocumentHtmlToLocationBody(normalizedFocusBody, entity.bodyHtml)
-            : normalizedFocusBody;
+            : shouldRenderLoreFactionArchive091CanvasNode(entity)
+              ? withFactionArchiveObjectIdInRails(
+                  focusDocumentHtmlToFactionBody(normalizedFocusBody, factionTemplate),
+                  entity.id,
+                )
+              : normalizedFocusBody;
         const nextTitleResolved = shouldRenderLoreLocationCanvasNode(entity)
           ? plainPlaceNameFromLocationBodyHtml(nextBodyResolved).trim() ||
             defaultTitleForLoreKind("location")
-          : focusTitle.trim() || "Untitled";
+          : shouldRenderLoreFactionArchive091CanvasNode(entity)
+            ? plainFactionPrimaryNameFromArchiveBodyHtml(nextBodyResolved).trim() ||
+              defaultTitleForLoreKind("faction")
+            : focusTitle.trim() || "Untitled";
         const bodyChanged = hgDefault
           ? JSON.stringify(focusDoc) !== JSON.stringify(focusBaselineBodyDoc)
           : entity.bodyHtml !== nextBodyResolved;
@@ -4343,15 +4398,27 @@ export function ArchitecturalCanvasApp({
       setGraph((prev) => {
         const entity = prev.entities[activeNodeId];
         if (!entity || entity.kind !== "content") return prev;
+        const facTpl =
+          bodyHtmlImpliesFactionArchive091(entity.bodyHtml)
+            ? entity.bodyHtml
+            : getLoreNodeSeedBodyHtml("faction", "v4", { factionRailSeed: entity.id });
         const nextBody = shouldRenderLoreCharacterCredentialCanvasNode(entity)
           ? focusDocumentHtmlToCharacterV11Body(normalizedFocusBody, entity.bodyHtml, entity.id)
           : shouldRenderLoreLocationCanvasNode(entity)
             ? focusDocumentHtmlToLocationBody(normalizedFocusBody, entity.bodyHtml)
-            : normalizedFocusBody;
+            : shouldRenderLoreFactionArchive091CanvasNode(entity)
+              ? withFactionArchiveObjectIdInRails(
+                  focusDocumentHtmlToFactionBody(normalizedFocusBody, facTpl),
+                  entity.id,
+                )
+              : normalizedFocusBody;
         const nextTitle =
           shouldRenderLoreLocationCanvasNode(entity)
             ? plainPlaceNameFromLocationBodyHtml(nextBody).trim() || defaultTitleForLoreKind("location")
-            : focusTitle.trim() || "Untitled";
+            : shouldRenderLoreFactionArchive091CanvasNode(entity)
+              ? plainFactionPrimaryNameFromArchiveBodyHtml(nextBody).trim() ||
+                defaultTitleForLoreKind("faction")
+              : focusTitle.trim() || "Untitled";
         return {
           ...prev,
           entities: {
@@ -4370,15 +4437,27 @@ export function ArchitecturalCanvasApp({
         queueMicrotask(() => {
           const ent = graphRef.current.entities[aid];
           if (!ent || ent.kind !== "content") return;
+          const facEntTpl =
+            bodyHtmlImpliesFactionArchive091(ent.bodyHtml)
+              ? ent.bodyHtml
+              : getLoreNodeSeedBodyHtml("faction", "v4", { factionRailSeed: ent.id });
           const nextBody = shouldRenderLoreCharacterCredentialCanvasNode(ent)
             ? focusDocumentHtmlToCharacterV11Body(normalizedFocusBody, ent.bodyHtml, ent.id)
             : shouldRenderLoreLocationCanvasNode(ent)
               ? focusDocumentHtmlToLocationBody(normalizedFocusBody, ent.bodyHtml)
-              : normalizedFocusBody;
+              : shouldRenderLoreFactionArchive091CanvasNode(ent)
+                ? withFactionArchiveObjectIdInRails(
+                    focusDocumentHtmlToFactionBody(normalizedFocusBody, facEntTpl),
+                    ent.id,
+                  )
+                : normalizedFocusBody;
           const nextTitle =
             shouldRenderLoreLocationCanvasNode(ent)
               ? plainPlaceNameFromLocationBodyHtml(nextBody).trim() || defaultTitleForLoreKind("location")
-              : focusTitle.trim() || "Untitled";
+              : shouldRenderLoreFactionArchive091CanvasNode(ent)
+                ? plainFactionPrimaryNameFromArchiveBodyHtml(nextBody).trim() ||
+                  defaultTitleForLoreKind("faction")
+                : focusTitle.trim() || "Untitled";
           const merged: CanvasContentEntity = {
             ...ent,
             title: nextTitle,
@@ -4431,12 +4510,18 @@ export function ArchitecturalCanvasApp({
   ]);
 
   /** What kind of focus overlay to render for the active content node. */
-  const focusSurface = useMemo((): "default-doc" | "code" | "character-hybrid" | "location-hybrid" => {
+  const focusSurface = useMemo(():
+    | "default-doc"
+    | "code"
+    | "character-hybrid"
+    | "location-hybrid"
+    | "faction-hybrid" => {
     if (!focusOpen || !activeNodeId) return "default-doc";
     const ent = graph.entities[activeNodeId];
     if (!ent || ent.kind !== "content") return "default-doc";
     if (shouldRenderLoreCharacterCredentialCanvasNode(ent)) return "character-hybrid";
     if (shouldRenderLoreLocationCanvasNode(ent)) return "location-hybrid";
+    if (shouldRenderLoreFactionArchive091CanvasNode(ent)) return "faction-hybrid";
     if (ent.theme === "code") return "code";
     return "default-doc";
   }, [focusOpen, activeNodeId, graph.entities]);
@@ -6019,7 +6104,8 @@ export function ArchitecturalCanvasApp({
         ent.kind !== "content" ||
         ent.theme === "media" ||
         shouldRenderLoreCharacterCredentialCanvasNode(ent) ||
-        shouldRenderLoreLocationCanvasNode(ent)
+        shouldRenderLoreLocationCanvasNode(ent) ||
+        shouldRenderLoreFactionArchive091CanvasNode(ent)
       ) {
         return null;
       }
@@ -6044,7 +6130,8 @@ export function ArchitecturalCanvasApp({
         ent.kind !== "content" ||
         ent.theme === "media" ||
         shouldRenderLoreCharacterCredentialCanvasNode(ent) ||
-        shouldRenderLoreLocationCanvasNode(ent)
+        shouldRenderLoreLocationCanvasNode(ent) ||
+        shouldRenderLoreFactionArchive091CanvasNode(ent)
       ) {
         return null;
       }
@@ -6444,7 +6531,8 @@ export function ArchitecturalCanvasApp({
     const x = center.x - 170 + (Math.random() * 60 - 30);
     const y = center.y - 100 + (Math.random() * 60 - 30);
     const rotation = (Math.random() - 0.5) * 4;
-    const tapeRotation = (Math.random() - 0.5) * 6;
+    const tapeRotation =
+      type === "faction" ? -1.2 : (Math.random() - 0.5) * 6;
     const nextZ = maxZIndexRef.current + 1;
     setMaxZIndex(nextZ);
 
@@ -8122,15 +8210,21 @@ export function ArchitecturalCanvasApp({
        * onDoubleClick on ArchitecturalFolderCard (with stopPropagation). */
       const inBody = !!target.closest(`.${styles.nodeBody}`);
       const loroOrdoDragChrome = targetIsLoreLocationOrdoCanvasDragChrome(target);
+      const facArcDragChrome = targetIsLoreFactionArchiveCanvasDragChrome(target);
       const inLoreLocationOrdoV7Canvas = !!target.closest(
         '[data-hg-canvas-role="lore-location"][data-lore-variant="v7"]',
+      );
+      const inLoreFactionArchiveCanvas = !!target.closest(
+        '[data-hg-canvas-role="lore-faction"][data-lore-variant="v4"]',
       );
       const inContent =
         (inBody &&
           !targetIsLoreCharacterV11CanvasDragChrome(target) &&
-          !loroOrdoDragChrome) ||
+          !loroOrdoDragChrome &&
+          !facArcDragChrome) ||
         /* ORDO v7 uses LoreLocationOrdoV7Slab without `.nodeBody`; treat the slab as content unless the hit is the drag handle. */
         (inLoreLocationOrdoV7Canvas && !loroOrdoDragChrome) ||
+        (inLoreFactionArchiveCanvas && !facArcDragChrome) ||
         target.closest(`.${styles.nodeBtn}`) ||
         target.closest(`.${styles.folderTitleInput}`) ||
         target.closest("[data-folder-open-btn='true']");
@@ -8273,6 +8367,17 @@ export function ArchitecturalCanvasApp({
         node?.kind === "content" &&
         !!target.closest('[data-hg-canvas-role="lore-location"][data-lore-variant="v7"]');
       if (inLoreLocationOrdoCanvas) {
+        if (target.closest("[data-expand-btn='true']")) {
+          return;
+        }
+        openFocusMode(id);
+        return;
+      }
+
+      const inLoreFactionArchive091Canvas =
+        node?.kind === "content" &&
+        !!target.closest('[data-hg-canvas-role="lore-faction"][data-lore-variant="v4"]');
+      if (inLoreFactionArchive091Canvas) {
         if (target.closest("[data-expand-btn='true']")) {
           return;
         }
@@ -10106,6 +10211,35 @@ export function ArchitecturalCanvasApp({
                           : undefined
                       }
                     />
+                  ) : shouldRenderLoreFactionArchive091CanvasNode(entity) ? (
+                    <ArchitecturalLoreFactionArchiveCanvasNode
+                      id={entity.id}
+                      width={entity.width}
+                      tapeVariant={
+                        entity.tapeVariant ??
+                        tapeVariantForLoreCard("faction", entity.loreCard?.variant ?? "v4")
+                      }
+                      tapeRotation={entity.tapeRotation}
+                      bodyHtml={canonicalizeFactionBodyHtml(entity, entity.bodyHtml)}
+                      factionRoster={entity.factionRoster ?? []}
+                      activeTool={activeTool}
+                      dragged={dragged}
+                      selected={selected}
+                      showTape={!entity.stackId}
+                      onBodyCommit={updateNodeBody}
+                      onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
+                      wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                      onRichDocCommand={
+                        entity.theme === "default" || entity.theme === "task"
+                          ? (command, value) => runFormat(command, value)
+                          : undefined
+                      }
+                      emptyPlaceholder={
+                        entity.theme === "default" || entity.theme === "task"
+                          ? "Write here, or type / for blocks…"
+                          : undefined
+                      }
+                    />
                   ) : (
                     <ArchitecturalNodeCard
                       id={entity.id}
@@ -10328,6 +10462,36 @@ export function ArchitecturalCanvasApp({
                           selected={false}
                           showTape={false}
                           showStaple={!entity.stackId}
+                          bodyEditable={false}
+                          onBodyCommit={updateNodeBody}
+                          onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
+                          wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                          onRichDocCommand={
+                            entity.theme === "default" || entity.theme === "task"
+                              ? (command, value) => runFormat(command, value)
+                              : undefined
+                          }
+                          emptyPlaceholder={
+                            entity.theme === "default" || entity.theme === "task"
+                              ? "Write here, or type / for blocks…"
+                              : undefined
+                          }
+                        />
+                      ) : shouldRenderLoreFactionArchive091CanvasNode(entity) ? (
+                        <ArchitecturalLoreFactionArchiveCanvasNode
+                          id={entity.id}
+                          width={entity.width}
+                          tapeVariant={
+                            entity.tapeVariant ??
+                            tapeVariantForLoreCard("faction", entity.loreCard?.variant ?? "v4")
+                          }
+                          tapeRotation={entity.tapeRotation}
+                          bodyHtml={canonicalizeFactionBodyHtml(entity, entity.bodyHtml)}
+                          factionRoster={entity.factionRoster ?? []}
+                          activeTool={activeTool}
+                          dragged={draggingStack}
+                          selected={false}
+                          showTape={!entity.stackId}
                           bodyEditable={false}
                           onBodyCommit={updateNodeBody}
                           onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
@@ -11678,6 +11842,35 @@ export function ArchitecturalCanvasApp({
                           : undefined
                       }
                     />
+                  ) : shouldRenderLoreFactionArchive091CanvasNode(entity) ? (
+                    <ArchitecturalLoreFactionArchiveCanvasNode
+                      id={entity.id}
+                      width={entity.width}
+                      tapeVariant={
+                        entity.tapeVariant ??
+                        tapeVariantForLoreCard("faction", entity.loreCard?.variant ?? "v4")
+                      }
+                      tapeRotation={entity.tapeRotation}
+                      bodyHtml={canonicalizeFactionBodyHtml(entity, entity.bodyHtml)}
+                      factionRoster={entity.factionRoster ?? []}
+                      activeTool={activeTool}
+                      dragged={!!drag}
+                      selected={false}
+                      showTape={!entity.stackId}
+                      onBodyCommit={updateNodeBody}
+                      onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
+                      wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                      onRichDocCommand={
+                        entity.theme === "default" || entity.theme === "task"
+                          ? (command, value) => runFormat(command, value)
+                          : undefined
+                      }
+                      emptyPlaceholder={
+                        entity.theme === "default" || entity.theme === "task"
+                          ? "Write here, or type / for blocks…"
+                          : undefined
+                      }
+                    />
                   ) : (
                     <ArchitecturalNodeCard
                       id={entity.id}
@@ -11856,7 +12049,8 @@ export function ArchitecturalCanvasApp({
         className={`${styles.focusOverlay} ${focusOpen ? styles.focusActive : ""} ${
           focusSurface === "code" ||
           focusSurface === "character-hybrid" ||
-          focusSurface === "location-hybrid"
+          focusSurface === "location-hybrid" ||
+          focusSurface === "faction-hybrid"
             ? styles.focusEditorDark
             : ""
         }`}
@@ -11867,7 +12061,9 @@ export function ArchitecturalCanvasApp({
             <div className={styles.focusHeaderLead}>
               <div
                 className={`${styles.focusMeta} ${
-                  focusSurface === "character-hybrid" || focusSurface === "location-hybrid"
+                  focusSurface === "character-hybrid" ||
+                  focusSurface === "location-hybrid" ||
+                  focusSurface === "faction-hybrid"
                     ? styles.focusMetaReadable
                     : ""
                 }`}
@@ -11883,7 +12079,8 @@ export function ArchitecturalCanvasApp({
                     variant={
                       focusSurface === "code" ||
                       focusSurface === "character-hybrid" ||
-                      focusSurface === "location-hybrid"
+                      focusSurface === "location-hybrid" ||
+                      focusSurface === "faction-hybrid"
                         ? "llmFocusDark"
                         : "llmLight"
                     }
@@ -11921,7 +12118,9 @@ export function ArchitecturalCanvasApp({
             />
           </div>
           <div className={styles.focusContent}>
-            {focusSurface === "character-hybrid" || focusSurface === "location-hybrid" ? null : (
+            {focusSurface === "character-hybrid" ||
+            focusSurface === "location-hybrid" ||
+            focusSurface === "faction-hybrid" ? null : (
               <BufferedTextInput
                 type="text"
                 className={styles.focusTitle}
@@ -11932,17 +12131,27 @@ export function ArchitecturalCanvasApp({
                 data-focus-title-editor="true"
               />
             )}
-            {focusSurface === "character-hybrid" || focusSurface === "location-hybrid" ? (
+            {focusSurface === "character-hybrid" ||
+            focusSurface === "location-hybrid" ||
+            focusSurface === "faction-hybrid" ? (
               <LoreHybridFocusEditor
                 key={`lore-hybrid-${activeNodeId ?? "none"}-${focusSurface}`}
-                variant={focusSurface === "character-hybrid" ? "character" : "location"}
+                variant={
+                  focusSurface === "character-hybrid"
+                    ? "character"
+                    : focusSurface === "faction-hybrid"
+                      ? "faction"
+                      : "location"
+                }
                 focusHtml={focusBody}
                 onChangeFocusHtml={setFocusBody}
                 focusDocumentKey={activeNodeId ?? ""}
                 className={`${styles.focusBody} ${
                   focusSurface === "character-hybrid"
                     ? styles.focusCharacterDocument
-                    : styles.focusLocationDocument
+                    : focusSurface === "faction-hybrid"
+                      ? styles.focusFactionDocument
+                      : styles.focusLocationDocument
                 }`}
               />
             ) : (

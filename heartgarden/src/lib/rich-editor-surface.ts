@@ -39,6 +39,12 @@ export function caretIsWithinRichDocInsertRegion(
   if (surfaceRoot.querySelector('[data-hg-location-focus-doc="v1"]')) {
     return !!focusEl.closest('[data-hg-lore-location-focus-notes="true"]');
   }
+  if (surfaceRoot.querySelector('[data-hg-faction-focus-doc="v1"]')) {
+    return !!focusEl.closest('[data-hg-faction-focus-record="true"]');
+  }
+  if (surfaceRoot.closest('[data-hg-canvas-role="lore-faction"]')) {
+    return !!focusEl.closest("[data-hg-lore-faction-record]");
+  }
   return true;
 }
 

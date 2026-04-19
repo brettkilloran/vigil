@@ -61,4 +61,16 @@ test.describe("heartgarden smoke", () => {
     expect(styleSnapshot.backgroundImage).toContain("linear-gradient");
     expect(styleSnapshot.boxShadow).toContain("inset");
   });
+
+  test("creates an organization node with Archive-091 canvas shell", async ({ page }) => {
+    await gotoCanvasAfterBoot(page);
+
+    const nodes = page.locator("[data-node-id]");
+    const beforeCount = await nodes.count();
+    await page.getByRole("button", { name: "Organization" }).click();
+    await expect(nodes).toHaveCount(beforeCount + 1);
+
+    const orgNode = nodes.nth(beforeCount);
+    await expect(orgNode.locator('[data-hg-lore-faction-variant="archive091"]')).toBeVisible();
+  });
 });

@@ -139,9 +139,9 @@ export const DEFAULT_CREATE_ACTIONS: DockCreateAction[] = [
 /** Labels for lore layout variants (palette hints, import UI, etc.). */
 export function loreVariantChoiceLabel(kind: LoreCardKind, v: LoreCardVariant): string {
   if (kind === "faction") {
-    if (v === "v1") return "Letterhead";
-    if (v === "v2") return "Monogram rail";
-    return "Framed memo";
+    if (v === "v4") return "Archive-091";
+    if (v === "v1" || v === "v2" || v === "v3") return "Archive-091";
+    return v;
   }
   if (kind === "location") {
     if (v === "v7") return "ORDO coordinate slab";

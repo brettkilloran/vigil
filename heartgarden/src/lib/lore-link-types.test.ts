@@ -13,7 +13,7 @@ function contentEntity(id: string, loreKind: "character" | "faction" | "location
       ? { kind: "character" as const, variant: "v11" as const }
       : loreKind === "location"
         ? { kind: "location" as const, variant: "v2" as const }
-        : { kind: "faction" as const, variant: "v1" as const };
+        : { kind: "faction" as const, variant: "v4" as const };
   return {
     id,
     kind: "content",

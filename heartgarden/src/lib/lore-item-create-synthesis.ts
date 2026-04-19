@@ -23,6 +23,9 @@ export function resolveLoreCardForCreate(args: {
   if (kind === "character") {
     return { kind: "character", variant: "v11" };
   }
+  if (kind === "faction") {
+    return { kind: "faction", variant: "v4" };
+  }
   const v = args.loreVariant;
   if (v === "v1" || v === "v2" || v === "v3") {
     return { kind, variant: v };
