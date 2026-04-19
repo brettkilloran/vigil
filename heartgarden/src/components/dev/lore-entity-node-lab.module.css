@@ -2222,7 +2222,8 @@
   --fac-arxx-border: rgba(245, 245, 245, 0.24);
 
   padding: 0;
-  overflow: hidden;
+  /* Tape sits above the sheet (`top: -12px`); allow it to paint outside the plate. */
+  overflow: visible;
   border-radius: 0;
   border: 1px solid color-mix(in oklch, var(--fac-arxx-fg) 22%, var(--sys-color-neutral-900));
   background: var(--fac-arxx-bg);
@@ -2232,7 +2233,7 @@
 
 .facArxxRoot {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   cursor: default;
 }
 
@@ -2270,7 +2271,7 @@
   padding: 0 5px 0;
   min-height: 0;
   align-items: stretch;
-  /* Skeuomorphic sheet: cold top light, corner washes, paper tooth + micro-noise (`.facArxxGrain` still adds global grit). */
+  /* Skeuomorphic sheet: cold top light, corner washes, whisper tooth + faint cross-grain + single soft film grain. */
   background-color: var(--fac-arxx-bg);
   background-image:
     radial-gradient(
@@ -2292,13 +2293,20 @@
       -12deg,
       transparent,
       transparent 1px,
-      color-mix(in oklch, var(--fac-arxx-fg) 3.5%, transparent) 1px,
-      color-mix(in oklch, var(--fac-arxx-fg) 3.5%, transparent) 2px
+      color-mix(in oklch, var(--fac-arxx-fg) 2.8%, transparent) 1px,
+      color-mix(in oklch, var(--fac-arxx-fg) 2.8%, transparent) 2px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 3px,
+      color-mix(in oklch, var(--fac-arxx-fg) 1.1%, transparent) 3px,
+      color-mix(in oklch, var(--fac-arxx-fg) 1.1%, transparent) 4px
     ),
     url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: auto, auto, auto, auto, 140px 140px;
-  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
-  background-blend-mode: normal, soft-light, multiply, soft-light, overlay;
+  background-size: auto, auto, auto, auto, auto, 148px 148px;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat, repeat;
+  background-blend-mode: normal, soft-light, multiply, soft-light, soft-light, soft-light;
   box-shadow:
     inset 0 1px 0 color-mix(in oklch, var(--fac-arxx-fg) 9%, transparent),
     inset 0 -1px 0 color-mix(in oklch, var(--sys-color-black) 28%, transparent),

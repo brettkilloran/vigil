@@ -2,7 +2,7 @@
 
 import { ArrowsOutSimple } from "@phosphor-icons/react";
 import type { JSONContent } from "@tiptap/core";
-import type { CSSProperties, MutableRefObject } from "react";
+import type { MutableRefObject } from "react";
 import {
   forwardRef,
   memo,
@@ -40,6 +40,7 @@ import {
   installLoreV11PlaceholderCaretSync,
   syncLoreV11PhCaretOffsetsInHost,
 } from "@/src/lib/lore-v11-ph-caret";
+import { ordoV7StaplePlacementFromSeed } from "@/src/lib/lore-v7-staple-placement";
 
 /**
  * ORDO v7 `contentEditable` fields must not use React-managed children: the browser mutates the DOM
@@ -82,36 +83,38 @@ const ORDO_V7_LOGO_PIXEL_GRID: readonly (0 | 1)[][] = [
   [1, 1, 1, 1, 1, 1, 1, 1],
 ];
 
-/**
- * Per-card staple position + tilt: stable from seed (SSR-safe), independent of tape-only ±3°.
- * Combines tape rotation with hashed extra angle (~±7°; between prior ±11° and original ~±3°) and offset.
- */
-function ordoV7StaplePlacementFromSeed(seed: string, tapeRotationDeg?: number): CSSProperties {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) {
-    h = Math.imul(h ^ seed.charCodeAt(i), 16777619) >>> 0;
-  }
-  const mix = (salt: number) => {
-    let x = Math.imul(h ^ salt, 2246822519) >>> 0;
-    x ^= x >>> 16;
-    x = Math.imul(x, 2246822519) >>> 0;
-    return x >>> 0;
-  };
-  const hDeg = mix(0x5bd1e995);
-  const hX = mix(0xcbf29ce4);
-  const hY = mix(0x9e3779b9);
-  const extraDeg = ((hDeg % 1001) / 1001 - 0.5) * 14;
-  const deg = (tapeRotationDeg ?? 0) + extraDeg;
-  const offsetX = ((hX % 2001) / 2001 - 0.5) * 50;
-  const offsetY = ((hY % 2001) / 2001 - 0.5) * 22;
-  return {
-    "--loc-ordo-v7-staple-deg": `${deg.toFixed(2)}deg`,
-    "--loc-ordo-v7-staple-ox": `${offsetX.toFixed(2)}px`,
-    "--loc-ordo-v7-staple-oy": `${offsetY.toFixed(2)}px`,
-  } as CSSProperties;
+/** Shared top-edge pin: same anchor + seed as staple; switches metal drawing only (Option B). */
+export function OrdoV7TopPin({
+  kind,
+  nodeId,
+  labTestId,
+  tapeRotationDeg,
+}: {
+  kind: "staple" | "nail";
+  nodeId: string;
+  labTestId?: string;
+  tapeRotationDeg?: number;
+}) {
+  const seed = labTestId ?? nodeId;
+  const style = ordoV7StaplePlacementFromSeed(seed, tapeRotationDeg);
+  return (
+    <span
+      className={cardStyles.locOrdoV7Staple}
+      aria-hidden
+      data-hg-lore-location-staple={kind === "staple" ? "v7" : undefined}
+      data-hg-lore-location-nail={kind === "nail" ? "v7-unified" : undefined}
+      style={style}
+    >
+      <span
+        className={kind === "staple" ? cardStyles.locOrdoV7StapleMetal : cardStyles.locOrdoV7NailMetal}
+        aria-hidden
+      />
+    </span>
+  );
 }
 
-function OrdoV7Staple({
+/** Option A: duplicate positioning shell (`.locOrdoV7NailParallel`) + shared nail metal — lab / comparison only. */
+export function OrdoV7NailParallel({
   nodeId,
   labTestId,
   tapeRotationDeg,
@@ -124,14 +127,26 @@ function OrdoV7Staple({
   const style = ordoV7StaplePlacementFromSeed(seed, tapeRotationDeg);
   return (
     <span
-      className={cardStyles.locOrdoV7Staple}
+      className={cardStyles.locOrdoV7NailParallel}
       aria-hidden
-      data-hg-lore-location-staple="v7"
+      data-hg-lore-location-nail="v7-parallel"
       style={style}
     >
-      <span className={cardStyles.locOrdoV7StapleMetal} aria-hidden />
+      <span className={cardStyles.locOrdoV7NailMetal} aria-hidden />
     </span>
   );
+}
+
+function OrdoV7Staple({
+  nodeId,
+  labTestId,
+  tapeRotationDeg,
+}: {
+  nodeId: string;
+  labTestId?: string;
+  tapeRotationDeg?: number;
+}) {
+  return <OrdoV7TopPin kind="staple" nodeId={nodeId} labTestId={labTestId} tapeRotationDeg={tapeRotationDeg} />;
 }
 
 const TitleAndContext = memo(function TitleAndContext({

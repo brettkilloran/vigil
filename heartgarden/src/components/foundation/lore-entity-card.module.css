@@ -3885,6 +3885,72 @@
   z-index: 2;
 }
 
+/*
+ * Option A (lab): duplicate of `.locOrdoV7Staple` shell — keep anchor/size in sync when editing staple pin math.
+ */
+.locOrdoV7NailParallel {
+  --loc-ordo-v7-staple-deg: 0deg;
+  --loc-ordo-v7-staple-ox: 0px;
+  --loc-ordo-v7-staple-oy: 0px;
+  position: absolute;
+  left: calc(50% + var(--loc-ordo-v7-staple-ox, 0px));
+  top: calc(14px + var(--loc-ordo-v7-staple-oy, 0px));
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 11px;
+  margin: 0;
+  padding: 0;
+  line-height: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) rotate(var(--loc-ordo-v7-staple-deg, 0deg));
+  transform-origin: 50% 50%;
+}
+
+/* Thumbtack nail — shared by parallel shell + `OrdoV7TopPin` kind=nail (Option B uses `.locOrdoV7Staple` shell). */
+.locOrdoV7NailMetal {
+  position: relative;
+  display: block;
+  width: 15px;
+  height: 20px;
+  flex-shrink: 0;
+  isolation: isolate;
+  pointer-events: none;
+}
+
+.locOrdoV7NailMetal::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.52) 0%, transparent 45%),
+    linear-gradient(165deg, #c6c6c6 0%, #6a6a6a 48%, #242424 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.48),
+    0 2px 4px oklch(0 0 0 / 0.34);
+}
+
+.locOrdoV7NailMetal::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  transform: translateX(-50%);
+  width: 2.5px;
+  height: 10px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, #141414, #4a4a4a, #141414);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
 .locOrdoV7Inner {
   position: relative;
   z-index: 2;

@@ -1283,8 +1283,8 @@ const XX_ARCHIVE_091_READABLE_UUID_RAIL_BOTTOM = XX_ARCHIVE_091_READABLE_OBJECT_
 
 /**
  * XX · Archive-091 (readable) — same void-archive IA as IX with larger type, neutral plate chrome, and faction PRD wiring.
- * Top chrome: slim archive plate header (mono slug + focus affordance). Metrics table replaced by
- * hgArch roster demo; protocol body is `document`. No bottom serial/registry footer strip.
+ * Canvas-style top tape (`ArchitecturalNodeTape`). Top chrome: slim archive plate header (mono slug + focus affordance).
+ * Metrics table replaced by hgArch roster demo; protocol body is `document`. No bottom serial/registry footer strip.
  */
 function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
   const [archiveRoster, setArchiveRoster] = useState<FactionRosterEntry[]>(() => {
@@ -1385,6 +1385,7 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
       data-hg-lab-faction-specimen="xx-archive-091-readable"
       data-hg-lab-archive-object-uuid={XX_ARCHIVE_091_READABLE_OBJECT_UUID}
     >
+      <ArchitecturalNodeTape variant="dark" rotationDeg={-1.2} />
       <div className={labStyles.facArxxGrain} aria-hidden />
       <div className={labStyles.facArxxPage}>
         <aside className={labStyles.facArxxRail} aria-hidden>
@@ -3214,8 +3215,8 @@ function LoreEntityNodeLabInner() {
               <ul className={labStyles.spec}>
                 <li>
                   Readable successor to IX: left rail only (IX had both sides), grain, letterhead, protocol sections — larger type, same neutral
-                  plate border/shadow as IX, slim mono plate header + focus icon (lab-native, not canvas{" "}
-                  <code>nodeHeader</code>). No serial/registry footer.{" "}
+                  plate border/shadow as IX, top <code>ArchitecturalNodeTape</code> (dark variant), slim mono plate header + focus icon
+                  (lab-native, not canvas <code>nodeHeader</code>). No serial/registry footer.{" "}
                   <strong>Editable</strong> <code>orgNamePrimary</code>, <code>orgNameAccent</code> (letterhead uses same
                   v11 guest-check markers as character cards: <code>charSkShellV11</code> + <code>charSkDisplayName</code> /{" "}
                   <code>charSkRole</code>), <code>document</code> (no separate <code>context</code> strip in lab — fold
