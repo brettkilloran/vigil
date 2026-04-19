@@ -1294,11 +1294,53 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
   const archiveDocumentRef = useRef<HTMLDivElement>(null);
   const facArxxLetterheadPhRef = useRef<HTMLDivElement>(null);
 
-  /** Do not combine `dangerouslySetInnerHTML` with `contentEditable` — React reconciliation can throw (removeChild on null). */
+  /**
+   * Do not combine `dangerouslySetInnerHTML` with `contentEditable` — React reconciliation can throw (removeChild on null).
+   * Edge fade on the scrollport (`data-hg-fac-arxx-doc-mask`) updates on scroll / resize / input when content overflows.
+   */
   useLayoutEffect(() => {
     const el = archiveDocumentRef.current;
     if (!el) return;
     el.innerHTML = FACTION_LAB_ARCHIVE091_READABLE_DOCUMENT_HTML;
+
+    /** Tolerance for “flush” with top / bottom of scrollable content (px). */
+    const edgePx = 1;
+    const syncDocScrollMask = () => {
+      const sh = el.scrollHeight;
+      const ch = el.clientHeight;
+      const maxScroll = sh - ch;
+      if (maxScroll <= 0.5) {
+        el.removeAttribute("data-hg-fac-arxx-doc-mask");
+        return;
+      }
+      const st = el.scrollTop;
+      const distanceFromBottom = Math.max(0, sh - st - ch);
+      const nearTop = st <= edgePx;
+      /*
+       * `scrollTop + clientHeight >= scrollHeight - ε` is true at scrollTop=0 whenever maxScroll ≤ ε,
+       * which wrongly enables the top fade. Require real scroll for “near bottom” unless essentially flush (0).
+       */
+      const nearBottom =
+        distanceFromBottom <= edgePx && (st > edgePx || distanceFromBottom < 0.5);
+      if (nearTop && !nearBottom) {
+        el.setAttribute("data-hg-fac-arxx-doc-mask", "end");
+      } else if (!nearTop && nearBottom) {
+        el.setAttribute("data-hg-fac-arxx-doc-mask", "start");
+      } else {
+        el.setAttribute("data-hg-fac-arxx-doc-mask", "both");
+      }
+    };
+
+    el.addEventListener("scroll", syncDocScrollMask, { passive: true });
+    el.addEventListener("input", syncDocScrollMask);
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(syncDocScrollMask) : null;
+    ro?.observe(el);
+    queueMicrotask(syncDocScrollMask);
+    return () => {
+      el.removeEventListener("scroll", syncDocScrollMask);
+      el.removeEventListener("input", syncDocScrollMask);
+      ro?.disconnect();
+    };
   }, []);
 
   useLayoutEffect(() => {
@@ -1364,7 +1406,7 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
                     aria-label="Focus Mode"
                     onClick={() => {}}
                   >
-                    <ArrowsOutSimple size={12} weight="regular" />
+                    <ArrowsOutSimple size={14} weight="regular" />
                   </Button>
                 </ArchitecturalTooltip>
               </div>
