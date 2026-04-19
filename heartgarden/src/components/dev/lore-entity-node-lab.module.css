@@ -2227,7 +2227,7 @@
   border-radius: 0;
   border: 1px solid color-mix(in oklch, var(--fac-arxx-blue) 42%, var(--fac-arxx-bg));
   background: var(--fac-arxx-bg);
-  color: var(--fac-arxx-fg);
+  color: var(--sem-text-primary);
   box-shadow:
     0 0 22px color-mix(in oklch, var(--fac-arxx-blue) 16%, transparent),
     0 16px 38px color-mix(in oklch, var(--sys-color-black) 52%, transparent);
@@ -2274,7 +2274,7 @@
 }
 
 .facArxxPage > aside:first-of-type {
-  border-right: 0.5px solid var(--fac-arxx-border);
+  border-right: 0.5px solid var(--sem-border-subtle);
 }
 
 .facArxxRail {
@@ -2284,7 +2284,7 @@
   justify-content: space-between;
   padding: 8px 4px 8px 0;
   min-height: 140px;
-  color: var(--fac-arxx-fg);
+  color: var(--sem-text-primary);
   box-sizing: border-box;
 }
 
@@ -2296,7 +2296,7 @@
   font-weight: 500;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--fac-arxx-accent);
+  color: var(--sem-text-muted);
   line-height: 1.25;
 }
 
@@ -2312,8 +2312,8 @@
   height: 6px;
   background: repeating-linear-gradient(
     90deg,
-    var(--fac-arxx-fg) 0,
-    var(--fac-arxx-fg) 1px,
+    var(--sem-text-primary) 0,
+    var(--sem-text-primary) 1px,
     transparent 1px,
     transparent 3px
   );
@@ -2324,37 +2324,52 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
+  gap: var(--fac-arxx-stack-gap);
   padding-inline: 6px;
+  box-sizing: border-box;
+  --fac-arxx-stack-gap: 12px;
+}
+
+.facArxxRule {
+  flex-shrink: 0;
+  width: 100%;
+  height: 0.5px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: var(--sem-border-strong);
   box-sizing: border-box;
 }
 
 .facArxxFocusTop {
   width: 100%;
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 
-/* Lab-native strip: matches archive meta / rule weight — not canvas `nodeHeader` (no pin, no grab). */
+/* Lab strip: typographic match to canvas `ArchitecturalNodeHeader` `.nodeTitle` (no pin, no grab). */
 .facArxxPlateHeader {
   display: flex;
   width: 100%;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 4px 0 8px;
-  border-bottom: 0.5px solid var(--fac-arxx-border);
+  padding: 0;
+  border-bottom: none;
 }
 
 .facArxxPlateHeaderTitle {
+  display: flex;
   min-width: 0;
   flex: 1 1 auto;
+  align-items: center;
   font-family: var(--font-geist-mono), monospace;
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.14em;
-  line-height: 1.25;
+  line-height: 1;
   text-transform: uppercase;
-  color: color-mix(in oklch, var(--fac-arxx-fg) 88%, var(--fac-arxx-accent));
+  letter-spacing: 0.06em;
+  color: var(--sem-text-muted);
 }
 
 .facArxxPlateHeaderActions {
@@ -2367,15 +2382,59 @@
   opacity: 0.92;
 }
 
+/* Default icon `md` control is taller than the 10px mono slug — shrink to fit the strip. */
+.facArxxPlateHeaderBtn:global(.vigil-btn[data-size="icon"]) {
+  --btn-height: 22px;
+  width: 22px;
+  min-width: 22px;
+}
+
+/* Faction archive letterhead title: one-line name — use single strip wipe (not guest-check dual-line). */
+@keyframes facArxxLetterheadPrimaryStripWipe {
+  from {
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
+  }
+
+  to {
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
+  }
+}
+
 .facArxxLetterhead {
   width: 100%;
-  padding-bottom: 10px;
-  margin-bottom: 8px;
-  border-bottom: 0.5px solid var(--fac-arxx-border);
+  margin: 0;
+  padding: 0;
+  border: none;
   text-align: center;
 }
 
-.facArxxH1 {
+.facArxxLetterheadPh {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  --sk-id-surface: var(--fac-arxx-bg);
+  --sk-id-text: var(--fac-arxx-fg);
+  --sk-v11-marker: color-mix(in oklch, var(--fac-arxx-fg) 32%, var(--fac-arxx-bg));
+  --sk-v11-marker-h: 22px;
+  --sk-v11-marker-tail: 100%;
+  --sem-text-primary: var(--fac-arxx-fg);
+  --sem-text-muted: var(--fac-arxx-accent);
+}
+
+/*
+ * Strips use `width: 100%` on the field’s ::after — if the field shrinks to “REDACTED” width, markers look tiny.
+ * Stretch both lines to the letterhead shell so redaction spans the full plate title band (~2×+ vs content-sized).
+ */
+.facArxxLetterheadPh .facArxxLetterheadPrimary,
+.facArxxLetterheadPh .facArxxLetterheadSecondary {
+  align-self: stretch;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.facArxxLetterheadPrimary {
   margin: 0 0 4px;
   font-family: var(--font-hg-id-playfair), var(--font-lora), serif;
   font-size: 1.5rem;
@@ -2383,27 +2442,99 @@
   letter-spacing: -0.035em;
   line-height: 0.95;
   text-transform: uppercase;
-  outline: none;
+  text-align: center;
   overflow-wrap: anywhere;
 }
 
-.facArxxSubTitle {
+@supports (width: 1cqi) {
+  .facArxxLetterheadPh .facArxxLetterheadPrimary {
+    font-size: 1.5rem;
+  }
+}
+
+.facArxxLetterheadSecondary {
   font-family: var(--font-hg-id-playfair), var(--font-lora), serif;
   font-size: 0.8125rem;
   font-style: italic;
   font-weight: 400;
   line-height: 1.3;
   color: var(--fac-arxx-accent);
+  text-align: center;
   outline: none;
   overflow-wrap: anywhere;
 }
 
-.facArxxContentBody {
-  display: flex;
-  width: 100%;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 8px;
+/*
+ * `lore-entity-card`’s `.charSkShellV11 .charSkDisplayName…::after` is dual-line and matches our specificity when load-order
+ * ties — pin overrides with `data-hg-lore-faction-field` (faction archive primary title only).
+ */
+.facArxxLetterheadPh
+  .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"][data-hg-lore-ph]::before,
+.facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
+  content: none !important;
+}
+
+.facArxxLetterheadPh
+  .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"],
+.facArxxLetterheadPh
+  .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"][data-hg-lore-ph] {
+  min-height: max(1.35em, var(--sk-v11-marker-h));
+  height: max(1.35em, var(--sk-v11-marker-h));
+  box-sizing: border-box;
+}
+
+.facArxxLetterheadPh
+  .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]::after {
+  top: var(--hg-lore-ph-y, 0px);
+  bottom: auto;
+  /* Full band between insets — do not subtract ph-x / trim (centered title would over-shrink the strip). */
+  left: var(--sk-v11-marker-inset-left) !important;
+  width: calc(100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right)) !important;
+  height: var(--hg-lore-ph-lh, var(--sk-v11-marker-h));
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
+  transform-origin: left top;
+  animation: facArxxLetterheadPrimaryStripWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in oklch, var(--sys-color-white) var(--sk-v11-marker-gloss, 2.5%), transparent) 0%,
+      transparent 80%
+    ),
+    var(--sk-v11-marker);
+  background-blend-mode: soft-light, normal;
+  box-shadow: 0 0 2px var(--sk-v11-marker);
+  filter: none;
+}
+
+.facArxxLetterheadPh
+  .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]:focus::after,
+.facArxxLetterheadPh
+  .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]:focus-within::after {
+  animation: none;
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
+  transition: transform var(--sk-v11-marker-hide-ms) var(--sk-v11-marker-hide-ease);
+}
+
+.facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-placeholder="true"]::after {
+  left: var(--sk-v11-marker-inset-left) !important;
+  width: calc(100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right)) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .facArxxLetterheadPh
+    .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]::after {
+    animation: none;
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
+  }
+
+  .facArxxLetterheadPh
+    .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]:focus::after,
+  .facArxxLetterheadPh
+    .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]:focus-within::after {
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
+    opacity: 0;
+    transition: opacity 0.12s ease;
+  }
 }
 
 .facArxxTextSection {
@@ -2413,13 +2544,13 @@
 
 .facArxxH2 {
   margin: 0 0 6px;
-  padding-bottom: 4px;
-  border-bottom: 0.5px solid var(--fac-arxx-fg);
-  font-family: var(--font-hg-id-playfair), var(--font-lora), serif;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  color: var(--sem-text-muted);
 }
 
 .facArxxH2Row {
@@ -2429,8 +2560,6 @@
   justify-content: space-between;
   gap: 8px;
   margin: 0 0 6px;
-  padding-bottom: 4px;
-  border-bottom: 0.5px solid var(--fac-arxx-fg);
 }
 
 .facArxxH2Row .facArxxH2 {
@@ -2447,23 +2576,23 @@
   font-size: 10px;
   font-weight: 500;
   line-height: 1.25;
-  color: var(--fac-arxx-accent);
+  color: var(--sem-text-muted);
 }
 
 .facArxxDocument {
   max-height: 132px;
   margin-bottom: 8px;
-  padding-right: 4px;
+  padding-right: 12px;
   overflow-x: hidden;
   overflow-y: auto;
-  font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
-  font-size: 11.5px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
   font-weight: 400;
-  line-height: 1.52;
-  color: var(--fac-arxx-accent);
+  line-height: 1.55;
+  color: var(--sem-text-secondary);
   text-align: justify;
   outline: none;
-  scrollbar-color: var(--fac-arxx-border) var(--fac-arxx-bg);
+  scrollbar-color: var(--sem-border-subtle) transparent;
   scrollbar-width: thin;
 }
 
@@ -2480,9 +2609,8 @@
 }
 
 .facArxxRoster {
-  margin-top: 2px;
-  padding-top: 8px;
-  border-top: 0.5px dashed var(--fac-arxx-border);
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .facArxxRosterList {
@@ -2491,29 +2619,107 @@
   gap: 7px;
 }
 
+.facArxxRosterEmpty {
+  padding: 14px 12px;
+  border: 1px dashed var(--sem-border-subtle);
+  border-radius: 2px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.facArxxRosterEmptyTitle {
+  margin: 0 0 8px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sem-text-muted);
+}
+
+.facArxxRosterEmptyHint {
+  margin: 0;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--sem-text-secondary);
+}
+
+.facArxxRosterEmptyHint strong {
+  font-weight: 600;
+  color: var(--sem-text-primary);
+}
+
+.facArxxRosterEmptyKey {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  color: var(--sem-text-muted);
+}
+
 .facArxxRosterCard {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 9px 9px;
-  border: 0.5px solid color-mix(in oklch, var(--fac-arxx-border) 85%, var(--fac-arxx-fg));
+  border: 1px dashed var(--sem-border-subtle);
   border-radius: 2px;
 }
 
-.facArxxRosterCardName {
+.facArxxRosterCardBody {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.facArxxRosterField {
+  width: 100%;
   margin: 0;
-  font-size: 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.35;
   letter-spacing: -0.01em;
-  color: var(--fac-arxx-fg);
-  overflow-wrap: anywhere;
+  color: var(--sem-text-primary);
+  outline: none;
 }
 
-.facArxxRosterCardRole {
-  margin: 5px 0 0;
-  font-size: 11px;
+.facArxxRosterField::placeholder {
+  color: color-mix(in oklch, var(--sem-text-muted) 78%, transparent);
   font-weight: 500;
-  line-height: 1.35;
-  color: var(--fac-arxx-accent);
-  overflow-wrap: anywhere;
+}
+
+.facArxxRosterFieldRole {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--sem-text-muted);
+}
+
+.facArxxRosterRemoveBtn {
+  flex-shrink: 0;
+  margin: 0 -6px 0 0;
+  opacity: 0.85;
+}
+
+.facArxxRosterRemoveBtn:hover {
+  opacity: 1;
+}
+
+.facArxxRosterAddBar {
+  display: flex;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.facArxxRosterAddBtn {
+  width: 100%;
 }
 
 /* X · Lattice induction protocol (white sheet, blue accent; compact 340px lab plate). */
