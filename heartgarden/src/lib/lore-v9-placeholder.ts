@@ -171,16 +171,26 @@ export function syncLoreV9RedactedPlaceholderState(host: HTMLElement | null): vo
   const shell = host.matches?.('[class*="charSkShell"]')
     ? host
     : host.querySelector<HTMLElement>('[class*="charSkShell"]');
-  if (!shell) return;
-  for (const el of shell.querySelectorAll<HTMLElement>("[data-hg-lore-field]")) {
+  if (shell) {
+    for (const el of shell.querySelectorAll<HTMLElement>("[data-hg-lore-field]")) {
+      if (isLoreFieldPlaceholderContent(el)) {
+        el.setAttribute("data-hg-lore-placeholder", "true");
+      } else {
+        el.removeAttribute("data-hg-lore-placeholder");
+      }
+    }
+    syncLoreV11MarkerTilts(host);
+    syncLoreV11PhCaretOffsetsInHost(host);
+    return;
+  }
+  if (!host.querySelector?.("[data-hg-lore-field]")) return;
+  for (const el of host.querySelectorAll<HTMLElement>("[data-hg-lore-field]")) {
     if (isLoreFieldPlaceholderContent(el)) {
       el.setAttribute("data-hg-lore-placeholder", "true");
     } else {
       el.removeAttribute("data-hg-lore-placeholder");
     }
   }
-  syncLoreV11MarkerTilts(host);
-  syncLoreV11PhCaretOffsetsInHost(host);
 }
 
 /**
