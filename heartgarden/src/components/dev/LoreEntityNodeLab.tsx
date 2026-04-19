@@ -7,7 +7,7 @@
  * keys such as `cardVariant` once a direction is chosen.
  *
  * **Body vs document shell:** Character v11 uses **`LabSkeuoCard`** (body-only canvas plate; same stack as production).
- * Faction lab previews use **`FactionLabPlate`** (e.g. `protocolIndigoBloom`, `protocolTerminalFleet`, `protocolOcularMandate`, `protocolSynthesisArchive`, `protocolEssentialistId`) — not **`LabCard`**, so they are not constrained to
+ * Faction lab previews use **`FactionLabPlate`** (e.g. `protocolIndigoBloom`, `protocolTerminalFleet`, `protocolOcularMandate`, `protocolOcularMandateLight`, `protocolArchive091Readable`, `protocolSynthesisArchive`, `protocolEssentialistId`, `protocolClandestineBrief`) — not **`LabCard`**, so they are not constrained to
  * tape or `a4DocumentBody`. Specimen **`rosterPriming`** validates **`hgArch.factionRoster`** (`faction-roster-schema.ts`)
  * — not production `lore-node-seed-html` faction seeds. Shelf variants use **`ArchitecturalNodeHeader`** for the expand affordance. Location v2–v3
  * use **`LabCard`** to match canvas A4 nodes; v4–v7 are lab-only **`FactionLabPlate`** ORDO mono slabs — v4 static fiction;
@@ -75,6 +75,10 @@ const FACTION_LAB_SYNTH_DOCUMENT_HTML = `<p>Canonical charter for this organizat
 
 const FACTION_LAB_ESSENTIALIST_CHARTER_HTML = `<p>Canonical operating charter (TipTap-capable in production). Membership below mirrors hgArch.${FACTION_ROSTER_HG_ARCH_KEY} — structured JSON, not pasted prose lists.</p><p>Quorum and succession rules bind all signatories; roster rows are the source of truth for who counts.</p>`;
 
+const FACTION_LAB_CLANDESTINE_DOCUMENT_HTML = `<p>Internal circulation only. This annex merges terminal clearance language with registry protocol: roster rows below are hgArch.${FACTION_ROSTER_HG_ARCH_KEY} (JSON), not transcribed into this body.</p><p>Do not route externally. File under the bureau docket referenced in the subject line; deviations require countersign from the archive clerk of record.</p>`;
+
+const FACTION_LAB_ARCHIVE091_READABLE_DOCUMENT_HTML = `<p>To reach <em>the Absolute Neutral</em>, surrender the chronological anchor. Catalog the exterior, then displace it in the ledger furnace — Ironwood tariff binders only.</p><p>The horizon does not curve for the eye; it curves for the soul. We are the quiet space between charter clauses.</p><p><em>Structured members: use hgArch.${FACTION_ROSTER_HG_ARCH_KEY} (JSON) in the index below — not ad-hoc metrics rows.</em></p>`;
+
 function factionRosterDemoDisplayName(row: FactionRosterEntry): string {
   if (row.kind === "character") {
     return row.displayNameOverride ?? `Character ${row.characterItemId.slice(0, 8)}…`;
@@ -96,7 +100,15 @@ function factionRosterDemoRoleOptional(row: FactionRosterEntry): string | null {
 function FactionLabDemoHgArchRoster({
   variant,
 }: {
-  variant: "indigo" | "terminal" | "ocular" | "synthesis" | "essentialist";
+  variant:
+    | "indigo"
+    | "terminal"
+    | "ocular"
+    | "ocularLight"
+    | "archive091Readable"
+    | "synthesis"
+    | "essentialist"
+    | "clandestine";
 }) {
   const roster = parseFactionRoster(DEMO_FACTION_ROSTER);
   if (!roster?.length) {
@@ -231,6 +243,102 @@ function FactionLabDemoHgArchRoster({
     );
   }
 
+  if (variant === "ocularLight") {
+    return (
+      <div
+        className={labStyles.facOclmRoster}
+        data-hg-lore-faction-roster="1"
+        data-hg-arch-key={FACTION_ROSTER_HG_ARCH_KEY}
+      >
+        <div className={labStyles.facOclmRosterBar}>
+          <span className={labStyles.facOclmRosterBarLeft}>personnel index</span>
+          <span className={labStyles.facOclmRosterBarRight} title={`hgArch.${FACTION_ROSTER_HG_ARCH_KEY}`}>
+            {roster.length} record{roster.length === 1 ? "" : "s"}
+          </span>
+        </div>
+        <div className={labStyles.facOclmRosterList} role="list">
+          {roster.map((row) => {
+            const role = factionRosterDemoRoleOptional(row);
+            return (
+              <div
+                key={row.id}
+                className={labStyles.facOclmRosterCard}
+                role="listitem"
+                data-faction-roster-entry-id={row.id}
+                data-faction-roster-kind={row.kind}
+              >
+                <p className={labStyles.facOclmRosterCardName}>{factionRosterDemoDisplayName(row)}</p>
+                {role ? <p className={labStyles.facOclmRosterCardRole}>{role}</p> : null}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === "archive091Readable") {
+    return (
+      <div
+        className={labStyles.facArxxRoster}
+        data-hg-lore-faction-roster="1"
+        data-hg-arch-key={FACTION_ROSTER_HG_ARCH_KEY}
+      >
+        <div className={labStyles.facArxxRosterList} role="list">
+          {roster.map((row) => {
+            const role = factionRosterDemoRoleOptional(row);
+            return (
+              <div
+                key={row.id}
+                className={labStyles.facArxxRosterCard}
+                role="listitem"
+                data-faction-roster-entry-id={row.id}
+                data-faction-roster-kind={row.kind}
+              >
+                <p className={labStyles.facArxxRosterCardName}>{factionRosterDemoDisplayName(row)}</p>
+                {role ? <p className={labStyles.facArxxRosterCardRole}>{role}</p> : null}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === "clandestine") {
+    return (
+      <div
+        className={labStyles.facClandRoster}
+        data-hg-lore-faction-roster="1"
+        data-hg-arch-key={FACTION_ROSTER_HG_ARCH_KEY}
+      >
+        <div className={labStyles.facClandRosterBar}>
+          <span className={labStyles.facClandRosterBarLeft}>circulation roster</span>
+          <span className={labStyles.facClandRosterBarRight} title={`hgArch.${FACTION_ROSTER_HG_ARCH_KEY}`}>
+            {roster.length} line{roster.length === 1 ? "" : "s"} · hgArch
+          </span>
+        </div>
+        <div className={labStyles.facClandRosterList} role="list">
+          {roster.map((row) => {
+            const role = factionRosterDemoRoleOptional(row);
+            return (
+              <div
+                key={row.id}
+                className={labStyles.facClandRosterCard}
+                role="listitem"
+                data-faction-roster-entry-id={row.id}
+                data-faction-roster-kind={row.kind}
+              >
+                <p className={labStyles.facClandRosterCardName}>{factionRosterDemoDisplayName(row)}</p>
+                {role ? <p className={labStyles.facClandRosterCardRole}>{role}</p> : null}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={labStyles.facTermXivRoster}
@@ -319,6 +427,8 @@ function FactionLabPlate({
     | "protocolOrdoCompactMono"
     | "protocolSynod"
     | "protocolArchive091"
+    /** XX · Archive-091 readable — IX void archive with larger type, blue frame, editable PRD fields + hgArch roster. */
+    | "protocolArchive091Readable"
     | "protocolLattice"
     | "protocolAeonConclave"
     | "protocolAeonProtocol"
@@ -332,6 +442,10 @@ function FactionLabPlate({
     | "protocolSynthesisArchive"
     /** XVII · Essentialist ID — faction identity + charter + hgArch roster demo (ID-badge chrome); no pointer tilt JS. */
     | "protocolEssentialistId"
+    /** XVIII · Clandestine bureau brief — XII shell + XI bar + XV grid/stripes; editable PRD fields + roster demo. */
+    | "protocolClandestineBrief"
+    /** XIX · Ocular Mandate light — XV dossier in light mode, no rail, single-line sans title; roster demo. */
+    | "protocolOcularMandateLight"
     /** Data-model priming — roster + placeholder fields; not a production canvas seed. */
     | "rosterPriming";
   className?: string;
@@ -1035,6 +1149,102 @@ function FactionArchive091Body({ testId }: { testId: string }) {
   );
 }
 
+/**
+ * XX · Archive-091 (readable) — same void-archive IA as IX with larger type, subtle blue frame, and faction PRD wiring.
+ * Top chrome: slim archive plate header (mono slug + focus affordance). Metrics table replaced by
+ * hgArch roster demo; protocol body is `document`. No bottom serial/registry footer strip.
+ */
+function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
+  const archiveMemberCount = parseFactionRoster(DEMO_FACTION_ROSTER)?.length ?? 0;
+
+  return (
+    <div className={labStyles.facArxxRoot} data-testid={testId} data-hg-lab-faction-specimen="xx-archive-091-readable">
+      <div className={labStyles.facArxxGrain} aria-hidden />
+      <div className={labStyles.facArxxPage}>
+        <aside className={labStyles.facArxxRail} aria-hidden>
+          <div className={labStyles.facArxxVertical}>Restricted // Access // 091</div>
+          <svg className={labStyles.facArxxStar} viewBox="0 0 24 24">
+            <path d="M12 0L14 10L24 12L14 14L12 24L10 14L0 12L10 10L12 0Z" fill="currentColor" />
+          </svg>
+          <div className={labStyles.facArxxVertical}>07652-46738225-415523907</div>
+          <div className={labStyles.facArxxBarcode} />
+        </aside>
+
+        <div className={labStyles.facArxxMain}>
+          <div className={labStyles.facArxxFocusTop} data-hg-lab-arxx-focus-chrome="1">
+            <div className={labStyles.facArxxPlateHeader}>
+              <span className={labStyles.facArxxPlateHeaderTitle}>Archive · 091</span>
+              <div className={labStyles.facArxxPlateHeaderActions}>
+                <ArchitecturalTooltip content="Focus Mode" side="bottom" delayMs={320}>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    tone="card-dark"
+                    className={labStyles.facArxxPlateHeaderBtn}
+                    data-expand-btn="true"
+                    aria-label="Focus Mode"
+                    onClick={() => {}}
+                  >
+                    <ArrowsOutSimple size={12} weight="regular" />
+                  </Button>
+                </ArchitecturalTooltip>
+              </div>
+            </div>
+          </div>
+
+          <header className={labStyles.facArxxLetterhead}>
+            <h1
+              className={labStyles.facArxxH1}
+              contentEditable
+              spellCheck={false}
+              suppressContentEditableWarning
+              data-hg-lore-faction-field="orgNamePrimary"
+            >
+              Absence
+            </h1>
+            <div
+              className={labStyles.facArxxSubTitle}
+              contentEditable
+              spellCheck={false}
+              suppressContentEditableWarning
+              data-hg-lore-faction-field="orgNameAccent"
+            >
+              Of Mind
+            </div>
+          </header>
+
+          <div className={labStyles.facArxxContentBody}>
+            <div className={labStyles.facArxxTextSection}>
+              <div className={labStyles.facArxxH2Row}>
+                <h2 className={labStyles.facArxxH2}>Member index</h2>
+                <span
+                  className={labStyles.facArxxH2Meta}
+                  title={`hgArch.${FACTION_ROSTER_HG_ARCH_KEY}`}
+                >
+                  {archiveMemberCount} record{archiveMemberCount === 1 ? "" : "s"}
+                </span>
+              </div>
+              <FactionLabDemoHgArchRoster variant="archive091Readable" />
+            </div>
+            <div className={labStyles.facArxxTextSection}>
+              <h2 className={labStyles.facArxxH2}>Record</h2>
+              <div
+                className={labStyles.facArxxDocument}
+                contentEditable
+                spellCheck={false}
+                suppressHydrationWarning
+                data-hg-lore-faction-field="document"
+                dangerouslySetInnerHTML={{ __html: FACTION_LAB_ARCHIVE091_READABLE_DOCUMENT_HTML }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Lattice induction — legible “notice” layout for 340px: masthead, stat rows, one obligation; avatar + micro-meta omitted. */
 function FactionLatticeInductionBody({ testId }: { testId: string }) {
   return (
@@ -1446,6 +1656,84 @@ function FactionOcularMandateV15Body({ testId }: { testId: string }) {
   );
 }
 
+/**
+ * XIX · Ocular Mandate (light) — same dossier IA as XV: grid field, authorized stamp, directive, document, evidence frame,
+ * personnel roster. Light paper palette, no vertical rail, single-line Inter title (`orgNamePrimary` only; fold accent into
+ * this line in production if needed). CSS only.
+ */
+function FactionOcularMandateLightV19Body({ testId }: { testId: string }) {
+  return (
+    <div
+      className={labStyles.facOclmRoot}
+      data-testid={testId}
+      data-hg-lab-faction-specimen="xix-ocular-mandate-light"
+    >
+      <div className={labStyles.facOclmGridBg} aria-hidden />
+      <div className={labStyles.facOclmMain}>
+        <header className={labStyles.facOclmHeader}>
+          <div className={labStyles.facOclmHeaderLeft}>
+            <div className={labStyles.facOclmK}>jurisdiction</div>
+            <div
+              className={labStyles.facOclmContext}
+              contentEditable
+              spellCheck={false}
+              suppressContentEditableWarning
+              data-hg-lore-faction-field="context"
+            >
+              Central Command / Sector 7
+            </div>
+          </div>
+          <div className={labStyles.facOclmHeaderRight}>
+            <span className={labStyles.facOclmStamp}>authorized</span>
+          </div>
+        </header>
+
+        <h2
+          className={labStyles.facOclmTitle}
+          contentEditable
+          spellCheck={false}
+          suppressContentEditableWarning
+          data-hg-lore-faction-field="orgNamePrimary"
+        >
+          Ocular sovereignty
+        </h2>
+
+        <div className={labStyles.facOclmSubjectRow}>
+          <span className={labStyles.facOclmK}>directive</span>
+          <span
+            className={labStyles.facOclmSubjectVal}
+            contentEditable
+            spellCheck={false}
+            suppressContentEditableWarning
+            data-hg-lore-faction-field="subtitle"
+          >
+            THE OCULAR MANDATE // PROTOCOL 09
+          </span>
+        </div>
+
+        <div
+          className={labStyles.facOclmDocument}
+          contentEditable
+          spellCheck={false}
+          suppressHydrationWarning
+          data-hg-lore-faction-field="document"
+          dangerouslySetInnerHTML={{ __html: FACTION_LAB_OCULAR_DOCUMENT_HTML }}
+        />
+
+        <div className={labStyles.facOclmEvidence} aria-hidden>
+          <span className={labStyles.facOclmEvidenceInner}>evidence slot · no image in lab</span>
+        </div>
+
+        <FactionLabDemoHgArchRoster variant="ocularLight" />
+
+        <div className={labStyles.facOclmFooterSlug} aria-hidden>
+          mandate.sys / verify
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** XVI · Synthesis Archive — Inter + Playfair + JetBrains; glass corner pills, strip + ledger roster; no clock / pointer JS. */
 function FactionSynthesisArchiveV16Body({ testId }: { testId: string }) {
   return (
@@ -1712,6 +2000,133 @@ function FactionEssentialistIdV17Body({ testId }: { testId: string }) {
                 FAC&lt;&lt;ESSENTIALIST&lt;&lt;DIR&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * XVIII · Clandestine bureau brief — XII concrete classified base, XI clearance bar, XV grid / striped display;
+ * editable `orgNamePrimary`, `orgNameAccent`, `subtitle`, `context`, `document` + hgArch roster demo; CSS only.
+ */
+function FactionClandestineBriefV18Body({ testId }: { testId: string }) {
+  return (
+    <div
+      className={labStyles.facClandRoot}
+      data-testid={testId}
+      data-hg-lab-faction-specimen="xviii-clandestine-brief"
+    >
+      <div className={labStyles.facAeonProtoAura} aria-hidden />
+      <div className={labStyles.facAeonProtoGrain} aria-hidden />
+      <div className={labStyles.facClandGridBg} aria-hidden />
+
+      <div className={labStyles.facClandInner}>
+        <header className={labStyles.facClandClassifiedBar}>
+          <div className={labStyles.facClandClassifiedLeft}>
+            <span className={labStyles.facClandStatusDot} aria-hidden />
+            <span>Classified · level 8 clearance only</span>
+          </div>
+          <div className={labStyles.facClandClassifiedRight}>TS-BU-661.18 · 09:14:00</div>
+        </header>
+
+        <div className={labStyles.facClandDocShell}>
+          <span className={labStyles.facAeonProtoChTL} aria-hidden />
+          <span className={labStyles.facAeonProtoChTR} aria-hidden />
+          <span className={labStyles.facAeonProtoChBL} aria-hidden />
+          <span className={labStyles.facAeonProtoChBR} aria-hidden />
+
+          <div className={labStyles.facAeonProtoTop}>
+            <div className={labStyles.facAeonProtoStampLeft}>
+              <span className={labStyles.facAeonProtoSlashed}>18.04.2026</span>
+              <span>INDEX_0189</span>
+              <span className={labStyles.facAeonProtoIndexNum} aria-hidden>
+                18
+              </span>
+            </div>
+            <div className={labStyles.facAeonProtoHeaderRight}>
+              <span>18APR&apos;26</span>
+              <span>ORD—BUREAU</span>
+              <span>
+                LEVEL—<span className={labStyles.facAeonProtoSlashed}>0</span>8
+              </span>
+              <span>ANNEX</span>
+            </div>
+          </div>
+
+          <div className={labStyles.facClandTitleBlock}>
+            <div
+              className={labStyles.facClandStripedLg}
+              contentEditable
+              spellCheck={false}
+              suppressContentEditableWarning
+              data-hg-lore-faction-field="orgNamePrimary"
+            >
+              AEON
+            </div>
+            <div
+              className={labStyles.facClandStripedSm}
+              contentEditable
+              spellCheck={false}
+              suppressContentEditableWarning
+              data-hg-lore-faction-field="orgNameAccent"
+            >
+              Registry annex
+            </div>
+          </div>
+
+          <h2 className={labStyles.facAeonProtoSubject}>
+            <span className={labStyles.facAeonProtoSubjectDot} aria-hidden />
+            <span
+              className={labStyles.facClandSubjectText}
+              contentEditable
+              spellCheck={false}
+              suppressContentEditableWarning
+              data-hg-lore-faction-field="subtitle"
+            >
+              Subject: internal circulation file Ø-18
+            </span>
+          </h2>
+
+          <div className={labStyles.facClandJurisdictionRow}>
+            <div className={labStyles.facClandJurisdictionInner}>
+              <div className={labStyles.facClandJurisdictionK}>jurisdiction</div>
+              <div
+                className={labStyles.facClandJurisdictionVal}
+                contentEditable
+                spellCheck={false}
+                suppressContentEditableWarning
+                data-hg-lore-faction-field="context"
+              >
+                Obsidian Reach · sector registry
+              </div>
+            </div>
+            <span className={labStyles.facClandAuthStamp}>authorized</span>
+          </div>
+
+          <div
+            className={labStyles.facClandDocument}
+            contentEditable
+            spellCheck={false}
+            suppressHydrationWarning
+            data-hg-lore-faction-field="document"
+            dangerouslySetInnerHTML={{ __html: FACTION_LAB_CLANDESTINE_DOCUMENT_HTML }}
+          />
+
+          <FactionLabDemoHgArchRoster variant="clandestine" />
+
+          <div className={labStyles.facAeonProtoBottom}>
+            <div className={labStyles.facAeonProtoStampBox}>Eyes only · internal circulation</div>
+            <p className={labStyles.facAeonProtoRegistry}>
+              Bureau of annex filings · Girona branch · unit 18
+              <br />
+              Clerk of record · classified docket
+            </p>
+          </div>
+
+          <div className={labStyles.facAeonProtoCta} role="presentation">
+            Route to archive clerk
           </div>
         </div>
       </div>
@@ -2164,7 +2579,7 @@ function LoreEntityNodeLabInner() {
           <p className={labStyles.sectionHint}>
             <strong>Priming (specimen 0):</strong> <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code> from{" "}
             <code>faction-roster-schema.ts</code> — lab-only; production faction letterhead seeds are unchanged. Then{" "}
-            <strong>I–XVII:</strong> seventeen <code>FactionLabPlate</code> specimens — no canvas <code>LabCard</code> stack
+            <strong>I–XX:</strong> twenty <code>FactionLabPlate</code> specimens — no canvas <code>LabCard</code> stack
             (no tape, no <code>a4DocumentBody</code>). I–III: dead-drop slip, summit stub, interoffice memo. IV–V: same
             rosy shelf
             catalog; V adds left-edge <code>mask-image</code> perforation + dashed border only. VI: ORDO LUNARIS
@@ -2180,7 +2595,12 @@ function LoreEntityNodeLabInner() {
             dossier, Inter striped display type, Space Mono body, evidence placeholder, personnel index + hgArch roster demo —
             no images / pointer JS). XVI: Synthesis Archive (pale blue field, Playfair hero, glass corner pills, mission strip +
             ledger roster from hgArch — no live clock / pointer motion). XVII: Essentialist ID (faction org + charter + roster
-            demo, ID-badge chrome; CSS-only glare — no pointer 3D tilt).
+            demo, ID-badge chrome; CSS-only glare — no pointer 3D tilt). XVIII: Clandestine bureau brief (XII concrete +
+            classified aura; XI clearance bar; XV grid, striped display, authorized stamp; editable PRD fields + hgArch
+            roster — no images / pointer JS). XIX: Ocular Mandate light (XV dossier on pale grid field, no protocol rail,
+            single-line Inter title on <code>orgNamePrimary</code> only, Space Mono body + roster — no images / pointer JS).
+            XX: Archive-091 readable (IX void archive, larger type + blue frame, slim plate header + focus affordance, editable PRD
+            fields, roster replaces fiction metrics table, no ritual CTA / serial footer — no canvas / pointer JS).
           </p>
           <div className={labStyles.grid}>
             <div className={labStyles.cell}>
@@ -2507,6 +2927,58 @@ function LoreEntityNodeLabInner() {
                   <code>subtitle</code> (charter class), <code>document</code> (charter prose); read-only jurisdiction grid
                   (demo); <code>variant=&quot;essentialist&quot;</code> roster from <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>;
                   decorative seal void + barcode + registry line. CSS glare only — no pointer 3D tilt.
+                </li>
+              </ul>
+            </div>
+
+            <div className={labStyles.cell}>
+              <span className={labStyles.variantLabel}>XVIII · Bureau · Clandestine circulation brief</span>
+              <FactionLabPlate plateKind="protocolClandestineBrief">
+                <FactionClandestineBriefV18Body testId="fac-lab-protocol-clandestine-brief-xviii" />
+              </FactionLabPlate>
+              <ul className={labStyles.spec}>
+                <li>
+                  Merge of XII (concrete classified sheet, aura, grain, crosshairs, index stack, subject marker, stamp +
+                  registry, CTA strip), XI (clearance bar + status dot), and XV (grid field, Inter-style striped display
+                  type, authorized capsule). <strong>Editable</strong> <code>orgNamePrimary</code>,{" "}
+                  <code>orgNameAccent</code>, <code>subtitle</code>, <code>context</code>, <code>document</code>; roster via{" "}
+                  <code>variant=&quot;clandestine&quot;</code> + <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>. Light mode
+                  only; CSS-only — no live clock / pointer JS.
+                </li>
+              </ul>
+            </div>
+
+            <div className={labStyles.cell}>
+              <span className={labStyles.variantLabel}>XIX · Ocular · Mandate dossier (light)</span>
+              <FactionLabPlate plateKind="protocolOcularMandateLight">
+                <FactionOcularMandateLightV19Body testId="fac-lab-protocol-ocular-mandate-light-xix" />
+              </FactionLabPlate>
+              <ul className={labStyles.spec}>
+                <li>
+                  Light counterpart to XV: same dossier stack (jurisdiction, authorized stamp, directive, charter, evidence
+                  frame, footer slug) without the vertical protocol rail. Title is one Inter line on{" "}
+                  <code>orgNamePrimary</code> only (fold <code>orgNameAccent</code> into that string in production if both
+                  exist). <strong>Editable</strong> <code>context</code>, <code>subtitle</code>, <code>document</code>; roster{" "}
+                  <code>variant=&quot;ocularLight&quot;</code> + <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>. CSS-only.
+                </li>
+              </ul>
+            </div>
+
+            <div className={labStyles.cell}>
+              <span className={labStyles.variantLabel}>XX · Archive · 091 internal (readable)</span>
+              <FactionLabPlate plateKind="protocolArchive091Readable">
+                <FactionArchive091ReadableV20Body testId="fac-lab-protocol-archive-091-readable-xx" />
+              </FactionLabPlate>
+              <ul className={labStyles.spec}>
+                <li>
+                  Readable successor to IX: left rail only (IX had both sides), grain, letterhead, protocol sections — larger type, blue-tinted
+                  frame, slim mono plate header + focus icon (lab-native, not canvas{" "}
+                  <code>nodeHeader</code>). No serial/registry footer.{" "}
+                  <strong>Editable</strong> <code>orgNamePrimary</code>, <code>orgNameAccent</code>, <code>document</code>{" "}
+                  (no separate <code>context</code> strip — fold registry copy into{" "}
+                  <code>document</code> or another field in production if needed).
+                  Fiction metrics table replaced by <code>variant=&quot;archive091Readable&quot;</code> roster +{" "}
+                  <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>. CSS grain only.
                 </li>
               </ul>
             </div>

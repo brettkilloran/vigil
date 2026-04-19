@@ -30,7 +30,7 @@ test.describe("/dev/lore-entity-nodes", () => {
     await expect(v7Slab.locator('[data-hg-lore-location-staple="v7"]')).toBeVisible();
   });
 
-  test("shows faction lab plates through XII including shelf, sleeve, and protocol specimens", async ({ page }) => {
+  test("shows faction lab plates through XX including shelf, sleeve, and protocol specimens", async ({ page }) => {
     await page.goto("/dev/lore-entity-nodes");
     await expect(page.getByRole("heading", { name: "Lore entity nodes", level: 1 })).toBeVisible({
       timeout: 60_000,
@@ -61,5 +61,11 @@ test.describe("/dev/lore-entity-nodes", () => {
     await expect(page.getByTestId("fac-lab-protocol-lattice")).toBeVisible();
     await expect(page.getByTestId("fac-lab-protocol-aeon-conclave")).toBeVisible();
     await expect(page.getByTestId("fac-lab-protocol-aeon-protocol")).toBeVisible();
+    await expect(page.getByText("XVIII · Bureau · Clandestine circulation brief")).toBeVisible();
+    await expect(page.getByTestId("fac-lab-protocol-clandestine-brief-xviii")).toBeVisible();
+    await expect(page.getByText("XIX · Ocular · Mandate dossier (light)")).toBeVisible();
+    await expect(page.getByTestId("fac-lab-protocol-ocular-mandate-light-xix")).toBeVisible();
+    await expect(page.getByText("XX · Archive · 091 internal (readable)")).toBeVisible();
+    await expect(page.getByTestId("fac-lab-protocol-archive-091-readable-xx")).toBeVisible();
   });
 });

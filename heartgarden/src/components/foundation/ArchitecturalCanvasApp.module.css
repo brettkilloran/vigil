@@ -5337,8 +5337,8 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 /* Lore hybrid Notes (light focus, matches default doc / card ink) */
-.focusBody.focusCharacterDocument
-  :global([data-hg-lore-hybrid-focus="character"] [data-hg-doc-editor="true"] .tiptap.ProseMirror) {
+/* `[data-hg-lore-hybrid-focus]` lives on the same node as `.focusBody`, so do not use a descendant combinator between them. */
+.focusBody.focusCharacterDocument :global([data-hg-doc-editor="true"] .tiptap.ProseMirror) {
   color: var(--sem-text-focus-body);
   -webkit-text-fill-color: var(--sem-text-focus-body);
 }
@@ -5398,9 +5398,9 @@ button.rootDockPanel.viewportMetricsPanel {
   caret-color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
 }
 
-.focusEditorDark .focusBody.focusCharacterDocument :global([data-hg-lore-hybrid-focus="character"] [data-hg-doc-editor="true"] .tiptap.ProseMirror) {
-  color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
-  -webkit-text-fill-color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
+.focusEditorDark .focusBody.focusCharacterDocument :global([data-hg-doc-editor="true"] .tiptap.ProseMirror) {
+  color: var(--sys-color-white);
+  -webkit-text-fill-color: var(--sys-color-white);
 }
 
 .focusEditorDark .focusBody.focusCharacterDocument :global([data-hg-character-focus-field][data-placeholder]:not(:focus):empty)::before,
@@ -5560,8 +5560,7 @@ button.rootDockPanel.viewportMetricsPanel {
   box-sizing: border-box;
 }
 
-.focusBody.focusLocationDocument
-  :global([data-hg-lore-hybrid-focus="location"] [data-hg-doc-editor="true"] .tiptap.ProseMirror) {
+.focusBody.focusLocationDocument :global([data-hg-doc-editor="true"] .tiptap.ProseMirror) {
   color: var(--sem-text-focus-body);
   -webkit-text-fill-color: var(--sem-text-focus-body);
 }
@@ -5602,9 +5601,9 @@ button.rootDockPanel.viewportMetricsPanel {
   caret-color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
 }
 
-.focusEditorDark .focusBody.focusLocationDocument :global([data-hg-lore-hybrid-focus="location"] [data-hg-doc-editor="true"] .tiptap.ProseMirror) {
-  color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
-  -webkit-text-fill-color: color-mix(in oklch, var(--sys-color-white) 88%, transparent);
+.focusEditorDark .focusBody.focusLocationDocument :global([data-hg-doc-editor="true"] .tiptap.ProseMirror) {
+  color: var(--sys-color-white);
+  -webkit-text-fill-color: var(--sys-color-white);
 }
 
 .focusEditorDark .focusBody.focusLocationDocument :global([data-hg-lore-location-focus-notes="true"] .tiptap.ProseMirror) :where(h1, h2, h3) {
