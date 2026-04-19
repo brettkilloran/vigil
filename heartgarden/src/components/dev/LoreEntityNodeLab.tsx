@@ -1271,6 +1271,16 @@ function FactionArchive091Body({ testId }: { testId: string }) {
   );
 }
 
+/** Stable lore-object id for the XX readable Archive-091 lab specimen; rail splits UUID — top half replaces “Roster // 091”, bottom half completes the id. */
+const XX_ARCHIVE_091_READABLE_OBJECT_UUID = "c9e4f2a1-7b6c-4d8e-8f3a-2d1e0c9b8a76";
+const XX_ARCHIVE_091_READABLE_UUID_RAIL_TOP = XX_ARCHIVE_091_READABLE_OBJECT_UUID.slice(
+  0,
+  Math.floor(XX_ARCHIVE_091_READABLE_OBJECT_UUID.length / 2),
+);
+const XX_ARCHIVE_091_READABLE_UUID_RAIL_BOTTOM = XX_ARCHIVE_091_READABLE_OBJECT_UUID.slice(
+  Math.floor(XX_ARCHIVE_091_READABLE_OBJECT_UUID.length / 2),
+);
+
 /**
  * XX · Archive-091 (readable) — same void-archive IA as IX with larger type, neutral plate chrome, and faction PRD wiring.
  * Top chrome: slim archive plate header (mono slug + focus affordance). Metrics table replaced by
@@ -1373,15 +1383,16 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
       className={labStyles.facArxxRoot}
       data-testid={testId}
       data-hg-lab-faction-specimen="xx-archive-091-readable"
+      data-hg-lab-archive-object-uuid={XX_ARCHIVE_091_READABLE_OBJECT_UUID}
     >
       <div className={labStyles.facArxxGrain} aria-hidden />
       <div className={labStyles.facArxxPage}>
         <aside className={labStyles.facArxxRail} aria-hidden>
-          <div className={labStyles.facArxxVertical}>Faction // Roster // 091</div>
+          <div className={labStyles.facArxxVertical}>{XX_ARCHIVE_091_READABLE_UUID_RAIL_TOP}</div>
           <svg className={labStyles.facArxxStar} viewBox="0 0 24 24">
             <path d="M12 0L14 10L24 12L14 14L12 24L10 14L0 12L10 10L12 0Z" fill="currentColor" />
           </svg>
-          <div className={labStyles.facArxxVertical}>07652-46738225-415523907</div>
+          <div className={labStyles.facArxxVertical}>{XX_ARCHIVE_091_READABLE_UUID_RAIL_BOTTOM}</div>
           <div className={labStyles.facArxxBarcode} />
         </aside>
 

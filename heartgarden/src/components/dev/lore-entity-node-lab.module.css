@@ -2332,6 +2332,9 @@
   text-transform: uppercase;
   color: var(--sem-text-muted);
   line-height: 1.25;
+  margin: 3px 0;
+  padding: 3px 1px;
+  box-sizing: border-box;
 }
 
 .facArxxStar {
@@ -2470,7 +2473,7 @@
 }
 
 .facArxxLetterheadPrimary {
-  margin: 0 0 4px;
+  margin: 0 0 8px;
   text-align: center;
   overflow-wrap: anywhere;
 }
@@ -2520,8 +2523,7 @@
 }
 
 /*
- * Placeholder strip + caption: `charSkShellV11` positions ::after with `--hg-lore-ph-y` (caret line).
- * This field is a flex row; caret metrics sit low in the box — center the marker band on the fixed min-height instead.
+ * Placeholder strip: base v11 uses `--hg-lore-ph-y`; this flex-centered band pins ::after to the floor (see orgNameAccent rule).
  */
 .facArxxLetterheadPh
   .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"][data-hg-lore-placeholder="true"],
@@ -2550,8 +2552,9 @@
   .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"],
 .facArxxLetterheadPh
   .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"][data-hg-lore-ph] {
-  min-height: max(1.35em, var(--sk-v11-marker-h));
-  height: max(1.35em, var(--sk-v11-marker-h));
+  /* Slightly taller redaction band than single-line v11 floor (readable archive title plate). */
+  min-height: max(1.62em, calc(var(--sk-v11-marker-h) + 8px));
+  height: max(1.62em, calc(var(--sk-v11-marker-h) + 8px));
   box-sizing: border-box;
 }
 
@@ -2562,7 +2565,7 @@
   /* Full band between insets — do not subtract ph-x / trim (centered title would over-shrink the strip). */
   left: var(--sk-v11-marker-inset-left) !important;
   width: calc(100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right)) !important;
-  height: var(--hg-lore-ph-lh, var(--sk-v11-marker-h));
+  height: calc(var(--hg-lore-ph-lh, var(--sk-v11-marker-h)) + 6px);
   transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   transform-origin: left top;
   animation: facArxxLetterheadPrimaryStripWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
@@ -2589,8 +2592,13 @@
 
 .facArxxLetterheadPh
   .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"][data-hg-lore-placeholder="true"]::after {
-  top: calc(50% - (var(--hg-lore-ph-lh, var(--sk-v11-marker-h)) / 2));
-  transform-origin: left center;
+  /*
+   * Floor-align the redaction strip. Base v11 uses `.charSkShellV11 [data-hg-lore-field]…:not(.charSkDisplayName)::after`
+   * (higher specificity than this block) — `!important` is required so `top`/`bottom` win over `--hg-lore-ph-y`.
+   */
+  top: auto !important;
+  bottom: 3px !important;
+  transform-origin: left center !important;
   left: var(--sk-v11-marker-inset-left) !important;
   width: calc(100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right)) !important;
 }
@@ -2618,7 +2626,7 @@
 }
 
 .facArxxH2 {
-  margin: 0 0 6px;
+  margin: 0 0 10px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
   font-weight: 600;
@@ -2658,8 +2666,8 @@
   --fac-arxx-doc-edge-fade: 16px;
 
   max-height: 132px;
-  margin-bottom: 8px;
-  padding-right: 12px;
+  margin-bottom: 10px;
+  padding: 2px 12px 0 0;
   overflow-x: hidden;
   overflow-y: auto;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
@@ -2729,7 +2737,7 @@
 }
 
 .facArxxDocument p {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
 }
 
 .facArxxDocument p:last-child {
