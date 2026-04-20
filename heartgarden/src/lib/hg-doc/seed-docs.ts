@@ -8,7 +8,7 @@ const ext = getHgDocExtensions({ withPlaceholder: false }) as Extensions;
 
 /** Demo welcome card — onboarding copy for local/demo bootstrap (no campaign lore assumed). */
 export const DEMO_ROOT_WELCOME_DOC: JSONContent = generateJSON(
-  `<h1>Your table at a glance</h1><p><strong>Heartgarden</strong> is a pinboard canvas: each <strong>card</strong> is a note, checklist, code snippet, or image. You do not need to know anything about a specific game world to explore this demo — the names are placeholders.</p><p><strong>Move around:</strong> drag the empty background to pan; scroll or pinch to zoom.</p><p><strong>Canvas thread:</strong> the colored line from this card toward the <strong>sample stack</strong> (top sheet) is a real pin thread — same kind you can draw between cards with the connect tool.</p><p><strong>Trail / breadcrumbs:</strong> when you open a folder, a path appears at the top of the canvas — use it to step back out without losing context.</p><p><strong>Search:</strong> open the command palette with <strong>Ctrl+K</strong> on Windows/Linux or <strong>⌘K</strong> on Mac (the status bar shows the same hint) to jump to cards and actions as the board grows.</p><blockquote><p>In a connected workspace, your edits save to the account you signed in with. This screen is a <strong>local demo</strong> so you can try the UI safely.</p></blockquote><p><strong>Next:</strong> open the <strong>Demo notes</strong> folder below. The cards inside are only in that space — nothing repeats from out here on purpose.</p>`,
+  `<h1>Your table at a glance</h1><p><strong>Heartgarden</strong> is a pinboard canvas: each <strong>card</strong> is a note, checklist, code snippet, or image. You do not need to know anything about a specific game world to explore this demo — the names are placeholders.</p><p><strong>Move around:</strong> drag the empty background to pan; scroll or pinch to zoom.</p><p><strong>Canvas thread:</strong> the colored line from this card toward the <strong>sample stack</strong> (top sheet) is a real pin thread — same kind you can draw between cards with the connect tool.</p><p><strong>Trail / breadcrumbs:</strong> when you open a folder, a path appears at the top of the canvas — use it to step back out without losing context.</p><p><strong>Search:</strong> open the command palette with <strong>Ctrl+K</strong> on Windows/Linux or <strong>⌘K</strong> on Mac (the status bar shows the same hint) to jump to cards and actions as the board grows.</p><blockquote><p>In a connected workspace, your edits save to the account you signed in with. This screen is a <strong>local demo</strong> so you can try the UI safely.</p></blockquote><p><strong>Next:</strong> open the <strong>Demo subspace folder</strong> below. The cards inside are only in that space — nothing repeats from out here on purpose.</p>`,
   ext,
 );
 
@@ -52,7 +52,7 @@ export function demoRootTaskDoc(): JSONContent {
           content: [
             {
               type: "text",
-              text: "Open Demo notes — a small space with just a couple of cards plus the Archive folder",
+              text: "Open Demo subspace folder — a small space with specimen lore cards",
             },
           ],
         },
@@ -73,7 +73,7 @@ export function demoRootTaskDoc(): JSONContent {
 }
 
 export const DEMO_RESEARCH_DOSSIER_DOC: JSONContent = generateJSON(
-  `<p><strong>You are inside the demo folder.</strong> This sample space stays small on purpose (a few items only).</p><p>Folders are <strong>spaces</strong>: double-click to enter, use the trail to leave. The <strong>stack on the home board</strong> is only out there — nothing is duplicated here.</p><p>Try renaming titles or dragging items — the demo is disposable scaffolding, not your lore bible.</p>`,
+  `<p><strong>You are inside the demo folder.</strong> This sample space stays small on purpose (a few items only).</p><p>Folders are <strong>spaces</strong>: double-click to enter, use the trail to leave. The <strong>stack on the home board</strong> is only out there — nothing is duplicated here.</p><p>Three specimen cards tie together here: <strong>Morgan Vale</strong> (warder), the <strong>Ratcatchers</strong> faction roster, and <strong>Arbiter Station Lagrange 1</strong>. Pin threads on the board link them so you can see relationship lines at a glance.</p><p>Try renaming titles or dragging items — the demo is disposable scaffolding, not your lore bible.</p>`,
   ext,
 );
 

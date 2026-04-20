@@ -1821,7 +1821,7 @@ function parseHeartgardenBootStatus(d: HeartgardenBootStatusJson): HeartgardenBo
   };
 }
 
-/** Local-only demo canvas (no Neon); same graph as default seed (single-level Demo notes folder). */
+/** Local-only demo canvas (no Neon); same graph as default seed (single-level Demo subspace folder). */
 function buildHeartgardenDemoLocalGraph() {
   return buildArchitecturalSeedGraph(
     {

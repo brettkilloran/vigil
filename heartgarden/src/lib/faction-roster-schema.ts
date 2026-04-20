@@ -51,15 +51,38 @@ export function parseFactionRosterFromHgArch(hgArch: unknown): FactionRosterEntr
 export const DEMO_FACTION_ROSTER: FactionRosterEntry[] = [
   {
     id: "11111111-1111-4111-8111-111111111111",
-    kind: "character",
-    characterItemId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-    displayNameOverride: "M. Vance (card title may differ)",
-    roleOverride: "Warden",
+    kind: "unlinked",
+    label: "Morgan Vale",
+    role: "Lead warder · character card in demo subspace",
   },
   {
     id: "22222222-2222-4222-8222-222222222222",
     kind: "unlinked",
-    label: "Adjunct counsel",
-    role: "No character card",
+    label: "Silas Rook",
+    role: "Field runner",
+  },
+  {
+    id: "33333333-3333-4333-8333-333333333333",
+    kind: "unlinked",
+    label: "Corbin Nox",
+    role: "Evidence clerk",
+  },
+  {
+    id: "44444444-4444-4444-8444-444444444444",
+    kind: "unlinked",
+    label: "Hester Yao",
+    role: "Quartermaster",
+  },
+  {
+    id: "55555555-5555-4555-8555-555555555555",
+    kind: "unlinked",
+    label: "Jia Okonkwo",
+    role: "Archivist",
+  },
+  {
+    id: "66666666-6666-4666-8666-666666666666",
+    kind: "unlinked",
+    label: "Tamsin Burke",
+    role: "Mediation attaché",
   },
 ];

@@ -21,6 +21,27 @@ describe("plainPlaceNameFromLocationBodyHtml", () => {
     expect(plainPlaceNameFromLocationBodyHtml(body)).toBe("Harbor Kiln");
   });
 
+  it("treats legacy seed literal Place name as empty", () => {
+    const body = `<div data-hg-canvas-role="lore-location">
+<div data-hg-lore-location-field="name">Place name</div>
+</div>`;
+    expect(plainPlaceNameFromLocationBodyHtml(body)).toBe("");
+  });
+
+  it("strips legacy Place name prefix before real title", () => {
+    const body = `<div data-hg-canvas-role="lore-location">
+<div data-hg-lore-location-field="name">Place name Pacific Station</div>
+</div>`;
+    expect(plainPlaceNameFromLocationBodyHtml(body)).toBe("Pacific Station");
+  });
+
+  it("strips glued legacy Place name prefix (no space)", () => {
+    const body = `<div data-hg-canvas-role="lore-location">
+<div data-hg-lore-location-field="name">Place nameOrbital Nine</div>
+</div>`;
+    expect(plainPlaceNameFromLocationBodyHtml(body)).toBe("Orbital Nine");
+  });
+
   it("treats literal ORDO v7 placeholder label as empty", () => {
     const body = `<div data-hg-canvas-role="lore-location">
 <div data-hg-lore-location-field="name">PLACENAME</div>
@@ -69,6 +90,19 @@ describe("location hybrid meta shell", () => {
 });
 
 describe("location focus projection round-trip", () => {
+  it("does not embed legacy Place name into focus name field", () => {
+    const body = `<div data-hg-canvas-role="lore-location">
+<div data-hg-lore-location-field="name">Place name Drydock</div>
+<div data-hg-lore-location-field="context"><br></div>
+<div data-hg-lore-location-field="detail"><br></div>
+<div data-hg-lore-location-notes="true"><p><br></p></div>
+</div>`;
+    const focus = locationBodyToFocusDocumentHtml(body);
+    const doc = new DOMParser().parseFromString(`<div id="w">${focus}</div>`, "text/html");
+    const nameField = doc.querySelector('[data-hg-lore-location-focus-field="name"]');
+    expect((nameField?.textContent || "").replace(/\s+/g, " ").trim().toLowerCase()).toBe("drydock");
+  });
+
   it("round-trips modern v2 seed: notes and fields merge back; chrome preserved", () => {
     const canonical = getLoreNodeSeedBodyHtml("location", "v2");
     const focus = locationBodyToFocusDocumentHtml(canonical);

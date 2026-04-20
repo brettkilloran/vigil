@@ -4,12 +4,52 @@
  * projects to a single scroll surface; notes are hidden on the canvas (CSS).
  */
 
-import { ORDO_V7_EMPTY_NAME_SENTINEL } from "@/src/lib/lore-location-ordo-display-name";
+import {
+  ORDO_V7_EMPTY_NAME_SENTINEL,
+  splitOrdoV7DisplayName,
+} from "@/src/lib/lore-location-ordo-display-name";
 
 const DEFAULT_NOTES_HTML = "<p><br></p>";
 
 /** v11 `data-hg-lore-ph` caption for empty ORDO v7 placename (guest-check strip + ::before; not real title text). */
 export const LORE_V11_PH_LOCATION_PLACEHOLDER = "PLACENAME";
+
+/** Legacy v2/v3 seed HTML used this literal in `[data-hg-lore-location-field="name"]` — not a real placename. */
+const LEGACY_LOC_SEED_PLACEHOLDER_LABEL = /^place name$/i;
+const LEGACY_LOC_SEED_PLACEHOLDER_PREFIX_SP = /^place name\s+/i;
+/** User typed after the seed label without deleting it first (no space before the real title). */
+const LEGACY_LOC_SEED_PLACEHOLDER_PREFIX_GLUE = /^place name(?=[A-Z0-9])/i;
+
+function escapeHtmlLocationNamePlain(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/**
+ * Strip legacy seed / edit artifacts so "Place name" is not treated as part of the placename.
+ * Exported for tests and any call sites that mirror title extraction.
+ */
+export function stripLegacyLoreLocationSeedPlaceNameLabel(plain: string): string {
+  const t = plain.replace(/\s+/g, " ").trim();
+  if (!t) return "";
+  if (LEGACY_LOC_SEED_PLACEHOLDER_LABEL.test(t)) return "";
+  if (LEGACY_LOC_SEED_PLACEHOLDER_PREFIX_SP.test(t)) {
+    return t.replace(LEGACY_LOC_SEED_PLACEHOLDER_PREFIX_SP, "").trim();
+  }
+  if (LEGACY_LOC_SEED_PLACEHOLDER_PREFIX_GLUE.test(t)) {
+    return t.replace(/^place name/i, "").trim();
+  }
+  return t;
+}
+
+function buildLocationNameFieldInnerHtmlFromPlainCore(coreRaw: string): string {
+  const core = normalizeLocOrdoV7NameField(coreRaw.replace(/\s+/g, " ").trim());
+  if (!core) return "<br>";
+  const { line1, line2 } = splitOrdoV7DisplayName(core);
+  if (line2) {
+    return `${escapeHtmlLocationNamePlain(line1)}<br />${escapeHtmlLocationNamePlain(line2)}`;
+  }
+  return escapeHtmlLocationNamePlain(line1);
+}
 
 /** Normalize stored/plain name: empty, PLACENAME caption, or splitOrdoV7 empty sentinel → "". */
 export function normalizeLocOrdoV7NameField(raw: string): string {
@@ -37,19 +77,44 @@ function takeInnerHtml(root: ParentNode, selector: string, fallback = "<br>"): s
   return html || fallback;
 }
 
+/**
+ * Strip legacy literal `Place name` when it was a seed label or edit artifact; otherwise preserve
+ * `innerHTML` (casing, inline markup, legacy cards).
+ */
+function locationNameFieldInnerHtmlAfterLegacyPlaceNameStrip(el: HTMLElement, fallback: string): string {
+  const plain = (el.textContent || "").replace(/\s+/g, " ").trim();
+  const stripped = stripLegacyLoreLocationSeedPlaceNameLabel(plain);
+  if (stripped !== plain) {
+    return buildLocationNameFieldInnerHtmlFromPlainCore(stripped);
+  }
+  const raw = (el.innerHTML || "").trim();
+  return raw || fallback;
+}
+
+/** Focus + merge: normalize saved/live focus name field when it still contains the legacy seed label. */
+function normalizedLocationFocusNameInnerFromFieldEl(el: HTMLElement | null, fallback = "<br>"): string {
+  if (!el) return fallback;
+  return locationNameFieldInnerHtmlAfterLegacyPlaceNameStrip(el, fallback);
+}
+
+function normalizedLocationFocusNameInnerFromRoot(root: ParentNode): string {
+  const el = root.querySelector<HTMLElement>('[data-hg-lore-location-focus-field="name"]');
+  return normalizedLocationFocusNameInnerFromFieldEl(el, takeInnerHtml(root, '[data-hg-lore-location-focus-field="name"]', "<br>"));
+}
+
 /** Plain text for graph title — required line is `name`. */
 export function plainPlaceNameFromLocationBodyHtml(bodyHtml: string): string {
   const root = parseWrapped(bodyHtml);
   if (!root) return "";
   const modern = root.querySelector<HTMLElement>('[data-hg-lore-location-field="name"]');
   if (modern) {
-    const t = (modern.textContent || "").trim();
+    const t = stripLegacyLoreLocationSeedPlaceNameLabel((modern.textContent || "").replace(/\s+/g, " ").trim());
     return normalizeLocOrdoV7NameField(t);
   }
   const legacy = root.querySelector<HTMLElement>('[class*="locName"]');
   if (legacy) {
-    const t = (legacy.textContent || "").trim();
-    return t || "";
+    const t = stripLegacyLoreLocationSeedPlaceNameLabel((legacy.textContent || "").replace(/\s+/g, " ").trim());
+    return normalizeLocOrdoV7NameField(t);
   }
   return "";
 }
@@ -57,13 +122,11 @@ export function plainPlaceNameFromLocationBodyHtml(bodyHtml: string): string {
 function extractNameHtml(root: ParentNode): string {
   const el = root.querySelector<HTMLElement>('[data-hg-lore-location-field="name"]');
   if (el) {
-    const raw = (el.innerHTML || "").trim();
-    return raw || "<br>";
+    return locationNameFieldInnerHtmlAfterLegacyPlaceNameStrip(el, "<br>");
   }
   const legacy = root.querySelector<HTMLElement>('[class*="locName"]');
   if (legacy) {
-    const raw = (legacy.innerHTML || "").trim();
-    return raw || "<br>";
+    return locationNameFieldInnerHtmlAfterLegacyPlaceNameStrip(legacy, "<br>");
   }
   return "<br>";
 }
@@ -262,7 +325,7 @@ export function focusDocumentHtmlToLocationBody(focusHtml: string, canonicalTemp
   const templateRoot = parseWrapped(canonicalTemplateHtml);
   if (!focusRoot || !templateRoot) return canonicalTemplateHtml;
 
-  const name = takeInnerHtml(focusRoot, '[data-hg-lore-location-focus-field="name"]', "<br>");
+  const name = normalizedLocationFocusNameInnerFromRoot(focusRoot);
   const context = takeInnerHtml(focusRoot, '[data-hg-lore-location-focus-field="context"]', "<br>");
   const detail = takeInnerHtml(focusRoot, '[data-hg-lore-location-focus-field="detail"]', "<br>");
   const notes = takeInnerHtml(focusRoot, '[data-hg-lore-location-focus-notes="true"]', DEFAULT_NOTES_HTML);
@@ -294,7 +357,7 @@ export function parseLocationFocusDocumentHtml(html: string): LocationFocusParts
   const refField = root.querySelector('[data-hg-lore-location-focus-field="ref"]');
   const hasRef = !!refField;
   return {
-    name: takeInnerHtml(root, '[data-hg-lore-location-focus-field="name"]', "<br>"),
+    name: normalizedLocationFocusNameInnerFromRoot(root),
     context: takeInnerHtml(root, '[data-hg-lore-location-focus-field="context"]', "<br>"),
     detail: takeInnerHtml(root, '[data-hg-lore-location-focus-field="detail"]', "<br>"),
     ref: refField ? takeInnerHtml(root, '[data-hg-lore-location-focus-field="ref"]', "<br>") : "",
@@ -360,7 +423,9 @@ export function readLocationFocusPartsFromMetaHost(metaHost: HTMLElement, notesH
   const refField = root.querySelector('[data-hg-lore-location-focus-field="ref"]');
   const hasRef = !!refField;
   return {
-    name: takeInnerHtml(root, '[data-hg-lore-location-focus-field="name"]', "<br>"),
+    name: normalizedLocationFocusNameInnerFromFieldEl(
+      root.querySelector<HTMLElement>('[data-hg-lore-location-focus-field="name"]'),
+    ),
     context: takeInnerHtml(root, '[data-hg-lore-location-focus-field="context"]', "<br>"),
     detail: takeInnerHtml(root, '[data-hg-lore-location-focus-field="detail"]', "<br>"),
     ref: refField ? takeInnerHtml(root, '[data-hg-lore-location-focus-field="ref"]', "<br>") : "",
@@ -390,7 +455,9 @@ export function parseLocationOrdoV7BodyPlainFields(bodyHtml: string): {
     return { name: "", context: "", detail: "", notesHtml: DEFAULT_NOTES_HTML };
   }
   const nameEl = root.querySelector('[data-hg-lore-location-field="name"]');
-  const name = normalizeLocOrdoV7NameField((nameEl?.textContent || "").replace(/\s+/g, " ").trim());
+  const name = normalizeLocOrdoV7NameField(
+    stripLegacyLoreLocationSeedPlaceNameLabel((nameEl?.textContent || "").replace(/\s+/g, " ").trim()),
+  );
   const ctxEl = root.querySelector('[data-hg-lore-location-field="context"]');
   const context = (ctxEl?.textContent || "").replace(/\s+/g, " ").trim();
   const detEl = root.querySelector('[data-hg-lore-location-field="detail"]');

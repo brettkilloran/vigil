@@ -47,8 +47,8 @@ type StyleTokens = {
  * the lower-right quadrant). Rhythm: 600px row step (clears `.a4DocumentNode` max height ≈ 340×√2).
  *
  * **Root demo layout:** Row 1 — welcome doc (left) + sample stack (right). Row 2 — “Try these steps”
- * checklist under the welcome card; image card on the stack column (between stack and folder). Row 3 —
- * Demo notes folder below the image.
+ * checklist under the welcome card. Image card sits tighter under the stack (not a full `ROW_STEP`);
+ * Demo subspace folder stays two row-steps below the grid origin (unchanged when nudging image only).
  */
 const DEMO_ROOT_GRID_OX = -420;
 const DEMO_ROOT_GRID_OY = -440;
@@ -58,8 +58,8 @@ const DEMO_ROOT_ROW_STEP = 600;
 const DEMO_ROOT_STACK_COL_OX = DEMO_ROOT_GRID_OX + 500;
 /** 420px-wide folder centered under the 340px-wide stack column. */
 const DEMO_ROOT_FOLDER_X = DEMO_ROOT_STACK_COL_OX + (340 - 420) / 2;
-/** Image row on the stack column; folder one row lower. */
-const DEMO_ROOT_IMAGE_Y = DEMO_ROOT_GRID_OY + DEMO_ROOT_ROW_STEP;
+/** Image: closer under the stack than a full row step (folder Y is independent). */
+const DEMO_ROOT_IMAGE_Y = DEMO_ROOT_GRID_OY + 440;
 const DEMO_ROOT_FOLDER_Y = DEMO_ROOT_GRID_OY + DEMO_ROOT_ROW_STEP * 2;
 
 /** Pin anchors aligned with `ArchitecturalCanvasApp` `CONNECTION_PIN_DEFAULT_CONTENT`. */
@@ -74,6 +74,12 @@ const DEMO_SEED_CONTENT_PIN: CanvasConnectionPin = {
  * Endpoints use existing seed entity ids (`node-1` → top sheet of the home stack) on the root canvas only.
  */
 const DEMO_ROOT_PIN_THREAD_ID = "hg-demo-pin-thread-main";
+
+/** Pin threads inside the demo subspace (`space-project-thesis`) linking intro + lore specimen cards. */
+const DEMO_THESIS_THREAD_INTRO_CHAR = "hg-demo-thesis-intro-char";
+const DEMO_THESIS_THREAD_CHAR_FACTION = "hg-demo-thesis-char-faction";
+const DEMO_THESIS_THREAD_FACTION_LOC = "hg-demo-thesis-faction-loc";
+const DEMO_THESIS_THREAD_LOC_CHAR = "hg-demo-thesis-loc-char";
 
 function buildDemoRootPinThreadConnection(): CanvasPinConnection {
   const t = 1_700_000_000_000;
@@ -93,6 +99,30 @@ function buildDemoRootPinThreadConnection(): CanvasPinConnection {
   };
 }
 
+function buildDemoThesisPinThread(
+  id: string,
+  sourceEntityId: string,
+  targetEntityId: string,
+  color: string,
+  timeOffsetMs: number,
+): CanvasPinConnection {
+  const t = 1_700_000_001_000 + timeOffsetMs;
+  return {
+    id,
+    sourceEntityId,
+    targetEntityId,
+    sourcePin: DEMO_SEED_CONTENT_PIN,
+    targetPin: DEMO_SEED_CONTENT_PIN,
+    color,
+    linkType: "pin",
+    slackMultiplier: DEFAULT_LINK_SLACK_MULTIPLIER,
+    createdAt: t,
+    updatedAt: t,
+    syncState: "local-only",
+    syncError: null,
+  };
+}
+
 /** Demo folder — v11 character plate with placeholder fields filled for readability. */
 function seedDemoCharacterBodyHtml(): string {
   return getLoreNodeSeedBodyHtml("character", "v11")
@@ -102,11 +132,11 @@ function seedDemoCharacterBodyHtml(): string {
     )
     .replace(
       'data-hg-lore-field="1" data-hg-lore-placeholder="true" data-hg-lore-ph="Role"><br></span>',
-      'data-hg-lore-field="1">Lead surveyor</span>',
+      'data-hg-lore-field="1">Lead warder</span>',
     )
     .replace(
       'data-hg-lore-field="1" data-hg-lore-placeholder="true" data-hg-lore-ph="Group"><br></span>',
-      'data-hg-lore-field="1">Astroglass Survey</span>',
+      'data-hg-lore-field="1">Ratcatchers</span>',
     )
     .replace(
       'data-hg-lore-field="1" data-hg-lore-placeholder="true" data-hg-lore-ph="Origin"><br></span>',
@@ -114,17 +144,17 @@ function seedDemoCharacterBodyHtml(): string {
     )
     .replace(
       'data-hg-lore-field="1" data-hg-lore-placeholder="true" data-hg-lore-ph="Notes"><p><br></p></div>',
-      'data-hg-lore-field="1"><p>Demo character — keeps the drydock manifest honest.</p></div>',
+      'data-hg-lore-field="1"><p>Demo liaison: routes filings through <strong>Arbiter Station Lagrange 1</strong> for the Ratcatchers roster in this folder.</p></div>',
     );
 }
 
 function seedDemoFactionBodyHtml(): string {
   const { upper, lower } = factionArchiveRailTextsFromObjectId("demo-faction-seed");
   return buildFactionArchive091BodyHtml({
-    orgPrimaryInnerHtml: "Astroglass Survey",
-    orgAccentInnerHtml: "Independent cooperative",
+    orgPrimaryInnerHtml: "Ratcatchers",
+    orgAccentInnerHtml: "Warrant & recovery · L1 circuit",
     recordInnerHtml:
-      "<p>Demo organization: joint survey and salvage auditors. Names and rails are placeholders for the demo folder.</p>",
+      "<p>Demo faction for the <strong>Demo subspace folder</strong>: a compact warrant unit tied to <strong>Arbiter Station Lagrange 1</strong>. The structured roster below lists sample members (including Morgan as lead warder).</p>",
     railUpper: upper,
     railLower: lower,
   });
@@ -132,15 +162,16 @@ function seedDemoFactionBodyHtml(): string {
 
 function seedDemoLocationBodyHtml(): string {
   return buildLocationOrdoV7BodyHtml({
-    name: "Orbital Drydock Nine",
-    context: "Pacific orbital corridor",
-    detail: "Civilian heavy repair berth",
-    notesInnerHtml: "<p>Demo waypoint for maintenance skiffs and courier drops.</p>",
+    name: "Arbiter Station Lagrange 1",
+    context: "Earth–Moon L1 · admin corridor",
+    detail: "Ratcatchers field office · civilian hearings deck",
+    notesInnerHtml:
+      "<p>Demo station: neutral ground where the <strong>Ratcatchers</strong> log warrants and hand-offs. Threads on the board link this place to Morgan and the faction card.</p>",
   });
 }
 
 export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
-  /* Root demo: welcome + stack (row 1); checklist + image on stack column (row 2); folder (row 3). */
+  /* Root demo: welcome + stack (row 1); checklist under welcome; image tight under stack; folder below (2× row step from grid). */
   return [
     {
       id: "node-1",
@@ -228,7 +259,7 @@ export function buildArchitecturalSeedGraph(
     },
     "space-project-thesis": {
       id: "space-project-thesis",
-      name: "Demo notes",
+      name: "Demo subspace folder",
       parentSpaceId: "root",
       entityIds: [],
     },
@@ -236,7 +267,7 @@ export function buildArchitecturalSeedGraph(
 
   entities["folder-1"] = {
     id: "folder-1",
-    title: "Demo notes",
+    title: "Demo subspace folder",
     kind: "folder",
     theme: "folder",
     childSpaceId: "space-project-thesis",
@@ -298,15 +329,21 @@ export function buildArchitecturalSeedGraph(
     slots: { root: { ...homeStackSlot } },
   } satisfies CanvasContentEntity;
 
-  const DEMO_RESEARCH_OX = -420;
-  const DEMO_RESEARCH_OY = -140;
-  const DEMO_RESEARCH_ROW_STEP = 600;
+  /**
+   * Demo subspace inner space (`space-project-thesis`): camera centers world (0,0) on enter.
+   * Place the 2×2 note grid symmetrically around the origin so all four cards are in view.
+   */
+  const DEMO_NOTES_CARD_W = 340;
+  const DEMO_NOTES_GAP = 80;
+  const DEMO_NOTES_HALF_CENTER_OFFSET = (DEMO_NOTES_CARD_W + DEMO_NOTES_GAP) / 2;
+  const DEMO_NOTES_TOP_LEFT = -DEMO_NOTES_HALF_CENTER_OFFSET - DEMO_NOTES_CARD_W / 2;
+  const DEMO_NOTES_TOP_RIGHT = DEMO_NOTES_HALF_CENTER_OFFSET - DEMO_NOTES_CARD_W / 2;
 
   const folderIntro: CanvasNode = {
     id: "dossier-01",
     title: "Inside the folder",
-    x: DEMO_RESEARCH_OX,
-    y: DEMO_RESEARCH_OY,
+    x: DEMO_NOTES_TOP_LEFT,
+    y: DEMO_NOTES_TOP_LEFT,
     rotation: -1.2,
     width: 340,
     theme: "default",
@@ -319,8 +356,8 @@ export function buildArchitecturalSeedGraph(
   const folderLoreCharacter: CanvasNode = {
     id: "demo-lore-character",
     title: "Morgan Vale",
-    x: DEMO_RESEARCH_OX + 500,
-    y: DEMO_RESEARCH_OY,
+    x: DEMO_NOTES_TOP_RIGHT,
+    y: DEMO_NOTES_TOP_LEFT,
     rotation: 0.9,
     width: 340,
     theme: "default",
@@ -331,9 +368,9 @@ export function buildArchitecturalSeedGraph(
 
   const folderLoreFaction: CanvasNode = {
     id: "demo-lore-faction",
-    title: "Astroglass Survey Cooperative",
-    x: DEMO_RESEARCH_OX,
-    y: DEMO_RESEARCH_OY + DEMO_RESEARCH_ROW_STEP,
+    title: "Ratcatchers",
+    x: DEMO_NOTES_TOP_LEFT,
+    y: DEMO_NOTES_TOP_RIGHT,
     rotation: -0.8,
     width: 340,
     theme: "default",
@@ -344,9 +381,9 @@ export function buildArchitecturalSeedGraph(
 
   const folderLoreLocation: CanvasNode = {
     id: "demo-lore-location",
-    title: "Orbital Drydock Nine",
-    x: DEMO_RESEARCH_OX + 500,
-    y: DEMO_RESEARCH_OY + DEMO_RESEARCH_ROW_STEP,
+    title: "Arbiter Station Lagrange 1",
+    x: DEMO_NOTES_TOP_RIGHT,
+    y: DEMO_NOTES_TOP_RIGHT,
     rotation: 1.1,
     width: 340,
     theme: "default",
@@ -384,7 +421,7 @@ export function buildArchitecturalSeedGraph(
     spaces["space-project-thesis"].entityIds.push(node.id);
   });
 
-  /* Demo notes subspace: intro + lore specimen cards (no nested Archive). */
+  /* Demo subspace: intro + lore specimen cards (no nested Archive). */
 
   if (scenario === "corrupt") {
     entities["folder-1"] = {
@@ -399,6 +436,34 @@ export function buildArchitecturalSeedGraph(
     entities,
     connections: {
       [DEMO_ROOT_PIN_THREAD_ID]: buildDemoRootPinThreadConnection(),
+      [DEMO_THESIS_THREAD_INTRO_CHAR]: buildDemoThesisPinThread(
+        DEMO_THESIS_THREAD_INTRO_CHAR,
+        "dossier-01",
+        "demo-lore-character",
+        "oklch(0.62 0.14 250)",
+        0,
+      ),
+      [DEMO_THESIS_THREAD_CHAR_FACTION]: buildDemoThesisPinThread(
+        DEMO_THESIS_THREAD_CHAR_FACTION,
+        "demo-lore-character",
+        "demo-lore-faction",
+        "oklch(0.65 0.2 145)",
+        1,
+      ),
+      [DEMO_THESIS_THREAD_FACTION_LOC]: buildDemoThesisPinThread(
+        DEMO_THESIS_THREAD_FACTION_LOC,
+        "demo-lore-faction",
+        "demo-lore-location",
+        "oklch(0.7 0.18 55)",
+        2,
+      ),
+      [DEMO_THESIS_THREAD_LOC_CHAR]: buildDemoThesisPinThread(
+        DEMO_THESIS_THREAD_LOC_CHAR,
+        "demo-lore-location",
+        "demo-lore-character",
+        "oklch(0.58 0.22 310)",
+        3,
+      ),
     },
   };
 }
