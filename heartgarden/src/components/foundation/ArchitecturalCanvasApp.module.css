@@ -1738,24 +1738,17 @@
   overflow-y: auto;
   overscroll-behavior-y: contain;
 
-  /* Subtle bottom fade: ~6 % of viewport height ≈ bottom padding, so text stays readable. */
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    var(--sys-color-black) 0%,
-    var(--sys-color-black) 94%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    var(--sys-color-black) 0%,
-    var(--sys-color-black) 94%,
-    transparent 100%
-  );
+  /*
+   * No perpetual bottom mask: it read as “more content below” even when the doc fits.
+   * Scrollbar lane only when overflow (`auto`); avoid `stable` gutter on short docs.
+   */
+  -webkit-mask-image: none;
+  mask-image: none;
 
   /* Thin scrollbar — invisible at rest, tinted on hover. */
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
 }
 
 .a4DocumentBody:hover,

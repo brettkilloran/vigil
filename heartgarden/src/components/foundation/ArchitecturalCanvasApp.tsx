@@ -316,6 +316,8 @@ const VigilFlowRevealOverlay = dynamic(
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 3;
 const ZOOM_BUTTON_STEP = 0.2;
+/** Subpixel / border rounding when comparing `scrollHeight` vs `clientHeight`. */
+const SCROLLPORT_OVERFLOW_EPSILON_PX = 1;
 /** Trackpad pinch (ctrl/meta + wheel): tuned to feel close to Figma on laptop trackpads. */
 const WHEEL_ZOOM_SENSITIVITY = 0.00235;
 
@@ -341,20 +343,53 @@ function normalizeWheelZoomDeltaY(deltaY: number, deltaMode: number): number {
 
 function canScrollableBodyConsumeWheel(body: HTMLElement | null, event: WheelEvent): boolean {
   if (!body) return false;
-  if (body.scrollHeight <= body.clientHeight + 1) return false;
+  if (body.scrollHeight <= body.clientHeight + SCROLLPORT_OVERFLOW_EPSILON_PX) return false;
   const goingDown = event.deltaY > 0;
   const goingUp = event.deltaY < 0;
   if (!goingDown && !goingUp) return false;
   const maxScrollTop = body.scrollHeight - body.clientHeight;
   const atTop = body.scrollTop <= 0;
-  const atBottom = body.scrollTop >= maxScrollTop - 1;
+  const atBottom = body.scrollTop >= maxScrollTop - SCROLLPORT_OVERFLOW_EPSILON_PX;
   return (goingDown && !atBottom) || (goingUp && !atTop);
 }
 
-/** Trackpads usually emit pixel-mode wheel deltas; prefer canvas pan over passive body scroll on hover. */
-function isLikelyTrackpadWheel(event: WheelEvent): boolean {
-  return event.deltaMode === WheelEvent.DOM_DELTA_PIXEL;
+/**
+ * `WheelEvent.target` may be a text node or non-HTMLElement (`SVG*`); walk to an `HTMLElement` for
+ * geometry / `getComputedStyle` / DOM walks.
+ */
+function wheelEventOriginHTMLElement(event: WheelEvent): HTMLElement | null {
+  let n: Node | null = event.target as Node | null;
+  if (!n) return null;
+  if (n.nodeType === Node.TEXT_NODE || n.nodeType === Node.CDATA_SECTION_NODE) n = n.parentElement;
+  let el: Element | null = n instanceof Element ? n : null;
+  while (el && !(el instanceof HTMLElement)) el = el.parentElement;
+  return el;
 }
+
+/**
+ * Closest strict ancestor inside the canvas viewport that is a real vertical scrollport (`overflow-y`
+ * scrollable and content taller than the box). Never returns `viewportRoot` itself so future `overflow`
+ * on `.viewport` cannot steal wheel from the custom pan/zoom handler. `data-node-body-editor` often sits
+ * *inside* the scroll element (e.g. ORDO notes cell), so routing cannot rely on that attribute alone.
+ */
+function nearestVerticalScrollportInViewport(
+  target: HTMLElement,
+  viewportRoot: HTMLElement,
+): HTMLElement | null {
+  let el: HTMLElement | null = target;
+  while (el && el !== viewportRoot && viewportRoot.contains(el)) {
+    const oy = window.getComputedStyle(el).overflowY;
+    if (
+      (oy === "auto" || oy === "scroll" || oy === "overlay") &&
+      el.scrollHeight > el.clientHeight + SCROLLPORT_OVERFLOW_EPSILON_PX
+    ) {
+      return el;
+    }
+    el = el.parentElement;
+  }
+  return null;
+}
+
 /** Scene fade-out / fade-in duration (ms); keep in sync with `.viewportSceneLayer` in ArchitecturalCanvasApp.module.css */
 const VIEWPORT_SCENE_FADE_MS = 760;
 /** Hold at opacity 0 while flow overlay peaks (between fade-out and fade-in). */
@@ -8645,26 +8680,25 @@ export function ArchitecturalCanvasApp({
       ) {
         return;
       }
-      const target = event.target as HTMLElement | null;
+      const target = wheelEventOriginHTMLElement(event);
       if (!target) return;
 
-      const inEditable = !!target.closest("input, textarea, select, [contenteditable='true']");
-      const scrollBody = target.closest<HTMLElement>("[data-node-body-editor]");
-      const inScrollableBody = !!scrollBody && scrollBody.scrollHeight > scrollBody.clientHeight;
+      const scrollPort = nearestVerticalScrollportInViewport(target, root);
       const activeEl = document.activeElement as HTMLElement | null;
       const editableRoot = target.closest<HTMLElement>("input, textarea, select, [contenteditable='true']");
       const editableIsActivelyFocused =
         !!editableRoot &&
         !!activeEl &&
         (editableRoot === activeEl || editableRoot.contains(activeEl));
-      const bodyCanConsumeWheel = canScrollableBodyConsumeWheel(scrollBody, event);
-      const trackpadWheel = isLikelyTrackpadWheel(event);
+      const bodyCanConsumeWheel = canScrollableBodyConsumeWheel(scrollPort, event);
 
       const pinchZoom = event.ctrlKey || event.metaKey;
       if (!pinchZoom && editableIsActivelyFocused) return;
-      if (!pinchZoom && bodyCanConsumeWheel && !trackpadWheel) return;
-      // Preserve native wheel behavior for non-focused form fields outside the canvas editor surfaces.
-      if (!pinchZoom && inEditable && !inScrollableBody && !editableIsActivelyFocused) return;
+      /*
+       * Mouse + trackpad: defer to the browser when a nested scrollport can still move vertically.
+       * Otherwise fall through to preventDefault + canvas pan/zoom (incl. scroll chaining at edges).
+       */
+      if (!pinchZoom && bodyCanConsumeWheel) return;
 
       event.preventDefault();
       if (pinchZoom) {
