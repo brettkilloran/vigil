@@ -38,3 +38,12 @@ export const HEARTGARDEN_COLLA_POLL_ERROR_SNIPPET = "space changes (poll)";
 
 export const HEARTGARDEN_COLLA_POLL_FAILURE_USER_MESSAGE =
   "Could not load space changes (poll). Check network or try refreshing.";
+
+/** Coalesce burst `GET …/graph` refreshes after delta merge / realtime. */
+export const HEARTGARDEN_GRAPH_REFRESH_DEBOUNCE_MS = 450;
+
+/**
+ * When realtime WebSocket is down, still poll graph periodically so pure `item_links` writes
+ * (e.g. MCP) eventually show without an item row bump in `GET …/changes`.
+ */
+export const HEARTGARDEN_GRAPH_REFRESH_FALLBACK_INTERVAL_MS = 55_000;

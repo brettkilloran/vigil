@@ -24,6 +24,9 @@ export type IngestionSignals = z.infer<typeof ingestionSignalsSchema>;
 
 const linkTypeSchema = z.string().max(64).optional();
 
+/** Import-time hint: soft graph edge vs structured field the user may fill on the card later. */
+export const loreImportLinkIntentSchema = z.enum(["association", "binding_hint"]).optional();
+
 export const loreImportPlanFolderSchema = z.object({
   clientId: z.string().min(1).max(64),
   title: z.string().min(1).max(255),
@@ -50,6 +53,7 @@ export const loreImportPlanLinkSchema = z.object({
   fromClientId: z.string().min(1).max(64),
   toClientId: z.string().min(1).max(64),
   linkType: linkTypeSchema,
+  linkIntent: loreImportLinkIntentSchema,
 });
 
 export const mergeProposalSchema = z.object({

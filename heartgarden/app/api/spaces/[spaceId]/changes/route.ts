@@ -6,6 +6,7 @@ import { getHeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-con
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { fetchPlayerSubtreeSpaceRows } from "@/src/lib/heartgarden-space-subtree";
+import { computeItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
 import { collectSpaceSubtreeIds, listGmWorkspaceSpaces } from "@/src/lib/spaces";
 
 /**
@@ -37,6 +38,7 @@ export async function GET(
       spaces: [] as { id: string; name: string; parentSpaceId: string | null; updatedAt: string }[],
       ...(includeItemIds ? { itemIds: [] as string[] } : {}),
       cursor: new Date(0).toISOString(),
+      itemLinksRevision: "0:0:",
     });
   }
 
@@ -75,12 +77,14 @@ export async function GET(
 
   const subtreeIds = collectSpaceSubtreeIds(spaceId, spaceRows);
   if (subtreeIds.length === 0) {
+    const itemLinksRevision = await computeItemLinksRevisionForSpace(db, spaceId);
     return Response.json({
       ok: true,
       items: [],
       spaces: [],
       ...(includeItemIds ? { itemIds: [] as string[] } : {}),
       cursor: new Date(sinceMs).toISOString(),
+      itemLinksRevision,
     });
   }
 
@@ -122,11 +126,14 @@ export async function GET(
 
   const cursor = maxIsoCursor([...changedRows, ...changedSpaceRows], sinceMs);
 
+  const itemLinksRevision = await computeItemLinksRevisionForSpace(db, spaceId);
+
   return Response.json({
     ok: true,
     items: changedItems,
     ...(spacePayload.length > 0 ? { spaces: spacePayload } : {}),
     ...(includeItemIds && itemIds !== undefined ? { itemIds } : {}),
     cursor,
+    itemLinksRevision,
   });
 }

@@ -12,11 +12,15 @@ import {
   playerMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
-import { clampLinkMetaSlackMultiplier } from "@/src/lib/item-link-meta";
+import {
+  clampLinkMetaSlackMultiplier,
+  normalizeLinkSemanticsInMeta,
+} from "@/src/lib/item-link-meta";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 
 function normalizeItemLinkMeta(meta: Record<string, unknown>): Record<string, unknown> {
   const next = { ...meta };
+  normalizeLinkSemanticsInMeta(next);
   if ("slackMultiplier" in next && typeof next.slackMultiplier === "number") {
     next.slackMultiplier = clampLinkMetaSlackMultiplier(next.slackMultiplier);
   }
@@ -125,6 +129,12 @@ export async function POST(req: Request) {
         and(eq(itemLinks.sourceItemId, sourceItemId), eq(itemLinks.targetItemId, targetItemId), pinClause),
       )
       .limit(1);
+    await publishHeartgardenSpaceInvalidation(db, {
+      originSpaceId: srcItem.spaceId,
+      reason: "item-links.changed",
+      itemId: sourceItemId,
+      lookupSpaceIds: [srcItem.spaceId],
+    });
     return Response.json({
       ok: true,
       deduped: true,
@@ -230,7 +240,7 @@ export async function PATCH(req: Request) {
   }
   const [updated] = await db
     .update(itemLinks)
-    .set(updates)
+    .set({ ...updates, updatedAt: new Date() })
     .where(eq(itemLinks.id, id))
     .returning();
   if (!updated) {

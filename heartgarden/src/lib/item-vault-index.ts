@@ -6,6 +6,7 @@ import type { tryGetDb } from "@/src/db/index";
 import { itemEmbeddings, items } from "@/src/db/schema";
 import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
 import { extractLoreItemMeta } from "@/src/lib/lore-item-meta";
+import { buildHgArchBindingSummaryText } from "@/src/lib/hg-arch-binding-projection";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { buildVaultEmbedDocument, chunkVaultText } from "@/src/lib/vault-chunk";
 
@@ -103,11 +104,15 @@ export async function reindexItemVault(
   const [latest] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
   const r = latest ?? row;
 
+  const bindingProjection = buildHgArchBindingSummaryText(
+    r.contentJson as Record<string, unknown> | null | undefined,
+  );
   const doc = buildVaultEmbedDocument({
     title: r.title,
     contentText: r.contentText,
     loreSummary: r.loreSummary,
     loreAliases: r.loreAliases ?? undefined,
+    bindingProjection: bindingProjection || null,
   });
   const chunks = chunkVaultText(doc);
   if (chunks.length === 0) {

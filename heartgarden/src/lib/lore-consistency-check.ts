@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 import { extractJsonObject } from "@/src/lib/lore-import-plan-llm";
+import { extractHgArchBoundItemIds } from "@/src/lib/hg-arch-binding-projection";
 import type { VigilDb } from "@/src/lib/spaces";
 import { LORE_CONSISTENCY_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 import { hybridRetrieveItems } from "@/src/lib/vault-retrieval";
@@ -27,7 +28,8 @@ Rules:
 - **suggestedNoteTags**: 0–8 machine tags for the draft itself (e.g. flavor_not_crunch, uncertain_canon, gm_note_layer, table_advice, needs_crosslink). Lowercase slug_case with underscores. Empty array if none.
 - **semanticSummary**: omit if nothing useful.
 - Never invent candidateItemId values — only copy from the candidates list when provided.
-- When there are no candidates, still return suggestedNoteTags + semanticSummary if helpful; issues should usually be [].`;
+- When there are no candidates, still return suggestedNoteTags + semanticSummary if helpful; issues should usually be [].
+- When a candidate includes structuredBindingTargets (hgArch item ids), flag a contradiction or warning if the draft clearly asserts a different employer, home, or membership than those bindings imply.`;
 
 export type LoreConsistencyIssue = {
   summary: string;
@@ -67,12 +69,18 @@ export async function runLoreConsistencyCheck(args: {
       const snippet =
         hybrid.itemIdToFtsSnippet.get(r.item.id) ??
         (hybrid.itemIdToChunks.get(r.item.id)?.[0] ?? "");
+      const structuredBindingTargets = extractHgArchBoundItemIds(
+        r.item.contentJson as Record<string, unknown> | null | undefined,
+      );
       return {
         itemId: r.item.id,
         title: r.item.title ?? "",
         itemType: r.item.itemType,
         entityType: r.item.entityType,
         excerpt: String(snippet ?? "").slice(0, 1200),
+        ...(structuredBindingTargets.length
+          ? { structuredBindingTargets: structuredBindingTargets.slice(0, 16) }
+          : {}),
       };
     });
 

@@ -90,6 +90,8 @@ export type ParsedSpaceChangesResponse = {
   spaces: SpaceChangePayloadRow[];
   itemIds?: string[];
   cursor?: string;
+  /** Present on current API; when absent, clients should fall back to refreshing the graph each poll. */
+  itemLinksRevision?: string;
 };
 
 function isNonEmptyString(v: unknown): v is string {
@@ -114,6 +116,13 @@ export function parseSpaceChangesResponseJson(
   if ("items" in o && o.items != null && !Array.isArray(o.items)) return null;
   if ("spaces" in o && o.spaces != null && !Array.isArray(o.spaces)) return null;
   if ("cursor" in o && o.cursor != null && typeof o.cursor !== "string") return null;
+  if (
+    "itemLinksRevision" in o &&
+    o.itemLinksRevision != null &&
+    typeof o.itemLinksRevision !== "string"
+  ) {
+    return null;
+  }
 
   if (options.requireItemIds) {
     if (!("itemIds" in o) || !isStringArray(o.itemIds)) return null;
@@ -140,6 +149,8 @@ export function parseSpaceChangesResponseJson(
 
   const itemIds = isStringArray(o.itemIds) ? o.itemIds : undefined;
   const cursor = typeof o.cursor === "string" ? o.cursor : undefined;
+  const itemLinksRevision =
+    typeof o.itemLinksRevision === "string" ? o.itemLinksRevision : undefined;
 
   return {
     ok: true,
@@ -147,6 +158,7 @@ export function parseSpaceChangesResponseJson(
     spaces,
     ...(itemIds !== undefined ? { itemIds } : {}),
     ...(cursor !== undefined ? { cursor } : {}),
+    ...(itemLinksRevision !== undefined ? { itemLinksRevision } : {}),
   };
 }
 

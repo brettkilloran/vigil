@@ -18,6 +18,7 @@ type PlanLinkDraft = {
   fromClientId: string;
   toClientId: string;
   linkType?: string;
+  linkIntent?: "association" | "binding_hint";
 };
 
 /**
@@ -55,6 +56,7 @@ export function filterPlanLinksToSameCanvasSpace(
       fromClientId: l.fromClientId,
       toClientId: l.toClientId,
       linkType: normalizeImportItemLinkType(l.linkType),
+      ...(l.linkIntent ? { linkIntent: l.linkIntent } : {}),
     });
   }
 

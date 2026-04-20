@@ -9,11 +9,9 @@ import type {
   LoreCanvasThreadAnchors,
 } from "@/src/components/foundation/architectural-types";
 import { linkCharacterToFactionRosterRow } from "@/src/lib/faction-roster-link";
+import { isUuidLike } from "@/src/lib/uuid-like";
 
-export function isUuidLike(value: string | null | undefined): value is string {
-  if (!value) return false;
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
+export { isUuidLike } from "@/src/lib/uuid-like";
 
 export function resolvedPersistedContentItemId(entity: CanvasContentEntity): string | null {
   const id =
@@ -54,6 +52,28 @@ function mergeCharFactionAnchors(
     ...prev,
     primaryFactionItemId: factionPersistedId,
     primaryFactionRosterEntryId: rosterEntryId,
+  };
+}
+
+/** Character ↔ faction thread when not targeting a roster row (card-face / employer hint). */
+function mergeCharFactionDirectAnchors(
+  prev: LoreCanvasThreadAnchors | undefined,
+  factionPersistedId: string,
+): LoreCanvasThreadAnchors {
+  if (
+    prev?.primaryFactionItemId &&
+    prev.primaryFactionItemId !== factionPersistedId &&
+    prev.primaryFactionRosterEntryId
+  ) {
+    return {
+      ...prev,
+      primaryFactionItemId: factionPersistedId,
+      primaryFactionRosterEntryId: undefined,
+    };
+  }
+  return {
+    ...prev,
+    primaryFactionItemId: factionPersistedId,
   };
 }
 
@@ -140,6 +160,61 @@ export function evaluateFactionRosterThreadLink(
   return { kind: "connect_and_patch", patch };
 }
 
+export function evaluateCharacterFactionDirectThreadLink(
+  entities: Record<string, CanvasEntity>,
+  endpointA: string,
+  endpointB: string,
+): SemanticThreadEvalResult {
+  const ea = entities[endpointA];
+  const eb = entities[endpointB];
+  const char =
+    ea?.kind === "content" && ea.loreCard?.kind === "character"
+      ? ea
+      : eb?.kind === "content" && eb.loreCard?.kind === "character"
+        ? eb
+        : null;
+  const fac =
+    ea?.kind === "content" && ea.loreCard?.kind === "faction"
+      ? ea
+      : eb?.kind === "content" && eb.loreCard?.kind === "faction"
+        ? eb
+        : null;
+  if (!char || !fac) return { kind: "none" };
+
+  const characterItemId = resolvedPersistedContentItemId(char);
+  const factionPersistedId = resolvedPersistedContentItemId(fac) ?? fac.id;
+  if (!characterItemId) {
+    return {
+      kind: "connect_only",
+      notice:
+        "Could not link faction — this character card needs a saved item id. Try again after the card finishes syncing.",
+    };
+  }
+  if (!isUuidLike(factionPersistedId)) {
+    return {
+      kind: "connect_only",
+      notice:
+        "Could not link faction — this faction card needs a saved item id. Try again after the card finishes syncing.",
+    };
+  }
+
+  const prev = char.loreThreadAnchors;
+  if (prev?.primaryFactionItemId === factionPersistedId) {
+    return { kind: "none" };
+  }
+
+  const nextAnchors = mergeCharFactionDirectAnchors(prev, factionPersistedId);
+  const patch: SemanticThreadPatch = {
+    entityUpdates: {
+      [char.id]: (prevE) =>
+        prevE.kind === "content" && prevE.loreCard?.kind === "character"
+          ? { ...prevE, loreThreadAnchors: nextAnchors }
+          : prevE,
+    },
+  };
+  return { kind: "connect_and_patch", patch };
+}
+
 export function evaluateLocationCharacterThreadLink(
   entities: Record<string, CanvasEntity>,
   endpointA: string,
@@ -216,5 +291,7 @@ export function runSemanticThreadLinkEvaluation(
     if (fac.kind !== "none") return fac;
     return { kind: "none" };
   }
+  const facDirect = evaluateCharacterFactionDirectThreadLink(entities, endpointA, endpointB);
+  if (facDirect.kind !== "none") return facDirect;
   return evaluateLocationCharacterThreadLink(entities, endpointA, endpointB);
 }

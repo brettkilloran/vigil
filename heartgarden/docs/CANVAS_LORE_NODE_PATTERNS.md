@@ -2,6 +2,12 @@
 
 This guide is for adding **new alternate canvas item presentations** (lore cards, credential shells, custom bodies) that share the infinite canvas with generic note/code cards. It encodes lessons from character v11, focus mode, and progressive disclosure so the **next** variant is cheaper to ship.
 
+## Associations vs bindings (vocabulary)
+
+- **Association** — a contextual **canvas connection** (`item_links`): “these cards belong in the same story web.” Cutting the rope removes the visible thread; it does not by itself erase prose or structured fields the user already filled on the card.
+- **Binding** — a **structured field** on the card (`content_json.hgArch`): employer faction, home location, roster row, etc. Bindings are what template chrome and recall should trust for “this card *is* or *has* that entity.”
+- Drawing a thread can still **mirror** into hgArch for approved patterns (see `canvas-thread-link-eval.ts`). Full slot catalog: [`BINDINGS_CATALOG.md`](./BINDINGS_CATALOG.md).
+
 ## Goals
 
 - **Configurable** — detection, seed HTML, and UI shell stay data-driven where possible (`loreCard`, theme, seed helpers).

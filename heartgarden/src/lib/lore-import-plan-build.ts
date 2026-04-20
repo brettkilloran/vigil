@@ -145,6 +145,7 @@ export async function buildLoreImportPlan(args: {
       fromClientId: l.fromClientId,
       toClientId: l.toClientId,
       linkType: l.linkType,
+      linkIntent: l.linkIntent,
     })),
   );
 
@@ -233,6 +234,7 @@ export async function buildLoreImportPlan(args: {
       fromClientId: l.fromClientId,
       toClientId: l.toClientId,
       linkType: l.linkType,
+      ...(l.linkIntent ? { linkIntent: l.linkIntent } : {}),
     })),
     mergeProposals,
     contradictions,

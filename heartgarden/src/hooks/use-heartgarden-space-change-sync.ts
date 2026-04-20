@@ -49,6 +49,14 @@ export function useHeartgardenSpaceChangeSync(options: {
   remoteTombstoneExemptIdsRef: MutableRefObject<Set<string>>;
   setGraph: Dispatch<SetStateAction<CanvasGraph>>;
   itemServerUpdatedAtRef: MutableRefObject<Map<string, string>>;
+  /**
+   * After item/space rows merge from poll or realtime catch-up.
+   * `itemLinksRevision` comes from `GET …/changes` — compare to last seen before downloading `GET …/graph`.
+   */
+  onAfterSpaceChangeMerge?: (info: {
+    source: HeartgardenSpaceSyncRunSource;
+    itemLinksRevision?: string;
+  }) => void;
 }): void {
   const {
     enabled,
@@ -64,6 +72,7 @@ export function useHeartgardenSpaceChangeSync(options: {
     remoteTombstoneExemptIdsRef,
     setGraph,
     itemServerUpdatedAtRef,
+    onAfterSpaceChangeMerge,
   } = options;
 
   const consecutiveMissesRef = useRef(0);
@@ -173,6 +182,10 @@ export function useHeartgardenSpaceChangeSync(options: {
         for (const bump of collectItemServerUpdatedAtBumps(rawItems, protectedContentIds)) {
           mergeItemServerUpdatedAtIfNewer(itemServerUpdatedAtRef.current, bump.id, bump.updatedAt);
         }
+        onAfterSpaceChangeMerge?.({
+          source,
+          itemLinksRevision: data.itemLinksRevision,
+        });
       } finally {
         inFlight = false;
       }
@@ -246,6 +259,7 @@ export function useHeartgardenSpaceChangeSync(options: {
     remoteTombstoneExemptIdsRef,
     setGraph,
     itemServerUpdatedAtRef,
+    onAfterSpaceChangeMerge,
   ]);
 
   useEffect(() => {

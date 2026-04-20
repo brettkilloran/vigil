@@ -11,7 +11,9 @@ import { sanitizeRetrievedTextForLorePrompt } from "@/src/lib/lore-prompt-saniti
 import {
   budgetPerSource,
   excerptForLore,
+  expandHgArchBindingNeighbors,
   expandLinkedItems,
+  expandProseLinkedItems,
   hybridRetrieveItems,
 } from "@/src/lib/vault-retrieval";
 
@@ -27,6 +29,10 @@ export type LoreSource = {
   matchedChunks?: string[];
   /** Included via 1-hop item_links from primary hits. */
   viaGraph?: boolean;
+  /** Included because a primary hit's body cites `vigil:item:` (wiki-style). */
+  viaProse?: boolean;
+  /** Included via hgArch binding slots on a primary hit (no `item_links` required). */
+  viaBinding?: boolean;
 };
 
 const LORE_SYSTEM = `You are Heartgarden's lore assistant for tabletop RPG worldbuilding.
@@ -72,7 +78,21 @@ export async function retrieveLoreSources(
   );
   const maxOut = 20;
 
-  const total = rows.length + graphRows.length;
+  const proseCap = Math.min(
+    6,
+    Math.max(0, maxOut - rows.length - graphRows.length),
+  );
+  const proseRows =
+    proseCap > 0 ? await expandProseLinkedItems(db, rows, base, proseCap) : [];
+
+  const bindingCap = Math.min(
+    6,
+    Math.max(0, maxOut - rows.length - graphRows.length - proseRows.length),
+  );
+  const bindingRows =
+    bindingCap > 0 ? await expandHgArchBindingNeighbors(db, rows, base, bindingCap) : [];
+
+  const total = rows.length + graphRows.length + proseRows.length + bindingRows.length;
   const primaryBudget = budgetPerSource(total, 14_000);
   const graphBudget = Math.min(900, Math.floor(primaryBudget * 0.55));
 
@@ -92,6 +112,8 @@ export async function retrieveLoreSources(
   }
 
   const primaryIds = new Set(rows.map((r) => r.item.id));
+  const graphIds = new Set(graphRows.map((r) => r.item.id));
+  const proseIds = new Set(proseRows.map((r) => r.item.id));
   for (const row of graphRows) {
     if (out.length >= maxOut) break;
     if (primaryIds.has(row.item.id)) continue;
@@ -102,6 +124,34 @@ export async function retrieveLoreSources(
       spaceName: row.space.name,
       excerpt: fallbackExcerpt(row, graphBudget),
       viaGraph: true,
+    });
+  }
+
+  for (const row of proseRows) {
+    if (out.length >= maxOut) break;
+    if (primaryIds.has(row.item.id) || graphIds.has(row.item.id)) continue;
+    out.push({
+      itemId: row.item.id,
+      title: row.item.title?.trim() || "Untitled",
+      spaceId: row.space.id,
+      spaceName: row.space.name,
+      excerpt: fallbackExcerpt(row, graphBudget),
+      viaProse: true,
+    });
+  }
+
+  for (const row of bindingRows) {
+    if (out.length >= maxOut) break;
+    if (primaryIds.has(row.item.id) || graphIds.has(row.item.id) || proseIds.has(row.item.id)) {
+      continue;
+    }
+    out.push({
+      itemId: row.item.id,
+      title: row.item.title?.trim() || "Untitled",
+      spaceId: row.space.id,
+      spaceName: row.space.name,
+      excerpt: fallbackExcerpt(row, graphBudget),
+      viaBinding: true,
     });
   }
 
@@ -125,7 +175,14 @@ export async function synthesizeLoreAnswer(
   const client = new Anthropic({ apiKey });
   const blocks = sources.map((s, i) => {
     const body = sanitizeRetrievedTextForLorePrompt(s.excerpt);
-    return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${s.viaGraph ? "\n- context: linked neighbor" : ""}\n\n${body}`;
+    const ctx = s.viaGraph
+      ? "\n- context: canvas connection neighbor"
+      : s.viaProse
+        ? "\n- context: cited in note text"
+        : s.viaBinding
+          ? "\n- context: structured card field (hgArch binding target)"
+          : "";
+    return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${ctx}\n\n${body}`;
   });
   const user = `Question:\n${question.trim()}\n\n---\n\nCanvas excerpts (your only ground truth):\n\n${blocks.join("\n\n---\n\n")}`;
 

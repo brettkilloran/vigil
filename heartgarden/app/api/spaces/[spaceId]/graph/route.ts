@@ -5,6 +5,7 @@ import { itemLinks, items } from "@/src/db/schema";
 import { getHeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
 import type { GraphEdge, GraphNode } from "@/src/lib/graph-types";
 import { parseSlackMultiplierFromLinkMeta } from "@/src/lib/item-link-meta";
+import { computeItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 
 export async function GET(
@@ -44,6 +45,8 @@ export async function GET(
     .where(eq(items.spaceId, spaceId));
   const totalNodes = totalRow?.c ?? 0;
 
+  const itemLinksRevision = await computeItemLinksRevisionForSpace(db, spaceId);
+
   let rows;
   let pageLimit: number | undefined;
   if (limitRaw == null) {
@@ -80,6 +83,7 @@ export async function GET(
       nodes: [] as GraphNode[],
       edges: [] as GraphEdge[],
       total_nodes: totalNodes,
+      itemLinksRevision,
     };
     if (limitRaw != null && pageLimit != null) {
       emptyPayload.limit = pageLimit;
@@ -132,6 +136,7 @@ export async function GET(
     nodes,
     edges,
     total_nodes: totalNodes,
+    itemLinksRevision,
   };
   if (limitRaw != null && pageLimit != null) {
     payload.limit = pageLimit;

@@ -128,15 +128,18 @@ export function buildVaultEmbedDocument(input: {
   contentText: string;
   loreSummary?: string | null;
   loreAliases?: string[] | null;
+  /** hgArch roster / thread anchors etc. — see `buildHgArchBindingSummaryText`. */
+  bindingProjection?: string | null;
 }): string {
   const title = input.title?.trim() ?? "";
   const body = input.contentText?.trim() ?? "";
   const aliases = (input.loreAliases ?? []).filter(Boolean).join(", ");
   const summary = input.loreSummary?.trim() ?? "";
+  const bind = input.bindingProjection?.trim() ?? "";
   const meta = [summary && `Summary: ${summary}`, aliases && `Aliases: ${aliases}`]
     .filter(Boolean)
     .join("\n");
   const head = title ? `Title: ${title}` : "";
-  const parts = [head, meta, body].filter(Boolean);
+  const parts = [head, meta, bind, body].filter(Boolean);
   return parts.join("\n\n").trim();
 }

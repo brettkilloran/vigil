@@ -39,7 +39,12 @@ Return ONLY valid JSON (no markdown fence) with this exact shape:
     }
   ],
   "links": [
-    { "fromClientId": "note clientId", "toClientId": "note clientId", "linkType": "reference"|"ally"|"enemy"|"neutral"|"faction"|"quest"|"location"|"npc"|"lore" (optional; default reference) }
+    {
+      "fromClientId": "note clientId",
+      "toClientId": "note clientId",
+      "linkType": "reference"|"ally"|"enemy"|"neutral"|"faction"|"quest"|"location"|"npc"|"lore" (optional; default reference),
+      "linkIntent": "association" | "binding_hint" (optional)
+    }
   ]
 }
 
@@ -49,6 +54,7 @@ Rules:
 - Titles must be stable proper nouns or section names when possible.
 - If the document is tiny, one folder and one note is fine.
 - **Links:** Only connect two notes that share the same folderClientId (same canvas space). Never use linkType "pin" — that is reserved for user-drawn canvas threads. Prefer **relationship** linkTypes (ally, enemy, neutral, reference, quest, lore) when the edge describes how two notes relate. Use **role tags** (npc, faction, location) only when the import needs an explicit story role that is not already obvious from each note's entity kind — do not set linkType to duplicate both endpoints' kinds (e.g. avoid faction→faction with linkType "faction" unless it adds meaning).
+- **Association vs binding:** linkIntent is optional metadata on each link. Use "association" (default) for narrative or contextual ties that should stay as **canvas connections** (item_links rows) only. Use "binding_hint" when the edge is really a **structured relationship that belongs on a lore card** (employer faction, home location, roster membership) — the importer still creates a connection row today, but hints that the GM should confirm or fill the matching hgArch fields on the card; do not invent roster rows the document does not support.
 - Keep each note focused (one topic or tight cluster) so entity kinds and link types stay accurate.`;
 
 const MERGE_SYSTEM = `You match new imported notes to existing canvas items (candidates from search).
@@ -138,7 +144,12 @@ export type OutlineLlmResult = {
     campaignEpoch?: number;
     loreHistorical?: boolean;
   }[];
-  links: { fromClientId: string; toClientId: string; linkType?: string }[];
+  links: {
+    fromClientId: string;
+    toClientId: string;
+    linkType?: string;
+    linkIntent?: "association" | "binding_hint";
+  }[];
 };
 
 /** Shrink per-chunk excerpts until the full chunk id list fits in the outline prompt. */
@@ -472,7 +483,12 @@ export type LoreImportClarifyContext = {
     ingestionSignals?: IngestionSignals;
     loreHistorical?: boolean;
   }[];
-  links: { fromClientId: string; toClientId: string; linkType?: string }[];
+  links: {
+    fromClientId: string;
+    toClientId: string;
+    linkType?: string;
+    linkIntent?: "association" | "binding_hint";
+  }[];
   mergeProposals: {
     id: string;
     noteClientId: string;

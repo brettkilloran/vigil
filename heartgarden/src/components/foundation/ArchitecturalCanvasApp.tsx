@@ -132,6 +132,7 @@ import {
   type SpacePresencePeer,
 } from "@/src/components/foundation/architectural-neon-api";
 import { mergeHydratedDbConnections } from "@/src/lib/architectural-item-link-graph";
+import type { GraphEdge } from "@/src/lib/graph-types";
 import {
   clampLinkMetaSlackMultiplier,
   DEFAULT_LINK_SLACK_MULTIPLIER,
@@ -192,6 +193,8 @@ import {
   worldRectFromViewport,
 } from "@/src/lib/canvas-viewport-cull";
 import {
+  HEARTGARDEN_GRAPH_REFRESH_DEBOUNCE_MS,
+  HEARTGARDEN_GRAPH_REFRESH_FALLBACK_INTERVAL_MS,
   HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MAX,
   HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MIN,
   HEARTGARDEN_PRESENCE_POINTER_FLUSH_MIN_MS,
@@ -1885,6 +1888,7 @@ export function ArchitecturalCanvasApp({
   const connectionModeSoundPrevRef = useRef<ConnectionDockMode>("move");
   const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
   const [threadRosterNotice, setThreadRosterNotice] = useState<string | null>(null);
+  const [collabConnectionsNotice, setCollabConnectionsNotice] = useState<string | null>(null);
   const [connectionColor, setConnectionColor] = useState(CONNECTION_DEFAULT_COLOR);
   const [connectionCursorWorld, setConnectionCursorWorld] = useState<{ x: number; y: number } | null>(
     null,
@@ -2260,6 +2264,19 @@ export function ArchitecturalCanvasApp({
   /** While undo restores a deleted row, collab merge must not tombstone it before POST /items completes. */
   const remoteTombstoneExemptIdsRef = useRef<Set<string>>(new Set());
   const syncCursorRef = useRef<string>(new Date(0).toISOString());
+  /** Fingerprint of last merged server `item_links` graph — detects remote edge changes for toast. */
+  const pollGraphEdgesSigRef = useRef<string | null>(null);
+  /** Matches `GET …/changes` + `GET …/graph` `itemLinksRevision` — skip full graph when unchanged. */
+  const lastItemLinksRevisionRef = useRef<string | null>(null);
+  const graphMergeQueueRef = useRef({
+    debounceTimer: null as number | null,
+    inFlight: false,
+    rerun: false,
+    pendingToast: false,
+  });
+  const mergeRemoteGraphEdgesImplRef = useRef<(showToastIfChanged: boolean) => Promise<void>>(
+    async () => {},
+  );
   const focusDirtyRef = useRef(false);
   const inlineContentDirtyIdsRef = useRef<Set<string>>(new Set());
   /** Item ids with an in-flight `apiPatchItem` (versioned PATCH from `patchItemWithVersion`). */
@@ -2316,6 +2333,12 @@ export function ArchitecturalCanvasApp({
     const t = window.setTimeout(() => setThreadRosterNotice(null), 6500);
     return () => window.clearTimeout(t);
   }, [threadRosterNotice]);
+
+  useEffect(() => {
+    if (!collabConnectionsNotice) return;
+    const t = window.setTimeout(() => setCollabConnectionsNotice(null), 5500);
+    return () => window.clearTimeout(t);
+  }, [collabConnectionsNotice]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -4502,6 +4525,106 @@ export function ArchitecturalCanvasApp({
     persistNeonRef.current &&
     isUuidLike(activeSpaceId);
 
+  const mergeRemoteGraphEdgesImpl = useCallback(
+    async (showToastIfChanged: boolean) => {
+      if (scenario !== "default" || !canvasBootstrapResolved) return;
+      if (!persistNeonRef.current) return;
+      if (!isUuidLike(activeSpaceId)) return;
+      try {
+        const res = await fetch(`/api/spaces/${encodeURIComponent(activeSpaceId)}/graph`);
+        const data = (await res.json()) as {
+          ok?: boolean;
+          edges?: GraphEdge[];
+          itemLinksRevision?: string;
+        };
+        if (!data?.ok || !data.edges) return;
+        const sig = [...data.edges]
+          .map((e) => e.id)
+          .sort()
+          .join("\n");
+        const prevSig = pollGraphEdgesSigRef.current;
+        pollGraphEdgesSigRef.current = sig;
+        if (typeof data.itemLinksRevision === "string") {
+          lastItemLinksRevisionRef.current = data.itemLinksRevision;
+        }
+        setGraph((prev) =>
+          mergeHydratedDbConnections(prev, data.edges!, {
+            defaultFolderPin: CONNECTION_PIN_DEFAULT_FOLDER,
+            defaultContentPin: CONNECTION_PIN_DEFAULT_CONTENT,
+            fallbackColor: CONNECTION_DEFAULT_COLOR,
+          }),
+        );
+        if (showToastIfChanged && prevSig !== null && prevSig !== sig) {
+          setCollabConnectionsNotice(
+            "Connections were updated (another tab, automation, or background sync).",
+          );
+        }
+      } catch {
+        /* ignore */
+      }
+    },
+    [activeSpaceId, scenario, canvasBootstrapResolved, setGraph],
+  );
+
+  useEffect(() => {
+    mergeRemoteGraphEdgesImplRef.current = mergeRemoteGraphEdgesImpl;
+  }, [mergeRemoteGraphEdgesImpl]);
+
+  const enqueueRemoteGraphMerge = useCallback((wantToastOnChange: boolean) => {
+    const q = graphMergeQueueRef.current;
+    if (wantToastOnChange) q.pendingToast = true;
+    if (q.inFlight) {
+      q.rerun = true;
+      return;
+    }
+    if (q.debounceTimer != null) {
+      window.clearTimeout(q.debounceTimer);
+      q.debounceTimer = null;
+    }
+    q.debounceTimer = window.setTimeout(() => {
+      q.debounceTimer = null;
+      void (async () => {
+        const qq = graphMergeQueueRef.current;
+        if (qq.inFlight) {
+          qq.rerun = true;
+          return;
+        }
+        qq.inFlight = true;
+        try {
+          do {
+            qq.rerun = false;
+            const toast = qq.pendingToast;
+            qq.pendingToast = false;
+            await mergeRemoteGraphEdgesImplRef.current(toast);
+          } while (qq.rerun);
+        } finally {
+          qq.inFlight = false;
+        }
+      })();
+    }, HEARTGARDEN_GRAPH_REFRESH_DEBOUNCE_MS);
+  }, []);
+
+  useEffect(() => {
+    const queue = graphMergeQueueRef.current;
+    return () => {
+      if (queue.debounceTimer != null) window.clearTimeout(queue.debounceTimer);
+      queue.debounceTimer = null;
+    };
+  }, []);
+
+  const onAfterSpaceChangeMerge = useCallback(
+    (info: { itemLinksRevision?: string }) => {
+      const rev = info.itemLinksRevision;
+      if (typeof rev !== "string") {
+        enqueueRemoteGraphMerge(false);
+        return;
+      }
+      if (rev === lastItemLinksRevisionRef.current) return;
+      enqueueRemoteGraphMerge(true);
+    },
+    [enqueueRemoteGraphMerge],
+  );
+
   useHeartgardenSpaceChangeSync({
     enabled: collabNeonActive,
     hasRemotePeers: presencePeers.length > 0,
@@ -4516,15 +4639,49 @@ export function ArchitecturalCanvasApp({
     remoteTombstoneExemptIdsRef,
     setGraph,
     itemServerUpdatedAtRef,
+    onAfterSpaceChangeMerge,
   });
 
-  useHeartgardenRealtimeSpaceSync({
+  const { connectedRef: realtimeConnectedRef } = useHeartgardenRealtimeSpaceSync({
     enabled: collabNeonActive,
     activeSpaceId,
-    onInvalidate: () => {
+    onInvalidate: (detail) => {
       setRealtimeRefreshNonce((n) => n + 1);
+      if (detail?.reason === "item-links.changed") {
+        enqueueRemoteGraphMerge(true);
+      }
     },
   });
+
+  useEffect(() => {
+    if (!collabNeonActive || !isUuidLike(activeSpaceId)) return;
+    const id = window.setInterval(() => {
+      if (realtimeConnectedRef.current) return;
+      void (async () => {
+        try {
+          const res = await fetch(
+            `/api/spaces/${encodeURIComponent(activeSpaceId)}/link-revision`,
+          );
+          const raw: unknown = await res.json();
+          if (
+            !res.ok ||
+            typeof raw !== "object" ||
+            raw === null ||
+            (raw as { ok?: unknown }).ok !== true
+          ) {
+            return;
+          }
+          const rev = (raw as { itemLinksRevision?: unknown }).itemLinksRevision;
+          if (typeof rev !== "string") return;
+          if (rev === lastItemLinksRevisionRef.current) return;
+          enqueueRemoteGraphMerge(true);
+        } catch {
+          /* ignore */
+        }
+      })();
+    }, HEARTGARDEN_GRAPH_REFRESH_FALLBACK_INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, [activeSpaceId, collabNeonActive, enqueueRemoteGraphMerge, realtimeConnectedRef]);
 
   const presencePayloadForHeartbeat = useCallback(() => {
     const v = viewRef.current;
@@ -4781,14 +4938,24 @@ export function ArchitecturalCanvasApp({
     if (!persistNeonRef.current) return;
     if (!isUuidLike(activeSpaceId)) return;
     let cancelled = false;
+    pollGraphEdgesSigRef.current = null;
+    lastItemLinksRevisionRef.current = null;
     void (async () => {
       try {
         const res = await fetch(`/api/spaces/${encodeURIComponent(activeSpaceId)}/graph`);
         const data = (await res.json()) as {
           ok?: boolean;
-          edges?: import("@/src/lib/graph-types").GraphEdge[];
+          edges?: GraphEdge[];
+          itemLinksRevision?: string;
         };
         if (cancelled || !data?.ok || !data.edges) return;
+        pollGraphEdgesSigRef.current = [...data.edges]
+          .map((e) => e.id)
+          .sort()
+          .join("\n");
+        if (typeof data.itemLinksRevision === "string") {
+          lastItemLinksRevisionRef.current = data.itemLinksRevision;
+        }
         setGraph((prev) =>
           mergeHydratedDbConnections(prev, data.edges!, {
             defaultFolderPin: CONNECTION_PIN_DEFAULT_FOLDER,
@@ -12392,6 +12559,11 @@ export function ArchitecturalCanvasApp({
         {threadRosterNotice ? (
           <div className={styles.threadRosterNotice} role="status" aria-live="polite">
             {threadRosterNotice}
+          </div>
+        ) : null}
+        {collabConnectionsNotice ? (
+          <div className={styles.threadRosterNotice} role="status" aria-live="polite">
+            {collabConnectionsNotice}
           </div>
         ) : null}
       </div>

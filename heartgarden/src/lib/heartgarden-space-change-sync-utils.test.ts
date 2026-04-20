@@ -136,6 +136,14 @@ describe("parseSpaceChangesResponseJson", () => {
     );
     expect(p?.itemIds).toEqual(["x"]);
   });
+
+  it("parses itemLinksRevision when present", () => {
+    const p = parseSpaceChangesResponseJson(
+      { ok: true, items: [], itemIds: ["x"], itemLinksRevision: "3:99:abc" },
+      { requireItemIds: true },
+    );
+    expect(p?.itemLinksRevision).toBe("3:99:abc");
+  });
 });
 
 describe("applySpaceChangeGraphMerge", () => {

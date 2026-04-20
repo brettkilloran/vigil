@@ -12,7 +12,8 @@ import {
 export function useHeartgardenRealtimeSpaceSync(options: {
   enabled: boolean;
   activeSpaceId: string;
-  onInvalidate: () => void;
+  /** Payload from Redis fanout; use `reason === "item-links.changed"` to refresh graph without waiting for poll. */
+  onInvalidate: (detail?: { reason?: string }) => void;
 }): { connectedRef: React.MutableRefObject<boolean> } {
   const { enabled, activeSpaceId, onInvalidate } = options;
   const connectedRef = useRef(false);
@@ -74,9 +75,16 @@ export function useHeartgardenRealtimeSpaceSync(options: {
           connectedRef.current = true;
           recordRealtimeWsConnect();
         };
-        ws.onmessage = () => {
+        ws.onmessage = (ev) => {
           recordRealtimeMessageReceived();
-          onInvalidate();
+          let reason: string | undefined;
+          try {
+            const p = JSON.parse(String(ev.data)) as { reason?: string };
+            if (typeof p.reason === "string") reason = p.reason;
+          } catch {
+            /* ignore */
+          }
+          onInvalidate(reason !== undefined ? { reason } : undefined);
         };
         ws.onerror = () => {
           connectedRef.current = false;

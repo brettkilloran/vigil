@@ -160,6 +160,7 @@ export type SpaceChangesResponse = {
   spaces?: SpaceChangePayloadRow[];
   itemIds?: string[];
   cursor?: string;
+  itemLinksRevision?: string;
   error?: string;
 };
 
@@ -190,6 +191,9 @@ export async function fetchSpaceChanges(
       ...(parsed.spaces.length > 0 ? { spaces: parsed.spaces } : {}),
       ...(parsed.itemIds !== undefined ? { itemIds: parsed.itemIds } : {}),
       ...(parsed.cursor !== undefined ? { cursor: parsed.cursor } : {}),
+      ...(parsed.itemLinksRevision !== undefined
+        ? { itemLinksRevision: parsed.itemLinksRevision }
+        : {}),
     };
   } catch {
     return null;
@@ -405,7 +409,12 @@ export async function apiPatchItem(
 
       const logicalOk = res.ok && body.ok === true;
       finishNeonTrack(track, op, res, rawText, body, logicalOk);
-      if (logicalOk && (patch.title !== undefined || patch.contentText !== undefined)) {
+      if (
+        logicalOk &&
+        (patch.title !== undefined ||
+          patch.contentText !== undefined ||
+          patch.contentJson !== undefined)
+      ) {
         scheduleVaultIndexForItem(itemId);
       }
       if (logicalOk && body.item) {

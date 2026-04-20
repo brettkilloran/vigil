@@ -264,7 +264,12 @@ export async function listItemsForSpaceSubtree(
   return db
     .select()
     .from(items)
-    .where(inArray(items.spaceId, ids))
+    .where(
+      and(
+        inArray(items.spaceId, ids),
+        sql`coalesce((${items.entityMeta}::jsonb -> 'hgArchive' ->> 'archived'), 'false') != 'true'`,
+      ),
+    )
     .orderBy(asc(items.zIndex), asc(items.createdAt));
 }
 

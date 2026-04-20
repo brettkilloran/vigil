@@ -169,6 +169,7 @@ export async function applyLoreImportPlan(
       fromClientId: l.fromClientId,
       toClientId: l.toClientId,
       linkType: l.linkType,
+      linkIntent: l.linkIntent,
     })),
   );
   plan = {
@@ -488,7 +489,11 @@ export async function applyLoreImportPlan(
           sourcePin: null,
           targetPin: null,
           color: null,
-          meta: { import: true, importBatchId: plan.importBatchId },
+          meta: {
+            import: true,
+            importBatchId: plan.importBatchId,
+            ...(link.linkIntent ? { linkIntent: link.linkIntent } : {}),
+          },
         })
         .onConflictDoNothing({
           target: [

@@ -22,6 +22,7 @@ import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realt
 import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-vault-index";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
+import { jsonValuesEqualForPatch } from "@/src/lib/json-value-equal";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
@@ -251,7 +252,10 @@ export async function PATCH(
     p.title !== undefined && p.title !== existing.title;
   const contentTextChanged =
     p.contentText !== undefined && p.contentText !== existing.contentText;
-  const contentDirty = titleChanged || contentTextChanged;
+  const contentJsonChanged =
+    p.contentJson !== undefined &&
+    !jsonValuesEqualForPatch(p.contentJson, existing.contentJson);
+  const contentDirty = titleChanged || contentTextChanged || contentJsonChanged;
   const metaDirty =
     p.entityMeta !== undefined || p.entityMetaMerge !== undefined;
   if (bootCtx.role !== "player") {

@@ -38,6 +38,12 @@ export const LORE_LINK_TYPE_OPTIONS: readonly LoreLinkTypeOption[] = [
   { value: "quest", label: "Quest", group: "relationship", menuLabel: "Quest" },
   { value: "lore", label: "Lore", group: "relationship", menuLabel: "Lore" },
   {
+    value: "other",
+    label: "Other",
+    group: "relationship",
+    menuLabel: "Other (describe in link label / notes)",
+  },
+  {
     value: "faction",
     label: "Faction",
     group: "story_tag",
@@ -105,6 +111,7 @@ function linkTypeRankScore(
     s += 16;
   }
   if (value === "quest" && (ks === "character" || kt === "character")) s += 6;
+  if (value === "other") s += 2;
 
   // Deprioritize role tags that duplicate both endpoints' entity kinds (still available).
   if (value === "location" && ks === "location" && kt === "location") s -= 24;

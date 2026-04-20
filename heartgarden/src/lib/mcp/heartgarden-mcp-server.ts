@@ -408,7 +408,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       {
         name: "heartgarden_patch_item",
         description:
-          "PATCH an item (geometry, content, entity fields, move between spaces). Maps snake_case args to API camelCase. Requires write_key (or omit when HEARTGARDEN_MCP_WRITE_KEY is set on the MCP server). Prefer content_text for normal edits; content_json is the full TipTap document (see docs/API.md PATCH /api/items). content_text is capped at ~2M characters per request.",
+          "PATCH an item (geometry, content, entity fields, move between spaces). Maps snake_case args to API camelCase. Requires write_key (or omit when HEARTGARDEN_MCP_WRITE_KEY is set on the MCP server). Prefer content_text for normal prose edits. content_json is the stored document JSON — for lore cards this is also where structured fields live under hgArch (employer faction, locations, roster rows). Use heartgarden_create_link for a visible canvas connection between two cards; use content_json / hgArch when the relationship should be owned by the card template. content_text is capped at ~2M characters per request.",
         inputSchema: {
           type: "object",
           properties: {
@@ -526,7 +526,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       {
         name: "heartgarden_create_link",
         description:
-          "Create a directed item_link (POST /api/item-links). source_item_id → target_item_id. relationship_type maps to the API linkType field. Both items must be in the same space as space_id.",
+          "Create a canvas connection between two items (POST /api/item-links): a visible thread/edge on the map. This is not the same as editing structured fields on a lore card (roster, anchors) — those live in the item's content JSON (hgArch) via heartgarden_patch_item. source_item_id → target_item_id. relationship_type maps to linkType. Pins are omitted so the UI picks default anchors; duplicate logical pairs can exist with different pin geometry. Both items must share space_id.",
         inputSchema: {
           type: "object",
           properties: {

@@ -136,6 +136,7 @@ export const itemLinks = pgTable(
     color: varchar("color", { length: 128 }),
     meta: jsonb("meta").$type<Record<string, unknown> | null>(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   },
   (t) => [
     unique("item_links_source_target_pin_uidx").on(

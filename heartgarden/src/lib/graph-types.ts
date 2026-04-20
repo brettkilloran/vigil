@@ -21,5 +21,6 @@ export type SpaceGraphResponse = {
   ok?: boolean;
   nodes?: GraphNode[];
   edges?: GraphEdge[];
+  itemLinksRevision?: string;
   error?: string;
 };
