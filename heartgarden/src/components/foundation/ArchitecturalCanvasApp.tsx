@@ -482,7 +482,7 @@ function collectSpacesNeedingParentResync(
   return out;
 }
 
-type ArchitecturalCanvasScenario = "default" | "nested" | "corrupt";
+type ArchitecturalCanvasScenario = "default" | "corrupt";
 
 type LoreImportDraftState = {
   fileName?: string;
@@ -1821,8 +1821,8 @@ function parseHeartgardenBootStatus(d: HeartgardenBootStatusJson): HeartgardenBo
   };
 }
 
-/** Local-only demo canvas (no Neon); same showcase as nested scenario seed. */
-function buildHeartgardenNestedDemoGraph() {
+/** Local-only demo canvas (no Neon); same graph as default seed (single-level Demo notes folder). */
+function buildHeartgardenDemoLocalGraph() {
   return buildArchitecturalSeedGraph(
     {
       taskItem: styles.taskItem,
@@ -1834,7 +1834,7 @@ function buildHeartgardenNestedDemoGraph() {
       mediaImageActions: styles.mediaImageActions,
       mediaUploadBtn: styles.mediaUploadBtn,
     },
-    "nested",
+    "default",
   );
 }
 
@@ -4864,7 +4864,7 @@ export function ArchitecturalCanvasApp({
     setWorkspaceViewFromCache(false);
     persistNeonRef.current = false;
     neonSyncSetCloudEnabled(false);
-    const freshGraph = buildHeartgardenNestedDemoGraph();
+    const freshGraph = buildHeartgardenDemoLocalGraph();
     setGraph(freshGraph);
     setActiveSpaceId(freshGraph.rootSpaceId);
     setNavigationPath([freshGraph.rootSpaceId]);

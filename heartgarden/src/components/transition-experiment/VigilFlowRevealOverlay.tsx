@@ -269,7 +269,7 @@ function compileShader(gl: WebGLRenderingContext, type: number, source: string):
 }
 
 export type VigilFlowRevealOverlayProps = {
-  scenario: "default" | "nested" | "corrupt";
+  scenario: "default" | "corrupt";
   /** After the user activates (or non-default mount): full reveal target 1; before that, ambient ~nav idle. */
   sessionActivated: boolean;
   navActive: boolean;

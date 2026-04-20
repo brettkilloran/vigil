@@ -19,10 +19,6 @@ export const Default: Story = {
   render: () => <ArchitecturalCanvasApp />,
 };
 
-export const NestedFolders: Story = {
-  render: () => <ArchitecturalCanvasApp scenario="nested" />,
-};
-
 export const CorruptFolderRecovery: Story = {
   render: () => <ArchitecturalCanvasApp scenario="corrupt" />,
 };

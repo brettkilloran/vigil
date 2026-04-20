@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { VigilFlowRevealOverlay } from "./VigilFlowRevealOverlay";
 
 /**
- * WebGL flow reveal used on the real canvas. Only `scenario="default"` renders; nested/corrupt
+ * WebGL flow reveal used on the real canvas. Only `scenario="default"` renders; non-default
  * scenarios skip the overlay in the app, so most stories keep `default`.
  */
 const meta = {
@@ -85,14 +85,14 @@ export const BootstrapPending: Story = {
 
 export const NonDefaultScenarioSkipsOverlay: Story = {
   args: {
-    scenario: "nested",
+    scenario: "corrupt",
     sessionActivated: true,
     navActive: true,
   },
   parameters: {
     docs: {
       description: {
-        story: "Matches app behavior: overlay does not mount for nested (or corrupt) scenarios.",
+        story: "Matches app behavior: overlay does not mount for corrupt (or any non-default) scenarios.",
       },
     },
   },

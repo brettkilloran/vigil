@@ -26,17 +26,5 @@ describe("architectural seed hgDoc migration", () => {
     }
   });
 
-  it("nested scenario default/task/code cards also carry bodyDoc", () => {
-    const graph = buildArchitecturalSeedGraph(TOKENS, "nested");
-    const content = Object.values(graph.entities).filter((e) => e.kind === "content");
-    const proseAndCode = content.filter(
-      (e) => e.theme === "default" || e.theme === "task" || e.theme === "code",
-    );
-    expect(proseAndCode.length).toBeGreaterThan(0);
-    for (const entity of proseAndCode) {
-      expect(entity.bodyDoc).toBeTruthy();
-      expect(hgDocToPlainText(entity.bodyDoc!).trim().length).toBeGreaterThan(0);
-    }
-  });
 });
 

@@ -13,8 +13,6 @@ import { mediaUploadActionLabel } from "@/src/components/foundation/architectura
 import { legacyCodeBodyHtmlToHgDocSeed } from "@/src/lib/hg-doc/html-to-doc";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
 import {
-  DEMO_ARCHIVE_EXTRA_DOC,
-  DEMO_ARCHIVE_NOTE_DOC,
   DEMO_RESEARCH_DOSSIER_DOC,
   DEMO_ROOT_WELCOME_DOC,
   DEMO_STACK_HOME_BOTTOM_DOC,
@@ -38,23 +36,22 @@ type StyleTokens = {
 /**
  * World-space offsets so the onboarding cluster sits around **world (0,0)** — matches how a
  * real GM “Main space” feels with viewport-centered `defaultCamera` (cards are not shoved into
- * the lower-right quadrant). Same 2×2 rhythm: ~160px gutters, 600px row step.
+ * the lower-right quadrant). Rhythm: 600px row step (clears `.a4DocumentNode` max height ≈ 340×√2).
  *
- * **Vertical gap:** On-canvas notes use `.a4DocumentNode` (max height ≈ 340×√2). The third row
- * (folder) must start below the second row by at least that height plus margin, or cards overlap
- * the folder after the newer tall-card shell shipped.
+ * **Root demo layout:** Row 1 — welcome doc (left) + sample stack (right). Row 2 — “Try these steps”
+ * checklist under the welcome card, Demo notes folder under the stack. Row 3 — image card under the folder.
  */
 const DEMO_ROOT_GRID_OX = -420;
 const DEMO_ROOT_GRID_OY = -440;
-/** Row distance between the two card rows (world px). */
+/** Row distance between major horizontal bands (world px). */
 const DEMO_ROOT_ROW_STEP = 600;
-/**
- * Y offset from `DEMO_ROOT_GRID_OY` to the folder’s top edge. ~600 (row) + ~520 (max card body column
- * + header, rounded up) + margin — keeps the demo-notes folder clear of row two.
- */
-const DEMO_ROOT_FOLDER_Y_FROM_GRID_ORIGIN = DEMO_ROOT_ROW_STEP + 600;
-/** 420px-wide folder centered under the 2×2 grid (grid spans x ≈ −420…420). */
-const DEMO_ROOT_FOLDER_LEFT = DEMO_ROOT_GRID_OX + 210;
+/** Sample stack column (same x as each stacked card slot). */
+const DEMO_ROOT_STACK_COL_OX = DEMO_ROOT_GRID_OX + 500;
+/** 420px-wide folder centered under the 340px-wide stack column. */
+const DEMO_ROOT_FOLDER_X = DEMO_ROOT_STACK_COL_OX + (340 - 420) / 2;
+/** Folder sits in row 2 on the stack column; image in row 3 below it. */
+const DEMO_ROOT_FOLDER_Y = DEMO_ROOT_GRID_OY + DEMO_ROOT_ROW_STEP;
+const DEMO_ROOT_IMAGE_Y = DEMO_ROOT_GRID_OY + DEMO_ROOT_ROW_STEP * 2;
 
 /** Pin anchors aligned with `ArchitecturalCanvasApp` `CONNECTION_PIN_DEFAULT_CONTENT`. */
 const DEMO_SEED_CONTENT_PIN: CanvasConnectionPin = {
@@ -96,7 +93,7 @@ const DEMO_DOSSIER_02_BODY_DOC = legacyCodeBodyHtmlToHgDocSeed(DEMO_DOSSIER_02_C
 const DEMO_DOSSIER_02_BODY_HTML = hgDocToHtml(DEMO_DOSSIER_02_BODY_DOC);
 
 export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
-  /* Root demo: 2×2 grid (welcome + three-card stack on row one, checklist + image on row two), then folder row. */
+  /* Root demo: welcome + stack (row 1); checklist under welcome + folder under stack (row 2); image under folder (row 3). */
   return [
     {
       id: "node-1",
@@ -113,7 +110,7 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
     {
       id: "node-3",
       title: "Try these steps",
-      x: DEMO_ROOT_GRID_OX + 500,
+      x: DEMO_ROOT_GRID_OX,
       y: DEMO_ROOT_GRID_OY + DEMO_ROOT_ROW_STEP,
       rotation: -3.1,
       width: 340,
@@ -126,8 +123,8 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
     {
       id: "node-4",
       title: "Image card (double-click for gallery)",
-      x: DEMO_ROOT_GRID_OX,
-      y: DEMO_ROOT_GRID_OY + DEMO_ROOT_ROW_STEP,
+      x: DEMO_ROOT_STACK_COL_OX,
+      y: DEMO_ROOT_IMAGE_Y,
       rotation: 2.2,
       width: 340,
       theme: "media",
@@ -164,7 +161,7 @@ function createContentSeedMap(tokens: StyleTokens): Record<string, CanvasEntity>
 
 export function buildArchitecturalSeedGraph(
   tokens: StyleTokens,
-  scenario: "default" | "nested" | "corrupt" = "default",
+  scenario: "default" | "corrupt" = "default",
 ): CanvasGraph {
   const entities = createContentSeedMap(tokens);
   const spaces: Record<string, CanvasSpace> = {
@@ -199,15 +196,15 @@ export function buildArchitecturalSeedGraph(
     rotation: -4.2,
     width: 420,
     tapeRotation: 0,
-    /* Third row: centered under the 2×2 grid — Y chosen so tall a4-style cards do not cover it. */
+    /* Row 2 on the stack column, centered under the 340px cards. */
     slots: {
-      root: { x: DEMO_ROOT_FOLDER_LEFT, y: DEMO_ROOT_GRID_OY + DEMO_ROOT_FOLDER_Y_FROM_GRID_ORIGIN },
+      root: { x: DEMO_ROOT_FOLDER_X, y: DEMO_ROOT_FOLDER_Y },
     },
   };
 
-  /** Home-board stack (was top-right grid cell); pin thread targets `home-stack-c`. */
+  /** Home-board stack (top-right of row 1); pin thread targets `home-stack-c`. */
   const DEMO_HOME_STACK_ID = "demo-home-stack";
-  const homeStackSlot = { x: DEMO_ROOT_GRID_OX + 500, y: DEMO_ROOT_GRID_OY };
+  const homeStackSlot = { x: DEMO_ROOT_STACK_COL_OX, y: DEMO_ROOT_GRID_OY };
   entities["home-stack-a"] = {
     id: "home-stack-a",
     title: "Sample stack — back card",
@@ -256,9 +253,6 @@ export function buildArchitecturalSeedGraph(
 
   const DEMO_RESEARCH_OX = -420;
   const DEMO_RESEARCH_OY = -140;
-  const DEMO_RESEARCH_FOLDER_LEFT = DEMO_RESEARCH_OX + 210;
-  /** Nested Archive folder: below the two dossier cards (a4-height + margin). */
-  const DEMO_RESEARCH_NESTED_FOLDER_Y = DEMO_RESEARCH_OY + 600;
 
   const folderMockNodes: CanvasNode[] = [
     {
@@ -300,65 +294,7 @@ export function buildArchitecturalSeedGraph(
     spaces["space-project-thesis"].entityIds.push(node.id);
   });
 
-  /* Demo notes space stays minimal: two cards + nested Archive folder when `nested` (three entities max). */
-
-  if (scenario === "nested") {
-    spaces["space-subsystems"] = {
-      id: "space-subsystems",
-      name: "Archive",
-      parentSpaceId: "space-project-thesis",
-      entityIds: ["nested-note-1", "nested-note-2"],
-    };
-
-    entities["folder-2"] = {
-      id: "folder-2",
-      title: "Archive",
-      kind: "folder",
-      theme: "folder",
-      childSpaceId: "space-subsystems",
-      rotation: 0.5,
-      width: 420,
-      tapeRotation: 0,
-      /* Below the two research cards, centered like the root folder */
-      slots: {
-        "space-project-thesis": { x: DEMO_RESEARCH_FOLDER_LEFT, y: DEMO_RESEARCH_NESTED_FOLDER_Y },
-      },
-    };
-
-    entities["nested-note-1"] = {
-      id: "nested-note-1",
-      title: "Nested space (third level)",
-      kind: "content",
-      theme: "default",
-      rotation: -0.6,
-      tapeRotation: 1.2,
-      tapeVariant: "clear",
-      bodyDoc: DEMO_ARCHIVE_NOTE_DOC,
-      bodyHtml: hgDocToHtml(DEMO_ARCHIVE_NOTE_DOC),
-      slots: {
-        /* Single card centered on the archive’s focal point */
-        "space-subsystems": { x: -170, y: -140 },
-      },
-    };
-
-    entities["nested-note-2"] = {
-      id: "nested-note-2",
-      title: "Dummy vault list",
-      kind: "content",
-      theme: "task",
-      rotation: 1.4,
-      tapeRotation: -0.8,
-      tapeVariant: "clear",
-      bodyDoc: DEMO_ARCHIVE_EXTRA_DOC,
-      bodyHtml: hgDocToHtml(DEMO_ARCHIVE_EXTRA_DOC),
-      slots: {
-        /* Below nested-note-1 — spaced for a4-style max height on the first card. */
-        "space-subsystems": { x: -170, y: 440 },
-      },
-    };
-
-    spaces["space-project-thesis"].entityIds.push("folder-2");
-  }
+  /* Demo notes subspace: two cards only (no third-level Archive folder). */
 
   if (scenario === "corrupt") {
     entities["folder-1"] = {
