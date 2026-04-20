@@ -11,6 +11,17 @@ export type LoreCardKind = "character" | "faction" | "location";
 export type LoreCardVariant = "v1" | "v2" | "v3" | "v4" | "v7" | "v11";
 export type LoreCard = { kind: LoreCardKind; variant: LoreCardVariant };
 
+/**
+ * Semantic canvas thread anchors persisted under `content_json.hgArch.loreThreadAnchors`.
+ * Character cards use primary* fields; location cards use `linkedCharacterItemIds`.
+ */
+export type LoreCanvasThreadAnchors = {
+  primaryLocationItemId?: string;
+  primaryFactionItemId?: string;
+  primaryFactionRosterEntryId?: string;
+  linkedCharacterItemIds?: string[];
+};
+
 export type NodeTheme = ContentTheme | "folder" | LoreCardKind;
 
 export type { FolderColorSchemeId };
@@ -61,6 +72,8 @@ export type CanvasContentEntity = CanvasEntityBase & {
   loreCard?: LoreCard;
   /** From `content_json.hgArch.factionRoster` when present (faction lore cards). */
   factionRoster?: FactionRosterEntry[];
+  /** From `content_json.hgArch.loreThreadAnchors` — semantic thread / autofill hints. */
+  loreThreadAnchors?: LoreCanvasThreadAnchors;
 };
 
 export type CanvasFolderEntity = CanvasEntityBase & {

@@ -9,6 +9,7 @@ import type {
   CanvasPinConnection,
   CanvasSpace,
   ContentTheme,
+  LoreCanvasThreadAnchors,
   LoreCard,
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
@@ -74,6 +75,7 @@ export type HgArchPayload = {
   folderColorScheme?: string;
   loreCard?: LoreCard;
   factionRoster?: FactionRosterEntry[];
+  loreThreadAnchors?: LoreCanvasThreadAnchors;
 };
 
 export function htmlToPlainText(html: string): string {
@@ -92,6 +94,28 @@ function readRecord(obj: unknown): Record<string, unknown> | null {
     : null;
 }
 
+function parseLoreThreadAnchors(raw: unknown): LoreCanvasThreadAnchors | undefined {
+  const o = readRecord(raw);
+  if (!o) return undefined;
+  const out: LoreCanvasThreadAnchors = {};
+  if (typeof o.primaryLocationItemId === "string" && o.primaryLocationItemId.trim()) {
+    out.primaryLocationItemId = o.primaryLocationItemId.trim();
+  }
+  if (typeof o.primaryFactionItemId === "string" && o.primaryFactionItemId.trim()) {
+    out.primaryFactionItemId = o.primaryFactionItemId.trim();
+  }
+  if (typeof o.primaryFactionRosterEntryId === "string" && o.primaryFactionRosterEntryId.trim()) {
+    out.primaryFactionRosterEntryId = o.primaryFactionRosterEntryId.trim();
+  }
+  if (Array.isArray(o.linkedCharacterItemIds)) {
+    const ids = o.linkedCharacterItemIds.filter(
+      (x): x is string => typeof x === "string" && x.trim().length > 0,
+    );
+    if (ids.length) out.linkedCharacterItemIds = ids;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 function readHgArch(cj: Record<string, unknown> | null): HgArchPayload | null {
   if (!cj) return null;
   const raw = cj.hgArch;
@@ -99,6 +123,7 @@ function readHgArch(cj: Record<string, unknown> | null): HgArchPayload | null {
   if (!o) return null;
   const factionRosterRaw = o[FACTION_ROSTER_HG_ARCH_KEY];
   const factionRoster = parseFactionRoster(factionRosterRaw);
+  const loreThreadAnchors = parseLoreThreadAnchors(o.loreThreadAnchors);
   return {
     theme: o.theme as ContentTheme | undefined,
     tapeVariant: o.tapeVariant as TapeVariant | undefined,
@@ -108,6 +133,7 @@ function readHgArch(cj: Record<string, unknown> | null): HgArchPayload | null {
       typeof o.folderColorScheme === "string" ? o.folderColorScheme : undefined,
     loreCard: parseLoreCard(o.loreCard),
     ...(factionRoster ? { factionRoster } : {}),
+    ...(loreThreadAnchors ? { loreThreadAnchors } : {}),
   };
 }
 
@@ -277,6 +303,9 @@ export function canvasItemToEntity(
   }
   if (loreCard?.kind === "faction" && hg?.factionRoster) {
     entity.factionRoster = hg.factionRoster;
+  }
+  if (hg?.loreThreadAnchors) {
+    entity.loreThreadAnchors = hg.loreThreadAnchors;
   }
   return entity;
 }
@@ -604,6 +633,9 @@ export function buildContentJsonForContentEntity(
   }
   if (entity.loreCard?.kind === "faction" && entity.factionRoster !== undefined) {
     hgArch.factionRoster = entity.factionRoster;
+  }
+  if (entity.loreThreadAnchors && Object.keys(entity.loreThreadAnchors).length > 0) {
+    hgArch.loreThreadAnchors = entity.loreThreadAnchors;
   }
   if (entity.bodyDoc != null && contentEntityUsesHgDoc(entity)) {
     return {

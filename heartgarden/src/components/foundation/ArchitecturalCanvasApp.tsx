@@ -266,10 +266,11 @@ import { newDefaultHgDocSeed, newTaskHgDocSeed } from "@/src/lib/hg-doc/new-node
 import { hgDocForContentEntity } from "@/src/lib/hg-doc/code-theme-doc";
 import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
 import {
-  createDefaultFactionRosterSeed,
-  linkCharacterToFactionRosterRow,
-} from "@/src/lib/faction-roster-link";
-import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
+  isUuidLike,
+  resolveFactionRosterEntryIdFromDrawTarget,
+  runSemanticThreadLinkEvaluation,
+} from "@/src/lib/canvas-thread-link-eval";
+import { createDefaultFactionRosterSeed } from "@/src/lib/faction-roster-link";
 import {
   defaultLoreCardVariantForKind,
   defaultTitleForLoreKind,
@@ -730,86 +731,6 @@ type ConnectionPinViewContext = {
   ty: number;
   scale: number;
 };
-
-function isUuidLike(value: string | null | undefined): value is string {
-  if (!value) return false;
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-function resolvedPersistedContentItemId(entity: CanvasContentEntity): string | null {
-  const id =
-    entity.persistedItemId && isUuidLike(entity.persistedItemId) ? entity.persistedItemId : entity.id;
-  return isUuidLike(id) ? id : null;
-}
-
-function resolveFactionRosterEntryIdFromDrawTarget(
-  target: HTMLElement,
-  endpointA: string,
-  endpointB: string,
-): string | null {
-  const row = target.closest<HTMLElement>("[data-faction-roster-entry-id]");
-  if (!row) return null;
-  const rosterId = row.dataset.factionRosterEntryId;
-  const host = row.closest<HTMLElement>("[data-node-id]")?.dataset.nodeId;
-  if (!rosterId || !host || (host !== endpointA && host !== endpointB)) return null;
-  return rosterId;
-}
-
-type FactionRosterThreadEval =
-  | { kind: "none" }
-  | { kind: "block"; message: string }
-  | { kind: "connect_and_patch"; factionEntityId: string; nextRoster: FactionRosterEntry[] }
-  | { kind: "connect_only"; notice?: string };
-
-function evaluateFactionRosterThreadLink(
-  entities: Record<string, CanvasEntity>,
-  endpointA: string,
-  endpointB: string,
-  rosterEntryId: string | null,
-): FactionRosterThreadEval {
-  if (!rosterEntryId) return { kind: "none" };
-  const ea = entities[endpointA];
-  const eb = entities[endpointB];
-  const char =
-    ea?.kind === "content" && ea.loreCard?.kind === "character"
-      ? ea
-      : eb?.kind === "content" && eb.loreCard?.kind === "character"
-        ? eb
-        : null;
-  const fac =
-    ea?.kind === "content" && ea.loreCard?.kind === "faction"
-      ? ea
-      : eb?.kind === "content" && eb.loreCard?.kind === "faction"
-        ? eb
-        : null;
-  if (!char || !fac) return { kind: "none" };
-
-  const characterItemId = resolvedPersistedContentItemId(char);
-  if (!characterItemId) {
-    return {
-      kind: "connect_only",
-      notice:
-        "Could not link roster — this character card needs a saved item id. Try again after the card finishes syncing.",
-    };
-  }
-
-  const prevRoster = fac.factionRoster ?? [];
-  const result = linkCharacterToFactionRosterRow(prevRoster, rosterEntryId, characterItemId);
-  if (!result.ok) {
-    if (result.code === "replace_blocked") {
-      return { kind: "block", message: result.message };
-    }
-    return { kind: "connect_only", notice: result.message };
-  }
-  if (JSON.stringify(result.roster) === JSON.stringify(prevRoster)) {
-    return { kind: "none" };
-  }
-  return {
-    kind: "connect_and_patch",
-    factionEntityId: fac.id,
-    nextRoster: result.roster,
-  };
-}
 
 function clampFollowCamera(cam: CameraState): CameraState {
   return {
@@ -3052,8 +2973,9 @@ export function ArchitecturalCanvasApp({
   );
 
   const syncCreateConnection = useCallback(
-    async (connectionId: string) => {
-      const snap = graphRef.current.connections[connectionId];
+    async (connectionId: string, snapIn?: CanvasPinConnection) => {
+      /** `graphRef` tracks last *rendered* graph; right after `setGraph` the new connection is not in the ref yet. */
+      const snap = snapIn ?? graphRef.current.connections[connectionId];
       if (!snap) return;
       const sourceEntity = graphRef.current.entities[snap.sourceEntityId];
       const targetEntity = graphRef.current.entities[snap.targetEntityId];
@@ -3282,34 +3204,43 @@ export function ArchitecturalCanvasApp({
     ) => {
       const connectionId = createId();
       if (!opts?.skipUndo) recordUndoBeforeMutation();
-      setGraph((prev) => {
-        const sourceExists = !!prev.entities[sourceEntityId];
-        const targetExists = !!prev.entities[targetEntityId];
-        if (!sourceExists || !targetExists || sourceEntityId === targetEntityId) return prev;
-        const next = shallowCloneGraph(prev);
-        next.connections[connectionId] = {
-          id: connectionId,
-          sourceEntityId,
-          targetEntityId,
-          sourcePin:
-            prev.entities[sourceEntityId]?.kind === "folder"
-              ? CONNECTION_PIN_DEFAULT_FOLDER
-              : CONNECTION_PIN_DEFAULT_CONTENT,
-          targetPin:
-            prev.entities[targetEntityId]?.kind === "folder"
-              ? CONNECTION_PIN_DEFAULT_FOLDER
-              : CONNECTION_PIN_DEFAULT_CONTENT,
-          color: connectionColor,
-          linkType: "pin",
-          slackMultiplier: DEFAULT_LINK_SLACK_MULTIPLIER,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          syncState: "local-only",
-          syncError: null,
-        };
+      const prev = graphRef.current;
+      if (
+        !prev.entities[sourceEntityId] ||
+        !prev.entities[targetEntityId] ||
+        sourceEntityId === targetEntityId
+      ) {
+        return;
+      }
+      const now = Date.now();
+      const newConnection: CanvasPinConnection = {
+        id: connectionId,
+        sourceEntityId,
+        targetEntityId,
+        sourcePin:
+          prev.entities[sourceEntityId]?.kind === "folder"
+            ? CONNECTION_PIN_DEFAULT_FOLDER
+            : CONNECTION_PIN_DEFAULT_CONTENT,
+        targetPin:
+          prev.entities[targetEntityId]?.kind === "folder"
+            ? CONNECTION_PIN_DEFAULT_FOLDER
+            : CONNECTION_PIN_DEFAULT_CONTENT,
+        color: connectionColor,
+        linkType: "pin",
+        slackMultiplier: DEFAULT_LINK_SLACK_MULTIPLIER,
+        createdAt: now,
+        updatedAt: now,
+        syncState: "local-only",
+        syncError: null,
+      };
+      setGraph((p) => {
+        if (!p.entities[sourceEntityId] || !p.entities[targetEntityId] || sourceEntityId === targetEntityId)
+          return p;
+        const next = shallowCloneGraph(p);
+        next.connections[connectionId] = newConnection;
         return next;
       });
-      void syncCreateConnection(connectionId);
+      void syncCreateConnection(connectionId, newConnection);
     },
     [connectionColor, createId, recordUndoBeforeMutation, syncCreateConnection],
   );
@@ -8067,7 +7998,8 @@ export function ArchitecturalCanvasApp({
     const onMouseDown = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (target.closest("[data-hg-sync-popover='true']")) return;
-      if (target.closest("[data-hg-doc-editor]")) {
+      /* Draw/cut must complete even when the click lands on TipTap (`data-hg-doc-editor`); only skip in move mode. */
+      if (connectionMode === "move" && target.closest("[data-hg-doc-editor]")) {
         return;
       }
       const taskCheckbox = target.closest(`.${styles.taskCheckbox}`);
@@ -8149,38 +8081,40 @@ export function ArchitecturalCanvasApp({
             connectionRosterAnchorRef.current = null;
             setConnectionSourceId(null);
 
-            const rosterEval = evaluateFactionRosterThreadLink(
+            const semanticEval = runSemanticThreadLinkEvaluation(
               graphRef.current.entities,
               endpointA,
               endpointB,
               rosterEntryId,
             );
 
-            if (rosterEval.kind === "block") {
-              setThreadRosterNotice(rosterEval.message);
+            if (semanticEval.kind === "block") {
+              setThreadRosterNotice(semanticEval.message);
               return;
             }
 
-            if (rosterEval.kind === "connect_and_patch") {
+            if (semanticEval.kind === "connect_and_patch") {
               recordUndoBeforeMutation();
               createConnection(endpointA, endpointB, { skipUndo: true });
-              const { factionEntityId, nextRoster } = rosterEval;
-              const base = graphRef.current.entities[factionEntityId];
-              if (base?.kind === "content") {
-                const merged: CanvasContentEntity = { ...base, factionRoster: nextRoster };
-                setGraph((prev) => {
-                  const cur = prev.entities[factionEntityId];
-                  if (!cur || cur.kind !== "content") return prev;
-                  return {
-                    ...prev,
-                    entities: {
-                      ...prev.entities,
-                      [factionEntityId]: { ...cur, factionRoster: nextRoster },
-                    },
-                  };
-                });
-                if (persistNeonRef.current && isUuidLike(factionEntityId)) {
-                  void patchItemWithVersion(factionEntityId, {
+              const { patch } = semanticEval;
+              const patchedForNeon: CanvasContentEntity[] = [];
+              setGraph((prev) => {
+                const entities = { ...prev.entities };
+                for (const [eid, updater] of Object.entries(patch.entityUpdates)) {
+                  const cur = entities[eid];
+                  if (cur?.kind !== "content") continue;
+                  const next = updater(cur);
+                  entities[eid] = next;
+                  if (isUuidLike(eid)) patchedForNeon.push(next);
+                }
+                return { ...prev, entities };
+              });
+              if (persistNeonRef.current) {
+                const seenPersist = new Set<string>();
+                for (const merged of patchedForNeon) {
+                  if (seenPersist.has(merged.id)) continue;
+                  seenPersist.add(merged.id);
+                  void patchItemWithVersion(merged.id, {
                     contentText: contentPlainTextForEntity(merged),
                     contentJson: buildContentJsonForContentEntity(merged),
                   });
@@ -8190,8 +8124,8 @@ export function ArchitecturalCanvasApp({
               createConnection(endpointA, endpointB);
             }
 
-            if (rosterEval.kind === "connect_only" && rosterEval.notice) {
-              setThreadRosterNotice(rosterEval.notice);
+            if (semanticEval.kind === "connect_only" && semanticEval.notice) {
+              setThreadRosterNotice(semanticEval.notice);
             }
           }
           return;
