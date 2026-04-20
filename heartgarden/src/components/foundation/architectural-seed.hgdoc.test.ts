@@ -19,6 +19,7 @@ describe("architectural seed hgDoc migration", () => {
     const graph = buildArchitecturalSeedGraph(TOKENS, "default");
     const content = Object.values(graph.entities).filter((e) => e.kind === "content");
     for (const entity of content) {
+      if (entity.loreCard) continue;
       if (entity.theme === "default" || entity.theme === "task" || entity.theme === "code") {
         expect(entity.bodyDoc).toBeTruthy();
         expect(hgDocToPlainText(entity.bodyDoc!).trim().length).toBeGreaterThan(0);

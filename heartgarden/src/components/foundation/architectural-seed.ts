@@ -10,8 +10,17 @@ import {
 } from "@/src/components/foundation/architectural-types";
 import { DEFAULT_LINK_SLACK_MULTIPLIER } from "@/src/lib/item-link-meta";
 import { mediaUploadActionLabel } from "@/src/components/foundation/architectural-media-html";
-import { legacyCodeBodyHtmlToHgDocSeed } from "@/src/lib/hg-doc/html-to-doc";
+import { createDefaultFactionRosterSeed } from "@/src/lib/faction-roster-link";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
+import {
+  buildFactionArchive091BodyHtml,
+  factionArchiveRailTextsFromObjectId,
+} from "@/src/lib/lore-faction-archive-html";
+import {
+  buildLocationOrdoV7BodyHtml,
+  getLoreNodeSeedBodyHtml,
+  tapeVariantForLoreCard,
+} from "@/src/lib/lore-node-seed-html";
 import {
   DEMO_RESEARCH_DOSSIER_DOC,
   DEMO_ROOT_WELCOME_DOC,
@@ -20,7 +29,6 @@ import {
   DEMO_STACK_HOME_TOP_DOC,
   demoRootTaskDoc,
 } from "@/src/lib/hg-doc/seed-docs";
-import { DS_COLOR } from "@/src/lib/design-system-tokens";
 
 type StyleTokens = {
   taskItem: string;
@@ -39,7 +47,8 @@ type StyleTokens = {
  * the lower-right quadrant). Rhythm: 600px row step (clears `.a4DocumentNode` max height ≈ 340×√2).
  *
  * **Root demo layout:** Row 1 — welcome doc (left) + sample stack (right). Row 2 — “Try these steps”
- * checklist under the welcome card, Demo notes folder under the stack. Row 3 — image card under the folder.
+ * checklist under the welcome card; image card on the stack column (between stack and folder). Row 3 —
+ * Demo notes folder below the image.
  */
 const DEMO_ROOT_GRID_OX = -420;
 const DEMO_ROOT_GRID_OY = -440;
@@ -49,9 +58,9 @@ const DEMO_ROOT_ROW_STEP = 600;
 const DEMO_ROOT_STACK_COL_OX = DEMO_ROOT_GRID_OX + 500;
 /** 420px-wide folder centered under the 340px-wide stack column. */
 const DEMO_ROOT_FOLDER_X = DEMO_ROOT_STACK_COL_OX + (340 - 420) / 2;
-/** Folder sits in row 2 on the stack column; image in row 3 below it. */
-const DEMO_ROOT_FOLDER_Y = DEMO_ROOT_GRID_OY + DEMO_ROOT_ROW_STEP;
-const DEMO_ROOT_IMAGE_Y = DEMO_ROOT_GRID_OY + DEMO_ROOT_ROW_STEP * 2;
+/** Image row on the stack column; folder one row lower. */
+const DEMO_ROOT_IMAGE_Y = DEMO_ROOT_GRID_OY + DEMO_ROOT_ROW_STEP;
+const DEMO_ROOT_FOLDER_Y = DEMO_ROOT_GRID_OY + DEMO_ROOT_ROW_STEP * 2;
 
 /** Pin anchors aligned with `ArchitecturalCanvasApp` `CONNECTION_PIN_DEFAULT_CONTENT`. */
 const DEMO_SEED_CONTENT_PIN: CanvasConnectionPin = {
@@ -84,16 +93,54 @@ function buildDemoRootPinThreadConnection(): CanvasPinConnection {
   };
 }
 
-/** Styled snippet for the in-folder demo card (`legacyCodeBodyHtmlToHgDocSeed`). */
-const DEMO_DOSSIER_02_CODE_HTML = `<span style="color: ${DS_COLOR.codeSampleComment};">// Strip noise from pasted text before indexing</span><br><span style="color: ${DS_COLOR.codeSampleKeyword};">function</span> <span style="color: ${DS_COLOR.codeSampleName};">normalize</span>(s: <span style="color: ${DS_COLOR.codeSampleName};">string</span>) {<br>
-&nbsp;&nbsp;<span style="color: ${DS_COLOR.codeSampleKeyword};">return</span> s.<span style="color: ${DS_COLOR.codeSampleName};">replace</span>(<span style="color: ${DS_COLOR.codeSampleString};">/\\s+/g</span>, <span style="color: ${DS_COLOR.codeSampleString};">' '</span>).<span style="color: ${DS_COLOR.codeSampleName};">trim</span>();<br>
-}`;
+/** Demo folder — v11 character plate with placeholder fields filled for readability. */
+function seedDemoCharacterBodyHtml(): string {
+  return getLoreNodeSeedBodyHtml("character", "v11")
+    .replace(
+      'data-hg-lore-field="1" data-hg-lore-placeholder="true" data-hg-lore-ph="Name"><br></div>',
+      'data-hg-lore-field="1">Morgan Vale</div>',
+    )
+    .replace(
+      'data-hg-lore-field="1" data-hg-lore-placeholder="true" data-hg-lore-ph="Role"><br></span>',
+      'data-hg-lore-field="1">Lead surveyor</span>',
+    )
+    .replace(
+      'data-hg-lore-field="1" data-hg-lore-placeholder="true" data-hg-lore-ph="Group"><br></span>',
+      'data-hg-lore-field="1">Astroglass Survey</span>',
+    )
+    .replace(
+      'data-hg-lore-field="1" data-hg-lore-placeholder="true" data-hg-lore-ph="Origin"><br></span>',
+      'data-hg-lore-field="1">Luna-born</span>',
+    )
+    .replace(
+      'data-hg-lore-field="1" data-hg-lore-placeholder="true" data-hg-lore-ph="Notes"><p><br></p></div>',
+      'data-hg-lore-field="1"><p>Demo character — keeps the drydock manifest honest.</p></div>',
+    );
+}
 
-const DEMO_DOSSIER_02_BODY_DOC = legacyCodeBodyHtmlToHgDocSeed(DEMO_DOSSIER_02_CODE_HTML);
-const DEMO_DOSSIER_02_BODY_HTML = hgDocToHtml(DEMO_DOSSIER_02_BODY_DOC);
+function seedDemoFactionBodyHtml(): string {
+  const { upper, lower } = factionArchiveRailTextsFromObjectId("demo-faction-seed");
+  return buildFactionArchive091BodyHtml({
+    orgPrimaryInnerHtml: "Astroglass Survey",
+    orgAccentInnerHtml: "Independent cooperative",
+    recordInnerHtml:
+      "<p>Demo organization: joint survey and salvage auditors. Names and rails are placeholders for the demo folder.</p>",
+    railUpper: upper,
+    railLower: lower,
+  });
+}
+
+function seedDemoLocationBodyHtml(): string {
+  return buildLocationOrdoV7BodyHtml({
+    name: "Orbital Drydock Nine",
+    context: "Pacific orbital corridor",
+    detail: "Civilian heavy repair berth",
+    notesInnerHtml: "<p>Demo waypoint for maintenance skiffs and courier drops.</p>",
+  });
+}
 
 export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
-  /* Root demo: welcome + stack (row 1); checklist under welcome + folder under stack (row 2); image under folder (row 3). */
+  /* Root demo: welcome + stack (row 1); checklist + image on stack column (row 2); folder (row 3). */
   return [
     {
       id: "node-1",
@@ -196,7 +243,7 @@ export function buildArchitecturalSeedGraph(
     rotation: -4.2,
     width: 420,
     tapeRotation: 0,
-    /* Row 2 on the stack column, centered under the 340px cards. */
+    /* Row 3 — below the image on the stack column. */
     slots: {
       root: { x: DEMO_ROOT_FOLDER_X, y: DEMO_ROOT_FOLDER_Y },
     },
@@ -253,40 +300,83 @@ export function buildArchitecturalSeedGraph(
 
   const DEMO_RESEARCH_OX = -420;
   const DEMO_RESEARCH_OY = -140;
+  const DEMO_RESEARCH_ROW_STEP = 600;
 
-  const folderMockNodes: CanvasNode[] = [
-    {
-      id: "dossier-01",
-      title: "Inside the folder",
-      x: DEMO_RESEARCH_OX,
-      y: DEMO_RESEARCH_OY,
-      rotation: -1.2,
-      width: 340,
-      theme: "default",
-      tapeRotation: -1.1,
-      tapeVariant: "clear",
-      bodyDoc: DEMO_RESEARCH_DOSSIER_DOC,
-      bodyHtml: hgDocToHtml(DEMO_RESEARCH_DOSSIER_DOC),
-    },
-    {
-      id: "dossier-02",
-      title: "Another sample card",
-      x: DEMO_RESEARCH_OX + 500,
-      y: DEMO_RESEARCH_OY,
-      rotation: 0.7,
-      width: 340,
-      theme: "code",
-      tapeRotation: 1.4,
-      tapeVariant: "dark",
-      bodyDoc: DEMO_DOSSIER_02_BODY_DOC,
-      bodyHtml: DEMO_DOSSIER_02_BODY_HTML,
-    },
+  const folderIntro: CanvasNode = {
+    id: "dossier-01",
+    title: "Inside the folder",
+    x: DEMO_RESEARCH_OX,
+    y: DEMO_RESEARCH_OY,
+    rotation: -1.2,
+    width: 340,
+    theme: "default",
+    tapeRotation: -1.1,
+    tapeVariant: "clear",
+    bodyDoc: DEMO_RESEARCH_DOSSIER_DOC,
+    bodyHtml: hgDocToHtml(DEMO_RESEARCH_DOSSIER_DOC),
+  };
+
+  const folderLoreCharacter: CanvasNode = {
+    id: "demo-lore-character",
+    title: "Morgan Vale",
+    x: DEMO_RESEARCH_OX + 500,
+    y: DEMO_RESEARCH_OY,
+    rotation: 0.9,
+    width: 340,
+    theme: "default",
+    tapeRotation: -1.3,
+    tapeVariant: tapeVariantForLoreCard("character", "v11"),
+    bodyHtml: seedDemoCharacterBodyHtml(),
+  };
+
+  const folderLoreFaction: CanvasNode = {
+    id: "demo-lore-faction",
+    title: "Astroglass Survey Cooperative",
+    x: DEMO_RESEARCH_OX,
+    y: DEMO_RESEARCH_OY + DEMO_RESEARCH_ROW_STEP,
+    rotation: -0.8,
+    width: 340,
+    theme: "default",
+    tapeRotation: 1.0,
+    tapeVariant: tapeVariantForLoreCard("faction", "v4"),
+    bodyHtml: seedDemoFactionBodyHtml(),
+  };
+
+  const folderLoreLocation: CanvasNode = {
+    id: "demo-lore-location",
+    title: "Orbital Drydock Nine",
+    x: DEMO_RESEARCH_OX + 500,
+    y: DEMO_RESEARCH_OY + DEMO_RESEARCH_ROW_STEP,
+    rotation: 1.1,
+    width: 340,
+    theme: "default",
+    tapeRotation: -0.9,
+    tapeVariant: tapeVariantForLoreCard("location", "v7"),
+    bodyHtml: seedDemoLocationBodyHtml(),
+  };
+
+  const folderEntities: CanvasNode[] = [
+    folderIntro,
+    folderLoreCharacter,
+    folderLoreFaction,
+    folderLoreLocation,
   ];
 
-  folderMockNodes.forEach((node) => {
+  folderEntities.forEach((node) => {
+    const isChar = node.id === "demo-lore-character";
+    const isFaction = node.id === "demo-lore-faction";
+    const isLoc = node.id === "demo-lore-location";
     entities[node.id] = {
       ...node,
       kind: "content",
+      ...(isChar ? { loreCard: { kind: "character", variant: "v11" } as const } : {}),
+      ...(isFaction
+        ? {
+            loreCard: { kind: "faction", variant: "v4" } as const,
+            factionRoster: createDefaultFactionRosterSeed(),
+          }
+        : {}),
+      ...(isLoc ? { loreCard: { kind: "location", variant: "v7" } as const } : {}),
       slots: {
         "space-project-thesis": { x: node.x, y: node.y },
       },
@@ -294,7 +384,7 @@ export function buildArchitecturalSeedGraph(
     spaces["space-project-thesis"].entityIds.push(node.id);
   });
 
-  /* Demo notes subspace: two cards only (no third-level Archive folder). */
+  /* Demo notes subspace: intro + lore specimen cards (no nested Archive). */
 
   if (scenario === "corrupt") {
     entities["folder-1"] = {
