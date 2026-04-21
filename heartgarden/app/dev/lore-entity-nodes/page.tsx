@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 
 import { LoreEntityNodesClient } from "./LoreEntityNodesClient";
 
@@ -9,5 +10,8 @@ export const metadata: Metadata = {
 };
 
 export default function LoreEntityNodesPage() {
+  if (process.env.NODE_ENV === "production" && process.env.HEARTGARDEN_ENABLE_DEV_ROUTES !== "1") {
+    notFound();
+  }
   return <LoreEntityNodesClient />;
 }

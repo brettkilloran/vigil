@@ -26,6 +26,10 @@ type Story = StoryObj<typeof meta>;
 const logTextCommit = fn();
 
 export const Default: Story = {
+  args: {
+    value: "Double-click to rename",
+    onCommit: fn(),
+  },
   render: () => {
     const [value, setValue] = useState("Double-click to rename");
     return (

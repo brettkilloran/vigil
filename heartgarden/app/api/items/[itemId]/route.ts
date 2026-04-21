@@ -19,7 +19,6 @@ import {
   stripGmOnlyEntityMetaPatch,
 } from "@/src/lib/player-item-policy";
 import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
-import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-vault-index";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { jsonValuesEqualForPatch } from "@/src/lib/json-value-equal";
@@ -300,9 +299,6 @@ export async function PATCH(
   const metaDirty =
     p.entityMeta !== undefined || p.entityMetaMerge !== undefined;
   if (row && (contentDirty || metaDirty)) {
-    if (contentDirty) {
-      scheduleItemEmbeddingRefresh(db, row);
-    }
     scheduleVaultReindexAfterResponse(row.id);
   }
 

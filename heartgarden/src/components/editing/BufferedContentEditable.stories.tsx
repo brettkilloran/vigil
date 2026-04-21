@@ -26,6 +26,11 @@ type Story = StoryObj<typeof meta>;
 const logBodyCommit = fn();
 
 export const PlainText: Story = {
+  args: {
+    value: "Edit this line. Blur commits; Escape cancels.",
+    plainText: true,
+    onCommit: fn(),
+  },
   render: () => {
     const [value, setValue] = useState("Edit this line. Blur commits; Escape cancels.");
     return (

@@ -56,6 +56,21 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Open: Story = {
+  args: {
+    open: true,
+    onClose: fn(),
+    currentSpaceId: "root",
+    items: [],
+    spaces: [],
+    actions: [],
+    recentItems: [],
+    recentFolders: [],
+    onSelectItem: fn(),
+    onSelectSpace: fn(),
+    onRecordRecentItem: fn(),
+    onOpenRecentFolder: fn(),
+    onRunAction: fn(),
+  },
   render: () => (
     <CommandPalette
       open

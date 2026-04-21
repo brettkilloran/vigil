@@ -150,7 +150,16 @@ export function useHeartgardenSpaceChangeSync(options: {
           });
           firstPage = false;
           if (cancelled) return;
-          if (!data) {
+          if (!data.ok) {
+            neonSyncSpaceChangeSyncBreadcrumb(
+              `poll failure (${data.cause})${data.httpStatus ? ` status=${data.httpStatus}` : ""}: ${data.error}`,
+            );
+            neonSyncReportAuxiliaryFailure({
+              operation: `GET /api/spaces/${activeSpaceId}/changes`,
+              message: data.error,
+              cause: data.cause === "http" ? "http" : data.cause === "network" ? "network" : "client",
+              ...(data.httpStatus != null ? { httpStatus: data.httpStatus } : {}),
+            });
             onRepeatedPollFailure();
             return;
           }

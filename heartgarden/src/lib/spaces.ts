@@ -3,6 +3,7 @@ import { and, asc, desc, eq, inArray, ne, notInArray, or, sql } from "drizzle-or
 import type { tryGetDb } from "@/src/db/index";
 import { itemLinks, items, spaces } from "@/src/db/schema";
 import { isHeartgardenGmPlayerSpaceBreakGlassEnabled } from "@/src/lib/heartgarden-gm-break-glass";
+import { fetchDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
 import {
   HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME,
   isHeartgardenImplicitPlayerRootSpaceName,
@@ -197,10 +198,13 @@ export async function assertSpaceReparentAllowed(
     const parent = await assertSpaceExists(db, newParentId);
     if (!parent) return { ok: false, error: "parent_not_found" };
   }
-  const treeRows = await db
-    .select({ id: spaces.id, parentSpaceId: spaces.parentSpaceId })
-    .from(spaces);
-  if (spaceReparentWouldCreateCycle(spaceId, newParentId, treeRows)) {
+  if (newParentId !== null) {
+    const descendants = await fetchDescendantSpaceIds(db, spaceId);
+    if (descendants.has(newParentId)) {
+      return { ok: false, error: "would_create_cycle" };
+    }
+  }
+  if (newParentId === spaceId) {
     return { ok: false, error: "would_create_cycle" };
   }
   return { ok: true };
@@ -648,47 +652,17 @@ export async function deleteSpaceSubtree(
   db: VigilDb,
   spaceId: string,
 ): Promise<{ ok: true; deletedIds: string[] } | { ok: false; error: string }> {
-  const all = await db
-    .select({ id: spaces.id, parentSpaceId: spaces.parentSpaceId })
-    .from(spaces);
-
-  if (!all.some((s) => s.id === spaceId)) {
+  const root = await assertSpaceExists(db, spaceId);
+  if (!root) {
     return { ok: false, error: "Space not found" };
   }
 
-  const byParent = new Map<string | null, string[]>();
-  for (const s of all) {
-    const p = s.parentSpaceId ?? null;
-    const list = byParent.get(p) ?? [];
-    list.push(s.id);
-    byParent.set(p, list);
-  }
-
-  const inTree = new Set<string>();
-  const stack: string[] = [spaceId];
-  while (stack.length > 0) {
-    const id = stack.pop()!;
-    if (inTree.has(id)) continue;
-    inTree.add(id);
-    for (const kid of byParent.get(id) ?? []) stack.push(kid);
-  }
-
-  if (inTree.size >= all.length) {
+  const inTree = await fetchDescendantSpaceIds(db, spaceId);
+  const [total] = await db.select({ c: sql<number>`count(*)::int` }).from(spaces);
+  if (inTree.size >= (total?.c ?? 0)) {
     return { ok: false, error: "Cannot delete all spaces" };
   }
-
-  const order: string[] = [];
-  const postOrder = (id: string) => {
-    for (const kid of byParent.get(id) ?? []) {
-      if (inTree.has(kid)) postOrder(kid);
-    }
-    order.push(id);
-  };
-  postOrder(spaceId);
-
-  for (const id of order) {
-    await db.delete(spaces).where(eq(spaces.id, id));
-  }
-
-  return { ok: true, deletedIds: order };
+  const deletedIds = [...inTree];
+  await db.delete(spaces).where(inArray(spaces.id, deletedIds));
+  return { ok: true, deletedIds };
 }

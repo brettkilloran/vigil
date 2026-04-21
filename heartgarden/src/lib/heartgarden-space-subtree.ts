@@ -51,6 +51,32 @@ export async function fetchPlayerSubtreeSpaceRows(
   return rows.map((r) => ({ id: r.id, parentSpaceId: r.parentSpaceId ?? null }));
 }
 
+/**
+ * Scoped subtree traversal without loading the full spaces table.
+ * Uses iterative parent -> children expansion (bounded by tree depth/size).
+ */
+export async function fetchDescendantSpaceIds(
+  db: VigilDb,
+  rootSpaceId: string,
+): Promise<Set<string>> {
+  const out = new Set<string>([rootSpaceId]);
+  let frontier = [rootSpaceId];
+  while (frontier.length > 0) {
+    const children = await db
+      .select({ id: spaces.id })
+      .from(spaces)
+      .where(inArray(spaces.parentSpaceId, frontier));
+    const next: string[] = [];
+    for (const row of children) {
+      if (out.has(row.id)) continue;
+      out.add(row.id);
+      next.push(row.id);
+    }
+    frontier = next;
+  }
+  return out;
+}
+
 /** Collect `rootId` and every descendant space id using parent pointers (breadth from DB rows). */
 export function collectDescendantSpaceIds(
   rootId: string,

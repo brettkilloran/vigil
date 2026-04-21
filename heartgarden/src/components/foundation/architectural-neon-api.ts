@@ -26,6 +26,13 @@ import { heartgardenSyncDebugLog, isHeartgardenSyncDebugEnabled } from "@/src/li
 const vaultIndexTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const VAULT_INDEX_DEBOUNCE_MS = 2800;
 
+function isServerAfterVaultIndexOwner(): boolean {
+  const owner = (process.env.NEXT_PUBLIC_HEARTGARDEN_INDEX_OWNER ?? "server_after")
+    .trim()
+    .toLowerCase();
+  return owner === "server_after";
+}
+
 /** When true, skip debounced `POST /api/items/:id/index` (Players tier — route is GM-only). */
 let vaultIndexClientDisabledForPlayerLayer = false;
 
@@ -52,6 +59,7 @@ export function neonVaultIndexSetPlayerLayerActive(active: boolean) {
 
 function scheduleVaultIndexForItem(itemId: string) {
   if (vaultIndexClientDisabledForPlayerLayer) return;
+  if (isServerAfterVaultIndexOwner()) return;
   const prev = vaultIndexTimers.get(itemId);
   if (prev) clearTimeout(prev);
   vaultIndexMarkPending(itemId);
@@ -153,8 +161,8 @@ export async function fetchBootstrap(spaceId?: string): Promise<BootstrapRespons
 
 export type { SpaceChangePayloadRow };
 
-export type SpaceChangesResponse = {
-  ok: boolean;
+export type SpaceChangesSuccess = {
+  ok: true;
   items?: CanvasItem[];
   /** Subtree `spaces` rows updated since `since` (e.g. reparent / rename). */
   spaces?: SpaceChangePayloadRow[];
@@ -163,31 +171,75 @@ export type SpaceChangesResponse = {
   itemLinksRevision?: string;
   /** More rows exist after `cursor`; caller should re-poll with `since=cursor`. */
   hasMore?: boolean;
-  error?: string;
 };
+
+export type SpaceChangesFailure = {
+  ok: false;
+  error: string;
+  cause: "http" | "parse" | "network";
+  httpStatus?: number;
+};
+
+export type SpaceChangesResponse = SpaceChangesSuccess | SpaceChangesFailure;
+
+function spaceChangesFailure(
+  cause: SpaceChangesFailure["cause"],
+  error: string,
+  httpStatus?: number,
+): SpaceChangesFailure {
+  return {
+    ok: false,
+    error,
+    cause,
+    ...(httpStatus != null ? { httpStatus } : {}),
+  };
+}
 
 export async function fetchSpaceChanges(
   spaceId: string,
   since: string,
   options?: { includeItemIds?: boolean },
-): Promise<SpaceChangesResponse | null> {
+): Promise<SpaceChangesResponse> {
+  const q = new URLSearchParams();
+  q.set("since", since);
+  q.set("limit", "500");
+  if (options?.includeItemIds) q.set("includeItemIds", "1");
   try {
-    const q = new URLSearchParams();
-    q.set("since", since);
-    q.set("limit", "500");
-    if (options?.includeItemIds) q.set("includeItemIds", "1");
     const res = await fetch(
       `/api/spaces/${encodeURIComponent(spaceId)}/changes?${q.toString()}`,
     );
-    const raw: unknown = await res.json();
-    if (!res.ok) return null;
+    let raw: unknown;
+    try {
+      raw = await res.json();
+    } catch {
+      return spaceChangesFailure(
+        "parse",
+        "Space changes response was not valid JSON",
+        res.status,
+      );
+    }
+    if (!res.ok) {
+      const msg =
+        typeof raw === "object" &&
+        raw != null &&
+        typeof (raw as { error?: unknown }).error === "string"
+          ? (raw as { error: string }).error
+          : `Space changes request failed (${res.status})`;
+      return spaceChangesFailure("http", msg, res.status);
+    }
     if (typeof raw !== "object" || raw === null || (raw as { ok?: unknown }).ok !== true) {
-      return null;
+      return spaceChangesFailure("parse", "Space changes payload failed contract check", res.status);
     }
     const parsed = parseSpaceChangesResponseJson(raw, {
       requireItemIds: options?.includeItemIds === true,
     });
-    if (!parsed) return null;
+    if (!parsed) {
+      return spaceChangesFailure(
+        "parse",
+        "Space changes payload missing required fields",
+        res.status,
+      );
+    }
     return {
       ok: true,
       items: parsed.items,
@@ -199,8 +251,8 @@ export async function fetchSpaceChanges(
         : {}),
       ...(parsed.hasMore === true ? { hasMore: true } : {}),
     };
-  } catch {
-    return null;
+  } catch (e) {
+    return spaceChangesFailure("network", e instanceof Error ? e.message : "Network error");
   }
 }
 

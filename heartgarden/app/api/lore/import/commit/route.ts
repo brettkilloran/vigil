@@ -10,7 +10,6 @@ import {
   heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
-import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-vault-index";
 import {
   buildLoreNoteContentJson,
   planLoreImportCardLayout,
@@ -19,6 +18,7 @@ import { normalizeImportItemLinkType } from "@/src/lib/lore-import-item-link";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 import { normalizeCanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
 import { persistedEntityTypeFromCanonical } from "@/src/lib/lore-object-registry";
+import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { assertSpaceExists, type VigilDb } from "@/src/lib/spaces";
 
@@ -300,7 +300,9 @@ export async function POST(req: Request) {
   );
 
   for (const row of embeddingRows) {
-    scheduleItemEmbeddingRefresh(db, row);
+    if (row.contentText.trim().length > 0 || row.title.trim().length > 0) {
+      scheduleVaultReindexAfterResponse(row.id);
+    }
   }
 
   return Response.json({

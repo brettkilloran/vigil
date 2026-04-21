@@ -64,13 +64,43 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Ready: Story = {
+  args: {
+    technicalReady: true,
+    onActivate: fn(),
+    onExitComplete: fn(),
+    flowerPortalContainer: null,
+    canvasEffectsEnabled: true,
+    onCanvasEffectsEnabledChange: fn(),
+    bootGateEnabled: false,
+    bootGateStatusReady: true,
+  },
   render: () => <BootScreenStage technicalReady />,
 };
 
 export const WaitingOnTechnical: Story = {
+  args: {
+    technicalReady: false,
+    onActivate: fn(),
+    onExitComplete: fn(),
+    flowerPortalContainer: null,
+    canvasEffectsEnabled: true,
+    onCanvasEffectsEnabledChange: fn(),
+    bootGateEnabled: false,
+    bootGateStatusReady: true,
+  },
   render: () => <BootScreenStage technicalReady={false} />,
 };
 
 export const BootPinGate: Story = {
+  args: {
+    technicalReady: true,
+    onActivate: fn(),
+    onExitComplete: fn(),
+    flowerPortalContainer: null,
+    canvasEffectsEnabled: true,
+    onCanvasEffectsEnabledChange: fn(),
+    bootGateEnabled: true,
+    bootGateStatusReady: true,
+  },
   render: () => <BootScreenStage bootGateEnabled bootGateStatusReady />,
 };

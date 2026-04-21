@@ -26,7 +26,6 @@ import {
   stripGmOnlyEntityMetaPatch,
 } from "@/src/lib/player-item-policy";
 import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
-import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-vault-index";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
@@ -262,7 +261,6 @@ export async function POST(
     .returning();
 
   if (row && bootCtx.role !== "player") {
-    scheduleItemEmbeddingRefresh(db, row);
     if (contentText.trim().length > 0 || title.trim().length > 0) {
       scheduleVaultReindexAfterResponse(row.id);
     }

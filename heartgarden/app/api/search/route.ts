@@ -13,6 +13,7 @@ import {
 } from "@/src/lib/heartgarden-search-tier-policy";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { parseSearchFiltersFromUrl } from "@/src/lib/heartgarden-search-url-params";
+import { searchRateLimitExceeded } from "@/src/lib/search-rate-limit";
 import { assertSpaceExists, searchItemsFTS, searchItemsFuzzy } from "@/src/lib/spaces";
 import { parseHybridRetrieveQueryParams } from "@/src/lib/vault-retrieval-query-params";
 import { API_SEARCH_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
@@ -26,6 +27,13 @@ function mapRows(rows: Awaited<ReturnType<typeof searchItemsFTS>>) {
 }
 
 export async function GET(req: Request) {
+  if (searchRateLimitExceeded(req)) {
+    return Response.json(
+      { ok: false, error: "Too many search requests. Try again in a minute.", code: "search_rate_limited", items: [] },
+      { status: 429, headers: { "Retry-After": "60" } },
+    );
+  }
+
   const db = tryGetDb();
   if (!db) {
     return Response.json({ ok: false, error: "Database not configured", items: [] }, { status: 503 });

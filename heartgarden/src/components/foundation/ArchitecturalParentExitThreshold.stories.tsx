@@ -49,14 +49,17 @@ function ThresholdStage(props: {
 }
 
 export const VisibleIdle: Story = {
+  args: { toolbarBottomPx: 0, visible: true, hovered: false, interactive: false },
   render: () => <ThresholdStage visible hovered={false} interactive={false} />,
 };
 
 export const Hovered: Story = {
+  args: { toolbarBottomPx: 0, visible: true, hovered: true, interactive: false },
   render: () => <ThresholdStage visible hovered interactive={false} />,
 };
 
 export const Interactive: Story = {
+  args: { toolbarBottomPx: 0, visible: true, hovered: true, interactive: true, onActivate: fn() },
   render: () => {
     const onActivate = fn();
     return <ThresholdStage visible hovered interactive onActivate={onActivate} />;
@@ -64,5 +67,6 @@ export const Interactive: Story = {
 };
 
 export const Hidden: Story = {
+  args: { toolbarBottomPx: 0, visible: false, hovered: false, interactive: false },
   render: () => <ThresholdStage visible={false} hovered={false} interactive={false} />,
 };

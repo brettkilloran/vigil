@@ -29,6 +29,11 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  args: {
+    position: { x: 48, y: 48 },
+    onClose: fn(),
+    items: [],
+  },
   render: () => {
     const [position, setPosition] = useState<ContextMenuPosition>({ x: 48, y: 48 });
     return (

@@ -11,7 +11,10 @@ import {
   heartgardenRealtimeSecretFromEnv,
   heartgardenRealtimeSpaceChannel,
 } from "../src/lib/heartgarden-realtime-config";
-import { verifyHeartgardenRealtimeRoomToken } from "../src/lib/heartgarden-realtime-token";
+import {
+  heartgardenRealtimeTokenFromProtocolsHeader,
+  verifyHeartgardenRealtimeRoomToken,
+} from "../src/lib/heartgarden-realtime-token";
 
 config({ path: resolve(process.cwd(), ".env.local") });
 
@@ -154,7 +157,11 @@ wss.on("connection", (ws: WebSocket, _request: IncomingMessage, tokenSpaceId: st
 server.on("upgrade", (request, socket, head) => {
   const baseUrl = `http://${request.headers.host ?? "localhost"}`;
   const url = new URL(request.url ?? "/", baseUrl);
-  const token = url.searchParams.get("token") ?? "";
+  const protocolToken = heartgardenRealtimeTokenFromProtocolsHeader(
+    request.headers["sec-websocket-protocol"],
+  );
+  // Backward-compatible fallback while clients roll from query-string auth.
+  const token = protocolToken ?? url.searchParams.get("token") ?? "";
   const verified = verifyHeartgardenRealtimeRoomToken(token);
   if (!verified) {
     socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
