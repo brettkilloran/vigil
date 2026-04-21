@@ -10,11 +10,13 @@ import {
   type CandidateRow,
 } from "@/src/lib/lore-import-plan-llm";
 import {
+  buildChunkAssignmentClarifications,
   capClarificationList,
   ensureClarificationsForContradictions,
   normalizeClarificationsFromLlm,
 } from "@/src/lib/lore-import-clarifications";
 import { filterPlanLinksToSameCanvasSpace } from "@/src/lib/lore-import-item-link";
+import { coerceImportLinkType } from "@/src/lib/lore-import-link-shape";
 import type { IngestionSignals, LoreImportPlan } from "@/src/lib/lore-import-plan-types";
 import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
 import type { HeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
@@ -55,7 +57,7 @@ export async function buildLoreImportPlan(args: {
     chunks,
     args.fullText,
   );
-  attachBodiesToOutline(outline, chunks);
+  const chunkDiagnostics = attachBodiesToOutline(outline, chunks);
 
   const notesInternal: OutlineNoteInternal[] = outline.notes.map((n) => ({
     ...n,
@@ -136,18 +138,69 @@ export async function buildLoreImportPlan(args: {
     details: c.details,
   }));
 
-  const { links: coLocatedLinks, warnings: linkWarnings } = filterPlanLinksToSameCanvasSpace(
+  const kindByClientId = new Map(
+    notesInternal.map((n) => [n.clientId, n.canonicalEntityKind]),
+  );
+  const coercionWarnings: string[] = [];
+  const shapedOutlineLinks = outline.links.map((l) => {
+    const fromKind = kindByClientId.get(l.fromClientId);
+    const toKind = kindByClientId.get(l.toClientId);
+    const coerced = coerceImportLinkType(fromKind, toKind, l.linkType);
+    if (coerced.coerced && coerced.reason) {
+      coercionWarnings.push(
+        `Link ${l.fromClientId} → ${l.toClientId}: ${coerced.reason}`,
+      );
+    }
+    return {
+      fromClientId: l.fromClientId,
+      toClientId: l.toClientId,
+      linkType: coerced.linkType,
+      linkIntent: l.linkIntent,
+    };
+  });
+
+  const {
+    links: coLocatedLinks,
+    crossSpaceMentions,
+    warnings: linkWarnings,
+  } = filterPlanLinksToSameCanvasSpace(
     notesInternal.map((n) => ({
       clientId: n.clientId,
       folderClientId: n.folderClientId,
     })),
-    outline.links.map((l) => ({
-      fromClientId: l.fromClientId,
-      toClientId: l.toClientId,
-      linkType: l.linkType,
-      linkIntent: l.linkIntent,
-    })),
+    shapedOutlineLinks,
   );
+
+  // Group cross-space drafts by the source note so we can attach mention arrays + inject
+  // `[[Title]]` markers into `bodyText`. The apply path is responsible for resolving
+  // the target client ids to real item UUIDs and appending `vigil:item:<uuid>` pointers.
+  const titleByClientId = new Map(notesInternal.map((n) => [n.clientId, n.title]));
+  const mentionsBySource = new Map<
+    string,
+    { toClientId: string; targetTitle: string; linkType: string; linkIntent?: "association" | "binding_hint" }[]
+  >();
+  for (const m of crossSpaceMentions) {
+    const targetTitle = titleByClientId.get(m.toClientId);
+    if (!targetTitle) continue;
+    const list = mentionsBySource.get(m.fromClientId) ?? [];
+    list.push({
+      toClientId: m.toClientId,
+      targetTitle,
+      linkType: m.linkType ?? "history",
+      linkIntent: m.linkIntent,
+    });
+    mentionsBySource.set(m.fromClientId, list);
+  }
+  for (const n of notesInternal) {
+    const mentions = mentionsBySource.get(n.clientId);
+    if (!mentions || mentions.length === 0) continue;
+    const markers = mentions
+      .map((m) => `[[${m.targetTitle}]]`)
+      .join(", ");
+    const appended = `\n\n**Related (in other folders):** ${markers}`;
+    n.bodyText = (n.bodyText + appended).slice(0, 120_000);
+    (n as { crossFolderMentions?: typeof mentions }).crossFolderMentions = mentions;
+  }
 
   const clarifyPayload = {
     folders: outline.folders.map((f) => ({
@@ -200,6 +253,14 @@ export async function buildLoreImportPlan(args: {
     mergeProposals,
     clarifications,
   );
+  const chunkClarifications = buildChunkAssignmentClarifications({
+    noteClientIdsWithoutChunks: chunkDiagnostics.noteClientIdsWithoutChunks,
+    unassignedChunkIds: chunkDiagnostics.unassignedChunkIds,
+    duplicateAssignments: chunkDiagnostics.duplicateAssignments,
+    notes: notesInternal.map((n) => ({ clientId: n.clientId, title: n.title })),
+    chunks: chunks.map((c) => ({ id: c.id, heading: c.heading })),
+  });
+  clarifications = [...clarifications, ...chunkClarifications];
   clarifications = capClarificationList(clarifications);
 
   const planRaw: LoreImportPlan = {
@@ -211,25 +272,39 @@ export async function buildLoreImportPlan(args: {
       heading: c.heading,
       charStart: c.charStart,
       charEnd: c.charEnd,
+      body: c.body.slice(0, 32_000),
     })),
     folders: outline.folders.map((f) => ({
       clientId: f.clientId,
       title: f.title,
       parentClientId: f.parentClientId,
     })),
-    notes: notesInternal.map((n) => ({
-      clientId: n.clientId,
-      title: n.title,
-      canonicalEntityKind: n.canonicalEntityKind,
-      summary: n.summary,
-      bodyText: n.bodyText,
-      folderClientId: n.folderClientId,
-      targetItemType: null,
-      ingestionSignals: n.ingestionSignals,
-      campaignEpoch: n.campaignEpoch,
-      loreHistorical: n.loreHistorical,
-      sourceChunkIds: n.sourceChunkIds,
-    })),
+    notes: notesInternal.map((n) => {
+      const mentions = (n as {
+        crossFolderMentions?: {
+          toClientId: string;
+          targetTitle: string;
+          linkType: string;
+          linkIntent?: "association" | "binding_hint";
+        }[];
+      }).crossFolderMentions;
+      return {
+        clientId: n.clientId,
+        title: n.title,
+        canonicalEntityKind: n.canonicalEntityKind,
+        summary: n.summary,
+        bodyText: n.bodyText,
+        folderClientId: n.folderClientId,
+        targetItemType: null,
+        ingestionSignals: n.ingestionSignals,
+        campaignEpoch: n.campaignEpoch,
+        loreHistorical: n.loreHistorical,
+        sourceChunkIds: n.sourceChunkIds,
+        ...(mentions && mentions.length > 0
+          ? { crossFolderMentions: mentions }
+          : {}),
+      };
+    }),
     links: coLocatedLinks.map((l) => ({
       fromClientId: l.fromClientId,
       toClientId: l.toClientId,
@@ -239,7 +314,10 @@ export async function buildLoreImportPlan(args: {
     mergeProposals,
     contradictions,
     clarifications,
-    importPlanWarnings: linkWarnings.length > 0 ? linkWarnings : undefined,
+    importPlanWarnings:
+      linkWarnings.length > 0 || coercionWarnings.length > 0
+        ? [...coercionWarnings, ...linkWarnings]
+        : undefined,
   };
 
   const parsed = loreImportPlanSchema.safeParse(planRaw);

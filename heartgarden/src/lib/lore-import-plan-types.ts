@@ -33,6 +33,25 @@ export const loreImportPlanFolderSchema = z.object({
   parentClientId: z.string().min(1).max(64).nullable().optional(),
 });
 
+/**
+ * References to plan notes in a different folder — surfaced as `[[Title]]` mentions
+ * on the source card rather than silently dropped `item_links`. Apply materialises
+ * each mention into both `bodyText` (with `vigil:item:<uuid>`) and
+ * `entity_meta.crossFolderRefs` once the target row has an id.
+ *
+ * @see docs/LORE_IMPORT_AUDIT_2026-04-21.md §4.2 and plan §5.
+ */
+export const loreImportCrossFolderMentionSchema = z.object({
+  toClientId: z.string().min(1).max(64),
+  targetTitle: z.string().min(1).max(255),
+  linkType: z.string().min(1).max(64),
+  linkIntent: loreImportLinkIntentSchema,
+});
+
+export type LoreImportCrossFolderMention = z.infer<
+  typeof loreImportCrossFolderMentionSchema
+>;
+
 export const loreImportPlanNoteSchema = z.object({
   clientId: z.string().min(1).max(64),
   title: z.string().min(1).max(255),
@@ -47,6 +66,10 @@ export const loreImportPlanNoteSchema = z.object({
   campaignEpoch: z.number().int().optional(),
   loreHistorical: z.boolean().optional(),
   sourceChunkIds: z.array(z.string().uuid()).optional(),
+  crossFolderMentions: z
+    .array(loreImportCrossFolderMentionSchema)
+    .max(32)
+    .optional(),
 });
 
 export const loreImportPlanLinkSchema = z.object({
@@ -127,6 +150,17 @@ export const planPatchHintSchema = z.discriminatedUnion("op", [
     op: z.literal("discard_merge_proposal"),
     mergeProposalId: z.string().uuid(),
   }),
+  z.object({
+    op: z.literal("assign_chunk_to_note"),
+    chunkId: z.string().uuid(),
+    noteClientId: z.string().min(1).max(64),
+  }),
+  z.object({
+    op: z.literal("unassign_chunk"),
+    chunkId: z.string().uuid(),
+    /** When set, only drops the chunk from this note; otherwise drops from every note. */
+    noteClientId: z.string().min(1).max(64).optional(),
+  }),
 ]);
 
 export type PlanPatchHint = z.infer<typeof planPatchHintSchema>;
@@ -180,6 +214,8 @@ export const loreImportPlanSchema = z.object({
         heading: z.string(),
         charStart: z.number().int(),
         charEnd: z.number().int(),
+        /** Full chunk body (kept on the plan so patches can rebuild note bodies at apply). */
+        body: z.string().max(32_000).optional(),
       }),
     )
     .optional(),
