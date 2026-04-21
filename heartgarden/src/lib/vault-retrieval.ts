@@ -32,6 +32,50 @@ export const DEFAULT_FUZZY_LIMIT_WHEN_SPARSE = 16;
 /** When FTS hit count is below this, merge fuzzy supplement rows. */
 export const DEFAULT_FTS_SPARSE_THRESHOLD = 8;
 export const DEFAULT_MAX_CHUNKS_PER_ITEM = 4;
+export const DEFAULT_RRF_K = 60;
+export const DEFAULT_RRF_LEXICAL_WEIGHT = 1;
+export const DEFAULT_RRF_VECTOR_WEIGHT = 1;
+
+function envNumberInRange(
+  raw: string | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function envIntegerInRange(
+  raw: string | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, Math.floor(parsed)));
+}
+
+const defaultRrfKFromEnv = envIntegerInRange(
+  process.env.HEARTGARDEN_RETRIEVAL_RRF_K,
+  DEFAULT_RRF_K,
+  1,
+  500,
+);
+const defaultRrfLexicalWeightFromEnv = envNumberInRange(
+  process.env.HEARTGARDEN_RETRIEVAL_RRF_LEXICAL_WEIGHT,
+  DEFAULT_RRF_LEXICAL_WEIGHT,
+  0.1,
+  8,
+);
+const defaultRrfVectorWeightFromEnv = envNumberInRange(
+  process.env.HEARTGARDEN_RETRIEVAL_RRF_VECTOR_WEIGHT,
+  DEFAULT_RRF_VECTOR_WEIGHT,
+  0.1,
+  8,
+);
 
 /**
  * Options for `hybridRetrieveItems`. Omitted fields use defaults matching pre-tuning behavior.
@@ -45,6 +89,9 @@ export type HybridRetrieveOptions = {
   fuzzyLimitWhenSparse?: number;
   ftsSparseThreshold?: number;
   maxChunksPerItem?: number;
+  rrfK?: number;
+  rrfLexicalWeight?: number;
+  rrfVectorWeight?: number;
 };
 
 function vectorSqlLiteral(embedding: number[]): string {
@@ -135,6 +182,9 @@ export async function hybridRetrieveItems(
   const fuzzyLimitWhenSparse = options.fuzzyLimitWhenSparse ?? DEFAULT_FUZZY_LIMIT_WHEN_SPARSE;
   const ftsSparseThreshold = options.ftsSparseThreshold ?? DEFAULT_FTS_SPARSE_THRESHOLD;
   const maxChunksPerItem = options.maxChunksPerItem ?? DEFAULT_MAX_CHUNKS_PER_ITEM;
+  const rrfK = options.rrfK ?? defaultRrfKFromEnv;
+  const rrfLexicalWeight = options.rrfLexicalWeight ?? defaultRrfLexicalWeightFromEnv;
+  const rrfVectorWeight = options.rrfVectorWeight ?? defaultRrfVectorWeightFromEnv;
 
   const itemIdToChunks = new Map<string, string[]>();
   const itemIdToFtsSnippet = new Map<string, string>();
@@ -186,6 +236,11 @@ export async function hybridRetrieveItems(
     lexicalOrderedIds,
     vectorOrderedIds,
     maxItems,
+    config: {
+      k: rrfK,
+      lexicalWeight: rrfLexicalWeight,
+      vectorWeight: rrfVectorWeight,
+    },
   });
 
   const rowById = new Map<string, SearchRow>();
@@ -217,6 +272,9 @@ export async function hybridRetrieveItems(
     ftsSparseThreshold,
     maxChunksPerItem,
     vecLimit,
+    rrfK,
+    rrfLexicalWeight,
+    rrfVectorWeight,
     ftsHits: ftsRows.length,
     lexicalRows: lexicalRows.length,
     vectorChunkHits: vecHits.length,

@@ -467,7 +467,11 @@ export async function searchItemsFuzzy(
   const q = query.trim();
   if (!q) return [] as SearchRow[];
   const limit = normalizeLimit(filters.limit, 24, 100);
-  const similarityExpr = sql<number>`similarity(${items.title}, ${q})`;
+  const titleSimilarityExpr = sql<number>`similarity(coalesce(${items.title}, ''), ${q})`;
+  const bodySimilarityExpr = sql<number>`similarity(coalesce(${items.contentText}, ''), ${q})`;
+  const blobSimilarityExpr = sql<number>`similarity(coalesce(${items.searchBlob}, ''), ${q})`;
+  // Title remains slightly boosted while allowing recall from body/blob text.
+  const similarityExpr = sql<number>`greatest(${titleSimilarityExpr} * 1.15, ${bodySimilarityExpr}, ${blobSimilarityExpr})`;
   const where = and(...searchWhereClauses(filters), sql`${similarityExpr} > ${minSimilarity}`);
   const sort = filters.sort ?? "relevance";
   const rankedOrder =
@@ -662,6 +666,7 @@ export async function deleteSpaceSubtree(
   if (inTree.size >= (total?.c ?? 0)) {
     return { ok: false, error: "Cannot delete all spaces" };
   }
+  // Single statement delete over the computed subtree id set; avoids N sequential deletes.
   const deletedIds = [...inTree];
   await db.delete(spaces).where(inArray(spaces.id, deletedIds));
   return { ok: true, deletedIds };

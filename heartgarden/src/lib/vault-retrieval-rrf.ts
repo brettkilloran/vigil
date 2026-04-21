@@ -1,9 +1,37 @@
 /** Reciprocal rank fusion constant (standard default). */
 export const RRF_K = 60;
+export const RRF_WEIGHT_LEXICAL = 1;
+export const RRF_WEIGHT_VECTOR = 1;
 
-export function rrfScore(rank: number | undefined): number {
+export type RrfFusionConfig = {
+  k?: number;
+  lexicalWeight?: number;
+  vectorWeight?: number;
+};
+
+function normalizeRrfConfig(config: RrfFusionConfig | undefined): {
+  k: number;
+  lexicalWeight: number;
+  vectorWeight: number;
+} {
+  const kRaw = config?.k;
+  const lexicalWeightRaw = config?.lexicalWeight;
+  const vectorWeightRaw = config?.vectorWeight;
+  const k = Number.isFinite(kRaw) ? Math.max(1, Math.floor(kRaw as number)) : RRF_K;
+  const lexicalWeight =
+    Number.isFinite(lexicalWeightRaw) && (lexicalWeightRaw as number) > 0
+      ? (lexicalWeightRaw as number)
+      : RRF_WEIGHT_LEXICAL;
+  const vectorWeight =
+    Number.isFinite(vectorWeightRaw) && (vectorWeightRaw as number) > 0
+      ? (vectorWeightRaw as number)
+      : RRF_WEIGHT_VECTOR;
+  return { k, lexicalWeight, vectorWeight };
+}
+
+export function rrfScore(rank: number | undefined, k = RRF_K): number {
   if (rank === undefined) return 0;
-  return 1 / (RRF_K + rank + 1);
+  return 1 / (k + rank + 1);
 }
 
 export type RrfFusionInput = {
@@ -12,6 +40,7 @@ export type RrfFusionInput = {
   /** Item ids in vector relevance order (first chunk per item defines rank). */
   vectorOrderedIds: string[];
   maxItems: number;
+  config?: RrfFusionConfig;
 };
 
 export type RrfFusionScore = {
@@ -29,6 +58,7 @@ export type RrfFusionResult = {
  * Pure RRF over two ordered id lists (deduped per list by first occurrence).
  */
 export function fuseRrfFromOrderedLists(input: RrfFusionInput): RrfFusionResult {
+  const config = normalizeRrfConfig(input.config);
   const lexRankByItem = new Map<string, number>();
   input.lexicalOrderedIds.forEach((id, i) => {
     if (!lexRankByItem.has(id)) lexRankByItem.set(id, i);
@@ -42,7 +72,9 @@ export function fuseRrfFromOrderedLists(input: RrfFusionInput): RrfFusionResult 
   const scored = [...allIds].map((id) => {
     const lexR = lexRankByItem.get(id);
     const vecR = vecRankByItem.get(id);
-    const rrf = rrfScore(lexR) + rrfScore(vecR);
+    const rrf =
+      rrfScore(lexR, config.k) * config.lexicalWeight +
+      rrfScore(vecR, config.k) * config.vectorWeight;
     return { id, rrf, lexR, vecR };
   });
   scored.sort((a, b) => b.rrf - a.rrf);

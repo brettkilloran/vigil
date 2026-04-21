@@ -46,4 +46,31 @@ describe("fuseRrfFromOrderedLists", () => {
     });
     expect(topIds).toEqual(["a", "b"]);
   });
+
+  it("supports weighted fusion favoring lexical rank", () => {
+    const out = fuseRrfFromOrderedLists({
+      lexicalOrderedIds: ["a", "b", "c"],
+      vectorOrderedIds: ["c", "b", "a"],
+      maxItems: 3,
+      config: { lexicalWeight: 3, vectorWeight: 0.5 },
+    });
+    expect(out.topIds[0]).toBe("a");
+  });
+
+  it("supports custom k via config", () => {
+    const defaultScore = fuseRrfFromOrderedLists({
+      lexicalOrderedIds: ["a", "b"],
+      vectorOrderedIds: ["b", "a"],
+      maxItems: 2,
+    }).scores.get("a")?.rrf;
+    const sharperScore = fuseRrfFromOrderedLists({
+      lexicalOrderedIds: ["a", "b"],
+      vectorOrderedIds: ["b", "a"],
+      maxItems: 2,
+      config: { k: 1 },
+    }).scores.get("a")?.rrf;
+    expect(defaultScore).toBeDefined();
+    expect(sharperScore).toBeDefined();
+    expect(sharperScore!).toBeGreaterThan(defaultScore!);
+  });
 });
