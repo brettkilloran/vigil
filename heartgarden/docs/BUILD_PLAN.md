@@ -72,7 +72,7 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 ### Near-term — hardening & parity
 
 1. **`POST /api/lore/query` hardening** — Baseline in-memory rate limit is shipped; before a public URL add auth, edge firewall, or Redis / Vercel KV for global limits.
-2. **Index + embedding ops** — Tune HNSW / IVFFLAT on Neon. Optional **`HEARTGARDEN_INDEX_AFTER_PATCH=1`** uses Next **`after()`** on item PATCH/create (`schedule-vault-index-after.ts`); global queue if volume still exceeds debounced client + reindex.
+2. **Index + embedding ops** — Tune HNSW / IVFFLAT on Neon. Server **`after()`** vault reindex on item PATCH/create (`schedule-vault-index-after.ts`) is **default on**; set **`HEARTGARDEN_INDEX_AFTER_PATCH=0`** to disable. Add a global queue if volume still exceeds debounced client + reindex.
 3. **Retrieval observability** — `HEARTGARDEN_VAULT_DEBUG=1` enables `console.debug` RRF diagnostics in `vault-retrieval.ts` (shipped).
 4. **E2E** — Optional: palette → lore panel smoke (skip or mock LLM in CI).
 5. **Canvas version history (UX2 — decision for v1)** — **Export-first:** the canvas already supports **Export graph JSON** (Cmd+K). Treat that as the supported “checkpoint” workflow until a DB snapshot or `item_revisions` table is justified. **Space / graph snapshots** and **per-item revision logs** remain future options; any in-app restore must not silently fight the local undo stack (explicit “restore from server snapshot” only).

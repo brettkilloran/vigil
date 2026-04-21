@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 
 import type { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
@@ -126,7 +126,7 @@ export function stripHgArchReferencesToItem(
   return { ...root, hgArch: hg };
 }
 
-/** True if `text` mentions a UUID equal to `deadId` (cheap pre-filter before JSON parse). */
+/** In-memory check: full-document stringify + substring (use for ad-hoc callers; delete scrub uses SQL filters). */
 export function contentJsonMightReferenceItemId(contentJson: unknown, deadId: string): boolean {
   if (!isUuidLike(deadId)) return false;
   try {
@@ -137,16 +137,35 @@ export function contentJsonMightReferenceItemId(contentJson: unknown, deadId: st
   }
 }
 
-/** Strip hgArch pointers to a deleted item for every other row in the same space. Returns updated item ids. */
+/**
+ * Strip hgArch pointers to a deleted item for every other row in the same space. Returns updated item ids.
+ *
+ * **Query scope:** Only loads rows that already have a JSON **object** at `content_json.hgArch` whose serialized
+ * form contains `deadItemId`. That matches what `stripHgArchReferencesToItem` can change and avoids scanning
+ * every item in the space (large canvases).
+ */
 export async function scrubHgArchRefsAfterItemDelete(
   db: VigilDb,
   opts: { spaceId: string; deadItemId: string },
 ): Promise<string[]> {
   const updatedIds: string[] = [];
-  const rows = await db.select().from(items).where(eq(items.spaceId, opts.spaceId));
+  if (!opts.deadItemId) return updatedIds;
+
+  const hgArchSubtree = sql`(${items.contentJson}->'hgArch')`;
+  const rows = await db
+    .select()
+    .from(items)
+    .where(
+      and(
+        eq(items.spaceId, opts.spaceId),
+        ne(items.id, opts.deadItemId),
+        sql`${items.contentJson} is not null`,
+        sql`jsonb_typeof(${hgArchSubtree}) = 'object'`,
+        sql`strpos(${hgArchSubtree}::text, ${opts.deadItemId}) > 0`,
+      ),
+    );
+
   for (const row of rows) {
-    if (row.id === opts.deadItemId) continue;
-    if (!contentJsonMightReferenceItemId(row.contentJson, opts.deadItemId)) continue;
     const nextJson = stripHgArchReferencesToItem(row.contentJson, opts.deadItemId);
     if (!nextJson) continue;
     const searchBlob = buildSearchBlob({

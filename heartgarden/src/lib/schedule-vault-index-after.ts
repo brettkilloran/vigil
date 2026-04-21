@@ -11,14 +11,18 @@ function vaultReindexAfterPatchDisabled(): boolean {
 /**
  * Run vault reindex after the HTTP response (Next.js `after`) when content or lore meta changes.
  * **Default: enabled.** Set `HEARTGARDEN_INDEX_AFTER_PATCH=0` to disable (e.g. tests or custom pipelines).
- * Complements the debounced client `POST /api/items/:id/index`; both may run if the client also schedules.
+ *
+ * Uses **`refreshLoreMeta: false`** so this path only rebuilds chunks/embeddings from the row already
+ * in Postgres (including existing `lore_summary` / aliases). That avoids duplicate **Anthropic** calls:
+ * the shell’s debounced `POST /api/items/:id/index` still defaults to lore-meta refresh when you want it.
+ * For zero Anthropic on all index routes, set **`HEARTGARDEN_INDEX_SKIP_LORE_META=1`**.
  */
 export function scheduleVaultReindexAfterResponse(itemId: string): void {
   if (vaultReindexAfterPatchDisabled()) return;
   after(async () => {
     const db = tryGetDb();
     if (!db) return;
-    await reindexItemVault(db, itemId, {}).catch(() => {
+    await reindexItemVault(db, itemId, { refreshLoreMeta: false }).catch(() => {
       /* best-effort */
     });
   });
