@@ -1,9 +1,11 @@
 import { randomUUID } from "crypto";
 
+import { NO_MATCHING_CHUNKS_PLACEHOLDER } from "@/src/lib/lore-import-plan-llm";
 import type {
   ClarificationAnswer,
   LoreImportClarificationItem,
   LoreImportPlan,
+  LoreImportPlanNote,
   MergeProposal,
   PlanPatchHint,
 } from "@/src/lib/lore-import-plan-types";
@@ -14,6 +16,26 @@ import {
 
 function clonePlan(plan: LoreImportPlan): LoreImportPlan {
   return structuredClone(plan) as LoreImportPlan;
+}
+
+/**
+ * Rebuild a note's `bodyText` from the plan's chunk bodies using the note's current
+ * `sourceChunkIds`. Used by chunk-assignment patch ops so that re-assigning a chunk
+ * at apply time actually updates what gets written to the card body.
+ */
+function rebuildNoteBodyText(plan: LoreImportPlan, note: LoreImportPlanNote): void {
+  const byId = new Map((plan.chunks ?? []).map((c) => [c.id, c]));
+  const ids = note.sourceChunkIds ?? [];
+  const bodies: string[] = [];
+  for (const cid of ids) {
+    const ch = byId.get(cid);
+    if (!ch || !ch.body) continue;
+    bodies.push(`## ${ch.heading}\n\n${ch.body}`);
+  }
+  note.bodyText =
+    bodies.length > 0
+      ? bodies.join("\n\n---\n\n").slice(0, 120_000)
+      : NO_MATCHING_CHUNKS_PLACEHOLDER;
 }
 
 export function applyPlanPatchHint(plan: LoreImportPlan, hint: PlanPatchHint): void {
@@ -81,6 +103,37 @@ export function applyPlanPatchHint(plan: LoreImportPlan, hint: PlanPatchHint): v
         throw new Error(
           `Clarification patch: unknown merge proposal "${hint.mergeProposalId}"`,
         );
+      }
+      return;
+    }
+    case "assign_chunk_to_note": {
+      const note = plan.notes.find((n) => n.clientId === hint.noteClientId);
+      if (!note) {
+        throw new Error(`Clarification patch: unknown note "${hint.noteClientId}"`);
+      }
+      const chunk = (plan.chunks ?? []).find((c) => c.id === hint.chunkId);
+      if (!chunk) {
+        throw new Error(`Clarification patch: unknown chunk "${hint.chunkId}"`);
+      }
+      const ids = new Set(note.sourceChunkIds ?? []);
+      ids.add(hint.chunkId);
+      note.sourceChunkIds = Array.from(ids);
+      rebuildNoteBodyText(plan, note);
+      return;
+    }
+    case "unassign_chunk": {
+      const targets = hint.noteClientId
+        ? plan.notes.filter((n) => n.clientId === hint.noteClientId)
+        : plan.notes;
+      if (hint.noteClientId && targets.length === 0) {
+        throw new Error(`Clarification patch: unknown note "${hint.noteClientId}"`);
+      }
+      for (const note of targets) {
+        if (!note.sourceChunkIds) continue;
+        const next = note.sourceChunkIds.filter((id) => id !== hint.chunkId);
+        if (next.length === note.sourceChunkIds.length) continue;
+        note.sourceChunkIds = next;
+        rebuildNoteBodyText(plan, note);
       }
       return;
     }
@@ -308,6 +361,157 @@ export function normalizeClarificationsFromLlm(raw: unknown): LoreImportClarific
     const parsed = loreImportClarificationItemSchema.safeParse(built);
     if (parsed.success) out.push(parsed.data);
   }
+  return out;
+}
+
+/**
+ * Deterministic "structure" clarifications produced when the outline model leaves
+ * chunks unassigned, assigns the same chunk to multiple notes, or creates notes
+ * without any matching chunks. Each item is marked `optional` so the importer
+ * does not hard-block on them, but the UI will flag them.
+ *
+ * @see docs/LORE_IMPORT_AUDIT_2026-04-21.md §4.4 and plan §4.
+ */
+export function buildChunkAssignmentClarifications(input: {
+  noteClientIdsWithoutChunks: string[];
+  unassignedChunkIds: string[];
+  duplicateAssignments: { chunkId: string; noteClientIds: string[] }[];
+  notes: { clientId: string; title: string }[];
+  chunks: { id: string; heading: string }[];
+}): LoreImportClarificationItem[] {
+  const out: LoreImportClarificationItem[] = [];
+  const notesById = new Map(input.notes.map((n) => [n.clientId, n]));
+  const chunksById = new Map(input.chunks.map((c) => [c.id, c]));
+
+  // Cap the note list each clarification offers to keep option counts bounded.
+  const MAX_NOTE_OPTIONS = 5;
+  const noteOptions = input.notes.slice(0, MAX_NOTE_OPTIONS);
+
+  for (const chunkId of input.unassignedChunkIds) {
+    const chunk = chunksById.get(chunkId);
+    if (!chunk) continue;
+    if (noteOptions.length === 0) break;
+    const options: LoreImportClarificationItem["options"] = [
+      {
+        id: "drop",
+        label: "Leave this chunk only on the source card",
+        recommended: true as const,
+        planPatchHint: { op: "no_op" as const },
+      },
+      ...noteOptions.map((n) => ({
+        id: `assign_${n.clientId}`,
+        label: `Attach "${chunk.heading.slice(0, 80)}" to ${n.title}`,
+        planPatchHint: {
+          op: "assign_chunk_to_note" as const,
+          chunkId,
+          noteClientId: n.clientId,
+        },
+      })),
+    ];
+    const built = {
+      id: randomUUID(),
+      category: "structure" as const,
+      severity: "optional" as const,
+      title: `Unassigned chunk: "${chunk.heading.slice(0, 80)}"`,
+      context:
+        `The outline did not attach this chunk to any note. It still lives on the imported source card, ` +
+        `but you can pin it to a specific note instead.`,
+      questionKind: "single_select" as const,
+      options: options.slice(0, 12),
+    };
+    const parsed = loreImportClarificationItemSchema.safeParse(built);
+    if (parsed.success) out.push(parsed.data);
+  }
+
+  for (const dup of input.duplicateAssignments) {
+    const chunk = chunksById.get(dup.chunkId);
+    if (!chunk || dup.noteClientIds.length !== 2) continue;
+    const claimants = dup.noteClientIds
+      .map((id) => notesById.get(id))
+      .filter((n): n is { clientId: string; title: string } => !!n);
+    if (claimants.length !== 2) continue;
+    const [a, b] = claimants as [typeof claimants[number], typeof claimants[number]];
+    const options: LoreImportClarificationItem["options"] = [
+      {
+        id: "keep_both",
+        label: "Keep the chunk on both notes",
+        planPatchHint: { op: "no_op" as const },
+      },
+      {
+        id: `keep_${a.clientId}`,
+        label: `Keep only on ${a.title}`,
+        recommended: true as const,
+        planPatchHint: {
+          op: "unassign_chunk" as const,
+          chunkId: dup.chunkId,
+          noteClientId: b.clientId,
+        },
+      },
+      {
+        id: `keep_${b.clientId}`,
+        label: `Keep only on ${b.title}`,
+        planPatchHint: {
+          op: "unassign_chunk" as const,
+          chunkId: dup.chunkId,
+          noteClientId: a.clientId,
+        },
+      },
+    ];
+    const built = {
+      id: randomUUID(),
+      category: "structure" as const,
+      severity: "optional" as const,
+      title: `Chunk claimed by 2 notes`,
+      context: `"${chunk.heading.slice(0, 80)}" is listed on ${a.title} and ${b.title}.`,
+      questionKind: "single_select" as const,
+      options,
+      relatedNoteClientIds: [a.clientId, b.clientId],
+    };
+    const parsed = loreImportClarificationItemSchema.safeParse(built);
+    if (parsed.success) out.push(parsed.data);
+  }
+
+  for (const noteClientId of input.noteClientIdsWithoutChunks) {
+    const note = notesById.get(noteClientId);
+    if (!note) continue;
+    const options: LoreImportClarificationItem["options"] = [
+      {
+        id: "summary_only",
+        label: "Keep this note as a summary-only stub",
+        recommended: true as const,
+        planPatchHint: { op: "no_op" as const },
+      },
+    ];
+    for (const chunkId of input.unassignedChunkIds.slice(0, 5)) {
+      const chunk = chunksById.get(chunkId);
+      if (!chunk) continue;
+      options.push({
+        id: `attach_${chunkId}`,
+        label: `Attach "${chunk.heading.slice(0, 80)}"`,
+        planPatchHint: {
+          op: "assign_chunk_to_note" as const,
+          chunkId,
+          noteClientId,
+        },
+      });
+    }
+    if (options.length < 2) continue;
+    const built = {
+      id: randomUUID(),
+      category: "structure" as const,
+      severity: "optional" as const,
+      title: `Note "${note.title}" has no chunks`,
+      context:
+        `The outline mentioned this note but did not attach any source chunks. It will be written as a ` +
+        `placeholder; attach a chunk or leave as a stub for now.`,
+      questionKind: "single_select" as const,
+      options: options.slice(0, 12),
+      relatedNoteClientIds: [noteClientId],
+    };
+    const parsed = loreImportClarificationItemSchema.safeParse(built);
+    if (parsed.success) out.push(parsed.data);
+  }
+
   return out;
 }
 

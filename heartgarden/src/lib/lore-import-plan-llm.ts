@@ -123,6 +123,8 @@ HINT OPS — every planPatchHint must be exactly one of:
 { "op": "set_lore_historical", "noteClientId": "<id>", "loreHistorical": true|false }
 { "op": "discard_merge_proposal", "mergeProposalId": "<uuid from mergeProposals in payload>" }
 
+(Do not emit "assign_chunk_to_note" / "unassign_chunk" hints — those are added automatically by the server for chunk-assignment gaps.)
+
 Rules:
 - For **every contradiction** in the payload, emit at least one **required** "conflict" clarification unless the contradiction is trivial noise.
 - Ask about **link_semantics** when relationship type is ambiguous between two linked notes.
@@ -293,53 +295,87 @@ export async function runLoreImportOutlineLlm(
   }
 }
 
-function fillNoteBodiesFromChunks(
+/** Placeholder body shown for notes the model created but failed to ground in any chunk. */
+export const NO_MATCHING_CHUNKS_PLACEHOLDER =
+  "_(No matching chunks — pick one in review, or keep this as a summary-only stub.)_";
+
+/**
+ * Diagnostics describing how chunks were distributed across notes in the outline.
+ * The plan-build orchestrator turns these into `chunk_assignment` /
+ * `unassigned_chunks` / `duplicate_chunk_assignment` clarifications so the user
+ * can resolve gaps during review instead of silently burying content on note[0].
+ *
+ * @see docs/LORE_IMPORT_AUDIT_2026-04-21.md §4.4
+ */
+export type ChunkAssignmentDiagnostics = {
+  /** Chunks not referenced by any note's sourceChunkIds (valid id + unassigned). */
+  unassignedChunkIds: string[];
+  /** Note clientIds that resolved zero valid chunks (placeholder body written). */
+  noteClientIdsWithoutChunks: string[];
+  /** chunkId -> list of note clientIds that claim it when >1. */
+  duplicateAssignments: { chunkId: string; noteClientIds: string[] }[];
+};
+
+export function buildNoteBodyFromChunks(
+  sourceChunkIds: string[],
+  chunkById: ReadonlyMap<string, SourceTextChunk>,
+): string {
+  const bodies: string[] = [];
+  for (const cid of sourceChunkIds) {
+    const ch = chunkById.get(cid);
+    if (ch) bodies.push(`## ${ch.heading}\n\n${ch.body}`);
+  }
+  if (bodies.length === 0) return NO_MATCHING_CHUNKS_PLACEHOLDER;
+  return bodies.join("\n\n---\n\n").slice(0, 120_000);
+}
+
+/**
+ * Resolve each note to a grounded `bodyText` and collect diagnostics. No longer
+ * "dumps" unassigned chunks onto the first note — unclaimed content surfaces via
+ * clarifications so the user consciously decides where it goes (or that it stays
+ * only on the source card).
+ */
+export function fillNoteBodiesFromChunks(
   notes: OutlineLlmResult["notes"],
   chunks: SourceTextChunk[],
-): void {
+): ChunkAssignmentDiagnostics {
   const byId = new Map(chunks.map((c) => [c.id, c]));
-  const assignedIds = new Set<string>();
+  const assignedTo = new Map<string, string[]>();
+
   for (const n of notes) {
     for (const cid of n.sourceChunkIds) {
-      if (byId.has(cid)) assignedIds.add(cid);
+      if (!byId.has(cid)) continue;
+      const list = assignedTo.get(cid) ?? [];
+      list.push(n.clientId);
+      assignedTo.set(cid, list);
     }
-  }
-  const unassigned = chunks.filter((c) => !assignedIds.has(c.id));
-
-  for (let i = 0; i < notes.length; i++) {
-    const n = notes[i]!;
-    const bodies: string[] = [];
-    for (const cid of n.sourceChunkIds) {
-      const ch = byId.get(cid);
-      if (ch) bodies.push(`## ${ch.heading}\n\n${ch.body}`);
-    }
-    if (bodies.length === 0 && chunks.length > 0) {
-      if (i === 0) {
-        const toAdd = unassigned.length > 0 ? unassigned : chunks;
-        bodies.push(
-          ...toAdd.map((ch) => `## ${ch.heading}\n\n${ch.body}`),
-        );
-      } else {
-        bodies.push(
-          "_(No matching chunks — review the source card or split.)_",
-        );
-      }
-    }
-    const joined = bodies.join("\n\n---\n\n").slice(0, 120_000);
-    (n as { bodyText?: string }).bodyText = joined;
   }
 
-  if (notes.length > 0 && unassigned.length > 0) {
-    const first = notes[0]!;
-    const hadDirectIds = first.sourceChunkIds.some((id) => byId.has(id));
-    if (hadDirectIds) {
-      const n = first as { bodyText?: string };
-      const extra = unassigned
-        .map((ch) => `## ${ch.heading}\n\n${ch.body}`)
-        .join("\n\n---\n\n");
-      n.bodyText = `${String(n.bodyText ?? "")}\n\n---\n\n${extra}`.slice(0, 120_000);
+  const diagnostics: ChunkAssignmentDiagnostics = {
+    unassignedChunkIds: [],
+    noteClientIdsWithoutChunks: [],
+    duplicateAssignments: [],
+  };
+
+  for (const ch of chunks) {
+    if (!assignedTo.has(ch.id)) diagnostics.unassignedChunkIds.push(ch.id);
+  }
+  for (const [chunkId, noteClientIds] of assignedTo.entries()) {
+    if (noteClientIds.length > 1) {
+      diagnostics.duplicateAssignments.push({ chunkId, noteClientIds });
     }
   }
+
+  for (const n of notes) {
+    const body = buildNoteBodyFromChunks(n.sourceChunkIds, byId);
+    (n as { bodyText?: string }).bodyText = body;
+    const groundedCount = n.sourceChunkIds.filter((id) => byId.has(id)).length;
+    if (chunks.length > 0 && groundedCount === 0) {
+      diagnostics.noteClientIdsWithoutChunks.push(n.clientId);
+    }
+  }
+
+  return diagnostics;
 }
 
 export type CandidateRow = {
@@ -564,7 +600,7 @@ export async function runLoreImportClarifyLlm(
 export function attachBodiesToOutline(
   outline: OutlineLlmResult,
   chunks: SourceTextChunk[],
-): void {
+): ChunkAssignmentDiagnostics {
   if (outline.notes.length === 0 && chunks.length > 0) {
     outline.notes.push({
       clientId: "n_fallback",
@@ -575,5 +611,5 @@ export function attachBodiesToOutline(
       sourceChunkIds: chunks.map((c) => c.id),
     });
   }
-  fillNoteBodiesFromChunks(outline.notes, chunks);
+  return fillNoteBodiesFromChunks(outline.notes, chunks);
 }
