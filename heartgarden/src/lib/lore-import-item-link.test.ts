@@ -24,18 +24,42 @@ describe("filterPlanLinksToSameCanvasSpace", () => {
   ];
 
   it("keeps links within the same folder", () => {
-    const { links, warnings } = filterPlanLinksToSameCanvasSpace(notes, [
+    const { links, crossSpaceMentions, warnings } = filterPlanLinksToSameCanvasSpace(notes, [
       { fromClientId: "a", toClientId: "b", linkType: "bond" },
     ]);
     expect(links).toHaveLength(1);
+    expect(crossSpaceMentions).toHaveLength(0);
     expect(warnings).toHaveLength(0);
   });
 
-  it("drops cross-folder links with a warning", () => {
-    const { links, warnings } = filterPlanLinksToSameCanvasSpace(notes, [
-      { fromClientId: "a", toClientId: "c", linkType: "history" },
-    ]);
+  it("converts cross-folder links to mentions with a warning", () => {
+    const { links, crossSpaceMentions, warnings } = filterPlanLinksToSameCanvasSpace(
+      notes,
+      [{ fromClientId: "a", toClientId: "c", linkType: "history" }],
+    );
     expect(links).toHaveLength(0);
+    expect(crossSpaceMentions).toHaveLength(1);
+    expect(crossSpaceMentions[0]?.fromClientId).toBe("a");
+    expect(crossSpaceMentions[0]?.toClientId).toBe("c");
     expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0]).toMatch(/cross-folder mention/);
+  });
+
+  it("drops links that reference unknown note ids", () => {
+    const { links, crossSpaceMentions, warnings } = filterPlanLinksToSameCanvasSpace(
+      notes,
+      [{ fromClientId: "a", toClientId: "ghost", linkType: "history" }],
+    );
+    expect(links).toHaveLength(0);
+    expect(crossSpaceMentions).toHaveLength(0);
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0]).toMatch(/unknown note id/);
+  });
+
+  it("normalises pin on co-located edges to history", () => {
+    const { links } = filterPlanLinksToSameCanvasSpace(notes, [
+      { fromClientId: "a", toClientId: "b", linkType: "pin" },
+    ]);
+    expect(links[0]?.linkType).toBe("history");
   });
 });

@@ -23,19 +23,28 @@ type PlanLinkDraft = {
 
 /**
  * `item_links` are only created between items in the same `items.space_id`
- * (`validateLinkTargetsInSourceSpace`). Drop links that span different import
- * folders / root so apply does not fail silently beyond a generic error.
+ * (`validateLinkTargetsInSourceSpace`). Instead of silently dropping links that
+ * span different import folders, split them into `crossSpaceMentions` so the
+ * plan-build / apply layers can turn them into prose mentions (`[[Title]]` +
+ * `vigil:item:<uuid>`) on the source card and `entity_meta.crossFolderRefs`.
+ *
+ * @see docs/LORE_IMPORT_AUDIT_2026-04-21.md §4.2 and plan §5.
  */
 export function filterPlanLinksToSameCanvasSpace(
   notes: NoteFolderSlot[],
   links: PlanLinkDraft[],
-): { links: PlanLinkDraft[]; warnings: string[] } {
+): {
+  links: PlanLinkDraft[];
+  crossSpaceMentions: PlanLinkDraft[];
+  warnings: string[];
+} {
   const folderKey = (folderClientId: string | null | undefined) =>
     folderClientId ?? "__root__";
 
   const byClient = new Map(notes.map((n) => [n.clientId, folderKey(n.folderClientId)]));
   const warnings: string[] = [];
   const out: PlanLinkDraft[] = [];
+  const crossSpaceMentions: PlanLinkDraft[] = [];
 
   for (const l of links) {
     const fromKey = byClient.get(l.fromClientId);
@@ -47,8 +56,14 @@ export function filterPlanLinksToSameCanvasSpace(
       continue;
     }
     if (fromKey !== toKey) {
+      crossSpaceMentions.push({
+        fromClientId: l.fromClientId,
+        toClientId: l.toClientId,
+        linkType: normalizeImportItemLinkType(l.linkType),
+        ...(l.linkIntent ? { linkIntent: l.linkIntent } : {}),
+      });
       warnings.push(
-        `Dropped link ${l.fromClientId} → ${l.toClientId}: cross-space links are not supported. Put both topics in the same folder, or add a pin thread on the canvas after import.`,
+        `Converted link ${l.fromClientId} → ${l.toClientId} to a cross-folder mention (they live in different spaces).`,
       );
       continue;
     }
@@ -60,5 +75,5 @@ export function filterPlanLinksToSameCanvasSpace(
     });
   }
 
-  return { links: out, warnings };
+  return { links: out, crossSpaceMentions, warnings };
 }
