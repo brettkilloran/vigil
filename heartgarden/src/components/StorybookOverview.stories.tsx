@@ -41,7 +41,9 @@ export const AboutThisStorybook: Story = {
         <strong>UI catalog:</strong>{" "}
         <span style={{ color: "var(--sem-text-secondary)" }}>
           Heartgarden → UI — tokens (including LLM / ingestion <code style={{ fontSize: "0.88em" }}>--sem-*-llm-*</code>),
-          shared controls (e.g. Tag, Button), canvas chrome, and full-canvas integration (sorted by name).
+          shared controls (e.g. Tag, Button), canvas chrome (tool rail, minimap, viewport toast, remote
+          presence cursors, link-graph overlay), lore-specific canvas plates (character v11, faction
+          Archive-091, location ORDO v7), and full-canvas integration (sorted by name).
         </span>
       </p>
       <p style={{ marginBottom: 0 }}>
