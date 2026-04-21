@@ -780,6 +780,9 @@ export function ArchitecturalConnectionKindPicker({
     <div className={styles.connectionKindList} role="listbox" aria-label={ariaLabel}>
       {CONNECTION_KINDS.map((meta) => {
         const selected = meta.kind === value;
+        // Light / mid-neutral fills need a rim so they don't disappear
+        // on the dark popover (same rule as folder-tint swatches).
+        const isHighKey = meta.scheme === "gray" || meta.scheme === "parchment";
         return (
           <Button
             key={meta.kind}
@@ -796,12 +799,11 @@ export function ArchitecturalConnectionKindPicker({
             onClick={() => pick(meta.kind)}
           >
             <span
-              className={styles.connectionKindRowSwatch}
-              style={{
-                background: meta.swatch,
-                // Feed into CSS for the selected ring color.
-                ["--connection-kind-border" as string]: meta.border,
-              }}
+              className={cx(
+                styles.connectionKindRowSwatch,
+                isHighKey && styles.connectionKindRowSwatchHighKey,
+              )}
+              style={{ background: meta.swatch }}
               aria-hidden
             />
             <span className={styles.connectionKindRowLabel}>{meta.label}</span>

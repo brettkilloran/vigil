@@ -3914,18 +3914,14 @@
 }
 
 /*
- * Skeumorphic pebble — same idiom as `.dockFolderTintMenuSwatch` /
- * `.dockFolderTintCatalogSwatch`. Built from box-shadow layers over a
- * solid inline `background` (the kind's swatch color), because inline
- * `style` wins the CSS cascade and we can't swap in a gradient here.
- *
- * Layer order (first-declared paints on top):
- *  1. Inset bright top specular  — glossy rim highlight
- *  2. Inset dark bottom interior — "settled into the hole" depth
- *  3. Flat dark rim              — crisp edge against the menu surface
- *  4. Outer cast shadow          — lifts the pebble off the row
- * All states share this base; hover/selected only add / intensify the
- * kind-signature ring + glow (that's the semantic cue).
+ * Swatch — pixel-identical recipe to `.dockFolderTintCatalogSwatch` (the
+ * pre-refactor thread-ink swatch), shrunk to 18px for the compact list.
+ * Two shadow layers only:
+ *  1. Inset top-down dark — the "looking into a shallow bowl" depth
+ *  2. Soft drop shadow    — lifts the dot off the row
+ * Row selection carries all selected-state weight via the accent tint;
+ * the swatch itself stays identical across default / hover / selected
+ * (only hover adds a scale lift, matching `.dockFolderTintMenuSwatch`).
  */
 .connectionKindRowSwatch {
   flex: 0 0 18px;
@@ -3934,29 +3930,26 @@
   border-radius: 999px;
   box-sizing: border-box;
   box-shadow:
-    inset 0 1px 1px color-mix(in oklch, var(--sys-color-white) 36%, transparent),
-    inset 0 -2px 3px color-mix(in oklch, var(--sys-color-black) 34%, transparent),
-    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 48%, transparent),
-    0 1px 3px var(--sem-color-shadow-30);
-  transition: box-shadow 0.14s ease, transform 0.14s ease;
+    inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 28%, transparent),
+    0 1px 3px var(--sem-color-shadow-22);
+  transition: transform 0.14s ease;
+}
+
+/*
+ * Light / mid-neutral fills (gray, parchment) need a rim so they don't
+ * read as "missing" on the dark popover — mirrors
+ * `.dockFolderTintCatalogSwatchHighKey`.
+ */
+.connectionKindRowSwatchHighKey {
+  border: 1px solid color-mix(in oklch, var(--sys-color-white) 34%, transparent);
+  box-shadow:
+    inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 20%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 38%, transparent),
+    0 1px 3px var(--sem-color-shadow-22);
 }
 
 .connectionKindList :global(.vigil-btn).connectionKindRow:hover .connectionKindRowSwatch {
-  transform: scale(1.08);
-  box-shadow:
-    inset 0 1px 1.5px color-mix(in oklch, var(--sys-color-white) 46%, transparent),
-    inset 0 -2px 3px color-mix(in oklch, var(--sys-color-black) 30%, transparent),
-    0 0 0 1px color-mix(in oklch, var(--connection-kind-border, var(--sys-color-white)) 52%, transparent),
-    0 1px 4px var(--sem-color-shadow-30);
-}
-
-.connectionKindList :global(.vigil-btn).connectionKindRow.connectionKindRowSelected
-  .connectionKindRowSwatch {
-  box-shadow:
-    inset 0 1px 1.5px color-mix(in oklch, var(--sys-color-white) 50%, transparent),
-    inset 0 -2px 3px color-mix(in oklch, var(--sys-color-black) 28%, transparent),
-    0 0 0 1.5px color-mix(in oklch, var(--connection-kind-border, var(--accent)) 72%, transparent),
-    0 1px 3px var(--sem-color-shadow-30);
+  transform: scale(1.1);
 }
 
 .connectionKindRowLabel {
