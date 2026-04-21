@@ -3817,15 +3817,13 @@
   pointer-events: auto;
   width: min(216px, calc(100vw - 24px));
   padding: 6px;
-  border-radius: 14px;
+  /* System glass menu tokens — matches ContextMenu / rootDockPanel / sideToolsMainPanel. */
+  border-radius: var(--chrome-panel-radius);
   border: 1px solid var(--ui-glass-border);
-  background: color-mix(in oklch, var(--sys-color-neutral-950) 86%, transparent);
-  backdrop-filter: blur(18px) saturate(130%);
-  -webkit-backdrop-filter: blur(18px) saturate(130%);
-  box-shadow:
-    0 14px 32px var(--sem-color-shadow-50),
-    0 2px 6px var(--sem-color-shadow-22),
-    inset 0 1px 0 var(--sem-overlay-white-08);
+  background: var(--ui-glass-bg);
+  backdrop-filter: var(--chrome-glass-filter);
+  -webkit-backdrop-filter: var(--chrome-glass-filter);
+  box-shadow: var(--chrome-glass-shadow);
 }
 
 .connectionKindMenuDown {
@@ -3842,9 +3840,10 @@
   margin: 0;
 }
 
+/* Focus-mode editor dock: solid black surface, no backdrop blur. */
 .connectionKindMenuEditor {
-  background: color-mix(in oklch, var(--sys-color-black) 94%, transparent);
-  border-color: color-mix(in oklch, var(--sys-color-white) 16%, transparent);
+  background: var(--sys-color-black);
+  border-color: var(--sem-overlay-white-12);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
@@ -3892,8 +3891,8 @@
 }
 
 .connectionKindList :global(.vigil-btn).connectionKindRow:hover {
-  background: color-mix(in oklch, var(--sys-color-white) 7%, transparent);
-  color: color-mix(in oklch, var(--sem-text-primary) 100%, transparent);
+  background: var(--sem-surface-muted-hover);
+  color: var(--sem-text-primary);
 }
 
 .connectionKindList :global(.vigil-btn).connectionKindRow:focus-visible {
@@ -3901,8 +3900,13 @@
   outline-offset: 1px;
 }
 
+/*
+ * Selected row keeps the kind's signature hue as the ring — this is the
+ * semantic cue (which kind is active) and is intentionally off the neutral
+ * system palette. Fill stays on-token (`--sem-surface-muted-hover`).
+ */
 .connectionKindList :global(.vigil-btn).connectionKindRow.connectionKindRowSelected {
-  background: color-mix(in oklch, var(--sys-color-white) 9%, transparent);
+  background: var(--sem-overlay-white-10);
   border-color: color-mix(in oklch, var(--connection-kind-border, var(--accent)) 58%, transparent);
   color: var(--sem-text-primary);
   box-shadow:
@@ -3917,8 +3921,8 @@
   border-radius: 999px;
   box-sizing: border-box;
   box-shadow:
-    inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 32%, transparent),
-    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 45%, transparent),
+    inset 0 1px 2px var(--sem-color-shadow-40),
+    0 0 0 1px var(--sem-color-shadow-50),
     0 1px 3px var(--sem-color-shadow-22);
   transition: box-shadow 0.14s ease, transform 0.14s ease;
 }
@@ -3926,7 +3930,7 @@
 .connectionKindList :global(.vigil-btn).connectionKindRow:hover .connectionKindRowSwatch {
   transform: scale(1.06);
   box-shadow:
-    inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 28%, transparent),
+    inset 0 1px 2px var(--sem-color-shadow-30),
     0 0 0 1px color-mix(in oklch, var(--connection-kind-border, var(--sys-color-white)) 40%, transparent),
     0 1px 4px var(--sem-color-shadow-30);
 }
@@ -3934,7 +3938,7 @@
 .connectionKindList :global(.vigil-btn).connectionKindRow.connectionKindRowSelected
   .connectionKindRowSwatch {
   box-shadow:
-    inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 24%, transparent),
+    inset 0 1px 2px var(--sem-color-shadow-22),
     0 0 0 2px color-mix(in oklch, var(--connection-kind-border, var(--accent)) 72%, transparent),
     0 0 10px color-mix(in oklch, var(--connection-kind-border, var(--accent)) 40%, transparent);
 }
@@ -3955,14 +3959,14 @@
 .connectionKindMenuEditor
   .connectionKindList
   :global(.vigil-btn).connectionKindRow:hover {
-  background: color-mix(in oklch, var(--sys-color-white) 10%, transparent);
-  color: color-mix(in oklch, var(--sys-color-white) 100%, transparent);
+  background: var(--sem-overlay-white-10);
+  color: var(--sys-color-white);
 }
 
 .connectionKindMenuEditor
   .connectionKindList
   :global(.vigil-btn).connectionKindRow.connectionKindRowSelected {
-  background: color-mix(in oklch, var(--sys-color-white) 12%, transparent);
+  background: var(--sem-overlay-white-12);
   color: var(--sys-color-white);
 }
 
