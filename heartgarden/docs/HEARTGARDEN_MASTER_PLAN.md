@@ -37,6 +37,7 @@ related:
 | DB migration notes | [`MIGRATION.md`](./MIGRATION.md) |
 | Historical functional PRD | Stub [`FUNCTIONAL_PRD_REBUILD.md`](./FUNCTIONAL_PRD_REBUILD.md) → full text [`archive/FUNCTIONAL_PRD_REBUILD.md`](./archive/FUNCTIONAL_PRD_REBUILD.md) |
 | Data pipeline audit (intent, modes, import, registry) | [`DATA_PIPELINE_AUDIT_2026-04-11.md`](./DATA_PIPELINE_AUDIT_2026-04-11.md) |
+| **Code health audit (living backlog of bugs / perf / hygiene)** | [`CODE_HEALTH_AUDIT_2026-04-21.md`](./CODE_HEALTH_AUDIT_2026-04-21.md) |
 | Shipped capabilities + AI/import review UX | [`FEATURES.md`](./FEATURES.md), [`EDITOR_HG_DOC.md`](./EDITOR_HG_DOC.md), [`CODEMAP.md`](./CODEMAP.md) |
 | Lore import canonical kind → DB / canvas | [`LORE_IMPORT_KIND_MAPPING.md`](./LORE_IMPORT_KIND_MAPPING.md) |
 | Optional multiplayer realtime (WebSocket + Redis) | [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md) §5.5, [`API.md`](./API.md) (Realtime), [`CODEMAP.md`](./CODEMAP.md) |

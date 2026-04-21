@@ -71,7 +71,7 @@ This file is a **living backlog** — work items below are intended to be picked
 
 **Fix direction:** ref-wrap the handler (pattern already in `useHeartgardenPresenceHeartbeat`), or drop `onInvalidate` from deps.
 
-**Shipped:** `onInvalidateRef` + `useLayoutEffect` in [`use-heartgarden-realtime-space-sync.ts`](../src/hooks/use-heartgarden-realtime-space-sync.ts); effect deps `[enabled, activeSpaceId]` only.
+**Shipped:** `onInvalidateRef` + `useLayoutEffect` in `[use-heartgarden-realtime-space-sync.ts](../src/hooks/use-heartgarden-realtime-space-sync.ts)`; effect deps `[enabled, activeSpaceId]` only.
 
 ### ~~2. Optimistic locking is optional and brittle~~ — **fixed 2026-04-21**
 
@@ -94,7 +94,7 @@ PATCH accepts `baseUpdatedAt` but only checks it when present AND parseable as a
 
 **Fix direction:** require `baseUpdatedAt` for any PATCH that touches `content_json` / `title` / `entity_meta` (not selection-only moves); normalize `updatedAt` with `new Date(existing.updatedAt as any).getTime()`.
 
-**Shipped:** [`route.ts`](../app/api/items/[itemId]/route.ts) — `patchRequiresBaseOptimisticLock()`, `rowUpdatedAtMs()`, 400 when body fields change without `baseUpdatedAt`; tests in [`route.patch-conflict.test.ts`](../app/api/items/[itemId]/route.patch-conflict.test.ts).
+**Shipped:** `[route.ts](../app/api/items/[itemId]/route.ts)` — `patchRequiresBaseOptimisticLock()`, `rowUpdatedAtMs()`, 400 when body fields change without `baseUpdatedAt`; tests in `[route.patch-conflict.test.ts](../app/api/items/[itemId]/route.patch-conflict.test.ts)`.
 
 ### ~~3. Import review queue is written before plan validation~~ — **fixed 2026-04-21**
 
@@ -104,7 +104,7 @@ PATCH accepts `baseUpdatedAt` but only checks it when present AND parseable as a
 
 **Fix direction:** reorder — validate, then persist.
 
-**Shipped:** [`lore-import-job-process.ts`](../src/lib/lore-import-job-process.ts) — `safeParse` before `persistImportReviewQueueFromPlan`.
+**Shipped:** `[lore-import-job-process.ts](../src/lib/lore-import-job-process.ts)` — `safeParse` before `persistImportReviewQueueFromPlan`.
 
 ### ~~4. Lore import commit is not transactional~~ — **fixed 2026-04-21**
 
@@ -114,7 +114,7 @@ PATCH accepts `baseUpdatedAt` but only checks it when present AND parseable as a
 
 **Fix direction:** wrap in a single `db.transaction(...)`. Neon-serverless supports it.
 
-**Shipped:** [`commit/route.ts`](../app/api/lore/import/commit/route.ts) — single `db.transaction`; `scheduleItemEmbeddingRefresh` after commit.
+**Shipped:** `[commit/route.ts](../app/api/lore/import/commit/route.ts)` — single `db.transaction`; `scheduleItemEmbeddingRefresh` after commit.
 
 ### ~~5. Vector index drifts when embedding fails~~ — **fixed 2026-04-21**
 
@@ -124,7 +124,7 @@ PATCH accepts `baseUpdatedAt` but only checks it when present AND parseable as a
 
 **Fix direction:** do `clearItemEmbeddings` + lexical update + new embedding insert in one transaction, or don't touch `search_blob` until embedding succeeds. Currently moot while #6 holds.
 
-**Shipped:** [`item-vault-index.ts`](../src/lib/item-vault-index.ts) — `embedTexts` before persisting `search_blob` when chunks exist; transactional insert of embeddings + row update.
+**Shipped:** `[item-vault-index.ts](../src/lib/item-vault-index.ts)` — `embedTexts` before persisting `search_blob` when chunks exist; transactional insert of embeddings + row update.
 
 ### ~~6. "Hybrid" search is a lie~~ — **fixed 2026-04-21**
 
@@ -140,13 +140,13 @@ PATCH accepts `baseUpdatedAt` but only checks it when present AND parseable as a
 
 **Fix direction:** either wire a real provider (OpenAI / Voyage / Cohere — pgvector is already in the schema), or delete `semantic` / `hybrid` modes, the vector SQL, and the RRF code to kill a large dead surface.
 
-**Shipped:** [`embedding-provider.ts`](../src/lib/embedding-provider.ts) — OpenAI embeddings when `OPENAI_API_KEY` is set (default `text-embedding-3-small`, 1536-d). [`search/route.ts`](../app/api/search/route.ts) — hybrid mode always uses `hybridRetrieveItems` with `includeVector` tied to config (no FTS short-circuit divergence). Docs: [`AGENTS.md`](../AGENTS.md), [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md), [`.env.local.example`](../.env.local.example).
+**Shipped:** `[embedding-provider.ts](../src/lib/embedding-provider.ts)` — OpenAI embeddings when `OPENAI_API_KEY` is set (default `text-embedding-3-small`, 1536-d). `[search/route.ts](../app/api/search/route.ts)` — hybrid mode always uses `hybridRetrieveItems` with `includeVector` tied to config (no FTS short-circuit divergence). Docs: `[AGENTS.md](../AGENTS.md)`, `[VERCEL_ENV_VARS.md](./VERCEL_ENV_VARS.md)`, `[.env.local.example](../.env.local.example)`.
 
 ---
 
 ## HIGH — real bugs or operational risk
 
-### 7. Silent failure culture in the shell — **partially addressed 2026-04-21**
+### ~~7. Silent failure culture in the shell~~ — **fixed 2026-04-21**
 
 Many user-visible actions swallow errors, so a backend blip turns into "ghost" local state until reload.
 
@@ -171,7 +171,7 @@ Same pattern at:
 
 **Fix direction:** route failures through `neon-sync-bus` as real errors; add breadcrumb logging. Distinguish "offline, keep local" from "server said no."
 
-**Progress:** 409 conflict no longer calls `neonSyncEndRequest(true)` ([`architectural-neon-api.ts`](../src/components/foundation/architectural-neon-api.ts)); `syncDeleteConnection` + graph merge/poll report via `neon-sync-bus` / `neonSyncSpaceChangeSyncBreadcrumb` ([`ArchitecturalCanvasApp.tsx`](../src/components/foundation/ArchitecturalCanvasApp.tsx)); [`schedule-vault-index-after.ts`](../src/lib/schedule-vault-index-after.ts) logs `after()` reindex failures. Remaining: `fetchSpaceChanges` null collapse, MCP surfaces, broad shell `catch {}` audit.
+**Shipped:** typed `fetchSpaceChanges` failure surfaces (`http` / `parse` / `network`) in `[architectural-neon-api.ts](../src/components/foundation/architectural-neon-api.ts)`, downstream breadcrumb + auxiliary failure reporting in `[use-heartgarden-space-change-sync.ts](../src/hooks/use-heartgarden-space-change-sync.ts)`, plus prior conflict/delete/merge instrumentation and `after()` logging.
 
 ### ~~8. Unbounded delta payloads~~ — **fixed 2026-04-21**
 
@@ -189,9 +189,9 @@ Missing btree on `(space_id, updated_at)` — migrations only add GIN/trgm.
 
 **Fix direction:** add `LIMIT` (e.g. 500) + `hasMore` + next cursor; add the btree index.
 
-**Shipped:** [`changes/route.ts`](../app/api/spaces/[spaceId]/changes/route.ts) — `limit` (default 500), `hasMore`, client loop in [`use-heartgarden-space-change-sync.ts`](../src/hooks/use-heartgarden-space-change-sync.ts) + [`fetchSpaceChanges`](../src/components/foundation/architectural-neon-api.ts); btree migration [`0008_items_space_updated_at_idx.sql`](../drizzle/migrations/0008_items_space_updated_at_idx.sql); [`docs/API.md`](./API.md).
+**Shipped:** `[changes/route.ts](../app/api/spaces/[spaceId]/changes/route.ts)` — `limit` (default 500), `hasMore`, client loop in `[use-heartgarden-space-change-sync.ts](../src/hooks/use-heartgarden-space-change-sync.ts)` + `[fetchSpaceChanges](../src/components/foundation/architectural-neon-api.ts)`; btree migration `[0008_items_space_updated_at_idx.sql](../drizzle/migrations/0008_items_space_updated_at_idx.sql)`; `[docs/API.md](./API.md)`.
 
-### 9. O(peers) serial DB calls on presence GET
+### ~~9. O(peers) serial DB calls on presence GET~~ — **fixed 2026-04-21**
 
 Player tier awaits `spaceIsUnderPlayerRoot` inside a `for (const r of rows)` loop.
 
@@ -199,7 +199,9 @@ Player tier awaits `spaceIsUnderPlayerRoot` inside a `for (const r of rows)` loo
 
 **Fix direction:** compute the allowed subtree once via a single SQL pass, then filter in JS.
 
-### 10. Full-table scans for space operations
+**Shipped:** precomputed subtree id sets via `[fetchDescendantSpaceIds](../src/lib/heartgarden-space-subtree.ts)` and membership checks in `[presence/route.ts](../app/api/spaces/[spaceId]/presence/route.ts)` (no per-peer `await` loop).
+
+### ~~10. Full-table scans for space operations~~ — **fixed 2026-04-21**
 
 `assertSpaceReparentAllowed`, `deleteSpaceSubtree`, and the presence route each `select({id, parentSpaceId}).from(spaces)` — loading every space to walk a local tree. Fine at hundreds of spaces, painful at thousands.
 
@@ -207,6 +209,8 @@ Player tier awaits `spaceIsUnderPlayerRoot` inside a `for (const r of rows)` loo
 - `heartgarden/app/api/spaces/[spaceId]/presence/route.ts` 61–63.
 
 **Fix direction:** recursive CTE scoped to the target subtree, or cache `parentSpaceId` in an in-memory map with TTL.
+
+**Shipped:** subtree-scoped traversal helper `[fetchDescendantSpaceIds](../src/lib/heartgarden-space-subtree.ts)` applied to `[assertSpaceReparentAllowed](../src/lib/spaces.ts)`, `[deleteSpaceSubtree](../src/lib/spaces.ts)`, and `[presence/route.ts](../app/api/spaces/[spaceId]/presence/route.ts)`, removing whole-table parent-map scans from those hot paths.
 
 ### ~~11. Link revision fingerprint can miss changes~~ — **fixed 2026-04-21**
 
@@ -227,7 +231,7 @@ Player tier awaits `spaceIsUnderPlayerRoot` inside a `for (const r of rows)` loo
 
 **Fix direction:** aggregate over source OR target (two sub-queries unioned), or replace with a `max(updated_at)` covering either side.
 
-**Shipped:** [`item-links-space-revision.ts`](../src/lib/item-links-space-revision.ts) — `EXISTS` for source or target item in space.
+**Shipped:** `[item-links-space-revision.ts](../src/lib/item-links-space-revision.ts)` — `EXISTS` for source or target item in space.
 
 ### ~~12. Reconnect scheduler is a flat 2s with no jitter~~ — **fixed 2026-04-21**
 
@@ -237,9 +241,9 @@ After a realtime server blip, every client tab aligns on the same cadence and ha
 
 **Fix direction:** exponential backoff with ±30% jitter; cap at ~30s.
 
-**Shipped:** [`use-heartgarden-realtime-space-sync.ts`](../src/hooks/use-heartgarden-realtime-space-sync.ts) — exponential backoff with jitter, cap 30s; reset on successful `onopen`.
+**Shipped:** `[use-heartgarden-realtime-space-sync.ts](../src/hooks/use-heartgarden-realtime-space-sync.ts)` — exponential backoff with jitter, cap 30s; reset on successful `onopen`.
 
-### 13. JWT passed as WebSocket query string
+### ~~13. JWT passed as WebSocket query string~~ — **fixed 2026-04-21**
 
 Tokens end up in edge/proxy logs, referer headers, and browser history for the realtime URL. The file `heartgarden-realtime-token.ts` defines `heartgardenRealtimeSocketAuthHeader` but it is **never referenced** — an abandoned header-auth branch.
 
@@ -249,7 +253,9 @@ Tokens end up in edge/proxy logs, referer headers, and browser history for the r
 
 **Fix direction:** finish header-based auth (e.g. `Sec-WebSocket-Protocol` subprotocol trick), or rotate tokens aggressively.
 
-### 14. Error-message leakage to clients
+**Shipped:** client now sends auth via websocket subprotocols using `[heartgardenRealtimeSocketProtocols](../src/lib/heartgarden-realtime-token.ts)` from `[use-heartgarden-realtime-space-sync.ts](../src/hooks/use-heartgarden-realtime-space-sync.ts)`; realtime server reads token from `sec-websocket-protocol` with query fallback for migration in `[scripts/realtime-server.ts](../scripts/realtime-server.ts)`.
+
+### ~~14. Error-message leakage to clients~~ — **fixed 2026-04-21**
 
 Several routes return raw `Error.message`:
 
@@ -260,7 +266,7 @@ Several routes return raw `Error.message`:
 
 **Fix direction:** standard `{error, code}` with opaque codes; log the full message server-side only.
 
-**Progress:** [`jsonPublicError`](../src/lib/heartgarden-public-error.ts) helper; [`POST /api/items/:id/index`](../app/api/items/[itemId]/index/route.ts), [`GET /api/search/chunks`](../app/api/search/chunks/route.ts); failed import job polling returns opaque message + `code` ([`jobs/[jobId]/route.ts`](../app/api/lore/import/jobs/[jobId]/route.ts)). Remaining: MCP tool bodies, import job persisted `error` column, other routes.
+**Shipped:** prior opaque route hardening plus MCP tool/resource surfaces now return structured opaque errors (with server-side logs) in `[heartgarden-mcp-server.ts](../src/lib/mcp/heartgarden-mcp-server.ts)`, including `ListResources` failures.
 
 ### ~~15. Canvas bootstrap effect over-depends on `heartgardenBootApi`~~ — **fixed 2026-04-21**
 
@@ -268,7 +274,7 @@ The whole API object is in the dep array of the bootstrap and cached-workspace e
 
 **Fix direction:** destructure only the primitive inputs you actually read; wrap callbacks in `useCallback`.
 
-**Shipped:** [`ArchitecturalCanvasApp.tsx`](../src/components/foundation/ArchitecturalCanvasApp.tsx) — primitive boot fields + `heartgardenBootApiRef.current` for reads inside the bootstrap effect.
+**Shipped:** `[ArchitecturalCanvasApp.tsx](../src/components/foundation/ArchitecturalCanvasApp.tsx)` — primitive boot fields + `heartgardenBootApiRef.current` for reads inside the bootstrap effect.
 
 ### 16. `entity_meta` / `content_json` are `z.any()` JSON god-objects
 
@@ -287,9 +293,9 @@ No size cap, no discriminated-union validation, no DB `CHECK` constraints. That'
 
 **Fix direction:** guard `if (!row) return 404`.
 
-**Shipped:** [`route.ts`](../app/api/items/[itemId]/route.ts) — 404 when `.returning()` is empty.
+**Shipped:** `[route.ts](../app/api/items/[itemId]/route.ts)` — 404 when `.returning()` is empty.
 
-### 18. Stories are excluded from TypeScript strict checking
+### ~~18. Stories are excluded from TypeScript strict checking~~ — **fixed 2026-04-21**
 
 `tsconfig.json` excludes `**/*.stories.{ts,tsx}`. Storybook builds them separately, but type errors there won't break `npm run check`. Given the many untracked story files in the working tree, this is actively masking drift.
 
@@ -299,19 +305,25 @@ No size cap, no discriminated-union validation, no DB `CHECK` constraints. That'
 
 **Fix direction:** remove the exclusion; fix whatever falls out once.
 
-### 19. Dev-only code ships to production
+**Shipped:** removed story exclusions in `[tsconfig.json](../tsconfig.json)` and fixed strict story typing fallout in story files (for example `[BufferedContentEditable.stories.tsx](../src/components/editing/BufferedContentEditable.stories.tsx)`, `[BufferedTextInput.stories.tsx](../src/components/editing/BufferedTextInput.stories.tsx)`, `[VigilAppBootScreen.stories.tsx](../src/components/foundation/VigilAppBootScreen.stories.tsx)`, `[CommandPalette.stories.tsx](../src/components/ui/CommandPalette.stories.tsx)`, `[ContextMenu.stories.tsx](../src/components/ui/ContextMenu.stories.tsx)`).
+
+### ~~19. Dev-only code ships to production~~ — **fixed 2026-04-21**
 
 `app/dev/lore-entity-nodes/page.tsx` + `src/components/dev/LoreEntityNodeLab.tsx` (~147 KB) and `app/dev/ai-pending-style/` are regular app routes and appear in the production build. Worth ~150 KB+ of JS plus an internal surface anyone who can hit `/dev/`* can see.
 
 **Fix direction:** wrap with `notFound()` in prod, or guard behind an env flag, or move under a conditional rewrite.
 
-### 20. No rate-limit on `/api/search`
+**Shipped:** production guard added to `[app/dev/lore-entity-nodes/page.tsx](../app/dev/lore-entity-nodes/page.tsx)` and `[app/dev/ai-pending-style/page.tsx](../app/dev/ai-pending-style/page.tsx)`: `notFound()` unless `HEARTGARDEN_ENABLE_DEV_ROUTES=1`.
+
+### ~~20. No rate-limit on `/api/search`~~ — **fixed 2026-04-21**
 
 `/api/lore/query` and the index routes have one, but search does not — and MCP drives search via HTTP. An automated loop can hammer FTS + trigram joins. `src/lib/lore-query-rate-limit.ts` + `vault-index-rate-limit.ts` trust first-hop `X-Forwarded-For` (spoofable if the edge doesn't strip it) and their cleanup only kicks in at >10k entries.
 
 **Fix direction:** share a rate-limit helper; validate `X-Forwarded-For` against a trusted proxy list.
 
-### 21. LLM calls have no timeout, abort, or retry budget
+**Shipped:** shared in-memory limiter `[search-rate-limit.ts](../src/lib/search-rate-limit.ts)` wired into `[app/api/search/route.ts](../app/api/search/route.ts)` with `429` + `Retry-After: 60`.
+
+### ~~21. LLM calls have no timeout, abort, or retry budget~~ — **fixed 2026-04-21**
 
 - `lore-engine.ts` 189–194
 - `lore-item-meta.ts` 26–38
@@ -321,13 +333,13 @@ All call Anthropic with `max_tokens` only. A hung provider pins route-handler co
 
 **Fix direction:** shared `AbortController` with a ~30s deadline + one retry on 5xx/timeout.
 
-**Shipped:** [`async-timeout.ts`](../src/lib/async-timeout.ts) — `withDeadline` + `HEARTGARDEN_ANTHROPIC_TIMEOUT_MS` (default 120s) wrapping Anthropic `messages.create` in [`lore-engine.ts`](../src/lib/lore-engine.ts), [`lore-item-meta.ts`](../src/lib/lore-item-meta.ts), [`lore-import-plan-llm.ts`](../src/lib/lore-import-plan-llm.ts). MCP `fetch` abort budget still open.
+**Shipped:** `[async-timeout.ts](../src/lib/async-timeout.ts)` — `withDeadline` + `HEARTGARDEN_ANTHROPIC_TIMEOUT_MS` (default 120s) wrapping Anthropic `messages.create` in `[lore-engine.ts](../src/lib/lore-engine.ts)`, `[lore-item-meta.ts](../src/lib/lore-item-meta.ts)`, `[lore-import-plan-llm.ts](../src/lib/lore-import-plan-llm.ts)`; MCP internal fetch deadline via abort controller (`HEARTGARDEN_MCP_FETCH_TIMEOUT_MS`) in `[heartgarden-mcp-server.ts](../src/lib/mcp/heartgarden-mcp-server.ts)`.
 
 ### ~~22. Lore import routes miss `gmMayAccessSpaceIdAsync`~~ — **fixed 2026-04-21**
 
 Other GM routes gate target space access; `app/api/lore/import/plan|jobs|apply|commit` only check `enforceGmOnlyBootContext` + existence. A GM session can target restricted spaces (e.g. implicit player root).
 
-**Shipped:** `gmMayAccessSpaceIdAsync` after `assertSpaceExists` on **plan, jobs, apply, commit** and on **GET jobs/[jobId]** ([`app/api/lore/import/`](../app/api/lore/import/)).
+**Shipped:** `gmMayAccessSpaceIdAsync` after `assertSpaceExists` on **plan, jobs, apply, commit** and on **GET jobs/[jobId]** (`[app/api/lore/import/](../app/api/lore/import/)`).
 
 ---
 
@@ -366,7 +378,7 @@ const hgDocBlockPointerDragActiveRef = { current: false };
 
 **Fix direction:** promote to per-editor via `useRef`.
 
-### 27. Reindex double / triple work on a single write
+### ~~27. Reindex double / triple work on a single write~~ — **fixed 2026-04-21**
 
 PATCH triggers:
 
@@ -380,13 +392,17 @@ Errors in each are swallowed. Pick **one** path that owns the refresh and make t
 - `heartgarden/src/lib/item-vault-index.ts` 67–70.
 - `heartgarden/app/api/lore/import/commit/route.ts` 182–184.
 
-### 28. Stale presence GC runs on every GET and POST
+**Shipped:** `after()` path is now the owning policy: route-level direct embedding refresh calls were removed from create/patch/import commit/apply routes in favor of `[scheduleVaultReindexAfterResponse](../src/lib/schedule-vault-index-after.ts)`, and client debounced index calls are explicit no-ops when `NEXT_PUBLIC_HEARTGARDEN_INDEX_OWNER=server_after` in `[architectural-neon-api.ts](../src/components/foundation/architectural-neon-api.ts)`.
+
+### ~~28. Stale presence GC runs on every GET and POST~~ — **fixed 2026-04-21**
 
 `deleteStalePresenceRows` scans and deletes each request; scales linearly with traffic.
 
 `heartgarden/app/api/spaces/[spaceId]/presence/route.ts` 22–25, 54, 168.
 
 **Fix direction:** throttle (only when `Math.random() < 0.1`, or every N seconds), or move to a cron / `after()` hook.
+
+**Shipped:** request-path presence GC is throttled to run at most every 15s via `shouldRunPresenceGc` in `[presence/route.ts](../app/api/spaces/[spaceId]/presence/route.ts)`.
 
 ### 29. Subtree delete is N sequential DELETEs
 
@@ -465,11 +481,13 @@ Won't repaint on theme switch without `invalidateVigilBootFlowerAccentCache()`. 
 
 `heartgarden/src/components/foundation/VigilBootFlowerGarden.tsx` 30–40.
 
-### 41. MCP `ListResources` swallows fetch errors, returns empty
+### ~~41. MCP `ListResources` swallows fetch errors, returns empty~~ — **fixed 2026-04-21**
 
 Confuses clients.
 
 `heartgarden/src/lib/mcp/heartgarden-mcp-server.ts` 147–169.
+
+**Shipped:** `ListResources` now logs failures and returns structured MCP errors (instead of silent empty resources) in `[heartgarden-mcp-server.ts](../src/lib/mcp/heartgarden-mcp-server.ts)`.
 
 ### 42. 400 responses return Zod `flatten()`
 
@@ -543,5 +561,5 @@ Not dead code; confirm bundle impact is acceptable for a TTRPG notes app.
 ## Changelog
 
 - **2026-04-21** — Initial audit. 45 items across CRITICAL / HIGH / MEDIUM / LOW.
-- **2026-04-21 (remediation)** — Implemented fixes documented above (CRITICAL #1–#6; HIGH #8, #11, #12, #15, #17, #21, #22; partial #7, #14; MEDIUM #38 folded into #15). Run migration **`0008_items_space_updated_at_idx.sql`** on Neon when deploying. Doc/status updates: strikethrough batch `38ca04a`; commit reference + BUILD_PLAN link `bad55f2`. Implementation on `main` as of 2026-04-21 (see file references under each item).
+- **2026-04-21 (remediation)** — Implemented fixes documented above (CRITICAL #1–#6; HIGH #8, #11, #12, #15, #17, #21, #22; partial #7, #14; MEDIUM #38 folded into #15). Run migration `**0008_items_space_updated_at_idx.sql`** on Neon when deploying. Doc/status updates: strikethrough batch `38ca04a`; commit reference + BUILD_PLAN link `bad55f2`. Implementation on `main` as of 2026-04-21 (see file references under each item).
 
