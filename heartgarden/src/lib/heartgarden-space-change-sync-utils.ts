@@ -96,6 +96,25 @@ export type ParsedSpaceChangesResponse = {
   hasMore?: boolean;
 };
 
+const CANVAS_ITEM_TYPES = new Set(["note", "sticky", "image", "checklist", "webclip", "folder"]);
+
+function isCanvasItemPayload(v: unknown): v is CanvasItem {
+  if (typeof v !== "object" || v === null) return false;
+  const o = v as Record<string, unknown>;
+  if (typeof o.id !== "string" || o.id.length === 0) return false;
+  if (typeof o.spaceId !== "string" || o.spaceId.length === 0) return false;
+  if (typeof o.itemType !== "string" || !CANVAS_ITEM_TYPES.has(o.itemType)) return false;
+  if (typeof o.x !== "number" || typeof o.y !== "number") return false;
+  if (typeof o.width !== "number" || typeof o.height !== "number") return false;
+  if (typeof o.zIndex !== "number") return false;
+  if (typeof o.title !== "string" || typeof o.contentText !== "string") return false;
+  if (o.updatedAt !== undefined && typeof o.updatedAt !== "string") return false;
+  if (o.contentJson !== undefined && o.contentJson !== null && typeof o.contentJson !== "object") return false;
+  if (o.entityMeta !== undefined && o.entityMeta !== null && typeof o.entityMeta !== "object") return false;
+  if (o.imageMeta !== undefined && o.imageMeta !== null && typeof o.imageMeta !== "object") return false;
+  return true;
+}
+
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === "string" && v.length > 0;
 }
@@ -135,7 +154,12 @@ export function parseSpaceChangesResponseJson(
     return null;
   }
 
-  const items = (Array.isArray(o.items) ? o.items : []) as CanvasItem[];
+  const itemsRaw = Array.isArray(o.items) ? o.items : [];
+  const items: CanvasItem[] = [];
+  for (const row of itemsRaw) {
+    if (!isCanvasItemPayload(row)) return null;
+    items.push(row);
+  }
   const spacesRaw = Array.isArray(o.spaces) ? o.spaces : [];
   const spaces: SpaceChangePayloadRow[] = [];
   for (const row of spacesRaw) {

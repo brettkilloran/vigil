@@ -14,8 +14,15 @@ const ITEM_TYPES: ItemType[] = [
   "folder",
 ];
 
+const unknownItemTypeWarnings = new Set<string>();
+
 function asItemType(v: string): ItemType {
-  return ITEM_TYPES.includes(v as ItemType) ? (v as ItemType) : "note";
+  if (ITEM_TYPES.includes(v as ItemType)) return v as ItemType;
+  if (!unknownItemTypeWarnings.has(v)) {
+    unknownItemTypeWarnings.add(v);
+    console.warn("[item-mapper] unknown itemType fallback", v);
+  }
+  return "note";
 }
 
 export function rowToCanvasItem(row: ItemRow): CanvasItem {

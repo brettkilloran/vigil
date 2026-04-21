@@ -144,6 +144,30 @@ describe("parseSpaceChangesResponseJson", () => {
     );
     expect(p?.itemLinksRevision).toBe("3:99:abc");
   });
+
+  it("rejects payload when an item row fails shape validation", () => {
+    const p = parseSpaceChangesResponseJson(
+      {
+        ok: true,
+        items: [
+          {
+            id: "i1",
+            spaceId: "s1",
+            itemType: "note",
+            x: 0,
+            y: 0,
+            width: 10,
+            height: 10,
+            zIndex: 1,
+            title: "t",
+            contentText: 42,
+          },
+        ],
+      },
+      { requireItemIds: false },
+    );
+    expect(p).toBeNull();
+  });
 });
 
 describe("applySpaceChangeGraphMerge", () => {

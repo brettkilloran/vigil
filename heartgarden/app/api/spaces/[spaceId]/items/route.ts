@@ -26,6 +26,8 @@ import {
   stripGmOnlyEntityMetaPatch,
 } from "@/src/lib/player-item-policy";
 import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
+import { validateItemWriteJsonPayload } from "@/src/lib/heartgarden-item-json-schema";
+import { jsonValidationError } from "@/src/lib/heartgarden-validation-error";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
@@ -106,10 +108,7 @@ export async function POST(
 
   const parsed = createBody.safeParse(json);
   if (!parsed.success) {
-    return Response.json(
-      { ok: false, error: parsed.error.flatten() },
-      { status: 400 },
-    );
+    return jsonValidationError(parsed.error);
   }
 
   const t = parsed.data.itemType;
@@ -159,6 +158,16 @@ export async function POST(
 
   let contentJson: Record<string, unknown> | null =
     (parsed.data.contentJson as Record<string, unknown> | undefined) ?? null;
+  const jsonValidation = validateItemWriteJsonPayload({
+    entityType,
+    entityMeta: parsed.data.entityMeta,
+    contentJson,
+    imageMeta: parsed.data.imageMeta,
+    routeTag: "POST /api/spaces/[spaceId]/items",
+  });
+  if (!jsonValidation.ok) {
+    return Response.json({ ok: false, error: jsonValidation.error }, { status: 400 });
+  }
 
   const loreVariantRaw = parsed.data.lore_variant;
   const loreVariantForResolve =
