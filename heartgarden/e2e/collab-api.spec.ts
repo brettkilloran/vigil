@@ -44,4 +44,13 @@ test.describe("collaboration API stubs (e2e server)", () => {
     expect(body.ok).toBe(true);
     expect(Array.isArray(body.peers)).toBe(true);
   });
+
+  test("DELETE /api/spaces/[id]/presence returns ok with clientId", async ({ request }) => {
+    const res = await request.delete(
+      "/api/spaces/00000000-0000-4000-8000-000000000001/presence?clientId=11111111-1111-4111-8111-111111111111",
+    );
+    expect(res.ok()).toBeTruthy();
+    const body = (await res.json()) as { ok?: boolean };
+    expect(body.ok).toBe(true);
+  });
 });

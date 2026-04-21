@@ -1,4 +1,4 @@
-import { and, gt, inArray, lte } from "drizzle-orm";
+import { and, eq, gt, inArray, lte } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { canvasPresence } from "@/src/db/schema";
@@ -176,6 +176,73 @@ export async function POST(
         updatedAt: now,
       },
     });
+
+  if (shouldRunPresenceGc()) {
+    await deleteStalePresenceRows(db);
+  }
+
+  return Response.json({ ok: true });
+}
+
+/**
+ * Remove a client's presence row immediately — fired from `pagehide` so a closed tab does not
+ * linger as a ghost peer for up to TTL (see `HEARTGARDEN_PRESENCE_TTL_MS`). Only takes
+ * `clientId` as a query param because browser keepalive senders prefer short, body-less URLs.
+ *
+ * Safety rails layered on top of `clientId` ownership (we have no per-user auth):
+ * - Requires boot access to the URL `spaceId` just like POST/GET.
+ * - Reuses the presence POST rate-limit bucket so a misbehaving or malicious tab cannot spam
+ *   deletes; tab-close traffic is tiny (one request per close) so sharing the POST quota is
+ *   fine. See `HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_*` in `docs/VERCEL_ENV_VARS.md`.
+ * - For **player**-tier callers, only deletes the row when its `active_space_id` sits inside
+ *   the player's allowed subtree. This blocks a player session from nuking a GM's presence
+ *   row by passing a foreign `clientId`. We scope to the *player's* subtree rather than the
+ *   URL `spaceId`'s subtree so that a legitimate "switched from A to B then closed tab" race
+ *   (where the beacon URL is B but the row's `active_space_id` is still A) still succeeds
+ *   as long as both A and B are inside the player's world. **GM**-tier callers have full
+ *   tree access, so no extra scope is applied — matches the existing GM access model.
+ */
+export async function DELETE(
+  req: Request,
+  context: { params: Promise<{ spaceId: string }> },
+) {
+  if (process.env.PLAYWRIGHT_E2E === "1") {
+    return Response.json({ ok: true });
+  }
+
+  const db = tryGetDb();
+  if (!db) {
+    return Response.json({ ok: false, error: "Database not configured" }, { status: 503 });
+  }
+
+  const bootCtx = await getHeartgardenApiBootContext();
+  const { spaceId } = await context.params;
+  const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
+  if (!access.ok) return access.response;
+
+  if (!consumeHeartgardenPresencePostRateLimit(heartgardenBootClientIp(req))) {
+    return Response.json({ ok: false, error: "Rate limited" }, { status: 429 });
+  }
+
+  const url = new URL(req.url);
+  const clientIdRaw = url.searchParams.get("clientId")?.trim() ?? "";
+  const parsed = z.string().uuid().safeParse(clientIdRaw);
+  if (!parsed.success) {
+    return Response.json({ ok: false, error: "Invalid clientId" }, { status: 400 });
+  }
+
+  const clientIdMatch = eq(canvasPresence.clientId, parsed.data);
+  const whereClause =
+    bootCtx.role === "player"
+      ? and(
+          clientIdMatch,
+          inArray(canvasPresence.activeSpaceId, [
+            ...(await fetchDescendantSpaceIds(db, bootCtx.playerSpaceId)),
+          ]),
+        )
+      : clientIdMatch;
+
+  await db.delete(canvasPresence).where(whereClause);
 
   if (shouldRunPresenceGc()) {
     await deleteStalePresenceRows(db);

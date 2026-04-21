@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 
 import {
   fetchSpacePresencePeersDetail,
+  leavePresenceBeacon,
   postPresencePayload,
   type SpacePresencePeer,
 } from "@/src/components/foundation/architectural-neon-api";
@@ -16,6 +17,20 @@ import type { CameraState } from "@/src/model/canvas-types";
 
 export type { SpacePresencePeer };
 
+/**
+ * Presence heartbeat + peer poll. Split into two effects so that "leave" signals
+ * (tab close, collab disable, component unmount) are decoupled from the heartbeat loop:
+ *
+ * - **Heartbeat effect** keyed on `[enabled, activeSpaceId]` — runs the 25s beat and 3s poll,
+ *   restarts them on space switches. Deliberately does **not** fire a DELETE on cleanup,
+ *   because an SPA space change re-runs this effect and a racing DELETE could land *after*
+ *   the new effect's immediate POST, wiping the freshly upserted row.
+ *
+ * - **Leave-signal effect** keyed on `[enabled]` — owns the `pagehide` listener and the
+ *   unmount/disable DELETE. Because its deps do not include `activeSpaceId`, changing space
+ *   in the SPA does **not** retrigger this cleanup, so no DELETE/POST race exists. A
+ *   `spaceIdRef` carries the latest space id into the beacon.
+ */
 export function useHeartgardenPresenceHeartbeat(options: {
   enabled: boolean;
   activeSpaceId: string;
@@ -25,11 +40,38 @@ export function useHeartgardenPresenceHeartbeat(options: {
   const { enabled, activeSpaceId, getPayload, onPeersUpdate } = options;
   const getPayloadRef = useRef(getPayload);
   const onPeersRef = useRef(onPeersUpdate);
+  const spaceIdRef = useRef(activeSpaceId);
   useLayoutEffect(() => {
     getPayloadRef.current = getPayload;
     onPeersRef.current = onPeersUpdate;
+    spaceIdRef.current = activeSpaceId;
   });
 
+  // Leave-signal effect. Registers `pagehide` once per enabled-session and fires a DELETE
+  // on unmount or when `enabled` flips false so peers stop seeing us before TTL prune.
+  // Deliberately *not* guarding against duplicate fires: the `pagehide(persisted=true)` →
+  // bfcache → `pageshow` cycle legitimately re-POSTs presence on return, and a later real
+  // tab-close must be allowed to DELETE again. Server DELETE is idempotent and the rate-limit
+  // cost of an occasional double-fire is negligible (one token per tab close).
+  useEffect(() => {
+    if (!enabled) return;
+    const clientId = getOrCreatePresenceClientId();
+    if (!clientId) return;
+
+    const fireLeave = () => {
+      leavePresenceBeacon(spaceIdRef.current, clientId);
+    };
+
+    const onPageHide = () => fireLeave();
+    window.addEventListener("pagehide", onPageHide);
+
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+      fireLeave();
+    };
+  }, [enabled]);
+
+  // Heartbeat + peer poll effect.
   useEffect(() => {
     if (!enabled) {
       onPeersRef.current([]);
@@ -84,12 +126,15 @@ export function useHeartgardenPresenceHeartbeat(options: {
         stopTimers();
         return;
       }
+      // Covers bfcache return (`pageshow` is mirrored by a visibilitychange to "visible")
+      // — restart timers and re-post so we are not invisible to peers while back.
       startTimers();
       beat();
       void poll();
     };
 
     document.addEventListener("visibilitychange", onVisibility);
+
     if (document.visibilityState !== "hidden") {
       startTimers();
       beat();

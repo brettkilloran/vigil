@@ -409,6 +409,22 @@ export async function postPresencePayload(
   }
 }
 
+/**
+ * Fire-and-forget presence removal used on tab close (`pagehide`). Uses `keepalive: true` so the
+ * request survives the document being unloaded — that is the whole reason this endpoint exists
+ * instead of waiting for TTL prune.
+ */
+export function leavePresenceBeacon(spaceId: string, clientId: string): void {
+  try {
+    const url = `/api/spaces/${encodeURIComponent(spaceId)}/presence?clientId=${encodeURIComponent(clientId)}`;
+    void fetch(url, { method: "DELETE", keepalive: true }).catch(() => {
+      /* swallow — page is unloading; cannot recover anyway */
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
 export async function fetchSpacePresencePeersDetail(
   spaceId: string,
   exceptClientId?: string,
