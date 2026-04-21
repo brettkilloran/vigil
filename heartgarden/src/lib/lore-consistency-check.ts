@@ -1,6 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
-
-import { extractJsonObject } from "@/src/lib/lore-import-plan-llm";
+import { buildCachedSystem, callAnthropic } from "@/src/lib/anthropic-client";
 import { extractHgArchBoundItemIds } from "@/src/lib/hg-arch-binding-projection";
 import type { VigilDb } from "@/src/lib/spaces";
 import { LORE_CONSISTENCY_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
@@ -84,23 +82,21 @@ export async function runLoreConsistencyCheck(args: {
       };
     });
 
-  const client = new Anthropic({ apiKey: args.apiKey });
   const user =
     candidates.length > 0
-      ? `DRAFT NOTE:\nTitle: ${args.title.slice(0, 255)}\nBody:\n${args.bodyText.slice(0, 24_000)}\n\nCANDIDATES (JSON):\n${JSON.stringify(candidates).slice(0, 100_000)}`
-      : `DRAFT NOTE (no related vault excerpts were retrieved — infer tags from the draft only):\nTitle: ${args.title.slice(0, 255)}\nBody:\n${args.bodyText.slice(0, 24_000)}`;
+      ? `DRAFT NOTE:\nTitle: ${args.title.slice(0, 255)}\nBody:\n${args.bodyText.slice(0, 80_000)}\n\nCANDIDATES (JSON):\n${JSON.stringify(candidates).slice(0, 100_000)}`
+      : `DRAFT NOTE (no related vault excerpts were retrieved — infer tags from the draft only):\nTitle: ${args.title.slice(0, 255)}\nBody:\n${args.bodyText.slice(0, 80_000)}`;
 
-  const res = await client.messages.create({
-    model: args.model,
-    max_tokens: 4096,
-    system: SYSTEM,
-    messages: [{ role: "user", content: user }],
-  });
-  let raw = "";
-  for (const block of res.content) {
-    if (block.type === "text") raw += block.text;
-  }
-  const jsonStr = extractJsonObject(raw);
+  const res = await callAnthropic(
+    args.apiKey,
+    {
+      model: args.model,
+      system: buildCachedSystem(SYSTEM),
+      messages: [{ role: "user", content: user }],
+    },
+    { label: "lore.consistency", expectJson: true },
+  );
+  const jsonStr = res.jsonText;
   if (!jsonStr) {
     return { issues: [], suggestedNoteTags: [], semanticSummary: null };
   }

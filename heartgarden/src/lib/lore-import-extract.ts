@@ -1,10 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
-
 import type {
   LoreImportEntityDraft,
   LoreImportExtractResult,
   LoreImportLinkDraft,
 } from "@/src/lib/lore-import-types";
+import { buildCachedSystem, callAnthropic } from "@/src/lib/anthropic-client";
 
 export type { LoreImportEntityDraft, LoreImportExtractResult, LoreImportLinkDraft };
 
@@ -36,31 +35,26 @@ async function extractLoreEntitiesOneSegment(
   model: string,
   segment: string,
 ): Promise<LoreImportExtractResult> {
-  const client = new Anthropic({ apiKey });
   const trimmed = segment.trim();
-  const res = await client.messages.create({
-    model,
-    max_tokens: 4096,
-    system: EXTRACT_SYSTEM,
-    messages: [
-      {
-        role: "user",
-        content: `Source text:\n\n${trimmed || "(empty)"}`,
-      },
-    ],
-  });
-  let raw = "";
-  for (const block of res.content) {
-    if (block.type === "text") raw += block.text;
-  }
-  raw = raw.trim();
-  const start = raw.indexOf("{");
-  const end = raw.lastIndexOf("}");
-  if (start < 0 || end <= start) {
+  const res = await callAnthropic(
+    apiKey,
+    {
+      model,
+      system: buildCachedSystem(EXTRACT_SYSTEM),
+      messages: [
+        {
+          role: "user",
+          content: `Source text:\n\n${trimmed || "(empty)"}`,
+        },
+      ],
+    },
+    { label: "lore.import.extract", expectJson: true },
+  );
+  if (!res.jsonText) {
     return { entities: [], suggestedLinks: [] };
   }
   try {
-    const parsed = JSON.parse(raw.slice(start, end + 1)) as {
+    const parsed = JSON.parse(res.jsonText) as {
       entities?: LoreImportEntityDraft[];
       suggestedLinks?: LoreImportLinkDraft[];
     };

@@ -1,10 +1,8 @@
-import Anthropic from "@anthropic-ai/sdk";
-
-import { anthropicLlmDeadlineMs, withDeadline } from "@/src/lib/async-timeout";
 import {
   normalizeCanonicalEntityKind,
   type CanonicalEntityKind,
 } from "@/src/lib/lore-import-canonical-kinds";
+import { buildCachedSystem, callAnthropic } from "@/src/lib/anthropic-client";
 import {
   CANONICAL_RELATIONSHIP_LINK_TYPES,
   connectionKindsPromptGlossary,
@@ -14,7 +12,7 @@ import type { IngestionSignals } from "@/src/lib/lore-import-plan-types";
 
 /** Keep chunk list JSON under this so long docs still send every chunk id to the model. */
 export const OUTLINE_CHUNK_LIST_JSON_MAX = 650_000;
-const OUTLINE_SOURCE_SAMPLE_MAX = 120_000;
+const OUTLINE_SOURCE_SAMPLE_MAX = 400_000;
 /** Merge / clarify payloads can be large when many notes exist; batch merge separately. */
 const MERGE_USER_JSON_MAX = 420_000;
 const CLARIFY_USER_JSON_MAX = 420_000;
@@ -195,25 +193,19 @@ export async function runLoreImportOutlineLlm(
   chunks: SourceTextChunk[],
   sourceSample: string,
 ): Promise<OutlineLlmResult> {
-  const client = new Anthropic({ apiKey });
   const chunkList = buildOutlineChunkListPayload(chunks);
   const user = `CHUNK LIST (JSON):\n${JSON.stringify(chunkList)}\n\nSOURCE SAMPLE (first ~${OUTLINE_SOURCE_SAMPLE_MAX} chars, for tone — chunk ids above are authoritative for assignment):\n${sourceSample.slice(0, OUTLINE_SOURCE_SAMPLE_MAX)}`;
 
-  const res = await withDeadline(
-    client.messages.create({
+  const res = await callAnthropic(
+    apiKey,
+    {
       model,
-      max_tokens: 8192,
-      system: OUTLINE_SYSTEM,
+      system: buildCachedSystem(OUTLINE_SYSTEM),
       messages: [{ role: "user", content: user }],
-    }),
-    anthropicLlmDeadlineMs(),
-    "lore_import_outline",
+    },
+    { label: "lore.import.outline", expectJson: true },
   );
-  let raw = "";
-  for (const block of res.content) {
-    if (block.type === "text") raw += block.text;
-  }
-  const jsonStr = extractJsonObject(raw);
+  const jsonStr = res.jsonText;
   if (!jsonStr) {
     return { folders: [], notes: [], links: [] };
   }
@@ -402,7 +394,6 @@ export async function runLoreImportMergeLlm(
   }[];
   contradictions: { noteClientId?: string; summary: string; details?: string }[];
 }> {
-  const client = new Anthropic({ apiKey });
   const payload = notes.map((n) => ({
     noteClientId: n.clientId,
     title: n.title,
@@ -412,21 +403,16 @@ export async function runLoreImportMergeLlm(
   }));
   const user = `NOTES AND CANDIDATES (JSON):\n${JSON.stringify(payload).slice(0, MERGE_USER_JSON_MAX)}`;
 
-  const res = await withDeadline(
-    client.messages.create({
+  const res = await callAnthropic(
+    apiKey,
+    {
       model,
-      max_tokens: 8192,
-      system: MERGE_SYSTEM,
+      system: buildCachedSystem(MERGE_SYSTEM),
       messages: [{ role: "user", content: user }],
-    }),
-    anthropicLlmDeadlineMs(),
-    "lore_import_merge",
+    },
+    { label: "lore.import.merge", expectJson: true },
   );
-  let raw = "";
-  for (const block of res.content) {
-    if (block.type === "text") raw += block.text;
-  }
-  const jsonStr = extractJsonObject(raw);
+  const jsonStr = res.jsonText;
   if (!jsonStr) {
     return { mergeProposals: [], contradictions: [] };
   }
@@ -571,23 +557,17 @@ export async function runLoreImportClarifyLlm(
   model: string,
   context: LoreImportClarifyContext,
 ): Promise<unknown[]> {
-  const client = new Anthropic({ apiKey });
   const user = `IMPORT PLAN CONTEXT (JSON):\n${JSON.stringify(context).slice(0, CLARIFY_USER_JSON_MAX)}`;
-  const res = await withDeadline(
-    client.messages.create({
+  const res = await callAnthropic(
+    apiKey,
+    {
       model,
-      max_tokens: 8192,
-      system: CLARIFY_SYSTEM,
+      system: buildCachedSystem(CLARIFY_SYSTEM),
       messages: [{ role: "user", content: user }],
-    }),
-    anthropicLlmDeadlineMs(),
-    "lore_import_clarify",
+    },
+    { label: "lore.import.clarify", expectJson: true },
   );
-  let raw = "";
-  for (const block of res.content) {
-    if (block.type === "text") raw += block.text;
-  }
-  const jsonStr = extractJsonObject(raw);
+  const jsonStr = res.jsonText;
   if (!jsonStr) return [];
   try {
     const parsed = JSON.parse(jsonStr) as { clarifications?: unknown[] };

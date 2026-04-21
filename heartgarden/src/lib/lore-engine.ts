@@ -2,9 +2,7 @@
  * Lore Q&A pipeline: hybrid vault retrieval (`hybridRetrieveItems` + link expansion)
  * → excerpt shaping → Anthropic completion. Used by `POST /api/lore/query`.
  */
-import Anthropic from "@anthropic-ai/sdk";
-
-import { anthropicLlmDeadlineMs, withDeadline } from "@/src/lib/async-timeout";
+import { buildCachedSystem, callAnthropic } from "@/src/lib/anthropic-client";
 
 import type { tryGetDb } from "@/src/db/index";
 import type { SearchFilters, SearchRow } from "@/src/lib/spaces";
@@ -177,21 +175,12 @@ export async function retrieveLoreSources(
   return out;
 }
 
-function messageText(message: Anthropic.Message): string {
-  const parts: string[] = [];
-  for (const block of message.content) {
-    if (block.type === "text") parts.push(block.text);
-  }
-  return parts.join("\n").trim();
-}
-
 export async function synthesizeLoreAnswer(
   apiKey: string,
   model: string,
   question: string,
   sources: LoreSource[],
 ): Promise<string> {
-  const client = new Anthropic({ apiKey });
   const blocks = sources.map((s, i) => {
     const body = sanitizeRetrievedTextForLorePrompt(s.excerpt);
     const ctx = s.viaGraph
@@ -206,16 +195,15 @@ export async function synthesizeLoreAnswer(
   });
   const user = `Question:\n${question.trim()}\n\n---\n\nCanvas excerpts (your only ground truth):\n\n${blocks.join("\n\n---\n\n")}`;
 
-  const res = await withDeadline(
-    client.messages.create({
+  const res = await callAnthropic(
+    apiKey,
+    {
       model,
-      max_tokens: 4096,
-      system: LORE_SYSTEM,
+      system: buildCachedSystem(LORE_SYSTEM),
       messages: [{ role: "user", content: user }],
-    }),
-    anthropicLlmDeadlineMs(),
-    "lore_query",
+    },
+    { label: "lore.query.answer" },
   );
 
-  return messageText(res);
+  return res.text;
 }

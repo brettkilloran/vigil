@@ -1,5 +1,15 @@
-/** Default cap for Anthropic `messages.create` calls (configurable via `HEARTGARDEN_ANTHROPIC_TIMEOUT_MS`). */
+/** Default cap for user-facing Anthropic `messages.create` calls. */
 const DEFAULT_ANTHROPIC_MS = 120_000;
+/** Background/job Anthropic calls can run longer on huge imports. */
+const DEFAULT_ANTHROPIC_JOB_MS = 300_000;
+
+function parseDeadlineMs(raw: string, fallback: number): number {
+  const trimmed = raw.trim();
+  if (!trimmed) return fallback;
+  const n = Number(trimmed);
+  if (Number.isFinite(n) && n >= 5000 && n <= 600_000) return Math.floor(n);
+  return fallback;
+}
 
 export async function withDeadline<T>(
   promise: Promise<T>,
@@ -20,9 +30,12 @@ export async function withDeadline<T>(
 }
 
 export function anthropicLlmDeadlineMs(): number {
-  const raw = (process.env.HEARTGARDEN_ANTHROPIC_TIMEOUT_MS ?? "").trim();
-  if (!raw) return DEFAULT_ANTHROPIC_MS;
-  const n = Number(raw);
-  if (Number.isFinite(n) && n >= 5000 && n <= 600_000) return Math.floor(n);
-  return DEFAULT_ANTHROPIC_MS;
+  return parseDeadlineMs(process.env.HEARTGARDEN_ANTHROPIC_TIMEOUT_MS ?? "", DEFAULT_ANTHROPIC_MS);
+}
+
+export function anthropicLlmJobDeadlineMs(): number {
+  return parseDeadlineMs(
+    process.env.HEARTGARDEN_ANTHROPIC_JOB_TIMEOUT_MS ?? "",
+    DEFAULT_ANTHROPIC_JOB_MS,
+  );
 }

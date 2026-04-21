@@ -1,9 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
-
-import { anthropicLlmDeadlineMs, withDeadline } from "@/src/lib/async-timeout";
+import { buildCachedSystem, callAnthropic } from "@/src/lib/anthropic-client";
 
 /** Max chars of note text passed to the lore-meta model after trim (must match `item-vault-index` skip-hash). */
-export const LORE_META_MAX_INPUT_CHARS = 24_000;
+export const LORE_META_MAX_INPUT_CHARS = 60_000;
 
 /** Same trim + cap as `extractLoreItemMeta` applies before the API call. */
 export function normalizeLoreMetaInputText(text: string): string {
@@ -25,35 +23,26 @@ export async function extractLoreItemMeta(
   model: string,
   text: string,
 ): Promise<LoreItemMeta> {
-  const client = new Anthropic({ apiKey });
   const trimmed = normalizeLoreMetaInputText(text);
-  const res = await withDeadline(
-    client.messages.create({
+  const res = await callAnthropic(
+    apiKey,
+    {
       model,
-      max_tokens: 512,
-      system: SYSTEM,
+      system: buildCachedSystem(SYSTEM),
       messages: [
         {
           role: "user",
           content: `Note text:\n\n${trimmed || "(empty)"}`,
         },
       ],
-    }),
-    anthropicLlmDeadlineMs(),
-    "lore_item_meta",
+    },
+    { label: "lore.item_meta", expectJson: true },
   );
-  let raw = "";
-  for (const block of res.content) {
-    if (block.type === "text") raw += block.text;
-  }
-  raw = raw.trim();
-  const start = raw.indexOf("{");
-  const end = raw.lastIndexOf("}");
-  if (start < 0 || end <= start) {
+  if (!res.jsonText) {
     return { summary: "", aliases: [] };
   }
   try {
-    const parsed = JSON.parse(raw.slice(start, end + 1)) as {
+    const parsed = JSON.parse(res.jsonText) as {
       summary?: string;
       aliases?: string[];
     };

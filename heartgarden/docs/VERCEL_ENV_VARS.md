@@ -27,7 +27,16 @@ Use with **[`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)** and the **[dashboard check
 | `NEON_DATABASE_URL` | Yes | Yes (**different** pooled URL than prod) | Required for cloud sync; omit both → demo bootstrap. |
 | `ANTHROPIC_API_KEY` | If lore needed | Optional / omit | Server-only. |
 | `ANTHROPIC_LORE_MODEL` | Optional | Optional | |
-| `HEARTGARDEN_ANTHROPIC_TIMEOUT_MS` | Optional | Optional | Max time (ms) for Anthropic `messages.create` in lore query, vault meta, and import LLM paths (default **120000**; clamped **5000–600000**). |
+| `HEARTGARDEN_ANTHROPIC_TIMEOUT_MS` | Optional | Optional | Max time (ms) for user-facing Anthropic calls (notably lore query). Default **120000**; clamped **5000–600000**. |
+| `HEARTGARDEN_ANTHROPIC_JOB_TIMEOUT_MS` | Optional | Optional | Max time (ms) for job/import Anthropic calls (outline/merge/clarify/extract/meta/consistency). Default **300000**; clamped **5000–600000**. |
+| `HEARTGARDEN_ANTHROPIC_CACHE_DISABLED` | Optional | Optional | Set **`1`** to disable Anthropic prompt caching globally (wrapper removes `cache_control`). |
+| `HEARTGARDEN_ANTHROPIC_CACHE_TTL` | Optional | Optional | Prompt-cache TTL for cached system blocks: **`5m`** (default) or **`1h`**. `1h` increases cache-write cost; use only when repeated reads justify it. |
+| `HEARTGARDEN_ANTHROPIC_DEBUG` | Optional | Optional | Set **`1`** to log structured Anthropic wrapper telemetry (`stop_reason`, token usage including cache create/read, retries, continuations, elapsed ms). |
+| `HEARTGARDEN_ANTHROPIC_THINKING_BUDGET` | Optional | Optional | Extended-thinking budget tokens for reasoning-heavy labels (`lore.query.answer`, `lore.import.clarify`, `lore.consistency`). Default **8192**. |
+| `HEARTGARDEN_ANTHROPIC_THINKING_DISABLED` | Optional | Optional | Set **`1`** to force-disable extended thinking for all Anthropic calls. |
+| `HEARTGARDEN_ANTHROPIC_MAX_OUTPUT_TOKENS` | Optional | Optional | Global override for Anthropic wrapper output ceiling (`max_tokens`). Per-label defaults are set in code; this override applies to all labels. |
+| `HEARTGARDEN_ANTHROPIC_MAX_CONTINUATIONS` | Optional | Optional | Max auto-continue turns when Anthropic returns `stop_reason: max_tokens`. Default **3** (clamped **0–12**). |
+| `HEARTGARDEN_ANTHROPIC_MAX_RETRIES` | Optional | Optional | Max retry attempts for transient Anthropic failures (429/529/network). Default **3** (clamped **0–8**). |
 | `OPENAI_API_KEY` | If vector vault / semantic search | Optional | Server-only. When set, **`src/lib/embedding-provider.ts`** indexes **`item_embeddings`** (default model **`text-embedding-3-small`**, 1536-d). Without it, hybrid search is lexical-only. |
 | `HEARTGARDEN_OPENAI_EMBEDDING_MODEL` | Optional | Optional | Override OpenAI embedding model (default **`text-embedding-3-small`**). |
 | `HEARTGARDEN_LORE_META_IGNORE_SOURCE_HASH` | Omit | Optional | Set **`1`** to **always** run Anthropic on vault reindex when lore meta is enabled (ignores stored `lore_meta_source_hash`). Use after changing the lore model or to force-refresh summaries. |
