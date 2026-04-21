@@ -31,9 +31,9 @@ This file is a **living backlog** — work items below are intended to be picked
 
 **For quick status instead:**
 
-- **`docs/BUILD_PLAN.md`** — shipped tranches, architecture snapshot, next execution phases.
-- **`docs/FEATURES.md`** — what exists in production.
-- **`docs/API.md`** — current HTTP contracts and operational toggles.
+- `**docs/BUILD_PLAN.md`** — shipped tranches, architecture snapshot, next execution phases.
+- `**docs/FEATURES.md`** — what exists in production.
+- `**docs/API.md**` — current HTTP contracts and operational toggles.
 
 Treat this document like an annotated defect ledger, not a dashboard.
 
@@ -300,7 +300,7 @@ No size cap, no discriminated-union validation, no DB `CHECK` constraints. That'
 
 **Fix direction:** introduce Zod discriminated unions per `entity_type`; add a 1–2 MB JSON size cap.
 
-**Shipped:** shared write-time JSON guard in [`heartgarden-item-json-schema.ts`](../src/lib/heartgarden-item-json-schema.ts) enforces size caps and entity-type-aware meta validation for high-traffic item write routes: [`app/api/items/[itemId]/route.ts`](../app/api/items/[itemId]/route.ts) and [`app/api/spaces/[spaceId]/items/route.ts`](../app/api/spaces/[spaceId]/items/route.ts).
+**Shipped:** shared write-time JSON guard in `[heartgarden-item-json-schema.ts](../src/lib/heartgarden-item-json-schema.ts)` enforces size caps and entity-type-aware meta validation for high-traffic item write routes: `[app/api/items/[itemId]/route.ts](../app/api/items/[itemId]/route.ts)` and `[app/api/spaces/[spaceId]/items/route.ts](../app/api/spaces/[spaceId]/items/route.ts)`.
 
 ### ~~17. `rowToCanvasItem(row!)` after UPDATE can throw~~ — **fixed 2026-04-21**
 
@@ -366,13 +366,13 @@ Other GM routes gate target space access; `app/api/lore/import/plan|jobs|apply|c
 
 `graphRef`, selection refs, focus flags, queues all copied every render (`ArchitecturalCanvasApp.tsx` L2290–2314). It works, but one future edit that reads state instead of `ref.current` (or vice versa) creates a subtle race. Consider `useSyncExternalStore` for the graph or a minimal reducer store.
 
-**Shipped:** stack-bounds effects now read explicit ref snapshots keyed by stable effect fingerprints (instead of closure-prone dep suppressions), reducing ref/state drift risk in [`ArchitecturalCanvasApp.tsx`](../src/components/foundation/ArchitecturalCanvasApp.tsx).
+**Shipped:** stack-bounds effects now read explicit ref snapshots keyed by stable effect fingerprints (instead of closure-prone dep suppressions), reducing ref/state drift risk in `[ArchitecturalCanvasApp.tsx](../src/components/foundation/ArchitecturalCanvasApp.tsx)`.
 
 ### ~~24. `flushSync` in hot paths~~ — **fixed 2026-04-21**
 
 L5409, 5699, 5719, 5957. Forces synchronous commits; usually a sign the code is compensating for not owning a ref it should own. Review whether these can be replaced with `startTransition` or ref updates.
 
-**Shipped:** removed non-essential `flushSync` usage from folder-child-space resolution/update paths; retained only behavior-critical sync boundaries in [`ArchitecturalCanvasApp.tsx`](../src/components/foundation/ArchitecturalCanvasApp.tsx).
+**Shipped:** removed non-essential `flushSync` usage from folder-child-space resolution/update paths; retained only behavior-critical sync boundaries in `[ArchitecturalCanvasApp.tsx](../src/components/foundation/ArchitecturalCanvasApp.tsx)`.
 
 ### ~~25. TipTap full-doc `JSON.stringify` equality on every external update~~ — **fixed 2026-04-21**
 
@@ -387,7 +387,7 @@ Same pattern in `LoreHybridFocusEditor.tsx` 106–108.
 
 **Fix direction:** keep a version token (e.g. `updatedAt` or content hash) passed alongside the doc; compare the token.
 
-**Shipped:** editors now use stable doc-key refs to avoid repeated full-doc compare churn on every update in [`HeartgardenDocEditor.tsx`](../src/components/editing/HeartgardenDocEditor.tsx) and [`LoreHybridFocusEditor.tsx`](../src/components/editing/LoreHybridFocusEditor.tsx).
+**Shipped:** editors now use stable doc-key refs to avoid repeated full-doc compare churn on every update in `[HeartgardenDocEditor.tsx](../src/components/editing/HeartgardenDocEditor.tsx)` and `[LoreHybridFocusEditor.tsx](../src/components/editing/LoreHybridFocusEditor.tsx)`.
 
 ### ~~26. `HgDocPointerBlockDrag` uses module-scope refs for drag state~~ — **fixed 2026-04-21**
 
@@ -401,7 +401,7 @@ const hgDocBlockPointerDragActiveRef = { current: false };
 
 **Fix direction:** promote to per-editor via `useRef`.
 
-**Shipped:** drag session + active markers are now per-instance refs inside the component in [`HgDocPointerBlockDrag.tsx`](../src/components/editing/HgDocPointerBlockDrag.tsx).
+**Shipped:** drag session + active markers are now per-instance refs inside the component in `[HgDocPointerBlockDrag.tsx](../src/components/editing/HgDocPointerBlockDrag.tsx)`.
 
 ### ~~27. Reindex double / triple work on a single write~~ — **fixed 2026-04-21**
 
@@ -433,7 +433,7 @@ Errors in each are swallowed. Pick **one** path that owns the refresh and make t
 
 `heartgarden/src/lib/spaces.ts` 689–691. Replace with a single `DELETE WHERE id = ANY($1)` after ordering, or a recursive CTE.
 
-**Shipped:** subtree delete now executes one `DELETE ... WHERE inArray(id, subtreeIds)` after subtree id discovery in [`spaces.ts`](../src/lib/spaces.ts) (no per-node delete loop).
+**Shipped:** subtree delete now executes one `DELETE ... WHERE inArray(id, subtreeIds)` after subtree id discovery in `[spaces.ts](../src/lib/spaces.ts)` (no per-node delete loop).
 
 ### ~~30. `document.querySelector` for stack bounds is unscoped~~ — **fixed 2026-04-21**
 
@@ -443,7 +443,7 @@ If tests, portals, or future Storybook embeds render duplicates, the wrong node 
 
 **Fix direction:** use a ref into the stack container.
 
-**Shipped:** stack and drag-drop measurements now scope queries through shell-root refs first (`shellRef.current ?? document`) in [`ArchitecturalCanvasApp.tsx`](../src/components/foundation/ArchitecturalCanvasApp.tsx).
+**Shipped:** stack and drag-drop measurements now scope queries through shell-root refs first (`shellRef.current ?? document`) in `[ArchitecturalCanvasApp.tsx](../src/components/foundation/ArchitecturalCanvasApp.tsx)`.
 
 ### ~~31. `setTimeout` without cleanup~~ — **fixed 2026-04-21**
 
@@ -454,13 +454,13 @@ Several "copy hint" / "status feedback" timers call `setState` after a possibly-
 
 **Fix direction:** `useEffect` cleanup or a ref-guarded helper.
 
-**Shipped:** copy/status timers are now tracked by refs with explicit cleanup on close/unmount in [`ArchitecturalStatusBar.tsx`](../src/components/foundation/ArchitecturalStatusBar.tsx) and `WorkspaceBootstrapErrorPanel` in [`ArchitecturalCanvasApp.tsx`](../src/components/foundation/ArchitecturalCanvasApp.tsx).
+**Shipped:** copy/status timers are now tracked by refs with explicit cleanup on close/unmount in `[ArchitecturalStatusBar.tsx](../src/components/foundation/ArchitecturalStatusBar.tsx)` and `WorkspaceBootstrapErrorPanel` in `[ArchitecturalCanvasApp.tsx](../src/components/foundation/ArchitecturalCanvasApp.tsx)`.
 
 ### ~~32. No `AbortController` for `fetch` anywhere in the shell~~ — **fixed 2026-04-21**
 
 Bootstrap, graph poll, connection delete, etc. can resolve after unmount/navigation — root cause of several "ghost state" issues. Adopt a `useAbortSignal()` hook.
 
-**Shipped:** space-change polling now uses per-run `AbortController`, and API wrappers accept/forward abort signals for cancellable fetches in [`use-heartgarden-space-change-sync.ts`](../src/hooks/use-heartgarden-space-change-sync.ts) and [`architectural-neon-api.ts`](../src/components/foundation/architectural-neon-api.ts).
+**Shipped:** space-change polling now uses per-run `AbortController`, and API wrappers accept/forward abort signals for cancellable fetches in `[use-heartgarden-space-change-sync.ts](../src/hooks/use-heartgarden-space-change-sync.ts)` and `[architectural-neon-api.ts](../src/components/foundation/architectural-neon-api.ts)`.
 
 ### ~~33. Item-mapper silently coerces unknown `item_type` to `"note"`~~ — **fixed 2026-04-21**
 
@@ -474,7 +474,7 @@ function asItemType(v: string): ItemType {
 
 **Fix direction:** log and default, or surface a telemetry event.
 
-**Shipped:** [`item-mapper.ts`](../src/lib/item-mapper.ts) now logs one warning per unknown type before fallback (no silent coercion).
+**Shipped:** `[item-mapper.ts](../src/lib/item-mapper.ts)` now logs one warning per unknown type before fallback (no silent coercion).
 
 ### ~~34. `parseSpaceChangesResponseJson` trusts the wire~~ — **fixed 2026-04-21**
 
@@ -482,7 +482,7 @@ Casts array elements to `CanvasItem[]` with no per-item Zod validation — a bad
 
 `heartgarden/src/lib/heartgarden-space-change-sync-utils.ts` L133.
 
-**Shipped:** per-item shape validation in [`heartgarden-space-change-sync-utils.ts`](../src/lib/heartgarden-space-change-sync-utils.ts) replaces the blind `CanvasItem[]` cast; invalid rows now fail parse and trigger sync recovery.
+**Shipped:** per-item shape validation in `[heartgarden-space-change-sync-utils.ts](../src/lib/heartgarden-space-change-sync-utils.ts)` replaces the blind `CanvasItem[]` cast; invalid rows now fail parse and trigger sync recovery.
 
 ### ~~35. RRF hardcoded k=60, equal weight lexical vs vector~~ — **fixed 2026-04-21**
 
@@ -490,7 +490,7 @@ Moot while vectors are empty (see #6), but if embeddings come online, weights sh
 
 `heartgarden/src/lib/vault-retrieval-rrf.ts` 1–48.
 
-**Shipped:** RRF now supports configurable `k` + lexical/vector weights (options + env defaults) wired through retrieval flow in [`vault-retrieval-rrf.ts`](../src/lib/vault-retrieval-rrf.ts) and [`vault-retrieval.ts`](../src/lib/vault-retrieval.ts), with tests.
+**Shipped:** RRF now supports configurable `k` + lexical/vector weights (options + env defaults) wired through retrieval flow in `[vault-retrieval-rrf.ts](../src/lib/vault-retrieval-rrf.ts)` and `[vault-retrieval.ts](../src/lib/vault-retrieval.ts)`, with tests.
 
 ### ~~36. "Fuzzy" search matches title only~~ — **fixed 2026-04-21**
 
@@ -498,13 +498,13 @@ Body trigram matching would dramatically help recall for typos.
 
 `heartgarden/src/lib/spaces.ts` 466–467.
 
-**Shipped:** fuzzy score now considers title + body + search blob (title slightly boosted) in [`searchItemsFuzzy`](../src/lib/spaces.ts), improving typo recall outside titles.
+**Shipped:** fuzzy score now considers title + body + search blob (title slightly boosted) in `[searchItemsFuzzy](../src/lib/spaces.ts)`, improving typo recall outside titles.
 
 ### ~~37. Scripts / stories CI coverage~~ — **fixed 2026-04-21**
 
 CI runs `build-storybook` but the many untracked `*.stories.tsx` suggest story/component pairs drift locally. `verify:foundation-sync` only covers foundation shell wiring, not story coverage.
 
-**Shipped:** CI now executes `npm run verify:foundation-sync` in [`.github/workflows/heartgarden-ci.yml`](../../.github/workflows/heartgarden-ci.yml) before lint/build.
+**Shipped:** CI now executes `npm run verify:foundation-sync` in `[.github/workflows/heartgarden-ci.yml](../../.github/workflows/heartgarden-ci.yml)` before lint/build.
 
 ### ~~38. `heartgardenBootApi` cached-workspace reconnect effect — same identity churn risk as #15~~ — **fixed 2026-04-21** (same change as #15)
 
@@ -514,7 +514,7 @@ CI runs `build-storybook` but the many untracked `*.stories.tsx` suggest story/c
 
 Per-entity debounce timers are cleared per id, not all on unmount. Risk of `setState` after unmount.
 
-**Shipped:** unmount cleanup now flushes and clears all pending content patch timers in [`ArchitecturalCanvasApp.tsx`](../src/components/foundation/ArchitecturalCanvasApp.tsx).
+**Shipped:** unmount cleanup now flushes and clears all pending content patch timers in `[ArchitecturalCanvasApp.tsx](../src/components/foundation/ArchitecturalCanvasApp.tsx)`.
 
 ---
 
@@ -526,7 +526,7 @@ Won't repaint on theme switch without `invalidateVigilBootFlowerAccentCache()`. 
 
 `heartgarden/src/components/foundation/VigilBootFlowerGarden.tsx` 30–40.
 
-**Shipped:** theme mutation observer now invalidates accent cache on root theme/class/style transitions in [`VigilBootFlowerGarden.tsx`](../src/components/foundation/VigilBootFlowerGarden.tsx).
+**Shipped:** theme mutation observer now invalidates accent cache on root theme/class/style transitions in `[VigilBootFlowerGarden.tsx](../src/components/foundation/VigilBootFlowerGarden.tsx)`.
 
 ### ~~41. MCP `ListResources` swallows fetch errors, returns empty~~ — **fixed 2026-04-21**
 
@@ -542,7 +542,7 @@ Useful in dev, slightly chatty for prod clients.
 
 `heartgarden/app/api/items/[itemId]/route.ts` 102–107 (representative).
 
-**Shipped:** shared validation error envelope helper [`heartgarden-validation-error.ts`](../src/lib/heartgarden-validation-error.ts) with bounded field details; wired into high-traffic write routes [`app/api/items/[itemId]/route.ts`](../app/api/items/[itemId]/route.ts) and [`app/api/spaces/[spaceId]/items/route.ts`](../app/api/spaces/[spaceId]/items/route.ts).
+**Shipped:** shared validation error envelope helper `[heartgarden-validation-error.ts](../src/lib/heartgarden-validation-error.ts)` with bounded field details; wired into high-traffic write routes `[app/api/items/[itemId]/route.ts](../app/api/items/[itemId]/route.ts)` and `[app/api/spaces/[spaceId]/items/route.ts](../app/api/spaces/[spaceId]/items/route.ts)`.
 
 ### ~~43. Many `eslint-disable-next-line react-hooks/exhaustive-deps` in the shell~~ — **fixed 2026-04-21**
 
@@ -550,19 +550,19 @@ E.g. L3405, L3860, L3904. Each is a landmine for future edits.
 
 **Fix direction:** replace with stable identities (sorted JSON fingerprint pattern already used elsewhere) or a custom `useEffectEvent`.
 
-**Shipped:** stack bounds effects were reworked to stable fingerprint + ref snapshots, removing suppression-heavy effect patterns in [`ArchitecturalCanvasApp.tsx`](../src/components/foundation/ArchitecturalCanvasApp.tsx).
+**Shipped:** stack bounds effects were reworked to stable fingerprint + ref snapshots, removing suppression-heavy effect patterns in `[ArchitecturalCanvasApp.tsx](../src/components/foundation/ArchitecturalCanvasApp.tsx)`.
 
 ### ~~44. Window-level pointer listeners with `[]` deps and intentional stale-deps tradeoff~~ — **fixed 2026-04-21**
 
 `ArchitecturalCanvasApp.tsx` 7839–7841. Fragile if a future edit captures stale data instead of reading refs.
 
-**Shipped:** listener block now documents and enforces the ref-read invariant; callback-sensitive data stays in refs to avoid stale-closure drift in [`ArchitecturalCanvasApp.tsx`](../src/components/foundation/ArchitecturalCanvasApp.tsx).
+**Shipped:** listener block now documents and enforces the ref-read invariant; callback-sensitive data stays in refs to avoid stale-closure drift in `[ArchitecturalCanvasApp.tsx](../src/components/foundation/ArchitecturalCanvasApp.tsx)`.
 
 ### ~~45. `snd-lib` confirmed live (dynamic import in `vigil-ui-sounds.ts`)~~ — **fixed 2026-04-21**
 
 Not dead code; confirm bundle impact is acceptable for a TTRPG notes app.
 
-**Shipped:** analysis run confirms `snd-lib` remains dynamically imported behind `playVigilUiSound` and master switch in [`vigil-ui-sounds.ts`](../src/lib/vigil-ui-sounds.ts); no eager static import path was introduced.
+**Shipped:** analysis run confirms `snd-lib` remains dynamically imported behind `playVigilUiSound` and master switch in `[vigil-ui-sounds.ts](../src/lib/vigil-ui-sounds.ts)`; no eager static import path was introduced.
 
 ---
 
