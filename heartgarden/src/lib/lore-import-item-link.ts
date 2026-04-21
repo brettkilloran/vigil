@@ -9,7 +9,7 @@ import { normalizeLoreLinkType } from "@/src/lib/lore-import-commit";
  */
 export function normalizeImportItemLinkType(raw: string | undefined): string {
   const t = normalizeLoreLinkType(raw);
-  return t === "pin" ? "reference" : t;
+  return t === "pin" ? "history" : t;
 }
 
 type NoteFolderSlot = { clientId: string; folderClientId: string | null | undefined };

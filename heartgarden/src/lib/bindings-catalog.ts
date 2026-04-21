@@ -27,7 +27,7 @@ export type BindingSlotId =
   | "location.parentRegion";
 
 /** Canvas connection (`item_links`) semantic bucket for recall / MCP copy — not a second source of truth for card slots. */
-export type CanvasConnectionKind = "pin" | "relationship" | "story_tag" | "other";
+export type CanvasConnectionKind = "pin" | "relationship";
 
 export type BindingSlotDefinition = {
   id: BindingSlotId;

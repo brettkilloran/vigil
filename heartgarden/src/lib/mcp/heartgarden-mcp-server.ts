@@ -12,6 +12,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 import packageJson from "@/package.json";
+import { normalizeLinkTypeAlias } from "@/src/lib/connection-kind-colors";
 
 export type HeartgardenMcpServerConfig = {
   baseUrl: string;
@@ -133,11 +134,75 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
   const WRITE_KEY = config.writeKey;
   const SERVICE_KEY = config.serviceKey;
 
-  const api = (input: string | URL, init?: RequestInit) =>
-    fetch(input, {
-      ...init,
-      headers: mergeAuthHeaders(SERVICE_KEY, init?.headers),
+  const mcpApiTimeoutMs = (() => {
+    const raw = (process.env.HEARTGARDEN_MCP_FETCH_TIMEOUT_MS ?? "").trim();
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed >= 1000 && parsed <= 120_000) {
+      return Math.floor(parsed);
+    }
+    return 30_000;
+  })();
+
+  const api = async (input: string | URL, init?: RequestInit) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(new Error("MCP fetch timeout")), mcpApiTimeoutMs);
+    try {
+      return await fetch(input, {
+        ...init,
+        headers: mergeAuthHeaders(SERVICE_KEY, init?.headers),
+        signal: ctrl.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  const mcpToolText = (text: string) => ({ content: [{ type: "text" as const, text }] });
+
+  const mcpToolError = (
+    code: string,
+    message: string,
+    extra?: { httpStatus?: number; retryAfter?: string | null },
+  ) => ({
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            ok: false,
+            error: message,
+            code,
+            ...(extra?.httpStatus != null ? { httpStatus: extra.httpStatus } : {}),
+            ...(extra?.retryAfter ? { retryAfter: extra.retryAfter } : {}),
+          },
+          null,
+          2,
+        ),
+      },
+    ],
+    isError: true,
+  });
+
+  const mcpApiError = async (res: Response, code: string) => {
+    const bodyText = await res.text();
+    console.error("[heartgarden MCP API error]", code, {
+      status: res.status,
+      bodyPreview: bodyText.slice(0, 1200),
     });
+    return mcpToolError(
+      code,
+      res.status === 429 ? "Rate limited by API" : "API request failed",
+      {
+        httpStatus: res.status,
+        retryAfter: res.headers.get("retry-after"),
+      },
+    );
+  };
+
+  const mcpApiText = async (res: Response, code: string) => {
+    if (!res.ok) return mcpApiError(res, code);
+    return mcpToolText(await res.text());
+  };
 
   const server = new Server(
     { name: "heartgarden", version: packageJson.version },
@@ -147,6 +212,14 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
     try {
       const res = await api(`${BASE}/api/spaces`);
+      if (!res.ok) {
+        const bodyText = await res.text();
+        console.error("[heartgarden MCP list resources]", {
+          status: res.status,
+          bodyPreview: bodyText.slice(0, 1200),
+        });
+        throw new Error("Unable to list resources");
+      }
       const data = (await res.json()) as { spaces?: unknown[] };
       const spaces = filterGmSpaces(
         Array.isArray(data.spaces) ? data.spaces : [],
@@ -164,8 +237,9 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           };
         }),
       };
-    } catch {
-      return { resources: [] };
+    } catch (e) {
+      console.error("[heartgarden MCP list resources failed]", e);
+      throw new Error("Unable to list resources");
     }
   });
 
@@ -201,13 +275,13 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           },
         ],
       };
-    } catch (e) {
+    } catch {
       return {
         contents: [
           {
             uri,
             mimeType: "text/plain",
-            text: `Failed to read resource: ${e instanceof Error ? e.message : String(e)}`,
+            text: "Failed to read resource.",
           },
         ],
       };
@@ -409,7 +483,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       {
         name: "heartgarden_patch_item",
         description:
-          "PATCH an item (geometry, content, entity fields, move between spaces). Maps snake_case args to API camelCase. Requires write_key (or omit when HEARTGARDEN_MCP_WRITE_KEY is set on the MCP server). Prefer content_text for normal prose edits. content_json is the stored document JSON — for lore cards this is also where structured fields live under hgArch (employer faction, locations, roster rows). Use heartgarden_create_link for a visible canvas connection between two cards; use content_json / hgArch when the relationship should be owned by the card template. content_text is capped at ~2M characters per request.",
+          "PATCH an item (geometry, content, entity fields, move between spaces). Maps snake_case args to API camelCase. Requires write_key (or omit when HEARTGARDEN_MCP_WRITE_KEY is set on the MCP server). Prefer content_text for normal prose edits. content_json is the stored document JSON — for lore cards this is also where structured fields live under hgArch (employer faction, locations, roster rows). Use heartgarden_create_link only for visible high-signal map relationships; do not add decorative wires for every related fact. Use content_json / hgArch when the relationship should be owned by the card template. content_text is capped at ~2M characters per request.",
         inputSchema: {
           type: "object",
           properties: {
@@ -510,7 +584,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       {
         name: "heartgarden_create_folder",
         description:
-          "Create a folder card and child space (POST /api/spaces with parentSpaceId, then POST folder item on the parent canvas).",
+          "Create a folder card and child space (POST /api/spaces with parentSpaceId, then POST folder item on the parent canvas). Prefer this when a concept set is densely interrelated; folders reduce wire clutter and keep topology legible.",
         inputSchema: {
           type: "object",
           properties: {
@@ -527,7 +601,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       {
         name: "heartgarden_create_link",
         description:
-          "Create a canvas connection between two items (POST /api/item-links): a visible thread/edge on the map. This is not the same as editing structured fields on a lore card (roster, anchors) — those live in the item's content JSON (hgArch) via heartgarden_patch_item. source_item_id → target_item_id. relationship_type maps to linkType. Pins are omitted so the UI picks default anchors; duplicate logical pairs can exist with different pin geometry. Both items must share space_id.",
+          "Create a canvas connection between two items (POST /api/item-links): a visible thread/edge on the map. This is not the same as editing structured fields on a lore card (roster, anchors) — those live in the item's content JSON (hgArch) via heartgarden_patch_item. source_item_id → target_item_id. relationship_type maps to linkType. Canonical values: bond, affiliation, contract, conflict, history (pin is default rope). Legacy values are normalized server-side. Use links intentionally (high-signal relationships), not as full-mesh wiring for every related fact. If many cards are tightly related under one idea, prefer a folder/subspace and a few bridge links. Pins are omitted so the UI picks default anchors; duplicate logical pairs can exist with different pin geometry. Both items must share space_id.",
         inputSchema: {
           type: "object",
           properties: {
@@ -539,7 +613,11 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             source_item_id: { type: "string" },
             target_item_id: { type: "string" },
             label: { type: "string", description: "Edge label shown on the canvas" },
-            relationship_type: { type: "string", description: "Stored as linkType (e.g. faction_membership)" },
+            relationship_type: {
+              type: "string",
+              description:
+                "Stored as linkType. Prefer: bond | affiliation | contract | conflict | history",
+            },
           },
           required: ["space_id", "source_item_id", "target_item_id"],
         },
@@ -547,7 +625,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       {
         name: "heartgarden_update_link",
         description:
-          "PATCH an existing item_link (PATCH /api/item-links): label, relationship_type (maps to linkType), or color.",
+          "PATCH an existing item_link (PATCH /api/item-links): label, relationship_type (maps to linkType), or color. Prefer canonical relationship_type: bond | affiliation | contract | conflict | history.",
         inputSchema: {
           type: "object",
           properties: {
@@ -557,7 +635,11 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             },
             link_id: { type: "string", description: "item_links row UUID" },
             label: { type: "string", description: "Edge label; omit to leave unchanged" },
-            relationship_type: { type: "string", description: "Maps to linkType" },
+            relationship_type: {
+              type: "string",
+              description:
+                "Maps to linkType. Canonical: bond | affiliation | contract | conflict | history",
+            },
             color: { type: "string", description: "Edge color token" },
           },
           required: ["link_id"],
@@ -623,17 +705,18 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
 
     if (name === "heartgarden_browse_spaces") {
       const res = await api(`${BASE}/api/spaces`);
+      if (!res.ok) return mcpApiError(res, "mcp_browse_spaces_failed");
       const text = await res.text();
       try {
         const data = JSON.parse(text) as { spaces?: unknown[] };
         if (data && Array.isArray(data.spaces)) {
           data.spaces = filterGmSpaces(data.spaces, config.playerSpaceExcluded, config.gmBreakGlass);
-          return { content: [{ type: "text", text: JSON.stringify(data) }] };
+          return mcpToolText(JSON.stringify(data));
         }
       } catch {
         /* passthrough */
       }
-      return { content: [{ type: "text", text }] };
+      return mcpToolText(text);
     }
 
     if (name === "heartgarden_mcp_config") {
@@ -664,7 +747,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         };
       }
       const res = await api(`${BASE}/api/spaces/${encodeURIComponent(spaceId)}/summary`);
-      return { content: [{ type: "text", text: await res.text() }] };
+      return mcpApiText(res, "mcp_space_summary_failed");
     }
 
     if (name === "heartgarden_list_items") {
@@ -682,7 +765,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       if (args.limit != null) qs.set("limit", String(args.limit));
       if (args.offset != null) qs.set("offset", String(args.offset));
       const res = await api(`${BASE}/api/v1/items?${qs.toString()}`);
-      return { content: [{ type: "text", text: await res.text() }] };
+      return mcpApiText(res, "mcp_list_items_failed");
     }
 
     if (name === "heartgarden_search") {
@@ -708,7 +791,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       url.searchParams.set("q", q);
       url.searchParams.set("mode", String(mode));
       const res = await api(url);
-      return { content: [{ type: "text", text: await res.text() }] };
+      return mcpApiText(res, "mcp_search_failed");
     }
 
     if (name === "heartgarden_graph") {
@@ -728,7 +811,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       const res = await api(
         `${BASE}/api/spaces/${encodeURIComponent(String(spaceId))}/graph${q ? `?${q}` : ""}`,
       );
-      return { content: [{ type: "text", text: await res.text() }] };
+      return mcpApiText(res, "mcp_graph_failed");
     }
 
     if (name === "heartgarden_get_item" || name === "heartgarden_get_entity") {
@@ -740,7 +823,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         };
       }
       const res = await api(`${BASE}/api/v1/items/${encodeURIComponent(itemId)}`);
-      return { content: [{ type: "text", text: await res.text() }] };
+      return mcpApiText(res, "mcp_get_item_failed");
     }
 
     if (name === "heartgarden_item_links") {
@@ -752,7 +835,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         };
       }
       const res = await api(`${BASE}/api/items/${encodeURIComponent(itemId)}/links`);
-      return { content: [{ type: "text", text: await res.text() }] };
+      return mcpApiText(res, "mcp_item_links_failed");
     }
 
     if (name === "heartgarden_traverse_links") {
@@ -797,7 +880,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       if (spaceId) q.set("spaceId", spaceId);
       q.set("limit", String(limit));
       const res = await api(`${BASE}/api/items/${encodeURIComponent(itemId)}/related?${q.toString()}`);
-      return { content: [{ type: "text", text: await res.text() }] };
+      return mcpApiText(res, "mcp_related_items_failed");
     }
 
     if (name === "heartgarden_title_mentions") {
@@ -839,7 +922,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       url.searchParams.set("q", title.slice(0, 200));
       url.searchParams.set("mode", "fts");
       const res = await api(url);
-      return { content: [{ type: "text", text: await res.text() }] };
+      return mcpApiText(res, "mcp_title_mentions_failed");
     }
 
     if (name === "heartgarden_lore_query") {
@@ -858,7 +941,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      return { content: [{ type: "text", text: await res.text() }] };
+      return mcpApiText(res, "mcp_lore_query_failed");
     }
 
     if (name === "heartgarden_semantic_search") {
@@ -890,17 +973,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       url.searchParams.set("q", q);
       if (args.limit != null) url.searchParams.set("limit", String(args.limit));
       const res = await api(url);
-      const bodyText = await res.text();
-      let out = bodyText;
-      if (res.status === 429) {
-        try {
-          const j = JSON.parse(bodyText) as Record<string, unknown>;
-          out = JSON.stringify({ httpStatus: res.status, ...j }, null, 2);
-        } catch {
-          out = JSON.stringify({ httpStatus: res.status, body: bodyText }, null, 2);
-        }
-      }
-      return { content: [{ type: "text", text: out }] };
+      return mcpApiText(res, "mcp_semantic_search_failed");
     }
 
     if (name === "heartgarden_index_item") {
@@ -917,33 +990,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const bodyText = await res.text();
-      let out = bodyText;
-      if (res.status === 429) {
-        try {
-          const j = JSON.parse(bodyText) as Record<string, unknown>;
-          out = JSON.stringify(
-            {
-              httpStatus: res.status,
-              retryAfter: res.headers.get("retry-after"),
-              ...j,
-            },
-            null,
-            2,
-          );
-        } catch {
-          out = JSON.stringify(
-            {
-              httpStatus: res.status,
-              retryAfter: res.headers.get("retry-after"),
-              body: bodyText,
-            },
-            null,
-            2,
-          );
-        }
-      }
-      return { content: [{ type: "text", text: out }] };
+      return mcpApiText(res, "mcp_index_item_failed");
     }
 
     if (name === "heartgarden_patch_item") {
@@ -1027,7 +1074,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
-      return { content: [{ type: "text", text: await res.text() }] };
+      return mcpApiText(res, "mcp_patch_item_failed");
     }
 
     if (name === "heartgarden_create_item") {
@@ -1171,6 +1218,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      if (!res.ok) return mcpApiError(res, "mcp_create_item_failed");
       const createText = await res.text();
       if (args.auto_index !== true) {
         return { content: [{ type: "text", text: createText }] };
@@ -1186,6 +1234,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({}),
         });
+        if (!idxRes.ok) return mcpApiError(idxRes, "mcp_create_item_index_failed");
         const indexText = await idxRes.text();
         let indexPayload: unknown = indexText;
         try {
@@ -1224,6 +1273,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: title, parentSpaceId }),
       });
+      if (!spaceRes.ok) return mcpApiError(spaceRes, "mcp_create_folder_space_failed");
       const spaceText = await spaceRes.text();
       let childSpaceId = "";
       try {
@@ -1254,6 +1304,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           contentJson: folderContentJson,
         }),
       });
+      if (!itemRes.ok) return mcpApiError(itemRes, "mcp_create_folder_item_failed");
       const itemText = await itemRes.text();
       if (args.auto_index !== true) {
         return {
@@ -1287,6 +1338,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({}),
         });
+        if (!idxRes.ok) return mcpApiError(idxRes, "mcp_create_folder_index_failed");
         const indexText = await idxRes.text();
         let indexPayload: unknown = indexText;
         try {
@@ -1375,14 +1427,14 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       };
       if (typeof args.label === "string" && args.label.trim()) linkBody.label = args.label.trim();
       if (typeof args.relationship_type === "string" && args.relationship_type.trim()) {
-        linkBody.linkType = args.relationship_type.trim();
+        linkBody.linkType = normalizeLinkTypeAlias(args.relationship_type.trim());
       }
       const res = await api(`${BASE}/api/item-links`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(linkBody),
       });
-      return { content: [{ type: "text", text: await res.text() }] };
+      return mcpApiText(res, "mcp_create_link_failed");
     }
 
     if (name === "heartgarden_update_link") {
@@ -1399,7 +1451,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       const relRaw = args.relationship_type;
       if (relRaw !== undefined && relRaw !== null) {
         const rel = String(relRaw).trim();
-        if (rel) patchBody.linkType = rel;
+        if (rel) patchBody.linkType = normalizeLinkTypeAlias(rel);
       }
       if (args.color !== undefined) patchBody.color = args.color;
       if (Object.keys(patchBody).length < 2) {
@@ -1418,7 +1470,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patchBody),
       });
-      return { content: [{ type: "text", text: await res.text() }] };
+      return mcpApiText(res, "mcp_update_link_failed");
     }
 
     if (name === "heartgarden_delete_item") {
@@ -1433,7 +1485,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       const res = await api(`${BASE}/api/items/${encodeURIComponent(itemId)}`, {
         method: "DELETE",
       });
-      return { content: [{ type: "text", text: await res.text() }] };
+      return mcpApiText(res, "mcp_delete_item_failed");
     }
 
     if (name === "heartgarden_delete_link") {
@@ -1450,7 +1502,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: linkId }),
       });
-      return { content: [{ type: "text", text: await res.text() }] };
+      return mcpApiText(res, "mcp_delete_link_failed");
     }
 
     return {

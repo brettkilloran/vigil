@@ -16,13 +16,15 @@ Return ONLY valid JSON (no markdown fence) with this shape:
     { "name": "string", "kind": "npc"|"location"|"faction"|"quest"|"item"|"lore"|"other", "summary": "string" }
   ],
   "suggestedLinks": [
-    { "fromName": "string", "toName": "string", "linkType": "ally"|"enemy"|"neutral"|"faction"|"quest"|"location"|"lore"|"reference" }
+    { "fromName": "string", "toName": "string", "linkType": "bond"|"affiliation"|"contract"|"conflict"|"history" }
   ]
 }
 
 Rules:
 - "entities" should be proper nouns or clear story elements; keep summaries under 240 chars.
 - "suggestedLinks" only when both names appear in entities; omit if unsure.
+- Keep suggestedLinks sparse and high-signal; do not emit all possible related pairs.
+- If entities look like one tightly contained cluster, prefer fewer links (folder-level containment is handled later).
 - If the text is empty, return {"entities":[],"suggestedLinks":[]}.`;
 
 const EXTRACT_SEGMENT_CHARS = 95_000;
@@ -110,11 +112,11 @@ function mergeExtractSegments(
       if (!nameKeys.has(from.toLowerCase()) || !nameKeys.has(to.toLowerCase())) {
         continue;
       }
-      const lt = (l.linkType ?? "reference").trim() || "reference";
+      const lt = (l.linkType ?? "history").trim() || "history";
       const k = linkKey(from, to, lt);
       if (seenLinks.has(k)) continue;
       seenLinks.add(k);
-      suggestedLinks.push({ fromName: from, toName: to, linkType: l.linkType });
+      suggestedLinks.push({ fromName: from, toName: to, linkType: lt });
     }
   }
   return { entities, suggestedLinks };

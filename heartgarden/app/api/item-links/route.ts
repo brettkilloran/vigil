@@ -15,6 +15,10 @@ import {
   clampLinkMetaSlackMultiplier,
   normalizeLinkSemanticsInMeta,
 } from "@/src/lib/item-link-meta";
+import {
+  connectionKindMetaForLinkType,
+  normalizeLinkTypeAlias,
+} from "@/src/lib/connection-kind-colors";
 import { validateStructuredMirrorItemLink } from "@/src/lib/item-links-structured-validation";
 import {
   heartgardenApiReadJsonBody,
@@ -29,6 +33,18 @@ function normalizeItemLinkMeta(meta: Record<string, unknown>): Record<string, un
   if ("slackMultiplier" in next && typeof next.slackMultiplier === "number") {
     next.slackMultiplier = clampLinkMetaSlackMultiplier(next.slackMultiplier);
   }
+  return next;
+}
+
+function withLinkSemanticMeta(
+  base: Record<string, unknown>,
+  linkType: string,
+): Record<string, unknown> {
+  const next = { ...base };
+  const semantic = connectionKindMetaForLinkType(linkType);
+  if (!semantic) return next;
+  next.linkSemanticFamily = semantic.semanticFamily;
+  next.linkSemanticKeywords = semantic.autopopulationKeywords;
   return next;
 }
 
@@ -92,7 +108,10 @@ export async function POST(req: Request) {
   if (!validated.ok) {
     return Response.json({ ok: false, error: validated.error }, { status: validated.status });
   }
-  const metaForRow = meta ? normalizeItemLinkMeta({ ...meta }) : null;
+  const canonicalLinkType = normalizeLinkTypeAlias(linkType ?? "pin");
+  const metaForRow = normalizeItemLinkMeta(
+    withLinkSemanticMeta(meta ? { ...meta } : {}, canonicalLinkType),
+  );
   const entRows = await db
     .select({ id: items.id, entityType: items.entityType })
     .from(items)
@@ -111,12 +130,12 @@ export async function POST(req: Request) {
     .values({
       sourceItemId,
       targetItemId,
-      linkType: linkType ?? "reference",
+      linkType: canonicalLinkType,
       label: label ?? null,
       sourcePin: sourcePin ?? null,
       targetPin: targetPin ?? null,
       color: color ?? null,
-      meta: metaForRow,
+      meta: Object.keys(metaForRow).length > 0 ? metaForRow : null,
     })
     .onConflictDoNothing({
       target: [itemLinks.sourceItemId, itemLinks.targetItemId, itemLinks.sourcePin, itemLinks.targetPin],
@@ -207,7 +226,7 @@ export async function PATCH(req: Request) {
   }
 
   const [existing] = await db
-    .select({ meta: itemLinks.meta })
+    .select({ meta: itemLinks.meta, linkType: itemLinks.linkType })
     .from(itemLinks)
     .where(eq(itemLinks.id, id))
     .limit(1);
@@ -226,7 +245,7 @@ export async function PATCH(req: Request) {
   } = {};
   if (color !== undefined) updates.color = color;
   if (label !== undefined) updates.label = label;
-  if (linkType !== undefined) updates.linkType = linkType;
+  if (linkType !== undefined) updates.linkType = normalizeLinkTypeAlias(linkType);
   if (meta !== undefined) {
     if (meta === null) {
       updates.meta = null;
@@ -235,8 +254,18 @@ export async function PATCH(req: Request) {
         existing.meta && typeof existing.meta === "object" && !Array.isArray(existing.meta)
           ? { ...(existing.meta as Record<string, unknown>) }
           : {};
-      updates.meta = normalizeItemLinkMeta({ ...prev, ...meta });
+      const linkTypeForMeta = updates.linkType ?? existing.linkType ?? "pin";
+      updates.meta = normalizeItemLinkMeta(
+        withLinkSemanticMeta({ ...prev, ...meta }, linkTypeForMeta),
+      );
     }
+  }
+  if (updates.linkType !== undefined && updates.meta === undefined) {
+    const prev =
+      existing.meta && typeof existing.meta === "object" && !Array.isArray(existing.meta)
+        ? { ...(existing.meta as Record<string, unknown>) }
+        : {};
+    updates.meta = normalizeItemLinkMeta(withLinkSemanticMeta(prev, updates.linkType));
   }
   if (Object.keys(updates).length < 1) {
     return Response.json({ ok: false, error: "No updates provided" }, { status: 400 });

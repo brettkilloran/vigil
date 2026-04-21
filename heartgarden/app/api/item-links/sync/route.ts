@@ -88,7 +88,7 @@ export async function POST(req: Request) {
         uniqueTargets.map((targetItemId) => ({
           sourceItemId,
           targetItemId,
-          linkType: "reference",
+          linkType: "pin",
           sourcePin: null,
           targetPin: null,
         })),

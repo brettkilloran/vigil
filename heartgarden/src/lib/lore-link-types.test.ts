@@ -28,24 +28,46 @@ function contentEntity(id: string, loreKind: "character" | "faction" | "location
 }
 
 describe("lore-link-types", () => {
-  it("menuLabelForLinkType uses friendly labels for legacy role tags", () => {
-    expect(menuLabelForLinkType("faction")).toContain("Organization");
-    expect(menuLabelForLinkType("npc")).toContain("Character");
+  it("menuLabelForLinkType normalizes legacy values to canonical labels", () => {
+    expect(menuLabelForLinkType("faction")).toBe("Affiliation");
+    expect(menuLabelForLinkType("enemy")).toBe("Conflict");
   });
 
-  it("orders ally above redundant location tag for two location cards", () => {
-    const a = contentEntity("a", "location");
-    const b = contentEntity("b", "location");
+  it("orders bond above history for two character cards", () => {
+    const a = contentEntity("a", "character");
+    const b = contentEntity("b", "character");
     const ordered = orderedLoreLinkTypeOptionsForEndpoints(a, b);
-    const allyIdx = ordered.findIndex((o) => o.value === "ally");
-    const locIdx = ordered.findIndex((o) => o.value === "location");
-    expect(allyIdx).toBeGreaterThanOrEqual(0);
-    expect(locIdx).toBeGreaterThanOrEqual(0);
-    expect(allyIdx).toBeLessThan(locIdx);
+    const bondIdx = ordered.findIndex((o) => o.value === "bond");
+    const historyIdx = ordered.findIndex((o) => o.value === "history");
+    expect(bondIdx).toBeGreaterThanOrEqual(0);
+    expect(historyIdx).toBeGreaterThanOrEqual(0);
+    expect(bondIdx).toBeLessThan(historyIdx);
   });
 
-  it("groupedOrderedLinkOptionsForEndpoints returns three groups with canvas first", () => {
+  it("orders affiliation above contract for character↔faction links", () => {
+    const a = contentEntity("a", "character");
+    const b = contentEntity("b", "faction");
+    const ordered = orderedLoreLinkTypeOptionsForEndpoints(a, b);
+    const affIdx = ordered.findIndex((o) => o.value === "affiliation");
+    const contractIdx = ordered.findIndex((o) => o.value === "contract");
+    expect(affIdx).toBeGreaterThanOrEqual(0);
+    expect(contractIdx).toBeGreaterThanOrEqual(0);
+    expect(affIdx).toBeLessThan(contractIdx);
+  });
+
+  it("orders history above contract for character↔location links", () => {
+    const a = contentEntity("a", "location");
+    const b = contentEntity("b", "character");
+    const ordered = orderedLoreLinkTypeOptionsForEndpoints(a, b);
+    const historyIdx = ordered.findIndex((o) => o.value === "history");
+    const contractIdx = ordered.findIndex((o) => o.value === "contract");
+    expect(historyIdx).toBeGreaterThanOrEqual(0);
+    expect(contractIdx).toBeGreaterThanOrEqual(0);
+    expect(historyIdx).toBeLessThan(contractIdx);
+  });
+
+  it("groupedOrderedLinkOptionsForEndpoints returns two groups with canvas first", () => {
     const grouped = groupedOrderedLinkOptionsForEndpoints(undefined, undefined);
-    expect(grouped.map((g) => g.group)).toEqual(["canvas", "relationship", "story_tag"]);
+    expect(grouped.map((g) => g.group)).toEqual(["canvas", "relationship"]);
   });
 });

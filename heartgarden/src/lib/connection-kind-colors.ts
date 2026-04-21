@@ -7,9 +7,8 @@
  * together**. Picking a kind sets both; recoloring a thread re-tags it;
  * re-tagging a thread re-colors it.
  *
- * Not every `lore-link-types.ts` option is a picker kind — legacy import-era
- * tags (`faction`, `location`, `npc`) are preserved on existing data but snap
- * to `other` for coloring.
+ * Legacy labels are normalized through aliases so existing data snaps forward
+ * into the current canonical set.
  */
 import {
   FOLDER_COLOR_SCHEMES,
@@ -20,13 +19,11 @@ import {
 /** Kinds surfaced in the connection picker. Order matches the picker UI. */
 export const CONNECTION_KINDS_IN_ORDER = [
   "pin",
-  "reference",
-  "ally",
-  "enemy",
-  "neutral",
-  "quest",
-  "lore",
-  "other",
+  "bond",
+  "affiliation",
+  "contract",
+  "conflict",
+  "history",
 ] as const;
 
 export type ConnectionKind = (typeof CONNECTION_KINDS_IN_ORDER)[number];
@@ -45,6 +42,19 @@ export type ConnectionKindMeta = {
   swatch: string;
   /** Lighter / neon rim color for selected states and ring accents. */
   border: string;
+  /** Stable semantic family for ranking, prompts, and future field hints. */
+  semanticFamily:
+    | "default"
+    | "social"
+    | "institutional"
+    | "operational"
+    | "adversarial"
+    | "historical";
+  /**
+   * Tokens for AI retrieval/generation hints. Keep terse and domain-agnostic;
+   * prompts can expand these into richer prose guidance.
+   */
+  autopopulationKeywords: readonly string[];
 };
 
 function schemeMeta(id: FolderColorSchemeId): FolderColorSchemeMeta {
@@ -56,19 +66,16 @@ function schemeMeta(id: FolderColorSchemeId): FolderColorSchemeMeta {
 }
 
 /**
- * Canonical kind -> color mapping. Labels lean on `lore-link-types.ts`
- * vocabulary; swatches reuse folder schemes so threads and folder faces share
- * a palette.
+ * Canonical kind -> color mapping. Swatches reuse folder schemes so threads
+ * and folder faces share a palette.
  *
- * - `pin` = coral: the app's default warm orange (current
- *   `CONNECTION_DEFAULT_COLOR`) — untyped rope between two cards.
- * - `reference` = cyan (Aqua): "comms, data flow, blueprints".
- * - `ally` = rose: "care, intimacy, gentle obligations".
- * - `enemy` = wine: deep red, adversarial heft.
- * - `neutral` = gray: low-emphasis tie, background link.
- * - `quest` = ocean (Cobalt): "main spine — travel, trade, big plot".
- * - `lore` = parchment (Peach): "history, lore, older story roads".
- * - `other` = violet: arcane / custom / describe in link label.
+ * NV-aligned six-type core:
+ * - `pin`         coral     default rope / unspecified tie
+ * - `bond`        rose      trusted personal tie
+ * - `affiliation` ocean     membership or alignment with an org/bloc
+ * - `contract`    gray      formal work, mission, debt duty
+ * - `conflict`    wine      opposition, pressure, coercion
+ * - `history`     parchment former ties and shared past
  */
 const CONNECTION_KIND_TABLE: Record<ConnectionKind, ConnectionKindMeta> = (() => {
   const rows: Array<Omit<ConnectionKindMeta, "swatch" | "border"> & { scheme: FolderColorSchemeId }> = [
@@ -78,55 +85,53 @@ const CONNECTION_KIND_TABLE: Record<ConnectionKind, ConnectionKindMeta> = (() =>
       label: "Pin",
       hint: "Default rope — untyped link between two cards.",
       scheme: "coral",
+      semanticFamily: "default",
+      autopopulationKeywords: ["default", "unspecified", "generic"],
     },
     {
-      kind: "reference",
-      linkType: "reference",
-      label: "Reference",
-      hint: "Comms, data flow, info lookups.",
-      scheme: "cyan",
-    },
-    {
-      kind: "ally",
-      linkType: "ally",
-      label: "Ally",
-      hint: "Care, intimacy, gentle obligations.",
+      kind: "bond",
+      linkType: "bond",
+      label: "Bond",
+      hint: "Trusted personal tie — coven, partner, or sworn ally.",
       scheme: "rose",
+      semanticFamily: "social",
+      autopopulationKeywords: ["trust", "loyalty", "coven", "intimacy"],
     },
     {
-      kind: "enemy",
-      linkType: "enemy",
-      label: "Enemy",
-      hint: "Conflict, rivalry, grudges.",
-      scheme: "wine",
-    },
-    {
-      kind: "neutral",
-      linkType: "neutral",
-      label: "Neutral",
-      hint: "Background ties, low-emphasis links.",
-      scheme: "gray",
-    },
-    {
-      kind: "quest",
-      linkType: "quest",
-      label: "Quest",
-      hint: "Main spine — travel, trade, big plot.",
+      kind: "affiliation",
+      linkType: "affiliation",
+      label: "Affiliation",
+      hint: "Belongs to or aligns with an organization, bloc, or nation.",
       scheme: "ocean",
+      semanticFamily: "institutional",
+      autopopulationKeywords: ["membership", "alignment", "faction", "organization"],
     },
     {
-      kind: "lore",
-      linkType: "lore",
-      label: "Lore",
-      hint: "History, myths, older story roads.",
+      kind: "contract",
+      linkType: "contract",
+      label: "Contract",
+      hint: "Formal mission, paid work, or binding duty.",
+      scheme: "gray",
+      semanticFamily: "operational",
+      autopopulationKeywords: ["job", "mission", "employment", "obligation"],
+    },
+    {
+      kind: "conflict",
+      linkType: "conflict",
+      label: "Conflict",
+      hint: "Opposition, hostile pressure, hunt, or coercion.",
+      scheme: "wine",
+      semanticFamily: "adversarial",
+      autopopulationKeywords: ["rivalry", "hostility", "war", "coercion", "debt"],
+    },
+    {
+      kind: "history",
+      linkType: "history",
+      label: "History",
+      hint: "Former ties, origins, and past events still shaping the present.",
       scheme: "parchment",
-    },
-    {
-      kind: "other",
-      linkType: "other",
-      label: "Other",
-      hint: "Arcane, experimental, or custom — describe in link label.",
-      scheme: "violet",
+      semanticFamily: "historical",
+      autopopulationKeywords: ["former", "origin", "backstory", "legacy"],
     },
   ];
   return Object.fromEntries(
@@ -145,7 +150,19 @@ const CONNECTION_KIND_TABLE: Record<ConnectionKind, ConnectionKindMeta> = (() =>
 export const CONNECTION_KINDS: readonly ConnectionKindMeta[] =
   CONNECTION_KINDS_IN_ORDER.map((k) => CONNECTION_KIND_TABLE[k]);
 
+export const CANONICAL_RELATIONSHIP_LINK_TYPES: readonly string[] = CONNECTION_KINDS.filter(
+  (k) => k.linkType !== "pin",
+).map((k) => k.linkType);
+
 export function connectionKindMeta(kind: ConnectionKind): ConnectionKindMeta {
+  return CONNECTION_KIND_TABLE[kind];
+}
+
+export function connectionKindMetaForLinkType(
+  linkType: string | null | undefined,
+): ConnectionKindMeta | null {
+  const kind = connectionKindFromLinkType(linkType);
+  if (!kind) return null;
   return CONNECTION_KIND_TABLE[kind];
 }
 
@@ -161,11 +178,46 @@ export function schemeIdForConnectionKind(kind: ConnectionKind): FolderColorSche
   return CONNECTION_KIND_TABLE[kind].scheme;
 }
 
+export function connectionKindsPromptGlossary(): string {
+  return CONNECTION_KINDS.filter((k) => k.linkType !== "pin")
+    .map(
+      (k) =>
+        `- ${k.linkType}: ${k.hint} Keywords: ${k.autopopulationKeywords.join(", ")}.`,
+    )
+    .join("\n");
+}
+
 /** Direct `link_type` (string) -> `ConnectionKind` (picker kind), or null if legacy / unknown. */
 export function connectionKindFromLinkType(linkType: string | null | undefined): ConnectionKind | null {
   if (!linkType) return null;
-  const match = CONNECTION_KINDS.find((m) => m.linkType === linkType);
+  const normalized = normalizeLinkTypeAlias(linkType);
+  const match = CONNECTION_KINDS.find((m) => m.linkType === normalized);
   return match ? match.kind : null;
+}
+
+const LINK_TYPE_ALIASES: Record<string, string> = {
+  // Previous picker vocabulary.
+  reference: "history",
+  ally: "bond",
+  enemy: "conflict",
+  neutral: "pin",
+  quest: "contract",
+  lore: "history",
+  other: "history",
+  // Import-era role tags.
+  faction: "affiliation",
+  location: "history",
+  npc: "bond",
+  // Planned-but-removed semantic.
+  leverage: "conflict",
+};
+
+export function normalizeLinkTypeAlias(linkType: string | null | undefined): string {
+  const t = String(linkType ?? "")
+    .trim()
+    .toLowerCase();
+  if (!t) return "pin";
+  return LINK_TYPE_ALIASES[t] ?? t;
 }
 
 function parseOklch(swatch: string): { L: number; C: number; H: number } | null {
@@ -214,9 +266,7 @@ export function snapColorToConnectionKind(color: string | null | undefined): Con
 
 /**
  * Canonical kind for a stored connection (color + linkType). Prefer a valid
- * picker `linkType`; otherwise snap by color. Legacy import-era link types
- * (`faction`, `location`, `npc`) fall through to color-snap — color carries
- * meaning in that case, not the legacy story-tag.
+ * picker `linkType` after alias normalization; otherwise snap by color.
  */
 export function canonicalKindForConnection(params: {
   color: string | null | undefined;
@@ -239,8 +289,8 @@ export function canonicalPairForKind(kind: ConnectionKind): CanonicalConnectionP
 
 /**
  * True if the stored (color, linkType) is already the canonical pair for some
- * picker kind. Legacy story-tag link types (`faction`, `location`, `npc`) are
- * treated as canonical-as-stored (we don't rewrite them during migration).
+ * picker kind using the canonical raw linkType string (not just an alias).
+ * Legacy values intentionally return false so migration rewrites them.
  */
 export function isCanonicalConnectionPair(params: {
   color: string | null | undefined;
@@ -248,9 +298,13 @@ export function isCanonicalConnectionPair(params: {
 }): boolean {
   const byLinkType = connectionKindFromLinkType(params.linkType);
   if (byLinkType) {
-    return params.color === CONNECTION_KIND_TABLE[byLinkType].swatch;
+    const raw = String(params.linkType ?? "")
+      .trim()
+      .toLowerCase();
+    return (
+      params.color === CONNECTION_KIND_TABLE[byLinkType].swatch &&
+      raw === CONNECTION_KIND_TABLE[byLinkType].linkType
+    );
   }
-  const storyTagLegacy = new Set(["faction", "location", "npc"]);
-  if (params.linkType && storyTagLegacy.has(params.linkType)) return true;
   return false;
 }

@@ -46,3 +46,12 @@ Used by **`POST /api/spaces/:id/items`** and MCP to map into **`items.entity_typ
 | `heartgarden_patch_item` | Geometry, **`space_id`** (move), **`entity_type`**, **`content_json`**, stacks, etc. |
 
 `write_key` matches **`HEARTGARDEN_MCP_WRITE_KEY`** (may be omitted when set on the MCP process for some tools — see `AGENTS.md`).
+
+## Topology guidance (project process)
+
+Use deliberate topology, not maximal wiring:
+
+- Choose `heartgarden_create_link` for **salient** cross-card relationships.
+- Choose `heartgarden_create_folder` when a concept set is internally dense and should live as a contained subspace.
+- For contained domains, link the cluster to the outer canvas through a small number of bridge edges.
+- Prefer structured card fields (`hgArch`) for ownership/roster facts instead of adding decorative link clutter.

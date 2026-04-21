@@ -131,7 +131,7 @@ export const itemLinks = pgTable(
     targetItemId: uuid("target_item_id")
       .notNull()
       .references(() => items.id, { onDelete: "cascade" }),
-    linkType: varchar("link_type", { length: 64 }).notNull().default("reference"),
+  linkType: varchar("link_type", { length: 64 }).notNull().default("pin"),
     label: text("label"),
     sourcePin: varchar("source_pin", { length: 64 }),
     targetPin: varchar("target_pin", { length: 64 }),

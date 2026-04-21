@@ -654,7 +654,7 @@ export function ArchitecturalFolderColorStrip({
 
 /**
  * Canvas thread color picker. The picker operates on **connection kinds**
- * (`pin`, `reference`, `ally`, …) — color is a visual consequence of the
+ * (`pin`, `bond`, `affiliation`, …) — color is a visual consequence of the
  * kind, not a free choice. See `src/lib/connection-kind-colors.ts` for the
  * canonical kind<->color<->link_type mapping and `docs/RELATIONSHIP_VOCABULARY.md`.
  *

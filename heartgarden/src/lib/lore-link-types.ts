@@ -1,19 +1,18 @@
 import type { CanvasEntity, LoreCardKind } from "@/src/components/foundation/architectural-types";
+import { normalizeLinkTypeAlias } from "@/src/lib/connection-kind-colors";
 
-/** `item_links.link_type` grouping for UI (canvas default vs relationships vs import-era role tags). */
-export type LinkTypeGroup = "canvas" | "relationship" | "story_tag";
+/** `item_links.link_type` grouping for UI (default pin vs canonical relationships). */
+export type LinkTypeGroup = "canvas" | "relationship";
 
 export const LINK_TYPE_GROUP_ORDER: readonly LinkTypeGroup[] = [
   "canvas",
   "relationship",
-  "story_tag",
 ] as const;
 
 /** Section titles in connection context menus (threads vs prose mentions). */
 export const LINK_TYPE_GROUP_HEADINGS: Record<LinkTypeGroup, string> = {
   canvas: "Canvas (default)",
   relationship: "Relationships",
-  story_tag: "Story roles (import · legacy)",
 };
 
 export type LoreLinkTypeOption = {
@@ -26,41 +25,17 @@ export type LoreLinkTypeOption = {
 };
 
 /**
- * Values stored in `item_links.link_type` for TTRPG / canvas semantics.
- * `menuLabel` avoids clashing with lore **entity** kinds (organization cards use `faction` in DB).
+ * Values stored in `item_links.link_type` for the canonical canvas relationship
+ * vocabulary. Keep lean and semantically distinct so retrieval / generation can
+ * reason over them reliably.
  */
 export const LORE_LINK_TYPE_OPTIONS: readonly LoreLinkTypeOption[] = [
   { value: "pin", label: "Pin thread", group: "canvas", menuLabel: "Pin thread (default rope)" },
-  { value: "reference", label: "Reference", group: "relationship", menuLabel: "Reference" },
-  { value: "ally", label: "Ally", group: "relationship", menuLabel: "Ally" },
-  { value: "enemy", label: "Enemy", group: "relationship", menuLabel: "Enemy" },
-  { value: "neutral", label: "Neutral", group: "relationship", menuLabel: "Neutral" },
-  { value: "quest", label: "Quest", group: "relationship", menuLabel: "Quest" },
-  { value: "lore", label: "Lore", group: "relationship", menuLabel: "Lore" },
-  {
-    value: "other",
-    label: "Other",
-    group: "relationship",
-    menuLabel: "Other (describe in link label / notes)",
-  },
-  {
-    value: "faction",
-    label: "Faction",
-    group: "story_tag",
-    menuLabel: "Organization tie (stored as faction)",
-  },
-  {
-    value: "location",
-    label: "Location",
-    group: "story_tag",
-    menuLabel: "Location tie (stored as location)",
-  },
-  {
-    value: "npc",
-    label: "NPC",
-    group: "story_tag",
-    menuLabel: "Character tie (stored as npc)",
-  },
+  { value: "bond", label: "Bond", group: "relationship", menuLabel: "Bond" },
+  { value: "affiliation", label: "Affiliation", group: "relationship", menuLabel: "Affiliation" },
+  { value: "contract", label: "Contract", group: "relationship", menuLabel: "Contract" },
+  { value: "conflict", label: "Conflict", group: "relationship", menuLabel: "Conflict" },
+  { value: "history", label: "History", group: "relationship", menuLabel: "History" },
 ] as const;
 
 export type LoreLinkTypeValue = (typeof LORE_LINK_TYPE_OPTIONS)[number]["value"];
@@ -72,7 +47,7 @@ const OPTION_BY_VALUE: Record<string, LoreLinkTypeOption | undefined> = Object.f
 /** Label for menus; falls back to raw value for unknown / forward-compatible types. */
 export function menuLabelForLinkType(value: string | null | undefined): string {
   if (!value) return "Pin thread";
-  const o = OPTION_BY_VALUE[value];
+  const o = OPTION_BY_VALUE[normalizeLinkTypeAlias(value)];
   return o?.menuLabel ?? value;
 }
 
@@ -94,29 +69,26 @@ function linkTypeRankScore(
   let s = 0;
 
   if (value === "pin") s += 8;
-
-  if (["ally", "enemy", "neutral"].includes(value) && ks === "character" && kt === "character") {
-    s += 28;
-  }
+  if (value === "bond" && ks === "character" && kt === "character") s += 20;
   if (
-    (value === "faction" || value === "ally") &&
+    value === "affiliation" &&
     ((ks === "character" && kt === "faction") || (kt === "character" && ks === "faction"))
   ) {
     s += 22;
   }
   if (
-    (value === "location" || value === "lore") &&
-    ((ks === "character" && kt === "location") || (kt === "character" && ks === "location"))
+    value === "contract" &&
+    ((ks === "character" && kt === "faction") || (kt === "character" && ks === "faction"))
   ) {
     s += 16;
   }
-  if (value === "quest" && (ks === "character" || kt === "character")) s += 6;
-  if (value === "other") s += 2;
-
-  // Deprioritize role tags that duplicate both endpoints' entity kinds (still available).
-  if (value === "location" && ks === "location" && kt === "location") s -= 24;
-  if (value === "faction" && ks === "faction" && kt === "faction") s -= 24;
-  if (value === "npc" && ks === "character" && kt === "character") s -= 8;
+  if (value === "conflict") s += 10;
+  if (
+    value === "history" &&
+    ((ks === "character" && kt === "location") || (kt === "character" && ks === "location"))
+  ) {
+    s += 14;
+  }
 
   return s;
 }
@@ -129,7 +101,6 @@ export function orderedLoreLinkTypeOptionsForEndpoints(
   const byGroup: Record<LinkTypeGroup, LoreLinkTypeOption[]> = {
     canvas: [],
     relationship: [],
-    story_tag: [],
   };
   for (const o of LORE_LINK_TYPE_OPTIONS) {
     byGroup[o.group].push(o);

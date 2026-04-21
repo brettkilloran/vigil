@@ -4,16 +4,45 @@ This appendix supports **naming**, **import**, **MCP**, and future **autocomplet
 
 ## Canvas connection labels (`item_links.link_type`)
 
-Canonical options and UI ordering live in **`src/lib/lore-link-types.ts`** (`LORE_LINK_TYPE_OPTIONS`). Values are stored as short strings; unknown values round-trip and display as raw text (`menuLabelForLinkType`).
+Canonical options and UI ordering live in **`src/lib/lore-link-types.ts`** (`LORE_LINK_TYPE_OPTIONS`). Values are stored as short strings; legacy aliases normalize forward to canonical values.
 
 | Value | Typical use |
 |-------|-------------|
-| `pin` | User-drawn default thread (not used from bulk import) |
-| `reference`, `ally`, `enemy`, `neutral`, `quest`, `lore` | Associative / narrative ties |
-| `faction`, `location`, `npc` | Legacy / import **role** tags when the edge adds meaning beyond endpoint entity kinds |
-| `other` | Curated list + free nuance via **link label** / notes |
+| `pin` | User-drawn default thread |
+| `bond` | Trusted personal tie (coven, partner, sworn ally) |
+| `affiliation` | Membership/alignment with an organization, bloc, nation, or cult |
+| `contract` | Formal work/mission/paid obligation |
+| `conflict` | Active opposition, hostile pressure, coercion |
+| `history` | Former ties and shared past still shaping current events |
 
-**Shipping new labels:** add an entry to `LORE_LINK_TYPE_OPTIONS` (with group + menu copy). Server accepts any `varchar(64)`; older clients show the raw string.
+Legacy aliases are normalized at write/import time:
+
+- `reference` -> `history`
+- `ally` -> `bond`
+- `enemy` -> `conflict`
+- `neutral` -> `pin`
+- `quest` -> `contract`
+- `lore` -> `history`
+- `other` -> `history`
+- `faction` -> `affiliation`
+- `location` -> `history`
+- `npc` -> `bond`
+- `leverage` -> `conflict`
+
+`anomaly` semantics are metadata/label-level (not a first-class `link_type`).
+
+## Sparsity and containment policy
+
+Connection threads are semantic highlights, not mandatory wiring.
+
+- Do **not** connect everything that is merely related in-world.
+- Add links when they improve retrieval, traversal, or player-facing reasoning.
+- Keep local clusters readable: if a set is densely interrelated, prefer a **folder** boundary plus a few bridge links.
+- Within one pair of cards, prefer one strongest relationship type rather than multiple redundant threads.
+
+This policy keeps the canvas legible and preserves signal quality for LLM retrieval and generation.
+
+**Shipping new labels:** update `LORE_LINK_TYPE_OPTIONS` and the canonical table in `src/lib/connection-kind-colors.ts` together.
 
 ## Structured bindings (hgArch)
 
@@ -26,4 +55,4 @@ Bindings use **slot ids** from **`src/lib/bindings-catalog.ts`** (`BINDING_SLOT_
 
 ## Import hints
 
-Import plan links may set **`linkIntent`**: `association` (default) vs `binding_hint` (structured field the GM should confirm on the card). See **`lore-import-plan-llm.ts`** outline rules and **`lore-import-plan-types.ts`**.
+Import plan links may set **`linkIntent`**: `association` (default) vs `binding_hint` (structured field the GM should confirm on the card). Import normalization aliases legacy strings to the canonical set and falls back to `history` when uncertain.

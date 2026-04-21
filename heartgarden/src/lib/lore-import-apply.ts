@@ -6,8 +6,8 @@ import { importReviewItems, itemLinks, items, spaces } from "@/src/db/schema";
 import { buildContentJsonForFolderEntity } from "@/src/components/foundation/architectural-db-bridge";
 import type { CanvasFolderEntity } from "@/src/components/foundation/architectural-types";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
-import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-vault-index";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
+import { connectionKindMetaForLinkType } from "@/src/lib/connection-kind-colors";
 import {
   buildLoreNoteContentJson,
   buildLoreNoteContentJsonMerged,
@@ -478,6 +478,7 @@ export async function applyLoreImportPlan(
       }
 
       const linkType = normalizeImportItemLinkType(link.linkType);
+      const canonicalLinkMeta = connectionKindMetaForLinkType(linkType);
       const [lr] = await dbx
         .insert(itemLinks)
         .values({
@@ -492,6 +493,12 @@ export async function applyLoreImportPlan(
           meta: {
             import: true,
             importBatchId: plan.importBatchId,
+            ...(canonicalLinkMeta
+              ? {
+                  linkSemanticFamily: canonicalLinkMeta.semanticFamily,
+                  linkSemanticKeywords: canonicalLinkMeta.autopopulationKeywords,
+                }
+              : {}),
             ...(link.linkIntent ? { linkIntent: link.linkIntent } : {}),
           },
         })
@@ -522,7 +529,6 @@ export async function applyLoreImportPlan(
   });
 
   for (const row of rowsToSchedule) {
-    scheduleItemEmbeddingRefresh(db, row);
     if (row.contentText.trim().length > 0 || row.title.trim().length > 0) {
       scheduleVaultReindexAfterResponse(row.id);
     }

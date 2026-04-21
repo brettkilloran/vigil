@@ -54,7 +54,7 @@ Responses include **`camera`**: `{ x, y, zoom }` parsed from legacy **`spaces.ca
 
 **Tooling:** Shared logic lives in **`src/lib/mcp/heartgarden-mcp-server.ts`**.
 
-**Tool names:** **`tools/list`** advertises only **`heartgarden_*`**. **`tools/call`** still accepts legacy **`vigil_*`** names and maps them to **`heartgarden_*`** via **`canonicalHeartgardenMcpToolName`** (see **`heartgarden-mcp-server.test.ts`**). Write tools validate **`write_key`** against **`HEARTGARDEN_MCP_WRITE_KEY`** in the MCP process; **`write_key`** may be omitted when the MCP server has **`HEARTGARDEN_MCP_WRITE_KEY`** set. **`heartgarden_mcp_config`** returns booleans only (**`default_space_configured`**, **`mcp_read_only`**, **`write_key_configured`**)—no env values. **`heartgarden_create_item`** → **`POST /api/spaces/:id/items`**; **`heartgarden_create_folder`** → **`POST /api/spaces`** then folder **`POST .../items`**; **`heartgarden_create_link`** → **`POST /api/item-links`** (**`relationship_type`** → **`linkType`**); **`heartgarden_patch_item`** → **`PATCH /api/items/:id`**. Prefer **`contentText`** on PATCH; **`contentJson`** is the full TipTap document (see **`PATCH`** row under Items). Data model for agents: **`docs/MCP_CANVAS_MODEL.md`**.
+**Tool names:** **`tools/list`** advertises only **`heartgarden_*`**. **`tools/call`** still accepts legacy **`vigil_*`** names and maps them to **`heartgarden_*`** via **`canonicalHeartgardenMcpToolName`** (see **`heartgarden-mcp-server.test.ts`**). Write tools validate **`write_key`** against **`HEARTGARDEN_MCP_WRITE_KEY`** in the MCP process; **`write_key`** may be omitted when the MCP server has **`HEARTGARDEN_MCP_WRITE_KEY`** set. **`heartgarden_mcp_config`** returns booleans only (**`default_space_configured`**, **`mcp_read_only`**, **`write_key_configured`**)—no env values. **`heartgarden_create_item`** → **`POST /api/spaces/:id/items`**; **`heartgarden_create_folder`** → **`POST /api/spaces`** then folder **`POST .../items`**; **`heartgarden_create_link`** → **`POST /api/item-links`** (**`relationship_type`** → **`linkType`**, canonical: `bond|affiliation|contract|conflict|history`; legacy aliases normalize server-side); **`heartgarden_patch_item`** → **`PATCH /api/items/:id`**. Prefer **`contentText`** on PATCH; **`contentJson`** is the full TipTap document (see **`PATCH`** row under Items). Data model for agents: **`docs/MCP_CANVAS_MODEL.md`**.
 
 **Create-item entity fields (HTTP + MCP):** If **`entityType`** is set on the body, it wins. Else **`canonical_entity_kind`** maps to **`entityType`** via the registry. Lore shells (**`character`** \| **`faction`** \| **`location`**) with **`note`**/**`sticky`** and no client **`contentJson`** get server-synthesized lore HTML (same as the UI). MCP tool descriptions spell out **`lore_entity`** vs **`canonical_entity_kind`** vs **`entity_type`**.
 
@@ -80,8 +80,8 @@ Optional **`HEARTGARDEN_MCP_URL`** (default `https://heartgarden.vercel.app/api/
 | DELETE | `/api/spaces/[spaceId]` | Delete space (cascade per schema). |
 | GET | `/api/spaces/[spaceId]/changes` | Query **`since`** (ISO timestamp). Response includes **`items`** (changed item rows) and **`cursor`** (max of item + space `updated_at` in range). **`hasMore`**: when true, more rows exist after **`cursor`** — call again with **`since=<cursor>`** until **`hasMore`** is false (default page size **`limit=500`**, max 500). Includes **`itemLinksRevision`** (aggregate fingerprint over **`item_links`** touching this space on **source or target**) so clients can detect link-only changes without downloading the full graph every poll. When any subtree **`spaces`** row changed since **`since`** (e.g. folder reparent / rename), **`spaces`** lists **`{ id, name, parentSpaceId, updatedAt }`** so other clients can merge without a full bootstrap. Optional **`includeItemIds=1`**: when set, response **must** include **`itemIds`** (full subtree id list for tombstone sync). When omitted, **`itemIds`** is omitted — lighter for non-shell clients. The **official web shell** sends **`includeItemIds=1`** on the **first** page of a delta poll, then omits it on continuation requests while **`hasMore`** (see **Browser shell — delta sync** under **Items**). |
 | GET | `/api/spaces/[spaceId]/link-revision` | Returns **`{ ok: true, itemLinksRevision }`** — cheap **`item_links`** fingerprint for the space (same scope as **`GET …/graph`**). Use when the WebSocket path is down or to decide whether to **`GET …/graph`** after a revision bump. |
-| GET | `/api/spaces/[spaceId]/presence` | Optional **`?except=<clientUuid>`**. Optional **`scope=local`** — restrict to peers whose **`activeSpaceId`** equals **`spaceId`**; **default** (omit param) returns peers in **`spaceId`’s entire subtree** (descendant child spaces included). Each peer: **`clientId`**, **`activeSpaceId`**, **`camera`** `{ x, y, zoom }`, **`pointer`** `{ x, y } \| null` (world coordinates), **`updatedAt`** (ISO). TTL **~2 minutes**. |
-| POST | `/api/spaces/[spaceId]/presence` | Body **`{ clientId: uuid, camera: { x, y, zoom }, pointer?: { x, y } \| null }`**. URL **`spaceId`** is the client’s active canvas space (must match access rules). Upserts **one row per `clientId`** in **`canvas_presence`**. Rate-limited **per public IP** (in-memory per server instance). **`PLAYWRIGHT_E2E=1`** bypasses. Deletes stale rows globally (older than server TTL). **`429`** if rate limited. Requires **`canvas_presence`** in Postgres (`npm run db:push` after schema pull). |
+| GET | `/api/spaces/[spaceId]/presence` | Optional **`?except=<clientUuid>`**. Optional **`scope=local`** — restrict to peers whose **`activeSpaceId`** equals **`spaceId`**; **default** (omit param) returns peers in **`spaceId`’s entire subtree** (descendant child spaces included). Each peer: **`clientId`**, **`activeSpaceId`**, **`camera`** `{ x, y, zoom }`, **`pointer`** `{ x, y } \| null` (world coordinates), **`updatedAt`** (ISO). TTL **~2 minutes**. Presence GC is throttled server-side (not on every request). |
+| POST | `/api/spaces/[spaceId]/presence` | Body **`{ clientId: uuid, camera: { x, y, zoom }, pointer?: { x, y } \| null }`**. URL **`spaceId`** is the client’s active canvas space (must match access rules). Upserts **one row per `clientId`** in **`canvas_presence`**. Rate-limited **per public IP** (in-memory per server instance). **`PLAYWRIGHT_E2E=1`** bypasses. Stale-row GC is throttled globally (older than server TTL). **`429`** if rate limited. Requires **`canvas_presence`** in Postgres (`npm run db:push` after schema pull). |
 | GET | `/api/spaces/[spaceId]/items` | Items for space. |
 | POST | `/api/spaces/[spaceId]/items` | Create item in space. Body: **`itemType`**, **`x`**, **`y`**, optional **`width`**, **`height`**, **`title`**, **`contentText`**, **`contentJson`**, optional **`theme`**, **`entityType`**, **`entityMeta`**, **`canonical_entity_kind`** (maps to **`entityType`** via import registry), **`lore_variant`** (`v1`–`v3` / `v11` for shells). If **`zIndex`** is omitted, **`max(zIndex)+1`** in that space (starts **101** when empty). Default dimensions: lore shells (**`entityType`** **`character`** \| **`faction`** \| **`location`**) **340×280**; plain note **340×270**; checklist **340×188**; other **280×200**. If **`contentJson`** is omitted and **`entityType`** is a lore shell kind, the server builds the same HTML + **`hgArch.loreCard`** as the canvas UI (`getLoreNodeSeedBodyHtml`). Otherwise omitted **`contentJson`** for **`note`**/**`sticky`**/**`checklist`** uses generic synthesis. **`contentText`** is required for plain **`note`** rows when **`contentJson`** is omitted (unless **`canonical_entity_kind`** / lore entity will supply text). |
 | GET | `/api/spaces/[spaceId]/graph` | Graph JSON export for space. |
@@ -101,7 +101,7 @@ Optional **`HEARTGARDEN_MCP_URL`** (default `https://heartgarden.vercel.app/api/
 
 ### Vault index orchestration
 
-Per-item vault work (**chunking, embeddings, optional Anthropic lore summary/aliases**) is triggered from multiple places; they funnel into the same core indexer **`reindexItemVault`** (`src/lib/item-vault-index.ts`) via **`POST /api/items/[itemId]/index`**. The browser shell also schedules a **debounced** client **`POST …/index`** after edits (`scheduleVaultIndexForItem` in `architectural-neon-api.ts`). **`scheduleVaultReindexAfterResponse`** (`schedule-vault-index-after.ts`) may run **`after()`** reindex on PATCH/create with **`refreshLoreMeta: false`** so it does **not** duplicate Anthropic lore-meta work with the client-scheduled index path. See **`AGENTS.md`** → Lore + vault index for env toggles.
+Per-item vault work (**chunking, embeddings, optional Anthropic lore summary/aliases**) funnels into **`reindexItemVault`** (`src/lib/item-vault-index.ts`) via **`POST /api/items/[itemId]/index`** and server **`after()`** scheduling (`schedule-vault-index-after.ts`). Current default owner is server `after()`; client debounced **`POST …/index`** is a no-op when **`NEXT_PUBLIC_HEARTGARDEN_INDEX_OWNER=server_after`**. `after()` reindex uses **`refreshLoreMeta: false`** to avoid duplicate Anthropic calls. See **`AGENTS.md`** → Lore + vault index for env toggles.
 
 ```mermaid
 flowchart LR
@@ -136,14 +136,14 @@ Requires **`HEARTGARDEN_REALTIME_URL`**, **`HEARTGARDEN_REALTIME_REDIS_URL`**, *
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| POST | `/api/realtime/room-token` | Body **`{ spaceId: "<uuid>" }`**. Returns **`{ ok: true, realtimeUrl, token, expiresAt }`** when realtime is configured, or **503** if not. **`spaceId`** must pass **`requireHeartgardenSpaceApiAccess`**. Non-**GM** callers need a valid **`hg_boot`** cookie when the boot gate is on. Token is short-lived (~15 min) for **`wss://`** connect. |
+| POST | `/api/realtime/room-token` | Body **`{ spaceId: "<uuid>" }`**. Returns **`{ ok: true, realtimeUrl, token, expiresAt }`** when realtime is configured, or **503** if not. **`spaceId`** must pass **`requireHeartgardenSpaceApiAccess`**. Non-**GM** callers need a valid **`hg_boot`** cookie when the boot gate is on. Token is short-lived (~15 min) for **`wss://`** connect. Client sends the token via websocket subprotocol (`auth.<token>`) with query fallback during migration. |
 | GET | `/api/realtime/metrics` | **`{ ok: true, publisher: … }`** — in-process Redis publish timing (best-effort; resets per serverless instance). Ops / staging; no secrets. |
 
 ## Search
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/search` | Query params: `q`, `spaceId`, mode (`hybrid` / `semantic` / FTS), filters (`types`, `entityTypes`, `limit`, …). **Hybrid / semantic** (when embeddings are configured): optional retrieval tuning — `ftsLimit` (8–200), `fuzzyLimitEmpty` / `fuzzyLimitSparse` (8–100), `ftsSparseThreshold` (2–64), `vectorChunkLimit` (8–200), `maxChunksPerItem` (1–12), `retrievalMaxItems` (8–80, caps RRF output; defaults from `limit` or 24). Uses pgvector when embeddings are configured. **Players** tier: `spaceId` forced to player space; hybrid/semantic downgraded to FTS. |
+| GET | `/api/search` | Query params: `q`, `spaceId`, mode (`hybrid` / `semantic` / FTS), filters (`types`, `entityTypes`, `limit`, …). **Hybrid / semantic** (when embeddings are configured): optional retrieval tuning — `ftsLimit` (8–200), `fuzzyLimitEmpty` / `fuzzyLimitSparse` (8–100), `ftsSparseThreshold` (2–64), `vectorChunkLimit` (8–200), `maxChunksPerItem` (1–12), `retrievalMaxItems` (8–80, caps RRF output; defaults from `limit` or 24). Uses pgvector when embeddings are configured. **Players** tier: `spaceId` forced to player space; hybrid/semantic downgraded to FTS. In-memory per-IP limiter returns **429** with `Retry-After: 60` when exceeded. |
 | GET | `/api/search/suggest` | Prefix / palette suggestions. |
 | GET | `/api/search/chunks` | Raw chunk-level hits (debug / advanced clients). |
 
@@ -177,6 +177,12 @@ Requires **`HEARTGARDEN_REALTIME_URL`**, **`HEARTGARDEN_REALTIME_REDIS_URL`**, *
 | DELETE | `/api/item-links` | Delete link. |
 | POST | `/api/item-links/sync` | Replace / sync links from client graph (transactional; see route). |
 
+**Canonical `linkType` values:** `pin`, `bond`, `affiliation`, `contract`, `conflict`, `history`.  
+Legacy values (`reference`, `ally`, `enemy`, `neutral`, `quest`, `lore`, `other`, `faction`, `location`, `npc`, `leverage`) normalize to canonical values in import/UI/MCP/API write flows.
+
+**Topology guidance:** treat links as high-signal semantic wires, not exhaustive world adjacency.  
+When one concept set is densely connected, prefer folder containment (child space) plus a few bridge links instead of full-mesh threading.
+
 ## Upload & webclip
 
 | Method | Path | Purpose |
@@ -202,6 +208,7 @@ Requires **`HEARTGARDEN_REALTIME_URL`**, **`HEARTGARDEN_REALTIME_REDIS_URL`**, *
 | `ANTHROPIC_LORE_MODEL` | Optional model override |
 | `HEARTGARDEN_MCP_SERVICE_KEY` | Bearer for **`GET|POST|DELETE /api/mcp`**, stdio MCP internal `fetch` to **`/api/*`** when the boot gate is on, and boot-context GM resolution for those requests |
 | `HEARTGARDEN_MCP_WRITE_KEY` | Reindex + MCP write tools (must match client `write_key`) |
+| `HEARTGARDEN_MCP_FETCH_TIMEOUT_MS` | Optional MCP internal API fetch timeout in ms (default **30000**, clamped **1000–120000**). |
 | `R2_*` | Image presign |
 | `PLAYWRIGHT_E2E` | Bootstrap empty demo (tests only); boot gate forced off in **`/api/heartgarden/boot`** |
 | `HEARTGARDEN_BOOT_PIN_BISHOP` / `HEARTGARDEN_BOOT_PIN_PLAYERS` / `HEARTGARDEN_BOOT_PIN_DEMO` | Boot splash PINs (8 chars each if set) |
@@ -213,6 +220,7 @@ Requires **`HEARTGARDEN_REALTIME_URL`**, **`HEARTGARDEN_REALTIME_REDIS_URL`**, *
 | `HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_MAX` | Optional max **`POST …/presence`** per **public IP** per window (default **4000**, clamped **10–100000**). Baseline ~36 posts per **tab** per 15 min from the **25s** heartbeat; **pointer moves** can add throttled POSTs (~one every **2s** while moving). Two household players on one Wi‑Fi ≈ 2× that — still far below default. Raise only for very many devices sharing one IP. |
 | `HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_WINDOW_MS` | Optional window in ms (default **15 minutes**, clamped **60s–1h**) |
 | `HEARTGARDEN_REALTIME_URL` / `HEARTGARDEN_REALTIME_REDIS_URL` / `HEARTGARDEN_REALTIME_SECRET` | Optional multiplayer realtime (**`POST /api/realtime/room-token`**, **`npm run realtime`**) — see **`docs/VERCEL_ENV_VARS.md`** |
+| `NEXT_PUBLIC_HEARTGARDEN_INDEX_OWNER` | Optional client/server index ownership policy. Default **`server_after`** disables client debounced index POSTs. |
 
 See also **`docs/DEPLOY_VERCEL.md`**, **`docs/FOLLOW_UP.md`**, and **`AGENTS.md`** for operational detail.
 

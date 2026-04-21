@@ -1,13 +1,14 @@
 import { LORE_LINK_TYPE_OPTIONS } from "@/src/lib/lore-link-types";
+import { normalizeLinkTypeAlias } from "@/src/lib/connection-kind-colors";
 
 const ALLOWED_LINK_TYPES = new Set<string>(
   LORE_LINK_TYPE_OPTIONS.map((o) => o.value as string),
 );
 
 export function normalizeLoreLinkType(raw: string | undefined): string {
-  if (!raw) return "reference";
-  const t = raw.toLowerCase().trim();
-  return ALLOWED_LINK_TYPES.has(t) ? t : "reference";
+  if (!raw) return "history";
+  const t = normalizeLinkTypeAlias(raw);
+  return ALLOWED_LINK_TYPES.has(t) ? t : "history";
 }
 
 export function escapeHtmlForNoteBody(text: string): string {

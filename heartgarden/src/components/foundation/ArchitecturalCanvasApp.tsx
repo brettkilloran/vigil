@@ -3268,10 +3268,9 @@ export function ArchitecturalCanvasApp({
 
   /**
    * Sets `item_links.link_type` on a thread. If the new `linkType` maps to a
-   * canonical picker kind (`pin`, `reference`, `ally`, `enemy`, `neutral`,
-   * `quest`, `lore`, `other`), ALSO recolor the thread to that kind's
-   * signature color so color + link_type stay locked. Legacy story-tag values
-   * (`faction`, `location`, `npc`) leave color alone.
+   * canonical picker kind (`pin`, `bond`, `affiliation`, `contract`,
+   * `conflict`, `history`), ALSO recolor the thread to that kind's signature
+   * color so color + link_type stay locked.
    */
   const setConnectionLinkType = useCallback(
     (connectionId: string, linkType: string) => {
@@ -9875,8 +9874,7 @@ export function ArchitecturalCanvasApp({
       out.push({ type: "heading", label: LINK_TYPE_GROUP_HEADINGS[group] });
       for (const opt of options) {
         // Picker kinds render with their canonical color swatch so the right-click
-        // menu visibly matches the thread-ink picker. Legacy story_tag options
-        // (faction/location/npc) still appear without a swatch — they don't rewrite color.
+        // menu visibly matches the thread-kind picker.
         const kindForOpt = CONNECTION_KINDS_IN_ORDER.find(
           (k) => linkTypeForConnectionKind(k) === opt.value,
         );
@@ -10888,7 +10886,7 @@ export function ArchitecturalCanvasApp({
               const isCut = connectionMode === "cut";
               const lt = connection.linkType ?? "pin";
               const dash =
-                lt !== "pin" && lt !== "reference" ? ("10 7" as const) : undefined;
+                lt !== "pin" && lt !== "affiliation" ? ("10 7" as const) : undefined;
               return (
                 <g key={connection.id} data-connection-id={connection.id}>
                   {!isCut ? (
@@ -11859,7 +11857,7 @@ export function ArchitecturalCanvasApp({
                                 ...p,
                                 suggestedLinks: [
                                   ...p.suggestedLinks,
-                                  { fromName: "", toName: "", linkType: "reference" },
+                                  { fromName: "", toName: "", linkType: "affiliation" },
                                 ],
                               }
                             : p,

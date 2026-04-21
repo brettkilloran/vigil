@@ -5,6 +5,10 @@ import {
   normalizeCanonicalEntityKind,
   type CanonicalEntityKind,
 } from "@/src/lib/lore-import-canonical-kinds";
+import {
+  CANONICAL_RELATIONSHIP_LINK_TYPES,
+  connectionKindsPromptGlossary,
+} from "@/src/lib/connection-kind-colors";
 import type { SourceTextChunk } from "@/src/lib/lore-import-chunk";
 import type { IngestionSignals } from "@/src/lib/lore-import-plan-types";
 
@@ -14,6 +18,9 @@ const OUTLINE_SOURCE_SAMPLE_MAX = 120_000;
 /** Merge / clarify payloads can be large when many notes exist; batch merge separately. */
 const MERGE_USER_JSON_MAX = 420_000;
 const CLARIFY_USER_JSON_MAX = 420_000;
+const IMPORT_LINK_TYPE_ENUM = CANONICAL_RELATIONSHIP_LINK_TYPES.map((t) => `"${t}"`).join("|");
+const IMPORT_LINK_TYPE_LIST = CANONICAL_RELATIONSHIP_LINK_TYPES.join(", ");
+const IMPORT_LINK_TYPE_GLOSSARY = connectionKindsPromptGlossary();
 
 const OUTLINE_SYSTEM = `You structure TTRPG / worldbuilding documents for a canvas notes app.
 
@@ -43,7 +50,7 @@ Return ONLY valid JSON (no markdown fence) with this exact shape:
     {
       "fromClientId": "note clientId",
       "toClientId": "note clientId",
-      "linkType": "reference"|"ally"|"enemy"|"neutral"|"faction"|"quest"|"location"|"npc"|"lore" (optional; default reference),
+      "linkType": ${IMPORT_LINK_TYPE_ENUM} (optional; default history),
       "linkIntent": "association" | "binding_hint" (optional)
     }
   ]
@@ -54,7 +61,11 @@ Rules:
 - Use 1–12 folders max unless the document clearly needs more.
 - Titles must be stable proper nouns or section names when possible.
 - If the document is tiny, one folder and one note is fine.
-- **Links:** Only connect two notes that share the same folderClientId (same canvas space). Never use linkType "pin" — that is reserved for user-drawn canvas threads. Prefer **relationship** linkTypes (ally, enemy, neutral, reference, quest, lore) when the edge describes how two notes relate. Use **role tags** (npc, faction, location) only when the import needs an explicit story role that is not already obvious from each note's entity kind — do not set linkType to duplicate both endpoints' kinds (e.g. avoid faction→faction with linkType "faction" unless it adds meaning).
+- **Links:** Only connect two notes that share the same folderClientId (same canvas space). Never use linkType "pin" — that is reserved for user-drawn canvas threads. Use only these semantic link types: ${IMPORT_LINK_TYPE_LIST}.
+- **Link type guide (for consistent generation):**
+${IMPORT_LINK_TYPE_GLOSSARY}
+- **Sparsity:** Do not connect every related pair. Add links only when the edge materially improves navigation/retrieval or reflects a primary relationship.
+- **Containment:** If many notes are strongly interrelated within one idea, prefer folder structure over dense link meshes; add a few bridge links instead of full local cross-wiring.
 - **Association vs binding:** linkIntent is optional metadata on each link. Use "association" (default) for narrative or contextual ties that should stay as **canvas connections** (item_links rows) only. Use "binding_hint" when the edge is really a **structured relationship that belongs on a lore card** (employer faction, home location, roster membership) — the importer still creates a connection row today, but hints that the GM should confirm or fill the matching hgArch fields on the card; do not invent roster rows the document does not support.
 - Keep each note focused (one topic or tight cluster) so entity kinds and link types stay accurate.`;
 
@@ -106,7 +117,7 @@ Tone: collaborative, default-forward (always mark a recommended option when poss
 HINT OPS — every planPatchHint must be exactly one of:
 { "op": "no_op" }
 { "op": "set_note_folder", "noteClientId": "<id>", "folderClientId": "<folder clientId>" | null }
-{ "op": "set_link_type", "fromClientId": "<id>", "toClientId": "<id>", "linkType": "reference"|"ally"|"enemy"|"neutral"|"faction"|"quest"|"location"|"npc"|"lore" }
+{ "op": "set_link_type", "fromClientId": "<id>", "toClientId": "<id>", "linkType": ${IMPORT_LINK_TYPE_ENUM} }
 { "op": "remove_link", "fromClientId": "<id>", "toClientId": "<id>" }
 { "op": "set_ingestion_signals", "noteClientId": "<id>", "patch": { optional salienceRole, voiceReliability, importance 0-1 } }
 { "op": "set_lore_historical", "noteClientId": "<id>", "loreHistorical": true|false }
@@ -270,6 +281,10 @@ export async function runLoreImportOutlineLlm(
         fromClientId,
         toClientId,
         linkType: o.linkType != null ? String(o.linkType).slice(0, 64) : undefined,
+        linkIntent:
+          o.linkIntent === "association" || o.linkIntent === "binding_hint"
+            ? o.linkIntent
+            : undefined,
       });
     }
     return { folders, notes, links };

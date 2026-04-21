@@ -6,13 +6,13 @@ import {
 } from "@/src/lib/lore-import-item-link";
 
 describe("normalizeImportItemLinkType", () => {
-  it("maps pin to reference for ingestion", () => {
-    expect(normalizeImportItemLinkType("pin")).toBe("reference");
+  it("maps pin to history for ingestion", () => {
+    expect(normalizeImportItemLinkType("pin")).toBe("history");
   });
 
   it("preserves semantic types", () => {
-    expect(normalizeImportItemLinkType("ally")).toBe("ally");
-    expect(normalizeImportItemLinkType("faction")).toBe("faction");
+    expect(normalizeImportItemLinkType("bond")).toBe("bond");
+    expect(normalizeImportItemLinkType("faction")).toBe("affiliation");
   });
 });
 
@@ -25,7 +25,7 @@ describe("filterPlanLinksToSameCanvasSpace", () => {
 
   it("keeps links within the same folder", () => {
     const { links, warnings } = filterPlanLinksToSameCanvasSpace(notes, [
-      { fromClientId: "a", toClientId: "b", linkType: "ally" },
+      { fromClientId: "a", toClientId: "b", linkType: "bond" },
     ]);
     expect(links).toHaveLength(1);
     expect(warnings).toHaveLength(0);
@@ -33,7 +33,7 @@ describe("filterPlanLinksToSameCanvasSpace", () => {
 
   it("drops cross-folder links with a warning", () => {
     const { links, warnings } = filterPlanLinksToSameCanvasSpace(notes, [
-      { fromClientId: "a", toClientId: "c", linkType: "reference" },
+      { fromClientId: "a", toClientId: "c", linkType: "history" },
     ]);
     expect(links).toHaveLength(0);
     expect(warnings.length).toBeGreaterThan(0);
