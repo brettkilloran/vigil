@@ -3807,6 +3807,14 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: calc(var(--layer-focus-overlay) + 3);
+  /*
+   * Portaled spool variant lives under `#hg-portal-root` which is
+   * `pointer-events: none` by default (see app/globals.css). Opt this popover
+   * back in so the menu surface is the hit target — without it, clicks on
+   * the background/padding fall through to whatever is beneath the portal
+   * and DevTools / Cursor design tool can't target the menu container.
+   */
+  pointer-events: auto;
   width: min(216px, calc(100vw - 24px));
   padding: 6px;
   border-radius: 14px;
