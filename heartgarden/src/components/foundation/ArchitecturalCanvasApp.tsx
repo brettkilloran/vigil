@@ -7122,12 +7122,14 @@ export function ArchitecturalCanvasApp({
               window.alert(
                 typeof jobBody.error === "string"
                   ? jobBody.error
-                  : "Could not start import job — opening legacy review.",
+                  : "Could not start import job. Please try again.",
               );
             } else {
               const jobId = jobBody.jobId;
               /** ~12 min — smart planning can run many LLM + vault passes on large sources. */
               const maxAttempts = 720;
+              let pollFailed = false;
+              let planFailed = false;
               let planReady = false;
               for (let attempt = 0; attempt < maxAttempts; attempt++) {
                 const poll = await fetch(
@@ -7143,8 +7145,9 @@ export function ArchitecturalCanvasApp({
                   window.alert(
                     typeof st.error === "string"
                       ? st.error
-                      : "Import job status request failed — opening legacy review.",
+                      : "Import job status request failed. Please try again.",
                   );
+                  pollFailed = true;
                   break;
                 }
                 if (st.status === "ready" && st.plan) {
@@ -7170,13 +7173,14 @@ export function ArchitecturalCanvasApp({
                   window.alert(
                     typeof st.error === "string"
                       ? st.error
-                      : "Smart import plan failed — opening legacy review.",
+                      : "Smart import plan failed. Try again or split the file.",
                   );
+                  planFailed = true;
                   break;
                 }
                 await new Promise((r) => setTimeout(r, 1000));
               }
-              if (!planReady) {
+              if (!planReady && !pollFailed && !planFailed) {
                 window.alert(
                   "Import planning is taking too long (the server may still be working). Try again in a minute or split the file into smaller parts.",
                 );

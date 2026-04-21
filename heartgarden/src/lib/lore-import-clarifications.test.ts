@@ -30,7 +30,6 @@ function minimalPlan(
     links: [],
     mergeProposals: [],
     contradictions: [],
-    clarifications: [],
     ...overrides,
   };
 }
