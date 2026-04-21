@@ -38,6 +38,7 @@ import {
   ARCH_TOOLTIP_AVOID_BOTTOM,
 } from "@/src/components/foundation/ArchitecturalTooltip";
 import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
+import { useDevPinnedPopovers } from "@/src/lib/dev-pin-popovers";
 import { Button } from "@/src/components/ui/Button";
 import {
   FOLDER_COLOR_BLACK_MIRROR_HINT,
@@ -53,6 +54,11 @@ import type {
   LoreCardVariant,
   NodeTheme,
 } from "@/src/components/foundation/architectural-types";
+import {
+  CONNECTION_KINDS,
+  connectionKindMeta,
+  type ConnectionKind,
+} from "@/src/lib/connection-kind-colors";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { cx } from "@/src/lib/cx";
 
@@ -158,8 +164,8 @@ export type ConnectionDockMode = "move" | "draw" | "cut";
 export type ConnectionToolbarProps = {
   mode: ConnectionDockMode;
   onSetMode: (next: ConnectionDockMode) => void;
-  colorScheme: FolderColorSchemeId | null;
-  onSetColorScheme: (next: FolderColorSchemeId | null) => void;
+  connectionKind: ConnectionKind;
+  onSetConnectionKind: (next: ConnectionKind) => void;
   disabled?: boolean;
   variant?: "canvas" | "editor";
 };
@@ -646,6 +652,265 @@ export function ArchitecturalFolderColorStrip({
   );
 }
 
+/**
+ * Canvas thread color picker. The picker operates on **connection kinds**
+ * (`pin`, `reference`, `ally`, …) — color is a visual consequence of the
+ * kind, not a free choice. See `src/lib/connection-kind-colors.ts` for the
+ * canonical kind<->color<->link_type mapping and `docs/RELATIONSHIP_VOCABULARY.md`.
+ *
+ * `label` appearance: used inside the bottom dock and the top-right connection
+ * toolbar (swatch + short text + caret). `spool` appearance: used on the right
+ * side-tools rail as a small thread-spool button (swatch only, popover portaled
+ * to `#hg-portal-root` so it doesn't clip to the rail).
+ */
+export function ArchitecturalConnectionKindPicker({
+  value,
+  onChange,
+  variant = "canvas",
+  appearance = "label",
+  ariaLabel = "Connection thread kind",
+  /** When false, flyout closes and the trigger is inert (e.g. not in Draw mode). */
+  engaged = true,
+}: {
+  value: ConnectionKind;
+  onChange: (next: ConnectionKind) => void;
+  variant?: "canvas" | "editor";
+  appearance?: "label" | "spool";
+  ariaLabel?: string;
+  engaged?: boolean;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuDirection, setMenuDirection] = useState<"up" | "down">("up");
+  const [spoolMenuPos, setSpoolMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const pickerRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const isEditor = variant === "editor";
+  const isSpool = appearance === "spool";
+  const activeMeta = connectionKindMeta(value);
+  // Dev-only: when ON, suppress outside-click + Escape dismissal so the
+  // popover can be inspected in DevTools. Toggle with Alt+Shift+P. Always
+  // `false` in production. See `src/lib/dev-pin-popovers.ts`.
+  const pinnedForDev = useDevPinnedPopovers();
+
+  useEffect(() => {
+    if (!engaged) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- collapse on disengage
+      setMenuOpen(false);
+    }
+  }, [engaged]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    if (!isSpool) {
+      const trigger = pickerRef.current;
+      if (trigger) {
+        const rect = trigger.getBoundingClientRect();
+        const estimatedMenuHeight = 360;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const shouldOpenDown =
+          spaceBelow >= estimatedMenuHeight || (spaceBelow > 110 && spaceAbove < estimatedMenuHeight);
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- post-open measurement
+        setMenuDirection(shouldOpenDown ? "down" : "up");
+      }
+    }
+    if (pinnedForDev) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const t = event.target as Node | null;
+      if (!t) {
+        setMenuOpen(false);
+        return;
+      }
+      if (pickerRef.current?.contains(t)) return;
+      if (isSpool && menuRef.current?.contains(t)) return;
+      setMenuOpen(false);
+    };
+    window.addEventListener("pointerdown", onPointerDown, true);
+    return () => window.removeEventListener("pointerdown", onPointerDown, true);
+  }, [menuOpen, isSpool, pinnedForDev]);
+
+  useLayoutEffect(() => {
+    if (!menuOpen || !isSpool) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on close
+      setSpoolMenuPos(null);
+      return;
+    }
+    const position = () => {
+      const trig = triggerRef.current;
+      const menuEl = menuRef.current;
+      if (!trig || !menuEl) return;
+      const tr = trig.getBoundingClientRect();
+      const gap = 10;
+      const mw = menuEl.offsetWidth;
+      const mh = menuEl.offsetHeight;
+      if (mw < 1 || mh < 1) return;
+      // Open to the LEFT of the side-tools rail (same convention as thread spool).
+      let left = tr.left - gap - mw;
+      let top = tr.top + tr.height / 2 - mh / 2;
+      const pad = 8;
+      left = Math.max(pad, Math.min(left, window.innerWidth - mw - pad));
+      top = Math.max(pad, Math.min(top, window.innerHeight - mh - pad));
+      setSpoolMenuPos({ left, top });
+    };
+    position();
+    window.addEventListener("scroll", position, true);
+    window.addEventListener("resize", position);
+    return () => {
+      window.removeEventListener("scroll", position, true);
+      window.removeEventListener("resize", position);
+    };
+  }, [menuOpen, isSpool]);
+
+  useEffect(() => {
+    if (!menuOpen || pinnedForDev) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen, pinnedForDev]);
+
+  const pick = (next: ConnectionKind) => {
+    onChange(next);
+    setMenuOpen(false);
+  };
+
+  const menuBody = (
+    <div className={styles.connectionKindList} role="listbox" aria-label={ariaLabel}>
+      {CONNECTION_KINDS.map((meta) => {
+        const selected = meta.kind === value;
+        return (
+          <Button
+            key={meta.kind}
+            type="button"
+            variant="ghost"
+            tone="glass"
+            role="option"
+            aria-selected={selected}
+            aria-label={`${meta.label}. ${meta.hint}`}
+            className={cx(
+              styles.connectionKindRow,
+              selected && styles.connectionKindRowSelected,
+            )}
+            onClick={() => pick(meta.kind)}
+          >
+            <span
+              className={styles.connectionKindRowSwatch}
+              style={{
+                background: meta.swatch,
+                // Feed into CSS for the selected ring color.
+                ["--connection-kind-border" as string]: meta.border,
+              }}
+              aria-hidden
+            />
+            <span className={styles.connectionKindRowLabel}>{meta.label}</span>
+          </Button>
+        );
+      })}
+    </div>
+  );
+
+  const spoolMenuPortal =
+    menuOpen && isSpool && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            ref={menuRef}
+            className={cx(
+              styles.connectionKindMenu,
+              styles.connectionKindMenuSpoolFixed,
+              isEditor && styles.connectionKindMenuEditor,
+            )}
+            role="presentation"
+            data-hg-kind-picker-menu="spool"
+            data-hg-kind-picker-appearance={appearance}
+            data-hg-kind-picker-variant={variant}
+            style={
+              spoolMenuPos
+                ? { top: spoolMenuPos.top, left: spoolMenuPos.left, opacity: 1 }
+                : { top: 0, left: 0, opacity: 0, pointerEvents: "none" as const }
+            }
+          >
+            {menuBody}
+          </div>,
+          getVigilPortalRoot(),
+        )
+      : null;
+
+  return (
+    <div
+      ref={pickerRef}
+      className={styles.dockFolderTintPicker}
+      role="group"
+      aria-label={ariaLabel}
+      aria-hidden={engaged ? undefined : true}
+      data-hg-kind-picker-root=""
+      data-hg-kind-picker-appearance={appearance}
+      data-hg-kind-picker-variant={variant}
+      data-hg-kind-picker-open={menuOpen ? "true" : "false"}
+    >
+      <DockChromeTooltip content={`${activeMeta.label} — ${activeMeta.hint}`} disabled={menuOpen}>
+        <Button
+          ref={triggerRef}
+          type="button"
+          variant="ghost"
+          tone="glass"
+          className={cx(
+            styles.dockFolderTintTrigger,
+            isSpool && styles.dockFolderTintTriggerSpool,
+            isEditor && styles.dockFolderTintTriggerEditor,
+            menuOpen && styles.dockFolderTintTriggerOpen,
+          )}
+          aria-haspopup="listbox"
+          aria-expanded={engaged ? menuOpen : false}
+          aria-label={`${ariaLabel}: ${activeMeta.label}`}
+          disabled={!engaged}
+          tabIndex={engaged ? undefined : -1}
+          data-hg-kind-picker-trigger=""
+          data-hg-kind-picker-kind={value}
+          onClick={() => engaged && setMenuOpen((open) => !open)}
+        >
+          <span
+            className={cx(
+              styles.dockFolderTintPreview,
+              isSpool && styles.dockFolderTintPreviewSpool,
+            )}
+            style={{ background: activeMeta.swatch }}
+            aria-hidden
+          />
+          {!isSpool ? (
+            <span className={styles.dockFolderTintTriggerText}>{activeMeta.label}</span>
+          ) : null}
+          {!isSpool ? (
+            <CaretDown
+              size={11}
+              weight="bold"
+              className={styles.dockFolderTintCaret}
+              aria-hidden
+            />
+          ) : null}
+        </Button>
+      </DockChromeTooltip>
+      {menuOpen && !isSpool ? (
+        <div
+          className={cx(
+            styles.connectionKindMenu,
+            menuDirection === "down" && styles.connectionKindMenuDown,
+            isEditor && styles.connectionKindMenuEditor,
+          )}
+          role="presentation"
+          data-hg-kind-picker-menu="inline"
+          data-hg-kind-picker-appearance={appearance}
+          data-hg-kind-picker-variant={variant}
+        >
+          {menuBody}
+        </div>
+      ) : null}
+      {spoolMenuPortal}
+    </div>
+  );
+}
+
 export function ArchitecturalCreateMenu({
   actions,
   actionTone = "menu",
@@ -702,8 +967,8 @@ export function ArchitecturalCreateMenu({
 export function ArchitecturalConnectionToolbar({
   mode,
   onSetMode,
-  colorScheme,
-  onSetColorScheme,
+  connectionKind,
+  onSetConnectionKind,
   disabled = false,
   variant = "canvas",
 }: ConnectionToolbarProps) {
@@ -764,11 +1029,11 @@ export function ArchitecturalConnectionToolbar({
           </ArchitecturalButton>
         </ArchitecturalTooltip>
       </div>
-      <ArchitecturalFolderColorStrip
-        value={colorScheme}
-        onChange={onSetColorScheme}
+      <ArchitecturalConnectionKindPicker
+        value={connectionKind}
+        onChange={onSetConnectionKind}
         variant={isEditor ? "editor" : "canvas"}
-        context="thread"
+        appearance="label"
       />
     </div>
   );
@@ -823,10 +1088,10 @@ export function ArchitecturalBottomDock({
     value: FolderColorSchemeId | null;
     onChange: (next: FolderColorSchemeId | null) => void;
   } | null;
-  /** Global connection tint picker for pin strings. */
+  /** Global connection **kind** picker — color is derived from the selected kind. */
   connectionColorPicker?: {
-    value: FolderColorSchemeId | null;
-    onChange: (next: FolderColorSchemeId | null) => void;
+    value: ConnectionKind;
+    onChange: (next: ConnectionKind) => void;
   } | null;
   /**
    * Canvas-only: own dock cluster next to history. Omit on editor dock.
@@ -1056,11 +1321,11 @@ export function ArchitecturalBottomDock({
           >
             <div className={styles.rootDockPanelSlotInner}>
               <div className={styles.rootDockPanel}>
-                <ArchitecturalFolderColorStrip
+                <ArchitecturalConnectionKindPicker
                   value={connectionColorPicker.value}
                   onChange={connectionColorPicker.onChange}
                   variant={isEditor ? "editor" : "canvas"}
-                  context="thread"
+                  appearance="label"
                 />
               </div>
             </div>

@@ -60,7 +60,7 @@ import { Tag } from "@/src/components/ui/Tag";
 import { HeartgardenMediaPlaceholderImg } from "@/src/components/ui/HeartgardenMediaPlaceholderImg";
 import {
   ArchitecturalBottomDock,
-  ArchitecturalFolderColorStrip,
+  ArchitecturalConnectionKindPicker,
   DEFAULT_CREATE_ACTIONS,
   DEFAULT_DOC_INSERT_ACTIONS,
   DEFAULT_FORMAT_ACTIONS,
@@ -99,10 +99,17 @@ import {
 } from "@/src/components/foundation/architectural-media-html";
 import { heartgardenMediaPlaceholderClassList } from "@/src/lib/heartgarden-media-placeholder-classes";
 import loreEntityCardStyles from "@/src/components/foundation/lore-entity-card.module.css";
+import { type FolderColorSchemeId } from "@/src/components/foundation/architectural-folder-schemes";
 import {
-  FOLDER_COLOR_SCHEMES,
-  type FolderColorSchemeId,
-} from "@/src/components/foundation/architectural-folder-schemes";
+  CONNECTION_KINDS_IN_ORDER,
+  canonicalKindForConnection,
+  canonicalPairForKind,
+  colorForConnectionKind,
+  isCanonicalConnectionPair,
+  linkTypeForConnectionKind,
+  snapColorToConnectionKind,
+  type ConnectionKind,
+} from "@/src/lib/connection-kind-colors";
 import {
   type BootstrapResponse,
   buildCanvasGraphFromBootstrap,
@@ -721,10 +728,12 @@ function stackBoundsRecordsVisuallyEqual(
 
 const STACK_BOUNDS_EQ_TOL_PX = 2;
 
-const CONNECTION_DEFAULT_COLOR =
-  FOLDER_COLOR_SCHEMES.find((s) => s.id === "coral")?.swatch ?? "oklch(0.68 0.32 48)";
-/** Dark neutral thread for "Black mirror" / classic picker slot (not a folder scheme swatch). */
-const CONNECTION_CLASSIC_THREAD_COLOR = "oklch(0.22 0.025 265)";
+/**
+ * Fallback color for connections hydrated without one (e.g. historical DB rows
+ * that predate the kind-driven picker). Resolves to the `pin` kind's canonical
+ * swatch — see `src/lib/connection-kind-colors.ts`.
+ */
+const CONNECTION_DEFAULT_COLOR = colorForConnectionKind("pin");
 /** OS/browser built-ins only — CSS has no pin/scissors keywords; crosshair reads as precise targeting. */
 const CONNECTION_DRAW_CURSOR = "crosshair";
 const CONNECTION_CUT_CURSOR = "crosshair";
@@ -1891,7 +1900,14 @@ export function ArchitecturalCanvasApp({
   const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
   const [threadRosterNotice, setThreadRosterNotice] = useState<string | null>(null);
   const [collabConnectionsNotice, setCollabConnectionsNotice] = useState<string | null>(null);
-  const [connectionColor, setConnectionColor] = useState(CONNECTION_DEFAULT_COLOR);
+  /**
+   * Connection kind drives BOTH the color and `item_links.link_type` written
+   * when a new thread is drawn. The picker edits this single piece of state;
+   * `connection-kind-colors.ts` is the canonical map. Legacy per-color state
+   * was removed — color is a visual consequence of the selected kind.
+   */
+  const [connectionKind, setConnectionKind] = useState<ConnectionKind>("pin");
+  const connectionColor = useMemo(() => colorForConnectionKind(connectionKind), [connectionKind]);
   const [connectionCursorWorld, setConnectionCursorWorld] = useState<{ x: number; y: number } | null>(
     null,
   );
@@ -3245,15 +3261,32 @@ export function ArchitecturalCanvasApp({
     [setConnectionSyncPatch],
   );
 
+  /**
+   * Sets `item_links.link_type` on a thread. If the new `linkType` maps to a
+   * canonical picker kind (`pin`, `reference`, `ally`, `enemy`, `neutral`,
+   * `quest`, `lore`, `other`), ALSO recolor the thread to that kind's
+   * signature color so color + link_type stay locked. Legacy story-tag values
+   * (`faction`, `location`, `npc`) leave color alone.
+   */
   const setConnectionLinkType = useCallback(
     (connectionId: string, linkType: string) => {
       const cur = graphRef.current.connections[connectionId];
-      if (!cur || (cur.linkType ?? "pin") === linkType) return;
+      if (!cur) return;
+      const currentLt = cur.linkType ?? "pin";
+      const kind = CONNECTION_KINDS_IN_ORDER.find((k) => linkTypeForConnectionKind(k) === linkType);
+      const nextColor = kind ? colorForConnectionKind(kind) : null;
+      const colorChanges = nextColor !== null && cur.color !== nextColor;
+      const linkTypeChanges = currentLt !== linkType;
+      if (!colorChanges && !linkTypeChanges) return;
       recordUndoBeforeMutation();
-      setConnectionSyncPatch(connectionId, { linkType });
-      void syncLinkTypeConnection(connectionId, linkType);
+      const patch: { linkType?: string; color?: string } = {};
+      if (linkTypeChanges) patch.linkType = linkType;
+      if (colorChanges && nextColor) patch.color = nextColor;
+      setConnectionSyncPatch(connectionId, patch);
+      if (linkTypeChanges) void syncLinkTypeConnection(connectionId, linkType);
+      if (colorChanges && nextColor) void syncColorConnection(connectionId, nextColor);
     },
-    [recordUndoBeforeMutation, setConnectionSyncPatch, syncLinkTypeConnection],
+    [recordUndoBeforeMutation, setConnectionSyncPatch, syncColorConnection, syncLinkTypeConnection],
   );
 
   const createConnection = useCallback(
@@ -3286,7 +3319,7 @@ export function ArchitecturalCanvasApp({
             ? CONNECTION_PIN_DEFAULT_FOLDER
             : CONNECTION_PIN_DEFAULT_CONTENT,
         color: connectionColor,
-        linkType: "pin",
+        linkType: linkTypeForConnectionKind(connectionKind),
         slackMultiplier: DEFAULT_LINK_SLACK_MULTIPLIER,
         createdAt: now,
         updatedAt: now,
@@ -3302,7 +3335,7 @@ export function ArchitecturalCanvasApp({
       });
       void syncCreateConnection(connectionId, newConnection);
     },
-    [connectionColor, createId, recordUndoBeforeMutation, syncCreateConnection],
+    [connectionColor, connectionKind, createId, recordUndoBeforeMutation, syncCreateConnection],
   );
 
   const cutConnection = useCallback(
@@ -3322,15 +3355,34 @@ export function ArchitecturalCanvasApp({
     [recordUndoBeforeMutation, syncDeleteConnection],
   );
 
+  /**
+   * Recolor a thread. The new `color` snaps to the nearest picker kind and we
+   * write BOTH the canonical color AND its `link_type` so color + kind stay
+   * locked (see `connection-kind-colors.ts`).
+   */
   const recolorConnection = useCallback(
     (connectionId: string, color: string) => {
       const current = graphRef.current.connections[connectionId];
-      if (!current || current.color === color) return;
+      if (!current) return;
+      const kind = snapColorToConnectionKind(color);
+      const { color: canonicalColor, linkType: canonicalLinkType } = canonicalPairForKind(kind);
+      const colorChanges = current.color !== canonicalColor;
+      const linkTypeChanges = (current.linkType ?? "pin") !== canonicalLinkType;
+      if (!colorChanges && !linkTypeChanges) return;
       recordUndoBeforeMutation();
-      setConnectionSyncPatch(connectionId, { color });
-      void syncColorConnection(connectionId, color);
+      const patch: { color?: string; linkType?: string } = {};
+      if (colorChanges) patch.color = canonicalColor;
+      if (linkTypeChanges) patch.linkType = canonicalLinkType;
+      setConnectionSyncPatch(connectionId, patch);
+      if (colorChanges) void syncColorConnection(connectionId, canonicalColor);
+      if (linkTypeChanges) void syncLinkTypeConnection(connectionId, canonicalLinkType);
     },
-    [recordUndoBeforeMutation, setConnectionSyncPatch, syncColorConnection],
+    [
+      recordUndoBeforeMutation,
+      setConnectionSyncPatch,
+      syncColorConnection,
+      syncLinkTypeConnection,
+    ],
   );
 
   const setConnectionSlack = useCallback(
@@ -3347,12 +3399,18 @@ export function ArchitecturalCanvasApp({
     [recordUndoBeforeMutation, setConnectionSyncPatch, syncConnectionSlack],
   );
 
-  const applyConnectionColor = useCallback(
-    (nextColor: string) => {
-      setConnectionColor(nextColor);
+  /**
+   * Picker change: set the active kind for NEW threads, and — when exactly
+   * two cards are selected — retcon all threads BETWEEN those two cards to
+   * the canonical (color, link_type) pair for the picked kind.
+   */
+  const applyConnectionKind = useCallback(
+    (nextKind: ConnectionKind) => {
+      setConnectionKind(nextKind);
       const selected = selectedNodeIdsRef.current;
       if (selected.length !== 2) return;
       const [a, b] = selected;
+      const nextColor = colorForConnectionKind(nextKind);
       const between = Object.values(graphRef.current.connections)
         .filter(
           (connection) =>
@@ -3364,22 +3422,50 @@ export function ArchitecturalCanvasApp({
     },
     [recolorConnection],
   );
-  const connectionColorSchemeId = useMemo<FolderColorSchemeId | null>(() => {
-    if (connectionColor === CONNECTION_CLASSIC_THREAD_COLOR) return null;
-    return FOLDER_COLOR_SCHEMES.find((scheme) => scheme.swatch === connectionColor)?.id ?? null;
-  }, [connectionColor]);
-  const applyConnectionColorScheme = useCallback(
-    (nextScheme: FolderColorSchemeId | null) => {
-      if (nextScheme === null) {
-        applyConnectionColor(CONNECTION_CLASSIC_THREAD_COLOR);
-        return;
-      }
-      const match = FOLDER_COLOR_SCHEMES.find((scheme) => scheme.id === nextScheme);
-      if (!match) return;
-      applyConnectionColor(match.swatch);
-    },
-    [applyConnectionColor],
-  );
+
+  /**
+   * Legacy thread migration: any connection whose (color, link_type) isn't a
+   * canonical picker pair gets snapped to the nearest kind and rewritten with
+   * the canonical pair. Runs once per connection id (tracked via ref) and
+   * skips undo so the history stack stays meaningful. Only fires after
+   * bootstrap has resolved to avoid racing with the initial graph hydrate.
+   */
+  const migratedConnectionIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (scenario === "default" && !canvasBootstrapResolved) return;
+    const seen = migratedConnectionIdsRef.current;
+    const patches: Array<{ id: string; color: string; linkType: string }> = [];
+    for (const conn of Object.values(graph.connections)) {
+      if (seen.has(conn.id)) continue;
+      seen.add(conn.id);
+      if (isCanonicalConnectionPair({ color: conn.color, linkType: conn.linkType })) continue;
+      const kind = canonicalKindForConnection({ color: conn.color, linkType: conn.linkType });
+      const pair = canonicalPairForKind(kind);
+      if (conn.color === pair.color && (conn.linkType ?? "pin") === pair.linkType) continue;
+      patches.push({ id: conn.id, color: pair.color, linkType: pair.linkType });
+    }
+    if (patches.length === 0) return;
+    for (const p of patches) {
+      const current = graphRef.current.connections[p.id];
+      if (!current) continue;
+      const colorChanged = current.color !== p.color;
+      const linkTypeChanged = (current.linkType ?? "pin") !== p.linkType;
+      if (!colorChanged && !linkTypeChanged) continue;
+      const patch: { color?: string; linkType?: string } = {};
+      if (colorChanged) patch.color = p.color;
+      if (linkTypeChanged) patch.linkType = p.linkType;
+      setConnectionSyncPatch(p.id, patch);
+      if (colorChanged) void syncColorConnection(p.id, p.color);
+      if (linkTypeChanged) void syncLinkTypeConnection(p.id, p.linkType);
+    }
+  }, [
+    graph.connections,
+    scenario,
+    canvasBootstrapResolved,
+    setConnectionSyncPatch,
+    syncColorConnection,
+    syncLinkTypeConnection,
+  ]);
 
   useEffect(() => {
     if (!stackModal) {
@@ -9758,8 +9844,29 @@ export function ArchitecturalCanvasApp({
     for (const { group, options } of grouped) {
       out.push({ type: "heading", label: LINK_TYPE_GROUP_HEADINGS[group] });
       for (const opt of options) {
+        // Picker kinds render with their canonical color swatch so the right-click
+        // menu visibly matches the thread-ink picker. Legacy story_tag options
+        // (faction/location/npc) still appear without a swatch — they don't rewrite color.
+        const kindForOpt = CONNECTION_KINDS_IN_ORDER.find(
+          (k) => linkTypeForConnectionKind(k) === opt.value,
+        );
+        const swatchIcon = kindForOpt ? (
+          <span
+            aria-hidden
+            style={{
+              width: 14,
+              height: 14,
+              borderRadius: 999,
+              display: "inline-block",
+              background: colorForConnectionKind(kindForOpt),
+              boxShadow:
+                "inset 0 1px 2px color-mix(in oklch, black 30%, transparent), 0 0 0 1px color-mix(in oklch, black 50%, transparent)",
+            }}
+          />
+        ) : undefined;
         out.push({
           label: `${currentLt === opt.value ? "✓ " : ""}${opt.menuLabel}`,
+          icon: swatchIcon,
           onSelect: () => setConnectionLinkType(selectedConnectionId, opt.value),
         });
       }
@@ -11019,11 +11126,11 @@ export function ArchitecturalCanvasApp({
               }
             }}
             connectionColorControl={
-              <ArchitecturalFolderColorStrip
-                value={connectionColorSchemeId}
-                onChange={applyConnectionColorScheme}
+              <ArchitecturalConnectionKindPicker
+                value={connectionKind}
+                onChange={applyConnectionKind}
                 appearance="spool"
-                ariaLabel="Connection thread color"
+                ariaLabel="Connection thread kind"
                 engaged={connectionMode === "draw"}
               />
             }

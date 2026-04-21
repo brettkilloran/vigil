@@ -11,7 +11,7 @@ import {
   DEFAULT_FORMAT_ACTIONS,
   type ConnectionDockMode,
 } from "@/src/components/foundation/ArchitecturalBottomDock";
-import { type FolderColorSchemeId } from "@/src/components/foundation/architectural-folder-schemes";
+import { type ConnectionKind } from "@/src/lib/connection-kind-colors";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 
 const meta: Meta<typeof ArchitecturalBottomDock> = {
@@ -123,15 +123,15 @@ export const Editor: Story = {
 
 function ConnectionToolbarDemo() {
   const [mode, setMode] = useState<ConnectionDockMode>("move");
-  const [colorScheme, setColorScheme] = useState<FolderColorSchemeId | null>("midnight");
+  const [connectionKind, setConnectionKind] = useState<ConnectionKind>("pin");
   return (
     <div style={{ position: "absolute", top: 24, right: 24 }}>
       <div className={styles.rootDockPanel}>
         <ArchitecturalConnectionToolbar
           mode={mode}
           onSetMode={setMode}
-          colorScheme={colorScheme}
-          onSetColorScheme={setColorScheme}
+          connectionKind={connectionKind}
+          onSetConnectionKind={setConnectionKind}
         />
       </div>
     </div>
