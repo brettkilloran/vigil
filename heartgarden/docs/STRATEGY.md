@@ -2,7 +2,7 @@
 title: heartgarden — engineering strategy
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-13
+last_reviewed: 2026-04-21
 related:
   - heartgarden/docs/BUILD_PLAN.md
   - heartgarden/docs/LORE_ENGINE_ROADMAP.md
@@ -29,7 +29,7 @@ This file is the **short bridge** between the repo today and planning docs. **Lo
 | Motion | **CSS transitions** + pointer/wheel handlers in **`ArchitecturalCanvasApp`**; optional **WebGL** flow overlay + timed **nav** dimming when canvas effects are on (**no** framer-motion / @use-gesture / three / gsap in tree) | Same product feel; optional motion lib later |
 | Styling | **Tailwind 4** + tokens; **Geist** + **Lora** (headings in editor); Vercel-ish neutrals + card tokens; chips/glass via `vigil-ui-classes` | Visual Design Bible polish + `VISUAL_REVAMP_PLAN` (icons, grouping) |
 | Cross-card links | Wiki-style `vigil:item:` / `[[` in note HTML + **`/api/item-links`** / **`/api/item-links/sync`**; **Links** panel resolves from **content** on **local canvas** (no Neon); cloud uses **`item_links`** API; **Graph** overlay (**d3-force**) via **`GET /api/spaces/[id]/graph`** | Richer editor (e.g. TipTap), LLM auto-linking, Phase 5 graph UX |
-| Lore / LLM | **`POST /api/lore/query`** — retrieval (FTS + fuzzy + link neighbors + Anthropic; optional pgvector when embeddings wired) + **Anthropic**; **`LoreAskPanel`**; vault lore meta via Anthropic on index; **no** third-party embedding API in this repo (`embedding-provider.ts`) | Phase 5 consistency checker, bulk import, auto-link; optional streaming |
+| Lore / LLM | **`POST /api/lore/query`** — retrieval (FTS + fuzzy + link neighbors + Anthropic; optional pgvector when **`OPENAI_API_KEY`** enables embeddings) + **Anthropic**; **`LoreAskPanel`**; vault lore meta via Anthropic on index; OpenAI embeddings live in `embedding-provider.ts` (default **`text-embedding-3-small`**) | Phase 5 consistency checker, bulk import, auto-link; optional streaming |
 | Save confidence | **Status bar** sync line (`neon-sync-bus` + wrapped Neon API calls + debounced note pending); documents undo vs server in UI; delta sync defers polls while editing (`docs/API.md` browser shell) | Optional: canvas **version history** / snapshots (`BUILD_PLAN.md` UX2) |
 | TTRPG | **Entity type** bar + **`entity_meta`** fields per type; **Timeline** panel (Event + `eventDate`) | Markdown LLM import, consistency checker, richer forms |
 | Import / export | Toolbar **Export** / **Import** (JSON); cloud import creates items via API | Preferences, richer conflict rules |

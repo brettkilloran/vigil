@@ -15,11 +15,11 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). Without `NEON_DATABASE_URL`, the app runs in **local-only** mode (data in `localStorage`). With Neon configured, use **`docs/STRATEGY.md`** migration notes if upgrading from older schemas (removed `users` / `source_shape_id` / tldraw snapshots).
 
-Copy [`.env.local.example`](.env.local.example) to `.env.local` for database, optional **Anthropic** (lore Q&A, imports), and optional R2.
+Copy [`.env.local.example`](.env.local.example) to `.env.local` for database, optional **Anthropic** (lore Q&A, imports), optional **OpenAI** embeddings (vault vectors / semantic search), and optional R2.
 
 Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 
-**Neon + vault index (automated):** From this folder, **`npm run db:vault-setup`** runs pgvector, **`drizzle-kit push --force`**, and the vault SQL migration (see [`docs/FOLLOW_UP.md`](docs/FOLLOW_UP.md)). Chunk **vector** embeddings are not wired to an external API in this repo (see **`src/lib/embedding-provider.ts`**); search uses Postgres FTS + trigram. **`npm run vault:reindex`** still refreshes lore meta when configured. GitHub: manual workflow **`heartgarden-db-vault.yml`** + secret **`HEARTGARDEN_NEON_DATABASE_URL`**.
+**Neon + vault index (automated):** From this folder, **`npm run db:vault-setup`** runs pgvector, **`drizzle-kit push --force`**, and the vault SQL migration (see [`docs/FOLLOW_UP.md`](docs/FOLLOW_UP.md)). When **`OPENAI_API_KEY`** is set, **`src/lib/embedding-provider.ts`** writes chunk vectors with OpenAI embeddings (default **`text-embedding-3-small`**); without it, vault reindex still refreshes lexical search data and lore meta, and hybrid/semantic modes fall back to lexical-only retrieval. GitHub: manual workflow **`heartgarden-db-vault.yml`** + secret **`HEARTGARDEN_NEON_DATABASE_URL`**.
 
 ## Scripts
 

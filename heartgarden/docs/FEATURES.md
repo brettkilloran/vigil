@@ -51,7 +51,7 @@ Single place to **look up what exists** and where it lives. For **HTTP contracts
 |--------|----------------------------|------|----------------|
 | **Cmd+K palette** | Search suggest, spaces, actions, **lore create shortcuts** (character; organization letterhead/monogram/framed; location plaque/postcard/survey), export, recents (caps expanded over time) | [`API.md`](./API.md) (`/api/search/suggest`) | `paletteActions` / `runPaletteAction` in `ArchitecturalCanvasApp.tsx`, `app/api/search/suggest/route.ts` |
 | **Vault index status** | Status bar line for “indexing notes…” / errors (pending + in-flight) | [`CODEMAP.md`](./CODEMAP.md) (Search & vault index), [`API.md`](./API.md) (`POST …/index`) | `vault-index-status-bus.ts`, `VaultIndexStatusInline` in `ArchitecturalStatusBar.tsx`, debounced index in `architectural-neon-api.ts` |
-| **Hybrid / semantic search** | Palette + `/api/search` RRF when embeddings exist | [`API.md`](./API.md), [`BUILD_PLAN.md`](./BUILD_PLAN.md) | `app/api/search/route.ts`, `vault-retrieval-rrf.ts` |
+| **Hybrid / semantic search** | Palette + `/api/search` RRF when embeddings exist; lexical-only fallback when OpenAI embeddings are not configured | [`API.md`](./API.md), [`BUILD_PLAN.md`](./BUILD_PLAN.md), [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md) | `app/api/search/route.ts`, `vault-retrieval-rrf.ts`, `embedding-provider.ts` |
 | **Ask lore** | Lore Q&A panel | [`API.md`](./API.md) (`/api/lore/query`) | `LoreAskPanel.tsx`, `lore-engine.ts` |
 
 ---
@@ -89,6 +89,7 @@ Single place to **look up what exists** and where it lives. For **HTTP contracts
 | **PIN boot gate** | Splash PINs, signed `hg_boot`, rate limit, log out | [`API.md`](./API.md), [`PLAYER_LAYER.md`](./PLAYER_LAYER.md), [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md) | `VigilAppBootScreen`, `proxy.ts`, `heartgarden-boot-*.ts` |
 | **Players tier** | Single scoped space, API enforcement | [`PLAYER_LAYER.md`](./PLAYER_LAYER.md) | `heartgarden-api-boot-context.ts`, `heartgarden-space-route-access.ts` |
 | **Presence POST rate limit** | Per public IP budget (NAT-friendly defaults) | [`API.md`](./API.md), [`PLAYER_LAYER.md`](./PLAYER_LAYER.md) | `heartgarden-presence-rate-limit.ts` |
+| **Search rate limit** | Per public IP budget on `GET /api/search`; returns `429` + `Retry-After: 60` on bursts | [`API.md`](./API.md) | `search-rate-limit.ts`, `app/api/search/route.ts` |
 
 ---
 

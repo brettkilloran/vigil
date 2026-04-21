@@ -2,7 +2,7 @@
 title: Lore engine roadmap
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-11
+last_reviewed: 2026-04-21
 canonical: true
 related:
   - heartgarden/docs/BUILD_PLAN.md
@@ -22,9 +22,10 @@ related:
 
 ## Code anchors (verify before changing docs)
 
-- Lore Q&A: `app/api/lore/query/route.ts`, `src/lib/lore-engine.ts`, `src/lib/vault-retrieval.ts`
+- Lore Q&A: `app/api/lore/query/route.ts`, `src/lib/lore-engine.ts`, `src/lib/vault-retrieval.ts`, `src/components/ui/LoreAskPanel.tsx`
 - Lore import (plan/apply/commit): `app/api/lore/import/*`, `src/lib/lore-import-*.ts` — see [`docs/API.md`](./API.md); pending review + `entity_meta` in [`FEATURES.md`](./FEATURES.md)
-- Vault index: `src/lib/item-vault-index.ts`, `POST /api/items/[itemId]/index`
+- Vault index: `src/lib/item-vault-index.ts`, `POST /api/items/[itemId]/index`, `src/lib/embedding-provider.ts`
+- Search hardening: `app/api/search/route.ts`, `src/lib/search-rate-limit.ts`
 - Schema: `src/db/schema.ts` (`item_embeddings`, `items` lore fields)
 
 Do **not** duplicate env var tables here — use [`docs/VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md).

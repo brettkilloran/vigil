@@ -95,7 +95,7 @@ Optional **`HEARTGARDEN_MCP_URL`** (default `https://heartgarden.vercel.app/api/
 | PATCH | `/api/items/[itemId]` | Partial update (geometry, content, entity meta, stack, …). Body may include **`contentText`** (plain) and/or **`contentJson`** (TipTap / hgArch document root, typically **`{ type: "doc", content: [...] }`**—same shape as stored on the item). Prefer patching **`contentText`** unless replacing full editor state. Optional **`baseUpdatedAt`** (ISO) must match the row’s **`updated_at`** or the handler returns **409** **`{ ok: false, error: "conflict", item }`**. Missing item → **404**; the shell drops the entity locally (remote delete). Success returns **`{ ok: true, item }`** (includes **`updatedAt`**). Triggers search blob / optional vault scheduling per implementation. **Browser shell** behavior: see **Browser shell — PATCH versioning and conflicts** (after this table). |
 | DELETE | `/api/items/[itemId]` | Delete item. |
 | POST | `/api/items/[itemId]/embed` | Clear stale `item_embeddings` rows for item (does not embed). |
-| POST | `/api/items/[itemId]/index` | Chunk + optional lore meta (Anthropic). Vector rows require a future embedding provider in **`src/lib/embedding-provider.ts`** (none wired). Rate-limited. |
+| POST | `/api/items/[itemId]/index` | Chunk + optional lore meta (Anthropic). When **`OPENAI_API_KEY`** is set, writes chunk vectors via **`src/lib/embedding-provider.ts`** (default **`text-embedding-3-small`**); without it, lexical search data and lore meta still refresh. Rate-limited. |
 | GET | `/api/items/[itemId]/links` | Link neighbors. |
 | GET | `/api/items/[itemId]/related` | Related-items heuristic. |
 
@@ -206,6 +206,8 @@ When one concept set is densely connected, prefer folder containment (child spac
 | `NEON_DATABASE_URL` / `DATABASE_URL` | DB |
 | `ANTHROPIC_API_KEY` | Lore query, import planning, index lore meta |
 | `ANTHROPIC_LORE_MODEL` | Optional model override |
+| `OPENAI_API_KEY` | Optional OpenAI embeddings for vault chunk vectors / semantic search |
+| `HEARTGARDEN_OPENAI_EMBEDDING_MODEL` | Optional OpenAI embedding model override (default **`text-embedding-3-small`**) |
 | `HEARTGARDEN_MCP_SERVICE_KEY` | Bearer for **`GET|POST|DELETE /api/mcp`**, stdio MCP internal `fetch` to **`/api/*`** when the boot gate is on, and boot-context GM resolution for those requests |
 | `HEARTGARDEN_MCP_WRITE_KEY` | Reindex + MCP write tools (must match client `write_key`) |
 | `HEARTGARDEN_MCP_FETCH_TIMEOUT_MS` | Optional MCP internal API fetch timeout in ms (default **30000**, clamped **1000–120000**). |

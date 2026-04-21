@@ -108,7 +108,7 @@ NEON_VERCEL_SETUP.md
 
 ## Phase 8 — Optional: vault reindex (assistant + you)
 
-You may run **`npm run vault:reindex`** locally with **`HEARTGARDEN_APP_URL`** pointing at production — see [`NEON_VERCEL_SETUP.md`](./NEON_VERCEL_SETUP.md) §4 and [`FOLLOW_UP.md`](./FOLLOW_UP.md). Vector chunk rows require a future embedding provider in **`src/lib/embedding-provider.ts`**.
+You may run **`npm run vault:reindex`** locally with **`HEARTGARDEN_APP_URL`** pointing at production — see [`NEON_VERCEL_SETUP.md`](./NEON_VERCEL_SETUP.md) §4 and [`FOLLOW_UP.md`](./FOLLOW_UP.md). When **`OPENAI_API_KEY`** is set in the target environment, reindex also refreshes vector chunk rows through **`src/lib/embedding-provider.ts`**; without it, reindex still refreshes lexical search data and lore meta.
 
 **Prompt to send:**
 

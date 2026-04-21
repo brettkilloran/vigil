@@ -1,6 +1,5 @@
 ---
-
-## title: heartgarden — code map
+title: heartgarden — code map
 status: canonical
 audience: [agent, human]
 last_reviewed: 2026-04-21
@@ -8,6 +7,7 @@ canonical: true
 related:
   - heartgarden/docs/FEATURES.md
   - heartgarden/docs/API.md
+---
 
 # heartgarden — code map
 
@@ -104,6 +104,7 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Concern                                  | Location                                                                                      |
 | ---------------------------------------- | --------------------------------------------------------------------------------------------- |
 | FTS + fuzzy + hybrid RRF                 | `app/api/search/route.ts`, `src/lib/spaces.ts` (search helpers)                               |
+| Search rate limit                        | `src/lib/search-rate-limit.ts`                                                                |
 | Suggest (palette)                        | `app/api/search/suggest/route.ts`                                                             |
 | Raw chunk hits                           | `app/api/search/chunks/route.ts`                                                              |
 | Hybrid retrieval (FTS + vector + fusion) | `src/lib/vault-retrieval.ts`, `vault-retrieval-rrf.ts`                                        |
@@ -122,7 +123,7 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | HTTP entry                   | `app/api/lore/query/route.ts`                              |
 | Retrieval + answer synthesis | `src/lib/lore-engine.ts` (uses `vault-retrieval.ts`)       |
 | Rate limit                   | `src/lib/lore-query-rate-limit.ts`                         |
-| UI                           | `src/components/foundation/LoreAskPanel.tsx` (and related) |
+| UI                           | `src/components/ui/LoreAskPanel.tsx`, `src/components/ui/LoreAskPanel.stories.tsx` |
 
 
 ## Lore import (smart import)
@@ -209,8 +210,9 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 
 | Concern | Location                                           |
 | ------- | -------------------------------------------------- |
-| Unit    | `src/**/*.test.ts`, `vitest.config.ts`             |
+| Unit + route tests | `src/**/*.test.ts`, `app/api/**/*.test.ts`, `vitest.config.ts` |
 | E2E     | `e2e/`, `playwright.config.ts`                     |
+| Storybook | `src/components/**/*.stories.tsx`, `.storybook/` |
 | Checks  | `npm run check`, `npm run check:all` (`AGENTS.md`) |
 
 

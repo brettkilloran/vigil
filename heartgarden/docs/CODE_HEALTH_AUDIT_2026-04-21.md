@@ -1,7 +1,6 @@
 ---
 
-## title: heartgarden — code health audit (2026-04-21)
-
+title: heartgarden — code health audit (2026-04-21)
 status: supporting
 audience: [agent, human]
 last_reviewed: 2026-04-21
@@ -12,12 +11,14 @@ related:
 - heartgarden/docs/CODEMAP.md
 - heartgarden/docs/API.md
 
+---
+
 # heartgarden — code health audit (2026-04-21)
 
 A read-only review of the production shell, sync layer, search/vault, editor, realtime, and operational hygiene. The app is largely **vibecoded**, so findings cluster around three themes:
 
 1. **Silent failure culture** — `catch {}` hides real bugs from users and ops.
-2. **Correctness drift** — optimistic lock optional; "hybrid" search where the vector provider is permanently stubbed; link revision joins only one side.
+2. **Correctness drift** — optimistic lock optional; search / embedding behavior and docs drifting out of sync; link revision joins only one side.
 3. **Unbounded work** — delta reads without `LIMIT`; full-space scans on hot paths; presence GC on every request.
 
 This file is a **living backlog** — work items below are intended to be picked up progressively. Check off items when merged; open a plan in `.cursor/plans/` only if the fix needs multi-step coordination. Cross-link shipped fixes from `**BUILD_PLAN.md`** if they close an architectural concern.
@@ -523,7 +524,7 @@ Not dead code; confirm bundle impact is acceptable for a TTRPG notes app.
 
 ### Week 2 — honesty & observability
 
-1. Decide on embeddings: wire a provider or delete the vector code paths and docs (#5, #6).
+1. Keep embeddings honest: verify OpenAI-backed vector ops, fallback behavior, and docs stay aligned (#5, #6, #35).
 2. Replace `catch {}` in shell and neon-api with structured error reporting via `neon-sync-bus` (#7).
 3. Redact raw upstream `Error.message` in all failed paths; log server-side (#14).
 4. Add shared `AbortController` to shell fetches + LLM/MCP calls with a deadline (#21, #32).
