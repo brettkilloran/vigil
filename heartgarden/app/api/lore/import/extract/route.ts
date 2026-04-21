@@ -5,6 +5,10 @@ import {
   getHeartgardenApiBootContext,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { extractLoreEntitiesWithAnthropic } from "@/src/lib/lore-import-extract";
+import {
+  heartgardenImportLegacyEnabled,
+  heartgardenImportLegacyGoneResponse,
+} from "@/src/lib/heartgarden-import-legacy-gate";
 
 export const runtime = "nodejs";
 
@@ -13,6 +17,10 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  if (!heartgardenImportLegacyEnabled()) {
+    return heartgardenImportLegacyGoneResponse("/api/lore/import/extract");
+  }
+
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
   if (denied) return denied;

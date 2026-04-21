@@ -10,10 +10,12 @@ import {
   heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
+import { buildLoreNoteContentJson } from "@/src/lib/lore-import-commit";
 import {
-  buildLoreNoteContentJson,
-  planLoreImportCardLayout,
-} from "@/src/lib/lore-import-commit";
+  heartgardenImportLegacyEnabled,
+  heartgardenImportLegacyGoneResponse,
+} from "@/src/lib/heartgarden-import-legacy-gate";
+import { placeImportCards } from "@/src/lib/lore-import-placement";
 import { normalizeImportItemLinkType } from "@/src/lib/lore-import-item-link";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 import { normalizeCanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
@@ -82,6 +84,10 @@ function resolveNameToId(
 }
 
 export async function POST(req: Request) {
+  if (!heartgardenImportLegacyEnabled()) {
+    return heartgardenImportLegacyGoneResponse("/api/lore/import/commit");
+  }
+
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
   if (denied) return denied;
@@ -130,7 +136,27 @@ export async function POST(req: Request) {
 
   const ox = parsed.data.layout?.originX ?? 0;
   const oy = parsed.data.layout?.originY ?? 0;
-  const layout = planLoreImportCardLayout(ox, oy, sourceText.length > 0, deduped.length);
+  const linkPairs = (suggestedLinks ?? []).map((l) => ({
+    from: l.fromName.trim().toLowerCase(),
+    to: l.toName.trim().toLowerCase(),
+  }));
+  const layout = placeImportCards({
+    originX: ox,
+    originY: oy,
+    source: sourceText.length > 0 ? { width: 420, height: 360 } : undefined,
+    entities: deduped.map((e) => ({
+      clientId: e.canonicalName.toLowerCase(),
+      affinities: linkPairs
+        .filter(
+          (l) =>
+            l.from === e.canonicalName.toLowerCase() ||
+            l.to === e.canonicalName.toLowerCase(),
+        )
+        .map((l) =>
+          l.from === e.canonicalName.toLowerCase() ? l.to : l.from,
+        ),
+    })),
+  });
 
   const embeddingRows: (typeof items.$inferSelect)[] = [];
 
@@ -216,7 +242,12 @@ export async function POST(req: Request) {
 
       for (let i = 0; i < deduped.length; i++) {
         const e = deduped[i]!;
-        const pos = layout.entities[i]!;
+        const pos = layout.entities[e.canonicalName.toLowerCase()] ?? {
+          x: ox,
+          y: oy,
+          width: 280,
+          height: 260,
+        };
         const summary = e.summary ?? "";
         const contentJson = buildLoreNoteContentJson(summary || "—", { aiPending: true });
         const canonKind = normalizeCanonicalEntityKind(e.kind ?? "lore");

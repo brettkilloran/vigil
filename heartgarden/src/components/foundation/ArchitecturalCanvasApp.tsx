@@ -7268,49 +7268,21 @@ export function ArchitecturalCanvasApp({
               }
               if (!planReady) {
                 window.alert(
-                  "Import planning is taking too long (the server may still be working). Try again in a minute, split the file, or use legacy import.",
+                  "Import planning is taking too long (the server may still be working). Try again in a minute or split the file into smaller parts.",
                 );
               }
             }
           } catch {
-            window.alert("Smart import job request failed — opening legacy review.");
+            window.alert("Smart import job request failed. Please try again or split the file.");
           } finally {
             setLoreSmartPlanning(false);
           }
+          return;
         }
 
-        let entities: LoreImportEntityDraft[] = [];
-        let suggestedLinks: LoreImportLinkDraft[] = [];
-        try {
-          const extRes = await fetch("/api/lore/import/extract", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: parsed.text }),
-          });
-          const extracted = (await extRes.json()) as {
-            ok?: boolean;
-            error?: string;
-            entities?: LoreImportEntityDraft[];
-            suggestedLinks?: LoreImportLinkDraft[];
-          };
-          if (extRes.ok && extracted.ok) {
-            entities = Array.isArray(extracted.entities) ? extracted.entities : [];
-            suggestedLinks = Array.isArray(extracted.suggestedLinks) ? extracted.suggestedLinks : [];
-          } else if (extRes.status !== 503) {
-            window.alert(extracted.error ?? "Extract failed");
-            return;
-          }
-        } catch {
-          /* Network error — still open manual review with parsed text */
-        }
-        setLoreImportDraft({
-          fileName: parsed.fileName,
-          sourceTitle: parsed.suggestedTitle,
-          sourceText: parsed.text,
-          includeSourceCard: true,
-          entities,
-          suggestedLinks,
-        });
+        window.alert(
+          "Smart import requires a connected Neon space. Connect your workspace and retry to import lore from this file.",
+        );
       } catch {
         window.alert("Import request failed");
       }
