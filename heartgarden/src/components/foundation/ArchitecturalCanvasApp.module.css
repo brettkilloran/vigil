@@ -3376,6 +3376,16 @@
     inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 92%, transparent);
 }
 
+/* Same global `min-height: 36px` as swatches — kept trigger non-square and squashed the ink dot. */
+.shell :global(.vigil-btn).dockFolderTintTriggerSpool {
+  min-height: 32px;
+  min-width: 32px;
+  max-height: 32px;
+  max-width: 32px;
+  padding-inline: 0;
+  aspect-ratio: 1;
+}
+
 .dockFolderTintTrigger:hover {
   border-color: color-mix(in oklch, var(--sem-text-muted) 28%, var(--sem-border-subtle));
   background: color-mix(in oklch, var(--sys-color-black) 62%, transparent);
@@ -3555,6 +3565,20 @@
     border-color 0.14s ease;
 }
 
+/*
+ * `.shell .vigil-btn` sets min-height: 36px globally. Swatches use 30×30 → 30×36 ovals.
+ * The spool menu is portaled under `#hg-portal-root` (outside `.shell`), so this must not
+ * rely on `.shell` — only on the tint grid / menu wrapper.
+ */
+.dockFolderTintSwatchGrid :global(.vigil-btn).dockFolderTintMenuSwatch,
+.dockFolderTintMenu :global(.vigil-btn).dockFolderTintMenuSwatch {
+  min-height: 0;
+  min-width: 30px;
+  max-height: 30px;
+  padding-inline: 0;
+  aspect-ratio: 1;
+}
+
 .dockFolderTintMenuSwatch:hover {
   transform: scale(1.1);
 }
@@ -3587,6 +3611,181 @@
   box-shadow:
     inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 22%, transparent),
     0 0 0 2px color-mix(in oklch, var(--accent) 38%, transparent);
+}
+
+/* Compact swatch grid — tooltip body (two-line). */
+.dockFolderTintTooltipStack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  max-width: 240px;
+}
+
+.dockFolderTintTooltipName {
+  font-weight: 600;
+  font-size: var(--cmp-tooltip-font-size, 12px);
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+}
+
+.dockFolderTintTooltipMeta {
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 500;
+  color: var(--cmp-tooltip-fg-muted, var(--sem-text-muted));
+}
+
+/* Thread ink — readable catalog (tool rail portal + dock when context=thread). */
+.dockFolderTintMenuThreadCatalog {
+  min-width: min(288px, calc(100vw - 24px));
+  max-width: min(320px, calc(100vw - 24px));
+}
+
+.dockFolderTintCatalog {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: min(520px, 72vh);
+}
+
+.dockFolderTintCatalogHeader {
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid color-mix(in oklch, var(--sys-color-white) 10%, transparent);
+}
+
+.dockFolderTintCatalogTitle {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: color-mix(in oklch, var(--sem-text-primary) 88%, transparent);
+  margin-bottom: 6px;
+}
+
+.dockFolderTintCatalogSubtitle {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  font-weight: 500;
+  color: color-mix(in oklch, var(--sem-text-muted) 94%, transparent);
+}
+
+.dockFolderTintCatalogList {
+  padding: 6px 8px 10px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  scrollbar-gutter: stable;
+}
+
+/*
+ * Catalog rows use `Button` (eslint). Reset global `.shell .vigil-btn` min-height / padding
+ * so rows stay compact and left-aligned (not centered icon buttons).
+ */
+.dockFolderTintCatalogList :global(.vigil-btn).dockFolderTintCatalogRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  min-height: 0;
+  max-height: none;
+  height: auto;
+  margin: 0;
+  padding: 7px 8px;
+  justify-content: flex-start;
+  gap: 10px;
+  border-radius: 8px;
+  border: none;
+  text-align: left;
+  font-weight: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  background: transparent;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition:
+    background 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.dockFolderTintCatalogList :global(.vigil-btn).dockFolderTintCatalogRow:hover {
+  background: color-mix(in oklch, var(--sys-color-white) 8%, transparent);
+}
+
+.dockFolderTintCatalogList :global(.vigil-btn).dockFolderTintCatalogRow:focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--accent) 70%, transparent);
+  outline-offset: 1px;
+}
+
+.dockFolderTintCatalogList :global(.vigil-btn).dockFolderTintCatalogRow.dockFolderTintCatalogRowSelected {
+  background: color-mix(in oklch, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 42%, transparent);
+}
+
+.dockFolderTintCatalogSwatch {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 999px;
+  box-sizing: border-box;
+  box-shadow:
+    inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 28%, transparent),
+    0 1px 3px var(--sem-color-shadow-22);
+}
+
+.dockFolderTintCatalogSwatchHighKey {
+  border: 1px solid color-mix(in oklch, var(--sys-color-white) 34%, transparent);
+  box-shadow:
+    inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 20%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--sys-color-black) 38%, transparent),
+    0 1px 3px var(--sem-color-shadow-22);
+}
+
+.dockFolderTintCatalogText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dockFolderTintCatalogName {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: color-mix(in oklch, var(--sem-text-primary) 96%, transparent);
+}
+
+.dockFolderTintCatalogHint {
+  font-size: 10.5px;
+  line-height: 1.35;
+  font-weight: 500;
+  color: color-mix(in oklch, var(--sem-text-muted) 92%, transparent);
+}
+
+.dockFolderTintMenuEditor .dockFolderTintCatalogTitle {
+  color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
+}
+
+.dockFolderTintMenuEditor .dockFolderTintCatalogSubtitle,
+.dockFolderTintMenuEditor .dockFolderTintCatalogHint {
+  color: color-mix(in oklch, var(--sys-color-white) 52%, transparent);
+}
+
+.dockFolderTintMenuEditor .dockFolderTintCatalogName {
+  color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
+}
+
+.dockFolderTintMenuEditor .dockFolderTintCatalogList :global(.vigil-btn).dockFolderTintCatalogRow:hover {
+  background: color-mix(in oklch, var(--sys-color-white) 8%, transparent);
+}
+
+.dockFolderTintMenuEditor .dockFolderTintCatalogHeader {
+  border-bottom-color: color-mix(in oklch, var(--sys-color-white) 14%, transparent);
 }
 
 .dockFolderTintMenuEditor .dockFolderTintMenuSwatch:hover {

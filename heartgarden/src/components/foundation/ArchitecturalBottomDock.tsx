@@ -40,8 +40,10 @@ import {
 import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
 import { Button } from "@/src/components/ui/Button";
 import {
+  FOLDER_COLOR_BLACK_MIRROR_HINT,
   FOLDER_COLOR_SCHEMES,
   type FolderColorSchemeId,
+  type FolderColorSchemeMeta,
 } from "@/src/components/foundation/architectural-folder-schemes";
 import type {
   ArchitecturalBottomDockVariant,
@@ -320,6 +322,8 @@ export function ArchitecturalFolderColorStrip({
   onChange,
   variant = "canvas",
   appearance = "label",
+  /** Folder card tints vs thread ink — threads get the catalog popover and richer tooltips. */
+  context: contextProp,
   ariaLabel = "Folder inks",
   /** When false, flyout closes and the trigger is inert (e.g. thread spool only in draw mode). */
   engaged = true,
@@ -328,6 +332,7 @@ export function ArchitecturalFolderColorStrip({
   onChange: (next: FolderColorSchemeId | null) => void;
   variant?: "canvas" | "editor";
   appearance?: "label" | "spool";
+  context?: "folder" | "thread";
   ariaLabel?: string;
   engaged?: boolean;
 }) {
@@ -339,6 +344,8 @@ export function ArchitecturalFolderColorStrip({
   const menuRef = useRef<HTMLDivElement | null>(null);
   const isEditor = variant === "editor";
   const isSpool = appearance === "spool";
+  const context = contextProp ?? (isSpool ? "thread" : "folder");
+  const threadCatalog = context === "thread";
   const activeMeta = value ? FOLDER_COLOR_SCHEMES.find((s) => s.id === value) : null;
 
   useEffect(() => {
@@ -355,7 +362,7 @@ export function ArchitecturalFolderColorStrip({
       const trigger = pickerRef.current;
       if (trigger) {
         const rect = trigger.getBoundingClientRect();
-        const estimatedMenuHeight = 190;
+        const estimatedMenuHeight = threadCatalog ? 460 : 190;
         const spaceBelow = window.innerHeight - rect.bottom;
         const spaceAbove = rect.top;
         const shouldOpenDown =
@@ -376,7 +383,7 @@ export function ArchitecturalFolderColorStrip({
     };
     window.addEventListener("pointerdown", onPointerDown, true);
     return () => window.removeEventListener("pointerdown", onPointerDown, true);
-  }, [menuOpen, isSpool]);
+  }, [menuOpen, isSpool, threadCatalog]);
 
   useLayoutEffect(() => {
     if (!menuOpen || !isSpool) {
@@ -407,7 +414,7 @@ export function ArchitecturalFolderColorStrip({
       window.removeEventListener("scroll", position, true);
       window.removeEventListener("resize", position);
     };
-  }, [menuOpen, isSpool]);
+  }, [menuOpen, isSpool, threadCatalog]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -423,9 +430,23 @@ export function ArchitecturalFolderColorStrip({
     setMenuOpen(false);
   };
 
+  const tooltipScheme = (s: FolderColorSchemeMeta) => (
+    <span className={styles.dockFolderTintTooltipStack}>
+      <span className={styles.dockFolderTintTooltipName}>{s.label}</span>
+      <span className={styles.dockFolderTintTooltipMeta}>{s.usageHint}</span>
+    </span>
+  );
+
+  const tooltipBlackMirror = (
+    <span className={styles.dockFolderTintTooltipStack}>
+      <span className={styles.dockFolderTintTooltipName}>Black mirror</span>
+      <span className={styles.dockFolderTintTooltipMeta}>{FOLDER_COLOR_BLACK_MIRROR_HINT}</span>
+    </span>
+  );
+
   const swatchGrid = (
     <div className={styles.dockFolderTintSwatchGrid}>
-      <DockChromeTooltip content="Black mirror">
+      <DockChromeTooltip content={tooltipBlackMirror}>
         <Button
           type="button"
           variant="ghost"
@@ -433,7 +454,7 @@ export function ArchitecturalFolderColorStrip({
           iconOnly
           role="option"
           aria-selected={value == null}
-          aria-label="Black mirror — unmarked folder"
+          aria-label={`Black mirror. ${FOLDER_COLOR_BLACK_MIRROR_HINT}`}
           className={cx(
             styles.dockFolderTintMenuSwatch,
             styles.dockFolderTintMenuSwatchClassic,
@@ -443,7 +464,7 @@ export function ArchitecturalFolderColorStrip({
         />
       </DockChromeTooltip>
       {FOLDER_COLOR_SCHEMES.map((s) => (
-        <DockChromeTooltip key={s.id} content={s.label}>
+        <DockChromeTooltip key={s.id} content={tooltipScheme(s)}>
           <Button
             type="button"
             variant="ghost"
@@ -451,7 +472,7 @@ export function ArchitecturalFolderColorStrip({
             iconOnly
             role="option"
             aria-selected={value === s.id}
-            aria-label={s.label}
+            aria-label={`${s.label}. ${s.usageHint}`}
             className={cx(
               styles.dockFolderTintMenuSwatch,
               (s.id === "white" || s.id === "gray" || s.id === "parchment") &&
@@ -466,6 +487,74 @@ export function ArchitecturalFolderColorStrip({
     </div>
   );
 
+  const threadInkCatalog = (
+    <div className={styles.dockFolderTintCatalog}>
+      <header className={styles.dockFolderTintCatalogHeader}>
+        <div className={styles.dockFolderTintCatalogTitle}>Thread ink</div>
+        <p className={styles.dockFolderTintCatalogSubtitle}>
+          Applies to the next threads you draw. Same hues as folder tints — use them consistently to read relationship
+          kinds at a glance.
+        </p>
+      </header>
+      <div className={styles.dockFolderTintCatalogList} role="listbox" aria-label={ariaLabel}>
+        <Button
+          type="button"
+          variant="ghost"
+          tone="glass"
+          role="option"
+          aria-selected={value == null}
+          aria-label={`Black mirror. ${FOLDER_COLOR_BLACK_MIRROR_HINT}`}
+          className={cx(
+            styles.dockFolderTintCatalogRow,
+            value == null && styles.dockFolderTintCatalogRowSelected,
+          )}
+          onClick={() => pick(null)}
+        >
+          <span
+            className={cx(styles.dockFolderTintCatalogSwatch, styles.dockFolderTintMenuSwatchClassic)}
+            aria-hidden
+          />
+          <span className={styles.dockFolderTintCatalogText}>
+            <span className={styles.dockFolderTintCatalogName}>Black mirror</span>
+            <span className={styles.dockFolderTintCatalogHint}>{FOLDER_COLOR_BLACK_MIRROR_HINT}</span>
+          </span>
+        </Button>
+        {FOLDER_COLOR_SCHEMES.map((s) => (
+          <Button
+            key={s.id}
+            type="button"
+            variant="ghost"
+            tone="glass"
+            role="option"
+            aria-selected={value === s.id}
+            aria-label={`${s.label}. ${s.usageHint}`}
+            className={cx(
+              styles.dockFolderTintCatalogRow,
+              value === s.id && styles.dockFolderTintCatalogRowSelected,
+            )}
+            onClick={() => pick(s.id)}
+          >
+            <span
+              className={cx(
+                styles.dockFolderTintCatalogSwatch,
+                (s.id === "white" || s.id === "gray" || s.id === "parchment") &&
+                  styles.dockFolderTintCatalogSwatchHighKey,
+              )}
+              style={{ background: s.swatch }}
+              aria-hidden
+            />
+            <span className={styles.dockFolderTintCatalogText}>
+              <span className={styles.dockFolderTintCatalogName}>{s.label}</span>
+              <span className={styles.dockFolderTintCatalogHint}>{s.usageHint}</span>
+            </span>
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const menuBody = threadCatalog ? threadInkCatalog : swatchGrid;
+
   const spoolMenuPortal =
     menuOpen && isSpool && typeof document !== "undefined"
       ? createPortal(
@@ -474,17 +563,18 @@ export function ArchitecturalFolderColorStrip({
             className={cx(
               styles.dockFolderTintMenu,
               styles.dockFolderTintMenuSpoolFixed,
+              threadCatalog && styles.dockFolderTintMenuThreadCatalog,
               isEditor && styles.dockFolderTintMenuEditor,
             )}
-            role="listbox"
-            aria-label={ariaLabel}
+            role={threadCatalog ? "presentation" : "listbox"}
+            aria-label={threadCatalog ? undefined : ariaLabel}
             style={
               spoolMenuPos
                 ? { top: spoolMenuPos.top, left: spoolMenuPos.left, opacity: 1 }
                 : { top: 0, left: 0, opacity: 0, pointerEvents: "none" as const }
             }
           >
-            {swatchGrid}
+            {menuBody}
           </div>,
           getVigilPortalRoot(),
         )
@@ -542,12 +632,13 @@ export function ArchitecturalFolderColorStrip({
           className={cx(
             styles.dockFolderTintMenu,
             menuDirection === "down" && styles.dockFolderTintMenuDown,
+            threadCatalog && styles.dockFolderTintMenuThreadCatalog,
             isEditor && styles.dockFolderTintMenuEditor,
           )}
-          role="listbox"
-          aria-label={ariaLabel}
+          role={threadCatalog ? "presentation" : "listbox"}
+          aria-label={threadCatalog ? undefined : ariaLabel}
         >
-          {swatchGrid}
+          {menuBody}
         </div>
       ) : null}
       {spoolMenuPortal}
@@ -639,7 +730,7 @@ export function ArchitecturalConnectionToolbar({
           </ArchitecturalButton>
         </ArchitecturalTooltip>
         <ArchitecturalTooltip
-          content="Draw thread — click two cards to connect. Right-click a thread to tag the relationship. Wiki mentions in prose are separate."
+          content="Draw thread — click two cards to connect; right-click to tag."
           side="top"
           delayMs={420}
           avoidSides={ARCH_TOOLTIP_AVOID_BOTTOM}
@@ -677,6 +768,7 @@ export function ArchitecturalConnectionToolbar({
         value={colorScheme}
         onChange={onSetColorScheme}
         variant={isEditor ? "editor" : "canvas"}
+        context="thread"
       />
     </div>
   );
@@ -968,6 +1060,7 @@ export function ArchitecturalBottomDock({
                   value={connectionColorPicker.value}
                   onChange={connectionColorPicker.onChange}
                   variant={isEditor ? "editor" : "canvas"}
+                  context="thread"
                 />
               </div>
             </div>
