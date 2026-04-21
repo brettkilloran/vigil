@@ -2,7 +2,7 @@
 title: heartgarden — HTTP API reference
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-13
+last_reviewed: 2026-04-21
 canonical: true
 related:
   - heartgarden/docs/FEATURES.md
@@ -18,6 +18,8 @@ Hand-maintained catalog of **`app/api/**`** routes. **Auth:** the app is single-
 
 Conventions: successful JSON often includes `{ ok: true, … }`; errors `{ ok: false, error: string }` (legacy **`/api/v1/*`** uses `{ error: string }` only).
 
+**Boot gate (edge):** When the PIN gate is enabled, root **`proxy.ts`** (matcher **`/api/:path*`**) rejects unauthenticated **`/api/*`** with **403** — same rules described historically as “middleware.” Details: **`src/lib/heartgarden-boot-edge.ts`**, **`AGENTS.md`** (Next dev leaves gate off by default).
+
 ## Client-only editor behavior (not HTTP)
 
 **hgDoc** block reorder (six-dot grip in the focus / document sheet) runs entirely in the browser (`HgDocPointerBlockDrag`). It does **not** call a heartgarden API and is **not** listed in the tables below.
@@ -28,7 +30,7 @@ There is **no** supported **`/api/dev/*`** route in this catalog for editor or b
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/bootstrap` | Active space, spaces list, items (subtree), **`camera`** (see subsection below). **`PLAYWRIGHT_E2E=1`** forces empty demo payload (tests only). With boot gate on, **`middleware`** returns **403** without a valid **`hg_boot`** cookie (except **`/api/heartgarden/boot`**), unless **`Authorization: Bearer`** matches **`HEARTGARDEN_MCP_SERVICE_KEY`**. With a valid **`player`** tier cookie, scopes to the resolved Players root (env UUID if set, else implicit dedicated space; 403 if misconfigured). **`demo`** tier should not call this in normal clients (local canvas only). |
+| GET | `/api/bootstrap` | Active space, spaces list, items (subtree), **`camera`** (see subsection below). **`PLAYWRIGHT_E2E=1`** forces empty demo payload (tests only). With boot gate on, **`proxy.ts`** returns **403** without a valid **`hg_boot`** cookie (except **`/api/heartgarden/boot`**), unless **`Authorization: Bearer`** matches **`HEARTGARDEN_MCP_SERVICE_KEY`**. With a valid **`player`** tier cookie, scopes to the resolved Players root (env UUID if set, else implicit dedicated space; 403 if misconfigured). **`demo`** tier should not call this in normal clients (local canvas only). |
 
 ### `camera` in the bootstrap JSON
 
@@ -48,7 +50,7 @@ Responses include **`camera`**: `{ x, y, zoom }` parsed from legacy **`spaces.ca
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET, POST, DELETE | `/api/mcp` | **Streamable HTTP** MCP transport (same JSON-RPC surface as **`npm run mcp`** stdio). **Auth (any one):** header **`Authorization: Bearer <HEARTGARDEN_MCP_SERVICE_KEY>`**, or query **`?token=`** / **`?key=`** (same secret), or header **`X-Heartgarden-Mcp-Token`**. Returns **503** if **`HEARTGARDEN_MCP_SERVICE_KEY`** is unset. **401** if none match. Middleware allows this path through the boot gate without **`hg_boot`** so the route can respond; auth is enforced in the handler. Stateless (**no** session stickiness) for serverless. |
+| GET, POST, DELETE | `/api/mcp` | **Streamable HTTP** MCP transport (same JSON-RPC surface as **`npm run mcp`** stdio). **Auth (any one):** header **`Authorization: Bearer <HEARTGARDEN_MCP_SERVICE_KEY>`**, or query **`?token=`** / **`?key=`** (same secret), or header **`X-Heartgarden-Mcp-Token`**. Returns **503** if **`HEARTGARDEN_MCP_SERVICE_KEY`** is unset. **401** if none match. **`proxy.ts`** allows this path through the boot gate without **`hg_boot`** so the route can respond; auth is enforced in the handler. Stateless (**no** session stickiness) for serverless. |
 
 **Tooling:** Shared logic lives in **`src/lib/mcp/heartgarden-mcp-server.ts`**.
 
@@ -76,7 +78,8 @@ Optional **`HEARTGARDEN_MCP_URL`** (default `https://heartgarden.vercel.app/api/
 | POST | `/api/spaces` | Create space. **GM:** optional top-level row (`parentSpaceId` omitted) or child of an allowed parent. **Player:** **`parentSpaceId` required** — must be the Players root or a folder space under it (`spaceIsUnderPlayerRoot`); cannot supply **`id`** (no client-chosen UUID). |
 | PATCH | `/api/spaces/[spaceId]` | Update **name** and/or **`parentSpaceId`** (UUID or `null`). A **`camera`** field in the body is accepted for backward compatibility but **ignored** (viewport is not persisted server-side). **`parentSpaceId`** is **GM-only** (rejected for **player**); requires access to both this space and the new parent; the server rejects moves that would create a **parent cycle**. Use this to keep a folder’s inner space aligned when its folder card moves between canvases. |
 | DELETE | `/api/spaces/[spaceId]` | Delete space (cascade per schema). |
-| GET | `/api/spaces/[spaceId]/changes` | Query **`since`** (ISO timestamp). Response includes **`items`** (changed item rows) and **`cursor`** (max of item + space `updated_at` in range). When any subtree **`spaces`** row changed since **`since`** (e.g. folder reparent / rename), **`spaces`** lists **`{ id, name, parentSpaceId, updatedAt }`** so other clients can merge without a full bootstrap. Optional **`includeItemIds=1`**: when set, response **must** include **`itemIds`** (full subtree id list for tombstone sync). When omitted, **`itemIds`** is omitted — lighter for non-shell clients. The **official web shell** always sends **`includeItemIds=1`** on delta polls (see **Browser shell — delta sync** under **Items**). |
+| GET | `/api/spaces/[spaceId]/changes` | Query **`since`** (ISO timestamp). Response includes **`items`** (changed item rows) and **`cursor`** (max of item + space `updated_at` in range). Includes **`itemLinksRevision`** (aggregate fingerprint over **`item_links`** in this space’s graph scope) so clients can detect link-only changes without downloading the full graph every poll. When any subtree **`spaces`** row changed since **`since`** (e.g. folder reparent / rename), **`spaces`** lists **`{ id, name, parentSpaceId, updatedAt }`** so other clients can merge without a full bootstrap. Optional **`includeItemIds=1`**: when set, response **must** include **`itemIds`** (full subtree id list for tombstone sync). When omitted, **`itemIds`** is omitted — lighter for non-shell clients. The **official web shell** always sends **`includeItemIds=1`** on delta polls (see **Browser shell — delta sync** under **Items**). |
+| GET | `/api/spaces/[spaceId]/link-revision` | Returns **`{ ok: true, itemLinksRevision }`** — cheap **`item_links`** fingerprint for the space (same scope as **`GET …/graph`**). Use when the WebSocket path is down or to decide whether to **`GET …/graph`** after a revision bump. |
 | GET | `/api/spaces/[spaceId]/presence` | Optional **`?except=<clientUuid>`**. Optional **`scope=local`** — restrict to peers whose **`activeSpaceId`** equals **`spaceId`**; **default** (omit param) returns peers in **`spaceId`’s entire subtree** (descendant child spaces included). Each peer: **`clientId`**, **`activeSpaceId`**, **`camera`** `{ x, y, zoom }`, **`pointer`** `{ x, y } \| null` (world coordinates), **`updatedAt`** (ISO). TTL **~2 minutes**. |
 | POST | `/api/spaces/[spaceId]/presence` | Body **`{ clientId: uuid, camera: { x, y, zoom }, pointer?: { x, y } \| null }`**. URL **`spaceId`** is the client’s active canvas space (must match access rules). Upserts **one row per `clientId`** in **`canvas_presence`**. Rate-limited **per public IP** (in-memory per server instance). **`PLAYWRIGHT_E2E=1`** bypasses. Deletes stale rows globally (older than server TTL). **`429`** if rate limited. Requires **`canvas_presence`** in Postgres (`npm run db:push` after schema pull). |
 | GET | `/api/spaces/[spaceId]/items` | Items for space. |
@@ -108,6 +111,19 @@ The **`useHeartgardenSpaceChangeSync`** hook polls with **`includeItemIds=1`** s
 
 See **`docs/FEATURES.md`** (Collaboration & sync), **`docs/PLAYER_LAYER.md`**, and **`src/lib/heartgarden-space-change-sync-utils.ts`**.
 
+### Browser shell — link revision (`itemLinksRevision`)
+
+Delta responses include **`itemLinksRevision`**. When it changes without item rows changing, the shell may **`GET /api/spaces/[spaceId]/graph`** (or rely on **realtime** `item-links.changed` when configured). **`GET /api/spaces/[spaceId]/link-revision`** exposes the same fingerprint for clients that poll link state separately. Implementation: **`src/lib/item-links-space-revision.ts`**.
+
+## Realtime (optional)
+
+Requires **`HEARTGARDEN_REALTIME_URL`**, **`HEARTGARDEN_REALTIME_REDIS_URL`**, **`HEARTGARDEN_REALTIME_SECRET`** (see **`docs/VERCEL_ENV_VARS.md`**, **`docs/DEPLOY_VERCEL.md`** §5.5). Vercel serverless publishes invalidations; a long-lived **`npm run realtime`** process fans out WebSocket events. **Neon** remains source of truth; clients still merge from **`GET …/changes`**.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/realtime/room-token` | Body **`{ spaceId: "<uuid>" }`**. Returns **`{ ok: true, realtimeUrl, token, expiresAt }`** when realtime is configured, or **503** if not. **`spaceId`** must pass **`requireHeartgardenSpaceApiAccess`**. Non-**GM** callers need a valid **`hg_boot`** cookie when the boot gate is on. Token is short-lived (~15 min) for **`wss://`** connect. |
+| GET | `/api/realtime/metrics` | **`{ ok: true, publisher: … }`** — in-process Redis publish timing (best-effort; resets per serverless instance). Ops / staging; no secrets. |
+
 ## Search
 
 | Method | Path | Purpose |
@@ -134,6 +150,8 @@ See **`docs/FEATURES.md`** (Collaboration & sync), **`docs/PLAYER_LAYER.md`**, a
 | POST | `/api/lore/import/apply` | Apply a plan to the canvas (see route body). |
 | POST | `/api/lore/import/commit` | Persist import / review decisions (see route). |
 | POST | `/api/lore/consistency/check` | Lore consistency check (LLM-backed; see route for body). |
+
+**Bodies and Zod shapes** for each step live in the route files under **`app/api/lore/import/*`** and **`app/api/lore/consistency/check/route.ts`**. Pipeline map: **`docs/CODEMAP.md`** (Lore import); kind registry: **`docs/LORE_IMPORT_KIND_MAPPING.md`**.
 
 ## Item links
 
@@ -179,6 +197,7 @@ See **`docs/FEATURES.md`** (Collaboration & sync), **`docs/PLAYER_LAYER.md`**, a
 | `HEARTGARDEN_BOOT_POST_RATE_LIMIT_WINDOW_MS` | Optional window length in ms (default **15 minutes**, clamped **30s–1h**) |
 | `HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_MAX` | Optional max **`POST …/presence`** per **public IP** per window (default **4000**, clamped **10–100000**). Baseline ~36 posts per **tab** per 15 min from the **25s** heartbeat; **pointer moves** can add throttled POSTs (~one every **2s** while moving). Two household players on one Wi‑Fi ≈ 2× that — still far below default. Raise only for very many devices sharing one IP. |
 | `HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_WINDOW_MS` | Optional window in ms (default **15 minutes**, clamped **60s–1h**) |
+| `HEARTGARDEN_REALTIME_URL` / `HEARTGARDEN_REALTIME_REDIS_URL` / `HEARTGARDEN_REALTIME_SECRET` | Optional multiplayer realtime (**`POST /api/realtime/room-token`**, **`npm run realtime`**) — see **`docs/VERCEL_ENV_VARS.md`** |
 
 See also **`docs/DEPLOY_VERCEL.md`**, **`docs/FOLLOW_UP.md`**, and **`AGENTS.md`** for operational detail.
 

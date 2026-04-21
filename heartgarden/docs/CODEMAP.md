@@ -3,7 +3,7 @@
 ## title: heartgarden — code map
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-13
+last_reviewed: 2026-04-21
 canonical: true
 related:
   - heartgarden/docs/FEATURES.md
@@ -19,7 +19,9 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Concern                                       | Location                                                                    |
 | --------------------------------------------- | --------------------------------------------------------------------------- |
 | Next app root, global CSS                     | `app/layout.tsx`, `app/page.tsx`, `app/globals.css`                         |
+| Edge boot gate (**`/api/*`** when PIN on)     | `proxy.ts` (matcher **`/api/:path*`**), `src/lib/heartgarden-boot-edge.ts`, `src/lib/heartgarden-boot-gate-bypass.ts` |
 | Client mount, boot gate                       | `app/_components/VigilApp.tsx`                                              |
+| Dev-only pages (**`/dev/*`**, unindexed)      | `app/dev/ai-pending-style/page.tsx`, `app/dev/lore-entity-nodes/page.tsx` → `src/components/dev/*` |
 | Production canvas UI (graph state lives here) | `src/components/foundation/ArchitecturalCanvasApp.tsx`                      |
 | Browser-local camera storage + arrival policy | `src/lib/heartgarden-space-camera.ts` (see `**AGENTS.md`** → Canvas camera) |
 | Foundation types / pieces                     | `src/components/foundation/*`                                               |
@@ -79,6 +81,21 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Presence POST body validation           | `src/lib/heartgarden-presence-body.ts`                                                                                                              |
 | Presence client + poll/heartbeat        | `src/hooks/use-heartgarden-presence-heartbeat.ts`, `src/components/foundation/architectural-neon-api.ts`, `src/lib/heartgarden-collab-constants.ts` |
 | Remote cursors + emoji identity         | `src/components/foundation/ArchitecturalRemotePresenceLayer.tsx`, `src/lib/collab-presence-identity.ts`                                             |
+| **Link fingerprint** (`itemLinksRevision`, `GET …/link-revision`) | `src/lib/item-links-space-revision.ts`, `app/api/spaces/[spaceId]/link-revision/route.ts` |
+
+
+## Optional realtime (WebSocket invalidation)
+
+
+| Concern | Location |
+| ------- | -------- |
+| Client subscription + reconnect | `src/hooks/use-heartgarden-realtime-space-sync.ts` |
+| Config + channel naming | `src/lib/heartgarden-realtime-config.ts` |
+| Room JWT issue (**`POST /api/realtime/room-token`**) | `app/api/realtime/room-token/route.ts`, `src/lib/heartgarden-realtime-token.ts` |
+| Redis publish after writes | `src/lib/heartgarden-realtime-publisher.ts`, `src/lib/heartgarden-realtime-invalidation.ts` |
+| Publish timings (**`GET /api/realtime/metrics`**) | `src/lib/heartgarden-realtime-publish-metrics.ts`, `app/api/realtime/metrics/route.ts` |
+| Long-lived WebSocket server | `scripts/realtime-server.ts` (**`npm run realtime`**), optional `Dockerfile.realtime` |
+| Redis smoke | `scripts/realtime-redis-smoke.ts` (**`npm run realtime:redis-smoke`**) |
 
 
 ## Search & vault index
@@ -141,7 +158,8 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | --------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | List / create spaces                                                                          | `app/api/spaces/route.ts`                    |
 | Patch camera / rename / delete                                                                | `app/api/spaces/[spaceId]/route.ts`          |
-| Delta sync (items + optional spaces / itemIds)                                                | `app/api/spaces/[spaceId]/changes/route.ts`  |
+| Delta sync (items + optional spaces / itemIds; **`itemLinksRevision`**)                         | `app/api/spaces/[spaceId]/changes/route.ts`  |
+| Link revision only (`itemLinksRevision`)                                                      | `app/api/spaces/[spaceId]/link-revision/route.ts` |
 | Ephemeral presence (peers, camera, pointer; boot access via `heartgarden-space-route-access`) | `app/api/spaces/[spaceId]/presence/route.ts` |
 | Items in space                                                                                | `app/api/spaces/[spaceId]/items/route.ts`    |
 | Graph export shape                                                                            | `app/api/spaces/[spaceId]/graph/route.ts`    |

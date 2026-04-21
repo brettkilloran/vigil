@@ -2,7 +2,7 @@
 title: heartgarden — shipped features
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-13
+last_reviewed: 2026-04-21
 canonical: true
 related:
   - heartgarden/docs/API.md
@@ -26,6 +26,7 @@ Single place to **look up what exists** and where it lives. For **HTTP contracts
 | **Soft presence** | Emoji chips in status bar (subtree peers), remote cursors, **follow** another tab’s view (confirm if focus/stack open) | [`PLAYER_LAYER.md`](./PLAYER_LAYER.md), [`API.md`](./API.md) (`…/presence`) | `canvas_presence` in `schema.ts`, `presence/route.ts`, `use-heartgarden-presence-heartbeat.ts`, `ArchitecturalRemotePresenceLayer.tsx`, `collab-presence-identity.ts` |
 | **PATCH conflict (409)** | Server version wins; shell surfaces a **conflict banner** with server copy vs dismiss (keep local draft); dev-only `NEXT_PUBLIC_HEARTGARDEN_SYNC_DEBUG=1` logs PATCH timing | [`API.md`](./API.md) (Items PATCH) | `app/api/items/[itemId]/route.ts`, item patch flow in `ArchitecturalCanvasApp.tsx` / `architectural-neon-api.ts`, `heartgarden-sync-debug.ts` |
 | **Remote merge / protected ids** | Graph merge preserves local title/body for focus overlay, **inline** drafts, and **in-flight PATCH** ids; poll `updatedAt` map only advances when newer (no regress) | [`API.md`](./API.md) (browser shell — delta sync) | `architectural-db-bridge.ts`, `architectural-db-bridge.merge-remote.test.ts`, `heartgarden-space-change-sync-utils.ts` |
+| **Realtime invalidation (optional)** | When **`HEARTGARDEN_REALTIME_*`** is set + **`npm run realtime`**, WebSocket events wake peers; Neon + **`GET …/changes`** remain source of truth | [`API.md`](./API.md) (Realtime), [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md) §5.5 | `use-heartgarden-realtime-space-sync.ts`, `heartgarden-realtime-*.ts`, `scripts/realtime-server.ts` |
 
 ---
 
@@ -33,14 +34,14 @@ Single place to **look up what exists** and where it lives. For **HTTP contracts
 
 | Feature | What users see / behavior | Docs | Primary code |
 |--------|----------------------------|------|----------------|
-| **Minimap** | Bottom-left map toggle in viewport metrics strip; world overview, pan/fit | — | `CanvasMinimap.tsx`, `ArchitecturalViewportMetricsStrip` / status metrics in `ArchitecturalStatusBar.tsx`, prefs `VIGIL_MINIMAP_VISIBLE_STORAGE_KEY` in `vigil-canvas-prefs.ts` |
-| **Fit / frame camera** | Zoom-to-fit content, fit selection, world rect helpers for minimap & UI | — | `canvas-view-bounds.ts`, `canvas-view-bounds.test.ts` |
+| **Minimap** | Bottom-left map toggle in viewport metrics strip; world overview, pan/fit | [`CODEMAP.md`](./CODEMAP.md) (Canvas chrome) | `CanvasMinimap.tsx`, `ArchitecturalViewportMetricsStrip` / status metrics in `ArchitecturalStatusBar.tsx`, prefs `VIGIL_MINIMAP_VISIBLE_STORAGE_KEY` in `vigil-canvas-prefs.ts` |
+| **Fit / frame camera** | Zoom-to-fit content, fit selection, world rect helpers for minimap & UI | [`CODEMAP.md`](./CODEMAP.md) (Canvas chrome) | `canvas-view-bounds.ts`, `canvas-view-bounds.test.ts` |
 | **Viewport arrival (origin)** | Bootstrap, opening a folder, and related transitions land with **world (0,0) at viewport center**, zoom 1 — no restoring stale localStorage pan on load; pan/zoom still persist while you work | [`AGENTS.md`](../AGENTS.md) (Canvas camera) | `defaultCamera(w,h)` in `canvas-types.ts`, `heartgarden-space-camera.ts`, `applyBootstrapData` / `enterSpace` / `recenterToOrigin` in `ArchitecturalCanvasApp.tsx` |
-| **Viewport toast** | Short-lived bottom message (e.g. nav hints) with cooldown | — | `CanvasViewportToast.tsx` |
+| **Viewport toast** | Short-lived bottom message (e.g. nav hints) with cooldown | [`CODEMAP.md`](./CODEMAP.md) (Canvas chrome) | `CanvasViewportToast.tsx` |
 | **Space transitions** | Optional WebGL flow overlay when **canvas effects** on; dimmed scene during `enterSpace` fetch; **generation guard** drops stale async completions if user navigates again | [`BUILD_PLAN.md`](./BUILD_PLAN.md) | `VigilFlowRevealOverlay.tsx` (dynamic `next/dynamic`), `enterSpace` + `spaceNavGenerationRef` in `ArchitecturalCanvasApp.tsx` |
-| **Dock + stack modal** | Chrome layout safe when stack modal open (no clipped controls) | — | `ArchitecturalCanvasApp.tsx` + related CSS modules |
+| **Dock + stack modal** | Chrome layout safe when stack modal open (no clipped controls) | [`BUILD_PLAN.md`](./BUILD_PLAN.md) (architecture snapshot), [`CODEMAP.md`](./CODEMAP.md) | `ArchitecturalCanvasApp.tsx` + related CSS modules |
 | **Lore create (bottom dock)** | **Character** one-click; **Organization** / **Location** open a **layout flyout** (v1–v3 seeds) | [`CODEMAP.md`](./CODEMAP.md) | `ArchitecturalBottomDock.tsx` (`DEFAULT_CREATE_ACTIONS`, `loreVariantSubmenu`), `createNewNode` in `ArchitecturalCanvasApp.tsx` |
-| **Empty-canvas context menu** | Right-click **empty viewport** (not on a card) → create **character** or **organization** / **location** by layout variant | — | `canvasEmptyContextMenu` + `handleViewportContextMenuCapture` in `ArchitecturalCanvasApp.tsx` |
+| **Empty-canvas context menu** | Right-click **empty viewport** (not on a card) → create **character** or **organization** / **location** by layout variant | [`CODEMAP.md`](./CODEMAP.md) (Canvas chrome) | `canvasEmptyContextMenu` + `handleViewportContextMenuCapture` in `ArchitecturalCanvasApp.tsx` |
 
 ---
 
@@ -49,7 +50,7 @@ Single place to **look up what exists** and where it lives. For **HTTP contracts
 | Feature | What users see / behavior | Docs | Primary code |
 |--------|----------------------------|------|----------------|
 | **Cmd+K palette** | Search suggest, spaces, actions, **lore create shortcuts** (character; organization letterhead/monogram/framed; location plaque/postcard/survey), export, recents (caps expanded over time) | [`API.md`](./API.md) (`/api/search/suggest`) | `paletteActions` / `runPaletteAction` in `ArchitecturalCanvasApp.tsx`, `app/api/search/suggest/route.ts` |
-| **Vault index status** | Status bar line for “indexing notes…” / errors (pending + in-flight) | — | `vault-index-status-bus.ts`, `VaultIndexStatusInline` in `ArchitecturalStatusBar.tsx`, debounced index in `architectural-neon-api.ts` |
+| **Vault index status** | Status bar line for “indexing notes…” / errors (pending + in-flight) | [`CODEMAP.md`](./CODEMAP.md) (Search & vault index), [`API.md`](./API.md) (`POST …/index`) | `vault-index-status-bus.ts`, `VaultIndexStatusInline` in `ArchitecturalStatusBar.tsx`, debounced index in `architectural-neon-api.ts` |
 | **Hybrid / semantic search** | Palette + `/api/search` RRF when embeddings exist | [`API.md`](./API.md), [`BUILD_PLAN.md`](./BUILD_PLAN.md) | `app/api/search/route.ts`, `vault-retrieval-rrf.ts` |
 | **Ask lore** | Lore Q&A panel | [`API.md`](./API.md) (`/api/lore/query`) | `LoreAskPanel.tsx`, `lore-engine.ts` |
 
@@ -63,8 +64,9 @@ Single place to **look up what exists** and where it lives. For **HTTP contracts
 | **AI / import pending text (`hgAiPending`)** | Inline **pending** styling for AI or imported prose; per-span **Bind** in the editor margin (hgDoc); editing inside a span participates in undo/redo | [`EDITOR_HG_DOC.md`](./EDITOR_HG_DOC.md) | `hg-doc/hg-ai-pending-mark.ts`, `HgAiPendingEditorGutter.tsx`, `collect-hg-ai-pending-ranges.ts`, `remove-hg-ai-pending-range.ts`, `strip-hg-ai-pending.ts`, `app/globals.css` (`--sem-text-ai-pending`) |
 | **Unreviewed / Accept (cards)** | `items.entity_meta.aiReview === "pending"` shows **Unreviewed** + **Accept** when the body still has pending markup (hgDoc JSON or `data-hg-ai-pending` HTML); Accept strips marks and clears `aiReview` | [`DATA_PIPELINE_AUDIT_2026-04-11.md`](./DATA_PIPELINE_AUDIT_2026-04-11.md) | `ArchitecturalNodeCard.tsx`, `acceptAiReviewForEntity` + pending detection in `ArchitecturalCanvasApp.tsx` |
 | **Lore import + review flags** | Apply/commit paths can wrap bodies with pending spans and set **`aiReview: pending`**; merge flows extend structured HTML without flattening prior body when designed to | [`API.md`](./API.md) (lore import) | `lore-import-apply.ts`, `lore-import-commit.ts`, `app/api/lore/import/*` |
-| **Dev: AI pending style** | `/dev/ai-pending-style` — static + live hgDoc samples for pending styling | — | `app/dev/ai-pending-style/*` |
-| **Wiki link `[[` assist** | Typing `[[` in rich text opens popover to pick / create wiki targets | — | `BufferedContentEditable.tsx`, `WikiLinkAssistPopover.tsx`, `wiki-link-caret.ts`, `wiki-link-caret.test.ts` |
+| **Dev: AI pending style** | `/dev/ai-pending-style` — static + live hgDoc samples for pending styling | [`CODEMAP.md`](./CODEMAP.md) (App shell — dev pages) | `app/dev/ai-pending-style/*` |
+| **Dev: lore entity lab** | `/dev/lore-entity-nodes` — design previews for character / org / location canvas shells | [`CODEMAP.md`](./CODEMAP.md) (App shell — dev pages), [`CANVAS_LORE_NODE_PATTERNS.md`](./CANVAS_LORE_NODE_PATTERNS.md) | `app/dev/lore-entity-nodes/page.tsx`, `src/components/dev/LoreEntityNodeLab.tsx` |
+| **Wiki link `[[` assist** | Typing `[[` in rich text opens popover to pick / create wiki targets | [`CODEMAP.md`](./CODEMAP.md) (Canvas chrome — Buffered rich text + wiki) | `BufferedContentEditable.tsx`, `WikiLinkAssistPopover.tsx`, `wiki-link-caret.ts`, `wiki-link-caret.test.ts` |
 | **Internal links** | `vigil:item:` resolution in shell | [`AGENTS.md`](../AGENTS.md) | `ArchitecturalLinksPanel` / link resolution paths in foundation |
 | **Connections (three surfaces)** | **Canvas threads** (associations: drawn ropes, `item_links` + pins); **structured bindings** on lore cards (`content_json.hgArch` — roster, thread anchors); **wiki mentions** (`vigil:item` / `[[`, soft recall neighbors); **FTS related**. See [`BINDINGS_CATALOG.md`](./BINDINGS_CATALOG.md). Thread tags include **Other** for custom labels. | [`CODEMAP.md`](./CODEMAP.md), [`BINDINGS_CATALOG.md`](./BINDINGS_CATALOG.md) | `ArchitecturalCanvasApp.tsx`, `ArchitecturalLinksPanel.tsx`, `lore-link-types.ts`, `bindings-catalog.ts`, `canvas-thread-link-eval.ts` |
 
@@ -76,7 +78,7 @@ Single place to **look up what exists** and where it lives. For **HTTP contracts
 |--------|----------------------------|------|----------------|
 | **Zoom-aware image URLs** | Optional CDN resize template for card images by zoom | [`FOLLOW_UP.md`](./FOLLOW_UP.md) | `heartgarden-image-display-url.ts`, **`NEXT_PUBLIC_HEARTGARDEN_IMAGE_URL_TEMPLATE`** (see `.env.local.example`) |
 | **Viewport culling** | Off-screen entities / stacks / connections skip heavy work | [`BUILD_PLAN.md`](./BUILD_PLAN.md) | `canvas-viewport-cull.ts`, wired in `ArchitecturalCanvasApp.tsx` |
-| **Bundle analyze** | Webpack bundle analyzer opt-in | — | `npm run analyze` in `package.json` |
+| **Bundle analyze** | Webpack bundle analyzer opt-in | [`README.md`](../README.md) (Scripts — more npm tasks), [`BUILD_PLAN.md`](./BUILD_PLAN.md) | `npm run analyze` in `package.json` |
 
 ---
 
@@ -84,7 +86,7 @@ Single place to **look up what exists** and where it lives. For **HTTP contracts
 
 | Feature | What users see / behavior | Docs | Primary code |
 |--------|----------------------------|------|----------------|
-| **PIN boot gate** | Splash PINs, signed `hg_boot`, rate limit, log out | [`API.md`](./API.md), [`PLAYER_LAYER.md`](./PLAYER_LAYER.md), [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md) | `VigilAppBootScreen`, `middleware.ts`, `heartgarden-boot-*.ts` |
+| **PIN boot gate** | Splash PINs, signed `hg_boot`, rate limit, log out | [`API.md`](./API.md), [`PLAYER_LAYER.md`](./PLAYER_LAYER.md), [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md) | `VigilAppBootScreen`, `proxy.ts`, `heartgarden-boot-*.ts` |
 | **Players tier** | Single scoped space, API enforcement | [`PLAYER_LAYER.md`](./PLAYER_LAYER.md) | `heartgarden-api-boot-context.ts`, `heartgarden-space-route-access.ts` |
 | **Presence POST rate limit** | Per public IP budget (NAT-friendly defaults) | [`API.md`](./API.md), [`PLAYER_LAYER.md`](./PLAYER_LAYER.md) | `heartgarden-presence-rate-limit.ts` |
 

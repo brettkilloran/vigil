@@ -2,7 +2,7 @@
 title: heartgarden — documentation index
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-11
+last_reviewed: 2026-04-21
 canonical: true
 related:
   - heartgarden/AGENTS.md
@@ -39,6 +39,7 @@ related:
 | Data pipeline audit (intent, modes, import, registry) | [`DATA_PIPELINE_AUDIT_2026-04-11.md`](./DATA_PIPELINE_AUDIT_2026-04-11.md) |
 | Shipped capabilities + AI/import review UX | [`FEATURES.md`](./FEATURES.md), [`EDITOR_HG_DOC.md`](./EDITOR_HG_DOC.md), [`CODEMAP.md`](./CODEMAP.md) |
 | Lore import canonical kind → DB / canvas | [`LORE_IMPORT_KIND_MAPPING.md`](./LORE_IMPORT_KIND_MAPPING.md) |
+| Optional multiplayer realtime (WebSocket + Redis) | [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md) §5.5, [`API.md`](./API.md) (Realtime), [`CODEMAP.md`](./CODEMAP.md) |
 
 ## Archived
 

@@ -38,6 +38,29 @@ Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 | `npm run mcp` | MCP stdio tools (**`heartgarden_*`**, e.g. **`heartgarden_list_items`**, **`heartgarden_search`**, **`heartgarden_graph`**; legacy **`vigil_*`** aliases still work on call) — needs app reachable at `HEARTGARDEN_APP_URL` (default `http://localhost:3000`). Hosted Streamable HTTP: **`GET|POST|DELETE /api/mcp`** with **`Authorization: Bearer HEARTGARDEN_MCP_SERVICE_KEY`** (see **`AGENTS.md`**). |
 | `npm run realtime` | Optional dedicated WebSocket room server for multiplayer invalidation fanout. Requires **`HEARTGARDEN_REALTIME_URL`**, **`HEARTGARDEN_REALTIME_REDIS_URL`**, and **`HEARTGARDEN_REALTIME_SECRET`**. Clients still merge from Neon via `/api/spaces/:id/changes`; realtime just wakes them immediately. |
 
+**More npm tasks** (see also **`AGENTS.md`** for CI and Storybook guardrails):
+
+| Script | Purpose |
+|--------|---------|
+| `npm run check:all` | `check` + production **Storybook** build (use when touching stories or `.storybook/`) |
+| `npm run analyze` | Webpack bundle analyzer (`ANALYZE=1` build) |
+| `npm run test:unit` | Vitest unit tests (`src/**/*.test.ts`) |
+| `npm run test:e2e` | Playwright (`e2e/`); see **`AGENTS.md`** for **`PLAYWRIGHT_E2E`** / port **3001** |
+| `npm run test:e2e:visual` | Visual regression snapshots (OS-specific baselines) |
+| `npm run reinstall` | Clean reinstall **`node_modules`** from lockfile (fixes broken Storybook/Webpack installs) |
+| `npm run verify:package-lock-ci` | Verify **`npm ci`**-safe lockfile for Linux CI |
+| `npm run lockfile:regenerate-linux` | Regenerate lockfile Linux optionals after **`npm install`** on Windows |
+| `npm run verify:editor-cutover` | Guard script for editor migration wiring |
+| `npm run mcp:smoke` | Smoke-test hosted **`/api/mcp`** (same transport as Claude Desktop) |
+| `npm run realtime:redis-smoke` | Redis connectivity check for realtime stack |
+| `npm run db:studio` | Drizzle Studio |
+| `npm run db:migrate` | `drizzle-kit migrate` |
+| `npm run db:sever-worlds` | One-time GM / Players data severance — see **`docs/PLAYER_LAYER.md`** |
+| `npm run storybook:lan` | Storybook on **`0.0.0.0:6006`** (LAN) |
+| `npm run storybook:doctor` | Preflight that Storybook deps exist |
+| `npm run storybook:static` | Build + serve static Storybook on **6007** |
+| `npm run secrets:protect` / `secrets:scan` | Gitleaks (repo root config) |
+
 ### Keyboard (canvas, not typing in a note)
 
 Handlers use **`Ctrl` on Windows and Linux** and **`⌘` on macOS** (`ctrlKey || metaKey`). Toolbar labels match your OS after load.
