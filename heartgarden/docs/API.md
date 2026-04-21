@@ -158,12 +158,12 @@ Requires **`HEARTGARDEN_REALTIME_URL`**, **`HEARTGARDEN_REALTIME_REDIS_URL`**, *
 | Method | Path | Purpose |
 |--------|------|---------|
 | POST | `/api/lore/import/parse` | Multipart / file → extracted text (and metadata). |
-| POST | `/api/lore/import/extract` | JSON/text extraction helper (see route for shape). |
 | POST | `/api/lore/import/plan` | **Synchronous** smart plan. Needs **`ANTHROPIC_API_KEY`**. Optional `persistReview`. |
 | POST | `/api/lore/import/jobs` | Enqueue **async** plan job; returns `jobId`, `importBatchId`. |
 | GET | `/api/lore/import/jobs/[jobId]` | Poll status. **Required query:** `spaceId=<uuid>` (must match job’s space). |
 | POST | `/api/lore/import/apply` | Apply a plan to the canvas (see route body). |
-| POST | `/api/lore/import/commit` | Persist import / review decisions (see route). |
+| POST | `/api/lore/import/extract` | **Deprecated.** Legacy single-pass extractor. Returns **HTTP 410** unless `HEARTGARDEN_IMPORT_LEGACY_ENABLED=1`. Use `/api/lore/import/jobs` + `/apply`. |
+| POST | `/api/lore/import/commit` | **Deprecated.** Legacy transactional importer. Returns **HTTP 410** unless `HEARTGARDEN_IMPORT_LEGACY_ENABLED=1`. Use `/api/lore/import/apply`. |
 | POST | `/api/lore/consistency/check` | Lore consistency check (LLM-backed; see route for body). |
 
 **Bodies and Zod shapes** for each step live in the route files under **`app/api/lore/import/*`** and **`app/api/lore/consistency/check/route.ts`**. Pipeline map: **`docs/CODEMAP.md`** (Lore import); kind registry: **`docs/LORE_IMPORT_KIND_MAPPING.md`**.

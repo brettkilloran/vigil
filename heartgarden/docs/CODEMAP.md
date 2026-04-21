@@ -131,12 +131,17 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 
 | Concern                                                      | Location                                                                                                |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| Parse / extract uploads                                      | `app/api/lore/import/parse/route.ts`, `extract/route.ts`                                                |
+| Parse uploads                                                | `app/api/lore/import/parse/route.ts`                                                                    |
 | Sync plan (blocking)                                         | `app/api/lore/import/plan/route.ts` → `src/lib/lore-import-plan-build.ts`                               |
 | Async job enqueue + poll                                     | `app/api/lore/import/jobs/route.ts`, `jobs/[jobId]/route.ts` → `src/lib/lore-import-job-*.ts`           |
 | Apply plan to canvas                                         | `app/api/lore/import/apply/route.ts`, `src/lib/lore-import-apply.ts`                                    |
-| Commit / review persistence                                  | `app/api/lore/import/commit/route.ts`, `src/lib/lore-import-commit.ts`, `lore-import-persist-review.ts` |
-| Apply/commit: pending HTML wrappers + `entity_meta.aiReview` | `src/lib/lore-import-apply.ts`, `lore-import-commit.ts`, `app/api/lore/import/commit/route.ts`          |
+| Apply: pending HTML wrappers + `entity_meta.aiReview`        | `src/lib/lore-import-apply.ts`, `lore-import-commit.ts`                                                 |
+| Review persistence                                           | `src/lib/lore-import-persist-review.ts`                                                                 |
+| Card layout (proximity / affinity-driven)                    | `src/lib/lore-import-placement.ts`                                                                      |
+| Entity meta schema (typed `items.entity_meta`)               | `src/lib/entity-meta-schema.ts`                                                                         |
+| Import link shape validator (coerce to canonical types)      | `src/lib/lore-import-link-shape.ts`                                                                     |
+| Binding-hint promotion into `hgArch` slots                   | `src/lib/lore-import-apply-bindings.ts`, `src/lib/bindings-catalog.ts`                                  |
+| Legacy routes (deprecated, gated by `HEARTGARDEN_IMPORT_LEGACY_ENABLED=1`) | `app/api/lore/import/extract/route.ts`, `app/api/lore/import/commit/route.ts`, `src/lib/heartgarden-import-legacy-gate.ts` |
 | Plan types & Zod                                             | `src/lib/lore-import-plan-types.ts`                                                                     |
 | Consistency check (LLM)                                      | `app/api/lore/consistency/check/route.ts`                                                               |
 
