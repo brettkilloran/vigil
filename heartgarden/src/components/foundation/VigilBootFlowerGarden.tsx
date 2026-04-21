@@ -2184,6 +2184,18 @@ export const VigilBootFlowerGarden = forwardRef<VigilBootFlowerGardenHandle, Vig
     }, []);
 
     useEffect(() => {
+      if (typeof document === "undefined") return;
+      const root = document.documentElement;
+      const onThemeMutation = () => invalidateVigilBootFlowerAccentCache();
+      const observer = new MutationObserver(onThemeMutation);
+      observer.observe(root, {
+        attributes: true,
+        attributeFilter: ["class", "style", "data-theme"],
+      });
+      return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
       resize();
       const onResize = () => resize();
       window.addEventListener("resize", onResize);

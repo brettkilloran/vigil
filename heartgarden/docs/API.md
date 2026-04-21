@@ -143,7 +143,7 @@ Requires **`HEARTGARDEN_REALTIME_URL`**, **`HEARTGARDEN_REALTIME_REDIS_URL`**, *
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/search` | Query params: `q`, `spaceId`, mode (`hybrid` / `semantic` / FTS), filters (`types`, `entityTypes`, `limit`, …). **Hybrid / semantic** (when embeddings are configured): optional retrieval tuning — `ftsLimit` (8–200), `fuzzyLimitEmpty` / `fuzzyLimitSparse` (8–100), `ftsSparseThreshold` (2–64), `vectorChunkLimit` (8–200), `maxChunksPerItem` (1–12), `retrievalMaxItems` (8–80, caps RRF output; defaults from `limit` or 24). Uses pgvector when embeddings are configured. **Players** tier: `spaceId` forced to player space; hybrid/semantic downgraded to FTS. In-memory per-IP limiter returns **429** with `Retry-After: 60` when exceeded. |
+| GET | `/api/search` | Query params: `q`, `spaceId`, mode (`hybrid` / `semantic` / FTS), filters (`types`, `entityTypes`, `limit`, …). **Hybrid / semantic** (when embeddings are configured): optional retrieval tuning — `ftsLimit` (8–200), `fuzzyLimitEmpty` / `fuzzyLimitSparse` (8–100), `ftsSparseThreshold` (2–64), `vectorChunkLimit` (8–200), `maxChunksPerItem` (1–12), `retrievalMaxItems` (8–80, caps RRF output; defaults from `limit` or 24). Fuzzy fallback now scores title + body + search blob (title slightly boosted). RRF `k` and lexical/vector weights are configurable via retrieval options and env defaults. Uses pgvector when embeddings are configured. **Players** tier: `spaceId` forced to player space; hybrid/semantic downgraded to FTS. In-memory per-IP limiter returns **429** with `Retry-After: 60` when exceeded. |
 | GET | `/api/search/suggest` | Prefix / palette suggestions. |
 | GET | `/api/search/chunks` | Raw chunk-level hits (debug / advanced clients). |
 
@@ -221,6 +221,9 @@ When one concept set is densely connected, prefer folder containment (child spac
 | `HEARTGARDEN_BOOT_POST_RATE_LIMIT_WINDOW_MS` | Optional window length in ms (default **15 minutes**, clamped **30s–1h**) |
 | `HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_MAX` | Optional max **`POST …/presence`** per **public IP** per window (default **4000**, clamped **10–100000**). Baseline ~36 posts per **tab** per 15 min from the **25s** heartbeat; **pointer moves** can add throttled POSTs (~one every **2s** while moving). Two household players on one Wi‑Fi ≈ 2× that — still far below default. Raise only for very many devices sharing one IP. |
 | `HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_WINDOW_MS` | Optional window in ms (default **15 minutes**, clamped **60s–1h**) |
+| `HEARTGARDEN_RETRIEVAL_RRF_K` | Optional default RRF constant `k` (default **60**, clamped **1–500**). |
+| `HEARTGARDEN_RETRIEVAL_RRF_LEXICAL_WEIGHT` | Optional default lexical weight for RRF fusion (default **1**, clamped **0.1–8**). |
+| `HEARTGARDEN_RETRIEVAL_RRF_VECTOR_WEIGHT` | Optional default vector weight for RRF fusion (default **1**, clamped **0.1–8**). |
 | `HEARTGARDEN_REALTIME_URL` / `HEARTGARDEN_REALTIME_REDIS_URL` / `HEARTGARDEN_REALTIME_SECRET` | Optional multiplayer realtime (**`POST /api/realtime/room-token`**, **`npm run realtime`**) — see **`docs/VERCEL_ENV_VARS.md`** |
 | `NEXT_PUBLIC_HEARTGARDEN_INDEX_OWNER` | Optional client/server index ownership policy. Default **`server_after`** disables client debounced index POSTs. |
 

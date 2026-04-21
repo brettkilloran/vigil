@@ -45,6 +45,11 @@ jobs:
           echo "::group::Install dependencies"
           npm ci
           echo "::endgroup::"
+      - name: Verify foundation sync
+        run: |
+          echo "::group::Verify foundation sync"
+          npm run verify:foundation-sync
+          echo "::endgroup::"
       - name: Lint and build
         run: |
           echo "::group::Lint and build"
