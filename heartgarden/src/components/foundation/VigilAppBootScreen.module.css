@@ -46,6 +46,18 @@
 }
 
 /*
+ * `pointer-events: none` on an ancestor does not stop descendants that set `pointer-events: auto`
+ * (see `.flowerToolsPanel`, `.bootChromeDockPanel`, gutter clusters). Without this, the boot
+ * overlay can fade out invisibly while those controls still capture hovers/clicks over the canvas.
+ */
+.overlayExiting .flowerToolsPanel,
+.overlayExiting .bootChromeDockPanel,
+.overlayExiting .metaTopRightCluster > *,
+.overlayExiting .metaBottomRightCluster > * {
+  pointer-events: none;
+}
+
+/*
  * Portaled into `.bootFlowerPortalHost` — below VigilFlowRevealOverlay (z 92); host handles stack vs scene.
  * Visual-only; hit-testing stays on `.overlay` (spawn / poison).
  */
