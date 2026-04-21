@@ -479,6 +479,7 @@ export async function runLoreImportMergeLlmBatched(
     bodyPreview: string;
   }[],
   candidatesByNoteClientId: Record<string, CandidateRow[]>,
+  onBatchProgress?: (step: number, total: number) => void | Promise<void>,
 ): Promise<{
   mergeProposals: {
     noteClientId: string;
@@ -501,7 +502,10 @@ export async function runLoreImportMergeLlmBatched(
     summary: string;
     details?: string;
   }[] = [];
+  const totalBatches = Math.max(1, Math.ceil(mergeInput.length / MERGE_NOTE_BATCH));
   for (let i = 0; i < mergeInput.length; i += MERGE_NOTE_BATCH) {
+    const batchStep = Math.floor(i / MERGE_NOTE_BATCH) + 1;
+    await onBatchProgress?.(batchStep, totalBatches);
     const batch = mergeInput.slice(i, i + MERGE_NOTE_BATCH);
     const cand: Record<string, CandidateRow[]> = {};
     for (const n of batch) {

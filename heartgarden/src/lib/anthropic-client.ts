@@ -7,6 +7,9 @@ import {
 } from "@/src/lib/async-timeout";
 
 type AnthropicCreateParams = Parameters<Anthropic["messages"]["create"]>[0];
+type AnthropicCreateParamsLoose = Omit<AnthropicCreateParams, "max_tokens"> & {
+  max_tokens?: number;
+};
 type AnthropicMessage = Anthropic.Message;
 
 type CacheTtl = "5m" | "1h";
@@ -14,6 +17,13 @@ type CacheTtl = "5m" | "1h";
 type CallAnthropicOptions = {
   label: string;
   expectJson?: boolean;
+  deadlineMs?: number;
+  maxOutputTokens?: number;
+  thinkingBudget?: number | "off";
+};
+
+type CallAnthropicStreamOptions = {
+  label: string;
   deadlineMs?: number;
   maxOutputTokens?: number;
   thinkingBudget?: number | "off";
@@ -58,6 +68,7 @@ const THINKING_ENABLED_LABELS = new Set<string>([
 ]);
 
 const clientByApiKey = new Map<string, Anthropic>();
+const ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages";
 
 function envInt(name: string, fallback: number, min: number, max: number): number {
   const raw = (process.env[name] ?? "").trim();
@@ -142,6 +153,15 @@ function isAssistantPrefillUnsupportedError(err: unknown): boolean {
   );
 }
 
+function shouldEmitSampledMetric(): boolean {
+  const raw = (process.env.HEARTGARDEN_ANTHROPIC_METRICS_SAMPLE_RATE ?? "").trim();
+  if (!raw) return false;
+  const rate = Number(raw);
+  if (!Number.isFinite(rate)) return false;
+  const clamped = Math.max(0, Math.min(1, rate));
+  return Math.random() < clamped;
+}
+
 function resolveMaxOutputTokens(label: string, override?: number): number {
   const envOverride = envInt("HEARTGARDEN_ANTHROPIC_MAX_OUTPUT_TOKENS", 0, 256, 64_000);
   if (envOverride > 0) return envOverride;
@@ -203,7 +223,7 @@ async function createWithRetry(
   }
 }
 
-function withMaxTokens(params: AnthropicCreateParams, maxTokens: number): AnthropicCreateParams {
+function withMaxTokens(params: AnthropicCreateParamsLoose, maxTokens: number): AnthropicCreateParams {
   return {
     ...(params as unknown as Record<string, unknown>),
     max_tokens: maxTokens,
@@ -212,7 +232,7 @@ function withMaxTokens(params: AnthropicCreateParams, maxTokens: number): Anthro
 
 async function runCompletion(args: {
   client: Anthropic;
-  baseParams: AnthropicCreateParams;
+  baseParams: AnthropicCreateParamsLoose;
   label: string;
   deadlineMs: number;
   expectJson: boolean;
@@ -278,11 +298,23 @@ async function runCompletion(args: {
 }
 
 function logDebug(info: Record<string, unknown>): void {
-  if ((process.env.HEARTGARDEN_ANTHROPIC_DEBUG ?? "").trim() !== "1") return;
+  const debugEnabled =
+    (process.env.HEARTGARDEN_ANTHROPIC_DEBUG ?? "").trim() === "1" ||
+    (process.env.HEARTGARDEN_ANTHROPIC_CACHE_DEBUG ?? "").trim() === "1";
+  if (!debugEnabled) return;
   try {
     console.info(`[anthropic] ${JSON.stringify(info)}`);
   } catch {
     console.info("[anthropic] debug log serialization failed");
+  }
+}
+
+function logSampledMetric(info: Record<string, unknown>): void {
+  if (!shouldEmitSampledMetric()) return;
+  try {
+    console.info(`[anthropic-metric] ${JSON.stringify(info)}`);
+  } catch {
+    console.info("[anthropic-metric] metric log serialization failed");
   }
 }
 
@@ -308,7 +340,7 @@ export function buildCachedSystem(text: string): Anthropic.TextBlockParam[] {
 
 export async function callAnthropic(
   apiKey: string,
-  params: AnthropicCreateParams,
+  params: AnthropicCreateParamsLoose,
   options: CallAnthropicOptions,
 ): Promise<CallAnthropicResult> {
   const started = Date.now();
@@ -393,9 +425,21 @@ export async function callAnthropic(
     }
   }
 
-  const usage = (finalMessage as { usage?: Record<string, unknown> }).usage ?? {};
+  const usage = (finalMessage as unknown as { usage?: Record<string, unknown> }).usage ?? {};
   const elapsedMs = Date.now() - started;
   logDebug({
+    label,
+    model: (params as { model?: unknown }).model,
+    stopReason,
+    retries: retryCount,
+    continuations: continuationCount,
+    elapsedMs,
+    inputTokens: usage.input_tokens ?? null,
+    outputTokens: usage.output_tokens ?? null,
+    cacheCreationInputTokens: usage.cache_creation_input_tokens ?? null,
+    cacheReadInputTokens: usage.cache_read_input_tokens ?? null,
+  });
+  logSampledMetric({
     label,
     model: (params as { model?: unknown }).model,
     stopReason,
@@ -418,4 +462,163 @@ export async function callAnthropic(
     parsedJson,
     elapsedMs,
   };
+}
+
+async function fetchAnthropicStreamResponse(args: {
+  apiKey: string;
+  body: Record<string, unknown>;
+  deadlineMs: number;
+  label: string;
+}): Promise<Response> {
+  const maxRetries = envInt("HEARTGARDEN_ANTHROPIC_MAX_RETRIES", 3, 0, 8);
+  let retries = 0;
+  while (true) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(new Error("Anthropic stream timed out")), args.deadlineMs);
+    try {
+      const res = await fetch(ANTHROPIC_MESSAGES_URL, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": args.apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify(args.body),
+        signal: ctrl.signal,
+      });
+      if (!res.ok && [429, 500, 502, 503, 504, 529].includes(res.status) && retries < maxRetries) {
+        retries += 1;
+        const base = 1000 * 2 ** (retries - 1);
+        const jitter = Math.floor(Math.random() * base);
+        await sleep(base + jitter);
+        continue;
+      }
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(
+          `${args.label}: Anthropic stream request failed (${res.status})${detail ? ` ${detail.slice(0, 500)}` : ""}`,
+        );
+      }
+      return res;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+}
+
+function parseSseDataBlock(block: string): string | null {
+  const lines = block.split("\n");
+  const parts: string[] = [];
+  for (const line of lines) {
+    if (!line.startsWith("data:")) continue;
+    parts.push(line.slice(5).trimStart());
+  }
+  if (parts.length === 0) return null;
+  const data = parts.join("\n").trim();
+  if (!data || data === "[DONE]") return null;
+  return data;
+}
+
+export async function* callAnthropicTextStream(
+  apiKey: string,
+  params: AnthropicCreateParamsLoose,
+  options: CallAnthropicStreamOptions,
+): AsyncGenerator<string> {
+  const started = Date.now();
+  const label = options.label;
+  const maxOutputTokens = resolveMaxOutputTokens(label, options.maxOutputTokens);
+  const deadlineMs = resolveDeadlineMs(label, options.deadlineMs);
+  const thinking = resolveThinking(label, options.thinkingBudget);
+  const maxContinuations = envInt("HEARTGARDEN_ANTHROPIC_MAX_CONTINUATIONS", 3, 0, 12);
+  const baseMessages = Array.isArray((params as { messages?: unknown }).messages)
+    ? ([...(params as { messages: unknown[] }).messages] as unknown[])
+    : [];
+  let messages = [...baseMessages];
+  let continuationCount = 0;
+  let finalStopReason: string | null = null;
+  let outputChars = 0;
+  for (;;) {
+    const body = {
+      ...(params as unknown as Record<string, unknown>),
+      messages,
+      max_tokens: maxOutputTokens,
+      stream: true,
+      ...(thinking ? { thinking } : {}),
+    };
+    const res = await fetchAnthropicStreamResponse({
+      apiKey,
+      body,
+      deadlineMs,
+      label,
+    });
+    if (!res.body) {
+      throw new Error(`${label}: Anthropic stream body missing`);
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let continuationText = "";
+    let requestStopReason: string | null = null;
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let splitIdx = buffer.indexOf("\n\n");
+      while (splitIdx >= 0) {
+        const block = buffer.slice(0, splitIdx);
+        buffer = buffer.slice(splitIdx + 2);
+        const data = parseSseDataBlock(block);
+        if (!data) {
+          splitIdx = buffer.indexOf("\n\n");
+          continue;
+        }
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(data) as unknown;
+        } catch {
+          splitIdx = buffer.indexOf("\n\n");
+          continue;
+        }
+        const evt = parsed as {
+          type?: string;
+          delta?: { type?: string; text?: string; stop_reason?: string | null };
+        };
+        if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta") {
+          const text = evt.delta.text ?? "";
+          if (text) {
+            outputChars += text.length;
+            continuationText += text;
+            yield text;
+          }
+        }
+        if (evt.type === "message_delta" && typeof evt.delta?.stop_reason === "string") {
+          requestStopReason = evt.delta.stop_reason;
+        }
+        splitIdx = buffer.indexOf("\n\n");
+      }
+    }
+    finalStopReason = requestStopReason;
+    if (
+      requestStopReason !== "max_tokens" ||
+      continuationCount >= maxContinuations ||
+      continuationText.trim().length === 0
+    ) {
+      break;
+    }
+    continuationCount += 1;
+    messages = [
+      ...messages,
+      { role: "assistant", content: continuationText },
+      { role: "user", content: CONTINUE_TEXT_PROMPT },
+    ];
+  }
+  logSampledMetric({
+    label,
+    model: (params as { model?: unknown }).model,
+    mode: "stream",
+    stopReason: finalStopReason,
+    continuations: continuationCount,
+    elapsedMs: Date.now() - started,
+    outputChars,
+  });
 }

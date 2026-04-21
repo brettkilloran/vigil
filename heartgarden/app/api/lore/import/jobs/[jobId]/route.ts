@@ -65,6 +65,21 @@ export async function GET(req: Request, ctx: RouteCtx) {
     }
   }
 
+  const progress =
+    job.progressPhase || job.progressMessage
+      ? {
+          phase: job.progressPhase ?? "processing",
+          step: typeof job.progressStep === "number" ? job.progressStep : undefined,
+          total: typeof job.progressTotal === "number" ? job.progressTotal : undefined,
+          message: job.progressMessage ?? "Import is running on the server",
+          meta:
+            job.progressMeta && typeof job.progressMeta === "object"
+              ? (job.progressMeta as Record<string, unknown>)
+              : undefined,
+          updatedAt: job.lastProgressAt?.toISOString() ?? job.updatedAt?.toISOString() ?? null,
+        }
+      : undefined;
+
   if (job.status === "ready" && job.plan) {
     const parsed = loreImportPlanSchema.safeParse(job.plan);
     if (!parsed.success) {
@@ -81,6 +96,7 @@ export async function GET(req: Request, ctx: RouteCtx) {
       ok: true,
       status: job.status,
       plan: parsed.data,
+      ...(progress ? { progress } : {}),
     });
   }
 
@@ -102,6 +118,7 @@ export async function GET(req: Request, ctx: RouteCtx) {
   return Response.json({
     ok: true,
     status: job.status,
+    ...(progress ? { progress } : {}),
     ...(job.status === "failed"
       ? {
           error: "Import job failed",

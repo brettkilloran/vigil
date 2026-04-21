@@ -17,6 +17,7 @@ import {
 } from "@/src/lib/lore-import-clarifications";
 import { filterPlanLinksToSameCanvasSpace } from "@/src/lib/lore-import-item-link";
 import { coerceImportLinkType } from "@/src/lib/lore-import-link-shape";
+import type { LoreImportProgressReporter } from "@/src/lib/lore-import-progress";
 import type { IngestionSignals, LoreImportPlan } from "@/src/lib/lore-import-plan-types";
 import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
 import type { HeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
@@ -49,14 +50,31 @@ export async function buildLoreImportPlan(args: {
   fullText: string;
   importBatchId: string;
   fileName?: string;
+  onProgress?: LoreImportProgressReporter;
 }): Promise<LoreImportPlan> {
+  const reportProgress = async (
+    phase: string,
+    message: string,
+    detail?: { step?: number; total?: number; meta?: Record<string, unknown> },
+  ) => {
+    await args.onProgress?.({
+      phase,
+      message,
+      step: detail?.step,
+      total: detail?.total,
+      meta: detail?.meta,
+    });
+  };
+  await reportProgress("chunking", "Splitting source text into import chunks");
   const chunks = chunkSourceText(args.fullText);
+  await reportProgress("outline", "Generating initial folder/note outline");
   const outline = await runLoreImportOutlineLlm(
     args.apiKey,
     args.model,
     chunks,
     args.fullText,
   );
+  await reportProgress("outline", "Outline generated; attaching chunk-backed note bodies");
   const chunkDiagnostics = attachBodiesToOutline(outline, chunks);
 
   const notesInternal: OutlineNoteInternal[] = outline.notes.map((n) => ({
@@ -68,7 +86,16 @@ export async function buildLoreImportPlan(args: {
     (await finalizeHeartgardenSearchFiltersForDb(args.db, GM_LORE_IMPORT_SEARCH, {})) ?? {};
 
   const candidatesByNoteClientId: Record<string, CandidateRow[]> = {};
+  const retrievalTotal = Math.max(
+    1,
+    Math.ceil(notesInternal.length / VAULT_SEARCH_CONCURRENCY),
+  );
   for (let i = 0; i < notesInternal.length; i += VAULT_SEARCH_CONCURRENCY) {
+    const retrievalStep = Math.floor(i / VAULT_SEARCH_CONCURRENCY) + 1;
+    await reportProgress("vault_retrieval", "Searching existing vault candidates", {
+      step: retrievalStep,
+      total: retrievalTotal,
+    });
     const slice = notesInternal.slice(i, i + VAULT_SEARCH_CONCURRENCY);
     const results = await Promise.all(
       slice.map(async (n) => {
@@ -104,6 +131,7 @@ export async function buildLoreImportPlan(args: {
     summary: n.summary,
     bodyPreview: n.bodyText.slice(0, 3500),
   }));
+  await reportProgress("merge", "Comparing import notes with candidate cards");
 
   const { mergeProposals: rawMerges, contradictions: rawContra } =
     await runLoreImportMergeLlmBatched(
@@ -111,7 +139,11 @@ export async function buildLoreImportPlan(args: {
       args.model,
       mergeInput,
       candidatesByNoteClientId,
+      async (step, total) => {
+        await reportProgress("merge", "Running merge analysis batches", { step, total });
+      },
     );
+  await reportProgress("clarify", "Generating contradiction and clarification questions");
 
   const mergeProposals = rawMerges.map((m) => {
     const row = candidatesByNoteClientId[m.noteClientId]?.find(
@@ -324,5 +356,6 @@ export async function buildLoreImportPlan(args: {
   if (!parsed.success) {
     throw new Error(`Plan validation failed: ${parsed.error.message}`);
   }
+  await reportProgress("finalize", "Finalizing validated import plan");
   return parsed.data;
 }

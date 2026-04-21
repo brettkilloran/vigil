@@ -13,6 +13,7 @@ import {
 
 import packageJson from "@/package.json";
 import { normalizeLinkTypeAlias } from "@/src/lib/connection-kind-colors";
+import { anthropicLlmDeadlineMs } from "@/src/lib/async-timeout";
 
 export type HeartgardenMcpServerConfig = {
   baseUrl: string;
@@ -137,15 +138,29 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
   const mcpApiTimeoutMs = (() => {
     const raw = (process.env.HEARTGARDEN_MCP_FETCH_TIMEOUT_MS ?? "").trim();
     const parsed = Number(raw);
-    if (Number.isFinite(parsed) && parsed >= 1000 && parsed <= 120_000) {
+    if (Number.isFinite(parsed) && parsed >= 1000 && parsed <= 300_000) {
       return Math.floor(parsed);
     }
     return 30_000;
   })();
 
-  const api = async (input: string | URL, init?: RequestInit) => {
+  const mcpLoreQueryTimeoutMs = (() => {
+    const raw = (process.env.HEARTGARDEN_MCP_LORE_QUERY_TIMEOUT_MS ?? "").trim();
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed >= 1000 && parsed <= 300_000) {
+      return Math.floor(parsed);
+    }
+    return Math.max(mcpApiTimeoutMs, anthropicLlmDeadlineMs());
+  })();
+
+  const api = async (
+    input: string | URL,
+    init?: RequestInit,
+    opts?: { timeoutMs?: number },
+  ) => {
+    const timeoutMs = opts?.timeoutMs ?? mcpApiTimeoutMs;
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(new Error("MCP fetch timeout")), mcpApiTimeoutMs);
+    const timer = setTimeout(() => ctrl.abort(new Error("MCP fetch timeout")), timeoutMs);
     try {
       return await fetch(input, {
         ...init,
@@ -432,13 +447,18 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       {
         name: "heartgarden_lore_query",
         description:
-          "Q&A over the canvas: hybrid retrieval (FTS + vectors + graph neighbors) then Claude returns one synthesized natural-language answer plus source pointers. POST /api/lore/query. Use this for answering questions. For raw retrieved chunks (no synthesis) to feed your own reasoning, use heartgarden_semantic_search.",
+          "Q&A over the canvas: hybrid retrieval (FTS + vectors + graph neighbors) then Claude returns one synthesized answer plus source pointers. POST /api/lore/query. response_mode=text (default) returns natural language; response_mode=grounded_json returns validated citations for stricter agent workflows. For raw retrieved chunks (no synthesis) to feed your own reasoning, use heartgarden_semantic_search.",
         inputSchema: {
           type: "object",
           properties: {
             question: { type: "string" },
             space_id: { type: "string", description: "Optional: limit retrieval to this space UUID" },
             limit: { type: "integer", description: "Max sources 1–24, default 14" },
+            response_mode: {
+              type: "string",
+              enum: ["text", "grounded_json"],
+              description: "text (default) or grounded_json for cited-item contract output",
+            },
           },
           required: ["question"],
         },
@@ -936,12 +956,55 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       const body: Record<string, unknown> = { question };
       if (args.space_id) body.spaceId = String(args.space_id);
       if (args.limit != null) body.limit = Number(args.limit);
-      const res = await api(`${BASE}/api/lore/query`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      return mcpApiText(res, "mcp_lore_query_failed");
+      if (args.response_mode === "grounded_json" || args.response_mode === "text") {
+        body.responseMode = args.response_mode;
+      }
+      let res: Response;
+      try {
+        res = await api(
+          `${BASE}/api/lore/query`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          },
+          { timeoutMs: mcpLoreQueryTimeoutMs },
+        );
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "MCP lore query failed";
+        const timeout =
+          msg.includes("MCP fetch timeout") ||
+          msg.includes("aborted") ||
+          msg.includes("AbortError");
+        return mcpToolError(
+          timeout ? "mcp_lore_query_timeout" : "mcp_lore_query_transport_error",
+          timeout
+            ? `Lore query timed out after ${mcpLoreQueryTimeoutMs}ms`
+            : "Lore query transport error",
+        );
+      }
+      if (!res.ok) {
+        const bodyText = await res.text();
+        const mappedCode =
+          res.status === 429
+            ? "mcp_lore_query_rate_limited"
+            : res.status >= 500
+              ? "mcp_lore_query_upstream_error"
+              : "mcp_lore_query_failed";
+        console.error("[heartgarden MCP API error]", mappedCode, {
+          status: res.status,
+          bodyPreview: bodyText.slice(0, 1200),
+        });
+        return mcpToolError(
+          mappedCode,
+          res.status === 429 ? "Rate limited by lore query API" : "Lore query API request failed",
+          {
+            httpStatus: res.status,
+            retryAfter: res.headers.get("retry-after"),
+          },
+        );
+      }
+      return mcpToolText(await res.text());
     }
 
     if (name === "heartgarden_semantic_search") {

@@ -18,7 +18,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const bodySchema = z.object({
-  text: z.string().min(1).max(500_000),
+  text: z.string().min(1).max(2_000_000),
   spaceId: z.string().uuid(),
   fileName: z.string().max(512).optional(),
 });
@@ -72,6 +72,12 @@ export async function POST(req: Request) {
     fileName: parsed.data.fileName ?? null,
     plan: null,
     error: null,
+    progressPhase: "queued",
+    progressStep: null,
+    progressTotal: null,
+    progressMessage: "Queued for smart import planning",
+    progressMeta: null,
+    lastProgressAt: now,
     createdAt: now,
     updatedAt: now,
   });

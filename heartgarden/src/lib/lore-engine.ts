@@ -2,7 +2,11 @@
  * Lore Q&A pipeline: hybrid vault retrieval (`hybridRetrieveItems` + link expansion)
  * → excerpt shaping → Anthropic completion. Used by `POST /api/lore/query`.
  */
-import { buildCachedSystem, callAnthropic } from "@/src/lib/anthropic-client";
+import {
+  buildCachedSystem,
+  callAnthropic,
+  callAnthropicTextStream,
+} from "@/src/lib/anthropic-client";
 
 import type { tryGetDb } from "@/src/db/index";
 import type { SearchFilters, SearchRow } from "@/src/lib/spaces";
@@ -35,6 +39,12 @@ export type LoreSource = {
   viaProse?: boolean;
   /** Included via hgArch binding slots on a primary hit (no `item_links` required). */
   viaBinding?: boolean;
+};
+
+export type LoreGroundedAnswer = {
+  answerText: string;
+  citedItemIds: string[];
+  insufficientEvidence: boolean;
 };
 
 function readCanonicalEntityKind(row: SearchRow): string | null {
@@ -206,4 +216,113 @@ export async function synthesizeLoreAnswer(
   );
 
   return res.text;
+}
+
+export async function* synthesizeLoreAnswerStream(
+  apiKey: string,
+  model: string,
+  question: string,
+  sources: LoreSource[],
+): AsyncGenerator<string> {
+  const blocks = sources.map((s, i) => {
+    const body = sanitizeRetrievedTextForLorePrompt(s.excerpt);
+    const ctx = s.viaGraph
+      ? "\n- context: canvas connection neighbor"
+      : s.viaProse
+        ? "\n- context: cited in note text"
+        : s.viaBinding
+          ? "\n- context: structured card field (hgArch binding target)"
+          : "";
+    const kindLine = s.canonicalEntityKind ? `\n- kind: ${s.canonicalEntityKind}` : "";
+    return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${kindLine}${ctx}\n\n${body}`;
+  });
+  const user = `Question:\n${question.trim()}\n\n---\n\nCanvas excerpts (your only ground truth):\n\n${blocks.join("\n\n---\n\n")}`;
+  yield* callAnthropicTextStream(
+    apiKey,
+    {
+      model,
+      system: buildCachedSystem(LORE_SYSTEM),
+      messages: [{ role: "user", content: user }],
+    },
+    { label: "lore.query.answer" },
+  );
+}
+
+const LORE_GROUNDED_SYSTEM = `${LORE_SYSTEM}
+
+Additionally, return ONLY valid JSON with this exact shape:
+{
+  "answer_text": "string",
+  "cited_item_ids": ["item uuid from sources", ...],
+  "insufficient_evidence": boolean
+}
+
+Rules:
+- cited_item_ids must contain only itemId values from the provided sources.
+- If evidence is weak/incomplete, set insufficient_evidence=true and explain limits in answer_text.
+- Do not add markdown fences or prose outside JSON.`;
+
+export function normalizeGroundedLoreAnswer(
+  value: unknown,
+  sources: LoreSource[],
+): LoreGroundedAnswer {
+  const sourceIds = new Set(sources.map((s) => s.itemId));
+  const raw = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const answerText = String(raw.answer_text ?? "").trim();
+  const citedRaw = Array.isArray(raw.cited_item_ids) ? raw.cited_item_ids : [];
+  const citedItemIds = citedRaw
+    .map((x) => String(x ?? "").trim())
+    .filter((id, idx, arr) => id && sourceIds.has(id) && arr.indexOf(id) === idx);
+  const insufficientEvidence = raw.insufficient_evidence === true;
+  return {
+    answerText,
+    citedItemIds,
+    insufficientEvidence,
+  };
+}
+
+export function groundedLoreAnswerContractIssue(answer: LoreGroundedAnswer): string | null {
+  if (!answer.answerText.trim()) {
+    return "empty_answer_text";
+  }
+  if (!answer.insufficientEvidence && answer.citedItemIds.length === 0) {
+    return "missing_citations";
+  }
+  return null;
+}
+
+export async function synthesizeLoreAnswerGrounded(
+  apiKey: string,
+  model: string,
+  question: string,
+  sources: LoreSource[],
+): Promise<LoreGroundedAnswer> {
+  const blocks = sources.map((s, i) => {
+    const body = sanitizeRetrievedTextForLorePrompt(s.excerpt);
+    const ctx = s.viaGraph
+      ? "\n- context: canvas connection neighbor"
+      : s.viaProse
+        ? "\n- context: cited in note text"
+        : s.viaBinding
+          ? "\n- context: structured card field (hgArch binding target)"
+          : "";
+    const kindLine = s.canonicalEntityKind ? `\n- kind: ${s.canonicalEntityKind}` : "";
+    return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${kindLine}${ctx}\n\n${body}`;
+  });
+  const user = `Question:\n${question.trim()}\n\n---\n\nCanvas excerpts (your only ground truth):\n\n${blocks.join("\n\n---\n\n")}`;
+  const res = await callAnthropic(
+    apiKey,
+    {
+      model,
+      system: buildCachedSystem(LORE_GROUNDED_SYSTEM),
+      messages: [{ role: "user", content: user }],
+    },
+    { label: "lore.query.answer", expectJson: true },
+  );
+  const grounded = normalizeGroundedLoreAnswer(res.parsedJson, sources);
+  const issue = groundedLoreAnswerContractIssue(grounded);
+  if (issue) {
+    throw new Error(`lore.query.answer grounded contract violation: ${issue}`);
+  }
+  return grounded;
 }

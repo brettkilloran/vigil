@@ -27,6 +27,9 @@ type LoreResponse = {
   error?: unknown;
 };
 
+type LoreStreamMeta = { sources?: LoreAskSource[]; model?: string | null };
+type LoreStreamDone = { answer?: string; sources?: LoreAskSource[]; model?: string | null };
+
 function loreScrollableAncestorWithin(el: Node | null, boundary: HTMLElement): HTMLElement | null {
   let n: Element | null = el instanceof Element ? el : el?.parentElement ?? null;
   while (n && boundary.contains(n)) {
@@ -165,9 +168,10 @@ export function LoreAskPanel({
     setSources([]);
     setModel(null);
     try {
-      const body: { question: string; spaceId?: string; limit?: number } = {
+      const body: { question: string; spaceId?: string; limit?: number; stream?: boolean } = {
         question: q,
         limit: 18,
+        stream: true,
       };
       if (spaceScopedAllowed && scopeCurrentSpace && spaceId) {
         body.spaceId = spaceId;
@@ -177,6 +181,64 @@ export function LoreAskPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      const contentType = res.headers.get("content-type") ?? "";
+      if (res.ok && contentType.includes("text/event-stream") && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let started = false;
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let splitIdx = buffer.indexOf("\n\n");
+          while (splitIdx >= 0) {
+            const block = buffer.slice(0, splitIdx);
+            buffer = buffer.slice(splitIdx + 2);
+            const lines = block.split("\n");
+            let eventName = "message";
+            const dataLines: string[] = [];
+            for (const line of lines) {
+              if (line.startsWith("event:")) eventName = line.slice(6).trim();
+              if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
+            }
+            const payloadRaw = dataLines.join("\n");
+            let payload: unknown = null;
+            if (payloadRaw) {
+              try {
+                payload = JSON.parse(payloadRaw) as unknown;
+              } catch {
+                payload = null;
+              }
+            }
+            if (eventName === "meta") {
+              const p = payload as LoreStreamMeta | null;
+              if (Array.isArray(p?.sources)) setSources(p.sources);
+              if (typeof p?.model === "string") setModel(p.model);
+            } else if (eventName === "delta") {
+              const text = String((payload as { text?: unknown } | null)?.text ?? "");
+              if (text) {
+                if (!started) {
+                  playVigilUiSound("notification");
+                  started = true;
+                }
+                setAnswer((prev) => `${prev ?? ""}${text}`);
+              }
+            } else if (eventName === "done") {
+              const p = payload as LoreStreamDone | null;
+              if (typeof p?.answer === "string") setAnswer(p.answer);
+              if (Array.isArray(p?.sources)) setSources(p.sources);
+              if (typeof p?.model === "string") setModel(p.model);
+            } else if (eventName === "error") {
+              const msg = String((payload as { message?: unknown } | null)?.message ?? "Request failed");
+              playVigilUiSound("caution");
+              setError(msg);
+            }
+            splitIdx = buffer.indexOf("\n\n");
+          }
+        }
+        return;
+      }
       const data = (await res.json()) as LoreResponse;
       if (!res.ok || !data.ok) {
         const err = data.error;

@@ -504,6 +504,15 @@ type LoreSmartImportReviewState = {
   fileName?: string;
 };
 
+type LoreImportJobProgress = {
+  phase?: string;
+  step?: number;
+  total?: number;
+  message?: string;
+  meta?: Record<string, unknown>;
+  updatedAt?: string | null;
+};
+
 function upsertClarificationAnswer(
   prev: ClarificationAnswer[],
   next: ClarificationAnswer,
@@ -2163,6 +2172,8 @@ export function ArchitecturalCanvasApp({
     "structure",
   );
   const [loreSmartPlanning, setLoreSmartPlanning] = useState(false);
+  const [loreSmartPlanningProgress, setLoreSmartPlanningProgress] =
+    useState<LoreImportJobProgress | null>(null);
   const [loreSmartIncludeSource, setLoreSmartIncludeSource] = useState(true);
   const [loreSmartAcceptedMergeIds, setLoreSmartAcceptedMergeIds] = useState<Record<string, boolean>>(
     {},
@@ -7209,6 +7220,10 @@ export function ArchitecturalCanvasApp({
           setLoreSmartIncludeSource(true);
           setLoreSmartTab("structure");
           setLoreSmartPlanning(true);
+          setLoreSmartPlanningProgress({
+            phase: "queued",
+            message: "Queued for smart import planning",
+          });
           try {
             const jobRes = await fetch("/api/lore/import/jobs", {
               method: "POST",
@@ -7237,6 +7252,8 @@ export function ArchitecturalCanvasApp({
               let pollFailed = false;
               let planFailed = false;
               let planReady = false;
+              let stablePhaseCount = 0;
+              let lastPhase = "";
               for (let attempt = 0; attempt < maxAttempts; attempt++) {
                 const poll = await fetch(
                   `/api/lore/import/jobs/${jobId}?spaceId=${encodeURIComponent(spaceId)}`,
@@ -7246,6 +7263,7 @@ export function ArchitecturalCanvasApp({
                   status?: string;
                   plan?: LoreImportPlan;
                   error?: string;
+                  progress?: LoreImportJobProgress;
                 };
                 if (!poll.ok || !st.ok) {
                   window.alert(
@@ -7255,6 +7273,15 @@ export function ArchitecturalCanvasApp({
                   );
                   pollFailed = true;
                   break;
+                }
+                if (st.progress) {
+                  setLoreSmartPlanningProgress(st.progress);
+                  const phase = String(st.progress.phase ?? "");
+                  if (phase && phase === lastPhase) stablePhaseCount += 1;
+                  else {
+                    stablePhaseCount = 0;
+                    lastPhase = phase;
+                  }
                 }
                 if (st.status === "ready" && st.plan) {
                   planReady = true;
@@ -7284,7 +7311,9 @@ export function ArchitecturalCanvasApp({
                   planFailed = true;
                   break;
                 }
-                await new Promise((r) => setTimeout(r, 1000));
+                const delayMs =
+                  stablePhaseCount >= 12 ? 3000 : stablePhaseCount >= 6 ? 2000 : 1000;
+                await new Promise((r) => setTimeout(r, delayMs));
               }
               if (!planReady && !pollFailed && !planFailed) {
                 window.alert(
@@ -7296,6 +7325,7 @@ export function ArchitecturalCanvasApp({
             window.alert("Smart import job request failed. Please try again or split the file.");
           } finally {
             setLoreSmartPlanning(false);
+            setLoreSmartPlanningProgress(null);
           }
           return;
         }
@@ -11240,6 +11270,15 @@ export function ArchitecturalCanvasApp({
           >
             <div className="rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-panel)] px-6 py-4 text-sm text-[var(--vigil-label)] shadow-xl">
               <p className="font-medium">Planning import…</p>
+              {loreSmartPlanningProgress?.message ? (
+                <p className="mt-1 text-[12px] text-[var(--vigil-label)]">
+                  {loreSmartPlanningProgress.message}
+                  {typeof loreSmartPlanningProgress.step === "number" &&
+                  typeof loreSmartPlanningProgress.total === "number"
+                    ? ` (${loreSmartPlanningProgress.step}/${loreSmartPlanningProgress.total})`
+                    : ""}
+                </p>
+              ) : null}
               <p className="mt-1 max-w-xs text-[11px] text-[var(--vigil-muted)]">
                 Running in the background on the server. You can leave this page open — it usually finishes
                 within a minute or two for typical files.
