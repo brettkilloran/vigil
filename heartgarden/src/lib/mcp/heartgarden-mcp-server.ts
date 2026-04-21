@@ -1,6 +1,7 @@
 /**
  * Shared Heartgarden MCP server: tools + resources + HTTP fetch to HEARTGARDEN_APP_URL
  * with optional Bearer HEARTGARDEN_MCP_SERVICE_KEY for production boot gate.
+ * Request bodies mirror `app/api/**` handlers (Zod + Drizzle there); keep wire shapes aligned when editing tools.
  */
 import { Server } from "@modelcontextprotocol/sdk/server";
 import {

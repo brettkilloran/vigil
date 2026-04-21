@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import type { tryGetDb } from "@/src/db/index";
 import { itemEmbeddings, items } from "@/src/db/schema";
 import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
-import { extractLoreItemMeta } from "@/src/lib/lore-item-meta";
+import { extractLoreItemMeta, normalizeLoreMetaInputText } from "@/src/lib/lore-item-meta";
 import {
   buildItemVaultCorpus,
   itemSearchableSourceFromRow,
@@ -16,9 +16,6 @@ type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 export type ItemRow = typeof items.$inferSelect;
 
 const DEFAULT_LORE_MODEL = "claude-sonnet-4-20250514";
-
-/** Must match `extractLoreItemMeta` (`lore-item-meta.ts`) so skip-hash aligns with the API payload. */
-const LORE_META_BODY_MAX_CHARS = 24_000;
 
 /** When unset, `HEARTGARDEN_INDEX_SKIP_LORE_META=1` skips Anthropic lore fields on index. */
 function resolveRefreshLoreMeta(explicit?: boolean): boolean {
@@ -48,7 +45,7 @@ export function buildLoreMetaAnthropicBody(row: Pick<ItemRow, "title" | "content
 
 /** SHA-256 hex of the exact note text sent to Anthropic (after trim + length cap). */
 export function computeLoreMetaSourceHash(row: Pick<ItemRow, "title" | "contentText">): string {
-  const forApi = buildLoreMetaAnthropicBody(row).trim().slice(0, LORE_META_BODY_MAX_CHARS);
+  const forApi = normalizeLoreMetaInputText(buildLoreMetaAnthropicBody(row));
   return sha256Hex(forApi);
 }
 

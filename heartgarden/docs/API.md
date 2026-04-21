@@ -99,6 +99,21 @@ Optional **`HEARTGARDEN_MCP_URL`** (default `https://heartgarden.vercel.app/api/
 | GET | `/api/items/[itemId]/links` | Link neighbors. |
 | GET | `/api/items/[itemId]/related` | Related-items heuristic. |
 
+### Vault index orchestration
+
+Per-item vault work (**chunking, embeddings, optional Anthropic lore summary/aliases**) is triggered from multiple places; they funnel into the same core indexer **`reindexItemVault`** (`src/lib/item-vault-index.ts`) via **`POST /api/items/[itemId]/index`**. The browser shell also schedules a **debounced** client **`POST …/index`** after edits (`scheduleVaultIndexForItem` in `architectural-neon-api.ts`). **`scheduleVaultReindexAfterResponse`** (`schedule-vault-index-after.ts`) may run **`after()`** reindex on PATCH/create with **`refreshLoreMeta: false`** so it does **not** duplicate Anthropic lore-meta work with the client-scheduled index path. See **`AGENTS.md`** → Lore + vault index for env toggles.
+
+```mermaid
+flowchart LR
+  neonApi["scheduleVaultIndexForItem"]
+  afterHook["scheduleVaultReindexAfterResponse"]
+  indexRoute["POST /api/items/id/index"]
+  reindex["reindexItemVault"]
+  neonApi -->|"debounced fetch"| indexRoute
+  afterHook --> reindex
+  indexRoute --> reindex
+```
+
 ### Browser shell — PATCH versioning and conflicts
 
 The shipped canvas (`ArchitecturalCanvasApp` → **`patchItemWithVersion`**) keeps a client map of each item’s last known server **`updatedAt`** and sends **`baseUpdatedAt`** on PATCH when available. **`apiPatchItem`** runs **at most one in-flight fetch per item id** (serialized queue). On **409 conflict**, the UI may **retry once** using **`item.updatedAt`** from the error body; if the second write still conflicts, it queues a **conflict banner** (load server row vs dismiss and keep local draft). **`recordItemPatchOk`** / **`recordItemPatchConflict`** in **`heartgarden-collab-metrics.ts`** count successful PATCHes vs 409 conflicts; **`window.__heartgardenCollabMetrics`** exposes space-sync run counts (including **`poll_catchup`**) for ad-hoc debugging.

@@ -8,7 +8,6 @@ import {
   gmMayAccessItemSpaceAsync,
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForPlayer,
-  isHeartgardenPlayerBlocked,
   playerMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
@@ -17,6 +16,11 @@ import {
   normalizeLinkSemanticsInMeta,
 } from "@/src/lib/item-link-meta";
 import { validateStructuredMirrorItemLink } from "@/src/lib/item-links-structured-validation";
+import {
+  heartgardenApiReadJsonBody,
+  heartgardenApiRejectIfPlayerBlocked,
+  heartgardenApiRequireDb,
+} from "@/src/lib/heartgarden-api-route-helpers";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 
 function normalizeItemLinkMeta(meta: Record<string, unknown>): Record<string, unknown> {
@@ -52,24 +56,15 @@ const deleteBodySchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const db = tryGetDb();
-  if (!db) {
-    return Response.json(
-      { ok: false, error: "Database not configured" },
-      { status: 503 },
-    );
-  }
+  const dbGate = heartgardenApiRequireDb(tryGetDb());
+  if (!dbGate.ok) return dbGate.response;
+  const db = dbGate.db;
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenPlayerBlocked(bootCtx)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
-  let json: unknown;
-  try {
-    json = await req.json();
-  } catch {
-    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
-  }
-  const parsed = bodySchema.safeParse(json);
+  const blocked = heartgardenApiRejectIfPlayerBlocked(bootCtx);
+  if (blocked) return blocked;
+  const bodyRead = await heartgardenApiReadJsonBody(req);
+  if (!bodyRead.ok) return bodyRead.response;
+  const parsed = bodySchema.safeParse(bodyRead.json);
   if (!parsed.success) {
     return Response.json(
       { ok: false, error: parsed.error.flatten() },
@@ -165,24 +160,15 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const db = tryGetDb();
-  if (!db) {
-    return Response.json(
-      { ok: false, error: "Database not configured" },
-      { status: 503 },
-    );
-  }
+  const dbGate = heartgardenApiRequireDb(tryGetDb());
+  if (!dbGate.ok) return dbGate.response;
+  const db = dbGate.db;
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenPlayerBlocked(bootCtx)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
-  let json: unknown;
-  try {
-    json = await req.json();
-  } catch {
-    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
-  }
-  const parsed = patchBodySchema.safeParse(json);
+  const blocked = heartgardenApiRejectIfPlayerBlocked(bootCtx);
+  if (blocked) return blocked;
+  const bodyRead = await heartgardenApiReadJsonBody(req);
+  if (!bodyRead.ok) return bodyRead.response;
+  const parsed = patchBodySchema.safeParse(bodyRead.json);
   if (!parsed.success) {
     return Response.json(
       { ok: false, error: parsed.error.flatten() },
@@ -293,24 +279,15 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const db = tryGetDb();
-  if (!db) {
-    return Response.json(
-      { ok: false, error: "Database not configured" },
-      { status: 503 },
-    );
-  }
+  const dbGate = heartgardenApiRequireDb(tryGetDb());
+  if (!dbGate.ok) return dbGate.response;
+  const db = dbGate.db;
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenPlayerBlocked(bootCtx)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
-  let json: unknown;
-  try {
-    json = await req.json();
-  } catch {
-    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
-  }
-  const parsed = deleteBodySchema.safeParse(json);
+  const blocked = heartgardenApiRejectIfPlayerBlocked(bootCtx);
+  if (blocked) return blocked;
+  const bodyRead = await heartgardenApiReadJsonBody(req);
+  if (!bodyRead.ok) return bodyRead.response;
+  const parsed = deleteBodySchema.safeParse(bodyRead.json);
   if (!parsed.success) {
     return Response.json(
       { ok: false, error: parsed.error.flatten() },

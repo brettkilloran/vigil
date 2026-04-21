@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { LoreEntityNodeLab } from "@/src/components/dev/LoreEntityNodeLab";
+import { LoreEntityNodesClient } from "./LoreEntityNodesClient";
 
 export const metadata: Metadata = {
   title: "Lore entity nodes — lab",
@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function LoreEntityNodesPage() {
-  return <LoreEntityNodeLab />;
+  return <LoreEntityNodesClient />;
 }

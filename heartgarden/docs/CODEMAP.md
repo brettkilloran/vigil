@@ -26,7 +26,7 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Browser-local camera storage + arrival policy | `src/lib/heartgarden-space-camera.ts` (see `**AGENTS.md`** → Canvas camera) |
 | Foundation types / pieces                     | `src/components/foundation/*`                                               |
 | Flow / WebGL overlay (optional)               | `src/components/transition-experiment/VigilFlowRevealOverlay.tsx`           |
-| Legacy / parallel store (panels)              | `src/stores/canvas-store.ts` (see `BUILD_PLAN.md`)                          |
+| Panel / prefs state (not canvas graph SoT)   | Local React state + `src/lib/vigil-canvas-prefs.ts` (minimap, etc.); graph lives only in `ArchitecturalCanvasApp` |
 
 
 ## Canvas chrome, navigation & note editing

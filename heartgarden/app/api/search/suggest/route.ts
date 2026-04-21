@@ -9,35 +9,8 @@ import {
   applySuggestTierPolicy,
   finalizeHeartgardenSearchFiltersForDb,
 } from "@/src/lib/heartgarden-search-tier-policy";
-import { suggestItems, type SearchFilters } from "@/src/lib/spaces";
-
-function parseBool(raw: string | null): boolean | undefined {
-  if (!raw) return undefined;
-  const v = raw.trim().toLowerCase();
-  if (v === "true") return true;
-  if (v === "false") return false;
-  return undefined;
-}
-
-function parseCsv(raw: string | null): string[] {
-  if (!raw) return [];
-  return raw
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean);
-}
-
-function parseFilters(url: URL): SearchFilters {
-  const limitRaw = Number(url.searchParams.get("limit"));
-  return {
-    spaceId: url.searchParams.get("spaceId") ?? undefined,
-    itemTypes: parseCsv(url.searchParams.get("types")),
-    entityTypes: parseCsv(url.searchParams.get("entityTypes")),
-    hasLinks: parseBool(url.searchParams.get("hasLinks")),
-    inStack: parseBool(url.searchParams.get("inStack")),
-    limit: Number.isFinite(limitRaw) ? limitRaw : undefined,
-  };
-}
+import { parseSearchFiltersFromUrl } from "@/src/lib/heartgarden-search-url-params";
+import { suggestItems } from "@/src/lib/spaces";
 
 export async function GET(req: Request) {
   const db = tryGetDb();
@@ -56,7 +29,7 @@ export async function GET(req: Request) {
   if (q.length < 1) {
     return Response.json({ ok: true, suggestions: [] });
   }
-  const parsed = parseFilters(url);
+  const parsed = parseSearchFiltersFromUrl(url, "suggest");
   const tiered = applySuggestTierPolicy(bootCtx, parsed);
   if (!tiered.ok) {
     return heartgardenApiForbiddenJsonResponse();

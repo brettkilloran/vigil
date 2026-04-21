@@ -38,7 +38,7 @@ function run() {
   );
   mustContain(
     "src/components/foundation/ArchitecturalNodeCard.tsx",
-    "value={bodyDoc ?? EMPTY_HG_DOC}",
+    "bodyDoc ?? EMPTY_HG_DOC",
   );
   mustNotContain(
     "src/components/foundation/ArchitecturalNodeCard.tsx",

@@ -4,12 +4,10 @@ import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
-  gmMayAccessSpaceIdAsync,
   isHeartgardenPlayerBlocked,
-  playerMayAccessSpaceIdAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { assertV1ItemsListSpaceAccess } from "@/src/lib/heartgarden-api-item-loaders";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
-import { assertSpaceExists } from "@/src/lib/spaces";
 
 /**
  * Versioned read-only list for scripts / LLM (no auth in single-user mode).
@@ -29,17 +27,14 @@ export async function GET(req: Request) {
   if (!spaceId) {
     return Response.json({ error: "space_id required" }, { status: 400 });
   }
-  const space = await assertSpaceExists(db, spaceId);
-  if (!space) {
+  const spaceAccess = await assertV1ItemsListSpaceAccess(db, bootCtx, spaceId);
+  if (spaceAccess.kind === "space_absent") {
     if (bootCtx.role === "player") {
       return Response.json({ error: "Forbidden." }, { status: 403 });
     }
     return Response.json({ error: "Space not found" }, { status: 404 });
   }
-  if (!(await playerMayAccessSpaceIdAsync(db, bootCtx, spaceId))) {
-    return Response.json({ error: "Forbidden." }, { status: 403 });
-  }
-  if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, spaceId))) {
+  if (spaceAccess.kind === "deny") {
     return Response.json({ error: "Forbidden." }, { status: 403 });
   }
 

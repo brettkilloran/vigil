@@ -6,17 +6,10 @@ import {
   heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
-import { assertSpaceExists, type SearchFilters, type VigilDb } from "@/src/lib/spaces";
+import { parseSearchFiltersFromUrl } from "@/src/lib/heartgarden-search-url-params";
+import { assertSpaceExists, type VigilDb } from "@/src/lib/spaces";
 import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
 import { searchItemChunksByVector } from "@/src/lib/vault-retrieval";
-
-function parseFilters(url: URL): SearchFilters {
-  const limitRaw = Number(url.searchParams.get("limit"));
-  return {
-    spaceId: url.searchParams.get("spaceId") ?? undefined,
-    limit: Number.isFinite(limitRaw) ? limitRaw : undefined,
-  };
-}
 
 export async function GET(req: Request) {
   const bootCtx = await getHeartgardenApiBootContext();
@@ -30,7 +23,7 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim();
-  const parsed = parseFilters(url);
+  const parsed = parseSearchFiltersFromUrl(url, "chunks");
 
   if (parsed.spaceId && !(await gmMayAccessSpaceIdAsync(db as VigilDb, bootCtx, parsed.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();

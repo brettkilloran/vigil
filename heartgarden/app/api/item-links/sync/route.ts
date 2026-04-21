@@ -8,9 +8,13 @@ import {
   gmMayAccessItemSpaceAsync,
   heartgardenApiForbiddenJsonResponse,
   heartgardenMaskNotFoundForPlayer,
-  isHeartgardenPlayerBlocked,
   playerMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
+import {
+  heartgardenApiReadJsonBody,
+  heartgardenApiRejectIfPlayerBlocked,
+  heartgardenApiRequireDb,
+} from "@/src/lib/heartgarden-api-route-helpers";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 
 const bodySchema = z.object({
@@ -23,26 +27,17 @@ const bodySchema = z.object({
  * Kept for external/script clients; app UI writes per-link via `/api/item-links`.
  */
 export async function POST(req: Request) {
-  const db = tryGetDb();
-  if (!db) {
-    return Response.json(
-      { ok: false, error: "Database not configured" },
-      { status: 503 },
-    );
-  }
+  const dbGate = heartgardenApiRequireDb(tryGetDb());
+  if (!dbGate.ok) return dbGate.response;
+  const db = dbGate.db;
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenPlayerBlocked(bootCtx)) {
-    return heartgardenApiForbiddenJsonResponse();
-  }
+  const blocked = heartgardenApiRejectIfPlayerBlocked(bootCtx);
+  if (blocked) return blocked;
 
-  let json: unknown;
-  try {
-    json = await req.json();
-  } catch {
-    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
-  }
+  const bodyRead = await heartgardenApiReadJsonBody(req);
+  if (!bodyRead.ok) return bodyRead.response;
 
-  const parsed = bodySchema.safeParse(json);
+  const parsed = bodySchema.safeParse(bodyRead.json);
   if (!parsed.success) {
     return Response.json(
       { ok: false, error: parsed.error.flatten() },

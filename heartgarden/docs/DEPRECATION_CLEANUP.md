@@ -10,7 +10,7 @@ This document is the cleanup playbook for post-cutover deletion and hardening wo
 
 - Phase A (guardrails): complete
 - Phase B (legacy path isolation): complete (`runHgDocFormat` / `runLegacyFormat` split in `ArchitecturalCanvasApp.tsx`)
-- Phase C (dead-code deletion): partial (legacy checklist insertion path removed from legacy formatter; additional non-hgDoc surface cleanup is optional and can proceed incrementally)
+- Phase C (dead-code deletion): partial — `runLegacyFormat` / **`normalizeChecklistMarkup`** remain for **non-hgDoc** and merge/focus HTML paths (see `ArchitecturalCanvasApp` call sites); further deletion requires the **Deletion Gates** § checklist below.
 - Phase D (hard enforcement): complete for automated gates (`verify:editor-cutover`, acceptance matrix automation, text-editing E2E)
 
 ## Scope

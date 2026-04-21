@@ -74,6 +74,6 @@ We **treat the archived master plan** as **historical product intent** (gestures
 
 1. For **next tasks:** **`docs/LORE_ENGINE_ROADMAP.md`** + **`docs/BUILD_PLAN.md`** + **`.cursor/plans/README.md`**. For **historical UX / session ordering:** **`docs/archive/vigil-master-plan-legacy.md`** (cross-check paths against real code).
 2. Prefer code that follows the custom-canvas architecture (**`ArchitecturalCanvasApp`**); **tldraw is gone** from this repo.
-3. **Canvas graph state** lives in **`ArchitecturalCanvasApp`** (in-component React state + undo/redo). **`src/stores/canvas-store.ts`** is a **legacy / parallel** store for some panels — do not assume it is the shell’s item graph SoT (see **`docs/CODEMAP.md`**).
+3. **Canvas graph state** lives in **`ArchitecturalCanvasApp`** (in-component React state + undo/redo). **Do not** assume any external store is the shell’s item graph SoT — see **`docs/CODEMAP.md`** (panels use local state + prefs helpers).
 4. When touching schema, align migrations with **`src/db/schema.ts`** and the master plan (stacks, search, embeddings, links).
 5. **Neon vault ops:** **`npm run db:vault-setup`** (extension + Drizzle push + vault SQL), **`npm run vault:reindex`** (needs running app). Human checklist + CI workflow: **`docs/FOLLOW_UP.md`**; script table: **`README.md`**.

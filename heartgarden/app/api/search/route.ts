@@ -12,9 +12,9 @@ import {
   finalizeHeartgardenSearchFiltersForDb,
 } from "@/src/lib/heartgarden-search-tier-policy";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
+import { parseSearchFiltersFromUrl } from "@/src/lib/heartgarden-search-url-params";
 import {
   assertSpaceExists,
-  type SearchFilters,
   searchItemsFTS,
   searchItemsFuzzy,
   searchItemsHybrid,
@@ -24,47 +24,6 @@ import { API_SEARCH_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 import { hybridRetrieveItems } from "@/src/lib/vault-retrieval";
 
 const HYBRID_FTS_SHORT_CIRCUIT_LIMIT = 12;
-
-function parseBool(raw: string | null): boolean | undefined {
-  if (!raw) return undefined;
-  const v = raw.trim().toLowerCase();
-  if (v === "true") return true;
-  if (v === "false") return false;
-  return undefined;
-}
-
-function parseCsv(raw: string | null): string[] {
-  if (!raw) return [];
-  return raw
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean);
-}
-
-function parseFilters(url: URL): SearchFilters {
-  const updatedAfterRaw = url.searchParams.get("updatedAfter");
-  const updatedAfter = updatedAfterRaw ? new Date(updatedAfterRaw) : undefined;
-  const sortRaw = (url.searchParams.get("sort") ?? "").toLowerCase();
-  const sort =
-    sortRaw === "title" || sortRaw === "created" || sortRaw === "updated" || sortRaw === "relevance"
-      ? sortRaw
-      : undefined;
-  const limitRaw = Number(url.searchParams.get("limit"));
-  const minEpochRaw = Number(url.searchParams.get("minCampaignEpoch"));
-  return {
-    spaceId: url.searchParams.get("spaceId") ?? undefined,
-    itemTypes: parseCsv(url.searchParams.get("types")),
-    entityTypes: parseCsv(url.searchParams.get("entityTypes")),
-    updatedAfter:
-      updatedAfter && Number.isFinite(updatedAfter.getTime()) ? updatedAfter : undefined,
-    hasLinks: parseBool(url.searchParams.get("hasLinks")),
-    inStack: parseBool(url.searchParams.get("inStack")),
-    sort,
-    limit: Number.isFinite(limitRaw) ? limitRaw : undefined,
-    minCampaignEpoch: Number.isFinite(minEpochRaw) ? Math.floor(minEpochRaw) : undefined,
-    excludeLoreHistorical: parseBool(url.searchParams.get("excludeLoreHistorical")),
-  };
-}
 
 function mapRows(rows: Awaited<ReturnType<typeof searchItemsFTS>>) {
   return rows.map((row) => ({
@@ -86,7 +45,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim();
   const modeRaw = (url.searchParams.get("mode") ?? "hybrid").toLowerCase();
-  const parsedFilters = parseFilters(url);
+  const parsedFilters = parseSearchFiltersFromUrl(url, "full");
 
   const tiered = applySearchTierPolicy(bootCtx, parsedFilters, modeRaw);
   if (!tiered.ok) {

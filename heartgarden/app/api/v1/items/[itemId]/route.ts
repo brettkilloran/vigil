@@ -1,13 +1,9 @@
-import { eq } from "drizzle-orm";
-
 import { tryGetDb } from "@/src/db/index";
-import { items } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
-  gmMayAccessItemSpaceAsync,
   isHeartgardenPlayerBlocked,
-  playerMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { loadItemRowForHeartgardenApi } from "@/src/lib/heartgarden-api-item-loaders";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 
 /**
@@ -27,21 +23,18 @@ export async function GET(
     return Response.json({ error: "Forbidden." }, { status: 403 });
   }
   const { itemId } = await context.params;
-  const [row] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
-  if (!row) {
+  const loaded = await loadItemRowForHeartgardenApi(db, bootCtx, itemId);
+  if (loaded.kind === "absent") {
     if (bootCtx.role === "player") {
       return Response.json({ error: "Forbidden." }, { status: 403 });
     }
     return Response.json({ error: "Not found" }, { status: 404 });
   }
-  if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, row.spaceId))) {
-    return Response.json({ error: "Forbidden." }, { status: 403 });
-  }
-  if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, row.spaceId))) {
+  if (loaded.kind === "deny") {
     return Response.json({ error: "Forbidden." }, { status: 403 });
   }
   return Response.json({
     version: 1,
-    item: rowToCanvasItem(row),
+    item: rowToCanvasItem(loaded.row),
   });
 }

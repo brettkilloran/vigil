@@ -1,5 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 
+/** Max chars of note text passed to the lore-meta model after trim (must match `item-vault-index` skip-hash). */
+export const LORE_META_MAX_INPUT_CHARS = 24_000;
+
+/** Same trim + cap as `extractLoreItemMeta` applies before the API call. */
+export function normalizeLoreMetaInputText(text: string): string {
+  return text.trim().slice(0, LORE_META_MAX_INPUT_CHARS);
+}
+
 const SYSTEM = `You index tabletop / worldbuilding notes for search. Return ONLY valid JSON (no markdown fence):
 {"summary":"string under 280 chars","aliases":["short alternate names or epithets, max 12 entries"]}
 
@@ -16,7 +24,7 @@ export async function extractLoreItemMeta(
   text: string,
 ): Promise<LoreItemMeta> {
   const client = new Anthropic({ apiKey });
-  const trimmed = text.trim().slice(0, 24_000);
+  const trimmed = normalizeLoreMetaInputText(text);
   const res = await client.messages.create({
     model,
     max_tokens: 512,
