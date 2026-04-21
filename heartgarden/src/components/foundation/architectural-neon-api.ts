@@ -152,9 +152,12 @@ export type ApiPatchItemResult =
   | { ok: false; gone: true }
   | { ok: false; error?: string };
 
-export async function fetchBootstrap(spaceId?: string): Promise<BootstrapResponse | null> {
+export async function fetchBootstrap(
+  spaceId?: string,
+  options?: { signal?: AbortSignal },
+): Promise<BootstrapResponse | null> {
   const q = spaceId ? `?space=${encodeURIComponent(spaceId)}` : "";
-  const res = await fetch(`/api/bootstrap${q}`);
+  const res = await fetch(`/api/bootstrap${q}`, { signal: options?.signal });
   const data = (await res.json()) as BootstrapResponse;
   return data.ok ? data : null;
 }
@@ -198,7 +201,7 @@ function spaceChangesFailure(
 export async function fetchSpaceChanges(
   spaceId: string,
   since: string,
-  options?: { includeItemIds?: boolean },
+  options?: { includeItemIds?: boolean; signal?: AbortSignal },
 ): Promise<SpaceChangesResponse> {
   const q = new URLSearchParams();
   q.set("since", since);
@@ -207,6 +210,7 @@ export async function fetchSpaceChanges(
   try {
     const res = await fetch(
       `/api/spaces/${encodeURIComponent(spaceId)}/changes?${q.toString()}`,
+      { signal: options?.signal },
     );
     let raw: unknown;
     try {

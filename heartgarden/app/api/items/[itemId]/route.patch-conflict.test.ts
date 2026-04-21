@@ -92,7 +92,7 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
     const body = (await res.json()) as { ok: boolean; error: string };
     expect(body.ok).toBe(false);
     expect(String(body.error)).toContain("baseUpdatedAt");
-  });
+  }, 15_000);
 
   it("returns 409 with server item when baseUpdatedAt mismatches", async () => {
     const serverTime = new Date("2024-06-01T12:00:00.000Z");

@@ -1726,12 +1726,20 @@ After one successful cloud load, Heartgarden keeps a local snapshot in this brow
 
 function WorkspaceBootstrapErrorPanel() {
   const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onCopyDetails = useCallback(async () => {
+    const markCopied = () => {
+      setCopied(true);
+      if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => {
+        copyTimerRef.current = null;
+        setCopied(false);
+      }, 2500);
+    };
     try {
       await navigator.clipboard.writeText(WORKSPACE_BOOTSTRAP_ERROR_COPY);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2500);
+      markCopied();
     } catch {
       try {
         const ta = document.createElement("textarea");
@@ -1743,13 +1751,22 @@ function WorkspaceBootstrapErrorPanel() {
         ta.select();
         document.execCommand("copy");
         document.body.removeChild(ta);
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 2500);
+        markCopied();
       } catch {
         window.alert("Could not copy automatically — select the text in the box and press Ctrl+C (⌘C on Mac).");
       }
     }
   }, []);
+
+  useEffect(
+    () => () => {
+      if (copyTimerRef.current != null) {
+        clearTimeout(copyTimerRef.current);
+        copyTimerRef.current = null;
+      }
+    },
+    [],
+  );
 
   return (
     <div
@@ -2302,6 +2319,17 @@ export function ArchitecturalCanvasApp({
   const savingContentIdsRef = useRef<Set<string>>(new Set());
   const mediaFileInputRef = useRef<HTMLInputElement | null>(null);
   const lastFormatRangeRef = useRef<Range | null>(null);
+
+  useEffect(
+    () => () => {
+      for (const timer of itemContentPatchTimersRef.current.values()) {
+        clearTimeout(timer);
+        neonSyncUnbumpPending();
+      }
+      itemContentPatchTimersRef.current.clear();
+    },
+    [],
+  );
   const [historyEpoch, setHistoryEpoch] = useState(0);
 
   graphRef.current = graph;
@@ -3905,18 +3933,30 @@ export function ArchitecturalCanvasApp({
     return `${stackPart}#${stackModalLayoutKey}#${viewPart}`;
   }, [collapsedStacks, stackModalLayoutKey, scale, translateX, translateY]);
 
+  const collapsedStacksRef = useRef(collapsedStacks);
+  const selectedNodeIdsForBoundsRef = useRef(selectedNodeIds);
   useEffect(() => {
-    if (collapsedStacks.length === 0) {
+    collapsedStacksRef.current = collapsedStacks;
+  }, [collapsedStacks]);
+  useEffect(() => {
+    selectedNodeIdsForBoundsRef.current = selectedNodeIds;
+  }, [selectedNodeIds]);
+
+  useEffect(() => {
+    const collapsedForBounds = collapsedStacksRef.current;
+    const selectedForBounds = selectedNodeIdsForBoundsRef.current;
+    if (collapsedForBounds.length === 0) {
       setStackFocusBoundsById((prev) =>
         Object.keys(prev).length === 0 ? prev : EMPTY_STACK_BOUNDS,
       );
       return;
     }
     const next: Record<string, { left: number; top: number; width: number; height: number }> = {};
-    collapsedStacks.forEach(({ stackId, entities }) => {
-      const selected = entities.some((entity) => selectedNodeIds.includes(entity.id));
+    const domRoot: ParentNode = shellRef.current ?? document;
+    collapsedForBounds.forEach(({ stackId, entities }) => {
+      const selected = entities.some((entity) => selectedForBounds.includes(entity.id));
       if (!selected) return;
-      const container = document.querySelector<HTMLElement>(
+      const container = domRoot.querySelector<HTMLElement>(
         `[data-stack-container='true'][data-stack-id='${stackId}']`,
       );
       if (!container) return;
@@ -3947,20 +3987,20 @@ export function ArchitecturalCanvasApp({
     setStackFocusBoundsById((prev) =>
       stackBoundsRecordsVisuallyEqual(prev, next, STACK_BOUNDS_EQ_TOL_PX) ? prev : next,
     );
-    // `stackFocusBoundsEffectKey` encodes collapsed stacks, selection, modal layout, and pan/zoom.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid re-running on `collapsedStacks` ref churn
   }, [stackFocusBoundsEffectKey]);
 
   useEffect(() => {
-    if (collapsedStacks.length === 0) {
+    const collapsedForBounds = collapsedStacksRef.current;
+    if (collapsedForBounds.length === 0) {
       setStackHoverBoundsById((prev) =>
         Object.keys(prev).length === 0 ? prev : EMPTY_STACK_BOUNDS,
       );
       return;
     }
     const next: Record<string, { left: number; top: number; width: number; height: number }> = {};
-    collapsedStacks.forEach(({ stackId }) => {
-      const container = document.querySelector<HTMLElement>(
+    const domRoot: ParentNode = shellRef.current ?? document;
+    collapsedForBounds.forEach(({ stackId }) => {
+      const container = domRoot.querySelector<HTMLElement>(
         `[data-stack-container='true'][data-stack-id='${stackId}']`,
       );
       if (!container) return;
@@ -3991,8 +4031,6 @@ export function ArchitecturalCanvasApp({
     setStackHoverBoundsById((prev) =>
       stackBoundsRecordsVisuallyEqual(prev, next, STACK_BOUNDS_EQ_TOL_PX) ? prev : next,
     );
-    // `stackHoverBoundsEffectKey` encodes collapsed stacks, modal layout, and pan/zoom.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid re-running on `collapsedStacks` ref churn
   }, [stackHoverBoundsEffectKey]);
   const updateNodeBody = useCallback(
     (id: string, html: string, options?: { immediate?: boolean }) => {
@@ -5811,50 +5849,45 @@ export function ArchitecturalCanvasApp({
           childSpaceId: newSpaceId,
         });
         await patchItemWithVersion(folderId, { contentJson });
-        flushSync(() => {
-          setGraph((prev) => {
-            const f = prev.entities[folderId];
-            if (!f || f.kind !== "folder") return prev;
-            const next = shallowCloneGraph(prev);
-            next.spaces[newSpaceId] = {
-              id: newSpaceId,
-              name: f.title || "Untitled Folder",
-              parentSpaceId,
-              entityIds: [],
-            };
-            next.entities[folderId] = { ...f, childSpaceId: newSpaceId };
-            return next;
-          });
+        setGraph((prev) => {
+          const f = prev.entities[folderId];
+          if (!f || f.kind !== "folder") return prev;
+          const next = shallowCloneGraph(prev);
+          next.spaces[newSpaceId] = {
+            id: newSpaceId,
+            name: f.title || "Untitled Folder",
+            parentSpaceId,
+            entityIds: [],
+          };
+          next.entities[folderId] = { ...f, childSpaceId: newSpaceId };
+          return next;
         });
         return newSpaceId;
       }
 
       recordUndoBeforeMutation();
-      let resolved: string | null = null;
-      flushSync(() => {
+      const snapshot = graphRef.current;
+      const folder = snapshot.entities[folderId];
+      if (!folder || folder.kind !== "folder") return null;
+      const existingChildId = snapshot.spaces[folder.childSpaceId] ? folder.childSpaceId : null;
+      const resolved = existingChildId ?? createId();
+      if (!existingChildId) {
         setGraph((prev) => {
-          const folder = prev.entities[folderId];
-          if (!folder || folder.kind !== "folder") return prev;
-          if (prev.spaces[folder.childSpaceId]) {
-            resolved = folder.childSpaceId;
-            return prev;
-          }
-
+          const folderCurrent = prev.entities[folderId];
+          if (!folderCurrent || folderCurrent.kind !== "folder") return prev;
+          if (prev.spaces[folderCurrent.childSpaceId]) return prev;
           const next = shallowCloneGraph(prev);
-          const newSpaceId = createId();
-          const parentSpaceId =
-            next.spaces[activeSpaceId]?.id ?? next.rootSpaceId;
-          next.spaces[newSpaceId] = {
-            id: newSpaceId,
-            name: folder.title || "Untitled Folder",
+          const parentSpaceId = next.spaces[activeSpaceId]?.id ?? next.rootSpaceId;
+          next.spaces[resolved] = {
+            id: resolved,
+            name: folderCurrent.title || "Untitled Folder",
             parentSpaceId,
             entityIds: [],
           };
-          next.entities[folderId] = { ...folder, childSpaceId: newSpaceId };
-          resolved = newSpaceId;
+          next.entities[folderId] = { ...folderCurrent, childSpaceId: resolved };
           return next;
         });
-      });
+      }
       return resolved;
     },
     [activeSpaceId, createId, patchItemWithVersion, recordUndoBeforeMutation],
@@ -7433,6 +7466,7 @@ export function ArchitecturalCanvasApp({
 
   const updateDropTargets = useCallback(
     (draggedEntityId: string, pointerClientX?: number, pointerClientY?: number) => {
+      const domRoot: ParentNode = shellRef.current ?? document;
       const draggedGroup =
         draggedNodeIdsRef.current.length > 0 ? draggedNodeIdsRef.current : [draggedEntityId];
       const draggedEntity = graph.entities[draggedEntityId];
@@ -7442,8 +7476,8 @@ export function ArchitecturalCanvasApp({
           ? draggedEntity.stackId
           : null;
       const draggedEl = sharedStackId
-        ? document.querySelector<HTMLElement>(`[data-stack-container='true'][data-stack-id='${sharedStackId}']`)
-        : document.querySelector<HTMLElement>(`[data-node-id="${draggedEntityId}"]`);
+        ? domRoot.querySelector<HTMLElement>(`[data-stack-container='true'][data-stack-id='${sharedStackId}']`)
+        : domRoot.querySelector<HTMLElement>(`[data-node-id="${draggedEntityId}"]`);
       let dragRect: DOMRect | null = null;
       if (sharedStackId && draggedEl) {
         dragRect = unionBoundingRectFromStackLayers(draggedEl);
@@ -7453,7 +7487,7 @@ export function ArchitecturalCanvasApp({
       }
       if (!dragRect) {
         const rects = draggedGroup
-          .map((id) => document.querySelector<HTMLElement>(`[data-node-id="${id}"]`)?.getBoundingClientRect())
+          .map((id) => domRoot.querySelector<HTMLElement>(`[data-node-id="${id}"]`)?.getBoundingClientRect())
           .filter((rect): rect is DOMRect => !!rect);
         if (rects.length > 0) {
           const left = Math.min(...rects.map((r) => r.left));
@@ -7478,7 +7512,7 @@ export function ArchitecturalCanvasApp({
       const centerY = dragRect.top + dragRect.height / 2;
 
       let nextFolderId: string | null = null;
-      Array.from(document.querySelectorAll<HTMLElement>("[data-folder-drop='true']")).forEach(
+      Array.from(domRoot.querySelectorAll<HTMLElement>("[data-folder-drop='true']")).forEach(
         (folderEl) => {
           const folderId = folderEl.dataset.folderId;
           if (!folderId || folderId === draggedEntityId) return;
@@ -7503,7 +7537,7 @@ export function ArchitecturalCanvasApp({
       let nextStackTargetId: string | null = null;
       const canDragGroupStack = draggedGroup.every((id) => graph.entities[id]?.kind === "content");
       if (!stackModalRef.current && !nextFolderId && canDragGroupStack) {
-        Array.from(document.querySelectorAll<HTMLElement>("[data-stack-target]")).forEach(
+        Array.from(domRoot.querySelectorAll<HTMLElement>("[data-stack-target]")).forEach(
           (targetEl) => {
             const targetId = targetEl.dataset.nodeId ?? targetEl.dataset.stackTopId;
             if (!targetId || draggedGroup.includes(targetId)) return;
@@ -7747,6 +7781,7 @@ export function ArchitecturalCanvasApp({
   persistNeonItemsLayoutRef.current = persistNeonItemsLayout;
 
   useEffect(() => {
+    // Window-level listeners are intentionally stable; handlers must read mutable refs, not stale closure state.
     const onPointerMove = (event: PointerEvent) => {
       if (lassoStartRef.current) {
         const pid = lassoPointerIdRef.current;

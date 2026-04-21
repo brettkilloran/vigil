@@ -22,12 +22,6 @@ type HitBase = {
 
 type Hit = HitBase & { tone: ButtonTone };
 
-/** While set, `refreshHit` must not clear `hit` (grip stays mounted; lift ghost is active). */
-const dragSessionRef = { current: null as { index: number; blockEl: HTMLElement } | null };
-
-/** Synchronous “drag in progress” — RAF’d `refreshHit` can run before React re-reads `dragSessionRef` semantics; this flips with the session. */
-const hgDocBlockPointerDragActiveRef = { current: false };
-
 function yMarginBand(dom: HTMLElement): { yTop: number; yBottom: number } {
   const br = dom.getBoundingClientRect();
   const cs = getComputedStyle(dom);
@@ -285,13 +279,20 @@ export function HgDocPointerBlockDrag({
   const liftStartPointer = useRef({ x: 0, y: 0 });
   const gripButtonRef = useRef<HTMLButtonElement | null>(null);
   const hitRef = useRef(hit);
+  /** While set, `refreshHit` must not clear `hit` (grip stays mounted; lift ghost is active). */
+  const dragSessionRef = useRef<{ index: number; blockEl: HTMLElement } | null>(null);
+  /**
+   * Synchronous “drag in progress” marker; RAF-driven hover refresh reads this to
+   * avoid clearing the grip while a drag session is still active.
+   */
+  const dragActiveRef = useRef(false);
 
   useLayoutEffect(() => {
     hitRef.current = hit;
   }, [hit]);
 
   const refreshHit = useCallback(() => {
-    if (hgDocBlockPointerDragActiveRef.current || dragSessionRef.current != null || dragFrom.current != null) {
+    if (dragActiveRef.current || dragSessionRef.current != null || dragFrom.current != null) {
       return;
     }
 
@@ -325,7 +326,7 @@ export function HgDocPointerBlockDrag({
   }, [chromeRole, editor, enabled, hostRef]);
 
   const endDragSession = useCallback(() => {
-    hgDocBlockPointerDragActiveRef.current = false;
+    dragActiveRef.current = false;
     dragSessionRef.current = null;
     dragFrom.current = null;
     setDragLiftKey(0);
@@ -340,7 +341,7 @@ export function HgDocPointerBlockDrag({
     const block: HTMLElement | null =
       session.blockEl && session.blockEl.isConnected ? session.blockEl : topLevelChildDom(view, idx);
     if (!block) {
-      hgDocBlockPointerDragActiveRef.current = false;
+      dragActiveRef.current = false;
       dragSessionRef.current = null;
       dragFrom.current = null;
       queueMicrotask(() => setDragLiftKey(0));
@@ -551,7 +552,7 @@ export function HgDocPointerBlockDrag({
       ev.preventDefault();
       ev.stopPropagation();
 
-      hgDocBlockPointerDragActiveRef.current = true;
+      dragActiveRef.current = true;
       liftStartPointer.current = { x: ev.clientX, y: ev.clientY };
       dragFrom.current = index;
       dragSessionRef.current = { index, blockEl: block };

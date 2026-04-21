@@ -279,6 +279,7 @@ function SaveAndVersionPopover({
 
   const [open, setOpen] = useState(false);
   const [copySnapshotHint, setCopySnapshotHint] = useState<"idle" | "copied" | "failed">("idle");
+  const copySnapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const popoverId = useId();
@@ -336,6 +337,10 @@ function SaveAndVersionPopover({
   }, [open, reposition]);
 
   const closeSyncPopover = useCallback(() => {
+    if (copySnapshotTimerRef.current != null) {
+      clearTimeout(copySnapshotTimerRef.current);
+      copySnapshotTimerRef.current = null;
+    }
     setCopySnapshotHint("idle");
     setOpen(false);
   }, []);
@@ -400,11 +405,27 @@ function SaveAndVersionPopover({
       () => {
         playVigilUiSound("tap");
         setCopySnapshotHint("copied");
-        window.setTimeout(() => setCopySnapshotHint("idle"), 2200);
+        if (copySnapshotTimerRef.current != null) {
+          clearTimeout(copySnapshotTimerRef.current);
+        }
+        copySnapshotTimerRef.current = setTimeout(() => {
+          copySnapshotTimerRef.current = null;
+          setCopySnapshotHint("idle");
+        }, 2200);
       },
       () => setCopySnapshotHint("failed"),
     );
   }, [supportSnapshotText]);
+
+  useEffect(
+    () => () => {
+      if (copySnapshotTimerRef.current != null) {
+        clearTimeout(copySnapshotTimerRef.current);
+        copySnapshotTimerRef.current = null;
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!open) return;

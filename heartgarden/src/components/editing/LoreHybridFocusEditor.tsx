@@ -33,6 +33,14 @@ import { htmlFragmentToHgDocDoc } from "@/src/lib/hg-doc/html-to-doc";
 
 import styles from "@/src/components/editing/LoreHybridFocusEditor.module.css";
 
+function docJsonKey(doc: JSONContent): string {
+  try {
+    return JSON.stringify(doc);
+  } catch {
+    return "";
+  }
+}
+
 function eventTargetElement(ev: Event): Element | null {
   const t = ev.target;
   if (t instanceof Element) return t;
@@ -66,6 +74,7 @@ export function LoreHybridFocusEditor({
   const locationPartsRef = useRef<LocationFocusParts | null>(null);
   const factionPartsRef = useRef<FactionFocusParts | null>(null);
   const notesDocRef = useRef(notesDoc);
+  const notesDocKeyRef = useRef(docJsonKey(notesDoc));
   const identityShellRef = useRef<HTMLDivElement | null>(null);
   const locationMetaShellRef = useRef<HTMLDivElement | null>(null);
   const factionMetaShellRef = useRef<HTMLDivElement | null>(null);
@@ -79,6 +88,7 @@ export function LoreHybridFocusEditor({
 
   useEffect(() => {
     notesDocRef.current = notesDoc;
+    notesDocKeyRef.current = docJsonKey(notesDoc);
   }, [notesDoc]);
   useEffect(() => {
     characterPartsRef.current = characterParts;
@@ -104,7 +114,8 @@ export function LoreHybridFocusEditor({
             skipNotesResyncFromFocusHtmlRef.current = 0;
           } else {
             const nextNotes = htmlFragmentToHgDocDoc(p.notesHtml);
-            if (JSON.stringify(notesDocRef.current) !== JSON.stringify(nextNotes)) {
+            const nextNotesKey = docJsonKey(nextNotes);
+            if (notesDocKeyRef.current !== nextNotesKey) {
               setNotesDoc(nextNotes);
             }
           }
@@ -119,7 +130,8 @@ export function LoreHybridFocusEditor({
             skipNotesResyncFromFocusHtmlRef.current = 0;
           } else {
             const nextNotes = htmlFragmentToHgDocDoc(lp.notesHtml);
-            if (JSON.stringify(notesDocRef.current) !== JSON.stringify(nextNotes)) {
+            const nextNotesKey = docJsonKey(nextNotes);
+            if (notesDocKeyRef.current !== nextNotesKey) {
               setNotesDoc(nextNotes);
             }
           }
@@ -134,7 +146,8 @@ export function LoreHybridFocusEditor({
             skipNotesResyncFromFocusHtmlRef.current = 0;
           } else {
             const nextRecord = htmlFragmentToHgDocDoc(fp.recordHtml);
-            if (JSON.stringify(notesDocRef.current) !== JSON.stringify(nextRecord)) {
+            const nextRecordKey = docJsonKey(nextRecord);
+            if (notesDocKeyRef.current !== nextRecordKey) {
               setNotesDoc(nextRecord);
             }
           }

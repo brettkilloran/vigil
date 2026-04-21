@@ -27,6 +27,7 @@ describe("fetchSpaceChanges", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("/api/spaces/space-1/changes?"),
+      expect.objectContaining({ signal: undefined }),
     );
     const url = String(fetchMock.mock.calls[0]?.[0]);
     expect(url).toContain("includeItemIds=1");

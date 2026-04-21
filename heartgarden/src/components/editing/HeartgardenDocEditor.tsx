@@ -24,6 +24,14 @@ import {
 
 import styles from "@/src/components/editing/HeartgardenDocEditor.module.css";
 
+function docJsonKey(doc: JSONContent): string {
+  try {
+    return JSON.stringify(doc);
+  } catch {
+    return "";
+  }
+}
+
 export type HeartgardenDocChromeRole = "focus" | "canvas";
 
 export type HeartgardenDocEditorProps = {
@@ -86,6 +94,9 @@ export function HeartgardenDocEditor({
   );
 
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const currentEditorDocKeyRef = useRef<string>(
+    docJsonKey(value?.type === "doc" ? value : EMPTY_HG_DOC),
+  );
 
   const showBlockDragHandle = Boolean(enableDragHandle && chromeRole === "focus");
 
@@ -108,7 +119,9 @@ export function HeartgardenDocEditor({
       },
 
       onUpdate: ({ editor: ed }) => {
-        onChange?.(ed.getJSON());
+        const nextDoc = ed.getJSON();
+        currentEditorDocKeyRef.current = docJsonKey(nextDoc);
+        onChange?.(nextDoc);
       },
     },
 
@@ -119,10 +132,9 @@ export function HeartgardenDocEditor({
     if (!editor) return;
 
     const next = value?.type === "doc" ? value : EMPTY_HG_DOC;
-
-    const cur = editor.getJSON();
-
-    if (JSON.stringify(cur) === JSON.stringify(next)) return;
+    const nextKey = docJsonKey(next);
+    if (currentEditorDocKeyRef.current === nextKey) return;
+    currentEditorDocKeyRef.current = nextKey;
 
     editor.commands.setContent(next, { emitUpdate: false });
   }, [editor, value]);

@@ -89,6 +89,7 @@ export function useHeartgardenSpaceChangeSync(options: {
     let inFlight = false;
     let pollTimer: number | null = null;
     let pollCatchupTimer: number | null = null;
+    let inFlightAbort: AbortController | null = null;
 
     const shouldDeferPollForBusyEditing = () =>
       inlineContentDirtyIdsRef.current.size > 0 || savingContentIdsRef.current.size > 0;
@@ -139,6 +140,7 @@ export function useHeartgardenSpaceChangeSync(options: {
       }
       recordHeartgardenSpaceSyncRun(source);
       inFlight = true;
+      inFlightAbort = new AbortController();
       try {
         let sinceCursor = syncCursorRef.current;
         let firstPage = true;
@@ -147,6 +149,7 @@ export function useHeartgardenSpaceChangeSync(options: {
         while (true) {
           const data = await fetchSpaceChanges(activeSpaceId, sinceCursor, {
             includeItemIds: firstPage,
+            signal: inFlightAbort.signal,
           });
           firstPage = false;
           if (cancelled) return;
@@ -209,6 +212,7 @@ export function useHeartgardenSpaceChangeSync(options: {
           itemLinksRevision: lastItemLinksRevision,
         });
       } finally {
+        inFlightAbort = null;
         inFlight = false;
       }
     }
@@ -260,6 +264,7 @@ export function useHeartgardenSpaceChangeSync(options: {
 
     return () => {
       cancelled = true;
+      inFlightAbort?.abort();
       stopPoll();
       if (pollCatchupTimer != null) {
         window.clearTimeout(pollCatchupTimer);
