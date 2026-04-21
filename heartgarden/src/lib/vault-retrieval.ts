@@ -9,6 +9,10 @@ import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provid
 import { logVaultHybridRetrieval } from "@/src/lib/vault-retrieval-debug";
 import { fuseRrfFromOrderedLists } from "@/src/lib/vault-retrieval-rrf";
 import { extractHgArchBoundItemIds } from "@/src/lib/hg-arch-binding-projection";
+import {
+  buildItemVaultCorpus,
+  itemSearchableSourceFromRow,
+} from "@/src/lib/item-searchable-text";
 import { dedupeLogicalItemLinkRows } from "@/src/lib/item-links-logical-dedupe";
 import { linkExpansionDepriorityRank } from "@/src/lib/item-link-meta";
 import { extractVigilItemIdsFromText } from "@/src/lib/wiki-item-refs";
@@ -450,7 +454,8 @@ export function excerptForLore(
   if (chunks.length) {
     parts.push("Relevant excerpts (semantic):\n" + chunks.join("\n---\n"));
   } else {
-    const body = row.item.contentText?.trim() ?? "";
+    const corpus = buildItemVaultCorpus(itemSearchableSourceFromRow(row.item));
+    const body = corpus.trim() || (row.item.contentText?.trim() ?? "");
     if (body) {
       parts.push(body.length <= maxChars ? body : `${body.slice(0, maxChars)}…`);
     }

@@ -26,7 +26,7 @@ Mirror rules and “who writes what” are listed on each `BindingSlotDefinition
 
 ## Recall and index
 
-- Vault embed text includes a **binding projection** (`buildHgArchBindingSummaryText`, `buildVaultEmbedDocument`).
+- Vault embed text and FTS **`search_blob`** use the same **`buildItemVaultCorpus`** projection (`item-searchable-text.ts`): hgDoc + HTML JSON, `hgArch`, `entity_meta`, title/body, lore fields, and image metadata strings.
 - Lore Q&A expands **graph neighbors**, **prose `vigil:item` cites**, and **hgArch binding targets** (`expandHgArchBindingNeighbors`).
 
 ## Versioning

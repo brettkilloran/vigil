@@ -86,6 +86,8 @@ export const items = pgTable("items", {
   loreSummary: text("lore_summary"),
   loreAliases: jsonb("lore_aliases").$type<string[] | null>(),
   loreIndexedAt: timestamp("lore_indexed_at", { withTimezone: true }),
+  /** SHA-256 (hex) of title+content_text lore-meta prompt last sent to Anthropic; skips duplicate API calls. */
+  loreMetaSourceHash: varchar("lore_meta_source_hash", { length: 64 }),
 
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),

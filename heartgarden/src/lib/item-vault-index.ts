@@ -6,14 +6,19 @@ import type { tryGetDb } from "@/src/db/index";
 import { itemEmbeddings, items } from "@/src/db/schema";
 import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
 import { extractLoreItemMeta } from "@/src/lib/lore-item-meta";
-import { buildHgArchBindingSummaryText } from "@/src/lib/hg-arch-binding-projection";
-import { buildSearchBlob } from "@/src/lib/search-blob";
-import { buildVaultEmbedDocument, chunkVaultText } from "@/src/lib/vault-chunk";
+import {
+  buildItemVaultCorpus,
+  itemSearchableSourceFromRow,
+} from "@/src/lib/item-searchable-text";
+import { chunkVaultText } from "@/src/lib/vault-chunk";
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 export type ItemRow = typeof items.$inferSelect;
 
 const DEFAULT_LORE_MODEL = "claude-sonnet-4-20250514";
+
+/** Must match `extractLoreItemMeta` (`lore-item-meta.ts`) so skip-hash aligns with the API payload. */
+const LORE_META_BODY_MAX_CHARS = 24_000;
 
 /** When unset, `HEARTGARDEN_INDEX_SKIP_LORE_META=1` skips Anthropic lore fields on index. */
 function resolveRefreshLoreMeta(explicit?: boolean): boolean {
@@ -26,6 +31,31 @@ function resolveRefreshLoreMeta(explicit?: boolean): boolean {
 
 function sha256Hex(s: string): string {
   return createHash("sha256").update(s, "utf8").digest("hex");
+}
+
+/**
+ * Plain-text payload sent to Anthropic for lore summary + aliases (must stay in sync with `extractLoreItemMeta`).
+ * Exported for tests and diagnostics only.
+ */
+export function buildLoreMetaAnthropicBody(row: Pick<ItemRow, "title" | "contentText">): string {
+  const titleTrim = row.title?.trim();
+  const textTrim = row.contentText?.trim();
+  const parts: string[] = [];
+  if (titleTrim) parts.push(`Title: ${titleTrim}`);
+  if (textTrim) parts.push(textTrim);
+  return parts.join("\n\n");
+}
+
+/** SHA-256 hex of the exact note text sent to Anthropic (after trim + length cap). */
+export function computeLoreMetaSourceHash(row: Pick<ItemRow, "title" | "contentText">): string {
+  const forApi = buildLoreMetaAnthropicBody(row).trim().slice(0, LORE_META_BODY_MAX_CHARS);
+  return sha256Hex(forApi);
+}
+
+/** When set, always call Anthropic for lore meta even if the source hash matches (e.g. after changing `ANTHROPIC_LORE_MODEL`). */
+function loreMetaIgnoreSourceHashEnv(): boolean {
+  const v = (process.env.HEARTGARDEN_LORE_META_IGNORE_SOURCE_HASH ?? "").trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
 }
 
 /** Remove all embedding chunks for an item (call after content edits until reindexed). */
@@ -69,52 +99,54 @@ export async function reindexItemVault(
   }
 
   let loreMetaUpdated = false;
+  let loreSummaryEff = row.loreSummary;
+  let loreAliasesEff = row.loreAliases;
+  let loreMetaSourceHash: string | undefined;
   const wantMeta = resolveRefreshLoreMeta(options.refreshLoreMeta);
   const anthropicKey = (process.env.ANTHROPIC_API_KEY ?? "").trim();
   if (wantMeta && anthropicKey) {
-    const model =
-      (process.env.ANTHROPIC_LORE_MODEL ?? DEFAULT_LORE_MODEL).trim() || DEFAULT_LORE_MODEL;
-    const body = [row.title?.trim() && `Title: ${row.title}`, row.contentText?.trim()]
-      .filter(Boolean)
-      .join("\n\n");
-    const meta = await extractLoreItemMeta(anthropicKey, model, body);
-    const searchBlob = buildSearchBlob({
-      title: row.title,
-      contentText: row.contentText,
-      contentJson: row.contentJson,
-      entityType: row.entityType,
-      entityMeta: row.entityMeta,
-      imageUrl: row.imageUrl,
-      imageMeta: row.imageMeta,
-      loreSummary: meta.summary || null,
-      loreAliases: meta.aliases.length ? meta.aliases : null,
-    });
+    const body = buildLoreMetaAnthropicBody(row);
+    const sourceHash = computeLoreMetaSourceHash(row);
+    const skipAnthropic =
+      !loreMetaIgnoreSourceHashEnv() &&
+      row.loreMetaSourceHash != null &&
+      row.loreMetaSourceHash === sourceHash;
+
+    if (!skipAnthropic) {
+      const model =
+        (process.env.ANTHROPIC_LORE_MODEL ?? DEFAULT_LORE_MODEL).trim() || DEFAULT_LORE_MODEL;
+      const meta = await extractLoreItemMeta(anthropicKey, model, body);
+      loreSummaryEff = meta.summary || null;
+      loreAliasesEff = meta.aliases.length ? meta.aliases : null;
+      loreMetaSourceHash = sourceHash;
+      loreMetaUpdated = true;
+    }
+  }
+
+  const corpus = buildItemVaultCorpus(
+    itemSearchableSourceFromRow({
+      ...row,
+      loreSummary: loreSummaryEff,
+      loreAliases: loreAliasesEff,
+    }),
+  );
+
+  if (loreMetaUpdated) {
     await db
       .update(items)
       .set({
-        loreSummary: meta.summary || null,
-        loreAliases: meta.aliases.length ? meta.aliases : null,
+        searchBlob: corpus,
+        loreSummary: loreSummaryEff,
+        loreAliases: loreAliasesEff,
         loreIndexedAt: new Date(),
-        searchBlob,
+        loreMetaSourceHash: loreMetaSourceHash!,
       })
       .where(eq(items.id, itemId));
-    loreMetaUpdated = true;
+  } else {
+    await db.update(items).set({ searchBlob: corpus }).where(eq(items.id, itemId));
   }
 
-  const [latest] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
-  const r = latest ?? row;
-
-  const bindingProjection = buildHgArchBindingSummaryText(
-    r.contentJson as Record<string, unknown> | null | undefined,
-  );
-  const doc = buildVaultEmbedDocument({
-    title: r.title,
-    contentText: r.contentText,
-    loreSummary: r.loreSummary,
-    loreAliases: r.loreAliases ?? undefined,
-    bindingProjection: bindingProjection || null,
-  });
-  const chunks = chunkVaultText(doc);
+  const chunks = chunkVaultText(corpus);
   if (chunks.length === 0) {
     await clearItemEmbeddings(db, itemId);
     return { ok: true, chunks: 0, loreMetaUpdated };
@@ -123,10 +155,10 @@ export async function reindexItemVault(
   const vectors = await embedTexts(chunks);
   await clearItemEmbeddings(db, itemId);
 
-  const sourceUpdatedAt = r.updatedAt ?? new Date();
+  const sourceUpdatedAt = row.updatedAt ?? new Date();
   const values = chunks.map((chunkText, i) => ({
-    itemId: r.id,
-    spaceId: r.spaceId,
+    itemId: row.id,
+    spaceId: row.spaceId,
     chunkIndex: i,
     contentHash: sha256Hex(chunkText),
     sourceUpdatedAt,

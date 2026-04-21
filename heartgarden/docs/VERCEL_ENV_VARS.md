@@ -18,6 +18,7 @@ Use with **[`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)** and the **[dashboard check
 | `NEON_DATABASE_URL` | Yes | Yes (**different** pooled URL than prod) | Required for cloud sync; omit both → demo bootstrap. |
 | `ANTHROPIC_API_KEY` | If lore needed | Optional / omit | Server-only. |
 | `ANTHROPIC_LORE_MODEL` | Optional | Optional | |
+| `HEARTGARDEN_LORE_META_IGNORE_SOURCE_HASH` | Omit | Optional | Set **`1`** to **always** run Anthropic on vault reindex when lore meta is enabled (ignores stored `lore_meta_source_hash`). Use after changing the lore model or to force-refresh summaries. |
 | `R2_ACCOUNT_ID` | If uploads | If uploads | Full `R2_*` set required together. |
 | `R2_ACCESS_KEY_ID` | If uploads | If uploads | |
 | `R2_SECRET_ACCESS_KEY` | If uploads | If uploads | Mark **Sensitive**. |
