@@ -1,6 +1,15 @@
 # Go-live: what’s left + prompts for the assistant
 
-Use this after the initial Vercel project work. It lists **only what you must do** (accounts, secrets, DNS), then **copy-paste prompts** you can send to Cursor so the assistant can verify, deploy, and debug **without** needing your Neon/Vercel passwords.
+Use this **after the initial Vercel project work is already in place**. It lists **only what you must do** (accounts, secrets, DNS), then **copy-paste prompts** you can send to Cursor so the assistant can verify, deploy, and debug **without** needing your Neon/Vercel passwords.
+
+**Role in the deploy set:** this is the post-setup go-live and handoff doc, not the first-deploy walkthrough.
+
+**Need a different deploy doc?**
+
+- **First deploy order / narrative:** [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)
+- **Dashboard checklist:** [`DEPLOY_VERCEL_CHECKLIST.md`](./DEPLOY_VERCEL_CHECKLIST.md)
+- **Neon Production + Preview DB setup:** [`NEON_VERCEL_SETUP.md`](./NEON_VERCEL_SETUP.md)
+- **Env variable meanings:** [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md)
 
 **Related:** [`DEPLOY_VERCEL_CHECKLIST.md`](./DEPLOY_VERCEL_CHECKLIST.md) (full dashboard list), [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md), [`NEON_VERCEL_SETUP.md`](./NEON_VERCEL_SETUP.md), [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md).
 

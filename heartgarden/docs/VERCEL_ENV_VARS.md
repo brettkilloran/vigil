@@ -2,7 +2,7 @@
 title: Vercel environment variables
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-13
+last_reviewed: 2026-04-21
 canonical: true
 related:
   - heartgarden/docs/DEPLOY_VERCEL.md
@@ -12,6 +12,15 @@ related:
 # Vercel environment variables — reference
 
 Use with **[`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)** and the **[dashboard checklist](./DEPLOY_VERCEL_CHECKLIST.md)**. This file is the **source of truth** for env semantics; narrative deploy docs link here instead of duplicating edge cases. Set each key in **Project → Settings → Environment Variables** and choose **Production**, **Preview**, **Development** (or combinations) per cell below.
+
+**Role in the deploy set:** use this to answer "what does this variable mean?" or "which environments should get it?" Do **not** use it as the first deploy walkthrough.
+
+**Need a different deploy doc?**
+
+- **First deploy order / narrative:** [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)
+- **Dashboard clicks:** [`DEPLOY_VERCEL_CHECKLIST.md`](./DEPLOY_VERCEL_CHECKLIST.md)
+- **Neon Production + Preview setup:** [`NEON_VERCEL_SETUP.md`](./NEON_VERCEL_SETUP.md)
+- **Go-live follow-up:** [`GO_LIVE_REMAINING.md`](./GO_LIVE_REMAINING.md)
 
 | Variable | Typical Production | Typical Preview (isolated DB) | Notes |
 |----------|-------------------|-------------------------------|--------|

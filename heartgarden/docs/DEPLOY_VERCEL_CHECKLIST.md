@@ -1,6 +1,15 @@
 # Vercel first deploy — dashboard checklist
 
-Use this **click-by-click** list with the narrative in [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md). Check items off as you go.
+Use this **click-by-click** list only after skimming [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md). Check items off as you go.
+
+**Role in the deploy set:** this file is the fast dashboard checklist, not the source of truth for env semantics or Neon branching.
+
+**Need a different deploy doc?**
+
+- **Start / full narrative:** [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)
+- **Exact env meanings:** [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md)
+- **Neon Production + Preview setup:** [`NEON_VERCEL_SETUP.md`](./NEON_VERCEL_SETUP.md)
+- **Post-deploy go-live audit:** [`GO_LIVE_REMAINING.md`](./GO_LIVE_REMAINING.md)
 
 **Do not duplicate env semantics here.** Variable names, required combinations, and edge cases (e.g. Players PIN + optional player space UUID) are defined in **[`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md)** — that file is the **source of truth**; this checklist and [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md) only repeat **what to click** and high-level groupings.
 
@@ -32,6 +41,8 @@ Add under **Project → Settings → Environment Variables**; mark sensitive val
 
 - [ ] `ANTHROPIC_API_KEY` — lore Q&A + related routes.
 - [ ] `ANTHROPIC_LORE_MODEL` — optional override.
+- [ ] `OPENAI_API_KEY` — optional OpenAI embeddings for vault vectors / semantic search.
+- [ ] `HEARTGARDEN_OPENAI_EMBEDDING_MODEL` — optional embedding model override.
 - [ ] `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_BASE_URL` — if using uploads (see R2 CORS in [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md) §5).
 - [ ] `HEARTGARDEN_LORE_QUERY_DISABLED=1` — optional; disables **`POST /api/lore/query`** until you add stronger access control (see [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md) §7).
 - [ ] Boot PIN gate (optional): **`HEARTGARDEN_BOOT_SESSION_SECRET`** (16+ chars) + at least one of **`HEARTGARDEN_BOOT_PIN_BISHOP`** / **`HEARTGARDEN_BOOT_PIN_PLAYERS`** / **`HEARTGARDEN_BOOT_PIN_DEMO`** (each exactly **8** chars if set). Players-only is valid for a player-only deploy. If Players sign in, set **`HEARTGARDEN_PLAYER_SPACE_ID`** (see [`PLAYER_LAYER.md`](./PLAYER_LAYER.md)). See [`API.md`](./API.md) and [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md).

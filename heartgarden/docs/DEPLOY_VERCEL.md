@@ -1,5 +1,17 @@
 # Deploy heartgarden on Vercel
 
+**Start here** for deployment. This is the **primary narrative guide**.
+
+## Deploy doc map
+
+| If you need to... | Read this |
+|---|---|
+| Do the first deploy end-to-end | [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md) |
+| Click through the dashboard quickly | [`DEPLOY_VERCEL_CHECKLIST.md`](./DEPLOY_VERCEL_CHECKLIST.md) |
+| Check exact env meanings / edge cases | [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md) |
+| Set up Neon Production + Preview branches | [`NEON_VERCEL_SETUP.md`](./NEON_VERCEL_SETUP.md) |
+| Finish post-deploy verification / go-live handoff | [`GO_LIVE_REMAINING.md`](./GO_LIVE_REMAINING.md) |
+
 This is the **step-by-step** companion to the short notes in [`README.md`](../README.md). I can’t log into your Vercel or Neon accounts from here; use this as a checklist while you click through the dashboards (or run the Vercel CLI on your machine after `vercel login`).
 
 **Env variable meanings and edge cases** are defined only in **[`docs/VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md)**. The tables in §3 below are a deploy-oriented summary; if anything disagrees, **`VERCEL_ENV_VARS.md`** wins.
@@ -38,6 +50,8 @@ Add these in **Project → Settings → Environment Variables**. Mark secrets as
 | `NEON_DATABASE_URL` | Production, Preview (optional) | For cloud sync | Postgres URL from Neon. Prefer the **pooled / serverless** connection string Neon documents for **many short-lived connections** (fits Vercel functions). Include SSL if Neon gives it (`?sslmode=require` etc.). |
 | `ANTHROPIC_API_KEY` | Production, Preview (optional) | For lore | Powers **`/api/lore/query`** and lore import extract. **Never** prefix with `NEXT_PUBLIC_`. |
 | `ANTHROPIC_LORE_MODEL` | Same | Optional | Default in code if unset. |
+| `OPENAI_API_KEY` | Production, Preview (optional) | For vector search | Enables OpenAI embeddings for vault chunk vectors / semantic search. |
+| `HEARTGARDEN_OPENAI_EMBEDDING_MODEL` | Same | Optional | Override embedding model (default **`text-embedding-3-small`**). |
 | `R2_ACCOUNT_ID` | Production, Preview | For R2 uploads | With the other `R2_*` vars, enables [`/api/upload/presign`](../app/api/upload/presign/route.ts). |
 | `R2_ACCESS_KEY_ID` | Same | For R2 | |
 | `R2_SECRET_ACCESS_KEY` | Same | For R2 | Sensitive. |
