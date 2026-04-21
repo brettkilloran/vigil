@@ -242,9 +242,8 @@
   -webkit-backdrop-filter: var(--chrome-glass-filter);
   border-radius: var(--chrome-panel-radius);
   box-shadow: var(--chrome-glass-shadow);
-  /* Match icon-toolbar vertical rhythm used in bottom dock strips (4px top/bottom around 36px controls). */
-  padding-block: calc(var(--chrome-panel-pad-y) - 2px);
-  padding-inline: var(--chrome-panel-pad-x);
+  /* Same inset on all sides as bottom-dock icon strips (pad-y−2px); avoids asymmetric pad-x vs pad-y. */
+  padding: calc(var(--chrome-panel-pad-y) - 2px);
   box-sizing: border-box;
   min-height: var(--chrome-panel-height);
   display: inline-flex;
