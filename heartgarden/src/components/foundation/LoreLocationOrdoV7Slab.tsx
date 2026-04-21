@@ -211,7 +211,8 @@ const TitleAndContext = memo(function TitleAndContext({
             const el = e.currentTarget as HTMLElement;
             if (e instanceof InputEvent && consumeLorePlaceholderBeforeInput(el, e)) {
               queueMicrotask(() => {
-                onNameCommit(normalizeLocOrdoV7NameField(el.textContent?.replace(/\s+/g, " ").trim() ?? ""));
+                const t = el.innerText.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+                onNameCommit(normalizeLocOrdoV7NameField(t));
               });
             }
           }}
@@ -246,7 +247,7 @@ const TitleAndContext = memo(function TitleAndContext({
             const el = e.currentTarget as HTMLElement;
             if (e instanceof InputEvent && consumeLorePlaceholderBeforeInput(el, e)) {
               queueMicrotask(() => {
-                onContextCommit(el.textContent?.replace(/\s+/g, " ").trim() ?? "");
+                onContextCommit(el.innerText.replace(/\s+/g, " ").trim());
               });
             }
           }}

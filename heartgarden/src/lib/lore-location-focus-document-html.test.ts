@@ -8,6 +8,7 @@ import {
   focusDocumentHtmlToLocationBody,
   locationBodyToFocusDocumentHtml,
   parseLocationFocusDocumentHtml,
+  parseLocationOrdoV7BodyPlainFields,
   plainPlaceNameFromLocationBodyHtml,
   readLocationFocusPartsFromMetaHost,
 } from "@/src/lib/lore-location-focus-document-html";
@@ -63,6 +64,14 @@ describe("plainPlaceNameFromLocationBodyHtml", () => {
 
   it("returns empty when missing", () => {
     expect(plainPlaceNameFromLocationBodyHtml("<div></div>")).toBe("");
+  });
+
+  it("preserves spaces across ORDO v7 two-line name (<br>)", () => {
+    const body = `<div data-hg-canvas-role="lore-location">
+<div data-hg-lore-location-field="name">ARBITER STATION<br />LAGRANGE 1</div>
+</div>`;
+    expect(plainPlaceNameFromLocationBodyHtml(body)).toBe("ARBITER STATION LAGRANGE 1");
+    expect(parseLocationOrdoV7BodyPlainFields(body).name).toBe("ARBITER STATION LAGRANGE 1");
   });
 });
 

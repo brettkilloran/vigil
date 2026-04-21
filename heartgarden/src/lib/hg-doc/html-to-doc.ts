@@ -43,6 +43,25 @@ export function stripLegacyHtmlToPlainText(html: string): string {
 }
 
 /**
+ * Plain text from an HTML fragment that may use `<br>` for soft line breaks (e.g. ORDO v7 title lines).
+ * `Node.textContent` does not insert a separator across `<br>`, so "LINE1" + "LINE2" becomes "LINE1LINE2".
+ */
+export function plainTextFromInlineHtmlFragment(html: string): string {
+  const trimmed = (html ?? "").trim();
+  if (!trimmed) return "";
+  const withBrAsSpace = trimmed.replace(/<br\s*\/?>/gi, " ");
+  if (typeof DOMParser !== "undefined") {
+    try {
+      const doc = new DOMParser().parseFromString(`<div>${withBrAsSpace}</div>`, "text/html");
+      return (doc.body?.textContent ?? "").replace(/\s+/g, " ").trim();
+    } catch {
+      /* ignore */
+    }
+  }
+  return stripLegacyHtmlToPlainText(withBrAsSpace);
+}
+
+/**
  * Legacy code-theme bodies were stored as decorated HTML; produce a single hgDoc `codeBlock`
  * so the TipTap + lowlight surface can highlight it.
  */

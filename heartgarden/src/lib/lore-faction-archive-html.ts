@@ -5,6 +5,7 @@
 
 import loreCardStyles from "@/src/components/foundation/lore-entity-card.module.css";
 import { FACTION_ROSTER_HG_ARCH_KEY } from "@/src/lib/faction-roster-schema";
+import { plainTextFromInlineHtmlFragment } from "@/src/lib/hg-doc/html-to-doc";
 import { LORE_V9_REDACTED_SENTINEL } from "@/src/lib/lore-v9-placeholder";
 
 const s = loreCardStyles;
@@ -152,8 +153,7 @@ export function withFactionArchiveObjectIdInRails(bodyHtml: string, objectId: st
 export function plainFactionPrimaryNameFromArchiveBodyHtml(bodyHtml: string): string {
   const p = parseFactionArchive091BodyHtml(bodyHtml);
   if (!p) return "";
-  const doc = typeof DOMParser !== "undefined" ? new DOMParser().parseFromString(`<div>${p.orgPrimaryInnerHtml}</div>`, "text/html") : null;
-  const text = doc?.body?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+  const text = plainTextFromInlineHtmlFragment(p.orgPrimaryInnerHtml);
   if (!text || text === LORE_V9_REDACTED_SENTINEL) return "";
   return text;
 }

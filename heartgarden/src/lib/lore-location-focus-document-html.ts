@@ -4,6 +4,7 @@
  * projects to a single scroll surface; notes are hidden on the canvas (CSS).
  */
 
+import { plainTextFromInlineHtmlFragment } from "@/src/lib/hg-doc/html-to-doc";
 import {
   ORDO_V7_EMPTY_NAME_SENTINEL,
   splitOrdoV7DisplayName,
@@ -82,7 +83,7 @@ function takeInnerHtml(root: ParentNode, selector: string, fallback = "<br>"): s
  * `innerHTML` (casing, inline markup, legacy cards).
  */
 function locationNameFieldInnerHtmlAfterLegacyPlaceNameStrip(el: HTMLElement, fallback: string): string {
-  const plain = (el.textContent || "").replace(/\s+/g, " ").trim();
+  const plain = plainTextFromInlineHtmlFragment(el.innerHTML || "");
   const stripped = stripLegacyLoreLocationSeedPlaceNameLabel(plain);
   if (stripped !== plain) {
     return buildLocationNameFieldInnerHtmlFromPlainCore(stripped);
@@ -108,12 +109,12 @@ export function plainPlaceNameFromLocationBodyHtml(bodyHtml: string): string {
   if (!root) return "";
   const modern = root.querySelector<HTMLElement>('[data-hg-lore-location-field="name"]');
   if (modern) {
-    const t = stripLegacyLoreLocationSeedPlaceNameLabel((modern.textContent || "").replace(/\s+/g, " ").trim());
+    const t = stripLegacyLoreLocationSeedPlaceNameLabel(plainTextFromInlineHtmlFragment(modern.innerHTML || ""));
     return normalizeLocOrdoV7NameField(t);
   }
   const legacy = root.querySelector<HTMLElement>('[class*="locName"]');
   if (legacy) {
-    const t = stripLegacyLoreLocationSeedPlaceNameLabel((legacy.textContent || "").replace(/\s+/g, " ").trim());
+    const t = stripLegacyLoreLocationSeedPlaceNameLabel(plainTextFromInlineHtmlFragment(legacy.innerHTML || ""));
     return normalizeLocOrdoV7NameField(t);
   }
   return "";
@@ -454,14 +455,14 @@ export function parseLocationOrdoV7BodyPlainFields(bodyHtml: string): {
   if (!root) {
     return { name: "", context: "", detail: "", notesHtml: DEFAULT_NOTES_HTML };
   }
-  const nameEl = root.querySelector('[data-hg-lore-location-field="name"]');
+  const nameEl = root.querySelector<HTMLElement>('[data-hg-lore-location-field="name"]');
   const name = normalizeLocOrdoV7NameField(
-    stripLegacyLoreLocationSeedPlaceNameLabel((nameEl?.textContent || "").replace(/\s+/g, " ").trim()),
+    stripLegacyLoreLocationSeedPlaceNameLabel(plainTextFromInlineHtmlFragment(nameEl?.innerHTML || "")),
   );
-  const ctxEl = root.querySelector('[data-hg-lore-location-field="context"]');
-  const context = (ctxEl?.textContent || "").replace(/\s+/g, " ").trim();
-  const detEl = root.querySelector('[data-hg-lore-location-field="detail"]');
-  const detail = (detEl?.textContent || "").replace(/\s+/g, " ").trim();
+  const ctxEl = root.querySelector<HTMLElement>('[data-hg-lore-location-field="context"]');
+  const context = plainTextFromInlineHtmlFragment(ctxEl?.innerHTML || "");
+  const detEl = root.querySelector<HTMLElement>('[data-hg-lore-location-field="detail"]');
+  const detail = plainTextFromInlineHtmlFragment(detEl?.innerHTML || "");
   const notesHtml = extractNotesHtml(root);
   return { name, context, detail, notesHtml };
 }

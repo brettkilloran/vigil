@@ -5,6 +5,7 @@ import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
 import {
   htmlFragmentToHgDocDoc,
   legacyCodeBodyHtmlToHgDocSeed,
+  plainTextFromInlineHtmlFragment,
   stripLegacyHtmlToPlainText,
 } from "@/src/lib/hg-doc/html-to-doc";
 
@@ -27,6 +28,10 @@ describe("html-to-doc", () => {
   it("stripLegacyHtmlToPlainText removes script and decodes entities", () => {
     const evil = '<script>alert(1)</script><p>a&nbsp;&amp;b</p>';
     expect(stripLegacyHtmlToPlainText(evil)).toBe("a &b");
+  });
+
+  it("plainTextFromInlineHtmlFragment inserts word boundary across <br> (not glued like textContent)", () => {
+    expect(plainTextFromInlineHtmlFragment("ARBITER STATION<br />LAGRANGE 1")).toBe("ARBITER STATION LAGRANGE 1");
   });
 
   it("legacyCodeBodyHtmlToHgDocSeed decodes nbsp and basic entities", () => {
