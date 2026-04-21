@@ -872,7 +872,11 @@ function VaultIndexStatusInline() {
 
 export type CollabPeerPresenceChip = {
   clientId: string;
-  emoji: string;
+  kind?: "peer" | "overflow";
+  emoji?: string;
+  initials?: string;
+  displayName?: string;
+  sigilLabel?: string;
   title: string;
   ariaLabel: string;
   muted?: boolean;
@@ -890,6 +894,7 @@ export function ArchitecturalStatusBar({
   syncBootstrapPending = false,
   syncShowingCachedWorkspace = false,
   syncOfflineNoSnapshot = false,
+  collabNameplateEnabled = false,
   collabPeers = [],
   onExportGraphJson,
   exportGraphPaletteHint,
@@ -906,6 +911,8 @@ export function ArchitecturalStatusBar({
   syncBootstrapPending?: boolean;
   syncShowingCachedWorkspace?: boolean;
   syncOfflineNoSnapshot?: boolean;
+  /** Name-first presence UI is currently player-space-only. */
+  collabNameplateEnabled?: boolean;
   /** Other sessions in this space subtree (best-effort); click chip to follow their view. */
   collabPeers?: CollabPeerPresenceChip[];
   onExportGraphJson?: () => void;
@@ -937,21 +944,43 @@ export function ArchitecturalStatusBar({
           <>
             <div className={styles.sep} />
             <div className={styles.collabPeerStrip} role="group" aria-label="Collaborators in this area">
-              {collabPeers.map((p) => (
-                <Button
-                  key={p.clientId}
-                  type="button"
-                  size="xs"
-                  tone="glass"
-                  variant="ghost"
-                  className={cx(styles.collabPeerChip, p.muted && styles.collabPeerChipMuted)}
-                  title={p.title}
-                  aria-label={p.ariaLabel}
-                  onClick={p.onFollow}
-                >
-                  {p.emoji}
-                </Button>
-              ))}
+              {collabPeers.map((p) =>
+                p.kind === "overflow" ? (
+                  <span
+                    key={p.clientId}
+                    className={cx(styles.collabPeerChip, styles.collabPeerChipOverflow)}
+                    title={p.title}
+                    aria-label={p.ariaLabel}
+                  >
+                    <span className={styles.collabPeerChipInitials}>{p.initials ?? "??"}</span>
+                    <span className={styles.collabPeerChipName}>{p.displayName ?? "More"}</span>
+                  </span>
+                ) : (
+                  <Button
+                    key={p.clientId}
+                    type="button"
+                    size="xs"
+                    tone="glass"
+                    variant="ghost"
+                    className={cx(styles.collabPeerChip, p.muted && styles.collabPeerChipMuted)}
+                    title={p.title}
+                    aria-label={p.ariaLabel}
+                    onClick={p.onFollow}
+                  >
+                    {collabNameplateEnabled ? (
+                      <>
+                        <span className={styles.collabPeerChipInitials}>{p.initials ?? "??"}</span>
+                        <span className={styles.collabPeerChipName}>{p.displayName ?? "Collaborator"}</span>
+                        {p.sigilLabel ? (
+                          <span className={styles.collabPeerChipSigil}>{p.sigilLabel}</span>
+                        ) : null}
+                      </>
+                    ) : (
+                      p.emoji ?? "🙂"
+                    )}
+                  </Button>
+                ),
+              )}
             </div>
           </>
         ) : null}

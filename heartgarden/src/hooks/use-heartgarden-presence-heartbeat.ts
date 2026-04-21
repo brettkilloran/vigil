@@ -12,6 +12,7 @@ import {
   HEARTGARDEN_PRESENCE_HEARTBEAT_MS,
   HEARTGARDEN_PRESENCE_PEER_POLL_MS,
 } from "@/src/lib/heartgarden-collab-constants";
+import type { PresenceSigilVariant } from "@/src/lib/collab-presence-identity";
 import { getOrCreatePresenceClientId } from "@/src/lib/heartgarden-presence-client";
 import type { CameraState } from "@/src/model/canvas-types";
 
@@ -35,17 +36,20 @@ export function useHeartgardenPresenceHeartbeat(options: {
   enabled: boolean;
   activeSpaceId: string;
   getPayload: () => { camera: CameraState; pointer: { x: number; y: number } | null };
+  getIdentity?: () => { displayName: string | null; sigil: PresenceSigilVariant | null };
   onPeersUpdate: (peers: SpacePresencePeer[]) => void;
 }): void {
-  const { enabled, activeSpaceId, getPayload, onPeersUpdate } = options;
+  const { enabled, activeSpaceId, getPayload, getIdentity, onPeersUpdate } = options;
   const getPayloadRef = useRef(getPayload);
+  const getIdentityRef = useRef(getIdentity);
   const onPeersRef = useRef(onPeersUpdate);
   const spaceIdRef = useRef(activeSpaceId);
   useLayoutEffect(() => {
     getPayloadRef.current = getPayload;
+    getIdentityRef.current = getIdentity;
     onPeersRef.current = onPeersUpdate;
     spaceIdRef.current = activeSpaceId;
-  });
+  }, [activeSpaceId, getIdentity, getPayload, onPeersUpdate]);
 
   // Leave-signal effect. Registers `pagehide` once per enabled-session and fires a DELETE
   // on unmount or when `enabled` flips false so peers stop seeing us before TTL prune.
@@ -90,7 +94,12 @@ export function useHeartgardenPresenceHeartbeat(options: {
     const beat = () => {
       if (cancelled || document.visibilityState === "hidden") return;
       const p = getPayloadRef.current();
-      void postPresencePayload(activeSpaceId, clientId, p);
+      const identity = getIdentityRef.current?.() ?? undefined;
+      void postPresencePayload(activeSpaceId, clientId, {
+        ...p,
+        displayName: identity?.displayName ?? undefined,
+        sigil: identity?.sigil ?? undefined,
+      });
     };
 
     const poll = async () => {

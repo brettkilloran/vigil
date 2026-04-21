@@ -143,6 +143,10 @@ import {
   type BootstrapFetchDetail,
   type SpacePresencePeer,
 } from "@/src/components/foundation/architectural-neon-api";
+import {
+  applyFolderPopOutPlan,
+  collectFolderPopOutPlan,
+} from "@/src/components/foundation/architectural-folder-popout";
 import { mergeHydratedDbConnections } from "@/src/lib/architectural-item-link-graph";
 import type { GraphEdge } from "@/src/lib/graph-types";
 import {
@@ -210,8 +214,19 @@ import {
   HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MIN,
   HEARTGARDEN_PRESENCE_POINTER_FLUSH_MIN_MS,
 } from "@/src/lib/heartgarden-collab-constants";
-import { presenceEmojiForClientId } from "@/src/lib/collab-presence-identity";
+import {
+  presenceFallbackAliasForClientId,
+  presenceEmojiForClientId,
+  presenceInitialsFromName,
+  presenceNameForClient,
+  presenceSigilLabel,
+  sanitizePresenceDisplayName,
+} from "@/src/lib/collab-presence-identity";
 import { getOrCreatePresenceClientId } from "@/src/lib/heartgarden-presence-client";
+import {
+  maybePromptPresenceDisplayNameOnce,
+  readPresenceProfile,
+} from "@/src/lib/heartgarden-presence-profile";
 import { useHeartgardenPresenceHeartbeat } from "@/src/hooks/use-heartgarden-presence-heartbeat";
 import { useHeartgardenRealtimeSpaceSync } from "@/src/hooks/use-heartgarden-realtime-space-sync";
 import { useHeartgardenSpaceChangeSync } from "@/src/hooks/use-heartgarden-space-change-sync";
@@ -2117,6 +2132,16 @@ export function ArchitecturalCanvasApp({
     neonVaultIndexSetPlayerLayerActive(isPlayersTier);
     return () => neonVaultIndexSetPlayerLayerActive(false);
   }, [isPlayersTier]);
+
+  /**
+   * Presence identity (names/sigils) is intentionally scoped to player sessions for now.
+   * GM/other spaces keep current anonymous behavior until we intentionally expand it.
+   */
+  const presenceIdentityEnabled = isPlayersTier;
+  useEffect(() => {
+    if (!presenceIdentityEnabled) return;
+    maybePromptPresenceDisplayNameOnce(getOrCreatePresenceClientId());
+  }, [presenceIdentityEnabled]);
 
   const bootServerConfigurationError = useMemo(
     () =>
@@ -4909,6 +4934,21 @@ export function ArchitecturalCanvasApp({
     };
   }, []);
 
+  const presenceIdentityForHeartbeat = useCallback(() => {
+    if (!presenceIdentityEnabled) {
+      return { displayName: null, sigil: null };
+    }
+    const clientId = getOrCreatePresenceClientId();
+    if (!clientId) {
+      return { displayName: null, sigil: null };
+    }
+    const profile = readPresenceProfile(clientId);
+    return {
+      displayName: profile.displayName,
+      sigil: profile.sigil,
+    };
+  }, [presenceIdentityEnabled]);
+
   const onPresencePeersUpdate = useCallback((peers: SpacePresencePeer[]) => {
     setPresencePeers(peers);
   }, []);
@@ -4917,6 +4957,7 @@ export function ArchitecturalCanvasApp({
     enabled: collabNeonActive,
     activeSpaceId,
     getPayload: presencePayloadForHeartbeat,
+    getIdentity: presenceIdentityForHeartbeat,
     onPeersUpdate: onPresencePeersUpdate,
   });
 
@@ -4930,9 +4971,12 @@ export function ArchitecturalCanvasApp({
       const clientId = getOrCreatePresenceClientId();
       if (!clientId) return;
       const v = viewRef.current;
+      const identity = presenceIdentityForHeartbeat();
       void postPresencePayload(activeSpaceId, clientId, {
         camera: { x: v.tx, y: v.ty, zoom: v.scale },
         pointer: localPointerWorldRef.current,
+        displayName: identity.displayName,
+        sigil: identity.sigil,
       });
     };
     const scheduleFlush = () => {
@@ -4963,7 +5007,7 @@ export function ArchitecturalCanvasApp({
       el.removeEventListener("pointerleave", onLeave);
       if (raf) cancelAnimationFrame(raf);
     };
-  }, [collabNeonActive, activeSpaceId]);
+  }, [collabNeonActive, activeSpaceId, presenceIdentityForHeartbeat]);
 
   const galleryDirty = useMemo(
     () =>
@@ -6280,14 +6324,19 @@ export function ArchitecturalCanvasApp({
 
   const handleFollowPresencePeer = useCallback(
     (peer: SpacePresencePeer) => {
+      const peerName = presenceNameForClient(
+        peer.clientId,
+        presenceIdentityEnabled ? sanitizePresenceDisplayName(peer.displayName) : null,
+      );
       const snap = graphRef.current;
       if (!snap.spaces[peer.activeSpaceId]) return;
 
       if (focusOpen || galleryOpen || stackModal != null) {
+        const confirmCopy = presenceIdentityEnabled
+          ? `Close the open card, gallery, or stack and jump to ${peerName}'s view?`
+          : "Close the open card, gallery, or stack and jump to this collaborator’s view?";
         if (
-          !window.confirm(
-            "Close the open card, gallery, or stack and jump to this collaborator’s view?",
-          )
+          !window.confirm(confirmCopy)
         ) {
           return;
         }
@@ -6308,26 +6357,69 @@ export function ArchitecturalCanvasApp({
 
       enterSpace(peer.activeSpaceId, { cameraOverride: cam });
     },
-    [focusOpen, galleryOpen, stackModal, enterSpace],
+    [focusOpen, galleryOpen, stackModal, enterSpace, presenceIdentityEnabled],
   );
 
   const collabPeerChips = useMemo((): CollabPeerPresenceChip[] => {
+    const formatLastSeen = (updatedAtIso: string): string => {
+      const t = Date.parse(updatedAtIso);
+      if (!Number.isFinite(t)) return "unknown";
+      const sec = Math.max(0, Math.round((Date.now() - t) / 1000));
+      if (sec < 60) return `${sec}s ago`;
+      const min = Math.round(sec / 60);
+      if (min < 60) return `${min}m ago`;
+      const hr = Math.round(min / 60);
+      return `${hr}h ago`;
+    };
+
     const now = Date.now();
-    return presencePeers.map((p) => {
+    const chips: CollabPeerPresenceChip[] = presencePeers.map((p) => {
       const short = p.clientId.slice(-4).toLowerCase();
       const spaceName = graph.spaces[p.activeSpaceId]?.name ?? "Space";
       const t = Date.parse(p.updatedAt);
       const stale = !Number.isFinite(t) || now - t > 60_000;
+      const name = presenceNameForClient(
+        p.clientId,
+        presenceIdentityEnabled ? sanitizePresenceDisplayName(p.displayName) : null,
+      );
+      const initials = presenceInitialsFromName(name);
+      const sigil = presenceSigilLabel(p.sigil);
       return {
         clientId: p.clientId,
-        emoji: presenceEmojiForClientId(p.clientId),
-        title: `${spaceName} · …${short}${stale ? " · may be stale" : ""}`,
-        ariaLabel: `Follow collaborator ending …${short}`,
+        kind: "peer",
+        emoji: presenceIdentityEnabled ? undefined : presenceEmojiForClientId(p.clientId),
+        initials: initials.length > 0 ? initials : "??",
+        displayName: presenceIdentityEnabled ? name : presenceFallbackAliasForClientId(p.clientId),
+        sigilLabel: presenceIdentityEnabled ? sigil : undefined,
+        title: presenceIdentityEnabled
+          ? `${spaceName} · ${name} · last seen ${formatLastSeen(p.updatedAt)}${stale ? " · may be stale" : ""}`
+          : `${spaceName} · …${short}${stale ? " · may be stale" : ""}`,
+        ariaLabel: presenceIdentityEnabled
+          ? `Follow collaborator ${name}`
+          : `Follow collaborator ending …${short}`,
         muted: stale,
         onFollow: () => handleFollowPresencePeer(p),
       };
     });
-  }, [presencePeers, graph.spaces, handleFollowPresencePeer]);
+    if (!presenceIdentityEnabled || chips.length <= 3) return chips;
+    const visible = chips.slice(0, 3);
+    const hidden = chips.length - visible.length;
+    if (hidden <= 0) return visible;
+    visible.push({
+      clientId: "__overflow__",
+      kind: "overflow",
+      initials: `+${hidden}`,
+      displayName: `${hidden} more`,
+      sigilLabel: undefined,
+      title: `${hidden} additional collaborators`,
+      ariaLabel: `${hidden} additional collaborators`,
+      muted: false,
+      onFollow: () => {
+        /* informational overflow chip */
+      },
+    });
+    return visible;
+  }, [presencePeers, graph.spaces, handleFollowPresencePeer, presenceIdentityEnabled]);
 
   const openFolder = useCallback(
     (folderId: string) => {
@@ -8760,40 +8852,27 @@ export function ArchitecturalCanvasApp({
   const deleteEntitySelection = useCallback(
     (entityIds: string[]) => {
       if (entityIds.length === 0) return;
-      const snap = graphRef.current;
-      const { entityIds: idsToRemove, spaceIds } = collectDeletionClosure(snap, entityIds);
-      const spaceRoots = filterSpaceDeletionRoots(spaceIds, snap);
+      let idsToRemove: string[] = [];
+      let spaceRoots: string[] = [];
+      let moveOps: ReturnType<typeof collectFolderPopOutPlan>["entityMoves"] = [];
+      let reparentOps: ReturnType<typeof collectFolderPopOutPlan>["spaceReparents"] = [];
       recordUndoBeforeMutation();
       setGraph((prev) => {
-        const next = shallowCloneGraph(prev);
-        const entityIdsToDelete = new Set<string>();
-        const spaceIdsToDelete = new Set<string>();
-
-        const markEntity = (entityId: string) => {
-          if (entityIdsToDelete.has(entityId)) return;
-          const entity = next.entities[entityId];
-          if (!entity) return;
-          entityIdsToDelete.add(entityId);
-
-          if (entity.kind !== "folder") return;
-          const stack = [entity.childSpaceId];
-          while (stack.length > 0) {
-            const spaceId = stack.pop();
-            if (!spaceId || spaceIdsToDelete.has(spaceId)) continue;
-            const space = next.spaces[spaceId];
-            if (!space) continue;
-            spaceIdsToDelete.add(spaceId);
-            space.entityIds.forEach(markEntity);
-            Object.values(next.spaces).forEach((candidate) => {
-              if (candidate.parentSpaceId === spaceId) {
-                stack.push(candidate.id);
-              }
-            });
-          }
-        };
-
-        entityIds.forEach(markEntity);
-
+        const folderIds = entityIds.filter((id) => prev.entities[id]?.kind === "folder");
+        const popOutPlan = collectFolderPopOutPlan(prev, folderIds);
+        const graphAfterPopOut = applyFolderPopOutPlan(prev, popOutPlan);
+        const closure = collectDeletionClosure(graphAfterPopOut, entityIds);
+        idsToRemove = closure.entityIds;
+        const spaceIds = closure.spaceIds;
+        spaceRoots = filterSpaceDeletionRoots(spaceIds, graphAfterPopOut);
+        const idsToRemoveSet = new Set(idsToRemove);
+        const spaceIdsToRemoveSet = new Set(spaceIds);
+        moveOps = popOutPlan.entityMoves.filter((move) => !idsToRemoveSet.has(move.entityId));
+        reparentOps = popOutPlan.spaceReparents.filter(
+          (reparent) => !spaceIdsToRemoveSet.has(reparent.spaceId),
+        );
+        const next = applyFolderPopOutPlan(prev, popOutPlan);
+        const entityIdsToDelete = new Set(idsToRemove);
         Object.values(next.spaces).forEach((space) => {
           next.spaces[space.id] = {
             ...space,
@@ -8801,10 +8880,10 @@ export function ArchitecturalCanvasApp({
           };
         });
 
-        entityIdsToDelete.forEach((entityId) => {
+        idsToRemove.forEach((entityId) => {
           delete next.entities[entityId];
         });
-        spaceIdsToDelete.forEach((spaceId) => {
+        closure.spaceIds.forEach((spaceId) => {
           if (spaceId !== next.rootSpaceId) {
             delete next.spaces[spaceId];
           }
@@ -8824,12 +8903,46 @@ export function ArchitecturalCanvasApp({
       });
 
       if (persistNeonRef.current) {
-        for (const id of idsToRemove) {
-          if (isUuidLike(id)) void apiDeleteItem(id);
-        }
-        for (const sid of spaceRoots) {
-          if (isUuidLike(sid)) void apiDeleteSpaceSubtree(sid);
-        }
+        void (async () => {
+          const moveResults = await Promise.all(
+            moveOps.map(async (move) => {
+              if (!isUuidLike(move.entityId)) return true;
+              const result = await apiPatchItem(move.entityId, {
+                spaceId: move.toSpaceId,
+                x: move.newSlot.x,
+                y: move.newSlot.y,
+              });
+              return result.ok === true;
+            }),
+          );
+          const reparentResults = await Promise.all(
+            reparentOps.map(async (reparent) => {
+              if (!isUuidLike(reparent.spaceId)) return true;
+              return apiPatchSpaceParent(reparent.spaceId, reparent.newParentId);
+            }),
+          );
+          if (moveResults.some((ok) => !ok) || reparentResults.some((ok) => !ok)) {
+            neonSyncReportAuxiliaryFailure({
+              operation: "folder delete pop-out persistence",
+              message:
+                "Could not persist one or more pop-out moves; skipped remote deletes to avoid data loss.",
+              cause: "http",
+            });
+            return;
+          }
+          await Promise.all(
+            idsToRemove.map(async (id) => {
+              if (!isUuidLike(id)) return;
+              await apiDeleteItem(id);
+            }),
+          );
+          await Promise.all(
+            spaceRoots.map(async (sid) => {
+              if (!isUuidLike(sid)) return;
+              await apiDeleteSpaceSubtree(sid);
+            }),
+          );
+        })();
       }
 
       const pruned = new Set(idsToRemove);
@@ -11027,6 +11140,7 @@ export function ArchitecturalCanvasApp({
             <ArchitecturalRemotePresenceCursors
               peers={presencePeers.filter((p) => p.activeSpaceId === activeSpaceId)}
               prefersReducedMotion={prefersReducedMotion}
+              nameplateEnabled={presenceIdentityEnabled}
             />
           ) : null}
         </div>
@@ -12290,6 +12404,7 @@ export function ArchitecturalCanvasApp({
                 syncSourceLabel={environmentSourceLabel.replace(/^Source:\s*/i, "")}
                 syncSpaceLabel={environmentSpaceLabel}
                 syncStrictGm={strictGmWorkspaceSession}
+                collabNameplateEnabled={presenceIdentityEnabled}
                 collabPeers={collabPeerChips}
                 onExportGraphJson={exportGraphJson}
                 exportGraphPaletteHint={`${modKeyHints.search} → Export graph JSON`}

@@ -50,6 +50,8 @@ export const canvasPresence = pgTable("canvas_presence", {
     .references(() => spaces.id, { onDelete: "cascade" }),
   camera: jsonb("camera").$type<{ x: number; y: number; zoom: number }>().notNull(),
   pointer: jsonb("pointer").$type<{ x: number; y: number } | null>(),
+  displayName: varchar("display_name", { length: 32 }),
+  sigil: varchar("sigil", { length: 16 }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

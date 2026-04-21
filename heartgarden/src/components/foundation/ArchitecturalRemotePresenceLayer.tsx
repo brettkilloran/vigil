@@ -1,27 +1,44 @@
 "use client";
 
 import type { SpacePresencePeer } from "@/src/components/foundation/architectural-neon-api";
-import { presenceCursorColor, presenceEmojiForClientId } from "@/src/lib/collab-presence-identity";
+import {
+  presenceCursorColor,
+  presenceEmojiForClientId,
+  presenceInitialsFromName,
+  presenceNameForClient,
+  presenceSigilForClientId,
+  presenceSigilLabel,
+} from "@/src/lib/collab-presence-identity";
 
 import styles from "./ArchitecturalRemotePresenceLayer.module.css";
 
 type Props = {
   peers: SpacePresencePeer[];
   prefersReducedMotion: boolean;
+  nameplateEnabled?: boolean;
 };
 
-export function ArchitecturalRemotePresenceCursors({ peers, prefersReducedMotion }: Props) {
+export function ArchitecturalRemotePresenceCursors({
+  peers,
+  prefersReducedMotion,
+  nameplateEnabled = false,
+}: Props) {
   return (
     <div className={styles.remoteCursorRoot} aria-hidden>
       {peers.map((p) => {
         if (!p.pointer) return null;
-        const emoji = presenceEmojiForClientId(p.clientId);
         const color = presenceCursorColor(p.clientId);
         const shortId = p.clientId.slice(-4).toLowerCase();
+        const name = presenceNameForClient(p.clientId, p.displayName);
+        const emoji = presenceEmojiForClientId(p.clientId);
+        const sigil = p.sigil ?? presenceSigilForClientId(p.clientId);
+        const initials = presenceInitialsFromName(name);
         return (
           <div
             key={p.clientId}
-            className={`${styles.remoteCursor} ${!prefersReducedMotion ? styles.remoteCursorFloat : ""}`}
+            className={`${styles.remoteCursor} ${
+              !nameplateEnabled && !prefersReducedMotion ? styles.remoteCursorFloat : ""
+            }`}
             style={{
               left: p.pointer.x,
               top: p.pointer.y,
@@ -44,9 +61,17 @@ export function ArchitecturalRemotePresenceCursors({ peers, prefersReducedMotion
                 strokeLinejoin="round"
               />
             </svg>
-            <div className={styles.remoteCursorLabel} title={`${emoji} · …${shortId}`}>
-              {emoji} <span style={{ opacity: 0.75, fontSize: 10 }}>…{shortId}</span>
-            </div>
+            {nameplateEnabled ? (
+              <div className={styles.remoteCursorNameplate} title={`${name} · ${presenceSigilLabel(sigil)} · …${shortId}`}>
+                <span className={styles.remoteCursorInitials}>{initials}</span>
+                <span className={styles.remoteCursorNameText}>{name}</span>
+                <span className={styles.remoteCursorSigil}>{presenceSigilLabel(sigil)}</span>
+              </div>
+            ) : (
+              <div className={styles.remoteCursorLabel} title={`${emoji} · …${shortId}`}>
+                {emoji} <span className={styles.remoteCursorAnonId}>…{shortId}</span>
+              </div>
+            )}
           </div>
         );
       })}

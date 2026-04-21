@@ -1,4 +1,8 @@
 import type { BootstrapResponse } from "@/src/components/foundation/architectural-db-bridge";
+import {
+  PRESENCE_SIGIL_VARIANTS,
+  type PresenceSigilVariant,
+} from "@/src/lib/collab-presence-identity";
 import type { CameraState, CanvasItem } from "@/src/model/canvas-types";
 import {
   getNeonSyncSnapshot,
@@ -360,6 +364,8 @@ export type SpacePresencePeer = {
   activeSpaceId: string;
   camera: CameraState;
   pointer: { x: number; y: number } | null;
+  displayName: string | null;
+  sigil: PresenceSigilVariant | null;
   updatedAt: string;
 };
 
@@ -372,6 +378,11 @@ function parseSpacePresencePeer(raw: unknown): SpacePresencePeer | null {
   if (typeof cam !== "object" || cam === null) return null;
   const c = cam as Record<string, unknown>;
   if (typeof c.x !== "number" || typeof c.y !== "number" || typeof c.zoom !== "number") return null;
+  const displayName = typeof o.displayName === "string" ? o.displayName : null;
+  const sigil =
+    typeof o.sigil === "string" && PRESENCE_SIGIL_VARIANTS.includes(o.sigil as PresenceSigilVariant)
+      ? (o.sigil as PresenceSigilVariant)
+      : null;
   let pointer: { x: number; y: number } | null = null;
   if (o.pointer !== null && typeof o.pointer === "object" && o.pointer !== null) {
     const p = o.pointer as Record<string, unknown>;
@@ -382,6 +393,8 @@ function parseSpacePresencePeer(raw: unknown): SpacePresencePeer | null {
     activeSpaceId: o.activeSpaceId,
     camera: { x: c.x, y: c.y, zoom: c.zoom },
     pointer,
+    displayName,
+    sigil,
     updatedAt: o.updatedAt,
   };
 }
@@ -390,7 +403,12 @@ function parseSpacePresencePeer(raw: unknown): SpacePresencePeer | null {
 export async function postPresencePayload(
   spaceId: string,
   clientId: string,
-  payload: { camera: CameraState; pointer: { x: number; y: number } | null },
+  payload: {
+    camera: CameraState;
+    pointer: { x: number; y: number } | null;
+    displayName?: string | null;
+    sigil?: PresenceSigilVariant | null;
+  },
 ): Promise<boolean> {
   try {
     const res = await fetch(`/api/spaces/${encodeURIComponent(spaceId)}/presence`, {
@@ -400,6 +418,8 @@ export async function postPresencePayload(
         clientId,
         camera: payload.camera,
         pointer: payload.pointer,
+        displayName: payload.displayName ?? undefined,
+        sigil: payload.sigil ?? undefined,
       }),
     });
     const body = (await res.json()) as { ok?: boolean };

@@ -62,12 +62,15 @@ export const AwaitingBootAuth: Story = {
 
 export const WithCollabPeers: Story = {
   args: {
+    collabNameplateEnabled: true,
     collabPeers: [
       {
         clientId: "11111111-1111-4111-8111-111111111111",
-        emoji: "🦊",
-        title: "Notes · …1111",
-        ariaLabel: "Follow collaborator ending …1111",
+        initials: "AN",
+        displayName: "Avery North",
+        sigilLabel: "Thread",
+        title: "Notes · Avery North · last seen 12s ago",
+        ariaLabel: "Follow collaborator Avery North",
         muted: false,
         onFollow: () => {
           console.info("follow peer a");
@@ -75,9 +78,11 @@ export const WithCollabPeers: Story = {
       },
       {
         clientId: "22222222-2222-4222-8222-222222222222",
-        emoji: "🌸",
-        title: "Lore · …2222 · may be stale",
-        ariaLabel: "Follow collaborator ending …2222",
+        initials: "MC",
+        displayName: "Mina Cedar",
+        sigilLabel: "Quill",
+        title: "Lore · Mina Cedar · last seen 2m ago · may be stale",
+        ariaLabel: "Follow collaborator Mina Cedar",
         muted: true,
         onFollow: () => {
           console.info("follow peer b");

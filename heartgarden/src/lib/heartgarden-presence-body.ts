@@ -4,6 +4,12 @@ import {
   HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MAX,
   HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MIN,
 } from "@/src/lib/heartgarden-collab-constants";
+import {
+  PRESENCE_DISPLAY_NAME_MAX_CHARS,
+  PRESENCE_SIGIL_VARIANTS,
+  sanitizePresenceDisplayName,
+  type PresenceSigilVariant,
+} from "@/src/lib/collab-presence-identity";
 import type { CameraState } from "@/src/model/canvas-types";
 import { defaultCamera } from "@/src/model/canvas-types";
 
@@ -22,10 +28,14 @@ export const presencePointerSchema = z.object({
   y: finite,
 });
 
+export const presenceSigilSchema = z.enum(PRESENCE_SIGIL_VARIANTS);
+
 export const presencePostBodySchema = z.object({
   clientId: z.string().uuid(),
   camera: presenceCameraSchema,
   pointer: presencePointerSchema.nullable().optional(),
+  displayName: z.string().max(PRESENCE_DISPLAY_NAME_MAX_CHARS).optional(),
+  sigil: presenceSigilSchema.optional(),
 });
 
 export type PresencePostBody = z.infer<typeof presencePostBodySchema>;
@@ -52,5 +62,14 @@ export function safePresenceCameraFromUnknown(raw: unknown): CameraState {
 export function safePresencePointerFromUnknown(raw: unknown): { x: number; y: number } | null {
   if (raw == null) return null;
   const p = presencePointerSchema.safeParse(raw);
+  return p.success ? p.data : null;
+}
+
+export function normalizePresenceDisplayName(raw: unknown): string | null {
+  return sanitizePresenceDisplayName(raw);
+}
+
+export function safePresenceSigilFromUnknown(raw: unknown): PresenceSigilVariant | null {
+  const p = presenceSigilSchema.safeParse(raw);
   return p.success ? p.data : null;
 }

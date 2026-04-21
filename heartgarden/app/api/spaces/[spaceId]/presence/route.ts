@@ -7,9 +7,11 @@ import { HEARTGARDEN_PRESENCE_TTL_MS } from "@/src/lib/heartgarden-collab-consta
 import { heartgardenBootClientIp } from "@/src/lib/heartgarden-boot-rate-limit";
 import {
   clampPresenceCamera,
+  normalizePresenceDisplayName,
   presencePostBodySchema,
   safePresenceCameraFromUnknown,
   safePresencePointerFromUnknown,
+  safePresenceSigilFromUnknown,
 } from "@/src/lib/heartgarden-presence-body";
 import { consumeHeartgardenPresencePostRateLimit } from "@/src/lib/heartgarden-presence-rate-limit";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
@@ -47,6 +49,8 @@ export async function GET(
         activeSpaceId: string;
         camera: { x: number; y: number; zoom: number };
         pointer: { x: number; y: number } | null;
+        displayName: string | null;
+        sigil: string | null;
         updatedAt: string;
       }[],
     });
@@ -85,6 +89,8 @@ export async function GET(
       activeSpaceId: canvasPresence.activeSpaceId,
       camera: canvasPresence.camera,
       pointer: canvasPresence.pointer,
+      displayName: canvasPresence.displayName,
+      sigil: canvasPresence.sigil,
       updatedAt: canvasPresence.updatedAt,
     })
     .from(canvasPresence)
@@ -97,6 +103,8 @@ export async function GET(
     activeSpaceId: string;
     camera: { x: number; y: number; zoom: number };
     pointer: { x: number; y: number } | null;
+    displayName: string | null;
+    sigil: string | null;
     updatedAt: string;
   }[] = [];
 
@@ -107,11 +115,15 @@ export async function GET(
     }
     const cam = safePresenceCameraFromUnknown(r.camera);
     const ptr = safePresencePointerFromUnknown(r.pointer);
+    const name = normalizePresenceDisplayName(r.displayName);
+    const sigil = safePresenceSigilFromUnknown(r.sigil);
     out.push({
       clientId: r.clientId,
       activeSpaceId: r.activeSpaceId,
       camera: cam,
       pointer: ptr,
+      displayName: name,
+      sigil,
       updatedAt: r.updatedAt.toISOString(),
     });
   }
@@ -156,6 +168,8 @@ export async function POST(
   const camera = clampPresenceCamera(parsed.data.camera);
   const pointer =
     parsed.data.pointer === undefined ? null : parsed.data.pointer === null ? null : parsed.data.pointer;
+  const displayName = normalizePresenceDisplayName(parsed.data.displayName);
+  const sigil = safePresenceSigilFromUnknown(parsed.data.sigil);
 
   const now = new Date();
   await db
@@ -165,6 +179,8 @@ export async function POST(
       activeSpaceId: spaceId,
       camera,
       pointer,
+      displayName,
+      sigil,
       updatedAt: now,
     })
     .onConflictDoUpdate({
@@ -173,6 +189,8 @@ export async function POST(
         activeSpaceId: spaceId,
         camera,
         pointer,
+        displayName,
+        sigil,
         updatedAt: now,
       },
     });

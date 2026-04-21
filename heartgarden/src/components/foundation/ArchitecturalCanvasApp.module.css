@@ -3071,14 +3071,16 @@
 .collabPeerChip {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 30px;
+  justify-content: flex-start;
+  min-width: 48px;
   height: 28px;
-  padding: 0 6px;
+  max-width: min(220px, 36vw);
+  padding: 0 8px;
+  gap: 6px;
   border-radius: 999px;
   border: 1px solid var(--sem-overlay-white-18, rgba(255, 255, 255, 0.12));
-  background: color-mix(in oklch, var(--accent) 14%, transparent);
-  font-size: 15px;
+  background: color-mix(in oklch, var(--accent) 11%, transparent);
+  font-size: 12px;
   line-height: 1;
   cursor: pointer;
   transition:
@@ -3092,6 +3094,37 @@
 
 .collabPeerChipMuted {
   opacity: 0.55;
+}
+
+.collabPeerChipInitials {
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--sys-color-neutral-200);
+  background: color-mix(in oklch, var(--accent) 20%, transparent);
+  border: 1px solid color-mix(in oklch, var(--accent) 40%, transparent);
+}
+
+.collabPeerChipName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collabPeerChipSigil {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.68;
+}
+
+.collabPeerChipOverflow {
+  cursor: default;
 }
 
 .collabPeerChip:focus-visible {

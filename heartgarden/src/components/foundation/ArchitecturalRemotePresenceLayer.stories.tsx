@@ -10,6 +10,8 @@ const peerA: SpacePresencePeer = {
   activeSpaceId: "space-1",
   camera: { x: 0, y: 0, zoom: 1 },
   pointer: { x: 120, y: 180 },
+  displayName: "Avery North",
+  sigil: "thread",
   updatedAt: new Date().toISOString(),
 };
 
@@ -18,6 +20,8 @@ const peerB: SpacePresencePeer = {
   activeSpaceId: "space-1",
   camera: { x: 0, y: 0, zoom: 1 },
   pointer: { x: 420, y: 260 },
+  displayName: "Mina Cedar",
+  sigil: "quill",
   updatedAt: new Date().toISOString(),
 };
 
@@ -27,6 +31,7 @@ const meta: Meta<typeof ArchitecturalRemotePresenceCursors> = {
   args: {
     peers: [peerA, peerB],
     prefersReducedMotion: false,
+    nameplateEnabled: true,
   },
   argTypes: {
     prefersReducedMotion: { control: "boolean" },
