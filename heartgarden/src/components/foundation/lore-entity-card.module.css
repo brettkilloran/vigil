@@ -4285,10 +4285,16 @@
   color: var(--loc-ordo-accent);
 }
 
+/*
+ * Tight negative letter-spacing compresses *spaces* too, so “LAGRANGE 1” can look glued.
+ * Ease tracking slightly and add word-spacing so gaps stay legible (detail lines use +tracking instead).
+ */
 .locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-location-field="name"] {
   text-transform: uppercase;
   font-variant-ligatures: none;
   line-height: 0.92;
+  letter-spacing: -0.03em;
+  word-spacing: 0.12em;
 }
 
 /* Empty placename: character v11 display-name parity — caption ::before + dual-line guest-check ::after. */
