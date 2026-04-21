@@ -13,7 +13,8 @@ import { pointerEventTargetElement } from "@/src/components/foundation/pointer-e
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 
-const FOLDER_PREVIEW_VISIBLE_MAX = 6;
+/** Folder face lines; keep in sync with `.folderContentPreviewList` in ArchitecturalCanvasApp.module.css */
+export const FOLDER_CONTENT_PREVIEW_MAX_LINES = 6;
 
 /** Stable 0..2^32-1 from string — same folder id always gets same “random” angles. */
 function stableHash(input: string): number {
@@ -53,7 +54,7 @@ export function ArchitecturalFolderCard({
   onTitleCommit?: (title: string) => void;
 }) {
   const showPeek = itemCount > 0;
-  const visiblePreviewTitles = previewTitles.slice(0, FOLDER_PREVIEW_VISIBLE_MAX);
+  const visiblePreviewTitles = previewTitles.slice(0, FOLDER_CONTENT_PREVIEW_MAX_LINES);
 
   const peekRotDeg = useMemo(
     () => ({

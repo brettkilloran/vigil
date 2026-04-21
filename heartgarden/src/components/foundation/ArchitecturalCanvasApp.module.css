@@ -1114,8 +1114,8 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  min-height: 0;
-  flex: 1 1 auto;
+  /* Do not shrink below list content — avoids clipping preview lines inside fixed folder height */
+  flex: 0 0 auto;
   overflow: hidden;
 }
 
@@ -1124,9 +1124,12 @@
   padding: 0;
   list-style: none;
   display: grid;
-  row-gap: 6px;
+  row-gap: 5px;
   width: 100%;
   opacity: 0.82;
+  /* FOLDER_CONTENT_PREVIEW_MAX_LINES in ArchitecturalFolderCard.tsx (6 × 10px×1.22 + 5 gaps) */
+  max-height: calc(6 * (10px * 1.22) + 5 * 5px);
+  overflow: hidden;
 }
 
 .folderContentPreviewItem {

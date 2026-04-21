@@ -69,7 +69,10 @@ import {
 } from "@/src/components/foundation/ArchitecturalBottomDock";
 import { ArchitecturalParentExitThreshold } from "@/src/components/foundation/ArchitecturalParentExitThreshold";
 import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
-import { ArchitecturalFolderCard } from "@/src/components/foundation/ArchitecturalFolderCard";
+import {
+  ArchitecturalFolderCard,
+  FOLDER_CONTENT_PREVIEW_MAX_LINES,
+} from "@/src/components/foundation/ArchitecturalFolderCard";
 import { ArchitecturalLoreCharacterCanvasNode } from "@/src/components/foundation/ArchitecturalLoreCharacterCanvasNode";
 import { ArchitecturalLoreFactionArchiveCanvasNode } from "@/src/components/foundation/ArchitecturalLoreFactionArchiveCanvasNode";
 import { ArchitecturalLoreLocationCanvasNode } from "@/src/components/foundation/ArchitecturalLoreLocationCanvasNode";
@@ -418,7 +421,6 @@ const STACK_MODAL_GAP = 24;
 const STACK_MODAL_PADDING = 28;
 const STACK_MODAL_EJECT_MARGIN = 24;
 const STACK_CLICK_SUPPRESS_DRAG_PX = 6;
-const FOLDER_PREVIEW_MAX_ITEMS = 6;
 
 function entitySlotsDiffer(a: CanvasEntity, b: CanvasEntity): boolean {
   const keys = new Set([...Object.keys(a.slots), ...Object.keys(b.slots)]);
@@ -1057,7 +1059,7 @@ function folderPreviewTitles(
     .reverse()
     .map((entityId) => graph.entities[entityId])
     .filter((entity): entity is Extract<CanvasEntity, { kind: "content" }> => entity?.kind === "content")
-    .slice(0, FOLDER_PREVIEW_MAX_ITEMS)
+    .slice(0, FOLDER_CONTENT_PREVIEW_MAX_LINES)
     .map((entity) => normalizedFocusTitle(entity.title));
 }
 
