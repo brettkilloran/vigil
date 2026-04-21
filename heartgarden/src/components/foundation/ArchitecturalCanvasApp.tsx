@@ -150,7 +150,6 @@ import {
 import {
   groupedOrderedLinkOptionsForEndpoints,
   LINK_TYPE_GROUP_HEADINGS,
-  LORE_LINK_TYPE_OPTIONS,
 } from "@/src/lib/lore-link-types";
 import { validateClarificationAnswersForApply } from "@/src/lib/lore-import-clarifications";
 import type {
@@ -158,7 +157,6 @@ import type {
   LoreImportClarificationItem,
   LoreImportPlan,
 } from "@/src/lib/lore-import-plan-types";
-import type { LoreImportEntityDraft, LoreImportLinkDraft } from "@/src/lib/lore-import-types";
 import {
   getNeonSyncSnapshot,
   getNeonSyncServerSnapshot,
@@ -496,15 +494,6 @@ function collectSpacesNeedingParentResync(
 }
 
 type ArchitecturalCanvasScenario = "default" | "corrupt";
-
-type LoreImportDraftState = {
-  fileName?: string;
-  sourceTitle?: string;
-  sourceText: string;
-  includeSourceCard: boolean;
-  entities: LoreImportEntityDraft[];
-  suggestedLinks: LoreImportLinkDraft[];
-};
 
 type LoreSmartImportReviewState = {
   plan: LoreImportPlan;
@@ -2077,7 +2066,6 @@ export function ArchitecturalCanvasApp({
   const lorePanelOpenSoundPrevRef = useRef(false);
   const [graphOverlayOpen, setGraphOverlayOpen] = useState(false);
   const graphOverlayOpenSoundPrevRef = useRef(false);
-  const [loreImportDraft, setLoreImportDraft] = useState<LoreImportDraftState | null>(null);
   const [loreSmartReview, setLoreSmartReview] = useState<LoreSmartImportReviewState | null>(null);
   const [loreSmartTab, setLoreSmartTab] = useState<"structure" | "merges" | "questions">(
     "structure",
@@ -2104,7 +2092,6 @@ export function ArchitecturalCanvasApp({
   const [loreReviewSuggestedTags, setLoreReviewSuggestedTags] = useState<string[]>([]);
   const [loreReviewSemanticSummary, setLoreReviewSemanticSummary] = useState<string | null>(null);
   const [loreImportCommitting, setLoreImportCommitting] = useState(false);
-  const loreImportDraftRef = useRef<LoreImportDraftState | null>(null);
   const [cloudLinksBar, setCloudLinksBar] = useState(() => getNeonSyncSnapshot().cloudEnabled);
   const neonSyncSnapshot = useSyncExternalStore(
     subscribeNeonSync,
@@ -2154,10 +2141,6 @@ export function ArchitecturalCanvasApp({
     parentDropHoveredRef.current = next;
     setParentDropHovered(next);
   }, []);
-
-  useEffect(() => {
-    loreImportDraftRef.current = loreImportDraft;
-  }, [loreImportDraft]);
 
   /** `orderedIds`: front-to-back (top-of-stack / foremost card first) for layout and expanded grid. */
   const [stackModal, setStackModal] = useState<{
@@ -5520,7 +5503,6 @@ export function ArchitecturalCanvasApp({
     if (!isRestrictedLayer) return;
     setLorePanelOpen(false);
     setGraphOverlayOpen(false);
-    setLoreImportDraft(null);
     setLoreSmartReview(null);
     setLoreReviewPanelOpen(false);
   }, [isRestrictedLayer]);
@@ -5605,77 +5587,6 @@ export function ArchitecturalCanvasApp({
       y: (h / 2 - translateY) / scale,
     };
   }, [scale, translateX, translateY]);
-
-  const commitLoreImport = useCallback(async () => {
-    const d = loreImportDraftRef.current;
-    if (!d) return;
-    if (!persistNeonRef.current || !isUuidLike(activeSpaceId)) {
-      window.alert("Importing to the canvas requires a connected Neon space (not local demo mode).");
-      return;
-    }
-    const trimmedEntities = d.entities
-      .map((e) => ({
-        name: e.name.trim(),
-        kind: e.kind.trim() || "lore",
-        summary: e.summary.trim(),
-      }))
-      .filter((e) => e.name.length > 0);
-    const hasSource = d.includeSourceCard && d.sourceText.trim().length > 0;
-    if (!hasSource && trimmedEntities.length < 1) {
-      window.alert("Add at least one entity with a name, or include the source text as a card.");
-      return;
-    }
-    const center = centerCoords();
-    setLoreImportCommitting(true);
-    playVigilUiSound("button");
-    try {
-      const res = await fetch("/api/lore/import/commit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          spaceId: activeSpaceId,
-          sourceDocument: hasSource
-            ? {
-                title: d.sourceTitle?.trim() || d.fileName,
-                text: d.sourceText,
-              }
-            : undefined,
-          entities: trimmedEntities,
-          suggestedLinks: d.suggestedLinks.filter((l) => l.fromName.trim() && l.toName.trim()),
-          layout: { originX: center.x - 140, originY: center.y - 120 },
-        }),
-      });
-      const data = (await res.json()) as {
-        ok?: boolean;
-        error?: string;
-        linkWarnings?: string[];
-      };
-      if (!res.ok || !data.ok) {
-        playVigilUiSound("caution");
-        window.alert(typeof data.error === "string" ? data.error : "Commit failed");
-        return;
-      }
-      if (data.linkWarnings?.length) {
-        window.alert(
-          `Imported. Link notes:\n${data.linkWarnings.slice(0, 8).join("\n")}${data.linkWarnings.length > 8 ? "\n…" : ""}`,
-        );
-      }
-      const boot = await fetchBootstrap(activeSpaceId);
-      if (boot && boot.demo === false && boot.spaceId) {
-        setGraph((g) => mergeBootstrapView(g, boot));
-        if (boot.items.length > 0) {
-          setMaxZIndex((z) => Math.max(z, ...boot.items.map((i) => i.zIndex)));
-        }
-      }
-      playVigilUiSound("celebration");
-      setLoreImportDraft(null);
-    } catch {
-      playVigilUiSound("caution");
-      window.alert("Commit request failed");
-    } finally {
-      setLoreImportCommitting(false);
-    }
-  }, [activeSpaceId, centerCoords]);
 
   const commitSmartLoreImport = useCallback(async () => {
     const rev = loreSmartReview;
@@ -7186,7 +7097,6 @@ export function ArchitecturalCanvasApp({
           persistNeonRef.current && isUuidLike(spaceId) && parsed.text.trim().length > 0;
 
         if (useSmart) {
-          setLoreImportDraft(null);
           setLoreSmartReview(null);
           setLoreSmartAcceptedMergeIds({});
           setLoreSmartClarificationAnswers([]);
@@ -11663,295 +11573,6 @@ export function ArchitecturalCanvasApp({
             onClose={() => setGraphOverlayOpen(false)}
             onSelectItem={(id) => focusEntityFromPalette(id)}
           />
-        ) : null}
-        {loreImportDraft && !loreSmartReview && !isRestrictedLayer ? (
-          <div
-            className="fixed inset-0 z-[1150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Lore import review"
-            onMouseDown={(e) => {
-              if (e.target === e.currentTarget && !loreImportCommitting) setLoreImportDraft(null);
-            }}
-          >
-            <datalist id="hg-lore-import-kinds">
-              {(
-                ["npc", "location", "faction", "quest", "item", "lore", "other"] as const
-              ).map((k) => (
-                <option key={k} value={k} />
-              ))}
-            </datalist>
-            <datalist id="hg-lore-import-linktypes">
-              {LORE_LINK_TYPE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value} label={o.menuLabel} />
-              ))}
-            </datalist>
-            <div className="flex max-h-[min(90vh,720px)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-panel)] p-4 shadow-xl">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <span className="text-sm font-semibold text-[var(--vigil-label)]">Lore import</span>
-                  {loreImportDraft.fileName ? (
-                    <p className="text-[10px] text-[var(--vigil-muted)]">{loreImportDraft.fileName}</p>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    variant="neutral"
-                    tone="glass"
-                    disabled={loreImportCommitting}
-                    onClick={() => setLoreImportDraft(null)}
-                  >
-                    Close
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    tone="solid"
-                    disabled={loreImportCommitting}
-                    onClick={() => void commitLoreImport()}
-                  >
-                    {loreImportCommitting ? "Saving…" : "Add to canvas"}
-                  </Button>
-                </div>
-              </div>
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
-                {loreImportDraft.entities.length === 0 && loreImportDraft.suggestedLinks.length === 0 ? (
-                  <p className="text-[11px] text-[var(--vigil-muted)]">
-                    No AI-extracted entities yet (missing API key or empty result). Add entity rows below, or
-                    include the source text as a note card.
-                  </p>
-                ) : null}
-                <label className="flex items-start gap-2 text-[11px] text-[var(--vigil-label)]">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5"
-                    checked={loreImportDraft.includeSourceCard}
-                    onChange={(e) =>
-                      setLoreImportDraft((p) => (p ? { ...p, includeSourceCard: e.target.checked } : p))
-                    }
-                  />
-                  <span>Include full source text as a note card (recommended for traceability)</span>
-                </label>
-                <div>
-                  <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-[var(--vigil-muted)]">
-                    Source text
-                  </span>
-                  <textarea
-                    className="h-28 w-full resize-y rounded-lg border border-[var(--vigil-border)] bg-[var(--vigil-surface)] px-2 py-1.5 text-[11px] text-[var(--vigil-label)]"
-                    value={loreImportDraft.sourceText}
-                    onChange={(e) =>
-                      setLoreImportDraft((p) => (p ? { ...p, sourceText: e.target.value } : p))
-                    }
-                    spellCheck={false}
-                  />
-                </div>
-                <div>
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--vigil-muted)]">
-                      Entities (manual edit)
-                    </span>
-                    <Button
-                      size="xs"
-                      variant="neutral"
-                      tone="glass"
-                      type="button"
-                      onClick={() =>
-                        setLoreImportDraft((p) =>
-                          p
-                            ? {
-                                ...p,
-                                entities: [...p.entities, { name: "", kind: "lore", summary: "" }],
-                              }
-                            : p,
-                        )
-                      }
-                    >
-                      Add entity
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {loreImportDraft.entities.length === 0 ? (
-                      <p className="text-[10px] text-[var(--vigil-muted)]">No entities — use Add entity.</p>
-                    ) : null}
-                    {loreImportDraft.entities.map((ent, i) => (
-                      <div
-                        key={i}
-                        className="grid gap-2 rounded-lg border border-[var(--vigil-border)] bg-black/[0.03] p-2 dark:bg-white/[0.04] sm:grid-cols-[1fr_100px_1fr_auto]"
-                      >
-                        <input
-                          className="rounded border border-[var(--vigil-border)] bg-[var(--vigil-surface)] px-2 py-1 text-[11px] text-[var(--vigil-label)]"
-                          placeholder="Name"
-                          value={ent.name}
-                          onChange={(e) =>
-                            setLoreImportDraft((p) => {
-                              if (!p) return p;
-                              const next = [...p.entities];
-                              next[i] = { ...next[i]!, name: e.target.value };
-                              return { ...p, entities: next };
-                            })
-                          }
-                        />
-                        <input
-                          className="rounded border border-[var(--vigil-border)] bg-[var(--vigil-surface)] px-2 py-1 text-[11px] text-[var(--vigil-label)]"
-                          placeholder="Kind"
-                          list="hg-lore-import-kinds"
-                          value={ent.kind}
-                          onChange={(e) =>
-                            setLoreImportDraft((p) => {
-                              if (!p) return p;
-                              const next = [...p.entities];
-                              next[i] = { ...next[i]!, kind: e.target.value };
-                              return { ...p, entities: next };
-                            })
-                          }
-                        />
-                        <input
-                          className="rounded border border-[var(--vigil-border)] bg-[var(--vigil-surface)] px-2 py-1 text-[11px] text-[var(--vigil-label)] sm:col-span-1"
-                          placeholder="Summary"
-                          value={ent.summary}
-                          onChange={(e) =>
-                            setLoreImportDraft((p) => {
-                              if (!p) return p;
-                              const next = [...p.entities];
-                              next[i] = { ...next[i]!, summary: e.target.value };
-                              return { ...p, entities: next };
-                            })
-                          }
-                        />
-                        <Button
-                          size="xs"
-                          variant="ghost"
-                          tone="glass"
-                          type="button"
-                          className="justify-self-end"
-                          onClick={() =>
-                            setLoreImportDraft((p) => {
-                              if (!p) return p;
-                              const next = p.entities.filter((_, j) => j !== i);
-                              const names = new Set(
-                                next.map((e) => e.name.trim().toLowerCase()).filter(Boolean),
-                              );
-                              const links = p.suggestedLinks.filter(
-                                (l) =>
-                                  names.has(l.fromName.trim().toLowerCase()) &&
-                                  names.has(l.toName.trim().toLowerCase()),
-                              );
-                              return { ...p, entities: next, suggestedLinks: links };
-                            })
-                          }
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--vigil-muted)]">
-                      Suggested links
-                    </span>
-                    <Button
-                      size="xs"
-                      variant="neutral"
-                      tone="glass"
-                      type="button"
-                      onClick={() =>
-                        setLoreImportDraft((p) =>
-                          p
-                            ? {
-                                ...p,
-                                suggestedLinks: [
-                                  ...p.suggestedLinks,
-                                  { fromName: "", toName: "", linkType: "affiliation" },
-                                ],
-                              }
-                            : p,
-                        )
-                      }
-                    >
-                      Add link
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {loreImportDraft.suggestedLinks.length === 0 ? (
-                      <p className="text-[10px] text-[var(--vigil-muted)]">No links.</p>
-                    ) : null}
-                    {loreImportDraft.suggestedLinks.map((link, i) => (
-                      <div
-                        key={i}
-                        className="grid gap-2 rounded-lg border border-[var(--vigil-border)] bg-black/[0.03] p-2 dark:bg-white/[0.04] sm:grid-cols-[1fr_1fr_120px_auto]"
-                      >
-                        <input
-                          className="rounded border border-[var(--vigil-border)] bg-[var(--vigil-surface)] px-2 py-1 text-[11px] text-[var(--vigil-label)]"
-                          placeholder="From (entity name)"
-                          value={link.fromName}
-                          onChange={(e) =>
-                            setLoreImportDraft((p) => {
-                              if (!p) return p;
-                              const next = [...p.suggestedLinks];
-                              next[i] = { ...next[i]!, fromName: e.target.value };
-                              return { ...p, suggestedLinks: next };
-                            })
-                          }
-                        />
-                        <input
-                          className="rounded border border-[var(--vigil-border)] bg-[var(--vigil-surface)] px-2 py-1 text-[11px] text-[var(--vigil-label)]"
-                          placeholder="To (entity name)"
-                          value={link.toName}
-                          onChange={(e) =>
-                            setLoreImportDraft((p) => {
-                              if (!p) return p;
-                              const next = [...p.suggestedLinks];
-                              next[i] = { ...next[i]!, toName: e.target.value };
-                              return { ...p, suggestedLinks: next };
-                            })
-                          }
-                        />
-                        <input
-                          className="rounded border border-[var(--vigil-border)] bg-[var(--vigil-surface)] px-2 py-1 text-[11px] text-[var(--vigil-label)]"
-                          placeholder="Type"
-                          list="hg-lore-import-linktypes"
-                          value={link.linkType ?? ""}
-                          onChange={(e) =>
-                            setLoreImportDraft((p) => {
-                              if (!p) return p;
-                              const next = [...p.suggestedLinks];
-                              next[i] = { ...next[i]!, linkType: e.target.value };
-                              return { ...p, suggestedLinks: next };
-                            })
-                          }
-                        />
-                        <Button
-                          size="xs"
-                          variant="ghost"
-                          tone="glass"
-                          type="button"
-                          className="justify-self-end"
-                          onClick={() =>
-                            setLoreImportDraft((p) => {
-                              if (!p) return p;
-                              return {
-                                ...p,
-                                suggestedLinks: p.suggestedLinks.filter((_, j) => j !== i),
-                              };
-                            })
-                          }
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <p className="mt-3 text-[10px] text-[var(--vigil-muted)]">
-                Cards are placed near the viewport center. Requires Neon (not local demo). Link rows must match
-                entity names (case-insensitive).
-              </p>
-            </div>
-          </div>
         ) : null}
       </div>
       </div>

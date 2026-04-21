@@ -114,9 +114,9 @@ Promotion flow: `runSemanticThreadLinkEvaluation` (`canvas-thread-link-eval.ts`)
 - `fillNoteBodiesFromChunks` dumps **all chunks not claimed by any note** into the **first note's body** as "extra" content. If the outline model misses any IDs, note #1 becomes a giant dump.
 - No check against double-assignment either: if two notes both claim chunk 5, both get its text (duplicate prose).
 
-### 4.7 Two import paths, one UI
+### 4.7 Two import paths, one UI — Resolved
 
-- Smart (`/jobs` → `/apply`) and legacy (`/extract` → `/commit`) both open modals. Legacy has no folders, no merges, no clarifications, and is reachable any time Neon/UUID check fails. It's not deprecated anywhere in docs. Two review drafts (`loreImportDraft` and `loreSmartReview`) share the same shell with divergent UX.
+- Resolved by `e46eca7` (routes gated behind `HEARTGARDEN_IMPORT_LEGACY_ENABLED`) and the follow-up shell cleanup that deleted `loreImportDraft`, `commitLoreImport`, and the legacy modal block from `ArchitecturalCanvasApp.tsx`. The shell now opens the smart review for every successful import and surfaces a clear failure message otherwise — no second modal, no fallback path.
 
 ### 4.8 Entity-meta is unbounded
 
