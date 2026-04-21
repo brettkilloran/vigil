@@ -48,7 +48,7 @@ type StyleTokens = {
  *
  * **Root demo layout:** Row 1 — welcome doc (left) + sample stack (right). Row 2 — “Try these steps”
  * checklist under the welcome card. Image card sits tighter under the stack (not a full `ROW_STEP`);
- * Demo subspace folder stays two row-steps below the grid origin (unchanged when nudging image only).
+ * Demo subspace folder sits two row-steps below the grid origin, nudged 60px up for tighter grouping under the stack.
  */
 const DEMO_ROOT_GRID_OX = -420;
 const DEMO_ROOT_GRID_OY = -440;
@@ -60,7 +60,8 @@ const DEMO_ROOT_STACK_COL_OX = DEMO_ROOT_GRID_OX + 500;
 const DEMO_ROOT_FOLDER_X = DEMO_ROOT_STACK_COL_OX + (340 - 420) / 2;
 /** Image: closer under the stack than a full row step (folder Y is independent). */
 const DEMO_ROOT_IMAGE_Y = DEMO_ROOT_GRID_OY + 440;
-const DEMO_ROOT_FOLDER_Y = DEMO_ROOT_GRID_OY + DEMO_ROOT_ROW_STEP * 2;
+/** Two row-steps below grid origin; −60px lifts the folder slightly toward the stack column. */
+const DEMO_ROOT_FOLDER_Y = DEMO_ROOT_GRID_OY + DEMO_ROOT_ROW_STEP * 2 - 60;
 
 /** Pin anchors aligned with `ArchitecturalCanvasApp` `CONNECTION_PIN_DEFAULT_CONTENT`. */
 const DEMO_SEED_CONTENT_PIN: CanvasConnectionPin = {
@@ -274,7 +275,7 @@ export function buildArchitecturalSeedGraph(
     rotation: -4.2,
     width: 420,
     tapeRotation: 0,
-    /* Row 3 — below the image on the stack column. */
+    /* Row 3 band — below the image on the stack column (see DEMO_ROOT_FOLDER_Y nudge). */
     slots: {
       root: { x: DEMO_ROOT_FOLDER_X, y: DEMO_ROOT_FOLDER_Y },
     },
