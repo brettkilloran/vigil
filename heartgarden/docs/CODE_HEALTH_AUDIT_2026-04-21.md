@@ -543,5 +543,5 @@ Not dead code; confirm bundle impact is acceptable for a TTRPG notes app.
 ## Changelog
 
 - **2026-04-21** — Initial audit. 45 items across CRITICAL / HIGH / MEDIUM / LOW.
-- **2026-04-21 (remediation)** — Implemented fixes documented above (CRITICAL #1–#6; HIGH #8, #11, #12, #15, #17, #21, #22; partial #7, #14; MEDIUM #38 folded into #15). Run migration **`0008_items_space_updated_at_idx.sql`** on Neon when deploying. Doc/status update commit: `38ca04a` (implementation on `main` as of same date; see file references under each item).
+- **2026-04-21 (remediation)** — Implemented fixes documented above (CRITICAL #1–#6; HIGH #8, #11, #12, #15, #17, #21, #22; partial #7, #14; MEDIUM #38 folded into #15). Run migration **`0008_items_space_updated_at_idx.sql`** on Neon when deploying. Doc/status updates: strikethrough batch `38ca04a`; commit reference + BUILD_PLAN link `bad55f2`. Implementation on `main` as of 2026-04-21 (see file references under each item).
 

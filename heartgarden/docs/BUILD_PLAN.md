@@ -71,7 +71,7 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 
 ### Code health backlog (living audit)
 
-**Cross-cutting bug / perf / hygiene backlog:** [`CODE_HEALTH_AUDIT_2026-04-21.md`](./CODE_HEALTH_AUDIT_2026-04-21.md) — dated audit with 45 prioritized items (CRITICAL → LOW) and a three-week attack order. Work those items alongside the phase tranches below; they are not duplicated here to avoid drift. Strike items out in the audit doc as they land. **2026-04-21:** first remediation batch landed (CRITICAL blockers + key HIGH items — see audit doc strikethroughs and `38ca04a` changelog line).
+**Cross-cutting bug / perf / hygiene backlog:** [`CODE_HEALTH_AUDIT_2026-04-21.md`](./CODE_HEALTH_AUDIT_2026-04-21.md) — dated audit with 45 prioritized items (CRITICAL → LOW) and a three-week attack order. Work those items alongside the phase tranches below; they are not duplicated here to avoid drift. Strike items out in the audit doc as they land. **2026-04-21:** first remediation batch landed (CRITICAL blockers + key HIGH items — see audit doc strikethroughs; changelog commits `38ca04a` / `bad55f2`).
 
 ### Near-term — hardening & parity
 
