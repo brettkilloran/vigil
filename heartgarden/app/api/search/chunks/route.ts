@@ -10,6 +10,7 @@ import { parseSearchFiltersFromUrl } from "@/src/lib/heartgarden-search-url-para
 import { assertSpaceExists, type VigilDb } from "@/src/lib/spaces";
 import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
 import { searchItemChunksByVector } from "@/src/lib/vault-retrieval";
+import { jsonPublicError } from "@/src/lib/heartgarden-public-error";
 
 export async function GET(req: Request) {
   const bootCtx = await getHeartgardenApiBootContext();
@@ -72,7 +73,7 @@ export async function GET(req: Request) {
       })),
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Semantic search failed";
-    return Response.json({ ok: false, error: msg, chunks: [] }, { status: 502 });
+    console.error("[GET /api/search/chunks]", e);
+    return jsonPublicError(502, "Semantic search failed", "search_chunks_failed", { chunks: [] });
   }
 }

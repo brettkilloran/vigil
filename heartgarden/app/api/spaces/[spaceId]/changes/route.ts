@@ -15,6 +15,9 @@ import { collectSpaceSubtreeIds, listGmWorkspaceSpaces } from "@/src/lib/spaces"
  * - `cursor` is the max updatedAt across changed items/spaces (never before `since` when nothing changed).
  * - Invalid `since` → 400 (client must recover via bootstrap, not guess a cursor).
  */
+const DEFAULT_CHANGES_LIMIT = 500;
+const MAX_CHANGES_LIMIT = 500;
+
 function maxIsoCursor(rows: { updatedAt: Date | null }[], fallbackMs: number): string {
   let ms = fallbackMs;
   for (const r of rows) {
@@ -30,6 +33,14 @@ export async function GET(
 ) {
   const url = new URL(req.url);
   const includeItemIds = url.searchParams.get("includeItemIds") === "1";
+  const limitParam = url.searchParams.get("limit");
+  let pageLimit = DEFAULT_CHANGES_LIMIT;
+  if (limitParam != null && limitParam.trim() !== "") {
+    const n = Number(limitParam);
+    if (Number.isFinite(n)) {
+      pageLimit = Math.min(MAX_CHANGES_LIMIT, Math.max(1, Math.floor(n)));
+    }
+  }
 
   if (process.env.PLAYWRIGHT_E2E === "1") {
     return Response.json({
@@ -39,6 +50,7 @@ export async function GET(
       ...(includeItemIds ? { itemIds: [] as string[] } : {}),
       cursor: new Date(0).toISOString(),
       itemLinksRevision: "0:0:",
+      hasMore: false,
     });
   }
 
@@ -85,6 +97,7 @@ export async function GET(
       ...(includeItemIds ? { itemIds: [] as string[] } : {}),
       cursor: new Date(sinceMs).toISOString(),
       itemLinksRevision,
+      hasMore: false,
     });
   }
 
@@ -97,15 +110,20 @@ export async function GET(
     itemIds = idRows.map((r) => r.id);
   }
 
-  const changedRows = await db
+  const itemFetchLimit = pageLimit + 1;
+  const rawItemRows = await db
     .select()
     .from(items)
     .where(and(inArray(items.spaceId, subtreeIds), gt(items.updatedAt, sinceDate)))
-    .orderBy(asc(items.updatedAt));
+    .orderBy(asc(items.updatedAt))
+    .limit(itemFetchLimit);
+
+  const itemHasMore = rawItemRows.length > pageLimit;
+  const changedRows = itemHasMore ? rawItemRows.slice(0, pageLimit) : rawItemRows;
 
   const changedItems = changedRows.map(rowToCanvasItem);
 
-  const changedSpaceRows = await db
+  const rawSpaceRows = await db
     .select({
       id: spaces.id,
       name: spaces.name,
@@ -114,7 +132,11 @@ export async function GET(
     })
     .from(spaces)
     .where(and(inArray(spaces.id, subtreeIds), gt(spaces.updatedAt, sinceDate)))
-    .orderBy(asc(spaces.updatedAt));
+    .orderBy(asc(spaces.updatedAt))
+    .limit(itemFetchLimit);
+
+  const spaceHasMore = rawSpaceRows.length > pageLimit;
+  const changedSpaceRows = spaceHasMore ? rawSpaceRows.slice(0, pageLimit) : rawSpaceRows;
 
   const spacePayload = changedSpaceRows.map((r) => ({
     id: r.id,
@@ -128,6 +150,8 @@ export async function GET(
 
   const itemLinksRevision = await computeItemLinksRevisionForSpace(db, spaceId);
 
+  const hasMore = itemHasMore || spaceHasMore;
+
   return Response.json({
     ok: true,
     items: changedItems,
@@ -135,5 +159,6 @@ export async function GET(
     ...(includeItemIds && itemIds !== undefined ? { itemIds } : {}),
     cursor,
     itemLinksRevision,
+    hasMore,
   });
 }

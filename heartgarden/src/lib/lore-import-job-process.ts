@@ -65,8 +65,6 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
       fileName: job.fileName ?? undefined,
     });
 
-    await persistImportReviewQueueFromPlan(db as VigilDb, job.spaceId, plan, true);
-
     const parsedPlan = loreImportPlanSchema.safeParse(plan);
     if (!parsedPlan.success) {
       await db
@@ -79,6 +77,8 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
         .where(eq(loreImportJobs.id, jobId));
       return;
     }
+
+    await persistImportReviewQueueFromPlan(db as VigilDb, job.spaceId, parsedPlan.data, true);
 
     await db
       .update(loreImportJobs)

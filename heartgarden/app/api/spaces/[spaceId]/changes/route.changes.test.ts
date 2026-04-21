@@ -33,6 +33,10 @@ vi.mock("@/src/lib/spaces", async (importOriginal) => {
   };
 });
 
+vi.mock("@/src/lib/item-links-space-revision", () => ({
+  computeItemLinksRevisionForSpace: vi.fn(async () => "0:0:test"),
+}));
+
 describe("GET /api/spaces/[spaceId]/changes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -68,7 +72,9 @@ describe("GET /api/spaces/[spaceId]/changes", () => {
           return {
             from: vi.fn(() => ({
               where: vi.fn(() => ({
-                orderBy: vi.fn(async () => []),
+                orderBy: vi.fn(() => ({
+                  limit: vi.fn(async () => []),
+                })),
               })),
             })),
           };
@@ -76,7 +82,9 @@ describe("GET /api/spaces/[spaceId]/changes", () => {
         return {
           from: vi.fn(() => ({
             where: vi.fn(() => ({
-              orderBy: vi.fn(async () => []),
+              orderBy: vi.fn(() => ({
+                limit: vi.fn(async () => []),
+              })),
             })),
           })),
         };
@@ -127,34 +135,36 @@ describe("GET /api/spaces/[spaceId]/changes", () => {
               expect(table).toBe(items);
               return {
                 where: vi.fn(() => ({
-                  orderBy: vi.fn(async () => [
-                    {
-                      id: "item-a",
-                      spaceId: "space-root",
-                      itemType: "note",
-                      x: 0,
-                      y: 0,
-                      width: 280,
-                      height: 200,
-                      zIndex: 1,
-                      title: "A",
-                      contentText: "",
-                      searchBlob: "",
-                      contentJson: null,
-                      imageUrl: null,
-                      imageMeta: null,
-                      color: null,
-                      entityType: null,
-                      entityMeta: null,
-                      stackId: null,
-                      stackOrder: null,
-                      loreSummary: null,
-                      loreAliases: null,
-                      loreIndexedAt: null,
-                      createdAt: new Date("2019-01-01"),
-                      updatedAt: itemTime,
-                    },
-                  ]),
+                  orderBy: vi.fn(() => ({
+                    limit: vi.fn(async () => [
+                      {
+                        id: "item-a",
+                        spaceId: "space-root",
+                        itemType: "note",
+                        x: 0,
+                        y: 0,
+                        width: 280,
+                        height: 200,
+                        zIndex: 1,
+                        title: "A",
+                        contentText: "",
+                        searchBlob: "",
+                        contentJson: null,
+                        imageUrl: null,
+                        imageMeta: null,
+                        color: null,
+                        entityType: null,
+                        entityMeta: null,
+                        stackId: null,
+                        stackOrder: null,
+                        loreSummary: null,
+                        loreAliases: null,
+                        loreIndexedAt: null,
+                        createdAt: new Date("2019-01-01"),
+                        updatedAt: itemTime,
+                      },
+                    ]),
+                  })),
                 })),
               };
             }),
@@ -165,14 +175,16 @@ describe("GET /api/spaces/[spaceId]/changes", () => {
             expect(table).toBe(spaces);
             return {
               where: vi.fn(() => ({
-                orderBy: vi.fn(async () => [
-                  {
-                    id: "space-root",
-                    name: "Root",
-                    parentSpaceId: null,
-                    updatedAt: spaceTime,
-                  },
-                ]),
+                orderBy: vi.fn(() => ({
+                  limit: vi.fn(async () => [
+                    {
+                      id: "space-root",
+                      name: "Root",
+                      parentSpaceId: null,
+                      updatedAt: spaceTime,
+                    },
+                  ]),
+                })),
               })),
             };
           }),
@@ -212,7 +224,9 @@ describe("GET /api/spaces/[spaceId]/changes", () => {
           return {
             from: vi.fn(() => ({
               where: vi.fn(() => ({
-                orderBy: vi.fn(async () => []),
+                orderBy: vi.fn(() => ({
+                  limit: vi.fn(async () => []),
+                })),
               })),
             })),
           };
@@ -220,7 +234,9 @@ describe("GET /api/spaces/[spaceId]/changes", () => {
         return {
           from: vi.fn(() => ({
             where: vi.fn(() => ({
-              orderBy: vi.fn(async () => []),
+              orderBy: vi.fn(() => ({
+                limit: vi.fn(async () => []),
+              })),
             })),
           })),
         };

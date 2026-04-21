@@ -128,29 +128,30 @@ export async function reindexItemVault(
     }),
   );
 
-  if (loreMetaUpdated) {
-    await db
-      .update(items)
-      .set({
-        searchBlob: corpus,
-        loreSummary: loreSummaryEff,
-        loreAliases: loreAliasesEff,
-        loreIndexedAt: new Date(),
-        loreMetaSourceHash: loreMetaSourceHash!,
-      })
-      .where(eq(items.id, itemId));
-  } else {
-    await db.update(items).set({ searchBlob: corpus }).where(eq(items.id, itemId));
-  }
-
   const chunks = chunkVaultText(corpus);
+
+  /** No vector rows: persist lexical row only. */
   if (chunks.length === 0) {
+    if (loreMetaUpdated) {
+      await db
+        .update(items)
+        .set({
+          searchBlob: corpus,
+          loreSummary: loreSummaryEff,
+          loreAliases: loreAliasesEff,
+          loreIndexedAt: new Date(),
+          loreMetaSourceHash: loreMetaSourceHash!,
+        })
+        .where(eq(items.id, itemId));
+    } else {
+      await db.update(items).set({ searchBlob: corpus }).where(eq(items.id, itemId));
+    }
     await clearItemEmbeddings(db, itemId);
     return { ok: true, chunks: 0, loreMetaUpdated };
   }
 
+  /** Embed first so we never persist a new `search_blob` if embedding fails (audit: vector/index drift). */
   const vectors = await embedTexts(chunks);
-  await clearItemEmbeddings(db, itemId);
 
   const sourceUpdatedAt = row.updatedAt ?? new Date();
   const values = chunks.map((chunkText, i) => ({
@@ -163,7 +164,24 @@ export async function reindexItemVault(
     chunkText,
   }));
 
-  await db.insert(itemEmbeddings).values(values);
+  await db.transaction(async (tx) => {
+    if (loreMetaUpdated) {
+      await tx
+        .update(items)
+        .set({
+          searchBlob: corpus,
+          loreSummary: loreSummaryEff,
+          loreAliases: loreAliasesEff,
+          loreIndexedAt: new Date(),
+          loreMetaSourceHash: loreMetaSourceHash!,
+        })
+        .where(eq(items.id, itemId));
+    } else {
+      await tx.update(items).set({ searchBlob: corpus }).where(eq(items.id, itemId));
+    }
+    await tx.delete(itemEmbeddings).where(eq(itemEmbeddings.itemId, itemId));
+    await tx.insert(itemEmbeddings).values(values);
+  });
 
   return { ok: true, chunks: chunks.length, loreMetaUpdated };
 }

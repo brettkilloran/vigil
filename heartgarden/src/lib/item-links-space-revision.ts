@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 import type { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
@@ -17,8 +17,18 @@ export async function computeItemLinksRevisionForSpace(db: VigilDb, spaceId: str
       maxId: sql<string | null>`max(${itemLinks.id}::text)`,
     })
     .from(itemLinks)
-    .innerJoin(items, eq(items.id, itemLinks.sourceItemId))
-    .where(eq(items.spaceId, spaceId));
+    .where(
+      sql`(
+        EXISTS (
+          SELECT 1 FROM ${items}
+          WHERE ${items.id} = ${itemLinks.sourceItemId} AND ${items.spaceId} = ${spaceId}
+        )
+        OR EXISTS (
+          SELECT 1 FROM ${items}
+          WHERE ${items.id} = ${itemLinks.targetItemId} AND ${items.spaceId} = ${spaceId}
+        )
+      )`,
+    );
 
   const c = row?.c ?? 0;
   const maxU = row?.maxU instanceof Date ? row.maxU.getTime() : 0;

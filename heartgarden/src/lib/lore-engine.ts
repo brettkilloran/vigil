@@ -4,6 +4,8 @@
  */
 import Anthropic from "@anthropic-ai/sdk";
 
+import { anthropicLlmDeadlineMs, withDeadline } from "@/src/lib/async-timeout";
+
 import type { tryGetDb } from "@/src/db/index";
 import type { SearchFilters, SearchRow } from "@/src/lib/spaces";
 import { LORE_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
@@ -186,12 +188,16 @@ export async function synthesizeLoreAnswer(
   });
   const user = `Question:\n${question.trim()}\n\n---\n\nCanvas excerpts (your only ground truth):\n\n${blocks.join("\n\n---\n\n")}`;
 
-  const res = await client.messages.create({
-    model,
-    max_tokens: 4096,
-    system: LORE_SYSTEM,
-    messages: [{ role: "user", content: user }],
-  });
+  const res = await withDeadline(
+    client.messages.create({
+      model,
+      max_tokens: 4096,
+      system: LORE_SYSTEM,
+      messages: [{ role: "user", content: user }],
+    }),
+    anthropicLlmDeadlineMs(),
+    "lore_query",
+  );
 
   return messageText(res);
 }

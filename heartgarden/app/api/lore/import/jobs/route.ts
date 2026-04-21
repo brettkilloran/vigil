@@ -6,6 +6,8 @@ import { loreImportJobs } from "@/src/db/schema";
 import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
+  gmMayAccessSpaceIdAsync,
+  heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { scheduleLoreImportJobProcessing } from "@/src/lib/lore-import-job-after";
 import { assertSpaceExists } from "@/src/lib/spaces";
@@ -52,6 +54,9 @@ export async function POST(req: Request) {
   const space = await assertSpaceExists(db, parsed.data.spaceId);
   if (!space) {
     return Response.json({ ok: false, error: "Space not found" }, { status: 404 });
+  }
+  if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, parsed.data.spaceId))) {
+    return heartgardenApiForbiddenJsonResponse();
   }
 
   const jobId = randomUUID();

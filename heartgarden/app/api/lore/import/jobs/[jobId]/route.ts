@@ -5,6 +5,8 @@ import { loreImportJobs } from "@/src/db/schema";
 import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
+  gmMayAccessSpaceIdAsync,
+  heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { scheduleLoreImportJobProcessing } from "@/src/lib/lore-import-job-after";
 import {
@@ -52,6 +54,9 @@ export async function GET(req: Request, ctx: RouteCtx) {
   if (!job || job.spaceId !== spaceId) {
     return Response.json({ ok: false, error: "Job not found" }, { status: 404 });
   }
+  if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, spaceId))) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
 
   if (job.status === "processing" && job.updatedAt) {
     const staleBefore = new Date(Date.now() - STALE_LORE_IMPORT_PROCESSING_MS);
@@ -90,9 +95,18 @@ export async function GET(req: Request, ctx: RouteCtx) {
     );
   }
 
+  if (job.status === "failed" && job.error) {
+    console.error("[lore import job failed]", job.id, job.error);
+  }
+
   return Response.json({
     ok: true,
     status: job.status,
-    error: job.status === "failed" ? job.error ?? "Unknown error" : undefined,
+    ...(job.status === "failed"
+      ? {
+          error: "Import job failed",
+          code: "lore_import_job_failed",
+        }
+      : {}),
   });
 }

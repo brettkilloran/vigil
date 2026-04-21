@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 import {
   installHeartgardenCollabMetricsGlobal,
@@ -17,6 +17,10 @@ export function useHeartgardenRealtimeSpaceSync(options: {
 }): { connectedRef: React.MutableRefObject<boolean> } {
   const { enabled, activeSpaceId, onInvalidate } = options;
   const connectedRef = useRef(false);
+  const onInvalidateRef = useRef(onInvalidate);
+  useLayoutEffect(() => {
+    onInvalidateRef.current = onInvalidate;
+  });
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -33,6 +37,7 @@ export function useHeartgardenRealtimeSpaceSync(options: {
     let closed = false;
     let ws: WebSocket | null = null;
     let reconnectTimer: number | null = null;
+    let reconnectAttempt = 0;
 
     const clearReconnect = () => {
       if (reconnectTimer != null) {
@@ -43,10 +48,13 @@ export function useHeartgardenRealtimeSpaceSync(options: {
 
     const scheduleReconnect = () => {
       if (closed || reconnectTimer != null) return;
+      const base = Math.min(30_000, 2000 * Math.pow(2, reconnectAttempt));
+      reconnectAttempt += 1;
+      const jitterMs = base * (0.7 + Math.random() * 0.6);
       reconnectTimer = window.setTimeout(() => {
         reconnectTimer = null;
         void connect();
-      }, 2000);
+      }, jitterMs);
     };
 
     const connect = async () => {
@@ -72,6 +80,7 @@ export function useHeartgardenRealtimeSpaceSync(options: {
         }
         ws = new WebSocket(`${tokenJson.realtimeUrl}?token=${encodeURIComponent(tokenJson.token)}`);
         ws.onopen = () => {
+          reconnectAttempt = 0;
           connectedRef.current = true;
           recordRealtimeWsConnect();
         };
@@ -84,7 +93,7 @@ export function useHeartgardenRealtimeSpaceSync(options: {
           } catch {
             /* ignore */
           }
-          onInvalidate(reason !== undefined ? { reason } : undefined);
+          onInvalidateRef.current(reason !== undefined ? { reason } : undefined);
         };
         ws.onerror = () => {
           connectedRef.current = false;
@@ -108,7 +117,7 @@ export function useHeartgardenRealtimeSpaceSync(options: {
       clearReconnect();
       ws?.close();
     };
-  }, [enabled, activeSpaceId, onInvalidate]);
+  }, [enabled, activeSpaceId]);
 
   return { connectedRef };
 }

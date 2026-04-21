@@ -63,6 +63,37 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
     vi.clearAllMocks();
   });
 
+  it("returns 400 when title changes without baseUpdatedAt", async () => {
+    const serverTime = new Date("2024-06-01T12:00:00.000Z");
+    const db = {
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            limit: vi.fn(async () => [mockExistingRow(serverTime)]),
+          })),
+        })),
+      })),
+    };
+    tryGetDbMock.mockReturnValue(db);
+
+    const { PATCH } = await import("./route");
+    const res = await PATCH(
+      new Request(`http://localhost/api/items/${ITEM_ID}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Next",
+        }),
+      }),
+      { params: Promise.resolve({ itemId: ITEM_ID }) },
+    );
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { ok: boolean; error: string };
+    expect(body.ok).toBe(false);
+    expect(String(body.error)).toContain("baseUpdatedAt");
+  });
+
   it("returns 409 with server item when baseUpdatedAt mismatches", async () => {
     const serverTime = new Date("2024-06-01T12:00:00.000Z");
     const db = {

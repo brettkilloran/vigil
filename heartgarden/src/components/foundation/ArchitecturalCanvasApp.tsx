@@ -165,6 +165,7 @@ import {
   neonSyncBumpPending,
   neonSyncReportAuxiliaryFailure,
   neonSyncSetCloudEnabled,
+  neonSyncSpaceChangeSyncBreadcrumb,
   neonSyncUnbumpPending,
   subscribeNeonSync,
 } from "@/src/lib/neon-sync-bus";
@@ -3174,8 +3175,12 @@ export function ArchitecturalCanvasApp({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: connection.dbLinkId }),
       });
-    } catch {
-      // Keep local delete authoritative.
+    } catch (e) {
+      neonSyncReportAuxiliaryFailure({
+        operation: "DELETE /api/item-links",
+        message: e instanceof Error ? e.message : "Network error",
+        cause: "network",
+      });
     }
   }, []);
 
@@ -4647,8 +4652,10 @@ export function ArchitecturalCanvasApp({
             "Connections were updated (another tab, automation, or background sync).",
           );
         }
-      } catch {
-        /* ignore */
+      } catch (e) {
+        neonSyncSpaceChangeSyncBreadcrumb(
+          `mergeRemoteGraphEdges: ${e instanceof Error ? e.message : "error"}`,
+        );
       }
     },
     [activeSpaceId, scenario, canvasBootstrapResolved, setGraph],
@@ -5051,8 +5058,10 @@ export function ArchitecturalCanvasApp({
             fallbackColor: CONNECTION_DEFAULT_COLOR,
           }),
         );
-      } catch {
-        /* ignore */
+      } catch (e) {
+        neonSyncSpaceChangeSyncBreadcrumb(
+          `poll graph edges: ${e instanceof Error ? e.message : "error"}`,
+        );
       }
     })();
     return () => {
@@ -5144,6 +5153,11 @@ export function ArchitecturalCanvasApp({
     setCanvasBootstrapResolved(true);
   }, []);
 
+  const bootApiLoaded = heartgardenBootApi.loaded;
+  const bootGateEnabled = heartgardenBootApi.gateEnabled;
+  const bootSessionValid = heartgardenBootApi.sessionValid;
+  const bootSessionTier = heartgardenBootApi.sessionTier;
+
   useEffect(() => {
     if (scenario !== "default") {
       const tokens = {
@@ -5176,7 +5190,7 @@ export function ArchitecturalCanvasApp({
       return;
     }
 
-    const boot = heartgardenBootApi;
+    const boot = heartgardenBootApiRef.current;
     if (!boot.loaded) {
       setCanvasBootstrapResolved(false);
       setNeonWorkspaceOk(null);
@@ -5299,7 +5313,15 @@ export function ArchitecturalCanvasApp({
     return () => {
       cancelled = true;
     };
-  }, [scenario, ingestLiveBootstrap, applyDemoLocalCanvas, heartgardenBootApi]);
+  }, [
+    scenario,
+    ingestLiveBootstrap,
+    applyDemoLocalCanvas,
+    bootApiLoaded,
+    bootGateEnabled,
+    bootSessionValid,
+    bootSessionTier,
+  ]);
 
   useEffect(() => {
     if (scenario !== "default" || !workspaceViewFromCache) return;
@@ -5326,7 +5348,15 @@ export function ArchitecturalCanvasApp({
       window.removeEventListener("online", onOnline);
       window.clearInterval(interval);
     };
-  }, [scenario, workspaceViewFromCache, ingestLiveBootstrap, heartgardenBootApi]);
+  }, [
+    scenario,
+    workspaceViewFromCache,
+    ingestLiveBootstrap,
+    bootApiLoaded,
+    bootGateEnabled,
+    bootSessionValid,
+    bootSessionTier,
+  ]);
 
   useLayoutEffect(() => {
     setViewportSize({ width: window.innerWidth, height: window.innerHeight });

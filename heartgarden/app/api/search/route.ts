@@ -13,17 +13,10 @@ import {
 } from "@/src/lib/heartgarden-search-tier-policy";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { parseSearchFiltersFromUrl } from "@/src/lib/heartgarden-search-url-params";
-import {
-  assertSpaceExists,
-  searchItemsFTS,
-  searchItemsFuzzy,
-  searchItemsHybrid,
-} from "@/src/lib/spaces";
+import { assertSpaceExists, searchItemsFTS, searchItemsFuzzy } from "@/src/lib/spaces";
 import { parseHybridRetrieveQueryParams } from "@/src/lib/vault-retrieval-query-params";
 import { API_SEARCH_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 import { hybridRetrieveItems } from "@/src/lib/vault-retrieval";
-
-const HYBRID_FTS_SHORT_CIRCUIT_LIMIT = 12;
 
 function mapRows(rows: Awaited<ReturnType<typeof searchItemsFTS>>) {
   return rows.map((row) => ({
@@ -118,30 +111,19 @@ export async function GET(req: Request) {
   }
 
   if (mode === "hybrid") {
-    if (isEmbeddingApiConfigured()) {
-      const { rows } = await hybridRetrieveItems(db, q, filters, hybridRetrieveOpts);
-      return Response.json({
-        ok: true,
-        items: mapRows(rows),
-        mode: "hybrid",
-      });
-    }
-
-    const ftsRows = await searchItemsFTS(db, q, filters);
-    if (ftsRows.length >= HYBRID_FTS_SHORT_CIRCUIT_LIMIT) {
-      return Response.json({
-        ok: true,
-        items: mapRows(ftsRows),
-        mode: "hybrid",
-        note: "Lexical hybrid only (no embedding provider; vector fusion disabled).",
-      });
-    }
-    const rows = await searchItemsHybrid(db, q, filters);
+    const { rows } = await hybridRetrieveItems(db, q, filters, {
+      ...hybridRetrieveOpts,
+      includeVector: isEmbeddingApiConfigured(),
+    });
     return Response.json({
       ok: true,
       items: mapRows(rows),
       mode: "hybrid",
-      note: "Lexical hybrid only (no embedding provider; vector fusion disabled).",
+      ...(!isEmbeddingApiConfigured()
+        ? {
+            note: "Lexical hybrid only (no OPENAI_API_KEY; vector fusion disabled).",
+          }
+        : {}),
     });
   }
 

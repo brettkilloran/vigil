@@ -75,6 +75,26 @@ const patchBody = z.object({
   baseUpdatedAt: z.string().optional(),
 });
 
+function rowUpdatedAtMs(existing: { updatedAt: unknown }): number | null {
+  const u = existing.updatedAt;
+  const ms =
+    u instanceof Date ? u.getTime() : new Date(u as string | number | Date).getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/** Title/body/entity/image fields — optimistic lock required (see CODE_HEALTH_AUDIT). */
+function patchRequiresBaseOptimisticLock(p: z.infer<typeof patchBody>): boolean {
+  if (p.title !== undefined) return true;
+  if (p.contentText !== undefined) return true;
+  if (p.contentJson !== undefined) return true;
+  if (p.entityMeta !== undefined) return true;
+  if (p.entityMetaMerge !== undefined && Object.keys(p.entityMetaMerge).length > 0) return true;
+  if (p.entityType !== undefined) return true;
+  if (p.imageUrl !== undefined) return true;
+  if (p.imageMeta !== undefined) return true;
+  return false;
+}
+
 export async function PATCH(
   req: Request,
   context: { params: Promise<{ itemId: string }> },
@@ -135,16 +155,36 @@ export async function PATCH(
   }
 
   const p = parsed.data;
-  if (p.baseUpdatedAt) {
-    const baseMs = Date.parse(p.baseUpdatedAt);
-    if (Number.isFinite(baseMs)) {
-      const rowMs = existing.updatedAt instanceof Date ? existing.updatedAt.getTime() : 0;
-      if (rowMs !== baseMs) {
-        return Response.json(
-          { ok: false, error: "conflict", item: rowToCanvasItem(existing) },
-          { status: 409 },
-        );
-      }
+  const rowMs = rowUpdatedAtMs(existing);
+  if (rowMs === null) {
+    return Response.json(
+      { ok: false, error: "Item row has invalid updatedAt" },
+      { status: 500 },
+    );
+  }
+
+  const needsOptimisticLock = patchRequiresBaseOptimisticLock(p);
+  if (needsOptimisticLock && !p.baseUpdatedAt?.trim()) {
+    return Response.json(
+      {
+        ok: false,
+        error: "baseUpdatedAt is required when changing title, body, or entity fields",
+      },
+      { status: 400 },
+    );
+  }
+
+  const effectiveBase = p.baseUpdatedAt?.trim();
+  if (needsOptimisticLock || effectiveBase) {
+    const baseMs = Date.parse(effectiveBase ?? "");
+    if (!Number.isFinite(baseMs)) {
+      return Response.json({ ok: false, error: "Invalid baseUpdatedAt" }, { status: 400 });
+    }
+    if (rowMs !== baseMs) {
+      return Response.json(
+        { ok: false, error: "conflict", item: rowToCanvasItem(existing) },
+        { status: 409 },
+      );
     }
   }
   const updates: {
@@ -266,7 +306,14 @@ export async function PATCH(
     scheduleVaultReindexAfterResponse(row.id);
   }
 
-  if (row) {
+  if (!row) {
+    return heartgardenMaskNotFoundForPlayer(
+      bootCtx,
+      Response.json({ ok: false, error: "Not found" }, { status: 404 }),
+    );
+  }
+
+  {
     const changedSpaceIds =
       updates.spaceId !== undefined && updates.spaceId !== existing.spaceId
         ? [existing.spaceId, updates.spaceId]
@@ -279,7 +326,7 @@ export async function PATCH(
     });
   }
 
-  return Response.json({ ok: true, item: rowToCanvasItem(row!) });
+  return Response.json({ ok: true, item: rowToCanvasItem(row) });
 }
 
 export async function DELETE(

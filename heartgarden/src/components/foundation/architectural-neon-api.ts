@@ -161,6 +161,8 @@ export type SpaceChangesResponse = {
   itemIds?: string[];
   cursor?: string;
   itemLinksRevision?: string;
+  /** More rows exist after `cursor`; caller should re-poll with `since=cursor`. */
+  hasMore?: boolean;
   error?: string;
 };
 
@@ -172,6 +174,7 @@ export async function fetchSpaceChanges(
   try {
     const q = new URLSearchParams();
     q.set("since", since);
+    q.set("limit", "500");
     if (options?.includeItemIds) q.set("includeItemIds", "1");
     const res = await fetch(
       `/api/spaces/${encodeURIComponent(spaceId)}/changes?${q.toString()}`,
@@ -194,6 +197,7 @@ export async function fetchSpaceChanges(
       ...(parsed.itemLinksRevision !== undefined
         ? { itemLinksRevision: parsed.itemLinksRevision }
         : {}),
+      ...(parsed.hasMore === true ? { hasMore: true } : {}),
     };
   } catch {
     return null;
@@ -402,7 +406,14 @@ export async function apiPatchItem(
       }
 
       if (res.status === 409 && body.error === "conflict" && body.item) {
-        if (track) neonSyncEndRequest(true);
+        if (track) {
+          neonSyncEndRequest(false, {
+            operation: op,
+            message: "Edit conflict — server has a newer version",
+            cause: "http",
+            httpStatus: 409,
+          });
+        }
         recordItemPatchConflict();
         return { ok: false, conflict: true, item: body.item };
       }

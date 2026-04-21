@@ -3901,17 +3901,16 @@
 }
 
 /*
- * Selected row keeps the kind's signature hue as the ring — this is the
- * semantic cue (which kind is active) and is intentionally off the neutral
- * system palette. Fill stays on-token (`--sem-surface-muted-hover`).
+ * Selected row uses the app-wide accent tint + inset accent ring — same
+ * idiom as `.dockFolderTintCatalogRowSelected`. The kind identity is
+ * already conveyed by the swatch pebble's fill + colored rim; tinting
+ * the row with the kind color too made the row read like a selected
+ * form input, inconsistent with the rest of the menu system.
  */
 .connectionKindList :global(.vigil-btn).connectionKindRow.connectionKindRowSelected {
-  background: var(--sem-overlay-white-10);
-  border-color: color-mix(in oklch, var(--connection-kind-border, var(--accent)) 58%, transparent);
+  background: color-mix(in oklch, var(--accent) 14%, transparent);
   color: var(--sem-text-primary);
-  box-shadow:
-    0 0 0 1px color-mix(in oklch, var(--connection-kind-border, var(--accent)) 32%, transparent),
-    0 4px 12px color-mix(in oklch, var(--connection-kind-border, var(--accent)) 18%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 42%, transparent);
 }
 
 /*
@@ -3956,8 +3955,8 @@
   box-shadow:
     inset 0 1px 1.5px color-mix(in oklch, var(--sys-color-white) 50%, transparent),
     inset 0 -2px 3px color-mix(in oklch, var(--sys-color-black) 28%, transparent),
-    0 0 0 2px color-mix(in oklch, var(--connection-kind-border, var(--accent)) 78%, transparent),
-    0 0 10px color-mix(in oklch, var(--connection-kind-border, var(--accent)) 42%, transparent);
+    0 0 0 1.5px color-mix(in oklch, var(--connection-kind-border, var(--accent)) 72%, transparent),
+    0 1px 3px var(--sem-color-shadow-30);
 }
 
 .connectionKindRowLabel {
@@ -3983,8 +3982,9 @@
 .connectionKindMenuEditor
   .connectionKindList
   :global(.vigil-btn).connectionKindRow.connectionKindRowSelected {
-  background: var(--sem-overlay-white-12);
+  background: color-mix(in oklch, var(--accent) 18%, transparent);
   color: var(--sys-color-white);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 48%, transparent);
 }
 
 @media (prefers-reduced-motion: no-preference) {

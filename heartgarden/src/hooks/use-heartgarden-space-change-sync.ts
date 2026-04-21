@@ -140,51 +140,64 @@ export function useHeartgardenSpaceChangeSync(options: {
       recordHeartgardenSpaceSyncRun(source);
       inFlight = true;
       try {
-        const since = syncCursorRef.current;
-        const data = await fetchSpaceChanges(activeSpaceId, since, {
-          // Always request full subtree ids so remote tombstones propagate while peers stay active.
-          includeItemIds: true,
-        });
-        if (cancelled) return;
-        if (!data) {
-          onRepeatedPollFailure();
-          return;
+        let sinceCursor = syncCursorRef.current;
+        let firstPage = true;
+        let lastItemLinksRevision: string | undefined;
+
+        while (true) {
+          const data = await fetchSpaceChanges(activeSpaceId, sinceCursor, {
+            includeItemIds: firstPage,
+          });
+          firstPage = false;
+          if (cancelled) return;
+          if (!data) {
+            onRepeatedPollFailure();
+            return;
+          }
+          consecutiveMissesRef.current = 0;
+          neonSyncClearLastErrorIfContains(HEARTGARDEN_COLLA_POLL_ERROR_SNIPPET);
+
+          const nextCursor = mergeLatestIsoCursor(sinceCursor, data.cursor);
+          sinceCursor = nextCursor;
+          syncCursorRef.current = nextCursor;
+
+          const serverIds: ReadonlySet<string> = new Set(data.itemIds ?? []);
+          const protectedContentIds = buildCollabMergeProtectedContentIds({
+            focusOpen: focusOpenRef.current,
+            focusDirty: focusDirtyRef.current,
+            activeNodeId: activeNodeIdRef.current,
+            inlineContentDirtyIds: inlineContentDirtyIdsRef.current,
+            savingContentIds: savingContentIdsRef.current,
+          });
+          const rawItems = data.items ?? [];
+          const rawSpaces = (data.spaces ?? []).map((s) => ({
+            id: s.id,
+            name: s.name,
+            parentSpaceId: s.parentSpaceId ?? null,
+          }));
+          setGraph((prev) =>
+            applySpaceChangeGraphMerge({
+              prev,
+              activeSpaceId,
+              rawItems,
+              rawSpaceRows: rawSpaces,
+              serverItemIds: serverIds,
+              protectedContentIds,
+              tombstoneExemptIds: remoteTombstoneExemptIdsRef.current,
+            }),
+          );
+          for (const bump of collectItemServerUpdatedAtBumps(rawItems, protectedContentIds)) {
+            mergeItemServerUpdatedAtIfNewer(itemServerUpdatedAtRef.current, bump.id, bump.updatedAt);
+          }
+          if (typeof data.itemLinksRevision === "string") {
+            lastItemLinksRevision = data.itemLinksRevision;
+          }
+          if (data.hasMore !== true) break;
         }
-        consecutiveMissesRef.current = 0;
-        neonSyncClearLastErrorIfContains(HEARTGARDEN_COLLA_POLL_ERROR_SNIPPET);
-        const nextCursor = mergeLatestIsoCursor(since, data.cursor);
-        syncCursorRef.current = nextCursor;
-        const serverIds: ReadonlySet<string> = new Set(data.itemIds ?? []);
-        const protectedContentIds = buildCollabMergeProtectedContentIds({
-          focusOpen: focusOpenRef.current,
-          focusDirty: focusDirtyRef.current,
-          activeNodeId: activeNodeIdRef.current,
-          inlineContentDirtyIds: inlineContentDirtyIdsRef.current,
-          savingContentIds: savingContentIdsRef.current,
-        });
-        const rawItems = data.items ?? [];
-        const rawSpaces = (data.spaces ?? []).map((s) => ({
-          id: s.id,
-          name: s.name,
-          parentSpaceId: s.parentSpaceId ?? null,
-        }));
-        setGraph((prev) =>
-          applySpaceChangeGraphMerge({
-            prev,
-            activeSpaceId,
-            rawItems,
-            rawSpaceRows: rawSpaces,
-            serverItemIds: serverIds,
-            protectedContentIds,
-            tombstoneExemptIds: remoteTombstoneExemptIdsRef.current,
-          }),
-        );
-        for (const bump of collectItemServerUpdatedAtBumps(rawItems, protectedContentIds)) {
-          mergeItemServerUpdatedAtIfNewer(itemServerUpdatedAtRef.current, bump.id, bump.updatedAt);
-        }
+
         onAfterSpaceChangeMerge?.({
           source,
-          itemLinksRevision: data.itemLinksRevision,
+          itemLinksRevision: lastItemLinksRevision,
         });
       } finally {
         inFlight = false;

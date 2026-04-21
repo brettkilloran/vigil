@@ -92,6 +92,8 @@ export type ParsedSpaceChangesResponse = {
   cursor?: string;
   /** Present on current API; when absent, clients should fall back to refreshing the graph each poll. */
   itemLinksRevision?: string;
+  /** Server has additional pages; advance `since` to `cursor` and fetch again. */
+  hasMore?: boolean;
 };
 
 function isNonEmptyString(v: unknown): v is string {
@@ -123,6 +125,9 @@ export function parseSpaceChangesResponseJson(
   ) {
     return null;
   }
+  if ("hasMore" in o && o.hasMore != null && typeof o.hasMore !== "boolean") {
+    return null;
+  }
 
   if (options.requireItemIds) {
     if (!("itemIds" in o) || !isStringArray(o.itemIds)) return null;
@@ -151,6 +156,7 @@ export function parseSpaceChangesResponseJson(
   const cursor = typeof o.cursor === "string" ? o.cursor : undefined;
   const itemLinksRevision =
     typeof o.itemLinksRevision === "string" ? o.itemLinksRevision : undefined;
+  const hasMore = o.hasMore === true ? true : undefined;
 
   return {
     ok: true,
@@ -159,6 +165,7 @@ export function parseSpaceChangesResponseJson(
     ...(itemIds !== undefined ? { itemIds } : {}),
     ...(cursor !== undefined ? { cursor } : {}),
     ...(itemLinksRevision !== undefined ? { itemLinksRevision } : {}),
+    ...(hasMore !== undefined ? { hasMore } : {}),
   };
 }
 

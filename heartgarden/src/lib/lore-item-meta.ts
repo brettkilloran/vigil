@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 
+import { anthropicLlmDeadlineMs, withDeadline } from "@/src/lib/async-timeout";
+
 /** Max chars of note text passed to the lore-meta model after trim (must match `item-vault-index` skip-hash). */
 export const LORE_META_MAX_INPUT_CHARS = 24_000;
 
@@ -25,17 +27,21 @@ export async function extractLoreItemMeta(
 ): Promise<LoreItemMeta> {
   const client = new Anthropic({ apiKey });
   const trimmed = normalizeLoreMetaInputText(text);
-  const res = await client.messages.create({
-    model,
-    max_tokens: 512,
-    system: SYSTEM,
-    messages: [
-      {
-        role: "user",
-        content: `Note text:\n\n${trimmed || "(empty)"}`,
-      },
-    ],
-  });
+  const res = await withDeadline(
+    client.messages.create({
+      model,
+      max_tokens: 512,
+      system: SYSTEM,
+      messages: [
+        {
+          role: "user",
+          content: `Note text:\n\n${trimmed || "(empty)"}`,
+        },
+      ],
+    }),
+    anthropicLlmDeadlineMs(),
+    "lore_item_meta",
+  );
   let raw = "";
   for (const block of res.content) {
     if (block.type === "text") raw += block.text;

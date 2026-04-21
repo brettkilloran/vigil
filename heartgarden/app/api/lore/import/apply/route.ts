@@ -2,6 +2,8 @@ import { tryGetDb } from "@/src/db/index";
 import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
+  gmMayAccessSpaceIdAsync,
+  heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
 import {
   applyLoreImportPlan,
@@ -42,6 +44,9 @@ export async function POST(req: Request) {
   const space = await assertSpaceExists(db, parsed.data.spaceId);
   if (!space) {
     return Response.json({ ok: false, error: "Space not found" }, { status: 404 });
+  }
+  if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, parsed.data.spaceId))) {
+    return heartgardenApiForbiddenJsonResponse();
   }
 
   try {

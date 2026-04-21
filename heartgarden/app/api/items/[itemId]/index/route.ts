@@ -10,6 +10,7 @@ import {
   playerMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { reindexItemVault } from "@/src/lib/item-vault-index";
+import { jsonPublicError } from "@/src/lib/heartgarden-public-error";
 import {
   vaultIndexRateLimitMeta,
   vaultItemIndexRateLimitExceeded,
@@ -78,7 +79,7 @@ export async function POST(
       skipped: result.skipped ?? null,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Index failed";
-    return Response.json({ ok: false, error: msg }, { status: 502 });
+    console.error("[POST /api/items/:id/index]", e);
+    return jsonPublicError(502, "Index failed", "vault_index_failed");
   }
 }

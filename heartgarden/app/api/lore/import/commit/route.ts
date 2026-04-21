@@ -6,6 +6,8 @@ import { itemLinks, items } from "@/src/db/schema";
 import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
+  gmMayAccessSpaceIdAsync,
+  heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
 import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-vault-index";
@@ -18,7 +20,7 @@ import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validatio
 import { normalizeCanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
 import { persistedEntityTypeFromCanonical } from "@/src/lib/lore-object-registry";
 import { buildSearchBlob } from "@/src/lib/search-blob";
-import { assertSpaceExists } from "@/src/lib/spaces";
+import { assertSpaceExists, type VigilDb } from "@/src/lib/spaces";
 
 export const runtime = "nodejs";
 
@@ -122,154 +124,183 @@ export async function POST(req: Request) {
   if (!space) {
     return Response.json({ ok: false, error: "Space not found" }, { status: 404 });
   }
-
-  const [mz] = await db
-    .select({ z: max(items.zIndex) })
-    .from(items)
-    .where(eq(items.spaceId, spaceId));
-  let zNext =
-    mz?.z != null && Number.isFinite(Number(mz.z)) ? Number(mz.z) + 1 : 101;
+  if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, spaceId))) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
 
   const ox = parsed.data.layout?.originX ?? 0;
   const oy = parsed.data.layout?.originY ?? 0;
   const layout = planLoreImportCardLayout(ox, oy, sourceText.length > 0, deduped.length);
 
-  const nameToId = new Map<string, string>();
-  const createdIds: string[] = [];
-  let sourceItemId: string | undefined;
+  const embeddingRows: (typeof items.$inferSelect)[] = [];
 
-  const insertNote = async (args: {
-    title: string;
-    contentText: string;
-    contentJson: Record<string, unknown>;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    entityType?: string | null;
-    entityMeta?: Record<string, unknown> | null;
-  }) => {
-    const searchBlob = buildSearchBlob({
-      title: args.title,
-      contentText: args.contentText,
-      contentJson: args.contentJson,
-      entityType: args.entityType ?? null,
-      entityMeta: args.entityMeta ?? null,
-      imageUrl: null,
-      imageMeta: null,
-      loreSummary: null,
-      loreAliases: null,
-    });
-    const [row] = await db
-      .insert(items)
-      .values({
-        spaceId,
-        itemType: "note",
-        x: args.x,
-        y: args.y,
-        width: args.width,
-        height: args.height,
-        zIndex: zNext++,
-        title: args.title,
-        contentText: args.contentText,
-        searchBlob,
-        contentJson: args.contentJson,
-        color: DS_COLOR.itemDefaultNote,
-        entityType: args.entityType ?? null,
-        entityMeta: args.entityMeta ?? null,
-      })
-      .returning();
-    if (row) {
-      createdIds.push(row.id);
-      scheduleItemEmbeddingRefresh(db, row);
-    }
-    return row?.id;
-  };
+  const { createdIds, sourceItemId, linksCreated, linkWarnings } = await db.transaction(
+    async (tx) => {
+      const [mz] = await tx
+        .select({ z: max(items.zIndex) })
+        .from(items)
+        .where(eq(items.spaceId, spaceId));
+      let zNext =
+        mz?.z != null && Number.isFinite(Number(mz.z)) ? Number(mz.z) + 1 : 101;
 
-  if (sourceText.length > 0 && layout.source) {
-    const title =
-      sourceDocument?.title?.trim() ||
-      (deduped.length ? "Import source" : "Imported note");
-    const contentJson = buildLoreNoteContentJson(sourceText, { aiPending: true });
-    const id = await insertNote({
-      title,
-      contentText: sourceText.slice(0, 120_000),
-      contentJson,
-      x: layout.source.x,
-      y: layout.source.y,
-      width: layout.source.width,
-      height: layout.source.height,
-      entityType: "lore_source",
-      entityMeta: { import: true, aiReview: "pending" },
-    });
-    sourceItemId = id;
-  }
+      const nameToId = new Map<string, string>();
+      const createdIds: string[] = [];
+      let sourceItemId: string | undefined;
 
-  for (let i = 0; i < deduped.length; i++) {
-    const e = deduped[i]!;
-    const pos = layout.entities[i]!;
-    const summary = e.summary ?? "";
-    const contentJson = buildLoreNoteContentJson(summary || "—", { aiPending: true });
-    const canonKind = normalizeCanonicalEntityKind(e.kind ?? "lore");
-    const persistedEntityType = persistedEntityTypeFromCanonical(canonKind);
-    const id = await insertNote({
-      title: e.canonicalName.slice(0, 255),
-      contentText: summary.slice(0, 120_000),
-      contentJson,
-      x: pos.x,
-      y: pos.y,
-      width: pos.width,
-      height: pos.height,
-      entityType: persistedEntityType,
-      entityMeta: {
-        import: true,
-        kind: e.kind ?? null,
-        canonicalEntityKind: canonKind,
-        aiReview: "pending",
-      },
-    });
-    if (id) {
-      nameToId.set(e.canonicalName.toLowerCase(), id);
-    }
-  }
+      const insertNote = async (args: {
+        title: string;
+        contentText: string;
+        contentJson: Record<string, unknown>;
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        entityType?: string | null;
+        entityMeta?: Record<string, unknown> | null;
+      }) => {
+        const searchBlob = buildSearchBlob({
+          title: args.title,
+          contentText: args.contentText,
+          contentJson: args.contentJson,
+          entityType: args.entityType ?? null,
+          entityMeta: args.entityMeta ?? null,
+          imageUrl: null,
+          imageMeta: null,
+          loreSummary: null,
+          loreAliases: null,
+        });
+        const [row] = await tx
+          .insert(items)
+          .values({
+            spaceId,
+            itemType: "note",
+            x: args.x,
+            y: args.y,
+            width: args.width,
+            height: args.height,
+            zIndex: zNext++,
+            title: args.title,
+            contentText: args.contentText,
+            searchBlob,
+            contentJson: args.contentJson,
+            color: DS_COLOR.itemDefaultNote,
+            entityType: args.entityType ?? null,
+            entityMeta: args.entityMeta ?? null,
+          })
+          .returning();
+        if (row) {
+          createdIds.push(row.id);
+          embeddingRows.push(row);
+        }
+        return row?.id;
+      };
 
-  let linksCreated = 0;
-  const linkErrors: string[] = [];
+      if (sourceText.length > 0 && layout.source) {
+        const title =
+          sourceDocument?.title?.trim() ||
+          (deduped.length ? "Import source" : "Imported note");
+        const contentJson = buildLoreNoteContentJson(sourceText, { aiPending: true });
+        const id = await insertNote({
+          title,
+          contentText: sourceText.slice(0, 120_000),
+          contentJson,
+          x: layout.source.x,
+          y: layout.source.y,
+          width: layout.source.width,
+          height: layout.source.height,
+          entityType: "lore_source",
+          entityMeta: { import: true, aiReview: "pending" },
+        });
+        sourceItemId = id;
+      }
 
-  const links = suggestedLinks ?? [];
-  for (const link of links) {
-    const fromId = resolveNameToId(nameToId, link.fromName);
-    const toId = resolveNameToId(nameToId, link.toName);
-    if (!fromId || !toId) {
-      linkErrors.push(`Skipped link "${link.fromName}" → "${link.toName}" (unknown name)`);
-      continue;
-    }
-    if (fromId === toId) continue;
+      for (let i = 0; i < deduped.length; i++) {
+        const e = deduped[i]!;
+        const pos = layout.entities[i]!;
+        const summary = e.summary ?? "";
+        const contentJson = buildLoreNoteContentJson(summary || "—", { aiPending: true });
+        const canonKind = normalizeCanonicalEntityKind(e.kind ?? "lore");
+        const persistedEntityType = persistedEntityTypeFromCanonical(canonKind);
+        const id = await insertNote({
+          title: e.canonicalName.slice(0, 255),
+          contentText: summary.slice(0, 120_000),
+          contentJson,
+          x: pos.x,
+          y: pos.y,
+          width: pos.width,
+          height: pos.height,
+          entityType: persistedEntityType,
+          entityMeta: {
+            import: true,
+            kind: e.kind ?? null,
+            canonicalEntityKind: canonKind,
+            aiReview: "pending",
+          },
+        });
+        if (id) {
+          nameToId.set(e.canonicalName.toLowerCase(), id);
+        }
+      }
 
-    const validated = await validateLinkTargetsInSourceSpace(db, fromId, [toId]);
-    if (!validated.ok) {
-      linkErrors.push(validated.error);
-      continue;
-    }
+      let linksCreated = 0;
+      const linkErrors: string[] = [];
 
-    const linkType = normalizeImportItemLinkType(link.linkType);
-    const [row] = await db
-      .insert(itemLinks)
-      .values({
-        sourceItemId: fromId,
-        targetItemId: toId,
-        linkType,
-        label: null,
-        sourcePin: null,
-        targetPin: null,
-        color: null,
-        meta: { import: true },
-      })
-      .onConflictDoNothing({
-        target: [itemLinks.sourceItemId, itemLinks.targetItemId, itemLinks.sourcePin, itemLinks.targetPin],
-      })
-      .returning();
-    if (row) linksCreated += 1;
+      const links = suggestedLinks ?? [];
+      for (const link of links) {
+        const fromId = resolveNameToId(nameToId, link.fromName);
+        const toId = resolveNameToId(nameToId, link.toName);
+        if (!fromId || !toId) {
+          linkErrors.push(`Skipped link "${link.fromName}" → "${link.toName}" (unknown name)`);
+          continue;
+        }
+        if (fromId === toId) continue;
+
+        const validated = await validateLinkTargetsInSourceSpace(
+          tx as unknown as VigilDb,
+          fromId,
+          [toId],
+        );
+        if (!validated.ok) {
+          linkErrors.push(validated.error);
+          continue;
+        }
+
+        const linkType = normalizeImportItemLinkType(link.linkType);
+        const [row] = await tx
+          .insert(itemLinks)
+          .values({
+            sourceItemId: fromId,
+            targetItemId: toId,
+            linkType,
+            label: null,
+            sourcePin: null,
+            targetPin: null,
+            color: null,
+            meta: { import: true },
+          })
+          .onConflictDoNothing({
+            target: [
+              itemLinks.sourceItemId,
+              itemLinks.targetItemId,
+              itemLinks.sourcePin,
+              itemLinks.targetPin,
+            ],
+          })
+          .returning();
+        if (row) linksCreated += 1;
+      }
+
+      return {
+        createdIds,
+        sourceItemId,
+        linksCreated,
+        linkWarnings: linkErrors.length ? linkErrors : undefined,
+      };
+    },
+  );
+
+  for (const row of embeddingRows) {
+    scheduleItemEmbeddingRefresh(db, row);
   }
 
   return Response.json({
@@ -277,6 +308,6 @@ export async function POST(req: Request) {
     createdItemIds: createdIds,
     sourceItemId: sourceItemId ?? null,
     linksCreated,
-    linkWarnings: linkErrors.length ? linkErrors : undefined,
+    linkWarnings,
   });
 }

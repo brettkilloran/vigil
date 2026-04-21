@@ -22,8 +22,8 @@ export function scheduleVaultReindexAfterResponse(itemId: string): void {
   after(async () => {
     const db = tryGetDb();
     if (!db) return;
-    await reindexItemVault(db, itemId, { refreshLoreMeta: false }).catch(() => {
-      /* best-effort */
+    await reindexItemVault(db, itemId, { refreshLoreMeta: false }).catch((e) => {
+      console.error("[after() vault reindex]", itemId, e);
     });
   });
 }

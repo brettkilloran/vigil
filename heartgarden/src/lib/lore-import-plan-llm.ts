@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 
+import { anthropicLlmDeadlineMs, withDeadline } from "@/src/lib/async-timeout";
 import {
   normalizeCanonicalEntityKind,
   type CanonicalEntityKind,
@@ -185,12 +186,16 @@ export async function runLoreImportOutlineLlm(
   const chunkList = buildOutlineChunkListPayload(chunks);
   const user = `CHUNK LIST (JSON):\n${JSON.stringify(chunkList)}\n\nSOURCE SAMPLE (first ~${OUTLINE_SOURCE_SAMPLE_MAX} chars, for tone — chunk ids above are authoritative for assignment):\n${sourceSample.slice(0, OUTLINE_SOURCE_SAMPLE_MAX)}`;
 
-  const res = await client.messages.create({
-    model,
-    max_tokens: 8192,
-    system: OUTLINE_SYSTEM,
-    messages: [{ role: "user", content: user }],
-  });
+  const res = await withDeadline(
+    client.messages.create({
+      model,
+      max_tokens: 8192,
+      system: OUTLINE_SYSTEM,
+      messages: [{ role: "user", content: user }],
+    }),
+    anthropicLlmDeadlineMs(),
+    "lore_import_outline",
+  );
   let raw = "";
   for (const block of res.content) {
     if (block.type === "text") raw += block.text;
@@ -356,12 +361,16 @@ export async function runLoreImportMergeLlm(
   }));
   const user = `NOTES AND CANDIDATES (JSON):\n${JSON.stringify(payload).slice(0, MERGE_USER_JSON_MAX)}`;
 
-  const res = await client.messages.create({
-    model,
-    max_tokens: 8192,
-    system: MERGE_SYSTEM,
-    messages: [{ role: "user", content: user }],
-  });
+  const res = await withDeadline(
+    client.messages.create({
+      model,
+      max_tokens: 8192,
+      system: MERGE_SYSTEM,
+      messages: [{ role: "user", content: user }],
+    }),
+    anthropicLlmDeadlineMs(),
+    "lore_import_merge",
+  );
   let raw = "";
   for (const block of res.content) {
     if (block.type === "text") raw += block.text;
@@ -513,12 +522,16 @@ export async function runLoreImportClarifyLlm(
 ): Promise<unknown[]> {
   const client = new Anthropic({ apiKey });
   const user = `IMPORT PLAN CONTEXT (JSON):\n${JSON.stringify(context).slice(0, CLARIFY_USER_JSON_MAX)}`;
-  const res = await client.messages.create({
-    model,
-    max_tokens: 8192,
-    system: CLARIFY_SYSTEM,
-    messages: [{ role: "user", content: user }],
-  });
+  const res = await withDeadline(
+    client.messages.create({
+      model,
+      max_tokens: 8192,
+      system: CLARIFY_SYSTEM,
+      messages: [{ role: "user", content: user }],
+    }),
+    anthropicLlmDeadlineMs(),
+    "lore_import_clarify",
+  );
   let raw = "";
   for (const block of res.content) {
     if (block.type === "text") raw += block.text;

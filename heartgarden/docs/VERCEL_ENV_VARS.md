@@ -18,6 +18,9 @@ Use with **[`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)** and the **[dashboard check
 | `NEON_DATABASE_URL` | Yes | Yes (**different** pooled URL than prod) | Required for cloud sync; omit both → demo bootstrap. |
 | `ANTHROPIC_API_KEY` | If lore needed | Optional / omit | Server-only. |
 | `ANTHROPIC_LORE_MODEL` | Optional | Optional | |
+| `HEARTGARDEN_ANTHROPIC_TIMEOUT_MS` | Optional | Optional | Max time (ms) for Anthropic `messages.create` in lore query, vault meta, and import LLM paths (default **120000**; clamped **5000–600000**). |
+| `OPENAI_API_KEY` | If vector vault / semantic search | Optional | Server-only. When set, **`src/lib/embedding-provider.ts`** indexes **`item_embeddings`** (default model **`text-embedding-3-small`**, 1536-d). Without it, hybrid search is lexical-only. |
+| `HEARTGARDEN_OPENAI_EMBEDDING_MODEL` | Optional | Optional | Override OpenAI embedding model (default **`text-embedding-3-small`**). |
 | `HEARTGARDEN_LORE_META_IGNORE_SOURCE_HASH` | Omit | Optional | Set **`1`** to **always** run Anthropic on vault reindex when lore meta is enabled (ignores stored `lore_meta_source_hash`). Use after changing the lore model or to force-refresh summaries. |
 | `R2_ACCOUNT_ID` | If uploads | If uploads | Full `R2_*` set required together. |
 | `R2_ACCESS_KEY_ID` | If uploads | If uploads | |
