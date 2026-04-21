@@ -125,6 +125,20 @@ function appendFromUnknown(value: unknown, parts: string[], depth: number, seen:
 }
 
 /**
+ * If `entity_meta.canonicalEntityKind` is a short slug, emit a discoverable
+ * `kind:<slug>` token so FTS and vector retrieval can filter by lore kind.
+ */
+function extractCanonicalEntityKindToken(meta: unknown): string | null {
+  if (!meta || typeof meta !== "object") return null;
+  const raw = (meta as Record<string, unknown>).canonicalEntityKind;
+  if (typeof raw !== "string") return null;
+  const slug = raw.trim().toLowerCase();
+  if (!slug || slug.length > 32) return null;
+  if (!/^[a-z][a-z0-9_-]*$/.test(slug)) return null;
+  return `kind:${slug}`;
+}
+
+/**
  * Plain-text corpus for search indexing and embeddings (space-normalized).
  */
 export function buildItemVaultCorpus(source: ItemSearchableSource): string {
@@ -133,6 +147,8 @@ export function buildItemVaultCorpus(source: ItemSearchableSource): string {
 
   appendString(String(source.title ?? ""), parts);
   if (source.entityType) appendString(String(source.entityType), parts);
+  const canonicalKindToken = extractCanonicalEntityKindToken(source.entityMeta);
+  if (canonicalKindToken) appendString(canonicalKindToken, parts);
   if (source.loreSummary) appendString(String(source.loreSummary), parts);
   if (Array.isArray(source.loreAliases)) {
     for (const a of source.loreAliases) {

@@ -27,6 +27,8 @@ export type LoreSource = {
   spaceId: string;
   spaceName: string;
   excerpt: string;
+  /** `entity_meta.canonicalEntityKind` (e.g. `npc`, `location`, `faction`). */
+  canonicalEntityKind?: string | null;
   /** Semantic chunk texts surfaced for this item (UI / transparency). */
   matchedChunks?: string[];
   /** Included via 1-hop item_links from primary hits. */
@@ -37,12 +39,23 @@ export type LoreSource = {
   viaBinding?: boolean;
 };
 
+function readCanonicalEntityKind(row: SearchRow): string | null {
+  const meta = row.item.entityMeta;
+  if (!meta || typeof meta !== "object") return null;
+  const raw = (meta as Record<string, unknown>).canonicalEntityKind;
+  if (typeof raw !== "string") return null;
+  const slug = raw.trim().toLowerCase();
+  if (!slug || slug.length > 32 || !/^[a-z][a-z0-9_-]*$/.test(slug)) return null;
+  return slug;
+}
+
 const LORE_SYSTEM = `You are Heartgarden's lore assistant for tabletop RPG worldbuilding.
 
 Rules:
 - Answer only from the "Canvas excerpts" the user provides. If they are insufficient, say what is missing and suggest what to add on the canvas.
 - Be concise and in-world when the excerpts support it; otherwise stay neutral and factual.
 - When you cite a fact, mention the source title (and space name if helpful).
+- Use each source's \`kind\` hint (e.g. npc, location, faction, artifact) to keep references grounded in the right kind of entity; do not conflate kinds.
 - Do not invent proper nouns, dates, or relationships not grounded in the excerpts.`;
 
 function fallbackExcerpt(row: SearchRow, maxChars: number): string {
@@ -109,6 +122,7 @@ export async function retrieveLoreSources(
       spaceId: row.space.id,
       spaceName: row.space.name,
       excerpt,
+      canonicalEntityKind: readCanonicalEntityKind(row),
       matchedChunks: chunks?.length ? chunks : undefined,
     });
   }
@@ -125,6 +139,7 @@ export async function retrieveLoreSources(
       spaceId: row.space.id,
       spaceName: row.space.name,
       excerpt: fallbackExcerpt(row, graphBudget),
+      canonicalEntityKind: readCanonicalEntityKind(row),
       viaGraph: true,
     });
   }
@@ -138,6 +153,7 @@ export async function retrieveLoreSources(
       spaceId: row.space.id,
       spaceName: row.space.name,
       excerpt: fallbackExcerpt(row, graphBudget),
+      canonicalEntityKind: readCanonicalEntityKind(row),
       viaProse: true,
     });
   }
@@ -153,6 +169,7 @@ export async function retrieveLoreSources(
       spaceId: row.space.id,
       spaceName: row.space.name,
       excerpt: fallbackExcerpt(row, graphBudget),
+      canonicalEntityKind: readCanonicalEntityKind(row),
       viaBinding: true,
     });
   }
@@ -184,7 +201,8 @@ export async function synthesizeLoreAnswer(
         : s.viaBinding
           ? "\n- context: structured card field (hgArch binding target)"
           : "";
-    return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${ctx}\n\n${body}`;
+    const kindLine = s.canonicalEntityKind ? `\n- kind: ${s.canonicalEntityKind}` : "";
+    return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${kindLine}${ctx}\n\n${body}`;
   });
   const user = `Question:\n${question.trim()}\n\n---\n\nCanvas excerpts (your only ground truth):\n\n${blocks.join("\n\n---\n\n")}`;
 

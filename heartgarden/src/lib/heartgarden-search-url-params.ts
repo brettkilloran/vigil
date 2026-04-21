@@ -40,6 +40,7 @@ export function parseSearchFiltersFromUrl(url: URL, variant: SearchUrlVariant): 
       spaceId: url.searchParams.get("spaceId") ?? undefined,
       itemTypes: parseCsv(url.searchParams.get("types")),
       entityTypes: parseCsv(url.searchParams.get("entityTypes")),
+      canonicalEntityKinds: parseCsv(url.searchParams.get("canonicalKind")),
       hasLinks: parseBool(url.searchParams.get("hasLinks")),
       inStack: parseBool(url.searchParams.get("inStack")),
       limit: Number.isFinite(limitRaw) ? limitRaw : undefined,
@@ -59,6 +60,7 @@ export function parseSearchFiltersFromUrl(url: URL, variant: SearchUrlVariant): 
     spaceId: url.searchParams.get("spaceId") ?? undefined,
     itemTypes: parseCsv(url.searchParams.get("types")),
     entityTypes: parseCsv(url.searchParams.get("entityTypes")),
+    canonicalEntityKinds: parseCsv(url.searchParams.get("canonicalKind")),
     updatedAfter:
       updatedAfter && Number.isFinite(updatedAfter.getTime()) ? updatedAfter : undefined,
     hasLinks: parseBool(url.searchParams.get("hasLinks")),

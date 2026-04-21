@@ -36,6 +36,7 @@ describe("parseSearchFiltersFromUrl", () => {
       spaceId: "s1",
       itemTypes: ["note", "sticky"],
       entityTypes: ["character"],
+      canonicalEntityKinds: [],
       updatedAfter: "2024-01-15T00:00:00.000Z",
       hasLinks: true,
       inStack: false,
@@ -44,6 +45,14 @@ describe("parseSearchFiltersFromUrl", () => {
       minCampaignEpoch: 3,
       excludeLoreHistorical: true,
     });
+  });
+
+  it('variant "full" parses canonicalKind CSV', () => {
+    const u = new URL(
+      "http://localhost/api/search?canonicalKind=npc,faction",
+    );
+    const f = parseSearchFiltersFromUrl(u, "full");
+    expect(f.canonicalEntityKinds).toEqual(["npc", "faction"]);
   });
 
   it('variant "full" rejects invalid date and unknown sort', () => {
@@ -62,6 +71,7 @@ describe("parseSearchFiltersFromUrl", () => {
       spaceId: "sp",
       itemTypes: ["folder"],
       entityTypes: [],
+      canonicalEntityKinds: [],
       hasLinks: false,
       inStack: undefined,
       limit: 5,

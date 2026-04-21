@@ -298,6 +298,11 @@ export type SearchFilters = {
   minCampaignEpoch?: number;
   /** When true, exclude items with `entityMeta.loreHistorical === true`. */
   excludeLoreHistorical?: boolean;
+  /**
+   * When set, restrict to items whose `entityMeta.canonicalEntityKind`
+   * matches one of these lore-engine kinds (e.g. `npc`, `location`).
+   */
+  canonicalEntityKinds?: string[];
 };
 
 export type SearchRow = {
@@ -347,6 +352,11 @@ function searchWhereClauses(filters: SearchFilters): ReturnType<typeof sql>[] {
   if (filters.excludeLoreHistorical === true) {
     clauses.push(
       sql`coalesce((${items.entityMeta} ->> 'loreHistorical')::boolean, false) = false`,
+    );
+  }
+  if (filters.canonicalEntityKinds?.length) {
+    clauses.push(
+      sql`${items.entityMeta} ->> 'canonicalEntityKind' = any(${filters.canonicalEntityKinds}::text[])`,
     );
   }
   return clauses;

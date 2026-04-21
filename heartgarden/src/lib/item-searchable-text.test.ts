@@ -36,6 +36,26 @@ describe("buildItemVaultCorpus", () => {
     expect(c).not.toContain("script");
   });
 
+  it("emits a kind:<canonicalEntityKind> token for imported items", () => {
+    const c = buildItemVaultCorpus({
+      title: "Varin",
+      contentText: "",
+      contentJson: null,
+      entityMeta: { canonicalEntityKind: "npc", import: true },
+    });
+    expect(c).toContain("kind:npc");
+  });
+
+  it("does not emit kind: for malformed canonicalEntityKind", () => {
+    const c = buildItemVaultCorpus({
+      title: "Weird",
+      contentText: "",
+      contentJson: null,
+      entityMeta: { canonicalEntityKind: "NPC-! ! space" },
+    });
+    expect(c).not.toContain("kind:");
+  });
+
   it("includes entity_meta strings", () => {
     const c = buildItemVaultCorpus({
       title: "x",
