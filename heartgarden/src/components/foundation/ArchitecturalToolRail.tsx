@@ -81,7 +81,7 @@ export function ArchitecturalToolRail({
   const drawConnectionButton = (
     <ArchitecturalToolButton
       label="Draw thread"
-      tooltip="Draw thread — click two cards to connect with a rope. Right-click a thread to tag the relationship. Wiki mentions in prose ([[ or vigil:item) are separate."
+      tooltip="Draw thread — click two cards to connect; right-click to tag."
       active={connectionMode === "draw"}
       icon={<PushPin size={18} />}
       onClick={() => onSetConnectionMode?.("draw")}
