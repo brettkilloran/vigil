@@ -42,7 +42,7 @@ This file is a **living backlog** — work items below are intended to be picked
 
 ## CRITICAL — ship-blockers or silent data-loss risk
 
-### 1. Realtime WebSocket reconnects on every canvas re-render
+### ~~1. Realtime WebSocket reconnects on every canvas re-render~~ — **fixed 2026-04-21**
 
 `useHeartgardenRealtimeSpaceSync` lists `onInvalidate` in its effect deps, but the shell passes a **fresh inline arrow** each render. The socket is torn down and re-opened constantly, fetching a new JWT each time and spamming the realtime server.
 
@@ -71,7 +71,9 @@ This file is a **living backlog** — work items below are intended to be picked
 
 **Fix direction:** ref-wrap the handler (pattern already in `useHeartgardenPresenceHeartbeat`), or drop `onInvalidate` from deps.
 
-### 2. Optimistic locking is optional and brittle
+**Shipped:** `onInvalidateRef` + `useLayoutEffect` in [`use-heartgarden-realtime-space-sync.ts`](../src/hooks/use-heartgarden-realtime-space-sync.ts); effect deps `[enabled, activeSpaceId]` only.
+
+### ~~2. Optimistic locking is optional and brittle~~ — **fixed 2026-04-21**
 
 PATCH accepts `baseUpdatedAt` but only checks it when present AND parseable as a finite date. Any client bug, partial payload, or clock skew silently degrades to last-writer-wins. Worse, if `existing.updatedAt` ever isn't a `Date` (driver edge), `rowMs = 0` and every valid base triggers spurious 409s.
 
@@ -92,7 +94,9 @@ PATCH accepts `baseUpdatedAt` but only checks it when present AND parseable as a
 
 **Fix direction:** require `baseUpdatedAt` for any PATCH that touches `content_json` / `title` / `entity_meta` (not selection-only moves); normalize `updatedAt` with `new Date(existing.updatedAt as any).getTime()`.
 
-### 3. Import review queue is written before plan validation
+**Shipped:** [`route.ts`](../app/api/items/[itemId]/route.ts) — `patchRequiresBaseOptimisticLock()`, `rowUpdatedAtMs()`, 400 when body fields change without `baseUpdatedAt`; tests in [`route.patch-conflict.test.ts`](../app/api/items/[itemId]/route.patch-conflict.test.ts).
+
+### ~~3. Import review queue is written before plan validation~~ — **fixed 2026-04-21**
 
 `persistImportReviewQueueFromPlan` runs **before** `loreImportPlanSchema.safeParse`. If validation fails, the job is marked `failed`, but pending `import_review_items` may already be inserted/replaced for that batch. Bad LLM output corrupts the user's review queue.
 
@@ -100,7 +104,9 @@ PATCH accepts `baseUpdatedAt` but only checks it when present AND parseable as a
 
 **Fix direction:** reorder — validate, then persist.
 
-### 4. Lore import commit is not transactional
+**Shipped:** [`lore-import-job-process.ts`](../src/lib/lore-import-job-process.ts) — `safeParse` before `persistImportReviewQueueFromPlan`.
+
+### ~~4. Lore import commit is not transactional~~ — **fixed 2026-04-21**
 
 `/api/lore/import/commit` performs many sequential `insert(items)` and `insert(itemLinks)`. A mid-flight failure leaves orphan notes without their links, partial folder trees, or half-applied reviews.
 
@@ -108,7 +114,9 @@ PATCH accepts `baseUpdatedAt` but only checks it when present AND parseable as a
 
 **Fix direction:** wrap in a single `db.transaction(...)`. Neon-serverless supports it.
 
-### 5. Vector index drifts when embedding fails
+**Shipped:** [`commit/route.ts`](../app/api/lore/import/commit/route.ts) — single `db.transaction`; `scheduleItemEmbeddingRefresh` after commit.
+
+### ~~5. Vector index drifts when embedding fails~~ — **fixed 2026-04-21**
 
 `reindexItemVault` updates `items.search_blob` and sometimes lore fields **before** calling `embedTexts`. If embedding throws, lexical content is already new; old `item_embeddings` rows are never cleared. Hybrid retrieval then ranks new lexical content against stale vectors.
 
@@ -116,7 +124,9 @@ PATCH accepts `baseUpdatedAt` but only checks it when present AND parseable as a
 
 **Fix direction:** do `clearItemEmbeddings` + lexical update + new embedding insert in one transaction, or don't touch `search_blob` until embedding succeeds. Currently moot while #6 holds.
 
-### 6. "Hybrid" search is a lie
+**Shipped:** [`item-vault-index.ts`](../src/lib/item-vault-index.ts) — `embedTexts` before persisting `search_blob` when chunks exist; transactional insert of embeddings + row update.
+
+### ~~6. "Hybrid" search is a lie~~ — **fixed 2026-04-21**
 
 `isEmbeddingApiConfigured()` is hardcoded `false`; `embedTexts` always throws; `vault-retrieval.ts` silently catches and sets `vecHits = []`. The app exposes a `semantic` mode and advertises "RRF fusion" but it's pure FTS + fuzzy. `GET /api/search?mode=hybrid` also diverges from `hybridRetrieveItems` — if FTS returns ≥12 hits the route short-circuits to FTS-only while the library still merges fuzzy.
 
@@ -130,11 +140,13 @@ PATCH accepts `baseUpdatedAt` but only checks it when present AND parseable as a
 
 **Fix direction:** either wire a real provider (OpenAI / Voyage / Cohere — pgvector is already in the schema), or delete `semantic` / `hybrid` modes, the vector SQL, and the RRF code to kill a large dead surface.
 
+**Shipped:** [`embedding-provider.ts`](../src/lib/embedding-provider.ts) — OpenAI embeddings when `OPENAI_API_KEY` is set (default `text-embedding-3-small`, 1536-d). [`search/route.ts`](../app/api/search/route.ts) — hybrid mode always uses `hybridRetrieveItems` with `includeVector` tied to config (no FTS short-circuit divergence). Docs: [`AGENTS.md`](../AGENTS.md), [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md), [`.env.local.example`](../.env.local.example).
+
 ---
 
 ## HIGH — real bugs or operational risk
 
-### 7. Silent failure culture in the shell
+### 7. Silent failure culture in the shell — **partially addressed 2026-04-21**
 
 Many user-visible actions swallow errors, so a backend blip turns into "ghost" local state until reload.
 
@@ -159,7 +171,9 @@ Same pattern at:
 
 **Fix direction:** route failures through `neon-sync-bus` as real errors; add breadcrumb logging. Distinguish "offline, keep local" from "server said no."
 
-### 8. Unbounded delta payloads
+**Progress:** 409 conflict no longer calls `neonSyncEndRequest(true)` ([`architectural-neon-api.ts`](../src/components/foundation/architectural-neon-api.ts)); `syncDeleteConnection` + graph merge/poll report via `neon-sync-bus` / `neonSyncSpaceChangeSyncBreadcrumb` ([`ArchitecturalCanvasApp.tsx`](../src/components/foundation/ArchitecturalCanvasApp.tsx)); [`schedule-vault-index-after.ts`](../src/lib/schedule-vault-index-after.ts) logs `after()` reindex failures. Remaining: `fetchSpaceChanges` null collapse, MCP surfaces, broad shell `catch {}` audit.
+
+### ~~8. Unbounded delta payloads~~ — **fixed 2026-04-21**
 
 `GET /api/spaces/:id/changes` selects full rows with `updatedAt > since` — no LIMIT, no cursor cap. Long offline, bulk import, or a schema bug that bumps every `updatedAt` can return hundreds of MBs.
 
@@ -174,6 +188,8 @@ Same pattern at:
 Missing btree on `(space_id, updated_at)` — migrations only add GIN/trgm.
 
 **Fix direction:** add `LIMIT` (e.g. 500) + `hasMore` + next cursor; add the btree index.
+
+**Shipped:** [`changes/route.ts`](../app/api/spaces/[spaceId]/changes/route.ts) — `limit` (default 500), `hasMore`, client loop in [`use-heartgarden-space-change-sync.ts`](../src/hooks/use-heartgarden-space-change-sync.ts) + [`fetchSpaceChanges`](../src/components/foundation/architectural-neon-api.ts); btree migration [`0008_items_space_updated_at_idx.sql`](../drizzle/migrations/0008_items_space_updated_at_idx.sql); [`docs/API.md`](./API.md).
 
 ### 9. O(peers) serial DB calls on presence GET
 
@@ -192,7 +208,7 @@ Player tier awaits `spaceIsUnderPlayerRoot` inside a `for (const r of rows)` loo
 
 **Fix direction:** recursive CTE scoped to the target subtree, or cache `parentSpaceId` in an in-memory map with TTL.
 
-### 11. Link revision fingerprint can miss changes
+### ~~11. Link revision fingerprint can miss changes~~ — **fixed 2026-04-21**
 
 `computeItemLinksRevisionForSpace` inner-joins `item_links` on `sourceItemId` only. Links whose only space-visible side is the target won't bump the revision, so clients relying on the revision short-circuit can stall on stale link state.
 
@@ -211,13 +227,17 @@ Player tier awaits `spaceIsUnderPlayerRoot` inside a `for (const r of rows)` loo
 
 **Fix direction:** aggregate over source OR target (two sub-queries unioned), or replace with a `max(updated_at)` covering either side.
 
-### 12. Reconnect scheduler is a flat 2s with no jitter
+**Shipped:** [`item-links-space-revision.ts`](../src/lib/item-links-space-revision.ts) — `EXISTS` for source or target item in space.
+
+### ~~12. Reconnect scheduler is a flat 2s with no jitter~~ — **fixed 2026-04-21**
 
 After a realtime server blip, every client tab aligns on the same cadence and hammers `/api/realtime/room-token`.
 
 `heartgarden/src/hooks/use-heartgarden-realtime-space-sync.ts` 44–49.
 
 **Fix direction:** exponential backoff with ±30% jitter; cap at ~30s.
+
+**Shipped:** [`use-heartgarden-realtime-space-sync.ts`](../src/hooks/use-heartgarden-realtime-space-sync.ts) — exponential backoff with jitter, cap 30s; reset on successful `onopen`.
 
 ### 13. JWT passed as WebSocket query string
 
@@ -240,11 +260,15 @@ Several routes return raw `Error.message`:
 
 **Fix direction:** standard `{error, code}` with opaque codes; log the full message server-side only.
 
-### 15. Canvas bootstrap effect over-depends on `heartgardenBootApi`
+**Progress:** [`jsonPublicError`](../src/lib/heartgarden-public-error.ts) helper; [`POST /api/items/:id/index`](../app/api/items/[itemId]/index/route.ts), [`GET /api/search/chunks`](../app/api/search/chunks/route.ts); failed import job polling returns opaque message + `code` ([`jobs/[jobId]/route.ts`](../app/api/lore/import/jobs/[jobId]/route.ts)). Remaining: MCP tool bodies, import job persisted `error` column, other routes.
+
+### ~~15. Canvas bootstrap effect over-depends on `heartgardenBootApi`~~ — **fixed 2026-04-21**
 
 The whole API object is in the dep array of the bootstrap and cached-workspace effects (shell L5061–5216 and L5218–5243). Any identity change re-runs the async bootstrap race — duplicate `/api/bootstrap` calls, repeated graph resets, lost `cancelled` guards under fast toggles.
 
 **Fix direction:** destructure only the primitive inputs you actually read; wrap callbacks in `useCallback`.
+
+**Shipped:** [`ArchitecturalCanvasApp.tsx`](../src/components/foundation/ArchitecturalCanvasApp.tsx) — primitive boot fields + `heartgardenBootApiRef.current` for reads inside the bootstrap effect.
 
 ### 16. `entity_meta` / `content_json` are `z.any()` JSON god-objects
 
@@ -262,6 +286,8 @@ No size cap, no discriminated-union validation, no DB `CHECK` constraints. That'
 `heartgarden/app/api/items/[itemId]/route.ts` 246–282.
 
 **Fix direction:** guard `if (!row) return 404`.
+
+**Shipped:** [`route.ts`](../app/api/items/[itemId]/route.ts) — 404 when `.returning()` is empty.
 
 ### 18. Stories are excluded from TypeScript strict checking
 
@@ -295,9 +321,13 @@ All call Anthropic with `max_tokens` only. A hung provider pins route-handler co
 
 **Fix direction:** shared `AbortController` with a ~30s deadline + one retry on 5xx/timeout.
 
-### 22. Lore import routes miss `gmMayAccessSpaceIdAsync`
+**Shipped:** [`async-timeout.ts`](../src/lib/async-timeout.ts) — `withDeadline` + `HEARTGARDEN_ANTHROPIC_TIMEOUT_MS` (default 120s) wrapping Anthropic `messages.create` in [`lore-engine.ts`](../src/lib/lore-engine.ts), [`lore-item-meta.ts`](../src/lib/lore-item-meta.ts), [`lore-import-plan-llm.ts`](../src/lib/lore-import-plan-llm.ts). MCP `fetch` abort budget still open.
+
+### ~~22. Lore import routes miss `gmMayAccessSpaceIdAsync`~~ — **fixed 2026-04-21**
 
 Other GM routes gate target space access; `app/api/lore/import/plan|jobs|apply|commit` only check `enforceGmOnlyBootContext` + existence. A GM session can target restricted spaces (e.g. implicit player root).
+
+**Shipped:** `gmMayAccessSpaceIdAsync` after `assertSpaceExists` on **plan, jobs, apply, commit** and on **GET jobs/[jobId]** ([`app/api/lore/import/`](../app/api/lore/import/)).
 
 ---
 
@@ -417,7 +447,7 @@ Body trigram matching would dramatically help recall for typos.
 
 CI runs `build-storybook` but the many untracked `*.stories.tsx` suggest story/component pairs drift locally. `verify:foundation-sync` only covers foundation shell wiring, not story coverage.
 
-### 38. `heartgardenBootApi` cached-workspace reconnect effect — same identity churn risk as #15
+### ~~38. `heartgardenBootApi` cached-workspace reconnect effect — same identity churn risk as #15~~ — **fixed 2026-04-21** (same change as #15)
 
 `ArchitecturalCanvasApp.tsx` 5218–5243.
 
@@ -513,4 +543,5 @@ Not dead code; confirm bundle impact is acceptable for a TTRPG notes app.
 ## Changelog
 
 - **2026-04-21** — Initial audit. 45 items across CRITICAL / HIGH / MEDIUM / LOW.
+- **2026-04-21 (remediation)** — Implemented fixes documented above (CRITICAL #1–#6; HIGH #8, #11, #12, #15, #17, #21, #22; partial #7, #14; MEDIUM #38 folded into #15). Run migration **`0008_items_space_updated_at_idx.sql`** on Neon when deploying.
 
