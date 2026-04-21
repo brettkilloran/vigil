@@ -46,3 +46,41 @@ export function persistedEntityTypeFromCanonical(kind: CanonicalEntityKind): str
 
 /** Every canonical kind must appear in the mapping doc + this module (CI: registry-wiring test). */
 export const ALL_CANONICAL_KINDS: readonly CanonicalEntityKind[] = CANONICAL_ENTITY_KINDS;
+
+/**
+ * Closed set of values the importer / apply path / shell are allowed to write into
+ * `items.entity_type`. Expands on the three lore-card shells to cover every canonical
+ * kind plus the imported source-card marker.
+ *
+ * Any new value written to `items.entity_type` MUST appear here and be covered by the
+ * registry-wiring test so we don't re-introduce ad-hoc strings like the audit's
+ * §4.5 "lore_source" regression.
+ */
+export const PERSISTED_ENTITY_TYPES = [
+  "character",
+  "faction",
+  "location",
+  "quest",
+  "item",
+  "lore",
+  "lore_source",
+  "other",
+] as const;
+
+export type PersistedEntityType = (typeof PERSISTED_ENTITY_TYPES)[number];
+
+export function isPersistedEntityType(value: unknown): value is PersistedEntityType {
+  return (
+    typeof value === "string" &&
+    (PERSISTED_ENTITY_TYPES as readonly string[]).includes(value)
+  );
+}
+
+/**
+ * The imported original document is inserted with this `entity_type`. Use the constant
+ * instead of hard-coding "lore_source" at call sites so the registry stays the single
+ * source of truth.
+ */
+export function persistedEntityTypeForLoreSource(): PersistedEntityType {
+  return "lore_source";
+}
