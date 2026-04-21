@@ -6,13 +6,17 @@ import { importReviewItems, itemLinks, items, spaces } from "@/src/db/schema";
 import { buildContentJsonForFolderEntity } from "@/src/components/foundation/architectural-db-bridge";
 import type { CanvasFolderEntity } from "@/src/components/foundation/architectural-types";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
+import {
+  buildImportedEntityMeta,
+  type CrossFolderRef,
+} from "@/src/lib/entity-meta-schema";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 import { connectionKindMetaForLinkType } from "@/src/lib/connection-kind-colors";
 import {
   buildLoreNoteContentJson,
   buildLoreNoteContentJsonMerged,
-  planLoreImportCardLayout,
 } from "@/src/lib/lore-import-commit";
+import { placeImportCards } from "@/src/lib/lore-import-placement";
 import {
   applyClarificationPatches,
   validateClarificationAnswersForApply,
@@ -21,6 +25,12 @@ import {
   filterPlanLinksToSameCanvasSpace,
   normalizeImportItemLinkType,
 } from "@/src/lib/lore-import-item-link";
+import { coerceImportLinkType } from "@/src/lib/lore-import-link-shape";
+import {
+  buildBindingPatchForImport,
+  mergeHgArchBindingPatches,
+  type BindingPatch,
+} from "@/src/lib/lore-import-apply-bindings";
 import type { CanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
 import {
   buildDefaultEntityMeta,
@@ -30,16 +40,16 @@ import {
 } from "@/src/lib/lore-import-plan-types";
 import type { VigilDb } from "@/src/lib/spaces";
 import { assertSpaceExists } from "@/src/lib/spaces";
-import { persistedEntityTypeFromCanonical } from "@/src/lib/lore-object-registry";
+import {
+  persistedEntityTypeForLoreSource,
+  persistedEntityTypeFromCanonical,
+} from "@/src/lib/lore-object-registry";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
 
 type ItemRow = InferSelectModel<typeof items>;
 
 const NODE_W = 280;
-const GAP = 28;
-const ROW_H = 280;
-const COLS = 2;
 const FOLDER_W = 420;
 const FOLDER_H = 280;
 
@@ -114,22 +124,6 @@ async function nextZIndex(
   return n;
 }
 
-/** Per-space note layout cursor */
-function makeGridPlacer(ox: number, oy: number) {
-  let i = 0;
-  return () => {
-    const col = i % COLS;
-    const row = Math.floor(i / COLS);
-    i += 1;
-    return {
-      x: ox + col * (NODE_W + GAP),
-      y: oy + row * ROW_H,
-      width: NODE_W,
-      height: 260,
-    };
-  };
-}
-
 export async function applyLoreImportPlan(
   db: VigilDb,
   raw: LoreImportApplyBody,
@@ -160,23 +154,74 @@ export async function applyLoreImportPlan(
     const msg = e instanceof Error ? e.message : "Clarification patch failed";
     throw new Error(msg);
   }
+  // Re-coerce link types against current canonicalEntityKind values (clarification
+  // patches may have shifted a note's kind and made an earlier link type invalid).
+  const kindByClientIdForApply = new Map(
+    plan.notes.map((n) => [n.clientId, n.canonicalEntityKind]),
+  );
+  const applyCoercionWarnings: string[] = [];
+  const shapedLinks = plan.links.map((l) => {
+    const fromKind = kindByClientIdForApply.get(l.fromClientId);
+    const toKind = kindByClientIdForApply.get(l.toClientId);
+    const coerced = coerceImportLinkType(fromKind, toKind, l.linkType);
+    if (coerced.coerced && coerced.reason) {
+      applyCoercionWarnings.push(
+        `Link ${l.fromClientId} → ${l.toClientId}: ${coerced.reason}`,
+      );
+    }
+    return {
+      fromClientId: l.fromClientId,
+      toClientId: l.toClientId,
+      linkType: coerced.linkType,
+      linkIntent: l.linkIntent,
+    };
+  });
+
   const linkRefilter = filterPlanLinksToSameCanvasSpace(
     plan.notes.map((n) => ({
       clientId: n.clientId,
       folderClientId: n.folderClientId,
     })),
-    plan.links.map((l) => ({
-      fromClientId: l.fromClientId,
-      toClientId: l.toClientId,
-      linkType: l.linkType,
-      linkIntent: l.linkIntent,
-    })),
+    shapedLinks,
   );
+  // Re-derive cross-folder mentions after clarification patches (folder reassignments may
+  // have created new cross-folder pairs). Merge with any already set on the plan.
+  const titleByClientId = new Map(plan.notes.map((n) => [n.clientId, n.title]));
+  const newMentionsBySource = new Map<string, {
+    toClientId: string;
+    targetTitle: string;
+    linkType: string;
+    linkIntent?: "association" | "binding_hint";
+  }[]>();
+  for (const m of linkRefilter.crossSpaceMentions) {
+    const targetTitle = titleByClientId.get(m.toClientId);
+    if (!targetTitle) continue;
+    const list = newMentionsBySource.get(m.fromClientId) ?? [];
+    list.push({
+      toClientId: m.toClientId,
+      targetTitle,
+      linkType: m.linkType ?? "history",
+      linkIntent: m.linkIntent,
+    });
+    newMentionsBySource.set(m.fromClientId, list);
+  }
   plan = {
     ...plan,
+    notes: plan.notes.map((n) => {
+      const fresh = newMentionsBySource.get(n.clientId) ?? [];
+      const existing = n.crossFolderMentions ?? [];
+      const seen = new Set(existing.map((m) => `${m.toClientId}|${m.linkType}`));
+      const merged = [
+        ...existing,
+        ...fresh.filter((m) => !seen.has(`${m.toClientId}|${m.linkType}`)),
+      ];
+      if (merged.length === 0) return n;
+      return { ...n, crossFolderMentions: merged };
+    }),
     links: linkRefilter.links,
     importPlanWarnings: [
       ...(plan.importPlanWarnings ?? []),
+      ...applyCoercionWarnings,
       ...linkRefilter.warnings,
     ],
   };
@@ -200,7 +245,6 @@ export async function applyLoreImportPlan(
 
   const ox = body.layout?.originX ?? 0;
   const oy = body.layout?.originY ?? 0;
-  const spacePlacers = new Map<string, ReturnType<typeof makeGridPlacer>>();
 
   const folderClientToChildSpace = new Map<string, string>();
   const clientIdToItemId = new Map<string, string>();
@@ -250,12 +294,16 @@ export async function applyLoreImportPlan(
         slots: {},
       };
 
+      const folderEntityMeta = buildImportedEntityMeta({
+        import: true,
+        importBatchId: plan.importBatchId,
+      });
       const folderSearch = buildSearchBlob({
         title: folder.title.slice(0, 255),
         contentText: "",
         contentJson: null,
         entityType: null,
-        entityMeta: { import: true, importBatchId: plan.importBatchId },
+        entityMeta: folderEntityMeta,
         imageUrl: null,
         imageMeta: null,
         loreSummary: null,
@@ -278,7 +326,7 @@ export async function applyLoreImportPlan(
           contentJson: buildContentJsonForFolderEntity(tempFolder),
           color: null,
           entityType: null,
-          entityMeta: { import: true, importBatchId: plan.importBatchId },
+          entityMeta: folderEntityMeta,
         })
         .returning();
 
@@ -307,7 +355,10 @@ export async function applyLoreImportPlan(
         existing.entityMeta && typeof existing.entityMeta === "object"
           ? (existing.entityMeta as Record<string, unknown>)
           : {};
-      const mergedEntityMeta = { ...prevMeta, aiReview: "pending" };
+      const mergedEntityMeta = buildImportedEntityMeta({
+        existing: prevMeta,
+        aiReview: "pending",
+      });
       const searchBlob = buildSearchBlob({
         title: existing.title,
         contentText: mergedText.slice(0, 120_000),
@@ -343,15 +394,65 @@ export async function applyLoreImportPlan(
       body.sourceDocument?.text?.trim() ?? "";
     const hasSource =
       body.includeSourceCard === true && sourceText.length > 0;
-    const layout = planLoreImportCardLayout(
-      ox,
-      oy,
-      hasSource,
-      notesToCreate.length,
-    );
+
+    // Resolve the target space id for each note up-front so we can compute
+    // per-space proximity placement in one pass.
+    const notesBySpace = new Map<string, typeof notesToCreate>();
+    for (const note of notesToCreate) {
+      const spaceId = note.folderClientId
+        ? (folderClientToChildSpace.get(note.folderClientId) ?? body.spaceId)
+        : body.spaceId;
+      const list = notesBySpace.get(spaceId) ?? [];
+      list.push(note);
+      notesBySpace.set(spaceId, list);
+    }
+
+    const placementByNoteClient = new Map<string, {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }>();
+    let rootSourceRect:
+      | { x: number; y: number; width: number; height: number }
+      | undefined;
+    for (const [spaceId, notes] of notesBySpace.entries()) {
+      const entities = notes.map((n) => ({
+        clientId: n.clientId,
+        affinities: plan.links
+          .filter((l) =>
+            (l.fromClientId === n.clientId || l.toClientId === n.clientId) &&
+            notes.some(
+              (m) =>
+                m.clientId ===
+                (l.fromClientId === n.clientId ? l.toClientId : l.fromClientId),
+            ),
+          )
+          .map((l) =>
+            l.fromClientId === n.clientId ? l.toClientId : l.fromClientId,
+          ),
+      }));
+      const layout = placeImportCards({
+        originX: spaceId === body.spaceId ? ox : 0,
+        originY: spaceId === body.spaceId ? oy : 0,
+        source:
+          spaceId === body.spaceId && hasSource
+            ? { width: 420, height: 360 }
+            : undefined,
+        entities,
+      });
+      if (spaceId === body.spaceId && layout.source) {
+        rootSourceRect = layout.source;
+      }
+      for (const e of entities) {
+        const rect = layout.entities[e.clientId];
+        if (rect) placementByNoteClient.set(e.clientId, rect);
+      }
+    }
 
     let zRoot = await nextZIndex(dbx, body.spaceId);
-    if (hasSource && layout.source) {
+    if (hasSource && rootSourceRect) {
+      const layoutSource = rootSourceRect;
       const title =
         body.sourceDocument?.title?.trim() ||
         plan.fileName ||
@@ -359,16 +460,17 @@ export async function applyLoreImportPlan(
       const contentJson = buildLoreNoteContentJson(sourceText.slice(0, 120_000), {
         aiPending: true,
       });
+      const sourceEntityMeta = buildImportedEntityMeta({
+        import: true,
+        importBatchId: plan.importBatchId,
+        aiReview: "pending",
+      });
       const searchBlob = buildSearchBlob({
         title: title.slice(0, 255),
         contentText: sourceText.slice(0, 120_000),
         contentJson,
-        entityType: "lore_source",
-        entityMeta: {
-          import: true,
-          importBatchId: plan.importBatchId,
-          aiReview: "pending",
-        },
+        entityType: persistedEntityTypeForLoreSource(),
+        entityMeta: sourceEntityMeta,
         imageUrl: null,
         imageMeta: null,
         loreSummary: null,
@@ -379,18 +481,18 @@ export async function applyLoreImportPlan(
         .values({
           spaceId: body.spaceId,
           itemType: "note",
-          x: layout.source.x,
-          y: layout.source.y,
-          width: layout.source.width,
-          height: layout.source.height,
+          x: layoutSource.x,
+          y: layoutSource.y,
+          width: layoutSource.width,
+          height: layoutSource.height,
           zIndex: zRoot++,
           title: title.slice(0, 255),
           contentText: sourceText.slice(0, 120_000),
           searchBlob,
           contentJson,
           color: DS_COLOR.itemDefaultNote,
-          entityType: "lore_source",
-          entityMeta: { import: true, importBatchId: plan.importBatchId },
+          entityType: persistedEntityTypeForLoreSource(),
+          entityMeta: sourceEntityMeta,
         })
         .returning();
       if (row) {
@@ -404,19 +506,22 @@ export async function applyLoreImportPlan(
         ? (folderClientToChildSpace.get(note.folderClientId) ?? body.spaceId)
         : body.spaceId;
 
-      if (!spacePlacers.has(targetSpaceId)) {
-        spacePlacers.set(targetSpaceId, makeGridPlacer(0, 0));
-      }
-      const placer = spacePlacers.get(targetSpaceId)!;
-      const pos = placer();
+      const pos =
+        placementByNoteClient.get(note.clientId) ?? {
+          x: 0,
+          y: 0,
+          width: NODE_W,
+          height: 260,
+        };
       const z = await nextZIndex(dbx, targetSpaceId);
 
       const bodyText = note.bodyText.slice(0, 120_000);
       const contentJson = buildLoreNoteContentJson(bodyText, { aiPending: true });
-      const entityMeta = {
-        ...buildDefaultEntityMeta(note),
+      const entityMeta = buildImportedEntityMeta({
+        base: buildDefaultEntityMeta(note),
         importBatchId: plan.importBatchId,
-      };
+        canonicalEntityKind: note.canonicalEntityKind as CanonicalEntityKind,
+      });
 
       const persistedEntityType = persistedEntityTypeFromCanonical(
         note.canonicalEntityKind as CanonicalEntityKind,
@@ -457,6 +562,75 @@ export async function applyLoreImportPlan(
         createdItemIds.push(row.id);
         clientIdToItemId.set(note.clientId, row.id);
         rowsToSchedule.push(row);
+      }
+    }
+
+    // Cross-folder mentions: once targets have real item ids, append `vigil:item:<uuid>`
+    // pointers to each source note's bodyText/contentJson and record cross-folder refs.
+    for (const note of notesToCreate) {
+      const mentions = note.crossFolderMentions;
+      if (!mentions || mentions.length === 0) continue;
+      const sourceItemId = clientIdToItemId.get(note.clientId);
+      if (!sourceItemId) continue;
+      const sourceRow = rowsToSchedule.find((r) => r.id === sourceItemId);
+      if (!sourceRow) continue;
+
+      const resolvedRefs: CrossFolderRef[] = [];
+      const vigilAppendParts: string[] = [];
+      for (const m of mentions) {
+        const targetItemId = clientIdToItemId.get(m.toClientId);
+        if (!targetItemId) continue;
+        resolvedRefs.push({
+          targetItemId,
+          targetTitle: m.targetTitle,
+          linkType: m.linkType,
+          linkIntent: m.linkIntent,
+        });
+        vigilAppendParts.push(
+          `[[${m.targetTitle}]] (vigil:item:${targetItemId})`,
+        );
+      }
+      if (resolvedRefs.length === 0) continue;
+
+      const appendBlock = `\n\n${vigilAppendParts.join(" · ")}`;
+      const nextContentText = (sourceRow.contentText + appendBlock).slice(0, 120_000);
+      const nextContentJson = buildLoreNoteContentJson(nextContentText, {
+        aiPending: true,
+      });
+      const prevMeta =
+        sourceRow.entityMeta && typeof sourceRow.entityMeta === "object"
+          ? (sourceRow.entityMeta as Record<string, unknown>)
+          : {};
+      const nextEntityMeta = buildImportedEntityMeta({
+        existing: prevMeta,
+        crossFolderRefs: resolvedRefs,
+      });
+      const nextSearchBlob = buildSearchBlob({
+        title: sourceRow.title,
+        contentText: nextContentText,
+        contentJson: nextContentJson,
+        entityType: sourceRow.entityType,
+        entityMeta: nextEntityMeta,
+        imageUrl: sourceRow.imageUrl ?? null,
+        imageMeta: sourceRow.imageMeta ?? null,
+        loreSummary: sourceRow.loreSummary ?? null,
+        loreAliases: sourceRow.loreAliases ?? null,
+      });
+
+      const [updated] = await dbx
+        .update(items)
+        .set({
+          contentText: nextContentText,
+          contentJson: nextContentJson,
+          searchBlob: nextSearchBlob,
+          entityMeta: nextEntityMeta,
+          updatedAt: new Date(),
+        })
+        .where(eq(items.id, sourceItemId))
+        .returning();
+      if (updated) {
+        const idx = rowsToSchedule.findIndex((r) => r.id === sourceItemId);
+        if (idx >= 0) rowsToSchedule[idx] = updated;
       }
     }
 
@@ -512,6 +686,75 @@ export async function applyLoreImportPlan(
         })
         .returning();
       if (lr) linksCreated += 1;
+    }
+
+    // Binding-hint promotion: for each link marked `linkIntent: "binding_hint"`, compute
+    // a structured hgArch patch for the source card and merge it in. The item_links row
+    // is still created above — the binding is additive.
+    const bindingPatchesBySource = new Map<string, BindingPatch[]>();
+    for (const link of plan.links) {
+      if (link.linkIntent !== "binding_hint") continue;
+      const fromId = clientIdToItemId.get(link.fromClientId);
+      const toId = clientIdToItemId.get(link.toClientId);
+      if (!fromId || !toId) continue;
+      const patch = buildBindingPatchForImport({
+        sourceKind: kindByClientIdForApply.get(link.fromClientId),
+        targetKind: kindByClientIdForApply.get(link.toClientId),
+        targetItemId: toId,
+        targetTitle: titleByClientId.get(link.toClientId),
+      });
+      if (!patch) continue;
+      const list = bindingPatchesBySource.get(fromId) ?? [];
+      list.push(patch);
+      bindingPatchesBySource.set(fromId, list);
+    }
+
+    for (const [sourceItemId, patches] of bindingPatchesBySource.entries()) {
+      const sourceRow = rowsToSchedule.find((r) => r.id === sourceItemId);
+      if (!sourceRow) continue;
+      const prevContentJson =
+        sourceRow.contentJson && typeof sourceRow.contentJson === "object"
+          ? (sourceRow.contentJson as Record<string, unknown>)
+          : {};
+      const prevHgArch =
+        prevContentJson.hgArch && typeof prevContentJson.hgArch === "object"
+          ? (prevContentJson.hgArch as Record<string, unknown>)
+          : {};
+      const { hgArch: nextHgArch, touchedSlots } = mergeHgArchBindingPatches(
+        prevHgArch,
+        patches,
+      );
+      if (touchedSlots.length === 0) continue;
+      const nextContentJson = { ...prevContentJson, hgArch: nextHgArch };
+      const prevMeta =
+        sourceRow.entityMeta && typeof sourceRow.entityMeta === "object"
+          ? (sourceRow.entityMeta as Record<string, unknown>)
+          : {};
+      const prevBindings =
+        prevMeta.pendingBindingSlots &&
+        Array.isArray(prevMeta.pendingBindingSlots)
+          ? (prevMeta.pendingBindingSlots as string[])
+          : [];
+      const pendingBindingSlots = Array.from(
+        new Set([...prevBindings, ...touchedSlots]),
+      );
+      const nextEntityMeta = buildImportedEntityMeta({
+        existing: { ...prevMeta, pendingBindingSlots },
+        aiReview: "pending",
+      });
+      const [updated] = await dbx
+        .update(items)
+        .set({
+          contentJson: nextContentJson,
+          entityMeta: nextEntityMeta,
+          updatedAt: new Date(),
+        })
+        .where(eq(items.id, sourceItemId))
+        .returning();
+      if (updated) {
+        const idx = rowsToSchedule.findIndex((r) => r.id === sourceItemId);
+        if (idx >= 0) rowsToSchedule[idx] = updated;
+      }
     }
 
     for (const a of clarificationAnswers) {
