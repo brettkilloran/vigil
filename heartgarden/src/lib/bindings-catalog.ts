@@ -117,6 +117,10 @@ export const BINDING_SLOT_DEFINITIONS: readonly BindingSlotDefinition[] = [
   },
 ];
 
+export const BINDING_SLOT_BY_ID = Object.fromEntries(
+  BINDING_SLOT_DEFINITIONS.map((d) => [d.id, d]),
+) as Record<BindingSlotId, BindingSlotDefinition>;
+
 /** Optional `item_links.meta.linkSemantics` / `linkRole` values (string stored in JSON). */
 export const LINK_SEMANTICS = {
   /** Ordinary canvas / import / MCP graph edge. */
@@ -126,3 +130,76 @@ export const LINK_SEMANTICS = {
 } as const;
 
 export type LinkSemanticsValue = (typeof LINK_SEMANTICS)[keyof typeof LINK_SEMANTICS];
+
+// --- Canvas thread draw → hgArch (semantic eval) --------------------------------
+
+/** Lore shells that participate in draw-to-bind today (generic notes → association-only). */
+export type ThreadDrawShell = Extract<LoreBindingShell, "character" | "faction" | "location">;
+
+/**
+ * Ordered, stable effect ids implemented in `canvas-thread-link-eval.ts`.
+ * Adding a slot here = add handler + rule row; keep `touchesSlots` in sync with real patches.
+ */
+export type CanvasThreadSemanticEffect =
+  | "faction_roster_row_bind"
+  | "character_faction_thread_anchor"
+  | "character_location_bidirectional";
+
+export type CanvasThreadSemanticPhase = "roster_target" | "default";
+
+export type CanvasThreadSemanticRule = {
+  id: string;
+  phase: CanvasThreadSemanticPhase;
+  /** Lower runs first within the same phase. */
+  priority: number;
+  /**
+   * Sorted pair of endpoint shells (order-independent match).
+   * Both nodes must be `content` entities with this `loreCard.kind`.
+   */
+  endpointShells: readonly [ThreadDrawShell, ThreadDrawShell];
+  /** hgArch slots this rule mutates when it applies — traceability to `BINDING_SLOT_DEFINITIONS`. */
+  touchesSlots: readonly BindingSlotId[];
+  effect: CanvasThreadSemanticEffect;
+};
+
+/**
+ * Rules for `runSemanticThreadLinkEvaluation`.
+ *
+ * - **roster_target** phase runs only when `rosterEntryId != null` (click completed on a roster row).
+ *   If no rule matches, evaluation stops with `{ kind: "none" }` (do not fall through to location, etc.).
+ * - **default** phase runs only when `rosterEntryId == null`.
+ */
+/** Declarative order: roster-target phase first within its group; then default phase by priority. */
+export const CANVAS_THREAD_SEMANTIC_RULES: readonly CanvasThreadSemanticRule[] = [
+  {
+    id: "faction_roster_row",
+    phase: "roster_target",
+    priority: 10,
+    endpointShells: ["character", "faction"],
+    touchesSlots: ["faction.factionRoster", "character.loreThreadAnchors"],
+    effect: "faction_roster_row_bind",
+  },
+  {
+    id: "character_faction_card_face",
+    phase: "default",
+    priority: 10,
+    endpointShells: ["character", "faction"],
+    touchesSlots: ["character.loreThreadAnchors"],
+    effect: "character_faction_thread_anchor",
+  },
+  {
+    id: "character_location_mirror",
+    phase: "default",
+    priority: 20,
+    endpointShells: ["character", "location"],
+    touchesSlots: ["character.loreThreadAnchors", "location.linkedCharacters"],
+    effect: "character_location_bidirectional",
+  },
+];
+
+export function sortedThreadDrawShellPair(
+  a: ThreadDrawShell,
+  b: ThreadDrawShell,
+): readonly [ThreadDrawShell, ThreadDrawShell] {
+  return a <= b ? [a, b] : [b, a];
+}

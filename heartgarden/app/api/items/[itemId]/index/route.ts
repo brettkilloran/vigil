@@ -3,9 +3,11 @@ import { eq } from "drizzle-orm";
 import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
 import {
-  enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
   gmMayAccessItemSpaceAsync,
+  heartgardenApiForbiddenJsonResponse,
+  isHeartgardenPlayerBlocked,
+  playerMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { reindexItemVault } from "@/src/lib/item-vault-index";
 import {
@@ -18,8 +20,9 @@ export async function POST(
   context: { params: Promise<{ itemId: string }> },
 ) {
   const bootCtxEarly = await getHeartgardenApiBootContext();
-  const deniedEarly = enforceGmOnlyBootContext(bootCtxEarly);
-  if (deniedEarly) return deniedEarly;
+  if (isHeartgardenPlayerBlocked(bootCtxEarly)) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
 
   if (vaultItemIndexRateLimitExceeded(req)) {
     const retry = vaultIndexRateLimitMeta.retry_after_seconds;
@@ -45,6 +48,9 @@ export async function POST(
   const [row] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
   if (!row) {
     return Response.json({ ok: false, error: "Not found" }, { status: 404 });
+  }
+  if (!(await playerMayAccessItemSpaceAsync(db, bootCtxEarly, row.spaceId))) {
+    return Response.json({ ok: false, error: "Forbidden." }, { status: 403 });
   }
   if (!(await gmMayAccessItemSpaceAsync(db, bootCtxEarly, row.spaceId))) {
     return Response.json({ ok: false, error: "Forbidden." }, { status: 403 });

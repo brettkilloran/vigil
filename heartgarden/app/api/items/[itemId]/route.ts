@@ -23,6 +23,7 @@ import { scheduleItemEmbeddingRefresh } from "@/src/lib/item-vault-index";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { jsonValuesEqualForPatch } from "@/src/lib/json-value-equal";
+import { scrubHgArchRefsAfterItemDelete } from "@/src/lib/hg-arch-orphan-repair";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
@@ -258,13 +259,11 @@ export async function PATCH(
   const contentDirty = titleChanged || contentTextChanged || contentJsonChanged;
   const metaDirty =
     p.entityMeta !== undefined || p.entityMetaMerge !== undefined;
-  if (bootCtx.role !== "player") {
-    if (contentDirty && row) {
+  if (row && (contentDirty || metaDirty)) {
+    if (contentDirty) {
       scheduleItemEmbeddingRefresh(db, row);
-      scheduleVaultReindexAfterResponse(row.id);
-    } else if (metaDirty && row) {
-      scheduleVaultReindexAfterResponse(row.id);
     }
+    scheduleVaultReindexAfterResponse(row.id);
   }
 
   if (row) {
@@ -325,6 +324,19 @@ export async function DELETE(
       bootCtx,
       Response.json({ ok: false, error: "Not found" }, { status: 404 }),
     );
+  }
+  const scrubbedIds = await scrubHgArchRefsAfterItemDelete(db, {
+    spaceId: existing.spaceId,
+    deadItemId: itemId,
+  });
+  for (const sid of scrubbedIds) {
+    scheduleVaultReindexAfterResponse(sid);
+    await publishHeartgardenSpaceInvalidation(db, {
+      originSpaceId: existing.spaceId,
+      reason: "item.updated",
+      itemId: sid,
+      lookupSpaceIds: [existing.spaceId],
+    });
   }
   await publishHeartgardenSpaceInvalidation(db, {
     originSpaceId: existing.spaceId,

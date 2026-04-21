@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
@@ -16,6 +16,7 @@ import {
   clampLinkMetaSlackMultiplier,
   normalizeLinkSemanticsInMeta,
 } from "@/src/lib/item-link-meta";
+import { validateStructuredMirrorItemLink } from "@/src/lib/item-links-structured-validation";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 
 function normalizeItemLinkMeta(meta: Record<string, unknown>): Record<string, unknown> {
@@ -96,7 +97,20 @@ export async function POST(req: Request) {
   if (!validated.ok) {
     return Response.json({ ok: false, error: validated.error }, { status: validated.status });
   }
-  const metaForRow = meta ? normalizeItemLinkMeta(meta) : null;
+  const metaForRow = meta ? normalizeItemLinkMeta({ ...meta }) : null;
+  const entRows = await db
+    .select({ id: items.id, entityType: items.entityType })
+    .from(items)
+    .where(inArray(items.id, [sourceItemId, targetItemId]));
+  const srcRow = entRows.find((r) => r.id === sourceItemId);
+  const tgtRow = entRows.find((r) => r.id === targetItemId);
+  if (!srcRow || !tgtRow) {
+    return Response.json({ ok: false, error: "Source or target item not found" }, { status: 404 });
+  }
+  const mirrorCheck = validateStructuredMirrorItemLink(metaForRow, srcRow, tgtRow);
+  if (!mirrorCheck.ok) {
+    return Response.json({ ok: false, error: mirrorCheck.error }, { status: mirrorCheck.status });
+  }
   const [row] = await db
     .insert(itemLinks)
     .values({
@@ -178,7 +192,10 @@ export async function PATCH(req: Request) {
   const { id, color, label, linkType, meta } = parsed.data;
 
   const [linkMeta] = await db
-    .select({ sourceItemId: itemLinks.sourceItemId })
+    .select({
+      sourceItemId: itemLinks.sourceItemId,
+      targetItemId: itemLinks.targetItemId,
+    })
     .from(itemLinks)
     .where(eq(itemLinks.id, id))
     .limit(1);
@@ -237,6 +254,21 @@ export async function PATCH(req: Request) {
   }
   if (Object.keys(updates).length < 1) {
     return Response.json({ ok: false, error: "No updates provided" }, { status: 400 });
+  }
+  if (updates.meta !== undefined) {
+    const entRows = await db
+      .select({ id: items.id, entityType: items.entityType })
+      .from(items)
+      .where(inArray(items.id, [linkMeta.sourceItemId, linkMeta.targetItemId]));
+    const srcRow = entRows.find((r) => r.id === linkMeta.sourceItemId);
+    const tgtRow = entRows.find((r) => r.id === linkMeta.targetItemId);
+    if (!srcRow || !tgtRow) {
+      return Response.json({ ok: false, error: "Source or target item not found" }, { status: 404 });
+    }
+    const mirrorCheck = validateStructuredMirrorItemLink(updates.meta, srcRow, tgtRow);
+    if (!mirrorCheck.ok) {
+      return Response.json({ ok: false, error: mirrorCheck.error }, { status: mirrorCheck.status });
+    }
   }
   const [updated] = await db
     .update(itemLinks)

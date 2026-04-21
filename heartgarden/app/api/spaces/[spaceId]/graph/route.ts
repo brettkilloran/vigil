@@ -5,6 +5,7 @@ import { itemLinks, items } from "@/src/db/schema";
 import { getHeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
 import type { GraphEdge, GraphNode } from "@/src/lib/graph-types";
 import { parseSlackMultiplierFromLinkMeta } from "@/src/lib/item-link-meta";
+import { dedupeLogicalItemLinkRows } from "@/src/lib/item-links-logical-dedupe";
 import { computeItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 
@@ -94,7 +95,7 @@ export async function GET(
     return Response.json(emptyPayload);
   }
 
-  const linkRows = await db
+  const linkRowsRaw = await db
     .select({
       id: itemLinks.id,
       source: itemLinks.sourceItemId,
@@ -104,6 +105,7 @@ export async function GET(
       targetPin: itemLinks.targetPin,
       linkType: itemLinks.linkType,
       meta: itemLinks.meta,
+      updatedAt: itemLinks.updatedAt,
     })
     .from(itemLinks)
     .where(
@@ -112,6 +114,20 @@ export async function GET(
         inArray(itemLinks.targetItemId, idList),
       ),
     );
+
+  const linkRows = dedupeLogicalItemLinkRows(
+    linkRowsRaw.map((l) => ({
+      id: l.id,
+      source: l.source,
+      target: l.target,
+      linkType: l.linkType ?? null,
+      sourcePin: l.sourcePin ?? null,
+      targetPin: l.targetPin ?? null,
+      color: l.color ?? null,
+      meta: l.meta,
+      updatedAtMs: l.updatedAt?.getTime() ?? 0,
+    })),
+  );
 
   const nodes: GraphNode[] = rows.map((r) => ({
     id: r.id,

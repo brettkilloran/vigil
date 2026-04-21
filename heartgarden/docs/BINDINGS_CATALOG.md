@@ -32,3 +32,17 @@ Mirror rules and “who writes what” are listed on each `BindingSlotDefinition
 ## Versioning
 
 `HGARCH_BINDINGS_SCHEMA_VERSION` documents the expected shape generation for migrations; readers should ignore unknown hgArch keys.
+
+## Recoverable archive (deletion / restore)
+
+Archived items are **hidden from default listings** but **retain** `item_links` and `content_json` until hard-deleted. Helpers: `src/lib/item-archive.ts` (`isItemArchivedFromEntityMeta`, `entityMetaMergeForArchivePatch`). List routes and canvas loaders filter archived peers where appropriate so dangling threads do not clutter the graph; restoring an item brings its associations back without a separate “re-link” step.
+
+## Prose links vs promoted threads
+
+Wiki-style `[[Title]]` and `vigil:item:` prose resolve through search and **expand into retrieval neighbors** (`expandProseLinkedItems`, `expandHgArchBindingNeighbors`). **Promoting** a prose-only reference to a **canvas thread** is a deliberate UI action (draw link or create `item_links` row with correct `link_type` / semantics). Import plans may flag **`linkIntent: binding_hint`** when the model infers a structured slot — GM confirms on-card before writing hgArch.
+
+## Related docs
+
+- **`docs/RELATIONSHIP_VOCABULARY.md`** — `link_type` labels and autocomplete direction.
+- **`docs/MCP_BINDING_CONTRACT.md`** — tools vs `item_links` vs `patch_item` hgArch.
+- **`docs/FOCUS_HTML_VS_HGARCH.md`** — focus HTML vs structured bindings round-trip.

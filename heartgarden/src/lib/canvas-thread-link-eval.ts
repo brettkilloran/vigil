@@ -8,6 +8,12 @@ import type {
   CanvasEntity,
   LoreCanvasThreadAnchors,
 } from "@/src/components/foundation/architectural-types";
+import {
+  CANVAS_THREAD_SEMANTIC_RULES,
+  type CanvasThreadSemanticRule,
+  sortedThreadDrawShellPair,
+  type ThreadDrawShell,
+} from "@/src/lib/bindings-catalog";
 import { linkCharacterToFactionRosterRow } from "@/src/lib/faction-roster-link";
 import { isUuidLike } from "@/src/lib/uuid-like";
 
@@ -277,8 +283,54 @@ export function evaluateLocationCharacterThreadLink(
   return { kind: "connect_and_patch", patch };
 }
 
+function threadDrawShellPairForEndpoints(
+  entities: Record<string, CanvasEntity>,
+  endpointA: string,
+  endpointB: string,
+): readonly [ThreadDrawShell, ThreadDrawShell] | null {
+  const ea = entities[endpointA];
+  const eb = entities[endpointB];
+  if (ea?.kind !== "content" || eb?.kind !== "content") return null;
+  const ka = ea.loreCard?.kind;
+  const kb = eb.loreCard?.kind;
+  if (ka !== "character" && ka !== "faction" && ka !== "location") return null;
+  if (kb !== "character" && kb !== "faction" && kb !== "location") return null;
+  return sortedThreadDrawShellPair(ka, kb);
+}
+
+function ruleMatchesEndpoints(
+  rule: CanvasThreadSemanticRule,
+  pair: readonly [ThreadDrawShell, ThreadDrawShell],
+): boolean {
+  return rule.endpointShells[0] === pair[0] && rule.endpointShells[1] === pair[1];
+}
+
+function dispatchThreadSemanticEffect(
+  rule: CanvasThreadSemanticRule,
+  entities: Record<string, CanvasEntity>,
+  endpointA: string,
+  endpointB: string,
+  rosterEntryId: string | null,
+): SemanticThreadEvalResult {
+  switch (rule.effect) {
+    case "faction_roster_row_bind":
+      return evaluateFactionRosterThreadLink(entities, endpointA, endpointB, rosterEntryId);
+    case "character_faction_thread_anchor":
+      return evaluateCharacterFactionDirectThreadLink(entities, endpointA, endpointB);
+    case "character_location_bidirectional":
+      return evaluateLocationCharacterThreadLink(entities, endpointA, endpointB);
+    default: {
+      const _exhaustive: never = rule.effect;
+      return _exhaustive;
+    }
+  }
+}
+
 /**
- * Ordered evaluators: faction roster row (when `rosterEntryId` is set), else character↔location pair.
+ * Dispatches draw-completion using {@link CANVAS_THREAD_SEMANTIC_RULES} in `bindings-catalog.ts`.
+ *
+ * **Roster phase:** when `rosterEntryId` is set, only `phase: "roster_target"` rules run; if none
+ * apply (e.g. character+location), returns `{ kind: "none" }` — same as the legacy ordering.
  */
 export function runSemanticThreadLinkEvaluation(
   entities: Record<string, CanvasEntity>,
@@ -286,12 +338,14 @@ export function runSemanticThreadLinkEvaluation(
   endpointB: string,
   rosterEntryId: string | null,
 ): SemanticThreadEvalResult {
-  if (rosterEntryId) {
-    const fac = evaluateFactionRosterThreadLink(entities, endpointA, endpointB, rosterEntryId);
-    if (fac.kind !== "none") return fac;
-    return { kind: "none" };
+  const pair = threadDrawShellPairForEndpoints(entities, endpointA, endpointB);
+  if (!pair) return { kind: "none" };
+
+  const phase = rosterEntryId ? "roster_target" : "default";
+  for (const rule of CANVAS_THREAD_SEMANTIC_RULES) {
+    if (rule.phase !== phase) continue;
+    if (!ruleMatchesEndpoints(rule, pair)) continue;
+    return dispatchThreadSemanticEffect(rule, entities, endpointA, endpointB, rosterEntryId);
   }
-  const facDirect = evaluateCharacterFactionDirectThreadLink(entities, endpointA, endpointB);
-  if (facDirect.kind !== "none") return facDirect;
-  return evaluateLocationCharacterThreadLink(entities, endpointA, endpointB);
+  return { kind: "none" };
 }

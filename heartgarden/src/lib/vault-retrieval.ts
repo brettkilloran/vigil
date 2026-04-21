@@ -9,6 +9,7 @@ import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provid
 import { logVaultHybridRetrieval } from "@/src/lib/vault-retrieval-debug";
 import { fuseRrfFromOrderedLists } from "@/src/lib/vault-retrieval-rrf";
 import { extractHgArchBoundItemIds } from "@/src/lib/hg-arch-binding-projection";
+import { dedupeLogicalItemLinkRows } from "@/src/lib/item-links-logical-dedupe";
 import { linkExpansionDepriorityRank } from "@/src/lib/item-link-meta";
 import { extractVigilItemIdsFromText } from "@/src/lib/wiki-item-refs";
 import type { VigilDb } from "@/src/lib/spaces";
@@ -258,16 +259,35 @@ export async function expandLinkedItems(
   if (cap <= 0 || seedIds.length === 0) return [];
 
   const seedSet = new Set(seedIds);
-  const linkRows = await db
+  const linkRowsRaw = await db
     .select({
+      id: itemLinks.id,
       sourceItemId: itemLinks.sourceItemId,
       targetItemId: itemLinks.targetItemId,
       meta: itemLinks.meta,
+      sourcePin: itemLinks.sourcePin,
+      targetPin: itemLinks.targetPin,
+      linkType: itemLinks.linkType,
+      updatedAt: itemLinks.updatedAt,
     })
     .from(itemLinks)
     .where(
       or(inArray(itemLinks.sourceItemId, seedIds), inArray(itemLinks.targetItemId, seedIds)),
     );
+
+  const linkRows = dedupeLogicalItemLinkRows(
+    linkRowsRaw.map((l) => ({
+      id: l.id,
+      source: l.sourceItemId,
+      target: l.targetItemId,
+      linkType: l.linkType ?? null,
+      sourcePin: l.sourcePin ?? null,
+      targetPin: l.targetPin ?? null,
+      color: null,
+      meta: l.meta,
+      updatedAtMs: l.updatedAt?.getTime() ?? 0,
+    })),
+  );
 
   const neighborRank = new Map<string, number>();
   for (const l of linkRows) {
@@ -277,8 +297,8 @@ export async function expandLinkedItems(
       const prev = neighborRank.get(id) ?? Number.POSITIVE_INFINITY;
       neighborRank.set(id, Math.min(prev, rank));
     };
-    bump(l.sourceItemId);
-    bump(l.targetItemId);
+    bump(l.source);
+    bump(l.target);
   }
 
   const sortedNeighbors = [...neighborRank.keys()].sort((a, b) => {
