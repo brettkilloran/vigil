@@ -137,8 +137,10 @@ import {
   apiPatchSpaceName,
   apiPatchSpaceParent,
   fetchBootstrap,
+  fetchBootstrapDetailed,
   neonVaultIndexSetPlayerLayerActive,
   postPresencePayload,
+  type BootstrapFetchDetail,
   type SpacePresencePeer,
 } from "@/src/components/foundation/architectural-neon-api";
 import { mergeHydratedDbConnections } from "@/src/lib/architectural-item-link-graph";
@@ -1713,9 +1715,77 @@ Vercel / hosted:
 
 After one successful cloud load, Heartgarden keeps a local snapshot in this browser so short outages still show your garden.`;
 
-function WorkspaceBootstrapErrorPanel() {
+/**
+ * Shape of the last failed bootstrap attempt, cached in state so
+ * {@link WorkspaceBootstrapErrorPanel} can surface **why** loading failed
+ * (schema drift 500, forbidden role, offline, etc.) instead of only a
+ * generic overlay. Null = no failure recorded yet.
+ */
+type WorkspaceBootstrapErrorSummary = {
+  cause: Exclude<BootstrapFetchDetail, { ok: true }>["cause"];
+  status: number | null;
+  message: string | null;
+};
+
+function summarizeBootstrapError(
+  detail: Extract<BootstrapFetchDetail, { ok: false }>,
+): WorkspaceBootstrapErrorSummary {
+  if (detail.cause === "network") {
+    return { cause: "network", status: null, message: detail.message };
+  }
+  if (detail.cause === "parse") {
+    return { cause: "parse", status: detail.status, message: null };
+  }
+  return {
+    cause: detail.cause,
+    status: detail.status,
+    message: "message" in detail && detail.message ? detail.message : null,
+  };
+}
+
+function formatBootstrapErrorHeadline(
+  summary: WorkspaceBootstrapErrorSummary | null,
+): string | null {
+  if (!summary) return null;
+  switch (summary.cause) {
+    case "network":
+      return "Network error reaching /api/bootstrap";
+    case "forbidden":
+      return `HTTP 403 — session not allowed on this workspace`;
+    case "demo":
+      return "Server returned demo fallback (database not configured)";
+    case "parse":
+      return `HTTP ${summary.status ?? "?"} — server returned non-JSON (likely a crash)`;
+    case "http":
+    default: {
+      const s = summary.status ?? "?";
+      return `HTTP ${s} from /api/bootstrap`;
+    }
+  }
+}
+
+function WorkspaceBootstrapErrorPanel({
+  errorSummary,
+}: {
+  errorSummary: WorkspaceBootstrapErrorSummary | null;
+}) {
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const headline = formatBootstrapErrorHeadline(errorSummary);
+
+  const copyPayload = useMemo(() => {
+    if (!errorSummary) return WORKSPACE_BOOTSTRAP_ERROR_COPY;
+    const lines = [
+      WORKSPACE_BOOTSTRAP_ERROR_COPY,
+      "",
+      "Diagnostics:",
+      `- cause: ${errorSummary.cause}`,
+    ];
+    if (errorSummary.status != null) lines.push(`- status: ${errorSummary.status}`);
+    if (errorSummary.message) lines.push(`- server message: ${errorSummary.message}`);
+    return lines.join("\n");
+  }, [errorSummary]);
 
   const onCopyDetails = useCallback(async () => {
     const markCopied = () => {
@@ -1727,12 +1797,12 @@ function WorkspaceBootstrapErrorPanel() {
       }, 2500);
     };
     try {
-      await navigator.clipboard.writeText(WORKSPACE_BOOTSTRAP_ERROR_COPY);
+      await navigator.clipboard.writeText(copyPayload);
       markCopied();
     } catch {
       try {
         const ta = document.createElement("textarea");
-        ta.value = WORKSPACE_BOOTSTRAP_ERROR_COPY;
+        ta.value = copyPayload;
         ta.setAttribute("readonly", "");
         ta.style.position = "fixed";
         ta.style.left = "-9999px";
@@ -1745,7 +1815,7 @@ function WorkspaceBootstrapErrorPanel() {
         window.alert("Could not copy automatically — select the text in the box and press Ctrl+C (⌘C on Mac).");
       }
     }
-  }, []);
+  }, [copyPayload]);
 
   useEffect(
     () => () => {
@@ -1778,6 +1848,20 @@ function WorkspaceBootstrapErrorPanel() {
           Nothing was removed from your account — we could not open a database-backed workspace from
           this session. Use the message below for setup or support.
         </p>
+        {headline ? (
+          <p
+            className={styles.neonWorkspaceUnavailableFoot}
+            data-testid="hg-ws-err-headline"
+          >
+            <span className={styles.monoSmall}>{headline}</span>
+            {errorSummary?.message ? (
+              <>
+                {" — "}
+                <span className={styles.monoSmall}>{errorSummary.message}</span>
+              </>
+            ) : null}
+          </p>
+        ) : null}
         <div className={styles.neonWorkspaceUnavailableCopySection}>
           <div className={styles.neonWorkspaceUnavailableCopyToolbar}>
             <span id="hg-ws-err-copy-label" className={styles.neonWorkspaceUnavailableCopyLabel}>
@@ -1795,7 +1879,7 @@ function WorkspaceBootstrapErrorPanel() {
             </ArchitecturalButton>
           </div>
           <pre className={styles.neonWorkspaceUnavailablePre} tabIndex={0}>
-            {WORKSPACE_BOOTSTRAP_ERROR_COPY}
+            {copyPayload}
           </pre>
         </div>
         <p className={styles.neonWorkspaceUnavailableFoot}>
@@ -1931,6 +2015,14 @@ export function ArchitecturalCanvasApp({
   const [neonWorkspaceOk, setNeonWorkspaceOk] = useState<boolean | null>(() =>
     scenario === "default" ? null : true,
   );
+  /**
+   * Last failed `/api/bootstrap` attempt (status + short server message).
+   * Used by {@link WorkspaceBootstrapErrorPanel} so the blocking overlay shows **why** — a
+   * schema-drift 500 must not look the same as a 403 or an offline network. Cleared on
+   * every successful live bootstrap (see `ingestLiveBootstrap` setter usage).
+   */
+  const [bootstrapErrorSummary, setBootstrapErrorSummary] =
+    useState<WorkspaceBootstrapErrorSummary | null>(null);
   /** True when the canvas is hydrated from localStorage because live bootstrap failed (still looks “loaded”). */
   const [workspaceViewFromCache, setWorkspaceViewFromCache] = useState(false);
   const [navTransitionActive, setNavTransitionActive] = useState(false);
@@ -5255,14 +5347,27 @@ export function ArchitecturalCanvasApp({
 
     let cancelled = false;
     void (async () => {
+      let failure: Extract<BootstrapFetchDetail, { ok: false }> | null = null;
       try {
-        const data = await fetchBootstrap();
-        if (cancelled || !data || data.demo !== false || !data.spaceId) {
-          throw new Error("demo");
-        }
-        ingestLiveBootstrap(data);
-      } catch {
+        const result = await fetchBootstrapDetailed();
         if (cancelled) return;
+        if (result.ok) {
+          setBootstrapErrorSummary(null);
+          ingestLiveBootstrap(result.data);
+        } else {
+          failure = result;
+        }
+      } catch (e) {
+        /* `ingestLiveBootstrap` crashed or `fetchBootstrapDetailed` rethrew (AbortError). */
+        if (cancelled || (e instanceof DOMException && e.name === "AbortError")) return;
+        failure = {
+          ok: false,
+          cause: "network",
+          message: e instanceof Error ? e.message : String(e),
+        };
+      }
+      if (failure) {
+        setBootstrapErrorSummary(summarizeBootstrapError(failure));
         const b = heartgardenBootApiRef.current;
         const strictGmWorkspace = !b.gateEnabled || b.sessionTier === "access";
         const skipCache =
@@ -5354,6 +5459,7 @@ export function ArchitecturalCanvasApp({
       try {
         const data = await fetchBootstrap();
         if (cancelled || !data || data.demo !== false || !data.spaceId) return;
+        setBootstrapErrorSummary(null);
         ingestLiveBootstrap(data);
       } catch {
         /* keep cached view */
@@ -10908,7 +11014,9 @@ export function ArchitecturalCanvasApp({
             bootstrapPending={scenario === "default" && !canvasBootstrapResolved}
           />
         ) : null}
-        {showWorkspaceBlockingOverlay ? <WorkspaceBootstrapErrorPanel /> : null}
+        {showWorkspaceBlockingOverlay ? (
+          <WorkspaceBootstrapErrorPanel errorSummary={bootstrapErrorSummary} />
+        ) : null}
         <div
           className={`${styles.chromeLayer}${bootPreActivateGate ? ` ${styles.chromeLayerBootSuppressed}` : ""}`}
         >

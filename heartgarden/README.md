@@ -19,7 +19,7 @@ Copy [`.env.local.example`](.env.local.example) to `.env.local` for database, op
 
 Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 
-**Neon + vault index (automated):** From this folder, **`npm run db:vault-setup`** runs pgvector, **`drizzle-kit push --force`**, and the vault SQL migration (see [`docs/FOLLOW_UP.md`](docs/FOLLOW_UP.md)). When **`OPENAI_API_KEY`** is set, **`src/lib/embedding-provider.ts`** writes chunk vectors with OpenAI embeddings (default **`text-embedding-3-small`**); without it, vault reindex still refreshes lexical search data and lore meta, and hybrid/semantic modes fall back to lexical-only retrieval. GitHub: manual workflow **`heartgarden-db-vault.yml`** + secret **`HEARTGARDEN_NEON_DATABASE_URL`**.
+**Neon + vault index (automated):** From this folder, **`npm run db:vault-setup`** runs pgvector, **`drizzle-kit push --force`**, and replays every file in **`drizzle/migrations/`** in order via **`db:vault-sql`** (idempotent; new `.sql` files get picked up automatically). See [`docs/FOLLOW_UP.md`](docs/FOLLOW_UP.md). When **`OPENAI_API_KEY`** is set, **`src/lib/embedding-provider.ts`** writes chunk vectors with OpenAI embeddings (default **`text-embedding-3-small`**); without it, vault reindex still refreshes lexical search data and lore meta, and hybrid/semantic modes fall back to lexical-only retrieval. GitHub: manual workflow **`heartgarden-db-vault.yml`** + secret **`HEARTGARDEN_NEON_DATABASE_URL`**.
 
 ## Scripts
 
@@ -32,7 +32,7 @@ Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 | `npm run build` | Production build |
 | `npm run db:push` | Push Drizzle schema to Neon (interactive) |
 | `npm run db:push:force` | `drizzle-kit push --force` (CI / automation; review data-loss prompts before using on prod) |
-| `npm run db:vault-sql` | Apply `drizzle/migrations/0003_vault_embeddings_lore_meta.sql` via `pg` (HNSW fallback if unsupported) |
+| `npm run db:vault-sql` | Apply every `drizzle/migrations/*.sql` file in order via `pg` (idempotent — `IF NOT EXISTS` guards; HNSW fallback if unsupported). Applies extensions / custom indexes / backfills that `drizzle-kit push` cannot express. |
 | `npm run db:vault-setup` | **`db:ensure-pgvector`** → **`db:push:force`** → **`db:vault-sql`** |
 | `npm run vault:reindex` | HTTP fan-out to **`POST /api/items/:id/index`** for every item (app must be up; see `.env.local.example` for `VAULT_REINDEX_*`) |
 | `npm run mcp` | MCP stdio tools (**`heartgarden_*`**, e.g. **`heartgarden_list_items`**, **`heartgarden_search`**, **`heartgarden_graph`**; legacy **`vigil_*`** aliases still work on call) — needs app reachable at `HEARTGARDEN_APP_URL` (default `http://localhost:3000`). Hosted Streamable HTTP: **`GET|POST|DELETE /api/mcp`** with **`Authorization: Bearer HEARTGARDEN_MCP_SERVICE_KEY`** (see **`AGENTS.md`**). |

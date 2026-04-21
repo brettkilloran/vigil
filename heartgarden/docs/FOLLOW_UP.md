@@ -35,9 +35,9 @@ related:
 
 ## Database & Neon hygiene
 
-- **`canvas_presence`:** Required in Postgres for **`/api/spaces/[spaceId]/presence`**. After schema changes, **`npm run db:push`** from **`heartgarden/`**. Legacy **`space_presence`** is obsolete; code uses **`canvas_presence`** only.
+- **`canvas_presence`:** Required in Postgres for **`/api/spaces/[spaceId]/presence`**. Created by both **`npm run db:push`** (schema) and **`drizzle/migrations/0009_canvas_presence.sql`** (replayed by **`db:vault-sql`**). Legacy **`space_presence`** is obsolete; code uses **`canvas_presence`** only.
 - **Legacy `canvas_state`:** Old DBs may still hold full tldraw JSON — migrate or reset per **`docs/STRATEGY.md`** / **`docs/MIGRATION.md`**.
-- **Vault setup:** **`npm run db:vault-setup`** from **`heartgarden/`** (pgvector + Drizzle push + vault SQL). See **`heartgarden/AGENTS.md`** for full sequence.
+- **Vault setup:** **`npm run db:vault-setup`** from **`heartgarden/`** (pgvector + Drizzle push + SQL migration replay). **`db:vault-sql`** iterates every **`drizzle/migrations/*.sql`** in lex order; each file is idempotent, so running setup on each environment (local, Preview, Production) after schema / migration changes is safe and required. See **`heartgarden/AGENTS.md`** for full sequence.
 - **Vault reindex:** **`npm run vault:reindex`** (app running) refreshes per-item index / lore meta per implementation. Optional: **`VAULT_REINDEX_*`**, **`HEARTGARDEN_APP_URL`**, **`VAULT_REINDEX_DRY=1`**.
 
 ---

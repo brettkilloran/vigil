@@ -37,10 +37,14 @@ Schema and extensions apply **on Neon**, not inside Vercel’s build. Use this w
 
 4. In Vercel, add **`NEON_DATABASE_URL`** scoped to **Preview** only with the Preview branch URL. **Do not** reuse Production’s URL on Preview if you want isolation.
 
-## 3. GitHub Actions (optional)
+## 3. After every schema / migration change
+
+**`npm run db:vault-setup`** replays **every** `.sql` file under **`drizzle/migrations/`** in lex order (each is idempotent). Run it against **every** target DB URL that should match the new code — local, Preview branch, Production — before redeploying code that depends on the new schema. Skipping Production is what causes **`/api/bootstrap`** to 500 with **`column … does not exist`**. The manual GitHub Actions workflow below is the hands‑off way to do this for a chosen URL.
+
+## 4. GitHub Actions (optional)
 
 To apply vault SQL from CI against a chosen database, use **`.github/workflows/heartgarden-db-vault.yml`** with secret **`HEARTGARDEN_NEON_DATABASE_URL`** — run separately for prod vs preview URLs if you automate both.
 
-## 4. After deploy
+## 5. After deploy
 
 - Vault reindex (optional): with the **deployed** app URL, run **`npm run vault:reindex`** locally with **`HEARTGARDEN_APP_URL`** set to your Vercel origin (see [`FOLLOW_UP.md`](./FOLLOW_UP.md)).

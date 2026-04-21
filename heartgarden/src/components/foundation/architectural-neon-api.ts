@@ -152,14 +152,109 @@ export type ApiPatchItemResult =
   | { ok: false; gone: true }
   | { ok: false; error?: string };
 
+/**
+ * Why: when `/api/bootstrap` fails, the shell needs the **reason** (HTTP status +
+ * short server message) so {@link WorkspaceBootstrapErrorPanel} can render it
+ * instead of a generic "could not load workspace" — which hides schema drift,
+ * forbidden sessions, and real outages behind the same string. Keep
+ * {@link fetchBootstrap} as the legacy thin wrapper so existing callers that
+ * only care about "did we get a live workspace" do not change.
+ *
+ * Causes:
+ *   - `demo`: server returned `{ ok: true, demo: true }` (DB unconfigured or Playwright E2E).
+ *   - `forbidden`: HTTP 403 (player layer blocked / mis-scoped session).
+ *   - `http`: HTTP !ok (4xx/5xx) with or without a JSON body.
+ *   - `parse`: server returned non-JSON (often the 500 empty-body path).
+ *   - `network`: `fetch` threw (offline, DNS, TLS, CORS, etc.). `AbortError` is rethrown so
+ *      caller-side cancellation logic keeps working.
+ */
+export type BootstrapFetchDetail =
+  | { ok: true; data: BootstrapResponse & { demo: false; spaceId: string } }
+  | { ok: false; cause: "demo"; status: number; data: BootstrapResponse }
+  | { ok: false; cause: "forbidden"; status: number; message?: string }
+  | { ok: false; cause: "http"; status: number; message?: string }
+  | { ok: false; cause: "parse"; status: number }
+  | { ok: false; cause: "network"; message: string };
+
+function extractServerErrorMessage(body: unknown): string | undefined {
+  if (body && typeof body === "object") {
+    const err = (body as { error?: unknown }).error;
+    if (typeof err === "string" && err.trim()) return err.trim();
+  }
+  return undefined;
+}
+
+export async function fetchBootstrapDetailed(
+  spaceId?: string,
+  options?: { signal?: AbortSignal },
+): Promise<BootstrapFetchDetail> {
+  const q = spaceId ? `?space=${encodeURIComponent(spaceId)}` : "";
+  let res: Response;
+  try {
+    res = await fetch(`/api/bootstrap${q}`, { signal: options?.signal });
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") throw e;
+    return {
+      ok: false,
+      cause: "network",
+      message: e instanceof Error ? e.message : String(e),
+    };
+  }
+
+  const rawText = await res.text();
+  let body: unknown = null;
+  if (rawText.trim()) {
+    try {
+      body = JSON.parse(rawText);
+    } catch {
+      return { ok: false, cause: "parse", status: res.status };
+    }
+  }
+
+  if (!res.ok) {
+    const message = extractServerErrorMessage(body);
+    if (res.status === 403) {
+      return { ok: false, cause: "forbidden", status: res.status, message };
+    }
+    return { ok: false, cause: "http", status: res.status, message };
+  }
+
+  const data = (body as BootstrapResponse | null) ?? null;
+  if (!data || data.ok !== true) {
+    return {
+      ok: false,
+      cause: "http",
+      status: res.status,
+      message: extractServerErrorMessage(body) ?? "Response ok=false",
+    };
+  }
+  if (data.demo === true || !data.spaceId) {
+    return { ok: false, cause: "demo", status: res.status, data };
+  }
+  return {
+    ok: true,
+    data: data as BootstrapResponse & { demo: false; spaceId: string },
+  };
+}
+
+/**
+ * Legacy thin wrapper: returns a {@link BootstrapResponse} for any 200 + `ok: true`
+ * payload (live **or** demo), and `null` for HTTP errors with a JSON body.
+ * Throws for network failures / non-JSON 5xx so existing try/catch paths keep
+ * working. New code should prefer {@link fetchBootstrapDetailed}.
+ */
 export async function fetchBootstrap(
   spaceId?: string,
   options?: { signal?: AbortSignal },
 ): Promise<BootstrapResponse | null> {
-  const q = spaceId ? `?space=${encodeURIComponent(spaceId)}` : "";
-  const res = await fetch(`/api/bootstrap${q}`, { signal: options?.signal });
-  const data = (await res.json()) as BootstrapResponse;
-  return data.ok ? data : null;
+  const result = await fetchBootstrapDetailed(spaceId, options);
+  if (result.ok) return result.data;
+  if (result.cause === "demo") return result.data;
+  if (result.cause === "forbidden" || result.cause === "http") return null;
+  if (result.cause === "parse") {
+    throw new Error(`Bootstrap returned non-JSON (status ${result.status})`);
+  }
+  throw new Error(`Bootstrap network error: ${result.message}`);
 }
 
 export type { SpaceChangePayloadRow };
