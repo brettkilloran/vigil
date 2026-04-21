@@ -2,6 +2,11 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { verifyBootSessionCookie } from "@/src/lib/heartgarden-boot-session";
 import { heartgardenRealtimeSecretFromEnv } from "@/src/lib/heartgarden-realtime-config";
+export {
+  HEARTGARDEN_REALTIME_WS_PROTOCOL,
+  heartgardenRealtimeSocketProtocols,
+  heartgardenRealtimeTokenFromProtocolsHeader,
+} from "@/src/lib/heartgarden-realtime-protocol";
 
 type HeartgardenRealtimeTokenPayload = {
   spaceId: string;
@@ -78,12 +83,6 @@ export function verifyHeartgardenRealtimeRoomToken(
     exp: raw.exp,
     role: raw.role,
   };
-}
-
-export function heartgardenRealtimeSocketAuthHeader(cookieValue: string | undefined): string | null {
-  const raw = (cookieValue ?? "").trim();
-  if (!raw) return null;
-  return raw;
 }
 
 export function heartgardenRealtimeRoleFromBootCookie(

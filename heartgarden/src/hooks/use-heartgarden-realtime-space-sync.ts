@@ -8,6 +8,7 @@ import {
   recordRealtimeWsConnect,
   recordRealtimeWsDisconnect,
 } from "@/src/lib/heartgarden-collab-metrics";
+import { heartgardenRealtimeSocketProtocols } from "@/src/lib/heartgarden-realtime-protocol";
 
 export function useHeartgardenRealtimeSpaceSync(options: {
   enabled: boolean;
@@ -78,7 +79,10 @@ export function useHeartgardenRealtimeSpaceSync(options: {
           scheduleReconnect();
           return;
         }
-        ws = new WebSocket(`${tokenJson.realtimeUrl}?token=${encodeURIComponent(tokenJson.token)}`);
+        ws = new WebSocket(
+          tokenJson.realtimeUrl,
+          heartgardenRealtimeSocketProtocols(tokenJson.token),
+        );
         ws.onopen = () => {
           reconnectAttempt = 0;
           connectedRef.current = true;
