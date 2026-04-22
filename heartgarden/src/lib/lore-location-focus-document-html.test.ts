@@ -4,13 +4,18 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  LOCATION_TOP_FIELD_CHAR_CAPS,
+  computeLocationTopFieldPasteInsertText,
   extractLocationMetaFocusShellHtml,
   focusDocumentHtmlToLocationBody,
   locationBodyToFocusDocumentHtml,
+  normalizeLocationTopFieldPlain,
   parseLocationFocusDocumentHtml,
   parseLocationOrdoV7BodyPlainFields,
   plainPlaceNameFromLocationBodyHtml,
   readLocationFocusPartsFromMetaHost,
+  shouldBlockLocationTopFieldBeforeInput,
+  trimLocationTopFieldForImport,
 } from "@/src/lib/lore-location-focus-document-html";
 import { getLoreNodeSeedBodyHtml, shouldRenderLoreLocationCanvasNode } from "@/src/lib/lore-node-seed-html";
 
@@ -176,5 +181,81 @@ describe("shouldRenderLoreLocationCanvasNode", () => {
         loreCard: { kind: "character", variant: "v11" },
       }),
     ).toBe(false);
+  });
+});
+
+function makeEditableHost(text: string): HTMLDivElement {
+  const el = document.createElement("div");
+  el.setAttribute("contenteditable", "true");
+  el.textContent = text;
+  document.body.appendChild(el);
+  return el;
+}
+
+function setTextSelection(el: HTMLElement, start: number, end: number) {
+  const node = el.firstChild;
+  if (!(node instanceof Text)) return;
+  const sel = document.getSelection();
+  if (!sel) return;
+  const range = document.createRange();
+  range.setStart(node, start);
+  range.setEnd(node, end);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+describe("location top field caps", () => {
+  it("trims import fields to tight caps", () => {
+    const rawName = `  ${"N".repeat(80)}  `;
+    const rawContext = `${"C".repeat(90)}`;
+    const rawDetail = `${"D".repeat(120)}`;
+    const name = trimLocationTopFieldForImport("name", rawName);
+    const context = trimLocationTopFieldForImport("context", rawContext);
+    const detail = trimLocationTopFieldForImport("detail", rawDetail);
+    expect(name.value.length).toBe(LOCATION_TOP_FIELD_CHAR_CAPS.name);
+    expect(context.value.length).toBe(LOCATION_TOP_FIELD_CHAR_CAPS.context);
+    expect(detail.value.length).toBe(LOCATION_TOP_FIELD_CHAR_CAPS.detail);
+    expect(name.wasTrimmed).toBe(true);
+    expect(context.wasTrimmed).toBe(true);
+    expect(detail.wasTrimmed).toBe(true);
+  });
+
+  it("normalizes whitespace in top fields", () => {
+    expect(normalizeLocationTopFieldPlain("name", "  ORDO   DELTA  ")).toBe("ORDO DELTA");
+    expect(normalizeLocationTopFieldPlain("context", "  one \n\n two   ")).toBe("one two");
+    expect(normalizeLocationTopFieldPlain("detail", " \t deep   vault ")).toBe("deep vault");
+  });
+
+  it("blocks insertions beyond cap, allows deletions", () => {
+    const capped = makeEditableHost("N".repeat(LOCATION_TOP_FIELD_CHAR_CAPS.name));
+    const insert = new InputEvent("beforeinput", {
+      inputType: "insertText",
+      data: "X",
+    });
+    expect(shouldBlockLocationTopFieldBeforeInput("name", capped, insert)).toBe(true);
+    const del = new InputEvent("beforeinput", {
+      inputType: "deleteContentBackward",
+    });
+    expect(shouldBlockLocationTopFieldBeforeInput("name", capped, del)).toBe(false);
+  });
+
+  it("allows replacements that shorten legacy over-limit text", () => {
+    const legacy = makeEditableHost("D".repeat(120));
+    setTextSelection(legacy, 0, 50);
+    const insert = new InputEvent("beforeinput", {
+      inputType: "insertText",
+      data: "short",
+    });
+    expect(shouldBlockLocationTopFieldBeforeInput("detail", legacy, insert)).toBe(false);
+  });
+
+  it("clips paste to available room for capped fields", () => {
+    const el = makeEditableHost("C".repeat(70));
+    const clipped = computeLocationTopFieldPasteInsertText(
+      "context",
+      el,
+      "ABCD1234",
+    );
+    expect(clipped).toBe("AB");
   });
 });

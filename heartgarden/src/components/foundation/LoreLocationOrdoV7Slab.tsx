@@ -2,7 +2,7 @@
 
 import { ArrowsOutSimple } from "@phosphor-icons/react";
 import type { JSONContent } from "@tiptap/core";
-import type { MutableRefObject } from "react";
+import type { ClipboardEvent as ReactClipboardEvent, DragEvent as ReactDragEvent, MutableRefObject } from "react";
 import {
   forwardRef,
   memo,
@@ -23,8 +23,11 @@ import { htmlFragmentToHgDocDoc } from "@/src/lib/hg-doc/html-to-doc";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
 import {
   LORE_V11_PH_LOCATION_PLACEHOLDER,
+  computeLocationTopFieldPasteInsertText,
+  insertPlainTextIntoContentEditable,
   normalizeLocOrdoV7NameField,
   parseLocationOrdoV7BodyPlainFields,
+  shouldBlockLocationTopFieldBeforeInput,
 } from "@/src/lib/lore-location-focus-document-html";
 import { splitOrdoV7DisplayName } from "@/src/lib/lore-location-ordo-display-name";
 import {
@@ -69,6 +72,25 @@ function fillOrdoV7SingleLineFieldDOM(el: HTMLElement, raw: string) {
     return;
   }
   el.textContent = t;
+}
+
+function handleTopFieldPaste(
+  field: "name" | "context" | "detail",
+  e: ReactClipboardEvent<HTMLElement>,
+) {
+  const el = e.currentTarget as HTMLElement;
+  const clipped = computeLocationTopFieldPasteInsertText(
+    field,
+    el,
+    e.clipboardData.getData("text/plain"),
+  );
+  e.preventDefault();
+  if (!clipped) return;
+  insertPlainTextIntoContentEditable(el, clipped);
+}
+
+function handleTopFieldDrop(e: ReactDragEvent<HTMLElement>) {
+  e.preventDefault();
 }
 
 /** Same grid as lab `FAC_ORDO_PIXEL_GRID`. */
@@ -209,12 +231,25 @@ const TitleAndContext = memo(function TitleAndContext({
           onBeforeInput={(e) => {
             if (!editable) return;
             const el = e.currentTarget as HTMLElement;
-            if (e instanceof InputEvent && consumeLorePlaceholderBeforeInput(el, e)) {
+            const native = e.nativeEvent;
+            if (native instanceof InputEvent && shouldBlockLocationTopFieldBeforeInput("name", el, native)) {
+              e.preventDefault();
+              return;
+            }
+            if (native instanceof InputEvent && consumeLorePlaceholderBeforeInput(el, native)) {
               queueMicrotask(() => {
                 const t = el.innerText.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
                 onNameCommit(normalizeLocOrdoV7NameField(t));
               });
             }
+          }}
+          onPaste={(e) => {
+            if (!editable) return;
+            handleTopFieldPaste("name", e);
+          }}
+          onDrop={(e) => {
+            if (!editable) return;
+            handleTopFieldDrop(e);
           }}
           onBlur={(e) => {
             nameFocusedRef.current = false;
@@ -245,11 +280,24 @@ const TitleAndContext = memo(function TitleAndContext({
           onBeforeInput={(e) => {
             if (!editable) return;
             const el = e.currentTarget as HTMLElement;
-            if (e instanceof InputEvent && consumeLorePlaceholderBeforeInput(el, e)) {
+            const native = e.nativeEvent;
+            if (native instanceof InputEvent && shouldBlockLocationTopFieldBeforeInput("context", el, native)) {
+              e.preventDefault();
+              return;
+            }
+            if (native instanceof InputEvent && consumeLorePlaceholderBeforeInput(el, native)) {
               queueMicrotask(() => {
                 onContextCommit(el.innerText.replace(/\s+/g, " ").trim());
               });
             }
+          }}
+          onPaste={(e) => {
+            if (!editable) return;
+            handleTopFieldPaste("context", e);
+          }}
+          onDrop={(e) => {
+            if (!editable) return;
+            handleTopFieldDrop(e);
           }}
           onBlur={(e) => {
             ctxFocusedRef.current = false;
@@ -298,6 +346,22 @@ const DetailLine = memo(
         suppressContentEditableWarning
         onFocus={() => {
           focusedRef.current = true;
+        }}
+        onBeforeInput={(e) => {
+          if (!editable) return;
+          const native = e.nativeEvent;
+          if (!(native instanceof InputEvent)) return;
+          if (shouldBlockLocationTopFieldBeforeInput("detail", e.currentTarget, native)) {
+            e.preventDefault();
+          }
+        }}
+        onPaste={(e) => {
+          if (!editable) return;
+          handleTopFieldPaste("detail", e);
+        }}
+        onDrop={(e) => {
+          if (!editable) return;
+          handleTopFieldDrop(e);
         }}
         onBlur={(e) => {
           focusedRef.current = false;

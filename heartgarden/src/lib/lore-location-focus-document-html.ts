@@ -15,6 +15,14 @@ const DEFAULT_NOTES_HTML = "<p><br></p>";
 /** v11 `data-hg-lore-ph` caption for empty ORDO v7 placename (guest-check strip + ::before; not real title text). */
 export const LORE_V11_PH_LOCATION_PLACEHOLDER = "PLACENAME";
 
+export const LOCATION_TOP_FIELD_CHAR_CAPS = {
+  name: 64,
+  context: 72,
+  detail: 96,
+} as const;
+
+export type LocationTopFieldKey = keyof typeof LOCATION_TOP_FIELD_CHAR_CAPS;
+
 /** Legacy v2/v3 seed HTML used this literal in `[data-hg-lore-location-field="name"]` — not a real placename. */
 const LEGACY_LOC_SEED_PLACEHOLDER_LABEL = /^place name$/i;
 const LEGACY_LOC_SEED_PLACEHOLDER_PREFIX_SP = /^place name\s+/i;
@@ -59,6 +67,152 @@ export function normalizeLocOrdoV7NameField(raw: string): string {
   if (t.toUpperCase() === LORE_V11_PH_LOCATION_PLACEHOLDER.toUpperCase()) return "";
   if (t.toUpperCase() === ORDO_V7_EMPTY_NAME_SENTINEL.toUpperCase()) return "";
   return t;
+}
+
+export function normalizeLocationTopFieldPlain(
+  field: LocationTopFieldKey,
+  raw: string,
+): string {
+  const collapsed = raw.replace(/\s+/g, " ").trim();
+  if (field === "name") return normalizeLocOrdoV7NameField(collapsed);
+  return collapsed;
+}
+
+export function trimLocationTopFieldForImport(
+  field: LocationTopFieldKey,
+  raw: string,
+): {
+  value: string;
+  wasTrimmed: boolean;
+  cap: number;
+} {
+  const normalized = normalizeLocationTopFieldPlain(field, raw);
+  const cap = LOCATION_TOP_FIELD_CHAR_CAPS[field];
+  if (normalized.length <= cap) {
+    return { value: normalized, wasTrimmed: false, cap };
+  }
+  return {
+    value: normalized.slice(0, cap).trimEnd(),
+    wasTrimmed: true,
+    cap,
+  };
+}
+
+function readLocationTopFieldPlainFromElement(
+  field: LocationTopFieldKey,
+  el: HTMLElement,
+): string {
+  const domText = typeof el.innerText === "string" ? el.innerText : (el.textContent ?? "");
+  const raw = field === "name" ? domText.replace(/\n/g, " ") : domText;
+  return normalizeLocationTopFieldPlain(field, raw);
+}
+
+function selectionWithinElement(sel: Selection, el: HTMLElement): boolean {
+  return !!sel.anchorNode && !!sel.focusNode && el.contains(sel.anchorNode) && el.contains(sel.focusNode);
+}
+
+function selectedPlainLengthInElement(
+  field: LocationTopFieldKey,
+  el: HTMLElement,
+): number {
+  const sel = el.ownerDocument.getSelection();
+  if (!sel || sel.rangeCount === 0 || !selectionWithinElement(sel, el)) return 0;
+  const selectedRaw = field === "name" ? sel.toString().replace(/\n/g, " ") : sel.toString();
+  return normalizeLocationTopFieldPlain(field, selectedRaw).length;
+}
+
+function isDeletionInputType(inputType: string): boolean {
+  return inputType.startsWith("delete");
+}
+
+function isInsertionInputType(inputType: string): boolean {
+  return inputType.startsWith("insert");
+}
+
+function normalizedInsertionTextForBeforeInput(
+  field: LocationTopFieldKey,
+  event: InputEvent,
+): string {
+  if (event.inputType === "insertParagraph" || event.inputType === "insertLineBreak") {
+    return " ";
+  }
+  const raw = event.data ?? event.dataTransfer?.getData("text/plain") ?? "";
+  return normalizeLocationTopFieldPlain(field, raw);
+}
+
+function maxInsertLength(
+  field: LocationTopFieldKey,
+  currentLength: number,
+  baseLength: number,
+): number {
+  const cap = LOCATION_TOP_FIELD_CHAR_CAPS[field];
+  if (currentLength > cap) {
+    // Legacy over-limit content is allowed to remain, but new insertions must not grow it further.
+    return Math.max(0, currentLength - baseLength);
+  }
+  return Math.max(0, cap - baseLength);
+}
+
+export function shouldBlockLocationTopFieldBeforeInput(
+  field: LocationTopFieldKey,
+  el: HTMLElement,
+  event: InputEvent,
+): boolean {
+  if (isDeletionInputType(event.inputType)) return false;
+  if (!isInsertionInputType(event.inputType)) return false;
+  const currentLength = readLocationTopFieldPlainFromElement(field, el).length;
+  const selectedLength = Math.min(
+    currentLength,
+    selectedPlainLengthInElement(field, el),
+  );
+  const baseLength = Math.max(0, currentLength - selectedLength);
+  const incomingLength = normalizedInsertionTextForBeforeInput(field, event).length;
+  return incomingLength > maxInsertLength(field, currentLength, baseLength);
+}
+
+export function computeLocationTopFieldPasteInsertText(
+  field: LocationTopFieldKey,
+  el: HTMLElement,
+  rawClipboardText: string,
+): string {
+  const incoming = normalizeLocationTopFieldPlain(field, rawClipboardText);
+  if (!incoming) return "";
+  const currentLength = readLocationTopFieldPlainFromElement(field, el).length;
+  const selectedLength = Math.min(
+    currentLength,
+    selectedPlainLengthInElement(field, el),
+  );
+  const baseLength = Math.max(0, currentLength - selectedLength);
+  const maxLen = maxInsertLength(field, currentLength, baseLength);
+  if (maxLen <= 0) return "";
+  return incoming.slice(0, maxLen);
+}
+
+export function insertPlainTextIntoContentEditable(
+  el: HTMLElement,
+  text: string,
+): void {
+  if (!text) return;
+  el.focus();
+  const doc = el.ownerDocument;
+  try {
+    if (typeof doc.execCommand === "function" && doc.execCommand("insertText", false, text)) {
+      return;
+    }
+  } catch {
+    // Fall through to manual range insertion.
+  }
+  const sel = doc.getSelection();
+  if (!sel || sel.rangeCount === 0 || !selectionWithinElement(sel, el)) {
+    el.appendChild(doc.createTextNode(text));
+    return;
+  }
+  const range = sel.getRangeAt(0);
+  range.deleteContents();
+  range.insertNode(doc.createTextNode(text));
+  range.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(range);
 }
 
 function parseWrapped(html: string): HTMLElement | null {

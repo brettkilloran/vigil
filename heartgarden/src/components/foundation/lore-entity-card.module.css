@@ -4297,6 +4297,16 @@
   word-spacing: 0.12em;
 }
 
+.locOrdoV7Root
+  .locOrdoV7DisplayTitle[data-hg-lore-location-field="name"]:not([data-hg-lore-placeholder="true"]):not(:focus):not(:focus-within) {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 /* Empty placename: character v11 display-name parity — caption ::before + dual-line guest-check ::after. */
 .locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"][data-hg-lore-ph] {
   position: relative;
@@ -4404,6 +4414,14 @@
   text-transform: uppercase;
   font-variant-ligatures: none;
   color: var(--loc-ordo-accent);
+}
+
+.locOrdoV7Root
+  .locOrdoV7ContextLine:not([data-hg-lore-placeholder="true"]):not(:focus):not(:focus-within) {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Empty context: character v11 meta parity — `data-hg-lore-ph` caption + marker strip (::after). */
@@ -4519,6 +4537,13 @@
   color: var(--loc-ordo-accent);
   padding: 0 0 0.55em;
   border-bottom: 1px solid color-mix(in oklch, var(--loc-ordo-accent) 14%, transparent);
+}
+
+.locOrdoV7Root .locOrdoV7DetailLine:not(:focus):not(:focus-within) {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .locOrdoV7NotesCell {

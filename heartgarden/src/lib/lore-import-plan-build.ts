@@ -23,6 +23,7 @@ import type { LoreImportProgressReporter } from "@/src/lib/lore-import-progress"
 import { computeLoreImportPipelinePercent } from "@/src/lib/lore-import-pipeline-progress";
 import type { IngestionSignals, LoreImportPlan } from "@/src/lib/lore-import-plan-types";
 import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
+import { LOCATION_TOP_FIELD_CHAR_CAPS } from "@/src/lib/lore-location-focus-document-html";
 import type { HeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
 import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
 import type { SearchFilters, VigilDb } from "@/src/lib/spaces";
@@ -99,10 +100,27 @@ export async function buildLoreImportPlan(args: {
   });
   ensureOutlineHasFallbackNote(outline, chunks);
   const chunkDiagnostics = attachBodiesToOutline(outline, chunks);
+  const locationTopFieldTrimWarnings: string[] = [];
 
   const notesInternal: OutlineNoteInternal[] = outline.notes.map((n) => ({
-    ...n,
-    bodyText: renderStructuredBodyPlainText(n.body).slice(0, 120_000) ||
+    ...(function () {
+      const locationTrimFields =
+        n.body && n.body.kind === "location"
+          ? (
+              n.body as typeof n.body & {
+                __locationTopFieldTrimmedFields?: Array<"name" | "context" | "detail">;
+              }
+            ).__locationTopFieldTrimmedFields ?? []
+          : [];
+      for (const field of locationTrimFields) {
+        locationTopFieldTrimWarnings.push(
+          `Location "${n.title}" ${field} exceeded ${LOCATION_TOP_FIELD_CHAR_CAPS[field]} chars and was trimmed during import.`,
+        );
+      }
+      return n;
+    })(),
+    bodyText:
+      renderStructuredBodyPlainText(n.body).slice(0, 120_000) ||
       String((n as { bodyText?: string }).bodyText ?? "").slice(0, 120_000),
   }));
   const titleByClientId = new Map(notesInternal.map((n) => [n.clientId, n.title]));
@@ -401,8 +419,10 @@ export async function buildLoreImportPlan(args: {
     contradictions,
     clarifications,
     importPlanWarnings:
-      linkWarnings.length > 0 || coercionWarnings.length > 0
-        ? [...coercionWarnings, ...linkWarnings]
+      linkWarnings.length > 0 ||
+      coercionWarnings.length > 0 ||
+      locationTopFieldTrimWarnings.length > 0
+        ? [...locationTopFieldTrimWarnings, ...coercionWarnings, ...linkWarnings]
         : undefined,
   };
 

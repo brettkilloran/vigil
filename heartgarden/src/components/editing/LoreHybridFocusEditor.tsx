@@ -21,10 +21,13 @@ import {
 } from "@/src/lib/lore-faction-focus-document-html";
 import {
   buildLocationFocusDocumentHtml,
+  computeLocationTopFieldPasteInsertText,
   buildLocationFocusMetaShellHtml,
   extractLocationMetaFocusShellHtml,
+  insertPlainTextIntoContentEditable,
   parseLocationFocusDocumentHtml,
   readLocationFocusPartsFromMetaHost,
+  shouldBlockLocationTopFieldBeforeInput,
   type LocationFocusParts,
 } from "@/src/lib/lore-location-focus-document-html";
 import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
@@ -45,6 +48,15 @@ function eventTargetElement(ev: Event): Element | null {
   const t = ev.target;
   if (t instanceof Element) return t;
   if (t instanceof Text && t.parentElement) return t.parentElement;
+  return null;
+}
+
+function locationTopFieldFromEl(el: Element | null): "name" | "context" | "detail" | null {
+  if (!el) return null;
+  const host = el.closest("[data-hg-lore-location-focus-field]");
+  if (!(host instanceof HTMLElement)) return null;
+  const field = host.getAttribute("data-hg-lore-location-focus-field");
+  if (field === "name" || field === "context" || field === "detail") return field;
   return null;
 }
 
@@ -305,9 +317,51 @@ export function LoreHybridFocusEditor({
       flushFromMetaDom();
     };
 
+    const onBeforeInput = (ev: Event) => {
+      if (!(ev instanceof InputEvent)) return;
+      const el = eventTargetElement(ev);
+      const field = locationTopFieldFromEl(el);
+      if (!field) return;
+      const fieldEl = el?.closest("[data-hg-lore-location-focus-field]");
+      if (!(fieldEl instanceof HTMLElement)) return;
+      if (shouldBlockLocationTopFieldBeforeInput(field, fieldEl, ev)) {
+        ev.preventDefault();
+      }
+    };
+
+    const onPaste = (ev: Event) => {
+      if (!(ev instanceof ClipboardEvent)) return;
+      const el = eventTargetElement(ev);
+      const field = locationTopFieldFromEl(el);
+      if (!field) return;
+      const fieldEl = el?.closest("[data-hg-lore-location-focus-field]");
+      if (!(fieldEl instanceof HTMLElement)) return;
+      const clipped = computeLocationTopFieldPasteInsertText(
+        field,
+        fieldEl,
+        ev.clipboardData?.getData("text/plain") ?? "",
+      );
+      ev.preventDefault();
+      if (!clipped) return;
+      insertPlainTextIntoContentEditable(fieldEl, clipped);
+    };
+
+    const onDrop = (ev: Event) => {
+      const el = eventTargetElement(ev);
+      const field = locationTopFieldFromEl(el);
+      if (!field) return;
+      ev.preventDefault();
+    };
+
+    host.addEventListener("beforeinput", onBeforeInput, true);
+    host.addEventListener("paste", onPaste, true);
+    host.addEventListener("drop", onDrop, true);
     host.addEventListener("input", onMaybeMetaEdit, true);
     host.addEventListener("compositionend", onMaybeMetaEdit, true);
     return () => {
+      host.removeEventListener("beforeinput", onBeforeInput, true);
+      host.removeEventListener("paste", onPaste, true);
+      host.removeEventListener("drop", onDrop, true);
       host.removeEventListener("input", onMaybeMetaEdit, true);
       host.removeEventListener("compositionend", onMaybeMetaEdit, true);
     };

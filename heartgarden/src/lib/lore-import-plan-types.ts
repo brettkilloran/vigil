@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { CANONICAL_ENTITY_KINDS } from "@/src/lib/lore-import-canonical-kinds";
 import { HEARTGARDEN_NATIONS } from "@/src/lib/lore-nations";
+import { LOCATION_TOP_FIELD_CHAR_CAPS } from "@/src/lib/lore-location-focus-document-html";
 
 export const ingestionSignalsSchema = z
   .object({
@@ -82,9 +83,9 @@ const loreImportCharacterBodySchema = z.object({
 
 const loreImportLocationBodySchema = z.object({
   kind: z.literal("location"),
-  name: z.string().max(255),
-  context: z.string().max(255).optional(),
-  detail: z.string().max(255).optional(),
+  name: z.string().max(LOCATION_TOP_FIELD_CHAR_CAPS.name),
+  context: z.string().max(LOCATION_TOP_FIELD_CHAR_CAPS.context).optional(),
+  detail: z.string().max(LOCATION_TOP_FIELD_CHAR_CAPS.detail).optional(),
   notesParagraphs: z.array(z.string().max(8000)).max(400),
 });
 

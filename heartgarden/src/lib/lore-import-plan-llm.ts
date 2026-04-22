@@ -9,6 +9,7 @@ import {
 } from "@/src/lib/connection-kind-colors";
 import type { SourceTextChunk } from "@/src/lib/lore-import-chunk";
 import type { IngestionSignals, LoreImportStructuredBody } from "@/src/lib/lore-import-plan-types";
+import { trimLocationTopFieldForImport } from "@/src/lib/lore-location-focus-document-html";
 import { HEARTGARDEN_NATIONS, isHeartgardenNation } from "@/src/lib/lore-nations";
 
 /** Keep chunk list JSON under this so long docs still send every chunk id to the model. */
@@ -256,13 +257,27 @@ function parseStructuredBody(
     return hasSignal ? result : undefined;
   }
   if (effectiveKind === "location") {
+    const nameTrim = trimLocationTopFieldForImport("name", String(o.name ?? ""));
+    const contextTrim = trimLocationTopFieldForImport("context", String(o.context ?? ""));
+    const detailTrim = trimLocationTopFieldForImport("detail", String(o.detail ?? ""));
+    const trimmedFields: Array<"name" | "context" | "detail"> = [];
+    if (nameTrim.wasTrimmed) trimmedFields.push("name");
+    if (contextTrim.wasTrimmed) trimmedFields.push("context");
+    if (detailTrim.wasTrimmed) trimmedFields.push("detail");
     const result: Extract<LoreImportStructuredBody, { kind: "location" }> = {
       kind: "location",
-      name: String(o.name ?? "").trim().slice(0, 255),
-      context: String(o.context ?? "").trim().slice(0, 255) || undefined,
-      detail: String(o.detail ?? "").trim().slice(0, 255) || undefined,
+      name: nameTrim.value,
+      context: contextTrim.value || undefined,
+      detail: detailTrim.value || undefined,
       notesParagraphs: toParagraphs(o.notesParagraphs),
     };
+    if (trimmedFields.length > 0) {
+      (
+        result as Extract<LoreImportStructuredBody, { kind: "location" }> & {
+          __locationTopFieldTrimmedFields?: Array<"name" | "context" | "detail">;
+        }
+      ).__locationTopFieldTrimmedFields = trimmedFields;
+    }
     const hasSignal =
       result.name.length > 0 ||
       Boolean(result.context) ||
