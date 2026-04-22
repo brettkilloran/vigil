@@ -159,6 +159,7 @@ import {
   LINK_TYPE_GROUP_HEADINGS,
 } from "@/src/lib/lore-link-types";
 import { validateClarificationAnswersForApply } from "@/src/lib/lore-import-clarifications";
+import { computeLoreImportPipelinePercent } from "@/src/lib/lore-import-pipeline-progress";
 import type {
   ClarificationAnswer,
   LoreImportClarificationItem,
@@ -536,16 +537,16 @@ type LoreImportJobProgress = {
 
 function toHumanPhaseLabel(phase?: string): string {
   const key = String(phase || "").trim().toLowerCase();
-  if (!key) return "Preparing import plan";
+  if (!key) return "Starting…";
   const labels: Record<string, string> = {
-    queued: "In queue",
-    fallback_plan: "Local planning",
-    chunking: "Analyzing document chunks",
-    outline: "Building outline",
-    vault_retrieval: "Reading related vault context",
+    queued: "Queued on the server",
+    fallback_plan: "Planning locally",
+    chunking: "Reading the document",
+    outline: "Building the outline",
+    vault_retrieval: "Gathering related vault context",
     merge: "Merging entities and notes",
-    clarify: "Preparing clarifications",
-    persist_review: "Saving review queue",
+    clarify: "Drafting clarifications",
+    persist_review: "Saving the review queue",
     failed: "Planning failed",
     ready: "Plan ready",
   };
@@ -2346,7 +2347,28 @@ export function ArchitecturalCanvasApp({
   const loreSmartPlanningUi = useMemo(() => {
     const progress = loreSmartPlanningProgress;
     const phase = String(progress?.phase ?? "").trim();
-    const percent = toPlanningPercent(progress?.step, progress?.total);
+    const metaPctRaw = progress?.meta?.pipelinePercent;
+    const metaPercent =
+      typeof metaPctRaw === "number" && Number.isFinite(metaPctRaw)
+        ? Math.round(Math.max(0, Math.min(100, metaPctRaw)))
+        : typeof metaPctRaw === "string" && metaPctRaw.trim() !== ""
+          ? (() => {
+              const n = Number(metaPctRaw);
+              return Number.isFinite(n) ? Math.round(Math.max(0, Math.min(100, n))) : null;
+            })()
+          : null;
+    const derivedPercent =
+      metaPercent ??
+      (phase
+        ? computeLoreImportPipelinePercent(phase, {
+            step: progress?.step,
+            total: progress?.total,
+          })
+        : null);
+    const percent =
+      derivedPercent !== null && Number.isFinite(derivedPercent)
+        ? derivedPercent
+        : toPlanningPercent(progress?.step, progress?.total);
     const queueFailureHintRaw = progress?.meta?.queueFailureHint;
     const queueFailureHint =
       typeof queueFailureHintRaw === "string" && queueFailureHintRaw.trim().length > 0
@@ -2362,7 +2384,7 @@ export function ArchitecturalCanvasApp({
           ? rawDetail
           : phase === "queued"
             ? null
-            : "Preparing smart import plan";
+            : "Analyzing your document…";
     return {
       phaseLabel,
       detail,
@@ -2388,9 +2410,6 @@ export function ArchitecturalCanvasApp({
   const [loreSmartClarificationAnswers, setLoreSmartClarificationAnswers] = useState<
     ClarificationAnswer[]
   >([]);
-  const [loreSmartQuestionFilter, setLoreSmartQuestionFilter] = useState<
-    "all" | "required" | "unanswered"
-  >("all");
   const [loreSmartOtherFollowUp, setLoreSmartOtherFollowUp] = useState<LoreImportOtherFollowUp | null>(
     null,
   );
@@ -2401,7 +2420,6 @@ export function ArchitecturalCanvasApp({
     setLoreSmartAcceptedMergeIds({});
     setLoreSmartClarificationAnswers([]);
     setLoreSmartOtherFollowUp(null);
-    setLoreSmartQuestionFilter("all");
     setLoreSmartTab("structure");
   }, [loreImportCommitting]);
   const cancelLoreSmartPlanning = useCallback(() => {
@@ -2454,9 +2472,13 @@ export function ArchitecturalCanvasApp({
         optionalAnswered: 0,
         requiredPending: 0,
         percent: 0,
+        barPercent: 0,
         ordered: [] as LoreImportClarificationItem[],
-        visible: [] as LoreImportClarificationItem[],
-        activeQuestion: null as LoreImportClarificationItem | null,
+        focusQuestion: null as LoreImportClarificationItem | null,
+        questionsComplete: false,
+        answeredCount: 0,
+        totalQuestions: 0,
+        wizardBarPercent: 0,
       };
     }
     const clarifications = loreSmartReview.plan.clarifications;
@@ -2469,6 +2491,14 @@ export function ArchitecturalCanvasApp({
     const requiredTotal = required.length;
     const requiredPending = requiredTotal - requiredAnswered;
     const percent = requiredTotal > 0 ? Math.round((requiredAnswered / requiredTotal) * 100) : 100;
+    const barPercent =
+      requiredTotal === 0
+        ? 100
+        : requiredAnswered >= requiredTotal
+          ? 100
+          : requiredAnswered === 0
+            ? 0
+            : Math.max(percent, 8);
     const ordered = [...clarifications].sort((a, b) => {
       const aAnswered = isClarificationAnswered(byId.get(a.id));
       const bAnswered = isClarificationAnswered(byId.get(b.id));
@@ -2478,24 +2508,37 @@ export function ArchitecturalCanvasApp({
       if (a.severity !== b.severity) return a.severity === "required" ? -1 : 1;
       return a.title.localeCompare(b.title);
     });
-    const visible = ordered.filter((c) => {
-      if (loreSmartQuestionFilter === "required") return c.severity === "required";
-      if (loreSmartQuestionFilter === "unanswered") return !isClarificationAnswered(byId.get(c.id));
-      return true;
-    });
-    const activeQuestion =
-      ordered.find((c) => !isClarificationAnswered(byId.get(c.id))) ?? ordered[0] ?? null;
+    const answeredCount = clarifications.filter((c) => isClarificationAnswered(byId.get(c.id))).length;
+    const totalQuestions = clarifications.length;
+    const focusQuestion =
+      totalQuestions === 0 ? null : ordered.find((c) => !isClarificationAnswered(byId.get(c.id))) ?? null;
+    const questionsComplete =
+      totalQuestions > 0 && clarifications.every((c) => isClarificationAnswered(byId.get(c.id)));
+    const wizardBarPercentRaw =
+      totalQuestions === 0 ? 100 : Math.round((answeredCount / totalQuestions) * 100);
+    const wizardBarPercent =
+      totalQuestions === 0
+        ? 100
+        : answeredCount >= totalQuestions
+          ? 100
+          : answeredCount === 0
+            ? 0
+            : Math.max(wizardBarPercentRaw, 6);
     return {
       requiredTotal,
       requiredAnswered,
       optionalAnswered,
       requiredPending,
       percent,
+      barPercent,
       ordered,
-      visible,
-      activeQuestion,
+      focusQuestion,
+      questionsComplete,
+      answeredCount,
+      totalQuestions,
+      wizardBarPercent,
     };
-  }, [loreSmartClarificationAnswers, loreSmartQuestionFilter, loreSmartReview]);
+  }, [loreSmartClarificationAnswers, loreSmartReview]);
   const [loreReviewPanelOpen, setLoreReviewPanelOpen] = useState(false);
   const [loreReviewLoading, setLoreReviewLoading] = useState(false);
   const [loreReviewError, setLoreReviewError] = useState<string | null>(null);
@@ -6149,7 +6192,6 @@ export function ArchitecturalCanvasApp({
       setLoreSmartReview(null);
       setLoreSmartAcceptedMergeIds({});
       setLoreSmartClarificationAnswers([]);
-      setLoreSmartQuestionFilter("all");
       setLoreSmartTab("structure");
     } catch (error) {
       reportFailure(
@@ -7709,7 +7751,6 @@ export function ArchitecturalCanvasApp({
           setLoreSmartAcceptedMergeIds({});
           setLoreSmartClarificationAnswers([]);
           setLoreSmartOtherFollowUp(null);
-          setLoreSmartQuestionFilter("all");
           setLoreSmartIncludeSource(true);
           setLoreSmartTab("structure");
           setLoreSmartPlanning(true);
@@ -11988,13 +12029,16 @@ export function ArchitecturalCanvasApp({
             className={styles.smartImportPlanningBackdrop}
             role="status"
             aria-live="polite"
-            aria-label="Building import plan"
+            aria-label="Smart import planning status"
           >
             <div className={styles.smartImportPlanningCard}>
               <div className={styles.smartImportPlanningHeader}>
-                <p className={styles.smartImportPlanningTitle}>Planning import</p>
+                <div className={styles.smartImportPlanningHeaderMain}>
+                  <span className={styles.smartImportPlanningEyebrow}>Smart import</span>
+                  <p className={styles.smartImportPlanningPhase}>{loreSmartPlanningUi.phaseLabel}</p>
+                </div>
+                <span className={styles.smartImportPlanningModeBadge}>Planning</span>
               </div>
-              <p className={styles.smartImportPlanningPhase}>{loreSmartPlanningUi.phaseLabel}</p>
               <div className={styles.smartImportPlanningProgressTrack}>
                 {typeof loreSmartPlanningUi.percent === "number" ? (
                   <div
@@ -12017,27 +12061,27 @@ export function ArchitecturalCanvasApp({
               ) : null}
               {loreSmartPlanningUi.queueFailureHint ? (
                 <p className={styles.smartImportPlanningWarning}>
-                  Queue detail: {loreSmartPlanningUi.queueFailureHint}
+                  {loreSmartPlanningUi.queueFailureHint}
                 </p>
               ) : null}
               <p className={styles.smartImportPlanningHint}>
-                Running on the server in the background. Keep this tab open; typical files finish within
-                one to two minutes.
+                This step runs in the background on the server. Keep this tab open—most documents finish in
+                about one to two minutes.
               </p>
               {loreSmartPlanningUi.updatedAtText ? (
                 <p className={styles.smartImportPlanningUpdatedAt}>
-                  Last update: {loreSmartPlanningUi.updatedAtText}
+                  Updated {loreSmartPlanningUi.updatedAtText}
                 </p>
               ) : null}
               <div className={styles.smartImportPlanningActions}>
                 <Button
-                  size="xs"
-                  variant="neutral"
+                  size="sm"
+                  variant="ghost"
                   tone="glass"
                   type="button"
                   onClick={cancelLoreSmartPlanning}
                 >
-                  Cancel import
+                  Cancel
                 </Button>
               </div>
             </div>
@@ -12066,7 +12110,7 @@ export function ArchitecturalCanvasApp({
         ) : null}
         {loreSmartReview && !isRestrictedLayer ? (
           <div
-            className="fixed inset-0 z-[20010] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
+            className={styles.smartImportReviewBackdrop}
             role="dialog"
             aria-modal="true"
             aria-label="Smart document import"
@@ -12076,35 +12120,39 @@ export function ArchitecturalCanvasApp({
               }
             }}
           >
-            <div className="pointer-events-auto flex max-h-[min(90vh,760px)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-panel)] p-4 shadow-xl">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <span className="text-sm font-semibold text-[var(--vigil-label)]">
-                    Smart import
-                  </span>
+            <div className={styles.smartImportReviewPanel}>
+              <header className={styles.smartImportReviewHeader}>
+                <div className={styles.smartImportReviewHeaderMain}>
+                  <h2 className={styles.smartImportReviewTitle}>Smart import</h2>
                   {loreSmartReview.fileName ? (
-                    <p className="text-[10px] text-[var(--vigil-muted)]">{loreSmartReview.fileName}</p>
+                    <p className={styles.smartImportReviewFile}>{loreSmartReview.fileName}</p>
                   ) : null}
-                  <p className="text-[10px] text-[var(--vigil-muted)]">
-                    {loreSmartReview.plan.folders.length} folders · {loreSmartReview.plan.notes.length}{" "}
-                    notes · {loreSmartReview.plan.mergeProposals.length} merge suggestions
-                    {loreSmartReview.plan.links.length > 0
-                      ? ` · ${loreSmartReview.plan.links.length} same-canvas semantic links`
-                      : ""}
-                    {loreSmartReview.plan.contradictions.length > 0
-                      ? ` · ${loreSmartReview.plan.contradictions.length} flagged for review`
-                      : ""}
-                    {loreSmartReview.plan.clarifications.length > 0
-                      ? ` · ${loreSmartReview.plan.clarifications.length} open question(s)`
-                      : ""}
-                  </p>
-                  <p className="text-[10px] text-[var(--vigil-muted)]">
-                    Imported links use relationship types (ally, faction, …), not pin threads. Pin
-                    connections are for hand-drawn ropes; add those on the canvas if you need ties
-                    across folders.
+                  <p className={styles.smartImportReviewStatsLine}>
+                    <strong>{loreSmartReview.plan.folders.length}</strong> folders ·{" "}
+                    <strong>{loreSmartReview.plan.notes.length}</strong> notes ·{" "}
+                    <strong>{loreSmartReview.plan.mergeProposals.length}</strong> merge suggestions
+                    {loreSmartReview.plan.links.length > 0 ? (
+                      <>
+                        {" "}
+                        · <strong>{loreSmartReview.plan.links.length}</strong> semantic links
+                      </>
+                    ) : null}
+                    {loreSmartReview.plan.contradictions.length > 0 ? (
+                      <>
+                        {" "}
+                        · <strong>{loreSmartReview.plan.contradictions.length}</strong> review flags
+                      </>
+                    ) : null}
+                    {loreSmartReview.plan.clarifications.length > 0 ? (
+                      <>
+                        {" "}
+                        · <strong>{loreSmartReview.plan.clarifications.length}</strong> question
+                        {loreSmartReview.plan.clarifications.length === 1 ? "" : "s"}
+                      </>
+                    ) : null}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className={styles.smartImportReviewHeaderActions}>
                   <Button
                     size="sm"
                     variant="neutral"
@@ -12124,13 +12172,15 @@ export function ArchitecturalCanvasApp({
                     {loreImportCommitting ? "Applying…" : "Apply import"}
                   </Button>
                 </div>
-              </div>
-              <div className="mb-3 flex gap-1 border-b border-[var(--vigil-border)] pb-2">
+              </header>
+              <div className={styles.smartImportReviewTabs} role="tablist" aria-label="Import sections">
                 <Button
                   size="xs"
                   variant={loreSmartTab === "structure" ? "primary" : "neutral"}
                   tone="glass"
                   type="button"
+                  role="tab"
+                  aria-selected={loreSmartTab === "structure"}
                   onClick={() => setLoreSmartTab("structure")}
                 >
                   Structure
@@ -12140,6 +12190,8 @@ export function ArchitecturalCanvasApp({
                   variant={loreSmartTab === "merges" ? "primary" : "neutral"}
                   tone="glass"
                   type="button"
+                  role="tab"
+                  aria-selected={loreSmartTab === "merges"}
                   onClick={() => setLoreSmartTab("merges")}
                 >
                   Merges
@@ -12149,6 +12201,8 @@ export function ArchitecturalCanvasApp({
                   variant={loreSmartTab === "questions" ? "primary" : "neutral"}
                   tone="glass"
                   type="button"
+                  role="tab"
+                  aria-selected={loreSmartTab === "questions"}
                   onClick={() => setLoreSmartTab("questions")}
                 >
                   Open questions
@@ -12158,34 +12212,45 @@ export function ArchitecturalCanvasApp({
                     : ""}
                 </Button>
               </div>
-              {!loreSmartClarificationsOk ? (
-                <p className="mb-2 text-[10px] text-amber-700 dark:text-amber-300">
-                  Answer all required questions in Open questions before applying.
+              {loreSmartTab === "questions" && loreSmartReview.plan.clarifications.length > 0 ? (
+                loreSmartQuestionUi.questionsComplete && !loreSmartOtherFollowUp ? (
+                  <p className={styles.smartImportReviewSuccessBanner}>
+                    All questions answered — use <strong>Apply import</strong> below or in the header when
+                    you&apos;re ready.
+                  </p>
+                ) : !loreSmartClarificationsOk ? (
+                  <p className={styles.smartImportReviewBanner}>
+                    Answer each question below. <strong>Apply import</strong> stays off until required items
+                    are done.
+                  </p>
+                ) : null
+              ) : !loreSmartClarificationsOk ? (
+                <p className={styles.smartImportReviewBanner}>
+                  Finish <strong>Open questions</strong> before applying.
                 </p>
               ) : null}
-              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-                <label className="flex items-start gap-2 text-[11px] text-[var(--vigil-label)]">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5"
-                    checked={loreSmartIncludeSource}
-                    onChange={(e) => setLoreSmartIncludeSource(e.target.checked)}
-                  />
-                  <span>Include full source text as a note card</span>
-                </label>
+              <div className={styles.smartImportReviewBody}>
+                {loreSmartTab !== "questions" ? (
+                  <label className={styles.smartImportReviewSourceToggle}>
+                    <input
+                      type="checkbox"
+                      checked={loreSmartIncludeSource}
+                      onChange={(e) => setLoreSmartIncludeSource(e.target.checked)}
+                    />
+                    <span>Include full source text as a note card</span>
+                  </label>
+                ) : null}
                 {loreSmartTab === "structure" ? (
-                  <div className="space-y-3 text-[11px] text-[var(--vigil-label)]">
+                  <div className={styles.smartImportReviewStructure}>
                     {loreSmartReview.plan.folders.length > 0 ? (
                       <div>
-                        <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-[var(--vigil-muted)]">
-                          Folders
-                        </span>
-                        <ul className="list-inside list-disc space-y-1 text-[var(--vigil-muted)]">
+                        <p className={styles.smartImportReviewSectionLabel}>Folders</p>
+                        <ul className={styles.smartImportReviewList}>
                           {loreSmartReview.plan.folders.map((f) => (
                             <li key={f.clientId}>
-                              <span className="text-[var(--vigil-label)]">{f.title}</span>
+                              <span className={styles.smartImportReviewNoteTitle}>{f.title}</span>
                               {f.parentClientId ? (
-                                <span className="text-[var(--vigil-muted)]">
+                                <span className={styles.smartImportReviewNoteSummary}>
                                   {" "}
                                   (under {f.parentClientId})
                                 </span>
@@ -12196,28 +12261,23 @@ export function ArchitecturalCanvasApp({
                       </div>
                     ) : null}
                     <div>
-                      <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-[var(--vigil-muted)]">
-                        Notes
-                      </span>
-                      <ul className="max-h-[42vh] space-y-2 overflow-y-auto pr-1">
+                      <p className={styles.smartImportReviewSectionLabel}>Notes</p>
+                      <ul className={styles.smartImportReviewNoteList}>
                         {loreSmartReview.plan.notes.map((n) => (
-                          <li
-                            key={n.clientId}
-                            className="rounded-lg border border-[var(--vigil-border)] bg-black/[0.03] p-2 dark:bg-white/[0.04]"
-                          >
-                            <div className="flex flex-wrap items-baseline justify-between gap-2">
-                              <span className="font-medium">{n.title}</span>
-                              <span className="text-[10px] uppercase text-[var(--vigil-muted)]">
+                          <li key={n.clientId} className={styles.smartImportReviewNoteCard}>
+                            <div className={styles.smartImportReviewNoteTitleRow}>
+                              <span className={styles.smartImportReviewNoteTitle}>{n.title}</span>
+                              <span className={styles.smartImportReviewNoteKind}>
                                 {n.canonicalEntityKind}
                               </span>
                             </div>
-                            <p className="mt-1 text-[10px] text-[var(--vigil-muted)]">{n.summary}</p>
+                            <p className={styles.smartImportReviewNoteSummary}>{n.summary}</p>
                           </li>
                         ))}
                       </ul>
                     </div>
                     {loreSmartReview.plan.contradictions.length > 0 ? (
-                      <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                      <p className={styles.smartImportReviewMutedWarn}>
                         {loreSmartReview.plan.contradictions.length} contradiction(s) were saved to
                         your review queue for later.
                       </p>
@@ -12225,391 +12285,291 @@ export function ArchitecturalCanvasApp({
                     {loreSmartReview.plan.importPlanWarnings &&
                     loreSmartReview.plan.importPlanWarnings.length > 0 ? (
                       <div>
-                        <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-[var(--vigil-muted)]">
-                          Link plan adjustments
-                        </span>
-                        <ul className="list-inside list-disc space-y-1 text-[10px] text-[var(--vigil-muted)]">
+                        <p className={styles.smartImportReviewSectionLabel}>Link plan adjustments</p>
+                        <ul className={styles.smartImportReviewWarningList}>
                           {loreSmartReview.plan.importPlanWarnings.map((w, i) => (
                             <li key={i}>{w}</li>
                           ))}
                         </ul>
                       </div>
                     ) : null}
+                    <p className={styles.smartImportReviewFootnote}>
+                      Imported links use relationship types (ally, faction, …), not pin threads. Pin
+                      threads are drawn on the canvas; add them there if you need ties across folders.
+                    </p>
                   </div>
                 ) : loreSmartTab === "questions" ? (
-                  <div className={styles.smartImportQuestionsPane}>
-                    <div className={styles.smartImportQuestionsStatusCard}>
-                      <div className={styles.smartImportQuestionsStatusTop}>
-                        <p className={styles.smartImportQuestionsStatusTitle}>Open questions</p>
-                        <span className={styles.smartImportQuestionsStatusBadge}>
-                          {loreSmartQuestionUi.requiredAnswered}/{loreSmartQuestionUi.requiredTotal} required
-                        </span>
-                      </div>
-                      <div className={styles.smartImportQuestionsProgressTrack}>
-                        <div
-                          className={styles.smartImportQuestionsProgressFill}
-                          style={{ width: `${loreSmartQuestionUi.percent}%` }}
-                        />
-                      </div>
-                      <p className={styles.smartImportQuestionsStatusMeta}>
-                        {loreSmartQuestionUi.requiredPending > 0
-                          ? `${loreSmartQuestionUi.requiredPending} required unresolved`
-                          : "All required questions answered"}
-                        {loreSmartQuestionUi.optionalAnswered > 0
-                          ? ` · ${loreSmartQuestionUi.optionalAnswered} optional answered`
-                          : ""}
-                      </p>
-                    </div>
-                    {!loreSmartClarificationsOk ? (
-                      <p className={styles.smartImportQuestionsBlockingHint}>
-                        Answer all required questions before applying.
-                      </p>
-                    ) : null}
-                    {loreSmartOtherFollowUp ? (
-                      <div className={styles.smartImportFollowUpCard} role="region" aria-live="polite">
-                        <div className={styles.smartImportFollowUpHeader}>
-                          <span className={styles.smartImportFollowUpBadge}>Follow-up needed</span>
-                          <span className={styles.smartImportFollowUpConfidence}>
-                            Confidence {Math.round(loreSmartOtherFollowUp.confidence * 100)}%
-                          </span>
-                        </div>
-                        <p className={styles.smartImportFollowUpTitle}>{loreSmartOtherFollowUp.title}</p>
-                        <p className={styles.smartImportFollowUpBody}>{loreSmartOtherFollowUp.question}</p>
-                        <p className={styles.smartImportFollowUpQuote}>
-                          Your Other answer: &quot;{loreSmartOtherFollowUp.otherText}&quot;
-                        </p>
-                        <div className={styles.smartImportFollowUpOptions}>
-                          {loreSmartOtherFollowUp.options.map((opt) => (
-                            <Button
-                              key={opt.id}
-                              size="xs"
-                              variant="neutral"
-                              tone="glass"
-                              type="button"
-                              onClick={() => {
-                                setLoreSmartClarificationAnswers((prev) =>
-                                  upsertClarificationAnswer(prev, {
-                                    clarificationId: loreSmartOtherFollowUp.clarificationId,
-                                    resolution: "answered",
-                                    selectedOptionIds: [opt.id],
-                                  }),
-                                );
-                                setLoreSmartOtherFollowUp(null);
-                              }}
-                            >
-                              {opt.label}
-                            </Button>
-                          ))}
-                        </div>
-                        <div className={styles.smartImportFollowUpActions}>
-                          <Button
-                            size="xs"
-                            variant="neutral"
-                            tone="glass"
-                            type="button"
-                            onClick={() => {
-                              setLoreSmartClarificationAnswers((prev) =>
-                                upsertClarificationAnswer(prev, {
-                                  clarificationId: loreSmartOtherFollowUp.clarificationId,
-                                  resolution: "skipped_best_judgement",
-                                }),
-                              );
-                              setLoreSmartOtherFollowUp(null);
-                            }}
-                          >
-                            Skip (use best judgement)
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="neutral"
-                            tone="glass"
-                            type="button"
-                            onClick={closeLoreSmartReview}
-                          >
-                            Abort import
-                          </Button>
-                        </div>
-                      </div>
-                    ) : null}
-                    <div className={styles.smartImportQuestionsControls}>
-                      <div className={styles.smartImportQuestionsFilters}>
-                        <Button
-                          size="xs"
-                          variant={loreSmartQuestionFilter === "all" ? "primary" : "neutral"}
-                          tone="glass"
-                          type="button"
-                          onClick={() => setLoreSmartQuestionFilter("all")}
-                        >
-                          All
-                        </Button>
-                        <Button
-                          size="xs"
-                          variant={loreSmartQuestionFilter === "required" ? "primary" : "neutral"}
-                          tone="glass"
-                          type="button"
-                          onClick={() => setLoreSmartQuestionFilter("required")}
-                        >
-                          Required
-                        </Button>
-                        <Button
-                          size="xs"
-                          variant={loreSmartQuestionFilter === "unanswered" ? "primary" : "neutral"}
-                          tone="glass"
-                          type="button"
-                          onClick={() => setLoreSmartQuestionFilter("unanswered")}
-                        >
-                          Unanswered
-                        </Button>
-                      </div>
-                      <Button
-                        size="xs"
-                        variant="neutral"
-                        tone="glass"
-                        type="button"
-                        onClick={() => {
-                          const required = loreSmartReview.plan.clarifications.filter(
-                            (c) => c.severity === "required",
-                          );
-                          setLoreSmartClarificationAnswers((prev) => {
-                            let next = [...prev];
-                            for (const c of required) {
-                              const existing = next.find((a) => a.clarificationId === c.id);
-                              if (isClarificationAnswered(existing)) continue;
-                              const def = recommendedClarificationOptionId(c);
-                              if (!def) continue;
-                              next = upsertClarificationAnswer(next, {
-                                clarificationId: c.id,
-                                resolution: "skipped_default",
-                                skipDefaultOptionId: def,
-                              });
-                            }
-                            return next;
-                          });
-                        }}
-                      >
-                        Answer recommended defaults
-                      </Button>
-                    </div>
+                  <div className={styles.smartImportWizard}>
                     {loreSmartReview.plan.clarifications.length === 0 ? (
-                      <p className="text-[var(--vigil-muted)]">No open questions for this import.</p>
+                      <p className={styles.smartImportReviewEmpty}>No open questions for this import.</p>
                     ) : (
-                      (() => {
-                        const answerById = new Map(
-                          loreSmartClarificationAnswers.map((a) => [a.clarificationId, a]),
-                        );
-                        const activeId = loreSmartQuestionUi.activeQuestion?.id ?? null;
-                        const renderClarificationCard = (
-                          c: LoreImportClarificationItem,
-                          spotlight: boolean,
-                        ) => {
-                          const ans = answerById.get(c.id);
-                          const isMulti = c.questionKind === "multi_select";
-                          const selectedSet = new Set(
-                            ans?.resolution === "answered"
-                              ? (ans.selectedOptionIds ?? [])
-                              : ans?.resolution === "skipped_default" && ans.skipDefaultOptionId
-                                ? [ans.skipDefaultOptionId]
-                                : [],
-                          );
-                          const answered = isClarificationAnswered(ans);
-                          const otherSelected = ans?.resolution === "other_text";
-                          return (
-                            <li
-                              key={c.id}
-                              className={`${styles.smartImportQuestionCard} ${
-                                spotlight ? styles.smartImportQuestionCardActive : ""
-                              } ${answered ? styles.smartImportQuestionCardDone : ""}`}
-                            >
-                              <div className={styles.smartImportQuestionHeader}>
-                                <p className={styles.smartImportQuestionTitle}>{c.title}</p>
-                                <div className={styles.smartImportQuestionMeta}>
-                                  <Tag variant="neutral" className={styles.smartImportQuestionChip}>
-                                    {c.category.replace(/_/g, " ")}
-                                  </Tag>
-                                  <Tag variant="neutral" className={styles.smartImportQuestionChip}>
-                                    {c.severity === "required" ? "Required" : "Optional"}
-                                  </Tag>
-                                  <Tag variant="neutral" className={styles.smartImportQuestionChip}>
-                                    {answered ? "Answered" : "Unanswered"}
-                                  </Tag>
-                                  <span className={styles.smartImportQuestionConfidence}>
-                                    Confidence {Math.round(clarificationConfidenceScore(c) * 100)}%
-                                  </span>
-                                </div>
-                              </div>
-                              {c.context ? (
-                                <p className={styles.smartImportQuestionContext}>{c.context}</p>
-                              ) : null}
-                              <div className={styles.smartImportQuestionOptions}>
-                                {c.options.map((opt) =>
-                                  isMulti ? (
-                                    <label key={opt.id} className={styles.smartImportOptionLabel}>
-                                      <input
-                                        type="checkbox"
-                                        className={styles.smartImportOptionInput}
-                                        checked={selectedSet.has(opt.id)}
-                                        onChange={(e) => {
-                                          let base: string[] =
-                                            ans?.resolution === "answered"
-                                              ? [...(ans.selectedOptionIds ?? [])]
-                                              : [];
-                                          if (e.target.checked) {
-                                            if (!base.includes(opt.id)) base.push(opt.id);
-                                          } else {
-                                            base = base.filter((x) => x !== opt.id);
-                                          }
-                                          setLoreSmartClarificationAnswers((prev) =>
-                                            upsertClarificationAnswer(prev, {
-                                              clarificationId: c.id,
-                                              resolution: "answered",
-                                              selectedOptionIds: base,
-                                            }),
-                                          );
-                                          setLoreSmartOtherFollowUp((cur) =>
-                                            cur?.clarificationId === c.id ? null : cur,
-                                          );
-                                        }}
-                                      />
-                                      <span>{opt.label}</span>
-                                    </label>
-                                  ) : (
-                                    <label key={opt.id} className={styles.smartImportOptionLabel}>
-                                      <input
-                                        type="radio"
-                                        className={styles.smartImportOptionInput}
-                                        name={`clarify-${c.id}`}
-                                        checked={
-                                          !!(
-                                            ans?.resolution === "answered" &&
-                                            ans.selectedOptionIds?.[0] === opt.id
-                                          ) ||
-                                          !!(
-                                            ans?.resolution === "skipped_default" &&
-                                            ans.skipDefaultOptionId === opt.id
-                                          )
-                                        }
-                                        onChange={() => {
-                                          setLoreSmartClarificationAnswers((prev) =>
-                                            upsertClarificationAnswer(prev, {
-                                              clarificationId: c.id,
-                                              resolution: "answered",
-                                              selectedOptionIds: [opt.id],
-                                            }),
-                                          );
-                                          setLoreSmartOtherFollowUp((cur) =>
-                                            cur?.clarificationId === c.id ? null : cur,
-                                          );
-                                        }}
-                                      />
-                                      <span>{opt.label}</span>
-                                    </label>
-                                  ),
-                                )}
-                                <label className={styles.smartImportOptionLabel}>
-                                  <input
-                                    type="radio"
-                                    className={styles.smartImportOptionInput}
-                                    name={`clarify-other-${c.id}`}
-                                    checked={otherSelected}
-                                    onChange={() =>
-                                      setLoreSmartClarificationAnswers((prev) =>
-                                        upsertClarificationAnswer(prev, {
-                                          clarificationId: c.id,
-                                          resolution: "other_text",
-                                          otherText: ans?.otherText ?? "",
-                                        }),
-                                      )
-                                    }
-                                  />
-                                  <span>Other (type your answer)</span>
-                                </label>
-                                {otherSelected ? (
-                                  <textarea
-                                    className={styles.smartImportOtherInput}
-                                    placeholder="Describe the correct interpretation..."
-                                    value={ans?.otherText ?? ""}
-                                    onChange={(e) =>
-                                      setLoreSmartClarificationAnswers((prev) =>
-                                        upsertClarificationAnswer(prev, {
-                                          clarificationId: c.id,
-                                          resolution: "other_text",
-                                          otherText: e.target.value,
-                                        }),
-                                      )
-                                    }
-                                  />
-                                ) : null}
-                              </div>
-                              <div className={styles.smartImportQuestionActions}>
-                                {recommendedClarificationOptionId(c) ? (
-                                  <Button
-                                    size="xs"
-                                    variant="neutral"
-                                    tone="glass"
-                                    type="button"
-                                    onClick={() => {
-                                      const def = recommendedClarificationOptionId(c);
-                                      if (!def) return;
-                                      setLoreSmartClarificationAnswers((prev) =>
-                                        upsertClarificationAnswer(prev, {
-                                          clarificationId: c.id,
-                                          resolution: "skipped_default",
-                                          skipDefaultOptionId: def,
-                                        }),
-                                      );
-                                      setLoreSmartOtherFollowUp((cur) =>
-                                        cur?.clarificationId === c.id ? null : cur,
-                                      );
-                                    }}
-                                  >
-                                    Use recommended default
-                                  </Button>
-                                ) : null}
+                      <>
+                        <div className={styles.smartImportWizardProgress}>
+                          <p className={styles.smartImportWizardProgressLabel}>
+                            {loreSmartOtherFollowUp
+                              ? "Follow-up"
+                              : loreSmartQuestionUi.questionsComplete
+                                ? "All done"
+                                : loreSmartQuestionUi.focusQuestion
+                                  ? `Question ${loreSmartQuestionUi.ordered.indexOf(loreSmartQuestionUi.focusQuestion) + 1} of ${loreSmartQuestionUi.totalQuestions}`
+                                  : "Questions"}
+                          </p>
+                          <div
+                            className={styles.smartImportQuestionsProgressTrack}
+                            role="progressbar"
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={loreSmartQuestionUi.wizardBarPercent}
+                            aria-label="Questions completed"
+                          >
+                            <div
+                              className={styles.smartImportQuestionsProgressFill}
+                              style={{ width: `${loreSmartQuestionUi.wizardBarPercent}%` }}
+                            />
+                          </div>
+                        </div>
+                        {loreSmartOtherFollowUp ? (
+                          <div className={styles.smartImportWizardCard} role="region" aria-live="polite">
+                            <p className={styles.smartImportWizardEyebrow}>Follow-up</p>
+                            <h3 className={styles.smartImportWizardTitle}>{loreSmartOtherFollowUp.title}</h3>
+                            <p className={styles.smartImportWizardContext}>{loreSmartOtherFollowUp.question}</p>
+                            <p className={styles.smartImportWizardQuote}>
+                              You wrote: &quot;{loreSmartOtherFollowUp.otherText}&quot;
+                            </p>
+                            <div className={styles.smartImportWizardFollowUpOptions}>
+                              {loreSmartOtherFollowUp.options.map((opt) => (
                                 <Button
-                                  size="xs"
+                                  key={opt.id}
+                                  size="sm"
                                   variant="neutral"
                                   tone="glass"
                                   type="button"
-                                  onClick={() =>
+                                  onClick={() => {
                                     setLoreSmartClarificationAnswers((prev) =>
-                                      clearClarificationAnswer(prev, c.id),
-                                    )
-                                  }
+                                      upsertClarificationAnswer(prev, {
+                                        clarificationId: loreSmartOtherFollowUp.clarificationId,
+                                        resolution: "answered",
+                                        selectedOptionIds: [opt.id],
+                                      }),
+                                    );
+                                    setLoreSmartOtherFollowUp(null);
+                                  }}
                                 >
-                                  Clear answer
+                                  {opt.label}
                                 </Button>
-                              </div>
-                            </li>
-                          );
-                        };
-                        return (
-                          <div className={styles.smartImportQuestionsLists}>
-                            {loreSmartQuestionUi.activeQuestion ? (
-                              <div>
-                                <p className={styles.smartImportQuestionsSectionLabel}>
-                                  Next question (lowest confidence)
-                                </p>
-                                <ul className={styles.smartImportQuestionsList}>
-                                  {renderClarificationCard(loreSmartQuestionUi.activeQuestion, true)}
-                                </ul>
-                              </div>
-                            ) : null}
-                            <div>
-                              <p className={styles.smartImportQuestionsSectionLabel}>Review all questions</p>
-                              <ul className={styles.smartImportQuestionsList}>
-                                {loreSmartQuestionUi.visible
-                                  .filter((c) => c.id !== activeId)
-                                  .map((c) => renderClarificationCard(c, false))}
-                              </ul>
+                              ))}
+                            </div>
+                            <div className={styles.smartImportWizardFooter}>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                tone="glass"
+                                type="button"
+                                onClick={() => {
+                                  setLoreSmartClarificationAnswers((prev) =>
+                                    upsertClarificationAnswer(prev, {
+                                      clarificationId: loreSmartOtherFollowUp.clarificationId,
+                                      resolution: "skipped_best_judgement",
+                                    }),
+                                  );
+                                  setLoreSmartOtherFollowUp(null);
+                                }}
+                              >
+                                Skip, use best judgement
+                              </Button>
                             </div>
                           </div>
-                        );
-                      })()
+                        ) : loreSmartQuestionUi.questionsComplete ? (
+                          <div className={styles.smartImportWizardComplete}>
+                            <p className={styles.smartImportWizardCompleteTitle}>You&apos;re all set</p>
+                            <p className={styles.smartImportWizardCompleteBody}>
+                              Optionally review <strong>Structure</strong> and <strong>Merges</strong>, then
+                              apply the import to add this content to your space.
+                            </p>
+                            <Button
+                              size="md"
+                              variant="primary"
+                              tone="solid"
+                              type="button"
+                              disabled={loreImportCommitting}
+                              onClick={() => void commitSmartLoreImport()}
+                            >
+                              {loreImportCommitting ? "Applying…" : "Apply import to canvas"}
+                            </Button>
+                          </div>
+                        ) : loreSmartQuestionUi.focusQuestion ? (
+                          (() => {
+                            const c = loreSmartQuestionUi.focusQuestion;
+                            const answerById = new Map(
+                              loreSmartClarificationAnswers.map((a) => [a.clarificationId, a]),
+                            );
+                            const ans = answerById.get(c.id);
+                            const isMulti = c.questionKind === "multi_select";
+                            const selectedSet = new Set(
+                              ans?.resolution === "answered"
+                                ? (ans.selectedOptionIds ?? [])
+                                : ans?.resolution === "skipped_default" && ans.skipDefaultOptionId
+                                  ? [ans.skipDefaultOptionId]
+                                  : [],
+                            );
+                            const otherSelected = ans?.resolution === "other_text";
+                            const step = loreSmartQuestionUi.ordered.indexOf(c) + 1;
+                            return (
+                              <article className={styles.smartImportWizardCard}>
+                                <p className={styles.smartImportWizardEyebrow}>
+                                  {c.severity === "required" ? "Required" : "Optional"} · {step} of{" "}
+                                  {loreSmartQuestionUi.totalQuestions}
+                                </p>
+                                <h3 className={styles.smartImportWizardTitle}>{c.title}</h3>
+                                {c.context ? (
+                                  <p className={styles.smartImportWizardContext}>{c.context}</p>
+                                ) : null}
+                                <div className={styles.smartImportWizardOptions}>
+                                  {c.options.map((opt) =>
+                                    isMulti ? (
+                                      <label key={opt.id} className={styles.smartImportWizardOption}>
+                                        <input
+                                          type="checkbox"
+                                          checked={selectedSet.has(opt.id)}
+                                          onChange={(e) => {
+                                            let base: string[] =
+                                              ans?.resolution === "answered"
+                                                ? [...(ans.selectedOptionIds ?? [])]
+                                                : [];
+                                            if (e.target.checked) {
+                                              if (!base.includes(opt.id)) base.push(opt.id);
+                                            } else {
+                                              base = base.filter((x) => x !== opt.id);
+                                            }
+                                            setLoreSmartClarificationAnswers((prev) =>
+                                              upsertClarificationAnswer(prev, {
+                                                clarificationId: c.id,
+                                                resolution: "answered",
+                                                selectedOptionIds: base,
+                                              }),
+                                            );
+                                            setLoreSmartOtherFollowUp((cur) =>
+                                              cur?.clarificationId === c.id ? null : cur,
+                                            );
+                                          }}
+                                        />
+                                        <span>{opt.label}</span>
+                                      </label>
+                                    ) : (
+                                      <label key={opt.id} className={styles.smartImportWizardOption}>
+                                        <input
+                                          type="radio"
+                                          name={`clarify-${c.id}`}
+                                          checked={
+                                            !!(
+                                              ans?.resolution === "answered" &&
+                                              ans.selectedOptionIds?.[0] === opt.id
+                                            ) ||
+                                            !!(
+                                              ans?.resolution === "skipped_default" &&
+                                              ans.skipDefaultOptionId === opt.id
+                                            )
+                                          }
+                                          onChange={() => {
+                                            setLoreSmartClarificationAnswers((prev) =>
+                                              upsertClarificationAnswer(prev, {
+                                                clarificationId: c.id,
+                                                resolution: "answered",
+                                                selectedOptionIds: [opt.id],
+                                              }),
+                                            );
+                                            setLoreSmartOtherFollowUp((cur) =>
+                                              cur?.clarificationId === c.id ? null : cur,
+                                            );
+                                          }}
+                                        />
+                                        <span>{opt.label}</span>
+                                      </label>
+                                    ),
+                                  )}
+                                  <label className={styles.smartImportWizardOption}>
+                                    <input
+                                      type="radio"
+                                      name={`clarify-other-${c.id}`}
+                                      checked={otherSelected}
+                                      onChange={() =>
+                                        setLoreSmartClarificationAnswers((prev) =>
+                                          upsertClarificationAnswer(prev, {
+                                            clarificationId: c.id,
+                                            resolution: "other_text",
+                                            otherText: ans?.otherText ?? "",
+                                          }),
+                                        )
+                                      }
+                                    />
+                                    <span>Other…</span>
+                                  </label>
+                                  {otherSelected ? (
+                                    <textarea
+                                      className={styles.smartImportWizardTextarea}
+                                      placeholder="Type your answer (at least a few characters)…"
+                                      value={ans?.otherText ?? ""}
+                                      onChange={(e) =>
+                                        setLoreSmartClarificationAnswers((prev) =>
+                                          upsertClarificationAnswer(prev, {
+                                            clarificationId: c.id,
+                                            resolution: "other_text",
+                                            otherText: e.target.value,
+                                          }),
+                                        )
+                                      }
+                                    />
+                                  ) : null}
+                                </div>
+                                <div className={styles.smartImportWizardFooter}>
+                                  {recommendedClarificationOptionId(c) ? (
+                                    <Button
+                                      size="sm"
+                                      variant="neutral"
+                                      tone="glass"
+                                      type="button"
+                                      onClick={() => {
+                                        const def = recommendedClarificationOptionId(c);
+                                        if (!def) return;
+                                        setLoreSmartClarificationAnswers((prev) =>
+                                          upsertClarificationAnswer(prev, {
+                                            clarificationId: c.id,
+                                            resolution: "skipped_default",
+                                            skipDefaultOptionId: def,
+                                          }),
+                                        );
+                                        setLoreSmartOtherFollowUp((cur) =>
+                                          cur?.clarificationId === c.id ? null : cur,
+                                        );
+                                      }}
+                                    >
+                                      Use recommended
+                                    </Button>
+                                  ) : null}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    tone="glass"
+                                    type="button"
+                                    onClick={() =>
+                                      setLoreSmartClarificationAnswers((prev) =>
+                                        clearClarificationAnswer(prev, c.id),
+                                      )
+                                    }
+                                  >
+                                    Clear
+                                  </Button>
+                                </div>
+                              </article>
+                            );
+                          })()
+                        ) : null}
+                      </>
                     )}
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap gap-2">
+                  <div className={styles.smartImportReviewStructure}>
+                    <div className={styles.smartImportReviewMergeToolbar}>
                       <Button
                         size="xs"
                         variant="neutral"
@@ -12644,20 +12604,16 @@ export function ArchitecturalCanvasApp({
                       </Button>
                     </div>
                     {loreSmartReview.plan.mergeProposals.length === 0 ? (
-                      <p className="text-[11px] text-[var(--vigil-muted)]">
+                      <p className={styles.smartImportReviewEmpty}>
                         No merge suggestions — new notes and folders will be created.
                       </p>
                     ) : (
-                      <ul className="max-h-[48vh] space-y-3 overflow-y-auto pr-1">
+                      <ul className={styles.smartImportReviewMergeList}>
                         {loreSmartReview.plan.mergeProposals.map((m) => (
-                          <li
-                            key={m.id}
-                            className="rounded-lg border border-[var(--vigil-border)] bg-black/[0.03] p-2 dark:bg-white/[0.04]"
-                          >
-                            <label className="flex cursor-pointer gap-2 text-[11px] text-[var(--vigil-label)]">
+                          <li key={m.id} className={styles.smartImportReviewMergeCard}>
+                            <label className={styles.smartImportReviewMergeLabel}>
                               <input
                                 type="checkbox"
-                                className="mt-0.5"
                                 checked={!!loreSmartAcceptedMergeIds[m.id]}
                                 onChange={() =>
                                   setLoreSmartAcceptedMergeIds((p) => ({
@@ -12668,14 +12624,14 @@ export function ArchitecturalCanvasApp({
                               />
                               <span>
                                 Merge into{" "}
-                                <span className="font-medium">{m.targetTitle}</span>
+                                <strong>{m.targetTitle}</strong>
                                 {m.targetSpaceName ? (
-                                  <span className="text-[var(--vigil-muted)]">
+                                  <span className={styles.smartImportReviewMergeSpace}>
                                     {" "}
                                     · {m.targetSpaceName}
                                   </span>
                                 ) : null}
-                                <span className="block text-[10px] text-[var(--vigil-muted)]">
+                                <span className={styles.smartImportReviewMergeMeta}>
                                   Strategy: {m.strategy}
                                   {m.targetItemType || m.targetEntityType
                                     ? ` · existing type ${m.targetItemType ?? "note"} / ${m.targetEntityType ?? "—"}`
@@ -12683,9 +12639,7 @@ export function ArchitecturalCanvasApp({
                                 </span>
                               </span>
                             </label>
-                            <pre className="mt-2 max-h-36 overflow-auto whitespace-pre-wrap rounded border border-[var(--vigil-border)] bg-[var(--vigil-surface)] p-2 text-[10px] text-[var(--vigil-muted)]">
-                              {m.proposedText}
-                            </pre>
+                            <pre className={styles.smartImportReviewMergePre}>{m.proposedText}</pre>
                           </li>
                         ))}
                       </ul>

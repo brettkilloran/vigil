@@ -97,7 +97,7 @@ Return ONLY valid JSON (no markdown fence):
 { "clarifications": [ CLARIFICATION_ITEM, ... ] }
 
 Each CLARIFICATION_ITEM must include:
-- "category": "structure" | "link_semantics" | "canon_weight" | "conflict"
+- "category": "structure" | "canon_weight" | "conflict" (never "link_semantics")
 - "severity": "required" when human choice materially affects correctness; "optional" for minor polish only
 - "title": short question (max ~120 chars)
 - "context": 1–3 sentences: say what you are unsure about and cite evidence (note titles, chunk headings, candidate titles, merge rationale). Admit uncertainty plainly. Never shame the user.
@@ -115,8 +115,6 @@ Tone: collaborative, default-forward (always mark a recommended option when poss
 HINT OPS — every planPatchHint must be exactly one of:
 { "op": "no_op" }
 { "op": "set_note_folder", "noteClientId": "<id>", "folderClientId": "<folder clientId>" | null }
-{ "op": "set_link_type", "fromClientId": "<id>", "toClientId": "<id>", "linkType": ${IMPORT_LINK_TYPE_ENUM} }
-{ "op": "remove_link", "fromClientId": "<id>", "toClientId": "<id>" }
 { "op": "set_ingestion_signals", "noteClientId": "<id>", "patch": { optional salienceRole, voiceReliability, importance 0-1 } }
 { "op": "set_lore_historical", "noteClientId": "<id>", "loreHistorical": true|false }
 { "op": "discard_merge_proposal", "mergeProposalId": "<uuid from mergeProposals in payload>" }
@@ -125,7 +123,7 @@ HINT OPS — every planPatchHint must be exactly one of:
 
 Rules:
 - For **every contradiction** in the payload, emit at least one **required** "conflict" clarification unless the contradiction is trivial noise.
-- Ask about **link_semantics** when relationship type is ambiguous between two linked notes.
+- Do **not** ask about semantic link types, relationship kinds, association vs binding, or other connection-edge choices — the importer applies defaults and users adjust links on the canvas.
 - Ask **structure** when a note could belong in two folders or the folder split is uncertain.
 - Ask **canon_weight** when voiceReliability is unknown/mixed but the content sounds like rules or official lore (importance / historical vs current).
 - Use mergeProposalId from the payload verbatim in discard_merge_proposal hints.

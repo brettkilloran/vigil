@@ -2610,7 +2610,7 @@
   font-weight: 600;
   letter-spacing: -0.01em;
   line-height: 1.25;
-  color: var(--vigil-label);
+  color: var(--sem-text-primary);
   margin: 0 0 8px;
   min-width: 0;
 }
@@ -2684,7 +2684,7 @@
   margin: 0;
   font-size: 13px;
   line-height: 1.55;
-  color: color-mix(in oklch, var(--vigil-muted) 88%, var(--vigil-label) 12%);
+  color: color-mix(in oklch, var(--sem-text-muted) 88%, var(--sem-text-primary) 12%);
   min-width: 0;
 }
 
@@ -2692,7 +2692,7 @@
   margin: 8px 0 0;
   font-size: 12px;
   line-height: 1.45;
-  color: var(--vigil-label);
+  color: var(--sem-text-primary);
   min-width: 0;
 }
 
@@ -2702,8 +2702,8 @@
   margin-top: 10px;
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid color-mix(in oklch, var(--vigil-border) 78%, transparent);
-  background: color-mix(in oklch, var(--vigil-surface) 90%, transparent);
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 78%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 6%, var(--sys-color-neutral-900) 94%);
 }
 
 .syncPopoverContextRow {
@@ -2724,7 +2724,7 @@
 .syncPopoverContextVal {
   font-size: 11px;
   line-height: 1.25;
-  color: var(--vigil-label);
+  color: var(--sem-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2777,16 +2777,16 @@
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
-  color: color-mix(in oklch, var(--vigil-muted) 82%, var(--vigil-label) 18%);
-  background: color-mix(in oklch, var(--vigil-surface) 92%, var(--vigil-border) 8%);
+  color: color-mix(in oklch, var(--sem-text-muted) 82%, var(--sem-text-primary) 18%);
+  background: color-mix(in oklch, var(--sem-text-primary) 5%, var(--sys-color-neutral-920) 95%);
   border-radius: 8px;
-  border: 1px solid color-mix(in oklch, var(--vigil-border) 80%, transparent);
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 80%, transparent);
 }
 
 .syncPopoverMeta {
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px solid color-mix(in oklch, var(--vigil-border) 75%, transparent);
+  border-top: 1px solid color-mix(in oklch, var(--sem-border-subtle) 75%, transparent);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -2801,7 +2801,7 @@
   gap: 6px;
   margin: 0;
   min-width: 0;
-  color: var(--vigil-muted);
+  color: var(--sem-text-muted);
 }
 
 .syncPopoverMetaKey {
@@ -2809,7 +2809,7 @@
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: var(--vigil-label);
+  color: var(--sem-text-primary);
   line-height: 1.35;
 }
 
@@ -2829,7 +2829,7 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 12px;
   line-height: 1.45;
-  color: color-mix(in oklch, var(--vigil-muted) 70%, var(--vigil-label) 30%);
+  color: color-mix(in oklch, var(--sem-text-muted) 70%, var(--sem-text-primary) 30%);
 }
 
 .syncPopoverMetaRel {
@@ -2842,7 +2842,7 @@
 .syncPopoverSection {
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px solid color-mix(in oklch, var(--vigil-border) 75%, transparent);
+  border-top: 1px solid color-mix(in oklch, var(--sem-border-subtle) 75%, transparent);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -2854,7 +2854,7 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--vigil-muted);
+  color: var(--sem-text-muted);
   margin: 0 0 10px;
   line-height: 1.35;
   align-self: flex-start;
@@ -2864,7 +2864,7 @@
   margin: 0;
   font-size: 13px;
   line-height: 1.55;
-  color: color-mix(in oklch, var(--vigil-muted) 88%, var(--vigil-label) 12%);
+  color: color-mix(in oklch, var(--sem-text-muted) 88%, var(--sem-text-primary) 12%);
   min-width: 0;
 }
 
@@ -2880,10 +2880,321 @@
   margin: 14px 0 0;
   font-size: 11px;
   line-height: 1.5;
-  color: var(--vigil-muted);
+  color: var(--sem-text-muted);
   opacity: 0.95;
   min-width: 0;
   text-align: left;
+}
+
+/* --- Smart import review modal (post-plan) — tokens from globals only --- */
+.smartImportReviewBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20010;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in oklch, var(--sys-color-black) 50%, transparent);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.smartImportReviewPanel {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  max-height: min(90vh, 780px);
+  width: 100%;
+  max-width: 42rem;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid var(--sem-border-subtle);
+  background: var(--sys-color-neutral-900);
+  box-shadow:
+    0 25px 50px -12px color-mix(in oklch, var(--sys-color-black) 55%, transparent),
+    inset 0 1px 0 var(--sem-overlay-white-08);
+}
+
+.smartImportReviewHeader {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 16px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid color-mix(in oklch, var(--sem-border-subtle) 88%, transparent);
+}
+
+.smartImportReviewHeaderMain {
+  min-width: 0;
+  flex: 1;
+}
+
+.smartImportReviewTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--sem-text-primary);
+}
+
+.smartImportReviewFile {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: color-mix(in oklch, var(--sem-text-muted) 90%, var(--sem-text-primary) 10%);
+  word-break: break-word;
+}
+
+.smartImportReviewStatsLine {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--sem-text-muted);
+}
+
+.smartImportReviewStatsLine strong {
+  font-weight: 600;
+  color: color-mix(in oklch, var(--sem-text-primary) 82%, var(--sem-text-muted) 18%);
+}
+
+.smartImportReviewHeaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+  align-items: flex-start;
+}
+
+.smartImportReviewTabs {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid color-mix(in oklch, var(--sem-border-subtle) 88%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 3.5%, var(--sys-color-neutral-900) 96.5%);
+}
+
+.smartImportReviewBanner {
+  flex-shrink: 0;
+  margin: 0 16px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklch, var(--sys-color-warning-400) 42%, transparent);
+  background: color-mix(in oklch, var(--sys-color-warning-500) 11%, transparent);
+  font-size: 11px;
+  line-height: 1.45;
+  color: color-mix(in oklch, var(--sys-color-warning-300) 72%, var(--sem-text-primary) 28%);
+}
+
+.smartImportReviewSuccessBanner {
+  flex-shrink: 0;
+  margin: 0 16px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklch, var(--sys-color-accent-500) 35%, transparent);
+  background: color-mix(in oklch, var(--sem-accent-primary) 12%, var(--sys-color-neutral-900) 88%);
+  font-size: 11px;
+  line-height: 1.45;
+  color: color-mix(in oklch, var(--sem-text-primary) 88%, var(--sem-text-muted) 12%);
+}
+
+.smartImportReviewBody {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.smartImportReviewSourceToggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 82%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 5%, var(--sys-color-neutral-900) 95%);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--sem-text-primary);
+  cursor: pointer;
+}
+
+.smartImportReviewSourceToggle input {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.smartImportReviewFootnote {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px dashed color-mix(in oklch, var(--sem-border-subtle) 75%, transparent);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--sem-text-muted);
+}
+
+.smartImportReviewStructure {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--sem-text-primary);
+}
+
+.smartImportReviewSectionLabel {
+  margin: 0 0 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: color-mix(in oklch, var(--sem-text-muted) 88%, var(--sem-text-primary) 12%);
+}
+
+.smartImportReviewList {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: var(--sem-text-muted);
+}
+
+.smartImportReviewNoteList {
+  max-height: 42vh;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.smartImportReviewNoteCard {
+  border-radius: 10px;
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 86%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 6%, var(--sys-color-neutral-900) 94%);
+  padding: 10px 12px;
+}
+
+.smartImportReviewNoteTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.smartImportReviewNoteTitle {
+  font-weight: 600;
+}
+
+.smartImportReviewNoteKind {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sem-text-muted);
+}
+
+.smartImportReviewNoteSummary {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--sem-text-muted);
+  line-height: 1.4;
+}
+
+.smartImportReviewMutedWarn {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: color-mix(in oklch, var(--sys-color-warning-300) 70%, var(--sem-text-primary) 30%);
+}
+
+.smartImportReviewWarningList {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 11px;
+  color: var(--sem-text-muted);
+}
+
+.smartImportReviewMergeToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.smartImportReviewMergeList {
+  max-height: 48vh;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.smartImportReviewMergeCard {
+  border-radius: 10px;
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 86%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 6%, var(--sys-color-neutral-900) 94%);
+  padding: 12px;
+}
+
+.smartImportReviewMergeLabel {
+  display: flex;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--sem-text-primary);
+}
+
+.smartImportReviewMergeLabel input {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.smartImportReviewMergeSpace {
+  font-size: 10px;
+  color: var(--sem-text-muted);
+}
+
+.smartImportReviewMergeMeta {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--sem-text-muted);
+}
+
+.smartImportReviewMergePre {
+  margin: 10px 0 0;
+  max-height: 9rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 88%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 4%, var(--sys-color-neutral-920) 96%);
+  padding: 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: color-mix(in oklch, var(--sem-text-muted) 88%, var(--sem-text-primary) 12%);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+.smartImportReviewEmpty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--sem-text-muted);
 }
 
 .smartImportPlanningBackdrop {
@@ -2895,6 +3206,8 @@
   justify-content: center;
   padding: 16px;
   background: color-mix(in oklch, var(--sys-color-black) 50%, transparent);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   pointer-events: auto;
 }
 
@@ -2902,63 +3215,74 @@
   width: min(520px, calc(100vw - 24px));
   max-height: min(86vh, 720px);
   overflow-y: auto;
-  border-radius: var(--chrome-panel-radius);
-  border: 1px solid var(--sem-border-subtle, rgba(255 255 255 / 0.08));
+  border-radius: 12px;
+  border: 1px solid var(--sem-border-subtle);
   background: var(--sys-color-neutral-900);
   box-shadow:
-    0 16px 70px rgba(0, 0, 0, 0.5),
+    0 25px 50px -12px color-mix(in oklch, var(--sys-color-black) 55%, transparent),
     inset 0 1px 0 var(--sem-overlay-white-08);
-  color: var(--vigil-label);
-  padding: 14px 16px;
+  color: var(--sem-text-primary);
+  padding: 16px;
 }
 
 .smartImportPlanningHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
 }
 
-.smartImportPlanningTitle {
+.smartImportPlanningHeaderMain {
+  min-width: 0;
+  flex: 1;
+}
+
+.smartImportPlanningEyebrow {
+  display: block;
   margin: 0;
-  font-size: 20px;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
+  font-size: 11px;
+  line-height: 1.3;
   font-weight: 600;
-  color: var(--vigil-label);
+  letter-spacing: -0.01em;
+  color: var(--sem-text-primary);
 }
 
 .smartImportPlanningModeBadge {
+  flex-shrink: 0;
   border-radius: 999px;
-  border: 1px solid color-mix(in oklch, var(--vigil-border) 88%, transparent);
-  background: color-mix(in oklch, var(--vigil-surface) 92%, transparent);
-  padding: 2px 8px;
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 88%, transparent);
+  background: color-mix(in oklch, var(--sem-surface-muted-hover) 65%, transparent);
+  padding: 3px 9px;
   font-size: 10px;
   line-height: 1.25;
-  letter-spacing: 0.06em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--vigil-muted);
+  color: color-mix(in oklch, var(--sem-text-muted) 82%, var(--sem-text-primary) 18%);
 }
 
 .smartImportPlanningPhase {
-  margin: 6px 0 0;
-  font-size: 14px;
-  line-height: 1.4;
-  color: color-mix(in oklch, var(--vigil-label) 92%, var(--vigil-muted) 8%);
+  margin: 4px 0 0;
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: color-mix(in oklch, var(--sem-text-primary) 94%, var(--sem-text-muted) 6%);
 }
 
 .smartImportPlanningProgressTrack {
-  margin-top: 10px;
-  height: 8px;
+  margin-top: 14px;
+  height: 6px;
   border-radius: 999px;
   overflow: hidden;
-  background: color-mix(in oklch, var(--vigil-border) 86%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 12%, transparent);
+  box-shadow: inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 35%, transparent);
 }
 
 .smartImportPlanningProgressFill {
   height: 100%;
   border-radius: 999px;
-  background: color-mix(in oklch, var(--sem-accent-primary) 80%, var(--vigil-accent) 20%);
+  background: color-mix(in oklch, var(--sem-accent-primary) 82%, var(--sem-focus-ring) 18%);
   transition: width 420ms ease-out;
 }
 
@@ -2966,7 +3290,7 @@
   height: 100%;
   width: 40%;
   border-radius: 999px;
-  background: color-mix(in oklch, var(--sem-accent-primary) 80%, var(--vigil-accent) 20%);
+  background: color-mix(in oklch, var(--sem-accent-primary) 82%, var(--sem-focus-ring) 18%);
   animation: pulse 1.4s ease-in-out infinite;
 }
 
@@ -2981,14 +3305,14 @@
 .smartImportPlanningDetail {
   font-size: 12px;
   line-height: 1.4;
-  color: var(--vigil-muted);
+  color: var(--sem-text-muted);
 }
 
 .smartImportPlanningStep {
   font-size: 11px;
   line-height: 1.3;
   font-family: var(--font-geist-mono), monospace;
-  color: color-mix(in oklch, var(--vigil-muted) 86%, var(--vigil-label) 14%);
+  color: color-mix(in oklch, var(--sem-text-muted) 86%, var(--sem-text-primary) 14%);
   flex-shrink: 0;
 }
 
@@ -3000,41 +3324,196 @@
   padding: 7px 9px;
   font-size: 12px;
   line-height: 1.45;
-  color: color-mix(in oklch, var(--sys-color-warning-300) 72%, var(--vigil-label) 28%);
+  color: color-mix(in oklch, var(--sys-color-warning-300) 72%, var(--sem-text-primary) 28%);
 }
 
 .smartImportPlanningHint {
-  margin: 10px 0 0;
+  margin: 12px 0 0;
   font-size: 12px;
-  line-height: 1.45;
-  color: var(--vigil-muted);
+  line-height: 1.5;
+  color: color-mix(in oklch, var(--sem-text-muted) 92%, var(--sem-text-primary) 8%);
 }
 
 .smartImportPlanningUpdatedAt {
-  margin: 7px 0 0;
+  margin: 8px 0 0;
   font-size: 10px;
   line-height: 1.35;
-  color: color-mix(in oklch, var(--vigil-muted) 88%, var(--vigil-label) 12%);
+  color: color-mix(in oklch, var(--sem-text-muted) 88%, var(--sem-text-primary) 12%);
 }
 
 .smartImportPlanningActions {
-  margin-top: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in oklch, var(--sem-border-subtle) 92%, transparent);
   display: flex;
   justify-content: flex-end;
+}
+
+.smartImportWizard {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 20px;
+  max-width: 520px;
+  margin: 0 auto;
+  width: 100%;
+  color: var(--sem-text-primary);
+}
+
+.smartImportWizardProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.smartImportWizardProgressLabel {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: color-mix(in oklch, var(--sem-text-muted) 88%, var(--sem-text-primary) 12%);
+}
+
+.smartImportWizardCard {
+  border-radius: 14px;
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 78%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 5%, var(--sys-color-neutral-900) 95%);
+  padding: 22px 22px 20px;
+  box-shadow: 0 1px 0 var(--sem-overlay-white-08);
+}
+
+.smartImportWizardEyebrow {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sem-text-muted);
+}
+
+.smartImportWizardTitle {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  color: var(--sem-text-primary);
+}
+
+.smartImportWizardContext {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: color-mix(in oklch, var(--sem-text-muted) 82%, var(--sem-text-primary) 18%);
+}
+
+.smartImportWizardQuote {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--sem-text-muted);
+  font-style: italic;
+}
+
+.smartImportWizardOptions {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.smartImportWizardOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 85%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 4%, var(--sys-color-neutral-900) 96%);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--sem-text-primary);
+  transition:
+    border-color 140ms ease,
+    background 140ms ease;
+}
+
+.smartImportWizardOption:hover {
+  border-color: color-mix(in oklch, var(--sem-focus-ring) 38%, var(--sem-border-subtle) 62%);
+  background: color-mix(in oklch, var(--sem-text-primary) 7%, var(--sys-color-neutral-900) 93%);
+}
+
+.smartImportWizardOption input {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.smartImportWizardTextarea {
+  width: 100%;
+  min-height: 88px;
+  margin-top: 4px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 88%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 5%, var(--sys-color-neutral-920) 95%);
+  color: var(--sem-text-primary);
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.smartImportWizardFooter {
+  margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.smartImportWizardFollowUpOptions {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.smartImportWizardComplete {
+  text-align: center;
+  padding: 32px 22px 28px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 76%, transparent);
+  background: color-mix(in oklch, var(--sem-accent-primary) 9%, var(--sys-color-neutral-900) 91%);
+}
+
+.smartImportWizardCompleteTitle {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--sem-text-primary);
+}
+
+.smartImportWizardCompleteBody {
+  margin: 12px auto 22px;
+  max-width: 26rem;
+  font-size: 13px;
+  line-height: 1.55;
+  color: color-mix(in oklch, var(--sem-text-muted) 86%, var(--sem-text-primary) 14%);
 }
 
 .smartImportQuestionsPane {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  color: var(--vigil-label);
+  color: var(--sem-text-primary);
 }
 
 .smartImportQuestionsStatusCard {
-  border: 1px solid color-mix(in oklch, var(--vigil-border) 82%, transparent);
-  background: color-mix(in oklch, var(--vigil-surface) 88%, transparent);
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 82%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 6%, var(--sys-color-neutral-900) 94%);
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 12px 14px;
 }
 
 .smartImportQuestionsStatusTop {
@@ -3052,35 +3531,39 @@
 }
 
 .smartImportQuestionsStatusBadge {
-  border: 1px solid color-mix(in oklch, var(--vigil-border) 88%, transparent);
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 88%, transparent);
+  background: color-mix(in oklch, var(--sem-surface-muted-hover) 50%, transparent);
   border-radius: 999px;
-  padding: 2px 8px;
+  padding: 3px 9px;
   font-size: 10px;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--vigil-muted);
+  color: color-mix(in oklch, var(--sem-text-muted) 82%, var(--sem-text-primary) 18%);
 }
 
 .smartImportQuestionsProgressTrack {
-  margin-top: 8px;
-  height: 8px;
+  margin-top: 10px;
+  height: 6px;
   width: 100%;
   border-radius: 999px;
   overflow: hidden;
-  background: color-mix(in oklch, var(--vigil-border) 86%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 12%, transparent);
+  box-shadow: inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 35%, transparent);
 }
 
 .smartImportQuestionsProgressFill {
   height: 100%;
+  min-width: 0;
   border-radius: 999px;
-  background: var(--vigil-accent);
-  transition: width 220ms ease;
+  background: color-mix(in oklch, var(--sem-accent-primary) 82%, var(--sem-focus-ring) 18%);
+  transition: width 240ms ease-out;
 }
 
 .smartImportQuestionsStatusMeta {
   margin: 7px 0 0;
   font-size: 11px;
-  color: var(--vigil-muted);
+  color: var(--sem-text-muted);
 }
 
 .smartImportQuestionsBlockingHint {
@@ -3089,7 +3572,7 @@
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 11px;
-  color: color-mix(in oklch, var(--sys-color-warning-300) 75%, var(--vigil-label) 25%);
+  color: color-mix(in oklch, var(--sys-color-warning-300) 75%, var(--sem-text-primary) 25%);
   background: color-mix(in oklch, var(--sys-color-warning-500) 12%, transparent);
 }
 
@@ -3115,11 +3598,12 @@
 }
 
 .smartImportQuestionsSectionLabel {
-  margin: 0 0 6px;
-  font-size: 10px;
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--vigil-muted);
+  color: color-mix(in oklch, var(--sem-text-muted) 88%, var(--sem-text-primary) 12%);
 }
 
 .smartImportQuestionsList {
@@ -3134,16 +3618,16 @@
 }
 
 .smartImportQuestionCard {
-  border: 1px solid color-mix(in oklch, var(--vigil-border) 86%, transparent);
-  background: color-mix(in oklch, var(--vigil-surface) 84%, transparent);
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 86%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 5%, var(--sys-color-neutral-900) 95%);
   border-radius: 10px;
-  padding: 12px;
+  padding: 14px;
   pointer-events: auto;
 }
 
 .smartImportQuestionCardActive {
-  border-color: color-mix(in oklch, var(--vigil-accent) 48%, var(--vigil-border) 52%);
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--vigil-accent) 22%, transparent);
+  border-color: color-mix(in oklch, var(--sem-focus-ring) 52%, var(--sem-border-subtle) 48%);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--sem-focus-ring) 26%, transparent);
 }
 
 .smartImportQuestionCardDone {
@@ -3180,14 +3664,14 @@
 
 .smartImportQuestionConfidence {
   font-size: 10px;
-  color: var(--vigil-muted);
+  color: var(--sem-text-muted);
 }
 
 .smartImportQuestionContext {
   margin: 8px 0 0;
   font-size: 12px;
   line-height: 1.45;
-  color: color-mix(in oklch, var(--vigil-muted) 84%, var(--vigil-label) 16%);
+  color: color-mix(in oklch, var(--sem-text-muted) 84%, var(--sem-text-primary) 16%);
 }
 
 .smartImportQuestionOptions {
@@ -3216,9 +3700,9 @@
   width: 100%;
   min-height: 72px;
   border-radius: 8px;
-  border: 1px solid color-mix(in oklch, var(--vigil-border) 88%, transparent);
-  background: color-mix(in oklch, var(--vigil-surface) 92%, transparent);
-  color: var(--vigil-label);
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 88%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 5%, var(--sys-color-neutral-920) 95%);
+  color: var(--sem-text-primary);
   padding: 8px 10px;
   font-size: 12px;
   line-height: 1.45;
@@ -3234,7 +3718,7 @@
 }
 
 .smartImportFollowUpCard {
-  border: 1px solid color-mix(in oklch, var(--sys-color-warning-400) 48%, var(--vigil-border) 52%);
+  border: 1px solid color-mix(in oklch, var(--sys-color-warning-400) 48%, var(--sem-border-subtle) 52%);
   background: color-mix(in oklch, var(--sys-color-warning-500) 11%, transparent);
   border-radius: 10px;
   padding: 10px 12px;
@@ -3252,12 +3736,12 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--vigil-label);
+  color: var(--sem-text-primary);
 }
 
 .smartImportFollowUpConfidence {
   font-size: 10px;
-  color: var(--vigil-muted);
+  color: var(--sem-text-muted);
 }
 
 .smartImportFollowUpTitle {
@@ -3271,13 +3755,13 @@
   margin: 6px 0 0;
   font-size: 12px;
   line-height: 1.45;
-  color: var(--vigil-label);
+  color: var(--sem-text-primary);
 }
 
 .smartImportFollowUpQuote {
   margin: 8px 0 0;
   font-size: 11px;
-  color: var(--vigil-muted);
+  color: var(--sem-text-muted);
 }
 
 .smartImportFollowUpOptions {

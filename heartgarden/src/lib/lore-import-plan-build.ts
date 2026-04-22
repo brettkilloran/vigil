@@ -14,10 +14,12 @@ import {
   capClarificationList,
   ensureClarificationsForContradictions,
   normalizeClarificationsFromLlm,
+  withoutLinkSemanticsClarifications,
 } from "@/src/lib/lore-import-clarifications";
 import { filterPlanLinksToSameCanvasSpace } from "@/src/lib/lore-import-item-link";
 import { coerceImportLinkType } from "@/src/lib/lore-import-link-shape";
 import type { LoreImportProgressReporter } from "@/src/lib/lore-import-progress";
+import { computeLoreImportPipelinePercent } from "@/src/lib/lore-import-pipeline-progress";
 import type { IngestionSignals, LoreImportPlan } from "@/src/lib/lore-import-plan-types";
 import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
 import type { HeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
@@ -55,26 +57,43 @@ export async function buildLoreImportPlan(args: {
   const reportProgress = async (
     phase: string,
     message: string,
-    detail?: { step?: number; total?: number; meta?: Record<string, unknown> },
+    detail?: {
+      step?: number;
+      total?: number;
+      phaseFraction?: number;
+      meta?: Record<string, unknown>;
+    },
   ) => {
+    const pipelinePercent =
+      computeLoreImportPipelinePercent(phase, {
+        step: detail?.step,
+        total: detail?.total,
+        phaseFraction: detail?.phaseFraction,
+      }) ?? 8;
     await args.onProgress?.({
       phase,
       message,
       step: detail?.step,
       total: detail?.total,
-      meta: detail?.meta,
+      meta: { ...detail?.meta, pipelinePercent },
     });
   };
-  await reportProgress("chunking", "Splitting source text into import chunks");
+  await reportProgress("chunking", "Splitting source text into import chunks", {
+    phaseFraction: 1,
+  });
   const chunks = chunkSourceText(args.fullText);
-  await reportProgress("outline", "Generating initial folder/note outline");
+  await reportProgress("outline", "Generating initial folder/note outline", {
+    phaseFraction: 0.12,
+  });
   const outline = await runLoreImportOutlineLlm(
     args.apiKey,
     args.model,
     chunks,
     args.fullText,
   );
-  await reportProgress("outline", "Outline generated; attaching chunk-backed note bodies");
+  await reportProgress("outline", "Outline generated; attaching chunk-backed note bodies", {
+    phaseFraction: 0.92,
+  });
   const chunkDiagnostics = attachBodiesToOutline(outline, chunks);
 
   const notesInternal: OutlineNoteInternal[] = outline.notes.map((n) => ({
@@ -131,7 +150,9 @@ export async function buildLoreImportPlan(args: {
     summary: n.summary,
     bodyPreview: n.bodyText.slice(0, 3500),
   }));
-  await reportProgress("merge", "Comparing import notes with candidate cards");
+  await reportProgress("merge", "Comparing import notes with candidate cards", {
+    phaseFraction: 0.08,
+  });
 
   const { mergeProposals: rawMerges, contradictions: rawContra } =
     await runLoreImportMergeLlmBatched(
@@ -143,7 +164,6 @@ export async function buildLoreImportPlan(args: {
         await reportProgress("merge", "Running merge analysis batches", { step, total });
       },
     );
-  await reportProgress("clarify", "Generating contradiction and clarification questions");
 
   const mergeProposals = rawMerges.map((m) => {
     const row = candidatesByNoteClientId[m.noteClientId]?.find(
@@ -274,11 +294,15 @@ export async function buildLoreImportPlan(args: {
     })),
   };
 
+  await reportProgress("clarify", "Generating contradiction and clarification questions", {
+    phaseFraction: 0.12,
+  });
   const clarifyRaw = await runLoreImportClarifyLlm(
     args.apiKey,
     args.model,
     clarifyPayload,
   );
+  await reportProgress("clarify", "Consolidating review questions", { phaseFraction: 0.95 });
   let clarifications = normalizeClarificationsFromLlm(clarifyRaw);
   clarifications = ensureClarificationsForContradictions(
     contradictions,
@@ -294,6 +318,7 @@ export async function buildLoreImportPlan(args: {
   });
   clarifications = [...clarifications, ...chunkClarifications];
   clarifications = capClarificationList(clarifications);
+  clarifications = withoutLinkSemanticsClarifications(clarifications);
 
   const planRaw: LoreImportPlan = {
     importBatchId: args.importBatchId,
@@ -356,6 +381,6 @@ export async function buildLoreImportPlan(args: {
   if (!parsed.success) {
     throw new Error(`Plan validation failed: ${parsed.error.message}`);
   }
-  await reportProgress("finalize", "Finalizing validated import plan");
+  await reportProgress("finalize", "Finalizing validated import plan", { phaseFraction: 1 });
   return parsed.data;
 }

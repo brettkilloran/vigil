@@ -18,6 +18,13 @@ const OTHER_TEXT_MIN_LENGTH = 4;
 const OTHER_RESOLVE_CLEAR_SCORE = 0.58;
 const OTHER_RESOLVE_CLEAR_GAP = 0.12;
 
+/** Link-type quizzes are low value during import; defaults + canvas editing suffice. */
+export function withoutLinkSemanticsClarifications(
+  items: LoreImportClarificationItem[],
+): LoreImportClarificationItem[] {
+  return items.filter((c) => c.category !== "link_semantics");
+}
+
 export type ClarificationFollowUpPrompt = {
   clarificationId: string;
   title: string;

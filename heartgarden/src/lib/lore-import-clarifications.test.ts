@@ -342,7 +342,7 @@ describe("resolveOtherClarificationAnswers", () => {
       clarifications: [
         {
           id: qid,
-          category: "link_semantics",
+          category: "structure",
           severity: "required",
           title: "Pick link",
           questionKind: "single_select",

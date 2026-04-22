@@ -4,6 +4,7 @@ import { tryGetDb } from "@/src/db/index";
 import { loreImportJobs } from "@/src/db/schema";
 import { buildLoreImportPlan } from "@/src/lib/lore-import-plan-build";
 import type { LoreImportProgress } from "@/src/lib/lore-import-progress";
+import { computeLoreImportPipelinePercent } from "@/src/lib/lore-import-pipeline-progress";
 import { persistImportReviewQueueFromPlan } from "@/src/lib/lore-import-persist-review";
 import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
 import type { VigilDb } from "@/src/lib/spaces";
@@ -198,6 +199,10 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
     await updateLoreImportJobProgress(db as VigilDb, jobId, {
       phase: "persist_review",
       message: "Persisting review queue and final plan",
+      meta: {
+        pipelinePercent:
+          computeLoreImportPipelinePercent("persist_review", { phaseFraction: 0.4 }) ?? 97,
+      },
     });
     await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
     await persistImportReviewQueueFromPlan(db as VigilDb, job.spaceId, parsedPlan.data, true);

@@ -42,6 +42,29 @@ type LoreImportJobView = {
   lastProgressAt?: Date | null;
 };
 
+function coerceOptionalInt(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.trunc(value);
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.trunc(n) : null;
+  }
+  return null;
+}
+
+function normalizeProgressMeta(meta: unknown): Record<string, unknown> | undefined {
+  if (!meta || typeof meta !== "object") return undefined;
+  const m = { ...(meta as Record<string, unknown>) };
+  const p = coerceOptionalInt(m.pipelinePercent);
+  if (p !== null) {
+    m.pipelinePercent = Math.max(0, Math.min(100, p));
+  } else {
+    delete m.pipelinePercent;
+  }
+  return m;
+}
+
 function isMissingProgressColumnsError(error: unknown): boolean {
   const source =
     error && typeof error === "object" ? (error as Record<string, unknown>) : {};
@@ -60,19 +83,21 @@ function isMissingProgressColumnsError(error: unknown): boolean {
 function normalizeJobProgress(
   job: LoreImportJobView,
 ): LoreImportJobProgressPayload | undefined {
+  const step = coerceOptionalInt(job.progressStep);
+  const total = coerceOptionalInt(job.progressTotal);
   const hasProgress =
     Boolean(job.progressPhase) ||
-    typeof job.progressStep === "number" ||
-    typeof job.progressTotal === "number" ||
+    step !== null ||
+    total !== null ||
     Boolean(job.progressMessage) ||
     Boolean(job.progressMeta);
   if (!hasProgress) return undefined;
   return {
     phase: job.progressPhase ?? undefined,
-    step: typeof job.progressStep === "number" ? job.progressStep : undefined,
-    total: typeof job.progressTotal === "number" ? job.progressTotal : undefined,
+    step: step ?? undefined,
+    total: total ?? undefined,
     message: job.progressMessage ?? undefined,
-    meta: (job.progressMeta as Record<string, unknown> | null) ?? undefined,
+    meta: normalizeProgressMeta(job.progressMeta),
     updatedAt: job.lastProgressAt ? job.lastProgressAt.toISOString() : undefined,
   };
 }
@@ -152,10 +177,8 @@ export async function GET(req: Request, ctx: RouteCtx) {
           ...job,
           progressPhase:
             typeof row.progress_phase === "string" ? row.progress_phase : null,
-          progressStep:
-            typeof row.progress_step === "number" ? row.progress_step : null,
-          progressTotal:
-            typeof row.progress_total === "number" ? row.progress_total : null,
+          progressStep: coerceOptionalInt(row.progress_step),
+          progressTotal: coerceOptionalInt(row.progress_total),
           progressMessage:
             typeof row.progress_message === "string" ? row.progress_message : null,
           progressMeta:
