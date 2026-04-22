@@ -1,5 +1,3 @@
-import { PDFParse } from "pdf-parse";
-
 import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
@@ -59,6 +57,7 @@ export async function POST(req: Request) {
   let text = "";
   if (lower.endsWith(".pdf")) {
     try {
+      const { PDFParse } = await import("pdf-parse");
       const parser = new PDFParse({ data: new Uint8Array(buf) });
       const parsed = await parser.getText();
       await parser.destroy();
