@@ -4,14 +4,18 @@
  */
 .anchor {
   position: absolute;
-  right: max(24px, env(safe-area-inset-right, 0px));
-  /* Sit just above the X/Y + zoom strip (same bottom inset and rail height as `.viewportMetricsStrip`). */
-  bottom: calc(28px + var(--chrome-tool-rail-strip-width, 46px) + 10px);
+  left: max(24px, env(safe-area-inset-left, 0px));
+  right: auto;
+  /* Vertically center in the canvas chrome so the debug rail is easy to reach without covering the
+     bottom metrics strip. Expanded panel uses `align-items: flex-start` so it opens to the right. */
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
   z-index: 800;
   pointer-events: auto;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 10px;
 }
 

@@ -21,7 +21,8 @@ function readStoredOpen(key: string): boolean | null {
 }
 
 /**
- * Collapsible chrome aligned with the canvas right tool rail — debug / inspector surfaces only.
+ * Collapsible chrome on the canvas mid-left — debug / inspector surfaces only. Panel extends
+ * rightward so it stays on-screen (mirrors the old right-rail layout that grew left).
  */
 export function CanvasDebugInspectorShell({
   storageKey,
@@ -56,7 +57,7 @@ export function CanvasDebugInspectorShell({
     >
       {!open ? (
         <div className={styles.collapsedPanel}>
-          <ArchitecturalTooltip content="Open debug link inspector" side="left" delayMs={280}>
+          <ArchitecturalTooltip content="Open debug link inspector" side="right" delayMs={280}>
             <Button
               type="button"
               size="icon"
