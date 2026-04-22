@@ -40,6 +40,7 @@ export type LoreFactionArchive091SlabProps = {
   nodeId: string;
   bodyHtml: string;
   factionRoster: FactionRosterEntry[];
+  onFactionRosterChange?: (nextRoster: FactionRosterEntry[]) => void;
   labTestId?: string;
   editable: boolean;
   onCommit: (html: string) => void;
@@ -51,6 +52,7 @@ export function LoreFactionArchive091Slab({
   nodeId,
   bodyHtml,
   factionRoster,
+  onFactionRosterChange,
   labTestId,
   editable,
   onCommit,
@@ -309,6 +311,36 @@ export function LoreFactionArchive091Slab({
   );
 
   const rosterCount = factionRoster.length;
+  const rosterEditable = editable && typeof onFactionRosterChange === "function";
+
+  const createRosterRowId = useCallback(() => {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    return `hg-roster-${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+  }, []);
+
+  const addRosterRow = useCallback(() => {
+    if (!onFactionRosterChange) return;
+    const next: FactionRosterEntry[] = [
+      ...factionRoster,
+      {
+        id: createRosterRowId(),
+        kind: "unlinked",
+        label: "New member",
+      },
+    ];
+    onFactionRosterChange(next);
+  }, [createRosterRowId, factionRoster, onFactionRosterChange]);
+
+  const removeRosterRow = useCallback(
+    (rowId: string) => {
+      if (!onFactionRosterChange) return;
+      const next = factionRoster.filter((row) => row.id !== rowId);
+      onFactionRosterChange(next);
+    },
+    [factionRoster, onFactionRosterChange],
+  );
 
   return (
     <div
@@ -399,9 +431,24 @@ export function LoreFactionArchive091Slab({
           <div className={cardStyles.facArxxTextSection}>
             <div className={cardStyles.facArxxH2Row}>
               <h2 className={cardStyles.facArxxH2}>Member index</h2>
-              <span className={cardStyles.facArxxH2Meta}>
-                {rosterCount} record{rosterCount === 1 ? "" : "s"}
-              </span>
+              <div className={cardStyles.facArxxH2Actions}>
+                <span className={cardStyles.facArxxH2Meta}>
+                  {rosterCount} record{rosterCount === 1 ? "" : "s"}
+                </span>
+                {rosterEditable ? (
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="ghost"
+                    tone="card-dark"
+                    className={cardStyles.facArxxRosterAddBtn}
+                    aria-label="Add faction member"
+                    onClick={addRosterRow}
+                  >
+                    Add
+                  </Button>
+                ) : null}
+              </div>
             </div>
             <div
               className={cardStyles.facArxxRosterCanvasList}
@@ -430,9 +477,25 @@ export function LoreFactionArchive091Slab({
                       data-faction-roster-entry-id={row.id}
                       data-faction-roster-kind={row.kind}
                     >
-                      <div className={cardStyles.facArxxRosterCanvasRowText}>{primary}</div>
-                      {secondary ? (
-                        <div className={cardStyles.facArxxRosterCanvasRowMeta}>{secondary}</div>
+                      <div className={cardStyles.facArxxRosterCanvasRowMain}>
+                        <div className={cardStyles.facArxxRosterCanvasRowText}>{primary}</div>
+                        {secondary ? (
+                          <div className={cardStyles.facArxxRosterCanvasRowMeta}>{secondary}</div>
+                        ) : null}
+                      </div>
+                      {rosterEditable ? (
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="ghost"
+                          tone="card-dark"
+                          className={cardStyles.facArxxRosterDeleteBtn}
+                          aria-label={`Delete ${primary}`}
+                          data-faction-roster-delete="true"
+                          onClick={() => removeRosterRow(row.id)}
+                        >
+                          Delete
+                        </Button>
                       ) : null}
                     </div>
                   );

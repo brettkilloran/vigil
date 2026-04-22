@@ -47,9 +47,10 @@ export function ArchitecturalLoreLocationCanvasNode({
   onRichDocCommand?: (command: string, value?: string) => void;
   emptyPlaceholder?: string | null;
 }) {
-  const nodeWidth = width ?? 340;
+  const MAX_ENTITY_CARD_WIDTH = 340;
+  const nodeWidth = Math.min(width ?? MAX_ENTITY_CARD_WIDTH, MAX_ENTITY_CARD_WIDTH);
   const cardStyle = {
-    width: width != null ? `${width}px` : undefined,
+    width: `${nodeWidth}px`,
     "--entity-width": `${nodeWidth}px`,
   } as CSSProperties;
 

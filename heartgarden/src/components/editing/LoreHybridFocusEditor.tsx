@@ -4,6 +4,7 @@ import type { JSONContent } from "@tiptap/core";
 import { startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { HeartgardenDocEditor } from "@/src/components/editing/HeartgardenDocEditor";
+import { Button } from "@/src/components/ui/Button";
 import {
   buildCharacterFocusDocumentHtml,
   extractCharacterIdentityRowHtml,
@@ -33,6 +34,7 @@ import {
 import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
 import { htmlFragmentToHgDocDoc } from "@/src/lib/hg-doc/html-to-doc";
+import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
 
 import styles from "@/src/components/editing/LoreHybridFocusEditor.module.css";
 
@@ -64,6 +66,8 @@ export type LoreHybridFocusEditorProps = {
   variant: "character" | "location" | "faction";
   focusHtml: string;
   onChangeFocusHtml: (next: string) => void;
+  factionRoster?: FactionRosterEntry[];
+  onFactionRosterChange?: (next: FactionRosterEntry[]) => void;
   className?: string;
   notesSurfaceKey?: string;
   /** When this changes (e.g. active node id), identity row HTML is re-injected once; same key avoids wiping contenteditable while typing. */
@@ -74,6 +78,8 @@ export function LoreHybridFocusEditor({
   variant,
   focusHtml,
   onChangeFocusHtml,
+  factionRoster,
+  onFactionRosterChange,
   className,
   notesSurfaceKey = "focus-lore-notes",
   focusDocumentKey = null,
@@ -268,6 +274,7 @@ export function LoreHybridFocusEditor({
   const hasCharacterShell = characterParts != null;
   const hasLocationShell = locationParts != null;
   const hasFactionShell = factionParts != null;
+  const canEditFactionRoster = variant === "faction" && typeof onFactionRosterChange === "function";
 
   useEffect(() => {
     if (variant !== "character" || !hasCharacterShell) return;
@@ -413,6 +420,35 @@ export function LoreHybridFocusEditor({
     [variant, emitCharacter, emitLocation, emitFaction],
   );
 
+  const createRosterRowId = useCallback(() => {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    return `hg-roster-${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+  }, []);
+
+  const addFocusFactionRosterRow = useCallback(() => {
+    if (!onFactionRosterChange) return;
+    const nextRoster = factionRoster ?? [];
+    onFactionRosterChange([
+      ...nextRoster,
+      {
+        id: createRosterRowId(),
+        kind: "unlinked",
+        label: "New member",
+      },
+    ]);
+  }, [createRosterRowId, factionRoster, onFactionRosterChange]);
+
+  const removeFocusFactionRosterRow = useCallback(
+    (rowId: string) => {
+      if (!onFactionRosterChange) return;
+      const nextRoster = factionRoster ?? [];
+      onFactionRosterChange(nextRoster.filter((row) => row.id !== rowId));
+    },
+    [factionRoster, onFactionRosterChange],
+  );
+
   if (variant === "character" && !characterParts) {
     return <div className={className} data-focus-body-editor="true" />;
   }
@@ -458,6 +494,68 @@ export function LoreHybridFocusEditor({
         data-hg-lore-hybrid-focus="faction"
       >
         <div ref={factionMetaShellRef} className={styles.factionMetaHost} />
+        <div className={styles.factionRosterWrap} data-hg-faction-focus-roster="true">
+          <div className={styles.factionRosterHeader}>
+            <span className={styles.label}>Member index</span>
+            <div className={styles.factionRosterHeaderActions}>
+              <span className={styles.factionRosterCount}>
+                {(factionRoster ?? []).length} record{(factionRoster ?? []).length === 1 ? "" : "s"}
+              </span>
+              {canEditFactionRoster ? (
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="ghost"
+                  tone="focus-dark"
+                  className={styles.factionRosterActionBtn}
+                  aria-label="Add faction member"
+                  onClick={addFocusFactionRosterRow}
+                >
+                  Add
+                </Button>
+              ) : null}
+            </div>
+          </div>
+          <div className={styles.factionRosterList}>
+            {(factionRoster ?? []).length === 0 ? (
+              <p className={styles.factionRosterEmpty}>No known members.</p>
+            ) : (
+              (factionRoster ?? []).map((row) => {
+                const primary =
+                  row.kind === "character"
+                    ? row.displayNameOverride?.trim() || `Character ${row.characterItemId.slice(0, 8)}…`
+                    : row.label.trim() || "Member";
+                const secondary =
+                  row.kind === "character"
+                    ? row.roleOverride?.trim() || null
+                    : row.role?.trim() || null;
+                return (
+                  <div key={row.id} className={styles.factionRosterRow}>
+                    <div className={styles.factionRosterRowMain}>
+                      <p className={styles.factionRosterRowPrimary}>{primary}</p>
+                      {secondary ? (
+                        <p className={styles.factionRosterRowSecondary}>{secondary}</p>
+                      ) : null}
+                    </div>
+                    {canEditFactionRoster ? (
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="ghost"
+                        tone="focus-dark"
+                        className={styles.factionRosterActionBtn}
+                        aria-label={`Delete ${primary}`}
+                        onClick={() => removeFocusFactionRosterRow(row.id)}
+                      >
+                        Delete
+                      </Button>
+                    ) : null}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
         <div className={styles.notesWrap} data-hg-lore-hybrid-notes-wrap="true">
           <span className={styles.label} data-hg-lore-hybrid-notes-label="true">
             Record

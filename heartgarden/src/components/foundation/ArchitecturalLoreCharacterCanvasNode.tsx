@@ -54,9 +54,10 @@ export function ArchitecturalLoreCharacterCanvasNode({
   /** Standalone canvas: double-click enters inline edit when the body is not yet editable. */
   onRequestCanvasBodyEdit?: () => void;
 }) {
-  const nodeWidth = width ?? 340;
+  const MAX_ENTITY_CARD_WIDTH = 340;
+  const nodeWidth = Math.min(width ?? MAX_ENTITY_CARD_WIDTH, MAX_ENTITY_CARD_WIDTH);
   const cardStyle = {
-    width: width != null ? `${width}px` : undefined,
+    width: `${nodeWidth}px`,
     "--entity-width": `${nodeWidth}px`,
   } as CSSProperties;
 

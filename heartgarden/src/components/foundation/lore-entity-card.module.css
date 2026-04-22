@@ -2382,7 +2382,7 @@
 }
 
 .charSkShellV11 .charSkMetaBlock {
-  grid-template-rows: 76px 76px;
+  grid-template-rows: repeat(2, minmax(76px, auto));
   align-content: start;
   align-self: stretch;
   justify-self: stretch;
@@ -2390,11 +2390,11 @@
   min-height: 0;
 }
 
-/* Both meta rows fixed 76px so Affiliation and Nationality match (avoid 1fr squeezing row 1). */
+/* Keep row floors aligned, but let long/pending content expand instead of being clipped. */
 .charSkShellV11 .charSkMetaBlock > .charSkMetaRow {
-  min-height: 0;
-  height: 76px;
-  max-height: 76px;
+  min-height: 76px;
+  height: auto;
+  max-height: none;
   box-sizing: border-box;
 }
 
@@ -2445,7 +2445,7 @@
 
 .charSkShellV11 .charSkMetaRow {
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .charSkMetaRow .charSkFieldLabel {
@@ -3993,7 +3993,8 @@
   font-weight: 500;
   display: flex;
   flex-direction: column;
-  max-height: 340px;
+  /* Match standard A4 node cap so location slabs can grow naturally but stop at the same ceiling. */
+  max-height: calc(var(--entity-width, 340px) * 1.41421356237);
   min-height: 0;
   overflow: hidden;
   box-sizing: border-box;
@@ -4084,7 +4085,8 @@
   flex-direction: column;
   /* Tight stack: title row → context → main (extra margin here read as “padding below” the placename). */
   gap: 3px;
-  flex: 1 1 auto;
+  /* Hug content by default; do not stretch to fill unused slab height. */
+  flex: 0 1 auto;
   min-height: 0;
   overflow: hidden;
 }
@@ -4095,7 +4097,7 @@
 }
 
 .locOrdoV7DocGrid > .locOrdoV7Main {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
   overflow: hidden;
 }
@@ -4104,7 +4106,7 @@
 .locOrdoV7DocInline {
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
   overflow: hidden;
   --loc-ordo-v7-detail-slot-h: calc(0.92 * 12px * 1.55 + 0.55 * 0.92 * 12px + 1px);
@@ -4122,8 +4124,10 @@
 }
 
 .locOrdoV7Root .locOrdoV7DocInline > .locOrdoV7NotesCell {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
+  /* Once notes exceed the card budget, scroll notes instead of stretching the whole card. */
+  max-height: calc((var(--entity-width, 340px) * 1.41421356237) - 190px);
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
@@ -5027,6 +5031,12 @@
   margin: 0 0 10px;
 }
 
+.facArxxH2Actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .facArxxH2Row .facArxxH2 {
   margin: 0;
   padding: 0;
@@ -5042,6 +5052,13 @@
   font-weight: 500;
   line-height: 1.25;
   color: var(--sem-text-muted);
+}
+
+.facArxxRosterAddBtn:global(.vigil-btn),
+.facArxxRosterDeleteBtn:global(.vigil-btn) {
+  --btn-height: var(--sys-control-height-xs);
+  margin: 0;
+  letter-spacing: 0.04em;
 }
 
 .facArxxRecordCell {
@@ -5142,6 +5159,19 @@
   margin-bottom: 0;
 }
 
+.facArxxHgHost :global(.ProseMirror [data-hg-ai-pending="true"]),
+.facArxxHgHost :global(.ProseMirror span.hgAiPending) {
+  color: var(--sem-text-llm-accent-bright);
+  text-decoration: none;
+  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, transparent);
+}
+
+.facArxxHgHost :global(.ProseMirror [data-hg-ai-pending="true"].hgAiPending--gutter-hover),
+.facArxxHgHost :global(.ProseMirror span.hgAiPending.hgAiPending--gutter-hover) {
+  background: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 100%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--sem-text-llm-accent-bright) 42%, transparent);
+}
+
 .facArxxHgHost :global(.ProseMirror em) {
   font-style: italic;
 }
@@ -5199,11 +5229,17 @@
 
 .facArxxRosterCanvasRow {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
   padding: 10px 11px 11px;
   border: 1px dashed var(--sem-border-subtle);
   border-radius: 2px;
+}
+
+.facArxxRosterCanvasRowMain {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .facArxxRosterCanvasRowText {

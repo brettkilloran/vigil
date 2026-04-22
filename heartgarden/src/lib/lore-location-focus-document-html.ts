@@ -566,6 +566,10 @@ export function extractLocationMetaFocusShellHtml(html: string): string {
     const root = doc.getElementById("__hg_loc_meta");
     const meta = root?.querySelector('[data-hg-lore-location-focus-meta="true"]');
     if (!meta) return "";
+    const nameField = meta.querySelector<HTMLElement>('[data-hg-lore-location-focus-field="name"]');
+    if (nameField) {
+      nameField.innerHTML = normalizedLocationFocusNameInnerFromFieldEl(nameField, "<br>");
+    }
     return `<div data-hg-location-focus-doc="v1">${meta.outerHTML}</div>`;
   } catch {
     return "";

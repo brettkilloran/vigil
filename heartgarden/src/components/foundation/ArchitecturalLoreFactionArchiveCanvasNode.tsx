@@ -30,6 +30,7 @@ export function ArchitecturalLoreFactionArchiveCanvasNode({
   showTape = true,
   bodyEditable,
   onBodyDraftDirty,
+  onFactionRosterChange,
   wikiLinkAssist,
   onRichDocCommand,
   emptyPlaceholder,
@@ -47,13 +48,15 @@ export function ArchitecturalLoreFactionArchiveCanvasNode({
   showTape?: boolean;
   bodyEditable?: boolean;
   onBodyDraftDirty?: (dirty: boolean) => void;
+  onFactionRosterChange?: (id: string, roster: FactionRosterEntry[]) => void;
   wikiLinkAssist?: WikiLinkAssistConfig | null;
   onRichDocCommand?: (command: string, value?: string) => void;
   emptyPlaceholder?: string | null;
 }) {
-  const nodeWidth = width ?? 340;
+  const MAX_ENTITY_CARD_WIDTH = 340;
+  const nodeWidth = Math.min(width ?? MAX_ENTITY_CARD_WIDTH, MAX_ENTITY_CARD_WIDTH);
   const cardStyle = {
-    width: width != null ? `${width}px` : undefined,
+    width: `${nodeWidth}px`,
     "--entity-width": `${nodeWidth}px`,
   } as CSSProperties;
 
@@ -78,6 +81,9 @@ export function ArchitecturalLoreFactionArchiveCanvasNode({
           bodyHtml={bodyHtml}
           factionRoster={factionRoster}
           editable={editable}
+          onFactionRosterChange={
+            onFactionRosterChange ? (nextRoster) => onFactionRosterChange(id, nextRoster) : undefined
+          }
           onCommit={(html) => onBodyCommit(id, html)}
           onDraftDirty={onBodyDraftDirty}
           emptyPlaceholder={emptyPlaceholder}

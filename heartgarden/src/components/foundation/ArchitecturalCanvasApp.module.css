@@ -1208,8 +1208,10 @@
 }
 
 .entityNode {
+  --entity-max-width: 340px;
   position: relative;
-  width: 340px;
+  width: var(--entity-width, var(--entity-max-width));
+  max-width: var(--entity-max-width);
   border-radius: 2px;
   box-shadow:
     0 4px 12px var(--sem-color-shadow-20),
@@ -1626,6 +1628,13 @@
 .nodeBtn {
   cursor: pointer;
   transition: transform 0.16s ease;
+}
+
+/* Keep canvas expand controls consistent with lore slab Storybook sizing. */
+.nodeBtn:global(.vigil-btn[data-size="icon"]) {
+  --btn-height: var(--sys-control-height-xs);
+  width: var(--sys-control-height-xs);
+  min-width: var(--sys-control-height-xs);
 }
 
 .nodeBtn:hover {
@@ -5833,6 +5842,13 @@ button.rootDockPanel.viewportMetricsPanel {
   color: var(--sys-color-neutral-400);
 }
 
+/* AI/import Bind controls use dedicated semantic tokens; do not inherit generic glass gray. */
+.shell :global(.vigil-btn[data-hg-ai-bind="true"]) {
+  color: var(--btn-fg-default);
+  background: var(--btn-bg-default);
+  border-color: var(--btn-border-default);
+}
+
 /* Current space in trail: white; beat glass tone + disabled opacity on non-clickable crumb. */
 .shell :global(.vigil-btn[data-tone="glass"]).crumbActive,
 .shell :global(.vigil-btn[data-tone="glass"]).crumbActive:disabled,
@@ -5914,6 +5930,15 @@ button.rootDockPanel.viewportMetricsPanel {
   color: var(--sys-color-neutral-100);
 }
 
+.shell :global(.vigil-btn[data-hg-ai-bind="true"]:hover:not(:disabled):not([data-disabled="true"])),
+.shell :global(
+    .vigil-btn[data-hg-ai-bind="true"][data-force-state="hover"]:not(:disabled):not([data-disabled="true"])
+  ) {
+  color: var(--btn-fg-hover);
+  background: var(--btn-bg-hover);
+  border-color: var(--btn-border-hover);
+}
+
 /* Selected glass tool: light fill + dark icon; default glass hover uses light text → white-on-white in engaged well. */
 .shell :global(.vigil-btn[data-tone="glass"][data-active="true"]:hover:not(:disabled):not([data-disabled="true"])),
 .shell :global(.vigil-btn[data-tone="menu"][data-active="true"]:hover:not(:disabled):not([data-disabled="true"])),
@@ -5938,6 +5963,15 @@ button.rootDockPanel.viewportMetricsPanel {
   background: var(--sem-surface-muted-press);
   color: var(--sys-color-neutral-100);
   transform: translateY(0.5px);
+}
+
+.shell :global(.vigil-btn[data-hg-ai-bind="true"]:active:not(:disabled):not([data-disabled="true"])),
+.shell :global(
+    .vigil-btn[data-hg-ai-bind="true"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])
+  ) {
+  color: var(--btn-fg-active);
+  background: var(--btn-bg-active);
+  border-color: var(--btn-border-active);
 }
 
 .shell :global(.vigil-btn[data-tone="glass"][data-active="true"]:active:not(:disabled):not([data-disabled="true"])),

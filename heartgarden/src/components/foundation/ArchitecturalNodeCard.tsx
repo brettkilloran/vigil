@@ -21,7 +21,6 @@ import type { JSONContent } from "@tiptap/core";
 import type { ButtonTone } from "@/src/components/ui/Button";
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
-import { Tag } from "@/src/components/ui/Tag";
 import { HeartgardenMediaPlaceholderImg } from "@/src/components/ui/HeartgardenMediaPlaceholderImg";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
@@ -67,7 +66,6 @@ export function ArchitecturalNodeHeader({
   expandLabel = "Focus Mode",
   buttonTone = "card-light",
   onExpand,
-  aiReviewPending = false,
   compact = false,
 }: {
   title: ReactNode;
@@ -75,8 +73,6 @@ export function ArchitecturalNodeHeader({
   expandLabel?: string;
   buttonTone?: ButtonTone;
   onExpand?: () => void;
-  /** When true, show a small badge for import / LLM text pending review. */
-  aiReviewPending?: boolean;
   /** Tighter bar + smaller expand control — closer to title-only document headers. */
   compact?: boolean;
 }) {
@@ -97,14 +93,6 @@ export function ArchitecturalNodeHeader({
         aria-hidden
       />
       <div className={styles.nodeTitleRow}>
-        {aiReviewPending ? (
-          <Tag
-            variant={buttonTone === "card-dark" ? "llmCode" : "llmLight"}
-            title="Heartgarden AI or import text — not yet reviewed"
-          >
-            Unreviewed
-          </Tag>
-        ) : null}
         <span className={styles.nodeTitle}>{title}</span>
       </div>
       <div className={styles.nodeActions}>
@@ -251,15 +239,16 @@ export function ArchitecturalNodeCard({
   /** From `items.entity_meta.aiReview` and body pending marks — show Unreviewed chip when actionable. */
   aiReviewPending?: boolean;
 }) {
+  const MAX_ENTITY_CARD_WIDTH = 340;
   const isMediaNode = theme === "media";
   const documentVariant: "hgDoc" | "html" =
     !loreCard && (theme === "default" || theme === "task" || theme === "code") ? "hgDoc" : "html";
-  const nodeWidth = width ?? 340;
+  const nodeWidth = Math.min(width ?? MAX_ENTITY_CARD_WIDTH, MAX_ENTITY_CARD_WIDTH);
   const [imageDpr] = useState(() =>
     typeof window !== "undefined" ? Math.min(window.devicePixelRatio ?? 1, 2.5) : 1,
   );
   const cardStyle = {
-    width: width != null ? `${width}px` : undefined,
+    width: `${nodeWidth}px`,
     "--entity-width": `${nodeWidth}px`,
   } as CSSProperties;
 
@@ -366,7 +355,6 @@ export function ArchitecturalNodeCard({
         showExpand={showExpandButton}
         buttonTone={theme === "code" ? "card-dark" : "card-light"}
         onExpand={() => onExpand(id)}
-        aiReviewPending={aiReviewPending}
       />
       <ArchitecturalNodeBody
         nodeId={id}
