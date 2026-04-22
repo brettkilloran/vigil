@@ -11498,10 +11498,6 @@ export function ArchitecturalCanvasApp({
                       }
                       loreCard={entity.loreCard}
                       factionRoster={entity.loreCard?.kind === "faction" ? entity.factionRoster : undefined}
-                      aiReviewPending={hasActionableAiReview(
-                        entity.entityMeta,
-                        contentEntityHasHgAiPending(entity),
-                      )}
                     />
                   )
                 ) : (
@@ -11752,10 +11748,6 @@ export function ArchitecturalCanvasApp({
                           useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
                           loreCard={entity.loreCard}
                           factionRoster={entity.loreCard?.kind === "faction" ? entity.factionRoster : undefined}
-                          aiReviewPending={hasActionableAiReview(
-                            entity.entityMeta,
-                            contentEntityHasHgAiPending(entity),
-                          )}
                         />
                       )
                     ) : (
@@ -12908,10 +12900,6 @@ export function ArchitecturalCanvasApp({
                       }
                       loreCard={entity.loreCard}
                       factionRoster={entity.loreCard?.kind === "faction" ? entity.factionRoster : undefined}
-                      aiReviewPending={hasActionableAiReview(
-                        entity.entityMeta,
-                        contentEntityHasHgAiPending(entity),
-                      )}
                     />
                   )
                 ) : (
@@ -13151,7 +13139,7 @@ export function ArchitecturalCanvasApp({
                 factionRoster={
                   focusSurface === "faction-hybrid" && activeNodeId
                     ? graph.entities[activeNodeId]?.kind === "content"
-                      ? (graph.entities[activeNodeId].contentJson.factionRoster ?? [])
+                      ? (graph.entities[activeNodeId].factionRoster ?? [])
                       : []
                     : undefined
                 }

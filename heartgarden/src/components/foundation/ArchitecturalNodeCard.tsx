@@ -209,7 +209,6 @@ export function ArchitecturalNodeCard({
   loreCard,
   factionRoster,
   bodyDoc,
-  aiReviewPending = false,
 }: {
   id: string;
   title: string;
@@ -236,8 +235,6 @@ export function ArchitecturalNodeCard({
   loreCard?: LoreCard | null;
   /** Roster rows for faction cards (`hgArch.factionRoster`) — thread targets use `data-faction-roster-entry-id`. */
   factionRoster?: FactionRosterEntry[];
-  /** From `items.entity_meta.aiReview` and body pending marks — show Unreviewed chip when actionable. */
-  aiReviewPending?: boolean;
 }) {
   const MAX_ENTITY_CARD_WIDTH = 340;
   const isMediaNode = theme === "media";

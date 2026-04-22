@@ -12,14 +12,12 @@ const meta: Meta<typeof ArchitecturalNodeHeader> = {
     showExpand: true,
     expandLabel: "Focus Mode",
     buttonTone: "card-light",
-    aiReviewPending: false,
     onExpand: () => {},
   },
   argTypes: {
     title: { control: "text" },
     showExpand: { control: "boolean" },
     expandLabel: { control: "text" },
-    aiReviewPending: { control: "boolean" },
     buttonTone: {
       control: "radio",
       options: ["card-light", "card-dark", "focus-light", "focus-dark"],
@@ -43,13 +41,6 @@ export const Default: Story = {};
 export const NoExpandButton: Story = {
   args: {
     showExpand: false,
-  },
-};
-
-export const WithAiReviewBadge: Story = {
-  args: {
-    aiReviewPending: true,
-    title: "Merged import",
   },
 };
 
