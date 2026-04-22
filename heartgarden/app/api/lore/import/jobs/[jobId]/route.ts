@@ -66,21 +66,6 @@ export async function GET(req: Request, ctx: RouteCtx) {
     }
   }
 
-  const progress =
-    job.progressPhase || job.progressMessage
-      ? {
-          phase: job.progressPhase ?? "processing",
-          step: typeof job.progressStep === "number" ? job.progressStep : undefined,
-          total: typeof job.progressTotal === "number" ? job.progressTotal : undefined,
-          message: job.progressMessage ?? "Import is running on the server",
-          meta:
-            job.progressMeta && typeof job.progressMeta === "object"
-              ? (job.progressMeta as Record<string, unknown>)
-              : undefined,
-          updatedAt: job.lastProgressAt?.toISOString() ?? job.updatedAt?.toISOString() ?? null,
-        }
-      : undefined;
-
   if (job.status === "ready" && job.plan) {
     const parsed = loreImportPlanSchema.safeParse(job.plan);
     if (!parsed.success) {
@@ -97,7 +82,6 @@ export async function GET(req: Request, ctx: RouteCtx) {
       ok: true,
       status: job.status,
       plan: parsed.data,
-      ...(progress ? { progress } : {}),
     });
   }
 
@@ -118,32 +102,17 @@ export async function GET(req: Request, ctx: RouteCtx) {
       jobId: job.id,
       spaceId: job.spaceId,
       error: job.error,
-      progressPhase: job.progressPhase ?? null,
-      progressMeta: job.progressMeta ?? null,
     });
   }
-
-  const failureMeta =
-    job.progressMeta && typeof job.progressMeta === "object"
-      ? (job.progressMeta as Record<string, unknown>)
-      : null;
-  const errorCode = typeof failureMeta?.errorCode === "string" ? failureMeta.errorCode : undefined;
-  const lastPhase =
-    typeof failureMeta?.lastPhase === "string"
-      ? failureMeta.lastPhase
-      : job.progressPhase ?? undefined;
 
   return Response.json({
     ok: true,
     attemptId,
     status: job.status,
-    ...(progress ? { progress } : {}),
     ...(job.status === "failed"
       ? {
           error: job.error || "Import job failed",
           code: "lore_import_job_failed",
-          errorCode,
-          lastPhase,
         }
       : {}),
   });

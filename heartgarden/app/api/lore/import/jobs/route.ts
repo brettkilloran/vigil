@@ -89,12 +89,6 @@ export async function POST(req: Request) {
       fileName: parsed.data.fileName ?? null,
       plan: null,
       error: null,
-      progressPhase: "queued",
-      progressStep: null,
-      progressTotal: null,
-      progressMessage: "Queued for smart import planning",
-      progressMeta: { attemptId, stage: "queued" },
-      lastProgressAt: now,
       createdAt: now,
       updatedAt: now,
     });
