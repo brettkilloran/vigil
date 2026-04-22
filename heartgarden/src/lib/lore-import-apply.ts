@@ -19,6 +19,7 @@ import {
 import { placeImportCards } from "@/src/lib/lore-import-placement";
 import {
   applyClarificationPatches,
+  resolveOtherClarificationAnswers,
   validateClarificationAnswersForApply,
 } from "@/src/lib/lore-import-clarifications";
 import {
@@ -34,6 +35,7 @@ import {
 import type { CanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
 import {
   buildDefaultEntityMeta,
+  type ClarificationAnswer,
   clarificationAnswerSchema,
   loreImportPlanSchema,
   type LoreImportPlan,
@@ -127,13 +129,28 @@ async function nextZIndex(
 export async function applyLoreImportPlan(
   db: VigilDb,
   raw: LoreImportApplyBody,
-): Promise<{
-  createdItemIds: string[];
-  folderItemIds: string[];
-  linksCreated: number;
-  mergesApplied: number;
-  linkWarnings: string[];
-}> {
+): Promise<
+  | {
+      status: "applied";
+      createdItemIds: string[];
+      folderItemIds: string[];
+      linksCreated: number;
+      mergesApplied: number;
+      linkWarnings: string[];
+    }
+  | {
+      status: "needs_follow_up";
+      resolvedClarificationAnswers: ClarificationAnswer[];
+      followUp: {
+        clarificationId: string;
+        title: string;
+        question: string;
+        options: { id: string; label: string; recommended?: boolean }[];
+        confidence: number;
+        otherText: string;
+      };
+    }
+> {
   const body = loreImportApplyBodySchema.parse(raw);
   const space = await assertSpaceExists(db, body.spaceId);
   if (!space) {
@@ -146,10 +163,19 @@ export async function applyLoreImportPlan(
   }
 
   const clarificationAnswers = body.clarificationAnswers ?? [];
-  const v = validateClarificationAnswersForApply(plan, clarificationAnswers);
+  const resolvedOther = resolveOtherClarificationAnswers(plan, clarificationAnswers);
+  if (resolvedOther.status === "needs_follow_up") {
+    return {
+      status: "needs_follow_up",
+      resolvedClarificationAnswers: resolvedOther.answers,
+      followUp: resolvedOther.followUp,
+    };
+  }
+  const normalizedAnswers = resolvedOther.answers;
+  const v = validateClarificationAnswersForApply(plan, normalizedAnswers);
   if (!v.ok) throw new Error(v.error);
   try {
-    plan = applyClarificationPatches(plan, clarificationAnswers);
+    plan = applyClarificationPatches(plan, normalizedAnswers);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Clarification patch failed";
     throw new Error(msg);
@@ -757,7 +783,7 @@ export async function applyLoreImportPlan(
       }
     }
 
-    for (const a of clarificationAnswers) {
+    for (const a of normalizedAnswers) {
       await tx
         .update(importReviewItems)
         .set({ status: "resolved", updatedAt: new Date() })
@@ -778,6 +804,7 @@ export async function applyLoreImportPlan(
   }
 
   return {
+    status: "applied",
     createdItemIds,
     folderItemIds,
     linksCreated,

@@ -2886,6 +2886,277 @@
   text-align: left;
 }
 
+.smartImportQuestionsPane {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--vigil-label);
+}
+
+.smartImportQuestionsStatusCard {
+  border: 1px solid color-mix(in oklch, var(--vigil-border) 82%, transparent);
+  background: color-mix(in oklch, var(--vigil-surface) 88%, transparent);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.smartImportQuestionsStatusTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.smartImportQuestionsStatusTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.smartImportQuestionsStatusBadge {
+  border: 1px solid color-mix(in oklch, var(--vigil-border) 88%, transparent);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--vigil-muted);
+}
+
+.smartImportQuestionsProgressTrack {
+  margin-top: 8px;
+  height: 8px;
+  width: 100%;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in oklch, var(--vigil-border) 86%, transparent);
+}
+
+.smartImportQuestionsProgressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--vigil-accent);
+  transition: width 220ms ease;
+}
+
+.smartImportQuestionsStatusMeta {
+  margin: 7px 0 0;
+  font-size: 11px;
+  color: var(--vigil-muted);
+}
+
+.smartImportQuestionsBlockingHint {
+  margin: 0;
+  border: 1px solid color-mix(in oklch, var(--sys-color-warning-400) 45%, transparent);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: color-mix(in oklch, var(--sys-color-warning-300) 75%, var(--vigil-label) 25%);
+  background: color-mix(in oklch, var(--sys-color-warning-500) 12%, transparent);
+}
+
+.smartImportQuestionsControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.smartImportQuestionsFilters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.smartImportQuestionsLists {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.smartImportQuestionsSectionLabel {
+  margin: 0 0 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vigil-muted);
+}
+
+.smartImportQuestionsList {
+  max-height: 52vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 2px 2px 0;
+  margin: 0;
+  list-style: none;
+}
+
+.smartImportQuestionCard {
+  border: 1px solid color-mix(in oklch, var(--vigil-border) 86%, transparent);
+  background: color-mix(in oklch, var(--vigil-surface) 84%, transparent);
+  border-radius: 10px;
+  padding: 12px;
+  pointer-events: auto;
+}
+
+.smartImportQuestionCardActive {
+  border-color: color-mix(in oklch, var(--vigil-accent) 48%, var(--vigil-border) 52%);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--vigil-accent) 22%, transparent);
+}
+
+.smartImportQuestionCardDone {
+  opacity: 0.92;
+}
+
+.smartImportQuestionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.smartImportQuestionTitle {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.smartImportQuestionMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.smartImportQuestionChip {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.smartImportQuestionConfidence {
+  font-size: 10px;
+  color: var(--vigil-muted);
+}
+
+.smartImportQuestionContext {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: color-mix(in oklch, var(--vigil-muted) 84%, var(--vigil-label) 16%);
+}
+
+.smartImportQuestionOptions {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.smartImportOptionLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.smartImportOptionInput {
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
+
+.smartImportOtherInput {
+  width: 100%;
+  min-height: 72px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklch, var(--vigil-border) 88%, transparent);
+  background: color-mix(in oklch, var(--vigil-surface) 92%, transparent);
+  color: var(--vigil-label);
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.smartImportQuestionActions {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.smartImportFollowUpCard {
+  border: 1px solid color-mix(in oklch, var(--sys-color-warning-400) 48%, var(--vigil-border) 52%);
+  background: color-mix(in oklch, var(--sys-color-warning-500) 11%, transparent);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.smartImportFollowUpHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.smartImportFollowUpBadge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vigil-label);
+}
+
+.smartImportFollowUpConfidence {
+  font-size: 10px;
+  color: var(--vigil-muted);
+}
+
+.smartImportFollowUpTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.smartImportFollowUpBody {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--vigil-label);
+}
+
+.smartImportFollowUpQuote {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--vigil-muted);
+}
+
+.smartImportFollowUpOptions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.smartImportFollowUpActions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .navChrome {
   flex: 0 1 auto;
   min-width: 0;

@@ -64,6 +64,15 @@ export async function POST(req: Request) {
 
   try {
     const result = await applyLoreImportPlan(db, parsed.data);
+    if (result.status === "needs_follow_up") {
+      return Response.json({
+        ok: true,
+        attemptId,
+        status: result.status,
+        resolvedClarificationAnswers: result.resolvedClarificationAnswers,
+        followUp: result.followUp,
+      });
+    }
     return Response.json({
       ok: true,
       attemptId,

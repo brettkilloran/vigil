@@ -613,12 +613,43 @@ function upsertClarificationAnswer(
   return [...prev.filter((a) => a.clarificationId !== next.clarificationId), next];
 }
 
+function clearClarificationAnswer(prev: ClarificationAnswer[], clarificationId: string): ClarificationAnswer[] {
+  return prev.filter((a) => a.clarificationId !== clarificationId);
+}
+
 function recommendedClarificationOptionId(
   c: LoreImportClarificationItem,
 ): string | undefined {
   const r = c.options.find((o) => o.recommended);
   return r?.id ?? c.options[0]?.id;
 }
+
+function clarificationConfidenceScore(c: LoreImportClarificationItem): number {
+  if (typeof c.confidenceScore === "number" && Number.isFinite(c.confidenceScore)) {
+    return Math.max(0, Math.min(1, c.confidenceScore));
+  }
+  if (c.questionKind === "confirm_default") return 0.78;
+  if (c.severity === "required") return 0.44;
+  return 0.62;
+}
+
+function isClarificationAnswered(a: ClarificationAnswer | undefined): boolean {
+  if (!a) return false;
+  if (a.resolution === "answered") return (a.selectedOptionIds?.length ?? 0) > 0;
+  if (a.resolution === "skipped_default") return !!a.skipDefaultOptionId;
+  if (a.resolution === "other_text") return (a.otherText?.trim().length ?? 0) >= 4;
+  if (a.resolution === "skipped_best_judgement") return true;
+  return false;
+}
+
+type LoreImportOtherFollowUp = {
+  clarificationId: string;
+  title: string;
+  question: string;
+  options: { id: string; label: string; recommended?: boolean }[];
+  confidence: number;
+  otherText: string;
+};
 
 function reportItemLinkFailure(
   operation: string,
@@ -2318,6 +2349,12 @@ export function ArchitecturalCanvasApp({
   const [loreSmartClarificationAnswers, setLoreSmartClarificationAnswers] = useState<
     ClarificationAnswer[]
   >([]);
+  const [loreSmartQuestionFilter, setLoreSmartQuestionFilter] = useState<
+    "all" | "required" | "unanswered"
+  >("all");
+  const [loreSmartOtherFollowUp, setLoreSmartOtherFollowUp] = useState<LoreImportOtherFollowUp | null>(
+    null,
+  );
   const loreSmartClarificationsOk = useMemo(() => {
     if (!loreSmartReview) return true;
     return validateClarificationAnswersForApply(
@@ -2325,6 +2362,56 @@ export function ArchitecturalCanvasApp({
       loreSmartClarificationAnswers,
     ).ok;
   }, [loreSmartReview, loreSmartClarificationAnswers]);
+  const loreSmartQuestionUi = useMemo(() => {
+    if (!loreSmartReview) {
+      return {
+        requiredTotal: 0,
+        requiredAnswered: 0,
+        optionalAnswered: 0,
+        requiredPending: 0,
+        percent: 0,
+        ordered: [] as LoreImportClarificationItem[],
+        visible: [] as LoreImportClarificationItem[],
+        activeQuestion: null as LoreImportClarificationItem | null,
+      };
+    }
+    const clarifications = loreSmartReview.plan.clarifications;
+    const byId = new Map(loreSmartClarificationAnswers.map((a) => [a.clarificationId, a]));
+    const required = clarifications.filter((c) => c.severity === "required");
+    const requiredAnswered = required.filter((c) => isClarificationAnswered(byId.get(c.id))).length;
+    const optionalAnswered = clarifications.filter(
+      (c) => c.severity === "optional" && isClarificationAnswered(byId.get(c.id)),
+    ).length;
+    const requiredTotal = required.length;
+    const requiredPending = requiredTotal - requiredAnswered;
+    const percent = requiredTotal > 0 ? Math.round((requiredAnswered / requiredTotal) * 100) : 100;
+    const ordered = [...clarifications].sort((a, b) => {
+      const aAnswered = isClarificationAnswered(byId.get(a.id));
+      const bAnswered = isClarificationAnswered(byId.get(b.id));
+      if (aAnswered !== bAnswered) return aAnswered ? 1 : -1;
+      const c = clarificationConfidenceScore(a) - clarificationConfidenceScore(b);
+      if (Math.abs(c) > 0.001) return c;
+      if (a.severity !== b.severity) return a.severity === "required" ? -1 : 1;
+      return a.title.localeCompare(b.title);
+    });
+    const visible = ordered.filter((c) => {
+      if (loreSmartQuestionFilter === "required") return c.severity === "required";
+      if (loreSmartQuestionFilter === "unanswered") return !isClarificationAnswered(byId.get(c.id));
+      return true;
+    });
+    const activeQuestion =
+      ordered.find((c) => !isClarificationAnswered(byId.get(c.id))) ?? ordered[0] ?? null;
+    return {
+      requiredTotal,
+      requiredAnswered,
+      optionalAnswered,
+      requiredPending,
+      percent,
+      ordered,
+      visible,
+      activeQuestion,
+    };
+  }, [loreSmartClarificationAnswers, loreSmartQuestionFilter, loreSmartReview]);
   const [loreReviewPanelOpen, setLoreReviewPanelOpen] = useState(false);
   const [loreReviewLoading, setLoreReviewLoading] = useState(false);
   const [loreReviewError, setLoreReviewError] = useState<string | null>(null);
@@ -5929,8 +6016,11 @@ export function ArchitecturalCanvasApp({
       const rawText = await res.text();
       const data = parseLoreImportJsonBody(rawText) as {
         ok?: boolean;
+        status?: "applied" | "needs_follow_up";
         error?: string;
         linkWarnings?: string[];
+        followUp?: LoreImportOtherFollowUp;
+        resolvedClarificationAnswers?: ClarificationAnswer[];
       };
       if (!res.ok || !data.ok) {
         reportFailure(
@@ -5950,6 +6040,16 @@ export function ArchitecturalCanvasApp({
         );
         return;
       }
+      if (data.status === "needs_follow_up" && data.followUp) {
+        setLoreSmartOtherFollowUp(data.followUp);
+        if (Array.isArray(data.resolvedClarificationAnswers)) {
+          setLoreSmartClarificationAnswers(data.resolvedClarificationAnswers);
+        }
+        setLoreSmartTab("questions");
+        playVigilUiSound("caution");
+        return;
+      }
+      setLoreSmartOtherFollowUp(null);
       if (data.linkWarnings?.length) {
         window.alert(
           `Imported. Link notes:\n${data.linkWarnings.slice(0, 8).join("\n")}${data.linkWarnings.length > 8 ? "\n…" : ""}`,
@@ -5966,6 +6066,7 @@ export function ArchitecturalCanvasApp({
       setLoreSmartReview(null);
       setLoreSmartAcceptedMergeIds({});
       setLoreSmartClarificationAnswers([]);
+      setLoreSmartQuestionFilter("all");
       setLoreSmartTab("structure");
     } catch (error) {
       reportFailure(
@@ -7519,6 +7620,8 @@ export function ArchitecturalCanvasApp({
           setLoreSmartReview(null);
           setLoreSmartAcceptedMergeIds({});
           setLoreSmartClarificationAnswers([]);
+          setLoreSmartOtherFollowUp(null);
+          setLoreSmartQuestionFilter("all");
           setLoreSmartIncludeSource(true);
           setLoreSmartTab("structure");
           setLoreSmartPlanning(true);
@@ -7534,6 +7637,7 @@ export function ArchitecturalCanvasApp({
               fileName: parsed.fileName,
             });
             setLoreSmartClarificationAnswers([]);
+            setLoreSmartOtherFollowUp(null);
             const nextMerge: Record<string, boolean> = {};
             for (const m of plan.mergeProposals) {
               nextMerge[m.id] = false;
@@ -11842,7 +11946,7 @@ export function ArchitecturalCanvasApp({
         ) : null}
         {loreSmartReview && !isRestrictedLayer ? (
           <div
-            className="fixed inset-0 z-[1150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
+            className="fixed inset-0 z-[14990] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
             role="dialog"
             aria-modal="true"
             aria-label="Smart document import"
@@ -11851,11 +11955,13 @@ export function ArchitecturalCanvasApp({
                 setLoreSmartReview(null);
                 setLoreSmartAcceptedMergeIds({});
                 setLoreSmartClarificationAnswers([]);
+                setLoreSmartOtherFollowUp(null);
+                setLoreSmartQuestionFilter("all");
                 setLoreSmartTab("structure");
               }
             }}
           >
-            <div className="flex max-h-[min(90vh,760px)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-panel)] p-4 shadow-xl">
+            <div className="pointer-events-auto flex max-h-[min(90vh,760px)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-panel)] p-4 shadow-xl">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="text-sm font-semibold text-[var(--vigil-label)]">
@@ -11893,6 +11999,8 @@ export function ArchitecturalCanvasApp({
                       setLoreSmartReview(null);
                       setLoreSmartAcceptedMergeIds({});
                       setLoreSmartClarificationAnswers([]);
+                      setLoreSmartOtherFollowUp(null);
+                      setLoreSmartQuestionFilter("all");
                       setLoreSmartTab("structure");
                     }}
                   >
@@ -11902,7 +12010,7 @@ export function ArchitecturalCanvasApp({
                     size="sm"
                     variant="primary"
                     tone="solid"
-                    disabled={loreImportCommitting || !loreSmartClarificationsOk}
+                    disabled={loreImportCommitting || !loreSmartClarificationsOk || !!loreSmartOtherFollowUp}
                     onClick={() => void commitSmartLoreImport()}
                   >
                     {loreImportCommitting ? "Applying…" : "Apply import"}
@@ -12021,15 +12129,179 @@ export function ArchitecturalCanvasApp({
                     ) : null}
                   </div>
                 ) : loreSmartTab === "questions" ? (
-                  <div className="space-y-3 text-[11px] text-[var(--vigil-label)]">
+                  <div className={styles.smartImportQuestionsPane}>
+                    <div className={styles.smartImportQuestionsStatusCard}>
+                      <div className={styles.smartImportQuestionsStatusTop}>
+                        <p className={styles.smartImportQuestionsStatusTitle}>Open questions</p>
+                        <span className={styles.smartImportQuestionsStatusBadge}>
+                          {loreSmartQuestionUi.requiredAnswered}/{loreSmartQuestionUi.requiredTotal} required
+                        </span>
+                      </div>
+                      <div className={styles.smartImportQuestionsProgressTrack}>
+                        <div
+                          className={styles.smartImportQuestionsProgressFill}
+                          style={{ width: `${loreSmartQuestionUi.percent}%` }}
+                        />
+                      </div>
+                      <p className={styles.smartImportQuestionsStatusMeta}>
+                        {loreSmartQuestionUi.requiredPending > 0
+                          ? `${loreSmartQuestionUi.requiredPending} required unresolved`
+                          : "All required questions answered"}
+                        {loreSmartQuestionUi.optionalAnswered > 0
+                          ? ` · ${loreSmartQuestionUi.optionalAnswered} optional answered`
+                          : ""}
+                      </p>
+                    </div>
+                    {!loreSmartClarificationsOk ? (
+                      <p className={styles.smartImportQuestionsBlockingHint}>
+                        Answer all required questions before applying.
+                      </p>
+                    ) : null}
+                    {loreSmartOtherFollowUp ? (
+                      <div className={styles.smartImportFollowUpCard} role="region" aria-live="polite">
+                        <div className={styles.smartImportFollowUpHeader}>
+                          <span className={styles.smartImportFollowUpBadge}>Follow-up needed</span>
+                          <span className={styles.smartImportFollowUpConfidence}>
+                            Confidence {Math.round(loreSmartOtherFollowUp.confidence * 100)}%
+                          </span>
+                        </div>
+                        <p className={styles.smartImportFollowUpTitle}>{loreSmartOtherFollowUp.title}</p>
+                        <p className={styles.smartImportFollowUpBody}>{loreSmartOtherFollowUp.question}</p>
+                        <p className={styles.smartImportFollowUpQuote}>
+                          Your Other answer: &quot;{loreSmartOtherFollowUp.otherText}&quot;
+                        </p>
+                        <div className={styles.smartImportFollowUpOptions}>
+                          {loreSmartOtherFollowUp.options.map((opt) => (
+                            <Button
+                              key={opt.id}
+                              size="xs"
+                              variant="neutral"
+                              tone="glass"
+                              type="button"
+                              onClick={() => {
+                                setLoreSmartClarificationAnswers((prev) =>
+                                  upsertClarificationAnswer(prev, {
+                                    clarificationId: loreSmartOtherFollowUp.clarificationId,
+                                    resolution: "answered",
+                                    selectedOptionIds: [opt.id],
+                                  }),
+                                );
+                                setLoreSmartOtherFollowUp(null);
+                              }}
+                            >
+                              {opt.label}
+                            </Button>
+                          ))}
+                        </div>
+                        <div className={styles.smartImportFollowUpActions}>
+                          <Button
+                            size="xs"
+                            variant="neutral"
+                            tone="glass"
+                            type="button"
+                            onClick={() => {
+                              setLoreSmartClarificationAnswers((prev) =>
+                                upsertClarificationAnswer(prev, {
+                                  clarificationId: loreSmartOtherFollowUp.clarificationId,
+                                  resolution: "skipped_best_judgement",
+                                }),
+                              );
+                              setLoreSmartOtherFollowUp(null);
+                            }}
+                          >
+                            Skip (use best judgement)
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="neutral"
+                            tone="glass"
+                            type="button"
+                            onClick={() => {
+                              setLoreSmartReview(null);
+                              setLoreSmartAcceptedMergeIds({});
+                              setLoreSmartClarificationAnswers([]);
+                              setLoreSmartOtherFollowUp(null);
+                              setLoreSmartQuestionFilter("all");
+                              setLoreSmartTab("structure");
+                            }}
+                          >
+                            Abort import
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+                    <div className={styles.smartImportQuestionsControls}>
+                      <div className={styles.smartImportQuestionsFilters}>
+                        <Button
+                          size="xs"
+                          variant={loreSmartQuestionFilter === "all" ? "primary" : "neutral"}
+                          tone="glass"
+                          type="button"
+                          onClick={() => setLoreSmartQuestionFilter("all")}
+                        >
+                          All
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant={loreSmartQuestionFilter === "required" ? "primary" : "neutral"}
+                          tone="glass"
+                          type="button"
+                          onClick={() => setLoreSmartQuestionFilter("required")}
+                        >
+                          Required
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant={loreSmartQuestionFilter === "unanswered" ? "primary" : "neutral"}
+                          tone="glass"
+                          type="button"
+                          onClick={() => setLoreSmartQuestionFilter("unanswered")}
+                        >
+                          Unanswered
+                        </Button>
+                      </div>
+                      <Button
+                        size="xs"
+                        variant="neutral"
+                        tone="glass"
+                        type="button"
+                        onClick={() => {
+                          const required = loreSmartReview.plan.clarifications.filter(
+                            (c) => c.severity === "required",
+                          );
+                          setLoreSmartClarificationAnswers((prev) => {
+                            let next = [...prev];
+                            for (const c of required) {
+                              const existing = next.find((a) => a.clarificationId === c.id);
+                              if (isClarificationAnswered(existing)) continue;
+                              const def = recommendedClarificationOptionId(c);
+                              if (!def) continue;
+                              next = upsertClarificationAnswer(next, {
+                                clarificationId: c.id,
+                                resolution: "skipped_default",
+                                skipDefaultOptionId: def,
+                              });
+                            }
+                            return next;
+                          });
+                        }}
+                      >
+                        Answer recommended defaults
+                      </Button>
+                    </div>
                     {loreSmartReview.plan.clarifications.length === 0 ? (
                       <p className="text-[var(--vigil-muted)]">No open questions for this import.</p>
                     ) : (
-                      <ul className="max-h-[52vh] space-y-4 overflow-y-auto pr-1">
-                        {loreSmartReview.plan.clarifications.map((c) => {
-                          const ans = loreSmartClarificationAnswers.find(
-                            (a) => a.clarificationId === c.id,
-                          );
+                      (() => {
+                        const answerById = new Map(
+                          loreSmartClarificationAnswers.map((a) => [a.clarificationId, a]),
+                        );
+                        const activeId = loreSmartQuestionUi.activeQuestion?.id ?? null;
+                        const renderClarificationCard = (
+                          c: LoreImportClarificationItem,
+                          spotlight: boolean,
+                        ) => {
+                          const ans = answerById.get(c.id);
                           const isMulti = c.questionKind === "multi_select";
                           const selectedSet = new Set(
                             ans?.resolution === "answered"
@@ -12038,50 +12310,48 @@ export function ArchitecturalCanvasApp({
                                 ? [ans.skipDefaultOptionId]
                                 : [],
                           );
+                          const answered = isClarificationAnswered(ans);
+                          const otherSelected = ans?.resolution === "other_text";
                           return (
                             <li
                               key={c.id}
-                              className="rounded-lg border border-[var(--vigil-border)] bg-black/[0.03] p-3 dark:bg-white/[0.04]"
+                              className={`${styles.smartImportQuestionCard} ${
+                                spotlight ? styles.smartImportQuestionCardActive : ""
+                              } ${answered ? styles.smartImportQuestionCardDone : ""}`}
                             >
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-medium">{c.title}</span>
-                                <span className="text-[9px] uppercase text-[var(--vigil-muted)]">
-                                  {c.category.replace(/_/g, " ")}
-                                </span>
-                                {c.severity === "required" ? (
-                                  <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] uppercase text-amber-800 dark:text-amber-200">
-                                    Required
+                              <div className={styles.smartImportQuestionHeader}>
+                                <p className={styles.smartImportQuestionTitle}>{c.title}</p>
+                                <div className={styles.smartImportQuestionMeta}>
+                                  <Tag variant="neutral" className={styles.smartImportQuestionChip}>
+                                    {c.category.replace(/_/g, " ")}
+                                  </Tag>
+                                  <Tag variant="neutral" className={styles.smartImportQuestionChip}>
+                                    {c.severity === "required" ? "Required" : "Optional"}
+                                  </Tag>
+                                  <Tag variant="neutral" className={styles.smartImportQuestionChip}>
+                                    {answered ? "Answered" : "Unanswered"}
+                                  </Tag>
+                                  <span className={styles.smartImportQuestionConfidence}>
+                                    Confidence {Math.round(clarificationConfidenceScore(c) * 100)}%
                                   </span>
-                                ) : (
-                                  <span className="text-[9px] uppercase text-[var(--vigil-muted)]">
-                                    Optional
-                                  </span>
-                                )}
+                                </div>
                               </div>
                               {c.context ? (
-                                <p className="mt-2 text-[10px] leading-relaxed text-[var(--vigil-muted)]">
-                                  {c.context}
-                                </p>
+                                <p className={styles.smartImportQuestionContext}>{c.context}</p>
                               ) : null}
-                              <div className="mt-3 space-y-2">
+                              <div className={styles.smartImportQuestionOptions}>
                                 {c.options.map((opt) =>
                                   isMulti ? (
-                                    <label
-                                      key={opt.id}
-                                      className="flex cursor-pointer items-start gap-2 text-[11px]"
-                                    >
+                                    <label key={opt.id} className={styles.smartImportOptionLabel}>
                                       <input
                                         type="checkbox"
-                                        className="mt-0.5"
+                                        className={styles.smartImportOptionInput}
                                         checked={selectedSet.has(opt.id)}
                                         onChange={(e) => {
                                           let base: string[] =
                                             ans?.resolution === "answered"
                                               ? [...(ans.selectedOptionIds ?? [])]
-                                              : ans?.resolution === "skipped_default" &&
-                                                  ans.skipDefaultOptionId
-                                                ? [ans.skipDefaultOptionId]
-                                                : [];
+                                              : [];
                                           if (e.target.checked) {
                                             if (!base.includes(opt.id)) base.push(opt.id);
                                           } else {
@@ -12094,18 +12364,18 @@ export function ArchitecturalCanvasApp({
                                               selectedOptionIds: base,
                                             }),
                                           );
+                                          setLoreSmartOtherFollowUp((cur) =>
+                                            cur?.clarificationId === c.id ? null : cur,
+                                          );
                                         }}
                                       />
                                       <span>{opt.label}</span>
                                     </label>
                                   ) : (
-                                    <label
-                                      key={opt.id}
-                                      className="flex cursor-pointer items-start gap-2 text-[11px]"
-                                    >
+                                    <label key={opt.id} className={styles.smartImportOptionLabel}>
                                       <input
                                         type="radio"
-                                        className="mt-0.5"
+                                        className={styles.smartImportOptionInput}
                                         name={`clarify-${c.id}`}
                                         checked={
                                           !!(
@@ -12117,23 +12387,60 @@ export function ArchitecturalCanvasApp({
                                             ans.skipDefaultOptionId === opt.id
                                           )
                                         }
-                                        onChange={() =>
+                                        onChange={() => {
                                           setLoreSmartClarificationAnswers((prev) =>
                                             upsertClarificationAnswer(prev, {
                                               clarificationId: c.id,
                                               resolution: "answered",
                                               selectedOptionIds: [opt.id],
                                             }),
-                                          )
-                                        }
+                                          );
+                                          setLoreSmartOtherFollowUp((cur) =>
+                                            cur?.clarificationId === c.id ? null : cur,
+                                          );
+                                        }}
                                       />
                                       <span>{opt.label}</span>
                                     </label>
                                   ),
                                 )}
+                                <label className={styles.smartImportOptionLabel}>
+                                  <input
+                                    type="radio"
+                                    className={styles.smartImportOptionInput}
+                                    name={`clarify-other-${c.id}`}
+                                    checked={otherSelected}
+                                    onChange={() =>
+                                      setLoreSmartClarificationAnswers((prev) =>
+                                        upsertClarificationAnswer(prev, {
+                                          clarificationId: c.id,
+                                          resolution: "other_text",
+                                          otherText: ans?.otherText ?? "",
+                                        }),
+                                      )
+                                    }
+                                  />
+                                  <span>Other (type your answer)</span>
+                                </label>
+                                {otherSelected ? (
+                                  <textarea
+                                    className={styles.smartImportOtherInput}
+                                    placeholder="Describe the correct interpretation..."
+                                    value={ans?.otherText ?? ""}
+                                    onChange={(e) =>
+                                      setLoreSmartClarificationAnswers((prev) =>
+                                        upsertClarificationAnswer(prev, {
+                                          clarificationId: c.id,
+                                          resolution: "other_text",
+                                          otherText: e.target.value,
+                                        }),
+                                      )
+                                    }
+                                  />
+                                ) : null}
                               </div>
-                              {recommendedClarificationOptionId(c) ? (
-                                <div className="mt-2">
+                              <div className={styles.smartImportQuestionActions}>
+                                {recommendedClarificationOptionId(c) ? (
                                   <Button
                                     size="xs"
                                     variant="neutral"
@@ -12149,16 +12456,54 @@ export function ArchitecturalCanvasApp({
                                           skipDefaultOptionId: def,
                                         }),
                                       );
+                                      setLoreSmartOtherFollowUp((cur) =>
+                                        cur?.clarificationId === c.id ? null : cur,
+                                      );
                                     }}
                                   >
                                     Use recommended default
                                   </Button>
-                                </div>
-                              ) : null}
+                                ) : null}
+                                <Button
+                                  size="xs"
+                                  variant="neutral"
+                                  tone="glass"
+                                  type="button"
+                                  onClick={() =>
+                                    setLoreSmartClarificationAnswers((prev) =>
+                                      clearClarificationAnswer(prev, c.id),
+                                    )
+                                  }
+                                >
+                                  Clear answer
+                                </Button>
+                              </div>
                             </li>
                           );
-                        })}
-                      </ul>
+                        };
+                        return (
+                          <div className={styles.smartImportQuestionsLists}>
+                            {loreSmartQuestionUi.activeQuestion ? (
+                              <div>
+                                <p className={styles.smartImportQuestionsSectionLabel}>
+                                  Next question (lowest confidence)
+                                </p>
+                                <ul className={styles.smartImportQuestionsList}>
+                                  {renderClarificationCard(loreSmartQuestionUi.activeQuestion, true)}
+                                </ul>
+                              </div>
+                            ) : null}
+                            <div>
+                              <p className={styles.smartImportQuestionsSectionLabel}>Review all questions</p>
+                              <ul className={styles.smartImportQuestionsList}>
+                                {loreSmartQuestionUi.visible
+                                  .filter((c) => c.id !== activeId)
+                                  .map((c) => renderClarificationCard(c, false))}
+                              </ul>
+                            </div>
+                          </div>
+                        );
+                      })()
                     )}
                   </div>
                 ) : (

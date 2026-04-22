@@ -14,6 +14,51 @@ import {
   planPatchHintSchema,
 } from "@/src/lib/lore-import-plan-types";
 
+const OTHER_TEXT_MIN_LENGTH = 4;
+const OTHER_RESOLVE_CLEAR_SCORE = 0.58;
+const OTHER_RESOLVE_CLEAR_GAP = 0.12;
+
+export type ClarificationFollowUpPrompt = {
+  clarificationId: string;
+  title: string;
+  question: string;
+  options: { id: string; label: string; recommended?: boolean }[];
+  confidence: number;
+  otherText: string;
+};
+
+function tokenizeLoose(input: string): string[] {
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 3);
+}
+
+function scoreOptionForOtherText(label: string, otherText: string): number {
+  const labelTokens = tokenizeLoose(label);
+  if (labelTokens.length === 0) return 0;
+  const text = otherText.toLowerCase();
+  const textTokens = new Set(tokenizeLoose(otherText));
+  let overlap = 0;
+  for (const token of labelTokens) {
+    if (textTokens.has(token)) overlap += 1;
+  }
+  const overlapRatio = overlap / labelTokens.length;
+  const phraseBoost = text.includes(label.toLowerCase()) ? 0.34 : 0;
+  return Math.max(0, Math.min(1, overlapRatio + phraseBoost));
+}
+
+function bestJudgementOptionIds(c: LoreImportClarificationItem): string[] {
+  if (c.questionKind === "multi_select") {
+    const recommended = c.options.filter((o) => o.recommended).map((o) => o.id);
+    return recommended.length > 0 ? recommended : [c.options[0]!.id];
+  }
+  const recommended = c.options.find((o) => o.recommended);
+  return [recommended?.id ?? c.options[0]!.id];
+}
+
 function clonePlan(plan: LoreImportPlan): LoreImportPlan {
   return structuredClone(plan) as LoreImportPlan;
 }
@@ -158,6 +203,25 @@ function validateSingleAnswer(
     }
     return null;
   }
+  if (a.resolution === "skipped_best_judgement") {
+    if (a.selectedOptionIds?.length || a.skipDefaultOptionId || a.otherText?.trim()) {
+      return `Clarification "${c.title}": skipped_best_judgement cannot include explicit option/default/other text`;
+    }
+    return null;
+  }
+  if (a.resolution === "other_text") {
+    const text = a.otherText?.trim() ?? "";
+    if (text.length < OTHER_TEXT_MIN_LENGTH) {
+      return `Clarification "${c.title}": otherText must be at least ${OTHER_TEXT_MIN_LENGTH} characters`;
+    }
+    if (a.selectedOptionIds?.length) {
+      return `Clarification "${c.title}": other_text cannot include selectedOptionIds`;
+    }
+    if (a.skipDefaultOptionId) {
+      return `Clarification "${c.title}": other_text cannot include skipDefaultOptionId`;
+    }
+    return null;
+  }
   const sel = a.selectedOptionIds ?? [];
   if (sel.length === 0) {
     return `Clarification "${c.title}": selectedOptionIds is required when resolution is answered`;
@@ -211,6 +275,101 @@ export function validateClarificationAnswersForApply(
   return { ok: true };
 }
 
+export function resolveOtherClarificationAnswers(
+  plan: LoreImportPlan,
+  answers: ClarificationAnswer[],
+):
+  | { status: "resolved"; answers: ClarificationAnswer[] }
+  | { status: "needs_follow_up"; answers: ClarificationAnswer[]; followUp: ClarificationFollowUpPrompt } {
+  const clarById = new Map(plan.clarifications.map((c) => [c.id, c]));
+  const normalized = answers.map((a) => ({ ...a }));
+  const unresolved: {
+    index: number;
+    clarification: LoreImportClarificationItem;
+    otherText: string;
+    scored: { id: string; label: string; recommended?: boolean; score: number }[];
+    bestScore: number;
+    confidence: number;
+  }[] = [];
+
+  for (let i = 0; i < normalized.length; i += 1) {
+    const a = normalized[i]!;
+    if (a.resolution === "skipped_best_judgement") {
+      const c = clarById.get(a.clarificationId);
+      if (!c) continue;
+      normalized[i] = {
+        clarificationId: a.clarificationId,
+        resolution: "answered",
+        selectedOptionIds: bestJudgementOptionIds(c),
+      };
+      continue;
+    }
+    if (a.resolution !== "other_text") continue;
+    const c = clarById.get(a.clarificationId);
+    if (!c) continue;
+    const otherText = a.otherText?.trim() ?? "";
+    if (otherText.length < OTHER_TEXT_MIN_LENGTH) continue;
+    const scored = c.options
+      .map((opt) => ({
+        id: opt.id,
+        label: opt.label,
+        recommended: opt.recommended,
+        score: scoreOptionForOtherText(opt.label, otherText),
+      }))
+      .sort((x, y) => y.score - x.score);
+    const best = scored[0];
+    const second = scored[1];
+    const bestScore = best?.score ?? 0;
+    const gap = bestScore - (second?.score ?? 0);
+    const plannerConfidence = c.confidenceScore ?? 0.55;
+    const confidence = Math.max(0, Math.min(1, Math.min(bestScore, plannerConfidence)));
+    const clear =
+      !!best &&
+      (bestScore >= OTHER_RESOLVE_CLEAR_SCORE && gap >= OTHER_RESOLVE_CLEAR_GAP);
+    if (clear) {
+      normalized[i] = {
+        clarificationId: a.clarificationId,
+        resolution: "answered",
+        selectedOptionIds: [best.id],
+      };
+      continue;
+    }
+    unresolved.push({
+      index: i,
+      clarification: c,
+      otherText,
+      scored,
+      bestScore,
+      confidence,
+    });
+  }
+
+  if (unresolved.length === 0) {
+    return { status: "resolved", answers: normalized };
+  }
+
+  unresolved.sort((a, b) => a.confidence - b.confidence);
+  const target = unresolved[0]!;
+  const topOptions = target.scored.slice(0, 4).map((o) => ({
+    id: o.id,
+    label: o.label,
+    recommended: o.recommended,
+  }));
+  return {
+    status: "needs_follow_up",
+    answers: normalized,
+    followUp: {
+      clarificationId: target.clarification.id,
+      title: target.clarification.title,
+      question:
+        "I could not confidently map your `Other` answer. Please choose the closest option, or skip this one and let the model use best judgement.",
+      options: topOptions,
+      confidence: target.confidence,
+      otherText: target.otherText,
+    },
+  };
+}
+
 /**
  * Applies user answers in **plan clarification order** so patches compose predictably.
  */
@@ -226,7 +385,9 @@ export function applyClarificationPatches(
     const optIds =
       a.resolution === "skipped_default"
         ? [a.skipDefaultOptionId!]
-        : (a.selectedOptionIds ?? []);
+        : a.resolution === "skipped_best_judgement"
+          ? bestJudgementOptionIds(c)
+          : (a.selectedOptionIds ?? []);
     for (const oid of optIds) {
       const opt = c.options.find((o) => o.id === oid);
       if (!opt) {
@@ -326,6 +487,12 @@ export function normalizeClarificationsFromLlm(raw: unknown): LoreImportClarific
       id: randomUUID(),
       category,
       severity,
+      confidenceScore:
+        typeof o.confidenceScore === "number" && Number.isFinite(o.confidenceScore)
+          ? Math.max(0, Math.min(1, o.confidenceScore))
+          : typeof o.confidence === "number" && Number.isFinite(o.confidence)
+            ? Math.max(0, Math.min(1, o.confidence))
+            : undefined,
       title,
       context:
         o.context != null ? String(o.context).trim().slice(0, 4000) : undefined,
@@ -412,6 +579,7 @@ export function buildChunkAssignmentClarifications(input: {
       id: randomUUID(),
       category: "structure" as const,
       severity: "optional" as const,
+      confidenceScore: 0.7,
       title: `Unassigned chunk: "${chunk.heading.slice(0, 80)}"`,
       context:
         `The outline did not attach this chunk to any note. It still lives on the imported source card, ` +
@@ -461,6 +629,7 @@ export function buildChunkAssignmentClarifications(input: {
       id: randomUUID(),
       category: "structure" as const,
       severity: "optional" as const,
+      confidenceScore: 0.66,
       title: `Chunk claimed by 2 notes`,
       context: `"${chunk.heading.slice(0, 80)}" is listed on ${a.title} and ${b.title}.`,
       questionKind: "single_select" as const,
@@ -500,6 +669,7 @@ export function buildChunkAssignmentClarifications(input: {
       id: randomUUID(),
       category: "structure" as const,
       severity: "optional" as const,
+      confidenceScore: 0.68,
       title: `Note "${note.title}" has no chunks`,
       context:
         `The outline mentioned this note but did not attach any source chunks. It will be written as a ` +
@@ -542,6 +712,7 @@ export function ensureClarificationsForContradictions(
         id: randomUUID(),
         category: "conflict" as const,
         severity: "required" as const,
+        confidenceScore: 0.42,
         title: "Contradiction with an existing card — merge or split?",
         context: ctx || contra.summary,
         questionKind: "single_select" as const,
@@ -570,6 +741,7 @@ export function ensureClarificationsForContradictions(
         id: randomUUID(),
         category: "conflict" as const,
         severity: "required" as const,
+        confidenceScore: 0.5,
         title: "Flagged contradiction — confirm import",
         context: ctx || contra.summary,
         questionKind: "single_select" as const,

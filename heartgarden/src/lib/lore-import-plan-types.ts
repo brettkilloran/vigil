@@ -176,6 +176,8 @@ export const loreImportClarificationItemSchema = z.object({
   id: z.string().uuid(),
   category: z.enum(["structure", "link_semantics", "canon_weight", "conflict"]),
   severity: z.enum(["required", "optional"]),
+  /** 0..1 confidence from planner; lower values should be asked earlier. */
+  confidenceScore: z.number().min(0).max(1).optional(),
   title: z.string().min(1).max(300),
   context: z.string().max(4000).optional(),
   questionKind: z.enum(["single_select", "multi_select", "confirm_default"]),
@@ -196,9 +198,10 @@ export type LoreImportClarificationItem = z.infer<
 
 export const clarificationAnswerSchema = z.object({
   clarificationId: z.string().uuid(),
-  resolution: z.enum(["answered", "skipped_default"]),
+  resolution: z.enum(["answered", "skipped_default", "other_text", "skipped_best_judgement"]),
   selectedOptionIds: z.array(z.string().min(1).max(64)).max(12).optional(),
   skipDefaultOptionId: z.string().min(1).max(64).optional(),
+  otherText: z.string().max(2000).optional(),
 });
 
 export type ClarificationAnswer = z.infer<typeof clarificationAnswerSchema>;
