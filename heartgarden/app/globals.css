@@ -1429,21 +1429,23 @@ a {
  * Same palette as Tag `llmLight` (see Tag.module.css).
  */
 .vigil-btn[data-hg-ai-bind="true"] {
-  --btn-bg-default: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--sys-color-neutral-100));
-  --btn-bg-hover: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 88%, var(--sys-color-white));
-  --btn-bg-active: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--sys-color-neutral-100));
-  --btn-bg-disabled: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--sys-color-neutral-100));
+  --btn-bg-default: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 62%, var(--sys-color-white));
+  --btn-bg-hover: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 78%, var(--sys-color-white));
+  --btn-bg-active: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 56%, var(--sys-color-neutral-100));
+  --btn-bg-disabled: color-mix(in oklch, var(--sem-surface-llm-pending) 46%, var(--sys-color-white));
   --btn-fg-default: var(--sem-text-llm-accent);
   --btn-fg-hover: var(--sem-text-llm-accent);
   --btn-fg-active: var(--sem-text-llm-accent);
   --btn-fg-disabled: color-mix(in oklch, var(--sem-text-llm-accent) 55%, transparent);
-  --btn-border-default: var(--sem-border-llm-pending);
+  --btn-border-default: color-mix(in oklch, var(--sem-text-llm-accent) 36%, var(--sys-color-white));
   --btn-border-hover: var(--sem-text-llm-accent);
   --btn-border-active: var(--sem-text-llm-accent);
-  --btn-border-disabled: var(--sem-border-llm-pending);
+  --btn-border-disabled: color-mix(in oklch, var(--sem-text-llm-accent) 24%, transparent);
   --btn-radius: var(--sys-radius-sm);
-  /* Neutral contact + soft violet bloom (surface reflection) — reads as blocking light + purple bounce. */
+  /* Crisp edge + soft violet bloom so this reads as a real button, not a flat chip. */
   box-shadow:
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 76%, transparent),
+    inset 0 -1px 0 color-mix(in oklch, var(--sem-text-llm-accent) 10%, transparent),
     0 0.5px 1px color-mix(in oklch, var(--sys-color-black) 14%, transparent),
     0 1px 2px color-mix(in oklch, var(--sys-color-black) 7%, transparent),
     0 3px 10px color-mix(in oklch, var(--sem-text-llm-accent) 24%, transparent),
@@ -1452,6 +1454,8 @@ a {
 
 .vigil-btn[data-hg-ai-bind="true"]:hover {
   box-shadow:
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 84%, transparent),
+    inset 0 -1px 0 color-mix(in oklch, var(--sem-text-llm-accent) 12%, transparent),
     0 0.5px 1px color-mix(in oklch, var(--sys-color-black) 16%, transparent),
     0 2px 4px color-mix(in oklch, var(--sys-color-black) 9%, transparent),
     0 4px 14px color-mix(in oklch, var(--sem-text-llm-accent) 30%, transparent),
@@ -1460,6 +1464,8 @@ a {
 
 .vigil-btn[data-hg-ai-bind="true"]:active {
   box-shadow:
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 55%, transparent),
+    inset 0 -1px 0 color-mix(in oklch, var(--sem-text-llm-accent) 14%, transparent),
     0 0.5px 1px color-mix(in oklch, var(--sys-color-black) 12%, transparent),
     0 1px 3px color-mix(in oklch, var(--sem-text-llm-accent) 18%, transparent),
     0 4px 12px color-mix(in oklch, var(--sem-text-llm-accent) 12%, transparent);
@@ -1468,10 +1474,27 @@ a {
 .vigil-btn[data-hg-ai-bind="true"]:focus-visible {
   box-shadow:
     0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sem-text-llm-accent) 36%, transparent),
+    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 76%, transparent),
+    inset 0 -1px 0 color-mix(in oklch, var(--sem-text-llm-accent) 10%, transparent),
     0 0.5px 1px color-mix(in oklch, var(--sys-color-black) 14%, transparent),
     0 1px 2px color-mix(in oklch, var(--sys-color-black) 7%, transparent),
     0 3px 10px color-mix(in oklch, var(--sem-text-llm-accent) 24%, transparent),
     0 10px 26px color-mix(in oklch, var(--sem-text-llm-accent) 14%, transparent);
+}
+
+.dark .vigil-btn[data-hg-ai-bind="true"] {
+  --btn-bg-default: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 56%, var(--sys-color-neutral-920));
+  --btn-bg-hover: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 72%, var(--sys-color-neutral-900));
+  --btn-bg-active: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 48%, var(--sys-color-neutral-900));
+  --btn-bg-disabled: color-mix(in oklch, var(--sem-surface-llm-pending) 36%, var(--sys-color-neutral-920));
+  --btn-fg-default: var(--sem-text-llm-accent-bright);
+  --btn-fg-hover: var(--sem-text-llm-accent-bright);
+  --btn-fg-active: var(--sem-text-llm-accent-bright);
+  --btn-fg-disabled: color-mix(in oklch, var(--sem-text-llm-accent-bright) 52%, transparent);
+  --btn-border-default: color-mix(in oklch, var(--sem-text-llm-accent-bright) 42%, transparent);
+  --btn-border-hover: color-mix(in oklch, var(--sem-text-llm-accent-bright) 70%, transparent);
+  --btn-border-active: color-mix(in oklch, var(--sem-text-llm-accent-bright) 78%, transparent);
+  --btn-border-disabled: color-mix(in oklch, var(--sem-text-llm-accent-bright) 28%, transparent);
 }
 
 /* hgDoc block reorder grip — portaled to `#hg-portal-root` (see `getVigilPortalRoot`); tones: focus-light / focus-dark / card (HgDocPointerBlockDrag). */
