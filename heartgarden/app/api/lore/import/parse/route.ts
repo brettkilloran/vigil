@@ -2,8 +2,11 @@ import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 
 export const runtime = "nodejs";
+const nodeRequire = createRequire(import.meta.url);
 
 type PdfRuntimeGlobals = typeof globalThis & {
   DOMMatrix?: unknown;
@@ -109,7 +112,7 @@ async function ensurePdfRuntimeGlobals(attemptId: string) {
 
   try {
     const canvas = await import("@napi-rs/canvas");
-    // `@napi-rs/canvas`’s DOMMatrix is structurally enough for `pdf-parse` but not identical to
+    // `@napi-rs/canvas`’s DOMMatrix is structurally enough for `pdfjs-dist` but not identical to
     // the lib.dom global type in TS (e.g. prototype method differences). Cast at the boundary.
     globals.DOMMatrix ??= canvas.DOMMatrix as unknown as NonNullable<typeof globalThis.DOMMatrix>;
     globals.ImageData ??= canvas.ImageData as unknown as NonNullable<typeof globalThis.ImageData>;
@@ -133,6 +136,42 @@ function stripBom(text: string) {
 
 function importAttemptId(req: Request): string {
   return req.headers.get("x-heartgarden-import-attempt")?.trim() || "unknown";
+}
+
+async function parsePdfText(buf: Buffer, attemptId: string): Promise<string> {
+  await ensurePdfRuntimeGlobals(attemptId);
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+    const workerUrl = pathToFileURL(
+      nodeRequire.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs"),
+    ).toString();
+    pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+  }
+  const loadingTask = pdfjs.getDocument({
+    data: new Uint8Array(buf),
+  });
+
+  const doc = await loadingTask.promise;
+  try {
+    const pages: string[] = [];
+    for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
+      const page = await doc.getPage(pageNum);
+      try {
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item) => ("str" in item && typeof item.str === "string" ? item.str : ""))
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+        if (pageText) pages.push(pageText);
+      } finally {
+        page.cleanup();
+      }
+    }
+    return pages.join("\n\n");
+  } finally {
+    await doc.destroy();
+  }
 }
 
 export async function POST(req: Request) {
@@ -178,15 +217,7 @@ export async function POST(req: Request) {
   let text = "";
   if (lower.endsWith(".pdf")) {
     try {
-      await ensurePdfRuntimeGlobals(attemptId);
-      const { PDFParse } = await import("pdf-parse");
-      const parser = new PDFParse({ data: new Uint8Array(buf) });
-      try {
-        const parsed = await parser.getText();
-        text = typeof parsed.text === "string" ? parsed.text : "";
-      } finally {
-        await parser.destroy();
-      }
+      text = await parsePdfText(buf, attemptId);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       console.error("[lore-import] parse pdf failed", { attemptId, fileName: name, detail });
