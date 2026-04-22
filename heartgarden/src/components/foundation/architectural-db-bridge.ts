@@ -25,6 +25,7 @@ import type { CameraState } from "@/src/model/canvas-types";
 import { EMPTY_HG_DOC, HG_DOC_FORMAT } from "@/src/lib/hg-doc/constants";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
 import {
+  htmlFragmentToHgDocDoc,
   legacyCodeBodyHtmlToHgDocSeed,
   stripLegacyHtmlToPlainText,
 } from "@/src/lib/hg-doc/html-to-doc";
@@ -261,6 +262,10 @@ export function canvasItemToEntity(
       bodyDoc = undefined;
     } else if (theme === "code" && workHtml.trim()) {
       bodyDoc = legacyCodeBodyHtmlToHgDocSeed(workHtml);
+      bodyHtml = hgDocToHtml(bodyDoc);
+    } else if (cj?.format === "html" && workHtml.trim()) {
+      // Imported HTML notes should not be replaced with an empty doc during hydration.
+      bodyDoc = htmlFragmentToHgDocDoc(workHtml);
       bodyHtml = hgDocToHtml(bodyDoc);
     } else {
       bodyDoc = structuredClone(EMPTY_HG_DOC);

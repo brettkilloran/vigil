@@ -4,13 +4,14 @@ import type { CanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds"
 import { chunkSourceText } from "@/src/lib/lore-import-chunk";
 import {
   attachBodiesToOutline,
+  ensureOutlineHasFallbackNote,
+  renderStructuredBodyPlainText,
   runLoreImportClarifyLlm,
   runLoreImportMergeLlmBatched,
   runLoreImportOutlineLlm,
   type CandidateRow,
 } from "@/src/lib/lore-import-plan-llm";
 import {
-  buildChunkAssignmentClarifications,
   capClarificationList,
   ensureClarificationsForContradictions,
   normalizeClarificationsFromLlm,
@@ -39,6 +40,8 @@ type OutlineNoteInternal = {
   summary: string;
   folderClientId: string | null;
   sourceChunkIds: string[];
+  sourcePassages: { chunkId: string; quote: string }[];
+  body?: import("@/src/lib/lore-import-plan-types").LoreImportStructuredBody;
   ingestionSignals?: IngestionSignals;
   campaignEpoch?: number;
   loreHistorical?: boolean;
@@ -94,12 +97,31 @@ export async function buildLoreImportPlan(args: {
   await reportProgress("outline", "Outline generated; attaching chunk-backed note bodies", {
     phaseFraction: 0.92,
   });
+  ensureOutlineHasFallbackNote(outline, chunks);
   const chunkDiagnostics = attachBodiesToOutline(outline, chunks);
 
   const notesInternal: OutlineNoteInternal[] = outline.notes.map((n) => ({
     ...n,
-    bodyText: String((n as { bodyText?: string }).bodyText ?? "").slice(0, 120_000),
+    bodyText: renderStructuredBodyPlainText(n.body).slice(0, 120_000) ||
+      String((n as { bodyText?: string }).bodyText ?? "").slice(0, 120_000),
   }));
+  const titleByClientId = new Map(notesInternal.map((n) => [n.clientId, n.title]));
+  for (const dup of chunkDiagnostics.duplicateQuotePassages) {
+    if (dup.noteClientIds.length <= 1) continue;
+    const primaryId = dup.noteClientIds[0]!;
+    const primaryTitle = titleByClientId.get(primaryId) ?? "Related note";
+    const shortMention = dup.quote.split(/(?<=[.!?])\s+/)[0]?.slice(0, 180) ?? dup.quote.slice(0, 180);
+    for (const noteId of dup.noteClientIds.slice(1)) {
+      const note = notesInternal.find((n) => n.clientId === noteId);
+      if (!note) continue;
+      note.sourcePassages = (note.sourcePassages ?? []).filter(
+        (sp) => sp.quote.replace(/\s+/g, " ").trim() !== dup.quote,
+      );
+      if (!note.bodyText.includes(`[[${primaryTitle}]]`)) {
+        note.bodyText = `${note.bodyText}\n\n${shortMention} [[${primaryTitle}]]`.slice(0, 120_000);
+      }
+    }
+  }
 
   const vaultSearchFilters: SearchFilters =
     (await finalizeHeartgardenSearchFiltersForDb(args.db, GM_LORE_IMPORT_SEARCH, {})) ?? {};
@@ -193,8 +215,22 @@ export async function buildLoreImportPlan(args: {
   const kindByClientId = new Map(
     notesInternal.map((n) => [n.clientId, n.canonicalEntityKind]),
   );
+  const impliedBindingLinks = notesInternal
+    .map((n) => {
+      if (n.body?.kind !== "character") return null;
+      const target = n.body.affiliationFactionClientId?.trim();
+      if (!target) return null;
+      if (!notesInternal.some((candidate) => candidate.clientId === target)) return null;
+      return {
+        fromClientId: n.clientId,
+        toClientId: target,
+        linkType: "alliance",
+        linkIntent: "binding_hint" as const,
+      };
+    })
+    .filter((l): l is { fromClientId: string; toClientId: string; linkType: string; linkIntent: "binding_hint" } => Boolean(l));
   const coercionWarnings: string[] = [];
-  const shapedOutlineLinks = outline.links.map((l) => {
+  const shapedOutlineLinks = [...outline.links, ...impliedBindingLinks].map((l) => {
     const fromKind = kindByClientId.get(l.fromClientId);
     const toKind = kindByClientId.get(l.toClientId);
     const coerced = coerceImportLinkType(fromKind, toKind, l.linkType);
@@ -226,7 +262,6 @@ export async function buildLoreImportPlan(args: {
   // Group cross-space drafts by the source note so we can attach mention arrays + inject
   // `[[Title]]` markers into `bodyText`. The apply path is responsible for resolving
   // the target client ids to real item UUIDs and appending `vigil:item:<uuid>` pointers.
-  const titleByClientId = new Map(notesInternal.map((n) => [n.clientId, n.title]));
   const mentionsBySource = new Map<
     string,
     { toClientId: string; targetTitle: string; linkType: string; linkIntent?: "association" | "binding_hint" }[]
@@ -309,14 +344,6 @@ export async function buildLoreImportPlan(args: {
     mergeProposals,
     clarifications,
   );
-  const chunkClarifications = buildChunkAssignmentClarifications({
-    noteClientIdsWithoutChunks: chunkDiagnostics.noteClientIdsWithoutChunks,
-    unassignedChunkIds: chunkDiagnostics.unassignedChunkIds,
-    duplicateAssignments: chunkDiagnostics.duplicateAssignments,
-    notes: notesInternal.map((n) => ({ clientId: n.clientId, title: n.title })),
-    chunks: chunks.map((c) => ({ id: c.id, heading: c.heading })),
-  });
-  clarifications = [...clarifications, ...chunkClarifications];
   clarifications = capClarificationList(clarifications);
   clarifications = withoutLinkSemanticsClarifications(clarifications);
 
@@ -357,6 +384,8 @@ export async function buildLoreImportPlan(args: {
         campaignEpoch: n.campaignEpoch,
         loreHistorical: n.loreHistorical,
         sourceChunkIds: n.sourceChunkIds,
+        sourcePassages: n.sourcePassages,
+        ...(n.body ? { body: n.body } : {}),
         ...(mentions && mentions.length > 0
           ? { crossFolderMentions: mentions }
           : {}),

@@ -1,6 +1,5 @@
 import { randomUUID } from "crypto";
 
-import { NO_MATCHING_CHUNKS_PLACEHOLDER } from "@/src/lib/lore-import-plan-llm";
 import type {
   ClarificationAnswer,
   LoreImportClarificationItem,
@@ -87,7 +86,7 @@ function rebuildNoteBodyText(plan: LoreImportPlan, note: LoreImportPlanNote): vo
   note.bodyText =
     bodies.length > 0
       ? bodies.join("\n\n---\n\n").slice(0, 120_000)
-      : NO_MATCHING_CHUNKS_PLACEHOLDER;
+      : "";
 }
 
 export function applyPlanPatchHint(plan: LoreImportPlan, hint: PlanPatchHint): void {

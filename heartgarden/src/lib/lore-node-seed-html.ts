@@ -17,8 +17,10 @@ import {
   locationBodyToFocusDocumentHtml,
   LORE_V11_PH_LOCATION_PLACEHOLDER,
   normalizeLocOrdoV7NameField,
+  parseLocationOrdoV7BodyPlainFields,
 } from "@/src/lib/lore-location-focus-document-html";
 import { splitOrdoV7DisplayName } from "@/src/lib/lore-location-ordo-display-name";
+import { stripLegacyHtmlToPlainText } from "@/src/lib/hg-doc/html-to-doc";
 import {
   buildFactionArchive091BodyHtml,
   factionArchiveRailTextsFromObjectId,
@@ -392,9 +394,28 @@ export function shouldRenderLoreFactionArchive091CanvasNode(
 export function migrateLocationBodyToOrdoV7(bodyHtml: string): string {
   if (!bodyHtml.trim()) return locationV7();
   if (bodyHtml.includes('data-hg-lore-location-variant="v7"')) return bodyHtml;
+  // Node-side callers don't have DOMParser. Returning the original body avoids data loss.
+  if (typeof DOMParser === "undefined") return bodyHtml;
   try {
     const focus = locationBodyToFocusDocumentHtml(bodyHtml);
-    return focusDocumentHtmlToLocationBody(focus, locationV7());
+    const migrated = focusDocumentHtmlToLocationBody(focus, locationV7());
+    const parsed = parseLocationOrdoV7BodyPlainFields(migrated);
+    const plainNotes = stripLegacyHtmlToPlainText(parsed.notesHtml ?? "").trim();
+    const migratedLooksEmpty =
+      !parsed.name.trim() &&
+      !parsed.context.trim() &&
+      !parsed.detail.trim() &&
+      plainNotes.length === 0;
+    if (!migratedLooksEmpty) return migrated;
+    const sourcePlain = stripLegacyHtmlToPlainText(bodyHtml).trim();
+    if (!sourcePlain) return migrated;
+    const sourceNotesInnerHtml = `<p>${escapeHtmlV7Field(sourcePlain).replace(/\n/g, "<br />")}</p>`;
+    return buildLocationOrdoV7BodyHtml({
+      name: "",
+      context: "",
+      detail: "",
+      notesInnerHtml: sourceNotesInnerHtml,
+    });
   } catch {
     return bodyHtml;
   }

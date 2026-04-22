@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { CANONICAL_ENTITY_KINDS } from "@/src/lib/lore-import-canonical-kinds";
+import { HEARTGARDEN_NATIONS } from "@/src/lib/lore-nations";
 
 export const ingestionSignalsSchema = z
   .object({
@@ -52,6 +53,57 @@ export type LoreImportCrossFolderMention = z.infer<
   typeof loreImportCrossFolderMentionSchema
 >;
 
+export const loreImportSourcePassageSchema = z.object({
+  chunkId: z.string().uuid(),
+  quote: z.string().min(1).max(4000),
+});
+
+const loreImportGenericBodySchema = z.object({
+  kind: z.literal("generic"),
+  paragraphs: z
+    .array(
+      z.object({
+        heading: z.string().max(255).optional(),
+        text: z.string().max(8000),
+      }),
+    )
+    .max(400),
+});
+
+const loreImportCharacterBodySchema = z.object({
+  kind: z.literal("character"),
+  name: z.string().max(255),
+  role: z.string().max(255).optional(),
+  affiliation: z.string().max(255).optional(),
+  affiliationFactionClientId: z.string().min(1).max(64).optional(),
+  nationality: z.enum(HEARTGARDEN_NATIONS).or(z.literal("")).optional(),
+  notesParagraphs: z.array(z.string().max(8000)).max(400),
+});
+
+const loreImportLocationBodySchema = z.object({
+  kind: z.literal("location"),
+  name: z.string().max(255),
+  context: z.string().max(255).optional(),
+  detail: z.string().max(255).optional(),
+  notesParagraphs: z.array(z.string().max(8000)).max(400),
+});
+
+const loreImportFactionBodySchema = z.object({
+  kind: z.literal("faction"),
+  namePrimary: z.string().max(255),
+  nameAccent: z.string().max(255).optional(),
+  recordParagraphs: z.array(z.string().max(8000)).max(400),
+});
+
+export const loreImportStructuredBodySchema = z.discriminatedUnion("kind", [
+  loreImportCharacterBodySchema,
+  loreImportLocationBodySchema,
+  loreImportFactionBodySchema,
+  loreImportGenericBodySchema,
+]);
+
+export type LoreImportStructuredBody = z.infer<typeof loreImportStructuredBodySchema>;
+
 export const loreImportPlanNoteSchema = z.object({
   clientId: z.string().min(1).max(64),
   title: z.string().min(1).max(255),
@@ -60,6 +112,8 @@ export const loreImportPlanNoteSchema = z.object({
   ),
   summary: z.string().max(4000),
   bodyText: z.string().max(120_000),
+  body: loreImportStructuredBodySchema.optional(),
+  sourcePassages: z.array(loreImportSourcePassageSchema).max(400).optional(),
   folderClientId: z.string().min(1).max(64).nullable().optional(),
   targetItemType: z.string().max(64).nullable().optional(),
   ingestionSignals: ingestionSignalsSchema,
