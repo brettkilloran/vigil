@@ -2997,11 +2997,6 @@ export function ArchitecturalCanvasApp({
           return false;
         }
         if (!r.ok && "conflict" in r && r.conflict) {
-          if (!patchTouchesItemContent(patch)) {
-            setGraph((prev) => applyServerCanvasItemToGraph(prev, r.item));
-            if (r.item.updatedAt) itemServerUpdatedAtRef.current.set(r.item.id, r.item.updatedAt);
-            return false;
-          }
           const serverAt = r.item.updatedAt;
           if (typeof serverAt === "string" && serverAt.length > 0) {
             itemServerUpdatedAtRef.current.set(itemId, serverAt);
@@ -3011,9 +3006,19 @@ export function ArchitecturalCanvasApp({
               return true;
             }
             if (!r2.ok && "conflict" in r2 && r2.conflict) {
+              if (!patchTouchesItemContent(patch)) {
+                setGraph((prev) => applyServerCanvasItemToGraph(prev, r2.item));
+                if (r2.item.updatedAt) itemServerUpdatedAtRef.current.set(r2.item.id, r2.item.updatedAt);
+                return false;
+              }
               enqueueItemConflict(r2.item);
               return false;
             }
+          }
+          if (!patchTouchesItemContent(patch)) {
+            setGraph((prev) => applyServerCanvasItemToGraph(prev, r.item));
+            if (r.item.updatedAt) itemServerUpdatedAtRef.current.set(r.item.id, r.item.updatedAt);
+            return false;
           }
           enqueueItemConflict(r.item);
         }
