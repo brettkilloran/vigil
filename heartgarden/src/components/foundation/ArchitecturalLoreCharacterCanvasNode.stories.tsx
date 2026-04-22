@@ -8,7 +8,7 @@ import { getLoreNodeSeedBodyHtml } from "@/src/lib/lore-node-seed-html";
 const bodyHtml = getLoreNodeSeedBodyHtml("character", "v11");
 
 const meta: Meta<typeof ArchitecturalLoreCharacterCanvasNode> = {
-  title: "Heartgarden/UI/Lore canvas · character (v11)",
+  title: "Heartgarden/UI/Lore canvas · character coverage",
   component: ArchitecturalLoreCharacterCanvasNode,
   args: {
     id: "story-lore-character-v11",

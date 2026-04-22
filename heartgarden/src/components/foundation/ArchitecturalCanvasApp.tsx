@@ -7055,7 +7055,7 @@ export function ArchitecturalCanvasApp({
       {
         id: "create-character",
         label: "Create character",
-        hint: "Lore character card (ID plate layout)",
+        hint: `Lore character — ${loreVariantChoiceLabel("character", defaultLoreCardVariantForKind("character"))} layout`,
         keywords: ["lore", "character", "person", "npc", "cast"],
         icon: <User size={14} weight="bold" />,
       },
@@ -7080,7 +7080,7 @@ export function ArchitecturalCanvasApp({
         id: "create-location",
         label: "Create location",
         hint: `Lore place — ${loreVariantChoiceLabel("location", defaultLoreCardVariantForKind("location"))} layout`,
-        keywords: ["lore", "location", "place", "ordo", "coordinate", "slab"],
+        keywords: ["lore", "location", "place", "coverage", "map", "region"],
         icon: <MapPin size={14} weight="bold" />,
       },
       { id: "export-json", label: "Export graph JSON", hint: "Download the current graph", icon: <DownloadSimple size={14} weight="bold" /> },

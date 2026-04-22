@@ -10,7 +10,7 @@ const bodyHtml = getLoreNodeSeedBodyHtml("faction", "v4");
 const factionRoster = createDefaultFactionRosterSeed();
 
 const meta: Meta<typeof ArchitecturalLoreFactionArchiveCanvasNode> = {
-  title: "Heartgarden/UI/Lore canvas · faction (Archive-091)",
+  title: "Heartgarden/UI/Lore canvas · organization coverage",
   component: ArchitecturalLoreFactionArchiveCanvasNode,
   args: {
     id: "story-lore-faction-archive091",

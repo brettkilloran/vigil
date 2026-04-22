@@ -8,7 +8,7 @@ import { getLoreNodeSeedBodyHtml } from "@/src/lib/lore-node-seed-html";
 const bodyHtml = getLoreNodeSeedBodyHtml("location", "v7");
 
 const meta: Meta<typeof ArchitecturalLoreLocationCanvasNode> = {
-  title: "Heartgarden/UI/Lore canvas · location (ORDO v7)",
+  title: "Heartgarden/UI/Lore canvas · location coverage",
   component: ArchitecturalLoreLocationCanvasNode,
   args: {
     id: "story-lore-location-ordo-v7",
@@ -57,7 +57,7 @@ const meta: Meta<typeof ArchitecturalLoreLocationCanvasNode> = {
 export default meta;
 type Story = StoryObj<typeof ArchitecturalLoreLocationCanvasNode>;
 
-export const OrdoSlab: Story = {};
+export const CoverageCard: Story = {};
 
 export const WithTape: Story = {
   args: {

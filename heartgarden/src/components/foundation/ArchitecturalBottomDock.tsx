@@ -146,18 +146,18 @@ export const DEFAULT_CREATE_ACTIONS: DockCreateAction[] = [
 
 /** Labels for lore layout variants (palette hints, import UI, etc.). */
 export function loreVariantChoiceLabel(kind: LoreCardKind, v: LoreCardVariant): string {
+  if (kind === "character") {
+    return "Character coverage card";
+  }
   if (kind === "faction") {
-    if (v === "v4") return "Archive-091";
-    if (v === "v1" || v === "v2" || v === "v3") return "Archive-091";
-    return v;
+    if (v === "v1" || v === "v2" || v === "v3") return "Organization coverage card (legacy)";
+    return "Organization coverage card";
   }
   if (kind === "location") {
-    if (v === "v7") return "ORDO coordinate slab";
-    if (v === "v2") return "Postcard band";
-    if (v === "v3") return "Survey tag";
-    return v;
+    if (v === "v2" || v === "v3") return "Location coverage card (legacy)";
+    return "Location coverage card";
   }
-  return v;
+  return "Coverage card";
 }
 
 export type ConnectionDockMode = "move" | "draw" | "cut";
