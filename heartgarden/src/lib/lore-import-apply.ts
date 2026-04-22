@@ -13,8 +13,9 @@ import {
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 import { connectionKindMetaForLinkType } from "@/src/lib/connection-kind-colors";
 import {
-  buildLoreNoteContentJson,
   buildLoreNoteContentJsonMerged,
+  buildLoreSourceContentJson,
+  buildLoreStructuredBodyContentJson,
 } from "@/src/lib/lore-import-commit";
 import { placeImportCards } from "@/src/lib/lore-import-placement";
 import {
@@ -48,12 +49,78 @@ import {
 } from "@/src/lib/lore-object-registry";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
+import { parseFactionRoster, type FactionRosterEntry } from "@/src/lib/faction-roster-schema";
 
 type ItemRow = InferSelectModel<typeof items>;
 
 const NODE_W = 280;
 const FOLDER_W = 420;
 const FOLDER_H = 280;
+export const SOURCE_SECTION_CARD_MAX_CHARS = 10_000;
+
+type SourceCardDraft = {
+  title: string;
+  text: string;
+};
+
+export function splitIntoSourceParts(text: string): string[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+  if (trimmed.length <= SOURCE_SECTION_CARD_MAX_CHARS) return [trimmed];
+  const out: string[] = [];
+  let cursor = 0;
+  while (cursor < trimmed.length) {
+    out.push(trimmed.slice(cursor, cursor + SOURCE_SECTION_CARD_MAX_CHARS));
+    cursor += SOURCE_SECTION_CARD_MAX_CHARS;
+  }
+  return out;
+}
+
+export function buildSourceCardDraftsFromPlan(
+  plan: LoreImportPlan,
+  fallbackSourceText: string,
+  baseTitle: string,
+): SourceCardDraft[] {
+  if (!plan.chunks || plan.chunks.length === 0) {
+    const parts = splitIntoSourceParts(fallbackSourceText);
+    return parts.map((part, idx) => ({
+      title:
+        parts.length > 1
+          ? `${baseTitle} • Part ${idx + 1}`
+          : baseTitle,
+      text: part,
+    }));
+  }
+  const referencedChunkIds = new Set<string>();
+  for (const note of plan.notes) {
+    for (const p of note.sourcePassages ?? []) referencedChunkIds.add(p.chunkId);
+    for (const id of note.sourceChunkIds ?? []) referencedChunkIds.add(id);
+  }
+  const byHeading = new Map<string, string[]>();
+  for (const ch of plan.chunks) {
+    if (referencedChunkIds.size > 0 && !referencedChunkIds.has(ch.id)) continue;
+    const heading = (ch.heading || "Document").trim() || "Document";
+    const list = byHeading.get(heading) ?? [];
+    if (ch.body?.trim()) list.push(ch.body.trim());
+    byHeading.set(heading, list);
+  }
+  const drafts: SourceCardDraft[] = [];
+  for (const [heading, bodies] of byHeading.entries()) {
+    const merged = bodies.join("\n\n").trim();
+    if (!merged) continue;
+    const parts = splitIntoSourceParts(merged);
+    for (let i = 0; i < parts.length; i += 1) {
+      drafts.push({
+        title:
+          parts.length > 1
+            ? `${baseTitle} — ${heading} • Part ${i + 1}`
+            : `${baseTitle} — ${heading}`,
+        text: parts[i]!,
+      });
+    }
+  }
+  return drafts.length > 0 ? drafts : [{ title: baseTitle, text: fallbackSourceText.trim() }];
+}
 
 export const loreImportApplyBodySchema = z.object({
   spaceId: z.string().uuid(),
@@ -420,6 +487,13 @@ export async function applyLoreImportPlan(
       body.sourceDocument?.text?.trim() ?? "";
     const hasSource =
       body.includeSourceCard === true && sourceText.length > 0;
+    const sourceTitleBase =
+      body.sourceDocument?.title?.trim() ||
+      plan.fileName ||
+      "Import source";
+    const sourceCardDrafts = hasSource
+      ? buildSourceCardDraftsFromPlan(plan, sourceText, sourceTitleBase)
+      : [];
 
     // Resolve the target space id for each note up-front so we can compute
     // per-space proximity placement in one pass.
@@ -479,51 +553,50 @@ export async function applyLoreImportPlan(
     let zRoot = await nextZIndex(dbx, body.spaceId);
     if (hasSource && rootSourceRect) {
       const layoutSource = rootSourceRect;
-      const title =
-        body.sourceDocument?.title?.trim() ||
-        plan.fileName ||
-        "Import source";
-      const contentJson = buildLoreNoteContentJson(sourceText.slice(0, 120_000), {
-        aiPending: true,
-      });
-      const sourceEntityMeta = buildImportedEntityMeta({
-        import: true,
-        importBatchId: plan.importBatchId,
-        aiReview: "pending",
-      });
-      const searchBlob = buildSearchBlob({
-        title: title.slice(0, 255),
-        contentText: sourceText.slice(0, 120_000),
-        contentJson,
-        entityType: persistedEntityTypeForLoreSource(),
-        entityMeta: sourceEntityMeta,
-        imageUrl: null,
-        imageMeta: null,
-        loreSummary: null,
-        loreAliases: null,
-      });
-      const [row] = await dbx
-        .insert(items)
-        .values({
-          spaceId: body.spaceId,
-          itemType: "note",
-          x: layoutSource.x,
-          y: layoutSource.y,
-          width: layoutSource.width,
-          height: layoutSource.height,
-          zIndex: zRoot++,
-          title: title.slice(0, 255),
-          contentText: sourceText.slice(0, 120_000),
-          searchBlob,
-          contentJson,
-          color: DS_COLOR.itemDefaultNote,
+      for (let i = 0; i < sourceCardDrafts.length; i += 1) {
+        const draft = sourceCardDrafts[i]!;
+        const sourceContentJson = buildLoreSourceContentJson(draft.text.slice(0, 120_000));
+        const sourceEntityMeta = buildImportedEntityMeta({
+          import: true,
+          importBatchId: plan.importBatchId,
+          aiReview: "pending",
+          sourceSectionIndex: i,
+          sourceSectionTotal: sourceCardDrafts.length,
+        });
+        const searchBlob = buildSearchBlob({
+          title: draft.title.slice(0, 255),
+          contentText: draft.text.slice(0, 120_000),
+          contentJson: sourceContentJson,
           entityType: persistedEntityTypeForLoreSource(),
           entityMeta: sourceEntityMeta,
-        })
-        .returning();
-      if (row) {
-        createdItemIds.push(row.id);
-        rowsToSchedule.push(row);
+          imageUrl: null,
+          imageMeta: null,
+          loreSummary: null,
+          loreAliases: null,
+        });
+        const [row] = await dbx
+          .insert(items)
+          .values({
+            spaceId: body.spaceId,
+            itemType: "note",
+            x: layoutSource.x + i * 28,
+            y: layoutSource.y + i * 26,
+            width: layoutSource.width,
+            height: layoutSource.height,
+            zIndex: zRoot++,
+            title: draft.title.slice(0, 255),
+            contentText: draft.text.slice(0, 120_000),
+            searchBlob,
+            contentJson: sourceContentJson,
+            color: DS_COLOR.itemDefaultNote,
+            entityType: persistedEntityTypeForLoreSource(),
+            entityMeta: sourceEntityMeta,
+          })
+          .returning();
+        if (row) {
+          createdItemIds.push(row.id);
+          rowsToSchedule.push(row);
+        }
       }
     }
 
@@ -542,7 +615,7 @@ export async function applyLoreImportPlan(
       const z = await nextZIndex(dbx, targetSpaceId);
 
       const bodyText = note.bodyText.slice(0, 120_000);
-      const contentJson = buildLoreNoteContentJson(bodyText, { aiPending: true });
+      const contentJson = buildLoreStructuredBodyContentJson(note.body, bodyText);
       const entityMeta = buildImportedEntityMeta({
         base: buildDefaultEntityMeta(note),
         importBatchId: plan.importBatchId,
@@ -591,6 +664,101 @@ export async function applyLoreImportPlan(
       }
     }
 
+    // Faction roster auto-fill from character affiliations (co-created + merged-vault factions).
+    const normalizeNameKey = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const factionByNormalizedTitle = new Map<string, string>();
+    for (const m of mergeProposalsAccepted) {
+      if (m.targetEntityType !== "faction") continue;
+      const key = normalizeNameKey(m.targetTitle ?? "");
+      if (!key) continue;
+      factionByNormalizedTitle.set(key, m.targetItemId);
+    }
+    const factionMembers = new Map<string, Set<string>>();
+    for (const note of plan.notes) {
+      if (note.body?.kind !== "character") continue;
+      const characterItemId = clientIdToItemId.get(note.clientId);
+      if (!characterItemId) continue;
+      let factionItemId: string | undefined;
+      const factionClientId = note.body.affiliationFactionClientId?.trim();
+      if (factionClientId) {
+        factionItemId = clientIdToItemId.get(factionClientId);
+      }
+      if (!factionItemId && note.body.affiliation?.trim()) {
+        const key = normalizeNameKey(note.body.affiliation);
+        if (key) factionItemId = factionByNormalizedTitle.get(key);
+      }
+      if (!factionItemId) continue;
+      const members = factionMembers.get(factionItemId) ?? new Set<string>();
+      members.add(characterItemId);
+      factionMembers.set(factionItemId, members);
+    }
+    for (const [factionItemId, members] of factionMembers.entries()) {
+      if (members.size === 0) continue;
+      let factionRow = rowsToSchedule.find((r) => r.id === factionItemId);
+      if (!factionRow) {
+        const [existingFaction] = await dbx
+          .select()
+          .from(items)
+          .where(eq(items.id, factionItemId))
+          .limit(1);
+        if (!existingFaction) continue;
+        factionRow = existingFaction;
+      }
+      const prevContentJson =
+        factionRow.contentJson && typeof factionRow.contentJson === "object"
+          ? (factionRow.contentJson as Record<string, unknown>)
+          : {};
+      const prevHgArch =
+        prevContentJson.hgArch && typeof prevContentJson.hgArch === "object"
+          ? (prevContentJson.hgArch as Record<string, unknown>)
+          : {};
+      const prevRoster = parseFactionRoster(prevHgArch.factionRoster) ?? [];
+      const seenCharacterIds = new Set(
+        prevRoster
+          .filter((entry): entry is Extract<FactionRosterEntry, { kind: "character" }> => entry.kind === "character")
+          .map((entry) => entry.characterItemId),
+      );
+      const additions: FactionRosterEntry[] = [];
+      for (const characterItemId of members.values()) {
+        if (seenCharacterIds.has(characterItemId)) continue;
+        additions.push({
+          id: randomUUID(),
+          kind: "character",
+          characterItemId,
+        });
+      }
+      if (additions.length === 0) continue;
+      const nextContentJson = {
+        ...prevContentJson,
+        hgArch: {
+          ...prevHgArch,
+          factionRoster: [...prevRoster, ...additions],
+        },
+      };
+      const prevMeta =
+        factionRow.entityMeta && typeof factionRow.entityMeta === "object"
+          ? (factionRow.entityMeta as Record<string, unknown>)
+          : {};
+      const nextEntityMeta = buildImportedEntityMeta({
+        existing: prevMeta,
+        aiReview: "pending",
+      });
+      const [updated] = await dbx
+        .update(items)
+        .set({
+          contentJson: nextContentJson,
+          entityMeta: nextEntityMeta,
+          updatedAt: new Date(),
+        })
+        .where(eq(items.id, factionItemId))
+        .returning();
+      if (updated) {
+        const idx = rowsToSchedule.findIndex((r) => r.id === factionItemId);
+        if (idx >= 0) rowsToSchedule[idx] = updated;
+        else rowsToSchedule.push(updated);
+      }
+    }
+
     // Cross-folder mentions: once targets have real item ids, append `vigil:item:<uuid>`
     // pointers to each source note's bodyText/contentJson and record cross-folder refs.
     for (const note of notesToCreate) {
@@ -620,9 +788,10 @@ export async function applyLoreImportPlan(
 
       const appendBlock = `\n\n${vigilAppendParts.join(" · ")}`;
       const nextContentText = (sourceRow.contentText + appendBlock).slice(0, 120_000);
-      const nextContentJson = buildLoreNoteContentJson(nextContentText, {
-        aiPending: true,
-      });
+      const nextContentJson =
+        sourceRow.entityType === persistedEntityTypeForLoreSource()
+          ? buildLoreSourceContentJson(nextContentText)
+          : (sourceRow.contentJson as Record<string, unknown> | null);
       const prevMeta =
         sourceRow.entityMeta && typeof sourceRow.entityMeta === "object"
           ? (sourceRow.entityMeta as Record<string, unknown>)
