@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { loreImportJobs } from "@/src/db/schema";
@@ -17,6 +17,78 @@ import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
 export const runtime = "nodejs";
 
 type RouteCtx = { params: Promise<{ jobId: string }> };
+
+type LoreImportJobProgressPayload = {
+  phase?: string;
+  step?: number;
+  total?: number;
+  message?: string;
+  meta?: Record<string, unknown>;
+  updatedAt?: string;
+};
+
+type LoreImportJobView = {
+  id: string;
+  spaceId: string;
+  status: string;
+  plan: unknown;
+  error: string | null;
+  updatedAt: Date | null;
+  progressPhase?: string | null;
+  progressStep?: number | null;
+  progressTotal?: number | null;
+  progressMessage?: string | null;
+  progressMeta?: Record<string, unknown> | null;
+  lastProgressAt?: Date | null;
+};
+
+function isMissingProgressColumnsError(error: unknown): boolean {
+  const source =
+    error && typeof error === "object" ? (error as Record<string, unknown>) : {};
+  const code = String(source.code ?? "").trim();
+  const column = String(source.column ?? "").toLowerCase();
+  const message = String(source.message ?? "").toLowerCase();
+  const mentionsProgressColumn =
+    column.startsWith("progress_") ||
+    column === "last_progress_at" ||
+    message.includes("progress_") ||
+    message.includes("last_progress_at");
+  if (!mentionsProgressColumn) return false;
+  return !code || code === "42703" || code === "42P01";
+}
+
+function normalizeJobProgress(
+  job: LoreImportJobView,
+): LoreImportJobProgressPayload | undefined {
+  const hasProgress =
+    Boolean(job.progressPhase) ||
+    typeof job.progressStep === "number" ||
+    typeof job.progressTotal === "number" ||
+    Boolean(job.progressMessage) ||
+    Boolean(job.progressMeta);
+  if (!hasProgress) return undefined;
+  return {
+    phase: job.progressPhase ?? undefined,
+    step: typeof job.progressStep === "number" ? job.progressStep : undefined,
+    total: typeof job.progressTotal === "number" ? job.progressTotal : undefined,
+    message: job.progressMessage ?? undefined,
+    meta: (job.progressMeta as Record<string, unknown> | null) ?? undefined,
+    updatedAt: job.lastProgressAt ? job.lastProgressAt.toISOString() : undefined,
+  };
+}
+
+function readFailedMeta(
+  job: LoreImportJobView,
+): { errorCode?: string; lastPhase?: string } {
+  const meta = (job.progressMeta as Record<string, unknown> | null) ?? null;
+  return {
+    errorCode: typeof meta?.errorCode === "string" ? meta.errorCode : undefined,
+    lastPhase:
+      typeof meta?.lastPhase === "string"
+        ? meta.lastPhase
+        : (job.progressPhase ?? undefined),
+  };
+}
 
 export async function GET(req: Request, ctx: RouteCtx) {
   const attemptId = req.headers.get("x-heartgarden-import-attempt")?.trim() || "unknown";
@@ -46,11 +118,60 @@ export async function GET(req: Request, ctx: RouteCtx) {
     );
   }
 
-  const [job] = await db
-    .select()
+  const [baseJob] = await db
+    .select({
+      id: loreImportJobs.id,
+      spaceId: loreImportJobs.spaceId,
+      status: loreImportJobs.status,
+      plan: loreImportJobs.plan,
+      error: loreImportJobs.error,
+      updatedAt: loreImportJobs.updatedAt,
+    })
     .from(loreImportJobs)
     .where(eq(loreImportJobs.id, jobId))
     .limit(1);
+  let job: LoreImportJobView | null = baseJob ?? null;
+  const canExecuteSql = typeof (db as { execute?: unknown }).execute === "function";
+  if (job && canExecuteSql) {
+    try {
+      const progressRows = await db.execute(sql`
+        select
+          progress_phase,
+          progress_step,
+          progress_total,
+          progress_message,
+          progress_meta,
+          last_progress_at
+        from "lore_import_jobs"
+        where "id" = ${jobId}
+        limit 1
+      `);
+      const row = (progressRows as { rows?: Record<string, unknown>[] })?.rows?.[0];
+      if (row) {
+        job = {
+          ...job,
+          progressPhase:
+            typeof row.progress_phase === "string" ? row.progress_phase : null,
+          progressStep:
+            typeof row.progress_step === "number" ? row.progress_step : null,
+          progressTotal:
+            typeof row.progress_total === "number" ? row.progress_total : null,
+          progressMessage:
+            typeof row.progress_message === "string" ? row.progress_message : null,
+          progressMeta:
+            row.progress_meta && typeof row.progress_meta === "object"
+              ? (row.progress_meta as Record<string, unknown>)
+              : null,
+          lastProgressAt:
+            row.last_progress_at instanceof Date
+              ? row.last_progress_at
+              : null,
+        };
+      }
+    } catch (error) {
+      if (!isMissingProgressColumnsError(error)) throw error;
+    }
+  }
 
   if (!job || job.spaceId !== spaceId) {
     return Response.json({ ok: false, error: "Job not found" }, { status: 404 });
@@ -74,14 +195,18 @@ export async function GET(req: Request, ctx: RouteCtx) {
           ok: false,
           status: "failed",
           error: "Stored plan failed validation",
+          errorCode: "lore_import_plan_validation_failed",
+          progress: normalizeJobProgress(job),
         },
         { status: 500 },
       );
     }
     return Response.json({
       ok: true,
+      attemptId,
       status: job.status,
       plan: parsed.data,
+      progress: normalizeJobProgress(job),
     });
   }
 
@@ -91,6 +216,8 @@ export async function GET(req: Request, ctx: RouteCtx) {
         ok: false,
         status: "failed",
         error: "Job is ready but plan data is missing",
+        errorCode: "lore_import_plan_missing",
+        progress: normalizeJobProgress(job),
       },
       { status: 500 },
     );
@@ -105,14 +232,19 @@ export async function GET(req: Request, ctx: RouteCtx) {
     });
   }
 
+  const progress = normalizeJobProgress(job);
+  const failedMeta = job.status === "failed" ? readFailedMeta(job) : {};
   return Response.json({
     ok: true,
     attemptId,
     status: job.status,
+    ...(progress ? { progress } : {}),
     ...(job.status === "failed"
       ? {
           error: job.error || "Import job failed",
           code: "lore_import_job_failed",
+          errorCode: failedMeta.errorCode,
+          lastPhase: failedMeta.lastPhase,
         }
       : {}),
   });

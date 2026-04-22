@@ -534,6 +534,51 @@ type LoreImportJobProgress = {
   updatedAt?: string | null;
 };
 
+function toHumanPhaseLabel(phase?: string): string {
+  const key = String(phase || "").trim().toLowerCase();
+  if (!key) return "Preparing import plan";
+  const labels: Record<string, string> = {
+    queued: "Queued",
+    fallback_plan: "Direct planning fallback",
+    chunking: "Analyzing document chunks",
+    outline: "Building outline",
+    vault_retrieval: "Reading related vault context",
+    merge: "Merging entities and notes",
+    clarify: "Preparing clarifications",
+    persist_review: "Saving review queue",
+    failed: "Planning failed",
+    ready: "Plan ready",
+  };
+  return labels[key] ?? key.replace(/[_-]+/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+function toPlanningPercent(step?: number, total?: number): number | null {
+  if (typeof step !== "number" || typeof total !== "number" || total <= 0) return null;
+  const ratio = Math.max(0, Math.min(1, step / total));
+  return Math.round(ratio * 100);
+}
+
+function summarizeQueueCreateFailure(args: {
+  status: number;
+  error?: string;
+  detail?: string;
+  hint?: string;
+  errorCode?: string;
+  dbCode?: string;
+}): string {
+  if (args.status === 503) return "Queue service unavailable (check database configuration)";
+  if (args.status === 403) return "Queue request forbidden for this session";
+  if (args.errorCode === "lore_import_job_persist_failed") {
+    const db = args.dbCode ? ` (${args.dbCode})` : "";
+    return `Queue persistence failed${db}`;
+  }
+  if (args.errorCode) return `Queue request failed (${args.errorCode})`;
+  if (args.detail) return args.detail;
+  if (args.error) return args.error;
+  if (args.hint) return args.hint;
+  return `Queue request failed (HTTP ${args.status})`;
+}
+
 function createLoreImportFailureDetail(args: {
   attemptId: string;
   stage: LoreImportStage;
@@ -2232,6 +2277,40 @@ export function ArchitecturalCanvasApp({
   const [loreSmartPlanning, setLoreSmartPlanning] = useState(false);
   const [loreSmartPlanningProgress, setLoreSmartPlanningProgress] =
     useState<LoreImportJobProgress | null>(null);
+  const loreSmartPlanningUi = useMemo(() => {
+    const progress = loreSmartPlanningProgress;
+    const phase = String(progress?.phase ?? "").trim();
+    const percent = toPlanningPercent(progress?.step, progress?.total);
+    const queueFailureHintRaw = progress?.meta?.queueFailureHint;
+    const queueFailureHint =
+      typeof queueFailureHintRaw === "string" && queueFailureHintRaw.trim().length > 0
+        ? queueFailureHintRaw.trim()
+        : null;
+    const mode =
+      phase === "fallback_plan"
+        ? "Fallback (Direct)"
+        : phase === "queued"
+          ? "Queued"
+          : "Planning";
+    return {
+      phaseLabel: toHumanPhaseLabel(phase),
+      mode,
+      detail: progress?.message?.trim() || "Preparing smart import plan",
+      stepText:
+        typeof progress?.step === "number" && typeof progress?.total === "number"
+          ? `${progress.step}/${progress.total}`
+          : null,
+      percent,
+      queueFailureHint,
+      updatedAtText: progress?.updatedAt
+        ? new Date(progress.updatedAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })
+        : null,
+    };
+  }, [loreSmartPlanningProgress]);
   const [loreSmartIncludeSource, setLoreSmartIncludeSource] = useState(true);
   const [loreSmartAcceptedMergeIds, setLoreSmartAcceptedMergeIds] = useState<Record<string, boolean>>(
     {},
@@ -7464,10 +7543,11 @@ export function ArchitecturalCanvasApp({
               setLoreSmartTab("questions");
             }
           };
-          const tryDirectPlanFallback = async (): Promise<boolean> => {
+          const tryDirectPlanFallback = async (queueFailureHint?: string): Promise<boolean> => {
             setLoreSmartPlanningProgress({
               phase: "fallback_plan",
               message: "Smart queue unavailable; planning directly",
+              meta: queueFailureHint ? { queueFailureHint } : undefined,
             });
             const planRes = await fetch("/api/lore/import/plan", {
               method: "POST",
@@ -7522,7 +7602,22 @@ export function ArchitecturalCanvasApp({
               jobId?: string;
             };
             if (!jobRes.ok || !jobBody.ok || !jobBody.jobId) {
-              const usedFallback = await tryDirectPlanFallback().catch(() => false);
+              const queueFailureHint = summarizeQueueCreateFailure({
+                status: jobRes.status,
+                error: typeof jobBody.error === "string" ? jobBody.error : undefined,
+                detail: typeof jobBody.detail === "string" ? jobBody.detail : undefined,
+                hint: typeof jobBody.hint === "string" ? jobBody.hint : undefined,
+                errorCode: typeof jobBody.errorCode === "string" ? jobBody.errorCode : undefined,
+                dbCode: typeof jobBody.dbCode === "string" ? jobBody.dbCode : undefined,
+              });
+              console.warn("[lore-import] smart queue unavailable; using direct fallback", {
+                attemptId,
+                status: jobRes.status,
+                queueFailureHint,
+                errorCode: jobBody.errorCode,
+                dbCode: jobBody.dbCode,
+              });
+              const usedFallback = await tryDirectPlanFallback(queueFailureHint).catch(() => false);
               if (usedFallback) return;
               reportFailure(
                 createLoreImportFailureDetail({
@@ -7678,6 +7773,13 @@ export function ArchitecturalCanvasApp({
               }
             }
           } catch (error) {
+            const queueFailureHint = unknownMessage(error, "Smart import job request failed.");
+            console.warn("[lore-import] smart queue request threw; using direct fallback", {
+              attemptId,
+              queueFailureHint,
+            });
+            const usedFallback = await tryDirectPlanFallback(queueFailureHint).catch(() => false);
+            if (usedFallback) return;
             reportFailure(
               createLoreImportFailureDetail({
                 attemptId,
@@ -11678,21 +11780,42 @@ export function ArchitecturalCanvasApp({
             aria-live="polite"
             aria-label="Building import plan"
           >
-            <div className="rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-panel)] px-6 py-4 text-sm text-[var(--vigil-label)] shadow-xl">
-              <p className="font-medium">Planning import…</p>
-              {loreSmartPlanningProgress?.message ? (
-                <p className="mt-1 text-[12px] text-[var(--vigil-label)]">
-                  {loreSmartPlanningProgress.message}
-                  {typeof loreSmartPlanningProgress.step === "number" &&
-                  typeof loreSmartPlanningProgress.total === "number"
-                    ? ` (${loreSmartPlanningProgress.step}/${loreSmartPlanningProgress.total})`
-                    : ""}
+            <div className="w-full max-w-md rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-panel)] px-5 py-4 text-sm text-[var(--vigil-label)] shadow-xl">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-semibold">Planning import</p>
+                <span className="rounded-full border border-[var(--vigil-border)] px-2 py-0.5 text-[10px] text-[var(--vigil-muted)]">
+                  {loreSmartPlanningUi.mode}
+                </span>
+              </div>
+              <p className="mt-1 text-[12px] text-[var(--vigil-label)]">{loreSmartPlanningUi.phaseLabel}</p>
+              <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[var(--vigil-border)]">
+                {typeof loreSmartPlanningUi.percent === "number" ? (
+                  <div
+                    className="h-full rounded-full bg-[var(--vigil-accent)] transition-[width] duration-500 ease-out"
+                    style={{ width: `${loreSmartPlanningUi.percent}%` }}
+                  />
+                ) : (
+                  <div className="h-full w-2/5 animate-pulse rounded-full bg-[var(--vigil-accent)]" />
+                )}
+              </div>
+              <div className="mt-2 flex items-center justify-between text-[11px] text-[var(--vigil-muted)]">
+                <span>{loreSmartPlanningUi.detail}</span>
+                {loreSmartPlanningUi.stepText ? <span>{loreSmartPlanningUi.stepText}</span> : null}
+              </div>
+              {loreSmartPlanningUi.queueFailureHint ? (
+                <p className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
+                  Queue detail: {loreSmartPlanningUi.queueFailureHint}
                 </p>
               ) : null}
-              <p className="mt-1 max-w-xs text-[11px] text-[var(--vigil-muted)]">
-                Running in the background on the server. You can leave this page open — it usually finishes
-                within a minute or two for typical files.
+              <p className="mt-2 max-w-xs text-[11px] text-[var(--vigil-muted)]">
+                Running on the server in the background. Keep this tab open; typical files finish within
+                one to two minutes.
               </p>
+              {loreSmartPlanningUi.updatedAtText ? (
+                <p className="mt-1 text-[10px] text-[var(--vigil-muted)]">
+                  Last update: {loreSmartPlanningUi.updatedAtText}
+                </p>
+              ) : null}
             </div>
           </div>
         ) : null}

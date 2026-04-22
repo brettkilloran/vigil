@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
@@ -10,6 +11,7 @@ import {
   heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { scheduleLoreImportJobProcessing } from "@/src/lib/lore-import-job-after";
+import { processLoreImportJob } from "@/src/lib/lore-import-job-process";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
 export const runtime = "nodejs";
@@ -76,6 +78,22 @@ function readDbInsertDiagnostic(error: unknown): DbInsertDiagnostic {
     routine: clipped(source.routine, 128),
     retryable: Boolean(code && retryableCodes.has(code)),
   };
+}
+
+function isMissingProgressColumnsDiagnostic(diag: DbInsertDiagnostic): boolean {
+  const code = String(diag.code || "").trim();
+  const column = String(diag.column || "").toLowerCase();
+  const text = `${diag.message || ""} ${diag.detail || ""}`.toLowerCase();
+  const mentionsProgressColumn =
+    column.startsWith("progress_") ||
+    column === "last_progress_at" ||
+    text.includes("progress_") ||
+    text.includes("last_progress_at");
+  if (!mentionsProgressColumn) return false;
+  if (!code) return true;
+  if (code === "42703") return true;
+  if (code === "42P01" && text.includes("lore_import_jobs")) return true;
+  return false;
 }
 
 export async function POST(req: Request) {
@@ -145,6 +163,71 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     const diag = readDbInsertDiagnostic(error);
+    if (isMissingProgressColumnsDiagnostic(diag)) {
+      console.warn("[lore-import] jobs insert using legacy schema fallback", {
+        attemptId,
+        spaceId: parsed.data.spaceId,
+        dbCode: diag.code,
+        dbColumn: diag.column,
+      });
+      try {
+        await db.execute(sql`
+          insert into "lore_import_jobs" (
+            "id",
+            "space_id",
+            "import_batch_id",
+            "status",
+            "source_text",
+            "file_name",
+            "plan",
+            "error",
+            "created_at",
+            "updated_at"
+          ) values (
+            ${jobId},
+            ${parsed.data.spaceId},
+            ${importBatchId},
+            ${"queued"},
+            ${parsed.data.text},
+            ${parsed.data.fileName ?? null},
+            ${null},
+            ${null},
+            ${now},
+            ${now}
+          )
+        `);
+      } catch (legacyError) {
+        const legacyDiag = readDbInsertDiagnostic(legacyError);
+        console.error("[lore-import] jobs legacy insert failed", {
+          attemptId,
+          spaceId: parsed.data.spaceId,
+          ...legacyDiag,
+          stack: legacyError instanceof Error ? clipped(legacyError.stack, 1200) : undefined,
+        });
+        return Response.json(
+          {
+            ok: false,
+            error: "Could not persist import job",
+            errorCode: "lore_import_job_persist_failed",
+            detail:
+              legacyDiag.detail ||
+              legacyDiag.message ||
+              "Insert into lore_import_jobs failed before background planning could start.",
+            hint: "Run lore-import migrations so progress columns exist, then retry import.",
+            operation: "insert lore_import_jobs",
+            dbCode: legacyDiag.code,
+            dbSeverity: legacyDiag.severity,
+            dbTable: legacyDiag.table,
+            dbColumn: legacyDiag.column,
+            dbConstraint: legacyDiag.constraint,
+            dbRoutine: legacyDiag.routine,
+            retryable: legacyDiag.retryable ?? false,
+            attemptId,
+          },
+          { status: 500 },
+        );
+      }
+    } else {
     console.error("[lore-import] jobs insert failed", {
       attemptId,
       spaceId: parsed.data.spaceId,
@@ -173,9 +256,27 @@ export async function POST(req: Request) {
       },
       { status: 500 },
     );
+    }
   }
 
-  scheduleLoreImportJobProcessing(jobId);
+  let queueMode: "after" | "inline_fallback" = "after";
+  try {
+    scheduleLoreImportJobProcessing(jobId);
+  } catch (error) {
+    queueMode = "inline_fallback";
+    console.error("[lore-import] jobs schedule failed; running inline fallback", {
+      attemptId,
+      jobId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    void processLoreImportJob(jobId).catch((processError) => {
+      console.error("[lore-import] inline fallback processing failed", {
+        attemptId,
+        jobId,
+        error: processError instanceof Error ? processError.message : String(processError),
+      });
+    });
+  }
 
   return Response.json({
     ok: true,
@@ -183,5 +284,6 @@ export async function POST(req: Request) {
     jobId,
     importBatchId,
     status: "queued",
+    queueMode,
   });
 }

@@ -67,6 +67,7 @@ describe("GET /api/lore/import/jobs/[jobId]", () => {
       code?: string;
       errorCode?: string;
       lastPhase?: string;
+      progress?: { phase?: string; message?: string };
     };
     expect(payload.ok).toBe(true);
     expect(payload.status).toBe("failed");
@@ -74,6 +75,8 @@ describe("GET /api/lore/import/jobs/[jobId]", () => {
     expect(payload.code).toBe("lore_import_job_failed");
     expect(payload.errorCode).toBe("outline_llm_failed");
     expect(payload.lastPhase).toBe("outline");
+    expect(payload.progress?.phase).toBe("failed");
+    expect(payload.progress?.message).toBe("Import job failed");
   });
 });
 

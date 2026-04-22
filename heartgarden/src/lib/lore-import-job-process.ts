@@ -11,18 +11,88 @@ import type { VigilDb } from "@/src/lib/spaces";
 /** Re-queue jobs stuck in `processing` after a crash or serverless timeout. */
 export const STALE_LORE_IMPORT_PROCESSING_MS = 15 * 60 * 1000;
 
+function isMissingProgressColumnsError(error: unknown): boolean {
+  const source =
+    error && typeof error === "object" ? (error as Record<string, unknown>) : {};
+  const code = String(source.code ?? "").trim();
+  const column = String(source.column ?? "").toLowerCase();
+  const fallbackMessage = error instanceof Error ? error.message : "";
+  const message = String(source.message ?? fallbackMessage).toLowerCase();
+  const mentionsProgressColumn =
+    column.startsWith("progress_") ||
+    column === "last_progress_at" ||
+    message.includes("progress_") ||
+    message.includes("last_progress_at");
+  if (!mentionsProgressColumn) return false;
+  if (!code) return true;
+  if (code === "42703") return true;
+  if (code === "42P01" && message.includes("lore_import_jobs")) return true;
+  return false;
+}
+
 async function updateLoreImportJobProgress(
   db: VigilDb,
   jobId: string,
   progress: LoreImportProgress,
 ): Promise<void> {
-  void progress;
-  await db
-    .update(loreImportJobs)
-    .set({
-      updatedAt: new Date(),
-    })
-    .where(eq(loreImportJobs.id, jobId));
+  const now = new Date();
+  try {
+    await db
+      .update(loreImportJobs)
+      .set({
+        progressPhase: progress.phase || null,
+        progressStep: typeof progress.step === "number" ? progress.step : null,
+        progressTotal: typeof progress.total === "number" ? progress.total : null,
+        progressMessage: progress.message || null,
+        progressMeta: progress.meta ?? null,
+        lastProgressAt: now,
+        updatedAt: now,
+      })
+      .where(eq(loreImportJobs.id, jobId));
+  } catch (error) {
+    if (!isMissingProgressColumnsError(error)) throw error;
+    await db
+      .update(loreImportJobs)
+      .set({
+        updatedAt: now,
+      })
+      .where(eq(loreImportJobs.id, jobId));
+  }
+}
+
+async function updateLoreImportJobFailed(
+  db: VigilDb,
+  jobId: string,
+  args: { error: string; errorCode: string; lastPhase: string },
+): Promise<void> {
+  const now = new Date();
+  try {
+    await db
+      .update(loreImportJobs)
+      .set({
+        status: "failed",
+        error: args.error,
+        progressPhase: "failed",
+        progressMessage: args.error,
+        progressMeta: {
+          errorCode: args.errorCode,
+          lastPhase: args.lastPhase,
+        },
+        lastProgressAt: now,
+        updatedAt: now,
+      })
+      .where(eq(loreImportJobs.id, jobId));
+  } catch (error) {
+    if (!isMissingProgressColumnsError(error)) throw error;
+    await db
+      .update(loreImportJobs)
+      .set({
+        status: "failed",
+        error: args.error,
+        updatedAt: now,
+      })
+      .where(eq(loreImportJobs.id, jobId));
+  }
 }
 
 export async function processLoreImportJob(jobId: string): Promise<void> {
@@ -51,26 +121,30 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
         ),
       ),
     )
-    .returning();
+    .returning({
+      id: loreImportJobs.id,
+      spaceId: loreImportJobs.spaceId,
+      importBatchId: loreImportJobs.importBatchId,
+      sourceText: loreImportJobs.sourceText,
+      fileName: loreImportJobs.fileName,
+    });
 
   if (!job) {
     return;
   }
   const key = process.env.ANTHROPIC_API_KEY?.trim();
   if (!key) {
-    await db
-      .update(loreImportJobs)
-      .set({
-        status: "failed",
-        error: "ANTHROPIC_API_KEY is not configured",
-        updatedAt: new Date(),
-      })
-      .where(eq(loreImportJobs.id, jobId));
+    await updateLoreImportJobFailed(db as VigilDb, jobId, {
+      error: "ANTHROPIC_API_KEY is not configured",
+      errorCode: "anthropic_api_key_missing",
+      lastPhase: "config",
+    });
     return;
   }
 
   const model =
     process.env.ANTHROPIC_LORE_MODEL?.trim() || "claude-sonnet-4-20250514";
+  let lastPhase = "queued";
 
   try {
     const plan = await buildLoreImportPlan({
@@ -81,20 +155,18 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
       importBatchId: job.importBatchId,
       fileName: job.fileName ?? undefined,
       onProgress: async (progress) => {
+        lastPhase = progress.phase || lastPhase;
         await updateLoreImportJobProgress(db as VigilDb, jobId, progress);
       },
     });
 
     const parsedPlan = loreImportPlanSchema.safeParse(plan);
     if (!parsedPlan.success) {
-      await db
-        .update(loreImportJobs)
-        .set({
-          status: "failed",
-          error: `Plan validation failed: ${parsedPlan.error.message}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(loreImportJobs.id, jobId));
+      await updateLoreImportJobFailed(db as VigilDb, jobId, {
+        error: `Plan validation failed: ${parsedPlan.error.message}`,
+        errorCode: "lore_import_plan_validation_failed",
+        lastPhase,
+      });
       return;
     }
 
@@ -115,13 +187,10 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
       .where(eq(loreImportJobs.id, jobId));
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Plan failed";
-    await db
-      .update(loreImportJobs)
-      .set({
-        status: "failed",
-        error: msg,
-        updatedAt: new Date(),
-      })
-      .where(eq(loreImportJobs.id, jobId));
+    await updateLoreImportJobFailed(db as VigilDb, jobId, {
+      error: msg,
+      errorCode: "lore_import_job_failed",
+      lastPhase,
+    });
   }
 }
