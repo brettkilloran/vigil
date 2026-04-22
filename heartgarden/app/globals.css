@@ -647,7 +647,6 @@ a {
   font-weight: var(--btn-font-weight);
   letter-spacing: 0.03em;
   line-height: 1;
-  text-transform: uppercase !important;
   white-space: nowrap;
   cursor: pointer;
   transition:
