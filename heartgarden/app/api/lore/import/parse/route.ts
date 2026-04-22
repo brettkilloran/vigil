@@ -12,7 +12,12 @@ function stripBom(text: string) {
   return text;
 }
 
+function importAttemptId(req: Request): string {
+  return req.headers.get("x-heartgarden-import-attempt")?.trim() || "unknown";
+}
+
 export async function POST(req: Request) {
+  const attemptId = importAttemptId(req);
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
   if (denied) return denied;
@@ -28,7 +33,11 @@ export async function POST(req: Request) {
   let form: FormData;
   try {
     form = await req.formData();
-  } catch {
+  } catch (error) {
+    console.error("[lore-import] parse formData failed", {
+      attemptId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return Response.json({ ok: false, error: "Invalid form data" }, { status: 400 });
   }
 
@@ -40,6 +49,12 @@ export async function POST(req: Request) {
   const name = file.name || "upload";
   const lower = name.toLowerCase();
   const buf = Buffer.from(await file.arrayBuffer());
+  console.info("[lore-import] parse request", {
+    attemptId,
+    fileName: name,
+    contentType: file.type || null,
+    fileBytes: buf.length,
+  });
 
   let text = "";
   if (lower.endsWith(".pdf")) {
@@ -48,8 +63,13 @@ export async function POST(req: Request) {
       const parsed = await parser.getText();
       await parser.destroy();
       text = typeof parsed.text === "string" ? parsed.text : "";
-    } catch {
-      return Response.json({ ok: false, error: "Could not parse PDF" }, { status: 400 });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      console.error("[lore-import] parse pdf failed", { attemptId, fileName: name, detail });
+      return Response.json(
+        { ok: false, error: "Could not parse PDF", detail },
+        { status: 400 },
+      );
     }
   } else if (lower.endsWith(".md") || lower.endsWith(".txt") || lower.endsWith(".markdown")) {
     text = stripBom(buf.toString("utf8"));
@@ -68,6 +88,7 @@ export async function POST(req: Request) {
 
   return Response.json({
     ok: true,
+    attemptId,
     fileName: name,
     suggestedTitle: baseTitle,
     text: trimmed,

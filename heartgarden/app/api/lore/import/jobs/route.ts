@@ -23,7 +23,12 @@ const bodySchema = z.object({
   fileName: z.string().max(512).optional(),
 });
 
+function importAttemptId(req: Request): string {
+  return req.headers.get("x-heartgarden-import-attempt")?.trim() || "unknown";
+}
+
 export async function POST(req: Request) {
+  const attemptId = importAttemptId(req);
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
   if (denied) return denied;
@@ -39,17 +44,28 @@ export async function POST(req: Request) {
   let json: unknown;
   try {
     json = await req.json();
-  } catch {
+  } catch (error) {
+    console.error("[lore-import] jobs invalid json", {
+      attemptId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
   }
 
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
+    const firstIssue = parsed.error.issues[0]?.message ?? "Invalid request body";
     return Response.json(
-      { ok: false, error: parsed.error.flatten() },
+      { ok: false, error: parsed.error.flatten(), hint: firstIssue },
       { status: 400 },
     );
   }
+  console.info("[lore-import] jobs create request", {
+    attemptId,
+    spaceId: parsed.data.spaceId,
+    textChars: parsed.data.text.length,
+    fileName: parsed.data.fileName ?? null,
+  });
 
   const space = await assertSpaceExists(db, parsed.data.spaceId);
   if (!space) {
@@ -63,29 +79,42 @@ export async function POST(req: Request) {
   const importBatchId = randomUUID();
   const now = new Date();
 
-  await db.insert(loreImportJobs).values({
-    id: jobId,
-    spaceId: parsed.data.spaceId,
-    importBatchId,
-    status: "queued",
-    sourceText: parsed.data.text,
-    fileName: parsed.data.fileName ?? null,
-    plan: null,
-    error: null,
-    progressPhase: "queued",
-    progressStep: null,
-    progressTotal: null,
-    progressMessage: "Queued for smart import planning",
-    progressMeta: null,
-    lastProgressAt: now,
-    createdAt: now,
-    updatedAt: now,
-  });
+  try {
+    await db.insert(loreImportJobs).values({
+      id: jobId,
+      spaceId: parsed.data.spaceId,
+      importBatchId,
+      status: "queued",
+      sourceText: parsed.data.text,
+      fileName: parsed.data.fileName ?? null,
+      plan: null,
+      error: null,
+      progressPhase: "queued",
+      progressStep: null,
+      progressTotal: null,
+      progressMessage: "Queued for smart import planning",
+      progressMeta: { attemptId, stage: "queued" },
+      lastProgressAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+  } catch (error) {
+    console.error("[lore-import] jobs insert failed", {
+      attemptId,
+      spaceId: parsed.data.spaceId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return Response.json(
+      { ok: false, error: "Could not persist import job" },
+      { status: 500 },
+    );
+  }
 
   scheduleLoreImportJobProcessing(jobId);
 
   return Response.json({
     ok: true,
+    attemptId,
     jobId,
     importBatchId,
     status: "queued",

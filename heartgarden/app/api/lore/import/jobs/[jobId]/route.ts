@@ -19,6 +19,7 @@ export const runtime = "nodejs";
 type RouteCtx = { params: Promise<{ jobId: string }> };
 
 export async function GET(req: Request, ctx: RouteCtx) {
+  const attemptId = req.headers.get("x-heartgarden-import-attempt")?.trim() || "unknown";
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
   if (denied) return denied;
@@ -112,17 +113,37 @@ export async function GET(req: Request, ctx: RouteCtx) {
   }
 
   if (job.status === "failed" && job.error) {
-    console.error("[lore import job failed]", job.id, job.error);
+    console.error("[lore-import] job failed", {
+      attemptId,
+      jobId: job.id,
+      spaceId: job.spaceId,
+      error: job.error,
+      progressPhase: job.progressPhase ?? null,
+      progressMeta: job.progressMeta ?? null,
+    });
   }
+
+  const failureMeta =
+    job.progressMeta && typeof job.progressMeta === "object"
+      ? (job.progressMeta as Record<string, unknown>)
+      : null;
+  const errorCode = typeof failureMeta?.errorCode === "string" ? failureMeta.errorCode : undefined;
+  const lastPhase =
+    typeof failureMeta?.lastPhase === "string"
+      ? failureMeta.lastPhase
+      : job.progressPhase ?? undefined;
 
   return Response.json({
     ok: true,
+    attemptId,
     status: job.status,
     ...(progress ? { progress } : {}),
     ...(job.status === "failed"
       ? {
-          error: "Import job failed",
+          error: job.error || "Import job failed",
           code: "lore_import_job_failed",
+          errorCode,
+          lastPhase,
         }
       : {}),
   });

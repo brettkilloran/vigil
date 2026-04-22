@@ -43,6 +43,7 @@ import {
   type VaultReviewDraft,
   type VaultReviewIssue,
 } from "@/src/components/foundation/ArchitecturalLoreReviewPanel";
+import { ArchitecturalLoreImportErrorDialog } from "@/src/components/foundation/ArchitecturalLoreImportErrorDialog";
 import { VigilAppBootScreen } from "./VigilAppBootScreen";
 import { VigilAppChromeAudioMuteButton } from "./VigilAppChromeAudioMuteButton";
 import styles from "./ArchitecturalCanvasApp.module.css";
@@ -174,6 +175,11 @@ import {
   subscribeNeonSync,
 } from "@/src/lib/neon-sync-bus";
 import { parseJsonBody, syncFailureFromApiResponse } from "@/src/lib/sync-error-diagnostic";
+import {
+  parseLoreImportJsonBody,
+  type LoreImportFailureDetail,
+  type LoreImportStage,
+} from "@/src/lib/lore-import-diagnostic";
 import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
 import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
 import {
@@ -527,6 +533,26 @@ type LoreImportJobProgress = {
   meta?: Record<string, unknown>;
   updatedAt?: string | null;
 };
+
+function createLoreImportFailureDetail(args: {
+  attemptId: string;
+  stage: LoreImportStage;
+  operation: string;
+  message: string;
+  recommendedAction: string;
+  responseSnippet?: string;
+  httpStatus?: number;
+  jobId?: string;
+  phase?: string;
+  errorCode?: string;
+  fileName?: string;
+  spaceId?: string;
+}): LoreImportFailureDetail {
+  return {
+    ...args,
+    occurredAtIso: new Date().toISOString(),
+  };
+}
 
 function upsertClarificationAnswer(
   prev: ClarificationAnswer[],
@@ -2220,6 +2246,7 @@ export function ArchitecturalCanvasApp({
   const [loreReviewSuggestedTags, setLoreReviewSuggestedTags] = useState<string[]>([]);
   const [loreReviewSemanticSummary, setLoreReviewSemanticSummary] = useState<string | null>(null);
   const [loreImportCommitting, setLoreImportCommitting] = useState(false);
+  const [loreImportFailure, setLoreImportFailure] = useState<LoreImportFailureDetail | null>(null);
   const [cloudLinksBar, setCloudLinksBar] = useState(() => getNeonSyncSnapshot().cloudEnabled);
   const neonSyncSnapshot = useSyncExternalStore(
     subscribeNeonSync,
@@ -5752,20 +5779,50 @@ export function ArchitecturalCanvasApp({
   const commitSmartLoreImport = useCallback(async () => {
     const rev = loreSmartReview;
     if (!rev) return;
+    const attemptId =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `import-apply-${Date.now()}`;
+    const reportFailure = (detail: LoreImportFailureDetail) => {
+      console.error(
+        "[lore-import]",
+        detail.stage,
+        detail.operation,
+        detail.httpStatus ?? "no_http_status",
+        detail.message,
+        { attemptId: detail.attemptId, jobId: detail.jobId, phase: detail.phase },
+      );
+      playVigilUiSound("caution");
+      setLoreImportFailure(detail);
+    };
     if (!persistNeonRef.current || !isUuidLike(activeSpaceId)) {
-      window.alert("Importing to the canvas requires a connected Neon space (not local demo mode).");
+      reportFailure(
+        createLoreImportFailureDetail({
+          attemptId,
+          stage: "apply",
+          operation: "POST /api/lore/import/apply",
+          message: "Importing to the canvas requires a connected Neon space (not local demo mode).",
+          fileName: rev.fileName,
+          spaceId: activeSpaceId,
+          recommendedAction: "Switch to a connected Neon workspace before applying import changes.",
+        }),
+      );
       return;
     }
     const center = centerCoords();
     const acceptedMergeProposalIds = Object.entries(loreSmartAcceptedMergeIds)
       .filter(([, v]) => v)
       .map(([id]) => id);
+    setLoreImportFailure(null);
     setLoreImportCommitting(true);
     playVigilUiSound("button");
     try {
       const res = await fetch("/api/lore/import/apply", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Heartgarden-Import-Attempt": attemptId,
+        },
         body: JSON.stringify({
           spaceId: activeSpaceId,
           importBatchId: rev.plan.importBatchId,
@@ -5783,14 +5840,28 @@ export function ArchitecturalCanvasApp({
           clarificationAnswers: loreSmartClarificationAnswers,
         }),
       });
-      const data = (await res.json()) as {
+      const rawText = await res.text();
+      const data = parseLoreImportJsonBody(rawText) as {
         ok?: boolean;
         error?: string;
         linkWarnings?: string[];
       };
       if (!res.ok || !data.ok) {
-        playVigilUiSound("caution");
-        window.alert(typeof data.error === "string" ? data.error : "Apply failed");
+        reportFailure(
+          createLoreImportFailureDetail({
+            attemptId,
+            stage: "apply",
+            operation: "POST /api/lore/import/apply",
+            message: typeof data.error === "string" ? data.error : `Apply failed (HTTP ${res.status})`,
+            responseSnippet: rawText,
+            httpStatus: res.status,
+            jobId: rev.plan.importBatchId,
+            fileName: rev.fileName,
+            spaceId: activeSpaceId,
+            recommendedAction:
+              "Review required clarifications/merges and retry. If this persists, copy diagnostics and share it.",
+          }),
+        );
         return;
       }
       if (data.linkWarnings?.length) {
@@ -5810,9 +5881,20 @@ export function ArchitecturalCanvasApp({
       setLoreSmartAcceptedMergeIds({});
       setLoreSmartClarificationAnswers([]);
       setLoreSmartTab("structure");
-    } catch {
-      playVigilUiSound("caution");
-      window.alert("Apply request failed");
+    } catch (error) {
+      reportFailure(
+        createLoreImportFailureDetail({
+          attemptId,
+          stage: "apply",
+          operation: "POST /api/lore/import/apply",
+          message: error instanceof Error ? error.message : "Apply request failed",
+          jobId: rev.plan.importBatchId,
+          fileName: rev.fileName,
+          spaceId: activeSpaceId,
+          recommendedAction:
+            "Retry apply once. If it fails again, copy support snapshot and include the import batch id.",
+        }),
+      );
     } finally {
       setLoreImportCommitting(false);
     }
@@ -7285,19 +7367,60 @@ export function ArchitecturalCanvasApp({
       const file = event.target.files?.[0];
       event.target.value = "";
       if (!file) return;
+      const attemptId =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `import-attempt-${Date.now()}`;
+      setLoreImportFailure(null);
+      const reportFailure = (detail: LoreImportFailureDetail) => {
+        console.error(
+          "[lore-import]",
+          detail.stage,
+          detail.operation,
+          detail.httpStatus ?? "no_http_status",
+          detail.message,
+          { attemptId: detail.attemptId, jobId: detail.jobId, phase: detail.phase },
+        );
+        playVigilUiSound("caution");
+        setLoreImportFailure(detail);
+      };
+      const unknownMessage = (error: unknown, fallback: string) =>
+        error instanceof Error ? error.message : fallback;
       const fd = new FormData();
       fd.append("file", file);
       try {
-        const parseRes = await fetch("/api/lore/import/parse", { method: "POST", body: fd });
-        const parsed = (await parseRes.json()) as {
+        const parseRes = await fetch("/api/lore/import/parse", {
+          method: "POST",
+          body: fd,
+          headers: { "X-Heartgarden-Import-Attempt": attemptId },
+        });
+        const parseRaw = await parseRes.text();
+        const parsed = parseLoreImportJsonBody(parseRaw) as {
           ok?: boolean;
           error?: string;
+          detail?: string;
           text?: string;
           fileName?: string;
           suggestedTitle?: string;
         };
-        if (!parsed.ok || typeof parsed.text !== "string") {
-          window.alert(parsed.error ?? "Parse failed");
+        if (!parseRes.ok || !parsed.ok || typeof parsed.text !== "string") {
+          reportFailure(
+            createLoreImportFailureDetail({
+              attemptId,
+              stage: "parse",
+              operation: "POST /api/lore/import/parse",
+              message:
+                (typeof parsed.error === "string" && parsed.error) ||
+                (typeof parsed.detail === "string" && parsed.detail) ||
+                `Parse failed (HTTP ${parseRes.status})`,
+              responseSnippet: parseRaw,
+              httpStatus: parseRes.status,
+              fileName: file.name,
+              spaceId: activeSpaceIdRef.current,
+              recommendedAction:
+                "Check file type/content and retry. If this repeats, copy the snapshot and share it.",
+            }),
+          );
           return;
         }
 
@@ -7319,23 +7442,39 @@ export function ArchitecturalCanvasApp({
           try {
             const jobRes = await fetch("/api/lore/import/jobs", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                "X-Heartgarden-Import-Attempt": attemptId,
+              },
               body: JSON.stringify({
                 text: parsed.text,
                 spaceId,
                 fileName: parsed.fileName,
               }),
             });
-            const jobBody = (await jobRes.json()) as {
+            const jobRaw = await jobRes.text();
+            const jobBody = parseLoreImportJsonBody(jobRaw) as {
               ok?: boolean;
               error?: string;
               jobId?: string;
             };
             if (!jobRes.ok || !jobBody.ok || !jobBody.jobId) {
-              window.alert(
-                typeof jobBody.error === "string"
-                  ? jobBody.error
-                  : "Could not start import job. Please try again.",
+              reportFailure(
+                createLoreImportFailureDetail({
+                  attemptId,
+                  stage: "job_create",
+                  operation: "POST /api/lore/import/jobs",
+                  message:
+                    typeof jobBody.error === "string"
+                      ? jobBody.error
+                      : `Could not start import job (HTTP ${jobRes.status})`,
+                  responseSnippet: jobRaw,
+                  httpStatus: jobRes.status,
+                  fileName: parsed.fileName ?? file.name,
+                  spaceId,
+                  recommendedAction:
+                    "Confirm Neon/database is reachable and try again. If this repeats, share the snapshot.",
+                }),
               );
             } else {
               const jobId = jobBody.jobId;
@@ -7349,19 +7488,44 @@ export function ArchitecturalCanvasApp({
               for (let attempt = 0; attempt < maxAttempts; attempt++) {
                 const poll = await fetch(
                   `/api/lore/import/jobs/${jobId}?spaceId=${encodeURIComponent(spaceId)}`,
+                  { headers: { "X-Heartgarden-Import-Attempt": attemptId } },
                 );
-                const st = (await poll.json()) as {
+                const pollRaw = await poll.text();
+                const st = parseLoreImportJsonBody(pollRaw) as {
                   ok?: boolean;
                   status?: string;
                   plan?: LoreImportPlan;
                   error?: string;
+                  errorCode?: string;
+                  lastPhase?: string;
+                  attemptId?: string;
                   progress?: LoreImportJobProgress;
                 };
                 if (!poll.ok || !st.ok) {
-                  window.alert(
-                    typeof st.error === "string"
-                      ? st.error
-                      : "Import job status request failed. Please try again.",
+                  reportFailure(
+                    createLoreImportFailureDetail({
+                      attemptId,
+                      stage: "job_poll",
+                      operation: "GET /api/lore/import/jobs/[jobId]",
+                      message:
+                        typeof st.error === "string"
+                          ? st.error
+                          : `Import job status request failed (HTTP ${poll.status})`,
+                      responseSnippet: pollRaw,
+                      httpStatus: poll.status,
+                      jobId,
+                      phase:
+                        typeof st.lastPhase === "string"
+                          ? st.lastPhase
+                          : typeof st.progress?.phase === "string"
+                            ? st.progress.phase
+                            : undefined,
+                      errorCode: typeof st.errorCode === "string" ? st.errorCode : undefined,
+                      fileName: parsed.fileName ?? file.name,
+                      spaceId,
+                      recommendedAction:
+                        "Wait a few seconds and retry import. If this repeats, copy the snapshot and include the job id.",
+                    }),
                   );
                   pollFailed = true;
                   break;
@@ -7395,10 +7559,30 @@ export function ArchitecturalCanvasApp({
                   return;
                 }
                 if (st.status === "failed") {
-                  window.alert(
-                    typeof st.error === "string"
-                      ? st.error
-                      : "Smart import plan failed. Try again or split the file.",
+                  reportFailure(
+                    createLoreImportFailureDetail({
+                      attemptId,
+                      stage: "plan_failed",
+                      operation: "GET /api/lore/import/jobs/[jobId]",
+                      message:
+                        typeof st.error === "string"
+                          ? st.error
+                          : "Smart import plan failed. Try again or split the file.",
+                      responseSnippet: pollRaw,
+                      httpStatus: poll.status,
+                      jobId,
+                      phase:
+                        typeof st.lastPhase === "string"
+                          ? st.lastPhase
+                          : typeof st.progress?.phase === "string"
+                            ? st.progress.phase
+                            : undefined,
+                      errorCode: typeof st.errorCode === "string" ? st.errorCode : undefined,
+                      fileName: parsed.fileName ?? file.name,
+                      spaceId,
+                      recommendedAction:
+                        "Try splitting the source file into smaller chunks, then retry. Share snapshot if failure persists.",
+                    }),
                   );
                   planFailed = true;
                   break;
@@ -7408,13 +7592,36 @@ export function ArchitecturalCanvasApp({
                 await new Promise((r) => setTimeout(r, delayMs));
               }
               if (!planReady && !pollFailed && !planFailed) {
-                window.alert(
-                  "Import planning is taking too long (the server may still be working). Try again in a minute or split the file into smaller parts.",
+                reportFailure(
+                  createLoreImportFailureDetail({
+                    attemptId,
+                    stage: "timeout",
+                    operation: "GET /api/lore/import/jobs/[jobId]",
+                    message:
+                      "Import planning is taking too long. The server may still be working in the background.",
+                    jobId,
+                    phase: lastPhase || "unknown",
+                    fileName: parsed.fileName ?? file.name,
+                    spaceId,
+                    recommendedAction:
+                      "Wait 30-60 seconds and retry. If this keeps timing out on the same phase, split the source and rerun.",
+                  }),
                 );
               }
             }
-          } catch {
-            window.alert("Smart import job request failed. Please try again or split the file.");
+          } catch (error) {
+            reportFailure(
+              createLoreImportFailureDetail({
+                attemptId,
+                stage: "job_create",
+                operation: "POST /api/lore/import/jobs",
+                message: unknownMessage(error, "Smart import job request failed."),
+                fileName: parsed.fileName ?? file.name,
+                spaceId,
+                recommendedAction:
+                  "Check network/boot session and retry import. Copy diagnostics if this keeps failing.",
+              }),
+            );
           } finally {
             setLoreSmartPlanning(false);
             setLoreSmartPlanningProgress(null);
@@ -7422,11 +7629,32 @@ export function ArchitecturalCanvasApp({
           return;
         }
 
-        window.alert(
-          "Smart import requires a connected Neon space. Connect your workspace and retry to import lore from this file.",
+        reportFailure(
+          createLoreImportFailureDetail({
+            attemptId,
+            stage: "parse",
+            operation: "smart_import_prerequisite",
+            message:
+              "Smart import requires a connected Neon space. Connect your workspace and retry.",
+            fileName: parsed.fileName ?? file.name,
+            spaceId,
+            recommendedAction:
+              "Switch to a connected Neon workspace, then retry this import.",
+          }),
         );
-      } catch {
-        window.alert("Import request failed");
+      } catch (error) {
+        reportFailure(
+          createLoreImportFailureDetail({
+            attemptId,
+            stage: "unknown",
+            operation: "onLoreImportFileChange",
+            message: unknownMessage(error, "Import request failed"),
+            fileName: file.name,
+            spaceId: activeSpaceIdRef.current,
+            recommendedAction:
+              "Retry import. If this repeats, copy support snapshot and include the stage/attempt id.",
+          }),
+        );
       }
     },
     [],
@@ -11412,6 +11640,13 @@ export function ArchitecturalCanvasApp({
             issues={loreReviewIssues}
             suggestedNoteTags={loreReviewSuggestedTags}
             semanticSummary={loreReviewSemanticSummary}
+          />
+        ) : null}
+        {!isRestrictedLayer ? (
+          <ArchitecturalLoreImportErrorDialog
+            failure={loreImportFailure}
+            onClose={() => setLoreImportFailure(null)}
+            onRetry={() => loreImportFileInputRef.current?.click()}
           />
         ) : null}
         {loreSmartReview && !isRestrictedLayer ? (

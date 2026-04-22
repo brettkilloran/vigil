@@ -14,6 +14,7 @@ import { assertSpaceExists } from "@/src/lib/spaces";
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  const attemptId = req.headers.get("x-heartgarden-import-attempt")?.trim() || "unknown";
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
   if (denied) return denied;
@@ -29,17 +30,29 @@ export async function POST(req: Request) {
   let json: unknown;
   try {
     json = await req.json();
-  } catch {
+  } catch (error) {
+    console.error("[lore-import] apply invalid json", {
+      attemptId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
   }
 
   const parsed = loreImportApplyBodySchema.safeParse(json);
   if (!parsed.success) {
+    const firstIssue = parsed.error.issues[0]?.message ?? "Invalid request body";
     return Response.json(
-      { ok: false, error: parsed.error.flatten() },
+      { ok: false, error: parsed.error.flatten(), hint: firstIssue },
       { status: 400 },
     );
   }
+  console.info("[lore-import] apply request", {
+    attemptId,
+    spaceId: parsed.data.spaceId,
+    importBatchId: parsed.data.importBatchId,
+    acceptedMergeCount: parsed.data.acceptedMergeProposalIds.length,
+    clarificationCount: parsed.data.clarificationAnswers.length,
+  });
 
   const space = await assertSpaceExists(db, parsed.data.spaceId);
   if (!space) {
@@ -53,11 +66,18 @@ export async function POST(req: Request) {
     const result = await applyLoreImportPlan(db, parsed.data);
     return Response.json({
       ok: true,
+      attemptId,
       ...result,
       linkWarnings: result.linkWarnings.length ? result.linkWarnings : undefined,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Apply failed";
+    console.error("[lore-import] apply failed", {
+      attemptId,
+      spaceId: parsed.data.spaceId,
+      importBatchId: parsed.data.importBatchId,
+      error: msg,
+    });
     return Response.json({ ok: false, error: msg }, { status: 400 });
   }
 }

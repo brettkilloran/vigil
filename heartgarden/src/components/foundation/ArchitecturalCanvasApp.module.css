@@ -2587,6 +2587,24 @@
   min-width: 0;
 }
 
+.loreImportErrorBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 14990;
+  background: color-mix(in oklch, var(--sys-color-black) 52%, transparent);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.loreImportErrorDialog {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 24px));
+  max-height: min(84vh, 760px);
+  overflow-y: auto;
+}
+
 .syncPopoverTitle {
   font-size: 15px;
   font-weight: 600;
