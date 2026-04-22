@@ -2390,6 +2390,7 @@ export function ArchitecturalCanvasApp({
   const [loreSmartOtherFollowUp, setLoreSmartOtherFollowUp] = useState<LoreImportOtherFollowUp | null>(
     null,
   );
+  const [loreImportCommitting, setLoreImportCommitting] = useState(false);
   const closeLoreSmartReview = useCallback(() => {
     if (loreImportCommitting) return;
     setLoreSmartReview(null);
@@ -2497,7 +2498,6 @@ export function ArchitecturalCanvasApp({
   const [loreReviewIssues, setLoreReviewIssues] = useState<VaultReviewIssue[]>([]);
   const [loreReviewSuggestedTags, setLoreReviewSuggestedTags] = useState<string[]>([]);
   const [loreReviewSemanticSummary, setLoreReviewSemanticSummary] = useState<string | null>(null);
-  const [loreImportCommitting, setLoreImportCommitting] = useState(false);
   const [loreImportFailure, setLoreImportFailure] = useState<LoreImportFailureDetail | null>(null);
   const [cloudLinksBar, setCloudLinksBar] = useState(() => getNeonSyncSnapshot().cloudEnabled);
   const neonSyncSnapshot = useSyncExternalStore(
