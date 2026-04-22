@@ -1,0 +1,14 @@
+.base {
+  filter: none;
+  mix-blend-mode: normal;
+  object-fit: contain;
+  object-position: center center;
+  box-sizing: border-box;
+  display: block;
+}
+
+.mediaWell,
+.loreCredential,
+.neutral {
+  background-color: color-mix(in oklch, var(--sys-color-white) 5%, var(--sys-color-neutral-925));
+}

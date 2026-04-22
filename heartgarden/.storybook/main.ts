@@ -40,7 +40,7 @@ function pinAppReactAliases(map: Record<string, unknown>) {
 }
 
 /**
- * heartgarden UI documentation. App directory in git is `heartgarden/` (see `docs/NAMING.md`); stories are colocated under `src/components/**` and use explicit `meta.title` paths (`Heartgarden/Overview`, `UI/*`, `Experiments/*`) — not filesystem folders — for the sidebar.
+ * heartgarden UI documentation. App directory in git is `heartgarden/` (see `docs/NAMING.md`); stories are colocated under `src/components/**` and use explicit `meta.title` paths (`Heartgarden/Design System/*`, `Heartgarden/Product UI/*`, `Heartgarden/Experiments/*`) — not filesystem folders — for the sidebar.
  * Invariants: see `AGENTS.md` § "Local dev, Node, and Storybook (guardrails)".
  */
 const config: StorybookConfig = {

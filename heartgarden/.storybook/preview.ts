@@ -10,8 +10,8 @@ const preview: Preview = {
       storySort: {
         order: [
           "Heartgarden",
-          ["Heartgarden", "Overview"],
-          ["Heartgarden", "UI"],
+          ["Heartgarden", "Design System"],
+          ["Heartgarden", "Product UI"],
           ["Heartgarden", "Experiments"],
           "*",
         ],

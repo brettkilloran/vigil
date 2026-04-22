@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { HEARTGARDEN_BRAND_MARK_EMOJI } from "@/src/lib/brand-mark";
 
 const meta = {
-  title: "Heartgarden/Overview",
+  title: "Heartgarden/Design System/Overview",
   parameters: {
     layout: "centered",
     docs: {
@@ -38,12 +38,18 @@ export const AboutThisStorybook: Story = {
         Next app.
       </p>
       <p style={{ marginBottom: 8 }}>
-        <strong>UI catalog:</strong>{" "}
+        <strong>Design System:</strong>{" "}
         <span style={{ color: "var(--sem-text-secondary)" }}>
-          Heartgarden → UI — tokens (including LLM / ingestion <code style={{ fontSize: "0.88em" }}>--sem-*-llm-*</code>),
-          shared controls (e.g. Tag, Button), canvas chrome (tool rail, minimap, viewport toast, remote
-          presence cursors, link-graph overlay), lore-specific canvas plates (character v11, faction
-          Archive-091, location ORDO v7), and full-canvas integration (sorted by name).
+          Heartgarden → Design System — overview, tokens (including LLM / ingestion{" "}
+          <code style={{ fontSize: "0.88em" }}>--sem-*-llm-*</code>), and shared primitives
+          (Button, Tag, inputs, and foundational controls).
+        </span>
+      </p>
+      <p style={{ marginBottom: 8 }}>
+        <strong>Product UI:</strong>{" "}
+        <span style={{ color: "var(--sem-text-secondary)" }}>
+          Heartgarden → Product UI — canvas shell/chrome surfaces, lore-focused plates and review
+          panels, and flower-specific boot interactions.
         </span>
       </p>
       <p style={{ marginBottom: 0 }}>

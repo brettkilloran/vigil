@@ -1,0 +1,17 @@
+/* Host wraps the contenteditable (legacy lore HTML + folder title plainText). */
+.richEditorHost {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-x: visible;
+  /* Structural chrome aligned with HeartgardenDocEditor `.proseRoot` (drop lines, gutters). */
+  --hg-rich-structure-edge: color-mix(in oklch, var(--sem-text-muted) 40%, transparent);
+  --hg-rich-structure-fill: color-mix(in oklch, var(--sem-text-muted) 7%, transparent);
+}
+
+.richEditorHostInner {
+  flex: 1;
+  min-height: 0;
+}
