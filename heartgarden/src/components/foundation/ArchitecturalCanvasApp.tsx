@@ -606,6 +606,39 @@ function createLoreImportFailureDetail(args: {
   };
 }
 
+function isAbortError(error: unknown): boolean {
+  if (!error) return false;
+  if (error instanceof DOMException && error.name === "AbortError") return true;
+  if (error instanceof Error) {
+    const name = error.name.toLowerCase();
+    const msg = error.message.toLowerCase();
+    return name === "aborterror" || msg.includes("aborted") || msg.includes("abort");
+  }
+  return false;
+}
+
+async function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
+  if (!signal) {
+    await new Promise((r) => setTimeout(r, ms));
+    return;
+  }
+  if (signal.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+  await new Promise<void>((resolve, reject) => {
+    const t = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(t);
+      signal.removeEventListener("abort", onAbort);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
 function upsertClarificationAnswer(
   prev: ClarificationAnswer[],
   next: ClarificationAnswer,
@@ -2306,6 +2339,8 @@ export function ArchitecturalCanvasApp({
     "structure",
   );
   const [loreSmartPlanning, setLoreSmartPlanning] = useState(false);
+  const [loreSmartPlanningJobId, setLoreSmartPlanningJobId] = useState<string | null>(null);
+  const loreSmartPlanningAbortRef = useRef<AbortController | null>(null);
   const [loreSmartPlanningProgress, setLoreSmartPlanningProgress] =
     useState<LoreImportJobProgress | null>(null);
   const loreSmartPlanningUi = useMemo(() => {
@@ -2355,6 +2390,50 @@ export function ArchitecturalCanvasApp({
   const [loreSmartOtherFollowUp, setLoreSmartOtherFollowUp] = useState<LoreImportOtherFollowUp | null>(
     null,
   );
+  const closeLoreSmartReview = useCallback(() => {
+    if (loreImportCommitting) return;
+    setLoreSmartReview(null);
+    setLoreSmartAcceptedMergeIds({});
+    setLoreSmartClarificationAnswers([]);
+    setLoreSmartOtherFollowUp(null);
+    setLoreSmartQuestionFilter("all");
+    setLoreSmartTab("structure");
+  }, [loreImportCommitting]);
+  const cancelLoreSmartPlanning = useCallback(() => {
+    const ctrl = loreSmartPlanningAbortRef.current;
+    if (ctrl) {
+      ctrl.abort();
+      loreSmartPlanningAbortRef.current = null;
+    }
+    const currentJobId = loreSmartPlanningJobId;
+    const currentSpaceId = activeSpaceIdRef.current;
+    if (currentJobId && isUuidLike(currentSpaceId)) {
+      void fetch(`/api/lore/import/jobs/${currentJobId}?spaceId=${encodeURIComponent(currentSpaceId)}`, {
+        method: "DELETE",
+        headers: { "X-Heartgarden-Import-Attempt": "client-cancel" },
+      }).catch(() => {});
+    }
+    setLoreSmartPlanningJobId(null);
+    setLoreSmartPlanning(false);
+    setLoreSmartPlanningProgress(null);
+  }, [loreSmartPlanningJobId]);
+  useEffect(() => {
+    if (!loreSmartPlanning && !loreSmartReview) return;
+    const onGlobalEsc = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (loreSmartPlanning) {
+        cancelLoreSmartPlanning();
+        return;
+      }
+      if (loreSmartReview) {
+        closeLoreSmartReview();
+      }
+    };
+    window.addEventListener("keydown", onGlobalEsc, true);
+    return () => window.removeEventListener("keydown", onGlobalEsc, true);
+  }, [cancelLoreSmartPlanning, closeLoreSmartReview, loreSmartPlanning, loreSmartReview]);
   const loreSmartClarificationsOk = useMemo(() => {
     if (!loreSmartReview) return true;
     return validateClarificationAnswersForApply(
@@ -7558,6 +7637,9 @@ export function ArchitecturalCanvasApp({
         typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
           ? crypto.randomUUID()
           : `import-attempt-${Date.now()}`;
+      loreSmartPlanningAbortRef.current?.abort();
+      const planningAbort = new AbortController();
+      loreSmartPlanningAbortRef.current = planningAbort;
       setLoreImportFailure(null);
       const reportFailure = (detail: LoreImportFailureDetail) => {
         console.error(
@@ -7580,6 +7662,7 @@ export function ArchitecturalCanvasApp({
           method: "POST",
           body: fd,
           headers: { "X-Heartgarden-Import-Attempt": attemptId },
+          signal: planningAbort.signal,
         });
         const parseRaw = await parseRes.text();
         const parsed = parseLoreImportJsonBody(parseRaw) as {
@@ -7617,6 +7700,7 @@ export function ArchitecturalCanvasApp({
           persistNeonRef.current && isUuidLike(spaceId) && parsedText.trim().length > 0;
 
         if (useSmart) {
+          setLoreSmartPlanningJobId(null);
           setLoreSmartReview(null);
           setLoreSmartAcceptedMergeIds({});
           setLoreSmartClarificationAnswers([]);
@@ -7659,6 +7743,7 @@ export function ArchitecturalCanvasApp({
                 "Content-Type": "application/json",
                 "X-Heartgarden-Import-Attempt": attemptId,
               },
+              signal: planningAbort.signal,
               body: JSON.stringify({
                 text: parsedText,
                 spaceId,
@@ -7685,6 +7770,7 @@ export function ArchitecturalCanvasApp({
                 "Content-Type": "application/json",
                 "X-Heartgarden-Import-Attempt": attemptId,
               },
+              signal: planningAbort.signal,
               body: JSON.stringify({
                 text: parsedText,
                 spaceId,
@@ -7759,6 +7845,7 @@ export function ArchitecturalCanvasApp({
               );
             } else {
               const jobId = jobBody.jobId;
+              setLoreSmartPlanningJobId(jobId);
               /** ~12 min — smart planning can run many LLM + vault passes on large sources. */
               const maxAttempts = 720;
               let pollFailed = false;
@@ -7767,9 +7854,13 @@ export function ArchitecturalCanvasApp({
               let stablePhaseCount = 0;
               let lastPhase = "";
               for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                if (planningAbort.signal.aborted) return;
                 const poll = await fetch(
                   `/api/lore/import/jobs/${jobId}?spaceId=${encodeURIComponent(spaceId)}`,
-                  { headers: { "X-Heartgarden-Import-Attempt": attemptId } },
+                  {
+                    headers: { "X-Heartgarden-Import-Attempt": attemptId },
+                    signal: planningAbort.signal,
+                  },
                 );
                 const pollRaw = await poll.text();
                 const st = parseLoreImportJsonBody(pollRaw) as {
@@ -7856,7 +7947,7 @@ export function ArchitecturalCanvasApp({
                 }
                 const delayMs =
                   stablePhaseCount >= 12 ? 3000 : stablePhaseCount >= 6 ? 2000 : 1000;
-                await new Promise((r) => setTimeout(r, delayMs));
+                await abortableDelay(delayMs, planningAbort.signal);
               }
               if (!planReady && !pollFailed && !planFailed) {
                 reportFailure(
@@ -7877,6 +7968,10 @@ export function ArchitecturalCanvasApp({
               }
             }
           } catch (error) {
+            if (isAbortError(error) || planningAbort.signal.aborted) {
+              console.info("[lore-import] planning cancelled by user", { attemptId });
+              return;
+            }
             const queueFailureHint = unknownMessage(error, "Smart import job request failed.");
             console.warn("[lore-import] smart queue request threw; using direct fallback", {
               attemptId,
@@ -7897,6 +7992,7 @@ export function ArchitecturalCanvasApp({
               }),
             );
           } finally {
+            setLoreSmartPlanningJobId(null);
             setLoreSmartPlanning(false);
             setLoreSmartPlanningProgress(null);
           }
@@ -7917,6 +8013,10 @@ export function ArchitecturalCanvasApp({
           }),
         );
       } catch (error) {
+        if (isAbortError(error) || planningAbort.signal.aborted) {
+          console.info("[lore-import] import parse cancelled by user", { attemptId });
+          return;
+        }
         reportFailure(
           createLoreImportFailureDetail({
             attemptId,
@@ -7929,6 +8029,11 @@ export function ArchitecturalCanvasApp({
               "Retry import. If this repeats, copy support snapshot and include the stage/attempt id.",
           }),
         );
+      }
+      finally {
+        if (loreSmartPlanningAbortRef.current === planningAbort) {
+          loreSmartPlanningAbortRef.current = null;
+        }
       }
     },
     [],
@@ -11879,47 +11984,60 @@ export function ArchitecturalCanvasApp({
         ) : null}
         {loreSmartPlanning ? (
           <div
-            className="fixed inset-0 z-[1150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
+            className={styles.smartImportPlanningBackdrop}
             role="status"
             aria-live="polite"
             aria-label="Building import plan"
           >
-            <div className="w-full max-w-md rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-panel)] px-5 py-4 text-sm text-[var(--vigil-label)] shadow-xl">
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-semibold">Planning import</p>
-                <span className="rounded-full border border-[var(--vigil-border)] px-2 py-0.5 text-[10px] text-[var(--vigil-muted)]">
+            <div className={styles.smartImportPlanningCard}>
+              <div className={styles.smartImportPlanningHeader}>
+                <p className={styles.smartImportPlanningTitle}>Planning import</p>
+                <span className={styles.smartImportPlanningModeBadge}>
                   {loreSmartPlanningUi.mode}
                 </span>
               </div>
-              <p className="mt-1 text-[12px] text-[var(--vigil-label)]">{loreSmartPlanningUi.phaseLabel}</p>
-              <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[var(--vigil-border)]">
+              <p className={styles.smartImportPlanningPhase}>{loreSmartPlanningUi.phaseLabel}</p>
+              <div className={styles.smartImportPlanningProgressTrack}>
                 {typeof loreSmartPlanningUi.percent === "number" ? (
                   <div
-                    className="h-full rounded-full bg-[var(--vigil-accent)] transition-[width] duration-500 ease-out"
+                    className={styles.smartImportPlanningProgressFill}
                     style={{ width: `${loreSmartPlanningUi.percent}%` }}
                   />
                 ) : (
-                  <div className="h-full w-2/5 animate-pulse rounded-full bg-[var(--vigil-accent)]" />
+                  <div className={styles.smartImportPlanningProgressIndeterminate} />
                 )}
               </div>
-              <div className="mt-2 flex items-center justify-between text-[11px] text-[var(--vigil-muted)]">
-                <span>{loreSmartPlanningUi.detail}</span>
-                {loreSmartPlanningUi.stepText ? <span>{loreSmartPlanningUi.stepText}</span> : null}
+              <div className={styles.smartImportPlanningDetailRow}>
+                <span className={styles.smartImportPlanningDetail}>{loreSmartPlanningUi.detail}</span>
+                {loreSmartPlanningUi.stepText ? (
+                  <span className={styles.smartImportPlanningStep}>{loreSmartPlanningUi.stepText}</span>
+                ) : null}
               </div>
               {loreSmartPlanningUi.queueFailureHint ? (
-                <p className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
+                <p className={styles.smartImportPlanningWarning}>
                   Queue detail: {loreSmartPlanningUi.queueFailureHint}
                 </p>
               ) : null}
-              <p className="mt-2 max-w-xs text-[11px] text-[var(--vigil-muted)]">
+              <p className={styles.smartImportPlanningHint}>
                 Running on the server in the background. Keep this tab open; typical files finish within
                 one to two minutes.
               </p>
               {loreSmartPlanningUi.updatedAtText ? (
-                <p className="mt-1 text-[10px] text-[var(--vigil-muted)]">
+                <p className={styles.smartImportPlanningUpdatedAt}>
                   Last update: {loreSmartPlanningUi.updatedAtText}
                 </p>
               ) : null}
+              <div className={styles.smartImportPlanningActions}>
+                <Button
+                  size="xs"
+                  variant="neutral"
+                  tone="glass"
+                  type="button"
+                  onClick={cancelLoreSmartPlanning}
+                >
+                  Cancel import
+                </Button>
+              </div>
             </div>
           </div>
         ) : null}
@@ -11946,18 +12064,13 @@ export function ArchitecturalCanvasApp({
         ) : null}
         {loreSmartReview && !isRestrictedLayer ? (
           <div
-            className="fixed inset-0 z-[14990] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
+            className="fixed inset-0 z-[20010] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
             role="dialog"
             aria-modal="true"
             aria-label="Smart document import"
             onMouseDown={(e) => {
               if (e.target === e.currentTarget && !loreImportCommitting) {
-                setLoreSmartReview(null);
-                setLoreSmartAcceptedMergeIds({});
-                setLoreSmartClarificationAnswers([]);
-                setLoreSmartOtherFollowUp(null);
-                setLoreSmartQuestionFilter("all");
-                setLoreSmartTab("structure");
+                closeLoreSmartReview();
               }
             }}
           >
@@ -11995,14 +12108,7 @@ export function ArchitecturalCanvasApp({
                     variant="neutral"
                     tone="glass"
                     disabled={loreImportCommitting}
-                    onClick={() => {
-                      setLoreSmartReview(null);
-                      setLoreSmartAcceptedMergeIds({});
-                      setLoreSmartClarificationAnswers([]);
-                      setLoreSmartOtherFollowUp(null);
-                      setLoreSmartQuestionFilter("all");
-                      setLoreSmartTab("structure");
-                    }}
+                    onClick={closeLoreSmartReview}
                   >
                     Close
                   </Button>
@@ -12216,14 +12322,7 @@ export function ArchitecturalCanvasApp({
                             variant="neutral"
                             tone="glass"
                             type="button"
-                            onClick={() => {
-                              setLoreSmartReview(null);
-                              setLoreSmartAcceptedMergeIds({});
-                              setLoreSmartClarificationAnswers([]);
-                              setLoreSmartOtherFollowUp(null);
-                              setLoreSmartQuestionFilter("all");
-                              setLoreSmartTab("structure");
-                            }}
+                            onClick={closeLoreSmartReview}
                           >
                             Abort import
                           </Button>
