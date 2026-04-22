@@ -10,7 +10,6 @@ import { Button } from "@/src/components/ui/Button";
 import cardStyles from "@/src/components/foundation/lore-entity-card.module.css";
 import { cx } from "@/src/lib/cx";
 import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
-import { FACTION_ROSTER_HG_ARCH_KEY } from "@/src/lib/faction-roster-schema";
 import {
   buildFactionArchive091BodyHtml,
   FACTION_ARCHIVE091_READABLE_DEFAULT_RECORD_HTML,
@@ -400,7 +399,7 @@ export function LoreFactionArchive091Slab({
           <div className={cardStyles.facArxxTextSection}>
             <div className={cardStyles.facArxxH2Row}>
               <h2 className={cardStyles.facArxxH2}>Member index</h2>
-              <span className={cardStyles.facArxxH2Meta} title={`hgArch.${FACTION_ROSTER_HG_ARCH_KEY}`}>
+              <span className={cardStyles.facArxxH2Meta}>
                 {rosterCount} record{rosterCount === 1 ? "" : "s"}
               </span>
             </div>
@@ -411,14 +410,7 @@ export function LoreFactionArchive091Slab({
             >
               {factionRoster.length === 0 ? (
                 <div className={cardStyles.facArxxRosterCanvasEmpty} role="status">
-                  <p className={cardStyles.facArxxRosterCanvasEmptyTitle}>No member rows</p>
-                  <p className={cardStyles.facArxxRosterCanvasEmptyHint}>
-                    Use <strong>Add member</strong> — lab state mirrors{" "}
-                    <span className={cardStyles.facArxxRosterCanvasEmptyKey}>
-                      hgArch.{FACTION_ROSTER_HG_ARCH_KEY}
-                    </span>
-                    .
-                  </p>
+                  <p className={cardStyles.facArxxRosterCanvasEmptyTitle}>No known members</p>
                 </div>
               ) : (
                 factionRoster.map((row) => {

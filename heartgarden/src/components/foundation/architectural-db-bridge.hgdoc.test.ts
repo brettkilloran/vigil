@@ -66,7 +66,7 @@ describe("hgDoc persistence cutover", () => {
     });
   });
 
-  it("clean-break legacy note HTML maps to empty hgDoc body", () => {
+  it("legacy note HTML hydrates into hgDoc body content", () => {
     const mapped = canvasItemToEntity(
       baseItem({
         itemType: "note",
@@ -76,10 +76,11 @@ describe("hgDoc persistence cutover", () => {
     );
     expect(mapped?.kind).toBe("content");
     if (!mapped || mapped.kind !== "content") return;
-    expect(mapped.bodyDoc).toEqual(EMPTY_HG_DOC);
+    expect(mapped.bodyDoc).not.toEqual(EMPTY_HG_DOC);
+    expect(JSON.stringify(mapped.bodyDoc)).toContain("legacy prose should not carry over");
 
     const contentJson = buildContentJsonForContentEntity(mapped);
-    expect(contentJson).toMatchObject({ format: "hgDoc", doc: EMPTY_HG_DOC });
+    expect(contentJson).toMatchObject({ format: "hgDoc", doc: mapped.bodyDoc });
   });
 
   it("lore character HTML body wins over stray bodyDoc when serializing PATCH payload", () => {

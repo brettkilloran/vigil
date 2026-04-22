@@ -7826,6 +7826,16 @@ export function ArchitecturalCanvasApp({
               setLoreSmartTab("questions");
             }
           };
+          let planningFailed = false;
+          const reportPlanningFailure = (detail: LoreImportFailureDetail) => {
+            planningFailed = true;
+            setLoreSmartPlanningProgress({
+              phase: "failed",
+              message: detail.message,
+              meta: detail.errorCode ? { errorCode: detail.errorCode } : undefined,
+            });
+            reportFailure(detail);
+          };
           const tryDirectPlanFallback = async (queueFailureHint?: string): Promise<boolean> => {
             setLoreSmartPlanningProgress({
               phase: "fallback_plan",
@@ -7904,7 +7914,7 @@ export function ArchitecturalCanvasApp({
               });
               const usedFallback = await tryDirectPlanFallback(queueFailureHint).catch(() => false);
               if (usedFallback) return;
-              reportFailure(
+              reportPlanningFailure(
                 createLoreImportFailureDetail({
                   attemptId,
                   stage: "job_create",
@@ -7969,7 +7979,7 @@ export function ArchitecturalCanvasApp({
                   progress?: LoreImportJobProgress;
                 };
                 if (!poll.ok || !st.ok) {
-                  reportFailure(
+                  reportPlanningFailure(
                     createLoreImportFailureDetail({
                       attemptId,
                       stage: "job_poll",
@@ -8012,7 +8022,7 @@ export function ArchitecturalCanvasApp({
                   return;
                 }
                 if (st.status === "failed") {
-                  reportFailure(
+                  reportPlanningFailure(
                     createLoreImportFailureDetail({
                       attemptId,
                       stage: "plan_failed",
@@ -8045,7 +8055,7 @@ export function ArchitecturalCanvasApp({
                 await abortableDelay(delayMs, planningAbort.signal);
               }
               if (!planReady && !pollFailed && !planFailed) {
-                reportFailure(
+                reportPlanningFailure(
                   createLoreImportFailureDetail({
                     attemptId,
                     stage: "timeout",
@@ -8074,7 +8084,7 @@ export function ArchitecturalCanvasApp({
             });
             const usedFallback = await tryDirectPlanFallback(queueFailureHint).catch(() => false);
             if (usedFallback) return;
-            reportFailure(
+            reportPlanningFailure(
               createLoreImportFailureDetail({
                 attemptId,
                 stage: "job_create",

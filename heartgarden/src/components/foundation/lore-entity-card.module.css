@@ -1957,6 +1957,23 @@
   grid-template-rows: minmax(0, auto);
 }
 
+/*
+ * Autofill can inject long inline runs and wrappers into the name column.
+ * Pin the right metadata track and let left content wrap/shrink instead of
+ * expanding the grid and clipping the right side.
+ */
+.charSkShellV11 .charSkIdentityCell > .charSkNameBlock {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.charSkShellV11 .charSkIdentityCell > .charSkMetaBlock {
+  width: 142px;
+  min-width: 142px;
+  max-width: 142px;
+  justify-self: stretch;
+}
+
 .charSkShellV11 .charSkHeaderCell {
   background: linear-gradient(
     180deg,

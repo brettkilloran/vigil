@@ -1,0 +1,143 @@
+.shell {
+  min-height: 100vh;
+  padding: 32px 24px 64px;
+  background: var(--sem-surface-base);
+  color: var(--sem-text-primary);
+}
+
+.title {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--sem-text-muted);
+  max-width: 56rem;
+}
+
+.url {
+  font-size: 12px;
+  color: var(--sem-text-muted);
+  margin: 0 0 24px;
+}
+
+.url code {
+  font-size: 0.92em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: color-mix(in oklch, var(--sem-text-primary) 8%, transparent);
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+.scenarioSwitcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--sem-border-subtle);
+  background: color-mix(in oklch, var(--sem-text-primary) 3%, var(--sys-color-neutral-900) 97%);
+  align-items: center;
+}
+
+.scenarioLabel {
+  margin-right: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sem-text-muted);
+}
+
+.scenarioChip {
+  appearance: none;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 85%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 3%, var(--sys-color-neutral-900) 97%);
+  color: var(--sem-text-primary);
+  padding: 6px 12px;
+  font-size: 12px;
+  line-height: 1.2;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+.scenarioChip:hover {
+  border-color: color-mix(in oklch, var(--sem-focus-ring) 40%, var(--sem-border-subtle) 60%);
+}
+
+.scenarioChipActive {
+  border-color: color-mix(in oklch, var(--sem-accent-primary) 72%, transparent);
+  background: color-mix(in oklch, var(--sem-accent-primary) 18%, var(--sys-color-neutral-900) 82%);
+  color: color-mix(in oklch, var(--sem-text-primary) 96%, white 4%);
+}
+
+.stageGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stageHeading {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sem-text-muted);
+}
+
+.stageHint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--sem-text-muted);
+  max-width: 52rem;
+}
+
+.stage {
+  padding: 28px 24px;
+  border-radius: 14px;
+  border: 1px dashed color-mix(in oklch, var(--sem-text-primary) 14%, transparent);
+  background:
+    radial-gradient(
+      120% 80% at 50% 0%,
+      color-mix(in oklch, var(--sem-accent-primary) 8%, transparent),
+      transparent 70%
+    ),
+    color-mix(in oklch, var(--sys-color-black) 35%, var(--sys-color-neutral-950) 65%);
+}
+
+.resetRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.stateDump {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--sem-border-subtle);
+  background: color-mix(in oklch, var(--sys-color-black) 55%, var(--sys-color-neutral-900) 45%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--sem-text-muted);
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
