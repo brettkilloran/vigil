@@ -31,6 +31,8 @@ export type ButtonProps = {
   asChild?: boolean;
   /** Storybook/debug only. */
   forceState?: ButtonVisualState;
+  /** Opt-in hook for AI bind button typography tweaks. */
+  "data-hg-ai-bind"?: boolean | "true" | "false";
 } & ButtonHTMLAttributes<HTMLButtonElement>;
 
 function sharedProps({
@@ -88,6 +90,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   ref,
 ) {
   const mergedDisabled = disabled || isLoading;
+  const aiBindAttr = buttonProps["data-hg-ai-bind"];
+  const isAiBind = aiBindAttr === true || aiBindAttr === "true";
 
   if (iconOnly && !buttonProps["aria-label"]) {
     throw new Error("Icon-only buttons must include aria-label.");
@@ -116,7 +120,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       children: (
         <>
           {leadingIcon}
-          {child.props.children}
+          {isAiBind ? <span>{child.props.children}</span> : child.props.children}
           {trailingIcon}
         </>
       ),
@@ -143,7 +147,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...buttonProps}
     >
       {leadingIcon}
-      {children}
+      {isAiBind ? <span>{children}</span> : children}
       {trailingIcon}
     </button>
   );

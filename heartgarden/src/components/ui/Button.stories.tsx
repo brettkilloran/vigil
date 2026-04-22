@@ -4,7 +4,10 @@ import { CheckCircle, CursorClick, Trash } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/nextjs";
 import { expect, userEvent, within } from "storybook/test";
 
+import canvasStyles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
+import gutterStyles from "@/src/components/editing/HgAiPendingEditorGutter.module.css";
 import { Button } from "@/src/components/ui/Button";
+import { Tag } from "@/src/components/ui/Tag";
 
 const meta: Meta<typeof Button> = {
   title: "Heartgarden/UI/Button",
@@ -23,7 +26,7 @@ const meta: Meta<typeof Button> = {
   argTypes: {
     variant: {
       control: "radio",
-      options: ["neutral", "primary", "danger", "ghost", "subtle"],
+      options: ["neutral", "primary", "danger", "ghost"],
     },
     size: {
       control: "radio",
@@ -49,7 +52,7 @@ export const Playground: Story = {};
 
 export const VariantMatrix: Story = {
   render: () => {
-    const variants = ["neutral", "primary", "danger", "ghost", "subtle"] as const;
+    const variants = ["neutral", "primary", "danger", "ghost"] as const;
     const sizes = ["xs", "sm", "md", "lg"] as const;
     return (
       <div style={{ display: "grid", gap: 12, padding: 20, background: "var(--sem-surface-base)" }}>
@@ -145,5 +148,125 @@ export const LoadingSuppressesClick: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Loading Action" }));
   },
+};
+
+function BindButtonRow({ dark = false }: { dark?: boolean }) {
+  return (
+    <div
+      className={dark ? "dark" : undefined}
+      style={{
+        padding: 16,
+        borderRadius: 12,
+        background: dark ? "var(--sys-color-neutral-920)" : "var(--sem-surface-base)",
+      }}
+    >
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <Button
+          type="button"
+          size="xs"
+          variant="subtle"
+          className={gutterStyles.bindBtn}
+          data-hg-ai-bind="true"
+        >
+          Bind
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant="subtle"
+          className={gutterStyles.bindBtn}
+          data-hg-ai-bind="true"
+          forceState="hover"
+        >
+          Bind
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant="subtle"
+          className={gutterStyles.bindBtn}
+          data-hg-ai-bind="true"
+          forceState="active"
+        >
+          Bind
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant="subtle"
+          className={gutterStyles.bindBtn}
+          data-hg-ai-bind="true"
+          disabled
+        >
+          Bind
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export const AiBindGutterStates: Story = {
+  render: () => (
+    <div style={{ display: "grid", gap: 12 }}>
+      <BindButtonRow />
+      <BindButtonRow dark />
+    </div>
+  ),
+};
+
+export const AiBindFocusReviewBar: Story = {
+  render: () => (
+    <div style={{ display: "grid", gap: 12 }}>
+      <div
+        style={{
+          padding: 16,
+          borderRadius: 12,
+          background: "var(--sem-surface-base)",
+        }}
+      >
+        <div className={canvasStyles.focusAiReviewBar}>
+          <Tag variant="llmLight">Unreviewed</Tag>
+          <Button
+            type="button"
+            size="xs"
+            variant="subtle"
+            className={canvasStyles.nodeBtn}
+            data-hg-ai-bind="true"
+          >
+            Bind all
+          </Button>
+          <span className={canvasStyles.focusAiReviewHint}>
+            Bind removes pending highlights; Save applies body edits like any other change.
+          </span>
+        </div>
+      </div>
+
+      <div
+        className={`${canvasStyles.focusEditorDark} dark`}
+        style={{
+          padding: 16,
+          borderRadius: 12,
+          background: "var(--sys-color-neutral-900)",
+        }}
+      >
+        <div className={canvasStyles.focusAiReviewBar}>
+          <Tag variant="llmFocusDark">Unreviewed</Tag>
+          <Button
+            type="button"
+            size="xs"
+            variant="subtle"
+            className={canvasStyles.nodeBtn}
+            data-hg-ai-bind="true"
+            forceState="hover"
+          >
+            Bind all
+          </Button>
+          <span className={canvasStyles.focusAiReviewHint}>
+            Bind removes pending highlights; Save applies body edits like any other change.
+          </span>
+        </div>
+      </div>
+    </div>
+  ),
 };
 

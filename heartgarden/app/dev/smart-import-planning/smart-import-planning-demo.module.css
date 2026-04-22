@@ -111,7 +111,8 @@
   color: var(--sem-text-primary);
 }
 
-.textInput {
+.textInput,
+.textArea {
   width: 100%;
   border-radius: 8px;
   border: 1px solid var(--sem-border-subtle);
@@ -121,6 +122,12 @@
   font-size: 12px;
   line-height: 1.4;
   box-sizing: border-box;
+  font-family: inherit;
+}
+
+.textArea {
+  resize: vertical;
+  min-height: 56px;
 }
 
 .stageHint {

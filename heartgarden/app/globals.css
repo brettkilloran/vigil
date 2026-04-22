@@ -164,7 +164,7 @@
   --sem-checkbox-check-fill: color-mix(in oklch, var(--sys-color-white) 95%, transparent);
 
   /* Component button tokens */
-  --cmp-button-neutral-bg-default: transparent;
+  --cmp-button-neutral-bg-default: var(--sem-overlay-white-05);
   --cmp-button-neutral-bg-hover: var(--sem-surface-muted-hover);
   --cmp-button-neutral-bg-active: var(--sem-surface-muted-press);
   --cmp-button-neutral-bg-disabled: transparent;
@@ -634,7 +634,9 @@ a {
   align-items: center;
   justify-content: center;
   gap: var(--btn-gap);
+  height: var(--btn-height);
   min-height: var(--btn-height);
+  padding-block: 0;
   padding-inline: var(--btn-pad-x);
   border-radius: var(--btn-radius);
   border: 1px solid var(--btn-border-default);
@@ -643,7 +645,10 @@ a {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--btn-font-size);
   font-weight: var(--btn-font-weight);
+  letter-spacing: 0.03em;
   line-height: 1;
+  text-transform: uppercase !important;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
@@ -651,6 +656,13 @@ a {
     border-color var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
     transform var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
     opacity var(--sys-motion-duration-fast) var(--sys-motion-ease-standard);
+}
+
+.vigil-btn > :where(span, strong, em, b, i) {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  text-transform: inherit !important;
 }
 
 .vigil-btn:hover {
@@ -720,7 +732,7 @@ a {
 .vigil-btn[data-size="xs"] {
   --btn-height: var(--sys-control-height-xs);
   --btn-pad-x: calc(var(--sys-control-pad-x-xs) + var(--vigil-btn-inline-pad-extra));
-  --btn-radius: var(--sys-radius-sm);
+  --btn-radius: var(--sys-radius-md);
   --btn-font-size: 0.6875rem;
   --btn-gap: 0.25rem;
 }
@@ -742,7 +754,7 @@ a {
 .vigil-btn[data-size="lg"] {
   --btn-height: var(--sys-control-height-lg);
   --btn-pad-x: calc(var(--sys-control-pad-x-lg) + var(--vigil-btn-inline-pad-extra));
-  --btn-radius: var(--sys-radius-lg);
+  --btn-radius: var(--sys-radius-md);
   --btn-font-size: 0.8125rem;
 }
 
@@ -777,7 +789,8 @@ a {
   --btn-border-disabled: var(--cmp-button-primary-border-disabled);
 }
 
-.vigil-btn[data-variant="neutral"] {
+.vigil-btn[data-variant="neutral"],
+.vigil-btn[data-variant="subtle"] {
   --btn-bg-default: var(--cmp-button-neutral-bg-default);
   --btn-bg-hover: var(--cmp-button-neutral-bg-hover);
   --btn-bg-active: var(--cmp-button-neutral-bg-active);
@@ -805,21 +818,6 @@ a {
   --btn-border-hover: var(--cmp-button-ghost-border-hover);
   --btn-border-active: var(--cmp-button-ghost-border-active);
   --btn-border-disabled: var(--cmp-button-ghost-border-disabled);
-}
-
-.vigil-btn[data-variant="subtle"] {
-  --btn-bg-default: var(--cmp-button-subtle-bg-default);
-  --btn-bg-hover: var(--cmp-button-subtle-bg-hover);
-  --btn-bg-active: var(--cmp-button-subtle-bg-active);
-  --btn-bg-disabled: var(--cmp-button-subtle-bg-disabled);
-  --btn-fg-default: var(--cmp-button-subtle-fg-default);
-  --btn-fg-hover: var(--cmp-button-subtle-fg-hover);
-  --btn-fg-active: var(--cmp-button-subtle-fg-active);
-  --btn-fg-disabled: var(--cmp-button-subtle-fg-disabled);
-  --btn-border-default: var(--cmp-button-subtle-border-default);
-  --btn-border-hover: var(--cmp-button-subtle-border-hover);
-  --btn-border-active: var(--cmp-button-subtle-border-active);
-  --btn-border-disabled: var(--cmp-button-subtle-border-disabled);
 }
 
 .vigil-btn[data-variant="primary"] {
@@ -1441,45 +1439,29 @@ a {
   --btn-border-hover: var(--sem-text-llm-accent);
   --btn-border-active: var(--sem-text-llm-accent);
   --btn-border-disabled: color-mix(in oklch, var(--sem-text-llm-accent) 24%, transparent);
-  --btn-radius: var(--sys-radius-sm);
-  /* Crisp edge + soft violet bloom so this reads as a real button, not a flat chip. */
-  box-shadow:
-    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 76%, transparent),
-    inset 0 -1px 0 color-mix(in oklch, var(--sem-text-llm-accent) 10%, transparent),
-    0 0.5px 1px color-mix(in oklch, var(--sys-color-black) 14%, transparent),
-    0 1px 2px color-mix(in oklch, var(--sys-color-black) 7%, transparent),
-    0 3px 10px color-mix(in oklch, var(--sem-text-llm-accent) 24%, transparent),
-    0 10px 26px color-mix(in oklch, var(--sem-text-llm-accent) 14%, transparent);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  /* Keep bind controls crisp and even; avoid heavy top/bottom contrast. */
+  box-shadow: 0 1px 2px color-mix(in oklch, var(--sys-color-black) 10%, transparent);
+}
+
+.vigil-btn[data-hg-ai-bind="true"] > :where(span, strong, em, b, i) {
+  /* Geist uppercase optical baseline reads low at xs; nudge for true visual centering. */
+  transform: translateY(0);
 }
 
 .vigil-btn[data-hg-ai-bind="true"]:hover {
-  box-shadow:
-    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 84%, transparent),
-    inset 0 -1px 0 color-mix(in oklch, var(--sem-text-llm-accent) 12%, transparent),
-    0 0.5px 1px color-mix(in oklch, var(--sys-color-black) 16%, transparent),
-    0 2px 4px color-mix(in oklch, var(--sys-color-black) 9%, transparent),
-    0 4px 14px color-mix(in oklch, var(--sem-text-llm-accent) 30%, transparent),
-    0 14px 32px color-mix(in oklch, var(--sem-text-llm-accent) 18%, transparent);
+  box-shadow: 0 1px 3px color-mix(in oklch, var(--sys-color-black) 14%, transparent);
 }
 
 .vigil-btn[data-hg-ai-bind="true"]:active {
-  box-shadow:
-    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 55%, transparent),
-    inset 0 -1px 0 color-mix(in oklch, var(--sem-text-llm-accent) 14%, transparent),
-    0 0.5px 1px color-mix(in oklch, var(--sys-color-black) 12%, transparent),
-    0 1px 3px color-mix(in oklch, var(--sem-text-llm-accent) 18%, transparent),
-    0 4px 12px color-mix(in oklch, var(--sem-text-llm-accent) 12%, transparent);
+  box-shadow: inset 0 1px 1px color-mix(in oklch, var(--sys-color-black) 10%, transparent);
 }
 
 .vigil-btn[data-hg-ai-bind="true"]:focus-visible {
   box-shadow:
     0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sem-text-llm-accent) 36%, transparent),
-    inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 76%, transparent),
-    inset 0 -1px 0 color-mix(in oklch, var(--sem-text-llm-accent) 10%, transparent),
-    0 0.5px 1px color-mix(in oklch, var(--sys-color-black) 14%, transparent),
-    0 1px 2px color-mix(in oklch, var(--sys-color-black) 7%, transparent),
-    0 3px 10px color-mix(in oklch, var(--sem-text-llm-accent) 24%, transparent),
-    0 10px 26px color-mix(in oklch, var(--sem-text-llm-accent) 14%, transparent);
+    0 1px 2px color-mix(in oklch, var(--sys-color-black) 10%, transparent);
 }
 
 .dark .vigil-btn[data-hg-ai-bind="true"] {

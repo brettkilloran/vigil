@@ -109,8 +109,10 @@
 }
 
 .stage {
-  padding: 28px 24px;
+  position: relative;
+  min-height: 640px;
   border-radius: 14px;
+  overflow: hidden;
   border: 1px dashed color-mix(in oklch, var(--sem-text-primary) 14%, transparent);
   background:
     radial-gradient(
@@ -119,6 +121,37 @@
       transparent 70%
     ),
     color-mix(in oklch, var(--sys-color-black) 35%, var(--sys-color-neutral-950) 65%);
+}
+
+.stageBackdrop {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: auto !important;
+}
+
+.stagePanel {
+  max-height: 100% !important;
+  max-width: 44rem !important;
+}
+
+.stageLabel {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  z-index: 1;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--sem-text-muted) 80%, transparent);
+  pointer-events: none;
+}
+
+.stageFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
 }
 
 .resetRow {

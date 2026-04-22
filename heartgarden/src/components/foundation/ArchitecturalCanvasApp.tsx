@@ -158,7 +158,6 @@ import {
   groupedOrderedLinkOptionsForEndpoints,
   LINK_TYPE_GROUP_HEADINGS,
 } from "@/src/lib/lore-link-types";
-import { validateClarificationAnswersForApply } from "@/src/lib/lore-import-clarifications";
 import type {
   ClarificationAnswer,
   LoreImportClarificationItem,
@@ -645,10 +644,6 @@ function upsertClarificationAnswer(
   next: ClarificationAnswer,
 ): ClarificationAnswer[] {
   return [...prev.filter((a) => a.clarificationId !== next.clarificationId), next];
-}
-
-function clearClarificationAnswer(prev: ClarificationAnswer[], clarificationId: string): ClarificationAnswer[] {
-  return prev.filter((a) => a.clarificationId !== clarificationId);
 }
 
 function recommendedClarificationOptionId(
@@ -2152,6 +2147,7 @@ export function ArchitecturalCanvasApp({
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
   const [spacePanning, setSpacePanning] = useState(false);
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const [pendingFolderTitleSelectId, setPendingFolderTitleSelectId] = useState<string | null>(null);
   /** Lore character canvas: body is read-only until double-click so Delete targets the node, not the editor. */
   const [loreCanvasBodyEditEntityId, setLoreCanvasBodyEditEntityId] = useState<string | null>(null);
   const [connectionMode, setConnectionMode] = useState<ConnectionDockMode>("move");
@@ -2337,9 +2333,6 @@ export function ArchitecturalCanvasApp({
   const [graphOverlayOpen, setGraphOverlayOpen] = useState(false);
   const graphOverlayOpenSoundPrevRef = useRef(false);
   const [loreSmartReview, setLoreSmartReview] = useState<LoreSmartImportReviewState | null>(null);
-  const [loreSmartTab, setLoreSmartTab] = useState<"structure" | "merges" | "questions">(
-    "structure",
-  );
   const [loreSmartPlanning, setLoreSmartPlanning] = useState(false);
   const [loreSmartPlanningJobId, setLoreSmartPlanningJobId] = useState<string | null>(null);
   const loreSmartPlanningAbortRef = useRef<AbortController | null>(null);
@@ -2386,7 +2379,6 @@ export function ArchitecturalCanvasApp({
     setLoreSmartAcceptedMergeIds({});
     setLoreSmartClarificationAnswers([]);
     setLoreSmartOtherFollowUp(null);
-    setLoreSmartTab("structure");
   }, [loreImportCommitting]);
   const cancelLoreSmartPlanning = useCallback(() => {
     const ctrl = loreSmartPlanningAbortRef.current;
@@ -2431,13 +2423,6 @@ export function ArchitecturalCanvasApp({
     window.addEventListener("keydown", onGlobalEsc, true);
     return () => window.removeEventListener("keydown", onGlobalEsc, true);
   }, [cancelLoreSmartPlanning, closeLoreSmartReview, loreSmartPlanning, loreSmartReview]);
-  const loreSmartClarificationsOk = useMemo(() => {
-    if (!loreSmartReview) return true;
-    return validateClarificationAnswersForApply(
-      loreSmartReview.plan,
-      loreSmartClarificationAnswers,
-    ).ok;
-  }, [loreSmartReview, loreSmartClarificationAnswers]);
   const loreSmartQuestionUi = useMemo(() => {
     if (!loreSmartReview) {
       return {
@@ -2812,6 +2797,42 @@ export function ArchitecturalCanvasApp({
       setLoreCanvasBodyEditEntityId(null);
     }
   }, [selectedNodeIds, loreCanvasBodyEditEntityId]);
+
+  useEffect(() => {
+    if (!pendingFolderTitleSelectId) return;
+    let cancelled = false;
+    let attempts = 0;
+    const folderId = pendingFolderTitleSelectId;
+    const tryFocusAndSelect = () => {
+      if (cancelled) return;
+      const escapedFolderId = folderId.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+      const editor = shellRef.current?.querySelector<HTMLElement>(
+        `[data-node-id="${escapedFolderId}"] [data-folder-title-editor="true"]`,
+      );
+      if (!editor) {
+        if (attempts < 10) {
+          attempts += 1;
+          requestAnimationFrame(tryFocusAndSelect);
+        } else {
+          setPendingFolderTitleSelectId((current) => (current === folderId ? null : current));
+        }
+        return;
+      }
+      editor.focus({ preventScroll: true });
+      const sel = window.getSelection();
+      if (sel) {
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+      setPendingFolderTitleSelectId((current) => (current === folderId ? null : current));
+    };
+    requestAnimationFrame(tryFocusAndSelect);
+    return () => {
+      cancelled = true;
+    };
+  }, [pendingFolderTitleSelectId]);
 
   useEffect(() => {
     if (!connectionSourceId) connectionRosterAnchorRef.current = null;
@@ -6226,7 +6247,6 @@ export function ArchitecturalCanvasApp({
         if (Array.isArray(data.resolvedClarificationAnswers)) {
           setLoreSmartClarificationAnswers(data.resolvedClarificationAnswers);
         }
-        setLoreSmartTab("questions");
         playVigilUiSound("caution");
         return;
       }
@@ -6247,7 +6267,6 @@ export function ArchitecturalCanvasApp({
       setLoreSmartReview(null);
       setLoreSmartAcceptedMergeIds({});
       setLoreSmartClarificationAnswers([]);
-      setLoreSmartTab("structure");
     } catch (error) {
       reportFailure(
         createLoreImportFailureDetail({
@@ -7467,6 +7486,8 @@ export function ArchitecturalCanvasApp({
             }
             return next;
           });
+          setSelectedNodeIds([entity.id]);
+          setPendingFolderTitleSelectId(entity.id);
           return;
         }
 
@@ -7637,6 +7658,8 @@ export function ArchitecturalCanvasApp({
         }
         return next;
       });
+      setSelectedNodeIds([entityId]);
+      setPendingFolderTitleSelectId(entityId);
       return;
     }
 
@@ -7807,7 +7830,6 @@ export function ArchitecturalCanvasApp({
           setLoreSmartClarificationAnswers([]);
           setLoreSmartOtherFollowUp(null);
           setLoreSmartIncludeSource(true);
-          setLoreSmartTab("structure");
           setLoreSmartPlanning(true);
           setLoreSmartPlanningProgress({ phase: "queued" });
           const applySmartPlanToUi = (plan: LoreImportPlan) => {
@@ -7824,9 +7846,6 @@ export function ArchitecturalCanvasApp({
               nextMerge[m.id] = false;
             }
             setLoreSmartAcceptedMergeIds(nextMerge);
-            if (plan.clarifications.some((c) => c.severity === "required")) {
-              setLoreSmartTab("questions");
-            }
           };
           let planningFailed = false;
           const reportPlanningFailure = (detail: LoreImportFailureDetail) => {
@@ -12108,12 +12127,10 @@ export function ArchitecturalCanvasApp({
                     {loreImportFailure?.message ??
                       loreSmartPlanningUi.detail ??
                       "Smart import couldn't finish planning. Try again or copy the details below."}
+                    {loreImportFailure?.recommendedAction
+                      ? ` ${loreImportFailure.recommendedAction}`
+                      : ""}
                   </p>
-                  {loreImportFailure?.recommendedAction ? (
-                    <p className={styles.smartImportPlanningDetail}>
-                      {loreImportFailure.recommendedAction}
-                    </p>
-                  ) : null}
                   {loreImportFailure ? (
                     <details className={styles.smartImportPlanningDetails}>
                       <summary>Technical details</summary>
@@ -12233,26 +12250,8 @@ export function ArchitecturalCanvasApp({
                   <p className={styles.smartImportReviewStatsLine}>
                     <strong>{loreSmartReview.plan.folders.length}</strong> folders ·{" "}
                     <strong>{loreSmartReview.plan.notes.length}</strong> notes ·{" "}
-                    <strong>{loreSmartReview.plan.mergeProposals.length}</strong> merge suggestions
-                    {loreSmartReview.plan.links.length > 0 ? (
-                      <>
-                        {" "}
-                        · <strong>{loreSmartReview.plan.links.length}</strong> semantic links
-                      </>
-                    ) : null}
-                    {loreSmartReview.plan.contradictions.length > 0 ? (
-                      <>
-                        {" "}
-                        · <strong>{loreSmartReview.plan.contradictions.length}</strong> review flags
-                      </>
-                    ) : null}
-                    {loreSmartReview.plan.clarifications.length > 0 ? (
-                      <>
-                        {" "}
-                        · <strong>{loreSmartReview.plan.clarifications.length}</strong> question
-                        {loreSmartReview.plan.clarifications.length === 1 ? "" : "s"}
-                      </>
-                    ) : null}
+                    <strong>{loreSmartReview.plan.clarifications.length}</strong> question
+                    {loreSmartReview.plan.clarifications.length === 1 ? "" : "s"}
                   </p>
                 </div>
                 <div className={styles.smartImportReviewHeaderActions}>
@@ -12265,146 +12264,27 @@ export function ArchitecturalCanvasApp({
                   >
                     Close
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    tone="solid"
-                    disabled={loreImportCommitting || !loreSmartClarificationsOk || !!loreSmartOtherFollowUp}
-                    onClick={() => void commitSmartLoreImport()}
-                  >
-                    {loreImportCommitting ? "Applying…" : "Apply import"}
-                  </Button>
                 </div>
               </header>
-              <div className={styles.smartImportReviewTabs} role="tablist" aria-label="Import sections">
-                <Button
-                  size="xs"
-                  variant={loreSmartTab === "structure" ? "primary" : "neutral"}
-                  tone={loreSmartTab === "structure" ? "glass" : "card-dark"}
-                  type="button"
-                  role="tab"
-                  aria-selected={loreSmartTab === "structure"}
-                  onClick={() => setLoreSmartTab("structure")}
-                >
-                  Structure
-                </Button>
-                <Button
-                  size="xs"
-                  variant={loreSmartTab === "merges" ? "primary" : "neutral"}
-                  tone={loreSmartTab === "merges" ? "glass" : "card-dark"}
-                  type="button"
-                  role="tab"
-                  aria-selected={loreSmartTab === "merges"}
-                  onClick={() => setLoreSmartTab("merges")}
-                >
-                  Merges
-                </Button>
-                <Button
-                  size="xs"
-                  variant={loreSmartTab === "questions" ? "primary" : "neutral"}
-                  tone={loreSmartTab === "questions" ? "glass" : "card-dark"}
-                  type="button"
-                  role="tab"
-                  aria-selected={loreSmartTab === "questions"}
-                  onClick={() => setLoreSmartTab("questions")}
-                >
-                  Open questions
-                  {loreSmartReview.plan.clarifications.filter((c) => c.severity === "required")
-                    .length > 0
-                    ? ` (${loreSmartReview.plan.clarifications.filter((c) => c.severity === "required").length} required)`
-                    : ""}
-                </Button>
-              </div>
-              {loreSmartTab === "questions" && loreSmartReview.plan.clarifications.length > 0 ? (
-                loreSmartQuestionUi.questionsComplete && !loreSmartOtherFollowUp ? (
-                  <p className={styles.smartImportReviewSuccessBanner}>
-                    All questions answered — use <strong>Apply import</strong> below or in the header when
-                    you&apos;re ready.
-                  </p>
-                ) : !loreSmartClarificationsOk ? (
-                  <p className={styles.smartImportReviewBanner}>
-                    Answer each question below. <strong>Apply import</strong> stays off until required items
-                    are done.
-                  </p>
-                ) : null
-              ) : !loreSmartClarificationsOk ? (
-                <p className={styles.smartImportReviewBanner}>
-                  Finish <strong>Open questions</strong> before applying.
-                </p>
-              ) : null}
               <div className={styles.smartImportReviewBody}>
-                {loreSmartTab !== "questions" ? (
-                  <label className={styles.smartImportReviewSourceToggle}>
-                    <input
-                      type="checkbox"
-                      checked={loreSmartIncludeSource}
-                      onChange={(e) => setLoreSmartIncludeSource(e.target.checked)}
-                    />
-                    <span>Include full source text as a note card</span>
-                  </label>
-                ) : null}
-                {loreSmartTab === "structure" ? (
-                  <div className={styles.smartImportReviewStructure}>
-                    {loreSmartReview.plan.folders.length > 0 ? (
-                      <div>
-                        <p className={styles.smartImportReviewSectionLabel}>Folders</p>
-                        <ul className={styles.smartImportReviewList}>
-                          {loreSmartReview.plan.folders.map((f) => (
-                            <li key={f.clientId}>
-                              <span className={styles.smartImportReviewNoteTitle}>{f.title}</span>
-                              {f.parentClientId ? (
-                                <span className={styles.smartImportReviewNoteSummary}>
-                                  {" "}
-                                  (under {f.parentClientId})
-                                </span>
-                              ) : null}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
-                    <div>
-                      <p className={styles.smartImportReviewSectionLabel}>Notes</p>
-                      <ul className={styles.smartImportReviewNoteList}>
-                        {loreSmartReview.plan.notes.map((n) => (
-                          <li key={n.clientId} className={styles.smartImportReviewNoteCard}>
-                            <div className={styles.smartImportReviewNoteTitleRow}>
-                              <span className={styles.smartImportReviewNoteTitle}>{n.title}</span>
-                              <span className={styles.smartImportReviewNoteKind}>
-                                {n.canonicalEntityKind}
-                              </span>
-                            </div>
-                            <p className={styles.smartImportReviewNoteSummary}>{n.summary}</p>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    {loreSmartReview.plan.contradictions.length > 0 ? (
-                      <p className={styles.smartImportReviewMutedWarn}>
-                        {loreSmartReview.plan.contradictions.length} contradiction(s) were saved to
-                        your review queue for later.
-                      </p>
-                    ) : null}
-                    {loreSmartReview.plan.importPlanWarnings &&
-                    loreSmartReview.plan.importPlanWarnings.length > 0 ? (
-                      <div>
-                        <p className={styles.smartImportReviewSectionLabel}>Link plan adjustments</p>
-                        <ul className={styles.smartImportReviewWarningList}>
-                          {loreSmartReview.plan.importPlanWarnings.map((w, i) => (
-                            <li key={i}>{w}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
-                    <p className={styles.smartImportReviewFootnote}>
-                      Imported links use relationship types (ally, faction, …), not pin threads. Pin
-                      threads are drawn on the canvas; add them there if you need ties across folders.
-                    </p>
-                  </div>
-                ) : loreSmartTab === "questions" ? (
-                  <div className={styles.smartImportWizard}>
+                <div className={styles.smartImportWizard}>
                     {loreSmartReview.plan.clarifications.length === 0 ? (
-                      <p className={styles.smartImportReviewEmpty}>No open questions for this import.</p>
+                      <div className={styles.smartImportWizardComplete}>
+                        <p className={styles.smartImportWizardCompleteTitle}>Ready to import</p>
+                        <p className={styles.smartImportWizardCompleteBody}>
+                          No clarification questions are required for this file.
+                        </p>
+                        <Button
+                          size="md"
+                          variant="primary"
+                          tone="solid"
+                          type="button"
+                          disabled={loreImportCommitting}
+                          onClick={() => void commitSmartLoreImport()}
+                        >
+                          {loreImportCommitting ? "Applying…" : "Apply import to canvas"}
+                        </Button>
+                      </div>
                     ) : (
                       <>
                         <div className={styles.smartImportWizardProgress}>
@@ -12418,17 +12298,39 @@ export function ArchitecturalCanvasApp({
                                   : "Questions"}
                           </p>
                           <div
-                            className={styles.smartImportQuestionsProgressTrack}
+                            className={
+                              loreSmartQuestionUi.totalQuestions > 1
+                                ? `${styles.smartImportQuestionsProgressTrack} ${styles.smartImportQuestionsProgressTrackSegmented}`
+                                : styles.smartImportQuestionsProgressTrack
+                            }
                             role="progressbar"
                             aria-valuemin={0}
                             aria-valuemax={100}
                             aria-valuenow={loreSmartQuestionUi.wizardBarPercent}
                             aria-label="Questions completed"
                           >
-                            <div
-                              className={styles.smartImportQuestionsProgressFill}
-                              style={{ width: `${loreSmartQuestionUi.wizardBarPercent}%` }}
-                            />
+                            {loreSmartQuestionUi.totalQuestions > 1 ? (
+                              loreSmartQuestionUi.ordered.map((q) => {
+                                const answered = loreSmartClarificationAnswers.find(
+                                  (a) => a.clarificationId === q.id,
+                                );
+                                const isDone = isClarificationAnswered(answered);
+                                const isActive =
+                                  !!loreSmartQuestionUi.focusQuestion &&
+                                  loreSmartQuestionUi.focusQuestion.id === q.id;
+                                return (
+                                  <span
+                                    key={q.id}
+                                    className={`${styles.smartImportQuestionsProgressSegment}${isDone ? ` ${styles.smartImportQuestionsProgressSegmentDone}` : ""}${isActive ? ` ${styles.smartImportQuestionsProgressSegmentActive}` : ""}`}
+                                  />
+                                );
+                              })
+                            ) : (
+                              <div
+                                className={styles.smartImportQuestionsProgressFill}
+                                style={{ width: `${loreSmartQuestionUi.wizardBarPercent}%` }}
+                              />
+                            )}
                           </div>
                         </div>
                         {loreSmartOtherFollowUp ? (
@@ -12441,25 +12343,26 @@ export function ArchitecturalCanvasApp({
                             </p>
                             <div className={styles.smartImportWizardFollowUpOptions}>
                               {loreSmartOtherFollowUp.options.map((opt) => (
-                                <Button
+                                <label
                                   key={opt.id}
-                                  size="sm"
-                                  variant="neutral"
-                                  tone="card-dark"
-                                  type="button"
-                                  onClick={() => {
-                                    setLoreSmartClarificationAnswers((prev) =>
-                                      upsertClarificationAnswer(prev, {
-                                        clarificationId: loreSmartOtherFollowUp.clarificationId,
-                                        resolution: "answered",
-                                        selectedOptionIds: [opt.id],
-                                      }),
-                                    );
-                                    setLoreSmartOtherFollowUp(null);
-                                  }}
+                                  className={styles.smartImportWizardOption}
                                 >
-                                  {opt.label}
-                                </Button>
+                                  <input
+                                    type="radio"
+                                    name={`clarify-followup-${loreSmartOtherFollowUp.clarificationId}`}
+                                    onChange={() => {
+                                      setLoreSmartClarificationAnswers((prev) =>
+                                        upsertClarificationAnswer(prev, {
+                                          clarificationId: loreSmartOtherFollowUp.clarificationId,
+                                          resolution: "answered",
+                                          selectedOptionIds: [opt.id],
+                                        }),
+                                      );
+                                      setLoreSmartOtherFollowUp(null);
+                                    }}
+                                  />
+                                  <span>{opt.label}</span>
+                                </label>
                               ))}
                             </div>
                             <div className={styles.smartImportWizardFooter}>
@@ -12486,8 +12389,8 @@ export function ArchitecturalCanvasApp({
                           <div className={styles.smartImportWizardComplete}>
                             <p className={styles.smartImportWizardCompleteTitle}>You&apos;re all set</p>
                             <p className={styles.smartImportWizardCompleteBody}>
-                              Optionally review <strong>Structure</strong> and <strong>Merges</strong>, then
-                              apply the import to add this content to your space.
+                              Your answers are ready. Apply the import to add this content to your
+                              space.
                             </p>
                             <Button
                               size="md"
@@ -12649,19 +12552,6 @@ export function ArchitecturalCanvasApp({
                                       Use recommended
                                     </Button>
                                   ) : null}
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    tone="glass"
-                                    type="button"
-                                    onClick={() =>
-                                      setLoreSmartClarificationAnswers((prev) =>
-                                        clearClarificationAnswer(prev, c.id),
-                                      )
-                                    }
-                                  >
-                                    Clear
-                                  </Button>
                                 </div>
                               </article>
                             );
@@ -12670,85 +12560,6 @@ export function ArchitecturalCanvasApp({
                       </>
                     )}
                   </div>
-                ) : (
-                  <div className={styles.smartImportReviewStructure}>
-                    <div className={styles.smartImportReviewMergeToolbar}>
-                      <Button
-                        size="xs"
-                        variant="neutral"
-                        tone="card-dark"
-                        type="button"
-                        disabled={loreSmartReview.plan.mergeProposals.length === 0}
-                        onClick={() => {
-                          const next: Record<string, boolean> = {};
-                          for (const m of loreSmartReview.plan.mergeProposals) {
-                            next[m.id] = true;
-                          }
-                          setLoreSmartAcceptedMergeIds(next);
-                        }}
-                      >
-                        Select all merges
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="neutral"
-                        tone="card-dark"
-                        type="button"
-                        disabled={loreSmartReview.plan.mergeProposals.length === 0}
-                        onClick={() => {
-                          const next: Record<string, boolean> = {};
-                          for (const m of loreSmartReview.plan.mergeProposals) {
-                            next[m.id] = false;
-                          }
-                          setLoreSmartAcceptedMergeIds(next);
-                        }}
-                      >
-                        Clear merges
-                      </Button>
-                    </div>
-                    {loreSmartReview.plan.mergeProposals.length === 0 ? (
-                      <p className={styles.smartImportReviewEmpty}>
-                        No merge suggestions — new notes and folders will be created.
-                      </p>
-                    ) : (
-                      <ul className={styles.smartImportReviewMergeList}>
-                        {loreSmartReview.plan.mergeProposals.map((m) => (
-                          <li key={m.id} className={styles.smartImportReviewMergeCard}>
-                            <label className={styles.smartImportReviewMergeLabel}>
-                              <input
-                                type="checkbox"
-                                checked={!!loreSmartAcceptedMergeIds[m.id]}
-                                onChange={() =>
-                                  setLoreSmartAcceptedMergeIds((p) => ({
-                                    ...p,
-                                    [m.id]: !p[m.id],
-                                  }))
-                                }
-                              />
-                              <span>
-                                Merge into{" "}
-                                <strong>{m.targetTitle}</strong>
-                                {m.targetSpaceName ? (
-                                  <span className={styles.smartImportReviewMergeSpace}>
-                                    {" "}
-                                    · {m.targetSpaceName}
-                                  </span>
-                                ) : null}
-                                <span className={styles.smartImportReviewMergeMeta}>
-                                  Strategy: {m.strategy}
-                                  {m.targetItemType || m.targetEntityType
-                                    ? ` · existing type ${m.targetItemType ?? "note"} / ${m.targetEntityType ?? "—"}`
-                                    : ""}
-                                </span>
-                              </span>
-                            </label>
-                            <pre className={styles.smartImportReviewMergePre}>{m.proposedText}</pre>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           </div>

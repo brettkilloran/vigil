@@ -33,13 +33,6 @@ function upsertAnswer(
   return [...prev.filter((a) => a.clarificationId !== next.clarificationId), next];
 }
 
-function clearAnswer(
-  prev: ClarificationAnswer[],
-  clarificationId: string,
-): ClarificationAnswer[] {
-  return prev.filter((a) => a.clarificationId !== clarificationId);
-}
-
 function recommendedOptionId(c: LoreImportClarificationItem): string | undefined {
   const r = c.options.find((o) => o.recommended);
   return r?.id ?? c.options[0]?.id;
@@ -135,13 +128,6 @@ const SCENARIOS: Scenario[] = [
     description:
       "Optional multi-select with a recommended role pre-highlighted. Skipping falls back to best judgement.",
     clarifications: [MULTI_SELECT],
-    initialAnswers: [
-      {
-        clarificationId: MULTI_SELECT.id,
-        resolution: "answered",
-        selectedOptionIds: ["role-enforcer"],
-      },
-    ],
   },
   {
     key: "confirmDefault",
@@ -196,6 +182,24 @@ type WizardProps = {
   scenario: Scenario;
 };
 
+type MockPlanStats = {
+  folders: number;
+  notes: number;
+  merges: number;
+  links: number;
+  reviewFlags: number;
+};
+
+const MOCK_STATS: MockPlanStats = {
+  folders: 4,
+  notes: 18,
+  merges: 3,
+  links: 7,
+  reviewFlags: 1,
+};
+
+const MOCK_FILE_NAME = "fellowship-lore.md";
+
 function WizardPreview({ scenario }: WizardProps) {
   const [answers, setAnswers] = useState<ClarificationAnswer[]>(
     () => scenario.initialAnswers ?? [],
@@ -227,7 +231,6 @@ function WizardPreview({ scenario }: WizardProps) {
         : answeredCount === 0
           ? 0
           : Math.max(wizardBarPercentRaw, 6);
-
   const reset = () => {
     setAnswers(scenario.initialAnswers ?? []);
     setOtherFollowUp(scenario.initialOtherFollowUp ?? null);
@@ -245,9 +248,43 @@ function WizardPreview({ scenario }: WizardProps) {
   };
 
   return (
-    <div className={styles.stage}>
-      <div className={canvasStyles.smartImportWizard}>
-        <div className={canvasStyles.smartImportWizardProgress}>
+    <>
+      <div className={styles.stage}>
+        <span className={styles.stageLabel}>Preview</span>
+        <div
+          className={`${canvasStyles.smartImportReviewBackdrop} ${styles.stageBackdrop}`}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Smart document import"
+        >
+        <div className={`${canvasStyles.smartImportReviewPanel} ${styles.stagePanel}`}>
+          <header className={canvasStyles.smartImportReviewHeader}>
+            <div className={canvasStyles.smartImportReviewHeaderMain}>
+              <h2 className={canvasStyles.smartImportReviewTitle}>Smart import</h2>
+              <p className={canvasStyles.smartImportReviewFile}>{MOCK_FILE_NAME}</p>
+              <p className={canvasStyles.smartImportReviewStatsLine}>
+                <strong>{MOCK_STATS.folders}</strong> folders ·{" "}
+                <strong>{MOCK_STATS.notes}</strong> notes ·{" "}
+                <strong>{totalQuestions}</strong> question{totalQuestions === 1 ? "" : "s"}
+              </p>
+            </div>
+            <div className={canvasStyles.smartImportReviewHeaderActions}>
+              <Button
+                size="sm"
+                variant="neutral"
+                tone="card-dark"
+                type="button"
+                onClick={() => {
+                  /* demo — no-op */
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          </header>
+          <div className={canvasStyles.smartImportReviewBody}>
+            <div className={canvasStyles.smartImportWizard}>
+              <div className={canvasStyles.smartImportWizardProgress}>
           <p className={canvasStyles.smartImportWizardProgressLabel}>
             {otherFollowUp
               ? "Follow-up"
@@ -258,17 +295,35 @@ function WizardPreview({ scenario }: WizardProps) {
                   : "Questions"}
           </p>
           <div
-            className={canvasStyles.smartImportQuestionsProgressTrack}
+            className={
+              totalQuestions > 1
+                ? `${canvasStyles.smartImportQuestionsProgressTrack} ${canvasStyles.smartImportQuestionsProgressTrackSegmented}`
+                : canvasStyles.smartImportQuestionsProgressTrack
+            }
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={wizardBarPercent}
             aria-label="Questions completed"
           >
-            <div
-              className={canvasStyles.smartImportQuestionsProgressFill}
-              style={{ width: `${wizardBarPercent}%` }}
-            />
+            {totalQuestions > 1 ? (
+              ordered.map((q) => {
+                const answered = byId.get(q.id);
+                const isDone = isAnswered(answered);
+                const isActive = !!focusQuestion && focusQuestion.id === q.id;
+                return (
+                  <span
+                    key={q.id}
+                    className={`${canvasStyles.smartImportQuestionsProgressSegment}${isDone ? ` ${canvasStyles.smartImportQuestionsProgressSegmentDone}` : ""}${isActive ? ` ${canvasStyles.smartImportQuestionsProgressSegmentActive}` : ""}`}
+                  />
+                );
+              })
+            ) : (
+              <div
+                className={canvasStyles.smartImportQuestionsProgressFill}
+                style={{ width: `${wizardBarPercent}%` }}
+              />
+            )}
           </div>
         </div>
 
@@ -282,25 +337,26 @@ function WizardPreview({ scenario }: WizardProps) {
             </p>
             <div className={canvasStyles.smartImportWizardFollowUpOptions}>
               {otherFollowUp.options.map((opt) => (
-                <Button
+                <label
                   key={opt.id}
-                  size="sm"
-                  variant="neutral"
-                  tone="glass"
-                  type="button"
-                  onClick={() => {
-                    setAnswers((prev) =>
-                      upsertAnswer(prev, {
-                        clarificationId: otherFollowUp.clarificationId,
-                        resolution: "answered",
-                        selectedOptionIds: [opt.id],
-                      }),
-                    );
-                    setOtherFollowUp(null);
-                  }}
+                  className={canvasStyles.smartImportWizardOption}
                 >
-                  {opt.label}
-                </Button>
+                  <input
+                    type="radio"
+                    name={`clarify-followup-${otherFollowUp.clarificationId}`}
+                    onChange={() => {
+                      setAnswers((prev) =>
+                        upsertAnswer(prev, {
+                          clarificationId: otherFollowUp.clarificationId,
+                          resolution: "answered",
+                          selectedOptionIds: [opt.id],
+                        }),
+                      );
+                      setOtherFollowUp(null);
+                    }}
+                  />
+                  <span>{opt.label}</span>
+                </label>
               ))}
             </div>
             <div className={canvasStyles.smartImportWizardFooter}>
@@ -468,7 +524,7 @@ function WizardPreview({ scenario }: WizardProps) {
                     <Button
                       size="sm"
                       variant="neutral"
-                      tone="glass"
+                      tone="card-dark"
                       type="button"
                       onClick={() => {
                         const def = recommendedOptionId(c);
@@ -488,38 +544,31 @@ function WizardPreview({ scenario }: WizardProps) {
                       Use recommended
                     </Button>
                   ) : null}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    tone="glass"
-                    type="button"
-                    onClick={() =>
-                      setAnswers((prev) => clearAnswer(prev, c.id))
-                    }
-                  >
-                    Clear
-                  </Button>
                 </div>
               </article>
             );
           })()
         ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div style={{ height: 16 }} />
-      <div className={styles.resetRow}>
-        <Button size="xs" variant="neutral" tone="glass" type="button" onClick={reset}>
-          Reset scenario
-        </Button>
-        <Button size="xs" variant="neutral" tone="glass" type="button" onClick={answerAll}>
-          Auto-answer all (recommended)
-        </Button>
+      <div className={styles.stageFooter}>
+        <div className={styles.resetRow}>
+          <Button size="xs" variant="neutral" tone="card-dark" type="button" onClick={reset}>
+            Reset scenario
+          </Button>
+          <Button size="xs" variant="neutral" tone="card-dark" type="button" onClick={answerAll}>
+            Auto-answer all (recommended)
+          </Button>
+        </div>
+        <pre className={styles.stateDump} aria-label="Answer state">
+          {JSON.stringify({ answers, otherFollowUp }, null, 2)}
+        </pre>
       </div>
-      <div style={{ height: 10 }} />
-      <pre className={styles.stateDump} aria-label="Answer state">
-        {JSON.stringify({ answers, otherFollowUp }, null, 2)}
-      </pre>
-    </div>
+    </>
   );
 }
 
