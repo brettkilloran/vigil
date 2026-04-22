@@ -235,6 +235,8 @@ function parseStructuredBody(
   }
   if (effectiveKind === "character") {
     const nationalityRaw = String(o.nationality ?? "").trim();
+    const nationality: Extract<LoreImportStructuredBody, { kind: "character" }>["nationality"] =
+      isHeartgardenNation(nationalityRaw) ? nationalityRaw : "";
     const result: Extract<LoreImportStructuredBody, { kind: "character" }> = {
       kind: "character",
       name: String(o.name ?? "").trim().slice(0, 255),
@@ -242,10 +244,7 @@ function parseStructuredBody(
       affiliation: String(o.affiliation ?? "").trim().slice(0, 255) || undefined,
       affiliationFactionClientId:
         String(o.affiliationFactionClientId ?? "").trim().slice(0, 64) || undefined,
-      nationality:
-        nationalityRaw.length === 0 || isHeartgardenNation(nationalityRaw)
-          ? nationalityRaw
-          : "",
+      nationality,
       notesParagraphs: toParagraphs(o.notesParagraphs),
     };
     const hasSignal =

@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { and, eq, max, sql } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
 import { z } from "zod";
@@ -557,11 +558,13 @@ export async function applyLoreImportPlan(
         const draft = sourceCardDrafts[i]!;
         const sourceContentJson = buildLoreSourceContentJson(draft.text.slice(0, 120_000));
         const sourceEntityMeta = buildImportedEntityMeta({
+          base: {
+            sourceSectionIndex: i,
+            sourceSectionTotal: sourceCardDrafts.length,
+          },
           import: true,
           importBatchId: plan.importBatchId,
           aiReview: "pending",
-          sourceSectionIndex: i,
-          sourceSectionTotal: sourceCardDrafts.length,
         });
         const searchBlob = buildSearchBlob({
           title: draft.title.slice(0, 255),
