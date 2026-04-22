@@ -27,6 +27,57 @@ function importAttemptId(req: Request): string {
   return req.headers.get("x-heartgarden-import-attempt")?.trim() || "unknown";
 }
 
+type DbInsertDiagnostic = {
+  message?: string;
+  code?: string;
+  detail?: string;
+  hint?: string;
+  severity?: string;
+  table?: string;
+  column?: string;
+  constraint?: string;
+  routine?: string;
+  retryable?: boolean;
+};
+
+function clipped(value: unknown, max = 280): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const text = value.trim();
+  if (!text) return undefined;
+  return text.length > max ? `${text.slice(0, max)}...` : text;
+}
+
+function readDbInsertDiagnostic(error: unknown): DbInsertDiagnostic {
+  const source =
+    error && typeof error === "object" ? (error as Record<string, unknown>) : {};
+  const code = clipped(source.code, 24);
+  const retryableCodes = new Set([
+    "40001", // serialization_failure
+    "40P01", // deadlock_detected
+    "53300", // too_many_connections
+    "57P01", // admin_shutdown
+    "57014", // query_canceled
+    "08000", // connection_exception
+    "08001", // sqlclient_unable_to_establish_sqlconnection
+    "08006", // connection_failure
+    "08P01", // protocol_violation
+  ]);
+  return {
+    message:
+      clipped(source.message) ||
+      (error instanceof Error ? clipped(error.message) : clipped(String(error))),
+    code,
+    detail: clipped(source.detail),
+    hint: clipped(source.hint),
+    severity: clipped(source.severity, 64),
+    table: clipped(source.table, 128),
+    column: clipped(source.column, 128),
+    constraint: clipped(source.constraint, 128),
+    routine: clipped(source.routine, 128),
+    retryable: Boolean(code && retryableCodes.has(code)),
+  };
+}
+
 export async function POST(req: Request) {
   const attemptId = importAttemptId(req);
   const bootCtx = await getHeartgardenApiBootContext();
@@ -93,13 +144,33 @@ export async function POST(req: Request) {
       updatedAt: now,
     });
   } catch (error) {
+    const diag = readDbInsertDiagnostic(error);
     console.error("[lore-import] jobs insert failed", {
       attemptId,
       spaceId: parsed.data.spaceId,
-      error: error instanceof Error ? error.message : String(error),
+      ...diag,
+      stack: error instanceof Error ? clipped(error.stack, 1200) : undefined,
     });
     return Response.json(
-      { ok: false, error: "Could not persist import job" },
+      {
+        ok: false,
+        error: "Could not persist import job",
+        errorCode: "lore_import_job_persist_failed",
+        detail:
+          diag.detail ||
+          diag.message ||
+          "Insert into lore_import_jobs failed before background planning could start.",
+        hint: diag.hint || "Check migrations/schema for lore import and presence tables.",
+        operation: "insert lore_import_jobs",
+        dbCode: diag.code,
+        dbSeverity: diag.severity,
+        dbTable: diag.table,
+        dbColumn: diag.column,
+        dbConstraint: diag.constraint,
+        dbRoutine: diag.routine,
+        retryable: diag.retryable ?? false,
+        attemptId,
+      },
       { status: 500 },
     );
   }

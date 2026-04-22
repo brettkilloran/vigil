@@ -17,6 +17,13 @@ export type LoreImportFailureDetail = {
   jobId?: string;
   phase?: string;
   errorCode?: string;
+  serverDetail?: string;
+  serverHint?: string;
+  dbCode?: string;
+  dbTable?: string;
+  dbColumn?: string;
+  dbConstraint?: string;
+  retryable?: boolean;
   fileName?: string;
   spaceId?: string;
   recommendedAction?: string;
@@ -57,8 +64,15 @@ export function formatLoreImportFailureReport(detail: LoreImportFailureDetail): 
   if (detail.fileName) lines.push(`fileName: ${detail.fileName}`);
   if (detail.phase) lines.push(`phase: ${detail.phase}`);
   if (detail.errorCode) lines.push(`errorCode: ${detail.errorCode}`);
+  if (detail.dbCode) lines.push(`dbCode: ${detail.dbCode}`);
+  if (detail.dbTable) lines.push(`dbTable: ${detail.dbTable}`);
+  if (detail.dbColumn) lines.push(`dbColumn: ${detail.dbColumn}`);
+  if (detail.dbConstraint) lines.push(`dbConstraint: ${detail.dbConstraint}`);
+  if (typeof detail.retryable === "boolean") lines.push(`retryable: ${String(detail.retryable)}`);
   if (typeof detail.httpStatus === "number") lines.push(`httpStatus: ${detail.httpStatus}`);
   lines.push(`message: ${detail.message.trim() || "(empty)"}`);
+  if (detail.serverDetail?.trim()) lines.push(`serverDetail: ${detail.serverDetail.trim()}`);
+  if (detail.serverHint?.trim()) lines.push(`serverHint: ${detail.serverHint.trim()}`);
   if (detail.recommendedAction?.trim()) {
     lines.push(`recommendedAction: ${detail.recommendedAction.trim()}`);
   }

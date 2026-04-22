@@ -545,6 +545,13 @@ function createLoreImportFailureDetail(args: {
   jobId?: string;
   phase?: string;
   errorCode?: string;
+  serverDetail?: string;
+  serverHint?: string;
+  dbCode?: string;
+  dbTable?: string;
+  dbColumn?: string;
+  dbConstraint?: string;
+  retryable?: boolean;
   fileName?: string;
   spaceId?: string;
 }): LoreImportFailureDetail {
@@ -7503,6 +7510,14 @@ export function ArchitecturalCanvasApp({
             const jobBody = parseLoreImportJsonBody(jobRaw) as {
               ok?: boolean;
               error?: string;
+              detail?: string;
+              hint?: string;
+              errorCode?: string;
+              dbCode?: string;
+              dbTable?: string;
+              dbColumn?: string;
+              dbConstraint?: string;
+              retryable?: boolean;
               jobId?: string;
             };
             if (!jobRes.ok || !jobBody.ok || !jobBody.jobId) {
@@ -7516,9 +7531,26 @@ export function ArchitecturalCanvasApp({
                   message:
                     typeof jobBody.error === "string"
                       ? jobBody.error
+                      : typeof jobBody.detail === "string"
+                        ? jobBody.detail
                       : `Could not start import job (HTTP ${jobRes.status})`,
                   responseSnippet: jobRaw,
                   httpStatus: jobRes.status,
+                  errorCode:
+                    typeof jobBody.errorCode === "string"
+                      ? jobBody.errorCode
+                      : typeof jobBody.dbCode === "string"
+                        ? jobBody.dbCode
+                        : undefined,
+                  serverDetail: typeof jobBody.detail === "string" ? jobBody.detail : undefined,
+                  serverHint: typeof jobBody.hint === "string" ? jobBody.hint : undefined,
+                  dbCode: typeof jobBody.dbCode === "string" ? jobBody.dbCode : undefined,
+                  dbTable: typeof jobBody.dbTable === "string" ? jobBody.dbTable : undefined,
+                  dbColumn: typeof jobBody.dbColumn === "string" ? jobBody.dbColumn : undefined,
+                  dbConstraint:
+                    typeof jobBody.dbConstraint === "string" ? jobBody.dbConstraint : undefined,
+                  retryable:
+                    typeof jobBody.retryable === "boolean" ? jobBody.retryable : undefined,
                   fileName: parsed.fileName ?? file.name,
                   spaceId,
                   recommendedAction:
