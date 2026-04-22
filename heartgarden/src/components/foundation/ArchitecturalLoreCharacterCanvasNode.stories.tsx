@@ -18,7 +18,7 @@ const meta: Meta<typeof ArchitecturalLoreCharacterCanvasNode> = {
     dragged: false,
     selected: true,
     onBodyCommit: () => {},
-    tapeVariant: "clear",
+    tapeVariant: "dark",
     showTape: true,
   },
   argTypes: {

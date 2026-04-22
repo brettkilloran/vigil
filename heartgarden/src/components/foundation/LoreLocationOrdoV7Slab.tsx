@@ -376,7 +376,7 @@ DetailLine.displayName = "DetailLine";
 export type LoreLocationOrdoV7SlabProps = {
   nodeId: string;
   bodyHtml: string;
-  /** Canvas: hide with tape when grouped (`showTape` false). Lab defaults to true. */
+  /** Canvas: hide staple when grouped (stacked). Lab defaults to true. */
   showStaple?: boolean;
   /** Canvas: degrees match `entity.tapeRotation` (set on parent for staple CSS var). */
   tapeRotationDeg?: number;

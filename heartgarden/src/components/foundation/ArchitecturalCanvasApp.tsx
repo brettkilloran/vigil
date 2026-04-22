@@ -11321,7 +11321,7 @@ export function ArchitecturalCanvasApp({
                     <ArchitecturalLoreCharacterCanvasNode
                       id={entity.id}
                       width={entity.width}
-                      tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
+                      tapeVariant={tapeVariantForLoreCard("character", entity.loreCard?.variant ?? "v11")}
                       tapeRotation={entity.tapeRotation}
                       bodyHtml={canonicalizeCharacterBodyHtml(entity, entity.bodyHtml)}
                       activeTool={activeTool}
@@ -11347,13 +11347,11 @@ export function ArchitecturalCanvasApp({
                     <ArchitecturalLoreLocationCanvasNode
                       id={entity.id}
                       width={entity.width}
-                      tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
                       tapeRotation={entity.tapeRotation}
                       bodyHtml={entity.bodyHtml}
                       activeTool={activeTool}
                       dragged={dragged}
                       selected={selected}
-                      showTape={false}
                       showStaple={!entity.stackId}
                       onBodyCommit={updateNodeBody}
                       onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
@@ -11586,7 +11584,7 @@ export function ArchitecturalCanvasApp({
                         <ArchitecturalLoreCharacterCanvasNode
                           id={entity.id}
                           width={entity.width}
-                          tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
+                          tapeVariant={tapeVariantForLoreCard("character", entity.loreCard?.variant ?? "v11")}
                           tapeRotation={entity.tapeRotation}
                           bodyHtml={canonicalizeCharacterBodyHtml(entity, entity.bodyHtml)}
                           activeTool={activeTool}
@@ -11611,13 +11609,11 @@ export function ArchitecturalCanvasApp({
                         <ArchitecturalLoreLocationCanvasNode
                           id={entity.id}
                           width={entity.width}
-                          tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
                           tapeRotation={entity.tapeRotation}
                           bodyHtml={entity.bodyHtml}
                           activeTool={activeTool}
                           dragged={draggingStack}
                           selected={false}
-                          showTape={false}
                           showStaple={!entity.stackId}
                           bodyEditable={false}
                           onBodyCommit={updateNodeBody}
@@ -12127,8 +12123,8 @@ export function ArchitecturalCanvasApp({
                   <div className={styles.smartImportPlanningActionsSplit}>
                     <Button
                       size="sm"
-                      variant="subtle"
-                      tone="glass"
+                      variant="neutral"
+                      tone="card-dark"
                       type="button"
                       onClick={copyLoreSmartPlanningFailure}
                       leadingIcon={<CopySimple size={14} weight="regular" />}
@@ -12142,8 +12138,8 @@ export function ArchitecturalCanvasApp({
                     <div>
                       <Button
                         size="sm"
-                        variant="subtle"
-                        tone="glass"
+                        variant="neutral"
+                        tone="card-dark"
                         type="button"
                         onClick={closeLoreSmartPlanningFailure}
                       >
@@ -12181,8 +12177,8 @@ export function ArchitecturalCanvasApp({
                   <div className={styles.smartImportPlanningActions}>
                     <Button
                       size="sm"
-                      variant="subtle"
-                      tone="glass"
+                      variant="neutral"
+                      tone="card-dark"
                       type="button"
                       onClick={cancelLoreSmartPlanning}
                     >
@@ -12263,7 +12259,7 @@ export function ArchitecturalCanvasApp({
                   <Button
                     size="sm"
                     variant="neutral"
-                    tone="glass"
+                    tone="card-dark"
                     disabled={loreImportCommitting}
                     onClick={closeLoreSmartReview}
                   >
@@ -12284,7 +12280,7 @@ export function ArchitecturalCanvasApp({
                 <Button
                   size="xs"
                   variant={loreSmartTab === "structure" ? "primary" : "neutral"}
-                  tone="glass"
+                  tone={loreSmartTab === "structure" ? "glass" : "card-dark"}
                   type="button"
                   role="tab"
                   aria-selected={loreSmartTab === "structure"}
@@ -12295,7 +12291,7 @@ export function ArchitecturalCanvasApp({
                 <Button
                   size="xs"
                   variant={loreSmartTab === "merges" ? "primary" : "neutral"}
-                  tone="glass"
+                  tone={loreSmartTab === "merges" ? "glass" : "card-dark"}
                   type="button"
                   role="tab"
                   aria-selected={loreSmartTab === "merges"}
@@ -12306,7 +12302,7 @@ export function ArchitecturalCanvasApp({
                 <Button
                   size="xs"
                   variant={loreSmartTab === "questions" ? "primary" : "neutral"}
-                  tone="glass"
+                  tone={loreSmartTab === "questions" ? "glass" : "card-dark"}
                   type="button"
                   role="tab"
                   aria-selected={loreSmartTab === "questions"}
@@ -12449,7 +12445,7 @@ export function ArchitecturalCanvasApp({
                                   key={opt.id}
                                   size="sm"
                                   variant="neutral"
-                                  tone="glass"
+                                  tone="card-dark"
                                   type="button"
                                   onClick={() => {
                                     setLoreSmartClarificationAnswers((prev) =>
@@ -12633,7 +12629,7 @@ export function ArchitecturalCanvasApp({
                                     <Button
                                       size="sm"
                                       variant="neutral"
-                                      tone="glass"
+                                      tone="card-dark"
                                       type="button"
                                       onClick={() => {
                                         const def = recommendedClarificationOptionId(c);
@@ -12680,7 +12676,7 @@ export function ArchitecturalCanvasApp({
                       <Button
                         size="xs"
                         variant="neutral"
-                        tone="glass"
+                        tone="card-dark"
                         type="button"
                         disabled={loreSmartReview.plan.mergeProposals.length === 0}
                         onClick={() => {
@@ -12696,7 +12692,7 @@ export function ArchitecturalCanvasApp({
                       <Button
                         size="xs"
                         variant="neutral"
-                        tone="glass"
+                        tone="card-dark"
                         type="button"
                         disabled={loreSmartReview.plan.mergeProposals.length === 0}
                         onClick={() => {
@@ -12918,13 +12914,11 @@ export function ArchitecturalCanvasApp({
                     <ArchitecturalLoreLocationCanvasNode
                       id={entity.id}
                       width={entity.width}
-                      tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
                       tapeRotation={entity.tapeRotation}
                       bodyHtml={entity.bodyHtml}
                       activeTool={activeTool}
                       dragged={!!drag}
                       selected={false}
-                      showTape={false}
                       showStaple={!entity.stackId}
                       onBodyCommit={updateNodeBody}
                       onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}

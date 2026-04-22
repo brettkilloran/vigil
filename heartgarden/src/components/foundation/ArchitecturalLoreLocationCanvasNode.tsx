@@ -2,11 +2,10 @@
 
 import type { CSSProperties } from "react";
 
-import type { CanvasTool, TapeVariant } from "@/src/components/foundation/architectural-types";
+import type { CanvasTool } from "@/src/components/foundation/architectural-types";
 import type { WikiLinkAssistConfig } from "@/src/components/editing/BufferedContentEditable";
 import {
   ArchitecturalNodeBody,
-  ArchitecturalNodeTape,
 } from "@/src/components/foundation/ArchitecturalNodeCard";
 import { LoreLocationOrdoV7Slab } from "@/src/components/foundation/LoreLocationOrdoV7Slab";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
@@ -25,9 +24,7 @@ export function ArchitecturalLoreLocationCanvasNode({
   dragged,
   selected,
   onBodyCommit,
-  tapeVariant = "clear",
-  showTape = false,
-  /** Ordo staple bar; independent of `showTape` (location cards keep tape off but show staples when not grouped). */
+  /** Location canvas cards always use staples (never tape). */
   showStaple = true,
   bodyEditable,
   onBodyDraftDirty,
@@ -37,14 +34,12 @@ export function ArchitecturalLoreLocationCanvasNode({
 }: {
   id: string;
   width?: number;
-  tapeVariant?: TapeVariant;
   tapeRotation: number;
   bodyHtml: string;
   activeTool: CanvasTool;
   dragged: boolean;
   selected: boolean;
   onBodyCommit: (id: string, html: string) => void;
-  showTape?: boolean;
   showStaple?: boolean;
   bodyEditable?: boolean;
   onBodyDraftDirty?: (dirty: boolean) => void;
@@ -70,9 +65,6 @@ export function ArchitecturalLoreLocationCanvasNode({
       data-lore-kind="location"
       data-lore-variant="v7"
     >
-      {showTape ? (
-        <ArchitecturalNodeTape variant={tapeVariant} rotationDeg={tapeRotation} />
-      ) : null}
       {bodyHtmlImpliesLoreLocationOrdoV7(bodyHtml) ? (
         <LoreLocationOrdoV7Slab
           nodeId={id}

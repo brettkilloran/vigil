@@ -2141,8 +2141,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: var(--sys-control-height-xs);
+  height: var(--sys-control-height-xs);
+  min-width: var(--sys-control-height-xs);
   padding: 0;
   margin: 0;
   flex-shrink: 0;
@@ -2150,26 +2151,39 @@
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
-  border: 1px solid var(--sk-id-line);
+  border: 1px solid transparent;
   border-radius: 6px;
-  background: transparent;
-  color: var(--sem-text-secondary);
+  background: var(--cmp-button-card-dark-bg-default);
+  color: var(--cmp-button-card-dark-fg-default);
   box-sizing: border-box;
+  transition:
+    background var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
+    color var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
+    border-color var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
+    transform var(--sys-motion-duration-fast) var(--sys-motion-ease-standard);
 }
 
 .charSkExpandBtn svg {
   display: block;
   flex-shrink: 0;
+  width: 14px;
+  height: 14px;
 }
 
 .charSkExpandBtn:hover {
-  color: var(--sem-text-primary);
-  background: color-mix(in oklch, var(--sys-color-white) 6%, transparent);
+  color: var(--cmp-button-card-dark-fg-hover);
+  background: var(--cmp-button-card-dark-bg-hover);
+}
+
+.charSkExpandBtn:active {
+  color: var(--cmp-button-card-dark-fg-active);
+  background: var(--cmp-button-card-dark-bg-active);
+  transform: translateY(0.5px);
 }
 
 .charSkExpandBtn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in oklch, var(--sem-focus-ring) 45%, transparent);
+  box-shadow: 0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sem-focus-ring) 35%, transparent);
 }
 
 .charSkPhotoCell {
@@ -4051,18 +4065,18 @@
 
 .locOrdoV7ExpandBtn {
   flex-shrink: 0;
-  margin: -2px 0 0;
-  padding: 2px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: color-mix(in oklch, var(--loc-ordo-accent) 55%, transparent);
-  cursor: pointer;
+  margin: 0;
 }
 
-.locOrdoV7ExpandBtn:hover {
-  color: var(--loc-ordo-accent);
-  background: oklch(0 0 0 / 0.06);
+.locOrdoV7ExpandBtn:global(.vigil-btn[data-size="icon"]) {
+  --btn-height: var(--sys-control-height-xs);
+  width: var(--sys-control-height-xs);
+  min-width: var(--sys-control-height-xs);
+}
+
+.locOrdoV7ExpandBtn:global(.vigil-btn[data-size="icon"] svg) {
+  width: 14px;
+  height: 14px;
 }
 
 .locOrdoV7DocGrid {
@@ -4778,13 +4792,18 @@
 }
 
 .facArxxPlateHeaderBtn {
-  opacity: 0.92;
+  opacity: 1;
 }
 
 .facArxxPlateHeaderBtn:global(.vigil-btn[data-size="icon"]) {
   --btn-height: var(--sys-control-height-xs);
   width: var(--sys-control-height-xs);
   min-width: var(--sys-control-height-xs);
+}
+
+.facArxxPlateHeaderBtn:global(.vigil-btn[data-size="icon"] svg) {
+  width: 14px;
+  height: 14px;
 }
 
 .facArxxLetterhead {

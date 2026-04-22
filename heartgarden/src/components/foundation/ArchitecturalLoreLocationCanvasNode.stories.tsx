@@ -18,14 +18,11 @@ const meta: Meta<typeof ArchitecturalLoreLocationCanvasNode> = {
     dragged: false,
     selected: true,
     onBodyCommit: () => {},
-    tapeVariant: "clear",
-    showTape: false,
     showStaple: true,
   },
   argTypes: {
     activeTool: { control: "radio", options: ["select", "pan"] },
     onBodyCommit: { control: false },
-    showTape: { control: "boolean" },
     showStaple: { control: "boolean" },
   },
   parameters: {
@@ -59,9 +56,8 @@ type Story = StoryObj<typeof ArchitecturalLoreLocationCanvasNode>;
 
 export const CoverageCard: Story = {};
 
-export const WithTape: Story = {
+export const WithoutStaple: Story = {
   args: {
-    showTape: true,
-    tapeVariant: "masking",
+    showStaple: false,
   },
 };
