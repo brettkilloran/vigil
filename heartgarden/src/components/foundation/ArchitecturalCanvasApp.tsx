@@ -7431,9 +7431,10 @@ export function ArchitecturalCanvasApp({
           return;
         }
 
+        const parsedText = parsed.text;
         const spaceId = activeSpaceIdRef.current;
         const useSmart =
-          persistNeonRef.current && isUuidLike(spaceId) && parsed.text.trim().length > 0;
+          persistNeonRef.current && isUuidLike(spaceId) && parsedText.trim().length > 0;
 
         if (useSmart) {
           setLoreSmartReview(null);
@@ -7449,7 +7450,7 @@ export function ArchitecturalCanvasApp({
           const applySmartPlanToUi = (plan: LoreImportPlan) => {
             setLoreSmartReview({
               plan,
-              sourceText: parsed.text,
+              sourceText: parsedText,
               sourceTitle: parsed.suggestedTitle,
               fileName: parsed.fileName,
             });
@@ -7475,7 +7476,7 @@ export function ArchitecturalCanvasApp({
                 "X-Heartgarden-Import-Attempt": attemptId,
               },
               body: JSON.stringify({
-                text: parsed.text,
+                text: parsedText,
                 spaceId,
                 fileName: parsed.fileName,
                 persistReview: false,
@@ -7501,7 +7502,7 @@ export function ArchitecturalCanvasApp({
                 "X-Heartgarden-Import-Attempt": attemptId,
               },
               body: JSON.stringify({
-                text: parsed.text,
+                text: parsedText,
                 spaceId,
                 fileName: parsed.fileName,
               }),
