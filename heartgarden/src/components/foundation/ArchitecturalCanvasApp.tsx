@@ -57,7 +57,6 @@ import {
   ARCH_TOOLTIP_AVOID_TOP,
 } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
-import { Tag } from "@/src/components/ui/Tag";
 import { HeartgardenMediaPlaceholderImg } from "@/src/components/ui/HeartgardenMediaPlaceholderImg";
 import {
   ArchitecturalBottomDock,
@@ -311,6 +310,7 @@ import {
   runSemanticThreadLinkEvaluation,
 } from "@/src/lib/canvas-thread-link-eval";
 import { createDefaultFactionRosterSeed } from "@/src/lib/faction-roster-link";
+import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
 import {
   defaultLoreCardVariantForKind,
   defaultTitleForLoreKind,
@@ -2372,6 +2372,7 @@ export function ArchitecturalCanvasApp({
   const [loreSmartOtherFollowUp, setLoreSmartOtherFollowUp] = useState<LoreImportOtherFollowUp | null>(
     null,
   );
+  const [loreSmartManualQuestionId, setLoreSmartManualQuestionId] = useState<string | null>(null);
   const [loreImportCommitting, setLoreImportCommitting] = useState(false);
   const closeLoreSmartReview = useCallback(() => {
     if (loreImportCommitting) return;
@@ -2379,6 +2380,7 @@ export function ArchitecturalCanvasApp({
     setLoreSmartAcceptedMergeIds({});
     setLoreSmartClarificationAnswers([]);
     setLoreSmartOtherFollowUp(null);
+    setLoreSmartManualQuestionId(null);
   }, [loreImportCommitting]);
   const cancelLoreSmartPlanning = useCallback(() => {
     const ctrl = loreSmartPlanningAbortRef.current;
@@ -2433,6 +2435,7 @@ export function ArchitecturalCanvasApp({
         percent: 0,
         barPercent: 0,
         ordered: [] as LoreImportClarificationItem[],
+        stableQuestionOrder: [] as LoreImportClarificationItem[],
         focusQuestion: null as LoreImportClarificationItem | null,
         questionsComplete: false,
         answeredCount: 0,
@@ -2467,10 +2470,22 @@ export function ArchitecturalCanvasApp({
       if (a.severity !== b.severity) return a.severity === "required" ? -1 : 1;
       return a.title.localeCompare(b.title);
     });
+    const stableQuestionOrder = [...clarifications].sort((a, b) => {
+      const c = clarificationConfidenceScore(a) - clarificationConfidenceScore(b);
+      if (Math.abs(c) > 0.001) return c;
+      if (a.severity !== b.severity) return a.severity === "required" ? -1 : 1;
+      return a.title.localeCompare(b.title);
+    });
     const answeredCount = clarifications.filter((c) => isClarificationAnswered(byId.get(c.id))).length;
     const totalQuestions = clarifications.length;
+    const defaultFocusQuestion =
+      totalQuestions === 0
+        ? null
+        : stableQuestionOrder.find((c) => !isClarificationAnswered(byId.get(c.id))) ?? null;
     const focusQuestion =
-      totalQuestions === 0 ? null : ordered.find((c) => !isClarificationAnswered(byId.get(c.id))) ?? null;
+      loreSmartManualQuestionId == null
+        ? defaultFocusQuestion
+        : stableQuestionOrder.find((c) => c.id === loreSmartManualQuestionId) ?? defaultFocusQuestion;
     const questionsComplete =
       totalQuestions > 0 && clarifications.every((c) => isClarificationAnswered(byId.get(c.id)));
     const wizardBarPercentRaw =
@@ -2491,13 +2506,14 @@ export function ArchitecturalCanvasApp({
       percent,
       barPercent,
       ordered,
+      stableQuestionOrder,
       focusQuestion,
       questionsComplete,
       answeredCount,
       totalQuestions,
       wizardBarPercent,
     };
-  }, [loreSmartClarificationAnswers, loreSmartReview]);
+  }, [loreSmartClarificationAnswers, loreSmartManualQuestionId, loreSmartReview]);
   const [loreReviewPanelOpen, setLoreReviewPanelOpen] = useState(false);
   const [loreReviewLoading, setLoreReviewLoading] = useState(false);
   const [loreReviewError, setLoreReviewError] = useState<string | null>(null);
@@ -4579,6 +4595,33 @@ export function ArchitecturalCanvasApp({
     [updateNodeBody, updateNodeHgDoc],
   );
 
+  const updateFactionRoster = useCallback(
+    (entityId: string, roster: FactionRosterEntry[]) => {
+      const ent = graphRef.current.entities[entityId];
+      if (!ent || ent.kind !== "content" || ent.loreCard?.kind !== "faction") return;
+      const prev = ent.factionRoster ?? [];
+      if (JSON.stringify(prev) === JSON.stringify(roster)) return;
+      recordUndoBeforeMutation();
+      setGraph((p) => {
+        const cur = p.entities[entityId];
+        if (!cur || cur.kind !== "content" || cur.loreCard?.kind !== "faction") return p;
+        return {
+          ...p,
+          entities: {
+            ...p.entities,
+            [entityId]: { ...cur, factionRoster: roster },
+          },
+        };
+      });
+      const merged = { ...ent, factionRoster: roster } as CanvasContentEntity;
+      void patchItemWithVersion(entityId, {
+        contentText: contentPlainTextForEntity(merged),
+        contentJson: buildContentJsonForContentEntity(merged),
+      });
+    },
+    [patchItemWithVersion, recordUndoBeforeMutation],
+  );
+
   const acceptAiReviewForEntity = useCallback(
     (entityId: string) => {
       const ent = graphRef.current.entities[entityId];
@@ -6249,6 +6292,7 @@ export function ArchitecturalCanvasApp({
       }
       if (data.status === "needs_follow_up" && data.followUp) {
         setLoreSmartOtherFollowUp(data.followUp);
+        setLoreSmartManualQuestionId(null);
         if (Array.isArray(data.resolvedClarificationAnswers)) {
           setLoreSmartClarificationAnswers(data.resolvedClarificationAnswers);
         }
@@ -6256,6 +6300,7 @@ export function ArchitecturalCanvasApp({
         return;
       }
       setLoreSmartOtherFollowUp(null);
+      setLoreSmartManualQuestionId(null);
       if (data.linkWarnings?.length) {
         window.alert(
           `Imported. Link notes:\n${data.linkWarnings.slice(0, 8).join("\n")}${data.linkWarnings.length > 8 ? "\n…" : ""}`,
@@ -6272,6 +6317,7 @@ export function ArchitecturalCanvasApp({
       setLoreSmartReview(null);
       setLoreSmartAcceptedMergeIds({});
       setLoreSmartClarificationAnswers([]);
+      setLoreSmartManualQuestionId(null);
     } catch (error) {
       reportFailure(
         createLoreImportFailureDetail({
@@ -7834,6 +7880,7 @@ export function ArchitecturalCanvasApp({
           setLoreSmartAcceptedMergeIds({});
           setLoreSmartClarificationAnswers([]);
           setLoreSmartOtherFollowUp(null);
+          setLoreSmartManualQuestionId(null);
           setLoreSmartIncludeSource(true);
           setLoreSmartPlanning(true);
           setLoreSmartPlanningProgress({ phase: "queued" });
@@ -7846,6 +7893,7 @@ export function ArchitecturalCanvasApp({
             });
             setLoreSmartClarificationAnswers([]);
             setLoreSmartOtherFollowUp(null);
+            setLoreSmartManualQuestionId(null);
             const nextMerge: Record<string, boolean> = {};
             for (const m of plan.mergeProposals) {
               nextMerge[m.id] = false;
@@ -11404,6 +11452,7 @@ export function ArchitecturalCanvasApp({
                       selected={selected}
                       showTape={!entity.stackId}
                       onBodyCommit={updateNodeBody}
+                      onFactionRosterChange={updateFactionRoster}
                       onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
                       wikiLinkAssist={makeWikiLinkAssist(entity.id)}
                       onRichDocCommand={
@@ -11668,6 +11717,7 @@ export function ArchitecturalCanvasApp({
                           showTape={!entity.stackId}
                           bodyEditable={false}
                           onBodyCommit={updateNodeBody}
+                          onFactionRosterChange={updateFactionRoster}
                           onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
                           wikiLinkAssist={makeWikiLinkAssist(entity.id)}
                           onRichDocCommand={
@@ -12299,7 +12349,7 @@ export function ArchitecturalCanvasApp({
                               : loreSmartQuestionUi.questionsComplete
                                 ? "All done"
                                 : loreSmartQuestionUi.focusQuestion
-                                  ? `Question ${loreSmartQuestionUi.ordered.indexOf(loreSmartQuestionUi.focusQuestion) + 1} of ${loreSmartQuestionUi.totalQuestions}`
+                                  ? `Question ${loreSmartQuestionUi.stableQuestionOrder.indexOf(loreSmartQuestionUi.focusQuestion) + 1} of ${loreSmartQuestionUi.totalQuestions}`
                                   : "Questions"}
                           </p>
                           <div
@@ -12315,7 +12365,7 @@ export function ArchitecturalCanvasApp({
                             aria-label="Questions completed"
                           >
                             {loreSmartQuestionUi.totalQuestions > 1 ? (
-                              loreSmartQuestionUi.ordered.map((q) => {
+                              loreSmartQuestionUi.stableQuestionOrder.map((q) => {
                                 const answered = loreSmartClarificationAnswers.find(
                                   (a) => a.clarificationId === q.id,
                                 );
@@ -12363,6 +12413,7 @@ export function ArchitecturalCanvasApp({
                                           selectedOptionIds: [opt.id],
                                         }),
                                       );
+                                      setLoreSmartManualQuestionId(null);
                                       setLoreSmartOtherFollowUp(null);
                                     }}
                                   />
@@ -12383,30 +12434,13 @@ export function ArchitecturalCanvasApp({
                                       resolution: "skipped_best_judgement",
                                     }),
                                   );
+                                  setLoreSmartManualQuestionId(null);
                                   setLoreSmartOtherFollowUp(null);
                                 }}
                               >
                                 Skip, use best judgement
                               </Button>
                             </div>
-                          </div>
-                        ) : loreSmartQuestionUi.questionsComplete ? (
-                          <div className={styles.smartImportWizardComplete}>
-                            <p className={styles.smartImportWizardCompleteTitle}>You&apos;re all set</p>
-                            <p className={styles.smartImportWizardCompleteBody}>
-                              Your answers are ready. Apply the import to add this content to your
-                              space.
-                            </p>
-                            <Button
-                              size="md"
-                              variant="primary"
-                              tone="solid"
-                              type="button"
-                              disabled={loreImportCommitting}
-                              onClick={() => void commitSmartLoreImport()}
-                            >
-                              {loreImportCommitting ? "Applying…" : "Apply import to canvas"}
-                            </Button>
                           </div>
                         ) : loreSmartQuestionUi.focusQuestion ? (
                           (() => {
@@ -12424,7 +12458,12 @@ export function ArchitecturalCanvasApp({
                                   : [],
                             );
                             const otherSelected = ans?.resolution === "other_text";
-                            const step = loreSmartQuestionUi.ordered.indexOf(c) + 1;
+                            const step = loreSmartQuestionUi.stableQuestionOrder.indexOf(c) + 1;
+                            const canGoBack = step > 1;
+                            const prevQuestion =
+                              canGoBack
+                                ? loreSmartQuestionUi.stableQuestionOrder[step - 2] ?? null
+                                : null;
                             return (
                               <article className={styles.smartImportWizardCard}>
                                 <p className={styles.smartImportWizardEyebrow}>
@@ -12459,6 +12498,7 @@ export function ArchitecturalCanvasApp({
                                                 selectedOptionIds: base,
                                               }),
                                             );
+                                            setLoreSmartManualQuestionId(null);
                                             setLoreSmartOtherFollowUp((cur) =>
                                               cur?.clarificationId === c.id ? null : cur,
                                             );
@@ -12489,6 +12529,7 @@ export function ArchitecturalCanvasApp({
                                                 selectedOptionIds: [opt.id],
                                               }),
                                             );
+                                            setLoreSmartManualQuestionId(null);
                                             setLoreSmartOtherFollowUp((cur) =>
                                               cur?.clarificationId === c.id ? null : cur,
                                             );
@@ -12503,7 +12544,8 @@ export function ArchitecturalCanvasApp({
                                       type="radio"
                                       name={`clarify-other-${c.id}`}
                                       checked={otherSelected}
-                                      onChange={() =>
+                                      onChange={() => {
+                                        setLoreSmartManualQuestionId(c.id);
                                         setLoreSmartClarificationAnswers((prev) =>
                                           upsertClarificationAnswer(prev, {
                                             clarificationId: c.id,
@@ -12511,7 +12553,7 @@ export function ArchitecturalCanvasApp({
                                             otherText: ans?.otherText ?? "",
                                           }),
                                         )
-                                      }
+                                      }}
                                     />
                                     <span>Other…</span>
                                   </label>
@@ -12520,19 +12562,45 @@ export function ArchitecturalCanvasApp({
                                       className={styles.smartImportWizardTextarea}
                                       placeholder="Type your answer (at least a few characters)…"
                                       value={ans?.otherText ?? ""}
+                                      onFocus={() => setLoreSmartManualQuestionId(c.id)}
+                                      onBlur={() => {
+                                        const nextLen = ans?.otherText?.trim().length ?? 0;
+                                        if (nextLen >= 4) {
+                                          setLoreSmartManualQuestionId(null);
+                                        }
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.stopPropagation();
+                                        }
+                                      }}
                                       onChange={(e) =>
-                                        setLoreSmartClarificationAnswers((prev) =>
-                                          upsertClarificationAnswer(prev, {
-                                            clarificationId: c.id,
-                                            resolution: "other_text",
-                                            otherText: e.target.value,
-                                          }),
-                                        )
+                                        {
+                                          setLoreSmartManualQuestionId(c.id);
+                                          setLoreSmartClarificationAnswers((prev) =>
+                                            upsertClarificationAnswer(prev, {
+                                              clarificationId: c.id,
+                                              resolution: "other_text",
+                                              otherText: e.target.value,
+                                            }),
+                                          );
+                                        }
                                       }
                                     />
                                   ) : null}
                                 </div>
                                 <div className={styles.smartImportWizardFooter}>
+                                  {prevQuestion ? (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      tone="card-dark"
+                                      type="button"
+                                      onClick={() => setLoreSmartManualQuestionId(prevQuestion.id)}
+                                    >
+                                      Back
+                                    </Button>
+                                  ) : null}
                                   {recommendedClarificationOptionId(c) ? (
                                     <Button
                                       size="sm"
@@ -12549,6 +12617,7 @@ export function ArchitecturalCanvasApp({
                                             skipDefaultOptionId: def,
                                           }),
                                         );
+                                        setLoreSmartManualQuestionId(null);
                                         setLoreSmartOtherFollowUp((cur) =>
                                           cur?.clarificationId === c.id ? null : cur,
                                         );
@@ -12557,10 +12626,40 @@ export function ArchitecturalCanvasApp({
                                       Use recommended
                                     </Button>
                                   ) : null}
+                                  {otherSelected ? (
+                                    <Button
+                                      size="sm"
+                                      variant="primary"
+                                      tone="solid"
+                                      type="button"
+                                      disabled={(ans?.otherText?.trim().length ?? 0) < 4}
+                                      onClick={() => setLoreSmartManualQuestionId(null)}
+                                    >
+                                      Continue
+                                    </Button>
+                                  ) : null}
                                 </div>
                               </article>
                             );
                           })()
+                        ) : loreSmartQuestionUi.questionsComplete ? (
+                          <div className={styles.smartImportWizardComplete}>
+                            <p className={styles.smartImportWizardCompleteTitle}>You&apos;re all set</p>
+                            <p className={styles.smartImportWizardCompleteBody}>
+                              Your answers are ready. Apply the import to add this content to your
+                              space.
+                            </p>
+                            <Button
+                              size="md"
+                              variant="primary"
+                              tone="solid"
+                              type="button"
+                              disabled={loreImportCommitting}
+                              onClick={() => void commitSmartLoreImport()}
+                            >
+                              {loreImportCommitting ? "Applying…" : "Apply import to canvas"}
+                            </Button>
+                          </div>
                         ) : null}
                       </>
                     )}
@@ -12763,6 +12862,7 @@ export function ArchitecturalCanvasApp({
                       selected={false}
                       showTape={!entity.stackId}
                       onBodyCommit={updateNodeBody}
+                      onFactionRosterChange={updateFactionRoster}
                       onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
                       wikiLinkAssist={makeWikiLinkAssist(entity.id)}
                       onRichDocCommand={
@@ -12988,18 +13088,6 @@ export function ArchitecturalCanvasApp({
                     if (!showReviewBar) return null;
                     return (
                       <div className={styles.focusAiReviewBar} role="status" aria-live="polite">
-                        <Tag
-                          variant={
-                            focusSurface === "code" ||
-                            focusSurface === "character-hybrid" ||
-                            focusSurface === "location-hybrid" ||
-                            focusSurface === "faction-hybrid"
-                              ? "llmFocusDark"
-                              : "llmLight"
-                          }
-                        >
-                          Unreviewed
-                        </Tag>
                         <ArchitecturalTooltip
                           content="Bind all pending AI/import text and mark this note reviewed"
                           side="bottom"
@@ -13060,6 +13148,18 @@ export function ArchitecturalCanvasApp({
                 }
                 focusHtml={focusBody}
                 onChangeFocusHtml={setFocusBody}
+                factionRoster={
+                  focusSurface === "faction-hybrid" && activeNodeId
+                    ? graph.entities[activeNodeId]?.kind === "content"
+                      ? (graph.entities[activeNodeId].contentJson.factionRoster ?? [])
+                      : []
+                    : undefined
+                }
+                onFactionRosterChange={
+                  focusSurface === "faction-hybrid" && activeNodeId
+                    ? (nextRoster) => updateFactionRoster(activeNodeId, nextRoster)
+                    : undefined
+                }
                 focusDocumentKey={activeNodeId ?? ""}
                 className={`${styles.focusBody} ${
                   focusSurface === "character-hybrid"
