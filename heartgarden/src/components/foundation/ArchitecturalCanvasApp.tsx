@@ -346,6 +346,7 @@ import {
   resolveActiveRichEditorSurface,
   resolveProseCommandTarget,
 } from "@/src/lib/rich-editor-surface";
+import { useChunkLoadRecovery } from "@/src/lib/chunk-load-recovery";
 const VigilFlowRevealOverlay = dynamic(
   () =>
     import("@/src/components/transition-experiment/VigilFlowRevealOverlay").then((mod) => ({
@@ -2121,6 +2122,7 @@ export function ArchitecturalCanvasApp({
 }: {
   scenario?: ArchitecturalCanvasScenario;
 }) {
+  useChunkLoadRecovery();
   const [graph, setGraph] = useState<CanvasGraph>(() =>
     scenario === "default"
       ? createBootstrapPendingGraph()
@@ -8098,8 +8100,10 @@ export function ArchitecturalCanvasApp({
             );
           } finally {
             setLoreSmartPlanningJobId(null);
-            setLoreSmartPlanning(false);
-            setLoreSmartPlanningProgress(null);
+            if (!planningFailed) {
+              setLoreSmartPlanning(false);
+              setLoreSmartPlanningProgress(null);
+            }
           }
           return;
         }
