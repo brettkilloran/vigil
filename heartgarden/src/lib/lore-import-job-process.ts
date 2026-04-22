@@ -10,6 +10,15 @@ import type { VigilDb } from "@/src/lib/spaces";
 
 /** Re-queue jobs stuck in `processing` after a crash or serverless timeout. */
 export const STALE_LORE_IMPORT_PROCESSING_MS = 15 * 60 * 1000;
+const LORE_IMPORT_JOB_CANCELLED_CODE = "lore_import_job_cancelled";
+
+class LoreImportJobCancelledError extends Error {
+  code = LORE_IMPORT_JOB_CANCELLED_CODE;
+  constructor(jobId: string) {
+    super(`Lore import job cancelled (${jobId})`);
+    this.name = "LoreImportJobCancelledError";
+  }
+}
 
 function isMissingProgressColumnsError(error: unknown): boolean {
   const source =
@@ -95,6 +104,20 @@ async function updateLoreImportJobFailed(
   }
 }
 
+async function assertLoreImportJobNotCancelled(db: VigilDb, jobId: string): Promise<void> {
+  const [row] = await db
+    .select({ status: loreImportJobs.status })
+    .from(loreImportJobs)
+    .where(eq(loreImportJobs.id, jobId))
+    .limit(1);
+  if (!row) {
+    throw new LoreImportJobCancelledError(jobId);
+  }
+  if (row.status === "cancelled") {
+    throw new LoreImportJobCancelledError(jobId);
+  }
+}
+
 export async function processLoreImportJob(jobId: string): Promise<void> {
   const db = tryGetDb();
   if (!db) {
@@ -147,6 +170,7 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
   let lastPhase = "queued";
 
   try {
+    await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
     const plan = await buildLoreImportPlan({
       db: db as VigilDb,
       apiKey: key,
@@ -155,6 +179,7 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
       importBatchId: job.importBatchId,
       fileName: job.fileName ?? undefined,
       onProgress: async (progress) => {
+        await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
         lastPhase = progress.phase || lastPhase;
         await updateLoreImportJobProgress(db as VigilDb, jobId, progress);
       },
@@ -174,7 +199,9 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
       phase: "persist_review",
       message: "Persisting review queue and final plan",
     });
+    await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
     await persistImportReviewQueueFromPlan(db as VigilDb, job.spaceId, parsedPlan.data, true);
+    await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
 
     await db
       .update(loreImportJobs)
@@ -186,6 +213,13 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
       })
       .where(eq(loreImportJobs.id, jobId));
   } catch (e) {
+    if (
+      e instanceof LoreImportJobCancelledError ||
+      (e instanceof Error &&
+        (e as { code?: string }).code === LORE_IMPORT_JOB_CANCELLED_CODE)
+    ) {
+      return;
+    }
     const msg = e instanceof Error ? e.message : "Plan failed";
     await updateLoreImportJobFailed(db as VigilDb, jobId, {
       error: msg,

@@ -249,3 +249,79 @@ export async function GET(req: Request, ctx: RouteCtx) {
       : {}),
   });
 }
+
+export async function DELETE(req: Request, ctx: RouteCtx) {
+  const attemptId = req.headers.get("x-heartgarden-import-attempt")?.trim() || "unknown";
+  const bootCtx = await getHeartgardenApiBootContext();
+  const denied = enforceGmOnlyBootContext(bootCtx);
+  if (denied) return denied;
+
+  const { jobId } = await ctx.params;
+  if (!/^[0-9a-f-]{36}$/i.test(jobId)) {
+    return Response.json({ ok: false, error: "Invalid job id" }, { status: 400 });
+  }
+
+  const url = new URL(req.url);
+  const spaceId = url.searchParams.get("spaceId")?.trim() ?? "";
+  if (!/^[0-9a-f-]{36}$/i.test(spaceId)) {
+    return Response.json(
+      { ok: false, error: "Query parameter spaceId (uuid) is required" },
+      { status: 400 },
+    );
+  }
+
+  const db = tryGetDb();
+  if (!db) {
+    return Response.json(
+      { ok: false, error: "Database not configured" },
+      { status: 503 },
+    );
+  }
+  if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, spaceId))) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+
+  const [job] = await db
+    .select({
+      id: loreImportJobs.id,
+      spaceId: loreImportJobs.spaceId,
+      status: loreImportJobs.status,
+    })
+    .from(loreImportJobs)
+    .where(eq(loreImportJobs.id, jobId))
+    .limit(1);
+
+  if (!job || job.spaceId !== spaceId) {
+    return Response.json({ ok: false, error: "Job not found" }, { status: 404 });
+  }
+
+  if (job.status === "ready" || job.status === "failed" || job.status === "cancelled") {
+    return Response.json({
+      ok: true,
+      attemptId,
+      jobId,
+      status: job.status,
+      cancelled: job.status === "cancelled",
+      mutable: false,
+    });
+  }
+
+  const now = new Date();
+  await db
+    .update(loreImportJobs)
+    .set({
+      status: "cancelled",
+      error: "Cancelled by user",
+      updatedAt: now,
+    })
+    .where(eq(loreImportJobs.id, jobId));
+
+  return Response.json({
+    ok: true,
+    attemptId,
+    jobId,
+    status: "cancelled",
+    cancelled: true,
+    mutable: true,
+  });
+}

@@ -80,3 +80,102 @@ describe("GET /api/lore/import/jobs/[jobId]", () => {
   });
 });
 
+describe("DELETE /api/lore/import/jobs/[jobId]", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    gmMayAccessSpaceIdAsyncMock.mockResolvedValue(true);
+  });
+
+  it("marks queued/processing jobs as cancelled", async () => {
+    const updateWhereMock = vi.fn().mockResolvedValue(undefined);
+    const db = {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [
+              {
+                id: "11111111-1111-4111-8111-111111111111",
+                spaceId: "22222222-2222-4222-8222-222222222222",
+                status: "processing",
+              },
+            ],
+          }),
+        }),
+      }),
+      update: () => ({
+        set: () => ({
+          where: updateWhereMock,
+        }),
+      }),
+    };
+    tryGetDbMock.mockReturnValue(db);
+
+    const { DELETE } = await import("./route");
+    const req = new Request(
+      "http://localhost/api/lore/import/jobs/11111111-1111-4111-8111-111111111111?spaceId=22222222-2222-4222-8222-222222222222",
+      { method: "DELETE" },
+    );
+    const res = await DELETE(req, {
+      params: Promise.resolve({ jobId: "11111111-1111-4111-8111-111111111111" }),
+    });
+    const payload = (await res.json()) as {
+      ok: boolean;
+      status: string;
+      cancelled: boolean;
+      mutable: boolean;
+    };
+    expect(res.status).toBe(200);
+    expect(payload.ok).toBe(true);
+    expect(payload.status).toBe("cancelled");
+    expect(payload.cancelled).toBe(true);
+    expect(payload.mutable).toBe(true);
+    expect(updateWhereMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns immutable for already-ready jobs", async () => {
+    const updateWhereMock = vi.fn().mockResolvedValue(undefined);
+    const db = {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [
+              {
+                id: "11111111-1111-4111-8111-111111111111",
+                spaceId: "22222222-2222-4222-8222-222222222222",
+                status: "ready",
+              },
+            ],
+          }),
+        }),
+      }),
+      update: () => ({
+        set: () => ({
+          where: updateWhereMock,
+        }),
+      }),
+    };
+    tryGetDbMock.mockReturnValue(db);
+
+    const { DELETE } = await import("./route");
+    const req = new Request(
+      "http://localhost/api/lore/import/jobs/11111111-1111-4111-8111-111111111111?spaceId=22222222-2222-4222-8222-222222222222",
+      { method: "DELETE" },
+    );
+    const res = await DELETE(req, {
+      params: Promise.resolve({ jobId: "11111111-1111-4111-8111-111111111111" }),
+    });
+    const payload = (await res.json()) as {
+      ok: boolean;
+      status: string;
+      cancelled: boolean;
+      mutable: boolean;
+    };
+    expect(res.status).toBe(200);
+    expect(payload.ok).toBe(true);
+    expect(payload.status).toBe("ready");
+    expect(payload.cancelled).toBe(false);
+    expect(payload.mutable).toBe(false);
+    expect(updateWhereMock).not.toHaveBeenCalled();
+  });
+});
+
