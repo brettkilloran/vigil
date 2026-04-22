@@ -109,9 +109,11 @@ async function ensurePdfRuntimeGlobals(attemptId: string) {
 
   try {
     const canvas = await import("@napi-rs/canvas");
-    globals.DOMMatrix ??= canvas.DOMMatrix;
-    globals.ImageData ??= canvas.ImageData;
-    globals.Path2D ??= canvas.Path2D;
+    // `@napi-rs/canvas`’s DOMMatrix is structurally enough for `pdf-parse` but not identical to
+    // the lib.dom global type in TS (e.g. prototype method differences). Cast at the boundary.
+    globals.DOMMatrix ??= canvas.DOMMatrix as unknown as NonNullable<typeof globalThis.DOMMatrix>;
+    globals.ImageData ??= canvas.ImageData as unknown as NonNullable<typeof globalThis.ImageData>;
+    globals.Path2D ??= canvas.Path2D as unknown as NonNullable<typeof globalThis.Path2D>;
   } catch (error) {
     console.warn("[lore-import] @napi-rs/canvas unavailable; using PDF fallbacks", {
       attemptId,
@@ -119,9 +121,9 @@ async function ensurePdfRuntimeGlobals(attemptId: string) {
     });
   }
 
-  globals.DOMMatrix ??= FallbackDOMMatrix;
-  globals.ImageData ??= FallbackImageData;
-  globals.Path2D ??= FallbackPath2D;
+  globals.DOMMatrix ??= FallbackDOMMatrix as unknown as NonNullable<typeof globalThis.DOMMatrix>;
+  globals.ImageData ??= FallbackImageData as unknown as NonNullable<typeof globalThis.ImageData>;
+  globals.Path2D ??= FallbackPath2D as unknown as NonNullable<typeof globalThis.Path2D>;
 }
 
 function stripBom(text: string) {

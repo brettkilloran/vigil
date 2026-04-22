@@ -5,6 +5,12 @@ const withBundleAnalyzer = bundleAnalyzer({ enabled: process.env.ANALYZE === "1"
 
 const nextConfig: NextConfig = {
   /**
+   * Native bindings: Turbopack cannot place `@napi-rs/canvas` in ESM app-route chunks. Keep it
+   * external so PDF parsing in `/api/lore/import/parse` loads it from `node_modules` at runtime
+   * (Vercel Linux build + local dev).
+   */
+  serverExternalPackages: ["@napi-rs/canvas"],
+  /**
    * Expose Vercel’s commit SHA to the client bundle so boot / about strings can show a unique
    * deploy id alongside semver from `package.json` (see `src/lib/app-version.ts`).
    */
