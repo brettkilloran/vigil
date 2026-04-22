@@ -2894,9 +2894,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: color-mix(in oklch, var(--sys-color-black) 52%, transparent);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  background: color-mix(in oklch, var(--sys-color-black) 50%, transparent);
   pointer-events: auto;
 }
 
@@ -2905,11 +2903,11 @@
   max-height: min(86vh, 720px);
   overflow-y: auto;
   border-radius: var(--chrome-panel-radius);
-  border: 1px solid var(--ui-glass-border);
-  background: var(--ui-glass-bg);
-  backdrop-filter: var(--chrome-glass-filter);
-  -webkit-backdrop-filter: var(--chrome-glass-filter);
-  box-shadow: var(--chrome-glass-shadow);
+  border: 1px solid var(--sem-border-subtle, rgba(255 255 255 / 0.08));
+  background: var(--sys-color-neutral-900);
+  box-shadow:
+    0 16px 70px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 var(--sem-overlay-white-08);
   color: var(--vigil-label);
   padding: 14px 16px;
 }

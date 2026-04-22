@@ -538,8 +538,8 @@ function toHumanPhaseLabel(phase?: string): string {
   const key = String(phase || "").trim().toLowerCase();
   if (!key) return "Preparing import plan";
   const labels: Record<string, string> = {
-    queued: "Queued",
-    fallback_plan: "Direct planning fallback",
+    queued: "In queue",
+    fallback_plan: "Local planning",
     chunking: "Analyzing document chunks",
     outline: "Building outline",
     vault_retrieval: "Reading related vault context",
@@ -2352,16 +2352,20 @@ export function ArchitecturalCanvasApp({
       typeof queueFailureHintRaw === "string" && queueFailureHintRaw.trim().length > 0
         ? queueFailureHintRaw.trim()
         : null;
-    const mode =
-      phase === "fallback_plan"
-        ? "Fallback (Direct)"
-        : phase === "queued"
-          ? "Queued"
-          : "Planning";
+    const phaseLabel = toHumanPhaseLabel(phase);
+    const rawDetail = typeof progress?.message === "string" ? progress.message.trim() : "";
+    const redundantQueuedCopy = phase === "queued" && /^queued\b/i.test(rawDetail);
+    const detail =
+      redundantQueuedCopy
+        ? null
+        : rawDetail.length > 0
+          ? rawDetail
+          : phase === "queued"
+            ? null
+            : "Preparing smart import plan";
     return {
-      phaseLabel: toHumanPhaseLabel(phase),
-      mode,
-      detail: progress?.message?.trim() || "Preparing smart import plan",
+      phaseLabel,
+      detail,
       stepText:
         typeof progress?.step === "number" && typeof progress?.total === "number"
           ? `${progress.step}/${progress.total}`
@@ -7709,10 +7713,7 @@ export function ArchitecturalCanvasApp({
           setLoreSmartIncludeSource(true);
           setLoreSmartTab("structure");
           setLoreSmartPlanning(true);
-          setLoreSmartPlanningProgress({
-            phase: "queued",
-            message: "Queued for smart import planning",
-          });
+          setLoreSmartPlanningProgress({ phase: "queued" });
           const applySmartPlanToUi = (plan: LoreImportPlan) => {
             setLoreSmartReview({
               plan,
@@ -11992,9 +11993,6 @@ export function ArchitecturalCanvasApp({
             <div className={styles.smartImportPlanningCard}>
               <div className={styles.smartImportPlanningHeader}>
                 <p className={styles.smartImportPlanningTitle}>Planning import</p>
-                <span className={styles.smartImportPlanningModeBadge}>
-                  {loreSmartPlanningUi.mode}
-                </span>
               </div>
               <p className={styles.smartImportPlanningPhase}>{loreSmartPlanningUi.phaseLabel}</p>
               <div className={styles.smartImportPlanningProgressTrack}>
@@ -12007,12 +12005,16 @@ export function ArchitecturalCanvasApp({
                   <div className={styles.smartImportPlanningProgressIndeterminate} />
                 )}
               </div>
-              <div className={styles.smartImportPlanningDetailRow}>
-                <span className={styles.smartImportPlanningDetail}>{loreSmartPlanningUi.detail}</span>
-                {loreSmartPlanningUi.stepText ? (
-                  <span className={styles.smartImportPlanningStep}>{loreSmartPlanningUi.stepText}</span>
-                ) : null}
-              </div>
+              {loreSmartPlanningUi.detail || loreSmartPlanningUi.stepText ? (
+                <div className={styles.smartImportPlanningDetailRow}>
+                  {loreSmartPlanningUi.detail ? (
+                    <span className={styles.smartImportPlanningDetail}>{loreSmartPlanningUi.detail}</span>
+                  ) : null}
+                  {loreSmartPlanningUi.stepText ? (
+                    <span className={styles.smartImportPlanningStep}>{loreSmartPlanningUi.stepText}</span>
+                  ) : null}
+                </div>
+              ) : null}
               {loreSmartPlanningUi.queueFailureHint ? (
                 <p className={styles.smartImportPlanningWarning}>
                   Queue detail: {loreSmartPlanningUi.queueFailureHint}
