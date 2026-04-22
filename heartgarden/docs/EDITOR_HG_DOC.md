@@ -38,10 +38,11 @@ Provenance for **Heartgarden AI or import output that is not yet reviewed** is m
 
 - **Styling:** Semantic tokens in `app/globals.css` (e.g. `--sem-text-ai-pending`, border/underline mix). Scoped editor rules in `HeartgardenDocEditor.module.css` and canvas/focus body rules in `ArchitecturalCanvasApp.module.css` where hgDoc appears inside `.nodeBody` / `.focusBody`.
 - **Clearing:** Edits inside a pending span shrink/clear the mark (ProseMirror plugin + `appendTransaction` in `hg-doc/hg-ai-pending-mark.ts`); programmatic strip uses `remove-hg-ai-pending-range.ts` with history metadata so undo/redo stay coherent.
-- **Margin “Bind”:** `HeartgardenDocEditor` can render `HgAiPendingEditorGutter.tsx` — one control per collected pending range (`collect-hg-ai-pending-ranges.ts`) to clear that span without selecting text.
-- **Strip helpers:** `strip-hg-ai-pending.ts` removes marks from hgDoc JSON and unwraps matching spans in HTML — used when the user **Accepts** review from the card chrome (`ArchitecturalNodeCard` / `acceptAiReviewForEntity` in `ArchitecturalCanvasApp.tsx`).
-- **Item-level flag:** `items.entity_meta.aiReview` (`"pending"` | cleared) drives the **Unreviewed** tag when the body still contains pending markup; see `docs/FEATURES.md` and import paths in `lore-import-apply.ts` / `lore-import-commit.ts`.
-- **Surface coverage:** **Bind** and full TipTap behavior apply wherever **`HeartgardenDocEditor`** is mounted. Lore **canvas** HTML plates still inherit **global** pending appearance for wrapped spans but do not use the hgDoc gutter until those bodies are hgDoc.
+- **Margin “Bind”:** `HeartgardenDocEditor` can render `HgAiPendingEditorGutter.tsx` — one control per collected pending range (`collect-hg-ai-pending-ranges.ts`) to clear that span without selecting text. The gutter auto-hides when pending coverage indicates the note is mostly generated, so review uses bulk action instead of many per-passage controls.
+- **Bulk “Bind all”:** Focus mode review bar provides **Bind all** to clear all pending spans and mark the note reviewed in one action.
+- **Strip helpers:** `strip-hg-ai-pending.ts` removes marks from hgDoc JSON and unwraps matching spans in HTML — used by the bulk bind action in `ArchitecturalCanvasApp.tsx`.
+- **Item-level flag:** `items.entity_meta.aiReview` (`"pending"` | `"accepted"` | `"cleared"`) drives the **Unreviewed** tag whenever review is still actionable (pending metadata and/or pending body markup); see `docs/FEATURES.md` and import paths in `lore-import-apply.ts` / `lore-import-commit.ts`.
+- **Surface coverage:** Per-passage **Bind** controls are focus-oriented. Canvas hgDoc cards suppress gutter bind controls; lore **canvas** HTML plates still inherit **global** pending appearance for wrapped spans but do not use the hgDoc gutter until those bodies are hgDoc.
 
 ## Deprecation posture
 

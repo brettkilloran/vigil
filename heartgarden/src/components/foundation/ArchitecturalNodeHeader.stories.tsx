@@ -50,7 +50,6 @@ export const WithAiReviewBadge: Story = {
   args: {
     aiReviewPending: true,
     title: "Merged import",
-    onAcceptAi: () => {},
   },
 };
 

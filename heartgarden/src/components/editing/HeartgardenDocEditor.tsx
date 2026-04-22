@@ -55,7 +55,7 @@ export type HeartgardenDocEditorProps = {
   /** Syntax token colors tuned for dark code panels (snippet focus + canvas code cards). */
   codeSyntaxDark?: boolean;
 
-  /** Right margin: one Accept control per pending AI span (hgAiPending mark). Default true. */
+  /** Right margin: one Bind control per pending AI span (hgAiPending mark). Default true. */
   showAiPendingGutter?: boolean;
 };
 

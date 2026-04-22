@@ -1502,7 +1502,7 @@ span.hgAiPending {
   -webkit-box-decoration-break: clone;
 }
 
-/* Stronger preview when a gutter “Accept” control targets this span */
+/* Stronger preview when a gutter Bind control targets this span */
 [data-hg-ai-pending="true"].hgAiPending--gutter-hover,
 span.hgAiPending.hgAiPending--gutter-hover {
   background: var(--sem-surface-llm-pending-hover);

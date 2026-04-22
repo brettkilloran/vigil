@@ -33,7 +33,14 @@ export const crossFolderRefSchema = z
   })
   .strip();
 
-export const aiReviewStateSchema = z.enum(["pending", "accepted"]);
+export const AI_REVIEW_PENDING = "pending";
+export const AI_REVIEW_ACCEPTED = "accepted";
+export const AI_REVIEW_CLEARED = "cleared";
+export const aiReviewStateSchema = z.enum([
+  AI_REVIEW_PENDING,
+  AI_REVIEW_ACCEPTED,
+  AI_REVIEW_CLEARED,
+]);
 
 /**
  * Zod schema for the subset of `items.entity_meta` keys the importer knows about.
@@ -59,6 +66,25 @@ export type ImportedEntityMeta = z.infer<typeof importedEntityMetaSchema>;
 export type CrossFolderRef = z.infer<typeof crossFolderRefSchema>;
 export type ImportProvenance = z.infer<typeof importProvenanceSchema>;
 export type AiReviewState = z.infer<typeof aiReviewStateSchema>;
+
+export function readAiReviewState(entityMeta: Record<string, unknown> | null | undefined): AiReviewState | null {
+  const raw = entityMeta?.aiReview;
+  if (raw === AI_REVIEW_PENDING || raw === AI_REVIEW_ACCEPTED || raw === AI_REVIEW_CLEARED) {
+    return raw;
+  }
+  return null;
+}
+
+export function isAiReviewPending(entityMeta: Record<string, unknown> | null | undefined): boolean {
+  return readAiReviewState(entityMeta) === AI_REVIEW_PENDING;
+}
+
+export function hasActionableAiReview(
+  entityMeta: Record<string, unknown> | null | undefined,
+  hasPendingBodyMarkup: boolean,
+): boolean {
+  return hasPendingBodyMarkup || isAiReviewPending(entityMeta);
+}
 
 /**
  * Parse a raw `items.entity_meta` blob into the typed shape. Returns null when the

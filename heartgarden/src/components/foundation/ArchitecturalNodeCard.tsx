@@ -68,7 +68,6 @@ export function ArchitecturalNodeHeader({
   buttonTone = "card-light",
   onExpand,
   aiReviewPending = false,
-  onAcceptAi,
   compact = false,
 }: {
   title: ReactNode;
@@ -76,9 +75,8 @@ export function ArchitecturalNodeHeader({
   expandLabel?: string;
   buttonTone?: ButtonTone;
   onExpand?: () => void;
-  /** When true, show a small badge and optional Accept control for import / LLM text. */
+  /** When true, show a small badge for import / LLM text pending review. */
   aiReviewPending?: boolean;
-  onAcceptAi?: () => void;
   /** Tighter bar + smaller expand control — closer to title-only document headers. */
   compact?: boolean;
 }) {
@@ -110,25 +108,6 @@ export function ArchitecturalNodeHeader({
         <span className={styles.nodeTitle}>{title}</span>
       </div>
       <div className={styles.nodeActions}>
-        {aiReviewPending && onAcceptAi ? (
-          <ArchitecturalTooltip content="Mark AI/import text as reviewed (clears highlight)" side="bottom">
-            <Button
-              type="button"
-              size="xs"
-              variant="ghost"
-              tone={buttonTone}
-              className={styles.nodeBtn}
-              data-accept-ai-btn="true"
-              aria-label="Accept AI text"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAcceptAi();
-              }}
-            >
-              Accept
-            </Button>
-          </ArchitecturalTooltip>
-        ) : null}
         {showExpand ? (
           <ArchitecturalTooltip content={expandLabel} side="bottom" delayMs={320}>
             <Button
@@ -187,6 +166,7 @@ export function ArchitecturalNodeBody({
         className={`${styles.nodeBody} ${className ?? ""}`.trim()}
         value={codeTheme ? normalizeHgDocForCodeTheme(bodyDoc ?? EMPTY_HG_DOC) : bodyDoc ?? EMPTY_HG_DOC}
         codeSyntaxDark={codeTheme}
+        showAiPendingGutter={false}
         editable={editable}
         placeholder={emptyPlaceholder ?? "Write here, or type / for blocks…"}
         onChange={(doc) => onCommitPayload?.({ kind: "hgDoc", doc })}
@@ -242,7 +222,6 @@ export function ArchitecturalNodeCard({
   factionRoster,
   bodyDoc,
   aiReviewPending = false,
-  onAcceptAiReview,
 }: {
   id: string;
   title: string;
@@ -269,9 +248,8 @@ export function ArchitecturalNodeCard({
   loreCard?: LoreCard | null;
   /** Roster rows for faction cards (`hgArch.factionRoster`) — thread targets use `data-faction-roster-entry-id`. */
   factionRoster?: FactionRosterEntry[];
-  /** From `items.entity_meta.aiReview` — show Unreviewed chip + Accept when pending. */
+  /** From `items.entity_meta.aiReview` and body pending marks — show Unreviewed chip when actionable. */
   aiReviewPending?: boolean;
-  onAcceptAiReview?: () => void;
 }) {
   const isMediaNode = theme === "media";
   const documentVariant: "hgDoc" | "html" =
@@ -389,7 +367,6 @@ export function ArchitecturalNodeCard({
         buttonTone={theme === "code" ? "card-dark" : "card-light"}
         onExpand={() => onExpand(id)}
         aiReviewPending={aiReviewPending}
-        onAcceptAi={onAcceptAiReview}
       />
       <ArchitecturalNodeBody
         nodeId={id}

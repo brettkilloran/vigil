@@ -6,7 +6,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
-import { collectHgAiPendingRanges } from "@/src/lib/hg-doc/collect-hg-ai-pending-ranges";
+import { collectHgAiPendingRangeMetrics } from "@/src/lib/hg-doc/collect-hg-ai-pending-ranges";
 import { removeHgAiPendingRange } from "@/src/lib/hg-doc/remove-hg-ai-pending-range";
 
 import styles from "@/src/components/editing/HgAiPendingEditorGutter.module.css";
@@ -18,6 +18,7 @@ const BIND_TOP_INSET_PX = -4;
 
 /** Min vertical gap between stacked Bind controls when several pending runs sit on one line. */
 const MIN_BIND_STACK_GAP_PX = 26;
+const MOSTLY_GENERATED_PENDING_COVERAGE_THRESHOLD = 0.68;
 
 function findPendingSpanForRange(editor: Editor, from: number): HTMLElement | null {
   const maxPos = Math.max(0, editor.state.doc.content.size - 1);
@@ -59,12 +60,14 @@ export function HgAiPendingEditorGutter({ editor, wrapRef }: HgAiPendingEditorGu
   const [tops, setTops] = useState<number[]>([]);
   const [hovered, setHovered] = useState<number | null>(null);
 
-  const ranges = useMemo(
-    () => collectHgAiPendingRanges(editor),
+  const pending = useMemo(
+    () => collectHgAiPendingRangeMetrics(editor),
     // docVersion bumps on TipTap update/selectionUpdate; editor ref is stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- docVersion
     [editor, docVersion],
   );
+  const ranges = pending.ranges;
+  const hideRangeBinds = pending.pendingCoverage >= MOSTLY_GENERATED_PENDING_COVERAGE_THRESHOLD;
 
   useEffect(() => {
     const bump = () => setDocVersion((v) => v + 1);
@@ -142,7 +145,7 @@ export function HgAiPendingEditorGutter({ editor, wrapRef }: HgAiPendingEditorGu
     };
   }, [editor, safeHovered, ranges]);
 
-  if (ranges.length === 0) return null;
+  if (ranges.length === 0 || hideRangeBinds) return null;
 
   return (
     <div className={styles.rail} ref={railRef}>

@@ -159,7 +159,6 @@ import {
   LINK_TYPE_GROUP_HEADINGS,
 } from "@/src/lib/lore-link-types";
 import { validateClarificationAnswersForApply } from "@/src/lib/lore-import-clarifications";
-import { computeLoreImportPipelinePercent } from "@/src/lib/lore-import-pipeline-progress";
 import type {
   ClarificationAnswer,
   LoreImportClarificationItem,
@@ -177,6 +176,7 @@ import {
 } from "@/src/lib/neon-sync-bus";
 import { parseJsonBody, syncFailureFromApiResponse } from "@/src/lib/sync-error-diagnostic";
 import {
+  formatLoreImportFailureReport,
   parseLoreImportJsonBody,
   type LoreImportFailureDetail,
   type LoreImportStage,
@@ -293,6 +293,11 @@ import {
   stripHgAiPendingFromHgDocJson,
   stripHgAiPendingFromHtml,
 } from "@/src/lib/hg-doc/strip-hg-ai-pending";
+import {
+  AI_REVIEW_CLEARED,
+  hasActionableAiReview,
+  isAiReviewPending,
+} from "@/src/lib/entity-meta-schema";
 import {
   htmlFragmentToHgDocDoc,
   legacyCodeBodyHtmlToHgDocSeed,
@@ -551,12 +556,6 @@ function toHumanPhaseLabel(phase?: string): string {
     ready: "Plan ready",
   };
   return labels[key] ?? key.replace(/[_-]+/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
-}
-
-function toPlanningPercent(step?: number, total?: number): number | null {
-  if (typeof step !== "number" || typeof total !== "number" || total <= 0) return null;
-  const ratio = Math.max(0, Math.min(1, step / total));
-  return Math.round(ratio * 100);
 }
 
 function summarizeQueueCreateFailure(args: {
@@ -2347,28 +2346,6 @@ export function ArchitecturalCanvasApp({
   const loreSmartPlanningUi = useMemo(() => {
     const progress = loreSmartPlanningProgress;
     const phase = String(progress?.phase ?? "").trim();
-    const metaPctRaw = progress?.meta?.pipelinePercent;
-    const metaPercent =
-      typeof metaPctRaw === "number" && Number.isFinite(metaPctRaw)
-        ? Math.round(Math.max(0, Math.min(100, metaPctRaw)))
-        : typeof metaPctRaw === "string" && metaPctRaw.trim() !== ""
-          ? (() => {
-              const n = Number(metaPctRaw);
-              return Number.isFinite(n) ? Math.round(Math.max(0, Math.min(100, n))) : null;
-            })()
-          : null;
-    const derivedPercent =
-      metaPercent ??
-      (phase
-        ? computeLoreImportPipelinePercent(phase, {
-            step: progress?.step,
-            total: progress?.total,
-          })
-        : null);
-    const percent =
-      derivedPercent !== null && Number.isFinite(derivedPercent)
-        ? derivedPercent
-        : toPlanningPercent(progress?.step, progress?.total);
     const queueFailureHintRaw = progress?.meta?.queueFailureHint;
     const queueFailureHint =
       typeof queueFailureHintRaw === "string" && queueFailureHintRaw.trim().length > 0
@@ -2378,29 +2355,16 @@ export function ArchitecturalCanvasApp({
     const rawDetail = typeof progress?.message === "string" ? progress.message.trim() : "";
     const redundantQueuedCopy = phase === "queued" && /^queued\b/i.test(rawDetail);
     const detail =
-      redundantQueuedCopy
+      redundantQueuedCopy || rawDetail.length === 0 || /^queued\b/i.test(rawDetail)
         ? null
-        : rawDetail.length > 0
-          ? rawDetail
-          : phase === "queued"
-            ? null
-            : "Analyzing your document…";
+        : rawDetail;
+    const failed = phase === "failed";
     return {
+      phase,
       phaseLabel,
       detail,
-      stepText:
-        typeof progress?.step === "number" && typeof progress?.total === "number"
-          ? `${progress.step}/${progress.total}`
-          : null,
-      percent,
       queueFailureHint,
-      updatedAtText: progress?.updatedAt
-        ? new Date(progress.updatedAt).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          })
-        : null,
+      failed,
     };
   }, [loreSmartPlanningProgress]);
   const [loreSmartIncludeSource, setLoreSmartIncludeSource] = useState(true);
@@ -2440,6 +2404,14 @@ export function ArchitecturalCanvasApp({
     setLoreSmartPlanning(false);
     setLoreSmartPlanningProgress(null);
   }, [loreSmartPlanningJobId]);
+  const [loreSmartPlanningCopyState, setLoreSmartPlanningCopyState] = useState<
+    "idle" | "copied" | "failed"
+  >("idle");
+  useEffect(() => {
+    if (loreSmartPlanningCopyState === "idle") return;
+    const t = setTimeout(() => setLoreSmartPlanningCopyState("idle"), 1800);
+    return () => clearTimeout(t);
+  }, [loreSmartPlanningCopyState]);
   useEffect(() => {
     if (!loreSmartPlanning && !loreSmartReview) return;
     const onGlobalEsc = (event: KeyboardEvent) => {
@@ -2565,6 +2537,37 @@ export function ArchitecturalCanvasApp({
     [dockCreateDisabledBySyncError],
   );
   const loreImportFileInputRef = useRef<HTMLInputElement | null>(null);
+  const copyLoreSmartPlanningFailure = useCallback(() => {
+    const failure = loreImportFailure;
+    const progress = loreSmartPlanningProgress;
+    const payload = failure
+      ? formatLoreImportFailureReport(failure)
+      : `Smart import planning failed\n---\nphase: ${progress?.phase ?? "unknown"}\nmessage: ${
+          progress?.message ?? "(no message)"
+        }\nmeta: ${JSON.stringify(progress?.meta ?? {}, null, 2)}`;
+    if (!payload) return;
+    void navigator.clipboard.writeText(payload).then(
+      () => setLoreSmartPlanningCopyState("copied"),
+      () => setLoreSmartPlanningCopyState("failed"),
+    );
+  }, [loreImportFailure, loreSmartPlanningProgress]);
+  const retryLoreSmartPlanning = useCallback(() => {
+    setLoreImportFailure(null);
+    setLoreSmartPlanningJobId(null);
+    setLoreSmartPlanning(false);
+    setLoreSmartPlanningProgress(null);
+    setLoreSmartPlanningCopyState("idle");
+    requestAnimationFrame(() => {
+      loreImportFileInputRef.current?.click();
+    });
+  }, []);
+  const closeLoreSmartPlanningFailure = useCallback(() => {
+    setLoreImportFailure(null);
+    setLoreSmartPlanningJobId(null);
+    setLoreSmartPlanning(false);
+    setLoreSmartPlanningProgress(null);
+    setLoreSmartPlanningCopyState("idle");
+  }, []);
   const [galleryNodeId, setGalleryNodeId] = useState<string | null>(null);
   const galleryNodeIdRef = useRef<string | null>(null);
   const [galleryDraftTitle, setGalleryDraftTitle] = useState("");
@@ -3041,14 +3044,13 @@ export function ArchitecturalCanvasApp({
         neonSyncUnbumpPending();
         const ent = graphRef.current.entities[entityId];
         if (!ent || ent.kind !== "content") return;
-        const clearAiMeta =
-          ent.entityMeta?.aiReview === "pending" && !contentEntityHasHgAiPending(ent);
+        const clearAiMeta = isAiReviewPending(ent.entityMeta) && !contentEntityHasHgAiPending(ent);
         const patch: Record<string, unknown> = {
           contentText: contentPlainTextForEntity(ent),
           contentJson: buildContentJsonForContentEntity(ent),
         };
         if (clearAiMeta) {
-          patch.entityMetaMerge = { aiReview: "cleared" };
+          patch.entityMetaMerge = { aiReview: AI_REVIEW_CLEARED };
           setGraph((p) => {
             const cur = p.entities[entityId];
             if (!cur || cur.kind !== "content") return p;
@@ -3058,7 +3060,7 @@ export function ArchitecturalCanvasApp({
                 ...p.entities,
                 [entityId]: {
                   ...cur,
-                  entityMeta: { ...cur.entityMeta, aiReview: "cleared" },
+                  entityMeta: { ...cur.entityMeta, aiReview: AI_REVIEW_CLEARED },
                 },
               },
             };
@@ -4555,7 +4557,28 @@ export function ArchitecturalCanvasApp({
       if (!ent || ent.kind !== "content") return;
       const docPending = ent.bodyDoc != null && hgDocJsonHasHgAiPending(ent.bodyDoc);
       const htmlPending = htmlStringHasHgAiPending(ent.bodyHtml);
-      if (!docPending && !htmlPending) return;
+      const hasPendingMarkup = docPending || htmlPending;
+      if (!hasPendingMarkup) {
+        if (!isAiReviewPending(ent.entityMeta)) return;
+        setGraph((p) => {
+          const cur = p.entities[entityId];
+          if (!cur || cur.kind !== "content") return p;
+          return {
+            ...p,
+            entities: {
+              ...p.entities,
+              [entityId]: {
+                ...cur,
+                entityMeta: { ...cur.entityMeta, aiReview: AI_REVIEW_CLEARED },
+              },
+            },
+          };
+        });
+        void patchItemWithVersion(entityId, {
+          entityMetaMerge: { aiReview: AI_REVIEW_CLEARED },
+        });
+        return;
+      }
       recordUndoBeforeMutation();
       const useHg = contentEntityUsesHgDoc(ent);
       let nextDoc: JSONContent | null | undefined = ent.bodyDoc;
@@ -4577,7 +4600,7 @@ export function ArchitecturalCanvasApp({
         ...ent,
         bodyDoc: useHg ? nextDoc ?? undefined : undefined,
         bodyHtml: nextHtml,
-        entityMeta: { ...ent.entityMeta, aiReview: "cleared" },
+        entityMeta: { ...ent.entityMeta, aiReview: AI_REVIEW_CLEARED },
       };
       setGraph((p) => {
         const cur = p.entities[entityId];
@@ -4613,7 +4636,7 @@ export function ArchitecturalCanvasApp({
       void patchItemWithVersion(entityId, {
         contentText: contentPlainTextForEntity(merged),
         contentJson: buildContentJsonForContentEntity(merged),
-        entityMetaMerge: { aiReview: "cleared" },
+        entityMetaMerge: { aiReview: AI_REVIEW_CLEARED },
       });
     },
     [
@@ -4811,6 +4834,7 @@ export function ArchitecturalCanvasApp({
       getHgDocEditor("gallery-notes")?.getJSON() ?? galleryDraftNotesDoc,
     );
     const nextBody = setArchitecturalMediaNotes(entity.bodyHtml, notesHtml);
+    const clearAiMeta = isAiReviewPending(entity.entityMeta) && !htmlStringHasHgAiPending(nextBody);
     if (entity.title === nextTitle && entity.bodyHtml === nextBody) {
       closeMediaGallery();
       return;
@@ -4827,6 +4851,9 @@ export function ArchitecturalCanvasApp({
               ...e,
               title: nextTitle,
               bodyHtml: setArchitecturalMediaNotes(e.bodyHtml, notesHtml),
+              entityMeta: clearAiMeta
+                ? { ...e.entityMeta, aiReview: AI_REVIEW_CLEARED }
+                : e.entityMeta,
             },
           },
         };
@@ -4845,6 +4872,9 @@ export function ArchitecturalCanvasApp({
               title: nextTitle,
               bodyHtml: nextBodyPersist,
             }),
+            ...(clearAiMeta
+              ? { entityMetaMerge: { aiReview: AI_REVIEW_CLEARED } }
+              : {}),
           });
         });
       }
@@ -4975,6 +5005,15 @@ export function ArchitecturalCanvasApp({
               ? plainFactionPrimaryNameFromArchiveBodyHtml(nextBody).trim() ||
                 defaultTitleForLoreKind("faction")
               : focusTitle.trim() || "Untitled";
+        const nextBodyDoc = hgDefault ? structuredClone(focusDoc) : undefined;
+        const clearAiMeta =
+          isAiReviewPending(entity.entityMeta) &&
+          !contentEntityHasHgAiPending({
+            ...entity,
+            title: nextTitle,
+            bodyHtml: nextBody,
+            bodyDoc: nextBodyDoc,
+          });
         return {
           ...prev,
           entities: {
@@ -4983,7 +5022,10 @@ export function ArchitecturalCanvasApp({
               ...entity,
               title: nextTitle,
               bodyHtml: nextBody,
-              bodyDoc: hgDefault ? structuredClone(focusDoc) : undefined,
+              bodyDoc: nextBodyDoc,
+              entityMeta: clearAiMeta
+                ? { ...entity.entityMeta, aiReview: AI_REVIEW_CLEARED }
+                : entity.entityMeta,
             },
           },
         };
@@ -5020,10 +5062,21 @@ export function ArchitecturalCanvasApp({
             bodyHtml: nextBody,
             bodyDoc: hgDefault ? structuredClone(focusDoc) : undefined,
           };
+          const clearAiMeta =
+            isAiReviewPending(ent.entityMeta) && !contentEntityHasHgAiPending(merged);
+          const persistedMerged = clearAiMeta
+            ? {
+                ...merged,
+                entityMeta: { ...merged.entityMeta, aiReview: AI_REVIEW_CLEARED },
+              }
+            : merged;
           void patchItemWithVersion(aid, {
             title: nextTitle,
-            contentText: contentPlainTextForEntity(merged),
-            contentJson: buildContentJsonForContentEntity(merged),
+            contentText: contentPlainTextForEntity(persistedMerged),
+            contentJson: buildContentJsonForContentEntity(persistedMerged),
+            ...(clearAiMeta
+              ? { entityMetaMerge: { aiReview: AI_REVIEW_CLEARED } }
+              : {}),
           });
         });
       }
@@ -11306,10 +11359,7 @@ export function ArchitecturalCanvasApp({
                     <ArchitecturalLoreFactionArchiveCanvasNode
                       id={entity.id}
                       width={entity.width}
-                      tapeVariant={
-                        entity.tapeVariant ??
-                        tapeVariantForLoreCard("faction", entity.loreCard?.variant ?? "v4")
-                      }
+                      tapeVariant={tapeVariantForLoreCard("faction", entity.loreCard?.variant ?? "v4")}
                       tapeRotation={entity.tapeRotation}
                       bodyHtml={canonicalizeFactionBodyHtml(entity, entity.bodyHtml)}
                       factionRoster={entity.factionRoster ?? []}
@@ -11363,8 +11413,10 @@ export function ArchitecturalCanvasApp({
                       }
                       loreCard={entity.loreCard}
                       factionRoster={entity.loreCard?.kind === "faction" ? entity.factionRoster : undefined}
-                      aiReviewPending={entity.entityMeta?.aiReview === "pending"}
-                      onAcceptAiReview={() => acceptAiReviewForEntity(entity.id)}
+                      aiReviewPending={hasActionableAiReview(
+                        entity.entityMeta,
+                        contentEntityHasHgAiPending(entity),
+                      )}
                     />
                   )
                 ) : (
@@ -11572,10 +11624,7 @@ export function ArchitecturalCanvasApp({
                         <ArchitecturalLoreFactionArchiveCanvasNode
                           id={entity.id}
                           width={entity.width}
-                          tapeVariant={
-                            entity.tapeVariant ??
-                            tapeVariantForLoreCard("faction", entity.loreCard?.variant ?? "v4")
-                          }
+                          tapeVariant={tapeVariantForLoreCard("faction", entity.loreCard?.variant ?? "v4")}
                           tapeRotation={entity.tapeRotation}
                           bodyHtml={canonicalizeFactionBodyHtml(entity, entity.bodyHtml)}
                           factionRoster={entity.factionRoster ?? []}
@@ -11619,8 +11668,10 @@ export function ArchitecturalCanvasApp({
                           useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
                           loreCard={entity.loreCard}
                           factionRoster={entity.loreCard?.kind === "faction" ? entity.factionRoster : undefined}
-                          aiReviewPending={entity.entityMeta?.aiReview === "pending"}
-                          onAcceptAiReview={() => acceptAiReviewForEntity(entity.id)}
+                          aiReviewPending={hasActionableAiReview(
+                            entity.entityMeta,
+                            contentEntityHasHgAiPending(entity),
+                          )}
                         />
                       )
                     ) : (
@@ -11703,9 +11754,6 @@ export function ArchitecturalCanvasApp({
               /** Placeholder only; rope sim writes `d` imperatively (see rAF `step`). */
               const pathD = "M 0 0";
               const isCut = connectionMode === "cut";
-              const lt = connection.linkType ?? "pin";
-              const dash =
-                lt !== "pin" && lt !== "affiliation" ? ("10 7" as const) : undefined;
               return (
                 <g key={connection.id} data-connection-id={connection.id}>
                   {!isCut ? (
@@ -11740,7 +11788,7 @@ export function ArchitecturalCanvasApp({
                     className={`${styles.connectionStroke} ${
                       isCut ? styles.connectionStrokeCuttable : ""
                     } ${selectedConnectionId === connection.id ? styles.connectionStrokeSelected : ""}`}
-                    style={{ stroke: connection.color, strokeDasharray: dash }}
+                    style={{ stroke: connection.color }}
                     data-connection-id={connection.id}
                     onMouseDown={(event) => {
                       if (!isCut) return;
@@ -12027,63 +12075,108 @@ export function ArchitecturalCanvasApp({
         {loreSmartPlanning ? (
           <div
             className={styles.smartImportPlanningBackdrop}
-            role="status"
-            aria-live="polite"
-            aria-label="Smart import planning status"
+            role={loreSmartPlanningUi.failed ? "alertdialog" : "status"}
+            aria-live={loreSmartPlanningUi.failed ? "assertive" : "polite"}
+            aria-label={
+              loreSmartPlanningUi.failed
+                ? "Smart import failed"
+                : "Smart import planning status"
+            }
           >
             <div className={styles.smartImportPlanningCard}>
-              <div className={styles.smartImportPlanningHeader}>
-                <div className={styles.smartImportPlanningHeaderMain}>
-                  <span className={styles.smartImportPlanningEyebrow}>Smart import</span>
+              {loreSmartPlanningUi.failed ? (
+                <>
+                  <div className={styles.smartImportPlanningFailIcon} aria-hidden>
+                    <WarningCircle size={28} weight="fill" />
+                  </div>
+                  <p className={styles.smartImportPlanningPhase}>
+                    {loreImportFailure?.stage === "timeout"
+                      ? "Import is taking too long"
+                      : "Smart import failed"}
+                  </p>
+                  <p className={styles.smartImportPlanningError}>
+                    {loreImportFailure?.message ??
+                      loreSmartPlanningUi.detail ??
+                      "Smart import couldn't finish planning. Try again or copy the details below."}
+                  </p>
+                  {loreImportFailure?.recommendedAction ? (
+                    <p className={styles.smartImportPlanningDetail}>
+                      {loreImportFailure.recommendedAction}
+                    </p>
+                  ) : null}
+                  {loreImportFailure ? (
+                    <details className={styles.smartImportPlanningDetails}>
+                      <summary>Technical details</summary>
+                      <pre>{formatLoreImportFailureReport(loreImportFailure)}</pre>
+                    </details>
+                  ) : null}
+                  <div className={styles.smartImportPlanningActionsSplit}>
+                    <Button
+                      size="sm"
+                      variant="subtle"
+                      tone="glass"
+                      type="button"
+                      onClick={copyLoreSmartPlanningFailure}
+                      leadingIcon={<CopySimple size={14} weight="regular" />}
+                    >
+                      {loreSmartPlanningCopyState === "copied"
+                        ? "Copied"
+                        : loreSmartPlanningCopyState === "failed"
+                          ? "Copy failed"
+                          : "Copy details"}
+                    </Button>
+                    <div>
+                      <Button
+                        size="sm"
+                        variant="subtle"
+                        tone="glass"
+                        type="button"
+                        onClick={closeLoreSmartPlanningFailure}
+                      >
+                        Close
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        tone="solid"
+                        type="button"
+                        onClick={retryLoreSmartPlanning}
+                      >
+                        Retry
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className={styles.smartImportPlanningSpinner} aria-hidden>
+                    <span className={styles.smartImportPlanningSpinnerRing} />
+                  </div>
                   <p className={styles.smartImportPlanningPhase}>{loreSmartPlanningUi.phaseLabel}</p>
-                </div>
-                <span className={styles.smartImportPlanningModeBadge}>Planning</span>
-              </div>
-              <div className={styles.smartImportPlanningProgressTrack}>
-                {typeof loreSmartPlanningUi.percent === "number" ? (
-                  <div
-                    className={styles.smartImportPlanningProgressFill}
-                    style={{ width: `${loreSmartPlanningUi.percent}%` }}
-                  />
-                ) : (
-                  <div className={styles.smartImportPlanningProgressIndeterminate} />
-                )}
-              </div>
-              {loreSmartPlanningUi.detail || loreSmartPlanningUi.stepText ? (
-                <div className={styles.smartImportPlanningDetailRow}>
                   {loreSmartPlanningUi.detail ? (
-                    <span className={styles.smartImportPlanningDetail}>{loreSmartPlanningUi.detail}</span>
+                    <p className={styles.smartImportPlanningDetail}>{loreSmartPlanningUi.detail}</p>
                   ) : null}
-                  {loreSmartPlanningUi.stepText ? (
-                    <span className={styles.smartImportPlanningStep}>{loreSmartPlanningUi.stepText}</span>
+                  {loreSmartPlanningUi.queueFailureHint ? (
+                    <p className={styles.smartImportPlanningWarning}>
+                      {loreSmartPlanningUi.queueFailureHint}
+                    </p>
                   ) : null}
-                </div>
-              ) : null}
-              {loreSmartPlanningUi.queueFailureHint ? (
-                <p className={styles.smartImportPlanningWarning}>
-                  {loreSmartPlanningUi.queueFailureHint}
-                </p>
-              ) : null}
-              <p className={styles.smartImportPlanningHint}>
-                This step runs in the background on the server. Keep this tab open—most documents finish in
-                about one to two minutes.
-              </p>
-              {loreSmartPlanningUi.updatedAtText ? (
-                <p className={styles.smartImportPlanningUpdatedAt}>
-                  Updated {loreSmartPlanningUi.updatedAtText}
-                </p>
-              ) : null}
-              <div className={styles.smartImportPlanningActions}>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  tone="glass"
-                  type="button"
-                  onClick={cancelLoreSmartPlanning}
-                >
-                  Cancel
-                </Button>
-              </div>
+                  <p className={styles.smartImportPlanningHint}>
+                    Keep this tab open — most imports finish in a minute or two.
+                  </p>
+                  <div className={styles.smartImportPlanningActions}>
+                    <Button
+                      size="sm"
+                      variant="subtle"
+                      tone="glass"
+                      type="button"
+                      onClick={cancelLoreSmartPlanning}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         ) : null}
@@ -12103,7 +12196,7 @@ export function ArchitecturalCanvasApp({
         ) : null}
         {!isRestrictedLayer ? (
           <ArchitecturalLoreImportErrorDialog
-            failure={loreImportFailure}
+            failure={loreSmartPlanning ? null : loreImportFailure}
             onClose={() => setLoreImportFailure(null)}
             onRetry={() => loreImportFileInputRef.current?.click()}
           />
@@ -12837,10 +12930,7 @@ export function ArchitecturalCanvasApp({
                     <ArchitecturalLoreFactionArchiveCanvasNode
                       id={entity.id}
                       width={entity.width}
-                      tapeVariant={
-                        entity.tapeVariant ??
-                        tapeVariantForLoreCard("faction", entity.loreCard?.variant ?? "v4")
-                      }
+                      tapeVariant={tapeVariantForLoreCard("faction", entity.loreCard?.variant ?? "v4")}
                       tapeRotation={entity.tapeRotation}
                       bodyHtml={canonicalizeFactionBodyHtml(entity, entity.bodyHtml)}
                       factionRoster={entity.factionRoster ?? []}
@@ -12894,8 +12984,10 @@ export function ArchitecturalCanvasApp({
                       }
                       loreCard={entity.loreCard}
                       factionRoster={entity.loreCard?.kind === "faction" ? entity.factionRoster : undefined}
-                      aiReviewPending={entity.entityMeta?.aiReview === "pending"}
-                      onAcceptAiReview={() => acceptAiReviewForEntity(entity.id)}
+                      aiReviewPending={hasActionableAiReview(
+                        entity.entityMeta,
+                        contentEntityHasHgAiPending(entity),
+                      )}
                     />
                   )
                 ) : (
@@ -13061,45 +13153,53 @@ export function ArchitecturalCanvasApp({
               >
                 {`EDITING // ${activeNodeId ? activeNodeId.slice(0, 8).toUpperCase() : "NODE"}`}
               </div>
-              {focusOpen &&
-              activeNodeId &&
-              graph.entities[activeNodeId]?.kind === "content" &&
-              graph.entities[activeNodeId].entityMeta?.aiReview === "pending" ? (
-                <div className={styles.focusAiReviewBar} role="status" aria-live="polite">
-                  <Tag
-                    variant={
-                      focusSurface === "code" ||
-                      focusSurface === "character-hybrid" ||
-                      focusSurface === "location-hybrid" ||
-                      focusSurface === "faction-hybrid"
-                        ? "llmFocusDark"
-                        : "llmLight"
-                    }
-                  >
-                    Unreviewed
-                  </Tag>
-                  <ArchitecturalTooltip
-                    content="Clear AI/import highlights and mark this note reviewed"
-                    side="bottom"
-                    delayMs={280}
-                  >
-                    <Button
-                      type="button"
-                      size="xs"
-                      variant="ghost"
-                      tone="glass"
-                      className={styles.nodeBtn}
-                      aria-label="Accept AI and import text"
-                      onClick={() => acceptAiReviewForEntity(activeNodeId)}
-                    >
-                      Accept
-                    </Button>
-                  </ArchitecturalTooltip>
-                  <span className={styles.focusAiReviewHint}>
-                    Typing in highlighted text also clears it; Save applies like any edit.
-                  </span>
-                </div>
-              ) : null}
+              {focusOpen && activeNodeId
+                ? (() => {
+                    const activeEntity = graph.entities[activeNodeId];
+                    if (!activeEntity || activeEntity.kind !== "content") return null;
+                    const showReviewBar = hasActionableAiReview(
+                      activeEntity.entityMeta,
+                      contentEntityHasHgAiPending(activeEntity),
+                    );
+                    if (!showReviewBar) return null;
+                    return (
+                      <div className={styles.focusAiReviewBar} role="status" aria-live="polite">
+                        <Tag
+                          variant={
+                            focusSurface === "code" ||
+                            focusSurface === "character-hybrid" ||
+                            focusSurface === "location-hybrid" ||
+                            focusSurface === "faction-hybrid"
+                              ? "llmFocusDark"
+                              : "llmLight"
+                          }
+                        >
+                          Unreviewed
+                        </Tag>
+                        <ArchitecturalTooltip
+                          content="Bind all pending AI/import text and mark this note reviewed"
+                          side="bottom"
+                          delayMs={280}
+                        >
+                          <Button
+                            type="button"
+                            size="xs"
+                            variant="subtle"
+                            className={styles.nodeBtn}
+                            data-hg-ai-bind="true"
+                            aria-label="Bind all pending AI and import text"
+                            onClick={() => acceptAiReviewForEntity(activeNodeId)}
+                          >
+                            Bind all
+                          </Button>
+                        </ArchitecturalTooltip>
+                        <span className={styles.focusAiReviewHint}>
+                          Bind removes pending highlights; Save applies body edits like any other change.
+                        </span>
+                      </div>
+                    );
+                  })()
+                : null}
             </div>
             <ArchitecturalFocusCloseButton
               dirty={focusDirty}

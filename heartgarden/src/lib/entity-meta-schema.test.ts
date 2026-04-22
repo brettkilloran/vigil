@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AI_REVIEW_CLEARED,
   buildImportedEntityMeta,
+  hasActionableAiReview,
   importedEntityMetaSchema,
+  isAiReviewPending,
   parseImportedEntityMeta,
+  readAiReviewState,
   withCrossFolderRef,
 } from "@/src/lib/entity-meta-schema";
 
@@ -18,6 +22,13 @@ describe("entity-meta-schema", () => {
     expect(parsed).not.toBeNull();
     expect(parsed?.canonicalEntityKind).toBe("npc");
     expect(parsed?.aiReview).toBe("pending");
+  });
+
+  it("accepts cleared review state for runtime/editor writes", () => {
+    const parsed = parseImportedEntityMeta({
+      aiReview: AI_REVIEW_CLEARED,
+    });
+    expect(parsed?.aiReview).toBe(AI_REVIEW_CLEARED);
   });
 
   it("preserves unknown keys via passthrough", () => {
@@ -80,5 +91,15 @@ describe("entity-meta-schema", () => {
     expect(parseImportedEntityMeta(null)).toBeNull();
     expect(parseImportedEntityMeta("hi")).toBeNull();
     expect(parseImportedEntityMeta(42)).toBeNull();
+  });
+
+  it("exposes helpers for actionable review checks", () => {
+    expect(readAiReviewState({ aiReview: "pending" })).toBe("pending");
+    expect(readAiReviewState({ aiReview: "unknown" })).toBeNull();
+    expect(isAiReviewPending({ aiReview: "pending" })).toBe(true);
+    expect(isAiReviewPending({ aiReview: "accepted" })).toBe(false);
+    expect(hasActionableAiReview({ aiReview: "pending" }, false)).toBe(true);
+    expect(hasActionableAiReview({ aiReview: "accepted" }, true)).toBe(true);
+    expect(hasActionableAiReview({ aiReview: "accepted" }, false)).toBe(false);
   });
 });

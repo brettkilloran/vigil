@@ -1650,6 +1650,19 @@
   background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--theme-code-bg));
 }
 
+/*
+ * Lore canvas slabs (character v11 + faction Archive-091) sit on dark internals where
+ * the default paper accent reads too dim. Match dark focus-mode pending contrast.
+ */
+.entityNode[data-hg-canvas-role="lore-character-v11"] :global([data-hg-ai-pending="true"]),
+.entityNode[data-hg-canvas-role="lore-character-v11"] :global(span.hgAiPending),
+.entityNode[data-hg-canvas-role="lore-faction"] :global([data-hg-ai-pending="true"]),
+.entityNode[data-hg-canvas-role="lore-faction"] :global(span.hgAiPending) {
+  color: var(--sem-text-llm-accent-bright);
+  text-decoration: none;
+  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, transparent);
+}
+
 .nodeBody {
   /* Used by location v3 `.locPlaqueStrip` to bleed to the card edges. */
   --arch-body-pad-x: 22px;
@@ -3212,141 +3225,211 @@
 }
 
 .smartImportPlanningCard {
-  width: min(520px, calc(100vw - 24px));
-  max-height: min(86vh, 720px);
-  overflow-y: auto;
-  border-radius: 12px;
+  width: min(420px, calc(100vw - 24px));
+  border-radius: 16px;
   border: 1px solid var(--sem-border-subtle);
   background: var(--sys-color-neutral-900);
   box-shadow:
     0 25px 50px -12px color-mix(in oklch, var(--sys-color-black) 55%, transparent),
     inset 0 1px 0 var(--sem-overlay-white-08);
   color: var(--sem-text-primary);
-  padding: 16px;
-}
-
-.smartImportPlanningHeader {
+  padding: 28px 24px 20px;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
-.smartImportPlanningHeaderMain {
-  min-width: 0;
-  flex: 1;
+.smartImportPlanningSpinner {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  margin: 4px 0 18px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--sem-accent-primary) 16%, transparent) 0%,
+    transparent 72%
+  );
 }
 
-.smartImportPlanningEyebrow {
-  display: block;
-  margin: 0;
+.smartImportPlanningSpinner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid color-mix(in oklch, var(--sem-text-primary) 10%, transparent);
+  box-sizing: border-box;
+}
+
+.smartImportPlanningSpinnerRing {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: color-mix(in oklch, var(--sem-accent-primary) 96%, white 4%);
+  border-right-color: color-mix(in oklch, var(--sem-accent-primary) 62%, transparent);
+  box-sizing: border-box;
+  animation: smart-import-planning-spin 0.9s linear infinite;
+  will-change: transform;
+}
+
+@keyframes smart-import-planning-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .smartImportPlanningSpinnerRing {
+    animation-duration: 2.8s;
+  }
+}
+
+.smartImportPlanningFailIcon {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  margin: 4px 0 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--sys-color-warning-500) 16%, transparent) 0%,
+    transparent 72%
+  );
+  border: 2px solid color-mix(in oklch, var(--sys-color-warning-400) 55%, transparent);
+  box-sizing: border-box;
+  color: color-mix(in oklch, var(--sys-color-warning-300) 86%, var(--sem-text-primary) 14%);
+}
+
+.smartImportPlanningError {
+  margin: 6px 0 0;
+  width: 100%;
+  max-width: 34ch;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: color-mix(in oklch, var(--sys-color-warning-200) 62%, var(--sem-text-primary) 38%);
+  word-break: break-word;
+}
+
+.smartImportPlanningDetails {
+  width: 100%;
+  margin-top: 14px;
+  border-radius: 8px;
+  border: 1px solid var(--sem-border-subtle);
+  background: color-mix(in oklch, var(--sys-color-black) 30%, var(--sys-color-neutral-950) 70%);
+  overflow: hidden;
+  text-align: left;
+}
+
+.smartImportPlanningDetails > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 8px 10px;
   font-size: 11px;
-  line-height: 1.3;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--sem-text-primary);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sem-text-muted);
+  user-select: none;
 }
 
-.smartImportPlanningModeBadge {
-  flex-shrink: 0;
-  border-radius: 999px;
-  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 88%, transparent);
-  background: color-mix(in oklch, var(--sem-surface-muted-hover) 65%, transparent);
-  padding: 3px 9px;
-  font-size: 10px;
-  line-height: 1.25;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: color-mix(in oklch, var(--sem-text-muted) 82%, var(--sem-text-primary) 18%);
+.smartImportPlanningDetails > summary::-webkit-details-marker {
+  display: none;
+}
+
+.smartImportPlanningDetails > summary::before {
+  content: "›";
+  display: inline-block;
+  width: 1em;
+  margin-right: 4px;
+  color: color-mix(in oklch, var(--sem-text-muted) 70%, transparent);
+  transform: rotate(0deg);
+  transition: transform 140ms ease;
+}
+
+.smartImportPlanningDetails[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.smartImportPlanningDetails pre {
+  margin: 0;
+  padding: 10px 12px;
+  border-top: 1px solid var(--sem-border-subtle);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: color-mix(in oklch, var(--sem-text-muted) 92%, var(--sem-text-primary) 8%);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.smartImportPlanningActionsSplit {
+  margin-top: 18px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.smartImportPlanningActionsSplit > div {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .smartImportPlanningPhase {
-  margin: 4px 0 0;
-  font-size: 15px;
+  margin: 0;
+  font-size: 16px;
   line-height: 1.35;
   font-weight: 500;
   letter-spacing: -0.015em;
-  color: color-mix(in oklch, var(--sem-text-primary) 94%, var(--sem-text-muted) 6%);
-}
-
-.smartImportPlanningProgressTrack {
-  margin-top: 14px;
-  height: 6px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: color-mix(in oklch, var(--sem-text-primary) 12%, transparent);
-  box-shadow: inset 0 1px 2px color-mix(in oklch, var(--sys-color-black) 35%, transparent);
-}
-
-.smartImportPlanningProgressFill {
-  height: 100%;
-  border-radius: 999px;
-  background: color-mix(in oklch, var(--sem-accent-primary) 82%, var(--sem-focus-ring) 18%);
-  transition: width 420ms ease-out;
-}
-
-.smartImportPlanningProgressIndeterminate {
-  height: 100%;
-  width: 40%;
-  border-radius: 999px;
-  background: color-mix(in oklch, var(--sem-accent-primary) 82%, var(--sem-focus-ring) 18%);
-  animation: pulse 1.4s ease-in-out infinite;
-}
-
-.smartImportPlanningDetailRow {
-  margin-top: 8px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  color: var(--sem-text-primary);
 }
 
 .smartImportPlanningDetail {
+  margin: 6px 0 0;
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--sem-text-muted);
 }
 
-.smartImportPlanningStep {
-  font-size: 11px;
-  line-height: 1.3;
-  font-family: var(--font-geist-mono), monospace;
-  color: color-mix(in oklch, var(--sem-text-muted) 86%, var(--sem-text-primary) 14%);
-  flex-shrink: 0;
-}
-
 .smartImportPlanningWarning {
-  margin: 10px 0 0;
+  margin: 14px 0 0;
+  width: 100%;
   border-radius: 8px;
   border: 1px solid color-mix(in oklch, var(--sys-color-warning-400) 40%, transparent);
   background: color-mix(in oklch, var(--sys-color-warning-500) 12%, transparent);
-  padding: 7px 9px;
+  padding: 7px 10px;
   font-size: 12px;
   line-height: 1.45;
+  text-align: left;
   color: color-mix(in oklch, var(--sys-color-warning-300) 72%, var(--sem-text-primary) 28%);
 }
 
 .smartImportPlanningHint {
-  margin: 12px 0 0;
+  margin: 14px 0 0;
+  max-width: 34ch;
   font-size: 12px;
   line-height: 1.5;
-  color: color-mix(in oklch, var(--sem-text-muted) 92%, var(--sem-text-primary) 8%);
-}
-
-.smartImportPlanningUpdatedAt {
-  margin: 8px 0 0;
-  font-size: 10px;
-  line-height: 1.35;
   color: color-mix(in oklch, var(--sem-text-muted) 88%, var(--sem-text-primary) 12%);
 }
 
 .smartImportPlanningActions {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid color-mix(in oklch, var(--sem-border-subtle) 92%, transparent);
+  margin-top: 18px;
+  width: 100%;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
 }
 
 .smartImportWizard {
@@ -6297,29 +6380,6 @@ button.rootDockPanel.viewportMetricsPanel {
 .focusEditorDark .focusAiReviewBar :global(.vigil-btn:hover:not([data-disabled="true"])) {
   border-color: var(--sem-text-llm-accent-bright);
   background: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 100%, transparent);
-}
-
-/* Canvas card header — Accept next to chip (see `data-accept-ai-btn` on ArchitecturalNodeCard) */
-.nodeActions :global([data-accept-ai-btn="true"]) {
-  color: var(--sem-text-llm-accent);
-  border-color: var(--sem-border-llm-pending);
-  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--theme-default-bg));
-}
-
-.nodeActions :global([data-accept-ai-btn="true"]:hover:not([data-disabled="true"])) {
-  border-color: var(--sem-text-llm-accent);
-  background: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 100%, var(--theme-default-bg));
-}
-
-.themeCode .nodeActions :global([data-accept-ai-btn="true"]) {
-  color: var(--sem-text-llm-accent-bright);
-  border-color: color-mix(in oklch, var(--sem-text-llm-accent-bright) 40%, transparent);
-  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--theme-code-bg));
-}
-
-.themeCode .nodeActions :global([data-accept-ai-btn="true"]:hover:not([data-disabled="true"])) {
-  border-color: var(--sem-text-llm-accent-bright);
-  background: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 100%, var(--theme-code-bg));
 }
 
 .focusAiReviewHint {
