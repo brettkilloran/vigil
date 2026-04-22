@@ -128,6 +128,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   }
 
   return (
+    /* eslint-disable-next-line no-restricted-syntax -- Base shared Button must render the native control. */
     <button
       ref={ref}
       type="button"

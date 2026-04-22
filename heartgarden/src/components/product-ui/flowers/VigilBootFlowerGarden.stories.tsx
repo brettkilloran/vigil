@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs";
 
+import { Button } from "@/src/components/design-system/primitives/Button";
 import { VigilBootFlowerGarden, type VigilBootFlowerGardenHandle } from "./VigilBootFlowerGarden";
 
 function FlowerGardenStage() {
@@ -12,8 +13,10 @@ function FlowerGardenStage() {
     <div style={{ position: "relative", minHeight: "100vh", background: "var(--sem-bg-canvas,#050608)" }}>
       <VigilBootFlowerGarden ref={ref} active />
       <div style={{ position: "absolute", top: 16, left: 16, display: "flex", gap: 8 }}>
-        <button
-          type="button"
+        <Button
+          variant="neutral"
+          tone="solid"
+          size="sm"
           onClick={() => ref.current?.clearAll()}
           style={{
             padding: "6px 10px",
@@ -24,7 +27,7 @@ function FlowerGardenStage() {
           }}
         >
           Clear all
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -47,6 +50,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Interactive: Story = {
+  args: {
+    active: true,
+  },
   render: () => <FlowerGardenStage />,
 };
 
