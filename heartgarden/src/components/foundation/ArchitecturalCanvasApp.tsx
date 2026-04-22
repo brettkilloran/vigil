@@ -7439,6 +7439,53 @@ export function ArchitecturalCanvasApp({
             phase: "queued",
             message: "Queued for smart import planning",
           });
+          const applySmartPlanToUi = (plan: LoreImportPlan) => {
+            setLoreSmartReview({
+              plan,
+              sourceText: parsed.text,
+              sourceTitle: parsed.suggestedTitle,
+              fileName: parsed.fileName,
+            });
+            setLoreSmartClarificationAnswers([]);
+            const nextMerge: Record<string, boolean> = {};
+            for (const m of plan.mergeProposals) {
+              nextMerge[m.id] = false;
+            }
+            setLoreSmartAcceptedMergeIds(nextMerge);
+            if (plan.clarifications.some((c) => c.severity === "required")) {
+              setLoreSmartTab("questions");
+            }
+          };
+          const tryDirectPlanFallback = async (): Promise<boolean> => {
+            setLoreSmartPlanningProgress({
+              phase: "fallback_plan",
+              message: "Smart queue unavailable; planning directly",
+            });
+            const planRes = await fetch("/api/lore/import/plan", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Heartgarden-Import-Attempt": attemptId,
+              },
+              body: JSON.stringify({
+                text: parsed.text,
+                spaceId,
+                fileName: parsed.fileName,
+                persistReview: false,
+              }),
+            });
+            const planRaw = await planRes.text();
+            const planBody = parseLoreImportJsonBody(planRaw) as {
+              ok?: boolean;
+              error?: string;
+              plan?: LoreImportPlan;
+            };
+            if (!planRes.ok || !planBody.ok || !planBody.plan) {
+              return false;
+            }
+            applySmartPlanToUi(planBody.plan);
+            return true;
+          };
           try {
             const jobRes = await fetch("/api/lore/import/jobs", {
               method: "POST",
@@ -7459,6 +7506,8 @@ export function ArchitecturalCanvasApp({
               jobId?: string;
             };
             if (!jobRes.ok || !jobBody.ok || !jobBody.jobId) {
+              const usedFallback = await tryDirectPlanFallback().catch(() => false);
+              if (usedFallback) return;
               reportFailure(
                 createLoreImportFailureDetail({
                   attemptId,
@@ -7541,21 +7590,7 @@ export function ArchitecturalCanvasApp({
                 }
                 if (st.status === "ready" && st.plan) {
                   planReady = true;
-                  setLoreSmartReview({
-                    plan: st.plan,
-                    sourceText: parsed.text,
-                    sourceTitle: parsed.suggestedTitle,
-                    fileName: parsed.fileName,
-                  });
-                  setLoreSmartClarificationAnswers([]);
-                  const nextMerge: Record<string, boolean> = {};
-                  for (const m of st.plan.mergeProposals) {
-                    nextMerge[m.id] = false;
-                  }
-                  setLoreSmartAcceptedMergeIds(nextMerge);
-                  if (st.plan.clarifications.some((c) => c.severity === "required")) {
-                    setLoreSmartTab("questions");
-                  }
+                  applySmartPlanToUi(st.plan);
                   return;
                 }
                 if (st.status === "failed") {
