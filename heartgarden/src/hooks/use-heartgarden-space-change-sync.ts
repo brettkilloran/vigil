@@ -45,6 +45,8 @@ export function useHeartgardenSpaceChangeSync(options: {
   inlineContentDirtyIdsRef: MutableRefObject<Set<string>>;
   /** Item ids with an in-flight item PATCH (see `patchItemWithVersion` in the shell). */
   savingContentIdsRef: MutableRefObject<Set<string>>;
+  /** Locally edited ids protected from stale remote rows for a short grace window. */
+  optimisticProtectedIdsRef?: MutableRefObject<Set<string>>;
   /** Skips remote tombstone deletes for these item ids (undo restore in flight). */
   remoteTombstoneExemptIdsRef: MutableRefObject<Set<string>>;
   setGraph: Dispatch<SetStateAction<CanvasGraph>>;
@@ -69,6 +71,7 @@ export function useHeartgardenSpaceChangeSync(options: {
     activeNodeIdRef,
     inlineContentDirtyIdsRef,
     savingContentIdsRef,
+    optimisticProtectedIdsRef,
     remoteTombstoneExemptIdsRef,
     setGraph,
     itemServerUpdatedAtRef,
@@ -181,6 +184,7 @@ export function useHeartgardenSpaceChangeSync(options: {
             inlineContentDirtyIds: inlineContentDirtyIdsRef.current,
             savingContentIds: savingContentIdsRef.current,
           });
+          optimisticProtectedIdsRef?.current.forEach((id) => protectedContentIds.add(id));
           const rawItems = data.items ?? [];
           const rawSpaces = (data.spaces ?? []).map((s) => ({
             id: s.id,
@@ -283,6 +287,7 @@ export function useHeartgardenSpaceChangeSync(options: {
     activeNodeIdRef,
     inlineContentDirtyIdsRef,
     savingContentIdsRef,
+    optimisticProtectedIdsRef,
     remoteTombstoneExemptIdsRef,
     setGraph,
     itemServerUpdatedAtRef,

@@ -546,6 +546,12 @@ type LoreImportSelectionState = {
   contextText: string;
 };
 
+type LoreImportPreparedSource = {
+  text: string;
+  fileName: string;
+  suggestedTitle: string;
+};
+
 function inferDocSourceKind(fileName: string): LoreImportUserContext["docSourceKind"] {
   const lower = fileName.toLowerCase();
   if (lower.endsWith(".pdf")) return "pdf";
@@ -2699,12 +2705,10 @@ export function ArchitecturalCanvasApp({
   const [loreReviewSemanticSummary, setLoreReviewSemanticSummary] = useState<string | null>(null);
   const [loreImportFailure, setLoreImportFailure] = useState<LoreImportFailureDetail | null>(null);
   const [loreImportPopoverOpen, setLoreImportPopoverOpen] = useState(false);
+  const [loreImportPreparedSource, setLoreImportPreparedSource] = useState<LoreImportPreparedSource | null>(
+    null,
+  );
   const [loreImportSelection, setLoreImportSelection] = useState<LoreImportSelectionState>({
-    mode: "many_loose",
-    contextText: "",
-  });
-  const loreImportButtonRef = useRef<HTMLButtonElement | null>(null);
-  const loreImportPendingSelectionRef = useRef<LoreImportSelectionState>({
     mode: "many_loose",
     contextText: "",
   });
@@ -2727,31 +2731,13 @@ export function ArchitecturalCanvasApp({
     [dockCreateDisabledBySyncError],
   );
   const loreImportFileInputRef = useRef<HTMLInputElement | null>(null);
-  const openLoreImportPopover = useCallback(() => {
-    setLoreImportPopoverOpen(true);
+  const beginLoreImportFilePick = useCallback(() => {
+    setLoreImportPopoverOpen(false);
+    loreImportFileInputRef.current?.click();
   }, []);
   const closeLoreImportPopover = useCallback(() => {
     setLoreImportPopoverOpen(false);
   }, []);
-  const loreImportPopoverPosition = useMemo(() => {
-    const fallback = { top: 72, left: 16 };
-    if (!loreImportPopoverOpen) return fallback;
-    if (typeof window === "undefined") return fallback;
-    const rect = loreImportButtonRef.current?.getBoundingClientRect();
-    if (!rect) return fallback;
-    const width = Math.min(360, window.innerWidth - 24);
-    const left = Math.min(
-      Math.max(12, rect.right - width),
-      Math.max(12, window.innerWidth - width - 12),
-    );
-    const top = Math.min(rect.bottom + 8, window.innerHeight - 24);
-    return { top, left };
-  }, [loreImportPopoverOpen]);
-  const triggerLoreImportFilePick = useCallback(() => {
-    loreImportPendingSelectionRef.current = loreImportSelection;
-    setLoreImportPopoverOpen(false);
-    loreImportFileInputRef.current?.click();
-  }, [loreImportSelection]);
   const copyLoreSmartPlanningFailure = useCallback(() => {
     const failure = loreImportFailure;
     const progress = loreSmartPlanningProgress;
@@ -2773,9 +2759,9 @@ export function ArchitecturalCanvasApp({
     setLoreSmartPlanningProgress(null);
     setLoreSmartPlanningCopyState("idle");
     requestAnimationFrame(() => {
-      openLoreImportPopover();
+      beginLoreImportFilePick();
     });
-  }, [openLoreImportPopover]);
+  }, [beginLoreImportFilePick]);
   const closeLoreSmartPlanningFailure = useCallback(() => {
     setLoreImportFailure(null);
     setLoreSmartPlanningJobId(null);
@@ -2972,6 +2958,9 @@ export function ArchitecturalCanvasApp({
   const inlineContentDirtyIdsRef = useRef<Set<string>>(new Set());
   /** Item ids with an in-flight `apiPatchItem` (versioned PATCH from `patchItemWithVersion`). */
   const savingContentIdsRef = useRef<Set<string>>(new Set());
+  /** Local ids protected from stale remote rows for a short optimistic window. */
+  const optimisticProtectedIdsRef = useRef<Set<string>>(new Set());
+  const optimisticProtectedTimerRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const mediaFileInputRef = useRef<HTMLInputElement | null>(null);
   const lastFormatRangeRef = useRef<Range | null>(null);
 
@@ -5517,6 +5506,34 @@ export function ArchitecturalCanvasApp({
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      for (const timer of optimisticProtectedTimerRef.current.values()) {
+        clearTimeout(timer);
+      }
+      optimisticProtectedTimerRef.current.clear();
+      optimisticProtectedIdsRef.current.clear();
+    };
+  }, []);
+
+  const markOptimisticProtectedId = useCallback((id: string, ttlMs = 3500) => {
+    optimisticProtectedIdsRef.current.add(id);
+    const prevTimer = optimisticProtectedTimerRef.current.get(id);
+    if (prevTimer) clearTimeout(prevTimer);
+    const nextTimer = setTimeout(() => {
+      optimisticProtectedTimerRef.current.delete(id);
+      optimisticProtectedIdsRef.current.delete(id);
+    }, ttlMs);
+    optimisticProtectedTimerRef.current.set(id, nextTimer);
+  }, []);
+
+  const clearOptimisticProtectedId = useCallback((id: string) => {
+    const prevTimer = optimisticProtectedTimerRef.current.get(id);
+    if (prevTimer) clearTimeout(prevTimer);
+    optimisticProtectedTimerRef.current.delete(id);
+    optimisticProtectedIdsRef.current.delete(id);
+  }, []);
+
   const onAfterSpaceChangeMerge = useCallback(
     (info: { itemLinksRevision?: string }) => {
       const rev = info.itemLinksRevision;
@@ -5541,6 +5558,7 @@ export function ArchitecturalCanvasApp({
     activeNodeIdRef,
     inlineContentDirtyIdsRef,
     savingContentIdsRef,
+    optimisticProtectedIdsRef,
     remoteTombstoneExemptIdsRef,
     setGraph,
     itemServerUpdatedAtRef,
@@ -7603,6 +7621,7 @@ export function ArchitecturalCanvasApp({
           if (!entity || entity.kind !== "folder") return;
           if (scheme == null && entity.folderColorScheme == null) return;
           if (scheme != null && entity.folderColorScheme === scheme) return;
+          markOptimisticProtectedId(entityId);
           recordUndoBeforeMutation();
           setGraph((p) => {
             const ent = p.entities[entityId];
@@ -7618,16 +7637,40 @@ export function ArchitecturalCanvasApp({
             return next;
           });
           queueMicrotask(() => {
-            if (!persistNeonRef.current || !isUuidLike(entityId)) return;
-            const ent = graphRef.current.entities[entityId];
-            if (ent?.kind !== "folder") return;
-            void patchItemWithVersion(entityId, { contentJson: buildContentJsonForFolderEntity(ent) });
+            void (async () => {
+              if (!persistNeonRef.current || !isUuidLike(entityId)) return;
+              let ent = graphRef.current.entities[entityId];
+              if (ent?.kind !== "folder") return;
+              let ok = await patchItemWithVersion(entityId, {
+                contentJson: buildContentJsonForFolderEntity(ent),
+              });
+              if (!ok) {
+                await new Promise<void>((resolve) => window.setTimeout(resolve, 220));
+                ent = graphRef.current.entities[entityId];
+                if (ent?.kind === "folder") {
+                  ok = await patchItemWithVersion(entityId, {
+                    contentJson: buildContentJsonForFolderEntity(ent),
+                  });
+                }
+              }
+              if (!ok) {
+                clearOptimisticProtectedId(entityId);
+                return;
+              }
+              markOptimisticProtectedId(entityId, 1400);
+            })();
           });
         },
         120,
       );
     },
-    [patchItemWithVersion, queueGraphCommit, recordUndoBeforeMutation],
+    [
+      clearOptimisticProtectedId,
+      markOptimisticProtectedId,
+      patchItemWithVersion,
+      queueGraphCommit,
+      recordUndoBeforeMutation,
+    ],
   );
 
   const folderColorPickerForDock = useMemo(() => {
@@ -8118,13 +8161,391 @@ export function ArchitecturalCanvasApp({
     [activeSpaceId, centerCoords, createId],
   );
 
+  const executeLoreImportWithParsed = useCallback(
+    async (args: {
+      parsedText: string;
+      parsedFileName: string;
+      parsedSuggestedTitle: string;
+      sourceFileName: string;
+      userContext: LoreImportUserContext;
+      attemptId: string;
+      planningAbort: AbortController;
+      reportFailure: (detail: LoreImportFailureDetail) => void;
+      unknownMessage: (error: unknown, fallback: string) => string;
+    }) => {
+      const {
+        parsedText,
+        parsedFileName,
+        parsedSuggestedTitle,
+        sourceFileName,
+        userContext,
+        attemptId,
+        planningAbort,
+        reportFailure,
+        unknownMessage,
+      } = args;
+      const parsed = {
+        text: parsedText,
+        fileName: parsedFileName,
+        suggestedTitle: parsedSuggestedTitle,
+      };
+      const file = { name: sourceFileName };
+      const spaceId = activeSpaceIdRef.current;
+      if (userContext.granularity === "one_note") {
+        const ok = await createSingleImportedNote({
+          title: parsed.suggestedTitle || parsed.fileName || file.name,
+          text: parsedText,
+        });
+        if (!ok) {
+          reportFailure(
+            createLoreImportFailureDetail({
+              attemptId,
+              stage: "apply",
+              operation: "create_single_import_note",
+              message:
+                "Could not create the imported note on the current canvas. Check sync status and retry.",
+              fileName: parsed.fileName ?? file.name,
+              spaceId,
+              recommendedAction:
+                "Retry import once. If this keeps failing, open sync status and include the attempt id.",
+            }),
+          );
+        } else {
+          playVigilUiSound("celebration");
+        }
+        return;
+      }
+      const useSmart = persistNeonRef.current && isUuidLike(spaceId) && parsedText.trim().length > 0;
+
+      if (useSmart) {
+        setLoreSmartPlanningJobId(null);
+        setLoreSmartReview(null);
+        setLoreSmartAcceptedMergeIds({});
+        setLoreSmartClarificationAnswers([]);
+        setLoreSmartOtherFollowUp(null);
+        setLoreSmartManualQuestionId(null);
+        setLoreSmartIncludeSource(true);
+        setLoreSmartPlanning(true);
+        setLoreSmartPlanningProgress({ phase: "queued" });
+        const applySmartPlanToUi = (plan: LoreImportPlan) => {
+          const normalizedPlan = filterAutoResolvedClarifications(plan);
+          setLoreSmartReview({
+            plan: normalizedPlan,
+            sourceText: parsedText,
+            sourceTitle: parsed.suggestedTitle,
+            fileName: parsed.fileName,
+          });
+          setLoreSmartClarificationAnswers([]);
+          setLoreSmartOtherFollowUp(null);
+          setLoreSmartManualQuestionId(null);
+          const nextMerge: Record<string, boolean> = {};
+          for (const m of normalizedPlan.mergeProposals) {
+            nextMerge[m.id] = false;
+          }
+          setLoreSmartAcceptedMergeIds(nextMerge);
+        };
+        let planningFailed = false;
+        const reportPlanningFailure = (detail: LoreImportFailureDetail) => {
+          planningFailed = true;
+          setLoreSmartPlanningProgress({
+            phase: "failed",
+            message: detail.message,
+            meta: detail.errorCode ? { errorCode: detail.errorCode } : undefined,
+          });
+          reportFailure(detail);
+        };
+        const tryDirectPlanFallback = async (queueFailureHint?: string): Promise<boolean> => {
+          setLoreSmartPlanningProgress({
+            phase: "fallback_plan",
+            message: "Smart queue unavailable; planning directly",
+            meta: queueFailureHint ? { queueFailureHint } : undefined,
+          });
+          const planRes = await fetch("/api/lore/import/plan", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Heartgarden-Import-Attempt": attemptId,
+            },
+            signal: planningAbort.signal,
+            body: JSON.stringify({
+              text: parsedText,
+              spaceId,
+              fileName: parsed.fileName,
+              userContext,
+              persistReview: false,
+            }),
+          });
+          const planRaw = await planRes.text();
+          const planBody = parseLoreImportJsonBody(planRaw) as {
+            ok?: boolean;
+            error?: string;
+            plan?: LoreImportPlan;
+          };
+          if (!planRes.ok || !planBody.ok || !planBody.plan) {
+            return false;
+          }
+          applySmartPlanToUi(planBody.plan);
+          return true;
+        };
+        try {
+          const jobRes = await fetch("/api/lore/import/jobs", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Heartgarden-Import-Attempt": attemptId,
+            },
+            signal: planningAbort.signal,
+            body: JSON.stringify({
+              text: parsedText,
+              spaceId,
+              fileName: parsed.fileName,
+              userContext,
+            }),
+          });
+          const jobRaw = await jobRes.text();
+          const jobBody = parseLoreImportJsonBody(jobRaw) as {
+            ok?: boolean;
+            error?: string;
+            detail?: string;
+            hint?: string;
+            errorCode?: string;
+            dbCode?: string;
+            dbTable?: string;
+            dbColumn?: string;
+            dbConstraint?: string;
+            retryable?: boolean;
+            jobId?: string;
+          };
+          if (!jobRes.ok || !jobBody.ok || !jobBody.jobId) {
+            const queueFailureHint = summarizeQueueCreateFailure({
+              status: jobRes.status,
+              error: typeof jobBody.error === "string" ? jobBody.error : undefined,
+              detail: typeof jobBody.detail === "string" ? jobBody.detail : undefined,
+              hint: typeof jobBody.hint === "string" ? jobBody.hint : undefined,
+              errorCode: typeof jobBody.errorCode === "string" ? jobBody.errorCode : undefined,
+              dbCode: typeof jobBody.dbCode === "string" ? jobBody.dbCode : undefined,
+            });
+            console.warn("[lore-import] smart queue unavailable; using direct fallback", {
+              attemptId,
+              status: jobRes.status,
+              queueFailureHint,
+              errorCode: jobBody.errorCode,
+              dbCode: jobBody.dbCode,
+            });
+            const usedFallback = await tryDirectPlanFallback(queueFailureHint).catch(() => false);
+            if (usedFallback) return;
+            reportPlanningFailure(
+              createLoreImportFailureDetail({
+                attemptId,
+                stage: "job_create",
+                operation: "POST /api/lore/import/jobs",
+                message:
+                  typeof jobBody.error === "string"
+                    ? jobBody.error
+                    : typeof jobBody.detail === "string"
+                      ? jobBody.detail
+                      : `Could not start import job (HTTP ${jobRes.status})`,
+                responseSnippet: jobRaw,
+                httpStatus: jobRes.status,
+                errorCode:
+                  typeof jobBody.errorCode === "string"
+                    ? jobBody.errorCode
+                    : typeof jobBody.dbCode === "string"
+                      ? jobBody.dbCode
+                      : undefined,
+                serverDetail: typeof jobBody.detail === "string" ? jobBody.detail : undefined,
+                serverHint: typeof jobBody.hint === "string" ? jobBody.hint : undefined,
+                dbCode: typeof jobBody.dbCode === "string" ? jobBody.dbCode : undefined,
+                dbTable: typeof jobBody.dbTable === "string" ? jobBody.dbTable : undefined,
+                dbColumn: typeof jobBody.dbColumn === "string" ? jobBody.dbColumn : undefined,
+                dbConstraint:
+                  typeof jobBody.dbConstraint === "string" ? jobBody.dbConstraint : undefined,
+                retryable: typeof jobBody.retryable === "boolean" ? jobBody.retryable : undefined,
+                fileName: parsed.fileName ?? file.name,
+                spaceId,
+                recommendedAction:
+                  "Confirm Neon/database is reachable and try again. If this repeats, share the snapshot.",
+              }),
+            );
+          } else {
+            const jobId = jobBody.jobId;
+            setLoreSmartPlanningJobId(jobId);
+            /** ~12 min — smart planning can run many LLM + vault passes on large sources. */
+            const maxAttempts = 720;
+            let pollFailed = false;
+            let planFailed = false;
+            let planReady = false;
+            let stablePhaseCount = 0;
+            let lastPhase = "";
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+              if (planningAbort.signal.aborted) return;
+              const poll = await fetch(
+                `/api/lore/import/jobs/${jobId}?spaceId=${encodeURIComponent(spaceId)}`,
+                {
+                  headers: { "X-Heartgarden-Import-Attempt": attemptId },
+                  signal: planningAbort.signal,
+                },
+              );
+              const pollRaw = await poll.text();
+              const st = parseLoreImportJsonBody(pollRaw) as {
+                ok?: boolean;
+                status?: string;
+                plan?: LoreImportPlan;
+                error?: string;
+                errorCode?: string;
+                lastPhase?: string;
+                attemptId?: string;
+                progress?: LoreImportJobProgress;
+              };
+              if (!poll.ok || !st.ok) {
+                reportPlanningFailure(
+                  createLoreImportFailureDetail({
+                    attemptId,
+                    stage: "job_poll",
+                    operation: "GET /api/lore/import/jobs/[jobId]",
+                    message:
+                      typeof st.error === "string"
+                        ? st.error
+                        : `Import job status request failed (HTTP ${poll.status})`,
+                    responseSnippet: pollRaw,
+                    httpStatus: poll.status,
+                    jobId,
+                    phase:
+                      typeof st.lastPhase === "string"
+                        ? st.lastPhase
+                        : typeof st.progress?.phase === "string"
+                          ? st.progress.phase
+                          : undefined,
+                    errorCode: typeof st.errorCode === "string" ? st.errorCode : undefined,
+                    fileName: parsed.fileName ?? file.name,
+                    spaceId,
+                    recommendedAction:
+                      "Wait a few seconds and retry import. If this repeats, copy the snapshot and include the job id.",
+                  }),
+                );
+                pollFailed = true;
+                break;
+              }
+              if (st.progress) {
+                setLoreSmartPlanningProgress(st.progress);
+                const phase = String(st.progress.phase ?? "");
+                if (phase && phase === lastPhase) stablePhaseCount += 1;
+                else {
+                  stablePhaseCount = 0;
+                  lastPhase = phase;
+                }
+              }
+              if (st.status === "ready" && st.plan) {
+                planReady = true;
+                applySmartPlanToUi(st.plan);
+                return;
+              }
+              if (st.status === "failed") {
+                reportPlanningFailure(
+                  createLoreImportFailureDetail({
+                    attemptId,
+                    stage: "plan_failed",
+                    operation: "GET /api/lore/import/jobs/[jobId]",
+                    message:
+                      typeof st.error === "string"
+                        ? st.error
+                        : "Smart import plan failed. Try again or split the file.",
+                    responseSnippet: pollRaw,
+                    httpStatus: poll.status,
+                    jobId,
+                    phase:
+                      typeof st.lastPhase === "string"
+                        ? st.lastPhase
+                        : typeof st.progress?.phase === "string"
+                          ? st.progress.phase
+                          : undefined,
+                    errorCode: typeof st.errorCode === "string" ? st.errorCode : undefined,
+                    fileName: parsed.fileName ?? file.name,
+                    spaceId,
+                    recommendedAction:
+                      "Try splitting the source file into smaller chunks, then retry. Share snapshot if failure persists.",
+                  }),
+                );
+                planFailed = true;
+                break;
+              }
+              const delayMs = stablePhaseCount >= 12 ? 3000 : stablePhaseCount >= 6 ? 2000 : 1000;
+              await abortableDelay(delayMs, planningAbort.signal);
+            }
+            if (!planReady && !pollFailed && !planFailed) {
+              reportPlanningFailure(
+                createLoreImportFailureDetail({
+                  attemptId,
+                  stage: "timeout",
+                  operation: "GET /api/lore/import/jobs/[jobId]",
+                  message:
+                    "Import planning is taking too long. The server may still be working in the background.",
+                  jobId,
+                  phase: lastPhase || "unknown",
+                  fileName: parsed.fileName ?? file.name,
+                  spaceId,
+                  recommendedAction:
+                    "Wait 30-60 seconds and retry. If this keeps timing out on the same phase, split the source and rerun.",
+                }),
+              );
+            }
+          }
+        } catch (error) {
+          if (isAbortError(error) || planningAbort.signal.aborted) {
+            console.info("[lore-import] planning cancelled by user", { attemptId });
+            return;
+          }
+          const queueFailureHint = unknownMessage(error, "Smart import job request failed.");
+          console.warn("[lore-import] smart queue request threw; using direct fallback", {
+            attemptId,
+            queueFailureHint,
+          });
+          const usedFallback = await tryDirectPlanFallback(queueFailureHint).catch(() => false);
+          if (usedFallback) return;
+          reportPlanningFailure(
+            createLoreImportFailureDetail({
+              attemptId,
+              stage: "job_create",
+              operation: "POST /api/lore/import/jobs",
+              message: unknownMessage(error, "Smart import job request failed."),
+              fileName: parsed.fileName ?? file.name,
+              spaceId,
+              recommendedAction:
+                "Check network/boot session and retry import. Copy diagnostics if this keeps failing.",
+            }),
+          );
+        } finally {
+          setLoreSmartPlanningJobId(null);
+          if (!planningFailed) {
+            setLoreSmartPlanning(false);
+            setLoreSmartPlanningProgress(null);
+          }
+        }
+        return;
+      }
+
+      reportFailure(
+        createLoreImportFailureDetail({
+          attemptId,
+          stage: "parse",
+          operation: "smart_import_prerequisite",
+          message: "Smart import requires a connected Neon space. Connect your workspace and retry.",
+          fileName: parsed.fileName ?? file.name,
+          spaceId,
+          recommendedAction: "Switch to a connected Neon workspace, then retry this import.",
+        }),
+      );
+    },
+    [createSingleImportedNote],
+  );
+
   const onLoreImportFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       event.target.value = "";
       if (!file) return;
       const isPdfFile = file.name.toLowerCase().endsWith(".pdf");
-      const selection = loreImportPendingSelectionRef.current;
+      const selection = loreImportSelection;
       const userContext = mapSelectionToUserContext(selection, file.name);
       const attemptId =
         typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -8256,357 +8677,13 @@ export function ArchitecturalCanvasApp({
           return;
         }
 
-        const parsedText = parsed.text;
-        const spaceId = activeSpaceIdRef.current;
-        if (userContext.granularity === "one_note") {
-          const ok = await createSingleImportedNote({
-            title: parsed.suggestedTitle || parsed.fileName || file.name,
-            text: parsedText,
-          });
-          if (!ok) {
-            reportFailure(
-              createLoreImportFailureDetail({
-                attemptId,
-                stage: "apply",
-                operation: "create_single_import_note",
-                message:
-                  "Could not create the imported note on the current canvas. Check sync status and retry.",
-                fileName: parsed.fileName ?? file.name,
-                spaceId,
-                recommendedAction:
-                  "Retry import once. If this keeps failing, open sync status and include the attempt id.",
-              }),
-            );
-          } else {
-            playVigilUiSound("celebration");
-          }
-          return;
-        }
-        const useSmart =
-          persistNeonRef.current && isUuidLike(spaceId) && parsedText.trim().length > 0;
-
-        if (useSmart) {
-          setLoreSmartPlanningJobId(null);
-          setLoreSmartReview(null);
-          setLoreSmartAcceptedMergeIds({});
-          setLoreSmartClarificationAnswers([]);
-          setLoreSmartOtherFollowUp(null);
-          setLoreSmartManualQuestionId(null);
-          setLoreSmartIncludeSource(true);
-          setLoreSmartPlanning(true);
-          setLoreSmartPlanningProgress({ phase: "queued" });
-          const applySmartPlanToUi = (plan: LoreImportPlan) => {
-            const normalizedPlan = filterAutoResolvedClarifications(plan);
-            setLoreSmartReview({
-              plan: normalizedPlan,
-              sourceText: parsedText,
-              sourceTitle: parsed.suggestedTitle,
-              fileName: parsed.fileName,
-            });
-            setLoreSmartClarificationAnswers([]);
-            setLoreSmartOtherFollowUp(null);
-            setLoreSmartManualQuestionId(null);
-            const nextMerge: Record<string, boolean> = {};
-            for (const m of normalizedPlan.mergeProposals) {
-              nextMerge[m.id] = false;
-            }
-            setLoreSmartAcceptedMergeIds(nextMerge);
-          };
-          let planningFailed = false;
-          const reportPlanningFailure = (detail: LoreImportFailureDetail) => {
-            planningFailed = true;
-            setLoreSmartPlanningProgress({
-              phase: "failed",
-              message: detail.message,
-              meta: detail.errorCode ? { errorCode: detail.errorCode } : undefined,
-            });
-            reportFailure(detail);
-          };
-          const tryDirectPlanFallback = async (queueFailureHint?: string): Promise<boolean> => {
-            setLoreSmartPlanningProgress({
-              phase: "fallback_plan",
-              message: "Smart queue unavailable; planning directly",
-              meta: queueFailureHint ? { queueFailureHint } : undefined,
-            });
-            const planRes = await fetch("/api/lore/import/plan", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Heartgarden-Import-Attempt": attemptId,
-              },
-              signal: planningAbort.signal,
-              body: JSON.stringify({
-                text: parsedText,
-                spaceId,
-                fileName: parsed.fileName,
-                userContext,
-                persistReview: false,
-              }),
-            });
-            const planRaw = await planRes.text();
-            const planBody = parseLoreImportJsonBody(planRaw) as {
-              ok?: boolean;
-              error?: string;
-              plan?: LoreImportPlan;
-            };
-            if (!planRes.ok || !planBody.ok || !planBody.plan) {
-              return false;
-            }
-            applySmartPlanToUi(planBody.plan);
-            return true;
-          };
-          try {
-            const jobRes = await fetch("/api/lore/import/jobs", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Heartgarden-Import-Attempt": attemptId,
-              },
-              signal: planningAbort.signal,
-              body: JSON.stringify({
-                text: parsedText,
-                spaceId,
-                fileName: parsed.fileName,
-                userContext,
-              }),
-            });
-            const jobRaw = await jobRes.text();
-            const jobBody = parseLoreImportJsonBody(jobRaw) as {
-              ok?: boolean;
-              error?: string;
-              detail?: string;
-              hint?: string;
-              errorCode?: string;
-              dbCode?: string;
-              dbTable?: string;
-              dbColumn?: string;
-              dbConstraint?: string;
-              retryable?: boolean;
-              jobId?: string;
-            };
-            if (!jobRes.ok || !jobBody.ok || !jobBody.jobId) {
-              const queueFailureHint = summarizeQueueCreateFailure({
-                status: jobRes.status,
-                error: typeof jobBody.error === "string" ? jobBody.error : undefined,
-                detail: typeof jobBody.detail === "string" ? jobBody.detail : undefined,
-                hint: typeof jobBody.hint === "string" ? jobBody.hint : undefined,
-                errorCode: typeof jobBody.errorCode === "string" ? jobBody.errorCode : undefined,
-                dbCode: typeof jobBody.dbCode === "string" ? jobBody.dbCode : undefined,
-              });
-              console.warn("[lore-import] smart queue unavailable; using direct fallback", {
-                attemptId,
-                status: jobRes.status,
-                queueFailureHint,
-                errorCode: jobBody.errorCode,
-                dbCode: jobBody.dbCode,
-              });
-              const usedFallback = await tryDirectPlanFallback(queueFailureHint).catch(() => false);
-              if (usedFallback) return;
-              reportPlanningFailure(
-                createLoreImportFailureDetail({
-                  attemptId,
-                  stage: "job_create",
-                  operation: "POST /api/lore/import/jobs",
-                  message:
-                    typeof jobBody.error === "string"
-                      ? jobBody.error
-                      : typeof jobBody.detail === "string"
-                        ? jobBody.detail
-                      : `Could not start import job (HTTP ${jobRes.status})`,
-                  responseSnippet: jobRaw,
-                  httpStatus: jobRes.status,
-                  errorCode:
-                    typeof jobBody.errorCode === "string"
-                      ? jobBody.errorCode
-                      : typeof jobBody.dbCode === "string"
-                        ? jobBody.dbCode
-                        : undefined,
-                  serverDetail: typeof jobBody.detail === "string" ? jobBody.detail : undefined,
-                  serverHint: typeof jobBody.hint === "string" ? jobBody.hint : undefined,
-                  dbCode: typeof jobBody.dbCode === "string" ? jobBody.dbCode : undefined,
-                  dbTable: typeof jobBody.dbTable === "string" ? jobBody.dbTable : undefined,
-                  dbColumn: typeof jobBody.dbColumn === "string" ? jobBody.dbColumn : undefined,
-                  dbConstraint:
-                    typeof jobBody.dbConstraint === "string" ? jobBody.dbConstraint : undefined,
-                  retryable:
-                    typeof jobBody.retryable === "boolean" ? jobBody.retryable : undefined,
-                  fileName: parsed.fileName ?? file.name,
-                  spaceId,
-                  recommendedAction:
-                    "Confirm Neon/database is reachable and try again. If this repeats, share the snapshot.",
-                }),
-              );
-            } else {
-              const jobId = jobBody.jobId;
-              setLoreSmartPlanningJobId(jobId);
-              /** ~12 min — smart planning can run many LLM + vault passes on large sources. */
-              const maxAttempts = 720;
-              let pollFailed = false;
-              let planFailed = false;
-              let planReady = false;
-              let stablePhaseCount = 0;
-              let lastPhase = "";
-              for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                if (planningAbort.signal.aborted) return;
-                const poll = await fetch(
-                  `/api/lore/import/jobs/${jobId}?spaceId=${encodeURIComponent(spaceId)}`,
-                  {
-                    headers: { "X-Heartgarden-Import-Attempt": attemptId },
-                    signal: planningAbort.signal,
-                  },
-                );
-                const pollRaw = await poll.text();
-                const st = parseLoreImportJsonBody(pollRaw) as {
-                  ok?: boolean;
-                  status?: string;
-                  plan?: LoreImportPlan;
-                  error?: string;
-                  errorCode?: string;
-                  lastPhase?: string;
-                  attemptId?: string;
-                  progress?: LoreImportJobProgress;
-                };
-                if (!poll.ok || !st.ok) {
-                  reportPlanningFailure(
-                    createLoreImportFailureDetail({
-                      attemptId,
-                      stage: "job_poll",
-                      operation: "GET /api/lore/import/jobs/[jobId]",
-                      message:
-                        typeof st.error === "string"
-                          ? st.error
-                          : `Import job status request failed (HTTP ${poll.status})`,
-                      responseSnippet: pollRaw,
-                      httpStatus: poll.status,
-                      jobId,
-                      phase:
-                        typeof st.lastPhase === "string"
-                          ? st.lastPhase
-                          : typeof st.progress?.phase === "string"
-                            ? st.progress.phase
-                            : undefined,
-                      errorCode: typeof st.errorCode === "string" ? st.errorCode : undefined,
-                      fileName: parsed.fileName ?? file.name,
-                      spaceId,
-                      recommendedAction:
-                        "Wait a few seconds and retry import. If this repeats, copy the snapshot and include the job id.",
-                    }),
-                  );
-                  pollFailed = true;
-                  break;
-                }
-                if (st.progress) {
-                  setLoreSmartPlanningProgress(st.progress);
-                  const phase = String(st.progress.phase ?? "");
-                  if (phase && phase === lastPhase) stablePhaseCount += 1;
-                  else {
-                    stablePhaseCount = 0;
-                    lastPhase = phase;
-                  }
-                }
-                if (st.status === "ready" && st.plan) {
-                  planReady = true;
-                  applySmartPlanToUi(st.plan);
-                  return;
-                }
-                if (st.status === "failed") {
-                  reportPlanningFailure(
-                    createLoreImportFailureDetail({
-                      attemptId,
-                      stage: "plan_failed",
-                      operation: "GET /api/lore/import/jobs/[jobId]",
-                      message:
-                        typeof st.error === "string"
-                          ? st.error
-                          : "Smart import plan failed. Try again or split the file.",
-                      responseSnippet: pollRaw,
-                      httpStatus: poll.status,
-                      jobId,
-                      phase:
-                        typeof st.lastPhase === "string"
-                          ? st.lastPhase
-                          : typeof st.progress?.phase === "string"
-                            ? st.progress.phase
-                            : undefined,
-                      errorCode: typeof st.errorCode === "string" ? st.errorCode : undefined,
-                      fileName: parsed.fileName ?? file.name,
-                      spaceId,
-                      recommendedAction:
-                        "Try splitting the source file into smaller chunks, then retry. Share snapshot if failure persists.",
-                    }),
-                  );
-                  planFailed = true;
-                  break;
-                }
-                const delayMs =
-                  stablePhaseCount >= 12 ? 3000 : stablePhaseCount >= 6 ? 2000 : 1000;
-                await abortableDelay(delayMs, planningAbort.signal);
-              }
-              if (!planReady && !pollFailed && !planFailed) {
-                reportPlanningFailure(
-                  createLoreImportFailureDetail({
-                    attemptId,
-                    stage: "timeout",
-                    operation: "GET /api/lore/import/jobs/[jobId]",
-                    message:
-                      "Import planning is taking too long. The server may still be working in the background.",
-                    jobId,
-                    phase: lastPhase || "unknown",
-                    fileName: parsed.fileName ?? file.name,
-                    spaceId,
-                    recommendedAction:
-                      "Wait 30-60 seconds and retry. If this keeps timing out on the same phase, split the source and rerun.",
-                  }),
-                );
-              }
-            }
-          } catch (error) {
-            if (isAbortError(error) || planningAbort.signal.aborted) {
-              console.info("[lore-import] planning cancelled by user", { attemptId });
-              return;
-            }
-            const queueFailureHint = unknownMessage(error, "Smart import job request failed.");
-            console.warn("[lore-import] smart queue request threw; using direct fallback", {
-              attemptId,
-              queueFailureHint,
-            });
-            const usedFallback = await tryDirectPlanFallback(queueFailureHint).catch(() => false);
-            if (usedFallback) return;
-            reportPlanningFailure(
-              createLoreImportFailureDetail({
-                attemptId,
-                stage: "job_create",
-                operation: "POST /api/lore/import/jobs",
-                message: unknownMessage(error, "Smart import job request failed."),
-                fileName: parsed.fileName ?? file.name,
-                spaceId,
-                recommendedAction:
-                  "Check network/boot session and retry import. Copy diagnostics if this keeps failing.",
-              }),
-            );
-          } finally {
-            setLoreSmartPlanningJobId(null);
-            if (!planningFailed) {
-              setLoreSmartPlanning(false);
-              setLoreSmartPlanningProgress(null);
-            }
-          }
-          return;
-        }
-
-        reportFailure(
-          createLoreImportFailureDetail({
-            attemptId,
-            stage: "parse",
-            operation: "smart_import_prerequisite",
-            message:
-              "Smart import requires a connected Neon space. Connect your workspace and retry.",
-            fileName: parsed.fileName ?? file.name,
-            spaceId,
-            recommendedAction:
-              "Switch to a connected Neon workspace, then retry this import.",
-          }),
-        );
+        setLoreImportPreparedSource({
+          text: parsed.text,
+          fileName: parsed.fileName || file.name,
+          suggestedTitle: parsed.suggestedTitle || loreImportSuggestedTitle(file.name),
+        });
+        setLoreImportPopoverOpen(true);
+        playVigilUiSound("select");
       } catch (error) {
         if (isAbortError(error) || planningAbort.signal.aborted) {
           console.info("[lore-import] import parse cancelled by user", { attemptId });
@@ -8616,7 +8693,7 @@ export function ArchitecturalCanvasApp({
           createLoreImportFailureDetail({
             attemptId,
             stage: "unknown",
-            operation: "onLoreImportFileChange",
+              operation: "onLoreImportFileChange",
             message: unknownMessage(error, "Import request failed"),
             fileName: file.name,
             spaceId: activeSpaceIdRef.current,
@@ -8631,8 +8708,57 @@ export function ArchitecturalCanvasApp({
         }
       }
     },
-    [createSingleImportedNote],
+    [loreImportSelection],
   );
+
+  const continuePreparedLoreImport = useCallback(async () => {
+    const prepared = loreImportPreparedSource;
+    if (!prepared) {
+      playVigilUiSound("caution");
+      return;
+    }
+    setLoreImportPopoverOpen(false);
+    const userContext = mapSelectionToUserContext(loreImportSelection, prepared.fileName);
+    const attemptId =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `import-attempt-${Date.now()}`;
+    loreSmartPlanningAbortRef.current?.abort();
+    const planningAbort = new AbortController();
+    loreSmartPlanningAbortRef.current = planningAbort;
+    setLoreImportFailure(null);
+    const reportFailure = (detail: LoreImportFailureDetail) => {
+      console.error(
+        "[lore-import]",
+        detail.stage,
+        detail.operation,
+        detail.httpStatus ?? "no_http_status",
+        detail.message,
+        { attemptId: detail.attemptId, jobId: detail.jobId, phase: detail.phase },
+      );
+      playVigilUiSound("caution");
+      setLoreImportFailure(detail);
+    };
+    const unknownMessage = (error: unknown, fallback: string) =>
+      error instanceof Error ? error.message : fallback;
+    try {
+      await executeLoreImportWithParsed({
+        parsedText: prepared.text,
+        parsedFileName: prepared.fileName,
+        parsedSuggestedTitle: prepared.suggestedTitle,
+        sourceFileName: prepared.fileName,
+        userContext,
+        attemptId,
+        planningAbort,
+        reportFailure,
+        unknownMessage,
+      });
+    } finally {
+      if (loreSmartPlanningAbortRef.current === planningAbort) {
+        loreSmartPlanningAbortRef.current = null;
+      }
+    }
+  }, [executeLoreImportWithParsed, loreImportPreparedSource, loreImportSelection]);
 
   const exportGraphJson = useCallback(() => {
     const data = JSON.stringify(graphRef.current, null, 2);
@@ -8753,7 +8879,7 @@ export function ArchitecturalCanvasApp({
     }
     if (actionId === "import-lore") {
       playVigilUiSound("select");
-      openLoreImportPopover();
+      beginLoreImportFilePick();
       return;
     }
     if (actionId === "check-lore-consistency") {
@@ -8772,7 +8898,7 @@ export function ArchitecturalCanvasApp({
     createNewNode,
     exportGraphJson,
     isRestrictedLayer,
-    openLoreImportPopover,
+    beginLoreImportFilePick,
     recenterToOrigin,
     setCanvasEffectsEnabled,
     setGraphOverlayOpen,
@@ -12565,16 +12691,16 @@ export function ArchitecturalCanvasApp({
         ) : null}
         {!isRestrictedLayer ? (
           <ArchitecturalLoreImportUploadPopover
-            open={loreImportPopoverOpen}
-            top={loreImportPopoverPosition.top}
-            left={loreImportPopoverPosition.left}
+            open={loreImportPopoverOpen && !!loreImportPreparedSource}
+            fileName={loreImportPreparedSource?.fileName ?? ""}
             mode={loreImportSelection.mode}
             contextText={loreImportSelection.contextText}
             onModeChange={(mode) => setLoreImportSelection((prev) => ({ ...prev, mode }))}
             onContextTextChange={(value) =>
               setLoreImportSelection((prev) => ({ ...prev, contextText: value }))
             }
-            onChooseFile={triggerLoreImportFilePick}
+            onChangeFile={beginLoreImportFilePick}
+            onContinue={continuePreparedLoreImport}
             onClose={closeLoreImportPopover}
           />
         ) : null}
@@ -12702,7 +12828,7 @@ export function ArchitecturalCanvasApp({
           <ArchitecturalLoreImportErrorDialog
             failure={loreSmartPlanning ? null : loreImportFailure}
             onClose={() => setLoreImportFailure(null)}
-            onRetry={openLoreImportPopover}
+            onRetry={beginLoreImportFilePick}
           />
         ) : null}
         {loreSmartReview && !isRestrictedLayer ? (
@@ -13832,7 +13958,6 @@ export function ArchitecturalCanvasApp({
                       avoidSides={ARCH_TOOLTIP_AVOID_TOP}
                     >
                       <ArchitecturalButton
-                        ref={loreImportButtonRef}
                         type="button"
                         size="icon"
                         tone="glass"
@@ -13841,7 +13966,7 @@ export function ArchitecturalCanvasApp({
                         aria-label="Import document"
                         onClick={() => {
                           playVigilUiSound("select");
-                          openLoreImportPopover();
+                          beginLoreImportFilePick();
                         }}
                       >
                         <UploadSimple size={18} weight="bold" aria-hidden />
