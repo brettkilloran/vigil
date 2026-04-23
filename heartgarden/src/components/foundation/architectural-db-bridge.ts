@@ -500,6 +500,16 @@ export function mergeRemoteItemPatches(
 ): CanvasGraph {
   const spacesRecord: Record<string, CanvasSpace> = { ...prev.spaces };
   const entities: Record<string, CanvasEntity> = { ...prev.entities };
+  const mutableSpaceIds = new Set<string>();
+  const ensureMutableSpace = (spaceId: string): CanvasSpace | null => {
+    const current = spacesRecord[spaceId];
+    if (!current) return null;
+    if (mutableSpaceIds.has(spaceId)) return current;
+    const next = { ...current, entityIds: [...current.entityIds] };
+    spacesRecord[spaceId] = next;
+    mutableSpaceIds.add(spaceId);
+    return next;
+  };
   const entityIdsBySpace = new Map<string, Set<string>>();
   for (const [sid, space] of Object.entries(spacesRecord)) {
     entityIdsBySpace.set(sid, new Set(space.entityIds));
@@ -523,8 +533,13 @@ export function mergeRemoteItemPatches(
 
   const stripFromHome = (id: string) => {
     const home = entityHome.get(id);
-    if (home && spacesRecord[home]) {
-      const ids = spacesRecord[home].entityIds;
+    if (home) {
+      const homeSpace = ensureMutableSpace(home);
+      if (!homeSpace) {
+        entityHome.delete(id);
+        return;
+      }
+      const ids = homeSpace.entityIds;
       const idx = ids.indexOf(id);
       if (idx !== -1) ids.splice(idx, 1);
       entityIdsBySpace.get(home)?.delete(id);
@@ -557,7 +572,7 @@ export function mergeRemoteItemPatches(
       };
       entityIdsBySpace.set(item.spaceId, new Set<string>());
     }
-    const sp = spacesRecord[item.spaceId]!;
+    const sp = ensureMutableSpace(item.spaceId) ?? spacesRecord[item.spaceId]!;
     const ids = entityIdsBySpace.get(item.spaceId)!;
     if (!ids.has(merged.id)) {
       ids.add(merged.id);
