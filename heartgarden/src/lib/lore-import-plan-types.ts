@@ -125,6 +125,29 @@ export const loreImportPlanNoteSchema = z.object({
     .array(loreImportCrossFolderMentionSchema)
     .max(32)
     .optional(),
+  targetSpaceId: z.string().uuid().nullable().optional(),
+  targetSpaceConfidence: z.number().min(0).max(1).optional(),
+  targetSpaceReason: z.string().max(400).optional(),
+  relatedItems: z
+    .array(
+      z.object({
+        itemId: z.string().uuid(),
+        spaceId: z.string().uuid(),
+        title: z.string().max(255),
+        score: z.number().min(0).max(1).optional(),
+        snippet: z.string().max(1_200).optional(),
+      }),
+    )
+    .max(40)
+    .optional(),
+});
+
+export const loreImportSpaceSuggestionSchema = z.object({
+  spaceId: z.string().uuid(),
+  spaceTitle: z.string().max(255),
+  path: z.string().max(1_000).optional(),
+  score: z.number().min(0).max(1).optional(),
+  reason: z.string().max(400).optional(),
 });
 
 export const loreImportPlanLinkSchema = z.object({
@@ -264,6 +287,7 @@ export type ClarificationAnswer = z.infer<typeof clarificationAnswerSchema>;
 export const loreImportUserContextSchema = z.object({
   granularity: z.enum(["one_note", "many"]),
   orgMode: z.enum(["folders", "nearby"]),
+  importScope: z.enum(["current_subtree", "gm_workspace"]).optional().default("current_subtree"),
   freeformContext: z.string().max(4_000).optional(),
   docSourceKind: z.enum(["pdf", "docx", "markdown", "text"]).optional(),
 });
@@ -296,6 +320,7 @@ export const loreImportPlanSchema = z.object({
   links: z.array(loreImportPlanLinkSchema),
   mergeProposals: z.array(mergeProposalSchema),
   contradictions: z.array(contradictionSchema),
+  spaceSuggestions: z.array(loreImportSpaceSuggestionSchema).max(128).optional(),
   /** LLM + validation: open questions; required items block apply until answered. */
   clarifications: z.array(loreImportClarificationItemSchema).optional().default([]),
   /** Server-generated: cross-space link drops, etc. (round-tripped through apply). */

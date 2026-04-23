@@ -77,6 +77,7 @@ export async function POST(req: Request) {
   try {
     const plan = await buildLoreImportPlan({
       db,
+      spaceId: parsed.data.spaceId,
       apiKey: key,
       model,
       fullText: parsed.data.text,

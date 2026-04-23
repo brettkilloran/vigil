@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { and, eq, max, sql } from "drizzle-orm";
+import { and, eq, inArray, max, sql } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
 import { z } from "zod";
 
@@ -51,6 +51,9 @@ import {
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
 import { parseFactionRoster, type FactionRosterEntry } from "@/src/lib/faction-roster-schema";
+import type { HeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
+import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
+import { fetchDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
 
 type ItemRow = InferSelectModel<typeof items>;
 
@@ -58,11 +61,41 @@ const NODE_W = 280;
 const FOLDER_W = 420;
 const FOLDER_H = 280;
 export const SOURCE_SECTION_CARD_MAX_CHARS = 10_000;
+const GM_LORE_IMPORT_SCOPE_CONTEXT: HeartgardenApiBootContext = { role: "gm" };
 
 type SourceCardDraft = {
   title: string;
   text: string;
 };
+
+async function resolveAllowedImportSpaceIds(
+  db: VigilDb,
+  rootSpaceId: string,
+  importScope: "current_subtree" | "gm_workspace",
+): Promise<Set<string>> {
+  if (importScope === "current_subtree") {
+    return fetchDescendantSpaceIds(db, rootSpaceId);
+  }
+  const baseFilters =
+    (await finalizeHeartgardenSearchFiltersForDb(
+      db,
+      GM_LORE_IMPORT_SCOPE_CONTEXT,
+      {},
+    )) ?? {};
+  const rows = await db.select({ id: spaces.id }).from(spaces);
+  let allowed = new Set(rows.map((row) => row.id));
+  if (baseFilters.spaceIds?.length) {
+    const scoped = new Set(baseFilters.spaceIds);
+    allowed = new Set([...allowed].filter((id) => scoped.has(id)));
+  } else if (baseFilters.spaceId) {
+    allowed = new Set(baseFilters.spaceId ? [baseFilters.spaceId] : []);
+  }
+  if (baseFilters.excludeSpaceIds?.length) {
+    for (const id of baseFilters.excludeSpaceIds) allowed.delete(id);
+  }
+  if (baseFilters.excludeSpaceId) allowed.delete(baseFilters.excludeSpaceId);
+  return allowed;
+}
 
 export function splitIntoSourceParts(text: string): string[] {
   const trimmed = text.trim();
@@ -358,6 +391,47 @@ export async function applyLoreImportPlan(
   const mergeProposalsAccepted = plan.mergeProposals.filter((m) =>
     acceptedMergeIds.has(m.id),
   );
+  const importScope = plan.userContext?.importScope ?? "current_subtree";
+  const allowedImportSpaceIds = await resolveAllowedImportSpaceIds(
+    db,
+    body.spaceId,
+    importScope,
+  );
+  if (!allowedImportSpaceIds.has(body.spaceId)) {
+    throw new Error("Current space is outside allowed import scope");
+  }
+  const directTargetSpaceIds = new Set(
+    plan.notes
+      .filter((note) => !note.folderClientId)
+      .map((note) => note.targetSpaceId)
+      .filter((id): id is string => typeof id === "string" && id.length > 0),
+  );
+  for (const targetSpaceId of directTargetSpaceIds) {
+    if (!allowedImportSpaceIds.has(targetSpaceId)) {
+      throw new Error(`Target space ${targetSpaceId} is outside allowed import scope`);
+    }
+    const exists = await assertSpaceExists(db, targetSpaceId);
+    if (!exists) {
+      throw new Error(`Target space ${targetSpaceId} not found`);
+    }
+  }
+  if (mergeProposalsAccepted.length > 0) {
+    const mergeTargetIds = [...new Set(mergeProposalsAccepted.map((m) => m.targetItemId))];
+    const mergeRows = await db
+      .select({ id: items.id, spaceId: items.spaceId })
+      .from(items)
+      .where(inArray(items.id, mergeTargetIds));
+    const mergeSpaceByItemId = new Map(mergeRows.map((row) => [row.id, row.spaceId]));
+    for (const mergeTargetId of mergeTargetIds) {
+      const mergeSpaceId = mergeSpaceByItemId.get(mergeTargetId);
+      if (!mergeSpaceId) {
+        throw new Error(`Merge target item ${mergeTargetId} not found`);
+      }
+      if (!allowedImportSpaceIds.has(mergeSpaceId)) {
+        throw new Error(`Merge target ${mergeTargetId} is outside allowed import scope`);
+      }
+    }
+  }
   const mergedNoteClientIds = new Set(
     mergeProposalsAccepted.map((m) => m.noteClientId),
   );
@@ -583,9 +657,12 @@ export async function applyLoreImportPlan(
     // per-space proximity placement in one pass.
     const notesBySpace = new Map<string, typeof notesToCreate>();
     for (const note of notesToCreate) {
-      const spaceId = orgMode === "folders" && note.folderClientId
-        ? (folderClientToChildSpace.get(note.folderClientId) ?? body.spaceId)
-        : body.spaceId;
+      const spaceId =
+        orgMode === "folders" && note.folderClientId
+          ? (folderClientToChildSpace.get(note.folderClientId) ?? body.spaceId)
+          : note.targetSpaceId && allowedImportSpaceIds.has(note.targetSpaceId)
+            ? note.targetSpaceId
+            : body.spaceId;
       const list = notesBySpace.get(spaceId) ?? [];
       list.push(note);
       notesBySpace.set(spaceId, list);
@@ -687,9 +764,12 @@ export async function applyLoreImportPlan(
     }
 
     for (const note of notesToCreate) {
-      const targetSpaceId = orgMode === "folders" && note.folderClientId
-        ? (folderClientToChildSpace.get(note.folderClientId) ?? body.spaceId)
-        : body.spaceId;
+      const targetSpaceId =
+        orgMode === "folders" && note.folderClientId
+          ? (folderClientToChildSpace.get(note.folderClientId) ?? body.spaceId)
+          : note.targetSpaceId && allowedImportSpaceIds.has(note.targetSpaceId)
+            ? note.targetSpaceId
+            : body.spaceId;
 
       const pos =
         placementByNoteClient.get(note.clientId) ?? {

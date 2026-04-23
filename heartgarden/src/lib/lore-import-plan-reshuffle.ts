@@ -11,6 +11,7 @@ function withUserContext(
   return {
     granularity: patch.granularity ?? plan.userContext?.granularity ?? "many",
     orgMode: patch.orgMode ?? plan.userContext?.orgMode ?? "folders",
+    importScope: patch.importScope ?? plan.userContext?.importScope ?? "current_subtree",
     freeformContext: patch.freeformContext ?? plan.userContext?.freeformContext,
     docSourceKind: patch.docSourceKind ?? plan.userContext?.docSourceKind,
   };

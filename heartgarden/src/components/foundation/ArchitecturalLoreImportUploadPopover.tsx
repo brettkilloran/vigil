@@ -4,16 +4,21 @@ import { useEffect } from "react";
 import { Button } from "@/src/components/ui/Button";
 import { LoreImportLandModeRadios } from "./LoreImportLandModeRadios";
 import type { LoreImportUploadMode } from "./LoreImportLandModeRadios";
+import { LoreImportScopeRadios } from "./LoreImportScopeRadios";
+import type { LoreImportScopeMode } from "./LoreImportScopeRadios";
 import styles from "./ArchitecturalCanvasApp.module.css";
 
 export type { LoreImportUploadMode } from "./LoreImportLandModeRadios";
+export type { LoreImportScopeMode } from "./LoreImportScopeRadios";
 
 export function ArchitecturalLoreImportUploadPopover(props: {
   open: boolean;
   fileName: string;
   mode: LoreImportUploadMode;
+  scope: LoreImportScopeMode;
   contextText: string;
   onModeChange: (mode: LoreImportUploadMode) => void;
+  onScopeChange: (scope: LoreImportScopeMode) => void;
   onContextTextChange: (value: string) => void;
   onChangeFile: () => void;
   onContinue: () => void;
@@ -23,8 +28,10 @@ export function ArchitecturalLoreImportUploadPopover(props: {
     open,
     fileName,
     mode,
+    scope,
     contextText,
     onModeChange,
+    onScopeChange,
     onContextTextChange,
     onChangeFile,
     onContinue,
@@ -71,6 +78,10 @@ export function ArchitecturalLoreImportUploadPopover(props: {
         <section className={styles.importUploadPopoverSection}>
           <h3 className={styles.importUploadPopoverSectionTitle}>How should this import land?</h3>
           <LoreImportLandModeRadios mode={mode} onModeChange={onModeChange} />
+        </section>
+        <section className={styles.importUploadPopoverSection}>
+          <h3 className={styles.importUploadPopoverSectionTitle}>Where can this import place notes?</h3>
+          <LoreImportScopeRadios scope={scope} onScopeChange={onScopeChange} />
         </section>
         <div
           className={styles.importUploadPopoverActions}

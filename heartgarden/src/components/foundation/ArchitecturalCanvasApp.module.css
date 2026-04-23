@@ -3221,6 +3221,30 @@
   color: var(--sem-text-primary);
 }
 
+.smartImportReviewTargetScope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.smartImportReviewScopeHint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--sem-text-muted);
+}
+
+.smartImportReviewTargetSearch {
+  min-width: 220px;
+  flex: 1;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 86%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 4%, var(--sys-color-neutral-920) 96%);
+  color: var(--sem-text-primary);
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
 .smartImportReviewSectionLabel {
   margin: 0 0 6px;
   font-size: 10px;
@@ -3278,6 +3302,73 @@
   font-size: 11px;
   color: var(--sem-text-muted);
   line-height: 1.4;
+}
+
+.smartImportReviewTargetField {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.smartImportReviewTargetField span {
+  color: var(--sem-text-muted);
+}
+
+.smartImportReviewTargetField select {
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 86%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 4%, var(--sys-color-neutral-920) 96%);
+  color: var(--sem-text-primary);
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+.smartImportReviewTargetField small {
+  color: var(--sem-text-muted);
+}
+
+.smartImportReviewRelatedBlock {
+  margin-top: 10px;
+}
+
+.smartImportReviewRelatedToggle {
+  border: 0;
+  background: transparent;
+  color: var(--sem-text-primary);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+}
+
+.smartImportReviewRelatedList {
+  margin: 8px 0 0;
+  padding-left: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.smartImportReviewRelatedList li {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.smartImportReviewRelatedLink {
+  border: 0;
+  background: transparent;
+  color: var(--sem-text-primary);
+  cursor: pointer;
+  font-size: 11px;
+  text-align: left;
+  padding: 0;
+}
+
+.smartImportReviewRelatedList small {
+  color: var(--sem-text-muted);
+  font-size: 10px;
 }
 
 .smartImportReviewMutedWarn {

@@ -331,6 +331,7 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
     const parsedUserContext = loreImportUserContextSchema.safeParse(userContextRaw);
     const plan = await buildLoreImportPlan({
       db: db as VigilDb,
+      spaceId: job.spaceId,
       apiKey: key,
       model,
       fullText: job.sourceText,

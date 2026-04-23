@@ -138,11 +138,20 @@ Return ONLY valid JSON (no markdown fence):
   ],
   "contradictions": [
     { "noteClientId": "optional", "summary": "string", "details": "optional string" }
+  ],
+  "targetSpaces": [
+    {
+      "noteClientId": "string",
+      "targetSpaceId": "uuid from allowed spaceCandidates for that note, or null for current space",
+      "confidence": "number 0..1 (optional)",
+      "reason": "short rationale"
+    }
   ]
 }
 
 Rules:
 - Only use targetItemId values that appear in the candidates list for that noteClientId.
+- Only use targetSpaceId values that appear in that note's spaceCandidates list; otherwise return null.
 - If nothing matches well, omit merge proposals for that note (a new card will be created).
 - Use append_dated for session-style updates; use append_section for adding a labeled subsection.
 - Flag contradictions when the new text conflicts with a candidate excerpt and cannot be merged safely without human choice.`;
@@ -664,10 +673,20 @@ export function fillNoteBodiesFromChunks(
 export type CandidateRow = {
   itemId: string;
   title: string;
+  spaceId?: string;
   spaceName: string;
   snippet?: string;
   itemType?: string;
   entityType?: string | null;
+};
+
+export type SpaceCandidateRow = {
+  spaceId: string;
+  spaceTitle: string;
+  path?: string;
+  score?: number;
+  reason?: string;
+  topTitles?: string[];
 };
 
 export async function runLoreImportMergeLlm(
@@ -675,6 +694,7 @@ export async function runLoreImportMergeLlm(
   model: string,
   notes: { clientId: string; title: string; summary: string; bodyPreview: string }[],
   candidatesByNoteClientId: Record<string, CandidateRow[]>,
+  spaceCandidatesByNoteClientId: Record<string, SpaceCandidateRow[]> = {},
   onLlmCall?: LoreImportLlmCallReporter,
 ): Promise<{
   mergeProposals: {
@@ -685,6 +705,12 @@ export async function runLoreImportMergeLlm(
     rationale?: string;
   }[];
   contradictions: { noteClientId?: string; summary: string; details?: string }[];
+  targetSpaces: {
+    noteClientId: string;
+    targetSpaceId: string | null;
+    confidence?: number;
+    reason?: string;
+  }[];
 }> {
   const payload = notes.map((n) => ({
     noteClientId: n.clientId,
@@ -692,6 +718,7 @@ export async function runLoreImportMergeLlm(
     summary: n.summary,
     bodyPreview: n.bodyPreview,
     candidates: candidatesByNoteClientId[n.clientId] ?? [],
+    spaceCandidates: spaceCandidatesByNoteClientId[n.clientId] ?? [],
   }));
   const user = `NOTES AND CANDIDATES (JSON):\n${JSON.stringify(payload).slice(0, MERGE_USER_JSON_MAX)}`;
 
@@ -716,12 +743,13 @@ export async function runLoreImportMergeLlm(
   });
   const jsonStr = res.jsonText;
   if (!jsonStr) {
-    return { mergeProposals: [], contradictions: [] };
+    return { mergeProposals: [], contradictions: [], targetSpaces: [] };
   }
   try {
     const parsed = JSON.parse(jsonStr) as {
       mergeProposals?: unknown[];
       contradictions?: unknown[];
+      targetSpaces?: unknown[];
     };
     const mergeProposals: {
       noteClientId: string;
@@ -762,9 +790,39 @@ export async function runLoreImportMergeLlm(
         details: o.details != null ? String(o.details).slice(0, 8000) : undefined,
       });
     }
-    return { mergeProposals, contradictions };
+    const targetSpaces: {
+      noteClientId: string;
+      targetSpaceId: string | null;
+      confidence?: number;
+      reason?: string;
+    }[] = [];
+    for (const t of parsed.targetSpaces ?? []) {
+      if (!t || typeof t !== "object") continue;
+      const o = t as Record<string, unknown>;
+      const noteClientId = String(o.noteClientId ?? "").trim();
+      if (!noteClientId) continue;
+      const allowedSpaceIds = new Set(
+        (spaceCandidatesByNoteClientId[noteClientId] ?? []).map((c) => c.spaceId),
+      );
+      const rawTarget = o.targetSpaceId;
+      const targetSpaceId =
+        typeof rawTarget === "string" && allowedSpaceIds.has(rawTarget.trim())
+          ? rawTarget.trim()
+          : null;
+      const rawConfidence =
+        typeof o.confidence === "number" && Number.isFinite(o.confidence)
+          ? Math.max(0, Math.min(1, o.confidence))
+          : undefined;
+      targetSpaces.push({
+        noteClientId,
+        targetSpaceId,
+        confidence: rawConfidence,
+        reason: o.reason != null ? String(o.reason).slice(0, 400) : undefined,
+      });
+    }
+    return { mergeProposals, contradictions, targetSpaces };
   } catch {
-    return { mergeProposals: [], contradictions: [] };
+    return { mergeProposals: [], contradictions: [], targetSpaces: [] };
   }
 }
 
@@ -781,6 +839,7 @@ export async function runLoreImportMergeLlmBatched(
     bodyPreview: string;
   }[],
   candidatesByNoteClientId: Record<string, CandidateRow[]>,
+  spaceCandidatesByNoteClientId: Record<string, SpaceCandidateRow[]> = {},
   onBatchProgress?: (step: number, total: number) => void | Promise<void>,
   onLlmCall?: LoreImportLlmCallReporter,
 ): Promise<{
@@ -792,6 +851,12 @@ export async function runLoreImportMergeLlmBatched(
     rationale?: string;
   }[];
   contradictions: { noteClientId?: string; summary: string; details?: string }[];
+  targetSpaces: {
+    noteClientId: string;
+    targetSpaceId: string | null;
+    confidence?: number;
+    reason?: string;
+  }[];
 }> {
   const mergeProposals: {
     noteClientId: string;
@@ -805,20 +870,29 @@ export async function runLoreImportMergeLlmBatched(
     summary: string;
     details?: string;
   }[] = [];
+  const targetSpaces: {
+    noteClientId: string;
+    targetSpaceId: string | null;
+    confidence?: number;
+    reason?: string;
+  }[] = [];
   const totalBatches = Math.max(1, Math.ceil(mergeInput.length / MERGE_NOTE_BATCH));
   for (let i = 0; i < mergeInput.length; i += MERGE_NOTE_BATCH) {
     const batchStep = Math.floor(i / MERGE_NOTE_BATCH) + 1;
     await onBatchProgress?.(batchStep, totalBatches);
     const batch = mergeInput.slice(i, i + MERGE_NOTE_BATCH);
     const cand: Record<string, CandidateRow[]> = {};
+    const spaceCand: Record<string, SpaceCandidateRow[]> = {};
     for (const n of batch) {
       cand[n.clientId] = candidatesByNoteClientId[n.clientId] ?? [];
+      spaceCand[n.clientId] = spaceCandidatesByNoteClientId[n.clientId] ?? [];
     }
-    const r = await runLoreImportMergeLlm(apiKey, model, batch, cand, onLlmCall);
+    const r = await runLoreImportMergeLlm(apiKey, model, batch, cand, spaceCand, onLlmCall);
     mergeProposals.push(...r.mergeProposals);
     contradictions.push(...r.contradictions);
+    targetSpaces.push(...r.targetSpaces);
   }
-  return { mergeProposals, contradictions };
+  return { mergeProposals, contradictions, targetSpaces };
 }
 
 export type LoreImportClarifyContext = {

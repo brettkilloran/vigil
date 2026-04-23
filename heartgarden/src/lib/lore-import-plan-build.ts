@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 
+import { spaces as spacesTable } from "@/src/db/schema";
 import type { CanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
 import { chunkSourceText } from "@/src/lib/lore-import-chunk";
 import {
@@ -11,6 +12,7 @@ import {
   runLoreImportMergeLlmBatched,
   runLoreImportOutlineLlm,
   type CandidateRow,
+  type SpaceCandidateRow,
 } from "@/src/lib/lore-import-plan-llm";
 import {
   capClarificationList,
@@ -31,6 +33,7 @@ import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
 import { LOCATION_TOP_FIELD_CHAR_CAPS } from "@/src/lib/lore-location-focus-document-html";
 import type { HeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
 import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
+import { fetchDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
 import type { SearchFilters, VigilDb } from "@/src/lib/spaces";
 import { IMPORT_MERGE_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 import { hybridRetrieveItems } from "@/src/lib/vault-retrieval";
@@ -78,17 +81,57 @@ type LoreImportFindings = {
   folders: number;
   notes: number;
   candidates: number;
+  candidateSpaces: number;
   mergeProposals: number;
   contradictions: number;
   clarifications: number;
+  targetSpaceRoutes: number;
 };
 
 type LoreImportPlanEventReporter = (
   event: LoreImportPlanEvent,
 ) => void | Promise<void>;
 
+function withScopedSpaceIds(
+  filters: SearchFilters,
+  allowedSpaceIds: Set<string> | null,
+): SearchFilters {
+  if (!allowedSpaceIds) return filters;
+  const allowed = [...allowedSpaceIds];
+  const next: SearchFilters = { ...filters };
+  if (next.spaceIds?.length) {
+    next.spaceIds = next.spaceIds.filter((id) => allowedSpaceIds.has(id));
+    return next;
+  }
+  if (next.spaceId) {
+    next.spaceIds = allowedSpaceIds.has(next.spaceId) ? [next.spaceId] : [];
+    delete next.spaceId;
+    return next;
+  }
+  next.spaceIds = allowed;
+  return next;
+}
+
+function buildSpacePath(
+  spaceId: string,
+  byId: Map<string, { name: string; parentSpaceId: string | null }>,
+): string {
+  const labels: string[] = [];
+  let current: string | null = spaceId;
+  const seen = new Set<string>();
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    const row = byId.get(current);
+    if (!row) break;
+    labels.push(row.name);
+    current = row.parentSpaceId;
+  }
+  return labels.reverse().join(" / ");
+}
+
 export async function buildLoreImportPlan(args: {
   db: VigilDb;
+  spaceId: string;
   apiKey: string;
   model: string;
   fullText: string;
@@ -105,9 +148,11 @@ export async function buildLoreImportPlan(args: {
     folders: 0,
     notes: 0,
     candidates: 0,
+    candidateSpaces: 0,
     mergeProposals: 0,
     contradictions: 0,
     clarifications: 0,
+    targetSpaceRoutes: 0,
   };
   const emitEvent = async (event: LoreImportPlanEvent): Promise<void> => {
     await args.onEvent?.(event);
@@ -276,8 +321,30 @@ export async function buildLoreImportPlan(args: {
     }
   }
 
-  const vaultSearchFilters: SearchFilters =
+  const importScope = args.userContext?.importScope ?? "current_subtree";
+  const allowedSpaceIds =
+    importScope === "current_subtree"
+      ? await fetchDescendantSpaceIds(args.db, args.spaceId)
+      : null;
+  const baseVaultSearchFilters: SearchFilters =
     (await finalizeHeartgardenSearchFiltersForDb(args.db, GM_LORE_IMPORT_SEARCH, {})) ?? {};
+  const vaultSearchFilters: SearchFilters = withScopedSpaceIds(
+    baseVaultSearchFilters,
+    allowedSpaceIds,
+  );
+  const spaceRows = await args.db
+    .select({
+      id: spacesTable.id,
+      name: spacesTable.name,
+      parentSpaceId: spacesTable.parentSpaceId,
+    })
+    .from(spacesTable);
+  const spaceById = new Map(
+    spaceRows.map((row) => [
+      row.id,
+      { name: row.name, parentSpaceId: row.parentSpaceId ?? null },
+    ]),
+  );
 
   const candidatesByNoteClientId: Record<string, CandidateRow[]> = {};
   const retrievalTotal = Math.max(
@@ -306,6 +373,7 @@ export async function buildLoreImportPlan(args: {
           return {
             itemId: r.item.id,
             title: r.item.title ?? "",
+            spaceId: r.space.id,
             spaceName: r.space.name,
             snippet,
             itemType: r.item.itemType,
@@ -333,6 +401,123 @@ export async function buildLoreImportPlan(args: {
     });
   }
 
+  const relatedItemsByNoteClientId: Record<
+    string,
+    {
+      itemId: string;
+      spaceId: string;
+      title: string;
+      score?: number;
+      snippet?: string;
+    }[]
+  > = {};
+  const spaceCandidatesByNoteClientId: Record<string, SpaceCandidateRow[]> = {};
+  const globalSpaceSuggestions = new Map<
+    string,
+    { spaceId: string; spaceTitle: string; path?: string; score: number; reason?: string }
+  >();
+  const spaceRetrievalTotal = Math.max(
+    1,
+    Math.ceil(notesInternal.length / VAULT_SEARCH_CONCURRENCY),
+  );
+  for (let i = 0; i < notesInternal.length; i += VAULT_SEARCH_CONCURRENCY) {
+    const retrievalStep = Math.floor(i / VAULT_SEARCH_CONCURRENCY) + 1;
+    await reportProgress("vault_retrieval", "Finding best destination spaces", {
+      step: retrievalStep,
+      total: spaceRetrievalTotal,
+      meta: { subphase: "space_candidates" },
+    });
+    const retrievalStartedAt = Date.now();
+    const slice = notesInternal.slice(i, i + VAULT_SEARCH_CONCURRENCY);
+    const results = await Promise.all(
+      slice.map(async (note) => {
+        const q = `${note.title} ${note.summary}`.trim().slice(0, 800);
+        const hybrid = await hybridRetrieveItems(args.db, q, vaultSearchFilters, {
+          ...IMPORT_MERGE_HYBRID_OPTIONS,
+          includeVector: true,
+        });
+        const relatedItems = hybrid.rows.slice(0, 12).map((r) => ({
+          itemId: r.item.id,
+          spaceId: r.space.id,
+          title: (r.item.title ?? "").slice(0, 255),
+          score: typeof r.score === "number" ? Math.max(0, Math.min(1, r.score)) : undefined,
+          snippet:
+            hybrid.itemIdToFtsSnippet.get(r.item.id)?.slice(0, 1200) ??
+            hybrid.itemIdToChunks.get(r.item.id)?.[0]?.slice(0, 1200),
+        }));
+        const bySpace = new Map<
+          string,
+          { spaceTitle: string; score: number; topTitles: string[] }
+        >();
+        for (const row of hybrid.rows) {
+          const entry = bySpace.get(row.space.id) ?? {
+            spaceTitle: row.space.name,
+            score: 0,
+            topTitles: [],
+          };
+          entry.score += typeof row.score === "number" ? row.score : 0;
+          if (entry.topTitles.length < 3) {
+            const title = (row.item.title ?? "").trim();
+            if (title) entry.topTitles.push(title.slice(0, 255));
+          }
+          bySpace.set(row.space.id, entry);
+        }
+        const spaceCandidates = [...bySpace.entries()]
+          .sort((a, b) => b[1].score - a[1].score)
+          .slice(0, 5)
+          .map(([spaceId, entry]) => {
+            const path = buildSpacePath(spaceId, spaceById);
+            const score = Math.max(0, Math.min(1, entry.score));
+            return {
+              spaceId,
+              spaceTitle: entry.spaceTitle.slice(0, 255),
+              path: path || undefined,
+              score,
+              reason:
+                entry.topTitles.length > 0
+                  ? `Related cards: ${entry.topTitles.join(", ")}`
+                  : undefined,
+              topTitles: entry.topTitles,
+            };
+          });
+        return { clientId: note.clientId, relatedItems, spaceCandidates };
+      }),
+    );
+    for (const result of results) {
+      relatedItemsByNoteClientId[result.clientId] = result.relatedItems;
+      spaceCandidatesByNoteClientId[result.clientId] = result.spaceCandidates;
+      for (const candidate of result.spaceCandidates) {
+        const existing = globalSpaceSuggestions.get(candidate.spaceId);
+        if (!existing || (candidate.score ?? 0) > existing.score) {
+          globalSpaceSuggestions.set(candidate.spaceId, {
+            spaceId: candidate.spaceId,
+            spaceTitle: candidate.spaceTitle,
+            path: candidate.path,
+            score: candidate.score ?? 0,
+            reason: candidate.reason,
+          });
+        }
+      }
+    }
+    findings = {
+      ...findings,
+      candidateSpaces: globalSpaceSuggestions.size,
+    };
+    await emitEvent({
+      kind: "vault_search",
+      phase: "vault_retrieval",
+      durationMs: Math.max(0, Date.now() - retrievalStartedAt),
+      text: `Space candidate retrieval batch ${retrievalStep} of ${spaceRetrievalTotal}`,
+    });
+  }
+  if (importScope === "current_subtree" && globalSpaceSuggestions.size === 0) {
+    await emitEvent({
+      kind: "warning",
+      phase: "vault_retrieval",
+      text: "No placement candidates found in current subtree scope.",
+    });
+  }
+
   const mergeInput = notesInternal.map((n) => ({
     clientId: n.clientId,
     title: n.title,
@@ -344,12 +529,17 @@ export async function buildLoreImportPlan(args: {
     meta: { subphase: "candidate_match" },
   });
 
-  const { mergeProposals: rawMerges, contradictions: rawContra } =
+  const {
+    mergeProposals: rawMerges,
+    contradictions: rawContra,
+    targetSpaces: rawTargetSpaces,
+  } =
     await runLoreImportMergeLlmBatched(
       args.apiKey,
       args.model,
       mergeInput,
       candidatesByNoteClientId,
+      spaceCandidatesByNoteClientId,
       async (step, total) => {
         await reportProgress("merge", "Running merge analysis batches", {
           step,
@@ -363,6 +553,9 @@ export async function buildLoreImportPlan(args: {
         await emitLlmCall(event, "merge");
       },
     );
+  const targetSpaceByNoteClientId = new Map(
+    rawTargetSpaces.map((row) => [row.noteClientId, row]),
+  );
 
   const mergeProposals = rawMerges.map((m) => {
     const row = candidatesByNoteClientId[m.noteClientId]?.find(
@@ -392,6 +585,7 @@ export async function buildLoreImportPlan(args: {
     ...findings,
     mergeProposals: mergeProposals.length,
     contradictions: contradictions.length,
+    targetSpaceRoutes: rawTargetSpaces.filter((row) => row.targetSpaceId).length,
   };
 
   const kindByClientId = new Map(
@@ -582,6 +776,8 @@ export async function buildLoreImportPlan(args: {
           linkIntent?: "association" | "binding_hint";
         }[];
       }).crossFolderMentions;
+      const targetSpace = targetSpaceByNoteClientId.get(n.clientId);
+      const relatedItems = relatedItemsByNoteClientId[n.clientId] ?? [];
       return {
         clientId: n.clientId,
         title: n.title,
@@ -596,6 +792,14 @@ export async function buildLoreImportPlan(args: {
         sourceChunkIds: n.sourceChunkIds,
         sourcePassages: n.sourcePassages,
         ...(n.body ? { body: n.body } : {}),
+        ...(typeof targetSpace?.targetSpaceId === "string"
+          ? { targetSpaceId: targetSpace.targetSpaceId }
+          : {}),
+        ...(typeof targetSpace?.confidence === "number"
+          ? { targetSpaceConfidence: targetSpace.confidence }
+          : {}),
+        ...(targetSpace?.reason ? { targetSpaceReason: targetSpace.reason } : {}),
+        ...(relatedItems.length > 0 ? { relatedItems } : {}),
         ...(mentions && mentions.length > 0
           ? { crossFolderMentions: mentions }
           : {}),
@@ -610,6 +814,19 @@ export async function buildLoreImportPlan(args: {
     mergeProposals,
     contradictions,
     clarifications,
+    spaceSuggestions:
+      globalSpaceSuggestions.size > 0
+        ? [...globalSpaceSuggestions.values()]
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 25)
+            .map((row) => ({
+              spaceId: row.spaceId,
+              spaceTitle: row.spaceTitle,
+              path: row.path,
+              score: row.score,
+              reason: row.reason,
+            }))
+        : undefined,
     importPlanWarnings:
       linkWarnings.length > 0 ||
       coercionWarnings.length > 0 ||

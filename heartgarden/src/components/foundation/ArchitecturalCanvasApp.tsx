@@ -46,6 +46,7 @@ import {
 import { ArchitecturalLoreImportErrorDialog } from "@/src/components/foundation/ArchitecturalLoreImportErrorDialog";
 import {
   ArchitecturalLoreImportUploadPopover,
+  type LoreImportScopeMode,
   type LoreImportUploadMode,
 } from "@/src/components/foundation/ArchitecturalLoreImportUploadPopover";
 import { VigilAppBootScreen } from "./VigilAppBootScreen";
@@ -543,6 +544,7 @@ type LoreSmartImportReviewState = {
 
 type LoreImportSelectionState = {
   mode: LoreImportUploadMode;
+  scope: LoreImportScopeMode;
   contextText: string;
 };
 
@@ -568,6 +570,7 @@ function mapSelectionToUserContext(
     return {
       granularity: "one_note",
       orgMode: "nearby",
+      importScope: selection.scope,
       freeformContext: "",
       docSourceKind: inferDocSourceKind(fileName),
     };
@@ -576,6 +579,7 @@ function mapSelectionToUserContext(
     return {
       granularity: "many",
       orgMode: "folders",
+      importScope: selection.scope,
       freeformContext: selection.contextText.trim(),
       docSourceKind: inferDocSourceKind(fileName),
     };
@@ -583,6 +587,7 @@ function mapSelectionToUserContext(
   return {
     granularity: "many",
     orgMode: "nearby",
+    importScope: selection.scope,
     freeformContext: selection.contextText.trim(),
     docSourceKind: inferDocSourceKind(fileName),
   };
@@ -609,6 +614,12 @@ type LoreImportJobEvent = {
   responseSnippet?: string;
   text?: string;
   ref?: string;
+};
+
+type LoreImportTargetSpaceOption = {
+  spaceId: string;
+  title: string;
+  path: string;
 };
 
 function coerceOptionalProgressInt(value: unknown): number | null {
@@ -2664,9 +2675,11 @@ export function ArchitecturalCanvasApp({
           folders: readProgressMetaNumber(findingsRaw, "folders"),
           notes: readProgressMetaNumber(findingsRaw, "notes"),
           candidates: readProgressMetaNumber(findingsRaw, "candidates"),
+          candidateSpaces: readProgressMetaNumber(findingsRaw, "candidateSpaces"),
           mergeProposals: readProgressMetaNumber(findingsRaw, "mergeProposals"),
           contradictions: readProgressMetaNumber(findingsRaw, "contradictions"),
           clarifications: readProgressMetaNumber(findingsRaw, "clarifications"),
+          targetSpaceRoutes: readProgressMetaNumber(findingsRaw, "targetSpaceRoutes"),
         }
       : null;
     const findingsSummary = findings
@@ -2675,6 +2688,9 @@ export function ArchitecturalCanvasApp({
           typeof findings.notes === "number" ? `${findings.notes} notes` : null,
           typeof findings.folders === "number" ? `${findings.folders} folders` : null,
           typeof findings.candidates === "number" ? `${findings.candidates} candidates` : null,
+          typeof findings.candidateSpaces === "number"
+            ? `${findings.candidateSpaces} candidate spaces`
+            : null,
           typeof findings.mergeProposals === "number"
             ? `${findings.mergeProposals} merge proposals`
             : null,
@@ -2683,6 +2699,9 @@ export function ArchitecturalCanvasApp({
             : null,
           typeof findings.clarifications === "number"
             ? `${findings.clarifications} clarifications`
+            : null,
+          typeof findings.targetSpaceRoutes === "number"
+            ? `${findings.targetSpaceRoutes} routed`
             : null,
         ]
           .filter((token): token is string => Boolean(token))
@@ -2721,6 +2740,16 @@ export function ArchitecturalCanvasApp({
     null,
   );
   const [loreSmartManualQuestionId, setLoreSmartManualQuestionId] = useState<string | null>(null);
+  const [loreSmartTargetSpaceByNoteId, setLoreSmartTargetSpaceByNoteId] = useState<
+    Record<string, string | null>
+  >({});
+  const [loreSmartRelatedOpenByNoteId, setLoreSmartRelatedOpenByNoteId] = useState<
+    Record<string, boolean>
+  >({});
+  const [loreSmartSpaceSearchQuery, setLoreSmartSpaceSearchQuery] = useState("");
+  const [loreSmartSpaceSearchResults, setLoreSmartSpaceSearchResults] = useState<
+    LoreImportTargetSpaceOption[]
+  >([]);
   const [loreImportCommitting, setLoreImportCommitting] = useState(false);
   const closeLoreSmartReview = useCallback(() => {
     if (loreImportCommitting) return;
@@ -2729,6 +2758,10 @@ export function ArchitecturalCanvasApp({
     setLoreSmartClarificationAnswers([]);
     setLoreSmartOtherFollowUp(null);
     setLoreSmartManualQuestionId(null);
+    setLoreSmartTargetSpaceByNoteId({});
+    setLoreSmartRelatedOpenByNoteId({});
+    setLoreSmartSpaceSearchQuery("");
+    setLoreSmartSpaceSearchResults([]);
   }, [loreImportCommitting]);
   const flattenSmartImportToNearby = useCallback(() => {
     setLoreSmartReview((prev) => {
@@ -2758,6 +2791,55 @@ export function ArchitecturalCanvasApp({
     setLoreSmartManualQuestionId(null);
     setLoreSmartOtherFollowUp(null);
   }, []);
+  const loreSmartImportScope = loreSmartReview?.plan.userContext?.importScope ?? "current_subtree";
+  const loreSmartPlanWithTargetOverrides = useMemo(() => {
+    if (!loreSmartReview) return null;
+    const notes = loreSmartReview.plan.notes.map((note) => {
+      if (note.folderClientId) return note;
+      const overridden = loreSmartTargetSpaceByNoteId[note.clientId];
+      return {
+        ...note,
+        targetSpaceId: typeof overridden === "string" ? overridden : null,
+      };
+    });
+    return { ...loreSmartReview.plan, notes };
+  }, [loreSmartReview, loreSmartTargetSpaceByNoteId]);
+  useEffect(() => {
+    if (!loreSmartReview || !isUuidLike(activeSpaceId)) {
+      setLoreSmartSpaceSearchResults([]);
+      return;
+    }
+    const ctrl = new AbortController();
+    const query = loreSmartSpaceSearchQuery.trim();
+    const params = new URLSearchParams({
+      scope: loreSmartImportScope,
+      rootSpaceId: activeSpaceId,
+    });
+    if (query) params.set("q", query);
+    void fetch(`/api/spaces/search?${params.toString()}`, {
+      signal: ctrl.signal,
+    })
+      .then(async (res) => {
+        const body = (await res.json()) as {
+          ok?: boolean;
+          spaces?: Array<{ spaceId?: string; title?: string; path?: string }>;
+        };
+        if (!res.ok || !body.ok || !Array.isArray(body.spaces)) return;
+        setLoreSmartSpaceSearchResults(
+          body.spaces
+            .filter((row): row is { spaceId: string; title: string; path: string } =>
+              typeof row.spaceId === "string" &&
+              typeof row.title === "string" &&
+              typeof row.path === "string",
+            )
+            .slice(0, 80),
+        );
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error)) return;
+      });
+    return () => ctrl.abort();
+  }, [activeSpaceId, loreSmartImportScope, loreSmartReview, loreSmartSpaceSearchQuery]);
   const cancelLoreSmartPlanning = useCallback(() => {
     const ctrl = loreSmartPlanningAbortRef.current;
     if (ctrl) {
@@ -2925,6 +3007,7 @@ export function ArchitecturalCanvasApp({
   );
   const [loreImportSelection, setLoreImportSelection] = useState<LoreImportSelectionState>({
     mode: "many_loose",
+    scope: "current_subtree",
     contextText: "",
   });
   const [cloudLinksBar, setCloudLinksBar] = useState(() => getNeonSyncSnapshot().cloudEnabled);
@@ -5728,12 +5811,14 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   useEffect(() => {
+    const protectedTimers = optimisticProtectedTimerRef.current;
+    const protectedIds = optimisticProtectedIdsRef.current;
     return () => {
-      for (const timer of optimisticProtectedTimerRef.current.values()) {
+      for (const timer of protectedTimers.values()) {
         clearTimeout(timer);
       }
-      optimisticProtectedTimerRef.current.clear();
-      optimisticProtectedIdsRef.current.clear();
+      protectedTimers.clear();
+      protectedIds.clear();
     };
   }, []);
 
@@ -6652,7 +6737,8 @@ export function ArchitecturalCanvasApp({
 
   const commitSmartLoreImport = useCallback(async () => {
     const rev = loreSmartReview;
-    if (!rev) return;
+    const planForApply = loreSmartPlanWithTargetOverrides;
+    if (!rev || !planForApply) return;
     const attemptId =
       typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
@@ -6699,11 +6785,11 @@ export function ArchitecturalCanvasApp({
         },
         body: JSON.stringify({
           spaceId: activeSpaceId,
-          importBatchId: rev.plan.importBatchId,
-          plan: rev.plan,
+          importBatchId: planForApply.importBatchId,
+          plan: planForApply,
           layout: { originX: center.x - 140, originY: center.y - 120 },
           includeSourceCard:
-            rev.plan.userContext?.granularity === "one_note"
+            planForApply.userContext?.granularity === "one_note"
               ? false
               : loreSmartIncludeSource,
           sourceDocument:
@@ -6735,7 +6821,7 @@ export function ArchitecturalCanvasApp({
             message: typeof data.error === "string" ? data.error : `Apply failed (HTTP ${res.status})`,
             responseSnippet: rawText,
             httpStatus: res.status,
-            jobId: rev.plan.importBatchId,
+            jobId: planForApply.importBatchId,
             fileName: rev.fileName,
             spaceId: activeSpaceId,
             recommendedAction:
@@ -6771,6 +6857,10 @@ export function ArchitecturalCanvasApp({
       setLoreSmartReview(null);
       setLoreSmartAcceptedMergeIds({});
       setLoreSmartClarificationAnswers([]);
+      setLoreSmartTargetSpaceByNoteId({});
+      setLoreSmartRelatedOpenByNoteId({});
+      setLoreSmartSpaceSearchQuery("");
+      setLoreSmartSpaceSearchResults([]);
       setLoreSmartManualQuestionId(null);
     } catch (error) {
       reportFailure(
@@ -6795,6 +6885,7 @@ export function ArchitecturalCanvasApp({
     loreSmartAcceptedMergeIds,
     loreSmartClarificationAnswers,
     loreSmartIncludeSource,
+    loreSmartPlanWithTargetOverrides,
     loreSmartReview,
   ]);
 
@@ -8451,6 +8542,10 @@ export function ArchitecturalCanvasApp({
         setLoreSmartClarificationAnswers([]);
         setLoreSmartOtherFollowUp(null);
         setLoreSmartManualQuestionId(null);
+        setLoreSmartTargetSpaceByNoteId({});
+        setLoreSmartRelatedOpenByNoteId({});
+        setLoreSmartSpaceSearchQuery("");
+        setLoreSmartSpaceSearchResults([]);
         setLoreSmartIncludeSource(true);
         setLoreSmartPlanning(true);
         loreSmartPlanningStartedAtRef.current = Date.now();
@@ -8468,6 +8563,14 @@ export function ArchitecturalCanvasApp({
           setLoreSmartClarificationAnswers([]);
           setLoreSmartOtherFollowUp(null);
           setLoreSmartManualQuestionId(null);
+          const nextTargetSpaces: Record<string, string | null> = {};
+          for (const note of normalizedPlan.notes) {
+            nextTargetSpaces[note.clientId] = note.targetSpaceId ?? null;
+          }
+          setLoreSmartTargetSpaceByNoteId(nextTargetSpaces);
+          setLoreSmartRelatedOpenByNoteId({});
+          setLoreSmartSpaceSearchQuery("");
+          setLoreSmartSpaceSearchResults([]);
           const nextMerge: Record<string, boolean> = {};
           for (const m of normalizedPlan.mergeProposals) {
             nextMerge[m.id] = false;
@@ -12931,8 +13034,10 @@ export function ArchitecturalCanvasApp({
             open={loreImportPopoverOpen && !!loreImportPreparedSource}
             fileName={loreImportPreparedSource?.fileName ?? ""}
             mode={loreImportSelection.mode}
+            scope={loreImportSelection.scope}
             contextText={loreImportSelection.contextText}
             onModeChange={(mode) => setLoreImportSelection((prev) => ({ ...prev, mode }))}
+            onScopeChange={(scope) => setLoreImportSelection((prev) => ({ ...prev, scope }))}
             onContextTextChange={(value) =>
               setLoreImportSelection((prev) => ({ ...prev, contextText: value }))
             }
@@ -13267,6 +13372,121 @@ export function ArchitecturalCanvasApp({
                     </Button>
                   ) : null}
                 </div>
+                <section className={styles.smartImportReviewStructure}>
+                  <div className={styles.smartImportReviewTargetScope}>
+                    <p className={styles.smartImportReviewScopeHint}>
+                      Scope:{" "}
+                      {loreSmartImportScope === "gm_workspace"
+                        ? "Entire GM workspace"
+                        : "This space & its folders"}
+                    </p>
+                    <input
+                      className={styles.smartImportReviewTargetSearch}
+                      type="search"
+                      placeholder="Search spaces for overrides..."
+                      value={loreSmartSpaceSearchQuery}
+                      onChange={(event) => setLoreSmartSpaceSearchQuery(event.target.value)}
+                    />
+                  </div>
+                  <ul className={styles.smartImportReviewNoteList}>
+                    {loreSmartReview.plan.notes.map((note) => {
+                      const selected = loreSmartTargetSpaceByNoteId[note.clientId] ?? null;
+                      const scopedSuggestions = [
+                        ...(loreSmartReview.plan.spaceSuggestions ?? []).map((s) => ({
+                          spaceId: s.spaceId,
+                          title: s.spaceTitle,
+                          path: s.path ?? s.spaceTitle,
+                        })),
+                        ...loreSmartSpaceSearchResults,
+                      ];
+                      const seen = new Set<string>();
+                      const uniqueOptions = scopedSuggestions.filter((option) => {
+                        if (seen.has(option.spaceId)) return false;
+                        seen.add(option.spaceId);
+                        return true;
+                      });
+                      const related = note.relatedItems ?? [];
+                      const relatedOpen = Boolean(loreSmartRelatedOpenByNoteId[note.clientId]);
+                      return (
+                        <li key={note.clientId} className={styles.smartImportReviewNoteCard}>
+                          <div className={styles.smartImportReviewNoteTitleRow}>
+                            <p className={styles.smartImportReviewNoteTitle}>{note.title}</p>
+                            <span className={styles.smartImportReviewNoteKind}>
+                              {note.canonicalEntityKind}
+                            </span>
+                          </div>
+                          {note.summary ? (
+                            <p className={styles.smartImportReviewNoteSummary}>{note.summary}</p>
+                          ) : null}
+                          {note.folderClientId ? (
+                            <p className={styles.smartImportReviewMergeMeta}>
+                              In folder mode, placement follows new import folders.
+                            </p>
+                          ) : (
+                            <label className={styles.smartImportReviewTargetField}>
+                              <span>Target space</span>
+                              <select
+                                value={selected ?? ""}
+                                onChange={(event) =>
+                                  setLoreSmartTargetSpaceByNoteId((prev) => ({
+                                    ...prev,
+                                    [note.clientId]: event.target.value || null,
+                                  }))
+                                }
+                              >
+                                <option value="">Current space</option>
+                                {uniqueOptions.map((option) => (
+                                  <option key={`${note.clientId}-${option.spaceId}`} value={option.spaceId}>
+                                    {option.path}
+                                  </option>
+                                ))}
+                              </select>
+                              {note.targetSpaceReason ? (
+                                <small>{note.targetSpaceReason}</small>
+                              ) : null}
+                            </label>
+                          )}
+                          {related.length > 0 ? (
+                            <div className={styles.smartImportReviewRelatedBlock}>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                tone="card-dark"
+                                className={styles.smartImportReviewRelatedToggle}
+                                onClick={() =>
+                                  setLoreSmartRelatedOpenByNoteId((prev) => ({
+                                    ...prev,
+                                    [note.clientId]: !relatedOpen,
+                                  }))
+                                }
+                              >
+                                Related elsewhere ({related.length})
+                              </Button>
+                              {relatedOpen ? (
+                                <ul className={styles.smartImportReviewRelatedList}>
+                                  {related.map((row) => (
+                                    <li key={`${note.clientId}-${row.itemId}`}>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        tone="card-dark"
+                                        className={styles.smartImportReviewRelatedLink}
+                                        onClick={() => focusEntityFromPalette(row.itemId)}
+                                      >
+                                        {row.title || row.itemId}
+                                      </Button>
+                                      {row.snippet ? <small>{row.snippet}</small> : null}
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
                 <div className={styles.smartImportWizard}>
                     {loreSmartReview.plan.clarifications.length === 0 ? (
                       <div className={styles.smartImportWizardComplete}>
