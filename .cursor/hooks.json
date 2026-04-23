@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "subagentStop": [
+      {
+        "command": "node .cursor/hooks/review-fix-kickoff.mjs",
+        "matcher": "generalPurpose",
+        "timeout": 5,
+        "failClosed": false
+      }
+    ]
+  }
+}
