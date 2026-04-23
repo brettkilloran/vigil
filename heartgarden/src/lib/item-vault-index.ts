@@ -186,6 +186,16 @@ export async function reindexItemVault(
   return { ok: true, chunks: chunks.length, loreMetaUpdated };
 }
 
+// REVIEW_2026-04-22-2 H6: cap upstream embedding/summary calls with bounded
+// concurrency. The previous serial loop walked every item one-at-a-time while
+// each reindex issues OpenAI + Anthropic requests, which made medium spaces
+// trip request timeouts. A small concurrency cap keeps tail latency bounded
+// and respects upstream rate limits without a full job queue rewrite.
+const REINDEX_SPACE_CONCURRENCY = Math.max(
+  1,
+  Number.parseInt(process.env.HEARTGARDEN_REINDEX_CONCURRENCY ?? "", 10) || 4,
+);
+
 export async function reindexSpaceVault(
   db: VigilDb,
   spaceId: string,
@@ -193,12 +203,26 @@ export async function reindexSpaceVault(
 ): Promise<{ items: number; errors: number }> {
   const rows = await db.select({ id: items.id }).from(items).where(eq(items.spaceId, spaceId));
   let errors = 0;
-  for (const row of rows) {
-    try {
-      await reindexItemVault(db, row.id, options);
-    } catch {
-      errors += 1;
+  let cursor = 0;
+  const total = rows.length;
+  async function runWorker(): Promise<void> {
+    while (true) {
+      const next = cursor++;
+      if (next >= total) return;
+      const row = rows[next];
+      if (!row) return;
+      try {
+        await reindexItemVault(db, row.id, options);
+      } catch {
+        errors += 1;
+      }
     }
   }
-  return { items: rows.length, errors };
+  const workerCount = Math.min(REINDEX_SPACE_CONCURRENCY, Math.max(1, total));
+  const workers: Promise<void>[] = [];
+  for (let i = 0; i < workerCount; i += 1) {
+    workers.push(runWorker());
+  }
+  await Promise.all(workers);
+  return { items: total, errors };
 }
