@@ -3055,13 +3055,6 @@
   min-width: min(100%, 11rem);
 }
 
-.importUploadPopoverHint {
-  margin: 9px 0 0;
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--sem-text-muted);
-}
-
 /* --- Smart import review modal (post-plan) — tokens from globals only --- */
 .smartImportReviewBackdrop {
   position: fixed;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId } from "react";
+import { useEffect } from "react";
 import { Button } from "@/src/components/ui/Button";
 import { LoreImportLandModeRadios } from "./LoreImportLandModeRadios";
 import type { LoreImportUploadMode } from "./LoreImportLandModeRadios";
@@ -30,8 +30,6 @@ export function ArchitecturalLoreImportUploadPopover(props: {
     onContinue,
     onClose,
   } = props;
-  const contextHintId = useId();
-
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -67,12 +65,8 @@ export function ArchitecturalLoreImportUploadPopover(props: {
               value={contextText}
               onChange={(event) => onContextTextChange(event.target.value)}
               placeholder="Tell the AI what to prioritize and how to organize this import..."
-              aria-describedby={contextHintId}
             />
           </label>
-          <p id={contextHintId} className={styles.importUploadPopoverContextHint}>
-            Optional. One sentence is usually enough.
-          </p>
         </section>
         <section className={styles.importUploadPopoverSection}>
           <h3 className={styles.importUploadPopoverSectionTitle}>How should this import land?</h3>
@@ -92,12 +86,11 @@ export function ArchitecturalLoreImportUploadPopover(props: {
             </Button>
           </div>
           <div className={styles.importUploadPopoverActionsPrimary}>
-            <Button size="sm" variant="primary" tone="solid" type="button" onClick={onContinue}>
+            <Button size="sm" variant="default" tone="focus-light" type="button" onClick={onContinue}>
               Continue import
             </Button>
           </div>
         </div>
-        <p className={styles.importUploadPopoverHint}>Accepted: .pdf .md .txt .docx</p>
       </div>
     </div>
   );
