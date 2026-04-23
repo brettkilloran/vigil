@@ -3,7 +3,7 @@
   "hooks": {
     "subagentStop": [
       {
-        "command": "node .cursor/hooks/review-fix-kickoff.mjs",
+        "command": "node .cursor/hooks/review-heavy-fix-kickoff.mjs",
         "matcher": "generalPurpose",
         "timeout": 5,
         "failClosed": false

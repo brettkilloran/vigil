@@ -1,12 +1,12 @@
 ---
-name: review
+name: review-heavy
 description: >-
   Runs an automated, thorough code review via parallel Codex specialist subagents
   and writes a dated audit to heartgarden/docs/REVIEW_YYYY-MM-DD.md. Use when
-  the user invokes /review, asks for a repo audit, PR-style review, or wants
-  findings grouped by severity with file-line evidence and fix directions.
+  the user invokes /review-heavy, asks for a deep repo audit, or wants
+  high-confidence findings grouped by severity with file-line evidence.
 ---
-# /review
+# /review-heavy
 
 Run this workflow end-to-end. Review is read-only; fixes happen in `FIX_PASS.md`.
 
@@ -48,33 +48,6 @@ Specialists:
 5. Product-goal/functionality drift reviewer
 6. Docs and contract drift reviewer
 7. Simplification/maintainability reviewer
-
-### Specialist Focus Contracts
-
-1) Security and auth:
-- Input validation, injection, authz/authn mistakes, secret leakage, unsafe error disclosure.
-- Check gating paths like boot/session access and role checks in API routes.
-
-2) Correctness and data integrity:
-- Transaction boundaries, optimistic-lock behavior, partial-write risk, swallowed errors.
-- Dangerous assumptions/casts and schema-validation bypasses.
-
-3) Performance and hot paths:
-- Unbounded queries/payloads, hot-loop work, missing limits/index cues, avoidable rerenders.
-
-4) Sync/realtime/concurrency:
-- Race conditions, stale closures in hooks/effects, reconnect storm risk, missing cancellation.
-
-5) Product-goal/functionality drift:
-- Compare changes against `heartgarden/docs/STRATEGY.md`, `heartgarden/docs/FEATURES.md`, and `heartgarden/AGENTS.md`.
-- Flag accidental net-new behavior, UX scope creep, or goal drift.
-
-6) Docs and contract drift:
-- Ensure docs stay aligned when API/contracts/behavior/env vars changed.
-- Check `docs/API.md`, `docs/FEATURES.md`, `docs/CODEMAP.md`, `docs/BUILD_PLAN.md`, `docs/VERCEL_ENV_VARS.md`, and naming constraints in `docs/NAMING.md`.
-
-7) Simplification and maintainability:
-- Overengineering, needless abstraction, poor atomicity, and reviewability concerns.
 
 ## 3. Synthesize Findings in a Dedicated Codex Subagent
 
@@ -131,11 +104,3 @@ When the hook starts the fix flow, require classification per finding before edi
 - `NET_NEW`: adds capability/functionality beyond correcting the audited issue.
 
 Only `SAFE` items should proceed automatically after batched approval. `RISKY` and `NET_NEW` need explicit user approval.
-
-## 8. Hard Rules for Review Quality
-
-- No evidence, no finding.
-- Prefer fewer high-signal findings over noisy laundry lists.
-- Prioritize behavioral regressions, security risk, and data-loss risk.
-- Keep style nits low priority unless they hide correctness risk.
-- If no issues are found, explicitly say so and mention residual test risk/gaps.
