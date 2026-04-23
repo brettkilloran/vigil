@@ -1,8 +1,8 @@
 ---
 name: review-light
 description: >-
-  Runs a cheaper, faster code review using a single Composer 2 subagent pass and
-  returns high-signal findings with file evidence. Writes
+  Runs a cheaper, faster code review using three parallel Composer 2 subagent
+  passes and returns high-signal findings with file evidence. Writes
   heartgarden/docs/REVIEW_YYYY-MM-DD_HHMM.md (UTC date and 24h time). Use when
   the user invokes /review-light, wants a low-cost review, or needs a quick
   pre-commit sanity check.
@@ -10,14 +10,21 @@ description: >-
 # /review-light
 
 Use this for low-cost review. Prefer `review-heavy` when the change is large, risky, or release-bound.
+Read and follow `.cursor/skills/review-common/CLOSURE_POLICY.md` as mandatory policy.
 
 ## 0. Cost-Constrained Mode
 
-- Run exactly one review subagent pass.
-- Use `subagent_type: generalPurpose`, `readonly: true`.
-- Use model `composer-2-fast`.
-- Do not run multi-agent fan-out.
+- Run exactly three review subagent passes in parallel.
+- Each pass must use `subagent_type: generalPurpose`, `readonly: true`.
+- Use model `composer-2-fast` for all three passes.
+- Keep this as a constrained mini-swarm (exactly 3, not more).
 - Write a dated audit file every run so fix-pass can execute deterministically.
+
+Launch all three in one tool message so they run concurrently:
+
+1. Security/auth + correctness/data-integrity reviewer
+2. Performance/hot-path + concurrency risk reviewer
+3. API/docs/contract drift + maintainability reviewer
 
 ## 1. Scope Detection (Smart Auto)
 
@@ -80,7 +87,11 @@ Classifier policy:
 - `RISKY`: explicit user approval required.
 - `NET_NEW`: explicit user approval required.
 
-## 6. Escalation Rule
+## 6. Full-Closure Requirement (All Findings)
+
+`/review-light` must complete remediation for all findings in the same run by applying `.cursor/skills/review-common/CLOSURE_POLICY.md` (including terminal states and user-question requirements).
+
+## 7. Escalation Rule
 
 Recommend running `/review-heavy` when:
 

@@ -14,6 +14,7 @@ Run this workflow end-to-end. Review is read-only through audit creation; then i
 ## 0. Preconditions
 
 - Read `heartgarden/AGENTS.md` first, then use `docs/API.md`, `docs/FEATURES.md`, and `docs/CODEMAP.md` as needed.
+- Read `.cursor/skills/review-common/CLOSURE_POLICY.md` and follow it as mandatory policy.
 - Never commit secrets or expose credentials in output.
 - Keep review read-only: no edits, commits, pushes, or deploys in this phase.
 
@@ -101,7 +102,12 @@ Use this sequence:
 3. Apply SAFE/RISKY/NET_NEW classifier rules from this skill + `FIX_PASS.md`.
 4. If RISKY/NET_NEW findings exist, pause for explicit user approval before editing those items.
 
-## 7. Parent Agent Reply Format
+## 7. Full-Closure Requirement (All Findings)
+
+Apply `.cursor/skills/review-common/CLOSURE_POLICY.md` verbatim.  
+Do not stop until each finding has a terminal state (`FIXED`, `QUESTION_FOR_USER`, or `DECLINED_BY_USER`).
+
+## 8. Parent Agent Reply Format
 
 Return a concise user summary:
 
@@ -109,14 +115,8 @@ Return a concise user summary:
 - count by severity
 - top 3 issues (one line each)
 - audit file path
-- note that fix pass has started (or is blocked pending approvals)
+- note that fix pass reached full closure, or list explicit pending user questions
 
-## 8. Fix-Pass Classifier Contract (SAFE/RISKY/NET_NEW)
+## 9. Fix-Pass Classifier Contract (SAFE/RISKY/NET_NEW)
 
-When the hook starts the fix flow, require classification per finding before edits:
-
-- `SAFE`: minimal bug fix, no feature expansion, no new route/dependency/env var/migration/public API change.
-- `RISKY`: touches sensitive boundaries or has meaningful regression potential.
-- `NET_NEW`: adds capability/functionality beyond correcting the audited issue.
-
-Only `SAFE` items should proceed automatically after batched approval. `RISKY` and `NET_NEW` need explicit user approval.
+Use classifier definitions and approval gates from `.cursor/skills/review-common/CLOSURE_POLICY.md`.
