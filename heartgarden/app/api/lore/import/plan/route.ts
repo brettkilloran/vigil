@@ -9,6 +9,7 @@ import {
   heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { buildLoreImportPlan } from "@/src/lib/lore-import-plan-build";
+import { loreImportUserContextSchema } from "@/src/lib/lore-import-plan-types";
 import { persistImportReviewQueueFromPlan } from "@/src/lib/lore-import-persist-review";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
@@ -22,6 +23,7 @@ const bodySchema = z.object({
   fileName: z.string().max(512).optional(),
   importBatchId: z.string().uuid().optional(),
   persistReview: z.boolean().optional(),
+  userContext: loreImportUserContextSchema.optional(),
 });
 
 export async function POST(req: Request) {
@@ -80,6 +82,7 @@ export async function POST(req: Request) {
       fullText: parsed.data.text,
       importBatchId,
       fileName: parsed.data.fileName,
+      userContext: parsed.data.userContext,
     });
 
     const persistReview = parsed.data.persistReview !== false;

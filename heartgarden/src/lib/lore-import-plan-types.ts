@@ -261,6 +261,20 @@ export const clarificationAnswerSchema = z.object({
 
 export type ClarificationAnswer = z.infer<typeof clarificationAnswerSchema>;
 
+export const loreImportUserContextSchema = z.object({
+  granularity: z.enum(["one_note", "many"]),
+  orgMode: z.enum(["folders", "nearby"]),
+  freeformContext: z.string().max(4_000).optional(),
+  docSourceKind: z.enum(["pdf", "docx", "markdown", "text"]).optional(),
+});
+
+export type LoreImportUserContext = z.infer<typeof loreImportUserContextSchema>;
+
+export const loreImportOneNoteSourceSchema = z.object({
+  title: z.string().max(255).optional(),
+  text: z.string().max(500_000),
+});
+
 export const loreImportPlanSchema = z.object({
   importBatchId: z.string().uuid(),
   fileName: z.string().max(512).optional(),
@@ -286,6 +300,8 @@ export const loreImportPlanSchema = z.object({
   clarifications: z.array(loreImportClarificationItemSchema).optional().default([]),
   /** Server-generated: cross-space link drops, etc. (round-tripped through apply). */
   importPlanWarnings: z.array(z.string().max(600)).max(48).optional(),
+  userContext: loreImportUserContextSchema.optional(),
+  oneNoteSource: loreImportOneNoteSourceSchema.optional(),
 });
 
 export type LoreImportPlan = z.infer<typeof loreImportPlanSchema>;

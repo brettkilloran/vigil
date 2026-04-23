@@ -1,4 +1,4 @@
-import { and, eq, lt, or } from "drizzle-orm";
+import { and, eq, lt, or, sql } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { loreImportJobs } from "@/src/db/schema";
@@ -6,7 +6,10 @@ import { buildLoreImportPlan } from "@/src/lib/lore-import-plan-build";
 import type { LoreImportProgress } from "@/src/lib/lore-import-progress";
 import { computeLoreImportPipelinePercent } from "@/src/lib/lore-import-pipeline-progress";
 import { persistImportReviewQueueFromPlan } from "@/src/lib/lore-import-persist-review";
-import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
+import {
+  loreImportPlanSchema,
+  loreImportUserContextSchema,
+} from "@/src/lib/lore-import-plan-types";
 import type { VigilDb } from "@/src/lib/spaces";
 
 /** Re-queue jobs stuck in `processing` after a crash or serverless timeout. */
@@ -172,6 +175,24 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
 
   try {
     await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
+    let userContextRaw: unknown = null;
+    if (typeof (db as { execute?: unknown }).execute === "function") {
+      try {
+        const rows = await db.execute(sql`
+          select user_context
+          from lore_import_jobs
+          where id = ${jobId}
+          limit 1
+        `);
+        userContextRaw = (rows as { rows?: Array<{ user_context?: unknown }> }).rows?.[0]
+          ?.user_context;
+      } catch (error) {
+        if (!isMissingProgressColumnsError(error)) {
+          throw error;
+        }
+      }
+    }
+    const parsedUserContext = loreImportUserContextSchema.safeParse(userContextRaw);
     const plan = await buildLoreImportPlan({
       db: db as VigilDb,
       apiKey: key,
@@ -179,6 +200,7 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
       fullText: job.sourceText,
       importBatchId: job.importBatchId,
       fileName: job.fileName ?? undefined,
+      userContext: parsedUserContext.success ? parsedUserContext.data : undefined,
       onProgress: async (progress) => {
         await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
         lastPhase = progress.phase || lastPhase;

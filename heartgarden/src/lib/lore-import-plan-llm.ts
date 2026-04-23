@@ -8,7 +8,11 @@ import {
   connectionKindsPromptGlossary,
 } from "@/src/lib/connection-kind-colors";
 import type { SourceTextChunk } from "@/src/lib/lore-import-chunk";
-import type { IngestionSignals, LoreImportStructuredBody } from "@/src/lib/lore-import-plan-types";
+import type {
+  IngestionSignals,
+  LoreImportStructuredBody,
+  LoreImportUserContext,
+} from "@/src/lib/lore-import-plan-types";
 import { trimLocationTopFieldForImport } from "@/src/lib/lore-location-focus-document-html";
 import { HEARTGARDEN_NATIONS, isHeartgardenNation } from "@/src/lib/lore-nations";
 
@@ -321,9 +325,20 @@ export async function runLoreImportOutlineLlm(
   model: string,
   chunks: SourceTextChunk[],
   sourceSample: string,
+  userContext?: LoreImportUserContext,
 ): Promise<OutlineLlmResult> {
   const chunkList = buildOutlineChunkListPayload(chunks);
-  const user = `CHUNK LIST (JSON):\n${JSON.stringify(chunkList)}\n\nSOURCE SAMPLE (first ~${OUTLINE_SOURCE_SAMPLE_MAX} chars, for tone — chunk ids above are authoritative for assignment):\n${sourceSample.slice(0, OUTLINE_SOURCE_SAMPLE_MAX)}`;
+  const userIntentBlocks: string[] = [];
+  const freeformContext = userContext?.freeformContext?.trim();
+  if (freeformContext) {
+    userIntentBlocks.push(`USER IMPORT INTENT:\n${freeformContext.slice(0, 4_000)}`);
+  }
+  if (userContext?.orgMode === "nearby") {
+    userIntentBlocks.push(
+      "LAYOUT CONSTRAINT:\nReturn no folders. Every note must have folderClientId: null.",
+    );
+  }
+  const user = `${userIntentBlocks.length > 0 ? `${userIntentBlocks.join("\n\n")}\n\n` : ""}CHUNK LIST (JSON):\n${JSON.stringify(chunkList)}\n\nSOURCE SAMPLE (first ~${OUTLINE_SOURCE_SAMPLE_MAX} chars, for tone — chunk ids above are authoritative for assignment):\n${sourceSample.slice(0, OUTLINE_SOURCE_SAMPLE_MAX)}`;
 
   const res = await callAnthropic(
     apiKey,

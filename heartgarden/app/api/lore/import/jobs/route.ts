@@ -12,6 +12,7 @@ import {
 } from "@/src/lib/heartgarden-api-boot-context";
 import { scheduleLoreImportJobProcessing } from "@/src/lib/lore-import-job-after";
 import { processLoreImportJob } from "@/src/lib/lore-import-job-process";
+import { loreImportUserContextSchema } from "@/src/lib/lore-import-plan-types";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
 export const runtime = "nodejs";
@@ -23,6 +24,7 @@ const bodySchema = z.object({
   text: z.string().min(1).max(2_000_000),
   spaceId: z.string().uuid(),
   fileName: z.string().max(512).optional(),
+  userContext: loreImportUserContextSchema.optional(),
 });
 
 function importAttemptId(req: Request): string {
@@ -87,8 +89,10 @@ function isMissingProgressColumnsDiagnostic(diag: DbInsertDiagnostic): boolean {
   const mentionsProgressColumn =
     column.startsWith("progress_") ||
     column === "last_progress_at" ||
+    column === "user_context" ||
     text.includes("progress_") ||
-    text.includes("last_progress_at");
+    text.includes("last_progress_at") ||
+    text.includes("user_context");
   if (!mentionsProgressColumn) return false;
   if (!code) return true;
   if (code === "42703") return true;
@@ -134,6 +138,8 @@ export async function POST(req: Request) {
     spaceId: parsed.data.spaceId,
     textChars: parsed.data.text.length,
     fileName: parsed.data.fileName ?? null,
+    granularity: parsed.data.userContext?.granularity ?? null,
+    orgMode: parsed.data.userContext?.orgMode ?? null,
   });
 
   const space = await assertSpaceExists(db, parsed.data.spaceId);
@@ -156,6 +162,10 @@ export async function POST(req: Request) {
       status: "queued",
       sourceText: parsed.data.text,
       fileName: parsed.data.fileName ?? null,
+      userContext:
+        parsed.data.userContext != null
+          ? (parsed.data.userContext as unknown as Record<string, unknown>)
+          : null,
       plan: null,
       error: null,
       createdAt: now,

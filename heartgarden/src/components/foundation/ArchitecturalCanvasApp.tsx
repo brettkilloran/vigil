@@ -44,6 +44,10 @@ import {
   type VaultReviewIssue,
 } from "@/src/components/foundation/ArchitecturalLoreReviewPanel";
 import { ArchitecturalLoreImportErrorDialog } from "@/src/components/foundation/ArchitecturalLoreImportErrorDialog";
+import {
+  ArchitecturalLoreImportUploadPopover,
+  type LoreImportUploadMode,
+} from "@/src/components/foundation/ArchitecturalLoreImportUploadPopover";
 import { VigilAppBootScreen } from "./VigilAppBootScreen";
 import { VigilAppChromeAudioMuteButton } from "./VigilAppChromeAudioMuteButton";
 import styles from "./ArchitecturalCanvasApp.module.css";
@@ -161,7 +165,13 @@ import type {
   ClarificationAnswer,
   LoreImportClarificationItem,
   LoreImportPlan,
+  LoreImportUserContext,
 } from "@/src/lib/lore-import-plan-types";
+import {
+  collapseToOneNote,
+  filterAutoResolvedClarifications,
+  flipOrgMode,
+} from "@/src/lib/lore-import-plan-reshuffle";
 import {
   getNeonSyncSnapshot,
   getNeonSyncServerSnapshot,
@@ -530,6 +540,47 @@ type LoreSmartImportReviewState = {
   sourceTitle?: string;
   fileName?: string;
 };
+
+type LoreImportSelectionState = {
+  mode: LoreImportUploadMode;
+  contextText: string;
+};
+
+function inferDocSourceKind(fileName: string): LoreImportUserContext["docSourceKind"] {
+  const lower = fileName.toLowerCase();
+  if (lower.endsWith(".pdf")) return "pdf";
+  if (lower.endsWith(".docx")) return "docx";
+  if (lower.endsWith(".md") || lower.endsWith(".markdown")) return "markdown";
+  return "text";
+}
+
+function mapSelectionToUserContext(
+  selection: LoreImportSelectionState,
+  fileName: string,
+): LoreImportUserContext {
+  if (selection.mode === "one_note") {
+    return {
+      granularity: "one_note",
+      orgMode: "nearby",
+      freeformContext: "",
+      docSourceKind: inferDocSourceKind(fileName),
+    };
+  }
+  if (selection.mode === "many_folders") {
+    return {
+      granularity: "many",
+      orgMode: "folders",
+      freeformContext: selection.contextText.trim(),
+      docSourceKind: inferDocSourceKind(fileName),
+    };
+  }
+  return {
+    granularity: "many",
+    orgMode: "nearby",
+    freeformContext: selection.contextText.trim(),
+    docSourceKind: inferDocSourceKind(fileName),
+  };
+}
 
 type LoreImportJobProgress = {
   phase?: string;
@@ -2382,6 +2433,34 @@ export function ArchitecturalCanvasApp({
     setLoreSmartOtherFollowUp(null);
     setLoreSmartManualQuestionId(null);
   }, [loreImportCommitting]);
+  const flattenSmartImportToNearby = useCallback(() => {
+    setLoreSmartReview((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        plan: flipOrgMode(prev.plan, "nearby"),
+      };
+    });
+    setLoreSmartClarificationAnswers([]);
+    setLoreSmartManualQuestionId(null);
+    setLoreSmartOtherFollowUp(null);
+  }, []);
+  const collapseSmartImportToOneNote = useCallback(() => {
+    setLoreSmartReview((prev) => {
+      if (!prev) return prev;
+      const title = prev.sourceTitle?.trim() || prev.fileName || prev.plan.fileName || "Imported document";
+      return {
+        ...prev,
+        plan: collapseToOneNote(prev.plan, {
+          title,
+          text: prev.sourceText,
+        }),
+      };
+    });
+    setLoreSmartClarificationAnswers([]);
+    setLoreSmartManualQuestionId(null);
+    setLoreSmartOtherFollowUp(null);
+  }, []);
   const cancelLoreSmartPlanning = useCallback(() => {
     const ctrl = loreSmartPlanningAbortRef.current;
     if (ctrl) {
@@ -2521,6 +2600,16 @@ export function ArchitecturalCanvasApp({
   const [loreReviewSuggestedTags, setLoreReviewSuggestedTags] = useState<string[]>([]);
   const [loreReviewSemanticSummary, setLoreReviewSemanticSummary] = useState<string | null>(null);
   const [loreImportFailure, setLoreImportFailure] = useState<LoreImportFailureDetail | null>(null);
+  const [loreImportPopoverOpen, setLoreImportPopoverOpen] = useState(false);
+  const [loreImportSelection, setLoreImportSelection] = useState<LoreImportSelectionState>({
+    mode: "many_loose",
+    contextText: "",
+  });
+  const loreImportButtonRef = useRef<HTMLButtonElement | null>(null);
+  const loreImportPendingSelectionRef = useRef<LoreImportSelectionState>({
+    mode: "many_loose",
+    contextText: "",
+  });
   const [cloudLinksBar, setCloudLinksBar] = useState(() => getNeonSyncSnapshot().cloudEnabled);
   const neonSyncSnapshot = useSyncExternalStore(
     subscribeNeonSync,
@@ -2540,6 +2629,31 @@ export function ArchitecturalCanvasApp({
     [dockCreateDisabledBySyncError],
   );
   const loreImportFileInputRef = useRef<HTMLInputElement | null>(null);
+  const openLoreImportPopover = useCallback(() => {
+    setLoreImportPopoverOpen(true);
+  }, []);
+  const closeLoreImportPopover = useCallback(() => {
+    setLoreImportPopoverOpen(false);
+  }, []);
+  const loreImportPopoverPosition = useMemo(() => {
+    const fallback = { top: 72, left: 16 };
+    if (!loreImportPopoverOpen) return fallback;
+    if (typeof window === "undefined") return fallback;
+    const rect = loreImportButtonRef.current?.getBoundingClientRect();
+    if (!rect) return fallback;
+    const width = Math.min(360, window.innerWidth - 24);
+    const left = Math.min(
+      Math.max(12, rect.right - width),
+      Math.max(12, window.innerWidth - width - 12),
+    );
+    const top = Math.min(rect.bottom + 8, window.innerHeight - 24);
+    return { top, left };
+  }, [loreImportPopoverOpen]);
+  const triggerLoreImportFilePick = useCallback(() => {
+    loreImportPendingSelectionRef.current = loreImportSelection;
+    setLoreImportPopoverOpen(false);
+    loreImportFileInputRef.current?.click();
+  }, [loreImportSelection]);
   const copyLoreSmartPlanningFailure = useCallback(() => {
     const failure = loreImportFailure;
     const progress = loreSmartPlanningProgress;
@@ -2561,9 +2675,9 @@ export function ArchitecturalCanvasApp({
     setLoreSmartPlanningProgress(null);
     setLoreSmartPlanningCopyState("idle");
     requestAnimationFrame(() => {
-      loreImportFileInputRef.current?.click();
+      openLoreImportPopover();
     });
-  }, []);
+  }, [openLoreImportPopover]);
   const closeLoreSmartPlanningFailure = useCallback(() => {
     setLoreImportFailure(null);
     setLoreSmartPlanningJobId(null);
@@ -6251,7 +6365,10 @@ export function ArchitecturalCanvasApp({
           importBatchId: rev.plan.importBatchId,
           plan: rev.plan,
           layout: { originX: center.x - 140, originY: center.y - 120 },
-          includeSourceCard: loreSmartIncludeSource,
+          includeSourceCard:
+            rev.plan.userContext?.granularity === "one_note"
+              ? false
+              : loreSmartIncludeSource,
           sourceDocument:
             loreSmartIncludeSource && rev.sourceText.trim().length > 0
               ? {
@@ -7242,8 +7359,8 @@ export function ArchitecturalCanvasApp({
       {
         id: "import-lore",
         label: "Import lore file",
-        hint: "PDF / markdown → text + Claude entity extract (beta)",
-        keywords: ["import", "pdf", "markdown", "upload"],
+        hint: "PDF / DOCX / markdown → text + Claude entity extract (beta)",
+        keywords: ["import", "pdf", "docx", "markdown", "upload"],
         icon: <UploadSimple size={14} weight="bold" />,
       },
       ...(vaultReviewChromeVisible
@@ -7803,11 +7920,113 @@ export function ArchitecturalCanvasApp({
     strictGmWorkspaceSession,
   ]);
 
+  const createSingleImportedNote = useCallback(
+    async (args: { title: string; text: string }) => {
+      const title = args.title.trim().slice(0, 255) || "Imported document";
+      const text = args.text.trim().slice(0, 120_000);
+      if (!text) return false;
+      const center = centerCoords();
+      const x = center.x - 170 + (Math.random() * 40 - 20);
+      const y = center.y - 110 + (Math.random() * 40 - 20);
+      const rotation = (Math.random() - 0.5) * 4;
+      const tapeRotation = (Math.random() - 0.5) * 6;
+      const bodyHtml = `<p>${text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\n/g, "<br/>")}</p>`;
+      const nextZ = maxZIndexRef.current + 1;
+      setMaxZIndex(nextZ);
+
+      if (persistNeonRef.current && isUuidLike(activeSpaceId)) {
+        const spaceId = activeSpaceId;
+        const tempNode: CanvasContentEntity = {
+          id: "",
+          title,
+          kind: "content",
+          rotation,
+          width: UNIFIED_NODE_WIDTH,
+          height: 280,
+          theme: "default",
+          tapeVariant: tapeVariantForTheme("default"),
+          tapeRotation,
+          bodyHtml,
+          stackId: null,
+          stackOrder: null,
+          slots: { [spaceId]: { x, y } },
+        };
+        const itemRes = await apiCreateItem(spaceId, {
+          itemType: architecturalItemType(tempNode),
+          x,
+          y,
+          width: UNIFIED_NODE_WIDTH,
+          height: 280,
+          title,
+          contentText: text,
+          contentJson: buildContentJsonForContentEntity(tempNode),
+          zIndex: nextZ,
+          entityType: "lore",
+        });
+        if (!itemRes.ok || !itemRes.item) return false;
+        if (itemRes.item.updatedAt) {
+          itemServerUpdatedAtRef.current.set(itemRes.item.id, itemRes.item.updatedAt);
+        }
+        const entity = canvasItemToEntity(itemRes.item, spaceId);
+        if (!entity) return false;
+        setGraph((prev) => {
+          const next = shallowCloneGraph(prev);
+          next.entities[entity.id] = entity;
+          const sp = next.spaces[spaceId];
+          if (sp) {
+            next.spaces[spaceId] = { ...sp, entityIds: [...sp.entityIds, entity.id] };
+          }
+          return next;
+        });
+        setSelectedNodeIds([entity.id]);
+        return true;
+      }
+
+      const id = createId();
+      const nextNode: CanvasContentEntity = {
+        id,
+        title,
+        kind: "content",
+        rotation,
+        width: UNIFIED_NODE_WIDTH,
+        height: 280,
+        theme: "default",
+        tapeVariant: tapeVariantForTheme("default"),
+        tapeRotation,
+        bodyHtml,
+        stackId: null,
+        stackOrder: null,
+        slots: { [activeSpaceId]: { x, y } },
+      };
+      setGraph((prev) => {
+        const next = shallowCloneGraph(prev);
+        next.entities[id] = nextNode;
+        const space = next.spaces[activeSpaceId];
+        if (space) {
+          next.spaces[activeSpaceId] = {
+            ...space,
+            entityIds: [...space.entityIds, id],
+          };
+        }
+        return next;
+      });
+      setSelectedNodeIds([id]);
+      return true;
+    },
+    [activeSpaceId, centerCoords, createId],
+  );
+
   const onLoreImportFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       event.target.value = "";
       if (!file) return;
+      const selection = loreImportPendingSelectionRef.current;
+      const userContext = mapSelectionToUserContext(selection, file.name);
       const attemptId =
         typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
           ? crypto.randomUUID()
@@ -7832,6 +8051,7 @@ export function ArchitecturalCanvasApp({
         error instanceof Error ? error.message : fallback;
       const fd = new FormData();
       fd.append("file", file);
+      fd.append("context", JSON.stringify(userContext));
       try {
         const parseRes = await fetch("/api/lore/import/parse", {
           method: "POST",
@@ -7871,6 +8091,30 @@ export function ArchitecturalCanvasApp({
 
         const parsedText = parsed.text;
         const spaceId = activeSpaceIdRef.current;
+        if (userContext.granularity === "one_note") {
+          const ok = await createSingleImportedNote({
+            title: parsed.suggestedTitle || parsed.fileName || file.name,
+            text: parsedText,
+          });
+          if (!ok) {
+            reportFailure(
+              createLoreImportFailureDetail({
+                attemptId,
+                stage: "apply",
+                operation: "create_single_import_note",
+                message:
+                  "Could not create the imported note on the current canvas. Check sync status and retry.",
+                fileName: parsed.fileName ?? file.name,
+                spaceId,
+                recommendedAction:
+                  "Retry import once. If this keeps failing, open sync status and include the attempt id.",
+              }),
+            );
+          } else {
+            playVigilUiSound("celebration");
+          }
+          return;
+        }
         const useSmart =
           persistNeonRef.current && isUuidLike(spaceId) && parsedText.trim().length > 0;
 
@@ -7885,8 +8129,9 @@ export function ArchitecturalCanvasApp({
           setLoreSmartPlanning(true);
           setLoreSmartPlanningProgress({ phase: "queued" });
           const applySmartPlanToUi = (plan: LoreImportPlan) => {
+            const normalizedPlan = filterAutoResolvedClarifications(plan);
             setLoreSmartReview({
-              plan,
+              plan: normalizedPlan,
               sourceText: parsedText,
               sourceTitle: parsed.suggestedTitle,
               fileName: parsed.fileName,
@@ -7895,7 +8140,7 @@ export function ArchitecturalCanvasApp({
             setLoreSmartOtherFollowUp(null);
             setLoreSmartManualQuestionId(null);
             const nextMerge: Record<string, boolean> = {};
-            for (const m of plan.mergeProposals) {
+            for (const m of normalizedPlan.mergeProposals) {
               nextMerge[m.id] = false;
             }
             setLoreSmartAcceptedMergeIds(nextMerge);
@@ -7927,6 +8172,7 @@ export function ArchitecturalCanvasApp({
                 text: parsedText,
                 spaceId,
                 fileName: parsed.fileName,
+                userContext,
                 persistReview: false,
               }),
             });
@@ -7954,6 +8200,7 @@ export function ArchitecturalCanvasApp({
                 text: parsedText,
                 spaceId,
                 fileName: parsed.fileName,
+                userContext,
               }),
             });
             const jobRaw = await jobRes.text();
@@ -8217,7 +8464,7 @@ export function ArchitecturalCanvasApp({
         }
       }
     },
-    [],
+    [createSingleImportedNote],
   );
 
   const exportGraphJson = useCallback(() => {
@@ -8339,7 +8586,7 @@ export function ArchitecturalCanvasApp({
     }
     if (actionId === "import-lore") {
       playVigilUiSound("select");
-      loreImportFileInputRef.current?.click();
+      openLoreImportPopover();
       return;
     }
     if (actionId === "check-lore-consistency") {
@@ -8358,6 +8605,7 @@ export function ArchitecturalCanvasApp({
     createNewNode,
     exportGraphJson,
     isRestrictedLayer,
+    openLoreImportPopover,
     recenterToOrigin,
     setCanvasEffectsEnabled,
     setGraphOverlayOpen,
@@ -12141,11 +12389,26 @@ export function ArchitecturalCanvasApp({
           <input
             ref={loreImportFileInputRef}
             type="file"
-            accept=".pdf,.md,.txt,.markdown,text/plain,text/markdown,application/pdf"
+            accept=".pdf,.docx,.md,.txt,.markdown,text/plain,text/markdown,application/pdf"
             className="sr-only"
             aria-hidden
             tabIndex={-1}
             onChange={onLoreImportFileChange}
+          />
+        ) : null}
+        {!isRestrictedLayer ? (
+          <ArchitecturalLoreImportUploadPopover
+            open={loreImportPopoverOpen}
+            top={loreImportPopoverPosition.top}
+            left={loreImportPopoverPosition.left}
+            mode={loreImportSelection.mode}
+            contextText={loreImportSelection.contextText}
+            onModeChange={(mode) => setLoreImportSelection((prev) => ({ ...prev, mode }))}
+            onContextTextChange={(value) =>
+              setLoreImportSelection((prev) => ({ ...prev, contextText: value }))
+            }
+            onChooseFile={triggerLoreImportFilePick}
+            onClose={closeLoreImportPopover}
           />
         ) : null}
         {loreSmartPlanning ? (
@@ -12272,7 +12535,7 @@ export function ArchitecturalCanvasApp({
           <ArchitecturalLoreImportErrorDialog
             failure={loreSmartPlanning ? null : loreImportFailure}
             onClose={() => setLoreImportFailure(null)}
-            onRetry={() => loreImportFileInputRef.current?.click()}
+            onRetry={openLoreImportPopover}
           />
         ) : null}
         {loreSmartReview && !isRestrictedLayer ? (
@@ -12314,6 +12577,30 @@ export function ArchitecturalCanvasApp({
                 </div>
               </header>
               <div className={styles.smartImportReviewBody}>
+                <div className={styles.smartImportReviewMergeToolbar}>
+                  <Button
+                    size="sm"
+                    variant="neutral"
+                    tone="card-dark"
+                    type="button"
+                    disabled={loreImportCommitting}
+                    onClick={collapseSmartImportToOneNote}
+                  >
+                    Collapse to one note
+                  </Button>
+                  {loreSmartReview.plan.folders.length > 0 ? (
+                    <Button
+                      size="sm"
+                      variant="neutral"
+                      tone="card-dark"
+                      type="button"
+                      disabled={loreImportCommitting}
+                      onClick={flattenSmartImportToNearby}
+                    >
+                      Flatten to Nearby
+                    </Button>
+                  ) : null}
+                </div>
                 <div className={styles.smartImportWizard}>
                     {loreSmartReview.plan.clarifications.length === 0 ? (
                       <div className={styles.smartImportWizardComplete}>
@@ -13372,12 +13659,13 @@ export function ArchitecturalCanvasApp({
                     data-hg-chrome="import-document"
                   >
                     <ArchitecturalTooltip
-                      content="Import PDF or Markdown"
+                      content="Import PDF, DOCX, or Markdown"
                       side="bottom"
                       delayMs={320}
                       avoidSides={ARCH_TOOLTIP_AVOID_TOP}
                     >
                       <ArchitecturalButton
+                        ref={loreImportButtonRef}
                         type="button"
                         size="icon"
                         tone="glass"
@@ -13386,7 +13674,7 @@ export function ArchitecturalCanvasApp({
                         aria-label="Import document"
                         onClick={() => {
                           playVigilUiSound("select");
-                          loreImportFileInputRef.current?.click();
+                          openLoreImportPopover();
                         }}
                       >
                         <UploadSimple size={18} weight="bold" aria-hidden />

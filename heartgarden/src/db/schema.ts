@@ -117,6 +117,7 @@ export const loreImportJobs = pgTable("lore_import_jobs", {
   status: varchar("status", { length: 32 }).notNull().default("queued"),
   sourceText: text("source_text").notNull(),
   fileName: varchar("file_name", { length: 512 }),
+  userContext: jsonb("user_context").$type<Record<string, unknown> | null>(),
   plan: jsonb("plan").$type<Record<string, unknown> | null>(),
   error: text("error"),
   progressPhase: varchar("progress_phase", { length: 64 }),

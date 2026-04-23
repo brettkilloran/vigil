@@ -158,12 +158,12 @@ Requires **`HEARTGARDEN_REALTIME_URL`**, **`HEARTGARDEN_REALTIME_REDIS_URL`**, *
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| POST | `/api/lore/import/parse` | Multipart / file → extracted text (and metadata). |
+| POST | `/api/lore/import/parse` | Multipart / file → extracted text (and metadata). Accepts `.pdf`, `.docx`, `.md`, `.markdown`, `.txt`. Optional multipart `context` JSON (user import context) is echoed back when valid. |
 | POST | `/api/lore/import/plan` | **Synchronous** smart plan. Needs **`ANTHROPIC_API_KEY`**. Optional `persistReview`. |
-| POST | `/api/lore/import/jobs` | Enqueue **async** plan job; returns `jobId`, `importBatchId`. |
+| POST | `/api/lore/import/jobs` | Enqueue **async** plan job; returns `jobId`, `importBatchId`. Supports optional `userContext` (`granularity`, `orgMode`, `freeformContext`, `docSourceKind`). |
 | GET | `/api/lore/import/jobs/[jobId]` | Poll status. **Required query:** `spaceId=<uuid>` (must match job’s space). |
 | DELETE | `/api/lore/import/jobs/[jobId]` | Cancel queued/processing smart-import planning. **Required query:** `spaceId=<uuid>`. |
-| POST | `/api/lore/import/apply` | Apply a plan to the canvas. May return `status: "needs_follow_up"` when `Other` clarification text is ambiguous, including `followUp` + `resolvedClarificationAnswers`. |
+| POST | `/api/lore/import/apply` | Apply a plan to the canvas. Honors `plan.userContext.orgMode` (`folders` or `nearby`) and `plan.userContext.granularity` (`many` or `one_note`). May return `status: "needs_follow_up"` when `Other` clarification text is ambiguous, including `followUp` + `resolvedClarificationAnswers`. |
 | POST | `/api/lore/import/extract` | **Deprecated.** Legacy single-pass extractor. Returns **HTTP 410** unless `HEARTGARDEN_IMPORT_LEGACY_ENABLED=1`. Use `/api/lore/import/jobs` + `/apply`. |
 | POST | `/api/lore/import/commit` | **Deprecated.** Legacy transactional importer. Returns **HTTP 410** unless `HEARTGARDEN_IMPORT_LEGACY_ENABLED=1`. Use `/api/lore/import/apply`. |
 | POST | `/api/lore/consistency/check` | Lore consistency check (LLM-backed; see route for body). |

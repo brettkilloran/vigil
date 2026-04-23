@@ -87,6 +87,13 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 
 **Canonical kind → DB / canvas mapping (import):** [`LORE_IMPORT_KIND_MAPPING.md`](./LORE_IMPORT_KIND_MAPPING.md) — code: `src/lib/lore-object-registry.ts` (land with Agent mode if not present).
 
+**Lore import UX (post-granularity rollout) backlog:**
+- `.html` file upload parser (Readability + jsdom) as a separate tranche.
+- URL import (`fetch` + SSRF guardrails, content-type routing, auth-wall/SPA failure UX).
+- Granular reshuffle controls in review (rename/delete/reassign) if product demand appears after v1.
+- AI-assisted reshuffle prompt (`reorganize by X`) only if manual mode toggles prove insufficient.
+- **Explicit non-goal:** OCR ingestion is intentionally not planned (quality risk + bundle/runtime overhead). If revisited, scope it as a dedicated feature with cloud OCR and map-specific UX, not generic import.
+
 ### Mid-term — master plan Phase 5 (TTRPG + intelligence)
 
 Matches **legacy** Phase 5 themes and **`FOLLOW_UP.md`** LLM items (see archive master plan for original wording):

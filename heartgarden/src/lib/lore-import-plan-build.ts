@@ -21,7 +21,11 @@ import { filterPlanLinksToSameCanvasSpace } from "@/src/lib/lore-import-item-lin
 import { coerceImportLinkType } from "@/src/lib/lore-import-link-shape";
 import type { LoreImportProgressReporter } from "@/src/lib/lore-import-progress";
 import { computeLoreImportPipelinePercent } from "@/src/lib/lore-import-pipeline-progress";
-import type { IngestionSignals, LoreImportPlan } from "@/src/lib/lore-import-plan-types";
+import type {
+  IngestionSignals,
+  LoreImportPlan,
+  LoreImportUserContext,
+} from "@/src/lib/lore-import-plan-types";
 import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
 import { LOCATION_TOP_FIELD_CHAR_CAPS } from "@/src/lib/lore-location-focus-document-html";
 import type { HeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
@@ -56,6 +60,7 @@ export async function buildLoreImportPlan(args: {
   fullText: string;
   importBatchId: string;
   fileName?: string;
+  userContext?: LoreImportUserContext;
   onProgress?: LoreImportProgressReporter;
 }): Promise<LoreImportPlan> {
   const reportProgress = async (
@@ -94,6 +99,7 @@ export async function buildLoreImportPlan(args: {
     args.model,
     chunks,
     args.fullText,
+    args.userContext,
   );
   await reportProgress("outline", "Outline generated; attaching chunk-backed note bodies", {
     phaseFraction: 0.92,
@@ -424,6 +430,7 @@ export async function buildLoreImportPlan(args: {
       locationTopFieldTrimWarnings.length > 0
         ? [...locationTopFieldTrimWarnings, ...coercionWarnings, ...linkWarnings]
         : undefined,
+    userContext: args.userContext,
   };
 
   const parsed = loreImportPlanSchema.safeParse(planRaw);

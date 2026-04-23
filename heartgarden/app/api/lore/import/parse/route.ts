@@ -2,6 +2,10 @@ import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
 } from "@/src/lib/heartgarden-api-boot-context";
+import {
+  loreImportUserContextSchema,
+  type LoreImportUserContext,
+} from "@/src/lib/lore-import-plan-types";
 
 export const runtime = "nodejs";
 const MAX_UPLOAD_BYTES = 80 * 1024 * 1024; // 80 MB
@@ -170,6 +174,18 @@ function parseTextLikeFile(buf: Buffer) {
   };
 }
 
+async function parseDocxText(buf: Buffer) {
+  const mammoth = await import("mammoth");
+  const parsed = await mammoth.extractRawText({ buffer: buf });
+  const chunks: string[] = [];
+  const { charCount, truncated } = appendCappedText(chunks, parsed.value ?? "", 0);
+  return {
+    text: chunks.join(""),
+    charCount,
+    truncated,
+  };
+}
+
 async function parsePdfText(
   buf: Buffer,
   attemptId: string,
@@ -269,6 +285,19 @@ export async function POST(req: Request) {
   if (!file || !(file instanceof File)) {
     return Response.json({ ok: false, error: "Missing file" }, { status: 400 });
   }
+  let parsedContext: LoreImportUserContext | undefined;
+  const contextRaw = form.get("context");
+  if (typeof contextRaw === "string" && contextRaw.trim().length > 0) {
+    try {
+      const contextJson = JSON.parse(contextRaw);
+      const contextParsed = loreImportUserContextSchema.safeParse(contextJson);
+      if (contextParsed.success) {
+        parsedContext = contextParsed.data;
+      }
+    } catch {
+      // Keep parsing resilient: invalid context should not fail the upload.
+    }
+  }
 
   const name = file.name || "upload";
   const lower = name.toLowerCase();
@@ -319,6 +348,23 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
+  } else if (lower.endsWith(".docx")) {
+    try {
+      const parsed = await parseDocxText(buf);
+      text = parsed.text;
+      truncated = parsed.truncated;
+      console.info("[lore-import] parse docx success", {
+        attemptId,
+        fileName: name,
+        truncated: parsed.truncated,
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return Response.json(
+        { ok: false, error: "Could not parse DOCX file", detail },
+        { status: 400 },
+      );
+    }
   } else if (lower.endsWith(".md") || lower.endsWith(".txt") || lower.endsWith(".markdown")) {
     try {
       const parsed = parseTextLikeFile(buf);
@@ -340,7 +386,7 @@ export async function POST(req: Request) {
     return Response.json(
       {
         ok: false,
-        error: "Unsupported type. Use .pdf, .md, or .txt",
+        error: "Unsupported type. Use .pdf, .docx, .md, or .txt",
       },
       { status: 400 },
     );
@@ -357,6 +403,7 @@ export async function POST(req: Request) {
     text: trimmed,
     charCount: trimmed.length,
     truncated,
+    ...(parsedContext ? { context: parsedContext } : {}),
     ...(meta ? { meta } : {}),
   });
 }

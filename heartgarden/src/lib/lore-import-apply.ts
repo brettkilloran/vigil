@@ -149,6 +149,35 @@ export const loreImportApplyBodySchema = z.object({
 
 export type LoreImportApplyBody = z.infer<typeof loreImportApplyBodySchema>;
 
+function fallbackOneNoteTitle(plan: LoreImportPlan, body: LoreImportApplyBody): string {
+  const explicit =
+    plan.oneNoteSource?.title?.trim() ||
+    body.sourceDocument?.title?.trim() ||
+    plan.fileName?.replace(/\.[^.]+$/, "").trim();
+  return explicit || "Imported document";
+}
+
+function fallbackOneNoteText(plan: LoreImportPlan, body: LoreImportApplyBody): string {
+  const explicit = plan.oneNoteSource?.text?.trim();
+  if (explicit) return explicit;
+  const sourceDoc = body.sourceDocument?.text?.trim();
+  if (sourceDoc) return sourceDoc;
+  if (plan.chunks?.length) {
+    const merged = plan.chunks
+      .map((c) => c.body?.trim())
+      .filter((v): v is string => Boolean(v))
+      .join("\n\n")
+      .trim();
+    if (merged) return merged;
+  }
+  const fromNotes = plan.notes
+    .map((n) => n.bodyText.trim())
+    .filter(Boolean)
+    .join("\n\n")
+    .trim();
+  return fromNotes;
+}
+
 function sortFoldersTopologically(
   folders: LoreImportPlan["folders"],
 ): LoreImportPlan["folders"] {
@@ -226,6 +255,8 @@ export async function applyLoreImportPlan(
   }
 
   let plan = body.plan;
+  const granularity = plan.userContext?.granularity ?? "many";
+  const orgMode = plan.userContext?.orgMode ?? "folders";
   if (plan.importBatchId !== body.importBatchId) {
     throw new Error("importBatchId mismatch between body and plan");
   }
@@ -274,7 +305,7 @@ export async function applyLoreImportPlan(
   const linkRefilter = filterPlanLinksToSameCanvasSpace(
     plan.notes.map((n) => ({
       clientId: n.clientId,
-      folderClientId: n.folderClientId,
+      folderClientId: orgMode === "nearby" ? null : n.folderClientId,
     })),
     shapedLinks,
   );
@@ -353,7 +384,59 @@ export async function applyLoreImportPlan(
 
   await db.transaction(async (tx) => {
     const dbx = tx as unknown as VigilDb;
-    const sortedFolders = sortFoldersTopologically(plan.folders);
+    if (granularity === "one_note") {
+      const z = await nextZIndex(dbx, body.spaceId);
+      const title = fallbackOneNoteTitle(plan, body).slice(0, 255);
+      const contentText = fallbackOneNoteText(plan, body).slice(0, 120_000);
+      const contentJson = buildLoreStructuredBodyContentJson(undefined, contentText);
+      const entityMeta = buildImportedEntityMeta({
+        base: {
+          schemaVersion: 1,
+          import: true,
+          canonicalEntityKind: "lore",
+          aiReview: "pending",
+        },
+        importBatchId: plan.importBatchId,
+        canonicalEntityKind: "lore",
+      });
+      const searchBlob = buildSearchBlob({
+        title,
+        contentText,
+        contentJson,
+        entityType: persistedEntityTypeFromCanonical("lore"),
+        entityMeta,
+        imageUrl: null,
+        imageMeta: null,
+        loreSummary: null,
+        loreAliases: null,
+      });
+      const [row] = await dbx
+        .insert(items)
+        .values({
+          spaceId: body.spaceId,
+          itemType: "note",
+          x: ox,
+          y: oy,
+          width: NODE_W,
+          height: 280,
+          zIndex: z,
+          title,
+          contentText,
+          searchBlob,
+          contentJson,
+          color: DS_COLOR.itemDefaultNote,
+          entityType: persistedEntityTypeFromCanonical("lore"),
+          entityMeta,
+        })
+        .returning();
+      if (row) {
+        createdItemIds.push(row.id);
+        rowsToSchedule.push(row);
+      }
+      return;
+    }
+
+    const sortedFolders = orgMode === "folders" ? sortFoldersTopologically(plan.folders) : [];
     for (const folder of sortedFolders) {
       const parentSpaceId = folder.parentClientId
         ? (folderClientToChildSpace.get(folder.parentClientId) ?? body.spaceId)
@@ -500,7 +583,7 @@ export async function applyLoreImportPlan(
     // per-space proximity placement in one pass.
     const notesBySpace = new Map<string, typeof notesToCreate>();
     for (const note of notesToCreate) {
-      const spaceId = note.folderClientId
+      const spaceId = orgMode === "folders" && note.folderClientId
         ? (folderClientToChildSpace.get(note.folderClientId) ?? body.spaceId)
         : body.spaceId;
       const list = notesBySpace.get(spaceId) ?? [];
@@ -604,7 +687,7 @@ export async function applyLoreImportPlan(
     }
 
     for (const note of notesToCreate) {
-      const targetSpaceId = note.folderClientId
+      const targetSpaceId = orgMode === "folders" && note.folderClientId
         ? (folderClientToChildSpace.get(note.folderClientId) ?? body.spaceId)
         : body.spaceId;
 
