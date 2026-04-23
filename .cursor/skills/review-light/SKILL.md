@@ -2,8 +2,10 @@
 name: review-light
 description: >-
   Runs a cheaper, faster code review using a single Composer 2 subagent pass and
-  returns high-signal findings with file evidence. Use when the user invokes
-  /review-light, wants a low-cost review, or needs a quick pre-commit sanity check.
+  returns high-signal findings with file evidence. Writes
+  heartgarden/docs/REVIEW_YYYY-MM-DD_HHMM.md (UTC date and 24h time). Use when
+  the user invokes /review-light, wants a low-cost review, or needs a quick
+  pre-commit sanity check.
 ---
 # /review-light
 
@@ -50,19 +52,19 @@ If no significant issues are found, say so explicitly and list any residual risk
 
 Write audit to:
 
-- `heartgarden/docs/REVIEW_YYYY-MM-DD.md` (UTC date)
-- If name exists, use `REVIEW_YYYY-MM-DD-2.md`, then `-3`, etc.
+- `heartgarden/docs/REVIEW_YYYY-MM-DD_HHMM.md` (UTC date; `HHMM` is 24-hour, zero-padded, e.g. `0930`, `2115`)
+- If that exact name exists, use `REVIEW_YYYY-MM-DD_HHMM-2.md`, then `-3`, etc.
 
 Include frontmatter:
 
 - `status: supporting`
 - `audience: [agent, human]`
-- `last_reviewed: YYYY-MM-DD`
+- `last_reviewed: YYYY-MM-DDTHH:MM:00Z` (UTC, matching this run)
 - `related:` key docs for this change
 
 End output with sentinel:
 
-`REVIEW_AUDIT_WRITTEN: heartgarden/docs/REVIEW_YYYY-MM-DD.md`
+`REVIEW_AUDIT_WRITTEN: heartgarden/docs/REVIEW_YYYY-MM-DD_HHMM.md`
 
 ## 5. Mandatory Fix-Pass Handoff (Do Not Skip)
 

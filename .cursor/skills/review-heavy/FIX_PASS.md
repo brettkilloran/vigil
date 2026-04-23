@@ -18,7 +18,7 @@ Use this playbook after `/review-heavy` writes an audit file.
 
 ## 0. Inputs
 
-- Audit path (from sentinel): `heartgarden/docs/REVIEW_YYYY-MM-DD*.md`
+- Audit path (from sentinel): `heartgarden/docs/REVIEW_YYYY-MM-DD_HHMM*.md`
 - Scope to remediate: default `CRITICAL` + `HIGH` only.
 - Working directory for commands: `heartgarden/`
 

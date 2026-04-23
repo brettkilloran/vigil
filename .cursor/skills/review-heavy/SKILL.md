@@ -2,7 +2,8 @@
 name: review-heavy
 description: >-
   Runs an automated, thorough code review via parallel Codex specialist subagents
-  and writes a dated audit to heartgarden/docs/REVIEW_YYYY-MM-DD.md. Use when
+  and writes a dated audit to heartgarden/docs/REVIEW_YYYY-MM-DD_HHMM.md (UTC
+  date and 24h time). Use when
   the user invokes /review-heavy, asks for a deep repo audit, or wants
   high-confidence findings grouped by severity with file-line evidence.
 ---
@@ -67,21 +68,21 @@ After specialists finish, run a synthesizer subagent that:
 
 Write audit to:
 
-- `heartgarden/docs/REVIEW_YYYY-MM-DD.md` (UTC date)
-- If name exists, use `REVIEW_YYYY-MM-DD-2.md`, then `-3`, etc.
+- `heartgarden/docs/REVIEW_YYYY-MM-DD_HHMM.md` (UTC date; `HHMM` is 24-hour, zero-padded, e.g. `0930`, `2115`)
+- If that exact name exists, use `REVIEW_YYYY-MM-DD_HHMM-2.md`, then `-3`, etc.
 
 Include frontmatter:
 
 - `status: supporting`
 - `audience: [agent, human]`
-- `last_reviewed: YYYY-MM-DD`
+- `last_reviewed: YYYY-MM-DDTHH:MM:00Z` (UTC, matching this run)
 - `related:` key docs for this change
 
 ## 5. Required Sentinel
 
 End synthesizer output with:
 
-`REVIEW_AUDIT_WRITTEN: heartgarden/docs/REVIEW_YYYY-MM-DD.md`
+`REVIEW_AUDIT_WRITTEN: heartgarden/docs/REVIEW_YYYY-MM-DD_HHMM.md`
 
 This sentinel triggers the fix-pass kickoff hook.
 
