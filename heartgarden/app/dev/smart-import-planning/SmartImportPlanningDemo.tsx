@@ -274,7 +274,7 @@ export function SmartImportPlanningDemo() {
                   <div className={canvasStyles.smartImportPlanningActionsSplit}>
                     <Button
                       size="sm"
-                      variant="neutral"
+                      variant="default"
                       tone="card-dark"
                       type="button"
                       onClick={handleCopy}
@@ -289,7 +289,7 @@ export function SmartImportPlanningDemo() {
                     <div>
                       <Button
                         size="sm"
-                        variant="neutral"
+                        variant="default"
                         tone="card-dark"
                         type="button"
                         onClick={() => {
@@ -331,7 +331,7 @@ export function SmartImportPlanningDemo() {
                   <div className={canvasStyles.smartImportPlanningActions}>
                     <Button
                       size="sm"
-                      variant="neutral"
+                      variant="default"
                       tone="card-dark"
                       type="button"
                       onClick={() => {

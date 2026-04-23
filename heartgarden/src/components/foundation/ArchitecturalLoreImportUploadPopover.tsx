@@ -2,9 +2,11 @@
 
 import { useEffect, useId } from "react";
 import { Button } from "@/src/components/ui/Button";
+import { LoreImportLandModeRadios } from "./LoreImportLandModeRadios";
+import type { LoreImportUploadMode } from "./LoreImportLandModeRadios";
 import styles from "./ArchitecturalCanvasApp.module.css";
 
-export type LoreImportUploadMode = "one_note" | "many_loose" | "many_folders";
+export type { LoreImportUploadMode } from "./LoreImportLandModeRadios";
 
 export function ArchitecturalLoreImportUploadPopover(props: {
   open: boolean;
@@ -74,61 +76,26 @@ export function ArchitecturalLoreImportUploadPopover(props: {
         </section>
         <section className={styles.importUploadPopoverSection}>
           <h3 className={styles.importUploadPopoverSectionTitle}>How should this import land?</h3>
-          <div className={styles.importUploadPopoverModes}>
-            <label className={styles.importUploadPopoverModeRow}>
-              <input
-                type="radio"
-                name="import-mode"
-                checked={mode === "one_note"}
-                onChange={() => onModeChange("one_note")}
-              />
-              <span>
-                <strong>One note</strong>
-                <small>Drop the whole document as one card. No AI planning.</small>
-              </span>
-            </label>
-            <label className={styles.importUploadPopoverModeRow}>
-              <input
-                type="radio"
-                name="import-mode"
-                checked={mode === "many_loose"}
-                onChange={() => onModeChange("many_loose")}
-              />
-              <span>
-                <strong>Many loose</strong>
-                <small>Extract entities and drop them on this canvas. No folders.</small>
-              </span>
-            </label>
-            <label className={styles.importUploadPopoverModeRow}>
-              <input
-                type="radio"
-                name="import-mode"
-                checked={mode === "many_folders"}
-                onChange={() => onModeChange("many_folders")}
-              />
-              <span>
-                <strong>Many in folders</strong>
-                <small>Extract entities and organize them into folders.</small>
-              </span>
-            </label>
-          </div>
+          <LoreImportLandModeRadios mode={mode} onModeChange={onModeChange} />
         </section>
-        <div className={styles.importUploadPopoverActions}>
-          <Button size="sm" variant="neutral" tone="card-dark" type="button" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button size="sm" variant="ghost" tone="glass" type="button" onClick={onChangeFile}>
-            Change file
-          </Button>
-          <Button
-            size="sm"
-            variant="primary"
-            tone="solid"
-            type="button"
-            onClick={onContinue}
-          >
-            Continue import
-          </Button>
+        <div
+          className={styles.importUploadPopoverActions}
+          role="group"
+          aria-label="Import actions"
+        >
+          <div className={styles.importUploadPopoverActionsSecondary}>
+            <Button size="sm" variant="ghost" tone="glass" type="button" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button size="sm" variant="ghost" tone="glass" type="button" onClick={onChangeFile}>
+              Change file
+            </Button>
+          </div>
+          <div className={styles.importUploadPopoverActionsPrimary}>
+            <Button size="sm" variant="primary" tone="solid" type="button" onClick={onContinue}>
+              Continue import
+            </Button>
+          </div>
         </div>
         <p className={styles.importUploadPopoverHint}>Accepted: .pdf .md .txt .docx</p>
       </div>

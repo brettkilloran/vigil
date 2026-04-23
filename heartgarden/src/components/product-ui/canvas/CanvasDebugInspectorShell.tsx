@@ -61,7 +61,7 @@ export function CanvasDebugInspectorShell({
             <Button
               type="button"
               size="icon"
-              variant="neutral"
+              variant="default"
               tone="glass"
               iconOnly
               aria-label="Open debug link inspector"
@@ -81,7 +81,7 @@ export function CanvasDebugInspectorShell({
               <Button
                 type="button"
                 size="icon"
-                variant="neutral"
+                variant="default"
                 tone="glass"
                 iconOnly
                 aria-label="Close link inspector"

@@ -271,7 +271,7 @@ function WizardPreview({ scenario }: WizardProps) {
             <div className={canvasStyles.smartImportReviewHeaderActions}>
               <Button
                 size="sm"
-                variant="neutral"
+                variant="default"
                 tone="card-dark"
                 type="button"
                 onClick={() => {
@@ -523,7 +523,7 @@ function WizardPreview({ scenario }: WizardProps) {
                   {recommendedOptionId(c) ? (
                     <Button
                       size="sm"
-                      variant="neutral"
+                      variant="default"
                       tone="card-dark"
                       type="button"
                       onClick={() => {
@@ -557,10 +557,10 @@ function WizardPreview({ scenario }: WizardProps) {
 
       <div className={styles.stageFooter}>
         <div className={styles.resetRow}>
-          <Button size="xs" variant="neutral" tone="card-dark" type="button" onClick={reset}>
+          <Button size="xs" variant="default" tone="card-dark" type="button" onClick={reset}>
             Reset scenario
           </Button>
-          <Button size="xs" variant="neutral" tone="card-dark" type="button" onClick={answerAll}>
+          <Button size="xs" variant="default" tone="card-dark" type="button" onClick={answerAll}>
             Auto-answer all (recommended)
           </Button>
         </div>

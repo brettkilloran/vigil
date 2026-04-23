@@ -2956,77 +2956,30 @@
   color: var(--sem-text-muted);
 }
 
+/* Flat blocks: the popover is already a card — avoid a second boxed panel per block. */
 .importUploadPopoverSection {
-  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 78%, transparent);
-  border-radius: 12px;
-  background: color-mix(in oklch, var(--sys-color-neutral-940) 82%, var(--sys-color-black) 18%);
-  padding: 12px;
-  margin-top: 10px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 0;
+}
+
+.importUploadPopoverHeader + .importUploadPopoverSection {
+  margin-top: 4px;
+}
+
+.importUploadPopoverSection + .importUploadPopoverSection {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in oklch, var(--sem-border-subtle) 64%, transparent);
 }
 
 .importUploadPopoverSectionTitle {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--sem-text-muted);
-}
-
-.importUploadPopoverModes {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.importUploadPopoverModeRow {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: flex-start;
-  gap: 10px;
-  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 84%, transparent);
-  border-radius: 11px;
-  padding: 10px 11px;
-  cursor: pointer;
-  transition: border-color 120ms ease, background-color 120ms ease;
-  background: color-mix(in oklch, var(--sys-color-neutral-940) 74%, transparent);
-}
-
-.importUploadPopoverModeRow:hover {
-  border-color: color-mix(in oklch, var(--sem-border-brand) 44%, var(--sem-border-subtle) 56%);
-  background: color-mix(in oklch, var(--sem-text-primary) 7%, var(--sys-color-neutral-930) 93%);
-}
-
-.importUploadPopoverModeRow:has(input:checked) {
-  border-color: color-mix(in oklch, var(--sem-border-brand) 72%, var(--sem-border-subtle) 28%);
-  background: color-mix(in oklch, var(--sem-border-brand) 10%, var(--sys-color-neutral-930) 90%);
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--sem-border-brand) 26%, transparent);
-}
-
-.importUploadPopoverModeRow:focus-within {
-  border-color: color-mix(in oklch, var(--sem-border-brand) 76%, var(--sem-border-subtle) 24%);
-  box-shadow: 0 0 0 2px color-mix(in oklch, var(--sem-border-brand) 22%, transparent);
-}
-
-.importUploadPopoverModeRow input {
-  margin-top: 2px;
-  accent-color: var(--sem-border-brand);
-}
-
-.importUploadPopoverModeRow span {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  color: var(--sem-text-primary);
-}
-
-.importUploadPopoverModeRow strong {
-  font-size: 13px;
-  line-height: 1.3;
-}
-
-.importUploadPopoverModeRow small {
-  font-size: 11px;
-  line-height: 1.4;
   color: var(--sem-text-muted);
 }
 
@@ -3067,13 +3020,6 @@
   border-color: color-mix(in oklch, var(--sem-border-brand) 72%, var(--sem-border-subtle) 28%);
 }
 
-.importUploadPopoverContextHint {
-  margin: 8px 0 0;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--sem-text-muted);
-}
-
 .importUploadPopoverContextError {
   margin: 6px 0 0;
   font-size: 11px;
@@ -3081,11 +3027,32 @@
   color: var(--sys-color-danger-300);
 }
 
+/* Secondary actions (back out / swap file) on the start edge; primary CTA fills the rest and
+   stays end-aligned so it does not float in the middle of a wide popover. */
 .importUploadPopoverActions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in oklch, var(--sem-border-subtle) 64%, transparent);
+}
+
+.importUploadPopoverActionsSecondary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.importUploadPopoverActionsPrimary {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 14px;
+  min-width: min(100%, 11rem);
 }
 
 .importUploadPopoverHint {
@@ -3698,6 +3665,11 @@
   gap: 10px;
 }
 
+/* Import upload popover: same component classes; section title already adds rhythm */
+.smartImportWizardOptions.importUploadPopoverLandModeOptions {
+  margin-top: 8px;
+}
+
 .smartImportWizardOption {
   display: flex;
   align-items: flex-start;
@@ -3723,6 +3695,29 @@
 .smartImportWizardOption input {
   margin-top: 2px;
   flex-shrink: 0;
+  accent-color: var(--sem-border-brand);
+}
+
+.smartImportWizardOption span:has(strong) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  color: var(--sem-text-primary);
+}
+
+.smartImportWizardOption strong {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.smartImportWizardOption small {
+  display: block;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--sem-text-muted);
+  font-weight: 400;
 }
 
 .smartImportWizardTextarea {
@@ -6003,7 +5998,6 @@ button.rootDockPanel.viewportMetricsPanel {
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1;
-  text-transform: uppercase !important;
   cursor: pointer;
 }
 

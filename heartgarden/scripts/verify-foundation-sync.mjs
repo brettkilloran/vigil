@@ -37,6 +37,13 @@ function run() {
   mustExist("src/components/foundation/ArchitecturalNodeCard.stories.tsx");
   mustExist("src/components/foundation/ArchitecturalCanvasApp.stories.tsx");
   mustExist("src/components/foundation/ArchitecturalFolderCard.stories.tsx");
+  mustExist("src/components/foundation/LoreImportLandModeRadios.stories.tsx");
+
+  // App popover reuses the same land-mode block as Storybook.
+  mustContain(
+    "src/components/foundation/ArchitecturalLoreImportUploadPopover.tsx",
+    "LoreImportLandModeRadios",
+  );
 
   console.log("Foundation sync check passed.");
 }

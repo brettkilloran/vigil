@@ -14,7 +14,7 @@ function FlowerGardenStage() {
       <VigilBootFlowerGarden ref={ref} active />
       <div style={{ position: "absolute", top: 16, left: 16, display: "flex", gap: 8 }}>
         <Button
-          variant="neutral"
+          variant="default"
           tone="solid"
           size="sm"
           onClick={() => ref.current?.clearAll()}

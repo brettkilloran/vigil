@@ -12,8 +12,16 @@ import { Tag } from "@/src/components/ui/Tag";
 const meta: Meta<typeof Button> = {
   title: "Heartgarden/Design System/Primitives/Button",
   component: Button,
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Use **variant=\"default\"** for the standard control (most actions). **primary** is the high-emphasis CTA. **ghost** is for minimal affordances. **subtle** for compact or chip-like use. **danger** is destructive. Token pipeline still uses the `--cmp-button-neutral-*` names under the hood for the default style.",
+      },
+    },
+  },
   args: {
-    variant: "neutral",
+    variant: "default",
     size: "md",
     tone: "glass",
     isActive: false,
@@ -26,7 +34,7 @@ const meta: Meta<typeof Button> = {
   argTypes: {
     variant: {
       control: "radio",
-      options: ["neutral", "primary", "danger", "ghost"],
+      options: ["default", "primary", "danger", "ghost", "subtle"],
     },
     size: {
       control: "radio",
@@ -52,18 +60,40 @@ export const Playground: Story = {};
 
 export const VariantMatrix: Story = {
   render: () => {
-    const variants = ["neutral", "primary", "danger", "ghost"] as const;
+    const rows: {
+      id: "default" | "primary" | "danger" | "ghost" | "subtle";
+      label: string;
+      note: string;
+    }[] = [
+      { id: "default", label: "default", note: "Standard (use most often)" },
+      { id: "primary", label: "primary", note: "CTA / high emphasis" },
+      { id: "danger", label: "danger", note: "Destructive" },
+      { id: "ghost", label: "ghost", note: "Minimal" },
+      { id: "subtle", label: "subtle", note: "Compact / chips" },
+    ];
     const sizes = ["xs", "sm", "md", "lg"] as const;
     return (
       <div style={{ display: "grid", gap: 12, padding: 20, background: "var(--sem-surface-base)" }}>
-        {variants.map((variant) => (
-          <div key={variant} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ width: 70, color: "var(--sys-color-neutral-400)", fontFamily: "monospace", fontSize: 11 }}>
-              {variant}
-            </span>
+        {rows.map((row) => (
+          <div
+            key={row.id}
+            style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}
+          >
+            <div
+              style={{
+                width: 200,
+                color: "var(--sys-color-neutral-400)",
+                fontFamily: "ui-monospace, monospace",
+                fontSize: 11,
+                lineHeight: 1.3,
+              }}
+            >
+              <div>{row.label}</div>
+              <div style={{ color: "var(--sem-text-muted)", fontSize: 10 }}>{row.note}</div>
+            </div>
             {sizes.map((size) => (
-              <Button key={`${variant}-${size}`} variant={variant} size={size}>
-                {variant}
+              <Button key={`${row.id}-${size}`} variant={row.id} size={size}>
+                {row.label}
               </Button>
             ))}
           </div>
@@ -92,7 +122,7 @@ export const StateMatrix: Story = {
 
 export const AsChildLink: Story = {
   render: () => (
-    <Button asChild variant="neutral" tone="glass">
+    <Button asChild variant="default" tone="glass">
       <a href="https://example.com">Open Link</a>
     </Button>
   ),

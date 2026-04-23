@@ -32,13 +32,13 @@ function LinkGraphPlayground() {
         <Button type="button" size="sm" variant="primary" tone="solid" onClick={() => setOpen(true)}>
           Open overlay
         </Button>
-        <Button type="button" size="sm" variant="neutral" tone="glass" onClick={() => setSpaceId(null)}>
+        <Button type="button" size="sm" variant="default" tone="glass" onClick={() => setSpaceId(null)}>
           Clear space (no graph)
         </Button>
         <Button
           type="button"
           size="sm"
-          variant="neutral"
+          variant="default"
           tone="glass"
           onClick={() => setSpaceId("00000000-0000-4000-8000-000000000001")}
         >

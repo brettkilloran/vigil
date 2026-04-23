@@ -3,6 +3,8 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { HEARTGARDEN_BRAND_MARK_EMOJI } from "@/src/lib/brand-mark";
 
 const meta = {
+  /** Stable id so bookmarks / deep links keep working after `title` path changes. */
+  id: "heartgarden-overview",
   title: "Heartgarden/Design System/Overview",
   parameters: {
     layout: "centered",

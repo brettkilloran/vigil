@@ -526,7 +526,7 @@ function SaveAndVersionPopover({
               <Button
                 type="button"
                 size="md"
-                variant="neutral"
+                variant="default"
                 tone="focus-light"
                 className={styles.syncPopoverCopySnapshot}
                 onClick={copySupportSnapshot}
@@ -582,7 +582,7 @@ function SaveAndVersionPopover({
                 <Button
                   type="button"
                   size="md"
-                  variant="neutral"
+                  variant="default"
                   tone="focus-light"
                   className={styles.syncPopoverExport}
                   onClick={handleExport}
@@ -608,7 +608,7 @@ function SaveAndVersionPopover({
       </span>
       <Button
         ref={triggerRef}
-        variant="neutral"
+        variant="default"
         size="sm"
         tone="glass"
         className={styles.statusSaveBarTrigger}

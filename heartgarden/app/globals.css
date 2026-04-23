@@ -648,6 +648,8 @@ a {
   letter-spacing: 0.03em;
   line-height: 1;
   white-space: nowrap;
+  /* Shell / parents may use all-caps labels; buttons keep author casing. */
+  text-transform: none;
   cursor: pointer;
   transition:
     background var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
@@ -788,6 +790,8 @@ a {
   --btn-border-disabled: var(--cmp-button-primary-border-disabled);
 }
 
+/* `neutral` is legacy; keep selector for older serialized markup / devtools snippets. */
+.vigil-btn[data-variant="default"],
 .vigil-btn[data-variant="neutral"],
 .vigil-btn[data-variant="subtle"] {
   --btn-bg-default: var(--cmp-button-neutral-bg-default);

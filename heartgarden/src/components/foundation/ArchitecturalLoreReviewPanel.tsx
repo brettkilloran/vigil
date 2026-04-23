@@ -173,7 +173,7 @@ export function ArchitecturalLoreReviewPanel({
               <Button
                 type="button"
                 size="sm"
-                variant="neutral"
+                variant="default"
                 tone="glass"
                 className={styles.closeFab}
                 iconOnly
@@ -322,7 +322,7 @@ export function ArchitecturalLoreReviewPanel({
                       <Button
                         type="button"
                         size="xs"
-                        variant="neutral"
+                        variant="default"
                         tone="glass"
                         onClick={() => setDismissed((prev) => new Set(prev).add(i))}
                       >
@@ -332,7 +332,7 @@ export function ArchitecturalLoreReviewPanel({
                         <Button
                           type="button"
                           size="xs"
-                          variant="neutral"
+                          variant="default"
                           tone="glass"
                           disabled={tagBusy}
                           onClick={() => void applyTags(["reviewed_finding_ack"])}
@@ -374,7 +374,7 @@ export function ArchitecturalLoreReviewPanel({
                           <Button
                             type="button"
                             size="xs"
-                            variant="neutral"
+                            variant="default"
                             tone="glass"
                             onClick={() => setDismissed((prev) => new Set(prev).add(i))}
                           >
@@ -384,7 +384,7 @@ export function ArchitecturalLoreReviewPanel({
                             <Button
                               type="button"
                               size="xs"
-                              variant="neutral"
+                              variant="default"
                               tone="glass"
                               disabled={tagBusy}
                               onClick={() => void applyTags(["reviewed_finding_ack"])}

@@ -2,7 +2,7 @@
 import { cx } from "@/src/lib/cx";
 
 export type VigilButtonRecipeOptions = {
-  variant?: "neutral" | "primary" | "danger" | "ghost" | "subtle";
+  variant?: "default" | "primary" | "danger" | "ghost" | "subtle";
   size?: "xs" | "sm" | "md" | "lg" | "icon" | "pill";
   tone?: "glass" | "solid" | "menu" | "focus-light" | "focus-dark";
   active?: boolean;
@@ -16,7 +16,7 @@ export function vigilButtonRecipe(opts: VigilButtonRecipeOptions = {}) {
 }
 
 export function vigilButtonDataAttrs({
-  variant = "neutral",
+  variant = "default",
   size = "md",
   tone = "glass",
   active = false,

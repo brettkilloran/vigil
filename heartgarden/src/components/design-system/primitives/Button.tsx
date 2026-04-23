@@ -5,7 +5,14 @@ import { cloneElement, forwardRef, isValidElement } from "react";
 
 import { cx } from "@/src/lib/cx";
 
-export type ButtonVariant = "neutral" | "primary" | "danger" | "ghost" | "subtle";
+/**
+ * - **default** — Standard control (the system default: use for most non-destructive actions).
+ * - **primary** — High-emphasis CTA; use sparingly for the single best next step.
+ * - **danger** — Destructive action.
+ * - **ghost** — Minimal surface (toolbar / secondary in dense rows).
+ * - **subtle** — Compacted affordances (e.g. doc gutter, chips).
+ */
+export type ButtonVariant = "default" | "primary" | "danger" | "ghost" | "subtle";
 export type ButtonSize = "xs" | "sm" | "md" | "lg" | "icon" | "pill";
 export type ButtonTone =
   | "glass"
@@ -72,7 +79,7 @@ function sharedProps({
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
-    variant = "neutral",
+    variant = "default",
     size = "md",
     tone = "glass",
     isActive = false,

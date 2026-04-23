@@ -2740,11 +2740,11 @@ function LabLocationV3SurveyTagPreview() {
         </div>
       </LabCard>
       <div className={labStyles.locSurveyV3Chrome}>
-        <Button type="button" size="sm" variant="neutral" tone="glass" onClick={() => inputRef.current?.click()}>
+        <Button type="button" size="sm" variant="default" tone="glass" onClick={() => inputRef.current?.click()}>
           {hero ? "Replace hero image" : "Add hero image"}
         </Button>
         {hero ? (
-          <Button type="button" size="sm" variant="neutral" tone="glass" onClick={() => setHero(null)}>
+          <Button type="button" size="sm" variant="default" tone="glass" onClick={() => setHero(null)}>
             Clear hero
           </Button>
         ) : null}
@@ -2763,7 +2763,7 @@ function ThemeToolbar() {
           key={key}
           type="button"
           size="sm"
-          variant="neutral"
+          variant="default"
           tone="glass"
           isActive={preference === key}
           className={labStyles.themeBtn}

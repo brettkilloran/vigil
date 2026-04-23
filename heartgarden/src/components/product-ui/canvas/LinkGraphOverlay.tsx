@@ -223,11 +223,11 @@ function LinkGraphInner({
           Link graph
         </span>
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="md" variant="neutral" tone="glass" onClick={() => setLayoutRevision((n) => n + 1)}>
+          <Button size="md" variant="default" tone="glass" onClick={() => setLayoutRevision((n) => n + 1)}>
             <ArrowCounterClockwise className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             Reset layout
           </Button>
-          <Button size="md" variant="neutral" tone="glass" onClick={onClose}>
+          <Button size="md" variant="default" tone="glass" onClick={onClose}>
             <X className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             Close
           </Button>

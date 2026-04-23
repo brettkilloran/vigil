@@ -150,7 +150,7 @@ export function ArchitecturalLoreImportErrorDialog({ failure, onClose, onRetry }
           <Button
             type="button"
             size="md"
-            variant="neutral"
+            variant="default"
             tone="focus-light"
             className={styles.syncPopoverCopySnapshot}
             onClick={copySnapshot}
@@ -165,14 +165,14 @@ export function ArchitecturalLoreImportErrorDialog({ failure, onClose, onRetry }
             <Button
               type="button"
               size="md"
-              variant="neutral"
+              variant="default"
               tone="focus-light"
               onClick={() => onRetry?.()}
             >
               Retry import
             </Button>
           ) : null}
-          <Button type="button" size="md" variant="neutral" tone="focus-light" onClick={onClose}>
+          <Button type="button" size="md" variant="default" tone="focus-light" onClick={onClose}>
             Dismiss
           </Button>
         </div>

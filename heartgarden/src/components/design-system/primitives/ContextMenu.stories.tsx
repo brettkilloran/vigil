@@ -41,7 +41,7 @@ export const Default: Story = {
         <p className="mb-3 max-w-md text-sm text-[var(--sem-text-muted)]">
           Pointer-down outside the menu or Escape dismisses it. Reopen from the button.
         </p>
-        <Button size="sm" variant="neutral" tone="glass" onClick={() => setPosition({ x: 48, y: 48 })}>
+        <Button size="sm" variant="default" tone="glass" onClick={() => setPosition({ x: 48, y: 48 })}>
           Show menu
         </Button>
         <ContextMenu

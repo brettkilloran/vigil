@@ -686,6 +686,8 @@ type LoreImportPdfjsModule = typeof import("pdfjs-dist/legacy/build/pdf.mjs");
 /** Pinned to `package-lock` `pdfjs-dist` (via `pdf-parse`); keep worker URL in sync with `import()`. */
 const LORE_IMPORT_PDFJS_WORKER =
   "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/legacy/build/pdf.worker.mjs";
+const LORE_IMPORT_PDFJS_MODULE_URL =
+  "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/legacy/build/pdf.mjs";
 
 /**
  * pdfjs v5+ requires `GlobalWorkerOptions.workerSrc` before `getDocument` in the browser.
@@ -698,7 +700,8 @@ const LORE_IMPORT_PDFJS_WORKER =
 async function getLoreImportPdfjs(): Promise<LoreImportPdfjsModule> {
   const pdfjs = (await import(
     /* webpackIgnore: true */
-    "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/legacy/build/pdf.mjs" as any
+    // Use a variable so TypeScript treats this as runtime URL import (not compile-time module resolution).
+    LORE_IMPORT_PDFJS_MODULE_URL
   )) as LoreImportPdfjsModule;
   if (!loreImportPdfjsWorkerSrcSet) {
     pdfjs.GlobalWorkerOptions.workerSrc = LORE_IMPORT_PDFJS_WORKER;
