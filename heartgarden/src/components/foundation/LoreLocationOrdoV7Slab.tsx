@@ -19,6 +19,7 @@ import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalT
 import { Button } from "@/src/components/ui/Button";
 import cardStyles from "@/src/components/foundation/lore-entity-card.module.css";
 import { cx } from "@/src/lib/cx";
+import { getHgDocEditor } from "@/src/lib/hg-doc/editor-registry";
 import { htmlFragmentToHgDocDoc } from "@/src/lib/hg-doc/html-to-doc";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
 import {
@@ -63,6 +64,21 @@ function fillOrdoV7NameFieldDOM(el: HTMLElement, name: string) {
     el.appendChild(document.createElement("br"));
     el.appendChild(document.createTextNode(line2));
   }
+}
+
+/**
+ * Notes are considered empty when the doc has no blocks, or a single empty paragraph.
+ * Mirrors TipTap's `editor.isEmpty` semantics without needing the live editor instance.
+ */
+function isNotesHgDocEmpty(doc: JSONContent | null | undefined): boolean {
+  if (!doc || doc.type !== "doc") return true;
+  const content = doc.content ?? [];
+  if (content.length === 0) return true;
+  if (content.length === 1) {
+    const only = content[0];
+    if (only?.type === "paragraph" && !only.content?.length) return true;
+  }
+  return false;
 }
 
 function fillOrdoV7SingleLineFieldDOM(el: HTMLElement, raw: string) {
@@ -411,6 +427,9 @@ export function LoreLocationOrdoV7Slab({
   const detailLineRef = useRef<HTMLParagraphElement | null>(null);
 
   const [notesDoc, setNotesDoc] = useState<JSONContent>(() => htmlFragmentToHgDocDoc(parsed.notesHtml));
+  const [notesSlotOpen, setNotesSlotOpen] = useState(false);
+  const notesSurfaceKey = `loc-ordo-v7-notes-${nodeId}`;
+  const notesEmpty = useMemo(() => isNotesHgDocEmpty(notesDoc), [notesDoc]);
 
   const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastPushed = useRef(bodyHtml);
@@ -489,7 +508,14 @@ export function LoreLocationOrdoV7Slab({
     detailLineRef.current?.focus();
   }, [detailSlotOpen, detail]);
 
+  /* Focus the notes editor once it mounts in response to "add notes" so the caret is ready. */
+  useLayoutEffect(() => {
+    if (!notesSlotOpen || !notesEmpty) return;
+    getHgDocEditor(notesSurfaceKey)?.focus();
+  }, [notesSlotOpen, notesEmpty, notesSurfaceKey]);
+
   const showDetailLine = detail.trim().length > 0 || detailSlotOpen;
+  const showNotesEditor = !notesEmpty || notesSlotOpen;
 
   return (
     <div
@@ -600,31 +626,51 @@ export function LoreLocationOrdoV7Slab({
                   {"// add site detail"}
                 </button>
               )}
-              <div
-                className={cardStyles.locOrdoV7NotesCell}
-                data-hg-lore-location-notes-cell="true"
-                contentEditable={false}
-              >
+              {showNotesEditor ? (
                 <div
-                  data-hg-lore-location-notes="true"
+                  className={cardStyles.locOrdoV7NotesCell}
+                  data-hg-lore-location-notes-cell="true"
                   contentEditable={false}
-                  className={cardStyles.locOrdoV7NotesField}
+                  onBlur={(e) => {
+                    /* Collapse back to the "+ add notes" row once focus leaves the cell with empty content. */
+                    if (!editable) return;
+                    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+                    if (!notesEmpty) return;
+                    setNotesSlotOpen(false);
+                  }}
                 >
-                  <HeartgardenDocEditor
-                    surfaceKey={`loc-ordo-v7-notes-${nodeId}`}
-                    chromeRole="canvas"
-                    value={notesDoc}
-                    editable={editable}
-                    onChange={(next) => {
-                      setNotesDoc(next);
-                      scheduleNotesCommit(next);
-                    }}
-                    showAiPendingGutter={false}
-                    placeholder={emptyPlaceholder ?? "Notes… type / for blocks"}
-                    className={cardStyles.locOrdoV7HgHost}
-                  />
+                  <div
+                    data-hg-lore-location-notes="true"
+                    contentEditable={false}
+                    className={cardStyles.locOrdoV7NotesField}
+                  >
+                    <HeartgardenDocEditor
+                      surfaceKey={notesSurfaceKey}
+                      chromeRole="canvas"
+                      value={notesDoc}
+                      editable={editable}
+                      onChange={(next) => {
+                        setNotesDoc(next);
+                        scheduleNotesCommit(next);
+                      }}
+                      showAiPendingGutter={false}
+                      placeholder={emptyPlaceholder ?? "Notes… type / for blocks"}
+                      className={cardStyles.locOrdoV7HgHost}
+                    />
+                  </div>
                 </div>
-              </div>
+              ) : editable ? (
+                // eslint-disable-next-line no-restricted-syntax -- ORDO v7 notes slot: native slab row (parity with detail add)
+                <button
+                  type="button"
+                  className={cardStyles.locOrdoV7NotesAdd}
+                  data-hg-lore-location-notes-add="true"
+                  aria-label="Add site notes"
+                  onClick={() => setNotesSlotOpen(true)}
+                >
+                  {"// add notes"}
+                </button>
+              ) : null}
             </div>
           </div>
         </div>

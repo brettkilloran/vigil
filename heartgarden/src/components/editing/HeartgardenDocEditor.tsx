@@ -6,6 +6,8 @@ import { EditorContent, useEditor } from "@tiptap/react";
 
 import { useEffect, useMemo, useRef } from "react";
 
+import { useScrollEdgeOverflowAttrs } from "@/src/lib/use-scroll-edge-overflow";
+
 import { HgDocPointerBlockDrag } from "@/src/components/editing/HgDocPointerBlockDrag";
 import { HgAiPendingEditorGutter } from "@/src/components/editing/HgAiPendingEditorGutter";
 
@@ -97,6 +99,8 @@ export function HeartgardenDocEditor({
   const currentEditorDocKeyRef = useRef<string>(
     docJsonKey(value?.type === "doc" ? value : EMPTY_HG_DOC),
   );
+
+  useScrollEdgeOverflowAttrs(hostRef);
 
   const showBlockDragHandle = Boolean(enableDragHandle && chromeRole === "focus");
 

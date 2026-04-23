@@ -14494,9 +14494,6 @@ export function ArchitecturalCanvasApp({
                             Bind all
                           </Button>
                         </ArchitecturalTooltip>
-                        <span className={styles.focusAiReviewHint}>
-                          Bind removes pending highlights; Save applies body edits like any other change.
-                        </span>
                       </div>
                     );
                   })()

@@ -1673,10 +1673,16 @@
 }
 
 .nodeBody {
-  /* Used by location v3 `.locPlaqueStrip` to bleed to the card edges. */
+  /*
+   * Horizontal + vertical padding exposed as vars so downstream cards (lore v3 plaque strip,
+   * `.a4DocumentBody`, etc.) can tweak without re-specifying the whole shorthand.
+   */
   --arch-body-pad-x: 22px;
   --arch-body-pad-y: 20px;
-  padding: 20px 22px 22px;
+  padding:
+    var(--arch-body-pad-y)
+    var(--arch-body-pad-x)
+    calc(var(--arch-body-pad-y) + 2px);
   font-size: 14px;
   line-height: 1.68;
   outline: none;
@@ -1693,9 +1699,9 @@
 .nodeBody[data-arch-doc-empty="true"]::before {
   content: attr(data-placeholder);
   position: absolute;
-  left: 22px;
-  right: 22px;
-  top: 20px;
+  left: var(--arch-body-pad-x);
+  right: var(--arch-body-pad-x);
+  top: var(--arch-body-pad-y);
   pointer-events: none;
   color: color-mix(in oklch, currentColor 38%, transparent);
   font-size: 14px;
@@ -1764,16 +1770,76 @@
   overscroll-behavior-y: contain;
 
   /*
-   * No perpetual bottom mask: it read as “more content below” even when the doc fits.
-   * Scrollbar lane only when overflow (`auto`); avoid `stable` gutter on short docs.
+   * Tighter horizontal padding than the generic `.nodeBody` default so paragraphs
+   * breathe the full card width. `scrollbar-gutter: stable both-edges` reserves
+   * the (5px) scrollbar lane on *both* sides, so the visible left/right gutters
+   * stay identical whether or not the scrollbar is showing — no subtle rightward
+   * crowd when long docs begin to scroll.
    */
+  --arch-body-pad-x: 16px;
+  scrollbar-gutter: stable both-edges;
+
+  /*
+   * Conditional scroll-edge fade: `data-hg-scroll-overflow-*` is set by
+   * `useScrollEdgeOverflowAttrs` in `HeartgardenDocEditor` only when content actually
+   * overflows that edge. Short docs stay unmasked so the mask never reads as a phantom
+   * "more below" hint. Fade distance tracks the body's horizontal padding so the
+   * fade feels proportional to the page margins (rather than a hardcoded literal).
+   */
+  --a4-doc-scroll-fade: calc(var(--arch-body-pad-x) + 6px);
   -webkit-mask-image: none;
   mask-image: none;
 
   /* Thin scrollbar — invisible at rest, tinted on hover. */
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
-  scrollbar-gutter: auto;
+}
+
+.a4DocumentBody[data-hg-scroll-overflow-top="true"]:not([data-hg-scroll-overflow-bottom="true"]) {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--a4-doc-scroll-fade),
+    #000 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--a4-doc-scroll-fade),
+    #000 100%
+  );
+}
+
+.a4DocumentBody[data-hg-scroll-overflow-bottom="true"]:not([data-hg-scroll-overflow-top="true"]) {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - var(--a4-doc-scroll-fade)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - var(--a4-doc-scroll-fade)),
+    transparent 100%
+  );
+}
+
+.a4DocumentBody[data-hg-scroll-overflow-top="true"][data-hg-scroll-overflow-bottom="true"] {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--a4-doc-scroll-fade),
+    #000 calc(100% - var(--a4-doc-scroll-fade)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--a4-doc-scroll-fade),
+    #000 calc(100% - var(--a4-doc-scroll-fade)),
+    transparent 100%
+  );
 }
 
 .a4DocumentBody:hover,
@@ -2406,10 +2472,29 @@
   min-height: 100%;
 }
 
-/* Tight frosted chip: one dock-style icon between save strip and breadcrumb. */
+/*
+ * Single-icon top-right chrome (log out, vault review, import, search): we reuse the
+ * `.glassPanel.shellTopChromePanel` sizing / min-height / padding rhythm so these icons
+ * share a line height + baseline with the save + breadcrumb strips, but we *opt out* of
+ * the frosted chrome skin (border, translucent fill, shadow, backdrop blur). The buttons
+ * should read as bare toolbar icons — same visual weight as the canvas toolbars lower in
+ * the UI — not as tiny pills with their own ambient card.
+ *
+ * Only the visual chrome is stripped here; `min-height`, `padding-block`, and
+ * `padding-inline` intentionally stay inherited from `.glassPanel.shellTopChromePanel`
+ * (= `--chrome-panel-height`, `--chrome-panel-pad-y`, `--chrome-panel-pad-x`) so the
+ * icons keep the same 40px-ish band and vertical centering as the rest of the top
+ * chrome. Don't zero the padding/min-height here — that subtly shrinks the band and
+ * bumps the icons 4px upward relative to the top-left save / breadcrumb strips.
+ */
 .shellTopLogOutPanel.glassPanel.shellTopChromePanel {
   gap: 0;
   justify-content: center;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 /* Square icon control, same vertical band as save trigger / nav row. */
@@ -6809,28 +6894,59 @@ button.rootDockPanel.viewportMetricsPanel {
   max-width: 100%;
 }
 
-/* Accept in focus bar — ghost “glass” otherwise reads gray; align with LLM purple system */
-.focusAiReviewBar :global(.vigil-btn) {
-  color: var(--sem-text-llm-accent);
-  border-color: var(--sem-border-llm-pending);
-  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--sys-color-neutral-100));
+/*
+ * Accept in focus bar — ghost "glass" otherwise reads gray; align with LLM purple system.
+ * The bind button is the primary CTA of the review bar; use a filled LLM-accent surface so
+ * it reads as clearly actionable (not disabled) on both light and dark focus chrome.
+ */
+.focusAiReviewBar :global(.vigil-btn[data-hg-ai-bind="true"]) {
+  color: var(--sys-color-white);
+  border-color: color-mix(in oklch, oklch(0.30 0.22 294) 72%, transparent);
+  background: color-mix(in oklch, oklch(0.38 0.22 294) 92%, transparent);
 }
 
-.focusAiReviewBar :global(.vigil-btn:hover:not([data-disabled="true"])) {
-  color: var(--sem-text-llm-accent);
-  border-color: var(--sem-text-llm-accent);
-  background: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 100%, var(--sys-color-neutral-100));
+.focusAiReviewBar :global(.vigil-btn[data-hg-ai-bind="true"]:hover:not([data-disabled="true"])),
+.focusAiReviewBar
+  :global(.vigil-btn[data-hg-ai-bind="true"][data-force-state="hover"]:not([data-disabled="true"])) {
+  color: var(--sys-color-white);
+  border-color: color-mix(in oklch, oklch(0.30 0.22 294) 88%, transparent);
+  background: color-mix(in oklch, oklch(0.34 0.22 294) 100%, transparent);
 }
 
-.focusEditorDark .focusAiReviewBar :global(.vigil-btn) {
-  color: var(--sem-text-llm-accent-bright);
-  border-color: color-mix(in oklch, var(--sem-text-llm-accent-bright) 42%, transparent);
-  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, transparent);
+.focusAiReviewBar :global(.vigil-btn[data-hg-ai-bind="true"]:active:not([data-disabled="true"])),
+.focusAiReviewBar
+  :global(.vigil-btn[data-hg-ai-bind="true"][data-force-state="active"]:not([data-disabled="true"])) {
+  color: var(--sys-color-white);
+  border-color: color-mix(in oklch, oklch(0.24 0.22 294) 96%, transparent);
+  background: color-mix(in oklch, oklch(0.28 0.22 294) 100%, transparent);
 }
 
-.focusEditorDark .focusAiReviewBar :global(.vigil-btn:hover:not([data-disabled="true"])) {
+.focusEditorDark .focusAiReviewBar :global(.vigil-btn[data-hg-ai-bind="true"]) {
+  color: var(--sys-color-white);
+  border-color: color-mix(in oklch, var(--sem-text-llm-accent-bright) 72%, transparent);
+  background: color-mix(in oklch, oklch(0.46 0.22 294) 88%, transparent);
+}
+
+.focusEditorDark
+  .focusAiReviewBar
+  :global(.vigil-btn[data-hg-ai-bind="true"]:hover:not([data-disabled="true"])),
+.focusEditorDark
+  .focusAiReviewBar
+  :global(.vigil-btn[data-hg-ai-bind="true"][data-force-state="hover"]:not([data-disabled="true"])) {
+  color: var(--sys-color-white);
   border-color: var(--sem-text-llm-accent-bright);
-  background: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 100%, transparent);
+  background: color-mix(in oklch, oklch(0.52 0.22 294) 94%, transparent);
+}
+
+.focusEditorDark
+  .focusAiReviewBar
+  :global(.vigil-btn[data-hg-ai-bind="true"]:active:not([data-disabled="true"])),
+.focusEditorDark
+  .focusAiReviewBar
+  :global(.vigil-btn[data-hg-ai-bind="true"][data-force-state="active"]:not([data-disabled="true"])) {
+  color: var(--sys-color-white);
+  border-color: var(--sem-text-llm-accent-bright);
+  background: color-mix(in oklch, oklch(0.40 0.22 294) 96%, transparent);
 }
 
 .focusAiReviewHint {

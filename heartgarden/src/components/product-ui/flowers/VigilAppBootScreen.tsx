@@ -780,9 +780,11 @@ export function VigilAppBootScreen({
               primePlaybackFromGestureRef={bootAmbientPrimePlaybackRef}
             />
           </div>
-          <div className={`${styles.metaBottomLeft} ${styles.mono}`}>
-            Channel Stain · v.{HEARTGARDEN_APP_VERSION_LABEL}
-          </div>
+          {HEARTGARDEN_APP_VERSION_LABEL ? (
+            <div className={`${styles.metaBottomLeft} ${styles.mono}`}>
+              v.{HEARTGARDEN_APP_VERSION_LABEL}
+            </div>
+          ) : null}
         </div>
         <div className={styles.metaBottomRightCluster}>
           <div className={`${styles.mono} ${styles.fadeInBottom}`} style={{ animationDelay: "1.48s" }}>

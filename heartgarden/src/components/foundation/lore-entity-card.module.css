@@ -1865,8 +1865,9 @@
   /* Slot color matches the scene behind the card so the notch reads as a real passthrough. */
   --sk-v11-slot-ink: color-mix(in oklch, var(--sys-color-black) 84%, var(--sys-color-neutral-950));
   /*
-   * Identity band: literal px width for the name column (tune here only).
-   * Default ≈ max card inner width − 142px meta column − 2×1px card material border @ 340px entity width.
+   * Identity band: preferred px width for the name column (tune here only).
+   * v11 keeps the 2-column layout, but will clamp/shrink this track when the
+   * container is tighter so the 142px meta column stays visible (no clipping).
    */
   --char-sk-v11-name-col-w: 196px;
 }
@@ -1947,9 +1948,9 @@
   grid-template-rows: 44px auto max-content auto;
 }
 
-/* Identity band: min fits two 76px meta rows + divider (~153px); grows if content needs more. */
+/* Identity band: keep 2-column layout and shrink name track first on tight widths. */
 .charSkShellV11 .charSkIdentityCell {
-  grid-template-columns: var(--char-sk-v11-name-col-w) 142px;
+  grid-template-columns: minmax(0, min(var(--char-sk-v11-name-col-w), calc(100% - 142px))) 142px;
   min-height: 153px;
   height: auto;
   max-height: none;
@@ -1957,14 +1958,10 @@
   grid-template-rows: minmax(0, auto);
 }
 
-/*
- * Autofill can inject long inline runs and wrappers into the name column.
- * Pin the right metadata track and let left content wrap/shrink instead of
- * expanding the grid and clipping the right side.
- */
 .charSkShellV11 .charSkIdentityCell > .charSkNameBlock {
   min-width: 0;
   max-width: 100%;
+  border-right: 1px solid var(--sk-id-line);
 }
 
 .charSkShellV11 .charSkIdentityCell > .charSkMetaBlock {
@@ -4214,6 +4211,45 @@
 
 .locOrdoV7DetailAdd:focus,
 .locOrdoV7DetailAdd:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/*
+ * Empty-state notes row: a compact "+ add notes" affordance that replaces the full TipTap
+ * editor when the notes doc is empty, so an unused notes cell no longer inflates the
+ * location card height on the canvas. Shares the detail-add monospace tag style, but
+ * omits the border-bottom (there is no field below it) and hugs content.
+ */
+.locOrdoV7NotesAdd {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 2px 0 0;
+  border: none;
+  background: transparent;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1.35;
+  text-align: left;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--loc-ordo-accent) 40%, transparent);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.locOrdoV7NotesAdd:hover {
+  color: color-mix(in oklch, var(--loc-ordo-accent) 72%, transparent);
+}
+
+.locOrdoV7NotesAdd:focus,
+.locOrdoV7NotesAdd:focus-visible {
   outline: none;
   box-shadow: none;
 }

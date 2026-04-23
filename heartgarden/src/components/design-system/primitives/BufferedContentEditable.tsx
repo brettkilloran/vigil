@@ -37,6 +37,7 @@ import {
   syncLoreV9RedactedPlaceholderState,
 } from "@/src/lib/lore-v9-placeholder";
 import { sanitizeRichHtmlForEditor } from "@/src/lib/safe-html";
+import { useScrollEdgeOverflowAttrs } from "@/src/lib/use-scroll-edge-overflow";
 
 function isCaretAtStartOfHost(host: HTMLElement, range: Range): boolean {
   if (!range.collapsed) return false;
@@ -317,6 +318,7 @@ export function BufferedContentEditable({
   emptyPlaceholder = null,
 }: BufferedContentEditableProps) {
   const ref = useRef<HTMLDivElement | null>(null);
+  useScrollEdgeOverflowAttrs(ref);
   const pastePlainNextRef = useRef(false);
   const composingRef = useRef(false);
   const slashPlainRangeRef = useRef<{ start: number; end: number } | null>(null);
