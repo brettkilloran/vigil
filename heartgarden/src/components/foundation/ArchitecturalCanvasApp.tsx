@@ -679,6 +679,34 @@ function shouldUseLocalPdfParse(file: File): boolean {
   return file.size + LORE_IMPORT_MULTIPART_OVERHEAD_BYTES >= LORE_IMPORT_VERCEL_BODY_LIMIT_BYTES;
 }
 
+let loreImportPdfjsWorkerSrcSet = false;
+
+type LoreImportPdfjsModule = typeof import("pdfjs-dist/legacy/build/pdf.mjs");
+
+/** Pinned to `package-lock` `pdfjs-dist` (via `pdf-parse`); keep worker URL in sync with `import()`. */
+const LORE_IMPORT_PDFJS_WORKER =
+  "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/legacy/build/pdf.worker.mjs";
+
+/**
+ * pdfjs v5+ requires `GlobalWorkerOptions.workerSrc` before `getDocument` in the browser.
+ *
+ * We load the published `pdf.mjs` in the *browser* with `import()` + `webpackIgnore: true` so
+ * Next’s webpack does not re-bundle the pre-bundled library. Re-wrapping it breaks `next dev`
+ * (runtime `Object.defineProperty called on non-object` / undefined `__webpack_exports__`;
+ * see webpack#20095, mozilla/pdf.js#20478, vercel/next.js#89177).
+ */
+async function getLoreImportPdfjs(): Promise<LoreImportPdfjsModule> {
+  const pdfjs = (await import(
+    /* webpackIgnore: true */
+    "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/legacy/build/pdf.mjs" as any
+  )) as LoreImportPdfjsModule;
+  if (!loreImportPdfjsWorkerSrcSet) {
+    pdfjs.GlobalWorkerOptions.workerSrc = LORE_IMPORT_PDFJS_WORKER;
+    loreImportPdfjsWorkerSrcSet = true;
+  }
+  return pdfjs;
+}
+
 async function parsePdfInBrowser(
   file: File,
   signal?: AbortSignal,
@@ -686,17 +714,12 @@ async function parsePdfInBrowser(
   if (signal?.aborted) {
     throw new DOMException("Aborted", "AbortError");
   }
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const pdfjs = await getLoreImportPdfjs();
   const data = new Uint8Array(await file.arrayBuffer());
   if (signal?.aborted) {
     throw new DOMException("Aborted", "AbortError");
   }
-  const loadingTask = pdfjs.getDocument({
-    data,
-    // Browser fallback path: we intentionally keep parsing on the main thread to avoid worker
-    // boot/asset resolution issues in locked-down environments.
-    disableWorker: true,
-  } as unknown as Parameters<typeof pdfjs.getDocument>[0]);
+  const loadingTask = pdfjs.getDocument({ data });
   const doc = await loadingTask.promise;
   try {
     const chunks: string[] = [];
@@ -7619,8 +7642,6 @@ export function ArchitecturalCanvasApp({
           const prev = graphRef.current;
           const entity = prev.entities[entityId];
           if (!entity || entity.kind !== "folder") return;
-          if (scheme == null && entity.folderColorScheme == null) return;
-          if (scheme != null && entity.folderColorScheme === scheme) return;
           markOptimisticProtectedId(entityId);
           recordUndoBeforeMutation();
           setGraph((p) => {
@@ -7641,15 +7662,23 @@ export function ArchitecturalCanvasApp({
               if (!persistNeonRef.current || !isUuidLike(entityId)) return;
               let ent = graphRef.current.entities[entityId];
               if (ent?.kind !== "folder") return;
+              const withTargetScheme = (folder: CanvasFolderEntity) => {
+                if (scheme == null) {
+                  const updated = { ...folder };
+                  delete updated.folderColorScheme;
+                  return updated;
+                }
+                return { ...folder, folderColorScheme: scheme };
+              };
               let ok = await patchItemWithVersion(entityId, {
-                contentJson: buildContentJsonForFolderEntity(ent),
+                contentJson: buildContentJsonForFolderEntity(withTargetScheme(ent)),
               });
               if (!ok) {
                 await new Promise<void>((resolve) => window.setTimeout(resolve, 220));
                 ent = graphRef.current.entities[entityId];
                 if (ent?.kind === "folder") {
                   ok = await patchItemWithVersion(entityId, {
-                    contentJson: buildContentJsonForFolderEntity(ent),
+                    contentJson: buildContentJsonForFolderEntity(withTargetScheme(ent)),
                   });
                 }
               }
@@ -12743,7 +12772,7 @@ export function ArchitecturalCanvasApp({
                   <div className={styles.smartImportPlanningActionsSplit}>
                     <Button
                       size="sm"
-                      variant="neutral"
+                      variant="default"
                       tone="card-dark"
                       type="button"
                       onClick={copyLoreSmartPlanningFailure}
@@ -12758,7 +12787,7 @@ export function ArchitecturalCanvasApp({
                     <div>
                       <Button
                         size="sm"
-                        variant="neutral"
+                        variant="default"
                         tone="card-dark"
                         type="button"
                         onClick={closeLoreSmartPlanningFailure}
@@ -12797,7 +12826,7 @@ export function ArchitecturalCanvasApp({
                   <div className={styles.smartImportPlanningActions}>
                     <Button
                       size="sm"
-                      variant="neutral"
+                      variant="default"
                       tone="card-dark"
                       type="button"
                       onClick={cancelLoreSmartPlanning}
@@ -12860,7 +12889,7 @@ export function ArchitecturalCanvasApp({
                 <div className={styles.smartImportReviewHeaderActions}>
                   <Button
                     size="sm"
-                    variant="neutral"
+                    variant="default"
                     tone="card-dark"
                     disabled={loreImportCommitting}
                     onClick={closeLoreSmartReview}
@@ -12873,7 +12902,7 @@ export function ArchitecturalCanvasApp({
                 <div className={styles.smartImportReviewMergeToolbar}>
                   <Button
                     size="sm"
-                    variant="neutral"
+                    variant="default"
                     tone="card-dark"
                     type="button"
                     disabled={loreImportCommitting}
@@ -12884,7 +12913,7 @@ export function ArchitecturalCanvasApp({
                   {loreSmartReview.plan.folders.length > 0 ? (
                     <Button
                       size="sm"
-                      variant="neutral"
+                      variant="default"
                       tone="card-dark"
                       type="button"
                       disabled={loreImportCommitting}
@@ -13176,7 +13205,7 @@ export function ArchitecturalCanvasApp({
                                   {recommendedClarificationOptionId(c) ? (
                                     <Button
                                       size="sm"
-                                      variant="neutral"
+                                      variant="default"
                                       tone="card-dark"
                                       type="button"
                                       onClick={() => {
