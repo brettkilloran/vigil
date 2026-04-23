@@ -215,25 +215,48 @@ export function applySpaceChangeGraphMerge(input: {
     protectedContentIds,
     tombstoneExemptIds,
   } = input;
-  const spaceRows = Object.values(prev.spaces).map((s) => ({
+  const rows = rawSpaceRows.map((s) => ({
+    id: s.id,
+    name: s.name,
+    parentSpaceId: s.parentSpaceId ?? null,
+  }));
+  const withMergedSpaces = mergeRemoteSpaceRowsIntoGraph(prev, rows);
+  const spaceRows = Object.values(withMergedSpaces.spaces).map((s) => ({
     id: s.id,
     parentSpaceId: s.parentSpaceId ?? null,
   }));
   const subtree = collectSpaceSubtreeIds(activeSpaceId, spaceRows);
   const mergedItems = mergeRemoteItemPatches(
-    prev,
+    withMergedSpaces,
     rawItems,
     serverItemIds,
     subtree,
     protectedContentIds,
     tombstoneExemptIds,
   );
-  const rows = rawSpaceRows.map((s) => ({
-    id: s.id,
-    name: s.name,
-    parentSpaceId: s.parentSpaceId ?? null,
-  }));
-  return mergeRemoteSpaceRowsIntoGraph(mergedItems, rows);
+  // Safety net: enforce changed-item membership in destination spaces after merge.
+  if (rawItems.length === 0) return mergedItems;
+  const spacesRecord = { ...mergedItems.spaces };
+  for (const item of rawItems) {
+    const nextHome = spacesRecord[item.spaceId];
+    if (!nextHome) continue;
+    for (const sid of Object.keys(spacesRecord)) {
+      if (sid === item.spaceId) continue;
+      const sp = spacesRecord[sid]!;
+      const idx = sp.entityIds.indexOf(item.id);
+      if (idx === -1) continue;
+      const nextIds = [...sp.entityIds];
+      nextIds.splice(idx, 1);
+      spacesRecord[sid] = { ...sp, entityIds: nextIds };
+    }
+    if (!nextHome.entityIds.includes(item.id)) {
+      spacesRecord[item.spaceId] = {
+        ...nextHome,
+        entityIds: [...nextHome.entityIds, item.id],
+      };
+    }
+  }
+  return { ...mergedItems, spaces: spacesRecord };
 }
 
 /** Server `updatedAt` bumps for items that are not text-protected (for conflict base). */

@@ -337,6 +337,7 @@ export async function GET(req: Request, ctx: RouteCtx) {
   const running = job.status === "queued" || job.status === "processing";
   const events = normalizeJobEvents(job.progressEvents, { running });
   const failedMeta = job.status === "failed" ? readFailedMeta(job) : {};
+  const exposeFailureDetail = process.env.HEARTGARDEN_DEBUG_ERRORS === "1";
   return Response.json({
     ok: true,
     attemptId,
@@ -345,7 +346,9 @@ export async function GET(req: Request, ctx: RouteCtx) {
     ...(events.length > 0 ? { events } : {}),
     ...(job.status === "failed"
       ? {
-          error: job.error || "Import job failed",
+          error: exposeFailureDetail
+            ? (job.error || "Import job failed")
+            : "Import job failed",
           code: "lore_import_job_failed",
           errorCode: failedMeta.errorCode,
           lastPhase: failedMeta.lastPhase,

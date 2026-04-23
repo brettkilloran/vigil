@@ -309,7 +309,7 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
     const parsedPlan = loreImportPlanSchema.safeParse(plan);
     if (!parsedPlan.success) {
       await updateLoreImportJobFailed(db as VigilDb, jobId, {
-        error: `Plan validation failed: ${parsedPlan.error.message}`,
+        error: "Generated import plan failed validation",
         errorCode: "lore_import_plan_validation_failed",
         lastPhase,
       });
@@ -326,9 +326,7 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
     });
     await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
     await persistImportReviewQueueFromPlan(db as VigilDb, job.spaceId, parsedPlan.data, true);
-    await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
-
-    await db
+    const [readyWrite] = await db
       .update(loreImportJobs)
       .set({
         status: "ready",
@@ -336,7 +334,21 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
         error: null,
         updatedAt: new Date(),
       })
-      .where(eq(loreImportJobs.id, jobId));
+      .where(
+        and(
+          eq(loreImportJobs.id, jobId),
+          eq(loreImportJobs.status, "processing"),
+        ),
+      )
+      .returning({ id: loreImportJobs.id });
+    if (!readyWrite) {
+      await appendLoreImportJobEvent(db as VigilDb, jobId, {
+        kind: "warning",
+        phase: "persist_review",
+        text: "Finalization skipped because job was cancelled before ready write",
+      });
+      return;
+    }
   } catch (e) {
     if (
       e instanceof LoreImportJobCancelledError ||
@@ -346,8 +358,13 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
       return;
     }
     const msg = e instanceof Error ? e.message : "Plan failed";
-    await updateLoreImportJobFailed(db as VigilDb, jobId, {
+    console.error("[lore-import] job process failed", {
+      jobId,
+      lastPhase,
       error: msg,
+    });
+    await updateLoreImportJobFailed(db as VigilDb, jobId, {
+      error: "Import planning failed. Try again or split the document.",
       errorCode: "lore_import_job_failed",
       lastPhase,
     });

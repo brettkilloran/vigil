@@ -71,7 +71,7 @@ describe("GET /api/lore/import/jobs/[jobId]", () => {
     };
     expect(payload.ok).toBe(true);
     expect(payload.status).toBe("failed");
-    expect(payload.error).toBe("Outline model timed out");
+    expect(payload.error).toBe("Import job failed");
     expect(payload.code).toBe("lore_import_job_failed");
     expect(payload.errorCode).toBe("outline_llm_failed");
     expect(payload.lastPhase).toBe("outline");

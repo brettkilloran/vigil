@@ -501,7 +501,9 @@ export function mergeRemoteItemPatches(
   const stripFromHome = (id: string) => {
     const home = entityHome.get(id);
     if (home && spacesRecord[home]) {
-      spacesRecord[home].entityIds = spacesRecord[home].entityIds.filter((e) => e !== id);
+      const ids = spacesRecord[home].entityIds;
+      const idx = ids.indexOf(id);
+      if (idx !== -1) ids.splice(idx, 1);
     }
     entityHome.delete(id);
   };
@@ -522,8 +524,16 @@ export function mergeRemoteItemPatches(
     const merged = mergeFn(entities[item.id], item);
     if (!merged) continue;
     entities[item.id] = merged;
-    const sp = spacesRecord[item.spaceId];
-    if (sp && !sp.entityIds.includes(merged.id)) sp.entityIds.push(merged.id);
+    if (!spacesRecord[item.spaceId]) {
+      spacesRecord[item.spaceId] = {
+        id: item.spaceId,
+        name: "Loading...",
+        parentSpaceId: null,
+        entityIds: [],
+      };
+    }
+    const sp = spacesRecord[item.spaceId]!;
+    if (!sp.entityIds.includes(merged.id)) sp.entityIds.push(merged.id);
     entityHome.set(item.id, item.spaceId);
   }
 
@@ -615,8 +625,12 @@ export function applyServerCanvasItemToGraph(prev: CanvasGraph, item: CanvasItem
   const spacesRecord: Record<string, CanvasSpace> = { ...prev.spaces };
   for (const sid of Object.keys(spacesRecord)) {
     const sp = spacesRecord[sid]!;
-    if (!sp.entityIds.includes(item.id)) continue;
-    spacesRecord[sid] = { ...sp, entityIds: sp.entityIds.filter((e) => e !== item.id) };
+    const idx = sp.entityIds.indexOf(item.id);
+    if (idx === -1) continue;
+    const nextIds = [...sp.entityIds];
+    nextIds.splice(idx, 1);
+    spacesRecord[sid] = { ...sp, entityIds: nextIds };
+    break;
   }
   const sp = spacesRecord[item.spaceId];
   if (sp && !sp.entityIds.includes(merged.id)) sp.entityIds.push(merged.id);

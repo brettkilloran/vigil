@@ -5933,12 +5933,18 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     if (!collabNeonActive || !isUuidLike(activeSpaceId)) return;
+    let inFlight = false;
+    let pollAbort: AbortController | null = null;
     const id = window.setInterval(() => {
       if (realtimeConnectedRef.current) return;
+      if (inFlight) return;
+      inFlight = true;
+      pollAbort = new AbortController();
       void (async () => {
         try {
           const res = await fetch(
             `/api/spaces/${encodeURIComponent(activeSpaceId)}/link-revision`,
+            { signal: pollAbort.signal },
           );
           const raw: unknown = await res.json();
           if (
@@ -5953,12 +5959,19 @@ export function ArchitecturalCanvasApp({
           if (typeof rev !== "string") return;
           if (rev === lastItemLinksRevisionRef.current) return;
           enqueueRemoteGraphMerge(true);
-        } catch {
+        } catch (error) {
+          if (isAbortError(error)) return;
           /* ignore */
+        } finally {
+          inFlight = false;
+          pollAbort = null;
         }
       })();
     }, HEARTGARDEN_GRAPH_REFRESH_FALLBACK_INTERVAL_MS);
-    return () => window.clearInterval(id);
+    return () => {
+      window.clearInterval(id);
+      pollAbort?.abort();
+    };
   }, [activeSpaceId, collabNeonActive, enqueueRemoteGraphMerge, realtimeConnectedRef]);
 
   const presencePayloadForHeartbeat = useCallback(() => {
