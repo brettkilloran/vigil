@@ -657,6 +657,104 @@ function createLoreImportFailureDetail(args: {
   };
 }
 
+const LORE_IMPORT_VERCEL_BODY_LIMIT_BYTES = 4 * 1024 * 1024;
+const LORE_IMPORT_MULTIPART_OVERHEAD_BYTES = 256 * 1024;
+const LORE_IMPORT_LOCAL_PDF_MAX_CHARS = 2_000_000;
+
+function loreImportSuggestedTitle(fileName: string): string {
+  const trimmed = fileName.trim();
+  const base = trimmed.replace(/\.[^.]+$/, "").trim();
+  return base || "Import";
+}
+
+function shouldUseLocalPdfParse(file: File): boolean {
+  if (!file.name.toLowerCase().endsWith(".pdf")) return false;
+  // Vercel can reject large multipart bodies before the route handler runs (HTTP 413).
+  return file.size + LORE_IMPORT_MULTIPART_OVERHEAD_BYTES >= LORE_IMPORT_VERCEL_BODY_LIMIT_BYTES;
+}
+
+async function parsePdfInBrowser(
+  file: File,
+  signal?: AbortSignal,
+): Promise<{ text: string; truncated: boolean; pageCount: number; parsedPages: number; failedPages: number }> {
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const data = new Uint8Array(await file.arrayBuffer());
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+  const loadingTask = pdfjs.getDocument({
+    data,
+    // Browser fallback path: we intentionally keep parsing on the main thread to avoid worker
+    // boot/asset resolution issues in locked-down environments.
+    disableWorker: true,
+  } as unknown as Parameters<typeof pdfjs.getDocument>[0]);
+  const doc = await loadingTask.promise;
+  try {
+    const chunks: string[] = [];
+    let charCount = 0;
+    let parsedPages = 0;
+    let failedPages = 0;
+    for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
+      if (signal?.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+      }
+      try {
+        const page = await doc.getPage(pageNum);
+        try {
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item) => ("str" in item && typeof item.str === "string" ? item.str : ""))
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+          if (!pageText) {
+            parsedPages += 1;
+            continue;
+          }
+          if (chunks.length > 0) {
+            const remaining = LORE_IMPORT_LOCAL_PDF_MAX_CHARS - charCount;
+            if (remaining <= 0) break;
+            const spacer = "\n\n";
+            const spacing = spacer.length > remaining ? spacer.slice(0, remaining) : spacer;
+            chunks.push(spacing);
+            charCount += spacing.length;
+            if (spacing.length < spacer.length) break;
+          }
+          const remaining = LORE_IMPORT_LOCAL_PDF_MAX_CHARS - charCount;
+          if (remaining <= 0) break;
+          const next = pageText.length > remaining ? pageText.slice(0, remaining) : pageText;
+          chunks.push(next);
+          charCount += next.length;
+          parsedPages += 1;
+          if (next.length < pageText.length) break;
+        } finally {
+          page.cleanup();
+        }
+      } catch (error) {
+        if (isAbortError(error)) {
+          throw error;
+        }
+        failedPages += 1;
+      }
+    }
+    if (parsedPages === 0) {
+      throw new Error("PDF did not contain readable text");
+    }
+    return {
+      text: chunks.join("").replace(/\0/g, "").trim(),
+      truncated: charCount >= LORE_IMPORT_LOCAL_PDF_MAX_CHARS,
+      pageCount: doc.numPages,
+      parsedPages,
+      failedPages,
+    };
+  } finally {
+    await doc.destroy();
+  }
+}
+
 function isAbortError(error: unknown): boolean {
   if (!error) return false;
   if (error instanceof DOMException && error.name === "AbortError") return true;
@@ -8025,6 +8123,7 @@ export function ArchitecturalCanvasApp({
       const file = event.target.files?.[0];
       event.target.value = "";
       if (!file) return;
+      const isPdfFile = file.name.toLowerCase().endsWith(".pdf");
       const selection = loreImportPendingSelectionRef.current;
       const userContext = mapSelectionToUserContext(selection, file.name);
       const attemptId =
@@ -8052,15 +8151,54 @@ export function ArchitecturalCanvasApp({
       const fd = new FormData();
       fd.append("file", file);
       fd.append("context", JSON.stringify(userContext));
+      const localPdfParsePayload = async (
+        reason: "preflight_oversize" | "http_413_fallback",
+      ): Promise<{
+        ok: true;
+        text: string;
+        fileName: string;
+        suggestedTitle: string;
+      } | null> => {
+        try {
+          const local = await parsePdfInBrowser(file, planningAbort.signal);
+          console.info("[lore-import] parse pdf local fallback success", {
+            attemptId,
+            fileName: file.name,
+            fileBytes: file.size,
+            reason,
+            pageCount: local.pageCount,
+            parsedPages: local.parsedPages,
+            failedPages: local.failedPages,
+            truncated: local.truncated,
+          });
+          return {
+            ok: true,
+            text: local.text,
+            fileName: file.name,
+            suggestedTitle: loreImportSuggestedTitle(file.name),
+          };
+        } catch (error) {
+          if (isAbortError(error)) throw error;
+          const detail = error instanceof Error ? error.message : String(error);
+          reportFailure(
+            createLoreImportFailureDetail({
+              attemptId,
+              stage: "parse",
+              operation: "parse_pdf_client_fallback",
+              message: `PDF parse failed in browser (${detail})`,
+              fileName: file.name,
+              spaceId: activeSpaceIdRef.current,
+              recommendedAction:
+                "Try a smaller PDF or export to text/markdown, then retry. If this repeats, copy the snapshot and share it.",
+            }),
+          );
+          return null;
+        }
+      };
       try {
-        const parseRes = await fetch("/api/lore/import/parse", {
-          method: "POST",
-          body: fd,
-          headers: { "X-Heartgarden-Import-Attempt": attemptId },
-          signal: planningAbort.signal,
-        });
-        const parseRaw = await parseRes.text();
-        const parsed = parseLoreImportJsonBody(parseRaw) as {
+        let parseRes: Response | null = null;
+        let parseRaw = "";
+        let parsed = null as null | {
           ok?: boolean;
           error?: string;
           detail?: string;
@@ -8068,18 +8206,47 @@ export function ArchitecturalCanvasApp({
           fileName?: string;
           suggestedTitle?: string;
         };
-        if (!parseRes.ok || !parsed.ok || typeof parsed.text !== "string") {
+        if (isPdfFile && shouldUseLocalPdfParse(file)) {
+          parsed = await localPdfParsePayload("preflight_oversize");
+          if (!parsed) return;
+        } else {
+          parseRes = await fetch("/api/lore/import/parse", {
+            method: "POST",
+            body: fd,
+            headers: { "X-Heartgarden-Import-Attempt": attemptId },
+            signal: planningAbort.signal,
+          });
+          parseRaw = await parseRes.text();
+          parsed = parseLoreImportJsonBody(parseRaw) as {
+            ok?: boolean;
+            error?: string;
+            detail?: string;
+            text?: string;
+            fileName?: string;
+            suggestedTitle?: string;
+          };
+        }
+        if (!parsed || !parsed.ok || typeof parsed.text !== "string") {
+          if (parseRes?.status === 413 && isPdfFile) {
+            const fallbackParsed = await localPdfParsePayload("http_413_fallback");
+            if (fallbackParsed) {
+              parsed = fallbackParsed;
+            } else {
+              return;
+            }
+          }
+        }
+        if (!parsed || !parsed.ok || typeof parsed.text !== "string") {
+          const parsedError = typeof parsed?.error === "string" ? parsed.error : undefined;
+          const parsedDetail = typeof parsed?.detail === "string" ? parsed.detail : undefined;
           reportFailure(
             createLoreImportFailureDetail({
               attemptId,
               stage: "parse",
               operation: "POST /api/lore/import/parse",
-              message:
-                (typeof parsed.error === "string" && parsed.error) ||
-                (typeof parsed.detail === "string" && parsed.detail) ||
-                `Parse failed (HTTP ${parseRes.status})`,
+              message: parsedError || parsedDetail || `Parse failed (HTTP ${parseRes?.status ?? "unknown"})`,
               responseSnippet: parseRaw,
-              httpStatus: parseRes.status,
+              httpStatus: parseRes?.status,
               fileName: file.name,
               spaceId: activeSpaceIdRef.current,
               recommendedAction:

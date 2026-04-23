@@ -35,6 +35,7 @@ function folderItem(
   childSpaceId: string,
   title: string,
   updatedAt: string,
+  folderColorScheme?: string,
 ): CanvasItem {
   return {
     id,
@@ -47,7 +48,11 @@ function folderItem(
     zIndex: 1,
     title,
     contentText: "",
-    contentJson: { folder: { childSpaceId }, hgArch: {} },
+    contentJson: {
+      folder: { childSpaceId },
+      hgArch:
+        typeof folderColorScheme === "string" ? { folderColorScheme } : {},
+    },
     updatedAt,
   };
 }
@@ -184,6 +189,39 @@ describe("mergeRemoteItemPatches", () => {
     if (f?.kind !== "folder") return;
     expect(f.title).toBe("LocalFolder");
     expect(f.slots["space-1"]).toEqual({ x: 50, y: 60 });
+  });
+
+  it("keeps local folder tint when folder id is protected and server row is stale", () => {
+    const childSpace = "space-child-2";
+    const boot: BootstrapResponse = {
+      ok: true,
+      demo: false,
+      spaceId: "space-1",
+      spaces: [
+        { id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
+        { id: childSpace, name: "Inside", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
+      ],
+      items: [folderItem("fol2", "space-1", childSpace, "Tinted", "2020-01-01T00:00:00.000Z", "ocean")],
+      camera: { x: 0, y: 0, zoom: 1 },
+    };
+    const prev = buildCanvasGraphFromBootstrap(boot);
+    const local = prev.entities.fol2;
+    expect(local?.kind).toBe("folder");
+    if (local?.kind !== "folder") return;
+    local.folderColorScheme = "violet";
+    const remote = folderItem(
+      "fol2",
+      "space-1",
+      childSpace,
+      "Tinted",
+      "2020-01-02T00:00:00.000Z",
+      "ocean",
+    );
+    const next = mergeRemoteItemPatches(prev, [remote], new Set(["fol2"]), ["space-1"], new Set(["fol2"]));
+    const folder = next.entities.fol2;
+    expect(folder?.kind).toBe("folder");
+    if (folder?.kind !== "folder") return;
+    expect(folder.folderColorScheme).toBe("violet");
   });
 
   it("moves entity to another space in subtree when server row changes spaceId", () => {

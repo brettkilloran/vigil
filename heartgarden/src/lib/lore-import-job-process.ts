@@ -34,8 +34,10 @@ function isMissingProgressColumnsError(error: unknown): boolean {
   const mentionsProgressColumn =
     column.startsWith("progress_") ||
     column === "last_progress_at" ||
+    column === "user_context" ||
     message.includes("progress_") ||
-    message.includes("last_progress_at");
+    message.includes("last_progress_at") ||
+    message.includes("user_context");
   if (!mentionsProgressColumn) return false;
   if (!code) return true;
   if (code === "42703") return true;

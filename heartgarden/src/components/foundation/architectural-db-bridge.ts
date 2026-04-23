@@ -393,7 +393,11 @@ function mergeEntityFromItemProtectingText(
     };
   }
   if (prevEntity.kind === "folder" && merged.kind === "folder") {
-    return { ...merged, title: prevEntity.title };
+    return {
+      ...merged,
+      title: prevEntity.title,
+      folderColorScheme: prevEntity.folderColorScheme,
+    };
   }
   return merged;
 }
