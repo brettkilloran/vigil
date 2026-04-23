@@ -1,4 +1,4 @@
-import { and, asc, gt, inArray } from "drizzle-orm";
+import { and, asc, eq, gt, inArray } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { items, spaces } from "@/src/db/schema";
@@ -17,6 +17,9 @@ import { collectSpaceSubtreeIds, listGmWorkspaceSpaces } from "@/src/lib/spaces"
  */
 const DEFAULT_CHANGES_LIMIT = 500;
 const MAX_CHANGES_LIMIT = 500;
+// REVIEW_2026-04-22-2 H2: cap boundary over-fetch so a pathological
+// same-timestamp batch cannot drive unbounded memory/query cost.
+const BOUNDARY_OVERFETCH_CAP = 2000;
 
 function maxIsoCursor(rows: { updatedAt: Date | null }[], fallbackMs: number): string {
   let ms = fallbackMs;
@@ -25,6 +28,51 @@ function maxIsoCursor(rows: { updatedAt: Date | null }[], fallbackMs: number): s
     if (t > ms) ms = t;
   }
   return new Date(ms).toISOString();
+}
+
+/**
+ * REVIEW_2026-04-22-2 H2: close the page-boundary skip bug without a protocol break.
+ *
+ * The legacy cursor is a single ISO timestamp and the predicate is `updatedAt > since`.
+ * If the (pageLimit)-th and (pageLimit+1)-th rows share the exact same `updatedAt`
+ * (bulk imports, batched writes), advancing the cursor to that timestamp drops the
+ * rows that share it on page 2 because `>` excludes the boundary.
+ *
+ * Fix: when the truncation point shares a timestamp with the overflow row, fetch all
+ * remaining rows at that boundary (bounded by `BOUNDARY_OVERFETCH_CAP`) and include
+ * them in the current page. The cursor then advances to the boundary and the next
+ * poll's `>` predicate is safe.
+ */
+async function fetchAdditionalBoundaryRows<Row extends { id: string; updatedAt: Date | null }>(
+  fetchRowsEqUpdatedAt: (boundary: Date) => Promise<Row[]>,
+  changed: Row[],
+  overflowRow: Row,
+): Promise<{ rows: Row[]; saturated: boolean }> {
+  const lastChanged = changed[changed.length - 1];
+  if (!lastChanged || !(lastChanged.updatedAt instanceof Date)) {
+    return { rows: changed, saturated: false };
+  }
+  if (!(overflowRow.updatedAt instanceof Date)) {
+    return { rows: changed, saturated: false };
+  }
+  if (lastChanged.updatedAt.getTime() !== overflowRow.updatedAt.getTime()) {
+    return { rows: changed, saturated: false };
+  }
+  const boundary = lastChanged.updatedAt;
+  const extras = await fetchRowsEqUpdatedAt(boundary);
+  const seen = new Set(changed.map((r) => r.id));
+  const merged = [...changed];
+  let saturated = false;
+  for (const r of extras) {
+    if (seen.has(r.id)) continue;
+    merged.push(r);
+    seen.add(r.id);
+    if (merged.length >= BOUNDARY_OVERFETCH_CAP) {
+      saturated = true;
+      break;
+    }
+  }
+  return { rows: merged, saturated };
 }
 
 export async function GET(
@@ -111,15 +159,40 @@ export async function GET(
   }
 
   const itemFetchLimit = pageLimit + 1;
+  // REVIEW_2026-04-22-2 H2: add `asc(id)` as a stable secondary sort so the
+  // boundary-collision handler can reliably detect and resolve page splits at
+  // equal `updatedAt`.
   const rawItemRows = await db
     .select()
     .from(items)
     .where(and(inArray(items.spaceId, subtreeIds), gt(items.updatedAt, sinceDate)))
-    .orderBy(asc(items.updatedAt))
+    .orderBy(asc(items.updatedAt), asc(items.id))
     .limit(itemFetchLimit);
 
-  const itemHasMore = rawItemRows.length > pageLimit;
-  const changedRows = itemHasMore ? rawItemRows.slice(0, pageLimit) : rawItemRows;
+  let itemHasMore = rawItemRows.length > pageLimit;
+  let changedRows = itemHasMore ? rawItemRows.slice(0, pageLimit) : rawItemRows;
+  if (itemHasMore) {
+    const overflowItem = rawItemRows[pageLimit];
+    if (overflowItem) {
+      const resolved = await fetchAdditionalBoundaryRows(
+        async (boundary) =>
+          db
+            .select()
+            .from(items)
+            .where(and(inArray(items.spaceId, subtreeIds), eq(items.updatedAt, boundary)))
+            .orderBy(asc(items.id)),
+        changedRows,
+        overflowItem,
+      );
+      changedRows = resolved.rows;
+      // If the overflow was strictly greater than the boundary we would have returned
+      // `{ saturated: false, rows: changed }` unchanged; when we did absorb the boundary
+      // group `hasMore` stays true because the original `pageLimit+1` fetch saw rows
+      // beyond this page. Saturation (cap reached) also keeps `hasMore = true` so the
+      // next poll will pick up remaining rows.
+      itemHasMore = true;
+    }
+  }
 
   const changedItems = changedRows.map(rowToCanvasItem);
 
@@ -132,11 +205,33 @@ export async function GET(
     })
     .from(spaces)
     .where(and(inArray(spaces.id, subtreeIds), gt(spaces.updatedAt, sinceDate)))
-    .orderBy(asc(spaces.updatedAt))
+    .orderBy(asc(spaces.updatedAt), asc(spaces.id))
     .limit(itemFetchLimit);
 
-  const spaceHasMore = rawSpaceRows.length > pageLimit;
-  const changedSpaceRows = spaceHasMore ? rawSpaceRows.slice(0, pageLimit) : rawSpaceRows;
+  let spaceHasMore = rawSpaceRows.length > pageLimit;
+  let changedSpaceRows = spaceHasMore ? rawSpaceRows.slice(0, pageLimit) : rawSpaceRows;
+  if (spaceHasMore) {
+    const overflowSpace = rawSpaceRows[pageLimit];
+    if (overflowSpace) {
+      const resolved = await fetchAdditionalBoundaryRows(
+        async (boundary) =>
+          db
+            .select({
+              id: spaces.id,
+              name: spaces.name,
+              parentSpaceId: spaces.parentSpaceId,
+              updatedAt: spaces.updatedAt,
+            })
+            .from(spaces)
+            .where(and(inArray(spaces.id, subtreeIds), eq(spaces.updatedAt, boundary)))
+            .orderBy(asc(spaces.id)),
+        changedSpaceRows,
+        overflowSpace,
+      );
+      changedSpaceRows = resolved.rows;
+      spaceHasMore = true;
+    }
+  }
 
   const spacePayload = changedSpaceRows.map((r) => ({
     id: r.id,
