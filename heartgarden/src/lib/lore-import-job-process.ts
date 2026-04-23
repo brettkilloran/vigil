@@ -16,6 +16,7 @@ import type { VigilDb } from "@/src/lib/spaces";
 export const STALE_LORE_IMPORT_PROCESSING_MS = 15 * 60 * 1000;
 const LORE_IMPORT_JOB_CANCELLED_CODE = "lore_import_job_cancelled";
 const LORE_IMPORT_EVENT_CAP = 500;
+const LORE_IMPORT_EVENT_FLUSH_BATCH = 6;
 const LORE_IMPORT_RESPONSE_SNIPPET_MAX = 2_000;
 
 export type LoreImportJobEvent = {
@@ -104,25 +105,26 @@ function normalizeLoreImportJobEvent(event: LoreImportJobEvent): LoreImportJobEv
   };
 }
 
-export async function appendLoreImportJobEvent(
+export async function appendLoreImportJobEventsBatch(
   db: VigilDb,
   jobId: string,
-  event: LoreImportJobEvent,
+  events: LoreImportJobEvent[],
 ): Promise<void> {
   if (typeof (db as { execute?: unknown }).execute !== "function") return;
+  if (events.length === 0) return;
   const now = new Date();
-  const normalized = normalizeLoreImportJobEvent(event);
-  const eventJson = JSON.stringify(normalized);
+  const normalized = events.map(normalizeLoreImportJobEvent);
+  const batchJson = JSON.stringify(normalized);
   try {
     await db.execute(sql`
       update "lore_import_jobs"
       set
         "progress_events" = (
-          select jsonb_agg(value)
+          select coalesce(jsonb_agg(value), '[]'::jsonb)
           from (
             select value
             from jsonb_array_elements(
-              coalesce("lore_import_jobs"."progress_events", '[]'::jsonb) || jsonb_build_array(${eventJson}::jsonb)
+              coalesce("lore_import_jobs"."progress_events", '[]'::jsonb) || ${batchJson}::jsonb
             ) with ordinality as e(value, ord)
             order by ord desc
             limit ${LORE_IMPORT_EVENT_CAP}
@@ -134,6 +136,14 @@ export async function appendLoreImportJobEvent(
   } catch (error) {
     if (!isMissingProgressColumnsError(error)) throw error;
   }
+}
+
+export async function appendLoreImportJobEvent(
+  db: VigilDb,
+  jobId: string,
+  event: LoreImportJobEvent,
+): Promise<void> {
+  await appendLoreImportJobEventsBatch(db, jobId, [event]);
 }
 
 async function updateLoreImportJobProgress(
@@ -286,25 +296,39 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
       }
     }
     const parsedUserContext = loreImportUserContextSchema.safeParse(userContextRaw);
-    const plan = await buildLoreImportPlan({
-      db: db as VigilDb,
-      spaceId: job.spaceId,
-      apiKey: key,
-      model,
-      fullText: job.sourceText,
-      importBatchId: job.importBatchId,
-      fileName: job.fileName ?? undefined,
-      userContext: parsedUserContext.success ? parsedUserContext.data : undefined,
-      onProgress: async (progress) => {
-        await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
-        lastPhase = progress.phase || lastPhase;
-        await updateLoreImportJobProgress(db as VigilDb, jobId, progress);
-      },
-      onEvent: async (event) => {
-        await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
-        await appendLoreImportJobEvent(db as VigilDb, jobId, event);
-      },
-    });
+    const eventBuffer: LoreImportJobEvent[] = [];
+    const flushEventBuffer = async () => {
+      if (eventBuffer.length === 0) return;
+      await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
+      const chunk = eventBuffer.splice(0, eventBuffer.length);
+      await appendLoreImportJobEventsBatch(db as VigilDb, jobId, chunk);
+    };
+    let plan: Awaited<ReturnType<typeof buildLoreImportPlan>>;
+    try {
+      plan = await buildLoreImportPlan({
+        db: db as VigilDb,
+        spaceId: job.spaceId,
+        apiKey: key,
+        model,
+        fullText: job.sourceText,
+        importBatchId: job.importBatchId,
+        fileName: job.fileName ?? undefined,
+        userContext: parsedUserContext.success ? parsedUserContext.data : undefined,
+        onProgress: async (progress) => {
+          await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
+          lastPhase = progress.phase || lastPhase;
+          await updateLoreImportJobProgress(db as VigilDb, jobId, progress);
+        },
+        onEvent: async (event) => {
+          eventBuffer.push(event);
+          if (eventBuffer.length >= LORE_IMPORT_EVENT_FLUSH_BATCH) {
+            await flushEventBuffer();
+          }
+        },
+      });
+    } finally {
+      await flushEventBuffer();
+    }
 
     const parsedPlan = loreImportPlanSchema.safeParse(plan);
     if (!parsedPlan.success) {

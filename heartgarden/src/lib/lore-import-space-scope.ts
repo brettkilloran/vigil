@@ -1,3 +1,5 @@
+import { inArray } from "drizzle-orm";
+
 import { spaces } from "@/src/db/schema";
 import type { HeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
 import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
@@ -72,6 +74,68 @@ export async function resolveLoreImportAllowedSpaceIds(args: {
     await db.select({ id: spaces.id }).from(spaces)
   ).map((row) => row.id);
   return filterSpaceIdsBySearchFilters(allSpaceIds, baseFilters);
+}
+
+/**
+ * For import path labels (`buildSpacePath`), load only the spaces needed: under
+ * `current_subtree` this is the subtree under `rootSpaceId` plus ancestors up to
+ * the workspace root. For `gm_workspace`, all spaces are loaded (same as prior behavior).
+ */
+export async function loadSpaceMapForLoreImportPathLabels(args: {
+  db: VigilDb;
+  importScope: LoreImportScopeMode;
+  rootSpaceId: string;
+}): Promise<Map<string, { name: string; parentSpaceId: string | null }>> {
+  if (args.importScope === "current_subtree") {
+    const descendants = await fetchDescendantSpaceIds(args.db, args.rootSpaceId);
+    const withAncestors = new Set<string>(descendants);
+    let frontier = new Set<string>(descendants);
+    for (let depth = 0; depth < 64 && frontier.size > 0; depth++) {
+      const ids = [...frontier];
+      frontier = new Set();
+      if (ids.length === 0) break;
+      const rows = await args.db
+        .select({ id: spaces.id, parentSpaceId: spaces.parentSpaceId })
+        .from(spaces)
+        .where(inArray(spaces.id, ids));
+      for (const r of rows) {
+        if (r.parentSpaceId && !withAncestors.has(r.parentSpaceId)) {
+          withAncestors.add(r.parentSpaceId);
+          frontier.add(r.parentSpaceId);
+        }
+      }
+    }
+    if (withAncestors.size === 0) {
+      return new Map();
+    }
+    const spaceRows = await args.db
+      .select({
+        id: spaces.id,
+        name: spaces.name,
+        parentSpaceId: spaces.parentSpaceId,
+      })
+      .from(spaces)
+      .where(inArray(spaces.id, [...withAncestors]));
+    return new Map(
+      spaceRows.map((row) => [
+        row.id,
+        { name: row.name, parentSpaceId: row.parentSpaceId ?? null },
+      ]),
+    );
+  }
+  const spaceRows = await args.db
+    .select({
+      id: spaces.id,
+      name: spaces.name,
+      parentSpaceId: spaces.parentSpaceId,
+    })
+    .from(spaces);
+  return new Map(
+    spaceRows.map((row) => [
+      row.id,
+      { name: row.name, parentSpaceId: row.parentSpaceId ?? null },
+    ]),
+  );
 }
 
 export function buildSpacePath(

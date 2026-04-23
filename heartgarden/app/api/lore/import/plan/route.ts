@@ -11,7 +11,8 @@ import {
 import { buildLoreImportPlan } from "@/src/lib/lore-import-plan-build";
 import { loreImportUserContextSchema } from "@/src/lib/lore-import-plan-types";
 import { persistImportReviewQueueFromPlan } from "@/src/lib/lore-import-persist-review";
-import { assertSpaceExists } from "@/src/lib/spaces";
+import { insertLoreImportJobForCompletedSyncPlan } from "@/src/lib/lore-import-sync-plan-job";
+import { assertSpaceExists, type VigilDb } from "@/src/lib/spaces";
 
 export const runtime = "nodejs";
 
@@ -21,7 +22,6 @@ const bodySchema = z.object({
   text: z.string().min(1).max(500_000),
   spaceId: z.string().uuid(),
   fileName: z.string().max(512).optional(),
-  importBatchId: z.string().uuid().optional(),
   persistReview: z.boolean().optional(),
   userContext: loreImportUserContextSchema.optional(),
 });
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     return heartgardenApiForbiddenJsonResponse();
   }
 
-  const importBatchId = parsed.data.importBatchId ?? randomUUID();
+  const importBatchId = randomUUID();
   const model =
     process.env.ANTHROPIC_LORE_MODEL?.trim() || "claude-sonnet-4-20250514";
 
@@ -84,6 +84,16 @@ export async function POST(req: Request) {
       importBatchId,
       fileName: parsed.data.fileName,
       userContext: parsed.data.userContext,
+    });
+
+    await insertLoreImportJobForCompletedSyncPlan({
+      db: db as VigilDb,
+      spaceId: parsed.data.spaceId,
+      importBatchId: plan.importBatchId,
+      sourceText: parsed.data.text,
+      fileName: parsed.data.fileName,
+      userContext: parsed.data.userContext,
+      plan,
     });
 
     const persistReview = parsed.data.persistReview !== false;

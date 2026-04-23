@@ -2,7 +2,7 @@
 title: Lore import — canonical kind → canvas & DB
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-11
+last_reviewed: 2026-04-23
 related:
   - heartgarden/docs/DATA_PIPELINE_AUDIT_2026-04-11.md
   - heartgarden/src/lib/lore-object-registry.ts
@@ -23,8 +23,11 @@ Import plans label each note with a **`canonicalEntityKind`** (`npc`, `location`
 | `item` | `item` | No | |
 | `lore` | `lore` | No | |
 | `other` | `other` | No | |
+| *(source document card; not a `canonicalEntityKind`)* | **`lore_source`** | No (default note) | Original imported file is inserted as its own card; use `persistedEntityTypeForLoreSource()` in code — see registry. |
 
-**Source of truth in code:** [`src/lib/lore-object-registry.ts`](../src/lib/lore-object-registry.ts) (`persistedEntityTypeFromCanonical`, `loreShellKindFromCanonical`). *If the file is missing, apply the “Implementation handoff” in [`.cursor/plans/data_pipeline_import_hardening.plan.md`](../../.cursor/plans/data_pipeline_import_hardening.plan.md) and wire [`lore-import-apply.ts`](../src/lib/lore-import-apply.ts).*
+**Source of truth in code:** [`src/lib/lore-object-registry.ts`](../src/lib/lore-object-registry.ts) (`persistedEntityTypeFromCanonical`, `loreShellKindFromCanonical`, `persistedEntityTypeForLoreSource`). *If the file is missing, apply the “Implementation handoff” in [`.cursor/plans/data_pipeline_import_hardening.plan.md`](../../.cursor/plans/data_pipeline_import_hardening.plan.md) and wire [`lore-import-apply.ts`](../src/lib/lore-import-apply.ts).*
+
+**Non-import writes:** [`POST /api/spaces/[spaceId]/items`](../app/api/spaces/[spaceId]/items/route.ts) still accepts any `entityType` string (up to 64 chars) unless you use `canonical_entity_kind` mapping. Only the import/apply path and registry-backed call sites guarantee the closed set in the table above; do not assume every row in `items.entity_type` was validated through this matrix.
 
 **Hydration:** [`architectural-db-bridge.ts`](../src/components/foundation/architectural-db-bridge.ts) infers `loreCard` when `entity_type` is `character` | `faction` | `location` (or `hgArch.loreCard` / body heuristics).
 

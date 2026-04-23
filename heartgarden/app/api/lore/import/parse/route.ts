@@ -286,6 +286,7 @@ export async function POST(req: Request) {
     return Response.json({ ok: false, error: "Missing file" }, { status: 400 });
   }
   let parsedContext: LoreImportUserContext | undefined;
+  let contextWarning: { code: string; message: string } | undefined;
   const contextRaw = form.get("context");
   if (typeof contextRaw === "string" && contextRaw.trim().length > 0) {
     try {
@@ -293,9 +294,19 @@ export async function POST(req: Request) {
       const contextParsed = loreImportUserContextSchema.safeParse(contextJson);
       if (contextParsed.success) {
         parsedContext = contextParsed.data;
+      } else {
+        contextWarning = {
+          code: "user_context_invalid",
+          message:
+            "Multipart `context` was present but did not match the lore import user-context schema; default import settings apply.",
+        };
       }
     } catch {
-      // Keep parsing resilient: invalid context should not fail the upload.
+      contextWarning = {
+        code: "user_context_not_json",
+        message:
+          "Multipart `context` was present but was not valid JSON; default import settings apply.",
+      };
     }
   }
 
@@ -404,6 +415,7 @@ export async function POST(req: Request) {
     charCount: trimmed.length,
     truncated,
     ...(parsedContext ? { context: parsedContext } : {}),
+    ...(contextWarning ? { contextWarning } : {}),
     ...(meta ? { meta } : {}),
   });
 }

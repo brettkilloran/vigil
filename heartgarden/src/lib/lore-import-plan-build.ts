@@ -1,6 +1,5 @@
 import { randomUUID } from "crypto";
 
-import { spaces as spacesTable } from "@/src/db/schema";
 import type { CanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
 import { chunkSourceText } from "@/src/lib/lore-import-chunk";
 import {
@@ -36,6 +35,7 @@ import { fetchDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
 import {
   applyAllowedSpaceIdsToFilters,
   buildSpacePath,
+  loadSpaceMapForLoreImportPathLabels,
 } from "@/src/lib/lore-import-space-scope";
 import type { SearchFilters, VigilDb } from "@/src/lib/spaces";
 import { IMPORT_MERGE_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
@@ -298,19 +298,11 @@ export async function buildLoreImportPlan(args: {
     baseVaultSearchFilters,
     allowedSpaceIds,
   );
-  const spaceRows = await args.db
-    .select({
-      id: spacesTable.id,
-      name: spacesTable.name,
-      parentSpaceId: spacesTable.parentSpaceId,
-    })
-    .from(spacesTable);
-  const spaceById = new Map(
-    spaceRows.map((row) => [
-      row.id,
-      { name: row.name, parentSpaceId: row.parentSpaceId ?? null },
-    ]),
-  );
+  const spaceById = await loadSpaceMapForLoreImportPathLabels({
+    db: args.db,
+    importScope,
+    rootSpaceId: args.spaceId,
+  });
 
   const candidatesByNoteClientId: Record<string, CandidateRow[]> = {};
   const relatedItemsByNoteClientId: Record<

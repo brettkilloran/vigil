@@ -2,7 +2,7 @@
 title: heartgarden — HTTP API reference
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-21
+last_reviewed: 2026-04-23
 canonical: true
 related:
   - heartgarden/docs/FEATURES.md
@@ -158,9 +158,9 @@ Requires **`HEARTGARDEN_REALTIME_URL`**, **`HEARTGARDEN_REALTIME_REDIS_URL`**, *
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| POST | `/api/lore/import/parse` | Multipart / file → extracted text (and metadata). Accepts `.pdf`, `.docx`, `.md`, `.markdown`, `.txt`. Optional multipart `context` JSON (user import context) is echoed back when valid. |
-| POST | `/api/lore/import/plan` | **Synchronous** smart plan. Needs **`ANTHROPIC_API_KEY`**. Optional `persistReview`. |
-| POST | `/api/lore/import/jobs` | Enqueue **async** plan job; returns `jobId`, `importBatchId`. Supports optional `userContext` (`granularity`, `orgMode`, `freeformContext`, `docSourceKind`). |
+| POST | `/api/lore/import/parse` | Multipart / file → extracted text (and metadata). Accepts `.pdf`, `.docx`, `.md`, `.markdown`, `.txt`. Optional multipart `context` JSON (user import context) is echoed back when valid. If `context` is non-empty but invalid JSON or fails `loreImportUserContextSchema`, the parse still succeeds with `ok: true` and a `contextWarning` object (`code` + `message`) so clients can surface the drop. |
+| POST | `/api/lore/import/plan` | **Synchronous** smart plan. Needs **`ANTHROPIC_API_KEY`**. Optional `persistReview`. Body `text` max **500,000** characters. Persists a **`lore_import_jobs`** metadata row for the generated `importBatchId` so **`/apply`** can load server scope. `importBatchId` is always server-issued (not client-supplied). |
+| POST | `/api/lore/import/jobs` | Enqueue **async** plan job; returns `jobId`, `importBatchId`. Body `text` max **2,000,000** characters (larger documents than sync `plan`). Supports optional `userContext` (`granularity`, `orgMode`, `freeformContext`, `docSourceKind`). |
 | GET | `/api/lore/import/jobs/[jobId]` | Poll status. **Required query:** `spaceId=<uuid>` (must match job’s space). |
 | DELETE | `/api/lore/import/jobs/[jobId]` | Cancel queued/processing smart-import planning. **Required query:** `spaceId=<uuid>`. |
 | POST | `/api/lore/import/apply` | Apply a plan to the canvas. Honors `plan.userContext.orgMode` (`folders` or `nearby`) and `plan.userContext.granularity` (`many` or `one_note`). May return `status: "needs_follow_up"` when `Other` clarification text is ambiguous, including `followUp` + `resolvedClarificationAnswers`. |
