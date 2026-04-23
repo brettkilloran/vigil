@@ -346,6 +346,10 @@ export function buildCanvasGraphFromBootstrap(data: BootstrapResponse): CanvasGr
       entityIds: [],
     };
   }
+  const entityIdsBySpace = new Map<string, Set<string>>();
+  for (const s of data.spaces) {
+    entityIdsBySpace.set(s.id, new Set<string>());
+  }
 
   const entities: Record<string, CanvasEntity> = {};
 
@@ -354,7 +358,11 @@ export function buildCanvasGraphFromBootstrap(data: BootstrapResponse): CanvasGr
     if (!e) continue;
     entities[e.id] = e;
     const sp = spacesRecord[item.spaceId];
-    if (sp && !sp.entityIds.includes(e.id)) sp.entityIds.push(e.id);
+    const ids = entityIdsBySpace.get(item.spaceId);
+    if (sp && ids && !ids.has(e.id)) {
+      ids.add(e.id);
+      sp.entityIds.push(e.id);
+    }
   }
 
   return {
@@ -390,6 +398,9 @@ function mergeEntityFromItemProtectingText(
       title: prevEntity.title,
       bodyHtml: prevEntity.bodyHtml,
       bodyDoc: prevEntity.bodyDoc,
+      loreCard: prevEntity.loreCard ?? merged.loreCard,
+      factionRoster: prevEntity.factionRoster,
+      loreThreadAnchors: prevEntity.loreThreadAnchors,
     };
   }
   if (prevEntity.kind === "folder" && merged.kind === "folder") {
@@ -421,6 +432,10 @@ export function mergeBootstrapView(prev: CanvasGraph, data: BootstrapResponse): 
       entityIds: affectedSpaceIds.has(s.id) ? [] : (existing?.entityIds ?? []),
     };
   }
+  const entityIdsBySpace = new Map<string, Set<string>>();
+  for (const [sid, space] of Object.entries(spacesRecord)) {
+    entityIdsBySpace.set(sid, new Set(space.entityIds));
+  }
 
   const entities: Record<string, CanvasEntity> = { ...prev.entities };
   for (const item of data.items) {
@@ -428,7 +443,11 @@ export function mergeBootstrapView(prev: CanvasGraph, data: BootstrapResponse): 
     if (!merged) continue;
     entities[item.id] = merged;
     const sp = spacesRecord[item.spaceId];
-    if (sp && !sp.entityIds.includes(merged.id)) sp.entityIds.push(merged.id);
+    const ids = entityIdsBySpace.get(item.spaceId);
+    if (sp && ids && !ids.has(merged.id)) {
+      ids.add(merged.id);
+      sp.entityIds.push(merged.id);
+    }
   }
 
   const idsToDelete = new Set<string>();
@@ -481,6 +500,10 @@ export function mergeRemoteItemPatches(
 ): CanvasGraph {
   const spacesRecord: Record<string, CanvasSpace> = { ...prev.spaces };
   const entities: Record<string, CanvasEntity> = { ...prev.entities };
+  const entityIdsBySpace = new Map<string, Set<string>>();
+  for (const [sid, space] of Object.entries(spacesRecord)) {
+    entityIdsBySpace.set(sid, new Set(space.entityIds));
+  }
 
   const entityHome = new Map<string, string>();
   for (const sid of subtreeSpaceIds) {
@@ -504,6 +527,7 @@ export function mergeRemoteItemPatches(
       const ids = spacesRecord[home].entityIds;
       const idx = ids.indexOf(id);
       if (idx !== -1) ids.splice(idx, 1);
+      entityIdsBySpace.get(home)?.delete(id);
     }
     entityHome.delete(id);
   };
@@ -531,9 +555,14 @@ export function mergeRemoteItemPatches(
         parentSpaceId: null,
         entityIds: [],
       };
+      entityIdsBySpace.set(item.spaceId, new Set<string>());
     }
     const sp = spacesRecord[item.spaceId]!;
-    if (!sp.entityIds.includes(merged.id)) sp.entityIds.push(merged.id);
+    const ids = entityIdsBySpace.get(item.spaceId)!;
+    if (!ids.has(merged.id)) {
+      ids.add(merged.id);
+      sp.entityIds.push(merged.id);
+    }
     entityHome.set(item.id, item.spaceId);
   }
 

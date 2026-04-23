@@ -1,6 +1,7 @@
 import { HEARTGARDEN_MEDIA_PLACEHOLDER_SRC } from "@/src/lib/heartgarden-media-placeholder";
 import { mediaUploadActionLabel } from "@/src/components/foundation/architectural-media-html";
 import { getLoreNodeSeedBodyHtml } from "@/src/lib/lore-node-seed-html";
+import { sanitizedHtmlOrBr, sanitizeRichHtmlForEditor } from "@/src/lib/safe-html";
 
 const DEFAULT_NOTES_HTML = "<p><br></p>";
 
@@ -21,7 +22,7 @@ function takeInnerHtml(
 ): string {
   const el = root.querySelector<HTMLElement>(selector);
   if (!el) return fallback;
-  const html = (el.innerHTML || "").trim();
+  const html = sanitizeRichHtmlForEditor(el.innerHTML || "").trim();
   return html || fallback;
 }
 
@@ -246,7 +247,7 @@ export function characterV11BodyToFocusDocumentHtml(bodyHtml: string): string {
 function setInnerHtml(root: ParentNode, selector: string, html: string) {
   const el = root.querySelector<HTMLElement>(selector);
   if (!el) return;
-  const next = html.trim() ? html : "<br>";
+  const next = sanitizedHtmlOrBr(html);
   el.innerHTML = next;
 }
 
@@ -395,7 +396,7 @@ function parseFocusShellRoot(html: string): HTMLElement | null {
   if (typeof document === "undefined") return null;
   try {
     const tpl = document.createElement("template");
-    tpl.innerHTML = html.trim();
+    tpl.innerHTML = sanitizeRichHtmlForEditor(html.trim());
     const el = tpl.content.firstElementChild;
     return el instanceof HTMLElement ? el : null;
   } catch {

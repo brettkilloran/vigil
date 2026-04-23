@@ -73,27 +73,6 @@ export function extractHgArchBoundItemIds(
     }
   }
 
-  const pf = hg.primaryFactions;
-  if (Array.isArray(pf)) {
-    for (const x of pf) {
-      if (typeof x === "string" && isUuidLike(x)) out.add(x);
-      else if (x && typeof x === "object" && "itemId" in x) {
-        const id = (x as { itemId?: unknown }).itemId;
-        if (typeof id === "string" && isUuidLike(id)) out.add(id);
-      }
-    }
-  }
-  const pl = hg.primaryLocations;
-  if (Array.isArray(pl)) {
-    for (const x of pl) {
-      if (typeof x === "string" && isUuidLike(x)) out.add(x);
-      else if (x && typeof x === "object" && "itemId" in x) {
-        const id = (x as { itemId?: unknown }).itemId;
-        if (typeof id === "string" && isUuidLike(id)) out.add(id);
-      }
-    }
-  }
-
   return [...out];
 }
 

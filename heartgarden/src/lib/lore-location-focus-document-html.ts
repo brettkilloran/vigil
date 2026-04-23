@@ -9,6 +9,7 @@ import {
   ORDO_V7_EMPTY_NAME_SENTINEL,
   splitOrdoV7DisplayName,
 } from "@/src/lib/lore-location-ordo-display-name";
+import { sanitizedHtmlOrBr, sanitizeRichHtmlForEditor } from "@/src/lib/safe-html";
 
 const DEFAULT_NOTES_HTML = "<p><br></p>";
 
@@ -228,7 +229,7 @@ function parseWrapped(html: string): HTMLElement | null {
 function takeInnerHtml(root: ParentNode, selector: string, fallback = "<br>"): string {
   const el = root.querySelector<HTMLElement>(selector);
   if (!el) return fallback;
-  const html = (el.innerHTML || "").trim();
+  const html = sanitizeRichHtmlForEditor(el.innerHTML || "").trim();
   return html || fallback;
 }
 
@@ -242,7 +243,7 @@ function locationNameFieldInnerHtmlAfterLegacyPlaceNameStrip(el: HTMLElement, fa
   if (stripped !== plain) {
     return buildLocationNameFieldInnerHtmlFromPlainCore(stripped);
   }
-  const raw = (el.innerHTML || "").trim();
+  const raw = sanitizeRichHtmlForEditor(el.innerHTML || "").trim();
   return raw || fallback;
 }
 
@@ -395,7 +396,7 @@ ${refBlock}
 function setInnerHtml(root: ParentNode, selector: string, html: string) {
   const el = root.querySelector<HTMLElement>(selector);
   if (!el) return;
-  el.innerHTML = html.trim() ? html : "<br>";
+  el.innerHTML = sanitizedHtmlOrBr(html);
 }
 
 function mergeIntoModernTemplate(
@@ -430,14 +431,14 @@ function mergeIntoLegacyTemplate(
     const first = lines[0]!;
     const ctxField = first.querySelector<HTMLElement>('[data-hg-lore-location-field="context"]');
     if (ctxField) {
-      ctxField.innerHTML = context.trim() ? context : "<br>";
+      ctxField.innerHTML = sanitizedHtmlOrBr(context);
     } else {
       const spans = first.querySelectorAll("span");
       if (spans.length >= 2) {
         const val = spans[spans.length - 1] as HTMLElement;
-        val.innerHTML = context.trim() ? context : "<br>";
+        val.innerHTML = sanitizedHtmlOrBr(context);
       } else {
-        first.innerHTML = context.trim() ? context : "<br>";
+        first.innerHTML = sanitizedHtmlOrBr(context);
       }
     }
   }
@@ -445,14 +446,14 @@ function mergeIntoLegacyTemplate(
     const second = lines[1]!;
     const detailField = second.querySelector<HTMLElement>('[data-hg-lore-location-field="detail"]');
     if (detailField) {
-      detailField.innerHTML = detail.trim() ? detail : "<br>";
+      detailField.innerHTML = sanitizedHtmlOrBr(detail);
     } else {
       const spans = second.querySelectorAll("span");
       if (spans.length >= 2) {
         const val = spans[spans.length - 1] as HTMLElement;
-        val.innerHTML = detail.trim() ? detail : "<br>";
+        val.innerHTML = sanitizedHtmlOrBr(detail);
       } else {
-        second.innerHTML = detail.trim() ? detail : "<br>";
+        second.innerHTML = sanitizedHtmlOrBr(detail);
       }
     }
   }
@@ -461,12 +462,12 @@ function mergeIntoLegacyTemplate(
     const refEl =
       templateRoot.querySelector<HTMLElement>('[data-hg-lore-location-field="ref"]') ??
       templateRoot.querySelector<HTMLElement>('[class*="plaqueCorner"]');
-    if (refEl) refEl.innerHTML = ref.trim() ? ref : "<br>";
+    if (refEl) refEl.innerHTML = sanitizedHtmlOrBr(ref);
   }
 
   const notesEl = templateRoot.querySelector<HTMLElement>('[data-hg-lore-location-notes="true"]');
   if (notesEl) {
-    notesEl.innerHTML = notes;
+    notesEl.innerHTML = sanitizedHtmlOrBr(notes);
   } else {
     setInnerHtml(templateRoot, '[class*="notesText"]', notes);
   }
@@ -483,9 +484,16 @@ export function focusDocumentHtmlToLocationBody(focusHtml: string, canonicalTemp
   const name = normalizedLocationFocusNameInnerFromRoot(focusRoot);
   const context = takeInnerHtml(focusRoot, '[data-hg-lore-location-focus-field="context"]', "<br>");
   const detail = takeInnerHtml(focusRoot, '[data-hg-lore-location-focus-field="detail"]', "<br>");
-  const notes = takeInnerHtml(focusRoot, '[data-hg-lore-location-focus-notes="true"]', DEFAULT_NOTES_HTML);
+  let notes = takeInnerHtml(focusRoot, '[data-hg-lore-location-focus-notes="true"]', DEFAULT_NOTES_HTML);
   const refField = focusRoot.querySelector('[data-hg-lore-location-focus-field="ref"]');
   const ref = refField ? takeInnerHtml(focusRoot, '[data-hg-lore-location-focus-field="ref"]', "<br>") : undefined;
+  const notesAlreadyIncludeRef = notes.includes('data-hg-loc-ref-migrated="true"');
+  const refInline = (ref ?? "").trim();
+  if (!notesAlreadyIncludeRef && refInline && refInline !== "<br>") {
+    notes =
+      `<p data-hg-loc-ref-migrated="true"><strong>Reference:</strong> ${sanitizeRichHtmlForEditor(refInline)}</p>` +
+      notes;
+  }
 
   if (templateRoot.querySelector('[data-hg-lore-location-field="name"]')) {
     mergeIntoModernTemplate(templateRoot, name, context, detail, ref, notes);
@@ -568,7 +576,9 @@ export function extractLocationMetaFocusShellHtml(html: string): string {
     if (!meta) return "";
     const nameField = meta.querySelector<HTMLElement>('[data-hg-lore-location-focus-field="name"]');
     if (nameField) {
-      nameField.innerHTML = normalizedLocationFocusNameInnerFromFieldEl(nameField, "<br>");
+      nameField.innerHTML = sanitizeRichHtmlForEditor(
+        normalizedLocationFocusNameInnerFromFieldEl(nameField, "<br>"),
+      );
     }
     return `<div data-hg-location-focus-doc="v1">${meta.outerHTML}</div>`;
   } catch {

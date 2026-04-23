@@ -1259,7 +1259,6 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         args.lore_variant === "v1" ||
         args.lore_variant === "v2" ||
         args.lore_variant === "v3" ||
-        args.lore_variant === "v4" ||
         args.lore_variant === "v11"
       ) {
         body.lore_variant = args.lore_variant;

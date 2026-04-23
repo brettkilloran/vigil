@@ -36,6 +36,7 @@ import {
   placeCaretAfterLorePlaceholderReplace,
   syncLoreV9RedactedPlaceholderState,
 } from "@/src/lib/lore-v9-placeholder";
+import { sanitizeRichHtmlForEditor } from "@/src/lib/safe-html";
 
 function isCaretAtStartOfHost(host: HTMLElement, range: Range): boolean {
   if (!range.collapsed) return false;
@@ -489,7 +490,7 @@ export function BufferedContentEditable({
     if (plainText) {
       el.innerText = draft;
     } else {
-      el.innerHTML = draft;
+      el.innerHTML = sanitizeRichHtmlForEditor(draft);
       applySpellcheckToNestedEditables(el, spellCheck);
       syncCharSkDisplayNameStack(el);
       syncLoreV9RedactedPlaceholderState(el);
@@ -538,7 +539,7 @@ export function BufferedContentEditable({
   const readElementValue = useCallback(() => {
     const el = ref.current;
     if (!el) return "";
-    return plainText ? el.innerText : el.innerHTML;
+    return plainText ? el.innerText : sanitizeRichHtmlForEditor(el.innerHTML);
   }, [plainText]);
 
   const applySlashPick = useCallback(
@@ -1030,7 +1031,7 @@ export function BufferedContentEditable({
             if (ref.current) {
               if (plainText) ref.current.innerText = reset;
               else {
-                ref.current.innerHTML = reset;
+                ref.current.innerHTML = sanitizeRichHtmlForEditor(reset);
                 syncCharSkDisplayNameStack(ref.current);
                 syncLoreV9RedactedPlaceholderState(ref.current);
               }

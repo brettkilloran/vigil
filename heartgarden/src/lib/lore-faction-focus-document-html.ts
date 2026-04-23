@@ -7,6 +7,7 @@ import {
   buildFactionArchive091BodyHtml,
   parseFactionArchive091BodyHtml,
 } from "@/src/lib/lore-faction-archive-html";
+import { sanitizeRichHtmlForEditor } from "@/src/lib/safe-html";
 
 const DEFAULT_RECORD_HTML = "<p><br></p>";
 
@@ -23,7 +24,7 @@ function parseWrapped(html: string): HTMLElement | null {
 function takeInnerHtml(root: ParentNode, selector: string, fallback: string): string {
   const el = root.querySelector<HTMLElement>(selector);
   if (!el) return fallback;
-  const h = (el.innerHTML || "").trim();
+  const h = sanitizeRichHtmlForEditor(el.innerHTML || "").trim();
   return h || fallback;
 }
 

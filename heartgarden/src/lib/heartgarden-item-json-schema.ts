@@ -1,28 +1,10 @@
 import { z } from "zod";
+import { isPersistedEntityType } from "@/src/lib/lore-object-registry";
 
 const MAX_JSON_BYTES = 1_500_000;
 
 const jsonRecordSchema = z.record(z.string(), z.unknown());
-
-const characterMetaSchema = z
-  .object({
-    canonicalKind: z.string().optional(),
-    campaignEpoch: z.number().int().optional(),
-    loreHistorical: z.boolean().optional(),
-    loreReviewTags: z.array(z.string()).optional(),
-  })
-  .passthrough();
-
-const factionMetaSchema = z
-  .object({
-    canonicalKind: z.string().optional(),
-    campaignEpoch: z.number().int().optional(),
-    loreHistorical: z.boolean().optional(),
-    loreReviewTags: z.array(z.string()).optional(),
-  })
-  .passthrough();
-
-const locationMetaSchema = z
+const loreEntityMetaBaseSchema = z
   .object({
     canonicalKind: z.string().optional(),
     campaignEpoch: z.number().int().optional(),
@@ -32,9 +14,9 @@ const locationMetaSchema = z
   .passthrough();
 
 const entityMetaSchemaByType: Record<string, z.ZodType<Record<string, unknown>>> = {
-  character: characterMetaSchema,
-  faction: factionMetaSchema,
-  location: locationMetaSchema,
+  character: loreEntityMetaBaseSchema,
+  faction: loreEntityMetaBaseSchema,
+  location: loreEntityMetaBaseSchema,
 };
 
 function jsonSizeBytes(value: unknown): number {
@@ -56,7 +38,7 @@ export function validateItemWriteJsonPayload(input: {
   imageMeta?: unknown;
   routeTag: string;
 }): { ok: true } | { ok: false; error: string } {
-  const { entityType, entityMeta, contentJson, imageMeta, routeTag } = input;
+  const { entityType, entityMeta, contentJson, imageMeta } = input;
 
   if (contentJson !== undefined && contentJson !== null) {
     if (!isObjectRecord(contentJson)) {
@@ -87,15 +69,20 @@ export function validateItemWriteJsonPayload(input: {
       return { ok: false, error: "entityMeta exceeds size limit (1.5MB)" };
     }
     const normalizedType = (entityType ?? "").trim().toLowerCase();
+    if (normalizedType.length > 0 && !isPersistedEntityType(normalizedType)) {
+      return { ok: false, error: `entityType '${normalizedType}' is not allowed` };
+    }
     const schema = entityMetaSchemaByType[normalizedType];
     if (schema) {
       if (!schema.safeParse(entityMeta).success) {
         return { ok: false, error: `entityMeta is invalid for entityType '${normalizedType}'` };
       }
-    } else if (normalizedType.length > 0) {
-      // Lenient-first rollout: unknown entity types are accepted for writes, but logged.
-      console.warn(`[${routeTag}] entityMeta accepted for unknown entityType`, normalizedType);
     }
+  }
+
+  const normalizedType = (entityType ?? "").trim().toLowerCase();
+  if (normalizedType.length > 0 && !isPersistedEntityType(normalizedType)) {
+    return { ok: false, error: `entityType '${normalizedType}' is not allowed` };
   }
 
   return { ok: true };

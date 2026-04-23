@@ -1514,6 +1514,14 @@ function normalizedFocusTitle(raw: string): string {
   return raw.trim() || "Untitled";
 }
 
+function jsonStableStringify(value: unknown): string {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "";
+  }
+}
+
 function folderPreviewTitles(
   folder: Extract<CanvasEntity, { kind: "folder" }>,
   graph: CanvasGraph,
@@ -3128,9 +3136,15 @@ export function ArchitecturalCanvasApp({
   const [galleryDraftNotesDoc, setGalleryDraftNotesDoc] = useState<JSONContent>(() =>
     structuredClone(EMPTY_HG_DOC),
   );
+  const [galleryDraftNotesDocKey, setGalleryDraftNotesDocKey] = useState(() =>
+    jsonStableStringify(EMPTY_HG_DOC),
+  );
   const [galleryBaselineTitle, setGalleryBaselineTitle] = useState("");
   const [galleryBaselineNotesDoc, setGalleryBaselineNotesDoc] = useState<JSONContent>(() =>
     structuredClone(EMPTY_HG_DOC),
+  );
+  const [galleryBaselineNotesDocKey, setGalleryBaselineNotesDocKey] = useState(() =>
+    jsonStableStringify(EMPTY_HG_DOC),
   );
   const [galleryDimsLabel, setGalleryDimsLabel] = useState("— × —");
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
@@ -3138,10 +3152,17 @@ export function ArchitecturalCanvasApp({
   const [focusBody, setFocusBody] = useState("");
   /** TipTap JSON for hgDoc focus editor; lore hybrid focus uses `focusBody` HTML + `focus-lore-notes` surface. */
   const [focusBodyDoc, setFocusBodyDoc] = useState<JSONContent>(() => structuredClone(EMPTY_HG_DOC));
+  const [focusBodyDocKey, setFocusBodyDocKey] = useState(() => jsonStableStringify(EMPTY_HG_DOC));
   const [focusBaselineTitle, setFocusBaselineTitle] = useState("");
   const [focusBaselineBody, setFocusBaselineBody] = useState("");
   const [focusBaselineBodyDoc, setFocusBaselineBodyDoc] = useState<JSONContent>(() =>
     structuredClone(EMPTY_HG_DOC),
+  );
+  const [focusBaselineBodyDocKey, setFocusBaselineBodyDocKey] = useState(() =>
+    jsonStableStringify(EMPTY_HG_DOC),
+  );
+  const [focusBaselineFactionRoster, setFocusBaselineFactionRoster] = useState<FactionRosterEntry[]>(
+    [],
   );
   const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null);
   const [hoveredStackTargetId, setHoveredStackTargetId] = useState<string | null>(null);
@@ -3354,6 +3375,19 @@ export function ArchitecturalCanvasApp({
   activeNodeIdRef.current = activeNodeId;
   galleryNodeIdRef.current = galleryNodeId;
   itemConflictQueueRef.current = itemConflictQueue;
+
+  useEffect(() => {
+    setGalleryDraftNotesDocKey(jsonStableStringify(galleryDraftNotesDoc));
+  }, [galleryDraftNotesDoc]);
+  useEffect(() => {
+    setGalleryBaselineNotesDocKey(jsonStableStringify(galleryBaselineNotesDoc));
+  }, [galleryBaselineNotesDoc]);
+  useEffect(() => {
+    setFocusBodyDocKey(jsonStableStringify(focusBodyDoc));
+  }, [focusBodyDoc]);
+  useEffect(() => {
+    setFocusBaselineBodyDocKey(jsonStableStringify(focusBaselineBodyDoc));
+  }, [focusBaselineBodyDoc]);
 
   const modKeyHints = useModKeyHints();
   const recentPaletteTier: WorkspaceBootTierTag = workspaceCacheTierForNeonSession(heartgardenBootApi);
@@ -5115,13 +5149,16 @@ export function ArchitecturalCanvasApp({
         () => {
           const entity = graphRef.current.entities[id];
           if (!entity || entity.kind !== "content") return;
-          if (JSON.stringify(entity.bodyDoc) === JSON.stringify(doc) && entity.bodyHtml === html)
+          const nextDocKey = jsonStableStringify(doc);
+          const entityDocKey = jsonStableStringify(entity.bodyDoc);
+          if (entityDocKey === nextDocKey && entity.bodyHtml === html)
             return;
           recordUndoBeforeMutation();
           setGraph((p) => {
             const e = p.entities[id];
             if (!e || e.kind !== "content") return p;
-            if (JSON.stringify(e.bodyDoc) === JSON.stringify(doc) && e.bodyHtml === html) return p;
+            const currentDocKey = jsonStableStringify(e.bodyDoc);
+            if (currentDocKey === nextDocKey && e.bodyHtml === html) return p;
             return {
               ...p,
               entities: {
@@ -5167,6 +5204,9 @@ export function ArchitecturalCanvasApp({
           },
         };
       });
+      if (focusOpenRef.current && activeNodeIdRef.current === entityId) {
+        setFocusBaselineFactionRoster(roster);
+      }
       const merged = { ...ent, factionRoster: roster } as CanvasContentEntity;
       void patchItemWithVersion(entityId, {
         contentText: contentPlainTextForEntity(merged),
@@ -5422,6 +5462,7 @@ export function ArchitecturalCanvasApp({
       setFocusBaselineBody(projected);
     }
     setFocusBaselineTitle(entity.title);
+    setFocusBaselineFactionRoster(entity.loreCard?.kind === "faction" ? (entity.factionRoster ?? []) : []);
     setFocusOpen(true);
   }, [graph.entities, graph.spaces, pushRecentItem]);
 
@@ -5555,6 +5596,36 @@ export function ArchitecturalCanvasApp({
     }
   }, [closeMediaGallery, galleryNodeId, galleryOpen, graph.entities]);
 
+  const deriveLoreFocusResolvedBodyAndTitle = useCallback(
+    (
+      entity: CanvasContentEntity,
+      normalizedFocusBody: string,
+      fallbackTitle: string,
+    ): { bodyHtml: string; title: string } => {
+      const factionTemplate = bodyHtmlImpliesFactionArchive091(entity.bodyHtml)
+        ? entity.bodyHtml
+        : getLoreNodeSeedBodyHtml("faction", "v4", { factionRailSeed: entity.id });
+      const nextBody = shouldRenderLoreCharacterCredentialCanvasNode(entity)
+        ? focusDocumentHtmlToCharacterV11Body(normalizedFocusBody, entity.bodyHtml, entity.id)
+        : shouldRenderLoreLocationCanvasNode(entity)
+          ? focusDocumentHtmlToLocationBody(normalizedFocusBody, entity.bodyHtml)
+          : shouldRenderLoreFactionArchive091CanvasNode(entity)
+            ? withFactionArchiveObjectIdInRails(
+                focusDocumentHtmlToFactionBody(normalizedFocusBody, factionTemplate),
+                entity.id,
+              )
+            : normalizedFocusBody;
+      const nextTitle = shouldRenderLoreLocationCanvasNode(entity)
+        ? plainPlaceNameFromLocationBodyHtml(nextBody).trim() || defaultTitleForLoreKind("location")
+        : shouldRenderLoreFactionArchive091CanvasNode(entity)
+          ? plainFactionPrimaryNameFromArchiveBodyHtml(nextBody).trim() ||
+            defaultTitleForLoreKind("faction")
+          : fallbackTitle.trim() || "Untitled";
+      return { bodyHtml: nextBody, title: nextTitle };
+    },
+    [],
+  );
+
   const saveFocusAndClose = useCallback(() => {
     if (!activeNodeId) {
       setFocusOpen(false);
@@ -5578,29 +5649,10 @@ export function ArchitecturalCanvasApp({
     if (activeNodeId) {
       const entity = graphRef.current.entities[activeNodeId];
       if (entity && entity.kind === "content") {
-        const factionTemplate =
-          bodyHtmlImpliesFactionArchive091(entity.bodyHtml)
-            ? entity.bodyHtml
-            : getLoreNodeSeedBodyHtml("faction", "v4", { factionRailSeed: entity.id });
-        const nextBodyResolved = shouldRenderLoreCharacterCredentialCanvasNode(entity)
-          ? focusDocumentHtmlToCharacterV11Body(normalizedFocusBody, entity.bodyHtml, entity.id)
-          : shouldRenderLoreLocationCanvasNode(entity)
-            ? focusDocumentHtmlToLocationBody(normalizedFocusBody, entity.bodyHtml)
-            : shouldRenderLoreFactionArchive091CanvasNode(entity)
-              ? withFactionArchiveObjectIdInRails(
-                  focusDocumentHtmlToFactionBody(normalizedFocusBody, factionTemplate),
-                  entity.id,
-                )
-              : normalizedFocusBody;
-        const nextTitleResolved = shouldRenderLoreLocationCanvasNode(entity)
-          ? plainPlaceNameFromLocationBodyHtml(nextBodyResolved).trim() ||
-            defaultTitleForLoreKind("location")
-          : shouldRenderLoreFactionArchive091CanvasNode(entity)
-            ? plainFactionPrimaryNameFromArchiveBodyHtml(nextBodyResolved).trim() ||
-              defaultTitleForLoreKind("faction")
-            : focusTitle.trim() || "Untitled";
+        const { bodyHtml: nextBodyResolved, title: nextTitleResolved } =
+          deriveLoreFocusResolvedBodyAndTitle(entity, normalizedFocusBody, focusTitle);
         const bodyChanged = hgDefault
-          ? JSON.stringify(focusDoc) !== JSON.stringify(focusBaselineBodyDoc)
+          ? jsonStableStringify(focusDoc) !== focusBaselineBodyDocKey
           : entity.bodyHtml !== nextBodyResolved;
         if (entity.title !== nextTitleResolved || bodyChanged) {
           recordUndoBeforeMutation();
@@ -5609,27 +5661,11 @@ export function ArchitecturalCanvasApp({
       setGraph((prev) => {
         const entity = prev.entities[activeNodeId];
         if (!entity || entity.kind !== "content") return prev;
-        const facTpl =
-          bodyHtmlImpliesFactionArchive091(entity.bodyHtml)
-            ? entity.bodyHtml
-            : getLoreNodeSeedBodyHtml("faction", "v4", { factionRailSeed: entity.id });
-        const nextBody = shouldRenderLoreCharacterCredentialCanvasNode(entity)
-          ? focusDocumentHtmlToCharacterV11Body(normalizedFocusBody, entity.bodyHtml, entity.id)
-          : shouldRenderLoreLocationCanvasNode(entity)
-            ? focusDocumentHtmlToLocationBody(normalizedFocusBody, entity.bodyHtml)
-            : shouldRenderLoreFactionArchive091CanvasNode(entity)
-              ? withFactionArchiveObjectIdInRails(
-                  focusDocumentHtmlToFactionBody(normalizedFocusBody, facTpl),
-                  entity.id,
-                )
-              : normalizedFocusBody;
-        const nextTitle =
-          shouldRenderLoreLocationCanvasNode(entity)
-            ? plainPlaceNameFromLocationBodyHtml(nextBody).trim() || defaultTitleForLoreKind("location")
-            : shouldRenderLoreFactionArchive091CanvasNode(entity)
-              ? plainFactionPrimaryNameFromArchiveBodyHtml(nextBody).trim() ||
-                defaultTitleForLoreKind("faction")
-              : focusTitle.trim() || "Untitled";
+        const { bodyHtml: nextBody, title: nextTitle } = deriveLoreFocusResolvedBodyAndTitle(
+          entity,
+          normalizedFocusBody,
+          focusTitle,
+        );
         const nextBodyDoc = hgDefault ? structuredClone(focusDoc) : undefined;
         const clearAiMeta =
           isAiReviewPending(entity.entityMeta) &&
@@ -5660,27 +5696,11 @@ export function ArchitecturalCanvasApp({
         queueMicrotask(() => {
           const ent = graphRef.current.entities[aid];
           if (!ent || ent.kind !== "content") return;
-          const facEntTpl =
-            bodyHtmlImpliesFactionArchive091(ent.bodyHtml)
-              ? ent.bodyHtml
-              : getLoreNodeSeedBodyHtml("faction", "v4", { factionRailSeed: ent.id });
-          const nextBody = shouldRenderLoreCharacterCredentialCanvasNode(ent)
-            ? focusDocumentHtmlToCharacterV11Body(normalizedFocusBody, ent.bodyHtml, ent.id)
-            : shouldRenderLoreLocationCanvasNode(ent)
-              ? focusDocumentHtmlToLocationBody(normalizedFocusBody, ent.bodyHtml)
-              : shouldRenderLoreFactionArchive091CanvasNode(ent)
-                ? withFactionArchiveObjectIdInRails(
-                    focusDocumentHtmlToFactionBody(normalizedFocusBody, facEntTpl),
-                    ent.id,
-                  )
-                : normalizedFocusBody;
-          const nextTitle =
-            shouldRenderLoreLocationCanvasNode(ent)
-              ? plainPlaceNameFromLocationBodyHtml(nextBody).trim() || defaultTitleForLoreKind("location")
-              : shouldRenderLoreFactionArchive091CanvasNode(ent)
-                ? plainFactionPrimaryNameFromArchiveBodyHtml(nextBody).trim() ||
-                  defaultTitleForLoreKind("faction")
-                : focusTitle.trim() || "Untitled";
+          const { bodyHtml: nextBody, title: nextTitle } = deriveLoreFocusResolvedBodyAndTitle(
+            ent,
+            normalizedFocusBody,
+            focusTitle,
+          );
           const merged: CanvasContentEntity = {
             ...ent,
             title: nextTitle,
@@ -5710,9 +5730,10 @@ export function ArchitecturalCanvasApp({
     setActiveNodeId(null);
   }, [
     activeNodeId,
+    deriveLoreFocusResolvedBodyAndTitle,
     focusBody,
     focusBodyDoc,
-    focusBaselineBodyDoc,
+    focusBaselineBodyDocKey,
     focusTitle,
     patchItemWithVersion,
     recordUndoBeforeMutation,
@@ -5727,10 +5748,16 @@ export function ArchitecturalCanvasApp({
     const ent = activeNodeId ? graph.entities[activeNodeId] : null;
     const hgDefault = ent?.kind === "content" && contentEntityUsesHgDoc(ent);
     const bodyDirty = hgDefault
-      ? JSON.stringify(focusBodyDoc) !== JSON.stringify(focusBaselineBodyDoc)
+      ? focusBodyDocKey !== focusBaselineBodyDocKey
       : focusBody !== focusBaselineBody;
+    const rosterDirty =
+      ent?.kind === "content" && ent.loreCard?.kind === "faction"
+        ? JSON.stringify(ent.factionRoster ?? []) !== JSON.stringify(focusBaselineFactionRoster)
+        : false;
     return (
-      normalizedFocusTitle(focusTitle) !== normalizedFocusTitle(focusBaselineTitle) || bodyDirty
+      normalizedFocusTitle(focusTitle) !== normalizedFocusTitle(focusBaselineTitle) ||
+      bodyDirty ||
+      rosterDirty
     );
   }, [
     activeNodeId,
@@ -5739,8 +5766,9 @@ export function ArchitecturalCanvasApp({
     focusBaselineTitle,
     focusBody,
     focusBaselineBody,
-    focusBodyDoc,
-    focusBaselineBodyDoc,
+    focusBodyDocKey,
+    focusBaselineBodyDocKey,
+    focusBaselineFactionRoster,
   ]);
 
   /** What kind of focus overlay to render for the active content node. */
@@ -6062,11 +6090,11 @@ export function ArchitecturalCanvasApp({
       !!galleryOpen &&
       !!galleryNodeId &&
       (normalizedFocusTitle(galleryDraftTitle) !== normalizedFocusTitle(galleryBaselineTitle) ||
-        JSON.stringify(galleryDraftNotesDoc) !== JSON.stringify(galleryBaselineNotesDoc)),
+        galleryDraftNotesDocKey !== galleryBaselineNotesDocKey),
     [
-      galleryBaselineNotesDoc,
+      galleryBaselineNotesDocKey,
       galleryBaselineTitle,
-      galleryDraftNotesDoc,
+      galleryDraftNotesDocKey,
       galleryDraftTitle,
       galleryNodeId,
       galleryOpen,

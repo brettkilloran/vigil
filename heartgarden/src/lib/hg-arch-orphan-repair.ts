@@ -43,29 +43,6 @@ function scrubAnchors(a: LoreThreadAnchorsShape | undefined, deadId: string): Lo
   return touched ? next : a;
 }
 
-function scrubIdArray(raw: unknown, deadId: string): { next: unknown; changed: boolean } {
-  if (!Array.isArray(raw)) return { next: raw, changed: false };
-  let changed = false;
-  const next = raw.filter((x) => {
-    if (typeof x === "string") {
-      if (x === deadId) {
-        changed = true;
-        return false;
-      }
-      return true;
-    }
-    if (x && typeof x === "object" && "itemId" in x) {
-      const id = (x as { itemId?: unknown }).itemId;
-      if (typeof id === "string" && id === deadId) {
-        changed = true;
-        return false;
-      }
-    }
-    return true;
-  });
-  return { next, changed };
-}
-
 /**
  * Remove references to `deadItemId` from `content_json.hgArch` (best-effort, in-memory).
  * Returns null if nothing changed.
@@ -110,14 +87,6 @@ export function stripHgArchReferencesToItem(
       } else {
         hg.loreThreadAnchors = scrubbed;
       }
-      changed = true;
-    }
-  }
-
-  for (const key of ["primaryFactions", "primaryLocations"] as const) {
-    const { next, changed: c } = scrubIdArray(hg[key], deadItemId);
-    if (c) {
-      hg[key] = next;
       changed = true;
     }
   }
