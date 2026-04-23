@@ -132,7 +132,7 @@ If the dev server cannot be started, note that UI verification was skipped and w
 
 If a `NET_NEW` finding would realistically require more than ~5 files, introduce a new subsystem, or otherwise feels like a feature project:
 
-1. Do not ask a yes/no question. Instead, append a backlog entry to `heartgarden/docs/BUILD_PLAN.md` under a dedicated `## Review-sourced backlog` section (create it if missing), matching the file's table/bullet style.
+1. Do not ask a yes/no question. Instead, append a backlog entry to `heartgarden/docs/BACKLOG.md` under the `## Review-sourced backlog` section (already present; create if somehow missing), matching the file's table/bullet style.
 2. The entry must include:
    - short title
    - severity + user-facing impact (one line)
@@ -140,7 +140,7 @@ If a `NET_NEW` finding would realistically require more than ~5 files, introduce
    - recommended approach (2–5 bullets)
    - rough cost estimate (S / M / L) and risk call-out
    - source audit path (the current `REVIEW_*.md` filename)
-3. Mark the finding `DECLINED_BY_USER` in this run (with note "filed to BUILD_PLAN backlog") so closure doesn't block.
+3. Mark the finding `DECLINED_BY_USER` in this run (with note "filed to BACKLOG") so closure doesn't block.
 4. List all backlog entries filed in the closure report so the user sees what was punted.
 
 ## Remediation Ledger (Required)
@@ -165,6 +165,6 @@ Finish with a compact closure report containing:
 - verification commands and outcomes (baseline vs post-fix diff summary)
 - **UI changes** (before/after screenshot paths, if any)
 - **Deduped from prior audits** (titles only)
-- **Filed to backlog** (titles + `BUILD_PLAN.md` anchor)
+- **Filed to backlog** (titles + `BACKLOG.md#review-sourced-backlog` anchor)
 - **Next session ideas** (non-binding; things noticed but intentionally not touched this run — smells, unrelated cleanups, follow-ups from declined NET_NEW, etc.)
 - explicit outstanding user questions (if any) — should normally be empty once the questions phase completed

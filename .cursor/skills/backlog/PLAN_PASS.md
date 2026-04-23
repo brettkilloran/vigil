@@ -150,11 +150,11 @@ After writing `.cursor/plans/<slug>.plan.md`:
 
 1. Update `.cursor/plans/README.md`:
    - Add a row in the `## Active (still drives or may drive work)` table with the plan link and a one-line note.
-2. If the originating backlog item lives in `heartgarden/docs/BUILD_PLAN.md`, append a backreference comment to that item:
+2. If the originating backlog item lives in `heartgarden/docs/BACKLOG.md` (SOT) or, for pre-2026-04-23 items, `heartgarden/docs/BUILD_PLAN.md`, append a backreference comment to that item:
    ```
    <!-- backlog-plan: path=.cursor/plans/<slug>.plan.md created=<YYYY-MM-DDTHH:MMZ> -->
    ```
-   Do not strike through the BUILD_PLAN row — the work is just starting, not done.
+   Do not strike through the `BACKLOG.md` / `BUILD_PLAN.md` row — the work is just starting, not done.
 3. If the originating source is a `REVIEW_*.md` `QUESTION_FOR_USER` that's now being planned, append the same backreference comment beside that finding.
 
 ## 5. Closure Report (Appends to Stage 1 Closure)

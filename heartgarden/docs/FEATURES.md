@@ -14,7 +14,7 @@ related:
 
 # heartgarden — shipped features (reference)
 
-Single place to **look up what exists** and where it lives. For **HTTP contracts**, see **`docs/API.md`**. For **subsystem file maps**, see **`docs/CODEMAP.md`**. For **player / GM boot rules**, see **`docs/PLAYER_LAYER.md`**. For **backlog**, see **`docs/BUILD_PLAN.md`**.
+Single place to **look up what exists** and where it lives. For **HTTP contracts**, see **`docs/API.md`**. For **subsystem file maps**, see **`docs/CODEMAP.md`**. For **player / GM boot rules**, see **`docs/PLAYER_LAYER.md`**. For **open engineering backlog (SOT)**, see **`docs/BACKLOG.md`**. For **architecture + shipped tranches**, see **`docs/BUILD_PLAN.md`**.
 
 ---
 

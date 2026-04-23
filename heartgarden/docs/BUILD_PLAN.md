@@ -1,20 +1,30 @@
 ---
-title: heartgarden — execution build plan
+title: heartgarden — architecture snapshot + shipped history
 status: canonical
 audience: [agent, human]
-last_reviewed: 2026-04-13
+last_reviewed: 2026-04-23
 canonical: true
 related:
+  - heartgarden/docs/BACKLOG.md
   - heartgarden/docs/FEATURES.md
   - heartgarden/docs/CODEMAP.md
   - heartgarden/docs/LORE_ENGINE_ROADMAP.md
 ---
 
-# heartgarden — execution build plan (living)
+# heartgarden — architecture snapshot + shipped history
 
-This is the **repo-wide checklist**: architecture snapshot, shipped tranches, and backlog (hardening, embeddings, e2e, later phases). **Lore vertical** work (import pipeline, link phases, MCP expansion) is summarized in **`docs/LORE_ENGINE_ROADMAP.md`**; detailed notes live in **`.cursor/plans/README.md`** (index of workspace plans). Reprioritize here vs ad-hoc plans as needed.
+This file is the **architecture snapshot** and **shipped-tranches history** for the heartgarden app. It is **not** the backlog any more.
 
-**Historical product bible** (Spatial-style sessions, old paths): **`docs/archive/vigil-master-plan-legacy.md`**. Stub at **`VIGIL_MASTER_PLAN.md`** points there. Honest engineering delta: **`STRATEGY.md`**. Human / account items: **`FOLLOW_UP.md`**.
+**Open backlog (SOT):** [`docs/BACKLOG.md`](./BACKLOG.md) — hardening, parity, features, review overflow. All `/backlog` writes land there.
+
+**Other canonical docs:**
+
+- **Lore vertical overview:** [`docs/LORE_ENGINE_ROADMAP.md`](./LORE_ENGINE_ROADMAP.md)
+- **Execution plans** (optional engineering notes, YAML todos): [`.cursor/plans/README.md`](../../.cursor/plans/README.md)
+- **Historical product bible:** `docs/archive/vigil-master-plan-legacy.md` (stub at `VIGIL_MASTER_PLAN.md` redirects there)
+- **Engineering delta:** `STRATEGY.md`
+- **Human / account / infra:** `FOLLOW_UP.md`
+- **Deploy / release gates:** `GO_LIVE_REMAINING.md`
 
 ## Architecture snapshot (verify after each large merge)
 
@@ -67,45 +77,13 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 
 ---
 
-## Next execution phases (ordered)
+## Open backlog → [`docs/BACKLOG.md`](./BACKLOG.md)
 
-### Code health backlog (living audit)
+Open engineering work (near-term hardening, lore import tranche, mid / later phases, `NET_NEW` overflow from reviews, cross-cutting code-health pointers) lives in [`docs/BACKLOG.md`](./BACKLOG.md). That file is the single source of truth; this one is history + architecture only.
 
-**Cross-cutting bug / perf / hygiene backlog:** [`CODE_HEALTH_AUDIT_2026-04-21.md`](./CODE_HEALTH_AUDIT_2026-04-21.md) — dated audit with 45 prioritized items (CRITICAL → LOW) and a three-week attack order. Work those items alongside the phase tranches below; they are not duplicated here to avoid drift. Strike items out in the audit doc as they land. **2026-04-21:** first remediation batch landed (CRITICAL blockers + key HIGH items — see audit doc strikethroughs; changelog commits `38ca04a` / `bad55f2`). **2026-04-21 (batch 2 A-D):** landed observability/opaque-MCP fixes, subtree/presence scaling, websocket subprotocol auth + search limiter, and hygiene closeout (#7/#9/#10/#13/#14/#18/#19/#20/#21/#27/#28/#41). **2026-04-21 (remaining tranche):** closed the rest of the audit (#16/#17/#23/#24/#25/#26/#29/#30/#31/#32/#33/#34/#35/#36/#37/#39/#40/#42/#43/#44/#45), including shell lifecycle hardening, retrieval tuning, CI verification wiring, and full documentation closeout.
+When a backlog item **ships**, add a row to the **Completed tranches** table above (brief line + commit ref if handy) and remove it from `BACKLOG.md`. Do not append new open work here.
 
-### Near-term — hardening & parity
-
-1. **`POST /api/lore/query` hardening** — Baseline in-memory rate limit is shipped; before a public URL add auth, edge firewall, or Redis / Vercel KV for global limits.
-2. **Index + embedding ops** — Tune HNSW / IVFFLAT on Neon. Server **`after()`** vault reindex on item PATCH/create (`schedule-vault-index-after.ts`) is **default on**; set **`HEARTGARDEN_INDEX_AFTER_PATCH=0`** to disable. Add a global queue if volume still exceeds debounced client + reindex.
-3. **Retrieval observability** — `HEARTGARDEN_VAULT_DEBUG=1` enables `console.debug` RRF diagnostics in `vault-retrieval.ts` (shipped).
-4. **E2E** — Optional: palette → lore panel smoke (skip or mock LLM in CI).
-5. **Canvas version history (UX2 — decision for v1)** — **Export-first:** the canvas already supports **Export graph JSON** (Cmd+K). Treat that as the supported “checkpoint” workflow until a DB snapshot or `item_revisions` table is justified. **Space / graph snapshots** and **per-item revision logs** remain future options; any in-app restore must not silently fight the local undo stack (explicit “restore from server snapshot” only).
-6. **Space nav hardening (residual)** — **`enterSpace`** already uses a **generation guard** so stale fetches do not apply. Optional: **abort** in-flight bootstrap fetch on newer navigation, or a **short CSS-only** nav cue when canvas effects are **off** for parity with the WebGL transition.
-7. **Collab delta API (beyond full `itemIds` every poll)** — Optional next tracks: **E2** tombstones / `deleted_item_ids` since cursor; **E3** monotonic subtree revision so thin clients never re-enumerate full id sets on recovery. The **official shell** already sends **`includeItemIds=1`** every poll (`docs/API.md`); lighter integrations may omit it.
-
-**Lore import + data pipeline (audit tranche):** [`DATA_PIPELINE_AUDIT_2026-04-11.md`](./DATA_PIPELINE_AUDIT_2026-04-11.md) §10–§12 (registry, conformance tests, smoke gate, multiplayer expectations). Execution tracks and YAML todos: [`.cursor/plans/data_pipeline_import_hardening.plan.md`](../../.cursor/plans/data_pipeline_import_hardening.plan.md).
-
-**Canonical kind → DB / canvas mapping (import):** [`LORE_IMPORT_KIND_MAPPING.md`](./LORE_IMPORT_KIND_MAPPING.md) — code: `src/lib/lore-object-registry.ts` (land with Agent mode if not present).
-
-**Lore import UX (post-granularity rollout) backlog:**
-- `.html` file upload parser (Readability + jsdom) as a separate tranche.
-- URL import (`fetch` + SSRF guardrails, content-type routing, auth-wall/SPA failure UX).
-- Granular reshuffle controls in review (rename/delete/reassign) if product demand appears after v1.
-- AI-assisted reshuffle prompt (`reorganize by X`) only if manual mode toggles prove insufficient.
-- **Explicit non-goal:** OCR ingestion is intentionally not planned (quality risk + bundle/runtime overhead). If revisited, scope it as a dedicated feature with cloud OCR and map-specific UX, not generic import.
-
-### Mid-term — master plan Phase 5 (TTRPG + intelligence)
-
-Matches **legacy** Phase 5 themes and **`FOLLOW_UP.md`** LLM items (see archive master plan for original wording):
-
-- Markdown bulk import + entity extraction pipeline.
-- Auto-linking beyond in-note **`[[` assist** (popover in `BufferedContentEditable`) — e.g. batch suggest + review UX for imports.
-- Deeper graph/timeline integration with persisted `item_links` and UUID stability everywhere.
-- Lore consistency checker (LLM).
-
-### Later — Phases 6–8 + `VISUAL_REVAMP_PLAN`
-
-- Visual/typography polish, performance (culling, bundle), PWA/offline strategy, prefs — per legacy master plan + **`FOLLOW_UP.md`**.
+<!-- backlog-moved: 2026-04-23 — §"Next execution phases" (Code health / Near-term / Lore import tranche / Mid-term / Later) migrated to docs/BACKLOG.md -->
 
 ---
 

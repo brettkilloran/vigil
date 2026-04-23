@@ -2,15 +2,18 @@
 title: heartgarden — follow-ups
 status: supporting
 audience: [human]
-last_reviewed: 2026-04-10
+last_reviewed: 2026-04-23
 related:
+  - heartgarden/docs/BACKLOG.md
   - heartgarden/docs/BUILD_PLAN.md
   - heartgarden/docs/VERCEL_ENV_VARS.md
 ---
 
 # heartgarden — follow-ups (human / account / infra)
 
-**Scope:** Credentials, dashboards, and operational steps the codebase **cannot** complete without you. **Ordered engineering work, phases, and shipped-vs-open features** live only in **`docs/BUILD_PLAN.md`** — this file does **not** duplicate that backlog.
+**Scope:** Credentials, dashboards, and operational steps the codebase **cannot** complete without you. **Open engineering backlog** (hardening, features, review overflow) lives in **`docs/BACKLOG.md`** (SOT) — this file does **not** duplicate that. **Architecture snapshot + shipped-tranches history** lives in **`docs/BUILD_PLAN.md`**.
+
+**If you find an engineering-shaped item in this file, move it to `docs/BACKLOG.md`** and leave a `<!-- moved-to: docs/BACKLOG.md#<anchor> -->` breadcrumb.
 
 **Env definitions (names, semantics, edge cases):** **`docs/VERCEL_ENV_VARS.md`** — do not maintain a parallel matrix here.
 
@@ -42,4 +45,4 @@ related:
 
 ---
 
-**Execution backlog:** **`docs/BUILD_PLAN.md`**
+**Open engineering backlog (SOT):** **`docs/BACKLOG.md`** · **Shipped history + architecture:** **`docs/BUILD_PLAN.md`**

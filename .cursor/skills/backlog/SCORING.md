@@ -94,7 +94,7 @@ Rationale: the user works in intermittent bursts, so a pure age check is too str
 The triage subagent runs these signals **in order**; the first that triggers wins the DNF reason. Always include concrete evidence.
 
 1. **`already-fixed`** — grep / semantic search for the described fix or feature in the current codebase. If clearly implemented and working (tests, routes, UI present), mark DNF with file evidence.
-2. **`superseded`** — another `.cursor/plans/*.plan.md` or `BUILD_PLAN.md` row covers the same scope better or more recently. Link the successor.
+2. **`superseded`** — another `.cursor/plans/*.plan.md` row, `docs/BACKLOG.md` section, or `docs/BUILD_PLAN.md` shipped-tranches row covers the same scope better or more recently. Link the successor.
 3. **`out-of-strategy`** — `AGENTS.md`, `STRATEGY.md`, `HEARTGARDEN_MASTER_PLAN.md`, or `LORE_ENGINE_ROADMAP.md` now point in a direction that excludes this item. Cite the passage.
 4. **`stale-code-drift`** — linked code in the item description no longer exists at the cited path or has been refactored beyond recognition. Cite the current state.
 5. **`prior-review-fixed`** — a `heartgarden/docs/REVIEW_*.md` audit marked the underlying issue `FIXED` with verification. Cite the audit filename + finding title.

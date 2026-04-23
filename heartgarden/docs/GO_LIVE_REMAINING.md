@@ -4,6 +4,8 @@ Use this **after the initial Vercel project work is already in place**. It lists
 
 **Role in the deploy set:** this is the post-setup go-live and handoff doc, not the first-deploy walkthrough.
 
+**Not a backlog.** Open engineering work (hardening, features, review overflow) lives in [`BACKLOG.md`](./BACKLOG.md). If you find an engineering-shaped item creeping into this file, move it to `BACKLOG.md` and leave a `<!-- moved-to: docs/BACKLOG.md#<anchor> -->` breadcrumb.
+
 **Need a different deploy doc?**
 
 - **First deploy order / narrative:** [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)

@@ -4,7 +4,8 @@ Plans here are **optional engineering notes** (YAML todos, narratives). They are
 
 | Authority | Path |
 |-----------|------|
-| **Repo-wide backlog + architecture** | [`heartgarden/docs/BUILD_PLAN.md`](../heartgarden/docs/BUILD_PLAN.md) |
+| **Repo-wide open backlog (SOT)** | [`heartgarden/docs/BACKLOG.md`](../heartgarden/docs/BACKLOG.md) |
+| **Architecture snapshot + shipped tranches history** | [`heartgarden/docs/BUILD_PLAN.md`](../heartgarden/docs/BUILD_PLAN.md) |
 | **Lore vertical pointer** | [`heartgarden/docs/LORE_ENGINE_ROADMAP.md`](../heartgarden/docs/LORE_ENGINE_ROADMAP.md) |
 
 When a plan’s work lands or is cancelled, add **`Status:`** at the top of that `.plan.md` **or** move its row to **Completed / parked** below so agents do not treat stale notes as current behavior.
@@ -25,7 +26,7 @@ When a plan’s work lands or is cancelled, add **`Status:`** at the top of that
 
 ## Reference (audited periodically; not auto-backlog)
 
-These are retained for context. **Confirm open work in `BUILD_PLAN.md`**, not only here.
+These are retained for context. **Confirm open work in [`heartgarden/docs/BACKLOG.md`](../heartgarden/docs/BACKLOG.md)** (SOT), not only here.
 
 | Plan | Topic |
 |------|--------|

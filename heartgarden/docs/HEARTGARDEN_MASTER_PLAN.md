@@ -7,6 +7,7 @@ canonical: true
 related:
   - heartgarden/AGENTS.md
   - heartgarden/docs/API.md
+  - heartgarden/docs/BACKLOG.md
   - heartgarden/docs/BUILD_PLAN.md
 ---
 
@@ -20,9 +21,10 @@ related:
 2. [`API.md`](./API.md) — HTTP contracts  
 3. [`FEATURES.md`](./FEATURES.md) — shipped capabilities → code  
 4. [`CODEMAP.md`](./CODEMAP.md) — subsystem → files  
-5. [`BUILD_PLAN.md`](./BUILD_PLAN.md) — backlog and architecture snapshot  
-6. [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md) — deploy env matrix (SoT for variable definitions)  
-7. [`PLAYER_LAYER.md`](./PLAYER_LAYER.md) — GM / Players / demo tiers and collab  
+5. [`BUILD_PLAN.md`](./BUILD_PLAN.md) — architecture snapshot + shipped tranches history  
+6. [`BACKLOG.md`](./BACKLOG.md) — open engineering backlog (SOT)  
+7. [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md) — deploy env matrix (SoT for variable definitions)  
+8. [`PLAYER_LAYER.md`](./PLAYER_LAYER.md) — GM / Players / demo tiers and collab  
 
 ## Canonical pointers
 

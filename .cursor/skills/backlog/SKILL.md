@@ -35,15 +35,20 @@ Read and follow:
 - `/backlog` (default): mood-driven triage → 3 candidates → optional DNF edits → optional plan.
 - `/backlog consolidate`: run the **consolidation pass** (Section 7) instead of normal triage. Use when the user wants to prune / merge scattered backlog sources.
 
-## 2. Backlog Sources (Scan)
+## 2. Backlog Sources (Scan) + SOT Write Rule
 
-Scan all of these on every normal run. Note which sources smell stale in the report so the user can consolidate later:
+**SOT (single source of truth) for open engineering backlog:** `heartgarden/docs/BACKLOG.md`. All new items, score caches, DNF edits on items that **originated here**, and Review-sourced NET_NEW overflow go into this file.
 
-1. `heartgarden/docs/BUILD_PLAN.md` — canonical. Sections: `Code health backlog`, `Near-term — hardening & parity`, `Mid-term`, `Later`, and the `Review-sourced backlog` section created by `/review-*`.
-2. `.cursor/plans/*.plan.md` — YAML `todos` with `status: pending`. Ignore plans whose README row says `Completed / parked` or `Superseded`.
-3. `heartgarden/docs/REVIEW_*.md` — findings with terminal state `QUESTION_FOR_USER` that were never resolved in a later review.
-4. `heartgarden/docs/FOLLOW_UP.md` — human/infra work. Include but clearly tag `[human]` so it's not mistaken for agent-plannable.
-5. `heartgarden/docs/GO_LIVE_REMAINING.md` — release gates.
+**Scan-everywhere, write-to-SOT rule:** scan all sources below on every normal run so nothing is orphaned. DNF/strike-through edits still happen **in-place** on the source that holds the item (so the breadcrumb is where a reader would look). But **new** items and consolidation moves always land in `BACKLOG.md`, with a `<!-- moved-to: docs/BACKLOG.md#<anchor> ... -->` breadcrumb on the original if the source keeps a pointer.
+
+Sources to scan, in order of authority:
+
+1. **`heartgarden/docs/BACKLOG.md`** — SOT. Sections: `Near-term — hardening & parity`, `Lore import + data pipeline`, `Mid-term`, `Later`, `Cross-cutting code health`, `Review-sourced backlog`, `Archive`.
+2. `heartgarden/docs/BUILD_PLAN.md` — architecture + shipped-tranches history only (after 2026-04-23). Scan the `Completed tranches` table to recognize already-shipped work (useful for `already-fixed` DNF detection); do not expect open backlog here.
+3. `.cursor/plans/*.plan.md` — YAML `todos` with `status: pending`. Ignore plans whose README row says `Completed / parked` or `Superseded`. Plans are execution notes, not backlog; surface pending todos for triage but do not file new items into plan files — file them into `BACKLOG.md` instead.
+4. `heartgarden/docs/REVIEW_*.md` — findings with terminal state `QUESTION_FOR_USER` that were never resolved in a later review. If surfaced and still real, migrate into `BACKLOG.md` under `Review-sourced backlog` with a breadcrumb on the review file.
+5. `heartgarden/docs/FOLLOW_UP.md` — human/keys/infra only (not engineering backlog). Tag `[human]` and leave in place; only migrate to `BACKLOG.md` if it's clearly engineering work that drifted in.
+6. `heartgarden/docs/GO_LIVE_REMAINING.md` — release gates / operator runbook only. Same rule: migrate out if engineering drift is detected.
 
 Every candidate surfaced must include its source path and anchor (section or todo id) so the user can jump straight to it.
 
@@ -133,9 +138,10 @@ Do not commit. Leave the working tree dirty so the user can review the diff.
 
 Skip mood + triage. Run one Codex subagent whose sole job is to cross-reference sources and produce:
 
-- **Duplicate coverage** — items in two or more sources that describe the same scope (include both paths + anchors, similarity confidence, suggested canonical home).
+- **Duplicate coverage** — items in two or more sources that describe the same scope (include both paths + anchors, similarity confidence, suggested canonical home — **default canonical home is `heartgarden/docs/BACKLOG.md`** unless the item is clearly operator-runbook or human-infra in nature).
 - **Stale sources** — whole files or sections where >N% of items are already DNF-worthy.
-- **Recommended merges / retirements** — concrete "move X to Y" or "archive section Z" proposals, with exact edits.
+- **Recommended merges / retirements** — concrete "move X to Y" or "archive section Z" proposals, with exact edits. Default target for moves is `BACKLOG.md`.
+- **SOT drift** — items that *should* be in `BACKLOG.md` but have drifted into `FOLLOW_UP.md`, `GO_LIVE_REMAINING.md`, an old review, or a plan file. Flag them for migration with a `<!-- moved-to: docs/BACKLOG.md#<anchor> -->` breadcrumb at the original and a fresh row in `BACKLOG.md`.
 
 Parent agent presents via `AskQuestion` multi-select: apply none / apply subset / apply all. On approval, apply the edits. Do not proceed to Stage 2 planning in consolidation mode.
 

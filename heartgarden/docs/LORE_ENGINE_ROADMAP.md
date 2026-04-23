@@ -15,7 +15,8 @@ related:
 
 ## Where work is tracked
 
-1. **Repo-wide backlog and architecture snapshot:** [`docs/BUILD_PLAN.md`](./BUILD_PLAN.md) — shipped tranches, near-term hardening, lore-related items.
+1. **Open engineering backlog (SOT):** [`docs/BACKLOG.md`](./BACKLOG.md) — near-term hardening, lore-related items, mid/later phases.
+1a. **Architecture snapshot + shipped tranches:** [`docs/BUILD_PLAN.md`](./BUILD_PLAN.md).
 2. **Shipped UX + file map (import review, hgDoc pending):** [`docs/FEATURES.md`](./FEATURES.md), [`docs/EDITOR_HG_DOC.md`](./EDITOR_HG_DOC.md), [`docs/CODEMAP.md`](./CODEMAP.md) — Unreviewed/Bind, `hgAiPending`, lore import `aiReview`, palette/dock creates.
 3. **Import / pipeline hardening (audit tranche):** [`.cursor/plans/data_pipeline_import_hardening.plan.md`](../../.cursor/plans/data_pipeline_import_hardening.plan.md) — maps to [`DATA_PIPELINE_AUDIT_2026-04-11.md`](./DATA_PIPELINE_AUDIT_2026-04-11.md) §10–§12.
 4. **Cursor plans (workspace):** [`.cursor/plans/README.md`](../../.cursor/plans/README.md) — index of active `.plan.md` files (e.g. lore entity lab, multiplayer hardening). Add new plans there when you create them.

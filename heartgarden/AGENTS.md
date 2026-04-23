@@ -20,7 +20,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # heartgarden — agent notes
 
-**Read order (LLM / onboarding):** `AGENTS.md` (this file) → `docs/API.md` → `docs/FEATURES.md` → `docs/CODEMAP.md` → `docs/BUILD_PLAN.md`. **Env matrix (deploy):** `docs/VERCEL_ENV_VARS.md`. **Lore vertical pointer:** `docs/LORE_ENGINE_ROADMAP.md` + repo `.cursor/plans/README.md`.
+**Read order (LLM / onboarding):** `AGENTS.md` (this file) → `docs/API.md` → `docs/FEATURES.md` → `docs/CODEMAP.md` → `docs/BUILD_PLAN.md` (architecture + shipped history) → `docs/BACKLOG.md` (open engineering work, SOT). **Env matrix (deploy):** `docs/VERCEL_ENV_VARS.md`. **Lore vertical pointer:** `docs/LORE_ENGINE_ROADMAP.md` + repo `.cursor/plans/README.md`.
 
 ## Naming (product vs `heartgarden/` folder)
 
@@ -34,7 +34,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | **HTTP routes** | `docs/API.md` |
 | **Shipped behavior → code** | `docs/FEATURES.md` |
 | **Subsystem → files** | `docs/CODEMAP.md` |
-| **Backlog / architecture table** | `docs/BUILD_PLAN.md` |
+| **Open engineering backlog (SOT)** | `docs/BACKLOG.md` |
+| **Architecture snapshot + shipped tranches history** | `docs/BUILD_PLAN.md` |
 | **Env vars (Vercel)** | `docs/VERCEL_ENV_VARS.md` |
 | **Players / GM / collab** | `docs/PLAYER_LAYER.md` |
 | **Optional WebSocket realtime (Redis + separate `npm run realtime` host)** | `docs/DEPLOY_VERCEL.md` §5.5, `docs/API.md` (Realtime), `docs/CODEMAP.md` |
@@ -48,7 +49,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | **Human / keys / infra** | `docs/FOLLOW_UP.md` |
 | **Historical product bible** | `docs/archive/vigil-master-plan-legacy.md` — stub: `docs/VIGIL_MASTER_PLAN.md` |
 
-Read **STRATEGY** for current-vs-target delta and **BUILD_PLAN** for backlog. **Do not** treat a single missing `.cursor/plans/*.plan.md` filename as SoT — use **LORE_ENGINE_ROADMAP** + **plans README** + **BUILD_PLAN**. The legacy master plan still describes **custom DOM canvas** (no tldraw), **boot-tier access** (not full user accounts), **MIT stack**, and phases **1–8** at a product level.
+Read **STRATEGY** for current-vs-target delta, **BACKLOG** for open work (SOT), and **BUILD_PLAN** for architecture + shipped history. **Do not** treat a single missing `.cursor/plans/*.plan.md` filename as SoT — use **LORE_ENGINE_ROADMAP** + **plans README** + **BACKLOG**. The legacy master plan still describes **custom DOM canvas** (no tldraw), **boot-tier access** (not full user accounts), **MIT stack**, and phases **1–8** at a product level.
 
 ## Documentation update checklist
 
@@ -56,7 +57,7 @@ When you change behavior or contracts:
 
 1. Update **`docs/API.md`** if any `app/api/**` route shape or env requirement changed.
 2. Update **`docs/FEATURES.md`** and/or **`docs/CODEMAP.md`** if user-visible behavior or primary file locations changed.
-3. Update **`docs/BUILD_PLAN.md`** if you close or add a tranche/backlog item.
+3. Update **`docs/BACKLOG.md`** when you **add** or **retire** an open engineering item (SOT for open work). Update **`docs/BUILD_PLAN.md`** Completed-tranches table when work **ships**.
 4. Update **`docs/VERCEL_ENV_VARS.md`** if a new env var ships (narrative deploy docs should **link** here, not duplicate the full matrix).
 5. Keep **`AGENTS.md`** “Current code reality” in sync for shell/bootstrap/camera/lore **only** when those subsystems change.
 6. The historical functional PRD lives under **`docs/archive/FUNCTIONAL_PRD_REBUILD.md`** (stub: **`docs/FUNCTIONAL_PRD_REBUILD.md`**). Update it only when intentionally revisiting that archived spec.

@@ -258,4 +258,4 @@ Each recommendation has a concrete file to edit and a reachable test seam (the a
 - Sort (folders/spaces), categorize (types/entity_meta), link (item_links / hgArch / prose) mapped.
 - Mismatches, gaps, optimizations called out with file-level pointers.
 - Open questions surfaced.
-- Product review of §7; resulting decisions folded into the `[BUILD_PLAN.md](./BUILD_PLAN.md)` backlog alongside the P0/P1 items chosen.
+- Product review of §7; resulting decisions folded into the `[BACKLOG.md](./BACKLOG.md)` open backlog alongside the P0/P1 items chosen.
