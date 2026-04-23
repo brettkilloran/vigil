@@ -142,6 +142,11 @@ export async function POST(
     const ck = normalizeCanonicalEntityKind(parsed.data.canonical_entity_kind);
     entityType = persistedEntityTypeFromCanonical(ck);
   }
+  if (entityType === "") {
+    entityType = null;
+  } else if (entityType) {
+    entityType = entityType.toLowerCase();
+  }
 
   if (isLoreCardPersistedEntityType(entityType) && t !== "note" && t !== "sticky") {
     return Response.json(
