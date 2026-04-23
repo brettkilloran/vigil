@@ -7370,6 +7370,13 @@ export function ArchitecturalCanvasApp({
         void (async () => {
           let merged: CanvasGraph | null = null;
           let bootstrapMaxZ: number | null = null;
+          // REVIEW_2026-04-22-2 H8: accumulate sync cursor + per-item updatedAt
+          // bumps locally and only commit them to the persistent refs after the
+          // stillCurrent() guard, so a superseded enterSpace never rewinds the
+          // active space's sync cursor or injects bootstrap updatedAt values
+          // for a space that is no longer active.
+          const pendingUpdatedAtBumps: Array<readonly [string, string]> = [];
+          let pendingCursorIso: string | null = null;
           try {
             if (persistNeonRef.current && isUuidLike(targetSpaceId)) {
               const data = await fetchBootstrap(targetSpaceId);
@@ -7382,18 +7389,24 @@ export function ArchitecturalCanvasApp({
                 if (!Number.isFinite(maxMs)) maxMs = 0;
                 for (const it of data.items) {
                   if (it.updatedAt) {
-                    itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
+                    pendingUpdatedAtBumps.push([it.id, it.updatedAt] as const);
                     const t = Date.parse(it.updatedAt);
                     if (Number.isFinite(t) && t > maxMs) maxMs = t;
                   }
                 }
-                syncCursorRef.current = new Date(maxMs).toISOString();
+                pendingCursorIso = new Date(maxMs).toISOString();
               }
             }
           } catch {
             /* ignore */
           }
           if (!stillCurrent()) return;
+          for (const [id, ua] of pendingUpdatedAtBumps) {
+            itemServerUpdatedAtRef.current.set(id, ua);
+          }
+          if (pendingCursorIso !== null) {
+            syncCursorRef.current = pendingCursorIso;
+          }
           applySpaceNavigation(merged, bootstrapMaxZ);
         })();
         return;
@@ -7407,6 +7420,11 @@ export function ArchitecturalCanvasApp({
 
         let merged: CanvasGraph | null = null;
         let bootstrapMaxZ: number | null = null;
+        // REVIEW_2026-04-22-2 H8: buffer sync-cursor + updatedAt mutations until
+        // after the stillCurrent() guard; otherwise a superseded enterSpace can
+        // rewind the now-active space's cursor or poison its updatedAt map.
+        const pendingUpdatedAtBumps: Array<readonly [string, string]> = [];
+        let pendingCursorIso: string | null = null;
         try {
           if (persistNeonRef.current && isUuidLike(targetSpaceId)) {
             const data = await fetchBootstrap(targetSpaceId);
@@ -7419,12 +7437,12 @@ export function ArchitecturalCanvasApp({
               if (!Number.isFinite(maxMs)) maxMs = 0;
               for (const it of data.items) {
                 if (it.updatedAt) {
-                  itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
+                  pendingUpdatedAtBumps.push([it.id, it.updatedAt] as const);
                   const t = Date.parse(it.updatedAt);
                   if (Number.isFinite(t) && t > maxMs) maxMs = t;
                 }
               }
-              syncCursorRef.current = new Date(maxMs).toISOString();
+              pendingCursorIso = new Date(maxMs).toISOString();
             }
           }
         } finally {
@@ -7433,6 +7451,12 @@ export function ArchitecturalCanvasApp({
           if (waitFadeOutEnd > 0) await sleep(waitFadeOutEnd);
 
           if (!stillCurrent()) return;
+          for (const [id, ua] of pendingUpdatedAtBumps) {
+            itemServerUpdatedAtRef.current.set(id, ua);
+          }
+          if (pendingCursorIso !== null) {
+            syncCursorRef.current = pendingCursorIso;
+          }
           applySpaceNavigation(merged, bootstrapMaxZ);
 
           const elapsedBeforeRelease = now() - tNav;
