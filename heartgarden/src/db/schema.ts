@@ -125,6 +125,7 @@ export const loreImportJobs = pgTable("lore_import_jobs", {
   progressTotal: integer("progress_total"),
   progressMessage: text("progress_message"),
   progressMeta: jsonb("progress_meta").$type<Record<string, unknown> | null>(),
+  progressEvents: jsonb("progress_events").$type<Record<string, unknown>[] | null>(),
   lastProgressAt: timestamp("last_progress_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),

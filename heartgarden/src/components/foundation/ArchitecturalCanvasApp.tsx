@@ -597,6 +597,114 @@ type LoreImportJobProgress = {
   updatedAt?: string | null;
 };
 
+type LoreImportJobEvent = {
+  ts?: string;
+  phase?: string;
+  kind: "phase_start" | "phase_end" | "llm_call" | "vault_search" | "warning" | "note";
+  durationMs?: number;
+  model?: string;
+  tokensIn?: number;
+  tokensOut?: number;
+  stopReason?: string;
+  responseSnippet?: string;
+  text?: string;
+  ref?: string;
+};
+
+function coerceOptionalProgressInt(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
+  if (typeof value === "string" && value.trim().length > 0) {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.trunc(n) : null;
+  }
+  return null;
+}
+
+function readProgressMetaNumber(meta: Record<string, unknown> | undefined, key: string): number | null {
+  if (!meta) return null;
+  const value = coerceOptionalProgressInt(meta[key]);
+  if (value === null) return null;
+  return value;
+}
+
+function formatEtaLabel(ms: number): string {
+  const totalSeconds = Math.max(0, Math.round(ms / 1000));
+  if (totalSeconds < 60) return `~${totalSeconds}s left (estimate)`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const remMinutes = minutes % 60;
+    return remMinutes > 0
+      ? `~${hours}h ${remMinutes}m left (estimate)`
+      : `~${hours}h left (estimate)`;
+  }
+  return seconds > 0
+    ? `~${minutes}m ${seconds}s left (estimate)`
+    : `~${minutes}m left (estimate)`;
+}
+
+function toPlanningStepLabel(phase: string, step?: number, total?: number): string | null {
+  if (!(typeof step === "number" && typeof total === "number" && total > 0)) return null;
+  if (phase === "merge") return `Merge batch ${step} of ${total}`;
+  if (phase === "vault_retrieval") return `Searching vault ${step} of ${total}`;
+  return `Step ${step} of ${total}`;
+}
+
+function normalizeLoreImportJobEvents(raw: unknown): LoreImportJobEvent[] {
+  if (!Array.isArray(raw)) return [];
+  const allowedKinds = new Set([
+    "phase_start",
+    "phase_end",
+    "llm_call",
+    "vault_search",
+    "warning",
+    "note",
+  ]);
+  return raw
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
+      const row = entry as Record<string, unknown>;
+      const kind = String(row.kind ?? "").trim();
+      if (!allowedKinds.has(kind)) return null;
+      const event: LoreImportJobEvent = {
+        kind: kind as LoreImportJobEvent["kind"],
+      };
+      const ts = String(row.ts ?? "").trim();
+      if (ts) event.ts = ts;
+      const phase = String(row.phase ?? "").trim();
+      if (phase) event.phase = phase;
+      const model = String(row.model ?? "").trim();
+      if (model) event.model = model;
+      const stopReason = String(row.stopReason ?? "").trim();
+      if (stopReason) event.stopReason = stopReason;
+      const text = String(row.text ?? "").trim();
+      if (text) event.text = text;
+      const ref = String(row.ref ?? "").trim();
+      if (ref) event.ref = ref;
+      const responseSnippet = String(row.responseSnippet ?? "").trim();
+      if (responseSnippet) event.responseSnippet = responseSnippet;
+      const durationMs = coerceOptionalProgressInt(row.durationMs);
+      if (durationMs !== null && durationMs >= 0) event.durationMs = durationMs;
+      const tokensIn = coerceOptionalProgressInt(row.tokensIn);
+      if (tokensIn !== null && tokensIn >= 0) event.tokensIn = tokensIn;
+      const tokensOut = coerceOptionalProgressInt(row.tokensOut);
+      if (tokensOut !== null && tokensOut >= 0) event.tokensOut = tokensOut;
+      return event;
+    })
+    .filter((event): event is LoreImportJobEvent => Boolean(event));
+}
+
+function formatDurationMs(ms?: number): string | null {
+  if (typeof ms !== "number" || !Number.isFinite(ms) || ms < 0) return null;
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  const seconds = ms / 1000;
+  if (seconds < 60) return `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remSeconds = Math.round(seconds % 60);
+  return `${minutes}m ${remSeconds}s`;
+}
+
 function toHumanPhaseLabel(phase?: string): string {
   const key = String(phase || "").trim().toLowerCase();
   if (!key) return "Starting…";
@@ -2517,8 +2625,11 @@ export function ArchitecturalCanvasApp({
   const [loreSmartPlanning, setLoreSmartPlanning] = useState(false);
   const [loreSmartPlanningJobId, setLoreSmartPlanningJobId] = useState<string | null>(null);
   const loreSmartPlanningAbortRef = useRef<AbortController | null>(null);
+  const loreSmartPlanningStartedAtRef = useRef<number | null>(null);
   const [loreSmartPlanningProgress, setLoreSmartPlanningProgress] =
     useState<LoreImportJobProgress | null>(null);
+  const [loreSmartPlanningEvents, setLoreSmartPlanningEvents] = useState<LoreImportJobEvent[]>([]);
+  const [loreSmartPlanningDetailsOpen, setLoreSmartPlanningDetailsOpen] = useState(false);
   const loreSmartPlanningUi = useMemo(() => {
     const progress = loreSmartPlanningProgress;
     const phase = String(progress?.phase ?? "").trim();
@@ -2535,12 +2646,68 @@ export function ArchitecturalCanvasApp({
         ? null
         : rawDetail;
     const failed = phase === "failed";
+    const stepLabel = toPlanningStepLabel(phase, progress?.step, progress?.total);
+    const meta =
+      progress?.meta && typeof progress.meta === "object"
+        ? (progress.meta as Record<string, unknown>)
+        : undefined;
+    const pipelinePercent = readProgressMetaNumber(meta, "pipelinePercent");
+    const subphaseRaw = typeof meta?.subphase === "string" ? meta.subphase.trim() : "";
+    const subphase = subphaseRaw.length > 0 ? subphaseRaw : null;
+    const findingsRaw =
+      meta?.findings && typeof meta.findings === "object"
+        ? (meta.findings as Record<string, unknown>)
+        : undefined;
+    const findings = findingsRaw
+      ? {
+          chunks: readProgressMetaNumber(findingsRaw, "chunks"),
+          folders: readProgressMetaNumber(findingsRaw, "folders"),
+          notes: readProgressMetaNumber(findingsRaw, "notes"),
+          candidates: readProgressMetaNumber(findingsRaw, "candidates"),
+          mergeProposals: readProgressMetaNumber(findingsRaw, "mergeProposals"),
+          contradictions: readProgressMetaNumber(findingsRaw, "contradictions"),
+          clarifications: readProgressMetaNumber(findingsRaw, "clarifications"),
+        }
+      : null;
+    const findingsSummary = findings
+      ? [
+          typeof findings.chunks === "number" ? `${findings.chunks} chunks` : null,
+          typeof findings.notes === "number" ? `${findings.notes} notes` : null,
+          typeof findings.folders === "number" ? `${findings.folders} folders` : null,
+          typeof findings.candidates === "number" ? `${findings.candidates} candidates` : null,
+          typeof findings.mergeProposals === "number"
+            ? `${findings.mergeProposals} merge proposals`
+            : null,
+          typeof findings.contradictions === "number"
+            ? `${findings.contradictions} contradictions`
+            : null,
+          typeof findings.clarifications === "number"
+            ? `${findings.clarifications} clarifications`
+            : null,
+        ]
+          .filter((token): token is string => Boolean(token))
+          .join(" · ")
+      : null;
+    const startedAt = loreSmartPlanningStartedAtRef.current;
+    const etaLabel =
+      !failed &&
+      typeof pipelinePercent === "number" &&
+      pipelinePercent > 5 &&
+      pipelinePercent < 95 &&
+      typeof startedAt === "number"
+        ? formatEtaLabel(((Date.now() - startedAt) / pipelinePercent) * (100 - pipelinePercent))
+        : null;
     return {
       phase,
       phaseLabel,
       detail,
       queueFailureHint,
       failed,
+      pipelinePercent,
+      stepLabel,
+      subphase,
+      findingsSummary: findingsSummary || null,
+      etaLabel,
     };
   }, [loreSmartPlanningProgress]);
   const [loreSmartIncludeSource, setLoreSmartIncludeSource] = useState(true);
@@ -2608,10 +2775,32 @@ export function ArchitecturalCanvasApp({
     setLoreSmartPlanningJobId(null);
     setLoreSmartPlanning(false);
     setLoreSmartPlanningProgress(null);
+    loreSmartPlanningStartedAtRef.current = null;
+    setLoreSmartPlanningEvents([]);
+    setLoreSmartPlanningDetailsOpen(false);
   }, [loreSmartPlanningJobId]);
   const [loreSmartPlanningCopyState, setLoreSmartPlanningCopyState] = useState<
     "idle" | "copied" | "failed"
   >("idle");
+  const loreSmartPlanningEventGroups = useMemo(() => {
+    const groups: Array<{ phase: string; label: string; events: LoreImportJobEvent[] }> = [];
+    for (const event of loreSmartPlanningEvents) {
+      const phase = String(event.phase ?? "").trim() || "general";
+      const label = phase === "general" ? "General" : toHumanPhaseLabel(phase);
+      const existing = groups.find((g) => g.phase === phase);
+      if (existing) {
+        existing.events.push(event);
+      } else {
+        groups.push({ phase, label, events: [event] });
+      }
+    }
+    return groups;
+  }, [loreSmartPlanningEvents]);
+  useEffect(() => {
+    if (loreSmartPlanningUi.failed) {
+      setLoreSmartPlanningDetailsOpen(true);
+    }
+  }, [loreSmartPlanningUi.failed]);
   useEffect(() => {
     if (loreSmartPlanningCopyState === "idle") return;
     const t = setTimeout(() => setLoreSmartPlanningCopyState("idle"), 1800);
@@ -2783,6 +2972,9 @@ export function ArchitecturalCanvasApp({
     setLoreSmartPlanningJobId(null);
     setLoreSmartPlanning(false);
     setLoreSmartPlanningProgress(null);
+    loreSmartPlanningStartedAtRef.current = null;
+    setLoreSmartPlanningEvents([]);
+    setLoreSmartPlanningDetailsOpen(false);
     setLoreSmartPlanningCopyState("idle");
     requestAnimationFrame(() => {
       beginLoreImportFilePick();
@@ -2793,6 +2985,9 @@ export function ArchitecturalCanvasApp({
     setLoreSmartPlanningJobId(null);
     setLoreSmartPlanning(false);
     setLoreSmartPlanningProgress(null);
+    loreSmartPlanningStartedAtRef.current = null;
+    setLoreSmartPlanningEvents([]);
+    setLoreSmartPlanningDetailsOpen(false);
     setLoreSmartPlanningCopyState("idle");
   }, []);
   const [galleryNodeId, setGalleryNodeId] = useState<string | null>(null);
@@ -8258,6 +8453,9 @@ export function ArchitecturalCanvasApp({
         setLoreSmartManualQuestionId(null);
         setLoreSmartIncludeSource(true);
         setLoreSmartPlanning(true);
+        loreSmartPlanningStartedAtRef.current = Date.now();
+        setLoreSmartPlanningEvents([]);
+        setLoreSmartPlanningDetailsOpen(false);
         setLoreSmartPlanningProgress({ phase: "queued" });
         const applySmartPlanToUi = (plan: LoreImportPlan) => {
           const normalizedPlan = filterAutoResolvedClarifications(plan);
@@ -8428,6 +8626,7 @@ export function ArchitecturalCanvasApp({
                 lastPhase?: string;
                 attemptId?: string;
                 progress?: LoreImportJobProgress;
+                events?: unknown[];
               };
               if (!poll.ok || !st.ok) {
                 reportPlanningFailure(
@@ -8466,6 +8665,9 @@ export function ArchitecturalCanvasApp({
                   stablePhaseCount = 0;
                   lastPhase = phase;
                 }
+              }
+              if (Array.isArray(st.events)) {
+                setLoreSmartPlanningEvents(normalizeLoreImportJobEvents(st.events));
               }
               if (st.status === "ready" && st.plan) {
                 planReady = true;
@@ -8551,6 +8753,9 @@ export function ArchitecturalCanvasApp({
           if (!planningFailed) {
             setLoreSmartPlanning(false);
             setLoreSmartPlanningProgress(null);
+            loreSmartPlanningStartedAtRef.current = null;
+            setLoreSmartPlanningEvents([]);
+            setLoreSmartPlanningDetailsOpen(false);
           }
         }
         return;
@@ -12772,6 +12977,56 @@ export function ArchitecturalCanvasApp({
                       <pre>{formatLoreImportFailureReport(loreImportFailure)}</pre>
                     </details>
                   ) : null}
+                  {loreSmartPlanningEventGroups.length > 0 ? (
+                    <details
+                      className={styles.smartImportPlanningDetails}
+                      open={loreSmartPlanningDetailsOpen}
+                      onToggle={(event) => {
+                        setLoreSmartPlanningDetailsOpen(
+                          (event.currentTarget as HTMLDetailsElement).open,
+                        );
+                      }}
+                    >
+                      <summary>Timeline details</summary>
+                      <div className={styles.smartImportPlanningTimeline}>
+                        {loreSmartPlanningEventGroups.map((group) => (
+                          <div key={`planning-failed-group-${group.phase}`} className={styles.smartImportPlanningPhaseGroup}>
+                            <p className={styles.smartImportPlanningPhaseGroupTitle}>{group.label}</p>
+                            <ul className={styles.smartImportPlanningTimelineList}>
+                              {group.events.map((event, idx) => (
+                                <li key={`${group.phase}-failed-${idx}`} className={styles.smartImportPlanningTimelineItem}>
+                                  <p className={styles.smartImportPlanningTimelineRow}>
+                                    <span>{event.text || event.kind.replace(/_/g, " ")}</span>
+                                    {formatDurationMs(event.durationMs) ? (
+                                      <span>{formatDurationMs(event.durationMs)}</span>
+                                    ) : null}
+                                  </p>
+                                  {event.kind === "llm_call" ? (
+                                    <p className={styles.smartImportPlanningTimelineMeta}>
+                                      {event.model ? `${event.model} · ` : ""}
+                                      {typeof event.tokensIn === "number"
+                                        ? `${event.tokensIn} in`
+                                        : "tokens n/a"}
+                                      {typeof event.tokensOut === "number"
+                                        ? ` · ${event.tokensOut} out`
+                                        : ""}
+                                      {event.stopReason ? ` · ${event.stopReason}` : ""}
+                                    </p>
+                                  ) : null}
+                                  {event.kind === "llm_call" && event.responseSnippet ? (
+                                    <details className={styles.smartImportPlanningTimelineSnippet}>
+                                      <summary>Model output snippet</summary>
+                                      <pre>{event.responseSnippet}</pre>
+                                    </details>
+                                  ) : null}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  ) : null}
                   <div className={styles.smartImportPlanningActionsSplit}>
                     <Button
                       size="sm"
@@ -12815,13 +13070,99 @@ export function ArchitecturalCanvasApp({
                     <span className={styles.smartImportPlanningSpinnerRing} />
                   </div>
                   <p className={styles.smartImportPlanningPhase}>{loreSmartPlanningUi.phaseLabel}</p>
+                  {typeof loreSmartPlanningUi.pipelinePercent === "number" ? (
+                    <div
+                      className={styles.smartImportPlanningProgressBar}
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={Math.max(
+                        0,
+                        Math.min(100, Math.trunc(loreSmartPlanningUi.pipelinePercent)),
+                      )}
+                      aria-label="Import planning progress"
+                    >
+                      <span
+                        style={{
+                          width: `${Math.max(
+                            0,
+                            Math.min(100, Math.trunc(loreSmartPlanningUi.pipelinePercent)),
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                  ) : null}
+                  {loreSmartPlanningUi.stepLabel ? (
+                    <p className={styles.smartImportPlanningStep}>{loreSmartPlanningUi.stepLabel}</p>
+                  ) : null}
+                  {loreSmartPlanningUi.subphase ? (
+                    <p className={styles.smartImportPlanningSubphase}>{loreSmartPlanningUi.subphase}</p>
+                  ) : null}
                   {loreSmartPlanningUi.detail ? (
                     <p className={styles.smartImportPlanningDetail}>{loreSmartPlanningUi.detail}</p>
+                  ) : null}
+                  {loreSmartPlanningUi.findingsSummary ? (
+                    <p className={styles.smartImportPlanningFindings}>
+                      {loreSmartPlanningUi.findingsSummary}
+                    </p>
+                  ) : null}
+                  {loreSmartPlanningUi.etaLabel ? (
+                    <p className={styles.smartImportPlanningEta}>{loreSmartPlanningUi.etaLabel}</p>
                   ) : null}
                   {loreSmartPlanningUi.queueFailureHint ? (
                     <p className={styles.smartImportPlanningWarning}>
                       {loreSmartPlanningUi.queueFailureHint}
                     </p>
+                  ) : null}
+                  {loreSmartPlanningEventGroups.length > 0 ? (
+                    <details
+                      className={styles.smartImportPlanningDetails}
+                      open={loreSmartPlanningDetailsOpen}
+                      onToggle={(event) => {
+                        setLoreSmartPlanningDetailsOpen(
+                          (event.currentTarget as HTMLDetailsElement).open,
+                        );
+                      }}
+                    >
+                      <summary>Show details</summary>
+                      <div className={styles.smartImportPlanningTimeline}>
+                        {loreSmartPlanningEventGroups.map((group) => (
+                          <div key={`planning-group-${group.phase}`} className={styles.smartImportPlanningPhaseGroup}>
+                            <p className={styles.smartImportPlanningPhaseGroupTitle}>{group.label}</p>
+                            <ul className={styles.smartImportPlanningTimelineList}>
+                              {group.events.map((event, idx) => (
+                                <li key={`${group.phase}-${idx}`} className={styles.smartImportPlanningTimelineItem}>
+                                  <p className={styles.smartImportPlanningTimelineRow}>
+                                    <span>{event.text || event.kind.replace(/_/g, " ")}</span>
+                                    {formatDurationMs(event.durationMs) ? (
+                                      <span>{formatDurationMs(event.durationMs)}</span>
+                                    ) : null}
+                                  </p>
+                                  {event.kind === "llm_call" ? (
+                                    <p className={styles.smartImportPlanningTimelineMeta}>
+                                      {event.model ? `${event.model} · ` : ""}
+                                      {typeof event.tokensIn === "number"
+                                        ? `${event.tokensIn} in`
+                                        : "tokens n/a"}
+                                      {typeof event.tokensOut === "number"
+                                        ? ` · ${event.tokensOut} out`
+                                        : ""}
+                                      {event.stopReason ? ` · ${event.stopReason}` : ""}
+                                    </p>
+                                  ) : null}
+                                  {event.kind === "llm_call" && event.responseSnippet ? (
+                                    <details className={styles.smartImportPlanningTimelineSnippet}>
+                                      <summary>Model output snippet</summary>
+                                      <pre>{event.responseSnippet}</pre>
+                                    </details>
+                                  ) : null}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
                   ) : null}
                   <p className={styles.smartImportPlanningHint}>
                     Keep this tab open — most imports finish in a minute or two.

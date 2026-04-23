@@ -15,6 +15,28 @@ import type { VigilDb } from "@/src/lib/spaces";
 /** Re-queue jobs stuck in `processing` after a crash or serverless timeout. */
 export const STALE_LORE_IMPORT_PROCESSING_MS = 15 * 60 * 1000;
 const LORE_IMPORT_JOB_CANCELLED_CODE = "lore_import_job_cancelled";
+const LORE_IMPORT_EVENT_CAP = 500;
+const LORE_IMPORT_RESPONSE_SNIPPET_MAX = 2_000;
+
+export type LoreImportJobEvent = {
+  ts?: string;
+  phase?: string;
+  kind:
+    | "phase_start"
+    | "phase_end"
+    | "llm_call"
+    | "vault_search"
+    | "warning"
+    | "note";
+  durationMs?: number;
+  model?: string;
+  tokensIn?: number | null;
+  tokensOut?: number | null;
+  stopReason?: string | null;
+  responseSnippet?: string;
+  text?: string;
+  ref?: string;
+};
 
 class LoreImportJobCancelledError extends Error {
   code = LORE_IMPORT_JOB_CANCELLED_CODE;
@@ -34,15 +56,127 @@ function isMissingProgressColumnsError(error: unknown): boolean {
   const mentionsProgressColumn =
     column.startsWith("progress_") ||
     column === "last_progress_at" ||
+    column === "progress_events" ||
     column === "user_context" ||
     message.includes("progress_") ||
     message.includes("last_progress_at") ||
+    message.includes("progress_events") ||
     message.includes("user_context");
   if (!mentionsProgressColumn) return false;
   if (!code) return true;
   if (code === "42703") return true;
   if (code === "42P01" && message.includes("lore_import_jobs")) return true;
   return false;
+}
+
+function coerceOptionalNumber(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  return Math.trunc(value);
+}
+
+function clipEventText(value: unknown, max: number): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const text = value.trim();
+  if (!text) return undefined;
+  if (text.length <= max) return text;
+  return `${text.slice(0, max)}...`;
+}
+
+function normalizeLoreImportJobEvent(event: LoreImportJobEvent): LoreImportJobEvent {
+  return {
+    ts: clipEventText(event.ts, 64) ?? new Date().toISOString(),
+    phase: clipEventText(event.phase, 64),
+    kind: event.kind,
+    durationMs: coerceOptionalNumber(event.durationMs),
+    model: clipEventText(event.model, 128),
+    tokensIn:
+      typeof event.tokensIn === "number" && Number.isFinite(event.tokensIn)
+        ? Math.max(0, Math.trunc(event.tokensIn))
+        : null,
+    tokensOut:
+      typeof event.tokensOut === "number" && Number.isFinite(event.tokensOut)
+        ? Math.max(0, Math.trunc(event.tokensOut))
+        : null,
+    stopReason: clipEventText(event.stopReason, 64) ?? null,
+    responseSnippet: clipEventText(event.responseSnippet, LORE_IMPORT_RESPONSE_SNIPPET_MAX),
+    text: clipEventText(event.text, 280),
+    ref: clipEventText(event.ref, 128),
+  };
+}
+
+function trimLoreImportJobEvents(events: LoreImportJobEvent[]): LoreImportJobEvent[] {
+  if (events.length <= LORE_IMPORT_EVENT_CAP) return events;
+  const removableKinds = new Set(["note", "phase_start"]);
+  const removableIndexes: number[] = [];
+  for (let i = 0; i < events.length; i += 1) {
+    if (removableKinds.has(events[i]?.kind ?? "")) {
+      removableIndexes.push(i);
+    }
+  }
+  const toRemove = new Set<number>();
+  let excess = events.length - LORE_IMPORT_EVENT_CAP;
+  for (const idx of removableIndexes) {
+    if (excess <= 0) break;
+    toRemove.add(idx);
+    excess -= 1;
+  }
+  if (excess > 0) {
+    for (let i = 0; i < events.length && excess > 0; i += 1) {
+      if (toRemove.has(i)) continue;
+      toRemove.add(i);
+      excess -= 1;
+    }
+  }
+  const trimmed = events.filter((_, idx) => !toRemove.has(idx));
+  if (trimmed.length <= LORE_IMPORT_EVENT_CAP) return trimmed;
+  return trimmed.slice(trimmed.length - LORE_IMPORT_EVENT_CAP);
+}
+
+export async function appendLoreImportJobEvent(
+  db: VigilDb,
+  jobId: string,
+  event: LoreImportJobEvent,
+): Promise<void> {
+  if (typeof (db as { execute?: unknown }).execute !== "function") return;
+  const now = new Date();
+  const normalized = normalizeLoreImportJobEvent(event);
+  const eventJson = JSON.stringify(normalized);
+  try {
+    await db.execute(sql`
+      update "lore_import_jobs"
+      set
+        "progress_events" = coalesce("progress_events", '[]'::jsonb) || jsonb_build_array(${eventJson}::jsonb),
+        "updated_at" = ${now}
+      where "id" = ${jobId}
+    `);
+    const rows = await db.execute(sql`
+      select "progress_events"
+      from "lore_import_jobs"
+      where "id" = ${jobId}
+      limit 1
+    `);
+    const raw =
+      (rows as { rows?: Array<{ progress_events?: unknown }> }).rows?.[0]?.progress_events ?? [];
+    if (!Array.isArray(raw)) return;
+    const normalizedEvents = raw
+      .map((entry) => {
+        if (!entry || typeof entry !== "object") return null;
+        return normalizeLoreImportJobEvent(entry as LoreImportJobEvent);
+      })
+      .filter((entry): entry is LoreImportJobEvent => Boolean(entry));
+    const trimmed = trimLoreImportJobEvents(normalizedEvents);
+    if (trimmed.length === normalizedEvents.length) return;
+    const trimmedJson = JSON.stringify(trimmed);
+    await db.execute(sql`
+      update "lore_import_jobs"
+      set
+        "progress_events" = ${trimmedJson}::jsonb,
+        "updated_at" = ${now}
+      where "id" = ${jobId}
+    `);
+  } catch (error) {
+    if (!isMissingProgressColumnsError(error)) throw error;
+  }
 }
 
 async function updateLoreImportJobProgress(
@@ -207,6 +341,10 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
         await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
         lastPhase = progress.phase || lastPhase;
         await updateLoreImportJobProgress(db as VigilDb, jobId, progress);
+      },
+      onEvent: async (event) => {
+        await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
+        await appendLoreImportJobEvent(db as VigilDb, jobId, event);
       },
     });
 

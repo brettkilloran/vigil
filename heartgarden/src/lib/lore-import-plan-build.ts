@@ -6,6 +6,7 @@ import {
   attachBodiesToOutline,
   ensureOutlineHasFallbackNote,
   renderStructuredBodyPlainText,
+  type LoreImportLlmCallEvent,
   runLoreImportClarifyLlm,
   runLoreImportMergeLlmBatched,
   runLoreImportOutlineLlm,
@@ -53,6 +54,39 @@ type OutlineNoteInternal = {
   bodyText: string;
 };
 
+export type LoreImportPlanEvent = {
+  phase?: string;
+  kind:
+    | "phase_start"
+    | "phase_end"
+    | "llm_call"
+    | "vault_search"
+    | "warning"
+    | "note";
+  durationMs?: number;
+  model?: string;
+  tokensIn?: number | null;
+  tokensOut?: number | null;
+  stopReason?: string | null;
+  responseSnippet?: string;
+  text?: string;
+  ref?: string;
+};
+
+type LoreImportFindings = {
+  chunks: number;
+  folders: number;
+  notes: number;
+  candidates: number;
+  mergeProposals: number;
+  contradictions: number;
+  clarifications: number;
+};
+
+type LoreImportPlanEventReporter = (
+  event: LoreImportPlanEvent,
+) => void | Promise<void>;
+
 export async function buildLoreImportPlan(args: {
   db: VigilDb;
   apiKey: string;
@@ -62,7 +96,70 @@ export async function buildLoreImportPlan(args: {
   fileName?: string;
   userContext?: LoreImportUserContext;
   onProgress?: LoreImportProgressReporter;
+  onEvent?: LoreImportPlanEventReporter;
 }): Promise<LoreImportPlan> {
+  let currentPhase: string | null = null;
+  let currentPhaseStartedAt = 0;
+  let findings: LoreImportFindings = {
+    chunks: 0,
+    folders: 0,
+    notes: 0,
+    candidates: 0,
+    mergeProposals: 0,
+    contradictions: 0,
+    clarifications: 0,
+  };
+  const emitEvent = async (event: LoreImportPlanEvent): Promise<void> => {
+    await args.onEvent?.(event);
+  };
+  const beginPhaseIfNeeded = async (nextPhase: string): Promise<void> => {
+    if (!nextPhase) return;
+    if (currentPhase === nextPhase) return;
+    const now = Date.now();
+    if (currentPhase) {
+      await emitEvent({
+        kind: "phase_end",
+        phase: currentPhase,
+        durationMs: Math.max(0, now - currentPhaseStartedAt),
+        text: `${currentPhase} completed`,
+      });
+    }
+    currentPhase = nextPhase;
+    currentPhaseStartedAt = now;
+    await emitEvent({
+      kind: "phase_start",
+      phase: nextPhase,
+      text: `${nextPhase} started`,
+    });
+  };
+  const flushCurrentPhase = async (): Promise<void> => {
+    if (!currentPhase) return;
+    const now = Date.now();
+    await emitEvent({
+      kind: "phase_end",
+      phase: currentPhase,
+      durationMs: Math.max(0, now - currentPhaseStartedAt),
+      text: `${currentPhase} completed`,
+    });
+    currentPhase = null;
+    currentPhaseStartedAt = 0;
+  };
+  const emitLlmCall = async (
+    event: LoreImportLlmCallEvent,
+    phase: string,
+  ): Promise<void> => {
+    await emitEvent({
+      kind: "llm_call",
+      phase,
+      durationMs: event.durationMs,
+      model: event.model,
+      tokensIn: event.inputTokens ?? null,
+      tokensOut: event.outputTokens ?? null,
+      stopReason: event.stopReason ?? null,
+      responseSnippet: event.responseSnippet,
+      text: event.label,
+    });
+  };
   const reportProgress = async (
     phase: string,
     message: string,
@@ -73,6 +170,7 @@ export async function buildLoreImportPlan(args: {
       meta?: Record<string, unknown>;
     },
   ) => {
+    await beginPhaseIfNeeded(phase);
     const pipelinePercent =
       computeLoreImportPipelinePercent(phase, {
         step: detail?.step,
@@ -84,7 +182,7 @@ export async function buildLoreImportPlan(args: {
       message,
       step: detail?.step,
       total: detail?.total,
-      meta: { ...detail?.meta, pipelinePercent },
+      meta: { ...detail?.meta, pipelinePercent, findings },
     });
   };
   await reportProgress("chunking", "Splitting source text into import chunks", {
@@ -93,6 +191,7 @@ export async function buildLoreImportPlan(args: {
   const chunks = chunkSourceText(args.fullText);
   await reportProgress("outline", "Generating initial folder/note outline", {
     phaseFraction: 0.12,
+    meta: { subphase: "drafting" },
   });
   const outline = await runLoreImportOutlineLlm(
     args.apiKey,
@@ -100,12 +199,42 @@ export async function buildLoreImportPlan(args: {
     chunks,
     args.fullText,
     args.userContext,
+    async (event) => {
+      await emitLlmCall(event, "outline");
+    },
   );
   await reportProgress("outline", "Outline generated; attaching chunk-backed note bodies", {
     phaseFraction: 0.92,
+    meta: { subphase: "parsing" },
+  });
+  await reportProgress("outline", "Attaching chunk-backed note bodies", {
+    phaseFraction: 0.96,
+    meta: { subphase: "attaching_bodies" },
   });
   ensureOutlineHasFallbackNote(outline, chunks);
   const chunkDiagnostics = attachBodiesToOutline(outline, chunks);
+  findings = {
+    ...findings,
+    chunks: chunks.length,
+    folders: outline.folders.length,
+    notes: outline.notes.length,
+  };
+  if (chunkDiagnostics.unassignedChunkIds.length > 0) {
+    await emitEvent({
+      kind: "warning",
+      phase: "outline",
+      text: `Unassigned chunks detected (${chunkDiagnostics.unassignedChunkIds.length})`,
+      ref: chunkDiagnostics.unassignedChunkIds[0],
+    });
+  }
+  if (chunkDiagnostics.noteClientIdsWithoutChunks.length > 0) {
+    await emitEvent({
+      kind: "warning",
+      phase: "outline",
+      text: `Notes without chunk assignments (${chunkDiagnostics.noteClientIdsWithoutChunks.length})`,
+      ref: chunkDiagnostics.noteClientIdsWithoutChunks[0],
+    });
+  }
   const locationTopFieldTrimWarnings: string[] = [];
 
   const notesInternal: OutlineNoteInternal[] = outline.notes.map((n) => ({
@@ -161,6 +290,7 @@ export async function buildLoreImportPlan(args: {
       step: retrievalStep,
       total: retrievalTotal,
     });
+    const retrievalStartedAt = Date.now();
     const slice = notesInternal.slice(i, i + VAULT_SEARCH_CONCURRENCY);
     const results = await Promise.all(
       slice.map(async (n) => {
@@ -188,6 +318,19 @@ export async function buildLoreImportPlan(args: {
     for (const r of results) {
       candidatesByNoteClientId[r.clientId] = r.rows;
     }
+    findings = {
+      ...findings,
+      candidates: Object.values(candidatesByNoteClientId).reduce(
+        (sum, rows) => sum + rows.length,
+        0,
+      ),
+    };
+    await emitEvent({
+      kind: "vault_search",
+      phase: "vault_retrieval",
+      durationMs: Math.max(0, Date.now() - retrievalStartedAt),
+      text: `Vault retrieval batch ${retrievalStep} of ${retrievalTotal}`,
+    });
   }
 
   const mergeInput = notesInternal.map((n) => ({
@@ -198,6 +341,7 @@ export async function buildLoreImportPlan(args: {
   }));
   await reportProgress("merge", "Comparing import notes with candidate cards", {
     phaseFraction: 0.08,
+    meta: { subphase: "candidate_match" },
   });
 
   const { mergeProposals: rawMerges, contradictions: rawContra } =
@@ -207,7 +351,16 @@ export async function buildLoreImportPlan(args: {
       mergeInput,
       candidatesByNoteClientId,
       async (step, total) => {
-        await reportProgress("merge", "Running merge analysis batches", { step, total });
+        await reportProgress("merge", "Running merge analysis batches", {
+          step,
+          total,
+          meta: {
+            subphase: `batch ${step} of ${total}`,
+          },
+        });
+      },
+      async (event) => {
+        await emitLlmCall(event, "merge");
       },
     );
 
@@ -235,6 +388,11 @@ export async function buildLoreImportPlan(args: {
     summary: c.summary,
     details: c.details,
   }));
+  findings = {
+    ...findings,
+    mergeProposals: mergeProposals.length,
+    contradictions: contradictions.length,
+  };
 
   const kindByClientId = new Map(
     notesInternal.map((n) => [n.clientId, n.canonicalEntityKind]),
@@ -282,6 +440,27 @@ export async function buildLoreImportPlan(args: {
     })),
     shapedOutlineLinks,
   );
+  for (const warning of locationTopFieldTrimWarnings) {
+    await emitEvent({
+      kind: "warning",
+      phase: "outline",
+      text: warning,
+    });
+  }
+  for (const warning of coercionWarnings) {
+    await emitEvent({
+      kind: "warning",
+      phase: "merge",
+      text: warning,
+    });
+  }
+  for (const warning of linkWarnings) {
+    await emitEvent({
+      kind: "warning",
+      phase: "merge",
+      text: warning,
+    });
+  }
 
   // Group cross-space drafts by the source note so we can attach mention arrays + inject
   // `[[Title]]` markers into `bodyText`. The apply path is responsible for resolving
@@ -360,6 +539,9 @@ export async function buildLoreImportPlan(args: {
     args.apiKey,
     args.model,
     clarifyPayload,
+    async (event) => {
+      await emitLlmCall(event, "clarify");
+    },
   );
   await reportProgress("clarify", "Consolidating review questions", { phaseFraction: 0.95 });
   let clarifications = normalizeClarificationsFromLlm(clarifyRaw);
@@ -370,6 +552,10 @@ export async function buildLoreImportPlan(args: {
   );
   clarifications = capClarificationList(clarifications);
   clarifications = withoutLinkSemanticsClarifications(clarifications);
+  findings = {
+    ...findings,
+    clarifications: clarifications.length,
+  };
 
   const planRaw: LoreImportPlan = {
     importBatchId: args.importBatchId,
@@ -435,8 +621,10 @@ export async function buildLoreImportPlan(args: {
 
   const parsed = loreImportPlanSchema.safeParse(planRaw);
   if (!parsed.success) {
+    await flushCurrentPhase();
     throw new Error(`Plan validation failed: ${parsed.error.message}`);
   }
   await reportProgress("finalize", "Finalizing validated import plan", { phaseFraction: 1 });
+  await flushCurrentPhase();
   return parsed.data;
 }

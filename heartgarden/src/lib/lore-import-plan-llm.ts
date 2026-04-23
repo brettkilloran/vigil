@@ -25,6 +25,41 @@ const CLARIFY_USER_JSON_MAX = 420_000;
 const IMPORT_LINK_TYPE_ENUM = CANONICAL_RELATIONSHIP_LINK_TYPES.map((t) => `"${t}"`).join("|");
 const IMPORT_LINK_TYPE_LIST = CANONICAL_RELATIONSHIP_LINK_TYPES.join(", ");
 const IMPORT_LINK_TYPE_GLOSSARY = connectionKindsPromptGlossary();
+const LORE_IMPORT_RESPONSE_SNIPPET_MAX = 2_000;
+
+export type LoreImportLlmCallEvent = {
+  label: string;
+  model: string;
+  durationMs?: number;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  stopReason?: string | null;
+  responseSnippet?: string;
+};
+
+type LoreImportLlmCallReporter = (
+  event: LoreImportLlmCallEvent,
+) => void | Promise<void>;
+
+function coerceOptionalNumber(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return Math.trunc(value);
+}
+
+function clipResponseSnippet(text: string): string | undefined {
+  const normalized = String(text ?? "").trim();
+  if (!normalized) return undefined;
+  if (normalized.length <= LORE_IMPORT_RESPONSE_SNIPPET_MAX) return normalized;
+  return `${normalized.slice(0, LORE_IMPORT_RESPONSE_SNIPPET_MAX)}...`;
+}
+
+async function emitLlmCall(
+  onLlmCall: LoreImportLlmCallReporter | undefined,
+  event: LoreImportLlmCallEvent,
+): Promise<void> {
+  if (!onLlmCall) return;
+  await onLlmCall(event);
+}
 
 const OUTLINE_SYSTEM = `You structure TTRPG / worldbuilding documents for a canvas notes app.
 
@@ -326,6 +361,7 @@ export async function runLoreImportOutlineLlm(
   chunks: SourceTextChunk[],
   sourceSample: string,
   userContext?: LoreImportUserContext,
+  onLlmCall?: LoreImportLlmCallReporter,
 ): Promise<OutlineLlmResult> {
   const chunkList = buildOutlineChunkListPayload(chunks);
   const userIntentBlocks: string[] = [];
@@ -349,6 +385,16 @@ export async function runLoreImportOutlineLlm(
     },
     { label: "lore.import.outline", expectJson: true },
   );
+  const usage = (res.message as unknown as { usage?: Record<string, unknown> }).usage ?? {};
+  await emitLlmCall(onLlmCall, {
+    label: "lore.import.outline",
+    model,
+    durationMs: coerceOptionalNumber(res.elapsedMs) ?? undefined,
+    inputTokens: coerceOptionalNumber(usage.input_tokens),
+    outputTokens: coerceOptionalNumber(usage.output_tokens),
+    stopReason: res.stopReason ?? null,
+    responseSnippet: clipResponseSnippet(res.text),
+  });
   const jsonStr = res.jsonText;
   if (!jsonStr) {
     return { folders: [], notes: [], links: [] };
@@ -629,6 +675,7 @@ export async function runLoreImportMergeLlm(
   model: string,
   notes: { clientId: string; title: string; summary: string; bodyPreview: string }[],
   candidatesByNoteClientId: Record<string, CandidateRow[]>,
+  onLlmCall?: LoreImportLlmCallReporter,
 ): Promise<{
   mergeProposals: {
     noteClientId: string;
@@ -657,6 +704,16 @@ export async function runLoreImportMergeLlm(
     },
     { label: "lore.import.merge", expectJson: true },
   );
+  const usage = (res.message as unknown as { usage?: Record<string, unknown> }).usage ?? {};
+  await emitLlmCall(onLlmCall, {
+    label: "lore.import.merge",
+    model,
+    durationMs: coerceOptionalNumber(res.elapsedMs) ?? undefined,
+    inputTokens: coerceOptionalNumber(usage.input_tokens),
+    outputTokens: coerceOptionalNumber(usage.output_tokens),
+    stopReason: res.stopReason ?? null,
+    responseSnippet: clipResponseSnippet(res.text),
+  });
   const jsonStr = res.jsonText;
   if (!jsonStr) {
     return { mergeProposals: [], contradictions: [] };
@@ -725,6 +782,7 @@ export async function runLoreImportMergeLlmBatched(
   }[],
   candidatesByNoteClientId: Record<string, CandidateRow[]>,
   onBatchProgress?: (step: number, total: number) => void | Promise<void>,
+  onLlmCall?: LoreImportLlmCallReporter,
 ): Promise<{
   mergeProposals: {
     noteClientId: string;
@@ -756,7 +814,7 @@ export async function runLoreImportMergeLlmBatched(
     for (const n of batch) {
       cand[n.clientId] = candidatesByNoteClientId[n.clientId] ?? [];
     }
-    const r = await runLoreImportMergeLlm(apiKey, model, batch, cand);
+    const r = await runLoreImportMergeLlm(apiKey, model, batch, cand, onLlmCall);
     mergeProposals.push(...r.mergeProposals);
     contradictions.push(...r.contradictions);
   }
@@ -805,6 +863,7 @@ export async function runLoreImportClarifyLlm(
   apiKey: string,
   model: string,
   context: LoreImportClarifyContext,
+  onLlmCall?: LoreImportLlmCallReporter,
 ): Promise<unknown[]> {
   const user = `IMPORT PLAN CONTEXT (JSON):\n${JSON.stringify(context).slice(0, CLARIFY_USER_JSON_MAX)}`;
   const res = await callAnthropic(
@@ -816,6 +875,16 @@ export async function runLoreImportClarifyLlm(
     },
     { label: "lore.import.clarify", expectJson: true },
   );
+  const usage = (res.message as unknown as { usage?: Record<string, unknown> }).usage ?? {};
+  await emitLlmCall(onLlmCall, {
+    label: "lore.import.clarify",
+    model,
+    durationMs: coerceOptionalNumber(res.elapsedMs) ?? undefined,
+    inputTokens: coerceOptionalNumber(usage.input_tokens),
+    outputTokens: coerceOptionalNumber(usage.output_tokens),
+    stopReason: res.stopReason ?? null,
+    responseSnippet: clipResponseSnippet(res.text),
+  });
   const jsonStr = res.jsonText;
   if (!jsonStr) return [];
   try {

@@ -3560,6 +3560,58 @@
   color: var(--sem-text-muted);
 }
 
+.smartImportPlanningProgressBar {
+  margin: 10px 0 0;
+  width: min(320px, 100%);
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 80%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 8%, var(--sys-color-neutral-900) 92%);
+  overflow: hidden;
+}
+
+.smartImportPlanningProgressBar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--sys-color-primary-500) 75%, var(--sys-color-primary-300) 25%),
+    color-mix(in oklch, var(--sys-color-primary-400) 82%, var(--sys-color-primary-200) 18%)
+  );
+  transition: width 220ms ease;
+}
+
+.smartImportPlanningStep {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: color-mix(in oklch, var(--sem-text-muted) 82%, var(--sem-text-primary) 18%);
+}
+
+.smartImportPlanningSubphase {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  text-transform: capitalize;
+  color: color-mix(in oklch, var(--sem-text-muted) 76%, var(--sem-text-primary) 24%);
+}
+
+.smartImportPlanningFindings {
+  margin: 8px 0 0;
+  width: 100%;
+  font-size: 11px;
+  line-height: 1.45;
+  color: color-mix(in oklch, var(--sem-text-muted) 80%, var(--sem-text-primary) 20%);
+}
+
+.smartImportPlanningEta {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: color-mix(in oklch, var(--sys-color-primary-300) 70%, var(--sem-text-primary) 30%);
+}
+
 .smartImportPlanningWarning {
   margin: 14px 0 0;
   width: 100%;
@@ -3579,6 +3631,83 @@
   font-size: 12px;
   line-height: 1.5;
   color: color-mix(in oklch, var(--sem-text-muted) 88%, var(--sem-text-primary) 12%);
+}
+
+.smartImportPlanningTimeline {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.smartImportPlanningPhaseGroup {
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 76%, transparent);
+  background: color-mix(in oklch, var(--sem-text-primary) 4%, transparent);
+  padding: 8px 10px;
+}
+
+.smartImportPlanningPhaseGroupTitle {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: color-mix(in oklch, var(--sem-text-muted) 84%, var(--sem-text-primary) 16%);
+}
+
+.smartImportPlanningTimelineList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.smartImportPlanningTimelineItem {
+  margin: 0;
+}
+
+.smartImportPlanningTimelineRow {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--sem-text-primary);
+}
+
+.smartImportPlanningTimelineMeta {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--sem-text-muted);
+}
+
+.smartImportPlanningTimelineSnippet {
+  margin-top: 6px;
+}
+
+.smartImportPlanningTimelineSnippet > summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: color-mix(in oklch, var(--sem-text-muted) 80%, var(--sem-text-primary) 20%);
+}
+
+.smartImportPlanningTimelineSnippet pre {
+  margin: 6px 0 0;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 72%, transparent);
+  background: color-mix(in oklch, var(--sys-color-neutral-950) 88%, var(--sys-color-neutral-900) 12%);
+  padding: 8px;
+  max-height: 180px;
+  overflow: auto;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .smartImportPlanningActions {
