@@ -5,15 +5,14 @@ import type { LoreImportPlan } from "@/src/lib/lore-import-plan-types";
 import type { VigilDb } from "@/src/lib/spaces";
 
 /**
- * Writes contradiction + required-clarification rows and replaces prior pending rows for this batch.
+ * Replaces pending import-review queue rows for this batch (delete + insert).
+ * Call inside a `db.transaction` (or a single connection) for atomicity with other work.
  */
-export async function persistImportReviewQueueFromPlan(
+export async function replaceImportReviewQueueForPlan(
   db: VigilDb,
   spaceId: string,
   plan: LoreImportPlan,
-  persistReview: boolean,
 ): Promise<void> {
-  if (!persistReview) return;
   const now = new Date();
   const rows: (typeof importReviewItems.$inferInsert)[] = [];
   for (const c of plan.contradictions) {
@@ -53,18 +52,31 @@ export async function persistImportReviewQueueFromPlan(
       updatedAt: now,
     });
   }
+  await db
+    .delete(importReviewItems)
+    .where(
+      and(
+        eq(importReviewItems.spaceId, spaceId),
+        eq(importReviewItems.importBatchId, plan.importBatchId),
+        eq(importReviewItems.status, "pending"),
+      ),
+    );
+  if (rows.length > 0) {
+    await db.insert(importReviewItems).values(rows);
+  }
+}
+
+/**
+ * Writes contradiction + required-clarification rows and replaces prior pending rows for this batch.
+ */
+export async function persistImportReviewQueueFromPlan(
+  db: VigilDb,
+  spaceId: string,
+  plan: LoreImportPlan,
+  persistReview: boolean,
+): Promise<void> {
+  if (!persistReview) return;
   await db.transaction(async (tx) => {
-    await tx
-      .delete(importReviewItems)
-      .where(
-        and(
-          eq(importReviewItems.spaceId, spaceId),
-          eq(importReviewItems.importBatchId, plan.importBatchId),
-          eq(importReviewItems.status, "pending"),
-        ),
-      );
-    if (rows.length > 0) {
-      await tx.insert(importReviewItems).values(rows);
-    }
+    await replaceImportReviewQueueForPlan(tx as unknown as VigilDb, spaceId, plan);
   });
 }

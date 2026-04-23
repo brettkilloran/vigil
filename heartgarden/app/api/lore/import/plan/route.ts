@@ -1,5 +1,4 @@
 import { randomUUID } from "crypto";
-import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import {
@@ -9,22 +8,16 @@ import {
   heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { buildLoreImportPlan } from "@/src/lib/lore-import-plan-build";
-import { loreImportUserContextSchema } from "@/src/lib/lore-import-plan-types";
-import { persistImportReviewQueueFromPlan } from "@/src/lib/lore-import-persist-review";
+import { loreImportPlanPostBodySchema } from "@/src/lib/lore-import-plan-post-body";
+import {
+  replaceImportReviewQueueForPlan,
+} from "@/src/lib/lore-import-persist-review";
 import { insertLoreImportJobForCompletedSyncPlan } from "@/src/lib/lore-import-sync-plan-job";
 import { assertSpaceExists, type VigilDb } from "@/src/lib/spaces";
 
 export const runtime = "nodejs";
 
 export const maxDuration = 300;
-
-const bodySchema = z.object({
-  text: z.string().min(1).max(500_000),
-  spaceId: z.string().uuid(),
-  fileName: z.string().max(512).optional(),
-  persistReview: z.boolean().optional(),
-  userContext: loreImportUserContextSchema.optional(),
-});
 
 export async function POST(req: Request) {
   const bootCtx = await getHeartgardenApiBootContext();
@@ -54,7 +47,7 @@ export async function POST(req: Request) {
     return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
   }
 
-  const parsed = bodySchema.safeParse(json);
+  const parsed = loreImportPlanPostBodySchema.safeParse(json);
   if (!parsed.success) {
     return Response.json(
       { ok: false, error: parsed.error.flatten() },
@@ -86,23 +79,32 @@ export async function POST(req: Request) {
       userContext: parsed.data.userContext,
     });
 
-    await insertLoreImportJobForCompletedSyncPlan({
-      db: db as VigilDb,
-      spaceId: parsed.data.spaceId,
-      importBatchId: plan.importBatchId,
-      sourceText: parsed.data.text,
-      fileName: parsed.data.fileName,
-      userContext: parsed.data.userContext,
-      plan,
-    });
-
     const persistReview = parsed.data.persistReview !== false;
-    await persistImportReviewQueueFromPlan(
-      db,
-      parsed.data.spaceId,
-      plan,
-      persistReview,
-    );
+    if (persistReview) {
+      await db.transaction(async (tx) => {
+        const txDb = tx as unknown as VigilDb;
+        await insertLoreImportJobForCompletedSyncPlan({
+          db: txDb,
+          spaceId: parsed.data.spaceId,
+          importBatchId: plan.importBatchId,
+          sourceText: parsed.data.text,
+          fileName: parsed.data.fileName,
+          userContext: parsed.data.userContext,
+          plan,
+        });
+        await replaceImportReviewQueueForPlan(txDb, parsed.data.spaceId, plan);
+      });
+    } else {
+      await insertLoreImportJobForCompletedSyncPlan({
+        db: db as VigilDb,
+        spaceId: parsed.data.spaceId,
+        importBatchId: plan.importBatchId,
+        sourceText: parsed.data.text,
+        fileName: parsed.data.fileName,
+        userContext: parsed.data.userContext,
+        plan,
+      });
+    }
 
     return Response.json({ ok: true, plan });
   } catch (e) {

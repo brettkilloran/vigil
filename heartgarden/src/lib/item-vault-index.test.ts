@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildLoreMetaAnthropicBody, computeLoreMetaSourceHash } from "@/src/lib/item-vault-index";
+import { LORE_META_MAX_INPUT_CHARS } from "@/src/lib/lore-item-meta";
 
 describe("lore meta anthropic body + hash", () => {
   it("builds title + body like reindexItemVault", () => {
@@ -34,7 +35,9 @@ describe("lore meta anthropic body + hash", () => {
   });
 
   it("long content beyond cap hashes truncated body only", () => {
-    const pad = "a".repeat(25_000);
+    // `normalizeLoreMetaInputText` applies `LORE_META_MAX_INPUT_CHARS` to the full prompt;
+    // content must exceed the cap so a trailing suffix is ignored for hashing.
+    const pad = "a".repeat(LORE_META_MAX_INPUT_CHARS);
     const row = { title: "t", contentText: pad };
     const h1 = computeLoreMetaSourceHash(row);
     const rowSamePrefix = { title: "t", contentText: pad + "TAIL" };

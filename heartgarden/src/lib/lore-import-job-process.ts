@@ -303,7 +303,9 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
       const chunk = eventBuffer.splice(0, eventBuffer.length);
       await appendLoreImportJobEventsBatch(db as VigilDb, jobId, chunk);
     };
-    let plan: Awaited<ReturnType<typeof buildLoreImportPlan>>;
+    let plan: Awaited<ReturnType<typeof buildLoreImportPlan>> | undefined;
+    let buildError: unknown;
+    let flushError: unknown;
     try {
       plan = await buildLoreImportPlan({
         db: db as VigilDb,
@@ -326,8 +328,30 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
           }
         },
       });
+    } catch (e) {
+      buildError = e;
     } finally {
-      await flushEventBuffer();
+      try {
+        await flushEventBuffer();
+      } catch (e) {
+        flushError = e;
+      }
+    }
+    if (buildError) {
+      if (flushError) {
+        console.error("[lore-import] event flush also failed after build error", {
+          jobId,
+          flushError: flushError instanceof Error ? flushError.message : String(flushError),
+        });
+      }
+      throw buildError;
+    }
+    if (flushError) {
+      throw flushError;
+    }
+
+    if (plan === undefined) {
+      throw new Error("lore import plan missing after build");
     }
 
     const parsedPlan = loreImportPlanSchema.safeParse(plan);

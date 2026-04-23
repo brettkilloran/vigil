@@ -1,4 +1,4 @@
-import { eq, or } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
@@ -291,11 +291,42 @@ export async function PATCH(
     loreAliases: existing.loreAliases ?? undefined,
   });
 
+  // REVIEW_2026-04-22-2 C2: atomic optimistic-lock. When the caller supplied a
+  // `baseUpdatedAt`, the UPDATE predicate pins the row's current `updated_at` so
+  // a concurrent writer between the SELECT above and this UPDATE cannot silently
+  // overwrite newer state. If `returning()` comes back empty, the row has moved
+  // since we read it and we re-read to return a 409 with the freshest row.
+  const updatePredicate =
+    needsOptimisticLock || effectiveBase
+      ? and(
+          eq(items.id, itemId),
+          existing.updatedAt != null
+            ? eq(items.updatedAt, existing.updatedAt)
+            : isNull(items.updatedAt),
+        )
+      : eq(items.id, itemId);
   const [row] = await db
     .update(items)
     .set(updates)
-    .where(eq(items.id, itemId))
+    .where(updatePredicate)
     .returning();
+  if (!row) {
+    const [latest] = await db
+      .select()
+      .from(items)
+      .where(eq(items.id, itemId))
+      .limit(1);
+    if (!latest) {
+      return heartgardenMaskNotFoundForPlayer(
+        bootCtx,
+        Response.json({ ok: false, error: "Not found" }, { status: 404 }),
+      );
+    }
+    return Response.json(
+      { ok: false, error: "conflict", item: rowToCanvasItem(latest) },
+      { status: 409 },
+    );
+  }
 
   const titleChanged =
     p.title !== undefined && p.title !== existing.title;
