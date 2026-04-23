@@ -32,7 +32,7 @@ export type LoreSource = {
   /** `entity_meta.canonicalEntityKind` (e.g. `npc`, `location`, `faction`). */
   canonicalEntityKind?: string | null;
   /** Semantic chunk texts surfaced for this item (UI / transparency). */
-  matchedChunks?: string[];
+  matchedChunks?: Array<{ text: string; headingPath: string[] }>;
   /** Included via 1-hop item_links from primary hits. */
   viaGraph?: boolean;
   /** Included because a primary hit's body cites `vigil:item:` (wiki-style). */
@@ -87,11 +87,16 @@ export async function retrieveLoreSources(
   const cap = Math.min(Math.max(filters.limit ?? 14, 1), 20);
   const base: SearchFilters = { ...filters, limit: cap };
 
-  const { rows, itemIdToChunks, itemIdToFtsSnippet } = await hybridRetrieveItems(db, q, base, {
+  const { rows, itemIdToChunks, itemIdToChunkMatches, itemIdToFtsSnippet } = await hybridRetrieveItems(
+    db,
+    q,
+    base,
+    {
     ...LORE_HYBRID_OPTIONS,
     maxItems: cap,
     includeVector: true,
-  });
+    },
+  );
 
   const graphRows = await expandLinkedItems(
     db,
@@ -122,7 +127,7 @@ export async function retrieveLoreSources(
   const out: LoreSource[] = [];
 
   for (const row of rows) {
-    const chunks = itemIdToChunks.get(row.item.id);
+    const chunks = itemIdToChunkMatches.get(row.item.id);
     const excerpt = excerptForLore(row, itemIdToChunks, itemIdToFtsSnippet, primaryBudget);
     out.push({
       itemId: row.item.id,
@@ -201,7 +206,11 @@ export async function synthesizeLoreAnswer(
           ? "\n- context: structured card field (hgArch binding target)"
           : "";
     const kindLine = s.canonicalEntityKind ? `\n- kind: ${s.canonicalEntityKind}` : "";
-    return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${kindLine}${ctx}\n\n${body}`;
+    const sectionLine =
+      s.matchedChunks?.[0]?.headingPath?.length
+        ? `\n- section: ${s.matchedChunks[0].headingPath.join(" > ")}`
+        : "";
+    return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${kindLine}${ctx}${sectionLine}\n\n${body}`;
   });
   const user = `Question:\n${question.trim()}\n\n---\n\nCanvas excerpts (your only ground truth):\n\n${blocks.join("\n\n---\n\n")}`;
 
@@ -234,7 +243,11 @@ export async function* synthesizeLoreAnswerStream(
           ? "\n- context: structured card field (hgArch binding target)"
           : "";
     const kindLine = s.canonicalEntityKind ? `\n- kind: ${s.canonicalEntityKind}` : "";
-    return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${kindLine}${ctx}\n\n${body}`;
+    const sectionLine =
+      s.matchedChunks?.[0]?.headingPath?.length
+        ? `\n- section: ${s.matchedChunks[0].headingPath.join(" > ")}`
+        : "";
+    return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${kindLine}${ctx}${sectionLine}\n\n${body}`;
   });
   const user = `Question:\n${question.trim()}\n\n---\n\nCanvas excerpts (your only ground truth):\n\n${blocks.join("\n\n---\n\n")}`;
   yield* callAnthropicTextStream(
@@ -307,7 +320,11 @@ export async function synthesizeLoreAnswerGrounded(
           ? "\n- context: structured card field (hgArch binding target)"
           : "";
     const kindLine = s.canonicalEntityKind ? `\n- kind: ${s.canonicalEntityKind}` : "";
-    return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${kindLine}${ctx}\n\n${body}`;
+    const sectionLine =
+      s.matchedChunks?.[0]?.headingPath?.length
+        ? `\n- section: ${s.matchedChunks[0].headingPath.join(" > ")}`
+        : "";
+    return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${kindLine}${ctx}${sectionLine}\n\n${body}`;
   });
   const user = `Question:\n${question.trim()}\n\n---\n\nCanvas excerpts (your only ground truth):\n\n${blocks.join("\n\n---\n\n")}`;
   const res = await callAnthropic(

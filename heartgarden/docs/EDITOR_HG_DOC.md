@@ -27,6 +27,16 @@
 
 - Paragraph (body), headings 1–3, blockquote (callout), bullet/ordered lists (single level), horizontal rule, image, task list / task item (checkbox rows).
 
+## Structured body contract (MCP + import)
+
+- New write paths use a shared structured payload (`HgStructuredBody`) with blocks:
+  `heading` (level 1-3), `paragraph`, `bullet_list`, `ordered_list`, `quote`, `hr`.
+- H1/H2/H3 quality rules run in one lint pass (`lintAndRepairStructuredBody`):
+  H1 required for generic docs, no heading-level skipping, orphan H3 demotion, long-flat-body flagging.
+- Generic/free-form documents auto-prepend H1 from item title when absent.
+- Lore slab cards (`character`/`faction`/`location`) keep their slot-based structure; this heading contract only applies to generic/free-form bodies.
+- Headingless documents remain valid: retrieval/indexing falls back to a single synthetic section using the item title.
+
 ## Surfaces
 
 - **hgDoc (TipTap):** default, task, and **code** note bodies (canvas + focus); media **gallery** captions; lore character/location **focus** hybrid (`LoreHybridFocusEditor` + `focus-lore-notes` surface).

@@ -71,7 +71,7 @@ describe("lore import round-trip guards", () => {
           sourcePassages: [{ chunkId: chunks[0]!.id, quote: "The Obsidian Shard emitted a pulse visible to all divers." }],
           body: {
             kind: "generic" as const,
-            paragraphs: [{ text: "The Obsidian Shard emitted a pulse visible to all divers." }],
+            blocks: [{ kind: "paragraph", text: "The Obsidian Shard emitted a pulse visible to all divers." }],
           },
         },
         {
@@ -84,7 +84,7 @@ describe("lore import round-trip guards", () => {
           sourcePassages: [{ chunkId: chunks[0]!.id, quote: "The Obsidian Shard emitted a pulse visible to all divers." }],
           body: {
             kind: "generic" as const,
-            paragraphs: [{ text: "Witnesses saw the same pulse event." }],
+            blocks: [{ kind: "paragraph", text: "Witnesses saw the same pulse event." }],
           },
         },
       ],

@@ -13,6 +13,9 @@ import type {
   LoreImportStructuredBody,
   LoreImportUserContext,
 } from "@/src/lib/lore-import-plan-types";
+import { HG_HEADING_GUIDANCE_PROMPT } from "@/src/lib/hg-doc/structured-body-heuristics";
+import { markdownToStructuredBody } from "@/src/lib/hg-doc/structured-body-to-hg-doc";
+import { hgStructuredBlockSchema, type HgStructuredBlock } from "@/src/lib/hg-doc/structured-body";
 import { trimLocationTopFieldForImport } from "@/src/lib/lore-location-focus-document-html";
 import { HEARTGARDEN_NATIONS, isHeartgardenNation } from "@/src/lib/lore-nations";
 
@@ -108,7 +111,9 @@ Body rules:
 - \`nationality\` must be one of ${HEARTGARDEN_NATIONS.map((n) => `"${n}"`).join(", ")} or empty string.
 - Location body: { kind:"location", name, context?, detail?, notesParagraphs:string[] }.
 - Faction body: { kind:"faction", namePrimary, nameAccent?, recordParagraphs:string[] }.
-- Generic body: { kind:"generic", paragraphs:[{ heading?, text }] }.
+- Generic body: { kind:"generic", blocks:[{ kind:"heading", level:1|2|3, text } | { kind:"paragraph", text } | { kind:"bullet_list", items:string[] } | { kind:"ordered_list", items:string[] } | { kind:"quote", text } | { kind:"hr" }] }.
+- The first generic block should be a level-1 heading that matches the note title.
+- ${HG_HEADING_GUIDANCE_PROMPT}
 - If a passage belongs to multiple entities, keep the full passage on one primary card and write <=2 sentence mentions on secondary cards.
 
 General rules:
@@ -260,6 +265,18 @@ function toParagraphs(raw: unknown): string[] {
     .slice(0, 400);
 }
 
+function parseGenericBlocks(raw: unknown): HgStructuredBlock[] {
+  if (!Array.isArray(raw)) return [];
+  const out: HgStructuredBlock[] = [];
+  for (const candidate of raw) {
+    const parsed = hgStructuredBlockSchema.safeParse(candidate);
+    if (!parsed.success) continue;
+    out.push(parsed.data);
+    if (out.length >= 400) break;
+  }
+  return out;
+}
+
 function parseStructuredBody(
   canonicalEntityKind: CanonicalEntityKind,
   rawBody: unknown,
@@ -346,22 +363,14 @@ function parseStructuredBody(
       result.recordParagraphs.length > 0;
     return hasSignal ? result : undefined;
   }
-  const rawParagraphs = Array.isArray(o.paragraphs) ? o.paragraphs : [];
-  const paragraphs = rawParagraphs
-    .map((p) => {
-      if (!p || typeof p !== "object") return null;
-      const po = p as Record<string, unknown>;
-      const text = String(po.text ?? "").trim();
-      if (!text) return null;
-      const heading = String(po.heading ?? "").trim();
-      return {
-        ...(heading ? { heading: heading.slice(0, 255) } : {}),
-        text: text.slice(0, 8_000),
-      };
-    })
-    .filter((p): p is { heading?: string; text: string } => Boolean(p))
-    .slice(0, 400);
-  return paragraphs.length > 0 ? { kind: "generic", paragraphs } : undefined;
+  const blocks = parseGenericBlocks(o.blocks);
+  if (blocks.length > 0) return { kind: "generic", blocks };
+  const fallbackText = String(o.text ?? "").trim();
+  if (!fallbackText) return undefined;
+  return {
+    kind: "generic",
+    blocks: markdownToStructuredBody(fallbackText, { requireH1: false }).blocks,
+  };
 }
 
 export async function runLoreImportOutlineLlm(
@@ -530,8 +539,15 @@ function buildFallbackBodyFromChunks(
 export function renderStructuredBodyPlainText(body: LoreImportStructuredBody | undefined): string {
   if (!body) return "";
   if (body.kind === "generic") {
-    return body.paragraphs
-      .map((p) => `${p.heading ? `## ${p.heading}\n\n` : ""}${p.text}`)
+    return body.blocks
+      .map((block) => {
+        if (block.kind === "heading") return `${"#".repeat(block.level)} ${block.text}`.trim();
+        if (block.kind === "paragraph") return block.text;
+        if (block.kind === "quote") return `> ${block.text}`;
+        if (block.kind === "bullet_list") return block.items.map((item) => `- ${item}`).join("\n");
+        if (block.kind === "ordered_list") return block.items.map((item, idx) => `${idx + 1}. ${item}`).join("\n");
+        return "---";
+      })
       .join("\n\n")
       .slice(0, 120_000);
   }
@@ -602,13 +618,14 @@ export function attachBodiesToOutline(
   for (const n of notes) {
     const bodyTextFromChunks = buildFallbackBodyFromChunks(n.sourceChunkIds, byId);
     if (!n.body) {
-      const genericParagraphs = bodyTextFromChunks
-        .split(/\n{2,}/)
-        .map((text) => text.trim())
-        .filter(Boolean)
-        .map((text) => ({ text: text.slice(0, 8_000) }))
-        .slice(0, 400);
-      n.body = { kind: "generic", paragraphs: genericParagraphs };
+      const fallbackTitle = n.title?.trim() || "Imported note";
+      n.body = {
+        kind: "generic",
+        blocks: markdownToStructuredBody(bodyTextFromChunks, {
+          title: fallbackTitle,
+          requireH1: true,
+        }).blocks,
+      };
     }
     if (!n.sourcePassages || n.sourcePassages.length === 0) {
       n.sourcePassages = n.sourceChunkIds
@@ -981,10 +998,16 @@ export function ensureOutlineHasFallbackNote(outline: OutlineLlmResult, chunks: 
     sourcePassages: chunks.slice(0, 6).map((c) => ({ chunkId: c.id, quote: c.body.slice(0, 280) })),
     body: {
       kind: "generic",
-      paragraphs: chunks.slice(0, 12).map((c) => ({
-        heading: c.heading.slice(0, 255),
-        text: c.body.slice(0, 8_000),
-      })),
+      blocks: markdownToStructuredBody(
+        chunks
+          .slice(0, 12)
+          .map((c) => `## ${c.heading.slice(0, 255)}\n\n${c.body.slice(0, 8_000)}`)
+          .join("\n\n"),
+        {
+          title: chunks[0]!.heading.slice(0, 255) || "Imported document",
+          requireH1: true,
+        },
+      ).blocks,
     },
   });
 }

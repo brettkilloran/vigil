@@ -15,7 +15,7 @@ export type LoreAskSource = {
   spaceId: string;
   spaceName: string;
   excerpt: string;
-  matchedChunks?: string[];
+  matchedChunks?: Array<{ text: string; headingPath: string[] }>;
   viaGraph?: boolean;
 };
 
@@ -436,7 +436,8 @@ export function LoreAskPanel({
                       <div className="pl-2 text-[11px] leading-snug text-[var(--sem-text-muted)] border-l border-[var(--sem-border-subtle)] ml-1 max-h-24 overflow-y-auto">
                         {s.matchedChunks.slice(0, 3).map((c, i) => (
                           <p key={i} className="mb-1 line-clamp-3">
-                            {c}
+                            {c.headingPath.length > 1 ? `${c.headingPath.join(" > ")}: ` : ""}
+                            {c.text}
                           </p>
                         ))}
                       </div>

@@ -14,6 +14,10 @@ import {
 import packageJson from "@/package.json";
 import { normalizeLinkTypeAlias } from "@/src/lib/connection-kind-colors";
 import { anthropicLlmDeadlineMs } from "@/src/lib/async-timeout";
+import { deriveSectionsFromHgDoc } from "@/src/lib/hg-doc/derive-sections";
+import { isHgDocContentJson, readHgDocFromContentJson } from "@/src/lib/hg-doc/serialize";
+import { markdownToStructuredBody, structuredBodyToHgDoc } from "@/src/lib/hg-doc/structured-body-to-hg-doc";
+import { hgStructuredBlockSchema, type HgStructuredBlock } from "@/src/lib/hg-doc/structured-body";
 
 export type HeartgardenMcpServerConfig = {
   baseUrl: string;
@@ -40,12 +44,92 @@ const HEARTGARDEN_MCP_WRITE_TOOL_NAMES = new Set([
   "heartgarden_index_item",
 ]);
 
-function mcpContentTextTooLong(fieldLabel: string, text: string): string | null {
+export function mcpContentTextTooLong(fieldLabel: string, text: string): string | null {
   if (typeof text !== "string") return null;
   if (text.length > MCP_MAX_CONTENT_TEXT_CHARS) {
     return `${fieldLabel} exceeds ${MCP_MAX_CONTENT_TEXT_CHARS} characters (split content or shorten before sending).`;
   }
   return null;
+}
+
+export function mcpSerializedPayloadTooLong(fieldLabel: string, value: unknown): string | null {
+  try {
+    const encoded = JSON.stringify(value) ?? "";
+    if (encoded.length > MCP_MAX_CONTENT_TEXT_CHARS) {
+      return `${fieldLabel} exceeds ${MCP_MAX_CONTENT_TEXT_CHARS} serialized characters (split content or shorten before sending).`;
+    }
+    return null;
+  } catch {
+    return `${fieldLabel} could not be serialized for size validation.`;
+  }
+}
+
+function parseContentBlocks(raw: unknown): { ok: true; blocks: HgStructuredBlock[] } | { ok: false; error: string } {
+  if (!Array.isArray(raw)) return { ok: false, error: "content_blocks must be an array." };
+  const blocks: HgStructuredBlock[] = [];
+  for (let i = 0; i < raw.length; i += 1) {
+    const candidate = raw[i];
+    const parsed = hgStructuredBlockSchema.safeParse(candidate);
+    if (!parsed.success) {
+      return { ok: false, error: `mcp_invalid_content_blocks at index ${i}` };
+    }
+    blocks.push(parsed.data);
+  }
+  return { ok: true, blocks };
+}
+
+const MCP_CONTENT_BLOCK_SCHEMA = {
+  oneOf: [
+    {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: ["heading"] },
+        level: { type: "integer", enum: [1, 2, 3] },
+        text: { type: "string", minLength: 1, maxLength: 500 },
+      },
+      required: ["kind", "level", "text"],
+    },
+    {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: ["paragraph", "quote"] },
+        text: { type: "string", minLength: 1, maxLength: 8000 },
+      },
+      required: ["kind", "text"],
+    },
+    {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: ["bullet_list", "ordered_list"] },
+        items: {
+          type: "array",
+          items: { type: "string", minLength: 1, maxLength: 1200 },
+          minItems: 1,
+          maxItems: 200,
+        },
+      },
+      required: ["kind", "items"],
+    },
+    {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: ["hr"] },
+      },
+      required: ["kind"],
+    },
+  ],
+} as const;
+
+const MCP_CONTENT_BLOCKS_INPUT_SCHEMA = {
+  type: "array",
+  items: MCP_CONTENT_BLOCK_SCHEMA,
+  description:
+    "Typed structured blocks array. Supports heading(level 1-3), paragraph, quote, bullet_list, ordered_list, hr.",
+} as const;
+
+function shouldRequireH1ForItemType(itemType: unknown): boolean {
+  if (!itemType) return true;
+  return itemType === "note" || itemType === "sticky" || itemType === "checklist";
 }
 
 /** Tool args from LLMs often use "true"/"1" instead of booleans. */
@@ -394,6 +478,18 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         },
       },
       {
+        name: "heartgarden_get_item_outline",
+        description:
+          "Return heading outline for one item's hgDoc body as [{ level, text, charCount }]. Headingless docs return a single level-1 row with the item title.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            item_id: { type: "string", description: "UUID of the item" },
+          },
+          required: ["item_id"],
+        },
+      },
+      {
         name: "heartgarden_item_links",
         description: "Outgoing and incoming item_links for one item.",
         inputSchema: {
@@ -503,7 +599,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       {
         name: "heartgarden_patch_item",
         description:
-          "PATCH an item (geometry, content, entity fields, move between spaces). Maps snake_case args to API camelCase. Requires write_key (or omit when HEARTGARDEN_MCP_WRITE_KEY is set on the MCP server). Prefer content_text for normal prose edits. content_json is the stored document JSON — for lore cards this is also where structured fields live under hgArch (employer faction, locations, roster rows). Use heartgarden_create_link only for visible high-signal map relationships; do not add decorative wires for every related fact. Use content_json / hgArch when the relationship should be owned by the card template. content_text is capped at ~2M characters per request.",
+          "PATCH an item (geometry, content, entity fields, move between spaces). Maps snake_case args to API camelCase. Requires write_key (or omit when HEARTGARDEN_MCP_WRITE_KEY is set on the MCP server). For prose edits use content_markdown (preferred) or content_blocks (typed). Resolution order: content_json > content_blocks > content_markdown > content_text. content_json is the stored document JSON — for lore cards this is also where structured fields live under hgArch (employer faction, locations, roster rows). Use heartgarden_create_link only for visible high-signal map relationships; do not add decorative wires for every related fact. Use content_json / hgArch when the relationship should be owned by the card template. content_text is capped at ~2M characters per request.",
         inputSchema: {
           type: "object",
           properties: {
@@ -513,6 +609,14 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             content_text: {
               type: "string",
               description: `Plain text body (max ${MCP_MAX_CONTENT_TEXT_CHARS} chars per request). Default choice for edits.`,
+            },
+            content_markdown: {
+              type: "string",
+              description:
+                "Preferred prose input: markdown subset (#/##/###, lists, quote, hr, paragraphs). Converted to hgDoc.",
+            },
+            content_blocks: {
+              ...MCP_CONTENT_BLOCKS_INPUT_SCHEMA,
             },
             content_json: {
               type: "object",
@@ -545,7 +649,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       {
         name: "heartgarden_create_item",
         description:
-          'Create a canvas item (POST /api/spaces/:id/items). canvas_item_type: note|sticky|image|checklist|webclip (not folder—use heartgarden_create_folder). Entity fields—pick one primary path: (1) lore_entity character|faction|location for built-in lore card shells on note/sticky—server generates template contentJson/HTML like the UI. (2) canonical_entity_kind (npc|location|faction|quest|item|lore|other) maps to items.entity_type via the registry when you are not using lore_entity. (3) entity_type is the raw DB string when you need a specific type. MCP sends entityType from lore_entity first, else entity_type; canonical_entity_kind is also sent but the API uses it only if entityType is still unset—avoid mixing lore_entity with redundant canonical_entity_kind. Legacy item_type character → note + lore character. content_text max ~2M characters per request.',
+          'Create a canvas item (POST /api/spaces/:id/items). canvas_item_type: note|sticky|image|checklist|webclip (not folder—use heartgarden_create_folder). For prose content prefer content_markdown (or content_blocks for typed control). Resolution order: content_json > content_blocks > content_markdown > content_text. Entity fields—pick one primary path: (1) lore_entity character|faction|location for built-in lore card shells on note/sticky—server generates template contentJson/HTML like the UI. (2) canonical_entity_kind (npc|location|faction|quest|item|lore|other) maps to items.entity_type via the registry when you are not using lore_entity. (3) entity_type is the raw DB string when you need a specific type. MCP sends entityType from lore_entity first, else entity_type; canonical_entity_kind is also sent but the API uses it only if entityType is still unset—avoid mixing lore_entity with redundant canonical_entity_kind. Legacy item_type character → note + lore character. content_text max ~2M characters per request.',
         inputSchema: {
           type: "object",
           properties: {
@@ -567,6 +671,17 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             content_text: {
               type: "string",
               description: `Plain text (max ${MCP_MAX_CONTENT_TEXT_CHARS} chars per request)`,
+            },
+            content_json: {
+              type: "object",
+              description: "Full hgDoc/content JSON. Takes precedence over markdown/blocks/text.",
+            },
+            content_markdown: {
+              type: "string",
+              description: "Preferred prose input: markdown subset converted to hgDoc content_json.",
+            },
+            content_blocks: {
+              ...MCP_CONTENT_BLOCKS_INPUT_SCHEMA,
             },
             lore_entity: {
               type: "string",
@@ -846,6 +961,38 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       return mcpApiText(res, "mcp_get_item_failed");
     }
 
+    if (name === "heartgarden_get_item_outline") {
+      const itemId = String(args.item_id ?? "").trim();
+      if (!itemId) {
+        return {
+          content: [{ type: "text", text: "item_id is required" }],
+          isError: true,
+        };
+      }
+      const res = await api(`${BASE}/api/v1/items/${encodeURIComponent(itemId)}`);
+      if (!res.ok) return mcpApiError(res, "mcp_get_item_outline_failed");
+      const payload = (await res.json()) as {
+        item?: { title?: string; contentJson?: Record<string, unknown> | null; contentText?: string | null };
+      };
+      const item = payload.item;
+      if (!item) return mcpToolText(JSON.stringify({ ok: false, error: "Item not found" }, null, 2));
+      const title = String(item.title ?? "").trim() || "Untitled";
+      const contentJson = (item.contentJson as Record<string, unknown> | null) ?? null;
+      let outline: Array<{ level: 1 | 2 | 3; text: string; charCount: number }> = [];
+      if (isHgDocContentJson(contentJson)) {
+        const sections = deriveSectionsFromHgDoc(readHgDocFromContentJson(contentJson), title);
+        outline = sections.map((section, index) => ({
+          level: index === 0 ? 1 : ((Math.min(3, section.headingPath.length) || 1) as 1 | 2 | 3),
+          text: section.headingPath[section.headingPath.length - 1] ?? title,
+          charCount: section.text.length,
+        }));
+      } else {
+        const bodyLen = String(item.contentText ?? "").trim().length;
+        outline = [{ level: 1, text: title, charCount: bodyLen }];
+      }
+      return mcpToolText(JSON.stringify({ ok: true, itemId, outline }, null, 2));
+    }
+
     if (name === "heartgarden_item_links") {
       const itemId = String(args.item_id ?? "").trim();
       if (!itemId) {
@@ -1074,11 +1221,71 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           return { content: [{ type: "text", text: tooLong }], isError: true };
         }
       }
+      if (typeof args.content_markdown === "string") {
+        const tooLong = mcpContentTextTooLong("content_markdown", args.content_markdown);
+        if (tooLong) {
+          return { content: [{ type: "text", text: tooLong }], isError: true };
+        }
+      }
+      if (args.content_blocks != null) {
+        const tooLong = mcpSerializedPayloadTooLong("content_blocks", args.content_blocks);
+        if (tooLong) {
+          return { content: [{ type: "text", text: tooLong }], isError: true };
+        }
+      }
+      if (args.content_json != null && typeof args.content_json === "object") {
+        const tooLong = mcpSerializedPayloadTooLong("content_json", args.content_json);
+        if (tooLong) {
+          return { content: [{ type: "text", text: tooLong }], isError: true };
+        }
+      }
+      const hasExplicitJson =
+        args.content_json != null &&
+        typeof args.content_json === "object";
+      const markdownInput = typeof args.content_markdown === "string" ? args.content_markdown : "";
+      const hasMarkdown = markdownInput.trim().length > 0;
+      const hasBlocks = Array.isArray(args.content_blocks);
+      let structureReport: Record<string, unknown> | undefined;
+      let structuredDoc: Record<string, unknown> | undefined;
+      let structuredText: string | undefined;
+      if (!hasExplicitJson && hasBlocks) {
+        const parsed = parseContentBlocks(args.content_blocks);
+        if (!parsed.ok) {
+          return { content: [{ type: "text", text: parsed.error }], isError: true };
+        }
+        const built = structuredBodyToHgDoc(
+          { blocks: parsed.blocks },
+          {
+            title: typeof args.title === "string" ? args.title : undefined,
+            requireH1: shouldRequireH1ForItemType(args.item_type),
+          },
+        );
+        structuredDoc = { format: "hgDoc", doc: built.doc };
+        structuredText = built.plainText;
+        structureReport = built.structureReport as unknown as Record<string, unknown>;
+      } else if (!hasExplicitJson && hasMarkdown) {
+        const body = markdownToStructuredBody(markdownInput, {
+          title: typeof args.title === "string" ? args.title : undefined,
+          requireH1: shouldRequireH1ForItemType(args.item_type),
+        });
+        const built = structuredBodyToHgDoc(body, {
+          title: typeof args.title === "string" ? args.title : undefined,
+          requireH1: shouldRequireH1ForItemType(args.item_type),
+        });
+        structuredDoc = { format: "hgDoc", doc: built.doc };
+        structuredText = built.plainText;
+        structureReport = built.structureReport as unknown as Record<string, unknown>;
+      }
       const patch: Record<string, unknown> = {};
       if (typeof args.title === "string") patch.title = args.title;
       if (typeof args.content_text === "string") patch.contentText = args.content_text;
+      if (structuredText && typeof args.content_text !== "string") {
+        patch.contentText = structuredText;
+      }
       if (args.content_json != null && typeof args.content_json === "object") {
         patch.contentJson = args.content_json as Record<string, unknown>;
+      } else if (structuredDoc) {
+        patch.contentJson = structuredDoc;
       }
       if (typeof args.entity_type === "string") patch.entityType = args.entity_type;
       if (args.entity_meta != null && typeof args.entity_meta === "object") {
@@ -1137,7 +1344,17 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
-      return mcpApiText(res, "mcp_patch_item_failed");
+      if (!structureReport) return mcpApiText(res, "mcp_patch_item_failed");
+      if (!res.ok) return mcpApiError(res, "mcp_patch_item_failed");
+      const text = await res.text();
+      try {
+        const parsed = JSON.parse(text) as Record<string, unknown>;
+        return mcpToolText(JSON.stringify({ ...parsed, structure_report: structureReport }, null, 2));
+      } catch {
+        return mcpToolText(
+          JSON.stringify({ ok: true, raw: text, structure_report: structureReport }, null, 2),
+        );
+      }
     }
 
     if (name === "heartgarden_create_item") {
@@ -1216,6 +1433,59 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       }
 
       const contentText = typeof args.content_text === "string" ? args.content_text : "";
+      if (typeof args.content_markdown === "string") {
+        const tooLong = mcpContentTextTooLong("content_markdown", args.content_markdown);
+        if (tooLong) {
+          return { content: [{ type: "text", text: tooLong }], isError: true };
+        }
+      }
+      if (args.content_blocks != null) {
+        const tooLong = mcpSerializedPayloadTooLong("content_blocks", args.content_blocks);
+        if (tooLong) {
+          return { content: [{ type: "text", text: tooLong }], isError: true };
+        }
+      }
+      if (args.content_json != null && typeof args.content_json === "object") {
+        const tooLong = mcpSerializedPayloadTooLong("content_json", args.content_json);
+        if (tooLong) {
+          return { content: [{ type: "text", text: tooLong }], isError: true };
+        }
+      }
+      const markdownInput = typeof args.content_markdown === "string" ? args.content_markdown : "";
+      const hasMarkdown = markdownInput.trim().length > 0;
+      const hasBlocks = Array.isArray(args.content_blocks);
+      const hasContentJsonArg = args.content_json != null && typeof args.content_json === "object";
+      let structureReport: Record<string, unknown> | undefined;
+      let structuredDoc: Record<string, unknown> | undefined;
+      let structuredText: string | undefined;
+      if (!hasContentJsonArg && !resolvedLore && hasBlocks) {
+        const parsed = parseContentBlocks(args.content_blocks);
+        if (!parsed.ok) {
+          return { content: [{ type: "text", text: parsed.error }], isError: true };
+        }
+        const built = structuredBodyToHgDoc(
+          { blocks: parsed.blocks },
+          {
+            title,
+            requireH1: shouldRequireH1ForItemType(itemType),
+          },
+        );
+        structuredDoc = { format: "hgDoc", doc: built.doc };
+        structuredText = built.plainText;
+        structureReport = built.structureReport as unknown as Record<string, unknown>;
+      } else if (!hasContentJsonArg && !resolvedLore && hasMarkdown) {
+        const body = markdownToStructuredBody(markdownInput, {
+          title,
+          requireH1: shouldRequireH1ForItemType(itemType),
+        });
+        const built = structuredBodyToHgDoc(body, {
+          title,
+          requireH1: shouldRequireH1ForItemType(itemType),
+        });
+        structuredDoc = { format: "hgDoc", doc: built.doc };
+        structuredText = built.plainText;
+        structureReport = built.structureReport as unknown as Record<string, unknown>;
+      }
       const contentLenErr = mcpContentTextTooLong("content_text", contentText);
       if (contentLenErr) {
         return { content: [{ type: "text", text: contentLenErr }], isError: true };
@@ -1223,6 +1493,9 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       if (
         itemType === "note" &&
         contentText.trim() === "" &&
+        !hasMarkdown &&
+        !hasBlocks &&
+        !hasContentJsonArg &&
         !resolvedLore &&
         !args.canonical_entity_kind &&
         !String(args.entity_type ?? "").trim()
@@ -1242,10 +1515,15 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       const body: Record<string, unknown> = {
         itemType,
         title,
-        contentText,
+        contentText: contentText || structuredText || "",
         x: typeof args.x === "number" ? args.x : 0,
         y: typeof args.y === "number" ? args.y : 0,
       };
+      if (hasContentJsonArg) {
+        body.contentJson = args.content_json as Record<string, unknown>;
+      } else if (structuredDoc) {
+        body.contentJson = structuredDoc;
+      }
 
       if (resolvedLore) {
         body.entityType = resolvedLore;
@@ -1283,7 +1561,17 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       if (!res.ok) return mcpApiError(res, "mcp_create_item_failed");
       const createText = await res.text();
       if (args.auto_index !== true) {
-        return { content: [{ type: "text", text: createText }] };
+        if (!structureReport) {
+          return { content: [{ type: "text", text: createText }] };
+        }
+        try {
+          const created = JSON.parse(createText) as Record<string, unknown>;
+          return mcpToolText(JSON.stringify({ ...created, structure_report: structureReport }, null, 2));
+        } catch {
+          return mcpToolText(
+            JSON.stringify({ ok: true, raw: createText, structure_report: structureReport }, null, 2),
+          );
+        }
       }
       try {
         const created = JSON.parse(createText) as { ok?: boolean; item?: { id?: string } };
@@ -1308,7 +1596,15 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           content: [
             {
               type: "text",
-              text: JSON.stringify({ create: created, index: indexPayload }, null, 2),
+              text: JSON.stringify(
+                {
+                  create: created,
+                  index: indexPayload,
+                  ...(structureReport ? { structure_report: structureReport } : {}),
+                },
+                null,
+                2,
+              ),
             },
           ],
         };

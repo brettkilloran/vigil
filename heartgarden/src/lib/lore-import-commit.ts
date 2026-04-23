@@ -1,7 +1,7 @@
 import { LORE_LINK_TYPE_OPTIONS } from "@/src/lib/lore-link-types";
 import { normalizeLinkTypeAlias } from "@/src/lib/connection-kind-colors";
 import { HG_DOC_FORMAT } from "@/src/lib/hg-doc/constants";
-import { htmlFragmentToHgDocDoc } from "@/src/lib/hg-doc/html-to-doc";
+import { markdownToStructuredBody, structuredBodyToHgDoc } from "@/src/lib/hg-doc/structured-body-to-hg-doc";
 import type { LoreImportStructuredBody } from "@/src/lib/lore-import-plan-types";
 import { buildLocationOrdoV7BodyHtml, getLoreNodeSeedBodyHtml } from "@/src/lib/lore-node-seed-html";
 import {
@@ -263,8 +263,8 @@ function buildLocationSlabContentJson(body: Extract<LoreImportStructuredBody, { 
 }
 
 function buildGenericHgDocFromParagraphs(paragraphs: string[]): Record<string, unknown> {
-  const html = toPendingParagraphs(paragraphs);
-  const doc = htmlFragmentToHgDocDoc(html);
+  const body = markdownToStructuredBody(paragraphs.join("\n\n"), { requireH1: false });
+  const { doc } = structuredBodyToHgDoc(body, { aiPending: true, requireH1: false });
   return {
     format: HG_DOC_FORMAT,
     doc,
@@ -284,20 +284,38 @@ export function buildLoreSourceContentJson(fullText: string): Record<string, unk
 export function buildLoreStructuredBodyContentJson(
   body: LoreImportStructuredBody | undefined,
   fallbackPlainBody: string,
+  title?: string,
 ): Record<string, unknown> {
   if (!body) {
-    return buildGenericHgDocFromParagraphs(
-      fallbackPlainBody
-        .split(/\n{2,}/)
-        .map((p) => p.trim())
-        .filter(Boolean),
-    );
+    const fallbackBody = markdownToStructuredBody(fallbackPlainBody, {
+      title: title?.trim() || "Imported note",
+      requireH1: true,
+    });
+    const { doc } = structuredBodyToHgDoc(fallbackBody, {
+      aiPending: true,
+      title: title?.trim() || "Imported note",
+      requireH1: true,
+    });
+    return {
+      format: HG_DOC_FORMAT,
+      doc,
+      hgArch: { ...HG_ARCH_DEFAULT },
+    };
   }
   if (body.kind === "character") return buildCharacterSlabContentJson(body);
   if (body.kind === "faction") return buildFactionSlabContentJson(body);
   if (body.kind === "location") return buildLocationSlabContentJson(body);
-  const paragraphs = body.paragraphs.map((p) =>
-    p.heading?.trim() ? `${p.heading.trim()}\n\n${p.text}` : p.text,
+  const { doc } = structuredBodyToHgDoc(
+    { blocks: body.blocks },
+    {
+      aiPending: true,
+      title: title?.trim() || "Imported note",
+      requireH1: true,
+    },
   );
-  return buildGenericHgDocFromParagraphs(paragraphs);
+  return {
+    format: HG_DOC_FORMAT,
+    doc,
+    hgArch: { ...HG_ARCH_DEFAULT },
+  };
 }

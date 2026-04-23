@@ -4,14 +4,16 @@
  * Requires:
  * - NEON_DATABASE_URL in .env.local (to list item ids)
  * - `npm run dev` or `npm start` on HEARTGARDEN_APP_URL (default http://127.0.0.1:3000)
- * - Embedding provider on the server when vector indexing is wired (currently disabled in app)
+ * - Optional embedding provider (OPENAI_API_KEY). When missing, index calls return skipped:no_embedding_provider
  *
  * Env:
  * - HEARTGARDEN_APP_URL — base URL (no trailing slash)
  * - VAULT_REINDEX_SPACE_ID — optional UUID; only items in that space
  * - VAULT_REINDEX_SKIP_LORE=1 — POST body refreshLoreMeta: false
  * - VAULT_REINDEX_DRY=1 — print counts only, no HTTP
+ * - VAULT_REINDEX_SKIP_FORBIDDEN=1 — treat HTTP 403 as skipped instead of fail (default 1)
  * - VAULT_REINDEX_DELAY_MS — ms between requests (default 120)
+ * - HEARTGARDEN_MCP_SERVICE_KEY — optional Bearer token for protected /api/* routes
  *
  * Run: node ./scripts/vault-reindex-all.mjs
  */
@@ -36,7 +38,9 @@ const base = (process.env.HEARTGARDEN_APP_URL || "http://127.0.0.1:3000").replac
 const spaceId = (process.env.VAULT_REINDEX_SPACE_ID || "").trim();
 const skipLore = process.env.VAULT_REINDEX_SKIP_LORE === "1";
 const dry = process.env.VAULT_REINDEX_DRY === "1";
+const skipForbidden = process.env.VAULT_REINDEX_SKIP_FORBIDDEN !== "0";
 const delayMs = Math.max(0, Number(process.env.VAULT_REINDEX_DELAY_MS) || 120);
+const mcpServiceKey = (process.env.HEARTGARDEN_MCP_SERVICE_KEY || "").trim();
 
 const sql = neon(url);
 
@@ -58,6 +62,7 @@ if (dry) {
 const body = skipLore ? JSON.stringify({ refreshLoreMeta: false }) : "{}";
 let ok = 0;
 let fail = 0;
+let skippedForbidden = 0;
 
 for (let i = 0; i < rows.length; i++) {
   const id = rows[i]?.id;
@@ -65,7 +70,10 @@ for (let i = 0; i < rows.length; i++) {
   try {
     const res = await fetch(`${base}/api/items/${encodeURIComponent(id)}/index`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(mcpServiceKey ? { Authorization: `Bearer ${mcpServiceKey}` } : {}),
+      },
       body,
     });
     const data = await res.json().catch(() => ({}));
@@ -74,6 +82,9 @@ for (let i = 0; i < rows.length; i++) {
       if (data.skipped) {
         console.log(`[${i + 1}/${rows.length}] ${id} skipped: ${data.skipped}`);
       }
+    } else if (res.status === 403 && skipForbidden) {
+      skippedForbidden += 1;
+      console.warn(`[${i + 1}/${rows.length}] ${id} skipped: forbidden`);
     } else {
       fail += 1;
       console.error(`[${i + 1}/${rows.length}] ${id} HTTP ${res.status}`, data);
@@ -87,5 +98,7 @@ for (let i = 0; i < rows.length; i++) {
   }
 }
 
-console.log(`Done. ok=${ok} fail=${fail} (base=${base})`);
+console.log(
+  `Done. ok=${ok} skipped_forbidden=${skippedForbidden} fail=${fail} (base=${base})`,
+);
 if (fail > 0) process.exit(1);

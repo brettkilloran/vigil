@@ -175,5 +175,7 @@ export const itemEmbeddings = pgTable("item_embeddings", {
   sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }).notNull(),
   embedding: vector1536("embedding"),
   chunkText: text("chunk_text").notNull(),
+  /** JSON-encoded heading breadcrumb path used for section-aware retrieval/citations. */
+  headingPath: text("heading_path"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });

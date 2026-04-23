@@ -3,7 +3,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   canonicalHeartgardenMcpToolName,
   mcpCoerceTruthyFlag,
+  mcpContentTextTooLong,
+  mcpSerializedPayloadTooLong,
   mcpWriteKeyError,
+  MCP_MAX_CONTENT_TEXT_CHARS,
   resolveHeartgardenMcpBaseUrl,
 } from "./heartgarden-mcp-server";
 
@@ -17,6 +20,7 @@ describe("canonicalHeartgardenMcpToolName", () => {
       ["vigil_search", "heartgarden_search"],
       ["vigil_graph", "heartgarden_graph"],
       ["vigil_get_item", "heartgarden_get_item"],
+      ["vigil_get_item_outline", "heartgarden_get_item_outline"],
       ["vigil_get_entity", "heartgarden_get_entity"],
       ["vigil_item_links", "heartgarden_item_links"],
       ["vigil_traverse_links", "heartgarden_traverse_links"],
@@ -80,6 +84,22 @@ describe("mcpWriteKeyError", () => {
   });
   it("requires explicit key when omit not allowed", () => {
     expect(mcpWriteKeyError({}, "secret", { allowOmitWhenConfigSet: false })).toMatch(/required/);
+  });
+});
+
+describe("mcp payload size guards", () => {
+  it("caps content_text by max chars", () => {
+    const within = "a".repeat(MCP_MAX_CONTENT_TEXT_CHARS);
+    const over = "a".repeat(MCP_MAX_CONTENT_TEXT_CHARS + 1);
+    expect(mcpContentTextTooLong("content_text", within)).toBeNull();
+    expect(mcpContentTextTooLong("content_text", over)).toMatch(/exceeds/);
+  });
+
+  it("caps serialized structured payloads", () => {
+    const within = { text: "a".repeat(16) };
+    expect(mcpSerializedPayloadTooLong("content_json", within)).toBeNull();
+    const over = { text: "a".repeat(MCP_MAX_CONTENT_TEXT_CHARS + 8) };
+    expect(mcpSerializedPayloadTooLong("content_json", over)).toMatch(/serialized/);
   });
 });
 

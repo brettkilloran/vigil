@@ -104,11 +104,35 @@ function vectorSqlLiteral(embedding: number[]): string {
 export type VectorChunkHit = {
   itemId: string;
   chunkText: string;
+  headingPath: string[];
   chunkIndex: number;
   distance: number;
   item: typeof items.$inferSelect;
   space: { id: string; name: string; parentSpaceId: string | null };
 };
+
+export type VectorChunkMatch = {
+  text: string;
+  headingPath: string[];
+};
+
+function parseHeadingPath(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw.map((v) => String(v ?? "").trim()).filter(Boolean);
+  }
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed)) {
+        return parsed.map((v) => String(v ?? "").trim()).filter(Boolean);
+      }
+    } catch {
+      /* ignore */
+    }
+    if (raw.trim()) return [raw.trim()];
+  }
+  return [];
+}
 
 export async function searchItemChunksByVector(
   db: VigilDb,
@@ -133,6 +157,7 @@ export async function searchItemChunksByVector(
     .select({
       itemId: itemEmbeddings.itemId,
       chunkText: itemEmbeddings.chunkText,
+      headingPath: itemEmbeddings.headingPath,
       chunkIndex: itemEmbeddings.chunkIndex,
       distance: distanceExpr,
       item: items,
@@ -151,6 +176,7 @@ export async function searchItemChunksByVector(
   return rows.map((r) => ({
     itemId: r.itemId,
     chunkText: r.chunkText,
+    headingPath: parseHeadingPath(r.headingPath),
     chunkIndex: r.chunkIndex,
     distance: r.distance,
     item: r.item,
@@ -161,6 +187,7 @@ export async function searchItemChunksByVector(
 export type HybridRetrieveResult = {
   rows: SearchRow[];
   itemIdToChunks: Map<string, string[]>;
+  itemIdToChunkMatches: Map<string, VectorChunkMatch[]>;
   itemIdToFtsSnippet: Map<string, string>;
 };
 
@@ -187,10 +214,11 @@ export async function hybridRetrieveItems(
   const rrfVectorWeight = options.rrfVectorWeight ?? defaultRrfVectorWeightFromEnv;
 
   const itemIdToChunks = new Map<string, string[]>();
+  const itemIdToChunkMatches = new Map<string, VectorChunkMatch[]>();
   const itemIdToFtsSnippet = new Map<string, string>();
 
   if (!q) {
-    return { rows: [], itemIdToChunks, itemIdToFtsSnippet };
+    return { rows: [], itemIdToChunks, itemIdToChunkMatches, itemIdToFtsSnippet };
   }
 
   const ftsRows = await searchItemsFTSWithSnippets(db, q, { ...filters, limit: ftsLimit });
@@ -224,14 +252,25 @@ export async function hybridRetrieveItems(
 
   for (const h of vecHits) {
     const list = itemIdToChunks.get(h.itemId) ?? [];
+    const detailed = itemIdToChunkMatches.get(h.itemId) ?? [];
     if (list.length < maxChunksPerItem) {
       list.push(h.chunkText);
       itemIdToChunks.set(h.itemId, list);
+      detailed.push({ text: h.chunkText, headingPath: h.headingPath });
+      itemIdToChunkMatches.set(h.itemId, detailed);
     }
   }
 
   const lexicalOrderedIds = lexicalRows.map((r) => r.item.id);
-  const vectorOrderedIds = vecHits.map((h) => h.itemId);
+  const vectorOrderedIds: string[] = [];
+  const seenVectorSections = new Set<string>();
+  for (const hit of vecHits) {
+    const h2Path = hit.headingPath.slice(0, 2).join(">");
+    const sectionKey = `${hit.itemId}|${h2Path || "__root__"}`;
+    if (seenVectorSections.has(sectionKey)) continue;
+    seenVectorSections.add(sectionKey);
+    vectorOrderedIds.push(hit.itemId);
+  }
   const { topIds, scores } = fuseRrfFromOrderedLists({
     lexicalOrderedIds,
     vectorOrderedIds,
@@ -257,7 +296,20 @@ export async function hybridRetrieveItems(
   }
 
   const rows: SearchRow[] = [];
-  for (const id of topIds) {
+  const normalizedQuery = q.toLowerCase().trim();
+  const boostedTopIds = [...topIds].sort((a, b) => {
+    const aBase = scores.get(a)?.rrf ?? 0;
+    const bBase = scores.get(b)?.rrf ?? 0;
+    const aLeaf = (itemIdToChunkMatches.get(a)?.[0]?.headingPath.at(-1) ?? "").toLowerCase();
+    const bLeaf = (itemIdToChunkMatches.get(b)?.[0]?.headingPath.at(-1) ?? "").toLowerCase();
+    const shortQuery = normalizedQuery.length <= 80;
+    const aBoost = shortQuery && aLeaf && aLeaf === normalizedQuery ? 0.03 : 0;
+    const bBoost = shortQuery && bLeaf && bLeaf === normalizedQuery ? 0.03 : 0;
+    const diff = bBase + bBoost - (aBase + aBoost);
+    if (diff !== 0) return diff;
+    return a.localeCompare(b);
+  });
+  for (const id of boostedTopIds) {
     const r = rowById.get(id);
     if (r) rows.push(r);
   }
@@ -292,7 +344,7 @@ export async function hybridRetrieveItems(
     }),
   });
 
-  return { rows, itemIdToChunks, itemIdToFtsSnippet };
+  return { rows, itemIdToChunks, itemIdToChunkMatches, itemIdToFtsSnippet };
 }
 
 function summarizeSearchFiltersForDebug(f: SearchFilters): Record<string, unknown> {

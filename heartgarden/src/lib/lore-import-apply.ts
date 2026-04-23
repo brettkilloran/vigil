@@ -485,7 +485,7 @@ export async function applyLoreImportPlan(
       const z = await nextZIndex(dbx, body.spaceId);
       const title = fallbackOneNoteTitle(plan, body).slice(0, 255);
       const contentText = fallbackOneNoteText(plan, body).slice(0, 120_000);
-      const contentJson = buildLoreStructuredBodyContentJson(undefined, contentText);
+      const contentJson = buildLoreStructuredBodyContentJson(undefined, contentText, title);
       const entityMeta = buildImportedEntityMeta({
         base: {
           schemaVersion: 1,
@@ -829,7 +829,7 @@ export async function applyLoreImportPlan(
       const z = takeNextZIndex(zIndexCursor, targetSpaceId);
 
       const bodyText = note.bodyText.slice(0, 120_000);
-      const contentJson = buildLoreStructuredBodyContentJson(note.body, bodyText);
+      const contentJson = buildLoreStructuredBodyContentJson(note.body, bodyText, note.title);
       const entityMeta = buildImportedEntityMeta({
         base: buildDefaultEntityMeta(note),
         importBatchId: plan.importBatchId,

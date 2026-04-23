@@ -1,20 +1,36 @@
+import type { HgDocSection } from "@/src/lib/hg-doc/derive-sections";
+
 /** Target max characters per vault embedding chunk (rough token proxy). */
 export const VAULT_CHUNK_TARGET_CHARS = 820;
 /** Overlap between consecutive chunks to preserve boundary concepts. */
 export const VAULT_CHUNK_OVERLAP_CHARS = 130;
 
+export type VaultChunk = {
+  headingPath: string[];
+  breadcrumb: string;
+  chunkText: string;
+};
+
 function normalizeWhitespace(s: string): string {
   return s.replace(/\s+/g, " ").trim();
 }
 
-/**
- * Split note text into overlapping chunks, preferring paragraph boundaries.
- */
-export function chunkVaultText(fullText: string): string[] {
-  const text = normalizeWhitespace(fullText);
-  if (!text) return [];
+export function chunkBreadcrumb(path: string[]): string {
+  const clean = path.map((p) => p.trim()).filter(Boolean);
+  return clean.join(" > ");
+}
 
-  const paragraphs = text.split(/\n\s*\n/).map((p) => normalizeWhitespace(p)).filter(Boolean);
+/**
+ * Split one section into overlapping chunks, preferring paragraph boundaries.
+ */
+function splitSectionText(text: string): string[] {
+  const normalized = text.replace(/\r\n?/g, "\n").trim();
+  if (!normalized) return [];
+
+  const paragraphs = normalized
+    .split(/\n\s*\n/)
+    .map((p) => normalizeWhitespace(p))
+    .filter(Boolean);
   const pieces: string[] = [];
   let buf = "";
 
@@ -24,7 +40,7 @@ export function chunkVaultText(fullText: string): string[] {
     buf = "";
   };
 
-  for (const p of paragraphs) {
+  for (const p of paragraphs.length > 0 ? paragraphs : [normalizeWhitespace(normalized)]) {
     if (!buf) {
       if (p.length <= VAULT_CHUNK_TARGET_CHARS) {
         buf = p;
@@ -61,8 +77,36 @@ export function chunkVaultText(fullText: string): string[] {
     }
   }
   flushBuf();
-
   return mergeSmallPieces(applyOverlap(pieces));
+}
+
+export function chunkVaultSections(sections: HgDocSection[]): VaultChunk[] {
+  const out: VaultChunk[] = [];
+  for (const section of sections) {
+    const headingPath = section.headingPath.length > 0 ? section.headingPath : ["Untitled"];
+    const breadcrumb = chunkBreadcrumb(headingPath);
+    const pieces = splitSectionText(section.text);
+    if (pieces.length === 0 && section.text.trim()) {
+      const chunkText = `${breadcrumb} - ${normalizeWhitespace(section.text)}`.trim();
+      out.push({ headingPath, breadcrumb, chunkText });
+      continue;
+    }
+    for (const piece of pieces) {
+      const chunkText = `${breadcrumb} - ${piece}`.trim();
+      out.push({ headingPath, breadcrumb, chunkText });
+    }
+  }
+  return out;
+}
+
+/** Backward-compatible helper for headingless plain text. */
+export function chunkVaultText(fullText: string): string[] {
+  const body = fullText.replace(/\r\n?/g, "\n").trim();
+  if (!body) return [];
+  const chunks = chunkVaultSections([
+    { headingPath: ["Untitled"], text: body, charRange: [0, body.length] },
+  ]);
+  return chunks.map((c) => c.chunkText);
 }
 
 function hardSplitParagraph(p: string): string[] {
@@ -126,6 +170,7 @@ function applyOverlap(pieces: string[]): string[] {
 export function buildVaultEmbedDocument(input: {
   title: string;
   contentText: string;
+  sectionBreadcrumb?: string | null;
   loreSummary?: string | null;
   loreAliases?: string[] | null;
   /** hgArch roster / thread anchors etc. — see `buildHgArchBindingSummaryText`. */
@@ -139,7 +184,8 @@ export function buildVaultEmbedDocument(input: {
   const meta = [summary && `Summary: ${summary}`, aliases && `Aliases: ${aliases}`]
     .filter(Boolean)
     .join("\n");
-  const head = title ? `Title: ${title}` : "";
+  const section = input.sectionBreadcrumb?.trim() ?? "";
+  const head = section ? section : title ? `Title: ${title}` : "";
   const parts = [head, meta, bind, body].filter(Boolean);
   return parts.join("\n\n").trim();
 }

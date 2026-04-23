@@ -5,12 +5,14 @@ import { eq } from "drizzle-orm";
 import type { tryGetDb } from "@/src/db/index";
 import { itemEmbeddings, items } from "@/src/db/schema";
 import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
+import { deriveSectionsFromHgDoc, fallbackSingleSection } from "@/src/lib/hg-doc/derive-sections";
+import { isHgDocContentJson, readHgDocFromContentJson } from "@/src/lib/hg-doc/serialize";
 import { extractLoreItemMeta, normalizeLoreMetaInputText } from "@/src/lib/lore-item-meta";
 import {
   buildItemVaultCorpus,
   itemSearchableSourceFromRow,
 } from "@/src/lib/item-searchable-text";
-import { chunkVaultText } from "@/src/lib/vault-chunk";
+import { chunkVaultSections } from "@/src/lib/vault-chunk";
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 export type ItemRow = typeof items.$inferSelect;
@@ -77,6 +79,17 @@ export type ReindexItemVaultResult = {
   skipped?: string;
 };
 
+function assertLoreMetaHashInvariant(
+  loreMetaUpdated: boolean,
+  loreMetaSourceHash: string | undefined,
+): string | undefined {
+  if (!loreMetaUpdated) return undefined;
+  if (typeof loreMetaSourceHash === "string" && loreMetaSourceHash.length > 0) {
+    return loreMetaSourceHash;
+  }
+  throw new Error("lore meta hash invariant violated: update requested without source hash");
+}
+
 /**
  * Chunk, embed, and insert rows for one item. Optionally refresh lore_summary / aliases via Anthropic first.
  */
@@ -99,6 +112,7 @@ export async function reindexItemVault(
   let loreSummaryEff = row.loreSummary;
   let loreAliasesEff = row.loreAliases;
   let loreMetaSourceHash: string | undefined;
+  let requiredLoreMetaHash: string | undefined;
   const wantMeta = resolveRefreshLoreMeta(options.refreshLoreMeta);
   const anthropicKey = (process.env.ANTHROPIC_API_KEY ?? "").trim();
   if (wantMeta && anthropicKey) {
@@ -117,6 +131,7 @@ export async function reindexItemVault(
       loreAliasesEff = meta.aliases.length ? meta.aliases : null;
       loreMetaSourceHash = sourceHash;
       loreMetaUpdated = true;
+      requiredLoreMetaHash = assertLoreMetaHashInvariant(loreMetaUpdated, loreMetaSourceHash);
     }
   }
 
@@ -128,7 +143,11 @@ export async function reindexItemVault(
     }),
   );
 
-  const chunks = chunkVaultText(corpus);
+  const contentJson = (row.contentJson ?? null) as Record<string, unknown> | null;
+  const sections = isHgDocContentJson(contentJson)
+    ? deriveSectionsFromHgDoc(readHgDocFromContentJson(contentJson), row.title || "Untitled")
+    : fallbackSingleSection(row.contentText ?? corpus, row.title || "Untitled");
+  const chunks = chunkVaultSections(sections);
 
   /** No vector rows: persist lexical row only. */
   if (chunks.length === 0) {
@@ -140,7 +159,7 @@ export async function reindexItemVault(
           loreSummary: loreSummaryEff,
           loreAliases: loreAliasesEff,
           loreIndexedAt: new Date(),
-          loreMetaSourceHash: loreMetaSourceHash!,
+          loreMetaSourceHash: requiredLoreMetaHash,
         })
         .where(eq(items.id, itemId));
     } else {
@@ -151,17 +170,18 @@ export async function reindexItemVault(
   }
 
   /** Embed first so we never persist a new `search_blob` if embedding fails (audit: vector/index drift). */
-  const vectors = await embedTexts(chunks);
+  const vectors = await embedTexts(chunks.map((c) => c.chunkText));
 
   const sourceUpdatedAt = row.updatedAt ?? new Date();
-  const values = chunks.map((chunkText, i) => ({
+  const values = chunks.map((chunk, i) => ({
     itemId: row.id,
     spaceId: row.spaceId,
     chunkIndex: i,
-    contentHash: sha256Hex(chunkText),
+    contentHash: sha256Hex(chunk.chunkText),
     sourceUpdatedAt,
     embedding: vectors[i]!,
-    chunkText,
+    chunkText: chunk.chunkText,
+    headingPath: JSON.stringify(chunk.headingPath),
   }));
 
   await db.transaction(async (tx) => {
@@ -173,7 +193,7 @@ export async function reindexItemVault(
           loreSummary: loreSummaryEff,
           loreAliases: loreAliasesEff,
           loreIndexedAt: new Date(),
-          loreMetaSourceHash: loreMetaSourceHash!,
+          loreMetaSourceHash: requiredLoreMetaHash,
         })
         .where(eq(items.id, itemId));
     } else {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildVaultEmbedDocument,
+  chunkVaultSections,
   chunkVaultText,
   VAULT_CHUNK_OVERLAP_CHARS,
   VAULT_CHUNK_TARGET_CHARS,
@@ -17,6 +18,7 @@ describe("chunkVaultText", () => {
     const t = "Hello world. Short note.";
     const c = chunkVaultText(t);
     expect(c.length).toBe(1);
+    expect(c[0]).toContain("Untitled");
     expect(c[0]).toContain("Hello");
   });
 
@@ -29,6 +31,27 @@ describe("chunkVaultText", () => {
     for (const ch of c) {
       expect(ch.length).toBeLessThanOrEqual(maxAllowed);
     }
+  });
+});
+
+describe("chunkVaultSections", () => {
+  it("keeps overlap inside section boundaries", () => {
+    const chunks = chunkVaultSections([
+      {
+        headingPath: ["Doc", "Section A"],
+        text: "A ".repeat(900),
+        charRange: [0, 1800],
+      },
+      {
+        headingPath: ["Doc", "Section B"],
+        text: "B summary",
+        charRange: [1801, 1810],
+      },
+    ]);
+    expect(chunks.length).toBeGreaterThan(1);
+    const sectionB = chunks.find((c) => c.breadcrumb.includes("Section B"));
+    expect(sectionB?.chunkText).toContain("Section B");
+    expect(sectionB?.chunkText).not.toContain("A A A A");
   });
 });
 

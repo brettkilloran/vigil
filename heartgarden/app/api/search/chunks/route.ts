@@ -69,6 +69,7 @@ export async function GET(req: Request) {
         spaceName: h.space.name,
         chunkIndex: h.chunkIndex,
         chunk: h.chunkText,
+        headingPath: h.headingPath,
         distance: h.distance,
       })),
     });

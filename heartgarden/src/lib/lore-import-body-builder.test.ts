@@ -29,9 +29,13 @@ describe("lore import body builders", () => {
     const contentJson = buildLoreStructuredBodyContentJson(
       {
         kind: "generic",
-        paragraphs: [{ heading: "Incident", text: "Recovered obsidian shard at trench site." }],
+        blocks: [
+          { kind: "heading", level: 2, text: "Incident" },
+          { kind: "paragraph", text: "Recovered obsidian shard at trench site." },
+        ],
       },
       "",
+      "Imported",
     );
     expect(contentJson.format).toBe("hgDoc");
     const ent = canvasItemToEntity(makeItem(contentJson, "lore"), "22222222-2222-4222-8222-222222222222");
@@ -50,6 +54,7 @@ describe("lore import body builders", () => {
         notesParagraphs: ["Residual resonance and unstable tides."],
       },
       "",
+      "Imported",
     );
     const html = String((contentJson as { html?: string }).html ?? "");
     expect(html).toContain('data-hg-lore-location-variant="v7"');
@@ -68,6 +73,7 @@ describe("lore import body builders", () => {
         recordParagraphs: ["Maintains custody chain for recovered artifacts."],
       },
       "",
+      "Imported",
     );
     const html = String((contentJson as { html?: string }).html ?? "");
     expect(html).toContain('data-hg-lore-faction-variant="archive091"');

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { CANONICAL_ENTITY_KINDS } from "@/src/lib/lore-import-canonical-kinds";
+import { hgStructuredBlockSchema } from "@/src/lib/hg-doc/structured-body";
 import { HEARTGARDEN_NATIONS } from "@/src/lib/lore-nations";
 import { LOCATION_TOP_FIELD_CHAR_CAPS } from "@/src/lib/lore-location-focus-document-html";
 
@@ -61,14 +62,7 @@ export const loreImportSourcePassageSchema = z.object({
 
 const loreImportGenericBodySchema = z.object({
   kind: z.literal("generic"),
-  paragraphs: z
-    .array(
-      z.object({
-        heading: z.string().max(255).optional(),
-        text: z.string().max(8000),
-      }),
-    )
-    .max(400),
+  blocks: z.array(hgStructuredBlockSchema).max(400),
 });
 
 const loreImportCharacterBodySchema = z.object({
