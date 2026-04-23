@@ -8,7 +8,7 @@ description: >-
 ---
 # /review-heavy
 
-Run this workflow end-to-end. Review is read-only; fixes happen in `FIX_PASS.md`.
+Run this workflow end-to-end. Review is read-only through audit creation; then immediately run the fix pass.
 
 ## 0. Preconditions
 
@@ -85,7 +85,22 @@ End synthesizer output with:
 
 This sentinel triggers the fix-pass kickoff hook.
 
-## 6. Parent Agent Reply Format
+## 6. Mandatory Fix-Pass Handoff (Do Not Skip)
+
+After writing the audit file, the parent agent must **immediately** start the fix pass by following:
+
+- `.cursor/skills/review-heavy/FIX_PASS.md`
+
+Do not rely solely on hooks. Hooks are best-effort; this handoff is required even if no hook message appears.
+
+Use this sequence:
+
+1. Confirm audit file path in the parent response.
+2. Start fix pass in the same conversation turn unless the user explicitly opts out.
+3. Apply SAFE/RISKY/NET_NEW classifier rules from this skill + `FIX_PASS.md`.
+4. If RISKY/NET_NEW findings exist, pause for explicit user approval before editing those items.
+
+## 7. Parent Agent Reply Format
 
 Return a concise user summary:
 
@@ -93,9 +108,9 @@ Return a concise user summary:
 - count by severity
 - top 3 issues (one line each)
 - audit file path
-- note that fix pass is available via `FIX_PASS.md`
+- note that fix pass has started (or is blocked pending approvals)
 
-## 7. Fix-Pass Classifier Contract (SAFE/RISKY/NET_NEW)
+## 8. Fix-Pass Classifier Contract (SAFE/RISKY/NET_NEW)
 
 When the hook starts the fix flow, require classification per finding before edits:
 

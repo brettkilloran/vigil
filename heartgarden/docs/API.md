@@ -170,6 +170,14 @@ Requires **`HEARTGARDEN_REALTIME_URL`**, **`HEARTGARDEN_REALTIME_REDIS_URL`**, *
 
 **Bodies and Zod shapes** for each step live in the route files under **`app/api/lore/import/*`** and **`app/api/lore/consistency/check/route.ts`**. Pipeline map: **`docs/CODEMAP.md`** (Lore import); kind registry: **`docs/LORE_IMPORT_KIND_MAPPING.md`**.
 
+`userContext.importScope` is supported on planning routes (`/api/lore/import/plan`, `/api/lore/import/jobs`) with values:
+- `current_subtree` (default): planner + apply must stay within the selected space and its descendants.
+- `gm_workspace`: planner may target any GM-visible space; apply validates targets/merges against policy and rejects out-of-scope ids.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/spaces/search` | Space picker query for import targeting. Query params: `scope` (`current_subtree` default, or `gm_workspace`), `rootSpaceId` (required for `current_subtree`), optional `q` (minimum 2 chars when set), optional `limit` (1–100, default 30). Returns tier-filtered `{ ok, spaces: [{ spaceId, title, path }], scope }`. |
+
 ## Item links
 
 | Method | Path | Purpose |

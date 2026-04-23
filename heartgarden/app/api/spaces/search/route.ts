@@ -7,8 +7,10 @@ import {
   heartgardenApiForbiddenJsonResponse,
   isHeartgardenPlayerBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
-import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
-import { collectDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
+import {
+  buildSpacePath,
+  resolveLoreImportAllowedSpaceIds,
+} from "@/src/lib/lore-import-space-scope";
 
 const querySchema = z.object({
   q: z.string().max(200).optional(),
@@ -16,23 +18,6 @@ const querySchema = z.object({
   rootSpaceId: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });
-
-function buildSpacePath(
-  spaceId: string,
-  byId: Map<string, { name: string; parentSpaceId: string | null }>,
-): string {
-  const labels: string[] = [];
-  let current: string | null = spaceId;
-  const seen = new Set<string>();
-  while (current && !seen.has(current)) {
-    seen.add(current);
-    const row = byId.get(current);
-    if (!row) break;
-    labels.push(row.name);
-    current = row.parentSpaceId;
-  }
-  return labels.reverse().join(" / ");
-}
 
 export async function GET(req: Request) {
   const db = tryGetDb();
@@ -59,15 +44,20 @@ export async function GET(req: Request) {
       { status: 400 },
     );
   }
-  const scope = parsed.data.scope ?? "gm_workspace";
+  const scope = parsed.data.scope ?? "current_subtree";
   if (scope === "current_subtree" && !parsed.data.rootSpaceId) {
     return Response.json(
       { ok: false, error: "rootSpaceId is required for current_subtree scope", spaces: [] },
       { status: 400 },
     );
   }
-  const baseFilters = await finalizeHeartgardenSearchFiltersForDb(db, bootCtx, {});
-  if (!baseFilters) {
+  const allowed = await resolveLoreImportAllowedSpaceIds({
+    db,
+    rootSpaceId: parsed.data.rootSpaceId,
+    scope,
+    bootCtx,
+  }).catch(() => null);
+  if (!allowed) {
     return heartgardenApiForbiddenJsonResponse();
   }
   const rows = await db
@@ -80,22 +70,10 @@ export async function GET(req: Request) {
   const byId = new Map(
     rows.map((row) => [row.id, { name: row.name, parentSpaceId: row.parentSpaceId ?? null }]),
   );
-  let allowed = new Set(rows.map((row) => row.id));
-  if (baseFilters.spaceIds?.length) {
-    const scoped = new Set(baseFilters.spaceIds);
-    allowed = new Set([...allowed].filter((id) => scoped.has(id)));
-  } else if (baseFilters.spaceId) {
-    allowed = new Set([baseFilters.spaceId]);
-  }
-  if (baseFilters.excludeSpaceIds?.length) {
-    for (const excluded of baseFilters.excludeSpaceIds) allowed.delete(excluded);
-  }
-  if (baseFilters.excludeSpaceId) allowed.delete(baseFilters.excludeSpaceId);
-  if (scope === "current_subtree" && parsed.data.rootSpaceId) {
-    const subtree = collectDescendantSpaceIds(parsed.data.rootSpaceId, rows);
-    allowed = new Set([...allowed].filter((id) => subtree.has(id)));
-  }
   const q = (parsed.data.q ?? "").trim().toLowerCase();
+  if (q.length > 0 && q.length < 2) {
+    return Response.json({ ok: true, spaces: [], scope });
+  }
   const limit = parsed.data.limit ?? 30;
   const spaceList = rows
     .filter((row) => allowed.has(row.id))

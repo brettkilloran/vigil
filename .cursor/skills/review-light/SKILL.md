@@ -15,7 +15,7 @@ Use this for low-cost review. Prefer `review-heavy` when the change is large, ri
 - Use `subagent_type: generalPurpose`, `readonly: true`.
 - Use model `composer-2-fast`.
 - Do not run multi-agent fan-out.
-- Do not write a dated audit file by default.
+- Write a dated audit file every run so fix-pass can execute deterministically.
 
 ## 1. Scope Detection (Smart Auto)
 
@@ -46,7 +46,39 @@ Skip style-only nits unless they hide a real bug.
 
 If no significant issues are found, say so explicitly and list any residual risk.
 
-## 4. Escalation Rule
+## 4. Write Dated Audit File (Required)
+
+Write audit to:
+
+- `heartgarden/docs/REVIEW_YYYY-MM-DD.md` (UTC date)
+- If name exists, use `REVIEW_YYYY-MM-DD-2.md`, then `-3`, etc.
+
+Include frontmatter:
+
+- `status: supporting`
+- `audience: [agent, human]`
+- `last_reviewed: YYYY-MM-DD`
+- `related:` key docs for this change
+
+End output with sentinel:
+
+`REVIEW_AUDIT_WRITTEN: heartgarden/docs/REVIEW_YYYY-MM-DD.md`
+
+## 5. Mandatory Fix-Pass Handoff (Do Not Skip)
+
+After audit creation, immediately run fix pass by following:
+
+- `.cursor/skills/review-heavy/FIX_PASS.md`
+
+Treat this as mandatory for `/review-light` and `/review-heavy`. Do not rely only on hook delivery.
+
+Classifier policy:
+
+- `SAFE`: may proceed after one batched approval prompt.
+- `RISKY`: explicit user approval required.
+- `NET_NEW`: explicit user approval required.
+
+## 6. Escalation Rule
 
 Recommend running `/review-heavy` when:
 

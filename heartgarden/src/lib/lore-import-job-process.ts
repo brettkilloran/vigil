@@ -104,34 +104,6 @@ function normalizeLoreImportJobEvent(event: LoreImportJobEvent): LoreImportJobEv
   };
 }
 
-function trimLoreImportJobEvents(events: LoreImportJobEvent[]): LoreImportJobEvent[] {
-  if (events.length <= LORE_IMPORT_EVENT_CAP) return events;
-  const removableKinds = new Set(["note", "phase_start"]);
-  const removableIndexes: number[] = [];
-  for (let i = 0; i < events.length; i += 1) {
-    if (removableKinds.has(events[i]?.kind ?? "")) {
-      removableIndexes.push(i);
-    }
-  }
-  const toRemove = new Set<number>();
-  let excess = events.length - LORE_IMPORT_EVENT_CAP;
-  for (const idx of removableIndexes) {
-    if (excess <= 0) break;
-    toRemove.add(idx);
-    excess -= 1;
-  }
-  if (excess > 0) {
-    for (let i = 0; i < events.length && excess > 0; i += 1) {
-      if (toRemove.has(i)) continue;
-      toRemove.add(i);
-      excess -= 1;
-    }
-  }
-  const trimmed = events.filter((_, idx) => !toRemove.has(idx));
-  if (trimmed.length <= LORE_IMPORT_EVENT_CAP) return trimmed;
-  return trimmed.slice(trimmed.length - LORE_IMPORT_EVENT_CAP);
-}
-
 export async function appendLoreImportJobEvent(
   db: VigilDb,
   jobId: string,
@@ -145,32 +117,17 @@ export async function appendLoreImportJobEvent(
     await db.execute(sql`
       update "lore_import_jobs"
       set
-        "progress_events" = coalesce("progress_events", '[]'::jsonb) || jsonb_build_array(${eventJson}::jsonb),
-        "updated_at" = ${now}
-      where "id" = ${jobId}
-    `);
-    const rows = await db.execute(sql`
-      select "progress_events"
-      from "lore_import_jobs"
-      where "id" = ${jobId}
-      limit 1
-    `);
-    const raw =
-      (rows as { rows?: Array<{ progress_events?: unknown }> }).rows?.[0]?.progress_events ?? [];
-    if (!Array.isArray(raw)) return;
-    const normalizedEvents = raw
-      .map((entry) => {
-        if (!entry || typeof entry !== "object") return null;
-        return normalizeLoreImportJobEvent(entry as LoreImportJobEvent);
-      })
-      .filter((entry): entry is LoreImportJobEvent => Boolean(entry));
-    const trimmed = trimLoreImportJobEvents(normalizedEvents);
-    if (trimmed.length === normalizedEvents.length) return;
-    const trimmedJson = JSON.stringify(trimmed);
-    await db.execute(sql`
-      update "lore_import_jobs"
-      set
-        "progress_events" = ${trimmedJson}::jsonb,
+        "progress_events" = (
+          select jsonb_agg(value)
+          from (
+            select value
+            from jsonb_array_elements(
+              coalesce("lore_import_jobs"."progress_events", '[]'::jsonb) || jsonb_build_array(${eventJson}::jsonb)
+            ) with ordinality as e(value, ord)
+            order by ord desc
+            limit ${LORE_IMPORT_EVENT_CAP}
+          ) recent
+        ),
         "updated_at" = ${now}
       where "id" = ${jobId}
     `);

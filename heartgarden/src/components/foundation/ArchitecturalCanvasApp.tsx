@@ -622,6 +622,9 @@ type LoreImportTargetSpaceOption = {
   path: string;
 };
 
+const LORE_SMART_SPACE_SEARCH_MIN_QUERY = 2;
+const LORE_SMART_SPACE_SEARCH_DEBOUNCE_MS = 220;
+
 function coerceOptionalProgressInt(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
   if (typeof value === "string" && value.trim().length > 0) {
@@ -2636,6 +2639,7 @@ export function ArchitecturalCanvasApp({
   const [loreSmartPlanning, setLoreSmartPlanning] = useState(false);
   const [loreSmartPlanningJobId, setLoreSmartPlanningJobId] = useState<string | null>(null);
   const loreSmartPlanningAbortRef = useRef<AbortController | null>(null);
+  const loreSmartPlanningAttemptRef = useRef<string | null>(null);
   const loreSmartPlanningStartedAtRef = useRef<number | null>(null);
   const [loreSmartPlanningProgress, setLoreSmartPlanningProgress] =
     useState<LoreImportJobProgress | null>(null);
@@ -2751,6 +2755,25 @@ export function ArchitecturalCanvasApp({
     LoreImportTargetSpaceOption[]
   >([]);
   const [loreImportCommitting, setLoreImportCommitting] = useState(false);
+  const loreSmartMergeProposals = useMemo(
+    () => loreSmartReview?.plan.mergeProposals ?? [],
+    [loreSmartReview],
+  );
+  const loreSmartAcceptedMergeCount = useMemo(
+    () =>
+      loreSmartMergeProposals.reduce(
+        (sum, proposal) => sum + (loreSmartAcceptedMergeIds[proposal.id] ? 1 : 0),
+        0,
+      ),
+    [loreSmartAcceptedMergeIds, loreSmartMergeProposals],
+  );
+  const loreSmartNoteTitleByClientId = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const note of loreSmartReview?.plan.notes ?? []) {
+      byId.set(note.clientId, note.title);
+    }
+    return byId;
+  }, [loreSmartReview]);
   const closeLoreSmartReview = useCallback(() => {
     if (loreImportCommitting) return;
     setLoreSmartReview(null);
@@ -2791,6 +2814,21 @@ export function ArchitecturalCanvasApp({
     setLoreSmartManualQuestionId(null);
     setLoreSmartOtherFollowUp(null);
   }, []);
+  const setAllLoreSmartMergeAcceptances = useCallback((accepted: boolean) => {
+    setLoreSmartAcceptedMergeIds((prev) => {
+      const next: Record<string, boolean> = {};
+      for (const mergeId of Object.keys(prev)) {
+        next[mergeId] = accepted;
+      }
+      return next;
+    });
+  }, []);
+  const setLoreSmartMergeAccepted = useCallback((mergeId: string, accepted: boolean) => {
+    setLoreSmartAcceptedMergeIds((prev) => ({
+      ...prev,
+      [mergeId]: accepted,
+    }));
+  }, []);
   const loreSmartImportScope = loreSmartReview?.plan.userContext?.importScope ?? "current_subtree";
   const loreSmartPlanWithTargetOverrides = useMemo(() => {
     if (!loreSmartReview) return null;
@@ -2811,34 +2849,44 @@ export function ArchitecturalCanvasApp({
     }
     const ctrl = new AbortController();
     const query = loreSmartSpaceSearchQuery.trim();
+    if (query.length > 0 && query.length < LORE_SMART_SPACE_SEARCH_MIN_QUERY) {
+      setLoreSmartSpaceSearchResults([]);
+      return;
+    }
     const params = new URLSearchParams({
       scope: loreSmartImportScope,
       rootSpaceId: activeSpaceId,
+      limit: query.length > 0 ? "50" : "20",
     });
     if (query) params.set("q", query);
-    void fetch(`/api/spaces/search?${params.toString()}`, {
-      signal: ctrl.signal,
-    })
-      .then(async (res) => {
-        const body = (await res.json()) as {
-          ok?: boolean;
-          spaces?: Array<{ spaceId?: string; title?: string; path?: string }>;
-        };
-        if (!res.ok || !body.ok || !Array.isArray(body.spaces)) return;
-        setLoreSmartSpaceSearchResults(
-          body.spaces
-            .filter((row): row is { spaceId: string; title: string; path: string } =>
-              typeof row.spaceId === "string" &&
-              typeof row.title === "string" &&
-              typeof row.path === "string",
-            )
-            .slice(0, 80),
-        );
+    const timer = window.setTimeout(() => {
+      void fetch(`/api/spaces/search?${params.toString()}`, {
+        signal: ctrl.signal,
       })
-      .catch((error: unknown) => {
-        if (isAbortError(error)) return;
-      });
-    return () => ctrl.abort();
+        .then(async (res) => {
+          const body = (await res.json()) as {
+            ok?: boolean;
+            spaces?: Array<{ spaceId?: string; title?: string; path?: string }>;
+          };
+          if (!res.ok || !body.ok || !Array.isArray(body.spaces)) return;
+          setLoreSmartSpaceSearchResults(
+            body.spaces
+              .filter((row): row is { spaceId: string; title: string; path: string } =>
+                typeof row.spaceId === "string" &&
+                typeof row.title === "string" &&
+                typeof row.path === "string",
+              )
+              .slice(0, 80),
+          );
+        })
+        .catch((error: unknown) => {
+          if (isAbortError(error)) return;
+        });
+    }, LORE_SMART_SPACE_SEARCH_DEBOUNCE_MS);
+    return () => {
+      window.clearTimeout(timer);
+      ctrl.abort();
+    };
   }, [activeSpaceId, loreSmartImportScope, loreSmartReview, loreSmartSpaceSearchQuery]);
   const cancelLoreSmartPlanning = useCallback(() => {
     const ctrl = loreSmartPlanningAbortRef.current;
@@ -2860,6 +2908,7 @@ export function ArchitecturalCanvasApp({
     loreSmartPlanningStartedAtRef.current = null;
     setLoreSmartPlanningEvents([]);
     setLoreSmartPlanningDetailsOpen(false);
+    loreSmartPlanningAttemptRef.current = null;
   }, [loreSmartPlanningJobId]);
   const [loreSmartPlanningCopyState, setLoreSmartPlanningCopyState] = useState<
     "idle" | "copied" | "failed"
@@ -8536,6 +8585,7 @@ export function ArchitecturalCanvasApp({
       const useSmart = persistNeonRef.current && isUuidLike(spaceId) && parsedText.trim().length > 0;
 
       if (useSmart) {
+        loreSmartPlanningAttemptRef.current = attemptId;
         setLoreSmartPlanningJobId(null);
         setLoreSmartReview(null);
         setLoreSmartAcceptedMergeIds({});
@@ -8852,13 +8902,19 @@ export function ArchitecturalCanvasApp({
             }),
           );
         } finally {
-          setLoreSmartPlanningJobId(null);
-          if (!planningFailed) {
-            setLoreSmartPlanning(false);
-            setLoreSmartPlanningProgress(null);
-            loreSmartPlanningStartedAtRef.current = null;
-            setLoreSmartPlanningEvents([]);
-            setLoreSmartPlanningDetailsOpen(false);
+          if (
+            loreSmartPlanningAbortRef.current === planningAbort &&
+            loreSmartPlanningAttemptRef.current === attemptId
+          ) {
+            setLoreSmartPlanningJobId(null);
+            if (!planningFailed) {
+              setLoreSmartPlanning(false);
+              setLoreSmartPlanningProgress(null);
+              loreSmartPlanningStartedAtRef.current = null;
+              setLoreSmartPlanningEvents([]);
+              setLoreSmartPlanningDetailsOpen(false);
+            }
+            loreSmartPlanningAttemptRef.current = null;
           }
         }
         return;
@@ -8891,6 +8947,7 @@ export function ArchitecturalCanvasApp({
         typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
           ? crypto.randomUUID()
           : `import-attempt-${Date.now()}`;
+      loreSmartPlanningAttemptRef.current = null;
       loreSmartPlanningAbortRef.current?.abort();
       const planningAbort = new AbortController();
       loreSmartPlanningAbortRef.current = planningAbort;
@@ -9063,6 +9120,7 @@ export function ArchitecturalCanvasApp({
       typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
         : `import-attempt-${Date.now()}`;
+    loreSmartPlanningAttemptRef.current = null;
     loreSmartPlanningAbortRef.current?.abort();
     const planningAbort = new AbortController();
     loreSmartPlanningAbortRef.current = planningAbort;
@@ -13372,6 +13430,75 @@ export function ArchitecturalCanvasApp({
                     </Button>
                   ) : null}
                 </div>
+                {loreSmartMergeProposals.length > 0 ? (
+                  <section>
+                    <p className={styles.smartImportReviewMergeMeta}>
+                      Merge proposals: {loreSmartAcceptedMergeCount}/{loreSmartMergeProposals.length} accepted
+                    </p>
+                    <div className={styles.smartImportReviewMergeToolbar}>
+                      <Button
+                        size="sm"
+                        variant="default"
+                        tone="card-dark"
+                        type="button"
+                        disabled={loreImportCommitting}
+                        onClick={() => setAllLoreSmartMergeAcceptances(true)}
+                      >
+                        Accept all merges
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="default"
+                        tone="card-dark"
+                        type="button"
+                        disabled={loreImportCommitting}
+                        onClick={() => setAllLoreSmartMergeAcceptances(false)}
+                      >
+                        Reject all merges
+                      </Button>
+                    </div>
+                    <ul className={styles.smartImportReviewMergeList}>
+                      {loreSmartMergeProposals.map((merge) => {
+                        const accepted = Boolean(loreSmartAcceptedMergeIds[merge.id]);
+                        const fromTitle =
+                          loreSmartNoteTitleByClientId.get(merge.noteClientId) ?? merge.noteClientId;
+                        const preview = merge.proposedText.slice(0, 600);
+                        return (
+                          <li key={merge.id} className={styles.smartImportReviewMergeCard}>
+                            <label className={styles.smartImportReviewMergeLabel}>
+                              <input
+                                type="checkbox"
+                                checked={accepted}
+                                disabled={loreImportCommitting}
+                                onChange={(event) =>
+                                  setLoreSmartMergeAccepted(merge.id, event.target.checked)
+                                }
+                              />
+                              <span>
+                                <strong>{merge.targetTitle}</strong>
+                                <small className={styles.smartImportReviewMergeSpace}>
+                                  {merge.targetSpaceName
+                                    ? `${merge.targetSpaceName} · `
+                                    : ""}
+                                  from &quot;{fromTitle}&quot;
+                                </small>
+                                {merge.rationale ? (
+                                  <small className={styles.smartImportReviewMergeMeta}>
+                                    {merge.rationale}
+                                  </small>
+                                ) : null}
+                              </span>
+                            </label>
+                            <pre className={styles.smartImportReviewMergePre}>
+                              {preview}
+                              {merge.proposedText.length > preview.length ? "\n… (truncated)" : ""}
+                            </pre>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                ) : null}
                 <section className={styles.smartImportReviewStructure}>
                   <div className={styles.smartImportReviewTargetScope}>
                     <p className={styles.smartImportReviewScopeHint}>

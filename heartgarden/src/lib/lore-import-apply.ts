@@ -1,9 +1,9 @@
 import { randomUUID } from "crypto";
-import { and, eq, inArray, max, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, max, sql } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
 import { z } from "zod";
 
-import { importReviewItems, itemLinks, items, spaces } from "@/src/db/schema";
+import { importReviewItems, itemLinks, items, loreImportJobs, spaces } from "@/src/db/schema";
 import { buildContentJsonForFolderEntity } from "@/src/components/foundation/architectural-db-bridge";
 import type { CanvasFolderEntity } from "@/src/components/foundation/architectural-types";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
@@ -51,9 +51,7 @@ import {
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
 import { parseFactionRoster, type FactionRosterEntry } from "@/src/lib/faction-roster-schema";
-import type { HeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
-import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
-import { fetchDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
+import { resolveLoreImportAllowedSpaceIds } from "@/src/lib/lore-import-space-scope";
 
 type ItemRow = InferSelectModel<typeof items>;
 
@@ -61,41 +59,11 @@ const NODE_W = 280;
 const FOLDER_W = 420;
 const FOLDER_H = 280;
 export const SOURCE_SECTION_CARD_MAX_CHARS = 10_000;
-const GM_LORE_IMPORT_SCOPE_CONTEXT: HeartgardenApiBootContext = { role: "gm" };
 
 type SourceCardDraft = {
   title: string;
   text: string;
 };
-
-async function resolveAllowedImportSpaceIds(
-  db: VigilDb,
-  rootSpaceId: string,
-  importScope: "current_subtree" | "gm_workspace",
-): Promise<Set<string>> {
-  if (importScope === "current_subtree") {
-    return fetchDescendantSpaceIds(db, rootSpaceId);
-  }
-  const baseFilters =
-    (await finalizeHeartgardenSearchFiltersForDb(
-      db,
-      GM_LORE_IMPORT_SCOPE_CONTEXT,
-      {},
-    )) ?? {};
-  const rows = await db.select({ id: spaces.id }).from(spaces);
-  let allowed = new Set(rows.map((row) => row.id));
-  if (baseFilters.spaceIds?.length) {
-    const scoped = new Set(baseFilters.spaceIds);
-    allowed = new Set([...allowed].filter((id) => scoped.has(id)));
-  } else if (baseFilters.spaceId) {
-    allowed = new Set(baseFilters.spaceId ? [baseFilters.spaceId] : []);
-  }
-  if (baseFilters.excludeSpaceIds?.length) {
-    for (const id of baseFilters.excludeSpaceIds) allowed.delete(id);
-  }
-  if (baseFilters.excludeSpaceId) allowed.delete(baseFilters.excludeSpaceId);
-  return allowed;
-}
 
 export function splitIntoSourceParts(text: string): string[] {
   const trimmed = text.trim();
@@ -256,6 +224,35 @@ async function nextZIndex(
   return n;
 }
 
+async function buildInitialZIndexCursor(
+  tx: Pick<VigilDb, "select">,
+  spaceIds: Iterable<string>,
+): Promise<Map<string, number>> {
+  const ids = [...new Set([...spaceIds].filter((id) => typeof id === "string" && id.length > 0))];
+  if (ids.length === 0) return new Map();
+  const rows = await tx
+    .select({
+      spaceId: items.spaceId,
+      z: max(items.zIndex),
+    })
+    .from(items)
+    .where(inArray(items.spaceId, ids))
+    .groupBy(items.spaceId);
+  const cursor = new Map<string, number>();
+  for (const id of ids) cursor.set(id, 101);
+  for (const row of rows) {
+    const next = row.z != null && Number.isFinite(Number(row.z)) ? Number(row.z) + 1 : 101;
+    cursor.set(row.spaceId, next);
+  }
+  return cursor;
+}
+
+function takeNextZIndex(cursor: Map<string, number>, spaceId: string): number {
+  const next = cursor.get(spaceId) ?? 101;
+  cursor.set(spaceId, next + 1);
+  return next;
+}
+
 export async function applyLoreImportPlan(
   db: VigilDb,
   raw: LoreImportApplyBody,
@@ -391,12 +388,38 @@ export async function applyLoreImportPlan(
   const mergeProposalsAccepted = plan.mergeProposals.filter((m) =>
     acceptedMergeIds.has(m.id),
   );
-  const importScope = plan.userContext?.importScope ?? "current_subtree";
-  const allowedImportSpaceIds = await resolveAllowedImportSpaceIds(
+  const [jobRow] = await db
+    .select({
+      userContext: loreImportJobs.userContext,
+      spaceId: loreImportJobs.spaceId,
+    })
+    .from(loreImportJobs)
+    .where(eq(loreImportJobs.importBatchId, body.importBatchId))
+    .orderBy(desc(loreImportJobs.updatedAt))
+    .limit(1);
+  if (!jobRow) {
+    throw new Error("Missing server import metadata for this batch; re-run planning before apply.");
+  }
+  if (jobRow?.spaceId && jobRow.spaceId !== body.spaceId) {
+    throw new Error("Import batch does not belong to this space");
+  }
+  const serverScope =
+    jobRow?.userContext &&
+    typeof jobRow.userContext === "object" &&
+    (jobRow.userContext as { importScope?: unknown }).importScope === "gm_workspace"
+      ? "gm_workspace"
+      : "current_subtree";
+  if (
+    plan.userContext?.importScope &&
+    plan.userContext.importScope !== serverScope
+  ) {
+    throw new Error("Import scope mismatch with server job metadata");
+  }
+  const allowedImportSpaceIds = await resolveLoreImportAllowedSpaceIds({
     db,
-    body.spaceId,
-    importScope,
-  );
+    rootSpaceId: body.spaceId,
+    scope: serverScope,
+  });
   if (!allowedImportSpaceIds.has(body.spaceId)) {
     throw new Error("Current space is outside allowed import scope");
   }
@@ -511,12 +534,22 @@ export async function applyLoreImportPlan(
     }
 
     const sortedFolders = orgMode === "folders" ? sortFoldersTopologically(plan.folders) : [];
+    const targetSpaceIds = new Set<string>([body.spaceId]);
+    for (const note of notesToCreate) {
+      if (orgMode === "folders" && note.folderClientId) continue;
+      const target =
+        note.targetSpaceId && allowedImportSpaceIds.has(note.targetSpaceId)
+          ? note.targetSpaceId
+          : body.spaceId;
+      targetSpaceIds.add(target);
+    }
+    const zIndexCursor = await buildInitialZIndexCursor(dbx, targetSpaceIds);
     for (const folder of sortedFolders) {
       const parentSpaceId = folder.parentClientId
         ? (folderClientToChildSpace.get(folder.parentClientId) ?? body.spaceId)
         : body.spaceId;
 
-      const folderZ = await nextZIndex(dbx, parentSpaceId);
+      const folderZ = takeNextZIndex(zIndexCursor, parentSpaceId);
 
       const [childSpace] = await dbx
         .insert(spaces)
@@ -527,6 +560,7 @@ export async function applyLoreImportPlan(
         .returning();
       if (!childSpace) continue;
       folderClientToChildSpace.set(folder.clientId, childSpace.id);
+      zIndexCursor.set(childSpace.id, 101);
 
       const fx = ox + sortedFolders.indexOf(folder) * 40;
       const fy = oy + sortedFolders.indexOf(folder) * 36;
@@ -622,6 +656,7 @@ export async function applyLoreImportPlan(
         loreAliases: existing.loreAliases ?? undefined,
       });
 
+      const prevUpdatedAtIso = existing.updatedAt ? new Date(existing.updatedAt).toISOString() : null;
       const [updated] = await dbx
         .update(items)
         .set({
@@ -631,13 +666,24 @@ export async function applyLoreImportPlan(
           entityMeta: mergedEntityMeta,
           updatedAt: new Date(),
         })
-        .where(eq(items.id, m.targetItemId))
+        .where(
+          and(
+            eq(items.id, m.targetItemId),
+            prevUpdatedAtIso === null
+              ? sql`${items.updatedAt} is null`
+              : sql`${items.updatedAt} = ${prevUpdatedAtIso}::timestamptz`,
+          ),
+        )
         .returning();
 
       if (updated) {
         mergesApplied += 1;
         clientIdToItemId.set(m.noteClientId, m.targetItemId);
         rowsToSchedule.push(updated);
+      } else {
+        linkWarnings.push(
+          `Merge skipped — target ${m.targetItemId} changed while importing; retry to re-merge`,
+        );
       }
     }
 
@@ -711,7 +757,7 @@ export async function applyLoreImportPlan(
       }
     }
 
-    let zRoot = await nextZIndex(dbx, body.spaceId);
+    let zRoot = takeNextZIndex(zIndexCursor, body.spaceId);
     if (hasSource && rootSourceRect) {
       const layoutSource = rootSourceRect;
       for (let i = 0; i < sourceCardDrafts.length; i += 1) {
@@ -746,7 +792,7 @@ export async function applyLoreImportPlan(
             y: layoutSource.y + i * 26,
             width: layoutSource.width,
             height: layoutSource.height,
-            zIndex: zRoot++,
+            zIndex: zRoot,
             title: draft.title.slice(0, 255),
             contentText: draft.text.slice(0, 120_000),
             searchBlob,
@@ -760,7 +806,9 @@ export async function applyLoreImportPlan(
           createdItemIds.push(row.id);
           rowsToSchedule.push(row);
         }
+        zRoot += 1;
       }
+      zIndexCursor.set(body.spaceId, zRoot);
     }
 
     for (const note of notesToCreate) {
@@ -778,7 +826,7 @@ export async function applyLoreImportPlan(
           width: NODE_W,
           height: 260,
         };
-      const z = await nextZIndex(dbx, targetSpaceId);
+      const z = takeNextZIndex(zIndexCursor, targetSpaceId);
 
       const bodyText = note.bodyText.slice(0, 120_000);
       const contentJson = buildLoreStructuredBodyContentJson(note.body, bodyText);

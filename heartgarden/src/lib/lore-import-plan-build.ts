@@ -31,14 +31,17 @@ import type {
 } from "@/src/lib/lore-import-plan-types";
 import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
 import { LOCATION_TOP_FIELD_CHAR_CAPS } from "@/src/lib/lore-location-focus-document-html";
-import type { HeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
 import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
 import { fetchDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
+import {
+  applyAllowedSpaceIdsToFilters,
+  buildSpacePath,
+} from "@/src/lib/lore-import-space-scope";
 import type { SearchFilters, VigilDb } from "@/src/lib/spaces";
 import { IMPORT_MERGE_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 import { hybridRetrieveItems } from "@/src/lib/vault-retrieval";
 
-const GM_LORE_IMPORT_SEARCH: HeartgardenApiBootContext = { role: "gm" };
+const GM_LORE_IMPORT_SEARCH = { role: "gm" } as const;
 
 const VAULT_SEARCH_CONCURRENCY = 5;
 
@@ -91,43 +94,6 @@ type LoreImportFindings = {
 type LoreImportPlanEventReporter = (
   event: LoreImportPlanEvent,
 ) => void | Promise<void>;
-
-function withScopedSpaceIds(
-  filters: SearchFilters,
-  allowedSpaceIds: Set<string> | null,
-): SearchFilters {
-  if (!allowedSpaceIds) return filters;
-  const allowed = [...allowedSpaceIds];
-  const next: SearchFilters = { ...filters };
-  if (next.spaceIds?.length) {
-    next.spaceIds = next.spaceIds.filter((id) => allowedSpaceIds.has(id));
-    return next;
-  }
-  if (next.spaceId) {
-    next.spaceIds = allowedSpaceIds.has(next.spaceId) ? [next.spaceId] : [];
-    delete next.spaceId;
-    return next;
-  }
-  next.spaceIds = allowed;
-  return next;
-}
-
-function buildSpacePath(
-  spaceId: string,
-  byId: Map<string, { name: string; parentSpaceId: string | null }>,
-): string {
-  const labels: string[] = [];
-  let current: string | null = spaceId;
-  const seen = new Set<string>();
-  while (current && !seen.has(current)) {
-    seen.add(current);
-    const row = byId.get(current);
-    if (!row) break;
-    labels.push(row.name);
-    current = row.parentSpaceId;
-  }
-  return labels.reverse().join(" / ");
-}
 
 export async function buildLoreImportPlan(args: {
   db: VigilDb;
@@ -328,7 +294,7 @@ export async function buildLoreImportPlan(args: {
       : null;
   const baseVaultSearchFilters: SearchFilters =
     (await finalizeHeartgardenSearchFiltersForDb(args.db, GM_LORE_IMPORT_SEARCH, {})) ?? {};
-  const vaultSearchFilters: SearchFilters = withScopedSpaceIds(
+  const vaultSearchFilters: SearchFilters = applyAllowedSpaceIdsToFilters(
     baseVaultSearchFilters,
     allowedSpaceIds,
   );
@@ -347,6 +313,21 @@ export async function buildLoreImportPlan(args: {
   );
 
   const candidatesByNoteClientId: Record<string, CandidateRow[]> = {};
+  const relatedItemsByNoteClientId: Record<
+    string,
+    {
+      itemId: string;
+      spaceId: string;
+      title: string;
+      score?: number;
+      snippet?: string;
+    }[]
+  > = {};
+  const spaceCandidatesByNoteClientId: Record<string, SpaceCandidateRow[]> = {};
+  const globalSpaceSuggestions = new Map<
+    string,
+    { spaceId: string; spaceTitle: string; path?: string; score: number; reason?: string }
+  >();
   const retrievalTotal = Math.max(
     1,
     Math.ceil(notesInternal.length / VAULT_SEARCH_CONCURRENCY),
@@ -379,62 +360,6 @@ export async function buildLoreImportPlan(args: {
             itemType: r.item.itemType,
             entityType: r.item.entityType,
           };
-        });
-        return { clientId: n.clientId, rows };
-      }),
-    );
-    for (const r of results) {
-      candidatesByNoteClientId[r.clientId] = r.rows;
-    }
-    findings = {
-      ...findings,
-      candidates: Object.values(candidatesByNoteClientId).reduce(
-        (sum, rows) => sum + rows.length,
-        0,
-      ),
-    };
-    await emitEvent({
-      kind: "vault_search",
-      phase: "vault_retrieval",
-      durationMs: Math.max(0, Date.now() - retrievalStartedAt),
-      text: `Vault retrieval batch ${retrievalStep} of ${retrievalTotal}`,
-    });
-  }
-
-  const relatedItemsByNoteClientId: Record<
-    string,
-    {
-      itemId: string;
-      spaceId: string;
-      title: string;
-      score?: number;
-      snippet?: string;
-    }[]
-  > = {};
-  const spaceCandidatesByNoteClientId: Record<string, SpaceCandidateRow[]> = {};
-  const globalSpaceSuggestions = new Map<
-    string,
-    { spaceId: string; spaceTitle: string; path?: string; score: number; reason?: string }
-  >();
-  const spaceRetrievalTotal = Math.max(
-    1,
-    Math.ceil(notesInternal.length / VAULT_SEARCH_CONCURRENCY),
-  );
-  for (let i = 0; i < notesInternal.length; i += VAULT_SEARCH_CONCURRENCY) {
-    const retrievalStep = Math.floor(i / VAULT_SEARCH_CONCURRENCY) + 1;
-    await reportProgress("vault_retrieval", "Finding best destination spaces", {
-      step: retrievalStep,
-      total: spaceRetrievalTotal,
-      meta: { subphase: "space_candidates" },
-    });
-    const retrievalStartedAt = Date.now();
-    const slice = notesInternal.slice(i, i + VAULT_SEARCH_CONCURRENCY);
-    const results = await Promise.all(
-      slice.map(async (note) => {
-        const q = `${note.title} ${note.summary}`.trim().slice(0, 800);
-        const hybrid = await hybridRetrieveItems(args.db, q, vaultSearchFilters, {
-          ...IMPORT_MERGE_HYBRID_OPTIONS,
-          includeVector: true,
         });
         const relatedItems = hybrid.rows.slice(0, 12).map((r) => ({
           itemId: r.item.id,
@@ -480,13 +405,14 @@ export async function buildLoreImportPlan(args: {
               topTitles: entry.topTitles,
             };
           });
-        return { clientId: note.clientId, relatedItems, spaceCandidates };
+        return { clientId: n.clientId, rows, relatedItems, spaceCandidates };
       }),
     );
-    for (const result of results) {
-      relatedItemsByNoteClientId[result.clientId] = result.relatedItems;
-      spaceCandidatesByNoteClientId[result.clientId] = result.spaceCandidates;
-      for (const candidate of result.spaceCandidates) {
+    for (const r of results) {
+      candidatesByNoteClientId[r.clientId] = r.rows;
+      relatedItemsByNoteClientId[r.clientId] = r.relatedItems;
+      spaceCandidatesByNoteClientId[r.clientId] = r.spaceCandidates;
+      for (const candidate of r.spaceCandidates) {
         const existing = globalSpaceSuggestions.get(candidate.spaceId);
         if (!existing || (candidate.score ?? 0) > existing.score) {
           globalSpaceSuggestions.set(candidate.spaceId, {
@@ -501,13 +427,17 @@ export async function buildLoreImportPlan(args: {
     }
     findings = {
       ...findings,
+      candidates: Object.values(candidatesByNoteClientId).reduce(
+        (sum, rows) => sum + rows.length,
+        0,
+      ),
       candidateSpaces: globalSpaceSuggestions.size,
     };
     await emitEvent({
       kind: "vault_search",
       phase: "vault_retrieval",
       durationMs: Math.max(0, Date.now() - retrievalStartedAt),
-      text: `Space candidate retrieval batch ${retrievalStep} of ${spaceRetrievalTotal}`,
+      text: `Vault retrieval batch ${retrievalStep} of ${retrievalTotal}`,
     });
   }
   if (importScope === "current_subtree" && globalSpaceSuggestions.size === 0) {
