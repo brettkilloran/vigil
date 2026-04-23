@@ -9657,6 +9657,31 @@ export function ArchitecturalCanvasApp({
   updateDropTargetsRef.current = updateDropTargets;
   const persistNeonItemsLayoutRef = useRef(persistNeonItemsLayout);
   persistNeonItemsLayoutRef.current = persistNeonItemsLayout;
+  // REVIEW_2026-04-22-2 H3: coalesce drop-target hit-tests to at most one per
+  // animation frame. Each call to `updateDropTargets` performs many
+  // `getBoundingClientRect` reads; running it unthrottled on every pointermove
+  // causes per-frame layout thrash on dense canvases. A single pending rAF
+  // handle is sufficient because the hit-test only needs the newest pointer
+  // position, which we already stash in `dragPointerScreenRef`.
+  const dropTargetRafHandleRef = useRef<number | null>(null);
+  const dropTargetPendingDraggedIdRef = useRef<string | null>(null);
+  const scheduleUpdateDropTargets = (draggedId: string) => {
+    dropTargetPendingDraggedIdRef.current = draggedId;
+    if (dropTargetRafHandleRef.current !== null) return;
+    const run = () => {
+      dropTargetRafHandleRef.current = null;
+      const pendingId = dropTargetPendingDraggedIdRef.current;
+      dropTargetPendingDraggedIdRef.current = null;
+      if (!pendingId) return;
+      const { x, y } = dragPointerScreenRef.current;
+      updateDropTargetsRef.current(pendingId, x, y);
+    };
+    if (typeof requestAnimationFrame === "function") {
+      dropTargetRafHandleRef.current = requestAnimationFrame(run);
+    } else {
+      dropTargetRafHandleRef.current = window.setTimeout(run, 16) as unknown as number;
+    }
+  };
 
   useEffect(() => {
     // Window-level listeners are intentionally stable; handlers must read mutable refs, not stale closure state.
@@ -9731,7 +9756,7 @@ export function ArchitecturalCanvasApp({
           entities: nextEntities,
         };
       });
-      updateDropTargetsRef.current(draggedIds[0], event.clientX, event.clientY);
+      scheduleUpdateDropTargets(draggedIds[0]);
     };
 
     const completeActiveLasso = () => {
@@ -9825,6 +9850,17 @@ export function ArchitecturalCanvasApp({
       setIsPanning(false);
       if (draggedNodeIdsRef.current.length > 0) {
         const ids = [...draggedNodeIdsRef.current];
+        // REVIEW_2026-04-22-2 H3: cancel any pending rAF hit-test before we do
+        // the final synchronous one, so the trailing frame can't fire stale.
+        if (dropTargetRafHandleRef.current !== null) {
+          if (typeof cancelAnimationFrame === "function") {
+            cancelAnimationFrame(dropTargetRafHandleRef.current);
+          } else {
+            window.clearTimeout(dropTargetRafHandleRef.current);
+          }
+          dropTargetRafHandleRef.current = null;
+          dropTargetPendingDraggedIdRef.current = null;
+        }
         updateDropTargetsRef.current(ids[0], dragPointerScreenRef.current.x, dragPointerScreenRef.current.y);
         void handleDropRef.current(ids).then(() => {
           if (!persistNeonRef.current) return;
