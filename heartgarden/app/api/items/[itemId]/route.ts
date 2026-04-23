@@ -14,6 +14,7 @@ import {
   playerMayApplySpaceIdPatchAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import {
+  playersMayCreateItemType,
   playersMayPatchItemType,
   playersPatchBodyViolatesPolicy,
   stripGmOnlyEntityMetaPatch,
@@ -156,6 +157,9 @@ export async function PATCH(
     );
   }
   if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, existing.spaceId))) {
+    return heartgardenApiForbiddenJsonResponse();
+  }
+  if (bootCtx.role === "player" && !playersMayCreateItemType(existing.itemType)) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, existing.spaceId))) {
