@@ -39,6 +39,10 @@ export function useHeartgardenRealtimeSpaceSync(options: {
     let ws: WebSocket | null = null;
     let reconnectTimer: number | null = null;
     let reconnectAttempt = 0;
+    // REVIEW_2026-04-22-2 H7: abort in-flight token fetch on cleanup and guard
+    // each await boundary against `closed` so a stale async resume cannot create
+    // a websocket for a space we've already switched away from.
+    const tokenAbort = new AbortController();
 
     const clearReconnect = () => {
       if (reconnectTimer != null) {
@@ -54,23 +58,28 @@ export function useHeartgardenRealtimeSpaceSync(options: {
       const jitterMs = base * (0.7 + Math.random() * 0.6);
       reconnectTimer = window.setTimeout(() => {
         reconnectTimer = null;
+        if (closed) return;
         void connect();
       }, jitterMs);
     };
 
     const connect = async () => {
+      if (closed) return;
       try {
         const tokenRes = await fetch("/api/realtime/room-token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ spaceId: activeSpaceId }),
+          signal: tokenAbort.signal,
         });
+        if (closed) return;
         const tokenJson = (await tokenRes.json()) as {
           ok?: boolean;
           realtimeUrl?: string;
           token?: string;
           error?: string;
         };
+        if (closed) return;
         if (!tokenRes.ok || tokenJson.ok !== true || !tokenJson.realtimeUrl || !tokenJson.token) {
           connectedRef.current = false;
           if (tokenRes.status === 503 || tokenJson.error === "Realtime not configured") {
@@ -79,16 +88,28 @@ export function useHeartgardenRealtimeSpaceSync(options: {
           scheduleReconnect();
           return;
         }
-        ws = new WebSocket(
+        const nextWs = new WebSocket(
           tokenJson.realtimeUrl,
           heartgardenRealtimeSocketProtocols(tokenJson.token),
         );
+        if (closed) {
+          // Late cleanup after token fetch resolved: close before assigning so the
+          // outer cleanup's `ws?.close()` would have been a no-op otherwise.
+          try {
+            nextWs.close();
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+        ws = nextWs;
         ws.onopen = () => {
           reconnectAttempt = 0;
           connectedRef.current = true;
           recordRealtimeWsConnect();
         };
         ws.onmessage = (ev) => {
+          if (closed) return;
           recordRealtimeMessageReceived();
           let reason: string | undefined;
           try {
@@ -107,7 +128,10 @@ export function useHeartgardenRealtimeSpaceSync(options: {
           recordRealtimeWsDisconnect();
           if (!closed) scheduleReconnect();
         };
-      } catch {
+      } catch (err) {
+        if (closed) return;
+        // AbortError from cleanup-triggered abort: treat as normal shutdown.
+        if (err instanceof DOMException && err.name === "AbortError") return;
         connectedRef.current = false;
         scheduleReconnect();
       }
@@ -119,6 +143,11 @@ export function useHeartgardenRealtimeSpaceSync(options: {
       closed = true;
       connectedRef.current = false;
       clearReconnect();
+      try {
+        tokenAbort.abort();
+      } catch {
+        /* ignore */
+      }
       ws?.close();
     };
   }, [enabled, activeSpaceId]);

@@ -211,6 +211,39 @@ describe("applySpaceChangeGraphMerge", () => {
     expect(next.spaces["space-1"]?.entityIds).toEqual(["a"]);
   });
 
+  it("skips tombstone pruning when serverItemIds is null (partial pagination page)", () => {
+    // REVIEW_2026-04-22-2 C1 regression: page-2 of /changes omits `itemIds`
+    // because the client only requests includeItemIds on page 1. The merge layer
+    // must treat that as "no authoritative snapshot on this page" rather than
+    // an empty set, or the whole subtree gets tombstoned.
+    const boot: BootstrapResponse = {
+      ok: true,
+      demo: false,
+      spaceId: "space-1",
+      spaces: [
+        { id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
+      ],
+      items: [
+        note("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        note("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
+      camera: { x: 0, y: 0, zoom: 1 },
+    };
+    const prev = buildCanvasGraphFromBootstrap(boot);
+    const next = applySpaceChangeGraphMerge({
+      prev,
+      activeSpaceId: "space-1",
+      rawItems: [],
+      rawSpaceRows: [],
+      serverItemIds: null,
+      protectedContentIds: new Set(),
+      tombstoneExemptIds: new Set(),
+    });
+    expect(next.entities.a).toBeDefined();
+    expect(next.entities.b).toBeDefined();
+    expect(new Set(next.spaces["space-1"]?.entityIds ?? [])).toEqual(new Set(["a", "b"]));
+  });
+
   it("keeps moved item membership when destination space arrives in same payload", () => {
     const boot: BootstrapResponse = {
       ok: true,

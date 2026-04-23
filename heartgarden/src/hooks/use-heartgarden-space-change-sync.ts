@@ -176,7 +176,12 @@ export function useHeartgardenSpaceChangeSync(options: {
           sinceCursor = nextCursor;
           syncCursorRef.current = nextCursor;
 
-          const serverIds: ReadonlySet<string> = new Set(data.itemIds ?? []);
+          // REVIEW_2026-04-22-2 C1: only pages that explicitly carry `itemIds` are
+          // authoritative subtree snapshots. Subsequent pagination pages must pass
+          // `null` so partial deltas cannot tombstone the local graph.
+          const serverIds: ReadonlySet<string> | null = data.itemIds
+            ? new Set(data.itemIds)
+            : null;
           const protectedContentIds = buildCollabMergeProtectedContentIds({
             focusOpen: focusOpenRef.current,
             focusDirty: focusDirtyRef.current,

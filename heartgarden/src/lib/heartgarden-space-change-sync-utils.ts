@@ -196,13 +196,18 @@ export function parseSpaceChangesResponseJson(
 /**
  * Deterministic graph merge for one delta poll (testable pure orchestration).
  * Computes subtree from `prev` and applies item patches + space row updates.
+ *
+ * `serverItemIds` is `null` on pagination pages that do **not** carry a full subtree
+ * snapshot (the server only returns `itemIds` on the first page per poll cycle, see
+ * `includeItemIds` on `GET /api/spaces/:id/changes`). When `null`, tombstone deletes
+ * are skipped so a partial delta cannot evict the local graph (REVIEW_2026-04-22-2 C1).
  */
 export function applySpaceChangeGraphMerge(input: {
   prev: CanvasGraph;
   activeSpaceId: string;
   rawItems: CanvasItem[];
   rawSpaceRows: readonly SpaceChangePayloadRow[];
-  serverItemIds: ReadonlySet<string>;
+  serverItemIds: ReadonlySet<string> | null;
   protectedContentIds: ReadonlySet<string>;
   tombstoneExemptIds: ReadonlySet<string>;
 }): CanvasGraph {
