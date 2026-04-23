@@ -31,6 +31,12 @@ import {
 } from "@/src/lib/neon-sync-bus";
 
 const AUX_FAILURE_AFTER_CONSECUTIVE_MISSES = 3;
+// REVIEW_2026-04-22-2 H4: request the full subtree `itemIds` snapshot only on the
+// first poll after (re)mount and then at a slow reconciliation cadence; between
+// snapshots, rely on `cursor` + `itemLinksRevision` for incremental sync. This
+// stops the per-poll full ID scan + payload amplification while still catching
+// remote hard-deletes within one reconciliation window.
+const SUBTREE_ID_SNAPSHOT_INTERVAL_MS = 60_000;
 
 export function useHeartgardenSpaceChangeSync(options: {
   enabled: boolean;
@@ -80,6 +86,10 @@ export function useHeartgardenSpaceChangeSync(options: {
 
   const consecutiveMissesRef = useRef(0);
   const runRef = useRef<((source: HeartgardenSpaceSyncRunSource) => Promise<void>) | null>(null);
+  // REVIEW_2026-04-22-2 H4: throttle full subtree id snapshots across polls.
+  // `lastItemIdsSnapshotAtRef = 0` forces a snapshot on the first poll after
+  // mount or on a space change (handled by effect re-run on `activeSpaceId`).
+  const lastItemIdsSnapshotAtRef = useRef(0);
 
   useEffect(() => {
     if (!enabled) {
@@ -93,6 +103,9 @@ export function useHeartgardenSpaceChangeSync(options: {
     let pollTimer: number | null = null;
     let pollCatchupTimer: number | null = null;
     let inFlightAbort: AbortController | null = null;
+    // Reset snapshot TTL on each (re)run so a freshly-activated space always
+    // performs one tombstone-capable snapshot before falling back to deltas.
+    lastItemIdsSnapshotAtRef.current = 0;
 
     const shouldDeferPollForBusyEditing = () =>
       inlineContentDirtyIdsRef.current.size > 0 || savingContentIdsRef.current.size > 0;
@@ -148,10 +161,20 @@ export function useHeartgardenSpaceChangeSync(options: {
         let sinceCursor = syncCursorRef.current;
         let firstPage = true;
         let lastItemLinksRevision: string | undefined;
+        // REVIEW_2026-04-22-2 H4: only request the full subtree `itemIds` snapshot
+        // on page 1 AND when either we've never snapshotted in this run or the
+        // reconciliation TTL has elapsed. Other poll cycles use pure delta data.
+        const nowMs = Date.now();
+        const snapshotDue =
+          lastItemIdsSnapshotAtRef.current === 0 ||
+          nowMs - lastItemIdsSnapshotAtRef.current >= SUBTREE_ID_SNAPSHOT_INTERVAL_MS;
+        if (snapshotDue) {
+          lastItemIdsSnapshotAtRef.current = nowMs;
+        }
 
         while (true) {
           const data = await fetchSpaceChanges(activeSpaceId, sinceCursor, {
-            includeItemIds: firstPage,
+            includeItemIds: firstPage && snapshotDue,
             signal: inFlightAbort.signal,
           });
           firstPage = false;
