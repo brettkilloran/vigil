@@ -24,7 +24,7 @@
 
 - **Transport:** `GET|POST|DELETE` **`/api/mcp`** — **`WebStandardStreamableHTTPServerTransport`**, **stateless** (`sessionIdGenerator: undefined`) — [`heartgarden/app/api/mcp/route.ts`](../../heartgarden/app/api/mcp/route.ts).
 - **Auth (handler):** Bearer, `?token=` / `?key=`, or `X-Heartgarden-Mcp-Token` — [`heartgarden/src/lib/heartgarden-mcp-service-key.ts`](../../heartgarden/src/lib/heartgarden-mcp-service-key.ts).
-- **Middleware:** `/api/mcp` allowed through boot gate — [`heartgarden/middleware.ts`](../../heartgarden/middleware.ts).
+- **API boot gate:** `/api/mcp` allowlisted through the boot gate — [`heartgarden/proxy.ts`](../../heartgarden/proxy.ts) (see `heartgarden/AGENTS.md` → "API boot gate (production PIN)"; older notes may still say "middleware", behavior is identical).
 - **Client quirks addressed:** `Accept` merging for Streamable HTTP; path-only `request.url` query parsing; **browser tab** GET returns HTML info page (Sec-Fetch `navigate` + `document`) so humans are not confused with MCP errors.
 - **Shared tool surface:** [`heartgarden/src/lib/mcp/heartgarden-mcp-server.ts`](../../heartgarden/src/lib/mcp/heartgarden-mcp-server.ts); stdio [`heartgarden/scripts/mcp-server.ts`](../../heartgarden/scripts/mcp-server.ts).
 

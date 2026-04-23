@@ -29,11 +29,9 @@ These are retained for context. **Confirm open work in `BUILD_PLAN.md`**, not on
 
 | Plan | Topic |
 |------|--------|
-| [`canvas_navigation_ux.plan.md`](./canvas_navigation_ux.plan.md) | Canvas navigation UX |
 | [`collab_shell_streamline.plan.md`](./collab_shell_streamline.plan.md) | Collab shell |
 | [`dock_create_snappy.plan.md`](./dock_create_snappy.plan.md) | Dock / create flow |
 | [`mobile_fixes_desktop-safe.plan.md`](./mobile_fixes_desktop-safe.plan.md) | Mobile fixes |
-| [`multiplayer_presence_ui.plan.md`](./multiplayer_presence_ui.plan.md) | Presence UI |
 
 ---
 
@@ -41,7 +39,8 @@ These are retained for context. **Confirm open work in `BUILD_PLAN.md`**, not on
 
 | Plan | Notes |
 |------|--------|
-| — | *Add rows when you retire a plan file’s active intent (optional).* |
+| [`canvas_navigation_ux.plan.md`](./canvas_navigation_ux.plan.md) | **DNF 2026-04-23** — 7/8 todos match shipped tranches in `heartgarden/docs/BUILD_PLAN.md` (minimap + fit, wiki link assist, vault index status UI, space-nav guard, `CanvasViewportToast`). Retained for historical context. |
+| [`multiplayer_presence_ui.plan.md`](./multiplayer_presence_ui.plan.md) | **DNF 2026-04-23** — all checklist items covered by `heartgarden/docs/BUILD_PLAN.md` §Completed tranches "Soft presence + follow view" row. Residual multiplayer work lives in `players_multiplayer_hardening.plan.md`. |
 
 ---
 

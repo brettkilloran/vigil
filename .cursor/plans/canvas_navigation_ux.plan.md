@@ -4,32 +4,66 @@ overview: Extend Cmd+K, shared viewport helpers, top-left minimap, and out-of-vi
 todos:
   - id: bounds-lib
     content: "Add canvas-view-bounds.ts: AABB per entity/stack, rotation expansion, fitCameraToBounds; refactor palette zoom-fit to use it"
-    status: pending
+    status: dnf
+    dnf:
+      reason: superseded
+      evidence: "heartgarden/docs/BUILD_PLAN.md:55"
+      scored: 2026-04-23T00:00Z
   - id: minimap
     content: Build CanvasMinimap (SVG, viewport rect, click/drag/dblclick); mount under shellTopLeftStack with chrome styles; hide in focus/gallery/stack modal/boot
-    status: pending
+    status: dnf
+    dnf:
+      reason: superseded
+      evidence: "heartgarden/docs/BUILD_PLAN.md:55"
+      scored: 2026-04-23T00:00Z
   - id: toast
     content: Add debounced out-of-view detection + CanvasViewportToast with Show (fit all) and dismiss + cooldown
-    status: pending
+    status: dnf
+    dnf:
+      reason: already-fixed
+      evidence: "heartgarden/src/components/foundation/CanvasViewportToast.tsx"
+      scored: 2026-04-23T00:00Z
   - id: palette
     content: Expand CommandPalette action caps/sections; add zoom-to-selection, toggles (effects, link graph, lore); fix icons; wire runPaletteAction
-    status: pending
+    status: dnf
+    dnf:
+      reason: superseded
+      evidence: "heartgarden/docs/BUILD_PLAN.md:54"
+      scored: 2026-04-23T00:00Z
   - id: space-nav-hardening
     content: enterSpace generation token; ignore stale fetchBootstrap/merge results; safe navTransitionActive teardown for rapid space switches
-    status: pending
+    status: dnf
+    dnf:
+      reason: superseded
+      evidence: "heartgarden/docs/BUILD_PLAN.md:83"
+      scored: 2026-04-23T00:00Z
   - id: vault-index-ui
     content: Track debounced index + POST outcomes; surface status in status bar and/or per-card affordance; handle 429/skipped/no-API-key gracefully
-    status: pending
+    status: dnf
+    dnf:
+      reason: superseded
+      evidence: "heartgarden/docs/BUILD_PLAN.md:56"
+      scored: 2026-04-23T00:00Z
   - id: wiki-link-assist
     content: "[[ trigger + suggest list (titles + search); insert vigil:item HTML anchors in BufferedContentEditable / focus editor"
-    status: pending
+    status: dnf
+    dnf:
+      reason: superseded
+      evidence: "heartgarden/docs/BUILD_PLAN.md:57"
+      scored: 2026-04-23T00:00Z
   - id: tests
     content: Unit tests for bounds helper + space-nav generation; optional Storybook for minimap; light tests for link-assist parser if extracted
-    status: pending
+    status: dnf
+    dnf:
+      reason: superseded
+      evidence: "heartgarden/docs/BUILD_PLAN.md:55"
+      scored: 2026-04-23T00:00Z
 isProject: false
 ---
 
 # Canvas navigation and Cmd+K hardening
+
+**Status: DNF (superseded by BUILD_PLAN shipped tranches — see `heartgarden/docs/BUILD_PLAN.md` §Completed tranches rows for "Canvas minimap + fit", "`[[` wiki link assist", "Vault index status UI", and §Near-term line 83 for space-nav generation guard. `CanvasViewportToast.tsx` also ships. Plan retained for historical context.)**
 
 ## Context (current code)
 
