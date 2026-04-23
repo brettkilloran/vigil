@@ -9,7 +9,7 @@ Design rule: **password-gated worlds must not share retrieval, search corpora, o
 | Hybrid search / vault | Respect `spaceId` / `spaceIds` / exclude filters | `vault-retrieval.ts`, `spaces.ts` search helpers |
 | Lore Q&A | Same filters as caller (`retrieveLoreSources`) | `lore-engine.ts`, `/api/lore/query` |
 | MCP tools | Pass `space_id`; avoid “all spaces” unless explicitly requested | `heartgarden-mcp-server.ts` (see **`docs/MCP_BINDING_CONTRACT.md`**) |
-| World sever scripts | Remove cross-world `item_links` when splitting tiers | `heartgarden-sever-player-gm-worlds.ts` |
+| World sever scripts | Remove cross-world `item_links` when splitting tiers | `scripts/sever-player-gm-worlds.ts` |
 | Realtime / collab | Presence and polls are per active space | `use-heartgarden-space-change-sync.ts`, presence routes |
 
 ## When adding features

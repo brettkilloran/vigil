@@ -11,6 +11,7 @@ import {
 describe("heartgarden-mcp-service-key", () => {
   afterEach(() => {
     delete process.env.HEARTGARDEN_MCP_SERVICE_KEY;
+    delete process.env.HEARTGARDEN_MCP_ALLOW_QUERY_TOKEN;
   });
 
   it("timingSafeEqualUtf8 matches equal strings", () => {
@@ -45,16 +46,25 @@ describe("mcpTokenFromRequestUrlString", () => {
 describe("mcpRequestAuthorizedByServiceKey", () => {
   afterEach(() => {
     delete process.env.HEARTGARDEN_MCP_SERVICE_KEY;
+    delete process.env.HEARTGARDEN_MCP_ALLOW_QUERY_TOKEN;
   });
 
-  it("accepts matching token query param", () => {
+  it("rejects matching token query param when query token auth is disabled", () => {
     process.env.HEARTGARDEN_MCP_SERVICE_KEY = "q-secret";
+    const req = new Request("https://example.com/api/mcp?token=q-secret");
+    expect(mcpRequestAuthorizedByServiceKey(req)).toBe(false);
+  });
+
+  it("accepts token query param when query token auth is explicitly enabled", () => {
+    process.env.HEARTGARDEN_MCP_SERVICE_KEY = "q-secret";
+    process.env.HEARTGARDEN_MCP_ALLOW_QUERY_TOKEN = "1";
     const req = new Request("https://example.com/api/mcp?token=q-secret");
     expect(mcpRequestAuthorizedByServiceKey(req)).toBe(true);
   });
 
-  it("accepts path-only request.url with token (Next.js shape)", () => {
+  it("accepts path-only request.url with token when query token auth is enabled (Next.js shape)", () => {
     process.env.HEARTGARDEN_MCP_SERVICE_KEY = "path-only-secret";
+    process.env.HEARTGARDEN_MCP_ALLOW_QUERY_TOKEN = "1";
     const req = {
       url: "/api/mcp?token=path-only-secret",
       headers: new Headers(),

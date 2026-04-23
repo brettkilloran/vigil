@@ -164,7 +164,7 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Concern                                                                                       | Location                                     |
 | --------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | List / create spaces                                                                          | `app/api/spaces/route.ts`                    |
-| Patch camera / rename / delete                                                                | `app/api/spaces/[spaceId]/route.ts`          |
+| Patch rename / reparent / delete                                                              | `app/api/spaces/[spaceId]/route.ts`          |
 | Delta sync (items + optional spaces / itemIds; **`itemLinksRevision`**)                         | `app/api/spaces/[spaceId]/changes/route.ts`  |
 | Link revision only (`itemLinksRevision`)                                                      | `app/api/spaces/[spaceId]/link-revision/route.ts` |
 | Ephemeral presence (peers, camera, pointer; boot access via `heartgarden-space-route-access`) | `app/api/spaces/[spaceId]/presence/route.ts` |

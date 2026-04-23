@@ -266,6 +266,31 @@ describe("applySpaceChangeGraphMerge", () => {
     expect(next.spaces["space-1"]?.entityIds).toEqual([]);
     expect(next.spaces["space-2"]?.entityIds).toEqual(["a"]);
   });
+
+  it("does not mutate previous graph space membership arrays", () => {
+    const boot: BootstrapResponse = {
+      ok: true,
+      demo: false,
+      spaceId: "space-1",
+      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
+      items: [note("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
+      camera: { x: 0, y: 0, zoom: 1 },
+    };
+    const prev = buildCanvasGraphFromBootstrap(boot);
+    const prevSpace1EntityIds = prev.spaces["space-1"]?.entityIds;
+    const next = applySpaceChangeGraphMerge({
+      prev,
+      activeSpaceId: "space-1",
+      rawItems: [note("a", "space-2", "A moved", "2020-01-02T00:00:00.000Z")],
+      rawSpaceRows: [{ id: "space-2", name: "New space", parentSpaceId: "space-1" }],
+      serverItemIds: new Set(["a"]),
+      protectedContentIds: new Set(),
+      tombstoneExemptIds: new Set(),
+    });
+    expect(next.spaces["space-1"]?.entityIds).toEqual([]);
+    expect(prev.spaces["space-1"]?.entityIds).toEqual(["a"]);
+    expect(prevSpace1EntityIds).toEqual(["a"]);
+  });
 });
 
 describe("collectItemServerUpdatedAtBumps", () => {

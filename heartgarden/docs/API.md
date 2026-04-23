@@ -50,7 +50,7 @@ Responses include **`camera`**: `{ x, y, zoom }` parsed from legacy **`spaces.ca
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET, POST, DELETE | `/api/mcp` | **Streamable HTTP** MCP transport (same JSON-RPC surface as **`npm run mcp`** stdio). **Auth (any one):** header **`Authorization: Bearer <HEARTGARDEN_MCP_SERVICE_KEY>`**, or query **`?token=`** / **`?key=`** (same secret), or header **`X-Heartgarden-Mcp-Token`**. Returns **503** if **`HEARTGARDEN_MCP_SERVICE_KEY`** is unset. **401** if none match. **`proxy.ts`** allows this path through the boot gate without **`hg_boot`** so the route can respond; auth is enforced in the handler. Stateless (**no** session stickiness) for serverless. |
+| GET, POST, DELETE | `/api/mcp` | **Streamable HTTP** MCP transport (same JSON-RPC surface as **`npm run mcp`** stdio). **Auth (any one):** header **`Authorization: Bearer <HEARTGARDEN_MCP_SERVICE_KEY>`**, or header **`X-Heartgarden-Mcp-Token`**; query **`?token=`** / **`?key=`** is accepted only when **`HEARTGARDEN_MCP_ALLOW_QUERY_TOKEN=1`**. Returns **503** if **`HEARTGARDEN_MCP_SERVICE_KEY`** is unset. **401** if none match. **`proxy.ts`** allows this path through the boot gate without **`hg_boot`** so the route can respond; auth is enforced in the handler. Stateless (**no** session stickiness) for serverless. |
 
 **Tooling:** Shared logic lives in **`src/lib/mcp/heartgarden-mcp-server.ts`**.
 
@@ -76,7 +76,7 @@ Optional **`HEARTGARDEN_MCP_URL`** (default `https://heartgarden.vercel.app/api/
 |--------|------|---------|
 | GET | `/api/spaces` | List spaces. |
 | POST | `/api/spaces` | Create space. **GM:** optional top-level row (`parentSpaceId` omitted) or child of an allowed parent. **Player:** **`parentSpaceId` required** — must be the Players root or a folder space under it (`spaceIsUnderPlayerRoot`); cannot supply **`id`** (no client-chosen UUID). |
-| PATCH | `/api/spaces/[spaceId]` | Update **name** and/or **`parentSpaceId`** (UUID or `null`). A **`camera`** field in the body is accepted for backward compatibility but **ignored** (viewport is not persisted server-side). **`parentSpaceId`** is **GM-only** (rejected for **player**); requires access to both this space and the new parent; the server rejects moves that would create a **parent cycle**. Use this to keep a folder’s inner space aligned when its folder card moves between canvases. |
+| PATCH | `/api/spaces/[spaceId]` | Update **name** and/or **`parentSpaceId`** (UUID or `null`). **Only** those fields are accepted; unknown legacy fields (including `camera`) now return **400**. `parentSpaceId` is **GM-only** (rejected for **player**); requires access to both this space and the new parent; the server rejects moves that would create a **parent cycle**. Use this to keep a folder’s inner space aligned when its folder card moves between canvases. |
 | DELETE | `/api/spaces/[spaceId]` | Delete space (cascade per schema). |
 | GET | `/api/spaces/[spaceId]/changes` | Query **`since`** (ISO timestamp). Response includes **`items`** (changed item rows) and **`cursor`** (max of item + space `updated_at` in range). **`hasMore`**: when true, more rows exist after **`cursor`** — call again with **`since=<cursor>`** until **`hasMore`** is false (default page size **`limit=500`**, max 500). Includes **`itemLinksRevision`** (aggregate fingerprint over **`item_links`** touching this space on **source or target**) so clients can detect link-only changes without downloading the full graph every poll. When any subtree **`spaces`** row changed since **`since`** (e.g. folder reparent / rename), **`spaces`** lists **`{ id, name, parentSpaceId, updatedAt }`** so other clients can merge without a full bootstrap. Optional **`includeItemIds=1`**: when set, response **must** include **`itemIds`** (full subtree id list for tombstone sync). When omitted, **`itemIds`** is omitted — lighter for non-shell clients. The **official web shell** sends **`includeItemIds=1`** on the **first** page of a delta poll, then omits it on continuation requests while **`hasMore`** (see **Browser shell — delta sync** under **Items**). |
 | GET | `/api/spaces/[spaceId]/link-revision` | Returns **`{ ok: true, itemLinksRevision }`** — cheap **`item_links`** fingerprint for the space (same scope as **`GET …/graph`**). Use when the WebSocket path is down or to decide whether to **`GET …/graph`** after a revision bump. |
@@ -160,7 +160,7 @@ Requires **`HEARTGARDEN_REALTIME_URL`**, **`HEARTGARDEN_REALTIME_REDIS_URL`**, *
 |--------|------|---------|
 | POST | `/api/lore/import/parse` | Multipart / file → extracted text (and metadata). Accepts `.pdf`, `.docx`, `.md`, `.markdown`, `.txt`. Optional multipart `context` JSON (user import context) is echoed back when valid. If `context` is non-empty but invalid JSON or fails `loreImportUserContextSchema`, the parse still succeeds with `ok: true` and a `contextWarning` object (`code` + `message`) so clients can surface the drop. |
 | POST | `/api/lore/import/plan` | **Synchronous** smart plan. Needs **`ANTHROPIC_API_KEY`**. Optional `persistReview`. Body `text` max **500,000** characters. JSON body is **strict** (unknown keys, including a client `importBatchId`, return **400**). Persists a **`lore_import_jobs`** metadata row (and, when `persistReview` is not `false`, import-review queue rows) in **one transaction** for the generated `importBatchId` so **`/apply`** can load server scope. `importBatchId` is always server-issued. |
-| POST | `/api/lore/import/jobs` | Enqueue **async** plan job; returns `jobId`, `importBatchId`. Body `text` max **2,000,000** characters (larger documents than sync `plan`). Supports optional `userContext` (`granularity`, `orgMode`, `freeformContext`, `docSourceKind`). |
+| POST | `/api/lore/import/jobs` | Enqueue **async** plan job; returns `jobId`, `importBatchId`. Body `text` max **2,000,000** characters (larger documents than sync `plan`). Supports optional `userContext` (`granularity`, `orgMode`, `freeformContext`, `docSourceKind`). Legacy-schema insert fallback is **off by default**; set `HEARTGARDEN_IMPORT_JOBS_LEGACY_SCHEMA_FALLBACK=1` only as a temporary compatibility escape hatch while running migrations. |
 | GET | `/api/lore/import/jobs/[jobId]` | Poll status. **Required query:** `spaceId=<uuid>` (must match job’s space). |
 | DELETE | `/api/lore/import/jobs/[jobId]` | Cancel queued/processing smart-import planning. **Required query:** `spaceId=<uuid>`. |
 | POST | `/api/lore/import/apply` | Apply a plan to the canvas. Honors `plan.userContext.orgMode` (`folders` or `nearby`) and `plan.userContext.granularity` (`many` or `one_note`). May return `status: "needs_follow_up"` when `Other` clarification text is ambiguous, including `followUp` + `resolvedClarificationAnswers`. |
@@ -198,7 +198,7 @@ When one concept set is densely connected, prefer folder containment (child spac
 | Method | Path | Purpose |
 |--------|------|---------|
 | POST | `/api/upload/presign` | R2 presigned PUT. Needs **R2_* env** (`r2-upload.ts`). |
-| POST | `/api/webclip/preview` | Server fetch preview for webclip URLs (sanitized). |
+| POST | `/api/webclip/preview` | Server fetch preview for webclip URLs. SSRF guards: only `http(s)`, only ports `80/443`, blocks localhost/private/link-local targets after DNS resolution, and validates each redirect hop against the same policy (max 5 hops). |
 
 ## v1 (legacy JSON shape)
 
@@ -219,6 +219,7 @@ When one concept set is densely connected, prefer folder containment (child spac
 | `OPENAI_API_KEY` | Optional OpenAI embeddings for vault chunk vectors / semantic search |
 | `HEARTGARDEN_OPENAI_EMBEDDING_MODEL` | Optional OpenAI embedding model override (default **`text-embedding-3-small`**) |
 | `HEARTGARDEN_MCP_SERVICE_KEY` | Bearer for **`GET|POST|DELETE /api/mcp`**, stdio MCP internal `fetch` to **`/api/*`** when the boot gate is on, and boot-context GM resolution for those requests |
+| `HEARTGARDEN_MCP_ALLOW_QUERY_TOKEN` | Optional compatibility toggle: set **`1`** to allow query auth (`?token=` / `?key=`) on `/api/mcp`; default is header-based auth only |
 | `HEARTGARDEN_MCP_WRITE_KEY` | Reindex + MCP write tools (must match client `write_key`) |
 | `HEARTGARDEN_MCP_FETCH_TIMEOUT_MS` | Optional MCP internal API fetch timeout in ms (default **30000**, clamped **1000–120000**). |
 | `R2_*` | Image presign |

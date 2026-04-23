@@ -8,6 +8,11 @@ export function heartgardenMcpServiceKeyFromEnv(): string {
   return (process.env.HEARTGARDEN_MCP_SERVICE_KEY ?? "").trim();
 }
 
+function mcpAllowQueryTokenAuth(): boolean {
+  const raw = (process.env.HEARTGARDEN_MCP_ALLOW_QUERY_TOKEN ?? "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+}
+
 /** Constant-time comparison of UTF-8 bytes (both environments). */
 export function timingSafeEqualUtf8(a: string, b: string): boolean {
   const enc = new TextEncoder();
@@ -59,26 +64,29 @@ function tokenFromNextRequestIfPresent(request: Request): string | null {
 }
 
 /**
- * Same secret as Bearer, for clients that only support pasting a URL (e.g. Claude custom connector):
- * `?token=` or `?key=` on /api/mcp, or header `X-Heartgarden-Mcp-Token`.
- * Prefer Bearer when possible — query strings can appear in access logs.
+ * Same secret as Bearer for alternate transports:
+ * - URL query token/key (`?token=` / `?key=`) only when HEARTGARDEN_MCP_ALLOW_QUERY_TOKEN=1
+ * - header `X-Heartgarden-Mcp-Token` always
+ * Prefer Bearer when possible — query strings can appear in access logs/history.
  */
 export function mcpUrlQueryOrHeaderMatchesServiceKey(request: Request): boolean {
   const key = heartgardenMcpServiceKeyFromEnv();
   if (!key.length) return false;
 
-  const fromNext = tokenFromNextRequestIfPresent(request);
-  if (fromNext && timingSafeEqualUtf8(fromNext.trim(), key)) return true;
+  if (mcpAllowQueryTokenAuth()) {
+    const fromNext = tokenFromNextRequestIfPresent(request);
+    if (fromNext && timingSafeEqualUtf8(fromNext.trim(), key)) return true;
 
-  const fromUrl = mcpTokenFromRequestUrlString(request.url);
-  if (fromUrl && timingSafeEqualUtf8(fromUrl.trim(), key)) return true;
+    const fromUrl = mcpTokenFromRequestUrlString(request.url);
+    if (fromUrl && timingSafeEqualUtf8(fromUrl.trim(), key)) return true;
+  }
 
   const h = request.headers.get("x-heartgarden-mcp-token");
   if (h && timingSafeEqualUtf8(h.trim(), key)) return true;
   return false;
 }
 
-/** Bearer, or URL query token/key, or X-Heartgarden-Mcp-Token header. */
+/** Bearer, or X-Heartgarden-Mcp-Token, or optional query token/key when enabled. */
 export function mcpRequestAuthorizedByServiceKey(request: Request): boolean {
   return (
     authorizationBearerMatchesMcpServiceKey(request.headers.get("authorization")) ||

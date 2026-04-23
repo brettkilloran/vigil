@@ -7,54 +7,52 @@ import {
   getHeartgardenApiBootContext,
   gmMayAccessSpaceIdAsync,
   heartgardenApiForbiddenJsonResponse,
-  isHeartgardenPlayerBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { isHeartgardenImplicitPlayerRootSpaceName } from "@/src/lib/heartgarden-implicit-player-space";
+import {
+  heartgardenApiReadJsonBody,
+  heartgardenApiRejectIfPlayerBlocked,
+  heartgardenApiRequireDb,
+} from "@/src/lib/heartgarden-api-route-helpers";
 import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 import { assertSpaceReparentAllowed, deleteSpaceSubtree } from "@/src/lib/spaces";
 
 const patchBody = z.object({
-  camera: z
-    .object({
-      x: z.number(),
-      y: z.number(),
-      zoom: z.number().positive().max(8),
-    })
-    .optional(),
   name: z.string().min(1).max(255).optional(),
   /** When set, moves this space under a new parent (folder inner space ↔ canvas space). GM-only. */
   parentSpaceId: z.string().uuid().nullable().optional(),
-});
+}).strict();
 
 export async function PATCH(
   req: Request,
   context: { params: Promise<{ spaceId: string }> },
 ) {
-  const db = tryGetDb();
-  if (!db) {
-    return Response.json(
-      { ok: false, error: "Database not configured" },
-      { status: 503 },
-    );
-  }
+  const dbGate = heartgardenApiRequireDb(tryGetDb());
+  if (!dbGate.ok) return dbGate.response;
+  const db = dbGate.db;
 
   const bootCtx = await getHeartgardenApiBootContext();
+  const blocked = heartgardenApiRejectIfPlayerBlocked(bootCtx);
+  if (blocked) return blocked;
   const { spaceId } = await context.params;
   const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
   if (!access.ok) return access.response;
 
-  let json: unknown;
-  try {
-    json = await req.json();
-  } catch {
-    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
-  }
+  const bodyRead = await heartgardenApiReadJsonBody(req);
+  if (!bodyRead.ok) return bodyRead.response;
+  const json = bodyRead.json;
 
   const parsed = patchBody.safeParse(json);
   if (!parsed.success) {
     return Response.json(
       { ok: false, error: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+  if (parsed.data.name === undefined && parsed.data.parentSpaceId === undefined) {
+    return Response.json(
+      { ok: false, error: "No supported fields provided (allowed: name, parentSpaceId)" },
       { status: 400 },
     );
   }
@@ -134,15 +132,12 @@ export async function DELETE(
   _req: Request,
   context: { params: Promise<{ spaceId: string }> },
 ) {
-  const db = tryGetDb();
-  if (!db) {
-    return Response.json(
-      { ok: false, error: "Database not configured" },
-      { status: 503 },
-    );
-  }
+  const dbGate = heartgardenApiRequireDb(tryGetDb());
+  if (!dbGate.ok) return dbGate.response;
+  const db = dbGate.db;
   const bootCtx = await getHeartgardenApiBootContext();
-  if (isHeartgardenPlayerBlocked(bootCtx) || bootCtx.role === "player") {
+  const blocked = heartgardenApiRejectIfPlayerBlocked(bootCtx);
+  if (blocked || bootCtx.role === "player") {
     return heartgardenApiForbiddenJsonResponse();
   }
   const { spaceId } = await context.params;

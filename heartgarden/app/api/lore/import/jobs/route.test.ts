@@ -32,6 +32,7 @@ vi.mock("@/src/lib/heartgarden-api-boot-context", () => ({
 describe("POST /api/lore/import/jobs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.HEARTGARDEN_IMPORT_JOBS_LEGACY_SCHEMA_FALLBACK;
     scheduleLoreImportJobProcessingMock.mockImplementation(() => undefined);
     processLoreImportJobMock.mockResolvedValue(undefined);
     tryGetDbMock.mockReturnValue({
@@ -146,6 +147,7 @@ describe("POST /api/lore/import/jobs", () => {
   });
 
   it("uses legacy insert fallback when progress columns are missing", async () => {
+    process.env.HEARTGARDEN_IMPORT_JOBS_LEGACY_SCHEMA_FALLBACK = "1";
     const valuesMock = vi.fn().mockRejectedValue({
       code: "42703",
       column: "progress_phase",

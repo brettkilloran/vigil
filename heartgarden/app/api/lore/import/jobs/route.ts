@@ -100,6 +100,13 @@ function isMissingProgressColumnsDiagnostic(diag: DbInsertDiagnostic): boolean {
   return false;
 }
 
+function loreImportJobsLegacySchemaFallbackEnabled(): boolean {
+  const v = (process.env.HEARTGARDEN_IMPORT_JOBS_LEGACY_SCHEMA_FALLBACK ?? "")
+    .trim()
+    .toLowerCase();
+  return v === "1" || v === "true" || v === "yes" || v === "on";
+}
+
 export async function POST(req: Request) {
   const attemptId = importAttemptId(req);
   const bootCtx = await getHeartgardenApiBootContext();
@@ -173,7 +180,7 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     const diag = readDbInsertDiagnostic(error);
-    if (isMissingProgressColumnsDiagnostic(diag)) {
+    if (isMissingProgressColumnsDiagnostic(diag) && loreImportJobsLegacySchemaFallbackEnabled()) {
       console.warn("[lore-import] jobs insert using legacy schema fallback", {
         attemptId,
         spaceId: parsed.data.spaceId,
@@ -253,7 +260,11 @@ export async function POST(req: Request) {
           diag.detail ||
           diag.message ||
           "Insert into lore_import_jobs failed before background planning could start.",
-        hint: diag.hint || "Check migrations/schema for lore import and presence tables.",
+        hint:
+          diag.hint ||
+          (isMissingProgressColumnsDiagnostic(diag)
+            ? "Run lore-import migrations so progress columns exist, or set HEARTGARDEN_IMPORT_JOBS_LEGACY_SCHEMA_FALLBACK=1 as a temporary compatibility escape hatch."
+            : "Check migrations/schema for lore import and presence tables."),
         operation: "insert lore_import_jobs",
         dbCode: diag.code,
         dbSeverity: diag.severity,
