@@ -33,6 +33,10 @@ Launch all three in one tool message so they run concurrently:
 3. Else if feature branch and `origin/main` exists, review `origin/main...HEAD`.
 4. Else review `HEAD`.
 
+## 1b. Pre-Review Vibe Check (Required)
+
+Before launching subagents, emit the plain-English preamble required by `.cursor/skills/review-common/CLOSURE_POLICY.md` → "Pre-Review Vibe Check". Keep it to ~3 lines: what scope, 3 fast passes with `composer-2-fast`, ~1 min expected.
+
 ## 2. Review Focus (High-Signal Only)
 
 Limit to up to 8 findings total, prioritized by risk:
@@ -46,12 +50,18 @@ Skip style-only nits unless they hide a real bug.
 
 ## 3. Output Format
 
+Follow `.cursor/skills/review-common/CLOSURE_POLICY.md` → "Audit Format Requirements":
+
+- **Plain summary** at the top (3–6 sentences, product-designer language)
 - `CRITICAL/HIGH/MEDIUM/LOW` buckets
 - Each finding includes:
   - short title
-  - why it matters
+  - severity + classifier (`SAFE` / `RISKY` / `NET_NEW`)
+  - `confidence: 0.00–1.00` badge
+  - one-line **User-facing impact**
   - one evidence citation (`startLine:endLine:path`)
   - concise fix direction
+- `What is working well (don't break these)` — short bulleted list of behaviors/files that look healthy; helps the user avoid accidental regressions during the fix pass.
 
 If no significant issues are found, say so explicitly and list any residual risk.
 
@@ -81,11 +91,18 @@ After audit creation, immediately run fix pass by following:
 
 Treat this as mandatory for `/review-light` and `/review-heavy`. Do not rely only on hook delivery.
 
-Classifier policy:
+Classifier policy (full details in `.cursor/skills/review-common/CLOSURE_POLICY.md`):
 
-- `SAFE`: may proceed after one batched approval prompt.
-- `RISKY`: explicit user approval required.
-- `NET_NEW`: explicit user approval required.
+- `SAFE`: auto-apply without prompting; list applied fixes in the closure report.
+- `RISKY`: must ask via the `AskQuestion` tool, with plain-language context and pros/cons.
+- `NET_NEW`: must ask via the `AskQuestion` tool, with plain-language context and pros/cons.
+
+Questions Phase rules (apply to `/review-light` too):
+
+- Use the `AskQuestion` tool — never ask risky questions as free-form prose.
+- Batch related questions sensibly (default by severity, 3–6 per batch). Isolate very risky items (auth, destructive migrations, billing, public API breaks) into their own single-question call.
+- Each question is multiple choice with a clear `Apply recommended fix`, at least one real alternative when applicable, and a `Skip / decline` option. Include a recommendation plus pros/cons in the prompt.
+- Write for a layman product designer; translate jargon.
 
 ## 6. Full-Closure Requirement (All Findings)
 

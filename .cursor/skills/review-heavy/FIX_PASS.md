@@ -12,10 +12,12 @@ Also read and follow `.cursor/skills/review-common/CLOSURE_POLICY.md`.
 
 ## Core Policy
 
-- SAFE fixes can be applied after one batched approval prompt.
-- RISKY fixes require explicit per-item approval.
-- NET_NEW functionality always requires explicit approval.
-- If there is uncertainty, stop and ask.
+- SAFE fixes are auto-applied without asking, then listed in the closure report.
+- RISKY and NET_NEW fixes require explicit user approval via the `AskQuestion` tool, with pros/cons and a plain-language preamble.
+- Batch related RISKY/NET_NEW questions (default by severity, 3–6 per batch). Use a single-question `AskQuestion` call for very risky items (auth, destructive migrations, billing, public API breaks).
+- If there is uncertainty about whether something is SAFE, treat it as RISKY and ask.
+
+See `.cursor/skills/review-common/CLOSURE_POLICY.md` "Questions Phase" for the full format.
 
 ## 0. Inputs
 
@@ -42,19 +44,30 @@ Create a checkpoint commit before remediation so rollback is deterministic:
 
 Do not push.
 
-## 3. Remediate to Full Closure (Do Not Stop Early)
+## 3. Prior-Review Dedupe
+
+Before classifying or asking, follow `.cursor/skills/review-common/CLOSURE_POLICY.md` → "Prior-Review Deduplication". Silently drop previously declined findings and raise severity on regressions before proceeding.
+
+## 4. Remediate to Full Closure (Do Not Stop Early)
 
 Process findings in priority order (`CRITICAL` → `LOW`) and continue until every finding has a terminal state:
 
-1. Classify each finding (`SAFE`, `RISKY`, `NET_NEW`).
-2. Apply all `SAFE` fixes in logical batches; run targeted verification after each batch.
-3. For each `RISKY` or `NET_NEW` finding, ask an explicit user question before editing. Include options, recommendation, and risk trade-offs.
-4. If user approves, implement and verify; mark `FIXED`.
-5. If user declines, mark `DECLINED_BY_USER`.
-6. If ambiguity remains, keep `QUESTION_FOR_USER` open and ask follow-up until resolved.
+1. Classify each finding (`SAFE`, `RISKY`, `NET_NEW`). Respect the always-RISKY categories in the closure policy (auth, migrations, billing, realtime/sync, public API, MCP).
+2. Auto-apply all `SAFE` fixes in logical batches without prompting. After each batch, run the **post-fix verification gate** from the closure policy (`npm run check`, `npm run test:unit`, diff against baseline). On new failures, make up to 2 targeted repairs; if still failing, roll that fix back to the checkpoint and reclassify as `QUESTION_FOR_USER`.
+3. Apply the **stuck-state escalation rule**: if a SAFE fix takes more than 2 attempts or reveals hidden complexity, reclassify as RISKY and ask.
+4. For remaining `NET_NEW` findings, check the **feature-overflow rule** (>~5 files, new subsystem, or feature-sized work). If overflow, file a backlog entry in `heartgarden/docs/BUILD_PLAN.md` under `## Review-sourced backlog` per the closure policy and mark `DECLINED_BY_USER` with a note. Do not ask the user a yes/no.
+5. Group the remaining `RISKY` and `NET_NEW` findings into sensible batches (default: by severity, 3–6 questions per batch). Very risky items (auth bypass, destructive migrations, billing, public API breaks, irreversible destructive changes) get their own single-question `AskQuestion` call.
+6. For each batch, emit a plain-language preamble, then call `AskQuestion` with multiple-choice questions including pros/cons and a clear recommendation. Never ask risky questions as free-form prose.
+7. If user approves, implement and verify (post-fix gate applies); mark `FIXED`.
+8. If user declines, mark `DECLINED_BY_USER`.
+9. If ambiguity remains after an answer, follow up with another `AskQuestion` call until resolved.
 
 Stop only when ledger shows terminal state for all findings.
 
-## 4. Completion Contract
+## 5. UI Verification (if applicable)
 
-End the run with the closure report format required by `.cursor/skills/review-common/CLOSURE_POLICY.md`.
+For fixes touching visible UI, run the **UI Fix Verification** procedure in the closure policy (cursor-ide-browser MCP before/after screenshots against `http://localhost:3000`). Record screenshot paths in the ledger.
+
+## 6. Completion Contract
+
+End the run with the closure report format required by `.cursor/skills/review-common/CLOSURE_POLICY.md`, including the Next Session Ideas, Deduped, and Filed to Backlog sections.
