@@ -1,10 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { EntityGraphCanvas } from "@/src/components/product-ui/canvas/EntityGraphCanvas";
+import { EntityGraphPillCanvas } from "@/src/components/dev/EntityGraphPillCanvas";
+import styles from "@/src/components/dev/entity-graph-lab.module.css";
 import { Button } from "@/src/components/ui/Button";
+import { computeStableLayout } from "@/src/lib/entity-graph-stable-layout";
 import type { GraphEdge, GraphNode } from "@/src/lib/graph-types";
+import {
+  HEARTGARDEN_GLASS_PANEL,
+  HEARTGARDEN_METADATA_LABEL,
+} from "@/src/lib/vigil-ui-classes";
+import { cx } from "@/src/lib/cx";
 
 type GraphScenario = {
   key: string;
@@ -80,14 +87,35 @@ function byTitle(a: GraphNode, b: GraphNode): number {
 
 export function EntityGraphLab() {
   const [scenarioKey, setScenarioKey] = useState(SCENARIOS[0]?.key ?? "");
-  const [layoutRevision, setLayoutRevision] = useState(0);
   const [filter, setFilter] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [layout, setLayout] = useState<Map<string, { x: number; y: number }>>(new Map());
+  const [cameraResetKey, setCameraResetKey] = useState(0);
+
+  const layoutByScenarioRef = useRef<Map<string, Map<string, { x: number; y: number }>>>(new Map());
+  const pinnedByScenarioRef = useRef<Map<string, Map<string, { x: number; y: number }>>>(new Map());
 
   const scenario = useMemo(
     () => SCENARIOS.find((candidate) => candidate.key === scenarioKey) ?? SCENARIOS[0],
     [scenarioKey],
   );
+
+  useEffect(() => {
+    if (!scenario) return;
+    const cached = layoutByScenarioRef.current.get(scenario.key);
+    if (cached) {
+      setLayout(new Map(cached));
+      return;
+    }
+    const pins = pinnedByScenarioRef.current.get(scenario.key);
+    const next = computeStableLayout(scenario.nodes, scenario.edges, {
+      width: 1000,
+      height: 1000,
+      pinned: pins,
+    });
+    layoutByScenarioRef.current.set(scenario.key, new Map(next));
+    setLayout(next);
+  }, [scenario]);
 
   const visibleNodes = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -110,131 +138,212 @@ export function EntityGraphLab() {
     [scenario, visibleNodeIds],
   );
 
+  const visibleEdgeIds = useMemo(() => new Set(visibleEdges.map((edge) => edge.id)), [visibleEdges]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    if (!visibleNodeIds.has(selectedId)) {
+      setSelectedId(null);
+    }
+  }, [selectedId, visibleNodeIds]);
+
   const selectedNode = useMemo(
-    () => visibleNodes.find((node) => node.id === selectedId) ?? null,
-    [visibleNodes, selectedId],
+    () => scenario?.nodes.find((node) => node.id === selectedId) ?? null,
+    [scenario, selectedId],
   );
 
-  const selectedNeighbors = useMemo(() => {
+  const neighborIds = useMemo(() => {
     if (!selectedNode) return [];
     const connectedIds = new Set<string>();
     for (const edge of visibleEdges) {
       if (edge.source === selectedNode.id) connectedIds.add(edge.target);
       if (edge.target === selectedNode.id) connectedIds.add(edge.source);
     }
-    return visibleNodes.filter((node) => connectedIds.has(node.id)).sort(byTitle);
-  }, [selectedNode, visibleEdges, visibleNodes]);
+    return Array.from(connectedIds);
+  }, [selectedNode, visibleEdges]);
+
+  const neighborIdSet = useMemo(() => new Set(neighborIds), [neighborIds]);
+
+  const selectedNeighbors = useMemo(() => {
+    if (!selectedNode) return [];
+    return visibleNodes.filter((node) => neighborIdSet.has(node.id)).sort(byTitle);
+  }, [selectedNode, visibleNodes, neighborIdSet]);
+
+  const activeEdgeIds = useMemo(() => {
+    if (!selectedNode) return new Set<string>();
+    const ids = new Set<string>();
+    for (const edge of visibleEdges) {
+      if (edge.source === selectedNode.id || edge.target === selectedNode.id) {
+        ids.add(edge.id);
+      }
+    }
+    return ids;
+  }, [selectedNode, visibleEdges]);
+
+  const applyLayoutForScenario = (nextLayout: Map<string, { x: number; y: number }>) => {
+    if (!scenario) return;
+    layoutByScenarioRef.current.set(scenario.key, new Map(nextLayout));
+    setLayout(new Map(nextLayout));
+  };
+
+  const handleReSolve = () => {
+    if (!scenario) return;
+    const pins = pinnedByScenarioRef.current.get(scenario.key);
+    const next = computeStableLayout(scenario.nodes, scenario.edges, {
+      width: 1000,
+      height: 1000,
+      pinned: pins,
+    });
+    applyLayoutForScenario(next);
+  };
+
+  const handlePinNode = (id: string, position: { x: number; y: number }) => {
+    if (!scenario) return;
+    const perScenario = pinnedByScenarioRef.current.get(scenario.key) ?? new Map();
+    perScenario.set(id, position);
+    pinnedByScenarioRef.current.set(scenario.key, perScenario);
+  };
+
+  const visibleLayout = useMemo(() => {
+    const next = new Map<string, { x: number; y: number }>();
+    for (const node of visibleNodes) {
+      const point = layout.get(node.id);
+      if (point) next.set(node.id, point);
+    }
+    return next;
+  }, [layout, visibleNodes]);
 
   if (!scenario) return null;
 
+  const selectedVisible = selectedId ? visibleNodeIds.has(selectedId) : false;
+  const selectedCount = selectedNeighbors.length;
+  const selectedType = selectedNode?.entityType ?? selectedNode?.itemType ?? "node";
+  const selectedLabel = selectedNode?.title ?? "No selection";
+  const selectedDescription = selectedNode
+    ? `${selectedNode.itemType}${selectedNode.entityType ? ` · ${selectedNode.entityType}` : ""}`
+    : "Select a node to inspect connected context.";
+
   return (
-    <main className="min-h-screen bg-[var(--vigil-canvas)] p-6 text-[var(--vigil-label)]">
-      <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4">
-        <header className="rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-surface)] p-4">
-          <h1 className="text-lg font-semibold">Entity graph lab</h1>
-          <p className="mt-1 text-sm text-[var(--vigil-muted)]">
-            Isolated sandbox with deterministic dummy data so UX/UI can be tuned without API noise.
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <label className="text-xs uppercase tracking-[0.12em] text-[var(--vigil-muted)]" htmlFor="entity-graph-scenario">
-              Scenario
-            </label>
-            <select
-              id="entity-graph-scenario"
-              className="rounded-md border border-[var(--vigil-border)] bg-transparent px-2 py-1 text-sm"
-              value={scenario.key}
-              onChange={(event) => {
-                setScenarioKey(event.target.value);
-                setSelectedId(null);
-                setLayoutRevision(0);
-              }}
-            >
-              {SCENARIOS.map((item) => (
-                <option key={item.key} value={item.key} className="bg-[var(--vigil-bg)]">
-                  {item.label}
-                </option>
-              ))}
-            </select>
-            <input
-              className="min-w-[240px] flex-1 rounded-md border border-[var(--vigil-border)] bg-transparent px-2 py-1 text-sm"
-              value={filter}
-              onChange={(event) => setFilter(event.target.value)}
-              placeholder="Filter by title or type"
-            />
-            <Button
-              size="sm"
-              variant="default"
-              tone="glass"
-              onClick={() => setLayoutRevision((prev) => prev + 1)}
-            >
-              Reset layout
-            </Button>
+    <main className={styles.page}>
+      <div className={styles.shell}>
+        <section className={styles.canvasCard}>
+          <div className={styles.canvasViewport}>
+            {visibleNodes.length === 0 ? (
+              <div className="p-4 text-sm text-[var(--vigil-muted)]">No nodes match this filter.</div>
+            ) : (
+              <EntityGraphPillCanvas
+                nodes={visibleNodes}
+                edges={visibleEdges}
+                layout={visibleLayout}
+                selectedId={selectedVisible ? selectedId : null}
+                neighborIds={selectedVisible ? neighborIdSet : new Set<string>()}
+                activeEdgeIds={selectedVisible ? activeEdgeIds : new Set<string>()}
+                onSelect={setSelectedId}
+                onLayoutChange={applyLayoutForScenario}
+                onNodePin={handlePinNode}
+                cameraResetKey={cameraResetKey}
+              />
+            )}
+          </div>
+        </section>
+
+        <header className={cx(HEARTGARDEN_GLASS_PANEL, styles.topChrome)}>
+          <div className={styles.headerRow}>
+            <span className={HEARTGARDEN_METADATA_LABEL}>Entity graph lab</span>
+            <div className={styles.controls}>
+              <div
+                className={styles.scenarioButtons}
+                role="toolbar"
+                aria-label="Graph scenario selector"
+              >
+                {SCENARIOS.map((item) => (
+                  <Button
+                    key={item.key}
+                    size="sm"
+                    variant="subtle"
+                    tone="menu"
+                    isActive={item.key === scenario.key}
+                    onClick={() => {
+                      setScenarioKey(item.key);
+                      setSelectedId(null);
+                      setCameraResetKey((current) => current + 1);
+                    }}
+                    aria-label={`Switch to ${item.label} scenario`}
+                  >
+                    {item.label}
+                  </Button>
+                ))}
+              </div>
+              <input
+                className={styles.searchInput}
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+                placeholder="Filter by label, type, or item kind"
+                aria-label="Filter graph nodes"
+              />
+              <span className={styles.counts}>
+                {visibleLayout.size} nodes · {visibleEdgeIds.size} edges
+              </span>
+              <Button
+                size="sm"
+                variant="default"
+                tone="glass"
+                onClick={handleReSolve}
+                aria-label="Recompute graph layout"
+              >
+                Re-solve layout
+              </Button>
+              <Button
+                size="sm"
+                variant="default"
+                tone="glass"
+                onClick={() => setCameraResetKey((current) => current + 1)}
+                aria-label="Reset camera position and zoom"
+              >
+                Reset camera
+              </Button>
+            </div>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <section className="rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-surface)]">
-            <div className="border-b border-[var(--vigil-border)] px-4 py-2 text-xs text-[var(--vigil-muted)]">
-              {scenario.summary} · {visibleNodes.length} nodes · {visibleEdges.length} edges
-            </div>
-            <div className="h-[72vh] min-h-[540px]">
-              {visibleNodes.length === 0 ? (
-                <div className="p-4 text-sm text-[var(--vigil-muted)]">No nodes match this filter.</div>
-              ) : (
-                <EntityGraphCanvas
-                  key={`${scenario.key}:${layoutRevision}:${filter}`}
-                  nodes={visibleNodes}
-                  edges={visibleEdges}
-                  onPick={setSelectedId}
-                />
-              )}
-            </div>
-          </section>
-
-          <aside className="rounded-xl border border-[var(--vigil-border)] bg-[var(--vigil-surface)]">
-            <div className="border-b border-[var(--vigil-border)] px-4 py-3">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.12em]">Selection details</h2>
-            </div>
-            <div className="space-y-4 p-4 text-sm">
-              {selectedNode ? (
-                <>
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.1em] text-[var(--vigil-muted)]">Node</div>
-                    <p className="mt-1 font-semibold">{selectedNode.title}</p>
-                    <p className="mt-1 text-xs text-[var(--vigil-muted)]">
-                      {selectedNode.itemType}
-                      {selectedNode.entityType ? ` · ${selectedNode.entityType}` : ""}
-                    </p>
-                  </div>
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.1em] text-[var(--vigil-muted)]">Connected nodes</div>
-                    {selectedNeighbors.length === 0 ? (
-                      <p className="mt-1 text-[var(--vigil-muted)]">No visible neighbors.</p>
-                    ) : (
-                      <ul className="mt-2 space-y-1">
-                        {selectedNeighbors.map((node) => (
-                          <li key={node.id}>
-                            <Button
-                              size="sm"
-                              variant="subtle"
-                              tone="menu"
-                              className="w-full justify-start truncate"
-                              onClick={() => setSelectedId(node.id)}
-                            >
-                              {node.title}
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <p className="text-[var(--vigil-muted)]">Click a node in the graph to inspect it.</p>
-              )}
-            </div>
-          </aside>
-        </div>
+        <aside className={cx(HEARTGARDEN_GLASS_PANEL, styles.panel, selectedNode && styles.panelVisible)}>
+          <div className={styles.panelInner}>
+            {selectedNode ? (
+              <>
+                <span className={HEARTGARDEN_METADATA_LABEL}>{selectedType}</span>
+                <h2 className={styles.nodeTitle}>{selectedLabel}</h2>
+                <p className={styles.panelHint}>{selectedDescription}</p>
+                <div className={styles.metaRow}>
+                  <span className={HEARTGARDEN_METADATA_LABEL}>Connections</span>
+                  <strong>{selectedCount}</strong>
+                </div>
+                <div className={styles.neighbors}>
+                  {selectedNeighbors.length === 0 ? (
+                    <p className={styles.panelHint}>No visible neighbors in current filter.</p>
+                  ) : (
+                    selectedNeighbors.map((node) => (
+                      <Button
+                        key={node.id}
+                        size="sm"
+                        variant="subtle"
+                        tone="menu"
+                        className="w-full justify-start truncate"
+                        onClick={() => setSelectedId(node.id)}
+                        aria-label={`Focus neighbor ${node.title}`}
+                      >
+                        {node.title}
+                      </Button>
+                    ))
+                  )}
+                </div>
+              </>
+            ) : (
+              <p className={styles.panelHint}>
+                Select a node to enter focus mode. Escape or click empty canvas resets focus.
+              </p>
+            )}
+          </div>
+        </aside>
       </div>
     </main>
   );
