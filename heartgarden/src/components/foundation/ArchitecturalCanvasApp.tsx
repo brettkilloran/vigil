@@ -9948,6 +9948,42 @@ export function ArchitecturalCanvasApp({
       dropTargetRafHandleRef.current = window.setTimeout(run, 16) as unknown as number;
     }
   };
+  // Coalesce pan translate updates to one per animation frame. High-resolution
+  // pointer devices fire `pointermove` 500–1000Hz; calling `setTranslateX` /
+  // `setTranslateY` on every event has tripped React 19's nested-update guard
+  // when other camera-derived effects re-run between frames. rAF caps state
+  // updates to display refresh rate while keeping the latest pointer position.
+  const panRafHandleRef = useRef<number | null>(null);
+  const panPendingTranslateRef = useRef<{ tx: number; ty: number } | null>(null);
+  const cancelPanRaf = () => {
+    if (panRafHandleRef.current === null) return;
+    if (typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(panRafHandleRef.current);
+    } else {
+      window.clearTimeout(panRafHandleRef.current);
+    }
+    panRafHandleRef.current = null;
+  };
+  const flushPanPending = () => {
+    const next = panPendingTranslateRef.current;
+    panPendingTranslateRef.current = null;
+    if (!next) return;
+    setTranslateX((prev) => (prev === next.tx ? prev : next.tx));
+    setTranslateY((prev) => (prev === next.ty ? prev : next.ty));
+  };
+  const schedulePanTranslate = (nextTx: number, nextTy: number) => {
+    panPendingTranslateRef.current = { tx: nextTx, ty: nextTy };
+    if (panRafHandleRef.current !== null) return;
+    const run = () => {
+      panRafHandleRef.current = null;
+      flushPanPending();
+    };
+    if (typeof requestAnimationFrame === "function") {
+      panRafHandleRef.current = requestAnimationFrame(run);
+    } else {
+      panRafHandleRef.current = window.setTimeout(run, 16) as unknown as number;
+    }
+  };
 
   useEffect(() => {
     // Window-level listeners are intentionally stable; handlers must read mutable refs, not stale closure state.
@@ -9970,8 +10006,7 @@ export function ArchitecturalCanvasApp({
       if (isPanningRef.current) {
         const nextTx = event.clientX - panStartRef.current.x;
         const nextTy = event.clientY - panStartRef.current.y;
-        setTranslateX((prev) => (prev === nextTx ? prev : nextTx));
-        setTranslateY((prev) => (prev === nextTy ? prev : nextTy));
+        schedulePanTranslate(nextTx, nextTy);
       }
 
       const draggedIds = draggedNodeIdsRef.current;
@@ -10112,6 +10147,12 @@ export function ArchitecturalCanvasApp({
         completeActiveLasso();
       }
 
+      // Cancel any queued rAF and apply the latest pan position synchronously
+      // so the camera lands exactly where the pointer ended (no trailing frame).
+      if (panRafHandleRef.current !== null) {
+        cancelPanRaf();
+        flushPanPending();
+      }
       isPanningRef.current = false;
       setIsPanning(false);
       if (draggedNodeIdsRef.current.length > 0) {
@@ -10165,9 +10206,13 @@ export function ArchitecturalCanvasApp({
       window.removeEventListener("pointercancel", onWindowPointerOrMouseUp);
       window.removeEventListener("mousemove", onMouseMoveForLasso);
       window.removeEventListener("mouseup", onWindowPointerOrMouseUp);
+      cancelPanRaf();
+      panPendingTranslateRef.current = null;
     };
     /* Intentionally no deps: handleDrop/updateDropTargets change every pan frame via centerCoords →
-     * re-binding window listeners on those deps causes max update depth during pan (pointermove). */
+     * re-binding window listeners on those deps causes max update depth during pan (pointermove).
+     * `schedulePanTranslate` is recreated each render but only references stable refs + setters. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
