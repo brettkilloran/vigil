@@ -181,6 +181,14 @@ Phase 5 unifies under a single intelligence surface — one `⌘K` modal that ex
 
 **Risk:** low — all are warnings, not errors. No runtime behavior change. Goal is to eventually promote these rules back to errors once all sites are clean.
 
+### Make `@napi-rs/canvas` a direct dependency (Matt-recommended)
+
+`@napi-rs/canvas` was added as an optional dependency during the pnpm/Vercel deploy fix because `app/api/lore/import/parse/route.ts` imports it directly for PDF runtime globals. Matt recommends making it a normal direct dependency instead, so Vercel's Linux build/runtime and pnpm's strict module graph do not depend on optional dependency install semantics for the PDF parser path.
+
+**Fix approach:** move `@napi-rs/canvas` from `optionalDependencies` to `dependencies` in `package.json`, refresh `pnpm-lock.yaml`, and verify `pnpm run check` plus a Vercel preview build.
+
+**Risk:** low-to-medium — dependency manifest-only change, but it affects native package install behavior on Vercel and local machines.
+
 ---
 
 ## Review-sourced backlog
