@@ -20,7 +20,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # heartgarden — agent notes
 
-**Read order (LLM / onboarding):** `AGENTS.md` (this file) → `docs/API.md` → `docs/FEATURES.md` → `docs/CODEMAP.md` → `docs/BUILD_PLAN.md` (architecture + shipped history) → `docs/BACKLOG.md` (open engineering work, SOT). **Env matrix (deploy):** `docs/VERCEL_ENV_VARS.md`. **Lore vertical pointer:** `docs/LORE_ENGINE_ROADMAP.md` + repo `.cursor/plans/README.md`.
+**Read order (LLM / onboarding):** `AGENTS.md` (this file) → `docs/AGENT_COLLABORATION.md` → `docs/API.md` → `docs/FEATURES.md` → `docs/CODEMAP.md` → `docs/BUILD_PLAN.md` (architecture + shipped history) → `docs/BACKLOG.md` (open engineering work, SOT). **Env matrix (deploy):** `docs/VERCEL_ENV_VARS.md`. **Lore vertical pointer:** `docs/LORE_ENGINE_ROADMAP.md` + repo `.cursor/plans/README.md`.
 
 ## Naming (product vs `heartgarden/` folder)
 
@@ -31,6 +31,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Concern | Document |
 |--------|----------|
 | **Onboarding + architecture reality** | This file (`AGENTS.md`) |
+| **Human / agent / GitHub collaboration policy** | `docs/AGENT_COLLABORATION.md` |
 | **HTTP routes** | `docs/API.md` |
 | **Shipped behavior → code** | `docs/FEATURES.md` |
 | **Subsystem → files** | `docs/CODEMAP.md` |
@@ -50,6 +51,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | **Historical product bible** | `docs/archive/vigil-master-plan-legacy.md` — stub: `docs/VIGIL_MASTER_PLAN.md` |
 
 Read **STRATEGY** for current-vs-target delta, **BACKLOG** for open work (SOT), and **BUILD_PLAN** for architecture + shipped history. **Do not** treat a single missing `.cursor/plans/*.plan.md` filename as SoT — use **LORE_ENGINE_ROADMAP** + **plans README** + **BACKLOG**. The legacy master plan still describes **custom DOM canvas** (no tldraw), **boot-tier access** (not full user accounts), **MIT stack**, and phases **1–8** at a product level.
+
+## Collaboration policy (humans, agents, GitHub)
+
+Canonical workflow guidance lives in **`docs/AGENT_COLLABORATION.md`**. In short: Brett-directed Cursor work should bias toward action; Matt's comments are trusted peer-review input; agents may do reversible local work, open PRs, and leave clear GitHub comments without extra ceremony; agents must ask before disruptive one-way doors such as merges, PR/issue closes, branch deletes, force-pushes, production data/env/auth changes, or expensive open-ended loops.
 
 ## Documentation update checklist
 
@@ -95,6 +100,13 @@ Persistence: **`items`** rows; **`spaces.canvas_state`** is legacy (camera is **
 **Package manager:** Use **pnpm** only in the app directory (**`heartgarden/`**) (`pnpm-lock.yaml`; version pinned via `packageManager` in `package.json`). Do not mix npm/yarn in the same tree without a deliberate migration.
 
 **`pnpm audit`:** Treat **`pnpm audit`** as advisory — many findings are in **dev-only** transitive chains and do not map directly to production risk. Prefer **`pnpm audit --fix`** when it stays within compatible ranges. Avoid forced major upgrades unless you are ready to reconcile **peer dependencies** and to run **`pnpm run check`**, **`pnpm run build`**, and **`pnpm run build-storybook`** (or **`pnpm run check:all`**). A bad forced upgrade can leave **`package.json`** / **`pnpm-lock.yaml`** and **`node_modules`** out of sync; **`pnpm run reinstall`** rebuilds **`node_modules`** from the lockfile after you restore the manifests from git.
+
+**GitHub CLI on PATH (Windows / Cursor terminals):** GitHub CLI is already installed on Brett's machine at **`C:\Program Files\GitHub CLI\gh.exe`** and is authenticated with repo access. If a Cursor terminal says **`gh`** is not recognized, refresh the process PATH before using it:
+
+```powershell
+$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
+gh auth status
+```
 
 **Node on PATH (Windows portable installs):** If `pnpm`/`node` are missing in a new terminal or in Cursor, the portable Node folder is probably not on **User** `PATH`.
 

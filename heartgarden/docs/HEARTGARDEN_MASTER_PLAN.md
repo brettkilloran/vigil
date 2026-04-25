@@ -6,6 +6,7 @@ last_reviewed: 2026-04-21
 canonical: true
 related:
   - heartgarden/AGENTS.md
+  - heartgarden/docs/AGENT_COLLABORATION.md
   - heartgarden/docs/API.md
   - heartgarden/docs/BACKLOG.md
   - heartgarden/docs/BUILD_PLAN.md
@@ -18,18 +19,20 @@ related:
 ## Read order
 
 1. [`AGENTS.md`](../AGENTS.md) — product/code reality, dev guardrails, MCP, tests  
-2. [`API.md`](./API.md) — HTTP contracts  
-3. [`FEATURES.md`](./FEATURES.md) — shipped capabilities → code  
-4. [`CODEMAP.md`](./CODEMAP.md) — subsystem → files  
-5. [`BUILD_PLAN.md`](./BUILD_PLAN.md) — architecture snapshot + shipped tranches history  
-6. [`BACKLOG.md`](./BACKLOG.md) — open engineering backlog (SOT)  
-7. [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md) — deploy env matrix (SoT for variable definitions)  
-8. [`PLAYER_LAYER.md`](./PLAYER_LAYER.md) — GM / Players / demo tiers and collab  
+2. [`AGENT_COLLABORATION.md`](./AGENT_COLLABORATION.md) — Brett / Matt / agent / GitHub workflow  
+3. [`API.md`](./API.md) — HTTP contracts  
+4. [`FEATURES.md`](./FEATURES.md) — shipped capabilities → code  
+5. [`CODEMAP.md`](./CODEMAP.md) — subsystem → files  
+6. [`BUILD_PLAN.md`](./BUILD_PLAN.md) — architecture snapshot + shipped tranches history  
+7. [`BACKLOG.md`](./BACKLOG.md) — open engineering backlog (SOT)  
+8. [`VERCEL_ENV_VARS.md`](./VERCEL_ENV_VARS.md) — deploy env matrix (SoT for variable definitions)  
+9. [`PLAYER_LAYER.md`](./PLAYER_LAYER.md) — GM / Players / demo tiers and collab  
 
 ## Canonical pointers
 
 | Topic | Document |
 |-------|----------|
+| Human / agent / GitHub collaboration | [`AGENT_COLLABORATION.md`](./AGENT_COLLABORATION.md) |
 | Lore vertical + Cursor plans index | [`LORE_ENGINE_ROADMAP.md`](./LORE_ENGINE_ROADMAP.md), [`.cursor/plans/README.md`](../../.cursor/plans/README.md) |
 | Naming (`heartgarden/` folder) | [`NAMING.md`](./NAMING.md) |
 | Engineering strategy / phase map | [`STRATEGY.md`](./STRATEGY.md) |

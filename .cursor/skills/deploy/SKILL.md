@@ -15,6 +15,10 @@ Run this end-to-end in the **git repository root** (or the app root if the userâ
 
 - Do **not** commit secrets: `.env`, `.env.local`, real API keys, or files ignored for good reason. If only `.env.local.example` or similar should change, stage those explicitly.
 - If the user did not ask to commit **everything**, stop and confirm scope when the diff is large or mixes unrelated work.
+- `/deploy` is explicit permission to commit, push, get the requested work onto the production branch, and verify Vercel. It is **not** permission to take unrelated one-way-door actions.
+- Stop and ask before production data migrations/backfills, Vercel production env/auth/deployment-protection changes, force-pushes/history rewrites, closing/deleting PRs/branches, or expensive open-ended retries. Prefer the smallest reversible fix and report the risky next step.
+- If Brett explicitly triggered deploy, keep the path fast: use best instincts and flag only critical errors, failed checks, deploy failures, or one-way-door risks.
+- Collaboration policy: `heartgarden/docs/AGENT_COLLABORATION.md`. Brett-driven deploys should move quickly; Matt/external branches need explicit permission before merge/close/delete actions.
 
 ## 1. Inventory and optional chat context
 
