@@ -23,7 +23,7 @@ const eslintConfig = defineConfig([
   },
   {
     files: ["src/components/**/*.tsx"],
-    ignores: ["src/components/ui/Button.tsx"],
+    ignores: ["src/components/ui/Button.tsx", "src/components/dev/**/*.tsx"],
     rules: {
       "no-restricted-syntax": [
         "error",
