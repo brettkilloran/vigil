@@ -18,7 +18,12 @@ This document compares directional renderer options wired at:
 
 All four routes share one chrome/inspector contract and a common synthetic stress dataset (`Stress 1k`, `Stress 10k`).
 
-The current `pixi`, `sigma`, and `rfg` implementations are scaffold routes preserving the contract while we complete dedicated renderer internals. This keeps A/B route behavior stable during iteration and prevents integration churn.
+Current prototypes are live implementations:
+
+- `html`: existing pill canvas renderer.
+- `pixi`: dedicated Pixi stage with WebGL edges/nodes and close-zoom HTML pill overlay.
+- `sigma`: dedicated Sigma graph renderer with selection/dimming and camera framing actions.
+- `rfg`: dedicated react-force-graph canvas renderer with custom pill drawing and relation-aware edge styling.
 
 ## Metrics template
 
