@@ -28,6 +28,7 @@ import { buildSearchBlob } from "@/src/lib/search-blob";
 import { jsonValuesEqualForPatch } from "@/src/lib/json-value-equal";
 import { scrubHgArchRefsAfterItemDelete } from "@/src/lib/hg-arch-orphan-repair";
 import { scheduleEntityMentionRescanOnVocabularyChange } from "@/src/lib/entity-mentions";
+import { deriveVocabularyTermsFromSeed } from "@/src/lib/entity-vocabulary";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
@@ -239,6 +240,29 @@ export async function PATCH(
     if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, p.spaceId))) {
       return heartgardenApiForbiddenJsonResponse();
     }
+    // REVIEW_2026-04-25_1730 H1: Reject cross-brane item moves. The link and
+    // entity-mention layers assume "links/mentions stay inside one brane"
+    // (validated at write time by `validateLinkTargetsInBrane`); silently
+    // moving an item to a different brane would leave stale links and
+    // mention rows pointing across brane boundaries. A deliberate
+    // cross-brane migration helper can be added later if needed.
+    if (p.spaceId !== existing.spaceId) {
+      const branePair = await db
+        .select({ id: spaces.id, braneId: spaces.braneId })
+        .from(spaces)
+        .where(or(eq(spaces.id, existing.spaceId), eq(spaces.id, p.spaceId)));
+      const fromBraneId = branePair.find((row) => row.id === existing.spaceId)?.braneId ?? null;
+      const toBraneId = branePair.find((row) => row.id === p.spaceId)?.braneId ?? null;
+      if (fromBraneId && toBraneId && fromBraneId !== toBraneId) {
+        return Response.json(
+          {
+            ok: false,
+            error: "Cross-brane item moves are not allowed",
+          },
+          { status: 400 },
+        );
+      }
+    }
     updates.spaceId = p.spaceId;
   }
 
@@ -353,7 +377,19 @@ export async function PATCH(
         .where(eq(spaces.id, row.spaceId))
         .limit(1);
       if (spaceRow?.braneId) {
-        scheduleEntityMentionRescanOnVocabularyChange(db, spaceRow.braneId);
+        // REVIEW_2026-04-25_1730 H3: incremental rescan. Only items whose
+        // search_blob contains the OLD or NEW title can have their term
+        // mentions affected by this rename, so scope the brane-wide work
+        // to that candidate set + only those vocab terms.
+        const affectedTerms = Array.from(
+          new Set([
+            ...deriveVocabularyTermsFromSeed(existing.title),
+            ...deriveVocabularyTermsFromSeed(p.title),
+          ]),
+        );
+        scheduleEntityMentionRescanOnVocabularyChange(db, spaceRow.braneId, {
+          affectedTerms,
+        });
       }
     }
   }
@@ -366,13 +402,21 @@ export async function PATCH(
   }
 
   {
-    const changedSpaceIds =
-      updates.spaceId !== undefined && updates.spaceId !== existing.spaceId
-        ? [existing.spaceId, updates.spaceId]
-        : [row.spaceId];
+    const moved =
+      updates.spaceId !== undefined && updates.spaceId !== existing.spaceId;
+    const changedSpaceIds = moved
+      ? [existing.spaceId, updates.spaceId as string]
+      : [row.spaceId];
+    if (moved) {
+      // REVIEW_2026-04-25_1730 M6: Bump link-revision caches for BOTH
+      // origin and destination spaces; otherwise other clients keep
+      // serving stale link snapshots for the space the item left.
+      invalidateItemLinksRevisionForSpace(existing.spaceId);
+      invalidateItemLinksRevisionForSpace(updates.spaceId as string);
+    }
     await publishHeartgardenSpaceInvalidation(db, {
       originSpaceId: row.spaceId,
-      reason: updates.spaceId !== undefined && updates.spaceId !== existing.spaceId ? "space.moved" : "item.updated",
+      reason: moved ? "space.moved" : "item.updated",
       itemId: row.id,
       lookupSpaceIds: changedSpaceIds,
     });

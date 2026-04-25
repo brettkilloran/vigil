@@ -11,6 +11,12 @@ import {
   heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { scheduleLoreImportJobProcessing } from "@/src/lib/lore-import-job-after";
+import {
+  clipLoreImportJobInsertString,
+  isLoreImportJobSchemaLagError,
+  readLoreImportJobInsertDiagnostic,
+  type LoreImportJobInsertDiagnostic,
+} from "@/src/lib/lore-import-job-db-insert-helpers";
 import { processLoreImportJob } from "@/src/lib/lore-import-job-process";
 import { loreImportUserContextSchema } from "@/src/lib/lore-import-plan-types";
 import { assertSpaceExists } from "@/src/lib/spaces";
@@ -31,73 +37,18 @@ function importAttemptId(req: Request): string {
   return req.headers.get("x-heartgarden-import-attempt")?.trim() || "unknown";
 }
 
-type DbInsertDiagnostic = {
-  message?: string;
-  code?: string;
-  detail?: string;
-  hint?: string;
-  severity?: string;
-  table?: string;
-  column?: string;
-  constraint?: string;
-  routine?: string;
-  retryable?: boolean;
-};
+type DbInsertDiagnostic = LoreImportJobInsertDiagnostic;
 
 function clipped(value: unknown, max = 280): string | undefined {
-  if (typeof value !== "string") return undefined;
-  const text = value.trim();
-  if (!text) return undefined;
-  return text.length > max ? `${text.slice(0, max)}...` : text;
+  return clipLoreImportJobInsertString(value, max);
 }
 
 function readDbInsertDiagnostic(error: unknown): DbInsertDiagnostic {
-  const source =
-    error && typeof error === "object" ? (error as Record<string, unknown>) : {};
-  const code = clipped(source.code, 24);
-  const retryableCodes = new Set([
-    "40001", // serialization_failure
-    "40P01", // deadlock_detected
-    "53300", // too_many_connections
-    "57P01", // admin_shutdown
-    "57014", // query_canceled
-    "08000", // connection_exception
-    "08001", // sqlclient_unable_to_establish_sqlconnection
-    "08006", // connection_failure
-    "08P01", // protocol_violation
-  ]);
-  return {
-    message:
-      clipped(source.message) ||
-      (error instanceof Error ? clipped(error.message) : clipped(String(error))),
-    code,
-    detail: clipped(source.detail),
-    hint: clipped(source.hint),
-    severity: clipped(source.severity, 64),
-    table: clipped(source.table, 128),
-    column: clipped(source.column, 128),
-    constraint: clipped(source.constraint, 128),
-    routine: clipped(source.routine, 128),
-    retryable: Boolean(code && retryableCodes.has(code)),
-  };
+  return readLoreImportJobInsertDiagnostic(error);
 }
 
 function isMissingProgressColumnsDiagnostic(diag: DbInsertDiagnostic): boolean {
-  const code = String(diag.code || "").trim();
-  const column = String(diag.column || "").toLowerCase();
-  const text = `${diag.message || ""} ${diag.detail || ""}`.toLowerCase();
-  const mentionsProgressColumn =
-    column.startsWith("progress_") ||
-    column === "last_progress_at" ||
-    column === "user_context" ||
-    text.includes("progress_") ||
-    text.includes("last_progress_at") ||
-    text.includes("user_context");
-  if (!mentionsProgressColumn) return false;
-  if (!code) return true;
-  if (code === "42703") return true;
-  if (code === "42P01" && text.includes("lore_import_jobs")) return true;
-  return false;
+  return isLoreImportJobSchemaLagError(diag);
 }
 
 function loreImportJobsLegacySchemaFallbackEnabled(): boolean {

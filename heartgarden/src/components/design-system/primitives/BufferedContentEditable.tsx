@@ -292,6 +292,13 @@ function rangeForPlainTextOffsets(
   return range;
 }
 
+/**
+ * @deprecated The `[[wiki-link]]` typing assist was removed in the Global Links + Alt-graph
+ * refactor. The brane-wide Alt-hover discovery card (see `AltGraphCard.tsx` /
+ * `entity-mentions.ts`) is the supported replacement. This type and the matching
+ * `wikiLinkAssist` prop on `BufferedContentEditable` are now no-ops kept only so existing
+ * call sites keep compiling; both will be removed in a future cleanup pass.
+ */
 export type WikiLinkAssistConfig = {
   enabled: boolean;
   getLocalItems: () => WikiCandidate[];
@@ -318,6 +325,7 @@ type BufferedContentEditableProps = {
   onEscape?: () => void;
   onEnter?: () => void;
   dataAttribute?: string;
+  /** @deprecated No-op since the wiki-link typing assist was removed. See `WikiLinkAssistConfig`. */
   wikiLinkAssist?: WikiLinkAssistConfig | null;
   /**
    * When set: (1) Backspace at the start of an empty checklist text cell removes the whole task row.

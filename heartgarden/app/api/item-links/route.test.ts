@@ -31,6 +31,11 @@ describe("POST /api/item-links", () => {
           where: vi.fn(() => ({
             limit: vi.fn(async () => [{ spaceId: "00000000-0000-4000-8000-000000000099" }]),
           })),
+          leftJoin: vi.fn(() => ({
+            where: vi.fn(() => ({
+              limit: vi.fn(async () => [{ name: "Test Space", braneType: "gm" }]),
+            })),
+          })),
         })),
       })),
     };

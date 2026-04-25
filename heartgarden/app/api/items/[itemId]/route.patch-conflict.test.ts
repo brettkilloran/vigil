@@ -71,6 +71,11 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
           where: vi.fn(() => ({
             limit: vi.fn(async () => [mockExistingRow(serverTime)]),
           })),
+          leftJoin: vi.fn(() => ({
+            where: vi.fn(() => ({
+              limit: vi.fn(async () => [{ name: "Test Space", braneType: "gm" }]),
+            })),
+          })),
         })),
       })),
     };
@@ -101,6 +106,11 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
         from: vi.fn(() => ({
           where: vi.fn(() => ({
             limit: vi.fn(async () => [mockExistingRow(serverTime)]),
+          })),
+          leftJoin: vi.fn(() => ({
+            where: vi.fn(() => ({
+              limit: vi.fn(async () => [{ name: "Test Space", braneType: "gm" }]),
+            })),
           })),
         })),
       })),
@@ -144,6 +154,11 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
         from: vi.fn(() => ({
           where: vi.fn(() => ({
             limit: vi.fn(async () => [mockExistingRow(serverTime)]),
+          })),
+          leftJoin: vi.fn(() => ({
+            where: vi.fn(() => ({
+              limit: vi.fn(async () => [{ name: "Test Space", braneType: "gm" }]),
+            })),
           })),
         })),
       })),

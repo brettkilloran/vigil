@@ -3,20 +3,11 @@
 import { useMemo } from "react";
 
 import { Button } from "@/src/components/ui/Button";
+import {
+  type AltMentionRow as MentionRow,
+  type AltSearchRow as SearchRow,
+} from "@/src/lib/entity-mention-row-types";
 import { computeForceLayout } from "@/src/lib/graph-layout";
-
-type MentionRow = {
-  itemId: string;
-  title: string;
-  mentionCount: number;
-  snippet?: string | null;
-};
-
-type SearchRow = {
-  id: string;
-  title?: string | null;
-  itemType?: string | null;
-};
 
 type MiniNode = {
   id: string;

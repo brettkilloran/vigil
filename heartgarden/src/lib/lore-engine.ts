@@ -165,12 +165,15 @@ export async function retrieveLoreSources(
   return out;
 }
 
-export async function synthesizeLoreAnswer(
-  apiKey: string,
-  model: string,
-  question: string,
-  sources: LoreSource[],
-): Promise<string> {
+/**
+ * Build the user-message payload (the long "Question + Canvas excerpts" string)
+ * that all three lore-answer entry points send to Anthropic.
+ *
+ * Kept as a single helper so the normal synthesis, streaming synthesis, and
+ * grounded-JSON synthesis paths cannot drift in subtle prompt-construction
+ * details. Only the system prompt and downstream parsing differ between paths.
+ */
+export function buildLoreAnswerUserPrompt(question: string, sources: LoreSource[]): string {
   const blocks = sources.map((s, i) => {
     const body = sanitizeRetrievedTextForLorePrompt(s.excerpt);
     const ctx = s.viaGraph
@@ -185,7 +188,16 @@ export async function synthesizeLoreAnswer(
         : "";
     return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${kindLine}${ctx}${sectionLine}\n\n${body}`;
   });
-  const user = `Question:\n${question.trim()}\n\n---\n\nCanvas excerpts (your only ground truth):\n\n${blocks.join("\n\n---\n\n")}`;
+  return `Question:\n${question.trim()}\n\n---\n\nCanvas excerpts (your only ground truth):\n\n${blocks.join("\n\n---\n\n")}`;
+}
+
+export async function synthesizeLoreAnswer(
+  apiKey: string,
+  model: string,
+  question: string,
+  sources: LoreSource[],
+): Promise<string> {
+  const user = buildLoreAnswerUserPrompt(question, sources);
 
   const res = await callAnthropic(
     apiKey,
@@ -206,21 +218,7 @@ export async function* synthesizeLoreAnswerStream(
   question: string,
   sources: LoreSource[],
 ): AsyncGenerator<string> {
-  const blocks = sources.map((s, i) => {
-    const body = sanitizeRetrievedTextForLorePrompt(s.excerpt);
-    const ctx = s.viaGraph
-      ? "\n- context: canvas connection neighbor"
-      : s.viaBinding
-        ? "\n- context: structured card field (hgArch binding target)"
-        : "";
-    const kindLine = s.canonicalEntityKind ? `\n- kind: ${s.canonicalEntityKind}` : "";
-    const sectionLine =
-      s.matchedChunks?.[0]?.headingPath?.length
-        ? `\n- section: ${s.matchedChunks[0].headingPath.join(" > ")}`
-        : "";
-    return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${kindLine}${ctx}${sectionLine}\n\n${body}`;
-  });
-  const user = `Question:\n${question.trim()}\n\n---\n\nCanvas excerpts (your only ground truth):\n\n${blocks.join("\n\n---\n\n")}`;
+  const user = buildLoreAnswerUserPrompt(question, sources);
   yield* callAnthropicTextStream(
     apiKey,
     {
@@ -281,21 +279,7 @@ export async function synthesizeLoreAnswerGrounded(
   question: string,
   sources: LoreSource[],
 ): Promise<LoreGroundedAnswer> {
-  const blocks = sources.map((s, i) => {
-    const body = sanitizeRetrievedTextForLorePrompt(s.excerpt);
-    const ctx = s.viaGraph
-      ? "\n- context: canvas connection neighbor"
-      : s.viaBinding
-        ? "\n- context: structured card field (hgArch binding target)"
-        : "";
-    const kindLine = s.canonicalEntityKind ? `\n- kind: ${s.canonicalEntityKind}` : "";
-    const sectionLine =
-      s.matchedChunks?.[0]?.headingPath?.length
-        ? `\n- section: ${s.matchedChunks[0].headingPath.join(" > ")}`
-        : "";
-    return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${kindLine}${ctx}${sectionLine}\n\n${body}`;
-  });
-  const user = `Question:\n${question.trim()}\n\n---\n\nCanvas excerpts (your only ground truth):\n\n${blocks.join("\n\n---\n\n")}`;
+  const user = buildLoreAnswerUserPrompt(question, sources);
   const res = await callAnthropic(
     apiKey,
     {

@@ -232,19 +232,35 @@ export async function PATCH(req: Request) {
       Response.json({ ok: false, error: "Link not found" }, { status: 404 }),
     );
   }
-  const [srcForLink] = await db
-    .select({ spaceId: items.spaceId })
+
+  // Resolve both endpoints up front so we can authorize source AND target
+  // BEFORE mutating. This closes the audited bug where a 403 on the target
+  // space was returned only after the row had already been updated.
+  const endpointRows = await db
+    .select({
+      id: items.id,
+      spaceId: items.spaceId,
+      entityType: items.entityType,
+    })
     .from(items)
-    .where(eq(items.id, linkMeta.sourceItemId))
-    .limit(1);
-  if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, srcForLink?.spaceId ?? ""))) {
-    return heartgardenApiForbiddenJsonResponse();
+    .where(inArray(items.id, [linkMeta.sourceItemId, linkMeta.targetItemId]));
+  const srcRow = endpointRows.find((r) => r.id === linkMeta.sourceItemId);
+  const tgtRow = endpointRows.find((r) => r.id === linkMeta.targetItemId);
+  if (!srcRow || !tgtRow) {
+    return heartgardenMaskNotFoundForPlayer(
+      bootCtx,
+      Response.json({ ok: false, error: "Link endpoint missing" }, { status: 404 }),
+    );
   }
-  if (
-    srcForLink &&
-    !(await gmMayAccessItemSpaceAsync(db, bootCtx, srcForLink.spaceId))
-  ) {
-    return heartgardenApiForbiddenJsonResponse();
+
+  const endpointSpaceIds = [srcRow.spaceId, tgtRow.spaceId];
+  for (const spaceId of endpointSpaceIds) {
+    if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, spaceId))) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+    if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, spaceId))) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
   }
 
   const [existing] = await db
@@ -293,53 +309,36 @@ export async function PATCH(req: Request) {
     return Response.json({ ok: false, error: "No updates provided" }, { status: 400 });
   }
   if (updates.meta !== undefined) {
-    const entRows = await db
-      .select({ id: items.id, entityType: items.entityType })
-      .from(items)
-      .where(inArray(items.id, [linkMeta.sourceItemId, linkMeta.targetItemId]));
-    const srcRow = entRows.find((r) => r.id === linkMeta.sourceItemId);
-    const tgtRow = entRows.find((r) => r.id === linkMeta.targetItemId);
-    if (!srcRow || !tgtRow) {
-      return Response.json({ ok: false, error: "Source or target item not found" }, { status: 404 });
-    }
     const mirrorCheck = validateStructuredMirrorItemLink(updates.meta, srcRow, tgtRow);
     if (!mirrorCheck.ok) {
       return Response.json({ ok: false, error: mirrorCheck.error }, { status: mirrorCheck.status });
     }
   }
-  const [updated] = await db
-    .update(itemLinks)
-    .set({ ...updates, updatedAt: new Date() })
-    .where(eq(itemLinks.id, id))
-    .returning();
+
+  let updated:
+    | (typeof itemLinks.$inferSelect)
+    | undefined;
+  await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(itemLinks)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(itemLinks.id, id))
+      .returning();
+    updated = row;
+  });
   if (!updated) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json({ ok: false, error: "Link not found" }, { status: 404 }),
     );
   }
-  if (srcForLink?.spaceId) {
-    const [tgtForLink] = await db
-      .select({ spaceId: items.spaceId })
-      .from(items)
-      .where(eq(items.id, linkMeta.targetItemId))
-      .limit(1);
-    if (tgtForLink?.spaceId) {
-      if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, tgtForLink.spaceId))) {
-        return heartgardenApiForbiddenJsonResponse();
-      }
-      if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, tgtForLink.spaceId))) {
-        return heartgardenApiForbiddenJsonResponse();
-      }
-    }
-    await publishHeartgardenSpaceInvalidation(db, {
-      originSpaceId: srcForLink.spaceId,
-      reason: "item-links.changed",
-      itemId: linkMeta.sourceItemId,
-      lookupSpaceIds: [srcForLink.spaceId, tgtForLink?.spaceId ?? srcForLink.spaceId],
-    });
-    invalidateLinkRevisionSpaces(srcForLink.spaceId, tgtForLink?.spaceId);
-  }
+  await publishHeartgardenSpaceInvalidation(db, {
+    originSpaceId: srcRow.spaceId,
+    reason: "item-links.changed",
+    itemId: linkMeta.sourceItemId,
+    lookupSpaceIds: [srcRow.spaceId, tgtRow.spaceId],
+  });
+  invalidateLinkRevisionSpaces(srcRow.spaceId, tgtRow.spaceId);
   return Response.json({ ok: true, link: updated });
 }
 
@@ -371,51 +370,52 @@ export async function DELETE(req: Request) {
       Response.json({ ok: false, error: "Link not found" }, { status: 404 }),
     );
   }
-  const [srcForLink] = await db
-    .select({ spaceId: items.spaceId })
+
+  // Resolve both endpoints up front so we authorize source AND target BEFORE
+  // the delete runs. This closes the audited bug where a 403 on the target
+  // space was returned only after the row had already been deleted.
+  const endpointRows = await db
+    .select({ id: items.id, spaceId: items.spaceId })
     .from(items)
-    .where(eq(items.id, linkMeta.sourceItemId))
-    .limit(1);
-  if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, srcForLink?.spaceId ?? ""))) {
-    return heartgardenApiForbiddenJsonResponse();
+    .where(inArray(items.id, [linkMeta.sourceItemId, linkMeta.targetItemId]));
+  const srcRow = endpointRows.find((r) => r.id === linkMeta.sourceItemId);
+  const tgtRow = endpointRows.find((r) => r.id === linkMeta.targetItemId);
+  if (!srcRow || !tgtRow) {
+    return heartgardenMaskNotFoundForPlayer(
+      bootCtx,
+      Response.json({ ok: false, error: "Link endpoint missing" }, { status: 404 }),
+    );
   }
-  if (
-    srcForLink &&
-    !(await gmMayAccessItemSpaceAsync(db, bootCtx, srcForLink.spaceId))
-  ) {
-    return heartgardenApiForbiddenJsonResponse();
+  const endpointSpaceIds = [srcRow.spaceId, tgtRow.spaceId];
+  for (const spaceId of endpointSpaceIds) {
+    if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, spaceId))) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+    if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, spaceId))) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
   }
-  const deleted = await db
-    .delete(itemLinks)
-    .where(eq(itemLinks.id, id))
-    .returning();
-  if (deleted.length < 1) {
+
+  let deletedCount = 0;
+  await db.transaction(async (tx) => {
+    const deletedRows = await tx
+      .delete(itemLinks)
+      .where(eq(itemLinks.id, id))
+      .returning();
+    deletedCount = deletedRows.length;
+  });
+  if (deletedCount < 1) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json({ ok: false, error: "Link not found" }, { status: 404 }),
     );
   }
-  if (srcForLink?.spaceId) {
-    const [tgtForLink] = await db
-      .select({ spaceId: items.spaceId })
-      .from(items)
-      .where(eq(items.id, linkMeta.targetItemId))
-      .limit(1);
-    if (tgtForLink?.spaceId) {
-      if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, tgtForLink.spaceId))) {
-        return heartgardenApiForbiddenJsonResponse();
-      }
-      if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, tgtForLink.spaceId))) {
-        return heartgardenApiForbiddenJsonResponse();
-      }
-    }
-    await publishHeartgardenSpaceInvalidation(db, {
-      originSpaceId: srcForLink.spaceId,
-      reason: "item-links.changed",
-      itemId: linkMeta.sourceItemId,
-      lookupSpaceIds: [srcForLink.spaceId, tgtForLink?.spaceId ?? srcForLink.spaceId],
-    });
-    invalidateLinkRevisionSpaces(srcForLink.spaceId, tgtForLink?.spaceId);
-  }
+  await publishHeartgardenSpaceInvalidation(db, {
+    originSpaceId: srcRow.spaceId,
+    reason: "item-links.changed",
+    itemId: linkMeta.sourceItemId,
+    lookupSpaceIds: [srcRow.spaceId, tgtRow.spaceId],
+  });
+  invalidateLinkRevisionSpaces(srcRow.spaceId, tgtRow.spaceId);
   return Response.json({ ok: true });
 }

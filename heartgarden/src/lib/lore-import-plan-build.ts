@@ -281,8 +281,12 @@ export async function buildLoreImportPlan(args: {
       note.sourcePassages = (note.sourcePassages ?? []).filter(
         (sp) => sp.quote.replace(/\s+/g, " ").trim() !== dup.quote,
       );
-      if (!note.bodyText.includes(`[[${primaryTitle}]]`)) {
-        note.bodyText = `${note.bodyText}\n\n${shortMention} [[${primaryTitle}]]`.slice(0, 120_000);
+      // REVIEW_2026-04-25_1730 H6: emit a bold cross-reference instead of
+      // a `[[Title]]` marker; the wiki-link assist that resolved those
+      // markers no longer exists.
+      const refLine = `**See:** ${primaryTitle}`;
+      if (!note.bodyText.includes(refLine)) {
+        note.bodyText = `${note.bodyText}\n\n${shortMention} ${refLine}`.slice(0, 120_000);
       }
     }
   }
@@ -578,8 +582,15 @@ export async function buildLoreImportPlan(args: {
     });
   }
 
-  // Group cross-space drafts by source note so we can attach mention arrays and add
-  // readable `[[Title]]` markers to body text while preserving structured metadata.
+  // Group cross-space drafts by source note so we can attach mention arrays and
+  // append a readable "Related" footer (plain titles, no `[[...]]` markers).
+  //
+  // REVIEW_2026-04-25_1730 H6: previously this emitted `[[Title]]` markers
+  // inline. The wiki-link typing assist that resolved those markers has been
+  // removed, so they were rendering as raw `[[…]]` strings in the editor.
+  // The Alt-hover discovery surface + entity_mentions now cover the
+  // cross-folder affordance, so we just inline the bare titles here and
+  // keep the structured `crossFolderMentions` for downstream wiring.
   const mentionsBySource = new Map<
     string,
     { toClientId: string; targetTitle: string; linkType: string; linkIntent?: "association" | "binding_hint" }[]
@@ -599,10 +610,8 @@ export async function buildLoreImportPlan(args: {
   for (const n of notesInternal) {
     const mentions = mentionsBySource.get(n.clientId);
     if (!mentions || mentions.length === 0) continue;
-    const markers = mentions
-      .map((m) => `[[${m.targetTitle}]]`)
-      .join(", ");
-    const appended = `\n\n**Related (in other folders):** ${markers}`;
+    const titles = mentions.map((m) => m.targetTitle).join(", ");
+    const appended = `\n\n**Related (in other folders):** ${titles}`;
     n.bodyText = (n.bodyText + appended).slice(0, 120_000);
     (n as { crossFolderMentions?: typeof mentions }).crossFolderMentions = mentions;
   }

@@ -95,6 +95,36 @@ export async function gmMayAccessItemSpaceAsync(
 }
 
 /**
+ * Authorize brane-scoped reads (graph, vocabulary, mentions) for a GM caller.
+ *
+ * Mirrors the per-space rule used by {@link gmMayAccessSpaceIdAsync}:
+ * - GM may always read the GM and demo branes.
+ * - GM may read the player brane only when the explicit GM/Player break-glass
+ *   env flag is enabled.
+ * - Unknown brane ids → false (so the caller gets `403`, not a silent leak).
+ *
+ * REVIEW_2026-04-25_1730 M1: prevents a GM from reading another brane just by
+ * supplying its UUID through `?braneId=…` on the brane-scoped routes.
+ */
+export async function gmMayReadBraneIdAsync(
+  db: VigilDb,
+  ctx: HeartgardenApiBootContext,
+  braneId: string,
+): Promise<boolean> {
+  if (ctx.role !== "gm") return false;
+  const [row] = await db
+    .select({ braneType: branes.braneType })
+    .from(branes)
+    .where(eq(branes.id, braneId))
+    .limit(1);
+  if (!row) return false;
+  if (row.braneType === "player" && !isHeartgardenGmPlayerSpaceBreakGlassEnabled()) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * Resolve boot tier for API routes. GM path when gate off, E2E, or valid Bishop (`access`) cookie.
  * Player path with valid player cookie: env UUID if set, else {@link player_resolve_from_db} for
  * async resolution against Neon (see {@link getHeartgardenApiBootContext}).

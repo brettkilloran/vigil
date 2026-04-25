@@ -1,6 +1,6 @@
 import { after } from "next/server";
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 
 import type { tryGetDb } from "@/src/db/index";
 import { entityMentions, itemEmbeddings, items, spaces } from "@/src/db/schema";
@@ -172,9 +172,28 @@ function mentionCountFromDistance(distance: number): number {
   return Math.max(1, Math.min(100, score));
 }
 
+/**
+ * Options for {@link rescanItemEntityMentions} and the brane-wide rescan.
+ *
+ * REVIEW_2026-04-25_1730 H3: when we know which vocabulary terms changed
+ * (e.g. only the renamed item's old + new title), pass them in so the rescan
+ * only rebuilds term-mention rows for those terms and skips the expensive
+ * semantic-neighbor pass. Cleanup of stale rows is also scoped to the same
+ * term set so unrelated mentions are preserved.
+ */
+export type EntityMentionRescanOptions = {
+  /**
+   * Normalized (lowercased, trimmed) vocabulary terms whose mention rows may
+   * have changed. When omitted, the rescan is full (term + semantic, cleanup
+   * across all terms).
+   */
+  restrictToTerms?: readonly string[];
+};
+
 export async function rescanItemEntityMentions(
   db: VigilDb,
   itemId: string,
+  options?: EntityMentionRescanOptions,
 ): Promise<void> {
   const [row] = await db
     .select({
@@ -191,6 +210,11 @@ export async function rescanItemEntityMentions(
   if (!row?.braneId) return;
   const sourceBraneId = row.braneId;
   const sourceSpaceId = row.spaceId;
+
+  const restrictToTerms =
+    options?.restrictToTerms && options.restrictToTerms.length > 0
+      ? new Set(options.restrictToTerms.map((t) => t.toLowerCase()))
+      : null;
 
   const vocab = await buildEntityVocabularyForBrane(db, sourceBraneId);
   const blob = row.searchBlob ?? "";
@@ -249,44 +273,80 @@ export async function rescanItemEntityMentions(
     });
   };
 
+  // REVIEW_2026-04-25_1730 H3: precompute matched vocab entries and
+  // batch-load all referenced target spaces in one query (was N+1: one
+  // SELECT per target).
+  type MatchedTermEntry = {
+    term: string;
+    itemIds: readonly string[];
+    count: number;
+    snippet: string | null;
+  };
+  const matchedTerms: MatchedTermEntry[] = [];
+  const targetItemIds = new Set<string>();
   for (const entry of vocab.terms) {
+    if (restrictToTerms && !restrictToTerms.has(entry.term)) continue;
     const count = countMatches(blob, entry.term);
     if (count < 1) continue;
     const snippet = makeSnippet(blob, entry.term);
+    matchedTerms.push({ term: entry.term, itemIds: entry.itemIds, count, snippet });
     for (const targetItemId of entry.itemIds) {
+      if (targetItemId !== itemId) targetItemIds.add(targetItemId);
+    }
+  }
+  const targetSpaceById = new Map<string, string>();
+  if (targetItemIds.size > 0) {
+    const targetRows = await db
+      .select({ id: items.id, spaceId: items.spaceId })
+      .from(items)
+      .where(inArray(items.id, [...targetItemIds]));
+    for (const r of targetRows) {
+      if (r.spaceId) targetSpaceById.set(r.id, r.spaceId);
+    }
+  }
+
+  for (const matched of matchedTerms) {
+    for (const targetItemId of matched.itemIds) {
       if (targetItemId === itemId) continue;
-      const [targetSpace] = await db
-        .select({ spaceId: items.spaceId })
-        .from(items)
-        .where(eq(items.id, targetItemId))
-        .limit(1);
-      if (!targetSpace?.spaceId) continue;
+      const targetSpaceId = targetSpaceById.get(targetItemId);
+      if (!targetSpaceId) continue;
       await applyMentionRow({
         targetItemId,
-        targetSpaceId: targetSpace.spaceId,
-        matchedTerm: entry.term,
+        targetSpaceId,
+        matchedTerm: matched.term,
         sourceKind: "term",
-        mentionCount: count,
-        snippet,
+        mentionCount: matched.count,
+        snippet: matched.snippet,
         headingPath: null,
       });
     }
   }
 
-  const semanticNeighbors = await computeSemanticNeighborsForItem(db, itemId, sourceBraneId);
-  for (const semantic of semanticNeighbors) {
-    await applyMentionRow({
-      targetItemId: semantic.targetItemId,
-      targetSpaceId: semantic.targetSpaceId,
-      matchedTerm: SEMANTIC_MENTION_TOKEN,
-      sourceKind: "semantic",
-      mentionCount: mentionCountFromDistance(semantic.distance),
-      snippet: semantic.snippet,
-      headingPath: semantic.headingPath,
-    });
+  // Semantic neighbors don't depend on title vocabulary; skip when the caller
+  // restricted the rescan to a specific term set (rename-driven incremental
+  // path). Full rescans still rebuild semantic mentions.
+  if (!restrictToTerms) {
+    const semanticNeighbors = await computeSemanticNeighborsForItem(db, itemId, sourceBraneId);
+    for (const semantic of semanticNeighbors) {
+      await applyMentionRow({
+        targetItemId: semantic.targetItemId,
+        targetSpaceId: semantic.targetSpaceId,
+        matchedTerm: SEMANTIC_MENTION_TOKEN,
+        sourceKind: "semantic",
+        mentionCount: mentionCountFromDistance(semantic.distance),
+        snippet: semantic.snippet,
+        headingPath: semantic.headingPath,
+      });
+    }
   }
 
   for (const prev of previous) {
+    if (restrictToTerms) {
+      // Only delete rows whose matchedTerm is in scope; preserve unrelated
+      // mentions (and all semantic mentions).
+      if (prev.sourceKind === "semantic") continue;
+      if (!restrictToTerms.has(prev.matchedTerm)) continue;
+    }
     const key = `${prev.targetItemId}::${prev.matchedTerm}::${prev.sourceKind}`;
     if (nextKeys.has(key)) continue;
     await db.delete(entityMentions).where(eq(entityMentions.id, prev.id));
@@ -297,18 +357,57 @@ export async function rescanItemEntityMentions(
   }
 }
 
+/**
+ * Options that propagate to brane-wide rescan + per-item rescan calls.
+ *
+ * `affectedTerms` (when supplied) filters BOTH:
+ *   - which items in the brane are candidates (only items whose `searchBlob`
+ *     contains at least one of the affected terms), and
+ *   - which vocab terms each item's rescan rebuilds (via `restrictToTerms`).
+ *
+ * REVIEW_2026-04-25_1730 H3: enables incremental "one title changed" rescans
+ * instead of brane-wide N+1 rebuilds.
+ */
+export type ScheduleBraneEntityMentionRescanOptions = {
+  affectedTerms?: readonly string[];
+};
+
 export function scheduleBraneEntityMentionRescanAfterResponse(
   db: VigilDb,
   braneId: string,
+  options?: ScheduleBraneEntityMentionRescanOptions,
 ): void {
+  const affectedTerms =
+    options?.affectedTerms && options.affectedTerms.length > 0
+      ? Array.from(new Set(options.affectedTerms.map((t) => t.toLowerCase()).filter(Boolean)))
+      : null;
   after(async () => {
-    const rows = await db
-      .select({ id: items.id })
-      .from(items)
-      .innerJoin(spaces, eq(spaces.id, items.spaceId))
-      .where(eq(spaces.braneId, braneId));
+    let rows: Array<{ id: string }>;
+    if (affectedTerms) {
+      // ILIKE substring is intentionally permissive: a few extra rescans are
+      // cheap, and the per-item rescan re-applies word-boundary matching
+      // before writing rows.
+      const blobMatchesAnyTerm = or(
+        ...affectedTerms.map(
+          (t) => sql`lower(${items.searchBlob}) ILIKE '%' || ${t} || '%'`,
+        ),
+      );
+      rows = await db
+        .select({ id: items.id })
+        .from(items)
+        .innerJoin(spaces, eq(spaces.id, items.spaceId))
+        .where(and(eq(spaces.braneId, braneId), blobMatchesAnyTerm));
+    } else {
+      rows = await db
+        .select({ id: items.id })
+        .from(items)
+        .innerJoin(spaces, eq(spaces.id, items.spaceId))
+        .where(eq(spaces.braneId, braneId));
+    }
     for (const row of rows) {
-      await rescanItemEntityMentions(db, row.id).catch(() => {
+      await rescanItemEntityMentions(db, row.id, {
+        restrictToTerms: affectedTerms ?? undefined,
+      }).catch(() => {
         /* best effort */
       });
     }
@@ -318,7 +417,8 @@ export function scheduleBraneEntityMentionRescanAfterResponse(
 export function scheduleEntityMentionRescanOnVocabularyChange(
   db: VigilDb,
   braneId: string,
+  options?: ScheduleBraneEntityMentionRescanOptions,
 ): void {
   clearEntityVocabularyCache(braneId);
-  scheduleBraneEntityMentionRescanAfterResponse(db, braneId);
+  scheduleBraneEntityMentionRescanAfterResponse(db, braneId, options);
 }

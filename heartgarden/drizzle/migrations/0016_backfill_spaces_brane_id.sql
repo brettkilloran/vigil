@@ -1,3 +1,24 @@
+-- REVIEW_2026-04-25_1730 M4 (warning, after-the-fact):
+--
+-- The `demo_roots` CTE below uses a name heuristic — `lower(s.name) LIKE 'demo%'`.
+-- That means a real GM workspace whose space name happens to start with "demo"
+-- (e.g. "demo-tarot-flow", "demo run 2024") was silently moved into the demo
+-- brane on the first run of this migration. There is no marker column, so we
+-- cannot retroactively distinguish "intentional demo seed root" from
+-- "happens-to-be-named-demo-foo".
+--
+-- DO NOT add a corrective migration that re-shifts already-applied data:
+-- by the time you read this on a deployed system, links and entity_mentions
+-- have been written assuming the current `brane_id` assignment, so moving
+-- spaces back to GM would orphan that data and silently break Alt-hover and
+-- the graph panel for those workspaces.
+--
+-- A safer recovery path is captured in
+-- `.cursor/plans/demo-brane-marker-column.plan.md`: introduce an explicit
+-- `branes.is_demo_seed` flag (or a known UUID list) and have the demo seed
+-- mark itself, then provide an opt-in admin tool to reclassify
+-- false-positive demo spaces with a transactional link/mention re-scope.
+
 INSERT INTO "branes" ("name", "brane_type")
 VALUES
   ('GM Brane', 'gm'),

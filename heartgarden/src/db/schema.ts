@@ -1,7 +1,10 @@
+import { sql } from "drizzle-orm";
 import {
+  check,
   customType,
   doublePrecision,
   foreignKey,
+  index,
   integer,
   jsonb,
   pgTable,
@@ -53,6 +56,9 @@ export const spaces = pgTable(
       columns: [table.parentSpaceId],
       foreignColumns: [table.id],
     }).onDelete("set null"),
+    // REVIEW_2026-04-25_1730 M5: hot-path filter for /api/graph/brane,
+    // /api/branes/[id]/vocabulary, /api/mentions, vocabulary builder.
+    index("spaces_brane_id_idx").on(table.braneId),
   ],
 );
 
@@ -174,6 +180,9 @@ export const itemLinks = pgTable(
       t.sourcePin,
       t.targetPin,
     ),
+    // REVIEW_2026-04-25_1730 M5: revision query and target-side fetches
+    // (`/api/items/[id]/links` reverse direction) filter on this column.
+    index("item_links_target_item_id_idx").on(t.targetItemId),
   ],
 );
 
@@ -207,6 +216,14 @@ export const entityMentions = pgTable(
       t.targetItemId,
       t.matchedTerm,
       t.sourceKind,
+    ),
+    // REVIEW_2026-04-25_1730 L4: Mirror migration 0017's CHECK constraint in
+    // schema.ts so drizzle-kit diffs stay clean and an introspection-driven
+    // migration cannot silently drop the database-level invariant that a
+    // mention's source and target items must differ.
+    check(
+      "entity_mentions_source_not_target_chk",
+      sql`${t.sourceItemId} <> ${t.targetItemId}`,
     ),
   ],
 );

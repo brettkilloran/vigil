@@ -82,6 +82,29 @@ export async function PATCH(
     if (nextParent !== null && !(await gmMayAccessSpaceIdAsync(db, bootCtx, nextParent))) {
       return heartgardenApiForbiddenJsonResponse();
     }
+    // REVIEW_2026-04-25_1730 H1: Reject cross-brane reparents. Folder
+    // subtrees must remain inside a single brane so links/mentions stay
+    // valid; a deliberate cross-brane migration helper can be added later.
+    if (nextParent !== null) {
+      const [parentRow] = await db
+        .select({ braneId: spaces.braneId })
+        .from(spaces)
+        .where(eq(spaces.id, nextParent))
+        .limit(1);
+      if (!parentRow) {
+        return Response.json({ ok: false, error: "Parent space not found" }, { status: 404 });
+      }
+      if (
+        parentRow.braneId &&
+        access.space.braneId &&
+        parentRow.braneId !== access.space.braneId
+      ) {
+        return Response.json(
+          { ok: false, error: "Cross-brane folder reparents are not allowed" },
+          { status: 400 },
+        );
+      }
+    }
     const reparent = await assertSpaceReparentAllowed(db, spaceId, nextParent);
     if (!reparent.ok) {
       if (reparent.error === "parent_not_found") {

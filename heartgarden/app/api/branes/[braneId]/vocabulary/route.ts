@@ -5,6 +5,8 @@ import { branes } from "@/src/db/schema";
 import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
+  gmMayReadBraneIdAsync,
+  heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { buildEntityVocabularyForBrane } from "@/src/lib/entity-vocabulary";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
@@ -36,6 +38,9 @@ export async function GET(
     .limit(1);
   if (!brane) {
     return Response.json({ ok: false, error: "Brane not found" }, { status: 404 });
+  }
+  if (!(await gmMayReadBraneIdAsync(db, bootCtx, braneId))) {
+    return heartgardenApiForbiddenJsonResponse();
   }
 
   const payload = await buildEntityVocabularyForBrane(db, braneId);

@@ -359,6 +359,10 @@ import {
   resolveProseCommandTarget,
 } from "@/src/lib/rich-editor-surface";
 import { readWordUnderPointer } from "@/src/lib/word-under-pointer";
+import type {
+  AltMentionRow,
+  AltSearchRow,
+} from "@/src/lib/entity-mention-row-types";
 import { useChunkLoadRecovery } from "@/src/lib/chunk-load-recovery";
 const VigilFlowRevealOverlay = dynamic(
   () =>
@@ -2671,8 +2675,8 @@ export function ArchitecturalCanvasApp({
     term: string;
     x: number;
     y: number;
-    mentions: Array<{ itemId: string; title: string; mentionCount: number; snippet?: string | null }>;
-    searchItems: Array<{ id: string; title?: string | null; itemType?: string | null }>;
+    mentions: AltMentionRow[];
+    searchItems: AltSearchRow[];
     loadingMentions: boolean;
     loadingSearch: boolean;
   } | null>(null);
@@ -2683,19 +2687,10 @@ export function ArchitecturalCanvasApp({
     height: number;
   } | null>(null);
   const altMentionCacheRef = useRef(
-    new Map<
-      string,
-      {
-        at: number;
-        items: Array<{ itemId: string; title: string; mentionCount: number; snippet?: string | null }>;
-      }
-    >(),
+    new Map<string, { at: number; items: AltMentionRow[] }>(),
   );
   const altSearchCacheRef = useRef(
-    new Map<
-      string,
-      { at: number; items: Array<{ id: string; title?: string | null; itemType?: string | null }> }
-    >(),
+    new Map<string, { at: number; items: AltSearchRow[] }>(),
   );
   const graphOverlayOpenSoundPrevRef = useRef(false);
   const [loreSmartReview, setLoreSmartReview] = useState<LoreSmartImportReviewState | null>(null);
@@ -3591,7 +3586,6 @@ export function ArchitecturalCanvasApp({
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Alt") return;
-      e.preventDefault();
       setAltHeld(true);
       document.body.dataset.hgAltHeld = "1";
     };
@@ -3615,6 +3609,7 @@ export function ArchitecturalCanvasApp({
     if (!altHeld || !activeBraneId) return;
     const CACHE_TTL_MS = 12_000;
     let raf = 0;
+    let lastTerm: string | null = null;
     let mentionAbort: AbortController | null = null;
     let searchAbort: AbortController | null = null;
     const onMove = (e: PointerEvent) => {
@@ -3623,6 +3618,11 @@ export function ArchitecturalCanvasApp({
         raf = 0;
         const hit = readWordUnderPointer(e.clientX, e.clientY);
         if (!hit) {
+          lastTerm = null;
+          mentionAbort?.abort();
+          searchAbort?.abort();
+          mentionAbort = null;
+          searchAbort = null;
           setAltGraphCard(null);
           setAltWordHighlightRect(null);
           return;
@@ -3634,19 +3634,23 @@ export function ArchitecturalCanvasApp({
           width: Math.max(8, hit.rect.width),
           height: Math.max(8, hit.rect.height),
         });
-        setAltGraphCard((prev) => {
-          if (prev && prev.term === term) {
-            return { ...prev, x: hit.rect.left + 8, y: hit.rect.bottom + 8 };
-          }
-          return {
-            term,
-            x: hit.rect.left + 8,
-            y: hit.rect.bottom + 8,
-            mentions: [],
-            searchItems: [],
-            loadingMentions: true,
-            loadingSearch: true,
-          };
+        if (term === lastTerm) {
+          setAltGraphCard((prev) =>
+            prev && prev.term === term
+              ? { ...prev, x: hit.rect.left + 8, y: hit.rect.bottom + 8 }
+              : prev,
+          );
+          return;
+        }
+        lastTerm = term;
+        setAltGraphCard({
+          term,
+          x: hit.rect.left + 8,
+          y: hit.rect.bottom + 8,
+          mentions: [],
+          searchItems: [],
+          loadingMentions: true,
+          loadingSearch: true,
         });
         mentionAbort?.abort();
         searchAbort?.abort();
@@ -3728,6 +3732,12 @@ export function ArchitecturalCanvasApp({
                 setAltGraphCard((prev) =>
                   prev && prev.term === term
                     ? { ...prev, searchItems: items, loadingSearch: false }
+                    : prev,
+                );
+              } else {
+                setAltGraphCard((prev) =>
+                  prev && prev.term === term
+                    ? { ...prev, searchItems: [], loadingSearch: false }
                     : prev,
                 );
               }

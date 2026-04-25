@@ -32,17 +32,16 @@ describe("filterPlanLinksToSameCanvasSpace", () => {
     expect(warnings).toHaveLength(0);
   });
 
-  it("converts cross-folder links to mentions with a warning", () => {
+  it("keeps cross-folder links because the brane allows global linking", () => {
     const { links, crossSpaceMentions, warnings } = filterPlanLinksToSameCanvasSpace(
       notes,
       [{ fromClientId: "a", toClientId: "c", linkType: "history" }],
     );
-    expect(links).toHaveLength(0);
-    expect(crossSpaceMentions).toHaveLength(1);
-    expect(crossSpaceMentions[0]?.fromClientId).toBe("a");
-    expect(crossSpaceMentions[0]?.toClientId).toBe("c");
-    expect(warnings.length).toBeGreaterThan(0);
-    expect(warnings[0]).toMatch(/cross-folder mention/);
+    expect(links).toHaveLength(1);
+    expect(links[0]?.fromClientId).toBe("a");
+    expect(links[0]?.toClientId).toBe("c");
+    expect(crossSpaceMentions).toHaveLength(0);
+    expect(warnings).toHaveLength(0);
   });
 
   it("drops links that reference unknown note ids", () => {

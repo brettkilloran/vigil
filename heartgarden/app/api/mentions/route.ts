@@ -5,6 +5,8 @@ import { entityMentions, items } from "@/src/db/schema";
 import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
+  gmMayReadBraneIdAsync,
+  heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
 
@@ -27,6 +29,9 @@ export async function GET(req: Request) {
   }
   if (!braneId) {
     return Response.json({ ok: false, error: "Valid braneId is required" }, { status: 400 });
+  }
+  if (!(await gmMayReadBraneIdAsync(db, bootCtx, braneId))) {
+    return heartgardenApiForbiddenJsonResponse();
   }
 
   const rows = await db

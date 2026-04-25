@@ -5,6 +5,9 @@ import { entityMentions, items } from "@/src/db/schema";
 import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
+  gmMayAccessItemSpaceAsync,
+  heartgardenApiForbiddenJsonResponse,
+  heartgardenMaskNotFoundForPlayer,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
 
@@ -28,9 +31,19 @@ export async function GET(
     return Response.json({ ok: false, error: "Invalid item id" }, { status: 400 });
   }
 
-  const [itemRow] = await db.select({ id: items.id }).from(items).where(eq(items.id, itemId)).limit(1);
+  const [itemRow] = await db
+    .select({ id: items.id, spaceId: items.spaceId })
+    .from(items)
+    .where(eq(items.id, itemId))
+    .limit(1);
   if (!itemRow) {
-    return Response.json({ ok: false, error: "Item not found" }, { status: 404 });
+    return heartgardenMaskNotFoundForPlayer(
+      bootCtx,
+      Response.json({ ok: false, error: "Item not found" }, { status: 404 }),
+    );
+  }
+  if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, itemRow.spaceId))) {
+    return heartgardenApiForbiddenJsonResponse();
   }
 
   const [mentionsRows, mentionedByRows] = await Promise.all([

@@ -6,6 +6,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { tryGetDb } from "@/src/db/index";
 import { itemLinks, items, spaces } from "@/src/db/schema";
 import { normalizeLinkTypeAlias } from "@/src/lib/connection-kind-colors";
+import { rescanItemEntityMentions } from "@/src/lib/entity-mentions";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { resolveOrCreateBraneByType } from "@/src/lib/spaces";
 
@@ -128,6 +129,17 @@ export async function ensureDemoBraneSeed(db: VigilDb): Promise<void> {
         });
     }
   });
+
+  // REVIEW_2026-04-25_1730 H7: build entity_mentions for the seeded brane so
+  // Alt-hover discovery works on first boot. Without this, demo users see an
+  // empty mention card until they edit a title (which triggers a rescan).
+  // We do this synchronously after the seed transaction so it's deterministic
+  // for tests and the very first request after first boot.
+  for (const item of seed.items) {
+    await rescanItemEntityMentions(db, item.id).catch(() => {
+      /* best effort: a missing mention does not break demo boot */
+    });
+  }
 }
 
 export async function getDemoBraneRootSpaceId(db: VigilDb): Promise<string | undefined> {

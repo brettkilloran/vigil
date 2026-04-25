@@ -150,3 +150,25 @@ export function clearEntityVocabularyCache(braneId?: string): void {
   }
   vocabularyCache.clear();
 }
+
+/**
+ * Derive the normalized vocabulary terms a title/alias seed would contribute
+ * to {@link buildEntityVocabularyForBrane}. Used by mention rescan paths to
+ * scope work to only the terms whose membership actually changed (e.g. the
+ * old + new title on a rename).
+ *
+ * REVIEW_2026-04-25_1730 H3: keeps incremental rescans aligned with the same
+ * tokenization the vocabulary builder uses, so we never miss or invent terms.
+ */
+export function deriveVocabularyTermsFromSeed(
+  seed: string | null | undefined,
+): string[] {
+  if (!seed) return [];
+  const out = new Set<string>();
+  for (const candidate of candidateTermsFromRaw(seed)) {
+    const normalized = normalizeTerm(candidate);
+    if (normalized.length < MIN_TERM_LEN || STOPWORDS.has(normalized)) continue;
+    out.add(normalized);
+  }
+  return [...out];
+}
