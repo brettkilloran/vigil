@@ -166,6 +166,21 @@ Phase 5 unifies under a single intelligence surface — one `⌘K` modal that ex
 
 **Status as of 2026-04-23:** audit is fully closed — CRITICAL/HIGH tranche 2026-04-21, remaining items closed same day (batch 2 A–D + remaining tranche). Pointer retained for the next dated audit.
 
+### React 19 strict hooks ESLint warnings (pnpm migration)
+
+**Dated audit:** [`ESLINT_WARNINGS_2026-04-25.md`](./ESLINT_WARNINGS_2026-04-25.md) — 106 warnings across 13 files, 0 errors. Introduced by the npm → pnpm migration on `clean-up-dev` which resolved newer `eslint-plugin-react-hooks` with stricter React 19 rules. Currently downgraded to warnings in `eslint.config.mjs` so builds pass.
+
+**Breakdown:** 42× `set-state-in-effect`, 50× `refs`, 2× `purity`, 1× `immutability`, 3× stale `eslint-disable` directives (auto-fixable). ~78% of warnings are in `ArchitecturalCanvasApp.tsx`.
+
+**Fix approach (5 incremental batches):**
+1. Auto-fix 3 stale `eslint-disable` directives (`pnpm run lint --fix`).
+2. Extract `useLatest()` hook → fix 39 ref-sync warnings in `ArchitecturalCanvasApp` + 3 in `VigilFlowRevealOverlay`.
+3. Fix 15 `set-state-in-effect` warnings in smaller components (initializer functions, `useSyncExternalStore`).
+4. Fix 32 `set-state-in-effect` warnings in `ArchitecturalCanvasApp` (case-by-case review).
+5. Fix 3 purity/immutability warnings.
+
+**Risk:** low — all are warnings, not errors. No runtime behavior change. Goal is to eventually promote these rules back to errors once all sites are clean.
+
 ---
 
 ## Review-sourced backlog
