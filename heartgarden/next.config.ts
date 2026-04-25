@@ -11,11 +11,7 @@ const nextConfig: NextConfig = {
    * listed; it pulls `pdfjs-dist` transitively, but the route imports `pdfjs-dist` directly.
    */
   serverExternalPackages: ["@napi-rs/canvas", "pdfjs-dist"],
-  /**
-   * pnpm's symlinked node_modules can cause serverExternalPackages to miss
-   * platform-specific native binaries (e.g. @napi-rs/canvas-linux-x64-gnu).
-   * Explicitly externalize any .node binary and the whole @napi-rs scope.
-   */
+  turbopack: {},
   webpack: (config, { isServer }) => {
     if (isServer && Array.isArray(config.externals)) {
       config.externals.push(/@napi-rs/);
