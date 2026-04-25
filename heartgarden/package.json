@@ -125,7 +125,17 @@
     "vitest": "^4.1.2"
   },
   "pnpm": {
-    "ignoredBuiltDependencies": ["sharp", "unrs-resolver"],
-    "onlyBuiltDependencies": ["core-js-pure", "esbuild", "gitleaks-secret-scanner"]
+    "ignoredBuiltDependencies": [
+      "sharp",
+      "unrs-resolver"
+    ],
+    "onlyBuiltDependencies": [
+      "core-js-pure",
+      "esbuild",
+      "gitleaks-secret-scanner"
+    ]
+  },
+  "optionalDependencies": {
+    "@napi-rs/canvas": "0.1.80"
   }
 }
