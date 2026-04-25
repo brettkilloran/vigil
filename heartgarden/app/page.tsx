@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { VigilThemeProvider } from "@/src/contexts/vigil-theme-context";
 import { HEARTGARDEN_BRAND_MARK_EMOJI } from "@/src/lib/brand-mark";
 
-import VigilApp from "./_components/VigilApp";
+import VigilApp from "./_components/vigil-app";
 
 export default function Home() {
   return (

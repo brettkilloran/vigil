@@ -246,6 +246,7 @@ async function expandFrontier(
   return { explicit, implicit, neighborIds };
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: GET dispatches across full/neighborhood modes plus auth, ETag/304, and BFS traversal — splitting helpers would only relocate complexity
 export async function GET(req: Request) {
   const db = tryGetDb();
   if (!db) {

@@ -7,18 +7,11 @@
  * subtler profile so the slab title does not read as over-tilted or clip under `overflow:hidden`.
  */
 
+import { fnv1aHash32 } from "@/src/lib/hash-utils";
+
 /** Per `[data-hg-lore-field]` node — *not* the card root. Root-level idempotence breaks React remounts
  * (new h1 loses inline vars while the root stayed in a WeakSet → dual strips fall back to identical defaults). */
 const seededMarkerFieldElements = new WeakSet<HTMLElement>();
-
-function fnv1aHash32(input: string): number {
-  let hash = 0x81_1c_9d_c5;
-  for (let i = 0; i < input.length; i += 1) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 0x01_00_01_93);
-  }
-  return hash >>> 0;
-}
 
 function seededFloat(
   seed: string,

@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
 
+import { fnv1aHash32, xorshift32Mix } from "@/src/lib/hash-utils";
+
 export interface OrdoV7StaplePlacementOptions {
   /** Full span of hashed extra tilt in degrees (default 14 → ±7° from center). */
   extraDegRangeDeg?: number;
@@ -18,19 +20,10 @@ export function ordoV7StaplePlacementFromSeed(
   tapeRotationDeg?: number,
   options?: OrdoV7StaplePlacementOptions
 ): CSSProperties {
-  let h = 2_166_136_261;
-  for (let i = 0; i < seed.length; i++) {
-    h = Math.imul(h ^ seed.charCodeAt(i), 16_777_619) >>> 0;
-  }
-  const mix = (salt: number) => {
-    let x = Math.imul(h ^ salt, 2_246_822_519) >>> 0;
-    x ^= x >>> 16;
-    x = Math.imul(x, 2_246_822_519) >>> 0;
-    return x >>> 0;
-  };
-  const hDeg = mix(0x5b_d1_e9_95);
-  const hX = mix(0xcb_f2_9c_e4);
-  const hY = mix(0x9e_37_79_b9);
+  const h = fnv1aHash32(seed);
+  const hDeg = xorshift32Mix(h, 0x5b_d1_e9_95);
+  const hX = xorshift32Mix(h, 0xcb_f2_9c_e4);
+  const hY = xorshift32Mix(h, 0x9e_37_79_b9);
   const degRange = options?.extraDegRangeDeg ?? 14;
   const extraDeg = ((hDeg % 1001) / 1001 - 0.5) * degRange;
   const deg = (tapeRotationDeg ?? 0) + extraDeg;

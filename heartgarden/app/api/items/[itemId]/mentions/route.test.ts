@@ -38,6 +38,7 @@ describe("GET /api/items/[itemId]/mentions auth", () => {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
           innerJoin: vi.fn(() => ({
+            // biome-ignore lint/suspicious/useAwait: Vitest mock returns a Promise to mirror Drizzle's awaited where() shape; the stub itself has no async work.
             where: vi.fn(async () => {
               mentionsQueryRan = true;
               return [];

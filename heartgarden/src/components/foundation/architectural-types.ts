@@ -27,7 +27,7 @@ export interface LoreCanvasThreadAnchors {
 
 export type NodeTheme = ContentTheme | "folder" | LoreCardKind;
 
-export type { FolderColorSchemeId };
+export type { FolderColorSchemeId } from "@/src/components/foundation/architectural-folder-schemes";
 export type CanvasTool = "select" | "pan";
 export type TapeVariant = "clear" | "masking" | "dark";
 

@@ -90,7 +90,9 @@ function initOnce() {
 
 function subscribe(listener: () => void): () => void {
   if (!isDev() || typeof window === "undefined") {
-    return () => {};
+    return () => {
+      /* noop */
+    };
   }
   initOnce();
   window.addEventListener(EVENT_NAME, listener);

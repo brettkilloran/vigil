@@ -115,7 +115,7 @@ export function playVigilUiSound(kind: VigilUiSoundKind): void {
   if (!allowUiSounds()) {
     return;
   }
-  void getSndInstance().then((snd) => {
+  getSndInstance().then((snd) => {
     if (!(snd && allowUiSounds())) {
       return;
     }

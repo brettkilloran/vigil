@@ -44,7 +44,7 @@ async function getRealtimeRedisClient(): Promise<HeartgardenRealtimeRedisClient 
       return client;
     })().catch(() => null);
   }
-  return redisClientPromise;
+  return await redisClientPromise;
 }
 
 export async function publishHeartgardenRealtimeEvent(

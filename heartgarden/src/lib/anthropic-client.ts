@@ -637,6 +637,7 @@ function parseSseDataBlock(block: string): string | null {
   return data;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: anthropic streaming generator parses SSE deltas, applies retry/continuation/cache logic, and yields text chunks
 export async function* callAnthropicTextStream(
   apiKey: string,
   params: AnthropicCreateParamsLoose,

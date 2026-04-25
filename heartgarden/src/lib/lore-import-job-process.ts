@@ -262,6 +262,7 @@ async function assertLoreImportJobNotCancelled(
   }
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: lore import job processor advances state machine across parse/extract/plan/apply phases with per-phase error handling and cancellation
 export async function processLoreImportJob(jobId: string): Promise<void> {
   const db = tryGetDb();
   if (!db) {

@@ -41,7 +41,9 @@ export function writeAppAudioMuted(muted: boolean): void {
 
 export function subscribeAppAudioMuted(onChange: () => void): () => void {
   if (typeof window === "undefined") {
-    return () => {};
+    return () => {
+      /* noop */
+    };
   }
 
   const onStorage = (e: StorageEvent) => {

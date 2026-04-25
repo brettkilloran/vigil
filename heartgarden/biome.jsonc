@@ -5,6 +5,38 @@
     "ultracite/biome/react",
     "ultracite/biome/next"
   ],
+  "css": {
+    "parser": {
+      "cssModules": true
+    }
+  },
+  "linter": {
+    "rules": {
+      "complexity": {
+        "noExcessiveCognitiveComplexity": {
+          "level": "error",
+          "options": { "maxAllowedComplexity": 30 }
+        },
+        "noVoid": "off"
+      },
+      "a11y": {
+        "noNoninteractiveElementInteractions": "off",
+        "noStaticElementInteractions": "off",
+        "useHeadingContent": "off",
+        "useSemanticElements": "off"
+      },
+      "performance": {
+        "noBarrelFile": "off"
+      },
+      "style": {
+        "noNestedTernary": "off"
+      },
+      "suspicious": {
+        "noAlert": "off",
+        "noCommentText": "off"
+      }
+    }
+  },
   "assist": {
     "actions": {
       "source": {

@@ -53,19 +53,21 @@ export async function GET(
 
   const itemLinksRevision = await computeItemLinksRevisionForSpace(db, spaceId);
 
-  let rows;
+  const graphRowQuery = db
+    .select({
+      entityType: items.entityType,
+      id: items.id,
+      itemType: items.itemType,
+      title: items.title,
+    })
+    .from(items)
+    .where(eq(items.spaceId, spaceId))
+    .orderBy(asc(items.zIndex), asc(items.createdAt));
+  type GraphRow = Awaited<typeof graphRowQuery>[number];
+  let rows: GraphRow[];
   let pageLimit: number | undefined;
   if (limitRaw == null) {
-    rows = await db
-      .select({
-        entityType: items.entityType,
-        id: items.id,
-        itemType: items.itemType,
-        title: items.title,
-      })
-      .from(items)
-      .where(eq(items.spaceId, spaceId))
-      .orderBy(asc(items.zIndex), asc(items.createdAt));
+    rows = await graphRowQuery;
   } else {
     pageLimit = Math.min(
       Math.max(1, Number.parseInt(limitRaw, 10) || 500),

@@ -10,6 +10,7 @@ import {
 } from "d3-force";
 
 import type { GraphLayoutEdge, GraphLayoutNode } from "@/src/lib/graph-layout";
+import { fnv1aHash32FloatMul } from "@/src/lib/hash-utils";
 
 type SimNode = GraphLayoutNode &
   SimulationNodeDatum & {
@@ -24,15 +25,6 @@ export interface StableLayoutOptions {
   pinned?: Map<string, { x: number; y: number }>;
   seed?: Map<string, { x: number; y: number }>;
   width?: number;
-}
-
-function hashFnv1a(input: string): number {
-  let hash = 0x81_1c_9d_c5;
-  for (let i = 0; i < input.length; i += 1) {
-    hash ^= input.charCodeAt(i);
-    hash = (hash * 0x01_00_01_93) >>> 0;
-  }
-  return hash >>> 0;
 }
 
 function fallbackEntityType(entityType: string | null): string {
@@ -72,8 +64,8 @@ function deterministicSeedPoint(
   height: number
 ): { x: number; y: number } {
   const anchor = entityTypeCentroid(node.entityType, width, height);
-  const hA = hashFnv1a(`${node.id}:a`);
-  const hR = hashFnv1a(`${node.id}:r`);
+  const hA = fnv1aHash32FloatMul(`${node.id}:a`);
+  const hR = fnv1aHash32FloatMul(`${node.id}:r`);
   const angle = (hA / 0xff_ff_ff_ff) * Math.PI * 2;
   const radius = 24 + (hR / 0xff_ff_ff_ff) * 120;
   return {
@@ -91,6 +83,7 @@ function estimatedPillCollisionRadius(title: string): number {
   return halfDiagonal + 10;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: stable layout: BFS over connected components with anchor pinning
 function resolveResidualOverlaps(
   simNodes: SimNode[],
   width: number,

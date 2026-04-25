@@ -22,6 +22,8 @@ import { LORE_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 
+const CANONICAL_ENTITY_KIND_SLUG_RE = /^[a-z][a-z0-9_-]*$/;
+
 export interface LoreSource {
   /** `entity_meta.canonicalEntityKind` (e.g. `npc`, `location`, `faction`). */
   canonicalEntityKind?: string | null;
@@ -54,7 +56,7 @@ function readCanonicalEntityKind(row: SearchRow): string | null {
     return null;
   }
   const slug = raw.trim().toLowerCase();
-  if (!slug || slug.length > 32 || !/^[a-z][a-z0-9_-]*$/.test(slug)) {
+  if (!slug || slug.length > 32 || !CANONICAL_ENTITY_KIND_SLUG_RE.test(slug)) {
     return null;
   }
   return slug;

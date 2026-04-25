@@ -12,6 +12,8 @@ const MAX_UPLOAD_BYTES = 80 * 1024 * 1024; // 80 MB
 const MAX_EXTRACTED_CHARS = 2_000_000;
 const MAX_PDF_PAGE_FAILURES = 20;
 
+const FILE_EXTENSION_RE = /\.[^.]+$/;
+
 type PdfRuntimeGlobals = typeof globalThis & {
   DOMMatrix?: unknown;
   ImageData?: unknown;
@@ -110,7 +112,9 @@ class FallbackImageData {
 }
 
 class FallbackPath2D {
-  addPath() {}
+  addPath() {
+    /* noop */
+  }
 }
 
 async function ensurePdfRuntimeGlobals(attemptId: string) {
@@ -304,6 +308,7 @@ async function parsePdfText(
   }
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: POST parses uploaded files across multipart/json and pdf/text/markdown branches with truncation telemetry and attempt-id replay
 export async function POST(req: Request) {
   const attemptId = importAttemptId(req);
   const bootCtx = await getHeartgardenApiBootContext();
@@ -484,7 +489,7 @@ export async function POST(req: Request) {
   }
 
   const trimmed = text.replace(/\0/g, "").trim();
-  const baseTitle = name.replace(/\.[^.]+$/, "").trim() || "Import";
+  const baseTitle = name.replace(FILE_EXTENSION_RE, "").trim() || "Import";
 
   return Response.json({
     attemptId,

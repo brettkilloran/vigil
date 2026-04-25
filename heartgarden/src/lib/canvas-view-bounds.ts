@@ -45,15 +45,15 @@ export function buildCollapsedStacksList(
     groups.set(e.stackId, arr);
   }
   const out: CollapsedStackInfo[] = [];
-  groups.forEach((entities, stackId) => {
+  for (const [stackId, entities] of groups) {
     if (entities.length < 2) {
-      return;
+      continue;
     }
     const sorted = [...entities].sort(
       (a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0)
     );
     out.push({ entities: sorted, stackId, top: sorted.at(-1)! });
-  });
+  }
   return out;
 }
 
@@ -288,6 +288,7 @@ export function computeSpaceContentBounds(
 /**
  * Union bounds for a subset of entity ids (e.g. selection). Expands to full multi-card stacks when any member is selected.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: subset bounds union expands collapsed stacks per selection and merges per-entity world rects
 export function computeBoundsForEntitySubset(
   graph: CanvasGraph,
   activeSpaceId: string,
@@ -315,7 +316,9 @@ export function computeBoundsForEntitySubset(
     if (e.stackId) {
       const cs = stackById.get(e.stackId);
       if (cs && cs.entities.length > 1) {
-        cs.entities.forEach((m) => expanded.add(m.id));
+        for (const m of cs.entities) {
+          expanded.add(m.id);
+        }
         continue;
       }
     }

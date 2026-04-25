@@ -59,6 +59,7 @@ function loreImportJobsLegacySchemaFallbackEnabled(): boolean {
   return v === "1" || v === "true" || v === "yes" || v === "on";
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: POST creates an import job with attempt-id replay, payload normalization, legacy-schema fallback, and Vercel after() worker dispatch
 export async function POST(req: Request) {
   const attemptId = importAttemptId(req);
   const bootCtx = await getHeartgardenApiBootContext();
@@ -257,7 +258,7 @@ export async function POST(req: Request) {
         jobId,
       }
     );
-    void processLoreImportJob(jobId).catch((processError) => {
+    processLoreImportJob(jobId).catch((processError) => {
       console.error("[lore-import] inline fallback processing failed", {
         attemptId,
         error:

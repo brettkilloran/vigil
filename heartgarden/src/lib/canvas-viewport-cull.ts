@@ -232,8 +232,12 @@ export function buildCullExceptionEntityIds(options: {
   connectionSourceId: string | null;
 }): Set<string> {
   const s = new Set<string>();
-  options.selectedNodeIds.forEach((id) => s.add(id));
-  options.draggedNodeIds.forEach((id) => s.add(id));
+  for (const id of options.selectedNodeIds) {
+    s.add(id);
+  }
+  for (const id of options.draggedNodeIds) {
+    s.add(id);
+  }
   if (options.connectionSourceId) {
     s.add(options.connectionSourceId);
   }

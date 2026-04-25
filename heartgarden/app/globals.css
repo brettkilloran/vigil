@@ -665,7 +665,11 @@ body[data-hg-alt-held="1"] [contenteditable="true"] {
   --theme-media-text: oklch(0.23 0 0);
   --theme-media-border: oklch(0.868 0 0);
 
-  /* Compatibility aliases */
+  /* Compatibility aliases — these intentionally re-declare the legacy raw
+     `--vigil-*` / `--theme-*` / `--bg-base` tokens above as design-token
+     aliases. CSS picks the later declaration so the alias wins; the earlier
+     raw values are kept for documentation of the prior values. */
+  /* biome-ignore lint/suspicious/noDuplicateCustomProperties: intentional override layering of legacy raw tokens with design-token aliases */
   --vigil-btn-bg: var(--cmp-button-neutral-bg-default);
   --vigil-btn-fg: var(--cmp-button-neutral-fg-default);
   --vigil-btn-border: var(--cmp-button-neutral-border-default);

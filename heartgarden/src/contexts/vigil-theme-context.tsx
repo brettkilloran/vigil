@@ -2,10 +2,7 @@
 
 import { createContext, type ReactNode, useContext } from "react";
 
-import {
-  useVigilTheme,
-  type VigilColorScheme,
-} from "@/src/hooks/use-vigil-theme";
+import { useVigilTheme } from "@/src/hooks/use-vigil-theme";
 
 type VigilThemeValue = ReturnType<typeof useVigilTheme>;
 
@@ -30,4 +27,4 @@ export function useVigilThemeContext(): VigilThemeValue {
   return ctx;
 }
 
-export type { VigilColorScheme };
+export type { VigilColorScheme } from "@/src/hooks/use-vigil-theme";

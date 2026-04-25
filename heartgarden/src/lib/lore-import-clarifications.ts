@@ -12,6 +12,10 @@ import {
   loreImportClarificationItemSchema,
   planPatchHintSchema,
 } from "@/src/lib/lore-import-plan-types";
+import { isUuidLike } from "@/src/lib/uuid-like";
+
+const NON_ALPHANUM_RE = /[^a-z0-9\s]/g;
+const WHITESPACE_SPLIT_RE = /\s+/;
 
 const OTHER_TEXT_MIN_LENGTH = 4;
 const OTHER_RESOLVE_CLEAR_SCORE = 0.58;
@@ -36,8 +40,8 @@ export interface ClarificationFollowUpPrompt {
 function tokenizeLoose(input: string): string[] {
   return input
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .split(/\s+/)
+    .replace(NON_ALPHANUM_RE, " ")
+    .split(WHITESPACE_SPLIT_RE)
     .map((s) => s.trim())
     .filter((s) => s.length >= 3);
 }
@@ -96,6 +100,7 @@ function rebuildNoteBodyText(
     bodies.length > 0 ? bodies.join("\n\n---\n\n").slice(0, 120_000) : "";
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: clarification plan patch dispatches per hint op (folder/title/body/links) and mutates the matching plan node in place
 export function applyPlanPatchHint(
   plan: LoreImportPlan,
   hint: PlanPatchHint
@@ -220,7 +225,8 @@ export function applyPlanPatchHint(
     }
     default: {
       const _exhaustive: never = hint;
-      return _exhaustive;
+      void _exhaustive;
+      return;
     }
   }
 }
@@ -512,6 +518,7 @@ function parseHintLoose(o: unknown): PlanPatchHint | null {
 /**
  * Turn LLM clarification objects into validated items (assigns fresh ids).
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: clarification normalizer validates each LLM item shape and dispatches per question kind to typed objects
 export function normalizeClarificationsFromLlm(
   raw: unknown
 ): LoreImportClarificationItem[] {
@@ -619,11 +626,9 @@ export function normalizeClarificationsFromLlm(
               ).slice(0, 64),
             }
           : undefined,
-      relatedMergeProposalId:
-        typeof o.relatedMergeProposalId === "string" &&
-        /^[0-9a-f-]{36}$/i.test(o.relatedMergeProposalId)
-          ? o.relatedMergeProposalId
-          : undefined,
+      relatedMergeProposalId: isUuidLike(o.relatedMergeProposalId)
+        ? o.relatedMergeProposalId
+        : undefined,
       relatedNoteClientIds: Array.isArray(o.relatedNoteClientIds)
         ? o.relatedNoteClientIds
             .map((x) =>

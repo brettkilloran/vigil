@@ -11,7 +11,7 @@ import {
 async function readSpaceTreeRows(
   db: VigilDb
 ): Promise<{ id: string; parentSpaceId: string | null }[]> {
-  return db
+  return await db
     .select({ id: spaces.id, parentSpaceId: spaces.parentSpaceId })
     .from(spaces);
 }

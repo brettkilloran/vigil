@@ -2,6 +2,8 @@
  * `/` slash-command trigger in rich text (Dropbox Paper–style block menu).
  */
 
+const SLASH_TRIGGER_LINE_RE = /^(\s*)\/(\S*)$/;
+
 export interface SlashOpenTrigger {
   /** Filter text after `/` (may be empty). */
   query: string;
@@ -18,7 +20,7 @@ export function findOpenSlashTrigger(
 ): SlashOpenTrigger | null {
   const lineStart = plainUpToCaret.lastIndexOf("\n") + 1;
   const line = plainUpToCaret.slice(lineStart);
-  const m = line.match(/^(\s*)\/(\S*)$/);
+  const m = line.match(SLASH_TRIGGER_LINE_RE);
   if (!m) {
     return null;
   }

@@ -22,6 +22,9 @@ import {
   shouldRenderLoreLocationCanvasNode,
 } from "@/src/lib/lore-node-seed-html";
 
+const LOC_STRIP_DIGIT_RE = /data-loc-strip="\d"/;
+const LOC_STRIP_DIGIT_CAPTURE_RE = /data-loc-strip="(\d)"/;
+
 describe("plainPlaceNameFromLocationBodyHtml", () => {
   it("reads modern name field", () => {
     const body = `<div data-hg-canvas-role="lore-location">
@@ -162,10 +165,10 @@ describe("location focus projection round-trip", () => {
     const canonical = getLoreNodeSeedBodyHtml("location", "v3", {
       locationStripSeed: "fixture-seed",
     });
-    expect(canonical).toMatch(/data-loc-strip="\d"/);
+    expect(canonical).toMatch(LOC_STRIP_DIGIT_RE);
     const focus = locationBodyToFocusDocumentHtml(canonical);
     const merged = focusDocumentHtmlToLocationBody(focus, canonical);
-    const stripMatch = canonical.match(/data-loc-strip="(\d)"/);
+    const stripMatch = canonical.match(LOC_STRIP_DIGIT_CAPTURE_RE);
     expect(stripMatch).not.toBeNull();
     expect(merged).toContain(`data-loc-strip="${stripMatch?.[1]}"`);
   });

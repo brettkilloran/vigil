@@ -80,6 +80,7 @@ export async function GET() {
   });
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: POST creates a new space with optional parent, name uniqueness check, and parent ownership/role gating
 export async function POST(req: Request) {
   const dbGate = heartgardenApiRequireDb(tryGetDb());
   if (!dbGate.ok) {

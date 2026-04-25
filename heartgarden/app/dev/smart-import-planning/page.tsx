@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { SmartImportPlanningDemo } from "./SmartImportPlanningDemo";
+import { SmartImportPlanningDemo } from "./smart-import-planning-demo";
 
 export const metadata: Metadata = {
   description:

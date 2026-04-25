@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { EntityGraphClient } from "./EntityGraphClient";
+import { EntityGraphClient } from "./entity-graph-client";
 
 export const metadata: Metadata = {
   description: "Standalone entity graph UX/UI sandbox with dummy content.",

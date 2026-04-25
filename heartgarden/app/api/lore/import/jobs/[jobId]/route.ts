@@ -14,6 +14,8 @@ import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
 
 export const runtime = "nodejs";
 
+const UUID_RE = /^[0-9a-f-]{36}$/i;
+
 interface RouteCtx {
   params: Promise<{ jobId: string }>;
 }
@@ -234,6 +236,7 @@ function readFailedMeta(job: LoreImportJobView): {
   };
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: GET serves long-poll job status with phase event filtering, attempt auth, and SSE/JSON branching across queued/running/done states
 export async function GET(req: Request, ctx: RouteCtx) {
   const attemptId =
     req.headers.get("x-heartgarden-import-attempt")?.trim() || "unknown";
@@ -244,7 +247,7 @@ export async function GET(req: Request, ctx: RouteCtx) {
   }
 
   const { jobId } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/i.test(jobId)) {
+  if (!UUID_RE.test(jobId)) {
     return Response.json(
       { error: "Invalid job id", ok: false },
       { status: 400 }
@@ -253,7 +256,7 @@ export async function GET(req: Request, ctx: RouteCtx) {
 
   const url = new URL(req.url);
   const spaceId = url.searchParams.get("spaceId")?.trim() ?? "";
-  if (!/^[0-9a-f-]{36}$/i.test(spaceId)) {
+  if (!UUID_RE.test(spaceId)) {
     return Response.json(
       { error: "Query parameter spaceId (uuid) is required", ok: false },
       { status: 400 }
@@ -429,7 +432,7 @@ export async function DELETE(req: Request, ctx: RouteCtx) {
   }
 
   const { jobId } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/i.test(jobId)) {
+  if (!UUID_RE.test(jobId)) {
     return Response.json(
       { error: "Invalid job id", ok: false },
       { status: 400 }
@@ -438,7 +441,7 @@ export async function DELETE(req: Request, ctx: RouteCtx) {
 
   const url = new URL(req.url);
   const spaceId = url.searchParams.get("spaceId")?.trim() ?? "";
-  if (!/^[0-9a-f-]{36}$/i.test(spaceId)) {
+  if (!UUID_RE.test(spaceId)) {
     return Response.json(
       { error: "Query parameter spaceId (uuid) is required", ok: false },
       { status: 400 }

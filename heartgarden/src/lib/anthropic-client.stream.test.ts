@@ -19,6 +19,7 @@ describe("callAnthropicTextStream", () => {
     const requestBodies: Record<string, unknown>[] = [];
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
+      // biome-ignore lint/suspicious/useAwait: fetch's signature returns a Promise; the mock's async shape mirrors that without itself awaiting.
       .mockImplementation(async (_input, init) => {
         const parsed = JSON.parse(String(init?.body ?? "{}")) as Record<
           string,

@@ -125,6 +125,7 @@ function patchRequiresBaseOptimisticLock(
   return false;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: PATCH route fans out across many entity-meta types, conflict detection, soft-delete, and reindex scheduling — splitting helpers would only relocate complexity
 export async function PATCH(
   req: Request,
   context: { params: Promise<{ itemId: string }> }

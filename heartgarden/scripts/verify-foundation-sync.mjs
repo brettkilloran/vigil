@@ -23,14 +23,14 @@ function run() {
   // App entrypoint should continue to render the foundation shell.
   mustContain(
     "app/_components/VigilApp.tsx",
-    'import { ArchitecturalCanvasApp } from "@/src/components/foundation/ArchitecturalCanvasApp";'
+    'import { ArchitecturalCanvasApp } from "@/src/components/foundation/architectural-canvas-app";'
   );
   mustContain("app/_components/VigilApp.tsx", "<ArchitecturalCanvasApp />");
 
   // The app shell should use the same node component as Storybook.
   mustContain(
     "src/components/foundation/ArchitecturalCanvasApp.tsx",
-    'import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";'
+    'import { ArchitecturalNodeCard } from "@/src/components/foundation/architectural-node-card";'
   );
 
   // Storybook stories should exist for the key card shell.

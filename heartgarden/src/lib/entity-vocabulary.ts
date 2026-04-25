@@ -9,6 +9,8 @@ type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 
 const MIN_TERM_LEN = 3;
 const CACHE_TTL_MS = 15_000;
+const WHITESPACE_RUN_RE = /\s+/;
+const NON_WORD_CHAR_RUN_RE = /[^a-zA-Z0-9_-]/g;
 const STOPWORDS = new Set([
   "the",
   "and",
@@ -70,8 +72,8 @@ function candidateTermsFromRaw(raw: string): string[] {
   }
   const out = new Set<string>();
   out.add(trimmed);
-  for (const token of trimmed.split(/\s+/)) {
-    const normalized = token.replace(/[^a-zA-Z0-9_-]/g, "").trim();
+  for (const token of trimmed.split(WHITESPACE_RUN_RE)) {
+    const normalized = token.replace(NON_WORD_CHAR_RUN_RE, "").trim();
     if (normalized.length < MIN_TERM_LEN) {
       continue;
     }

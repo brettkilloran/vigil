@@ -247,6 +247,7 @@ function tapeVariantForTheme(theme: ContentTheme): TapeVariant {
   return "clear";
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: canvasItemToEntity branches on itemType (note/folder/sticky/image/lore variants) to project the row onto the in-memory entity shape
 export function canvasItemToEntity(
   item: CanvasItem,
   activeSpaceId: string

@@ -4,6 +4,9 @@ import { isIP } from "node:net";
 const WEBCLIP_ALLOWED_PROTOCOLS = new Set(["http:", "https:"]);
 const WEBCLIP_ALLOWED_PORTS = new Set(["", "80", "443"]);
 
+const DECIMAL_INT_RE = /^\d+$/;
+const IPV6_HEXTET_RE = /^[0-9a-f]{1,4}$/;
+
 export async function defaultWebclipDnsLookup(
   hostname: string
 ): Promise<readonly string[]> {
@@ -26,7 +29,7 @@ function parseIpv4Octets(address: string): number[] | null {
   }
   const octets: number[] = [];
   for (const part of parts) {
-    if (!/^\d+$/.test(part)) {
+    if (!DECIMAL_INT_RE.test(part)) {
       return null;
     }
     const value = Number(part);
@@ -82,7 +85,7 @@ function parseIpv6FirstHextet(address: string): number | null {
   if (!first) {
     return 0;
   }
-  if (!/^[0-9a-f]{1,4}$/.test(first)) {
+  if (!IPV6_HEXTET_RE.test(first)) {
     return null;
   }
   return Number.parseInt(first, 16);
@@ -97,9 +100,11 @@ function isPrivateIpv6(address: string): boolean {
   if (first == null) {
     return false;
   }
+  // biome-ignore lint/suspicious/noBitwiseOperators: IPv6 fc00::/7 unique-local prefix mask (high 7 bits)
   if ((first & 0xfe_00) === 0xfc_00) {
     return true; // fc00::/7
   }
+  // biome-ignore lint/suspicious/noBitwiseOperators: IPv6 fe80::/10 link-local prefix mask (high 10 bits)
   if ((first & 0xff_c0) === 0xfe_80) {
     return true; // fe80::/10
   }

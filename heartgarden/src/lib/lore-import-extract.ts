@@ -9,7 +9,7 @@ export type {
   LoreImportEntityDraft,
   LoreImportExtractResult,
   LoreImportLinkDraft,
-};
+} from "@/src/lib/lore-import-types";
 
 const EXTRACT_SYSTEM = `You extract structured entities from TTRPG / worldbuilding source text for a canvas app.
 
@@ -73,9 +73,9 @@ async function extractLoreEntitiesOneSegment(
   }
 }
 
-function mergeExtractSegments(
+function mergeExtractEntities(
   segments: LoreImportExtractResult[]
-): LoreImportExtractResult {
+): LoreImportEntityDraft[] {
   const byName = new Map<
     string,
     { name: string; kind?: string; summary?: string }
@@ -100,16 +100,19 @@ function mergeExtractSegments(
       }
     }
   }
-  const entities: LoreImportEntityDraft[] = [...byName.values()].map((v) => ({
+  return [...byName.values()].map((v) => ({
     kind: v.kind ?? "lore",
     name: v.name,
     summary: v.summary ?? "",
   }));
-  const nameKeys = new Set(entities.map((e) => e.name.toLowerCase()));
-  const linkKey = (a: string, b: string, t: string) =>
-    `${a.toLowerCase()}|${b.toLowerCase()}|${t}`;
+}
+
+function mergeExtractLinks(
+  segments: LoreImportExtractResult[],
+  knownEntityNames: Set<string>
+): LoreImportLinkDraft[] {
   const seenLinks = new Set<string>();
-  const suggestedLinks: LoreImportLinkDraft[] = [];
+  const out: LoreImportLinkDraft[] = [];
   for (const s of segments) {
     for (const l of s.suggestedLinks ?? []) {
       const from = String(l.fromName ?? "").trim();
@@ -118,19 +121,31 @@ function mergeExtractSegments(
         continue;
       }
       if (
-        !(nameKeys.has(from.toLowerCase()) && nameKeys.has(to.toLowerCase()))
+        !(
+          knownEntityNames.has(from.toLowerCase()) &&
+          knownEntityNames.has(to.toLowerCase())
+        )
       ) {
         continue;
       }
       const lt = (l.linkType ?? "history").trim() || "history";
-      const k = linkKey(from, to, lt);
+      const k = `${from.toLowerCase()}|${to.toLowerCase()}|${lt}`;
       if (seenLinks.has(k)) {
         continue;
       }
       seenLinks.add(k);
-      suggestedLinks.push({ fromName: from, linkType: lt, toName: to });
+      out.push({ fromName: from, linkType: lt, toName: to });
     }
   }
+  return out;
+}
+
+function mergeExtractSegments(
+  segments: LoreImportExtractResult[]
+): LoreImportExtractResult {
+  const entities = mergeExtractEntities(segments);
+  const nameKeys = new Set(entities.map((e) => e.name.toLowerCase()));
+  const suggestedLinks = mergeExtractLinks(segments, nameKeys);
   return { entities, suggestedLinks };
 }
 

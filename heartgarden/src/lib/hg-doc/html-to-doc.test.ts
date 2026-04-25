@@ -9,6 +9,8 @@ import {
 } from "@/src/lib/hg-doc/html-to-doc";
 import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
 
+const A_WHITESPACE_B_RE = /a\s+b/;
+
 describe("html-to-doc", () => {
   it("htmlFragmentToHgDocDoc round-trips simple markup through hgDocToHtml", () => {
     const doc = htmlFragmentToHgDocDoc("<p>Hello <strong>world</strong></p>");
@@ -41,7 +43,7 @@ describe("html-to-doc", () => {
       "<span>a</span>&nbsp;&nbsp;<span>b</span>"
     );
     const plain = hgDocToPlainText(doc);
-    expect(plain).toMatch(/a\s+b/);
+    expect(plain).toMatch(A_WHITESPACE_B_RE);
     expect(plain).not.toContain("&nbsp");
 
     const amp = legacyCodeBodyHtmlToHgDocSeed("<span>1 &lt; 2 &amp; 3</span>");

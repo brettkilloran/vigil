@@ -5,6 +5,8 @@ import {
   prepDemoSession,
 } from "./fixtures/bootstrap";
 
+const SAVE_AND_DATABASE_BUTTON_RE = /Save and database/;
+
 async function gotoCanvasAfterBoot(page: Page) {
   await page.goto("/");
   await expect(page.locator("[data-vigil-canvas]")).toBeVisible({
@@ -12,7 +14,7 @@ async function gotoCanvasAfterBoot(page: Page) {
   });
   await dismissHeartgardenBootIfPresent(page);
   await expect(
-    page.getByRole("button", { name: /Save and database/ })
+    page.getByRole("button", { name: SAVE_AND_DATABASE_BUTTON_RE })
   ).toBeVisible({
     timeout: 30_000,
   });

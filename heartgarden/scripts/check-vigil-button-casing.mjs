@@ -11,6 +11,8 @@ const SKIP_DIRS = new Set([
 ]);
 const CSS_EXTS = new Set([".css"]);
 
+const VIGIL_BTN_UPPERCASE_BODY_RE = /text-transform\s*:\s*uppercase\b/i;
+
 async function walk(dir, out) {
   const entries = await readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
@@ -48,16 +50,17 @@ function lineNumberAt(text, index) {
 function findViolations(fileText) {
   const violations = [];
   const ruleRe = /([^{}]*vigil-btn[^{}]*)\{([^{}]*)\}/gim;
-  let match;
-  while ((match = ruleRe.exec(fileText)) !== null) {
+  let match = ruleRe.exec(fileText);
+  while (match !== null) {
     const selector = match[1] ?? "";
     const body = match[2] ?? "";
-    if (/text-transform\s*:\s*uppercase\b/i.test(body)) {
+    if (VIGIL_BTN_UPPERCASE_BODY_RE.test(body)) {
       violations.push({
         index: match.index,
         selector: selector.replace(/\s+/g, " ").trim(),
       });
     }
+    match = ruleRe.exec(fileText);
   }
   return violations;
 }

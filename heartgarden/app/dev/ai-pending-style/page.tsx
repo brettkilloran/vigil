@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { AiPendingStyleDemo } from "./AiPendingStyleDemo";
+import { AiPendingStyleDemo } from "./ai-pending-style-demo";
 
 export const metadata: Metadata = {
   description: "Dev preview of unreviewed import / LLM body styling.",

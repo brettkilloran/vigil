@@ -214,6 +214,7 @@ export interface EntityMentionRescanOptions {
   restrictToTerms?: readonly string[];
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: entity mention rescan walks term + semantic mention sets and reconciles deletes against the restricted-term scope
 export async function rescanItemEntityMentions(
   db: VigilDb,
   itemId: string,

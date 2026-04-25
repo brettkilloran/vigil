@@ -17,8 +17,6 @@ import {
 import { linkCharacterToFactionRosterRow } from "@/src/lib/faction-roster-link";
 import { isUuidLike } from "@/src/lib/uuid-like";
 
-export { isUuidLike } from "@/src/lib/uuid-like";
-
 export function resolvedPersistedContentItemId(
   entity: CanvasContentEntity
 ): string | null {

@@ -116,6 +116,7 @@ export async function POST(req: Request) {
   return res;
 }
 
+// biome-ignore lint/suspicious/useAwait: Next.js Route Handler signatures must be async even when no await is needed.
 export async function DELETE() {
   const c = clearBootSessionCookieOptions();
   const res = new NextResponse(null, { status: 204 });

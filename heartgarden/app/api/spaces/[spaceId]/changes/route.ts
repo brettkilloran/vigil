@@ -87,6 +87,7 @@ async function fetchAdditionalBoundaryRows<
   return { rows: merged, saturated };
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: GET serves the change feed merging item/space/link revisions with cursor pagination, since-token filtering, and saturation handling
 export async function GET(
   req: Request,
   context: { params: Promise<{ spaceId: string }> }

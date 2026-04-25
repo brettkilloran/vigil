@@ -15,7 +15,6 @@
 .shell {
   position: relative;
   width: 100vw;
-  height: 100vh;
   height: 100dvh;
   overflow: hidden;
   /* Prevent macOS two-finger horizontal swipe from triggering browser history navigation. */
@@ -104,7 +103,6 @@
   --viewport-grid-scale: 1;
   position: relative;
   width: 100vw;
-  height: 100vh;
   height: 100dvh;
   /* Keep infinite-canvas gestures inside the app surface (no back/forward swipe). */
   overscroll-behavior-x: none;
@@ -2048,7 +2046,10 @@
   line-height: inherit;
 }
 
-/* Exported for demo seed HTML (checklist “done” rows compose taskItem + done). */
+/* Exported for demo seed HTML (checklist "done" rows compose taskItem + done).
+   Empty rule kept so CSS-modules generates a class name for `.done` that
+   selectors like `.taskItem.done` can target — JSX uses cx(taskItem, done). */
+/* biome-ignore lint/suspicious/noEmptyBlock: CSS-modules class export; selectors target .taskItem.done elsewhere */
 .done {
 }
 
@@ -2061,7 +2062,6 @@
   flex-shrink: 0;
   width: var(--cmp-task-checkbox-size);
   height: var(--cmp-task-checkbox-size);
-  margin-top: 3px;
   margin-top: max(0px, calc((1lh - var(--cmp-task-checkbox-size)) / 2));
   line-height: inherit;
   cursor: pointer;
@@ -2133,7 +2133,6 @@
   flex-shrink: 0;
   width: 18px;
   min-height: 1.2em;
-  margin-top: 3px;
   margin-top: max(0px, calc((1lh - 14px) / 2));
   align-self: flex-start;
   border: 0;
@@ -2295,29 +2294,77 @@
 }
 
 .nodeBody.loreCharacterBody
-  :global([class*="charSkNotesBody"] > p:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [class*="charSkNotesBody"]
+    > p:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .nodeBody.loreCharacterBody
-  :global([class*="charSkNotesBody"] > h1:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [class*="charSkNotesBody"]
+    > h1:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .nodeBody.loreCharacterBody
-  :global([class*="charSkNotesBody"] > h2:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [class*="charSkNotesBody"]
+    > h2:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .nodeBody.loreCharacterBody
-  :global([class*="charSkNotesBody"] > h3:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [class*="charSkNotesBody"]
+    > h3:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .nodeBody.loreCharacterBody
-  :global([class*="charSkNotesBody"] > blockquote:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [class*="charSkNotesBody"]
+    > blockquote:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .nodeBody.loreCharacterBody
-  :global([class*="charSkNotesBody"] > pre:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [class*="charSkNotesBody"]
+    > pre:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .nodeBody.loreCharacterBody
-  :global([class*="char3dNotesBody"] > p:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [class*="char3dNotesBody"]
+    > p:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .nodeBody.loreCharacterBody
-  :global([class*="char3dNotesBody"] > h1:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [class*="char3dNotesBody"]
+    > h1:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .nodeBody.loreCharacterBody
-  :global([class*="char3dNotesBody"] > h2:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [class*="char3dNotesBody"]
+    > h2:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .nodeBody.loreCharacterBody
-  :global([class*="char3dNotesBody"] > h3:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [class*="char3dNotesBody"]
+    > h3:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .nodeBody.loreCharacterBody
-  :global([class*="char3dNotesBody"] > blockquote:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [class*="char3dNotesBody"]
+    > blockquote:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .nodeBody.loreCharacterBody
-  :global([class*="char3dNotesBody"] > pre:has(.archBlockDragHandle) .archBlockDragHandle) {
+  :global(
+    [class*="char3dNotesBody"]
+    > pre:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ) {
   position: absolute;
   top: 0.2em;
   right: 100%;
@@ -5748,7 +5795,9 @@
 }
 
 .dockFolderTintCatalogList
-  :global(.vigil-btn).dockFolderTintCatalogRow.dockFolderTintCatalogRowSelected {
+  :global(
+    .vigil-btn
+  ).dockFolderTintCatalogRow.dockFolderTintCatalogRowSelected {
   background: color-mix(in oklch, var(--accent) 14%, transparent);
   box-shadow: inset 0 0 0 1px
     color-mix(in oklch, var(--accent) 42%, transparent);
@@ -6925,26 +6974,44 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .shell
-  :global(.vigil-btn[data-tone="glass"]:hover:not(:disabled):not([data-disabled="true"])),
-.shell
-  :global(.vigil-btn[data-tone="menu"]:hover:not(:disabled):not([data-disabled="true"])),
-.shell
   :global(
-    .vigil-btn[data-tone="glass"][data-force-state="hover"]:not(:disabled):not([data-disabled="true"])
+    .vigil-btn[data-tone="glass"]:hover:not(:disabled):not(
+      [data-disabled="true"]
+    )
   ),
 .shell
   :global(
-    .vigil-btn[data-tone="menu"][data-force-state="hover"]:not(:disabled):not([data-disabled="true"])
+    .vigil-btn[data-tone="menu"]:hover:not(:disabled):not(
+      [data-disabled="true"]
+    )
+  ),
+.shell
+  :global(
+    .vigil-btn[data-tone="glass"][data-force-state="hover"]:not(:disabled):not(
+      [data-disabled="true"]
+    )
+  ),
+.shell
+  :global(
+    .vigil-btn[data-tone="menu"][data-force-state="hover"]:not(:disabled):not(
+      [data-disabled="true"]
+    )
   ) {
   color: var(--sys-color-neutral-100);
   background: var(--sem-overlay-white-08);
 }
 
 .shell
-  :global(.vigil-btn[data-hg-ai-bind="true"]:hover:not(:disabled):not([data-disabled="true"])),
+  :global(
+    .vigil-btn[data-hg-ai-bind="true"]:hover:not(:disabled):not(
+      [data-disabled="true"]
+    )
+  ),
 .shell
   :global(
-    .vigil-btn[data-hg-ai-bind="true"][data-force-state="hover"]:not(:disabled):not([data-disabled="true"])
+    .vigil-btn[data-hg-ai-bind="true"][data-force-state="hover"]:not(
+      :disabled
+    ):not([data-disabled="true"])
   ) {
   color: var(--btn-fg-hover);
   background: var(--btn-bg-hover);
@@ -6953,16 +7020,28 @@ button.rootDockPanel.viewportMetricsPanel {
 
 /* Selected glass tool: light fill + dark icon; default glass hover uses light text → white-on-white in engaged well. */
 .shell
-:global(.vigil-btn[data-tone="glass"][data-active="true"]:hover:not(:disabled):not([data-disabled="true"])),
-.shell
-  :global(.vigil-btn[data-tone="menu"][data-active="true"]:hover:not(:disabled):not([data-disabled="true"])),
+:global(
+  .vigil-btn[data-tone="glass"][data-active="true"]:hover:not(:disabled):not(
+    [data-disabled="true"]
+  )
+),
 .shell
   :global(
-    .vigil-btn[data-tone="glass"][data-active="true"][data-force-state="hover"]:not(:disabled):not([data-disabled="true"])
+    .vigil-btn[data-tone="menu"][data-active="true"]:hover:not(:disabled):not(
+      [data-disabled="true"]
+    )
   ),
 .shell
   :global(
-    .vigil-btn[data-tone="menu"][data-active="true"][data-force-state="hover"]:not(:disabled):not([data-disabled="true"])
+    .vigil-btn[data-tone="glass"][data-active="true"][data-force-state="hover"]:not(
+      :disabled
+    ):not([data-disabled="true"])
+  ),
+.shell
+  :global(
+    .vigil-btn[data-tone="menu"][data-active="true"][data-force-state="hover"]:not(
+      :disabled
+    ):not([data-disabled="true"])
   ) {
   color: var(--sys-color-black);
   background: color-mix(
@@ -6973,16 +7052,28 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .shell
-  :global(.vigil-btn[data-tone="glass"]:active:not(:disabled):not([data-disabled="true"])),
-.shell
-  :global(.vigil-btn[data-tone="menu"]:active:not(:disabled):not([data-disabled="true"])),
-.shell
   :global(
-    .vigil-btn[data-tone="glass"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])
+    .vigil-btn[data-tone="glass"]:active:not(:disabled):not(
+      [data-disabled="true"]
+    )
   ),
 .shell
   :global(
-    .vigil-btn[data-tone="menu"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])
+    .vigil-btn[data-tone="menu"]:active:not(:disabled):not(
+      [data-disabled="true"]
+    )
+  ),
+.shell
+  :global(
+    .vigil-btn[data-tone="glass"][data-force-state="active"]:not(:disabled):not(
+      [data-disabled="true"]
+    )
+  ),
+.shell
+  :global(
+    .vigil-btn[data-tone="menu"][data-force-state="active"]:not(:disabled):not(
+      [data-disabled="true"]
+    )
   ) {
   color: var(--sys-color-neutral-100);
   background: var(--sem-surface-muted-press);
@@ -6990,10 +7081,16 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .shell
-  :global(.vigil-btn[data-hg-ai-bind="true"]:active:not(:disabled):not([data-disabled="true"])),
+  :global(
+    .vigil-btn[data-hg-ai-bind="true"]:active:not(:disabled):not(
+      [data-disabled="true"]
+    )
+  ),
 .shell
   :global(
-    .vigil-btn[data-hg-ai-bind="true"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])
+    .vigil-btn[data-hg-ai-bind="true"][data-force-state="active"]:not(
+      :disabled
+    ):not([data-disabled="true"])
   ) {
   color: var(--btn-fg-active);
   background: var(--btn-bg-active);
@@ -7001,16 +7098,28 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .shell
-  :global(.vigil-btn[data-tone="glass"][data-active="true"]:active:not(:disabled):not([data-disabled="true"])),
-.shell
-  :global(.vigil-btn[data-tone="menu"][data-active="true"]:active:not(:disabled):not([data-disabled="true"])),
-.shell
   :global(
-    .vigil-btn[data-tone="glass"][data-active="true"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])
+    .vigil-btn[data-tone="glass"][data-active="true"]:active:not(:disabled):not(
+      [data-disabled="true"]
+    )
   ),
 .shell
   :global(
-    .vigil-btn[data-tone="menu"][data-active="true"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])
+    .vigil-btn[data-tone="menu"][data-active="true"]:active:not(:disabled):not(
+      [data-disabled="true"]
+    )
+  ),
+.shell
+  :global(
+    .vigil-btn[data-tone="glass"][data-active="true"][data-force-state="active"]:not(
+      :disabled
+    ):not([data-disabled="true"])
+  ),
+.shell
+  :global(
+    .vigil-btn[data-tone="menu"][data-active="true"][data-force-state="active"]:not(
+      :disabled
+    ):not([data-disabled="true"])
   ) {
   color: var(--sys-color-black);
   background: color-mix(
@@ -7115,20 +7224,32 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .shell
-  :global(.vigil-btn[data-tone="card-light"]:hover:not(:disabled):not([data-disabled="true"])),
+  :global(
+    .vigil-btn[data-tone="card-light"]:hover:not(:disabled):not(
+      [data-disabled="true"]
+    )
+  ),
 .shell
   :global(
-    .vigil-btn[data-tone="card-light"][data-force-state="hover"]:not(:disabled):not([data-disabled="true"])
+    .vigil-btn[data-tone="card-light"][data-force-state="hover"]:not(
+      :disabled
+    ):not([data-disabled="true"])
   ) {
   color: color-mix(in oklch, var(--sys-color-black) 78%, transparent);
   background: color-mix(in oklch, var(--sys-color-black) 6%, transparent);
 }
 
 .shell
-  :global(.vigil-btn[data-tone="card-light"]:active:not(:disabled):not([data-disabled="true"])),
+  :global(
+    .vigil-btn[data-tone="card-light"]:active:not(:disabled):not(
+      [data-disabled="true"]
+    )
+  ),
 .shell
   :global(
-    .vigil-btn[data-tone="card-light"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])
+    .vigil-btn[data-tone="card-light"][data-force-state="active"]:not(
+      :disabled
+    ):not([data-disabled="true"])
   ) {
   color: color-mix(in oklch, var(--sys-color-black) 88%, transparent);
   background: color-mix(in oklch, var(--sys-color-black) 10%, transparent);
@@ -7136,20 +7257,32 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .shell
-  :global(.vigil-btn[data-tone="card-dark"]:hover:not(:disabled):not([data-disabled="true"])),
+  :global(
+    .vigil-btn[data-tone="card-dark"]:hover:not(:disabled):not(
+      [data-disabled="true"]
+    )
+  ),
 .shell
   :global(
-    .vigil-btn[data-tone="card-dark"][data-force-state="hover"]:not(:disabled):not([data-disabled="true"])
+    .vigil-btn[data-tone="card-dark"][data-force-state="hover"]:not(
+      :disabled
+    ):not([data-disabled="true"])
   ) {
   color: color-mix(in oklch, var(--sys-color-white) 90%, transparent);
   background: color-mix(in oklch, var(--sys-color-white) 10%, transparent);
 }
 
 .shell
-  :global(.vigil-btn[data-tone="card-dark"]:active:not(:disabled):not([data-disabled="true"])),
+  :global(
+    .vigil-btn[data-tone="card-dark"]:active:not(:disabled):not(
+      [data-disabled="true"]
+    )
+  ),
 .shell
   :global(
-    .vigil-btn[data-tone="card-dark"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])
+    .vigil-btn[data-tone="card-dark"][data-force-state="active"]:not(
+      :disabled
+    ):not([data-disabled="true"])
   ) {
   color: var(--sys-color-white);
   background: color-mix(in oklch, var(--sys-color-white) 16%, transparent);
@@ -7542,16 +7675,26 @@ button.rootDockPanel.viewportMetricsPanel {
 .focusAiReviewBar
   :global(.vigil-btn[data-hg-ai-bind="true"]:hover:not([data-disabled="true"])),
 .focusAiReviewBar
-  :global(.vigil-btn[data-hg-ai-bind="true"][data-force-state="hover"]:not([data-disabled="true"])) {
+  :global(
+    .vigil-btn[data-hg-ai-bind="true"][data-force-state="hover"]:not(
+      [data-disabled="true"]
+    )
+  ) {
   color: var(--sys-color-white);
   background: color-mix(in oklch, oklch(0.34 0.22 294) 100%, transparent);
   border-color: color-mix(in oklch, oklch(0.3 0.22 294) 88%, transparent);
 }
 
 .focusAiReviewBar
-  :global(.vigil-btn[data-hg-ai-bind="true"]:active:not([data-disabled="true"])),
+  :global(
+    .vigil-btn[data-hg-ai-bind="true"]:active:not([data-disabled="true"])
+  ),
 .focusAiReviewBar
-  :global(.vigil-btn[data-hg-ai-bind="true"][data-force-state="active"]:not([data-disabled="true"])) {
+  :global(
+    .vigil-btn[data-hg-ai-bind="true"][data-force-state="active"]:not(
+      [data-disabled="true"]
+    )
+  ) {
   color: var(--sys-color-white);
   background: color-mix(in oklch, oklch(0.28 0.22 294) 100%, transparent);
   border-color: color-mix(in oklch, oklch(0.24 0.22 294) 96%, transparent);
@@ -7572,7 +7715,11 @@ button.rootDockPanel.viewportMetricsPanel {
   :global(.vigil-btn[data-hg-ai-bind="true"]:hover:not([data-disabled="true"])),
 .focusEditorDark
   .focusAiReviewBar
-  :global(.vigil-btn[data-hg-ai-bind="true"][data-force-state="hover"]:not([data-disabled="true"])) {
+  :global(
+    .vigil-btn[data-hg-ai-bind="true"][data-force-state="hover"]:not(
+      [data-disabled="true"]
+    )
+  ) {
   color: var(--sys-color-white);
   background: color-mix(in oklch, oklch(0.52 0.22 294) 94%, transparent);
   border-color: var(--sem-text-llm-accent-bright);
@@ -7580,10 +7727,16 @@ button.rootDockPanel.viewportMetricsPanel {
 
 .focusEditorDark
   .focusAiReviewBar
-  :global(.vigil-btn[data-hg-ai-bind="true"]:active:not([data-disabled="true"])),
+  :global(
+    .vigil-btn[data-hg-ai-bind="true"]:active:not([data-disabled="true"])
+  ),
 .focusEditorDark
   .focusAiReviewBar
-  :global(.vigil-btn[data-hg-ai-bind="true"][data-force-state="active"]:not([data-disabled="true"])) {
+  :global(
+    .vigil-btn[data-hg-ai-bind="true"][data-force-state="active"]:not(
+      [data-disabled="true"]
+    )
+  ) {
   color: var(--sys-color-white);
   background: color-mix(in oklch, oklch(0.4 0.22 294) 96%, transparent);
   border-color: var(--sem-text-llm-accent-bright);
@@ -7785,7 +7938,9 @@ button.rootDockPanel.viewportMetricsPanel {
 
 .focusBody.focusCharacterDocument
   :global(
-    [data-hg-character-focus-portrait="true"] [data-hg-character-focus-portrait-frame="true"] [data-architectural-media-root="true"]
+    [data-hg-character-focus-portrait="true"]
+    [data-hg-character-focus-portrait-frame="true"]
+    [data-architectural-media-root="true"]
   ) {
   display: block;
   width: 100%;
@@ -7810,7 +7965,9 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-portrait-img="true"][data-hg-portrait-placeholder="true"]),
+  :global(
+    [data-hg-character-focus-portrait-img="true"][data-hg-portrait-placeholder="true"]
+  ),
 .focusBody.focusCharacterDocument
   :global(
     [data-hg-character-focus-portrait-img="true"][data-hg-heartgarden-media-placeholder="true"]
@@ -7825,7 +7982,10 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-portrait-frame="true"] [data-hg-portrait-actions="true"]) {
+  :global(
+    [data-hg-character-focus-portrait-frame="true"]
+    [data-hg-portrait-actions="true"]
+  ) {
   position: absolute;
   right: 8px;
   bottom: 8px;
@@ -7877,7 +8037,10 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-line="name"] [data-hg-character-focus-label="true"]) {
+  :global(
+    [data-hg-character-focus-line="name"]
+    [data-hg-character-focus-label="true"]
+  ) {
   min-width: 0;
   font-size: 10px;
   color: var(--sem-text-muted);
@@ -7899,16 +8062,25 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-field][data-placeholder]:not(:focus):empty)::before,
+  :global(
+    [data-hg-character-focus-field][data-placeholder]:not(:focus):empty
+  )::before,
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-field][data-placeholder]:not(:focus):has(> br:only-child))::before {
+  :global(
+    [data-hg-character-focus-field][data-placeholder]:not(:focus):has(
+      > br:only-child
+    )
+  )::before {
   color: color-mix(in oklch, var(--sem-text-muted) 80%, transparent);
   pointer-events: none;
   content: attr(data-placeholder);
 }
 
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-line="name"] [data-hg-character-focus-field="name"]) {
+  :global(
+    [data-hg-character-focus-line="name"]
+    [data-hg-character-focus-field="name"]
+  ) {
   font-size: clamp(28px, 4vw, 42px);
   font-weight: 700;
   line-height: 1.1;
@@ -7917,11 +8089,20 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-line="role"] [data-hg-character-focus-field="role"]),
+  :global(
+    [data-hg-character-focus-line="role"]
+    [data-hg-character-focus-field="role"]
+  ),
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-line="affiliation"] [data-hg-character-focus-field="affiliation"]),
+  :global(
+    [data-hg-character-focus-line="affiliation"]
+    [data-hg-character-focus-field="affiliation"]
+  ),
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-line="nationality"] [data-hg-character-focus-field="nationality"]) {
+  :global(
+    [data-hg-character-focus-line="nationality"]
+    [data-hg-character-focus-field="nationality"]
+  ) {
   font-size: 16px;
   font-weight: 400;
   line-height: 1.4;
@@ -7938,7 +8119,10 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes-shell="true"] [data-hg-character-focus-label="true"]) {
+  :global(
+    [data-hg-character-focus-notes-shell="true"]
+    [data-hg-character-focus-label="true"]
+  ) {
   font-size: 10px;
   color: var(--sem-text-muted);
 }
@@ -7963,7 +8147,10 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] > ul[data-arch-checklist="true"]) {
+  :global(
+    [data-hg-character-focus-notes="true"]
+    > ul[data-arch-checklist="true"]
+  ) {
   box-sizing: border-box;
   width: calc(100% + 32px);
   max-width: none;
@@ -8014,7 +8201,10 @@ button.rootDockPanel.viewportMetricsPanel {
 
 .focusEditorDark
   .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-portrait-frame="true"] [data-architectural-media-root="true"]) {
+  :global(
+    [data-hg-character-focus-portrait-frame="true"]
+    [data-architectural-media-root="true"]
+  ) {
   background: color-mix(
     in oklch,
     var(--sys-color-neutral-925) 92%,
@@ -8031,7 +8221,10 @@ button.rootDockPanel.viewportMetricsPanel {
 
 .focusEditorDark
   .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-line="name"] [data-hg-character-focus-label="true"]) {
+  :global(
+    [data-hg-character-focus-line="name"]
+    [data-hg-character-focus-label="true"]
+  ) {
   color: color-mix(in oklch, var(--sys-color-white) 55%, transparent);
 }
 
@@ -8043,28 +8236,44 @@ button.rootDockPanel.viewportMetricsPanel {
 
 .focusEditorDark
   .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-line="name"] [data-hg-character-focus-field="name"]) {
+  :global(
+    [data-hg-character-focus-line="name"]
+    [data-hg-character-focus-field="name"]
+  ) {
   color: color-mix(in oklch, var(--sys-color-white) 96%, transparent);
 }
 
 .focusEditorDark
   .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-line="role"] [data-hg-character-focus-field="role"]),
+  :global(
+    [data-hg-character-focus-line="role"]
+    [data-hg-character-focus-field="role"]
+  ),
 .focusEditorDark
   .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-line="affiliation"] [data-hg-character-focus-field="affiliation"]),
+  :global(
+    [data-hg-character-focus-line="affiliation"]
+    [data-hg-character-focus-field="affiliation"]
+  ),
 .focusEditorDark
   .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-line="nationality"] [data-hg-character-focus-field="nationality"]) {
+  :global(
+    [data-hg-character-focus-line="nationality"]
+    [data-hg-character-focus-field="nationality"]
+  ) {
   color: color-mix(in oklch, var(--sys-color-white) 78%, transparent);
 }
 
 .focusEditorDark
   .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-portrait-img="true"][data-hg-portrait-placeholder="true"]),
+  :global(
+    [data-hg-character-focus-portrait-img="true"][data-hg-portrait-placeholder="true"]
+  ),
 .focusEditorDark
   .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-portrait-img="true"][data-hg-heartgarden-media-placeholder="true"]) {
+  :global(
+    [data-hg-character-focus-portrait-img="true"][data-hg-heartgarden-media-placeholder="true"]
+  ) {
   background: color-mix(
     in oklch,
     var(--sys-color-neutral-900) 88%,
@@ -8074,7 +8283,10 @@ button.rootDockPanel.viewportMetricsPanel {
 
 .focusEditorDark
   .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes-shell="true"] [data-hg-character-focus-label="true"]) {
+  :global(
+    [data-hg-character-focus-notes-shell="true"]
+    [data-hg-character-focus-label="true"]
+  ) {
   color: color-mix(in oklch, var(--sys-color-white) 55%, transparent);
 }
 
@@ -8094,10 +8306,16 @@ button.rootDockPanel.viewportMetricsPanel {
 
 .focusEditorDark
   .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-field][data-placeholder]:not(:focus):empty)::before,
+  :global(
+    [data-hg-character-focus-field][data-placeholder]:not(:focus):empty
+  )::before,
 .focusEditorDark
   .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-field][data-placeholder]:not(:focus):has(> br:only-child))::before {
+  :global(
+    [data-hg-character-focus-field][data-placeholder]:not(:focus):has(
+      > br:only-child
+    )
+  )::before {
   color: color-mix(in oklch, var(--sys-color-white) 45%, transparent);
 }
 
@@ -8136,30 +8354,69 @@ button.rootDockPanel.viewportMetricsPanel {
 .focusBody.focusCharacterDocument
   :global([data-hg-character-focus-notes="true"] > p:has(.archBlockDragHandle)),
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] > h1:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-character-focus-notes="true"]
+    > h1:has(.archBlockDragHandle)
+  ),
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] > h2:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-character-focus-notes="true"]
+    > h2:has(.archBlockDragHandle)
+  ),
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] > h3:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-character-focus-notes="true"]
+    > h3:has(.archBlockDragHandle)
+  ),
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] > blockquote:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-character-focus-notes="true"]
+    > blockquote:has(.archBlockDragHandle)
+  ),
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] > pre:has(.archBlockDragHandle)) {
+  :global(
+    [data-hg-character-focus-notes="true"]
+    > pre:has(.archBlockDragHandle)
+  ) {
   position: relative;
 }
 
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] > p:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-character-focus-notes="true"]
+    > p:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] > h1:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-character-focus-notes="true"]
+    > h1:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] > h2:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-character-focus-notes="true"]
+    > h2:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] > h3:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-character-focus-notes="true"]
+    > h3:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] > blockquote:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-character-focus-notes="true"]
+    > blockquote:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusCharacterDocument
-  :global([data-hg-character-focus-notes="true"] > pre:has(.archBlockDragHandle) .archBlockDragHandle) {
+  :global(
+    [data-hg-character-focus-notes="true"]
+    > pre:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ) {
   position: absolute;
   top: 0.2em;
   right: 100%;
@@ -8235,10 +8492,14 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-field][data-placeholder]:not(:focus):empty)::before,
+  :global(
+    [data-hg-lore-location-focus-field][data-placeholder]:not(:focus):empty
+  )::before,
 .focusBody.focusLocationDocument
   :global(
-    [data-hg-lore-location-focus-field][data-placeholder]:not(:focus):has(> br:only-child)
+    [data-hg-lore-location-focus-field][data-placeholder]:not(:focus):has(
+      > br:only-child
+    )
   )::before {
   color: color-mix(in oklch, var(--sem-text-muted) 80%, transparent);
   pointer-events: none;
@@ -8246,7 +8507,10 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-row="name"] [data-hg-lore-location-focus-field="name"]) {
+  :global(
+    [data-hg-lore-location-focus-row="name"]
+    [data-hg-lore-location-focus-field="name"]
+  ) {
   font-size: clamp(26px, 3.6vw, 38px);
   font-weight: 700;
   line-height: 1.12;
@@ -8282,7 +8546,10 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] > ul[data-arch-checklist="true"]) {
+  :global(
+    [data-hg-lore-location-focus-notes="true"]
+    > ul[data-arch-checklist="true"]
+  ) {
   box-sizing: border-box;
   width: calc(100% + 32px);
   max-width: none;
@@ -8336,16 +8603,25 @@ button.rootDockPanel.viewportMetricsPanel {
 
 .focusEditorDark
   .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-row="name"] [data-hg-lore-location-focus-field="name"]) {
+  :global(
+    [data-hg-lore-location-focus-row="name"]
+    [data-hg-lore-location-focus-field="name"]
+  ) {
   color: color-mix(in oklch, var(--sys-color-white) 96%, transparent);
 }
 
 .focusEditorDark
   .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-field][data-placeholder]:not(:focus):empty)::before,
+  :global(
+    [data-hg-lore-location-focus-field][data-placeholder]:not(:focus):empty
+  )::before,
 .focusEditorDark
   .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-field][data-placeholder]:not(:focus):has(> br:only-child))::before {
+  :global(
+    [data-hg-lore-location-focus-field][data-placeholder]:not(:focus):has(
+      > br:only-child
+    )
+  )::before {
   color: color-mix(in oklch, var(--sys-color-white) 45%, transparent);
 }
 
@@ -8396,32 +8672,74 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] > p:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-lore-location-focus-notes="true"]
+    > p:has(.archBlockDragHandle)
+  ),
 .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] > h1:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-lore-location-focus-notes="true"]
+    > h1:has(.archBlockDragHandle)
+  ),
 .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] > h2:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-lore-location-focus-notes="true"]
+    > h2:has(.archBlockDragHandle)
+  ),
 .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] > h3:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-lore-location-focus-notes="true"]
+    > h3:has(.archBlockDragHandle)
+  ),
 .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] > blockquote:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-lore-location-focus-notes="true"]
+    > blockquote:has(.archBlockDragHandle)
+  ),
 .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] > pre:has(.archBlockDragHandle)) {
+  :global(
+    [data-hg-lore-location-focus-notes="true"]
+    > pre:has(.archBlockDragHandle)
+  ) {
   position: relative;
 }
 
 .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] > p:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-lore-location-focus-notes="true"]
+    > p:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] > h1:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-lore-location-focus-notes="true"]
+    > h1:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] > h2:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-lore-location-focus-notes="true"]
+    > h2:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] > h3:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-lore-location-focus-notes="true"]
+    > h3:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] > blockquote:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-lore-location-focus-notes="true"]
+    > blockquote:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] > pre:has(.archBlockDragHandle) .archBlockDragHandle) {
+  :global(
+    [data-hg-lore-location-focus-notes="true"]
+    > pre:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ) {
   position: absolute;
   top: 0.2em;
   right: 100%;
@@ -8433,7 +8751,10 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusLocationDocument
-  :global([data-hg-lore-location-focus-notes="true"] > pre:has(.archBlockDragHandle)) {
+  :global(
+    [data-hg-lore-location-focus-notes="true"]
+    > pre:has(.archBlockDragHandle)
+  ) {
   overflow-x: visible;
 }
 
@@ -8499,10 +8820,14 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusFactionDocument
-  :global([data-hg-faction-focus-field][data-placeholder]:not(:focus):empty)::before,
+  :global(
+    [data-hg-faction-focus-field][data-placeholder]:not(:focus):empty
+  )::before,
 .focusBody.focusFactionDocument
   :global(
-    [data-hg-faction-focus-field][data-placeholder]:not(:focus):has(> br:only-child)
+    [data-hg-faction-focus-field][data-placeholder]:not(:focus):has(
+      > br:only-child
+    )
   )::before {
   color: color-mix(in oklch, var(--sem-text-muted) 80%, transparent);
   pointer-events: none;
@@ -8510,7 +8835,10 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusFactionDocument
-  :global([data-hg-faction-focus-row="primary"] [data-hg-faction-focus-field="orgNamePrimary"]) {
+  :global(
+    [data-hg-faction-focus-row="primary"]
+    [data-hg-faction-focus-field="orgNamePrimary"]
+  ) {
   font-size: clamp(26px, 3.6vw, 38px);
   font-weight: 700;
   line-height: 1.12;
@@ -8545,7 +8873,10 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusFactionDocument
-  :global([data-hg-faction-focus-record="true"] > ul[data-arch-checklist="true"]) {
+  :global(
+    [data-hg-faction-focus-record="true"]
+    > ul[data-arch-checklist="true"]
+  ) {
   box-sizing: border-box;
   width: calc(100% + 32px);
   max-width: none;
@@ -8599,16 +8930,25 @@ button.rootDockPanel.viewportMetricsPanel {
 
 .focusEditorDark
   .focusBody.focusFactionDocument
-  :global([data-hg-faction-focus-row="primary"] [data-hg-faction-focus-field="orgNamePrimary"]) {
+  :global(
+    [data-hg-faction-focus-row="primary"]
+    [data-hg-faction-focus-field="orgNamePrimary"]
+  ) {
   color: color-mix(in oklch, var(--sys-color-white) 96%, transparent);
 }
 
 .focusEditorDark
   .focusBody.focusFactionDocument
-  :global([data-hg-faction-focus-field][data-placeholder]:not(:focus):empty)::before,
+  :global(
+    [data-hg-faction-focus-field][data-placeholder]:not(:focus):empty
+  )::before,
 .focusEditorDark
   .focusBody.focusFactionDocument
-  :global([data-hg-faction-focus-field][data-placeholder]:not(:focus):has(> br:only-child))::before {
+  :global(
+    [data-hg-faction-focus-field][data-placeholder]:not(:focus):has(
+      > br:only-child
+    )
+  )::before {
   color: color-mix(in oklch, var(--sys-color-white) 45%, transparent);
 }
 
@@ -8699,48 +9039,132 @@ button.rootDockPanel.viewportMetricsPanel {
 .focusBody.focusFactionDocument
   :global([data-hg-faction-focus-record="true"] > h3:has(.archBlockDragHandle)),
 .focusBody.focusFactionDocument
-  :global([data-hg-faction-focus-record="true"] > blockquote:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-faction-focus-record="true"]
+    > blockquote:has(.archBlockDragHandle)
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-faction-focus-record="true"] > pre:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-faction-focus-record="true"]
+    > pre:has(.archBlockDragHandle)
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > p:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-doc-editor="true"]
+    .tiptap.ProseMirror
+    > p:has(.archBlockDragHandle)
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > h1:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-doc-editor="true"]
+    .tiptap.ProseMirror
+    > h1:has(.archBlockDragHandle)
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > h2:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-doc-editor="true"]
+    .tiptap.ProseMirror
+    > h2:has(.archBlockDragHandle)
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > h3:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-doc-editor="true"]
+    .tiptap.ProseMirror
+    > h3:has(.archBlockDragHandle)
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > blockquote:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-doc-editor="true"]
+    .tiptap.ProseMirror
+    > blockquote:has(.archBlockDragHandle)
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > pre:has(.archBlockDragHandle)) {
+  :global(
+    [data-hg-doc-editor="true"]
+    .tiptap.ProseMirror
+    > pre:has(.archBlockDragHandle)
+  ) {
   position: relative;
 }
 
 .focusBody.focusFactionDocument
-  :global([data-hg-faction-focus-record="true"] > p:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-faction-focus-record="true"]
+    > p:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-faction-focus-record="true"] > h1:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-faction-focus-record="true"]
+    > h1:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-faction-focus-record="true"] > h2:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-faction-focus-record="true"]
+    > h2:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-faction-focus-record="true"] > h3:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-faction-focus-record="true"]
+    > h3:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-faction-focus-record="true"] > blockquote:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-faction-focus-record="true"]
+    > blockquote:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-faction-focus-record="true"] > pre:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-faction-focus-record="true"]
+    > pre:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > p:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-doc-editor="true"]
+    .tiptap.ProseMirror
+    > p:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > h1:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-doc-editor="true"]
+    .tiptap.ProseMirror
+    > h1:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > h2:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-doc-editor="true"]
+    .tiptap.ProseMirror
+    > h2:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > h3:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-doc-editor="true"]
+    .tiptap.ProseMirror
+    > h3:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > blockquote:has(.archBlockDragHandle) .archBlockDragHandle),
+  :global(
+    [data-hg-doc-editor="true"]
+    .tiptap.ProseMirror
+    > blockquote:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > pre:has(.archBlockDragHandle) .archBlockDragHandle) {
+  :global(
+    [data-hg-doc-editor="true"]
+    .tiptap.ProseMirror
+    > pre:has(.archBlockDragHandle)
+    .archBlockDragHandle
+  ) {
   position: absolute;
   top: 0.2em;
   right: 100%;
@@ -8752,9 +9176,16 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 .focusBody.focusFactionDocument
-  :global([data-hg-faction-focus-record="true"] > pre:has(.archBlockDragHandle)),
+  :global(
+    [data-hg-faction-focus-record="true"]
+    > pre:has(.archBlockDragHandle)
+  ),
 .focusBody.focusFactionDocument
-  :global([data-hg-doc-editor="true"] .tiptap.ProseMirror > pre:has(.archBlockDragHandle)) {
+  :global(
+    [data-hg-doc-editor="true"]
+    .tiptap.ProseMirror
+    > pre:has(.archBlockDragHandle)
+  ) {
   overflow-x: visible;
 }
 

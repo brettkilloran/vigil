@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 
 import { prepDemoSession } from "../fixtures/bootstrap";
 
+const ENTER_THE_GARDEN_BUTTON_RE = /Enter the garden/i;
+
 test.use({ viewport: { height: 844, width: 390 } });
 
 test.describe("visual: boot (mobile width)", () => {
@@ -13,7 +15,7 @@ test.describe("visual: boot (mobile width)", () => {
     await page.goto("/");
 
     await expect(
-      page.getByRole("button", { name: /Enter the garden/i })
+      page.getByRole("button", { name: ENTER_THE_GARDEN_BUTTON_RE })
     ).toBeVisible({
       timeout: 30_000,
     });

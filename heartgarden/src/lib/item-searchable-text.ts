@@ -58,6 +58,9 @@ const MAX_DEPTH = 48;
 /** Soft cap per string segment (pathological cards / abuse). */
 const MAX_SEGMENT_CHARS = 600_000;
 
+const HTML_TAG_LIKE_RE = /<[a-z][\s\S]*>/i;
+const CANONICAL_KIND_SLUG_RE = /^[a-z][a-z0-9_-]*$/;
+
 function pushSegment(raw: string, parts: string[]): void {
   let s = raw.replace(/\s+/g, " ").trim();
   if (!s) {
@@ -74,7 +77,7 @@ function looksLikeHtmlFragment(s: string): boolean {
     s.length >= 8 &&
     s.includes("<") &&
     s.includes(">") &&
-    /<[a-z][\s\S]*>/i.test(s)
+    HTML_TAG_LIKE_RE.test(s)
   );
 }
 
@@ -89,6 +92,7 @@ function appendString(s: string, parts: string[]): void {
   pushSegment(normalizeMaybeHtmlString(s), parts);
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: vault corpus walker recurses unknown JSON shapes (TipTap doc, hgArch, entity_meta) with depth + cycle guards
 function appendFromUnknown(
   value: unknown,
   parts: string[],
@@ -164,7 +168,7 @@ function extractCanonicalEntityKindToken(meta: unknown): string | null {
   if (!slug || slug.length > 32) {
     return null;
   }
-  if (!/^[a-z][a-z0-9_-]*$/.test(slug)) {
+  if (!CANONICAL_KIND_SLUG_RE.test(slug)) {
     return null;
   }
   return `kind:${slug}`;

@@ -29,6 +29,7 @@ const patchBody = z
   })
   .strict();
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: PATCH applies optional name and parentSpaceId reparent with cycle detection, GM auth, and revision bump
 export async function PATCH(
   req: Request,
   context: { params: Promise<{ spaceId: string }> }

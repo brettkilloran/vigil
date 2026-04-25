@@ -305,6 +305,7 @@ function parseGenericBlocks(raw: unknown): HgStructuredBlock[] {
   return out;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: structured body parser validates raw LLM JSON per canonical entity kind into the typed lore import body shape
 function parseStructuredBody(
   canonicalEntityKind: CanonicalEntityKind,
   rawBody: unknown
@@ -446,6 +447,7 @@ function parseStructuredBody(
   };
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: outline LLM call assembles chunk payload, runs Anthropic with retry/continuation, and parses outline notes from streamed JSON
 export async function runLoreImportOutlineLlm(
   apiKey: string,
   model: string,
@@ -730,6 +732,7 @@ export function renderStructuredBodyPlainText(
   return lines.join("\n").slice(0, 120_000);
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: outline-body attach merges chunk text per note while tracking unassigned/duplicate chunk diagnostics
 export function attachBodiesToOutline(
   outline: OutlineLlmResult,
   chunks: SourceTextChunk[]
@@ -870,6 +873,7 @@ export interface SpaceCandidateRow {
   topTitles?: string[];
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: merge-candidate LLM call validates per-note merge suggestions, dedupes, and attaches space/title hints to candidates
 export async function runLoreImportMergeLlm(
   apiKey: string,
   model: string,

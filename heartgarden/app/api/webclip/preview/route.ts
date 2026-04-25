@@ -14,27 +14,30 @@ const bodySchema = z.object({
 const WEBCLIP_FETCH_TIMEOUT_MS = 8000;
 const WEBCLIP_MAX_REDIRECTS = 5;
 
+const OG_IMAGE_META_PROPERTY_FIRST_RE =
+  /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i;
+const OG_IMAGE_META_CONTENT_FIRST_RE =
+  /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i;
+const OG_TITLE_META_PROPERTY_FIRST_RE =
+  /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i;
+const HTML_TITLE_TAG_RE = /<title[^>]*>([^<]{1,200})<\/title>/i;
+const HTTP_PROTOCOL_RE = /^https?:\/\//i;
+
 function pickOgImage(html: string): string | null {
-  const m = html.match(
-    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i
-  );
+  const m = html.match(OG_IMAGE_META_PROPERTY_FIRST_RE);
   if (m?.[1]) {
     return m[1].trim();
   }
-  const m2 = html.match(
-    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i
-  );
+  const m2 = html.match(OG_IMAGE_META_CONTENT_FIRST_RE);
   return m2?.[1]?.trim() ?? null;
 }
 
 function pickTitle(html: string): string | null {
-  const m = html.match(
-    /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i
-  );
+  const m = html.match(OG_TITLE_META_PROPERTY_FIRST_RE);
   if (m?.[1]) {
     return m[1].trim();
   }
-  const t = html.match(/<title[^>]*>([^<]{1,200})<\/title>/i);
+  const t = html.match(HTML_TITLE_TAG_RE);
   return t?.[1]?.trim() ?? null;
 }
 
@@ -68,7 +71,7 @@ export async function POST(req: Request) {
   }
 
   const url = parsed.data.url;
-  if (!/^https?:\/\//i.test(url)) {
+  if (!HTTP_PROTOCOL_RE.test(url)) {
     return NextResponse.json(
       { error: "HTTP(S) only", ok: false },
       { status: 400 }

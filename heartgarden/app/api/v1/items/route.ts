@@ -75,13 +75,15 @@ export async function GET(req: Request) {
     .where(eq(items.spaceId, spaceId));
   const total = totalRow?.c ?? 0;
 
-  let rows;
+  const itemsRowQuery = db
+    .select()
+    .from(items)
+    .where(eq(items.spaceId, spaceId))
+    .orderBy(asc(items.zIndex), asc(items.createdAt));
+  type ItemsRow = Awaited<typeof itemsRowQuery>[number];
+  let rows: ItemsRow[];
   if (pageLimit == null) {
-    rows = await db
-      .select()
-      .from(items)
-      .where(eq(items.spaceId, spaceId))
-      .orderBy(asc(items.zIndex), asc(items.createdAt));
+    rows = await itemsRowQuery;
   } else {
     rows = await db
       .select()

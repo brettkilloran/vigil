@@ -8,6 +8,8 @@ import {
 
 const DEFAULT_NOTES_HTML = "<p><br></p>";
 
+const WHITESPACE_SPLIT_RE = /\s+/;
+
 function parseWrapped(html: string): HTMLElement | null {
   if (typeof DOMParser === "undefined") {
     return null;
@@ -65,7 +67,7 @@ function takeText(root: ParentNode, selector: string, fallback = ""): string {
 function ensureVigilMediaUploadButtonClass(rawClass: string): string {
   const tokens = new Set(
     rawClass
-      .split(/\s+/)
+      .split(WHITESPACE_SPLIT_RE)
       .map((token) => token.trim())
       .filter(Boolean)
   );

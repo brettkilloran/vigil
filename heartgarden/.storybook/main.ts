@@ -69,6 +69,7 @@ const config: StorybookConfig = {
    * Default pnpm scripts bind **localhost** (not 0.0.0.0) so Windows HMR / dev-server client URLs stay
    * consistent. Use `pnpm run storybook:lan` when you need the LAN URL.
    */
+  // biome-ignore lint/suspicious/useAwait: Storybook expects webpackFinal to be async; signature is fixed by the API even when the body has no awaits.
   webpackFinal: async (cfg: Configuration) => {
     cfg.devServer = {
       ...cfg.devServer,

@@ -15,16 +15,21 @@ interface HeartgardenRealtimeTokenPayload {
   spaceId: string;
 }
 
+const BASE64_PLUS_RE = /\+/g;
+const BASE64_SLASH_RE = /\//g;
+const BASE64_TRAILING_EQUALS_RE = /=+$/u;
+const BASE64_URL_RE = /^[A-Za-z0-9_-]*$/u;
+
 function toBase64Url(buf: Buffer): string {
   return buf
     .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/u, "");
+    .replace(BASE64_PLUS_RE, "-")
+    .replace(BASE64_SLASH_RE, "_")
+    .replace(BASE64_TRAILING_EQUALS_RE, "");
 }
 
 function fromBase64Url(s: string): Buffer | null {
-  if (!/^[A-Za-z0-9_-]*$/u.test(s)) {
+  if (!BASE64_URL_RE.test(s)) {
     return null;
   }
   let b64 = s.replace(/-/g, "+").replace(/_/g, "/");

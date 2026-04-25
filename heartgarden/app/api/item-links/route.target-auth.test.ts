@@ -11,7 +11,9 @@ const tryGetDbMock = vi.fn();
 const validateLinkTargetsInBraneMock = vi.fn();
 const gmMayAccessItemSpaceAsyncMock = vi.fn();
 const playerMayAccessItemSpaceAsyncMock = vi.fn();
-const publishHeartgardenSpaceInvalidationMock = vi.fn(async () => {});
+const publishHeartgardenSpaceInvalidationMock = vi.fn(async () => {
+  /* noop */
+});
 
 vi.mock("@/src/db/index", () => ({ tryGetDb: tryGetDbMock }));
 vi.mock("@/src/lib/item-links-validation", () => ({
@@ -51,6 +53,7 @@ describe("PATCH /api/item-links target-space auth ordering", () => {
       select: vi.fn((shape: Record<string, unknown> | undefined) => ({
         from: vi.fn(() => ({
           where: vi.fn(() => ({
+            // biome-ignore lint/suspicious/useAwait: Vitest mock returns a Promise to mirror Drizzle's awaited query shape; body has no actual async work.
             limit: vi.fn(async () => {
               const keys = shape ? Object.keys(shape) : [];
               if (
@@ -72,6 +75,7 @@ describe("PATCH /api/item-links target-space auth ordering", () => {
           // Drizzle awaits the chain directly when no `.limit()` follows.
         })),
       })),
+      // biome-ignore lint/suspicious/useAwait: Vitest mock matches Drizzle's async transaction signature; the spy stub itself does not await anything.
       transaction: vi.fn(async () => {
         updateSpy();
       }),
@@ -172,6 +176,7 @@ describe("DELETE /api/item-links target-space auth ordering", () => {
         cb({
           delete: vi.fn(() => ({
             where: vi.fn(() => ({
+              // biome-ignore lint/suspicious/useAwait: Vitest mock returns a Promise to mirror Drizzle's awaited returning() shape; the stub body has no actual async work.
               returning: vi.fn(async () => {
                 deleteSpy();
                 return [];

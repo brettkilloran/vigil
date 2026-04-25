@@ -10,6 +10,11 @@ import {
   resolveHeartgardenMcpBaseUrl,
 } from "./heartgarden-mcp-server";
 
+const NOT_SET_RE = /not set/;
+const REQUIRED_RE = /required/;
+const EXCEEDS_RE = /exceeds/;
+const SERIALIZED_RE = /serialized/;
+
 describe("canonicalHeartgardenMcpToolName", () => {
   it("maps vigil_ tool names to heartgarden_ (legacy tools/call aliases)", () => {
     const pairs: [string, string][] = [
@@ -80,7 +85,7 @@ describe("mcpCoerceTruthyFlag", () => {
 describe("mcpWriteKeyError", () => {
   it("returns error when server key is unset", () => {
     expect(mcpWriteKeyError({}, "", { allowOmitWhenConfigSet: true })).toMatch(
-      /not set/
+      NOT_SET_RE
     );
   });
   it("allows omit when configured and allowOmitWhenConfigSet", () => {
@@ -98,7 +103,7 @@ describe("mcpWriteKeyError", () => {
   it("requires explicit key when omit not allowed", () => {
     expect(
       mcpWriteKeyError({}, "secret", { allowOmitWhenConfigSet: false })
-    ).toMatch(/required/);
+    ).toMatch(REQUIRED_RE);
   });
 });
 
@@ -107,7 +112,7 @@ describe("mcp payload size guards", () => {
     const within = "a".repeat(MCP_MAX_CONTENT_TEXT_CHARS);
     const over = "a".repeat(MCP_MAX_CONTENT_TEXT_CHARS + 1);
     expect(mcpContentTextTooLong("content_text", within)).toBeNull();
-    expect(mcpContentTextTooLong("content_text", over)).toMatch(/exceeds/);
+    expect(mcpContentTextTooLong("content_text", over)).toMatch(EXCEEDS_RE);
   });
 
   it("caps serialized structured payloads", () => {
@@ -115,7 +120,7 @@ describe("mcp payload size guards", () => {
     expect(mcpSerializedPayloadTooLong("content_json", within)).toBeNull();
     const over = { text: "a".repeat(MCP_MAX_CONTENT_TEXT_CHARS + 8) };
     expect(mcpSerializedPayloadTooLong("content_json", over)).toMatch(
-      /serialized/
+      SERIALIZED_RE
     );
   });
 });

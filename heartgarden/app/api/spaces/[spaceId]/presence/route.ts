@@ -194,12 +194,7 @@ export async function POST(
   }
 
   const camera = clampPresenceCamera(parsed.data.camera);
-  const pointer =
-    parsed.data.pointer === undefined
-      ? null
-      : parsed.data.pointer === null
-        ? null
-        : parsed.data.pointer;
+  const pointer = parsed.data.pointer ?? null;
   const displayName = normalizePresenceDisplayName(parsed.data.displayName);
   const sigil = safePresenceSigilFromUnknown(parsed.data.sigil);
 

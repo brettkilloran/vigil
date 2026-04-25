@@ -2,6 +2,9 @@
 
 import { useMemo, useSyncExternalStore } from "react";
 
+const APPLE_PLATFORM_RE = /Mac|iPhone|iPod|iPad/i;
+const APPLE_USER_AGENT_RE = /Mac OS X|Macintosh|iPhone|iPad|iPod/;
+
 function isAppleOS(): boolean {
   if (typeof navigator === "undefined") {
     return false;
@@ -10,14 +13,16 @@ function isAppleOS(): boolean {
     userAgentData?: { platform?: string };
   };
   const p = nav.userAgentData?.platform ?? "";
-  if (/Mac|iPhone|iPod|iPad/i.test(p)) {
+  if (APPLE_PLATFORM_RE.test(p)) {
     return true;
   }
   const ua = navigator.userAgent;
-  return /Mac OS X|Macintosh|iPhone|iPad|iPod/.test(ua);
+  return APPLE_USER_AGENT_RE.test(ua);
 }
 
-const noopSubscribe = () => () => {};
+const noopSubscribe = () => () => {
+  /* noop */
+};
 
 /**
  * macOS / iOS use ⌘; Windows and Linux use Ctrl for the same handlers

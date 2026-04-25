@@ -13,6 +13,9 @@ import {
 import { filterPlanLinksToSameCanvasSpace } from "@/src/lib/lore-import-item-link";
 import { coerceImportLinkType } from "@/src/lib/lore-import-link-shape";
 import { computeLoreImportPipelinePercent } from "@/src/lib/lore-import-pipeline-progress";
+
+const SENTENCE_BOUNDARY_RE = /(?<=[.!?])\s+/;
+
 import {
   attachBodiesToOutline,
   type CandidateRow,
@@ -95,6 +98,7 @@ type LoreImportPlanEventReporter = (
   event: LoreImportPlanEvent
 ) => void | Promise<void>;
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: lore import plan-build merges LLM response with local placement heuristics
 export async function buildLoreImportPlan(args: {
   db: VigilDb;
   spaceId: string;
@@ -291,7 +295,7 @@ export async function buildLoreImportPlan(args: {
     const primaryId = dup.noteClientIds[0]!;
     const primaryTitle = titleByClientId.get(primaryId) ?? "Related note";
     const shortMention =
-      dup.quote.split(/(?<=[.!?])\s+/)[0]?.slice(0, 180) ??
+      dup.quote.split(SENTENCE_BOUNDARY_RE)[0]?.slice(0, 180) ??
       dup.quote.slice(0, 180);
     for (const noteId of dup.noteClientIds.slice(1)) {
       const note = notesInternal.find((n) => n.clientId === noteId);

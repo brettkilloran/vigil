@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { LoreEntityNodesClient } from "./LoreEntityNodesClient";
+import { LoreEntityNodesClient } from "./lore-entity-nodes-client";
 
 export const metadata: Metadata = {
   description:

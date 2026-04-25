@@ -1,3 +1,5 @@
+import { fnv1aHash32 } from "@/src/lib/hash-utils";
+
 export const PRESENCE_DISPLAY_NAME_MAX_CHARS = 32;
 
 /**
@@ -5,6 +7,7 @@ export const PRESENCE_DISPLAY_NAME_MAX_CHARS = 32;
  * odd punctuation noise. Unicode letters/numbers are allowed.
  */
 const PRESENCE_DISPLAY_NAME_ALLOWED_RE = /^[\p{L}\p{N}][\p{L}\p{N}\s.'_-]*$/u;
+const WHITESPACE_RUN_RE = /\s+/;
 
 const PRESENCE_ALIAS_LEFT = [
   "Aether",
@@ -88,21 +91,12 @@ const PRESENCE_EMOJI_PALETTE = [
   "🛰️",
 ] as const;
 
-function hashUuidToUint32(uuid: string): number {
-  let h = 2_166_136_261;
-  for (let i = 0; i < uuid.length; i++) {
-    h ^= uuid.charCodeAt(i);
-    h = Math.imul(h, 16_777_619);
-  }
-  return h >>> 0;
-}
-
 function normalizeHashInput(value: string): string {
   return value.trim().toLowerCase();
 }
 
 export function presenceEmojiForClientId(clientId: string): string {
-  const h = hashUuidToUint32(normalizeHashInput(clientId));
+  const h = fnv1aHash32(normalizeHashInput(clientId));
   return PRESENCE_EMOJI_PALETTE[h % PRESENCE_EMOJI_PALETTE.length] ?? "🙂";
 }
 
@@ -118,7 +112,7 @@ export function sanitizePresenceDisplayName(raw: unknown): string | null {
 }
 
 export function presenceFallbackAliasForClientId(clientId: string): string {
-  const h = hashUuidToUint32(normalizeHashInput(clientId));
+  const h = fnv1aHash32(normalizeHashInput(clientId));
   const left = PRESENCE_ALIAS_LEFT[h % PRESENCE_ALIAS_LEFT.length] ?? "North";
   const right =
     PRESENCE_ALIAS_RIGHT[
@@ -138,7 +132,7 @@ export function presenceNameForClient(
 }
 
 export function presenceInitialsFromName(name: string): string {
-  const tokens = name.trim().split(/\s+/).filter(Boolean);
+  const tokens = name.trim().split(WHITESPACE_RUN_RE).filter(Boolean);
   const first = tokens[0]?.[0] ?? "";
   const last =
     tokens.length > 1 ? (tokens.at(-1)?.[0] ?? "") : (tokens[0]?.[1] ?? "");
@@ -149,7 +143,7 @@ export function presenceInitialsFromName(name: string): string {
 export function presenceSigilForClientId(
   clientId: string
 ): PresenceSigilVariant {
-  const h = hashUuidToUint32(normalizeHashInput(clientId));
+  const h = fnv1aHash32(normalizeHashInput(clientId));
   return (
     PRESENCE_SIGIL_VARIANTS[h % PRESENCE_SIGIL_VARIANTS.length] ?? "thread"
   );
@@ -172,7 +166,7 @@ export function presenceSigilLabel(
 
 /** CSS `hue` 0–360 for collaborator chrome (pointer + ring). */
 export function presenceHueForClientId(clientId: string): number {
-  return hashUuidToUint32(normalizeHashInput(clientId)) % 360;
+  return fnv1aHash32(normalizeHashInput(clientId)) % 360;
 }
 
 export function presenceCursorColor(clientId: string): string {

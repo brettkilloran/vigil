@@ -5,6 +5,10 @@ import {
   webclipAddressBlocked,
 } from "@/src/lib/webclip-ssrf";
 
+const PORT_ERROR_RE = /port/;
+const LOCALHOST_ERROR_RE = /localhost/;
+const PRIVATE_ADDRESS_ERROR_RE = /private address/;
+
 describe("webclipAddressBlocked", () => {
   it("blocks common private/loopback ranges", () => {
     expect(webclipAddressBlocked("127.0.0.1")).toBe(true);
@@ -28,13 +32,13 @@ describe("assertWebclipFetchTargetAllowed", () => {
   it("rejects disallowed ports", async () => {
     await expect(
       assertWebclipFetchTargetAllowed(new URL("https://example.com:8080/path"))
-    ).rejects.toThrow(/port/);
+    ).rejects.toThrow(PORT_ERROR_RE);
   });
 
   it("rejects localhost", async () => {
     await expect(
       assertWebclipFetchTargetAllowed(new URL("http://localhost/path"))
-    ).rejects.toThrow(/localhost/);
+    ).rejects.toThrow(LOCALHOST_ERROR_RE);
   });
 
   it("rejects host resolving to private address", async () => {
@@ -42,7 +46,7 @@ describe("assertWebclipFetchTargetAllowed", () => {
       assertWebclipFetchTargetAllowed(new URL("https://example.com/path"), {
         lookupHost: async () => ["10.0.0.1"],
       })
-    ).rejects.toThrow(/private address/);
+    ).rejects.toThrow(PRIVATE_ADDRESS_ERROR_RE);
   });
 
   it("allows host resolving to public address", async () => {

@@ -13,6 +13,8 @@ const MAX_BODY_CHARS = 2000;
 const HEADINGLESS_TARGET_CHARS = 1200;
 const HEADINGLESS_MIN_CHARS = 600;
 
+const MARKDOWN_HEADING_RE = /^(#{1,6})\s+(.+)$/;
+
 /** Split markdown/plaintext on ATX headings; subdivide oversized bodies. */
 export function chunkSourceText(fullText: string): SourceTextChunk[] {
   const text = fullText.replace(/\0/g, "").replace(/\r\n?/g, "\n").trim();
@@ -51,7 +53,7 @@ export function chunkSourceText(fullText: string): SourceTextChunk[] {
 
   for (const line of lines) {
     const lineStart = offset;
-    const m = /^(#{1,6})\s+(.+)$/.exec(line);
+    const m = MARKDOWN_HEADING_RE.exec(line);
     if (m) {
       flush();
       currentHeading = m[2]?.trim().slice(0, 200) || "Section";

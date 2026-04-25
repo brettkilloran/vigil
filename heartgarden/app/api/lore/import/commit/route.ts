@@ -174,6 +174,7 @@ export async function POST(req: Request) {
   const embeddingRows: (typeof items.$inferSelect)[] = [];
 
   const { createdIds, sourceItemId, linksCreated, linkWarnings } =
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: lore-import commit transaction inserts source plus N entity notes, dedupes by name, and creates link rows in one atomic block
     await db.transaction(async (tx) => {
       const [mz] = await tx
         .select({ z: max(items.zIndex) })
@@ -255,8 +256,7 @@ export async function POST(req: Request) {
         sourceItemId = id;
       }
 
-      for (let i = 0; i < deduped.length; i++) {
-        const e = deduped[i]!;
+      for (const e of deduped) {
         const pos = layout.entities[e.canonicalName.toLowerCase()] ?? {
           height: 260,
           width: 280,

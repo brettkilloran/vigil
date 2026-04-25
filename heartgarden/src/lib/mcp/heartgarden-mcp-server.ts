@@ -169,6 +169,10 @@ const MCP_SPACE_ID_OPTIONAL_HINT =
 const MCP_ERR_MISSING_SPACE =
   "Missing space_id: pass space_id or set HEARTGARDEN_DEFAULT_SPACE_ID on the MCP process (check heartgarden_mcp_config).";
 
+const TRAILING_SLASH_RE = /\/$/;
+const URL_PROTOCOL_PREFIX_RE = /^https?:\/\//;
+const LORE_RESOURCE_URI_RE = /^lore:\/\/space\/([0-9a-f-]{36})$/i;
+
 function mergeAuthHeaders(serviceKey: string, headers?: HeadersInit): Headers {
   const h = new Headers(headers);
   if (serviceKey.length > 0 && !h.has("Authorization")) {
@@ -181,13 +185,13 @@ function mergeAuthHeaders(serviceKey: string, headers?: HeadersInit): Headers {
 export function resolveHeartgardenMcpBaseUrl(request?: Request): string {
   const fromEnv = (process.env.HEARTGARDEN_APP_URL ?? "")
     .trim()
-    .replace(/\/$/, "");
+    .replace(TRAILING_SLASH_RE, "");
   if (fromEnv.length > 0) {
     return fromEnv;
   }
   const vercel = (process.env.VERCEL_URL ?? "").trim();
   if (vercel.length > 0) {
-    const host = vercel.replace(/^https?:\/\//, "");
+    const host = vercel.replace(URL_PROTOCOL_PREFIX_RE, "");
     return `https://${host}`;
   }
   if (request) {
@@ -254,7 +258,7 @@ function filterGmSpaces(
 export function createHeartgardenMcpServer(
   config: HeartgardenMcpServerConfig
 ): Server {
-  const BASE = config.baseUrl.replace(/\/$/, "");
+  const BASE = config.baseUrl.replace(TRAILING_SLASH_RE, "");
   const SPACE = config.defaultSpaceId;
   const WRITE_KEY = config.writeKey;
   const SERVICE_KEY = config.serviceKey;
@@ -395,7 +399,7 @@ export function createHeartgardenMcpServer(
 
   server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const uri = String(request.params.uri ?? "");
-    const m = /^lore:\/\/space\/([0-9a-f-]{36})$/i.exec(uri);
+    const m = LORE_RESOURCE_URI_RE.exec(uri);
     if (!m) {
       return {
         contents: [
@@ -1001,6 +1005,7 @@ export function createHeartgardenMcpServer(
     }>;
   }
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: MCP CallTool handler dispatches every heartgarden_* tool name through a switch with auth, args parsing, and response shaping
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const name = canonicalHeartgardenMcpToolName(
       String(request.params.name ?? "")

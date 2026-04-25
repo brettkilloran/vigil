@@ -65,6 +65,7 @@ describe("POST /api/item-links/sync", () => {
               ) => Promise<unknown>;
             } = {
               limit: vi.fn(async () => [{ spaceId: "space-a" }]),
+              // biome-ignore lint/suspicious/noThenProperty: intentional thenable shape — mock mirrors Drizzle's query builder which is itself thenable
               then: (resolve, reject) =>
                 Promise.resolve([] as unknown[]).then(resolve, reject),
             };

@@ -11,6 +11,8 @@ import {
   withCrossFolderRef,
 } from "@/src/lib/entity-meta-schema";
 
+const INVALID_ENTITY_META_ERROR_RE = /invalid entity_meta/;
+
 describe("entity-meta-schema", () => {
   it("parses a minimal importer meta", () => {
     const parsed = parseImportedEntityMeta({
@@ -70,7 +72,7 @@ describe("entity-meta-schema", () => {
       buildImportedEntityMeta({
         canonicalEntityKind: "dragon" as never,
       })
-    ).toThrow(/invalid entity_meta/);
+    ).toThrow(INVALID_ENTITY_META_ERROR_RE);
   });
 
   it("withCrossFolderRef deduplicates by target title + id", () => {

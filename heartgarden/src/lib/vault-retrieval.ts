@@ -47,6 +47,8 @@ export const DEFAULT_RRF_LEXICAL_WEIGHT = 1;
 export const DEFAULT_RRF_VECTOR_WEIGHT = 1;
 export const DEFAULT_RRF_MENTION_WEIGHT = 0.5;
 
+const WHITESPACE_SPLIT_RE = /\s+/;
+
 function envNumberInRange(
   raw: string | undefined,
   fallback: number,
@@ -126,7 +128,7 @@ export interface HybridRetrieveOptions {
 function tokenizeMentionQuery(query: string): string[] {
   return query
     .toLowerCase()
-    .split(/\s+/)
+    .split(WHITESPACE_SPLIT_RE)
     .map((v) => v.trim())
     .filter((v) => v.length >= 3)
     .slice(0, 8);

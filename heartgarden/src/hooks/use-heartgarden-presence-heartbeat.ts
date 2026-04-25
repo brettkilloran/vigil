@@ -16,7 +16,7 @@ import {
 import { getOrCreatePresenceClientId } from "@/src/lib/heartgarden-presence-client";
 import type { CameraState } from "@/src/model/canvas-types";
 
-export type { SpacePresencePeer };
+export type { SpacePresencePeer } from "@/src/components/foundation/architectural-neon-api";
 
 /**
  * Presence heartbeat + peer poll. Split into two effects so that "leave" signals

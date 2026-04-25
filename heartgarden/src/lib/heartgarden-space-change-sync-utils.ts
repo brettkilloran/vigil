@@ -49,8 +49,14 @@ export function buildCollabMergeProtectedContentIds(options: {
   if (focusOpen && focusDirty && activeNodeId) {
     out.add(activeNodeId);
   }
-  inlineContentDirtyIds.forEach((id) => out.add(id));
-  savingContentIds?.forEach((id) => out.add(id));
+  for (const id of inlineContentDirtyIds) {
+    out.add(id);
+  }
+  if (savingContentIds) {
+    for (const id of savingContentIds) {
+      out.add(id);
+    }
+  }
   return out;
 }
 
@@ -185,6 +191,7 @@ function isStringArray(v: unknown): v is string[] {
  * Validate JSON already known to be `ok: true` from HTTP layer. Returns `null` if the body
  * violates the merge contract (e.g. missing `itemIds` when required).
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: space changes response parser type-narrows each optional field and enforces the merge contract per shape
 export function parseSpaceChangesResponseJson(
   raw: unknown,
   options: { requireItemIds: boolean }

@@ -4,6 +4,8 @@ import type { InferSelectModel } from "drizzle-orm";
 import { and, desc, eq, inArray, max, sql } from "drizzle-orm";
 import { z } from "zod";
 
+const FILENAME_EXTENSION_RE = /\.[^.]+$/;
+
 import { buildContentJsonForFolderEntity } from "@/src/components/foundation/architectural-db-bridge";
 import type { CanvasFolderEntity } from "@/src/components/foundation/architectural-types";
 import {
@@ -216,7 +218,7 @@ function fallbackOneNoteTitle(
   const explicit =
     plan.oneNoteSource?.title?.trim() ||
     body.sourceDocument?.title?.trim() ||
-    plan.fileName?.replace(/\.[^.]+$/, "").trim();
+    plan.fileName?.replace(FILENAME_EXTENSION_RE, "").trim();
   return explicit || "Imported document";
 }
 
@@ -344,6 +346,7 @@ function takeNextZIndex(cursor: Map<string, number>, spaceId: string): number {
   return next;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: lore import apply orchestrates note creation, folder placement, link creation, and merge bindings inside a single transaction
 export async function applyLoreImportPlan(
   db: VigilDb,
   raw: LoreImportApplyBody
@@ -597,6 +600,7 @@ export async function applyLoreImportPlan(
 
   const rowsToSchedule: ItemRow[] = [];
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: lore import transaction body branches on granularity (one_note/multi) and applies inserts, merges, and link writes
   await db.transaction(async (tx) => {
     const dbx = tx as unknown as VigilDb;
     if (granularity === "one_note") {

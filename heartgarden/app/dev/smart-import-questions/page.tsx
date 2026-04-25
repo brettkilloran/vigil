@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { SmartImportQuestionsDemo } from "./SmartImportQuestionsDemo";
+import { SmartImportQuestionsDemo } from "./smart-import-questions-demo";
 
 export const metadata: Metadata = {
   description: "Dev preview of the Smart Import question wizard flow.",

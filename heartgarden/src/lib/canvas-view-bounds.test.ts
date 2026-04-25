@@ -101,8 +101,10 @@ describe("computeSpaceContentBounds", () => {
   it("uses folder default dimensions", () => {
     const g = graphWith([folder("f", 0, 0)]);
     const b = computeSpaceContentBounds(g, SPACE, []);
-    expect(b?.maxX - b?.minX).toBeCloseTo(CANVAS_BOUNDS_FOLDER_WIDTH);
-    expect(b?.maxY - b?.minY).toBeCloseTo(CANVAS_BOUNDS_FOLDER_HEIGHT);
+    // biome-ignore lint/style/noNonNullAssertion: test precondition — single folder yields non-null bounds
+    expect(b!.maxX - b!.minX).toBeCloseTo(CANVAS_BOUNDS_FOLDER_WIDTH);
+    // biome-ignore lint/style/noNonNullAssertion: test precondition — single folder yields non-null bounds
+    expect(b!.maxY - b!.minY).toBeCloseTo(CANVAS_BOUNDS_FOLDER_HEIGHT);
   });
 
   it("treats multi-card stack as one footprint at stack slot", () => {
@@ -114,8 +116,10 @@ describe("computeSpaceContentBounds", () => {
     expect(stacks).toHaveLength(1);
     const solo = computeSpaceContentBounds(g, SPACE, []);
     const withStacks = computeSpaceContentBounds(g, SPACE, stacks);
-    expect(withStacks?.maxX).toBeGreaterThan(solo?.maxX);
-    expect(withStacks?.maxX).toBeCloseTo(
+    // biome-ignore lint/style/noNonNullAssertion: test precondition — both bound calls have content and yield non-null
+    expect(withStacks!.maxX).toBeGreaterThan(solo!.maxX);
+    // biome-ignore lint/style/noNonNullAssertion: test precondition — see above
+    expect(withStacks!.maxX).toBeCloseTo(
       100 + CANVAS_BOUNDS_UNIFIED_NODE_WIDTH + 6
     );
   });
@@ -125,10 +129,13 @@ describe("computeSpaceContentBounds", () => {
     const graphOnly = computeSpaceContentBounds(g, SPACE, []);
     const measured = new Map([["a", { height: 900, width: 340 }]]);
     const withDom = computeSpaceContentBounds(g, SPACE, [], measured);
-    expect(withDom?.maxY - withDom?.minY).toBeGreaterThan(
-      graphOnly?.maxY - graphOnly?.minY
+    // biome-ignore lint/style/noNonNullAssertion: test precondition — both bound calls have content and yield non-null
+    expect(withDom!.maxY - withDom!.minY).toBeGreaterThan(
+      // biome-ignore lint/style/noNonNullAssertion: test precondition — see above
+      graphOnly!.maxY - graphOnly!.minY
     );
-    expect(withDom?.maxY).toBeCloseTo(20 + 900);
+    // biome-ignore lint/style/noNonNullAssertion: test precondition — see above
+    expect(withDom!.maxY).toBeCloseTo(20 + 900);
   });
 });
 
@@ -195,17 +202,22 @@ describe("computeBoundsForEntitySubset", () => {
     const stacks = buildCollapsedStacksList(g, SPACE);
     const b = computeBoundsForEntitySubset(g, SPACE, stacks, ["bottom"]);
     expect(b).not.toBeNull();
-    expect(b?.minX).toBeLessThanOrEqual(500);
-    expect(b?.maxX).toBeGreaterThanOrEqual(
+    if (!b) {
+      return;
+    }
+    expect(b.minX).toBeLessThanOrEqual(500);
+    expect(b.maxX).toBeGreaterThanOrEqual(
       500 + CANVAS_BOUNDS_UNIFIED_NODE_WIDTH
     );
     const b2 = computeBoundsForEntitySubset(g, SPACE, stacks, ["a", "bottom"]);
-    expect(b2?.minX).toBeCloseTo(0);
-    expect(b?.minX).toBeCloseTo(500);
-    expect(b2?.maxX).toBeCloseTo(b?.maxX);
-    expect(b2?.maxX).toBeGreaterThan(
-      b2?.minX + CANVAS_BOUNDS_UNIFIED_NODE_WIDTH
-    );
+    expect(b2).not.toBeNull();
+    if (!b2) {
+      return;
+    }
+    expect(b2.minX).toBeCloseTo(0);
+    expect(b.minX).toBeCloseTo(500);
+    expect(b2.maxX).toBeCloseTo(b.maxX);
+    expect(b2.maxX).toBeGreaterThan(b2.minX + CANVAS_BOUNDS_UNIFIED_NODE_WIDTH);
   });
 
   it("returns null for empty selection", () => {

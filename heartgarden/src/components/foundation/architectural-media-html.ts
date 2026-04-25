@@ -13,6 +13,18 @@ const MEDIA_ROOT_SEL = "[data-architectural-media-root]";
 const MEDIA_NOTES_SEL = "[data-architectural-media-notes]";
 const MEDIA_UPLOAD_BTN_SEL = "[data-architectural-media-upload]";
 
+const WHITESPACE_RUN_RE = /\s+/;
+const IMG_TAG_RE = /<img\b[^>]*>/i;
+const SRC_QUOTED_ATTR_RE = /\bsrc\s*=\s*["']([^"']*)["']/i;
+const SRC_UNQUOTED_ATTR_RE = /\bsrc\s*=\s*([^\s>]+)/i;
+const ALT_QUOTED_ATTR_RE = /\balt\s*=\s*["']([^"']*)["']/i;
+const ALT_UNQUOTED_ATTR_RE = /\balt\s*=\s*([^\s>]+)/i;
+const ARCHITECTURAL_MEDIA_ROOT_OPEN_TAG_RE =
+  /<[^>]*\bdata-architectural-media-root\s*=\s*(?:"true"|'true'|true)\b[^>]*>/i;
+const LORE_PORTRAIT_ROOT_ATTR_RE = /\bdata-hg-lore-portrait-root\s*=/i;
+const LORE_PORTRAIT_ROOT_V9_V11_RE =
+  /\bdata-hg-lore-portrait-root\s*=\s*(?:"v9"|"v10"|"v11"|'v9'|'v10'|'v11'|v9|v10|v11)\b/i;
+
 export function mediaUploadActionLabel(
   hasImage: boolean
 ): "Upload" | "Replace" {
@@ -22,7 +34,7 @@ export function mediaUploadActionLabel(
 function buildMediaUploadButtonClass(uploadButtonClass?: string): string {
   const tokens = new Set(
     (uploadButtonClass || "")
-      .split(/\s+/)
+      .split(WHITESPACE_RUN_RE)
       .map((t) => t.trim())
       .filter(Boolean)
   );
@@ -35,17 +47,17 @@ function parseFirstImgFromHtmlFragment(html: string): {
   src: string | null;
   alt: string;
 } {
-  const imgMatch = html.match(/<img\b[^>]*>/i);
+  const imgMatch = html.match(IMG_TAG_RE);
   if (!imgMatch) {
     return { alt: "", src: null };
   }
   const tag = imgMatch[0];
-  const srcQuoted = /\bsrc\s*=\s*["']([^"']*)["']/i.exec(tag);
-  const srcUnquoted = srcQuoted ? null : /\bsrc\s*=\s*([^\s>]+)/i.exec(tag);
+  const srcQuoted = SRC_QUOTED_ATTR_RE.exec(tag);
+  const srcUnquoted = srcQuoted ? null : SRC_UNQUOTED_ATTR_RE.exec(tag);
   const rawSrc = srcQuoted?.[1] ?? srcUnquoted?.[1] ?? null;
   const src = rawSrc != null && rawSrc.length > 0 ? rawSrc : null;
-  const altQuoted = /\balt\s*=\s*["']([^"']*)["']/i.exec(tag);
-  const altUnquoted = altQuoted ? null : /\balt\s*=\s*([^\s>]+)/i.exec(tag);
+  const altQuoted = ALT_QUOTED_ATTR_RE.exec(tag);
+  const altUnquoted = altQuoted ? null : ALT_UNQUOTED_ATTR_RE.exec(tag);
   const alt = altQuoted?.[1] ?? altUnquoted?.[1] ?? "";
   return { alt, src };
 }
@@ -57,10 +69,7 @@ export function parseArchitecturalMediaFromBody(bodyHtml: string): {
   src: string | null;
   alt: string;
 } {
-  const rootOpen =
-    /<[^>]*\bdata-architectural-media-root\s*=\s*(?:"true"|'true'|true)\b[^>]*>/i.exec(
-      bodyHtml
-    );
+  const rootOpen = ARCHITECTURAL_MEDIA_ROOT_OPEN_TAG_RE.exec(bodyHtml);
   if (rootOpen && rootOpen.index !== undefined) {
     const inner = bodyHtml.slice(rootOpen.index + rootOpen[0].length);
     const parsed = parseFirstImgFromHtmlFragment(inner);
@@ -139,14 +148,12 @@ export function setArchitecturalMediaNotes(
 
 /** Lore v8 (and similar) portrait wells use `data-hg-lore-portrait-root` on the media root. */
 export function bodyUsesLorePortraitMediaSlot(bodyHtml: string): boolean {
-  return /\bdata-hg-lore-portrait-root\s*=/i.test(bodyHtml);
+  return LORE_PORTRAIT_ROOT_ATTR_RE.test(bodyHtml);
 }
 
 /** v9 / v10 / v11 ID card portrait slot (same `charSkPortraitImg` treatment on committed `<img>`). */
 export function lorePortraitSlotUsesV9(bodyHtml: string): boolean {
-  return /\bdata-hg-lore-portrait-root\s*=\s*(?:"v9"|"v10"|"v11"|'v9'|'v10'|'v11'|v9|v10|v11)\b/i.test(
-    bodyHtml
-  );
+  return LORE_PORTRAIT_ROOT_V9_V11_RE.test(bodyHtml);
 }
 
 export function applyImageDataUrlToArchitecturalMediaBody(

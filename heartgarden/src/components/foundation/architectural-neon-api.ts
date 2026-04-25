@@ -9,6 +9,7 @@ import {
 } from "@/src/lib/heartgarden-collab-metrics";
 import {
   parseSpaceChangesResponseJson,
+  // biome-ignore lint/style/noExportedImports: SpaceChangePayloadRow is used locally (SpaceChangesSuccess.spaces) and re-exported on line 318 as part of the neon-api public surface
   type SpaceChangePayloadRow,
 } from "@/src/lib/heartgarden-space-change-sync-utils";
 import {
@@ -94,7 +95,7 @@ function scheduleVaultIndexForItem(itemId: string) {
       return;
     }
     vaultIndexMarkInFlight(itemId);
-    void (async () => {
+    (async () => {
       try {
         const res = await fetch(
           `/api/items/${encodeURIComponent(itemId)}/index`,
@@ -528,7 +529,7 @@ export async function postPresencePayload(
 export function leavePresenceBeacon(spaceId: string, clientId: string): void {
   try {
     const url = `/api/spaces/${encodeURIComponent(spaceId)}/presence?clientId=${encodeURIComponent(clientId)}`;
-    void fetch(url, { keepalive: true, method: "DELETE" }).catch(() => {
+    fetch(url, { keepalive: true, method: "DELETE" }).catch(() => {
       /* swallow — page is unloading; cannot recover anyway */
     });
   } catch {
@@ -658,10 +659,11 @@ export async function apiCreateItem(
   }
 }
 
-export async function apiPatchItem(
+export function apiPatchItem(
   itemId: string,
   patch: Record<string, unknown>
 ): Promise<ApiPatchItemResult> {
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: serialized PATCH wrapper instruments sync state, debug timing, retries on 409 conflict, and 4xx/5xx classification
   return runSerializedItemPatch(itemId, async () => {
     const track = getNeonSyncSnapshot().cloudEnabled;
     if (track) {

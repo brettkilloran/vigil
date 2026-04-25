@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { HeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
+// biome-ignore lint/performance/noNamespaceImport: vi.spyOn(target, name) needs the module namespace object as its first argument
 import * as heartgardenApiBootContext from "@/src/lib/heartgarden-api-boot-context";
 import {
   applySearchTierPolicy,

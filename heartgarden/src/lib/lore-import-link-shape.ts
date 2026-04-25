@@ -74,6 +74,9 @@ function linkTypeAcceptsEndpoints(
 
     case "history":
       return true; // catch-all — prior relationships, shared past.
+
+    default:
+      return false;
   }
 }
 

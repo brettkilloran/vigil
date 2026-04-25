@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
 
+const OKLCH_TRIPLET_RE = /^oklch\(\s*([\d.]+)\s+([\d.]+)\s+([-.\d]+)/i;
+
 /** Omit = canvas default (--folder-* from shell tokens). */
 export type FolderColorSchemeId =
   | "midnight"
@@ -30,7 +32,7 @@ export interface FolderColorSchemeMeta {
 
 /** Parse `oklch(L C H)` / `oklch(L C H / a)` from our scheme strings. */
 function parseOklch(swatch: string): { L: number; C: number } | null {
-  const m = swatch.trim().match(/^oklch\(\s*([\d.]+)\s+([\d.]+)\s+([-.\d]+)/i);
+  const m = swatch.trim().match(OKLCH_TRIPLET_RE);
   if (!m) {
     return null;
   }

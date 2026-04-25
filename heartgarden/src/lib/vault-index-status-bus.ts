@@ -6,7 +6,9 @@ let lastError: { message: string; at: number } | null = null;
 const listeners = new Set<VaultIndexListener>();
 
 function emit() {
-  listeners.forEach((fn) => fn());
+  for (const fn of listeners) {
+    fn();
+  }
 }
 
 export function vaultIndexMarkPending(itemId: string) {

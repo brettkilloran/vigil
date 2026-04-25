@@ -123,6 +123,7 @@ export function buildBindingPatchForImport(
  * returning a new hgArch object (does not mutate `baseHgArch`). Tracks the slot ids
  * touched so the caller can mark them pending review in `entity_meta`.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: lore import merges binding patches per slot kind into hgArch, tracking touched slot ids for pending-review metadata
 export function mergeHgArchBindingPatches(
   baseHgArch: Record<string, unknown> | undefined | null,
   patches: BindingPatch[]
@@ -188,6 +189,8 @@ export function mergeHgArchBindingPatches(
         hg.loreThreadAnchors = anchorsPrev;
         break;
       }
+      default:
+        break;
     }
   }
 

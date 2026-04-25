@@ -8,7 +8,7 @@ import {
   Playfair_Display,
 } from "next/font/google";
 
-import { RegisterSw } from "@/src/components/RegisterSw";
+import { RegisterSw } from "@/src/components/register-sw";
 import { HEARTGARDEN_APP_VERSION_LABEL } from "@/src/lib/app-version";
 import { HEARTGARDEN_BRAND_ICON_PATH } from "@/src/lib/brand-mark";
 import "./globals.css";

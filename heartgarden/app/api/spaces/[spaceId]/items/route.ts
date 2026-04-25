@@ -146,6 +146,7 @@ export async function GET(
   return Response.json(payload);
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: POST creates an item with optional content_json/text/markdown precedence, kind/entity-meta normalization, and z-index allocation
 export async function POST(
   req: Request,
   context: { params: Promise<{ spaceId: string }> }
@@ -313,26 +314,20 @@ export async function POST(
     }
   }
 
-  const defaultTitle =
-    t === "note"
-      ? "Note"
-      : t === "sticky"
-        ? "Sticky"
-        : t === "folder"
-          ? "Folder"
-          : t === "checklist"
-            ? "Checklist"
-            : t === "webclip"
-              ? "Web clip"
-              : "Item";
+  const DEFAULT_TITLES: Record<string, string> = {
+    checklist: "Checklist",
+    folder: "Folder",
+    note: "Note",
+    sticky: "Sticky",
+    webclip: "Web clip",
+  };
+  const defaultTitle = DEFAULT_TITLES[t] ?? "Item";
   const title = parsed.data.title?.trim() || defaultTitle;
-  const color =
-    parsed.data.color ??
-    (t === "sticky"
-      ? DS_COLOR.itemDefaultSticky
-      : t === "note"
-        ? DS_COLOR.itemDefaultNote
-        : null);
+  const DEFAULT_ITEM_COLORS: Record<string, string | null> = {
+    note: DS_COLOR.itemDefaultNote,
+    sticky: DS_COLOR.itemDefaultSticky,
+  };
+  const color = parsed.data.color ?? DEFAULT_ITEM_COLORS[t] ?? null;
   const { width: dimW, height: dimH } = defaultItemDimensions(t, entityType);
   const width = parsed.data.width ?? dimW;
   const height = parsed.data.height ?? dimH;

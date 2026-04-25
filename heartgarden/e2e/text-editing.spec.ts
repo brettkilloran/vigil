@@ -5,6 +5,8 @@ import {
   prepDemoSession,
 } from "./fixtures/bootstrap";
 
+const SAVE_AND_DATABASE_BUTTON_RE = /Save and database/;
+
 /**
  * Adds a default note and returns that card (not `[data-node-id].first()`, which may be a seeded
  * node off-screen when open-gate bootstrap loads the local demo graph).
@@ -42,7 +44,7 @@ test.describe("text editing hardening", () => {
     });
     await dismissHeartgardenBootIfPresent(page);
     await expect(
-      page.getByRole("button", { name: /Save and database/ })
+      page.getByRole("button", { name: SAVE_AND_DATABASE_BUTTON_RE })
     ).toBeVisible({
       timeout: 30_000,
     });

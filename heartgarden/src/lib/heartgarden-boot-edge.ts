@@ -3,6 +3,7 @@
  * Verification must match `verifyBootSessionCookie` in `heartgarden-boot-session.ts`.
  */
 
+import { constantTimeBytesEqual } from "@/src/lib/hash-utils";
 import { HEARTGARDEN_BOOT_COOKIE_MAX_CHARS } from "@/src/lib/heartgarden-boot-cookie-limits";
 import { isHeartgardenBootGateBypassed } from "@/src/lib/heartgarden-boot-gate-bypass";
 import { HEARTGARDEN_BOOT_PIN_LENGTH } from "@/src/lib/heartgarden-boot-pin-constants";
@@ -12,8 +13,10 @@ export const HEARTGARDEN_BOOT_COOKIE_NAME = "hg_boot";
 
 export type HeartgardenBootTierEdge = "access" | "player" | "demo";
 
+const BASE64_URL_RE = /^[A-Za-z0-9_-]*$/u;
+
 function base64UrlToUint8Array(s: string): Uint8Array | null {
-  if (!/^[A-Za-z0-9_-]*$/u.test(s)) {
+  if (!BASE64_URL_RE.test(s)) {
     return null;
   }
   let b64 = s.replace(/-/g, "+").replace(/_/g, "/");
@@ -36,17 +39,6 @@ function base64UrlToUint8Array(s: string): Uint8Array | null {
   } catch {
     return null;
   }
-}
-
-function timingSafeEqualBytes(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-  let x = 0;
-  for (let i = 0; i < a.length; i++) {
-    x |= a[i]! ^ b[i]!;
-  }
-  return x === 0;
 }
 
 async function hmacSha256(
@@ -123,7 +115,7 @@ export async function verifyBootSessionCookieEdge(
   }
   const expectedSig = await hmacSha256(secret, payloadB64);
   const gotSig = base64UrlToUint8Array(sigB64);
-  if (!(gotSig && timingSafeEqualBytes(expectedSig, gotSig))) {
+  if (!(gotSig && constantTimeBytesEqual(expectedSig, gotSig))) {
     return null;
   }
   const jsonBuf = base64UrlToUint8Array(payloadB64);

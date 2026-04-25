@@ -5,6 +5,10 @@ import {
   coerceImportLinkType,
 } from "@/src/lib/lore-import-link-shape";
 
+const DOES_NOT_FIT_RE = /does not fit/;
+const RESERVED_FOR_CANVAS_ROPES_RE = /reserved for canvas ropes/;
+const UNKNOWN_LINK_TYPE_RE = /Unknown link type/;
+
 describe("coerceImportLinkType", () => {
   it("allows bond between two characters (either canonical form)", () => {
     for (const a of ["character", "npc"]) {
@@ -20,7 +24,7 @@ describe("coerceImportLinkType", () => {
     const r = coerceImportLinkType("faction", "faction", "bond");
     expect(r.coerced).toBe(true);
     expect(r.linkType).toBe("history");
-    expect(r.reason).toMatch(/does not fit/);
+    expect(r.reason).toMatch(DOES_NOT_FIT_RE);
   });
 
   it("allows affiliation between character/faction either direction", () => {
@@ -75,7 +79,7 @@ describe("coerceImportLinkType", () => {
     const r = coerceImportLinkType("character", "character", "pin");
     expect(r.coerced).toBe(true);
     expect(r.linkType).toBe("history");
-    expect(r.reason).toMatch(/reserved for canvas ropes/);
+    expect(r.reason).toMatch(RESERVED_FOR_CANVAS_ROPES_RE);
   });
 
   it("falls back through legacy aliases before validating", () => {
@@ -93,7 +97,7 @@ describe("coerceImportLinkType", () => {
     const r = coerceImportLinkType("character", "character", "totally_made_up");
     expect(r.coerced).toBe(true);
     expect(r.linkType).toBe("history");
-    expect(r.reason).toMatch(/Unknown link type/);
+    expect(r.reason).toMatch(UNKNOWN_LINK_TYPE_RE);
   });
 
   it("every canonical import link type is exported", () => {

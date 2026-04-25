@@ -1,6 +1,8 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
+const TRAILING_SLASH_RE = /\/$/;
+
 export interface R2Env {
   accessKeyId: string;
   accountId: string;
@@ -16,7 +18,7 @@ export function readR2Env(): R2Env | null {
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY?.trim() ?? "";
   const bucket = process.env.R2_BUCKET_NAME?.trim() ?? "";
   const publicBaseUrl =
-    process.env.R2_PUBLIC_BASE_URL?.replace(/\/$/, "").trim() ?? "";
+    process.env.R2_PUBLIC_BASE_URL?.replace(TRAILING_SLASH_RE, "").trim() ?? "";
   if (
     !(accountId && accessKeyId && secretAccessKey && bucket && publicBaseUrl)
   ) {

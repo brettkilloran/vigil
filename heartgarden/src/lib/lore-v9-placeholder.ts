@@ -17,13 +17,12 @@ export function placeCaretAfterLorePlaceholderReplace(
   if (isNotes) {
     const paragraphs = field.querySelectorAll("p");
     const last =
-      paragraphs.length > 0
-        ? paragraphs.at(-1)!
-        : (() => {
-            const p = document.createElement("p");
-            field.appendChild(p);
-            return p;
-          })();
+      Array.from(paragraphs).at(-1) ??
+      (() => {
+        const p = document.createElement("p");
+        field.appendChild(p);
+        return p;
+      })();
     const tn = last.firstChild;
     if (tn && tn.nodeType === Node.TEXT_NODE) {
       const len = tn.textContent?.length ?? 0;

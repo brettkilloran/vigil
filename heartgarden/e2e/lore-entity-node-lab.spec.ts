@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 
 import { prepDemoSession } from "./fixtures/bootstrap";
 
+const FACTION_ORG_COMPANY_HEADING_RE = /Faction · org · company/i;
+
 test.describe("/dev/lore-entity-nodes", () => {
   test.beforeEach(async ({ page }) => {
     await prepDemoSession(page);
@@ -61,7 +63,7 @@ test.describe("/dev/lore-entity-nodes", () => {
     });
 
     await expect(
-      page.getByRole("heading", { name: /Faction · org · company/i })
+      page.getByRole("heading", { name: FACTION_ORG_COMPANY_HEADING_RE })
     ).toBeVisible();
     await expect(page.getByText("I · Dead-drop slip")).toBeVisible();
     await expect(page.getByText("II · Summit stub")).toBeVisible();

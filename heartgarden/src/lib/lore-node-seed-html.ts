@@ -8,6 +8,7 @@ import type {
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
 import loreCardStyles from "@/src/components/foundation/lore-entity-card.module.css";
+import { fnv1aHash32 } from "@/src/lib/hash-utils";
 import { HEARTGARDEN_MEDIA_PLACEHOLDER_SRC } from "@/src/lib/heartgarden-media-placeholder";
 import { heartgardenMediaPlaceholderClassList } from "@/src/lib/heartgarden-media-placeholder-classes";
 import { stripLegacyHtmlToPlainText } from "@/src/lib/hg-doc/html-to-doc";
@@ -287,12 +288,7 @@ const LOC_PLAQUE_STRIP_VARIANTS = 8;
 
 /** FNV-1a → 0..7 for `data-loc-strip` gradient presets. */
 export function locationStripVariantFromSeed(seed: string): number {
-  let h = 2_166_136_261 >>> 0;
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 16_777_619);
-  }
-  return h % LOC_PLAQUE_STRIP_VARIANTS;
+  return fnv1aHash32(seed) % LOC_PLAQUE_STRIP_VARIANTS;
 }
 
 function locationV3(stripIndex: number): string {

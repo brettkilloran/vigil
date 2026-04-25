@@ -4,6 +4,8 @@ import type { VigilDb } from "@/src/lib/spaces";
 import { hybridRetrieveItems } from "@/src/lib/vault-retrieval";
 import { LORE_CONSISTENCY_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 
+const VALID_TAG_RE = /^[a-z][a-z0-9_]*$/;
+
 const SYSTEM = `You review a draft note for a TTRPG / worldbuilding canvas.
 
 Return ONLY valid JSON (no markdown fence):
@@ -102,9 +104,79 @@ export async function runLoreConsistencyCheck(args: {
     },
     { expectJson: true, label: "lore.consistency" }
   );
-  const jsonStr = res.jsonText;
+  return parseLoreConsistencyResponse(
+    res.jsonText,
+    new Set(candidates.map((c) => c.itemId))
+  );
+}
+
+function parseLoreConsistencyIssue(
+  raw: unknown,
+  allowedIds: Set<string>
+): LoreConsistencyIssue | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const o = raw as Record<string, unknown>;
+  const summary = String(o.summary ?? "")
+    .trim()
+    .slice(0, 500);
+  if (!summary) {
+    return null;
+  }
+  const sevRaw = String(o.severity ?? "warning");
+  const severity =
+    sevRaw === "info" || sevRaw === "contradiction" ? sevRaw : "warning";
+  const candidateItemId =
+    typeof o.candidateItemId === "string" && allowedIds.has(o.candidateItemId)
+      ? o.candidateItemId
+      : undefined;
+  const hintRaw =
+    o.handlingHint == null ? "" : String(o.handlingHint).trim().slice(0, 64);
+  return {
+    candidateItemId,
+    details:
+      o.details == null ? undefined : String(o.details).trim().slice(0, 2000),
+    handlingHint: hintRaw || undefined,
+    severity,
+    summary,
+  };
+}
+
+function parseSuggestedNoteTags(raw: unknown): string[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  const out: string[] = [];
+  for (const t of raw) {
+    const s = String(t ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 48);
+    if (s && VALID_TAG_RE.test(s)) {
+      out.push(s);
+    }
+  }
+  return out;
+}
+
+function parseLoreConsistencyResponse(
+  jsonStr: string | null | undefined,
+  allowedIds: Set<string>
+): {
+  issues: LoreConsistencyIssue[];
+  suggestedNoteTags: string[];
+  semanticSummary: string | null;
+} {
+  const empty = {
+    issues: [] as LoreConsistencyIssue[],
+    semanticSummary: null,
+    suggestedNoteTags: [] as string[],
+  };
   if (!jsonStr) {
-    return { issues: [], semanticSummary: null, suggestedNoteTags: [] };
+    return empty;
   }
   try {
     const parsed = JSON.parse(jsonStr) as {
@@ -113,65 +185,19 @@ export async function runLoreConsistencyCheck(args: {
       semanticSummary?: unknown;
     };
     const issues: LoreConsistencyIssue[] = [];
-    const allowedIds = new Set(candidates.map((c) => c.itemId));
     for (const it of parsed.issues ?? []) {
-      if (!it || typeof it !== "object") {
-        continue;
-      }
-      const o = it as Record<string, unknown>;
-      const summary = String(o.summary ?? "")
-        .trim()
-        .slice(0, 500);
-      if (!summary) {
-        continue;
-      }
-      const sevRaw = String(o.severity ?? "warning");
-      const severity =
-        sevRaw === "info" || sevRaw === "contradiction" ? sevRaw : "warning";
-      const candidateItemId =
-        typeof o.candidateItemId === "string" &&
-        allowedIds.has(o.candidateItemId)
-          ? o.candidateItemId
-          : undefined;
-      const hintRaw =
-        o.handlingHint == null
-          ? ""
-          : String(o.handlingHint).trim().slice(0, 64);
-      const handlingHint = hintRaw || undefined;
-      issues.push({
-        candidateItemId,
-        details:
-          o.details == null
-            ? undefined
-            : String(o.details).trim().slice(0, 2000),
-        handlingHint,
-        severity,
-        summary,
-      });
-    }
-
-    const suggestedNoteTags: string[] = [];
-    if (Array.isArray(parsed.suggestedNoteTags)) {
-      for (const t of parsed.suggestedNoteTags) {
-        const s = String(t ?? "")
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9_]/g, "_")
-          .replace(/^_+|_+$/g, "")
-          .slice(0, 48);
-        if (s && /^[a-z][a-z0-9_]*$/.test(s)) {
-          suggestedNoteTags.push(s);
-        }
+      const issue = parseLoreConsistencyIssue(it, allowedIds);
+      if (issue) {
+        issues.push(issue);
       }
     }
-
+    const suggestedNoteTags = parseSuggestedNoteTags(parsed.suggestedNoteTags);
     const semanticSummary =
       parsed.semanticSummary == null
         ? null
         : String(parsed.semanticSummary).trim().slice(0, 500) || null;
-
     return { issues, semanticSummary, suggestedNoteTags };
   } catch {
-    return { issues: [], semanticSummary: null, suggestedNoteTags: [] };
+    return empty;
   }
 }

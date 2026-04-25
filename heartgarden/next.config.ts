@@ -1,6 +1,8 @@
 import bundleAnalyzer from "@next/bundle-analyzer";
 import type { NextConfig } from "next";
 
+const NAPI_RS_PACKAGE_RE = /@napi-rs/;
+
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "1",
 });
@@ -32,7 +34,7 @@ const nextConfig: NextConfig = {
   turbopack: {},
   webpack: (config, { isServer }) => {
     if (isServer && Array.isArray(config.externals)) {
-      config.externals.push(/@napi-rs/);
+      config.externals.push(NAPI_RS_PACKAGE_RE);
     }
     return config;
   },

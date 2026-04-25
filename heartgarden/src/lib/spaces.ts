@@ -25,6 +25,8 @@ import { defaultCamera } from "@/src/model/canvas-types";
 export type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 export type BraneType = "gm" | "player" | "demo";
 
+const WHITESPACE_SPLIT_RE = /\s+/;
+
 function playerSpaceIdExcludedFromGmDb(): string | undefined {
   return parseSpaceIdParam(
     (process.env.HEARTGARDEN_PLAYER_SPACE_ID ?? "").trim() || null
@@ -51,7 +53,7 @@ export function parseCameraFromRow(raw: unknown): CameraState {
 }
 
 export async function listAllSpaces(db: VigilDb) {
-  return db.select().from(spaces).orderBy(desc(spaces.updatedAt));
+  return await db.select().from(spaces).orderBy(desc(spaces.updatedAt));
 }
 
 export async function resolveOrCreateBraneByType(
@@ -99,7 +101,7 @@ export async function resolveOrCreateBraneByType(
 }
 
 export async function listBraneSpaces(db: VigilDb, braneId: string) {
-  return db
+  return await db
     .select()
     .from(spaces)
     .where(eq(spaces.braneId, braneId))
@@ -357,9 +359,11 @@ export async function listItemsForSpace(
     Number.isFinite(options.limit) &&
     options.limit > 0
   ) {
-    return q.limit(options.limit).offset(Math.max(0, options.offset ?? 0));
+    return await q
+      .limit(options.limit)
+      .offset(Math.max(0, options.offset ?? 0));
   }
-  return q;
+  return await q;
 }
 
 /** Active space plus all descendant spaces (for canvas items that live in child spaces). */
@@ -419,7 +423,7 @@ export async function listItemsForSpaceSubtree(
   if (ids.length === 0) {
     return [];
   }
-  return db
+  return await db
     .select()
     .from(items)
     .where(
@@ -572,7 +576,7 @@ function buildPrefixTsQuery(query: string): string | null {
   // entirely (`REVIEW_2026-04-25_1835` H17).
   const tokens = query
     .toLowerCase()
-    .split(/\s+/)
+    .split(WHITESPACE_SPLIT_RE)
     .map((token) => token.replace(/[^\p{L}\p{N}_-]/gu, ""))
     .filter(Boolean);
   if (tokens.length === 0) {
@@ -809,7 +813,7 @@ export async function suggestItems(
 }
 
 export async function listLinksForItem(db: VigilDb, itemId: string) {
-  return db
+  return await db
     .select()
     .from(itemLinks)
     .where(

@@ -406,7 +406,7 @@ export function buildArchitecturalSeedGraph(
     folderLoreLocation,
   ];
 
-  folderEntities.forEach((node) => {
+  for (const node of folderEntities) {
     const isChar = node.id === "demo-lore-character";
     const isFaction = node.id === "demo-lore-faction";
     const isLoc = node.id === "demo-lore-location";
@@ -430,7 +430,7 @@ export function buildArchitecturalSeedGraph(
       },
     } satisfies CanvasContentEntity;
     spaces["space-project-thesis"].entityIds.push(node.id);
-  });
+  }
 
   /* Demo subspace: intro + lore specimen cards (no nested Archive). */
 

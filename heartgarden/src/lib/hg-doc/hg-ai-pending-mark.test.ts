@@ -9,6 +9,8 @@ import {
   stripHgAiPendingFromHtml,
 } from "@/src/lib/hg-doc/strip-hg-ai-pending";
 
+const HG_AI_PENDING_ATTR_RE = /data-hg-ai-pending/;
+
 describe("hgAiPending mark", () => {
   it("round-trips through HTML export and htmlFragmentToHgDocDoc", () => {
     const doc = {
@@ -77,7 +79,7 @@ describe("hgAiPending mark", () => {
     } as const;
     const html = hgDocToHtml(doc);
     const stripped = stripHgAiPendingFromHtml(html);
-    expect(stripped).not.toMatch(/data-hg-ai-pending/);
+    expect(stripped).not.toMatch(HG_AI_PENDING_ATTR_RE);
     expect(stripped).toContain("Pending AI line.");
   });
 

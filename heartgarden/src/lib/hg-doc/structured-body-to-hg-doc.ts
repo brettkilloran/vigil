@@ -11,6 +11,10 @@ import {
   lintAndRepairStructuredBody,
   type StructureReport,
 } from "@/src/lib/hg-doc/structured-body-heuristics";
+import {
+  VIGIL_ITEM_LINK_RE,
+  WIKI_VIGIL_ITEM_LINK_RE,
+} from "@/src/lib/uuid-like";
 
 interface ParseOptions {
   requireH1?: boolean;
@@ -21,24 +25,34 @@ type BuildOptions = ParseOptions & {
   aiPending?: boolean;
 };
 
-const VIGIL_ITEM_RE =
-  /vigil:item:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
-const WIKI_VIGIL_RE =
-  /\[\[([^[\]]+)\]\]\s*\(vigil:item:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\)/gi;
+const AMPERSAND_RE = /&/g;
+const LT_RE = /</g;
+const GT_RE = />/g;
+const DOUBLE_QUOTE_RE = /"/g;
+const CRLF_OR_CR_RE = /\r\n?/g;
+const HORIZONTAL_RULE_LINE_RE = /^-{3,}$/;
+const MARKDOWN_HEADING_LINE_RE = /^(#{1,3})\s+(.+)$/;
+const MARKDOWN_HEADING_PREFIX_RE = /^(#{1,3})\s+/;
+const MARKDOWN_QUOTE_PREFIX_RE = /^>\s+/;
+const MARKDOWN_QUOTE_LINE_RE = /^>\s+(.+)$/;
+const MARKDOWN_BULLET_LIST_LINE_RE = /^[-*]\s+(.+)$/;
+const MARKDOWN_BULLET_LIST_PREFIX_RE = /^[-*]\s+/;
+const MARKDOWN_ORDERED_LIST_LINE_RE = /^\d+\.\s+(.+)$/;
+const MARKDOWN_ORDERED_LIST_PREFIX_RE = /^\d+\.\s+/;
 
 function escapeHtml(text: string): string {
   return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(AMPERSAND_RE, "&amp;")
+    .replace(LT_RE, "&lt;")
+    .replace(GT_RE, "&gt;")
+    .replace(DOUBLE_QUOTE_RE, "&quot;");
 }
 
 function inlineTextToHtml(text: string): string {
   const raw = text ?? "";
   let out = "";
   let idx = 0;
-  for (const m of raw.matchAll(WIKI_VIGIL_RE)) {
+  for (const m of raw.matchAll(WIKI_VIGIL_ITEM_LINK_RE)) {
     const start = m.index ?? 0;
     out += escapeHtml(raw.slice(idx, start));
     const title = (m[1] ?? "").trim() || "Untitled";
@@ -48,7 +62,7 @@ function inlineTextToHtml(text: string): string {
   }
   out += escapeHtml(raw.slice(idx));
   return out.replace(
-    VIGIL_ITEM_RE,
+    VIGIL_ITEM_LINK_RE,
     (_full, itemId: string) =>
       `<a href="vigil:item:${itemId}">vigil:item:${itemId}</a>`
   );
@@ -131,11 +145,12 @@ function parseListItems(
   return { items, nextIndex: i };
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: markdown-to-structured-body parser walks lines and dispatches per heading/list/quote/paragraph block kind
 export function markdownToStructuredBody(
   markdown: string,
   options: ParseOptions = {}
 ): HgStructuredBody {
-  const normalized = (markdown ?? "").replace(/\r\n?/g, "\n").trim();
+  const normalized = (markdown ?? "").replace(CRLF_OR_CR_RE, "\n").trim();
   const lines = normalized ? normalized.split("\n") : [];
   const blocks: HgStructuredBlock[] = [];
 
@@ -146,12 +161,12 @@ export function markdownToStructuredBody(
       i += 1;
       continue;
     }
-    if (/^-{3,}$/.test(trimmed)) {
+    if (HORIZONTAL_RULE_LINE_RE.test(trimmed)) {
       blocks.push({ kind: "hr" });
       i += 1;
       continue;
     }
-    const heading = /^(#{1,3})\s+(.+)$/.exec(trimmed);
+    const heading = MARKDOWN_HEADING_LINE_RE.exec(trimmed);
     if (heading) {
       blocks.push({
         kind: "heading",
@@ -161,11 +176,11 @@ export function markdownToStructuredBody(
       i += 1;
       continue;
     }
-    if (/^>\s+/.test(trimmed)) {
+    if (MARKDOWN_QUOTE_PREFIX_RE.test(trimmed)) {
       const quoteLines: string[] = [];
       while (i < lines.length) {
         const q = (lines[i] ?? "").trim();
-        const qm = /^>\s+(.+)$/.exec(q);
+        const qm = MARKDOWN_QUOTE_LINE_RE.exec(q);
         if (!qm) {
           break;
         }
@@ -178,13 +193,13 @@ export function markdownToStructuredBody(
       }
       continue;
     }
-    const bullet = parseListItems(lines, i, /^[-*]\s+(.+)$/);
+    const bullet = parseListItems(lines, i, MARKDOWN_BULLET_LIST_LINE_RE);
     if (bullet.items.length > 0) {
       blocks.push({ items: bullet.items, kind: "bullet_list" });
       i = bullet.nextIndex;
       continue;
     }
-    const ordered = parseListItems(lines, i, /^\d+\.\s+(.+)$/);
+    const ordered = parseListItems(lines, i, MARKDOWN_ORDERED_LIST_LINE_RE);
     if (ordered.items.length > 0) {
       blocks.push({ items: ordered.items, kind: "ordered_list" });
       i = ordered.nextIndex;
@@ -196,19 +211,19 @@ export function markdownToStructuredBody(
       if (!candidate) {
         break;
       }
-      if (/^-{3,}$/.test(candidate)) {
+      if (HORIZONTAL_RULE_LINE_RE.test(candidate)) {
         break;
       }
-      if (/^(#{1,3})\s+/.test(candidate)) {
+      if (MARKDOWN_HEADING_PREFIX_RE.test(candidate)) {
         break;
       }
-      if (/^>\s+/.test(candidate)) {
+      if (MARKDOWN_QUOTE_PREFIX_RE.test(candidate)) {
         break;
       }
-      if (/^[-*]\s+/.test(candidate)) {
+      if (MARKDOWN_BULLET_LIST_PREFIX_RE.test(candidate)) {
         break;
       }
-      if (/^\d+\.\s+/.test(candidate)) {
+      if (MARKDOWN_ORDERED_LIST_PREFIX_RE.test(candidate)) {
         break;
       }
       paraLines.push(candidate);

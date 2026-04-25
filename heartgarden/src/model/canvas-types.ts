@@ -23,22 +23,28 @@ export interface CameraState {
  * Home camera: world origin centered in the viewport, zoom 1.
  * Pass measured viewport width/height when known; otherwise uses `window` on the client, else `{0,0,1}`.
  */
+function pickViewportDimension(
+  measured: number | undefined,
+  windowDim: () => number
+): number {
+  if (measured != null && measured > 0) {
+    return measured;
+  }
+  if (typeof window !== "undefined") {
+    const wd = windowDim();
+    if (wd > 0) {
+      return wd;
+    }
+  }
+  return 0;
+}
+
 export function defaultCamera(
   viewportWidth?: number,
   viewportHeight?: number
 ): CameraState {
-  const w =
-    viewportWidth != null && viewportWidth > 0
-      ? viewportWidth
-      : typeof window !== "undefined" && window.innerWidth > 0
-        ? window.innerWidth
-        : 0;
-  const h =
-    viewportHeight != null && viewportHeight > 0
-      ? viewportHeight
-      : typeof window !== "undefined" && window.innerHeight > 0
-        ? window.innerHeight
-        : 0;
+  const w = pickViewportDimension(viewportWidth, () => window.innerWidth);
+  const h = pickViewportDimension(viewportHeight, () => window.innerHeight);
   if (w > 0 && h > 0) {
     return { x: w / 2, y: h / 2, zoom: 1 };
   }

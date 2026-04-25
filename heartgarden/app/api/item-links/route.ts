@@ -91,6 +91,7 @@ const deleteBodySchema = z.object({
   id: z.string().uuid(),
 });
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: POST validates body, enforces brane membership and write authority on both endpoints, then inserts/upserts the link plus revisions
 export async function POST(req: Request) {
   const dbGate = heartgardenApiRequireDb(tryGetDb());
   if (!dbGate.ok) {
@@ -261,6 +262,7 @@ export async function POST(req: Request) {
   return Response.json({ link: row, ok: true });
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: PATCH validates source/target ownership across braneIds, applies optional kind/relation/strength edits, and emits revisions — splitting helpers would only relocate complexity
 export async function PATCH(req: Request) {
   const dbGate = heartgardenApiRequireDb(tryGetDb());
   if (!dbGate.ok) {

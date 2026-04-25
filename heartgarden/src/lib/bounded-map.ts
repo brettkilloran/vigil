@@ -13,13 +13,15 @@
  */
 export class BoundedMap<K, V> {
   private readonly map: Map<K, V> = new Map();
+  private readonly maxSize: number;
 
-  constructor(private readonly maxSize: number) {
+  constructor(maxSize: number) {
     if (!Number.isFinite(maxSize) || maxSize <= 0) {
       throw new Error(
         `BoundedMap maxSize must be a positive integer, got ${maxSize}`
       );
     }
+    this.maxSize = maxSize;
   }
 
   get size(): number {

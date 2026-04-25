@@ -2,6 +2,8 @@ import type { JSONContent } from "@tiptap/core";
 
 import type { CanvasContentEntity } from "@/src/components/foundation/architectural-types";
 
+const HG_AI_PENDING_CLASS_RE = /\bhgAiPending\b/;
+
 /** True if the hgDoc JSON tree still contains `hgAiPending` marks. */
 export function hgDocJsonHasHgAiPending(
   doc: JSONContent | null | undefined
@@ -60,7 +62,7 @@ export function htmlStringHasHgAiPending(html: string): boolean {
   return (
     html.includes('data-hg-ai-pending="true"') ||
     html.includes("data-hg-ai-pending='true'") ||
-    /\bhgAiPending\b/.test(html)
+    HG_AI_PENDING_CLASS_RE.test(html)
   );
 }
 

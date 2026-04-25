@@ -11,6 +11,16 @@ import {
 import type { LoreImportStructuredBody } from "@/src/lib/lore-import-plan-types";
 import { LORE_LINK_TYPE_OPTIONS } from "@/src/lib/lore-link-types";
 import {
+  VIGIL_ITEM_LINK_RE,
+  WIKI_VIGIL_ITEM_LINK_RE,
+} from "@/src/lib/uuid-like";
+
+const HORIZONTAL_RULE_RE = /^-{3,}$/;
+const MARKDOWN_HEADING_RE = /^(#{1,6})\s+(.+)$/;
+const CRLF_TO_LF_RE = /\r\n?/g;
+const DOUBLE_NEWLINE_RE = /\n{2,}/;
+
+import {
   buildLocationOrdoV7BodyHtml,
   getLoreNodeSeedBodyHtml,
 } from "@/src/lib/lore-node-seed-html";
@@ -35,16 +45,11 @@ export function escapeHtmlForNoteBody(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
-const VIGIL_ITEM_RE =
-  /vigil:item:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
-const WIKI_VIGIL_RE =
-  /\[\[([^[\]]+)\]\]\s*\(vigil:item:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\)/gi;
-
 function inlinePlainToHtmlWithWikiLinks(text: string): string {
   const raw = text ?? "";
   let out = "";
   let idx = 0;
-  for (const m of raw.matchAll(WIKI_VIGIL_RE)) {
+  for (const m of raw.matchAll(WIKI_VIGIL_ITEM_LINK_RE)) {
     const start = m.index ?? 0;
     out += escapeHtmlForNoteBody(raw.slice(idx, start));
     const title = (m[1] ?? "").trim() || "Untitled";
@@ -54,7 +59,7 @@ function inlinePlainToHtmlWithWikiLinks(text: string): string {
   }
   out += escapeHtmlForNoteBody(raw.slice(idx));
   return out.replace(
-    VIGIL_ITEM_RE,
+    VIGIL_ITEM_LINK_RE,
     (_full, itemId: string) =>
       `<a href="vigil:item:${itemId}">vigil:item:${itemId}</a>`
   );
@@ -74,12 +79,12 @@ function plainBodyToStructuredHtmlFragment(plainBody: string): string {
       i += 1;
       continue;
     }
-    if (/^-{3,}$/.test(trimmed)) {
+    if (HORIZONTAL_RULE_RE.test(trimmed)) {
       blocks.push("<hr />");
       i += 1;
       continue;
     }
-    const heading = /^(#{1,6})\s+(.+)$/.exec(trimmed);
+    const heading = MARKDOWN_HEADING_RE.exec(trimmed);
     if (heading) {
       const level = Math.min(6, heading[1]?.length);
       blocks.push(
@@ -95,10 +100,10 @@ function plainBodyToStructuredHtmlFragment(plainBody: string): string {
       if (!candTrimmed) {
         break;
       }
-      if (/^-{3,}$/.test(candTrimmed)) {
+      if (HORIZONTAL_RULE_RE.test(candTrimmed)) {
         break;
       }
-      if (/^(#{1,6})\s+(.+)$/.test(candTrimmed)) {
+      if (MARKDOWN_HEADING_RE.test(candTrimmed)) {
         break;
       }
       paraLines.push(candidate);
@@ -349,8 +354,8 @@ export function buildLoreSourceContentJson(
   fullText: string
 ): Record<string, unknown> {
   const paragraphs = fullText
-    .replace(/\r\n?/g, "\n")
-    .split(/\n{2,}/)
+    .replace(CRLF_TO_LF_RE, "\n")
+    .split(DOUBLE_NEWLINE_RE)
     .map((p) => p.trim())
     .filter(Boolean);
   return buildGenericHgDocFromParagraphs(

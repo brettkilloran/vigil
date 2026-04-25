@@ -4,6 +4,7 @@ import {
   factionRosterSchema,
   parseFactionRoster,
 } from "@/src/lib/faction-roster-schema";
+import { generateUuidV4Fallback } from "@/src/lib/hash-utils";
 
 export type LinkCharacterToRosterRowFailureCode =
   | "entry_not_found"
@@ -92,10 +93,6 @@ export function createDefaultFactionRosterSeed(): FactionRosterEntry[] {
   const id =
     typeof globalThis.crypto?.randomUUID === "function"
       ? globalThis.crypto.randomUUID()
-      : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-          const r = (Math.random() * 16) | 0;
-          const v = c === "x" ? r : (r & 0x3) | 0x8;
-          return v.toString(16);
-        });
+      : generateUuidV4Fallback();
   return [{ id, kind: "unlinked", label: "Member" }];
 }

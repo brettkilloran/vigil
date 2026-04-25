@@ -110,14 +110,17 @@ async function handleMcpRequest(request: NextRequest): Promise<Response> {
   return transport.handleRequest(requestWithStreamableHttpAccept(request));
 }
 
+// biome-ignore lint/suspicious/useAwait: Next.js Route Handler signatures must be async even when no await is needed.
 export async function GET(request: NextRequest) {
   return handleMcpRequest(request);
 }
 
+// biome-ignore lint/suspicious/useAwait: Next.js Route Handler signatures must be async even when no await is needed.
 export async function POST(request: NextRequest) {
   return handleMcpRequest(request);
 }
 
+// biome-ignore lint/suspicious/useAwait: Next.js Route Handler signatures must be async even when no await is needed.
 export async function DELETE(request: NextRequest) {
   return handleMcpRequest(request);
 }

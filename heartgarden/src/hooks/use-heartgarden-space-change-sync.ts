@@ -169,10 +169,13 @@ export function useHeartgardenSpaceChangeSync(options: {
       neonSyncSpaceChangeSyncBreadcrumb(
         `poll contract failure x${AUX_FAILURE_AFTER_CONSECUTIVE_MISSES}; scheduling bootstrap repair`
       );
-      void tryBootstrapRepair();
+      tryBootstrapRepair().catch(() => {
+        /* repair errors are non-fatal */
+      });
       consecutiveMissesRef.current = 0;
     };
 
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: space change sync run defers polls during edits, reconciles per-source paths, and merges server rows
     async function run(source: HeartgardenSpaceSyncRunSource) {
       if (cancelled || document.visibilityState === "hidden" || inFlight) {
         return;
@@ -254,9 +257,11 @@ export function useHeartgardenSpaceChangeSync(options: {
             inlineContentDirtyIds: inlineContentDirtyIdsRef.current,
             savingContentIds: savingContentIdsRef.current,
           });
-          optimisticProtectedIdsRef?.current.forEach((id) =>
-            protectedContentIds.add(id)
-          );
+          if (optimisticProtectedIdsRef?.current) {
+            for (const id of optimisticProtectedIdsRef.current) {
+              protectedContentIds.add(id);
+            }
+          }
           const rawItems = data.items ?? [];
           const rawSpaces = (data.spaces ?? []).map((s) => ({
             id: s.id,

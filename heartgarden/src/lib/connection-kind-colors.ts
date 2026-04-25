@@ -16,6 +16,8 @@ import {
   type FolderColorSchemeMeta,
 } from "@/src/components/foundation/architectural-folder-schemes";
 
+const OKLCH_TRIPLET_RE = /^oklch\(\s*([\d.]+)\s+([\d.]+)\s+([-.\d]+)/i;
+
 /** Kinds surfaced in the connection picker. Order matches the picker UI. */
 export const CONNECTION_KINDS_IN_ORDER = [
   "pin",
@@ -250,7 +252,7 @@ export function normalizeLinkTypeAlias(
 function parseOklch(
   swatch: string
 ): { L: number; C: number; H: number } | null {
-  const m = swatch.trim().match(/^oklch\(\s*([\d.]+)\s+([\d.]+)\s+([-.\d]+)/i);
+  const m = swatch.trim().match(OKLCH_TRIPLET_RE);
   if (!m) {
     return null;
   }

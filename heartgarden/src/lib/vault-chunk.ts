@@ -32,6 +32,8 @@ export interface VaultChunk {
   headingPath: string[];
 }
 
+const PARAGRAPH_BREAK_RE = /\n\s*\n/;
+
 function normalizeWhitespace(s: string): string {
   return s.replace(/\s+/g, " ").trim();
 }
@@ -52,7 +54,7 @@ function splitSectionText(text: string): string[] {
   }
 
   const paragraphs = normalized
-    .split(/\n\s*\n/)
+    .split(PARAGRAPH_BREAK_RE)
     .map((p) => normalizeWhitespace(p))
     .filter(Boolean);
   const pieces: string[] = [];

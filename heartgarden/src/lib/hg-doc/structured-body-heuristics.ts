@@ -82,6 +82,7 @@ function countParagraphLikeBlocks(blocks: HgStructuredBlock[]): number {
     .length;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: structured body lint repair: H1 prepend, H3 demotion/promotion, duplicate title collapse, paragraph counts
 export function lintAndRepairStructuredBody(
   input: HgStructuredBody,
   options: LintOptions = {}

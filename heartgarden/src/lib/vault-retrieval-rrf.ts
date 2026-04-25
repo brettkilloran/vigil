@@ -77,23 +77,23 @@ export function fuseRrfFromOrderedLists(
 ): RrfFusionResult {
   const config = normalizeRrfConfig(input.config);
   const lexRankByItem = new Map<string, number>();
-  input.lexicalOrderedIds.forEach((id, i) => {
+  for (const [i, id] of input.lexicalOrderedIds.entries()) {
     if (!lexRankByItem.has(id)) {
       lexRankByItem.set(id, i);
     }
-  });
+  }
   const vecRankByItem = new Map<string, number>();
-  input.vectorOrderedIds.forEach((id, i) => {
+  for (const [i, id] of input.vectorOrderedIds.entries()) {
     if (!vecRankByItem.has(id)) {
       vecRankByItem.set(id, i);
     }
-  });
+  }
   const mentionRankByItem = new Map<string, number>();
-  (input.mentionOrderedIds ?? []).forEach((id, i) => {
+  for (const [i, id] of (input.mentionOrderedIds ?? []).entries()) {
     if (!mentionRankByItem.has(id)) {
       mentionRankByItem.set(id, i);
     }
-  });
+  }
 
   const allIds = new Set<string>([
     ...input.lexicalOrderedIds,

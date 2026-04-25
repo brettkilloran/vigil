@@ -1,3 +1,5 @@
+import { isUuidLike } from "@/src/lib/uuid-like";
+
 const STORAGE_KEY = "heartgarden-presence-client-id";
 
 /** Per-tab id for soft presence heartbeats (no accounts). */
@@ -7,7 +9,7 @@ export function getOrCreatePresenceClientId(): string | null {
   }
   try {
     const existing = window.sessionStorage.getItem(STORAGE_KEY);
-    if (existing && /^[0-9a-f-]{36}$/i.test(existing)) {
+    if (isUuidLike(existing)) {
       return existing;
     }
     if (

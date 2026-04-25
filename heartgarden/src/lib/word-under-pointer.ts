@@ -1,5 +1,7 @@
 import { RICH_EDITOR_SURFACE_SELECTOR } from "@/src/lib/rich-editor-surface";
 
+const WORD_CHAR_RE = /[A-Za-z0-9_-]/;
+
 export interface WordUnderPointer {
   rect: DOMRect;
   word: string;
@@ -50,7 +52,7 @@ export function readWordUnderPointer(
     return null;
   }
 
-  const isWord = (ch: string) => /[A-Za-z0-9_-]/.test(ch);
+  const isWord = (ch: string) => WORD_CHAR_RE.test(ch);
   let start = Math.max(0, Math.min(offset, text.length));
   let end = start;
   while (start > 0 && isWord(text[start - 1]!)) {

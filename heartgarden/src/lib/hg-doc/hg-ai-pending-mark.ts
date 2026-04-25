@@ -90,6 +90,7 @@ export const HgAiPending = Mark.create({
   addProseMirrorPlugins() {
     return [
       new Plugin({
+        // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: TipTap appendTransaction; clears hgAiPending mark across step types
         appendTransaction(transactions, oldState, newState) {
           if (transactions.some((t) => t.getMeta(HG_AI_PENDING_CLEAR_META))) {
             return null;

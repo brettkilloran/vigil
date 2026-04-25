@@ -18,6 +18,11 @@ export interface HeartgardenBootPayload {
   tier: HeartgardenBootTier;
 }
 
+const BASE64_PLUS_RE = /\+/g;
+const BASE64_SLASH_RE = /\//g;
+const BASE64_TRAILING_EQUALS_RE = /=+$/u;
+const BASE64_URL_RE = /^[A-Za-z0-9_-]*$/u;
+
 const DUMMY_DIGEST_A = createHash("sha256")
   .update("\0hg_boot_unset_a", "utf8")
   .digest();
@@ -134,13 +139,13 @@ export function resolveBootPinTier(
 function toBase64Url(buf: Buffer): string {
   return buf
     .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/u, "");
+    .replace(BASE64_PLUS_RE, "-")
+    .replace(BASE64_SLASH_RE, "_")
+    .replace(BASE64_TRAILING_EQUALS_RE, "");
 }
 
 function fromBase64Url(s: string): Buffer | null {
-  if (!/^[A-Za-z0-9_-]*$/u.test(s)) {
+  if (!BASE64_URL_RE.test(s)) {
     return null;
   }
   let b64 = s.replace(/-/g, "+").replace(/_/g, "/");

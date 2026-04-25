@@ -137,21 +137,20 @@
 
 /* Card body shared */
 .labBody {
-  composes: a4DocumentBody from
-    "../foundation/ArchitecturalCanvasApp.module.css";
   --arch-body-pad-x: 18px;
   --arch-body-pad-y: 16px;
-  padding: 16px 18px 20px;
+  composes: a4DocumentBody from "../foundation/ArchitecturalCanvasApp.module.css";
   max-height: 340px;
-  cursor: default;
-  user-select: text;
+  padding: 16px 18px 20px;
   /*
    * Lab previews are short and non-editing: drop canvas document scrollbar reserve + bottom mask.
    * Together those caused a persistent right “stripe” and muddy stacking with full-bleed lore layers.
    */
   scrollbar-gutter: auto;
-  mask-image: none;
+  cursor: default;
+  user-select: text;
   -webkit-mask-image: none;
+  mask-image: none;
 }
 
 /* Protocol v4–v8 lab cards: same body classes as canvas so full-bleed lore rules apply */

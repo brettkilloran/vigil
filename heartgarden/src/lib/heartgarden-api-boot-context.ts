@@ -116,7 +116,7 @@ export async function gmMayAccessSpaceIdAsync(
   return !isHeartgardenImplicitPlayerRootSpaceName(row.name);
 }
 
-export async function gmMayAccessItemSpaceAsync(
+export function gmMayAccessItemSpaceAsync(
   db: VigilDb,
   ctx: HeartgardenApiBootContext,
   itemSpaceId: string
@@ -251,7 +251,7 @@ export async function playerMayAccessItemSpaceAsync(
   if (ctx.role !== "player") {
     return true;
   }
-  return spaceIsUnderPlayerRoot(db, ctx.playerSpaceId, itemSpaceId);
+  return await spaceIsUnderPlayerRoot(db, ctx.playerSpaceId, itemSpaceId);
 }
 
 /** Players cannot move items outside their player-root subtree. */
@@ -315,7 +315,7 @@ export async function playerMayAccessSpaceIdAsync(
   if (ctx.role !== "player") {
     return true;
   }
-  return spaceIsUnderPlayerRoot(db, ctx.playerSpaceId, spaceId);
+  return await spaceIsUnderPlayerRoot(db, ctx.playerSpaceId, spaceId);
 }
 
 /** Use at the top of Route Handlers that support the player layer. */

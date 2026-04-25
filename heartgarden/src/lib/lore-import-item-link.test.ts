@@ -5,6 +5,8 @@ import {
   normalizeImportItemLinkType,
 } from "@/src/lib/lore-import-item-link";
 
+const UNKNOWN_NOTE_ID_RE = /unknown note id/;
+
 describe("normalizeImportItemLinkType", () => {
   it("maps pin to history for ingestion", () => {
     expect(normalizeImportItemLinkType("pin")).toBe("history");
@@ -53,7 +55,7 @@ describe("filterPlanLinksToSameCanvasSpace", () => {
     expect(links).toHaveLength(0);
     expect(crossSpaceMentions).toHaveLength(0);
     expect(warnings.length).toBeGreaterThan(0);
-    expect(warnings[0]).toMatch(/unknown note id/);
+    expect(warnings[0]).toMatch(UNKNOWN_NOTE_ID_RE);
   });
 
   it("normalises pin on co-located edges to history", () => {
