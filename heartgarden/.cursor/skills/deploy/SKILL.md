@@ -5,11 +5,13 @@ description: >-
   context), pushes to git, ensures the result lands on origin main, and
   triggers or confirms Vercel production deployment. Use when the user invokes
   /deploy, or asks to commit everything from recent chats, push, merge to
-  main, and deploy to Vercel. Lives in-repo at .cursor/skills/deploy/.
+  main, and deploy to Vercel.
 ---
 # /deploy — ship to main and Vercel
 
 Run this end-to-end in the **git repository root** (or the app root if the user’s workspace is only `heartgarden/` — detect with `git rev-parse --show-toplevel`).
+
+**Paths in this file** are from the **monorepo root** (`…/Cursor/`). If your shell cwd is already **`heartgarden/`**, use **`docs/…`** where this file says **`heartgarden/docs/…`**, and **`AGENTS.md`** for **`heartgarden/AGENTS.md`**.
 
 ## 0. Preconditions
 
@@ -19,11 +21,14 @@ Run this end-to-end in the **git repository root** (or the app root if the user�
 - Stop and ask before production data migrations/backfills, Vercel production env/auth/deployment-protection changes, force-pushes/history rewrites, closing/deleting PRs/branches, or expensive open-ended retries. Prefer the smallest reversible fix and report the risky next step.
 - If Brett explicitly triggered deploy, keep the path fast: use best instincts and flag only critical errors, failed checks, deploy failures, or one-way-door risks.
 - Collaboration policy: `heartgarden/docs/AGENT_COLLABORATION.md`. Brett-driven deploys should move quickly; Matt/external branches need explicit permission before merge/close/delete actions.
+- Canonical onboarding and doc index: `heartgarden/AGENTS.md` (read order + **documentation update checklist** — use it when judging whether the **diff** is doc-complete before commit).
 
 ## 1. Inventory and optional chat context
 
 1. `git status -sb` and review full diff (`git diff`, `git diff --staged`).
 2. **“Changes from recent agent chats”** means: use the working tree as the source of truth; optionally read **the most recently modified** `*.jsonl` under the workspace’s agent transcripts folder (`.cursor/projects/<id>/agent-transcripts/`) only to phrase **commit messages** or **group files into logical commits**. Do not treat transcripts as authoritative over `git status`.
+3. **Docs and env hygiene (from the diff):** If the change touches `app/api/**` contracts, user-visible behavior, primary file locations, new/retired open engineering work, shipped tranches, or **env var semantics/keys**, the matching updates should appear in the **same** commit series per **`heartgarden/AGENTS.md`** checklist (typically `heartgarden/docs/API.md`, `heartgarden/docs/FEATURES.md`, `heartgarden/docs/CODEMAP.md`, `heartgarden/docs/BACKLOG.md` / `heartgarden/docs/BUILD_PLAN.md`, and **`heartgarden/docs/VERCEL_ENV_VARS.md`** for env matrix SoT). If docs are intentionally deferred, say so in the reply (brief). Do not duplicate the full env matrix in narrative docs; link **`VERCEL_ENV_VARS.md`**.
+4. **Schema / Neon:** If the diff adds or depends on new DB schema, do not assume deploy alone applies migrations. Follow **`heartgarden/docs/NEON_VERCEL_SETUP.md`** and project db scripts so Production (and any Preview target) is migrated **before** or **with** the code that needs it; otherwise flag the gap instead of a silent `Deployed.`.
 
 ## 2. Commit strategy
 
@@ -46,13 +51,13 @@ Run this end-to-end in the **git repository root** (or the app root if the user�
 
 ## 4. Vercel deployment
 
-**Git integration (typical):** Pushing to `main` triggers a production deployment automatically. Confirm in Vercel → Deployments, or with `vercel ls` / project dashboard if CLI is linked.
+**Git integration (typical):** Pushing to `main` triggers a production deployment automatically. Confirm in Vercel → Deployments, or with `vercel ls` / project dashboard if CLI is linked. **New or changed Vercel env values** in the dashboard require a **redeploy** for serverless to pick them up; align changes with **`heartgarden/docs/VERCEL_ENV_VARS.md`**. First-time / narrative order: **`heartgarden/docs/DEPLOY_VERCEL.md`**.
 
 **CLI (when the user wants an explicit deploy or git hook isn’t wired):**
 
 - From repo root, respect **Root Directory** in the Vercel project (e.g. heartgarden: **`heartgarden/`**):  
   `cd heartgarden` (or the configured app directory), then `vercel --prod`  
-  Requires prior `vercel login` and `vercel link` for that directory.
+  Requires prior `vercel login` and `vercel link` for that directory. **`heartgarden/docs/GO_LIVE_REMAINING.md`** (CLI habit: monorepo root vs Root Directory `heartgarden`).
 
 If deploy fails, capture the build error, fix **only** what’s needed, commit, push to `main`, and retry or redeploy.
 
