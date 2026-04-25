@@ -1,13 +1,20 @@
 import { after } from "next/server";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import type { tryGetDb } from "@/src/db/index";
-import { entityMentions, items, spaces } from "@/src/db/schema";
+import { entityMentions, itemEmbeddings, items, spaces } from "@/src/db/schema";
 import { buildEntityVocabularyForBrane, clearEntityVocabularyCache } from "@/src/lib/entity-vocabulary";
 import { invalidateItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
+type MentionSourceKind = "term" | "semantic";
+
+const SEMANTIC_MENTION_TOKEN = "__semantic__";
+const SEMANTIC_MAX_SOURCE_CHUNKS = 8;
+const SEMANTIC_PER_CHUNK_NEIGHBORS = 6;
+const SEMANTIC_MAX_TARGETS = 10;
+const SEMANTIC_MAX_DISTANCE = 0.28;
 
 function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -30,6 +37,141 @@ function makeSnippet(text: string, term: string): string | null {
   return text.slice(start, end).trim();
 }
 
+function parseHeadingPath(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw.map((v) => String(v ?? "").trim()).filter(Boolean);
+  }
+  if (typeof raw !== "string") return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (Array.isArray(parsed)) {
+      return parsed.map((v) => String(v ?? "").trim()).filter(Boolean);
+    }
+  } catch {
+    /* ignore */
+  }
+  return raw.trim() ? [raw.trim()] : [];
+}
+
+function upsertBestSemanticMatch(
+  bestByTarget: Map<
+    string,
+    {
+      targetSpaceId: string;
+      distance: number;
+      snippet: string;
+      headingPath: string | null;
+    }
+  >,
+  row: { targetItemId: string; targetSpaceId: string; distance: number; snippet: string; headingPath: unknown },
+): void {
+  const prev = bestByTarget.get(row.targetItemId);
+  if (prev && prev.distance <= row.distance) return;
+  const heading = parseHeadingPath(row.headingPath).join(" > ").trim();
+  bestByTarget.set(row.targetItemId, {
+    targetSpaceId: row.targetSpaceId,
+    distance: row.distance,
+    snippet: row.snippet,
+    headingPath: heading || null,
+  });
+}
+
+async function computeSemanticNeighborsForItem(
+  db: VigilDb,
+  sourceItemId: string,
+  braneId: string,
+): Promise<
+  Array<{
+    targetItemId: string;
+    targetSpaceId: string;
+    distance: number;
+    snippet: string;
+    headingPath: string | null;
+  }>
+> {
+  const result = await db.execute(sql`
+    with source_chunks as (
+      select ${itemEmbeddings.embedding} as embedding
+      from ${itemEmbeddings}
+      where ${itemEmbeddings.itemId} = ${sourceItemId}
+      order by ${itemEmbeddings.chunkIndex} asc
+      limit ${SEMANTIC_MAX_SOURCE_CHUNKS}
+    )
+    select
+      c.${itemEmbeddings.itemId}::text as target_item_id,
+      c.${itemEmbeddings.spaceId}::text as target_space_id,
+      c.${itemEmbeddings.chunkText} as snippet,
+      c.${itemEmbeddings.headingPath} as heading_path,
+      (s.embedding <=> c.${itemEmbeddings.embedding})::float8 as distance
+    from source_chunks s
+    join lateral (
+      select
+        ${itemEmbeddings.itemId},
+        ${itemEmbeddings.spaceId},
+        ${itemEmbeddings.chunkText},
+        ${itemEmbeddings.headingPath},
+        ${itemEmbeddings.embedding}
+      from ${itemEmbeddings} c
+      inner join ${spaces} on ${spaces.id} = c.${itemEmbeddings.spaceId}
+      where c.${itemEmbeddings.itemId} <> ${sourceItemId}
+        and ${spaces.braneId} = ${braneId}
+      order by s.embedding <=> c.${itemEmbeddings.embedding} asc
+      limit ${SEMANTIC_PER_CHUNK_NEIGHBORS}
+    ) c on true
+    where (s.embedding <=> c.${itemEmbeddings.embedding}) <= ${SEMANTIC_MAX_DISTANCE}
+    order by distance asc
+    limit ${SEMANTIC_MAX_SOURCE_CHUNKS * SEMANTIC_PER_CHUNK_NEIGHBORS};
+  `);
+  const rows = (result as {
+    rows?: Array<{
+      target_item_id?: string;
+      target_space_id?: string;
+      distance?: number;
+      snippet?: string;
+      heading_path?: unknown;
+    }>;
+  }).rows;
+  if (!rows?.length) return [];
+  const bestByTarget = new Map<
+    string,
+    {
+      targetSpaceId: string;
+      distance: number;
+      snippet: string;
+      headingPath: string | null;
+    }
+  >();
+  for (const row of rows) {
+    const targetItemId = String(row.target_item_id ?? "").trim();
+    const targetSpaceId = String(row.target_space_id ?? "").trim();
+    const snippet = String(row.snippet ?? "").trim();
+    const distance = Number(row.distance);
+    if (!targetItemId || !targetSpaceId || !snippet || !Number.isFinite(distance)) continue;
+    upsertBestSemanticMatch(bestByTarget, {
+      targetItemId,
+      targetSpaceId,
+      distance,
+      snippet,
+      headingPath: row.heading_path,
+    });
+  }
+  return [...bestByTarget.entries()]
+    .sort((a, b) => a[1].distance - b[1].distance)
+    .slice(0, SEMANTIC_MAX_TARGETS)
+    .map(([targetItemId, data]) => ({
+      targetItemId,
+      targetSpaceId: data.targetSpaceId,
+      distance: data.distance,
+      snippet: data.snippet,
+      headingPath: data.headingPath,
+    }));
+}
+
+function mentionCountFromDistance(distance: number): number {
+  const score = Math.round((1 - distance) * 100);
+  return Math.max(1, Math.min(100, score));
+}
+
 export async function rescanItemEntityMentions(
   db: VigilDb,
   itemId: string,
@@ -47,8 +189,10 @@ export async function rescanItemEntityMentions(
     .where(eq(items.id, itemId))
     .limit(1);
   if (!row?.braneId) return;
+  const sourceBraneId = row.braneId;
+  const sourceSpaceId = row.spaceId;
 
-  const vocab = await buildEntityVocabularyForBrane(db, row.braneId);
+  const vocab = await buildEntityVocabularyForBrane(db, sourceBraneId);
   const blob = row.searchBlob ?? "";
   const previous = await db
     .select({
@@ -64,7 +208,46 @@ export async function rescanItemEntityMentions(
     previous.map((p) => [`${p.targetItemId}::${p.matchedTerm}::${p.sourceKind}`, p.id]),
   );
   const nextKeys = new Set<string>();
-  const touchedSpaceIds = new Set<string>([row.spaceId]);
+  const touchedSpaceIds = new Set<string>([sourceSpaceId]);
+
+  const applyMentionRow = async (args: {
+    targetItemId: string;
+    targetSpaceId: string;
+    matchedTerm: string;
+    sourceKind: MentionSourceKind;
+    mentionCount: number;
+    snippet: string | null;
+    headingPath: string | null;
+  }) => {
+    const key = `${args.targetItemId}::${args.matchedTerm}::${args.sourceKind}`;
+    nextKeys.add(key);
+    touchedSpaceIds.add(args.targetSpaceId);
+    const existingId = previousKeyToId.get(key);
+    if (existingId) {
+      await db
+        .update(entityMentions)
+        .set({
+          mentionCount: args.mentionCount,
+          snippet: args.snippet ?? sql<string | null>`null`,
+          headingPath: args.headingPath ?? sql<string | null>`null`,
+          sourceSpaceId,
+          updatedAt: new Date(),
+        })
+        .where(eq(entityMentions.id, existingId));
+      return;
+    }
+    await db.insert(entityMentions).values({
+      sourceItemId: itemId,
+      targetItemId: args.targetItemId,
+      matchedTerm: args.matchedTerm,
+      mentionCount: args.mentionCount,
+      braneId: sourceBraneId,
+      sourceSpaceId,
+      sourceKind: args.sourceKind,
+      ...(args.snippet ? { snippet: args.snippet } : {}),
+      ...(args.headingPath ? { headingPath: args.headingPath } : {}),
+    });
+  };
 
   for (const entry of vocab.terms) {
     const count = countMatches(blob, entry.term);
@@ -72,38 +255,35 @@ export async function rescanItemEntityMentions(
     const snippet = makeSnippet(blob, entry.term);
     for (const targetItemId of entry.itemIds) {
       if (targetItemId === itemId) continue;
-      const key = `${targetItemId}::${entry.term}::term`;
-      nextKeys.add(key);
-      const existingId = previousKeyToId.get(key);
-      if (existingId) {
-        await db
-          .update(entityMentions)
-          .set({
-            mentionCount: count,
-            snippet,
-            sourceSpaceId: row.spaceId,
-            updatedAt: new Date(),
-          })
-          .where(eq(entityMentions.id, existingId));
-      } else {
-        await db.insert(entityMentions).values({
-          sourceItemId: itemId,
-          targetItemId,
-          matchedTerm: entry.term,
-          mentionCount: count,
-          snippet,
-          braneId: row.braneId,
-          sourceSpaceId: row.spaceId,
-          sourceKind: "term",
-        });
-      }
       const [targetSpace] = await db
         .select({ spaceId: items.spaceId })
         .from(items)
         .where(eq(items.id, targetItemId))
         .limit(1);
-      if (targetSpace?.spaceId) touchedSpaceIds.add(targetSpace.spaceId);
+      if (!targetSpace?.spaceId) continue;
+      await applyMentionRow({
+        targetItemId,
+        targetSpaceId: targetSpace.spaceId,
+        matchedTerm: entry.term,
+        sourceKind: "term",
+        mentionCount: count,
+        snippet,
+        headingPath: null,
+      });
     }
+  }
+
+  const semanticNeighbors = await computeSemanticNeighborsForItem(db, itemId, sourceBraneId);
+  for (const semantic of semanticNeighbors) {
+    await applyMentionRow({
+      targetItemId: semantic.targetItemId,
+      targetSpaceId: semantic.targetSpaceId,
+      matchedTerm: SEMANTIC_MENTION_TOKEN,
+      sourceKind: "semantic",
+      mentionCount: mentionCountFromDistance(semantic.distance),
+      snippet: semantic.snippet,
+      headingPath: semantic.headingPath,
+    });
   }
 
   for (const prev of previous) {

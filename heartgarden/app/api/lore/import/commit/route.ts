@@ -18,7 +18,7 @@ import {
 } from "@/src/lib/heartgarden-import-legacy-gate";
 import { placeImportCards } from "@/src/lib/lore-import-placement";
 import { normalizeImportItemLinkType } from "@/src/lib/lore-import-item-link";
-import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
+import { validateLinkTargetsInBrane } from "@/src/lib/item-links-validation";
 import { normalizeCanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
 import { persistedEntityTypeFromCanonical } from "@/src/lib/lore-object-registry";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
@@ -287,7 +287,7 @@ export async function POST(req: Request) {
         }
         if (fromId === toId) continue;
 
-        const validated = await validateLinkTargetsInSourceSpace(
+        const validated = await validateLinkTargetsInBrane(
           tx as unknown as VigilDb,
           fromId,
           [toId],

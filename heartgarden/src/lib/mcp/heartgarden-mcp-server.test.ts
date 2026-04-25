@@ -25,6 +25,7 @@ describe("canonicalHeartgardenMcpToolName", () => {
       ["vigil_item_links", "heartgarden_item_links"],
       ["vigil_traverse_links", "heartgarden_traverse_links"],
       ["vigil_related_items", "heartgarden_related_items"],
+      ["vigil_entity_mentions", "heartgarden_entity_mentions"],
       ["vigil_title_mentions", "heartgarden_title_mentions"],
       ["vigil_lore_query", "heartgarden_lore_query"],
       ["vigil_semantic_search", "heartgarden_semantic_search"],

@@ -502,12 +502,18 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       },
       {
         name: "heartgarden_traverse_links",
-        description: "Expand item_links 1–2 hops from an item (HTTP fan-out to /links).",
+        description:
+          "Expand neighbors 1–2 hops from an item. By default traverses explicit item_links; set implicit_mode=true to include entity_mentions neighbors too.",
         inputSchema: {
           type: "object",
           properties: {
             item_id: { type: "string" },
             depth: { type: "integer", description: "1 or 2", minimum: 1, maximum: 2 },
+            implicit_mode: {
+              type: "boolean",
+              description:
+                "When true, also traverse implicit neighbors from /api/items/:id/mentions.",
+            },
           },
           required: ["item_id"],
         },
@@ -521,6 +527,18 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             item_id: { type: "string" },
             space_id: { type: "string", description: "Optional override; defaults to item's space" },
             limit: { type: "integer", description: "Default 8" },
+          },
+          required: ["item_id"],
+        },
+      },
+      {
+        name: "heartgarden_entity_mentions",
+        description:
+          "Implicit mention edges for one item (term-based entity_mentions): outgoing mentions and items that mention this item.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            item_id: { type: "string", description: "UUID of the item" },
           },
           required: ["item_id"],
         },
@@ -737,7 +755,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       {
         name: "heartgarden_create_link",
         description:
-          "Create a canvas connection between two items (POST /api/item-links): a visible thread/edge on the map. This is not the same as editing structured fields on a lore card (roster, anchors) — those live in the item's content JSON (hgArch) via heartgarden_patch_item. source_item_id → target_item_id. relationship_type maps to linkType. Canonical values: bond, affiliation, contract, conflict, history (pin is default rope). Legacy values are normalized server-side. Use links intentionally (high-signal relationships), not as full-mesh wiring for every related fact. If many cards are tightly related under one idea, prefer a folder/subspace and a few bridge links. Pins are omitted so the UI picks default anchors; duplicate logical pairs can exist with different pin geometry. Both items must share space_id.",
+          "Create a canvas connection between two items (POST /api/item-links): a visible thread/edge on the map. This is not the same as editing structured fields on a lore card (roster, anchors) — those live in the item's content JSON (hgArch) via heartgarden_patch_item. source_item_id → target_item_id. relationship_type maps to linkType. Canonical values: bond, affiliation, contract, conflict, history (pin is default rope). Legacy values are normalized server-side. Use links intentionally (high-signal relationships), not as full-mesh wiring for every related fact. If many cards are tightly related under one idea, prefer a folder/subspace and a few bridge links. Pins are omitted so the UI picks default anchors; duplicate logical pairs can exist with different pin geometry. Both items must be inside the same brane.",
         inputSchema: {
           type: "object",
           properties: {
@@ -820,6 +838,14 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
     return res.json() as Promise<{
       outgoing?: { to?: { id?: string } }[];
       incoming?: { from?: { id?: string } }[];
+    }>;
+  }
+
+  async function fetchItemMentions(itemId: string) {
+    const res = await api(`${BASE}/api/items/${encodeURIComponent(itemId)}/mentions`);
+    return res.json() as Promise<{
+      mentions?: { itemId?: string }[];
+      mentionedBy?: { itemId?: string }[];
     }>;
   }
 
@@ -1006,9 +1032,22 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       return mcpApiText(res, "mcp_item_links_failed");
     }
 
+    if (name === "heartgarden_entity_mentions") {
+      const itemId = String(args.item_id ?? "").trim();
+      if (!itemId) {
+        return {
+          content: [{ type: "text", text: "item_id is required" }],
+          isError: true,
+        };
+      }
+      const res = await api(`${BASE}/api/items/${encodeURIComponent(itemId)}/mentions`);
+      return mcpApiText(res, "mcp_entity_mentions_failed");
+    }
+
     if (name === "heartgarden_traverse_links") {
       const itemId = String(args.item_id ?? "").trim();
       const depth = Math.min(2, Math.max(1, Number(args.depth) || 1));
+      const implicitMode = args.implicit_mode === true;
       if (!itemId) {
         return {
           content: [{ type: "text", text: "item_id is required" }],
@@ -1016,7 +1055,18 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         };
       }
       const root = await fetchItemLinks(itemId);
-      const out: { root: typeof root; hops: Record<string, unknown> } = { root, hops: {} };
+      const rootImplicit = implicitMode ? await fetchItemMentions(itemId) : undefined;
+      const out: {
+        root: typeof root;
+        rootImplicit?: typeof rootImplicit;
+        hops: Record<string, unknown>;
+        hopsImplicit?: Record<string, unknown>;
+      } = {
+        root,
+        rootImplicit,
+        hops: {},
+        hopsImplicit: implicitMode ? {} : undefined,
+      };
       if (depth < 2) {
         return { content: [{ type: "text", text: JSON.stringify(out, null, 2) }] };
       }
@@ -1027,9 +1077,20 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       for (const r of root.incoming ?? []) {
         if (r.from?.id) peerIds.add(r.from.id);
       }
+      if (implicitMode && rootImplicit) {
+        for (const r of rootImplicit.mentions ?? []) {
+          if (r.itemId) peerIds.add(r.itemId);
+        }
+        for (const r of rootImplicit.mentionedBy ?? []) {
+          if (r.itemId) peerIds.add(r.itemId);
+        }
+      }
       peerIds.delete(itemId);
       for (const pid of peerIds) {
         out.hops[pid] = await fetchItemLinks(pid);
+        if (implicitMode && out.hopsImplicit) {
+          out.hopsImplicit[pid] = await fetchItemMentions(pid);
+        }
       }
       return { content: [{ type: "text", text: JSON.stringify(out, null, 2) }] };
     }

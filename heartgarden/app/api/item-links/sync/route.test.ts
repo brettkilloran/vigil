@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const tryGetDbMock = vi.fn();
-const validateLinkTargetsInSourceSpaceMock = vi.fn();
+const validateLinkTargetsInBraneMock = vi.fn();
 
 vi.mock("@/src/db/index", () => ({
   tryGetDb: tryGetDbMock,
 }));
 
 vi.mock("@/src/lib/item-links-validation", () => ({
-  validateLinkTargetsInSourceSpace: validateLinkTargetsInSourceSpaceMock,
+  validateLinkTargetsInBrane: validateLinkTargetsInBraneMock,
 }));
 
 vi.mock("@/src/lib/heartgarden-api-boot-context", async (importOriginal) => {
@@ -48,9 +48,10 @@ describe("POST /api/item-links/sync", () => {
     };
 
     tryGetDbMock.mockReturnValue(db);
-    validateLinkTargetsInSourceSpaceMock.mockResolvedValue({
+    validateLinkTargetsInBraneMock.mockResolvedValue({
       ok: true,
       sourceSpaceId: "space-a",
+      targetSpaceIds: ["space-a"],
       targetIds: [
         "00000000-0000-4000-8000-000000000002",
         "00000000-0000-4000-8000-000000000003",

@@ -77,7 +77,7 @@ When **`isPlayersTier`** (boot loaded, gate on, **`sessionTier === "player"`**):
 | Top bar: import, vault review | Hidden |
 | Lore panels, smart import, link graph overlay | Unmounted |
 | Search palette (lexical / FTS) | On (server forces player `spaceId`) |
-| Links panel (same-space item links) | On if enabled for cloud |
+| Links panel (brane-scoped item links) | On if enabled for cloud |
 
 ## New routes (maintainer checklist)
 

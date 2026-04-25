@@ -3,9 +3,9 @@
  * Human-readable spec: docs/BINDINGS_CATALOG.md
  */
 
-/** All persisted `item_links` (and mirrored bindings) stay within one `items.space_id` — see `validateLinkTargetsInSourceSpace`. */
+/** All persisted `item_links` (and mirrored bindings) stay within one brane — see `validateLinkTargetsInBrane`. */
 export const CROSS_SPACE_LINK_POLICY =
-  "same_space_only" as const;
+  "same_brane_only" as const;
 
 /**
  * Version for structured `content_json.hgArch` binding payloads.

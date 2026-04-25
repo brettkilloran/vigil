@@ -272,7 +272,7 @@ import { ArchitecturalLinksPanel } from "@/src/components/ui/ArchitecturalLinksP
 import { LinkGraphOverlay } from "@/src/components/ui/LinkGraphOverlay";
 import { LoreAskPanel } from "@/src/components/ui/LoreAskPanel";
 import { GraphPanel } from "@/src/components/product-ui/canvas/GraphPanel";
-import { EntityPopover } from "@/src/components/product-ui/canvas/EntityPopover";
+import { AltGraphCard } from "@/src/components/product-ui/canvas/AltGraphCard";
 import {
   type CanvasBodyCommitPayload,
   type CanvasConnectionPin,
@@ -2637,6 +2637,7 @@ export function ArchitecturalCanvasApp({
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
+  const GRAPH_PANEL_WIDTH_STORAGE_KEY = "heartgarden.graphPanel.width";
   const [minimapPlacementSizes, setMinimapPlacementSizes] = useState<
     ReadonlyMap<string, { width: number; height: number }>
   >(() => new Map());
@@ -2645,16 +2646,57 @@ export function ArchitecturalCanvasApp({
   const lorePanelOpenRef = useRef(false);
   const lorePanelOpenSoundPrevRef = useRef(false);
   const [graphOverlayOpen, setGraphOverlayOpen] = useState(false);
-  const [graphPanelWidth] = useState(360);
+  const [graphPanelWidth, setGraphPanelWidth] = useState(360);
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = Number(window.localStorage.getItem(GRAPH_PANEL_WIDTH_STORAGE_KEY) ?? "");
+      if (!Number.isFinite(raw)) return;
+      setGraphPanelWidth(Math.max(320, Math.min(760, Math.round(raw))));
+    } catch {
+      /* ignore */
+    }
+  }, [GRAPH_PANEL_WIDTH_STORAGE_KEY]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(GRAPH_PANEL_WIDTH_STORAGE_KEY, String(graphPanelWidth));
+    } catch {
+      /* ignore */
+    }
+  }, [GRAPH_PANEL_WIDTH_STORAGE_KEY, graphPanelWidth]);
   const [activeBraneId, setActiveBraneId] = useState<string | null>(null);
   const [altHeld, setAltHeld] = useState(false);
-  const [entityPopover, setEntityPopover] = useState<{
+  const [altGraphCard, setAltGraphCard] = useState<{
     term: string;
     x: number;
     y: number;
-    rows: Array<{ itemId: string; title: string; mentionCount: number; snippet?: string | null }>;
-    loading: boolean;
+    mentions: Array<{ itemId: string; title: string; mentionCount: number; snippet?: string | null }>;
+    searchItems: Array<{ id: string; title?: string | null; itemType?: string | null }>;
+    loadingMentions: boolean;
+    loadingSearch: boolean;
   } | null>(null);
+  const [altWordHighlightRect, setAltWordHighlightRect] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const altMentionCacheRef = useRef(
+    new Map<
+      string,
+      {
+        at: number;
+        items: Array<{ itemId: string; title: string; mentionCount: number; snippet?: string | null }>;
+      }
+    >(),
+  );
+  const altSearchCacheRef = useRef(
+    new Map<
+      string,
+      { at: number; items: Array<{ id: string; title?: string | null; itemType?: string | null }> }
+    >(),
+  );
   const graphOverlayOpenSoundPrevRef = useRef(false);
   const [loreSmartReview, setLoreSmartReview] = useState<LoreSmartImportReviewState | null>(null);
   const [loreSmartPlanning, setLoreSmartPlanning] = useState(false);
@@ -3557,7 +3599,8 @@ export function ArchitecturalCanvasApp({
       if (e.key !== "Alt") return;
       setAltHeld(false);
       delete document.body.dataset.hgAltHeld;
-      setEntityPopover(null);
+      setAltGraphCard(null);
+      setAltWordHighlightRect(null);
     };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
@@ -3570,44 +3613,129 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     if (!altHeld || !activeBraneId) return;
+    const CACHE_TTL_MS = 12_000;
     let raf = 0;
-    let abort: AbortController | null = null;
+    let mentionAbort: AbortController | null = null;
+    let searchAbort: AbortController | null = null;
     const onMove = (e: PointerEvent) => {
       if (raf) cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         raf = 0;
         const hit = readWordUnderPointer(e.clientX, e.clientY);
         if (!hit) {
-          setEntityPopover(null);
+          setAltGraphCard(null);
+          setAltWordHighlightRect(null);
           return;
         }
         const term = hit.word.toLowerCase();
-        setEntityPopover((prev) => {
+        setAltWordHighlightRect({
+          left: hit.rect.left,
+          top: hit.rect.top,
+          width: Math.max(8, hit.rect.width),
+          height: Math.max(8, hit.rect.height),
+        });
+        setAltGraphCard((prev) => {
           if (prev && prev.term === term) {
             return { ...prev, x: hit.rect.left + 8, y: hit.rect.bottom + 8 };
           }
-          return { term, x: hit.rect.left + 8, y: hit.rect.bottom + 8, rows: [], loading: true };
+          return {
+            term,
+            x: hit.rect.left + 8,
+            y: hit.rect.bottom + 8,
+            mentions: [],
+            searchItems: [],
+            loadingMentions: true,
+            loadingSearch: true,
+          };
         });
-        abort?.abort();
-        abort = new AbortController();
+        mentionAbort?.abort();
+        searchAbort?.abort();
+
+        const now = Date.now();
+        const mentionCached = altMentionCacheRef.current.get(term);
+        if (mentionCached && now - mentionCached.at < CACHE_TTL_MS) {
+          setAltGraphCard((prev) =>
+            prev && prev.term === term
+              ? { ...prev, mentions: mentionCached.items, loadingMentions: false }
+              : prev,
+          );
+        } else {
+          mentionAbort = new AbortController();
+        }
+
+        const searchCacheKey = `${activeSpaceId || "__none__"}::${term}`;
+        const searchCached = altSearchCacheRef.current.get(searchCacheKey);
+        if (searchCached && now - searchCached.at < CACHE_TTL_MS) {
+          setAltGraphCard((prev) =>
+            prev && prev.term === term
+              ? { ...prev, searchItems: searchCached.items, loadingSearch: false }
+              : prev,
+          );
+        } else {
+          searchAbort = new AbortController();
+        }
+
         void (async () => {
           try {
-            const res = await fetch(
-              `/api/mentions?term=${encodeURIComponent(term)}&braneId=${encodeURIComponent(activeBraneId)}`,
-              { signal: abort?.signal },
-            );
-            const data = (await res.json()) as {
-              ok?: boolean;
-              items?: Array<{ itemId: string; title: string; mentionCount: number; snippet?: string | null }>;
-            };
-            if (!data.ok) return;
-            setEntityPopover((prev) =>
-              prev && prev.term === term
-                ? { ...prev, rows: data.items ?? [], loading: false }
-                : prev,
-            );
+            if (mentionAbort) {
+              const mentionRes = await fetch(
+                `/api/mentions?term=${encodeURIComponent(term)}&braneId=${encodeURIComponent(activeBraneId)}`,
+                { signal: mentionAbort.signal },
+              );
+              const mentionData = (await mentionRes.json()) as {
+                ok?: boolean;
+                items?: Array<{
+                  itemId: string;
+                  title: string;
+                  mentionCount: number;
+                  snippet?: string | null;
+                }>;
+              };
+              if (mentionData.ok) {
+                const items = mentionData.items ?? [];
+                altMentionCacheRef.current.set(term, { at: Date.now(), items });
+                setAltGraphCard((prev) =>
+                  prev && prev.term === term
+                    ? { ...prev, mentions: items, loadingMentions: false }
+                    : prev,
+                );
+              }
+            }
           } catch {
-            setEntityPopover((prev) => (prev && prev.term === term ? { ...prev, loading: false } : prev));
+            setAltGraphCard((prev) =>
+              prev && prev.term === term ? { ...prev, loadingMentions: false } : prev,
+            );
+          }
+        })();
+        void (async () => {
+          try {
+            if (searchAbort) {
+              const searchParams = new URLSearchParams();
+              searchParams.set("q", term);
+              searchParams.set("mode", "hybrid");
+              searchParams.set("limit", "12");
+              if (isUuidLike(activeSpaceId)) searchParams.set("spaceId", activeSpaceId);
+              const searchRes = await fetch(`/api/search?${searchParams.toString()}`, {
+                signal: searchAbort.signal,
+              });
+              const searchData = (await searchRes.json()) as {
+                ok?: boolean;
+                items?: Array<{ id: string; title?: string | null; itemType?: string | null }>;
+              };
+              if (searchData.ok) {
+                const items = searchData.items ?? [];
+                altSearchCacheRef.current.set(searchCacheKey, { at: Date.now(), items });
+                setAltGraphCard((prev) =>
+                  prev && prev.term === term
+                    ? { ...prev, searchItems: items, loadingSearch: false }
+                    : prev,
+                );
+              }
+            }
+          } catch {
+            setAltGraphCard((prev) =>
+              prev && prev.term === term ? { ...prev, loadingSearch: false } : prev,
+            );
           }
         })();
       });
@@ -3615,18 +3743,30 @@ export function ArchitecturalCanvasApp({
     const onClick = (e: PointerEvent) => {
       if (!altHeld) return;
       const hit = readWordUnderPointer(e.clientX, e.clientY);
-      if (!hit) return;
+      if (!hit) {
+        setAltGraphCard(null);
+        setAltWordHighlightRect(null);
+        return;
+      }
       if (!graphOverlayOpen) setGraphOverlayOpen(true);
+    };
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setAltGraphCard(null);
+      setAltWordHighlightRect(null);
     };
     document.addEventListener("pointermove", onMove);
     document.addEventListener("pointerdown", onClick);
+    document.addEventListener("keydown", onEscape);
     return () => {
       if (raf) cancelAnimationFrame(raf);
-      abort?.abort();
+      mentionAbort?.abort();
+      searchAbort?.abort();
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerdown", onClick);
+      document.removeEventListener("keydown", onEscape);
     };
-  }, [activeBraneId, altHeld, graphOverlayOpen]);
+  }, [activeBraneId, activeSpaceId, altHeld, graphOverlayOpen]);
 
   useEffect(() => {
     const prev = connectionModeSoundPrevRef.current;
@@ -13074,6 +13214,7 @@ export function ArchitecturalCanvasApp({
         ) : null}
         <div
           className={`${styles.chromeLayer}${bootPreActivateGate ? ` ${styles.chromeLayerBootSuppressed}` : ""}`}
+          style={{ right: graphOverlayOpen ? graphPanelWidth : 0 }}
         >
         {parentSpaceId ? (
           <ArchitecturalParentExitThreshold
@@ -14173,6 +14314,7 @@ export function ArchitecturalCanvasApp({
               open={graphOverlayOpen}
               braneId={activeBraneId}
               width={graphPanelWidth}
+              onResizeWidth={setGraphPanelWidth}
               onClose={() => setGraphOverlayOpen(false)}
               onSelectItem={(id) => focusEntityFromPalette(id)}
             />
@@ -14182,14 +14324,30 @@ export function ArchitecturalCanvasApp({
               onClose={() => setGraphOverlayOpen(false)}
               onSelectItem={(id) => focusEntityFromPalette(id)}
             />
-            <EntityPopover
-              open={Boolean(entityPopover)}
-              term={entityPopover?.term ?? ""}
-              x={entityPopover?.x ?? 0}
-              y={entityPopover?.y ?? 0}
-              rows={entityPopover?.rows ?? []}
-              loading={Boolean(entityPopover?.loading)}
-              onClose={() => setEntityPopover(null)}
+            {altHeld && altWordHighlightRect ? (
+              <div
+                className="pointer-events-none fixed z-[2090] rounded border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)]/35"
+                style={{
+                  left: altWordHighlightRect.left - 2,
+                  top: altWordHighlightRect.top - 1,
+                  width: altWordHighlightRect.width + 4,
+                  height: altWordHighlightRect.height + 2,
+                }}
+              />
+            ) : null}
+            <AltGraphCard
+              open={Boolean(altGraphCard)}
+              term={altGraphCard?.term ?? ""}
+              x={altGraphCard?.x ?? 0}
+              y={altGraphCard?.y ?? 0}
+              mentions={altGraphCard?.mentions ?? []}
+              searchItems={altGraphCard?.searchItems ?? []}
+              loadingMentions={Boolean(altGraphCard?.loadingMentions)}
+              loadingSearch={Boolean(altGraphCard?.loadingSearch)}
+              onClose={() => {
+                setAltGraphCard(null);
+                setAltWordHighlightRect(null);
+              }}
               onShowItem={(id) => {
                 if (!graphOverlayOpen) setGraphOverlayOpen(true);
                 focusEntityFromPalette(id);
@@ -14731,6 +14889,7 @@ export function ArchitecturalCanvasApp({
         className={`${styles.chromeLayer}${
           bootPreActivateGate ? ` ${styles.chromeLayerTopLeftBootElevated}` : ""
         }`}
+        style={{ right: graphOverlayOpen ? graphPanelWidth : 0 }}
       >
         <div ref={shellTopLeftStackRef} className={styles.shellTopLeftStack}>
           <div

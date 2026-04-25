@@ -4,7 +4,7 @@ Engineering source of truth: `src/lib/bindings-catalog.ts` (`BINDING_SLOT_DEFINI
 
 ## Cross-space
 
-All persisted canvas connections (`item_links`) and binding targets must stay **within the same `items.space_id`** as the source item. Folder depth does not change `space_id` until the item is moved; true cross-world / cross-canvas links are out of scope unless validation is revisited (`validateLinkTargetsInSourceSpace`).
+All persisted canvas connections (`item_links`) and binding targets must stay **within the same brane** as the source item (`validateLinkTargetsInBrane`). Cross-folder links inside a brane are supported.
 
 ## Association vs connection metadata
 
@@ -27,7 +27,7 @@ Mirror rules and “who writes what” are listed on each `BindingSlotDefinition
 ## Recall and index
 
 - Vault embed text and FTS **`search_blob`** use the same **`buildItemVaultCorpus`** projection (`item-searchable-text.ts`): hgDoc + HTML JSON, `hgArch`, `entity_meta`, title/body, lore fields, and image metadata strings.
-- Lore Q&A expands **graph neighbors**, **prose `vigil:item` cites**, and **hgArch binding targets** (`expandHgArchBindingNeighbors`).
+- Lore Q&A expands **graph neighbors** and **hgArch binding targets** (`expandHgArchBindingNeighbors`).
 
 ## Versioning
 

@@ -39,8 +39,8 @@ export const loreImportPlanFolderSchema = z.object({
 /**
  * References to plan notes in a different folder — surfaced as `[[Title]]` mentions
  * on the source card rather than silently dropped `item_links`. Apply materialises
- * each mention into both `bodyText` (with `vigil:item:<uuid>`) and
- * `entity_meta.crossFolderRefs` once the target row has an id.
+ * each mention into `entity_meta.crossFolderRefs` metadata once the target row
+ * has an id.
  *
  * @see docs/LORE_IMPORT_AUDIT_2026-04-21.md §4.2 and plan §5.
  */

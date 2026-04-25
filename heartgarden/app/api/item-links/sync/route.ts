@@ -17,7 +17,7 @@ import {
 } from "@/src/lib/heartgarden-api-route-helpers";
 import { invalidateItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
 import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
-import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
+import { validateLinkTargetsInBrane } from "@/src/lib/item-links-validation";
 
 const bodySchema = z.object({
   sourceItemId: z.string().uuid(),
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
   if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, srcItem.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
   }
-  const validated = await validateLinkTargetsInSourceSpace(db, sourceItemId, targetIds);
+  const validated = await validateLinkTargetsInBrane(db, sourceItemId, targetIds);
   if (!validated.ok) {
     return Response.json({ ok: false, error: validated.error }, { status: validated.status });
   }

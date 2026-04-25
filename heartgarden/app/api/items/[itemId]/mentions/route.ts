@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { entityMentions, items } from "@/src/db/schema";
@@ -39,27 +39,31 @@ export async function GET(
         id: entityMentions.id,
         itemId: entityMentions.targetItemId,
         title: items.title,
+        sourceKind: entityMentions.sourceKind,
         matchedTerm: entityMentions.matchedTerm,
         mentionCount: entityMentions.mentionCount,
         snippet: entityMentions.snippet,
+        headingPath: entityMentions.headingPath,
         sourceSpaceId: entityMentions.sourceSpaceId,
       })
       .from(entityMentions)
       .innerJoin(items, eq(items.id, entityMentions.targetItemId))
-      .where(and(eq(entityMentions.sourceItemId, itemId), eq(entityMentions.sourceKind, "term"))),
+      .where(eq(entityMentions.sourceItemId, itemId)),
     db
       .select({
         id: entityMentions.id,
         itemId: entityMentions.sourceItemId,
         title: items.title,
+        sourceKind: entityMentions.sourceKind,
         matchedTerm: entityMentions.matchedTerm,
         mentionCount: entityMentions.mentionCount,
         snippet: entityMentions.snippet,
+        headingPath: entityMentions.headingPath,
         sourceSpaceId: entityMentions.sourceSpaceId,
       })
       .from(entityMentions)
       .innerJoin(items, eq(items.id, entityMentions.sourceItemId))
-      .where(and(eq(entityMentions.targetItemId, itemId), eq(entityMentions.sourceKind, "term"))),
+      .where(eq(entityMentions.targetItemId, itemId)),
   ]);
 
   return Response.json({

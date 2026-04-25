@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const tryGetDbMock = vi.fn();
-const validateLinkTargetsInSourceSpaceMock = vi.fn();
+const validateLinkTargetsInBraneMock = vi.fn();
 
 vi.mock("@/src/db/index", () => ({
   tryGetDb: tryGetDbMock,
 }));
 
 vi.mock("@/src/lib/item-links-validation", () => ({
-  validateLinkTargetsInSourceSpace: validateLinkTargetsInSourceSpaceMock,
+  validateLinkTargetsInBrane: validateLinkTargetsInBraneMock,
 }));
 
 vi.mock("@/src/lib/heartgarden-api-boot-context", async (importOriginal) => {
@@ -35,7 +35,7 @@ describe("POST /api/item-links", () => {
       })),
     };
     tryGetDbMock.mockReturnValue(db);
-    validateLinkTargetsInSourceSpaceMock.mockResolvedValue({
+    validateLinkTargetsInBraneMock.mockResolvedValue({
       ok: false,
       status: 400,
       error: "Cross-space links are not allowed",
@@ -57,7 +57,7 @@ describe("POST /api/item-links", () => {
     const payload = (await res.json()) as { ok: boolean; error: string };
     expect(payload.ok).toBe(false);
     expect(payload.error).toBe("Cross-space links are not allowed");
-    expect(validateLinkTargetsInSourceSpaceMock).toHaveBeenCalledWith(
+    expect(validateLinkTargetsInBraneMock).toHaveBeenCalledWith(
       db,
       "00000000-0000-4000-8000-000000000001",
       ["00000000-0000-4000-8000-000000000002"],

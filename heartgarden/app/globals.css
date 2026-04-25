@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+body[data-hg-alt-held="1"] [data-hg-rich-editor-host="true"],
+body[data-hg-alt-held="1"] [contenteditable="true"] {
+  cursor: crosshair !important;
+}
+
 /* Architectural Canvas — dark-only shell; light-themed cards use per-type tokens. */
 
 :root {

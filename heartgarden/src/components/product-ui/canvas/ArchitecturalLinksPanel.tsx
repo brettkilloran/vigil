@@ -3,7 +3,7 @@
 import { TreeStructure } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import type { CanvasContentEntity, CanvasGraph } from "@/src/components/foundation/architectural-types";
+import type { CanvasGraph } from "@/src/components/foundation/architectural-types";
 import { menuLabelForLinkType } from "@/src/lib/lore-link-types";
 import { Button } from "@/src/components/ui/Button";
 import { CanvasDebugInspectorShell } from "@/src/components/ui/CanvasDebugInspectorShell";
@@ -12,62 +12,13 @@ import debugInspectorStyles from "@/src/components/ui/CanvasDebugInspectorShell.
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function extractVigilIdsFromHtml(html: string): string[] {
-  const re = /vigil:item:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
-  const out = new Set<string>();
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(html)) !== null) out.add(m[1]!.toLowerCase());
-  return [...out];
-}
-
-function wikiTargetsFromEntity(entity: CanvasContentEntity): string[] {
-  return extractVigilIdsFromHtml(entity.bodyHtml ?? "");
-}
-
 type Endpoint = { id: string; title: string; itemType: string };
 
 type CloudLoaded =
   | { outgoing: { linkId: string; linkType: string; to: Endpoint }[]; incoming: { linkId: string; linkType: string; from: Endpoint }[]; err: null }
   | { outgoing: []; incoming: []; err: string };
 
-function RowList({
-  label,
-  rows,
-  onPick,
-}: {
-  label: string;
-  rows: Endpoint[];
-  onPick: (id: string) => void;
-}) {
-  if (rows.length === 0) return null;
-  return (
-    <div>
-      <div className={debugInspectorStyles.debugInspectorSectionLabel}>{label}</div>
-      <ul className={debugInspectorStyles.debugInspectorList}>
-        {rows.map((r) => (
-          <li key={r.id}>
-            <Button
-              size="sm"
-              variant="subtle"
-              tone="menu"
-              className="w-full justify-start truncate"
-              onClick={() => onPick(r.id)}
-            >
-              {r.title}
-              <span className="ml-1 text-[var(--vigil-muted)]">({r.itemType})</span>
-            </Button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-/**
- * Three surfaces in one inspector: **canvas threads** (spatial ropes), **wiki mentions** (`vigil:item` /
- * `[[` in note HTML), **persisted edges** (Neon `item_links`, overlaps threads when synced), plus **FTS
- * related** (discovery, not authored links).
- */
+/** Inspector surfaces: canvas threads, persisted edges, and FTS related discovery. */
 export function ArchitecturalLinksPanel({
   graph,
   activeSpaceId,
@@ -85,10 +36,6 @@ export function ArchitecturalLinksPanel({
 }) {
   const entityId = selectedEntityIds.length === 1 ? selectedEntityIds[0]! : null;
   const entity = entityId ? graph.entities[entityId] : undefined;
-  const visibleIds = useMemo(
-    () => graph.spaces[activeSpaceId]?.entityIds ?? [],
-    [graph, activeSpaceId],
-  );
 
   const itemIdForCloud =
     entity && UUID_RE.test(entity.persistedItemId ?? entity.id)
@@ -169,45 +116,6 @@ export function ArchitecturalLinksPanel({
     };
   }, [activeSpaceId, cloudEnabled, itemIdForCloud]);
 
-  const localWiki = useMemo(() => {
-    if (!entityId || !entity || entity.kind !== "content") {
-      return { outgoing: [] as Endpoint[], incoming: [] as Endpoint[] };
-    }
-    const targets = wikiTargetsFromEntity(entity);
-    const outgoing: Endpoint[] = [];
-    const seen = new Set<string>();
-    for (const raw of targets) {
-      const id = visibleIds.find((vid) => vid.toLowerCase() === raw) ?? null;
-      if (!id || id === entityId) continue;
-      const peer = graph.entities[id];
-      if (!peer) continue;
-      if (seen.has(id)) continue;
-      seen.add(id);
-      outgoing.push({
-        id,
-        title: peer.title,
-        itemType: peer.kind === "folder" ? "folder" : peer.theme,
-      });
-    }
-    outgoing.sort((a, b) => a.title.localeCompare(b.title));
-
-    const incoming: Endpoint[] = [];
-    for (const vid of visibleIds) {
-      if (vid === entityId) continue;
-      const peer = graph.entities[vid];
-      if (!peer || peer.kind !== "content") continue;
-      const t = wikiTargetsFromEntity(peer);
-      if (!t.some((x) => x === entityId.toLowerCase())) continue;
-      incoming.push({
-        id: vid,
-        title: peer.title,
-        itemType: peer.theme,
-      });
-    }
-    incoming.sort((a, b) => a.title.localeCompare(b.title));
-    return { outgoing, incoming };
-  }, [entity, entityId, graph, visibleIds]);
-
   const canvasThreads = useMemo(() => {
     if (!entityId) return { count: 0, rows: [] as { peerId: string; title: string; tag: string }[] };
     const rows: { peerId: string; title: string; tag: string }[] = [];
@@ -245,7 +153,6 @@ export function ArchitecturalLinksPanel({
 
   if (!entityId) return null;
 
-  const wikiTotal = localWiki.outgoing.length + localWiki.incoming.length;
   const serverTotal =
     cloud && !cloud.err ? cloud.outgoing.length + cloud.incoming.length : null;
 
@@ -257,23 +164,22 @@ export function ArchitecturalLinksPanel({
     >
       <p className={`${debugInspectorStyles.debugInspectorIntro} mb-2`}>
         <span className="text-[var(--vigil-label)]">
-          Canvas threads: {canvasThreads.count} · Wiki mentions: {wikiTotal} · Persisted (Neon):{" "}
+          Canvas threads: {canvasThreads.count} · Persisted (Neon):{" "}
           {cloudEnabled && serverTotal !== null ? serverTotal : "—"}
         </span>
       </p>
       {!cloudEnabled ? (
         <p className={debugInspectorStyles.debugInspectorIntro}>
-          Local canvas — <code className={debugInspectorStyles.debugInspectorCode}>[[</code> wiki
-          targets and <code className={debugInspectorStyles.debugInspectorCode}>vigil:item:</code> in
-          note HTML. Sync to Neon for persisted <code className={debugInspectorStyles.debugInspectorCode}>
+          Local canvas threads are ephemeral until sync. Sync to Neon for persisted{" "}
+          <code className={debugInspectorStyles.debugInspectorCode}>
             item_links
           </code>{" "}
-          (same store as drawn threads when saved).
+          rows.
         </p>
       ) : (
         <p className={debugInspectorStyles.debugInspectorIntro}>
-          Persisted rows mirror drawn threads after sync; wiki targets in note bodies are separate from
-          ropes. FTS &quot;related&quot; is discovery, not an authored link.
+          Persisted rows mirror drawn threads after sync. FTS &quot;related&quot; is discovery,
+          not an authored link.
         </p>
       )}
 
@@ -364,21 +270,6 @@ export function ArchitecturalLinksPanel({
             ) : null}
           </div>
         ) : null
-      ) : null}
-
-      {entity?.kind === "content" ? (
-        <div className={debugInspectorStyles.debugInspectorDivider}>
-          <div className={debugInspectorStyles.debugInspectorSectionLabel}>Wiki mentions (note HTML)</div>
-          <div className={debugInspectorStyles.debugInspectorStack}>
-            <RowList label="Out" rows={localWiki.outgoing} onPick={focus} />
-            <RowList label="In" rows={localWiki.incoming} onPick={focus} />
-          </div>
-          {localWiki.outgoing.length === 0 && localWiki.incoming.length === 0 ? (
-            <p className={debugInspectorStyles.debugInspectorMuted}>
-              No vigil:item / HTML wiki targets yet.
-            </p>
-          ) : null}
-        </div>
       ) : null}
 
       {cloudEnabled && itemIdForCloud ? (

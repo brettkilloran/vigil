@@ -11,7 +11,7 @@ import {
   buildImportedEntityMeta,
   type CrossFolderRef,
 } from "@/src/lib/entity-meta-schema";
-import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
+import { validateLinkTargetsInBrane } from "@/src/lib/item-links-validation";
 import { connectionKindMetaForLinkType } from "@/src/lib/connection-kind-colors";
 import {
   buildLoreNoteContentJsonMerged,
@@ -983,8 +983,8 @@ export async function applyLoreImportPlan(
       }
     }
 
-    // Cross-folder mentions: once targets have real item ids, append `vigil:item:<uuid>`
-    // pointers to each source note's bodyText/contentJson and record cross-folder refs.
+    // Cross-folder references are metadata only in the global-link model.
+    // We no longer inject `vigil:item:` prose into note content.
     for (const note of notesToCreate) {
       const mentions = note.crossFolderMentions;
       if (!mentions || mentions.length === 0) continue;
@@ -994,7 +994,6 @@ export async function applyLoreImportPlan(
       if (!sourceRow) continue;
 
       const resolvedRefs: CrossFolderRef[] = [];
-      const vigilAppendParts: string[] = [];
       for (const m of mentions) {
         const targetItemId = clientIdToItemId.get(m.toClientId);
         if (!targetItemId) continue;
@@ -1004,18 +1003,8 @@ export async function applyLoreImportPlan(
           linkType: m.linkType,
           linkIntent: m.linkIntent,
         });
-        vigilAppendParts.push(
-          `[[${m.targetTitle}]] (vigil:item:${targetItemId})`,
-        );
       }
       if (resolvedRefs.length === 0) continue;
-
-      const appendBlock = `\n\n${vigilAppendParts.join(" · ")}`;
-      const nextContentText = (sourceRow.contentText + appendBlock).slice(0, 120_000);
-      const nextContentJson =
-        sourceRow.entityType === persistedEntityTypeForLoreSource()
-          ? buildLoreSourceContentJson(nextContentText)
-          : (sourceRow.contentJson as Record<string, unknown> | null);
       const prevMeta =
         sourceRow.entityMeta && typeof sourceRow.entityMeta === "object"
           ? (sourceRow.entityMeta as Record<string, unknown>)
@@ -1026,8 +1015,8 @@ export async function applyLoreImportPlan(
       });
       const nextSearchBlob = buildSearchBlob({
         title: sourceRow.title,
-        contentText: nextContentText,
-        contentJson: nextContentJson,
+        contentText: sourceRow.contentText,
+        contentJson: sourceRow.contentJson as Record<string, unknown> | null,
         entityType: sourceRow.entityType,
         entityMeta: nextEntityMeta,
         imageUrl: sourceRow.imageUrl ?? null,
@@ -1039,8 +1028,6 @@ export async function applyLoreImportPlan(
       const [updated] = await dbx
         .update(items)
         .set({
-          contentText: nextContentText,
-          contentJson: nextContentJson,
           searchBlob: nextSearchBlob,
           entityMeta: nextEntityMeta,
           updatedAt: new Date(),
@@ -1064,7 +1051,7 @@ export async function applyLoreImportPlan(
       }
       if (fromId === toId) continue;
 
-      const validated = await validateLinkTargetsInSourceSpace(dbx, fromId, [toId]);
+      const validated = await validateLinkTargetsInBrane(dbx, fromId, [toId]);
       if (!validated.ok) {
         linkWarnings.push(validated.error);
         continue;

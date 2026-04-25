@@ -70,4 +70,3 @@ export async function validateLinkTargetsInBrane(
   };
 }
 
-export const validateLinkTargetsInSourceSpace = validateLinkTargetsInBrane;

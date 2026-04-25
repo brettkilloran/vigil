@@ -24,12 +24,14 @@ export function GraphPanel({
   open,
   braneId,
   width,
+  onResizeWidth,
   onClose,
   onSelectItem,
 }: {
   open: boolean;
   braneId: string | null;
   width: number;
+  onResizeWidth: (next: number) => void;
   onClose: () => void;
   onSelectItem: (itemId: string) => void;
 }) {
@@ -72,9 +74,27 @@ export function GraphPanel({
 
   return (
     <aside
-      className="border-l border-[var(--vigil-border)] bg-[var(--vigil-bg)]"
+      className="relative border-l border-[var(--vigil-border)] bg-[var(--vigil-bg)]"
       style={{ width, minWidth: 320, maxWidth: 760 }}
     >
+      <div
+        className="absolute bottom-0 left-0 top-0 z-10 w-1 cursor-col-resize bg-transparent hover:bg-[var(--vigil-border)]/70"
+        onPointerDown={(event) => {
+          event.preventDefault();
+          const startX = event.clientX;
+          const startWidth = width;
+          const onMove = (e: PointerEvent) => {
+            const delta = startX - e.clientX;
+            onResizeWidth(Math.max(320, Math.min(760, Math.round(startWidth + delta))));
+          };
+          const onUp = () => {
+            window.removeEventListener("pointermove", onMove);
+            window.removeEventListener("pointerup", onUp);
+          };
+          window.addEventListener("pointermove", onMove);
+          window.addEventListener("pointerup", onUp);
+        }}
+      />
       <div className="flex items-center justify-between border-b border-[var(--vigil-border)] px-3 py-2">
         <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--vigil-label)]">
           Graph panel

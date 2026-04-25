@@ -578,9 +578,8 @@ export async function buildLoreImportPlan(args: {
     });
   }
 
-  // Group cross-space drafts by the source note so we can attach mention arrays + inject
-  // `[[Title]]` markers into `bodyText`. The apply path is responsible for resolving
-  // the target client ids to real item UUIDs and appending `vigil:item:<uuid>` pointers.
+  // Group cross-space drafts by source note so we can attach mention arrays and add
+  // readable `[[Title]]` markers to body text while preserving structured metadata.
   const mentionsBySource = new Map<
     string,
     { toClientId: string; targetTitle: string; linkType: string; linkIntent?: "association" | "binding_hint" }[]

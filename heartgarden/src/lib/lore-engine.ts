@@ -17,7 +17,6 @@ import {
   excerptForLore,
   expandHgArchBindingNeighbors,
   expandLinkedItems,
-  expandProseLinkedItems,
   hybridRetrieveItems,
 } from "@/src/lib/vault-retrieval";
 
@@ -35,8 +34,6 @@ export type LoreSource = {
   matchedChunks?: Array<{ text: string; headingPath: string[] }>;
   /** Included via 1-hop item_links from primary hits. */
   viaGraph?: boolean;
-  /** Included because a primary hit's body cites `vigil:item:` (wiki-style). */
-  viaProse?: boolean;
   /** Included via hgArch binding slots on a primary hit (no `item_links` required). */
   viaBinding?: boolean;
 };
@@ -106,21 +103,14 @@ export async function retrieveLoreSources(
   );
   const maxOut = 20;
 
-  const proseCap = Math.min(
-    6,
-    Math.max(0, maxOut - rows.length - graphRows.length),
-  );
-  const proseRows =
-    proseCap > 0 ? await expandProseLinkedItems(db, rows, base, proseCap) : [];
-
   const bindingCap = Math.min(
     6,
-    Math.max(0, maxOut - rows.length - graphRows.length - proseRows.length),
+    Math.max(0, maxOut - rows.length - graphRows.length),
   );
   const bindingRows =
     bindingCap > 0 ? await expandHgArchBindingNeighbors(db, rows, base, bindingCap) : [];
 
-  const total = rows.length + graphRows.length + proseRows.length + bindingRows.length;
+  const total = rows.length + graphRows.length + bindingRows.length;
   const primaryBudget = budgetPerSource(total, 14_000);
   const graphBudget = Math.min(900, Math.floor(primaryBudget * 0.55));
 
@@ -142,7 +132,6 @@ export async function retrieveLoreSources(
 
   const primaryIds = new Set(rows.map((r) => r.item.id));
   const graphIds = new Set(graphRows.map((r) => r.item.id));
-  const proseIds = new Set(proseRows.map((r) => r.item.id));
   for (const row of graphRows) {
     if (out.length >= maxOut) break;
     if (primaryIds.has(row.item.id)) continue;
@@ -157,23 +146,9 @@ export async function retrieveLoreSources(
     });
   }
 
-  for (const row of proseRows) {
-    if (out.length >= maxOut) break;
-    if (primaryIds.has(row.item.id) || graphIds.has(row.item.id)) continue;
-    out.push({
-      itemId: row.item.id,
-      title: row.item.title?.trim() || "Untitled",
-      spaceId: row.space.id,
-      spaceName: row.space.name,
-      excerpt: fallbackExcerpt(row, graphBudget),
-      canonicalEntityKind: readCanonicalEntityKind(row),
-      viaProse: true,
-    });
-  }
-
   for (const row of bindingRows) {
     if (out.length >= maxOut) break;
-    if (primaryIds.has(row.item.id) || graphIds.has(row.item.id) || proseIds.has(row.item.id)) {
+    if (primaryIds.has(row.item.id) || graphIds.has(row.item.id)) {
       continue;
     }
     out.push({
@@ -200,11 +175,9 @@ export async function synthesizeLoreAnswer(
     const body = sanitizeRetrievedTextForLorePrompt(s.excerpt);
     const ctx = s.viaGraph
       ? "\n- context: canvas connection neighbor"
-      : s.viaProse
-        ? "\n- context: cited in note text"
-        : s.viaBinding
-          ? "\n- context: structured card field (hgArch binding target)"
-          : "";
+      : s.viaBinding
+        ? "\n- context: structured card field (hgArch binding target)"
+        : "";
     const kindLine = s.canonicalEntityKind ? `\n- kind: ${s.canonicalEntityKind}` : "";
     const sectionLine =
       s.matchedChunks?.[0]?.headingPath?.length
@@ -237,11 +210,9 @@ export async function* synthesizeLoreAnswerStream(
     const body = sanitizeRetrievedTextForLorePrompt(s.excerpt);
     const ctx = s.viaGraph
       ? "\n- context: canvas connection neighbor"
-      : s.viaProse
-        ? "\n- context: cited in note text"
-        : s.viaBinding
-          ? "\n- context: structured card field (hgArch binding target)"
-          : "";
+      : s.viaBinding
+        ? "\n- context: structured card field (hgArch binding target)"
+        : "";
     const kindLine = s.canonicalEntityKind ? `\n- kind: ${s.canonicalEntityKind}` : "";
     const sectionLine =
       s.matchedChunks?.[0]?.headingPath?.length
@@ -314,11 +285,9 @@ export async function synthesizeLoreAnswerGrounded(
     const body = sanitizeRetrievedTextForLorePrompt(s.excerpt);
     const ctx = s.viaGraph
       ? "\n- context: canvas connection neighbor"
-      : s.viaProse
-        ? "\n- context: cited in note text"
-        : s.viaBinding
-          ? "\n- context: structured card field (hgArch binding target)"
-          : "";
+      : s.viaBinding
+        ? "\n- context: structured card field (hgArch binding target)"
+        : "";
     const kindLine = s.canonicalEntityKind ? `\n- kind: ${s.canonicalEntityKind}` : "";
     const sectionLine =
       s.matchedChunks?.[0]?.headingPath?.length

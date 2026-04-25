@@ -22,11 +22,8 @@ type PlanLinkDraft = {
 };
 
 /**
- * `item_links` are only created between items in the same `items.space_id`
- * (`validateLinkTargetsInSourceSpace`). Instead of silently dropping links that
- * span different import folders, split them into `crossSpaceMentions` so the
- * plan-build / apply layers can turn them into prose mentions (`[[Title]]` +
- * `vigil:item:<uuid>`) on the source card and `entity_meta.crossFolderRefs`.
+ * Global brane links are allowed, so import links no longer require same-folder filtering.
+ * Keep the helper for call-site stability while returning links unchanged.
  *
  * @see docs/LORE_IMPORT_AUDIT_2026-04-21.md §4.2 and plan §5.
  */
@@ -38,42 +35,22 @@ export function filterPlanLinksToSameCanvasSpace(
   crossSpaceMentions: PlanLinkDraft[];
   warnings: string[];
 } {
-  const folderKey = (folderClientId: string | null | undefined) =>
-    folderClientId ?? "__root__";
-
-  const byClient = new Map(notes.map((n) => [n.clientId, folderKey(n.folderClientId)]));
-  const warnings: string[] = [];
+  const noteIds = new Set(notes.map((n) => n.clientId));
   const out: PlanLinkDraft[] = [];
-  const crossSpaceMentions: PlanLinkDraft[] = [];
-
-  for (const l of links) {
-    const fromKey = byClient.get(l.fromClientId);
-    const toKey = byClient.get(l.toClientId);
-    if (fromKey === undefined || toKey === undefined) {
+  const warnings: string[] = [];
+  for (const link of links) {
+    if (!noteIds.has(link.fromClientId) || !noteIds.has(link.toClientId)) {
       warnings.push(
-        `Dropped link ${l.fromClientId} → ${l.toClientId}: unknown note id (links must reference planned notes).`,
-      );
-      continue;
-    }
-    if (fromKey !== toKey) {
-      crossSpaceMentions.push({
-        fromClientId: l.fromClientId,
-        toClientId: l.toClientId,
-        linkType: normalizeImportItemLinkType(l.linkType),
-        ...(l.linkIntent ? { linkIntent: l.linkIntent } : {}),
-      });
-      warnings.push(
-        `Converted link ${l.fromClientId} → ${l.toClientId} to a cross-folder mention (they live in different spaces).`,
+        `Dropped link ${link.fromClientId} → ${link.toClientId}: unknown note id (links must reference planned notes).`,
       );
       continue;
     }
     out.push({
-      fromClientId: l.fromClientId,
-      toClientId: l.toClientId,
-      linkType: normalizeImportItemLinkType(l.linkType),
-      ...(l.linkIntent ? { linkIntent: l.linkIntent } : {}),
+      fromClientId: link.fromClientId,
+      toClientId: link.toClientId,
+      linkType: normalizeImportItemLinkType(link.linkType),
+      ...(link.linkIntent ? { linkIntent: link.linkIntent } : {}),
     });
   }
-
-  return { links: out, crossSpaceMentions, warnings };
+  return { links: out, crossSpaceMentions: [], warnings };
 }

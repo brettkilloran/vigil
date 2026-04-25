@@ -10,21 +10,11 @@ import {
   useEditorSession,
 } from "@/src/components/editing/useEditorSession";
 import {
-  WikiLinkAssistPopover,
-  type WikiCandidate,
-} from "@/src/components/editing/WikiLinkAssistPopover";
-import {
   DEFAULT_SLASH_COMMAND_ITEMS,
   filterSlashCommands,
   type SlashCommandItem,
 } from "@/src/lib/default-slash-commands";
 import { findOpenSlashTrigger } from "@/src/lib/slash-command-caret";
-import {
-  findOpenWikiTrigger,
-  insertHtmlReplacingRange,
-  plainTextToCaret,
-  rangeForPlainTextOffsets,
-} from "@/src/lib/wiki-link-caret";
 
 import hostStyles from "@/src/components/editing/BufferedContentEditable.module.css";
 import { applySpellcheckToNestedEditables } from "@/src/lib/contenteditable-spellcheck";
@@ -253,6 +243,55 @@ function placeCaretInTaskTextFromPoint(taskText: HTMLElement, clientX: number, c
   placeCaretAtEnd(taskText);
 }
 
+type WikiCandidate = { id: string; title: string };
+
+/** Plain text from start of `root` up to the caret (collapsed selection). */
+function plainTextToCaret(root: HTMLElement): string {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return "";
+  const anchor = sel.anchorNode;
+  if (!anchor || !root.contains(anchor)) return "";
+  const range = document.createRange();
+  range.selectNodeContents(root);
+  range.setEnd(anchor, sel.anchorOffset);
+  return range.toString();
+}
+
+/** Build a Range covering plain-text offsets `[start, end)` within `root` text nodes. */
+function rangeForPlainTextOffsets(
+  root: HTMLElement,
+  start: number,
+  end: number,
+): Range | null {
+  if (start < 0 || end < start) return null;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let seen = 0;
+  let startNode: Text | null = null;
+  let endNode: Text | null = null;
+  let startOffset = 0;
+  let endOffset = 0;
+  while (walker.nextNode()) {
+    const n = walker.currentNode as Text;
+    const len = n.data.length;
+    const nextSeen = seen + len;
+    if (!startNode && start >= seen && start <= nextSeen) {
+      startNode = n;
+      startOffset = start - seen;
+    }
+    if (!endNode && end >= seen && end <= nextSeen) {
+      endNode = n;
+      endOffset = end - seen;
+    }
+    seen = nextSeen;
+    if (startNode && endNode) break;
+  }
+  if (!startNode || !endNode) return null;
+  const range = document.createRange();
+  range.setStart(startNode, Math.max(0, Math.min(startNode.length, startOffset)));
+  range.setEnd(endNode, Math.max(0, Math.min(endNode.length, endOffset)));
+  return range;
+}
+
 export type WikiLinkAssistConfig = {
   enabled: boolean;
   getLocalItems: () => WikiCandidate[];
@@ -312,11 +351,12 @@ export function BufferedContentEditable({
   onEscape,
   onEnter,
   dataAttribute,
-  wikiLinkAssist,
+  wikiLinkAssist: _wikiLinkAssist,
   checklistDeletion,
   richDocCommand,
   emptyPlaceholder = null,
 }: BufferedContentEditableProps) {
+  void _wikiLinkAssist;
   const ref = useRef<HTMLDivElement | null>(null);
   useScrollEdgeOverflowAttrs(ref);
   const pastePlainNextRef = useRef(false);
@@ -342,28 +382,6 @@ export function BufferedContentEditable({
     onDraftDirtyChange,
   });
 
-  const [wikiOpen, setWikiOpen] = useState(false);
-  const [wikiAnchor, setWikiAnchor] = useState<DOMRect | null>(null);
-  const [wikiCandidates, setWikiCandidates] = useState<WikiCandidate[]>([]);
-  const [wikiIndex, setWikiIndex] = useState(0);
-  const wikiPlainRangeRef = useRef<{ start: number; end: number } | null>(null);
-  const remoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const remoteAbortRef = useRef<AbortController | null>(null);
-
-  const closeWiki = useCallback(() => {
-    setWikiOpen(false);
-    setWikiAnchor(null);
-    setWikiCandidates([]);
-    setWikiIndex(0);
-    wikiPlainRangeRef.current = null;
-    if (remoteTimerRef.current) {
-      clearTimeout(remoteTimerRef.current);
-      remoteTimerRef.current = null;
-    }
-    remoteAbortRef.current?.abort();
-    remoteAbortRef.current = null;
-  }, []);
-
   const closeSlash = useCallback(() => {
     setSlashOpen(false);
     setSlashAnchor(null);
@@ -386,10 +404,6 @@ export function BufferedContentEditable({
       }
     }
     const plain = plainTextToCaret(el);
-    if (findOpenWikiTrigger(plain)) {
-      closeSlash();
-      return;
-    }
     const slash = findOpenSlashTrigger(plain);
     if (!slash) {
       closeSlash();
@@ -413,74 +427,6 @@ export function BufferedContentEditable({
       }
     }
   }, [closeSlash, plainText, richDocCommand]);
-
-  const refreshWikiAssist = useCallback(() => {
-    const cfg = wikiLinkAssist;
-    const el = ref.current;
-    if (!cfg?.enabled || plainText || !el) {
-      closeWiki();
-      return;
-    }
-
-    const plain = plainTextToCaret(el);
-    const trig = findOpenWikiTrigger(plain);
-    if (!trig) {
-      closeWiki();
-      return;
-    }
-    closeSlash();
-
-    const caretPlain = plain.length;
-    wikiPlainRangeRef.current = { start: trig.startPlainOffset, end: caretPlain };
-
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
-      const r = sel.getRangeAt(0).getBoundingClientRect();
-      if (r.width >= 0 && r.height >= 0) {
-        setWikiAnchor(r);
-      }
-    }
-
-    const q = trig.query.trim().toLowerCase();
-    const local = cfg
-      .getLocalItems()
-      .filter((it) => it.id !== cfg.excludeEntityId)
-      .filter((it) => {
-        if (!q) return true;
-        return it.title.toLowerCase().includes(q) || it.id.toLowerCase().includes(q);
-      })
-      .slice(0, 12);
-
-    setWikiCandidates(local);
-    setWikiIndex(0);
-    setWikiOpen(local.length > 0 || !!cfg.fetchRemoteSuggest);
-
-    if (cfg.fetchRemoteSuggest && trig.query.length >= 2) {
-      if (remoteTimerRef.current) clearTimeout(remoteTimerRef.current);
-      remoteAbortRef.current?.abort();
-      const ac = new AbortController();
-      remoteAbortRef.current = ac;
-      remoteTimerRef.current = setTimeout(() => {
-        void (async () => {
-          try {
-            const remote = await cfg.fetchRemoteSuggest!(trig.query, ac.signal);
-            if (ac.signal.aborted) return;
-            const merged = new Map<string, WikiCandidate>();
-            local.forEach((c) => merged.set(c.id, c));
-            remote
-              .filter((c) => c.id !== cfg.excludeEntityId)
-              .forEach((c) => merged.set(c.id, c));
-            const list = [...merged.values()].slice(0, 16);
-            setWikiCandidates(list);
-            setWikiIndex((i) => Math.min(i, Math.max(0, list.length - 1)));
-            setWikiOpen(list.length > 0);
-          } catch {
-            /* aborted or network */
-          }
-        })();
-      }, 220);
-    }
-  }, [closeSlash, closeWiki, plainText, wikiLinkAssist]);
 
   useEffect(() => {
     const el = ref.current;
@@ -572,27 +518,6 @@ export function BufferedContentEditable({
     [closeSlash, onDraftChange, readElementValue, richDocCommand],
   );
 
-  const applyWikiPick = useCallback(
-    (c: WikiCandidate) => {
-      const el = ref.current;
-      const rangePlain = wikiPlainRangeRef.current;
-      if (!el || !rangePlain) {
-        closeWiki();
-        return;
-      }
-      const r = rangeForPlainTextOffsets(el, rangePlain.start, rangePlain.end);
-      if (!r) {
-        closeWiki();
-        return;
-      }
-      const title = (c.title || "Untitled").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      const html = `<a href="vigil:item:${c.id}">${title}</a>`;
-      insertHtmlReplacingRange(r, html);
-      closeWiki();
-      onDraftChange(readElementValue());
-    },
-    [closeWiki, onDraftChange, readElementValue],
-  );
 
   const docEmpty =
     !plainText && !!editable && !!emptyPlaceholder && isDocHtmlVisuallyEmpty(draft);
@@ -614,13 +539,12 @@ export function BufferedContentEditable({
       const ae = document.activeElement;
       if (ae !== el && !el.contains(ae)) return;
       requestAnimationFrame(() => {
-        refreshWikiAssist();
         refreshSlashAssist();
       });
     };
     document.addEventListener("selectionchange", onSel);
     return () => document.removeEventListener("selectionchange", onSel);
-  }, [refreshSlashAssist, refreshWikiAssist]);
+  }, [refreshSlashAssist]);
 
   return (
     <>
@@ -638,7 +562,6 @@ export function BufferedContentEditable({
           beginEditing();
         }}
         onBlur={() => {
-          closeWiki();
           closeSlash();
           syncCharSkDisplayNameStack(ref.current);
           syncLoreV9RedactedPlaceholderState(ref.current);
@@ -650,7 +573,6 @@ export function BufferedContentEditable({
         onCompositionEnd={() => {
           composingRef.current = false;
           requestAnimationFrame(() => {
-            refreshWikiAssist();
             refreshSlashAssist();
           });
         }}
@@ -671,7 +593,6 @@ export function BufferedContentEditable({
             if (field.isConnected) placeCaretAfterLorePlaceholderReplace(field);
           });
           requestAnimationFrame(() => {
-            refreshWikiAssist();
             refreshSlashAssist();
           });
         }}
@@ -680,7 +601,6 @@ export function BufferedContentEditable({
           onDraftChange(next);
           syncLoreV9RedactedPlaceholderState(ref.current);
           requestAnimationFrame(() => {
-            refreshWikiAssist();
             refreshSlashAssist();
           });
         }}
@@ -692,7 +612,6 @@ export function BufferedContentEditable({
             document.execCommand("insertText", false, text);
             onDraftChange(readElementValue());
             requestAnimationFrame(() => {
-              refreshWikiAssist();
               refreshSlashAssist();
             });
           }
@@ -742,30 +661,6 @@ export function BufferedContentEditable({
             if (event.key === "Escape") {
               event.preventDefault();
               closeSlash();
-              return;
-            }
-          }
-
-          if (wikiOpen && wikiCandidates.length > 0) {
-            if (event.key === "ArrowDown") {
-              event.preventDefault();
-              setWikiIndex((i) => (i + 1 >= wikiCandidates.length ? 0 : i + 1));
-              return;
-            }
-            if (event.key === "ArrowUp") {
-              event.preventDefault();
-              setWikiIndex((i) => (i - 1 < 0 ? wikiCandidates.length - 1 : i - 1));
-              return;
-            }
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              const pick = wikiCandidates[wikiIndex];
-              if (pick) applyWikiPick(pick);
-              return;
-            }
-            if (event.key === "Escape") {
-              event.preventDefault();
-              closeWiki();
               return;
             }
           }
@@ -1057,14 +952,6 @@ export function BufferedContentEditable({
         activeIndex={slashIndex}
         onPick={applySlashPick}
         onClose={closeSlash}
-      />
-      <WikiLinkAssistPopover
-        open={wikiOpen && wikiCandidates.length > 0}
-        anchorRect={wikiAnchor}
-        candidates={wikiCandidates}
-        activeIndex={wikiIndex}
-        onPick={applyWikiPick}
-        onClose={closeWiki}
       />
     </>
   );

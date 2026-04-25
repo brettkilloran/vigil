@@ -61,7 +61,7 @@ The import and sort/categorize/link features are the same pipeline looked at fro
 
 Three surfaces, intentionally:
 
-1. `**item_links`** — DB rows (source_item_id, target_item_id, link_type, meta). Canonical `linkType` = `pin | bond | affiliation | contract | conflict | history` (`src/lib/lore-link-types.ts`, `connection-kind-colors.ts`). Legacy aliases are normalized. Cross-space links are rejected server-side (`validateLinkTargetsInSourceSpace`).
+1. `**item_links`** — DB rows (source_item_id, target_item_id, link_type, meta). Canonical `linkType` = `pin | bond | affiliation | contract | conflict | history` (`src/lib/lore-link-types.ts`, `connection-kind-colors.ts`). Legacy aliases are normalized. Cross-brane links are rejected server-side (`validateLinkTargetsInBrane`).
 2. **Structured bindings** (`content_json.hgArch`) on lore cards — e.g., faction `factionRoster[]`, character `primaryFaction`, `primaryLocation`, `linkedCharacterItemIds`, location `linkedCharacters`, `loreThreadAnchors`. Governed by `bindings-catalog.ts` (`BindingSlotDefinition`, `mirrorCanvasConnection`, `cardinality`, `writtenBy`, `targetEntityTypes`).
 3. **Wiki mentions in prose** — resolved at retrieval time (graph neighbor expansion for lore Q&A).
 
@@ -78,9 +78,9 @@ Promotion flow: `runSemanticThreadLinkEvaluation` (`canvas-thread-link-eval.ts`)
 - **Separation of concerns.** Plan building, validation, review persistence, and apply are well-bounded files with tight types (Zod schemas in `lore-import-plan-types.ts`).
 - **Atomicity.** Both commit paths use `db.transaction`. Plan validation precedes review-queue persistence. Vault reindex runs via `after()` and is idempotent.
 - **GM‑only gating.** `enforceGmOnlyBootContext` is applied on `parse`, `extract`, `plan`, `jobs`, `jobs/[jobId]`, `apply`, `commit` (HIGH #22 fix). Player tier genuinely cannot reach these.
-- **Link taxonomy discipline.** A small canonical set, aliases normalized on write, cross-space enforcement server-side, semantic eval promotes threads into structured bindings.
+- **Link taxonomy discipline.** A small canonical set, aliases normalized on write, cross-brane enforcement server-side, semantic eval promotes threads into structured bindings.
 - **Review affordances.** `hgAiPending` spans + `aiReview: "pending"` tag give the GM an explicit "did I read this?" loop rather than silently trusting LLM output.
-- **Same-folder link rule.** Simple, predictable, mirrors the one-canvas-per-folder mental model.
+- **Brane link rule.** Links stay inside the active brane while still allowing cross-folder graph structure.
 
 ## 4. Mismatches (where taxonomy, rendering, or recall diverge)
 
@@ -98,7 +98,7 @@ Promotion flow: `runSemanticThreadLinkEvaluation` (`canvas-thread-link-eval.ts`)
 ### 4.3 Link type not validated against endpoint shapes
 
 - `affiliation` / `contract` / `bond` / `conflict` have implicit shape expectations (char↔faction, char↔char, faction↔faction, etc.), documented in prompts and rank tables but not enforced.
-- The apply path will write any canonical type between any two items in the same space. A hallucinated `affiliation` between two `lore` notes sticks and colors the graph wrong.
+- The apply path will write any canonical type between any two items in the same brane. A hallucinated `affiliation` between two `lore` notes sticks and colors the graph wrong.
 
 ### 4.4 Cross-folder links are silently dropped
 
@@ -160,9 +160,9 @@ Promotion flow: `runSemanticThreadLinkEvaluation` (`canvas-thread-link-eval.ts`)
 
 - Legacy `/extract` → `/commit` skips folders, merges, clarifications, `aiReview`, `linkIntent`, and ingestion signals. Data written through it never carries the richer metadata the rest of the system expects. Worth either (a) deprecating visibly and removing from UI, or (b) upgrading to use the same review-queue + reindex semantics.
 
-### 5.8 Cross-space merge candidates vs same-space link rule
+### 5.8 Cross-space merge candidates vs brane link rule
 
-- Merge candidate retrieval uses a GM-wide scope (`GM_LORE_IMPORT_SEARCH`). Links are then restricted to same-folder. That asymmetry means a campaign's import can propose merges into another campaign's card (allowed, since merge is text-only) but never link between them. Intentional or leak? See §7 Q4.
+- Merge candidate retrieval uses a GM-wide scope (`GM_LORE_IMPORT_SEARCH`). Links are then restricted by brane. That asymmetry means a campaign's import can propose merges into another campaign's card (allowed, since merge is text-only) but still cannot link across branes. Intentional or leak? See §7 Q4.
 
 ### 5.9 `import_review_items` lifecycle leakage
 

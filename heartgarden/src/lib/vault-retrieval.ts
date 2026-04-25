@@ -15,7 +15,6 @@ import {
 } from "@/src/lib/item-searchable-text";
 import { dedupeLogicalItemLinkRows } from "@/src/lib/item-links-logical-dedupe";
 import { linkExpansionDepriorityRank } from "@/src/lib/item-link-meta";
-import { extractVigilItemIdsFromText } from "@/src/lib/wiki-item-refs";
 import type { VigilDb } from "@/src/lib/spaces";
 import {
   searchItemsFTSWithSnippets,
@@ -474,56 +473,6 @@ export async function expandLinkedItems(
     return a.localeCompare(b);
   });
   const toFetch = sortedNeighbors.slice(0, cap);
-  if (toFetch.length === 0) return [];
-
-  const where = and(
-    inArray(items.id, toFetch),
-    sql`coalesce((${items.entityMeta}::jsonb -> 'hgArchive' ->> 'archived'), 'false') != 'true'`,
-    ...(filters.spaceIds?.length ? [inArray(items.spaceId, filters.spaceIds)] : []),
-    ...(filters.spaceId && !filters.spaceIds?.length ? [eq(items.spaceId, filters.spaceId)] : []),
-    ...(filters.excludeSpaceIds?.length ? [notInArray(items.spaceId, filters.excludeSpaceIds)] : []),
-    ...(filters.excludeSpaceId ? [ne(items.spaceId, filters.excludeSpaceId)] : []),
-  );
-  const found = await db
-    .select({
-      item: items,
-      spaceId: spaces.id,
-      spaceName: spaces.name,
-      parentSpaceId: spaces.parentSpaceId,
-    })
-    .from(items)
-    .innerJoin(spaces, eq(spaces.id, items.spaceId))
-    .where(where)
-    .limit(cap);
-
-  return found.map((r) => ({
-    item: r.item,
-    space: { id: r.spaceId, name: r.spaceName, parentSpaceId: r.parentSpaceId },
-  }));
-}
-
-/**
- * Neighbors cited via `vigil:item:` in primary hit bodies (wiki-style), excluding seeds.
- * Does not create canvas edges — soft expansion for lore recall only.
- */
-export async function expandProseLinkedItems(
-  db: VigilDb,
-  seedRows: SearchRow[],
-  filters: SearchFilters,
-  cap: number,
-): Promise<SearchRow[]> {
-  if (cap <= 0 || seedRows.length === 0) return [];
-
-  const seedIds = new Set(seedRows.map((r) => r.item.id));
-  const neighborIds = new Set<string>();
-  for (const row of seedRows) {
-    const fromBody = extractVigilItemIdsFromText(row.item.contentText);
-    for (const id of fromBody) {
-      if (!seedIds.has(id)) neighborIds.add(id);
-    }
-  }
-
-  const toFetch = [...neighborIds].slice(0, cap);
   if (toFetch.length === 0) return [];
 
   const where = and(

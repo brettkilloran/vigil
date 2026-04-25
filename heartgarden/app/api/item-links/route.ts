@@ -26,7 +26,7 @@ import {
   heartgardenApiRejectIfPlayerBlocked,
   heartgardenApiRequireDb,
 } from "@/src/lib/heartgarden-api-route-helpers";
-import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
+import { validateLinkTargetsInBrane } from "@/src/lib/item-links-validation";
 
 function invalidateLinkRevisionSpaces(...spaceIds: Array<string | null | undefined>): void {
   const unique = new Set<string>();
@@ -116,7 +116,7 @@ export async function POST(req: Request) {
   if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, srcItem.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
   }
-  const validated = await validateLinkTargetsInSourceSpace(db, sourceItemId, [targetItemId]);
+  const validated = await validateLinkTargetsInBrane(db, sourceItemId, [targetItemId]);
   if (!validated.ok) {
     return Response.json({ ok: false, error: validated.error }, { status: validated.status });
   }
