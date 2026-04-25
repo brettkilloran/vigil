@@ -43,12 +43,12 @@ type Story = StoryObj<typeof ArchitecturalToolRail>;
 
 export const Default: Story = {
   render: (args) => (
-    <ToolRailHarnessWithArgs initialTool="select" args={args} />
+    <ToolRailHarnessWithArgs args={args} initialTool="select" />
   ),
 };
 
 export const PanSelected: Story = {
-  render: (args) => <ToolRailHarnessWithArgs initialTool="pan" args={args} />,
+  render: (args) => <ToolRailHarnessWithArgs args={args} initialTool="pan" />,
 };
 
 function ToolRailHarnessWithArgs({
@@ -66,14 +66,13 @@ function ToolRailHarnessWithArgs({
   return (
     <ArchitecturalToolRail
       activeTool={tool}
+      onRecenter={() => {}}
       onSetTool={setTool}
       onZoomIn={() => {}}
       onZoomOut={() => {}}
-      onRecenter={() => {}}
+      showRecenter={args.showRecenter}
       showSelectPan={args.showSelectPan}
       showZoom={args.showZoom}
-      showRecenter={args.showRecenter}
     />
   );
 }
-

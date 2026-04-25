@@ -27,31 +27,25 @@ export function BufferedTextInput({
   onKeyDown,
   ...inputProps
 }: BufferedTextInputProps) {
-  const {
-    draft,
-    beginEditing,
-    commitNow,
-    cancelEditing,
-    onDraftChange,
-  } = useEditorSession({
-    value,
-    debounceMs,
-    normalizeOnCommit,
-    onCommit,
-  });
+  const { draft, beginEditing, commitNow, cancelEditing, onDraftChange } =
+    useEditorSession({
+      value,
+      debounceMs,
+      normalizeOnCommit,
+      onCommit,
+    });
 
   return (
     <input
       {...inputProps}
-      value={draft}
-      onFocus={(event) => {
-        beginEditing();
-        onFocus?.(event);
-      }}
-      onChange={(event) => onDraftChange(event.target.value)}
       onBlur={(event) => {
         commitNow("blur");
         onBlur?.(event);
+      }}
+      onChange={(event) => onDraftChange(event.target.value)}
+      onFocus={(event) => {
+        beginEditing();
+        onFocus?.(event);
       }}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -66,6 +60,7 @@ export function BufferedTextInput({
         }
         onKeyDown?.(event);
       }}
+      value={draft}
     />
   );
 }

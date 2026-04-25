@@ -20,16 +20,21 @@ export const HEARTGARDEN_MEDIA_PLACEHOLDER_SRC =
 <line x1="6" y1="90" x2="16" y2="90"/><line x1="224" y1="90" x2="234" y2="90"/>
 <line x1="120" y1="6" x2="120" y2="16"/><line x1="120" y1="164" x2="120" y2="174"/>
 </g>
-</svg>`,
+</svg>`
   );
 
 /** Canonical attribute for placeholder `<img>` (lore still sets `data-hg-portrait-placeholder` for legacy HTML). */
-export const HG_MEDIA_PLACEHOLDER_ATTR = "data-hg-heartgarden-media-placeholder";
+export const HG_MEDIA_PLACEHOLDER_ATTR =
+  "data-hg-heartgarden-media-placeholder";
 
 /** Canonical placeholder surface (standardized across media/lore contexts). */
 export type HeartgardenMediaPlaceholderVariant = "neutral";
 
-export function isHeartgardenMediaPlaceholderSrc(src: string | null | undefined): boolean {
-  if (!src) return false;
+export function isHeartgardenMediaPlaceholderSrc(
+  src: string | null | undefined
+): boolean {
+  if (!src) {
+    return false;
+  }
   return src === HEARTGARDEN_MEDIA_PLACEHOLDER_SRC;
 }

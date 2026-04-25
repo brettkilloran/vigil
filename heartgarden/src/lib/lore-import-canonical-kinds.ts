@@ -11,8 +11,12 @@ export const CANONICAL_ENTITY_KINDS = [
 
 export type CanonicalEntityKind = (typeof CANONICAL_ENTITY_KINDS)[number];
 
-export function normalizeCanonicalEntityKind(raw: string | undefined | null): CanonicalEntityKind {
+export function normalizeCanonicalEntityKind(
+  raw: string | undefined | null
+): CanonicalEntityKind {
   const t = (raw ?? "lore").toLowerCase().trim();
-  if ((CANONICAL_ENTITY_KINDS as readonly string[]).includes(t)) return t as CanonicalEntityKind;
+  if ((CANONICAL_ENTITY_KINDS as readonly string[]).includes(t)) {
+    return t as CanonicalEntityKind;
+  }
   return "other";
 }

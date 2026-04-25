@@ -63,16 +63,28 @@ type BraneGraphEdge = {
   color: string | null;
 };
 
-function clampInt(raw: string | null, fallback: number, max: number, min = 1): number {
-  if (!raw) return fallback;
+function clampInt(
+  raw: string | null,
+  fallback: number,
+  max: number,
+  min = 1
+): number {
+  if (!raw) {
+    return fallback;
+  }
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed)) return fallback;
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
   return Math.max(min, Math.min(max, Math.trunc(parsed)));
 }
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 
-async function fetchBraneRevision(db: VigilDb, braneId: string): Promise<string> {
+async function fetchBraneRevision(
+  db: VigilDb,
+  braneId: string
+): Promise<string> {
   const result = await db.execute(sql`
     WITH brane_spaces AS (
       SELECT ${spaces.id} AS id
@@ -94,7 +106,9 @@ async function fetchBraneRevision(db: VigilDb, braneId: string): Promise<string>
          FROM ${entityMentions}
          WHERE ${entityMentions.braneId} = ${braneId}) AS mentions_max
   `);
-  const row = ((result as unknown as { rows?: Array<Record<string, unknown>> }).rows ?? [])[0] ?? {};
+  const row =
+    ((result as unknown as { rows?: Array<Record<string, unknown>> }).rows ??
+      [])[0] ?? {};
   const token = [
     String(row.items_max ?? 0),
     String(row.items_count ?? 0),
@@ -104,7 +118,11 @@ async function fetchBraneRevision(db: VigilDb, braneId: string): Promise<string>
   return token;
 }
 
-function buildEtag(braneId: string, revisionToken: string, params: Record<string, unknown>): string {
+function buildEtag(
+  braneId: string,
+  revisionToken: string,
+  params: Record<string, unknown>
+): string {
   const digest = createHash("sha256")
     .update(`${braneId}|${revisionToken}|${JSON.stringify(params)}`)
     .digest("hex")
@@ -116,9 +134,11 @@ async function loadNodesByIds(
   db: VigilDb,
   ids: string[],
   depthByItemId: Map<string, number>,
-  braneId: string,
+  braneId: string
 ): Promise<BraneGraphNode[]> {
-  if (ids.length === 0) return [];
+  if (ids.length === 0) {
+    return [];
+  }
   const rows = await db
     .select({
       id: items.id,
@@ -144,7 +164,7 @@ async function loadNodesByIds(
 async function expandFrontier(
   db: VigilDb,
   frontierIds: string[],
-  braneId: string,
+  braneId: string
 ): Promise<{
   explicit: BraneGraphEdge[];
   implicit: BraneGraphEdge[];
@@ -153,7 +173,9 @@ async function expandFrontier(
   const explicit: BraneGraphEdge[] = [];
   const implicit: BraneGraphEdge[] = [];
   const neighborIds = new Set<string>();
-  if (frontierIds.length === 0) return { explicit, implicit, neighborIds };
+  if (frontierIds.length === 0) {
+    return { explicit, implicit, neighborIds };
+  }
 
   const explicitRows = await db
     .select({
@@ -169,8 +191,8 @@ async function expandFrontier(
     .where(
       or(
         inArray(itemLinks.sourceItemId, frontierIds),
-        inArray(itemLinks.targetItemId, frontierIds),
-      ),
+        inArray(itemLinks.targetItemId, frontierIds)
+      )
     );
   for (const r of explicitRows) {
     explicit.push({
@@ -201,9 +223,9 @@ async function expandFrontier(
         eq(entityMentions.braneId, braneId),
         or(
           inArray(entityMentions.sourceItemId, frontierIds),
-          inArray(entityMentions.targetItemId, frontierIds),
-        ),
-      ),
+          inArray(entityMentions.targetItemId, frontierIds)
+        )
+      )
     );
   for (const r of implicitRows) {
     implicit.push({
@@ -227,16 +249,24 @@ async function expandFrontier(
 export async function GET(req: Request) {
   const db = tryGetDb();
   if (!db) {
-    return Response.json({ ok: false, error: "Database not configured" }, { status: 503 });
+    return Response.json(
+      { ok: false, error: "Database not configured" },
+      { status: 503 }
+    );
   }
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
 
   const url = new URL(req.url);
   const braneId = parseSpaceIdParam(url.searchParams.get("braneId"));
   if (!braneId) {
-    return Response.json({ ok: false, error: "Valid braneId is required" }, { status: 400 });
+    return Response.json(
+      { ok: false, error: "Valid braneId is required" },
+      { status: 400 }
+    );
   }
   if (!(await gmMayReadBraneIdAsync(db, bootCtx, braneId))) {
     return heartgardenApiForbiddenJsonResponse();
@@ -244,8 +274,13 @@ export async function GET(req: Request) {
 
   const seedItemId = parseSpaceIdParam(url.searchParams.get("seedItemId"));
   const modeRaw = url.searchParams.get("mode");
-  const mode: "full" | "neighborhood" = modeRaw === "full" ? "full" : "neighborhood";
-  const limit = clampInt(url.searchParams.get("limit"), DEFAULT_LIMIT, MAX_LIMIT);
+  const mode: "full" | "neighborhood" =
+    modeRaw === "full" ? "full" : "neighborhood";
+  const limit = clampInt(
+    url.searchParams.get("limit"),
+    DEFAULT_LIMIT,
+    MAX_LIMIT
+  );
   const maxDepth = clampInt(url.searchParams.get("maxDepth"), 1, MAX_DEPTH);
 
   if (mode === "neighborhood" && !seedItemId) {
@@ -255,12 +290,17 @@ export async function GET(req: Request) {
         error:
           "seedItemId is required for neighborhood mode (or pass mode=full to load the whole brane up to limit).",
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
   const revisionToken = await fetchBraneRevision(db, braneId);
-  const etag = buildEtag(braneId, revisionToken, { mode, seedItemId, maxDepth, limit });
+  const etag = buildEtag(braneId, revisionToken, {
+    mode,
+    seedItemId,
+    maxDepth,
+    limit,
+  });
   const ifNoneMatch = req.headers.get("if-none-match")?.trim();
   if (ifNoneMatch && ifNoneMatch === etag) {
     return new Response(null, {
@@ -290,8 +330,15 @@ export async function GET(req: Request) {
     const nodeIds = nodesSlice.map((n) => n.id);
     if (nodeIds.length === 0) {
       return Response.json(
-        { ok: true, mode, nodes: [], edges: [], truncated: false, totals: { nodes: 0, edges: 0 } },
-        { headers: { ETag: etag, "Cache-Control": "private, max-age=15" } },
+        {
+          ok: true,
+          mode,
+          nodes: [],
+          edges: [],
+          truncated: false,
+          totals: { nodes: 0, edges: 0 },
+        },
+        { headers: { ETag: etag, "Cache-Control": "private, max-age=15" } }
       );
     }
 
@@ -310,8 +357,8 @@ export async function GET(req: Request) {
         .where(
           and(
             inArray(itemLinks.sourceItemId, nodeIds),
-            inArray(itemLinks.targetItemId, nodeIds),
-          ),
+            inArray(itemLinks.targetItemId, nodeIds)
+          )
         ),
       db
         .select({
@@ -325,8 +372,8 @@ export async function GET(req: Request) {
           and(
             eq(entityMentions.braneId, braneId),
             inArray(entityMentions.sourceItemId, nodeIds),
-            inArray(entityMentions.targetItemId, nodeIds),
-          ),
+            inArray(entityMentions.targetItemId, nodeIds)
+          )
         ),
     ]);
 
@@ -365,7 +412,7 @@ export async function GET(req: Request) {
         totals: { nodes: nodesSlice.length, edges: edges.length },
         limit,
       },
-      { headers: { ETag: etag, "Cache-Control": "private, max-age=15" } },
+      { headers: { ETag: etag, "Cache-Control": "private, max-age=15" } }
     );
   }
 
@@ -386,7 +433,7 @@ export async function GET(req: Request) {
   if (!seedRow || seedRow.braneId !== braneId) {
     return Response.json(
       { ok: false, error: "seedItemId is not in this brane" },
-      { status: 404 },
+      { status: 404 }
     );
   }
 
@@ -398,8 +445,14 @@ export async function GET(req: Request) {
   let visitedTruncated = false;
 
   for (let depth = 0; depth < maxDepth; depth += 1) {
-    if (frontier.length === 0) break;
-    const { explicit, implicit, neighborIds } = await expandFrontier(db, frontier, braneId);
+    if (frontier.length === 0) {
+      break;
+    }
+    const { explicit, implicit, neighborIds } = await expandFrontier(
+      db,
+      frontier,
+      braneId
+    );
     for (const e of [...explicit, ...implicit]) {
       // Edges referencing items outside the brane (legacy data) are dropped:
       // BFS only descends through items in `braneId`.
@@ -407,7 +460,9 @@ export async function GET(req: Request) {
     }
     const nextFrontier: string[] = [];
     for (const id of neighborIds) {
-      if (visitedIds.has(id)) continue;
+      if (visitedIds.has(id)) {
+        continue;
+      }
       if (visitedIds.size >= limit) {
         visitedTruncated = true;
         break;
@@ -422,10 +477,15 @@ export async function GET(req: Request) {
     frontier = nextFrontier;
   }
 
-  const nodes = await loadNodesByIds(db, [...visitedIds], depthByItemId, braneId);
+  const nodes = await loadNodesByIds(
+    db,
+    [...visitedIds],
+    depthByItemId,
+    braneId
+  );
   const nodeIdSet = new Set(nodes.map((n) => n.id));
   const finalEdges = [...collectedEdges.values()].filter(
-    (e) => nodeIdSet.has(e.source) && nodeIdSet.has(e.target),
+    (e) => nodeIdSet.has(e.source) && nodeIdSet.has(e.target)
   );
 
   return Response.json(
@@ -441,6 +501,6 @@ export async function GET(req: Request) {
       totals: { nodes: nodes.length, edges: finalEdges.length },
       limit,
     },
-    { headers: { ETag: etag, "Cache-Control": "private, max-age=15" } },
+    { headers: { ETag: etag, "Cache-Control": "private, max-age=15" } }
   );
 }

@@ -14,10 +14,18 @@ describe("player-item-policy", () => {
   });
 
   it("rejects image fields and GM entityMeta for Players patch", () => {
-    expect(playersPatchBodyViolatesPolicy({ imageUrl: "https://x" })).toBe(true);
+    expect(playersPatchBodyViolatesPolicy({ imageUrl: "https://x" })).toBe(
+      true
+    );
     expect(playersPatchBodyViolatesPolicy({ imageMeta: {} })).toBe(true);
-    expect(playersPatchBodyViolatesPolicy({ entityMeta: { loreReviewTags: [] } })).toBe(true);
-    expect(playersPatchBodyViolatesPolicy({ entityMetaMerge: { loreHistorical: true } })).toBe(true);
+    expect(
+      playersPatchBodyViolatesPolicy({ entityMeta: { loreReviewTags: [] } })
+    ).toBe(true);
+    expect(
+      playersPatchBodyViolatesPolicy({
+        entityMetaMerge: { loreHistorical: true },
+      })
+    ).toBe(true);
     expect(playersPatchBodyViolatesPolicy({ itemType: "image" })).toBe(true);
     expect(playersPatchBodyViolatesPolicy({ itemType: "note" })).toBe(false);
   });

@@ -1,8 +1,8 @@
 import {
   DEMO_FACTION_ROSTER,
+  type FactionRosterEntry,
   factionRosterSchema,
   parseFactionRoster,
-  type FactionRosterEntry,
 } from "@/src/lib/faction-roster-schema";
 
 export type LinkCharacterToRosterRowFailureCode =
@@ -24,7 +24,7 @@ export function linkCharacterToFactionRosterRow(
   roster: FactionRosterEntry[],
   rosterEntryId: string,
   characterItemId: string,
-  options?: { allowReplace?: boolean },
+  options?: { allowReplace?: boolean }
 ): LinkCharacterToFactionRosterRowResult {
   const allowReplace = options?.allowReplace ?? false;
   const idx = roster.findIndex((r) => r.id === rosterEntryId);
@@ -86,7 +86,9 @@ export function linkCharacterToFactionRosterRow(
 /** Demo roster — matches XX · Archive-091 readable lab specimen (`DEMO_FACTION_ROSTER`). */
 export function createDefaultFactionRosterSeed(): FactionRosterEntry[] {
   const demo = parseFactionRoster(DEMO_FACTION_ROSTER);
-  if (demo?.length) return demo.map((r) => ({ ...r }));
+  if (demo?.length) {
+    return demo.map((r) => ({ ...r }));
+  }
   const id =
     typeof globalThis.crypto?.randomUUID === "function"
       ? globalThis.crypto.randomUUID()

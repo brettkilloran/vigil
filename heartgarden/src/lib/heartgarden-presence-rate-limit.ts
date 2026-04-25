@@ -17,11 +17,11 @@ const PRESENCE_POST_MAX_CLAMP = 100_000;
 function readPresencePostRateLimitConfig(): { max: number; windowMs: number } {
   const maxRaw = Number.parseInt(
     (process.env.HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_MAX ?? "").trim(),
-    10,
+    10
   );
   const windowRaw = Number.parseInt(
     (process.env.HEARTGARDEN_PRESENCE_POST_RATE_LIMIT_WINDOW_MS ?? "").trim(),
-    10,
+    10
   );
   const max =
     Number.isFinite(maxRaw) && maxRaw >= 10
@@ -38,7 +38,9 @@ function pruneStaleBuckets(windowMs: number) {
   const now = Date.now();
   const cutoff = now - windowMs * 2;
   for (const [ip, b] of buckets) {
-    if (b.windowStart < cutoff) buckets.delete(ip);
+    if (b.windowStart < cutoff) {
+      buckets.delete(ip);
+    }
   }
 }
 
@@ -46,7 +48,9 @@ function pruneStaleBuckets(windowMs: number) {
  * In-memory per-instance limit for presence heartbeats. Not a security boundary.
  */
 export function consumeHeartgardenPresencePostRateLimit(ip: string): boolean {
-  if (isPlaywrightE2E()) return true;
+  if (isPlaywrightE2E()) {
+    return true;
+  }
   const { max, windowMs } = readPresencePostRateLimitConfig();
   const now = Date.now();
   const b = buckets.get(ip);

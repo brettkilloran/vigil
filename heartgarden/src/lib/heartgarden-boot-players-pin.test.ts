@@ -7,10 +7,16 @@ describe("readHeartgardenPlayersBootPin", () => {
   const prevPlayer = process.env.HEARTGARDEN_BOOT_PIN_PLAYER;
 
   afterEach(() => {
-    if (prevPlayers === undefined) delete process.env.HEARTGARDEN_BOOT_PIN_PLAYERS;
-    else process.env.HEARTGARDEN_BOOT_PIN_PLAYERS = prevPlayers;
-    if (prevPlayer === undefined) delete process.env.HEARTGARDEN_BOOT_PIN_PLAYER;
-    else process.env.HEARTGARDEN_BOOT_PIN_PLAYER = prevPlayer;
+    if (prevPlayers === undefined) {
+      delete process.env.HEARTGARDEN_BOOT_PIN_PLAYERS;
+    } else {
+      process.env.HEARTGARDEN_BOOT_PIN_PLAYERS = prevPlayers;
+    }
+    if (prevPlayer === undefined) {
+      delete process.env.HEARTGARDEN_BOOT_PIN_PLAYER;
+    } else {
+      process.env.HEARTGARDEN_BOOT_PIN_PLAYER = prevPlayer;
+    }
   });
 
   it("returns trimmed HEARTGARDEN_BOOT_PIN_PLAYERS", () => {

@@ -13,7 +13,9 @@ const MEDIA_ROOT_SEL = "[data-architectural-media-root]";
 const MEDIA_NOTES_SEL = "[data-architectural-media-notes]";
 const MEDIA_UPLOAD_BTN_SEL = "[data-architectural-media-upload]";
 
-export function mediaUploadActionLabel(hasImage: boolean): "Upload" | "Replace" {
+export function mediaUploadActionLabel(
+  hasImage: boolean
+): "Upload" | "Replace" {
   return hasImage ? "Replace" : "Upload";
 }
 
@@ -22,23 +24,28 @@ function buildMediaUploadButtonClass(uploadButtonClass?: string): string {
     (uploadButtonClass || "")
       .split(/\s+/)
       .map((t) => t.trim())
-      .filter(Boolean),
+      .filter(Boolean)
   );
   tokens.add("vigil-btn");
   return Array.from(tokens).join(" ");
 }
 
 /** First `<img …>` in `html` (SSR-safe; mirrors `querySelector("img")` on a small fragment). */
-function parseFirstImgFromHtmlFragment(html: string): { src: string | null; alt: string } {
+function parseFirstImgFromHtmlFragment(html: string): {
+  src: string | null;
+  alt: string;
+} {
   const imgMatch = html.match(/<img\b[^>]*>/i);
-  if (!imgMatch) return { src: null, alt: "" };
+  if (!imgMatch) {
+    return { src: null, alt: "" };
+  }
   const tag = imgMatch[0];
   const srcQuoted = /\bsrc\s*=\s*["']([^"']*)["']/i.exec(tag);
-  const srcUnquoted = !srcQuoted ? /\bsrc\s*=\s*([^\s>]+)/i.exec(tag) : null;
+  const srcUnquoted = srcQuoted ? null : /\bsrc\s*=\s*([^\s>]+)/i.exec(tag);
   const rawSrc = srcQuoted?.[1] ?? srcUnquoted?.[1] ?? null;
   const src = rawSrc != null && rawSrc.length > 0 ? rawSrc : null;
   const altQuoted = /\balt\s*=\s*["']([^"']*)["']/i.exec(tag);
-  const altUnquoted = !altQuoted ? /\balt\s*=\s*([^\s>]+)/i.exec(tag) : null;
+  const altUnquoted = altQuoted ? null : /\balt\s*=\s*([^\s>]+)/i.exec(tag);
   const alt = altQuoted?.[1] ?? altUnquoted?.[1] ?? "";
   return { src, alt };
 }
@@ -50,14 +57,17 @@ export function parseArchitecturalMediaFromBody(bodyHtml: string): {
   src: string | null;
   alt: string;
 } {
-  const rootOpen = /<[^>]*\bdata-architectural-media-root\s*=\s*(?:"true"|'true'|true)\b[^>]*>/i.exec(
-    bodyHtml,
-  );
+  const rootOpen =
+    /<[^>]*\bdata-architectural-media-root\s*=\s*(?:"true"|'true'|true)\b[^>]*>/i.exec(
+      bodyHtml
+    );
   if (rootOpen && rootOpen.index !== undefined) {
     const inner = bodyHtml.slice(rootOpen.index + rootOpen[0].length);
     const parsed = parseFirstImgFromHtmlFragment(inner);
     if (parsed.src) {
-      if (isHeartgardenMediaPlaceholderSrc(parsed.src)) return { src: null, alt: parsed.alt };
+      if (isHeartgardenMediaPlaceholderSrc(parsed.src)) {
+        return { src: null, alt: parsed.alt };
+      }
       return parsed;
     }
   }
@@ -90,24 +100,33 @@ export function buildEmptyArchitecturalMediaBodyHtml(parts: {
 
 /** Rich HTML notes stored in `data-architectural-media-notes` after the media root in `bodyHtml`. */
 export function getArchitecturalMediaNotes(bodyHtml: string): string {
-  if (typeof document === "undefined") return "";
+  if (typeof document === "undefined") {
+    return "";
+  }
   const doc = new DOMParser().parseFromString(
     `<div id="__arch_media_notes_parse">${bodyHtml}</div>`,
-    "text/html",
+    "text/html"
   );
   const wrap = doc.getElementById("__arch_media_notes_parse");
   const notesEl = wrap?.querySelector(MEDIA_NOTES_SEL);
   return notesEl?.innerHTML ?? "";
 }
 
-export function setArchitecturalMediaNotes(bodyHtml: string, notesHtml: string): string {
-  if (typeof document === "undefined") return bodyHtml;
+export function setArchitecturalMediaNotes(
+  bodyHtml: string,
+  notesHtml: string
+): string {
+  if (typeof document === "undefined") {
+    return bodyHtml;
+  }
   const doc = new DOMParser().parseFromString(
     `<div id="__arch_media_notes_wrap">${bodyHtml}</div>`,
-    "text/html",
+    "text/html"
   );
   const wrap = doc.getElementById("__arch_media_notes_wrap");
-  if (!wrap) return bodyHtml;
+  if (!wrap) {
+    return bodyHtml;
+  }
   let notesEl = wrap.querySelector(MEDIA_NOTES_SEL);
   if (!notesEl) {
     notesEl = doc.createElement("div");
@@ -125,7 +144,9 @@ export function bodyUsesLorePortraitMediaSlot(bodyHtml: string): boolean {
 
 /** v9 / v10 / v11 ID card portrait slot (same `charSkPortraitImg` treatment on committed `<img>`). */
 export function lorePortraitSlotUsesV9(bodyHtml: string): boolean {
-  return /\bdata-hg-lore-portrait-root\s*=\s*(?:"v9"|"v10"|"v11"|'v9'|'v10'|'v11'|v9|v10|v11)\b/i.test(bodyHtml);
+  return /\bdata-hg-lore-portrait-root\s*=\s*(?:"v9"|"v10"|"v11"|'v9'|'v10'|'v11'|v9|v10|v11)\b/i.test(
+    bodyHtml
+  );
 }
 
 export function applyImageDataUrlToArchitecturalMediaBody(
@@ -133,16 +154,20 @@ export function applyImageDataUrlToArchitecturalMediaBody(
   dataUrl: string,
   alt: string,
   imageClass: string,
-  options?: { uploadButtonClass?: string },
+  options?: { uploadButtonClass?: string }
 ): string {
-  if (typeof document === "undefined") return bodyHtml;
+  if (typeof document === "undefined") {
+    return bodyHtml;
+  }
   const doc = new DOMParser().parseFromString(
     `<div id="__arch_media_wrap">${bodyHtml}</div>`,
-    "text/html",
+    "text/html"
   );
   const wrap = doc.getElementById("__arch_media_wrap");
   const root = wrap?.querySelector(MEDIA_ROOT_SEL);
-  if (!wrap || !root) return bodyHtml;
+  if (!(wrap && root)) {
+    return bodyHtml;
+  }
 
   root.querySelector("[data-architectural-media-fallback]")?.remove();
 
@@ -153,14 +178,19 @@ export function applyImageDataUrlToArchitecturalMediaBody(
   }
   img.setAttribute("src", dataUrl);
   img.setAttribute("alt", alt.replace(/"/g, ""));
-  if (imageClass) img.setAttribute("class", imageClass);
+  if (imageClass) {
+    img.setAttribute("class", imageClass);
+  }
   img.removeAttribute("data-hg-portrait-placeholder");
   img.removeAttribute(HG_MEDIA_PLACEHOLDER_ATTR);
   const uploadBtn = root.querySelector<HTMLElement>(MEDIA_UPLOAD_BTN_SEL);
   if (uploadBtn) {
     uploadBtn.textContent = mediaUploadActionLabel(true);
     if (options?.uploadButtonClass || !uploadBtn.getAttribute("class")) {
-      uploadBtn.setAttribute("class", buildMediaUploadButtonClass(options?.uploadButtonClass));
+      uploadBtn.setAttribute(
+        "class",
+        buildMediaUploadButtonClass(options?.uploadButtonClass)
+      );
     }
     uploadBtn.setAttribute("data-variant", "ghost");
     uploadBtn.setAttribute("data-size", "sm");

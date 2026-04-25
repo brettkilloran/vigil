@@ -5,11 +5,9 @@ import type { JSONContent } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 
 import { useEffect, useMemo, useRef } from "react";
-
-import { useScrollEdgeOverflowAttrs } from "@/src/lib/use-scroll-edge-overflow";
-
-import { HgDocPointerBlockDrag } from "@/src/components/editing/HgDocPointerBlockDrag";
+import styles from "@/src/components/editing/HeartgardenDocEditor.module.css";
 import { HgAiPendingEditorGutter } from "@/src/components/editing/HgAiPendingEditorGutter";
+import { HgDocPointerBlockDrag } from "@/src/components/editing/HgDocPointerBlockDrag";
 
 import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
 
@@ -23,8 +21,7 @@ import {
   applyHgDocFormatCommand,
   readHgDocFormatChrome,
 } from "@/src/lib/hg-doc/tiptap-format";
-
-import styles from "@/src/components/editing/HeartgardenDocEditor.module.css";
+import { useScrollEdgeOverflowAttrs } from "@/src/lib/use-scroll-edge-overflow";
 
 function docJsonKey(doc: JSONContent): string {
   try {
@@ -92,17 +89,19 @@ export function HeartgardenDocEditor({
         withPlaceholder: true,
       }),
 
-    [placeholder],
+    [placeholder]
   );
 
   const hostRef = useRef<HTMLDivElement | null>(null);
   const currentEditorDocKeyRef = useRef<string>(
-    docJsonKey(value?.type === "doc" ? value : EMPTY_HG_DOC),
+    docJsonKey(value?.type === "doc" ? value : EMPTY_HG_DOC)
   );
 
   useScrollEdgeOverflowAttrs(hostRef);
 
-  const showBlockDragHandle = Boolean(enableDragHandle && chromeRole === "focus");
+  const showBlockDragHandle = Boolean(
+    enableDragHandle && chromeRole === "focus"
+  );
 
   const editor = useEditor(
     {
@@ -129,28 +128,36 @@ export function HeartgardenDocEditor({
       },
     },
 
-    [extensions],
+    [extensions]
   );
 
   useEffect(() => {
-    if (!editor) return;
+    if (!editor) {
+      return;
+    }
 
     const next = value?.type === "doc" ? value : EMPTY_HG_DOC;
     const nextKey = docJsonKey(next);
-    if (currentEditorDocKeyRef.current === nextKey) return;
+    if (currentEditorDocKeyRef.current === nextKey) {
+      return;
+    }
     currentEditorDocKeyRef.current = nextKey;
 
     editor.commands.setContent(next, { emitUpdate: false });
   }, [editor, value]);
 
   useEffect(() => {
-    if (!editor) return;
+    if (!editor) {
+      return;
+    }
 
     editor.setEditable(editable);
   }, [editor, editable]);
 
   useEffect(() => {
-    if (!editor) return;
+    if (!editor) {
+      return;
+    }
 
     const api: HgDocEditorApi = {
       runFormat: (command, v) => applyHgDocFormatCommand(editor, command, v),
@@ -187,7 +194,9 @@ export function HeartgardenDocEditor({
     return () => registerHgDocEditor(surfaceKey, null);
   }, [editor, surfaceKey]);
 
-  if (!editor) return null;
+  if (!editor) {
+    return null;
+  }
 
   const dataAttrs =
     chromeRole === "focus"
@@ -196,25 +205,30 @@ export function HeartgardenDocEditor({
 
   return (
     <div
-      ref={hostRef}
       className={`${styles.host} ${className ?? ""}`.trim()}
       data-hg-doc-editor="true"
       data-hg-doc-surface={surfaceKey}
+      ref={hostRef}
       {...(codeSyntaxDark ? { "data-hg-doc-syntax": "dark" as const } : {})}
       {...dataAttrs}
     >
       {showBlockDragHandle ? (
-        <HgDocPointerBlockDrag editor={editor} hostRef={hostRef} chromeRole={chromeRole} enabled />
+        <HgDocPointerBlockDrag
+          chromeRole={chromeRole}
+          editor={editor}
+          enabled
+          hostRef={hostRef}
+        />
       ) : null}
       {showAiPendingGutter ? (
         <div className={styles.editorGutterRow} ref={gutterWrapRef}>
           <div className={styles.editorColumn}>
-            <EditorContent editor={editor} className={styles.editorContent} />
+            <EditorContent className={styles.editorContent} editor={editor} />
           </div>
           <HgAiPendingEditorGutter editor={editor} wrapRef={gutterWrapRef} />
         </div>
       ) : (
-        <EditorContent editor={editor} className={styles.editorContent} />
+        <EditorContent className={styles.editorContent} editor={editor} />
       )}
     </div>
   );

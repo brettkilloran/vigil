@@ -40,7 +40,11 @@ const BASE_BODY = {
     mergeProposals: [],
     contradictions: [],
     clarifications: [],
-    userContext: { granularity: "many", orgMode: "nearby", importScope: "current_subtree" },
+    userContext: {
+      granularity: "many",
+      orgMode: "nearby",
+      importScope: "current_subtree",
+    },
   },
   acceptedMergeProposalIds: [],
   clarificationAnswers: [],
@@ -56,7 +60,7 @@ describe("POST /api/lore/import/apply", () => {
 
   it("returns 400 when apply plan throws server scope mismatch", async () => {
     applyLoreImportPlanMock.mockRejectedValue(
-      new Error("Import scope mismatch with server job metadata"),
+      new Error("Import scope mismatch with server job metadata")
     );
     const { POST } = await import("./route");
     const req = new Request("http://localhost/api/lore/import/apply", {
@@ -74,7 +78,9 @@ describe("POST /api/lore/import/apply", () => {
 
   it("returns 400 when server import metadata is missing", async () => {
     applyLoreImportPlanMock.mockRejectedValue(
-      new Error("Missing server import metadata for this batch; re-run planning before apply."),
+      new Error(
+        "Missing server import metadata for this batch; re-run planning before apply."
+      )
     );
     const { POST } = await import("./route");
     const req = new Request("http://localhost/api/lore/import/apply", {

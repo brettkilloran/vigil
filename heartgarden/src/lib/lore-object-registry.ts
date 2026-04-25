@@ -15,13 +15,23 @@ import {
 } from "@/src/lib/lore-import-canonical-kinds";
 
 /** True when persisted `entity_type` should infer a `loreCard` on the canvas. */
-export function isLoreCardPersistedEntityType(entityType: string | null | undefined): boolean {
-  if (!entityType) return false;
-  return entityType === "character" || entityType === "faction" || entityType === "location";
+export function isLoreCardPersistedEntityType(
+  entityType: string | null | undefined
+): boolean {
+  if (!entityType) {
+    return false;
+  }
+  return (
+    entityType === "character" ||
+    entityType === "faction" ||
+    entityType === "location"
+  );
 }
 
 /** Lore shell kind when the canvas should use character/faction/location templates; otherwise null. */
-export function loreShellKindFromCanonical(kind: CanonicalEntityKind): LoreCardKind | null {
+export function loreShellKindFromCanonical(
+  kind: CanonicalEntityKind
+): LoreCardKind | null {
   switch (kind) {
     case "npc":
       return "character";
@@ -38,14 +48,19 @@ export function loreShellKindFromCanonical(kind: CanonicalEntityKind): LoreCardK
  * Value stored in `items.entity_type` after import apply / plan commit.
  * Maps `npc` → `character` so `canvasItemToEntity` attaches the character lore card shell.
  */
-export function persistedEntityTypeFromCanonical(kind: CanonicalEntityKind): string {
+export function persistedEntityTypeFromCanonical(
+  kind: CanonicalEntityKind
+): string {
   const shell = loreShellKindFromCanonical(kind);
-  if (shell) return shell;
+  if (shell) {
+    return shell;
+  }
   return kind;
 }
 
 /** Every canonical kind must appear in the mapping doc + this module (CI: registry-wiring test). */
-export const ALL_CANONICAL_KINDS: readonly CanonicalEntityKind[] = CANONICAL_ENTITY_KINDS;
+export const ALL_CANONICAL_KINDS: readonly CanonicalEntityKind[] =
+  CANONICAL_ENTITY_KINDS;
 
 /**
  * Closed set of values the importer / apply path / shell are allowed to write into
@@ -69,7 +84,9 @@ export const PERSISTED_ENTITY_TYPES = [
 
 export type PersistedEntityType = (typeof PERSISTED_ENTITY_TYPES)[number];
 
-export function isPersistedEntityType(value: unknown): value is PersistedEntityType {
+export function isPersistedEntityType(
+  value: unknown
+): value is PersistedEntityType {
   return (
     typeof value === "string" &&
     (PERSISTED_ENTITY_TYPES as readonly string[]).includes(value)

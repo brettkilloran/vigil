@@ -4,26 +4,35 @@
  */
 import { and, eq, inArray, ne, notInArray, or, sql } from "drizzle-orm";
 
-import { entityMentions, itemEmbeddings, itemLinks, items, spaces } from "@/src/db/schema";
-import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
-import { logVaultHybridRetrieval } from "@/src/lib/vault-retrieval-debug";
-import { fuseRrfFromOrderedLists } from "@/src/lib/vault-retrieval-rrf";
+import {
+  entityMentions,
+  itemEmbeddings,
+  itemLinks,
+  items,
+  spaces,
+} from "@/src/db/schema";
+import {
+  embedTexts,
+  isEmbeddingApiConfigured,
+} from "@/src/lib/embedding-provider";
 import { extractHgArchBoundItemIds } from "@/src/lib/hg-arch-binding-projection";
+import { linkExpansionDepriorityRank } from "@/src/lib/item-link-meta";
+import { dedupeLogicalItemLinkRows } from "@/src/lib/item-links-logical-dedupe";
 import {
   buildItemVaultCorpus,
   itemSearchableSourceFromRow,
 } from "@/src/lib/item-searchable-text";
-import { dedupeLogicalItemLinkRows } from "@/src/lib/item-links-logical-dedupe";
-import { linkExpansionDepriorityRank } from "@/src/lib/item-link-meta";
 import type { VigilDb } from "@/src/lib/spaces";
 import {
+  type SearchFilters,
+  type SearchRow,
   searchItemAttributeWhereClauses,
   searchItemsFTS,
   searchItemsFTSWithSnippets,
   searchItemsFuzzy,
-  type SearchFilters,
-  type SearchRow,
 } from "@/src/lib/spaces";
+import { logVaultHybridRetrieval } from "@/src/lib/vault-retrieval-debug";
+import { fuseRrfFromOrderedLists } from "@/src/lib/vault-retrieval-rrf";
 
 export const DEFAULT_VECTOR_CHUNK_LIMIT = 56;
 export const DEFAULT_MAX_ITEMS = 16;
@@ -42,10 +51,12 @@ function envNumberInRange(
   raw: string | undefined,
   fallback: number,
   min: number,
-  max: number,
+  max: number
 ): number {
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed)) return fallback;
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
   return Math.min(max, Math.max(min, parsed));
 }
 
@@ -53,10 +64,12 @@ function envIntegerInRange(
   raw: string | undefined,
   fallback: number,
   min: number,
-  max: number,
+  max: number
 ): number {
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed)) return fallback;
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
   return Math.min(max, Math.max(min, Math.floor(parsed)));
 }
 
@@ -64,25 +77,25 @@ const defaultRrfKFromEnv = envIntegerInRange(
   process.env.HEARTGARDEN_RETRIEVAL_RRF_K,
   DEFAULT_RRF_K,
   1,
-  500,
+  500
 );
 const defaultRrfLexicalWeightFromEnv = envNumberInRange(
   process.env.HEARTGARDEN_RETRIEVAL_RRF_LEXICAL_WEIGHT,
   DEFAULT_RRF_LEXICAL_WEIGHT,
   0.1,
-  8,
+  8
 );
 const defaultRrfVectorWeightFromEnv = envNumberInRange(
   process.env.HEARTGARDEN_RETRIEVAL_RRF_VECTOR_WEIGHT,
   DEFAULT_RRF_VECTOR_WEIGHT,
   0.1,
-  8,
+  8
 );
 const defaultRrfMentionWeightFromEnv = envNumberInRange(
   process.env.HEARTGARDEN_RETRIEVE_MENTION_WEIGHT,
   DEFAULT_RRF_MENTION_WEIGHT,
   0.1,
-  8,
+  8
 );
 
 /**
@@ -120,7 +133,10 @@ function tokenizeMentionQuery(query: string): string[] {
 }
 
 function vectorSqlLiteral(embedding: number[]): string {
-  if (embedding.length !== 1536 || !embedding.every((n) => Number.isFinite(n))) {
+  if (
+    embedding.length !== 1536 ||
+    !embedding.every((n) => Number.isFinite(n))
+  ) {
     throw new Error("invalid query embedding");
   }
   return `'[${embedding.join(",")}]'::vector`;
@@ -154,7 +170,9 @@ function parseHeadingPath(raw: unknown): string[] {
     } catch {
       /* ignore */
     }
-    if (raw.trim()) return [raw.trim()];
+    if (raw.trim()) {
+      return [raw.trim()];
+    }
   }
   return [];
 }
@@ -163,18 +181,25 @@ export async function searchItemChunksByVector(
   db: VigilDb,
   queryEmbedding: number[],
   filters: SearchFilters = {},
-  limit = DEFAULT_VECTOR_CHUNK_LIMIT,
+  limit = DEFAULT_VECTOR_CHUNK_LIMIT
 ): Promise<VectorChunkHit[]> {
   const lit = sql.raw(vectorSqlLiteral(queryEmbedding));
   const distanceExpr = sql<number>`${itemEmbeddings.embedding} <=> ${lit}`;
 
   const whereParts: ReturnType<typeof sql>[] = [];
-  if (filters.spaceIds?.length) whereParts.push(inArray(itemEmbeddings.spaceId, filters.spaceIds));
-  else if (filters.spaceId) whereParts.push(eq(itemEmbeddings.spaceId, filters.spaceId));
-  if (filters.excludeSpaceIds?.length) {
-    whereParts.push(notInArray(itemEmbeddings.spaceId, filters.excludeSpaceIds));
+  if (filters.spaceIds?.length) {
+    whereParts.push(inArray(itemEmbeddings.spaceId, filters.spaceIds));
+  } else if (filters.spaceId) {
+    whereParts.push(eq(itemEmbeddings.spaceId, filters.spaceId));
   }
-  if (filters.excludeSpaceId) whereParts.push(ne(itemEmbeddings.spaceId, filters.excludeSpaceId));
+  if (filters.excludeSpaceIds?.length) {
+    whereParts.push(
+      notInArray(itemEmbeddings.spaceId, filters.excludeSpaceIds)
+    );
+  }
+  if (filters.excludeSpaceId) {
+    whereParts.push(ne(itemEmbeddings.spaceId, filters.excludeSpaceId));
+  }
   // REVIEW_2026-04-25_1835 H5: apply non-space filters (item-type, entity-kind,
   // historical, campaign-epoch, hasLinks, inStack) on the embedding leg too,
   // so hybrid + semantic results obey the same eligibility set as lexical.
@@ -227,21 +252,29 @@ export async function hybridRetrieveItems(
   db: VigilDb,
   query: string,
   filters: SearchFilters = {},
-  options: HybridRetrieveOptions = {},
+  options: HybridRetrieveOptions = {}
 ): Promise<HybridRetrieveResult> {
   const q = query.trim();
   const maxItems = options.maxItems ?? DEFAULT_MAX_ITEMS;
   const vecLimit = options.vectorChunkLimit ?? DEFAULT_VECTOR_CHUNK_LIMIT;
-  const useVector = options.includeVector !== false && isEmbeddingApiConfigured();
+  const useVector =
+    options.includeVector !== false && isEmbeddingApiConfigured();
   const ftsLimit = options.ftsLimit ?? DEFAULT_FTS_LIMIT;
-  const fuzzyLimitWhenEmpty = options.fuzzyLimitWhenEmpty ?? DEFAULT_FUZZY_LIMIT_WHEN_EMPTY;
-  const fuzzyLimitWhenSparse = options.fuzzyLimitWhenSparse ?? DEFAULT_FUZZY_LIMIT_WHEN_SPARSE;
-  const ftsSparseThreshold = options.ftsSparseThreshold ?? DEFAULT_FTS_SPARSE_THRESHOLD;
-  const maxChunksPerItem = options.maxChunksPerItem ?? DEFAULT_MAX_CHUNKS_PER_ITEM;
+  const fuzzyLimitWhenEmpty =
+    options.fuzzyLimitWhenEmpty ?? DEFAULT_FUZZY_LIMIT_WHEN_EMPTY;
+  const fuzzyLimitWhenSparse =
+    options.fuzzyLimitWhenSparse ?? DEFAULT_FUZZY_LIMIT_WHEN_SPARSE;
+  const ftsSparseThreshold =
+    options.ftsSparseThreshold ?? DEFAULT_FTS_SPARSE_THRESHOLD;
+  const maxChunksPerItem =
+    options.maxChunksPerItem ?? DEFAULT_MAX_CHUNKS_PER_ITEM;
   const rrfK = options.rrfK ?? defaultRrfKFromEnv;
-  const rrfLexicalWeight = options.rrfLexicalWeight ?? defaultRrfLexicalWeightFromEnv;
-  const rrfVectorWeight = options.rrfVectorWeight ?? defaultRrfVectorWeightFromEnv;
-  const rrfMentionWeight = options.rrfMentionWeight ?? defaultRrfMentionWeightFromEnv;
+  const rrfLexicalWeight =
+    options.rrfLexicalWeight ?? defaultRrfLexicalWeightFromEnv;
+  const rrfVectorWeight =
+    options.rrfVectorWeight ?? defaultRrfVectorWeightFromEnv;
+  const rrfMentionWeight =
+    options.rrfMentionWeight ?? defaultRrfMentionWeightFromEnv;
   const includeSnippets = options.includeSnippets !== false;
 
   const itemIdToChunks = new Map<string, string[]>();
@@ -249,7 +282,12 @@ export async function hybridRetrieveItems(
   const itemIdToFtsSnippet = new Map<string, string>();
 
   if (!q) {
-    return { rows: [], itemIdToChunks, itemIdToChunkMatches, itemIdToFtsSnippet };
+    return {
+      rows: [],
+      itemIdToChunks,
+      itemIdToChunkMatches,
+      itemIdToFtsSnippet,
+    };
   }
 
   const ftsRows = includeSnippets
@@ -257,19 +295,29 @@ export async function hybridRetrieveItems(
     : await searchItemsFTS(db, q, { ...filters, limit: ftsLimit });
   if (includeSnippets) {
     for (const r of ftsRows) {
-      if (r.snippet) itemIdToFtsSnippet.set(r.item.id, r.snippet);
+      if (r.snippet) {
+        itemIdToFtsSnippet.set(r.item.id, r.snippet);
+      }
     }
   }
 
   let lexicalRows: SearchRow[] = ftsRows;
   if (ftsRows.length === 0) {
-    lexicalRows = await searchItemsFuzzy(db, q, { ...filters, limit: fuzzyLimitWhenEmpty });
+    lexicalRows = await searchItemsFuzzy(db, q, {
+      ...filters,
+      limit: fuzzyLimitWhenEmpty,
+    });
   } else if (ftsRows.length < ftsSparseThreshold) {
-    const fuzzyRows = await searchItemsFuzzy(db, q, { ...filters, limit: fuzzyLimitWhenSparse });
+    const fuzzyRows = await searchItemsFuzzy(db, q, {
+      ...filters,
+      limit: fuzzyLimitWhenSparse,
+    });
     const seen = new Set(ftsRows.map((r) => r.item.id));
     lexicalRows = [...ftsRows];
     for (const fr of fuzzyRows) {
-      if (seen.has(fr.item.id)) continue;
+      if (seen.has(fr.item.id)) {
+        continue;
+      }
       seen.add(fr.item.id);
       lexicalRows.push(fr);
     }
@@ -302,7 +350,9 @@ export async function hybridRetrieveItems(
   for (const hit of vecHits) {
     const h2Path = hit.headingPath.slice(0, 2).join(">");
     const sectionKey = `${hit.itemId}|${h2Path || "__root__"}`;
-    if (seenVectorSections.has(sectionKey)) continue;
+    if (seenVectorSections.has(sectionKey)) {
+      continue;
+    }
     seenVectorSections.add(sectionKey);
     vectorOrderedIds.push(hit.itemId);
   }
@@ -338,12 +388,17 @@ export async function hybridRetrieveItems(
               ? [eq(entityMentions.sourceSpaceId, filters.spaceId)]
               : []),
           ...(filters.excludeSpaceIds?.length
-            ? [notInArray(entityMentions.sourceSpaceId, filters.excludeSpaceIds)]
+            ? [
+                notInArray(
+                  entityMentions.sourceSpaceId,
+                  filters.excludeSpaceIds
+                ),
+              ]
             : filters.excludeSpaceId
               ? [ne(entityMentions.sourceSpaceId, filters.excludeSpaceId)]
               : []),
-          ...itemAttributeClauses,
-        ),
+          ...itemAttributeClauses
+        )
       )
       .groupBy(entityMentions.sourceItemId)
       .orderBy(sql`sum(${entityMentions.mentionCount}) desc`)
@@ -364,7 +419,9 @@ export async function hybridRetrieveItems(
   });
 
   const rowById = new Map<string, SearchRow>();
-  for (const r of lexicalRows) rowById.set(r.item.id, r);
+  for (const r of lexicalRows) {
+    rowById.set(r.item.id, r);
+  }
   for (const h of vecHits) {
     if (!rowById.has(h.itemId)) {
       rowById.set(h.itemId, {
@@ -381,18 +438,26 @@ export async function hybridRetrieveItems(
   const boostedTopIds = [...topIds].sort((a, b) => {
     const aBase = scores.get(a)?.rrf ?? 0;
     const bBase = scores.get(b)?.rrf ?? 0;
-    const aLeaf = (itemIdToChunkMatches.get(a)?.[0]?.headingPath.at(-1) ?? "").toLowerCase();
-    const bLeaf = (itemIdToChunkMatches.get(b)?.[0]?.headingPath.at(-1) ?? "").toLowerCase();
+    const aLeaf = (
+      itemIdToChunkMatches.get(a)?.[0]?.headingPath.at(-1) ?? ""
+    ).toLowerCase();
+    const bLeaf = (
+      itemIdToChunkMatches.get(b)?.[0]?.headingPath.at(-1) ?? ""
+    ).toLowerCase();
     const shortQuery = normalizedQuery.length <= 80;
     const aBoost = shortQuery && aLeaf && aLeaf === normalizedQuery ? 0.03 : 0;
     const bBoost = shortQuery && bLeaf && bLeaf === normalizedQuery ? 0.03 : 0;
     const diff = bBase + bBoost - (aBase + aBoost);
-    if (diff !== 0) return diff;
+    if (diff !== 0) {
+      return diff;
+    }
     return a.localeCompare(b);
   });
   for (const id of boostedTopIds) {
     const r = rowById.get(id);
-    if (r) rows.push(r);
+    if (r) {
+      rows.push(r);
+    }
   }
 
   logVaultHybridRetrieval({
@@ -423,7 +488,7 @@ export async function hybridRetrieveItems(
         lexRank: s?.lexRank,
         vecRank: s?.vecRank,
         mentionRank: s?.mentionRank,
-        rrf: s?.rrf != null ? Number(s.rrf.toFixed(5)) : undefined,
+        rrf: s?.rrf == null ? undefined : Number(s.rrf.toFixed(5)),
       };
     }),
   });
@@ -431,7 +496,9 @@ export async function hybridRetrieveItems(
   return { rows, itemIdToChunks, itemIdToChunkMatches, itemIdToFtsSnippet };
 }
 
-function summarizeSearchFiltersForDebug(f: SearchFilters): Record<string, unknown> {
+function summarizeSearchFiltersForDebug(
+  f: SearchFilters
+): Record<string, unknown> {
   return {
     spaceId: f.spaceId ?? null,
     spaceIdsCount: f.spaceIds?.length ?? 0,
@@ -452,9 +519,11 @@ export async function expandLinkedItems(
   db: VigilDb,
   seedIds: string[],
   filters: SearchFilters,
-  cap: number,
+  cap: number
 ): Promise<SearchRow[]> {
-  if (cap <= 0 || seedIds.length === 0) return [];
+  if (cap <= 0 || seedIds.length === 0) {
+    return [];
+  }
 
   const seedSet = new Set(seedIds);
   const linkRowsRaw = await db
@@ -470,7 +539,10 @@ export async function expandLinkedItems(
     })
     .from(itemLinks)
     .where(
-      or(inArray(itemLinks.sourceItemId, seedIds), inArray(itemLinks.targetItemId, seedIds)),
+      or(
+        inArray(itemLinks.sourceItemId, seedIds),
+        inArray(itemLinks.targetItemId, seedIds)
+      )
     );
 
   const linkRows = dedupeLogicalItemLinkRows(
@@ -484,14 +556,16 @@ export async function expandLinkedItems(
       color: null,
       meta: l.meta,
       updatedAtMs: l.updatedAt?.getTime() ?? 0,
-    })),
+    }))
   );
 
   const neighborRank = new Map<string, number>();
   for (const l of linkRows) {
     const rank = linkExpansionDepriorityRank(l.meta);
     const bump = (id: string) => {
-      if (seedSet.has(id)) return;
+      if (seedSet.has(id)) {
+        return;
+      }
       const prev = neighborRank.get(id) ?? Number.POSITIVE_INFINITY;
       neighborRank.set(id, Math.min(prev, rank));
     };
@@ -502,19 +576,31 @@ export async function expandLinkedItems(
   const sortedNeighbors = [...neighborRank.keys()].sort((a, b) => {
     const ra = neighborRank.get(a) ?? 0;
     const rb = neighborRank.get(b) ?? 0;
-    if (ra !== rb) return ra - rb;
+    if (ra !== rb) {
+      return ra - rb;
+    }
     return a.localeCompare(b);
   });
   const toFetch = sortedNeighbors.slice(0, cap);
-  if (toFetch.length === 0) return [];
+  if (toFetch.length === 0) {
+    return [];
+  }
 
   const where = and(
     inArray(items.id, toFetch),
     sql`coalesce((${items.entityMeta}::jsonb -> 'hgArchive' ->> 'archived'), 'false') != 'true'`,
-    ...(filters.spaceIds?.length ? [inArray(items.spaceId, filters.spaceIds)] : []),
-    ...(filters.spaceId && !filters.spaceIds?.length ? [eq(items.spaceId, filters.spaceId)] : []),
-    ...(filters.excludeSpaceIds?.length ? [notInArray(items.spaceId, filters.excludeSpaceIds)] : []),
-    ...(filters.excludeSpaceId ? [ne(items.spaceId, filters.excludeSpaceId)] : []),
+    ...(filters.spaceIds?.length
+      ? [inArray(items.spaceId, filters.spaceIds)]
+      : []),
+    ...(filters.spaceId && !filters.spaceIds?.length
+      ? [eq(items.spaceId, filters.spaceId)]
+      : []),
+    ...(filters.excludeSpaceIds?.length
+      ? [notInArray(items.spaceId, filters.excludeSpaceIds)]
+      : []),
+    ...(filters.excludeSpaceId
+      ? [ne(items.spaceId, filters.excludeSpaceId)]
+      : [])
   );
   const found = await db
     .select({
@@ -541,29 +627,46 @@ export async function expandHgArchBindingNeighbors(
   db: VigilDb,
   seedRows: SearchRow[],
   filters: SearchFilters,
-  cap: number,
+  cap: number
 ): Promise<SearchRow[]> {
-  if (cap <= 0 || seedRows.length === 0) return [];
+  if (cap <= 0 || seedRows.length === 0) {
+    return [];
+  }
 
   const seedIds = new Set(seedRows.map((r) => r.item.id));
   const neighborIds = new Set<string>();
   for (const row of seedRows) {
-    const cj = row.item.contentJson as Record<string, unknown> | null | undefined;
+    const cj = row.item.contentJson as
+      | Record<string, unknown>
+      | null
+      | undefined;
     for (const id of extractHgArchBoundItemIds(cj)) {
-      if (!seedIds.has(id)) neighborIds.add(id);
+      if (!seedIds.has(id)) {
+        neighborIds.add(id);
+      }
     }
   }
 
   const toFetch = [...neighborIds].slice(0, cap);
-  if (toFetch.length === 0) return [];
+  if (toFetch.length === 0) {
+    return [];
+  }
 
   const where = and(
     inArray(items.id, toFetch),
     sql`coalesce((${items.entityMeta}::jsonb -> 'hgArchive' ->> 'archived'), 'false') != 'true'`,
-    ...(filters.spaceIds?.length ? [inArray(items.spaceId, filters.spaceIds)] : []),
-    ...(filters.spaceId && !filters.spaceIds?.length ? [eq(items.spaceId, filters.spaceId)] : []),
-    ...(filters.excludeSpaceIds?.length ? [notInArray(items.spaceId, filters.excludeSpaceIds)] : []),
-    ...(filters.excludeSpaceId ? [ne(items.spaceId, filters.excludeSpaceId)] : []),
+    ...(filters.spaceIds?.length
+      ? [inArray(items.spaceId, filters.spaceIds)]
+      : []),
+    ...(filters.spaceId && !filters.spaceIds?.length
+      ? [eq(items.spaceId, filters.spaceId)]
+      : []),
+    ...(filters.excludeSpaceIds?.length
+      ? [notInArray(items.spaceId, filters.excludeSpaceIds)]
+      : []),
+    ...(filters.excludeSpaceId
+      ? [ne(items.spaceId, filters.excludeSpaceId)]
+      : [])
   );
   const found = await db
     .select({
@@ -587,30 +690,38 @@ export function excerptForLore(
   row: SearchRow,
   itemIdToChunks: Map<string, string[]>,
   itemIdToFtsSnippet: Map<string, string>,
-  maxChars: number,
+  maxChars: number
 ): string {
   const id = row.item.id;
   const chunks = itemIdToChunks.get(id) ?? [];
   const headline = itemIdToFtsSnippet.get(id);
   const title = row.item.title?.trim() || "Untitled";
   const parts: string[] = [`Title: ${title}`];
-  if (headline) parts.push(`Search match: ${headline}`);
+  if (headline) {
+    parts.push(`Search match: ${headline}`);
+  }
   if (chunks.length) {
     parts.push("Relevant excerpts (semantic):\n" + chunks.join("\n---\n"));
   } else {
     const corpus = buildItemVaultCorpus(itemSearchableSourceFromRow(row.item));
     const body = corpus.trim() || (row.item.contentText?.trim() ?? "");
     if (body) {
-      parts.push(body.length <= maxChars ? body : `${body.slice(0, maxChars)}…`);
+      parts.push(
+        body.length <= maxChars ? body : `${body.slice(0, maxChars)}…`
+      );
     }
   }
   const joined = parts.join("\n\n").trim();
-  if (joined.length <= maxChars) return joined;
+  if (joined.length <= maxChars) {
+    return joined;
+  }
   return `${joined.slice(0, maxChars)}…`;
 }
 
 /** Total character budget split across N primary sources (graph neighbors use smaller slice). */
 export function budgetPerSource(count: number, totalBudget = 14_000): number {
-  if (count <= 0) return totalBudget;
+  if (count <= 0) {
+    return totalBudget;
+  }
   return Math.max(1200, Math.floor(totalBudget / Math.min(count, 20)));
 }

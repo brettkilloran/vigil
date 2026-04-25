@@ -8,10 +8,10 @@ export const hgStructuredHeadingBlockSchema = z.object({
 
 export const hgStructuredParagraphBlockSchema = z.object({
   kind: z.literal("paragraph"),
-  text: z.string().trim().min(1).max(8_000),
+  text: z.string().trim().min(1).max(8000),
 });
 
-const hgStructuredListItemSchema = z.string().trim().min(1).max(1_200);
+const hgStructuredListItemSchema = z.string().trim().min(1).max(1200);
 
 export const hgStructuredBulletListBlockSchema = z.object({
   kind: z.literal("bullet_list"),
@@ -25,7 +25,7 @@ export const hgStructuredOrderedListBlockSchema = z.object({
 
 export const hgStructuredQuoteBlockSchema = z.object({
   kind: z.literal("quote"),
-  text: z.string().trim().min(1).max(8_000),
+  text: z.string().trim().min(1).max(8000),
 });
 
 export const hgStructuredRuleBlockSchema = z.object({

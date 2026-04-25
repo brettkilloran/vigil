@@ -26,7 +26,9 @@ let lastSavedAt: number | null = null;
 const listeners = new Set<() => void>();
 
 function emit() {
-  for (const l of listeners) l();
+  for (const l of listeners) {
+    l();
+  }
 }
 
 export function subscribeNeonSync(onChange: () => void): () => void {
@@ -81,13 +83,15 @@ export function getNeonSyncServerSnapshot(): NeonSyncSnapshot {
 
 /** Call when bootstrap resolves (demo vs real Neon). Resets counters when turning cloud off. */
 export function neonSyncSetCloudEnabled(enabled: boolean) {
-  if (cloudEnabled === enabled) return;
+  if (cloudEnabled === enabled) {
+    return;
+  }
   cloudEnabled = enabled;
-  if (!enabled) {
-    pending = 0;
-    inFlight = 0;
+  if (enabled) {
     lastError = null;
   } else {
+    pending = 0;
+    inFlight = 0;
     lastError = null;
   }
   emit();
@@ -118,13 +122,13 @@ export function neonSyncEndRequest(ok: boolean, detail?: NeonSyncFailureInput) {
   } else if (!detail) {
     lastError = formatSyncFailureReport(
       { operation: "(unknown)", message: "Save failed", cause: "client" },
-      { cloudEnabled },
+      { cloudEnabled }
     );
   } else if (typeof detail === "string") {
     const m = detail.trim() || "Save failed";
     lastError = formatSyncFailureReport(
       { operation: "(unspecified API call)", message: m, cause: "client" },
-      { cloudEnabled },
+      { cloudEnabled }
     );
   } else {
     lastError = formatSyncFailureReport(detail, { cloudEnabled });
@@ -134,7 +138,9 @@ export function neonSyncEndRequest(ok: boolean, detail?: NeonSyncFailureInput) {
 
 /** For failures that did not use {@link neonSyncBeginRequest} (e.g. item-link fetches). */
 export function neonSyncReportAuxiliaryFailure(detail: NeonSyncFailureInput) {
-  if (!cloudEnabled) return;
+  if (!cloudEnabled) {
+    return;
+  }
   if (typeof detail === "string") {
     lastError = formatSyncFailureReport(
       {
@@ -142,7 +148,7 @@ export function neonSyncReportAuxiliaryFailure(detail: NeonSyncFailureInput) {
         message: detail.trim() || "Sync error",
         cause: "client",
       },
-      { cloudEnabled },
+      { cloudEnabled }
     );
   } else {
     lastError = formatSyncFailureReport(detail, { cloudEnabled });
@@ -155,8 +161,12 @@ export function neonSyncReportAuxiliaryFailure(detail: NeonSyncFailureInput) {
  * successful delta poll). Avoids wiping mutation errors from PATCH flows.
  */
 export function neonSyncClearLastErrorIfContains(fragment: string) {
-  if (!cloudEnabled || !fragment || lastError == null) return;
-  if (!lastError.includes(fragment)) return;
+  if (!(cloudEnabled && fragment) || lastError == null) {
+    return;
+  }
+  if (!lastError.includes(fragment)) {
+    return;
+  }
   lastError = null;
   emit();
 }
@@ -166,18 +176,33 @@ export function neonSyncClearLastErrorIfContains(fragment: string) {
  * Avoids spamming production builds.
  */
 export function neonSyncSpaceChangeSyncBreadcrumb(message: string) {
-  if (process.env.NODE_ENV !== "development") return;
+  if (process.env.NODE_ENV !== "development") {
+    return;
+  }
   const m = message.trim();
-  if (!m) return;
+  if (!m) {
+    return;
+  }
   console.debug(`[heartgarden space sync] ${m}`);
 }
 
 export function formatSavedRelative(ts: number | null): string {
-  if (ts == null) return "";
+  if (ts == null) {
+    return "";
+  }
   const sec = Math.floor((Date.now() - ts) / 1000);
-  if (sec < 8) return "just now";
-  if (sec < 60) return `${sec}s ago`;
+  if (sec < 8) {
+    return "just now";
+  }
+  if (sec < 60) {
+    return `${sec}s ago`;
+  }
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m ago`;
-  return new Date(ts).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  if (min < 60) {
+    return `${min}m ago`;
+  }
+  return new Date(ts).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }

@@ -40,7 +40,8 @@ export default defineConfig({
     },
   },
   webServer: {
-    command: "pnpm run build && pnpm exec next start --hostname 127.0.0.1 --port 3001",
+    command:
+      "pnpm run build && pnpm exec next start --hostname 127.0.0.1 --port 3001",
     url: "http://127.0.0.1:3001",
     reuseExistingServer: !process.env.CI,
     timeout: 300_000,

@@ -14,9 +14,14 @@ const s = loreCardStyles;
 export const FACTION_ARCHIVE091_READABLE_DEFAULT_RECORD_HTML = `<p>To reach <em>the Absolute Neutral</em>, surrender the chronological anchor. Catalog the exterior, then displace it in the ledger furnace — Ironwood tariff binders only.</p><p>The horizon does not curve for the eye; it curves for the soul. We are the quiet space between charter clauses.</p><p><em>Structured members: use hgArch.${FACTION_ROSTER_HG_ARCH_KEY} (JSON) in the index below — not ad-hoc metrics rows.</em></p>`;
 
 function parseWrapped(html: string): HTMLElement | null {
-  if (typeof DOMParser === "undefined") return null;
+  if (typeof DOMParser === "undefined") {
+    return null;
+  }
   try {
-    const doc = new DOMParser().parseFromString(`<div id="__hg_faction_arc">${html}</div>`, "text/html");
+    const doc = new DOMParser().parseFromString(
+      `<div id="__hg_faction_arc">${html}</div>`,
+      "text/html"
+    );
     return doc.getElementById("__hg_faction_arc");
   } catch {
     return null;
@@ -24,15 +29,23 @@ function parseWrapped(html: string): HTMLElement | null {
 }
 
 /** Split object id across vertical rails (same idea as lab UUID rails). */
-export function factionArchiveRailTextsFromObjectId(objectId: string): { upper: string; lower: string } {
+export function factionArchiveRailTextsFromObjectId(objectId: string): {
+  upper: string;
+  lower: string;
+} {
   const full = objectId.replace(/\s+/g, "").toUpperCase();
-  if (!full) return { upper: "—", lower: "—" };
+  if (!full) {
+    return { upper: "—", lower: "—" };
+  }
   const mid = Math.floor(full.length / 2);
   return { upper: full.slice(0, mid), lower: full.slice(mid) };
 }
 
 function escapeHtmlText(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 const EXPAND_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M200 64v64a8 8 0 0 1-16 0V83.3l-45.2 45.1a8 8 0 0 1-11.3-11.3L172.7 72H136a8 8 0 0 1 0-16h64a8 8 0 0 1 8 8Zm-88 88H72v36.7l45.2-45.1a8 8 0 0 1 11.3 11.3L83.3 200H120a8 8 0 0 1 0 16H56a8 8 0 0 1-8-8v-64a8 8 0 0 1 16 0Z"/></svg>`;
@@ -48,8 +61,10 @@ export function buildFactionArchive091BodyHtml(parts: {
   railUpper: string;
   railLower: string;
 }): string {
-  const primary = (parts.orgPrimaryInnerHtml ?? "").trim() || LORE_V9_REDACTED_SENTINEL;
-  const accent = (parts.orgAccentInnerHtml ?? "").trim() || LORE_V9_REDACTED_SENTINEL;
+  const primary =
+    (parts.orgPrimaryInnerHtml ?? "").trim() || LORE_V9_REDACTED_SENTINEL;
+  const accent =
+    (parts.orgAccentInnerHtml ?? "").trim() || LORE_V9_REDACTED_SENTINEL;
   const record = (parts.recordInnerHtml ?? "").trim()
     ? parts.recordInnerHtml
     : FACTION_ARCHIVE091_READABLE_DEFAULT_RECORD_HTML;
@@ -112,23 +127,45 @@ export type FactionArchive091Parsed = {
   railLower: string;
 };
 
-export function parseFactionArchive091BodyHtml(html: string): FactionArchive091Parsed | null {
+export function parseFactionArchive091BodyHtml(
+  html: string
+): FactionArchive091Parsed | null {
   const root = parseWrapped(html);
-  if (!root) return null;
-  const host = root.querySelector('[data-hg-lore-faction-variant="archive091"]');
-  if (!host) return null;
+  if (!root) {
+    return null;
+  }
+  const host = root.querySelector(
+    '[data-hg-lore-faction-variant="archive091"]'
+  );
+  if (!host) {
+    return null;
+  }
 
-  const primary = host.querySelector<HTMLElement>('[data-hg-lore-faction-field="orgNamePrimary"]');
-  const accent = host.querySelector<HTMLElement>('[data-hg-lore-faction-field="orgNameAccent"]');
-  const record = host.querySelector<HTMLElement>('[data-hg-lore-faction-record="true"]');
-  const railU = host.querySelector<HTMLElement>('[data-hg-faction-archive-rail="upper"]');
-  const railL = host.querySelector<HTMLElement>('[data-hg-faction-archive-rail="lower"]');
+  const primary = host.querySelector<HTMLElement>(
+    '[data-hg-lore-faction-field="orgNamePrimary"]'
+  );
+  const accent = host.querySelector<HTMLElement>(
+    '[data-hg-lore-faction-field="orgNameAccent"]'
+  );
+  const record = host.querySelector<HTMLElement>(
+    '[data-hg-lore-faction-record="true"]'
+  );
+  const railU = host.querySelector<HTMLElement>(
+    '[data-hg-faction-archive-rail="upper"]'
+  );
+  const railL = host.querySelector<HTMLElement>(
+    '[data-hg-faction-archive-rail="lower"]'
+  );
 
-  if (!primary || !accent || !record) return null;
+  if (!(primary && accent && record)) {
+    return null;
+  }
 
   return {
-    orgPrimaryInnerHtml: (primary.innerHTML || "").trim() || LORE_V9_REDACTED_SENTINEL,
-    orgAccentInnerHtml: (accent.innerHTML || "").trim() || LORE_V9_REDACTED_SENTINEL,
+    orgPrimaryInnerHtml:
+      (primary.innerHTML || "").trim() || LORE_V9_REDACTED_SENTINEL,
+    orgAccentInnerHtml:
+      (accent.innerHTML || "").trim() || LORE_V9_REDACTED_SENTINEL,
     recordInnerHtml: (record.innerHTML || "").trim() || "<p><br></p>",
     railUpper: (railU?.textContent || "").trim() || "—",
     railLower: (railL?.textContent || "").trim() || "—",
@@ -136,24 +173,47 @@ export function parseFactionArchive091BodyHtml(html: string): FactionArchive091P
 }
 
 /** Sync vertical rail text from backend object id (compact uppercase split). */
-export function withFactionArchiveObjectIdInRails(bodyHtml: string, objectId: string): string {
+export function withFactionArchiveObjectIdInRails(
+  bodyHtml: string,
+  objectId: string
+): string {
   const root = parseWrapped(bodyHtml);
-  if (!root) return bodyHtml;
-  const host = root.querySelector<HTMLElement>('[data-hg-lore-faction-variant="archive091"]');
-  if (!host) return bodyHtml;
+  if (!root) {
+    return bodyHtml;
+  }
+  const host = root.querySelector<HTMLElement>(
+    '[data-hg-lore-faction-variant="archive091"]'
+  );
+  if (!host) {
+    return bodyHtml;
+  }
   const { upper, lower } = factionArchiveRailTextsFromObjectId(objectId);
-  const railU = host.querySelector<HTMLElement>('[data-hg-faction-archive-rail="upper"]');
-  const railL = host.querySelector<HTMLElement>('[data-hg-faction-archive-rail="lower"]');
-  if (railU) railU.textContent = upper;
-  if (railL) railL.textContent = lower;
+  const railU = host.querySelector<HTMLElement>(
+    '[data-hg-faction-archive-rail="upper"]'
+  );
+  const railL = host.querySelector<HTMLElement>(
+    '[data-hg-faction-archive-rail="lower"]'
+  );
+  if (railU) {
+    railU.textContent = upper;
+  }
+  if (railL) {
+    railL.textContent = lower;
+  }
   return host.outerHTML;
 }
 
 /** Plain-text primary org line for graph title / focus title derivation. */
-export function plainFactionPrimaryNameFromArchiveBodyHtml(bodyHtml: string): string {
+export function plainFactionPrimaryNameFromArchiveBodyHtml(
+  bodyHtml: string
+): string {
   const p = parseFactionArchive091BodyHtml(bodyHtml);
-  if (!p) return "";
+  if (!p) {
+    return "";
+  }
   const text = plainTextFromInlineHtmlFragment(p.orgPrimaryInnerHtml);
-  if (!text || text === LORE_V9_REDACTED_SENTINEL) return "";
+  if (!text || text === LORE_V9_REDACTED_SENTINEL) {
+    return "";
+  }
   return text;
 }

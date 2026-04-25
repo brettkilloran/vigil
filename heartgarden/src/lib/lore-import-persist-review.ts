@@ -11,7 +11,7 @@ import type { VigilDb } from "@/src/lib/spaces";
 export async function replaceImportReviewQueueForPlan(
   db: VigilDb,
   spaceId: string,
-  plan: LoreImportPlan,
+  plan: LoreImportPlan
 ): Promise<void> {
   const now = new Date();
   const rows: (typeof importReviewItems.$inferInsert)[] = [];
@@ -33,7 +33,9 @@ export async function replaceImportReviewQueueForPlan(
     });
   }
   for (const cl of plan.clarifications) {
-    if (cl.severity !== "required") continue;
+    if (cl.severity !== "required") {
+      continue;
+    }
     rows.push({
       importBatchId: plan.importBatchId,
       spaceId,
@@ -58,8 +60,8 @@ export async function replaceImportReviewQueueForPlan(
       and(
         eq(importReviewItems.spaceId, spaceId),
         eq(importReviewItems.importBatchId, plan.importBatchId),
-        eq(importReviewItems.status, "pending"),
-      ),
+        eq(importReviewItems.status, "pending")
+      )
     );
   if (rows.length > 0) {
     await db.insert(importReviewItems).values(rows);
@@ -73,10 +75,16 @@ export async function persistImportReviewQueueFromPlan(
   db: VigilDb,
   spaceId: string,
   plan: LoreImportPlan,
-  persistReview: boolean,
+  persistReview: boolean
 ): Promise<void> {
-  if (!persistReview) return;
+  if (!persistReview) {
+    return;
+  }
   await db.transaction(async (tx) => {
-    await replaceImportReviewQueueForPlan(tx as unknown as VigilDb, spaceId, plan);
+    await replaceImportReviewQueueForPlan(
+      tx as unknown as VigilDb,
+      spaceId,
+      plan
+    );
   });
 }

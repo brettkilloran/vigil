@@ -11,7 +11,9 @@ import {
 describe("collab-presence-identity", () => {
   it("fallback alias is deterministic per client id", () => {
     const id = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
-    expect(presenceFallbackAliasForClientId(id)).toBe(presenceFallbackAliasForClientId(id));
+    expect(presenceFallbackAliasForClientId(id)).toBe(
+      presenceFallbackAliasForClientId(id)
+    );
   });
 
   it("hue is in 0..359", () => {
@@ -21,14 +23,18 @@ describe("collab-presence-identity", () => {
   });
 
   it("sanitizes display names", () => {
-    expect(sanitizePresenceDisplayName("  Avery   North  ")).toBe("Avery North");
+    expect(sanitizePresenceDisplayName("  Avery   North  ")).toBe(
+      "Avery North"
+    );
     expect(sanitizePresenceDisplayName("")).toBeNull();
     expect(sanitizePresenceDisplayName("    ")).toBeNull();
   });
 
   it("uses fallback alias when display name is invalid", () => {
     const id = "cccccccc-bbbb-4ccc-8ddd-eeeeeeeeeeee";
-    expect(presenceNameForClient(id, "###")).toBe(presenceFallbackAliasForClientId(id));
+    expect(presenceNameForClient(id, "###")).toBe(
+      presenceFallbackAliasForClientId(id)
+    );
   });
 
   it("builds compact initials", () => {

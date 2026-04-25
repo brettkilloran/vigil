@@ -1,10 +1,12 @@
-import { after } from "next/server";
-
 import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { after } from "next/server";
 
 import type { tryGetDb } from "@/src/db/index";
 import { entityMentions, itemEmbeddings, items, spaces } from "@/src/db/schema";
-import { buildEntityVocabularyForBrane, clearEntityVocabularyCache } from "@/src/lib/entity-vocabulary";
+import {
+  buildEntityVocabularyForBrane,
+  clearEntityVocabularyCache,
+} from "@/src/lib/entity-vocabulary";
 import { invalidateItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
@@ -23,14 +25,18 @@ function escapeRegex(text: string): string {
 function countMatches(text: string, term: string): number {
   const re = new RegExp(`\\b${escapeRegex(term)}\\b`, "gi");
   let count = 0;
-  while (re.exec(text) !== null) count += 1;
+  while (re.exec(text) !== null) {
+    count += 1;
+  }
   return count;
 }
 
 function makeSnippet(text: string, term: string): string | null {
   const re = new RegExp(`\\b${escapeRegex(term)}\\b`, "i");
   const m = re.exec(text);
-  if (!m) return null;
+  if (!m) {
+    return null;
+  }
   const idx = m.index;
   const start = Math.max(0, idx - 120);
   const end = Math.min(text.length, idx + term.length + 120);
@@ -41,7 +47,9 @@ function parseHeadingPath(raw: unknown): string[] {
   if (Array.isArray(raw)) {
     return raw.map((v) => String(v ?? "").trim()).filter(Boolean);
   }
-  if (typeof raw !== "string") return [];
+  if (typeof raw !== "string") {
+    return [];
+  }
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (Array.isArray(parsed)) {
@@ -63,10 +71,18 @@ function upsertBestSemanticMatch(
       headingPath: string | null;
     }
   >,
-  row: { targetItemId: string; targetSpaceId: string; distance: number; snippet: string; headingPath: unknown },
+  row: {
+    targetItemId: string;
+    targetSpaceId: string;
+    distance: number;
+    snippet: string;
+    headingPath: unknown;
+  }
 ): void {
   const prev = bestByTarget.get(row.targetItemId);
-  if (prev && prev.distance <= row.distance) return;
+  if (prev && prev.distance <= row.distance) {
+    return;
+  }
   const heading = parseHeadingPath(row.headingPath).join(" > ").trim();
   bestByTarget.set(row.targetItemId, {
     targetSpaceId: row.targetSpaceId,
@@ -79,7 +95,7 @@ function upsertBestSemanticMatch(
 async function computeSemanticNeighborsForItem(
   db: VigilDb,
   sourceItemId: string,
-  braneId: string,
+  braneId: string
 ): Promise<
   Array<{
     targetItemId: string;
@@ -122,16 +138,20 @@ async function computeSemanticNeighborsForItem(
     order by distance asc
     limit ${SEMANTIC_MAX_SOURCE_CHUNKS * SEMANTIC_PER_CHUNK_NEIGHBORS};
   `);
-  const rows = (result as {
-    rows?: Array<{
-      target_item_id?: string;
-      target_space_id?: string;
-      distance?: number;
-      snippet?: string;
-      heading_path?: unknown;
-    }>;
-  }).rows;
-  if (!rows?.length) return [];
+  const rows = (
+    result as {
+      rows?: Array<{
+        target_item_id?: string;
+        target_space_id?: string;
+        distance?: number;
+        snippet?: string;
+        heading_path?: unknown;
+      }>;
+    }
+  ).rows;
+  if (!rows?.length) {
+    return [];
+  }
   const bestByTarget = new Map<
     string,
     {
@@ -146,7 +166,11 @@ async function computeSemanticNeighborsForItem(
     const targetSpaceId = String(row.target_space_id ?? "").trim();
     const snippet = String(row.snippet ?? "").trim();
     const distance = Number(row.distance);
-    if (!targetItemId || !targetSpaceId || !snippet || !Number.isFinite(distance)) continue;
+    if (
+      !(targetItemId && targetSpaceId && snippet && Number.isFinite(distance))
+    ) {
+      continue;
+    }
     upsertBestSemanticMatch(bestByTarget, {
       targetItemId,
       targetSpaceId,
@@ -193,7 +217,7 @@ export type EntityMentionRescanOptions = {
 export async function rescanItemEntityMentions(
   db: VigilDb,
   itemId: string,
-  options?: EntityMentionRescanOptions,
+  options?: EntityMentionRescanOptions
 ): Promise<void> {
   const [row] = await db
     .select({
@@ -207,7 +231,9 @@ export async function rescanItemEntityMentions(
     .innerJoin(spaces, eq(spaces.id, items.spaceId))
     .where(eq(items.id, itemId))
     .limit(1);
-  if (!row?.braneId) return;
+  if (!row?.braneId) {
+    return;
+  }
   const sourceBraneId = row.braneId;
   const sourceSpaceId = row.spaceId;
 
@@ -280,13 +306,24 @@ export async function rescanItemEntityMentions(
   const matchedTerms: MatchedTermEntry[] = [];
   const targetItemIds = new Set<string>();
   for (const entry of vocab.terms) {
-    if (restrictToTerms && !restrictToTerms.has(entry.term)) continue;
+    if (restrictToTerms && !restrictToTerms.has(entry.term)) {
+      continue;
+    }
     const count = countMatches(blob, entry.term);
-    if (count < 1) continue;
+    if (count < 1) {
+      continue;
+    }
     const snippet = makeSnippet(blob, entry.term);
-    matchedTerms.push({ term: entry.term, itemIds: entry.itemIds, count, snippet });
+    matchedTerms.push({
+      term: entry.term,
+      itemIds: entry.itemIds,
+      count,
+      snippet,
+    });
     for (const targetItemId of entry.itemIds) {
-      if (targetItemId !== itemId) targetItemIds.add(targetItemId);
+      if (targetItemId !== itemId) {
+        targetItemIds.add(targetItemId);
+      }
     }
   }
   const targetSpaceById = new Map<string, string>();
@@ -296,15 +333,21 @@ export async function rescanItemEntityMentions(
       .from(items)
       .where(inArray(items.id, [...targetItemIds]));
     for (const r of targetRows) {
-      if (r.spaceId) targetSpaceById.set(r.id, r.spaceId);
+      if (r.spaceId) {
+        targetSpaceById.set(r.id, r.spaceId);
+      }
     }
   }
 
   for (const matched of matchedTerms) {
     for (const targetItemId of matched.itemIds) {
-      if (targetItemId === itemId) continue;
+      if (targetItemId === itemId) {
+        continue;
+      }
       const targetSpaceId = targetSpaceById.get(targetItemId);
-      if (!targetSpaceId) continue;
+      if (!targetSpaceId) {
+        continue;
+      }
       applyMentionRow({
         targetItemId,
         targetSpaceId,
@@ -321,7 +364,11 @@ export async function rescanItemEntityMentions(
   // restricted the rescan to a specific term set (rename-driven incremental
   // path). Full rescans still rebuild semantic mentions.
   if (!restrictToTerms) {
-    const semanticNeighbors = await computeSemanticNeighborsForItem(db, itemId, sourceBraneId);
+    const semanticNeighbors = await computeSemanticNeighborsForItem(
+      db,
+      itemId,
+      sourceBraneId
+    );
     for (const semantic of semanticNeighbors) {
       applyMentionRow({
         targetItemId: semantic.targetItemId,
@@ -339,11 +386,17 @@ export async function rescanItemEntityMentions(
   const idsToDelete: string[] = [];
   for (const prev of previous) {
     if (restrictToTerms) {
-      if (prev.sourceKind === "semantic") continue;
-      if (!restrictToTerms.has(prev.matchedTerm)) continue;
+      if (prev.sourceKind === "semantic") {
+        continue;
+      }
+      if (!restrictToTerms.has(prev.matchedTerm)) {
+        continue;
+      }
     }
     const key = `${prev.targetItemId}::${prev.matchedTerm}::${prev.sourceKind}`;
-    if (nextKeys.has(key)) continue;
+    if (nextKeys.has(key)) {
+      continue;
+    }
     idsToDelete.push(prev.id);
   }
 
@@ -385,7 +438,9 @@ export async function rescanItemEntityMentions(
         });
     }
     if (idsToDelete.length > 0) {
-      await tx.delete(entityMentions).where(inArray(entityMentions.id, idsToDelete));
+      await tx
+        .delete(entityMentions)
+        .where(inArray(entityMentions.id, idsToDelete));
     }
   });
 
@@ -412,11 +467,15 @@ export type ScheduleBraneEntityMentionRescanOptions = {
 export function scheduleBraneEntityMentionRescanAfterResponse(
   db: VigilDb,
   braneId: string,
-  options?: ScheduleBraneEntityMentionRescanOptions,
+  options?: ScheduleBraneEntityMentionRescanOptions
 ): void {
   const affectedTerms =
     options?.affectedTerms && options.affectedTerms.length > 0
-      ? Array.from(new Set(options.affectedTerms.map((t) => t.toLowerCase()).filter(Boolean)))
+      ? Array.from(
+          new Set(
+            options.affectedTerms.map((t) => t.toLowerCase()).filter(Boolean)
+          )
+        )
       : null;
   after(async () => {
     let rows: Array<{ id: string }>;
@@ -426,8 +485,8 @@ export function scheduleBraneEntityMentionRescanAfterResponse(
       // before writing rows.
       const blobMatchesAnyTerm = or(
         ...affectedTerms.map(
-          (t) => sql`lower(${items.searchBlob}) ILIKE '%' || ${t} || '%'`,
-        ),
+          (t) => sql`lower(${items.searchBlob}) ILIKE '%' || ${t} || '%'`
+        )
       );
       rows = await db
         .select({ id: items.id })
@@ -454,7 +513,7 @@ export function scheduleBraneEntityMentionRescanAfterResponse(
 export function scheduleEntityMentionRescanOnVocabularyChange(
   db: VigilDb,
   braneId: string,
-  options?: ScheduleBraneEntityMentionRescanOptions,
+  options?: ScheduleBraneEntityMentionRescanOptions
 ): void {
   clearEntityVocabularyCache(braneId);
   scheduleBraneEntityMentionRescanAfterResponse(db, braneId, options);

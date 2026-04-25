@@ -26,7 +26,9 @@ describe("GET /api/v1/items/[itemId]", () => {
     const { GET } = await import("./route");
 
     const res = await GET(new Request("http://localhost/api/v1/items/x"), {
-      params: Promise.resolve({ itemId: "00000000-0000-4000-8000-000000000001" }),
+      params: Promise.resolve({
+        itemId: "00000000-0000-4000-8000-000000000001",
+      }),
     });
     expect(res.status).toBe(503);
     const payload = (await res.json()) as { error: string };
@@ -67,11 +69,21 @@ describe("GET /api/v1/items/[itemId]", () => {
     });
 
     const { GET } = await import("./route");
-    const res = await GET(new Request("http://localhost/api/v1/items/00000000-0000-4000-8000-000000000001"), {
-      params: Promise.resolve({ itemId: "00000000-0000-4000-8000-000000000001" }),
-    });
+    const res = await GET(
+      new Request(
+        "http://localhost/api/v1/items/00000000-0000-4000-8000-000000000001"
+      ),
+      {
+        params: Promise.resolve({
+          itemId: "00000000-0000-4000-8000-000000000001",
+        }),
+      }
+    );
     expect(res.status).toBe(200);
-    const payload = (await res.json()) as { version: number; item: { title: string } };
+    const payload = (await res.json()) as {
+      version: number;
+      item: { title: string };
+    };
     expect(payload.version).toBe(1);
     expect(payload.item.title).toBe("Hi");
   });
@@ -79,16 +91,20 @@ describe("GET /api/v1/items/[itemId]", () => {
   it("returns 404 Not found for missing item when gm", async () => {
     tryGetDbMock.mockReturnValue({});
     loadItemRowForHeartgardenApiMock.mockResolvedValue({ kind: "absent" });
-    const { getHeartgardenApiBootContext, isHeartgardenPlayerBlocked } = await import(
-      "@/src/lib/heartgarden-api-boot-context"
-    );
+    const { getHeartgardenApiBootContext, isHeartgardenPlayerBlocked } =
+      await import("@/src/lib/heartgarden-api-boot-context");
     vi.mocked(getHeartgardenApiBootContext).mockResolvedValue({ role: "gm" });
     vi.mocked(isHeartgardenPlayerBlocked).mockReturnValue(false);
 
     const { GET } = await import("./route");
-    const res = await GET(new Request("http://localhost/api/v1/items/missing"), {
-      params: Promise.resolve({ itemId: "00000000-0000-4000-8000-000000000099" }),
-    });
+    const res = await GET(
+      new Request("http://localhost/api/v1/items/missing"),
+      {
+        params: Promise.resolve({
+          itemId: "00000000-0000-4000-8000-000000000099",
+        }),
+      }
+    );
     expect(res.status).toBe(404);
     const payload = (await res.json()) as { error: string };
     expect(payload.error).toBe("Not found");

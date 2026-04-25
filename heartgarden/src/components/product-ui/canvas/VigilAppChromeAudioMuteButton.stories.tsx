@@ -20,7 +20,9 @@ const meta = {
     (Story) => (
       <div className="flex items-center gap-3 rounded-xl border border-[var(--vigil-border)] bg-[var(--ui-glass-bg)] px-4 py-3 backdrop-blur-xl">
         <Story />
-        <span className="text-sm text-[var(--sem-text-muted)]">Toggle updates shared app audio prefs</span>
+        <span className="text-[var(--sem-text-muted)] text-sm">
+          Toggle updates shared app audio prefs
+        </span>
       </div>
     ),
   ],

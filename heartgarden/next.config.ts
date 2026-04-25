@@ -1,7 +1,9 @@
-import type { NextConfig } from "next";
 import bundleAnalyzer from "@next/bundle-analyzer";
+import type { NextConfig } from "next";
 
-const withBundleAnalyzer = bundleAnalyzer({ enabled: process.env.ANALYZE === "1" });
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "1",
+});
 
 const nextConfig: NextConfig = {
   /**
@@ -24,7 +26,9 @@ const nextConfig: NextConfig = {
    */
   env: {
     NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA:
-      process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? "",
+      process.env.VERCEL_GIT_COMMIT_SHA ??
+      process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ??
+      "",
   },
   /**
    * Dev binds to all interfaces (`localhost` + LAN). Next 16 blocks cross-origin HMR by default;

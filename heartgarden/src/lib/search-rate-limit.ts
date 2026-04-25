@@ -12,10 +12,14 @@ function searchClientKey(req: Request): string {
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) {
     const first = forwarded.split(",")[0]?.trim();
-    if (first) return `ip:${first}`;
+    if (first) {
+      return `ip:${first}`;
+    }
   }
   const realIp = req.headers.get("x-real-ip")?.trim();
-  if (realIp) return `ip:${realIp}`;
+  if (realIp) {
+    return `ip:${realIp}`;
+  }
   return "ip:unknown";
 }
 
@@ -28,10 +32,14 @@ export function searchRateLimitExceeded(req: Request): boolean {
     buckets.set(key, bucket);
   }
   bucket.count += 1;
-  if (bucket.count > MAX_PER_WINDOW) return true;
+  if (bucket.count > MAX_PER_WINDOW) {
+    return true;
+  }
   if (buckets.size > 10_000) {
     for (const [k, v] of buckets) {
-      if (now - v.windowStart >= WINDOW_MS) buckets.delete(k);
+      if (now - v.windowStart >= WINDOW_MS) {
+        buckets.delete(k);
+      }
     }
   }
   return false;

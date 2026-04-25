@@ -13,24 +13,37 @@ export type HgAiPendingRangeMetrics = {
 };
 
 /** Contiguous PM ranges covered by the `hgAiPending` mark (merged across text-node splits). */
-export function collectHgAiPendingRanges(editor: Editor): { from: number; to: number }[] {
+export function collectHgAiPendingRanges(
+  editor: Editor
+): { from: number; to: number }[] {
   return collectHgAiPendingRangeMetrics(editor).ranges;
 }
 
-export function collectHgAiPendingRangeMetrics(editor: Editor): HgAiPendingRangeMetrics {
+export function collectHgAiPendingRangeMetrics(
+  editor: Editor
+): HgAiPendingRangeMetrics {
   const markType = editor.schema.marks.hgAiPending;
   if (!markType) {
-    return { ranges: [], pendingChars: 0, totalTextChars: 0, pendingCoverage: 0 };
+    return {
+      ranges: [],
+      pendingChars: 0,
+      totalTextChars: 0,
+      pendingCoverage: 0,
+    };
   }
   const doc = editor.state.doc;
   const raw: { from: number; to: number }[] = [];
   let pendingChars = 0;
   let totalTextChars = 0;
   doc.descendants((node, pos) => {
-    if (!node.isText) return;
+    if (!node.isText) {
+      return;
+    }
     const len = node.text?.length ?? 0;
     totalTextChars += len;
-    if (!node.marks.some((m) => m.type === markType)) return;
+    if (!node.marks.some((m) => m.type === markType)) {
+      return;
+    }
     pendingChars += len;
     raw.push({ from: pos, to: pos + len });
   });
@@ -38,8 +51,11 @@ export function collectHgAiPendingRangeMetrics(editor: Editor): HgAiPendingRange
   const merged: { from: number; to: number }[] = [];
   for (const r of raw) {
     const last = merged[merged.length - 1];
-    if (last && r.from <= last.to) last.to = Math.max(last.to, r.to);
-    else merged.push({ ...r });
+    if (last && r.from <= last.to) {
+      last.to = Math.max(last.to, r.to);
+    } else {
+      merged.push({ ...r });
+    }
   }
   const mergedSplits: { from: number; to: number }[] = [];
   for (const r of merged) {
@@ -55,7 +71,8 @@ export function collectHgAiPendingRangeMetrics(editor: Editor): HgAiPendingRange
       mergedSplits.push({ ...r });
     }
   }
-  const pendingCoverage = totalTextChars > 0 ? pendingChars / totalTextChars : 0;
+  const pendingCoverage =
+    totalTextChars > 0 ? pendingChars / totalTextChars : 0;
   return {
     ranges: mergedSplits,
     pendingChars,

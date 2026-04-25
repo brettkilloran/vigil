@@ -14,13 +14,18 @@ import { getItemLinksResolved } from "@/src/lib/spaces";
 
 export async function GET(
   _req: Request,
-  context: { params: Promise<{ itemId: string }> },
+  context: { params: Promise<{ itemId: string }> }
 ) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured", outgoing: [], incoming: [] },
-      { status: 503 },
+      {
+        ok: false,
+        error: "Database not configured",
+        outgoing: [],
+        incoming: [],
+      },
+      { status: 503 }
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
@@ -28,11 +33,15 @@ export async function GET(
     return heartgardenApiForbiddenJsonResponse();
   }
   const { itemId } = await context.params;
-  const [row] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
+  const [row] = await db
+    .select()
+    .from(items)
+    .where(eq(items.id, itemId))
+    .limit(1);
   if (!row) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Not found" }, { status: 404 }),
+      Response.json({ ok: false, error: "Not found" }, { status: 404 })
     );
   }
   if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, row.spaceId))) {

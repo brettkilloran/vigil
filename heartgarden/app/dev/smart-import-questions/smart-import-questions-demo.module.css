@@ -1,8 +1,8 @@
 .shell {
   min-height: 100vh;
   padding: 32px 24px 64px;
-  background: var(--sem-surface-base);
   color: var(--sem-text-primary);
+  background: var(--sem-surface-base);
 }
 
 .title {
@@ -13,24 +13,24 @@
 }
 
 .subtitle {
+  max-width: 56rem;
   margin: 0 0 20px;
   font-size: 13px;
   line-height: 1.55;
   color: var(--sem-text-muted);
-  max-width: 56rem;
 }
 
 .url {
+  margin: 0 0 24px;
   font-size: 12px;
   color: var(--sem-text-muted);
-  margin: 0 0 24px;
 }
 
 .url code {
-  font-size: 0.92em;
   padding: 0.1em 0.35em;
-  border-radius: 4px;
+  font-size: 0.92em;
   background: color-mix(in oklch, var(--sem-text-primary) 8%, transparent);
+  border-radius: 4px;
 }
 
 .layout {
@@ -43,46 +43,63 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--sem-border-subtle);
-  background: color-mix(in oklch, var(--sem-text-primary) 3%, var(--sys-color-neutral-900) 97%);
   align-items: center;
+  padding: 10px 12px;
+  background: color-mix(
+    in oklch,
+    var(--sem-text-primary) 3%,
+    var(--sys-color-neutral-900) 97%
+  );
+  border: 1px solid var(--sem-border-subtle);
+  border-radius: 12px;
 }
 
 .scenarioLabel {
   margin-right: 6px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--sem-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .scenarioChip {
-  appearance: none;
-  font: inherit;
-  cursor: pointer;
-  border-radius: 999px;
-  border: 1px solid color-mix(in oklch, var(--sem-border-subtle) 85%, transparent);
-  background: color-mix(in oklch, var(--sem-text-primary) 3%, var(--sys-color-neutral-900) 97%);
-  color: var(--sem-text-primary);
   padding: 6px 12px;
+  font: inherit;
   font-size: 12px;
   line-height: 1.2;
+  color: var(--sem-text-primary);
+  appearance: none;
+  cursor: pointer;
+  background: color-mix(
+    in oklch,
+    var(--sem-text-primary) 3%,
+    var(--sys-color-neutral-900) 97%
+  );
+  border: 1px solid
+    color-mix(in oklch, var(--sem-border-subtle) 85%, transparent);
+  border-radius: 999px;
   transition:
     border-color 120ms ease,
     background 120ms ease;
 }
 
 .scenarioChip:hover {
-  border-color: color-mix(in oklch, var(--sem-focus-ring) 40%, var(--sem-border-subtle) 60%);
+  border-color: color-mix(
+    in oklch,
+    var(--sem-focus-ring) 40%,
+    var(--sem-border-subtle) 60%
+  );
 }
 
 .scenarioChipActive {
-  border-color: color-mix(in oklch, var(--sem-accent-primary) 72%, transparent);
-  background: color-mix(in oklch, var(--sem-accent-primary) 18%, var(--sys-color-neutral-900) 82%);
   color: color-mix(in oklch, var(--sem-text-primary) 96%, white 4%);
+  background: color-mix(
+    in oklch,
+    var(--sem-accent-primary) 18%,
+    var(--sys-color-neutral-900) 82%
+  );
+  border-color: color-mix(in oklch, var(--sem-accent-primary) 72%, transparent);
 }
 
 .stageGroup {
@@ -95,32 +112,37 @@
   margin: 0;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--sem-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .stageHint {
+  max-width: 52rem;
   margin: 0;
   font-size: 12px;
   line-height: 1.5;
   color: var(--sem-text-muted);
-  max-width: 52rem;
 }
 
 .stage {
   position: relative;
   min-height: 640px;
-  border-radius: 14px;
   overflow: hidden;
-  border: 1px dashed color-mix(in oklch, var(--sem-text-primary) 14%, transparent);
   background:
     radial-gradient(
       120% 80% at 50% 0%,
       color-mix(in oklch, var(--sem-accent-primary) 8%, transparent),
       transparent 70%
     ),
-    color-mix(in oklch, var(--sys-color-black) 35%, var(--sys-color-neutral-950) 65%);
+    color-mix(
+      in oklch,
+      var(--sys-color-black) 35%,
+      var(--sys-color-neutral-950) 65%
+    );
+  border: 1px dashed
+    color-mix(in oklch, var(--sem-text-primary) 14%, transparent);
+  border-radius: 14px;
 }
 
 .stageBackdrop {
@@ -130,8 +152,8 @@
 }
 
 .stagePanel {
-  max-height: 100% !important;
   max-width: 44rem !important;
+  max-height: 100% !important;
 }
 
 .stageLabel {
@@ -141,9 +163,9 @@
   z-index: 1;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   color: color-mix(in oklch, var(--sem-text-muted) 80%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   pointer-events: none;
 }
 
@@ -156,21 +178,25 @@
 
 .resetRow {
   display: flex;
-  gap: 10px;
   flex-wrap: wrap;
+  gap: 10px;
   align-items: center;
 }
 
 .stateDump {
-  margin: 0;
   padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--sem-border-subtle);
-  background: color-mix(in oklch, var(--sys-color-black) 55%, var(--sys-color-neutral-900) 45%);
+  margin: 0;
+  overflow-x: auto;
   font-family: var(--font-geist-mono), monospace;
   font-size: 11px;
   line-height: 1.5;
   color: var(--sem-text-muted);
   white-space: pre-wrap;
-  overflow-x: auto;
+  background: color-mix(
+    in oklch,
+    var(--sys-color-black) 55%,
+    var(--sys-color-neutral-900) 45%
+  );
+  border: 1px solid var(--sem-border-subtle);
+  border-radius: 8px;
 }

@@ -2,10 +2,14 @@ import { syncLoreV11MarkerTilts } from "@/src/lib/lore-v11-marker-tilt";
 import { syncLoreV11PhCaretOffsetsInHost } from "@/src/lib/lore-v11-ph-caret";
 
 /** Move caret to the end of replaced placeholder content (browser often leaves it at offset 0). */
-export function placeCaretAfterLorePlaceholderReplace(field: HTMLElement): void {
+export function placeCaretAfterLorePlaceholderReplace(
+  field: HTMLElement
+): void {
   field.focus({ preventScroll: true });
   const sel = window.getSelection();
-  if (!sel) return;
+  if (!sel) {
+    return;
+  }
 
   const range = document.createRange();
   const isNotes = field.matches?.('[class*="charSkNotesBody"]') === true;
@@ -60,12 +64,21 @@ function placeholderExpectedPlain(field: HTMLElement): string {
   return field.textContent?.replace(/\s+/g, " ").trim() ?? "";
 }
 
-function selectionFullyCoversPlaceholder(field: HTMLElement, sel: Selection): boolean {
+function selectionFullyCoversPlaceholder(
+  field: HTMLElement,
+  sel: Selection
+): boolean {
   const exp = placeholderExpectedPlain(field);
-  if (exp.length === 0) return false;
-  if (sel.rangeCount === 0) return false;
+  if (exp.length === 0) {
+    return false;
+  }
+  if (sel.rangeCount === 0) {
+    return false;
+  }
   const r = sel.getRangeAt(0);
-  if (r.collapsed) return false;
+  if (r.collapsed) {
+    return false;
+  }
   const picked = sel.toString().replace(/\s+/g, " ").trim();
   return picked === exp;
 }
@@ -74,11 +87,19 @@ function selectionFullyCoversPlaceholder(field: HTMLElement, sel: Selection): bo
  * Select the entire placeholder copy (REDACTED sentinel, CLGN-ID, empty field, or notes’ first block) so the browser never
  * leaves a collapsed caret between letters — matches real placeholder semantics.
  */
-export function selectLoreRedactedPlaceholderAtomically(field: HTMLElement): void {
-  if (!isLoreFieldPlaceholderContent(field)) return;
-  if (placeholderExpectedPlain(field).length === 0) return;
+export function selectLoreRedactedPlaceholderAtomically(
+  field: HTMLElement
+): void {
+  if (!isLoreFieldPlaceholderContent(field)) {
+    return;
+  }
+  if (placeholderExpectedPlain(field).length === 0) {
+    return;
+  }
   const sel = window.getSelection();
-  if (!sel) return;
+  if (!sel) {
+    return;
+  }
 
   const range = document.createRange();
   const isNotes = field.matches?.('[class*="charSkNotesBody"]') === true;
@@ -93,7 +114,10 @@ export function selectLoreRedactedPlaceholderAtomically(field: HTMLElement): voi
     } else {
       range.selectNodeContents(field);
     }
-  } else if (field.childNodes.length === 1 && field.firstChild?.nodeType === Node.TEXT_NODE) {
+  } else if (
+    field.childNodes.length === 1 &&
+    field.firstChild?.nodeType === Node.TEXT_NODE
+  ) {
     const tn = field.firstChild as Text;
     range.setStart(tn, 0);
     range.setEnd(tn, tn.length);
@@ -110,7 +134,9 @@ export function selectLoreRedactedPlaceholderAtomically(field: HTMLElement): voi
  * Keeps lore placeholder fields non-editable “inside” the sentinel: full selection on focus and
  * whenever the selection would collapse or partially select within placeholder text.
  */
-export function installLorePlaceholderSelectionGuards(host: HTMLElement): () => void {
+export function installLorePlaceholderSelectionGuards(
+  host: HTMLElement
+): () => void {
   let composing = false;
 
   const onCompositionStart = () => {
@@ -122,29 +148,53 @@ export function installLorePlaceholderSelectionGuards(host: HTMLElement): () => 
 
   const onFocusIn = (e: FocusEvent) => {
     const field = (e.target as HTMLElement | null)?.closest?.(
-      "[data-hg-lore-placeholder='true']",
+      "[data-hg-lore-placeholder='true']"
     ) as HTMLElement | null;
-    if (!field || !host.contains(field)) return;
-    if (!isLoreFieldPlaceholderContent(field)) return;
-    if (placeholderExpectedPlain(field).length === 0) return;
+    if (!(field && host.contains(field))) {
+      return;
+    }
+    if (!isLoreFieldPlaceholderContent(field)) {
+      return;
+    }
+    if (placeholderExpectedPlain(field).length === 0) {
+      return;
+    }
     queueMicrotask(() => {
-      if (document.activeElement !== field) return;
+      if (document.activeElement !== field) {
+        return;
+      }
       const sel = window.getSelection();
-      if (sel && selectionFullyCoversPlaceholder(field, sel)) return;
+      if (sel && selectionFullyCoversPlaceholder(field, sel)) {
+        return;
+      }
       selectLoreRedactedPlaceholderAtomically(field);
     });
   };
 
   const onSelectionChange = () => {
-    if (composing) return;
+    if (composing) {
+      return;
+    }
     const ae = document.activeElement;
-    if (!ae || !(ae instanceof HTMLElement) || !host.contains(ae)) return;
-    if (ae.getAttribute("data-hg-lore-placeholder") !== "true") return;
-    if (!isLoreFieldPlaceholderContent(ae)) return;
-    if (placeholderExpectedPlain(ae).length === 0) return;
+    if (!(ae && ae instanceof HTMLElement && host.contains(ae))) {
+      return;
+    }
+    if (ae.getAttribute("data-hg-lore-placeholder") !== "true") {
+      return;
+    }
+    if (!isLoreFieldPlaceholderContent(ae)) {
+      return;
+    }
+    if (placeholderExpectedPlain(ae).length === 0) {
+      return;
+    }
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
-    if (selectionFullyCoversPlaceholder(ae, sel)) return;
+    if (!sel || sel.rangeCount === 0) {
+      return;
+    }
+    if (selectionFullyCoversPlaceholder(ae, sel)) {
+      return;
+    }
     selectLoreRedactedPlaceholderAtomically(ae);
   };
 
@@ -166,13 +216,19 @@ export function installLorePlaceholderSelectionGuards(host: HTMLElement): () => 
  * when text is empty or still the sentinel.
  * Optional `data-hg-lore-ph` (v11 character seed): succinct placeholder caption via CSS only — not indexed as body text.
  */
-export function syncLoreV9RedactedPlaceholderState(host: HTMLElement | null): void {
-  if (!host) return;
+export function syncLoreV9RedactedPlaceholderState(
+  host: HTMLElement | null
+): void {
+  if (!host) {
+    return;
+  }
   const shell = host.matches?.('[class*="charSkShell"]')
     ? host
     : host.querySelector<HTMLElement>('[class*="charSkShell"]');
   if (shell) {
-    for (const el of shell.querySelectorAll<HTMLElement>("[data-hg-lore-field]")) {
+    for (const el of shell.querySelectorAll<HTMLElement>(
+      "[data-hg-lore-field]"
+    )) {
       if (isLoreFieldPlaceholderContent(el)) {
         el.setAttribute("data-hg-lore-placeholder", "true");
       } else {
@@ -183,7 +239,9 @@ export function syncLoreV9RedactedPlaceholderState(host: HTMLElement | null): vo
     syncLoreV11PhCaretOffsetsInHost(host);
     return;
   }
-  if (!host.querySelector?.("[data-hg-lore-field]")) return;
+  if (!host.querySelector?.("[data-hg-lore-field]")) {
+    return;
+  }
   for (const el of host.querySelectorAll<HTMLElement>("[data-hg-lore-field]")) {
     if (isLoreFieldPlaceholderContent(el)) {
       el.setAttribute("data-hg-lore-placeholder", "true");
@@ -197,9 +255,16 @@ export function syncLoreV9RedactedPlaceholderState(host: HTMLElement | null): vo
  * First printable input while the sentinel (or header placeholder) is showing: replace the whole field,
  * like a native placeholder. Call from `beforeinput` (capture) on the editor host.
  */
-export function consumeLorePlaceholderBeforeInput(field: HTMLElement, event: InputEvent): boolean {
-  if (field.getAttribute("data-hg-lore-placeholder") !== "true") return false;
-  if (!isLoreFieldPlaceholderContent(field)) return false;
+export function consumeLorePlaceholderBeforeInput(
+  field: HTMLElement,
+  event: InputEvent
+): boolean {
+  if (field.getAttribute("data-hg-lore-placeholder") !== "true") {
+    return false;
+  }
+  if (!isLoreFieldPlaceholderContent(field)) {
+    return false;
+  }
 
   const it = event.inputType;
   let text: string | null = null;
@@ -212,15 +277,23 @@ export function consumeLorePlaceholderBeforeInput(field: HTMLElement, event: Inp
   } else if (it === "insertFromPaste") {
     text =
       event.dataTransfer?.getData("text/plain") ??
-      (event as InputEvent & { clipboardData?: DataTransfer }).clipboardData?.getData("text/plain") ??
+      (
+        event as InputEvent & { clipboardData?: DataTransfer }
+      ).clipboardData?.getData("text/plain") ??
       null;
-    if (text) text = text.replace(/\r\n/g, "\n");
+    if (text) {
+      text = text.replace(/\r\n/g, "\n");
+    }
   } else {
     return false;
   }
 
-  if (text == null) return false;
-  if (it !== "insertFromPaste" && text === "") return false;
+  if (text == null) {
+    return false;
+  }
+  if (it !== "insertFromPaste" && text === "") {
+    return false;
+  }
 
   event.preventDefault();
 

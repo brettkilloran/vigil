@@ -6,14 +6,14 @@ import {
   getHeartgardenApiBootContext,
   gmMayAccessSpaceIdAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
-import { loreQueryRateLimitExceeded } from "@/src/lib/lore-query-rate-limit";
+import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
 import {
   retrieveLoreSources,
   synthesizeLoreAnswer,
   synthesizeLoreAnswerGrounded,
   synthesizeLoreAnswerStream,
 } from "@/src/lib/lore-engine";
-import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
+import { loreQueryRateLimitExceeded } from "@/src/lib/lore-query-rate-limit";
 import { assertSpaceExists, type SearchFilters } from "@/src/lib/spaces";
 
 const bodySchema = z.object({
@@ -28,14 +28,25 @@ const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 
 export const runtime = "nodejs";
 
-function maybeLogLoreQueryMetric(event: string, payload: Record<string, unknown>): void {
-  const raw = (process.env.HEARTGARDEN_ANTHROPIC_METRICS_SAMPLE_RATE ?? "").trim();
+function maybeLogLoreQueryMetric(
+  event: string,
+  payload: Record<string, unknown>
+): void {
+  const raw = (
+    process.env.HEARTGARDEN_ANTHROPIC_METRICS_SAMPLE_RATE ?? ""
+  ).trim();
   const rate = Number(raw);
-  if (!Number.isFinite(rate)) return;
+  if (!Number.isFinite(rate)) {
+    return;
+  }
   const clamped = Math.max(0, Math.min(1, rate));
-  if (Math.random() >= clamped) return;
+  if (Math.random() >= clamped) {
+    return;
+  }
   try {
-    console.info(`[lore-query-metric] ${JSON.stringify({ event, ...payload })}`);
+    console.info(
+      `[lore-query-metric] ${JSON.stringify({ event, ...payload })}`
+    );
   } catch {
     // no-op
   }
@@ -48,17 +59,20 @@ function sseFrame(event: string, data: unknown): string {
 export async function POST(req: Request) {
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
 
   if ((process.env.HEARTGARDEN_LORE_QUERY_DISABLED ?? "").trim() === "1") {
     return Response.json(
       {
         ok: false,
-        error: "Lore query is disabled on this deployment (HEARTGARDEN_LORE_QUERY_DISABLED).",
+        error:
+          "Lore query is disabled on this deployment (HEARTGARDEN_LORE_QUERY_DISABLED).",
         answer: null,
         sources: [],
       },
-      { status: 503 },
+      { status: 503 }
     );
   }
 
@@ -70,23 +84,33 @@ export async function POST(req: Request) {
         answer: null,
         sources: [],
       },
-      { status: 429 },
+      { status: 429 }
     );
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return Response.json(
-      { ok: false, error: "ANTHROPIC_API_KEY not set", answer: null, sources: [] },
-      { status: 503 },
+      {
+        ok: false,
+        error: "ANTHROPIC_API_KEY not set",
+        answer: null,
+        sources: [],
+      },
+      { status: 503 }
     );
   }
 
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured", answer: null, sources: [] },
-      { status: 503 },
+      {
+        ok: false,
+        error: "Database not configured",
+        answer: null,
+        sources: [],
+      },
+      { status: 503 }
     );
   }
 
@@ -94,14 +118,17 @@ export async function POST(req: Request) {
   try {
     json = await req.json();
   } catch {
-    return Response.json({ ok: false, error: "Invalid JSON", answer: null, sources: [] }, { status: 400 });
+    return Response.json(
+      { ok: false, error: "Invalid JSON", answer: null, sources: [] },
+      { status: 400 }
+    );
   }
 
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return Response.json(
       { ok: false, error: parsed.error.flatten(), answer: null, sources: [] },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -116,22 +143,26 @@ export async function POST(req: Request) {
       if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, spaceId))) {
         return Response.json(
           { ok: false, error: "Forbidden.", answer: null, sources: [] },
-          { status: 403 },
+          { status: 403 }
         );
       }
       const space = await assertSpaceExists(db, spaceId);
       if (!space) {
         return Response.json(
           { ok: false, error: "Space not found", answer: null, sources: [] },
-          { status: 404 },
+          { status: 404 }
         );
       }
     }
-    const finalized = await finalizeHeartgardenSearchFiltersForDb(db, bootCtx, baseFilters);
+    const finalized = await finalizeHeartgardenSearchFiltersForDb(
+      db,
+      bootCtx,
+      baseFilters
+    );
     if (!finalized) {
       return Response.json(
         { ok: false, error: "Forbidden.", answer: null, sources: [] },
-        { status: 403 },
+        { status: 403 }
       );
     }
     sources = await retrieveLoreSources(db, question, finalized);
@@ -146,11 +177,12 @@ export async function POST(req: Request) {
     return Response.json(
       {
         ok: false,
-        error: "Lore retrieval failed (check database and search configuration).",
+        error:
+          "Lore retrieval failed (check database and search configuration).",
         answer: null,
         sources: [],
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 
@@ -161,10 +193,20 @@ export async function POST(req: Request) {
       const body = new ReadableStream<Uint8Array>({
         start(controller) {
           const enc = new TextEncoder();
-          controller.enqueue(enc.encode(sseFrame("meta", { sources: [], model: null })));
-          controller.enqueue(enc.encode(sseFrame("delta", { text: noMatchAnswer })));
           controller.enqueue(
-            enc.encode(sseFrame("done", { answer: noMatchAnswer, sources: [], model: null })),
+            enc.encode(sseFrame("meta", { sources: [], model: null }))
+          );
+          controller.enqueue(
+            enc.encode(sseFrame("delta", { text: noMatchAnswer }))
+          );
+          controller.enqueue(
+            enc.encode(
+              sseFrame("done", {
+                answer: noMatchAnswer,
+                sources: [],
+                model: null,
+              })
+            )
           );
           controller.close();
         },
@@ -185,14 +227,18 @@ export async function POST(req: Request) {
     });
   }
 
-  const model = (process.env.ANTHROPIC_LORE_MODEL ?? DEFAULT_MODEL).trim() || DEFAULT_MODEL;
+  const model =
+    (process.env.ANTHROPIC_LORE_MODEL ?? DEFAULT_MODEL).trim() || DEFAULT_MODEL;
 
   try {
     if (stream) {
       if (responseMode === "grounded_json") {
         return Response.json(
-          { ok: false, error: "Streaming is only supported for responseMode=text." },
-          { status: 400 },
+          {
+            ok: false,
+            error: "Streaming is only supported for responseMode=text.",
+          },
+          { status: 400 }
         );
       }
       const streamBody = new ReadableStream<Uint8Array>({
@@ -201,16 +247,25 @@ export async function POST(req: Request) {
           let full = "";
           controller.enqueue(enc.encode(sseFrame("meta", { sources, model })));
           try {
-            for await (const chunk of synthesizeLoreAnswerStream(apiKey, model, question, sources)) {
+            for await (const chunk of synthesizeLoreAnswerStream(
+              apiKey,
+              model,
+              question,
+              sources
+            )) {
               full += chunk;
-              controller.enqueue(enc.encode(sseFrame("delta", { text: chunk })));
+              controller.enqueue(
+                enc.encode(sseFrame("delta", { text: chunk }))
+              );
             }
             maybeLogLoreQueryMetric("stream_done", {
               sourceCount: sources.length,
               outputChars: full.length,
               model,
             });
-            controller.enqueue(enc.encode(sseFrame("done", { answer: full, sources, model })));
+            controller.enqueue(
+              enc.encode(sseFrame("done", { answer: full, sources, model }))
+            );
           } catch (err) {
             const msg =
               err instanceof Error
@@ -232,7 +287,12 @@ export async function POST(req: Request) {
     }
 
     if (responseMode === "grounded_json") {
-      const grounded = await synthesizeLoreAnswerGrounded(apiKey, model, question, sources);
+      const grounded = await synthesizeLoreAnswerGrounded(
+        apiKey,
+        model,
+        question,
+        sources
+      );
       maybeLogLoreQueryMetric("grounded_done", {
         sourceCount: sources.length,
         citedCount: grounded.citedItemIds.length,
@@ -263,11 +323,12 @@ export async function POST(req: Request) {
     return Response.json(
       {
         ok: false,
-        error: "Lore synthesis failed (check ANTHROPIC_LORE_MODEL and API access)",
+        error:
+          "Lore synthesis failed (check ANTHROPIC_LORE_MODEL and API access)",
         answer: null,
         sources,
       },
-      { status: 502 },
+      { status: 502 }
     );
   }
 }

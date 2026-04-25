@@ -9,7 +9,7 @@ import {
 
 function overlaps(
   a: { x: number; y: number; width: number; height: number },
-  b: { x: number; y: number; width: number; height: number },
+  b: { x: number; y: number; width: number; height: number }
 ): boolean {
   return !(
     a.x + a.width <= b.x ||
@@ -49,7 +49,9 @@ describe("placeImportCards", () => {
     expect(result.source?.x).toBe(10);
     expect(result.source?.y).toBe(20);
     const rect = result.entities.a!;
-    expect(rect.y).toBeGreaterThanOrEqual(result.source!.y + result.source!.height);
+    expect(rect.y).toBeGreaterThanOrEqual(
+      result.source!.y + result.source!.height
+    );
   });
 
   it("clusters affine entities near each other", () => {

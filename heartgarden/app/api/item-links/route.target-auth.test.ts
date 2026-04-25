@@ -21,7 +21,10 @@ vi.mock("@/src/lib/heartgarden-realtime-invalidation", () => ({
   publishHeartgardenSpaceInvalidation: publishHeartgardenSpaceInvalidationMock,
 }));
 vi.mock("@/src/lib/heartgarden-api-boot-context", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("@/src/lib/heartgarden-api-boot-context")>();
+  const mod =
+    await importOriginal<
+      typeof import("@/src/lib/heartgarden-api-boot-context")
+    >();
   return {
     ...mod,
     getHeartgardenApiBootContext: vi.fn(() => Promise.resolve({ role: "gm" })),
@@ -50,8 +53,16 @@ describe("PATCH /api/item-links target-space auth ordering", () => {
           where: vi.fn(() => ({
             limit: vi.fn(async () => {
               const keys = shape ? Object.keys(shape) : [];
-              if (keys.includes("sourceItemId") && keys.includes("targetItemId")) {
-                return [{ sourceItemId: SOURCE_ITEM_ID, targetItemId: TARGET_ITEM_ID }];
+              if (
+                keys.includes("sourceItemId") &&
+                keys.includes("targetItemId")
+              ) {
+                return [
+                  {
+                    sourceItemId: SOURCE_ITEM_ID,
+                    targetItemId: TARGET_ITEM_ID,
+                  },
+                ];
               }
               return [];
             }),
@@ -72,11 +83,17 @@ describe("PATCH /api/item-links target-space auth ordering", () => {
       call += 1;
       const keys = shape ? Object.keys(shape) : [];
       // 1st: linkMeta SELECT (limit-chained)
-      if (call === 1 && keys.includes("sourceItemId") && keys.includes("targetItemId")) {
+      if (
+        call === 1 &&
+        keys.includes("sourceItemId") &&
+        keys.includes("targetItemId")
+      ) {
         return {
           from: () => ({
             where: () => ({
-              limit: async () => [{ sourceItemId: SOURCE_ITEM_ID, targetItemId: TARGET_ITEM_ID }],
+              limit: async () => [
+                { sourceItemId: SOURCE_ITEM_ID, targetItemId: TARGET_ITEM_ID },
+              ],
             }),
           }),
         } as unknown as Record<string, unknown>;
@@ -93,9 +110,9 @@ describe("PATCH /api/item-links target-space auth ordering", () => {
     });
 
     tryGetDbMock.mockReturnValue(db);
-    gmMayAccessItemSpaceAsyncMock.mockImplementation(async (_db, _ctx, spaceId) => {
-      return spaceId !== TARGET_SPACE_ID;
-    });
+    gmMayAccessItemSpaceAsyncMock.mockImplementation(
+      async (_db, _ctx, spaceId) => spaceId !== TARGET_SPACE_ID
+    );
 
     const { PATCH } = await import("./route");
     const res = await PATCH(
@@ -103,7 +120,7 @@ describe("PATCH /api/item-links target-space auth ordering", () => {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: LINK_ID, color: "red" }),
-      }),
+      })
     );
     expect(res.status).toBe(403);
     expect(updateSpy).not.toHaveBeenCalled();
@@ -124,11 +141,20 @@ describe("DELETE /api/item-links target-space auth ordering", () => {
       select: vi.fn((shape: Record<string, unknown> | undefined) => {
         call += 1;
         const keys = shape ? Object.keys(shape) : [];
-        if (call === 1 && keys.includes("sourceItemId") && keys.includes("targetItemId")) {
+        if (
+          call === 1 &&
+          keys.includes("sourceItemId") &&
+          keys.includes("targetItemId")
+        ) {
           return {
             from: () => ({
               where: () => ({
-                limit: async () => [{ sourceItemId: SOURCE_ITEM_ID, targetItemId: TARGET_ITEM_ID }],
+                limit: async () => [
+                  {
+                    sourceItemId: SOURCE_ITEM_ID,
+                    targetItemId: TARGET_ITEM_ID,
+                  },
+                ],
               }),
             }),
           };
@@ -152,13 +178,13 @@ describe("DELETE /api/item-links target-space auth ordering", () => {
               }),
             })),
           })),
-        }),
+        })
       ),
     };
     tryGetDbMock.mockReturnValue(db);
-    gmMayAccessItemSpaceAsyncMock.mockImplementation(async (_db, _ctx, spaceId) => {
-      return spaceId !== TARGET_SPACE_ID;
-    });
+    gmMayAccessItemSpaceAsyncMock.mockImplementation(
+      async (_db, _ctx, spaceId) => spaceId !== TARGET_SPACE_ID
+    );
 
     const { DELETE } = await import("./route");
     const res = await DELETE(
@@ -166,7 +192,7 @@ describe("DELETE /api/item-links target-space auth ordering", () => {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: LINK_ID }),
-      }),
+      })
     );
     expect(res.status).toBe(403);
     expect(deleteSpy).not.toHaveBeenCalled();

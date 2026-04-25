@@ -40,15 +40,21 @@ let itemPatchConflict = 0;
 const listeners = new Set<() => void>();
 
 function emit() {
-  for (const l of listeners) l();
+  for (const l of listeners) {
+    l();
+  }
 }
 
-export function subscribeHeartgardenCollabMetrics(onChange: () => void): () => void {
+export function subscribeHeartgardenCollabMetrics(
+  onChange: () => void
+): () => void {
   listeners.add(onChange);
   return () => listeners.delete(onChange);
 }
 
-export function recordHeartgardenSpaceSyncRun(source: HeartgardenSpaceSyncRunSource): void {
+export function recordHeartgardenSpaceSyncRun(
+  source: HeartgardenSpaceSyncRunSource
+): void {
   spaceSyncRuns[source] += 1;
   emit();
 }
@@ -103,11 +109,18 @@ export function getHeartgardenCollabMetricsSnapshot(): Snapshot {
 
 /** Expose for ad-hoc debugging in devtools: `__heartgardenCollabMetrics.snapshot()`. */
 export function installHeartgardenCollabMetricsGlobal(): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined") {
+    return;
+  }
   const w = window as unknown as {
-    __heartgardenCollabMetrics?: { snapshot: () => Snapshot; reset: () => void };
+    __heartgardenCollabMetrics?: {
+      snapshot: () => Snapshot;
+      reset: () => void;
+    };
   };
-  if (w.__heartgardenCollabMetrics) return;
+  if (w.__heartgardenCollabMetrics) {
+    return;
+  }
   w.__heartgardenCollabMetrics = {
     snapshot: () => getHeartgardenCollabMetricsSnapshot(),
     reset: () => {

@@ -80,7 +80,9 @@ export function GraphPanel({
   const [mode, setMode] = useState<"neighborhood" | "full">("neighborhood");
 
   const [seedSearchQuery, setSeedSearchQuery] = useState("");
-  const [seedSearchResults, setSeedSearchResults] = useState<SeedSearchHit[]>([]);
+  const [seedSearchResults, setSeedSearchResults] = useState<SeedSearchHit[]>(
+    []
+  );
   const [seedSearchLoading, setSeedSearchLoading] = useState(false);
 
   const [nodes, setNodes] = useState<BraneGraphNode[]>([]);
@@ -106,7 +108,9 @@ export function GraphPanel({
 
   // Debounced seed search.
   useEffect(() => {
-    if (!open || !braneId) return;
+    if (!(open && braneId)) {
+      return;
+    }
     const q = seedSearchQuery.trim();
     if (q.length < 2) {
       setSeedSearchResults([]);
@@ -119,19 +123,36 @@ export function GraphPanel({
       try {
         const res = await fetch(
           `/api/search?q=${encodeURIComponent(q)}&mode=lexical`,
-          { signal: ctrl.signal },
+          { signal: ctrl.signal }
         );
-        const data = (await res.json()) as { ok?: boolean; items?: Array<{ id?: string; title?: string | null; itemType?: string | null }> };
+        const data = (await res.json()) as {
+          ok?: boolean;
+          items?: Array<{
+            id?: string;
+            title?: string | null;
+            itemType?: string | null;
+          }>;
+        };
         if (!data.ok) {
           setSeedSearchResults([]);
           return;
         }
         const hits: SeedSearchHit[] = (data.items ?? [])
-          .filter((row): row is { id: string; title?: string | null; itemType?: string | null } =>
-            typeof row?.id === "string",
+          .filter(
+            (
+              row
+            ): row is {
+              id: string;
+              title?: string | null;
+              itemType?: string | null;
+            } => typeof row?.id === "string"
           )
           .slice(0, 12)
-          .map((row) => ({ id: row.id, title: row.title ?? null, itemType: row.itemType ?? null }));
+          .map((row) => ({
+            id: row.id,
+            title: row.title ?? null,
+            itemType: row.itemType ?? null,
+          }));
         setSeedSearchResults(hits);
       } catch (err) {
         if ((err as { name?: string })?.name !== "AbortError") {
@@ -149,8 +170,12 @@ export function GraphPanel({
 
   // Load the graph for the current (mode, seed, depth, brane) combination.
   useEffect(() => {
-    if (!open || !braneId) return;
-    if (mode === "neighborhood" && !seedItemId) return;
+    if (!(open && braneId)) {
+      return;
+    }
+    if (mode === "neighborhood" && !seedItemId) {
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -169,16 +194,24 @@ export function GraphPanel({
         if (etagRef.current) {
           headers["If-None-Match"] = etagRef.current;
         }
-        const res = await fetch(`/api/graph/brane?${params.toString()}`, { headers });
-        if (cancelled) return;
+        const res = await fetch(`/api/graph/brane?${params.toString()}`, {
+          headers,
+        });
+        if (cancelled) {
+          return;
+        }
         if (res.status === 304) {
           // Cached graph still matches; nothing to do.
           return;
         }
         const incomingEtag = res.headers.get("ETag");
-        if (incomingEtag) etagRef.current = incomingEtag;
+        if (incomingEtag) {
+          etagRef.current = incomingEtag;
+        }
         const data = (await res.json()) as GraphResponse;
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         if (!data.ok) {
           setError("Failed to load graph.");
           setNodes([]);
@@ -198,7 +231,9 @@ export function GraphPanel({
           setEdges([]);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     })();
     return () => {
@@ -208,7 +243,9 @@ export function GraphPanel({
 
   const filteredNodes = useMemo(() => {
     const q = filterQuery.trim().toLowerCase();
-    if (!q) return nodes;
+    if (!q) {
+      return nodes;
+    }
     return nodes.filter((n) => n.title.toLowerCase().includes(q));
   }, [nodes, filterQuery]);
 
@@ -238,24 +275,28 @@ export function GraphPanel({
     etagRef.current = null;
   };
 
-  if (!open) return null;
+  if (!open) {
+    return null;
+  }
 
   const showingSeedPicker = mode === "neighborhood" && !seedItemId;
 
   return (
     <aside
-      className="relative border-l border-[var(--vigil-border)] bg-[var(--vigil-bg)]"
+      className="relative border-[var(--vigil-border)] border-l bg-[var(--vigil-bg)]"
       style={{ width, minWidth: 320, maxWidth: 760 }}
     >
       <div
-        className="absolute bottom-0 left-0 top-0 z-10 w-1 cursor-col-resize bg-transparent hover:bg-[var(--vigil-border)]/70"
+        className="absolute top-0 bottom-0 left-0 z-10 w-1 cursor-col-resize bg-transparent hover:bg-[var(--vigil-border)]/70"
         onPointerDown={(event) => {
           event.preventDefault();
           const startX = event.clientX;
           const startWidth = width;
           const onMove = (e: PointerEvent) => {
             const delta = startX - e.clientX;
-            onResizeWidth(Math.max(320, Math.min(760, Math.round(startWidth + delta))));
+            onResizeWidth(
+              Math.max(320, Math.min(760, Math.round(startWidth + delta)))
+            );
           };
           const onUp = () => {
             window.removeEventListener("pointermove", onMove);
@@ -265,91 +306,118 @@ export function GraphPanel({
           window.addEventListener("pointerup", onUp);
         }}
       />
-      <div className="flex items-center justify-between border-b border-[var(--vigil-border)] px-3 py-2">
-        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--vigil-label)]">
+      <div className="flex items-center justify-between border-[var(--vigil-border)] border-b px-3 py-2">
+        <div className="font-semibold text-[var(--vigil-label)] text-xs uppercase tracking-[0.16em]">
           Graph panel
         </div>
-        <Button size="sm" variant="ghost" tone="menu" onClick={onClose}>
+        <Button onClick={onClose} size="sm" tone="menu" variant="ghost">
           Close
         </Button>
       </div>
 
       {showingSeedPicker ? (
         <div className="p-3">
-          <div className="mb-2 text-xs text-[var(--vigil-label)]">
+          <div className="mb-2 text-[var(--vigil-label)] text-xs">
             Pick a seed item to explore its 1–2 hop neighborhood.
           </div>
           <input
+            autoFocus
             className="w-full rounded-md border border-[var(--vigil-border)] bg-transparent px-2 py-1 text-sm"
+            onChange={(e) => setSeedSearchQuery(e.target.value)}
             placeholder="Search items..."
             value={seedSearchQuery}
-            onChange={(e) => setSeedSearchQuery(e.target.value)}
-            autoFocus
           />
           <div className="mt-2 max-h-[55vh] overflow-auto">
             {seedSearchLoading && (
-              <div className="px-1 py-2 text-xs text-[var(--vigil-muted)]">Searching…</div>
+              <div className="px-1 py-2 text-[var(--vigil-muted)] text-xs">
+                Searching…
+              </div>
             )}
-            {!seedSearchLoading && seedSearchQuery.trim().length >= 2 && seedSearchResults.length === 0 && (
-              <div className="px-1 py-2 text-xs text-[var(--vigil-muted)]">No matches.</div>
-            )}
+            {!seedSearchLoading &&
+              seedSearchQuery.trim().length >= 2 &&
+              seedSearchResults.length === 0 && (
+                <div className="px-1 py-2 text-[var(--vigil-muted)] text-xs">
+                  No matches.
+                </div>
+              )}
             <ul className="space-y-1">
               {seedSearchResults.map((hit) => (
                 <li key={hit.id}>
                   <Button
-                    size="sm"
-                    variant="subtle"
-                    tone="menu"
                     className="w-full justify-start truncate"
                     onClick={() => handlePickSeed(hit)}
+                    size="sm"
+                    tone="menu"
+                    variant="subtle"
                   >
                     {hit.title ?? "(untitled)"}
                     {hit.itemType ? (
-                      <span className="ml-1 text-[var(--vigil-muted)]">({hit.itemType})</span>
+                      <span className="ml-1 text-[var(--vigil-muted)]">
+                        ({hit.itemType})
+                      </span>
                     ) : null}
                   </Button>
                 </li>
               ))}
             </ul>
           </div>
-          <div className="mt-3 border-t border-[var(--vigil-border)] pt-2">
-            <Button size="sm" variant="ghost" tone="menu" onClick={handleEnterFullMode}>
+          <div className="mt-3 border-[var(--vigil-border)] border-t pt-2">
+            <Button
+              onClick={handleEnterFullMode}
+              size="sm"
+              tone="menu"
+              variant="ghost"
+            >
               Load whole brane (capped to {FULL_MODE_LIMIT})
             </Button>
           </div>
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-2 border-b border-[var(--vigil-border)] px-3 py-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 border-[var(--vigil-border)] border-b px-3 py-2 text-xs">
             {mode === "neighborhood" ? (
               <>
                 <span className="text-[var(--vigil-label)]">Seed:</span>
-                <span className="truncate font-medium">{seedTitle ?? "(untitled)"}</span>
+                <span className="truncate font-medium">
+                  {seedTitle ?? "(untitled)"}
+                </span>
                 <span className="ml-2 text-[var(--vigil-muted)]">depth</span>
                 <Button
-                  size="sm"
-                  variant={maxDepth === 1 ? "subtle" : "ghost"}
-                  tone="menu"
                   onClick={() => setMaxDepth(1)}
+                  size="sm"
+                  tone="menu"
+                  variant={maxDepth === 1 ? "subtle" : "ghost"}
                 >
                   1
                 </Button>
                 <Button
-                  size="sm"
-                  variant={maxDepth === 2 ? "subtle" : "ghost"}
-                  tone="menu"
                   onClick={() => setMaxDepth(2)}
+                  size="sm"
+                  tone="menu"
+                  variant={maxDepth === 2 ? "subtle" : "ghost"}
                 >
                   2
                 </Button>
-                <Button size="sm" variant="ghost" tone="menu" onClick={handleClearSeed}>
+                <Button
+                  onClick={handleClearSeed}
+                  size="sm"
+                  tone="menu"
+                  variant="ghost"
+                >
                   Switch seed
                 </Button>
               </>
             ) : (
               <>
-                <span className="text-[var(--vigil-label)]">Full brane (capped)</span>
-                <Button size="sm" variant="ghost" tone="menu" onClick={handleClearSeed}>
+                <span className="text-[var(--vigil-label)]">
+                  Full brane (capped)
+                </span>
+                <Button
+                  onClick={handleClearSeed}
+                  size="sm"
+                  tone="menu"
+                  variant="ghost"
+                >
                   Pick seed
                 </Button>
               </>
@@ -359,23 +427,26 @@ export function GraphPanel({
           <div className="p-3">
             <input
               className="w-full rounded-md border border-[var(--vigil-border)] bg-transparent px-2 py-1 text-sm"
+              onChange={(e) => setFilterQuery(e.target.value)}
               placeholder="Filter loaded nodes..."
               value={filterQuery}
-              onChange={(e) => setFilterQuery(e.target.value)}
             />
           </div>
 
-          <div className="px-3 pb-2 text-xs text-[var(--vigil-label)]">
-            {loading ? "Loading graph..." : `${nodes.length} nodes · ${edges.length} edges`}
+          <div className="px-3 pb-2 text-[var(--vigil-label)] text-xs">
+            {loading
+              ? "Loading graph..."
+              : `${nodes.length} nodes · ${edges.length} edges`}
           </div>
 
           {(truncated || frontierTruncated) && !loading && (
-            <div className="mx-3 mb-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs text-amber-300">
-              Result was capped. Switch seed, lower depth, or refine to see more.
+            <div className="mx-3 mb-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-amber-300 text-xs">
+              Result was capped. Switch seed, lower depth, or refine to see
+              more.
             </div>
           )}
           {error && !loading && (
-            <div className="mx-3 mb-2 rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1 text-xs text-red-300">
+            <div className="mx-3 mb-2 rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1 text-red-300 text-xs">
               {error}
             </div>
           )}
@@ -385,16 +456,20 @@ export function GraphPanel({
               {filteredNodes.slice(0, 200).map((node) => (
                 <li key={node.id}>
                   <Button
-                    size="sm"
-                    variant="subtle"
-                    tone="menu"
                     className="w-full justify-start truncate"
                     onClick={() => onSelectItem(node.id)}
+                    size="sm"
+                    tone="menu"
+                    variant="subtle"
                   >
                     {node.title}
-                    <span className="ml-1 text-[var(--vigil-muted)]">({node.itemType})</span>
+                    <span className="ml-1 text-[var(--vigil-muted)]">
+                      ({node.itemType})
+                    </span>
                     {mode === "neighborhood" && node.depth > 0 ? (
-                      <span className="ml-1 text-[var(--vigil-muted)]">·hop {node.depth}</span>
+                      <span className="ml-1 text-[var(--vigil-muted)]">
+                        ·hop {node.depth}
+                      </span>
                     ) : null}
                   </Button>
                 </li>

@@ -1,6 +1,9 @@
 import { createClient } from "redis";
 
-import { heartgardenRealtimeRedisUrlFromEnv, heartgardenRealtimeSpaceChannel } from "@/src/lib/heartgarden-realtime-config";
+import {
+  heartgardenRealtimeRedisUrlFromEnv,
+  heartgardenRealtimeSpaceChannel,
+} from "@/src/lib/heartgarden-realtime-config";
 import { recordHeartgardenRealtimePublishMs } from "@/src/lib/heartgarden-realtime-publish-metrics";
 
 export type HeartgardenRealtimeEvent = {
@@ -23,11 +26,14 @@ export type HeartgardenRealtimeEvent = {
 
 type HeartgardenRealtimeRedisClient = ReturnType<typeof createClient>;
 
-let redisClientPromise: Promise<HeartgardenRealtimeRedisClient | null> | null = null;
+let redisClientPromise: Promise<HeartgardenRealtimeRedisClient | null> | null =
+  null;
 
 async function getRealtimeRedisClient(): Promise<HeartgardenRealtimeRedisClient | null> {
   const url = heartgardenRealtimeRedisUrlFromEnv();
-  if (!url) return null;
+  if (!url) {
+    return null;
+  }
   if (!redisClientPromise) {
     redisClientPromise = (async () => {
       const client = createClient({ url });
@@ -42,17 +48,19 @@ async function getRealtimeRedisClient(): Promise<HeartgardenRealtimeRedisClient 
 }
 
 export async function publishHeartgardenRealtimeEvent(
-  event: HeartgardenRealtimeEvent,
+  event: HeartgardenRealtimeEvent
 ): Promise<void> {
   const client = await getRealtimeRedisClient();
-  if (!client) return;
+  if (!client) {
+    return;
+  }
   const spaceIds = new Set<string>([event.spaceId, ...(event.spaceIds ?? [])]);
   const payload = JSON.stringify(event);
   const t0 = performance.now();
   await Promise.all(
     [...spaceIds].map((spaceId) =>
-      client.publish(heartgardenRealtimeSpaceChannel(spaceId), payload),
-    ),
+      client.publish(heartgardenRealtimeSpaceChannel(spaceId), payload)
+    )
   );
   recordHeartgardenRealtimePublishMs(performance.now() - t0);
 }

@@ -8,7 +8,11 @@ export const HEARTGARDEN_APP_VERSION: string = packageJson.version;
 
 const deploySha = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.trim() ?? "";
 const shortDeploySha =
-  deploySha.length >= 7 ? deploySha.slice(0, 7) : deploySha.length > 0 ? deploySha : "";
+  deploySha.length >= 7
+    ? deploySha.slice(0, 7)
+    : deploySha.length > 0
+      ? deploySha
+      : "";
 
 /**
  * Display string for boot / about: semver, plus SemVer build metadata when a deploy SHA exists

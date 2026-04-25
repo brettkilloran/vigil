@@ -4,7 +4,7 @@ import { URL } from "node:url";
 
 import { config } from "dotenv";
 import { createClient } from "redis";
-import { WebSocket, WebSocketServer } from "ws";
+import { type WebSocket, WebSocketServer } from "ws";
 
 import {
   heartgardenRealtimeRedisUrlFromEnv,
@@ -18,12 +18,17 @@ import {
 
 config({ path: resolve(process.cwd(), ".env.local") });
 
-const port = Number.parseInt(process.env.HEARTGARDEN_REALTIME_PORT ?? "3002", 10);
+const port = Number.parseInt(
+  process.env.HEARTGARDEN_REALTIME_PORT ?? "3002",
+  10
+);
 const redisUrl = heartgardenRealtimeRedisUrlFromEnv();
 const realtimeSecret = heartgardenRealtimeSecretFromEnv();
 
 if (!redisUrl) {
-  throw new Error("HEARTGARDEN_REALTIME_REDIS_URL is required for realtime-server");
+  throw new Error(
+    "HEARTGARDEN_REALTIME_REDIS_URL is required for realtime-server"
+  );
 }
 if (realtimeSecret.length < 16) {
   throw new Error("HEARTGARDEN_REALTIME_SECRET must be at least 16 characters");
@@ -42,13 +47,17 @@ const MAX_FANOUT_SAMPLES = 50;
 
 function recordFanoutMs(ms: number) {
   metrics.fanoutMsRecent.push(ms);
-  while (metrics.fanoutMsRecent.length > MAX_FANOUT_SAMPLES) metrics.fanoutMsRecent.shift();
+  while (metrics.fanoutMsRecent.length > MAX_FANOUT_SAMPLES) {
+    metrics.fanoutMsRecent.shift();
+  }
 }
 
 function fanoutStats() {
   const arr = [...metrics.fanoutMsRecent].sort((a, b) => a - b);
   const p = (q: number) =>
-    arr.length === 0 ? null : arr[Math.min(arr.length - 1, Math.floor(q * (arr.length - 1)))];
+    arr.length === 0
+      ? null
+      : arr[Math.min(arr.length - 1, Math.floor(q * (arr.length - 1)))];
   return {
     count: arr.length,
     lastMs: arr.length ? arr[arr.length - 1]! : null,
@@ -74,7 +83,7 @@ const server = createServer((req, res) => {
         redisMessagesReceived: metrics.redisMessagesReceived,
         fanoutSendCalls: metrics.fanoutSendCalls,
         fanout: fanoutStats(),
-      }),
+      })
     );
     return;
   }
@@ -99,12 +108,16 @@ const roomMap = new Map<string, RoomState>();
 async function ensureSubscribed(spaceId: string) {
   const channel = heartgardenRealtimeSpaceChannel(spaceId);
   const room = roomMap.get(spaceId);
-  if (!room || room.subscribed) return;
+  if (!room || room.subscribed) {
+    return;
+  }
   await subscriber.subscribe(channel, (message) => {
     const t0 = performance.now();
     metrics.redisMessagesReceived += 1;
     const currentRoom = roomMap.get(spaceId);
-    if (!currentRoom) return;
+    if (!currentRoom) {
+      return;
+    }
     for (const socket of currentRoom.sockets) {
       if (socket.readyState === socket.OPEN) {
         socket.send(message);
@@ -118,47 +131,54 @@ async function ensureSubscribed(spaceId: string) {
 
 async function maybeUnsubscribe(spaceId: string) {
   const room = roomMap.get(spaceId);
-  if (!room || room.sockets.size > 0 || !room.subscribed) return;
+  if (!room || room.sockets.size > 0 || !room.subscribed) {
+    return;
+  }
   await subscriber.unsubscribe(heartgardenRealtimeSpaceChannel(spaceId));
   roomMap.delete(spaceId);
 }
 
-wss.on("connection", (ws: WebSocket, _request: IncomingMessage, tokenSpaceId: string) => {
-  metrics.wsConnectionsAccepted += 1;
-  let room = roomMap.get(tokenSpaceId);
-  if (!room) {
-    room = { sockets: new Set(), subscribed: false };
-    roomMap.set(tokenSpaceId, room);
+wss.on(
+  "connection",
+  (ws: WebSocket, _request: IncomingMessage, tokenSpaceId: string) => {
+    metrics.wsConnectionsAccepted += 1;
+    let room = roomMap.get(tokenSpaceId);
+    if (!room) {
+      room = { sockets: new Set(), subscribed: false };
+      roomMap.set(tokenSpaceId, room);
+    }
+    room.sockets.add(ws);
+    void ensureSubscribed(tokenSpaceId);
+
+    ws.on("close", () => {
+      metrics.wsConnectionsClosed += 1;
+      const currentRoom = roomMap.get(tokenSpaceId);
+      if (!currentRoom) {
+        return;
+      }
+      currentRoom.sockets.delete(ws);
+      void maybeUnsubscribe(tokenSpaceId);
+    });
+
+    ws.on("message", () => {
+      // Server is push-only today.
+    });
+
+    ws.send(
+      JSON.stringify({
+        type: "realtime.connected",
+        spaceId: tokenSpaceId,
+        at: new Date().toISOString(),
+      })
+    );
   }
-  room.sockets.add(ws);
-  void ensureSubscribed(tokenSpaceId);
-
-  ws.on("close", () => {
-    metrics.wsConnectionsClosed += 1;
-    const currentRoom = roomMap.get(tokenSpaceId);
-    if (!currentRoom) return;
-    currentRoom.sockets.delete(ws);
-    void maybeUnsubscribe(tokenSpaceId);
-  });
-
-  ws.on("message", () => {
-    // Server is push-only today.
-  });
-
-  ws.send(
-    JSON.stringify({
-      type: "realtime.connected",
-      spaceId: tokenSpaceId,
-      at: new Date().toISOString(),
-    }),
-  );
-});
+);
 
 server.on("upgrade", (request, socket, head) => {
   const baseUrl = `http://${request.headers.host ?? "localhost"}`;
   const url = new URL(request.url ?? "/", baseUrl);
   const protocolToken = heartgardenRealtimeTokenFromProtocolsHeader(
-    request.headers["sec-websocket-protocol"],
+    request.headers["sec-websocket-protocol"]
   );
   // Backward-compatible fallback while clients roll from query-string auth.
   const token = protocolToken ?? url.searchParams.get("token") ?? "";

@@ -4,12 +4,20 @@ import type { Editor } from "@tiptap/core";
  * Maps legacy `runFormat` / `execCommand` style commands to TipTap chains.
  * Returns true when handled (including no-op guards).
  */
-export function applyHgDocFormatCommand(editor: Editor, command: string, value?: string): boolean {
-  if (!editor.isEditable) return false;
+export function applyHgDocFormatCommand(
+  editor: Editor,
+  command: string,
+  value?: string
+): boolean {
+  if (!editor.isEditable) {
+    return false;
+  }
 
   const chain = () => editor.chain().focus();
 
-  if (command === "arch:insertImage") return false;
+  if (command === "arch:insertImage") {
+    return false;
+  }
 
   if (command === "bold") {
     chain().toggleBold().run();
@@ -91,10 +99,15 @@ export function readHgDocFormatChrome(editor: Editor): {
   blockTag: "p" | "h1" | "h2" | "h3" | "blockquote";
 } {
   let blockTag: "p" | "h1" | "h2" | "h3" | "blockquote" = "p";
-  if (editor.isActive("heading", { level: 1 })) blockTag = "h1";
-  else if (editor.isActive("heading", { level: 2 })) blockTag = "h2";
-  else if (editor.isActive("heading", { level: 3 })) blockTag = "h3";
-  else if (editor.isActive("blockquote")) blockTag = "blockquote";
+  if (editor.isActive("heading", { level: 1 })) {
+    blockTag = "h1";
+  } else if (editor.isActive("heading", { level: 2 })) {
+    blockTag = "h2";
+  } else if (editor.isActive("heading", { level: 3 })) {
+    blockTag = "h3";
+  } else if (editor.isActive("blockquote")) {
+    blockTag = "blockquote";
+  }
 
   return {
     bold: editor.isActive("bold"),

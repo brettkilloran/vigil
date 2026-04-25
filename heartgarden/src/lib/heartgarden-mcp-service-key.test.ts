@@ -26,8 +26,12 @@ describe("heartgarden-mcp-service-key", () => {
 
   it("authorizationBearerMatchesMcpServiceKey accepts valid Bearer token", () => {
     process.env.HEARTGARDEN_MCP_SERVICE_KEY = "secret-token-one";
-    expect(authorizationBearerMatchesMcpServiceKey("Bearer secret-token-one")).toBe(true);
-    expect(authorizationBearerMatchesMcpServiceKey("bearer secret-token-one")).toBe(true);
+    expect(
+      authorizationBearerMatchesMcpServiceKey("Bearer secret-token-one")
+    ).toBe(true);
+    expect(
+      authorizationBearerMatchesMcpServiceKey("bearer secret-token-one")
+    ).toBe(true);
     expect(authorizationBearerMatchesMcpServiceKey("Bearer wrong")).toBe(false);
   });
 });
@@ -39,7 +43,9 @@ describe("mcpTokenFromRequestUrlString", () => {
   });
 
   it("parses absolute URL", () => {
-    expect(mcpTokenFromRequestUrlString("https://x.com/api/mcp?token=z")).toBe("z");
+    expect(mcpTokenFromRequestUrlString("https://x.com/api/mcp?token=z")).toBe(
+      "z"
+    );
   });
 });
 

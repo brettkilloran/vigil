@@ -1,14 +1,16 @@
 "use client";
 
 import { ArrowsOutSimple } from "@phosphor-icons/react";
+import type { JSONContent } from "@tiptap/core";
 import type { CSSProperties, ReactNode } from "react";
 import { useMemo, useState } from "react";
-
 import {
   BufferedContentEditable,
   type WikiLinkAssistConfig,
 } from "@/src/components/editing/BufferedContentEditable";
 import { HeartgardenDocEditor } from "@/src/components/editing/HeartgardenDocEditor";
+import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
+import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { parseArchitecturalMediaFromBody } from "@/src/components/foundation/architectural-media-html";
 import type {
   CanvasBodyCommitPayload,
@@ -17,29 +19,36 @@ import type {
   NodeTheme,
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
-import type { JSONContent } from "@tiptap/core";
+import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
 import type { ButtonTone } from "@/src/components/ui/Button";
-import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 import { HeartgardenMediaPlaceholderImg } from "@/src/components/ui/HeartgardenMediaPlaceholderImg";
-import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
-import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
-import { resolveImageDisplayUrl } from "@/src/lib/heartgarden-image-display-url";
-import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
-import { normalizeHgDocForCodeTheme } from "@/src/lib/hg-doc/code-theme-doc";
 import { cx } from "@/src/lib/cx";
 import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
+import { resolveImageDisplayUrl } from "@/src/lib/heartgarden-image-display-url";
+import { normalizeHgDocForCodeTheme } from "@/src/lib/hg-doc/code-theme-doc";
+import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
 
 function themeClass(theme: NodeTheme): string {
-  if (theme === "code") return styles.themeCode;
-  if (theme === "task") return styles.themeTask;
-  if (theme === "media") return styles.themeImage;
+  if (theme === "code") {
+    return styles.themeCode;
+  }
+  if (theme === "task") {
+    return styles.themeTask;
+  }
+  if (theme === "media") {
+    return styles.themeImage;
+  }
   return styles.themeDefault;
 }
 
 function tapeClass(variant: TapeVariant): string {
-  if (variant === "masking") return styles.tapeMasking;
-  if (variant === "dark") return styles.tapeDark;
+  if (variant === "masking") {
+    return styles.tapeMasking;
+  }
+  if (variant === "dark") {
+    return styles.tapeDark;
+  }
   return styles.tapeClear;
 }
 
@@ -80,32 +89,44 @@ export function ArchitecturalNodeHeader({
     <div
       className={cx(styles.nodeHeader, compact && styles.nodeHeaderCompact)}
       onDoubleClick={(event) => {
-        if (!onExpand) return;
+        if (!onExpand) {
+          return;
+        }
         const el = pointerEventTargetElement(event.target);
-        if (!el || el.closest("button") || el.closest("[data-expand-btn='true']")) return;
+        if (
+          !el ||
+          el.closest("button") ||
+          el.closest("[data-expand-btn='true']")
+        ) {
+          return;
+        }
         event.stopPropagation();
         onExpand();
       }}
     >
       <span
+        aria-hidden
         className={styles.contentConnectionPinAnchor}
         data-content-connection-pin-anchor="true"
-        aria-hidden
       />
       <div className={styles.nodeTitleRow}>
         <span className={styles.nodeTitle}>{title}</span>
       </div>
       <div className={styles.nodeActions}>
         {showExpand ? (
-          <ArchitecturalTooltip content={expandLabel} side="bottom" delayMs={320}>
+          <ArchitecturalTooltip
+            content={expandLabel}
+            delayMs={320}
+            side="bottom"
+          >
             <Button
-              size="icon"
-              variant="ghost"
-              tone={buttonTone}
+              aria-label={expandLabel}
               className={styles.nodeBtn}
               data-expand-btn="true"
-              aria-label={expandLabel}
               onClick={onExpand}
+              size="icon"
+              tone={buttonTone}
+              variant="ghost"
             >
               <ArrowsOutSimple size={compact ? 12 : 14} />
             </Button>
@@ -149,35 +170,41 @@ export function ArchitecturalNodeBody({
   if (documentVariant === "hgDoc") {
     return (
       <HeartgardenDocEditor
-        surfaceKey={`canvas-${nodeId}`}
         chromeRole="canvas"
         className={`${styles.nodeBody} ${className ?? ""}`.trim()}
-        value={codeTheme ? normalizeHgDocForCodeTheme(bodyDoc ?? EMPTY_HG_DOC) : bodyDoc ?? EMPTY_HG_DOC}
         codeSyntaxDark={codeTheme}
-        showAiPendingGutter={false}
         editable={editable}
-        placeholder={emptyPlaceholder ?? "Write here, or type / for blocks…"}
         onChange={(doc) => onCommitPayload?.({ kind: "hgDoc", doc })}
+        placeholder={emptyPlaceholder ?? "Write here, or type / for blocks…"}
+        showAiPendingGutter={false}
+        surfaceKey={`canvas-${nodeId}`}
+        value={
+          codeTheme
+            ? normalizeHgDocForCodeTheme(bodyDoc ?? EMPTY_HG_DOC)
+            : (bodyDoc ?? EMPTY_HG_DOC)
+        }
       />
     );
   }
   return (
     <BufferedContentEditable
-      value={html}
-      className={`${styles.nodeBody} ${className ?? ""}`.trim()}
-      editable={editable}
-      spellCheck={spellCheck}
-      debounceMs={300}
-      dataAttribute="data-node-body-editor"
       checklistDeletion={{
         taskItem: styles.taskItem,
         taskText: styles.taskText,
         taskCheckbox: styles.taskCheckbox,
       }}
-      richDocCommand={onRichDocCommand}
+      className={`${styles.nodeBody} ${className ?? ""}`.trim()}
+      dataAttribute="data-node-body-editor"
+      debounceMs={300}
+      editable={editable}
       emptyPlaceholder={emptyPlaceholder ?? null}
-      onCommit={(nextHtml) => onCommitPayload?.({ kind: "html", html: nextHtml })}
+      onCommit={(nextHtml) =>
+        onCommitPayload?.({ kind: "html", html: nextHtml })
+      }
       onDraftDirtyChange={onDraftDirtyChange}
+      richDocCommand={onRichDocCommand}
+      spellCheck={spellCheck}
+      value={html}
       wikiLinkAssist={wikiLinkAssist ?? null}
     />
   );
@@ -239,10 +266,17 @@ export function ArchitecturalNodeCard({
   const MAX_ENTITY_CARD_WIDTH = 340;
   const isMediaNode = theme === "media";
   const documentVariant: "hgDoc" | "html" =
-    !loreCard && (theme === "default" || theme === "task" || theme === "code") ? "hgDoc" : "html";
-  const nodeWidth = Math.min(width ?? MAX_ENTITY_CARD_WIDTH, MAX_ENTITY_CARD_WIDTH);
+    !loreCard && (theme === "default" || theme === "task" || theme === "code")
+      ? "hgDoc"
+      : "html";
+  const nodeWidth = Math.min(
+    width ?? MAX_ENTITY_CARD_WIDTH,
+    MAX_ENTITY_CARD_WIDTH
+  );
   const [imageDpr] = useState(() =>
-    typeof window !== "undefined" ? Math.min(window.devicePixelRatio ?? 1, 2.5) : 1,
+    typeof window === "undefined"
+      ? 1
+      : Math.min(window.devicePixelRatio ?? 1, 2.5)
   );
   const cardStyle = {
     width: `${nodeWidth}px`,
@@ -250,17 +284,24 @@ export function ArchitecturalNodeCard({
   } as CSSProperties;
 
   const imageCardMedia = useMemo(
-    () => (isMediaNode ? parseArchitecturalMediaFromBody(bodyHtml) : { src: null, alt: "" }),
-    [bodyHtml, isMediaNode],
+    () =>
+      isMediaNode
+        ? parseArchitecturalMediaFromBody(bodyHtml)
+        : { src: null, alt: "" },
+    [bodyHtml, isMediaNode]
   );
 
   const factionRosterRows = useMemo(() => {
-    if (loreCard?.kind !== "faction" || !factionRoster?.length) return null;
+    if (loreCard?.kind !== "faction" || !factionRoster?.length) {
+      return null;
+    }
     return factionRoster;
   }, [factionRoster, loreCard?.kind]);
 
   const imageDisplaySrc = useMemo(() => {
-    if (!imageCardMedia.src) return null;
+    if (!imageCardMedia.src) {
+      return null;
+    }
     return resolveImageDisplayUrl(imageCardMedia.src, {
       maxCssPixels: nodeWidth * canvasPanZoomScale,
       devicePixelRatio: imageDpr,
@@ -282,15 +323,24 @@ export function ArchitecturalNodeCard({
         } ${selected ? styles.selectedNode : ""}`}
         style={cardStyle}
       >
-        {showTape ? <ArchitecturalNodeTape variant={tapeVariant} rotationDeg={tapeRotation} /> : null}
+        {showTape ? (
+          <ArchitecturalNodeTape
+            rotationDeg={tapeRotation}
+            variant={tapeVariant}
+          />
+        ) : null}
         <ArchitecturalNodeHeader
-          title={title.trim() || "Untitled image"}
-          showExpand={showExpandButton}
-          expandLabel="Open gallery"
           buttonTone="card-dark"
+          expandLabel="Open gallery"
           onExpand={() => onExpand(id)}
+          showExpand={showExpandButton}
+          title={title.trim() || "Untitled image"}
         />
-        <ArchitecturalTooltip content="Double-click to open gallery" side="top" delayMs={400}>
+        <ArchitecturalTooltip
+          content="Double-click to open gallery"
+          delayMs={400}
+          side="top"
+        >
           <div
             className={
               imageCardMedia.src
@@ -299,33 +349,36 @@ export function ArchitecturalNodeCard({
             }
             data-image-open-gallery="true"
           >
-            <div className={styles.imageCardMediaRoot} data-architectural-media-root="true">
+            <div
+              className={styles.imageCardMediaRoot}
+              data-architectural-media-root="true"
+            >
               {imageCardMedia.src ? (
                 // eslint-disable-next-line @next/next/no-img-element -- dynamic user/R2 URLs; not suitable for next/image without broad remotePatterns
                 <img
-                  key={`${imageCardMedia.src}|${imageDisplaySrc ?? ""}`}
-                  className={styles.imageSlotImg}
-                  src={imageDisplaySrc ?? imageCardMedia.src}
                   alt={imageCardMedia.alt || title}
+                  className={styles.imageSlotImg}
                   draggable={false}
+                  key={`${imageCardMedia.src}|${imageDisplaySrc ?? ""}`}
+                  src={imageDisplaySrc ?? imageCardMedia.src}
                 />
               ) : (
                 <HeartgardenMediaPlaceholderImg
-                  variant="neutral"
-                  className={styles.imageSlotImg}
                   alt=""
                   aria-hidden
+                  className={styles.imageSlotImg}
+                  variant="neutral"
                 />
               )}
               <div className={styles.mediaImageActions} contentEditable={false}>
                 <Button
-                  type="button"
-                  variant="ghost"
-                  tone="glass"
-                  size="sm"
                   className={styles.mediaUploadBtn}
                   data-architectural-media-upload="true"
                   data-media-owner-id={id}
+                  size="sm"
+                  tone="glass"
+                  type="button"
+                  variant="ghost"
                 >
                   {imageCardMedia.src ? "Replace" : "Upload"}
                 </Button>
@@ -342,63 +395,74 @@ export function ArchitecturalNodeCard({
       className={`${styles.entityNode} ${themeClass(theme)} ${styles.a4DocumentNode} ${
         loreCard?.kind === "location" ? styles.loreLocationCanvasRoot : ""
       } ${dragged ? styles.dragging : ""} ${selected ? styles.selectedNode : ""}`}
-      style={cardStyle}
       data-lore-kind={loreCard?.kind}
       data-lore-variant={loreCard?.variant}
+      style={cardStyle}
     >
-      {showTape ? <ArchitecturalNodeTape variant={tapeVariant} rotationDeg={tapeRotation} /> : null}
+      {showTape ? (
+        <ArchitecturalNodeTape
+          rotationDeg={tapeRotation}
+          variant={tapeVariant}
+        />
+      ) : null}
       <ArchitecturalNodeHeader
-        title={title}
-        showExpand={showExpandButton}
         buttonTone={theme === "code" ? "card-dark" : "card-light"}
         onExpand={() => onExpand(id)}
+        showExpand={showExpandButton}
+        title={title}
       />
       <ArchitecturalNodeBody
-        nodeId={id}
-        documentVariant={documentVariant}
         bodyDoc={bodyDoc}
-        html={bodyHtml}
         className={styles.a4DocumentBody}
+        codeTheme={theme === "code"}
+        documentVariant={documentVariant}
         editable={bodyEditable ?? activeTool === "select"}
-        spellCheck={false}
+        emptyPlaceholder={emptyPlaceholder}
+        html={bodyHtml}
+        nodeId={id}
         onCommitPayload={(payload) => onBodyCommit(id, payload)}
         onDraftDirtyChange={onBodyDraftDirty}
-        wikiLinkAssist={
-          theme === "default" || theme === "task" ? wikiLinkAssist ?? null : null
-        }
         onRichDocCommand={onRichDocCommand}
-        emptyPlaceholder={emptyPlaceholder}
-        codeTheme={theme === "code"}
+        spellCheck={false}
+        wikiLinkAssist={
+          theme === "default" || theme === "task"
+            ? (wikiLinkAssist ?? null)
+            : null
+        }
       />
       {factionRosterRows ? (
         <div
           className={styles.factionRosterCanvas}
-          data-hg-lore-faction-roster="1"
           contentEditable={false}
+          data-hg-lore-faction-roster="1"
         >
           <p className={styles.factionRosterCanvasLabel}>Member index</p>
           <div className={styles.factionRosterCanvasList} role="list">
             {factionRosterRows.map((row) => {
               const primary =
                 row.kind === "character"
-                  ? (row.displayNameOverride?.trim() ||
-                      `Character ${row.characterItemId.slice(0, 8)}…`)
+                  ? row.displayNameOverride?.trim() ||
+                    `Character ${row.characterItemId.slice(0, 8)}…`
                   : row.label.trim() || "Member";
               const secondary =
                 row.kind === "character"
-                  ? (row.roleOverride?.trim() || null)
-                  : (row.role?.trim() || null);
+                  ? row.roleOverride?.trim() || null
+                  : row.role?.trim() || null;
               return (
                 <div
-                  key={row.id}
                   className={styles.factionRosterCanvasRow}
-                  role="listitem"
                   data-faction-roster-entry-id={row.id}
                   data-faction-roster-kind={row.kind}
+                  key={row.id}
+                  role="listitem"
                 >
-                  <div className={styles.factionRosterCanvasRowText}>{primary}</div>
+                  <div className={styles.factionRosterCanvasRowText}>
+                    {primary}
+                  </div>
                   {secondary ? (
-                    <div className={styles.factionRosterCanvasRowMeta}>{secondary}</div>
+                    <div className={styles.factionRosterCanvasRowMeta}>
+                      {secondary}
+                    </div>
                   ) : null}
                 </div>
               );

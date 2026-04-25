@@ -5,7 +5,8 @@ import { SmartImportPlanningDemo } from "./SmartImportPlanningDemo";
 
 export const metadata: Metadata = {
   title: "Smart import planning — style preview",
-  description: "Dev preview of the simplified Smart Import planning modal (spinner).",
+  description:
+    "Dev preview of the simplified Smart Import planning modal (spinner).",
   robots: { index: false, follow: false },
 };
 

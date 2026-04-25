@@ -17,7 +17,7 @@ export async function GET(req: Request) {
   if (!db) {
     return Response.json(
       { ok: false, error: "Database not configured", suggestions: [] },
-      { status: 503 },
+      { status: 503 }
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
@@ -34,7 +34,11 @@ export async function GET(req: Request) {
   if (!tiered.ok) {
     return heartgardenApiForbiddenJsonResponse();
   }
-  const finalized = await finalizeHeartgardenSearchFiltersForDb(db, bootCtx, tiered.filters);
+  const finalized = await finalizeHeartgardenSearchFiltersForDb(
+    db,
+    bootCtx,
+    tiered.filters
+  );
   if (!finalized) {
     return heartgardenApiForbiddenJsonResponse();
   }

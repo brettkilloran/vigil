@@ -1,13 +1,23 @@
-import { and, asc, desc, eq, inArray, ne, notInArray, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  ne,
+  notInArray,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import type { tryGetDb } from "@/src/db/index";
 import { branes, itemLinks, items, spaces } from "@/src/db/schema";
 import { isHeartgardenGmPlayerSpaceBreakGlassEnabled } from "@/src/lib/heartgarden-gm-break-glass";
-import { fetchDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
 import {
   HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME,
   isHeartgardenImplicitPlayerRootSpaceName,
 } from "@/src/lib/heartgarden-implicit-player-space";
+import { fetchDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
 import type { CameraState } from "@/src/model/canvas-types";
 import { defaultCamera } from "@/src/model/canvas-types";
@@ -16,11 +26,15 @@ export type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 export type BraneType = "gm" | "player" | "demo";
 
 function playerSpaceIdExcludedFromGmDb(): string | undefined {
-  return parseSpaceIdParam((process.env.HEARTGARDEN_PLAYER_SPACE_ID ?? "").trim() || null);
+  return parseSpaceIdParam(
+    (process.env.HEARTGARDEN_PLAYER_SPACE_ID ?? "").trim() || null
+  );
 }
 
 export function parseCameraFromRow(raw: unknown): CameraState {
-  if (!raw || typeof raw !== "object") return defaultCamera();
+  if (!raw || typeof raw !== "object") {
+    return defaultCamera();
+  }
   const o = raw as Record<string, unknown>;
   if (
     typeof o.x === "number" &&
@@ -37,24 +51,27 @@ export function parseCameraFromRow(raw: unknown): CameraState {
 }
 
 export async function listAllSpaces(db: VigilDb) {
-  return db
-    .select()
-    .from(spaces)
-    .orderBy(desc(spaces.updatedAt));
+  return db.select().from(spaces).orderBy(desc(spaces.updatedAt));
 }
 
 export async function resolveOrCreateBraneByType(
   db: VigilDb,
-  braneType: BraneType,
+  braneType: BraneType
 ): Promise<{ id: string; name: string; braneType: string }> {
   const [existing] = await db
     .select({ id: branes.id, name: branes.name, braneType: branes.braneType })
     .from(branes)
     .where(eq(branes.braneType, braneType))
     .limit(1);
-  if (existing) return existing;
+  if (existing) {
+    return existing;
+  }
   const defaultName =
-    braneType === "gm" ? "GM Brane" : braneType === "player" ? "Player Brane" : "Demo Brane";
+    braneType === "gm"
+      ? "GM Brane"
+      : braneType === "player"
+        ? "Player Brane"
+        : "Demo Brane";
   const [created] = await db
     .insert(branes)
     .values({
@@ -62,8 +79,14 @@ export async function resolveOrCreateBraneByType(
       braneType,
     })
     .onConflictDoNothing({ target: [branes.braneType] })
-    .returning({ id: branes.id, name: branes.name, braneType: branes.braneType });
-  if (created) return created;
+    .returning({
+      id: branes.id,
+      name: branes.name,
+      braneType: branes.braneType,
+    });
+  if (created) {
+    return created;
+  }
   const [afterConflict] = await db
     .select({ id: branes.id, name: branes.name, braneType: branes.braneType })
     .from(branes)
@@ -83,8 +106,15 @@ export async function listBraneSpaces(db: VigilDb, braneId: string) {
     .orderBy(desc(spaces.updatedAt));
 }
 
-export async function resolveSpaceBraneId(db: VigilDb, spaceId: string): Promise<string | undefined> {
-  const [row] = await db.select({ braneId: spaces.braneId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
+export async function resolveSpaceBraneId(
+  db: VigilDb,
+  spaceId: string
+): Promise<string | undefined> {
+  const [row] = await db
+    .select({ braneId: spaces.braneId })
+    .from(spaces)
+    .where(eq(spaces.id, spaceId))
+    .limit(1);
   return row?.braneId ?? undefined;
 }
 
@@ -95,14 +125,20 @@ export async function resolveSpaceBraneId(db: VigilDb, spaceId: string): Promise
 export async function listGmWorkspaceSpaces(db: VigilDb) {
   const gmBrane = await resolveOrCreateBraneByType(db, "gm");
   const all = await listBraneSpaces(db, gmBrane.id);
-  const withoutImplicit = all.filter((s) => !isHeartgardenImplicitPlayerRootSpaceName(s.name));
+  const withoutImplicit = all.filter(
+    (s) => !isHeartgardenImplicitPlayerRootSpaceName(s.name)
+  );
   const hid = playerSpaceIdExcludedFromGmDb();
-  if (!hid || isHeartgardenGmPlayerSpaceBreakGlassEnabled()) return withoutImplicit;
+  if (!hid || isHeartgardenGmPlayerSpaceBreakGlassEnabled()) {
+    return withoutImplicit;
+  }
   return withoutImplicit.filter((s) => s.id !== hid);
 }
 
 /** Select-only: used for GM search exclusion (must not insert rows). */
-export async function findImplicitPlayerRootSpaceId(db: VigilDb): Promise<string | undefined> {
+export async function findImplicitPlayerRootSpaceId(
+  db: VigilDb
+): Promise<string | undefined> {
   const playerBrane = await resolveOrCreateBraneByType(db, "player");
   const [row] = await db
     .select({ id: spaces.id })
@@ -110,8 +146,8 @@ export async function findImplicitPlayerRootSpaceId(db: VigilDb): Promise<string
     .where(
       and(
         eq(spaces.name, HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME),
-        eq(spaces.braneId, playerBrane.id),
-      ),
+        eq(spaces.braneId, playerBrane.id)
+      )
     )
     .orderBy(asc(spaces.createdAt))
     .limit(1);
@@ -126,15 +162,20 @@ export async function resolveOrCreateImplicitPlayerRootSpace(db: VigilDb) {
     .where(
       and(
         eq(spaces.name, HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME),
-        eq(spaces.braneId, playerBrane.id),
-      ),
+        eq(spaces.braneId, playerBrane.id)
+      )
     )
     .orderBy(asc(spaces.createdAt))
     .limit(1);
-  if (existing[0]) return existing[0];
+  if (existing[0]) {
+    return existing[0];
+  }
   const [created] = await db
     .insert(spaces)
-    .values({ name: HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME, braneId: playerBrane.id })
+    .values({
+      name: HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME,
+      braneId: playerBrane.id,
+    })
     .returning();
   return created!;
 }
@@ -144,24 +185,37 @@ export async function resolveOrCreateImplicitPlayerRootSpace(db: VigilDb) {
  * predictable space (bootstrap default) without re-seeding after wipes.
  */
 export function parseDevGmWorkspaceSpaceIdFromEnv(): string | undefined {
-  if (process.env.NODE_ENV !== "development") return undefined;
-  return parseSpaceIdParam((process.env.HEARTGARDEN_DEV_GM_SPACE_ID ?? "").trim() || null);
+  if (process.env.NODE_ENV !== "development") {
+    return;
+  }
+  return parseSpaceIdParam(
+    (process.env.HEARTGARDEN_DEV_GM_SPACE_ID ?? "").trim() || null
+  );
 }
 
 async function ensureDevGmWorkspaceSpace(db: VigilDb): Promise<void> {
   const id = parseDevGmWorkspaceSpaceIdFromEnv();
-  if (!id) return;
+  if (!id) {
+    return;
+  }
   const existing = await assertSpaceExists(db, id);
-  if (existing) return;
+  if (existing) {
+    return;
+  }
   const gmBrane = await resolveOrCreateBraneByType(db, "gm");
-  await db.insert(spaces).values({ id, name: "Dev workspace", braneId: gmBrane.id });
+  await db
+    .insert(spaces)
+    .values({ id, name: "Dev workspace", braneId: gmBrane.id });
 }
 
 /**
  * Like `resolveActiveSpace` but never selects the Players-only space for GM.
  * If the DB only contains the hidden space, inserts a new “Main space” for GM.
  */
-export async function resolveActiveSpaceGmWorkspace(db: VigilDb, requestedSpaceId?: string) {
+export async function resolveActiveSpaceGmWorkspace(
+  db: VigilDb,
+  requestedSpaceId?: string
+) {
   await ensureDevGmWorkspaceSpace(db);
   let allSpaces = await listGmWorkspaceSpaces(db);
   if (allSpaces.length === 0) {
@@ -182,9 +236,9 @@ export async function resolveActiveSpaceGmWorkspace(db: VigilDb, requestedSpaceI
   const defaultRoot =
     devId && allSpaces.some((s) => s.id === devId)
       ? allSpaces.find((s) => s.id === devId)!
-      : allSpaces.find((s) => s.parentSpaceId == null) ??
+      : (allSpaces.find((s) => s.parentSpaceId == null) ??
         allSpaces.find((s) => s.name.trim().toLowerCase() === "main space") ??
-        allSpaces[0];
+        allSpaces[0]);
   const active = reqOk
     ? allSpaces.find((s) => s.id === requestedSpaceId)!
     : defaultRoot;
@@ -193,7 +247,7 @@ export async function resolveActiveSpaceGmWorkspace(db: VigilDb, requestedSpaceI
 
 export async function resolveActiveSpace(
   db: VigilDb,
-  requestedSpaceId?: string,
+  requestedSpaceId?: string
 ) {
   let allSpaces = await listAllSpaces(db);
   if (allSpaces.length === 0) {
@@ -231,16 +285,24 @@ export async function assertSpaceExists(db: VigilDb, spaceId: string) {
 export function spaceReparentWouldCreateCycle(
   spaceId: string,
   newParentId: string | null,
-  rows: readonly { id: string; parentSpaceId: string | null }[],
+  rows: readonly { id: string; parentSpaceId: string | null }[]
 ): boolean {
-  if (newParentId == null) return false;
-  if (newParentId === spaceId) return true;
+  if (newParentId == null) {
+    return false;
+  }
+  if (newParentId === spaceId) {
+    return true;
+  }
   const byId = new Map(rows.map((r) => [r.id, r.parentSpaceId ?? null]));
   let current: string | null = newParentId;
   const seen = new Set<string>();
   while (current) {
-    if (current === spaceId) return true;
-    if (seen.has(current)) return true;
+    if (current === spaceId) {
+      return true;
+    }
+    if (seen.has(current)) {
+      return true;
+    }
     seen.add(current);
     current = byId.get(current) ?? null;
   }
@@ -250,15 +312,23 @@ export function spaceReparentWouldCreateCycle(
 export async function assertSpaceReparentAllowed(
   db: VigilDb,
   spaceId: string,
-  newParentId: string | null,
+  newParentId: string | null
 ): Promise<
-  { ok: true } | { ok: false; error: "space_not_found" | "parent_not_found" | "would_create_cycle" }
+  | { ok: true }
+  | {
+      ok: false;
+      error: "space_not_found" | "parent_not_found" | "would_create_cycle";
+    }
 > {
   const child = await assertSpaceExists(db, spaceId);
-  if (!child) return { ok: false, error: "space_not_found" };
+  if (!child) {
+    return { ok: false, error: "space_not_found" };
+  }
   if (newParentId !== null) {
     const parent = await assertSpaceExists(db, newParentId);
-    if (!parent) return { ok: false, error: "parent_not_found" };
+    if (!parent) {
+      return { ok: false, error: "parent_not_found" };
+    }
   }
   if (newParentId !== null) {
     const descendants = await fetchDescendantSpaceIds(db, spaceId);
@@ -275,14 +345,18 @@ export async function assertSpaceReparentAllowed(
 export async function listItemsForSpace(
   db: VigilDb,
   spaceId: string,
-  options: { limit?: number; offset?: number } = {},
+  options: { limit?: number; offset?: number } = {}
 ) {
   const q = db
     .select()
     .from(items)
     .where(eq(items.spaceId, spaceId))
     .orderBy(asc(items.zIndex), asc(items.createdAt));
-  if (options.limit != null && Number.isFinite(options.limit) && options.limit > 0) {
+  if (
+    options.limit != null &&
+    Number.isFinite(options.limit) &&
+    options.limit > 0
+  ) {
     return q.limit(options.limit).offset(Math.max(0, options.offset ?? 0));
   }
   return q;
@@ -291,7 +365,7 @@ export async function listItemsForSpace(
 /** Active space plus all descendant spaces (for canvas items that live in child spaces). */
 export function collectSpaceSubtreeIds(
   rootId: string,
-  spaceRows: { id: string; parentSpaceId: string | null }[],
+  spaceRows: { id: string; parentSpaceId: string | null }[]
 ): string[] {
   const byParent = new Map<string | null, string[]>();
   for (const s of spaceRows) {
@@ -306,17 +380,25 @@ export function collectSpaceSubtreeIds(
     const id = stack.pop()!;
     out.push(id);
     const kids = byParent.get(id);
-    if (kids) for (const k of kids) stack.push(k);
+    if (kids) {
+      for (const k of kids) {
+        stack.push(k);
+      }
+    }
   }
   return out;
 }
 
 export function collectSpaceAncestorIdsInclusive(
   spaceId: string,
-  spaceRows: { id: string; parentSpaceId: string | null }[],
+  spaceRows: { id: string; parentSpaceId: string | null }[]
 ): string[] {
-  const byId = new Map(spaceRows.map((row) => [row.id, row.parentSpaceId ?? null]));
-  if (!byId.has(spaceId)) return [spaceId];
+  const byId = new Map(
+    spaceRows.map((row) => [row.id, row.parentSpaceId ?? null])
+  );
+  if (!byId.has(spaceId)) {
+    return [spaceId];
+  }
   const out: string[] = [];
   let current: string | null = spaceId;
   const seen = new Set<string>();
@@ -331,18 +413,20 @@ export function collectSpaceAncestorIdsInclusive(
 export async function listItemsForSpaceSubtree(
   db: VigilDb,
   rootSpaceId: string,
-  spaceRows: { id: string; parentSpaceId: string | null }[],
+  spaceRows: { id: string; parentSpaceId: string | null }[]
 ) {
   const ids = collectSpaceSubtreeIds(rootSpaceId, spaceRows);
-  if (ids.length === 0) return [];
+  if (ids.length === 0) {
+    return [];
+  }
   return db
     .select()
     .from(items)
     .where(
       and(
         inArray(items.spaceId, ids),
-        sql`coalesce((${items.entityMeta}::jsonb -> 'hgArchive' ->> 'archived'), 'false') != 'true'`,
-      ),
+        sql`coalesce((${items.entityMeta}::jsonb -> 'hgArchive' ->> 'archived'), 'false') != 'true'`
+      )
     )
     .orderBy(asc(items.zIndex), asc(items.createdAt));
 }
@@ -382,10 +466,18 @@ export type SearchRow = {
   snippet?: string;
 };
 
-function normalizeLimit(limit: number | undefined, fallback: number, max: number): number {
-  if (!Number.isFinite(limit)) return fallback;
+function normalizeLimit(
+  limit: number | undefined,
+  fallback: number,
+  max: number
+): number {
+  if (!Number.isFinite(limit)) {
+    return fallback;
+  }
   const value = Math.floor(limit as number);
-  if (value <= 0) return fallback;
+  if (value <= 0) {
+    return fallback;
+  }
   return Math.min(value, max);
 }
 
@@ -396,40 +488,52 @@ function normalizeLimit(limit: number | undefined, fallback: number, max: number
  * `hybridRetrieveItems` can apply the same eligibility predicate as the lexical
  * leg, joining to `items` once. (`REVIEW_2026-04-25_1835` H5.)
  */
-export function searchItemAttributeWhereClauses(filters: SearchFilters): ReturnType<typeof sql>[] {
+export function searchItemAttributeWhereClauses(
+  filters: SearchFilters
+): ReturnType<typeof sql>[] {
   const clauses: ReturnType<typeof sql>[] = [];
-  if (filters.itemTypes?.length) clauses.push(inArray(items.itemType, filters.itemTypes));
-  if (filters.entityTypes?.length) clauses.push(inArray(items.entityType, filters.entityTypes));
-  if (filters.updatedAfter) clauses.push(sql`${items.updatedAt} >= ${filters.updatedAfter}`);
+  if (filters.itemTypes?.length) {
+    clauses.push(inArray(items.itemType, filters.itemTypes));
+  }
+  if (filters.entityTypes?.length) {
+    clauses.push(inArray(items.entityType, filters.entityTypes));
+  }
+  if (filters.updatedAfter) {
+    clauses.push(sql`${items.updatedAt} >= ${filters.updatedAfter}`);
+  }
   if (filters.hasLinks === true) {
     clauses.push(
-      sql`exists (select 1 from ${itemLinks} l where l.source_item_id = ${items.id} or l.target_item_id = ${items.id})`,
+      sql`exists (select 1 from ${itemLinks} l where l.source_item_id = ${items.id} or l.target_item_id = ${items.id})`
     );
   }
   if (filters.hasLinks === false) {
     clauses.push(
-      sql`not exists (select 1 from ${itemLinks} l where l.source_item_id = ${items.id} or l.target_item_id = ${items.id})`,
+      sql`not exists (select 1 from ${itemLinks} l where l.source_item_id = ${items.id} or l.target_item_id = ${items.id})`
     );
   }
-  if (filters.inStack === true) clauses.push(sql`${items.stackId} is not null`);
-  if (filters.inStack === false) clauses.push(sql`${items.stackId} is null`);
+  if (filters.inStack === true) {
+    clauses.push(sql`${items.stackId} is not null`);
+  }
+  if (filters.inStack === false) {
+    clauses.push(sql`${items.stackId} is null`);
+  }
   if (filters.minCampaignEpoch !== undefined) {
     const v = filters.minCampaignEpoch;
     clauses.push(
       sql`(
         ${items.entityMeta} ->> 'campaignEpoch' is null
         or (${items.entityMeta} ->> 'campaignEpoch')::int >= ${v}
-      )`,
+      )`
     );
   }
   if (filters.excludeLoreHistorical === true) {
     clauses.push(
-      sql`coalesce((${items.entityMeta} ->> 'loreHistorical')::boolean, false) = false`,
+      sql`coalesce((${items.entityMeta} ->> 'loreHistorical')::boolean, false) = false`
     );
   }
   if (filters.canonicalEntityKinds?.length) {
     clauses.push(
-      sql`${items.entityMeta} ->> 'canonicalEntityKind' = any(${filters.canonicalEntityKinds}::text[])`,
+      sql`${items.entityMeta} ->> 'canonicalEntityKind' = any(${filters.canonicalEntityKinds}::text[])`
     );
   }
   return clauses;
@@ -437,17 +541,28 @@ export function searchItemAttributeWhereClauses(filters: SearchFilters): ReturnT
 
 function searchWhereClauses(filters: SearchFilters): ReturnType<typeof sql>[] {
   const clauses: ReturnType<typeof sql>[] = [];
-  if (filters.spaceIds?.length) clauses.push(inArray(items.spaceId, filters.spaceIds));
-  else if (filters.spaceId) clauses.push(eq(items.spaceId, filters.spaceId));
-  if (filters.excludeSpaceIds?.length) clauses.push(notInArray(items.spaceId, filters.excludeSpaceIds));
-  if (filters.excludeSpaceId) clauses.push(ne(items.spaceId, filters.excludeSpaceId));
+  if (filters.spaceIds?.length) {
+    clauses.push(inArray(items.spaceId, filters.spaceIds));
+  } else if (filters.spaceId) {
+    clauses.push(eq(items.spaceId, filters.spaceId));
+  }
+  if (filters.excludeSpaceIds?.length) {
+    clauses.push(notInArray(items.spaceId, filters.excludeSpaceIds));
+  }
+  if (filters.excludeSpaceId) {
+    clauses.push(ne(items.spaceId, filters.excludeSpaceId));
+  }
   clauses.push(...searchItemAttributeWhereClauses(filters));
   return clauses;
 }
 
 function applySortForNonRanked(sort: SearchSort | undefined) {
-  if (sort === "created") return [desc(items.createdAt)];
-  if (sort === "title") return [asc(items.title), desc(items.updatedAt)];
+  if (sort === "created") {
+    return [desc(items.createdAt)];
+  }
+  if (sort === "title") {
+    return [asc(items.title), desc(items.updatedAt)];
+  }
   return [desc(items.updatedAt)];
 }
 
@@ -460,9 +575,11 @@ function buildPrefixTsQuery(query: string): string | null {
     .split(/\s+/)
     .map((token) => token.replace(/[^\p{L}\p{N}_-]/gu, ""))
     .filter(Boolean);
-  if (tokens.length === 0) return null;
+  if (tokens.length === 0) {
+    return null;
+  }
   const parts = tokens.map((token, index) =>
-    index === tokens.length - 1 ? `${token}:*` : token,
+    index === tokens.length - 1 ? `${token}:*` : token
   );
   return parts.join(" & ");
 }
@@ -475,11 +592,15 @@ function toSearchRows(
     parentSpaceId: string | null;
     score?: number;
     snippet?: string;
-  }[],
+  }[]
 ): SearchRow[] {
   return rows.map((row) => ({
     item: row.item,
-    space: { id: row.spaceId, name: row.spaceName, parentSpaceId: row.parentSpaceId },
+    space: {
+      id: row.spaceId,
+      name: row.spaceName,
+      parentSpaceId: row.parentSpaceId,
+    },
     score: row.score,
     snippet: row.snippet,
   }));
@@ -488,15 +609,20 @@ function toSearchRows(
 export async function searchItemsFTS(
   db: VigilDb,
   query: string,
-  filters: SearchFilters = {},
+  filters: SearchFilters = {}
 ) {
   const q = query.trim();
-  if (!q) return [] as SearchRow[];
+  if (!q) {
+    return [] as SearchRow[];
+  }
   const limit = normalizeLimit(filters.limit, 50, 200);
   const vectorExpr = sql`to_tsvector('english', coalesce(${items.searchBlob}, ''))`;
   const tsQuery = sql`plainto_tsquery('english', ${q})`;
   const rankExpr = sql<number>`ts_rank(${vectorExpr}, ${tsQuery})`;
-  const where = and(...searchWhereClauses(filters), sql`${vectorExpr} @@ ${tsQuery}`);
+  const where = and(
+    ...searchWhereClauses(filters),
+    sql`${vectorExpr} @@ ${tsQuery}`
+  );
   const sort = filters.sort ?? "relevance";
   const rankedOrder =
     sort === "relevance"
@@ -522,16 +648,21 @@ export async function searchItemsFTS(
 export async function searchItemsFTSWithSnippets(
   db: VigilDb,
   query: string,
-  filters: SearchFilters = {},
+  filters: SearchFilters = {}
 ) {
   const q = query.trim();
-  if (!q) return [] as SearchRow[];
+  if (!q) {
+    return [] as SearchRow[];
+  }
   const limit = normalizeLimit(filters.limit, 50, 200);
   const vectorExpr = sql`to_tsvector('english', coalesce(${items.searchBlob}, ''))`;
   const tsQuery = sql`plainto_tsquery('english', ${q})`;
   const rankExpr = sql<number>`ts_rank(${vectorExpr}, ${tsQuery})`;
   const snippetExpr = sql<string>`ts_headline('english', coalesce(${items.searchBlob}, ''), ${tsQuery})`;
-  const where = and(...searchWhereClauses(filters), sql`${vectorExpr} @@ ${tsQuery}`);
+  const where = and(
+    ...searchWhereClauses(filters),
+    sql`${vectorExpr} @@ ${tsQuery}`
+  );
   const sort = filters.sort ?? "relevance";
   const rankedOrder =
     sort === "relevance"
@@ -558,17 +689,22 @@ export async function searchItemsFuzzy(
   db: VigilDb,
   query: string,
   filters: SearchFilters = {},
-  minSimilarity = 0.25,
+  minSimilarity = 0.25
 ) {
   const q = query.trim();
-  if (!q) return [] as SearchRow[];
+  if (!q) {
+    return [] as SearchRow[];
+  }
   const limit = normalizeLimit(filters.limit, 24, 100);
   const titleSimilarityExpr = sql<number>`similarity(coalesce(${items.title}, ''), ${q})`;
   const bodySimilarityExpr = sql<number>`similarity(coalesce(${items.contentText}, ''), ${q})`;
   const blobSimilarityExpr = sql<number>`similarity(coalesce(${items.searchBlob}, ''), ${q})`;
   // Title remains slightly boosted while allowing recall from body/blob text.
   const similarityExpr = sql<number>`greatest(${titleSimilarityExpr} * 1.15, ${bodySimilarityExpr}, ${blobSimilarityExpr})`;
-  const where = and(...searchWhereClauses(filters), sql`${similarityExpr} > ${minSimilarity}`);
+  const where = and(
+    ...searchWhereClauses(filters),
+    sql`${similarityExpr} > ${minSimilarity}`
+  );
   const sort = filters.sort ?? "relevance";
   const rankedOrder =
     sort === "relevance"
@@ -598,7 +734,7 @@ export async function searchItemsHybrid(
   query: string,
   filters: SearchFilters = {},
   ftsLimit = 30,
-  fuzzyLimit = 16,
+  fuzzyLimit = 16
 ) {
   const [ftsRows, fuzzyRows] = await Promise.all([
     searchItemsFTS(db, query, { ...filters, limit: ftsLimit }),
@@ -607,7 +743,9 @@ export async function searchItemsHybrid(
   const seen = new Set<string>();
   const out: SearchRow[] = [];
   for (const row of [...ftsRows, ...fuzzyRows]) {
-    if (seen.has(row.item.id)) continue;
+    if (seen.has(row.item.id)) {
+      continue;
+    }
     seen.add(row.item.id);
     out.push(row);
   }
@@ -617,10 +755,12 @@ export async function searchItemsHybrid(
 export async function suggestItems(
   db: VigilDb,
   query: string,
-  filters: SearchFilters = {},
+  filters: SearchFilters = {}
 ) {
   const q = query.trim();
-  if (!q) return [] as SearchRow[];
+  if (!q) {
+    return [] as SearchRow[];
+  }
   const limit = normalizeLimit(filters.limit, 10, 20);
   const vectorExpr = sql`to_tsvector('english', coalesce(${items.searchBlob}, ''))`;
   const prefixTs = buildPrefixTsQuery(q);
@@ -628,7 +768,10 @@ export async function suggestItems(
     ? sql`to_tsquery('english', ${prefixTs})`
     : sql`plainto_tsquery('english', ${q})`;
   const rankExpr = sql<number>`ts_rank(${vectorExpr}, ${tsQuery})`;
-  const where = and(...searchWhereClauses(filters), sql`${vectorExpr} @@ ${tsQuery}`);
+  const where = and(
+    ...searchWhereClauses(filters),
+    sql`${vectorExpr} @@ ${tsQuery}`
+  );
   const ftsRows = await db
     .select({
       item: items,
@@ -644,14 +787,23 @@ export async function suggestItems(
     .orderBy(desc(rankExpr), desc(items.updatedAt))
     .limit(limit);
   const out = toSearchRows(ftsRows);
-  if (out.length >= limit) return out;
-  const fuzzyRows = await searchItemsFuzzy(db, q, { ...filters, limit: limit - out.length });
+  if (out.length >= limit) {
+    return out;
+  }
+  const fuzzyRows = await searchItemsFuzzy(db, q, {
+    ...filters,
+    limit: limit - out.length,
+  });
   const seen = new Set(out.map((row) => row.item.id));
   for (const row of fuzzyRows) {
-    if (seen.has(row.item.id)) continue;
+    if (seen.has(row.item.id)) {
+      continue;
+    }
     out.push(row);
     seen.add(row.item.id);
-    if (out.length >= limit) break;
+    if (out.length >= limit) {
+      break;
+    }
   }
   return out;
 }
@@ -661,10 +813,7 @@ export async function listLinksForItem(db: VigilDb, itemId: string) {
     .select()
     .from(itemLinks)
     .where(
-      or(
-        eq(itemLinks.sourceItemId, itemId),
-        eq(itemLinks.targetItemId, itemId),
-      ),
+      or(eq(itemLinks.sourceItemId, itemId), eq(itemLinks.targetItemId, itemId))
     );
 }
 
@@ -690,13 +839,16 @@ export type ResolvedLinkIn = {
 
 export async function getItemLinksResolved(
   db: VigilDb,
-  itemId: string,
+  itemId: string
 ): Promise<{ outgoing: ResolvedLinkOut[]; incoming: ResolvedLinkIn[] }> {
   const links = await listLinksForItem(db, itemId);
   const peerIds = new Set<string>();
   for (const l of links) {
-    if (l.sourceItemId === itemId) peerIds.add(l.targetItemId);
-    else peerIds.add(l.sourceItemId);
+    if (l.sourceItemId === itemId) {
+      peerIds.add(l.targetItemId);
+    } else {
+      peerIds.add(l.sourceItemId);
+    }
   }
   if (peerIds.size === 0) {
     return { outgoing: [], incoming: [] };
@@ -713,7 +865,7 @@ export async function getItemLinksResolved(
     peerRows.map((p) => [
       p.id,
       { id: p.id, title: p.title, itemType: p.itemType },
-    ]),
+    ])
   );
 
   const outgoing: ResolvedLinkOut[] = [];
@@ -750,7 +902,7 @@ export async function getItemLinksResolved(
  */
 export async function deleteSpaceSubtree(
   db: VigilDb,
-  spaceId: string,
+  spaceId: string
 ): Promise<{ ok: true; deletedIds: string[] } | { ok: false; error: string }> {
   const root = await assertSpaceExists(db, spaceId);
   if (!root) {
@@ -758,7 +910,9 @@ export async function deleteSpaceSubtree(
   }
 
   const inTree = await fetchDescendantSpaceIds(db, spaceId);
-  const [total] = await db.select({ c: sql<number>`count(*)::int` }).from(spaces);
+  const [total] = await db
+    .select({ c: sql<number>`count(*)::int` })
+    .from(spaces);
   if (inTree.size >= (total?.c ?? 0)) {
     return { ok: false, error: "Cannot delete all spaces" };
   }

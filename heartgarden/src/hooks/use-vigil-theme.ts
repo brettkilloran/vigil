@@ -7,15 +7,19 @@ const STORAGE_KEY = "vigil-color-scheme";
 export type VigilColorScheme = "system" | "light" | "dark";
 
 function readStored(): VigilColorScheme {
-  if (typeof window === "undefined") return "system";
+  if (typeof window === "undefined") {
+    return "system";
+  }
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw === "light" || raw === "dark" || raw === "system") return raw;
+  if (raw === "light" || raw === "dark" || raw === "system") {
+    return raw;
+  }
   return "system";
 }
 
 export function useVigilTheme() {
   const [preference, setPreference] = useState<VigilColorScheme>(() =>
-    readStored(),
+    readStored()
   );
   const [systemDark, setSystemDark] = useState(false);
 
@@ -32,8 +36,11 @@ export function useVigilTheme() {
 
   useEffect(() => {
     const root = document.documentElement;
-    if (preference === "system") root.removeAttribute("data-vigil-theme");
-    else root.setAttribute("data-vigil-theme", preference);
+    if (preference === "system") {
+      root.removeAttribute("data-vigil-theme");
+    } else {
+      root.setAttribute("data-vigil-theme", preference);
+    }
     root.style.colorScheme = resolved;
     /* Tailwind `dark:*` must track resolved theme, not only prefers-color-scheme. */
     root.classList.toggle("dark", resolved === "dark");

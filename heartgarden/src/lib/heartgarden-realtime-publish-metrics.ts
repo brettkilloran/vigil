@@ -9,10 +9,17 @@ const recent: PublishSample[] = [];
 const MAX_SAMPLES = 50;
 
 export function recordHeartgardenRealtimePublishMs(ms: number): void {
-  if (!Number.isFinite(ms) || ms < 0) return;
+  if (!Number.isFinite(ms) || ms < 0) {
+    return;
+  }
   recent.push({ ms, at: Date.now() });
-  while (recent.length > MAX_SAMPLES) recent.shift();
-  if (process.env.NODE_ENV === "development" || process.env.HEARTGARDEN_REALTIME_DEBUG === "1") {
+  while (recent.length > MAX_SAMPLES) {
+    recent.shift();
+  }
+  if (
+    process.env.NODE_ENV === "development" ||
+    process.env.HEARTGARDEN_REALTIME_DEBUG === "1"
+  ) {
     console.debug(`[heartgarden realtime publish] ${ms.toFixed(1)}ms`);
   }
 }
@@ -28,7 +35,9 @@ export function getHeartgardenRealtimePublishMetricsSnapshot(): {
   }
   const sorted = [...recent.map((r) => r.ms)].sort((a, b) => a - b);
   const lastMs = recent[recent.length - 1]!.ms;
-  const p = (q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * (sorted.length - 1)))] ?? null;
+  const p = (q: number) =>
+    sorted[Math.min(sorted.length - 1, Math.floor(q * (sorted.length - 1)))] ??
+    null;
   return {
     count: recent.length,
     lastMs,

@@ -5,16 +5,20 @@ const DEFAULT_ANTHROPIC_JOB_MS = 300_000;
 
 function parseDeadlineMs(raw: string, fallback: number): number {
   const trimmed = raw.trim();
-  if (!trimmed) return fallback;
+  if (!trimmed) {
+    return fallback;
+  }
   const n = Number(trimmed);
-  if (Number.isFinite(n) && n >= 5000 && n <= 600_000) return Math.floor(n);
+  if (Number.isFinite(n) && n >= 5000 && n <= 600_000) {
+    return Math.floor(n);
+  }
   return fallback;
 }
 
 export async function withDeadline<T>(
   promise: Promise<T>,
   ms: number,
-  label: string,
+  label: string
 ): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
@@ -25,17 +29,22 @@ export async function withDeadline<T>(
   try {
     return await Promise.race([promise, timeout]);
   } finally {
-    if (timer !== undefined) clearTimeout(timer);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
   }
 }
 
 export function anthropicLlmDeadlineMs(): number {
-  return parseDeadlineMs(process.env.HEARTGARDEN_ANTHROPIC_TIMEOUT_MS ?? "", DEFAULT_ANTHROPIC_MS);
+  return parseDeadlineMs(
+    process.env.HEARTGARDEN_ANTHROPIC_TIMEOUT_MS ?? "",
+    DEFAULT_ANTHROPIC_MS
+  );
 }
 
 export function anthropicLlmJobDeadlineMs(): number {
   return parseDeadlineMs(
     process.env.HEARTGARDEN_ANTHROPIC_JOB_TIMEOUT_MS ?? "",
-    DEFAULT_ANTHROPIC_JOB_MS,
+    DEFAULT_ANTHROPIC_JOB_MS
   );
 }

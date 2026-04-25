@@ -9,7 +9,9 @@ import { parseSpaceIdParam } from "@/src/lib/space-id";
 export function resolveHeartgardenPlayerSpaceIdFromEnv(): string | undefined {
   const playerRaw = (process.env.HEARTGARDEN_PLAYER_SPACE_ID ?? "").trim();
   const fromPlayer = parseSpaceIdParam(playerRaw || null);
-  if (fromPlayer) return fromPlayer;
+  if (fromPlayer) {
+    return fromPlayer;
+  }
   const defaultRaw = (process.env.HEARTGARDEN_DEFAULT_SPACE_ID ?? "").trim();
   return parseSpaceIdParam(defaultRaw || null) ?? undefined;
 }
@@ -22,11 +24,17 @@ export function resolveHeartgardenPlayerSpaceIdFromEnv(): string | undefined {
  */
 export function isHeartgardenPlayerLayerMisconfigured(): boolean {
   const playersPin = readHeartgardenPlayersBootPin();
-  if (playersPin.length !== HEARTGARDEN_BOOT_PIN_LENGTH) return false;
+  if (playersPin.length !== HEARTGARDEN_BOOT_PIN_LENGTH) {
+    return false;
+  }
   const playerRaw = (process.env.HEARTGARDEN_PLAYER_SPACE_ID ?? "").trim();
-  if (playerRaw.length > 0 && !parseSpaceIdParam(playerRaw)) return true;
+  if (playerRaw.length > 0 && !parseSpaceIdParam(playerRaw)) {
+    return true;
+  }
   const defaultRaw = (process.env.HEARTGARDEN_DEFAULT_SPACE_ID ?? "").trim();
-  if (defaultRaw.length > 0 && !parseSpaceIdParam(defaultRaw)) return true;
+  if (defaultRaw.length > 0 && !parseSpaceIdParam(defaultRaw)) {
+    return true;
+  }
   return false;
 }
 
@@ -37,12 +45,22 @@ const MISCONFIG_ALERT_THROTTLE_MS = 15 * 60 * 1000;
  * POST JSON to `HEARTGARDEN_PLAYER_LAYER_ALERT_WEBHOOK_URL` at most once per 15 minutes per process
  * (Slack/Discord/generic webhook). No-op if env unset.
  */
-export async function firePlayerLayerMisconfigAlertOnce(misconfigured: boolean): Promise<void> {
-  if (!misconfigured) return;
-  const url = (process.env.HEARTGARDEN_PLAYER_LAYER_ALERT_WEBHOOK_URL ?? "").trim();
-  if (!url) return;
+export async function firePlayerLayerMisconfigAlertOnce(
+  misconfigured: boolean
+): Promise<void> {
+  if (!misconfigured) {
+    return;
+  }
+  const url = (
+    process.env.HEARTGARDEN_PLAYER_LAYER_ALERT_WEBHOOK_URL ?? ""
+  ).trim();
+  if (!url) {
+    return;
+  }
   const now = Date.now();
-  if (now - lastPlayerLayerMisconfigAlertMs < MISCONFIG_ALERT_THROTTLE_MS) return;
+  if (now - lastPlayerLayerMisconfigAlertMs < MISCONFIG_ALERT_THROTTLE_MS) {
+    return;
+  }
   lastPlayerLayerMisconfigAlertMs = now;
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), 8000);

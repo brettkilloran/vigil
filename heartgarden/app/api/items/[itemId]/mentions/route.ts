@@ -15,20 +15,28 @@ export const runtime = "nodejs";
 
 export async function GET(
   _req: Request,
-  context: { params: Promise<{ itemId: string }> },
+  context: { params: Promise<{ itemId: string }> }
 ) {
   const db = tryGetDb();
   if (!db) {
-    return Response.json({ ok: false, error: "Database not configured" }, { status: 503 });
+    return Response.json(
+      { ok: false, error: "Database not configured" },
+      { status: 503 }
+    );
   }
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
 
   const { itemId: rawItemId } = await context.params;
   const itemId = parseSpaceIdParam(rawItemId);
   if (!itemId) {
-    return Response.json({ ok: false, error: "Invalid item id" }, { status: 400 });
+    return Response.json(
+      { ok: false, error: "Invalid item id" },
+      { status: 400 }
+    );
   }
 
   const [itemRow] = await db
@@ -39,7 +47,7 @@ export async function GET(
   if (!itemRow) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Item not found" }, { status: 404 }),
+      Response.json({ ok: false, error: "Item not found" }, { status: 404 })
     );
   }
   if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, itemRow.spaceId))) {

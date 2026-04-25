@@ -21,16 +21,18 @@ config({ path: resolve(process.cwd(), ".env.local") });
 const dry = process.env.HEARTGARDEN_SEVER_WORLDS_DRY === "1";
 const confirm = process.env.HEARTGARDEN_SEVER_WORLDS_CONFIRM === "1";
 
-if (!dry && !confirm) {
+if (!(dry || confirm)) {
   console.error(
-    "Refusing to run: set HEARTGARDEN_SEVER_WORLDS_DRY=1 (preview counts) or HEARTGARDEN_SEVER_WORLDS_CONFIRM=1 (destructive).",
+    "Refusing to run: set HEARTGARDEN_SEVER_WORLDS_DRY=1 (preview counts) or HEARTGARDEN_SEVER_WORLDS_CONFIRM=1 (destructive)."
   );
   process.exit(1);
 }
 
 const db = tryGetDb();
 if (!db) {
-  console.error("Database not configured (set NEON_DATABASE_URL or HEARTGARDEN_NEON_DATABASE_URL).");
+  console.error(
+    "Database not configured (set NEON_DATABASE_URL or HEARTGARDEN_NEON_DATABASE_URL)."
+  );
   process.exit(1);
 }
 

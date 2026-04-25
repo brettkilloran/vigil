@@ -7,16 +7,21 @@ import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-ro
 
 export async function GET(
   _req: Request,
-  context: { params: Promise<{ spaceId: string }> },
+  context: { params: Promise<{ spaceId: string }> }
 ) {
   const db = tryGetDb();
   if (!db) {
-    return Response.json({ ok: false, error: "Database not configured" }, { status: 503 });
+    return Response.json(
+      { ok: false, error: "Database not configured" },
+      { status: 503 }
+    );
   }
   const bootCtx = await getHeartgardenApiBootContext();
   const { spaceId } = await context.params;
   const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
-  if (!access.ok) return access.response;
+  if (!access.ok) {
+    return access.response;
+  }
   const space = access.space;
 
   const [itemRow] = await db
@@ -36,7 +41,10 @@ export async function GET(
       .select({ c: sql<number>`count(*)::int` })
       .from(itemLinks)
       .where(
-        and(inArray(itemLinks.sourceItemId, ids), inArray(itemLinks.targetItemId, ids)),
+        and(
+          inArray(itemLinks.sourceItemId, ids),
+          inArray(itemLinks.targetItemId, ids)
+        )
       );
     linkCount = linkRow?.c ?? 0;
   }

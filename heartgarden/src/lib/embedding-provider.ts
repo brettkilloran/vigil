@@ -14,7 +14,10 @@ export function isEmbeddingApiConfigured(): boolean {
 }
 
 function embeddingModel(): string {
-  return (process.env.HEARTGARDEN_OPENAI_EMBEDDING_MODEL ?? "").trim() || DEFAULT_EMBEDDING_MODEL;
+  return (
+    (process.env.HEARTGARDEN_OPENAI_EMBEDDING_MODEL ?? "").trim() ||
+    DEFAULT_EMBEDDING_MODEL
+  );
 }
 
 /**
@@ -32,22 +35,32 @@ const RETRYABLE_NETWORK_CODES = new Set([
 ]);
 
 function maxEmbeddingRetries(): number {
-  const raw = (process.env.HEARTGARDEN_OPENAI_EMBEDDINGS_MAX_RETRIES ?? "").trim();
-  if (!raw) return 3;
+  const raw = (
+    process.env.HEARTGARDEN_OPENAI_EMBEDDINGS_MAX_RETRIES ?? ""
+  ).trim();
+  if (!raw) {
+    return 3;
+  }
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed)) return 3;
+  if (!Number.isFinite(parsed)) {
+    return 3;
+  }
   return Math.min(8, Math.max(0, Math.floor(parsed)));
 }
 
 function isRetryableNetworkError(err: unknown): boolean {
   if (err instanceof Error) {
     const code = String((err as { code?: unknown }).code ?? "").toUpperCase();
-    if (RETRYABLE_NETWORK_CODES.has(code)) return true;
+    if (RETRYABLE_NETWORK_CODES.has(code)) {
+      return true;
+    }
     // Some Node fetch errors bury the code on `cause`.
     const cause = (err as { cause?: { code?: unknown } }).cause;
     if (cause) {
       const causeCode = String(cause.code ?? "").toUpperCase();
-      if (RETRYABLE_NETWORK_CODES.has(causeCode)) return true;
+      if (RETRYABLE_NETWORK_CODES.has(causeCode)) {
+        return true;
+      }
     }
   }
   return false;
@@ -63,7 +76,7 @@ function jitteredBackoffMs(retryAttempt: number): number {
 async function embedBatchWithRetry(
   apiKey: string,
   model: string,
-  batch: string[],
+  batch: string[]
 ): Promise<{ data?: { index?: number; embedding?: number[] }[] }> {
   const maxRetries = maxEmbeddingRetries();
   let attempt = 0;
@@ -94,7 +107,9 @@ async function embedBatchWithRetry(
 
     if (res.ok) {
       const data = json.data;
-      if (!data?.length) throw new Error("OpenAI embeddings returned no data");
+      if (!data?.length) {
+        throw new Error("OpenAI embeddings returned no data");
+      }
       return { data };
     }
 
@@ -105,7 +120,7 @@ async function embedBatchWithRetry(
     }
 
     throw new Error(
-      json.error?.message ?? `OpenAI embeddings failed (${res.status})`,
+      json.error?.message ?? `OpenAI embeddings failed (${res.status})`
     );
   }
 }
@@ -114,12 +129,14 @@ async function embedBatchWithRetry(
  * Embed many text chunks in as few requests as practical (OpenAI allows batch input).
  */
 export async function embedTexts(texts: string[]): Promise<number[][]> {
-  if (texts.length === 0) return [];
+  if (texts.length === 0) {
+    return [];
+  }
 
   const apiKey = (process.env.OPENAI_API_KEY ?? "").trim();
   if (!apiKey) {
     throw new Error(
-      "Embeddings are not configured: set OPENAI_API_KEY for vector chunk indexing.",
+      "Embeddings are not configured: set OPENAI_API_KEY for vector chunk indexing."
     );
   }
 
@@ -130,20 +147,28 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
   for (let i = 0; i < texts.length; i += batchSize) {
     const batch = texts.slice(i, i + batchSize);
     const { data } = await embedBatchWithRetry(apiKey, model, batch);
-    if (!data) throw new Error("OpenAI embeddings returned no data");
+    if (!data) {
+      throw new Error("OpenAI embeddings returned no data");
+    }
 
     for (const item of data) {
       const idx = item.index;
       const emb = item.embedding;
-      if (typeof idx !== "number" || !emb?.length) continue;
+      if (typeof idx !== "number" || !emb?.length) {
+        continue;
+      }
       const globalIdx = i + idx;
-      if (globalIdx < 0 || globalIdx >= out.length) continue;
+      if (globalIdx < 0 || globalIdx >= out.length) {
+        continue;
+      }
       out[globalIdx] = emb;
     }
   }
 
   if (out.some((v) => !v)) {
-    throw new Error("OpenAI embeddings response missing vectors for some chunks");
+    throw new Error(
+      "OpenAI embeddings response missing vectors for some chunks"
+    );
   }
 
   return out;

@@ -49,13 +49,24 @@ type Story = StoryObj<typeof Tag>;
 
 export const Playground: Story = {};
 
-const llmVariants: TagVariant[] = ["llmLight", "llmCode", "llmFocusDark", "neutral"];
+const llmVariants: TagVariant[] = [
+  "llmLight",
+  "llmCode",
+  "llmFocusDark",
+  "neutral",
+];
 
 export const LlmAndNeutralMatrix: Story = {
   render: () => (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div>
-        <p style={{ fontSize: 12, color: "var(--sem-text-muted)", margin: "0 0 8px" }}>
+        <p
+          style={{
+            fontSize: 12,
+            color: "var(--sem-text-muted)",
+            margin: "0 0 8px",
+          }}
+        >
           Light paper (default / task canvas, light focus)
         </p>
         <div
@@ -70,7 +81,13 @@ export const LlmAndNeutralMatrix: Story = {
         </div>
       </div>
       <div>
-        <p style={{ fontSize: 12, color: "var(--sem-text-muted)", margin: "0 0 8px" }}>
+        <p
+          style={{
+            fontSize: 12,
+            color: "var(--sem-text-muted)",
+            margin: "0 0 8px",
+          }}
+        >
           Code-themed card header
         </p>
         <div
@@ -79,20 +96,28 @@ export const LlmAndNeutralMatrix: Story = {
             background: "var(--theme-code-bg)",
             color: "var(--theme-code-text)",
             borderRadius: 8,
-            border: "1px solid color-mix(in oklch, var(--sys-color-white) 8%, transparent)",
+            border:
+              "1px solid color-mix(in oklch, var(--sys-color-white) 8%, transparent)",
           }}
         >
           <Tag variant="llmCode">Unreviewed</Tag>
         </div>
       </div>
       <div>
-        <p style={{ fontSize: 12, color: "var(--sem-text-muted)", margin: "0 0 8px" }}>
+        <p
+          style={{
+            fontSize: 12,
+            color: "var(--sem-text-muted)",
+            margin: "0 0 8px",
+          }}
+        >
           Dark focus sheet (code / lore hybrid)
         </p>
         <div
           style={{
             padding: 16,
-            background: "color-mix(in oklch, var(--sys-color-neutral-950) 96%, transparent)",
+            background:
+              "color-mix(in oklch, var(--sys-color-neutral-950) 96%, transparent)",
             borderRadius: 8,
           }}
         >
@@ -100,10 +125,22 @@ export const LlmAndNeutralMatrix: Story = {
         </div>
       </div>
       <div>
-        <p style={{ fontSize: 12, color: "var(--sem-text-muted)", margin: "0 0 8px" }}>
+        <p
+          style={{
+            fontSize: 12,
+            color: "var(--sem-text-muted)",
+            margin: "0 0 8px",
+          }}
+        >
           Neutral (non-LLM labels)
         </p>
-        <div style={{ padding: 16, background: "var(--sem-surface-base)", borderRadius: 8 }}>
+        <div
+          style={{
+            padding: 16,
+            background: "var(--sem-surface-base)",
+            borderRadius: 8,
+          }}
+        >
           <Tag variant="neutral">Beta</Tag>
         </div>
       </div>
@@ -113,7 +150,14 @@ export const LlmAndNeutralMatrix: Story = {
 
 export const VariantLabels: Story = {
   render: () => (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 8,
+        alignItems: "center",
+      }}
+    >
       {llmVariants.map((v) => (
         <Tag key={v} variant={v}>
           {v}

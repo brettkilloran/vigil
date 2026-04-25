@@ -7,5 +7,5 @@ export type LoreImportProgress = {
 };
 
 export type LoreImportProgressReporter = (
-  progress: LoreImportProgress,
+  progress: LoreImportProgress
 ) => void | Promise<void>;

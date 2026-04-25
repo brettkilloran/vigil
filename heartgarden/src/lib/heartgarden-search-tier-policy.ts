@@ -7,10 +7,7 @@ import {
 } from "@/src/lib/heartgarden-api-boot-context";
 import { isHeartgardenGmPlayerSpaceBreakGlassEnabled } from "@/src/lib/heartgarden-gm-break-glass";
 import { collectDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
-import {
-  type SearchFilters,
-  type VigilDb,
-} from "@/src/lib/spaces";
+import type { SearchFilters, VigilDb } from "@/src/lib/spaces";
 
 export type SearchTierPolicyResult =
   | { ok: false }
@@ -24,14 +21,16 @@ export type SearchTierPolicyResult =
 export function applySearchTierPolicy(
   ctx: HeartgardenApiBootContext,
   filters: SearchFilters,
-  modeRaw: string,
+  modeRaw: string
 ): SearchTierPolicyResult {
   const mode = modeRaw.toLowerCase();
 
   if (ctx.role === "player") {
     const nextFilters = { ...filters };
     let m = mode;
-    if (m === "hybrid" || m === "semantic") m = "fts";
+    if (m === "hybrid" || m === "semantic") {
+      m = "fts";
+    }
     return { ok: true, filters: nextFilters, mode: m };
   }
 
@@ -41,7 +40,7 @@ export function applySearchTierPolicy(
 /** `/api/search/suggest` — same space rules as search (no mode). */
 export function applySuggestTierPolicy(
   ctx: HeartgardenApiBootContext,
-  filters: SearchFilters,
+  filters: SearchFilters
 ): SearchTierPolicyResult {
   if (ctx.role === "player") {
     return { ok: true, filters: { ...filters }, mode: "" };
@@ -56,12 +55,14 @@ export function applySuggestTierPolicy(
 export async function finalizeHeartgardenSearchFiltersForDb(
   db: VigilDb,
   ctx: HeartgardenApiBootContext,
-  filters: SearchFilters,
+  filters: SearchFilters
 ): Promise<SearchFilters | null> {
   if (ctx.role === "player") {
     const next: SearchFilters = { ...filters };
     if (next.spaceId) {
-      if (!(await playerMayAccessSpaceIdAsync(db, ctx, next.spaceId))) return null;
+      if (!(await playerMayAccessSpaceIdAsync(db, ctx, next.spaceId))) {
+        return null;
+      }
       return next;
     }
     const slim = await db
@@ -88,7 +89,7 @@ export async function finalizeHeartgardenSearchFiltersForDb(
     !isHeartgardenGmPlayerSpaceBreakGlassEnabled() &&
     !filters.spaceId &&
     !filters.excludeSpaceId &&
-    !(filters.excludeSpaceIds?.length)
+    !filters.excludeSpaceIds?.length
   ) {
     const [playerBrane] = await db
       .select({ id: branes.id })

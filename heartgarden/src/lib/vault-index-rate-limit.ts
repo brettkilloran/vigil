@@ -26,10 +26,14 @@ function clientKeyFromRequest(req: Request): string {
   const forwarded = h.get("x-forwarded-for");
   if (forwarded) {
     const first = forwarded.split(",")[0]?.trim();
-    if (first) return `ip:${first}`;
+    if (first) {
+      return `ip:${first}`;
+    }
   }
   const realIp = h.get("x-real-ip")?.trim();
-  if (realIp) return `ip:${realIp}`;
+  if (realIp) {
+    return `ip:${realIp}`;
+  }
   return "ip:unknown";
 }
 
@@ -43,7 +47,9 @@ function bump(map: Map<string, Bucket>, key: string, max: number): boolean {
   b.count += 1;
   if (map.size > 10_000) {
     for (const [k, v] of map) {
-      if (now - v.windowStart >= WINDOW_MS) map.delete(k);
+      if (now - v.windowStart >= WINDOW_MS) {
+        map.delete(k);
+      }
     }
   }
   return b.count > max;
@@ -56,5 +62,9 @@ export function vaultItemIndexRateLimitExceeded(req: Request): boolean {
 
 /** @returns true if rate limited */
 export function vaultSpaceReindexRateLimitExceeded(req: Request): boolean {
-  return bump(reindexBuckets, clientKeyFromRequest(req), MAX_REINDEX_PER_WINDOW);
+  return bump(
+    reindexBuckets,
+    clientKeyFromRequest(req),
+    MAX_REINDEX_PER_WINDOW
+  );
 }

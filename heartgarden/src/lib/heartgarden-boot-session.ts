@@ -18,9 +18,15 @@ export type HeartgardenBootPayload = {
   exp: number;
 };
 
-const DUMMY_DIGEST_A = createHash("sha256").update("\0hg_boot_unset_a", "utf8").digest();
-const DUMMY_DIGEST_B = createHash("sha256").update("\0hg_boot_unset_b", "utf8").digest();
-const DUMMY_DIGEST_C = createHash("sha256").update("\0hg_boot_unset_c", "utf8").digest();
+const DUMMY_DIGEST_A = createHash("sha256")
+  .update("\0hg_boot_unset_a", "utf8")
+  .digest();
+const DUMMY_DIGEST_B = createHash("sha256")
+  .update("\0hg_boot_unset_b", "utf8")
+  .digest();
+const DUMMY_DIGEST_C = createHash("sha256")
+  .update("\0hg_boot_unset_c", "utf8")
+  .digest();
 
 export function isPlaywrightE2E(): boolean {
   return process.env.PLAYWRIGHT_E2E === "1";
@@ -34,24 +40,35 @@ export function readBootEnv(): {
   sessionSecret: string;
 } {
   if (isHeartgardenBootGateBypassed()) {
-    return { gateEnabled: false, bishopPin: "", playersPin: "", demoPin: "", sessionSecret: "" };
+    return {
+      gateEnabled: false,
+      bishopPin: "",
+      playersPin: "",
+      demoPin: "",
+      sessionSecret: "",
+    };
   }
   const bishopPin = (process.env.HEARTGARDEN_BOOT_PIN_BISHOP ?? "").trim();
   const playersPin = readHeartgardenPlayersBootPin();
   const demoPin = (process.env.HEARTGARDEN_BOOT_PIN_DEMO ?? "").trim();
-  const sessionSecret = (process.env.HEARTGARDEN_BOOT_SESSION_SECRET ?? "").trim();
+  const sessionSecret = (
+    process.env.HEARTGARDEN_BOOT_SESSION_SECRET ?? ""
+  ).trim();
   const bishopOk = bishopPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
   const playersOk = playersPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
   const demoOk = demoPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
   /** Gate is on when the session secret is set and at least one PIN is configured. */
-  const gateEnabled = sessionSecret.length >= 16 && (bishopOk || playersOk || demoOk);
+  const gateEnabled =
+    sessionSecret.length >= 16 && (bishopOk || playersOk || demoOk);
   return { gateEnabled, bishopPin, playersPin, demoPin, sessionSecret };
 }
 
 export function bootSessionMaxAgeSec(): number {
   const raw = (process.env.HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC ?? "").trim();
-  const n = raw ? Number.parseInt(raw, 10) : NaN;
-  if (Number.isFinite(n) && n > 60 && n <= 365 * 24 * 60 * 60) return n;
+  const n = raw ? Number.parseInt(raw, 10) : Number.NaN;
+  if (Number.isFinite(n) && n > 60 && n <= 365 * 24 * 60 * 60) {
+    return n;
+  }
   return 30 * 24 * 60 * 60;
 }
 
@@ -65,8 +82,12 @@ function normalizeBootPinForCompare(s: string): string {
 }
 
 function normalizeBootTierFromCookie(raw: unknown): HeartgardenBootTier | null {
-  if (raw === "access" || raw === "demo" || raw === "player") return raw;
-  if (raw === "visitor") return "player";
+  if (raw === "access" || raw === "demo" || raw === "player") {
+    return raw;
+  }
+  if (raw === "visitor") {
+    return "player";
+  }
   return null;
 }
 
@@ -79,10 +100,12 @@ export function resolveBootPinTier(
   code: string,
   bishopPin: string,
   playersPin: string,
-  demoPin: string,
+  demoPin: string
 ): HeartgardenBootTier | null {
   const c = normalizeBootPinForCompare(code);
-  if (c.length !== HEARTGARDEN_BOOT_PIN_LENGTH) return null;
+  if (c.length !== HEARTGARDEN_BOOT_PIN_LENGTH) {
+    return null;
+  }
   const h = sha256Utf8(c);
   const b = normalizeBootPinForCompare(bishopPin);
   const p = normalizeBootPinForCompare(playersPin);
@@ -96,9 +119,15 @@ export function resolveBootPinTier(
   const okBishop = timingSafeEqual(h, hBishop);
   const okPlayers = timingSafeEqual(h, hPlayers);
   const okDemo = timingSafeEqual(h, hDemo);
-  if (okBishop) return "access";
-  if (okPlayers) return "player";
-  if (okDemo) return "demo";
+  if (okBishop) {
+    return "access";
+  }
+  if (okPlayers) {
+    return "player";
+  }
+  if (okDemo) {
+    return "demo";
+  }
   return null;
 }
 
@@ -111,12 +140,19 @@ function toBase64Url(buf: Buffer): string {
 }
 
 function fromBase64Url(s: string): Buffer | null {
-  if (!/^[A-Za-z0-9_-]*$/u.test(s)) return null;
+  if (!/^[A-Za-z0-9_-]*$/u.test(s)) {
+    return null;
+  }
   let b64 = s.replace(/-/g, "+").replace(/_/g, "/");
   const mod = b64.length % 4;
-  if (mod === 1) return null;
-  if (mod === 2) b64 += "==";
-  else if (mod === 3) b64 += "=";
+  if (mod === 1) {
+    return null;
+  }
+  if (mod === 2) {
+    b64 += "==";
+  } else if (mod === 3) {
+    b64 += "=";
+  }
   try {
     return Buffer.from(b64, "base64");
   } catch {
@@ -124,7 +160,10 @@ function fromBase64Url(s: string): Buffer | null {
   }
 }
 
-export function signBootSessionPayload(secret: string, payload: HeartgardenBootPayload): string {
+export function signBootSessionPayload(
+  secret: string,
+  payload: HeartgardenBootPayload
+): string {
   const body = JSON.stringify(payload);
   const payloadB64 = toBase64Url(Buffer.from(body, "utf8"));
   const sig = createHmac("sha256", secret).update(payloadB64, "utf8").digest();
@@ -132,31 +171,56 @@ export function signBootSessionPayload(secret: string, payload: HeartgardenBootP
   return `${payloadB64}.${sigB64}`;
 }
 
-export function verifyBootSessionCookie(secret: string, cookieValue: string): HeartgardenBootPayload | null {
-  if (cookieValue.length > HEARTGARDEN_BOOT_COOKIE_MAX_CHARS) return null;
+export function verifyBootSessionCookie(
+  secret: string,
+  cookieValue: string
+): HeartgardenBootPayload | null {
+  if (cookieValue.length > HEARTGARDEN_BOOT_COOKIE_MAX_CHARS) {
+    return null;
+  }
   const parts = cookieValue.split(".");
-  if (parts.length !== 2) return null;
+  if (parts.length !== 2) {
+    return null;
+  }
   const [payloadB64, sigB64] = parts;
-  if (!payloadB64 || !sigB64) return null;
-  const expectedSig = createHmac("sha256", secret).update(payloadB64, "utf8").digest();
+  if (!(payloadB64 && sigB64)) {
+    return null;
+  }
+  const expectedSig = createHmac("sha256", secret)
+    .update(payloadB64, "utf8")
+    .digest();
   const gotSig = fromBase64Url(sigB64);
-  if (!gotSig || gotSig.length !== expectedSig.length) return null;
-  if (!timingSafeEqual(expectedSig, gotSig)) return null;
+  if (!gotSig || gotSig.length !== expectedSig.length) {
+    return null;
+  }
+  if (!timingSafeEqual(expectedSig, gotSig)) {
+    return null;
+  }
   const jsonBuf = fromBase64Url(payloadB64);
-  if (!jsonBuf) return null;
+  if (!jsonBuf) {
+    return null;
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(jsonBuf.toString("utf8"));
   } catch {
     return null;
   }
-  if (!parsed || typeof parsed !== "object") return null;
+  if (!parsed || typeof parsed !== "object") {
+    return null;
+  }
   const o = parsed as Record<string, unknown>;
   const tier = normalizeBootTierFromCookie(o.tier);
-  if (!tier) return null;
-  if (typeof o.exp !== "number" || !Number.isFinite(o.exp)) return null;
+  if (!tier) {
+    return null;
+  }
+  if (typeof o.exp !== "number" || !Number.isFinite(o.exp)) {
+    return null;
+  }
   const now = Math.floor(Date.now() / 1000);
-  if (o.exp <= now) return null;
+  if (o.exp <= now) {
+    return null;
+  }
   return { tier, exp: o.exp };
 }
 
@@ -178,7 +242,10 @@ export function clearBootSessionCookieOptions(): {
   };
 }
 
-export function bootSessionCookieOptions(value: string, maxAgeSec: number): {
+export function bootSessionCookieOptions(
+  value: string,
+  maxAgeSec: number
+): {
   name: string;
   value: string;
   path: string;

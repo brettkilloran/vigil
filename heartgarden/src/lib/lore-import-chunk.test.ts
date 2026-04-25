@@ -18,11 +18,13 @@ describe("chunkSourceText", () => {
   it("segments heading-less prose into multiple semantic chunks", () => {
     const para = (i: number) =>
       `Paragraph ${i}: ` +
-      "The obsidian shard hums through memory, witness notes, and contextual fallout. ".repeat(10);
+      "The obsidian shard hums through memory, witness notes, and contextual fallout. ".repeat(
+        10
+      );
     const text = Array.from({ length: 12 }, (_, i) => para(i + 1)).join("\n\n");
     const chunks = chunkSourceText(text);
     expect(chunks.length).toBeGreaterThan(1);
-    expect(chunks.every((c) => c.body.length <= 2_000)).toBe(true);
+    expect(chunks.every((c) => c.body.length <= 2000)).toBe(true);
     for (const c of chunks) {
       expect(c.charStart).toBeGreaterThanOrEqual(0);
       expect(c.charEnd).toBeGreaterThan(c.charStart);
@@ -30,10 +32,10 @@ describe("chunkSourceText", () => {
   });
 
   it("subdivides oversized heading sections at the 2k cap", () => {
-    const huge = "# Incident\n" + "A".repeat(5_500);
+    const huge = "# Incident\n" + "A".repeat(5500);
     const chunks = chunkSourceText(huge);
     expect(chunks.length).toBeGreaterThan(2);
-    expect(chunks.every((c) => c.body.length <= 2_000)).toBe(true);
+    expect(chunks.every((c) => c.body.length <= 2000)).toBe(true);
     expect(chunks.some((c) => c.heading.includes("(part"))).toBe(true);
   });
 

@@ -2,32 +2,37 @@ import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
-import { getHeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
 import type { GraphEdge, GraphNode } from "@/src/lib/graph-types";
+import { getHeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
+import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 import { parseSlackMultiplierFromLinkMeta } from "@/src/lib/item-link-meta";
 import { dedupeLogicalItemLinkRows } from "@/src/lib/item-links-logical-dedupe";
 import { computeItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
-import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 
 export async function GET(
   req: Request,
-  context: { params: Promise<{ spaceId: string }> },
+  context: { params: Promise<{ spaceId: string }> }
 ) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
       { ok: false, error: "Database not configured", nodes: [], edges: [] },
-      { status: 503 },
+      { status: 503 }
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
   const { spaceId } = await context.params;
   const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
-  if (!access.ok) return access.response;
+  if (!access.ok) {
+    return access.response;
+  }
 
   const url = new URL(req.url);
   const limitRaw = url.searchParams.get("limit");
-  const offset = Math.max(0, parseInt(url.searchParams.get("offset") ?? "0", 10) || 0);
+  const offset = Math.max(
+    0,
+    Number.parseInt(url.searchParams.get("offset") ?? "0", 10) || 0
+  );
   if (limitRaw == null && offset > 0) {
     return Response.json(
       {
@@ -36,7 +41,7 @@ export async function GET(
         nodes: [] as GraphNode[],
         edges: [] as GraphEdge[],
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -62,7 +67,10 @@ export async function GET(
       .where(eq(items.spaceId, spaceId))
       .orderBy(asc(items.zIndex), asc(items.createdAt));
   } else {
-    pageLimit = Math.min(Math.max(1, parseInt(limitRaw, 10) || 500), 2000);
+    pageLimit = Math.min(
+      Math.max(1, Number.parseInt(limitRaw, 10) || 500),
+      2000
+    );
     rows = await db
       .select({
         id: items.id,
@@ -109,7 +117,12 @@ export async function GET(
     })
     .from(itemLinks)
     .where(
-      and(or(inArray(itemLinks.sourceItemId, idList), inArray(itemLinks.targetItemId, idList))),
+      and(
+        or(
+          inArray(itemLinks.sourceItemId, idList),
+          inArray(itemLinks.targetItemId, idList)
+        )
+      )
     );
 
   const linkRows = dedupeLogicalItemLinkRows(
@@ -123,7 +136,7 @@ export async function GET(
       color: l.color ?? null,
       meta: l.meta,
       updatedAtMs: l.updatedAt?.getTime() ?? 0,
-    })),
+    }))
   );
 
   const nodes: GraphNode[] = rows.map((r) => ({
@@ -135,8 +148,12 @@ export async function GET(
   const nodeIds = new Set(nodes.map((n) => n.id));
   const ghostIds = new Set<string>();
   for (const edge of linkRows) {
-    if (!nodeIds.has(edge.source)) ghostIds.add(edge.source);
-    if (!nodeIds.has(edge.target)) ghostIds.add(edge.target);
+    if (!nodeIds.has(edge.source)) {
+      ghostIds.add(edge.source);
+    }
+    if (!nodeIds.has(edge.target)) {
+      ghostIds.add(edge.target);
+    }
   }
   if (ghostIds.size > 0) {
     const ghostRows = await db

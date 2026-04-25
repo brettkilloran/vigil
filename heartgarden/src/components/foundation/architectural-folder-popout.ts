@@ -19,14 +19,22 @@ export type FolderPopOutPlan = {
   emptiedSpaceIds: string[];
 };
 
-function findContainingSpaceId(graph: CanvasGraph, entityId: string): string | null {
+function findContainingSpaceId(
+  graph: CanvasGraph,
+  entityId: string
+): string | null {
   for (const space of Object.values(graph.spaces)) {
-    if (space.entityIds.includes(entityId)) return space.id;
+    if (space.entityIds.includes(entityId)) {
+      return space.id;
+    }
   }
   return null;
 }
 
-export function collectFolderPopOutPlan(graph: CanvasGraph, folderIds: string[]): FolderPopOutPlan {
+export function collectFolderPopOutPlan(
+  graph: CanvasGraph,
+  folderIds: string[]
+): FolderPopOutPlan {
   const entityMoves: FolderPopOutEntityMove[] = [];
   const spaceReparents: FolderPopOutSpaceReparent[] = [];
   const folderEntityIds: string[] = [];
@@ -36,18 +44,26 @@ export function collectFolderPopOutPlan(graph: CanvasGraph, folderIds: string[])
 
   for (const folderId of folderIds) {
     const folder = graph.entities[folderId];
-    if (!folder || folder.kind !== "folder") continue;
+    if (!folder || folder.kind !== "folder") {
+      continue;
+    }
     const parentSpaceId = findContainingSpaceId(graph, folder.id);
-    if (!parentSpaceId) continue;
+    if (!parentSpaceId) {
+      continue;
+    }
     const folderSlot = folder.slots[parentSpaceId] ?? { x: 0, y: 0 };
     const childSpace = graph.spaces[folder.childSpaceId];
-    if (!childSpace) continue;
+    if (!childSpace) {
+      continue;
+    }
     folderEntityIds.push(folder.id);
     emptiedSpaceIds.add(childSpace.id);
 
     for (const childId of childSpace.entityIds) {
       const child = graph.entities[childId];
-      if (!child || movedEntityIds.has(child.id)) continue;
+      if (!child || movedEntityIds.has(child.id)) {
+        continue;
+      }
       const childSlot = child.slots[childSpace.id] ?? { x: 0, y: 0 };
       entityMoves.push({
         entityId: child.id,
@@ -59,9 +75,14 @@ export function collectFolderPopOutPlan(graph: CanvasGraph, folderIds: string[])
         },
       });
       movedEntityIds.add(child.id);
-      if (child.kind !== "folder") continue;
+      if (child.kind !== "folder") {
+        continue;
+      }
       if (!reparentSpaceIds.has(child.childSpaceId)) {
-        spaceReparents.push({ spaceId: child.childSpaceId, newParentId: parentSpaceId });
+        spaceReparents.push({
+          spaceId: child.childSpaceId,
+          newParentId: parentSpaceId,
+        });
         reparentSpaceIds.add(child.childSpaceId);
       }
     }
@@ -75,7 +96,10 @@ export function collectFolderPopOutPlan(graph: CanvasGraph, folderIds: string[])
   };
 }
 
-export function applyFolderPopOutPlan(graph: CanvasGraph, plan: FolderPopOutPlan): CanvasGraph {
+export function applyFolderPopOutPlan(
+  graph: CanvasGraph,
+  plan: FolderPopOutPlan
+): CanvasGraph {
   const next: CanvasGraph = {
     ...graph,
     spaces: { ...graph.spaces },
@@ -87,7 +111,9 @@ export function applyFolderPopOutPlan(graph: CanvasGraph, plan: FolderPopOutPlan
     const entity = next.entities[move.entityId];
     const fromSpace = next.spaces[move.fromSpaceId];
     const toSpace = next.spaces[move.toSpaceId];
-    if (!entity || !fromSpace || !toSpace) continue;
+    if (!(entity && fromSpace && toSpace)) {
+      continue;
+    }
 
     const fromIds = fromSpace.entityIds.filter((id) => id !== move.entityId);
     const toIds = toSpace.entityIds.includes(move.entityId)
@@ -109,8 +135,13 @@ export function applyFolderPopOutPlan(graph: CanvasGraph, plan: FolderPopOutPlan
 
   for (const reparent of plan.spaceReparents) {
     const space = next.spaces[reparent.spaceId];
-    if (!space) continue;
-    next.spaces[reparent.spaceId] = { ...space, parentSpaceId: reparent.newParentId };
+    if (!space) {
+      continue;
+    }
+    next.spaces[reparent.spaceId] = {
+      ...space,
+      parentSpaceId: reparent.newParentId,
+    };
   }
 
   return next;

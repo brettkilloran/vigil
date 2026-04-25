@@ -15,7 +15,11 @@ export type ItemLinkLogicalEdge = {
   updatedAtMs: number;
 };
 
-function undirectedKey(source: string, target: string, linkType: string | null): string {
+function undirectedKey(
+  source: string,
+  target: string,
+  linkType: string | null
+): string {
   const a = source < target ? source : target;
   const b = source < target ? target : source;
   return `${a}\0${b}\0${linkType ?? ""}`;
@@ -26,7 +30,9 @@ function pinScore(sourcePin: string | null, targetPin: string | null): number {
 }
 
 /** Prefer more pin detail, then newest `updatedAt`, then lexicographically larger id (stable tie-break). */
-export function dedupeLogicalItemLinkRows(rows: ItemLinkLogicalEdge[]): ItemLinkLogicalEdge[] {
+export function dedupeLogicalItemLinkRows(
+  rows: ItemLinkLogicalEdge[]
+): ItemLinkLogicalEdge[] {
   const best = new Map<string, ItemLinkLogicalEdge>();
   for (const row of rows) {
     const k = undirectedKey(row.source, row.target, row.linkType);
@@ -41,13 +47,19 @@ export function dedupeLogicalItemLinkRows(rows: ItemLinkLogicalEdge[]): ItemLink
       best.set(k, row);
       continue;
     }
-    if (sNew < sOld) continue;
+    if (sNew < sOld) {
+      continue;
+    }
     if (row.updatedAtMs > prev.updatedAtMs) {
       best.set(k, row);
       continue;
     }
-    if (row.updatedAtMs < prev.updatedAtMs) continue;
-    if (row.id > prev.id) best.set(k, row);
+    if (row.updatedAtMs < prev.updatedAtMs) {
+      continue;
+    }
+    if (row.id > prev.id) {
+      best.set(k, row);
+    }
   }
   return [...best.values()];
 }

@@ -31,7 +31,9 @@ export type FolderColorSchemeMeta = {
 /** Parse `oklch(L C H)` / `oklch(L C H / a)` from our scheme strings. */
 function parseOklch(swatch: string): { L: number; C: number } | null {
   const m = swatch.trim().match(/^oklch\(\s*([\d.]+)\s+([\d.]+)\s+([-.\d]+)/i);
-  if (!m) return null;
+  if (!m) {
+    return null;
+  }
   return { L: Number(m[1]), C: Number(m[2]) };
 }
 
@@ -41,7 +43,9 @@ function parseOklch(swatch: string): { L: number; C: number } | null {
  */
 export function contrastingFolderInk(swatch: string): string {
   const o = parseOklch(swatch);
-  if (!o) return "oklch(0.12 0.04 260)";
+  if (!o) {
+    return "oklch(0.12 0.04 260)";
+  }
   const { L, C } = o;
 
   if (L >= 0.66) {
@@ -165,16 +169,22 @@ export const FOLDER_COLOR_SCHEMES: FolderColorSchemeMeta[] = [
 export const FOLDER_COLOR_BLACK_MIRROR_HINT =
   "Default ink — untyped links; lets card chrome stay dominant";
 
-const SCHEME_BY_ID: Record<FolderColorSchemeId, FolderColorSchemeMeta> = Object.fromEntries(
-  FOLDER_COLOR_SCHEMES.map((s) => [s.id, s]),
-) as Record<FolderColorSchemeId, FolderColorSchemeMeta>;
+const SCHEME_BY_ID: Record<FolderColorSchemeId, FolderColorSchemeMeta> =
+  Object.fromEntries(FOLDER_COLOR_SCHEMES.map((s) => [s.id, s])) as Record<
+    FolderColorSchemeId,
+    FolderColorSchemeMeta
+  >;
 
 export function folderNodeStyleForScheme(
-  scheme: FolderColorSchemeId | null | undefined,
+  scheme: FolderColorSchemeId | null | undefined
 ): CSSProperties | undefined {
-  if (!scheme) return undefined;
+  if (!scheme) {
+    return;
+  }
   const s = SCHEME_BY_ID[scheme];
-  if (!s) return undefined;
+  if (!s) {
+    return;
+  }
   return {
     "--folder-bg": s.swatch,
     "--folder-border": s.border,

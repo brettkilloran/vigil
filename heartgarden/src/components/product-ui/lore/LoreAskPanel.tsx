@@ -3,11 +3,9 @@
 import { Sparkle, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-
+import { Button } from "@/src/components/ui/Button";
 import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
 import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
-
-import { Button } from "@/src/components/ui/Button";
 
 export type LoreAskSource = {
   itemId: string;
@@ -28,15 +26,26 @@ type LoreResponse = {
 };
 
 type LoreStreamMeta = { sources?: LoreAskSource[]; model?: string | null };
-type LoreStreamDone = { answer?: string; sources?: LoreAskSource[]; model?: string | null };
+type LoreStreamDone = {
+  answer?: string;
+  sources?: LoreAskSource[];
+  model?: string | null;
+};
 
-function loreScrollableAncestorWithin(el: Node | null, boundary: HTMLElement): HTMLElement | null {
-  let n: Element | null = el instanceof Element ? el : el?.parentElement ?? null;
+function loreScrollableAncestorWithin(
+  el: Node | null,
+  boundary: HTMLElement
+): HTMLElement | null {
+  let n: Element | null =
+    el instanceof Element ? el : (el?.parentElement ?? null);
   while (n && boundary.contains(n)) {
     if (n instanceof HTMLElement) {
       const st = window.getComputedStyle(n);
       const oy = st.overflowY;
-      if ((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight + 1) {
+      if (
+        (oy === "auto" || oy === "scroll") &&
+        n.scrollHeight > n.clientHeight + 1
+      ) {
         return n;
       }
     }
@@ -83,13 +92,17 @@ export function LoreAskPanel({
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const id = requestAnimationFrame(() => textareaRef.current?.focus());
     return () => cancelAnimationFrame(id);
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const html = document.documentElement;
     const body = document.body;
     const prevHtmlOverflow = html.style.overflow;
@@ -103,11 +116,13 @@ export function LoreAskPanel({
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const onWheel = (e: WheelEvent) => {
       const root = rootRef.current;
       const t = e.target;
-      if (!root || !(t instanceof Node)) {
+      if (!(root && t instanceof Node)) {
         e.preventDefault();
         return;
       }
@@ -133,7 +148,7 @@ export function LoreAskPanel({
     const onTouchMove = (e: TouchEvent) => {
       const root = rootRef.current;
       const t = e.target;
-      if (!root || !(t instanceof Node)) {
+      if (!(root && t instanceof Node)) {
         e.preventDefault();
         return;
       }
@@ -141,7 +156,10 @@ export function LoreAskPanel({
         e.preventDefault();
         return;
       }
-      if (t instanceof Element && t.closest("textarea, input, select, [contenteditable='true']")) {
+      if (
+        t instanceof Element &&
+        t.closest("textarea, input, select, [contenteditable='true']")
+      ) {
         return;
       }
       if (loreScrollableAncestorWithin(t, root)) {
@@ -150,8 +168,14 @@ export function LoreAskPanel({
       e.preventDefault();
     };
 
-    window.addEventListener("wheel", onWheel, { passive: false, capture: true });
-    window.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
+    window.addEventListener("wheel", onWheel, {
+      passive: false,
+      capture: true,
+    });
+    window.addEventListener("touchmove", onTouchMove, {
+      passive: false,
+      capture: true,
+    });
     return () => {
       window.removeEventListener("wheel", onWheel, { capture: true });
       window.removeEventListener("touchmove", onTouchMove, { capture: true });
@@ -160,7 +184,9 @@ export function LoreAskPanel({
 
   const submit = useCallback(async () => {
     const q = question.trim();
-    if (!q || loading) return;
+    if (!q || loading) {
+      return;
+    }
     playVigilUiSound("button");
     setLoading(true);
     setError(null);
@@ -168,7 +194,12 @@ export function LoreAskPanel({
     setSources([]);
     setModel(null);
     try {
-      const body: { question: string; spaceId?: string; limit?: number; stream?: boolean } = {
+      const body: {
+        question: string;
+        spaceId?: string;
+        limit?: number;
+        stream?: boolean;
+      } = {
         question: q,
         limit: 18,
         stream: true,
@@ -189,7 +220,9 @@ export function LoreAskPanel({
         let started = false;
         while (true) {
           const { value, done } = await reader.read();
-          if (done) break;
+          if (done) {
+            break;
+          }
           buffer += decoder.decode(value, { stream: true });
           let splitIdx = buffer.indexOf("\n\n");
           while (splitIdx >= 0) {
@@ -199,8 +232,12 @@ export function LoreAskPanel({
             let eventName = "message";
             const dataLines: string[] = [];
             for (const line of lines) {
-              if (line.startsWith("event:")) eventName = line.slice(6).trim();
-              if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
+              if (line.startsWith("event:")) {
+                eventName = line.slice(6).trim();
+              }
+              if (line.startsWith("data:")) {
+                dataLines.push(line.slice(5).trimStart());
+              }
             }
             const payloadRaw = dataLines.join("\n");
             let payload: unknown = null;
@@ -213,10 +250,16 @@ export function LoreAskPanel({
             }
             if (eventName === "meta") {
               const p = payload as LoreStreamMeta | null;
-              if (Array.isArray(p?.sources)) setSources(p.sources);
-              if (typeof p?.model === "string") setModel(p.model);
+              if (Array.isArray(p?.sources)) {
+                setSources(p.sources);
+              }
+              if (typeof p?.model === "string") {
+                setModel(p.model);
+              }
             } else if (eventName === "delta") {
-              const text = String((payload as { text?: unknown } | null)?.text ?? "");
+              const text = String(
+                (payload as { text?: unknown } | null)?.text ?? ""
+              );
               if (text) {
                 if (!started) {
                   playVigilUiSound("notification");
@@ -226,11 +269,20 @@ export function LoreAskPanel({
               }
             } else if (eventName === "done") {
               const p = payload as LoreStreamDone | null;
-              if (typeof p?.answer === "string") setAnswer(p.answer);
-              if (Array.isArray(p?.sources)) setSources(p.sources);
-              if (typeof p?.model === "string") setModel(p.model);
+              if (typeof p?.answer === "string") {
+                setAnswer(p.answer);
+              }
+              if (Array.isArray(p?.sources)) {
+                setSources(p.sources);
+              }
+              if (typeof p?.model === "string") {
+                setModel(p.model);
+              }
             } else if (eventName === "error") {
-              const msg = String((payload as { message?: unknown } | null)?.message ?? "Request failed");
+              const msg = String(
+                (payload as { message?: unknown } | null)?.message ??
+                  "Request failed"
+              );
               playVigilUiSound("caution");
               setError(msg);
             }
@@ -240,18 +292,24 @@ export function LoreAskPanel({
         return;
       }
       const data = (await res.json()) as LoreResponse;
-      if (!res.ok || !data.ok) {
+      if (!(res.ok && data.ok)) {
         const err = data.error;
         let msg = "Request failed — check ANTHROPIC_API_KEY and try again.";
-        if (typeof err === "string") msg = err;
-        else if (err && typeof err === "object" && "formErrors" in err) {
+        if (typeof err === "string") {
+          msg = err;
+        } else if (err && typeof err === "object" && "formErrors" in err) {
           const fe = (err as { formErrors?: string[] }).formErrors;
-          if (Array.isArray(fe) && fe[0]) msg = fe[0];
-          else msg = "Invalid request";
+          if (Array.isArray(fe) && fe[0]) {
+            msg = fe[0];
+          } else {
+            msg = "Invalid request";
+          }
         }
         playVigilUiSound("caution");
         setError(msg);
-        if (Array.isArray(data.sources)) setSources(data.sources);
+        if (Array.isArray(data.sources)) {
+          setSources(data.sources);
+        }
         return;
       }
       playVigilUiSound("notification");
@@ -268,7 +326,9 @@ export function LoreAskPanel({
 
   const onKeyDownRoot = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+      if (e.nativeEvent.isComposing || e.keyCode === 229) {
+        return;
+      }
       if (e.key === "Escape") {
         e.preventDefault();
         onClose();
@@ -278,10 +338,12 @@ export function LoreAskPanel({
         void submit();
       }
     },
-    [onClose, submit],
+    [onClose, submit]
   );
 
-  if (!open || typeof document === "undefined") return null;
+  if (!open || typeof document === "undefined") {
+    return null;
+  }
 
   return createPortal(
     <div
@@ -294,72 +356,84 @@ export function LoreAskPanel({
       }}
     >
       <div
-        data-hg-lore="overlay"
         aria-hidden="true"
-        style={{ pointerEvents: "auto" }}
+        data-hg-lore="overlay"
         onPointerDown={(e) => {
-          if (e.target !== e.currentTarget) return;
-          if (e.button !== 0) return;
+          if (e.target !== e.currentTarget) {
+            return;
+          }
+          if (e.button !== 0) {
+            return;
+          }
           onClose();
         }}
+        style={{ pointerEvents: "auto" }}
       />
       <div data-hg-lore="dialog" role="presentation">
         <div
-          ref={rootRef}
-          data-hg-lore="root"
-          role="dialog"
-          aria-modal="true"
           aria-labelledby={titleId}
+          aria-modal="true"
+          data-hg-lore="root"
           onKeyDown={onKeyDownRoot}
+          ref={rootRef}
+          role="dialog"
         >
           <div data-hg-lore="header">
-            <div className="flex items-center gap-2 min-w-0">
-              <Sparkle className="size-5 shrink-0 text-[var(--sem-accent-primary)]" weight="bold" aria-hidden />
-              <h2 id={titleId} data-hg-lore="title">
+            <div className="flex min-w-0 items-center gap-2">
+              <Sparkle
+                aria-hidden
+                className="size-5 shrink-0 text-[var(--sem-accent-primary)]"
+                weight="bold"
+              />
+              <h2 data-hg-lore="title" id={titleId}>
                 Ask lore
               </h2>
             </div>
             <Button
+              aria-label="Close"
+              iconOnly
+              onClick={onClose}
+              size="icon"
+              tone="glass"
               type="button"
               variant="ghost"
-              tone="glass"
-              size="icon"
-              iconOnly
-              aria-label="Close"
-              onClick={onClose}
             >
-              <X className="size-4" weight="bold" aria-hidden />
+              <X aria-hidden className="size-4" weight="bold" />
             </Button>
           </div>
 
           <p data-hg-lore="lede">
-            Retrieval uses lexical search, linked neighbors, then Claude. Requires{" "}
+            Retrieval uses lexical search, linked neighbors, then Claude.
+            Requires{" "}
             <code className="text-[12px] opacity-90">ANTHROPIC_API_KEY</code>.
           </p>
 
           <textarea
-            ref={textareaRef}
             data-hg-lore="textarea"
-            value={question}
+            disabled={loading}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="e.g. Who is allied with the river houses?"
+            ref={textareaRef}
             rows={4}
-            disabled={loading}
+            value={question}
           />
 
           {spaceScopedAllowed && spaceId ? (
-            <label data-hg-lore="scope" className="flex max-w-md flex-col gap-1">
+            <label
+              className="flex max-w-md flex-col gap-1"
+              data-hg-lore="scope"
+            >
               <span className="flex items-start gap-2">
                 <input
-                  type="checkbox"
-                  className="mt-0.5"
                   checked={scopeCurrentSpace}
-                  onChange={(e) => setScopeCurrentSpace(e.target.checked)}
+                  className="mt-0.5"
                   disabled={loading}
+                  onChange={(e) => setScopeCurrentSpace(e.target.checked)}
+                  type="checkbox"
                 />
                 <span>
                   <span className="font-medium">Current space only</span>
-                  <span className="block text-[11px] leading-snug text-[var(--sem-text-muted)]">
+                  <span className="block text-[11px] text-[var(--sem-text-muted)] leading-snug">
                     {scopeCurrentSpace
                       ? "Recommended on large canvases — searches notes in this space."
                       : "Whole GM workspace — broader, may include more noise."}
@@ -371,12 +445,12 @@ export function LoreAskPanel({
 
           <div data-hg-lore="actions">
             <Button
-              type="button"
-              variant="primary"
-              tone="solid"
-              size="sm"
               disabled={loading || !question.trim()}
               onClick={() => void submit()}
+              size="sm"
+              tone="solid"
+              type="button"
+              variant="primary"
             >
               {loading ? "Thinking…" : "Ask"}
             </Button>
@@ -409,34 +483,39 @@ export function LoreAskPanel({
               <summary>Sources used ({sources.length})</summary>
               <ul>
                 {sources.map((s) => (
-                  <li key={s.itemId} className="space-y-1">
+                  <li className="space-y-1" key={s.itemId}>
                     <Button
-                      type="button"
-                      variant="ghost"
-                      tone="glass"
-                      size="sm"
                       className="h-auto min-h-0 w-full max-w-full justify-start py-1.5 text-left"
                       onClick={() => {
                         onOpenSource(s.itemId);
                         onClose();
                       }}
+                      size="sm"
+                      tone="glass"
+                      type="button"
+                      variant="ghost"
                     >
                       <span className="min-w-0 truncate">
                         <span className="font-medium">{s.title}</span>
-                        <span className="text-[var(--sem-text-muted)] text-[12px]">
+                        <span className="text-[12px] text-[var(--sem-text-muted)]">
                           {" "}
                           · {s.spaceName}
                           {s.viaGraph ? (
-                            <span className="text-[var(--sem-text-muted)]"> · linked</span>
+                            <span className="text-[var(--sem-text-muted)]">
+                              {" "}
+                              · linked
+                            </span>
                           ) : null}
                         </span>
                       </span>
                     </Button>
                     {s.matchedChunks && s.matchedChunks.length > 0 ? (
-                      <div className="pl-2 text-[11px] leading-snug text-[var(--sem-text-muted)] border-l border-[var(--sem-border-subtle)] ml-1 max-h-24 overflow-y-auto">
+                      <div className="ml-1 max-h-24 overflow-y-auto border-[var(--sem-border-subtle)] border-l pl-2 text-[11px] text-[var(--sem-text-muted)] leading-snug">
                         {s.matchedChunks.slice(0, 3).map((c, i) => (
-                          <p key={i} className="mb-1 line-clamp-3">
-                            {c.headingPath.length > 1 ? `${c.headingPath.join(" > ")}: ` : ""}
+                          <p className="mb-1 line-clamp-3" key={i}>
+                            {c.headingPath.length > 1
+                              ? `${c.headingPath.join(" > ")}: `
+                              : ""}
                             {c.text}
                           </p>
                         ))}
@@ -450,6 +529,6 @@ export function LoreAskPanel({
         </div>
       </div>
     </div>,
-    getVigilPortalRoot(),
+    getVigilPortalRoot()
   );
 }

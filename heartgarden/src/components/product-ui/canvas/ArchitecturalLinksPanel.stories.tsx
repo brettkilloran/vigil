@@ -2,10 +2,9 @@
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
 import { fn } from "storybook/test";
-
-import { ArchitecturalLinksPanel } from "@/src/components/ui/ArchitecturalLinksPanel";
-import { buildArchitecturalSeedGraph } from "@/src/components/foundation/architectural-seed";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
+import { buildArchitecturalSeedGraph } from "@/src/components/foundation/architectural-seed";
+import { ArchitecturalLinksPanel } from "@/src/components/ui/ArchitecturalLinksPanel";
 
 const seedGraph = buildArchitecturalSeedGraph(
   {
@@ -18,7 +17,7 @@ const seedGraph = buildArchitecturalSeedGraph(
     mediaImageActions: styles.mediaImageActions,
     mediaUploadBtn: styles.mediaUploadBtn,
   },
-  "default",
+  "default"
 );
 
 const meta = {
@@ -65,8 +64,10 @@ export const NothingSelected: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="relative min-h-[200px] w-full max-w-xl rounded-lg border border-dashed border-[var(--vigil-border)] p-4 text-sm text-[var(--vigil-muted)]">
-        <p className="mb-2">Panel returns `null` without a single selection — empty stage below.</p>
+      <div className="relative min-h-[200px] w-full max-w-xl rounded-lg border border-[var(--vigil-border)] border-dashed p-4 text-[var(--vigil-muted)] text-sm">
+        <p className="mb-2">
+          Panel returns `null` without a single selection — empty stage below.
+        </p>
         <Story />
       </div>
     ),

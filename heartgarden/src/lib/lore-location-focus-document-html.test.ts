@@ -4,10 +4,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  LOCATION_TOP_FIELD_CHAR_CAPS,
   computeLocationTopFieldPasteInsertText,
   extractLocationMetaFocusShellHtml,
   focusDocumentHtmlToLocationBody,
+  LOCATION_TOP_FIELD_CHAR_CAPS,
   locationBodyToFocusDocumentHtml,
   normalizeLocationTopFieldPlain,
   parseLocationFocusDocumentHtml,
@@ -17,7 +17,10 @@ import {
   shouldBlockLocationTopFieldBeforeInput,
   trimLocationTopFieldForImport,
 } from "@/src/lib/lore-location-focus-document-html";
-import { getLoreNodeSeedBodyHtml, shouldRenderLoreLocationCanvasNode } from "@/src/lib/lore-node-seed-html";
+import {
+  getLoreNodeSeedBodyHtml,
+  shouldRenderLoreLocationCanvasNode,
+} from "@/src/lib/lore-node-seed-html";
 
 describe("plainPlaceNameFromLocationBodyHtml", () => {
   it("reads modern name field", () => {
@@ -75,8 +78,12 @@ describe("plainPlaceNameFromLocationBodyHtml", () => {
     const body = `<div data-hg-canvas-role="lore-location">
 <div data-hg-lore-location-field="name">ARBITER STATION<br />LAGRANGE 1</div>
 </div>`;
-    expect(plainPlaceNameFromLocationBodyHtml(body)).toBe("ARBITER STATION LAGRANGE 1");
-    expect(parseLocationOrdoV7BodyPlainFields(body).name).toBe("ARBITER STATION LAGRANGE 1");
+    expect(plainPlaceNameFromLocationBodyHtml(body)).toBe(
+      "ARBITER STATION LAGRANGE 1"
+    );
+    expect(parseLocationOrdoV7BodyPlainFields(body).name).toBe(
+      "ARBITER STATION LAGRANGE 1"
+    );
   });
 });
 
@@ -89,9 +96,14 @@ describe("location hybrid meta shell", () => {
     expect(shell).toContain("data-hg-lore-location-focus-meta");
     expect(shell).not.toContain("data-hg-lore-location-focus-notes");
 
-    const doc = new DOMParser().parseFromString(`<div id="h">${shell}</div>`, "text/html");
+    const doc = new DOMParser().parseFromString(
+      `<div id="h">${shell}</div>`,
+      "text/html"
+    );
     const host = doc.getElementById("h");
-    const meta = host?.querySelector<HTMLElement>('[data-hg-lore-location-focus-meta="true"]');
+    const meta = host?.querySelector<HTMLElement>(
+      '[data-hg-lore-location-focus-meta="true"]'
+    );
     expect(meta).not.toBeNull();
     const parts = readLocationFocusPartsFromMetaHost(meta!, "<p><br></p>");
     const full = parseLocationFocusDocumentHtml(focus);
@@ -112,9 +124,16 @@ describe("location focus projection round-trip", () => {
 <div data-hg-lore-location-notes="true"><p><br></p></div>
 </div>`;
     const focus = locationBodyToFocusDocumentHtml(body);
-    const doc = new DOMParser().parseFromString(`<div id="w">${focus}</div>`, "text/html");
-    const nameField = doc.querySelector('[data-hg-lore-location-focus-field="name"]');
-    expect((nameField?.textContent || "").replace(/\s+/g, " ").trim().toLowerCase()).toBe("drydock");
+    const doc = new DOMParser().parseFromString(
+      `<div id="w">${focus}</div>`,
+      "text/html"
+    );
+    const nameField = doc.querySelector(
+      '[data-hg-lore-location-focus-field="name"]'
+    );
+    expect(
+      (nameField?.textContent || "").replace(/\s+/g, " ").trim().toLowerCase()
+    ).toBe("drydock");
   });
 
   it("round-trips modern v2 seed: notes and fields merge back; chrome preserved", () => {
@@ -127,7 +146,9 @@ describe("location focus projection round-trip", () => {
     const doc = new DOMParser().parseFromString(wrapped, "text/html");
     const host = doc.getElementById("__hg_rt");
     expect(host).not.toBeNull();
-    const notesEl = host!.querySelector<HTMLElement>('[data-hg-lore-location-focus-notes="true"]');
+    const notesEl = host!.querySelector<HTMLElement>(
+      '[data-hg-lore-location-focus-notes="true"]'
+    );
     expect(notesEl).not.toBeNull();
     notesEl!.innerHTML = "<p>Smoke note</p>";
     const editedFocus = host!.innerHTML;
@@ -138,7 +159,9 @@ describe("location focus projection round-trip", () => {
   });
 
   it("round-trips location v3 seed: strip attribute survives merge", () => {
-    const canonical = getLoreNodeSeedBodyHtml("location", "v3", { locationStripSeed: "fixture-seed" });
+    const canonical = getLoreNodeSeedBodyHtml("location", "v3", {
+      locationStripSeed: "fixture-seed",
+    });
     expect(canonical).toMatch(/data-loc-strip="\d"/);
     const focus = locationBodyToFocusDocumentHtml(canonical);
     const merged = focusDocumentHtmlToLocationBody(focus, canonical);
@@ -169,7 +192,7 @@ describe("shouldRenderLoreLocationCanvasNode", () => {
         kind: "content",
         bodyHtml: "<p>x</p>",
         loreCard: { kind: "location", variant: "v2" },
-      }),
+      })
     ).toBe(true);
   });
 
@@ -179,7 +202,7 @@ describe("shouldRenderLoreLocationCanvasNode", () => {
         kind: "content",
         bodyHtml: "",
         loreCard: { kind: "character", variant: "v11" },
-      }),
+      })
     ).toBe(false);
   });
 });
@@ -194,9 +217,13 @@ function makeEditableHost(text: string): HTMLDivElement {
 
 function setTextSelection(el: HTMLElement, start: number, end: number) {
   const node = el.firstChild;
-  if (!(node instanceof Text)) return;
+  if (!(node instanceof Text)) {
+    return;
+  }
   const sel = document.getSelection();
-  if (!sel) return;
+  if (!sel) {
+    return;
+  }
   const range = document.createRange();
   range.setStart(node, start);
   range.setEnd(node, end);
@@ -221,22 +248,34 @@ describe("location top field caps", () => {
   });
 
   it("normalizes whitespace in top fields", () => {
-    expect(normalizeLocationTopFieldPlain("name", "  ORDO   DELTA  ")).toBe("ORDO DELTA");
-    expect(normalizeLocationTopFieldPlain("context", "  one \n\n two   ")).toBe("one two");
-    expect(normalizeLocationTopFieldPlain("detail", " \t deep   vault ")).toBe("deep vault");
+    expect(normalizeLocationTopFieldPlain("name", "  ORDO   DELTA  ")).toBe(
+      "ORDO DELTA"
+    );
+    expect(normalizeLocationTopFieldPlain("context", "  one \n\n two   ")).toBe(
+      "one two"
+    );
+    expect(normalizeLocationTopFieldPlain("detail", " \t deep   vault ")).toBe(
+      "deep vault"
+    );
   });
 
   it("blocks insertions beyond cap, allows deletions", () => {
-    const capped = makeEditableHost("N".repeat(LOCATION_TOP_FIELD_CHAR_CAPS.name));
+    const capped = makeEditableHost(
+      "N".repeat(LOCATION_TOP_FIELD_CHAR_CAPS.name)
+    );
     const insert = new InputEvent("beforeinput", {
       inputType: "insertText",
       data: "X",
     });
-    expect(shouldBlockLocationTopFieldBeforeInput("name", capped, insert)).toBe(true);
+    expect(shouldBlockLocationTopFieldBeforeInput("name", capped, insert)).toBe(
+      true
+    );
     const del = new InputEvent("beforeinput", {
       inputType: "deleteContentBackward",
     });
-    expect(shouldBlockLocationTopFieldBeforeInput("name", capped, del)).toBe(false);
+    expect(shouldBlockLocationTopFieldBeforeInput("name", capped, del)).toBe(
+      false
+    );
   });
 
   it("allows replacements that shorten legacy over-limit text", () => {
@@ -246,7 +285,9 @@ describe("location top field caps", () => {
       inputType: "insertText",
       data: "short",
     });
-    expect(shouldBlockLocationTopFieldBeforeInput("detail", legacy, insert)).toBe(false);
+    expect(
+      shouldBlockLocationTopFieldBeforeInput("detail", legacy, insert)
+    ).toBe(false);
   });
 
   it("clips paste to available room for capped fields", () => {
@@ -254,7 +295,7 @@ describe("location top field caps", () => {
     const clipped = computeLocationTopFieldPasteInsertText(
       "context",
       el,
-      "ABCD1234",
+      "ABCD1234"
     );
     expect(clipped).toBe("AB");
   });

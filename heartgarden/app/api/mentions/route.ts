@@ -15,20 +15,31 @@ export const runtime = "nodejs";
 export async function GET(req: Request) {
   const db = tryGetDb();
   if (!db) {
-    return Response.json({ ok: false, error: "Database not configured" }, { status: 503 });
+    return Response.json(
+      { ok: false, error: "Database not configured" },
+      { status: 503 }
+    );
   }
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
 
   const url = new URL(req.url);
   const term = url.searchParams.get("term")?.trim().toLowerCase();
   const braneId = parseSpaceIdParam(url.searchParams.get("braneId"));
   if (!term || term.length < 2) {
-    return Response.json({ ok: false, error: "term is required (min 2 chars)" }, { status: 400 });
+    return Response.json(
+      { ok: false, error: "term is required (min 2 chars)" },
+      { status: 400 }
+    );
   }
   if (!braneId) {
-    return Response.json({ ok: false, error: "Valid braneId is required" }, { status: 400 });
+    return Response.json(
+      { ok: false, error: "Valid braneId is required" },
+      { status: 400 }
+    );
   }
   if (!(await gmMayReadBraneIdAsync(db, bootCtx, braneId))) {
     return heartgardenApiForbiddenJsonResponse();
@@ -50,8 +61,8 @@ export async function GET(req: Request) {
       and(
         eq(entityMentions.braneId, braneId),
         eq(entityMentions.sourceKind, "term"),
-        eq(entityMentions.matchedTerm, term),
-      ),
+        eq(entityMentions.matchedTerm, term)
+      )
     )
     .orderBy(desc(entityMentions.mentionCount), desc(entityMentions.updatedAt))
     .limit(200);

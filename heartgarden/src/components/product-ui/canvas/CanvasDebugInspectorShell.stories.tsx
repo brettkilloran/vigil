@@ -37,7 +37,7 @@ export const Collapsed: Story = {
     title: "DEBUG // Links",
     defaultOpen: false,
     children: (
-      <p className="text-sm text-[var(--vigil-muted)]">
+      <p className="text-[var(--vigil-muted)] text-sm">
         Expand the bug button to reveal this body.
       </p>
     ),
@@ -50,8 +50,10 @@ export const Expanded: Story = {
     title: "DEBUG // Links",
     defaultOpen: true,
     children: (
-      <div className="space-y-2 text-sm text-[var(--sem-text-secondary)]">
-        <p className="font-medium text-[var(--sem-text-primary)]">Sample inspector</p>
+      <div className="space-y-2 text-[var(--sem-text-secondary)] text-sm">
+        <p className="font-medium text-[var(--sem-text-primary)]">
+          Sample inspector
+        </p>
         <p className="text-[var(--vigil-muted)]">
           Uses the same glass panel styling as the live canvas debug rail.
         </p>

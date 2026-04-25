@@ -3,23 +3,23 @@ import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
+import { DS_COLOR } from "@/src/lib/design-system-tokens";
 import {
   enforceGmOnlyBootContext,
   getHeartgardenApiBootContext,
   gmMayAccessSpaceIdAsync,
   heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
-import { invalidateItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
-import { DS_COLOR } from "@/src/lib/design-system-tokens";
-import { buildLoreNoteContentJson } from "@/src/lib/lore-import-commit";
 import {
   heartgardenImportLegacyEnabled,
   heartgardenImportLegacyGoneResponse,
 } from "@/src/lib/heartgarden-import-legacy-gate";
-import { placeImportCards } from "@/src/lib/lore-import-placement";
-import { normalizeImportItemLinkType } from "@/src/lib/lore-import-item-link";
+import { invalidateItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
 import { validateLinkTargetsInBrane } from "@/src/lib/item-links-validation";
 import { normalizeCanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
+import { buildLoreNoteContentJson } from "@/src/lib/lore-import-commit";
+import { normalizeImportItemLinkType } from "@/src/lib/lore-import-item-link";
+import { placeImportCards } from "@/src/lib/lore-import-placement";
 import { persistedEntityTypeFromCanonical } from "@/src/lib/lore-object-registry";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
 import { buildSearchBlob } from "@/src/lib/search-blob";
@@ -58,14 +58,21 @@ const bodySchema = z.object({
 });
 
 function dedupeEntities(
-  list: z.infer<typeof entitySchema>[],
+  list: z.infer<typeof entitySchema>[]
 ): { canonicalName: string; kind?: string; summary?: string }[] {
-  const byKey = new Map<string, { canonicalName: string; kind?: string; summary?: string }>();
+  const byKey = new Map<
+    string,
+    { canonicalName: string; kind?: string; summary?: string }
+  >();
   for (const e of list) {
     const name = e.name.trim();
-    if (!name) continue;
+    if (!name) {
+      continue;
+    }
     const key = name.toLowerCase();
-    if (byKey.has(key)) continue;
+    if (byKey.has(key)) {
+      continue;
+    }
     byKey.set(key, {
       canonicalName: name,
       kind: e.kind?.trim() || undefined,
@@ -77,10 +84,12 @@ function dedupeEntities(
 
 function resolveNameToId(
   nameToId: Map<string, string>,
-  raw: string,
+  raw: string
 ): string | undefined {
   const t = raw.trim();
-  if (!t) return undefined;
+  if (!t) {
+    return;
+  }
   return nameToId.get(t.toLowerCase());
 }
 
@@ -91,13 +100,15 @@ export async function POST(req: Request) {
 
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
 
   const db = tryGetDb();
   if (!db) {
     return Response.json(
       { ok: false, error: "Database not configured" },
-      { status: 503 },
+      { status: 503 }
     );
   }
 
@@ -112,7 +123,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json(
       { ok: false, error: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -123,13 +134,16 @@ export async function POST(req: Request) {
   if (!sourceText && deduped.length < 1) {
     return Response.json(
       { ok: false, error: "Provide source text and/or at least one entity" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
   const space = await assertSpaceExists(db, spaceId);
   if (!space) {
-    return Response.json({ ok: false, error: "Space not found" }, { status: 404 });
+    return Response.json(
+      { ok: false, error: "Space not found" },
+      { status: 404 }
+    );
   }
   if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
@@ -151,18 +165,16 @@ export async function POST(req: Request) {
         .filter(
           (l) =>
             l.from === e.canonicalName.toLowerCase() ||
-            l.to === e.canonicalName.toLowerCase(),
+            l.to === e.canonicalName.toLowerCase()
         )
-        .map((l) =>
-          l.from === e.canonicalName.toLowerCase() ? l.to : l.from,
-        ),
+        .map((l) => (l.from === e.canonicalName.toLowerCase() ? l.to : l.from)),
     })),
   });
 
   const embeddingRows: (typeof items.$inferSelect)[] = [];
 
-  const { createdIds, sourceItemId, linksCreated, linkWarnings } = await db.transaction(
-    async (tx) => {
+  const { createdIds, sourceItemId, linksCreated, linkWarnings } =
+    await db.transaction(async (tx) => {
       const [mz] = await tx
         .select({ z: max(items.zIndex) })
         .from(items)
@@ -226,7 +238,9 @@ export async function POST(req: Request) {
         const title =
           sourceDocument?.title?.trim() ||
           (deduped.length ? "Import source" : "Imported note");
-        const contentJson = buildLoreNoteContentJson(sourceText, { aiPending: true });
+        const contentJson = buildLoreNoteContentJson(sourceText, {
+          aiPending: true,
+        });
         const id = await insertNote({
           title,
           contentText: sourceText.slice(0, 120_000),
@@ -250,7 +264,9 @@ export async function POST(req: Request) {
           height: 260,
         };
         const summary = e.summary ?? "";
-        const contentJson = buildLoreNoteContentJson(summary || "—", { aiPending: true });
+        const contentJson = buildLoreNoteContentJson(summary || "—", {
+          aiPending: true,
+        });
         const canonKind = normalizeCanonicalEntityKind(e.kind ?? "lore");
         const persistedEntityType = persistedEntityTypeFromCanonical(canonKind);
         const id = await insertNote({
@@ -281,16 +297,20 @@ export async function POST(req: Request) {
       for (const link of links) {
         const fromId = resolveNameToId(nameToId, link.fromName);
         const toId = resolveNameToId(nameToId, link.toName);
-        if (!fromId || !toId) {
-          linkErrors.push(`Skipped link "${link.fromName}" → "${link.toName}" (unknown name)`);
+        if (!(fromId && toId)) {
+          linkErrors.push(
+            `Skipped link "${link.fromName}" → "${link.toName}" (unknown name)`
+          );
           continue;
         }
-        if (fromId === toId) continue;
+        if (fromId === toId) {
+          continue;
+        }
 
         const validated = await validateLinkTargetsInBrane(
           tx as unknown as VigilDb,
           fromId,
-          [toId],
+          [toId]
         );
         if (!validated.ok) {
           linkErrors.push(validated.error);
@@ -319,7 +339,9 @@ export async function POST(req: Request) {
             ],
           })
           .returning();
-        if (row) linksCreated += 1;
+        if (row) {
+          linksCreated += 1;
+        }
       }
 
       return {
@@ -328,8 +350,7 @@ export async function POST(req: Request) {
         linksCreated,
         linkWarnings: linkErrors.length ? linkErrors : undefined,
       };
-    },
-  );
+    });
 
   for (const row of embeddingRows) {
     if (row.contentText.trim().length > 0 || row.title.trim().length > 0) {

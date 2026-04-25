@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
+import {
+  embedTexts,
+  isEmbeddingApiConfigured,
+} from "@/src/lib/embedding-provider";
 
 describe("embedding-provider", () => {
   it("isEmbeddingApiConfigured is false (no embedding API wired)", () => {

@@ -9,13 +9,21 @@ export type HgDocSection = {
 };
 
 function nodeText(node: JSONContent | null | undefined): string {
-  if (!node) return "";
+  if (!node) {
+    return "";
+  }
   const parts: string[] = [];
   const walk = (n: JSONContent) => {
-    if (typeof n.text === "string" && n.text.trim()) parts.push(n.text.trim());
-    if (n.type === "horizontalRule") parts.push("—");
+    if (typeof n.text === "string" && n.text.trim()) {
+      parts.push(n.text.trim());
+    }
+    if (n.type === "horizontalRule") {
+      parts.push("—");
+    }
     if (Array.isArray(n.content)) {
-      for (const child of n.content) walk(child);
+      for (const child of n.content) {
+        walk(child);
+      }
     }
   };
   walk(node);
@@ -29,11 +37,16 @@ type TempSection = {
 
 function trimHeadingPath(path: string[]): string[] {
   const out = path.map((p) => p.trim()).filter(Boolean);
-  if (out.length === 0) return ["Untitled"];
+  if (out.length === 0) {
+    return ["Untitled"];
+  }
   return out;
 }
 
-export function deriveSectionsFromHgDoc(doc: JSONContent, itemTitle: string): HgDocSection[] {
+export function deriveSectionsFromHgDoc(
+  doc: JSONContent,
+  itemTitle: string
+): HgDocSection[] {
   const title = itemTitle.trim() || "Untitled";
   const topLevel = Array.isArray(doc?.content) ? doc.content : [];
   if (topLevel.length === 0) {
@@ -45,7 +58,10 @@ export function deriveSectionsFromHgDoc(doc: JSONContent, itemTitle: string): Hg
   let activeText: string[] = [];
 
   const flush = () => {
-    const text = activeText.join("\n\n").replace(/\n{3,}/g, "\n\n").trim();
+    const text = activeText
+      .join("\n\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
     sections.push({
       headingPath: trimHeadingPath([...headingStack]),
       text,
@@ -58,13 +74,17 @@ export function deriveSectionsFromHgDoc(doc: JSONContent, itemTitle: string): Hg
       flush();
       const headingText = nodeText(block) || "Untitled section";
       const levelRaw = Number(block.attrs?.level);
-      const level = Number.isFinite(levelRaw) ? Math.min(3, Math.max(1, Math.floor(levelRaw))) : 1;
+      const level = Number.isFinite(levelRaw)
+        ? Math.min(3, Math.max(1, Math.floor(levelRaw)))
+        : 1;
       headingStack[level - 1] = headingText;
       headingStack.length = level;
       continue;
     }
     const text = nodeText(block);
-    if (!text) continue;
+    if (!text) {
+      continue;
+    }
     activeText.push(text);
   }
   flush();
@@ -73,7 +93,9 @@ export function deriveSectionsFromHgDoc(doc: JSONContent, itemTitle: string): Hg
   const usable = dense.length > 0 ? dense : sections;
   if (usable.length === 0) {
     const plain = hgDocToPlainText(doc).trim();
-    return [{ headingPath: [title], text: plain, charRange: [0, plain.length] }];
+    return [
+      { headingPath: [title], text: plain, charRange: [0, plain.length] },
+    ];
   }
 
   const withRanges: HgDocSection[] = [];
@@ -83,7 +105,8 @@ export function deriveSectionsFromHgDoc(doc: JSONContent, itemTitle: string): Hg
     const start = cursor;
     const end = start + text.length;
     withRanges.push({
-      headingPath: section.headingPath.length > 0 ? section.headingPath : [title],
+      headingPath:
+        section.headingPath.length > 0 ? section.headingPath : [title],
       text,
       charRange: [start, end],
     });
@@ -92,7 +115,10 @@ export function deriveSectionsFromHgDoc(doc: JSONContent, itemTitle: string): Hg
   return withRanges;
 }
 
-export function fallbackSingleSection(text: string, itemTitle: string): HgDocSection[] {
+export function fallbackSingleSection(
+  text: string,
+  itemTitle: string
+): HgDocSection[] {
   const title = itemTitle.trim() || "Untitled";
   const normalized = text.replace(/\r\n?/g, "\n").trim();
   return [

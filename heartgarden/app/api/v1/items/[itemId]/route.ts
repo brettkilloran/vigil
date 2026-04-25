@@ -12,7 +12,7 @@ import { rowToCanvasItem } from "@/src/lib/item-mapper";
  */
 export async function GET(
   _req: Request,
-  context: { params: Promise<{ itemId: string }> },
+  context: { params: Promise<{ itemId: string }> }
 ) {
   const db = tryGetDb();
   if (!db) {

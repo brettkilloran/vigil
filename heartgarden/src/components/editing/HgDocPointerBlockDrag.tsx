@@ -2,12 +2,21 @@
 
 import type { Editor } from "@tiptap/core";
 import type { RefObject } from "react";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 
 import { Button, type ButtonTone } from "@/src/components/ui/Button";
 import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
-import { moveTopLevelBlock, nthTopLevelRange } from "@/src/lib/hg-doc/move-top-level-block";
+import {
+  moveTopLevelBlock,
+  nthTopLevelRange,
+} from "@/src/lib/hg-doc/move-top-level-block";
 
 type HitBase = {
   index: number;
@@ -25,37 +34,52 @@ type Hit = HitBase & { tone: ButtonTone };
 function yMarginBand(dom: HTMLElement): { yTop: number; yBottom: number } {
   const br = dom.getBoundingClientRect();
   const cs = getComputedStyle(dom);
-  const mt = parseFloat(cs.marginTop) || 0;
-  const mb = parseFloat(cs.marginBottom) || 0;
+  const mt = Number.parseFloat(cs.marginTop) || 0;
+  const mb = Number.parseFloat(cs.marginBottom) || 0;
   return { yTop: br.top - mt, yBottom: br.bottom + mb };
 }
 
-function topLevelChildDom(view: Editor["view"], index: number): HTMLElement | null {
+function topLevelChildDom(
+  view: Editor["view"],
+  index: number
+): HTMLElement | null {
   const { doc } = view.state;
-  if (index < 0 || index >= doc.childCount) return null;
+  if (index < 0 || index >= doc.childCount) {
+    return null;
+  }
 
   const kids = view.dom.children;
   if (kids.length === doc.childCount) {
     const el = kids[index];
-    if (el instanceof HTMLElement) return el;
+    if (el instanceof HTMLElement) {
+      return el;
+    }
   }
 
   const r = nthTopLevelRange(doc, index);
-  if (!r) return null;
+  if (!r) {
+    return null;
+  }
 
   for (let pos = r.from; pos < r.to; pos++) {
     const n = view.nodeDOM(pos);
-    if (n instanceof HTMLElement) return n;
+    if (n instanceof HTMLElement) {
+      return n;
+    }
   }
 
   const inner = Math.min(r.from + 1, Math.max(r.from, r.to - 1));
   try {
     const at = view.domAtPos(inner);
     let node: Node | null = at.node;
-    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+    if (node.nodeType === Node.TEXT_NODE) {
+      node = node.parentElement;
+    }
     let el: Node | null = node;
     while (el instanceof HTMLElement) {
-      if (el.parentElement === view.dom) return el;
+      if (el.parentElement === view.dom) {
+        return el;
+      }
       el = el.parentElement;
     }
   } catch {
@@ -66,13 +90,19 @@ function topLevelChildDom(view: Editor["view"], index: number): HTMLElement | nu
 
 function dropIndexFromClientY(view: Editor["view"], clientY: number): number {
   const { doc } = view.state;
-  if (doc.childCount === 0) return 0;
+  if (doc.childCount === 0) {
+    return 0;
+  }
 
   for (let i = 0; i < doc.childCount; i++) {
     const dom = topLevelChildDom(view, i);
-    if (!dom) continue;
+    if (!dom) {
+      continue;
+    }
     const { yTop, yBottom } = yMarginBand(dom);
-    if (clientY < yTop) return i;
+    if (clientY < yTop) {
+      return i;
+    }
     if (clientY <= yBottom) {
       const mid = (yTop + yBottom) / 2;
       return clientY < mid ? i : i + 1;
@@ -82,22 +112,33 @@ function dropIndexFromClientY(view: Editor["view"], clientY: number): number {
 }
 
 /** Viewport Y (client px) for a horizontal “drop here” bar before child `dropIndex`. */
-function dropGapClientY(view: Editor["view"], dropIndex: number): number | null {
+function dropGapClientY(
+  view: Editor["view"],
+  dropIndex: number
+): number | null {
   const { doc } = view.state;
-  if (doc.childCount === 0) return null;
+  if (doc.childCount === 0) {
+    return null;
+  }
   if (dropIndex <= 0) {
     const dom0 = topLevelChildDom(view, 0);
-    if (!dom0) return null;
+    if (!dom0) {
+      return null;
+    }
     return yMarginBand(dom0).yTop - 2;
   }
   if (dropIndex >= doc.childCount) {
     const last = topLevelChildDom(view, doc.childCount - 1);
-    if (!last) return null;
+    if (!last) {
+      return null;
+    }
     return yMarginBand(last).yBottom + 2;
   }
   const up = topLevelChildDom(view, dropIndex - 1);
   const lo = topLevelChildDom(view, dropIndex);
-  if (!up || !lo) return null;
+  if (!(up && lo)) {
+    return null;
+  }
   const a = yMarginBand(up).yBottom;
   const b = yMarginBand(lo).yTop;
   return (a + b) / 2;
@@ -107,7 +148,7 @@ function dropGapClientY(view: Editor["view"], dropIndex: number): number | null 
 function gripAnchorVerticalNudgePx(dom: HTMLElement): number {
   if (
     dom.matches(
-      'blockquote, ul[data-hg-task-list="true"], ul[data-type="taskList"], li[data-hg-task-item="true"], li[data-type="taskItem"]',
+      'blockquote, ul[data-hg-task-list="true"], ul[data-type="taskList"], li[data-hg-task-item="true"], li[data-type="taskItem"]'
     )
   ) {
     return 3;
@@ -121,10 +162,10 @@ function gripAnchorVerticalNudgePx(dom: HTMLElement): number {
 function parseLineHeightPx(dom: HTMLElement, fallback = 20): number {
   const lh = getComputedStyle(dom).lineHeight;
   if (lh === "normal") {
-    const fs = parseFloat(getComputedStyle(dom).fontSize) || 16;
+    const fs = Number.parseFloat(getComputedStyle(dom).fontSize) || 16;
     return Math.round(fs * 1.25);
   }
-  const n = parseFloat(lh);
+  const n = Number.parseFloat(lh);
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
@@ -133,19 +174,28 @@ function parseLineHeightPx(dom: HTMLElement, fallback = 20): number {
  * `coordsAtPos(blockStart)` often matches the first text line, but for some top-level nodes PM returns
  * a coords rect as tall as the whole block; averaging that recenters the grip vertically.
  */
-function gripAnchorYForBlock(view: Editor["view"], index: number, dom: HTMLElement): number {
+function gripAnchorYForBlock(
+  view: Editor["view"],
+  index: number,
+  dom: HTMLElement
+): number {
   const br = dom.getBoundingClientRect();
   const { doc } = view.state;
   const r = nthTopLevelRange(doc, index);
   const cs = getComputedStyle(dom);
-  const borderTop = parseFloat(cs.borderTopWidth) || 0;
-  const padTop = parseFloat(cs.paddingTop) || 0;
+  const borderTop = Number.parseFloat(cs.borderTopWidth) || 0;
+  const padTop = Number.parseFloat(cs.paddingTop) || 0;
   const lineH = parseLineHeightPx(dom);
   const innerTop = br.top + borderTop + padTop;
-  const innerH = Math.max(0, br.height - borderTop - padTop - (parseFloat(cs.paddingBottom) || 0));
+  const innerH = Math.max(
+    0,
+    br.height - borderTop - padTop - (Number.parseFloat(cs.paddingBottom) || 0)
+  );
 
   const anchorFromBlockTop = (): number => {
-    if (innerH <= 1) return br.top + br.height / 2;
+    if (innerH <= 1) {
+      return br.top + br.height / 2;
+    }
     /* ~first line: offset scales with line-height, stays inside short blocks. */
     const raw = Math.min(lineH * 0.42, innerH * 0.38);
     const yOff = Math.max(3, Math.min(raw, innerH - 2));
@@ -153,19 +203,22 @@ function gripAnchorYForBlock(view: Editor["view"], index: number, dom: HTMLEleme
   };
 
   let y: number;
-  if (!r) {
-    y = anchorFromBlockTop();
-  } else {
+  if (r) {
     try {
       const coords = view.coordsAtPos(r.from);
-      if (Number.isFinite(coords.top) && Number.isFinite(coords.bottom) && coords.bottom > coords.top) {
+      if (
+        Number.isFinite(coords.top) &&
+        Number.isFinite(coords.bottom) &&
+        coords.bottom > coords.top
+      ) {
         const ch = coords.bottom - coords.top;
         /* Tall coords box ≈ whole block — ignore vertical mid; use top-inset anchor instead. */
-        const likelyFullBlockWrapper = ch > Math.max(36, lineH * 2.4, innerH * 0.42);
-        if (!likelyFullBlockWrapper) {
-          y = (coords.top + coords.bottom) / 2;
-        } else {
+        const likelyFullBlockWrapper =
+          ch > Math.max(36, lineH * 2.4, innerH * 0.42);
+        if (likelyFullBlockWrapper) {
           y = anchorFromBlockTop();
+        } else {
+          y = (coords.top + coords.bottom) / 2;
         }
       } else {
         y = anchorFromBlockTop();
@@ -174,6 +227,8 @@ function gripAnchorYForBlock(view: Editor["view"], index: number, dom: HTMLEleme
       /* invalid pos / layout not ready */
       y = anchorFromBlockTop();
     }
+  } else {
+    y = anchorFromBlockTop();
   }
 
   return y + gripAnchorVerticalNudgePx(dom);
@@ -183,7 +238,7 @@ function hitFromClient(
   view: Editor["view"],
   host: HTMLElement | null,
   clientX: number,
-  clientY: number,
+  clientY: number
 ): HitBase | null {
   const vr = view.dom.getBoundingClientRect();
   const hr = host?.getBoundingClientRect() ?? vr;
@@ -193,19 +248,33 @@ function hitFromClient(
   const rightBound = Math.max(vr.right, hr.right) + 40;
   const topBound = Math.min(vr.top, hr.top);
   const bottomBound = Math.max(vr.bottom, hr.bottom);
-  if (clientX < leftBound || clientX > rightBound || clientY < topBound || clientY > bottomBound) {
+  if (
+    clientX < leftBound ||
+    clientX > rightBound ||
+    clientY < topBound ||
+    clientY > bottomBound
+  ) {
     return null;
   }
 
   const { doc } = view.state;
   for (let i = 0; i < doc.childCount; i++) {
     const dom = topLevelChildDom(view, i);
-    if (!dom) continue;
+    if (!dom) {
+      continue;
+    }
     const br = dom.getBoundingClientRect();
     const { yTop, yBottom } = yMarginBand(dom);
     if (clientY >= yTop && clientY <= yBottom) {
       const gripAnchorY = gripAnchorYForBlock(view, i, dom);
-      return { index: i, top: br.top, left: br.left, height: br.height, gripAnchorY, blockEl: dom };
+      return {
+        index: i,
+        top: br.top,
+        left: br.left,
+        height: br.height,
+        gripAnchorY,
+        blockEl: dom,
+      };
     }
   }
   return null;
@@ -213,18 +282,25 @@ function hitFromClient(
 
 function rgbLuminanceFromCssColor(css: string): number | null {
   const m = css.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
-  if (!m) return null;
+  if (!m) {
+    return null;
+  }
   const r = Number(m[1]) / 255;
   const g = Number(m[2]) / 255;
   const b = Number(m[3]) / 255;
   return 0.299 * r + 0.587 * g + 0.114 * b;
 }
 
-function gripToneForHost(host: HTMLElement | null, chromeRole: "focus" | "canvas"): ButtonTone {
+function gripToneForHost(
+  host: HTMLElement | null,
+  chromeRole: "focus" | "canvas"
+): ButtonTone {
   if (chromeRole === "focus") {
     return host?.closest(".focusEditorDark") ? "focus-dark" : "focus-light";
   }
-  if (!host) return "card-light";
+  if (!host) {
+    return "card-light";
+  }
   const lum = rgbLuminanceFromCssColor(getComputedStyle(host).color);
   return lum != null && lum > 0.55 ? "card-dark" : "card-light";
 }
@@ -233,7 +309,9 @@ function stripIdsAndEditable(root: HTMLElement) {
   root.removeAttribute("id");
   root.removeAttribute("contenteditable");
   root.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
-  root.querySelectorAll("[contenteditable]").forEach((el) => el.removeAttribute("contenteditable"));
+  root
+    .querySelectorAll("[contenteditable]")
+    .forEach((el) => el.removeAttribute("contenteditable"));
 }
 
 const DRAG_DIM_ATTR = "data-hg-doc-drag-dimmed";
@@ -247,7 +325,9 @@ function dimDragSlot(el: HTMLElement) {
 
 function clearDragSlotDims(proseRoot: HTMLElement) {
   proseRoot.querySelectorAll(`[${DRAG_DIM_ATTR}]`).forEach((n) => {
-    if (!(n instanceof HTMLElement)) return;
+    if (!(n instanceof HTMLElement)) {
+      return;
+    }
     n.removeAttribute(DRAG_DIM_ATTR);
     n.style.removeProperty("opacity");
     n.style.removeProperty("pointer-events");
@@ -256,7 +336,9 @@ function clearDragSlotDims(proseRoot: HTMLElement) {
 
 function reapplyDragSlotDim(view: Editor["view"], index: number) {
   const el = topLevelChildDom(view, index);
-  if (el && el.isConnected) dimDragSlot(el);
+  if (el && el.isConnected) {
+    dimDragSlot(el);
+  }
 }
 
 export function HgDocPointerBlockDrag({
@@ -280,7 +362,9 @@ export function HgDocPointerBlockDrag({
   const gripButtonRef = useRef<HTMLButtonElement | null>(null);
   const hitRef = useRef(hit);
   /** While set, `refreshHit` must not clear `hit` (grip stays mounted; lift ghost is active). */
-  const dragSessionRef = useRef<{ index: number; blockEl: HTMLElement } | null>(null);
+  const dragSessionRef = useRef<{ index: number; blockEl: HTMLElement } | null>(
+    null
+  );
   /**
    * Synchronous “drag in progress” marker; RAF-driven hover refresh reads this to
    * avoid clearing the grip while a drag session is still active.
@@ -292,15 +376,24 @@ export function HgDocPointerBlockDrag({
   }, [hit]);
 
   const refreshHit = useCallback(() => {
-    if (dragActiveRef.current || dragSessionRef.current != null || dragFrom.current != null) {
+    if (
+      dragActiveRef.current ||
+      dragSessionRef.current != null ||
+      dragFrom.current != null
+    ) {
       return;
     }
 
-    if (!enabled || !editor.view.dom.isConnected) {
+    if (!(enabled && editor.view.dom.isConnected)) {
       setHit(null);
       return;
     }
-    const h = hitFromClient(editor.view, hostRef.current, last.current.x, last.current.y);
+    const h = hitFromClient(
+      editor.view,
+      hostRef.current,
+      last.current.x,
+      last.current.y
+    );
     if (!h) {
       setHit(null);
       return;
@@ -333,13 +426,17 @@ export function HgDocPointerBlockDrag({
   }, []);
 
   useLayoutEffect(() => {
-    if (dragLiftKey === 0 || dragSessionRef.current == null) return;
+    if (dragLiftKey === 0 || dragSessionRef.current == null) {
+      return;
+    }
 
     const view = editor.view;
     const session = dragSessionRef.current;
     const idx = session.index;
     const block: HTMLElement | null =
-      session.blockEl && session.blockEl.isConnected ? session.blockEl : topLevelChildDom(view, idx);
+      session.blockEl && session.blockEl.isConnected
+        ? session.blockEl
+        : topLevelChildDom(view, idx);
     if (!block) {
       dragActiveRef.current = false;
       dragSessionRef.current = null;
@@ -456,7 +553,9 @@ export function HgDocPointerBlockDrag({
 
     const onEditorTransaction = () => {
       const s = dragSessionRef.current;
-      if (!s) return;
+      if (!s) {
+        return;
+      }
       reapplyDragSlotDim(view, s.index);
     };
     editor.on("transaction", onEditorTransaction);
@@ -479,12 +578,16 @@ export function HgDocPointerBlockDrag({
       place(ev.clientX, ev.clientY);
       syncDropLine(ev.clientY);
       const s = dragSessionRef.current;
-      if (s) reapplyDragSlotDim(view, s.index);
+      if (s) {
+        reapplyDragSlotDim(view, s.index);
+      }
     };
     window.addEventListener("pointermove", onPtrMove, { capture: true });
 
     return () => {
-      if (rafDim != null) cancelAnimationFrame(rafDim);
+      if (rafDim != null) {
+        cancelAnimationFrame(rafDim);
+      }
       editor.off("transaction", onEditorTransaction);
       window.removeEventListener("pointermove", onPtrMove, true);
       ghostWrap.remove();
@@ -494,7 +597,9 @@ export function HgDocPointerBlockDrag({
   }, [dragLiftKey, editor, hostRef]);
 
   useLayoutEffect(() => {
-    if (dragLiftKey === 0) return;
+    if (dragLiftKey === 0) {
+      return;
+    }
     const prevCursor = document.body.style.cursor;
     const prevUserSelect = document.body.style.userSelect;
     document.body.style.cursor = "grabbing";
@@ -506,24 +611,33 @@ export function HgDocPointerBlockDrag({
   }, [dragLiftKey]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      return;
+    }
 
     const onMove = (e: PointerEvent) => {
       last.current = { x: e.clientX, y: e.clientY };
-      if (raf.current != null) cancelAnimationFrame(raf.current);
+      if (raf.current != null) {
+        cancelAnimationFrame(raf.current);
+      }
       raf.current = requestAnimationFrame(() => {
         raf.current = null;
         refreshHit();
       });
     };
 
-    window.addEventListener("pointermove", onMove, { capture: true, passive: true });
+    window.addEventListener("pointermove", onMove, {
+      capture: true,
+      passive: true,
+    });
     editor.on("transaction", refreshHit);
 
     return () => {
       window.removeEventListener("pointermove", onMove, true);
       editor.off("transaction", refreshHit);
-      if (raf.current != null) cancelAnimationFrame(raf.current);
+      if (raf.current != null) {
+        cancelAnimationFrame(raf.current);
+      }
     };
   }, [editor, enabled, refreshHit]);
 
@@ -533,15 +647,25 @@ export function HgDocPointerBlockDrag({
       const hi = hitRef.current;
       last.current = { x: ev.clientX, y: ev.clientY };
 
-      const fromPointer = hitFromClient(editor.view, hostRef.current, ev.clientX, ev.clientY);
+      const fromPointer = hitFromClient(
+        editor.view,
+        hostRef.current,
+        ev.clientX,
+        ev.clientY
+      );
       const index = fromPointer?.index ?? hi?.index ?? null;
-      let block: HTMLElement | null = fromPointer?.blockEl ?? hi?.blockEl ?? null;
+      let block: HTMLElement | null =
+        fromPointer?.blockEl ?? hi?.blockEl ?? null;
       if (!block && index != null) {
         block = topLevelChildDom(editor.view, index);
       }
       if (!block && index != null) {
         const kids = editor.view.dom.children;
-        if (index >= 0 && index < kids.length && kids[index] instanceof HTMLElement) {
+        if (
+          index >= 0 &&
+          index < kids.length &&
+          kids[index] instanceof HTMLElement
+        ) {
           block = kids[index] as HTMLElement;
         }
       }
@@ -564,84 +688,112 @@ export function HgDocPointerBlockDrag({
         /* ignore */
       }
     },
-    [editor, hostRef],
+    [editor, hostRef]
   );
 
   /* Document capture: portaled + embedded browsers sometimes skip the button’s own listener chain;
      still require `gripButtonRef` so we only handle *this* editor’s grip. */
   useEffect(() => {
-    if (!enabled || !editor.isEditable) return;
+    if (!(enabled && editor.isEditable)) {
+      return;
+    }
     const onDocPointerDownCapture = (ev: PointerEvent) => {
       const t = ev.target;
-      if (!(t instanceof Element)) return;
+      if (!(t instanceof Element)) {
+        return;
+      }
       const btn = t.closest("[data-hg-doc-block-drag-grip]");
-      if (!btn || !(btn instanceof HTMLButtonElement)) return;
-      if (btn !== gripButtonRef.current) return;
+      if (!(btn && btn instanceof HTMLButtonElement)) {
+        return;
+      }
+      if (btn !== gripButtonRef.current) {
+        return;
+      }
       beginGripPointerDown(ev, btn);
     };
     document.addEventListener("pointerdown", onDocPointerDownCapture, true);
-    return () => document.removeEventListener("pointerdown", onDocPointerDownCapture, true);
+    return () =>
+      document.removeEventListener(
+        "pointerdown",
+        onDocPointerDownCapture,
+        true
+      );
   }, [beginGripPointerDown, editor.isEditable, enabled]);
 
   const finishDrag = useCallback(
     (e: React.PointerEvent) => {
-      if (dragFrom.current == null) return;
+      if (dragFrom.current == null) {
+        return;
+      }
       e.preventDefault();
       const from = dragFrom.current;
       const drop = dropIndexFromClientY(editor.view, e.clientY);
 
       try {
-        (e.currentTarget as HTMLButtonElement).releasePointerCapture(e.pointerId);
+        (e.currentTarget as HTMLButtonElement).releasePointerCapture(
+          e.pointerId
+        );
       } catch {
         /* ignore */
       }
 
       endDragSession();
 
-      if (!editor.isEditable) return;
-      if (drop === from || drop === from + 1) return;
+      if (!editor.isEditable) {
+        return;
+      }
+      if (drop === from || drop === from + 1) {
+        return;
+      }
       moveTopLevelBlock(editor, from, drop);
     },
-    [editor, endDragSession],
+    [editor, endDragSession]
   );
 
-  if (!enabled || typeof document === "undefined") return null;
+  if (!enabled || typeof document === "undefined") {
+    return null;
+  }
 
   const draggingUi = dragLiftKey > 0;
 
   const grip =
     hit && editor.isEditable ? (
       <Button
-        ref={gripButtonRef}
-        type="button"
-        variant="ghost"
-        tone={hit.tone}
-        size="icon"
         aria-label="Drag to move block"
         data-hg-doc-block-drag-grip="true"
+        onLostPointerCapture={() => {
+          endDragSession();
+        }}
+        onPointerCancel={finishDrag}
+        onPointerUp={finishDrag}
+        ref={gripButtonRef}
+        size="icon"
         style={{
           position: "fixed",
-          zIndex: 2147483000,
+          zIndex: 2_147_483_000,
           left: Math.max(8, hit.left - 8),
           top: hit.gripAnchorY,
           transform: "translate(-100%, -50%)",
           cursor: draggingUi ? "grabbing" : "grab",
           pointerEvents: "auto",
         }}
-        onPointerUp={finishDrag}
-        onPointerCancel={finishDrag}
-        onLostPointerCapture={() => {
-          endDragSession();
-        }}
+        tone={hit.tone}
+        type="button"
+        variant="ghost"
       >
         <span aria-hidden>
-          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="14" viewBox="0 0 10 14">
-            <circle cx="2.5" cy="2.5" r="1.25" fill="currentColor" />
-            <circle cx="7.5" cy="2.5" r="1.25" fill="currentColor" />
-            <circle cx="2.5" cy="7" r="1.25" fill="currentColor" />
-            <circle cx="7.5" cy="7" r="1.25" fill="currentColor" />
-            <circle cx="2.5" cy="11.5" r="1.25" fill="currentColor" />
-            <circle cx="7.5" cy="11.5" r="1.25" fill="currentColor" />
+          <svg
+            height="14"
+            viewBox="0 0 10 14"
+            width="10"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle cx="2.5" cy="2.5" fill="currentColor" r="1.25" />
+            <circle cx="7.5" cy="2.5" fill="currentColor" r="1.25" />
+            <circle cx="2.5" cy="7" fill="currentColor" r="1.25" />
+            <circle cx="7.5" cy="7" fill="currentColor" r="1.25" />
+            <circle cx="2.5" cy="11.5" fill="currentColor" r="1.25" />
+            <circle cx="7.5" cy="11.5" fill="currentColor" r="1.25" />
           </svg>
         </span>
       </Button>

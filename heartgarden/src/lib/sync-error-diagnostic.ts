@@ -13,7 +13,9 @@ export type SyncFailureDetail = {
 };
 
 function pageOrigin(): string {
-  if (typeof window === "undefined" || !window.location?.origin) return "(ssr)";
+  if (typeof window === "undefined" || !window.location?.origin) {
+    return "(ssr)";
+  }
   return window.location.origin;
 }
 
@@ -23,7 +25,7 @@ function pageOrigin(): string {
  */
 export function formatSyncFailureReport(
   detail: SyncFailureDetail,
-  ctx: { cloudEnabled: boolean },
+  ctx: { cloudEnabled: boolean }
 ): string {
   const iso = new Date().toISOString();
   const status =
@@ -40,7 +42,9 @@ export function formatSyncFailureReport(
     `operation: ${detail.operation}`,
     `cause: ${detail.cause}`,
   ];
-  if (status != null) lines.push(`httpStatus: ${status}`);
+  if (status != null) {
+    lines.push(`httpStatus: ${status}`);
+  }
   lines.push(`message: ${detail.message.trim() || "Request failed"}`);
   if (detail.responseSnippet?.trim()) {
     const s = detail.responseSnippet.trim();
@@ -51,10 +55,13 @@ export function formatSyncFailureReport(
 
 /** One-line label for the status strip (before the diagnostic separator, if any). */
 export function syncErrorSummaryLine(full: string | null | undefined): string {
-  if (full == null || !full.trim()) return "";
+  if (full == null || !full.trim()) {
+    return "";
+  }
   const t = full.trim();
   const idx = t.indexOf(SYNC_ERROR_DIAGNOSTIC_SEP);
-  const head = idx >= 0 ? t.slice(0, idx).trim() : t.split("\n")[0]?.trim() ?? t;
+  const head =
+    idx >= 0 ? t.slice(0, idx).trim() : (t.split("\n")[0]?.trim() ?? t);
   return head.length > 52 ? `${head.slice(0, 50)}…` : head;
 }
 
@@ -74,13 +81,16 @@ export function syncFailureFromApiResponse(
   res: Response,
   rawText: string,
   body: Record<string, unknown>,
-  logicalOk: boolean,
+  logicalOk: boolean
 ): SyncFailureDetail | null {
-  if (logicalOk) return null;
+  if (logicalOk) {
+    return null;
+  }
   let fromJson = "";
   const errField = body.error;
-  if (typeof errField === "string" && errField.trim()) fromJson = errField.trim();
-  else if (errField != null && typeof errField === "object") {
+  if (typeof errField === "string" && errField.trim()) {
+    fromJson = errField.trim();
+  } else if (errField != null && typeof errField === "object") {
     try {
       fromJson = JSON.stringify(errField).slice(0, 280);
     } catch {

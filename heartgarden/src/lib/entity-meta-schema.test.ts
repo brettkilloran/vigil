@@ -69,7 +69,7 @@ describe("entity-meta-schema", () => {
     expect(() =>
       buildImportedEntityMeta({
         canonicalEntityKind: "dragon" as never,
-      }),
+      })
     ).toThrow(/invalid entity_meta/);
   });
 

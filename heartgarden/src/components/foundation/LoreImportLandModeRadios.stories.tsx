@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs";
+import { useState } from "react";
 import { fn } from "storybook/test";
 
 import styles from "./ArchitecturalCanvasApp.module.css";
@@ -52,10 +52,12 @@ function LandModeInPopoverSection(props: {
   const [mode, setMode] = useState(initialMode);
   return (
     <section className={styles.importUploadPopoverSection}>
-      <h3 className={styles.importUploadPopoverSectionTitle}>How should this import land?</h3>
+      <h3 className={styles.importUploadPopoverSectionTitle}>
+        How should this import land?
+      </h3>
       <LoreImportLandModeRadios
-        name={name}
         mode={mode}
+        name={name}
         onModeChange={(next) => {
           onModeChangeLog?.(next);
           setMode(next);
@@ -72,10 +74,7 @@ export const DefaultManyLoose: Story = {
     onModeChange: fn(),
   },
   render: () => (
-    <LandModeInPopoverSection
-      initialMode="many_loose"
-      onModeChangeLog={fn()}
-    />
+    <LandModeInPopoverSection initialMode="many_loose" onModeChangeLog={fn()} />
   ),
 };
 

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { buildFactionArchive091BodyHtml, factionArchiveRailTextsFromObjectId } from "./lore-faction-archive-html";
+import {
+  buildFactionArchive091BodyHtml,
+  factionArchiveRailTextsFromObjectId,
+} from "./lore-faction-archive-html";
 import {
   resolveLoreCardForCreate,
   synthesizeLoreCardContentJsonAndPlainText,
@@ -12,7 +15,9 @@ import {
 
 describe("resolveLoreCardForCreate", () => {
   it("forces character to v11", () => {
-    expect(resolveLoreCardForCreate({ kind: "character", loreVariant: "v1" })).toEqual({
+    expect(
+      resolveLoreCardForCreate({ kind: "character", loreVariant: "v1" })
+    ).toEqual({
       kind: "character",
       variant: "v11",
     });
@@ -27,19 +32,24 @@ describe("resolveLoreCardForCreate", () => {
 
 describe("synthesizeLoreCardContentJsonAndPlainText", () => {
   it("includes loreCard and html format for faction", () => {
-    const { contentJson, plainText } = synthesizeLoreCardContentJsonAndPlainText({
-      loreCard: { kind: "faction", variant: "v4" },
-    });
+    const { contentJson, plainText } =
+      synthesizeLoreCardContentJsonAndPlainText({
+        loreCard: { kind: "faction", variant: "v4" },
+      });
     expect(contentJson.format).toBe("html");
     expect(typeof contentJson.html).toBe("string");
-    expect((contentJson.hgArch as { loreCard?: { kind: string } }).loreCard?.kind).toBe("faction");
+    expect(
+      (contentJson.hgArch as { loreCard?: { kind: string } }).loreCard?.kind
+    ).toBe("faction");
     expect(plainText.length).toBeGreaterThan(0);
   });
 });
 
 describe("lore canvas shell routing", () => {
   it("faction Archive-091 is not misclassified as character v11 (shared charSkShellV11 letterhead)", () => {
-    const { upper, lower } = factionArchiveRailTextsFromObjectId("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    const { upper, lower } = factionArchiveRailTextsFromObjectId(
+      "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    );
     const html = buildFactionArchive091BodyHtml({
       orgPrimaryInnerHtml: "",
       orgAccentInnerHtml: "",

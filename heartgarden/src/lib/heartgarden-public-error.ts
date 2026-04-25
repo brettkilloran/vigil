@@ -5,7 +5,10 @@ export function jsonPublicError(
   status: number,
   publicMessage: string,
   code: string,
-  extra?: Record<string, unknown>,
+  extra?: Record<string, unknown>
 ): Response {
-  return Response.json({ ok: false, error: publicMessage, code, ...extra }, { status });
+  return Response.json(
+    { ok: false, error: publicMessage, code, ...extra },
+    { status }
+  );
 }

@@ -7,7 +7,10 @@ import {
   orderedLoreLinkTypeOptionsForEndpoints,
 } from "@/src/lib/lore-link-types";
 
-function contentEntity(id: string, loreKind: "character" | "faction" | "location"): CanvasContentEntity {
+function contentEntity(
+  id: string,
+  loreKind: "character" | "faction" | "location"
+): CanvasContentEntity {
   const loreCard =
     loreKind === "character"
       ? { kind: "character" as const, variant: "v11" as const }

@@ -1,10 +1,9 @@
 "use client";
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
-
+import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";
 import { buildArchitecturalSeedNodes } from "@/src/components/foundation/architectural-seed";
-import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 
 const seedNodes = buildArchitecturalSeedNodes({
   taskItem: styles.taskItem,
@@ -19,7 +18,9 @@ const seedNodes = buildArchitecturalSeedNodes({
 
 function getSeed(theme: "default" | "code" | "task" | "media") {
   const node = seedNodes.find((item) => item.theme === theme);
-  if (!node) throw new Error(`Missing seed node for theme: ${theme}`);
+  if (!node) {
+    throw new Error(`Missing seed node for theme: ${theme}`);
+  }
   return node;
 }
 
@@ -120,4 +121,3 @@ export const Media: Story = {
     tapeVariant: "dark",
   },
 };
-

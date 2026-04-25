@@ -1,18 +1,8 @@
 import { randomUUID } from "crypto";
-
+import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
+import { fetchDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
 import type { CanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
 import { chunkSourceText } from "@/src/lib/lore-import-chunk";
-import {
-  attachBodiesToOutline,
-  ensureOutlineHasFallbackNote,
-  renderStructuredBodyPlainText,
-  type LoreImportLlmCallEvent,
-  runLoreImportClarifyLlm,
-  runLoreImportMergeLlmBatched,
-  runLoreImportOutlineLlm,
-  type CandidateRow,
-  type SpaceCandidateRow,
-} from "@/src/lib/lore-import-plan-llm";
 import {
   capClarificationList,
   ensureClarificationsForContradictions,
@@ -21,25 +11,34 @@ import {
 } from "@/src/lib/lore-import-clarifications";
 import { filterPlanLinksToSameCanvasSpace } from "@/src/lib/lore-import-item-link";
 import { coerceImportLinkType } from "@/src/lib/lore-import-link-shape";
-import type { LoreImportProgressReporter } from "@/src/lib/lore-import-progress";
 import { computeLoreImportPipelinePercent } from "@/src/lib/lore-import-pipeline-progress";
+import {
+  attachBodiesToOutline,
+  type CandidateRow,
+  ensureOutlineHasFallbackNote,
+  type LoreImportLlmCallEvent,
+  renderStructuredBodyPlainText,
+  runLoreImportClarifyLlm,
+  runLoreImportMergeLlmBatched,
+  runLoreImportOutlineLlm,
+  type SpaceCandidateRow,
+} from "@/src/lib/lore-import-plan-llm";
 import type {
   IngestionSignals,
   LoreImportPlan,
   LoreImportUserContext,
 } from "@/src/lib/lore-import-plan-types";
 import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
-import { LOCATION_TOP_FIELD_CHAR_CAPS } from "@/src/lib/lore-location-focus-document-html";
-import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
-import { fetchDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
+import type { LoreImportProgressReporter } from "@/src/lib/lore-import-progress";
 import {
   applyAllowedSpaceIdsToFilters,
   buildSpacePath,
   loadSpaceMapForLoreImportPathLabels,
 } from "@/src/lib/lore-import-space-scope";
+import { LOCATION_TOP_FIELD_CHAR_CAPS } from "@/src/lib/lore-location-focus-document-html";
 import type { SearchFilters, VigilDb } from "@/src/lib/spaces";
-import { IMPORT_MERGE_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 import { hybridRetrieveItems } from "@/src/lib/vault-retrieval";
+import { IMPORT_MERGE_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 
 const GM_LORE_IMPORT_SEARCH = { role: "gm" } as const;
 
@@ -92,7 +91,7 @@ type LoreImportFindings = {
 };
 
 type LoreImportPlanEventReporter = (
-  event: LoreImportPlanEvent,
+  event: LoreImportPlanEvent
 ) => void | Promise<void>;
 
 export async function buildLoreImportPlan(args: {
@@ -124,8 +123,12 @@ export async function buildLoreImportPlan(args: {
     await args.onEvent?.(event);
   };
   const beginPhaseIfNeeded = async (nextPhase: string): Promise<void> => {
-    if (!nextPhase) return;
-    if (currentPhase === nextPhase) return;
+    if (!nextPhase) {
+      return;
+    }
+    if (currentPhase === nextPhase) {
+      return;
+    }
     const now = Date.now();
     if (currentPhase) {
       await emitEvent({
@@ -144,7 +147,9 @@ export async function buildLoreImportPlan(args: {
     });
   };
   const flushCurrentPhase = async (): Promise<void> => {
-    if (!currentPhase) return;
+    if (!currentPhase) {
+      return;
+    }
     const now = Date.now();
     await emitEvent({
       kind: "phase_end",
@@ -157,7 +162,7 @@ export async function buildLoreImportPlan(args: {
   };
   const emitLlmCall = async (
     event: LoreImportLlmCallEvent,
-    phase: string,
+    phase: string
   ): Promise<void> => {
     await emitEvent({
       kind: "llm_call",
@@ -179,7 +184,7 @@ export async function buildLoreImportPlan(args: {
       total?: number;
       phaseFraction?: number;
       meta?: Record<string, unknown>;
-    },
+    }
   ) => {
     await beginPhaseIfNeeded(phase);
     const pipelinePercent =
@@ -212,12 +217,16 @@ export async function buildLoreImportPlan(args: {
     args.userContext,
     async (event) => {
       await emitLlmCall(event, "outline");
-    },
+    }
   );
-  await reportProgress("outline", "Outline generated; attaching chunk-backed note bodies", {
-    phaseFraction: 0.92,
-    meta: { subphase: "parsing" },
-  });
+  await reportProgress(
+    "outline",
+    "Outline generated; attaching chunk-backed note bodies",
+    {
+      phaseFraction: 0.92,
+      meta: { subphase: "parsing" },
+    }
+  );
   await reportProgress("outline", "Attaching chunk-backed note bodies", {
     phaseFraction: 0.96,
     meta: { subphase: "attaching_bodies" },
@@ -249,18 +258,20 @@ export async function buildLoreImportPlan(args: {
   const locationTopFieldTrimWarnings: string[] = [];
 
   const notesInternal: OutlineNoteInternal[] = outline.notes.map((n) => ({
-    ...(function () {
+    ...(() => {
       const locationTrimFields =
         n.body && n.body.kind === "location"
-          ? (
+          ? ((
               n.body as typeof n.body & {
-                __locationTopFieldTrimmedFields?: Array<"name" | "context" | "detail">;
+                __locationTopFieldTrimmedFields?: Array<
+                  "name" | "context" | "detail"
+                >;
               }
-            ).__locationTopFieldTrimmedFields ?? []
+            ).__locationTopFieldTrimmedFields ?? [])
           : [];
       for (const field of locationTrimFields) {
         locationTopFieldTrimWarnings.push(
-          `Location "${n.title}" ${field} exceeded ${LOCATION_TOP_FIELD_CHAR_CAPS[field]} chars and was trimmed during import.`,
+          `Location "${n.title}" ${field} exceeded ${LOCATION_TOP_FIELD_CHAR_CAPS[field]} chars and was trimmed during import.`
         );
       }
       return n;
@@ -269,24 +280,35 @@ export async function buildLoreImportPlan(args: {
       renderStructuredBodyPlainText(n.body).slice(0, 120_000) ||
       String((n as { bodyText?: string }).bodyText ?? "").slice(0, 120_000),
   }));
-  const titleByClientId = new Map(notesInternal.map((n) => [n.clientId, n.title]));
+  const titleByClientId = new Map(
+    notesInternal.map((n) => [n.clientId, n.title])
+  );
   for (const dup of chunkDiagnostics.duplicateQuotePassages) {
-    if (dup.noteClientIds.length <= 1) continue;
+    if (dup.noteClientIds.length <= 1) {
+      continue;
+    }
     const primaryId = dup.noteClientIds[0]!;
     const primaryTitle = titleByClientId.get(primaryId) ?? "Related note";
-    const shortMention = dup.quote.split(/(?<=[.!?])\s+/)[0]?.slice(0, 180) ?? dup.quote.slice(0, 180);
+    const shortMention =
+      dup.quote.split(/(?<=[.!?])\s+/)[0]?.slice(0, 180) ??
+      dup.quote.slice(0, 180);
     for (const noteId of dup.noteClientIds.slice(1)) {
       const note = notesInternal.find((n) => n.clientId === noteId);
-      if (!note) continue;
+      if (!note) {
+        continue;
+      }
       note.sourcePassages = (note.sourcePassages ?? []).filter(
-        (sp) => sp.quote.replace(/\s+/g, " ").trim() !== dup.quote,
+        (sp) => sp.quote.replace(/\s+/g, " ").trim() !== dup.quote
       );
       // REVIEW_2026-04-25_1730 H6: emit a bold cross-reference instead of
       // a `[[Title]]` marker; the wiki-link assist that resolved those
       // markers no longer exists.
       const refLine = `**See:** ${primaryTitle}`;
       if (!note.bodyText.includes(refLine)) {
-        note.bodyText = `${note.bodyText}\n\n${shortMention} ${refLine}`.slice(0, 120_000);
+        note.bodyText = `${note.bodyText}\n\n${shortMention} ${refLine}`.slice(
+          0,
+          120_000
+        );
       }
     }
   }
@@ -297,10 +319,14 @@ export async function buildLoreImportPlan(args: {
       ? await fetchDescendantSpaceIds(args.db, args.spaceId)
       : null;
   const baseVaultSearchFilters: SearchFilters =
-    (await finalizeHeartgardenSearchFiltersForDb(args.db, GM_LORE_IMPORT_SEARCH, {})) ?? {};
+    (await finalizeHeartgardenSearchFiltersForDb(
+      args.db,
+      GM_LORE_IMPORT_SEARCH,
+      {}
+    )) ?? {};
   const vaultSearchFilters: SearchFilters = applyAllowedSpaceIdsToFilters(
     baseVaultSearchFilters,
-    allowedSpaceIds,
+    allowedSpaceIds
   );
   const spaceById = await loadSpaceMapForLoreImportPathLabels({
     db: args.db,
@@ -322,31 +348,47 @@ export async function buildLoreImportPlan(args: {
   const spaceCandidatesByNoteClientId: Record<string, SpaceCandidateRow[]> = {};
   const globalSpaceSuggestions = new Map<
     string,
-    { spaceId: string; spaceTitle: string; path?: string; score: number; reason?: string }
+    {
+      spaceId: string;
+      spaceTitle: string;
+      path?: string;
+      score: number;
+      reason?: string;
+    }
   >();
   const retrievalTotal = Math.max(
     1,
-    Math.ceil(notesInternal.length / VAULT_SEARCH_CONCURRENCY),
+    Math.ceil(notesInternal.length / VAULT_SEARCH_CONCURRENCY)
   );
   for (let i = 0; i < notesInternal.length; i += VAULT_SEARCH_CONCURRENCY) {
     const retrievalStep = Math.floor(i / VAULT_SEARCH_CONCURRENCY) + 1;
-    await reportProgress("vault_retrieval", "Searching existing vault candidates", {
-      step: retrievalStep,
-      total: retrievalTotal,
-    });
+    await reportProgress(
+      "vault_retrieval",
+      "Searching existing vault candidates",
+      {
+        step: retrievalStep,
+        total: retrievalTotal,
+      }
+    );
     const retrievalStartedAt = Date.now();
     const slice = notesInternal.slice(i, i + VAULT_SEARCH_CONCURRENCY);
     const results = await Promise.all(
       slice.map(async (n) => {
         const q = `${n.title} ${n.summary}`.trim().slice(0, 800);
-        const hybrid = await hybridRetrieveItems(args.db, q, vaultSearchFilters, {
-          ...IMPORT_MERGE_HYBRID_OPTIONS,
-          includeVector: true,
-        });
+        const hybrid = await hybridRetrieveItems(
+          args.db,
+          q,
+          vaultSearchFilters,
+          {
+            ...IMPORT_MERGE_HYBRID_OPTIONS,
+            includeVector: true,
+          }
+        );
         const rows = hybrid.rows.map((r) => {
           const snippet =
             hybrid.itemIdToFtsSnippet.get(r.item.id) ??
-            (hybrid.itemIdToChunks.get(r.item.id)?.[0] ?? undefined);
+            hybrid.itemIdToChunks.get(r.item.id)?.[0] ??
+            undefined;
           return {
             itemId: r.item.id,
             title: r.item.title ?? "",
@@ -361,7 +403,10 @@ export async function buildLoreImportPlan(args: {
           itemId: r.item.id,
           spaceId: r.space.id,
           title: (r.item.title ?? "").slice(0, 255),
-          score: typeof r.score === "number" ? Math.max(0, Math.min(1, r.score)) : undefined,
+          score:
+            typeof r.score === "number"
+              ? Math.max(0, Math.min(1, r.score))
+              : undefined,
           snippet:
             hybrid.itemIdToFtsSnippet.get(r.item.id)?.slice(0, 1200) ??
             hybrid.itemIdToChunks.get(r.item.id)?.[0]?.slice(0, 1200),
@@ -379,7 +424,9 @@ export async function buildLoreImportPlan(args: {
           entry.score += typeof row.score === "number" ? row.score : 0;
           if (entry.topTitles.length < 3) {
             const title = (row.item.title ?? "").trim();
-            if (title) entry.topTitles.push(title.slice(0, 255));
+            if (title) {
+              entry.topTitles.push(title.slice(0, 255));
+            }
           }
           bySpace.set(row.space.id, entry);
         }
@@ -402,7 +449,7 @@ export async function buildLoreImportPlan(args: {
             };
           });
         return { clientId: n.clientId, rows, relatedItems, spaceCandidates };
-      }),
+      })
     );
     for (const r of results) {
       candidatesByNoteClientId[r.clientId] = r.rows;
@@ -425,7 +472,7 @@ export async function buildLoreImportPlan(args: {
       ...findings,
       candidates: Object.values(candidatesByNoteClientId).reduce(
         (sum, rows) => sum + rows.length,
-        0,
+        0
       ),
       candidateSpaces: globalSpaceSuggestions.size,
     };
@@ -459,33 +506,32 @@ export async function buildLoreImportPlan(args: {
     mergeProposals: rawMerges,
     contradictions: rawContra,
     targetSpaces: rawTargetSpaces,
-  } =
-    await runLoreImportMergeLlmBatched(
-      args.apiKey,
-      args.model,
-      mergeInput,
-      candidatesByNoteClientId,
-      spaceCandidatesByNoteClientId,
-      async (step, total) => {
-        await reportProgress("merge", "Running merge analysis batches", {
-          step,
-          total,
-          meta: {
-            subphase: `batch ${step} of ${total}`,
-          },
-        });
-      },
-      async (event) => {
-        await emitLlmCall(event, "merge");
-      },
-    );
+  } = await runLoreImportMergeLlmBatched(
+    args.apiKey,
+    args.model,
+    mergeInput,
+    candidatesByNoteClientId,
+    spaceCandidatesByNoteClientId,
+    async (step, total) => {
+      await reportProgress("merge", "Running merge analysis batches", {
+        step,
+        total,
+        meta: {
+          subphase: `batch ${step} of ${total}`,
+        },
+      });
+    },
+    async (event) => {
+      await emitLlmCall(event, "merge");
+    }
+  );
   const targetSpaceByNoteClientId = new Map(
-    rawTargetSpaces.map((row) => [row.noteClientId, row]),
+    rawTargetSpaces.map((row) => [row.noteClientId, row])
   );
 
   const mergeProposals = rawMerges.map((m) => {
     const row = candidatesByNoteClientId[m.noteClientId]?.find(
-      (c) => c.itemId === m.targetItemId,
+      (c) => c.itemId === m.targetItemId
     );
     return {
       id: randomUUID(),
@@ -511,18 +557,25 @@ export async function buildLoreImportPlan(args: {
     ...findings,
     mergeProposals: mergeProposals.length,
     contradictions: contradictions.length,
-    targetSpaceRoutes: rawTargetSpaces.filter((row) => row.targetSpaceId).length,
+    targetSpaceRoutes: rawTargetSpaces.filter((row) => row.targetSpaceId)
+      .length,
   };
 
   const kindByClientId = new Map(
-    notesInternal.map((n) => [n.clientId, n.canonicalEntityKind]),
+    notesInternal.map((n) => [n.clientId, n.canonicalEntityKind])
   );
   const impliedBindingLinks = notesInternal
     .map((n) => {
-      if (n.body?.kind !== "character") return null;
+      if (n.body?.kind !== "character") {
+        return null;
+      }
       const target = n.body.affiliationFactionClientId?.trim();
-      if (!target) return null;
-      if (!notesInternal.some((candidate) => candidate.clientId === target)) return null;
+      if (!target) {
+        return null;
+      }
+      if (!notesInternal.some((candidate) => candidate.clientId === target)) {
+        return null;
+      }
       return {
         fromClientId: n.clientId,
         toClientId: target,
@@ -530,24 +583,35 @@ export async function buildLoreImportPlan(args: {
         linkIntent: "binding_hint" as const,
       };
     })
-    .filter((l): l is { fromClientId: string; toClientId: string; linkType: string; linkIntent: "binding_hint" } => Boolean(l));
+    .filter(
+      (
+        l
+      ): l is {
+        fromClientId: string;
+        toClientId: string;
+        linkType: string;
+        linkIntent: "binding_hint";
+      } => Boolean(l)
+    );
   const coercionWarnings: string[] = [];
-  const shapedOutlineLinks = [...outline.links, ...impliedBindingLinks].map((l) => {
-    const fromKind = kindByClientId.get(l.fromClientId);
-    const toKind = kindByClientId.get(l.toClientId);
-    const coerced = coerceImportLinkType(fromKind, toKind, l.linkType);
-    if (coerced.coerced && coerced.reason) {
-      coercionWarnings.push(
-        `Link ${l.fromClientId} → ${l.toClientId}: ${coerced.reason}`,
-      );
+  const shapedOutlineLinks = [...outline.links, ...impliedBindingLinks].map(
+    (l) => {
+      const fromKind = kindByClientId.get(l.fromClientId);
+      const toKind = kindByClientId.get(l.toClientId);
+      const coerced = coerceImportLinkType(fromKind, toKind, l.linkType);
+      if (coerced.coerced && coerced.reason) {
+        coercionWarnings.push(
+          `Link ${l.fromClientId} → ${l.toClientId}: ${coerced.reason}`
+        );
+      }
+      return {
+        fromClientId: l.fromClientId,
+        toClientId: l.toClientId,
+        linkType: coerced.linkType,
+        linkIntent: l.linkIntent,
+      };
     }
-    return {
-      fromClientId: l.fromClientId,
-      toClientId: l.toClientId,
-      linkType: coerced.linkType,
-      linkIntent: l.linkIntent,
-    };
-  });
+  );
 
   const {
     links: coLocatedLinks,
@@ -558,7 +622,7 @@ export async function buildLoreImportPlan(args: {
       clientId: n.clientId,
       folderClientId: n.folderClientId,
     })),
-    shapedOutlineLinks,
+    shapedOutlineLinks
   );
   for (const warning of locationTopFieldTrimWarnings) {
     await emitEvent({
@@ -593,11 +657,18 @@ export async function buildLoreImportPlan(args: {
   // keep the structured `crossFolderMentions` for downstream wiring.
   const mentionsBySource = new Map<
     string,
-    { toClientId: string; targetTitle: string; linkType: string; linkIntent?: "association" | "binding_hint" }[]
+    {
+      toClientId: string;
+      targetTitle: string;
+      linkType: string;
+      linkIntent?: "association" | "binding_hint";
+    }[]
   >();
   for (const m of crossSpaceMentions) {
     const targetTitle = titleByClientId.get(m.toClientId);
-    if (!targetTitle) continue;
+    if (!targetTitle) {
+      continue;
+    }
     const list = mentionsBySource.get(m.fromClientId) ?? [];
     list.push({
       toClientId: m.toClientId,
@@ -609,11 +680,14 @@ export async function buildLoreImportPlan(args: {
   }
   for (const n of notesInternal) {
     const mentions = mentionsBySource.get(n.clientId);
-    if (!mentions || mentions.length === 0) continue;
+    if (!mentions || mentions.length === 0) {
+      continue;
+    }
     const titles = mentions.map((m) => m.targetTitle).join(", ");
     const appended = `\n\n**Related (in other folders):** ${titles}`;
     n.bodyText = (n.bodyText + appended).slice(0, 120_000);
-    (n as { crossFolderMentions?: typeof mentions }).crossFolderMentions = mentions;
+    (n as { crossFolderMentions?: typeof mentions }).crossFolderMentions =
+      mentions;
   }
 
   const clarifyPayload = {
@@ -651,28 +725,34 @@ export async function buildLoreImportPlan(args: {
       heading: c.heading,
       excerpt: args.fullText.slice(
         c.charStart,
-        Math.min(c.charEnd, c.charStart + 2400),
+        Math.min(c.charEnd, c.charStart + 2400)
       ),
     })),
   };
 
-  await reportProgress("clarify", "Generating contradiction and clarification questions", {
-    phaseFraction: 0.12,
-  });
+  await reportProgress(
+    "clarify",
+    "Generating contradiction and clarification questions",
+    {
+      phaseFraction: 0.12,
+    }
+  );
   const clarifyRaw = await runLoreImportClarifyLlm(
     args.apiKey,
     args.model,
     clarifyPayload,
     async (event) => {
       await emitLlmCall(event, "clarify");
-    },
+    }
   );
-  await reportProgress("clarify", "Consolidating review questions", { phaseFraction: 0.95 });
+  await reportProgress("clarify", "Consolidating review questions", {
+    phaseFraction: 0.95,
+  });
   let clarifications = normalizeClarificationsFromLlm(clarifyRaw);
   clarifications = ensureClarificationsForContradictions(
     contradictions,
     mergeProposals,
-    clarifications,
+    clarifications
   );
   clarifications = capClarificationList(clarifications);
   clarifications = withoutLinkSemanticsClarifications(clarifications);
@@ -698,14 +778,16 @@ export async function buildLoreImportPlan(args: {
       parentClientId: f.parentClientId,
     })),
     notes: notesInternal.map((n) => {
-      const mentions = (n as {
-        crossFolderMentions?: {
-          toClientId: string;
-          targetTitle: string;
-          linkType: string;
-          linkIntent?: "association" | "binding_hint";
-        }[];
-      }).crossFolderMentions;
+      const mentions = (
+        n as {
+          crossFolderMentions?: {
+            toClientId: string;
+            targetTitle: string;
+            linkType: string;
+            linkIntent?: "association" | "binding_hint";
+          }[];
+        }
+      ).crossFolderMentions;
       const targetSpace = targetSpaceByNoteClientId.get(n.clientId);
       const relatedItems = relatedItemsByNoteClientId[n.clientId] ?? [];
       return {
@@ -728,7 +810,9 @@ export async function buildLoreImportPlan(args: {
         ...(typeof targetSpace?.confidence === "number"
           ? { targetSpaceConfidence: targetSpace.confidence }
           : {}),
-        ...(targetSpace?.reason ? { targetSpaceReason: targetSpace.reason } : {}),
+        ...(targetSpace?.reason
+          ? { targetSpaceReason: targetSpace.reason }
+          : {}),
         ...(relatedItems.length > 0 ? { relatedItems } : {}),
         ...(mentions && mentions.length > 0
           ? { crossFolderMentions: mentions }
@@ -761,7 +845,11 @@ export async function buildLoreImportPlan(args: {
       linkWarnings.length > 0 ||
       coercionWarnings.length > 0 ||
       locationTopFieldTrimWarnings.length > 0
-        ? [...locationTopFieldTrimWarnings, ...coercionWarnings, ...linkWarnings]
+        ? [
+            ...locationTopFieldTrimWarnings,
+            ...coercionWarnings,
+            ...linkWarnings,
+          ]
         : undefined,
     userContext: args.userContext,
   };
@@ -771,7 +859,9 @@ export async function buildLoreImportPlan(args: {
     await flushCurrentPhase();
     throw new Error(`Plan validation failed: ${parsed.error.message}`);
   }
-  await reportProgress("finalize", "Finalizing validated import plan", { phaseFraction: 1 });
+  await reportProgress("finalize", "Finalizing validated import plan", {
+    phaseFraction: 1,
+  });
   await flushCurrentPhase();
   return parsed.data;
 }

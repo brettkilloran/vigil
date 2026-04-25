@@ -86,9 +86,14 @@ export const DEFAULT_SLASH_COMMAND_ITEMS: SlashCommandItem[] = [
   },
 ];
 
-export function filterSlashCommands(items: SlashCommandItem[], query: string): SlashCommandItem[] {
+export function filterSlashCommands(
+  items: SlashCommandItem[],
+  query: string
+): SlashCommandItem[] {
   const q = query.trim().toLowerCase();
-  if (!q) return items;
+  if (!q) {
+    return items;
+  }
   return items.filter((it) => {
     const hay = [it.label, it.id, ...(it.keywords ?? [])]
       .join(" ")

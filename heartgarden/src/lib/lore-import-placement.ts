@@ -59,7 +59,7 @@ function cellKey(c: Cell): string {
 function pointToCell(
   x: number,
   y: number,
-  origin: { x: number; y: number },
+  origin: { x: number; y: number }
 ): Cell {
   const step = IMPORT_CARD_WIDTH + IMPORT_CARD_GAP;
   return {
@@ -72,7 +72,7 @@ function cellToRect(
   c: Cell,
   origin: { x: number; y: number },
   width: number,
-  height: number,
+  height: number
 ): ImportPlacementRect {
   const stepX = IMPORT_CARD_WIDTH + IMPORT_CARD_GAP;
   const stepY = IMPORT_CARD_HEIGHT + IMPORT_CARD_GAP;
@@ -104,7 +104,7 @@ function* spiralCells(center: Cell, maxRadius: number): IterableIterator<Cell> {
  * affinity between entities. Deterministic: same input ⇒ same output.
  */
 export function placeImportCards(
-  input: PlaceImportCardsInput,
+  input: PlaceImportCardsInput
 ): PlaceImportCardsOutput {
   const origin = { x: input.originX, y: input.originY };
   const occupied = new Set<string>();
@@ -147,7 +147,9 @@ export function placeImportCards(
   }
   const ordered = [...input.entities].sort((a, b) => {
     const d = (degree.get(b.clientId) ?? 0) - (degree.get(a.clientId) ?? 0);
-    if (d !== 0) return d;
+    if (d !== 0) {
+      return d;
+    }
     return input.entities.indexOf(a) - input.entities.indexOf(b);
   });
 
@@ -208,7 +210,7 @@ export function placeImportCardsCountOnly(
   originX: number,
   originY: number,
   hasSource: boolean,
-  entityCount: number,
+  entityCount: number
 ): {
   source?: ImportPlacementRect;
   entities: ImportPlacementRect[];
@@ -220,9 +222,7 @@ export function placeImportCardsCountOnly(
   const result = placeImportCards({
     originX,
     originY,
-    source: hasSource
-      ? { width: 420, height: 360 }
-      : undefined,
+    source: hasSource ? { width: 420, height: 360 } : undefined,
     entities,
   });
   return {

@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import { itemEmbeddings, itemLinks, items, spaces } from "@/src/db/schema";
+import { scheduleEntityMentionRescanOnVocabularyChange } from "@/src/lib/entity-mentions";
+import { deriveVocabularyTermsFromSeed } from "@/src/lib/entity-vocabulary";
 import {
   getHeartgardenApiBootContext,
   gmMayAccessItemSpaceAsync,
@@ -13,31 +15,31 @@ import {
   playerMayAccessItemSpaceAsync,
   playerMayApplySpaceIdPatchAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { validateItemWriteJsonPayload } from "@/src/lib/heartgarden-item-json-schema";
+import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
+import { jsonValidationError } from "@/src/lib/heartgarden-validation-error";
+import { scrubHgArchRefsAfterItemDelete } from "@/src/lib/hg-arch-orphan-repair";
+import { invalidateItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
+import { rowToCanvasItem } from "@/src/lib/item-mapper";
+import { jsonValuesEqualForPatch } from "@/src/lib/json-value-equal";
 import {
   playersMayCreateItemType,
   playersMayPatchItemType,
   playersPatchBodyViolatesPolicy,
   stripGmOnlyEntityMetaPatch,
 } from "@/src/lib/player-item-policy";
-import { invalidateItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
-import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
-import { validateItemWriteJsonPayload } from "@/src/lib/heartgarden-item-json-schema";
-import { jsonValidationError } from "@/src/lib/heartgarden-validation-error";
-import { rowToCanvasItem } from "@/src/lib/item-mapper";
-import { buildSearchBlob } from "@/src/lib/search-blob";
-import { jsonValuesEqualForPatch } from "@/src/lib/json-value-equal";
-import { scrubHgArchRefsAfterItemDelete } from "@/src/lib/hg-arch-orphan-repair";
-import { scheduleEntityMentionRescanOnVocabularyChange } from "@/src/lib/entity-mentions";
-import { deriveVocabularyTermsFromSeed } from "@/src/lib/entity-vocabulary";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
+import { buildSearchBlob } from "@/src/lib/search-blob";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
 function mergeEntityMeta(
   existing: Record<string, unknown> | null | undefined,
-  patch: Record<string, unknown>,
+  patch: Record<string, unknown>
 ): Record<string, unknown> {
   const base = {
-    ...(existing && typeof existing === "object" && !Array.isArray(existing) ? existing : {}),
+    ...(existing && typeof existing === "object" && !Array.isArray(existing)
+      ? existing
+      : {}),
   };
   for (const [k, v] of Object.entries(patch)) {
     if (k === "loreReviewTags" && Array.isArray(v)) {
@@ -83,32 +85,55 @@ const patchBody = z.object({
 function rowUpdatedAtMs(existing: { updatedAt: unknown }): number | null {
   const u = existing.updatedAt;
   const ms =
-    u instanceof Date ? u.getTime() : new Date(u as string | number | Date).getTime();
+    u instanceof Date
+      ? u.getTime()
+      : new Date(u as string | number | Date).getTime();
   return Number.isFinite(ms) ? ms : null;
 }
 
 /** Title/body/entity/image fields — optimistic lock required (see CODE_HEALTH_AUDIT). */
-function patchRequiresBaseOptimisticLock(p: z.infer<typeof patchBody>): boolean {
-  if (p.title !== undefined) return true;
-  if (p.contentText !== undefined) return true;
-  if (p.contentJson !== undefined) return true;
-  if (p.entityMeta !== undefined) return true;
-  if (p.entityMetaMerge !== undefined && Object.keys(p.entityMetaMerge).length > 0) return true;
-  if (p.entityType !== undefined) return true;
-  if (p.imageUrl !== undefined) return true;
-  if (p.imageMeta !== undefined) return true;
+function patchRequiresBaseOptimisticLock(
+  p: z.infer<typeof patchBody>
+): boolean {
+  if (p.title !== undefined) {
+    return true;
+  }
+  if (p.contentText !== undefined) {
+    return true;
+  }
+  if (p.contentJson !== undefined) {
+    return true;
+  }
+  if (p.entityMeta !== undefined) {
+    return true;
+  }
+  if (
+    p.entityMetaMerge !== undefined &&
+    Object.keys(p.entityMetaMerge).length > 0
+  ) {
+    return true;
+  }
+  if (p.entityType !== undefined) {
+    return true;
+  }
+  if (p.imageUrl !== undefined) {
+    return true;
+  }
+  if (p.imageMeta !== undefined) {
+    return true;
+  }
   return false;
 }
 
 export async function PATCH(
   req: Request,
-  context: { params: Promise<{ itemId: string }> },
+  context: { params: Promise<{ itemId: string }> }
 ) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
       { ok: false, error: "Database not configured" },
-      { status: 503 },
+      { status: 503 }
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
@@ -136,7 +161,10 @@ export async function PATCH(
     routeTag: "PATCH /api/items/[itemId]",
   });
   if (!jsonValidation.ok) {
-    return Response.json({ ok: false, error: jsonValidation.error }, { status: 400 });
+    return Response.json(
+      { ok: false, error: jsonValidation.error },
+      { status: 400 }
+    );
   }
 
   if (bootCtx.role === "player") {
@@ -156,13 +184,16 @@ export async function PATCH(
   if (!existing) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Not found" }, { status: 404 }),
+      Response.json({ ok: false, error: "Not found" }, { status: 404 })
     );
   }
   if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, existing.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
   }
-  if (bootCtx.role === "player" && !playersMayCreateItemType(existing.itemType)) {
+  if (
+    bootCtx.role === "player" &&
+    !playersMayCreateItemType(existing.itemType)
+  ) {
     return heartgardenApiForbiddenJsonResponse();
   }
   if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, existing.spaceId))) {
@@ -174,7 +205,7 @@ export async function PATCH(
   if (rowMs === null) {
     return Response.json(
       { ok: false, error: "Item row has invalid updatedAt" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 
@@ -183,9 +214,10 @@ export async function PATCH(
     return Response.json(
       {
         ok: false,
-        error: "baseUpdatedAt is required when changing title, body, or entity fields",
+        error:
+          "baseUpdatedAt is required when changing title, body, or entity fields",
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -193,12 +225,15 @@ export async function PATCH(
   if (needsOptimisticLock || effectiveBase) {
     const baseMs = Date.parse(effectiveBase ?? "");
     if (!Number.isFinite(baseMs)) {
-      return Response.json({ ok: false, error: "Invalid baseUpdatedAt" }, { status: 400 });
+      return Response.json(
+        { ok: false, error: "Invalid baseUpdatedAt" },
+        { status: 400 }
+      );
     }
     if (rowMs !== baseMs) {
       return Response.json(
         { ok: false, error: "conflict", item: rowToCanvasItem(existing) },
-        { status: 409 },
+        { status: 409 }
       );
     }
   }
@@ -227,14 +262,21 @@ export async function PATCH(
   };
 
   if (p.spaceId !== undefined) {
-    if (!(await playerMayApplySpaceIdPatchAsync(db, bootCtx, existing.spaceId, p.spaceId))) {
+    if (
+      !(await playerMayApplySpaceIdPatchAsync(
+        db,
+        bootCtx,
+        existing.spaceId,
+        p.spaceId
+      ))
+    ) {
       return heartgardenApiForbiddenJsonResponse();
     }
     const space = await assertSpaceExists(db, p.spaceId);
     if (!space) {
       return heartgardenMaskNotFoundForPlayer(
         bootCtx,
-        Response.json({ ok: false, error: "Space not found" }, { status: 400 }),
+        Response.json({ ok: false, error: "Space not found" }, { status: 400 })
       );
     }
     if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, p.spaceId))) {
@@ -251,63 +293,102 @@ export async function PATCH(
         .select({ id: spaces.id, braneId: spaces.braneId })
         .from(spaces)
         .where(or(eq(spaces.id, existing.spaceId), eq(spaces.id, p.spaceId)));
-      const fromBraneId = branePair.find((row) => row.id === existing.spaceId)?.braneId ?? null;
-      const toBraneId = branePair.find((row) => row.id === p.spaceId)?.braneId ?? null;
+      const fromBraneId =
+        branePair.find((row) => row.id === existing.spaceId)?.braneId ?? null;
+      const toBraneId =
+        branePair.find((row) => row.id === p.spaceId)?.braneId ?? null;
       if (fromBraneId && toBraneId && fromBraneId !== toBraneId) {
         return Response.json(
           {
             ok: false,
             error: "Cross-brane item moves are not allowed",
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
     updates.spaceId = p.spaceId;
   }
 
-  if (p.x !== undefined) updates.x = p.x;
-  if (p.y !== undefined) updates.y = p.y;
-  if (p.width !== undefined) updates.width = p.width;
-  if (p.height !== undefined) updates.height = p.height;
-  if (p.zIndex !== undefined) updates.zIndex = p.zIndex;
-  if (p.title !== undefined) updates.title = p.title;
-  if (p.contentText !== undefined) updates.contentText = p.contentText;
-  if (p.contentJson !== undefined) updates.contentJson = p.contentJson;
-  if (p.color !== undefined) updates.color = p.color;
-  if (p.itemType !== undefined) updates.itemType = p.itemType;
-  if (p.entityType !== undefined) updates.entityType = p.entityType;
+  if (p.x !== undefined) {
+    updates.x = p.x;
+  }
+  if (p.y !== undefined) {
+    updates.y = p.y;
+  }
+  if (p.width !== undefined) {
+    updates.width = p.width;
+  }
+  if (p.height !== undefined) {
+    updates.height = p.height;
+  }
+  if (p.zIndex !== undefined) {
+    updates.zIndex = p.zIndex;
+  }
+  if (p.title !== undefined) {
+    updates.title = p.title;
+  }
+  if (p.contentText !== undefined) {
+    updates.contentText = p.contentText;
+  }
+  if (p.contentJson !== undefined) {
+    updates.contentJson = p.contentJson;
+  }
+  if (p.color !== undefined) {
+    updates.color = p.color;
+  }
+  if (p.itemType !== undefined) {
+    updates.itemType = p.itemType;
+  }
+  if (p.entityType !== undefined) {
+    updates.entityType = p.entityType;
+  }
   if (p.entityMeta !== undefined) {
     if (bootCtx.role === "player") {
       if (p.entityMeta === null) {
         updates.entityMeta = null;
       } else {
-        const stripped = stripGmOnlyEntityMetaPatch(p.entityMeta as Record<string, unknown>);
+        const stripped = stripGmOnlyEntityMetaPatch(
+          p.entityMeta as Record<string, unknown>
+        );
         updates.entityMeta =
           stripped && Object.keys(stripped).length > 0 ? stripped : null;
       }
     } else {
       updates.entityMeta = p.entityMeta;
     }
-  } else if (p.entityMetaMerge !== undefined && Object.keys(p.entityMetaMerge).length > 0) {
+  } else if (
+    p.entityMetaMerge !== undefined &&
+    Object.keys(p.entityMetaMerge).length > 0
+  ) {
     const mergePatch =
       bootCtx.role === "player"
-        ? stripGmOnlyEntityMetaPatch(p.entityMetaMerge as Record<string, unknown>) ?? {}
+        ? (stripGmOnlyEntityMetaPatch(
+            p.entityMetaMerge as Record<string, unknown>
+          ) ?? {})
         : (p.entityMetaMerge as Record<string, unknown>);
     updates.entityMeta = mergeEntityMeta(
       existing.entityMeta as Record<string, unknown> | null | undefined,
-      mergePatch,
+      mergePatch
     );
   }
-  if (p.imageUrl !== undefined) updates.imageUrl = p.imageUrl;
-  if (p.imageMeta !== undefined) updates.imageMeta = p.imageMeta;
-  if (p.stackId !== undefined) updates.stackId = p.stackId;
-  if (p.stackOrder !== undefined) updates.stackOrder = p.stackOrder;
+  if (p.imageUrl !== undefined) {
+    updates.imageUrl = p.imageUrl;
+  }
+  if (p.imageMeta !== undefined) {
+    updates.imageMeta = p.imageMeta;
+  }
+  if (p.stackId !== undefined) {
+    updates.stackId = p.stackId;
+  }
+  if (p.stackOrder !== undefined) {
+    updates.stackOrder = p.stackOrder;
+  }
 
   const resolvedEntityMeta =
-    updates.entityMeta !== undefined
-      ? updates.entityMeta
-      : (existing.entityMeta as Record<string, unknown> | null);
+    updates.entityMeta === undefined
+      ? (existing.entityMeta as Record<string, unknown> | null)
+      : updates.entityMeta;
 
   updates.searchBlob = buildSearchBlob({
     title: p.title ?? existing.title,
@@ -330,9 +411,9 @@ export async function PATCH(
     needsOptimisticLock || effectiveBase
       ? and(
           eq(items.id, itemId),
-          existing.updatedAt != null
-            ? eq(items.updatedAt, existing.updatedAt)
-            : isNull(items.updatedAt),
+          existing.updatedAt == null
+            ? isNull(items.updatedAt)
+            : eq(items.updatedAt, existing.updatedAt)
         )
       : eq(items.id, itemId);
   const [row] = await db
@@ -349,17 +430,16 @@ export async function PATCH(
     if (!latest) {
       return heartgardenMaskNotFoundForPlayer(
         bootCtx,
-        Response.json({ ok: false, error: "Not found" }, { status: 404 }),
+        Response.json({ ok: false, error: "Not found" }, { status: 404 })
       );
     }
     return Response.json(
       { ok: false, error: "conflict", item: rowToCanvasItem(latest) },
-      { status: 409 },
+      { status: 409 }
     );
   }
 
-  const titleChanged =
-    p.title !== undefined && p.title !== existing.title;
+  const titleChanged = p.title !== undefined && p.title !== existing.title;
   const contentTextChanged =
     p.contentText !== undefined && p.contentText !== existing.contentText;
   const contentJsonChanged =
@@ -385,7 +465,7 @@ export async function PATCH(
           new Set([
             ...deriveVocabularyTermsFromSeed(existing.title),
             ...deriveVocabularyTermsFromSeed(p.title),
-          ]),
+          ])
         );
         scheduleEntityMentionRescanOnVocabularyChange(db, spaceRow.braneId, {
           affectedTerms,
@@ -397,7 +477,7 @@ export async function PATCH(
   if (!row) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Not found" }, { status: 404 }),
+      Response.json({ ok: false, error: "Not found" }, { status: 404 })
     );
   }
 
@@ -427,13 +507,13 @@ export async function PATCH(
 
 export async function DELETE(
   _req: Request,
-  context: { params: Promise<{ itemId: string }> },
+  context: { params: Promise<{ itemId: string }> }
 ) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
       { ok: false, error: "Database not configured" },
-      { status: 503 },
+      { status: 503 }
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
@@ -441,11 +521,15 @@ export async function DELETE(
     return heartgardenApiForbiddenJsonResponse();
   }
   const { itemId } = await context.params;
-  const [existing] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
+  const [existing] = await db
+    .select()
+    .from(items)
+    .where(eq(items.id, itemId))
+    .limit(1);
   if (!existing) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Not found" }, { status: 404 }),
+      Response.json({ ok: false, error: "Not found" }, { status: 404 })
     );
   }
   if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, existing.spaceId))) {
@@ -459,14 +543,19 @@ export async function DELETE(
     // Defensive cleanup for older deployments where FK cascades may be absent.
     await tx
       .delete(itemLinks)
-      .where(or(eq(itemLinks.sourceItemId, itemId), eq(itemLinks.targetItemId, itemId)));
+      .where(
+        or(
+          eq(itemLinks.sourceItemId, itemId),
+          eq(itemLinks.targetItemId, itemId)
+        )
+      );
     await tx.delete(itemEmbeddings).where(eq(itemEmbeddings.itemId, itemId));
     return tx.delete(items).where(eq(items.id, itemId)).returning();
   });
   if (deleted.length === 0) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Not found" }, { status: 404 }),
+      Response.json({ ok: false, error: "Not found" }, { status: 404 })
     );
   }
   const scrubbedIds = await scrubHgArchRefsAfterItemDelete(db, {

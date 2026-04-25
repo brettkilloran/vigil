@@ -10,12 +10,17 @@ import pg from "pg";
 config({ path: ".env.local" });
 
 /** Mirrors `src/db/postgres-env-url.ts`; inlined so this script stays plain Node. */
-const url = ["NEON_DATABASE_URL", "DATABASE_URL", "POSTGRES_URL", "POSTGRES_PRISMA_URL"]
+const url = [
+  "NEON_DATABASE_URL",
+  "DATABASE_URL",
+  "POSTGRES_URL",
+  "POSTGRES_PRISMA_URL",
+]
   .map((k) => process.env[k]?.trim())
   .find((v) => v);
 if (!url) {
   console.error(
-    "No Postgres URL set. Provide one of NEON_DATABASE_URL, DATABASE_URL, POSTGRES_URL, or POSTGRES_PRISMA_URL.",
+    "No Postgres URL set. Provide one of NEON_DATABASE_URL, DATABASE_URL, POSTGRES_URL, or POSTGRES_PRISMA_URL."
   );
   process.exit(1);
 }

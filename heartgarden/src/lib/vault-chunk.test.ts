@@ -27,7 +27,8 @@ describe("chunkVaultText", () => {
     const t = word.repeat(600).trim();
     const c = chunkVaultText(t);
     expect(c.length).toBeGreaterThan(1);
-    const maxAllowed = VAULT_CHUNK_TARGET_CHARS + VAULT_CHUNK_OVERLAP_CHARS + 120;
+    const maxAllowed =
+      VAULT_CHUNK_TARGET_CHARS + VAULT_CHUNK_OVERLAP_CHARS + 120;
     for (const ch of c) {
       expect(ch.length).toBeLessThanOrEqual(maxAllowed);
     }

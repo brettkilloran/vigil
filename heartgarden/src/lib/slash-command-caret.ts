@@ -13,11 +13,15 @@ export type SlashOpenTrigger = {
  * When the current line is only optional whitespace + `/` + optional filter (no spaces in filter).
  * Does not match lines like `foo /bar`.
  */
-export function findOpenSlashTrigger(plainUpToCaret: string): SlashOpenTrigger | null {
+export function findOpenSlashTrigger(
+  plainUpToCaret: string
+): SlashOpenTrigger | null {
   const lineStart = plainUpToCaret.lastIndexOf("\n") + 1;
   const line = plainUpToCaret.slice(lineStart);
   const m = line.match(/^(\s*)\/(\S*)$/);
-  if (!m) return null;
+  if (!m) {
+    return null;
+  }
   const slashStart = lineStart + m[1]!.length;
   return { startPlainOffset: slashStart, query: m[2] ?? "" };
 }

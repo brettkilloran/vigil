@@ -3,7 +3,10 @@
  * streamableHttp). Browsers and some connectors omit it; merge defaults without
  * dropping client preferences.
  */
-export function mergeStreamableHttpAcceptHeader(method: string, acceptHeader: string | null): string {
+export function mergeStreamableHttpAcceptHeader(
+  method: string,
+  acceptHeader: string | null
+): string {
   const accept = (acceptHeader ?? "").trim();
   let merged = accept;
 

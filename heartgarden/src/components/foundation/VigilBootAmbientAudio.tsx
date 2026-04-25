@@ -2,20 +2,20 @@
 
 import { SpeakerHigh, SpeakerSlash } from "@phosphor-icons/react";
 import {
+  type CSSProperties,
+  type MutableRefObject,
+  type SyntheticEvent,
   useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
-  type MutableRefObject,
-  type SyntheticEvent,
 } from "react";
 
 import {
-  ArchitecturalTooltip,
   ARCH_TOOLTIP_AVOID_BOTTOM,
+  ArchitecturalTooltip,
 } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 
@@ -26,8 +26,8 @@ import {
 } from "@/src/lib/vigil-audio-prefs";
 
 import {
-  VIGIL_BOOT_AMBIENT_LAYERS,
   VIGIL_BOOT_AMBIENT_LAYER_COUNT,
+  VIGIL_BOOT_AMBIENT_LAYERS,
 } from "./bootAmbientLayers";
 
 import styles from "./VigilBootAmbientAudio.module.css";
@@ -50,17 +50,24 @@ function clamp01(v: number): number {
   return Math.min(1, Math.max(0, v));
 }
 
-function getAudioElements(refs: (HTMLAudioElement | null)[]): HTMLAudioElement[] | null {
+function getAudioElements(
+  refs: (HTMLAudioElement | null)[]
+): HTMLAudioElement[] | null {
   const out: HTMLAudioElement[] = [];
   for (let i = 0; i < VIGIL_BOOT_AMBIENT_LAYER_COUNT; i++) {
     const el = refs[i];
-    if (!el) return null;
+    if (!el) {
+      return null;
+    }
     out.push(el);
   }
   return out;
 }
 
-async function resumeAndPlayAll(ctx: AudioContext | null, elements: HTMLAudioElement[]): Promise<void> {
+async function resumeAndPlayAll(
+  ctx: AudioContext | null,
+  elements: HTMLAudioElement[]
+): Promise<void> {
   if (ctx?.state === "suspended") {
     await ctx.resume();
   }
@@ -75,7 +82,9 @@ function pauseAll(elements: HTMLAudioElement[]): void {
 
 /** Avoid InvalidStateError when catch + effect cleanup both close, or React Strict Mode remounts. */
 function safeCloseAudioContext(ctx: AudioContext | null): void {
-  if (!ctx || ctx.state === "closed") return;
+  if (!ctx || ctx.state === "closed") {
+    return;
+  }
   try {
     void ctx.close();
   } catch {
@@ -111,7 +120,7 @@ function rafFadeVolumes(
   from: number[],
   to: number[],
   durationMs: number,
-  onDone?: () => void,
+  onDone?: () => void
 ): () => void {
   const t0 = performance.now();
   let raf = 0;
@@ -170,7 +179,10 @@ export function VigilBootAmbientAudio({
   const [muted, setMuted] = useState(() => readAppAudioMuted());
   const [blocked, setBlocked] = useState(false);
 
-  useEffect(() => subscribeAppAudioMuted(() => setMuted(readAppAudioMuted())), []);
+  useEffect(
+    () => subscribeAppAudioMuted(() => setMuted(readAppAudioMuted())),
+    []
+  );
 
   const clearFallbackFade = useCallback(() => {
     fadeRafCancelRef.current?.();
@@ -187,7 +199,9 @@ export function VigilBootAmbientAudio({
   const scheduleFadeIn = useCallback(() => {
     const ctx = audioCtxRef.current;
     const elements = getAudioElements(audioRefs.current);
-    if (!elements) return;
+    if (!elements) {
+      return;
+    }
 
     clearFallbackFade();
     clearFadeOutTimer();
@@ -210,18 +224,27 @@ export function VigilBootAmbientAudio({
     for (let i = 0; i < elements.length; i++) {
       elements[i].volume = 0;
     }
-    fadeRafCancelRef.current = rafFadeVolumes(elements, zeros, peaks, fadeInS * 1000);
+    fadeRafCancelRef.current = rafFadeVolumes(
+      elements,
+      zeros,
+      peaks,
+      fadeInS * 1000
+    );
   }, [clearFadeOutTimer, clearFallbackFade, fadeInS]);
 
   const scheduleFadeOutAndPause = useCallback(() => {
     const ctx = audioCtxRef.current;
     const elements = getAudioElements(audioRefs.current);
-    if (!elements) return;
+    if (!elements) {
+      return;
+    }
 
     clearFallbackFade();
     clearFadeOutTimer();
 
-    if (elements.every((el) => el.paused)) return;
+    if (elements.every((el) => el.paused)) {
+      return;
+    }
 
     const gains = webGainsRef.current;
     if (gains && ctx) {
@@ -232,17 +255,20 @@ export function VigilBootAmbientAudio({
         g.gain.setValueAtTime(v, t);
         g.gain.linearRampToValueAtTime(0, t + fadeOutS);
       }
-      fadeOutTimerRef.current = setTimeout(() => {
-        fadeOutTimerRef.current = null;
-        pauseAll(elements);
-        if (webGainsRef.current && audioCtxRef.current) {
-          const t1 = audioCtxRef.current.currentTime;
-          for (const g of webGainsRef.current) {
-            g.gain.cancelScheduledValues(t1);
-            g.gain.setValueAtTime(0, t1);
+      fadeOutTimerRef.current = setTimeout(
+        () => {
+          fadeOutTimerRef.current = null;
+          pauseAll(elements);
+          if (webGainsRef.current && audioCtxRef.current) {
+            const t1 = audioCtxRef.current.currentTime;
+            for (const g of webGainsRef.current) {
+              g.gain.cancelScheduledValues(t1);
+              g.gain.setValueAtTime(0, t1);
+            }
           }
-        }
-      }, fadeOutS * 1000 + 80);
+        },
+        fadeOutS * 1000 + 80
+      );
       return;
     }
 
@@ -260,13 +286,15 @@ export function VigilBootAmbientAudio({
         for (let i = 0; i < elements.length; i++) {
           elements[i].volume = clamp01(peaks[i]);
         }
-      },
+      }
     );
   }, [clearFadeOutTimer, clearFallbackFade, fadeOutS]);
 
   const tryStart = useCallback(async () => {
     const elements = getAudioElements(audioRefs.current);
-    if (!elements) return;
+    if (!elements) {
+      return;
+    }
     try {
       await resumeAndPlayAll(audioCtxRef.current, elements);
       writeAppAudioMuted(false);
@@ -279,12 +307,16 @@ export function VigilBootAmbientAudio({
 
   useLayoutEffect(() => {
     const elements = getAudioElements(audioRefs.current);
-    if (!elements) return;
+    if (!elements) {
+      return;
+    }
 
     const assignPrimePlayback = () => {
       if (primePlaybackFromGestureRef) {
         primePlaybackFromGestureRef.current = () => {
-          if (readAppAudioMuted()) return;
+          if (readAppAudioMuted()) {
+            return;
+          }
           void tryStart();
         };
       }
@@ -296,10 +328,11 @@ export function VigilBootAmbientAudio({
 
     let ctx: AudioContext | null = null;
     const AC =
-      typeof window !== "undefined"
-        ? (window.AudioContext ??
-          (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)
-        : null;
+      typeof window === "undefined"
+        ? null
+        : (window.AudioContext ??
+          (window as unknown as { webkitAudioContext?: typeof AudioContext })
+            .webkitAudioContext);
 
     try {
       if (!AC) {
@@ -362,18 +395,27 @@ export function VigilBootAmbientAudio({
         audioCtxRef.current = null;
       }
     };
-  }, [clearFadeOutTimer, clearFallbackFade, primePlaybackFromGestureRef, tryStart]);
+  }, [
+    clearFadeOutTimer,
+    clearFallbackFade,
+    primePlaybackFromGestureRef,
+    tryStart,
+  ]);
 
   /* useLayoutEffect: start audio in the same turn as a log-out flushSync so browser autoplay policy accepts play(). */
   useLayoutEffect(() => {
-    if (muted || suspended) return;
+    if (muted || suspended) {
+      return;
+    }
     /* tryStart → setState only after await play() (microtask); rule flags any effect-invoked path that touches setState. */
     /* eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: gesture window + async blocked/fade updates */
     void tryStart();
   }, [muted, suspended, tryStart]);
 
   useEffect(() => {
-    if (!suspended) return;
+    if (!suspended) {
+      return;
+    }
     scheduleFadeOutAndPause();
     return () => {
       clearFadeOutTimer();
@@ -381,9 +423,13 @@ export function VigilBootAmbientAudio({
   }, [clearFadeOutTimer, scheduleFadeOutAndPause, suspended]);
 
   useEffect(() => {
-    if (!muted) return;
+    if (!muted) {
+      return;
+    }
     const elements = getAudioElements(audioRefs.current);
-    if (!elements) return;
+    if (!elements) {
+      return;
+    }
 
     clearFallbackFade();
     clearFadeOutTimer();
@@ -400,7 +446,8 @@ export function VigilBootAmbientAudio({
     pauseAll(elements);
 
     const peaks = targetVolumes();
-    const viaWebAudio = webGainsRef.current != null && audioCtxRef.current != null;
+    const viaWebAudio =
+      webGainsRef.current != null && audioCtxRef.current != null;
     for (let i = 0; i < elements.length; i++) {
       elements[i].volume = viaWebAudio ? 1 : clamp01(peaks[i]);
     }
@@ -410,7 +457,9 @@ export function VigilBootAmbientAudio({
     if (muted) {
       writeAppAudioMuted(false);
       setMuted(false);
-      if (suspended) return;
+      if (suspended) {
+        return;
+      }
       void tryStart();
       return;
     }
@@ -424,7 +473,9 @@ export function VigilBootAmbientAudio({
     setMuted(true);
 
     const elements = getAudioElements(audioRefs.current);
-    if (!elements) return;
+    if (!elements) {
+      return;
+    }
 
     clearFallbackFade();
     clearFadeOutTimer();
@@ -441,110 +492,119 @@ export function VigilBootAmbientAudio({
     pauseAll(elements);
 
     const peaks = targetVolumes();
-    const viaWebAudio = webGainsRef.current != null && audioCtxRef.current != null;
+    const viaWebAudio =
+      webGainsRef.current != null && audioCtxRef.current != null;
     for (let i = 0; i < elements.length; i++) {
       elements[i].volume = viaWebAudio ? 1 : clamp01(peaks[i]);
     }
-  }, [blocked, clearFadeOutTimer, clearFallbackFade, muted, suspended, tryStart]);
+  }, [
+    blocked,
+    clearFadeOutTimer,
+    clearFallbackFade,
+    muted,
+    suspended,
+    tryStart,
+  ]);
 
   const icon = muted ? (
-    <SpeakerSlash size={18} weight="bold" aria-hidden />
+    <SpeakerSlash aria-hidden size={18} weight="bold" />
   ) : (
-    <SpeakerHigh size={18} weight="bold" aria-hidden />
+    <SpeakerHigh aria-hidden size={18} weight="bold" />
   );
 
-  const title =
-    muted
-      ? "Unmute audio (ambient layers and interface sounds)"
-      : blocked
-        ? "Start audio (click — autoplay was blocked)"
-        : "Mute audio (ambient layers and interface sounds)";
+  const title = muted
+    ? "Unmute audio (ambient layers and interface sounds)"
+    : blocked
+      ? "Start audio (click — autoplay was blocked)"
+      : "Mute audio (ambient layers and interface sounds)";
 
-  const ariaLabel =
-    muted
-      ? "Unmute layered ambient audio and interface sounds"
-      : blocked
-        ? "Start ambient audio"
-        : "Mute layered ambient audio and interface sounds";
+  const ariaLabel = muted
+    ? "Unmute layered ambient audio and interface sounds"
+    : blocked
+      ? "Start ambient audio"
+      : "Mute layered ambient audio and interface sounds";
 
   const audioRefCallbacks = useMemo(
     () =>
-      VIGIL_BOOT_AMBIENT_LAYERS.map(
-        (_, i) => (el: HTMLAudioElement | null) => {
-          audioRefs.current[i] = el;
-        },
-      ),
-    [],
+      VIGIL_BOOT_AMBIENT_LAYERS.map((_, i) => (el: HTMLAudioElement | null) => {
+        audioRefs.current[i] = el;
+      }),
+    []
   );
 
-  const wrapClass = `${styles.wrap} ${embedInChromeRow ? styles.wrapEmbed : ""} ${className ?? ""}`.trim();
+  const wrapClass =
+    `${styles.wrap} ${embedInChromeRow ? styles.wrapEmbed : ""} ${className ?? ""}`.trim();
 
   return (
     <div
       className={wrapClass}
-      style={style}
       data-vigil-boot-ambient-audio="true"
       onPointerDown={(e) => e.stopPropagation()}
+      style={style}
     >
-      <div className={styles.audioMount} aria-hidden>
+      <div aria-hidden className={styles.audioMount}>
         {VIGIL_BOOT_AMBIENT_LAYERS.map((layer, i) => (
           <audio
-            key={layer.id}
-            ref={audioRefCallbacks[i]}
-            src={layer.src}
-            loop
-            preload="auto"
-            playsInline
             aria-hidden
             data-vigil-boot-audio={layer.id}
+            key={layer.id}
+            loop
             onEnded={onAmbientEnded}
+            playsInline
+            preload="auto"
+            ref={audioRefCallbacks[i]}
+            src={layer.src}
           />
         ))}
       </div>
       {embedInChromeRow ? (
         <ArchitecturalTooltip
-          content={title}
-          side="top"
-          delayMs={320}
           avoidSides={ARCH_TOOLTIP_AVOID_BOTTOM}
+          content={title}
+          delayMs={320}
+          side="top"
         >
           <Button
-            type="button"
-            variant="ghost"
-            tone="glass"
-            size="icon"
-            iconOnly
             aria-label={ariaLabel}
             disabled={suspended}
+            iconOnly
             onClick={(e) => {
               e.stopPropagation();
               onToggle();
             }}
+            size="icon"
+            tone="glass"
+            type="button"
+            variant="ghost"
           >
             {icon}
           </Button>
         </ArchitecturalTooltip>
       ) : (
-        <div className={styles.panel} role="toolbar" aria-label="App audio — ambient and interface sounds">
+        <div
+          aria-label="App audio — ambient and interface sounds"
+          className={styles.panel}
+          role="toolbar"
+        >
           <div className={styles.toolbar}>
             <ArchitecturalTooltip
-              content={title}
-              side="top"
-              delayMs={320}
               avoidSides={ARCH_TOOLTIP_AVOID_BOTTOM}
+              content={title}
+              delayMs={320}
+              side="top"
             >
               <Button
-                type="button"
-                variant="ghost"
-                tone="glass"
-                size="icon"
-                iconOnly
                 aria-label={ariaLabel}
                 disabled={suspended}
+                iconOnly
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggle();
                 }}
+                size="icon"
+                tone="glass"
+                type="button"
+                variant="ghost"
               >
                 {icon}
               </Button>

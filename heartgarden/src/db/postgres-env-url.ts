@@ -3,7 +3,7 @@
  * Order matches common Heartgarden + Vercel / Neon setups.
  */
 export function resolvePostgresUrlFromEnv(
-  env: NodeJS.ProcessEnv = process.env,
+  env: NodeJS.ProcessEnv = process.env
 ): string | undefined {
   const keys = [
     "NEON_DATABASE_URL",
@@ -15,7 +15,9 @@ export function resolvePostgresUrlFromEnv(
   ] as const;
   for (const k of keys) {
     const v = env[k]?.trim();
-    if (v) return v;
+    if (v) {
+      return v;
+    }
   }
-  return undefined;
+  return;
 }

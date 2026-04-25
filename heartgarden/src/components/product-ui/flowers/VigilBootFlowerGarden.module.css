@@ -2,8 +2,8 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  pointer-events: none;
   overflow: hidden;
+  pointer-events: none;
 }
 
 /* Hidden defs only — filter referenced from inline style on .fxStack */

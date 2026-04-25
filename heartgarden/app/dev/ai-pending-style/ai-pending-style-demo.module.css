@@ -1,8 +1,8 @@
 .shell {
   min-height: 100vh;
   padding: 32px 24px 48px;
-  background: var(--sem-surface-base);
   color: var(--sem-text-primary);
+  background: var(--sem-surface-base);
 }
 
 .intro {
@@ -14,10 +14,10 @@
 }
 
 .intro code {
-  font-size: 0.92em;
   padding: 0.1em 0.35em;
-  border-radius: 4px;
+  font-size: 0.92em;
   background: color-mix(in oklch, var(--sem-text-primary) 8%, transparent);
+  border-radius: 4px;
 }
 
 .grid {
@@ -28,12 +28,12 @@
 }
 
 .sectionTitle {
+  margin: 0 0 12px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--sem-text-muted);
-  margin: 0 0 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .column {
@@ -48,9 +48,9 @@
 }
 
 .url {
+  margin-bottom: 20px;
   font-size: 12px;
   color: var(--sem-text-muted);
-  margin-bottom: 20px;
 }
 
 .url a {
@@ -61,8 +61,8 @@
 
 .flowList {
   max-width: 44rem;
-  margin: 0 0 24px;
   padding-left: 1.25rem;
+  margin: 0 0 24px;
   font-size: 14px;
   line-height: 1.55;
   color: var(--sem-text-secondary);
@@ -74,21 +74,26 @@
 
 .focusMockSheet {
   max-width: 640px;
+  overflow: hidden;
   background: var(--sys-color-neutral-100);
+  border: 1px solid color-mix(in oklch, var(--sys-color-black) 8%, transparent);
   border-radius: 8px;
   box-shadow: var(--sem-shadow-md);
-  border: 1px solid color-mix(in oklch, var(--sys-color-black) 8%, transparent);
-  overflow: hidden;
 }
 
 .focusMockHeader {
-  padding: 16px 24px;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   gap: 16px;
-  border-bottom: 1px solid color-mix(in oklch, var(--sys-color-black) 6%, transparent);
-  background: color-mix(in oklch, var(--sys-color-white) 40%, var(--sys-color-neutral-100));
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: color-mix(
+    in oklch,
+    var(--sys-color-white) 40%,
+    var(--sys-color-neutral-100)
+  );
+  border-bottom: 1px solid
+    color-mix(in oklch, var(--sys-color-black) 6%, transparent);
 }
 
 .focusMockBody {
@@ -105,13 +110,13 @@
 }
 
 .tiptapMarginPreviewBody {
-  background: var(--sys-color-neutral-100);
-  border-radius: 8px;
-  border: 1px solid color-mix(in oklch, var(--sys-color-black) 8%, transparent);
-  box-shadow: var(--sem-shadow-md);
+  box-sizing: border-box;
   /* ~focus content: left gutter for block drag handle + right padding for sheet edge */
   padding: 20px 40px 28px 62px;
-  box-sizing: border-box;
+  background: var(--sys-color-neutral-100);
+  border: 1px solid color-mix(in oklch, var(--sys-color-black) 8%, transparent);
+  border-radius: 8px;
+  box-shadow: var(--sem-shadow-md);
 }
 
 /*
@@ -119,8 +124,7 @@
  * this page is not inside `.focusOverlay`, so we restore visibility on the editor host.
  */
 .tiptapMarginPreviewBody :global([data-hg-doc-editor="true"]) {
+  min-height: 220px;
   opacity: 1 !important;
   transform: none !important;
-  min-height: 220px;
 }
-

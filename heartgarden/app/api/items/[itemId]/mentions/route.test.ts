@@ -13,7 +13,10 @@ const gmMayAccessItemSpaceAsyncMock = vi.fn();
 
 vi.mock("@/src/db/index", () => ({ tryGetDb: tryGetDbMock }));
 vi.mock("@/src/lib/heartgarden-api-boot-context", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("@/src/lib/heartgarden-api-boot-context")>();
+  const mod =
+    await importOriginal<
+      typeof import("@/src/lib/heartgarden-api-boot-context")
+    >();
   return {
     ...mod,
     getHeartgardenApiBootContext: vi.fn(() => Promise.resolve({ role: "gm" })),
@@ -50,9 +53,12 @@ describe("GET /api/items/[itemId]/mentions auth", () => {
     gmMayAccessItemSpaceAsyncMock.mockResolvedValue(false);
 
     const { GET } = await import("./route");
-    const res = await GET(new Request("http://localhost/api/items/x/mentions"), {
-      params: Promise.resolve({ itemId: ITEM_ID }),
-    });
+    const res = await GET(
+      new Request("http://localhost/api/items/x/mentions"),
+      {
+        params: Promise.resolve({ itemId: ITEM_ID }),
+      }
+    );
     expect(res.status).toBe(403);
     expect(mentionsQueryRan).toBe(false);
   }, 10_000);
@@ -70,9 +76,12 @@ describe("GET /api/items/[itemId]/mentions auth", () => {
     tryGetDbMock.mockReturnValue(db);
 
     const { GET } = await import("./route");
-    const res = await GET(new Request("http://localhost/api/items/x/mentions"), {
-      params: Promise.resolve({ itemId: ITEM_ID }),
-    });
+    const res = await GET(
+      new Request("http://localhost/api/items/x/mentions"),
+      {
+        params: Promise.resolve({ itemId: ITEM_ID }),
+      }
+    );
     expect(res.status).toBe(404);
     expect(gmMayAccessItemSpaceAsyncMock).not.toHaveBeenCalled();
   }, 10_000);

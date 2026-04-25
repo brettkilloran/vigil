@@ -21,7 +21,8 @@ const sampleIssues: VaultReviewIssue[] = [
   {
     summary: "Rules language mixed with fiction",
     severity: "warn",
-    details: "Phrases like “roll initiative” read as OOC unless framed as diegetic.",
+    details:
+      "Phrases like “roll initiative” read as OOC unless framed as diegetic.",
     handlingHint: "Rephrase or move to GM layer.",
   },
   {

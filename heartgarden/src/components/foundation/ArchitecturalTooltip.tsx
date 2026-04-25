@@ -2,17 +2,17 @@
 
 import {
   cloneElement,
+  type ReactElement,
+  type FocusEvent as ReactFocusEvent,
+  type ReactNode,
+  type PointerEvent as ReactPointerEvent,
+  type Ref,
   useCallback,
   useEffect,
   useId,
   useLayoutEffect,
   useRef,
   useState,
-  type FocusEvent as ReactFocusEvent,
-  type PointerEvent as ReactPointerEvent,
-  type ReactElement,
-  type ReactNode,
-  type Ref,
 } from "react";
 import { createPortal } from "react-dom";
 
@@ -22,9 +22,14 @@ const VIEWPORT_MARGIN = 10;
 const OFFSET = 8;
 
 function assignRef<T>(ref: Ref<T> | undefined, value: T | null) {
-  if (ref == null) return;
-  if (typeof ref === "function") ref(value);
-  else (ref as { current: T | null }).current = value;
+  if (ref == null) {
+    return;
+  }
+  if (typeof ref === "function") {
+    ref(value);
+  } else {
+    (ref as { current: T | null }).current = value;
+  }
 }
 
 type Side = "top" | "bottom" | "left" | "right";
@@ -62,11 +67,17 @@ function innerRefOf(el: ReactElement) {
 
 function pointerOutLeavesTarget(
   currentTarget: EventTarget | null,
-  relatedTarget: EventTarget | null,
+  relatedTarget: EventTarget | null
 ) {
-  if (!(currentTarget instanceof Element)) return true;
-  if (relatedTarget == null) return true;
-  if (!(relatedTarget instanceof Node)) return true;
+  if (!(currentTarget instanceof Element)) {
+    return true;
+  }
+  if (relatedTarget == null) {
+    return true;
+  }
+  if (!(relatedTarget instanceof Node)) {
+    return true;
+  }
   return !currentTarget.contains(relatedTarget);
 }
 
@@ -98,7 +109,10 @@ export function ArchitecturalTooltip({
 
   const [open, setOpen] = useState(false);
   const [paintOpen, setPaintOpen] = useState(false);
-  const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const [coords, setCoords] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
 
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clearShowTimer = useCallback(() => {
@@ -110,13 +124,18 @@ export function ArchitecturalTooltip({
 
   const scheduleShow = useCallback(
     (immediate: boolean) => {
-      if (disabled || content == null || content === "") return;
+      if (disabled || content == null || content === "") {
+        return;
+      }
       clearShowTimer();
       const run = () => setOpen(true);
-      if (immediate) run();
-      else showTimerRef.current = setTimeout(run, delayMs);
+      if (immediate) {
+        run();
+      } else {
+        showTimerRef.current = setTimeout(run, delayMs);
+      }
     },
-    [clearShowTimer, content, delayMs, disabled],
+    [clearShowTimer, content, delayMs, disabled]
   );
 
   const scheduleHide = useCallback(() => {
@@ -128,7 +147,9 @@ export function ArchitecturalTooltip({
   const updatePosition = useCallback(() => {
     const el = triggerRef.current;
     const tip = surfaceRef.current;
-    if (!el || !tip) return;
+    if (!(el && tip)) {
+      return;
+    }
 
     const r = el.getBoundingClientRect();
     const tw = tip.offsetWidth;
@@ -174,7 +195,9 @@ export function ArchitecturalTooltip({
     if (overflow()) {
       const avoid = new Set(avoidSides ?? []);
       let order = preferredSideOrder(side).filter((s) => !avoid.has(s));
-      if (order.length === 0) order = [side];
+      if (order.length === 0) {
+        order = [side];
+      }
 
       for (const s of order) {
         place(s);
@@ -193,12 +216,16 @@ export function ArchitecturalTooltip({
   }, [side, avoidSides]);
 
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     updatePosition();
   }, [open, content, updatePosition]);
 
   useLayoutEffect(() => {
-    if (!open || !paintOpen) return;
+    if (!(open && paintOpen)) {
+      return;
+    }
     updatePosition();
   }, [open, paintOpen, updatePosition]);
 
@@ -212,7 +239,9 @@ export function ArchitecturalTooltip({
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const onScrollOrResize = () => updatePosition();
     window.addEventListener("scroll", onScrollOrResize, true);
     window.addEventListener("resize", onScrollOrResize);
@@ -223,9 +252,13 @@ export function ArchitecturalTooltip({
   }, [open, updatePosition]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const onKeyDown = (ev: KeyboardEvent) => {
-      if (ev.key === "Escape") scheduleHide();
+      if (ev.key === "Escape") {
+        scheduleHide();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -235,7 +268,7 @@ export function ArchitecturalTooltip({
     () => () => {
       clearShowTimer();
     },
-    [clearShowTimer],
+    [clearShowTimer]
   );
 
   const childProps = children.props as {
@@ -253,13 +286,17 @@ export function ArchitecturalTooltip({
 
   const onHitboxPointerOver = (e: ReactPointerEvent<HTMLSpanElement>) => {
     childProps.onPointerOver?.(e as unknown as ReactPointerEvent<HTMLElement>);
-    if (e.pointerType === "touch") return;
+    if (e.pointerType === "touch") {
+      return;
+    }
     scheduleShow(false);
   };
 
   const onHitboxPointerOut = (e: ReactPointerEvent<HTMLSpanElement>) => {
     childProps.onPointerOut?.(e as unknown as ReactPointerEvent<HTMLElement>);
-    if (pointerOutLeavesTarget(e.currentTarget, e.relatedTarget)) scheduleHide();
+    if (pointerOutLeavesTarget(e.currentTarget, e.relatedTarget)) {
+      scheduleHide();
+    }
   };
 
   const onHitboxFocusCapture = () => {
@@ -267,46 +304,51 @@ export function ArchitecturalTooltip({
   };
 
   const onHitboxBlurCapture = (e: ReactFocusEvent<HTMLSpanElement>) => {
-    if (pointerOutLeavesTarget(e.currentTarget, e.relatedTarget)) scheduleHide();
+    if (pointerOutLeavesTarget(e.currentTarget, e.relatedTarget)) {
+      scheduleHide();
+    }
   };
 
   const setHitboxRef = (node: HTMLSpanElement | null) => {
     (triggerRef as { current: HTMLElement | null }).current = node;
   };
 
-  const triggerChild = cloneElement(children as ReactElement<Record<string, unknown>>, {
-    ref: (node: HTMLElement | null) => {
-      assignRef(innerRefOf(children), node);
-    },
-    "aria-describedby": mergedDescribedBy,
-  });
+  const triggerChild = cloneElement(
+    children as ReactElement<Record<string, unknown>>,
+    {
+      ref: (node: HTMLElement | null) => {
+        assignRef(innerRefOf(children), node);
+      },
+      "aria-describedby": mergedDescribedBy,
+    }
+  );
 
   const portal =
     open && typeof document !== "undefined"
       ? createPortal(
           <div
-            ref={surfaceRef}
-            id={tipId}
-            role="tooltip"
             className="vigil-tooltip-surface"
             data-state={paintOpen ? "open" : "closed"}
+            id={tipId}
+            ref={surfaceRef}
+            role="tooltip"
             style={{ top: coords.top, left: coords.left }}
           >
             {content}
           </div>,
-          getVigilPortalRoot(),
+          getVigilPortalRoot()
         )
       : null;
 
   return (
     <>
       <span
-        ref={setHitboxRef}
         className="hg-tooltip-hitbox"
-        onPointerOver={onHitboxPointerOver}
-        onPointerOut={onHitboxPointerOut}
-        onFocusCapture={onHitboxFocusCapture}
         onBlurCapture={onHitboxBlurCapture}
+        onFocusCapture={onHitboxFocusCapture}
+        onPointerOut={onHitboxPointerOut}
+        onPointerOver={onHitboxPointerOver}
+        ref={setHitboxRef}
       >
         {triggerChild}
       </span>

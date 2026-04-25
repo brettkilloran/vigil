@@ -21,13 +21,15 @@ const bodySchema = z.object({
 export async function POST(req: Request) {
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
 
   const key = process.env.ANTHROPIC_API_KEY?.trim();
   if (!key) {
     return Response.json(
       { ok: false, error: "ANTHROPIC_API_KEY is not configured" },
-      { status: 503 },
+      { status: 503 }
     );
   }
 
@@ -35,7 +37,7 @@ export async function POST(req: Request) {
   if (!db) {
     return Response.json(
       { ok: false, error: "Database not configured" },
-      { status: 503 },
+      { status: 503 }
     );
   }
 
@@ -50,7 +52,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json(
       { ok: false, error: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -60,7 +62,10 @@ export async function POST(req: Request) {
 
   const space = await assertSpaceExists(db, parsed.data.spaceId);
   if (!space) {
-    return Response.json({ ok: false, error: "Space not found" }, { status: 404 });
+    return Response.json(
+      { ok: false, error: "Space not found" },
+      { status: 404 }
+    );
   }
 
   const model =

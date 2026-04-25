@@ -34,18 +34,28 @@ export type LoreImportPipelineFractionOpts = {
 
 export function computeLoreImportPipelinePercent(
   phase: string,
-  opts?: LoreImportPipelineFractionOpts,
+  opts?: LoreImportPipelineFractionOpts
 ): number | null {
   const p = String(phase || "")
     .trim()
     .toLowerCase();
-  if (p === "queued") return 1;
-  if (p === "fallback_plan") return 5;
-  if (p === "failed") return 99;
-  if (p === "ready") return 99;
+  if (p === "queued") {
+    return 1;
+  }
+  if (p === "fallback_plan") {
+    return 5;
+  }
+  if (p === "failed") {
+    return 99;
+  }
+  if (p === "ready") {
+    return 99;
+  }
 
   const idx = PIPELINE_ORDER.indexOf(p as (typeof PIPELINE_ORDER)[number]);
-  if (idx === -1) return null;
+  if (idx === -1) {
+    return null;
+  }
 
   let before = 0;
   for (let i = 0; i < idx; i++) {

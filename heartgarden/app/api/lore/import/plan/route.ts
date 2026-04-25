@@ -7,11 +7,9 @@ import {
   gmMayAccessSpaceIdAsync,
   heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { replaceImportReviewQueueForPlan } from "@/src/lib/lore-import-persist-review";
 import { buildLoreImportPlan } from "@/src/lib/lore-import-plan-build";
 import { loreImportPlanPostBodySchema } from "@/src/lib/lore-import-plan-post-body";
-import {
-  replaceImportReviewQueueForPlan,
-} from "@/src/lib/lore-import-persist-review";
 import { insertLoreImportJobForCompletedSyncPlan } from "@/src/lib/lore-import-sync-plan-job";
 import { assertSpaceExists, type VigilDb } from "@/src/lib/spaces";
 
@@ -22,13 +20,15 @@ export const maxDuration = 300;
 export async function POST(req: Request) {
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
 
   const key = process.env.ANTHROPIC_API_KEY?.trim();
   if (!key) {
     return Response.json(
       { ok: false, error: "ANTHROPIC_API_KEY is not configured" },
-      { status: 503 },
+      { status: 503 }
     );
   }
 
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   if (!db) {
     return Response.json(
       { ok: false, error: "Database not configured" },
-      { status: 503 },
+      { status: 503 }
     );
   }
 
@@ -51,13 +51,16 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json(
       { ok: false, error: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
   const space = await assertSpaceExists(db, parsed.data.spaceId);
   if (!space) {
-    return Response.json({ ok: false, error: "Space not found" }, { status: 404 });
+    return Response.json(
+      { ok: false, error: "Space not found" },
+      { status: 404 }
+    );
   }
   if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, parsed.data.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();

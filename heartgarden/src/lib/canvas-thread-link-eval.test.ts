@@ -1,7 +1,10 @@
 /** @vitest-environment jsdom */
 import { describe, expect, it } from "vitest";
 
-import type { CanvasContentEntity, CanvasEntity } from "@/src/components/foundation/architectural-types";
+import type {
+  CanvasContentEntity,
+  CanvasEntity,
+} from "@/src/components/foundation/architectural-types";
 import {
   evaluateFactionRosterThreadLink,
   evaluateLocationCharacterThreadLink,
@@ -9,7 +12,10 @@ import {
   runSemanticThreadLinkEvaluation,
 } from "@/src/lib/canvas-thread-link-eval";
 
-function char(id: string, overrides: Partial<CanvasContentEntity> = {}): CanvasEntity {
+function char(
+  id: string,
+  overrides: Partial<CanvasContentEntity> = {}
+): CanvasEntity {
   return {
     id,
     title: "C",
@@ -25,7 +31,10 @@ function char(id: string, overrides: Partial<CanvasContentEntity> = {}): CanvasE
   } as CanvasContentEntity;
 }
 
-function fac(id: string, roster: CanvasContentEntity["factionRoster"]): CanvasEntity {
+function fac(
+  id: string,
+  roster: CanvasContentEntity["factionRoster"]
+): CanvasEntity {
   return {
     id,
     title: "F",
@@ -41,7 +50,10 @@ function fac(id: string, roster: CanvasContentEntity["factionRoster"]): CanvasEn
   } as CanvasContentEntity;
 }
 
-function loc(id: string, overrides: Partial<CanvasContentEntity> = {}): CanvasEntity {
+function loc(
+  id: string,
+  overrides: Partial<CanvasContentEntity> = {}
+): CanvasEntity {
   return {
     id,
     title: "L",
@@ -76,7 +88,9 @@ describe("resolveFactionRosterEntryIdFromDrawTarget", () => {
     node.dataset.nodeId = "faction-1";
     node.appendChild(row);
     document.body.appendChild(node);
-    expect(resolveFactionRosterEntryIdFromDrawTarget(row, "faction-1", "char-1")).toBe("row-1");
+    expect(
+      resolveFactionRosterEntryIdFromDrawTarget(row, "faction-1", "char-1")
+    ).toBe("row-1");
     node.remove();
   });
 });
@@ -93,9 +107,15 @@ describe("evaluateFactionRosterThreadLink", () => {
     };
     const r = evaluateFactionRosterThreadLink(entities, cId, fId, rid);
     expect(r.kind).toBe("connect_and_patch");
-    if (r.kind !== "connect_and_patch") return;
-    const nextF = r.patch.entityUpdates[fId]!(entities[fId] as CanvasContentEntity);
-    const nextC = r.patch.entityUpdates[cId]!(entities[cId] as CanvasContentEntity);
+    if (r.kind !== "connect_and_patch") {
+      return;
+    }
+    const nextF = r.patch.entityUpdates[fId]!(
+      entities[fId] as CanvasContentEntity
+    );
+    const nextC = r.patch.entityUpdates[cId]!(
+      entities[cId] as CanvasContentEntity
+    );
     expect(nextF.factionRoster?.[0]?.kind).toBe("character");
     expect(nextC.loreThreadAnchors?.primaryFactionItemId).toBe(fId);
     expect(nextC.loreThreadAnchors?.primaryFactionRosterEntryId).toBe(rid);
@@ -112,9 +132,15 @@ describe("evaluateLocationCharacterThreadLink", () => {
     };
     const r = evaluateLocationCharacterThreadLink(entities, cId, lId);
     expect(r.kind).toBe("connect_and_patch");
-    if (r.kind !== "connect_and_patch") return;
-    const nextC = r.patch.entityUpdates[cId]!(entities[cId] as CanvasContentEntity);
-    const nextL = r.patch.entityUpdates[lId]!(entities[lId] as CanvasContentEntity);
+    if (r.kind !== "connect_and_patch") {
+      return;
+    }
+    const nextC = r.patch.entityUpdates[cId]!(
+      entities[cId] as CanvasContentEntity
+    );
+    const nextL = r.patch.entityUpdates[lId]!(
+      entities[lId] as CanvasContentEntity
+    );
     expect(nextC.loreThreadAnchors?.primaryLocationItemId).toBe(lId);
     expect(nextL.loreThreadAnchors?.linkedCharacterItemIds).toContain(cId);
   });
@@ -129,7 +155,9 @@ describe("runSemanticThreadLinkEvaluation", () => {
       [cId]: char(cId),
       [lId]: loc(lId),
     };
-    expect(runSemanticThreadLinkEvaluation(entities, cId, lId, rid).kind).toBe("none");
+    expect(runSemanticThreadLinkEvaluation(entities, cId, lId, rid).kind).toBe(
+      "none"
+    );
   });
 
   it("runs location when no roster id", () => {
@@ -154,7 +182,9 @@ describe("runSemanticThreadLinkEvaluation", () => {
     };
     const r = runSemanticThreadLinkEvaluation(entities, cId, fId, rid);
     expect(r.kind).toBe("connect_and_patch");
-    if (r.kind !== "connect_and_patch") return;
+    if (r.kind !== "connect_and_patch") {
+      return;
+    }
     expect(r.patch.entityUpdates[fId]).toBeDefined();
     expect(r.patch.entityUpdates[cId]).toBeDefined();
   });

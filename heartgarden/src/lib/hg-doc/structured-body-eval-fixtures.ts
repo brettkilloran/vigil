@@ -17,7 +17,10 @@ export const STRUCTURED_BODY_EVAL_FIXTURES: StructuredBodyEvalFixture[] = [
     title: "Scout Notes",
     input: {
       blocks: [
-        { kind: "paragraph", text: "Two scouts reported quiet waters near Vanphimwell." },
+        {
+          kind: "paragraph",
+          text: "Two scouts reported quiet waters near Vanphimwell.",
+        },
         { kind: "paragraph", text: "No hostile movement detected at dawn." },
       ],
     },
@@ -29,11 +32,20 @@ export const STRUCTURED_BODY_EVAL_FIXTURES: StructuredBodyEvalFixture[] = [
     input: {
       blocks: [
         { kind: "heading", level: 2, text: "Travel" },
-        { kind: "paragraph", text: "The convoy reached the trench edge by dusk." },
+        {
+          kind: "paragraph",
+          text: "The convoy reached the trench edge by dusk.",
+        },
         { kind: "heading", level: 2, text: "Conflict" },
-        { kind: "paragraph", text: "A patrol skirmish slowed progress for one hour." },
+        {
+          kind: "paragraph",
+          text: "A patrol skirmish slowed progress for one hour.",
+        },
         { kind: "heading", level: 2, text: "Aftermath" },
-        { kind: "paragraph", text: "Recovered charts were cataloged in the river archive." },
+        {
+          kind: "paragraph",
+          text: "Recovered charts were cataloged in the river archive.",
+        },
       ],
     },
     expect: { minH1: 1, minH2: 3, minH3: 0 },

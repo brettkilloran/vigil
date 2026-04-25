@@ -32,7 +32,8 @@ export async function GET() {
   const { gateEnabled, sessionSecret } = readBootEnv();
   const jar = await cookies();
   const raw = jar.get(HEARTGARDEN_BOOT_COOKIE_NAME)?.value;
-  const payload = raw && sessionSecret ? verifyBootSessionCookie(sessionSecret, raw) : null;
+  const payload =
+    raw && sessionSecret ? verifyBootSessionCookie(sessionSecret, raw) : null;
   const playerLayerMisconfigured = isHeartgardenPlayerLayerMisconfigured();
   const sessionValid =
     gateEnabled &&
@@ -59,9 +60,13 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { gateEnabled, bishopPin, playersPin, demoPin, sessionSecret } = readBootEnv();
+  const { gateEnabled, bishopPin, playersPin, demoPin, sessionSecret } =
+    readBootEnv();
   if (!gateEnabled) {
-    return NextResponse.json({ error: "Boot gate is not enabled." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Boot gate is not enabled." },
+      { status: 400 }
+    );
   }
 
   const ip = heartgardenBootClientIp(req);

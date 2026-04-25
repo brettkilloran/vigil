@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
-import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
 import {
   htmlFragmentToHgDocDoc,
   legacyCodeBodyHtmlToHgDocSeed,
   plainTextFromInlineHtmlFragment,
   stripLegacyHtmlToPlainText,
 } from "@/src/lib/hg-doc/html-to-doc";
+import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
 
 describe("html-to-doc", () => {
   it("htmlFragmentToHgDocDoc round-trips simple markup through hgDocToHtml", () => {
@@ -26,16 +26,20 @@ describe("html-to-doc", () => {
   });
 
   it("stripLegacyHtmlToPlainText removes script and decodes entities", () => {
-    const evil = '<script>alert(1)</script><p>a&nbsp;&amp;b</p>';
+    const evil = "<script>alert(1)</script><p>a&nbsp;&amp;b</p>";
     expect(stripLegacyHtmlToPlainText(evil)).toBe("a &b");
   });
 
   it("plainTextFromInlineHtmlFragment inserts word boundary across <br> (not glued like textContent)", () => {
-    expect(plainTextFromInlineHtmlFragment("ARBITER STATION<br />LAGRANGE 1")).toBe("ARBITER STATION LAGRANGE 1");
+    expect(
+      plainTextFromInlineHtmlFragment("ARBITER STATION<br />LAGRANGE 1")
+    ).toBe("ARBITER STATION LAGRANGE 1");
   });
 
   it("legacyCodeBodyHtmlToHgDocSeed decodes nbsp and basic entities", () => {
-    const doc = legacyCodeBodyHtmlToHgDocSeed("<span>a</span>&nbsp;&nbsp;<span>b</span>");
+    const doc = legacyCodeBodyHtmlToHgDocSeed(
+      "<span>a</span>&nbsp;&nbsp;<span>b</span>"
+    );
     const plain = hgDocToPlainText(doc);
     expect(plain).toMatch(/a\s+b/);
     expect(plain).not.toContain("&nbsp");

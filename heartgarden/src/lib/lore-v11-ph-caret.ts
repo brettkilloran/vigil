@@ -5,8 +5,8 @@
 
 import { LORE_V11_PH_LOCATION_PLACEHOLDER } from "@/src/lib/lore-location-focus-document-html";
 import { LORE_V11_PH_DISPLAY_NAME } from "@/src/lib/lore-node-seed-html";
-import { syncLoreV11MarkerTilts } from "@/src/lib/lore-v11-marker-tilt";
 import { LORE_V9_REDACTED_SENTINEL } from "@/src/lib/lore-v9-placeholder";
+import { syncLoreV11MarkerTilts } from "@/src/lib/lore-v11-marker-tilt";
 
 const PH_X = "--hg-lore-ph-x";
 const PH_Y = "--hg-lore-ph-y";
@@ -27,13 +27,17 @@ export function clearLoreV11PhCaretVars(el: HTMLElement): void {
 }
 
 function charSkShellsV11Under(root: HTMLElement): HTMLElement[] {
-  if (root.matches?.(`[class*="charSkShellV11"]`)) return [root];
+  if (root.matches?.(`[class*="charSkShellV11"]`)) {
+    return [root];
+  }
   return [...root.querySelectorAll<HTMLElement>(`[class*="charSkShellV11"]`)];
 }
 
 /** Location ORDO v7 slab — same `data-hg-lore-ph` caret sync as character v11. */
 function locOrdoV7RootsUnder(root: HTMLElement): HTMLElement[] {
-  if (root.matches?.(`[class*="locOrdoV7Root"]`)) return [root];
+  if (root.matches?.(`[class*="locOrdoV7Root"]`)) {
+    return [root];
+  }
   return [...root.querySelectorAll<HTMLElement>(`[class*="locOrdoV7Root"]`)];
 }
 
@@ -79,10 +83,14 @@ function rangeAtFieldStart(field: HTMLElement): Range | null {
 }
 
 /** When the collapsed caret has no measurable box (common on `<br>`-only editables), still set `--hg-lore-ph-*`. */
-function fallbackCaretLineBox(field: HTMLElement): { x: number; y: number; h: number } {
+function fallbackCaretLineBox(field: HTMLElement): {
+  x: number;
+  y: number;
+  h: number;
+} {
   const cs = getComputedStyle(field);
-  const fontSize = parseFloat(cs.fontSize) || 13;
-  let lh = parseFloat(cs.lineHeight);
+  const fontSize = Number.parseFloat(cs.fontSize) || 13;
+  let lh = Number.parseFloat(cs.lineHeight);
   if (!Number.isFinite(lh) || lh <= 0 || cs.lineHeight === "normal") {
     lh = fontSize * 1.2;
   }
@@ -93,10 +101,16 @@ function fallbackCaretLineBox(field: HTMLElement): { x: number; y: number; h: nu
  * Caret line box for v11 placeholder strips + caption. Always uses the logical **start** of the field
  * (not the live selection) so marker bands do not jump between idle mount and focus/interaction.
  */
-function caretBoxForField(field: HTMLElement): { x: number; y: number; h: number } {
+function caretBoxForField(field: HTMLElement): {
+  x: number;
+  y: number;
+  h: number;
+} {
   const fb = fallbackCaretLineBox(field);
   const range = rangeAtFieldStart(field);
-  if (!range) return fb;
+  if (!range) {
+    return fb;
+  }
 
   const fr = field.getBoundingClientRect();
   if (fr.width <= 0 || fr.height <= 0) {
@@ -106,7 +120,9 @@ function caretBoxForField(field: HTMLElement): { x: number; y: number; h: number
   let rr = range.getBoundingClientRect();
   if (rr.width === 0 && rr.height === 0) {
     const cr = range.getClientRects();
-    if (cr.length > 0) rr = cr[0]!;
+    if (cr.length > 0) {
+      rr = cr[0]!;
+    }
   }
   if (rr.width === 0 && rr.height === 0) {
     return { x: 0, y: 0, h: fb.h };
@@ -122,14 +138,25 @@ function caretBoxForField(field: HTMLElement): { x: number; y: number; h: number
  * Sets `--hg-lore-ph-{x,y,lh}` on v11 fields with `data-hg-lore-ph` while placeholder is active.
  * `host` is any ancestor of the card (e.g. rich editor root).
  */
-export function syncLoreV11PhCaretOffsetsInHost(host: HTMLElement | null): void {
-  if (!host || typeof document === "undefined") return;
+export function syncLoreV11PhCaretOffsetsInHost(
+  host: HTMLElement | null
+): void {
+  if (!host || typeof document === "undefined") {
+    return;
+  }
   const shells = [...charSkShellsV11Under(host), ...locOrdoV7RootsUnder(host)];
-  if (!shells.length) return;
+  if (!shells.length) {
+    return;
+  }
 
   for (const shell of shells) {
-    for (const el of shell.querySelectorAll<HTMLElement>("[data-hg-lore-field]")) {
-      if (el.getAttribute("data-hg-lore-placeholder") !== "true" || !el.hasAttribute("data-hg-lore-ph")) {
+    for (const el of shell.querySelectorAll<HTMLElement>(
+      "[data-hg-lore-field]"
+    )) {
+      if (
+        el.getAttribute("data-hg-lore-placeholder") !== "true" ||
+        !el.hasAttribute("data-hg-lore-ph")
+      ) {
         clearLoreV11PhCaretVars(el);
         continue;
       }
@@ -139,9 +166,11 @@ export function syncLoreV11PhCaretOffsetsInHost(host: HTMLElement | null): void 
       const isDisplayNameField =
         ph === LORE_V11_PH_DISPLAY_NAME ||
         ph === LORE_V11_PH_LOCATION_PLACEHOLDER ||
-        (ph === LORE_V9_REDACTED_SENTINEL && el.matches?.('[class*="charSkDisplayName"]') === true);
+        (ph === LORE_V9_REDACTED_SENTINEL &&
+          el.matches?.('[class*="charSkDisplayName"]') === true);
       /* Faction archive letterhead org name: single-line strip marker (not dual-line display name block). */
-      const isFactionLetterheadPrimaryTitle = el.getAttribute("data-hg-lore-faction-field") === "orgNamePrimary";
+      const isFactionLetterheadPrimaryTitle =
+        el.getAttribute("data-hg-lore-faction-field") === "orgNamePrimary";
       const yOff =
         isDisplayNameField && !isFactionLetterheadPrimaryTitle
           ? PLACEHOLDER_Y_OFFSET_DISPLAY_NAME_PX
@@ -156,7 +185,9 @@ export function syncLoreV11PhCaretOffsetsInHost(host: HTMLElement | null): void 
 /**
  * Keeps v11 placeholder offsets in sync with selection, layout, and resize.
  */
-export function installLoreV11PlaceholderCaretSync(host: HTMLElement): () => void {
+export function installLoreV11PlaceholderCaretSync(
+  host: HTMLElement
+): () => void {
   syncLoreV11MarkerTilts(host);
 
   let raf = 0;
@@ -173,12 +204,15 @@ export function installLoreV11PlaceholderCaretSync(host: HTMLElement): () => voi
 
   document.addEventListener("selectionchange", run);
   window.addEventListener("resize", run);
-  const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(run) : null;
+  const ro =
+    typeof ResizeObserver === "undefined" ? null : new ResizeObserver(run);
   ro?.observe(host);
 
   const onFocusIn = (e: FocusEvent) => {
     const t = e.target;
-    if (t instanceof Node && host.contains(t)) run();
+    if (t instanceof Node && host.contains(t)) {
+      run();
+    }
   };
   host.addEventListener("focusin", onFocusIn, true);
 

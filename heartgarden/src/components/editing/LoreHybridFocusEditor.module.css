@@ -25,24 +25,24 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  margin-top: 0.125rem;
   padding: 0.75rem 0.875rem;
+  margin-top: 0.125rem;
+  background: color-mix(in oklch, var(--sys-color-white) 82%, transparent);
   border: 1px solid color-mix(in oklch, var(--sys-color-black) 10%, transparent);
   border-radius: var(--sys-radius-md);
-  background: color-mix(in oklch, var(--sys-color-white) 82%, transparent);
 }
 
 .factionRosterHeader {
   display: flex;
+  gap: 0.5rem;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
 }
 
 .factionRosterHeaderActions {
   display: flex;
-  align-items: center;
   gap: 0.375rem;
+  align-items: center;
 }
 
 .factionRosterCount {
@@ -64,9 +64,9 @@
 
 .factionRosterRow {
   display: flex;
+  gap: 0.625rem;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.625rem;
   padding: 0.375rem 0.125rem;
 }
 
@@ -103,39 +103,40 @@
 
 .label {
   font-size: 0.7rem;
-  letter-spacing: 0.06em;
   text-transform: uppercase;
+  letter-spacing: 0.06em;
   opacity: 0.75;
 }
 
 .notesWrap {
-  margin-top: 0.5rem;
   flex: 1;
   min-height: 10rem;
+  margin-top: 0.5rem;
 }
 
 /* Character hybrid: divider between injected identity row (portrait + fields) and Notes — legacy shell used `data-hg-character-focus-meta` border-bottom. */
 .host[data-hg-lore-hybrid-focus="character"] .notesWrap {
-  margin-top: 0.75rem;
   padding-top: 1rem;
-  border-top: 1px solid color-mix(in oklch, var(--sys-color-black) 12%, transparent);
+  margin-top: 0.75rem;
+  border-top: 1px solid
+    color-mix(in oklch, var(--sys-color-black) 12%, transparent);
 }
 
 /* Location: `.focusLocationDocument [data-hg-lore-location-focus-meta]` already has border-bottom in
    ArchitecturalCanvasApp — do not add border-top here or meta + Notes read as a double rule. */
 .host[data-hg-lore-hybrid-focus="location"] .notesWrap {
-  margin-top: 0.375rem;
   padding-top: 0.725rem;
+  margin-top: 0.375rem;
 }
 
 .host[data-hg-lore-hybrid-focus="faction"] .notesWrap {
-  margin-top: 0.375rem;
   padding-top: 0.725rem;
+  margin-top: 0.375rem;
 }
 
 :global(.focusEditorDark) .factionRosterWrap {
-  border-color: color-mix(in oklch, var(--sys-color-white) 16%, transparent);
   background: color-mix(in oklch, var(--sys-color-white) 6%, transparent);
+  border-color: color-mix(in oklch, var(--sys-color-white) 16%, transparent);
 }
 
 :global(.focusEditorDark) .factionRosterCount,

@@ -8,52 +8,71 @@ import {
   gmMayAccessSpaceIdAsync,
   heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
-import { isHeartgardenImplicitPlayerRootSpaceName } from "@/src/lib/heartgarden-implicit-player-space";
 import {
   heartgardenApiReadJsonBody,
   heartgardenApiRejectIfPlayerBlocked,
   heartgardenApiRequireDb,
 } from "@/src/lib/heartgarden-api-route-helpers";
+import { isHeartgardenImplicitPlayerRootSpaceName } from "@/src/lib/heartgarden-implicit-player-space";
 import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
-import { assertSpaceReparentAllowed, deleteSpaceSubtree } from "@/src/lib/spaces";
+import {
+  assertSpaceReparentAllowed,
+  deleteSpaceSubtree,
+} from "@/src/lib/spaces";
 
-const patchBody = z.object({
-  name: z.string().min(1).max(255).optional(),
-  /** When set, moves this space under a new parent (folder inner space ↔ canvas space). GM-only. */
-  parentSpaceId: z.string().uuid().nullable().optional(),
-}).strict();
+const patchBody = z
+  .object({
+    name: z.string().min(1).max(255).optional(),
+    /** When set, moves this space under a new parent (folder inner space ↔ canvas space). GM-only. */
+    parentSpaceId: z.string().uuid().nullable().optional(),
+  })
+  .strict();
 
 export async function PATCH(
   req: Request,
-  context: { params: Promise<{ spaceId: string }> },
+  context: { params: Promise<{ spaceId: string }> }
 ) {
   const dbGate = heartgardenApiRequireDb(tryGetDb());
-  if (!dbGate.ok) return dbGate.response;
+  if (!dbGate.ok) {
+    return dbGate.response;
+  }
   const db = dbGate.db;
 
   const bootCtx = await getHeartgardenApiBootContext();
   const blocked = heartgardenApiRejectIfPlayerBlocked(bootCtx);
-  if (blocked) return blocked;
+  if (blocked) {
+    return blocked;
+  }
   const { spaceId } = await context.params;
   const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
-  if (!access.ok) return access.response;
+  if (!access.ok) {
+    return access.response;
+  }
 
   const bodyRead = await heartgardenApiReadJsonBody(req);
-  if (!bodyRead.ok) return bodyRead.response;
+  if (!bodyRead.ok) {
+    return bodyRead.response;
+  }
   const json = bodyRead.json;
 
   const parsed = patchBody.safeParse(json);
   if (!parsed.success) {
     return Response.json(
       { ok: false, error: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
-  if (parsed.data.name === undefined && parsed.data.parentSpaceId === undefined) {
+  if (
+    parsed.data.name === undefined &&
+    parsed.data.parentSpaceId === undefined
+  ) {
     return Response.json(
-      { ok: false, error: "No supported fields provided (allowed: name, parentSpaceId)" },
-      { status: 400 },
+      {
+        ok: false,
+        error: "No supported fields provided (allowed: name, parentSpaceId)",
+      },
+      { status: 400 }
     );
   }
 
@@ -64,13 +83,19 @@ export async function PATCH(
       isHeartgardenImplicitPlayerRootSpaceName(toName) &&
       !isHeartgardenImplicitPlayerRootSpaceName(fromName)
     ) {
-      return Response.json({ ok: false, error: "Invalid space name" }, { status: 400 });
+      return Response.json(
+        { ok: false, error: "Invalid space name" },
+        { status: 400 }
+      );
     }
     if (
       isHeartgardenImplicitPlayerRootSpaceName(fromName) &&
       !isHeartgardenImplicitPlayerRootSpaceName(toName)
     ) {
-      return Response.json({ ok: false, error: "Invalid space name" }, { status: 400 });
+      return Response.json(
+        { ok: false, error: "Invalid space name" },
+        { status: 400 }
+      );
     }
   }
 
@@ -79,7 +104,10 @@ export async function PATCH(
       return heartgardenApiForbiddenJsonResponse();
     }
     const nextParent = parsed.data.parentSpaceId;
-    if (nextParent !== null && !(await gmMayAccessSpaceIdAsync(db, bootCtx, nextParent))) {
+    if (
+      nextParent !== null &&
+      !(await gmMayAccessSpaceIdAsync(db, bootCtx, nextParent))
+    ) {
       return heartgardenApiForbiddenJsonResponse();
     }
     // REVIEW_2026-04-25_1730 H1: Reject cross-brane reparents. Folder
@@ -92,7 +120,10 @@ export async function PATCH(
         .where(eq(spaces.id, nextParent))
         .limit(1);
       if (!parentRow) {
-        return Response.json({ ok: false, error: "Parent space not found" }, { status: 404 });
+        return Response.json(
+          { ok: false, error: "Parent space not found" },
+          { status: 404 }
+        );
       }
       if (
         parentRow.braneId &&
@@ -101,19 +132,28 @@ export async function PATCH(
       ) {
         return Response.json(
           { ok: false, error: "Cross-brane folder reparents are not allowed" },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
     const reparent = await assertSpaceReparentAllowed(db, spaceId, nextParent);
     if (!reparent.ok) {
       if (reparent.error === "parent_not_found") {
-        return Response.json({ ok: false, error: "Parent space not found" }, { status: 404 });
+        return Response.json(
+          { ok: false, error: "Parent space not found" },
+          { status: 404 }
+        );
       }
       if (reparent.error === "would_create_cycle") {
-        return Response.json({ ok: false, error: "Invalid parent (cycle)" }, { status: 400 });
+        return Response.json(
+          { ok: false, error: "Invalid parent (cycle)" },
+          { status: 400 }
+        );
       }
-      return Response.json({ ok: false, error: "Space not found" }, { status: 404 });
+      return Response.json(
+        { ok: false, error: "Space not found" },
+        { status: 404 }
+      );
     }
   }
 
@@ -133,9 +173,12 @@ export async function PATCH(
   await db.update(spaces).set(setPayload).where(eq(spaces.id, spaceId));
 
   const reason =
-    parsed.data.parentSpaceId !== undefined ? "space.moved" : "space.updated";
+    parsed.data.parentSpaceId === undefined ? "space.updated" : "space.moved";
   const lookupSpaceIds = [spaceId];
-  if (parsed.data.parentSpaceId !== undefined && parsed.data.parentSpaceId !== null) {
+  if (
+    parsed.data.parentSpaceId !== undefined &&
+    parsed.data.parentSpaceId !== null
+  ) {
     lookupSpaceIds.push(parsed.data.parentSpaceId);
   }
   if (previousParentSpaceId) {
@@ -153,10 +196,12 @@ export async function PATCH(
 
 export async function DELETE(
   _req: Request,
-  context: { params: Promise<{ spaceId: string }> },
+  context: { params: Promise<{ spaceId: string }> }
 ) {
   const dbGate = heartgardenApiRequireDb(tryGetDb());
-  if (!dbGate.ok) return dbGate.response;
+  if (!dbGate.ok) {
+    return dbGate.response;
+  }
   const db = dbGate.db;
   const bootCtx = await getHeartgardenApiBootContext();
   const blocked = heartgardenApiRejectIfPlayerBlocked(bootCtx);
@@ -165,7 +210,9 @@ export async function DELETE(
   }
   const { spaceId } = await context.params;
   const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
-  if (!access.ok) return access.response;
+  if (!access.ok) {
+    return access.response;
+  }
   const result = await deleteSpaceSubtree(db, spaceId);
   if (!result.ok) {
     const status = result.error === "Space not found" ? 404 : 400;
@@ -175,7 +222,9 @@ export async function DELETE(
     originSpaceId: spaceId,
     reason: "space.deleted",
     lookupSpaceIds: [spaceId],
-    directSpaceIds: access.space.parentSpaceId ? [access.space.parentSpaceId] : undefined,
+    directSpaceIds: access.space.parentSpaceId
+      ? [access.space.parentSpaceId]
+      : undefined,
   });
   return Response.json({ ok: true, deletedSpaceIds: result.deletedIds });
 }

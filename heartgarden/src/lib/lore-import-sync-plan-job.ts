@@ -6,7 +6,10 @@ import {
   isLoreImportJobSchemaLagError,
   readLoreImportJobInsertError,
 } from "@/src/lib/lore-import-job-db-insert-helpers";
-import type { LoreImportPlan, LoreImportUserContext } from "@/src/lib/lore-import-plan-types";
+import type {
+  LoreImportPlan,
+  LoreImportUserContext,
+} from "@/src/lib/lore-import-plan-types";
 import type { VigilDb } from "@/src/lib/spaces";
 
 const SYNC_READY_STATUS = "ready" as const;
@@ -27,9 +30,9 @@ export async function insertLoreImportJobForCompletedSyncPlan(args: {
   const now = new Date();
   const id = randomUUID();
   const userContextRecord =
-    args.userContext != null
-      ? (args.userContext as unknown as Record<string, unknown>)
-      : null;
+    args.userContext == null
+      ? null
+      : (args.userContext as unknown as Record<string, unknown>);
 
   try {
     await args.db.insert(loreImportJobs).values({

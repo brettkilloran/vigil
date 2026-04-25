@@ -19,28 +19,39 @@ import { isUuidLike } from "@/src/lib/uuid-like";
 
 export { isUuidLike } from "@/src/lib/uuid-like";
 
-export function resolvedPersistedContentItemId(entity: CanvasContentEntity): string | null {
+export function resolvedPersistedContentItemId(
+  entity: CanvasContentEntity
+): string | null {
   const id =
-    entity.persistedItemId && isUuidLike(entity.persistedItemId) ? entity.persistedItemId : entity.id;
+    entity.persistedItemId && isUuidLike(entity.persistedItemId)
+      ? entity.persistedItemId
+      : entity.id;
   return isUuidLike(id) ? id : null;
 }
 
 export function resolveFactionRosterEntryIdFromDrawTarget(
   target: HTMLElement,
   endpointA: string,
-  endpointB: string,
+  endpointB: string
 ): string | null {
   const row = target.closest<HTMLElement>("[data-faction-roster-entry-id]");
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
   const rosterId = row.dataset.factionRosterEntryId;
   const host = row.closest<HTMLElement>("[data-node-id]")?.dataset.nodeId;
-  if (!rosterId || !host || (host !== endpointA && host !== endpointB)) return null;
+  if (!(rosterId && host) || (host !== endpointA && host !== endpointB)) {
+    return null;
+  }
   return rosterId;
 }
 
 export type SemanticThreadPatch = {
   /** entity id → updater (applied in order, same graph tick) */
-  entityUpdates: Record<string, (prev: CanvasContentEntity) => CanvasContentEntity>;
+  entityUpdates: Record<
+    string,
+    (prev: CanvasContentEntity) => CanvasContentEntity
+  >;
 };
 
 export type SemanticThreadEvalResult =
@@ -52,7 +63,7 @@ export type SemanticThreadEvalResult =
 function mergeCharFactionAnchors(
   prev: LoreCanvasThreadAnchors | undefined,
   factionPersistedId: string,
-  rosterEntryId: string,
+  rosterEntryId: string
 ): LoreCanvasThreadAnchors {
   return {
     ...prev,
@@ -64,7 +75,7 @@ function mergeCharFactionAnchors(
 /** Character ↔ faction thread when not targeting a roster row (card-face / employer hint). */
 function mergeCharFactionDirectAnchors(
   prev: LoreCanvasThreadAnchors | undefined,
-  factionPersistedId: string,
+  factionPersistedId: string
 ): LoreCanvasThreadAnchors {
   if (
     prev?.primaryFactionItemId &&
@@ -85,16 +96,18 @@ function mergeCharFactionDirectAnchors(
 
 function appendLinkedCharacterUnique(
   prev: LoreCanvasThreadAnchors | undefined,
-  characterItemId: string,
+  characterItemId: string
 ): LoreCanvasThreadAnchors {
   const existing = prev?.linkedCharacterItemIds ?? [];
-  const next = existing.includes(characterItemId) ? existing : [...existing, characterItemId];
+  const next = existing.includes(characterItemId)
+    ? existing
+    : [...existing, characterItemId];
   return { ...prev, linkedCharacterItemIds: next };
 }
 
 function mergeCharLocationAnchors(
   prev: LoreCanvasThreadAnchors | undefined,
-  locationPersistedId: string,
+  locationPersistedId: string
 ): LoreCanvasThreadAnchors {
   return { ...prev, primaryLocationItemId: locationPersistedId };
 }
@@ -103,9 +116,11 @@ export function evaluateFactionRosterThreadLink(
   entities: Record<string, CanvasEntity>,
   endpointA: string,
   endpointB: string,
-  rosterEntryId: string | null,
+  rosterEntryId: string | null
 ): SemanticThreadEvalResult {
-  if (!rosterEntryId) return { kind: "none" };
+  if (!rosterEntryId) {
+    return { kind: "none" };
+  }
   const ea = entities[endpointA];
   const eb = entities[endpointB];
   const char =
@@ -120,7 +135,9 @@ export function evaluateFactionRosterThreadLink(
       : eb?.kind === "content" && eb.loreCard?.kind === "faction"
         ? eb
         : null;
-  if (!char || !fac) return { kind: "none" };
+  if (!(char && fac)) {
+    return { kind: "none" };
+  }
 
   const characterItemId = resolvedPersistedContentItemId(char);
   if (!characterItemId) {
@@ -132,7 +149,11 @@ export function evaluateFactionRosterThreadLink(
   }
 
   const prevRoster = fac.factionRoster ?? [];
-  const result = linkCharacterToFactionRosterRow(prevRoster, rosterEntryId, characterItemId);
+  const result = linkCharacterToFactionRosterRow(
+    prevRoster,
+    rosterEntryId,
+    characterItemId
+  );
   if (!result.ok) {
     if (result.code === "replace_blocked") {
       return { kind: "block", message: result.message };
@@ -157,7 +178,7 @@ export function evaluateFactionRosterThreadLink(
               loreThreadAnchors: mergeCharFactionAnchors(
                 prev.loreThreadAnchors,
                 factionPersistedId,
-                rosterEntryId,
+                rosterEntryId
               ),
             }
           : prev,
@@ -169,7 +190,7 @@ export function evaluateFactionRosterThreadLink(
 export function evaluateCharacterFactionDirectThreadLink(
   entities: Record<string, CanvasEntity>,
   endpointA: string,
-  endpointB: string,
+  endpointB: string
 ): SemanticThreadEvalResult {
   const ea = entities[endpointA];
   const eb = entities[endpointB];
@@ -185,7 +206,9 @@ export function evaluateCharacterFactionDirectThreadLink(
       : eb?.kind === "content" && eb.loreCard?.kind === "faction"
         ? eb
         : null;
-  if (!char || !fac) return { kind: "none" };
+  if (!(char && fac)) {
+    return { kind: "none" };
+  }
 
   const characterItemId = resolvedPersistedContentItemId(char);
   const factionPersistedId = resolvedPersistedContentItemId(fac) ?? fac.id;
@@ -224,7 +247,7 @@ export function evaluateCharacterFactionDirectThreadLink(
 export function evaluateLocationCharacterThreadLink(
   entities: Record<string, CanvasEntity>,
   endpointA: string,
-  endpointB: string,
+  endpointB: string
 ): SemanticThreadEvalResult {
   const ea = entities[endpointA];
   const eb = entities[endpointB];
@@ -240,7 +263,9 @@ export function evaluateLocationCharacterThreadLink(
       : eb?.kind === "content" && eb.loreCard?.kind === "location"
         ? eb
         : null;
-  if (!char || !loc) return { kind: "none" };
+  if (!(char && loc)) {
+    return { kind: "none" };
+  }
 
   const characterItemId = resolvedPersistedContentItemId(char);
   const locationItemId = resolvedPersistedContentItemId(loc);
@@ -259,14 +284,23 @@ export function evaluateLocationCharacterThreadLink(
     };
   }
 
-  const charNeeds = char.loreThreadAnchors?.primaryLocationItemId !== locationItemId;
-  const locNeeds = !(loc.loreThreadAnchors?.linkedCharacterItemIds ?? []).includes(characterItemId);
-  if (!charNeeds && !locNeeds) {
+  const charNeeds =
+    char.loreThreadAnchors?.primaryLocationItemId !== locationItemId;
+  const locNeeds = !(
+    loc.loreThreadAnchors?.linkedCharacterItemIds ?? []
+  ).includes(characterItemId);
+  if (!(charNeeds || locNeeds)) {
     return { kind: "none" };
   }
 
-  const nextCharAnchors = mergeCharLocationAnchors(char.loreThreadAnchors, locationItemId);
-  const nextLocAnchors = appendLinkedCharacterUnique(loc.loreThreadAnchors, characterItemId);
+  const nextCharAnchors = mergeCharLocationAnchors(
+    char.loreThreadAnchors,
+    locationItemId
+  );
+  const nextLocAnchors = appendLinkedCharacterUnique(
+    loc.loreThreadAnchors,
+    characterItemId
+  );
 
   const patch: SemanticThreadPatch = {
     entityUpdates: {
@@ -286,23 +320,31 @@ export function evaluateLocationCharacterThreadLink(
 function threadDrawShellPairForEndpoints(
   entities: Record<string, CanvasEntity>,
   endpointA: string,
-  endpointB: string,
+  endpointB: string
 ): readonly [ThreadDrawShell, ThreadDrawShell] | null {
   const ea = entities[endpointA];
   const eb = entities[endpointB];
-  if (ea?.kind !== "content" || eb?.kind !== "content") return null;
+  if (ea?.kind !== "content" || eb?.kind !== "content") {
+    return null;
+  }
   const ka = ea.loreCard?.kind;
   const kb = eb.loreCard?.kind;
-  if (ka !== "character" && ka !== "faction" && ka !== "location") return null;
-  if (kb !== "character" && kb !== "faction" && kb !== "location") return null;
+  if (ka !== "character" && ka !== "faction" && ka !== "location") {
+    return null;
+  }
+  if (kb !== "character" && kb !== "faction" && kb !== "location") {
+    return null;
+  }
   return sortedThreadDrawShellPair(ka, kb);
 }
 
 function ruleMatchesEndpoints(
   rule: CanvasThreadSemanticRule,
-  pair: readonly [ThreadDrawShell, ThreadDrawShell],
+  pair: readonly [ThreadDrawShell, ThreadDrawShell]
 ): boolean {
-  return rule.endpointShells[0] === pair[0] && rule.endpointShells[1] === pair[1];
+  return (
+    rule.endpointShells[0] === pair[0] && rule.endpointShells[1] === pair[1]
+  );
 }
 
 function dispatchThreadSemanticEffect(
@@ -310,15 +352,28 @@ function dispatchThreadSemanticEffect(
   entities: Record<string, CanvasEntity>,
   endpointA: string,
   endpointB: string,
-  rosterEntryId: string | null,
+  rosterEntryId: string | null
 ): SemanticThreadEvalResult {
   switch (rule.effect) {
     case "faction_roster_row_bind":
-      return evaluateFactionRosterThreadLink(entities, endpointA, endpointB, rosterEntryId);
+      return evaluateFactionRosterThreadLink(
+        entities,
+        endpointA,
+        endpointB,
+        rosterEntryId
+      );
     case "character_faction_thread_anchor":
-      return evaluateCharacterFactionDirectThreadLink(entities, endpointA, endpointB);
+      return evaluateCharacterFactionDirectThreadLink(
+        entities,
+        endpointA,
+        endpointB
+      );
     case "character_location_bidirectional":
-      return evaluateLocationCharacterThreadLink(entities, endpointA, endpointB);
+      return evaluateLocationCharacterThreadLink(
+        entities,
+        endpointA,
+        endpointB
+      );
     default: {
       const _exhaustive: never = rule.effect;
       return _exhaustive;
@@ -336,16 +391,28 @@ export function runSemanticThreadLinkEvaluation(
   entities: Record<string, CanvasEntity>,
   endpointA: string,
   endpointB: string,
-  rosterEntryId: string | null,
+  rosterEntryId: string | null
 ): SemanticThreadEvalResult {
   const pair = threadDrawShellPairForEndpoints(entities, endpointA, endpointB);
-  if (!pair) return { kind: "none" };
+  if (!pair) {
+    return { kind: "none" };
+  }
 
   const phase = rosterEntryId ? "roster_target" : "default";
   for (const rule of CANVAS_THREAD_SEMANTIC_RULES) {
-    if (rule.phase !== phase) continue;
-    if (!ruleMatchesEndpoints(rule, pair)) continue;
-    return dispatchThreadSemanticEffect(rule, entities, endpointA, endpointB, rosterEntryId);
+    if (rule.phase !== phase) {
+      continue;
+    }
+    if (!ruleMatchesEndpoints(rule, pair)) {
+      continue;
+    }
+    return dispatchThreadSemanticEffect(
+      rule,
+      entities,
+      endpointA,
+      endpointB,
+      rosterEntryId
+    );
   }
   return { kind: "none" };
 }

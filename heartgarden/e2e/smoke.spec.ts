@@ -1,12 +1,19 @@
-import { test, expect, type Page } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
-import { dismissHeartgardenBootIfPresent, prepDemoSession } from "./fixtures/bootstrap";
+import {
+  dismissHeartgardenBootIfPresent,
+  prepDemoSession,
+} from "./fixtures/bootstrap";
 
 async function gotoCanvasAfterBoot(page: Page) {
   await page.goto("/");
-  await expect(page.locator("[data-vigil-canvas]")).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator("[data-vigil-canvas]")).toBeVisible({
+    timeout: 30_000,
+  });
   await dismissHeartgardenBootIfPresent(page);
-  await expect(page.getByRole("button", { name: /Save and database/ })).toBeVisible({
+  await expect(
+    page.getByRole("button", { name: /Save and database/ })
+  ).toBeVisible({
     timeout: 30_000,
   });
 }
@@ -36,7 +43,9 @@ test.describe("heartgarden smoke", () => {
     await expect(nodes).toHaveCount(beforeCount + 1);
   });
 
-  test("keeps code-card tape variant and dark treatment in app shell", async ({ page }) => {
+  test("keeps code-card tape variant and dark treatment in app shell", async ({
+    page,
+  }) => {
     await gotoCanvasAfterBoot(page);
 
     const nodes = page.locator("[data-node-id]");
@@ -62,7 +71,9 @@ test.describe("heartgarden smoke", () => {
     expect(styleSnapshot.boxShadow).toContain("inset");
   });
 
-  test("creates an organization node with Archive-091 canvas shell", async ({ page }) => {
+  test("creates an organization node with Archive-091 canvas shell", async ({
+    page,
+  }) => {
     await gotoCanvasAfterBoot(page);
 
     const nodes = page.locator("[data-node-id]");
@@ -71,6 +82,8 @@ test.describe("heartgarden smoke", () => {
     await expect(nodes).toHaveCount(beforeCount + 1);
 
     const orgNode = nodes.nth(beforeCount);
-    await expect(orgNode.locator('[data-hg-lore-faction-variant="archive091"]')).toBeVisible();
+    await expect(
+      orgNode.locator('[data-hg-lore-faction-variant="archive091"]')
+    ).toBeVisible();
   });
 });

@@ -21,7 +21,9 @@ function normalizeRrfConfig(config: RrfFusionConfig | undefined): {
   const lexicalWeightRaw = config?.lexicalWeight;
   const vectorWeightRaw = config?.vectorWeight;
   const mentionWeightRaw = config?.mentionWeight;
-  const k = Number.isFinite(kRaw) ? Math.max(1, Math.floor(kRaw as number)) : RRF_K;
+  const k = Number.isFinite(kRaw)
+    ? Math.max(1, Math.floor(kRaw as number))
+    : RRF_K;
   const lexicalWeight =
     Number.isFinite(lexicalWeightRaw) && (lexicalWeightRaw as number) > 0
       ? (lexicalWeightRaw as number)
@@ -38,7 +40,9 @@ function normalizeRrfConfig(config: RrfFusionConfig | undefined): {
 }
 
 export function rrfScore(rank: number | undefined, k = RRF_K): number {
-  if (rank === undefined) return 0;
+  if (rank === undefined) {
+    return 0;
+  }
   return 1 / (k + rank + 1);
 }
 
@@ -68,19 +72,27 @@ export type RrfFusionResult = {
 /**
  * Pure RRF over two ordered id lists (deduped per list by first occurrence).
  */
-export function fuseRrfFromOrderedLists(input: RrfFusionInput): RrfFusionResult {
+export function fuseRrfFromOrderedLists(
+  input: RrfFusionInput
+): RrfFusionResult {
   const config = normalizeRrfConfig(input.config);
   const lexRankByItem = new Map<string, number>();
   input.lexicalOrderedIds.forEach((id, i) => {
-    if (!lexRankByItem.has(id)) lexRankByItem.set(id, i);
+    if (!lexRankByItem.has(id)) {
+      lexRankByItem.set(id, i);
+    }
   });
   const vecRankByItem = new Map<string, number>();
   input.vectorOrderedIds.forEach((id, i) => {
-    if (!vecRankByItem.has(id)) vecRankByItem.set(id, i);
+    if (!vecRankByItem.has(id)) {
+      vecRankByItem.set(id, i);
+    }
   });
   const mentionRankByItem = new Map<string, number>();
   (input.mentionOrderedIds ?? []).forEach((id, i) => {
-    if (!mentionRankByItem.has(id)) mentionRankByItem.set(id, i);
+    if (!mentionRankByItem.has(id)) {
+      mentionRankByItem.set(id, i);
+    }
   });
 
   const allIds = new Set<string>([

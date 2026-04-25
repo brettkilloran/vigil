@@ -1,8 +1,7 @@
 import { drizzle as drizzleNeon } from "drizzle-orm/neon-serverless";
 import { drizzle as drizzleNode } from "drizzle-orm/node-postgres";
-
-import * as schema from "./schema";
 import { resolvePostgresUrlFromEnv } from "./postgres-env-url";
+import * as schema from "./schema";
 
 export { schema };
 
@@ -21,7 +20,9 @@ function isNeonUrl(url: string): boolean {
 
 export function tryGetDb() {
   const connectionString = postgresConnectionString();
-  if (!connectionString) return undefined;
+  if (!connectionString) {
+    return;
+  }
   if (!cachedDb) {
     cachedDb = isNeonUrl(connectionString)
       ? drizzleNeon(connectionString, { schema })
@@ -29,4 +30,3 @@ export function tryGetDb() {
   }
   return cachedDb;
 }
-

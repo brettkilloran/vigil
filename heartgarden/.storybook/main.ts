@@ -28,8 +28,12 @@ const NEXT_COMPILED_REACT_ALIAS_KEYS = [
 
 function pinAppReactAliases(map: Record<string, unknown>) {
   try {
-    const reactDir = path.dirname(require.resolve("react/package.json", { paths: [repoRoot] }));
-    const reactDomDir = path.dirname(require.resolve("react-dom/package.json", { paths: [repoRoot] }));
+    const reactDir = path.dirname(
+      require.resolve("react/package.json", { paths: [repoRoot] })
+    );
+    const reactDomDir = path.dirname(
+      require.resolve("react-dom/package.json", { paths: [repoRoot] })
+    );
     map.react = reactDir;
     map["react-dom"] = reactDomDir;
     /* Storybook / Next sometimes register the exact-match key only. */
@@ -74,7 +78,9 @@ const config: StorybookConfig = {
     if (alias && !Array.isArray(alias)) {
       const map = alias as Record<string, unknown>;
       for (const key of NEXT_COMPILED_REACT_ALIAS_KEYS) {
-        if (key in map) delete map[key];
+        if (key in map) {
+          delete map[key];
+        }
       }
       pinAppReactAliases(map);
     }

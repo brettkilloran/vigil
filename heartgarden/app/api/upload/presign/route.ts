@@ -18,7 +18,9 @@ const bodySchema = z.object({
 export async function POST(req: Request) {
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
 
   const env = readR2Env();
   if (!env) {
@@ -29,7 +31,7 @@ export async function POST(req: Request) {
           "R2 is not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, and R2_PUBLIC_BASE_URL (public bucket URL, no trailing slash).",
         code: "R2_NOT_CONFIGURED",
       },
-      { status: 503 },
+      { status: 503 }
     );
   }
 
@@ -39,7 +41,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json(
       { ok: false, error: "Invalid JSON body", code: "BAD_REQUEST" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -47,15 +49,19 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: "Invalid body", code: "BAD_REQUEST" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
   const ct = parsed.data.contentType.toLowerCase();
   if (!ct.startsWith("image/")) {
     return NextResponse.json(
-      { ok: false, error: "Only image/* content types are allowed.", code: "INVALID_TYPE" },
-      { status: 400 },
+      {
+        ok: false,
+        error: "Only image/* content types are allowed.",
+        code: "INVALID_TYPE",
+      },
+      { status: 400 }
     );
   }
 
@@ -64,13 +70,13 @@ export async function POST(req: Request) {
     if (!db) {
       return NextResponse.json(
         { ok: false, error: "Database not configured", code: "DB_UNAVAILABLE" },
-        { status: 503 },
+        { status: 503 }
       );
     }
     if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, parsed.data.spaceId))) {
       return NextResponse.json(
         { ok: false, error: "Forbidden.", code: "FORBIDDEN" },
-        { status: 403 },
+        { status: 403 }
       );
     }
   }
@@ -92,7 +98,7 @@ export async function POST(req: Request) {
     const message = e instanceof Error ? e.message : "Presign failed";
     return NextResponse.json(
       { ok: false, error: message, code: "PRESIGN_FAILED" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

@@ -48,7 +48,9 @@ describe("LoreHybridFocusEditor character identity", () => {
 
   async function waitForIdentityFields(): Promise<void> {
     for (let i = 0; i < 30; i++) {
-      if (container.querySelector('[data-hg-character-focus-field="name"]')) return;
+      if (container.querySelector('[data-hg-character-focus-field="name"]')) {
+        return;
+      }
       await act(async () => {
         await new Promise((r) => setTimeout(r, 5));
       });
@@ -63,22 +65,26 @@ describe("LoreHybridFocusEditor character identity", () => {
     act(() => {
       root.render(
         <LoreHybridFocusEditor
-          variant="character"
+          focusDocumentKey="node-a"
           focusHtml={initialHtml}
           onChangeFocusHtml={onChangeFocusHtml}
-          focusDocumentKey="node-a"
-        />,
+          variant="character"
+        />
       );
     });
 
     await waitForIdentityFields();
 
-    const nameField = container.querySelector<HTMLElement>('[data-hg-character-focus-field="name"]');
+    const nameField = container.querySelector<HTMLElement>(
+      '[data-hg-character-focus-field="name"]'
+    );
     expect(nameField).toBeTruthy();
     nameField!.textContent = "Ada";
 
     await act(async () => {
-      nameField!.dispatchEvent(new InputEvent("input", { bubbles: true, cancelable: true }));
+      nameField!.dispatchEvent(
+        new InputEvent("input", { bubbles: true, cancelable: true })
+      );
     });
 
     expect(onChangeFocusHtml).toHaveBeenCalled();
@@ -94,17 +100,19 @@ describe("LoreHybridFocusEditor character identity", () => {
     act(() => {
       root.render(
         <LoreHybridFocusEditor
-          variant="character"
+          focusDocumentKey="node-b"
           focusHtml={initialHtml}
           onChangeFocusHtml={onChangeFocusHtml}
-          focusDocumentKey="node-b"
-        />,
+          variant="character"
+        />
       );
     });
 
     await waitForIdentityFields();
 
-    const nameField = container.querySelector<HTMLElement>('[data-hg-character-focus-field="name"]');
+    const nameField = container.querySelector<HTMLElement>(
+      '[data-hg-character-focus-field="name"]'
+    );
     expect(nameField).toBeTruthy();
     const text = document.createTextNode("Bob");
     nameField!.appendChild(text);

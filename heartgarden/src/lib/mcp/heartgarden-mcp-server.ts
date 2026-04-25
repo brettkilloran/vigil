@@ -12,12 +12,21 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 import packageJson from "@/package.json";
-import { normalizeLinkTypeAlias } from "@/src/lib/connection-kind-colors";
 import { anthropicLlmDeadlineMs } from "@/src/lib/async-timeout";
+import { normalizeLinkTypeAlias } from "@/src/lib/connection-kind-colors";
 import { deriveSectionsFromHgDoc } from "@/src/lib/hg-doc/derive-sections";
-import { isHgDocContentJson, readHgDocFromContentJson } from "@/src/lib/hg-doc/serialize";
-import { markdownToStructuredBody, structuredBodyToHgDoc } from "@/src/lib/hg-doc/structured-body-to-hg-doc";
-import { hgStructuredBlockSchema, type HgStructuredBlock } from "@/src/lib/hg-doc/structured-body";
+import {
+  isHgDocContentJson,
+  readHgDocFromContentJson,
+} from "@/src/lib/hg-doc/serialize";
+import {
+  type HgStructuredBlock,
+  hgStructuredBlockSchema,
+} from "@/src/lib/hg-doc/structured-body";
+import {
+  markdownToStructuredBody,
+  structuredBodyToHgDoc,
+} from "@/src/lib/hg-doc/structured-body-to-hg-doc";
 
 export type HeartgardenMcpServerConfig = {
   baseUrl: string;
@@ -44,15 +53,23 @@ const HEARTGARDEN_MCP_WRITE_TOOL_NAMES = new Set([
   "heartgarden_index_item",
 ]);
 
-export function mcpContentTextTooLong(fieldLabel: string, text: string): string | null {
-  if (typeof text !== "string") return null;
+export function mcpContentTextTooLong(
+  fieldLabel: string,
+  text: string
+): string | null {
+  if (typeof text !== "string") {
+    return null;
+  }
   if (text.length > MCP_MAX_CONTENT_TEXT_CHARS) {
     return `${fieldLabel} exceeds ${MCP_MAX_CONTENT_TEXT_CHARS} characters (split content or shorten before sending).`;
   }
   return null;
 }
 
-export function mcpSerializedPayloadTooLong(fieldLabel: string, value: unknown): string | null {
+export function mcpSerializedPayloadTooLong(
+  fieldLabel: string,
+  value: unknown
+): string | null {
   try {
     const encoded = JSON.stringify(value) ?? "";
     if (encoded.length > MCP_MAX_CONTENT_TEXT_CHARS) {
@@ -64,8 +81,12 @@ export function mcpSerializedPayloadTooLong(fieldLabel: string, value: unknown):
   }
 }
 
-function parseContentBlocks(raw: unknown): { ok: true; blocks: HgStructuredBlock[] } | { ok: false; error: string } {
-  if (!Array.isArray(raw)) return { ok: false, error: "content_blocks must be an array." };
+function parseContentBlocks(
+  raw: unknown
+): { ok: true; blocks: HgStructuredBlock[] } | { ok: false; error: string } {
+  if (!Array.isArray(raw)) {
+    return { ok: false, error: "content_blocks must be an array." };
+  }
   const blocks: HgStructuredBlock[] = [];
   for (let i = 0; i < raw.length; i += 1) {
     const candidate = raw[i];
@@ -128,8 +149,12 @@ const MCP_CONTENT_BLOCKS_INPUT_SCHEMA = {
 } as const;
 
 function shouldRequireH1ForItemType(itemType: unknown): boolean {
-  if (!itemType) return true;
-  return itemType === "note" || itemType === "sticky" || itemType === "checklist";
+  if (!itemType) {
+    return true;
+  }
+  return (
+    itemType === "note" || itemType === "sticky" || itemType === "checklist"
+  );
 }
 
 /** Tool args from LLMs often use "true"/"1" instead of booleans. */
@@ -154,17 +179,24 @@ function mergeAuthHeaders(serviceKey: string, headers?: HeadersInit): Headers {
 
 /** Resolve app base URL for MCP tool fetches (stdio, HTTP handler, or serverless). */
 export function resolveHeartgardenMcpBaseUrl(request?: Request): string {
-  const fromEnv = (process.env.HEARTGARDEN_APP_URL ?? "").trim().replace(/\/$/, "");
-  if (fromEnv.length > 0) return fromEnv;
+  const fromEnv = (process.env.HEARTGARDEN_APP_URL ?? "")
+    .trim()
+    .replace(/\/$/, "");
+  if (fromEnv.length > 0) {
+    return fromEnv;
+  }
   const vercel = (process.env.VERCEL_URL ?? "").trim();
   if (vercel.length > 0) {
     const host = vercel.replace(/^https?:\/\//, "");
     return `https://${host}`;
   }
   if (request) {
-    const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+    const host =
+      request.headers.get("x-forwarded-host") ?? request.headers.get("host");
     const proto = request.headers.get("x-forwarded-proto") ?? "https";
-    if (host) return `${proto}://${host}`;
+    if (host) {
+      return `${proto}://${host}`;
+    }
   }
   return "http://localhost:3000";
 }
@@ -185,7 +217,7 @@ export function canonicalHeartgardenMcpToolName(raw: string): string {
 export function mcpWriteKeyError(
   args: Record<string, unknown>,
   writeKeyFromConfig: string,
-  options: { allowOmitWhenConfigSet: boolean },
+  options: { allowOmitWhenConfigSet: boolean }
 ): string | null {
   const expected = writeKeyFromConfig.trim();
   if (!expected) {
@@ -207,13 +239,21 @@ export function mcpWriteKeyError(
 function filterGmSpaces(
   spaces: unknown[],
   playerSpaceExcluded: string,
-  gmBreakGlass: boolean,
+  gmBreakGlass: boolean
 ): unknown[] {
-  if (gmBreakGlass || !playerSpaceExcluded || !Array.isArray(spaces)) return spaces;
-  return spaces.filter((s) => String((s as { id?: string })?.id ?? "").toLowerCase() !== playerSpaceExcluded);
+  if (gmBreakGlass || !playerSpaceExcluded || !Array.isArray(spaces)) {
+    return spaces;
+  }
+  return spaces.filter(
+    (s) =>
+      String((s as { id?: string })?.id ?? "").toLowerCase() !==
+      playerSpaceExcluded
+  );
 }
 
-export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): Server {
+export function createHeartgardenMcpServer(
+  config: HeartgardenMcpServerConfig
+): Server {
   const BASE = config.baseUrl.replace(/\/$/, "");
   const SPACE = config.defaultSpaceId;
   const WRITE_KEY = config.writeKey;
@@ -229,7 +269,9 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
   })();
 
   const mcpLoreQueryTimeoutMs = (() => {
-    const raw = (process.env.HEARTGARDEN_MCP_LORE_QUERY_TIMEOUT_MS ?? "").trim();
+    const raw = (
+      process.env.HEARTGARDEN_MCP_LORE_QUERY_TIMEOUT_MS ?? ""
+    ).trim();
     const parsed = Number(raw);
     if (Number.isFinite(parsed) && parsed >= 1000 && parsed <= 300_000) {
       return Math.floor(parsed);
@@ -240,11 +282,14 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
   const api = async (
     input: string | URL,
     init?: RequestInit,
-    opts?: { timeoutMs?: number },
+    opts?: { timeoutMs?: number }
   ) => {
     const timeoutMs = opts?.timeoutMs ?? mcpApiTimeoutMs;
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(new Error("MCP fetch timeout")), timeoutMs);
+    const timer = setTimeout(
+      () => ctrl.abort(new Error("MCP fetch timeout")),
+      timeoutMs
+    );
     try {
       return await fetch(input, {
         ...init,
@@ -256,12 +301,14 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
     }
   };
 
-  const mcpToolText = (text: string) => ({ content: [{ type: "text" as const, text }] });
+  const mcpToolText = (text: string) => ({
+    content: [{ type: "text" as const, text }],
+  });
 
   const mcpToolError = (
     code: string,
     message: string,
-    extra?: { httpStatus?: number; retryAfter?: string | null },
+    extra?: { httpStatus?: number; retryAfter?: string | null }
   ) => ({
     content: [
       {
@@ -271,11 +318,13 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             ok: false,
             error: message,
             code,
-            ...(extra?.httpStatus != null ? { httpStatus: extra.httpStatus } : {}),
+            ...(extra?.httpStatus == null
+              ? {}
+              : { httpStatus: extra.httpStatus }),
             ...(extra?.retryAfter ? { retryAfter: extra.retryAfter } : {}),
           },
           null,
-          2,
+          2
         ),
       },
     ],
@@ -294,18 +343,20 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       {
         httpStatus: res.status,
         retryAfter: res.headers.get("retry-after"),
-      },
+      }
     );
   };
 
   const mcpApiText = async (res: Response, code: string) => {
-    if (!res.ok) return mcpApiError(res, code);
+    if (!res.ok) {
+      return mcpApiError(res, code);
+    }
     return mcpToolText(await res.text());
   };
 
   const server = new Server(
     { name: "heartgarden", version: packageJson.version },
-    { capabilities: { tools: {}, resources: {} } },
+    { capabilities: { tools: {}, resources: {} } }
   );
 
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
@@ -323,7 +374,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       const spaces = filterGmSpaces(
         Array.isArray(data.spaces) ? data.spaces : [],
         config.playerSpaceExcluded,
-        config.gmBreakGlass,
+        config.gmBreakGlass
       );
       return {
         resources: spaces.map((s) => {
@@ -404,11 +455,15 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       },
       {
         name: "heartgarden_space_summary",
-        description: "Item and in-space link counts for one space. GET /api/spaces/:id/summary.",
+        description:
+          "Item and in-space link counts for one space. GET /api/spaces/:id/summary.",
         inputSchema: {
           type: "object",
           properties: {
-            space_id: { type: "string", description: MCP_SPACE_ID_OPTIONAL_HINT },
+            space_id: {
+              type: "string",
+              description: MCP_SPACE_ID_OPTIONAL_HINT,
+            },
           },
         },
       },
@@ -425,9 +480,13 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             },
             limit: {
               type: "integer",
-              description: "Page size when set (1–1000, default 500). Omit for full list.",
+              description:
+                "Page size when set (1–1000, default 500). Omit for full list.",
             },
-            offset: { type: "integer", description: "Skip rows when limit is set (default 0)" },
+            offset: {
+              type: "integer",
+              description: "Skip rows when limit is set (default 0)",
+            },
           },
         },
       },
@@ -438,7 +497,10 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         inputSchema: {
           type: "object",
           properties: {
-            space_id: { type: "string", description: MCP_SPACE_ID_OPTIONAL_HINT },
+            space_id: {
+              type: "string",
+              description: MCP_SPACE_ID_OPTIONAL_HINT,
+            },
             q: { type: "string", description: "Query (at least 2 characters)" },
             mode: {
               type: "string",
@@ -456,12 +518,19 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         inputSchema: {
           type: "object",
           properties: {
-            space_id: { type: "string", description: MCP_SPACE_ID_OPTIONAL_HINT },
+            space_id: {
+              type: "string",
+              description: MCP_SPACE_ID_OPTIONAL_HINT,
+            },
             limit: {
               type: "integer",
-              description: "Node page size when set (1–2000, default 500). Omit for full graph.",
+              description:
+                "Node page size when set (1–2000, default 500). Omit for full graph.",
             },
-            offset: { type: "integer", description: "Node offset when limit is set (default 0)" },
+            offset: {
+              type: "integer",
+              description: "Node offset when limit is set (default 0)",
+            },
           },
         },
       },
@@ -508,7 +577,12 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           type: "object",
           properties: {
             item_id: { type: "string" },
-            depth: { type: "integer", description: "1 or 2", minimum: 1, maximum: 2 },
+            depth: {
+              type: "integer",
+              description: "1 or 2",
+              minimum: 1,
+              maximum: 2,
+            },
             implicit_mode: {
               type: "boolean",
               description:
@@ -520,12 +594,16 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       },
       {
         name: "heartgarden_related_items",
-        description: "FTS-based related items in a space. GET /api/items/:id/related.",
+        description:
+          "FTS-based related items in a space. GET /api/items/:id/related.",
         inputSchema: {
           type: "object",
           properties: {
             item_id: { type: "string" },
-            space_id: { type: "string", description: "Optional override; defaults to item's space" },
+            space_id: {
+              type: "string",
+              description: "Optional override; defaults to item's space",
+            },
             limit: { type: "integer", description: "Default 8" },
           },
           required: ["item_id"],
@@ -567,12 +645,19 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           type: "object",
           properties: {
             question: { type: "string" },
-            space_id: { type: "string", description: "Optional: limit retrieval to this space UUID" },
-            limit: { type: "integer", description: "Max sources 1–24, default 14" },
+            space_id: {
+              type: "string",
+              description: "Optional: limit retrieval to this space UUID",
+            },
+            limit: {
+              type: "integer",
+              description: "Max sources 1–24, default 14",
+            },
             response_mode: {
               type: "string",
               enum: ["text", "grounded_json"],
-              description: "text (default) or grounded_json for cited-item contract output",
+              description:
+                "text (default) or grounded_json for cited-item contract output",
             },
           },
           required: ["question"],
@@ -587,11 +672,13 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           properties: {
             space_id: {
               type: "string",
-              description: "Space UUID (recommended). Ignored when all_spaces is true.",
+              description:
+                "Space UUID (recommended). Ignored when all_spaces is true.",
             },
             all_spaces: {
               type: "boolean",
-              description: "When true, search all spaces (omit spaceId on the API).",
+              description:
+                "When true, search all spaces (omit spaceId on the API).",
             },
             q: { type: "string", description: "Query (at least 2 characters)" },
             limit: { type: "integer", description: "Max chunks, default 24" },
@@ -609,7 +696,8 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             item_id: { type: "string" },
             refresh_lore_meta: {
               type: "boolean",
-              description: "Default true; set false to skip Anthropic lore fields",
+              description:
+                "Default true; set false to skip Anthropic lore fields",
             },
           },
           required: ["item_id"],
@@ -622,7 +710,10 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         inputSchema: {
           type: "object",
           properties: {
-            write_key: { type: "string", description: "Must match HEARTGARDEN_MCP_WRITE_KEY" },
+            write_key: {
+              type: "string",
+              description: "Must match HEARTGARDEN_MCP_WRITE_KEY",
+            },
             item_id: { type: "string" },
             title: { type: "string" },
             content_text: {
@@ -644,8 +735,13 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             },
             entity_type: { type: "string", description: "items.entity_type" },
             entity_meta: { description: "Replaces entity_meta JSON object" },
-            entity_meta_merge: { description: "Shallow merge into entity_meta" },
-            space_id: { type: "string", description: "Move item to this space UUID" },
+            entity_meta_merge: {
+              description: "Shallow merge into entity_meta",
+            },
+            space_id: {
+              type: "string",
+              description: "Move item to this space UUID",
+            },
             x: { type: "number" },
             y: { type: "number" },
             width: { type: "number" },
@@ -654,13 +750,23 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             color: { type: "string" },
             item_type: {
               type: "string",
-              enum: ["note", "sticky", "image", "checklist", "webclip", "folder"],
+              enum: [
+                "note",
+                "sticky",
+                "image",
+                "checklist",
+                "webclip",
+                "folder",
+              ],
             },
             image_url: { type: "string" },
             image_meta: { description: "JSON object" },
             stack_id: { type: "string", description: "UUID or null to clear" },
             stack_order: { type: "integer" },
-            base_updated_at: { type: "string", description: "ISO optimistic concurrency" },
+            base_updated_at: {
+              type: "string",
+              description: "ISO optimistic concurrency",
+            },
           },
           required: ["item_id"],
         },
@@ -668,23 +774,37 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       {
         name: "heartgarden_create_item",
         description:
-          'Create a canvas item (POST /api/spaces/:id/items). canvas_item_type: note|sticky|image|checklist|webclip (not folder—use heartgarden_create_folder). For prose content prefer content_markdown (or content_blocks for typed control). Resolution order: content_json > content_blocks > content_markdown > content_text. Entity fields—pick one primary path: (1) lore_entity character|faction|location for built-in lore card shells on note/sticky—server generates template contentJson/HTML like the UI. (2) canonical_entity_kind (npc|location|faction|quest|item|lore|other) maps to items.entity_type via the registry when you are not using lore_entity. (3) entity_type is the raw DB string when you need a specific type. MCP sends entityType from lore_entity first, else entity_type; canonical_entity_kind is also sent but the API uses it only if entityType is still unset—avoid mixing lore_entity with redundant canonical_entity_kind. Legacy item_type character → note + lore character. content_text max ~2M characters per request.',
+          "Create a canvas item (POST /api/spaces/:id/items). canvas_item_type: note|sticky|image|checklist|webclip (not folder—use heartgarden_create_folder). For prose content prefer content_markdown (or content_blocks for typed control). Resolution order: content_json > content_blocks > content_markdown > content_text. Entity fields—pick one primary path: (1) lore_entity character|faction|location for built-in lore card shells on note/sticky—server generates template contentJson/HTML like the UI. (2) canonical_entity_kind (npc|location|faction|quest|item|lore|other) maps to items.entity_type via the registry when you are not using lore_entity. (3) entity_type is the raw DB string when you need a specific type. MCP sends entityType from lore_entity first, else entity_type; canonical_entity_kind is also sent but the API uses it only if entityType is still unset—avoid mixing lore_entity with redundant canonical_entity_kind. Legacy item_type character → note + lore character. content_text max ~2M characters per request.",
         inputSchema: {
           type: "object",
           properties: {
             write_key: {
               type: "string",
-              description: "Must match HEARTGARDEN_MCP_WRITE_KEY; may be omitted if the MCP process has that env set",
+              description:
+                "Must match HEARTGARDEN_MCP_WRITE_KEY; may be omitted if the MCP process has that env set",
             },
-            space_id: { type: "string", description: "Target canvas space UUID (always pass if unsure—see heartgarden_mcp_config)" },
+            space_id: {
+              type: "string",
+              description:
+                "Target canvas space UUID (always pass if unsure—see heartgarden_mcp_config)",
+            },
             canvas_item_type: {
               type: "string",
-              enum: ["note", "sticky", "image", "checklist", "webclip", "folder"],
-              description: "Maps to items.item_type. Use heartgarden_create_folder instead of folder.",
+              enum: [
+                "note",
+                "sticky",
+                "image",
+                "checklist",
+                "webclip",
+                "folder",
+              ],
+              description:
+                "Maps to items.item_type. Use heartgarden_create_folder instead of folder.",
             },
             item_type: {
               type: "string",
-              description: "Deprecated: use canvas_item_type. Value 'character' means note + lore character.",
+              description:
+                "Deprecated: use canvas_item_type. Value 'character' means note + lore character.",
             },
             title: { type: "string" },
             content_text: {
@@ -693,11 +813,13 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             },
             content_json: {
               type: "object",
-              description: "Full hgDoc/content JSON. Takes precedence over markdown/blocks/text.",
+              description:
+                "Full hgDoc/content JSON. Takes precedence over markdown/blocks/text.",
             },
             content_markdown: {
               type: "string",
-              description: "Preferred prose input: markdown subset converted to hgDoc content_json.",
+              description:
+                "Preferred prose input: markdown subset converted to hgDoc content_json.",
             },
             content_blocks: {
               ...MCP_CONTENT_BLOCKS_INPUT_SCHEMA,
@@ -715,13 +837,22 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             },
             canonical_entity_kind: {
               type: "string",
-              enum: ["npc", "location", "faction", "quest", "item", "lore", "other"],
+              enum: [
+                "npc",
+                "location",
+                "faction",
+                "quest",
+                "item",
+                "lore",
+                "other",
+              ],
               description:
                 "Maps to persisted entity_type via registry when lore_entity and entity_type are not used to set entityType.",
             },
             entity_type: {
               type: "string",
-              description: "Raw items.entity_type string (e.g. quest) when not using lore_entity as the primary path",
+              description:
+                "Raw items.entity_type string (e.g. quest) when not using lore_entity as the primary path",
             },
             entity_meta: { description: "JSON object stored on the item" },
             x: { type: "number" },
@@ -730,7 +861,10 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             theme: { type: "string", enum: ["default", "code", "task"] },
             image_url: { type: "string" },
             image_meta: { description: "JSON object" },
-            auto_index: { type: "boolean", description: "POST /api/items/:id/index after create" },
+            auto_index: {
+              type: "boolean",
+              description: "POST /api/items/:id/index after create",
+            },
           },
           required: ["space_id", "title"],
         },
@@ -761,12 +895,19 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           properties: {
             write_key: {
               type: "string",
-              description: "Must match HEARTGARDEN_MCP_WRITE_KEY; may be omitted if the MCP process has that env set",
+              description:
+                "Must match HEARTGARDEN_MCP_WRITE_KEY; may be omitted if the MCP process has that env set",
             },
-            space_id: { type: "string", description: "Space UUID (both items must belong here)" },
+            space_id: {
+              type: "string",
+              description: "Space UUID (both items must belong here)",
+            },
             source_item_id: { type: "string" },
             target_item_id: { type: "string" },
-            label: { type: "string", description: "Edge label shown on the canvas" },
+            label: {
+              type: "string",
+              description: "Edge label shown on the canvas",
+            },
             relationship_type: {
               type: "string",
               description:
@@ -785,10 +926,14 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           properties: {
             write_key: {
               type: "string",
-              description: "Must match HEARTGARDEN_MCP_WRITE_KEY; may be omitted if the MCP process has that env set",
+              description:
+                "Must match HEARTGARDEN_MCP_WRITE_KEY; may be omitted if the MCP process has that env set",
             },
             link_id: { type: "string", description: "item_links row UUID" },
-            label: { type: "string", description: "Edge label; omit to leave unchanged" },
+            label: {
+              type: "string",
+              description: "Edge label; omit to leave unchanged",
+            },
             relationship_type: {
               type: "string",
               description:
@@ -808,7 +953,8 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           properties: {
             write_key: {
               type: "string",
-              description: "Must match HEARTGARDEN_MCP_WRITE_KEY; may be omitted if the MCP process has that env set",
+              description:
+                "Must match HEARTGARDEN_MCP_WRITE_KEY; may be omitted if the MCP process has that env set",
             },
             item_id: { type: "string", description: "Item UUID" },
           },
@@ -817,13 +963,15 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       },
       {
         name: "heartgarden_delete_link",
-        description: "Delete one item_link by id (DELETE /api/item-links with JSON body).",
+        description:
+          "Delete one item_link by id (DELETE /api/item-links with JSON body).",
         inputSchema: {
           type: "object",
           properties: {
             write_key: {
               type: "string",
-              description: "Must match HEARTGARDEN_MCP_WRITE_KEY; may be omitted if the MCP process has that env set",
+              description:
+                "Must match HEARTGARDEN_MCP_WRITE_KEY; may be omitted if the MCP process has that env set",
             },
             link_id: { type: "string", description: "item_links row UUID" },
           },
@@ -834,7 +982,9 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
   }));
 
   async function fetchItemLinks(itemId: string) {
-    const res = await api(`${BASE}/api/items/${encodeURIComponent(itemId)}/links`);
+    const res = await api(
+      `${BASE}/api/items/${encodeURIComponent(itemId)}/links`
+    );
     return res.json() as Promise<{
       outgoing?: { to?: { id?: string } }[];
       incoming?: { from?: { id?: string } }[];
@@ -842,7 +992,9 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
   }
 
   async function fetchItemMentions(itemId: string) {
-    const res = await api(`${BASE}/api/items/${encodeURIComponent(itemId)}/mentions`);
+    const res = await api(
+      `${BASE}/api/items/${encodeURIComponent(itemId)}/mentions`
+    );
     return res.json() as Promise<{
       mentions?: { itemId?: string }[];
       mentionedBy?: { itemId?: string }[];
@@ -850,7 +1002,9 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
   }
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const name = canonicalHeartgardenMcpToolName(String(request.params.name ?? ""));
+    const name = canonicalHeartgardenMcpToolName(
+      String(request.params.name ?? "")
+    );
     const args = (request.params.arguments ?? {}) as Record<string, unknown>;
 
     if (config.readOnly && HEARTGARDEN_MCP_WRITE_TOOL_NAMES.has(name)) {
@@ -867,12 +1021,18 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
 
     if (name === "heartgarden_browse_spaces") {
       const res = await api(`${BASE}/api/spaces`);
-      if (!res.ok) return mcpApiError(res, "mcp_browse_spaces_failed");
+      if (!res.ok) {
+        return mcpApiError(res, "mcp_browse_spaces_failed");
+      }
       const text = await res.text();
       try {
         const data = JSON.parse(text) as { spaces?: unknown[] };
         if (data && Array.isArray(data.spaces)) {
-          data.spaces = filterGmSpaces(data.spaces, config.playerSpaceExcluded, config.gmBreakGlass);
+          data.spaces = filterGmSpaces(
+            data.spaces,
+            config.playerSpaceExcluded,
+            config.gmBreakGlass
+          );
           return mcpToolText(JSON.stringify(data));
         }
       } catch {
@@ -893,7 +1053,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
                 write_key_configured: WRITE_KEY.length > 0,
               },
               null,
-              2,
+              2
             ),
           },
         ],
@@ -908,7 +1068,9 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           isError: true,
         };
       }
-      const res = await api(`${BASE}/api/spaces/${encodeURIComponent(spaceId)}/summary`);
+      const res = await api(
+        `${BASE}/api/spaces/${encodeURIComponent(spaceId)}/summary`
+      );
       return mcpApiText(res, "mcp_space_summary_failed");
     }
 
@@ -916,16 +1078,18 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       const spaceId = (args.space_id as string | undefined) || SPACE;
       if (!spaceId) {
         return {
-          content: [
-            { type: "text", text: MCP_ERR_MISSING_SPACE },
-          ],
+          content: [{ type: "text", text: MCP_ERR_MISSING_SPACE }],
           isError: true,
         };
       }
       const qs = new URLSearchParams();
       qs.set("space_id", String(spaceId));
-      if (args.limit != null) qs.set("limit", String(args.limit));
-      if (args.offset != null) qs.set("offset", String(args.offset));
+      if (args.limit != null) {
+        qs.set("limit", String(args.limit));
+      }
+      if (args.offset != null) {
+        qs.set("offset", String(args.offset));
+      }
       const res = await api(`${BASE}/api/v1/items?${qs.toString()}`);
       return mcpApiText(res, "mcp_list_items_failed");
     }
@@ -936,15 +1100,15 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       const mode = (args.mode as string | undefined) || "hybrid";
       if (!spaceId) {
         return {
-          content: [
-            { type: "text", text: MCP_ERR_MISSING_SPACE },
-          ],
+          content: [{ type: "text", text: MCP_ERR_MISSING_SPACE }],
           isError: true,
         };
       }
       if (q.length < 2) {
         return {
-          content: [{ type: "text", text: "Query q must be at least 2 characters." }],
+          content: [
+            { type: "text", text: "Query q must be at least 2 characters." },
+          ],
           isError: true,
         };
       }
@@ -960,18 +1124,20 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       const spaceId = (args.space_id as string | undefined) || SPACE;
       if (!spaceId) {
         return {
-          content: [
-            { type: "text", text: MCP_ERR_MISSING_SPACE },
-          ],
+          content: [{ type: "text", text: MCP_ERR_MISSING_SPACE }],
           isError: true,
         };
       }
       const qs = new URLSearchParams();
-      if (args.limit != null) qs.set("limit", String(args.limit));
-      if (args.offset != null) qs.set("offset", String(args.offset));
+      if (args.limit != null) {
+        qs.set("limit", String(args.limit));
+      }
+      if (args.offset != null) {
+        qs.set("offset", String(args.offset));
+      }
       const q = qs.toString();
       const res = await api(
-        `${BASE}/api/spaces/${encodeURIComponent(String(spaceId))}/graph${q ? `?${q}` : ""}`,
+        `${BASE}/api/spaces/${encodeURIComponent(String(spaceId))}/graph${q ? `?${q}` : ""}`
       );
       return mcpApiText(res, "mcp_graph_failed");
     }
@@ -984,7 +1150,9 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           isError: true,
         };
       }
-      const res = await api(`${BASE}/api/v1/items/${encodeURIComponent(itemId)}`);
+      const res = await api(
+        `${BASE}/api/v1/items/${encodeURIComponent(itemId)}`
+      );
       return mcpApiText(res, "mcp_get_item_failed");
     }
 
@@ -996,20 +1164,43 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           isError: true,
         };
       }
-      const res = await api(`${BASE}/api/v1/items/${encodeURIComponent(itemId)}`);
-      if (!res.ok) return mcpApiError(res, "mcp_get_item_outline_failed");
+      const res = await api(
+        `${BASE}/api/v1/items/${encodeURIComponent(itemId)}`
+      );
+      if (!res.ok) {
+        return mcpApiError(res, "mcp_get_item_outline_failed");
+      }
       const payload = (await res.json()) as {
-        item?: { title?: string; contentJson?: Record<string, unknown> | null; contentText?: string | null };
+        item?: {
+          title?: string;
+          contentJson?: Record<string, unknown> | null;
+          contentText?: string | null;
+        };
       };
       const item = payload.item;
-      if (!item) return mcpToolText(JSON.stringify({ ok: false, error: "Item not found" }, null, 2));
+      if (!item) {
+        return mcpToolText(
+          JSON.stringify({ ok: false, error: "Item not found" }, null, 2)
+        );
+      }
       const title = String(item.title ?? "").trim() || "Untitled";
-      const contentJson = (item.contentJson as Record<string, unknown> | null) ?? null;
-      let outline: Array<{ level: 1 | 2 | 3; text: string; charCount: number }> = [];
+      const contentJson =
+        (item.contentJson as Record<string, unknown> | null) ?? null;
+      let outline: Array<{
+        level: 1 | 2 | 3;
+        text: string;
+        charCount: number;
+      }> = [];
       if (isHgDocContentJson(contentJson)) {
-        const sections = deriveSectionsFromHgDoc(readHgDocFromContentJson(contentJson), title);
+        const sections = deriveSectionsFromHgDoc(
+          readHgDocFromContentJson(contentJson),
+          title
+        );
         outline = sections.map((section, index) => ({
-          level: index === 0 ? 1 : ((Math.min(3, section.headingPath.length) || 1) as 1 | 2 | 3),
+          level:
+            index === 0
+              ? 1
+              : ((Math.min(3, section.headingPath.length) || 1) as 1 | 2 | 3),
           text: section.headingPath[section.headingPath.length - 1] ?? title,
           charCount: section.text.length,
         }));
@@ -1017,7 +1208,9 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         const bodyLen = String(item.contentText ?? "").trim().length;
         outline = [{ level: 1, text: title, charCount: bodyLen }];
       }
-      return mcpToolText(JSON.stringify({ ok: true, itemId, outline }, null, 2));
+      return mcpToolText(
+        JSON.stringify({ ok: true, itemId, outline }, null, 2)
+      );
     }
 
     if (name === "heartgarden_item_links") {
@@ -1028,7 +1221,9 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           isError: true,
         };
       }
-      const res = await api(`${BASE}/api/items/${encodeURIComponent(itemId)}/links`);
+      const res = await api(
+        `${BASE}/api/items/${encodeURIComponent(itemId)}/links`
+      );
       return mcpApiText(res, "mcp_item_links_failed");
     }
 
@@ -1040,7 +1235,9 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           isError: true,
         };
       }
-      const res = await api(`${BASE}/api/items/${encodeURIComponent(itemId)}/mentions`);
+      const res = await api(
+        `${BASE}/api/items/${encodeURIComponent(itemId)}/mentions`
+      );
       return mcpApiText(res, "mcp_entity_mentions_failed");
     }
 
@@ -1055,7 +1252,9 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         };
       }
       const root = await fetchItemLinks(itemId);
-      const rootImplicit = implicitMode ? await fetchItemMentions(itemId) : undefined;
+      const rootImplicit = implicitMode
+        ? await fetchItemMentions(itemId)
+        : undefined;
       const out: {
         root: typeof root;
         rootImplicit?: typeof rootImplicit;
@@ -1068,21 +1267,31 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         hopsImplicit: implicitMode ? {} : undefined,
       };
       if (depth < 2) {
-        return { content: [{ type: "text", text: JSON.stringify(out, null, 2) }] };
+        return {
+          content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
+        };
       }
       const peerIds = new Set<string>();
       for (const r of root.outgoing ?? []) {
-        if (r.to?.id) peerIds.add(r.to.id);
+        if (r.to?.id) {
+          peerIds.add(r.to.id);
+        }
       }
       for (const r of root.incoming ?? []) {
-        if (r.from?.id) peerIds.add(r.from.id);
+        if (r.from?.id) {
+          peerIds.add(r.from.id);
+        }
       }
       if (implicitMode && rootImplicit) {
         for (const r of rootImplicit.mentions ?? []) {
-          if (r.itemId) peerIds.add(r.itemId);
+          if (r.itemId) {
+            peerIds.add(r.itemId);
+          }
         }
         for (const r of rootImplicit.mentionedBy ?? []) {
-          if (r.itemId) peerIds.add(r.itemId);
+          if (r.itemId) {
+            peerIds.add(r.itemId);
+          }
         }
       }
       peerIds.delete(itemId);
@@ -1092,7 +1301,9 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           out.hopsImplicit[pid] = await fetchItemMentions(pid);
         }
       }
-      return { content: [{ type: "text", text: JSON.stringify(out, null, 2) }] };
+      return {
+        content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
+      };
     }
 
     if (name === "heartgarden_related_items") {
@@ -1103,12 +1314,16 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           isError: true,
         };
       }
-      const limit = args.limit != null ? Number(args.limit) : 8;
+      const limit = args.limit == null ? 8 : Number(args.limit);
       const spaceId = args.space_id ? String(args.space_id) : "";
       const q = new URLSearchParams();
-      if (spaceId) q.set("spaceId", spaceId);
+      if (spaceId) {
+        q.set("spaceId", spaceId);
+      }
       q.set("limit", String(limit));
-      const res = await api(`${BASE}/api/items/${encodeURIComponent(itemId)}/related?${q.toString()}`);
+      const res = await api(
+        `${BASE}/api/items/${encodeURIComponent(itemId)}/related?${q.toString()}`
+      );
       return mcpApiText(res, "mcp_related_items_failed");
     }
 
@@ -1123,13 +1338,13 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       }
       if (!spaceId) {
         return {
-          content: [
-            { type: "text", text: MCP_ERR_MISSING_SPACE },
-          ],
+          content: [{ type: "text", text: MCP_ERR_MISSING_SPACE }],
           isError: true,
         };
       }
-      const itemRes = await api(`${BASE}/api/v1/items/${encodeURIComponent(itemId)}`);
+      const itemRes = await api(
+        `${BASE}/api/v1/items/${encodeURIComponent(itemId)}`
+      );
       const itemJson = (await itemRes.json()) as { item?: { title?: string } };
       const title = String(itemJson?.item?.title ?? "").trim();
       if (title.length === 0) {
@@ -1167,9 +1382,16 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         };
       }
       const body: Record<string, unknown> = { question };
-      if (args.space_id) body.spaceId = String(args.space_id);
-      if (args.limit != null) body.limit = Number(args.limit);
-      if (args.response_mode === "grounded_json" || args.response_mode === "text") {
+      if (args.space_id) {
+        body.spaceId = String(args.space_id);
+      }
+      if (args.limit != null) {
+        body.limit = Number(args.limit);
+      }
+      if (
+        args.response_mode === "grounded_json" ||
+        args.response_mode === "text"
+      ) {
         body.responseMode = args.response_mode;
       }
       let res: Response;
@@ -1181,10 +1403,11 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
           },
-          { timeoutMs: mcpLoreQueryTimeoutMs },
+          { timeoutMs: mcpLoreQueryTimeoutMs }
         );
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "MCP lore query failed";
+        const msg =
+          err instanceof Error ? err.message : "MCP lore query failed";
         const timeout =
           msg.includes("MCP fetch timeout") ||
           msg.includes("aborted") ||
@@ -1193,7 +1416,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           timeout ? "mcp_lore_query_timeout" : "mcp_lore_query_transport_error",
           timeout
             ? `Lore query timed out after ${mcpLoreQueryTimeoutMs}ms`
-            : "Lore query transport error",
+            : "Lore query transport error"
         );
       }
       if (!res.ok) {
@@ -1210,11 +1433,13 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         });
         return mcpToolError(
           mappedCode,
-          res.status === 429 ? "Rate limited by lore query API" : "Lore query API request failed",
+          res.status === 429
+            ? "Rate limited by lore query API"
+            : "Lore query API request failed",
           {
             httpStatus: res.status,
             retryAfter: res.headers.get("retry-after"),
-          },
+          }
         );
       }
       return mcpToolText(await res.text());
@@ -1226,11 +1451,13 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       const q = String(args.q ?? "").trim();
       if (q.length < 2) {
         return {
-          content: [{ type: "text", text: "Query q must be at least 2 characters." }],
+          content: [
+            { type: "text", text: "Query q must be at least 2 characters." },
+          ],
           isError: true,
         };
       }
-      if (!allSpaces && !explicitSpace && !SPACE) {
+      if (!(allSpaces || explicitSpace || SPACE)) {
         return {
           content: [
             {
@@ -1244,10 +1471,14 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       const url = new URL("/api/search/chunks", BASE);
       if (!allSpaces) {
         const sid = explicitSpace || SPACE;
-        if (sid) url.searchParams.set("spaceId", sid);
+        if (sid) {
+          url.searchParams.set("spaceId", sid);
+        }
       }
       url.searchParams.set("q", q);
-      if (args.limit != null) url.searchParams.set("limit", String(args.limit));
+      if (args.limit != null) {
+        url.searchParams.set("limit", String(args.limit));
+      }
       const res = await api(url);
       return mcpApiText(res, "mcp_semantic_search_failed");
     }
@@ -1260,17 +1491,23 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           isError: true,
         };
       }
-      const payload = args.refresh_lore_meta === false ? { refreshLoreMeta: false } : {};
-      const res = await api(`${BASE}/api/items/${encodeURIComponent(itemId)}/index`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const payload =
+        args.refresh_lore_meta === false ? { refreshLoreMeta: false } : {};
+      const res = await api(
+        `${BASE}/api/items/${encodeURIComponent(itemId)}/index`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
       return mcpApiText(res, "mcp_index_item_failed");
     }
 
     if (name === "heartgarden_patch_item") {
-      const wkErr = mcpWriteKeyError(args, WRITE_KEY, { allowOmitWhenConfigSet: true });
+      const wkErr = mcpWriteKeyError(args, WRITE_KEY, {
+        allowOmitWhenConfigSet: true,
+      });
       if (wkErr) {
         return { content: [{ type: "text", text: wkErr }], isError: true };
       }
@@ -1282,33 +1519,45 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         };
       }
       if (typeof args.content_text === "string") {
-        const tooLong = mcpContentTextTooLong("content_text", args.content_text);
+        const tooLong = mcpContentTextTooLong(
+          "content_text",
+          args.content_text
+        );
         if (tooLong) {
           return { content: [{ type: "text", text: tooLong }], isError: true };
         }
       }
       if (typeof args.content_markdown === "string") {
-        const tooLong = mcpContentTextTooLong("content_markdown", args.content_markdown);
+        const tooLong = mcpContentTextTooLong(
+          "content_markdown",
+          args.content_markdown
+        );
         if (tooLong) {
           return { content: [{ type: "text", text: tooLong }], isError: true };
         }
       }
       if (args.content_blocks != null) {
-        const tooLong = mcpSerializedPayloadTooLong("content_blocks", args.content_blocks);
+        const tooLong = mcpSerializedPayloadTooLong(
+          "content_blocks",
+          args.content_blocks
+        );
         if (tooLong) {
           return { content: [{ type: "text", text: tooLong }], isError: true };
         }
       }
       if (args.content_json != null && typeof args.content_json === "object") {
-        const tooLong = mcpSerializedPayloadTooLong("content_json", args.content_json);
+        const tooLong = mcpSerializedPayloadTooLong(
+          "content_json",
+          args.content_json
+        );
         if (tooLong) {
           return { content: [{ type: "text", text: tooLong }], isError: true };
         }
       }
       const hasExplicitJson =
-        args.content_json != null &&
-        typeof args.content_json === "object";
-      const markdownInput = typeof args.content_markdown === "string" ? args.content_markdown : "";
+        args.content_json != null && typeof args.content_json === "object";
+      const markdownInput =
+        typeof args.content_markdown === "string" ? args.content_markdown : "";
       const hasMarkdown = markdownInput.trim().length > 0;
       const hasBlocks = Array.isArray(args.content_blocks);
       let structureReport: Record<string, unknown> | undefined;
@@ -1317,18 +1566,24 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       if (!hasExplicitJson && hasBlocks) {
         const parsed = parseContentBlocks(args.content_blocks);
         if (!parsed.ok) {
-          return { content: [{ type: "text", text: parsed.error }], isError: true };
+          return {
+            content: [{ type: "text", text: parsed.error }],
+            isError: true,
+          };
         }
         const built = structuredBodyToHgDoc(
           { blocks: parsed.blocks },
           {
             title: typeof args.title === "string" ? args.title : undefined,
             requireH1: shouldRequireH1ForItemType(args.item_type),
-          },
+          }
         );
         structuredDoc = { format: "hgDoc", doc: built.doc };
         structuredText = built.plainText;
-        structureReport = built.structureReport as unknown as Record<string, unknown>;
+        structureReport = built.structureReport as unknown as Record<
+          string,
+          unknown
+        >;
       } else if (!hasExplicitJson && hasMarkdown) {
         const body = markdownToStructuredBody(markdownInput, {
           title: typeof args.title === "string" ? args.title : undefined,
@@ -1340,11 +1595,18 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         });
         structuredDoc = { format: "hgDoc", doc: built.doc };
         structuredText = built.plainText;
-        structureReport = built.structureReport as unknown as Record<string, unknown>;
+        structureReport = built.structureReport as unknown as Record<
+          string,
+          unknown
+        >;
       }
       const patch: Record<string, unknown> = {};
-      if (typeof args.title === "string") patch.title = args.title;
-      if (typeof args.content_text === "string") patch.contentText = args.content_text;
+      if (typeof args.title === "string") {
+        patch.title = args.title;
+      }
+      if (typeof args.content_text === "string") {
+        patch.contentText = args.content_text;
+      }
       if (structuredText && typeof args.content_text !== "string") {
         patch.contentText = structuredText;
       }
@@ -1353,20 +1615,42 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       } else if (structuredDoc) {
         patch.contentJson = structuredDoc;
       }
-      if (typeof args.entity_type === "string") patch.entityType = args.entity_type;
+      if (typeof args.entity_type === "string") {
+        patch.entityType = args.entity_type;
+      }
       if (args.entity_meta != null && typeof args.entity_meta === "object") {
         patch.entityMeta = args.entity_meta as Record<string, unknown>;
       }
-      if (args.entity_meta_merge != null && typeof args.entity_meta_merge === "object") {
-        patch.entityMetaMerge = args.entity_meta_merge as Record<string, unknown>;
+      if (
+        args.entity_meta_merge != null &&
+        typeof args.entity_meta_merge === "object"
+      ) {
+        patch.entityMetaMerge = args.entity_meta_merge as Record<
+          string,
+          unknown
+        >;
       }
-      if (typeof args.space_id === "string" && args.space_id.trim()) patch.spaceId = args.space_id.trim();
-      if (typeof args.x === "number") patch.x = args.x;
-      if (typeof args.y === "number") patch.y = args.y;
-      if (typeof args.width === "number") patch.width = args.width;
-      if (typeof args.height === "number") patch.height = args.height;
-      if (typeof args.z_index === "number") patch.zIndex = args.z_index;
-      if (typeof args.color === "string") patch.color = args.color;
+      if (typeof args.space_id === "string" && args.space_id.trim()) {
+        patch.spaceId = args.space_id.trim();
+      }
+      if (typeof args.x === "number") {
+        patch.x = args.x;
+      }
+      if (typeof args.y === "number") {
+        patch.y = args.y;
+      }
+      if (typeof args.width === "number") {
+        patch.width = args.width;
+      }
+      if (typeof args.height === "number") {
+        patch.height = args.height;
+      }
+      if (typeof args.z_index === "number") {
+        patch.zIndex = args.z_index;
+      }
+      if (typeof args.color === "string") {
+        patch.color = args.color;
+      }
       if (
         args.item_type === "note" ||
         args.item_type === "sticky" ||
@@ -1377,7 +1661,9 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       ) {
         patch.itemType = args.item_type;
       }
-      if (typeof args.image_url === "string") patch.imageUrl = args.image_url;
+      if (typeof args.image_url === "string") {
+        patch.imageUrl = args.image_url;
+      }
       if (args.image_meta != null && typeof args.image_meta === "object") {
         patch.imageMeta = args.image_meta as Record<string, unknown>;
       }
@@ -1391,7 +1677,10 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       } else if (typeof args.stack_order === "number") {
         patch.stackOrder = args.stack_order;
       }
-      if (typeof args.base_updated_at === "string" && args.base_updated_at.trim()) {
+      if (
+        typeof args.base_updated_at === "string" &&
+        args.base_updated_at.trim()
+      ) {
         patch.baseUpdatedAt = args.base_updated_at.trim();
       }
       if (Object.keys(patch).length === 0) {
@@ -1410,31 +1699,53 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
-      if (!structureReport) return mcpApiText(res, "mcp_patch_item_failed");
-      if (!res.ok) return mcpApiError(res, "mcp_patch_item_failed");
+      if (!structureReport) {
+        return mcpApiText(res, "mcp_patch_item_failed");
+      }
+      if (!res.ok) {
+        return mcpApiError(res, "mcp_patch_item_failed");
+      }
       const text = await res.text();
       try {
         const parsed = JSON.parse(text) as Record<string, unknown>;
-        return mcpToolText(JSON.stringify({ ...parsed, structure_report: structureReport }, null, 2));
+        return mcpToolText(
+          JSON.stringify(
+            { ...parsed, structure_report: structureReport },
+            null,
+            2
+          )
+        );
       } catch {
         return mcpToolText(
-          JSON.stringify({ ok: true, raw: text, structure_report: structureReport }, null, 2),
+          JSON.stringify(
+            { ok: true, raw: text, structure_report: structureReport },
+            null,
+            2
+          )
         );
       }
     }
 
     if (name === "heartgarden_create_item") {
-      const wkErr = mcpWriteKeyError(args, WRITE_KEY, { allowOmitWhenConfigSet: true });
+      const wkErr = mcpWriteKeyError(args, WRITE_KEY, {
+        allowOmitWhenConfigSet: true,
+      });
       if (wkErr) {
         return { content: [{ type: "text", text: wkErr }], isError: true };
       }
       const spaceId = String(args.space_id ?? "").trim();
       if (!spaceId) {
-        return { content: [{ type: "text", text: "space_id is required" }], isError: true };
+        return {
+          content: [{ type: "text", text: "space_id is required" }],
+          isError: true,
+        };
       }
       const title = String(args.title ?? "").trim();
       if (!title) {
-        return { content: [{ type: "text", text: "title is required" }], isError: true };
+        return {
+          content: [{ type: "text", text: "title is required" }],
+          isError: true,
+        };
       }
 
       const canvasRaw = String(args.canvas_item_type ?? "").trim();
@@ -1442,7 +1753,12 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       let itemType = canvasRaw || legacyRaw;
       if (!itemType) {
         return {
-          content: [{ type: "text", text: "canvas_item_type is required (or legacy item_type)" }],
+          content: [
+            {
+              type: "text",
+              text: "canvas_item_type is required (or legacy item_type)",
+            },
+          ],
           isError: true,
         };
       }
@@ -1457,7 +1773,8 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
               type: "text",
               text: JSON.stringify({
                 ok: false,
-                error: "Use heartgarden_create_folder to create folder cards (child space + item).",
+                error:
+                  "Use heartgarden_create_folder to create folder cards (child space + item).",
               }),
             },
           ],
@@ -1465,28 +1782,37 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         };
       }
 
-      const validItemTypes = ["note", "sticky", "image", "checklist", "webclip"];
+      const validItemTypes = [
+        "note",
+        "sticky",
+        "image",
+        "checklist",
+        "webclip",
+      ];
       if (!validItemTypes.includes(itemType)) {
         return {
-          content: [{ type: "text", text: `Invalid canvas_item_type: ${itemType}` }],
+          content: [
+            { type: "text", text: `Invalid canvas_item_type: ${itemType}` },
+          ],
           isError: true,
         };
       }
 
       const loreEntity = String(args.lore_entity ?? "").trim();
-      const legacyCharacter = legacyRaw === "character" || canvasRaw === "character";
+      const legacyCharacter =
+        legacyRaw === "character" || canvasRaw === "character";
       let resolvedLore: string | undefined;
-      if (loreEntity === "character" || loreEntity === "faction" || loreEntity === "location") {
+      if (
+        loreEntity === "character" ||
+        loreEntity === "faction" ||
+        loreEntity === "location"
+      ) {
         resolvedLore = loreEntity;
       } else if (legacyCharacter) {
         resolvedLore = "character";
       }
 
-      if (
-        resolvedLore &&
-        itemType !== "note" &&
-        itemType !== "sticky"
-      ) {
+      if (resolvedLore && itemType !== "note" && itemType !== "sticky") {
         return {
           content: [
             {
@@ -1498,48 +1824,66 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         };
       }
 
-      const contentText = typeof args.content_text === "string" ? args.content_text : "";
+      const contentText =
+        typeof args.content_text === "string" ? args.content_text : "";
       if (typeof args.content_markdown === "string") {
-        const tooLong = mcpContentTextTooLong("content_markdown", args.content_markdown);
+        const tooLong = mcpContentTextTooLong(
+          "content_markdown",
+          args.content_markdown
+        );
         if (tooLong) {
           return { content: [{ type: "text", text: tooLong }], isError: true };
         }
       }
       if (args.content_blocks != null) {
-        const tooLong = mcpSerializedPayloadTooLong("content_blocks", args.content_blocks);
+        const tooLong = mcpSerializedPayloadTooLong(
+          "content_blocks",
+          args.content_blocks
+        );
         if (tooLong) {
           return { content: [{ type: "text", text: tooLong }], isError: true };
         }
       }
       if (args.content_json != null && typeof args.content_json === "object") {
-        const tooLong = mcpSerializedPayloadTooLong("content_json", args.content_json);
+        const tooLong = mcpSerializedPayloadTooLong(
+          "content_json",
+          args.content_json
+        );
         if (tooLong) {
           return { content: [{ type: "text", text: tooLong }], isError: true };
         }
       }
-      const markdownInput = typeof args.content_markdown === "string" ? args.content_markdown : "";
+      const markdownInput =
+        typeof args.content_markdown === "string" ? args.content_markdown : "";
       const hasMarkdown = markdownInput.trim().length > 0;
       const hasBlocks = Array.isArray(args.content_blocks);
-      const hasContentJsonArg = args.content_json != null && typeof args.content_json === "object";
+      const hasContentJsonArg =
+        args.content_json != null && typeof args.content_json === "object";
       let structureReport: Record<string, unknown> | undefined;
       let structuredDoc: Record<string, unknown> | undefined;
       let structuredText: string | undefined;
-      if (!hasContentJsonArg && !resolvedLore && hasBlocks) {
+      if (!(hasContentJsonArg || resolvedLore) && hasBlocks) {
         const parsed = parseContentBlocks(args.content_blocks);
         if (!parsed.ok) {
-          return { content: [{ type: "text", text: parsed.error }], isError: true };
+          return {
+            content: [{ type: "text", text: parsed.error }],
+            isError: true,
+          };
         }
         const built = structuredBodyToHgDoc(
           { blocks: parsed.blocks },
           {
             title,
             requireH1: shouldRequireH1ForItemType(itemType),
-          },
+          }
         );
         structuredDoc = { format: "hgDoc", doc: built.doc };
         structuredText = built.plainText;
-        structureReport = built.structureReport as unknown as Record<string, unknown>;
-      } else if (!hasContentJsonArg && !resolvedLore && hasMarkdown) {
+        structureReport = built.structureReport as unknown as Record<
+          string,
+          unknown
+        >;
+      } else if (!(hasContentJsonArg || resolvedLore) && hasMarkdown) {
         const body = markdownToStructuredBody(markdownInput, {
           title,
           requireH1: shouldRequireH1ForItemType(itemType),
@@ -1550,11 +1894,17 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         });
         structuredDoc = { format: "hgDoc", doc: built.doc };
         structuredText = built.plainText;
-        structureReport = built.structureReport as unknown as Record<string, unknown>;
+        structureReport = built.structureReport as unknown as Record<
+          string,
+          unknown
+        >;
       }
       const contentLenErr = mcpContentTextTooLong("content_text", contentText);
       if (contentLenErr) {
-        return { content: [{ type: "text", text: contentLenErr }], isError: true };
+        return {
+          content: [{ type: "text", text: contentLenErr }],
+          isError: true,
+        };
       }
       if (
         itemType === "note" &&
@@ -1570,8 +1920,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           content: [
             {
               type: "text",
-              text:
-                "content_text is required for plain notes (or set lore_entity, canonical_entity_kind, or entity_type)",
+              text: "content_text is required for plain notes (or set lore_entity, canonical_entity_kind, or entity_type)",
             },
           ],
           isError: true,
@@ -1593,10 +1942,16 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
 
       if (resolvedLore) {
         body.entityType = resolvedLore;
-      } else if (typeof args.entity_type === "string" && args.entity_type.trim()) {
+      } else if (
+        typeof args.entity_type === "string" &&
+        args.entity_type.trim()
+      ) {
         body.entityType = args.entity_type.trim();
       }
-      if (typeof args.canonical_entity_kind === "string" && args.canonical_entity_kind.trim()) {
+      if (
+        typeof args.canonical_entity_kind === "string" &&
+        args.canonical_entity_kind.trim()
+      ) {
         body.canonical_entity_kind = args.canonical_entity_kind.trim();
       }
       if (
@@ -1607,11 +1962,19 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       ) {
         body.lore_variant = args.lore_variant;
       }
-      if (typeof args.color === "string" && args.color.trim()) body.color = args.color.trim();
-      if (args.theme === "default" || args.theme === "code" || args.theme === "task") {
+      if (typeof args.color === "string" && args.color.trim()) {
+        body.color = args.color.trim();
+      }
+      if (
+        args.theme === "default" ||
+        args.theme === "code" ||
+        args.theme === "task"
+      ) {
         body.theme = args.theme;
       }
-      if (typeof args.image_url === "string" && args.image_url.trim()) body.imageUrl = args.image_url.trim();
+      if (typeof args.image_url === "string" && args.image_url.trim()) {
+        body.imageUrl = args.image_url.trim();
+      }
       if (args.image_meta != null && typeof args.image_meta === "object") {
         body.imageMeta = args.image_meta as Record<string, unknown>;
       }
@@ -1619,12 +1982,17 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         body.entityMeta = args.entity_meta as Record<string, unknown>;
       }
 
-      const res = await api(`${BASE}/api/spaces/${encodeURIComponent(spaceId)}/items`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) return mcpApiError(res, "mcp_create_item_failed");
+      const res = await api(
+        `${BASE}/api/spaces/${encodeURIComponent(spaceId)}/items`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
+      if (!res.ok) {
+        return mcpApiError(res, "mcp_create_item_failed");
+      }
       const createText = await res.text();
       if (args.auto_index !== true) {
         if (!structureReport) {
@@ -1632,25 +2000,43 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         }
         try {
           const created = JSON.parse(createText) as Record<string, unknown>;
-          return mcpToolText(JSON.stringify({ ...created, structure_report: structureReport }, null, 2));
+          return mcpToolText(
+            JSON.stringify(
+              { ...created, structure_report: structureReport },
+              null,
+              2
+            )
+          );
         } catch {
           return mcpToolText(
-            JSON.stringify({ ok: true, raw: createText, structure_report: structureReport }, null, 2),
+            JSON.stringify(
+              { ok: true, raw: createText, structure_report: structureReport },
+              null,
+              2
+            )
           );
         }
       }
       try {
-        const created = JSON.parse(createText) as { ok?: boolean; item?: { id?: string } };
+        const created = JSON.parse(createText) as {
+          ok?: boolean;
+          item?: { id?: string };
+        };
         const newId = created?.item?.id;
-        if (!created?.ok || !newId) {
+        if (!(created?.ok && newId)) {
           return { content: [{ type: "text", text: createText }] };
         }
-        const idxRes = await api(`${BASE}/api/items/${encodeURIComponent(newId)}/index`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        });
-        if (!idxRes.ok) return mcpApiError(idxRes, "mcp_create_item_index_failed");
+        const idxRes = await api(
+          `${BASE}/api/items/${encodeURIComponent(newId)}/index`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          }
+        );
+        if (!idxRes.ok) {
+          return mcpApiError(idxRes, "mcp_create_item_index_failed");
+        }
         const indexText = await idxRes.text();
         let indexPayload: unknown = indexText;
         try {
@@ -1666,10 +2052,12 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
                 {
                   create: created,
                   index: indexPayload,
-                  ...(structureReport ? { structure_report: structureReport } : {}),
+                  ...(structureReport
+                    ? { structure_report: structureReport }
+                    : {}),
                 },
                 null,
-                2,
+                2
               ),
             },
           ],
@@ -1680,13 +2068,15 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
     }
 
     if (name === "heartgarden_create_folder") {
-      const wkErr = mcpWriteKeyError(args, WRITE_KEY, { allowOmitWhenConfigSet: true });
+      const wkErr = mcpWriteKeyError(args, WRITE_KEY, {
+        allowOmitWhenConfigSet: true,
+      });
       if (wkErr) {
         return { content: [{ type: "text", text: wkErr }], isError: true };
       }
       const parentSpaceId = String(args.space_id ?? "").trim();
       const title = String(args.title ?? "").trim();
-      if (!parentSpaceId || !title) {
+      if (!(parentSpaceId && title)) {
         return {
           content: [{ type: "text", text: "space_id and title are required" }],
           isError: true,
@@ -1697,12 +2087,19 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: title, parentSpaceId }),
       });
-      if (!spaceRes.ok) return mcpApiError(spaceRes, "mcp_create_folder_space_failed");
+      if (!spaceRes.ok) {
+        return mcpApiError(spaceRes, "mcp_create_folder_space_failed");
+      }
       const spaceText = await spaceRes.text();
       let childSpaceId = "";
       try {
-        const sj = JSON.parse(spaceText) as { ok?: boolean; space?: { id?: string } };
-        if (sj?.ok && sj.space?.id) childSpaceId = sj.space.id;
+        const sj = JSON.parse(spaceText) as {
+          ok?: boolean;
+          space?: { id?: string };
+        };
+        if (sj?.ok && sj.space?.id) {
+          childSpaceId = sj.space.id;
+        }
       } catch {
         /* below */
       }
@@ -1714,21 +2111,26 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         folder: { childSpaceId },
         hgArch: { rotation, tapeRotation: 0 },
       };
-      const itemRes = await api(`${BASE}/api/spaces/${encodeURIComponent(parentSpaceId)}/items`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          itemType: "folder",
-          x: typeof args.x === "number" ? args.x : 0,
-          y: typeof args.y === "number" ? args.y : 0,
-          width: 420,
-          height: 280,
-          title,
-          contentText: title,
-          contentJson: folderContentJson,
-        }),
-      });
-      if (!itemRes.ok) return mcpApiError(itemRes, "mcp_create_folder_item_failed");
+      const itemRes = await api(
+        `${BASE}/api/spaces/${encodeURIComponent(parentSpaceId)}/items`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            itemType: "folder",
+            x: typeof args.x === "number" ? args.x : 0,
+            y: typeof args.y === "number" ? args.y : 0,
+            width: 420,
+            height: 280,
+            title,
+            contentText: title,
+            contentJson: folderContentJson,
+          }),
+        }
+      );
+      if (!itemRes.ok) {
+        return mcpApiError(itemRes, "mcp_create_folder_item_failed");
+      }
       const itemText = await itemRes.text();
       if (args.auto_index !== true) {
         return {
@@ -1736,33 +2138,48 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
             {
               type: "text",
               text: JSON.stringify(
-                { space: JSON.parse(spaceText) as object, item: JSON.parse(itemText) as object },
+                {
+                  space: JSON.parse(spaceText) as object,
+                  item: JSON.parse(itemText) as object,
+                },
                 null,
-                2,
+                2
               ),
             },
           ],
         };
       }
       try {
-        const itemJson = JSON.parse(itemText) as { ok?: boolean; item?: { id?: string } };
+        const itemJson = JSON.parse(itemText) as {
+          ok?: boolean;
+          item?: { id?: string };
+        };
         const newId = itemJson?.item?.id;
-        if (!itemJson?.ok || !newId) {
+        if (!(itemJson?.ok && newId)) {
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify({ space: JSON.parse(spaceText), item: itemJson }, null, 2),
+                text: JSON.stringify(
+                  { space: JSON.parse(spaceText), item: itemJson },
+                  null,
+                  2
+                ),
               },
             ],
           };
         }
-        const idxRes = await api(`${BASE}/api/items/${encodeURIComponent(newId)}/index`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        });
-        if (!idxRes.ok) return mcpApiError(idxRes, "mcp_create_folder_index_failed");
+        const idxRes = await api(
+          `${BASE}/api/items/${encodeURIComponent(newId)}/index`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          }
+        );
+        if (!idxRes.ok) {
+          return mcpApiError(idxRes, "mcp_create_folder_index_failed");
+        }
         const indexText = await idxRes.text();
         let indexPayload: unknown = indexText;
         try {
@@ -1781,7 +2198,7 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
                   index: indexPayload,
                 },
                 null,
-                2,
+                2
               ),
             },
           ],
@@ -1791,7 +2208,11 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
           content: [
             {
               type: "text",
-              text: JSON.stringify({ space: JSON.parse(spaceText), rawItem: itemText }, null, 2),
+              text: JSON.stringify(
+                { space: JSON.parse(spaceText), rawItem: itemText },
+                null,
+                2
+              ),
             },
           ],
         };
@@ -1799,14 +2220,16 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
     }
 
     if (name === "heartgarden_create_link") {
-      const wkErr = mcpWriteKeyError(args, WRITE_KEY, { allowOmitWhenConfigSet: true });
+      const wkErr = mcpWriteKeyError(args, WRITE_KEY, {
+        allowOmitWhenConfigSet: true,
+      });
       if (wkErr) {
         return { content: [{ type: "text", text: wkErr }], isError: true };
       }
       const spaceId = String(args.space_id ?? "").trim();
       const sourceId = String(args.source_item_id ?? "").trim();
       const targetId = String(args.target_item_id ?? "").trim();
-      if (!spaceId || !sourceId || !targetId) {
+      if (!(spaceId && sourceId && targetId)) {
         return {
           content: [
             {
@@ -1821,9 +2244,11 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         api(`${BASE}/api/v1/items/${encodeURIComponent(sourceId)}`),
         api(`${BASE}/api/v1/items/${encodeURIComponent(targetId)}`),
       ]);
-      if (!srcRes.ok || !tgtRes.ok) {
+      if (!(srcRes.ok && tgtRes.ok)) {
         return {
-          content: [{ type: "text", text: "Could not load source or target item" }],
+          content: [
+            { type: "text", text: "Could not load source or target item" },
+          ],
           isError: true,
         };
       }
@@ -1831,14 +2256,15 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       const tgtJson = (await tgtRes.json()) as { item?: { spaceId?: string } };
       const s1 = srcJson?.item?.spaceId;
       const s2 = tgtJson?.item?.spaceId;
-      if (!s1 || !s2 || s1 !== spaceId || s2 !== spaceId) {
+      if (!(s1 && s2) || s1 !== spaceId || s2 !== spaceId) {
         return {
           content: [
             {
               type: "text",
               text: JSON.stringify({
                 ok: false,
-                error: "Source and target items must exist and belong to space_id",
+                error:
+                  "Source and target items must exist and belong to space_id",
               }),
             },
           ],
@@ -1849,9 +2275,16 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
         sourceItemId: sourceId,
         targetItemId: targetId,
       };
-      if (typeof args.label === "string" && args.label.trim()) linkBody.label = args.label.trim();
-      if (typeof args.relationship_type === "string" && args.relationship_type.trim()) {
-        linkBody.linkType = normalizeLinkTypeAlias(args.relationship_type.trim());
+      if (typeof args.label === "string" && args.label.trim()) {
+        linkBody.label = args.label.trim();
+      }
+      if (
+        typeof args.relationship_type === "string" &&
+        args.relationship_type.trim()
+      ) {
+        linkBody.linkType = normalizeLinkTypeAlias(
+          args.relationship_type.trim()
+        );
       }
       const res = await api(`${BASE}/api/item-links`, {
         method: "POST",
@@ -1862,22 +2295,33 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
     }
 
     if (name === "heartgarden_update_link") {
-      const wkErr = mcpWriteKeyError(args, WRITE_KEY, { allowOmitWhenConfigSet: true });
+      const wkErr = mcpWriteKeyError(args, WRITE_KEY, {
+        allowOmitWhenConfigSet: true,
+      });
       if (wkErr) {
         return { content: [{ type: "text", text: wkErr }], isError: true };
       }
       const linkId = String(args.link_id ?? "").trim();
       if (!linkId) {
-        return { content: [{ type: "text", text: "link_id is required" }], isError: true };
+        return {
+          content: [{ type: "text", text: "link_id is required" }],
+          isError: true,
+        };
       }
       const patchBody: Record<string, unknown> = { id: linkId };
-      if (args.label !== undefined) patchBody.label = args.label;
+      if (args.label !== undefined) {
+        patchBody.label = args.label;
+      }
       const relRaw = args.relationship_type;
       if (relRaw !== undefined && relRaw !== null) {
         const rel = String(relRaw).trim();
-        if (rel) patchBody.linkType = normalizeLinkTypeAlias(rel);
+        if (rel) {
+          patchBody.linkType = normalizeLinkTypeAlias(rel);
+        }
       }
-      if (args.color !== undefined) patchBody.color = args.color;
+      if (args.color !== undefined) {
+        patchBody.color = args.color;
+      }
       if (Object.keys(patchBody).length < 2) {
         return {
           content: [
@@ -1898,13 +2342,18 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
     }
 
     if (name === "heartgarden_delete_item") {
-      const wkErr = mcpWriteKeyError(args, WRITE_KEY, { allowOmitWhenConfigSet: true });
+      const wkErr = mcpWriteKeyError(args, WRITE_KEY, {
+        allowOmitWhenConfigSet: true,
+      });
       if (wkErr) {
         return { content: [{ type: "text", text: wkErr }], isError: true };
       }
       const itemId = String(args.item_id ?? "").trim();
       if (!itemId) {
-        return { content: [{ type: "text", text: "item_id is required" }], isError: true };
+        return {
+          content: [{ type: "text", text: "item_id is required" }],
+          isError: true,
+        };
       }
       const res = await api(`${BASE}/api/items/${encodeURIComponent(itemId)}`, {
         method: "DELETE",
@@ -1913,13 +2362,18 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
     }
 
     if (name === "heartgarden_delete_link") {
-      const wkErr = mcpWriteKeyError(args, WRITE_KEY, { allowOmitWhenConfigSet: true });
+      const wkErr = mcpWriteKeyError(args, WRITE_KEY, {
+        allowOmitWhenConfigSet: true,
+      });
       if (wkErr) {
         return { content: [{ type: "text", text: wkErr }], isError: true };
       }
       const linkId = String(args.link_id ?? "").trim();
       if (!linkId) {
-        return { content: [{ type: "text", text: "link_id is required" }], isError: true };
+        return {
+          content: [{ type: "text", text: "link_id is required" }],
+          isError: true,
+        };
       }
       const res = await api(`${BASE}/api/item-links`, {
         method: "DELETE",

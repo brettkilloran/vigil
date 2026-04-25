@@ -30,7 +30,7 @@ export const branes = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   },
-  (table) => [unique("branes_brane_type_uidx").on(table.braneType)],
+  (table) => [unique("branes_brane_type_uidx").on(table.braneType)]
 );
 
 export const spaces = pgTable(
@@ -63,7 +63,7 @@ export const spaces = pgTable(
     // checks, presence subtree resolution, and realtime invalidation. SQL mirror
     // in 0019_spaces_parent_space_id_idx.sql.
     index("spaces_parent_space_id_idx").on(table.parentSpaceId),
-  ],
+  ]
 );
 
 /**
@@ -75,11 +75,15 @@ export const canvasPresence = pgTable("canvas_presence", {
   activeSpaceId: uuid("active_space_id")
     .notNull()
     .references(() => spaces.id, { onDelete: "cascade" }),
-  camera: jsonb("camera").$type<{ x: number; y: number; zoom: number }>().notNull(),
+  camera: jsonb("camera")
+    .$type<{ x: number; y: number; zoom: number }>()
+    .notNull(),
   pointer: jsonb("pointer").$type<{ x: number; y: number } | null>(),
   displayName: varchar("display_name", { length: 32 }),
   sigil: varchar("sigil", { length: 16 }),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const items = pgTable("items", {
@@ -126,7 +130,9 @@ export const items = pgTable("items", {
 export const importReviewItems = pgTable("import_review_items", {
   id: uuid("id").defaultRandom().primaryKey(),
   importBatchId: uuid("import_batch_id").notNull(),
-  spaceId: uuid("space_id").references(() => spaces.id, { onDelete: "cascade" }),
+  spaceId: uuid("space_id").references(() => spaces.id, {
+    onDelete: "cascade",
+  }),
   status: varchar("status", { length: 32 }).notNull().default("pending"),
   kind: varchar("kind", { length: 64 }).notNull().default("contradiction"),
   payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
@@ -152,7 +158,9 @@ export const loreImportJobs = pgTable("lore_import_jobs", {
   progressTotal: integer("progress_total"),
   progressMessage: text("progress_message"),
   progressMeta: jsonb("progress_meta").$type<Record<string, unknown> | null>(),
-  progressEvents: jsonb("progress_events").$type<Record<string, unknown>[] | null>(),
+  progressEvents: jsonb("progress_events").$type<
+    Record<string, unknown>[] | null
+  >(),
   lastProgressAt: timestamp("last_progress_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
@@ -168,7 +176,7 @@ export const itemLinks = pgTable(
     targetItemId: uuid("target_item_id")
       .notNull()
       .references(() => items.id, { onDelete: "cascade" }),
-  linkType: varchar("link_type", { length: 64 }).notNull().default("pin"),
+    linkType: varchar("link_type", { length: 64 }).notNull().default("pin"),
     label: text("label"),
     sourcePin: varchar("source_pin", { length: 64 }),
     targetPin: varchar("target_pin", { length: 64 }),
@@ -182,12 +190,12 @@ export const itemLinks = pgTable(
       t.sourceItemId,
       t.targetItemId,
       t.sourcePin,
-      t.targetPin,
+      t.targetPin
     ),
     // REVIEW_2026-04-25_1730 M5: revision query and target-side fetches
     // (`/api/items/[id]/links` reverse direction) filter on this column.
     index("item_links_target_item_id_idx").on(t.targetItemId),
-  ],
+  ]
 );
 
 export const entityMentions = pgTable(
@@ -210,7 +218,9 @@ export const entityMentions = pgTable(
     sourceSpaceId: uuid("source_space_id")
       .notNull()
       .references(() => spaces.id, { onDelete: "cascade" }),
-    sourceKind: varchar("source_kind", { length: 16 }).notNull().default("term"),
+    sourceKind: varchar("source_kind", { length: 16 })
+      .notNull()
+      .default("term"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   },
@@ -219,7 +229,7 @@ export const entityMentions = pgTable(
       t.sourceItemId,
       t.targetItemId,
       t.matchedTerm,
-      t.sourceKind,
+      t.sourceKind
     ),
     // REVIEW_2026-04-25_1730 L4: Mirror migration 0017's CHECK constraint in
     // schema.ts so drizzle-kit diffs stay clean and an introspection-driven
@@ -227,9 +237,9 @@ export const entityMentions = pgTable(
     // mention's source and target items must differ.
     check(
       "entity_mentions_source_not_target_chk",
-      sql`${t.sourceItemId} <> ${t.targetItemId}`,
+      sql`${t.sourceItemId} <> ${t.targetItemId}`
     ),
-  ],
+  ]
 );
 
 /** Chunk embeddings for semantic search; rebuilt by vault index pipeline. */
@@ -244,7 +254,9 @@ export const itemEmbeddings = pgTable("item_embeddings", {
   chunkIndex: integer("chunk_index").notNull().default(0),
   /** sha256 hex of chunk text at index time (debug / future skip). */
   contentHash: varchar("content_hash", { length: 64 }).notNull().default(""),
-  sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }).notNull(),
+  sourceUpdatedAt: timestamp("source_updated_at", {
+    withTimezone: true,
+  }).notNull(),
   embedding: vector1536("embedding"),
   chunkText: text("chunk_text").notNull(),
   /** JSON-encoded heading breadcrumb path used for section-aware retrieval/citations. */

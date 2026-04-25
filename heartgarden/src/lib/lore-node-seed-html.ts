@@ -1,3 +1,5 @@
+import archBodyStyles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
+import { mediaUploadActionLabel } from "@/src/components/foundation/architectural-media-html";
 import type {
   CanvasContentEntity,
   LoreCard,
@@ -5,26 +7,26 @@ import type {
   LoreCardVariant,
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
-
-import { LORE_V9_HEADER_META_PLACEHOLDER, LORE_V9_REDACTED_SENTINEL } from "@/src/lib/lore-v9-placeholder";
-import archBodyStyles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import loreCardStyles from "@/src/components/foundation/lore-entity-card.module.css";
-import { mediaUploadActionLabel } from "@/src/components/foundation/architectural-media-html";
 import { HEARTGARDEN_MEDIA_PLACEHOLDER_SRC } from "@/src/lib/heartgarden-media-placeholder";
 import { heartgardenMediaPlaceholderClassList } from "@/src/lib/heartgarden-media-placeholder-classes";
-import {
-  focusDocumentHtmlToLocationBody,
-  locationBodyToFocusDocumentHtml,
-  LORE_V11_PH_LOCATION_PLACEHOLDER,
-  normalizeLocOrdoV7NameField,
-  parseLocationOrdoV7BodyPlainFields,
-} from "@/src/lib/lore-location-focus-document-html";
-import { splitOrdoV7DisplayName } from "@/src/lib/lore-location-ordo-display-name";
 import { stripLegacyHtmlToPlainText } from "@/src/lib/hg-doc/html-to-doc";
 import {
   buildFactionArchive091BodyHtml,
   factionArchiveRailTextsFromObjectId,
 } from "@/src/lib/lore-faction-archive-html";
+import {
+  focusDocumentHtmlToLocationBody,
+  LORE_V11_PH_LOCATION_PLACEHOLDER,
+  locationBodyToFocusDocumentHtml,
+  normalizeLocOrdoV7NameField,
+  parseLocationOrdoV7BodyPlainFields,
+} from "@/src/lib/lore-location-focus-document-html";
+import { splitOrdoV7DisplayName } from "@/src/lib/lore-location-ordo-display-name";
+import {
+  LORE_V9_HEADER_META_PLACEHOLDER,
+  LORE_V9_REDACTED_SENTINEL,
+} from "@/src/lib/lore-v9-placeholder";
 
 /** @deprecated Prefer `HEARTGARDEN_MEDIA_PLACEHOLDER_SRC` from `@/src/lib/heartgarden-media-placeholder`. */
 export const LORE_PORTRAIT_PLACEHOLDER_DARK = HEARTGARDEN_MEDIA_PLACEHOLDER_SRC;
@@ -45,13 +47,21 @@ const ORDO_V7_LOGO_PIXEL_GRID: readonly (0 | 1)[][] = [
 
 function ordoV7LogoPixelHtml(): string {
   const cells = ORDO_V7_LOGO_PIXEL_GRID.map((row) =>
-    row.map((on) => `<span class="${on ? s.locOrdoV7Px : s.locOrdoV7PxOff}" aria-hidden="true"></span>`).join(""),
+    row
+      .map(
+        (on) =>
+          `<span class="${on ? s.locOrdoV7Px : s.locOrdoV7PxOff}" aria-hidden="true"></span>`
+      )
+      .join("")
   ).join("");
   return `<div class="${s.locOrdoV7PixelIcon}" aria-hidden="true">${cells}</div>`;
 }
 
 function escapeHtmlV7Field(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 /**
@@ -77,7 +87,9 @@ export function buildLocationOrdoV7BodyHtml(parts: {
     : "";
   const ctx = parts.context.trim();
   const det = parts.detail.trim();
-  const notes = (parts.notesInnerHtml ?? "").trim() ? parts.notesInnerHtml : "<p><br></p>";
+  const notes = (parts.notesInnerHtml ?? "").trim()
+    ? parts.notesInnerHtml
+    : "<p><br></p>";
   const ctxAttrs = ctx
     ? ""
     : ` data-hg-lore-field="1" data-hg-lore-placeholder="true" data-hg-lore-ph="${LORE_V11_PH_LOCATION_CONTEXT}"`;
@@ -129,29 +141,48 @@ const LORE_V11_PH_NATIONALITY = "Origin";
 const LORE_V11_PH_NOTES = "Notes";
 
 export function defaultTitleForLoreKind(kind: LoreCardKind): string {
-  if (kind === "character") return "Unnamed";
-  if (kind === "faction") return "New organization";
+  if (kind === "character") {
+    return "Unnamed";
+  }
+  if (kind === "faction") {
+    return "New organization";
+  }
   return "New location";
 }
 
 /** Default `loreCard.variant` when creating nodes or inferring from `entity_type` without `hgArch`. */
-export function defaultLoreCardVariantForKind(kind: LoreCardKind): LoreCardVariant {
-  if (kind === "character") return "v11";
-  if (kind === "location") return "v7";
-  if (kind === "faction") return "v4";
+export function defaultLoreCardVariantForKind(
+  kind: LoreCardKind
+): LoreCardVariant {
+  if (kind === "character") {
+    return "v11";
+  }
+  if (kind === "location") {
+    return "v7";
+  }
+  if (kind === "faction") {
+    return "v4";
+  }
   return "v1";
 }
 
-export function tapeVariantForLoreCard(kind: LoreCardKind, variant: LoreCardVariant): TapeVariant {
+export function tapeVariantForLoreCard(
+  kind: LoreCardKind,
+  variant: LoreCardVariant
+): TapeVariant {
   if (kind === "character") {
     return "dark";
   }
   if (kind === "faction") {
-    if (variant === "v2") return "masking";
+    if (variant === "v2") {
+      return "masking";
+    }
     return "dark";
   }
   /* location: v2 postcard band, v3 survey tag, v7 ORDO slab */
-  if (variant === "v7" || variant === "v2") return "clear";
+  if (variant === "v7" || variant === "v2") {
+    return "clear";
+  }
   return "dark";
 }
 
@@ -214,7 +245,9 @@ function characterV11(): string {
 }
 
 /** Faction Archive-091 readable — canonical canvas/focus body (rails + letterhead + record). */
-function factionArchive091Seed(seedForRails = "__hg-faction-archive__"): string {
+function factionArchive091Seed(
+  seedForRails = "__hg-faction-archive__"
+): string {
   const { upper, lower } = factionArchiveRailTextsFromObjectId(seedForRails);
   return buildFactionArchive091BodyHtml({
     orgPrimaryInnerHtml: "",
@@ -254,17 +287,18 @@ const LOC_PLAQUE_STRIP_VARIANTS = 8;
 
 /** FNV-1a → 0..7 for `data-loc-strip` gradient presets. */
 export function locationStripVariantFromSeed(seed: string): number {
-  let h = 2166136261 >>> 0;
+  let h = 2_166_136_261 >>> 0;
   for (let i = 0; i < seed.length; i++) {
     h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 16777619);
+    h = Math.imul(h, 16_777_619);
   }
   return h % LOC_PLAQUE_STRIP_VARIANTS;
 }
 
 function locationV3(stripIndex: number): string {
   const si =
-    ((stripIndex % LOC_PLAQUE_STRIP_VARIANTS) + LOC_PLAQUE_STRIP_VARIANTS) % LOC_PLAQUE_STRIP_VARIANTS;
+    ((stripIndex % LOC_PLAQUE_STRIP_VARIANTS) + LOC_PLAQUE_STRIP_VARIANTS) %
+    LOC_PLAQUE_STRIP_VARIANTS;
   return `<div data-hg-canvas-role="lore-location" data-hg-lore-location-variant="v3">
 <div class="${s.locPlaqueStrip}" data-loc-strip="${si}" aria-hidden="true"></div>
 <div class="${s.plaqueCorner}" data-hg-lore-location-field="ref" contenteditable="true" spellcheck="false"><br></div>
@@ -290,20 +324,24 @@ export type LoreNodeSeedOptions = {
 export function getLoreNodeSeedBodyHtml(
   kind: LoreCardKind,
   variant: LoreCardVariant,
-  options?: LoreNodeSeedOptions,
+  options?: LoreNodeSeedOptions
 ): string {
   if (kind === "character") {
     return characterV11();
   }
   if (kind === "faction") {
-    return factionArchive091Seed(options?.factionRailSeed ?? "__hg-faction-archive__");
+    return factionArchive091Seed(
+      options?.factionRailSeed ?? "__hg-faction-archive__"
+    );
   }
   if (kind === "location") {
     if (variant === "v3") {
       const seed = options?.locationStripSeed ?? "__hg-loc-v3-default__";
       return locationV3(locationStripVariantFromSeed(seed));
     }
-    if (variant === "v7") return locationV7();
+    if (variant === "v7") {
+      return locationV7();
+    }
     return locationV2();
   }
   return locationV2();
@@ -314,25 +352,39 @@ export function isLoreCardKind(value: string): value is LoreCardKind {
 }
 
 export function parseLoreCard(raw: unknown): LoreCard | undefined {
-  if (!raw || typeof raw !== "object") return;
+  if (!raw || typeof raw !== "object") {
+    return;
+  }
   const o = raw as Record<string, unknown>;
   const k = o.kind;
   const v = o.variant;
-  if (!isLoreCardKind(String(k))) return;
-  if (typeof v !== "string") return;
+  if (!isLoreCardKind(String(k))) {
+    return;
+  }
+  if (typeof v !== "string") {
+    return;
+  }
   const kind = k as LoreCardKind;
   if (kind === "character") {
     /* Legacy stored variants (v3 passport, v8–v10, etc.) normalize to the canonical character template. */
-    if (!v.length) return;
+    if (!v.length) {
+      return;
+    }
     return { kind: "character", variant: "v11" };
   }
   if (kind === "location") {
-    if (v === "v1") return { kind: "location", variant: "v2" };
-    if (v === "v2" || v === "v3" || v === "v7") return { kind: "location", variant: v };
+    if (v === "v1") {
+      return { kind: "location", variant: "v2" };
+    }
+    if (v === "v2" || v === "v3" || v === "v7") {
+      return { kind: "location", variant: v };
+    }
     return;
   }
   if (kind === "faction") {
-    if (v === "v1" || v === "v2" || v === "v3" || v === "v4") return { kind: "faction", variant: "v4" };
+    if (v === "v1" || v === "v2" || v === "v3" || v === "v4") {
+      return { kind: "faction", variant: "v4" };
+    }
     return;
   }
   return;
@@ -340,9 +392,13 @@ export function parseLoreCard(raw: unknown): LoreCard | undefined {
 
 /** True when saved HTML is the v11 character ID plate (CSS-module class names still contain this segment). */
 export function bodyHtmlImpliesLoreCharacterV11(html: string): boolean {
-  if (!html) return false;
+  if (!html) {
+    return false;
+  }
   /* Faction Archive-091 letterhead composes `charSkShellV11` for typography — not a character card. */
-  if (html.includes('data-hg-lore-faction-variant="archive091"')) return false;
+  if (html.includes('data-hg-lore-faction-variant="archive091"')) {
+    return false;
+  }
   return (
     html.includes("charSkShellV11") ||
     html.includes('data-hg-lore-portrait-root="v11"')
@@ -351,27 +407,45 @@ export function bodyHtmlImpliesLoreCharacterV11(html: string): boolean {
 
 /** Canvas should use the standalone character credential shell (not the generic A4 note card). */
 export function shouldRenderLoreCharacterCredentialCanvasNode(
-  entity: Pick<CanvasContentEntity, "kind" | "bodyHtml" | "loreCard">,
+  entity: Pick<CanvasContentEntity, "kind" | "bodyHtml" | "loreCard">
 ): boolean {
-  if (entity.kind !== "content") return false;
-  if (entity.loreCard?.kind === "faction") return false;
-  if (entity.loreCard?.kind === "character") return true;
+  if (entity.kind !== "content") {
+    return false;
+  }
+  if (entity.loreCard?.kind === "faction") {
+    return false;
+  }
+  if (entity.loreCard?.kind === "character") {
+    return true;
+  }
   return bodyHtmlImpliesLoreCharacterV11(entity.bodyHtml);
 }
 
 /** Saved HTML from an older location template (before `data-hg-canvas-role`). */
 function bodyHtmlImpliesLoreLocationLegacy(html: string): boolean {
-  if (!html) return false;
-  if (html.includes('data-hg-canvas-role="lore-location"')) return false;
-  return html.includes("locHeader") && html.includes("locName") && html.includes("notesText");
+  if (!html) {
+    return false;
+  }
+  if (html.includes('data-hg-canvas-role="lore-location"')) {
+    return false;
+  }
+  return (
+    html.includes("locHeader") &&
+    html.includes("locName") &&
+    html.includes("notesText")
+  );
 }
 
 /** Location nodes: structured lines on canvas; notes edited in focus (hidden on canvas via CSS). */
 export function shouldRenderLoreLocationCanvasNode(
-  entity: Pick<CanvasContentEntity, "kind" | "bodyHtml" | "loreCard">,
+  entity: Pick<CanvasContentEntity, "kind" | "bodyHtml" | "loreCard">
 ): boolean {
-  if (entity.kind !== "content") return false;
-  if (entity.loreCard?.kind === "location") return true;
+  if (entity.kind !== "content") {
+    return false;
+  }
+  if (entity.loreCard?.kind === "location") {
+    return true;
+  }
   return (
     entity.bodyHtml.includes('data-hg-canvas-role="lore-location"') ||
     bodyHtmlImpliesLoreLocationLegacy(entity.bodyHtml)
@@ -380,10 +454,14 @@ export function shouldRenderLoreLocationCanvasNode(
 
 /** Faction Archive-091 slab (rails + letterhead + record); roster from `factionRoster`. */
 export function shouldRenderLoreFactionArchive091CanvasNode(
-  entity: Pick<CanvasContentEntity, "kind" | "bodyHtml" | "loreCard">,
+  entity: Pick<CanvasContentEntity, "kind" | "bodyHtml" | "loreCard">
 ): boolean {
-  if (entity.kind !== "content") return false;
-  if (entity.loreCard?.kind === "faction") return true;
+  if (entity.kind !== "content") {
+    return false;
+  }
+  if (entity.loreCard?.kind === "faction") {
+    return true;
+  }
   return entity.bodyHtml.includes('data-hg-lore-faction-variant="archive091"');
 }
 
@@ -392,23 +470,33 @@ export function shouldRenderLoreFactionArchive091CanvasNode(
  * Uses the focus projection merge path so field extraction matches `locationBodyToFocusDocumentHtml`.
  */
 export function migrateLocationBodyToOrdoV7(bodyHtml: string): string {
-  if (!bodyHtml.trim()) return locationV7();
-  if (bodyHtml.includes('data-hg-lore-location-variant="v7"')) return bodyHtml;
+  if (!bodyHtml.trim()) {
+    return locationV7();
+  }
+  if (bodyHtml.includes('data-hg-lore-location-variant="v7"')) {
+    return bodyHtml;
+  }
   // Node-side callers don't have DOMParser. Returning the original body avoids data loss.
-  if (typeof DOMParser === "undefined") return bodyHtml;
+  if (typeof DOMParser === "undefined") {
+    return bodyHtml;
+  }
   try {
     const focus = locationBodyToFocusDocumentHtml(bodyHtml);
     const migrated = focusDocumentHtmlToLocationBody(focus, locationV7());
     const parsed = parseLocationOrdoV7BodyPlainFields(migrated);
-    const plainNotes = stripLegacyHtmlToPlainText(parsed.notesHtml ?? "").trim();
+    const plainNotes = stripLegacyHtmlToPlainText(
+      parsed.notesHtml ?? ""
+    ).trim();
     const migratedLooksEmpty =
-      !parsed.name.trim() &&
-      !parsed.context.trim() &&
-      !parsed.detail.trim() &&
+      !(parsed.name.trim() || parsed.context.trim() || parsed.detail.trim()) &&
       plainNotes.length === 0;
-    if (!migratedLooksEmpty) return migrated;
+    if (!migratedLooksEmpty) {
+      return migrated;
+    }
     const sourcePlain = stripLegacyHtmlToPlainText(bodyHtml).trim();
-    if (!sourcePlain) return migrated;
+    if (!sourcePlain) {
+      return migrated;
+    }
     const sourceNotesInnerHtml = `<p>${escapeHtmlV7Field(sourcePlain).replace(/\n/g, "<br />")}</p>`;
     return buildLocationOrdoV7BodyHtml({
       name: "",

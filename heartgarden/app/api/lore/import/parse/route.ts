@@ -3,8 +3,8 @@ import {
   getHeartgardenApiBootContext,
 } from "@/src/lib/heartgarden-api-boot-context";
 import {
-  loreImportUserContextSchema,
   type LoreImportUserContext,
+  loreImportUserContextSchema,
 } from "@/src/lib/lore-import-plan-types";
 
 export const runtime = "nodejs";
@@ -115,29 +115,48 @@ class FallbackPath2D {
 
 async function ensurePdfRuntimeGlobals(attemptId: string) {
   const globals = globalThis as PdfRuntimeGlobals;
-  if (globals.DOMMatrix && globals.ImageData && globals.Path2D) return;
+  if (globals.DOMMatrix && globals.ImageData && globals.Path2D) {
+    return;
+  }
 
   try {
     const canvas = await import("@napi-rs/canvas");
     // `@napi-rs/canvas`’s DOMMatrix is structurally enough for `pdfjs-dist` but not identical to
     // the lib.dom global type in TS (e.g. prototype method differences). Cast at the boundary.
-    globals.DOMMatrix ??= canvas.DOMMatrix as unknown as NonNullable<typeof globalThis.DOMMatrix>;
-    globals.ImageData ??= canvas.ImageData as unknown as NonNullable<typeof globalThis.ImageData>;
-    globals.Path2D ??= canvas.Path2D as unknown as NonNullable<typeof globalThis.Path2D>;
+    globals.DOMMatrix ??= canvas.DOMMatrix as unknown as NonNullable<
+      typeof globalThis.DOMMatrix
+    >;
+    globals.ImageData ??= canvas.ImageData as unknown as NonNullable<
+      typeof globalThis.ImageData
+    >;
+    globals.Path2D ??= canvas.Path2D as unknown as NonNullable<
+      typeof globalThis.Path2D
+    >;
   } catch (error) {
-    console.warn("[lore-import] @napi-rs/canvas unavailable; using PDF fallbacks", {
-      attemptId,
-      detail: error instanceof Error ? error.message : String(error),
-    });
+    console.warn(
+      "[lore-import] @napi-rs/canvas unavailable; using PDF fallbacks",
+      {
+        attemptId,
+        detail: error instanceof Error ? error.message : String(error),
+      }
+    );
   }
 
-  globals.DOMMatrix ??= FallbackDOMMatrix as unknown as NonNullable<typeof globalThis.DOMMatrix>;
-  globals.ImageData ??= FallbackImageData as unknown as NonNullable<typeof globalThis.ImageData>;
-  globals.Path2D ??= FallbackPath2D as unknown as NonNullable<typeof globalThis.Path2D>;
+  globals.DOMMatrix ??= FallbackDOMMatrix as unknown as NonNullable<
+    typeof globalThis.DOMMatrix
+  >;
+  globals.ImageData ??= FallbackImageData as unknown as NonNullable<
+    typeof globalThis.ImageData
+  >;
+  globals.Path2D ??= FallbackPath2D as unknown as NonNullable<
+    typeof globalThis.Path2D
+  >;
 }
 
 function stripBom(text: string) {
-  if (text.charCodeAt(0) === 0xfeff) return text.slice(1);
+  if (text.charCodeAt(0) === 0xfe_ff) {
+    return text.slice(1);
+  }
   return text;
 }
 
@@ -148,21 +167,31 @@ function importAttemptId(req: Request): string {
 function appendCappedText(
   chunks: string[],
   chunk: string,
-  charCount: number,
+  charCount: number
 ): { charCount: number; truncated: boolean } {
-  if (!chunk) return { charCount, truncated: false };
-  if (charCount >= MAX_EXTRACTED_CHARS) return { charCount, truncated: true };
+  if (!chunk) {
+    return { charCount, truncated: false };
+  }
+  if (charCount >= MAX_EXTRACTED_CHARS) {
+    return { charCount, truncated: true };
+  }
   const remaining = MAX_EXTRACTED_CHARS - charCount;
   const next = chunk.length > remaining ? chunk.slice(0, remaining) : chunk;
   chunks.push(next);
-  return { charCount: charCount + next.length, truncated: next.length < chunk.length };
+  return {
+    charCount: charCount + next.length,
+    truncated: next.length < chunk.length,
+  };
 }
 
 function parseTextLikeFile(buf: Buffer) {
   const decoded = stripBom(buf.toString("utf8"));
   // U+FFFD indicates byte sequences that are not valid UTF-8.
   const replacementCount = (decoded.match(/\uFFFD/g) ?? []).length;
-  if (replacementCount > 0 && replacementCount / Math.max(decoded.length, 1) > 0.02) {
+  if (
+    replacementCount > 0 &&
+    replacementCount / Math.max(decoded.length, 1) > 0.02
+  ) {
     throw new Error("Text file is not valid UTF-8");
   }
   const chunks: string[] = [];
@@ -178,7 +207,11 @@ async function parseDocxText(buf: Buffer) {
   const mammoth = await import("mammoth");
   const parsed = await mammoth.extractRawText({ buffer: buf });
   const chunks: string[] = [];
-  const { charCount, truncated } = appendCappedText(chunks, parsed.value ?? "", 0);
+  const { charCount, truncated } = appendCappedText(
+    chunks,
+    parsed.value ?? "",
+    0
+  );
   return {
     text: chunks.join(""),
     charCount,
@@ -188,14 +221,21 @@ async function parseDocxText(buf: Buffer) {
 
 async function parsePdfText(
   buf: Buffer,
-  attemptId: string,
-): Promise<{ text: string; pageCount: number; parsedPages: number; failedPages: number; truncated: boolean }> {
+  attemptId: string
+): Promise<{
+  text: string;
+  pageCount: number;
+  parsedPages: number;
+  failedPages: number;
+  truncated: boolean;
+}> {
   await ensurePdfRuntimeGlobals(attemptId);
   // @ts-expect-error pdfjs-dist does not publish worker-module typings.
   const workerModule = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
   // In Node, pdfjs always uses the fake worker path; pre-seed the worker handler to avoid
   // dynamic workerSrc resolution against server chunk paths in Vercel bundles.
-  (globalThis as PdfRuntimeGlobals).pdfjsWorker = workerModule as PdfRuntimeGlobals["pdfjsWorker"];
+  (globalThis as PdfRuntimeGlobals).pdfjsWorker =
+    workerModule as PdfRuntimeGlobals["pdfjsWorker"];
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const loadingTask = pdfjs.getDocument({
     data: new Uint8Array(buf),
@@ -213,7 +253,9 @@ async function parsePdfText(
         try {
           const textContent = await page.getTextContent();
           const pageText = textContent.items
-            .map((item) => ("str" in item && typeof item.str === "string" ? item.str : ""))
+            .map((item) =>
+              "str" in item && typeof item.str === "string" ? item.str : ""
+            )
             .filter(Boolean)
             .join(" ")
             .trim();
@@ -221,11 +263,15 @@ async function parsePdfText(
             if (chunks.length > 0) {
               const spacing = appendCappedText(chunks, "\n\n", charCount);
               charCount = spacing.charCount;
-              if (spacing.truncated) break;
+              if (spacing.truncated) {
+                break;
+              }
             }
             const next = appendCappedText(chunks, pageText, charCount);
             charCount = next.charCount;
-            if (next.truncated) break;
+            if (next.truncated) {
+              break;
+            }
           }
           parsedPages += 1;
         } finally {
@@ -243,7 +289,9 @@ async function parsePdfText(
         }
       }
     }
-    if (parsedPages === 0) throw new Error("PDF did not contain readable text");
+    if (parsedPages === 0) {
+      throw new Error("PDF did not contain readable text");
+    }
     return {
       text: chunks.join(""),
       pageCount: doc.numPages,
@@ -260,13 +308,15 @@ export async function POST(req: Request) {
   const attemptId = importAttemptId(req);
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
 
   const ct = req.headers.get("content-type") ?? "";
   if (!ct.includes("multipart/form-data")) {
     return Response.json(
-      { ok: false, error: "Expected multipart/form-data with field \"file\"" },
-      { status: 400 },
+      { ok: false, error: 'Expected multipart/form-data with field "file"' },
+      { status: 400 }
     );
   }
 
@@ -284,7 +334,7 @@ export async function POST(req: Request) {
           error: "File too large",
           detail: `Max upload size is ${Math.floor(MAX_UPLOAD_BYTES / (1024 * 1024))}MB.`,
         },
-        { status: 413 },
+        { status: 413 }
       );
     }
   }
@@ -297,11 +347,14 @@ export async function POST(req: Request) {
       attemptId,
       error: error instanceof Error ? error.message : String(error),
     });
-    return Response.json({ ok: false, error: "Invalid form data" }, { status: 400 });
+    return Response.json(
+      { ok: false, error: "Invalid form data" },
+      { status: 400 }
+    );
   }
 
   const file = form.get("file");
-  if (!file || !(file instanceof File)) {
+  if (!(file && file instanceof File)) {
     return Response.json({ ok: false, error: "Missing file" }, { status: 400 });
   }
   let parsedContext: LoreImportUserContext | undefined;
@@ -339,7 +392,7 @@ export async function POST(req: Request) {
         error: "File too large",
         detail: `Max upload size is ${Math.floor(MAX_UPLOAD_BYTES / (1024 * 1024))}MB.`,
       },
-      { status: 413 },
+      { status: 413 }
     );
   }
   console.info("[lore-import] parse request", {
@@ -372,10 +425,14 @@ export async function POST(req: Request) {
       });
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      console.error("[lore-import] parse pdf failed", { attemptId, fileName: name, detail });
+      console.error("[lore-import] parse pdf failed", {
+        attemptId,
+        fileName: name,
+        detail,
+      });
       return Response.json(
         { ok: false, error: "Could not parse PDF", detail },
-        { status: 400 },
+        { status: 400 }
       );
     }
   } else if (lower.endsWith(".docx")) {
@@ -392,10 +449,14 @@ export async function POST(req: Request) {
       const detail = error instanceof Error ? error.message : String(error);
       return Response.json(
         { ok: false, error: "Could not parse DOCX file", detail },
-        { status: 400 },
+        { status: 400 }
       );
     }
-  } else if (lower.endsWith(".md") || lower.endsWith(".txt") || lower.endsWith(".markdown")) {
+  } else if (
+    lower.endsWith(".md") ||
+    lower.endsWith(".txt") ||
+    lower.endsWith(".markdown")
+  ) {
     try {
       const parsed = parseTextLikeFile(buf);
       text = parsed.text;
@@ -409,7 +470,7 @@ export async function POST(req: Request) {
       const detail = error instanceof Error ? error.message : String(error);
       return Response.json(
         { ok: false, error: "Could not parse text file", detail },
-        { status: 400 },
+        { status: 400 }
       );
     }
   } else {
@@ -418,7 +479,7 @@ export async function POST(req: Request) {
         ok: false,
         error: "Unsupported type. Use .pdf, .docx, .md, or .txt",
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 

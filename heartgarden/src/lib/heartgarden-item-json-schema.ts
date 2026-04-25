@@ -13,7 +13,10 @@ const loreEntityMetaBaseSchema = z
   })
   .passthrough();
 
-const entityMetaSchemaByType: Record<string, z.ZodType<Record<string, unknown>>> = {
+const entityMetaSchemaByType: Record<
+  string,
+  z.ZodType<Record<string, unknown>>
+> = {
   character: loreEntityMetaBaseSchema,
   faction: loreEntityMetaBaseSchema,
   location: loreEntityMetaBaseSchema,
@@ -70,19 +73,26 @@ export function validateItemWriteJsonPayload(input: {
     }
     const normalizedType = (entityType ?? "").trim().toLowerCase();
     if (normalizedType.length > 0 && !isPersistedEntityType(normalizedType)) {
-      return { ok: false, error: `entityType '${normalizedType}' is not allowed` };
+      return {
+        ok: false,
+        error: `entityType '${normalizedType}' is not allowed`,
+      };
     }
     const schema = entityMetaSchemaByType[normalizedType];
-    if (schema) {
-      if (!schema.safeParse(entityMeta).success) {
-        return { ok: false, error: `entityMeta is invalid for entityType '${normalizedType}'` };
-      }
+    if (schema && !schema.safeParse(entityMeta).success) {
+      return {
+        ok: false,
+        error: `entityMeta is invalid for entityType '${normalizedType}'`,
+      };
     }
   }
 
   const normalizedType = (entityType ?? "").trim().toLowerCase();
   if (normalizedType.length > 0 && !isPersistedEntityType(normalizedType)) {
-    return { ok: false, error: `entityType '${normalizedType}' is not allowed` };
+    return {
+      ok: false,
+      error: `entityType '${normalizedType}' is not allowed`,
+    };
   }
 
   return { ok: true };

@@ -16,21 +16,24 @@
  * @see docs/LORE_IMPORT_AUDIT_2026-04-21.md §4.6 and plan §7.
  */
 import { randomUUID } from "crypto";
-
-import type {
-  FactionRosterEntry,
-} from "@/src/lib/faction-roster-schema";
-import type { CanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
 import type { BindingSlotId } from "@/src/lib/bindings-catalog";
+import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
+import type { CanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
 
 type PersistableLoreShell = "character" | "faction" | "location";
 
 function loreShellFromCanonical(
-  kind: CanonicalEntityKind | string | undefined,
+  kind: CanonicalEntityKind | string | undefined
 ): PersistableLoreShell | null {
-  if (kind === "npc" || kind === "character") return "character";
-  if (kind === "faction") return "faction";
-  if (kind === "location") return "location";
+  if (kind === "npc" || kind === "character") {
+    return "character";
+  }
+  if (kind === "faction") {
+    return "faction";
+  }
+  if (kind === "location") {
+    return "location";
+  }
   return null;
 }
 
@@ -70,11 +73,13 @@ export type BuildBindingPatchInput = {
  * Direction matters: this patch applies to the **source** note's hgArch.
  */
 export function buildBindingPatchForImport(
-  input: BuildBindingPatchInput,
+  input: BuildBindingPatchInput
 ): BindingPatch | null {
   const src = loreShellFromCanonical(input.sourceKind);
   const tgt = loreShellFromCanonical(input.targetKind);
-  if (!src || !tgt) return null;
+  if (!(src && tgt)) {
+    return null;
+  }
 
   if (src === "faction" && tgt === "character") {
     const entry: FactionRosterEntry = {
@@ -119,7 +124,7 @@ export function buildBindingPatchForImport(
  */
 export function mergeHgArchBindingPatches(
   baseHgArch: Record<string, unknown> | undefined | null,
-  patches: BindingPatch[],
+  patches: BindingPatch[]
 ): {
   hgArch: Record<string, unknown>;
   touchedSlots: BindingSlotId[];
@@ -138,7 +143,7 @@ export function mergeHgArchBindingPatches(
             (e) =>
               e.kind === "character" &&
               patch.entry.kind === "character" &&
-              e.characterItemId === patch.entry.characterItemId,
+              e.characterItemId === patch.entry.characterItemId
           )
         ) {
           hg.factionRoster = [...prev, patch.entry];
@@ -157,11 +162,9 @@ export function mergeHgArchBindingPatches(
             anchorsPrev.primaryFactionItemId = patch.factionItemId;
             touched.add("character.primaryFactions");
           }
-        } else {
-          if (!anchorsPrev.primaryLocationItemId) {
-            anchorsPrev.primaryLocationItemId = patch.locationItemId;
-            touched.add("character.primaryLocations");
-          }
+        } else if (!anchorsPrev.primaryLocationItemId) {
+          anchorsPrev.primaryLocationItemId = patch.locationItemId;
+          touched.add("character.primaryLocations");
         }
         hg.loreThreadAnchors = anchorsPrev;
         break;

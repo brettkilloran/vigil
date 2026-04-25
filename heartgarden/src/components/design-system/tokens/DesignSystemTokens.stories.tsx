@@ -1,27 +1,41 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { CSSProperties } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs";
+import type { CSSProperties } from "react";
+import { useMemo, useState } from "react";
 
 type TokenRow = {
   name: string;
   value: string;
 };
 
-const TOKEN_PREFIXES = ["--sys-", "--sem-", "--cmp-", "--vigil-", "--theme-"] as const;
+const TOKEN_PREFIXES = [
+  "--sys-",
+  "--sem-",
+  "--cmp-",
+  "--vigil-",
+  "--theme-",
+] as const;
 
 function readRootTokens(): TokenRow[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") {
+    return [];
+  }
   const style = getComputedStyle(document.documentElement);
   const rows: TokenRow[] = [];
 
   for (let i = 0; i < style.length; i += 1) {
     const name = style.item(i);
-    if (!name) continue;
-    if (!TOKEN_PREFIXES.some((prefix) => name.startsWith(prefix))) continue;
+    if (!name) {
+      continue;
+    }
+    if (!TOKEN_PREFIXES.some((prefix) => name.startsWith(prefix))) {
+      continue;
+    }
     const value = style.getPropertyValue(name).trim();
-    if (!value) continue;
+    if (!value) {
+      continue;
+    }
     rows.push({ name, value });
   }
 
@@ -30,10 +44,18 @@ function readRootTokens(): TokenRow[] {
 }
 
 function titleForPrefix(prefix: string): string {
-  if (prefix === "--sys-") return "Primitive Tokens";
-  if (prefix === "--sem-") return "Semantic Tokens";
-  if (prefix === "--cmp-") return "Component Tokens";
-  if (prefix === "--vigil-") return "Compatibility Tokens";
+  if (prefix === "--sys-") {
+    return "Primitive Tokens";
+  }
+  if (prefix === "--sem-") {
+    return "Semantic Tokens";
+  }
+  if (prefix === "--cmp-") {
+    return "Component Tokens";
+  }
+  if (prefix === "--vigil-") {
+    return "Compatibility Tokens";
+  }
   return "Theme Tokens";
 }
 
@@ -113,13 +135,15 @@ function TokenCatalog() {
           Design System Token Source of Truth
         </h1>
         <p style={{ color: "var(--sem-text-muted)", marginBottom: 24 }}>
-          Live catalog from <code>:root</code> CSS variables. This page auto-updates when token
-          definitions change.
+          Live catalog from <code>:root</code> CSS variables. This page
+          auto-updates when token definitions change.
         </p>
 
         {TOKEN_PREFIXES.map((prefix) => {
           const sectionRows = grouped[prefix] ?? [];
-          if (sectionRows.length === 0) return null;
+          if (sectionRows.length === 0) {
+            return null;
+          }
 
           return (
             <section key={prefix} style={{ marginBottom: 24 }}>
@@ -139,16 +163,26 @@ function TokenCatalog() {
                     key={row.name}
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "44px minmax(260px, 1fr) minmax(320px, 1fr)",
+                      gridTemplateColumns:
+                        "44px minmax(260px, 1fr) minmax(320px, 1fr)",
                       alignItems: "center",
                       gap: 12,
                       padding: "10px 12px",
                       borderTop:
-                        idx === 0 ? "none" : "1px solid color-mix(in oklch, var(--sem-border-subtle) 70%, transparent)",
+                        idx === 0
+                          ? "none"
+                          : "1px solid color-mix(in oklch, var(--sem-border-subtle) 70%, transparent)",
                     }}
                   >
                     <div style={swatchStyle(row.name)} />
-                    <code style={{ fontSize: 13, color: "var(--sem-text-secondary)" }}>{row.name}</code>
+                    <code
+                      style={{
+                        fontSize: 13,
+                        color: "var(--sem-text-secondary)",
+                      }}
+                    >
+                      {row.name}
+                    </code>
                     <code
                       style={{
                         fontSize: 13,
@@ -190,5 +224,3 @@ export default meta;
 type Story = StoryObj<typeof TokenCatalog>;
 
 export const Catalog: Story = {};
-
-

@@ -51,20 +51,24 @@ function daysAgo(days: number): Date {
 export async function POST(req: Request) {
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
 
   const db = tryGetDb();
   if (!db) {
     return Response.json(
       { ok: false, error: "Database not configured" },
-      { status: 503 },
+      { status: 503 }
     );
   }
 
   let json: unknown = {};
   try {
     const text = await req.text();
-    if (text.trim().length > 0) json = JSON.parse(text);
+    if (text.trim().length > 0) {
+      json = JSON.parse(text);
+    }
   } catch (error) {
     return Response.json(
       {
@@ -72,7 +76,7 @@ export async function POST(req: Request) {
         error: "Invalid JSON",
         detail: error instanceof Error ? error.message : String(error),
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -80,7 +84,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json(
       { ok: false, error: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
   const redactAfterDays = parsed.data.redactAfterDays ?? DEFAULT_REDACT_DAYS;
@@ -91,7 +95,7 @@ export async function POST(req: Request) {
         ok: false,
         error: "redactAfterDays must be <= purgeAfterDays",
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
   const dryRun = parsed.data.dryRun === true;
@@ -105,8 +109,8 @@ export async function POST(req: Request) {
     .where(
       and(
         inArray(loreImportJobs.status, [...TERMINAL_STATUSES]),
-        lt(loreImportJobs.updatedAt, purgeCutoff),
-      ),
+        lt(loreImportJobs.updatedAt, purgeCutoff)
+      )
     )
     .limit(MAX_ROWS_PER_SWEEP);
 
@@ -119,8 +123,8 @@ export async function POST(req: Request) {
         lt(loreImportJobs.updatedAt, redactCutoff),
         // Only redact rows that still hold non-empty source text — otherwise
         // we churn updated_at on already-pruned rows.
-        sql`length(${loreImportJobs.sourceText}) > 0`,
-      ),
+        sql`length(${loreImportJobs.sourceText}) > 0`
+      )
     )
     .limit(MAX_ROWS_PER_SWEEP);
 

@@ -16,9 +16,13 @@ export const VAULT_DEFAULT_MAX_CHUNKS_PER_ITEM = 64;
 
 export function vaultMaxChunksPerItem(): number {
   const raw = (process.env.HEARTGARDEN_VAULT_MAX_CHUNKS_PER_ITEM ?? "").trim();
-  if (!raw) return VAULT_DEFAULT_MAX_CHUNKS_PER_ITEM;
+  if (!raw) {
+    return VAULT_DEFAULT_MAX_CHUNKS_PER_ITEM;
+  }
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed <= 0) return VAULT_DEFAULT_MAX_CHUNKS_PER_ITEM;
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return VAULT_DEFAULT_MAX_CHUNKS_PER_ITEM;
+  }
   return Math.min(512, Math.max(1, Math.floor(parsed)));
 }
 
@@ -42,7 +46,9 @@ export function chunkBreadcrumb(path: string[]): string {
  */
 function splitSectionText(text: string): string[] {
   const normalized = text.replace(/\r\n?/g, "\n").trim();
-  if (!normalized) return [];
+  if (!normalized) {
+    return [];
+  }
 
   const paragraphs = normalized
     .split(/\n\s*\n/)
@@ -53,20 +59,26 @@ function splitSectionText(text: string): string[] {
 
   const flushBuf = () => {
     const t = buf.trim();
-    if (t) pieces.push(t);
+    if (t) {
+      pieces.push(t);
+    }
     buf = "";
   };
 
-  for (const p of paragraphs.length > 0 ? paragraphs : [normalizeWhitespace(normalized)]) {
+  for (const p of paragraphs.length > 0
+    ? paragraphs
+    : [normalizeWhitespace(normalized)]) {
     if (!buf) {
       if (p.length <= VAULT_CHUNK_TARGET_CHARS) {
         buf = p;
         continue;
       }
       for (const hard of hardSplitParagraph(p)) {
-        if (!buf) buf = hard;
-        else if (buf.length + 1 + hard.length <= VAULT_CHUNK_TARGET_CHARS) buf = `${buf} ${hard}`;
-        else {
+        if (!buf) {
+          buf = hard;
+        } else if (buf.length + 1 + hard.length <= VAULT_CHUNK_TARGET_CHARS) {
+          buf = `${buf} ${hard}`;
+        } else {
           flushBuf();
           buf = hard;
         }
@@ -100,11 +112,13 @@ function splitSectionText(text: string): string[] {
 export function chunkVaultSections(sections: HgDocSection[]): VaultChunk[] {
   const out: VaultChunk[] = [];
   for (const section of sections) {
-    const headingPath = section.headingPath.length > 0 ? section.headingPath : ["Untitled"];
+    const headingPath =
+      section.headingPath.length > 0 ? section.headingPath : ["Untitled"];
     const breadcrumb = chunkBreadcrumb(headingPath);
     const pieces = splitSectionText(section.text);
     if (pieces.length === 0 && section.text.trim()) {
-      const chunkText = `${breadcrumb} - ${normalizeWhitespace(section.text)}`.trim();
+      const chunkText =
+        `${breadcrumb} - ${normalizeWhitespace(section.text)}`.trim();
       out.push({ headingPath, breadcrumb, chunkText });
       continue;
     }
@@ -119,7 +133,9 @@ export function chunkVaultSections(sections: HgDocSection[]): VaultChunk[] {
 /** Backward-compatible helper for headingless plain text. */
 export function chunkVaultText(fullText: string): string[] {
   const body = fullText.replace(/\r\n?/g, "\n").trim();
-  if (!body) return [];
+  if (!body) {
+    return [];
+  }
   const chunks = chunkVaultSections([
     { headingPath: ["Untitled"], text: body, charRange: [0, body.length] },
   ]);
@@ -148,7 +164,9 @@ function hardSplitParagraph(p: string): string[] {
 }
 
 function mergeSmallPieces(pieces: string[]): string[] {
-  if (pieces.length <= 1) return pieces;
+  if (pieces.length <= 1) {
+    return pieces;
+  }
   const out: string[] = [];
   let cur = pieces[0]!;
   for (let i = 1; i < pieces.length; i++) {
@@ -165,7 +183,9 @@ function mergeSmallPieces(pieces: string[]): string[] {
 }
 
 function applyOverlap(pieces: string[]): string[] {
-  if (pieces.length <= 1) return pieces;
+  if (pieces.length <= 1) {
+    return pieces;
+  }
   const out: string[] = [pieces[0]!];
   for (let i = 1; i < pieces.length; i++) {
     const prev = out[out.length - 1]!;
@@ -174,7 +194,9 @@ function applyOverlap(pieces: string[]): string[] {
       out.push(cur);
       continue;
     }
-    const tail = prev.slice(Math.max(0, prev.length - VAULT_CHUNK_OVERLAP_CHARS)).trimStart();
+    const tail = prev
+      .slice(Math.max(0, prev.length - VAULT_CHUNK_OVERLAP_CHARS))
+      .trimStart();
     const merged = tail ? `${tail} … ${cur}` : cur;
     out.push(merged);
   }
@@ -198,7 +220,10 @@ export function buildVaultEmbedDocument(input: {
   const aliases = (input.loreAliases ?? []).filter(Boolean).join(", ");
   const summary = input.loreSummary?.trim() ?? "";
   const bind = input.bindingProjection?.trim() ?? "";
-  const meta = [summary && `Summary: ${summary}`, aliases && `Aliases: ${aliases}`]
+  const meta = [
+    summary && `Summary: ${summary}`,
+    aliases && `Aliases: ${aliases}`,
+  ]
     .filter(Boolean)
     .join("\n");
   const section = input.sectionBreadcrumb?.trim() ?? "";

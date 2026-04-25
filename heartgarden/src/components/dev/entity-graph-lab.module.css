@@ -1,9 +1,10 @@
 .page {
   height: 100vh;
-  background: var(--sem-bg-canvas, var(--vigil-canvas));
-  color: var(--vigil-label);
   overflow: hidden;
-  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family:
+    var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--vigil-label);
+  background: var(--sem-bg-canvas, var(--vigil-canvas));
 }
 
 .shell {
@@ -15,47 +16,47 @@
 .topChrome {
   position: absolute;
   top: 12px;
-  left: 12px;
   right: 12px;
+  left: 12px;
   z-index: var(--layer-ui-chrome);
-  pointer-events: auto;
   min-height: var(--chrome-panel-height);
-  border-radius: var(--chrome-panel-radius);
   padding: var(--chrome-panel-pad-y) var(--chrome-panel-pad-x);
+  pointer-events: auto;
+  border-radius: var(--chrome-panel-radius);
 }
 
 .headerRow {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   gap: 12px;
+  align-items: center;
 }
 
 .controls {
-  margin-left: auto;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   gap: 10px;
+  align-items: center;
+  margin-left: auto;
 }
 
 .scenarioButtons {
   display: flex;
-  align-items: center;
   gap: 6px;
+  align-items: center;
 }
 
 .searchInput {
   min-width: 260px;
   min-height: var(--sys-control-height-sm);
+  padding: 6px 2px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--sem-text-primary);
+  outline: none;
+  background: transparent;
   border: none;
   border-bottom: 1px solid var(--sem-border-subtle);
-  background: transparent;
-  color: var(--sem-text-primary);
-  font-size: 12px;
-  font-family: inherit;
-  padding: 6px 2px;
-  outline: none;
   border-radius: 0;
 }
 
@@ -81,24 +82,24 @@
 
 .panel {
   position: absolute;
-  right: 12px;
   top: 80px;
+  right: 12px;
   bottom: 12px;
-  width: min(360px, calc(100vw - 28px));
   z-index: var(--layer-ui-chrome);
+  width: min(360px, calc(100vw - 28px));
+  overflow: hidden;
   pointer-events: auto;
   border-radius: var(--chrome-panel-radius);
-  transform: translateX(10px);
   opacity: 0;
+  transform: translateX(10px);
   transition:
     transform var(--sys-motion-duration-normal) cubic-bezier(0.2, 0.8, 0.2, 1),
     opacity var(--sys-motion-duration-normal) cubic-bezier(0.2, 0.8, 0.2, 1);
-  overflow: hidden;
 }
 
 .panelVisible {
-  transform: translateX(0);
   opacity: 1;
+  transform: translateX(0);
 }
 
 .panelInner {
@@ -114,28 +115,28 @@
 
 .nodeTitle {
   margin-top: 10px;
-  font-size: 24px;
-  line-height: 1.14;
-  letter-spacing: -0.01em;
-  font-weight: 600;
   font-family: inherit;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.14;
   color: var(--sem-text-primary);
+  letter-spacing: -0.01em;
 }
 
 .metaRow {
-  margin-top: 14px;
-  padding-top: 10px;
-  border-top: 1px solid var(--sem-border-subtle);
   display: flex;
   justify-content: space-between;
+  padding-top: 10px;
+  margin-top: 14px;
   font-size: 11px;
   color: var(--sem-text-secondary);
+  border-top: 1px solid var(--sem-border-subtle);
 }
 
 .neighbors {
-  margin-top: 10px;
   display: grid;
   gap: 8px;
+  margin-top: 10px;
 }
 
 .graphRoot {
@@ -154,8 +155,8 @@
 
 .graphLayer {
   position: absolute;
-  left: 0;
   top: 0;
+  left: 0;
   width: 1000px;
   height: 1000px;
   transform-origin: 0 0;
@@ -173,9 +174,9 @@
 }
 
 .edge {
+  opacity: 0.5;
   stroke: color-mix(in srgb, var(--vigil-label) 20%, transparent);
   stroke-width: 1;
-  opacity: 0.5;
   transition:
     opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
     stroke 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -186,45 +187,45 @@
 }
 
 .edgeActive {
-  stroke: color-mix(in srgb, var(--entity-graph-accent) 70%, white 30%);
   opacity: 0.95;
+  stroke: color-mix(in srgb, var(--entity-graph-accent) 70%, white 30%);
 }
 
 .pillNode {
   position: absolute;
-  transform: translate(-50%, -50%);
-  border: 1px solid color-mix(in srgb, white 42%, var(--sem-border-subtle) 58%);
-  border-radius: 999px;
-  background: color-mix(in srgb, white 18%, transparent);
-  color: var(--sem-text-primary);
-  backdrop-filter: blur(10px) saturate(125%);
-  -webkit-backdrop-filter: blur(10px) saturate(125%);
-  font-size: 10px;
-  font-weight: 600;
-  font-family: inherit;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  padding: 7px 12px;
-  white-space: nowrap;
   max-width: 260px;
+  padding: 7px 12px;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--sem-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
   cursor: pointer;
   user-select: none;
+  background: color-mix(in srgb, white 18%, transparent);
+  border: 1px solid color-mix(in srgb, white 42%, var(--sem-border-subtle) 58%);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 4px 14px rgba(0, 0, 0, 0.18);
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
+  backdrop-filter: blur(10px) saturate(125%);
+  transform: translate(-50%, -50%);
   transition:
     background-color 0.3s ease,
     color 0.3s ease,
     opacity 0.45s ease,
     border-color 0.3s ease,
     box-shadow 0.3s ease;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 4px 14px rgba(0, 0, 0, 0.18);
 }
 
 .pillNode:hover {
-  background: color-mix(in srgb, white 28%, transparent);
   color: var(--sem-text-primary);
+  background: color-mix(in srgb, white 28%, transparent);
   border-color: color-mix(in srgb, white 58%, var(--sem-border-subtle) 42%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.28),
@@ -232,21 +233,22 @@
 }
 
 .pillNodeSelected {
-  background: color-mix(in srgb, white 97%, var(--sem-surface-elevated) 3%);
-  color: color-mix(in srgb, black 90%, #0b0b0c 10%);
-  border-color: color-mix(in srgb, var(--entity-graph-accent) 74%, white 26%);
-  font-weight: 700;
-  transform: translate(-50%, -50%) scale(1.12);
   padding: 8px 14px;
+  font-weight: 700;
+  color: color-mix(in srgb, black 90%, #0b0b0c 10%);
+  background: color-mix(in srgb, white 97%, var(--sem-surface-elevated) 3%);
+  border-color: color-mix(in srgb, var(--entity-graph-accent) 74%, white 26%);
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--entity-graph-accent) 58%, transparent),
+    inset 0 0 0 1px
+    color-mix(in srgb, var(--entity-graph-accent) 58%, transparent),
     0 0 0 1px color-mix(in srgb, var(--entity-graph-accent) 40%, transparent),
     0 10px 24px color-mix(in srgb, var(--entity-graph-accent) 26%, transparent);
+  transform: translate(-50%, -50%) scale(1.12);
 }
 
 .pillNodeSelected:hover {
-  background: color-mix(in srgb, white 99%, var(--sem-surface-elevated) 1%);
   color: color-mix(in srgb, black 92%, #09090a 8%);
+  background: color-mix(in srgb, white 99%, var(--sem-surface-elevated) 1%);
 }
 
 .pillNodeNeighbor {
@@ -255,8 +257,8 @@
 }
 
 .pillNodeDimmed {
-  opacity: 0.15;
   pointer-events: auto;
+  opacity: 0.15;
 }
 
 .pillNodeDimmed:hover {
@@ -266,8 +268,8 @@
 @media (max-width: 1120px) {
   .topChrome {
     top: 10px;
-    left: 10px;
     right: 10px;
+    left: 10px;
     padding: var(--chrome-panel-pad-y) var(--chrome-panel-pad-x);
   }
 
@@ -277,16 +279,16 @@
   }
 
   .searchInput {
-    min-width: 180px;
     flex: 1 1 auto;
+    min-width: 180px;
   }
 
   .panel {
+    top: auto;
     right: 10px;
+    bottom: 10px;
     left: 10px;
     width: auto;
-    top: auto;
-    bottom: 10px;
     max-height: 42vh;
   }
 }

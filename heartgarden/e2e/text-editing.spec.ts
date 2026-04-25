@@ -1,6 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
-import { dismissHeartgardenBootIfPresent, prepDemoSession } from "./fixtures/bootstrap";
+import {
+  dismissHeartgardenBootIfPresent,
+  prepDemoSession,
+} from "./fixtures/bootstrap";
 
 /**
  * Adds a default note and returns that card (not `[data-node-id].first()`, which may be a seeded
@@ -19,20 +22,28 @@ async function createFirstNoteAndGetBodyEditor(page: Page) {
 }
 
 function insertBlocksButton(page: Page, name: string) {
-  return page.getByRole("toolbar", { name: "Insert blocks" }).getByRole("button", { name });
+  return page
+    .getByRole("toolbar", { name: "Insert blocks" })
+    .getByRole("button", { name });
 }
 
 function textFormattingButton(page: Page, name: string) {
-  return page.getByRole("toolbar", { name: "Text formatting" }).getByRole("button", { name });
+  return page
+    .getByRole("toolbar", { name: "Text formatting" })
+    .getByRole("button", { name });
 }
 
 test.describe("text editing hardening", () => {
   test.beforeEach(async ({ page }) => {
     await prepDemoSession(page);
     await page.goto("/");
-    await expect(page.locator("[data-vigil-canvas]")).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("[data-vigil-canvas]")).toBeVisible({
+      timeout: 30_000,
+    });
     await dismissHeartgardenBootIfPresent(page);
-    await expect(page.getByRole("button", { name: /Save and database/ })).toBeVisible({
+    await expect(
+      page.getByRole("button", { name: /Save and database/ })
+    ).toBeVisible({
       timeout: 30_000,
     });
   });
@@ -45,7 +56,9 @@ test.describe("text editing hardening", () => {
 
     const caretState = await bodyEditor.evaluate((el) => {
       const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) return null;
+      if (!selection || selection.rangeCount === 0) {
+        return null;
+      }
       const ae = document.activeElement as Node | null;
       return {
         containsSelection: el.contains(selection.anchorNode),
@@ -60,7 +73,9 @@ test.describe("text editing hardening", () => {
     await expect(bodyEditor).toContainText("hardening-check");
   });
 
-  test("node body keeps typed text after blur (commit path)", async ({ page }) => {
+  test("node body keeps typed text after blur (commit path)", async ({
+    page,
+  }) => {
     const { bodyEditor } = await createFirstNoteAndGetBodyEditor(page);
     await bodyEditor.click();
     await page.keyboard.type(" blur-commit-guard");
@@ -75,7 +90,7 @@ test.describe("text editing hardening", () => {
     await insertBlocksButton(page, "Checklist").click();
 
     const firstTaskText = bodyEditor.locator(
-      'li[data-hg-task-item="true"] p, li[data-type="taskItem"] p',
+      'li[data-hg-task-item="true"] p, li[data-type="taskItem"] p'
     );
     await expect(firstTaskText.first()).toContainText("line one");
     await firstTaskText.first().click();
@@ -83,9 +98,13 @@ test.describe("text editing hardening", () => {
     await page.keyboard.press("Enter");
     await page.keyboard.type("line two");
 
-    const taskItems = bodyEditor.locator('li[data-hg-task-item="true"], li[data-type="taskItem"]');
+    const taskItems = bodyEditor.locator(
+      'li[data-hg-task-item="true"], li[data-type="taskItem"]'
+    );
     await expect(taskItems).toHaveCount(2, { timeout: 10_000 });
-    await expect(bodyEditor.locator('[data-arch-task-text="true"]')).toHaveCount(0);
+    await expect(
+      bodyEditor.locator('[data-arch-task-text="true"]')
+    ).toHaveCount(0);
   });
 
   test("checklist empty-row Enter exits to paragraph", async ({ page }) => {
@@ -94,7 +113,7 @@ test.describe("text editing hardening", () => {
     await page.keyboard.type("alpha");
     await insertBlocksButton(page, "Checklist").click();
     const firstTaskText = bodyEditor.locator(
-      'li[data-hg-task-item="true"] p, li[data-type="taskItem"] p',
+      'li[data-hg-task-item="true"] p, li[data-type="taskItem"] p'
     );
     await firstTaskText.first().click();
     await page.keyboard.press("End");
@@ -102,11 +121,16 @@ test.describe("text editing hardening", () => {
     await page.keyboard.press("Enter");
     await page.keyboard.type("after-enter-exit");
 
-    const taskItems = bodyEditor.locator('li[data-hg-task-item="true"], li[data-type="taskItem"]');
+    const taskItems = bodyEditor.locator(
+      'li[data-hg-task-item="true"], li[data-type="taskItem"]'
+    );
     await expect(taskItems).toHaveCount(1);
     const outsideParagraphText = await bodyEditor.evaluate((el) => {
       const paragraphs = Array.from(el.querySelectorAll("p"));
-      const outside = paragraphs.filter((p) => !p.closest('li[data-hg-task-item="true"], li[data-type="taskItem"]'));
+      const outside = paragraphs.filter(
+        (p) =>
+          !p.closest('li[data-hg-task-item="true"], li[data-type="taskItem"]')
+      );
       return outside.map((p) => (p.textContent ?? "").trim()).filter(Boolean);
     });
     expect(outsideParagraphText).toContain("after-enter-exit");
@@ -118,7 +142,7 @@ test.describe("text editing hardening", () => {
     await page.keyboard.type("alpha");
     await insertBlocksButton(page, "Checklist").click();
     const firstTaskText = bodyEditor.locator(
-      'li[data-hg-task-item="true"] p, li[data-type="taskItem"] p',
+      'li[data-hg-task-item="true"] p, li[data-type="taskItem"] p'
     );
     await firstTaskText.first().click();
     await page.keyboard.press("End");
@@ -126,11 +150,16 @@ test.describe("text editing hardening", () => {
     await page.keyboard.press("Backspace");
     await page.keyboard.type("after-backspace-exit");
 
-    const taskItems = bodyEditor.locator('li[data-hg-task-item="true"], li[data-type="taskItem"]');
+    const taskItems = bodyEditor.locator(
+      'li[data-hg-task-item="true"], li[data-type="taskItem"]'
+    );
     await expect(taskItems).toHaveCount(1);
     const outsideParagraphText = await bodyEditor.evaluate((el) => {
       const paragraphs = Array.from(el.querySelectorAll("p"));
-      const outside = paragraphs.filter((p) => !p.closest('li[data-hg-task-item="true"], li[data-type="taskItem"]'));
+      const outside = paragraphs.filter(
+        (p) =>
+          !p.closest('li[data-hg-task-item="true"], li[data-type="taskItem"]')
+      );
       return outside.map((p) => (p.textContent ?? "").trim()).filter(Boolean);
     });
     expect(outsideParagraphText).toContain("after-backspace-exit");
@@ -173,10 +202,14 @@ test.describe("text editing hardening", () => {
     await textFormattingButton(page, "Heading").click();
     await page.getByRole("button", { name: "Body" }).click();
     await expect(bodyEditor.locator("h2")).toHaveCount(0);
-    await expect(bodyEditor.locator("p").first()).toContainText("heading target");
+    await expect(bodyEditor.locator("p").first()).toContainText(
+      "heading target"
+    );
   });
 
-  test("bulleted and numbered list toggles are reversible", async ({ page }) => {
+  test("bulleted and numbered list toggles are reversible", async ({
+    page,
+  }) => {
     const { bodyEditor } = await createFirstNoteAndGetBodyEditor(page);
     await bodyEditor.click();
     await page.keyboard.type("list target");
@@ -194,7 +227,9 @@ test.describe("text editing hardening", () => {
     await expect(bodyEditor.locator("p").first()).toContainText("list target");
   });
 
-  test("keeps folder title editor focused during inline rename", async ({ page }) => {
+  test("keeps folder title editor focused during inline rename", async ({
+    page,
+  }) => {
     const folders = page.locator("[data-folder-id]");
     const beforeFolders = await folders.count();
     await page.getByRole("button", { name: "Folder" }).click();
@@ -202,7 +237,9 @@ test.describe("text editing hardening", () => {
     const folderNode = folders.nth(beforeFolders);
     await expect(folderNode).toBeVisible({ timeout: 15_000 });
 
-    const titleEditors = folderNode.locator('[data-folder-title-editor="true"]');
+    const titleEditors = folderNode.locator(
+      '[data-folder-title-editor="true"]'
+    );
     const editor = titleEditors.first();
     await expect(editor).toBeVisible();
     await editor.click();
@@ -232,7 +269,8 @@ test.describe("text editing hardening", () => {
       const ae = document.activeElement as Node | null;
       return {
         isFocused: ae != null && (el === ae || el.contains(ae)),
-        containsSelection: !!selection?.anchorNode && el.contains(selection.anchorNode),
+        containsSelection:
+          !!selection?.anchorNode && el.contains(selection.anchorNode),
       };
     });
 
@@ -243,11 +281,17 @@ test.describe("text editing hardening", () => {
     await expect(focusBody).toContainText("focus-stability");
   });
 
-  test("hgDoc focus body mounts TipTap chrome with ProseMirror root", async ({ page }) => {
+  test("hgDoc focus body mounts TipTap chrome with ProseMirror root", async ({
+    page,
+  }) => {
     const { node } = await createFirstNoteAndGetBodyEditor(page);
     await node.locator('[data-expand-btn="true"]').click();
-    const focusHost = page.locator('[data-focus-body-editor="true"][data-hg-doc-editor="true"]');
+    const focusHost = page.locator(
+      '[data-focus-body-editor="true"][data-hg-doc-editor="true"]'
+    );
     await expect(focusHost).toBeVisible({ timeout: 15_000 });
-    await expect(focusHost.locator(".ProseMirror")).toBeVisible({ timeout: 15_000 });
+    await expect(focusHost.locator(".ProseMirror")).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });

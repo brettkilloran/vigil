@@ -27,4 +27,3 @@ export default meta;
 type Story = StoryObj<typeof ArchitecturalStatusMetric>;
 
 export const Default: Story = {};
-

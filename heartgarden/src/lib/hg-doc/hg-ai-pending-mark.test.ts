@@ -39,7 +39,9 @@ describe("hgAiPending mark", () => {
       content: [
         {
           type: "paragraph",
-          content: [{ type: "text", text: "x", marks: [{ type: "hgAiPending" }] }],
+          content: [
+            { type: "text", text: "x", marks: [{ type: "hgAiPending" }] },
+          ],
         },
       ],
     } as const;
@@ -85,8 +87,20 @@ describe("hgAiPending mark", () => {
       schema: { marks: { hgAiPending: markType } },
       state: {
         doc: {
-          descendants: (cb: (node: { isText: boolean; text?: string; marks: unknown[] }, pos: number) => void) => {
-            cb({ isText: true, text: "LLLLLLLLLLLLLLLLLLLL", marks: [{ type: markType }] }, 1);
+          descendants: (
+            cb: (
+              node: { isText: boolean; text?: string; marks: unknown[] },
+              pos: number
+            ) => void
+          ) => {
+            cb(
+              {
+                isText: true,
+                text: "LLLLLLLLLLLLLLLLLLLL",
+                marks: [{ type: markType }],
+              },
+              1
+            );
             cb({ isText: true, text: " tail", marks: [] }, 21);
           },
         },

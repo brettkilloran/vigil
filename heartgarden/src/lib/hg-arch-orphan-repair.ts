@@ -2,9 +2,11 @@ import { and, eq, ne, sql } from "drizzle-orm";
 
 import type { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
-import { FACTION_ROSTER_HG_ARCH_KEY } from "@/src/lib/faction-roster-schema";
 import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
-import { parseFactionRoster } from "@/src/lib/faction-roster-schema";
+import {
+  FACTION_ROSTER_HG_ARCH_KEY,
+  parseFactionRoster,
+} from "@/src/lib/faction-roster-schema";
 import type { LoreThreadAnchorsShape } from "@/src/lib/hg-arch-binding-projection";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { isUuidLike } from "@/src/lib/uuid-like";
@@ -13,8 +15,13 @@ type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 
 type JsonRecord = Record<string, unknown>;
 
-function demoteRosterRowForDeletedCharacter(row: FactionRosterEntry, deadId: string): FactionRosterEntry {
-  if (row.kind !== "character" || row.characterItemId !== deadId) return row;
+function demoteRosterRowForDeletedCharacter(
+  row: FactionRosterEntry,
+  deadId: string
+): FactionRosterEntry {
+  if (row.kind !== "character" || row.characterItemId !== deadId) {
+    return row;
+  }
   return {
     id: row.id,
     kind: "unlinked",
@@ -23,8 +30,13 @@ function demoteRosterRowForDeletedCharacter(row: FactionRosterEntry, deadId: str
   };
 }
 
-function scrubAnchors(a: LoreThreadAnchorsShape | undefined, deadId: string): LoreThreadAnchorsShape | undefined {
-  if (!a) return undefined;
+function scrubAnchors(
+  a: LoreThreadAnchorsShape | undefined,
+  deadId: string
+): LoreThreadAnchorsShape | undefined {
+  if (!a) {
+    return;
+  }
   let next: LoreThreadAnchorsShape = { ...a };
   let touched = false;
   if (next.primaryLocationItemId === deadId) {
@@ -32,12 +44,19 @@ function scrubAnchors(a: LoreThreadAnchorsShape | undefined, deadId: string): Lo
     touched = true;
   }
   if (next.primaryFactionItemId === deadId) {
-    next = { ...next, primaryFactionItemId: undefined, primaryFactionRosterEntryId: undefined };
+    next = {
+      ...next,
+      primaryFactionItemId: undefined,
+      primaryFactionRosterEntryId: undefined,
+    };
     touched = true;
   }
   const linked = next.linkedCharacterItemIds?.filter((id) => id !== deadId);
   if (linked && linked.length !== (next.linkedCharacterItemIds?.length ?? 0)) {
-    next = { ...next, linkedCharacterItemIds: linked.length ? linked : undefined };
+    next = {
+      ...next,
+      linkedCharacterItemIds: linked.length ? linked : undefined,
+    };
     touched = true;
   }
   return touched ? next : a;
@@ -49,12 +68,20 @@ function scrubAnchors(a: LoreThreadAnchorsShape | undefined, deadId: string): Lo
  */
 export function stripHgArchReferencesToItem(
   contentJson: unknown,
-  deadItemId: string,
+  deadItemId: string
 ): Record<string, unknown> | null {
-  if (!contentJson || typeof contentJson !== "object" || Array.isArray(contentJson)) return null;
+  if (
+    !contentJson ||
+    typeof contentJson !== "object" ||
+    Array.isArray(contentJson)
+  ) {
+    return null;
+  }
   const root = contentJson as JsonRecord;
   const hgRaw = root.hgArch;
-  if (!hgRaw || typeof hgRaw !== "object" || Array.isArray(hgRaw)) return null;
+  if (!hgRaw || typeof hgRaw !== "object" || Array.isArray(hgRaw)) {
+    return null;
+  }
 
   const hg = { ...(hgRaw as JsonRecord) };
   let changed = false;
@@ -64,7 +91,9 @@ export function stripHgArchReferencesToItem(
     let rosterChanged = false;
     const nextRoster = roster.map((r) => {
       const n = demoteRosterRowForDeletedCharacter(r, deadItemId);
-      if (n !== r) rosterChanged = true;
+      if (n !== r) {
+        rosterChanged = true;
+      }
       return n;
     });
     if (rosterChanged) {
@@ -74,14 +103,22 @@ export function stripHgArchReferencesToItem(
   }
 
   const anchorsRaw = hg.loreThreadAnchors;
-  if (anchorsRaw && typeof anchorsRaw === "object" && !Array.isArray(anchorsRaw)) {
-    const scrubbed = scrubAnchors(anchorsRaw as LoreThreadAnchorsShape, deadItemId);
+  if (
+    anchorsRaw &&
+    typeof anchorsRaw === "object" &&
+    !Array.isArray(anchorsRaw)
+  ) {
+    const scrubbed = scrubAnchors(
+      anchorsRaw as LoreThreadAnchorsShape,
+      deadItemId
+    );
     if (scrubbed !== anchorsRaw) {
-      const empty =
-        !scrubbed?.primaryLocationItemId &&
-        !scrubbed?.primaryFactionItemId &&
-        !scrubbed?.primaryFactionRosterEntryId &&
-        !(scrubbed?.linkedCharacterItemIds?.length ?? 0);
+      const empty = !(
+        scrubbed?.primaryLocationItemId ||
+        scrubbed?.primaryFactionItemId ||
+        scrubbed?.primaryFactionRosterEntryId ||
+        (scrubbed?.linkedCharacterItemIds?.length ?? 0)
+      );
       if (empty) {
         delete hg.loreThreadAnchors;
       } else {
@@ -91,13 +128,20 @@ export function stripHgArchReferencesToItem(
     }
   }
 
-  if (!changed) return null;
+  if (!changed) {
+    return null;
+  }
   return { ...root, hgArch: hg };
 }
 
 /** In-memory check: full-document stringify + substring (use for ad-hoc callers; delete scrub uses SQL filters). */
-export function contentJsonMightReferenceItemId(contentJson: unknown, deadId: string): boolean {
-  if (!isUuidLike(deadId)) return false;
+export function contentJsonMightReferenceItemId(
+  contentJson: unknown,
+  deadId: string
+): boolean {
+  if (!isUuidLike(deadId)) {
+    return false;
+  }
   try {
     const s = JSON.stringify(contentJson);
     return s.includes(deadId);
@@ -115,10 +159,12 @@ export function contentJsonMightReferenceItemId(contentJson: unknown, deadId: st
  */
 export async function scrubHgArchRefsAfterItemDelete(
   db: VigilDb,
-  opts: { spaceId: string; deadItemId: string },
+  opts: { spaceId: string; deadItemId: string }
 ): Promise<string[]> {
   const updatedIds: string[] = [];
-  if (!opts.deadItemId) return updatedIds;
+  if (!opts.deadItemId) {
+    return updatedIds;
+  }
 
   const hgArchSubtree = sql`(${items.contentJson}->'hgArch')`;
   const rows = await db
@@ -130,13 +176,18 @@ export async function scrubHgArchRefsAfterItemDelete(
         ne(items.id, opts.deadItemId),
         sql`${items.contentJson} is not null`,
         sql`jsonb_typeof(${hgArchSubtree}) = 'object'`,
-        sql`strpos(${hgArchSubtree}::text, ${opts.deadItemId}) > 0`,
-      ),
+        sql`strpos(${hgArchSubtree}::text, ${opts.deadItemId}) > 0`
+      )
     );
 
   for (const row of rows) {
-    const nextJson = stripHgArchReferencesToItem(row.contentJson, opts.deadItemId);
-    if (!nextJson) continue;
+    const nextJson = stripHgArchReferencesToItem(
+      row.contentJson,
+      opts.deadItemId
+    );
+    if (!nextJson) {
+      continue;
+    }
     const searchBlob = buildSearchBlob({
       title: row.title,
       contentText: row.contentText,

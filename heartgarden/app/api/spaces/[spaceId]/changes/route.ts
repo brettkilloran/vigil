@@ -4,10 +4,13 @@ import { tryGetDb } from "@/src/db/index";
 import { items, spaces } from "@/src/db/schema";
 import { getHeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
-import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { fetchPlayerSubtreeSpaceRows } from "@/src/lib/heartgarden-space-subtree";
 import { computeItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
-import { collectSpaceSubtreeIds, listGmWorkspaceSpaces } from "@/src/lib/spaces";
+import { rowToCanvasItem } from "@/src/lib/item-mapper";
+import {
+  collectSpaceSubtreeIds,
+  listGmWorkspaceSpaces,
+} from "@/src/lib/spaces";
 
 /**
  * Delta feed for GM/player spaces. Contract:
@@ -21,11 +24,16 @@ const MAX_CHANGES_LIMIT = 500;
 // same-timestamp batch cannot drive unbounded memory/query cost.
 const BOUNDARY_OVERFETCH_CAP = 2000;
 
-function maxIsoCursor(rows: { updatedAt: Date | null }[], fallbackMs: number): string {
+function maxIsoCursor(
+  rows: { updatedAt: Date | null }[],
+  fallbackMs: number
+): string {
   let ms = fallbackMs;
   for (const r of rows) {
     const t = r.updatedAt instanceof Date ? r.updatedAt.getTime() : 0;
-    if (t > ms) ms = t;
+    if (t > ms) {
+      ms = t;
+    }
   }
   return new Date(ms).toISOString();
 }
@@ -43,13 +51,15 @@ function maxIsoCursor(rows: { updatedAt: Date | null }[], fallbackMs: number): s
  * them in the current page. The cursor then advances to the boundary and the next
  * poll's `>` predicate is safe.
  */
-async function fetchAdditionalBoundaryRows<Row extends { id: string; updatedAt: Date | null }>(
+async function fetchAdditionalBoundaryRows<
+  Row extends { id: string; updatedAt: Date | null },
+>(
   fetchRowsEqUpdatedAt: (boundary: Date) => Promise<Row[]>,
   changed: Row[],
-  overflowRow: Row,
+  overflowRow: Row
 ): Promise<{ rows: Row[]; saturated: boolean }> {
   const lastChanged = changed[changed.length - 1];
-  if (!lastChanged || !(lastChanged.updatedAt instanceof Date)) {
+  if (!(lastChanged && lastChanged.updatedAt instanceof Date)) {
     return { rows: changed, saturated: false };
   }
   if (!(overflowRow.updatedAt instanceof Date)) {
@@ -64,7 +74,9 @@ async function fetchAdditionalBoundaryRows<Row extends { id: string; updatedAt: 
   const merged = [...changed];
   let saturated = false;
   for (const r of extras) {
-    if (seen.has(r.id)) continue;
+    if (seen.has(r.id)) {
+      continue;
+    }
     merged.push(r);
     seen.add(r.id);
     if (merged.length >= BOUNDARY_OVERFETCH_CAP) {
@@ -77,7 +89,7 @@ async function fetchAdditionalBoundaryRows<Row extends { id: string; updatedAt: 
 
 export async function GET(
   req: Request,
-  context: { params: Promise<{ spaceId: string }> },
+  context: { params: Promise<{ spaceId: string }> }
 ) {
   const url = new URL(req.url);
   const includeItemIds = url.searchParams.get("includeItemIds") === "1";
@@ -94,7 +106,12 @@ export async function GET(
     return Response.json({
       ok: true,
       items: [],
-      spaces: [] as { id: string; name: string; parentSpaceId: string | null; updatedAt: string }[],
+      spaces: [] as {
+        id: string;
+        name: string;
+        parentSpaceId: string | null;
+        updatedAt: string;
+      }[],
       ...(includeItemIds ? { itemIds: [] as string[] } : {}),
       cursor: new Date(0).toISOString(),
       itemLinksRevision: "0:0:",
@@ -104,20 +121,28 @@ export async function GET(
 
   const db = tryGetDb();
   if (!db) {
-    return Response.json({ ok: false, error: "Database not configured" }, { status: 503 });
+    return Response.json(
+      { ok: false, error: "Database not configured" },
+      { status: 503 }
+    );
   }
 
   const bootCtx = await getHeartgardenApiBootContext();
   const { spaceId } = await context.params;
   const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
-  if (!access.ok) return access.response;
+  if (!access.ok) {
+    return access.response;
+  }
 
   const sinceRaw = url.searchParams.get("since")?.trim() ?? "";
   let sinceMs = 0;
   if (sinceRaw.length > 0) {
     const parsed = Date.parse(sinceRaw);
     if (!Number.isFinite(parsed)) {
-      return Response.json({ ok: false, error: "Invalid since" }, { status: 400 });
+      return Response.json(
+        { ok: false, error: "Invalid since" },
+        { status: 400 }
+      );
     }
     sinceMs = parsed;
   }
@@ -137,7 +162,10 @@ export async function GET(
 
   const subtreeIds = collectSpaceSubtreeIds(spaceId, spaceRows);
   if (subtreeIds.length === 0) {
-    const itemLinksRevision = await computeItemLinksRevisionForSpace(db, spaceId);
+    const itemLinksRevision = await computeItemLinksRevisionForSpace(
+      db,
+      spaceId
+    );
     return Response.json({
       ok: true,
       items: [],
@@ -165,7 +193,9 @@ export async function GET(
   const rawItemRows = await db
     .select()
     .from(items)
-    .where(and(inArray(items.spaceId, subtreeIds), gt(items.updatedAt, sinceDate)))
+    .where(
+      and(inArray(items.spaceId, subtreeIds), gt(items.updatedAt, sinceDate))
+    )
     .orderBy(asc(items.updatedAt), asc(items.id))
     .limit(itemFetchLimit);
 
@@ -179,10 +209,15 @@ export async function GET(
           db
             .select()
             .from(items)
-            .where(and(inArray(items.spaceId, subtreeIds), eq(items.updatedAt, boundary)))
+            .where(
+              and(
+                inArray(items.spaceId, subtreeIds),
+                eq(items.updatedAt, boundary)
+              )
+            )
             .orderBy(asc(items.id)),
         changedRows,
-        overflowItem,
+        overflowItem
       );
       changedRows = resolved.rows;
       // If the overflow was strictly greater than the boundary we would have returned
@@ -209,7 +244,9 @@ export async function GET(
     .limit(itemFetchLimit);
 
   let spaceHasMore = rawSpaceRows.length > pageLimit;
-  let changedSpaceRows = spaceHasMore ? rawSpaceRows.slice(0, pageLimit) : rawSpaceRows;
+  let changedSpaceRows = spaceHasMore
+    ? rawSpaceRows.slice(0, pageLimit)
+    : rawSpaceRows;
   if (spaceHasMore) {
     const overflowSpace = rawSpaceRows[pageLimit];
     if (overflowSpace) {
@@ -223,10 +260,15 @@ export async function GET(
               updatedAt: spaces.updatedAt,
             })
             .from(spaces)
-            .where(and(inArray(spaces.id, subtreeIds), eq(spaces.updatedAt, boundary)))
+            .where(
+              and(
+                inArray(spaces.id, subtreeIds),
+                eq(spaces.updatedAt, boundary)
+              )
+            )
             .orderBy(asc(spaces.id)),
         changedSpaceRows,
-        overflowSpace,
+        overflowSpace
       );
       changedSpaceRows = resolved.rows;
       spaceHasMore = true;
@@ -238,7 +280,9 @@ export async function GET(
     name: r.name,
     parentSpaceId: r.parentSpaceId ?? null,
     updatedAt:
-      r.updatedAt instanceof Date ? r.updatedAt.toISOString() : String(r.updatedAt ?? ""),
+      r.updatedAt instanceof Date
+        ? r.updatedAt.toISOString()
+        : String(r.updatedAt ?? ""),
   }));
 
   const cursor = maxIsoCursor([...changedRows, ...changedSpaceRows], sinceMs);

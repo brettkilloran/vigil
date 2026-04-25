@@ -2,18 +2,22 @@
 
 .rail {
   position: fixed;
-  left: 0;
-  right: 0;
   top: 0;
+  right: 0;
+  left: 0;
   z-index: var(--layer-ui-chrome, 100);
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
   width: 100%;
   height: fit-content;
-  padding-inline: max(8px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
-  box-sizing: border-box;
+  padding-inline: max(
+    8px,
+    env(safe-area-inset-left, 0px),
+    env(safe-area-inset-right, 0px)
+  );
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.2s ease;
@@ -24,20 +28,20 @@
 }
 
 .well {
-  pointer-events: none;
-  flex-shrink: 0;
+  box-sizing: border-box;
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  vertical-align: middle;
   width: 100%;
   max-width: min(1080px, 98vw);
   height: var(--parent-exit-well-height, 108px);
-  box-sizing: border-box;
   padding: 0;
-  border-radius: 14px;
-  border: 2px dashed transparent;
+  vertical-align: middle;
+  pointer-events: none;
   background: transparent;
+  border: 2px dashed transparent;
+  border-radius: 14px;
   transition:
     border-color 0.18s ease,
     border-style 0.18s ease,
@@ -47,18 +51,22 @@
 
 .wellRow {
   display: inline-flex;
+  gap: 9px;
   align-items: center;
   justify-content: center;
   vertical-align: middle;
-  gap: 9px;
 }
 
 .wellVisible {
-  border-color: color-mix(in oklch, var(--accent) 62%, var(--sys-color-white) 10%);
   background: linear-gradient(
     to bottom,
     color-mix(in oklch, var(--accent) 4%, transparent) 0%,
     color-mix(in oklch, var(--accent) 11%, transparent) 100%
+  );
+  border-color: color-mix(
+    in oklch,
+    var(--accent) 62%,
+    var(--sys-color-white) 10%
   );
   box-shadow:
     0 0 0 1px color-mix(in oklch, var(--accent) 12%, transparent) inset,
@@ -76,18 +84,18 @@
 }
 
 .wellDisabled {
-  opacity: 0.55;
   cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .wellHovered {
-  border-style: solid;
-  border-color: color-mix(in oklch, var(--accent) 82%, transparent);
   background: linear-gradient(
     to bottom,
     color-mix(in oklch, var(--accent) 10%, transparent) 0%,
     color-mix(in oklch, var(--accent) 18%, transparent) 100%
   );
+  border-color: color-mix(in oklch, var(--accent) 82%, transparent);
+  border-style: solid;
   box-shadow:
     0 0 0 1px color-mix(in oklch, var(--accent) 28%, transparent) inset,
     0 0 28px color-mix(in oklch, var(--accent) 24%, transparent),
@@ -108,11 +116,11 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: none;
   line-height: 1.25;
   vertical-align: middle;
   color: color-mix(in oklch, var(--sys-color-white) 82%, transparent);
+  text-transform: none;
+  letter-spacing: 0.06em;
   white-space: nowrap;
 }
 

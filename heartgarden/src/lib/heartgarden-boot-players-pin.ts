@@ -5,6 +5,8 @@
  */
 export function readHeartgardenPlayersBootPin(): string {
   const canonical = (process.env.HEARTGARDEN_BOOT_PIN_PLAYERS ?? "").trim();
-  if (canonical.length > 0) return canonical;
+  if (canonical.length > 0) {
+    return canonical;
+  }
   return (process.env.HEARTGARDEN_BOOT_PIN_PLAYER ?? "").trim();
 }

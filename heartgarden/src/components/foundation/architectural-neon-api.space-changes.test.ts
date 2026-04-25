@@ -6,14 +6,17 @@ describe("fetchSpaceChanges", () => {
     vi.unstubAllGlobals();
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.reject(new Error("unmocked fetch"))),
+      vi.fn(() => Promise.reject(new Error("unmocked fetch")))
     );
   });
 
   it("returns parse failure when includeItemIds is true but itemIds is missing", async () => {
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ ok: true, items: [] }), { status: 200, headers: { "Content-Type": "application/json" } }),
+      new Response(JSON.stringify({ ok: true, items: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
     );
     const { fetchSpaceChanges } = await import("./architectural-neon-api");
     const out = await fetchSpaceChanges("space-1", "2020-01-01T00:00:00.000Z", {
@@ -27,7 +30,7 @@ describe("fetchSpaceChanges", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("/api/spaces/space-1/changes?"),
-      expect.objectContaining({ signal: undefined }),
+      expect.objectContaining({ signal: undefined })
     );
     const url = String(fetchMock.mock.calls[0]?.[0]);
     expect(url).toContain("includeItemIds=1");
@@ -43,8 +46,8 @@ describe("fetchSpaceChanges", () => {
           itemIds: ["a", "b"],
           cursor: "2024-02-01T00:00:00.000Z",
         }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
     );
     const { fetchSpaceChanges } = await import("./architectural-neon-api");
     const out = await fetchSpaceChanges("space-1", "2020-01-01T00:00:00.000Z", {
@@ -60,7 +63,10 @@ describe("fetchSpaceChanges", () => {
 
   it("returns structured failure on HTTP error", async () => {
     vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify({ ok: false, error: "Database not configured" }), { status: 503 }),
+      new Response(
+        JSON.stringify({ ok: false, error: "Database not configured" }),
+        { status: 503 }
+      )
     );
     const { fetchSpaceChanges } = await import("./architectural-neon-api");
     const out = await fetchSpaceChanges("space-1", "2020-01-01T00:00:00.000Z", {

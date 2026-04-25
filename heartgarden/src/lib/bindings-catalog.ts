@@ -4,8 +4,7 @@
  */
 
 /** All persisted `item_links` (and mirrored bindings) stay within one brane — see `validateLinkTargetsInBrane`. */
-export const CROSS_SPACE_LINK_POLICY =
-  "same_brane_only" as const;
+export const CROSS_SPACE_LINK_POLICY = "same_brane_only" as const;
 
 /**
  * Version for structured `content_json.hgArch` binding payloads.
@@ -13,7 +12,11 @@ export const CROSS_SPACE_LINK_POLICY =
  */
 export const HGARCH_BINDINGS_SCHEMA_VERSION = 1 as const;
 
-export type LoreBindingShell = "character" | "faction" | "location" | "generic_note";
+export type LoreBindingShell =
+  | "character"
+  | "faction"
+  | "location"
+  | "generic_note";
 
 /** Structured field on the card (`content_json.hgArch` / entity shape) — source of truth for display slots. */
 export type BindingSlotId =
@@ -50,7 +53,12 @@ export const BINDING_SLOT_DEFINITIONS: readonly BindingSlotDefinition[] = [
     cardinality: "0-n",
     targetEntityTypes: ["character"],
     mirrorCanvasConnection: true,
-    writtenBy: ["draw thread to roster row", "import apply", "structured field edit", "MCP patch item"],
+    writtenBy: [
+      "draw thread to roster row",
+      "import apply",
+      "structured field edit",
+      "MCP patch item",
+    ],
   },
   {
     id: "character.loreThreadAnchors",
@@ -64,7 +72,8 @@ export const BINDING_SLOT_DEFINITIONS: readonly BindingSlotDefinition[] = [
   {
     id: "location.linkedCharacters",
     shell: "location",
-    label: "Linked characters (mirror of character primary location when threaded)",
+    label:
+      "Linked characters (mirror of character primary location when threaded)",
     cardinality: "0-n",
     targetEntityTypes: ["character"],
     mirrorCanvasConnection: true,
@@ -73,7 +82,8 @@ export const BINDING_SLOT_DEFINITIONS: readonly BindingSlotDefinition[] = [
   {
     id: "character.primaryFactions",
     shell: "character",
-    label: "Employer / faction lines (card chrome + focus affiliation — reconcile with roster)",
+    label:
+      "Employer / faction lines (card chrome + focus affiliation — reconcile with roster)",
     cardinality: "0-n",
     targetEntityTypes: ["faction"],
     mirrorCanvasConnection: false,
@@ -118,7 +128,7 @@ export const BINDING_SLOT_DEFINITIONS: readonly BindingSlotDefinition[] = [
 ];
 
 export const BINDING_SLOT_BY_ID = Object.fromEntries(
-  BINDING_SLOT_DEFINITIONS.map((d) => [d.id, d]),
+  BINDING_SLOT_DEFINITIONS.map((d) => [d.id, d])
 ) as Record<BindingSlotId, BindingSlotDefinition>;
 
 /** Optional `item_links.meta.linkSemantics` / `linkRole` values (string stored in JSON). */
@@ -129,12 +139,16 @@ export const LINK_SEMANTICS = {
   structuredMirror: "structured_mirror",
 } as const;
 
-export type LinkSemanticsValue = (typeof LINK_SEMANTICS)[keyof typeof LINK_SEMANTICS];
+export type LinkSemanticsValue =
+  (typeof LINK_SEMANTICS)[keyof typeof LINK_SEMANTICS];
 
 // --- Canvas thread draw → hgArch (semantic eval) --------------------------------
 
 /** Lore shells that participate in draw-to-bind today (generic notes → association-only). */
-export type ThreadDrawShell = Extract<LoreBindingShell, "character" | "faction" | "location">;
+export type ThreadDrawShell = Extract<
+  LoreBindingShell,
+  "character" | "faction" | "location"
+>;
 
 /**
  * Ordered, stable effect ids implemented in `canvas-thread-link-eval.ts`.
@@ -170,36 +184,40 @@ export type CanvasThreadSemanticRule = {
  * - **default** phase runs only when `rosterEntryId == null`.
  */
 /** Declarative order: roster-target phase first within its group; then default phase by priority. */
-export const CANVAS_THREAD_SEMANTIC_RULES: readonly CanvasThreadSemanticRule[] = [
-  {
-    id: "faction_roster_row",
-    phase: "roster_target",
-    priority: 10,
-    endpointShells: ["character", "faction"],
-    touchesSlots: ["faction.factionRoster", "character.loreThreadAnchors"],
-    effect: "faction_roster_row_bind",
-  },
-  {
-    id: "character_faction_card_face",
-    phase: "default",
-    priority: 10,
-    endpointShells: ["character", "faction"],
-    touchesSlots: ["character.loreThreadAnchors"],
-    effect: "character_faction_thread_anchor",
-  },
-  {
-    id: "character_location_mirror",
-    phase: "default",
-    priority: 20,
-    endpointShells: ["character", "location"],
-    touchesSlots: ["character.loreThreadAnchors", "location.linkedCharacters"],
-    effect: "character_location_bidirectional",
-  },
-];
+export const CANVAS_THREAD_SEMANTIC_RULES: readonly CanvasThreadSemanticRule[] =
+  [
+    {
+      id: "faction_roster_row",
+      phase: "roster_target",
+      priority: 10,
+      endpointShells: ["character", "faction"],
+      touchesSlots: ["faction.factionRoster", "character.loreThreadAnchors"],
+      effect: "faction_roster_row_bind",
+    },
+    {
+      id: "character_faction_card_face",
+      phase: "default",
+      priority: 10,
+      endpointShells: ["character", "faction"],
+      touchesSlots: ["character.loreThreadAnchors"],
+      effect: "character_faction_thread_anchor",
+    },
+    {
+      id: "character_location_mirror",
+      phase: "default",
+      priority: 20,
+      endpointShells: ["character", "location"],
+      touchesSlots: [
+        "character.loreThreadAnchors",
+        "location.linkedCharacters",
+      ],
+      effect: "character_location_bidirectional",
+    },
+  ];
 
 export function sortedThreadDrawShellPair(
   a: ThreadDrawShell,
-  b: ThreadDrawShell,
+  b: ThreadDrawShell
 ): readonly [ThreadDrawShell, ThreadDrawShell] {
   return a <= b ? [a, b] : [b, a];
 }

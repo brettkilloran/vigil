@@ -3,14 +3,14 @@ import type { JSONContent } from "@tiptap/core";
 import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
 import { htmlFragmentToHgDocDoc } from "@/src/lib/hg-doc/html-to-doc";
 import {
-  lintAndRepairStructuredBody,
-  type StructureReport,
-} from "@/src/lib/hg-doc/structured-body-heuristics";
-import {
   type HgStructuredBlock,
   type HgStructuredBody,
   hgStructuredBodySchema,
 } from "@/src/lib/hg-doc/structured-body";
+import {
+  lintAndRepairStructuredBody,
+  type StructureReport,
+} from "@/src/lib/hg-doc/structured-body-heuristics";
 
 type ParseOptions = {
   title?: string;
@@ -21,7 +21,8 @@ type BuildOptions = ParseOptions & {
   aiPending?: boolean;
 };
 
-const VIGIL_ITEM_RE = /vigil:item:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+const VIGIL_ITEM_RE =
+  /vigil:item:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
 const WIKI_VIGIL_RE =
   /\[\[([^[\]]+)\]\]\s*\(vigil:item:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\)/gi;
 
@@ -48,12 +49,15 @@ function inlineTextToHtml(text: string): string {
   out += escapeHtml(raw.slice(idx));
   return out.replace(
     VIGIL_ITEM_RE,
-    (_full, itemId: string) => `<a href="vigil:item:${itemId}">vigil:item:${itemId}</a>`,
+    (_full, itemId: string) =>
+      `<a href="vigil:item:${itemId}">vigil:item:${itemId}</a>`
   );
 }
 
 function pendingWrap(inner: string, aiPending?: boolean): string {
-  if (!aiPending) return inner;
+  if (!aiPending) {
+    return inner;
+  }
   return `<span data-hg-ai-pending="true">${inner}</span>`;
 }
 
@@ -70,12 +74,16 @@ function blockToHtml(block: HgStructuredBlock, aiPending?: boolean): string {
   }
   if (block.kind === "bullet_list") {
     return `<ul>${block.items
-      .map((item) => `<li>${pendingWrap(inlineTextToHtml(item), aiPending)}</li>`)
+      .map(
+        (item) => `<li>${pendingWrap(inlineTextToHtml(item), aiPending)}</li>`
+      )
       .join("")}</ul>`;
   }
   if (block.kind === "ordered_list") {
     return `<ol>${block.items
-      .map((item) => `<li>${pendingWrap(inlineTextToHtml(item), aiPending)}</li>`)
+      .map(
+        (item) => `<li>${pendingWrap(inlineTextToHtml(item), aiPending)}</li>`
+      )
       .join("")}</ol>`;
   }
   return "<hr />";
@@ -86,32 +94,47 @@ function blockToPlainText(block: HgStructuredBlock): string {
     const marks = "#".repeat(Math.min(3, Math.max(1, block.level)));
     return `${marks} ${block.text}`.trim();
   }
-  if (block.kind === "paragraph") return block.text;
-  if (block.kind === "quote") return `> ${block.text}`;
-  if (block.kind === "bullet_list") return block.items.map((item) => `- ${item}`).join("\n");
-  if (block.kind === "ordered_list") return block.items.map((item, idx) => `${idx + 1}. ${item}`).join("\n");
+  if (block.kind === "paragraph") {
+    return block.text;
+  }
+  if (block.kind === "quote") {
+    return `> ${block.text}`;
+  }
+  if (block.kind === "bullet_list") {
+    return block.items.map((item) => `- ${item}`).join("\n");
+  }
+  if (block.kind === "ordered_list") {
+    return block.items.map((item, idx) => `${idx + 1}. ${item}`).join("\n");
+  }
   return "---";
 }
 
 function parseListItems(
   lines: string[],
   index: number,
-  pattern: RegExp,
+  pattern: RegExp
 ): { items: string[]; nextIndex: number } {
   const items: string[] = [];
   let i = index;
   while (i < lines.length) {
     const line = lines[i] ?? "";
     const m = pattern.exec(line.trim());
-    if (!m) break;
+    if (!m) {
+      break;
+    }
     const text = (m[1] ?? "").trim();
-    if (text) items.push(text);
+    if (text) {
+      items.push(text);
+    }
     i += 1;
   }
   return { items, nextIndex: i };
 }
 
-export function markdownToStructuredBody(markdown: string, options: ParseOptions = {}): HgStructuredBody {
+export function markdownToStructuredBody(
+  markdown: string,
+  options: ParseOptions = {}
+): HgStructuredBody {
   const normalized = (markdown ?? "").replace(/\r\n?/g, "\n").trim();
   const lines = normalized ? normalized.split("\n") : [];
   const blocks: HgStructuredBlock[] = [];
@@ -143,12 +166,16 @@ export function markdownToStructuredBody(markdown: string, options: ParseOptions
       while (i < lines.length) {
         const q = (lines[i] ?? "").trim();
         const qm = /^>\s+(.+)$/.exec(q);
-        if (!qm) break;
+        if (!qm) {
+          break;
+        }
         quoteLines.push((qm[1] ?? "").trim());
         i += 1;
       }
       const text = quoteLines.join(" ").trim();
-      if (text) blocks.push({ kind: "quote", text });
+      if (text) {
+        blocks.push({ kind: "quote", text });
+      }
       continue;
     }
     const bullet = parseListItems(lines, i, /^[-*]\s+(.+)$/);
@@ -166,17 +193,31 @@ export function markdownToStructuredBody(markdown: string, options: ParseOptions
     const paraLines: string[] = [];
     while (i < lines.length) {
       const candidate = (lines[i] ?? "").trim();
-      if (!candidate) break;
-      if (/^-{3,}$/.test(candidate)) break;
-      if (/^(#{1,3})\s+/.test(candidate)) break;
-      if (/^>\s+/.test(candidate)) break;
-      if (/^[-*]\s+/.test(candidate)) break;
-      if (/^\d+\.\s+/.test(candidate)) break;
+      if (!candidate) {
+        break;
+      }
+      if (/^-{3,}$/.test(candidate)) {
+        break;
+      }
+      if (/^(#{1,3})\s+/.test(candidate)) {
+        break;
+      }
+      if (/^>\s+/.test(candidate)) {
+        break;
+      }
+      if (/^[-*]\s+/.test(candidate)) {
+        break;
+      }
+      if (/^\d+\.\s+/.test(candidate)) {
+        break;
+      }
       paraLines.push(candidate);
       i += 1;
     }
     const text = paraLines.join(" ").trim();
-    if (text) blocks.push({ kind: "paragraph", text });
+    if (text) {
+      blocks.push({ kind: "paragraph", text });
+    }
   }
 
   const base = {
@@ -194,10 +235,12 @@ export function markdownToStructuredBody(markdown: string, options: ParseOptions
 
 export function structuredBodyToHgDoc(
   input: HgStructuredBody,
-  options: BuildOptions = {},
+  options: BuildOptions = {}
 ): { doc: JSONContent; plainText: string; structureReport: StructureReport } {
   const parsed = hgStructuredBodySchema.safeParse(input);
-  const base = parsed.success ? parsed.data : { blocks: [] as HgStructuredBlock[] };
+  const base = parsed.success
+    ? parsed.data
+    : { blocks: [] as HgStructuredBlock[] };
   if (base.blocks.length === 0) {
     return {
       doc: structuredClone(EMPTY_HG_DOC),
@@ -216,9 +259,14 @@ export function structuredBodyToHgDoc(
     title: options.title,
     requireH1: options.requireH1,
   });
-  const html = linted.body.blocks.map((b) => blockToHtml(b, options.aiPending)).join("");
+  const html = linted.body.blocks
+    .map((b) => blockToHtml(b, options.aiPending))
+    .join("");
   const doc = htmlFragmentToHgDocDoc(html);
-  const plainText = linted.body.blocks.map((b) => blockToPlainText(b)).join("\n\n").trim();
+  const plainText = linted.body.blocks
+    .map((b) => blockToPlainText(b))
+    .join("\n\n")
+    .trim();
   return {
     doc,
     plainText,

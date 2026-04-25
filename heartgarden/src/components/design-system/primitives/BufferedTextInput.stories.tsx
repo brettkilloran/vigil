@@ -1,8 +1,8 @@
 "use client";
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
-import { fn } from "storybook/test";
 import { useState } from "react";
+import { fn } from "storybook/test";
 
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
 
@@ -34,16 +34,20 @@ export const Default: Story = {
     const [value, setValue] = useState("Double-click to rename");
     return (
       <div className="w-[min(100vw-32px,360px)] space-y-2">
-        <label className="block text-xs font-medium text-[var(--sem-text-muted)]">Committed value</label>
+        <label className="block font-medium text-[var(--sem-text-muted)] text-xs">
+          Committed value
+        </label>
         <BufferedTextInput
-          className="w-full rounded-lg border border-[var(--vigil-border)] bg-[var(--vigil-elevated)] px-3 py-2 text-sm text-[var(--sem-text-primary)] outline-none focus:ring-2 focus:ring-[var(--sem-accent-primary)]"
-          value={value}
+          className="w-full rounded-lg border border-[var(--vigil-border)] bg-[var(--vigil-elevated)] px-3 py-2 text-[var(--sem-text-primary)] text-sm outline-none focus:ring-2 focus:ring-[var(--sem-accent-primary)]"
           onCommit={(next) => {
             logTextCommit(next);
             setValue(next);
           }}
+          value={value}
         />
-        <p className="text-xs text-[var(--vigil-muted)]">Blur or Enter commits; Esc reverts.</p>
+        <p className="text-[var(--vigil-muted)] text-xs">
+          Blur or Enter commits; Esc reverts.
+        </p>
       </div>
     );
   },

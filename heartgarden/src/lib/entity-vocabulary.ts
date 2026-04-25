@@ -65,13 +65,19 @@ function normalizeTerm(term: string): string {
 
 function candidateTermsFromRaw(raw: string): string[] {
   const trimmed = raw.trim();
-  if (trimmed.length < MIN_TERM_LEN) return [];
+  if (trimmed.length < MIN_TERM_LEN) {
+    return [];
+  }
   const out = new Set<string>();
   out.add(trimmed);
   for (const token of trimmed.split(/\s+/)) {
     const normalized = token.replace(/[^a-zA-Z0-9_-]/g, "").trim();
-    if (normalized.length < MIN_TERM_LEN) continue;
-    if (STOPWORDS.has(normalized.toLowerCase())) continue;
+    if (normalized.length < MIN_TERM_LEN) {
+      continue;
+    }
+    if (STOPWORDS.has(normalized.toLowerCase())) {
+      continue;
+    }
     out.add(normalized);
   }
   return [...out];
@@ -79,11 +85,13 @@ function candidateTermsFromRaw(raw: string): string[] {
 
 export async function buildEntityVocabularyForBrane(
   db: VigilDb,
-  braneId: string,
+  braneId: string
 ): Promise<EntityVocabularyPayload> {
   const now = Date.now();
   const cached = vocabularyCache.get(braneId);
-  if (cached && cached.expiresAt > now) return cached.payload;
+  if (cached && cached.expiresAt > now) {
+    return cached.payload;
+  }
 
   const spaceRows = await db
     .select({ id: spaces.id })
@@ -91,8 +99,15 @@ export async function buildEntityVocabularyForBrane(
     .where(eq(spaces.braneId, braneId));
   const spaceIds = spaceRows.map((row) => row.id);
   if (spaceIds.length === 0) {
-    const empty: EntityVocabularyPayload = { etag: "v0", terms: [], itemTitles: {} };
-    vocabularyCache.set(braneId, { expiresAt: now + CACHE_TTL_MS, payload: empty });
+    const empty: EntityVocabularyPayload = {
+      etag: "v0",
+      terms: [],
+      itemTitles: {},
+    };
+    vocabularyCache.set(braneId, {
+      expiresAt: now + CACHE_TTL_MS,
+      payload: empty,
+    });
     return empty;
   }
 
@@ -106,16 +121,26 @@ export async function buildEntityVocabularyForBrane(
     .where(inArray(items.spaceId, spaceIds));
 
   const itemTitles: Record<string, string> = {};
-  const byTerm = new Map<string, { itemIds: Set<string>; originalTerm: string }>();
+  const byTerm = new Map<
+    string,
+    { itemIds: Set<string>; originalTerm: string }
+  >();
   for (const row of rows) {
     itemTitles[row.id] = row.title;
-    const aliases = Array.isArray(row.loreAliases) ? row.loreAliases.filter((v): v is string => typeof v === "string") : [];
+    const aliases = Array.isArray(row.loreAliases)
+      ? row.loreAliases.filter((v): v is string => typeof v === "string")
+      : [];
     const seeds = [row.title, ...aliases];
     for (const seed of seeds) {
       for (const candidate of candidateTermsFromRaw(seed)) {
         const normalized = normalizeTerm(candidate);
-        if (normalized.length < MIN_TERM_LEN || STOPWORDS.has(normalized)) continue;
-        const slot = byTerm.get(normalized) ?? { itemIds: new Set<string>(), originalTerm: candidate };
+        if (normalized.length < MIN_TERM_LEN || STOPWORDS.has(normalized)) {
+          continue;
+        }
+        const slot = byTerm.get(normalized) ?? {
+          itemIds: new Set<string>(),
+          originalTerm: candidate,
+        };
         slot.itemIds.add(row.id);
         byTerm.set(normalized, slot);
       }
@@ -133,13 +158,20 @@ export async function buildEntityVocabularyForBrane(
   const digest = createHash("sha256")
     .update(
       JSON.stringify(
-        terms.map((entry) => ({ term: entry.term, ids: entry.itemIds })),
-      ),
+        terms.map((entry) => ({ term: entry.term, ids: entry.itemIds }))
+      )
     )
     .digest("hex")
     .slice(0, 24);
-  const nextPayload: EntityVocabularyPayload = { etag: `v1-${digest}`, terms, itemTitles };
-  vocabularyCache.set(braneId, { expiresAt: now + CACHE_TTL_MS, payload: nextPayload });
+  const nextPayload: EntityVocabularyPayload = {
+    etag: `v1-${digest}`,
+    terms,
+    itemTitles,
+  };
+  vocabularyCache.set(braneId, {
+    expiresAt: now + CACHE_TTL_MS,
+    payload: nextPayload,
+  });
   return nextPayload;
 }
 
@@ -161,13 +193,17 @@ export function clearEntityVocabularyCache(braneId?: string): void {
  * tokenization the vocabulary builder uses, so we never miss or invent terms.
  */
 export function deriveVocabularyTermsFromSeed(
-  seed: string | null | undefined,
+  seed: string | null | undefined
 ): string[] {
-  if (!seed) return [];
+  if (!seed) {
+    return [];
+  }
   const out = new Set<string>();
   for (const candidate of candidateTermsFromRaw(seed)) {
     const normalized = normalizeTerm(candidate);
-    if (normalized.length < MIN_TERM_LEN || STOPWORDS.has(normalized)) continue;
+    if (normalized.length < MIN_TERM_LEN || STOPWORDS.has(normalized)) {
+      continue;
+    }
     out.add(normalized);
   }
   return [...out];

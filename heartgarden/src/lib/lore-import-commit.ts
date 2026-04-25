@@ -1,20 +1,28 @@
-import { LORE_LINK_TYPE_OPTIONS } from "@/src/lib/lore-link-types";
 import { normalizeLinkTypeAlias } from "@/src/lib/connection-kind-colors";
 import { HG_DOC_FORMAT } from "@/src/lib/hg-doc/constants";
-import { markdownToStructuredBody, structuredBodyToHgDoc } from "@/src/lib/hg-doc/structured-body-to-hg-doc";
-import type { LoreImportStructuredBody } from "@/src/lib/lore-import-plan-types";
-import { buildLocationOrdoV7BodyHtml, getLoreNodeSeedBodyHtml } from "@/src/lib/lore-node-seed-html";
+import {
+  markdownToStructuredBody,
+  structuredBodyToHgDoc,
+} from "@/src/lib/hg-doc/structured-body-to-hg-doc";
 import {
   buildFactionArchive091BodyHtml,
   factionArchiveRailTextsFromObjectId,
 } from "@/src/lib/lore-faction-archive-html";
+import type { LoreImportStructuredBody } from "@/src/lib/lore-import-plan-types";
+import { LORE_LINK_TYPE_OPTIONS } from "@/src/lib/lore-link-types";
+import {
+  buildLocationOrdoV7BodyHtml,
+  getLoreNodeSeedBodyHtml,
+} from "@/src/lib/lore-node-seed-html";
 
 const ALLOWED_LINK_TYPES = new Set<string>(
-  LORE_LINK_TYPE_OPTIONS.map((o) => o.value as string),
+  LORE_LINK_TYPE_OPTIONS.map((o) => o.value as string)
 );
 
 export function normalizeLoreLinkType(raw: string | undefined): string {
-  if (!raw) return "history";
+  if (!raw) {
+    return "history";
+  }
   const t = normalizeLinkTypeAlias(raw);
   return ALLOWED_LINK_TYPES.has(t) ? t : "history";
 }
@@ -27,7 +35,8 @@ export function escapeHtmlForNoteBody(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
-const VIGIL_ITEM_RE = /vigil:item:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+const VIGIL_ITEM_RE =
+  /vigil:item:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
 const WIKI_VIGIL_RE =
   /\[\[([^[\]]+)\]\]\s*\(vigil:item:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\)/gi;
 
@@ -46,13 +55,16 @@ function inlinePlainToHtmlWithWikiLinks(text: string): string {
   out += escapeHtmlForNoteBody(raw.slice(idx));
   return out.replace(
     VIGIL_ITEM_RE,
-    (_full, itemId: string) => `<a href="vigil:item:${itemId}">vigil:item:${itemId}</a>`,
+    (_full, itemId: string) =>
+      `<a href="vigil:item:${itemId}">vigil:item:${itemId}</a>`
   );
 }
 
 function plainBodyToStructuredHtmlFragment(plainBody: string): string {
   const normalized = (plainBody ?? "").replace(/\r\n?/g, "\n").trim();
-  if (!normalized) return "<p><br></p>";
+  if (!normalized) {
+    return "<p><br></p>";
+  }
   const lines = normalized.split("\n");
   const blocks: string[] = [];
   for (let i = 0; i < lines.length; ) {
@@ -70,7 +82,9 @@ function plainBodyToStructuredHtmlFragment(plainBody: string): string {
     const heading = /^(#{1,6})\s+(.+)$/.exec(trimmed);
     if (heading) {
       const level = Math.min(6, heading[1]!.length);
-      blocks.push(`<h${level}>${inlinePlainToHtmlWithWikiLinks(heading[2] ?? "")}</h${level}>`);
+      blocks.push(
+        `<h${level}>${inlinePlainToHtmlWithWikiLinks(heading[2] ?? "")}</h${level}>`
+      );
       i += 1;
       continue;
     }
@@ -78,13 +92,21 @@ function plainBodyToStructuredHtmlFragment(plainBody: string): string {
     while (i < lines.length) {
       const candidate = lines[i] ?? "";
       const candTrimmed = candidate.trim();
-      if (!candTrimmed) break;
-      if (/^-{3,}$/.test(candTrimmed)) break;
-      if (/^(#{1,6})\s+(.+)$/.test(candTrimmed)) break;
+      if (!candTrimmed) {
+        break;
+      }
+      if (/^-{3,}$/.test(candTrimmed)) {
+        break;
+      }
+      if (/^(#{1,6})\s+(.+)$/.test(candTrimmed)) {
+        break;
+      }
       paraLines.push(candidate);
       i += 1;
     }
-    const inner = paraLines.map((l) => inlinePlainToHtmlWithWikiLinks(l)).join("<br />");
+    const inner = paraLines
+      .map((l) => inlinePlainToHtmlWithWikiLinks(l))
+      .join("<br />");
     blocks.push(`<p>${inner || "<br>"}</p>`);
   }
   return blocks.length > 0 ? blocks.join("") : "<p><br></p>";
@@ -110,11 +132,13 @@ export type BuildLoreNoteContentJsonOptions = {
 /** Matches `buildContentJsonForContentEntity` defaults for a simple note card. */
 export function buildLoreNoteContentJson(
   plainBody: string,
-  options?: BuildLoreNoteContentJsonOptions,
+  options?: BuildLoreNoteContentJsonOptions
 ): Record<string, unknown> {
   const inner = plainBodyToStructuredHtmlFragment(plainBody);
   const pendingWrapped =
-    options?.aiPending === true ? `<div data-hg-ai-pending="true">${inner}</div>` : inner;
+    options?.aiPending === true
+      ? `<div data-hg-ai-pending="true">${inner}</div>`
+      : inner;
   const bodyHtml = `<div contenteditable="true">${pendingWrapped}</div>`;
   return {
     format: "html",
@@ -128,7 +152,7 @@ export function buildLoreNoteContentJson(
  */
 export function buildLoreNoteContentJsonMerged(
   approvedPlain: string,
-  proposedPlain: string,
+  proposedPlain: string
 ): Record<string, unknown> {
   const approved = escapePlainBodyToHtmlFragment(approvedPlain.trim());
   const proposed = escapePlainBodyToHtmlFragment(proposedPlain.trim());
@@ -145,11 +169,11 @@ function replaceClassInnerHtml(
   html: string,
   classToken: string,
   nextInnerHtml: string,
-  occurrence = 0,
+  occurrence = 0
 ): string {
   const re = new RegExp(
     `<([a-zA-Z0-9]+)([^>]*class="[^"]*${classToken}[^"]*"[^>]*)>([\\s\\S]*?)<\\/\\1>`,
-    "g",
+    "g"
   );
   let idx = 0;
   return html.replace(re, (full, tagName, attrs) => {
@@ -166,38 +190,74 @@ function replaceDataAttrInnerHtml(
   html: string,
   attrName: string,
   attrValue: string,
-  nextInnerHtml: string,
+  nextInnerHtml: string
 ): string {
   const re = new RegExp(
     `<([a-zA-Z0-9]+)([^>]*${attrName}="${attrValue}"[^>]*)>([\\s\\S]*?)<\\/\\1>`,
-    "g",
+    "g"
   );
-  return html.replace(re, (_full, tagName, attrs) => {
-    return `<${String(tagName)}${String(attrs)}>${nextInnerHtml}</${String(tagName)}>`;
-  });
+  return html.replace(
+    re,
+    (_full, tagName, attrs) =>
+      `<${String(tagName)}${String(attrs)}>${nextInnerHtml}</${String(tagName)}>`
+  );
 }
 
 function toPendingInline(text: string): string {
   const t = text.trim();
-  if (!t) return "<br>";
+  if (!t) {
+    return "<br>";
+  }
   return `<span data-hg-ai-pending="true">${escapeHtmlForNoteBody(t)}</span>`;
 }
 
 function toPendingParagraphs(paragraphs: string[]): string {
   const rows = paragraphs.map((p) => p.trim()).filter(Boolean);
-  if (rows.length === 0) return "<p><br></p>";
+  if (rows.length === 0) {
+    return "<p><br></p>";
+  }
   return rows
-    .map((p) => `<p><span data-hg-ai-pending="true">${escapeHtmlForNoteBody(p)}</span></p>`)
+    .map(
+      (p) =>
+        `<p><span data-hg-ai-pending="true">${escapeHtmlForNoteBody(p)}</span></p>`
+    )
     .join("");
 }
 
-function buildCharacterSlabContentJson(body: Extract<LoreImportStructuredBody, { kind: "character" }>) {
+function buildCharacterSlabContentJson(
+  body: Extract<LoreImportStructuredBody, { kind: "character" }>
+) {
   let html = getLoreNodeSeedBodyHtml("character", "v11");
-  html = replaceClassInnerHtml(html, "charSkDisplayName", toPendingInline(body.name || ""), 0);
-  html = replaceClassInnerHtml(html, "charSkRole", toPendingInline(body.role || ""), 0);
-  html = replaceClassInnerHtml(html, "charSkMetaValue", toPendingInline(body.affiliation || ""), 0);
-  html = replaceClassInnerHtml(html, "charSkMetaValue", toPendingInline(body.nationality || ""), 1);
-  html = replaceClassInnerHtml(html, "charSkNotesBody", toPendingParagraphs(body.notesParagraphs), 0);
+  html = replaceClassInnerHtml(
+    html,
+    "charSkDisplayName",
+    toPendingInline(body.name || ""),
+    0
+  );
+  html = replaceClassInnerHtml(
+    html,
+    "charSkRole",
+    toPendingInline(body.role || ""),
+    0
+  );
+  html = replaceClassInnerHtml(
+    html,
+    "charSkMetaValue",
+    toPendingInline(body.affiliation || ""),
+    0
+  );
+  html = replaceClassInnerHtml(
+    html,
+    "charSkMetaValue",
+    toPendingInline(body.nationality || ""),
+    1
+  );
+  html = replaceClassInnerHtml(
+    html,
+    "charSkNotesBody",
+    toPendingParagraphs(body.notesParagraphs),
+    0
+  );
   return {
     format: "html",
     html,
@@ -208,8 +268,12 @@ function buildCharacterSlabContentJson(body: Extract<LoreImportStructuredBody, {
   } as Record<string, unknown>;
 }
 
-function buildFactionSlabContentJson(body: Extract<LoreImportStructuredBody, { kind: "faction" }>) {
-  const rails = factionArchiveRailTextsFromObjectId(body.namePrimary || "__hg-faction-import__");
+function buildFactionSlabContentJson(
+  body: Extract<LoreImportStructuredBody, { kind: "faction" }>
+) {
+  const rails = factionArchiveRailTextsFromObjectId(
+    body.namePrimary || "__hg-faction-import__"
+  );
   const html = buildFactionArchive091BodyHtml({
     orgPrimaryInnerHtml: toPendingInline(body.namePrimary || ""),
     orgAccentInnerHtml: toPendingInline(body.nameAccent || ""),
@@ -227,7 +291,9 @@ function buildFactionSlabContentJson(body: Extract<LoreImportStructuredBody, { k
   } as Record<string, unknown>;
 }
 
-function buildLocationSlabContentJson(body: Extract<LoreImportStructuredBody, { kind: "location" }>) {
+function buildLocationSlabContentJson(
+  body: Extract<LoreImportStructuredBody, { kind: "location" }>
+) {
   let html = buildLocationOrdoV7BodyHtml({
     name: body.name || "",
     context: body.context || "",
@@ -238,19 +304,19 @@ function buildLocationSlabContentJson(body: Extract<LoreImportStructuredBody, { 
     html,
     "data-hg-lore-location-field",
     "name",
-    toPendingInline(body.name || ""),
+    toPendingInline(body.name || "")
   );
   html = replaceDataAttrInnerHtml(
     html,
     "data-hg-lore-location-field",
     "context",
-    toPendingInline(body.context || ""),
+    toPendingInline(body.context || "")
   );
   html = replaceDataAttrInnerHtml(
     html,
     "data-hg-lore-location-field",
     "detail",
-    toPendingInline(body.detail || ""),
+    toPendingInline(body.detail || "")
   );
   return {
     format: "html",
@@ -262,9 +328,16 @@ function buildLocationSlabContentJson(body: Extract<LoreImportStructuredBody, { 
   } as Record<string, unknown>;
 }
 
-function buildGenericHgDocFromParagraphs(paragraphs: string[]): Record<string, unknown> {
-  const body = markdownToStructuredBody(paragraphs.join("\n\n"), { requireH1: false });
-  const { doc } = structuredBodyToHgDoc(body, { aiPending: true, requireH1: false });
+function buildGenericHgDocFromParagraphs(
+  paragraphs: string[]
+): Record<string, unknown> {
+  const body = markdownToStructuredBody(paragraphs.join("\n\n"), {
+    requireH1: false,
+  });
+  const { doc } = structuredBodyToHgDoc(body, {
+    aiPending: true,
+    requireH1: false,
+  });
   return {
     format: HG_DOC_FORMAT,
     doc,
@@ -272,19 +345,23 @@ function buildGenericHgDocFromParagraphs(paragraphs: string[]): Record<string, u
   };
 }
 
-export function buildLoreSourceContentJson(fullText: string): Record<string, unknown> {
+export function buildLoreSourceContentJson(
+  fullText: string
+): Record<string, unknown> {
   const paragraphs = fullText
     .replace(/\r\n?/g, "\n")
     .split(/\n{2,}/)
     .map((p) => p.trim())
     .filter(Boolean);
-  return buildGenericHgDocFromParagraphs(paragraphs.length > 0 ? paragraphs : [fullText.trim()]);
+  return buildGenericHgDocFromParagraphs(
+    paragraphs.length > 0 ? paragraphs : [fullText.trim()]
+  );
 }
 
 export function buildLoreStructuredBodyContentJson(
   body: LoreImportStructuredBody | undefined,
   fallbackPlainBody: string,
-  title?: string,
+  title?: string
 ): Record<string, unknown> {
   if (!body) {
     const fallbackBody = markdownToStructuredBody(fallbackPlainBody, {
@@ -302,16 +379,22 @@ export function buildLoreStructuredBodyContentJson(
       hgArch: { ...HG_ARCH_DEFAULT },
     };
   }
-  if (body.kind === "character") return buildCharacterSlabContentJson(body);
-  if (body.kind === "faction") return buildFactionSlabContentJson(body);
-  if (body.kind === "location") return buildLocationSlabContentJson(body);
+  if (body.kind === "character") {
+    return buildCharacterSlabContentJson(body);
+  }
+  if (body.kind === "faction") {
+    return buildFactionSlabContentJson(body);
+  }
+  if (body.kind === "location") {
+    return buildLocationSlabContentJson(body);
+  }
   const { doc } = structuredBodyToHgDoc(
     { blocks: body.blocks },
     {
       aiPending: true,
       title: title?.trim() || "Imported note",
       requireH1: true,
-    },
+    }
   );
   return {
     format: HG_DOC_FORMAT,

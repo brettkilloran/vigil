@@ -2,11 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   canonicalHeartgardenMcpToolName,
+  MCP_MAX_CONTENT_TEXT_CHARS,
   mcpCoerceTruthyFlag,
   mcpContentTextTooLong,
   mcpSerializedPayloadTooLong,
   mcpWriteKeyError,
-  MCP_MAX_CONTENT_TEXT_CHARS,
   resolveHeartgardenMcpBaseUrl,
 } from "./heartgarden-mcp-server";
 
@@ -44,15 +44,21 @@ describe("canonicalHeartgardenMcpToolName", () => {
   });
 
   it("trims whitespace before mapping", () => {
-    expect(canonicalHeartgardenMcpToolName("  vigil_search  ")).toBe("heartgarden_search");
+    expect(canonicalHeartgardenMcpToolName("  vigil_search  ")).toBe(
+      "heartgarden_search"
+    );
   });
 
   it("passes through canonical heartgarden_ names unchanged", () => {
-    expect(canonicalHeartgardenMcpToolName("heartgarden_search")).toBe("heartgarden_search");
+    expect(canonicalHeartgardenMcpToolName("heartgarden_search")).toBe(
+      "heartgarden_search"
+    );
   });
 
   it("does not rewrite unrelated tool names", () => {
-    expect(canonicalHeartgardenMcpToolName("other_connector_tool")).toBe("other_connector_tool");
+    expect(canonicalHeartgardenMcpToolName("other_connector_tool")).toBe(
+      "other_connector_tool"
+    );
   });
 });
 
@@ -73,18 +79,26 @@ describe("mcpCoerceTruthyFlag", () => {
 
 describe("mcpWriteKeyError", () => {
   it("returns error when server key is unset", () => {
-    expect(mcpWriteKeyError({}, "", { allowOmitWhenConfigSet: true })).toMatch(/not set/);
-  });
-  it("allows omit when configured and allowOmitWhenConfigSet", () => {
-    expect(mcpWriteKeyError({}, "secret", { allowOmitWhenConfigSet: true })).toBe(null);
-  });
-  it("rejects wrong key", () => {
-    expect(mcpWriteKeyError({ write_key: "bad" }, "good", { allowOmitWhenConfigSet: true })).toBe(
-      "Invalid write_key",
+    expect(mcpWriteKeyError({}, "", { allowOmitWhenConfigSet: true })).toMatch(
+      /not set/
     );
   });
+  it("allows omit when configured and allowOmitWhenConfigSet", () => {
+    expect(
+      mcpWriteKeyError({}, "secret", { allowOmitWhenConfigSet: true })
+    ).toBe(null);
+  });
+  it("rejects wrong key", () => {
+    expect(
+      mcpWriteKeyError({ write_key: "bad" }, "good", {
+        allowOmitWhenConfigSet: true,
+      })
+    ).toBe("Invalid write_key");
+  });
   it("requires explicit key when omit not allowed", () => {
-    expect(mcpWriteKeyError({}, "secret", { allowOmitWhenConfigSet: false })).toMatch(/required/);
+    expect(
+      mcpWriteKeyError({}, "secret", { allowOmitWhenConfigSet: false })
+    ).toMatch(/required/);
   });
 });
 
@@ -100,7 +114,9 @@ describe("mcp payload size guards", () => {
     const within = { text: "a".repeat(16) };
     expect(mcpSerializedPayloadTooLong("content_json", within)).toBeNull();
     const over = { text: "a".repeat(MCP_MAX_CONTENT_TEXT_CHARS + 8) };
-    expect(mcpSerializedPayloadTooLong("content_json", over)).toMatch(/serialized/);
+    expect(mcpSerializedPayloadTooLong("content_json", over)).toMatch(
+      /serialized/
+    );
   });
 });
 

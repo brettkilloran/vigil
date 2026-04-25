@@ -1,17 +1,25 @@
+import { mediaUploadActionLabel } from "@/src/components/foundation/architectural-media-html";
 import {
-  ROOT_SPACE_DISPLAY_NAME,
   type CanvasConnectionPin,
-  type CanvasEntity,
   type CanvasContentEntity,
+  type CanvasEntity,
   type CanvasGraph,
   type CanvasNode,
   type CanvasPinConnection,
   type CanvasSpace,
+  ROOT_SPACE_DISPLAY_NAME,
 } from "@/src/components/foundation/architectural-types";
-import { DEFAULT_LINK_SLACK_MULTIPLIER } from "@/src/lib/item-link-meta";
-import { mediaUploadActionLabel } from "@/src/components/foundation/architectural-media-html";
 import { createDefaultFactionRosterSeed } from "@/src/lib/faction-roster-link";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
+import {
+  DEMO_RESEARCH_DOSSIER_DOC,
+  DEMO_ROOT_WELCOME_DOC,
+  DEMO_STACK_HOME_BOTTOM_DOC,
+  DEMO_STACK_HOME_MIDDLE_DOC,
+  DEMO_STACK_HOME_TOP_DOC,
+  demoRootTaskDoc,
+} from "@/src/lib/hg-doc/seed-docs";
+import { DEFAULT_LINK_SLACK_MULTIPLIER } from "@/src/lib/item-link-meta";
 import {
   buildFactionArchive091BodyHtml,
   factionArchiveRailTextsFromObjectId,
@@ -21,14 +29,6 @@ import {
   getLoreNodeSeedBodyHtml,
   tapeVariantForLoreCard,
 } from "@/src/lib/lore-node-seed-html";
-import {
-  DEMO_RESEARCH_DOSSIER_DOC,
-  DEMO_ROOT_WELCOME_DOC,
-  DEMO_STACK_HOME_BOTTOM_DOC,
-  DEMO_STACK_HOME_MIDDLE_DOC,
-  DEMO_STACK_HOME_TOP_DOC,
-  demoRootTaskDoc,
-} from "@/src/lib/hg-doc/seed-docs";
 
 type StyleTokens = {
   taskItem: string;
@@ -105,7 +105,7 @@ function buildDemoThesisPinThread(
   sourceEntityId: string,
   targetEntityId: string,
   color: string,
-  timeOffsetMs: number,
+  timeOffsetMs: number
 ): CanvasPinConnection {
   const t = 1_700_000_001_000 + timeOffsetMs;
   return {
@@ -129,28 +129,29 @@ function seedDemoCharacterBodyHtml(): string {
   return getLoreNodeSeedBodyHtml("character", "v11")
     .replace(
       'data-hg-lore-field="1" data-hg-lore-placeholder="true" data-hg-lore-ph="Name"><br></div>',
-      'data-hg-lore-field="1">Morgan Vale</div>',
+      'data-hg-lore-field="1">Morgan Vale</div>'
     )
     .replace(
       'data-hg-lore-field="1" data-hg-lore-placeholder="true" data-hg-lore-ph="Role"><br></span>',
-      'data-hg-lore-field="1">Lead warder</span>',
+      'data-hg-lore-field="1">Lead warder</span>'
     )
     .replace(
       'data-hg-lore-field="1" data-hg-lore-placeholder="true" data-hg-lore-ph="Group"><br></span>',
-      'data-hg-lore-field="1">Ratcatchers</span>',
+      'data-hg-lore-field="1">Ratcatchers</span>'
     )
     .replace(
       'data-hg-lore-field="1" data-hg-lore-placeholder="true" data-hg-lore-ph="Origin"><br></span>',
-      'data-hg-lore-field="1">Luna-born</span>',
+      'data-hg-lore-field="1">Luna-born</span>'
     )
     .replace(
       'data-hg-lore-field="1" data-hg-lore-placeholder="true" data-hg-lore-ph="Notes"><p><br></p></div>',
-      'data-hg-lore-field="1"><p>Demo liaison: routes filings through <strong>Arbiter Station Lagrange 1</strong> for the Ratcatchers roster in this folder.</p></div>',
+      'data-hg-lore-field="1"><p>Demo liaison: routes filings through <strong>Arbiter Station Lagrange 1</strong> for the Ratcatchers roster in this folder.</p></div>'
     );
 }
 
 function seedDemoFactionBodyHtml(): string {
-  const { upper, lower } = factionArchiveRailTextsFromObjectId("demo-faction-seed");
+  const { upper, lower } =
+    factionArchiveRailTextsFromObjectId("demo-faction-seed");
   return buildFactionArchive091BodyHtml({
     orgPrimaryInnerHtml: "Ratcatchers",
     orgAccentInnerHtml: "Warrant & recovery · L1 circuit",
@@ -222,7 +223,9 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
   ];
 }
 
-function createContentSeedMap(tokens: StyleTokens): Record<string, CanvasEntity> {
+function createContentSeedMap(
+  tokens: StyleTokens
+): Record<string, CanvasEntity> {
   const nodes = buildArchitecturalSeedNodes(tokens);
   return Object.fromEntries(
     nodes.map((node) => [
@@ -234,13 +237,13 @@ function createContentSeedMap(tokens: StyleTokens): Record<string, CanvasEntity>
           root: { x: node.x, y: node.y },
         },
       } satisfies CanvasContentEntity,
-    ]),
+    ])
   ) as Record<string, CanvasEntity>;
 }
 
 export function buildArchitecturalSeedGraph(
   tokens: StyleTokens,
-  scenario: "default" | "corrupt" = "default",
+  scenario: "default" | "corrupt" = "default"
 ): CanvasGraph {
   const entities = createContentSeedMap(tokens);
   const spaces: Record<string, CanvasSpace> = {
@@ -336,9 +339,12 @@ export function buildArchitecturalSeedGraph(
    */
   const DEMO_NOTES_CARD_W = 340;
   const DEMO_NOTES_GAP = 80;
-  const DEMO_NOTES_HALF_CENTER_OFFSET = (DEMO_NOTES_CARD_W + DEMO_NOTES_GAP) / 2;
-  const DEMO_NOTES_TOP_LEFT = -DEMO_NOTES_HALF_CENTER_OFFSET - DEMO_NOTES_CARD_W / 2;
-  const DEMO_NOTES_TOP_RIGHT = DEMO_NOTES_HALF_CENTER_OFFSET - DEMO_NOTES_CARD_W / 2;
+  const DEMO_NOTES_HALF_CENTER_OFFSET =
+    (DEMO_NOTES_CARD_W + DEMO_NOTES_GAP) / 2;
+  const DEMO_NOTES_TOP_LEFT =
+    -DEMO_NOTES_HALF_CENTER_OFFSET - DEMO_NOTES_CARD_W / 2;
+  const DEMO_NOTES_TOP_RIGHT =
+    DEMO_NOTES_HALF_CENTER_OFFSET - DEMO_NOTES_CARD_W / 2;
 
   const folderIntro: CanvasNode = {
     id: "dossier-01",
@@ -407,14 +413,18 @@ export function buildArchitecturalSeedGraph(
     entities[node.id] = {
       ...node,
       kind: "content",
-      ...(isChar ? { loreCard: { kind: "character", variant: "v11" } as const } : {}),
+      ...(isChar
+        ? { loreCard: { kind: "character", variant: "v11" } as const }
+        : {}),
       ...(isFaction
         ? {
             loreCard: { kind: "faction", variant: "v4" } as const,
             factionRoster: createDefaultFactionRosterSeed(),
           }
         : {}),
-      ...(isLoc ? { loreCard: { kind: "location", variant: "v7" } as const } : {}),
+      ...(isLoc
+        ? { loreCard: { kind: "location", variant: "v7" } as const }
+        : {}),
       slots: {
         "space-project-thesis": { x: node.x, y: node.y },
       },
@@ -442,28 +452,28 @@ export function buildArchitecturalSeedGraph(
         "dossier-01",
         "demo-lore-character",
         "oklch(0.62 0.14 250)",
-        0,
+        0
       ),
       [DEMO_THESIS_THREAD_CHAR_FACTION]: buildDemoThesisPinThread(
         DEMO_THESIS_THREAD_CHAR_FACTION,
         "demo-lore-character",
         "demo-lore-faction",
         "oklch(0.65 0.2 145)",
-        1,
+        1
       ),
       [DEMO_THESIS_THREAD_FACTION_LOC]: buildDemoThesisPinThread(
         DEMO_THESIS_THREAD_FACTION_LOC,
         "demo-lore-faction",
         "demo-lore-location",
         "oklch(0.7 0.18 55)",
-        2,
+        2
       ),
       [DEMO_THESIS_THREAD_LOC_CHAR]: buildDemoThesisPinThread(
         DEMO_THESIS_THREAD_LOC_CHAR,
         "demo-lore-location",
         "demo-lore-character",
         "oklch(0.58 0.22 310)",
-        3,
+        3
       ),
     },
   };
@@ -476,7 +486,10 @@ export const SEED_LOCAL_ROOT_SPACE_ID = "root";
  * Remap the seed “root” space and all entity slots from `root` → `activeSpaceId`
  * so the same demo graph works after bootstrap (empty DB space still shows cards).
  */
-export function pinSeedGraphToActiveSpace(seed: CanvasGraph, activeSpaceId: string): CanvasGraph {
+export function pinSeedGraphToActiveSpace(
+  seed: CanvasGraph,
+  activeSpaceId: string
+): CanvasGraph {
   if (activeSpaceId === SEED_LOCAL_ROOT_SPACE_ID) {
     return structuredClone(seed);
   }
@@ -506,8 +519,12 @@ export function pinSeedGraphToActiveSpace(seed: CanvasGraph, activeSpaceId: stri
   const entities = { ...next.entities } as Record<string, CanvasEntity>;
   for (const entityId of Object.keys(entities)) {
     const e = entities[entityId]!;
-    if (!("slots" in e) || !e.slots) continue;
-    if (!(SEED_LOCAL_ROOT_SPACE_ID in e.slots)) continue;
+    if (!("slots" in e && e.slots)) {
+      continue;
+    }
+    if (!(SEED_LOCAL_ROOT_SPACE_ID in e.slots)) {
+      continue;
+    }
     const slots = { ...e.slots };
     slots[activeSpaceId] = slots[SEED_LOCAL_ROOT_SPACE_ID]!;
     delete slots[SEED_LOCAL_ROOT_SPACE_ID];

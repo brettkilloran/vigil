@@ -1,6 +1,9 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-import { dismissHeartgardenBootIfPresent, prepDemoSession } from "../fixtures/bootstrap";
+import {
+  dismissHeartgardenBootIfPresent,
+  prepDemoSession,
+} from "../fixtures/bootstrap";
 
 test.describe("visual: shell (light, empty demo)", () => {
   test.beforeEach(async ({ page }) => {

@@ -38,26 +38,36 @@ const LORE_IMPORT_JOB_RETRYABLE_PG_CODES = new Set<string>([
 ]);
 
 function clipped(value: unknown, max = 280): string | undefined {
-  if (typeof value !== "string") return undefined;
+  if (typeof value !== "string") {
+    return;
+  }
   const text = value.trim();
-  if (!text) return undefined;
+  if (!text) {
+    return;
+  }
   return text.length > max ? `${text.slice(0, max)}...` : text;
 }
 
 export function clipLoreImportJobInsertString(
   value: unknown,
-  max = 280,
+  max = 280
 ): string | undefined {
   return clipped(value, max);
 }
 
-export function readLoreImportJobInsertError(error: unknown): LoreImportJobInsertErrorDiag {
+export function readLoreImportJobInsertError(
+  error: unknown
+): LoreImportJobInsertErrorDiag {
   const source =
-    error && typeof error === "object" ? (error as Record<string, unknown>) : {};
+    error && typeof error === "object"
+      ? (error as Record<string, unknown>)
+      : {};
   return {
     message:
       clipped(source.message) ||
-      (error instanceof Error ? clipped(error.message) : clipped(String(error))),
+      (error instanceof Error
+        ? clipped(error.message)
+        : clipped(String(error))),
     code: clipped(source.code, 24),
     column: clipped(source.column, 128),
     detail: clipped(source.detail),
@@ -65,11 +75,13 @@ export function readLoreImportJobInsertError(error: unknown): LoreImportJobInser
 }
 
 export function readLoreImportJobInsertDiagnostic(
-  error: unknown,
+  error: unknown
 ): LoreImportJobInsertDiagnostic {
   const base = readLoreImportJobInsertError(error);
   const source =
-    error && typeof error === "object" ? (error as Record<string, unknown>) : {};
+    error && typeof error === "object"
+      ? (error as Record<string, unknown>)
+      : {};
   const code = base.code;
   return {
     ...base,
@@ -87,7 +99,9 @@ export function readLoreImportJobInsertDiagnostic(
  * columns (progress, `user_context`, etc.) or the table is missing in part.
  * Matches the heuristic used in `app/api/lore/import/jobs/route.ts`.
  */
-export function isLoreImportJobSchemaLagError(diag: LoreImportJobInsertErrorDiag): boolean {
+export function isLoreImportJobSchemaLagError(
+  diag: LoreImportJobInsertErrorDiag
+): boolean {
   const code = String(diag.code || "").trim();
   const column = String(diag.column || "").toLowerCase();
   const text = `${diag.message || ""} ${diag.detail || ""}`.toLowerCase();
@@ -100,9 +114,17 @@ export function isLoreImportJobSchemaLagError(diag: LoreImportJobInsertErrorDiag
     text.includes("last_progress_at") ||
     text.includes("user_context") ||
     text.includes("progress_events");
-  if (!mentionsOptionalColumn) return false;
-  if (!code) return true;
-  if (code === "42703") return true;
-  if (code === "42P01" && text.includes("lore_import_jobs")) return true;
+  if (!mentionsOptionalColumn) {
+    return false;
+  }
+  if (!code) {
+    return true;
+  }
+  if (code === "42703") {
+    return true;
+  }
+  if (code === "42P01" && text.includes("lore_import_jobs")) {
+    return true;
+  }
   return false;
 }

@@ -5,10 +5,11 @@
  * Close dev servers, Storybook, and IDE terminals that lock files under
  * `node_modules` (Windows EBUSY) before running.
  */
-import { existsSync, rmSync } from "node:fs";
+
 import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import { existsSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const nm = join(root, "node_modules");
@@ -16,18 +17,25 @@ const nm = join(root, "node_modules");
 process.chdir(root);
 
 if (existsSync(nm)) {
-   
   console.error("Removing node_modules…");
   try {
-    rmSync(nm, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    rmSync(nm, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 200,
+    });
   } catch (err) {
-     
     console.error(
-      "\nCould not delete node_modules (EBUSY/EPERM). Close Next.js, Storybook, test runners, and other terminals using this folder, then retry.\n",
+      "\nCould not delete node_modules (EBUSY/EPERM). Close Next.js, Storybook, test runners, and other terminals using this folder, then retry.\n"
     );
     throw err;
   }
 }
 
-const r = spawnSync("pnpm", ["install", "--frozen-lockfile"], { stdio: "inherit", shell: true, cwd: root });
+const r = spawnSync("pnpm", ["install", "--frozen-lockfile"], {
+  stdio: "inherit",
+  shell: true,
+  cwd: root,
+});
 process.exit(r.status ?? 1);

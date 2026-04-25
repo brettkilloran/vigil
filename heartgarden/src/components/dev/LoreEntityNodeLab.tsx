@@ -14,38 +14,38 @@
  * v5 dense field-mapped; v6 lean **`BufferedContentEditable`** body; v7 matches canvas (**`LoreLocationOrdoV7Slab`**).
  */
 
+import { ArrowsOutSimple, Plus, Trash } from "@phosphor-icons/react";
 import {
+  type ChangeEvent,
+  type CSSProperties,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
   useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type ChangeEvent,
-  type CSSProperties,
-  type Dispatch,
-  type ReactNode,
-  type SetStateAction,
 } from "react";
-import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
+import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
+import canvasStyles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import {
   ArchitecturalNodeHeader,
   ArchitecturalNodeTape,
 } from "@/src/components/foundation/ArchitecturalNodeCard";
-import { LoreLocationOrdoV7Slab } from "@/src/components/foundation/LoreLocationOrdoV7Slab";
-import { ArrowsOutSimple, Plus, Trash } from "@phosphor-icons/react";
-import canvasStyles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
-import cardStyles from "@/src/components/foundation/lore-entity-card.module.css";
-import { VigilThemeProvider, useVigilThemeContext } from "@/src/contexts/vigil-theme-context";
-import { cx } from "@/src/lib/cx";
+import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
+import { applyImageDataUrlToArchitecturalMediaBody } from "@/src/components/foundation/architectural-media-html";
 import type { TapeVariant } from "@/src/components/foundation/architectural-types";
+import { LoreLocationOrdoV7Slab } from "@/src/components/foundation/LoreLocationOrdoV7Slab";
+import cardStyles from "@/src/components/foundation/lore-entity-card.module.css";
 import { Button } from "@/src/components/ui/Button";
-import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
-import labStyles from "./lore-entity-node-lab.module.css";
 import {
-  getLoreNodeSeedBodyHtml,
-  locationStripVariantFromSeed,
-} from "@/src/lib/lore-node-seed-html";
+  useVigilThemeContext,
+  VigilThemeProvider,
+} from "@/src/contexts/vigil-theme-context";
+import { applySpellcheckToNestedEditables } from "@/src/lib/contenteditable-spellcheck";
+import { cx } from "@/src/lib/cx";
 import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
 import {
   DEMO_FACTION_ROSTER,
@@ -53,7 +53,11 @@ import {
   parseFactionRoster,
 } from "@/src/lib/faction-roster-schema";
 import { syncCharSkDisplayNameStack } from "@/src/lib/lore-char-sk-display-name";
-import { installLoreV11PlaceholderCaretSync } from "@/src/lib/lore-v11-ph-caret";
+import { FACTION_ARCHIVE091_READABLE_DEFAULT_RECORD_HTML } from "@/src/lib/lore-faction-archive-html";
+import {
+  getLoreNodeSeedBodyHtml,
+  locationStripVariantFromSeed,
+} from "@/src/lib/lore-node-seed-html";
 import {
   consumeLorePlaceholderBeforeInput,
   installLorePlaceholderSelectionGuards,
@@ -61,15 +65,15 @@ import {
   placeCaretAfterLorePlaceholderReplace,
   syncLoreV9RedactedPlaceholderState,
 } from "@/src/lib/lore-v9-placeholder";
-import { applyImageDataUrlToArchitecturalMediaBody } from "@/src/components/foundation/architectural-media-html";
-import { applySpellcheckToNestedEditables } from "@/src/lib/contenteditable-spellcheck";
-import { FACTION_ARCHIVE091_READABLE_DEFAULT_RECORD_HTML } from "@/src/lib/lore-faction-archive-html";
+import { installLoreV11PlaceholderCaretSync } from "@/src/lib/lore-v11-ph-caret";
+import labStyles from "./lore-entity-node-lab.module.css";
 
 /**
  * Multi-paragraph faction `document` regions use static HTML (not React element children) under `contentEditable`, so the
  * runtime does not warn about React-managed children inside an editable host.
  */
-const FACTION_LAB_INDIGO_DOCUMENT_HTML = `<p>The initiation begins in the silence between breaths. To perceive the cobalt frequency, one must first relinquish the warmth of the sun. Our roots reach into the abyssal indigo, seeking the nutrient of starlight. This document serves as the primary tether for all initiates of the Ninth Radial.</p><p>Prepare the vessel with water drawn from the silent springs. The petals must be arranged in a non-linear spiral, mimicking the movement of the celestial goldfish. When the blue light peaks—precisely at the transition of the fourth watch—the bloom will commence.</p><p><em>Warning: Exposure to the raw electric cobalt frequency without proper retinal shielding may cause permanent synesthesia.</em></p>`;
+const FACTION_LAB_INDIGO_DOCUMENT_HTML =
+  "<p>The initiation begins in the silence between breaths. To perceive the cobalt frequency, one must first relinquish the warmth of the sun. Our roots reach into the abyssal indigo, seeking the nutrient of starlight. This document serves as the primary tether for all initiates of the Ninth Radial.</p><p>Prepare the vessel with water drawn from the silent springs. The petals must be arranged in a non-linear spiral, mimicking the movement of the celestial goldfish. When the blue light peaks—precisely at the transition of the fourth watch—the bloom will commence.</p><p><em>Warning: Exposure to the raw electric cobalt frequency without proper retinal shielding may cause permanent synesthesia.</em></p>";
 
 const FACTION_LAB_TERMINAL_DOCUMENT_HTML = `<p>Canonical operating agreement for this organization. Roster below mirrors hgArch.${FACTION_ROSTER_HG_ARCH_KEY} (structured JSON, not this HTML body).</p><p>Quorum requires seven active signatures before the exchange may route external traffic. Degraded members stay listed but do not count toward vote weight until their heartbeat clears.</p>`;
 
@@ -83,7 +87,9 @@ const FACTION_LAB_CLANDESTINE_DOCUMENT_HTML = `<p>Internal circulation only. Thi
 
 function factionRosterDemoDisplayName(row: FactionRosterEntry): string {
   if (row.kind === "character") {
-    return row.displayNameOverride ?? `Character ${row.characterItemId.slice(0, 8)}…`;
+    return (
+      row.displayNameOverride ?? `Character ${row.characterItemId.slice(0, 8)}…`
+    );
   }
   return row.label;
 }
@@ -136,91 +142,119 @@ function FactionArchive091ReadableRosterManager({
     (id: string) => {
       setRoster((prev) => prev.filter((r) => r.id !== id));
     },
-    [setRoster],
+    [setRoster]
   );
 
   return (
     <div
       className={labStyles.facArxxRoster}
-      data-hg-lore-faction-roster="1"
       data-hg-arch-key={FACTION_ROSTER_HG_ARCH_KEY}
+      data-hg-lore-faction-roster="1"
     >
       <div
+        aria-label={roster.length > 0 ? "Faction roster entries" : undefined}
         className={labStyles.facArxxRosterList}
         role={roster.length > 0 ? "list" : undefined}
-        aria-label={roster.length > 0 ? "Faction roster entries" : undefined}
       >
         {roster.length === 0 ? (
           <div className={labStyles.facArxxRosterEmpty} role="status">
             <p className={labStyles.facArxxRosterEmptyTitle}>No member rows</p>
             <p className={labStyles.facArxxRosterEmptyHint}>
               Use <strong>Add member</strong> — lab state mirrors{" "}
-              <span className={labStyles.facArxxRosterEmptyKey}>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</span>.
+              <span className={labStyles.facArxxRosterEmptyKey}>
+                hgArch.{FACTION_ROSTER_HG_ARCH_KEY}
+              </span>
+              .
             </p>
           </div>
         ) : (
           roster.map((row) => {
             const roleVal =
-              row.kind === "character" ? (row.roleOverride ?? "") : (row.role ?? "");
+              row.kind === "character"
+                ? (row.roleOverride ?? "")
+                : (row.role ?? "");
             const nameVal =
-              row.kind === "character" ? (row.displayNameOverride ?? "") : row.label;
+              row.kind === "character"
+                ? (row.displayNameOverride ?? "")
+                : row.label;
 
             return (
               <div
-                key={row.id}
                 className={labStyles.facArxxRosterCard}
-                role="listitem"
                 data-faction-roster-entry-id={row.id}
                 data-faction-roster-kind={row.kind}
+                key={row.id}
+                role="listitem"
               >
                 <div className={labStyles.facArxxRosterCardBody}>
                   <input
-                    type="text"
+                    aria-label={
+                      row.kind === "character"
+                        ? "Display name override"
+                        : "Roster label"
+                    }
                     className={labStyles.facArxxRosterField}
-                    aria-label={row.kind === "character" ? "Display name override" : "Roster label"}
-                    value={nameVal}
-                    placeholder={row.kind === "character" ? "Display name (optional)" : "Member name"}
                     onChange={(e) => {
                       const v = e.target.value;
                       setRoster((prev) =>
                         prev.map((r) => {
-                          if (r.id !== row.id) return r;
+                          if (r.id !== row.id) {
+                            return r;
+                          }
                           if (r.kind === "character") {
-                            return { ...r, displayNameOverride: v ? v : undefined };
+                            return {
+                              ...r,
+                              displayNameOverride: v ? v : undefined,
+                            };
                           }
                           return { ...r, label: v };
-                        }),
+                        })
                       );
                     }}
+                    placeholder={
+                      row.kind === "character"
+                        ? "Display name (optional)"
+                        : "Member name"
+                    }
+                    type="text"
+                    value={nameVal}
                   />
                   <input
-                    type="text"
-                    className={cx(labStyles.facArxxRosterField, labStyles.facArxxRosterFieldRole)}
                     aria-label="Role"
-                    value={roleVal}
-                    placeholder="Role (optional)"
+                    className={cx(
+                      labStyles.facArxxRosterField,
+                      labStyles.facArxxRosterFieldRole
+                    )}
                     onChange={(e) => {
                       const v = e.target.value;
                       setRoster((prev) =>
                         prev.map((r) => {
-                          if (r.id !== row.id) return r;
+                          if (r.id !== row.id) {
+                            return r;
+                          }
                           if (r.kind === "character") {
-                            return { ...r, roleOverride: v === "" ? undefined : v };
+                            return {
+                              ...r,
+                              roleOverride: v === "" ? undefined : v,
+                            };
                           }
                           return { ...r, role: v === "" ? undefined : v };
-                        }),
+                        })
                       );
                     }}
+                    placeholder="Role (optional)"
+                    type="text"
+                    value={roleVal}
                   />
                 </div>
                 <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  tone="card-dark"
-                  className={labStyles.facArxxRosterRemoveBtn}
                   aria-label="Remove member from roster"
+                  className={labStyles.facArxxRosterRemoveBtn}
                   onClick={() => removeMember(row.id)}
+                  size="icon"
+                  tone="card-dark"
+                  type="button"
+                  variant="ghost"
                 >
                   <Trash size={14} weight="regular" />
                 </Button>
@@ -231,13 +265,13 @@ function FactionArchive091ReadableRosterManager({
       </div>
       <div className={labStyles.facArxxRosterAddBar}>
         <Button
-          type="button"
-          variant="ghost"
-          tone="card-dark"
-          size="sm"
           className={labStyles.facArxxRosterAddBtn}
           leadingIcon={<Plus size={14} weight="regular" />}
           onClick={addUnlinkedMember}
+          size="sm"
+          tone="card-dark"
+          type="button"
+          variant="ghost"
         >
           Add member
         </Button>
@@ -262,7 +296,10 @@ function FactionLabDemoHgArchRoster({
   const roster = parseFactionRoster(DEMO_FACTION_ROSTER);
   if (!roster?.length) {
     return (
-      <p className={labStyles.facRosterDemoInvalid} data-hg-lore-faction-roster-status="invalid">
+      <p
+        className={labStyles.facRosterDemoInvalid}
+        data-hg-lore-faction-roster-status="invalid"
+      >
         factionRoster parse failed (demo)
       </p>
     );
@@ -272,8 +309,8 @@ function FactionLabDemoHgArchRoster({
     return (
       <div
         className={labStyles.facIndigoRosterBlock}
-        data-hg-lore-faction-roster="1"
         data-hg-arch-key={FACTION_ROSTER_HG_ARCH_KEY}
+        data-hg-lore-faction-roster="1"
       >
         <div className={labStyles.facIndigoRosterSectionMarker}>
           <span className={labStyles.facIndigoRosterSectionLabel}>
@@ -286,14 +323,20 @@ function FactionLabDemoHgArchRoster({
             const role = factionRosterDemoRoleOptional(row);
             return (
               <li
-                key={row.id}
                 className={labStyles.facIndigoRosterRow}
                 data-faction-roster-entry-id={row.id}
                 data-faction-roster-kind={row.kind}
+                key={row.id}
               >
                 <div className={labStyles.facIndigoRosterTop}>
-                  <span className={labStyles.facIndigoRosterName}>{factionRosterDemoDisplayName(row)}</span>
-                  {role ? <span className={labStyles.facIndigoRosterRole}>{role}</span> : null}
+                  <span className={labStyles.facIndigoRosterName}>
+                    {factionRosterDemoDisplayName(row)}
+                  </span>
+                  {role ? (
+                    <span className={labStyles.facIndigoRosterRole}>
+                      {role}
+                    </span>
+                  ) : null}
                 </div>
               </li>
             );
@@ -307,23 +350,29 @@ function FactionLabDemoHgArchRoster({
     return (
       <div
         className={labStyles.facEssIdRoster}
-        data-hg-lore-faction-roster="1"
         data-hg-arch-key={FACTION_ROSTER_HG_ARCH_KEY}
+        data-hg-lore-faction-roster="1"
       >
-        <div className={labStyles.facEssIdRosterLabel}>members · hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</div>
+        <div className={labStyles.facEssIdRosterLabel}>
+          members · hgArch.{FACTION_ROSTER_HG_ARCH_KEY}
+        </div>
         <div className={labStyles.facEssIdRosterList} role="list">
           {roster.map((row) => {
             const role = factionRosterDemoRoleOptional(row);
             return (
               <div
-                key={row.id}
                 className={labStyles.facEssIdRosterRow}
-                role="listitem"
                 data-faction-roster-entry-id={row.id}
                 data-faction-roster-kind={row.kind}
+                key={row.id}
+                role="listitem"
               >
-                <span className={labStyles.facEssIdRosterName}>{factionRosterDemoDisplayName(row)}</span>
-                {role ? <span className={labStyles.facEssIdRosterRole}>{role}</span> : null}
+                <span className={labStyles.facEssIdRosterName}>
+                  {factionRosterDemoDisplayName(row)}
+                </span>
+                {role ? (
+                  <span className={labStyles.facEssIdRosterRole}>{role}</span>
+                ) : null}
               </div>
             );
           })}
@@ -336,21 +385,27 @@ function FactionLabDemoHgArchRoster({
     return (
       <div
         className={labStyles.facSynthRoster}
-        data-hg-lore-faction-roster="1"
         data-hg-arch-key={FACTION_ROSTER_HG_ARCH_KEY}
+        data-hg-lore-faction-roster="1"
       >
-        <div className={labStyles.facSynthRosterLabel}>ledger · hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</div>
+        <div className={labStyles.facSynthRosterLabel}>
+          ledger · hgArch.{FACTION_ROSTER_HG_ARCH_KEY}
+        </div>
         {roster.map((row) => {
           const role = factionRosterDemoRoleOptional(row);
           return (
             <div
-              key={row.id}
               className={labStyles.facSynthLedgerRow}
               data-faction-roster-entry-id={row.id}
               data-faction-roster-kind={row.kind}
+              key={row.id}
             >
-              <div className={labStyles.facSynthLedgerCategory}>{factionRosterDemoDisplayName(row)}</div>
-              {role ? <div className={labStyles.facSynthLedgerRole}>{role}</div> : null}
+              <div className={labStyles.facSynthLedgerCategory}>
+                {factionRosterDemoDisplayName(row)}
+              </div>
+              {role ? (
+                <div className={labStyles.facSynthLedgerRole}>{role}</div>
+              ) : null}
             </div>
           );
         })}
@@ -362,12 +417,17 @@ function FactionLabDemoHgArchRoster({
     return (
       <div
         className={labStyles.facOcularRoster}
-        data-hg-lore-faction-roster="1"
         data-hg-arch-key={FACTION_ROSTER_HG_ARCH_KEY}
+        data-hg-lore-faction-roster="1"
       >
         <div className={labStyles.facOcularRosterBar}>
-          <span className={labStyles.facOcularRosterBarLeft}>personnel index</span>
-          <span className={labStyles.facOcularRosterBarRight} title={`hgArch.${FACTION_ROSTER_HG_ARCH_KEY}`}>
+          <span className={labStyles.facOcularRosterBarLeft}>
+            personnel index
+          </span>
+          <span
+            className={labStyles.facOcularRosterBarRight}
+            title={`hgArch.${FACTION_ROSTER_HG_ARCH_KEY}`}
+          >
             {roster.length} record{roster.length === 1 ? "" : "s"}
           </span>
         </div>
@@ -376,14 +436,18 @@ function FactionLabDemoHgArchRoster({
             const role = factionRosterDemoRoleOptional(row);
             return (
               <div
-                key={row.id}
                 className={labStyles.facOcularRosterCard}
-                role="listitem"
                 data-faction-roster-entry-id={row.id}
                 data-faction-roster-kind={row.kind}
+                key={row.id}
+                role="listitem"
               >
-                <p className={labStyles.facOcularRosterCardName}>{factionRosterDemoDisplayName(row)}</p>
-                {role ? <p className={labStyles.facOcularRosterCardRole}>{role}</p> : null}
+                <p className={labStyles.facOcularRosterCardName}>
+                  {factionRosterDemoDisplayName(row)}
+                </p>
+                {role ? (
+                  <p className={labStyles.facOcularRosterCardRole}>{role}</p>
+                ) : null}
               </div>
             );
           })}
@@ -396,12 +460,17 @@ function FactionLabDemoHgArchRoster({
     return (
       <div
         className={labStyles.facOclmRoster}
-        data-hg-lore-faction-roster="1"
         data-hg-arch-key={FACTION_ROSTER_HG_ARCH_KEY}
+        data-hg-lore-faction-roster="1"
       >
         <div className={labStyles.facOclmRosterBar}>
-          <span className={labStyles.facOclmRosterBarLeft}>personnel index</span>
-          <span className={labStyles.facOclmRosterBarRight} title={`hgArch.${FACTION_ROSTER_HG_ARCH_KEY}`}>
+          <span className={labStyles.facOclmRosterBarLeft}>
+            personnel index
+          </span>
+          <span
+            className={labStyles.facOclmRosterBarRight}
+            title={`hgArch.${FACTION_ROSTER_HG_ARCH_KEY}`}
+          >
             {roster.length} record{roster.length === 1 ? "" : "s"}
           </span>
         </div>
@@ -410,14 +479,18 @@ function FactionLabDemoHgArchRoster({
             const role = factionRosterDemoRoleOptional(row);
             return (
               <div
-                key={row.id}
                 className={labStyles.facOclmRosterCard}
-                role="listitem"
                 data-faction-roster-entry-id={row.id}
                 data-faction-roster-kind={row.kind}
+                key={row.id}
+                role="listitem"
               >
-                <p className={labStyles.facOclmRosterCardName}>{factionRosterDemoDisplayName(row)}</p>
-                {role ? <p className={labStyles.facOclmRosterCardRole}>{role}</p> : null}
+                <p className={labStyles.facOclmRosterCardName}>
+                  {factionRosterDemoDisplayName(row)}
+                </p>
+                {role ? (
+                  <p className={labStyles.facOclmRosterCardRole}>{role}</p>
+                ) : null}
               </div>
             );
           })}
@@ -430,12 +503,17 @@ function FactionLabDemoHgArchRoster({
     return (
       <div
         className={labStyles.facClandRoster}
-        data-hg-lore-faction-roster="1"
         data-hg-arch-key={FACTION_ROSTER_HG_ARCH_KEY}
+        data-hg-lore-faction-roster="1"
       >
         <div className={labStyles.facClandRosterBar}>
-          <span className={labStyles.facClandRosterBarLeft}>circulation roster</span>
-          <span className={labStyles.facClandRosterBarRight} title={`hgArch.${FACTION_ROSTER_HG_ARCH_KEY}`}>
+          <span className={labStyles.facClandRosterBarLeft}>
+            circulation roster
+          </span>
+          <span
+            className={labStyles.facClandRosterBarRight}
+            title={`hgArch.${FACTION_ROSTER_HG_ARCH_KEY}`}
+          >
             {roster.length} line{roster.length === 1 ? "" : "s"} · hgArch
           </span>
         </div>
@@ -444,14 +522,18 @@ function FactionLabDemoHgArchRoster({
             const role = factionRosterDemoRoleOptional(row);
             return (
               <div
-                key={row.id}
                 className={labStyles.facClandRosterCard}
-                role="listitem"
                 data-faction-roster-entry-id={row.id}
                 data-faction-roster-kind={row.kind}
+                key={row.id}
+                role="listitem"
               >
-                <p className={labStyles.facClandRosterCardName}>{factionRosterDemoDisplayName(row)}</p>
-                {role ? <p className={labStyles.facClandRosterCardRole}>{role}</p> : null}
+                <p className={labStyles.facClandRosterCardName}>
+                  {factionRosterDemoDisplayName(row)}
+                </p>
+                {role ? (
+                  <p className={labStyles.facClandRosterCardRole}>{role}</p>
+                ) : null}
               </div>
             );
           })}
@@ -463,12 +545,15 @@ function FactionLabDemoHgArchRoster({
   return (
     <div
       className={labStyles.facTermXivRoster}
-      data-hg-lore-faction-roster="1"
       data-hg-arch-key={FACTION_ROSTER_HG_ARCH_KEY}
+      data-hg-lore-faction-roster="1"
     >
       <div className={labStyles.facTermXivRosterBar}>
         <span className={labStyles.facTermXivRosterBarLeft}>members</span>
-        <span className={labStyles.facTermXivRosterBarRight} title={`hgArch.${FACTION_ROSTER_HG_ARCH_KEY}`}>
+        <span
+          className={labStyles.facTermXivRosterBarRight}
+          title={`hgArch.${FACTION_ROSTER_HG_ARCH_KEY}`}
+        >
           {roster.length} entr{roster.length === 1 ? "y" : "ies"} · hgArch
         </span>
       </div>
@@ -477,14 +562,18 @@ function FactionLabDemoHgArchRoster({
           const role = factionRosterDemoRoleOptional(row);
           return (
             <div
-              key={row.id}
               className={labStyles.facTermXivRosterCard}
-              role="listitem"
               data-faction-roster-entry-id={row.id}
               data-faction-roster-kind={row.kind}
+              key={row.id}
+              role="listitem"
             >
-              <p className={labStyles.facTermXivRosterCardName}>{factionRosterDemoDisplayName(row)}</p>
-              {role ? <p className={labStyles.facTermXivRosterCardRole}>{role}</p> : null}
+              <p className={labStyles.facTermXivRosterCardName}>
+                {factionRosterDemoDisplayName(row)}
+              </p>
+              {role ? (
+                <p className={labStyles.facTermXivRosterCardRole}>{role}</p>
+              ) : null}
             </div>
           );
         })}
@@ -512,16 +601,16 @@ function LabCard({
         canvasStyles.entityNode,
         canvasStyles.themeDefault,
         canvasStyles.a4DocumentNode,
-        className,
+        className
       )}
       style={{ width: 340, "--entity-width": "340px" } as CSSProperties}
     >
-      <ArchitecturalNodeTape variant={tapeVariant} rotationDeg={tapeRotation} />
+      <ArchitecturalNodeTape rotationDeg={tapeRotation} variant={tapeVariant} />
       <ArchitecturalNodeHeader
-        title={headerTitle}
-        showExpand={false}
-        onExpand={() => {}}
         buttonTone="card-light"
+        onExpand={() => {}}
+        showExpand={false}
+        title={headerTitle}
       />
       <div className={labStyles.labBody}>{children}</div>
     </div>
@@ -574,7 +663,11 @@ function FactionLabPlate({
 }) {
   return (
     <div
-      className={cx(labStyles.factionLabPlate, labStyles[`factionLabPlate_${plateKind}`], className)}
+      className={cx(
+        labStyles.factionLabPlate,
+        labStyles[`factionLabPlate_${plateKind}`],
+        className
+      )}
       data-hg-lab-faction-plate={plateKind}
       style={{ width: 340, "--entity-width": "340px" } as CSSProperties}
     >
@@ -593,37 +686,57 @@ function FactionRosterPrimingBody({ testId }: { testId: string }) {
 
   return (
     <div className={labStyles.facRosterPrimingRoot} data-testid={testId}>
-      <div className={labStyles.facRosterPrimingEyebrow}>Priming · not canvas seed HTML</div>
-      <div className={labStyles.facRosterPrimingOrg} data-hg-lore-faction-field="orgName">
+      <div className={labStyles.facRosterPrimingEyebrow}>
+        Priming · not canvas seed HTML
+      </div>
+      <div
+        className={labStyles.facRosterPrimingOrg}
+        data-hg-lore-faction-field="orgName"
+      >
         Ironwood Mercantile Exchange
       </div>
-      <div className={labStyles.facRosterPrimingNation} data-hg-lore-faction-field="context">
+      <div
+        className={labStyles.facRosterPrimingNation}
+        data-hg-lore-faction-field="context"
+      >
         Obsidian Reach
       </div>
-      <div className={labStyles.facRosterPrimingRosterBlock} data-hg-lore-faction-roster="1">
+      <div
+        className={labStyles.facRosterPrimingRosterBlock}
+        data-hg-lore-faction-roster="1"
+      >
         <div className={labStyles.facRosterPrimingRosterLabel}>
           Members ({FACTION_ROSTER_HG_ARCH_KEY})
         </div>
         <ul className={labStyles.facRosterPrimingList}>
           {roster?.map((row) => (
             <li
-              key={row.id}
               className={labStyles.facRosterPrimingRow}
               data-faction-roster-entry-id={row.id}
+              key={row.id}
             >
               {row.kind === "character" ? (
                 <>
                   <span className={labStyles.facRosterPrimingName}>
-                    {row.displayNameOverride ?? `Character ${row.characterItemId.slice(0, 8)}…`}
+                    {row.displayNameOverride ??
+                      `Character ${row.characterItemId.slice(0, 8)}…`}
                   </span>
                   {row.roleOverride ? (
-                    <span className={labStyles.facRosterPrimingRole}>{row.roleOverride}</span>
+                    <span className={labStyles.facRosterPrimingRole}>
+                      {row.roleOverride}
+                    </span>
                   ) : null}
                 </>
               ) : (
                 <>
-                  <span className={labStyles.facRosterPrimingName}>{row.label}</span>
-                  {row.role ? <span className={labStyles.facRosterPrimingRole}>{row.role}</span> : null}
+                  <span className={labStyles.facRosterPrimingName}>
+                    {row.label}
+                  </span>
+                  {row.role ? (
+                    <span className={labStyles.facRosterPrimingRole}>
+                      {row.role}
+                    </span>
+                  ) : null}
                 </>
               )}
             </li>
@@ -634,7 +747,9 @@ function FactionRosterPrimingBody({ testId }: { testId: string }) {
         className={labStyles.facRosterPrimingFoot}
         data-hg-lore-faction-schema-status={valid ? "ok" : "invalid"}
       >
-        {valid ? `Zod: ${FACTION_ROSTER_HG_ARCH_KEY} validates (demo array)` : "Schema mismatch"}
+        {valid
+          ? `Zod: ${FACTION_ROSTER_HG_ARCH_KEY} validates (demo array)`
+          : "Schema mismatch"}
       </p>
     </div>
   );
@@ -657,7 +772,12 @@ function ProtocolOrdoLiveClock() {
   useEffect(() => {
     const tick = () => {
       const now = new Date();
-      const timeStr = [now.getHours(), now.getMinutes(), now.getSeconds(), Math.floor(now.getMilliseconds() / 10)]
+      const timeStr = [
+        now.getHours(),
+        now.getMinutes(),
+        now.getSeconds(),
+        Math.floor(now.getMilliseconds() / 10),
+      ]
         .map((v) => v.toString().padStart(2, "0"))
         .join(":");
       setLabel(timeStr);
@@ -673,19 +793,22 @@ function ProtocolOrdoLiveClock() {
 function FactionProtocolOrdoBody({ testId }: { testId: string }) {
   return (
     <div className={labStyles.facOrdoRoot} data-testid={testId}>
-      <div className={labStyles.facOrdoGeo} aria-hidden />
-      <div className={labStyles.facOrdoGlow} aria-hidden />
+      <div aria-hidden className={labStyles.facOrdoGeo} />
+      <div aria-hidden className={labStyles.facOrdoGlow} />
       <div className={labStyles.facOrdoInner}>
         <header className={labStyles.facOrdoHeader}>
           <div className={labStyles.facOrdoLogoBlock}>
-            <div className={labStyles.facOrdoPixelIcon} aria-hidden>
+            <div aria-hidden className={labStyles.facOrdoPixelIcon}>
               {FAC_ORDO_PIXEL_GRID.map((row, ri) =>
                 row.map((on, ci) => (
                   <span
+                    className={cx(
+                      labStyles.facOrdoPx,
+                      !on && labStyles.facOrdoPxOff
+                    )}
                     key={`${ri}-${ci}`}
-                    className={cx(labStyles.facOrdoPx, !on && labStyles.facOrdoPxOff)}
                   />
-                )),
+                ))
               )}
             </div>
             <span className={labStyles.facOrdoBrand}>ORDO LUNARIS</span>
@@ -726,30 +849,46 @@ function FactionProtocolOrdoBody({ testId }: { testId: string }) {
 
           <div className={labStyles.facOrdoMain}>
             <div className={labStyles.facOrdoContentBlock}>
-              <h2 className={labStyles.facOrdoSectionLabel}>I. INITIATION DECREE</h2>
+              <h2 className={labStyles.facOrdoSectionLabel}>
+                I. INITIATION DECREE
+              </h2>
               <p className={labStyles.facOrdoP}>
-                The ritual of the <span className={labStyles.facOrdoRedacted}>REDACTED</span> must be observed with
-                clinical precision. Harbor alignment is biological: we breathe the frequency of the ledger. We become
+                The ritual of the{" "}
+                <span className={labStyles.facOrdoRedacted}>REDACTED</span> must
+                be observed with clinical precision. Harbor alignment is
+                biological: we breathe the frequency of the ledger. We become
                 the echo.
               </p>
               <p className={labStyles.facOrdoP}>
-                The architecture of the exchange demands total surrender of the self to the machine of tariffs.
+                The architecture of the exchange demands total surrender of the
+                self to the machine of tariffs.
               </p>
               <span className={labStyles.facOrdoBtn}>ACKNOWLEDGE PROTOCOL</span>
             </div>
             <div className={labStyles.facOrdoContentBlock}>
-              <h2 className={labStyles.facOrdoSectionLabel}>II. OPERATIONAL GEOMETRY</h2>
+              <h2 className={labStyles.facOrdoSectionLabel}>
+                II. OPERATIONAL GEOMETRY
+              </h2>
               <p className={labStyles.facOrdoP}>
-                The circles must overlap. The centers must never touch. The coral core is the only truth in a gray
-                world. If the signal drifts beyond 0.04Hz, the{" "}
-                <span className={labStyles.facOrdoRedacted}>REDACTED</span> will initiate immediately.
+                The circles must overlap. The centers must never touch. The
+                coral core is the only truth in a gray world. If the signal
+                drifts beyond 0.04Hz, the{" "}
+                <span className={labStyles.facOrdoRedacted}>REDACTED</span> will
+                initiate immediately.
               </p>
             </div>
           </div>
 
-          <aside className={labStyles.facOrdoSidebar} aria-label="Protocol margin notes">
+          <aside
+            aria-label="Protocol margin notes"
+            className={labStyles.facOrdoSidebar}
+          >
             <div className={labStyles.facOrdoBox}>
-              <svg className={labStyles.facOrdoArrowSvg} viewBox="0 0 24 24" aria-hidden>
+              <svg
+                aria-hidden
+                className={labStyles.facOrdoArrowSvg}
+                viewBox="0 0 24 24"
+              >
                 <path d="M7 17L17 7M17 7H8M17 7V16" />
               </svg>
               <div className={labStyles.facOrdoBoxText}>
@@ -758,10 +897,13 @@ function FactionProtocolOrdoBody({ testId }: { testId: string }) {
                 ASCENSION FREQUENCY: 88.2 KHZ
               </div>
             </div>
-            <div className={cx(labStyles.facOrdoBox, labStyles.facOrdoBoxDashed)}>
+            <div
+              className={cx(labStyles.facOrdoBox, labStyles.facOrdoBoxDashed)}
+            >
               <strong>WARNING:</strong>
               <br />
-              FAILURE TO COMPLY WITH PROTOCOL 09 RESULTS IN PERMANENT SIGNAL DEGRADATION.
+              FAILURE TO COMPLY WITH PROTOCOL 09 RESULTS IN PERMANENT SIGNAL
+              DEGRADATION.
             </div>
           </aside>
 
@@ -784,19 +926,22 @@ function FactionProtocolOrdoCompactBody({
 }) {
   return (
     <div className={labStyles.facOrdoRoot} data-testid={testId}>
-      <div className={labStyles.facOrdoGeo} aria-hidden />
-      <div className={labStyles.facOrdoGlow} aria-hidden />
+      <div aria-hidden className={labStyles.facOrdoGeo} />
+      <div aria-hidden className={labStyles.facOrdoGlow} />
       <div className={labStyles.facOrdoInner}>
         <header className={labStyles.facOrdoHeader}>
           <div className={labStyles.facOrdoLogoBlock}>
-            <div className={labStyles.facOrdoPixelIcon} aria-hidden>
+            <div aria-hidden className={labStyles.facOrdoPixelIcon}>
               {FAC_ORDO_PIXEL_GRID.map((row, ri) =>
                 row.map((on, ci) => (
                   <span
+                    className={cx(
+                      labStyles.facOrdoPx,
+                      !on && labStyles.facOrdoPxOff
+                    )}
                     key={`${ri}-${ci}`}
-                    className={cx(labStyles.facOrdoPx, !on && labStyles.facOrdoPxOff)}
                   />
-                )),
+                ))
               )}
             </div>
             <span className={labStyles.facOrdoBrand}>{brandLabel}</span>
@@ -825,14 +970,20 @@ function FactionProtocolOrdoCompactBody({
             </div>
           </div>
 
-          <div className={labStyles.facOrdoMetaStamp}>REF: ORG-7741 · SUBJECT: EXCHANGE CHARTER</div>
+          <div className={labStyles.facOrdoMetaStamp}>
+            REF: ORG-7741 · SUBJECT: EXCHANGE CHARTER
+          </div>
 
           <div className={labStyles.facOrdoMain}>
             <div className={labStyles.facOrdoContentBlock}>
-              <h2 className={labStyles.facOrdoSectionLabel}>I. INITIATION DECREE</h2>
+              <h2 className={labStyles.facOrdoSectionLabel}>
+                I. INITIATION DECREE
+              </h2>
               <p className={labStyles.facOrdoP}>
-                The ritual of the <span className={labStyles.facOrdoRedacted}>REDACTED</span> must be observed with
-                clinical precision — harbor alignment to the ledger frequency; surrender to the machine of tariffs.
+                The ritual of the{" "}
+                <span className={labStyles.facOrdoRedacted}>REDACTED</span> must
+                be observed with clinical precision — harbor alignment to the
+                ledger frequency; surrender to the machine of tariffs.
               </p>
             </div>
           </div>
@@ -848,8 +999,10 @@ function FactionProtocolOrdoCompactBody({
 
 /** Deterministic pseudo-coordinates so the same ref always charts the same bearing in the lab. */
 function labStableLatLonFromSeed(seed: string): { lat: string; lon: string } {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619) >>> 0;
+  let h = 2_166_136_261;
+  for (let i = 0; i < seed.length; i++) {
+    h = Math.imul(h ^ seed.charCodeAt(i), 16_777_619) >>> 0;
+  }
   const lat = 48 + (h % 700) / 100;
   const lon = 6 + ((h >> 12) % 1100) / 100;
   return {
@@ -860,8 +1013,12 @@ function labStableLatLonFromSeed(seed: string): { lat: string; lon: string } {
 
 function locOrdoV5ContextAcronym(context: string): string {
   const parts = context.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "—";
-  if (parts.length === 1) return parts[0].slice(0, 6).toUpperCase();
+  if (parts.length === 0) {
+    return "—";
+  }
+  if (parts.length === 1) {
+    return parts[0].slice(0, 6).toUpperCase();
+  }
   return parts
     .map((p) => p[0])
     .join("")
@@ -869,11 +1026,18 @@ function locOrdoV5ContextAcronym(context: string): string {
     .toUpperCase();
 }
 
-function locOrdoV5SplitDisplayName(name: string): { line1: string; line2: string | null } {
+function locOrdoV5SplitDisplayName(name: string): {
+  line1: string;
+  line2: string | null;
+} {
   const t = name.trim();
-  if (!t) return { line1: "UNTITLED", line2: null };
+  if (!t) {
+    return { line1: "UNTITLED", line2: null };
+  }
   const words = t.split(/\s+/);
-  if (words.length === 1) return { line1: words[0].toUpperCase(), line2: null };
+  if (words.length === 1) {
+    return { line1: words[0].toUpperCase(), line2: null };
+  }
   const mid = Math.ceil(words.length / 2);
   return {
     line1: words.slice(0, mid).join(" ").toUpperCase(),
@@ -892,7 +1056,7 @@ function buildLocationOrdoV6DocHtml(
   line2: string | null,
   context: string,
   detail: string,
-  notes: string,
+  notes: string
 ): string {
   const nameBr = line2 ? `<br />${escapeHtmlForOrdoDoc(line2)}` : "";
   return `<div class="${s.facOrdoDocGrid}"><div class="${s.facOrdoTitleRow}"><h1 class="${s.facOrdoDisplayTitle}" data-hg-lore-location-field="name">${escapeHtmlForOrdoDoc(line1)}${nameBr}</h1></div><p class="${s.facOrdoLocV6ContextLine}" data-hg-lore-location-field="context">${escapeHtmlForOrdoDoc(context)}</p><div class="${s.facOrdoMain}"><div class="${s.facOrdoContentBlock} ${s.facOrdoLocV5DocInline}"><p class="${s.facOrdoLocV5DetailLine}" data-hg-lore-location-field="detail">${escapeHtmlForOrdoDoc(detail)}</p><div class="${s.facOrdoLocV5NotesCell}" data-hg-lore-location-notes-cell="true"><div data-hg-lore-location-notes="true" class="${s.facOrdoLocV5NotesInner}"><p class="${s.facOrdoP}">${escapeHtmlForOrdoDoc(notes)}</p></div></div></div></div></div>`;
@@ -900,7 +1064,9 @@ function buildLocationOrdoV6DocHtml(
 
 /** Slash menu → `document.execCommand` (same command ids as canvas legacy `runFormat`; checklist/image omitted in lab). */
 function labOrdoSlashRichDocCommand(command: string, value?: string) {
-  if (command === "arch:insertImage" || command === "arch:checklist") return;
+  if (command === "arch:insertImage" || command === "arch:checklist") {
+    return;
+  }
   if (command === "formatBlock" && value) {
     document.execCommand("formatBlock", false, value);
     return;
@@ -934,26 +1100,36 @@ function LocationOrdoCoordinateSlabV5Body({ testId }: { testId: string }) {
   return (
     <div
       className={labStyles.facOrdoRoot}
-      data-testid={testId}
       data-hg-canvas-role="lore-location"
       data-hg-lore-location-variant="v5"
+      data-testid={testId}
     >
-      <div className={labStyles.facOrdoGeo} aria-hidden />
-      <div className={labStyles.facOrdoGlow} aria-hidden />
+      <div aria-hidden className={labStyles.facOrdoGeo} />
+      <div aria-hidden className={labStyles.facOrdoGlow} />
       <div className={labStyles.facOrdoInner}>
         <header className={labStyles.facOrdoHeader}>
           <div className={labStyles.facOrdoLogoBlock}>
-            <div className={labStyles.facOrdoPixelIcon} aria-hidden>
+            <div aria-hidden className={labStyles.facOrdoPixelIcon}>
               {FAC_ORDO_PIXEL_GRID.map((row, ri) =>
                 row.map((on, ci) => (
                   <span
+                    className={cx(
+                      labStyles.facOrdoPx,
+                      !on && labStyles.facOrdoPxOff
+                    )}
                     key={`${ri}-${ci}`}
-                    className={cx(labStyles.facOrdoPx, !on && labStyles.facOrdoPxOff)}
                   />
-                )),
+                ))
               )}
             </div>
-            <span className={cx(labStyles.facOrdoBrand, labStyles.facOrdoLocV5BrandRef)}>LOCATION</span>
+            <span
+              className={cx(
+                labStyles.facOrdoBrand,
+                labStyles.facOrdoLocV5BrandRef
+              )}
+            >
+              LOCATION
+            </span>
           </div>
           <div className={labStyles.facOrdoSystemData}>
             <div>REF: {ref}</div>
@@ -965,7 +1141,10 @@ function LocationOrdoCoordinateSlabV5Body({ testId }: { testId: string }) {
 
         <div className={labStyles.facOrdoDocGrid}>
           <div className={labStyles.facOrdoTitleRow}>
-            <h1 className={labStyles.facOrdoDisplayTitle} data-hg-lore-location-field="name">
+            <h1
+              className={labStyles.facOrdoDisplayTitle}
+              data-hg-lore-location-field="name"
+            >
               {line1}
               {line2 ? (
                 <>
@@ -976,9 +1155,15 @@ function LocationOrdoCoordinateSlabV5Body({ testId }: { testId: string }) {
             </h1>
           </div>
 
-          <div className={cx(labStyles.facOrdoMetaStamp, labStyles.facOrdoLocV5MetaStamp)}>
+          <div
+            className={cx(
+              labStyles.facOrdoMetaStamp,
+              labStyles.facOrdoLocV5MetaStamp
+            )}
+          >
             <div>
-              REF: <span data-hg-lore-location-field="ref">{ref}</span> · SUBJECT:{" "}
+              REF: <span data-hg-lore-location-field="ref">{ref}</span> ·
+              SUBJECT:{" "}
               <span data-hg-lore-location-field="context">{context}</span>
             </div>
             <div className={labStyles.facOrdoLocV5MetaStampSecond}>
@@ -987,22 +1172,35 @@ function LocationOrdoCoordinateSlabV5Body({ testId }: { testId: string }) {
           </div>
 
           <div className={labStyles.facOrdoMain}>
-            <div className={cx(labStyles.facOrdoContentBlock, labStyles.facOrdoLocV5DocInline)}>
-              <h2 className={cx(labStyles.facOrdoSectionLabel, labStyles.facOrdoLocV5DocEyebrow)}>
+            <div
+              className={cx(
+                labStyles.facOrdoContentBlock,
+                labStyles.facOrdoLocV5DocInline
+              )}
+            >
+              <h2
+                className={cx(
+                  labStyles.facOrdoSectionLabel,
+                  labStyles.facOrdoLocV5DocEyebrow
+                )}
+              >
                 I. SITE RECORD
               </h2>
-              <p className={labStyles.facOrdoLocV5DetailLine} data-hg-lore-location-field="detail">
+              <p
+                className={labStyles.facOrdoLocV5DetailLine}
+                data-hg-lore-location-field="detail"
+              >
                 {detail}
               </p>
               <div
                 className={labStyles.facOrdoLocV5NotesCell}
-                data-hg-lore-location-notes-cell="true"
                 contentEditable={false}
+                data-hg-lore-location-notes-cell="true"
               >
                 <div
-                  data-hg-lore-location-notes="true"
-                  contentEditable={false}
                   className={labStyles.facOrdoLocV5NotesInner}
+                  contentEditable={false}
+                  data-hg-lore-location-notes="true"
                 >
                   <p className={labStyles.facOrdoP}>{notesExcerpt}</p>
                 </div>
@@ -1033,7 +1231,14 @@ function LocationOrdoCoordinateSlabV6Body({ testId }: { testId: string }) {
 
   const { line1, line2 } = locOrdoV5SplitDisplayName(name);
   const [docHtml, setDocHtml] = useState(() =>
-    buildLocationOrdoV6DocHtml(labStyles, line1, line2, context, detail, notesExcerpt),
+    buildLocationOrdoV6DocHtml(
+      labStyles,
+      line1,
+      line2,
+      context,
+      detail,
+      notesExcerpt
+    )
   );
 
   const onDocCommit = useCallback((next: string) => {
@@ -1043,38 +1248,52 @@ function LocationOrdoCoordinateSlabV6Body({ testId }: { testId: string }) {
   return (
     <div
       className={labStyles.facOrdoRoot}
-      data-testid={testId}
       data-hg-canvas-role="lore-location"
       data-hg-lore-location-variant="v6"
+      data-testid={testId}
     >
-      <div className={labStyles.facOrdoGeo} aria-hidden />
-      <div className={labStyles.facOrdoGlow} aria-hidden />
+      <div aria-hidden className={labStyles.facOrdoGeo} />
+      <div aria-hidden className={labStyles.facOrdoGlow} />
       <div className={labStyles.facOrdoInner}>
         <header className={labStyles.facOrdoHeader}>
           <div className={labStyles.facOrdoLogoBlock}>
-            <div className={labStyles.facOrdoPixelIcon} aria-hidden>
+            <div aria-hidden className={labStyles.facOrdoPixelIcon}>
               {FAC_ORDO_PIXEL_GRID.map((row, ri) =>
                 row.map((on, ci) => (
                   <span
+                    className={cx(
+                      labStyles.facOrdoPx,
+                      !on && labStyles.facOrdoPxOff
+                    )}
                     key={`${ri}-${ci}`}
-                    className={cx(labStyles.facOrdoPx, !on && labStyles.facOrdoPxOff)}
                   />
-                )),
+                ))
               )}
             </div>
-            <span className={cx(labStyles.facOrdoBrand, labStyles.facOrdoLocV5BrandRef)}>LOCATION</span>
+            <span
+              className={cx(
+                labStyles.facOrdoBrand,
+                labStyles.facOrdoLocV5BrandRef
+              )}
+            >
+              LOCATION
+            </span>
           </div>
           <div className={labStyles.facOrdoHeaderRight}>
-            <ArchitecturalTooltip content="Expand object" side="bottom" delayMs={320}>
+            <ArchitecturalTooltip
+              content="Expand object"
+              delayMs={320}
+              side="bottom"
+            >
               <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                tone="card-light"
+                aria-label="Expand object"
                 className={labStyles.facOrdoHeaderExpandBtn}
                 data-expand-btn="true"
-                aria-label="Expand object"
                 onClick={() => {}}
+                size="icon"
+                tone="card-light"
+                type="button"
+                variant="ghost"
               >
                 <ArrowsOutSimple size={14} />
               </Button>
@@ -1083,21 +1302,21 @@ function LocationOrdoCoordinateSlabV6Body({ testId }: { testId: string }) {
         </header>
 
         <BufferedContentEditable
-          value={docHtml}
-          className={cx(labStyles.facOrdoV6RichHost)}
-          editable
-          spellCheck
-          debounceMs={300}
-          wikiLinkAssist={null}
-          richDocCommand={labOrdoSlashRichDocCommand}
-          emptyPlaceholder="Edit location fields…"
           checklistDeletion={{
             taskItem: canvasStyles.taskItem,
             taskText: canvasStyles.taskText,
             taskCheckbox: canvasStyles.taskCheckbox,
           }}
-          onCommit={onDocCommit}
+          className={cx(labStyles.facOrdoV6RichHost)}
           dataAttribute="data-node-body-editor"
+          debounceMs={300}
+          editable
+          emptyPlaceholder="Edit location fields…"
+          onCommit={onDocCommit}
+          richDocCommand={labOrdoSlashRichDocCommand}
+          spellCheck
+          value={docHtml}
+          wikiLinkAssist={null}
         />
       </div>
     </div>
@@ -1109,10 +1328,10 @@ function LocationOrdoCoordinateSlabV7LabBody() {
   const [bodyHtml, setBodyHtml] = useState(seed);
   return (
     <LoreLocationOrdoV7Slab
-      nodeId="loc-lab-ordo-coordinate-mono-v7"
-      labTestId="loc-lab-ordo-coordinate-mono-v7"
       bodyHtml={bodyHtml}
       editable
+      labTestId="loc-lab-ordo-coordinate-mono-v7"
+      nodeId="loc-lab-ordo-coordinate-mono-v7"
       onCommit={setBodyHtml}
     />
   );
@@ -1121,7 +1340,11 @@ function LocationOrdoCoordinateSlabV7LabBody() {
 /** Silent Synod — legible “brief” layout for the 340px plate (cream / blood accent; dossier + sigil motion omitted). */
 function FactionSilentSynodBody({ testId }: { testId: string }) {
   const [dateStr] = useState(() =>
-    new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }),
+    new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
   );
 
   return (
@@ -1129,13 +1352,18 @@ function FactionSilentSynodBody({ testId }: { testId: string }) {
       <div className={labStyles.facSynodBrief}>
         <header className={labStyles.facSynodBriefHead}>
           <div className={labStyles.facSynodBriefTitleBlock}>
-            <p className={labStyles.facSynodBriefEyebrow}>Bureau · transdimensional affairs</p>
+            <p className={labStyles.facSynodBriefEyebrow}>
+              Bureau · transdimensional affairs
+            </p>
             <h1 className={labStyles.facSynodBriefH1}>Silent Synod</h1>
             <p className={labStyles.facSynodBriefCode}>OMEGA-7</p>
           </div>
           <div className={labStyles.facSynodBriefAside}>
             <span className={labStyles.facSynodBriefAsideLine}>DOC-774-B</span>
-            <span className={labStyles.facSynodBriefAsideLine} suppressHydrationWarning>
+            <span
+              className={labStyles.facSynodBriefAsideLine}
+              suppressHydrationWarning
+            >
               {dateStr}
             </span>
             <span className={labStyles.facSynodBriefStatus}>Unresolved</span>
@@ -1143,8 +1371,10 @@ function FactionSilentSynodBody({ testId }: { testId: string }) {
         </header>
 
         <p className={labStyles.facSynodBriefLead}>
-          <strong>Constant evolution</strong> — map vectors before entropy lands. Ironwood holds the ledger;{" "}
-          <span className={labStyles.facSynodBriefRedact}>the veil</span> holds the charter.
+          <strong>Constant evolution</strong> — map vectors before entropy
+          lands. Ironwood holds the ledger;{" "}
+          <span className={labStyles.facSynodBriefRedact}>the veil</span> holds
+          the charter.
         </p>
 
         <dl className={labStyles.facSynodBriefFacts}>
@@ -1158,16 +1388,25 @@ function FactionSilentSynodBody({ testId }: { testId: string }) {
           </div>
         </dl>
 
-        <section className={labStyles.facSynodBriefSection} aria-label="Standing order">
+        <section
+          aria-label="Standing order"
+          className={labStyles.facSynodBriefSection}
+        >
           <h2 className={labStyles.facSynodBriefH2}>Standing order</h2>
           <p className={labStyles.facSynodBriefP}>
-            Report visual echoing to the ward. No static structures past the threshold — when{" "}
-            <span className={labStyles.facSynodBriefRedact}>geometries shift</span>, dissolve cleanly.
+            Report visual echoing to the ward. No static structures past the
+            threshold — when{" "}
+            <span className={labStyles.facSynodBriefRedact}>
+              geometries shift
+            </span>
+            , dissolve cleanly.
           </p>
         </section>
 
         <footer className={labStyles.facSynodBriefFoot}>
-          <span className={labStyles.facSynodBriefFootText}>ORG-7741 · Obsidian Reach</span>
+          <span className={labStyles.facSynodBriefFootText}>
+            ORG-7741 · Obsidian Reach
+          </span>
           <span className={labStyles.facSynodBriefStamp}>OMEGA</span>
         </footer>
       </div>
@@ -1179,40 +1418,54 @@ function FactionSilentSynodBody({ testId }: { testId: string }) {
 function FactionArchive091Body({ testId }: { testId: string }) {
   return (
     <div className={labStyles.facArcRoot} data-testid={testId}>
-      <div className={labStyles.facArcGrain} aria-hidden />
+      <div aria-hidden className={labStyles.facArcGrain} />
       <div className={labStyles.facArcPage}>
-        <aside className={labStyles.facArcRail} aria-hidden>
-          <div className={labStyles.facArcVertical}>Restricted // Access // 091</div>
+        <aside aria-hidden className={labStyles.facArcRail}>
+          <div className={labStyles.facArcVertical}>
+            Restricted // Access // 091
+          </div>
           <svg className={labStyles.facArcStar} viewBox="0 0 24 24">
-            <path d="M12 0L14 10L24 12L14 14L12 24L10 14L0 12L10 10L12 0Z" fill="currentColor" />
+            <path
+              d="M12 0L14 10L24 12L14 14L12 24L10 14L0 12L10 10L12 0Z"
+              fill="currentColor"
+            />
           </svg>
-          <div className={labStyles.facArcVertical}>07652-46738225-415523907</div>
+          <div className={labStyles.facArcVertical}>
+            07652-46738225-415523907
+          </div>
           <div className={labStyles.facArcBarcode} />
         </aside>
 
         <div className={labStyles.facArcMain}>
           <div className={labStyles.facArcMetaStrip}>
             <span>Ref: VOID_MANIFEST_v4.2</span>
-            <span className={labStyles.facArcBlink}>● RECORDING_IN_PROGRESS</span>
+            <span className={labStyles.facArcBlink}>
+              ● RECORDING_IN_PROGRESS
+            </span>
             <span>EST: 1984.09.12</span>
           </div>
 
           <header className={labStyles.facArcLetterhead}>
             <h1 className={labStyles.facArcH1}>Absence</h1>
             <div className={labStyles.facArcSubTitle}>Of Mind</div>
-            <div className={labStyles.facArcOrderLine}>By the order of the Void Collective</div>
+            <div className={labStyles.facArcOrderLine}>
+              By the order of the Void Collective
+            </div>
           </header>
 
           <div className={labStyles.facArcContentBody}>
             <div className={labStyles.facArcTextSection}>
               <h2 className={labStyles.facArcH2}>The Protocol</h2>
               <p className={labStyles.facArcP}>
-                To reach <em className={labStyles.facArcEm}>the Absolute Neutral</em>, surrender the chronological
-                anchor. Catalog the exterior, then displace it in the ledger furnace — Ironwood tariff binders only.
+                To reach{" "}
+                <em className={labStyles.facArcEm}>the Absolute Neutral</em>,
+                surrender the chronological anchor. Catalog the exterior, then
+                displace it in the ledger furnace — Ironwood tariff binders
+                only.
               </p>
               <p className={labStyles.facArcP}>
-                The horizon does not curve for the eye; it curves for the soul. We are the quiet space between
-                charter clauses.
+                The horizon does not curve for the eye; it curves for the soul.
+                We are the quiet space between charter clauses.
               </p>
               <span className={labStyles.facArcPill}>PHASE-RED-CLEARED</span>
             </div>
@@ -1251,18 +1504,35 @@ function FactionArchive091Body({ testId }: { testId: string }) {
 
           <footer className={labStyles.facArcFooter}>
             <span className={labStyles.facArcPill}>SERIAL: 091-VOID-RKTT</span>
-            <div className={labStyles.facArcFooterMid}>All rights forfeited to the void · Obsidian Reach registry</div>
+            <div className={labStyles.facArcFooterMid}>
+              All rights forfeited to the void · Obsidian Reach registry
+            </div>
             <div className={labStyles.facArcBarcode} />
           </footer>
         </div>
 
-        <aside className={labStyles.facArcRail} aria-hidden>
+        <aside aria-hidden className={labStyles.facArcRail}>
           <svg className={labStyles.facArcStar} viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="0.5" />
-            <path d="M12 2L12 22 M2 12 L22 12" stroke="currentColor" strokeWidth="0.5" />
+            <circle
+              cx="12"
+              cy="12"
+              fill="none"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="0.5"
+            />
+            <path
+              d="M12 2L12 22 M2 12 L22 12"
+              stroke="currentColor"
+              strokeWidth="0.5"
+            />
           </svg>
-          <div className={labStyles.facArcVertical}>System // status // nominal</div>
-          <div className={labStyles.facArcVertical}>Encrypted // channel // 091</div>
+          <div className={labStyles.facArcVertical}>
+            System // status // nominal
+          </div>
+          <div className={labStyles.facArcVertical}>
+            Encrypted // channel // 091
+          </div>
           <span className={labStyles.facArcPillVert}>091</span>
         </aside>
       </div>
@@ -1271,14 +1541,17 @@ function FactionArchive091Body({ testId }: { testId: string }) {
 }
 
 /** Stable lore-object id for the XX readable Archive-091 lab specimen; rail splits UUID — top half replaces “Roster // 091”, bottom half completes the id. */
-const XX_ARCHIVE_091_READABLE_OBJECT_UUID = "c9e4f2a1-7b6c-4d8e-8f3a-2d1e0c9b8a76";
-const XX_ARCHIVE_091_READABLE_UUID_RAIL_TOP = XX_ARCHIVE_091_READABLE_OBJECT_UUID.slice(
-  0,
-  Math.floor(XX_ARCHIVE_091_READABLE_OBJECT_UUID.length / 2),
-);
-const XX_ARCHIVE_091_READABLE_UUID_RAIL_BOTTOM = XX_ARCHIVE_091_READABLE_OBJECT_UUID.slice(
-  Math.floor(XX_ARCHIVE_091_READABLE_OBJECT_UUID.length / 2),
-);
+const XX_ARCHIVE_091_READABLE_OBJECT_UUID =
+  "c9e4f2a1-7b6c-4d8e-8f3a-2d1e0c9b8a76";
+const XX_ARCHIVE_091_READABLE_UUID_RAIL_TOP =
+  XX_ARCHIVE_091_READABLE_OBJECT_UUID.slice(
+    0,
+    Math.floor(XX_ARCHIVE_091_READABLE_OBJECT_UUID.length / 2)
+  );
+const XX_ARCHIVE_091_READABLE_UUID_RAIL_BOTTOM =
+  XX_ARCHIVE_091_READABLE_OBJECT_UUID.slice(
+    Math.floor(XX_ARCHIVE_091_READABLE_OBJECT_UUID.length / 2)
+  );
 
 /**
  * XX · Archive-091 (readable) — same void-archive IA as IX with larger type, neutral plate chrome, and faction PRD wiring.
@@ -1286,10 +1559,12 @@ const XX_ARCHIVE_091_READABLE_UUID_RAIL_BOTTOM = XX_ARCHIVE_091_READABLE_OBJECT_
  * Metrics table replaced by hgArch roster demo; protocol body is `document`. No bottom serial/registry footer strip.
  */
 function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
-  const [archiveRoster, setArchiveRoster] = useState<FactionRosterEntry[]>(() => {
-    const parsed = parseFactionRoster(DEMO_FACTION_ROSTER);
-    return parsed?.length ? parsed : [];
-  });
+  const [archiveRoster, setArchiveRoster] = useState<FactionRosterEntry[]>(
+    () => {
+      const parsed = parseFactionRoster(DEMO_FACTION_ROSTER);
+      return parsed?.length ? parsed : [];
+    }
+  );
   const archiveMemberCount = archiveRoster.length;
   const archiveDocumentRef = useRef<HTMLDivElement>(null);
   const facArxxLetterheadPhRef = useRef<HTMLDivElement>(null);
@@ -1300,7 +1575,9 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
    */
   useLayoutEffect(() => {
     const el = archiveDocumentRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     el.innerHTML = FACTION_ARCHIVE091_READABLE_DEFAULT_RECORD_HTML;
 
     /** Tolerance for “flush” with top / bottom of scrollable content (px). */
@@ -1321,7 +1598,8 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
        * which wrongly enables the top fade. Require real scroll for “near bottom” unless essentially flush (0).
        */
       const nearBottom =
-        distanceFromBottom <= edgePx && (st > edgePx || distanceFromBottom < 0.5);
+        distanceFromBottom <= edgePx &&
+        (st > edgePx || distanceFromBottom < 0.5);
       if (nearTop && !nearBottom) {
         el.setAttribute("data-hg-fac-arxx-doc-mask", "end");
       } else if (!nearTop && nearBottom) {
@@ -1333,7 +1611,10 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
 
     el.addEventListener("scroll", syncDocScrollMask, { passive: true });
     el.addEventListener("input", syncDocScrollMask);
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(syncDocScrollMask) : null;
+    const ro =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(syncDocScrollMask);
     ro?.observe(el);
     queueMicrotask(syncDocScrollMask);
     return () => {
@@ -1345,7 +1626,9 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
 
   useLayoutEffect(() => {
     const shell = facArxxLetterheadPhRef.current;
-    if (!shell) return;
+    if (!shell) {
+      return;
+    }
     syncLoreV9RedactedPlaceholderState(shell);
     const removeGuards = installLorePlaceholderSelectionGuards(shell);
     const removePhCaret = installLoreV11PlaceholderCaretSync(shell);
@@ -1354,12 +1637,20 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
     };
     const onBeforeInput = (e: Event) => {
       const ie = e as InputEvent;
-      const field = (ie.target as HTMLElement | null)?.closest?.("[data-hg-lore-field]");
-      if (!field || !(field instanceof HTMLElement) || !shell.contains(field)) return;
-      if (!consumeLorePlaceholderBeforeInput(field, ie)) return;
+      const field = (ie.target as HTMLElement | null)?.closest?.(
+        "[data-hg-lore-field]"
+      );
+      if (!(field && field instanceof HTMLElement && shell.contains(field))) {
+        return;
+      }
+      if (!consumeLorePlaceholderBeforeInput(field, ie)) {
+        return;
+      }
       syncLoreV9RedactedPlaceholderState(shell);
       queueMicrotask(() => {
-        if (field.isConnected) placeCaretAfterLorePlaceholderReplace(field);
+        if (field.isConnected) {
+          placeCaretAfterLorePlaceholderReplace(field);
+        }
       });
     };
     const onFocusOut = () => {
@@ -1380,37 +1671,51 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
   return (
     <div
       className={labStyles.facArxxRoot}
-      data-testid={testId}
-      data-hg-lab-faction-specimen="xx-archive-091-readable"
       data-hg-lab-archive-object-uuid={XX_ARCHIVE_091_READABLE_OBJECT_UUID}
+      data-hg-lab-faction-specimen="xx-archive-091-readable"
+      data-testid={testId}
     >
-      <ArchitecturalNodeTape variant="dark" rotationDeg={-1.2} />
-      <div className={labStyles.facArxxGrain} aria-hidden />
+      <ArchitecturalNodeTape rotationDeg={-1.2} variant="dark" />
+      <div aria-hidden className={labStyles.facArxxGrain} />
       <div className={labStyles.facArxxPage}>
-        <aside className={labStyles.facArxxRail} aria-hidden>
-          <div className={labStyles.facArxxVertical}>{XX_ARCHIVE_091_READABLE_UUID_RAIL_TOP}</div>
+        <aside aria-hidden className={labStyles.facArxxRail}>
+          <div className={labStyles.facArxxVertical}>
+            {XX_ARCHIVE_091_READABLE_UUID_RAIL_TOP}
+          </div>
           <svg className={labStyles.facArxxStar} viewBox="0 0 24 24">
-            <path d="M12 0L14 10L24 12L14 14L12 24L10 14L0 12L10 10L12 0Z" fill="currentColor" />
+            <path
+              d="M12 0L14 10L24 12L14 14L12 24L10 14L0 12L10 10L12 0Z"
+              fill="currentColor"
+            />
           </svg>
-          <div className={labStyles.facArxxVertical}>{XX_ARCHIVE_091_READABLE_UUID_RAIL_BOTTOM}</div>
+          <div className={labStyles.facArxxVertical}>
+            {XX_ARCHIVE_091_READABLE_UUID_RAIL_BOTTOM}
+          </div>
           <div className={labStyles.facArxxBarcode} />
         </aside>
 
         <div className={labStyles.facArxxMain}>
-          <div className={labStyles.facArxxFocusTop} data-hg-lab-arxx-focus-chrome="1">
+          <div
+            className={labStyles.facArxxFocusTop}
+            data-hg-lab-arxx-focus-chrome="1"
+          >
             <div className={labStyles.facArxxPlateHeader}>
               <span className={labStyles.facArxxPlateHeaderTitle}>Faction</span>
               <div className={labStyles.facArxxPlateHeaderActions}>
-                <ArchitecturalTooltip content="Focus Mode" side="bottom" delayMs={320}>
+                <ArchitecturalTooltip
+                  content="Focus Mode"
+                  delayMs={320}
+                  side="bottom"
+                >
                   <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    tone="card-dark"
+                    aria-label="Focus Mode"
                     className={labStyles.facArxxPlateHeaderBtn}
                     data-expand-btn="true"
-                    aria-label="Focus Mode"
                     onClick={() => {}}
+                    size="icon"
+                    tone="card-dark"
+                    type="button"
+                    variant="ghost"
                   >
                     <ArrowsOutSimple size={14} weight="regular" />
                   </Button>
@@ -1419,41 +1724,58 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
             </div>
           </div>
 
-          <div className={labStyles.facArxxRule} role="presentation" aria-hidden />
+          <div
+            aria-hidden
+            className={labStyles.facArxxRule}
+            role="presentation"
+          />
 
           <header className={labStyles.facArxxLetterhead}>
             <div
+              className={cx(
+                cardStyles.charSkShellV11,
+                labStyles.facArxxLetterheadPh
+              )}
               ref={facArxxLetterheadPhRef}
-              className={cx(cardStyles.charSkShellV11, labStyles.facArxxLetterheadPh)}
             >
               <h1
-                className={cx(cardStyles.charSkDisplayName, labStyles.facArxxLetterheadPrimary)}
+                className={cx(
+                  cardStyles.charSkDisplayName,
+                  labStyles.facArxxLetterheadPrimary
+                )}
                 contentEditable
+                data-hg-lore-faction-field="orgNamePrimary"
+                data-hg-lore-field="1"
+                data-hg-lore-ph={LORE_V9_REDACTED_SENTINEL}
+                data-hg-lore-placeholder="true"
                 spellCheck={false}
                 suppressContentEditableWarning
-                data-hg-lore-field="1"
-                data-hg-lore-placeholder="true"
-                data-hg-lore-ph={LORE_V9_REDACTED_SENTINEL}
-                data-hg-lore-faction-field="orgNamePrimary"
               >
                 {LORE_V9_REDACTED_SENTINEL}
               </h1>
               <div
-                className={cx(cardStyles.charSkRole, labStyles.facArxxLetterheadSecondary)}
+                className={cx(
+                  cardStyles.charSkRole,
+                  labStyles.facArxxLetterheadSecondary
+                )}
                 contentEditable
+                data-hg-lore-faction-field="orgNameAccent"
+                data-hg-lore-field="1"
+                data-hg-lore-ph={LORE_V9_REDACTED_SENTINEL}
+                data-hg-lore-placeholder="true"
                 spellCheck={false}
                 suppressContentEditableWarning
-                data-hg-lore-field="1"
-                data-hg-lore-placeholder="true"
-                data-hg-lore-ph={LORE_V9_REDACTED_SENTINEL}
-                data-hg-lore-faction-field="orgNameAccent"
               >
                 {LORE_V9_REDACTED_SENTINEL}
               </div>
             </div>
           </header>
 
-          <div className={labStyles.facArxxRule} role="presentation" aria-hidden />
+          <div
+            aria-hidden
+            className={labStyles.facArxxRule}
+            role="presentation"
+          />
 
           <div className={labStyles.facArxxTextSection}>
             <div className={labStyles.facArxxH2Row}>
@@ -1465,20 +1787,27 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
                 {archiveMemberCount} record{archiveMemberCount === 1 ? "" : "s"}
               </span>
             </div>
-            <FactionArchive091ReadableRosterManager roster={archiveRoster} setRoster={setArchiveRoster} />
+            <FactionArchive091ReadableRosterManager
+              roster={archiveRoster}
+              setRoster={setArchiveRoster}
+            />
           </div>
 
-          <div className={labStyles.facArxxRule} role="presentation" aria-hidden />
+          <div
+            aria-hidden
+            className={labStyles.facArxxRule}
+            role="presentation"
+          />
 
           <div className={labStyles.facArxxTextSection}>
             <h2 className={labStyles.facArxxH2}>Record</h2>
             <div
-              ref={archiveDocumentRef}
               className={labStyles.facArxxDocument}
               contentEditable
+              data-hg-lore-faction-field="document"
+              ref={archiveDocumentRef}
               spellCheck={false}
               suppressHydrationWarning
-              data-hg-lore-faction-field="document"
             />
           </div>
         </div>
@@ -1491,22 +1820,25 @@ function FactionArchive091ReadableV20Body({ testId }: { testId: string }) {
 function FactionLatticeInductionBody({ testId }: { testId: string }) {
   return (
     <div className={labStyles.facLatRoot} data-testid={testId}>
-      <div className={labStyles.facLatScanlines} aria-hidden />
+      <div aria-hidden className={labStyles.facLatScanlines} />
       <div className={labStyles.facLatDoc}>
         <header className={labStyles.facLatMast}>
-          <div className={labStyles.facLatLogoMark} aria-hidden />
+          <div aria-hidden className={labStyles.facLatLogoMark} />
           <div className={labStyles.facLatMastText}>
             <div className={labStyles.facLatMastTitle}>The Lattice</div>
-            <div className={labStyles.facLatMastSub}>Induction · HG-LATTICE · enrollment open</div>
+            <div className={labStyles.facLatMastSub}>
+              Induction · HG-LATTICE · enrollment open
+            </div>
           </div>
         </header>
 
         <p className={labStyles.facLatLead}>
-          Offer: the title of <span className={labStyles.facLatRedacted}>Primary vessel</span> within the Obsidian
-          Reach charter ring.
+          Offer: the title of{" "}
+          <span className={labStyles.facLatRedacted}>Primary vessel</span>{" "}
+          within the Obsidian Reach charter ring.
         </p>
 
-        <ul className={labStyles.facLatStatList} aria-label="Terms">
+        <ul aria-label="Terms" className={labStyles.facLatStatList}>
           <li className={labStyles.facLatStatRow}>
             <span className={labStyles.facLatStatLabel}>Charter stake</span>
             <span className={labStyles.facLatStatVal}>∞ fixed</span>
@@ -1523,7 +1855,8 @@ function FactionLatticeInductionBody({ testId }: { testId: string }) {
 
         <p className={labStyles.facLatOblig}>
           Obligation: hold the Ironwood ledger mesh coherent; invoke{" "}
-          <span className={labStyles.facLatRedacted}>Silencing protocol</span> on divergent tariff paths.
+          <span className={labStyles.facLatRedacted}>Silencing protocol</span>{" "}
+          on divergent tariff paths.
         </p>
 
         <footer className={labStyles.facLatFooter}>
@@ -1547,7 +1880,7 @@ function FactionAeonConclaveBody({ testId }: { testId: string }) {
     <div className={labStyles.facAeonRoot} data-testid={testId}>
       <header className={labStyles.facAeonTopBar}>
         <div className={labStyles.facAeonTopLeft}>
-          <span className={labStyles.facAeonStatusDot} aria-hidden />
+          <span aria-hidden className={labStyles.facAeonStatusDot} />
           <span>Classified · level 9 clearance only</span>
         </div>
         <div className={labStyles.facAeonTopRight}>TS-661.00 · 14:32:08</div>
@@ -1566,7 +1899,7 @@ function FactionAeonConclaveBody({ testId }: { testId: string }) {
       </div>
 
       <div className={labStyles.facAeonGrid}>
-        <aside className={labStyles.facAeonMeta} aria-label="Document metadata">
+        <aside aria-label="Document metadata" className={labStyles.facAeonMeta}>
           <div className={labStyles.facAeonMetaRow}>
             <span>Subject</span>
             <span>The great pillar</span>
@@ -1591,50 +1924,69 @@ function FactionAeonConclaveBody({ testId }: { testId: string }) {
           </div>
         </aside>
 
-        <section className={labStyles.facAeonContent} aria-label="Transmission body">
+        <section
+          aria-label="Transmission body"
+          className={labStyles.facAeonContent}
+        >
           <span className={labStyles.facAeonParaNum}>001</span>
           <p className={labStyles.facAeonP}>
             As established in the prior quorum, the presence of the{" "}
-            <span className={labStyles.facAeonRedacted}>Obsidian monolith</span> within the harbor lower vault has begun
-            to manifest structural drift in local ledger coherence. Initial sensor readings suggest non-linear temporal
-            leakage. We are no longer cataloging an artifact; we are looking at an aperture.
+            <span className={labStyles.facAeonRedacted}>Obsidian monolith</span>{" "}
+            within the harbor lower vault has begun to manifest structural drift
+            in local ledger coherence. Initial sensor readings suggest
+            non-linear temporal leakage. We are no longer cataloging an
+            artifact; we are looking at an aperture.
           </p>
 
-          <div className={labStyles.facAeonVisual} aria-hidden>
+          <div aria-hidden className={labStyles.facAeonVisual}>
             <div className={labStyles.facAeonOrb} />
             <div className={labStyles.facAeonOrbMid} />
             <div className={labStyles.facAeonOrbSm} />
-            <div className={labStyles.facAeonFigCap}>Fig 1.0 · radiant field capture (7.21ms)</div>
+            <div className={labStyles.facAeonFigCap}>
+              Fig 1.0 · radiant field capture (7.21ms)
+            </div>
           </div>
 
           <span className={labStyles.facAeonParaNum}>002</span>
           <p className={labStyles.facAeonP}>
-            Participants scheduled for the <span className={labStyles.facAeonRedacted}>ascension rite</span> must be
-            notified of increased volatility. The Conclave does not guarantee physical cohesion past the threshold. Those
-            who experience <strong className={labStyles.facAeonStrong}>visual echoing</strong> are to report immediately
-            to the Sanitization Ward.
+            Participants scheduled for the{" "}
+            <span className={labStyles.facAeonRedacted}>ascension rite</span>{" "}
+            must be notified of increased volatility. The Conclave does not
+            guarantee physical cohesion past the threshold. Those who experience{" "}
+            <strong className={labStyles.facAeonStrong}>visual echoing</strong>{" "}
+            are to report immediately to the Sanitization Ward.
           </p>
 
           <span className={labStyles.facAeonParaNum}>003</span>
           <p className={labStyles.facAeonP}>
             The following coordinates have been struck from all public maps:{" "}
-            <span className={labStyles.facAeonRedacted}>45.892° N, 12.001° E</span>. Communication regarding the Sound
-            of the Bone will be met with immediate{" "}
-            <span className={labStyles.facAeonRedacted}>Silencing protocol 4</span>.
+            <span className={labStyles.facAeonRedacted}>
+              45.892° N, 12.001° E
+            </span>
+            . Communication regarding the Sound of the Bone will be met with
+            immediate{" "}
+            <span className={labStyles.facAeonRedacted}>
+              Silencing protocol 4
+            </span>
+            .
           </p>
 
           <div className={labStyles.facAeonSignature}>
             <div className={labStyles.facAeonSignCol}>
               <div className={labStyles.facAeonCertLabel}>Certified by</div>
               <div className={labStyles.facAeonSignName}>A. V. Valerius</div>
-              <div className={labStyles.facAeonSignRole}>High priest · ops director</div>
+              <div className={labStyles.facAeonSignRole}>
+                High priest · ops director
+              </div>
             </div>
             <div className={labStyles.facAeonSeal}>VOID</div>
           </div>
         </section>
       </div>
 
-      <div className={labStyles.facAeonFooterRail}>Ironwood conclave · Obsidian Reach registry · void transmission</div>
+      <div className={labStyles.facAeonFooterRail}>
+        Ironwood conclave · Obsidian Reach registry · void transmission
+      </div>
     </div>
   );
 }
@@ -1642,12 +1994,16 @@ function FactionAeonConclaveBody({ testId }: { testId: string }) {
 /** XIII · Protocol Indigo Bloom — cobalt / midnight / orange; editable org + directive + jurisdiction + document; demo `hgArch.factionRoster` block (read-only). */
 function FactionIndigoBloomV13Body({ testId }: { testId: string }) {
   return (
-    <div className={labStyles.facIndigoRoot} data-testid={testId} data-hg-lab-faction-specimen="xiii-indigo-bloom">
-      <div className={labStyles.facIndigoBg} aria-hidden />
-      <div className={labStyles.facIndigoBloom} aria-hidden />
+    <div
+      className={labStyles.facIndigoRoot}
+      data-hg-lab-faction-specimen="xiii-indigo-bloom"
+      data-testid={testId}
+    >
+      <div aria-hidden className={labStyles.facIndigoBg} />
+      <div aria-hidden className={labStyles.facIndigoBloom} />
       <div className={labStyles.facIndigoDoc}>
         <div className={labStyles.facIndigoLayout}>
-          <div className={labStyles.facIndigoRail} aria-hidden>
+          <div aria-hidden className={labStyles.facIndigoRail}>
             EST. 1922 // SECTOR 09 // AZURE BLOOM // LAST UPDATED 2024.10.14
           </div>
           <div className={labStyles.facIndigoMain}>
@@ -1657,26 +2013,37 @@ function FactionIndigoBloomV13Body({ testId }: { testId: string }) {
                   <div
                     className={labStyles.facIndigoTitleLine}
                     contentEditable
+                    data-hg-lore-faction-field="orgNamePrimary"
                     spellCheck={false}
                     suppressContentEditableWarning
-                    data-hg-lore-faction-field="orgNamePrimary"
                   >
                     Symphony of
                   </div>
                   <div
                     className={labStyles.facIndigoTitleAccent}
                     contentEditable
+                    data-hg-lore-faction-field="orgNameAccent"
                     spellCheck={false}
                     suppressContentEditableWarning
-                    data-hg-lore-faction-field="orgNameAccent"
                   >
                     Anemone
                   </div>
                 </div>
               </div>
-              <div className={labStyles.facIndigoSeal} aria-hidden>
-                <svg className={labStyles.facIndigoSealSvg} viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 2" />
+              <div aria-hidden className={labStyles.facIndigoSeal}>
+                <svg
+                  className={labStyles.facIndigoSealSvg}
+                  viewBox="0 0 100 100"
+                >
+                  <circle
+                    cx="50"
+                    cy="50"
+                    fill="none"
+                    r="48"
+                    stroke="currentColor"
+                    strokeDasharray="2 2"
+                    strokeWidth="0.5"
+                  />
                   <path
                     d="M50 10 L60 40 L90 50 L60 60 L50 90 L40 60 L10 50 L40 40 Z"
                     fill="none"
@@ -1684,12 +2051,12 @@ function FactionIndigoBloomV13Body({ testId }: { testId: string }) {
                     strokeWidth="1"
                   />
                   <text
-                    x="50"
-                    y="52"
+                    fill="currentColor"
                     fontFamily="Space Mono, monospace"
                     fontSize="4"
                     textAnchor="middle"
-                    fill="currentColor"
+                    x="50"
+                    y="52"
                   >
                     VOID
                   </text>
@@ -1699,39 +2066,45 @@ function FactionIndigoBloomV13Body({ testId }: { testId: string }) {
             <p
               className={labStyles.facIndigoSubtitle}
               contentEditable
+              data-hg-lore-faction-field="subtitle"
               spellCheck={false}
               suppressContentEditableWarning
-              data-hg-lore-faction-field="subtitle"
             >
               Directive // Protocol IV-Blue
             </p>
             <p
               className={labStyles.facIndigoContext}
               contentEditable
+              data-hg-lore-faction-field="context"
               spellCheck={false}
               suppressContentEditableWarning
-              data-hg-lore-faction-field="context"
             >
               Obsidian Reach
             </p>
-            <div className={labStyles.facIndigoSectionMarker} aria-hidden>
-              <span className={labStyles.facIndigoSectionLabel}>01 // THE VERNAL EQUINOX RITUAL</span>
+            <div aria-hidden className={labStyles.facIndigoSectionMarker}>
+              <span className={labStyles.facIndigoSectionLabel}>
+                01 // THE VERNAL EQUINOX RITUAL
+              </span>
               <hr />
             </div>
             <div
               className={labStyles.facIndigoDocument}
               contentEditable
+              dangerouslySetInnerHTML={{
+                __html: FACTION_LAB_INDIGO_DOCUMENT_HTML,
+              }}
+              data-hg-lore-faction-field="document"
               spellCheck={false}
               suppressHydrationWarning
-              data-hg-lore-faction-field="document"
-              dangerouslySetInnerHTML={{ __html: FACTION_LAB_INDIGO_DOCUMENT_HTML }}
             />
             <FactionLabDemoHgArchRoster variant="indigo" />
-            <div className={labStyles.facIndigoAck} aria-hidden>
+            <div aria-hidden className={labStyles.facIndigoAck}>
               Acknowledge transmission
             </div>
             <footer className={labStyles.facIndigoFooter}>
-              <span className={labStyles.facIndigoFooterWordmark}>ANEMONE.</span>
+              <span className={labStyles.facIndigoFooterWordmark}>
+                ANEMONE.
+              </span>
               <span className={labStyles.facIndigoFooterMeta}>
                 COPYRIGHT © 2024 THE ORDER OF AZURE · ALL DIMENSIONS RESERVED
               </span>
@@ -1748,8 +2121,8 @@ function FactionTerminalFleetV14Body({ testId }: { testId: string }) {
   return (
     <div
       className={labStyles.facTermXivRoot}
-      data-testid={testId}
       data-hg-lab-faction-specimen="xiv-terminal-fleet"
+      data-testid={testId}
     >
       <header className={labStyles.facTermXivHeader}>
         <div className={labStyles.facTermXivHeaderRow}>
@@ -1758,9 +2131,9 @@ function FactionTerminalFleetV14Body({ testId }: { testId: string }) {
             <span
               className={labStyles.facTermXivV}
               contentEditable
+              data-hg-lore-faction-field="orgNamePrimary"
               spellCheck={false}
               suppressContentEditableWarning
-              data-hg-lore-faction-field="orgNamePrimary"
             >
               node-prod-zeus
             </span>
@@ -1770,9 +2143,9 @@ function FactionTerminalFleetV14Body({ testId }: { testId: string }) {
             <span
               className={labStyles.facTermXivV}
               contentEditable
+              data-hg-lore-faction-field="context"
               spellCheck={false}
               suppressContentEditableWarning
-              data-hg-lore-faction-field="context"
             >
               production
             </span>
@@ -1784,9 +2157,9 @@ function FactionTerminalFleetV14Body({ testId }: { testId: string }) {
             <span
               className={labStyles.facTermXivV}
               contentEditable
+              data-hg-lore-faction-field="subtitle"
               spellCheck={false}
               suppressContentEditableWarning
-              data-hg-lore-faction-field="subtitle"
             >
               CHARTER // HEARTWOOD EXCHANGE · RING 7
             </span>
@@ -1797,10 +2170,10 @@ function FactionTerminalFleetV14Body({ testId }: { testId: string }) {
       <div
         className={labStyles.facTermXivDocument}
         contentEditable
+        dangerouslySetInnerHTML={{ __html: FACTION_LAB_TERMINAL_DOCUMENT_HTML }}
+        data-hg-lore-faction-field="document"
         spellCheck={false}
         suppressHydrationWarning
-        data-hg-lore-faction-field="document"
-        dangerouslySetInnerHTML={{ __html: FACTION_LAB_TERMINAL_DOCUMENT_HTML }}
       />
 
       <FactionLabDemoHgArchRoster variant="terminal" />
@@ -1813,12 +2186,12 @@ function FactionOcularMandateV15Body({ testId }: { testId: string }) {
   return (
     <div
       className={labStyles.facOcularRoot}
-      data-testid={testId}
       data-hg-lab-faction-specimen="xv-ocular-mandate"
+      data-testid={testId}
     >
-      <div className={labStyles.facOcularGridBg} aria-hidden />
+      <div aria-hidden className={labStyles.facOcularGridBg} />
       <div className={labStyles.facOcularFrame}>
-        <div className={labStyles.facOcularRail} aria-hidden>
+        <div aria-hidden className={labStyles.facOcularRail}>
           protocol 09 · class omega · node 009
         </div>
         <div className={labStyles.facOcularMain}>
@@ -1828,9 +2201,9 @@ function FactionOcularMandateV15Body({ testId }: { testId: string }) {
               <div
                 className={labStyles.facOcularContext}
                 contentEditable
+                data-hg-lore-faction-field="context"
                 spellCheck={false}
                 suppressContentEditableWarning
-                data-hg-lore-faction-field="context"
               >
                 Central Command / Sector 7
               </div>
@@ -1844,18 +2217,18 @@ function FactionOcularMandateV15Body({ testId }: { testId: string }) {
             <div
               className={labStyles.facOcularStripedLg}
               contentEditable
+              data-hg-lore-faction-field="orgNamePrimary"
               spellCheck={false}
               suppressContentEditableWarning
-              data-hg-lore-faction-field="orgNamePrimary"
             >
               Ocular
             </div>
             <div
               className={labStyles.facOcularStripedSm}
               contentEditable
+              data-hg-lore-faction-field="orgNameAccent"
               spellCheck={false}
               suppressContentEditableWarning
-              data-hg-lore-faction-field="orgNameAccent"
             >
               Sovereignty
             </div>
@@ -1866,9 +2239,9 @@ function FactionOcularMandateV15Body({ testId }: { testId: string }) {
             <span
               className={labStyles.facOcularSubjectVal}
               contentEditable
+              data-hg-lore-faction-field="subtitle"
               spellCheck={false}
               suppressContentEditableWarning
-              data-hg-lore-faction-field="subtitle"
             >
               THE OCULAR MANDATE // PROTOCOL 09
             </span>
@@ -1877,19 +2250,23 @@ function FactionOcularMandateV15Body({ testId }: { testId: string }) {
           <div
             className={labStyles.facOcularDocument}
             contentEditable
+            dangerouslySetInnerHTML={{
+              __html: FACTION_LAB_OCULAR_DOCUMENT_HTML,
+            }}
+            data-hg-lore-faction-field="document"
             spellCheck={false}
             suppressHydrationWarning
-            data-hg-lore-faction-field="document"
-            dangerouslySetInnerHTML={{ __html: FACTION_LAB_OCULAR_DOCUMENT_HTML }}
           />
 
-          <div className={labStyles.facOcularEvidence} aria-hidden>
-            <span className={labStyles.facOcularEvidenceInner}>evidence slot · no image in lab</span>
+          <div aria-hidden className={labStyles.facOcularEvidence}>
+            <span className={labStyles.facOcularEvidenceInner}>
+              evidence slot · no image in lab
+            </span>
           </div>
 
           <FactionLabDemoHgArchRoster variant="ocular" />
 
-          <div className={labStyles.facOcularFooterSlug} aria-hidden>
+          <div aria-hidden className={labStyles.facOcularFooterSlug}>
             mandate.sys / verify
           </div>
         </div>
@@ -1907,10 +2284,10 @@ function FactionOcularMandateLightV19Body({ testId }: { testId: string }) {
   return (
     <div
       className={labStyles.facOclmRoot}
-      data-testid={testId}
       data-hg-lab-faction-specimen="xix-ocular-mandate-light"
+      data-testid={testId}
     >
-      <div className={labStyles.facOclmGridBg} aria-hidden />
+      <div aria-hidden className={labStyles.facOclmGridBg} />
       <div className={labStyles.facOclmMain}>
         <header className={labStyles.facOclmHeader}>
           <div className={labStyles.facOclmHeaderLeft}>
@@ -1918,9 +2295,9 @@ function FactionOcularMandateLightV19Body({ testId }: { testId: string }) {
             <div
               className={labStyles.facOclmContext}
               contentEditable
+              data-hg-lore-faction-field="context"
               spellCheck={false}
               suppressContentEditableWarning
-              data-hg-lore-faction-field="context"
             >
               Central Command / Sector 7
             </div>
@@ -1933,9 +2310,9 @@ function FactionOcularMandateLightV19Body({ testId }: { testId: string }) {
         <h2
           className={labStyles.facOclmTitle}
           contentEditable
+          data-hg-lore-faction-field="orgNamePrimary"
           spellCheck={false}
           suppressContentEditableWarning
-          data-hg-lore-faction-field="orgNamePrimary"
         >
           Ocular sovereignty
         </h2>
@@ -1945,9 +2322,9 @@ function FactionOcularMandateLightV19Body({ testId }: { testId: string }) {
           <span
             className={labStyles.facOclmSubjectVal}
             contentEditable
+            data-hg-lore-faction-field="subtitle"
             spellCheck={false}
             suppressContentEditableWarning
-            data-hg-lore-faction-field="subtitle"
           >
             THE OCULAR MANDATE // PROTOCOL 09
           </span>
@@ -1956,19 +2333,21 @@ function FactionOcularMandateLightV19Body({ testId }: { testId: string }) {
         <div
           className={labStyles.facOclmDocument}
           contentEditable
+          dangerouslySetInnerHTML={{ __html: FACTION_LAB_OCULAR_DOCUMENT_HTML }}
+          data-hg-lore-faction-field="document"
           spellCheck={false}
           suppressHydrationWarning
-          data-hg-lore-faction-field="document"
-          dangerouslySetInnerHTML={{ __html: FACTION_LAB_OCULAR_DOCUMENT_HTML }}
         />
 
-        <div className={labStyles.facOclmEvidence} aria-hidden>
-          <span className={labStyles.facOclmEvidenceInner}>evidence slot · no image in lab</span>
+        <div aria-hidden className={labStyles.facOclmEvidence}>
+          <span className={labStyles.facOclmEvidenceInner}>
+            evidence slot · no image in lab
+          </span>
         </div>
 
         <FactionLabDemoHgArchRoster variant="ocularLight" />
 
-        <div className={labStyles.facOclmFooterSlug} aria-hidden>
+        <div aria-hidden className={labStyles.facOclmFooterSlug}>
           mandate.sys / verify
         </div>
       </div>
@@ -1981,88 +2360,136 @@ function FactionSynthesisArchiveV16Body({ testId }: { testId: string }) {
   return (
     <div
       className={labStyles.facSynthRoot}
-      data-testid={testId}
       data-hg-lab-faction-specimen="xvi-synthesis-archive"
+      data-testid={testId}
     >
-      <div className={labStyles.facSynthNoise} aria-hidden />
-      <nav className={labStyles.facSynthNav} aria-label="Archive navigation (decorative)">
-        <div className={cx(labStyles.facSynthPill, labStyles.facSynthPillTopLeft)}>
+      <div aria-hidden className={labStyles.facSynthNoise} />
+      <nav
+        aria-label="Archive navigation (decorative)"
+        className={labStyles.facSynthNav}
+      >
+        <div
+          className={cx(labStyles.facSynthPill, labStyles.facSynthPillTopLeft)}
+        >
           <span className={labStyles.facSynthPillIndex}>01</span>
           <span className={labStyles.facSynthPillText}>Index / Directory</span>
         </div>
-        <div className={cx(labStyles.facSynthPill, labStyles.facSynthPillTopRight)}>
+        <div
+          className={cx(labStyles.facSynthPill, labStyles.facSynthPillTopRight)}
+        >
           <span className={labStyles.facSynthPillIndex}>02</span>
           <span className={labStyles.facSynthPillText}>Synthesis Archive</span>
         </div>
-        <div className={cx(labStyles.facSynthPill, labStyles.facSynthPillBottomLeft)}>
+        <div
+          className={cx(
+            labStyles.facSynthPill,
+            labStyles.facSynthPillBottomLeft
+          )}
+        >
           <span className={labStyles.facSynthPillIndex}>MTL</span>
-          <span className={labStyles.facSynthPillText}>45.5017° N, 73.5673° W</span>
+          <span className={labStyles.facSynthPillText}>
+            45.5017° N, 73.5673° W
+          </span>
         </div>
-        <div className={cx(labStyles.facSynthPill, labStyles.facSynthPillBottomRight)}>
+        <div
+          className={cx(
+            labStyles.facSynthPill,
+            labStyles.facSynthPillBottomRight
+          )}
+        >
           <span className={labStyles.facSynthPillIndex}>SYS</span>
-          <span className={labStyles.facSynthPillTime} data-time="12:00:00" title="Static time (lab)" />
+          <span
+            className={labStyles.facSynthPillTime}
+            data-time="12:00:00"
+            title="Static time (lab)"
+          />
         </div>
       </nav>
 
       <div className={labStyles.facSynthMain}>
-        <section className={labStyles.facSynthHero} aria-labelledby="fac-synth-hero-title">
+        <section
+          aria-labelledby="fac-synth-hero-title"
+          className={labStyles.facSynthHero}
+        >
           <div className={labStyles.facSynthMetaHeader}>
             <div
               contentEditable
+              data-hg-lore-faction-field="context"
               spellCheck={false}
               suppressContentEditableWarning
-              data-hg-lore-faction-field="context"
             >
               XJ92+WF MONTREAL, QC
             </div>
             <div
               contentEditable
+              data-hg-lore-faction-field="orgNameAccent"
               spellCheck={false}
               suppressContentEditableWarning
-              data-hg-lore-faction-field="orgNameAccent"
             >
               EST. 2024 / ARCHIVE-V1
             </div>
           </div>
 
-          <h1 id="fac-synth-hero-title" className={labStyles.facSynthMainTitle}>
+          <h1 className={labStyles.facSynthMainTitle} id="fac-synth-hero-title">
             <span
               contentEditable
+              data-hg-lore-faction-field="orgNamePrimary"
               spellCheck={false}
               suppressContentEditableWarning
-              data-hg-lore-faction-field="orgNamePrimary"
             >
               Synthesis
             </span>
           </h1>
 
           <div className={labStyles.facSynthStrip}>
-            <div className={cx(labStyles.facSynthStripCell, labStyles.facSynthStripSpan3)}>
+            <div
+              className={cx(
+                labStyles.facSynthStripCell,
+                labStyles.facSynthStripSpan3
+              )}
+            >
               Discipline / Research
             </div>
-            <div className={cx(labStyles.facSynthStripCell, labStyles.facSynthStripSpan3)}>Status / Active</div>
-            <div className={cx(labStyles.facSynthStripMission, labStyles.facSynthStripSpan6)}>
+            <div
+              className={cx(
+                labStyles.facSynthStripCell,
+                labStyles.facSynthStripSpan3
+              )}
+            >
+              Status / Active
+            </div>
+            <div
+              className={cx(
+                labStyles.facSynthStripMission,
+                labStyles.facSynthStripSpan6
+              )}
+            >
               <span
                 contentEditable
+                data-hg-lore-faction-field="subtitle"
                 spellCheck={false}
                 suppressContentEditableWarning
-                data-hg-lore-faction-field="subtitle"
               >
-                Our mission is to bridge the architectural divide between code and kinetic design. Structure is the
-                primary interface.
+                Our mission is to bridge the architectural divide between code
+                and kinetic design. Structure is the primary interface.
               </span>
             </div>
           </div>
         </section>
 
-        <section className={labStyles.facSynthArchive} aria-label="Charter and roster">
+        <section
+          aria-label="Charter and roster"
+          className={labStyles.facSynthArchive}
+        >
           <div
             className={labStyles.facSynthDocument}
             contentEditable
+            dangerouslySetInnerHTML={{
+              __html: FACTION_LAB_SYNTH_DOCUMENT_HTML,
+            }}
+            data-hg-lore-faction-field="document"
             spellCheck={false}
             suppressHydrationWarning
-            data-hg-lore-faction-field="document"
-            dangerouslySetInnerHTML={{ __html: FACTION_LAB_SYNTH_DOCUMENT_HTML }}
           />
 
           <FactionLabDemoHgArchRoster variant="synthesis" />
@@ -2070,17 +2497,30 @@ function FactionSynthesisArchiveV16Body({ testId }: { testId: string }) {
       </div>
 
       <svg
+        aria-hidden
         className={labStyles.facSynthDecoration}
-        width="400"
+        fill="none"
         height="400"
         viewBox="0 0 400 400"
-        fill="none"
+        width="400"
         xmlns="http://www.w3.org/2000/svg"
-        aria-hidden
       >
-        <circle cx="200" cy="200" r="199.5" stroke="#0033FF" strokeDasharray="2 4" />
+        <circle
+          cx="200"
+          cy="200"
+          r="199.5"
+          stroke="#0033FF"
+          strokeDasharray="2 4"
+        />
         <path d="M200 0V400M0 200H400" stroke="#0033FF" strokeWidth="0.5" />
-        <rect x="100" y="100" width="200" height="200" stroke="#0033FF" strokeWidth="0.5" />
+        <rect
+          height="200"
+          stroke="#0033FF"
+          strokeWidth="0.5"
+          width="200"
+          x="100"
+          y="100"
+        />
       </svg>
     </div>
   );
@@ -2137,34 +2577,52 @@ function FactionEssentialistIdV17Body({ testId }: { testId: string }) {
   return (
     <div
       className={labStyles.facEssIdRoot}
-      data-testid={testId}
       data-hg-lab-faction-specimen="xvii-essentialist-faction"
+      data-testid={testId}
     >
-      <div className={labStyles.facEssIdEnvGrid} aria-hidden />
+      <div aria-hidden className={labStyles.facEssIdEnvGrid} />
       <div className={labStyles.facEssIdScene}>
         <div className={labStyles.facEssIdBadge}>
-          <span className={cx(labStyles.facEssIdRegMark, labStyles.facEssIdRegTl)} aria-hidden />
-          <span className={cx(labStyles.facEssIdRegMark, labStyles.facEssIdRegTr)} aria-hidden />
-          <span className={cx(labStyles.facEssIdRegMark, labStyles.facEssIdRegBl)} aria-hidden />
-          <span className={cx(labStyles.facEssIdRegMark, labStyles.facEssIdRegBr)} aria-hidden />
-          <span className={cx(labStyles.facEssIdCutCorner, labStyles.facEssIdCutTl)} aria-hidden />
-          <span className={cx(labStyles.facEssIdCutCorner, labStyles.facEssIdCutBr)} aria-hidden />
+          <span
+            aria-hidden
+            className={cx(labStyles.facEssIdRegMark, labStyles.facEssIdRegTl)}
+          />
+          <span
+            aria-hidden
+            className={cx(labStyles.facEssIdRegMark, labStyles.facEssIdRegTr)}
+          />
+          <span
+            aria-hidden
+            className={cx(labStyles.facEssIdRegMark, labStyles.facEssIdRegBl)}
+          />
+          <span
+            aria-hidden
+            className={cx(labStyles.facEssIdRegMark, labStyles.facEssIdRegBr)}
+          />
+          <span
+            aria-hidden
+            className={cx(labStyles.facEssIdCutCorner, labStyles.facEssIdCutTl)}
+          />
+          <span
+            aria-hidden
+            className={cx(labStyles.facEssIdCutCorner, labStyles.facEssIdCutBr)}
+          />
 
           <div className={labStyles.facEssIdHeader}>
             <div className={labStyles.facEssIdHeaderMeta}>
               <span
                 contentEditable
+                data-hg-lore-faction-field="context"
                 spellCheck={false}
                 suppressContentEditableWarning
-                data-hg-lore-faction-field="context"
               >
                 FACTION_AUTH_NODE
               </span>
               <span
                 contentEditable
+                data-hg-lore-faction-field="orgNameAccent"
                 spellCheck={false}
                 suppressContentEditableWarning
-                data-hg-lore-faction-field="orgNameAccent"
               >
                 PARENT: HEARTCORE
               </span>
@@ -2174,13 +2632,15 @@ function FactionEssentialistIdV17Body({ testId }: { testId: string }) {
           <div className={labStyles.facEssIdBodySection}>
             <div className={labStyles.facEssIdRowIdentity}>
               <div className={labStyles.facEssIdIdentityBlock}>
-                <span className={labStyles.facEssIdLabelMicro}>Organization</span>
+                <span className={labStyles.facEssIdLabelMicro}>
+                  Organization
+                </span>
                 <h1
                   className={labStyles.facEssIdNamePrimary}
                   contentEditable
+                  data-hg-lore-faction-field="orgNamePrimary"
                   spellCheck={false}
                   suppressContentEditableWarning
-                  data-hg-lore-faction-field="orgNamePrimary"
                 >
                   ESSENTIALIST DIRECTORATE
                 </h1>
@@ -2188,9 +2648,9 @@ function FactionEssentialistIdV17Body({ testId }: { testId: string }) {
               <div
                 className={labStyles.facEssIdClearanceBadge}
                 contentEditable
+                data-hg-lore-faction-field="subtitle"
                 spellCheck={false}
                 suppressContentEditableWarning
-                data-hg-lore-faction-field="subtitle"
               >
                 CHARTER · OMN-9
               </div>
@@ -2198,8 +2658,12 @@ function FactionEssentialistIdV17Body({ testId }: { testId: string }) {
 
             <div className={labStyles.facEssIdRowData}>
               <div className={labStyles.facEssIdDataCell}>
-                <span className={labStyles.facEssIdLabelMicro}>Jurisdiction</span>
-                <span className={labStyles.facEssIdDataValue}>Obsidian Reach · Sector 7</span>
+                <span className={labStyles.facEssIdLabelMicro}>
+                  Jurisdiction
+                </span>
+                <span className={labStyles.facEssIdDataValue}>
+                  Obsidian Reach · Sector 7
+                </span>
               </div>
               <div className={labStyles.facEssIdDataCell}>
                 <span className={labStyles.facEssIdLabelMicro}>Registry</span>
@@ -2212,7 +2676,9 @@ function FactionEssentialistIdV17Body({ testId }: { testId: string }) {
                 <span className={labStyles.facEssIdDataValue}>ACTIVE</span>
               </div>
               <div className={labStyles.facEssIdDataCell}>
-                <span className={labStyles.facEssIdLabelMicro}>Charter cycle</span>
+                <span className={labStyles.facEssIdLabelMicro}>
+                  Charter cycle
+                </span>
                 <span className={labStyles.facEssIdDataValue}>2084.11.04</span>
               </div>
             </div>
@@ -2222,23 +2688,28 @@ function FactionEssentialistIdV17Body({ testId }: { testId: string }) {
             <div
               className={labStyles.facEssIdCharter}
               contentEditable
+              dangerouslySetInnerHTML={{
+                __html: FACTION_LAB_ESSENTIALIST_CHARTER_HTML,
+              }}
+              data-hg-lore-faction-field="document"
               spellCheck={false}
               suppressHydrationWarning
-              data-hg-lore-faction-field="document"
-              dangerouslySetInnerHTML={{ __html: FACTION_LAB_ESSENTIALIST_CHARTER_HTML }}
             />
 
             <div className={labStyles.facEssIdFooter}>
-              <div className={labStyles.facEssIdBarcode} aria-hidden>
+              <div aria-hidden className={labStyles.facEssIdBarcode}>
                 {ESSENTIALIST_ID_BAR_STRIP.map((b, i) => (
                   <span
+                    className={cx(
+                      labStyles.facEssIdBar,
+                      b.half ? labStyles.facEssIdBarHalf : undefined
+                    )}
                     key={i}
-                    className={cx(labStyles.facEssIdBar, b.half ? labStyles.facEssIdBarHalf : undefined)}
                     style={{ width: b.w, height: b.half ? "60%" : "100%" }}
                   />
                 ))}
               </div>
-              <div className={labStyles.facEssIdRegistryLine} aria-hidden>
+              <div aria-hidden className={labStyles.facEssIdRegistryLine}>
                 FAC&lt;&lt;ESSENTIALIST&lt;&lt;DIR&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;
               </div>
             </div>
@@ -2257,33 +2728,35 @@ function FactionClandestineBriefV18Body({ testId }: { testId: string }) {
   return (
     <div
       className={labStyles.facClandRoot}
-      data-testid={testId}
       data-hg-lab-faction-specimen="xviii-clandestine-brief"
+      data-testid={testId}
     >
-      <div className={labStyles.facAeonProtoAura} aria-hidden />
-      <div className={labStyles.facAeonProtoGrain} aria-hidden />
-      <div className={labStyles.facClandGridBg} aria-hidden />
+      <div aria-hidden className={labStyles.facAeonProtoAura} />
+      <div aria-hidden className={labStyles.facAeonProtoGrain} />
+      <div aria-hidden className={labStyles.facClandGridBg} />
 
       <div className={labStyles.facClandInner}>
         <header className={labStyles.facClandClassifiedBar}>
           <div className={labStyles.facClandClassifiedLeft}>
-            <span className={labStyles.facClandStatusDot} aria-hidden />
+            <span aria-hidden className={labStyles.facClandStatusDot} />
             <span>Classified · level 8 clearance only</span>
           </div>
-          <div className={labStyles.facClandClassifiedRight}>TS-BU-661.18 · 09:14:00</div>
+          <div className={labStyles.facClandClassifiedRight}>
+            TS-BU-661.18 · 09:14:00
+          </div>
         </header>
 
         <div className={labStyles.facClandDocShell}>
-          <span className={labStyles.facAeonProtoChTL} aria-hidden />
-          <span className={labStyles.facAeonProtoChTR} aria-hidden />
-          <span className={labStyles.facAeonProtoChBL} aria-hidden />
-          <span className={labStyles.facAeonProtoChBR} aria-hidden />
+          <span aria-hidden className={labStyles.facAeonProtoChTL} />
+          <span aria-hidden className={labStyles.facAeonProtoChTR} />
+          <span aria-hidden className={labStyles.facAeonProtoChBL} />
+          <span aria-hidden className={labStyles.facAeonProtoChBR} />
 
           <div className={labStyles.facAeonProtoTop}>
             <div className={labStyles.facAeonProtoStampLeft}>
               <span className={labStyles.facAeonProtoSlashed}>18.04.2026</span>
               <span>INDEX_0189</span>
-              <span className={labStyles.facAeonProtoIndexNum} aria-hidden>
+              <span aria-hidden className={labStyles.facAeonProtoIndexNum}>
                 18
               </span>
             </div>
@@ -2301,31 +2774,31 @@ function FactionClandestineBriefV18Body({ testId }: { testId: string }) {
             <div
               className={labStyles.facClandStripedLg}
               contentEditable
+              data-hg-lore-faction-field="orgNamePrimary"
               spellCheck={false}
               suppressContentEditableWarning
-              data-hg-lore-faction-field="orgNamePrimary"
             >
               AEON
             </div>
             <div
               className={labStyles.facClandStripedSm}
               contentEditable
+              data-hg-lore-faction-field="orgNameAccent"
               spellCheck={false}
               suppressContentEditableWarning
-              data-hg-lore-faction-field="orgNameAccent"
             >
               Registry annex
             </div>
           </div>
 
           <h2 className={labStyles.facAeonProtoSubject}>
-            <span className={labStyles.facAeonProtoSubjectDot} aria-hidden />
+            <span aria-hidden className={labStyles.facAeonProtoSubjectDot} />
             <span
               className={labStyles.facClandSubjectText}
               contentEditable
+              data-hg-lore-faction-field="subtitle"
               spellCheck={false}
               suppressContentEditableWarning
-              data-hg-lore-faction-field="subtitle"
             >
               Subject: internal circulation file Ø-18
             </span>
@@ -2333,13 +2806,15 @@ function FactionClandestineBriefV18Body({ testId }: { testId: string }) {
 
           <div className={labStyles.facClandJurisdictionRow}>
             <div className={labStyles.facClandJurisdictionInner}>
-              <div className={labStyles.facClandJurisdictionK}>jurisdiction</div>
+              <div className={labStyles.facClandJurisdictionK}>
+                jurisdiction
+              </div>
               <div
                 className={labStyles.facClandJurisdictionVal}
                 contentEditable
+                data-hg-lore-faction-field="context"
                 spellCheck={false}
                 suppressContentEditableWarning
-                data-hg-lore-faction-field="context"
               >
                 Obsidian Reach · sector registry
               </div>
@@ -2350,16 +2825,20 @@ function FactionClandestineBriefV18Body({ testId }: { testId: string }) {
           <div
             className={labStyles.facClandDocument}
             contentEditable
+            dangerouslySetInnerHTML={{
+              __html: FACTION_LAB_CLANDESTINE_DOCUMENT_HTML,
+            }}
+            data-hg-lore-faction-field="document"
             spellCheck={false}
             suppressHydrationWarning
-            data-hg-lore-faction-field="document"
-            dangerouslySetInnerHTML={{ __html: FACTION_LAB_CLANDESTINE_DOCUMENT_HTML }}
           />
 
           <FactionLabDemoHgArchRoster variant="clandestine" />
 
           <div className={labStyles.facAeonProtoBottom}>
-            <div className={labStyles.facAeonProtoStampBox}>Eyes only · internal circulation</div>
+            <div className={labStyles.facAeonProtoStampBox}>
+              Eyes only · internal circulation
+            </div>
             <p className={labStyles.facAeonProtoRegistry}>
               Bureau of annex filings · Girona branch · unit 18
               <br />
@@ -2380,19 +2859,19 @@ function FactionClandestineBriefV18Body({ testId }: { testId: string }) {
 function FactionAeonProtocolClassifiedBody({ testId }: { testId: string }) {
   return (
     <div className={labStyles.facAeonProtoRoot} data-testid={testId}>
-      <div className={labStyles.facAeonProtoAura} aria-hidden />
-      <div className={labStyles.facAeonProtoGrain} aria-hidden />
+      <div aria-hidden className={labStyles.facAeonProtoAura} />
+      <div aria-hidden className={labStyles.facAeonProtoGrain} />
       <div className={labStyles.facAeonProtoDoc}>
-        <span className={labStyles.facAeonProtoChTL} aria-hidden />
-        <span className={labStyles.facAeonProtoChTR} aria-hidden />
-        <span className={labStyles.facAeonProtoChBL} aria-hidden />
-        <span className={labStyles.facAeonProtoChBR} aria-hidden />
+        <span aria-hidden className={labStyles.facAeonProtoChTL} />
+        <span aria-hidden className={labStyles.facAeonProtoChTR} />
+        <span aria-hidden className={labStyles.facAeonProtoChBL} />
+        <span aria-hidden className={labStyles.facAeonProtoChBR} />
 
         <div className={labStyles.facAeonProtoTop}>
           <div className={labStyles.facAeonProtoStampLeft}>
             <span className={labStyles.facAeonProtoSlashed}>28.02.2025</span>
             <span>INDEX_0089</span>
-            <span className={labStyles.facAeonProtoIndexNum} aria-hidden>
+            <span aria-hidden className={labStyles.facAeonProtoIndexNum}>
               09
             </span>
           </div>
@@ -2407,27 +2886,34 @@ function FactionAeonProtocolClassifiedBody({ testId }: { testId: string }) {
         </div>
 
         <h2 className={labStyles.facAeonProtoSubject}>
-          <span className={labStyles.facAeonProtoSubjectDot} aria-hidden />
+          <span aria-hidden className={labStyles.facAeonProtoSubjectDot} />
           Subject: initiation of protocol Ø-9
         </h2>
 
         <div className={labStyles.facAeonProtoBody}>
           <p>
-            Manifestation began at <span className={labStyles.facAeonProtoRedact}>14:22 HRS</span> in the primary
-            sanctum. Observers noted atmospheric shift and{" "}
-            <span className={labStyles.facAeonProtoRedact}>spectral resonance</span> beyond nominal thresholds.
+            Manifestation began at{" "}
+            <span className={labStyles.facAeonProtoRedact}>14:22 HRS</span> in
+            the primary sanctum. Observers noted atmospheric shift and{" "}
+            <span className={labStyles.facAeonProtoRedact}>
+              spectral resonance
+            </span>{" "}
+            beyond nominal thresholds.
           </p>
           <p>
-            Maintain silence until final sync — scrub auditory data per Aeon Protocol. Do not fix on the{" "}
-            <span className={labStyles.facAeonProtoRedact}>bleeding light</span>. Geometry is no longer Euclidean;
-            Obsidian Reach observers only.
+            Maintain silence until final sync — scrub auditory data per Aeon
+            Protocol. Do not fix on the{" "}
+            <span className={labStyles.facAeonProtoRedact}>bleeding light</span>
+            . Geometry is no longer Euclidean; Obsidian Reach observers only.
           </p>
         </div>
 
         <div className={labStyles.facAeonProtoGrid}>
           <div className={labStyles.facAeonProtoCell}>
             <span className={labStyles.facAeonProtoLabel}>Coordinates</span>
-            <span className={labStyles.facAeonProtoVal}>41.9794° N, 2.8214° E</span>
+            <span className={labStyles.facAeonProtoVal}>
+              41.9794° N, 2.8214° E
+            </span>
           </div>
           <div className={labStyles.facAeonProtoCell}>
             <span className={labStyles.facAeonProtoLabel}>Stability</span>
@@ -2444,7 +2930,9 @@ function FactionAeonProtocolClassifiedBody({ testId }: { testId: string }) {
         </div>
 
         <div className={labStyles.facAeonProtoBottom}>
-          <div className={labStyles.facAeonProtoStampBox}>Eyes only · top secret</div>
+          <div className={labStyles.facAeonProtoStampBox}>
+            Eyes only · top secret
+          </div>
           <p className={labStyles.facAeonProtoRegistry}>
             AEON order · Girona branch · unit 9
             <br />
@@ -2464,20 +2952,24 @@ function FactionAeonProtocolClassifiedBody({ testId }: { testId: string }) {
 function FactionShelfCardBody({ testId }: { testId: string }) {
   return (
     <div className={labStyles.facShelfRoot} data-testid={testId}>
-      <div className={labStyles.facShelfTitle}>Ironwood Mercantile Exchange</div>
+      <div className={labStyles.facShelfTitle}>
+        Ironwood Mercantile Exchange
+      </div>
       <div className={labStyles.facShelfLine}>
         <span className={labStyles.facShelfKey}>Jurisdiction</span>
-        <span className={labStyles.facShelfDots} aria-hidden />
+        <span aria-hidden className={labStyles.facShelfDots} />
         <span className={labStyles.facShelfVal}>Obsidian Reach</span>
       </div>
       <div className={labStyles.facShelfLine}>
         <span className={labStyles.facShelfKey}>Class</span>
-        <span className={labStyles.facShelfDots} aria-hidden />
-        <span className={labStyles.facShelfVal}>Faction · charter registry</span>
+        <span aria-hidden className={labStyles.facShelfDots} />
+        <span className={labStyles.facShelfVal}>
+          Faction · charter registry
+        </span>
       </div>
       <div className={labStyles.facShelfLine}>
         <span className={labStyles.facShelfKey}>Cross-ref</span>
-        <span className={labStyles.facShelfDots} aria-hidden />
+        <span aria-hidden className={labStyles.facShelfDots} />
         <span className={labStyles.facShelfVal}>RG-EMB · harbor tariff</span>
       </div>
       <div className={labStyles.facShelfStamp}>CATALOG · NON-CIRC</div>
@@ -2504,33 +2996,54 @@ function LabSkeuoCard({
     (event: ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       event.target.value = "";
-      if (!file || !file.type.startsWith("image/")) return;
+      if (!(file && file.type.startsWith("image/"))) {
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => {
         const dataUrl = reader.result as string;
         const alt =
-          file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() || "Portrait";
+          file.name
+            .replace(/\.[^.]+$/, "")
+            .replace(/[-_]+/g, " ")
+            .trim() || "Portrait";
         setBodyAfterUpload((prev) =>
-          applyImageDataUrlToArchitecturalMediaBody(prev, dataUrl, alt, portraitCommittedClass, {
-            uploadButtonClass: canvasStyles.mediaUploadBtn,
-          }),
+          applyImageDataUrlToArchitecturalMediaBody(
+            prev,
+            dataUrl,
+            alt,
+            portraitCommittedClass,
+            {
+              uploadButtonClass: canvasStyles.mediaUploadBtn,
+            }
+          )
         );
       };
       reader.readAsDataURL(file);
     },
-    [portraitCommittedClass],
+    [portraitCommittedClass]
   );
 
   useEffect(() => {
     const root = rootRef.current;
-    if (!root) return;
+    if (!root) {
+      return;
+    }
     const stopCaretDrift = (e: MouseEvent) => {
-      const t = (e.target as HTMLElement).closest("[data-architectural-media-upload]");
-      if (t && root.contains(t)) e.preventDefault();
+      const t = (e.target as HTMLElement).closest(
+        "[data-architectural-media-upload]"
+      );
+      if (t && root.contains(t)) {
+        e.preventDefault();
+      }
     };
     const onUploadClick = (e: MouseEvent) => {
-      const t = (e.target as HTMLElement).closest("[data-architectural-media-upload]");
-      if (!t || !root.contains(t)) return;
+      const t = (e.target as HTMLElement).closest(
+        "[data-architectural-media-upload]"
+      );
+      if (!(t && root.contains(t))) {
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
       portraitFileRef.current?.click();
@@ -2547,14 +3060,18 @@ function LabSkeuoCard({
 
   useLayoutEffect(() => {
     const body = labBodyRef.current;
-    if (body) applySpellcheckToNestedEditables(body, false);
+    if (body) {
+      applySpellcheckToNestedEditables(body, false);
+    }
     syncCharSkDisplayNameStack(rootRef.current);
     syncLoreV9RedactedPlaceholderState(rootRef.current);
   }, [displayHtml]);
 
   useLayoutEffect(() => {
     const root = rootRef.current;
-    if (!root) return;
+    if (!root) {
+      return;
+    }
     const removeGuards = installLorePlaceholderSelectionGuards(root);
     const removePhCaret = installLoreV11PlaceholderCaretSync(root);
     const onInput = () => {
@@ -2562,20 +3079,30 @@ function LabSkeuoCard({
     };
     const onBeforeInput = (e: Event) => {
       const ie = e as InputEvent;
-      const field = (ie.target as HTMLElement | null)?.closest?.("[data-hg-lore-field]");
-      if (!field || !(field instanceof HTMLElement)) return;
-      if (!consumeLorePlaceholderBeforeInput(field, ie)) return;
+      const field = (ie.target as HTMLElement | null)?.closest?.(
+        "[data-hg-lore-field]"
+      );
+      if (!(field && field instanceof HTMLElement)) {
+        return;
+      }
+      if (!consumeLorePlaceholderBeforeInput(field, ie)) {
+        return;
+      }
       syncCharSkDisplayNameStack(root);
       syncLoreV9RedactedPlaceholderState(root);
       queueMicrotask(() => {
-        if (field.isConnected) placeCaretAfterLorePlaceholderReplace(field);
+        if (field.isConnected) {
+          placeCaretAfterLorePlaceholderReplace(field);
+        }
       });
     };
     const onFocusOut = (e: FocusEvent) => {
       const t = (e.target as HTMLElement | null)?.closest?.(
-        '[class*="charSkDisplayName"][data-hg-lore-field]',
+        '[class*="charSkDisplayName"][data-hg-lore-field]'
       );
-      if (!t || !root.contains(t)) return;
+      if (!(t && root.contains(t))) {
+        return;
+      }
       queueMicrotask(() => {
         syncCharSkDisplayNameStack(root);
         syncLoreV9RedactedPlaceholderState(root);
@@ -2595,11 +3122,15 @@ function LabSkeuoCard({
 
   return (
     <div
-      ref={rootRef}
-      className={cx(canvasStyles.entityNode, canvasStyles.loreCharacterCanvasRoot, className)}
+      className={cx(
+        canvasStyles.entityNode,
+        canvasStyles.loreCharacterCanvasRoot,
+        className
+      )}
       data-hg-canvas-role="lore-character-v11"
       data-lore-kind="character"
       data-lore-variant="v11"
+      ref={rootRef}
       style={
         {
           width: 340,
@@ -2609,19 +3140,23 @@ function LabSkeuoCard({
       }
     >
       <input
-        ref={portraitFileRef}
-        type="file"
         accept="image/*"
-        className={labStyles.visuallyHidden}
         aria-hidden
-        tabIndex={-1}
+        className={labStyles.visuallyHidden}
         onChange={onPortraitFile}
+        ref={portraitFileRef}
+        tabIndex={-1}
+        type="file"
       />
       {/* Lab-only static HTML; uses canvas `nodeBody` + `loreCharacterBody` (same as production character v11). */}
       <div
-        ref={labBodyRef}
-        className={cx(canvasStyles.nodeBody, canvasStyles.loreCharacterBody, labStyles.labSkeuoBleed)}
+        className={cx(
+          canvasStyles.nodeBody,
+          canvasStyles.loreCharacterBody,
+          labStyles.labSkeuoBleed
+        )}
         dangerouslySetInnerHTML={{ __html: displayHtml }}
+        ref={labBodyRef}
       />
     </div>
   );
@@ -2629,14 +3164,22 @@ function LabSkeuoCard({
 
 function useLabImagePick() {
   const inputRef = useRef<HTMLInputElement>(null);
-  const onFile = useCallback((event: ChangeEvent<HTMLInputElement>, onDataUrl: (url: string) => void) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file || !file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = () => onDataUrl(reader.result as string);
-    reader.readAsDataURL(file);
-  }, []);
+  const onFile = useCallback(
+    (
+      event: ChangeEvent<HTMLInputElement>,
+      onDataUrl: (url: string) => void
+    ) => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      if (!(file && file.type.startsWith("image/"))) {
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => onDataUrl(reader.result as string);
+      reader.readAsDataURL(file);
+    },
+    []
+  );
   return { inputRef, onFile };
 }
 
@@ -2648,91 +3191,106 @@ function LabLocationV3SurveyTagPreview() {
   return (
     <>
       <input
-        ref={inputRef}
-        type="file"
         accept="image/*"
-        className={labStyles.visuallyHidden}
         aria-hidden
-        tabIndex={-1}
+        className={labStyles.visuallyHidden}
         onChange={(e) => onFile(e, setHero)}
+        ref={inputRef}
+        tabIndex={-1}
+        type="file"
       />
-      <LabCard headerTitle="Location" tapeVariant="dark" tapeRotation={0.8}>
+      <LabCard headerTitle="Location" tapeRotation={0.8} tapeVariant="dark">
         <div
+          className={labStyles.locSurveyV3Shell}
           data-hg-canvas-role="lore-location"
           data-hg-lore-location-variant="v3"
-          className={labStyles.locSurveyV3Shell}
           data-testid="loc-survey-v3"
         >
           {hero ? (
             <>
               <div
-                className={labStyles.locSurveyV3HeroPhoto}
-                style={{ backgroundImage: `url(${JSON.stringify(hero)})` } as CSSProperties}
                 aria-hidden
+                className={labStyles.locSurveyV3HeroPhoto}
+                style={
+                  {
+                    backgroundImage: `url(${JSON.stringify(hero)})`,
+                  } as CSSProperties
+                }
               />
-              <div className={labStyles.locSurveyV3HeroScrim} aria-hidden />
+              <div aria-hidden className={labStyles.locSurveyV3HeroScrim} />
             </>
           ) : null}
           <div className={labStyles.locSurveyV3Foreground}>
             <div
+              aria-hidden
               className={cardStyles.locPlaqueStrip}
               data-loc-strip={locationStripVariantFromSeed("lab-survey-tag-v3")}
-              aria-hidden
             />
             <div
               className={cardStyles.plaqueCorner}
-              data-hg-lore-location-field="ref"
               contentEditable={false}
+              data-hg-lore-location-field="ref"
             >
               REF · KFC-DOCK-0847
             </div>
             <div
-              className={cx(cardStyles.locHeader, hero ? labStyles.locSurveyV3HeaderOnHero : undefined)}
+              className={cx(
+                cardStyles.locHeader,
+                hero ? labStyles.locSurveyV3HeaderOnHero : undefined
+              )}
               contentEditable={false}
             >
               <div
                 className={cardStyles.locName}
-                data-hg-lore-location-field="name"
                 contentEditable={false}
+                data-hg-lore-location-field="name"
               >
                 Old Harbor Kiln No. 4
               </div>
               <div
                 className={cardStyles.locMetaLine}
-                data-hg-lore-location-optional="true"
                 contentEditable={false}
+                data-hg-lore-location-optional="true"
               >
                 <span className={cardStyles.locMetaKey}>Nation</span>
-                <span data-hg-lore-location-field="context" contentEditable={false}>
+                <span
+                  contentEditable={false}
+                  data-hg-lore-location-field="context"
+                >
                   Kestrel Free City
                 </span>
               </div>
               <div
                 className={cardStyles.locMetaLine}
-                data-hg-lore-location-optional="true"
                 contentEditable={false}
+                data-hg-lore-location-optional="true"
               >
                 <span className={cardStyles.locMetaKey}>Kind</span>
-                <span data-hg-lore-location-field="detail" contentEditable={false}>
+                <span
+                  contentEditable={false}
+                  data-hg-lore-location-field="detail"
+                >
                   Warehouse · abandoned ceramic works
                 </span>
               </div>
             </div>
             <div
               className={cardStyles.notesBlock}
-              data-hg-lore-location-notes-cell="true"
               contentEditable={false}
+              data-hg-lore-location-notes-cell="true"
             >
               <span className={cardStyles.fieldLabel}>Notes</span>
               <div
                 className={cardStyles.notesText}
-                data-hg-lore-location-notes="true"
                 contentEditable={false}
+                data-hg-lore-location-notes="true"
               >
                 <p>
-                  Thin strip color is stable per item id via <code>data-loc-strip</code> + seed hash; the{" "}
-                  <code>ref</code> field is an optional monospace stamp for GMs. Use the buttons under the card to try
-                  a hero image: same layering a future cover URL would use (photo, scrim, then type).
+                  Thin strip color is stable per item id via{" "}
+                  <code>data-loc-strip</code> + seed hash; the <code>ref</code>{" "}
+                  field is an optional monospace stamp for GMs. Use the buttons
+                  under the card to try a hero image: same layering a future
+                  cover URL would use (photo, scrim, then type).
                 </p>
               </div>
             </div>
@@ -2740,11 +3298,23 @@ function LabLocationV3SurveyTagPreview() {
         </div>
       </LabCard>
       <div className={labStyles.locSurveyV3Chrome}>
-        <Button type="button" size="sm" variant="default" tone="glass" onClick={() => inputRef.current?.click()}>
+        <Button
+          onClick={() => inputRef.current?.click()}
+          size="sm"
+          tone="glass"
+          type="button"
+          variant="default"
+        >
           {hero ? "Replace hero image" : "Add hero image"}
         </Button>
         {hero ? (
-          <Button type="button" size="sm" variant="default" tone="glass" onClick={() => setHero(null)}>
+          <Button
+            onClick={() => setHero(null)}
+            size="sm"
+            tone="glass"
+            type="button"
+            variant="default"
+          >
             Clear hero
           </Button>
         ) : null}
@@ -2756,18 +3326,18 @@ function LabLocationV3SurveyTagPreview() {
 function ThemeToolbar() {
   const { preference, setPreference } = useVigilThemeContext();
   return (
-    <div className={labStyles.themeRow} role="group" aria-label="Color scheme">
+    <div aria-label="Color scheme" className={labStyles.themeRow} role="group">
       <span className={labStyles.themeLabel}>Theme</span>
       {(["light", "dark", "system"] as const).map((key) => (
         <Button
-          key={key}
-          type="button"
-          size="sm"
-          variant="default"
-          tone="glass"
-          isActive={preference === key}
           className={labStyles.themeBtn}
+          isActive={preference === key}
+          key={key}
           onClick={() => setPreference(key)}
+          size="sm"
+          tone="glass"
+          type="button"
+          variant="default"
         >
           {key}
         </Button>
@@ -2783,8 +3353,9 @@ function LoreEntityNodeLabInner() {
         <div className={labStyles.titleBlock}>
           <h1>Lore entity nodes</h1>
           <p>
-            Design lab: character ID plate (same v11 seed as the canvas), faction letterhead, and
-            location site cards. Same node shell as production; bodies mirror seeded HTML templates.
+            Design lab: character ID plate (same v11 seed as the canvas),
+            faction letterhead, and location site cards. Same node shell as
+            production; bodies mirror seeded HTML templates.
           </p>
         </div>
         <ThemeToolbar />
@@ -2792,22 +3363,32 @@ function LoreEntityNodeLabInner() {
 
       <div className={labStyles.sections}>
         <section aria-labelledby="sec-character">
-          <h2 id="sec-character" className={labStyles.sectionTitle}>
+          <h2 className={labStyles.sectionTitle} id="sec-character">
             Character
           </h2>
           <p className={labStyles.sectionHint}>
-            Production template: <code>loreCard: {"{"} kind: &quot;character&quot;, variant: &quot;v11&quot; {"}"}</code>
-            , seeded from <code>getLoreNodeSeedBodyHtml</code>. No canvas tape on character nodes; portrait uses the
-            same media-root + Upload path as image entities.
+            Production template:{" "}
+            <code>
+              loreCard: {"{"} kind: &quot;character&quot;, variant:
+              &quot;v11&quot; {"}"}
+            </code>
+            , seeded from <code>getLoreNodeSeedBodyHtml</code>. No canvas tape
+            on character nodes; portrait uses the same media-root + Upload path
+            as image entities.
           </p>
           <div className={labStyles.grid}>
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>Character · v11 ID plate</span>
-              <LabSkeuoCard html={getLoreNodeSeedBodyHtml("character", "v11")} />
+              <span className={labStyles.variantLabel}>
+                Character · v11 ID plate
+              </span>
+              <LabSkeuoCard
+                html={getLoreNodeSeedBodyHtml("character", "v11")}
+              />
               <ul className={labStyles.spec}>
                 <li>
-                  <code>charSkShellV11</code> guest-check placeholders (<code>data-hg-lore-ph</code> + marker strokes).
-                  Affiliation and nationality stay inline until structured fields land.
+                  <code>charSkShellV11</code> guest-check placeholders (
+                  <code>data-hg-lore-ph</code> + marker strokes). Affiliation
+                  and nationality stay inline until structured fields land.
                 </li>
               </ul>
             </div>
@@ -2815,61 +3396,86 @@ function LoreEntityNodeLabInner() {
         </section>
 
         <section aria-labelledby="sec-faction">
-          <h2 id="sec-faction" className={labStyles.sectionTitle}>
+          <h2 className={labStyles.sectionTitle} id="sec-faction">
             Faction · org · company
           </h2>
           <p className={labStyles.sectionHint}>
-            <strong>Priming (specimen 0):</strong> <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code> from{" "}
-            <code>faction-roster-schema.ts</code> — lab-only; production faction letterhead seeds are unchanged. Then{" "}
-            <strong>I–XX:</strong> twenty <code>FactionLabPlate</code> specimens — no canvas <code>LabCard</code> stack
-            (no tape, no <code>a4DocumentBody</code>). I–III: dead-drop slip, summit stub, interoffice memo. IV–V: same
-            rosy shelf
-            catalog; V adds left-edge <code>mask-image</code> perforation + dashed border only. VI: ORDO LUNARIS
-            compact (system-sized). VII: full ORDO protocol sheet. VIII: Silent Synod classified sheet. IX: Archive-091
-            void document (dark field, rails, letterhead + protocol, metrics table; CSS grain only). X: Lattice induction
-            (white protocol sheet, mono meta tags, data grid, static split footer; CSS scanlines; no external images).
-            XI: AEON Conclave terminal (pale field, crimson accent; classified header, letterhead, meta rail + body;
-            static figure orbs; no live clock / pointer motion). XII: AEON Protocol classified (concrete field, red/mint
-            aura, noise grain, crosshairs, 2×2 data grid; all static — no scrub invert / pointer parallax). XIII: Protocol
-            Indigo Bloom (midnight cobalt; EB Garamond + Space Mono; editable org + directive + jurisdiction + document;
-            static seal, rail, footer; CSS-only atmosphere — no pointer / star-field JS). XIV: Terminal fleet (minimal black
-            mono: host / env / directive + charter + roster demo only — no telemetry chrome). XV: Ocular Mandate (grid
-            dossier, Inter striped display type, Space Mono body, evidence placeholder, personnel index + hgArch roster demo —
-            no images / pointer JS). XVI: Synthesis Archive (pale blue field, Playfair hero, glass corner pills, mission strip +
-            ledger roster from hgArch — no live clock / pointer motion). XVII: Essentialist ID (faction org + charter + roster
-            demo, ID-badge chrome; CSS-only glare — no pointer 3D tilt). XVIII: Clandestine bureau brief (XII concrete +
-            classified aura; XI clearance bar; XV grid, striped display, authorized stamp; editable PRD fields + hgArch
-            roster — no images / pointer JS). XIX: Ocular Mandate light (XV dossier on pale grid field, no protocol rail,
-            single-line Inter title on <code>orgNamePrimary</code> only, Space Mono body + roster — no images / pointer JS).
-            XX: Archive-091 readable (IX void archive, larger type + neutral plate chrome, slim plate header + focus affordance, editable PRD
-            fields, roster replaces fiction metrics table, no ritual CTA / serial footer — no canvas / pointer JS).
+            <strong>Priming (specimen 0):</strong>{" "}
+            <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code> from{" "}
+            <code>faction-roster-schema.ts</code> — lab-only; production faction
+            letterhead seeds are unchanged. Then <strong>I–XX:</strong> twenty{" "}
+            <code>FactionLabPlate</code> specimens — no canvas{" "}
+            <code>LabCard</code> stack (no tape, no <code>a4DocumentBody</code>
+            ). I–III: dead-drop slip, summit stub, interoffice memo. IV–V: same
+            rosy shelf catalog; V adds left-edge <code>mask-image</code>{" "}
+            perforation + dashed border only. VI: ORDO LUNARIS compact
+            (system-sized). VII: full ORDO protocol sheet. VIII: Silent Synod
+            classified sheet. IX: Archive-091 void document (dark field, rails,
+            letterhead + protocol, metrics table; CSS grain only). X: Lattice
+            induction (white protocol sheet, mono meta tags, data grid, static
+            split footer; CSS scanlines; no external images). XI: AEON Conclave
+            terminal (pale field, crimson accent; classified header, letterhead,
+            meta rail + body; static figure orbs; no live clock / pointer
+            motion). XII: AEON Protocol classified (concrete field, red/mint
+            aura, noise grain, crosshairs, 2×2 data grid; all static — no scrub
+            invert / pointer parallax). XIII: Protocol Indigo Bloom (midnight
+            cobalt; EB Garamond + Space Mono; editable org + directive +
+            jurisdiction + document; static seal, rail, footer; CSS-only
+            atmosphere — no pointer / star-field JS). XIV: Terminal fleet
+            (minimal black mono: host / env / directive + charter + roster demo
+            only — no telemetry chrome). XV: Ocular Mandate (grid dossier, Inter
+            striped display type, Space Mono body, evidence placeholder,
+            personnel index + hgArch roster demo — no images / pointer JS). XVI:
+            Synthesis Archive (pale blue field, Playfair hero, glass corner
+            pills, mission strip + ledger roster from hgArch — no live clock /
+            pointer motion). XVII: Essentialist ID (faction org + charter +
+            roster demo, ID-badge chrome; CSS-only glare — no pointer 3D tilt).
+            XVIII: Clandestine bureau brief (XII concrete + classified aura; XI
+            clearance bar; XV grid, striped display, authorized stamp; editable
+            PRD fields + hgArch roster — no images / pointer JS). XIX: Ocular
+            Mandate light (XV dossier on pale grid field, no protocol rail,
+            single-line Inter title on <code>orgNamePrimary</code> only, Space
+            Mono body + roster — no images / pointer JS). XX: Archive-091
+            readable (IX void archive, larger type + neutral plate chrome, slim
+            plate header + focus affordance, editable PRD fields, roster
+            replaces fiction metrics table, no ritual CTA / serial footer — no
+            canvas / pointer JS).
           </p>
           <div className={labStyles.grid}>
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>0 · Faction roster (data model priming)</span>
+              <span className={labStyles.variantLabel}>
+                0 · Faction roster (data model priming)
+              </span>
               <FactionLabPlate plateKind="rosterPriming">
                 <FactionRosterPrimingBody testId="fac-lab-roster-priming" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Structured roster: <code>DEMO_FACTION_ROSTER</code> → <code>parseFactionRoster</code> (
-                  <code>FACTION_LORE_ENTITY_CHECKLIST.md</code> for integration parity).
+                  Structured roster: <code>DEMO_FACTION_ROSTER</code> →{" "}
+                  <code>parseFactionRoster</code> (
+                  <code>FACTION_LORE_ENTITY_CHECKLIST.md</code> for integration
+                  parity).
                 </li>
                 <li>
-                  Placeholder field markers: <code>data-hg-lore-faction-field</code>,{" "}
-                  <code>data-hg-lore-faction-roster</code> — align with character/location{" "}
-                  <code>data-hg-lore-*</code> when layout locks.
+                  Placeholder field markers:{" "}
+                  <code>data-hg-lore-faction-field</code>,{" "}
+                  <code>data-hg-lore-faction-roster</code> — align with
+                  character/location <code>data-hg-lore-*</code> when layout
+                  locks.
                 </li>
               </ul>
             </div>
             <div className={labStyles.cell}>
               <span className={labStyles.variantLabel}>I · Dead-drop slip</span>
               <FactionLabPlate plateKind="slip">
-                <div className={labStyles.facSlipEdge} aria-hidden>
+                <div aria-hidden className={labStyles.facSlipEdge}>
                   WORKING
                 </div>
-                <div className={labStyles.facSlipMain} data-testid="fac-sheet-docket">
-                  <div className={labStyles.facSlipHoles} aria-hidden>
+                <div
+                  className={labStyles.facSlipMain}
+                  data-testid="fac-sheet-docket"
+                >
+                  <div aria-hidden className={labStyles.facSlipHoles}>
                     <span />
                     <span />
                     <span />
@@ -2878,7 +3484,9 @@ function LoreEntityNodeLabInner() {
                     <span>LOT 7 · ORG-7741</span>
                     <span className={labStyles.facSlipHot}>OPEN CHANNEL</span>
                   </div>
-                  <div className={labStyles.facSlipOrg}>Ironwood Mercantile Exchange</div>
+                  <div className={labStyles.facSlipOrg}>
+                    Ironwood Mercantile Exchange
+                  </div>
                   <div className={labStyles.facSlipNation}>Obsidian Reach</div>
                   <ul className={labStyles.facSlipTeletype}>
                     <li>Clear customs window · 48h</li>
@@ -2889,7 +3497,8 @@ function LoreEntityNodeLabInner() {
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Vertical margin + binder holes + teletype lines — payload is procedural lines, not a document block.
+                  Vertical margin + binder holes + teletype lines — payload is
+                  procedural lines, not a document block.
                 </li>
               </ul>
             </div>
@@ -2897,11 +3506,18 @@ function LoreEntityNodeLabInner() {
             <div className={labStyles.cell}>
               <span className={labStyles.variantLabel}>II · Summit stub</span>
               <FactionLabPlate plateKind="stub">
-                <div className={labStyles.facStubRoot} data-testid="fac-sheet-buff">
-                  <div className={labStyles.facStubEyebrow}>Charter summit · admit</div>
-                  <div className={labStyles.facStubOrg}>Ironwood Mercantile Exchange</div>
+                <div
+                  className={labStyles.facStubRoot}
+                  data-testid="fac-sheet-buff"
+                >
+                  <div className={labStyles.facStubEyebrow}>
+                    Charter summit · admit
+                  </div>
+                  <div className={labStyles.facStubOrg}>
+                    Ironwood Mercantile Exchange
+                  </div>
                   <div className={labStyles.facStubNation}>Obsidian Reach</div>
-                  <div className={labStyles.facStubPerf} aria-hidden />
+                  <div aria-hidden className={labStyles.facStubPerf} />
                   <div className={labStyles.facStubAgenda}>
                     <div className={labStyles.facStubAgendaTitle}>Floor</div>
                     <ul>
@@ -2912,317 +3528,423 @@ function LoreEntityNodeLabInner() {
                   </div>
                   <div className={labStyles.facStubTear}>
                     <span className={labStyles.facStubTearCode}>ADM-09-K</span>
-                    <span className={labStyles.facStubTearHint}>tear along perf</span>
+                    <span className={labStyles.facStubTearHint}>
+                      tear along perf
+                    </span>
                   </div>
                 </div>
               </FactionLabPlate>
               <ul className={labStyles.spec}>
-                <li>Ticket IA: eyebrow, agenda list, perforated tear row with stub code — not a document lane.</li>
+                <li>
+                  Ticket IA: eyebrow, agenda list, perforated tear row with stub
+                  code — not a document lane.
+                </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>III · Interoffice memo</span>
+              <span className={labStyles.variantLabel}>
+                III · Interoffice memo
+              </span>
               <FactionLabPlate plateKind="iomemo">
-                <div className={labStyles.facMemoRoot} data-testid="fac-lab-iomemo">
+                <div
+                  className={labStyles.facMemoRoot}
+                  data-testid="fac-lab-iomemo"
+                >
                   <div className={labStyles.facMemoMark}>Memorandum</div>
                   <div className={labStyles.facMemoField}>
                     <span className={labStyles.facMemoLabel}>To</span>
-                    <span className={labStyles.facMemoVal}>Obsidian Reach · charter window</span>
+                    <span className={labStyles.facMemoVal}>
+                      Obsidian Reach · charter window
+                    </span>
                   </div>
                   <div className={labStyles.facMemoField}>
                     <span className={labStyles.facMemoLabel}>From</span>
-                    <span className={labStyles.facMemoVal}>Ironwood Mercantile Exchange</span>
+                    <span className={labStyles.facMemoVal}>
+                      Ironwood Mercantile Exchange
+                    </span>
                   </div>
                   <div className={labStyles.facMemoField}>
                     <span className={labStyles.facMemoLabel}>Re</span>
-                    <span className={labStyles.facMemoVal}>Harbor tariff pilot · customs carve-out</span>
+                    <span className={labStyles.facMemoVal}>
+                      Harbor tariff pilot · customs carve-out
+                    </span>
                   </div>
-                  <div className={labStyles.facMemoRule} aria-hidden />
+                  <div aria-hidden className={labStyles.facMemoRule} />
                   <p className={labStyles.facMemoNote}>
-                    Distribution: HG registry clerk · file duplicate under ORG-7741. Verbal commitments non-binding.
+                    Distribution: HG registry clerk · file duplicate under
+                    ORG-7741. Verbal commitments non-binding.
                   </p>
                 </div>
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Memo routing: TO / FROM / RE with ruled field lines — not a summit stub, not perforation or tear copy.
+                  Memo routing: TO / FROM / RE with ruled field lines — not a
+                  summit stub, not perforation or tear copy.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>IV · Shelf · rosy gradient</span>
+              <span className={labStyles.variantLabel}>
+                IV · Shelf · rosy gradient
+              </span>
               <FactionLabPlate plateKind="shelfcard">
                 <ArchitecturalNodeHeader
-                  title="Faction"
-                  expandLabel="Focus Mode"
-                  onExpand={() => {}}
                   buttonTone="card-light"
                   compact
+                  expandLabel="Focus Mode"
+                  onExpand={() => {}}
+                  title="Faction"
                 />
                 <FactionShelfCardBody testId="fac-lab-shelfcard" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Summit-stub family: deeper <code>accent</code> gradient on the card face — dot-leader catalog IA with
-                  compact document header (no edge mask).
+                  Summit-stub family: deeper <code>accent</code> gradient on the
+                  card face — dot-leader catalog IA with compact document header
+                  (no edge mask).
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>V · Shelf · sleeve perforation</span>
+              <span className={labStyles.variantLabel}>
+                V · Shelf · sleeve perforation
+              </span>
               <FactionLabPlate plateKind="shelfcardSleeve">
                 <div className={labStyles.facShelfSleeveStack}>
                   <ArchitecturalNodeHeader
-                    title="Faction"
-                    expandLabel="Focus Mode"
-                    onExpand={() => {}}
                     buttonTone="card-light"
                     compact
+                    expandLabel="Focus Mode"
+                    onExpand={() => {}}
+                    title="Faction"
                   />
                   <FactionShelfCardBody testId="fac-lab-shelfcard-sleeve" />
                 </div>
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Same rosy gradient as IV; dashed border on the shell. Holes: <code>mask-image</code> on the outer{" "}
-                  <code>factionLabPlate_shelfcardSleeve</code> (full paint + gradient) so notches read against the lab
-                  page; <code>facShelfSleeveStack</code> is layout-only; vertical padding + <code>mask-clip</code>:{" "}
-                  content-box insets the repeat.
+                  Same rosy gradient as IV; dashed border on the shell. Holes:{" "}
+                  <code>mask-image</code> on the outer{" "}
+                  <code>factionLabPlate_shelfcardSleeve</code> (full paint +
+                  gradient) so notches read against the lab page;{" "}
+                  <code>facShelfSleeveStack</code> is layout-only; vertical
+                  padding + <code>mask-clip</code>: content-box insets the
+                  repeat.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>VI · Protocol · ORDO LUNARIS · compact</span>
+              <span className={labStyles.variantLabel}>
+                VI · Protocol · ORDO LUNARIS · compact
+              </span>
               <FactionLabPlate plateKind="protocolOrdoCompact">
                 <FactionProtocolOrdoCompactBody testId="fac-lab-protocol-ordo-compact" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Same warm concrete + coral chrome as VII, scaled for the node width: single decree, one-line meta,
-                  short footer; type sized for legibility on 340px (mono meta ~8px, body ~10.5px) — no scroll.
+                  Same warm concrete + coral chrome as VII, scaled for the node
+                  width: single decree, one-line meta, short footer; type sized
+                  for legibility on 340px (mono meta ~8px, body ~10.5px) — no
+                  scroll.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>VII · Protocol · ORDO LUNARIS</span>
+              <span className={labStyles.variantLabel}>
+                VII · Protocol · ORDO LUNARIS
+              </span>
               <FactionLabPlate plateKind="protocolOrdo">
                 <FactionProtocolOrdoBody testId="fac-lab-protocol-ordo" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Full protocol layout (decrees I–II, margin boxes, footer strip); static multiply glow; no pointer
-                  tracking. Plate uses overflow hidden — no internal scrollbars.
+                  Full protocol layout (decrees I–II, margin boxes, footer
+                  strip); static multiply glow; no pointer tracking. Plate uses
+                  overflow hidden — no internal scrollbars.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>VIII · Classified · Silent Synod</span>
+              <span className={labStyles.variantLabel}>
+                VIII · Classified · Silent Synod
+              </span>
               <FactionLabPlate plateKind="protocolSynod">
                 <FactionSilentSynodBody testId="fac-lab-protocol-synod" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Legible brief: cream field + blood accent; large title + ref column, lead line, two fact cells,
-                  standing order, footer + OMEGA stamp. Denser dossier / sigil / pillar list removed so type stays
-                  readable on 340px.
+                  Legible brief: cream field + blood accent; large title + ref
+                  column, lead line, two fact cells, standing order, footer +
+                  OMEGA stamp. Denser dossier / sigil / pillar list removed so
+                  type stays readable on 340px.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>IX · Archive · 091 internal</span>
+              <span className={labStyles.variantLabel}>
+                IX · Archive · 091 internal
+              </span>
               <FactionLabPlate plateKind="protocolArchive091">
                 <FactionArchive091Body testId="fac-lab-protocol-archive-091" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Dark void archive: side rails + star sigils, meta strip with blink, Playfair letterhead, protocol +
-                  metrics table, pill tags, ritual line (non-interactive). Arch centerpiece removed for vertical space.
-                  CSS noise grain; no canvas / pointer parallax.
+                  Dark void archive: side rails + star sigils, meta strip with
+                  blink, Playfair letterhead, protocol + metrics table, pill
+                  tags, ritual line (non-interactive). Arch centerpiece removed
+                  for vertical space. CSS noise grain; no canvas / pointer
+                  parallax.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>X · Protocol · Lattice induction</span>
+              <span className={labStyles.variantLabel}>
+                X · Protocol · Lattice induction
+              </span>
               <FactionLabPlate plateKind="protocolLattice">
                 <FactionLatticeInductionBody testId="fac-lab-protocol-lattice" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Legible notice: masthead + ~11px body, row-based stats (no micro three-up grid), one obligation line,
-                  taller footer copy (~8px mono). Lighter scanlines; avatar + coord strip omitted for space.
+                  Legible notice: masthead + ~11px body, row-based stats (no
+                  micro three-up grid), one obligation line, taller footer copy
+                  (~8px mono). Lighter scanlines; avatar + coord strip omitted
+                  for space.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>XI · Terminal · AEON Conclave</span>
+              <span className={labStyles.variantLabel}>
+                XI · Terminal · AEON Conclave
+              </span>
               <FactionLabPlate plateKind="protocolAeonConclave">
                 <FactionAeonConclaveBody testId="fac-lab-protocol-aeon-conclave" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Reference: TERMINAL // AEON-9 — pale field, ink + crimson accent, Geist Mono rails; classified header,
-                  stacked letterhead, sticky-style meta column + numbered paragraphs, static black insert with concentric
-                  orbs (no animation / no pointer FX), signature + seal. Floating action omitted; type scaled for 340px
-                  legibility.
+                  Reference: TERMINAL // AEON-9 — pale field, ink + crimson
+                  accent, Geist Mono rails; classified header, stacked
+                  letterhead, sticky-style meta column + numbered paragraphs,
+                  static black insert with concentric orbs (no animation / no
+                  pointer FX), signature + seal. Floating action omitted; type
+                  scaled for 340px legibility.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>XII · Protocol · AEON classified</span>
+              <span className={labStyles.variantLabel}>
+                XII · Protocol · AEON classified
+              </span>
               <FactionLabPlate plateKind="protocolAeonProtocol">
                 <FactionAeonProtocolClassifiedBody testId="fac-lab-protocol-aeon-protocol" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Reference: THE AEON PROTOCOL // CLASSIFIED — warm concrete, red + mint aura, SVG grain overlay,
-                  corner crosshairs, index + header stack, subject rule with marker, ~11px body, legible 2×2 grid, stamp +
-                  registry, static CTA strip (no invert / no hover redact).
+                  Reference: THE AEON PROTOCOL // CLASSIFIED — warm concrete,
+                  red + mint aura, SVG grain overlay, corner crosshairs, index +
+                  header stack, subject rule with marker, ~11px body, legible
+                  2×2 grid, stamp + registry, static CTA strip (no invert / no
+                  hover redact).
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>XIII · Protocol · Indigo Bloom</span>
+              <span className={labStyles.variantLabel}>
+                XIII · Protocol · Indigo Bloom
+              </span>
               <FactionLabPlate plateKind="protocolIndigoBloom">
                 <FactionIndigoBloomV13Body testId="fac-lab-protocol-indigo-bloom-xiii" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Reference: Symphony of Anemone — midnight / cobalt / orange; vertical meta rail; static seal + section
-                  divider + footer; <strong>editable</strong> body fields: <code>orgNamePrimary</code>,{" "}
-                  <code>orgNameAccent</code>, <code>subtitle</code>, <code>context</code>, <code>document</code> (charter
-                  prose). <strong>Structured roster</strong> (read-only demo): <code>parseFactionRoster(DEMO_FACTION_ROSTER)</code>{" "}
-                  → same rows as <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code> in{" "}
-                  <code>faction-roster-schema.ts</code>. No cursor-follower / star JS.
+                  Reference: Symphony of Anemone — midnight / cobalt / orange;
+                  vertical meta rail; static seal + section divider + footer;{" "}
+                  <strong>editable</strong> body fields:{" "}
+                  <code>orgNamePrimary</code>, <code>orgNameAccent</code>,{" "}
+                  <code>subtitle</code>, <code>context</code>,{" "}
+                  <code>document</code> (charter prose).{" "}
+                  <strong>Structured roster</strong> (read-only demo):{" "}
+                  <code>parseFactionRoster(DEMO_FACTION_ROSTER)</code> → same
+                  rows as <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code> in{" "}
+                  <code>faction-roster-schema.ts</code>. No cursor-follower /
+                  star JS.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>XIV · Terminal · Fleet charter</span>
+              <span className={labStyles.variantLabel}>
+                XIV · Terminal · Fleet charter
+              </span>
               <FactionLabPlate plateKind="protocolTerminalFleet">
                 <FactionTerminalFleetV14Body testId="fac-lab-protocol-terminal-fleet-xiv" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Stripped mono plate: <strong>editable</strong> <code>orgNamePrimary</code>, <code>context</code>,{" "}
-                  <code>subtitle</code>, <code>document</code> + read-only <strong>stacked roster cards</strong> from{" "}
-                  <code>DEMO_FACTION_ROSTER</code> (<code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>). No signal strip, meta
-                  rail, charter/buffer chrome, or cmd footer.
+                  Stripped mono plate: <strong>editable</strong>{" "}
+                  <code>orgNamePrimary</code>, <code>context</code>,{" "}
+                  <code>subtitle</code>, <code>document</code> + read-only{" "}
+                  <strong>stacked roster cards</strong> from{" "}
+                  <code>DEMO_FACTION_ROSTER</code> (
+                  <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>). No signal
+                  strip, meta rail, charter/buffer chrome, or cmd footer.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>XV · Ocular · Mandate dossier</span>
+              <span className={labStyles.variantLabel}>
+                XV · Ocular · Mandate dossier
+              </span>
               <FactionLabPlate plateKind="protocolOcularMandate">
                 <FactionOcularMandateV15Body testId="fac-lab-protocol-ocular-mandate-xv" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Reference: THE OCULAR MANDATE — dark grid, vertical protocol rail, Inter <strong>striped</strong> display
-                  lines + Space Mono fields. <strong>Editable</strong> <code>context</code>, <code>orgNamePrimary</code>,{" "}
-                  <code>orgNameAccent</code>, <code>subtitle</code>, <code>document</code>; static evidence frame; roster
-                  via <code>variant=&quot;ocular&quot;</code> + <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>. No Unsplash, no
-                  mouse/interval JS.
+                  Reference: THE OCULAR MANDATE — dark grid, vertical protocol
+                  rail, Inter <strong>striped</strong> display lines + Space
+                  Mono fields. <strong>Editable</strong> <code>context</code>,{" "}
+                  <code>orgNamePrimary</code>, <code>orgNameAccent</code>,{" "}
+                  <code>subtitle</code>, <code>document</code>; static evidence
+                  frame; roster via <code>variant=&quot;ocular&quot;</code> +{" "}
+                  <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>. No Unsplash,
+                  no mouse/interval JS.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>XVI · Synthesis · Archive ledger</span>
+              <span className={labStyles.variantLabel}>
+                XVI · Synthesis · Archive ledger
+              </span>
               <FactionLabPlate plateKind="protocolSynthesisArchive">
                 <FactionSynthesisArchiveV16Body testId="fac-lab-protocol-synthesis-archive-xvi" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Reference: SYNTHESIS / ARCHIVE-01 — warm gray field, electric blue type, glass pills (hover invert +
-                  scale), Playfair display title, JetBrains meta, <strong>12-column</strong> sub-strip (3 + 3 + 6, mission
-                  right-aligned), SVG target watermark (opacity 0.1). <strong>Editable</strong> <code>context</code>,{" "}
-                  <code>orgNameAccent</code> (meta right), <code>orgNamePrimary</code>, <code>subtitle</code> (mission),{" "}
-                  <code>document</code>; roster ledger <code>variant=&quot;synthesis&quot;</code> +{" "}
-                  <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>. SYS time via <code>data-time</code> + CSS (static); no{" "}
-                  <code>setInterval</code> / pointer parallax. Container queries stack strip/ledger on narrow plate.
+                  Reference: SYNTHESIS / ARCHIVE-01 — warm gray field, electric
+                  blue type, glass pills (hover invert + scale), Playfair
+                  display title, JetBrains meta, <strong>12-column</strong>{" "}
+                  sub-strip (3 + 3 + 6, mission right-aligned), SVG target
+                  watermark (opacity 0.1). <strong>Editable</strong>{" "}
+                  <code>context</code>, <code>orgNameAccent</code> (meta right),{" "}
+                  <code>orgNamePrimary</code>, <code>subtitle</code> (mission),{" "}
+                  <code>document</code>; roster ledger{" "}
+                  <code>variant=&quot;synthesis&quot;</code> +{" "}
+                  <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>. SYS time via{" "}
+                  <code>data-time</code> + CSS (static); no{" "}
+                  <code>setInterval</code> / pointer parallax. Container queries
+                  stack strip/ledger on narrow plate.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>XVII · Essentialist · Identification protocol</span>
+              <span className={labStyles.variantLabel}>
+                XVII · Essentialist · Identification protocol
+              </span>
               <FactionLabPlate plateKind="protocolEssentialistId">
                 <FactionEssentialistIdV17Body testId="fac-lab-protocol-essentialist-id-xvii" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Reference: Essentialist Identification Protocol — same <strong>faction</strong> shape as other plates:{" "}
-                  <strong>editable</strong> <code>context</code>, <code>orgNameAccent</code>, <code>orgNamePrimary</code>,{" "}
-                  <code>subtitle</code> (charter class), <code>document</code> (charter prose); read-only jurisdiction grid
-                  (demo); <code>variant=&quot;essentialist&quot;</code> roster from <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>;
-                  decorative seal void + barcode + registry line. CSS glare only — no pointer 3D tilt.
+                  Reference: Essentialist Identification Protocol — same{" "}
+                  <strong>faction</strong> shape as other plates:{" "}
+                  <strong>editable</strong> <code>context</code>,{" "}
+                  <code>orgNameAccent</code>, <code>orgNamePrimary</code>,{" "}
+                  <code>subtitle</code> (charter class), <code>document</code>{" "}
+                  (charter prose); read-only jurisdiction grid (demo);{" "}
+                  <code>variant=&quot;essentialist&quot;</code> roster from{" "}
+                  <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>; decorative
+                  seal void + barcode + registry line. CSS glare only — no
+                  pointer 3D tilt.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>XVIII · Bureau · Clandestine circulation brief</span>
+              <span className={labStyles.variantLabel}>
+                XVIII · Bureau · Clandestine circulation brief
+              </span>
               <FactionLabPlate plateKind="protocolClandestineBrief">
                 <FactionClandestineBriefV18Body testId="fac-lab-protocol-clandestine-brief-xviii" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Merge of XII (concrete classified sheet, aura, grain, crosshairs, index stack, subject marker, stamp +
-                  registry, CTA strip), XI (clearance bar + status dot), and XV (grid field, Inter-style striped display
-                  type, authorized capsule). <strong>Editable</strong> <code>orgNamePrimary</code>,{" "}
-                  <code>orgNameAccent</code>, <code>subtitle</code>, <code>context</code>, <code>document</code>; roster via{" "}
-                  <code>variant=&quot;clandestine&quot;</code> + <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>. Light mode
+                  Merge of XII (concrete classified sheet, aura, grain,
+                  crosshairs, index stack, subject marker, stamp + registry, CTA
+                  strip), XI (clearance bar + status dot), and XV (grid field,
+                  Inter-style striped display type, authorized capsule).{" "}
+                  <strong>Editable</strong> <code>orgNamePrimary</code>,{" "}
+                  <code>orgNameAccent</code>, <code>subtitle</code>,{" "}
+                  <code>context</code>, <code>document</code>; roster via{" "}
+                  <code>variant=&quot;clandestine&quot;</code> +{" "}
+                  <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>. Light mode
                   only; CSS-only — no live clock / pointer JS.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>XIX · Ocular · Mandate dossier (light)</span>
+              <span className={labStyles.variantLabel}>
+                XIX · Ocular · Mandate dossier (light)
+              </span>
               <FactionLabPlate plateKind="protocolOcularMandateLight">
                 <FactionOcularMandateLightV19Body testId="fac-lab-protocol-ocular-mandate-light-xix" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Light counterpart to XV: same dossier stack (jurisdiction, authorized stamp, directive, charter, evidence
-                  frame, footer slug) without the vertical protocol rail. Title is one Inter line on{" "}
-                  <code>orgNamePrimary</code> only (fold <code>orgNameAccent</code> into that string in production if both
-                  exist). <strong>Editable</strong> <code>context</code>, <code>subtitle</code>, <code>document</code>; roster{" "}
-                  <code>variant=&quot;ocularLight&quot;</code> + <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>. CSS-only.
+                  Light counterpart to XV: same dossier stack (jurisdiction,
+                  authorized stamp, directive, charter, evidence frame, footer
+                  slug) without the vertical protocol rail. Title is one Inter
+                  line on <code>orgNamePrimary</code> only (fold{" "}
+                  <code>orgNameAccent</code> into that string in production if
+                  both exist). <strong>Editable</strong> <code>context</code>,{" "}
+                  <code>subtitle</code>, <code>document</code>; roster{" "}
+                  <code>variant=&quot;ocularLight&quot;</code> +{" "}
+                  <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code>. CSS-only.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>XX · Archive · 091 internal (readable)</span>
+              <span className={labStyles.variantLabel}>
+                XX · Archive · 091 internal (readable)
+              </span>
               <FactionLabPlate plateKind="protocolArchive091Readable">
                 <FactionArchive091ReadableV20Body testId="fac-lab-protocol-archive-091-readable-xx" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Readable successor to IX: left rail only (IX had both sides), grain, letterhead, protocol sections — larger type, same neutral
-                  plate border/shadow as IX, top <code>ArchitecturalNodeTape</code> (dark variant), slim mono plate header + focus icon
-                  (lab-native, not canvas <code>nodeHeader</code>). No serial/registry footer.{" "}
-                  <strong>Editable</strong> <code>orgNamePrimary</code>, <code>orgNameAccent</code> (letterhead uses same
-                  v11 guest-check markers as character cards: <code>charSkShellV11</code> + <code>charSkDisplayName</code> /{" "}
-                  <code>charSkRole</code>), <code>document</code> (no separate <code>context</code> strip in lab — fold
-                  registry copy into <code>document</code> or another field in production if needed).
-                  Fiction metrics table replaced by an interactive <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code> roster
-                  (add unlinked rows, edit label/role, remove). Linked character rows still carry <code>characterItemId</code>{" "}
-                  in data; no item picker in lab yet. Lab state only. CSS grain only.
+                  Readable successor to IX: left rail only (IX had both sides),
+                  grain, letterhead, protocol sections — larger type, same
+                  neutral plate border/shadow as IX, top{" "}
+                  <code>ArchitecturalNodeTape</code> (dark variant), slim mono
+                  plate header + focus icon (lab-native, not canvas{" "}
+                  <code>nodeHeader</code>). No serial/registry footer.{" "}
+                  <strong>Editable</strong> <code>orgNamePrimary</code>,{" "}
+                  <code>orgNameAccent</code> (letterhead uses same v11
+                  guest-check markers as character cards:{" "}
+                  <code>charSkShellV11</code> + <code>charSkDisplayName</code> /{" "}
+                  <code>charSkRole</code>), <code>document</code> (no separate{" "}
+                  <code>context</code> strip in lab — fold registry copy into{" "}
+                  <code>document</code> or another field in production if
+                  needed). Fiction metrics table replaced by an interactive{" "}
+                  <code>hgArch.{FACTION_ROSTER_HG_ARCH_KEY}</code> roster (add
+                  unlinked rows, edit label/role, remove). Linked character rows
+                  still carry <code>characterItemId</code> in data; no item
+                  picker in lab yet. Lab state only. CSS grain only.
                 </li>
               </ul>
             </div>
@@ -3230,70 +3952,90 @@ function LoreEntityNodeLabInner() {
         </section>
 
         <section aria-labelledby="sec-location">
-          <h2 id="sec-location" className={labStyles.sectionTitle}>
+          <h2 className={labStyles.sectionTitle} id="sec-location">
             Location
           </h2>
           <p className={labStyles.sectionHint}>
             Same <code>bodyHtml</code> contract as seeded canvas nodes:{" "}
             <code>data-hg-canvas-role=&quot;lore-location&quot;</code> +{" "}
-            <code>data-hg-lore-location-variant</code>, fields <code>name</code> / <code>context</code> /{" "}
-            <code>detail</code>, optional <code>ref</code> on v3, and notes in{" "}
-            <code>data-hg-lore-location-notes-cell</code>. Previews use sample copy; production seeds live in{" "}
-            <code>getLoreNodeSeedBodyHtml(&quot;location&quot;, …)</code>.{" "}
-            V4 is a lab-only grayscale ORDO coordinate slab (<code>protocolOrdoCompactMono</code>) — static specimen. V5
-            is a dense field-mapped slab (extra header + stamp fiction). V6 is lean with legacy rich HTML in one surface;
-            V7 matches that layout but uses <code>HeartgardenDocEditor</code> (hgDoc) for <strong>notes</strong> only.
-            Vector search still indexes whatever lands in <code>items.contentText</code> (see{" "}
-            <code>buildVaultEmbedDocument</code> in <code>vault-chunk.ts</code>), not separate LAT/ELV/etc. columns.
+            <code>data-hg-lore-location-variant</code>, fields <code>name</code>{" "}
+            / <code>context</code> / <code>detail</code>, optional{" "}
+            <code>ref</code> on v3, and notes in{" "}
+            <code>data-hg-lore-location-notes-cell</code>. Previews use sample
+            copy; production seeds live in{" "}
+            <code>getLoreNodeSeedBodyHtml(&quot;location&quot;, …)</code>. V4 is
+            a lab-only grayscale ORDO coordinate slab (
+            <code>protocolOrdoCompactMono</code>) — static specimen. V5 is a
+            dense field-mapped slab (extra header + stamp fiction). V6 is lean
+            with legacy rich HTML in one surface; V7 matches that layout but
+            uses <code>HeartgardenDocEditor</code> (hgDoc) for{" "}
+            <strong>notes</strong> only. Vector search still indexes whatever
+            lands in <code>items.contentText</code> (see{" "}
+            <code>buildVaultEmbedDocument</code> in <code>vault-chunk.ts</code>
+            ), not separate LAT/ELV/etc. columns.
           </p>
           <div className={labStyles.grid}>
             <div className={labStyles.cell}>
               <span className={labStyles.variantLabel}>V2 · Postcard band</span>
-              <LabCard headerTitle="Location" tapeVariant="clear" tapeRotation={-2}>
-                <div data-hg-canvas-role="lore-location" data-hg-lore-location-variant="v2">
-                  <div className={cardStyles.postcardBand} aria-hidden />
+              <LabCard
+                headerTitle="Location"
+                tapeRotation={-2}
+                tapeVariant="clear"
+              >
+                <div
+                  data-hg-canvas-role="lore-location"
+                  data-hg-lore-location-variant="v2"
+                >
+                  <div aria-hidden className={cardStyles.postcardBand} />
                   <div className={cardStyles.locHeader} contentEditable={false}>
                     <div
                       className={cardStyles.locName}
-                      data-hg-lore-location-field="name"
                       contentEditable={false}
+                      data-hg-lore-location-field="name"
                     >
                       Old Harbor Kiln No. 4
                     </div>
                     <div
                       className={cardStyles.locMetaLine}
-                      data-hg-lore-location-optional="true"
                       contentEditable={false}
+                      data-hg-lore-location-optional="true"
                     >
-                      <span data-hg-lore-location-field="context" contentEditable={false}>
+                      <span
+                        contentEditable={false}
+                        data-hg-lore-location-field="context"
+                      >
                         Kestrel Free City
                       </span>
                     </div>
                     <div
                       className={cardStyles.locMetaLine}
-                      data-hg-lore-location-optional="true"
                       contentEditable={false}
+                      data-hg-lore-location-optional="true"
                     >
                       <span className={cardStyles.locMetaKey}>Detail</span>
-                      <span data-hg-lore-location-field="detail" contentEditable={false}>
+                      <span
+                        contentEditable={false}
+                        data-hg-lore-location-field="detail"
+                      >
                         Dock ward · industrial brick
                       </span>
                     </div>
                   </div>
                   <div
                     className={cardStyles.notesBlock}
-                    data-hg-lore-location-notes-cell="true"
                     contentEditable={false}
+                    data-hg-lore-location-notes-cell="true"
                   >
                     <span className={cardStyles.fieldLabel}>Notes</span>
                     <div
                       className={cardStyles.notesText}
-                      data-hg-lore-location-notes="true"
                       contentEditable={false}
+                      data-hg-lore-location-notes="true"
                     >
                       <p>
-                        Color band suggests landscape / atmosphere without an image asset. Strip uses the
-                        same full-bleed inset as the v3 survey bar.
+                        Color band suggests landscape / atmosphere without an
+                        image asset. Strip uses the same full-bleed inset as the
+                        v3 survey bar.
                       </p>
                     </div>
                   </div>
@@ -3301,7 +4043,8 @@ function LoreEntityNodeLabInner() {
               </LabCard>
               <ul className={labStyles.spec}>
                 <li>
-                  <code>v2</code> seed: optional <code>context</code> line without a key (reads as subtitle).
+                  <code>v2</code> seed: optional <code>context</code> line
+                  without a key (reads as subtitle).
                 </li>
               </ul>
             </div>
@@ -3311,69 +4054,95 @@ function LoreEntityNodeLabInner() {
               <LabLocationV3SurveyTagPreview />
               <ul className={labStyles.spec}>
                 <li>
-                  <code>v3</code> seed order: strip → <code>ref</code> → header → notes (matches{" "}
-                  <code>lore-node-seed-html</code>).
+                  <code>v3</code> seed order: strip → <code>ref</code> → header
+                  → notes (matches <code>lore-node-seed-html</code>).
                 </li>
-                <li>Optional hero image in this lab only — canvas seeds stay HTML + strip until a cover field exists.</li>
+                <li>
+                  Optional hero image in this lab only — canvas seeds stay HTML
+                  + strip until a cover field exists.
+                </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>V4 · Ordo · coordinate slab (mono)</span>
+              <span className={labStyles.variantLabel}>
+                V4 · Ordo · coordinate slab (mono)
+              </span>
               <FactionLabPlate plateKind="protocolOrdoCompactMono">
-                <FactionProtocolOrdoCompactBody testId="loc-lab-ordo-coordinate-mono" brandLabel="LOCATION" />
+                <FactionProtocolOrdoCompactBody
+                  brandLabel="LOCATION"
+                  testId="loc-lab-ordo-coordinate-mono"
+                />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Grayscale ORDO LUNARIS compact plate moved here as a location-oriented preview: clearance, live clock,
-                  and LAT/LON in the header rail, charter copy below. Same <code>FactionLabPlate</code> width as faction
-                  specimens; not wired to <code>lore-location</code> HTML until product adopts this IA.
+                  Grayscale ORDO LUNARIS compact plate moved here as a
+                  location-oriented preview: clearance, live clock, and LAT/LON
+                  in the header rail, charter copy below. Same{" "}
+                  <code>FactionLabPlate</code> width as faction specimens; not
+                  wired to <code>lore-location</code> HTML until product adopts
+                  this IA.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>V5 · Ordo · coordinate slab (mono, field-mapped)</span>
+              <span className={labStyles.variantLabel}>
+                V5 · Ordo · coordinate slab (mono, field-mapped)
+              </span>
               <FactionLabPlate plateKind="protocolOrdoCompactMono">
                 <LocationOrdoCoordinateSlabV5Body testId="loc-lab-ordo-coordinate-mono-v5" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Same chrome as V4, but the slab is a real <code>lore-location</code> shape: masthead reads{" "}
-                  <code>LOCATION</code> (mono, like V4); <code>ref</code> / <code>context</code> in the two-line stamp;
-                  <code>name</code> drives the grotesk stack; <code>context</code> also drives the footer strip;{" "}
-                  <code>detail</code> as a secondary line; notes sit inline in the column (no extra panel) with the same Geist
-                  / line-height rhythm as canvas <code>nodeBody</code> / hgDoc prose. LAT/LON are deterministic from the
-                  ref (lab only).
+                  Same chrome as V4, but the slab is a real{" "}
+                  <code>lore-location</code> shape: masthead reads{" "}
+                  <code>LOCATION</code> (mono, like V4); <code>ref</code> /{" "}
+                  <code>context</code> in the two-line stamp;
+                  <code>name</code> drives the grotesk stack;{" "}
+                  <code>context</code> also drives the footer strip;{" "}
+                  <code>detail</code> as a secondary line; notes sit inline in
+                  the column (no extra panel) with the same Geist / line-height
+                  rhythm as canvas <code>nodeBody</code> / hgDoc prose. LAT/LON
+                  are deterministic from the ref (lab only).
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>V6 · Ordo · coordinate slab (mono, lean)</span>
+              <span className={labStyles.variantLabel}>
+                V6 · Ordo · coordinate slab (mono, lean)
+              </span>
               <FactionLabPlate plateKind="protocolOrdoCompactMono">
                 <LocationOrdoCoordinateSlabV6Body testId="loc-lab-ordo-coordinate-mono-v6" />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Same plate as V4–V5; DOM carries only <code>name</code>, <code>context</code>, <code>detail</code>,{" "}
-                  <code>ref</code>, <code>notes</code> — no duplicate stamps, charter/LAT/survey lines, or footer grid.
-                  The slab body uses <code>BufferedContentEditable</code> (rich HTML like canvas nodes); no header REF
-                  rail. Search indexing uses the item&apos;s text blob + title, not per-field keys.
+                  Same plate as V4–V5; DOM carries only <code>name</code>,{" "}
+                  <code>context</code>, <code>detail</code>, <code>ref</code>,{" "}
+                  <code>notes</code> — no duplicate stamps, charter/LAT/survey
+                  lines, or footer grid. The slab body uses{" "}
+                  <code>BufferedContentEditable</code> (rich HTML like canvas
+                  nodes); no header REF rail. Search indexing uses the
+                  item&apos;s text blob + title, not per-field keys.
                 </li>
               </ul>
             </div>
 
             <div className={labStyles.cell}>
-              <span className={labStyles.variantLabel}>V7 · Ordo · coordinate slab (mono, hgDoc notes)</span>
+              <span className={labStyles.variantLabel}>
+                V7 · Ordo · coordinate slab (mono, hgDoc notes)
+              </span>
               <FactionLabPlate plateKind="protocolOrdoCompactMono">
                 <LocationOrdoCoordinateSlabV7LabBody />
               </FactionLabPlate>
               <ul className={labStyles.spec}>
                 <li>
-                  Same lean slab as V6 (structured <code>name</code> / <code>context</code> / <code>detail</code> + footer
-                  ref), but <code>notes</code> use <code>HeartgardenDocEditor</code> — TipTap hgDoc (slash menu, block
-                  schema) with V6-matched Geist sizing on the plate.
+                  Same lean slab as V6 (structured <code>name</code> /{" "}
+                  <code>context</code> / <code>detail</code> + footer ref), but{" "}
+                  <code>notes</code> use <code>HeartgardenDocEditor</code> —
+                  TipTap hgDoc (slash menu, block schema) with V6-matched Geist
+                  sizing on the plate.
                 </li>
               </ul>
             </div>

@@ -7,10 +7,13 @@ import {
   resolveOtherClarificationAnswers,
   validateClarificationAnswersForApply,
 } from "@/src/lib/lore-import-clarifications";
-import type { ClarificationAnswer, LoreImportPlan } from "@/src/lib/lore-import-plan-types";
+import type {
+  ClarificationAnswer,
+  LoreImportPlan,
+} from "@/src/lib/lore-import-plan-types";
 
 function minimalPlan(
-  overrides: Partial<LoreImportPlan> & Pick<LoreImportPlan, "clarifications">,
+  overrides: Partial<LoreImportPlan> & Pick<LoreImportPlan, "clarifications">
 ): LoreImportPlan {
   const importBatchId = randomUUID();
   return {
@@ -55,7 +58,9 @@ describe("validateClarificationAnswersForApply", () => {
     });
     const r = validateClarificationAnswersForApply(plan, []);
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toContain("Missing answer");
+    if (!r.ok) {
+      expect(r.error).toContain("Missing answer");
+    }
   });
 
   it("accepts answered single_select with one option id", () => {
@@ -82,7 +87,9 @@ describe("validateClarificationAnswersForApply", () => {
         selectedOptionIds: ["a"],
       },
     ];
-    expect(validateClarificationAnswersForApply(plan, answers)).toEqual({ ok: true });
+    expect(validateClarificationAnswersForApply(plan, answers)).toEqual({
+      ok: true,
+    });
   });
 
   it("accepts skipped_default with valid skipDefaultOptionId", () => {
@@ -114,7 +121,9 @@ describe("validateClarificationAnswersForApply", () => {
         skipDefaultOptionId: "def",
       },
     ];
-    expect(validateClarificationAnswersForApply(plan, answers)).toEqual({ ok: true });
+    expect(validateClarificationAnswersForApply(plan, answers)).toEqual({
+      ok: true,
+    });
   });
 
   it("rejects duplicate clarification answers", () => {
@@ -174,7 +183,9 @@ describe("validateClarificationAnswersForApply", () => {
         otherText: "This assumption is wrong, use a separate NPC.",
       },
     ];
-    expect(validateClarificationAnswersForApply(plan, answers)).toEqual({ ok: true });
+    expect(validateClarificationAnswersForApply(plan, answers)).toEqual({
+      ok: true,
+    });
   });
 });
 
@@ -203,7 +214,7 @@ describe("capClarificationList", () => {
       ],
     };
     const list = Array.from({ length: 50 }, (_, i) =>
-      i === 0 ? req : { ...twoOpt, id: randomUUID() },
+      i === 0 ? req : { ...twoOpt, id: randomUUID() }
     );
     const capped = capClarificationList(list);
     expect(capped.length).toBe(40);
@@ -291,7 +302,10 @@ describe("applyClarificationPatches", () => {
             {
               id: "drop",
               label: "Drop",
-              planPatchHint: { op: "discard_merge_proposal", mergeProposalId: mid },
+              planPatchHint: {
+                op: "discard_merge_proposal",
+                mergeProposalId: mid,
+              },
             },
             { id: "keep", label: "Keep", planPatchHint: { op: "no_op" } },
           ],
@@ -319,7 +333,12 @@ describe("applyClarificationPatches", () => {
           title: "Canon",
           questionKind: "single_select",
           options: [
-            { id: "recommended", label: "Recommended", recommended: true, planPatchHint: { op: "no_op" } },
+            {
+              id: "recommended",
+              label: "Recommended",
+              recommended: true,
+              planPatchHint: { op: "no_op" },
+            },
             { id: "other", label: "Other", planPatchHint: { op: "no_op" } },
           ],
         },
@@ -347,8 +366,16 @@ describe("resolveOtherClarificationAnswers", () => {
           title: "Pick link",
           questionKind: "single_select",
           options: [
-            { id: "conflict", label: "Keep conflict", planPatchHint: { op: "no_op" } },
-            { id: "history", label: "Downgrade to history", planPatchHint: { op: "no_op" } },
+            {
+              id: "conflict",
+              label: "Keep conflict",
+              planPatchHint: { op: "no_op" },
+            },
+            {
+              id: "history",
+              label: "Downgrade to history",
+              planPatchHint: { op: "no_op" },
+            },
           ],
         },
       ],
@@ -378,8 +405,16 @@ describe("resolveOtherClarificationAnswers", () => {
           title: "Clarify target",
           questionKind: "single_select",
           options: [
-            { id: "maya", label: "Maya is target", planPatchHint: { op: "no_op" } },
-            { id: "lucia", label: "Lucia is target", planPatchHint: { op: "no_op" } },
+            {
+              id: "maya",
+              label: "Maya is target",
+              planPatchHint: { op: "no_op" },
+            },
+            {
+              id: "lucia",
+              label: "Lucia is target",
+              planPatchHint: { op: "no_op" },
+            },
           ],
         },
       ],

@@ -1,4 +1,7 @@
-import { buildItemVaultCorpus, type ItemSearchableSource } from "@/src/lib/item-searchable-text";
+import {
+  buildItemVaultCorpus,
+  type ItemSearchableSource,
+} from "@/src/lib/item-searchable-text";
 
 export type SearchBlobSource = ItemSearchableSource;
 

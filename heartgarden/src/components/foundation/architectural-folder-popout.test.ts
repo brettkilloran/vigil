@@ -1,9 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import type { CanvasEntity, CanvasGraph } from "@/src/components/foundation/architectural-types";
-import { applyFolderPopOutPlan, collectFolderPopOutPlan } from "./architectural-folder-popout";
+import type {
+  CanvasEntity,
+  CanvasGraph,
+} from "@/src/components/foundation/architectural-types";
+import {
+  applyFolderPopOutPlan,
+  collectFolderPopOutPlan,
+} from "./architectural-folder-popout";
 
-function content(id: string, slots: CanvasEntity["slots"]): Extract<CanvasEntity, { kind: "content" }> {
+function content(
+  id: string,
+  slots: CanvasEntity["slots"]
+): Extract<CanvasEntity, { kind: "content" }> {
   return {
     id,
     kind: "content",
@@ -19,7 +28,7 @@ function content(id: string, slots: CanvasEntity["slots"]): Extract<CanvasEntity
 function folder(
   id: string,
   childSpaceId: string,
-  slots: CanvasEntity["slots"],
+  slots: CanvasEntity["slots"]
 ): Extract<CanvasEntity, { kind: "folder" }> {
   return {
     id,
@@ -47,9 +56,16 @@ function baseGraph(): CanvasGraph {
 describe("folder pop-out planning", () => {
   it("returns an empty move plan for an empty folder", () => {
     const graph = baseGraph();
-    graph.entities.folderA = folder("folderA", "spaceA", { root: { x: 100, y: 100 } });
+    graph.entities.folderA = folder("folderA", "spaceA", {
+      root: { x: 100, y: 100 },
+    });
     graph.spaces.root.entityIds = ["folderA"];
-    graph.spaces.spaceA = { id: "spaceA", name: "A", parentSpaceId: "root", entityIds: [] };
+    graph.spaces.spaceA = {
+      id: "spaceA",
+      name: "A",
+      parentSpaceId: "root",
+      entityIds: [],
+    };
 
     const plan = collectFolderPopOutPlan(graph, ["folderA"]);
 
@@ -61,9 +77,13 @@ describe("folder pop-out planning", () => {
 
   it("moves immediate children into parent space with relative offsets", () => {
     const graph = baseGraph();
-    graph.entities.folderA = folder("folderA", "spaceA", { root: { x: 300, y: 200 } });
+    graph.entities.folderA = folder("folderA", "spaceA", {
+      root: { x: 300, y: 200 },
+    });
     graph.entities.note1 = content("note1", { spaceA: { x: 20, y: 35 } });
-    graph.entities.subFolder = folder("subFolder", "spaceB", { spaceA: { x: -10, y: 25 } });
+    graph.entities.subFolder = folder("subFolder", "spaceB", {
+      spaceA: { x: -10, y: 25 },
+    });
     graph.spaces.root.entityIds = ["folderA"];
     graph.spaces.spaceA = {
       id: "spaceA",
@@ -71,7 +91,12 @@ describe("folder pop-out planning", () => {
       parentSpaceId: "root",
       entityIds: ["note1", "subFolder"],
     };
-    graph.spaces.spaceB = { id: "spaceB", name: "B", parentSpaceId: "spaceA", entityIds: [] };
+    graph.spaces.spaceB = {
+      id: "spaceB",
+      name: "B",
+      parentSpaceId: "spaceA",
+      entityIds: [],
+    };
 
     const plan = collectFolderPopOutPlan(graph, ["folderA"]);
 
@@ -89,12 +114,16 @@ describe("folder pop-out planning", () => {
         newSlot: { x: 290, y: 225 },
       },
     ]);
-    expect(plan.spaceReparents).toEqual([{ spaceId: "spaceB", newParentId: "root" }]);
+    expect(plan.spaceReparents).toEqual([
+      { spaceId: "spaceB", newParentId: "root" },
+    ]);
   });
 
   it("applies moves without deleting child connections", () => {
     const graph = baseGraph();
-    graph.entities.folderA = folder("folderA", "spaceA", { root: { x: 50, y: 60 } });
+    graph.entities.folderA = folder("folderA", "spaceA", {
+      root: { x: 50, y: 60 },
+    });
     graph.entities.note1 = content("note1", { spaceA: { x: 5, y: 5 } });
     graph.entities.note2 = content("note2", { spaceA: { x: 15, y: 15 } });
     graph.spaces.root.entityIds = ["folderA"];

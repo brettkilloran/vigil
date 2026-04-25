@@ -12,7 +12,9 @@ const ext = getHgDocExtensions({ withPlaceholder: false }) as Extensions;
  */
 export function htmlFragmentToHgDocDoc(fragmentHtml: string): JSONContent {
   const trimmed = (fragmentHtml ?? "").trim();
-  if (!trimmed) return structuredClone(EMPTY_HG_DOC);
+  if (!trimmed) {
+    return structuredClone(EMPTY_HG_DOC);
+  }
   try {
     return generateJSON(trimmed, ext);
   } catch {
@@ -48,11 +50,16 @@ export function stripLegacyHtmlToPlainText(html: string): string {
  */
 export function plainTextFromInlineHtmlFragment(html: string): string {
   const trimmed = (html ?? "").trim();
-  if (!trimmed) return "";
+  if (!trimmed) {
+    return "";
+  }
   const withBrAsSpace = trimmed.replace(/<br\s*\/?>/gi, " ");
   if (typeof DOMParser !== "undefined") {
     try {
-      const doc = new DOMParser().parseFromString(`<div>${withBrAsSpace}</div>`, "text/html");
+      const doc = new DOMParser().parseFromString(
+        `<div>${withBrAsSpace}</div>`,
+        "text/html"
+      );
       return (doc.body?.textContent ?? "").replace(/\s+/g, " ").trim();
     } catch {
       /* ignore */
@@ -67,7 +74,9 @@ export function plainTextFromInlineHtmlFragment(html: string): string {
  */
 export function legacyCodeBodyHtmlToHgDocSeed(html: string): JSONContent {
   const plain = stripLegacyHtmlToPlainText(html);
-  if (!plain) return structuredClone(EMPTY_HG_DOC);
+  if (!plain) {
+    return structuredClone(EMPTY_HG_DOC);
+  }
   const text = plain.length > 50_000 ? plain.slice(0, 50_000) : plain;
   return {
     type: "doc",

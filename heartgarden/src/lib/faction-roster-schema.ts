@@ -35,14 +35,20 @@ export type FactionRosterEntry = z.infer<typeof factionRosterEntrySchema>;
 
 /** Validated roster array, or null if missing/invalid. */
 export function parseFactionRoster(raw: unknown): FactionRosterEntry[] | null {
-  if (raw === undefined || raw === null) return null;
+  if (raw === undefined || raw === null) {
+    return null;
+  }
   const r = factionRosterSchema.safeParse(raw);
   return r.success ? r.data : null;
 }
 
 /** Read `factionRoster` from a hgArch-like object (e.g. parsed `content_json.hgArch`). */
-export function parseFactionRosterFromHgArch(hgArch: unknown): FactionRosterEntry[] | null {
-  if (!hgArch || typeof hgArch !== "object") return null;
+export function parseFactionRosterFromHgArch(
+  hgArch: unknown
+): FactionRosterEntry[] | null {
+  if (!hgArch || typeof hgArch !== "object") {
+    return null;
+  }
   const raw = (hgArch as Record<string, unknown>)[FACTION_ROSTER_HG_ARCH_KEY];
   return parseFactionRoster(raw);
 }

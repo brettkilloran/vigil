@@ -20,15 +20,23 @@ function storageKeyForTier(tier: WorkspaceBootTierTag): string {
 }
 
 function readRecentItems(tier: WorkspaceBootTierTag): RecentPaletteItem[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") {
+    return [];
+  }
   try {
     const raw = window.localStorage.getItem(storageKeyForTier(tier));
-    if (!raw) return [];
+    if (!raw) {
+      return [];
+    }
     const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
     return parsed
       .filter((entry): entry is RecentPaletteItem => {
-        if (!entry || typeof entry !== "object") return false;
+        if (!entry || typeof entry !== "object") {
+          return false;
+        }
         const row = entry as Record<string, unknown>;
         return (
           typeof row.id === "string" &&
@@ -45,12 +53,17 @@ function readRecentItems(tier: WorkspaceBootTierTag): RecentPaletteItem[] {
   }
 }
 
-function writeRecentItems(tier: WorkspaceBootTierTag, items: RecentPaletteItem[]): void {
-  if (typeof window === "undefined") return;
+function writeRecentItems(
+  tier: WorkspaceBootTierTag,
+  items: RecentPaletteItem[]
+): void {
+  if (typeof window === "undefined") {
+    return;
+  }
   try {
     window.localStorage.setItem(
       storageKeyForTier(tier),
-      JSON.stringify(items.slice(0, MAX_RECENT_ITEMS)),
+      JSON.stringify(items.slice(0, MAX_RECENT_ITEMS))
     );
   } catch {
     /* ignore */
@@ -58,7 +71,9 @@ function writeRecentItems(tier: WorkspaceBootTierTag, items: RecentPaletteItem[]
 }
 
 export function useRecentItems(tier: WorkspaceBootTierTag) {
-  const [items, setItems] = useState<RecentPaletteItem[]>(() => readRecentItems(tier));
+  const [items, setItems] = useState<RecentPaletteItem[]>(() =>
+    readRecentItems(tier)
+  );
 
   useEffect(() => {
     setItems(readRecentItems(tier));
@@ -75,20 +90,24 @@ export function useRecentItems(tier: WorkspaceBootTierTag) {
         return next;
       });
     },
-    [tier],
+    [tier]
   );
 
   const pruneIds = useCallback(
     (ids: ReadonlySet<string>) => {
-      if (ids.size === 0) return;
+      if (ids.size === 0) {
+        return;
+      }
       setItems((prev) => {
         const next = prev.filter((row) => !ids.has(row.id));
-        if (next.length === prev.length) return prev;
+        if (next.length === prev.length) {
+          return prev;
+        }
         writeRecentItems(tier, next);
         return next;
       });
     },
-    [tier],
+    [tier]
   );
 
   return { items, push, pruneIds };

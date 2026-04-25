@@ -22,12 +22,14 @@ export function HeartgardenMediaPlaceholderImg({
   return (
     // eslint-disable-next-line @next/next/no-img-element -- intentional data-URL design token
     <img
-      src={HEARTGARDEN_MEDIA_PLACEHOLDER_SRC}
       alt={alt}
-      draggable={false}
+      className={[heartgardenMediaPlaceholderClassList(variant), className]
+        .filter(Boolean)
+        .join(" ")}
       data-hg-heartgarden-media-placeholder="true"
       data-hg-portrait-placeholder="true"
-      className={[heartgardenMediaPlaceholderClassList(variant), className].filter(Boolean).join(" ")}
+      draggable={false}
+      src={HEARTGARDEN_MEDIA_PLACEHOLDER_SRC}
       {...rest}
     />
   );

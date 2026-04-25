@@ -15,10 +15,14 @@ function clientKeyFromRequest(req: Request): string {
   const forwarded = h.get("x-forwarded-for");
   if (forwarded) {
     const first = forwarded.split(",")[0]?.trim();
-    if (first) return `ip:${first}`;
+    if (first) {
+      return `ip:${first}`;
+    }
   }
   const realIp = h.get("x-real-ip")?.trim();
-  if (realIp) return `ip:${realIp}`;
+  if (realIp) {
+    return `ip:${realIp}`;
+  }
   return "ip:unknown";
 }
 
@@ -31,10 +35,14 @@ export function loreQueryRateLimitExceeded(req: Request): boolean {
     buckets.set(key, b);
   }
   b.count += 1;
-  if (b.count > MAX_PER_WINDOW) return true;
+  if (b.count > MAX_PER_WINDOW) {
+    return true;
+  }
   if (buckets.size > 10_000) {
     for (const [k, v] of buckets) {
-      if (now - v.windowStart >= WINDOW_MS) buckets.delete(k);
+      if (now - v.windowStart >= WINDOW_MS) {
+        buckets.delete(k);
+      }
     }
   }
   return false;

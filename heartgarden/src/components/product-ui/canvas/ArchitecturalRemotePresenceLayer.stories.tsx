@@ -1,9 +1,8 @@
 "use client";
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
-
-import type { SpacePresencePeer } from "@/src/components/foundation/architectural-neon-api";
 import { ArchitecturalRemotePresenceCursors } from "@/src/components/foundation/ArchitecturalRemotePresenceLayer";
+import type { SpacePresencePeer } from "@/src/components/foundation/architectural-neon-api";
 
 const peerA: SpacePresencePeer = {
   clientId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",

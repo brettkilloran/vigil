@@ -23,8 +23,8 @@ import {
   mergeRemoteSpaceRowsIntoGraph,
 } from "@/src/components/foundation/architectural-db-bridge";
 import type { CanvasGraph } from "@/src/components/foundation/architectural-types";
-import type { CanvasItem } from "@/src/model/canvas-types";
 import { collectSpaceSubtreeIds } from "@/src/lib/spaces";
+import type { CanvasItem } from "@/src/model/canvas-types";
 
 /**
  * Pure logic shared by {@link useHeartgardenSpaceChangeSync}: which item ids must keep
@@ -39,7 +39,13 @@ export function buildCollabMergeProtectedContentIds(options: {
   savingContentIds?: ReadonlySet<string>;
 }): Set<string> {
   const out = new Set<string>();
-  const { focusOpen, focusDirty, activeNodeId, inlineContentDirtyIds, savingContentIds } = options;
+  const {
+    focusOpen,
+    focusDirty,
+    activeNodeId,
+    inlineContentDirtyIds,
+    savingContentIds,
+  } = options;
   if (focusOpen && focusDirty && activeNodeId) {
     out.add(activeNodeId);
   }
@@ -52,27 +58,36 @@ export function buildCollabMergeProtectedContentIds(options: {
 export function mergeItemServerUpdatedAtIfNewer(
   map: Map<string, string>,
   id: string,
-  incoming: string,
+  incoming: string
 ): void {
   const cur = map.get(id);
-  const prevMs = cur ? Date.parse(cur) : NaN;
+  const prevMs = cur ? Date.parse(cur) : Number.NaN;
   const nextMs = Date.parse(incoming);
-  if (!Number.isFinite(nextMs)) return;
+  if (!Number.isFinite(nextMs)) {
+    return;
+  }
   if (!Number.isFinite(prevMs) || nextMs > prevMs) {
     map.set(id, incoming);
   }
 }
 
 /** Advance cursor only forward; ignore absent, invalid, or regressive server cursors. */
-export function mergeLatestIsoCursor(currentIso: string, serverCursor: string | undefined): string {
+export function mergeLatestIsoCursor(
+  currentIso: string,
+  serverCursor: string | undefined
+): string {
   const prevMs = Date.parse(currentIso);
   const base = Number.isFinite(prevMs) ? prevMs : 0;
   if (typeof serverCursor !== "string" || serverCursor.length === 0) {
     return Number.isFinite(prevMs) ? currentIso : new Date(0).toISOString();
   }
   const nextMs = Date.parse(serverCursor);
-  if (!Number.isFinite(nextMs)) return Number.isFinite(prevMs) ? currentIso : new Date(0).toISOString();
-  if (nextMs < base) return currentIso;
+  if (!Number.isFinite(nextMs)) {
+    return Number.isFinite(prevMs) ? currentIso : new Date(0).toISOString();
+  }
+  if (nextMs < base) {
+    return currentIso;
+  }
   return serverCursor;
 }
 
@@ -96,22 +111,65 @@ export type ParsedSpaceChangesResponse = {
   hasMore?: boolean;
 };
 
-const CANVAS_ITEM_TYPES = new Set(["note", "sticky", "image", "checklist", "webclip", "folder"]);
+const CANVAS_ITEM_TYPES = new Set([
+  "note",
+  "sticky",
+  "image",
+  "checklist",
+  "webclip",
+  "folder",
+]);
 
 function isCanvasItemPayload(v: unknown): v is CanvasItem {
-  if (typeof v !== "object" || v === null) return false;
+  if (typeof v !== "object" || v === null) {
+    return false;
+  }
   const o = v as Record<string, unknown>;
-  if (typeof o.id !== "string" || o.id.length === 0) return false;
-  if (typeof o.spaceId !== "string" || o.spaceId.length === 0) return false;
-  if (typeof o.itemType !== "string" || !CANVAS_ITEM_TYPES.has(o.itemType)) return false;
-  if (typeof o.x !== "number" || typeof o.y !== "number") return false;
-  if (typeof o.width !== "number" || typeof o.height !== "number") return false;
-  if (typeof o.zIndex !== "number") return false;
-  if (typeof o.title !== "string" || typeof o.contentText !== "string") return false;
-  if (o.updatedAt !== undefined && typeof o.updatedAt !== "string") return false;
-  if (o.contentJson !== undefined && o.contentJson !== null && typeof o.contentJson !== "object") return false;
-  if (o.entityMeta !== undefined && o.entityMeta !== null && typeof o.entityMeta !== "object") return false;
-  if (o.imageMeta !== undefined && o.imageMeta !== null && typeof o.imageMeta !== "object") return false;
+  if (typeof o.id !== "string" || o.id.length === 0) {
+    return false;
+  }
+  if (typeof o.spaceId !== "string" || o.spaceId.length === 0) {
+    return false;
+  }
+  if (typeof o.itemType !== "string" || !CANVAS_ITEM_TYPES.has(o.itemType)) {
+    return false;
+  }
+  if (typeof o.x !== "number" || typeof o.y !== "number") {
+    return false;
+  }
+  if (typeof o.width !== "number" || typeof o.height !== "number") {
+    return false;
+  }
+  if (typeof o.zIndex !== "number") {
+    return false;
+  }
+  if (typeof o.title !== "string" || typeof o.contentText !== "string") {
+    return false;
+  }
+  if (o.updatedAt !== undefined && typeof o.updatedAt !== "string") {
+    return false;
+  }
+  if (
+    o.contentJson !== undefined &&
+    o.contentJson !== null &&
+    typeof o.contentJson !== "object"
+  ) {
+    return false;
+  }
+  if (
+    o.entityMeta !== undefined &&
+    o.entityMeta !== null &&
+    typeof o.entityMeta !== "object"
+  ) {
+    return false;
+  }
+  if (
+    o.imageMeta !== undefined &&
+    o.imageMeta !== null &&
+    typeof o.imageMeta !== "object"
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -129,14 +187,24 @@ function isStringArray(v: unknown): v is string[] {
  */
 export function parseSpaceChangesResponseJson(
   raw: unknown,
-  options: { requireItemIds: boolean },
+  options: { requireItemIds: boolean }
 ): ParsedSpaceChangesResponse | null {
-  if (typeof raw !== "object" || raw === null) return null;
+  if (typeof raw !== "object" || raw === null) {
+    return null;
+  }
   const o = raw as Record<string, unknown>;
-  if (o.ok !== true) return null;
-  if ("items" in o && o.items != null && !Array.isArray(o.items)) return null;
-  if ("spaces" in o && o.spaces != null && !Array.isArray(o.spaces)) return null;
-  if ("cursor" in o && o.cursor != null && typeof o.cursor !== "string") return null;
+  if (o.ok !== true) {
+    return null;
+  }
+  if ("items" in o && o.items != null && !Array.isArray(o.items)) {
+    return null;
+  }
+  if ("spaces" in o && o.spaces != null && !Array.isArray(o.spaces)) {
+    return null;
+  }
+  if ("cursor" in o && o.cursor != null && typeof o.cursor !== "string") {
+    return null;
+  }
   if (
     "itemLinksRevision" in o &&
     o.itemLinksRevision != null &&
@@ -149,7 +217,9 @@ export function parseSpaceChangesResponseJson(
   }
 
   if (options.requireItemIds) {
-    if (!("itemIds" in o) || !isStringArray(o.itemIds)) return null;
+    if (!("itemIds" in o && isStringArray(o.itemIds))) {
+      return null;
+    }
   } else if ("itemIds" in o && o.itemIds != null && !isStringArray(o.itemIds)) {
     return null;
   }
@@ -157,17 +227,25 @@ export function parseSpaceChangesResponseJson(
   const itemsRaw = Array.isArray(o.items) ? o.items : [];
   const items: CanvasItem[] = [];
   for (const row of itemsRaw) {
-    if (!isCanvasItemPayload(row)) return null;
+    if (!isCanvasItemPayload(row)) {
+      return null;
+    }
     items.push(row);
   }
   const spacesRaw = Array.isArray(o.spaces) ? o.spaces : [];
   const spaces: SpaceChangePayloadRow[] = [];
   for (const row of spacesRaw) {
-    if (typeof row !== "object" || row === null) return null;
+    if (typeof row !== "object" || row === null) {
+      return null;
+    }
     const r = row as Record<string, unknown>;
-    if (!isNonEmptyString(r.id) || typeof r.name !== "string") return null;
+    if (!isNonEmptyString(r.id) || typeof r.name !== "string") {
+      return null;
+    }
     const ps = r.parentSpaceId;
-    if (ps !== null && typeof ps !== "string") return null;
+    if (ps !== null && typeof ps !== "string") {
+      return null;
+    }
     spaces.push({
       id: r.id,
       name: r.name,
@@ -186,10 +264,10 @@ export function parseSpaceChangesResponseJson(
     ok: true,
     items,
     spaces,
-    ...(itemIds !== undefined ? { itemIds } : {}),
-    ...(cursor !== undefined ? { cursor } : {}),
-    ...(itemLinksRevision !== undefined ? { itemLinksRevision } : {}),
-    ...(hasMore !== undefined ? { hasMore } : {}),
+    ...(itemIds === undefined ? {} : { itemIds }),
+    ...(cursor === undefined ? {} : { cursor }),
+    ...(itemLinksRevision === undefined ? {} : { itemLinksRevision }),
+    ...(hasMore === undefined ? {} : { hasMore }),
   };
 }
 
@@ -237,19 +315,27 @@ export function applySpaceChangeGraphMerge(input: {
     serverItemIds,
     subtree,
     protectedContentIds,
-    tombstoneExemptIds,
+    tombstoneExemptIds
   );
   // Safety net: enforce changed-item membership in destination spaces after merge.
-  if (rawItems.length === 0) return mergedItems;
+  if (rawItems.length === 0) {
+    return mergedItems;
+  }
   const spacesRecord = { ...mergedItems.spaces };
   for (const item of rawItems) {
     const nextHome = spacesRecord[item.spaceId];
-    if (!nextHome) continue;
+    if (!nextHome) {
+      continue;
+    }
     for (const sid of Object.keys(spacesRecord)) {
-      if (sid === item.spaceId) continue;
+      if (sid === item.spaceId) {
+        continue;
+      }
       const sp = spacesRecord[sid]!;
       const idx = sp.entityIds.indexOf(item.id);
-      if (idx === -1) continue;
+      if (idx === -1) {
+        continue;
+      }
       const nextIds = [...sp.entityIds];
       nextIds.splice(idx, 1);
       spacesRecord[sid] = { ...sp, entityIds: nextIds };
@@ -267,11 +353,13 @@ export function applySpaceChangeGraphMerge(input: {
 /** Server `updatedAt` bumps for items that are not text-protected (for conflict base). */
 export function collectItemServerUpdatedAtBumps(
   rawItems: CanvasItem[],
-  protectedContentIds: ReadonlySet<string>,
+  protectedContentIds: ReadonlySet<string>
 ): Array<{ id: string; updatedAt: string }> {
   const out: Array<{ id: string; updatedAt: string }> = [];
   for (const it of rawItems) {
-    if (!it.updatedAt || protectedContentIds.has(it.id)) continue;
+    if (!it.updatedAt || protectedContentIds.has(it.id)) {
+      continue;
+    }
     out.push({ id: it.id, updatedAt: it.updatedAt });
   }
   return out;

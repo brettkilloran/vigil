@@ -19,9 +19,8 @@
  */
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-
-import { config } from "dotenv";
 import { neon } from "@neondatabase/serverless";
+import { config } from "dotenv";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
@@ -34,7 +33,9 @@ if (!url) {
   process.exit(1);
 }
 
-const base = (process.env.HEARTGARDEN_APP_URL || "http://127.0.0.1:3000").replace(/\/$/, "");
+const base = (
+  process.env.HEARTGARDEN_APP_URL || "http://127.0.0.1:3000"
+).replace(/\/$/, "");
 const spaceId = (process.env.VAULT_REINDEX_SPACE_ID || "").trim();
 const skipLore = process.env.VAULT_REINDEX_SKIP_LORE === "1";
 const dry = process.env.VAULT_REINDEX_DRY === "1";
@@ -52,7 +53,9 @@ if (spaceId) {
   rows = await sql`select id from items`;
 }
 
-console.log(`Found ${rows.length} item(s)${spaceId ? ` in space ${spaceId}` : ""}.`);
+console.log(
+  `Found ${rows.length} item(s)${spaceId ? ` in space ${spaceId}` : ""}.`
+);
 
 if (dry) {
   console.log("VAULT_REINDEX_DRY=1 — no requests sent.");
@@ -66,16 +69,23 @@ let skippedForbidden = 0;
 
 for (let i = 0; i < rows.length; i++) {
   const id = rows[i]?.id;
-  if (!id) continue;
+  if (!id) {
+    continue;
+  }
   try {
-    const res = await fetch(`${base}/api/items/${encodeURIComponent(id)}/index`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(mcpServiceKey ? { Authorization: `Bearer ${mcpServiceKey}` } : {}),
-      },
-      body,
-    });
+    const res = await fetch(
+      `${base}/api/items/${encodeURIComponent(id)}/index`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(mcpServiceKey
+            ? { Authorization: `Bearer ${mcpServiceKey}` }
+            : {}),
+        },
+        body,
+      }
+    );
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.ok !== false) {
       ok += 1;
@@ -91,7 +101,10 @@ for (let i = 0; i < rows.length; i++) {
     }
   } catch (e) {
     fail += 1;
-    console.error(`[${i + 1}/${rows.length}] ${id}`, e instanceof Error ? e.message : e);
+    console.error(
+      `[${i + 1}/${rows.length}] ${id}`,
+      e instanceof Error ? e.message : e
+    );
   }
   if (delayMs && i < rows.length - 1) {
     await new Promise((r) => setTimeout(r, delayMs));
@@ -99,6 +112,8 @@ for (let i = 0; i < rows.length; i++) {
 }
 
 console.log(
-  `Done. ok=${ok} skipped_forbidden=${skippedForbidden} fail=${fail} (base=${base})`,
+  `Done. ok=${ok} skipped_forbidden=${skippedForbidden} fail=${fail} (base=${base})`
 );
-if (fail > 0) process.exit(1);
+if (fail > 0) {
+  process.exit(1);
+}

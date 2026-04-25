@@ -1,4 +1,8 @@
-import type { LoreCard, LoreCardKind, LoreCardVariant } from "@/src/components/foundation/architectural-types";
+import type {
+  LoreCard,
+  LoreCardKind,
+  LoreCardVariant,
+} from "@/src/components/foundation/architectural-types";
 import { stripLegacyHtmlToPlainText } from "@/src/lib/hg-doc/html-to-doc";
 import {
   defaultLoreCardVariantForKind,
@@ -53,7 +57,7 @@ export function synthesizeLoreCardContentJsonAndPlainText(args: {
   const bodyHtml = getLoreNodeSeedBodyHtml(
     loreCard.kind,
     loreCard.variant,
-    locationStripSeed != null ? { locationStripSeed } : undefined,
+    locationStripSeed == null ? undefined : { locationStripSeed }
   );
   const tapeVariant = tapeVariantForLoreCard(loreCard.kind, loreCard.variant);
   const rotation = loreRotationDeg();
@@ -71,6 +75,8 @@ export function synthesizeLoreCardContentJsonAndPlainText(args: {
     },
   };
 
-  const plainText = stripLegacyHtmlToPlainText(bodyHtml).replace(/\s+/g, " ").trim();
+  const plainText = stripLegacyHtmlToPlainText(bodyHtml)
+    .replace(/\s+/g, " ")
+    .trim();
   return { contentJson, plainText };
 }

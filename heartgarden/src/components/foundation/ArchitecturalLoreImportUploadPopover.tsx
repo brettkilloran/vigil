@@ -2,11 +2,11 @@
 
 import { useEffect } from "react";
 import { Button } from "@/src/components/ui/Button";
-import { LoreImportLandModeRadios } from "./LoreImportLandModeRadios";
-import type { LoreImportUploadMode } from "./LoreImportLandModeRadios";
-import { LoreImportScopeRadios } from "./LoreImportScopeRadios";
-import type { LoreImportScopeMode } from "./LoreImportScopeRadios";
 import styles from "./ArchitecturalCanvasApp.module.css";
+import type { LoreImportUploadMode } from "./LoreImportLandModeRadios";
+import { LoreImportLandModeRadios } from "./LoreImportLandModeRadios";
+import type { LoreImportScopeMode } from "./LoreImportScopeRadios";
+import { LoreImportScopeRadios } from "./LoreImportScopeRadios";
 
 export type { LoreImportUploadMode } from "./LoreImportLandModeRadios";
 export type { LoreImportScopeMode } from "./LoreImportScopeRadios";
@@ -48,16 +48,18 @@ export function ArchitecturalLoreImportUploadPopover(props: {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
-  if (!open) return null;
+  if (!open) {
+    return null;
+  }
 
   return (
     <div className={styles.importUploadPopoverBackdrop} onMouseDown={onClose}>
       <div
-        className={styles.importUploadPopover}
-        role="dialog"
-        aria-modal="true"
         aria-label="Import document"
+        aria-modal="true"
+        className={styles.importUploadPopover}
         onMouseDown={(event) => event.stopPropagation()}
+        role="dialog"
       >
         <header className={styles.importUploadPopoverHeader}>
           <p className={styles.importUploadPopoverTitle}>Import document</p>
@@ -66,38 +68,62 @@ export function ArchitecturalLoreImportUploadPopover(props: {
           </p>
         </header>
         <section className={styles.importUploadPopoverSection}>
-          <h3 className={styles.importUploadPopoverSectionTitle}>Import focus</h3>
+          <h3 className={styles.importUploadPopoverSectionTitle}>
+            Import focus
+          </h3>
           <label className={styles.importUploadPopoverContext}>
             <textarea
-              value={contextText}
               onChange={(event) => onContextTextChange(event.target.value)}
               placeholder="Tell the AI what to prioritize and how to organize this import..."
+              value={contextText}
             />
           </label>
         </section>
         <section className={styles.importUploadPopoverSection}>
-          <h3 className={styles.importUploadPopoverSectionTitle}>How should this import land?</h3>
+          <h3 className={styles.importUploadPopoverSectionTitle}>
+            How should this import land?
+          </h3>
           <LoreImportLandModeRadios mode={mode} onModeChange={onModeChange} />
         </section>
         <section className={styles.importUploadPopoverSection}>
-          <h3 className={styles.importUploadPopoverSectionTitle}>Where can this import place notes?</h3>
-          <LoreImportScopeRadios scope={scope} onScopeChange={onScopeChange} />
+          <h3 className={styles.importUploadPopoverSectionTitle}>
+            Where can this import place notes?
+          </h3>
+          <LoreImportScopeRadios onScopeChange={onScopeChange} scope={scope} />
         </section>
         <div
+          aria-label="Import actions"
           className={styles.importUploadPopoverActions}
           role="group"
-          aria-label="Import actions"
         >
           <div className={styles.importUploadPopoverActionsSecondary}>
-            <Button size="sm" variant="ghost" tone="glass" type="button" onClick={onClose}>
+            <Button
+              onClick={onClose}
+              size="sm"
+              tone="glass"
+              type="button"
+              variant="ghost"
+            >
               Cancel
             </Button>
-            <Button size="sm" variant="ghost" tone="glass" type="button" onClick={onChangeFile}>
+            <Button
+              onClick={onChangeFile}
+              size="sm"
+              tone="glass"
+              type="button"
+              variant="ghost"
+            >
               Change file
             </Button>
           </div>
           <div className={styles.importUploadPopoverActionsPrimary}>
-            <Button size="sm" variant="default" tone="focus-light" type="button" onClick={onContinue}>
+            <Button
+              onClick={onContinue}
+              size="sm"
+              tone="focus-light"
+              type="button"
+              variant="default"
+            >
               Continue import
             </Button>
           </div>
@@ -106,4 +132,3 @@ export function ArchitecturalLoreImportUploadPopover(props: {
     </div>
   );
 }
-

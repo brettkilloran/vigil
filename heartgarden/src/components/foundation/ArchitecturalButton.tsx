@@ -1,9 +1,8 @@
 "use client";
 
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
-
-import { Button } from "@/src/components/ui/Button";
+import { type ButtonHTMLAttributes, forwardRef, type ReactNode } from "react";
 import type { ButtonSize as UiButtonSize } from "@/src/components/ui/Button";
+import { Button } from "@/src/components/ui/Button";
 
 type ButtonSize = "icon" | "menu" | "pill";
 export type ArchitecturalButtonTone =
@@ -20,7 +19,9 @@ type ButtonTone = ArchitecturalButtonTone;
 type ButtonState = "default" | "hover" | "active";
 
 function toUiButtonSize(size: ButtonSize): UiButtonSize {
-  if (size === "menu") return "sm";
+  if (size === "menu") {
+    return "sm";
+  }
   return size;
 }
 
@@ -46,19 +47,19 @@ export const ArchitecturalButton = forwardRef<
     children,
     ...buttonProps
   },
-  ref,
+  ref
 ) {
   return (
     <Button
+      className={className}
+      forceState={forceState}
+      iconOnly={iconOnly}
+      isActive={active}
+      leadingIcon={leadingIcon}
       ref={ref}
       size={toUiButtonSize(size)}
       tone={tone}
       variant="default"
-      isActive={active}
-      forceState={forceState}
-      leadingIcon={leadingIcon}
-      iconOnly={iconOnly}
-      className={className}
       {...buttonProps}
     >
       {children}

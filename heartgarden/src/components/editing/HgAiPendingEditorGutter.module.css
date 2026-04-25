@@ -11,9 +11,9 @@
 .acceptAnchor {
   position: absolute;
   left: 50%;
+  pointer-events: auto;
   /* Top edge aligns with pending span (+ inset); not vertically centered — matches block drag handles. */
   transform: translateX(-50%);
-  pointer-events: auto;
 }
 
 .acceptAnchor :global(.hg-tooltip-hitbox) {
@@ -22,15 +22,15 @@
 
 /* Compact chip: aligns with Tag llmLight typography; colors from globals [data-hg-ai-bind]. */
 .bindBtn {
-  margin: 0;
-  white-space: nowrap;
-  cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  line-height: 1;
   min-height: var(--sys-control-height-xs);
   padding-block: 0;
+  margin: 0;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
   transition: transform 0.16s ease;
 }
 

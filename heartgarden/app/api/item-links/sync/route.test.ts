@@ -16,7 +16,10 @@ vi.mock("@/src/lib/heartgarden-realtime-invalidation", () => ({
 }));
 
 vi.mock("@/src/lib/heartgarden-api-boot-context", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("@/src/lib/heartgarden-api-boot-context")>();
+  const mod =
+    await importOriginal<
+      typeof import("@/src/lib/heartgarden-api-boot-context")
+    >();
   return {
     ...mod,
     getHeartgardenApiBootContext: vi.fn(() => Promise.resolve({ role: "gm" })),
@@ -46,16 +49,22 @@ describe("POST /api/item-links/sync", () => {
           where: vi.fn(() => {
             const result: {
               limit: ReturnType<typeof vi.fn>;
-              then: (resolve: (rows: unknown[]) => unknown, reject?: (err: unknown) => unknown) => Promise<unknown>;
+              then: (
+                resolve: (rows: unknown[]) => unknown,
+                reject?: (err: unknown) => unknown
+              ) => Promise<unknown>;
             } = {
               limit: vi.fn(async () => [{ spaceId: "space-a" }]),
-              then: (resolve, reject) => Promise.resolve([] as unknown[]).then(resolve, reject),
+              then: (resolve, reject) =>
+                Promise.resolve([] as unknown[]).then(resolve, reject),
             };
             return result;
           }),
           leftJoin: vi.fn(() => ({
             where: vi.fn(() => ({
-              limit: vi.fn(async () => [{ name: "Test Space", braneType: "gm" }]),
+              limit: vi.fn(async () => [
+                { name: "Test Space", braneType: "gm" },
+              ]),
             })),
           })),
           innerJoin: vi.fn(() => ({
@@ -63,7 +72,9 @@ describe("POST /api/item-links/sync", () => {
           })),
         })),
       })),
-      transaction: vi.fn(async (run: (txn: typeof tx) => Promise<void>) => run(tx)),
+      transaction: vi.fn(async (run: (txn: typeof tx) => Promise<void>) =>
+        run(tx)
+      ),
     };
 
     tryGetDbMock.mockReturnValue(db);
@@ -89,7 +100,7 @@ describe("POST /api/item-links/sync", () => {
             "00000000-0000-4000-8000-000000000003",
           ],
         }),
-      }),
+      })
     );
 
     expect(res.status).toBe(200);

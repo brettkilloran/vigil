@@ -1,13 +1,17 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const verifyMock = vi.fn();
 
 vi.mock("@/src/lib/heartgarden-boot-edge", () => ({
   HEARTGARDEN_BOOT_COOKIE_NAME: "hg_boot",
   isHeartgardenBootApiAllowlisted: (pathname: string) =>
-    pathname === "/api/heartgarden/boot" || pathname.startsWith("/api/heartgarden/boot/"),
-  readBootGateEnvEdge: () => ({ gateEnabled: true, sessionSecret: "s".repeat(32) }),
+    pathname === "/api/heartgarden/boot" ||
+    pathname.startsWith("/api/heartgarden/boot/"),
+  readBootGateEnvEdge: () => ({
+    gateEnabled: true,
+    sessionSecret: "s".repeat(32),
+  }),
   verifyBootSessionCookieEdge: (...args: unknown[]) => verifyMock(...args),
 }));
 
@@ -19,7 +23,9 @@ describe("proxy boot gate", () => {
 
   it("allows GET /api/heartgarden/boot without cookie when gate is on", async () => {
     const { proxy } = await import("../../proxy");
-    const req = new NextRequest(new URL("http://localhost/api/heartgarden/boot"));
+    const req = new NextRequest(
+      new URL("http://localhost/api/heartgarden/boot")
+    );
     const res = await proxy(req);
     expect(res.status).toBe(200);
   });

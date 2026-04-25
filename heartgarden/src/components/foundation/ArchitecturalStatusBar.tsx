@@ -1,7 +1,16 @@
 "use client";
 
-import { CircleNotch, MagnifyingGlass, PictureInPicture, Waves, WarningCircle } from "@phosphor-icons/react";
 import {
+  CircleNotch,
+  MagnifyingGlass,
+  PictureInPicture,
+  WarningCircle,
+  Waves,
+} from "@phosphor-icons/react";
+import {
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+  type RefObject,
   useCallback,
   useEffect,
   useId,
@@ -10,16 +19,13 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  type MouseEvent as ReactMouseEvent,
-  type ReactNode,
-  type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
 
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import {
-  ArchitecturalTooltip,
   ARCH_TOOLTIP_AVOID_BOTTOM,
+  ArchitecturalTooltip,
 } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
 import { cx } from "@/src/lib/cx";
@@ -31,13 +37,13 @@ import {
   subscribeNeonSync,
 } from "@/src/lib/neon-sync-bus";
 import {
-  getVaultIndexStatusSnapshot,
-  subscribeVaultIndexStatus,
-} from "@/src/lib/vault-index-status-bus";
-import {
   SYNC_ERROR_DIAGNOSTIC_SEP,
   syncErrorSummaryLine,
 } from "@/src/lib/sync-error-diagnostic";
+import {
+  getVaultIndexStatusSnapshot,
+  subscribeVaultIndexStatus,
+} from "@/src/lib/vault-index-status-bus";
 import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
 
 export function ArchitecturalStatusBadge({
@@ -115,7 +121,7 @@ function SaveAndVersionPopover({
   const sync = useSyncExternalStore(
     subscribeNeonSync,
     getNeonSyncSnapshot,
-    getNeonSyncServerSnapshot,
+    getNeonSyncServerSnapshot
   );
   const busy = sync.cloudEnabled && (sync.pending > 0 || sync.inFlight > 0);
 
@@ -135,12 +141,12 @@ function SaveAndVersionPopover({
   } = useMemo(() => {
     const rel = formatSavedRelative(sync.lastSavedAt);
     const abs =
-      sync.lastSavedAt != null
-        ? new Date(sync.lastSavedAt).toLocaleString(undefined, {
+      sync.lastSavedAt == null
+        ? null
+        : new Date(sync.lastSavedAt).toLocaleString(undefined, {
             dateStyle: "medium",
             timeStyle: "short",
-          })
-        : null;
+          });
 
     let pulseToneClass = styles.pulseDotToneLocal;
     let statusLine = "";
@@ -215,7 +221,8 @@ function SaveAndVersionPopover({
       detailTitle = "Writing to Neon";
       detailBody =
         "Saving changes (including debounced note edits). Undo restores local canvas state; Neon keeps the last successful write until you edit again.";
-      recommendedAction = "Wait for writes to settle before large navigation or refresh.";
+      recommendedAction =
+        "Wait for writes to settle before large navigation or refresh.";
     } else {
       pulseToneClass = styles.pulseDotToneOk;
       statusLine = rel ? `Saved · ${rel}` : "Synced with Neon";
@@ -234,15 +241,15 @@ function SaveAndVersionPopover({
           ? "Workspace could not load; database not reachable"
           : !sync.cloudEnabled && showingCachedWorkspace
             ? "Offline, showing cached workspace from this browser"
-            : !sync.cloudEnabled
-              ? "Local session, not connected to Neon"
-              : sync.lastError
-              ? `Sync error: ${syncErrorSummaryLine(sync.lastError)}`
-              : busy
-                ? "Saving to Neon"
-                : rel
-                  ? `Saved to Neon ${rel}`
-                  : "Saved to Neon";
+            : sync.cloudEnabled
+              ? sync.lastError
+                ? `Sync error: ${syncErrorSummaryLine(sync.lastError)}`
+                : busy
+                  ? "Saving to Neon"
+                  : rel
+                    ? `Saved to Neon ${rel}`
+                    : "Saved to Neon"
+              : "Local session, not connected to Neon";
 
     const aria = awaitingBootAuth
       ? `Connection status: ${statusLine}. Open the menu for details. A valid session is required before workspace data loads.`
@@ -278,13 +285,21 @@ function SaveAndVersionPopover({
   ]);
 
   const [open, setOpen] = useState(false);
-  const [copySnapshotHint, setCopySnapshotHint] = useState<"idle" | "copied" | "failed">("idle");
-  const copySnapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [copySnapshotHint, setCopySnapshotHint] = useState<
+    "idle" | "copied" | "failed"
+  >("idle");
+  const copySnapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const popoverId = useId();
 
-  const [panelPos, setPanelPos] = useState<{ top: number; left: number; flip: boolean }>({
+  const [panelPos, setPanelPos] = useState<{
+    top: number;
+    left: number;
+    flip: boolean;
+  }>({
     top: 0,
     left: 0,
     flip: false,
@@ -292,7 +307,9 @@ function SaveAndVersionPopover({
 
   const reposition = useCallback(() => {
     const triggerEl = triggerRef.current;
-    if (!triggerEl) return;
+    if (!triggerEl) {
+      return;
+    }
     const triggerRect = triggerEl.getBoundingClientRect();
     const anchorEl = popoverAnchorRef.current;
     const anchorRect = anchorEl?.getBoundingClientRect() ?? triggerRect;
@@ -309,23 +326,34 @@ function SaveAndVersionPopover({
     top += POPOVER_SHIFT_DOWN;
     const minTop = 8;
     const maxTop = Math.max(minTop, vh - panelH - 8);
-    if (top < minTop) top = minTop;
-    else if (top > maxTop) top = maxTop;
+    if (top < minTop) {
+      top = minTop;
+    } else if (top > maxTop) {
+      top = maxTop;
+    }
     let left = triggerRect.left - POPOVER_SHIFT_LEFT;
     const maxLeft = vw - POPOVER_W - 8;
-    if (left > maxLeft) left = Math.max(8, maxLeft);
-    if (left < 8) left = 8;
+    if (left > maxLeft) {
+      left = Math.max(8, maxLeft);
+    }
+    if (left < 8) {
+      left = 8;
+    }
     setPanelPos({ top, left, flip });
   }, [popoverAnchorRef]);
 
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const id = requestAnimationFrame(() => reposition());
     return () => cancelAnimationFrame(id);
   }, [open, reposition, showWarningIcon]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const onScroll = () => reposition();
     const onResize = () => reposition();
     window.addEventListener("scroll", onScroll, true);
@@ -355,14 +383,28 @@ function SaveAndVersionPopover({
     lines.push(`In-flight requests: ${sync.inFlight}`);
     lines.push(`Awaiting boot auth: ${awaitingBootAuth ? "yes" : "no"}`);
     lines.push(`Bootstrap pending: ${bootstrapPending ? "yes" : "no"}`);
-    lines.push(`Cached workspace view: ${showingCachedWorkspace ? "yes" : "no"}`);
+    lines.push(
+      `Cached workspace view: ${showingCachedWorkspace ? "yes" : "no"}`
+    );
     lines.push(`Offline no snapshot: ${offlineNoSnapshot ? "yes" : "no"}`);
-    if (sessionLabel) lines.push(`Session: ${sessionLabel}`);
-    if (sourceLabel) lines.push(`Source: ${sourceLabel}`);
-    if (spaceLabel) lines.push(`Space: ${spaceLabel}`);
-    if (strictSync) lines.push("Strict GM sync: yes");
-    if (absSaved) lines.push(`Last successful write: ${absSaved}`);
-    if (relSaved) lines.push(`Last write relative: ${relSaved}`);
+    if (sessionLabel) {
+      lines.push(`Session: ${sessionLabel}`);
+    }
+    if (sourceLabel) {
+      lines.push(`Source: ${sourceLabel}`);
+    }
+    if (spaceLabel) {
+      lines.push(`Space: ${spaceLabel}`);
+    }
+    if (strictSync) {
+      lines.push("Strict GM sync: yes");
+    }
+    if (absSaved) {
+      lines.push(`Last successful write: ${absSaved}`);
+    }
+    if (relSaved) {
+      lines.push(`Last write relative: ${relSaved}`);
+    }
     lines.push(`Recommended next step: ${recommendedAction}`);
     const rawError = sync.lastError?.trim() ?? "";
     const structuredDiagnostic = detailPasteText?.trim() ?? "";
@@ -400,7 +442,9 @@ function SaveAndVersionPopover({
 
   const copySupportSnapshot = useCallback(() => {
     const text = supportSnapshotText.trim();
-    if (!text) return;
+    if (!text) {
+      return;
+    }
     void navigator.clipboard.writeText(text).then(
       () => {
         playVigilUiSound("tap");
@@ -413,7 +457,7 @@ function SaveAndVersionPopover({
           setCopySnapshotHint("idle");
         }, 2200);
       },
-      () => setCopySnapshotHint("failed"),
+      () => setCopySnapshotHint("failed")
     );
   }, [supportSnapshotText]);
 
@@ -424,24 +468,34 @@ function SaveAndVersionPopover({
         copySnapshotTimerRef.current = null;
       }
     },
-    [],
+    []
   );
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeSyncPopover();
+      if (e.key === "Escape") {
+        closeSyncPopover();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, closeSyncPopover]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const onDown = (e: PointerEvent) => {
-      if (e.button !== 0) return;
+      if (e.button !== 0) {
+        return;
+      }
       const t = e.target as Node;
-      if (triggerRef.current?.contains(t) || panelRef.current?.contains(t)) return;
+      if (triggerRef.current?.contains(t) || panelRef.current?.contains(t)) {
+        return;
+      }
       closeSyncPopover();
     };
     /* Capture: dismiss before canvas / shell bubble handlers; inside-panel hits still target descendants first. */
@@ -459,18 +513,18 @@ function SaveAndVersionPopover({
     open && typeof document !== "undefined"
       ? createPortal(
           <div
-            ref={panelRef}
-            id={popoverId}
-            data-hg-sync-popover="true"
-            className={styles.syncPopover}
-            style={{ top: panelPos.top, left: panelPos.left }}
-            role="dialog"
             aria-labelledby={`${popoverId}-title`}
+            className={styles.syncPopover}
+            data-hg-sync-popover="true"
+            id={popoverId}
+            onMouseDown={(e) => e.stopPropagation()}
             /* Block bubble to document — canvas + other shell listeners must not eat clicks / break copy. */
             onPointerDown={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
+            ref={panelRef}
+            role="dialog"
+            style={{ top: panelPos.top, left: panelPos.left }}
           >
-            <div id={`${popoverId}-title`} className={styles.syncPopoverTitle}>
+            <div className={styles.syncPopoverTitle} id={`${popoverId}-title`}>
               {detailTitle}
             </div>
             <div className={styles.syncPopoverStatusLineWrap}>
@@ -501,35 +555,45 @@ function SaveAndVersionPopover({
               <div className={styles.syncPopoverContext}>
                 {sessionLabel ? (
                   <div className={styles.syncPopoverContextRow}>
-                    <span className={styles.syncPopoverContextKey}>Session</span>
-                    <span className={styles.syncPopoverContextVal}>{sessionLabel}</span>
+                    <span className={styles.syncPopoverContextKey}>
+                      Session
+                    </span>
+                    <span className={styles.syncPopoverContextVal}>
+                      {sessionLabel}
+                    </span>
                   </div>
                 ) : null}
                 {sourceLabel ? (
                   <div className={styles.syncPopoverContextRow}>
                     <span className={styles.syncPopoverContextKey}>Source</span>
-                    <span className={styles.syncPopoverContextVal}>{sourceLabel}</span>
+                    <span className={styles.syncPopoverContextVal}>
+                      {sourceLabel}
+                    </span>
                   </div>
                 ) : null}
                 {spaceLabel ? (
                   <div className={styles.syncPopoverContextRow}>
                     <span className={styles.syncPopoverContextKey}>Space</span>
-                    <span className={styles.syncPopoverContextVal}>{spaceLabel}</span>
+                    <span className={styles.syncPopoverContextVal}>
+                      {spaceLabel}
+                    </span>
                   </div>
                 ) : null}
                 {strictSync ? (
-                  <div className={styles.syncPopoverContextBadge}>Strict GM sync</div>
+                  <div className={styles.syncPopoverContextBadge}>
+                    Strict GM sync
+                  </div>
                 ) : null}
               </div>
             ) : null}
             <div className={styles.syncPopoverQuickActions}>
               <Button
-                type="button"
-                size="md"
-                variant="default"
-                tone="focus-light"
                 className={styles.syncPopoverCopySnapshot}
                 onClick={copySupportSnapshot}
+                size="md"
+                tone="focus-light"
+                type="button"
+                variant="default"
               >
                 {copySnapshotHint === "copied"
                   ? "Snapshot copied"
@@ -551,41 +615,57 @@ function SaveAndVersionPopover({
               <div className={styles.syncPopoverMeta}>
                 {absSaved ? (
                   <div className={styles.syncPopoverMetaRow}>
-                    <span className={styles.syncPopoverMetaKey}>Last successful write</span>
+                    <span className={styles.syncPopoverMetaKey}>
+                      Last successful write
+                    </span>
                     <span className={styles.syncPopoverMetaValueLine}>
-                      <span className={styles.syncPopoverMetaVal}>{absSaved}</span>
+                      <span className={styles.syncPopoverMetaVal}>
+                        {absSaved}
+                      </span>
                       {relSaved ? (
-                        <span className={styles.syncPopoverMetaRel}>· {relSaved}</span>
+                        <span className={styles.syncPopoverMetaRel}>
+                          · {relSaved}
+                        </span>
                       ) : null}
                     </span>
                   </div>
                 ) : null}
                 <div className={styles.syncPopoverMetaRow}>
-                  <span className={styles.syncPopoverMetaKey}>Pending debounced saves</span>
-                  <span className={styles.syncPopoverMetaVal}>{sync.pending}</span>
+                  <span className={styles.syncPopoverMetaKey}>
+                    Pending debounced saves
+                  </span>
+                  <span className={styles.syncPopoverMetaVal}>
+                    {sync.pending}
+                  </span>
                 </div>
                 <div className={styles.syncPopoverMetaRow}>
-                  <span className={styles.syncPopoverMetaKey}>In-flight requests</span>
-                  <span className={styles.syncPopoverMetaVal}>{sync.inFlight}</span>
+                  <span className={styles.syncPopoverMetaKey}>
+                    In-flight requests
+                  </span>
+                  <span className={styles.syncPopoverMetaVal}>
+                    {sync.inFlight}
+                  </span>
                 </div>
               </div>
             ) : null}
 
             <div className={styles.syncPopoverSection}>
-              <div className={styles.syncPopoverSectionLabel}>Version history</div>
+              <div className={styles.syncPopoverSectionLabel}>
+                Version history
+              </div>
               <p className={styles.syncPopoverSectionBody}>
-                Checkpoints are export-based for now: download the full graph JSON, keep it in git or
-                backups. In-app restore from snapshots is not wired yet — use exports as your audit
-                trail.
+                Checkpoints are export-based for now: download the full graph
+                JSON, keep it in git or backups. In-app restore from snapshots
+                is not wired yet — use exports as your audit trail.
               </p>
               {onExportGraphJson ? (
                 <Button
-                  type="button"
-                  size="md"
-                  variant="default"
-                  tone="focus-light"
                   className={styles.syncPopoverExport}
                   onClick={handleExport}
+                  size="md"
+                  tone="focus-light"
+                  type="button"
+                  variant="default"
                 >
                   Export graph JSON
                 </Button>
@@ -597,38 +677,43 @@ function SaveAndVersionPopover({
               ) : null}
             </div>
           </div>,
-          getVigilPortalRoot(),
+          getVigilPortalRoot()
         )
       : null;
 
   return (
     <div className={styles.statusBarSaveCluster}>
-      <span className="sr-only" aria-live="polite" aria-atomic="true">
+      <span aria-atomic="true" aria-live="polite" className="sr-only">
         {liveAnnouncement}
       </span>
       <Button
-        ref={triggerRef}
-        variant="default"
-        size="sm"
-        tone="glass"
-        className={styles.statusSaveBarTrigger}
-        aria-label={triggerAriaLabel}
+        aria-controls={open ? popoverId : undefined}
         aria-expanded={open}
         aria-haspopup="dialog"
-        aria-controls={open ? popoverId : undefined}
+        aria-label={triggerAriaLabel}
+        className={styles.statusSaveBarTrigger}
         onClick={() => {
           setCopySnapshotHint("idle");
           setOpen((v) => !v);
         }}
+        ref={triggerRef}
+        size="sm"
+        tone="glass"
+        variant="default"
       >
         {showPulse ? (
-          <span className={cx(styles.pulseDot, pulseToneClass)} aria-hidden />
+          <span aria-hidden className={cx(styles.pulseDot, pulseToneClass)} />
         ) : null}
         <span className={styles.monoTag} lang="ja">
           {envLabel}
         </span>
         {showWarningIcon ? (
-          <WarningCircle className={styles.statusSaveWarningIcon} size={16} weight="bold" aria-hidden />
+          <WarningCircle
+            aria-hidden
+            className={styles.statusSaveWarningIcon}
+            size={16}
+            weight="bold"
+          />
         ) : null}
       </Button>
       {panel}
@@ -675,22 +760,22 @@ export function ArchitecturalCanvasEffectsToggle({
 
   const control = (
     <ArchitecturalTooltip
-      content={title}
-      side="top"
-      delayMs={420}
       avoidSides={ARCH_TOOLTIP_AVOID_BOTTOM}
+      content={title}
+      delayMs={420}
+      side="top"
     >
       <Button
-        type="button"
-        variant="ghost"
-        tone="glass"
-        size="icon"
-        iconOnly
         aria-label={ariaLabel}
+        iconOnly
         isActive={checked}
         onClick={onButtonClick}
+        size="icon"
+        tone="glass"
+        type="button"
+        variant="ghost"
       >
-        <Waves size={18} weight="bold" aria-hidden />
+        <Waves aria-hidden size={18} weight="bold" />
       </Button>
     </ArchitecturalTooltip>
   );
@@ -698,23 +783,23 @@ export function ArchitecturalCanvasEffectsToggle({
   if (layout === "bare") {
     return (
       <ArchitecturalTooltip
-        content={title}
-        side="top"
-        delayMs={420}
         avoidSides={ARCH_TOOLTIP_AVOID_BOTTOM}
+        content={title}
+        delayMs={420}
+        side="top"
       >
         <Button
-          type="button"
-          variant="ghost"
-          tone="glass"
-          size="icon"
-          iconOnly
-          data-hg-chrome="canvas-effects-toggle"
           aria-label={ariaLabel}
+          data-hg-chrome="canvas-effects-toggle"
+          iconOnly
           isActive={checked}
           onClick={onButtonClick}
+          size="icon"
+          tone="glass"
+          type="button"
+          variant="ghost"
         >
-          <Waves size={18} weight="bold" aria-hidden />
+          <Waves aria-hidden size={18} weight="bold" />
         </Button>
       </ArchitecturalTooltip>
     );
@@ -722,19 +807,25 @@ export function ArchitecturalCanvasEffectsToggle({
 
   if (layout === "inline") {
     return (
-      <div className={styles.focusEffectsStripInline} data-hg-chrome="canvas-effects-toggle">
+      <div
+        className={styles.focusEffectsStripInline}
+        data-hg-chrome="canvas-effects-toggle"
+      >
         {control}
       </div>
     );
   }
 
   return (
-    <div className={styles.focusEffectsStrip} data-hg-chrome="canvas-effects-toggle">
+    <div
+      className={styles.focusEffectsStrip}
+      data-hg-chrome="canvas-effects-toggle"
+    >
       <div
         className={cx(
           styles.rootDockPanel,
           styles.focusEffectsDockPanel,
-          trailingSlot ? styles.focusEffectsDockCluster : undefined,
+          trailingSlot ? styles.focusEffectsDockCluster : undefined
         )}
       >
         {control}
@@ -764,7 +855,7 @@ export function ArchitecturalViewportMetrics({
   const isClient = useSyncExternalStore(
     () => () => {},
     () => true,
-    () => false,
+    () => false
   );
   const displayWorldX = isClient ? centerWorldX : 0;
   const displayWorldY = isClient ? centerWorldY : 0;
@@ -778,7 +869,9 @@ export function ArchitecturalViewportMetrics({
       </ArchitecturalStatusMetric>
       <div className={styles.sep} />
       <ArchitecturalStatusMetric
-        icon={zoomPrefixIcon ? <MagnifyingGlass size={12} aria-hidden /> : undefined}
+        icon={
+          zoomPrefixIcon ? <MagnifyingGlass aria-hidden size={12} /> : undefined
+        }
       >
         <span className={styles.metric}>{Math.round(scale * 100)}%</span>
       </ArchitecturalStatusMetric>
@@ -788,50 +881,52 @@ export function ArchitecturalViewportMetrics({
   const panel = onToggleMinimap ? (
     <div className={cx(styles.rootDockPanel, styles.viewportMetricsPanel)}>
       <div
+        aria-label="Viewport center in world coordinates and zoom"
         className={styles.viewportMetricsReadout}
         role="status"
-        aria-label="Viewport center in world coordinates and zoom"
       >
         {metricsReadout}
       </div>
-      <div className={styles.sep} aria-hidden />
+      <div aria-hidden className={styles.sep} />
       <ArchitecturalTooltip
-        content={minimapOpen ? "Hide canvas map" : "Show canvas map"}
-        side="top"
-        delayMs={280}
         avoidSides={ARCH_TOOLTIP_AVOID_BOTTOM}
+        content={minimapOpen ? "Hide canvas map" : "Show canvas map"}
+        delayMs={280}
+        side="top"
       >
         <Button
-          type="button"
-          size="icon"
-          tone="glass"
-          variant="ghost"
+          aria-label={minimapOpen ? "Hide canvas map" : "Show canvas map"}
+          aria-pressed={minimapOpen}
           iconOnly
           onClick={onToggleMinimap}
-          aria-pressed={minimapOpen}
-          aria-label={minimapOpen ? "Hide canvas map" : "Show canvas map"}
+          size="icon"
+          tone="glass"
+          type="button"
+          variant="ghost"
         >
           <PictureInPicture
+            aria-hidden
             size={20}
             weight={minimapOpen ? "fill" : "regular"}
-            aria-hidden
           />
         </Button>
       </ArchitecturalTooltip>
     </div>
   ) : (
-    <div className={`${styles.rootDockPanel} ${styles.viewportMetricsPanel}`}>{metricsReadout}</div>
+    <div className={`${styles.rootDockPanel} ${styles.viewportMetricsPanel}`}>
+      {metricsReadout}
+    </div>
   );
 
   return (
     <div
-      className={styles.viewportMetricsStrip}
-      data-hg-chrome="viewport-metrics"
       aria-label={
         onToggleMinimap
           ? "Viewport center in world space, zoom, and canvas map toggle"
           : "Viewport center in world space and zoom"
       }
+      className={styles.viewportMetricsStrip}
+      data-hg-chrome="viewport-metrics"
     >
       {panel}
     </div>
@@ -841,32 +936,53 @@ export function ArchitecturalViewportMetrics({
 function VaultIndexStatusInline() {
   const [, tick] = useState(0);
 
-  useEffect(() => {
-    return subscribeVaultIndexStatus(() => tick((n) => n + 1));
-  }, []);
+  useEffect(() => subscribeVaultIndexStatus(() => tick((n) => n + 1)), []);
 
-  const { pendingCount, inFlightCount, errorLine } = getVaultIndexStatusSnapshot();
+  const { pendingCount, inFlightCount, errorLine } =
+    getVaultIndexStatusSnapshot();
   const vaultBusy = pendingCount + inFlightCount > 0;
 
-  if (!vaultBusy && !errorLine) return null;
+  if (!(vaultBusy || errorLine)) {
+    return null;
+  }
 
   const isError = Boolean(errorLine);
   const label = errorLine ?? "Indexing notes for search…";
 
-  if (typeof document === "undefined") return null;
+  if (typeof document === "undefined") {
+    return null;
+  }
 
   return createPortal(
-    <div className={styles.vaultIndexToastWrap} role="status" aria-live="polite" aria-atomic="true">
-      <div className={cx(styles.vaultIndexToast, isError ? styles.vaultIndexToastError : undefined)}>
+    <div
+      aria-atomic="true"
+      aria-live="polite"
+      className={styles.vaultIndexToastWrap}
+      role="status"
+    >
+      <div
+        className={cx(
+          styles.vaultIndexToast,
+          isError ? styles.vaultIndexToastError : undefined
+        )}
+      >
         {isError ? (
-          <WarningCircle className={styles.statusSaveWarningIcon} size={14} weight="bold" aria-hidden />
+          <WarningCircle
+            aria-hidden
+            className={styles.statusSaveWarningIcon}
+            size={14}
+            weight="bold"
+          />
         ) : (
-          <CircleNotch className={cx(styles.vaultIndexToastSpinner, styles.syncSpin)} size={14} />
+          <CircleNotch
+            className={cx(styles.vaultIndexToastSpinner, styles.syncSpin)}
+            size={14}
+          />
         )}
         <span className={styles.vaultIndexToastText}>{label}</span>
       </div>
     </div>,
-    getVigilPortalRoot(),
+    getVigilPortalRoot()
   );
 }
 
@@ -922,64 +1038,84 @@ export function ArchitecturalStatusBar({
   return (
     <div className={styles.statusBarSegment} data-hg-chrome="canvas-status">
       <div
-        ref={syncChromeRef}
         className={`${styles.glassPanel} ${styles.shellTopChromePanel}`}
+        ref={syncChromeRef}
       >
         <SaveAndVersionPopover
-          popoverAnchorRef={syncChromeRef}
+          awaitingBootAuth={syncAwaitingBootAuth}
+          bootstrapPending={syncBootstrapPending}
           envLabel={envLabel}
+          exportGraphPaletteHint={exportGraphPaletteHint}
+          offlineNoSnapshot={syncOfflineNoSnapshot}
+          onExportGraphJson={onExportGraphJson}
+          popoverAnchorRef={syncChromeRef}
           sessionLabel={syncSessionLabel}
+          showingCachedWorkspace={syncShowingCachedWorkspace}
+          showPulse={showPulse}
           sourceLabel={syncSourceLabel}
           spaceLabel={syncSpaceLabel}
           strictSync={syncStrictGm}
-          showPulse={showPulse}
-          awaitingBootAuth={syncAwaitingBootAuth}
-          bootstrapPending={syncBootstrapPending}
-          showingCachedWorkspace={syncShowingCachedWorkspace}
-          offlineNoSnapshot={syncOfflineNoSnapshot}
-          onExportGraphJson={onExportGraphJson}
-          exportGraphPaletteHint={exportGraphPaletteHint}
         />
         {collabPeers.length > 0 ? (
           <>
             <div className={styles.sep} />
-            <div className={styles.collabPeerStrip} role="group" aria-label="Collaborators in this area">
+            <div
+              aria-label="Collaborators in this area"
+              className={styles.collabPeerStrip}
+              role="group"
+            >
               {collabPeers.map((p) =>
                 p.kind === "overflow" ? (
                   <span
-                    key={p.clientId}
-                    className={cx(styles.collabPeerChip, styles.collabPeerChipOverflow)}
-                    title={p.title}
                     aria-label={p.ariaLabel}
+                    className={cx(
+                      styles.collabPeerChip,
+                      styles.collabPeerChipOverflow
+                    )}
+                    key={p.clientId}
+                    title={p.title}
                   >
-                    <span className={styles.collabPeerChipInitials}>{p.initials ?? "??"}</span>
-                    <span className={styles.collabPeerChipName}>{p.displayName ?? "More"}</span>
+                    <span className={styles.collabPeerChipInitials}>
+                      {p.initials ?? "??"}
+                    </span>
+                    <span className={styles.collabPeerChipName}>
+                      {p.displayName ?? "More"}
+                    </span>
                   </span>
                 ) : (
                   <Button
-                    key={p.clientId}
-                    type="button"
-                    size="xs"
-                    tone="glass"
-                    variant="ghost"
-                    className={cx(styles.collabPeerChip, p.muted && styles.collabPeerChipMuted)}
-                    title={p.title}
                     aria-label={p.ariaLabel}
+                    className={cx(
+                      styles.collabPeerChip,
+                      p.muted && styles.collabPeerChipMuted
+                    )}
+                    key={p.clientId}
                     onClick={p.onFollow}
+                    size="xs"
+                    title={p.title}
+                    tone="glass"
+                    type="button"
+                    variant="ghost"
                   >
                     {collabNameplateEnabled ? (
                       <>
-                        <span className={styles.collabPeerChipInitials}>{p.initials ?? "??"}</span>
-                        <span className={styles.collabPeerChipName}>{p.displayName ?? "Collaborator"}</span>
+                        <span className={styles.collabPeerChipInitials}>
+                          {p.initials ?? "??"}
+                        </span>
+                        <span className={styles.collabPeerChipName}>
+                          {p.displayName ?? "Collaborator"}
+                        </span>
                         {p.sigilLabel ? (
-                          <span className={styles.collabPeerChipSigil}>{p.sigilLabel}</span>
+                          <span className={styles.collabPeerChipSigil}>
+                            {p.sigilLabel}
+                          </span>
                         ) : null}
                       </>
                     ) : (
-                      p.emoji ?? "🙂"
+                      (p.emoji ?? "🙂")
                     )}
                   </Button>
-                ),
+                )
               )}
             </div>
           </>

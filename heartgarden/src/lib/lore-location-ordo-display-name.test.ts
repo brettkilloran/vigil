@@ -1,14 +1,23 @@
 import { describe, expect, it } from "vitest";
 
-import { ORDO_V7_EMPTY_NAME_SENTINEL, splitOrdoV7DisplayName } from "@/src/lib/lore-location-ordo-display-name";
+import {
+  ORDO_V7_EMPTY_NAME_SENTINEL,
+  splitOrdoV7DisplayName,
+} from "@/src/lib/lore-location-ordo-display-name";
 
 describe("splitOrdoV7DisplayName", () => {
   it("returns empty sentinel when empty", () => {
-    expect(splitOrdoV7DisplayName("")).toEqual({ line1: ORDO_V7_EMPTY_NAME_SENTINEL, line2: null });
+    expect(splitOrdoV7DisplayName("")).toEqual({
+      line1: ORDO_V7_EMPTY_NAME_SENTINEL,
+      line2: null,
+    });
   });
 
   it("single word is one line", () => {
-    expect(splitOrdoV7DisplayName("Harbor")).toEqual({ line1: "HARBOR", line2: null });
+    expect(splitOrdoV7DisplayName("Harbor")).toEqual({
+      line1: "HARBOR",
+      line2: null,
+    });
   });
 
   it("two words split evenly", () => {

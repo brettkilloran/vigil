@@ -31,12 +31,18 @@ function isDev(): boolean {
 }
 
 function readInitial(): boolean {
-  if (!isDev() || typeof window === "undefined") return false;
+  if (!isDev() || typeof window === "undefined") {
+    return false;
+  }
   try {
     const params = new URLSearchParams(window.location.search);
     const fromUrl = params.get("pinPopovers");
-    if (fromUrl === "1" || fromUrl === "true") return true;
-    if (fromUrl === "0" || fromUrl === "false") return false;
+    if (fromUrl === "1" || fromUrl === "true") {
+      return true;
+    }
+    if (fromUrl === "0" || fromUrl === "false") {
+      return false;
+    }
   } catch {
     // ignore URL parse issues — only used as a seed
   }
@@ -48,14 +54,20 @@ function readInitial(): boolean {
 }
 
 function initOnce() {
-  if (initialized || typeof window === "undefined" || !isDev()) return;
+  if (initialized || typeof window === "undefined" || !isDev()) {
+    return;
+  }
   initialized = true;
   currentValue = readInitial();
 
   const onKey = (event: KeyboardEvent) => {
     // Alt+Shift+P, ignore when typing in fields to avoid surprises.
-    if (!event.altKey || !event.shiftKey) return;
-    if (event.code !== "KeyP" && event.key.toLowerCase() !== "p") return;
+    if (!(event.altKey && event.shiftKey)) {
+      return;
+    }
+    if (event.code !== "KeyP" && event.key.toLowerCase() !== "p") {
+      return;
+    }
     const t = event.target as HTMLElement | null;
     const tag = t?.tagName;
     if (
@@ -70,14 +82,16 @@ function initOnce() {
     event.preventDefault();
     setPinnedPopovers(!currentValue);
     console.info(
-      `[hg] Pin popovers: ${currentValue ? "ON" : "OFF"} (Alt+Shift+P to toggle)`,
+      `[hg] Pin popovers: ${currentValue ? "ON" : "OFF"} (Alt+Shift+P to toggle)`
     );
   };
   window.addEventListener("keydown", onKey, true);
 }
 
 function subscribe(listener: () => void): () => void {
-  if (!isDev() || typeof window === "undefined") return () => {};
+  if (!isDev() || typeof window === "undefined") {
+    return () => {};
+  }
   initOnce();
   window.addEventListener(EVENT_NAME, listener);
   return () => window.removeEventListener(EVENT_NAME, listener);
@@ -92,15 +106,21 @@ function getServerSnapshot(): boolean {
 }
 
 export function getPinnedPopovers(): boolean {
-  if (!isDev()) return false;
+  if (!isDev()) {
+    return false;
+  }
   initOnce();
   return currentValue;
 }
 
 export function setPinnedPopovers(next: boolean): void {
-  if (!isDev() || typeof window === "undefined") return;
+  if (!isDev() || typeof window === "undefined") {
+    return;
+  }
   initOnce();
-  if (currentValue === next) return;
+  if (currentValue === next) {
+    return;
+  }
   currentValue = next;
   try {
     window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");

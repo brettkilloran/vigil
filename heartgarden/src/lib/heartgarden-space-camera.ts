@@ -39,20 +39,38 @@ function isRecord(x: unknown): x is Record<string, unknown> {
 type CameraEntry = { x: number; y: number; zoom: number; lastSeenAt: number };
 
 export function readSpaceCamera(spaceId: string): CameraState | null {
-  if (typeof window === "undefined") return null;
+  if (typeof window === "undefined") {
+    return null;
+  }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
+    if (!raw) {
+      return null;
+    }
     const parsed: unknown = JSON.parse(raw);
-    if (!isRecord(parsed)) return null;
+    if (!isRecord(parsed)) {
+      return null;
+    }
     const entry = parsed[spaceId];
-    if (!isRecord(entry)) return null;
+    if (!isRecord(entry)) {
+      return null;
+    }
     const x = entry.x;
     const y = entry.y;
     const zoom = entry.zoom;
-    if (typeof x !== "number" || typeof y !== "number" || typeof zoom !== "number") return null;
-    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(zoom)) return null;
-    if (zoom <= 0 || zoom > MAX_ZOOM) return null;
+    if (
+      typeof x !== "number" ||
+      typeof y !== "number" ||
+      typeof zoom !== "number"
+    ) {
+      return null;
+    }
+    if (!(Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(zoom))) {
+      return null;
+    }
+    if (zoom <= 0 || zoom > MAX_ZOOM) {
+      return null;
+    }
     return { x, y, zoom };
   } catch {
     return null;
@@ -60,7 +78,9 @@ export function readSpaceCamera(spaceId: string): CameraState | null {
 }
 
 export function writeSpaceCamera(spaceId: string, camera: CameraState): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined") {
+    return;
+  }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     const map: Record<string, CameraEntry> = {};
@@ -84,14 +104,21 @@ export function writeSpaceCamera(spaceId: string, camera: CameraState): void {
       }
     }
     const now = Date.now();
-    map[spaceId] = { x: camera.x, y: camera.y, zoom: camera.zoom, lastSeenAt: now };
+    map[spaceId] = {
+      x: camera.x,
+      y: camera.y,
+      zoom: camera.zoom,
+      lastSeenAt: now,
+    };
 
     const entries = Object.entries(map);
     if (entries.length > MAX_CAMERA_ENTRIES) {
       // Drop oldest by lastSeenAt; current write always survives (just stamped with `now`).
       entries.sort((a, b) => b[1].lastSeenAt - a[1].lastSeenAt);
       const trimmed: Record<string, CameraEntry> = {};
-      for (const [k, v] of entries.slice(0, MAX_CAMERA_ENTRIES)) trimmed[k] = v;
+      for (const [k, v] of entries.slice(0, MAX_CAMERA_ENTRIES)) {
+        trimmed[k] = v;
+      }
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
       return;
     }

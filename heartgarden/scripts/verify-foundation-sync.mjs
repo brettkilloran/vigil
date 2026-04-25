@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = process.cwd();
@@ -23,27 +23,33 @@ function run() {
   // App entrypoint should continue to render the foundation shell.
   mustContain(
     "app/_components/VigilApp.tsx",
-    'import { ArchitecturalCanvasApp } from "@/src/components/foundation/ArchitecturalCanvasApp";',
+    'import { ArchitecturalCanvasApp } from "@/src/components/foundation/ArchitecturalCanvasApp";'
   );
   mustContain("app/_components/VigilApp.tsx", "<ArchitecturalCanvasApp />");
 
   // The app shell should use the same node component as Storybook.
   mustContain(
     "src/components/foundation/ArchitecturalCanvasApp.tsx",
-    'import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";',
+    'import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";'
   );
 
   // Storybook stories should exist for the key card shell.
   // (Stories were reorganized into product-ui/canvas/ in commit 6397947.)
-  mustExist("src/components/product-ui/canvas/ArchitecturalNodeCard.stories.tsx");
-  mustExist("src/components/product-ui/canvas/ArchitecturalCanvasApp.stories.tsx");
-  mustExist("src/components/product-ui/canvas/ArchitecturalFolderCard.stories.tsx");
+  mustExist(
+    "src/components/product-ui/canvas/ArchitecturalNodeCard.stories.tsx"
+  );
+  mustExist(
+    "src/components/product-ui/canvas/ArchitecturalCanvasApp.stories.tsx"
+  );
+  mustExist(
+    "src/components/product-ui/canvas/ArchitecturalFolderCard.stories.tsx"
+  );
   mustExist("src/components/foundation/LoreImportLandModeRadios.stories.tsx");
 
   // App popover reuses the same land-mode block as Storybook.
   mustContain(
     "src/components/foundation/ArchitecturalLoreImportUploadPopover.tsx",
-    "LoreImportLandModeRadios",
+    "LoreImportLandModeRadios"
   );
 
   console.log("Foundation sync check passed.");

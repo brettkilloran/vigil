@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { LOCATION_TOP_FIELD_CHAR_CAPS } from "@/src/lib/lore-location-focus-document-html";
 import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
+import { LOCATION_TOP_FIELD_CHAR_CAPS } from "@/src/lib/lore-location-focus-document-html";
 
 const BASE_PLAN = {
   importBatchId: "11111111-1111-4111-8111-111111111111",

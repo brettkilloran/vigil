@@ -1,23 +1,38 @@
 "use client";
 
-import { useRef } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs";
+import { useRef } from "react";
 
 import { Button } from "@/src/components/design-system/primitives/Button";
-import { VigilBootFlowerGarden, type VigilBootFlowerGardenHandle } from "./VigilBootFlowerGarden";
+import {
+  VigilBootFlowerGarden,
+  type VigilBootFlowerGardenHandle,
+} from "./VigilBootFlowerGarden";
 
 function FlowerGardenStage() {
   const ref = useRef<VigilBootFlowerGardenHandle>(null);
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh", background: "var(--sem-bg-canvas,#050608)" }}>
-      <VigilBootFlowerGarden ref={ref} active />
-      <div style={{ position: "absolute", top: 16, left: 16, display: "flex", gap: 8 }}>
+    <div
+      style={{
+        position: "relative",
+        minHeight: "100vh",
+        background: "var(--sem-bg-canvas,#050608)",
+      }}
+    >
+      <VigilBootFlowerGarden active ref={ref} />
+      <div
+        style={{
+          position: "absolute",
+          top: 16,
+          left: 16,
+          display: "flex",
+          gap: 8,
+        }}
+      >
         <Button
-          variant="default"
-          tone="solid"
-          size="sm"
           onClick={() => ref.current?.clearAll()}
+          size="sm"
           style={{
             padding: "6px 10px",
             borderRadius: 8,
@@ -25,6 +40,8 @@ function FlowerGardenStage() {
             background: "var(--sem-surface-elevated)",
             color: "var(--sem-text-primary)",
           }}
+          tone="solid"
+          variant="default"
         >
           Clear all
         </Button>
@@ -55,4 +72,3 @@ export const Interactive: Story = {
   },
   render: () => <FlowerGardenStage />,
 };
-

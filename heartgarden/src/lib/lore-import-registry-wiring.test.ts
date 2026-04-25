@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { buildLoreNoteContentJson } from "@/src/lib/lore-import-commit";
 import {
   ALL_CANONICAL_KINDS,
-  PERSISTED_ENTITY_TYPES,
   isPersistedEntityType,
+  PERSISTED_ENTITY_TYPES,
   persistedEntityTypeForLoreSource,
   persistedEntityTypeFromCanonical,
 } from "@/src/lib/lore-object-registry";
@@ -18,13 +18,19 @@ describe("lore-import registry wiring", () => {
   it("buildSearchBlob accepts persisted entity type for every canonical kind", () => {
     for (const kind of ALL_CANONICAL_KINDS) {
       const persisted = persistedEntityTypeFromCanonical(kind);
-      const contentJson = buildLoreNoteContentJson("hello", { aiPending: true });
+      const contentJson = buildLoreNoteContentJson("hello", {
+        aiPending: true,
+      });
       const blob = buildSearchBlob({
         title: "T",
         contentText: "hello",
         contentJson,
         entityType: persisted,
-        entityMeta: { import: true, canonicalEntityKind: kind, aiReview: "pending" },
+        entityMeta: {
+          import: true,
+          canonicalEntityKind: kind,
+          aiReview: "pending",
+        },
         imageUrl: null,
         imageMeta: null,
         loreSummary: null,

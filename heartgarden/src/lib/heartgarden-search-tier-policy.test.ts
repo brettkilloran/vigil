@@ -17,12 +17,18 @@ describe("applySearchTierPolicy", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    if (prevBreakGlass === undefined) delete process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE;
-    else process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE = prevBreakGlass;
+    if (prevBreakGlass === undefined) {
+      delete process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE;
+    } else {
+      process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE = prevBreakGlass;
+    }
   });
 
   it("downgrades hybrid to fts for player without mutating space filters", () => {
-    const ctx: HeartgardenApiBootContext = { role: "player", playerSpaceId: PLAYER_UUID };
+    const ctx: HeartgardenApiBootContext = {
+      role: "player",
+      playerSpaceId: PLAYER_UUID,
+    };
     const r = applySearchTierPolicy(ctx, {}, "hybrid");
     expect(r.ok).toBe(true);
     if (r.ok) {
@@ -32,9 +38,15 @@ describe("applySearchTierPolicy", () => {
   });
 
   it("finalize rejects player when spaceId is outside their subtree", async () => {
-    vi.spyOn(heartgardenApiBootContext, "playerMayAccessSpaceIdAsync").mockResolvedValue(false);
+    vi.spyOn(
+      heartgardenApiBootContext,
+      "playerMayAccessSpaceIdAsync"
+    ).mockResolvedValue(false);
     const db = {} as unknown as VigilDb;
-    const ctx: HeartgardenApiBootContext = { role: "player", playerSpaceId: PLAYER_UUID };
+    const ctx: HeartgardenApiBootContext = {
+      role: "player",
+      playerSpaceId: PLAYER_UUID,
+    };
     const out = await finalizeHeartgardenSearchFiltersForDb(db, ctx, {
       spaceId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
     });
@@ -50,7 +62,10 @@ describe("applySearchTierPolicy", () => {
     const db = {
       select: () => ({ from: () => Promise.resolve(slim) }),
     } as unknown as VigilDb;
-    const ctx: HeartgardenApiBootContext = { role: "player", playerSpaceId: PLAYER_UUID };
+    const ctx: HeartgardenApiBootContext = {
+      role: "player",
+      playerSpaceId: PLAYER_UUID,
+    };
     const out = await finalizeHeartgardenSearchFiltersForDb(db, ctx, {});
     expect(out?.spaceId).toBeUndefined();
     expect(out?.spaceIds?.slice().sort()).toEqual([PLAYER_UUID, child].sort());
@@ -66,9 +81,13 @@ describe("applySearchTierPolicy", () => {
       select: () => ({ from: () => Promise.resolve(slim) }),
     } as unknown as VigilDb;
     const ctx: HeartgardenApiBootContext = { role: "gm" };
-    const out = await finalizeHeartgardenSearchFiltersForDb(db, ctx, { excludeSpaceId: PLAYER_UUID });
+    const out = await finalizeHeartgardenSearchFiltersForDb(db, ctx, {
+      excludeSpaceId: PLAYER_UUID,
+    });
     expect(out?.excludeSpaceId).toBeUndefined();
-    expect(out?.excludeSpaceIds?.slice().sort()).toEqual([PLAYER_UUID, child].sort());
+    expect(out?.excludeSpaceIds?.slice().sort()).toEqual(
+      [PLAYER_UUID, child].sort()
+    );
   });
 
   it("keeps GM global filters unchanged in apply tier policy", () => {
@@ -96,6 +115,8 @@ describe("applySearchTierPolicy", () => {
     const ctx: HeartgardenApiBootContext = { role: "gm" };
     const s = applySuggestTierPolicy(ctx, {});
     expect(s.ok).toBe(true);
-    if (s.ok) expect(s.filters.excludeSpaceId).toBeUndefined();
+    if (s.ok) {
+      expect(s.filters.excludeSpaceId).toBeUndefined();
+    }
   });
 });

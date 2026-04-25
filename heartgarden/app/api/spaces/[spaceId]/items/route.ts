@@ -5,39 +5,49 @@ import { z } from "zod";
 import type { LoreCardKind } from "@/src/components/foundation/architectural-types";
 import { tryGetDb } from "@/src/db/index";
 import { items } from "@/src/db/schema";
-import { getHeartgardenApiBootContext, heartgardenApiForbiddenJsonResponse } from "@/src/lib/heartgarden-api-boot-context";
+import { DS_COLOR } from "@/src/lib/design-system-tokens";
+import {
+  getHeartgardenApiBootContext,
+  heartgardenApiForbiddenJsonResponse,
+} from "@/src/lib/heartgarden-api-boot-context";
+import { validateItemWriteJsonPayload } from "@/src/lib/heartgarden-item-json-schema";
+import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
+import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
+import { jsonValidationError } from "@/src/lib/heartgarden-validation-error";
 import {
   defaultItemDimensions,
   nextZIndexForSpace,
   synthesizeContentJsonForCreateItem,
 } from "@/src/lib/item-create-defaults";
+import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { normalizeCanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
+import {
+  resolveLoreCardForCreate,
+  synthesizeLoreCardContentJsonAndPlainText,
+} from "@/src/lib/lore-item-create-synthesis";
 import {
   isLoreCardPersistedEntityType,
   persistedEntityTypeFromCanonical,
 } from "@/src/lib/lore-object-registry";
 import {
-  resolveLoreCardForCreate,
-  synthesizeLoreCardContentJsonAndPlainText,
-} from "@/src/lib/lore-item-create-synthesis";
-import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
-import { DS_COLOR } from "@/src/lib/design-system-tokens";
-import {
   playersMayCreateItemType,
   stripGmOnlyEntityMetaPatch,
 } from "@/src/lib/player-item-policy";
-import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
-import { validateItemWriteJsonPayload } from "@/src/lib/heartgarden-item-json-schema";
-import { jsonValidationError } from "@/src/lib/heartgarden-validation-error";
-import { rowToCanvasItem } from "@/src/lib/item-mapper";
-import { buildSearchBlob } from "@/src/lib/search-blob";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
+import { buildSearchBlob } from "@/src/lib/search-blob";
 import { listItemsForSpace } from "@/src/lib/spaces";
 
 const createBody = z.object({
   /** When set, insert this row id (used for undo-after-delete restore). Must not already exist. */
   id: z.string().uuid().optional(),
-  itemType: z.enum(["note", "sticky", "image", "checklist", "webclip", "folder"]),
+  itemType: z.enum([
+    "note",
+    "sticky",
+    "image",
+    "checklist",
+    "webclip",
+    "folder",
+  ]),
   x: z.number().default(0),
   y: z.number().default(0),
   /** Omit for type-based defaults (e.g. note 340×270, checklist 340×188, character 340×453). */
@@ -78,35 +88,37 @@ const MAX_ITEMS_LIST_LIMIT = 1000;
 
 export async function GET(
   req: Request,
-  context: { params: Promise<{ spaceId: string }> },
+  context: { params: Promise<{ spaceId: string }> }
 ) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
       { ok: false, error: "Database not configured" },
-      { status: 503 },
+      { status: 503 }
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
   const { spaceId } = await context.params;
   const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
-  if (!access.ok) return access.response;
+  if (!access.ok) {
+    return access.response;
+  }
 
   const url = new URL(req.url);
   const limitRaw = url.searchParams.get("limit");
   const offsetRaw = url.searchParams.get("offset");
   const wantAll = limitRaw === "all";
-  const offset = Math.max(0, parseInt(offsetRaw ?? "0", 10) || 0);
+  const offset = Math.max(0, Number.parseInt(offsetRaw ?? "0", 10) || 0);
   let limit: number | undefined;
   if (!wantAll) {
     if (limitRaw == null) {
       limit = DEFAULT_ITEMS_LIST_LIMIT;
     } else {
-      const parsed = parseInt(limitRaw, 10);
+      const parsed = Number.parseInt(limitRaw, 10);
       if (!Number.isFinite(parsed) || parsed <= 0) {
         return Response.json(
-          { ok: false, error: "limit must be a positive integer or \"all\"" },
-          { status: 400 },
+          { ok: false, error: 'limit must be a positive integer or "all"' },
+          { status: 400 }
         );
       }
       limit = Math.min(parsed, MAX_ITEMS_LIST_LIMIT);
@@ -136,19 +148,21 @@ export async function GET(
 
 export async function POST(
   req: Request,
-  context: { params: Promise<{ spaceId: string }> },
+  context: { params: Promise<{ spaceId: string }> }
 ) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
       { ok: false, error: "Database not configured" },
-      { status: 503 },
+      { status: 503 }
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
   const { spaceId } = await context.params;
   const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
-  if (!access.ok) return access.response;
+  if (!access.ok) {
+    return access.response;
+  }
 
   let json: unknown;
   try {
@@ -167,7 +181,10 @@ export async function POST(
     if (!playersMayCreateItemType(t)) {
       return heartgardenApiForbiddenJsonResponse();
     }
-    if (parsed.data.imageUrl !== undefined || parsed.data.imageMeta !== undefined) {
+    if (
+      parsed.data.imageUrl !== undefined ||
+      parsed.data.imageMeta !== undefined
+    ) {
       return heartgardenApiForbiddenJsonResponse();
     }
     if (parsed.data.id !== undefined) {
@@ -176,16 +193,24 @@ export async function POST(
   }
 
   if (parsed.data.id) {
-    const [existing] = await db.select().from(items).where(eq(items.id, parsed.data.id)).limit(1);
+    const [existing] = await db
+      .select()
+      .from(items)
+      .where(eq(items.id, parsed.data.id))
+      .limit(1);
     if (existing) {
-      return Response.json({ ok: false, error: "Item id already exists" }, { status: 409 });
+      return Response.json(
+        { ok: false, error: "Item id already exists" },
+        { status: 409 }
+      );
     }
   }
 
   const entityMetaForRow =
     bootCtx.role === "player"
-      ? stripGmOnlyEntityMetaPatch(parsed.data.entityMeta as Record<string, unknown> | undefined) ??
-        null
+      ? (stripGmOnlyEntityMetaPatch(
+          parsed.data.entityMeta as Record<string, unknown> | undefined
+        ) ?? null)
       : (parsed.data.entityMeta ?? null);
 
   let entityType: string | null = parsed.data.entityType?.trim() ?? null;
@@ -199,13 +224,18 @@ export async function POST(
     entityType = entityType.toLowerCase();
   }
 
-  if (isLoreCardPersistedEntityType(entityType) && t !== "note" && t !== "sticky") {
+  if (
+    isLoreCardPersistedEntityType(entityType) &&
+    t !== "note" &&
+    t !== "sticky"
+  ) {
     return Response.json(
       {
         ok: false,
-        error: "Lore shells (character / faction / location) require itemType note or sticky",
+        error:
+          "Lore shells (character / faction / location) require itemType note or sticky",
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -222,12 +252,18 @@ export async function POST(
     routeTag: "POST /api/spaces/[spaceId]/items",
   });
   if (!jsonValidation.ok) {
-    return Response.json({ ok: false, error: jsonValidation.error }, { status: 400 });
+    return Response.json(
+      { ok: false, error: jsonValidation.error },
+      { status: 400 }
+    );
   }
 
   const loreVariantRaw = parsed.data.lore_variant;
   const loreVariantForResolve =
-    loreVariantRaw === "v1" || loreVariantRaw === "v2" || loreVariantRaw === "v3" || loreVariantRaw === "v11"
+    loreVariantRaw === "v1" ||
+    loreVariantRaw === "v2" ||
+    loreVariantRaw === "v3" ||
+    loreVariantRaw === "v11"
       ? loreVariantRaw
       : undefined;
 
@@ -248,22 +284,33 @@ export async function POST(
     }
   }
 
-  if (parsed.data.contentJson === undefined && t === "note" && contentText.trim() === "") {
-    if (!isLoreCardPersistedEntityType(entityType)) {
-      return Response.json(
-        { ok: false, error: "contentText is required when contentJson is omitted for notes" },
-        { status: 400 },
-      );
-    }
+  if (
+    parsed.data.contentJson === undefined &&
+    t === "note" &&
+    contentText.trim() === "" &&
+    !isLoreCardPersistedEntityType(entityType)
+  ) {
+    return Response.json(
+      {
+        ok: false,
+        error: "contentText is required when contentJson is omitted for notes",
+      },
+      { status: 400 }
+    );
   }
 
-  if (contentJson === null && (t === "note" || t === "sticky" || t === "checklist")) {
+  if (
+    contentJson === null &&
+    (t === "note" || t === "sticky" || t === "checklist")
+  ) {
     const synthesized = synthesizeContentJsonForCreateItem({
       itemType: t,
       contentText,
       theme,
     });
-    if (synthesized) contentJson = synthesized;
+    if (synthesized) {
+      contentJson = synthesized;
+    }
   }
 
   const defaultTitle =
@@ -281,12 +328,18 @@ export async function POST(
   const title = parsed.data.title?.trim() || defaultTitle;
   const color =
     parsed.data.color ??
-    (t === "sticky" ? DS_COLOR.itemDefaultSticky : t === "note" ? DS_COLOR.itemDefaultNote : null);
+    (t === "sticky"
+      ? DS_COLOR.itemDefaultSticky
+      : t === "note"
+        ? DS_COLOR.itemDefaultNote
+        : null);
   const { width: dimW, height: dimH } = defaultItemDimensions(t, entityType);
   const width = parsed.data.width ?? dimW;
   const height = parsed.data.height ?? dimH;
   const zIndex =
-    parsed.data.zIndex !== undefined ? parsed.data.zIndex : await nextZIndexForSpace(db, spaceId);
+    parsed.data.zIndex === undefined
+      ? await nextZIndexForSpace(db, spaceId)
+      : parsed.data.zIndex;
 
   const searchBlob = buildSearchBlob({
     title,
@@ -320,15 +373,21 @@ export async function POST(
       imageUrl: parsed.data.imageUrl ?? null,
       imageMeta: parsed.data.imageMeta ?? null,
       zIndex,
-      ...(parsed.data.stackId !== undefined ? { stackId: parsed.data.stackId } : {}),
-      ...(parsed.data.stackOrder !== undefined ? { stackOrder: parsed.data.stackOrder } : {}),
+      ...(parsed.data.stackId === undefined
+        ? {}
+        : { stackId: parsed.data.stackId }),
+      ...(parsed.data.stackOrder === undefined
+        ? {}
+        : { stackOrder: parsed.data.stackOrder }),
     })
     .returning();
 
-  if (row && bootCtx.role !== "player") {
-    if (contentText.trim().length > 0 || title.trim().length > 0) {
-      scheduleVaultReindexAfterResponse(row.id);
-    }
+  if (
+    row &&
+    bootCtx.role !== "player" &&
+    (contentText.trim().length > 0 || title.trim().length > 0)
+  ) {
+    scheduleVaultReindexAfterResponse(row.id);
   }
 
   if (row) {

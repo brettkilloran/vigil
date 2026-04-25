@@ -1,13 +1,13 @@
 import { tryGetDb } from "@/src/db/index";
+import { ensureDemoBraneSeed } from "@/src/lib/demo-brane-seed";
 import {
   getHeartgardenApiBootContext,
   heartgardenApiForbiddenJsonResponse,
   isHeartgardenPlayerBlocked,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { fetchPlayerSubtreeSpacesFull } from "@/src/lib/heartgarden-space-subtree";
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
-import { fetchPlayerSubtreeSpacesFull } from "@/src/lib/heartgarden-space-subtree";
-import { ensureDemoBraneSeed } from "@/src/lib/demo-brane-seed";
 import {
   listItemsForSpaceSubtree,
   parseCameraFromRow,
@@ -57,7 +57,10 @@ export async function GET(req: Request) {
   }
 
   if (bootCtx.role === "player") {
-    const subtreeRows = await fetchPlayerSubtreeSpacesFull(db, bootCtx.playerSpaceId);
+    const subtreeRows = await fetchPlayerSubtreeSpacesFull(
+      db,
+      bootCtx.playerSpaceId
+    );
     if (subtreeRows.length === 0) {
       return heartgardenApiForbiddenJsonResponse();
     }
@@ -73,7 +76,11 @@ export async function GET(req: Request) {
       id: s.id,
       parentSpaceId: s.parentSpaceId ?? null,
     }));
-    const itemRows = await listItemsForSpaceSubtree(db, activeSpace.id, spaceRows);
+    const itemRows = await listItemsForSpaceSubtree(
+      db,
+      activeSpace.id,
+      spaceRows
+    );
     const items = itemRows.map(rowToCanvasItem);
     const camera = parseCameraFromRow(activeSpace.canvasState);
     return Response.json({
@@ -95,14 +102,21 @@ export async function GET(req: Request) {
     });
   }
 
-  const { activeSpace, allSpaces } = await resolveActiveSpaceGmWorkspace(db, requested);
+  const { activeSpace, allSpaces } = await resolveActiveSpaceGmWorkspace(
+    db,
+    requested
+  );
 
   const spaceRows = allSpaces.map((s) => ({
     id: s.id,
     parentSpaceId: s.parentSpaceId ?? null,
   }));
 
-  const itemRows = await listItemsForSpaceSubtree(db, activeSpace.id, spaceRows);
+  const itemRows = await listItemsForSpaceSubtree(
+    db,
+    activeSpace.id,
+    spaceRows
+  );
 
   const items = itemRows.map(rowToCanvasItem);
   const camera = parseCameraFromRow(activeSpace.canvasState);

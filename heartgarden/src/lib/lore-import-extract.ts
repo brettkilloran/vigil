@@ -1,11 +1,15 @@
+import { buildCachedSystem, callAnthropic } from "@/src/lib/anthropic-client";
 import type {
   LoreImportEntityDraft,
   LoreImportExtractResult,
   LoreImportLinkDraft,
 } from "@/src/lib/lore-import-types";
-import { buildCachedSystem, callAnthropic } from "@/src/lib/anthropic-client";
 
-export type { LoreImportEntityDraft, LoreImportExtractResult, LoreImportLinkDraft };
+export type {
+  LoreImportEntityDraft,
+  LoreImportExtractResult,
+  LoreImportLinkDraft,
+};
 
 const EXTRACT_SYSTEM = `You extract structured entities from TTRPG / worldbuilding source text for a canvas app.
 
@@ -27,13 +31,13 @@ Rules:
 - If the text is empty, return {"entities":[],"suggestedLinks":[]}.`;
 
 const EXTRACT_SEGMENT_CHARS = 95_000;
-const EXTRACT_SEGMENT_OVERLAP = 6_000;
+const EXTRACT_SEGMENT_OVERLAP = 6000;
 const EXTRACT_ENTITY_CAP = 220;
 
 async function extractLoreEntitiesOneSegment(
   apiKey: string,
   model: string,
-  segment: string,
+  segment: string
 ): Promise<LoreImportExtractResult> {
   const trimmed = segment.trim();
   const res = await callAnthropic(
@@ -48,7 +52,7 @@ async function extractLoreEntitiesOneSegment(
         },
       ],
     },
-    { label: "lore.import.extract", expectJson: true },
+    { label: "lore.import.extract", expectJson: true }
   );
   if (!res.jsonText) {
     return { entities: [], suggestedLinks: [] };
@@ -60,7 +64,9 @@ async function extractLoreEntitiesOneSegment(
     };
     return {
       entities: Array.isArray(parsed.entities) ? parsed.entities : [],
-      suggestedLinks: Array.isArray(parsed.suggestedLinks) ? parsed.suggestedLinks : [],
+      suggestedLinks: Array.isArray(parsed.suggestedLinks)
+        ? parsed.suggestedLinks
+        : [],
     };
   } catch {
     return { entities: [], suggestedLinks: [] };
@@ -68,7 +74,7 @@ async function extractLoreEntitiesOneSegment(
 }
 
 function mergeExtractSegments(
-  segments: LoreImportExtractResult[],
+  segments: LoreImportExtractResult[]
 ): LoreImportExtractResult {
   const byName = new Map<
     string,
@@ -77,15 +83,21 @@ function mergeExtractSegments(
   outer: for (const s of segments) {
     for (const e of s.entities ?? []) {
       const name = String(e.name ?? "").trim();
-      if (!name) continue;
+      if (!name) {
+        continue;
+      }
       const key = name.toLowerCase();
-      if (byName.has(key)) continue;
+      if (byName.has(key)) {
+        continue;
+      }
       byName.set(key, {
         name,
         kind: e.kind?.trim() || undefined,
         summary: e.summary?.trim() || undefined,
       });
-      if (byName.size >= EXTRACT_ENTITY_CAP) break outer;
+      if (byName.size >= EXTRACT_ENTITY_CAP) {
+        break outer;
+      }
     }
   }
   const entities: LoreImportEntityDraft[] = [...byName.values()].map((v) => ({
@@ -102,13 +114,19 @@ function mergeExtractSegments(
     for (const l of s.suggestedLinks ?? []) {
       const from = String(l.fromName ?? "").trim();
       const to = String(l.toName ?? "").trim();
-      if (!from || !to) continue;
-      if (!nameKeys.has(from.toLowerCase()) || !nameKeys.has(to.toLowerCase())) {
+      if (!(from && to)) {
+        continue;
+      }
+      if (
+        !(nameKeys.has(from.toLowerCase()) && nameKeys.has(to.toLowerCase()))
+      ) {
         continue;
       }
       const lt = (l.linkType ?? "history").trim() || "history";
       const k = linkKey(from, to, lt);
-      if (seenLinks.has(k)) continue;
+      if (seenLinks.has(k)) {
+        continue;
+      }
       seenLinks.add(k);
       suggestedLinks.push({ fromName: from, toName: to, linkType: lt });
     }
@@ -119,7 +137,7 @@ function mergeExtractSegments(
 export async function extractLoreEntitiesWithAnthropic(
   apiKey: string,
   model: string,
-  text: string,
+  text: string
 ): Promise<LoreImportExtractResult> {
   const full = text.replace(/\0/g, "").trim();
   if (!full) {

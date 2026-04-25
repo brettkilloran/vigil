@@ -27,13 +27,13 @@ describe("webclipAddressBlocked", () => {
 describe("assertWebclipFetchTargetAllowed", () => {
   it("rejects disallowed ports", async () => {
     await expect(
-      assertWebclipFetchTargetAllowed(new URL("https://example.com:8080/path")),
+      assertWebclipFetchTargetAllowed(new URL("https://example.com:8080/path"))
     ).rejects.toThrow(/port/);
   });
 
   it("rejects localhost", async () => {
     await expect(
-      assertWebclipFetchTargetAllowed(new URL("http://localhost/path")),
+      assertWebclipFetchTargetAllowed(new URL("http://localhost/path"))
     ).rejects.toThrow(/localhost/);
   });
 
@@ -41,7 +41,7 @@ describe("assertWebclipFetchTargetAllowed", () => {
     await expect(
       assertWebclipFetchTargetAllowed(new URL("https://example.com/path"), {
         lookupHost: async () => ["10.0.0.1"],
-      }),
+      })
     ).rejects.toThrow(/private address/);
   });
 
@@ -49,7 +49,7 @@ describe("assertWebclipFetchTargetAllowed", () => {
     await expect(
       assertWebclipFetchTargetAllowed(new URL("https://example.com/path"), {
         lookupHost: async () => ["93.184.216.34"],
-      }),
+      })
     ).resolves.toBeUndefined();
   });
 });

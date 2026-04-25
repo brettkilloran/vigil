@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-
+import type { SourceTextChunk } from "@/src/lib/lore-import-chunk";
 import {
   buildOutlineChunkListPayload,
   fillNoteBodiesFromChunks,
   OUTLINE_CHUNK_LIST_JSON_MAX,
 } from "@/src/lib/lore-import-plan-llm";
-import type { SourceTextChunk } from "@/src/lib/lore-import-chunk";
 
 function makeChunks(n: number): SourceTextChunk[] {
   const out: SourceTextChunk[] = [];
@@ -52,7 +51,7 @@ describe("fillNoteBodiesFromChunks", () => {
     const notes: TestNote[] = [makeNote("n0", [chunks[0]!.id])];
     const diagnostics = fillNoteBodiesFromChunks(
       notes as unknown as Parameters<typeof fillNoteBodiesFromChunks>[0],
-      chunks,
+      chunks
     );
     expect(notes[0]!.bodyText ?? "").not.toContain(chunks[1]!.body);
     expect(notes[0]!.bodyText ?? "").not.toContain(chunks[2]!.body);
@@ -70,7 +69,7 @@ describe("fillNoteBodiesFromChunks", () => {
     ];
     const diagnostics = fillNoteBodiesFromChunks(
       notes as unknown as Parameters<typeof fillNoteBodiesFromChunks>[0],
-      chunks,
+      chunks
     );
     expect(diagnostics.noteClientIdsWithoutChunks).toEqual(["n1"]);
   });
@@ -83,12 +82,12 @@ describe("fillNoteBodiesFromChunks", () => {
     ];
     const diagnostics = fillNoteBodiesFromChunks(
       notes as unknown as Parameters<typeof fillNoteBodiesFromChunks>[0],
-      chunks,
+      chunks
     );
     expect(diagnostics.duplicateAssignments).toHaveLength(1);
     expect(diagnostics.duplicateAssignments[0]!.chunkId).toBe(chunks[0]!.id);
     expect(new Set(diagnostics.duplicateAssignments[0]!.noteClientIds)).toEqual(
-      new Set(["a", "b"]),
+      new Set(["a", "b"])
     );
   });
 });

@@ -12,7 +12,10 @@ export function normalizeImportItemLinkType(raw: string | undefined): string {
   return t === "pin" ? "history" : t;
 }
 
-type NoteFolderSlot = { clientId: string; folderClientId: string | null | undefined };
+type NoteFolderSlot = {
+  clientId: string;
+  folderClientId: string | null | undefined;
+};
 
 type PlanLinkDraft = {
   fromClientId: string;
@@ -29,7 +32,7 @@ type PlanLinkDraft = {
  */
 export function filterPlanLinksToSameCanvasSpace(
   notes: NoteFolderSlot[],
-  links: PlanLinkDraft[],
+  links: PlanLinkDraft[]
 ): {
   links: PlanLinkDraft[];
   crossSpaceMentions: PlanLinkDraft[];
@@ -39,9 +42,9 @@ export function filterPlanLinksToSameCanvasSpace(
   const out: PlanLinkDraft[] = [];
   const warnings: string[] = [];
   for (const link of links) {
-    if (!noteIds.has(link.fromClientId) || !noteIds.has(link.toClientId)) {
+    if (!(noteIds.has(link.fromClientId) && noteIds.has(link.toClientId))) {
       warnings.push(
-        `Dropped link ${link.fromClientId} → ${link.toClientId}: unknown note id (links must reference planned notes).`,
+        `Dropped link ${link.fromClientId} → ${link.toClientId}: unknown note id (links must reference planned notes).`
       );
       continue;
     }

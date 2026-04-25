@@ -1,6 +1,8 @@
-import { FACTION_ROSTER_HG_ARCH_KEY } from "@/src/lib/faction-roster-schema";
 import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
-import { parseFactionRoster } from "@/src/lib/faction-roster-schema";
+import {
+  FACTION_ROSTER_HG_ARCH_KEY,
+  parseFactionRoster,
+} from "@/src/lib/faction-roster-schema";
 import { isUuidLike } from "@/src/lib/uuid-like";
 
 export type LoreThreadAnchorsShape = {
@@ -10,10 +12,16 @@ export type LoreThreadAnchorsShape = {
   linkedCharacterItemIds?: string[];
 };
 
-function parseHgArch(contentJson: Record<string, unknown> | null | undefined): Record<string, unknown> | null {
-  if (!contentJson || typeof contentJson !== "object") return null;
+function parseHgArch(
+  contentJson: Record<string, unknown> | null | undefined
+): Record<string, unknown> | null {
+  if (!contentJson || typeof contentJson !== "object") {
+    return null;
+  }
   const hg = (contentJson as { hgArch?: unknown }).hgArch;
-  if (!hg || typeof hg !== "object" || Array.isArray(hg)) return null;
+  if (!hg || typeof hg !== "object" || Array.isArray(hg)) {
+    return null;
+  }
   return hg as Record<string, unknown>;
 }
 
@@ -27,19 +35,31 @@ function rosterSummaryLines(roster: FactionRosterEntry[]): string[] {
       lines.push(`Roster (unlinked): ${label}`);
     }
   }
-  if (roster.length > 24) lines.push(`Roster: … +${roster.length - 24} more rows`);
+  if (roster.length > 24) {
+    lines.push(`Roster: … +${roster.length - 24} more rows`);
+  }
   return lines;
 }
 
 function anchorsSummary(a: LoreThreadAnchorsShape): string[] {
   const lines: string[] = [];
-  if (a.primaryLocationItemId) lines.push(`Primary location item: ${a.primaryLocationItemId}`);
-  if (a.primaryFactionItemId) lines.push(`Primary faction item: ${a.primaryFactionItemId}`);
-  if (a.primaryFactionRosterEntryId) lines.push(`Faction roster entry: ${a.primaryFactionRosterEntryId}`);
+  if (a.primaryLocationItemId) {
+    lines.push(`Primary location item: ${a.primaryLocationItemId}`);
+  }
+  if (a.primaryFactionItemId) {
+    lines.push(`Primary faction item: ${a.primaryFactionItemId}`);
+  }
+  if (a.primaryFactionRosterEntryId) {
+    lines.push(`Faction roster entry: ${a.primaryFactionRosterEntryId}`);
+  }
   if (a.linkedCharacterItemIds?.length) {
-    lines.push(`Linked character items: ${a.linkedCharacterItemIds.slice(0, 12).join(", ")}`);
+    lines.push(
+      `Linked character items: ${a.linkedCharacterItemIds.slice(0, 12).join(", ")}`
+    );
     if (a.linkedCharacterItemIds.length > 12) {
-      lines.push(`… +${a.linkedCharacterItemIds.length - 12} more character links`);
+      lines.push(
+        `… +${a.linkedCharacterItemIds.length - 12} more character links`
+      );
     }
   }
   return lines;
@@ -47,10 +67,12 @@ function anchorsSummary(a: LoreThreadAnchorsShape): string[] {
 
 /** UUIDs referenced by hgArch binding slots (roster, thread anchors, planned multi-value fields). */
 export function extractHgArchBoundItemIds(
-  contentJson: Record<string, unknown> | null | undefined,
+  contentJson: Record<string, unknown> | null | undefined
 ): string[] {
   const hg = parseHgArch(contentJson);
-  if (!hg) return [];
+  if (!hg) {
+    return [];
+  }
 
   const out = new Set<string>();
 
@@ -64,12 +86,22 @@ export function extractHgArchBoundItemIds(
   }
 
   const anchorsRaw = hg.loreThreadAnchors;
-  if (anchorsRaw && typeof anchorsRaw === "object" && !Array.isArray(anchorsRaw)) {
+  if (
+    anchorsRaw &&
+    typeof anchorsRaw === "object" &&
+    !Array.isArray(anchorsRaw)
+  ) {
     const a = anchorsRaw as LoreThreadAnchorsShape;
-    if (isUuidLike(a.primaryLocationItemId)) out.add(a.primaryLocationItemId);
-    if (isUuidLike(a.primaryFactionItemId)) out.add(a.primaryFactionItemId);
+    if (isUuidLike(a.primaryLocationItemId)) {
+      out.add(a.primaryLocationItemId);
+    }
+    if (isUuidLike(a.primaryFactionItemId)) {
+      out.add(a.primaryFactionItemId);
+    }
     for (const id of a.linkedCharacterItemIds ?? []) {
-      if (isUuidLike(id)) out.add(id);
+      if (isUuidLike(id)) {
+        out.add(id);
+      }
     }
   }
 
@@ -81,10 +113,12 @@ export function extractHgArchBoundItemIds(
  * Keeps UUIDs so retrieval can tie back to graph rows without inventing prose.
  */
 export function buildHgArchBindingSummaryText(
-  contentJson: Record<string, unknown> | null | undefined,
+  contentJson: Record<string, unknown> | null | undefined
 ): string {
   const hg = parseHgArch(contentJson);
-  if (!hg) return "";
+  if (!hg) {
+    return "";
+  }
 
   const parts: string[] = ["Structured card fields (hgArch):"];
 
@@ -95,12 +129,20 @@ export function buildHgArchBindingSummaryText(
   }
 
   const anchorsRaw = hg.loreThreadAnchors;
-  if (anchorsRaw && typeof anchorsRaw === "object" && !Array.isArray(anchorsRaw)) {
+  if (
+    anchorsRaw &&
+    typeof anchorsRaw === "object" &&
+    !Array.isArray(anchorsRaw)
+  ) {
     const a = anchorsRaw as LoreThreadAnchorsShape;
     const alines = anchorsSummary(a);
-    if (alines.length) parts.push(...alines);
+    if (alines.length) {
+      parts.push(...alines);
+    }
   }
 
-  if (parts.length <= 1) return "";
+  if (parts.length <= 1) {
+    return "";
+  }
   return parts.join("\n").trim();
 }

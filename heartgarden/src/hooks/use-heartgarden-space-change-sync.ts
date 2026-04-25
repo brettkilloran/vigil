@@ -1,10 +1,19 @@
 "use client";
 
-import { useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import {
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+  useEffect,
+  useRef,
+} from "react";
 
 import { mergeBootstrapView } from "@/src/components/foundation/architectural-db-bridge";
+import {
+  fetchBootstrap,
+  fetchSpaceChanges,
+} from "@/src/components/foundation/architectural-neon-api";
 import type { CanvasGraph } from "@/src/components/foundation/architectural-types";
-import { fetchBootstrap, fetchSpaceChanges } from "@/src/components/foundation/architectural-neon-api";
 import {
   HEARTGARDEN_COLLA_POLL_ERROR_SNIPPET,
   HEARTGARDEN_COLLA_POLL_FAILURE_USER_MESSAGE,
@@ -12,10 +21,10 @@ import {
   HEARTGARDEN_SPACE_CHANGE_POLL_MS_SOLO,
 } from "@/src/lib/heartgarden-collab-constants";
 import {
+  type HeartgardenSpaceSyncRunSource,
   recordBootstrapRepairAttempt,
   recordHeartgardenSpaceSyncRun,
   recordPollContractFailure,
-  type HeartgardenSpaceSyncRunSource,
 } from "@/src/lib/heartgarden-collab-metrics";
 import {
   applySpaceChangeGraphMerge,
@@ -85,7 +94,9 @@ export function useHeartgardenSpaceChangeSync(options: {
   } = options;
 
   const consecutiveMissesRef = useRef(0);
-  const runRef = useRef<((source: HeartgardenSpaceSyncRunSource) => Promise<void>) | null>(null);
+  const runRef = useRef<
+    ((source: HeartgardenSpaceSyncRunSource) => Promise<void>) | null
+  >(null);
   // REVIEW_2026-04-22-2 H4: throttle full subtree id snapshots across polls.
   // `lastItemIdsSnapshotAtRef = 0` forces a snapshot on the first poll after
   // mount or on a space change (handled by effect re-run on `activeSpaceId`).
@@ -108,24 +119,37 @@ export function useHeartgardenSpaceChangeSync(options: {
     lastItemIdsSnapshotAtRef.current = 0;
 
     const shouldDeferPollForBusyEditing = () =>
-      inlineContentDirtyIdsRef.current.size > 0 || savingContentIdsRef.current.size > 0;
+      inlineContentDirtyIdsRef.current.size > 0 ||
+      savingContentIdsRef.current.size > 0;
 
     const tryBootstrapRepair = async (): Promise<boolean> => {
       recordBootstrapRepairAttempt();
       neonSyncSpaceChangeSyncBreadcrumb("bootstrap repair attempt");
       const boot = await fetchBootstrap(activeSpaceId);
       if (cancelled || !boot || boot.demo !== false || !boot.spaceId) {
-        neonSyncSpaceChangeSyncBreadcrumb("bootstrap repair skipped (no cloud payload)");
+        neonSyncSpaceChangeSyncBreadcrumb(
+          "bootstrap repair skipped (no cloud payload)"
+        );
         return false;
       }
       setGraph((prev) => mergeBootstrapView(prev, boot));
       let maxMs = Date.parse(syncCursorRef.current);
-      if (!Number.isFinite(maxMs)) maxMs = 0;
+      if (!Number.isFinite(maxMs)) {
+        maxMs = 0;
+      }
       for (const it of boot.items) {
-        if (!it.updatedAt) continue;
-        mergeItemServerUpdatedAtIfNewer(itemServerUpdatedAtRef.current, it.id, it.updatedAt);
+        if (!it.updatedAt) {
+          continue;
+        }
+        mergeItemServerUpdatedAtIfNewer(
+          itemServerUpdatedAtRef.current,
+          it.id,
+          it.updatedAt
+        );
         const t = Date.parse(it.updatedAt);
-        if (Number.isFinite(t) && t > maxMs) maxMs = t;
+        if (Number.isFinite(t) && t > maxMs) {
+          maxMs = t;
+        }
       }
       syncCursorRef.current = new Date(maxMs).toISOString();
       neonSyncClearLastErrorIfContains(HEARTGARDEN_COLLA_POLL_ERROR_SNIPPET);
@@ -135,18 +159,24 @@ export function useHeartgardenSpaceChangeSync(options: {
 
     const onRepeatedPollFailure = () => {
       consecutiveMissesRef.current += 1;
-      if (consecutiveMissesRef.current < AUX_FAILURE_AFTER_CONSECUTIVE_MISSES) return;
+      if (consecutiveMissesRef.current < AUX_FAILURE_AFTER_CONSECUTIVE_MISSES) {
+        return;
+      }
       recordPollContractFailure();
-      neonSyncReportAuxiliaryFailure(HEARTGARDEN_COLLA_POLL_FAILURE_USER_MESSAGE);
+      neonSyncReportAuxiliaryFailure(
+        HEARTGARDEN_COLLA_POLL_FAILURE_USER_MESSAGE
+      );
       neonSyncSpaceChangeSyncBreadcrumb(
-        `poll contract failure x${AUX_FAILURE_AFTER_CONSECUTIVE_MISSES}; scheduling bootstrap repair`,
+        `poll contract failure x${AUX_FAILURE_AFTER_CONSECUTIVE_MISSES}; scheduling bootstrap repair`
       );
       void tryBootstrapRepair();
       consecutiveMissesRef.current = 0;
     };
 
     async function run(source: HeartgardenSpaceSyncRunSource) {
-      if (cancelled || document.visibilityState === "hidden" || inFlight) return;
+      if (cancelled || document.visibilityState === "hidden" || inFlight) {
+        return;
+      }
       if (
         shouldDeferPollForBusyEditing() &&
         (source === "poll_interval" || source === "poll_catchup")
@@ -167,7 +197,8 @@ export function useHeartgardenSpaceChangeSync(options: {
         const nowMs = Date.now();
         const snapshotDue =
           lastItemIdsSnapshotAtRef.current === 0 ||
-          nowMs - lastItemIdsSnapshotAtRef.current >= SUBTREE_ID_SNAPSHOT_INTERVAL_MS;
+          nowMs - lastItemIdsSnapshotAtRef.current >=
+            SUBTREE_ID_SNAPSHOT_INTERVAL_MS;
         if (snapshotDue) {
           lastItemIdsSnapshotAtRef.current = nowMs;
         }
@@ -178,22 +209,33 @@ export function useHeartgardenSpaceChangeSync(options: {
             signal: inFlightAbort.signal,
           });
           firstPage = false;
-          if (cancelled) return;
+          if (cancelled) {
+            return;
+          }
           if (!data.ok) {
             neonSyncSpaceChangeSyncBreadcrumb(
-              `poll failure (${data.cause})${data.httpStatus ? ` status=${data.httpStatus}` : ""}: ${data.error}`,
+              `poll failure (${data.cause})${data.httpStatus ? ` status=${data.httpStatus}` : ""}: ${data.error}`
             );
             neonSyncReportAuxiliaryFailure({
               operation: `GET /api/spaces/${activeSpaceId}/changes`,
               message: data.error,
-              cause: data.cause === "http" ? "http" : data.cause === "network" ? "network" : "client",
-              ...(data.httpStatus != null ? { httpStatus: data.httpStatus } : {}),
+              cause:
+                data.cause === "http"
+                  ? "http"
+                  : data.cause === "network"
+                    ? "network"
+                    : "client",
+              ...(data.httpStatus == null
+                ? {}
+                : { httpStatus: data.httpStatus }),
             });
             onRepeatedPollFailure();
             return;
           }
           consecutiveMissesRef.current = 0;
-          neonSyncClearLastErrorIfContains(HEARTGARDEN_COLLA_POLL_ERROR_SNIPPET);
+          neonSyncClearLastErrorIfContains(
+            HEARTGARDEN_COLLA_POLL_ERROR_SNIPPET
+          );
 
           const nextCursor = mergeLatestIsoCursor(sinceCursor, data.cursor);
           sinceCursor = nextCursor;
@@ -212,7 +254,9 @@ export function useHeartgardenSpaceChangeSync(options: {
             inlineContentDirtyIds: inlineContentDirtyIdsRef.current,
             savingContentIds: savingContentIdsRef.current,
           });
-          optimisticProtectedIdsRef?.current.forEach((id) => protectedContentIds.add(id));
+          optimisticProtectedIdsRef?.current.forEach((id) =>
+            protectedContentIds.add(id)
+          );
           const rawItems = data.items ?? [];
           const rawSpaces = (data.spaces ?? []).map((s) => ({
             id: s.id,
@@ -228,15 +272,24 @@ export function useHeartgardenSpaceChangeSync(options: {
               serverItemIds: serverIds,
               protectedContentIds,
               tombstoneExemptIds: remoteTombstoneExemptIdsRef.current,
-            }),
+            })
           );
-          for (const bump of collectItemServerUpdatedAtBumps(rawItems, protectedContentIds)) {
-            mergeItemServerUpdatedAtIfNewer(itemServerUpdatedAtRef.current, bump.id, bump.updatedAt);
+          for (const bump of collectItemServerUpdatedAtBumps(
+            rawItems,
+            protectedContentIds
+          )) {
+            mergeItemServerUpdatedAtIfNewer(
+              itemServerUpdatedAtRef.current,
+              bump.id,
+              bump.updatedAt
+            );
           }
           if (typeof data.itemLinksRevision === "string") {
             lastItemLinksRevision = data.itemLinksRevision;
           }
-          if (data.hasMore !== true) break;
+          if (data.hasMore !== true) {
+            break;
+          }
         }
 
         onAfterSpaceChangeMerge?.({
@@ -250,10 +303,14 @@ export function useHeartgardenSpaceChangeSync(options: {
     }
 
     const scheduleDeferredPollCatchup = () => {
-      if (pollCatchupTimer != null) window.clearTimeout(pollCatchupTimer);
+      if (pollCatchupTimer != null) {
+        window.clearTimeout(pollCatchupTimer);
+      }
       pollCatchupTimer = window.setTimeout(() => {
         pollCatchupTimer = null;
-        if (cancelled || document.visibilityState === "hidden") return;
+        if (cancelled || document.visibilityState === "hidden") {
+          return;
+        }
         void run("poll_catchup");
       }, 650);
     };
@@ -272,14 +329,18 @@ export function useHeartgardenSpaceChangeSync(options: {
       : HEARTGARDEN_SPACE_CHANGE_POLL_MS_SOLO;
 
     const startPoll = () => {
-      if (pollTimer != null || document.visibilityState === "hidden") return;
+      if (pollTimer != null || document.visibilityState === "hidden") {
+        return;
+      }
       pollTimer = window.setInterval(() => {
         void run("poll_interval");
       }, pollMs);
     };
 
     const onVisibility = () => {
-      if (cancelled) return;
+      if (cancelled) {
+        return;
+      }
       if (document.visibilityState === "hidden") {
         stopPoll();
         return;
@@ -323,8 +384,12 @@ export function useHeartgardenSpaceChangeSync(options: {
   ]);
 
   useEffect(() => {
-    if (!enabled) return;
-    if (refreshNonce === 0) return;
+    if (!enabled) {
+      return;
+    }
+    if (refreshNonce === 0) {
+      return;
+    }
     void runRef.current?.("realtime_invalidate");
   }, [enabled, refreshNonce]);
 }

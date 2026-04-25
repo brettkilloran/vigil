@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatLoreImportFailureReport,
+  type LoreImportFailureDetail,
   loreImportSummaryLine,
   parseLoreImportJsonBody,
-  type LoreImportFailureDetail,
 } from "@/src/lib/lore-import-diagnostic";
 
 describe("lore-import-diagnostic", () => {
@@ -50,7 +50,8 @@ describe("lore-import-diagnostic", () => {
     expect(report).toContain("attemptId: attempt-123");
     expect(report).toContain("stage: job_poll");
     expect(report).toContain("httpStatus: 500");
-    expect(report).toContain("recommendedAction: Retry with a smaller source file.");
+    expect(report).toContain(
+      "recommendedAction: Retry with a smaller source file."
+    );
   });
 });
-

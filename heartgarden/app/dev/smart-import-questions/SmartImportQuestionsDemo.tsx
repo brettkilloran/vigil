@@ -28,22 +28,37 @@ type OtherFollowUp = {
 
 function upsertAnswer(
   prev: ClarificationAnswer[],
-  next: ClarificationAnswer,
+  next: ClarificationAnswer
 ): ClarificationAnswer[] {
-  return [...prev.filter((a) => a.clarificationId !== next.clarificationId), next];
+  return [
+    ...prev.filter((a) => a.clarificationId !== next.clarificationId),
+    next,
+  ];
 }
 
-function recommendedOptionId(c: LoreImportClarificationItem): string | undefined {
+function recommendedOptionId(
+  c: LoreImportClarificationItem
+): string | undefined {
   const r = c.options.find((o) => o.recommended);
   return r?.id ?? c.options[0]?.id;
 }
 
 function isAnswered(a: ClarificationAnswer | undefined): boolean {
-  if (!a) return false;
-  if (a.resolution === "answered") return (a.selectedOptionIds?.length ?? 0) > 0;
-  if (a.resolution === "skipped_default") return !!a.skipDefaultOptionId;
-  if (a.resolution === "other_text") return (a.otherText?.trim().length ?? 0) >= 4;
-  if (a.resolution === "skipped_best_judgement") return true;
+  if (!a) {
+    return false;
+  }
+  if (a.resolution === "answered") {
+    return (a.selectedOptionIds?.length ?? 0) > 0;
+  }
+  if (a.resolution === "skipped_default") {
+    return !!a.skipDefaultOptionId;
+  }
+  if (a.resolution === "other_text") {
+    return (a.otherText?.trim().length ?? 0) >= 4;
+  }
+  if (a.resolution === "skipped_best_judgement") {
+    return true;
+  }
   return false;
 }
 
@@ -61,8 +76,17 @@ const SINGLE_SELECT: LoreImportClarificationItem = {
     "The import produced a new folder “Factions › Ember Consortium”, but your vault already has “Guilds › Ember Consortium”. Choose one home so the notes merge cleanly.",
   questionKind: "single_select",
   options: [
-    { id: "opt-existing", label: "Merge into Guilds › Ember Consortium", recommended: true, planPatchHint: noOp },
-    { id: "opt-new", label: "Keep the new Factions › Ember Consortium folder", planPatchHint: noOp },
+    {
+      id: "opt-existing",
+      label: "Merge into Guilds › Ember Consortium",
+      recommended: true,
+      planPatchHint: noOp,
+    },
+    {
+      id: "opt-new",
+      label: "Keep the new Factions › Ember Consortium folder",
+      planPatchHint: noOp,
+    },
     { id: "opt-both", label: "Keep both (link them)", planPatchHint: noOp },
   ],
 };
@@ -73,11 +97,17 @@ const MULTI_SELECT: LoreImportClarificationItem = {
   severity: "optional",
   confidenceScore: 0.55,
   title: "Which roles apply to Captain Irell in the Ashen Pact?",
-  context: "Pick any that match the source document. Leave empty to fall back on best judgement.",
+  context:
+    "Pick any that match the source document. Leave empty to fall back on best judgement.",
   questionKind: "multi_select",
   options: [
     { id: "role-founder", label: "Founder", planPatchHint: noOp },
-    { id: "role-enforcer", label: "Enforcer", recommended: true, planPatchHint: noOp },
+    {
+      id: "role-enforcer",
+      label: "Enforcer",
+      recommended: true,
+      planPatchHint: noOp,
+    },
     { id: "role-liaison", label: "Liaison to the Crown", planPatchHint: noOp },
     { id: "role-exile", label: "Exile", planPatchHint: noOp },
   ],
@@ -93,8 +123,17 @@ const CONFIRM_DEFAULT: LoreImportClarificationItem = {
     "The voice reads as narrator rather than an in-world document. We'll mark the notes as canon unless you say otherwise.",
   questionKind: "confirm_default",
   options: [
-    { id: "confirm-yes", label: "Yes — mark as canon", recommended: true, planPatchHint: noOp },
-    { id: "confirm-no", label: "No — mark as draft / speculative", planPatchHint: noOp },
+    {
+      id: "confirm-yes",
+      label: "Yes — mark as canon",
+      recommended: true,
+      planPatchHint: noOp,
+    },
+    {
+      id: "confirm-no",
+      label: "No — mark as draft / speculative",
+      planPatchHint: noOp,
+    },
   ],
 };
 
@@ -149,9 +188,19 @@ const SCENARIOS: Scenario[] = [
         "We read your answer as wanting a new top-level folder. Which of these closest matches your intent?",
       otherText: "Put it under a new Syndicates heading next to Cartels.",
       options: [
-        { id: "fu-new-top", label: "Create Syndicates › Ember Consortium", recommended: true },
-        { id: "fu-under-factions", label: "Create Factions › Syndicates › Ember Consortium" },
-        { id: "fu-rename-existing", label: "Rename Guilds to Syndicates and merge" },
+        {
+          id: "fu-new-top",
+          label: "Create Syndicates › Ember Consortium",
+          recommended: true,
+        },
+        {
+          id: "fu-under-factions",
+          label: "Create Factions › Syndicates › Ember Consortium",
+        },
+        {
+          id: "fu-rename-existing",
+          label: "Rename Guilds to Syndicates and merge",
+        },
       ],
     },
   },
@@ -202,27 +251,31 @@ const MOCK_FILE_NAME = "fellowship-lore.md";
 
 function WizardPreview({ scenario }: WizardProps) {
   const [answers, setAnswers] = useState<ClarificationAnswer[]>(
-    () => scenario.initialAnswers ?? [],
+    () => scenario.initialAnswers ?? []
   );
   const [otherFollowUp, setOtherFollowUp] = useState<OtherFollowUp | null>(
-    () => scenario.initialOtherFollowUp ?? null,
+    () => scenario.initialOtherFollowUp ?? null
   );
 
   const ordered = scenario.clarifications;
   const byId = useMemo(
     () => new Map(answers.map((a) => [a.clarificationId, a])),
-    [answers],
+    [answers]
   );
   const totalQuestions = ordered.length;
-  const answeredCount = ordered.filter((c) => isAnswered(byId.get(c.id))).length;
+  const answeredCount = ordered.filter((c) =>
+    isAnswered(byId.get(c.id))
+  ).length;
   const questionsComplete =
     totalQuestions > 0 && ordered.every((c) => isAnswered(byId.get(c.id)));
   const focusQuestion =
     totalQuestions === 0
       ? null
-      : ordered.find((c) => !isAnswered(byId.get(c.id))) ?? null;
+      : (ordered.find((c) => !isAnswered(byId.get(c.id))) ?? null);
   const wizardBarPercentRaw =
-    totalQuestions === 0 ? 100 : Math.round((answeredCount / totalQuestions) * 100);
+    totalQuestions === 0
+      ? 100
+      : Math.round((answeredCount / totalQuestions) * 100);
   const wizardBarPercent =
     totalQuestions === 0
       ? 100
@@ -242,7 +295,7 @@ function WizardPreview({ scenario }: WizardProps) {
         clarificationId: c.id,
         resolution: "answered" as const,
         selectedOptionIds: [recommendedOptionId(c) ?? c.options[0]!.id],
-      })),
+      }))
     );
     setOtherFollowUp(null);
   };
@@ -252,303 +305,346 @@ function WizardPreview({ scenario }: WizardProps) {
       <div className={styles.stage}>
         <span className={styles.stageLabel}>Preview</span>
         <div
+          aria-label="Smart document import"
+          aria-modal="true"
           className={`${canvasStyles.smartImportReviewBackdrop} ${styles.stageBackdrop}`}
           role="dialog"
-          aria-modal="true"
-          aria-label="Smart document import"
         >
-        <div className={`${canvasStyles.smartImportReviewPanel} ${styles.stagePanel}`}>
-          <header className={canvasStyles.smartImportReviewHeader}>
-            <div className={canvasStyles.smartImportReviewHeaderMain}>
-              <h2 className={canvasStyles.smartImportReviewTitle}>Smart import</h2>
-              <p className={canvasStyles.smartImportReviewFile}>{MOCK_FILE_NAME}</p>
-              <p className={canvasStyles.smartImportReviewStatsLine}>
-                <strong>{MOCK_STATS.folders}</strong> folders ·{" "}
-                <strong>{MOCK_STATS.notes}</strong> notes ·{" "}
-                <strong>{totalQuestions}</strong> question{totalQuestions === 1 ? "" : "s"}
-              </p>
-            </div>
-            <div className={canvasStyles.smartImportReviewHeaderActions}>
-              <Button
-                size="sm"
-                variant="default"
-                tone="card-dark"
-                type="button"
-                onClick={() => {
-                  /* demo — no-op */
-                }}
-              >
-                Close
-              </Button>
-            </div>
-          </header>
-          <div className={canvasStyles.smartImportReviewBody}>
-            <div className={canvasStyles.smartImportWizard}>
-              <div className={canvasStyles.smartImportWizardProgress}>
-          <p className={canvasStyles.smartImportWizardProgressLabel}>
-            {otherFollowUp
-              ? "Follow-up"
-              : questionsComplete
-                ? "All done"
-                : focusQuestion
-                  ? `Question ${ordered.indexOf(focusQuestion) + 1} of ${totalQuestions}`
-                  : "Questions"}
-          </p>
           <div
-            className={
-              totalQuestions > 1
-                ? `${canvasStyles.smartImportQuestionsProgressTrack} ${canvasStyles.smartImportQuestionsProgressTrackSegmented}`
-                : canvasStyles.smartImportQuestionsProgressTrack
-            }
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={wizardBarPercent}
-            aria-label="Questions completed"
+            className={`${canvasStyles.smartImportReviewPanel} ${styles.stagePanel}`}
           >
-            {totalQuestions > 1 ? (
-              ordered.map((q) => {
-                const answered = byId.get(q.id);
-                const isDone = isAnswered(answered);
-                const isActive = !!focusQuestion && focusQuestion.id === q.id;
-                return (
-                  <span
-                    key={q.id}
-                    className={`${canvasStyles.smartImportQuestionsProgressSegment}${isDone ? ` ${canvasStyles.smartImportQuestionsProgressSegmentDone}` : ""}${isActive ? ` ${canvasStyles.smartImportQuestionsProgressSegmentActive}` : ""}`}
-                  />
-                );
-              })
-            ) : (
-              <div
-                className={canvasStyles.smartImportQuestionsProgressFill}
-                style={{ width: `${wizardBarPercent}%` }}
-              />
-            )}
-          </div>
-        </div>
-
-        {otherFollowUp ? (
-          <div className={canvasStyles.smartImportWizardCard} role="region" aria-live="polite">
-            <p className={canvasStyles.smartImportWizardEyebrow}>Follow-up</p>
-            <h3 className={canvasStyles.smartImportWizardTitle}>{otherFollowUp.title}</h3>
-            <p className={canvasStyles.smartImportWizardContext}>{otherFollowUp.question}</p>
-            <p className={canvasStyles.smartImportWizardQuote}>
-              You wrote: &quot;{otherFollowUp.otherText}&quot;
-            </p>
-            <div className={canvasStyles.smartImportWizardFollowUpOptions}>
-              {otherFollowUp.options.map((opt) => (
-                <label
-                  key={opt.id}
-                  className={canvasStyles.smartImportWizardOption}
-                >
-                  <input
-                    type="radio"
-                    name={`clarify-followup-${otherFollowUp.clarificationId}`}
-                    onChange={() => {
-                      setAnswers((prev) =>
-                        upsertAnswer(prev, {
-                          clarificationId: otherFollowUp.clarificationId,
-                          resolution: "answered",
-                          selectedOptionIds: [opt.id],
-                        }),
-                      );
-                      setOtherFollowUp(null);
-                    }}
-                  />
-                  <span>{opt.label}</span>
-                </label>
-              ))}
-            </div>
-            <div className={canvasStyles.smartImportWizardFooter}>
-              <Button
-                size="sm"
-                variant="ghost"
-                tone="glass"
-                type="button"
-                onClick={() => {
-                  setAnswers((prev) =>
-                    upsertAnswer(prev, {
-                      clarificationId: otherFollowUp.clarificationId,
-                      resolution: "skipped_best_judgement",
-                    }),
-                  );
-                  setOtherFollowUp(null);
-                }}
-              >
-                Skip, use best judgement
-              </Button>
-            </div>
-          </div>
-        ) : questionsComplete ? (
-          <div className={canvasStyles.smartImportWizardComplete}>
-            <p className={canvasStyles.smartImportWizardCompleteTitle}>You&apos;re all set</p>
-            <p className={canvasStyles.smartImportWizardCompleteBody}>
-              Optionally review <strong>Structure</strong> and <strong>Merges</strong>, then
-              apply the import to add this content to your space.
-            </p>
-            <Button
-              size="md"
-              variant="primary"
-              tone="solid"
-              type="button"
-              onClick={() => {
-                /* demo — no-op */
-              }}
-            >
-              Apply import to canvas
-            </Button>
-          </div>
-        ) : focusQuestion ? (
-          (() => {
-            const c = focusQuestion;
-            const ans = byId.get(c.id);
-            const isMulti = c.questionKind === "multi_select";
-            const selectedSet = new Set(
-              ans?.resolution === "answered"
-                ? (ans.selectedOptionIds ?? [])
-                : ans?.resolution === "skipped_default" && ans.skipDefaultOptionId
-                  ? [ans.skipDefaultOptionId]
-                  : [],
-            );
-            const otherSelected = ans?.resolution === "other_text";
-            const step = ordered.indexOf(c) + 1;
-            return (
-              <article className={canvasStyles.smartImportWizardCard}>
-                <p className={canvasStyles.smartImportWizardEyebrow}>
-                  {c.severity === "required" ? "Required" : "Optional"} · {step} of{" "}
-                  {totalQuestions}
+            <header className={canvasStyles.smartImportReviewHeader}>
+              <div className={canvasStyles.smartImportReviewHeaderMain}>
+                <h2 className={canvasStyles.smartImportReviewTitle}>
+                  Smart import
+                </h2>
+                <p className={canvasStyles.smartImportReviewFile}>
+                  {MOCK_FILE_NAME}
                 </p>
-                <h3 className={canvasStyles.smartImportWizardTitle}>{c.title}</h3>
-                {c.context ? (
-                  <p className={canvasStyles.smartImportWizardContext}>{c.context}</p>
-                ) : null}
-                <div className={canvasStyles.smartImportWizardOptions}>
-                  {c.options.map((opt) =>
-                    isMulti ? (
-                      <label key={opt.id} className={canvasStyles.smartImportWizardOption}>
-                        <input
-                          type="checkbox"
-                          checked={selectedSet.has(opt.id)}
-                          onChange={(e) => {
-                            let base: string[] =
-                              ans?.resolution === "answered"
-                                ? [...(ans.selectedOptionIds ?? [])]
-                                : [];
-                            if (e.target.checked) {
-                              if (!base.includes(opt.id)) base.push(opt.id);
-                            } else {
-                              base = base.filter((x) => x !== opt.id);
-                            }
-                            setAnswers((prev) =>
-                              upsertAnswer(prev, {
-                                clarificationId: c.id,
-                                resolution: "answered",
-                                selectedOptionIds: base,
-                              }),
-                            );
-                            setOtherFollowUp((cur) =>
-                              cur?.clarificationId === c.id ? null : cur,
-                            );
-                          }}
-                        />
-                        <span>{opt.label}</span>
-                      </label>
+                <p className={canvasStyles.smartImportReviewStatsLine}>
+                  <strong>{MOCK_STATS.folders}</strong> folders ·{" "}
+                  <strong>{MOCK_STATS.notes}</strong> notes ·{" "}
+                  <strong>{totalQuestions}</strong> question
+                  {totalQuestions === 1 ? "" : "s"}
+                </p>
+              </div>
+              <div className={canvasStyles.smartImportReviewHeaderActions}>
+                <Button
+                  onClick={() => {
+                    /* demo — no-op */
+                  }}
+                  size="sm"
+                  tone="card-dark"
+                  type="button"
+                  variant="default"
+                >
+                  Close
+                </Button>
+              </div>
+            </header>
+            <div className={canvasStyles.smartImportReviewBody}>
+              <div className={canvasStyles.smartImportWizard}>
+                <div className={canvasStyles.smartImportWizardProgress}>
+                  <p className={canvasStyles.smartImportWizardProgressLabel}>
+                    {otherFollowUp
+                      ? "Follow-up"
+                      : questionsComplete
+                        ? "All done"
+                        : focusQuestion
+                          ? `Question ${ordered.indexOf(focusQuestion) + 1} of ${totalQuestions}`
+                          : "Questions"}
+                  </p>
+                  <div
+                    aria-label="Questions completed"
+                    aria-valuemax={100}
+                    aria-valuemin={0}
+                    aria-valuenow={wizardBarPercent}
+                    className={
+                      totalQuestions > 1
+                        ? `${canvasStyles.smartImportQuestionsProgressTrack} ${canvasStyles.smartImportQuestionsProgressTrackSegmented}`
+                        : canvasStyles.smartImportQuestionsProgressTrack
+                    }
+                    role="progressbar"
+                  >
+                    {totalQuestions > 1 ? (
+                      ordered.map((q) => {
+                        const answered = byId.get(q.id);
+                        const isDone = isAnswered(answered);
+                        const isActive =
+                          !!focusQuestion && focusQuestion.id === q.id;
+                        return (
+                          <span
+                            className={`${canvasStyles.smartImportQuestionsProgressSegment}${isDone ? ` ${canvasStyles.smartImportQuestionsProgressSegmentDone}` : ""}${isActive ? ` ${canvasStyles.smartImportQuestionsProgressSegmentActive}` : ""}`}
+                            key={q.id}
+                          />
+                        );
+                      })
                     ) : (
-                      <label key={opt.id} className={canvasStyles.smartImportWizardOption}>
-                        <input
-                          type="radio"
-                          name={`clarify-${c.id}`}
-                          checked={
-                            !!(
-                              ans?.resolution === "answered" &&
-                              ans.selectedOptionIds?.[0] === opt.id
-                            ) ||
-                            !!(
-                              ans?.resolution === "skipped_default" &&
-                              ans.skipDefaultOptionId === opt.id
-                            )
-                          }
-                          onChange={() => {
-                            setAnswers((prev) =>
-                              upsertAnswer(prev, {
-                                clarificationId: c.id,
-                                resolution: "answered",
-                                selectedOptionIds: [opt.id],
-                              }),
-                            );
-                            setOtherFollowUp((cur) =>
-                              cur?.clarificationId === c.id ? null : cur,
-                            );
-                          }}
-                        />
-                        <span>{opt.label}</span>
-                      </label>
-                    ),
-                  )}
-                  <label className={canvasStyles.smartImportWizardOption}>
-                    <input
-                      type="radio"
-                      name={`clarify-other-${c.id}`}
-                      checked={otherSelected}
-                      onChange={() =>
-                        setAnswers((prev) =>
-                          upsertAnswer(prev, {
-                            clarificationId: c.id,
-                            resolution: "other_text",
-                            otherText: ans?.otherText ?? "",
-                          }),
-                        )
-                      }
-                    />
-                    <span>Other…</span>
-                  </label>
-                  {otherSelected ? (
-                    <textarea
-                      className={canvasStyles.smartImportWizardTextarea}
-                      placeholder="Type your answer (at least a few characters)…"
-                      value={ans?.otherText ?? ""}
-                      onChange={(e) =>
-                        setAnswers((prev) =>
-                          upsertAnswer(prev, {
-                            clarificationId: c.id,
-                            resolution: "other_text",
-                            otherText: e.target.value,
-                          }),
-                        )
-                      }
-                    />
-                  ) : null}
+                      <div
+                        className={
+                          canvasStyles.smartImportQuestionsProgressFill
+                        }
+                        style={{ width: `${wizardBarPercent}%` }}
+                      />
+                    )}
+                  </div>
                 </div>
-                <div className={canvasStyles.smartImportWizardFooter}>
-                  {recommendedOptionId(c) ? (
-                    <Button
-                      size="sm"
-                      variant="default"
-                      tone="card-dark"
-                      type="button"
-                      onClick={() => {
-                        const def = recommendedOptionId(c);
-                        if (!def) return;
-                        setAnswers((prev) =>
-                          upsertAnswer(prev, {
-                            clarificationId: c.id,
-                            resolution: "skipped_default",
-                            skipDefaultOptionId: def,
-                          }),
-                        );
-                        setOtherFollowUp((cur) =>
-                          cur?.clarificationId === c.id ? null : cur,
-                        );
-                      }}
+
+                {otherFollowUp ? (
+                  <div
+                    aria-live="polite"
+                    className={canvasStyles.smartImportWizardCard}
+                    role="region"
+                  >
+                    <p className={canvasStyles.smartImportWizardEyebrow}>
+                      Follow-up
+                    </p>
+                    <h3 className={canvasStyles.smartImportWizardTitle}>
+                      {otherFollowUp.title}
+                    </h3>
+                    <p className={canvasStyles.smartImportWizardContext}>
+                      {otherFollowUp.question}
+                    </p>
+                    <p className={canvasStyles.smartImportWizardQuote}>
+                      You wrote: &quot;{otherFollowUp.otherText}&quot;
+                    </p>
+                    <div
+                      className={canvasStyles.smartImportWizardFollowUpOptions}
                     >
-                      Use recommended
+                      {otherFollowUp.options.map((opt) => (
+                        <label
+                          className={canvasStyles.smartImportWizardOption}
+                          key={opt.id}
+                        >
+                          <input
+                            name={`clarify-followup-${otherFollowUp.clarificationId}`}
+                            onChange={() => {
+                              setAnswers((prev) =>
+                                upsertAnswer(prev, {
+                                  clarificationId:
+                                    otherFollowUp.clarificationId,
+                                  resolution: "answered",
+                                  selectedOptionIds: [opt.id],
+                                })
+                              );
+                              setOtherFollowUp(null);
+                            }}
+                            type="radio"
+                          />
+                          <span>{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className={canvasStyles.smartImportWizardFooter}>
+                      <Button
+                        onClick={() => {
+                          setAnswers((prev) =>
+                            upsertAnswer(prev, {
+                              clarificationId: otherFollowUp.clarificationId,
+                              resolution: "skipped_best_judgement",
+                            })
+                          );
+                          setOtherFollowUp(null);
+                        }}
+                        size="sm"
+                        tone="glass"
+                        type="button"
+                        variant="ghost"
+                      >
+                        Skip, use best judgement
+                      </Button>
+                    </div>
+                  </div>
+                ) : questionsComplete ? (
+                  <div className={canvasStyles.smartImportWizardComplete}>
+                    <p className={canvasStyles.smartImportWizardCompleteTitle}>
+                      You&apos;re all set
+                    </p>
+                    <p className={canvasStyles.smartImportWizardCompleteBody}>
+                      Optionally review <strong>Structure</strong> and{" "}
+                      <strong>Merges</strong>, then apply the import to add this
+                      content to your space.
+                    </p>
+                    <Button
+                      onClick={() => {
+                        /* demo — no-op */
+                      }}
+                      size="md"
+                      tone="solid"
+                      type="button"
+                      variant="primary"
+                    >
+                      Apply import to canvas
                     </Button>
-                  ) : null}
-                </div>
-              </article>
-            );
-          })()
-        ) : null}
+                  </div>
+                ) : focusQuestion ? (
+                  (() => {
+                    const c = focusQuestion;
+                    const ans = byId.get(c.id);
+                    const isMulti = c.questionKind === "multi_select";
+                    const selectedSet = new Set(
+                      ans?.resolution === "answered"
+                        ? (ans.selectedOptionIds ?? [])
+                        : ans?.resolution === "skipped_default" &&
+                            ans.skipDefaultOptionId
+                          ? [ans.skipDefaultOptionId]
+                          : []
+                    );
+                    const otherSelected = ans?.resolution === "other_text";
+                    const step = ordered.indexOf(c) + 1;
+                    return (
+                      <article className={canvasStyles.smartImportWizardCard}>
+                        <p className={canvasStyles.smartImportWizardEyebrow}>
+                          {c.severity === "required" ? "Required" : "Optional"}{" "}
+                          · {step} of {totalQuestions}
+                        </p>
+                        <h3 className={canvasStyles.smartImportWizardTitle}>
+                          {c.title}
+                        </h3>
+                        {c.context ? (
+                          <p className={canvasStyles.smartImportWizardContext}>
+                            {c.context}
+                          </p>
+                        ) : null}
+                        <div className={canvasStyles.smartImportWizardOptions}>
+                          {c.options.map((opt) =>
+                            isMulti ? (
+                              <label
+                                className={canvasStyles.smartImportWizardOption}
+                                key={opt.id}
+                              >
+                                <input
+                                  checked={selectedSet.has(opt.id)}
+                                  onChange={(e) => {
+                                    let base: string[] =
+                                      ans?.resolution === "answered"
+                                        ? [...(ans.selectedOptionIds ?? [])]
+                                        : [];
+                                    if (e.target.checked) {
+                                      if (!base.includes(opt.id)) {
+                                        base.push(opt.id);
+                                      }
+                                    } else {
+                                      base = base.filter((x) => x !== opt.id);
+                                    }
+                                    setAnswers((prev) =>
+                                      upsertAnswer(prev, {
+                                        clarificationId: c.id,
+                                        resolution: "answered",
+                                        selectedOptionIds: base,
+                                      })
+                                    );
+                                    setOtherFollowUp((cur) =>
+                                      cur?.clarificationId === c.id ? null : cur
+                                    );
+                                  }}
+                                  type="checkbox"
+                                />
+                                <span>{opt.label}</span>
+                              </label>
+                            ) : (
+                              <label
+                                className={canvasStyles.smartImportWizardOption}
+                                key={opt.id}
+                              >
+                                <input
+                                  checked={
+                                    !!(
+                                      ans?.resolution === "answered" &&
+                                      ans.selectedOptionIds?.[0] === opt.id
+                                    ) ||
+                                    !!(
+                                      ans?.resolution === "skipped_default" &&
+                                      ans.skipDefaultOptionId === opt.id
+                                    )
+                                  }
+                                  name={`clarify-${c.id}`}
+                                  onChange={() => {
+                                    setAnswers((prev) =>
+                                      upsertAnswer(prev, {
+                                        clarificationId: c.id,
+                                        resolution: "answered",
+                                        selectedOptionIds: [opt.id],
+                                      })
+                                    );
+                                    setOtherFollowUp((cur) =>
+                                      cur?.clarificationId === c.id ? null : cur
+                                    );
+                                  }}
+                                  type="radio"
+                                />
+                                <span>{opt.label}</span>
+                              </label>
+                            )
+                          )}
+                          <label
+                            className={canvasStyles.smartImportWizardOption}
+                          >
+                            <input
+                              checked={otherSelected}
+                              name={`clarify-other-${c.id}`}
+                              onChange={() =>
+                                setAnswers((prev) =>
+                                  upsertAnswer(prev, {
+                                    clarificationId: c.id,
+                                    resolution: "other_text",
+                                    otherText: ans?.otherText ?? "",
+                                  })
+                                )
+                              }
+                              type="radio"
+                            />
+                            <span>Other…</span>
+                          </label>
+                          {otherSelected ? (
+                            <textarea
+                              className={canvasStyles.smartImportWizardTextarea}
+                              onChange={(e) =>
+                                setAnswers((prev) =>
+                                  upsertAnswer(prev, {
+                                    clarificationId: c.id,
+                                    resolution: "other_text",
+                                    otherText: e.target.value,
+                                  })
+                                )
+                              }
+                              placeholder="Type your answer (at least a few characters)…"
+                              value={ans?.otherText ?? ""}
+                            />
+                          ) : null}
+                        </div>
+                        <div className={canvasStyles.smartImportWizardFooter}>
+                          {recommendedOptionId(c) ? (
+                            <Button
+                              onClick={() => {
+                                const def = recommendedOptionId(c);
+                                if (!def) {
+                                  return;
+                                }
+                                setAnswers((prev) =>
+                                  upsertAnswer(prev, {
+                                    clarificationId: c.id,
+                                    resolution: "skipped_default",
+                                    skipDefaultOptionId: def,
+                                  })
+                                );
+                                setOtherFollowUp((cur) =>
+                                  cur?.clarificationId === c.id ? null : cur
+                                );
+                              }}
+                              size="sm"
+                              tone="card-dark"
+                              type="button"
+                              variant="default"
+                            >
+                              Use recommended
+                            </Button>
+                          ) : null}
+                        </div>
+                      </article>
+                    );
+                  })()
+                ) : null}
               </div>
             </div>
           </div>
@@ -557,14 +653,26 @@ function WizardPreview({ scenario }: WizardProps) {
 
       <div className={styles.stageFooter}>
         <div className={styles.resetRow}>
-          <Button size="xs" variant="default" tone="card-dark" type="button" onClick={reset}>
+          <Button
+            onClick={reset}
+            size="xs"
+            tone="card-dark"
+            type="button"
+            variant="default"
+          >
             Reset scenario
           </Button>
-          <Button size="xs" variant="default" tone="card-dark" type="button" onClick={answerAll}>
+          <Button
+            onClick={answerAll}
+            size="xs"
+            tone="card-dark"
+            type="button"
+            variant="default"
+          >
             Auto-answer all (recommended)
           </Button>
         </div>
-        <pre className={styles.stateDump} aria-label="Answer state">
+        <pre aria-label="Answer state" className={styles.stateDump}>
           {JSON.stringify({ answers, otherFollowUp }, null, 2)}
         </pre>
       </div>
@@ -581,29 +689,33 @@ export function SmartImportQuestionsDemo() {
     <div className={styles.shell}>
       <h1 className={styles.title}>Smart import — question wizard</h1>
       <p className={styles.subtitle}>
-        Interactive preview of the clarification cards used on the <code>Questions</code>{" "}
-        tab of the Smart Import review panel. Each scenario uses the same JSX and CSS
-        modules as the real component.
+        Interactive preview of the clarification cards used on the{" "}
+        <code>Questions</code> tab of the Smart Import review panel. Each
+        scenario uses the same JSX and CSS modules as the real component.
       </p>
       <p className={styles.url}>
         URL: <code>/dev/smart-import-questions</code>
       </p>
 
       <div className={styles.layout}>
-        <div className={styles.scenarioSwitcher} role="tablist" aria-label="Scenario">
+        <div
+          aria-label="Scenario"
+          className={styles.scenarioSwitcher}
+          role="tablist"
+        >
           <span className={styles.scenarioLabel}>Scenario</span>
           {SCENARIOS.map((s) => (
             <button
-              key={s.key}
-              type="button"
-              role="tab"
               aria-selected={scenarioKey === s.key}
               className={
                 scenarioKey === s.key
                   ? `${styles.scenarioChip} ${styles.scenarioChipActive}`
                   : styles.scenarioChip
               }
+              key={s.key}
               onClick={() => setScenarioKey(s.key)}
+              role="tab"
+              type="button"
             >
               {s.label}
             </button>

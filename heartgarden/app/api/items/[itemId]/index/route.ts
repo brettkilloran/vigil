@@ -9,8 +9,8 @@ import {
   isHeartgardenPlayerBlocked,
   playerMayAccessItemSpaceAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
-import { reindexItemVault } from "@/src/lib/item-vault-index";
 import { jsonPublicError } from "@/src/lib/heartgarden-public-error";
+import { reindexItemVault } from "@/src/lib/item-vault-index";
 import {
   vaultIndexRateLimitMeta,
   vaultItemIndexRateLimitExceeded,
@@ -18,7 +18,7 @@ import {
 
 export async function POST(
   req: Request,
-  context: { params: Promise<{ itemId: string }> },
+  context: { params: Promise<{ itemId: string }> }
 ) {
   const bootCtxEarly = await getHeartgardenApiBootContext();
   if (isHeartgardenPlayerBlocked(bootCtxEarly)) {
@@ -36,17 +36,24 @@ export async function POST(
       {
         status: 429,
         headers: { "Retry-After": String(retry) },
-      },
+      }
     );
   }
 
   const db = tryGetDb();
   if (!db) {
-    return Response.json({ ok: false, error: "Database not configured" }, { status: 503 });
+    return Response.json(
+      { ok: false, error: "Database not configured" },
+      { status: 503 }
+    );
   }
 
   const { itemId } = await context.params;
-  const [row] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
+  const [row] = await db
+    .select()
+    .from(items)
+    .where(eq(items.id, itemId))
+    .limit(1);
   if (!row) {
     return Response.json({ ok: false, error: "Not found" }, { status: 404 });
   }

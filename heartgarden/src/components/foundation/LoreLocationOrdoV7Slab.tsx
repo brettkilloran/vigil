@@ -2,7 +2,11 @@
 
 import { ArrowsOutSimple } from "@phosphor-icons/react";
 import type { JSONContent } from "@tiptap/core";
-import type { ClipboardEvent as ReactClipboardEvent, DragEvent as ReactDragEvent, MutableRefObject } from "react";
+import type {
+  MutableRefObject,
+  ClipboardEvent as ReactClipboardEvent,
+  DragEvent as ReactDragEvent,
+} from "react";
 import {
   forwardRef,
   memo,
@@ -16,25 +20,26 @@ import {
 
 import { HeartgardenDocEditor } from "@/src/components/editing/HeartgardenDocEditor";
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
-import { Button } from "@/src/components/ui/Button";
 import cardStyles from "@/src/components/foundation/lore-entity-card.module.css";
+import { Button } from "@/src/components/ui/Button";
 import { cx } from "@/src/lib/cx";
 import { getHgDocEditor } from "@/src/lib/hg-doc/editor-registry";
-import { htmlFragmentToHgDocDoc } from "@/src/lib/hg-doc/html-to-doc";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
+import { htmlFragmentToHgDocDoc } from "@/src/lib/hg-doc/html-to-doc";
 import {
-  LORE_V11_PH_LOCATION_PLACEHOLDER,
   computeLocationTopFieldPasteInsertText,
   insertPlainTextIntoContentEditable,
+  LORE_V11_PH_LOCATION_PLACEHOLDER,
   normalizeLocOrdoV7NameField,
   parseLocationOrdoV7BodyPlainFields,
   shouldBlockLocationTopFieldBeforeInput,
 } from "@/src/lib/lore-location-focus-document-html";
 import { splitOrdoV7DisplayName } from "@/src/lib/lore-location-ordo-display-name";
 import {
-  LORE_V11_PH_LOCATION_CONTEXT,
   buildLocationOrdoV7BodyHtml,
+  LORE_V11_PH_LOCATION_CONTEXT,
 } from "@/src/lib/lore-node-seed-html";
+import { ordoV7StaplePlacementFromSeed } from "@/src/lib/lore-v7-staple-placement";
 import {
   consumeLorePlaceholderBeforeInput,
   installLorePlaceholderSelectionGuards,
@@ -44,7 +49,6 @@ import {
   installLoreV11PlaceholderCaretSync,
   syncLoreV11PhCaretOffsetsInHost,
 } from "@/src/lib/lore-v11-ph-caret";
-import { ordoV7StaplePlacementFromSeed } from "@/src/lib/lore-v7-staple-placement";
 
 /**
  * ORDO v7 `contentEditable` fields must not use React-managed children: the browser mutates the DOM
@@ -71,12 +75,18 @@ function fillOrdoV7NameFieldDOM(el: HTMLElement, name: string) {
  * Mirrors TipTap's `editor.isEmpty` semantics without needing the live editor instance.
  */
 function isNotesHgDocEmpty(doc: JSONContent | null | undefined): boolean {
-  if (!doc || doc.type !== "doc") return true;
+  if (!doc || doc.type !== "doc") {
+    return true;
+  }
   const content = doc.content ?? [];
-  if (content.length === 0) return true;
+  if (content.length === 0) {
+    return true;
+  }
   if (content.length === 1) {
     const only = content[0];
-    if (only?.type === "paragraph" && !only.content?.length) return true;
+    if (only?.type === "paragraph" && !only.content?.length) {
+      return true;
+    }
   }
   return false;
 }
@@ -92,16 +102,18 @@ function fillOrdoV7SingleLineFieldDOM(el: HTMLElement, raw: string) {
 
 function handleTopFieldPaste(
   field: "name" | "context" | "detail",
-  e: ReactClipboardEvent<HTMLElement>,
+  e: ReactClipboardEvent<HTMLElement>
 ) {
   const el = e.currentTarget as HTMLElement;
   const clipped = computeLocationTopFieldPasteInsertText(
     field,
     el,
-    e.clipboardData.getData("text/plain"),
+    e.clipboardData.getData("text/plain")
   );
   e.preventDefault();
-  if (!clipped) return;
+  if (!clipped) {
+    return;
+  }
   insertPlainTextIntoContentEditable(el, clipped);
 }
 
@@ -137,15 +149,19 @@ export function OrdoV7TopPin({
   const style = ordoV7StaplePlacementFromSeed(seed, tapeRotationDeg);
   return (
     <span
-      className={cardStyles.locOrdoV7Staple}
       aria-hidden
-      data-hg-lore-location-staple={kind === "staple" ? "v7" : undefined}
+      className={cardStyles.locOrdoV7Staple}
       data-hg-lore-location-nail={kind === "nail" ? "v7-unified" : undefined}
+      data-hg-lore-location-staple={kind === "staple" ? "v7" : undefined}
       style={style}
     >
       <span
-        className={kind === "staple" ? cardStyles.locOrdoV7StapleMetal : cardStyles.locOrdoV7NailMetal}
         aria-hidden
+        className={
+          kind === "staple"
+            ? cardStyles.locOrdoV7StapleMetal
+            : cardStyles.locOrdoV7NailMetal
+        }
       />
     </span>
   );
@@ -165,12 +181,12 @@ export function OrdoV7NailParallel({
   const style = ordoV7StaplePlacementFromSeed(seed, tapeRotationDeg);
   return (
     <span
-      className={cardStyles.locOrdoV7NailParallel}
       aria-hidden
+      className={cardStyles.locOrdoV7NailParallel}
       data-hg-lore-location-nail="v7-parallel"
       style={style}
     >
-      <span className={cardStyles.locOrdoV7NailMetal} aria-hidden />
+      <span aria-hidden className={cardStyles.locOrdoV7NailMetal} />
     </span>
   );
 }
@@ -184,7 +200,14 @@ function OrdoV7Staple({
   labTestId?: string;
   tapeRotationDeg?: number;
 }) {
-  return <OrdoV7TopPin kind="staple" nodeId={nodeId} labTestId={labTestId} tapeRotationDeg={tapeRotationDeg} />;
+  return (
+    <OrdoV7TopPin
+      kind="staple"
+      labTestId={labTestId}
+      nodeId={nodeId}
+      tapeRotationDeg={tapeRotationDeg}
+    />
+  );
 }
 
 const TitleAndContext = memo(function TitleAndContext({
@@ -215,13 +238,17 @@ const TitleAndContext = memo(function TitleAndContext({
 
   useLayoutEffect(() => {
     const el = nameElRef.current;
-    if (!el || nameFocusedRef.current) return;
+    if (!el || nameFocusedRef.current) {
+      return;
+    }
     fillOrdoV7NameFieldDOM(el, name);
   }, [name]);
 
   useLayoutEffect(() => {
     const el = ctxElRef.current;
-    if (!el || ctxFocusedRef.current) return;
+    if (!el || ctxFocusedRef.current) {
+      return;
+    }
     fillOrdoV7SingleLineFieldDOM(el, context);
   }, [context]);
 
@@ -229,63 +256,119 @@ const TitleAndContext = memo(function TitleAndContext({
     <>
       <div className={cardStyles.locOrdoV7TitleRow}>
         <h1
-          ref={nameElRef}
           className={cardStyles.locOrdoV7DisplayTitle}
-          data-hg-lore-location-field="name"
-          data-hg-lore-field="name"
-          data-hg-lore-placeholder={nameEmpty ? "true" : undefined}
-          data-hg-lore-ph={nameEmpty ? LORE_V11_PH_LOCATION_PLACEHOLDER : undefined}
           contentEditable={editable}
-          suppressContentEditableWarning
-          onFocus={() => {
-            nameFocusedRef.current = true;
-          }}
-          onInput={(e) => {
-            const t = e.currentTarget.innerText.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
-            onNameDraftChange(normalizeLocOrdoV7NameField(t));
-          }}
+          data-hg-lore-field="name"
+          data-hg-lore-location-field="name"
+          data-hg-lore-ph={
+            nameEmpty ? LORE_V11_PH_LOCATION_PLACEHOLDER : undefined
+          }
+          data-hg-lore-placeholder={nameEmpty ? "true" : undefined}
           onBeforeInput={(e) => {
-            if (!editable) return;
+            if (!editable) {
+              return;
+            }
             const el = e.currentTarget as HTMLElement;
             const native = e.nativeEvent;
-            if (native instanceof InputEvent && shouldBlockLocationTopFieldBeforeInput("name", el, native)) {
+            if (
+              native instanceof InputEvent &&
+              shouldBlockLocationTopFieldBeforeInput("name", el, native)
+            ) {
               e.preventDefault();
               return;
             }
-            if (native instanceof InputEvent && consumeLorePlaceholderBeforeInput(el, native)) {
+            if (
+              native instanceof InputEvent &&
+              consumeLorePlaceholderBeforeInput(el, native)
+            ) {
               queueMicrotask(() => {
-                const t = el.innerText.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+                const t = el.innerText
+                  .replace(/\n/g, " ")
+                  .replace(/\s+/g, " ")
+                  .trim();
                 onNameCommit(normalizeLocOrdoV7NameField(t));
               });
             }
           }}
-          onPaste={(e) => {
-            if (!editable) return;
-            handleTopFieldPaste("name", e);
-          }}
-          onDrop={(e) => {
-            if (!editable) return;
-            handleTopFieldDrop(e);
-          }}
           onBlur={(e) => {
             nameFocusedRef.current = false;
-            const t = e.currentTarget.innerText.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+            const t = e.currentTarget.innerText
+              .replace(/\n/g, " ")
+              .replace(/\s+/g, " ")
+              .trim();
             onNameCommit(normalizeLocOrdoV7NameField(t));
           }}
+          onDrop={(e) => {
+            if (!editable) {
+              return;
+            }
+            handleTopFieldDrop(e);
+          }}
+          onFocus={() => {
+            nameFocusedRef.current = true;
+          }}
+          onInput={(e) => {
+            const t = e.currentTarget.innerText
+              .replace(/\n/g, " ")
+              .replace(/\s+/g, " ")
+              .trim();
+            onNameDraftChange(normalizeLocOrdoV7NameField(t));
+          }}
+          onPaste={(e) => {
+            if (!editable) {
+              return;
+            }
+            handleTopFieldPaste("name", e);
+          }}
+          ref={nameElRef}
+          suppressContentEditableWarning
         />
       </div>
       {/* Row shell: clips guest-check ::after so it cannot paint into the title (character meta row pattern). */}
       <div className={cardStyles.locOrdoV7ContextSlot}>
         <p
-          ref={ctxElRef}
           className={cardStyles.locOrdoV7ContextLine}
-          data-hg-lore-location-field="context"
-          data-hg-lore-field="1"
-          data-hg-lore-placeholder={contextEmpty ? "true" : undefined}
-          data-hg-lore-ph={contextEmpty ? LORE_V11_PH_LOCATION_CONTEXT : undefined}
           contentEditable={editable}
-          spellCheck={false}
-          suppressContentEditableWarning
+          data-hg-lore-field="1"
+          data-hg-lore-location-field="context"
+          data-hg-lore-ph={
+            contextEmpty ? LORE_V11_PH_LOCATION_CONTEXT : undefined
+          }
+          data-hg-lore-placeholder={contextEmpty ? "true" : undefined}
+          onBeforeInput={(e) => {
+            if (!editable) {
+              return;
+            }
+            const el = e.currentTarget as HTMLElement;
+            const native = e.nativeEvent;
+            if (
+              native instanceof InputEvent &&
+              shouldBlockLocationTopFieldBeforeInput("context", el, native)
+            ) {
+              e.preventDefault();
+              return;
+            }
+            if (
+              native instanceof InputEvent &&
+              consumeLorePlaceholderBeforeInput(el, native)
+            ) {
+              queueMicrotask(() => {
+                onContextCommit(el.innerText.replace(/\s+/g, " ").trim());
+              });
+            }
+          }}
+          onBlur={(e) => {
+            ctxFocusedRef.current = false;
+            onContextCommit(
+              e.currentTarget.innerText.replace(/\s+/g, " ").trim()
+            );
+          }}
+          onDrop={(e) => {
+            if (!editable) {
+              return;
+            }
+            handleTopFieldDrop(e);
+          }}
           onFocus={() => {
             ctxFocusedRef.current = true;
           }}
@@ -293,32 +376,15 @@ const TitleAndContext = memo(function TitleAndContext({
             const t = e.currentTarget.innerText.replace(/\s+/g, " ").trim();
             onContextDraftChange(t);
           }}
-          onBeforeInput={(e) => {
-            if (!editable) return;
-            const el = e.currentTarget as HTMLElement;
-            const native = e.nativeEvent;
-            if (native instanceof InputEvent && shouldBlockLocationTopFieldBeforeInput("context", el, native)) {
-              e.preventDefault();
+          onPaste={(e) => {
+            if (!editable) {
               return;
             }
-            if (native instanceof InputEvent && consumeLorePlaceholderBeforeInput(el, native)) {
-              queueMicrotask(() => {
-                onContextCommit(el.innerText.replace(/\s+/g, " ").trim());
-              });
-            }
-          }}
-          onPaste={(e) => {
-            if (!editable) return;
             handleTopFieldPaste("context", e);
           }}
-          onDrop={(e) => {
-            if (!editable) return;
-            handleTopFieldDrop(e);
-          }}
-          onBlur={(e) => {
-            ctxFocusedRef.current = false;
-            onContextCommit(e.currentTarget.innerText.replace(/\s+/g, " ").trim());
-          }}
+          ref={ctxElRef}
+          spellCheck={false}
+          suppressContentEditableWarning
         />
       </div>
     </>
@@ -340,52 +406,71 @@ const DetailLine = memo(
     const setRefs = useCallback(
       (node: HTMLParagraphElement | null) => {
         innerRef.current = node;
-        if (typeof ref === "function") ref(node);
-        else if (ref) (ref as MutableRefObject<HTMLParagraphElement | null>).current = node;
+        if (typeof ref === "function") {
+          ref(node);
+        } else if (ref) {
+          (ref as MutableRefObject<HTMLParagraphElement | null>).current = node;
+        }
       },
-      [ref],
+      [ref]
     );
 
     useLayoutEffect(() => {
       const el = innerRef.current;
-      if (!el || focusedRef.current) return;
+      if (!el || focusedRef.current) {
+        return;
+      }
       fillOrdoV7SingleLineFieldDOM(el, detail);
     }, [detail]);
 
     return (
       <p
-        ref={setRefs}
         className={cardStyles.locOrdoV7DetailLine}
+        contentEditable={editable}
         data-hg-lore-location-field="detail"
         data-placeholder="Ward · material · micro-context"
-        contentEditable={editable}
-        suppressContentEditableWarning
-        onFocus={() => {
-          focusedRef.current = true;
-        }}
         onBeforeInput={(e) => {
-          if (!editable) return;
+          if (!editable) {
+            return;
+          }
           const native = e.nativeEvent;
-          if (!(native instanceof InputEvent)) return;
-          if (shouldBlockLocationTopFieldBeforeInput("detail", e.currentTarget, native)) {
+          if (!(native instanceof InputEvent)) {
+            return;
+          }
+          if (
+            shouldBlockLocationTopFieldBeforeInput(
+              "detail",
+              e.currentTarget,
+              native
+            )
+          ) {
             e.preventDefault();
           }
-        }}
-        onPaste={(e) => {
-          if (!editable) return;
-          handleTopFieldPaste("detail", e);
-        }}
-        onDrop={(e) => {
-          if (!editable) return;
-          handleTopFieldDrop(e);
         }}
         onBlur={(e) => {
           focusedRef.current = false;
           onDetailCommit(e.currentTarget.innerText.replace(/\s+/g, " ").trim());
         }}
+        onDrop={(e) => {
+          if (!editable) {
+            return;
+          }
+          handleTopFieldDrop(e);
+        }}
+        onFocus={() => {
+          focusedRef.current = true;
+        }}
+        onPaste={(e) => {
+          if (!editable) {
+            return;
+          }
+          handleTopFieldPaste("detail", e);
+        }}
+        ref={setRefs}
+        suppressContentEditableWarning
       />
     );
-  }),
+  })
 );
 DetailLine.displayName = "DetailLine";
 
@@ -418,7 +503,10 @@ export function LoreLocationOrdoV7Slab({
   onDraftDirty,
   emptyPlaceholder,
 }: LoreLocationOrdoV7SlabProps) {
-  const parsed = useMemo(() => parseLocationOrdoV7BodyPlainFields(bodyHtml), [bodyHtml]);
+  const parsed = useMemo(
+    () => parseLocationOrdoV7BodyPlainFields(bodyHtml),
+    [bodyHtml]
+  );
 
   const [name, setName] = useState(parsed.name);
   const [context, setContext] = useState(parsed.context);
@@ -426,7 +514,9 @@ export function LoreLocationOrdoV7Slab({
   const [detailSlotOpen, setDetailSlotOpen] = useState(false);
   const detailLineRef = useRef<HTMLParagraphElement | null>(null);
 
-  const [notesDoc, setNotesDoc] = useState<JSONContent>(() => htmlFragmentToHgDocDoc(parsed.notesHtml));
+  const [notesDoc, setNotesDoc] = useState<JSONContent>(() =>
+    htmlFragmentToHgDocDoc(parsed.notesHtml)
+  );
   const [notesSlotOpen, setNotesSlotOpen] = useState(false);
   const notesSurfaceKey = `loc-ordo-v7-notes-${nodeId}`;
   const notesEmpty = useMemo(() => isNotesHgDocEmpty(notesDoc), [notesDoc]);
@@ -437,7 +527,9 @@ export function LoreLocationOrdoV7Slab({
 
   useLayoutEffect(() => {
     const el = rootRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     const removeCaret = installLoreV11PlaceholderCaretSync(el);
     const removeGuards = installLorePlaceholderSelectionGuards(el);
     return () => {
@@ -454,7 +546,9 @@ export function LoreLocationOrdoV7Slab({
   /* Sync local fields when `bodyHtml` changes from outside this editor (reload, collab, parent reset). */
   /* eslint-disable react-hooks/set-state-in-effect -- intentional prop→state sync; not a cascading-render loop */
   useEffect(() => {
-    if (bodyHtml === lastPushed.current) return;
+    if (bodyHtml === lastPushed.current) {
+      return;
+    }
     lastPushed.current = bodyHtml;
     const p = parseLocationOrdoV7BodyPlainFields(bodyHtml);
     setName(p.name);
@@ -465,7 +559,12 @@ export function LoreLocationOrdoV7Slab({
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const pushHtml = useCallback(
-    (p: { name: string; context: string; detail: string; notesHtml: string }) => {
+    (p: {
+      name: string;
+      context: string;
+      detail: string;
+      notesHtml: string;
+    }) => {
       const html = buildLocationOrdoV7BodyHtml({
         name: p.name,
         context: p.context,
@@ -476,13 +575,15 @@ export function LoreLocationOrdoV7Slab({
       onCommit(html);
       onDraftDirty?.(false);
     },
-    [onCommit, onDraftDirty],
+    [onCommit, onDraftDirty]
   );
 
   const scheduleNotesCommit = useCallback(
     (nextDoc: JSONContent) => {
       onDraftDirty?.(true);
-      if (notesTimer.current) clearTimeout(notesTimer.current);
+      if (notesTimer.current) {
+        clearTimeout(notesTimer.current);
+      }
       notesTimer.current = setTimeout(() => {
         notesTimer.current = null;
         pushHtml({
@@ -493,24 +594,30 @@ export function LoreLocationOrdoV7Slab({
         });
       }, 320);
     },
-    [name, context, detail, onDraftDirty, pushHtml],
+    [name, context, detail, onDraftDirty, pushHtml]
   );
 
   useEffect(
     () => () => {
-      if (notesTimer.current) clearTimeout(notesTimer.current);
+      if (notesTimer.current) {
+        clearTimeout(notesTimer.current);
+      }
     },
-    [],
+    []
   );
 
   useLayoutEffect(() => {
-    if (!detailSlotOpen || detail.trim().length > 0) return;
+    if (!detailSlotOpen || detail.trim().length > 0) {
+      return;
+    }
     detailLineRef.current?.focus();
   }, [detailSlotOpen, detail]);
 
   /* Focus the notes editor once it mounts in response to "add notes" so the caret is ready. */
   useLayoutEffect(() => {
-    if (!notesSlotOpen || !notesEmpty) return;
+    if (!(notesSlotOpen && notesEmpty)) {
+      return;
+    }
     getHgDocEditor(notesSurfaceKey)?.focus();
   }, [notesSlotOpen, notesEmpty, notesSurfaceKey]);
 
@@ -519,17 +626,21 @@ export function LoreLocationOrdoV7Slab({
 
   return (
     <div
-      ref={rootRef}
       className={cardStyles.locOrdoV7Root}
-      data-hg-lore-ordo-node-id={nodeId}
-      data-testid={labTestId}
       data-hg-canvas-role="lore-location"
       data-hg-lore-location-variant="v7"
+      data-hg-lore-ordo-node-id={nodeId}
+      data-testid={labTestId}
+      ref={rootRef}
     >
-      <div className={cardStyles.locOrdoV7Geo} aria-hidden />
-      <div className={cardStyles.locOrdoV7Glow} aria-hidden />
+      <div aria-hidden className={cardStyles.locOrdoV7Geo} />
+      <div aria-hidden className={cardStyles.locOrdoV7Glow} />
       {showStaple ? (
-        <OrdoV7Staple nodeId={nodeId} labTestId={labTestId} tapeRotationDeg={tapeRotationDeg} />
+        <OrdoV7Staple
+          labTestId={labTestId}
+          nodeId={nodeId}
+          tapeRotationDeg={tapeRotationDeg}
+        />
       ) : null}
       <div className={cardStyles.locOrdoV7Inner}>
         <header
@@ -537,28 +648,35 @@ export function LoreLocationOrdoV7Slab({
           data-hg-lore-ordo-drag-handle="true"
         >
           <div className={cardStyles.locOrdoV7LogoBlock}>
-            <div className={cardStyles.locOrdoV7PixelIcon} aria-hidden>
+            <div aria-hidden className={cardStyles.locOrdoV7PixelIcon}>
               {ORDO_V7_LOGO_PIXEL_GRID.map((row, ri) =>
                 row.map((on, ci) => (
                   <span
+                    className={cx(
+                      cardStyles.locOrdoV7Px,
+                      !on && cardStyles.locOrdoV7PxOff
+                    )}
                     key={`${ri}-${ci}`}
-                    className={cx(cardStyles.locOrdoV7Px, !on && cardStyles.locOrdoV7PxOff)}
                   />
-                )),
+                ))
               )}
             </div>
           </div>
           <div>
-            <ArchitecturalTooltip content="Expand object" side="bottom" delayMs={320}>
+            <ArchitecturalTooltip
+              content="Expand object"
+              delayMs={320}
+              side="bottom"
+            >
               <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                tone="card-light"
+                aria-label="Expand object"
                 className={cardStyles.locOrdoV7ExpandBtn}
                 data-expand-btn="true"
-                aria-label="Expand object"
                 onClick={() => {}}
+                size="icon"
+                tone="card-light"
+                type="button"
+                variant="ghost"
               >
                 <ArrowsOutSimple size={14} />
               </Button>
@@ -568,10 +686,18 @@ export function LoreLocationOrdoV7Slab({
 
         <div className={cardStyles.locOrdoV7DocGrid}>
           <TitleAndContext
-            name={name}
             context={context}
             editable={editable}
-            onNameDraftChange={setName}
+            name={name}
+            onContextCommit={(next) => {
+              setContext(next);
+              pushHtml({
+                name,
+                context: next,
+                detail,
+                notesHtml: hgDocToHtml(notesDoc),
+              });
+            }}
             onContextDraftChange={setContext}
             onNameCommit={(next) => {
               setName(next);
@@ -582,27 +708,25 @@ export function LoreLocationOrdoV7Slab({
                 notesHtml: hgDocToHtml(notesDoc),
               });
             }}
-            onContextCommit={(next) => {
-              setContext(next);
-              pushHtml({
-                name,
-                context: next,
-                detail,
-                notesHtml: hgDocToHtml(notesDoc),
-              });
-            }}
+            onNameDraftChange={setName}
           />
 
           <div className={cardStyles.locOrdoV7Main}>
-            <div className={cx(cardStyles.locOrdoV7ContentBlock, cardStyles.locOrdoV7DocInline)}>
+            <div
+              className={cx(
+                cardStyles.locOrdoV7ContentBlock,
+                cardStyles.locOrdoV7DocInline
+              )}
+            >
               {showDetailLine ? (
                 <DetailLine
-                  ref={detailLineRef}
                   detail={detail}
                   editable={editable}
                   onDetailCommit={(next) => {
                     setDetail(next);
-                    if (!next.trim()) setDetailSlotOpen(false);
+                    if (!next.trim()) {
+                      setDetailSlotOpen(false);
+                    }
                     pushHtml({
                       name,
                       context,
@@ -610,18 +734,19 @@ export function LoreLocationOrdoV7Slab({
                       notesHtml: hgDocToHtml(notesDoc),
                     });
                   }}
+                  ref={detailLineRef}
                 />
               ) : (
                 // eslint-disable-next-line no-restricted-syntax -- ORDO v7 detail slot: native slab row (lab parity; not vigil-btn)
                 <button
-                  type="button"
+                  aria-label="Add site detail line"
                   className={cardStyles.locOrdoV7DetailAdd}
                   data-hg-lore-location-detail-add="true"
-                  aria-label="Add site detail line"
                   onClick={() => {
                     setDetail("");
                     setDetailSlotOpen(true);
                   }}
+                  type="button"
                 >
                   {"// add site detail"}
                 </button>
@@ -629,44 +754,54 @@ export function LoreLocationOrdoV7Slab({
               {showNotesEditor ? (
                 <div
                   className={cardStyles.locOrdoV7NotesCell}
-                  data-hg-lore-location-notes-cell="true"
                   contentEditable={false}
+                  data-hg-lore-location-notes-cell="true"
                   onBlur={(e) => {
                     /* Collapse back to the "+ add notes" row once focus leaves the cell with empty content. */
-                    if (!editable) return;
-                    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-                    if (!notesEmpty) return;
+                    if (!editable) {
+                      return;
+                    }
+                    if (
+                      e.currentTarget.contains(e.relatedTarget as Node | null)
+                    ) {
+                      return;
+                    }
+                    if (!notesEmpty) {
+                      return;
+                    }
                     setNotesSlotOpen(false);
                   }}
                 >
                   <div
-                    data-hg-lore-location-notes="true"
-                    contentEditable={false}
                     className={cardStyles.locOrdoV7NotesField}
+                    contentEditable={false}
+                    data-hg-lore-location-notes="true"
                   >
                     <HeartgardenDocEditor
-                      surfaceKey={notesSurfaceKey}
                       chromeRole="canvas"
-                      value={notesDoc}
+                      className={cardStyles.locOrdoV7HgHost}
                       editable={editable}
                       onChange={(next) => {
                         setNotesDoc(next);
                         scheduleNotesCommit(next);
                       }}
+                      placeholder={
+                        emptyPlaceholder ?? "Notes… type / for blocks"
+                      }
                       showAiPendingGutter={false}
-                      placeholder={emptyPlaceholder ?? "Notes… type / for blocks"}
-                      className={cardStyles.locOrdoV7HgHost}
+                      surfaceKey={notesSurfaceKey}
+                      value={notesDoc}
                     />
                   </div>
                 </div>
               ) : editable ? (
                 // eslint-disable-next-line no-restricted-syntax -- ORDO v7 notes slot: native slab row (parity with detail add)
                 <button
-                  type="button"
+                  aria-label="Add site notes"
                   className={cardStyles.locOrdoV7NotesAdd}
                   data-hg-lore-location-notes-add="true"
-                  aria-label="Add site notes"
                   onClick={() => setNotesSlotOpen(true)}
+                  type="button"
                 >
                   {"// add notes"}
                 </button>

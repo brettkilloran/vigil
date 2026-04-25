@@ -4,7 +4,11 @@ import styles from "./ArchitecturalCanvasApp.module.css";
 
 export type LoreImportScopeMode = "current_subtree" | "gm_workspace";
 
-const SCOPE_MODE_OPTIONS: { id: LoreImportScopeMode; title: string; description: string }[] = [
+const SCOPE_MODE_OPTIONS: {
+  id: LoreImportScopeMode;
+  title: string;
+  description: string;
+}[] = [
   {
     id: "current_subtree",
     title: "This space & its folders",
@@ -25,17 +29,17 @@ export function LoreImportScopeRadios(props: {
   const { scope, onScopeChange, name = "import-scope" } = props;
   return (
     <div
+      aria-label="Where this import can place notes"
       className={`${styles.smartImportWizardOptions} ${styles.importUploadPopoverLandModeOptions}`}
       role="radiogroup"
-      aria-label="Where this import can place notes"
     >
       {SCOPE_MODE_OPTIONS.map((opt) => (
-        <label key={opt.id} className={styles.smartImportWizardOption}>
+        <label className={styles.smartImportWizardOption} key={opt.id}>
           <input
-            type="radio"
-            name={name}
             checked={scope === opt.id}
+            name={name}
             onChange={() => onScopeChange(opt.id)}
+            type="radio"
           />
           <span>
             <strong>{opt.title}</strong>
@@ -46,4 +50,3 @@ export function LoreImportScopeRadios(props: {
     </div>
   );
 }
-

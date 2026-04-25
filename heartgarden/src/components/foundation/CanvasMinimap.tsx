@@ -4,11 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { CanvasGraph } from "@/src/components/foundation/architectural-types";
 import {
+  type CollapsedStackInfo,
   computeSpaceContentBounds,
   listMinimapAtomRects,
-  viewportWorldRect,
-  type CollapsedStackInfo,
   type MinimapPlacementSize,
+  viewportWorldRect,
 } from "@/src/lib/canvas-view-bounds";
 import { cx } from "@/src/lib/cx";
 
@@ -44,7 +44,7 @@ type CanvasMinimapProps = {
 function padBounds(
   b: { minX: number; minY: number; maxX: number; maxY: number },
   padRatio: number,
-  minPad: number,
+  minPad: number
 ) {
   const w = b.maxX - b.minX;
   const h = b.maxY - b.minY;
@@ -86,31 +86,56 @@ export function CanvasMinimap({
   const [dragging, setDragging] = useState(false);
 
   const contentBounds = useMemo(
-    () => computeSpaceContentBounds(graph, activeSpaceId, collapsedStacks, placementSizes),
-    [graph, activeSpaceId, collapsedStacks, placementSizes],
+    () =>
+      computeSpaceContentBounds(
+        graph,
+        activeSpaceId,
+        collapsedStacks,
+        placementSizes
+      ),
+    [graph, activeSpaceId, collapsedStacks, placementSizes]
   );
 
   const vpWorld = useMemo(
-    () => viewportWorldRect(translateX, translateY, scale, viewportWidth, viewportHeight),
-    [translateX, translateY, scale, viewportWidth, viewportHeight],
+    () =>
+      viewportWorldRect(
+        translateX,
+        translateY,
+        scale,
+        viewportWidth,
+        viewportHeight
+      ),
+    [translateX, translateY, scale, viewportWidth, viewportHeight]
   );
 
   /** Empty spaces have no content bounds; still show the map frame from the current viewport. */
   const viewBoxRect = useMemo(() => {
-    if (contentBounds) return padBounds(contentBounds, 0.1, 80);
+    if (contentBounds) {
+      return padBounds(contentBounds, 0.1, 80);
+    }
     return padBounds(vpWorld, 0.12, 120);
   }, [contentBounds, vpWorld]);
 
   const atoms = useMemo(() => {
     const sel = new Set(selectedNodeIds);
-    return listMinimapAtomRects(graph, activeSpaceId, collapsedStacks, sel, placementSizes);
+    return listMinimapAtomRects(
+      graph,
+      activeSpaceId,
+      collapsedStacks,
+      sel,
+      placementSizes
+    );
   }, [graph, activeSpaceId, collapsedStacks, placementSizes, selectedNodeIds]);
 
   const clientToWorldDelta = useCallback(
     (movementX: number, movementY: number) => {
-      if (!svgRef.current || !viewBoxRect) return { dw: 0, dh: 0 };
+      if (!(svgRef.current && viewBoxRect)) {
+        return { dw: 0, dh: 0 };
+      }
       const r = svgRef.current.getBoundingClientRect();
-      if (r.width < 1 || r.height < 1) return { dw: 0, dh: 0 };
+      if (r.width < 1 || r.height < 1) {
+        return { dw: 0, dh: 0 };
+      }
       const vbW = viewBoxRect.maxX - viewBoxRect.minX;
       const vbH = viewBoxRect.maxY - viewBoxRect.minY;
       return {
@@ -118,7 +143,7 @@ export function CanvasMinimap({
         dh: (movementY / r.height) * vbH,
       };
     },
-    [viewBoxRect],
+    [viewBoxRect]
   );
 
   const onViewportPointerDown = useCallback((e: React.PointerEvent) => {
@@ -131,11 +156,13 @@ export function CanvasMinimap({
 
   const onSvgPointerMove = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
-      if (!draggingRef.current || e.buttons !== 1) return;
+      if (!draggingRef.current || e.buttons !== 1) {
+        return;
+      }
       const { dw, dh } = clientToWorldDelta(e.movementX, e.movementY);
       onPanWorldDelta(dw, dh);
     },
-    [clientToWorldDelta, onPanWorldDelta],
+    [clientToWorldDelta, onPanWorldDelta]
   );
 
   const onViewportPointerUp = useCallback((e: React.PointerEvent) => {
@@ -154,7 +181,9 @@ export function CanvasMinimap({
   }, []);
 
   useEffect(() => {
-    if (!dragging) return;
+    if (!dragging) {
+      return;
+    }
     const end = () => {
       draggingRef.current = false;
       setDragging(false);
@@ -169,8 +198,12 @@ export function CanvasMinimap({
 
   const onSvgClick = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
-      if ((e.target as SVGElement).closest("[data-minimap-viewport]")) return;
-      if (!svgRef.current || !viewBoxRect) return;
+      if ((e.target as SVGElement).closest("[data-minimap-viewport]")) {
+        return;
+      }
+      if (!(svgRef.current && viewBoxRect)) {
+        return;
+      }
       const svg = svgRef.current;
       const r = svg.getBoundingClientRect();
       const vbW = viewBoxRect.maxX - viewBoxRect.minX;
@@ -179,15 +212,17 @@ export function CanvasMinimap({
       const ly = ((e.clientY - r.top) / r.height) * vbH + viewBoxRect.minY;
       onCenterOnWorld(lx, ly);
     },
-    [onCenterOnWorld, viewBoxRect],
+    [onCenterOnWorld, viewBoxRect]
   );
 
   const onSvgDblClick = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
-      if ((e.target as SVGElement).closest("[data-minimap-viewport]")) return;
+      if ((e.target as SVGElement).closest("[data-minimap-viewport]")) {
+        return;
+      }
       onFitAll();
     },
-    [onFitAll],
+    [onFitAll]
   );
 
   const vb = `${viewBoxRect.minX} ${viewBoxRect.minY} ${viewBoxRect.maxX - viewBoxRect.minX} ${viewBoxRect.maxY - viewBoxRect.minY}`;
@@ -197,50 +232,54 @@ export function CanvasMinimap({
       className={cx(
         styles.root,
         toolbarEmbed && styles.rootToolbarEmbed,
-        metricsDockWidth && styles.rootMetricsDock,
+        metricsDockWidth && styles.rootMetricsDock
       )}
       data-hg-chrome="canvas-minimap"
     >
       <svg
-        ref={svgRef}
-        className={cx(styles.svg, toolbarEmbed && styles.svgToolbarEmbed)}
-        viewBox={vb}
-        preserveAspectRatio="xMidYMid meet"
-        role="img"
-        tabIndex={-1}
         aria-label="Canvas minimap"
-        onPointerMove={onSvgPointerMove}
-        onLostPointerCapture={onViewportLostPointerCapture}
+        className={cx(styles.svg, toolbarEmbed && styles.svgToolbarEmbed)}
         onClick={onSvgClick}
         onDoubleClick={onSvgDblClick}
+        onLostPointerCapture={onViewportLostPointerCapture}
+        onPointerMove={onSvgPointerMove}
+        preserveAspectRatio="xMidYMid meet"
+        ref={svgRef}
+        role="img"
+        tabIndex={-1}
+        viewBox={vb}
       >
         {atoms.map((a) => {
           const cx = a.x + a.width / 2;
           const cy = a.y + a.height / 2;
           return (
             <rect
+              className={a.selected ? styles.atomSelected : styles.atom}
+              height={a.height}
               key={a.key}
+              rx={2}
+              transform={
+                a.rotationDeg === 0
+                  ? undefined
+                  : `rotate(${a.rotationDeg} ${cx} ${cy})`
+              }
+              width={a.width}
               x={a.x}
               y={a.y}
-              width={a.width}
-              height={a.height}
-              rx={2}
-              transform={a.rotationDeg !== 0 ? `rotate(${a.rotationDeg} ${cx} ${cy})` : undefined}
-              className={a.selected ? styles.atomSelected : styles.atom}
             />
           );
         })}
         <rect
-          data-minimap-viewport="true"
-          x={vpWorld.minX}
-          y={vpWorld.minY}
-          width={Math.max(8, vpWorld.maxX - vpWorld.minX)}
-          height={Math.max(8, vpWorld.maxY - vpWorld.minY)}
           className={`${styles.viewportRect} ${dragging ? styles.viewportRectDragging : ""}`}
+          data-minimap-viewport="true"
+          height={Math.max(8, vpWorld.maxY - vpWorld.minY)}
+          onLostPointerCapture={onViewportLostPointerCapture}
+          onPointerCancel={onViewportPointerUp}
           onPointerDown={onViewportPointerDown}
           onPointerUp={onViewportPointerUp}
-          onPointerCancel={onViewportPointerUp}
-          onLostPointerCapture={onViewportLostPointerCapture}
+          width={Math.max(8, vpWorld.maxX - vpWorld.minX)}
+          x={vpWorld.minX}
+          y={vpWorld.minY}
         />
       </svg>
     </div>

@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 import styles from "./VigilFlowRevealOverlay.module.css";
 
@@ -255,13 +261,22 @@ void main() {
 }
 `;
 
-function compileShader(gl: WebGLRenderingContext, type: number, source: string): WebGLShader | null {
+function compileShader(
+  gl: WebGLRenderingContext,
+  type: number,
+  source: string
+): WebGLShader | null {
   const shader = gl.createShader(type);
-  if (!shader) return null;
+  if (!shader) {
+    return null;
+  }
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    console.warn("[VigilFlowReveal] shader compile", gl.getShaderInfoLog(shader));
+    console.warn(
+      "[VigilFlowReveal] shader compile",
+      gl.getShaderInfoLog(shader)
+    );
     gl.deleteShader(shader);
     return null;
   }
@@ -327,7 +342,9 @@ export function VigilFlowRevealOverlay({
    * Nav transitions alone use 0.18. Activate edge: snap progress 0 then ease to 1 for the wipe.
    */
   useEffect(() => {
-    if (skipBoot || reduceMotion) return;
+    if (skipBoot || reduceMotion) {
+      return;
+    }
     if (navActive) {
       targetProgressRef.current = 0.18;
       prevSessionActivatedRef.current = sessionActivated;
@@ -335,7 +352,9 @@ export function VigilFlowRevealOverlay({
     }
     if (bootstrapPending) {
       targetProgressRef.current = 0;
-      if (!sessionActivated) prevSessionActivatedRef.current = false;
+      if (!sessionActivated) {
+        prevSessionActivatedRef.current = false;
+      }
       return;
     }
     if (!sessionActivated) {
@@ -353,34 +372,49 @@ export function VigilFlowRevealOverlay({
   const disposeGl = useCallback(() => {
     const g = glRef.current;
     glRef.current = null;
-    if (!g) return;
+    if (!g) {
+      return;
+    }
     g.gl.deleteProgram(g.program);
     g.gl.deleteBuffer(g.posBuffer);
   }, []);
 
   useEffect(() => {
-    if (skipBoot || reduceMotion) return;
+    if (skipBoot || reduceMotion) {
+      return;
+    }
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      return;
+    }
 
     const gl = canvas.getContext("webgl", {
       alpha: true,
       premultipliedAlpha: true,
       antialias: false,
     });
-    if (!gl) return;
+    if (!gl) {
+      return;
+    }
 
     const vs = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
     const fs = compileShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
-    if (!vs || !fs) return;
+    if (!(vs && fs)) {
+      return;
+    }
 
     const program = gl.createProgram();
-    if (!program) return;
+    if (!program) {
+      return;
+    }
     gl.attachShader(program, vs);
     gl.attachShader(program, fs);
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      console.warn("[VigilFlowReveal] program link", gl.getProgramInfoLog(program));
+      console.warn(
+        "[VigilFlowReveal] program link",
+        gl.getProgramInfoLog(program)
+      );
       gl.deleteProgram(program);
       return;
     }
@@ -388,9 +422,15 @@ export function VigilFlowRevealOverlay({
     gl.deleteShader(fs);
 
     const positionBuffer = gl.createBuffer();
-    if (!positionBuffer) return;
+    if (!positionBuffer) {
+      return;
+    }
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
+      gl.STATIC_DRAW
+    );
 
     gl.useProgram(program);
     const posAttrib = gl.getAttribLocation(program, "a_position");
@@ -402,7 +442,15 @@ export function VigilFlowRevealOverlay({
     const resLoc = gl.getUniformLocation(program, "u_resolution");
     const softBootLoc = gl.getUniformLocation(program, "u_softBoot");
 
-    glRef.current = { gl, program, timeLoc, progressLoc, resLoc, softBootLoc, posBuffer: positionBuffer };
+    glRef.current = {
+      gl,
+      program,
+      timeLoc,
+      progressLoc,
+      resLoc,
+      softBootLoc,
+      posBuffer: positionBuffer,
+    };
 
     startTimeRef.current = Date.now();
     const initiallyActivated = sessionActivatedRef.current;
@@ -411,12 +459,12 @@ export function VigilFlowRevealOverlay({
     if (bootstrapPendingRef.current) {
       targetProgressRef.current = 0;
       progressRef.current = 0;
-    } else if (!initiallyActivated) {
-      targetProgressRef.current = 1;
-      progressRef.current = 1;
-    } else {
+    } else if (initiallyActivated) {
       targetProgressRef.current = 1;
       progressRef.current = 0;
+    } else {
+      targetProgressRef.current = 1;
+      progressRef.current = 1;
     }
 
     let width = 0;
@@ -434,16 +482,24 @@ export function VigilFlowRevealOverlay({
 
     const render = () => {
       const ctx = glRef.current;
-      if (!ctx) return;
+      if (!ctx) {
+        return;
+      }
 
       const time = (Date.now() - startTimeRef.current) * 0.001;
       const target = targetProgressRef.current;
       progressRef.current += (target - progressRef.current) * 0.025;
 
       gl.useProgram(ctx.program);
-      if (ctx.timeLoc !== null) gl.uniform1f(ctx.timeLoc, time);
-      if (ctx.progressLoc !== null) gl.uniform1f(ctx.progressLoc, progressRef.current);
-      if (ctx.resLoc !== null) gl.uniform2f(ctx.resLoc, width, height);
+      if (ctx.timeLoc !== null) {
+        gl.uniform1f(ctx.timeLoc, time);
+      }
+      if (ctx.progressLoc !== null) {
+        gl.uniform1f(ctx.progressLoc, progressRef.current);
+      }
+      if (ctx.resLoc !== null) {
+        gl.uniform2f(ctx.resLoc, width, height);
+      }
       if (ctx.softBootLoc !== null) {
         /*
          * During bootstrap we drive progress ~0 (full flow cover) instead of wisps + soft crush.
@@ -468,12 +524,16 @@ export function VigilFlowRevealOverlay({
     };
   }, [skipBoot, reduceMotion, disposeGl]);
 
-  if (skipBoot) return null;
-  if (reduceMotion) return null;
+  if (skipBoot) {
+    return null;
+  }
+  if (reduceMotion) {
+    return null;
+  }
 
   return (
-    <div className={styles.wrap} aria-hidden>
-      <canvas ref={canvasRef} className={styles.canvas} />
+    <div aria-hidden className={styles.wrap}>
+      <canvas className={styles.canvas} ref={canvasRef} />
     </div>
   );
 }

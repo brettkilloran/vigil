@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = process.cwd();
@@ -34,31 +34,31 @@ function run() {
   // Default/task hgDoc renderer must not silently fall back to legacy HTML when bodyDoc is missing.
   mustContain(
     "src/components/foundation/ArchitecturalNodeCard.tsx",
-    "if (documentVariant === \"hgDoc\")",
+    'if (documentVariant === "hgDoc")'
   );
   mustContain(
     "src/components/foundation/ArchitecturalNodeCard.tsx",
-    "bodyDoc ?? EMPTY_HG_DOC",
+    "bodyDoc ?? EMPTY_HG_DOC"
   );
   mustNotContain(
     "src/components/foundation/ArchitecturalNodeCard.tsx",
-    "documentVariant === \"hgDoc\" && bodyDoc != null",
+    'documentVariant === "hgDoc" && bodyDoc != null'
   );
 
   // hgDoc command routing must not fall through to legacy execCommand inside hg surfaces.
   mustContain(
     "src/components/foundation/ArchitecturalCanvasApp.tsx",
-    "const runHgDocFormat = useCallback(",
+    "const runHgDocFormat = useCallback("
   );
   mustContain(
     "src/components/foundation/ArchitecturalCanvasApp.tsx",
-    "if (target?.closest(\"[data-hg-doc-editor]\")) return true;",
+    'if (target?.closest("[data-hg-doc-editor]")) return true;'
   );
 
   // Keep the deprecation annotation near the legacy editor implementation.
   mustContain(
     "src/components/editing/BufferedContentEditable.tsx",
-    "Legacy rich-text editor surface.",
+    "Legacy rich-text editor surface."
   );
 
   console.log("Editor cutover check passed.");
@@ -71,4 +71,3 @@ try {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 }
-

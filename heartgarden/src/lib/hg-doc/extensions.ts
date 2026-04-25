@@ -4,11 +4,10 @@ import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
-import StarterKit from "@tiptap/starter-kit";
 import type { ResolvedPos } from "@tiptap/pm/model";
-
-import { hgDocLowlight } from "@/src/lib/hg-doc/hg-doc-lowlight";
+import StarterKit from "@tiptap/starter-kit";
 import { HgAiPending } from "@/src/lib/hg-doc/hg-ai-pending-mark";
+import { hgDocLowlight } from "@/src/lib/hg-doc/hg-doc-lowlight";
 
 function activeTaskItemText($from: ResolvedPos): string {
   for (let depth = $from.depth; depth >= 0; depth--) {
@@ -30,7 +29,8 @@ export function getHgDocExtensions(options?: {
   withPlaceholder?: boolean;
 }) {
   const withPlaceholder = options?.withPlaceholder !== false;
-  const placeholder = options?.placeholder ?? "Write here, or type / for blocks…";
+  const placeholder =
+    options?.placeholder ?? "Write here, or type / for blocks…";
 
   return [
     StarterKit.configure({
@@ -92,8 +92,12 @@ export function getHgDocExtensions(options?: {
         return {
           Enter: () => {
             const { $from, empty } = this.editor.state.selection;
-            if (!empty) return false;
-            if (!this.editor.isActive("taskItem")) return false;
+            if (!empty) {
+              return false;
+            }
+            if (!this.editor.isActive("taskItem")) {
+              return false;
+            }
             const text = activeTaskItemText($from);
             if (text.length === 0) {
               return this.editor.commands.liftListItem("taskItem");
@@ -102,9 +106,15 @@ export function getHgDocExtensions(options?: {
           },
           Backspace: () => {
             const { $from, empty } = this.editor.state.selection;
-            if (!empty) return false;
-            if (!this.editor.isActive("taskItem")) return false;
-            if ($from.parentOffset !== 0) return false;
+            if (!empty) {
+              return false;
+            }
+            if (!this.editor.isActive("taskItem")) {
+              return false;
+            }
+            if ($from.parentOffset !== 0) {
+              return false;
+            }
             const text = activeTaskItemText($from);
             if (text.length === 0) {
               return this.editor.commands.liftListItem("taskItem");

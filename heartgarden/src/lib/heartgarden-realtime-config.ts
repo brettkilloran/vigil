@@ -1,4 +1,5 @@
-export const HEARTGARDEN_REALTIME_CHANNEL_PREFIX = "heartgarden:realtime:space:";
+export const HEARTGARDEN_REALTIME_CHANNEL_PREFIX =
+  "heartgarden:realtime:space:";
 
 function readNonEmptyEnv(name: string): string {
   return (process.env[name] ?? "").trim();

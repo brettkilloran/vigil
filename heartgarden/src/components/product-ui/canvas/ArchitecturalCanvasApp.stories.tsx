@@ -22,4 +22,3 @@ export const Default: Story = {
 export const CorruptFolderRecovery: Story = {
   render: () => <ArchitecturalCanvasApp scenario="corrupt" />,
 };
-

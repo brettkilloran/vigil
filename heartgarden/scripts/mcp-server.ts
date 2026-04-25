@@ -19,8 +19,11 @@ const server = createHeartgardenMcpServer({
   defaultSpaceId: (process.env.HEARTGARDEN_DEFAULT_SPACE_ID ?? "").trim(),
   writeKey: (process.env.HEARTGARDEN_MCP_WRITE_KEY ?? "").trim(),
   serviceKey,
-  playerSpaceExcluded: (process.env.HEARTGARDEN_PLAYER_SPACE_ID ?? "").trim().toLowerCase(),
-  gmBreakGlass: (process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE ?? "").trim() === "1",
+  playerSpaceExcluded: (process.env.HEARTGARDEN_PLAYER_SPACE_ID ?? "")
+    .trim()
+    .toLowerCase(),
+  gmBreakGlass:
+    (process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE ?? "").trim() === "1",
   readOnly: (process.env.HEARTGARDEN_MCP_READ_ONLY ?? "").trim() === "1",
 });
 

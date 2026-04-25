@@ -21,29 +21,43 @@ const DEFAULT_MCP_URL = "https://heartgarden.vercel.app/api/mcp";
 async function main(): Promise<void> {
   const key = (process.env.HEARTGARDEN_MCP_SERVICE_KEY ?? "").trim();
   if (!key) {
-    console.error("Missing HEARTGARDEN_MCP_SERVICE_KEY (same secret as Vercel Production).");
+    console.error(
+      "Missing HEARTGARDEN_MCP_SERVICE_KEY (same secret as Vercel Production)."
+    );
     process.exit(1);
   }
 
   const base = (process.env.HEARTGARDEN_MCP_URL ?? DEFAULT_MCP_URL).trim();
   const mcpUrl = new URL(base);
-  if (!mcpUrl.pathname.endsWith("/api/mcp") && !mcpUrl.pathname.endsWith("/api/mcp/")) {
+  if (
+    !(
+      mcpUrl.pathname.endsWith("/api/mcp") ||
+      mcpUrl.pathname.endsWith("/api/mcp/")
+    )
+  ) {
     console.warn("Warning: URL path should end with /api/mcp");
   }
   mcpUrl.searchParams.set("token", key);
 
-  const protectionBypass = (process.env.HEARTGARDEN_VERCEL_PROTECTION_BYPASS ?? "").trim();
+  const protectionBypass = (
+    process.env.HEARTGARDEN_VERCEL_PROTECTION_BYPASS ?? ""
+  ).trim();
   if (protectionBypass) {
     mcpUrl.searchParams.set("x-vercel-protection-bypass", protectionBypass);
   }
 
   const transport = new StreamableHTTPClientTransport(mcpUrl);
-  const client = new Client({ name: "heartgarden-mcp-prod-smoke", version: "1.0.0" });
+  const client = new Client({
+    name: "heartgarden-mcp-prod-smoke",
+    version: "1.0.0",
+  });
 
   try {
     await client.connect(transport);
     const server = client.getServerVersion();
-    console.log(`initialize OK — server: ${server?.name ?? "?"} ${server?.version ?? ""}`.trim());
+    console.log(
+      `initialize OK — server: ${server?.name ?? "?"} ${server?.version ?? ""}`.trim()
+    );
 
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
@@ -52,7 +66,7 @@ async function main(): Promise<void> {
     const vigilListed = names.filter((n) => n.startsWith("vigil_"));
     if (vigilListed.length > 0) {
       console.error(
-        `FAIL: tools/list must not expose vigil_* names (canonical is heartgarden_*): ${vigilListed.join(", ")}`,
+        `FAIL: tools/list must not expose vigil_* names (canonical is heartgarden_*): ${vigilListed.join(", ")}`
       );
       process.exitCode = 1;
       return;
@@ -61,7 +75,7 @@ async function main(): Promise<void> {
     const heartgardenTools = names.filter((n) => n.startsWith("heartgarden_"));
     if (names.length > 0 && heartgardenTools.length === 0) {
       console.error(
-        `FAIL: expected Heartgarden MCP tools to use heartgarden_* prefix; got: ${names.slice(0, 12).join(", ")}`,
+        `FAIL: expected Heartgarden MCP tools to use heartgarden_* prefix; got: ${names.slice(0, 12).join(", ")}`
       );
       process.exitCode = 1;
       return;

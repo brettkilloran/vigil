@@ -3,21 +3,34 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 const ROOT = process.cwd();
-const SKIP_DIRS = new Set([".git", ".next", "node_modules", "storybook-static"]);
+const SKIP_DIRS = new Set([
+  ".git",
+  ".next",
+  "node_modules",
+  "storybook-static",
+]);
 const CSS_EXTS = new Set([".css"]);
 
 async function walk(dir, out) {
   const entries = await readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
-    if (entry.name.startsWith(".")) continue;
+    if (entry.name.startsWith(".")) {
+      continue;
+    }
     if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name)) continue;
+      if (SKIP_DIRS.has(entry.name)) {
+        continue;
+      }
       await walk(path.join(dir, entry.name), out);
       continue;
     }
-    if (!entry.isFile()) continue;
+    if (!entry.isFile()) {
+      continue;
+    }
     const ext = path.extname(entry.name);
-    if (!CSS_EXTS.has(ext)) continue;
+    if (!CSS_EXTS.has(ext)) {
+      continue;
+    }
     out.push(path.join(dir, entry.name));
   }
 }
@@ -25,7 +38,9 @@ async function walk(dir, out) {
 function lineNumberAt(text, index) {
   let line = 1;
   for (let i = 0; i < index; i += 1) {
-    if (text.charCodeAt(i) === 10) line += 1;
+    if (text.charCodeAt(i) === 10) {
+      line += 1;
+    }
   }
   return line;
 }
@@ -75,7 +90,7 @@ async function main() {
     console.error(`- ${err.file}:${err.line} :: ${err.selector}`);
   }
   console.error(
-    "\nUse `text-transform: none` on the shared `.vigil-btn` base and keep uppercase for non-button labels only.",
+    "\nUse `text-transform: none` on the shared `.vigil-btn` base and keep uppercase for non-button labels only."
   );
   process.exitCode = 1;
 }

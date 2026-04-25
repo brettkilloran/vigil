@@ -29,13 +29,15 @@ export function computeForceLayout(
   edges: GraphLayoutEdge[],
   width = 1000,
   height = 1000,
-  seed?: Map<string, { x: number; y: number }>,
+  seed?: Map<string, { x: number; y: number }>
 ): Map<string, { x: number; y: number }> {
   const cx = width / 2;
   const cy = height / 2;
   const out = new Map<string, { x: number; y: number }>();
 
-  if (nodes.length === 0) return out;
+  if (nodes.length === 0) {
+    return out;
+  }
   if (nodes.length === 1) {
     const s = seed?.get(nodes[0]!.id);
     out.set(nodes[0]!.id, { x: s?.x ?? cx, y: s?.y ?? cy });
@@ -59,7 +61,9 @@ export function computeForceLayout(
     .map((e) => {
       const s = byId.get(e.source);
       const t = byId.get(e.target);
-      if (!s || !t) return null;
+      if (!(s && t)) {
+        return null;
+      }
       return { source: s, target: t } as SimLink;
     })
     .filter((x): x is SimLink => x != null);
@@ -73,7 +77,9 @@ export function computeForceLayout(
     .velocityDecay(0.35);
 
   sim.stop();
-  for (let i = 0; i < 520; i++) sim.tick();
+  for (let i = 0; i < 520; i++) {
+    sim.tick();
+  }
 
   const pad = 36;
   for (const n of simNodes) {

@@ -9,17 +9,24 @@ export type SourceTextChunk = {
   charEnd: number;
 };
 
-const MAX_BODY_CHARS = 2_000;
-const HEADINGLESS_TARGET_CHARS = 1_200;
+const MAX_BODY_CHARS = 2000;
+const HEADINGLESS_TARGET_CHARS = 1200;
 const HEADINGLESS_MIN_CHARS = 600;
 
 /** Split markdown/plaintext on ATX headings; subdivide oversized bodies. */
 export function chunkSourceText(fullText: string): SourceTextChunk[] {
   const text = fullText.replace(/\0/g, "").replace(/\r\n?/g, "\n").trim();
-  if (!text) return [];
+  if (!text) {
+    return [];
+  }
 
   const lines = text.split("\n");
-  const sections: { heading: string; start: number; end: number; lines: string[] }[] = [];
+  const sections: {
+    heading: string;
+    start: number;
+    end: number;
+    lines: string[];
+  }[] = [];
   let currentHeading = "Untitled";
   let currentStart = 0;
   let currentEnd = 0;
@@ -27,10 +34,17 @@ export function chunkSourceText(fullText: string): SourceTextChunk[] {
   let offset = 0;
 
   const flush = () => {
-    if (buf.length === 0) return;
+    if (buf.length === 0) {
+      return;
+    }
     const body = buf.join("\n");
     if (body.trim().length > 0) {
-      sections.push({ heading: currentHeading, start: currentStart, end: currentEnd, lines: [...buf] });
+      sections.push({
+        heading: currentHeading,
+        start: currentStart,
+        end: currentEnd,
+        lines: [...buf],
+      });
     }
     buf = [];
   };
@@ -44,7 +58,9 @@ export function chunkSourceText(fullText: string): SourceTextChunk[] {
       currentStart = lineStart;
       buf.push(line);
     } else {
-      if (buf.length === 0) currentStart = lineStart;
+      if (buf.length === 0) {
+        currentStart = lineStart;
+      }
       buf.push(line);
     }
     offset += line.length + 1;
@@ -68,7 +84,9 @@ type ParagraphSlice = { text: string; start: number; end: number };
 
 function headingFromParagraph(para: string): string {
   const line = para.split("\n")[0]?.trim() ?? "";
-  if (!line) return "Document";
+  if (!line) {
+    return "Document";
+  }
   return line.slice(0, 120);
 }
 
@@ -79,7 +97,9 @@ function splitParagraphSlices(text: string): ParagraphSlice[] {
   let paraStart = 0;
   let buf: string[] = [];
   const flush = (end: number) => {
-    if (buf.length === 0) return;
+    if (buf.length === 0) {
+      return;
+    }
     const body = buf.join("\n");
     if (body.trim().length > 0) {
       slices.push({ text: body, start: paraStart, end });
@@ -94,7 +114,9 @@ function splitParagraphSlices(text: string): ParagraphSlice[] {
       paraStart = offset;
       continue;
     }
-    if (buf.length === 0) paraStart = lineStart;
+    if (buf.length === 0) {
+      paraStart = lineStart;
+    }
     buf.push(line);
     offset += line.length + 1;
   }
@@ -110,17 +132,28 @@ function buildHeadinglessChunks(text: string): SourceTextChunk[] {
   const out: SourceTextChunk[] = [];
   let active: ParagraphSlice[] = [];
   const flushActive = () => {
-    if (active.length === 0) return;
+    if (active.length === 0) {
+      return;
+    }
     const start = active[0]!.start;
     const end = active[active.length - 1]!.end;
     const body = active.map((p) => p.text).join("\n\n");
-    out.push(...subdivideChunk(headingFromParagraph(active[0]!.text), body, start, end));
+    out.push(
+      ...subdivideChunk(headingFromParagraph(active[0]!.text), body, start, end)
+    );
     active = [];
   };
   for (const para of paragraphs) {
     if (para.text.length > MAX_BODY_CHARS) {
       flushActive();
-      out.push(...subdivideChunk(headingFromParagraph(para.text), para.text, para.start, para.end));
+      out.push(
+        ...subdivideChunk(
+          headingFromParagraph(para.text),
+          para.text,
+          para.start,
+          para.end
+        )
+      );
       continue;
     }
     if (active.length === 0) {
@@ -130,7 +163,8 @@ function buildHeadinglessChunks(text: string): SourceTextChunk[] {
     const currentBody = active.map((p) => p.text).join("\n\n");
     const nextLen = currentBody.length + 2 + para.text.length;
     const shouldFlush =
-      (nextLen > HEADINGLESS_TARGET_CHARS && currentBody.length >= HEADINGLESS_MIN_CHARS) ||
+      (nextLen > HEADINGLESS_TARGET_CHARS &&
+        currentBody.length >= HEADINGLESS_MIN_CHARS) ||
       nextLen > MAX_BODY_CHARS;
     if (shouldFlush) {
       flushActive();
@@ -140,14 +174,16 @@ function buildHeadinglessChunks(text: string): SourceTextChunk[] {
     active.push(para);
   }
   flushActive();
-  return out.length > 0 ? out : subdivideChunk("Document", text, 0, text.length);
+  return out.length > 0
+    ? out
+    : subdivideChunk("Document", text, 0, text.length);
 }
 
 function subdivideChunk(
   heading: string,
   body: string,
   charStart: number,
-  charEnd: number,
+  charEnd: number
 ): SourceTextChunk[] {
   if (body.length <= MAX_BODY_CHARS) {
     return [

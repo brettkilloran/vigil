@@ -1,17 +1,6 @@
 "use client";
 
 import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
-import dynamic from "next/dynamic";
-import { flushSync } from "react-dom";
-import {
   ArrowLeft,
   ArrowsOut,
   BoundingBox,
@@ -21,9 +10,9 @@ import {
   Folder,
   Graph,
   ImageSquare,
-  MapPin,
   Lightning,
   MagnifyingGlass,
+  MapPin,
   NotePencil,
   Scan,
   SealCheck,
@@ -37,42 +26,32 @@ import {
   UsersThree,
   WarningCircle,
 } from "@phosphor-icons/react";
-
+import type { JSONContent } from "@tiptap/core";
+import dynamic from "next/dynamic";
 import {
-  ArchitecturalLoreReviewPanel,
-  type VaultReviewDraft,
-  type VaultReviewIssue,
-} from "@/src/components/foundation/ArchitecturalLoreReviewPanel";
-import { ArchitecturalLoreImportErrorDialog } from "@/src/components/foundation/ArchitecturalLoreImportErrorDialog";
-import {
-  ArchitecturalLoreImportUploadPopover,
-  type LoreImportScopeMode,
-  type LoreImportUploadMode,
-} from "@/src/components/foundation/ArchitecturalLoreImportUploadPopover";
-import { VigilAppBootScreen } from "./VigilAppBootScreen";
-import { VigilAppChromeAudioMuteButton } from "./VigilAppChromeAudioMuteButton";
-import styles from "./ArchitecturalCanvasApp.module.css";
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { flushSync } from "react-dom";
 import type { WikiLinkAssistConfig } from "@/src/components/editing/BufferedContentEditable";
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
 import { HeartgardenDocEditor } from "@/src/components/editing/HeartgardenDocEditor";
 import { LoreHybridFocusEditor } from "@/src/components/editing/LoreHybridFocusEditor";
-import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
-import {
-  ArchitecturalTooltip,
-  ARCH_TOOLTIP_AVOID_TOP,
-} from "@/src/components/foundation/ArchitecturalTooltip";
-import { Button } from "@/src/components/ui/Button";
-import { HeartgardenMediaPlaceholderImg } from "@/src/components/ui/HeartgardenMediaPlaceholderImg";
 import {
   ArchitecturalBottomDock,
   ArchitecturalConnectionKindPicker,
+  type ConnectionDockMode,
   DEFAULT_CREATE_ACTIONS,
   DEFAULT_DOC_INSERT_ACTIONS,
   DEFAULT_FORMAT_ACTIONS,
   loreVariantChoiceLabel,
-  type ConnectionDockMode,
 } from "@/src/components/foundation/ArchitecturalBottomDock";
-import { ArchitecturalParentExitThreshold } from "@/src/components/foundation/ArchitecturalParentExitThreshold";
+import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
 import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
 import {
   ArchitecturalFolderCard,
@@ -80,59 +59,64 @@ import {
 } from "@/src/components/foundation/ArchitecturalFolderCard";
 import { ArchitecturalLoreCharacterCanvasNode } from "@/src/components/foundation/ArchitecturalLoreCharacterCanvasNode";
 import { ArchitecturalLoreFactionArchiveCanvasNode } from "@/src/components/foundation/ArchitecturalLoreFactionArchiveCanvasNode";
+import { ArchitecturalLoreImportErrorDialog } from "@/src/components/foundation/ArchitecturalLoreImportErrorDialog";
+import {
+  ArchitecturalLoreImportUploadPopover,
+  type LoreImportScopeMode,
+  type LoreImportUploadMode,
+} from "@/src/components/foundation/ArchitecturalLoreImportUploadPopover";
 import { ArchitecturalLoreLocationCanvasNode } from "@/src/components/foundation/ArchitecturalLoreLocationCanvasNode";
+import {
+  ArchitecturalLoreReviewPanel,
+  type VaultReviewDraft,
+  type VaultReviewIssue,
+} from "@/src/components/foundation/ArchitecturalLoreReviewPanel";
 import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";
-import { CanvasMinimap } from "@/src/components/foundation/CanvasMinimap";
-import { CanvasViewportToast } from "@/src/components/foundation/CanvasViewportToast";
+import { ArchitecturalParentExitThreshold } from "@/src/components/foundation/ArchitecturalParentExitThreshold";
+import { ArchitecturalRemotePresenceCursors } from "@/src/components/foundation/ArchitecturalRemotePresenceLayer";
 import {
   ArchitecturalCanvasEffectsToggle,
   ArchitecturalStatusBar,
   ArchitecturalViewportMetrics,
   type CollabPeerPresenceChip,
 } from "@/src/components/foundation/ArchitecturalStatusBar";
-import { ArchitecturalRemotePresenceCursors } from "@/src/components/foundation/ArchitecturalRemotePresenceLayer";
 import { ArchitecturalToolRail } from "@/src/components/foundation/ArchitecturalToolRail";
+import {
+  ARCH_TOOLTIP_AVOID_TOP,
+  ArchitecturalTooltip,
+} from "@/src/components/foundation/ArchitecturalTooltip";
+import {
+  applyServerCanvasItemToGraph,
+  architecturalItemType,
+  type BootstrapResponse,
+  buildCanvasGraphFromBootstrap,
+  buildContentItemRestorePayload,
+  buildContentJsonForContentEntity,
+  buildContentJsonForFolderEntity,
+  buildFolderItemRestorePayload,
+  canvasItemToEntity,
+  contentPlainTextForEntity,
+  entityGeometryOnSpace,
+  htmlToPlainText,
+  mergeBootstrapView,
+  removeEntitiesFromGraphAfterRemoteDelete,
+  topoSortAddedSpacesForRestore,
+} from "@/src/components/foundation/architectural-db-bridge";
+import {
+  applyFolderPopOutPlan,
+  collectFolderPopOutPlan,
+} from "@/src/components/foundation/architectural-folder-popout";
+import type { FolderColorSchemeId } from "@/src/components/foundation/architectural-folder-schemes";
 import {
   applyImageDataUrlToArchitecturalMediaBody,
   bodyUsesLorePortraitMediaSlot,
   buildEmptyArchitecturalMediaBodyHtml,
-  lorePortraitSlotUsesV9,
   getArchitecturalMediaNotes,
+  lorePortraitSlotUsesV9,
   mediaUploadActionLabel,
   parseArchitecturalMediaFromBody,
   setArchitecturalMediaNotes,
 } from "@/src/components/foundation/architectural-media-html";
-import { heartgardenMediaPlaceholderClassList } from "@/src/lib/heartgarden-media-placeholder-classes";
-import loreEntityCardStyles from "@/src/components/foundation/lore-entity-card.module.css";
-import { type FolderColorSchemeId } from "@/src/components/foundation/architectural-folder-schemes";
-import {
-  CONNECTION_KINDS_IN_ORDER,
-  canonicalKindForConnection,
-  canonicalPairForKind,
-  colorForConnectionKind,
-  isCanonicalConnectionPair,
-  linkTypeForConnectionKind,
-  snapColorToConnectionKind,
-  type ConnectionKind,
-} from "@/src/lib/connection-kind-colors";
-import {
-  type BootstrapResponse,
-  buildCanvasGraphFromBootstrap,
-  buildContentJsonForContentEntity,
-  buildContentJsonForFolderEntity,
-  canvasItemToEntity,
-  contentPlainTextForEntity,
-  htmlToPlainText,
-  mergeBootstrapView,
-  applyServerCanvasItemToGraph,
-  buildContentItemRestorePayload,
-  buildFolderItemRestorePayload,
-  removeEntitiesFromGraphAfterRemoteDelete,
-  topoSortAddedSpacesForRestore,
-  architecturalItemType,
-  entityGeometryOnSpace,
-} from "@/src/components/foundation/architectural-db-bridge";
-import { buildArchitecturalSeedGraph } from "@/src/components/foundation/architectural-seed";
 import {
   apiCreateItem,
   apiCreateSpace,
@@ -141,72 +125,76 @@ import {
   apiPatchItem,
   apiPatchSpaceName,
   apiPatchSpaceParent,
+  type BootstrapFetchDetail,
   fetchBootstrap,
   fetchBootstrapDetailed,
   neonVaultIndexSetPlayerLayerActive,
   postPresencePayload,
-  type BootstrapFetchDetail,
   type SpacePresencePeer,
 } from "@/src/components/foundation/architectural-neon-api";
+import { buildArchitecturalSeedGraph } from "@/src/components/foundation/architectural-seed";
 import {
-  applyFolderPopOutPlan,
-  collectFolderPopOutPlan,
-} from "@/src/components/foundation/architectural-folder-popout";
-import { mergeHydratedDbConnections } from "@/src/lib/architectural-item-link-graph";
-import type { GraphEdge } from "@/src/lib/graph-types";
+  type CanvasBodyCommitPayload,
+  type CanvasConnectionPin,
+  type CanvasContentEntity,
+  type CanvasEntity,
+  type CanvasFolderEntity,
+  type CanvasGraph,
+  type CanvasPinConnection,
+  type CanvasSpace,
+  type CanvasTool,
+  type ContentTheme,
+  type DockFormatAction,
+  type LoreCard,
+  type LoreCardKind,
+  type LoreCardVariant,
+  type NodeTheme,
+  ROOT_SPACE_DISPLAY_NAME,
+  type TapeVariant,
+} from "@/src/components/foundation/architectural-types";
 import {
-  clampLinkMetaSlackMultiplier,
-  DEFAULT_LINK_SLACK_MULTIPLIER,
-} from "@/src/lib/item-link-meta";
-import {
-  groupedOrderedLinkOptionsForEndpoints,
-  LINK_TYPE_GROUP_HEADINGS,
-} from "@/src/lib/lore-link-types";
-import type {
-  ClarificationAnswer,
-  LoreImportClarificationItem,
-  LoreImportPlan,
-  LoreImportUserContext,
-} from "@/src/lib/lore-import-plan-types";
-import {
-  collapseToOneNote,
-  filterAutoResolvedClarifications,
-  flipOrgMode,
-} from "@/src/lib/lore-import-plan-reshuffle";
-import {
-  getNeonSyncSnapshot,
-  getNeonSyncServerSnapshot,
-  neonSyncBumpPending,
-  neonSyncReportAuxiliaryFailure,
-  neonSyncSetCloudEnabled,
-  neonSyncSpaceChangeSyncBreadcrumb,
-  neonSyncUnbumpPending,
-  subscribeNeonSync,
-} from "@/src/lib/neon-sync-bus";
-import { parseJsonBody, syncFailureFromApiResponse } from "@/src/lib/sync-error-diagnostic";
-import {
-  formatLoreImportFailureReport,
-  parseLoreImportJsonBody,
-  type LoreImportFailureDetail,
-  type LoreImportStage,
-} from "@/src/lib/lore-import-diagnostic";
-import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
-import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
-import {
+  type ArchitecturalUndoSnapshot,
   cloneArchitecturalGraph,
   MAX_ARCHITECTURAL_UNDO,
-  type ArchitecturalUndoSnapshot,
 } from "@/src/components/foundation/architectural-undo";
-import { useModKeyHints } from "@/src/lib/mod-keys";
+import { CanvasMinimap } from "@/src/components/foundation/CanvasMinimap";
+import { CanvasViewportToast } from "@/src/components/foundation/CanvasViewportToast";
+import loreEntityCardStyles from "@/src/components/foundation/lore-entity-card.module.css";
+import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
+import { AltGraphCard } from "@/src/components/product-ui/canvas/AltGraphCard";
+import { GraphPanel } from "@/src/components/product-ui/canvas/GraphPanel";
+import { ArchitecturalLinksPanel } from "@/src/components/ui/ArchitecturalLinksPanel";
+import { Button } from "@/src/components/ui/Button";
 import {
-  VIGIL_CANVAS_EFFECTS_STORAGE_KEY,
-  VIGIL_MINIMAP_VISIBLE_STORAGE_KEY,
-  readCanvasMinimapVisibleFromStorage,
-  writeCanvasMinimapVisibleToStorage,
-} from "@/src/lib/vigil-canvas-prefs";
-import { writeSpaceCamera } from "@/src/lib/heartgarden-space-camera";
+  CommandPalette,
+  type PaletteAction,
+  type PaletteItem,
+  type PaletteSpace,
+} from "@/src/components/ui/CommandPalette";
+import {
+  ContextMenu,
+  type ContextMenuItem,
+  type ContextMenuPosition,
+  clampContextMenuPosition,
+} from "@/src/components/ui/ContextMenu";
+import { HeartgardenMediaPlaceholderImg } from "@/src/components/ui/HeartgardenMediaPlaceholderImg";
+import { LinkGraphOverlay } from "@/src/components/ui/LinkGraphOverlay";
+import { LoreAskPanel } from "@/src/components/ui/LoreAskPanel";
+import { useHeartgardenPresenceHeartbeat } from "@/src/hooks/use-heartgarden-presence-heartbeat";
+import { useHeartgardenRealtimeSpaceSync } from "@/src/hooks/use-heartgarden-realtime-space-sync";
+import { useHeartgardenSpaceChangeSync } from "@/src/hooks/use-heartgarden-space-change-sync";
+import { useRecentFolders } from "@/src/hooks/use-recent-folders";
+import { useRecentItems } from "@/src/hooks/use-recent-items";
+import { mergeHydratedDbConnections } from "@/src/lib/architectural-item-link-graph";
+import { BoundedMap } from "@/src/lib/bounded-map";
+import {
+  isUuidLike,
+  resolveFactionRosterEntryIdFromDrawTarget,
+  runSemanticThreadLinkEvaluation,
+} from "@/src/lib/canvas-thread-link-eval";
 import {
   buildCollapsedStacksList,
+  type CollapsedStackInfo,
   computeSpaceContentBounds,
   fitCameraToActiveSpaceContent,
   fitCameraToSelection,
@@ -214,7 +202,6 @@ import {
   minimapLayoutSignature,
   minimapPlacementMapsEqual,
   viewportWorldRect,
-  type CollapsedStackInfo,
 } from "@/src/lib/canvas-view-bounds";
 import {
   buildCullExceptionEntityIds,
@@ -223,6 +210,37 @@ import {
   entityIntersectsWorldRect,
   worldRectFromViewport,
 } from "@/src/lib/canvas-viewport-cull";
+import { useChunkLoadRecovery } from "@/src/lib/chunk-load-recovery";
+import {
+  presenceEmojiForClientId,
+  presenceFallbackAliasForClientId,
+  presenceInitialsFromName,
+  presenceNameForClient,
+  presenceSigilLabel,
+  sanitizePresenceDisplayName,
+} from "@/src/lib/collab-presence-identity";
+import {
+  CONNECTION_KINDS_IN_ORDER,
+  type ConnectionKind,
+  canonicalKindForConnection,
+  canonicalPairForKind,
+  colorForConnectionKind,
+  isCanonicalConnectionPair,
+  linkTypeForConnectionKind,
+  snapColorToConnectionKind,
+} from "@/src/lib/connection-kind-colors";
+import type {
+  AltMentionRow,
+  AltSearchRow,
+} from "@/src/lib/entity-mention-row-types";
+import {
+  AI_REVIEW_CLEARED,
+  hasActionableAiReview,
+  isAiReviewPending,
+} from "@/src/lib/entity-meta-schema";
+import { createDefaultFactionRosterSeed } from "@/src/lib/faction-roster-link";
+import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
+import type { GraphEdge } from "@/src/lib/graph-types";
 import {
   HEARTGARDEN_GRAPH_REFRESH_DEBOUNCE_MS,
   HEARTGARDEN_GRAPH_REFRESH_FALLBACK_INTERVAL_MS,
@@ -230,73 +248,31 @@ import {
   HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MIN,
   HEARTGARDEN_PRESENCE_POINTER_FLUSH_MIN_MS,
 } from "@/src/lib/heartgarden-collab-constants";
-import {
-  presenceFallbackAliasForClientId,
-  presenceEmojiForClientId,
-  presenceInitialsFromName,
-  presenceNameForClient,
-  presenceSigilLabel,
-  sanitizePresenceDisplayName,
-} from "@/src/lib/collab-presence-identity";
+import { heartgardenMediaPlaceholderClassList } from "@/src/lib/heartgarden-media-placeholder-classes";
 import { getOrCreatePresenceClientId } from "@/src/lib/heartgarden-presence-client";
 import {
   maybePromptPresenceDisplayNameOnce,
   readPresenceProfile,
 } from "@/src/lib/heartgarden-presence-profile";
-import { useHeartgardenPresenceHeartbeat } from "@/src/hooks/use-heartgarden-presence-heartbeat";
-import { useHeartgardenRealtimeSpaceSync } from "@/src/hooks/use-heartgarden-realtime-space-sync";
-import { useHeartgardenSpaceChangeSync } from "@/src/hooks/use-heartgarden-space-change-sync";
-import {
-  clearWorkspaceViewCache,
-  readWorkspaceViewCache,
-  writeWorkspaceViewCache,
-  type WorkspaceBootTierTag,
-} from "@/src/lib/workspace-view-cache";
-import type { CameraState, CanvasItem } from "@/src/model/canvas-types";
-import { defaultCamera } from "@/src/model/canvas-types";
-import { useRecentFolders } from "@/src/hooks/use-recent-folders";
-import { useRecentItems } from "@/src/hooks/use-recent-items";
-import {
-  clampContextMenuPosition,
-  ContextMenu,
-  type ContextMenuItem,
-  type ContextMenuPosition,
-} from "@/src/components/ui/ContextMenu";
-import {
-  CommandPalette,
-  type PaletteAction,
-  type PaletteItem,
-  type PaletteSpace,
-} from "@/src/components/ui/CommandPalette";
-import { ArchitecturalLinksPanel } from "@/src/components/ui/ArchitecturalLinksPanel";
-import { LinkGraphOverlay } from "@/src/components/ui/LinkGraphOverlay";
-import { LoreAskPanel } from "@/src/components/ui/LoreAskPanel";
-import { GraphPanel } from "@/src/components/product-ui/canvas/GraphPanel";
-import { AltGraphCard } from "@/src/components/product-ui/canvas/AltGraphCard";
-import {
-  type CanvasBodyCommitPayload,
-  type CanvasConnectionPin,
-  type CanvasContentEntity,
-  type CanvasEntity,
-  type CanvasFolderEntity,
-  type ContentTheme,
-  type CanvasGraph,
-  type CanvasPinConnection,
-  type CanvasSpace,
-  type CanvasTool,
-  type DockFormatAction,
-  type LoreCard,
-  type LoreCardKind,
-  type LoreCardVariant,
-  type NodeTheme,
-  type TapeVariant,
-  ROOT_SPACE_DISPLAY_NAME,
-} from "@/src/components/foundation/architectural-types";
-import type { JSONContent } from "@tiptap/core";
+import { writeSpaceCamera } from "@/src/lib/heartgarden-space-camera";
+import { hgDocForContentEntity } from "@/src/lib/hg-doc/code-theme-doc";
 import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
+import {
+  findHgDocSurfaceKeyFromSelection,
+  getHgDocEditor,
+} from "@/src/lib/hg-doc/editor-registry";
 import { contentEntityUsesHgDoc } from "@/src/lib/hg-doc/entity-uses-hg-doc";
-import { findHgDocSurfaceKeyFromSelection, getHgDocEditor } from "@/src/lib/hg-doc/editor-registry";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
+import {
+  htmlFragmentToHgDocDoc,
+  legacyCodeBodyHtmlToHgDocSeed,
+  stripLegacyHtmlToPlainText,
+} from "@/src/lib/hg-doc/html-to-doc";
+import {
+  newDefaultHgDocSeed,
+  newTaskHgDocSeed,
+} from "@/src/lib/hg-doc/new-node-seeds";
+import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
 import {
   contentEntityHasHgAiPending,
   hgDocJsonHasHgAiPending,
@@ -305,25 +281,50 @@ import {
   stripHgAiPendingFromHtml,
 } from "@/src/lib/hg-doc/strip-hg-ai-pending";
 import {
-  AI_REVIEW_CLEARED,
-  hasActionableAiReview,
-  isAiReviewPending,
-} from "@/src/lib/entity-meta-schema";
+  clampLinkMetaSlackMultiplier,
+  DEFAULT_LINK_SLACK_MULTIPLIER,
+} from "@/src/lib/item-link-meta";
 import {
-  htmlFragmentToHgDocDoc,
-  legacyCodeBodyHtmlToHgDocSeed,
-  stripLegacyHtmlToPlainText,
-} from "@/src/lib/hg-doc/html-to-doc";
-import { newDefaultHgDocSeed, newTaskHgDocSeed } from "@/src/lib/hg-doc/new-node-seeds";
-import { hgDocForContentEntity } from "@/src/lib/hg-doc/code-theme-doc";
-import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
+  characterV11BodyToFocusDocumentHtml,
+  focusDocumentHtmlToCharacterV11Body,
+  normalizeCharacterV11BodyHtmlForCurrentBuild,
+  withCharacterV11ObjectIdInHeader,
+} from "@/src/lib/lore-character-focus-document-html";
 import {
-  isUuidLike,
-  resolveFactionRosterEntryIdFromDrawTarget,
-  runSemanticThreadLinkEvaluation,
-} from "@/src/lib/canvas-thread-link-eval";
-import { createDefaultFactionRosterSeed } from "@/src/lib/faction-roster-link";
-import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
+  bodyHtmlImpliesFactionArchive091,
+  plainFactionPrimaryNameFromArchiveBodyHtml,
+  withFactionArchiveObjectIdInRails,
+} from "@/src/lib/lore-faction-archive-html";
+import {
+  factionBodyToFocusDocumentHtml,
+  focusDocumentHtmlToFactionBody,
+} from "@/src/lib/lore-faction-focus-document-html";
+import {
+  formatLoreImportFailureReport,
+  type LoreImportFailureDetail,
+  type LoreImportStage,
+  parseLoreImportJsonBody,
+} from "@/src/lib/lore-import-diagnostic";
+import {
+  collapseToOneNote,
+  filterAutoResolvedClarifications,
+  flipOrgMode,
+} from "@/src/lib/lore-import-plan-reshuffle";
+import type {
+  ClarificationAnswer,
+  LoreImportClarificationItem,
+  LoreImportPlan,
+  LoreImportUserContext,
+} from "@/src/lib/lore-import-plan-types";
+import {
+  groupedOrderedLinkOptionsForEndpoints,
+  LINK_TYPE_GROUP_HEADINGS,
+} from "@/src/lib/lore-link-types";
+import {
+  focusDocumentHtmlToLocationBody,
+  locationBodyToFocusDocumentHtml,
+  plainPlaceNameFromLocationBodyHtml,
+} from "@/src/lib/lore-location-focus-document-html";
 import {
   defaultLoreCardVariantForKind,
   defaultTitleForLoreKind,
@@ -333,44 +334,54 @@ import {
   shouldRenderLoreLocationCanvasNode,
   tapeVariantForLoreCard,
 } from "@/src/lib/lore-node-seed-html";
+import { useModKeyHints } from "@/src/lib/mod-keys";
 import {
-  characterV11BodyToFocusDocumentHtml,
-  focusDocumentHtmlToCharacterV11Body,
-  normalizeCharacterV11BodyHtmlForCurrentBuild,
-  withCharacterV11ObjectIdInHeader,
-} from "@/src/lib/lore-character-focus-document-html";
-import {
-  focusDocumentHtmlToLocationBody,
-  locationBodyToFocusDocumentHtml,
-  plainPlaceNameFromLocationBodyHtml,
-} from "@/src/lib/lore-location-focus-document-html";
-import {
-  factionBodyToFocusDocumentHtml,
-  focusDocumentHtmlToFactionBody,
-} from "@/src/lib/lore-faction-focus-document-html";
-import {
-  bodyHtmlImpliesFactionArchive091,
-  plainFactionPrimaryNameFromArchiveBodyHtml,
-  withFactionArchiveObjectIdInRails,
-} from "@/src/lib/lore-faction-archive-html";
+  getNeonSyncServerSnapshot,
+  getNeonSyncSnapshot,
+  neonSyncBumpPending,
+  neonSyncReportAuxiliaryFailure,
+  neonSyncSetCloudEnabled,
+  neonSyncSpaceChangeSyncBreadcrumb,
+  neonSyncUnbumpPending,
+  subscribeNeonSync,
+} from "@/src/lib/neon-sync-bus";
 import {
   caretIsWithinRichDocInsertRegion,
   resolveActiveRichEditorSurface,
   resolveProseCommandTarget,
 } from "@/src/lib/rich-editor-surface";
+import {
+  parseJsonBody,
+  syncFailureFromApiResponse,
+} from "@/src/lib/sync-error-diagnostic";
+import {
+  readCanvasMinimapVisibleFromStorage,
+  VIGIL_CANVAS_EFFECTS_STORAGE_KEY,
+  VIGIL_MINIMAP_VISIBLE_STORAGE_KEY,
+  writeCanvasMinimapVisibleToStorage,
+} from "@/src/lib/vigil-canvas-prefs";
+import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
 import { readWordUnderPointer } from "@/src/lib/word-under-pointer";
-import { BoundedMap } from "@/src/lib/bounded-map";
-import type {
-  AltMentionRow,
-  AltSearchRow,
-} from "@/src/lib/entity-mention-row-types";
-import { useChunkLoadRecovery } from "@/src/lib/chunk-load-recovery";
+import {
+  clearWorkspaceViewCache,
+  readWorkspaceViewCache,
+  type WorkspaceBootTierTag,
+  writeWorkspaceViewCache,
+} from "@/src/lib/workspace-view-cache";
+import type { CameraState, CanvasItem } from "@/src/model/canvas-types";
+import { defaultCamera } from "@/src/model/canvas-types";
+import styles from "./ArchitecturalCanvasApp.module.css";
+import { VigilAppBootScreen } from "./VigilAppBootScreen";
+import { VigilAppChromeAudioMuteButton } from "./VigilAppChromeAudioMuteButton";
+
 const VigilFlowRevealOverlay = dynamic(
   () =>
-    import("@/src/components/transition-experiment/VigilFlowRevealOverlay").then((mod) => ({
+    import(
+      "@/src/components/transition-experiment/VigilFlowRevealOverlay"
+    ).then((mod) => ({
       default: mod.VigilFlowRevealOverlay,
     })),
-  { ssr: false, loading: () => null },
+  { ssr: false, loading: () => null }
 );
 
 const MIN_ZOOM = 0.3;
@@ -385,13 +396,21 @@ const ALT_HOVER_CACHE_MAX = 256;
 /** Subpixel / border rounding when comparing `scrollHeight` vs `clientHeight`. */
 const SCROLLPORT_OVERFLOW_EPSILON_PX = 1;
 /** Trackpad pinch (ctrl/meta + wheel): tuned to feel close to Figma on laptop trackpads. */
-const WHEEL_ZOOM_SENSITIVITY = 0.00235;
+const WHEEL_ZOOM_SENSITIVITY = 0.002_35;
 
 /** deltaMode → pixels (Figma-style canvas: stable pan on macOS trackpads / WebKit line mode). */
-function normalizeWheelPanAxis(delta: number, deltaMode: number, axis: "x" | "y"): number {
-  if (deltaMode === WheelEvent.DOM_DELTA_LINE) return delta * 16;
+function normalizeWheelPanAxis(
+  delta: number,
+  deltaMode: number,
+  axis: "x" | "y"
+): number {
+  if (deltaMode === WheelEvent.DOM_DELTA_LINE) {
+    return delta * 16;
+  }
   if (deltaMode === WheelEvent.DOM_DELTA_PAGE) {
-    if (typeof window === "undefined") return delta;
+    if (typeof window === "undefined") {
+      return delta;
+    }
     return delta * (axis === "x" ? window.innerWidth : window.innerHeight);
   }
   return delta;
@@ -399,23 +418,37 @@ function normalizeWheelPanAxis(delta: number, deltaMode: number, axis: "x" | "y"
 
 /** deltaY + deltaMode → pixels for pinch-zoom (ctrl/meta + wheel on Mac trackpad). */
 function normalizeWheelZoomDeltaY(deltaY: number, deltaMode: number): number {
-  if (deltaMode === WheelEvent.DOM_DELTA_LINE) return deltaY * 16;
+  if (deltaMode === WheelEvent.DOM_DELTA_LINE) {
+    return deltaY * 16;
+  }
   if (deltaMode === WheelEvent.DOM_DELTA_PAGE) {
-    if (typeof window === "undefined") return deltaY;
+    if (typeof window === "undefined") {
+      return deltaY;
+    }
     return deltaY * window.innerHeight;
   }
   return deltaY;
 }
 
-function canScrollableBodyConsumeWheel(body: HTMLElement | null, event: WheelEvent): boolean {
-  if (!body) return false;
-  if (body.scrollHeight <= body.clientHeight + SCROLLPORT_OVERFLOW_EPSILON_PX) return false;
+function canScrollableBodyConsumeWheel(
+  body: HTMLElement | null,
+  event: WheelEvent
+): boolean {
+  if (!body) {
+    return false;
+  }
+  if (body.scrollHeight <= body.clientHeight + SCROLLPORT_OVERFLOW_EPSILON_PX) {
+    return false;
+  }
   const goingDown = event.deltaY > 0;
   const goingUp = event.deltaY < 0;
-  if (!goingDown && !goingUp) return false;
+  if (!(goingDown || goingUp)) {
+    return false;
+  }
   const maxScrollTop = body.scrollHeight - body.clientHeight;
   const atTop = body.scrollTop <= 0;
-  const atBottom = body.scrollTop >= maxScrollTop - SCROLLPORT_OVERFLOW_EPSILON_PX;
+  const atBottom =
+    body.scrollTop >= maxScrollTop - SCROLLPORT_OVERFLOW_EPSILON_PX;
   return (goingDown && !atBottom) || (goingUp && !atTop);
 }
 
@@ -425,10 +458,16 @@ function canScrollableBodyConsumeWheel(body: HTMLElement | null, event: WheelEve
  */
 function wheelEventOriginHTMLElement(event: WheelEvent): HTMLElement | null {
   let n: Node | null = event.target as Node | null;
-  if (!n) return null;
-  if (n.nodeType === Node.TEXT_NODE || n.nodeType === Node.CDATA_SECTION_NODE) n = n.parentElement;
+  if (!n) {
+    return null;
+  }
+  if (n.nodeType === Node.TEXT_NODE || n.nodeType === Node.CDATA_SECTION_NODE) {
+    n = n.parentElement;
+  }
   let el: Element | null = n instanceof Element ? n : null;
-  while (el && !(el instanceof HTMLElement)) el = el.parentElement;
+  while (el && !(el instanceof HTMLElement)) {
+    el = el.parentElement;
+  }
   return el;
 }
 
@@ -440,7 +479,7 @@ function wheelEventOriginHTMLElement(event: WheelEvent): HTMLElement | null {
  */
 function nearestVerticalScrollportInViewport(
   target: HTMLElement,
-  viewportRoot: HTMLElement,
+  viewportRoot: HTMLElement
 ): HTMLElement | null {
   let el: HTMLElement | null = target;
   while (el && el !== viewportRoot && viewportRoot.contains(el)) {
@@ -465,7 +504,7 @@ const VIEWPORT_SCENE_PEAK_HOLD_MS = 320;
  * fade-out + peak hold + fade-in so fast loads don’t swap content before the outro finishes.
  */
 const VIEWPORT_TRANSITION_CENTER_MS = Math.floor(
-  (VIEWPORT_SCENE_FADE_MS * 2 + VIEWPORT_SCENE_PEAK_HOLD_MS) / 2,
+  (VIEWPORT_SCENE_FADE_MS * 2 + VIEWPORT_SCENE_PEAK_HOLD_MS) / 2
 );
 const UNIFIED_NODE_WIDTH = 340;
 /** Matches `.folderNode` width/height in ArchitecturalCanvasApp.module.css */
@@ -491,17 +530,26 @@ function entitySlotsDiffer(a: CanvasEntity, b: CanvasEntity): boolean {
     const ay = sa?.y ?? null;
     const bx = sb?.x ?? null;
     const by = sb?.y ?? null;
-    if (ax !== bx || ay !== by) return true;
+    if (ax !== bx || ay !== by) {
+      return true;
+    }
   }
   return false;
 }
 
 /** Content/folder rows whose layout or stack fields differ between snapshots (Neon resync after undo/redo). */
-function collectIdsNeedingNeonLayoutResync(from: CanvasGraph, to: CanvasGraph): string[] {
+function collectIdsNeedingNeonLayoutResync(
+  from: CanvasGraph,
+  to: CanvasGraph
+): string[] {
   const out = new Set<string>();
   for (const id of Object.keys(to.entities)) {
-    if (!from.entities[id]) continue;
-    if (!isUuidLike(id)) continue;
+    if (!from.entities[id]) {
+      continue;
+    }
+    if (!isUuidLike(id)) {
+      continue;
+    }
     const a = from.entities[id]!;
     const b = to.entities[id]!;
     if (a.kind !== b.kind) {
@@ -520,10 +568,12 @@ function collectIdsNeedingNeonLayoutResync(from: CanvasGraph, to: CanvasGraph): 
       if ((a.width ?? UNIFIED_NODE_WIDTH) !== (b.width ?? UNIFIED_NODE_WIDTH)) {
         out.add(id);
       }
-    } else if (a.kind === "folder" && b.kind === "folder") {
-      if ((a.width ?? FOLDER_CARD_WIDTH) !== (b.width ?? FOLDER_CARD_WIDTH)) {
-        out.add(id);
-      }
+    } else if (
+      a.kind === "folder" &&
+      b.kind === "folder" &&
+      (a.width ?? FOLDER_CARD_WIDTH) !== (b.width ?? FOLDER_CARD_WIDTH)
+    ) {
+      out.add(id);
     }
   }
   return [...out];
@@ -532,14 +582,18 @@ function collectIdsNeedingNeonLayoutResync(from: CanvasGraph, to: CanvasGraph): 
 /** `spaces.parentSpaceId` rows that differ between snapshots (Neon resync after undo/redo). */
 function collectSpacesNeedingParentResync(
   from: CanvasGraph,
-  to: CanvasGraph,
+  to: CanvasGraph
 ): { spaceId: string; parentSpaceId: string | null }[] {
   const out: { spaceId: string; parentSpaceId: string | null }[] = [];
   for (const sid of Object.keys(to.spaces)) {
-    if (!isUuidLike(sid)) continue;
+    if (!isUuidLike(sid)) {
+      continue;
+    }
     const a = from.spaces[sid];
     const b = to.spaces[sid];
-    if (!a || !b) continue;
+    if (!(a && b)) {
+      continue;
+    }
     if (a.parentSpaceId !== b.parentSpaceId) {
       out.push({ spaceId: sid, parentSpaceId: b.parentSpaceId });
     }
@@ -568,17 +622,25 @@ type LoreImportPreparedSource = {
   suggestedTitle: string;
 };
 
-function inferDocSourceKind(fileName: string): LoreImportUserContext["docSourceKind"] {
+function inferDocSourceKind(
+  fileName: string
+): LoreImportUserContext["docSourceKind"] {
   const lower = fileName.toLowerCase();
-  if (lower.endsWith(".pdf")) return "pdf";
-  if (lower.endsWith(".docx")) return "docx";
-  if (lower.endsWith(".md") || lower.endsWith(".markdown")) return "markdown";
+  if (lower.endsWith(".pdf")) {
+    return "pdf";
+  }
+  if (lower.endsWith(".docx")) {
+    return "docx";
+  }
+  if (lower.endsWith(".md") || lower.endsWith(".markdown")) {
+    return "markdown";
+  }
   return "text";
 }
 
 function mapSelectionToUserContext(
   selection: LoreImportSelectionState,
-  fileName: string,
+  fileName: string
 ): LoreImportUserContext {
   if (selection.mode === "one_note") {
     return {
@@ -619,7 +681,13 @@ type LoreImportJobProgress = {
 type LoreImportJobEvent = {
   ts?: string;
   phase?: string;
-  kind: "phase_start" | "phase_end" | "llm_call" | "vault_search" | "warning" | "note";
+  kind:
+    | "phase_start"
+    | "phase_end"
+    | "llm_call"
+    | "vault_search"
+    | "warning"
+    | "note";
   durationMs?: number;
   model?: string;
   tokensIn?: number;
@@ -640,7 +708,9 @@ const LORE_SMART_SPACE_SEARCH_MIN_QUERY = 2;
 const LORE_SMART_SPACE_SEARCH_DEBOUNCE_MS = 220;
 
 function coerceOptionalProgressInt(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.trunc(value);
+  }
   if (typeof value === "string" && value.trim().length > 0) {
     const n = Number(value);
     return Number.isFinite(n) ? Math.trunc(n) : null;
@@ -648,16 +718,25 @@ function coerceOptionalProgressInt(value: unknown): number | null {
   return null;
 }
 
-function readProgressMetaNumber(meta: Record<string, unknown> | undefined, key: string): number | null {
-  if (!meta) return null;
+function readProgressMetaNumber(
+  meta: Record<string, unknown> | undefined,
+  key: string
+): number | null {
+  if (!meta) {
+    return null;
+  }
   const value = coerceOptionalProgressInt(meta[key]);
-  if (value === null) return null;
+  if (value === null) {
+    return null;
+  }
   return value;
 }
 
 function formatEtaLabel(ms: number): string {
   const totalSeconds = Math.max(0, Math.round(ms / 1000));
-  if (totalSeconds < 60) return `~${totalSeconds}s left (estimate)`;
+  if (totalSeconds < 60) {
+    return `~${totalSeconds}s left (estimate)`;
+  }
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   if (minutes >= 60) {
@@ -672,15 +751,27 @@ function formatEtaLabel(ms: number): string {
     : `~${minutes}m left (estimate)`;
 }
 
-function toPlanningStepLabel(phase: string, step?: number, total?: number): string | null {
-  if (!(typeof step === "number" && typeof total === "number" && total > 0)) return null;
-  if (phase === "merge") return `Merge batch ${step} of ${total}`;
-  if (phase === "vault_retrieval") return `Searching vault ${step} of ${total}`;
+function toPlanningStepLabel(
+  phase: string,
+  step?: number,
+  total?: number
+): string | null {
+  if (!(typeof step === "number" && typeof total === "number" && total > 0)) {
+    return null;
+  }
+  if (phase === "merge") {
+    return `Merge batch ${step} of ${total}`;
+  }
+  if (phase === "vault_retrieval") {
+    return `Searching vault ${step} of ${total}`;
+  }
   return `Step ${step} of ${total}`;
 }
 
 function normalizeLoreImportJobEvents(raw: unknown): LoreImportJobEvent[] {
-  if (!Array.isArray(raw)) return [];
+  if (!Array.isArray(raw)) {
+    return [];
+  }
   const allowedKinds = new Set([
     "phase_start",
     "phase_end",
@@ -691,51 +782,85 @@ function normalizeLoreImportJobEvents(raw: unknown): LoreImportJobEvent[] {
   ]);
   return raw
     .map((entry) => {
-      if (!entry || typeof entry !== "object") return null;
+      if (!entry || typeof entry !== "object") {
+        return null;
+      }
       const row = entry as Record<string, unknown>;
       const kind = String(row.kind ?? "").trim();
-      if (!allowedKinds.has(kind)) return null;
+      if (!allowedKinds.has(kind)) {
+        return null;
+      }
       const event: LoreImportJobEvent = {
         kind: kind as LoreImportJobEvent["kind"],
       };
       const ts = String(row.ts ?? "").trim();
-      if (ts) event.ts = ts;
+      if (ts) {
+        event.ts = ts;
+      }
       const phase = String(row.phase ?? "").trim();
-      if (phase) event.phase = phase;
+      if (phase) {
+        event.phase = phase;
+      }
       const model = String(row.model ?? "").trim();
-      if (model) event.model = model;
+      if (model) {
+        event.model = model;
+      }
       const stopReason = String(row.stopReason ?? "").trim();
-      if (stopReason) event.stopReason = stopReason;
+      if (stopReason) {
+        event.stopReason = stopReason;
+      }
       const text = String(row.text ?? "").trim();
-      if (text) event.text = text;
+      if (text) {
+        event.text = text;
+      }
       const ref = String(row.ref ?? "").trim();
-      if (ref) event.ref = ref;
+      if (ref) {
+        event.ref = ref;
+      }
       const responseSnippet = String(row.responseSnippet ?? "").trim();
-      if (responseSnippet) event.responseSnippet = responseSnippet;
+      if (responseSnippet) {
+        event.responseSnippet = responseSnippet;
+      }
       const durationMs = coerceOptionalProgressInt(row.durationMs);
-      if (durationMs !== null && durationMs >= 0) event.durationMs = durationMs;
+      if (durationMs !== null && durationMs >= 0) {
+        event.durationMs = durationMs;
+      }
       const tokensIn = coerceOptionalProgressInt(row.tokensIn);
-      if (tokensIn !== null && tokensIn >= 0) event.tokensIn = tokensIn;
+      if (tokensIn !== null && tokensIn >= 0) {
+        event.tokensIn = tokensIn;
+      }
       const tokensOut = coerceOptionalProgressInt(row.tokensOut);
-      if (tokensOut !== null && tokensOut >= 0) event.tokensOut = tokensOut;
+      if (tokensOut !== null && tokensOut >= 0) {
+        event.tokensOut = tokensOut;
+      }
       return event;
     })
     .filter((event): event is LoreImportJobEvent => Boolean(event));
 }
 
 function formatDurationMs(ms?: number): string | null {
-  if (typeof ms !== "number" || !Number.isFinite(ms) || ms < 0) return null;
-  if (ms < 1000) return `${Math.round(ms)}ms`;
+  if (typeof ms !== "number" || !Number.isFinite(ms) || ms < 0) {
+    return null;
+  }
+  if (ms < 1000) {
+    return `${Math.round(ms)}ms`;
+  }
   const seconds = ms / 1000;
-  if (seconds < 60) return `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`;
+  if (seconds < 60) {
+    return `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`;
+  }
   const minutes = Math.floor(seconds / 60);
   const remSeconds = Math.round(seconds % 60);
   return `${minutes}m ${remSeconds}s`;
 }
 
 function toHumanPhaseLabel(phase?: string): string {
-  const key = String(phase || "").trim().toLowerCase();
-  if (!key) return "Starting…";
+  const key = String(phase || "")
+    .trim()
+    .toLowerCase();
+  if (!key) {
+    return "Starting…";
+  }
   const labels: Record<string, string> = {
     queued: "Queued on the server",
     fallback_plan: "Planning locally",
@@ -748,7 +873,10 @@ function toHumanPhaseLabel(phase?: string): string {
     failed: "Planning failed",
     ready: "Plan ready",
   };
-  return labels[key] ?? key.replace(/[_-]+/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+  return (
+    labels[key] ??
+    key.replace(/[_-]+/g, " ").replace(/\b\w/g, (m) => m.toUpperCase())
+  );
 }
 
 function summarizeQueueCreateFailure(args: {
@@ -759,16 +887,28 @@ function summarizeQueueCreateFailure(args: {
   errorCode?: string;
   dbCode?: string;
 }): string {
-  if (args.status === 503) return "Queue service unavailable (check database configuration)";
-  if (args.status === 403) return "Queue request forbidden for this session";
+  if (args.status === 503) {
+    return "Queue service unavailable (check database configuration)";
+  }
+  if (args.status === 403) {
+    return "Queue request forbidden for this session";
+  }
   if (args.errorCode === "lore_import_job_persist_failed") {
     const db = args.dbCode ? ` (${args.dbCode})` : "";
     return `Queue persistence failed${db}`;
   }
-  if (args.errorCode) return `Queue request failed (${args.errorCode})`;
-  if (args.detail) return args.detail;
-  if (args.error) return args.error;
-  if (args.hint) return args.hint;
+  if (args.errorCode) {
+    return `Queue request failed (${args.errorCode})`;
+  }
+  if (args.detail) {
+    return args.detail;
+  }
+  if (args.error) {
+    return args.error;
+  }
+  if (args.hint) {
+    return args.hint;
+  }
   return `Queue request failed (HTTP ${args.status})`;
 }
 
@@ -810,9 +950,14 @@ function loreImportSuggestedTitle(fileName: string): string {
 }
 
 function shouldUseLocalPdfParse(file: File): boolean {
-  if (!file.name.toLowerCase().endsWith(".pdf")) return false;
+  if (!file.name.toLowerCase().endsWith(".pdf")) {
+    return false;
+  }
   // Vercel can reject large multipart bodies before the route handler runs (HTTP 413).
-  return file.size + LORE_IMPORT_MULTIPART_OVERHEAD_BYTES >= LORE_IMPORT_VERCEL_BODY_LIMIT_BYTES;
+  return (
+    file.size + LORE_IMPORT_MULTIPART_OVERHEAD_BYTES >=
+    LORE_IMPORT_VERCEL_BODY_LIMIT_BYTES
+  );
 }
 
 let loreImportPdfjsWorkerSrcSet = false;
@@ -848,8 +993,14 @@ async function getLoreImportPdfjs(): Promise<LoreImportPdfjsModule> {
 
 async function parsePdfInBrowser(
   file: File,
-  signal?: AbortSignal,
-): Promise<{ text: string; truncated: boolean; pageCount: number; parsedPages: number; failedPages: number }> {
+  signal?: AbortSignal
+): Promise<{
+  text: string;
+  truncated: boolean;
+  pageCount: number;
+  parsedPages: number;
+  failedPages: number;
+}> {
   if (signal?.aborted) {
     throw new DOMException("Aborted", "AbortError");
   }
@@ -874,7 +1025,9 @@ async function parsePdfInBrowser(
         try {
           const textContent = await page.getTextContent();
           const pageText = textContent.items
-            .map((item) => ("str" in item && typeof item.str === "string" ? item.str : ""))
+            .map((item) =>
+              "str" in item && typeof item.str === "string" ? item.str : ""
+            )
             .filter(Boolean)
             .join(" ")
             .trim();
@@ -884,20 +1037,32 @@ async function parsePdfInBrowser(
           }
           if (chunks.length > 0) {
             const remaining = LORE_IMPORT_LOCAL_PDF_MAX_CHARS - charCount;
-            if (remaining <= 0) break;
+            if (remaining <= 0) {
+              break;
+            }
             const spacer = "\n\n";
-            const spacing = spacer.length > remaining ? spacer.slice(0, remaining) : spacer;
+            const spacing =
+              spacer.length > remaining ? spacer.slice(0, remaining) : spacer;
             chunks.push(spacing);
             charCount += spacing.length;
-            if (spacing.length < spacer.length) break;
+            if (spacing.length < spacer.length) {
+              break;
+            }
           }
           const remaining = LORE_IMPORT_LOCAL_PDF_MAX_CHARS - charCount;
-          if (remaining <= 0) break;
-          const next = pageText.length > remaining ? pageText.slice(0, remaining) : pageText;
+          if (remaining <= 0) {
+            break;
+          }
+          const next =
+            pageText.length > remaining
+              ? pageText.slice(0, remaining)
+              : pageText;
           chunks.push(next);
           charCount += next.length;
           parsedPages += 1;
-          if (next.length < pageText.length) break;
+          if (next.length < pageText.length) {
+            break;
+          }
         } finally {
           page.cleanup();
         }
@@ -924,12 +1089,18 @@ async function parsePdfInBrowser(
 }
 
 function isAbortError(error: unknown): boolean {
-  if (!error) return false;
-  if (error instanceof DOMException && error.name === "AbortError") return true;
+  if (!error) {
+    return false;
+  }
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return true;
+  }
   if (error instanceof Error) {
     const name = error.name.toLowerCase();
     const msg = error.message.toLowerCase();
-    return name === "aborterror" || msg.includes("aborted") || msg.includes("abort");
+    return (
+      name === "aborterror" || msg.includes("aborted") || msg.includes("abort")
+    );
   }
   return false;
 }
@@ -958,33 +1129,53 @@ async function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
 
 function upsertClarificationAnswer(
   prev: ClarificationAnswer[],
-  next: ClarificationAnswer,
+  next: ClarificationAnswer
 ): ClarificationAnswer[] {
-  return [...prev.filter((a) => a.clarificationId !== next.clarificationId), next];
+  return [
+    ...prev.filter((a) => a.clarificationId !== next.clarificationId),
+    next,
+  ];
 }
 
 function recommendedClarificationOptionId(
-  c: LoreImportClarificationItem,
+  c: LoreImportClarificationItem
 ): string | undefined {
   const r = c.options.find((o) => o.recommended);
   return r?.id ?? c.options[0]?.id;
 }
 
 function clarificationConfidenceScore(c: LoreImportClarificationItem): number {
-  if (typeof c.confidenceScore === "number" && Number.isFinite(c.confidenceScore)) {
+  if (
+    typeof c.confidenceScore === "number" &&
+    Number.isFinite(c.confidenceScore)
+  ) {
     return Math.max(0, Math.min(1, c.confidenceScore));
   }
-  if (c.questionKind === "confirm_default") return 0.78;
-  if (c.severity === "required") return 0.44;
+  if (c.questionKind === "confirm_default") {
+    return 0.78;
+  }
+  if (c.severity === "required") {
+    return 0.44;
+  }
   return 0.62;
 }
 
 function isClarificationAnswered(a: ClarificationAnswer | undefined): boolean {
-  if (!a) return false;
-  if (a.resolution === "answered") return (a.selectedOptionIds?.length ?? 0) > 0;
-  if (a.resolution === "skipped_default") return !!a.skipDefaultOptionId;
-  if (a.resolution === "other_text") return (a.otherText?.trim().length ?? 0) >= 4;
-  if (a.resolution === "skipped_best_judgement") return true;
+  if (!a) {
+    return false;
+  }
+  if (a.resolution === "answered") {
+    return (a.selectedOptionIds?.length ?? 0) > 0;
+  }
+  if (a.resolution === "skipped_default") {
+    return !!a.skipDefaultOptionId;
+  }
+  if (a.resolution === "other_text") {
+    return (a.otherText?.trim().length ?? 0) >= 4;
+  }
+  if (a.resolution === "skipped_best_judgement") {
+    return true;
+  }
   return false;
 }
 
@@ -1002,9 +1193,15 @@ function reportItemLinkFailure(
   res: Response,
   rawText: string,
   body: Record<string, unknown>,
-  logicalOk: boolean,
+  logicalOk: boolean
 ): string {
-  const d = syncFailureFromApiResponse(operation, res, rawText, body, logicalOk);
+  const d = syncFailureFromApiResponse(
+    operation,
+    res,
+    rawText,
+    body,
+    logicalOk
+  );
   const msg =
     d?.message ??
     (rawText.trim() ? rawText.trim().slice(0, 200) : `HTTP ${res.status}`);
@@ -1014,9 +1211,10 @@ function reportItemLinkFailure(
         operation,
         httpStatus: res.status,
         message: msg,
-        responseSnippet: rawText.length > 800 ? `${rawText.slice(0, 800)}…` : rawText,
+        responseSnippet:
+          rawText.length > 800 ? `${rawText.slice(0, 800)}…` : rawText,
         cause: "http",
-      },
+      }
     );
   }
   return msg;
@@ -1036,13 +1234,15 @@ async function deleteItemLinkByDbId(dbLinkId: string): Promise<void> {
 
 async function postItemLinkFromConnectionSnapshot(
   c: CanvasPinConnection,
-  entities: Record<string, CanvasEntity>,
+  entities: Record<string, CanvasEntity>
 ): Promise<{ ok: boolean; dbLinkId: string | null }> {
   const sourceEntity = entities[c.sourceEntityId];
   const targetEntity = entities[c.targetEntityId];
-  const sourceItemId = sourceEntity?.persistedItemId ?? sourceEntity?.id ?? null;
-  const targetItemId = targetEntity?.persistedItemId ?? targetEntity?.id ?? null;
-  if (!isUuidLike(sourceItemId) || !isUuidLike(targetItemId)) {
+  const sourceItemId =
+    sourceEntity?.persistedItemId ?? sourceEntity?.id ?? null;
+  const targetItemId =
+    targetEntity?.persistedItemId ?? targetEntity?.id ?? null;
+  if (!(isUuidLike(sourceItemId) && isUuidLike(targetItemId))) {
     return { ok: false, dbLinkId: null };
   }
   try {
@@ -1060,7 +1260,7 @@ async function postItemLinkFromConnectionSnapshot(
           sourcePinConfig: c.sourcePin,
           targetPinConfig: c.targetPin,
           slackMultiplier: clampLinkMetaSlackMultiplier(
-            c.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER,
+            c.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER
           ),
         },
       }),
@@ -1073,12 +1273,19 @@ async function postItemLinkFromConnectionSnapshot(
     };
     const logicalOk = res.ok && body.ok === true;
     if (!logicalOk) {
-      reportItemLinkFailure("POST /api/item-links (history)", res, rawText, body, logicalOk);
+      reportItemLinkFailure(
+        "POST /api/item-links (history)",
+        res,
+        rawText,
+        body,
+        logicalOk
+      );
       return { ok: false, dbLinkId: null };
     }
     return { ok: true, dbLinkId: body.link?.id ?? null };
   } catch (error) {
-    const msg = error instanceof Error ? error.message : "Failed to persist link";
+    const msg =
+      error instanceof Error ? error.message : "Failed to persist link";
     if (getNeonSyncSnapshot().cloudEnabled) {
       neonSyncReportAuxiliaryFailure({
         operation: "POST /api/item-links (history)",
@@ -1113,18 +1320,33 @@ function createBootstrapPendingGraph(): CanvasGraph {
 const EMPTY_ENTITY_IDS: readonly string[] = [];
 
 /** True when lengths match and each index is `===` (for selection / id-list no-op updates). */
-function sameOrderedStringIds(a: readonly string[], b: readonly string[]): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+function sameOrderedStringIds(
+  a: readonly string[],
+  b: readonly string[]
+): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
   return true;
 }
 /** Stable `collapsedStacks` when there are no multi-card stacks (avoids effect loops on new `[]` each render). */
-const EMPTY_COLLAPSED_STACKS: { stackId: string; entities: CanvasEntity[]; top: CanvasEntity }[] = [];
+const EMPTY_COLLAPSED_STACKS: {
+  stackId: string;
+  entities: CanvasEntity[];
+  top: CanvasEntity;
+}[] = [];
 /** Skip O(n) palette indexing when the command palette is closed (hot path on every node add / graph mutation). */
 const EMPTY_PALETTE_ITEMS: PaletteItem[] = [];
 const EMPTY_PALETTE_SPACES: PaletteSpace[] = [];
-const EMPTY_STACK_BOUNDS: Record<string, { left: number; top: number; width: number; height: number }> =
-  {};
+const EMPTY_STACK_BOUNDS: Record<
+  string,
+  { left: number; top: number; width: number; height: number }
+> = {};
 
 /** Integer px so JSON compare in stack bounds effects does not churn on subpixel rect noise (infinite re-renders). */
 function snapStackBoundsRect(r: {
@@ -1142,9 +1364,15 @@ function snapStackBoundsRect(r: {
 }
 
 /** Client rect union of `[data-stack-layer]` — tall lore cards exceed `.stackContainer`’s CSS min box. */
-function unionBoundingRectFromStackLayers(container: HTMLElement): DOMRect | null {
-  const layers = Array.from(container.querySelectorAll<HTMLElement>("[data-stack-layer='true']"));
-  if (layers.length === 0) return null;
+function unionBoundingRectFromStackLayers(
+  container: HTMLElement
+): DOMRect | null {
+  const layers = Array.from(
+    container.querySelectorAll<HTMLElement>("[data-stack-layer='true']")
+  );
+  if (layers.length === 0) {
+    return null;
+  }
   let minX = Number.POSITIVE_INFINITY;
   let minY = Number.POSITIVE_INFINITY;
   let maxX = Number.NEGATIVE_INFINITY;
@@ -1156,7 +1384,9 @@ function unionBoundingRectFromStackLayers(container: HTMLElement): DOMRect | nul
     maxX = Math.max(maxX, r.right);
     maxY = Math.max(maxY, r.bottom);
   }
-  if (!Number.isFinite(minX) || !Number.isFinite(minY)) return null;
+  if (!(Number.isFinite(minX) && Number.isFinite(minY))) {
+    return null;
+  }
   return {
     left: minX,
     top: minY,
@@ -1172,15 +1402,25 @@ function unionBoundingRectFromStackLayers(container: HTMLElement): DOMRect | nul
 
 /** Avoid setState loops: layout can still jitter by 1px between frames after rounding. */
 function stackBoundsRecordsVisuallyEqual(
-  prev: Record<string, { left: number; top: number; width: number; height: number }>,
-  next: Record<string, { left: number; top: number; width: number; height: number }>,
-  tolPx: number,
+  prev: Record<
+    string,
+    { left: number; top: number; width: number; height: number }
+  >,
+  next: Record<
+    string,
+    { left: number; top: number; width: number; height: number }
+  >,
+  tolPx: number
 ): boolean {
   const pk = Object.keys(prev).sort();
   const nk = Object.keys(next).sort();
-  if (pk.length !== nk.length) return false;
+  if (pk.length !== nk.length) {
+    return false;
+  }
   for (let i = 0; i < pk.length; i++) {
-    if (pk[i] !== nk[i]) return false;
+    if (pk[i] !== nk[i]) {
+      return false;
+    }
   }
   for (const k of pk) {
     const a = prev[k]!;
@@ -1260,8 +1500,8 @@ function clampFollowCamera(cam: CameraState): CameraState {
       HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MAX,
       Math.max(
         HEARTGARDEN_PRESENCE_CAMERA_ZOOM_MIN,
-        Number.isFinite(cam.zoom) ? cam.zoom : 1,
-      ),
+        Number.isFinite(cam.zoom) ? cam.zoom : 1
+      )
     ),
   };
 }
@@ -1270,7 +1510,7 @@ function clampFollowCamera(cam: CameraState): CameraState {
 function viewportCssSizeForDefaultCamera(
   viewportEl: HTMLDivElement | null,
   fallbackWidth: number,
-  fallbackHeight: number,
+  fallbackHeight: number
 ): { width: number; height: number } {
   const rect = viewportEl?.getBoundingClientRect();
   const w =
@@ -1278,40 +1518,50 @@ function viewportCssSizeForDefaultCamera(
       ? rect.width
       : fallbackWidth > 0
         ? fallbackWidth
-        : typeof window !== "undefined"
-          ? window.innerWidth
-          : 0;
+        : typeof window === "undefined"
+          ? 0
+          : window.innerWidth;
   const h =
     rect && rect.height > 0
       ? rect.height
       : fallbackHeight > 0
         ? fallbackHeight
-        : typeof window !== "undefined"
-          ? window.innerHeight
-          : 0;
+        : typeof window === "undefined"
+          ? 0
+          : window.innerHeight;
   return { width: Math.max(1, w), height: Math.max(1, h) };
 }
 
 function collectDeletionClosure(
   graph: CanvasGraph,
-  roots: string[],
+  roots: string[]
 ): { entityIds: string[]; spaceIds: string[] } {
   const entityIdsToDelete = new Set<string>();
   const spaceIdsToDelete = new Set<string>();
 
   const markEntity = (entityId: string) => {
-    if (entityIdsToDelete.has(entityId)) return;
+    if (entityIdsToDelete.has(entityId)) {
+      return;
+    }
     const entity = graph.entities[entityId];
-    if (!entity) return;
+    if (!entity) {
+      return;
+    }
     entityIdsToDelete.add(entityId);
 
-    if (entity.kind !== "folder") return;
+    if (entity.kind !== "folder") {
+      return;
+    }
     const stack = [entity.childSpaceId];
     while (stack.length > 0) {
       const spaceId = stack.pop();
-      if (!spaceId || spaceIdsToDelete.has(spaceId)) continue;
+      if (!spaceId || spaceIdsToDelete.has(spaceId)) {
+        continue;
+      }
       const space = graph.spaces[spaceId];
-      if (!space) continue;
+      if (!space) {
+        continue;
+      }
       spaceIdsToDelete.add(spaceId);
       space.entityIds.forEach(markEntity);
       Object.values(graph.spaces).forEach((candidate) => {
@@ -1329,15 +1579,21 @@ function collectDeletionClosure(
 }
 
 /** Spaces to delete remotely: each root of a subtree within `spaceIds` (avoid duplicate DELETE calls). */
-function filterSpaceDeletionRoots(spaceIds: string[], graph: CanvasGraph): string[] {
+function filterSpaceDeletionRoots(
+  spaceIds: string[],
+  graph: CanvasGraph
+): string[] {
   const set = new Set(spaceIds.filter((id) => id !== graph.rootSpaceId));
   return [...set].filter((id) => {
     const p = graph.spaces[id]?.parentSpaceId ?? null;
-    return !p || !set.has(p);
+    return !(p && set.has(p));
   });
 }
 
-function createRopeRuntime(start: { x: number; y: number }, end: { x: number; y: number }): RopeRuntime {
+function createRopeRuntime(
+  start: { x: number; y: number },
+  end: { x: number; y: number }
+): RopeRuntime {
   const points: RopePoint[] = [];
   const constraints: RopeConstraint[] = [];
   const distance = Math.hypot(end.x - start.x, end.y - start.y);
@@ -1365,12 +1621,16 @@ function resolveConnectionPin(
   pin: CanvasConnectionPin,
   activeSpaceId: string,
   graph: CanvasGraph,
-  view?: ConnectionPinViewContext,
+  view?: ConnectionPinViewContext
 ): { x: number; y: number } | null {
   const entity = graph.entities[entityId];
-  if (!entity) return null;
+  if (!entity) {
+    return null;
+  }
   const slot = entity.slots[activeSpaceId];
-  if (!slot) return null;
+  if (!slot) {
+    return null;
+  }
   const normalizedPin =
     pin.anchor === "topLeftInset"
       ? entity.kind === "folder"
@@ -1390,7 +1650,9 @@ function resolveConnectionPin(
   const nodeSel = `[data-node-id="${escapedId}"][data-space-id="${escapedSpace}"]`;
   /* Fan stage is a shell sibling of the canvas; when the stack modal is open, match it first so
      threads follow the fanned cards instead of the (still-mounted) collapsed stack under the scrim. */
-  const fanStage = document.querySelector<HTMLElement>("[data-stack-fan-stage='true']");
+  const fanStage = document.querySelector<HTMLElement>(
+    "[data-stack-fan-stage='true']"
+  );
   const placement =
     (fanStage?.querySelector<HTMLElement>(nodeSel) as HTMLElement | null) ??
     document.querySelector<HTMLElement>(nodeSel);
@@ -1416,10 +1678,14 @@ function resolveConnectionPin(
       }
     }
 
-    const w = placement.offsetWidth || (entity.kind === "folder" ? FOLDER_CARD_WIDTH : entity.width ?? UNIFIED_NODE_WIDTH);
+    const w =
+      placement.offsetWidth ||
+      (entity.kind === "folder"
+        ? FOLDER_CARD_WIDTH
+        : (entity.width ?? UNIFIED_NODE_WIDTH));
     const h =
       placement.offsetHeight ||
-      (entity.kind === "folder" ? FOLDER_CARD_HEIGHT : entity.height ?? 280);
+      (entity.kind === "folder" ? FOLDER_CARD_HEIGHT : (entity.height ?? 280));
     const rad = (entity.rotation * Math.PI) / 180;
     const cx = w / 2;
     const cy = h / 2;
@@ -1428,7 +1694,9 @@ function resolveConnectionPin(
     let insetY = normalizedPin.insetY;
     const applyAnchor = (selector: string) => {
       const anchor = placement!.querySelector<HTMLElement>(selector);
-      if (!anchor) return;
+      if (!anchor) {
+        return;
+      }
       let ax = anchor.offsetLeft + anchor.offsetWidth / 2;
       let ay = anchor.offsetTop + anchor.offsetHeight / 2;
       let op: HTMLElement | null = anchor.offsetParent as HTMLElement | null;
@@ -1468,9 +1736,11 @@ function resolveConnectionPin(
 /** Live placement size for persistence / bounds — same node resolution as connection pins. */
 function measureArchitecturalNodePlacement(
   entityId: string,
-  spaceId: string,
+  spaceId: string
 ): { width: number; height: number } | null {
-  if (typeof document === "undefined") return null;
+  if (typeof document === "undefined") {
+    return null;
+  }
   const escapedId =
     typeof CSS !== "undefined" && typeof CSS.escape === "function"
       ? CSS.escape(entityId)
@@ -1480,19 +1750,27 @@ function measureArchitecturalNodePlacement(
       ? CSS.escape(spaceId)
       : spaceId.replace(/"/g, '\\"');
   const nodeSel = `[data-node-id="${escapedId}"][data-space-id="${escapedSpace}"]`;
-  const fanStage = document.querySelector<HTMLElement>("[data-stack-fan-stage='true']");
+  const fanStage = document.querySelector<HTMLElement>(
+    "[data-stack-fan-stage='true']"
+  );
   const placement =
     (fanStage?.querySelector<HTMLElement>(nodeSel) as HTMLElement | null) ??
     document.querySelector<HTMLElement>(nodeSel);
-  if (!placement) return null;
+  if (!placement) {
+    return null;
+  }
   const w = placement.offsetWidth;
   const h = placement.offsetHeight;
-  if (w < 8 || h < 8) return null;
+  if (w < 8 || h < 8) {
+    return null;
+  }
   return { width: w, height: h };
 }
 
 function tapeVariantForTheme(theme: ContentTheme): TapeVariant {
-  if (theme === "code" || theme === "media") return "dark";
+  if (theme === "code" || theme === "media") {
+    return "dark";
+  }
   return "clear";
 }
 
@@ -1503,20 +1781,27 @@ function isLoreCreateNodeType(type: NodeTheme): type is LoreCardKind {
 /** Character is always v11. Location defaults to ORDO v7; v1 migrates to v7. Faction: explicit v1–v3 or default. */
 function resolveLoreVariantForCreate(
   type: LoreCardKind,
-  requested: LoreCardVariant | undefined,
+  requested: LoreCardVariant | undefined
 ): LoreCardVariant {
   if (type === "character") {
     return defaultLoreCardVariantForKind(type);
   }
   if (type === "location") {
-    if (requested === "v1") return "v7";
+    if (requested === "v1") {
+      return "v7";
+    }
     if (requested === "v2" || requested === "v3" || requested === "v7") {
       return requested;
     }
     return defaultLoreCardVariantForKind(type);
   }
   if (type === "faction") {
-    if (requested === "v1" || requested === "v2" || requested === "v3" || requested === "v4") {
+    if (
+      requested === "v1" ||
+      requested === "v2" ||
+      requested === "v3" ||
+      requested === "v4"
+    ) {
       return "v4";
     }
     return defaultLoreCardVariantForKind(type);
@@ -1538,15 +1823,20 @@ function jsonStableStringify(value: unknown): string {
 
 function folderPreviewTitles(
   folder: Extract<CanvasEntity, { kind: "folder" }>,
-  graph: CanvasGraph,
+  graph: CanvasGraph
 ): string[] {
   const childSpace = graph.spaces[folder.childSpaceId];
-  if (!childSpace) return [];
+  if (!childSpace) {
+    return [];
+  }
 
   return [...childSpace.entityIds]
     .reverse()
     .map((entityId) => graph.entities[entityId])
-    .filter((entity): entity is Extract<CanvasEntity, { kind: "content" }> => entity?.kind === "content")
+    .filter(
+      (entity): entity is Extract<CanvasEntity, { kind: "content" }> =>
+        entity?.kind === "content"
+    )
     .slice(0, FOLDER_CONTENT_PREVIEW_MAX_LINES)
     .map((entity) => normalizedFocusTitle(entity.title));
 }
@@ -1572,19 +1862,20 @@ function patchTouchesItemContent(patch: Record<string, unknown>): boolean {
 function applyUnstackStackInSpace(
   snapshot: CanvasGraph,
   stackId: string,
-  spaceId: string,
+  spaceId: string
 ): CanvasGraph {
   const next = shallowCloneGraph(snapshot);
   const members = Object.values(next.entities)
     .filter(
       (entity): entity is Extract<CanvasEntity, { kind: "content" }> =>
-        entity.kind === "content" && entity.stackId === stackId,
+        entity.kind === "content" && entity.stackId === stackId
     )
     .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0));
-  if (members.length === 0) return next;
+  if (members.length === 0) {
+    return next;
+  }
 
-  const anchor =
-    members[members.length - 1]?.slots[spaceId] ??
+  const anchor = members[members.length - 1]?.slots[spaceId] ??
     members[0]?.slots[spaceId] ?? { x: 0, y: 0 };
   const cols = Math.max(1, Math.min(3, Math.ceil(Math.sqrt(members.length))));
   const spacingX = 72;
@@ -1612,12 +1903,14 @@ function applyUnstackStackInSpace(
 
 function buildStackGroupsForActiveSpace(
   graph: CanvasGraph,
-  activeSpaceEntityIds: readonly string[],
+  activeSpaceEntityIds: readonly string[]
 ): Map<string, CanvasEntity[]> {
   const groups = new Map<string, CanvasEntity[]>();
   for (const id of activeSpaceEntityIds) {
     const entity = graph.entities[id];
-    if (!entity?.stackId) continue;
+    if (!entity?.stackId) {
+      continue;
+    }
     const arr = groups.get(entity.stackId) ?? [];
     arr.push(entity);
     groups.set(entity.stackId, arr);
@@ -1625,7 +1918,7 @@ function buildStackGroupsForActiveSpace(
   groups.forEach((arr, key) => {
     groups.set(
       key,
-      [...arr].sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0)),
+      [...arr].sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0))
     );
   });
   return groups;
@@ -1635,15 +1928,19 @@ function buildStackGroupsForActiveSpace(
 function getStackSelectionState(
   graph: CanvasGraph,
   activeSpaceId: string,
-  selectedNodeIds: readonly string[],
+  selectedNodeIds: readonly string[]
 ) {
   const activeSpaceEntityIds = graph.spaces[activeSpaceId]?.entityIds ?? [];
 
   const selectedVisibleDeduped: string[] = [];
   const seenVis = new Set<string>();
   for (const id of selectedNodeIds) {
-    if (!activeSpaceEntityIds.includes(id)) continue;
-    if (seenVis.has(id)) continue;
+    if (!activeSpaceEntityIds.includes(id)) {
+      continue;
+    }
+    if (seenVis.has(id)) {
+      continue;
+    }
     seenVis.add(id);
     selectedVisibleDeduped.push(id);
   }
@@ -1652,19 +1949,30 @@ function getStackSelectionState(
   const seen = new Set<string>();
   for (const id of selectedVisibleDeduped) {
     const e = graph.entities[id];
-    if (e?.kind !== "content") continue;
-    if (seen.has(id)) continue;
+    if (e?.kind !== "content") {
+      continue;
+    }
+    if (seen.has(id)) {
+      continue;
+    }
     seen.add(id);
     ordered.push(id);
   }
   const selectedContentSet = new Set(ordered);
 
-  const stackGroups = buildStackGroupsForActiveSpace(graph, activeSpaceEntityIds);
+  const stackGroups = buildStackGroupsForActiveSpace(
+    graph,
+    activeSpaceEntityIds
+  );
 
   const whollySelectedStackIds: string[] = [];
   stackGroups.forEach((members, stackId) => {
-    if (members.length < 2) return;
-    if (members.every((m) => selectedContentSet.has(m.id))) whollySelectedStackIds.push(stackId);
+    if (members.length < 2) {
+      return;
+    }
+    if (members.every((m) => selectedContentSet.has(m.id))) {
+      whollySelectedStackIds.push(stackId);
+    }
   });
 
   const union = new Set<string>();
@@ -1693,11 +2001,13 @@ function getStackSelectionState(
 function isDescendantSpace(
   candidateId: string,
   ancestorId: string,
-  spaces: Record<string, CanvasSpace>,
+  spaces: Record<string, CanvasSpace>
 ): boolean {
   let currentId: string | null = candidateId;
   while (currentId) {
-    if (currentId === ancestorId) return true;
+    if (currentId === ancestorId) {
+      return true;
+    }
     currentId = spaces[currentId]?.parentSpaceId ?? null;
   }
   return false;
@@ -1706,9 +2016,11 @@ function isDescendantSpace(
 function buildPathToSpace(
   spaceId: string,
   spaces: Record<string, CanvasSpace>,
-  rootSpaceId: string,
+  rootSpaceId: string
 ): string[] {
-  if (!spaces[spaceId]) return [rootSpaceId];
+  if (!spaces[spaceId]) {
+    return [rootSpaceId];
+  }
   const path: string[] = [];
   let currentId: string | null = spaceId;
   while (currentId && spaces[currentId]) {
@@ -1723,8 +2035,14 @@ function buildPathToSpace(
 
 function isEditableTarget(target: EventTarget | null) {
   const el = pointerEventTargetElement(target);
-  if (!el) return false;
-  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
+  if (!el) {
+    return false;
+  }
+  if (
+    el instanceof HTMLInputElement ||
+    el instanceof HTMLTextAreaElement ||
+    el instanceof HTMLSelectElement
+  ) {
     return true;
   }
   /* Text nodes have no isContentEditable; host uses React contenteditable="" (not [contenteditable="true"]). */
@@ -1733,7 +2051,9 @@ function isEditableTarget(target: EventTarget | null) {
 
 /** Mirrors `BufferedContentEditable` caret probes — canvas delete must not steal real text edits. */
 function canvasCaretIsAtStartOfHost(host: HTMLElement, range: Range): boolean {
-  if (!range.collapsed) return false;
+  if (!range.collapsed) {
+    return false;
+  }
   const probe = document.createRange();
   try {
     probe.setStart(host, 0);
@@ -1745,7 +2065,9 @@ function canvasCaretIsAtStartOfHost(host: HTMLElement, range: Range): boolean {
 }
 
 function canvasCaretIsAtEndOfHost(host: HTMLElement, range: Range): boolean {
-  if (!range.collapsed || !host.contains(range.startContainer)) return false;
+  if (!(range.collapsed && host.contains(range.startContainer))) {
+    return false;
+  }
   const end = document.createRange();
   try {
     end.selectNodeContents(host);
@@ -1759,18 +2081,28 @@ function canvasCaretIsAtEndOfHost(host: HTMLElement, range: Range): boolean {
   }
 }
 
-function resolveCanvasDataNodeIdFromTarget(target: EventTarget | null): string | null {
+function resolveCanvasDataNodeIdFromTarget(
+  target: EventTarget | null
+): string | null {
   const el = pointerEventTargetElement(target);
-  if (!el) return null;
+  if (!el) {
+    return null;
+  }
   const node = el.closest("[data-node-id]") as HTMLElement | null;
   const id = node?.dataset.nodeId;
   return id && id.length > 0 ? id : null;
 }
 
-function resolveCanvasRichBodyHostFromTarget(target: EventTarget | null): HTMLElement | null {
+function resolveCanvasRichBodyHostFromTarget(
+  target: EventTarget | null
+): HTMLElement | null {
   const el = pointerEventTargetElement(target);
-  if (!el) return null;
-  return el.closest("[data-hg-rich-editor-host], [data-hg-doc-editor]") as HTMLElement | null;
+  if (!el) {
+    return null;
+  }
+  return el.closest(
+    "[data-hg-rich-editor-host], [data-hg-doc-editor]"
+  ) as HTMLElement | null;
 }
 
 /**
@@ -1781,23 +2113,31 @@ function resolveCanvasRichBodyHostFromTarget(target: EventTarget | null): HTMLEl
 function shouldAllowCanvasDeleteWhileEditableBodyFocused(
   target: EventTarget | null,
   selectedNodeIds: readonly string[],
-  event: KeyboardEvent,
+  event: KeyboardEvent
 ): boolean {
   const nodeId = resolveCanvasDataNodeIdFromTarget(target);
-  if (!nodeId || !selectedNodeIds.includes(nodeId)) return false;
+  if (!(nodeId && selectedNodeIds.includes(nodeId))) {
+    return false;
+  }
 
   const host = resolveCanvasRichBodyHostFromTarget(target);
-  if (!host) return false;
+  if (!host) {
+    return false;
+  }
 
-  const sel = typeof window !== "undefined" ? window.getSelection() : null;
-  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
+  const sel = typeof window === "undefined" ? null : window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) {
+    return false;
+  }
   const range = sel.getRangeAt(0);
 
   if (event.key === "Delete") {
     return canvasCaretIsAtEndOfHost(host, range);
   }
   if (event.key === "Backspace") {
-    if (!canvasCaretIsAtStartOfHost(host, range)) return false;
+    if (!canvasCaretIsAtStartOfHost(host, range)) {
+      return false;
+    }
     if (host.matches("[data-hg-rich-editor-host]")) {
       return host.getAttribute("data-arch-doc-empty") === "true";
     }
@@ -1816,38 +2156,54 @@ function shouldAllowCanvasDeleteWhileEditableBodyFocused(
  * Excludes titles (focus overlay, folder names), plain-text fields, and other inputs.
  */
 function isTextFormattingToolbarTarget(focusEl: Element | null): boolean {
-  return !!(focusEl instanceof HTMLElement && focusEl.closest("[data-hg-doc-editor]"));
+  return !!(
+    focusEl instanceof HTMLElement && focusEl.closest("[data-hg-doc-editor]")
+  );
 }
 
 /** Caret is in a prose body surface (not card titles) — in-document insert tools apply. */
 function isRichDocBodyFormattingTarget(focusEl: Element | null): boolean {
   const surface = resolveActiveRichEditorSurface(focusEl);
-  if (!surface.root) return false;
-  if (!surface.root.matches("[data-hg-doc-editor]")) return false;
+  if (!surface.root) {
+    return false;
+  }
+  if (!surface.root.matches("[data-hg-doc-editor]")) {
+    return false;
+  }
   return caretIsWithinRichDocInsertRegion(focusEl, surface.root, surface.kind);
 }
 
-function normalizeFormatBlockTag(value: string | null | undefined): "p" | "h1" | "h2" | "h3" | "blockquote" {
-  const cleaned = (value ?? "")
-    .toLowerCase()
-    .replace(/[<>]/g, "")
-    .trim();
-  if (cleaned === "h1" || cleaned === "h2" || cleaned === "h3" || cleaned === "blockquote") {
+function normalizeFormatBlockTag(
+  value: string | null | undefined
+): "p" | "h1" | "h2" | "h3" | "blockquote" {
+  const cleaned = (value ?? "").toLowerCase().replace(/[<>]/g, "").trim();
+  if (
+    cleaned === "h1" ||
+    cleaned === "h2" ||
+    cleaned === "h3" ||
+    cleaned === "blockquote"
+  ) {
     return cleaned;
   }
   return "p";
 }
 
 function isNodeWithin(element: HTMLElement, candidate: Node | null): boolean {
-  if (!candidate) return false;
-  if (candidate === element) return true;
+  if (!candidate) {
+    return false;
+  }
+  if (candidate === element) {
+    return true;
+  }
   return element.contains(candidate);
 }
 
 function placeCaretAtEnd(element: HTMLElement) {
   element.focus();
   const selection = window.getSelection();
-  if (!selection) return;
+  if (!selection) {
+    return;
+  }
   const range = document.createRange();
   range.selectNodeContents(element);
   range.collapse(false);
@@ -1857,24 +2213,37 @@ function placeCaretAtEnd(element: HTMLElement) {
 
 function shouldNormalizeChecklistMarkup(
   html: string,
-  taskItemClass: string,
+  taskItemClass: string
 ): boolean {
-  return html.includes(taskItemClass) || html.includes('data-arch-checklist="true"');
+  return (
+    html.includes(taskItemClass) || html.includes('data-arch-checklist="true"')
+  );
 }
 
 function normalizeChecklistMarkup(
   html: string,
-  classes: { taskItem: string; taskCheckbox: string; taskText: string; done: string },
+  classes: {
+    taskItem: string;
+    taskCheckbox: string;
+    taskText: string;
+    done: string;
+  }
 ): string {
-  if (typeof document === "undefined") return html;
-  if (!shouldNormalizeChecklistMarkup(html, classes.taskItem)) return html;
+  if (typeof document === "undefined") {
+    return html;
+  }
+  if (!shouldNormalizeChecklistMarkup(html, classes.taskItem)) {
+    return html;
+  }
 
   const doc = new DOMParser().parseFromString(
     `<div id="__arch_task_parse">${html}</div>`,
-    "text/html",
+    "text/html"
   );
   const wrap = doc.getElementById("__arch_task_parse");
-  if (!wrap) return html;
+  if (!wrap) {
+    return html;
+  }
 
   wrap.querySelectorAll("ul[data-arch-checklist='true']").forEach((ul) => {
     const frag = doc.createDocumentFragment();
@@ -1884,7 +2253,9 @@ function normalizeChecklistMarkup(
       item.setAttribute("contenteditable", "false");
 
       const checked = !!li.querySelector("input[type='checkbox']:checked");
-      if (checked) item.classList.add(classes.done);
+      if (checked) {
+        item.classList.add(classes.done);
+      }
 
       const checkbox = doc.createElement("div");
       checkbox.setAttribute("class", classes.taskCheckbox);
@@ -1895,7 +2266,8 @@ function normalizeChecklistMarkup(
       text.setAttribute("class", classes.taskText);
       text.setAttribute("contenteditable", "true");
       text.setAttribute("data-arch-task-text", "true");
-      text.innerHTML = li.innerHTML.replace(/<input[^>]*>/gi, "").trim() || "New item";
+      text.innerHTML =
+        li.innerHTML.replace(/<input[^>]*>/gi, "").trim() || "New item";
       item.appendChild(text);
       frag.appendChild(item);
     });
@@ -1905,7 +2277,9 @@ function normalizeChecklistMarkup(
   wrap.querySelectorAll(`.${classes.taskItem}`).forEach((taskItemEl) => {
     const taskItem = taskItemEl as HTMLElement;
     taskItem.setAttribute("contenteditable", "false");
-    let checkbox = taskItem.querySelector<HTMLElement>(`.${classes.taskCheckbox}`);
+    let checkbox = taskItem.querySelector<HTMLElement>(
+      `.${classes.taskCheckbox}`
+    );
     if (!checkbox) {
       checkbox = doc.createElement("div");
       checkbox.setAttribute("class", classes.taskCheckbox);
@@ -1914,7 +2288,9 @@ function normalizeChecklistMarkup(
     checkbox.setAttribute("contenteditable", "false");
 
     let taskText = taskItem.querySelector<HTMLElement>(`.${classes.taskText}`);
-    if (!taskText) {
+    if (taskText) {
+      taskText.setAttribute("data-arch-task-text", "true");
+    } else {
       taskText = doc.createElement("div");
       taskText.setAttribute("class", classes.taskText);
       taskText.setAttribute("contenteditable", "true");
@@ -1922,7 +2298,9 @@ function normalizeChecklistMarkup(
 
       const textParts: string[] = [];
       Array.from(taskItem.childNodes).forEach((node) => {
-        if (node === checkbox || node === taskText) return;
+        if (node === checkbox || node === taskText) {
+          return;
+        }
         if (
           node.nodeType === Node.ELEMENT_NODE &&
           (node as Element).classList.contains(classes.taskCheckbox)
@@ -1937,14 +2315,14 @@ function normalizeChecklistMarkup(
         }
         const value =
           node.nodeType === Node.TEXT_NODE
-            ? node.textContent ?? ""
-            : (node as HTMLElement).innerText ?? "";
-        if (value.trim()) textParts.push(value.trim());
+            ? (node.textContent ?? "")
+            : ((node as HTMLElement).innerText ?? "");
+        if (value.trim()) {
+          textParts.push(value.trim());
+        }
       });
       taskText.textContent = textParts.join(" ") || "New item";
       taskItem.appendChild(taskText);
-    } else {
-      taskText.setAttribute("data-arch-task-text", "true");
     }
   });
 
@@ -1953,11 +2331,11 @@ function normalizeChecklistMarkup(
 
 function projectBodyHtmlForFocus(
   entity: Pick<CanvasContentEntity, "id" | "kind" | "bodyHtml" | "loreCard">,
-  bodyHtml: string,
+  bodyHtml: string
 ): string {
   if (shouldRenderLoreCharacterCredentialCanvasNode(entity)) {
     return characterV11BodyToFocusDocumentHtml(
-      withCharacterV11ObjectIdInHeader(bodyHtml, entity.id),
+      withCharacterV11ObjectIdInHeader(bodyHtml, entity.id)
     );
   }
   if (shouldRenderLoreLocationCanvasNode(entity)) {
@@ -1965,7 +2343,7 @@ function projectBodyHtmlForFocus(
   }
   if (shouldRenderLoreFactionArchive091CanvasNode(entity)) {
     return factionBodyToFocusDocumentHtml(
-      withFactionArchiveObjectIdInRails(bodyHtml, entity.id),
+      withFactionArchiveObjectIdInRails(bodyHtml, entity.id)
     );
   }
   return bodyHtml;
@@ -1973,25 +2351,26 @@ function projectBodyHtmlForFocus(
 
 function canonicalizeCharacterBodyHtml(
   entity: Pick<CanvasContentEntity, "id" | "kind" | "bodyHtml" | "loreCard">,
-  bodyHtml: string,
+  bodyHtml: string
 ): string {
-  if (!shouldRenderLoreCharacterCredentialCanvasNode(entity)) return bodyHtml;
+  if (!shouldRenderLoreCharacterCredentialCanvasNode(entity)) {
+    return bodyHtml;
+  }
   const normalizedBody =
     bodyHtml.includes(loreEntityCardStyles.charSkShellV11) &&
     bodyHtml.includes(loreEntityCardStyles.charSkCardMaterial)
       ? bodyHtml
       : normalizeCharacterV11BodyHtmlForCurrentBuild(bodyHtml);
-  return withCharacterV11ObjectIdInHeader(
-    normalizedBody,
-    entity.id,
-  );
+  return withCharacterV11ObjectIdInHeader(normalizedBody, entity.id);
 }
 
 function canonicalizeFactionBodyHtml(
   entity: Pick<CanvasContentEntity, "id" | "kind" | "bodyHtml" | "loreCard">,
-  bodyHtml: string,
+  bodyHtml: string
 ): string {
-  if (!shouldRenderLoreFactionArchive091CanvasNode(entity)) return bodyHtml;
+  if (!shouldRenderLoreFactionArchive091CanvasNode(entity)) {
+    return bodyHtml;
+  }
   const base = bodyHtmlImpliesFactionArchive091(bodyHtml)
     ? bodyHtml
     : getLoreNodeSeedBodyHtml("faction", "v4", { factionRailSeed: entity.id });
@@ -2010,10 +2389,18 @@ type LassoRectScreen = { x1: number; y1: number; x2: number; y2: number };
  */
 function targetIsLoreCharacterV11CanvasDragChrome(target: Element): boolean {
   const cred = target.closest('[data-hg-canvas-role="lore-character-v11"]');
-  if (!cred) return false;
-  if (target.closest("[data-expand-btn='true']")) return false;
-  if (target.closest("[data-architectural-media-upload='true']")) return false;
-  if (target.closest("[data-hg-lore-field]")) return false;
+  if (!cred) {
+    return false;
+  }
+  if (target.closest("[data-expand-btn='true']")) {
+    return false;
+  }
+  if (target.closest("[data-architectural-media-upload='true']")) {
+    return false;
+  }
+  if (target.closest("[data-hg-lore-field]")) {
+    return false;
+  }
   /*
    * Regression guard:
    * `BufferedContentEditable` wraps the whole lore plate with
@@ -2021,11 +2408,7 @@ function targetIsLoreCharacterV11CanvasDragChrome(target: Element): boolean {
    * generic `[contenteditable='true']` here would make every hit look
    * "editable" and block drag-start for the entire character card.
    */
-  if (
-    target.closest(
-      "button, a, input, textarea, select, [role='button']",
-    )
-  ) {
+  if (target.closest("button, a, input, textarea, select, [role='button']")) {
     return false;
   }
   // Treat any non-editable surface in the credential shell as card chrome so legacy/drifted
@@ -2035,15 +2418,19 @@ function targetIsLoreCharacterV11CanvasDragChrome(target: Element): boolean {
 
 /** Location ORDO v7 slab: drag only from the masthead strip (`data-hg-lore-ordo-drag-handle`); body fields stay text-first. */
 function targetIsLoreLocationOrdoCanvasDragChrome(target: Element): boolean {
-  const root = target.closest('[data-hg-canvas-role="lore-location"][data-lore-variant="v7"]');
-  if (!root) return false;
-  if (!target.closest("[data-hg-lore-ordo-drag-handle='true']")) return false;
-  if (target.closest("[data-expand-btn='true']")) return false;
-  if (
-    target.closest(
-      "button, a, input, textarea, select, [role='button']",
-    )
-  ) {
+  const root = target.closest(
+    '[data-hg-canvas-role="lore-location"][data-lore-variant="v7"]'
+  );
+  if (!root) {
+    return false;
+  }
+  if (!target.closest("[data-hg-lore-ordo-drag-handle='true']")) {
+    return false;
+  }
+  if (target.closest("[data-expand-btn='true']")) {
+    return false;
+  }
+  if (target.closest("button, a, input, textarea, select, [role='button']")) {
     return false;
   }
   return true;
@@ -2051,15 +2438,19 @@ function targetIsLoreLocationOrdoCanvasDragChrome(target: Element): boolean {
 
 /** Faction Archive-091: drag from plate header strip only (`data-hg-faction-archive-drag-handle`). */
 function targetIsLoreFactionArchiveCanvasDragChrome(target: Element): boolean {
-  const root = target.closest('[data-hg-canvas-role="lore-faction"][data-lore-variant="v4"]');
-  if (!root) return false;
-  if (!target.closest("[data-hg-faction-archive-drag-handle='true']")) return false;
-  if (target.closest("[data-expand-btn='true']")) return false;
-  if (
-    target.closest(
-      "button, a, input, textarea, select, [role='button']",
-    )
-  ) {
+  const root = target.closest(
+    '[data-hg-canvas-role="lore-faction"][data-lore-variant="v4"]'
+  );
+  if (!root) {
+    return false;
+  }
+  if (!target.closest("[data-hg-faction-archive-drag-handle='true']")) {
+    return false;
+  }
+  if (target.closest("[data-expand-btn='true']")) {
+    return false;
+  }
+  if (target.closest("button, a, input, textarea, select, [role='button']")) {
     return false;
   }
   return true;
@@ -2070,18 +2461,20 @@ function isCanvasPointerMarqueeOrPanSurface(
   viewportEl: HTMLElement | null,
   canvasClassName: string,
   activeTool: CanvasTool,
-  spacePanning: boolean,
+  spacePanning: boolean
 ): boolean {
   // Toolbars use Phosphor (svg/path) glyphs. Those must not count as the canvas surface or we start
   // lasso/pan on icon mousedown; a tiny mouseup then clears selection (lasso “click” path).
   if (
     target.closest(
-      "button, a, input, textarea, select, [role='button'], [data-hg-chrome]",
+      "button, a, input, textarea, select, [role='button'], [data-hg-chrome]"
     )
   ) {
     return false;
   }
-  if (activeTool === "pan" || spacePanning) return true;
+  if (activeTool === "pan" || spacePanning) {
+    return true;
+  }
   if (
     target.closest("[data-node-id]") ||
     target.closest("[data-stack-container='true']") ||
@@ -2089,23 +2482,37 @@ function isCanvasPointerMarqueeOrPanSurface(
   ) {
     return false;
   }
-  if (target === viewportEl) return true;
+  if (target === viewportEl) {
+    return true;
+  }
   /* Scene layer is an ancestor of `.canvas`, not inside it — `closest(canvas)` misses hits on this div. */
-  if (target.closest("[data-vigil-scene-layer='true']")) return true;
+  if (target.closest("[data-vigil-scene-layer='true']")) {
+    return true;
+  }
   const tag = target.tagName.toLowerCase();
-  if (tag === "svg" || tag === "path") return true;
+  if (tag === "svg" || tag === "path") {
+    return true;
+  }
   return !!target.closest(`.${canvasClassName}`);
 }
 
 function buildStackModalLayout(
   itemIds: string[],
   viewport: { width: number; height: number },
-  measuredHeights: Record<string, number>,
+  measuredHeights: Record<string, number>
 ): Record<string, { x: number; y: number; scale: number }> {
-  if (itemIds.length === 0) return {};
+  if (itemIds.length === 0) {
+    return {};
+  }
   const maxCols = Math.max(
     1,
-    Math.min(4, Math.floor((viewport.width - STACK_MODAL_PADDING * 2 + STACK_MODAL_GAP) / (STACK_MODAL_CARD_W + STACK_MODAL_GAP))),
+    Math.min(
+      4,
+      Math.floor(
+        (viewport.width - STACK_MODAL_PADDING * 2 + STACK_MODAL_GAP) /
+          (STACK_MODAL_CARD_W + STACK_MODAL_GAP)
+      )
+    )
   );
   const candidates = Array.from({ length: maxCols }, (_, i) => i + 1);
 
@@ -2125,38 +2532,57 @@ function buildStackModalLayout(
       const row = itemIds.slice(i, i + cols);
       rowSizes.push(row.length);
       const h = Math.max(
-        ...row.map((id) => measuredHeights[id] ?? STACK_MODAL_CARD_H_ESTIMATE),
+        ...row.map((id) => measuredHeights[id] ?? STACK_MODAL_CARD_H_ESTIMATE)
       );
       rowHeights.push(h);
     }
-    const totalW = Math.max(...rowSizes.map((size) => size * STACK_MODAL_CARD_W + (size - 1) * STACK_MODAL_GAP));
-    const totalH = rowHeights.reduce((sum, h) => sum + h, 0) + STACK_MODAL_GAP * (rowHeights.length - 1);
+    const totalW = Math.max(
+      ...rowSizes.map(
+        (size) => size * STACK_MODAL_CARD_W + (size - 1) * STACK_MODAL_GAP
+      )
+    );
+    const totalH =
+      rowHeights.reduce((sum, h) => sum + h, 0) +
+      STACK_MODAL_GAP * (rowHeights.length - 1);
     const scale = Math.min(
       1,
       (viewport.width - STACK_MODAL_PADDING * 2) / totalW,
-      (viewport.height - STACK_MODAL_PADDING * 2) / totalH,
+      (viewport.height - STACK_MODAL_PADDING * 2) / totalH
     );
     if (!best || scale > best.scale) {
       best = { cols, rowHeights, rowSizes, totalW, totalH, scale };
     }
   }
 
-  if (!best) return {};
+  if (!best) {
+    return {};
+  }
   const layout: Record<string, { x: number; y: number; scale: number }> = {};
   const scaledTotalW = best.totalW * best.scale;
   const scaledTotalH = best.totalH * best.scale;
-  const offsetX = Math.max(STACK_MODAL_PADDING, (viewport.width - scaledTotalW) / 2);
-  const offsetY = Math.max(STACK_MODAL_PADDING, (viewport.height - scaledTotalH) / 2);
+  const offsetX = Math.max(
+    STACK_MODAL_PADDING,
+    (viewport.width - scaledTotalW) / 2
+  );
+  const offsetY = Math.max(
+    STACK_MODAL_PADDING,
+    (viewport.height - scaledTotalH) / 2
+  );
 
   let rowTop = 0;
   let index = 0;
   best.rowSizes.forEach((rowSize, rowIndex) => {
-    const rowWidth = rowSize * STACK_MODAL_CARD_W + (rowSize - 1) * STACK_MODAL_GAP;
+    const rowWidth =
+      rowSize * STACK_MODAL_CARD_W + (rowSize - 1) * STACK_MODAL_GAP;
     const rowLeft = (best!.totalW - rowWidth) / 2;
     for (let col = 0; col < rowSize; col += 1) {
       const id = itemIds[index++];
-      if (!id) continue;
-      const x = offsetX + (rowLeft + col * (STACK_MODAL_CARD_W + STACK_MODAL_GAP)) * best.scale;
+      if (!id) {
+        continue;
+      }
+      const x =
+        offsetX +
+        (rowLeft + col * (STACK_MODAL_CARD_W + STACK_MODAL_GAP)) * best.scale;
       const y = offsetY + rowTop * best.scale;
       layout[id] = { x, y, scale: best.scale };
     }
@@ -2172,7 +2598,7 @@ function clientPointToCanvasWorld(
   canvasRect: DOMRect | undefined,
   tx: number,
   ty: number,
-  scale: number,
+  scale: number
 ): { x: number; y: number } {
   if (!Number.isFinite(scale) || scale === 0) {
     return { x: 0, y: 0 };
@@ -2215,7 +2641,7 @@ type WorkspaceBootstrapErrorSummary = {
 };
 
 function summarizeBootstrapError(
-  detail: Extract<BootstrapFetchDetail, { ok: false }>,
+  detail: Extract<BootstrapFetchDetail, { ok: false }>
 ): WorkspaceBootstrapErrorSummary {
   if (detail.cause === "network") {
     return { cause: "network", status: null, message: detail.message };
@@ -2231,14 +2657,16 @@ function summarizeBootstrapError(
 }
 
 function formatBootstrapErrorHeadline(
-  summary: WorkspaceBootstrapErrorSummary | null,
+  summary: WorkspaceBootstrapErrorSummary | null
 ): string | null {
-  if (!summary) return null;
+  if (!summary) {
+    return null;
+  }
   switch (summary.cause) {
     case "network":
       return "Network error reaching /api/bootstrap";
     case "forbidden":
-      return `HTTP 403 — session not allowed on this workspace`;
+      return "HTTP 403 — session not allowed on this workspace";
     case "demo":
       return "Server returned demo fallback (database not configured)";
     case "parse":
@@ -2262,22 +2690,30 @@ function WorkspaceBootstrapErrorPanel({
   const headline = formatBootstrapErrorHeadline(errorSummary);
 
   const copyPayload = useMemo(() => {
-    if (!errorSummary) return WORKSPACE_BOOTSTRAP_ERROR_COPY;
+    if (!errorSummary) {
+      return WORKSPACE_BOOTSTRAP_ERROR_COPY;
+    }
     const lines = [
       WORKSPACE_BOOTSTRAP_ERROR_COPY,
       "",
       "Diagnostics:",
       `- cause: ${errorSummary.cause}`,
     ];
-    if (errorSummary.status != null) lines.push(`- status: ${errorSummary.status}`);
-    if (errorSummary.message) lines.push(`- server message: ${errorSummary.message}`);
+    if (errorSummary.status != null) {
+      lines.push(`- status: ${errorSummary.status}`);
+    }
+    if (errorSummary.message) {
+      lines.push(`- server message: ${errorSummary.message}`);
+    }
     return lines.join("\n");
   }, [errorSummary]);
 
   const onCopyDetails = useCallback(async () => {
     const markCopied = () => {
       setCopied(true);
-      if (copyTimerRef.current != null) clearTimeout(copyTimerRef.current);
+      if (copyTimerRef.current != null) {
+        clearTimeout(copyTimerRef.current);
+      }
       copyTimerRef.current = setTimeout(() => {
         copyTimerRef.current = null;
         setCopied(false);
@@ -2299,7 +2735,9 @@ function WorkspaceBootstrapErrorPanel({
         document.body.removeChild(ta);
         markCopied();
       } catch {
-        window.alert("Could not copy automatically — select the text in the box and press Ctrl+C (⌘C on Mac).");
+        window.alert(
+          "Could not copy automatically — select the text in the box and press Ctrl+C (⌘C on Mac)."
+        );
       }
     }
   }, [copyPayload]);
@@ -2311,29 +2749,32 @@ function WorkspaceBootstrapErrorPanel({
         copyTimerRef.current = null;
       }
     },
-    [],
+    []
   );
 
   return (
     <div
-      className={styles.neonWorkspaceUnavailableOverlay}
-      role="alert"
       aria-live="assertive"
+      className={styles.neonWorkspaceUnavailableOverlay}
       data-workspace-blocking-no-snapshot="true"
+      role="alert"
     >
-      <div className={`${styles.glassPanel} ${styles.neonWorkspaceUnavailablePanel}`}>
+      <div
+        className={`${styles.glassPanel} ${styles.neonWorkspaceUnavailablePanel}`}
+      >
         <h2 className={styles.neonWorkspaceUnavailableTitle}>
           <WarningCircle
+            aria-hidden
             className={styles.neonWorkspaceUnavailableIcon}
             size={22}
             weight="bold"
-            aria-hidden
           />
           Could not load workspace
         </h2>
         <p className={styles.neonWorkspaceUnavailableLead}>
-          Nothing was removed from your account — we could not open a database-backed workspace from
-          this session. Use the message below for setup or support.
+          Nothing was removed from your account — we could not open a
+          database-backed workspace from this session. Use the message below for
+          setup or support.
         </p>
         {headline ? (
           <p
@@ -2351,16 +2792,19 @@ function WorkspaceBootstrapErrorPanel({
         ) : null}
         <div className={styles.neonWorkspaceUnavailableCopySection}>
           <div className={styles.neonWorkspaceUnavailableCopyToolbar}>
-            <span id="hg-ws-err-copy-label" className={styles.neonWorkspaceUnavailableCopyLabel}>
+            <span
+              className={styles.neonWorkspaceUnavailableCopyLabel}
+              id="hg-ws-err-copy-label"
+            >
               Full message
             </span>
             <ArchitecturalButton
-              type="button"
-              size="menu"
-              tone="glass"
-              leadingIcon={<CopySimple size={16} weight="bold" aria-hidden />}
-              onClick={onCopyDetails}
               aria-labelledby="hg-ws-err-copy-label"
+              leadingIcon={<CopySimple aria-hidden size={16} weight="bold" />}
+              leadingIcon={<CopySimple aria-hidden size={16} weight="bold" />}
+              onClick={onCopyDetails}
+              tone="glass"
+              type="button"
             >
               {copied ? "Copied" : "Copy"}
             </ArchitecturalButton>
@@ -2374,7 +2818,8 @@ function WorkspaceBootstrapErrorPanel({
           <span className={styles.monoSmall}>NEON_DATABASE_URL</span>,{" "}
           <span className={styles.monoSmall}>DATABASE_URL</span>,{" "}
           <span className={styles.monoSmall}>POSTGRES_URL</span>, then{" "}
-          <span className={styles.monoSmall}>POSTGRES_PRISMA_URL</span> (Vercel / Neon).
+          <span className={styles.monoSmall}>POSTGRES_PRISMA_URL</span> (Vercel
+          / Neon).
         </p>
       </div>
     </div>
@@ -2396,7 +2841,9 @@ export type HeartgardenBootApiState = {
   playerLayerMisconfigured: boolean;
 };
 
-function parseHeartgardenBootStatus(d: HeartgardenBootStatusJson): HeartgardenBootApiState {
+function parseHeartgardenBootStatus(
+  d: HeartgardenBootStatusJson
+): HeartgardenBootApiState {
   const st = d.sessionTier;
   const tier =
     st === "access" || st === "demo" || st === "player"
@@ -2409,7 +2856,9 @@ function parseHeartgardenBootStatus(d: HeartgardenBootStatusJson): HeartgardenBo
     gateEnabled: Boolean(d.gateEnabled),
     sessionValid: Boolean(d.sessionValid),
     sessionTier: tier,
-    playerLayerMisconfigured: Boolean(d.gateEnabled && d.playerLayerMisconfigured),
+    playerLayerMisconfigured: Boolean(
+      d.gateEnabled && d.playerLayerMisconfigured
+    ),
   };
 }
 
@@ -2426,14 +2875,22 @@ function buildHeartgardenDemoLocalGraph() {
       mediaImageActions: styles.mediaImageActions,
       mediaUploadBtn: styles.mediaUploadBtn,
     },
-    "default",
+    "default"
   );
 }
 
-function workspaceCacheTierForNeonSession(b: HeartgardenBootApiState): WorkspaceBootTierTag {
-  if (!b.gateEnabled) return "open";
-  if (b.sessionTier === "access") return "access";
-  if (b.sessionTier === "player") return "player";
+function workspaceCacheTierForNeonSession(
+  b: HeartgardenBootApiState
+): WorkspaceBootTierTag {
+  if (!b.gateEnabled) {
+    return "open";
+  }
+  if (b.sessionTier === "access") {
+    return "access";
+  }
+  if (b.sessionTier === "player") {
+    return "player";
+  }
   return "open";
 }
 
@@ -2457,11 +2914,13 @@ export function ArchitecturalCanvasApp({
             mediaImageActions: styles.mediaImageActions,
             mediaUploadBtn: styles.mediaUploadBtn,
           },
-          scenario,
-        ),
+          scenario
+        )
   );
   const [activeSpaceId, setActiveSpaceId] = useState(ROOT_SPACE_ID);
-  const [navigationPath, setNavigationPath] = useState<string[]>([ROOT_SPACE_ID]);
+  const [navigationPath, setNavigationPath] = useState<string[]>([
+    ROOT_SPACE_ID,
+  ]);
   const [scale, setScale] = useState(1);
   const [translateX, setTranslateX] = useState(0);
   const [translateY, setTranslateY] = useState(0);
@@ -2472,14 +2931,25 @@ export function ArchitecturalCanvasApp({
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
   const [spacePanning, setSpacePanning] = useState(false);
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
-  const [pendingFolderTitleSelectId, setPendingFolderTitleSelectId] = useState<string | null>(null);
+  const [pendingFolderTitleSelectId, setPendingFolderTitleSelectId] = useState<
+    string | null
+  >(null);
   /** Lore character canvas: body is read-only until double-click so Delete targets the node, not the editor. */
-  const [loreCanvasBodyEditEntityId, setLoreCanvasBodyEditEntityId] = useState<string | null>(null);
-  const [connectionMode, setConnectionMode] = useState<ConnectionDockMode>("move");
+  const [loreCanvasBodyEditEntityId, setLoreCanvasBodyEditEntityId] = useState<
+    string | null
+  >(null);
+  const [connectionMode, setConnectionMode] =
+    useState<ConnectionDockMode>("move");
   const connectionModeSoundPrevRef = useRef<ConnectionDockMode>("move");
-  const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
-  const [threadRosterNotice, setThreadRosterNotice] = useState<string | null>(null);
-  const [collabConnectionsNotice, setCollabConnectionsNotice] = useState<string | null>(null);
+  const [connectionSourceId, setConnectionSourceId] = useState<string | null>(
+    null
+  );
+  const [threadRosterNotice, setThreadRosterNotice] = useState<string | null>(
+    null
+  );
+  const [collabConnectionsNotice, setCollabConnectionsNotice] = useState<
+    string | null
+  >(null);
   /**
    * Connection kind drives BOTH the color and `item_links.link_type` written
    * when a new thread is drawn. The picker edits this single piece of state;
@@ -2487,22 +2957,29 @@ export function ArchitecturalCanvasApp({
    * was removed — color is a visual consequence of the selected kind.
    */
   const [connectionKind, setConnectionKind] = useState<ConnectionKind>("pin");
-  const connectionColor = useMemo(() => colorForConnectionKind(connectionKind), [connectionKind]);
-  const [connectionCursorWorld, setConnectionCursorWorld] = useState<{ x: number; y: number } | null>(
-    null,
+  const connectionColor = useMemo(
+    () => colorForConnectionKind(connectionKind),
+    [connectionKind]
   );
-  const [lassoRectScreen, setLassoRectScreen] = useState<LassoRectScreen | null>(null);
+  const [connectionCursorWorld, setConnectionCursorWorld] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [lassoRectScreen, setLassoRectScreen] =
+    useState<LassoRectScreen | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   /** After fonts + layout frame; drives viewport fade-in and avoids first-paint hiccups. */
   const [canvasSurfaceReady, setCanvasSurfaceReady] = useState(false);
   /** For app route: hide canvas content until bootstrap resolves (single graph + camera commit). */
-  const [canvasBootstrapResolved, setCanvasBootstrapResolved] = useState(() => scenario !== "default");
+  const [canvasBootstrapResolved, setCanvasBootstrapResolved] = useState(
+    () => scenario !== "default"
+  );
   /**
    * Default route only: null while bootstrap in flight; true when Neon returned a real workspace;
    * false when offline / demo bootstrap (no DB or failed request).
    */
   const [neonWorkspaceOk, setNeonWorkspaceOk] = useState<boolean | null>(() =>
-    scenario === "default" ? null : true,
+    scenario === "default" ? null : true
   );
   /**
    * Last failed `/api/bootstrap` attempt (status + short server message).
@@ -2542,17 +3019,20 @@ export function ArchitecturalCanvasApp({
     idleTimer: ReturnType<typeof setTimeout> | null;
   }>({ lastError: null, busy: false, idleTimer: null });
   /** Boot UI removed after exit animation (or immediately if reduced motion). */
-  const [bootLayerDismissed, setBootLayerDismissed] = useState(() => scenario !== "default");
+  const [bootLayerDismissed, setBootLayerDismissed] = useState(
+    () => scenario !== "default"
+  );
   /** Lets reduced-motion users see the auth splash again after explicit Log out. */
   const [bootAfterLogout, setBootAfterLogout] = useState(false);
   /** GET /api/heartgarden/boot — gate + cookie session (no secrets in state). */
-  const [heartgardenBootApi, setHeartgardenBootApi] = useState<HeartgardenBootApiState>({
-    loaded: false,
-    gateEnabled: false,
-    sessionValid: false,
-    sessionTier: null,
-    playerLayerMisconfigured: false,
-  });
+  const [heartgardenBootApi, setHeartgardenBootApi] =
+    useState<HeartgardenBootApiState>({
+      loaded: false,
+      gateEnabled: false,
+      sessionValid: false,
+      sessionTier: null,
+      playerLayerMisconfigured: false,
+    });
   /** Players PIN + `HEARTGARDEN_PLAYER_SPACE_ID`: scoped notes layer (server-enforced). */
   const isPlayersTier = useMemo(
     () =>
@@ -2563,14 +3043,18 @@ export function ArchitecturalCanvasApp({
       heartgardenBootApi.loaded,
       heartgardenBootApi.gateEnabled,
       heartgardenBootApi.sessionTier,
-    ],
+    ]
   );
   const isDemoTier = useMemo(
     () =>
       heartgardenBootApi.loaded &&
       heartgardenBootApi.gateEnabled &&
       heartgardenBootApi.sessionTier === "demo",
-    [heartgardenBootApi.loaded, heartgardenBootApi.gateEnabled, heartgardenBootApi.sessionTier],
+    [
+      heartgardenBootApi.loaded,
+      heartgardenBootApi.gateEnabled,
+      heartgardenBootApi.sessionTier,
+    ]
   );
   /** Hide GM-only affordances (Players + Demo local canvas). */
   const isRestrictedLayer = isPlayersTier || isDemoTier;
@@ -2582,13 +3066,14 @@ export function ArchitecturalCanvasApp({
     () =>
       scenario === "default" &&
       heartgardenBootApi.loaded &&
-      (!heartgardenBootApi.gateEnabled || heartgardenBootApi.sessionTier === "access"),
+      (!heartgardenBootApi.gateEnabled ||
+        heartgardenBootApi.sessionTier === "access"),
     [
       scenario,
       heartgardenBootApi.loaded,
       heartgardenBootApi.gateEnabled,
       heartgardenBootApi.sessionTier,
-    ],
+    ]
   );
   const heartgardenBootApiRef = useRef(heartgardenBootApi);
   heartgardenBootApiRef.current = heartgardenBootApi;
@@ -2604,7 +3089,9 @@ export function ArchitecturalCanvasApp({
    */
   const presenceIdentityEnabled = isPlayersTier;
   useEffect(() => {
-    if (!presenceIdentityEnabled) return;
+    if (!presenceIdentityEnabled) {
+      return;
+    }
     maybePromptPresenceDisplayNameOnce(getOrCreatePresenceClientId());
   }, [presenceIdentityEnabled]);
 
@@ -2619,7 +3106,7 @@ export function ArchitecturalCanvasApp({
       heartgardenBootApi.loaded,
       heartgardenBootApi.gateEnabled,
       heartgardenBootApi.playerLayerMisconfigured,
-    ],
+    ]
   );
 
   /** Bumps when returning to auth so boot ambient remounts and can play again after tear-down. */
@@ -2641,8 +3128,12 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key !== VIGIL_MINIMAP_VISIBLE_STORAGE_KEY) return;
-      if (e.storageArea !== window.localStorage) return;
+      if (e.key !== VIGIL_MINIMAP_VISIBLE_STORAGE_KEY) {
+        return;
+      }
+      if (e.storageArea !== window.localStorage) {
+        return;
+      }
       setMinimapOpen(e.newValue === "1");
     };
     window.addEventListener("storage", onStorage);
@@ -2659,19 +3150,30 @@ export function ArchitecturalCanvasApp({
   const [graphOverlayOpen, setGraphOverlayOpen] = useState(false);
   const [graphPanelWidth, setGraphPanelWidth] = useState(360);
   useLayoutEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      return;
+    }
     try {
-      const raw = Number(window.localStorage.getItem(GRAPH_PANEL_WIDTH_STORAGE_KEY) ?? "");
-      if (!Number.isFinite(raw)) return;
+      const raw = Number(
+        window.localStorage.getItem(GRAPH_PANEL_WIDTH_STORAGE_KEY) ?? ""
+      );
+      if (!Number.isFinite(raw)) {
+        return;
+      }
       setGraphPanelWidth(Math.max(320, Math.min(760, Math.round(raw))));
     } catch {
       /* ignore */
     }
   }, [GRAPH_PANEL_WIDTH_STORAGE_KEY]);
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      return;
+    }
     try {
-      window.localStorage.setItem(GRAPH_PANEL_WIDTH_STORAGE_KEY, String(graphPanelWidth));
+      window.localStorage.setItem(
+        GRAPH_PANEL_WIDTH_STORAGE_KEY,
+        String(graphPanelWidth)
+      );
     } catch {
       /* ignore */
     }
@@ -2693,18 +3195,26 @@ export function ArchitecturalCanvasApp({
   } | null>(null);
   const altGraphCardPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const altMentionCacheRef = useRef(
-    new BoundedMap<string, { at: number; items: AltMentionRow[] }>(ALT_HOVER_CACHE_MAX),
+    new BoundedMap<string, { at: number; items: AltMentionRow[] }>(
+      ALT_HOVER_CACHE_MAX
+    )
   );
   const altSearchCacheRef = useRef(
-    new BoundedMap<string, { at: number; items: AltSearchRow[] }>(ALT_HOVER_CACHE_MAX),
+    new BoundedMap<string, { at: number; items: AltSearchRow[] }>(
+      ALT_HOVER_CACHE_MAX
+    )
   );
   const altWordHighlightDivRef = useRef<HTMLDivElement | null>(null);
   const altGraphCardDivRef = useRef<HTMLDivElement | null>(null);
 
   const setAltHighlightRect = useCallback(
-    (rect: { left: number; top: number; width: number; height: number } | null) => {
+    (
+      rect: { left: number; top: number; width: number; height: number } | null
+    ) => {
       const el = altWordHighlightDivRef.current;
-      if (!el) return;
+      if (!el) {
+        return;
+      }
       if (!rect) {
         el.style.display = "none";
         return;
@@ -2714,49 +3224,67 @@ export function ArchitecturalCanvasApp({
       el.style.width = `${rect.width + 4}px`;
       el.style.height = `${rect.height + 2}px`;
     },
-    [],
+    []
   );
 
   const setAltGraphCardPos = useCallback((x: number, y: number) => {
     altGraphCardPosRef.current = { x, y };
     const el = altGraphCardDivRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
   }, []);
   const graphOverlayOpenSoundPrevRef = useRef(false);
-  const [loreSmartReview, setLoreSmartReview] = useState<LoreSmartImportReviewState | null>(null);
+  const [loreSmartReview, setLoreSmartReview] =
+    useState<LoreSmartImportReviewState | null>(null);
   const [loreSmartPlanning, setLoreSmartPlanning] = useState(false);
-  const [loreSmartPlanningJobId, setLoreSmartPlanningJobId] = useState<string | null>(null);
+  const [loreSmartPlanningJobId, setLoreSmartPlanningJobId] = useState<
+    string | null
+  >(null);
   const loreSmartPlanningAbortRef = useRef<AbortController | null>(null);
   const loreSmartPlanningAttemptRef = useRef<string | null>(null);
   const loreSmartPlanningStartedAtRef = useRef<number | null>(null);
   const [loreSmartPlanningProgress, setLoreSmartPlanningProgress] =
     useState<LoreImportJobProgress | null>(null);
-  const [loreSmartPlanningEvents, setLoreSmartPlanningEvents] = useState<LoreImportJobEvent[]>([]);
-  const [loreSmartPlanningDetailsOpen, setLoreSmartPlanningDetailsOpen] = useState(false);
+  const [loreSmartPlanningEvents, setLoreSmartPlanningEvents] = useState<
+    LoreImportJobEvent[]
+  >([]);
+  const [loreSmartPlanningDetailsOpen, setLoreSmartPlanningDetailsOpen] =
+    useState(false);
   const loreSmartPlanningUi = useMemo(() => {
     const progress = loreSmartPlanningProgress;
     const phase = String(progress?.phase ?? "").trim();
     const queueFailureHintRaw = progress?.meta?.queueFailureHint;
     const queueFailureHint =
-      typeof queueFailureHintRaw === "string" && queueFailureHintRaw.trim().length > 0
+      typeof queueFailureHintRaw === "string" &&
+      queueFailureHintRaw.trim().length > 0
         ? queueFailureHintRaw.trim()
         : null;
     const phaseLabel = toHumanPhaseLabel(phase);
-    const rawDetail = typeof progress?.message === "string" ? progress.message.trim() : "";
-    const redundantQueuedCopy = phase === "queued" && /^queued\b/i.test(rawDetail);
+    const rawDetail =
+      typeof progress?.message === "string" ? progress.message.trim() : "";
+    const redundantQueuedCopy =
+      phase === "queued" && /^queued\b/i.test(rawDetail);
     const detail =
-      redundantQueuedCopy || rawDetail.length === 0 || /^queued\b/i.test(rawDetail)
+      redundantQueuedCopy ||
+      rawDetail.length === 0 ||
+      /^queued\b/i.test(rawDetail)
         ? null
         : rawDetail;
     const failed = phase === "failed";
-    const stepLabel = toPlanningStepLabel(phase, progress?.step, progress?.total);
+    const stepLabel = toPlanningStepLabel(
+      phase,
+      progress?.step,
+      progress?.total
+    );
     const meta =
       progress?.meta && typeof progress.meta === "object"
         ? (progress.meta as Record<string, unknown>)
         : undefined;
     const pipelinePercent = readProgressMetaNumber(meta, "pipelinePercent");
-    const subphaseRaw = typeof meta?.subphase === "string" ? meta.subphase.trim() : "";
+    const subphaseRaw =
+      typeof meta?.subphase === "string" ? meta.subphase.trim() : "";
     const subphase = subphaseRaw.length > 0 ? subphaseRaw : null;
     const findingsRaw =
       meta?.findings && typeof meta.findings === "object"
@@ -2768,19 +3296,31 @@ export function ArchitecturalCanvasApp({
           folders: readProgressMetaNumber(findingsRaw, "folders"),
           notes: readProgressMetaNumber(findingsRaw, "notes"),
           candidates: readProgressMetaNumber(findingsRaw, "candidates"),
-          candidateSpaces: readProgressMetaNumber(findingsRaw, "candidateSpaces"),
+          candidateSpaces: readProgressMetaNumber(
+            findingsRaw,
+            "candidateSpaces"
+          ),
           mergeProposals: readProgressMetaNumber(findingsRaw, "mergeProposals"),
           contradictions: readProgressMetaNumber(findingsRaw, "contradictions"),
           clarifications: readProgressMetaNumber(findingsRaw, "clarifications"),
-          targetSpaceRoutes: readProgressMetaNumber(findingsRaw, "targetSpaceRoutes"),
+          targetSpaceRoutes: readProgressMetaNumber(
+            findingsRaw,
+            "targetSpaceRoutes"
+          ),
         }
       : null;
     const findingsSummary = findings
       ? [
-          typeof findings.chunks === "number" ? `${findings.chunks} chunks` : null,
+          typeof findings.chunks === "number"
+            ? `${findings.chunks} chunks`
+            : null,
           typeof findings.notes === "number" ? `${findings.notes} notes` : null,
-          typeof findings.folders === "number" ? `${findings.folders} folders` : null,
-          typeof findings.candidates === "number" ? `${findings.candidates} candidates` : null,
+          typeof findings.folders === "number"
+            ? `${findings.folders} folders`
+            : null,
+          typeof findings.candidates === "number"
+            ? `${findings.candidates} candidates`
+            : null,
           typeof findings.candidateSpaces === "number"
             ? `${findings.candidateSpaces} candidate spaces`
             : null,
@@ -2807,7 +3347,10 @@ export function ArchitecturalCanvasApp({
       pipelinePercent > 5 &&
       pipelinePercent < 95 &&
       typeof startedAt === "number"
-        ? formatEtaLabel(((Date.now() - startedAt) / pipelinePercent) * (100 - pipelinePercent))
+        ? formatEtaLabel(
+            ((Date.now() - startedAt) / pipelinePercent) *
+              (100 - pipelinePercent)
+          )
         : null;
     return {
       phase,
@@ -2823,38 +3366,37 @@ export function ArchitecturalCanvasApp({
     };
   }, [loreSmartPlanningProgress]);
   const [loreSmartIncludeSource, setLoreSmartIncludeSource] = useState(true);
-  const [loreSmartAcceptedMergeIds, setLoreSmartAcceptedMergeIds] = useState<Record<string, boolean>>(
-    {},
-  );
-  const [loreSmartClarificationAnswers, setLoreSmartClarificationAnswers] = useState<
-    ClarificationAnswer[]
-  >([]);
-  const [loreSmartOtherFollowUp, setLoreSmartOtherFollowUp] = useState<LoreImportOtherFollowUp | null>(
-    null,
-  );
-  const [loreSmartManualQuestionId, setLoreSmartManualQuestionId] = useState<string | null>(null);
-  const [loreSmartTargetSpaceByNoteId, setLoreSmartTargetSpaceByNoteId] = useState<
-    Record<string, string | null>
-  >({});
-  const [loreSmartRelatedOpenByNoteId, setLoreSmartRelatedOpenByNoteId] = useState<
+  const [loreSmartAcceptedMergeIds, setLoreSmartAcceptedMergeIds] = useState<
     Record<string, boolean>
   >({});
-  const [loreSmartSpaceSearchQuery, setLoreSmartSpaceSearchQuery] = useState("");
-  const [loreSmartSpaceSearchResults, setLoreSmartSpaceSearchResults] = useState<
-    LoreImportTargetSpaceOption[]
-  >([]);
+  const [loreSmartClarificationAnswers, setLoreSmartClarificationAnswers] =
+    useState<ClarificationAnswer[]>([]);
+  const [loreSmartOtherFollowUp, setLoreSmartOtherFollowUp] =
+    useState<LoreImportOtherFollowUp | null>(null);
+  const [loreSmartManualQuestionId, setLoreSmartManualQuestionId] = useState<
+    string | null
+  >(null);
+  const [loreSmartTargetSpaceByNoteId, setLoreSmartTargetSpaceByNoteId] =
+    useState<Record<string, string | null>>({});
+  const [loreSmartRelatedOpenByNoteId, setLoreSmartRelatedOpenByNoteId] =
+    useState<Record<string, boolean>>({});
+  const [loreSmartSpaceSearchQuery, setLoreSmartSpaceSearchQuery] =
+    useState("");
+  const [loreSmartSpaceSearchResults, setLoreSmartSpaceSearchResults] =
+    useState<LoreImportTargetSpaceOption[]>([]);
   const [loreImportCommitting, setLoreImportCommitting] = useState(false);
   const loreSmartMergeProposals = useMemo(
     () => loreSmartReview?.plan.mergeProposals ?? [],
-    [loreSmartReview],
+    [loreSmartReview]
   );
   const loreSmartAcceptedMergeCount = useMemo(
     () =>
       loreSmartMergeProposals.reduce(
-        (sum, proposal) => sum + (loreSmartAcceptedMergeIds[proposal.id] ? 1 : 0),
-        0,
+        (sum, proposal) =>
+          sum + (loreSmartAcceptedMergeIds[proposal.id] ? 1 : 0),
+        0
       ),
-    [loreSmartAcceptedMergeIds, loreSmartMergeProposals],
+    [loreSmartAcceptedMergeIds, loreSmartMergeProposals]
   );
   const loreSmartNoteTitleByClientId = useMemo(() => {
     const byId = new Map<string, string>();
@@ -2864,7 +3406,9 @@ export function ArchitecturalCanvasApp({
     return byId;
   }, [loreSmartReview]);
   const closeLoreSmartReview = useCallback(() => {
-    if (loreImportCommitting) return;
+    if (loreImportCommitting) {
+      return;
+    }
     setLoreSmartReview(null);
     setLoreSmartAcceptedMergeIds({});
     setLoreSmartClarificationAnswers([]);
@@ -2877,7 +3421,9 @@ export function ArchitecturalCanvasApp({
   }, [loreImportCommitting]);
   const flattenSmartImportToNearby = useCallback(() => {
     setLoreSmartReview((prev) => {
-      if (!prev) return prev;
+      if (!prev) {
+        return prev;
+      }
       return {
         ...prev,
         plan: flipOrgMode(prev.plan, "nearby"),
@@ -2889,8 +3435,14 @@ export function ArchitecturalCanvasApp({
   }, []);
   const collapseSmartImportToOneNote = useCallback(() => {
     setLoreSmartReview((prev) => {
-      if (!prev) return prev;
-      const title = prev.sourceTitle?.trim() || prev.fileName || prev.plan.fileName || "Imported document";
+      if (!prev) {
+        return prev;
+      }
+      const title =
+        prev.sourceTitle?.trim() ||
+        prev.fileName ||
+        prev.plan.fileName ||
+        "Imported document";
       return {
         ...prev,
         plan: collapseToOneNote(prev.plan, {
@@ -2912,17 +3464,25 @@ export function ArchitecturalCanvasApp({
       return next;
     });
   }, []);
-  const setLoreSmartMergeAccepted = useCallback((mergeId: string, accepted: boolean) => {
-    setLoreSmartAcceptedMergeIds((prev) => ({
-      ...prev,
-      [mergeId]: accepted,
-    }));
-  }, []);
-  const loreSmartImportScope = loreSmartReview?.plan.userContext?.importScope ?? "current_subtree";
+  const setLoreSmartMergeAccepted = useCallback(
+    (mergeId: string, accepted: boolean) => {
+      setLoreSmartAcceptedMergeIds((prev) => ({
+        ...prev,
+        [mergeId]: accepted,
+      }));
+    },
+    []
+  );
+  const loreSmartImportScope =
+    loreSmartReview?.plan.userContext?.importScope ?? "current_subtree";
   const loreSmartPlanWithTargetOverrides = useMemo(() => {
-    if (!loreSmartReview) return null;
+    if (!loreSmartReview) {
+      return null;
+    }
     const notes = loreSmartReview.plan.notes.map((note) => {
-      if (note.folderClientId) return note;
+      if (note.folderClientId) {
+        return note;
+      }
       const overridden = loreSmartTargetSpaceByNoteId[note.clientId];
       return {
         ...note,
@@ -2932,7 +3492,7 @@ export function ArchitecturalCanvasApp({
     return { ...loreSmartReview.plan, notes };
   }, [loreSmartReview, loreSmartTargetSpaceByNoteId]);
   useEffect(() => {
-    if (!loreSmartReview || !isUuidLike(activeSpaceId)) {
+    if (!(loreSmartReview && isUuidLike(activeSpaceId))) {
       setLoreSmartSpaceSearchResults([]);
       return;
     }
@@ -2947,7 +3507,9 @@ export function ArchitecturalCanvasApp({
       rootSpaceId: activeSpaceId,
       limit: query.length > 0 ? "50" : "20",
     });
-    if (query) params.set("q", query);
+    if (query) {
+      params.set("q", query);
+    }
     const timer = window.setTimeout(() => {
       void fetch(`/api/spaces/search?${params.toString()}`, {
         signal: ctrl.signal,
@@ -2957,26 +3519,38 @@ export function ArchitecturalCanvasApp({
             ok?: boolean;
             spaces?: Array<{ spaceId?: string; title?: string; path?: string }>;
           };
-          if (!res.ok || !body.ok || !Array.isArray(body.spaces)) return;
+          if (!(res.ok && body.ok && Array.isArray(body.spaces))) {
+            return;
+          }
           setLoreSmartSpaceSearchResults(
             body.spaces
-              .filter((row): row is { spaceId: string; title: string; path: string } =>
-                typeof row.spaceId === "string" &&
-                typeof row.title === "string" &&
-                typeof row.path === "string",
+              .filter(
+                (
+                  row
+                ): row is { spaceId: string; title: string; path: string } =>
+                  typeof row.spaceId === "string" &&
+                  typeof row.title === "string" &&
+                  typeof row.path === "string"
               )
-              .slice(0, 80),
+              .slice(0, 80)
           );
         })
         .catch((error: unknown) => {
-          if (isAbortError(error)) return;
+          if (isAbortError(error)) {
+            return;
+          }
         });
     }, LORE_SMART_SPACE_SEARCH_DEBOUNCE_MS);
     return () => {
       window.clearTimeout(timer);
       ctrl.abort();
     };
-  }, [activeSpaceId, loreSmartImportScope, loreSmartReview, loreSmartSpaceSearchQuery]);
+  }, [
+    activeSpaceId,
+    loreSmartImportScope,
+    loreSmartReview,
+    loreSmartSpaceSearchQuery,
+  ]);
   const cancelLoreSmartPlanning = useCallback(() => {
     const ctrl = loreSmartPlanningAbortRef.current;
     if (ctrl) {
@@ -2986,10 +3560,13 @@ export function ArchitecturalCanvasApp({
     const currentJobId = loreSmartPlanningJobId;
     const currentSpaceId = activeSpaceIdRef.current;
     if (currentJobId && isUuidLike(currentSpaceId)) {
-      void fetch(`/api/lore/import/jobs/${currentJobId}?spaceId=${encodeURIComponent(currentSpaceId)}`, {
-        method: "DELETE",
-        headers: { "X-Heartgarden-Import-Attempt": "client-cancel" },
-      }).catch(() => {});
+      void fetch(
+        `/api/lore/import/jobs/${currentJobId}?spaceId=${encodeURIComponent(currentSpaceId)}`,
+        {
+          method: "DELETE",
+          headers: { "X-Heartgarden-Import-Attempt": "client-cancel" },
+        }
+      ).catch(() => {});
     }
     setLoreSmartPlanningJobId(null);
     setLoreSmartPlanning(false);
@@ -3003,7 +3580,11 @@ export function ArchitecturalCanvasApp({
     "idle" | "copied" | "failed"
   >("idle");
   const loreSmartPlanningEventGroups = useMemo(() => {
-    const groups: Array<{ phase: string; label: string; events: LoreImportJobEvent[] }> = [];
+    const groups: Array<{
+      phase: string;
+      label: string;
+      events: LoreImportJobEvent[];
+    }> = [];
     for (const event of loreSmartPlanningEvents) {
       const phase = String(event.phase ?? "").trim() || "general";
       const label = phase === "general" ? "General" : toHumanPhaseLabel(phase);
@@ -3022,14 +3603,20 @@ export function ArchitecturalCanvasApp({
     }
   }, [loreSmartPlanningUi.failed]);
   useEffect(() => {
-    if (loreSmartPlanningCopyState === "idle") return;
+    if (loreSmartPlanningCopyState === "idle") {
+      return;
+    }
     const t = setTimeout(() => setLoreSmartPlanningCopyState("idle"), 1800);
     return () => clearTimeout(t);
   }, [loreSmartPlanningCopyState]);
   useEffect(() => {
-    if (!loreSmartPlanning && !loreSmartReview) return;
+    if (!(loreSmartPlanning || loreSmartReview)) {
+      return;
+    }
     const onGlobalEsc = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
+      if (event.key !== "Escape") {
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       if (loreSmartPlanning) {
@@ -3042,7 +3629,12 @@ export function ArchitecturalCanvasApp({
     };
     window.addEventListener("keydown", onGlobalEsc, true);
     return () => window.removeEventListener("keydown", onGlobalEsc, true);
-  }, [cancelLoreSmartPlanning, closeLoreSmartReview, loreSmartPlanning, loreSmartReview]);
+  }, [
+    cancelLoreSmartPlanning,
+    closeLoreSmartReview,
+    loreSmartPlanning,
+    loreSmartReview,
+  ]);
   const loreSmartQuestionUi = useMemo(() => {
     if (!loreSmartReview) {
       return {
@@ -3062,15 +3654,23 @@ export function ArchitecturalCanvasApp({
       };
     }
     const clarifications = loreSmartReview.plan.clarifications;
-    const byId = new Map(loreSmartClarificationAnswers.map((a) => [a.clarificationId, a]));
+    const byId = new Map(
+      loreSmartClarificationAnswers.map((a) => [a.clarificationId, a])
+    );
     const required = clarifications.filter((c) => c.severity === "required");
-    const requiredAnswered = required.filter((c) => isClarificationAnswered(byId.get(c.id))).length;
+    const requiredAnswered = required.filter((c) =>
+      isClarificationAnswered(byId.get(c.id))
+    ).length;
     const optionalAnswered = clarifications.filter(
-      (c) => c.severity === "optional" && isClarificationAnswered(byId.get(c.id)),
+      (c) =>
+        c.severity === "optional" && isClarificationAnswered(byId.get(c.id))
     ).length;
     const requiredTotal = required.length;
     const requiredPending = requiredTotal - requiredAnswered;
-    const percent = requiredTotal > 0 ? Math.round((requiredAnswered / requiredTotal) * 100) : 100;
+    const percent =
+      requiredTotal > 0
+        ? Math.round((requiredAnswered / requiredTotal) * 100)
+        : 100;
     const barPercent =
       requiredTotal === 0
         ? 100
@@ -3082,32 +3682,53 @@ export function ArchitecturalCanvasApp({
     const ordered = [...clarifications].sort((a, b) => {
       const aAnswered = isClarificationAnswered(byId.get(a.id));
       const bAnswered = isClarificationAnswered(byId.get(b.id));
-      if (aAnswered !== bAnswered) return aAnswered ? 1 : -1;
-      const c = clarificationConfidenceScore(a) - clarificationConfidenceScore(b);
-      if (Math.abs(c) > 0.001) return c;
-      if (a.severity !== b.severity) return a.severity === "required" ? -1 : 1;
+      if (aAnswered !== bAnswered) {
+        return aAnswered ? 1 : -1;
+      }
+      const c =
+        clarificationConfidenceScore(a) - clarificationConfidenceScore(b);
+      if (Math.abs(c) > 0.001) {
+        return c;
+      }
+      if (a.severity !== b.severity) {
+        return a.severity === "required" ? -1 : 1;
+      }
       return a.title.localeCompare(b.title);
     });
     const stableQuestionOrder = [...clarifications].sort((a, b) => {
-      const c = clarificationConfidenceScore(a) - clarificationConfidenceScore(b);
-      if (Math.abs(c) > 0.001) return c;
-      if (a.severity !== b.severity) return a.severity === "required" ? -1 : 1;
+      const c =
+        clarificationConfidenceScore(a) - clarificationConfidenceScore(b);
+      if (Math.abs(c) > 0.001) {
+        return c;
+      }
+      if (a.severity !== b.severity) {
+        return a.severity === "required" ? -1 : 1;
+      }
       return a.title.localeCompare(b.title);
     });
-    const answeredCount = clarifications.filter((c) => isClarificationAnswered(byId.get(c.id))).length;
+    const answeredCount = clarifications.filter((c) =>
+      isClarificationAnswered(byId.get(c.id))
+    ).length;
     const totalQuestions = clarifications.length;
     const defaultFocusQuestion =
       totalQuestions === 0
         ? null
-        : stableQuestionOrder.find((c) => !isClarificationAnswered(byId.get(c.id))) ?? null;
+        : (stableQuestionOrder.find(
+            (c) => !isClarificationAnswered(byId.get(c.id))
+          ) ?? null);
     const focusQuestion =
       loreSmartManualQuestionId == null
         ? defaultFocusQuestion
-        : stableQuestionOrder.find((c) => c.id === loreSmartManualQuestionId) ?? defaultFocusQuestion;
+        : (stableQuestionOrder.find(
+            (c) => c.id === loreSmartManualQuestionId
+          ) ?? defaultFocusQuestion);
     const questionsComplete =
-      totalQuestions > 0 && clarifications.every((c) => isClarificationAnswered(byId.get(c.id)));
+      totalQuestions > 0 &&
+      clarifications.every((c) => isClarificationAnswered(byId.get(c.id)));
     const wizardBarPercentRaw =
-      totalQuestions === 0 ? 100 : Math.round((answeredCount / totalQuestions) * 100);
+      totalQuestions === 0
+        ? 100
+        : Math.round((answeredCount / totalQuestions) * 100);
     const wizardBarPercent =
       totalQuestions === 0
         ? 100
@@ -3131,40 +3752,62 @@ export function ArchitecturalCanvasApp({
       totalQuestions,
       wizardBarPercent,
     };
-  }, [loreSmartClarificationAnswers, loreSmartManualQuestionId, loreSmartReview]);
+  }, [
+    loreSmartClarificationAnswers,
+    loreSmartManualQuestionId,
+    loreSmartReview,
+  ]);
   const [loreReviewPanelOpen, setLoreReviewPanelOpen] = useState(false);
   const [loreReviewLoading, setLoreReviewLoading] = useState(false);
   const [loreReviewError, setLoreReviewError] = useState<string | null>(null);
-  const [loreReviewIssues, setLoreReviewIssues] = useState<VaultReviewIssue[]>([]);
-  const [loreReviewSuggestedTags, setLoreReviewSuggestedTags] = useState<string[]>([]);
-  const [loreReviewSemanticSummary, setLoreReviewSemanticSummary] = useState<string | null>(null);
-  const [loreImportFailure, setLoreImportFailure] = useState<LoreImportFailureDetail | null>(null);
-  const [loreImportPopoverOpen, setLoreImportPopoverOpen] = useState(false);
-  const [loreImportPreparedSource, setLoreImportPreparedSource] = useState<LoreImportPreparedSource | null>(
-    null,
+  const [loreReviewIssues, setLoreReviewIssues] = useState<VaultReviewIssue[]>(
+    []
   );
-  const [loreImportSelection, setLoreImportSelection] = useState<LoreImportSelectionState>({
-    mode: "many_loose",
-    scope: "current_subtree",
-    contextText: "",
-  });
-  const [cloudLinksBar, setCloudLinksBar] = useState(() => getNeonSyncSnapshot().cloudEnabled);
+  const [loreReviewSuggestedTags, setLoreReviewSuggestedTags] = useState<
+    string[]
+  >([]);
+  const [loreReviewSemanticSummary, setLoreReviewSemanticSummary] = useState<
+    string | null
+  >(null);
+  const [loreImportFailure, setLoreImportFailure] =
+    useState<LoreImportFailureDetail | null>(null);
+  const [loreImportPopoverOpen, setLoreImportPopoverOpen] = useState(false);
+  const [loreImportPreparedSource, setLoreImportPreparedSource] =
+    useState<LoreImportPreparedSource | null>(null);
+  const [loreImportSelection, setLoreImportSelection] =
+    useState<LoreImportSelectionState>({
+      mode: "many_loose",
+      scope: "current_subtree",
+      contextText: "",
+    });
+  const [cloudLinksBar, setCloudLinksBar] = useState(
+    () => getNeonSyncSnapshot().cloudEnabled
+  );
   const neonSyncSnapshot = useSyncExternalStore(
     subscribeNeonSync,
     getNeonSyncSnapshot,
-    getNeonSyncServerSnapshot,
+    getNeonSyncServerSnapshot
   );
   const dockCreateDisabledBySyncError = useMemo(() => {
-    if (isRestrictedLayer || !isUuidLike(activeSpaceId)) return false;
-    if (!cloudLinksBar) return false;
+    if (isRestrictedLayer || !isUuidLike(activeSpaceId)) {
+      return false;
+    }
+    if (!cloudLinksBar) {
+      return false;
+    }
     return Boolean(neonSyncSnapshot.lastError?.trim());
-  }, [activeSpaceId, cloudLinksBar, isRestrictedLayer, neonSyncSnapshot.lastError]);
+  }, [
+    activeSpaceId,
+    cloudLinksBar,
+    isRestrictedLayer,
+    neonSyncSnapshot.lastError,
+  ]);
   const dockCreateSyncDisabledHint = useMemo(
     () =>
       dockCreateDisabledBySyncError
         ? "Cannot save new items while database sync shows an error — open the top-left status control for details"
         : null,
-    [dockCreateDisabledBySyncError],
+    [dockCreateDisabledBySyncError]
   );
   const loreImportFileInputRef = useRef<HTMLInputElement | null>(null);
   const beginLoreImportFilePick = useCallback(() => {
@@ -3182,10 +3825,12 @@ export function ArchitecturalCanvasApp({
       : `Smart import planning failed\n---\nphase: ${progress?.phase ?? "unknown"}\nmessage: ${
           progress?.message ?? "(no message)"
         }\nmeta: ${JSON.stringify(progress?.meta ?? {}, null, 2)}`;
-    if (!payload) return;
+    if (!payload) {
+      return;
+    }
     void navigator.clipboard.writeText(payload).then(
       () => setLoreSmartPlanningCopyState("copied"),
-      () => setLoreSmartPlanningCopyState("failed"),
+      () => setLoreSmartPlanningCopyState("failed")
     );
   }, [loreImportFailure, loreSmartPlanningProgress]);
   const retryLoreSmartPlanning = useCallback(() => {
@@ -3214,39 +3859,44 @@ export function ArchitecturalCanvasApp({
   const [galleryNodeId, setGalleryNodeId] = useState<string | null>(null);
   const galleryNodeIdRef = useRef<string | null>(null);
   const [galleryDraftTitle, setGalleryDraftTitle] = useState("");
-  const [galleryDraftNotesDoc, setGalleryDraftNotesDoc] = useState<JSONContent>(() =>
-    structuredClone(EMPTY_HG_DOC),
+  const [galleryDraftNotesDoc, setGalleryDraftNotesDoc] = useState<JSONContent>(
+    () => structuredClone(EMPTY_HG_DOC)
   );
   const [galleryDraftNotesDocKey, setGalleryDraftNotesDocKey] = useState(() =>
-    jsonStableStringify(EMPTY_HG_DOC),
+    jsonStableStringify(EMPTY_HG_DOC)
   );
   const [galleryBaselineTitle, setGalleryBaselineTitle] = useState("");
-  const [galleryBaselineNotesDoc, setGalleryBaselineNotesDoc] = useState<JSONContent>(() =>
-    structuredClone(EMPTY_HG_DOC),
-  );
-  const [galleryBaselineNotesDocKey, setGalleryBaselineNotesDocKey] = useState(() =>
-    jsonStableStringify(EMPTY_HG_DOC),
+  const [galleryBaselineNotesDoc, setGalleryBaselineNotesDoc] =
+    useState<JSONContent>(() => structuredClone(EMPTY_HG_DOC));
+  const [galleryBaselineNotesDocKey, setGalleryBaselineNotesDocKey] = useState(
+    () => jsonStableStringify(EMPTY_HG_DOC)
   );
   const [galleryDimsLabel, setGalleryDimsLabel] = useState("— × —");
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [focusTitle, setFocusTitle] = useState("");
   const [focusBody, setFocusBody] = useState("");
   /** TipTap JSON for hgDoc focus editor; lore hybrid focus uses `focusBody` HTML + `focus-lore-notes` surface. */
-  const [focusBodyDoc, setFocusBodyDoc] = useState<JSONContent>(() => structuredClone(EMPTY_HG_DOC));
-  const [focusBodyDocKey, setFocusBodyDocKey] = useState(() => jsonStableStringify(EMPTY_HG_DOC));
+  const [focusBodyDoc, setFocusBodyDoc] = useState<JSONContent>(() =>
+    structuredClone(EMPTY_HG_DOC)
+  );
+  const [focusBodyDocKey, setFocusBodyDocKey] = useState(() =>
+    jsonStableStringify(EMPTY_HG_DOC)
+  );
   const [focusBaselineTitle, setFocusBaselineTitle] = useState("");
   const [focusBaselineBody, setFocusBaselineBody] = useState("");
-  const [focusBaselineBodyDoc, setFocusBaselineBodyDoc] = useState<JSONContent>(() =>
-    structuredClone(EMPTY_HG_DOC),
+  const [focusBaselineBodyDoc, setFocusBaselineBodyDoc] = useState<JSONContent>(
+    () => structuredClone(EMPTY_HG_DOC)
   );
   const [focusBaselineBodyDocKey, setFocusBaselineBodyDocKey] = useState(() =>
-    jsonStableStringify(EMPTY_HG_DOC),
+    jsonStableStringify(EMPTY_HG_DOC)
   );
-  const [focusBaselineFactionRoster, setFocusBaselineFactionRoster] = useState<FactionRosterEntry[]>(
-    [],
-  );
+  const [focusBaselineFactionRoster, setFocusBaselineFactionRoster] = useState<
+    FactionRosterEntry[]
+  >([]);
   const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null);
-  const [hoveredStackTargetId, setHoveredStackTargetId] = useState<string | null>(null);
+  const [hoveredStackTargetId, setHoveredStackTargetId] = useState<
+    string | null
+  >(null);
   const [parentDropHovered, setParentDropHovered] = useState(false);
   const parentDropHoveredRef = useRef(false);
   const dragPointerScreenRef = useRef({ x: 0, y: 0 });
@@ -3287,7 +3937,9 @@ export function ArchitecturalCanvasApp({
   >({});
   const [stackModalEjectPreview, setStackModalEjectPreview] = useState(false);
   const [stackModalEjectCount, setStackModalEjectCount] = useState(0);
-  const [stackModalCardHeights, setStackModalCardHeights] = useState<Record<string, number>>({});
+  const [stackModalCardHeights, setStackModalCardHeights] = useState<
+    Record<string, number>
+  >({});
   /** Frozen active-space entity ids for eject hull during a stack drag (layout swaps won’t shrink/grow the drop zone). */
   const stackDragHullOrderedIdsRef = useRef<string[] | null>(null);
   /** Latest stack order during an active stack drag (synced before React re-render). */
@@ -3301,14 +3953,20 @@ export function ArchitecturalCanvasApp({
   const stackModalRef = useRef(stackModal);
   const stackDragRef = useRef(stackDrag);
   const stackModalCardHeightsRef = useRef(stackModalCardHeights);
-  const [selectionContextMenu, setSelectionContextMenu] = useState<ContextMenuPosition>(null);
-  const [canvasEmptyContextMenu, setCanvasEmptyContextMenu] = useState<ContextMenuPosition>(null);
-  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
-  const [connectionContextMenu, setConnectionContextMenu] = useState<ContextMenuPosition>(null);
+  const [selectionContextMenu, setSelectionContextMenu] =
+    useState<ContextMenuPosition>(null);
+  const [canvasEmptyContextMenu, setCanvasEmptyContextMenu] =
+    useState<ContextMenuPosition>(null);
+  const [selectedConnectionId, setSelectedConnectionId] = useState<
+    string | null
+  >(null);
+  const [connectionContextMenu, setConnectionContextMenu] =
+    useState<ContextMenuPosition>(null);
   /** Canvas/stack: show dock format cluster only while focus is in a rich-text surface (card/folder title or body). */
   const [textFormatChromeActive, setTextFormatChromeActive] = useState(false);
   /** True when the caret is in a note/body editor (not titles) — drives in-doc insert strip on canvas. */
-  const [richDocInsertChromeActive, setRichDocInsertChromeActive] = useState(false);
+  const [richDocInsertChromeActive, setRichDocInsertChromeActive] =
+    useState(false);
   const [formatCommandState, setFormatCommandState] = useState({
     bold: false,
     italic: false,
@@ -3320,7 +3978,8 @@ export function ArchitecturalCanvasApp({
   });
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const [bootFlowerPortalHost, setBootFlowerPortalHost] = useState<HTMLDivElement | null>(null);
+  const [bootFlowerPortalHost, setBootFlowerPortalHost] =
+    useState<HTMLDivElement | null>(null);
   const setViewportNode = useCallback((node: HTMLDivElement | null) => {
     viewportRef.current = node;
   }, []);
@@ -3353,14 +4012,19 @@ export function ArchitecturalCanvasApp({
   const lassoPointerIdRef = useRef<number | null>(null);
   const spacePanRef = useRef(false);
   const idCounterRef = useRef(2000);
-  const commitTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const commitTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map()
+  );
   const stackPointerDragRef = useRef<{
     stackId: string;
     startX: number;
     startY: number;
     moved: boolean;
   } | null>(null);
-  const suppressStackOpenRef = useRef<{ stackId: string; expiresAt: number } | null>(null);
+  const suppressStackOpenRef = useRef<{
+    stackId: string;
+    expiresAt: number;
+  } | null>(null);
   const graphRef = useRef(graph);
   /** Incremented on each `enterSpace` so stale `fetchBootstrap` completions are ignored. */
   const spaceNavGenerationRef = useRef(0);
@@ -3369,9 +4033,10 @@ export function ArchitecturalCanvasApp({
   const navigationPathRef = useRef(navigationPath);
   const selectedNodeIdsRef = useRef(selectedNodeIds);
   const connectionSourceIdRef = useRef<string | null>(null);
-  const connectionRosterAnchorRef = useRef<{ factionNodeId: string; rosterEntryId: string } | null>(
-    null,
-  );
+  const connectionRosterAnchorRef = useRef<{
+    factionNodeId: string;
+    rosterEntryId: string;
+  } | null>(null);
   const selectionBeforeConnectionModeRef = useRef<string[] | null>(null);
   const alignSelectedInGridRef = useRef<() => void>(() => {});
   const undoPastRef = useRef<ArchitecturalUndoSnapshot[]>([]);
@@ -3381,10 +4046,17 @@ export function ArchitecturalCanvasApp({
   const galleryOpenRef = useRef(galleryOpen);
   const paletteOpenRef = useRef(false);
   const activeNodeIdRef = useRef(activeNodeId);
-  const pendingMediaUploadRef = useRef<{ mode: "focus" | "canvas"; id: string } | null>(null);
+  const pendingMediaUploadRef = useRef<{
+    mode: "focus" | "canvas";
+    id: string;
+  } | null>(null);
   const persistNeonRef = useRef(false);
-  const itemContentPatchTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const cameraPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const itemContentPatchTimersRef = useRef<
+    Map<string, ReturnType<typeof setTimeout>>
+  >(new Map());
+  const cameraPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
   /** Latest space + pan for debounced localStorage write (avoids stale closure writing wrong space). */
   const cameraPersistSnapshotRef = useRef<{
     spaceId: string;
@@ -3394,7 +4066,9 @@ export function ArchitecturalCanvasApp({
   }>({ spaceId: ROOT_SPACE_ID, tx: 0, ty: 0, zoom: 1 });
   const itemServerUpdatedAtRef = useRef<Map<string, string>>(new Map());
   /** Item ids with an in-flight create request; PATCH waits for create to settle. */
-  const pendingCreatePromisesRef = useRef<Map<string, Promise<void>>>(new Map());
+  const pendingCreatePromisesRef = useRef<Map<string, Promise<void>>>(
+    new Map()
+  );
   /** While undo restores a deleted row, collab merge must not tombstone it before POST /items completes. */
   const remoteTombstoneExemptIdsRef = useRef<Set<string>>(new Set());
   const syncCursorRef = useRef<string>(new Date(0).toISOString());
@@ -3408,16 +4082,18 @@ export function ArchitecturalCanvasApp({
     rerun: false,
     pendingToast: false,
   });
-  const mergeRemoteGraphEdgesImplRef = useRef<(showToastIfChanged: boolean) => Promise<void>>(
-    async () => {},
-  );
+  const mergeRemoteGraphEdgesImplRef = useRef<
+    (showToastIfChanged: boolean) => Promise<void>
+  >(async () => {});
   const focusDirtyRef = useRef(false);
   const inlineContentDirtyIdsRef = useRef<Set<string>>(new Set());
   /** Item ids with an in-flight `apiPatchItem` (versioned PATCH from `patchItemWithVersion`). */
   const savingContentIdsRef = useRef<Set<string>>(new Set());
   /** Local ids protected from stale remote rows for a short optimistic window. */
   const optimisticProtectedIdsRef = useRef<Set<string>>(new Set());
-  const optimisticProtectedTimerRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const optimisticProtectedTimerRef = useRef<
+    Map<string, ReturnType<typeof setTimeout>>
+  >(new Map());
   const mediaFileInputRef = useRef<HTMLInputElement | null>(null);
   const lastFormatRangeRef = useRef<Range | null>(null);
 
@@ -3429,7 +4105,7 @@ export function ArchitecturalCanvasApp({
       }
       itemContentPatchTimersRef.current.clear();
     },
-    [],
+    []
   );
   const [historyEpoch, setHistoryEpoch] = useState(0);
 
@@ -3473,35 +4149,53 @@ export function ArchitecturalCanvasApp({
   }, [focusBaselineBodyDoc]);
 
   const modKeyHints = useModKeyHints();
-  const recentPaletteTier: WorkspaceBootTierTag = workspaceCacheTierForNeonSession(heartgardenBootApi);
-  const { items: recentItems, push: pushRecentItem, pruneIds: pruneRecentItems } =
-    useRecentItems(recentPaletteTier);
-  const { items: recentFolders, push: pushRecentFolder, pruneIds: pruneRecentFolders } =
-    useRecentFolders(recentPaletteTier);
+  const recentPaletteTier: WorkspaceBootTierTag =
+    workspaceCacheTierForNeonSession(heartgardenBootApi);
+  const {
+    items: recentItems,
+    push: pushRecentItem,
+    pruneIds: pruneRecentItems,
+  } = useRecentItems(recentPaletteTier);
+  const {
+    items: recentFolders,
+    push: pushRecentFolder,
+    pruneIds: pruneRecentFolders,
+  } = useRecentFolders(recentPaletteTier);
 
   useEffect(() => {
-    if (loreCanvasBodyEditEntityId && !selectedNodeIds.includes(loreCanvasBodyEditEntityId)) {
+    if (
+      loreCanvasBodyEditEntityId &&
+      !selectedNodeIds.includes(loreCanvasBodyEditEntityId)
+    ) {
       setLoreCanvasBodyEditEntityId(null);
     }
   }, [selectedNodeIds, loreCanvasBodyEditEntityId]);
 
   useEffect(() => {
-    if (!pendingFolderTitleSelectId) return;
+    if (!pendingFolderTitleSelectId) {
+      return;
+    }
     let cancelled = false;
     let attempts = 0;
     const folderId = pendingFolderTitleSelectId;
     const tryFocusAndSelect = () => {
-      if (cancelled) return;
-      const escapedFolderId = folderId.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+      if (cancelled) {
+        return;
+      }
+      const escapedFolderId = folderId
+        .replace(/\\/g, "\\\\")
+        .replace(/"/g, '\\"');
       const editor = shellRef.current?.querySelector<HTMLElement>(
-        `[data-node-id="${escapedFolderId}"] [data-folder-title-editor="true"]`,
+        `[data-node-id="${escapedFolderId}"] [data-folder-title-editor="true"]`
       );
       if (!editor) {
         if (attempts < 10) {
           attempts += 1;
           requestAnimationFrame(tryFocusAndSelect);
         } else {
-          setPendingFolderTitleSelectId((current) => (current === folderId ? null : current));
+          setPendingFolderTitleSelectId((current) =>
+            current === folderId ? null : current
+          );
         }
         return;
       }
@@ -3513,7 +4207,9 @@ export function ArchitecturalCanvasApp({
         sel.removeAllRanges();
         sel.addRange(range);
       }
-      setPendingFolderTitleSelectId((current) => (current === folderId ? null : current));
+      setPendingFolderTitleSelectId((current) =>
+        current === folderId ? null : current
+      );
     };
     requestAnimationFrame(tryFocusAndSelect);
     return () => {
@@ -3522,27 +4218,39 @@ export function ArchitecturalCanvasApp({
   }, [pendingFolderTitleSelectId]);
 
   useEffect(() => {
-    if (!connectionSourceId) connectionRosterAnchorRef.current = null;
+    if (!connectionSourceId) {
+      connectionRosterAnchorRef.current = null;
+    }
   }, [connectionSourceId]);
 
   useEffect(() => {
-    if (!threadRosterNotice) return;
+    if (!threadRosterNotice) {
+      return;
+    }
     const t = window.setTimeout(() => setThreadRosterNotice(null), 6500);
     return () => window.clearTimeout(t);
   }, [threadRosterNotice]);
 
   useEffect(() => {
-    if (!collabConnectionsNotice) return;
+    if (!collabConnectionsNotice) {
+      return;
+    }
     const t = window.setTimeout(() => setCollabConnectionsNotice(null), 5500);
     return () => window.clearTimeout(t);
   }, [collabConnectionsNotice]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (lorePanelOpenRef.current) return;
+      if (lorePanelOpenRef.current) {
+        return;
+      }
       const mod = event.metaKey || event.ctrlKey;
-      if (!mod || event.altKey || event.shiftKey) return;
-      if (event.key.toLowerCase() !== "k") return;
+      if (!mod || event.altKey || event.shiftKey) {
+        return;
+      }
+      if (event.key.toLowerCase() !== "k") {
+        return;
+      }
       event.preventDefault();
       setPaletteOpen((prev) => !prev);
     };
@@ -3551,14 +4259,23 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   const createId = useCallback(() => {
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    if (
+      typeof crypto !== "undefined" &&
+      typeof crypto.randomUUID === "function"
+    ) {
       return crypto.randomUUID();
     }
     idCounterRef.current += 1;
     return `hg-${Date.now()}-${idCounterRef.current}`;
   }, []);
 
-  useEffect(() => subscribeNeonSync(() => setCloudLinksBar(getNeonSyncSnapshot().cloudEnabled)), []);
+  useEffect(
+    () =>
+      subscribeNeonSync(() =>
+        setCloudLinksBar(getNeonSyncSnapshot().cloudEnabled)
+      ),
+    []
+  );
 
   useEffect(() => {
     const snap0 = getNeonSyncSnapshot();
@@ -3567,63 +4284,81 @@ export function ArchitecturalCanvasApp({
     r0.busy = snap0.pending > 0 || snap0.inFlight > 0;
   }, []);
 
-  useEffect(() => {
-    return subscribeNeonSync(() => {
-      const sync = getNeonSyncSnapshot();
-      const r = neonUiSoundRef.current;
-      if (!sync.cloudEnabled) {
-        r.lastError = sync.lastError;
-        r.busy = sync.pending > 0 || sync.inFlight > 0;
-        if (r.idleTimer) {
+  useEffect(
+    () =>
+      subscribeNeonSync(() => {
+        const sync = getNeonSyncSnapshot();
+        const r = neonUiSoundRef.current;
+        if (!sync.cloudEnabled) {
+          r.lastError = sync.lastError;
+          r.busy = sync.pending > 0 || sync.inFlight > 0;
+          if (r.idleTimer) {
+            clearTimeout(r.idleTimer);
+            r.idleTimer = null;
+          }
+          return;
+        }
+        const err = sync.lastError;
+        if (!r.lastError && err) {
+          playVigilUiSound("caution");
+        }
+        if (r.lastError && !err) {
+          playVigilUiSound("notification");
+        }
+        const busy = sync.pending > 0 || sync.inFlight > 0;
+        if (r.busy && !busy && !err) {
+          if (r.idleTimer) {
+            clearTimeout(r.idleTimer);
+          }
+          r.idleTimer = setTimeout(() => {
+            playVigilUiSound("notification");
+            neonUiSoundRef.current.idleTimer = null;
+          }, 420);
+        }
+        if (busy && r.idleTimer) {
           clearTimeout(r.idleTimer);
           r.idleTimer = null;
         }
-        return;
-      }
-      const err = sync.lastError;
-      if (!r.lastError && err) playVigilUiSound("caution");
-      if (r.lastError && !err) playVigilUiSound("notification");
-      const busy = sync.pending > 0 || sync.inFlight > 0;
-      if (r.busy && !busy && !err) {
-        if (r.idleTimer) clearTimeout(r.idleTimer);
-        r.idleTimer = setTimeout(() => {
-          playVigilUiSound("notification");
-          neonUiSoundRef.current.idleTimer = null;
-        }, 420);
-      }
-      if (busy && r.idleTimer) {
-        clearTimeout(r.idleTimer);
-        r.idleTimer = null;
-      }
-      r.lastError = err;
-      r.busy = busy;
-    });
-  }, []);
+        r.lastError = err;
+        r.busy = busy;
+      }),
+    []
+  );
 
   useEffect(() => {
     const prev = paletteOpenSoundPrevRef.current;
     paletteOpenSoundPrevRef.current = paletteOpen;
-    if (prev !== paletteOpen) playVigilUiSound("tap");
+    if (prev !== paletteOpen) {
+      playVigilUiSound("tap");
+    }
   }, [paletteOpen]);
 
   useEffect(() => {
-    if (lorePanelOpenSoundPrevRef.current && !lorePanelOpen) playVigilUiSound("tap");
+    if (lorePanelOpenSoundPrevRef.current && !lorePanelOpen) {
+      playVigilUiSound("tap");
+    }
     lorePanelOpenSoundPrevRef.current = lorePanelOpen;
   }, [lorePanelOpen]);
 
   useEffect(() => {
-    if (graphOverlayOpenSoundPrevRef.current && !graphOverlayOpen) playVigilUiSound("tap");
+    if (graphOverlayOpenSoundPrevRef.current && !graphOverlayOpen) {
+      playVigilUiSound("tap");
+    }
     graphOverlayOpenSoundPrevRef.current = graphOverlayOpen;
   }, [graphOverlayOpen]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Alt") return;
+      if (e.key !== "Alt") {
+        return;
+      }
       setAltHeld(true);
       document.body.dataset.hgAltHeld = "1";
     };
     const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key !== "Alt") return;
+      if (e.key !== "Alt") {
+        return;
+      }
       setAltHeld(false);
       delete document.body.dataset.hgAltHeld;
       setAltGraphCard(null);
@@ -3639,14 +4374,18 @@ export function ArchitecturalCanvasApp({
   }, [setAltHighlightRect]);
 
   useEffect(() => {
-    if (!altHeld || !activeBraneId) return;
+    if (!(altHeld && activeBraneId)) {
+      return;
+    }
     const CACHE_TTL_MS = 12_000;
     let raf = 0;
     let lastTerm: string | null = null;
     let mentionAbort: AbortController | null = null;
     let searchAbort: AbortController | null = null;
     const onMove = (e: PointerEvent) => {
-      if (raf) cancelAnimationFrame(raf);
+      if (raf) {
+        cancelAnimationFrame(raf);
+      }
       raf = requestAnimationFrame(() => {
         raf = 0;
         const hit = readWordUnderPointer(e.clientX, e.clientY);
@@ -3688,8 +4427,12 @@ export function ArchitecturalCanvasApp({
         if (mentionCached && now - mentionCached.at < CACHE_TTL_MS) {
           setAltGraphCard((prev) =>
             prev && prev.term === term
-              ? { ...prev, mentions: mentionCached.items, loadingMentions: false }
-              : prev,
+              ? {
+                  ...prev,
+                  mentions: mentionCached.items,
+                  loadingMentions: false,
+                }
+              : prev
           );
         } else {
           mentionAbort = new AbortController();
@@ -3700,8 +4443,12 @@ export function ArchitecturalCanvasApp({
         if (searchCached && now - searchCached.at < CACHE_TTL_MS) {
           setAltGraphCard((prev) =>
             prev && prev.term === term
-              ? { ...prev, searchItems: searchCached.items, loadingSearch: false }
-              : prev,
+              ? {
+                  ...prev,
+                  searchItems: searchCached.items,
+                  loadingSearch: false,
+                }
+              : prev
           );
         } else {
           searchAbort = new AbortController();
@@ -3712,7 +4459,7 @@ export function ArchitecturalCanvasApp({
             if (mentionAbort) {
               const mentionRes = await fetch(
                 `/api/mentions?term=${encodeURIComponent(term)}&braneId=${encodeURIComponent(activeBraneId)}`,
-                { signal: mentionAbort.signal },
+                { signal: mentionAbort.signal }
               );
               const mentionData = (await mentionRes.json()) as {
                 ok?: boolean;
@@ -3729,13 +4476,15 @@ export function ArchitecturalCanvasApp({
                 setAltGraphCard((prev) =>
                   prev && prev.term === term
                     ? { ...prev, mentions: items, loadingMentions: false }
-                    : prev,
+                    : prev
                 );
               }
             }
           } catch {
             setAltGraphCard((prev) =>
-              prev && prev.term === term ? { ...prev, loadingMentions: false } : prev,
+              prev && prev.term === term
+                ? { ...prev, loadingMentions: false }
+                : prev
             );
           }
         })();
@@ -3746,50 +4495,70 @@ export function ArchitecturalCanvasApp({
               searchParams.set("q", term);
               searchParams.set("mode", "hybrid");
               searchParams.set("limit", "12");
-              if (isUuidLike(activeSpaceId)) searchParams.set("spaceId", activeSpaceId);
-              const searchRes = await fetch(`/api/search?${searchParams.toString()}`, {
-                signal: searchAbort.signal,
-              });
+              if (isUuidLike(activeSpaceId)) {
+                searchParams.set("spaceId", activeSpaceId);
+              }
+              const searchRes = await fetch(
+                `/api/search?${searchParams.toString()}`,
+                {
+                  signal: searchAbort.signal,
+                }
+              );
               const searchData = (await searchRes.json()) as {
                 ok?: boolean;
-                items?: Array<{ id: string; title?: string | null; itemType?: string | null }>;
+                items?: Array<{
+                  id: string;
+                  title?: string | null;
+                  itemType?: string | null;
+                }>;
               };
               if (searchData.ok) {
                 const items = searchData.items ?? [];
-                altSearchCacheRef.current.set(searchCacheKey, { at: Date.now(), items });
+                altSearchCacheRef.current.set(searchCacheKey, {
+                  at: Date.now(),
+                  items,
+                });
                 setAltGraphCard((prev) =>
                   prev && prev.term === term
                     ? { ...prev, searchItems: items, loadingSearch: false }
-                    : prev,
+                    : prev
                 );
               } else {
                 setAltGraphCard((prev) =>
                   prev && prev.term === term
                     ? { ...prev, searchItems: [], loadingSearch: false }
-                    : prev,
+                    : prev
                 );
               }
             }
           } catch {
             setAltGraphCard((prev) =>
-              prev && prev.term === term ? { ...prev, loadingSearch: false } : prev,
+              prev && prev.term === term
+                ? { ...prev, loadingSearch: false }
+                : prev
             );
           }
         })();
       });
     };
     const onClick = (e: PointerEvent) => {
-      if (!altHeld) return;
+      if (!altHeld) {
+        return;
+      }
       const hit = readWordUnderPointer(e.clientX, e.clientY);
       if (!hit) {
         setAltGraphCard(null);
         setAltHighlightRect(null);
         return;
       }
-      if (!graphOverlayOpen) setGraphOverlayOpen(true);
+      if (!graphOverlayOpen) {
+        setGraphOverlayOpen(true);
+      }
     };
     const onEscape = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
+      if (e.key !== "Escape") {
+        return;
+      }
       setAltGraphCard(null);
       setAltHighlightRect(null);
     };
@@ -3797,22 +4566,37 @@ export function ArchitecturalCanvasApp({
     document.addEventListener("pointerdown", onClick);
     document.addEventListener("keydown", onEscape);
     return () => {
-      if (raf) cancelAnimationFrame(raf);
+      if (raf) {
+        cancelAnimationFrame(raf);
+      }
       mentionAbort?.abort();
       searchAbort?.abort();
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerdown", onClick);
       document.removeEventListener("keydown", onEscape);
     };
-  }, [activeBraneId, activeSpaceId, altHeld, graphOverlayOpen, setAltHighlightRect, setAltGraphCardPos]);
+  }, [
+    activeBraneId,
+    activeSpaceId,
+    altHeld,
+    graphOverlayOpen,
+    setAltHighlightRect,
+    setAltGraphCardPos,
+  ]);
 
   useEffect(() => {
     const prev = connectionModeSoundPrevRef.current;
     connectionModeSoundPrevRef.current = connectionMode;
-    if (prev === connectionMode) return;
-    if (prev === "move" && connectionMode !== "move") playVigilUiSound("toggle_on");
-    else if (prev !== "move" && connectionMode === "move") playVigilUiSound("toggle_off");
-    else playVigilUiSound("select");
+    if (prev === connectionMode) {
+      return;
+    }
+    if (prev === "move" && connectionMode !== "move") {
+      playVigilUiSound("toggle_on");
+    } else if (prev !== "move" && connectionMode === "move") {
+      playVigilUiSound("toggle_off");
+    } else {
+      playVigilUiSound("select");
+    }
   }, [connectionMode]);
 
   useEffect(() => {
@@ -3840,14 +4624,20 @@ export function ArchitecturalCanvasApp({
       if (pendingCreate) {
         await pendingCreate.catch(() => {});
       }
-      if (!graphRef.current.entities[itemId]) return false;
+      if (!graphRef.current.entities[itemId]) {
+        return false;
+      }
       savingContentIdsRef.current.add(itemId);
       try {
         const base = itemServerUpdatedAtRef.current.get(itemId);
-        const body: Record<string, unknown> = base ? { ...patch, baseUpdatedAt: base } : { ...patch };
+        const body: Record<string, unknown> = base
+          ? { ...patch, baseUpdatedAt: base }
+          : { ...patch };
         const r = await apiPatchItem(itemId, body);
         if (r.ok) {
-          if (r.item.updatedAt) itemServerUpdatedAtRef.current.set(itemId, r.item.updatedAt);
+          if (r.item.updatedAt) {
+            itemServerUpdatedAtRef.current.set(itemId, r.item.updatedAt);
+          }
           return true;
         }
         if (!r.ok && "gone" in r && r.gone) {
@@ -3860,7 +4650,9 @@ export function ArchitecturalCanvasApp({
           }
           inlineContentDirtyIdsRef.current.delete(itemId);
           setItemConflictQueue((q) => q.filter((i) => i.id !== itemId));
-          setGraph((prev) => removeEntitiesFromGraphAfterRemoteDelete(prev, [itemId]));
+          setGraph((prev) =>
+            removeEntitiesFromGraphAfterRemoteDelete(prev, [itemId])
+          );
           pruneRecentItems(new Set([itemId]));
           pruneRecentFolders(new Set([itemId]));
           setSelectedNodeIds((p) => p.filter((id) => id !== itemId));
@@ -3882,15 +4674,25 @@ export function ArchitecturalCanvasApp({
           const serverAt = r.item.updatedAt;
           if (typeof serverAt === "string" && serverAt.length > 0) {
             itemServerUpdatedAtRef.current.set(itemId, serverAt);
-            const r2 = await apiPatchItem(itemId, { ...patch, baseUpdatedAt: serverAt });
+            const r2 = await apiPatchItem(itemId, {
+              ...patch,
+              baseUpdatedAt: serverAt,
+            });
             if (r2.ok) {
-              if (r2.item.updatedAt) itemServerUpdatedAtRef.current.set(itemId, r2.item.updatedAt);
+              if (r2.item.updatedAt) {
+                itemServerUpdatedAtRef.current.set(itemId, r2.item.updatedAt);
+              }
               return true;
             }
             if (!r2.ok && "conflict" in r2 && r2.conflict) {
               if (!patchTouchesItemContent(patch)) {
                 setGraph((prev) => applyServerCanvasItemToGraph(prev, r2.item));
-                if (r2.item.updatedAt) itemServerUpdatedAtRef.current.set(r2.item.id, r2.item.updatedAt);
+                if (r2.item.updatedAt) {
+                  itemServerUpdatedAtRef.current.set(
+                    r2.item.id,
+                    r2.item.updatedAt
+                  );
+                }
                 return false;
               }
               enqueueItemConflict(r2.item);
@@ -3899,7 +4701,9 @@ export function ArchitecturalCanvasApp({
           }
           if (!patchTouchesItemContent(patch)) {
             setGraph((prev) => applyServerCanvasItemToGraph(prev, r.item));
-            if (r.item.updatedAt) itemServerUpdatedAtRef.current.set(r.item.id, r.item.updatedAt);
+            if (r.item.updatedAt) {
+              itemServerUpdatedAtRef.current.set(r.item.id, r.item.updatedAt);
+            }
             return false;
           }
           enqueueItemConflict(r.item);
@@ -3909,14 +4713,18 @@ export function ArchitecturalCanvasApp({
         savingContentIdsRef.current.delete(itemId);
       }
     },
-    [enqueueItemConflict, pruneRecentFolders, pruneRecentItems],
+    [enqueueItemConflict, pruneRecentFolders, pruneRecentItems]
   );
 
   const applyItemConflictFromServer = useCallback(() => {
     const it = itemConflictQueueRef.current[0];
-    if (!it) return;
+    if (!it) {
+      return;
+    }
     setGraph((prev) => applyServerCanvasItemToGraph(prev, it));
-    if (it.updatedAt) itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
+    if (it.updatedAt) {
+      itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
+    }
     queueMicrotask(() => {
       const e = graphRef.current.entities[it.id];
       if (e && e.kind === "content" && activeNodeIdRef.current === it.id) {
@@ -3944,17 +4752,27 @@ export function ArchitecturalCanvasApp({
 
   const schedulePersistContentBody = useCallback(
     (entityId: string) => {
-      if (!persistNeonRef.current || !isUuidLike(entityId)) return;
+      if (!(persistNeonRef.current && isUuidLike(entityId))) {
+        return;
+      }
       const prevT = itemContentPatchTimersRef.current.get(entityId);
       const isFirstTimerForEntity = !prevT;
-      if (prevT) clearTimeout(prevT);
-      if (isFirstTimerForEntity) neonSyncBumpPending();
+      if (prevT) {
+        clearTimeout(prevT);
+      }
+      if (isFirstTimerForEntity) {
+        neonSyncBumpPending();
+      }
       const t = setTimeout(() => {
         itemContentPatchTimersRef.current.delete(entityId);
         neonSyncUnbumpPending();
         const ent = graphRef.current.entities[entityId];
-        if (!ent || ent.kind !== "content") return;
-        const clearAiMeta = isAiReviewPending(ent.entityMeta) && !contentEntityHasHgAiPending(ent);
+        if (!ent || ent.kind !== "content") {
+          return;
+        }
+        const clearAiMeta =
+          isAiReviewPending(ent.entityMeta) &&
+          !contentEntityHasHgAiPending(ent);
         const patch: Record<string, unknown> = {
           contentText: contentPlainTextForEntity(ent),
           contentJson: buildContentJsonForContentEntity(ent),
@@ -3963,14 +4781,19 @@ export function ArchitecturalCanvasApp({
           patch.entityMetaMerge = { aiReview: AI_REVIEW_CLEARED };
           setGraph((p) => {
             const cur = p.entities[entityId];
-            if (!cur || cur.kind !== "content") return p;
+            if (!cur || cur.kind !== "content") {
+              return p;
+            }
             return {
               ...p,
               entities: {
                 ...p.entities,
                 [entityId]: {
                   ...cur,
-                  entityMeta: { ...cur.entityMeta, aiReview: AI_REVIEW_CLEARED },
+                  entityMeta: {
+                    ...cur.entityMeta,
+                    aiReview: AI_REVIEW_CLEARED,
+                  },
                 },
               },
             };
@@ -3980,92 +4803,129 @@ export function ArchitecturalCanvasApp({
       }, 450);
       itemContentPatchTimersRef.current.set(entityId, t);
     },
-    [patchItemWithVersion],
+    [patchItemWithVersion]
   );
 
   /** After item layout PATCH, align each folder's inner `spaces.parent_space_id` with the space that holds the folder card. */
   const persistNeonFolderInnerSpaceParentsAfterLayout = useCallback(
     (ids: string[], graphSnapshot?: CanvasGraph) => {
-      if (!persistNeonRef.current) return;
+      if (!persistNeonRef.current) {
+        return;
+      }
       const g = graphSnapshot ?? graphRef.current;
       const active = activeSpaceIdRef.current;
       for (const id of ids) {
-        if (!isUuidLike(id)) continue;
+        if (!isUuidLike(id)) {
+          continue;
+        }
         const e = g.entities[id];
-        if (!e || e.kind !== "folder") continue;
-        if (!isUuidLike(e.childSpaceId)) continue;
-        const holders = Object.values(g.spaces).filter((s) => s.entityIds.includes(id));
-        if (holders.length === 0) continue;
+        if (!e || e.kind !== "folder") {
+          continue;
+        }
+        if (!isUuidLike(e.childSpaceId)) {
+          continue;
+        }
+        const holders = Object.values(g.spaces).filter((s) =>
+          s.entityIds.includes(id)
+        );
+        if (holders.length === 0) {
+          continue;
+        }
         const primary =
           holders.length === 1
             ? holders[0]!.id
-            : holders.find((s) => s.id === active)?.id ?? holders[0]!.id;
-        if (!isUuidLike(primary)) continue;
+            : (holders.find((s) => s.id === active)?.id ?? holders[0]!.id);
+        if (!isUuidLike(primary)) {
+          continue;
+        }
         void apiPatchSpaceParent(e.childSpaceId, primary);
       }
     },
-    [],
+    []
   );
 
   /** Persist geometry and `items.spaceId` from whichever space currently owns each entity in the graph. */
-  const persistNeonItemsLayout = useCallback((ids: string[], graphSnapshot?: CanvasGraph) => {
-    if (!persistNeonRef.current) return;
-    const g = graphSnapshot ?? graphRef.current;
-    const active = activeSpaceIdRef.current;
-    const dimUpdates: { id: string; width: number; height: number }[] = [];
-    for (const id of ids) {
-      if (!isUuidLike(id)) continue;
-      const e = g.entities[id];
-      if (!e) continue;
-      const holders = Object.values(g.spaces).filter((s) => s.entityIds.includes(id));
-      if (holders.length === 0) continue;
-      const primary =
-        holders.length === 1
-          ? holders[0]!.id
-          : holders.find((s) => s.id === active)?.id ?? holders[0]!.id;
-      const geo = entityGeometryOnSpace(e, primary);
-      const measured = measureArchitecturalNodePlacement(id, primary);
-      const width = measured?.width ?? geo.width;
-      const height = measured?.height ?? geo.height;
-      if (measured) {
-        const prevW =
-          e.kind === "folder" ? e.width ?? FOLDER_CARD_WIDTH : e.width ?? UNIFIED_NODE_WIDTH;
-        const prevH =
-          e.kind === "folder" ? e.height ?? FOLDER_CARD_HEIGHT : e.height ?? 280;
-        if (Math.abs(width - prevW) > 0.5 || Math.abs(height - prevH) > 0.5) {
-          dimUpdates.push({ id, width, height });
-        }
+  const persistNeonItemsLayout = useCallback(
+    (ids: string[], graphSnapshot?: CanvasGraph) => {
+      if (!persistNeonRef.current) {
+        return;
       }
-      const patch: Record<string, unknown> = {
-        spaceId: primary,
-        x: geo.x,
-        y: geo.y,
-        width,
-        height,
-      };
-      if (e.kind === "content") {
-        if (!e.stackId) {
-          patch.stackId = null;
-          patch.stackOrder = null;
-        } else if (isUuidLike(e.stackId)) {
-          patch.stackId = e.stackId;
-          patch.stackOrder = e.stackOrder ?? null;
+      const g = graphSnapshot ?? graphRef.current;
+      const active = activeSpaceIdRef.current;
+      const dimUpdates: { id: string; width: number; height: number }[] = [];
+      for (const id of ids) {
+        if (!isUuidLike(id)) {
+          continue;
         }
+        const e = g.entities[id];
+        if (!e) {
+          continue;
+        }
+        const holders = Object.values(g.spaces).filter((s) =>
+          s.entityIds.includes(id)
+        );
+        if (holders.length === 0) {
+          continue;
+        }
+        const primary =
+          holders.length === 1
+            ? holders[0]!.id
+            : (holders.find((s) => s.id === active)?.id ?? holders[0]!.id);
+        const geo = entityGeometryOnSpace(e, primary);
+        const measured = measureArchitecturalNodePlacement(id, primary);
+        const width = measured?.width ?? geo.width;
+        const height = measured?.height ?? geo.height;
+        if (measured) {
+          const prevW =
+            e.kind === "folder"
+              ? (e.width ?? FOLDER_CARD_WIDTH)
+              : (e.width ?? UNIFIED_NODE_WIDTH);
+          const prevH =
+            e.kind === "folder"
+              ? (e.height ?? FOLDER_CARD_HEIGHT)
+              : (e.height ?? 280);
+          if (Math.abs(width - prevW) > 0.5 || Math.abs(height - prevH) > 0.5) {
+            dimUpdates.push({ id, width, height });
+          }
+        }
+        const patch: Record<string, unknown> = {
+          spaceId: primary,
+          x: geo.x,
+          y: geo.y,
+          width,
+          height,
+        };
+        if (e.kind === "content") {
+          if (!e.stackId) {
+            patch.stackId = null;
+            patch.stackOrder = null;
+          } else if (isUuidLike(e.stackId)) {
+            patch.stackId = e.stackId;
+            patch.stackOrder = e.stackOrder ?? null;
+          }
+        }
+        void patchItemWithVersion(id, patch);
       }
-      void patchItemWithVersion(id, patch);
-    }
-    if (dimUpdates.length > 0) {
-      setGraph((prev) => {
-        const next = shallowCloneGraph(prev);
-        for (const { id, width, height } of dimUpdates) {
-          const ent = next.entities[id];
-          if (ent) next.entities[id] = { ...ent, width, height };
-        }
-        return next;
-      });
-    }
-    persistNeonFolderInnerSpaceParentsAfterLayout(ids, g);
-  }, [patchItemWithVersion, persistNeonFolderInnerSpaceParentsAfterLayout, setGraph]);
+      if (dimUpdates.length > 0) {
+        setGraph((prev) => {
+          const next = shallowCloneGraph(prev);
+          for (const { id, width, height } of dimUpdates) {
+            const ent = next.entities[id];
+            if (ent) {
+              next.entities[id] = { ...ent, width, height };
+            }
+          }
+          return next;
+        });
+      }
+      persistNeonFolderInnerSpaceParentsAfterLayout(ids, g);
+    },
+    [
+      patchItemWithVersion,
+      persistNeonFolderInnerSpaceParentsAfterLayout,
+      setGraph,
+    ]
+  );
 
   const closeStackModal = useCallback(() => {
     setStackDrag(null);
@@ -4084,26 +4944,34 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   const recordUndoBeforeMutation = useCallback(() => {
-    if (isApplyingHistoryRef.current) return;
+    if (isApplyingHistoryRef.current) {
+      return;
+    }
     const snap: ArchitecturalUndoSnapshot = {
       graph: cloneArchitecturalGraph(graphRef.current),
       activeSpaceId: activeSpaceIdRef.current,
       navigationPath: [...navigationPathRef.current],
       selectedNodeIds: [...selectedNodeIdsRef.current],
     };
-    undoPastRef.current = [...undoPastRef.current, snap].slice(-MAX_ARCHITECTURAL_UNDO);
+    undoPastRef.current = [...undoPastRef.current, snap].slice(
+      -MAX_ARCHITECTURAL_UNDO
+    );
     undoFutureRef.current = [];
     setHistoryEpoch((n) => n + 1);
   }, []);
 
   const syncNeonAfterHistoryTransition = useCallback(
     async (from: CanvasGraph, to: CanvasGraph) => {
-      if (!persistNeonRef.current) return;
+      if (!persistNeonRef.current) {
+        return;
+      }
 
       const fromConnIds = new Set(Object.keys(from.connections));
       const toConnIds = new Set(Object.keys(to.connections));
       for (const cid of fromConnIds) {
-        if (toConnIds.has(cid)) continue;
+        if (toConnIds.has(cid)) {
+          continue;
+        }
         const c = from.connections[cid];
         if (c?.dbLinkId && isUuidLike(c.dbLinkId)) {
           void deleteItemLinkByDbId(c.dbLinkId);
@@ -4112,37 +4980,60 @@ export function ArchitecturalCanvasApp({
 
       const fromIds = new Set(Object.keys(from.entities));
       const toIds = new Set(Object.keys(to.entities));
-      const added = [...toIds].filter((id) => !fromIds.has(id) && isUuidLike(id));
-      const removed = [...fromIds].filter((id) => !toIds.has(id) && isUuidLike(id));
+      const added = [...toIds].filter(
+        (id) => !fromIds.has(id) && isUuidLike(id)
+      );
+      const removed = [...fromIds].filter(
+        (id) => !toIds.has(id) && isUuidLike(id)
+      );
 
       if (removed.length > 0) {
-        const { entityIds: idsToRemove, spaceIds } = collectDeletionClosure(from, removed);
+        const { entityIds: idsToRemove, spaceIds } = collectDeletionClosure(
+          from,
+          removed
+        );
         const spaceRoots = filterSpaceDeletionRoots(spaceIds, from);
         for (const id of idsToRemove) {
-          if (isUuidLike(id)) void apiDeleteItem(id);
+          if (isUuidLike(id)) {
+            void apiDeleteItem(id);
+          }
         }
         for (const sid of spaceRoots) {
-          if (isUuidLike(sid)) void apiDeleteSpaceSubtree(sid);
+          if (isUuidLike(sid)) {
+            void apiDeleteSpaceSubtree(sid);
+          }
         }
       }
 
       const addedSpaceIds = new Set(
         Object.keys(to.spaces).filter(
-          (sid) => !from.spaces[sid] && isUuidLike(sid) && sid !== to.rootSpaceId,
-        ),
+          (sid) =>
+            !from.spaces[sid] && isUuidLike(sid) && sid !== to.rootSpaceId
+        )
       );
       if (addedSpaceIds.size > 0) {
-        const spaceOrder = topoSortAddedSpacesForRestore(addedSpaceIds, to.spaces);
+        const spaceOrder = topoSortAddedSpacesForRestore(
+          addedSpaceIds,
+          to.spaces
+        );
         for (const sid of spaceOrder) {
           const row = to.spaces[sid];
-          if (!row) continue;
-          await apiCreateSpace(row.name?.trim() || "Folder", row.parentSpaceId ?? null, { id: sid });
+          if (!row) {
+            continue;
+          }
+          await apiCreateSpace(
+            row.name?.trim() || "Folder",
+            row.parentSpaceId ?? null,
+            { id: sid }
+          );
         }
       }
 
       for (const id of added) {
         const ent = to.entities[id];
-        if (!ent) continue;
+        if (!ent) {
+          continue;
+        }
 
         remoteTombstoneExemptIdsRef.current.add(id);
         const payload =
@@ -4164,14 +5055,20 @@ export function ArchitecturalCanvasApp({
       }
 
       for (const cid of toConnIds) {
-        if (fromConnIds.has(cid)) continue;
+        if (fromConnIds.has(cid)) {
+          continue;
+        }
         const c = to.connections[cid];
-        if (!c) continue;
+        if (!c) {
+          continue;
+        }
         const result = await postItemLinkFromConnectionSnapshot(c, to.entities);
         if (result.ok && result.dbLinkId && isUuidLike(result.dbLinkId)) {
           setGraph((prev) => {
             const cur = prev.connections[cid];
-            if (!cur) return prev;
+            if (!cur) {
+              return prev;
+            }
             const next = shallowCloneGraph(prev);
             next.connections[cid] = {
               ...cur,
@@ -4184,7 +5081,9 @@ export function ArchitecturalCanvasApp({
         } else if (result.ok) {
           setGraph((prev) => {
             const cur = prev.connections[cid];
-            if (!cur) return prev;
+            if (!cur) {
+              return prev;
+            }
             const next = shallowCloneGraph(prev);
             next.connections[cid] = {
               ...cur,
@@ -4196,7 +5095,9 @@ export function ArchitecturalCanvasApp({
         } else if (!result.ok) {
           setGraph((prev) => {
             const cur = prev.connections[cid];
-            if (!cur) return prev;
+            if (!cur) {
+              return prev;
+            }
             const next = shallowCloneGraph(prev);
             next.connections[cid] = {
               ...cur,
@@ -4212,17 +5113,26 @@ export function ArchitecturalCanvasApp({
       if (layoutIds.length > 0) {
         persistNeonItemsLayout(layoutIds, to);
       }
-      for (const { spaceId, parentSpaceId } of collectSpacesNeedingParentResync(from, to)) {
-        if (!isUuidLike(spaceId)) continue;
-        if (parentSpaceId !== null && !isUuidLike(parentSpaceId)) continue;
+      for (const { spaceId, parentSpaceId } of collectSpacesNeedingParentResync(
+        from,
+        to
+      )) {
+        if (!isUuidLike(spaceId)) {
+          continue;
+        }
+        if (parentSpaceId !== null && !isUuidLike(parentSpaceId)) {
+          continue;
+        }
         void apiPatchSpaceParent(spaceId, parentSpaceId);
       }
     },
-    [persistNeonItemsLayout, setGraph],
+    [persistNeonItemsLayout, setGraph]
   );
 
   const undo = useCallback(() => {
-    if (undoPastRef.current.length === 0) return;
+    if (undoPastRef.current.length === 0) {
+      return;
+    }
     isApplyingHistoryRef.current = true;
     const current: ArchitecturalUndoSnapshot = {
       graph: cloneArchitecturalGraph(graphRef.current),
@@ -4239,13 +5149,19 @@ export function ArchitecturalCanvasApp({
     let nextPath = restore.navigationPath;
     if (!rGraph.spaces[nextSpaceId]) {
       nextSpaceId = rGraph.rootSpaceId;
-      nextPath = buildPathToSpace(nextSpaceId, rGraph.spaces, rGraph.rootSpaceId);
+      nextPath = buildPathToSpace(
+        nextSpaceId,
+        rGraph.spaces,
+        rGraph.rootSpaceId
+      );
     }
 
     setGraph(rGraph);
     setActiveSpaceId(nextSpaceId);
     setNavigationPath(nextPath);
-    setSelectedNodeIds(restore.selectedNodeIds.filter((id) => rGraph.entities[id]));
+    setSelectedNodeIds(
+      restore.selectedNodeIds.filter((id) => rGraph.entities[id])
+    );
     closeStackModal();
     const restoredFocusNodeId = activeNodeIdRef.current;
     if (focusOpenRef.current && restoredFocusNodeId) {
@@ -4284,7 +5200,9 @@ export function ArchitecturalCanvasApp({
   }, [closeStackModal, syncNeonAfterHistoryTransition]);
 
   const redo = useCallback(() => {
-    if (undoFutureRef.current.length === 0) return;
+    if (undoFutureRef.current.length === 0) {
+      return;
+    }
     isApplyingHistoryRef.current = true;
     const current: ArchitecturalUndoSnapshot = {
       graph: cloneArchitecturalGraph(graphRef.current),
@@ -4294,20 +5212,28 @@ export function ArchitecturalCanvasApp({
     };
     const restore = undoFutureRef.current[undoFutureRef.current.length - 1]!;
     undoFutureRef.current = undoFutureRef.current.slice(0, -1);
-    undoPastRef.current = [...undoPastRef.current, current].slice(-MAX_ARCHITECTURAL_UNDO);
+    undoPastRef.current = [...undoPastRef.current, current].slice(
+      -MAX_ARCHITECTURAL_UNDO
+    );
 
     const rGraph = cloneArchitecturalGraph(restore.graph);
     let nextSpaceId = restore.activeSpaceId;
     let nextPath = restore.navigationPath;
     if (!rGraph.spaces[nextSpaceId]) {
       nextSpaceId = rGraph.rootSpaceId;
-      nextPath = buildPathToSpace(nextSpaceId, rGraph.spaces, rGraph.rootSpaceId);
+      nextPath = buildPathToSpace(
+        nextSpaceId,
+        rGraph.spaces,
+        rGraph.rootSpaceId
+      );
     }
 
     setGraph(rGraph);
     setActiveSpaceId(nextSpaceId);
     setNavigationPath(nextPath);
-    setSelectedNodeIds(restore.selectedNodeIds.filter((id) => rGraph.entities[id]));
+    setSelectedNodeIds(
+      restore.selectedNodeIds.filter((id) => rGraph.entities[id])
+    );
     closeStackModal();
     const restoredFocusNodeId = activeNodeIdRef.current;
     if (focusOpenRef.current && restoredFocusNodeId) {
@@ -4352,7 +5278,9 @@ export function ArchitecturalCanvasApp({
       playVigilUiSound("tap");
       return;
     }
-    if (undoPastRef.current.length === 0) return;
+    if (undoPastRef.current.length === 0) {
+      return;
+    }
     undo();
     playVigilUiSound("tap");
   }, [undo]);
@@ -4364,7 +5292,9 @@ export function ArchitecturalCanvasApp({
       playVigilUiSound("tap");
       return;
     }
-    if (undoFutureRef.current.length === 0) return;
+    if (undoFutureRef.current.length === 0) {
+      return;
+    }
     redo();
     playVigilUiSound("tap");
   }, [redo]);
@@ -4390,7 +5320,9 @@ export function ArchitecturalCanvasApp({
   const queueGraphCommit = useCallback(
     (key: string, applyCommit: () => void, delayMs: number) => {
       const existing = commitTimersRef.current.get(key);
-      if (existing) clearTimeout(existing);
+      if (existing) {
+        clearTimeout(existing);
+      }
       if (delayMs <= 0) {
         commitTimersRef.current.delete(key);
         applyCommit();
@@ -4402,7 +5334,7 @@ export function ArchitecturalCanvasApp({
       }, delayMs);
       commitTimersRef.current.set(key, timer);
     },
-    [],
+    []
   );
 
   useEffect(() => {
@@ -4417,32 +5349,45 @@ export function ArchitecturalCanvasApp({
     (connectionId: string, patch: Partial<CanvasPinConnection>) => {
       setGraph((prev) => {
         const current = prev.connections[connectionId];
-        if (!current) return prev;
+        if (!current) {
+          return prev;
+        }
         const next = shallowCloneGraph(prev);
-        next.connections[connectionId] = { ...current, ...patch, updatedAt: Date.now() };
+        next.connections[connectionId] = {
+          ...current,
+          ...patch,
+          updatedAt: Date.now(),
+        };
         return next;
       });
     },
-    [],
+    []
   );
 
   const syncCreateConnection = useCallback(
     async (connectionId: string, snapIn?: CanvasPinConnection) => {
       /** `graphRef` tracks last *rendered* graph; right after `setGraph` the new connection is not in the ref yet. */
       const snap = snapIn ?? graphRef.current.connections[connectionId];
-      if (!snap) return;
+      if (!snap) {
+        return;
+      }
       const sourceEntity = graphRef.current.entities[snap.sourceEntityId];
       const targetEntity = graphRef.current.entities[snap.targetEntityId];
-      const sourceItemId = sourceEntity?.persistedItemId ?? sourceEntity?.id ?? null;
-      const targetItemId = targetEntity?.persistedItemId ?? targetEntity?.id ?? null;
-      if (!isUuidLike(sourceItemId) || !isUuidLike(targetItemId)) {
+      const sourceItemId =
+        sourceEntity?.persistedItemId ?? sourceEntity?.id ?? null;
+      const targetItemId =
+        targetEntity?.persistedItemId ?? targetEntity?.id ?? null;
+      if (!(isUuidLike(sourceItemId) && isUuidLike(targetItemId))) {
         setConnectionSyncPatch(connectionId, {
           syncState: "local-only",
           syncError: "No persisted UUID mapping for one or more cards.",
         });
         return;
       }
-      setConnectionSyncPatch(connectionId, { syncState: "syncing", syncError: null });
+      setConnectionSyncPatch(connectionId, {
+        syncState: "syncing",
+        syncError: null,
+      });
       try {
         const res = await fetch("/api/item-links", {
           method: "POST",
@@ -4458,7 +5403,7 @@ export function ArchitecturalCanvasApp({
               sourcePinConfig: snap.sourcePin,
               targetPinConfig: snap.targetPin,
               slackMultiplier: clampLinkMetaSlackMultiplier(
-                snap.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER,
+                snap.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER
               ),
             },
           }),
@@ -4471,8 +5416,17 @@ export function ArchitecturalCanvasApp({
         };
         const logicalOk = res.ok && body.ok === true;
         if (!logicalOk) {
-          const msg = reportItemLinkFailure("POST /api/item-links", res, rawText, body, logicalOk);
-          setConnectionSyncPatch(connectionId, { syncState: "error", syncError: msg });
+          const msg = reportItemLinkFailure(
+            "POST /api/item-links",
+            res,
+            rawText,
+            body,
+            logicalOk
+          );
+          setConnectionSyncPatch(connectionId, {
+            syncState: "error",
+            syncError: msg,
+          });
           return;
         }
         setConnectionSyncPatch(connectionId, {
@@ -4481,7 +5435,8 @@ export function ArchitecturalCanvasApp({
           syncError: null,
         });
       } catch (error) {
-        const msg = error instanceof Error ? error.message : "Failed to persist link";
+        const msg =
+          error instanceof Error ? error.message : "Failed to persist link";
         setConnectionSyncPatch(connectionId, {
           syncState: "error",
           syncError: msg,
@@ -4495,20 +5450,24 @@ export function ArchitecturalCanvasApp({
         }
       }
     },
-    [setConnectionSyncPatch],
+    [setConnectionSyncPatch]
   );
 
   const syncConnectionSlack = useCallback(
     async (connectionId: string, slackMultiplier: number) => {
       const snap = graphRef.current.connections[connectionId];
-      if (!snap?.dbLinkId || !isUuidLike(snap.dbLinkId)) return;
+      if (!(snap?.dbLinkId && isUuidLike(snap.dbLinkId))) {
+        return;
+      }
       try {
         const res = await fetch("/api/item-links", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             id: snap.dbLinkId,
-            meta: { slackMultiplier: clampLinkMetaSlackMultiplier(slackMultiplier) },
+            meta: {
+              slackMultiplier: clampLinkMetaSlackMultiplier(slackMultiplier),
+            },
           }),
         });
         const rawText = await res.text();
@@ -4520,14 +5479,23 @@ export function ArchitecturalCanvasApp({
             res,
             rawText,
             body,
-            logicalOk,
+            logicalOk
           );
-          setConnectionSyncPatch(connectionId, { syncState: "error", syncError: msg });
+          setConnectionSyncPatch(connectionId, {
+            syncState: "error",
+            syncError: msg,
+          });
           return;
         }
-        setConnectionSyncPatch(connectionId, { syncState: "synced", syncError: null });
+        setConnectionSyncPatch(connectionId, {
+          syncState: "synced",
+          syncError: null,
+        });
       } catch (error) {
-        const msg = error instanceof Error ? error.message : "Failed to sync thread slack";
+        const msg =
+          error instanceof Error
+            ? error.message
+            : "Failed to sync thread slack";
         setConnectionSyncPatch(connectionId, {
           syncState: "error",
           syncError: msg,
@@ -4541,30 +5509,37 @@ export function ArchitecturalCanvasApp({
         }
       }
     },
-    [setConnectionSyncPatch],
+    [setConnectionSyncPatch]
   );
 
-  const syncDeleteConnection = useCallback(async (connection: CanvasPinConnection) => {
-    if (!connection.dbLinkId || !isUuidLike(connection.dbLinkId)) return;
-    try {
-      await fetch("/api/item-links", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: connection.dbLinkId }),
-      });
-    } catch (e) {
-      neonSyncReportAuxiliaryFailure({
-        operation: "DELETE /api/item-links",
-        message: e instanceof Error ? e.message : "Network error",
-        cause: "network",
-      });
-    }
-  }, []);
+  const syncDeleteConnection = useCallback(
+    async (connection: CanvasPinConnection) => {
+      if (!(connection.dbLinkId && isUuidLike(connection.dbLinkId))) {
+        return;
+      }
+      try {
+        await fetch("/api/item-links", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: connection.dbLinkId }),
+        });
+      } catch (e) {
+        neonSyncReportAuxiliaryFailure({
+          operation: "DELETE /api/item-links",
+          message: e instanceof Error ? e.message : "Network error",
+          cause: "network",
+        });
+      }
+    },
+    []
+  );
 
   const syncColorConnection = useCallback(
     async (connectionId: string, color: string) => {
       const snap = graphRef.current.connections[connectionId];
-      if (!snap?.dbLinkId || !isUuidLike(snap.dbLinkId)) return;
+      if (!(snap?.dbLinkId && isUuidLike(snap.dbLinkId))) {
+        return;
+      }
       try {
         const res = await fetch("/api/item-links", {
           method: "PATCH",
@@ -4580,12 +5555,18 @@ export function ArchitecturalCanvasApp({
             res,
             rawText,
             body,
-            logicalOk,
+            logicalOk
           );
-          setConnectionSyncPatch(connectionId, { syncState: "error", syncError: msg });
+          setConnectionSyncPatch(connectionId, {
+            syncState: "error",
+            syncError: msg,
+          });
         }
       } catch (error) {
-        const msg = error instanceof Error ? error.message : "Failed to sync connection color";
+        const msg =
+          error instanceof Error
+            ? error.message
+            : "Failed to sync connection color";
         setConnectionSyncPatch(connectionId, {
           syncState: "error",
           syncError: msg,
@@ -4599,13 +5580,15 @@ export function ArchitecturalCanvasApp({
         }
       }
     },
-    [setConnectionSyncPatch],
+    [setConnectionSyncPatch]
   );
 
   const syncLinkTypeConnection = useCallback(
     async (connectionId: string, linkType: string) => {
       const snap = graphRef.current.connections[connectionId];
-      if (!snap?.dbLinkId || !isUuidLike(snap.dbLinkId)) return;
+      if (!(snap?.dbLinkId && isUuidLike(snap.dbLinkId))) {
+        return;
+      }
       try {
         const res = await fetch("/api/item-links", {
           method: "PATCH",
@@ -4621,12 +5604,16 @@ export function ArchitecturalCanvasApp({
             res,
             rawText,
             body,
-            logicalOk,
+            logicalOk
           );
-          setConnectionSyncPatch(connectionId, { syncState: "error", syncError: msg });
+          setConnectionSyncPatch(connectionId, {
+            syncState: "error",
+            syncError: msg,
+          });
         }
       } catch (error) {
-        const msg = error instanceof Error ? error.message : "Failed to sync link type";
+        const msg =
+          error instanceof Error ? error.message : "Failed to sync link type";
         setConnectionSyncPatch(connectionId, {
           syncState: "error",
           syncError: msg,
@@ -4640,7 +5627,7 @@ export function ArchitecturalCanvasApp({
         }
       }
     },
-    [setConnectionSyncPatch],
+    [setConnectionSyncPatch]
   );
 
   /**
@@ -4652,36 +5639,56 @@ export function ArchitecturalCanvasApp({
   const setConnectionLinkType = useCallback(
     (connectionId: string, linkType: string) => {
       const cur = graphRef.current.connections[connectionId];
-      if (!cur) return;
+      if (!cur) {
+        return;
+      }
       const currentLt = cur.linkType ?? "pin";
-      const kind = CONNECTION_KINDS_IN_ORDER.find((k) => linkTypeForConnectionKind(k) === linkType);
+      const kind = CONNECTION_KINDS_IN_ORDER.find(
+        (k) => linkTypeForConnectionKind(k) === linkType
+      );
       const nextColor = kind ? colorForConnectionKind(kind) : null;
       const colorChanges = nextColor !== null && cur.color !== nextColor;
       const linkTypeChanges = currentLt !== linkType;
-      if (!colorChanges && !linkTypeChanges) return;
+      if (!(colorChanges || linkTypeChanges)) {
+        return;
+      }
       recordUndoBeforeMutation();
       const patch: { linkType?: string; color?: string } = {};
-      if (linkTypeChanges) patch.linkType = linkType;
-      if (colorChanges && nextColor) patch.color = nextColor;
+      if (linkTypeChanges) {
+        patch.linkType = linkType;
+      }
+      if (colorChanges && nextColor) {
+        patch.color = nextColor;
+      }
       setConnectionSyncPatch(connectionId, patch);
-      if (linkTypeChanges) void syncLinkTypeConnection(connectionId, linkType);
-      if (colorChanges && nextColor) void syncColorConnection(connectionId, nextColor);
+      if (linkTypeChanges) {
+        void syncLinkTypeConnection(connectionId, linkType);
+      }
+      if (colorChanges && nextColor) {
+        void syncColorConnection(connectionId, nextColor);
+      }
     },
-    [recordUndoBeforeMutation, setConnectionSyncPatch, syncColorConnection, syncLinkTypeConnection],
+    [
+      recordUndoBeforeMutation,
+      setConnectionSyncPatch,
+      syncColorConnection,
+      syncLinkTypeConnection,
+    ]
   );
 
   const createConnection = useCallback(
     (
       sourceEntityId: string,
       targetEntityId: string,
-      opts?: { skipUndo?: boolean },
+      opts?: { skipUndo?: boolean }
     ) => {
       const connectionId = createId();
-      if (!opts?.skipUndo) recordUndoBeforeMutation();
+      if (!opts?.skipUndo) {
+        recordUndoBeforeMutation();
+      }
       const prev = graphRef.current;
       if (
-        !prev.entities[sourceEntityId] ||
-        !prev.entities[targetEntityId] ||
+        !(prev.entities[sourceEntityId] && prev.entities[targetEntityId]) ||
         sourceEntityId === targetEntityId
       ) {
         return;
@@ -4708,24 +5715,38 @@ export function ArchitecturalCanvasApp({
         syncError: null,
       };
       setGraph((p) => {
-        if (!p.entities[sourceEntityId] || !p.entities[targetEntityId] || sourceEntityId === targetEntityId)
+        if (
+          !(p.entities[sourceEntityId] && p.entities[targetEntityId]) ||
+          sourceEntityId === targetEntityId
+        ) {
           return p;
+        }
         const next = shallowCloneGraph(p);
         next.connections[connectionId] = newConnection;
         return next;
       });
       void syncCreateConnection(connectionId, newConnection);
     },
-    [connectionColor, connectionKind, createId, recordUndoBeforeMutation, syncCreateConnection],
+    [
+      connectionColor,
+      connectionKind,
+      createId,
+      recordUndoBeforeMutation,
+      syncCreateConnection,
+    ]
   );
 
   const cutConnection = useCallback(
     (connectionId: string) => {
       const existing = graphRef.current.connections[connectionId];
-      if (!existing) return;
+      if (!existing) {
+        return;
+      }
       recordUndoBeforeMutation();
       setGraph((prev) => {
-        if (!prev.connections[connectionId]) return prev;
+        if (!prev.connections[connectionId]) {
+          return prev;
+        }
         const next = shallowCloneGraph(prev);
         delete next.connections[connectionId];
         return next;
@@ -4733,7 +5754,7 @@ export function ArchitecturalCanvasApp({
       delete ropeRuntimeRef.current[connectionId];
       void syncDeleteConnection(existing);
     },
-    [recordUndoBeforeMutation, syncDeleteConnection],
+    [recordUndoBeforeMutation, syncDeleteConnection]
   );
 
   /**
@@ -4744,40 +5765,60 @@ export function ArchitecturalCanvasApp({
   const recolorConnection = useCallback(
     (connectionId: string, color: string) => {
       const current = graphRef.current.connections[connectionId];
-      if (!current) return;
+      if (!current) {
+        return;
+      }
       const kind = snapColorToConnectionKind(color);
-      const { color: canonicalColor, linkType: canonicalLinkType } = canonicalPairForKind(kind);
+      const { color: canonicalColor, linkType: canonicalLinkType } =
+        canonicalPairForKind(kind);
       const colorChanges = current.color !== canonicalColor;
       const linkTypeChanges = (current.linkType ?? "pin") !== canonicalLinkType;
-      if (!colorChanges && !linkTypeChanges) return;
+      if (!(colorChanges || linkTypeChanges)) {
+        return;
+      }
       recordUndoBeforeMutation();
       const patch: { color?: string; linkType?: string } = {};
-      if (colorChanges) patch.color = canonicalColor;
-      if (linkTypeChanges) patch.linkType = canonicalLinkType;
+      if (colorChanges) {
+        patch.color = canonicalColor;
+      }
+      if (linkTypeChanges) {
+        patch.linkType = canonicalLinkType;
+      }
       setConnectionSyncPatch(connectionId, patch);
-      if (colorChanges) void syncColorConnection(connectionId, canonicalColor);
-      if (linkTypeChanges) void syncLinkTypeConnection(connectionId, canonicalLinkType);
+      if (colorChanges) {
+        void syncColorConnection(connectionId, canonicalColor);
+      }
+      if (linkTypeChanges) {
+        void syncLinkTypeConnection(connectionId, canonicalLinkType);
+      }
     },
     [
       recordUndoBeforeMutation,
       setConnectionSyncPatch,
       syncColorConnection,
       syncLinkTypeConnection,
-    ],
+    ]
   );
 
   const setConnectionSlack = useCallback(
     (connectionId: string, nextSlack: number) => {
       const current = graphRef.current.connections[connectionId];
-      if (!current) return;
-      const clamped = clampLinkMetaSlackMultiplier(nextSlack);
-      if (Math.abs((current.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER) - clamped) < 0.001)
+      if (!current) {
         return;
+      }
+      const clamped = clampLinkMetaSlackMultiplier(nextSlack);
+      if (
+        Math.abs(
+          (current.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER) - clamped
+        ) < 0.001
+      ) {
+        return;
+      }
       recordUndoBeforeMutation();
       setConnectionSyncPatch(connectionId, { slackMultiplier: clamped });
       void syncConnectionSlack(connectionId, clamped);
     },
-    [recordUndoBeforeMutation, setConnectionSyncPatch, syncConnectionSlack],
+    [recordUndoBeforeMutation, setConnectionSyncPatch, syncConnectionSlack]
   );
 
   /**
@@ -4789,19 +5830,22 @@ export function ArchitecturalCanvasApp({
     (nextKind: ConnectionKind) => {
       setConnectionKind(nextKind);
       const selected = selectedNodeIdsRef.current;
-      if (selected.length !== 2) return;
+      if (selected.length !== 2) {
+        return;
+      }
       const [a, b] = selected;
       const nextColor = colorForConnectionKind(nextKind);
       const between = Object.values(graphRef.current.connections)
         .filter(
           (connection) =>
-            (connection.sourceEntityId === a && connection.targetEntityId === b) ||
-            (connection.sourceEntityId === b && connection.targetEntityId === a),
+            (connection.sourceEntityId === a &&
+              connection.targetEntityId === b) ||
+            (connection.sourceEntityId === b && connection.targetEntityId === a)
         )
         .map((connection) => connection.id);
       between.forEach((id) => recolorConnection(id, nextColor));
     },
-    [recolorConnection],
+    [recolorConnection]
   );
 
   /**
@@ -4813,31 +5857,64 @@ export function ArchitecturalCanvasApp({
    */
   const migratedConnectionIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    if (scenario === "default" && !canvasBootstrapResolved) return;
+    if (scenario === "default" && !canvasBootstrapResolved) {
+      return;
+    }
     const seen = migratedConnectionIdsRef.current;
     const patches: Array<{ id: string; color: string; linkType: string }> = [];
     for (const conn of Object.values(graph.connections)) {
-      if (seen.has(conn.id)) continue;
+      if (seen.has(conn.id)) {
+        continue;
+      }
       seen.add(conn.id);
-      if (isCanonicalConnectionPair({ color: conn.color, linkType: conn.linkType })) continue;
-      const kind = canonicalKindForConnection({ color: conn.color, linkType: conn.linkType });
+      if (
+        isCanonicalConnectionPair({
+          color: conn.color,
+          linkType: conn.linkType,
+        })
+      ) {
+        continue;
+      }
+      const kind = canonicalKindForConnection({
+        color: conn.color,
+        linkType: conn.linkType,
+      });
       const pair = canonicalPairForKind(kind);
-      if (conn.color === pair.color && (conn.linkType ?? "pin") === pair.linkType) continue;
+      if (
+        conn.color === pair.color &&
+        (conn.linkType ?? "pin") === pair.linkType
+      ) {
+        continue;
+      }
       patches.push({ id: conn.id, color: pair.color, linkType: pair.linkType });
     }
-    if (patches.length === 0) return;
+    if (patches.length === 0) {
+      return;
+    }
     for (const p of patches) {
       const current = graphRef.current.connections[p.id];
-      if (!current) continue;
+      if (!current) {
+        continue;
+      }
       const colorChanged = current.color !== p.color;
       const linkTypeChanged = (current.linkType ?? "pin") !== p.linkType;
-      if (!colorChanged && !linkTypeChanged) continue;
+      if (!(colorChanged || linkTypeChanged)) {
+        continue;
+      }
       const patch: { color?: string; linkType?: string } = {};
-      if (colorChanged) patch.color = p.color;
-      if (linkTypeChanged) patch.linkType = p.linkType;
+      if (colorChanged) {
+        patch.color = p.color;
+      }
+      if (linkTypeChanged) {
+        patch.linkType = p.linkType;
+      }
       setConnectionSyncPatch(p.id, patch);
-      if (colorChanged) void syncColorConnection(p.id, p.color);
-      if (linkTypeChanged) void syncLinkTypeConnection(p.id, p.linkType);
+      if (colorChanged) {
+        void syncColorConnection(p.id, p.color);
+      }
+      if (linkTypeChanged) {
+        void syncLinkTypeConnection(p.id, p.linkType);
+      }
     }
   }, [
     graph.connections,
@@ -4862,7 +5939,8 @@ export function ArchitecturalCanvasApp({
     return () => window.cancelAnimationFrame(frame);
   }, [stackModal]);
 
-  const activeSpace = graph.spaces[activeSpaceId] ?? graph.spaces[graph.rootSpaceId];
+  const activeSpace =
+    graph.spaces[activeSpaceId] ?? graph.spaces[graph.rootSpaceId];
   const activeSpaceEntityIdsRaw = activeSpace?.entityIds ?? EMPTY_ENTITY_IDS;
   /**
    * Space id + ordered ids so memo identity cannot collide across spaces with the same id set.
@@ -4872,34 +5950,40 @@ export function ArchitecturalCanvasApp({
   const activeSpaceEntityIds = useMemo(
     () => activeSpaceEntityIdsRaw,
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fingerprint captures space + ordered ids; raw array ref churns on graph clone
-    [activeSpaceEntityIdsFingerprint],
+    [activeSpaceEntityIdsFingerprint]
   );
   const activeSpaceEntities = useMemo(
     () =>
       activeSpaceEntityIds
         .map((id) => graph.entities[id])
         .filter((entity): entity is CanvasEntity => !!entity),
-    [graph.entities, activeSpaceEntityIds],
+    [graph.entities, activeSpaceEntityIds]
   );
   const activeSpaceConnections = useMemo(
     () =>
       Object.values(graph.connections).filter((connection) => {
         const source = graph.entities[connection.sourceEntityId];
         const target = graph.entities[connection.targetEntityId];
-        if (!source || !target) return false;
+        if (!(source && target)) {
+          return false;
+        }
         return !!source.slots[activeSpaceId] && !!target.slots[activeSpaceId];
       }),
-    [activeSpaceId, graph.connections, graph.entities],
+    [activeSpaceId, graph.connections, graph.entities]
   );
   const activeSpacePinConnectionCount = activeSpaceConnections.length;
 
   useEffect(() => {
-    if (activeSpacePinConnectionCount === 0) return;
+    if (activeSpacePinConnectionCount === 0) {
+      return;
+    }
     let frame = 0;
     let cancelled = false;
 
     const step = () => {
-      if (cancelled) return;
+      if (cancelled) {
+        return;
+      }
       if (document.visibilityState !== "visible") {
         frame = 0;
         return;
@@ -4915,7 +5999,12 @@ export function ArchitecturalCanvasApp({
       const worldRectCullSim =
         vw > 0 && vh > 0
           ? worldRectFromViewport(tx, ty, pinScale, vw, vh, CULL_MARGIN_WORLD)
-          : { left: -Infinity, top: -Infinity, right: Infinity, bottom: Infinity };
+          : {
+              left: Number.NEGATIVE_INFINITY,
+              top: Number.NEGATIVE_INFINITY,
+              right: Number.POSITIVE_INFINITY,
+              bottom: Number.POSITIVE_INFINITY,
+            };
       const cullExcSim = buildCullExceptionEntityIds({
         selectedNodeIds: selectedNodeIdsRef.current,
         draggedNodeIds: draggedNodeIdsRef.current,
@@ -4924,12 +6013,22 @@ export function ArchitecturalCanvasApp({
       Object.values(graphSnap.connections).forEach((connection) => {
         const source = graphSnap.entities[connection.sourceEntityId];
         const target = graphSnap.entities[connection.targetEntityId];
-        if (!source || !target) return;
-        if (!source.slots[spaceId] || !target.slots[spaceId]) return;
+        if (!(source && target)) {
+          return;
+        }
+        if (!(source.slots[spaceId] && target.slots[spaceId])) {
+          return;
+        }
         if (
           vw > 0 &&
           vh > 0 &&
-          !connectionIntersectsWorldRect(connection, graphSnap, spaceId, worldRectCullSim, cullExcSim)
+          !connectionIntersectsWorldRect(
+            connection,
+            graphSnap,
+            spaceId,
+            worldRectCullSim,
+            cullExcSim
+          )
         ) {
           return;
         }
@@ -4938,16 +6037,18 @@ export function ArchitecturalCanvasApp({
           connection.sourcePin,
           spaceId,
           graphSnap,
-          pinView,
+          pinView
         );
         const end = resolveConnectionPin(
           connection.targetEntityId,
           connection.targetPin,
           spaceId,
           graphSnap,
-          pinView,
+          pinView
         );
-        if (!start || !end) return;
+        if (!(start && end)) {
+          return;
+        }
         activeIds.add(connection.id);
         let runtime = runtimeById[connection.id];
         if (!runtime) {
@@ -4964,15 +6065,19 @@ export function ArchitecturalCanvasApp({
         last.y = end.y;
         last.oldX = end.x;
         last.oldY = end.y;
-        const slackMultiplier = connection.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER;
+        const slackMultiplier =
+          connection.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER;
         const liveDistance = Math.hypot(end.x - start.x, end.y - start.y);
-        const segmentLength = Math.max(14, liveDistance / CONNECTION_SEGMENTS) * slackMultiplier;
+        const segmentLength =
+          Math.max(14, liveDistance / CONNECTION_SEGMENTS) * slackMultiplier;
         runtime.constraints.forEach((constraint) => {
           constraint.length = segmentLength;
         });
 
         runtime.points.forEach((point) => {
-          if (point.pinned) return;
+          if (point.pinned) {
+            return;
+          }
           const vx = (point.x - point.oldX) * CONNECTION_FRICTION;
           const vy = (point.y - point.oldY) * CONNECTION_FRICTION;
           point.oldX = point.x;
@@ -4984,7 +6089,9 @@ export function ArchitecturalCanvasApp({
           runtime.constraints.forEach((constraint) => {
             const p1 = runtime.points[constraint.p1];
             const p2 = runtime.points[constraint.p2];
-            if (!p1 || !p2) return;
+            if (!(p1 && p2)) {
+              return;
+            }
             const dx = p2.x - p1.x;
             const dy = p2.y - p1.y;
             const dist = Math.hypot(dx, dy) || 0.0001;
@@ -5007,7 +6114,9 @@ export function ArchitecturalCanvasApp({
         for (let i = 1; i < runtime.points.length - 1; i += 1) {
           const p = runtime.points[i];
           const n = runtime.points[i + 1];
-          if (!p || !n) continue;
+          if (!(p && n)) {
+            continue;
+          }
           const cx = (p.x + n.x) / 2;
           const cy = (p.y + n.y) / 2;
           path += ` Q ${p.x} ${p.y}, ${cx} ${cy}`;
@@ -5019,22 +6128,30 @@ export function ArchitecturalCanvasApp({
         nextPaths[connection.id] = path;
       });
       Object.keys(runtimeById).forEach((id) => {
-        if (!activeIds.has(id)) delete runtimeById[id];
+        if (!activeIds.has(id)) {
+          delete runtimeById[id];
+        }
       });
       const svgRoot = connectionLayerSvgRef.current;
       if (svgRoot) {
-        svgRoot.querySelectorAll<SVGPathElement>("path[data-connection-id]").forEach((pathEl) => {
-          const id = pathEl.getAttribute("data-connection-id");
-          if (!id) return;
-          const d = nextPaths[id] ?? "";
-          pathEl.setAttribute("d", d);
-        });
+        svgRoot
+          .querySelectorAll<SVGPathElement>("path[data-connection-id]")
+          .forEach((pathEl) => {
+            const id = pathEl.getAttribute("data-connection-id");
+            if (!id) {
+              return;
+            }
+            const d = nextPaths[id] ?? "";
+            pathEl.setAttribute("d", d);
+          });
       }
       frame = window.requestAnimationFrame(step);
     };
 
     const onVisibility = () => {
-      if (cancelled) return;
+      if (cancelled) {
+        return;
+      }
       if (document.visibilityState === "visible") {
         if (frame === 0) {
           frame = window.requestAnimationFrame(step);
@@ -5050,30 +6167,48 @@ export function ArchitecturalCanvasApp({
     return () => {
       cancelled = true;
       document.removeEventListener("visibilitychange", onVisibility);
-      if (frame) window.cancelAnimationFrame(frame);
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
     };
   }, [activeSpacePinConnectionCount]);
 
   const parentSpaceId = activeSpace?.parentSpaceId ?? null;
 
   const paletteItems = useMemo<PaletteItem[]>(() => {
-    if (!paletteOpen) return EMPTY_PALETTE_ITEMS;
+    if (!paletteOpen) {
+      return EMPTY_PALETTE_ITEMS;
+    }
     const out: PaletteItem[] = [];
     for (const entity of Object.values(graph.entities)) {
       const slotSpaceIds = Object.keys(entity.slots);
-      if (slotSpaceIds.length === 0) continue;
-      const preferredSpaceId =
-        slotSpaceIds.includes(activeSpaceId) ? activeSpaceId : slotSpaceIds[0]!;
+      if (slotSpaceIds.length === 0) {
+        continue;
+      }
+      const preferredSpaceId = slotSpaceIds.includes(activeSpaceId)
+        ? activeSpaceId
+        : slotSpaceIds[0]!;
       const space = graph.spaces[preferredSpaceId];
-      if (!space) continue;
+      if (!space) {
+        continue;
+      }
       const snippet =
         entity.kind === "content"
-          ? entity.bodyHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 180)
+          ? entity.bodyHtml
+              .replace(/<[^>]+>/g, " ")
+              .replace(/\s+/g, " ")
+              .trim()
+              .slice(0, 180)
           : undefined;
       out.push({
         id: entity.id,
         title: entity.title || "Untitled",
-        itemType: entity.kind === "folder" ? "folder" : entity.theme === "task" ? "checklist" : entity.theme,
+        itemType:
+          entity.kind === "folder"
+            ? "folder"
+            : entity.theme === "task"
+              ? "checklist"
+              : entity.theme,
         entityType: null,
         spaceId: preferredSpaceId,
         spaceName: space.name,
@@ -5084,11 +6219,15 @@ export function ArchitecturalCanvasApp({
   }, [paletteOpen, activeSpaceId, graph.entities, graph.spaces]);
 
   const paletteSpaces = useMemo<PaletteSpace[]>(() => {
-    if (!paletteOpen) return EMPTY_PALETTE_SPACES;
+    if (!paletteOpen) {
+      return EMPTY_PALETTE_SPACES;
+    }
     return Object.values(graph.spaces).map((space) => {
       const path = buildPathToSpace(space.id, graph.spaces, graph.rootSpaceId)
         .map((id) =>
-          id === graph.rootSpaceId ? ROOT_SPACE_DISPLAY_NAME : graph.spaces[id]?.name ?? "Unknown",
+          id === graph.rootSpaceId
+            ? ROOT_SPACE_DISPLAY_NAME
+            : (graph.spaces[id]?.name ?? "Unknown")
         )
         .join(" / ");
       return { id: space.id, name: space.name, pathLabel: path };
@@ -5097,13 +6236,17 @@ export function ArchitecturalCanvasApp({
 
   const nodeZ = useMemo(() => {
     const zMap = new Map<string, number>();
-    activeSpaceEntities.forEach((entity, index) => zMap.set(entity.id, index + 1));
+    activeSpaceEntities.forEach((entity, index) =>
+      zMap.set(entity.id, index + 1)
+    );
     return zMap;
   }, [activeSpaceEntities]);
   const stackGroups = useMemo(() => {
     const groups = new Map<string, CanvasEntity[]>();
     activeSpaceEntities.forEach((entity) => {
-      if (!entity.stackId) return;
+      if (!entity.stackId) {
+        return;
+      }
       const arr = groups.get(entity.stackId) ?? [];
       arr.push(entity);
       groups.set(entity.stackId, arr);
@@ -5111,7 +6254,7 @@ export function ArchitecturalCanvasApp({
     groups.forEach((arr, key) => {
       groups.set(
         key,
-        [...arr].sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0)),
+        [...arr].sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0))
       );
     });
     return groups;
@@ -5119,26 +6262,33 @@ export function ArchitecturalCanvasApp({
   const standaloneEntities = useMemo(
     () =>
       activeSpaceEntities.filter((entity) => {
-        if (!entity.stackId) return true;
+        if (!entity.stackId) {
+          return true;
+        }
         const group = stackGroups.get(entity.stackId);
         return !group || group.length <= 1;
       }),
-    [stackGroups, activeSpaceEntities],
+    [stackGroups, activeSpaceEntities]
   );
   const collapsedStacks = useMemo(() => {
     const out = Array.from(stackGroups.entries())
       .filter(([, arr]) => arr.length > 1)
-      .map(([stackId, arr]) => ({ stackId, entities: arr, top: arr[arr.length - 1]! }));
+      .map(([stackId, arr]) => ({
+        stackId,
+        entities: arr,
+        top: arr[arr.length - 1]!,
+      }));
     return out.length === 0 ? EMPTY_COLLAPSED_STACKS : out;
   }, [stackGroups]);
 
   const minimapLayoutKey = useMemo(
     () => minimapLayoutSignature(graph, activeSpaceId),
-    [graph, activeSpaceId],
+    [graph, activeSpaceId]
   );
 
   useEffect(() => {
-    const preActivateGate = scenario === "default" && !bootLayerDismissed && !canvasSessionActivated;
+    const preActivateGate =
+      scenario === "default" && !bootLayerDismissed && !canvasSessionActivated;
     if (
       focusOpen ||
       galleryOpen ||
@@ -5152,7 +6302,11 @@ export function ArchitecturalCanvasApp({
       return;
     }
     const id = window.setTimeout(() => {
-      const bounds = computeSpaceContentBounds(graph, activeSpaceId, collapsedStacks);
+      const bounds = computeSpaceContentBounds(
+        graph,
+        activeSpaceId,
+        collapsedStacks
+      );
       if (!bounds) {
         setViewportToastOpen(false);
         return;
@@ -5164,7 +6318,9 @@ export function ArchitecturalCanvasApp({
         setViewportToastOpen(false);
         return;
       }
-      if (Date.now() < viewportToastCooldownUntilRef.current) return;
+      if (Date.now() < viewportToastCooldownUntilRef.current) {
+        return;
+      }
       setViewportToastOpen(true);
     }, 450);
     return () => window.clearTimeout(id);
@@ -5195,7 +6351,7 @@ export function ArchitecturalCanvasApp({
         draggedNodeIds,
         connectionSourceId,
       }),
-    [selectedNodeIds, draggedNodeIds, connectionSourceId],
+    [selectedNodeIds, draggedNodeIds, connectionSourceId]
   );
 
   const worldCullRect = useMemo(
@@ -5206,25 +6362,35 @@ export function ArchitecturalCanvasApp({
         scale,
         Math.max(1, viewportSize.width),
         Math.max(1, viewportSize.height),
-        CULL_MARGIN_WORLD,
+        CULL_MARGIN_WORLD
       ),
-    [translateX, translateY, scale, viewportSize.width, viewportSize.height],
+    [translateX, translateY, scale, viewportSize.width, viewportSize.height]
   );
 
   const visibleStandaloneEntities = useMemo(
     () =>
       standaloneEntities.filter((entity) =>
-        entityIntersectsWorldRect(entity, activeSpaceId, worldCullRect, cullExceptionEntityIds),
+        entityIntersectsWorldRect(
+          entity,
+          activeSpaceId,
+          worldCullRect,
+          cullExceptionEntityIds
+        )
       ),
-    [standaloneEntities, activeSpaceId, worldCullRect, cullExceptionEntityIds],
+    [standaloneEntities, activeSpaceId, worldCullRect, cullExceptionEntityIds]
   );
 
   const visibleCollapsedStacks = useMemo(
     () =>
       collapsedStacks.filter(({ entities }) =>
-        collapsedStackIntersectsWorldRect(entities, activeSpaceId, worldCullRect, cullExceptionEntityIds),
+        collapsedStackIntersectsWorldRect(
+          entities,
+          activeSpaceId,
+          worldCullRect,
+          cullExceptionEntityIds
+        )
       ),
-    [collapsedStacks, activeSpaceId, worldCullRect, cullExceptionEntityIds],
+    [collapsedStacks, activeSpaceId, worldCullRect, cullExceptionEntityIds]
   );
 
   const visibleActiveSpaceConnections = useMemo(
@@ -5235,23 +6401,35 @@ export function ArchitecturalCanvasApp({
           graph,
           activeSpaceId,
           worldCullRect,
-          cullExceptionEntityIds,
-        ),
+          cullExceptionEntityIds
+        )
       ),
-    [activeSpaceConnections, graph, activeSpaceId, worldCullRect, cullExceptionEntityIds],
+    [
+      activeSpaceConnections,
+      graph,
+      activeSpaceId,
+      worldCullRect,
+      cullExceptionEntityIds,
+    ]
   );
 
   /** Stable primitive keys so stack-bounds effects do not re-run when `collapsedStacks` is a new array ref with the same logical stacks. */
   const stackModalLayoutKey = useMemo(() => {
-    if (!stackModal) return "0";
+    if (!stackModal) {
+      return "0";
+    }
     return `${stackModal.stackId}:${stackModal.orderedIds.join(",")}`;
   }, [stackModal]);
 
   const stackFocusBoundsEffectKey = useMemo(() => {
-    if (collapsedStacks.length === 0) return "empty";
+    if (collapsedStacks.length === 0) {
+      return "empty";
+    }
     const stackPart = collapsedStacks
       .map(({ stackId, entities }) => {
-        const sel = entities.some((e) => selectedNodeIds.includes(e.id)) ? "1" : "0";
+        const sel = entities.some((e) => selectedNodeIds.includes(e.id))
+          ? "1"
+          : "0";
         const ids = entities.map((e) => e.id).join(",");
         return `${stackId}:${sel}:${ids}`;
       })
@@ -5270,7 +6448,9 @@ export function ArchitecturalCanvasApp({
   ]);
 
   const stackHoverBoundsEffectKey = useMemo(() => {
-    if (collapsedStacks.length === 0) return "empty";
+    if (collapsedStacks.length === 0) {
+      return "empty";
+    }
     const stackPart = collapsedStacks
       .map(({ stackId, entities }) => {
         const ids = entities.map((e) => e.id).join(",");
@@ -5296,24 +6476,35 @@ export function ArchitecturalCanvasApp({
     const selectedForBounds = selectedNodeIdsForBoundsRef.current;
     if (collapsedForBounds.length === 0) {
       setStackFocusBoundsById((prev) =>
-        Object.keys(prev).length === 0 ? prev : EMPTY_STACK_BOUNDS,
+        Object.keys(prev).length === 0 ? prev : EMPTY_STACK_BOUNDS
       );
       return;
     }
-    const next: Record<string, { left: number; top: number; width: number; height: number }> = {};
+    const next: Record<
+      string,
+      { left: number; top: number; width: number; height: number }
+    > = {};
     const domRoot: ParentNode = shellRef.current ?? document;
     collapsedForBounds.forEach(({ stackId, entities }) => {
-      const selected = entities.some((entity) => selectedForBounds.includes(entity.id));
-      if (!selected) return;
-      const container = domRoot.querySelector<HTMLElement>(
-        `[data-stack-container='true'][data-stack-id='${stackId}']`,
+      const selected = entities.some((entity) =>
+        selectedForBounds.includes(entity.id)
       );
-      if (!container) return;
+      if (!selected) {
+        return;
+      }
+      const container = domRoot.querySelector<HTMLElement>(
+        `[data-stack-container='true'][data-stack-id='${stackId}']`
+      );
+      if (!container) {
+        return;
+      }
       const containerRect = container.getBoundingClientRect();
       const layers = Array.from(
-        container.querySelectorAll<HTMLElement>("[data-stack-layer='true']"),
+        container.querySelectorAll<HTMLElement>("[data-stack-layer='true']")
       );
-      if (layers.length === 0) return;
+      if (layers.length === 0) {
+        return;
+      }
       let minX = Number.POSITIVE_INFINITY;
       let minY = Number.POSITIVE_INFINITY;
       let maxX = Number.NEGATIVE_INFINITY;
@@ -5334,7 +6525,9 @@ export function ArchitecturalCanvasApp({
       });
     });
     setStackFocusBoundsById((prev) =>
-      stackBoundsRecordsVisuallyEqual(prev, next, STACK_BOUNDS_EQ_TOL_PX) ? prev : next,
+      stackBoundsRecordsVisuallyEqual(prev, next, STACK_BOUNDS_EQ_TOL_PX)
+        ? prev
+        : next
     );
   }, [stackFocusBoundsEffectKey]);
 
@@ -5342,22 +6535,29 @@ export function ArchitecturalCanvasApp({
     const collapsedForBounds = collapsedStacksRef.current;
     if (collapsedForBounds.length === 0) {
       setStackHoverBoundsById((prev) =>
-        Object.keys(prev).length === 0 ? prev : EMPTY_STACK_BOUNDS,
+        Object.keys(prev).length === 0 ? prev : EMPTY_STACK_BOUNDS
       );
       return;
     }
-    const next: Record<string, { left: number; top: number; width: number; height: number }> = {};
+    const next: Record<
+      string,
+      { left: number; top: number; width: number; height: number }
+    > = {};
     const domRoot: ParentNode = shellRef.current ?? document;
     collapsedForBounds.forEach(({ stackId }) => {
       const container = domRoot.querySelector<HTMLElement>(
-        `[data-stack-container='true'][data-stack-id='${stackId}']`,
+        `[data-stack-container='true'][data-stack-id='${stackId}']`
       );
-      if (!container) return;
+      if (!container) {
+        return;
+      }
       const containerRect = container.getBoundingClientRect();
       const layers = Array.from(
-        container.querySelectorAll<HTMLElement>("[data-stack-layer='true']"),
+        container.querySelectorAll<HTMLElement>("[data-stack-layer='true']")
       );
-      if (layers.length === 0) return;
+      if (layers.length === 0) {
+        return;
+      }
       let minX = Number.POSITIVE_INFINITY;
       let minY = Number.POSITIVE_INFINITY;
       let maxX = Number.NEGATIVE_INFINITY;
@@ -5378,7 +6578,9 @@ export function ArchitecturalCanvasApp({
       });
     });
     setStackHoverBoundsById((prev) =>
-      stackBoundsRecordsVisuallyEqual(prev, next, STACK_BOUNDS_EQ_TOL_PX) ? prev : next,
+      stackBoundsRecordsVisuallyEqual(prev, next, STACK_BOUNDS_EQ_TOL_PX)
+        ? prev
+        : next
     );
   }, [stackHoverBoundsEffectKey]);
   const updateNodeBody = useCallback(
@@ -5394,15 +6596,29 @@ export function ArchitecturalCanvasApp({
         () => {
           const prev = graphRef.current;
           const entity = prev.entities[id];
-          if (!entity || entity.kind !== "content") return;
-          const nextHtml = canonicalizeCharacterBodyHtml(entity, normalizedHtml);
-          if (entity.bodyHtml === nextHtml) return;
+          if (!entity || entity.kind !== "content") {
+            return;
+          }
+          const nextHtml = canonicalizeCharacterBodyHtml(
+            entity,
+            normalizedHtml
+          );
+          if (entity.bodyHtml === nextHtml) {
+            return;
+          }
           recordUndoBeforeMutation();
           setGraph((p) => {
             const e = p.entities[id];
-            if (!e || e.kind !== "content") return p;
-            const nextHtmlInner = canonicalizeCharacterBodyHtml(e, normalizedHtml);
-            if (e.bodyHtml === nextHtmlInner) return p;
+            if (!e || e.kind !== "content") {
+              return p;
+            }
+            const nextHtmlInner = canonicalizeCharacterBodyHtml(
+              e,
+              normalizedHtml
+            );
+            if (e.bodyHtml === nextHtmlInner) {
+              return p;
+            }
             return {
               ...p,
               entities: {
@@ -5413,10 +6629,10 @@ export function ArchitecturalCanvasApp({
           });
           schedulePersistContentBody(id);
         },
-        options?.immediate ? 0 : 120,
+        options?.immediate ? 0 : 120
       );
     },
-    [queueGraphCommit, recordUndoBeforeMutation, schedulePersistContentBody],
+    [queueGraphCommit, recordUndoBeforeMutation, schedulePersistContentBody]
   );
 
   const updateNodeHgDoc = useCallback(
@@ -5426,17 +6642,24 @@ export function ArchitecturalCanvasApp({
         `content-body:${id}`,
         () => {
           const entity = graphRef.current.entities[id];
-          if (!entity || entity.kind !== "content") return;
+          if (!entity || entity.kind !== "content") {
+            return;
+          }
           const nextDocKey = jsonStableStringify(doc);
           const entityDocKey = jsonStableStringify(entity.bodyDoc);
-          if (entityDocKey === nextDocKey && entity.bodyHtml === html)
+          if (entityDocKey === nextDocKey && entity.bodyHtml === html) {
             return;
+          }
           recordUndoBeforeMutation();
           setGraph((p) => {
             const e = p.entities[id];
-            if (!e || e.kind !== "content") return p;
+            if (!e || e.kind !== "content") {
+              return p;
+            }
             const currentDocKey = jsonStableStringify(e.bodyDoc);
-            if (currentDocKey === nextDocKey && e.bodyHtml === html) return p;
+            if (currentDocKey === nextDocKey && e.bodyHtml === html) {
+              return p;
+            }
             return {
               ...p,
               entities: {
@@ -5447,10 +6670,10 @@ export function ArchitecturalCanvasApp({
           });
           schedulePersistContentBody(id);
         },
-        options?.immediate ? 0 : 120,
+        options?.immediate ? 0 : 120
       );
     },
-    [queueGraphCommit, recordUndoBeforeMutation, schedulePersistContentBody],
+    [queueGraphCommit, recordUndoBeforeMutation, schedulePersistContentBody]
   );
 
   const handleNodeBodyCommit = useCallback(
@@ -5461,19 +6684,29 @@ export function ArchitecturalCanvasApp({
         updateNodeBody(id, payload.html);
       }
     },
-    [updateNodeBody, updateNodeHgDoc],
+    [updateNodeBody, updateNodeHgDoc]
   );
 
   const updateFactionRoster = useCallback(
     (entityId: string, roster: FactionRosterEntry[]) => {
       const ent = graphRef.current.entities[entityId];
-      if (!ent || ent.kind !== "content" || ent.loreCard?.kind !== "faction") return;
+      if (!ent || ent.kind !== "content" || ent.loreCard?.kind !== "faction") {
+        return;
+      }
       const prev = ent.factionRoster ?? [];
-      if (JSON.stringify(prev) === JSON.stringify(roster)) return;
+      if (JSON.stringify(prev) === JSON.stringify(roster)) {
+        return;
+      }
       recordUndoBeforeMutation();
       setGraph((p) => {
         const cur = p.entities[entityId];
-        if (!cur || cur.kind !== "content" || cur.loreCard?.kind !== "faction") return p;
+        if (
+          !cur ||
+          cur.kind !== "content" ||
+          cur.loreCard?.kind !== "faction"
+        ) {
+          return p;
+        }
         return {
           ...p,
           entities: {
@@ -5491,21 +6724,28 @@ export function ArchitecturalCanvasApp({
         contentJson: buildContentJsonForContentEntity(merged),
       });
     },
-    [patchItemWithVersion, recordUndoBeforeMutation],
+    [patchItemWithVersion, recordUndoBeforeMutation]
   );
 
   const acceptAiReviewForEntity = useCallback(
     (entityId: string) => {
       const ent = graphRef.current.entities[entityId];
-      if (!ent || ent.kind !== "content") return;
-      const docPending = ent.bodyDoc != null && hgDocJsonHasHgAiPending(ent.bodyDoc);
+      if (!ent || ent.kind !== "content") {
+        return;
+      }
+      const docPending =
+        ent.bodyDoc != null && hgDocJsonHasHgAiPending(ent.bodyDoc);
       const htmlPending = htmlStringHasHgAiPending(ent.bodyHtml);
       const hasPendingMarkup = docPending || htmlPending;
       if (!hasPendingMarkup) {
-        if (!isAiReviewPending(ent.entityMeta)) return;
+        if (!isAiReviewPending(ent.entityMeta)) {
+          return;
+        }
         setGraph((p) => {
           const cur = p.entities[entityId];
-          if (!cur || cur.kind !== "content") return p;
+          if (!cur || cur.kind !== "content") {
+            return p;
+          }
           return {
             ...p,
             entities: {
@@ -5541,13 +6781,15 @@ export function ArchitecturalCanvasApp({
       }
       const merged: CanvasContentEntity = {
         ...ent,
-        bodyDoc: useHg ? nextDoc ?? undefined : undefined,
+        bodyDoc: useHg ? (nextDoc ?? undefined) : undefined,
         bodyHtml: nextHtml,
         entityMeta: { ...ent.entityMeta, aiReview: AI_REVIEW_CLEARED },
       };
       setGraph((p) => {
         const cur = p.entities[entityId];
-        if (!cur || cur.kind !== "content") return p;
+        if (!cur || cur.kind !== "content") {
+          return p;
+        }
         return {
           ...p,
           entities: {
@@ -5589,19 +6831,28 @@ export function ArchitecturalCanvasApp({
       setFocusBaselineBodyDoc,
       setFocusBody,
       setFocusBodyDoc,
-    ],
+    ]
   );
 
-  const setInlineBodyDraftDirty = useCallback((entityId: string, dirty: boolean) => {
-    const s = inlineContentDirtyIdsRef.current;
-    if (dirty) s.add(entityId);
-    else s.delete(entityId);
-  }, []);
+  const setInlineBodyDraftDirty = useCallback(
+    (entityId: string, dirty: boolean) => {
+      const s = inlineContentDirtyIdsRef.current;
+      if (dirty) {
+        s.add(entityId);
+      } else {
+        s.delete(entityId);
+      }
+    },
+    []
+  );
 
-  const queueMediaUploadPick = useCallback((pending: { mode: "focus" | "canvas"; id: string }) => {
-    pendingMediaUploadRef.current = pending;
-    mediaFileInputRef.current?.click();
-  }, []);
+  const queueMediaUploadPick = useCallback(
+    (pending: { mode: "focus" | "canvas"; id: string }) => {
+      pendingMediaUploadRef.current = pending;
+      mediaFileInputRef.current?.click();
+    },
+    []
+  );
 
   const onArchitecturalMediaFile = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -5609,13 +6860,17 @@ export function ArchitecturalCanvasApp({
       event.target.value = "";
       const pending = pendingMediaUploadRef.current;
       pendingMediaUploadRef.current = null;
-      if (!file || !file.type.startsWith("image/") || !pending) return;
+      if (!(file && file.type.startsWith("image/") && pending)) {
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => {
         const dataUrl = reader.result as string;
         const alt =
-          file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() ||
-          "Uploaded image";
+          file.name
+            .replace(/\.[^.]+$/, "")
+            .replace(/[-_]+/g, " ")
+            .trim() || "Uploaded image";
         if (pending.mode === "focus") {
           const aid = activeNodeIdRef.current;
           const ent = aid ? graphRef.current.entities[aid] : null;
@@ -5633,15 +6888,20 @@ export function ArchitecturalCanvasApp({
                   ? loreEntityCardStyles.charSkPortraitImg
                   : loreEntityCardStyles.char3dPortraitImg
                 : styles.mediaImage,
-              { uploadButtonClass: styles.mediaUploadBtn },
-            ),
+              { uploadButtonClass: styles.mediaUploadBtn }
+            )
           );
           return;
         }
         const entity = graphRef.current.entities[pending.id];
-        if (!entity || entity.kind !== "content") return;
+        if (!entity || entity.kind !== "content") {
+          return;
+        }
         if (contentEntityUsesHgDoc(entity)) {
-          getHgDocEditor(`canvas-${pending.id}`)?.insertImageFromDataUrl(dataUrl, alt);
+          getHgDocEditor(`canvas-${pending.id}`)?.insertImageFromDataUrl(
+            dataUrl,
+            alt
+          );
           return;
         }
         const portraitClass = bodyUsesLorePortraitMediaSlot(entity.bodyHtml)
@@ -5651,29 +6911,47 @@ export function ArchitecturalCanvasApp({
           : styles.mediaImage;
         updateNodeBody(
           pending.id,
-          applyImageDataUrlToArchitecturalMediaBody(entity.bodyHtml, dataUrl, alt, portraitClass, {
-            uploadButtonClass: styles.mediaUploadBtn,
-          }),
-          { immediate: true },
+          applyImageDataUrlToArchitecturalMediaBody(
+            entity.bodyHtml,
+            dataUrl,
+            alt,
+            portraitClass,
+            {
+              uploadButtonClass: styles.mediaUploadBtn,
+            }
+          ),
+          { immediate: true }
         );
       };
       reader.readAsDataURL(file);
     },
-    [updateNodeBody],
+    [updateNodeBody]
   );
 
   useEffect(() => {
     const shell = shellRef.current;
-    if (!shell) return;
+    if (!shell) {
+      return;
+    }
     const stopCaretDriftOnButton = (e: MouseEvent) => {
-      const t = (e.target as HTMLElement).closest("[data-architectural-media-upload]");
-      if (t) e.preventDefault();
+      const t = (e.target as HTMLElement).closest(
+        "[data-architectural-media-upload]"
+      );
+      if (t) {
+        e.preventDefault();
+      }
       const ex = (e.target as HTMLElement).closest(`[data-expand-btn="true"]`);
-      if (ex && !ex.closest(`.${styles.nodeHeader}`)) e.preventDefault();
+      if (ex && !ex.closest(`.${styles.nodeHeader}`)) {
+        e.preventDefault();
+      }
     };
     const onUploadClick = (e: MouseEvent) => {
-      const t = (e.target as HTMLElement).closest("[data-architectural-media-upload]");
-      if (!t) return;
+      const t = (e.target as HTMLElement).closest(
+        "[data-architectural-media-upload]"
+      );
+      if (!t) {
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
       const ownerFromBtn = t.getAttribute("data-media-owner-id");
@@ -5681,7 +6959,9 @@ export function ArchitecturalCanvasApp({
         queueMediaUploadPick({ mode: "canvas", id: ownerFromBtn });
         return;
       }
-      const inFocusBody = t.closest("[data-focus-body-editor], [data-hg-doc-editor]");
+      const inFocusBody = t.closest(
+        "[data-focus-body-editor], [data-hg-doc-editor]"
+      );
       const nodeHost = t.closest("[data-node-id]");
       if (inFocusBody && focusOpenRef.current && activeNodeIdRef.current) {
         queueMediaUploadPick({
@@ -5705,44 +6985,51 @@ export function ArchitecturalCanvasApp({
     };
   }, [queueMediaUploadPick]);
 
-  const openFocusMode = useCallback((id: string) => {
-    const entity = graph.entities[id];
-    if (!entity || entity.kind !== "content") return;
-    const spaceId = Object.keys(entity.slots)[0] ?? activeSpaceIdRef.current;
-    const spaceName = graph.spaces[spaceId]?.name ?? "Unknown";
-    pushRecentItem({
-      id: entity.id,
-      title: entity.title,
-      itemType: entity.theme === "task" ? "checklist" : entity.theme,
-      spaceId,
-      spaceName,
-    });
-    const normalizedBody =
-      entity.theme === "task"
-        ? normalizeChecklistMarkup(entity.bodyHtml, {
-            taskItem: styles.taskItem,
-            taskCheckbox: styles.taskCheckbox,
-            taskText: styles.taskText,
-            done: styles.done,
-          })
-        : entity.bodyHtml;
-    setActiveNodeId(id);
-    setFocusTitle(entity.title);
-    const projected = projectBodyHtmlForFocus(entity, normalizedBody);
-    if (contentEntityUsesHgDoc(entity)) {
-      const doc = hgDocForContentEntity(entity);
-      setFocusBodyDoc(structuredClone(doc));
-      setFocusBaselineBodyDoc(structuredClone(doc));
-      setFocusBody("");
-      setFocusBaselineBody("");
-    } else {
-      setFocusBody(projected);
-      setFocusBaselineBody(projected);
-    }
-    setFocusBaselineTitle(entity.title);
-    setFocusBaselineFactionRoster(entity.loreCard?.kind === "faction" ? (entity.factionRoster ?? []) : []);
-    setFocusOpen(true);
-  }, [graph.entities, graph.spaces, pushRecentItem]);
+  const openFocusMode = useCallback(
+    (id: string) => {
+      const entity = graph.entities[id];
+      if (!entity || entity.kind !== "content") {
+        return;
+      }
+      const spaceId = Object.keys(entity.slots)[0] ?? activeSpaceIdRef.current;
+      const spaceName = graph.spaces[spaceId]?.name ?? "Unknown";
+      pushRecentItem({
+        id: entity.id,
+        title: entity.title,
+        itemType: entity.theme === "task" ? "checklist" : entity.theme,
+        spaceId,
+        spaceName,
+      });
+      const normalizedBody =
+        entity.theme === "task"
+          ? normalizeChecklistMarkup(entity.bodyHtml, {
+              taskItem: styles.taskItem,
+              taskCheckbox: styles.taskCheckbox,
+              taskText: styles.taskText,
+              done: styles.done,
+            })
+          : entity.bodyHtml;
+      setActiveNodeId(id);
+      setFocusTitle(entity.title);
+      const projected = projectBodyHtmlForFocus(entity, normalizedBody);
+      if (contentEntityUsesHgDoc(entity)) {
+        const doc = hgDocForContentEntity(entity);
+        setFocusBodyDoc(structuredClone(doc));
+        setFocusBaselineBodyDoc(structuredClone(doc));
+        setFocusBody("");
+        setFocusBaselineBody("");
+      } else {
+        setFocusBody(projected);
+        setFocusBaselineBody(projected);
+      }
+      setFocusBaselineTitle(entity.title);
+      setFocusBaselineFactionRoster(
+        entity.loreCard?.kind === "faction" ? (entity.factionRoster ?? []) : []
+      );
+      setFocusOpen(true);
+    },
+    [graph.entities, graph.spaces, pushRecentItem]
+  );
 
   const closeMediaGallery = useCallback(() => {
     setGalleryOpen(false);
@@ -5753,21 +7040,28 @@ export function ArchitecturalCanvasApp({
     setGalleryBaselineNotesDoc(structuredClone(EMPTY_HG_DOC));
   }, []);
 
-  const openMediaGallery = useCallback((id: string) => {
-    const entity = graph.entities[id];
-    if (!entity || entity.kind !== "content" || entity.theme !== "media") return;
-    const notes = getArchitecturalMediaNotes(entity.bodyHtml);
-    setGalleryNodeId(id);
-    setGalleryDraftTitle(entity.title);
-    const notesDoc = htmlFragmentToHgDocDoc(notes);
-    setGalleryDraftNotesDoc(structuredClone(notesDoc));
-    setGalleryBaselineTitle(entity.title);
-    setGalleryBaselineNotesDoc(structuredClone(notesDoc));
-    setGalleryOpen(true);
-  }, [graph.entities]);
+  const openMediaGallery = useCallback(
+    (id: string) => {
+      const entity = graph.entities[id];
+      if (!entity || entity.kind !== "content" || entity.theme !== "media") {
+        return;
+      }
+      const notes = getArchitecturalMediaNotes(entity.bodyHtml);
+      setGalleryNodeId(id);
+      setGalleryDraftTitle(entity.title);
+      const notesDoc = htmlFragmentToHgDocDoc(notes);
+      setGalleryDraftNotesDoc(structuredClone(notesDoc));
+      setGalleryBaselineTitle(entity.title);
+      setGalleryBaselineNotesDoc(structuredClone(notesDoc));
+      setGalleryOpen(true);
+    },
+    [graph.entities]
+  );
 
   const saveGalleryAndClose = useCallback(() => {
-    if (!galleryNodeId) return;
+    if (!galleryNodeId) {
+      return;
+    }
     const entity = graphRef.current.entities[galleryNodeId];
     if (!entity || entity.kind !== "content" || entity.theme !== "media") {
       closeMediaGallery();
@@ -5775,53 +7069,62 @@ export function ArchitecturalCanvasApp({
     }
     const nextTitle = normalizedFocusTitle(galleryDraftTitle);
     const notesHtml = hgDocToHtml(
-      getHgDocEditor("gallery-notes")?.getJSON() ?? galleryDraftNotesDoc,
+      getHgDocEditor("gallery-notes")?.getJSON() ?? galleryDraftNotesDoc
     );
     const nextBody = setArchitecturalMediaNotes(entity.bodyHtml, notesHtml);
-    const clearAiMeta = isAiReviewPending(entity.entityMeta) && !htmlStringHasHgAiPending(nextBody);
+    const clearAiMeta =
+      isAiReviewPending(entity.entityMeta) &&
+      !htmlStringHasHgAiPending(nextBody);
     if (entity.title === nextTitle && entity.bodyHtml === nextBody) {
       closeMediaGallery();
       return;
     }
     recordUndoBeforeMutation();
-      setGraph((prev) => {
-        const e = prev.entities[galleryNodeId];
-        if (!e || e.kind !== "content") return prev;
-        return {
-          ...prev,
-          entities: {
-            ...prev.entities,
-            [galleryNodeId]: {
-              ...e,
-              title: nextTitle,
-              bodyHtml: setArchitecturalMediaNotes(e.bodyHtml, notesHtml),
-              entityMeta: clearAiMeta
-                ? { ...e.entityMeta, aiReview: AI_REVIEW_CLEARED }
-                : e.entityMeta,
-            },
-          },
-        };
-      });
-      if (persistNeonRef.current && isUuidLike(galleryNodeId)) {
-        const gid = galleryNodeId;
-        const nextBodyPersist = setArchitecturalMediaNotes(entity.bodyHtml, notesHtml);
-        queueMicrotask(() => {
-          const ent = graphRef.current.entities[gid];
-          if (!ent || ent.kind !== "content") return;
-          void patchItemWithVersion(gid, {
-            title: nextTitle,
-            contentText: htmlToPlainText(nextBodyPersist),
-            contentJson: buildContentJsonForContentEntity({
-              ...ent,
-              title: nextTitle,
-              bodyHtml: nextBodyPersist,
-            }),
-            ...(clearAiMeta
-              ? { entityMetaMerge: { aiReview: AI_REVIEW_CLEARED } }
-              : {}),
-          });
-        });
+    setGraph((prev) => {
+      const e = prev.entities[galleryNodeId];
+      if (!e || e.kind !== "content") {
+        return prev;
       }
+      return {
+        ...prev,
+        entities: {
+          ...prev.entities,
+          [galleryNodeId]: {
+            ...e,
+            title: nextTitle,
+            bodyHtml: setArchitecturalMediaNotes(e.bodyHtml, notesHtml),
+            entityMeta: clearAiMeta
+              ? { ...e.entityMeta, aiReview: AI_REVIEW_CLEARED }
+              : e.entityMeta,
+          },
+        },
+      };
+    });
+    if (persistNeonRef.current && isUuidLike(galleryNodeId)) {
+      const gid = galleryNodeId;
+      const nextBodyPersist = setArchitecturalMediaNotes(
+        entity.bodyHtml,
+        notesHtml
+      );
+      queueMicrotask(() => {
+        const ent = graphRef.current.entities[gid];
+        if (!ent || ent.kind !== "content") {
+          return;
+        }
+        void patchItemWithVersion(gid, {
+          title: nextTitle,
+          contentText: htmlToPlainText(nextBodyPersist),
+          contentJson: buildContentJsonForContentEntity({
+            ...ent,
+            title: nextTitle,
+            bodyHtml: nextBodyPersist,
+          }),
+          ...(clearAiMeta
+            ? { entityMetaMerge: { aiReview: AI_REVIEW_CLEARED } }
+            : {}),
+        });
+      });
+    }
     closeMediaGallery();
   }, [
     closeMediaGallery,
@@ -5835,11 +7138,16 @@ export function ArchitecturalCanvasApp({
   const handleNodeExpand = useCallback(
     (id: string) => {
       const entity = graph.entities[id];
-      if (!entity || entity.kind !== "content") return;
-      if (entity.theme === "media") openMediaGallery(id);
-      else openFocusMode(id);
+      if (!entity || entity.kind !== "content") {
+        return;
+      }
+      if (entity.theme === "media") {
+        openMediaGallery(id);
+      } else {
+        openFocusMode(id);
+      }
     },
-    [graph.entities, openFocusMode, openMediaGallery],
+    [graph.entities, openFocusMode, openMediaGallery]
   );
 
   const handleNodeExpandRef = useRef(handleNodeExpand);
@@ -5847,11 +7155,17 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const shell = shellRef.current;
-    if (!shell) return;
+    if (!shell) {
+      return;
+    }
     const onExpandKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Enter" && e.key !== " ") return;
+      if (e.key !== "Enter" && e.key !== " ") {
+        return;
+      }
       const t = (e.target as HTMLElement).closest(`[data-expand-btn="true"]`);
-      if (!t || !shell.contains(t) || t.closest(`.${styles.nodeHeader}`)) return;
+      if (!(t && shell.contains(t)) || t.closest(`.${styles.nodeHeader}`)) {
+        return;
+      }
       e.preventDefault();
       const inFocus = t.closest("[data-focus-body-editor='true']");
       if (inFocus && focusOpenRef.current && activeNodeIdRef.current) {
@@ -5860,14 +7174,18 @@ export function ArchitecturalCanvasApp({
       }
       const node = t.closest<HTMLElement>("[data-node-id]");
       const id = node?.dataset.nodeId;
-      if (id) handleNodeExpandRef.current(id);
+      if (id) {
+        handleNodeExpandRef.current(id);
+      }
     };
     shell.addEventListener("keydown", onExpandKeyDown, true);
     return () => shell.removeEventListener("keydown", onExpandKeyDown, true);
   }, []);
 
   useEffect(() => {
-    if (!galleryOpen || !galleryNodeId) return;
+    if (!(galleryOpen && galleryNodeId)) {
+      return;
+    }
     const e = graph.entities[galleryNodeId];
     if (!e || e.kind !== "content" || e.theme !== "media") {
       closeMediaGallery();
@@ -5878,30 +7196,43 @@ export function ArchitecturalCanvasApp({
     (
       entity: CanvasContentEntity,
       normalizedFocusBody: string,
-      fallbackTitle: string,
+      fallbackTitle: string
     ): { bodyHtml: string; title: string } => {
       const factionTemplate = bodyHtmlImpliesFactionArchive091(entity.bodyHtml)
         ? entity.bodyHtml
-        : getLoreNodeSeedBodyHtml("faction", "v4", { factionRailSeed: entity.id });
+        : getLoreNodeSeedBodyHtml("faction", "v4", {
+            factionRailSeed: entity.id,
+          });
       const nextBody = shouldRenderLoreCharacterCredentialCanvasNode(entity)
-        ? focusDocumentHtmlToCharacterV11Body(normalizedFocusBody, entity.bodyHtml, entity.id)
+        ? focusDocumentHtmlToCharacterV11Body(
+            normalizedFocusBody,
+            entity.bodyHtml,
+            entity.id
+          )
         : shouldRenderLoreLocationCanvasNode(entity)
-          ? focusDocumentHtmlToLocationBody(normalizedFocusBody, entity.bodyHtml)
+          ? focusDocumentHtmlToLocationBody(
+              normalizedFocusBody,
+              entity.bodyHtml
+            )
           : shouldRenderLoreFactionArchive091CanvasNode(entity)
             ? withFactionArchiveObjectIdInRails(
-                focusDocumentHtmlToFactionBody(normalizedFocusBody, factionTemplate),
-                entity.id,
+                focusDocumentHtmlToFactionBody(
+                  normalizedFocusBody,
+                  factionTemplate
+                ),
+                entity.id
               )
             : normalizedFocusBody;
       const nextTitle = shouldRenderLoreLocationCanvasNode(entity)
-        ? plainPlaceNameFromLocationBodyHtml(nextBody).trim() || defaultTitleForLoreKind("location")
+        ? plainPlaceNameFromLocationBodyHtml(nextBody).trim() ||
+          defaultTitleForLoreKind("location")
         : shouldRenderLoreFactionArchive091CanvasNode(entity)
           ? plainFactionPrimaryNameFromArchiveBodyHtml(nextBody).trim() ||
             defaultTitleForLoreKind("faction")
           : fallbackTitle.trim() || "Untitled";
       return { bodyHtml: nextBody, title: nextTitle };
     },
-    [],
+    []
   );
 
   const saveFocusAndClose = useCallback(() => {
@@ -5911,9 +7242,10 @@ export function ArchitecturalCanvasApp({
       return;
     }
     const entityPre = graphRef.current.entities[activeNodeId];
-    const hgDefault = entityPre?.kind === "content" && contentEntityUsesHgDoc(entityPre);
+    const hgDefault =
+      entityPre?.kind === "content" && contentEntityUsesHgDoc(entityPre);
     const focusDoc = hgDefault
-      ? getHgDocEditor("focus-body")?.getJSON() ?? focusBodyDoc
+      ? (getHgDocEditor("focus-body")?.getJSON() ?? focusBodyDoc)
       : focusBodyDoc;
     const normalizedFocusBody = hgDefault
       ? hgDocToHtml(focusDoc)
@@ -5928,7 +7260,11 @@ export function ArchitecturalCanvasApp({
       const entity = graphRef.current.entities[activeNodeId];
       if (entity && entity.kind === "content") {
         const { bodyHtml: nextBodyResolved, title: nextTitleResolved } =
-          deriveLoreFocusResolvedBodyAndTitle(entity, normalizedFocusBody, focusTitle);
+          deriveLoreFocusResolvedBodyAndTitle(
+            entity,
+            normalizedFocusBody,
+            focusTitle
+          );
         const bodyChanged = hgDefault
           ? jsonStableStringify(focusDoc) !== focusBaselineBodyDocKey
           : entity.bodyHtml !== nextBodyResolved;
@@ -5938,12 +7274,15 @@ export function ArchitecturalCanvasApp({
       }
       setGraph((prev) => {
         const entity = prev.entities[activeNodeId];
-        if (!entity || entity.kind !== "content") return prev;
-        const { bodyHtml: nextBody, title: nextTitle } = deriveLoreFocusResolvedBodyAndTitle(
-          entity,
-          normalizedFocusBody,
-          focusTitle,
-        );
+        if (!entity || entity.kind !== "content") {
+          return prev;
+        }
+        const { bodyHtml: nextBody, title: nextTitle } =
+          deriveLoreFocusResolvedBodyAndTitle(
+            entity,
+            normalizedFocusBody,
+            focusTitle
+          );
         const nextBodyDoc = hgDefault ? structuredClone(focusDoc) : undefined;
         const clearAiMeta =
           isAiReviewPending(entity.entityMeta) &&
@@ -5973,12 +7312,15 @@ export function ArchitecturalCanvasApp({
         const aid = activeNodeId;
         queueMicrotask(() => {
           const ent = graphRef.current.entities[aid];
-          if (!ent || ent.kind !== "content") return;
-          const { bodyHtml: nextBody, title: nextTitle } = deriveLoreFocusResolvedBodyAndTitle(
-            ent,
-            normalizedFocusBody,
-            focusTitle,
-          );
+          if (!ent || ent.kind !== "content") {
+            return;
+          }
+          const { bodyHtml: nextBody, title: nextTitle } =
+            deriveLoreFocusResolvedBodyAndTitle(
+              ent,
+              normalizedFocusBody,
+              focusTitle
+            );
           const merged: CanvasContentEntity = {
             ...ent,
             title: nextTitle,
@@ -5986,11 +7328,15 @@ export function ArchitecturalCanvasApp({
             bodyDoc: hgDefault ? structuredClone(focusDoc) : undefined,
           };
           const clearAiMeta =
-            isAiReviewPending(ent.entityMeta) && !contentEntityHasHgAiPending(merged);
+            isAiReviewPending(ent.entityMeta) &&
+            !contentEntityHasHgAiPending(merged);
           const persistedMerged = clearAiMeta
             ? {
                 ...merged,
-                entityMeta: { ...merged.entityMeta, aiReview: AI_REVIEW_CLEARED },
+                entityMeta: {
+                  ...merged.entityMeta,
+                  aiReview: AI_REVIEW_CLEARED,
+                },
               }
             : merged;
           void patchItemWithVersion(aid, {
@@ -6030,10 +7376,12 @@ export function ArchitecturalCanvasApp({
       : focusBody !== focusBaselineBody;
     const rosterDirty =
       ent?.kind === "content" && ent.loreCard?.kind === "faction"
-        ? JSON.stringify(ent.factionRoster ?? []) !== JSON.stringify(focusBaselineFactionRoster)
+        ? JSON.stringify(ent.factionRoster ?? []) !==
+          JSON.stringify(focusBaselineFactionRoster)
         : false;
     return (
-      normalizedFocusTitle(focusTitle) !== normalizedFocusTitle(focusBaselineTitle) ||
+      normalizedFocusTitle(focusTitle) !==
+        normalizedFocusTitle(focusBaselineTitle) ||
       bodyDirty ||
       rosterDirty
     );
@@ -6056,13 +7404,25 @@ export function ArchitecturalCanvasApp({
     | "character-hybrid"
     | "location-hybrid"
     | "faction-hybrid" => {
-    if (!focusOpen || !activeNodeId) return "default-doc";
+    if (!(focusOpen && activeNodeId)) {
+      return "default-doc";
+    }
     const ent = graph.entities[activeNodeId];
-    if (!ent || ent.kind !== "content") return "default-doc";
-    if (shouldRenderLoreCharacterCredentialCanvasNode(ent)) return "character-hybrid";
-    if (shouldRenderLoreLocationCanvasNode(ent)) return "location-hybrid";
-    if (shouldRenderLoreFactionArchive091CanvasNode(ent)) return "faction-hybrid";
-    if (ent.theme === "code") return "code";
+    if (!ent || ent.kind !== "content") {
+      return "default-doc";
+    }
+    if (shouldRenderLoreCharacterCredentialCanvasNode(ent)) {
+      return "character-hybrid";
+    }
+    if (shouldRenderLoreLocationCanvasNode(ent)) {
+      return "location-hybrid";
+    }
+    if (shouldRenderLoreFactionArchive091CanvasNode(ent)) {
+      return "faction-hybrid";
+    }
+    if (ent.theme === "code") {
+      return "code";
+    }
     return "default-doc";
   }, [focusOpen, activeNodeId, graph.entities]);
 
@@ -6078,17 +7438,27 @@ export function ArchitecturalCanvasApp({
 
   const mergeRemoteGraphEdgesImpl = useCallback(
     async (showToastIfChanged: boolean) => {
-      if (scenario !== "default" || !canvasBootstrapResolved) return;
-      if (!persistNeonRef.current) return;
-      if (!isUuidLike(activeSpaceId)) return;
+      if (scenario !== "default" || !canvasBootstrapResolved) {
+        return;
+      }
+      if (!persistNeonRef.current) {
+        return;
+      }
+      if (!isUuidLike(activeSpaceId)) {
+        return;
+      }
       try {
-        const res = await fetch(`/api/spaces/${encodeURIComponent(activeSpaceId)}/graph`);
+        const res = await fetch(
+          `/api/spaces/${encodeURIComponent(activeSpaceId)}/graph`
+        );
         const data = (await res.json()) as {
           ok?: boolean;
           edges?: GraphEdge[];
           itemLinksRevision?: string;
         };
-        if (!data?.ok || !data.edges) return;
+        if (!(data?.ok && data.edges)) {
+          return;
+        }
         const sig = [...data.edges]
           .map((e) => e.id)
           .sort()
@@ -6103,20 +7473,20 @@ export function ArchitecturalCanvasApp({
             defaultFolderPin: CONNECTION_PIN_DEFAULT_FOLDER,
             defaultContentPin: CONNECTION_PIN_DEFAULT_CONTENT,
             fallbackColor: CONNECTION_DEFAULT_COLOR,
-          }),
+          })
         );
         if (showToastIfChanged && prevSig !== null && prevSig !== sig) {
           setCollabConnectionsNotice(
-            "Connections were updated (another tab, automation, or background sync).",
+            "Connections were updated (another tab, automation, or background sync)."
           );
         }
       } catch (e) {
         neonSyncSpaceChangeSyncBreadcrumb(
-          `mergeRemoteGraphEdges: ${e instanceof Error ? e.message : "error"}`,
+          `mergeRemoteGraphEdges: ${e instanceof Error ? e.message : "error"}`
         );
       }
     },
-    [activeSpaceId, scenario, canvasBootstrapResolved, setGraph],
+    [activeSpaceId, scenario, canvasBootstrapResolved, setGraph]
   );
 
   useEffect(() => {
@@ -6125,7 +7495,9 @@ export function ArchitecturalCanvasApp({
 
   const enqueueRemoteGraphMerge = useCallback((wantToastOnChange: boolean) => {
     const q = graphMergeQueueRef.current;
-    if (wantToastOnChange) q.pendingToast = true;
+    if (wantToastOnChange) {
+      q.pendingToast = true;
+    }
     if (q.inFlight) {
       q.rerun = true;
       return;
@@ -6160,7 +7532,9 @@ export function ArchitecturalCanvasApp({
   useEffect(() => {
     const queue = graphMergeQueueRef.current;
     return () => {
-      if (queue.debounceTimer != null) window.clearTimeout(queue.debounceTimer);
+      if (queue.debounceTimer != null) {
+        window.clearTimeout(queue.debounceTimer);
+      }
       queue.debounceTimer = null;
     };
   }, []);
@@ -6180,7 +7554,9 @@ export function ArchitecturalCanvasApp({
   const markOptimisticProtectedId = useCallback((id: string, ttlMs = 3500) => {
     optimisticProtectedIdsRef.current.add(id);
     const prevTimer = optimisticProtectedTimerRef.current.get(id);
-    if (prevTimer) clearTimeout(prevTimer);
+    if (prevTimer) {
+      clearTimeout(prevTimer);
+    }
     const nextTimer = setTimeout(() => {
       optimisticProtectedTimerRef.current.delete(id);
       optimisticProtectedIdsRef.current.delete(id);
@@ -6190,7 +7566,9 @@ export function ArchitecturalCanvasApp({
 
   const clearOptimisticProtectedId = useCallback((id: string) => {
     const prevTimer = optimisticProtectedTimerRef.current.get(id);
-    if (prevTimer) clearTimeout(prevTimer);
+    if (prevTimer) {
+      clearTimeout(prevTimer);
+    }
     optimisticProtectedTimerRef.current.delete(id);
     optimisticProtectedIdsRef.current.delete(id);
   }, []);
@@ -6202,10 +7580,12 @@ export function ArchitecturalCanvasApp({
         enqueueRemoteGraphMerge(false);
         return;
       }
-      if (rev === lastItemLinksRevisionRef.current) return;
+      if (rev === lastItemLinksRevisionRef.current) {
+        return;
+      }
       enqueueRemoteGraphMerge(true);
     },
-    [enqueueRemoteGraphMerge],
+    [enqueueRemoteGraphMerge]
   );
 
   useHeartgardenSpaceChangeSync({
@@ -6226,31 +7606,38 @@ export function ArchitecturalCanvasApp({
     onAfterSpaceChangeMerge,
   });
 
-  const { connectedRef: realtimeConnectedRef } = useHeartgardenRealtimeSpaceSync({
-    enabled: collabNeonActive,
-    activeSpaceId,
-    onInvalidate: (detail) => {
-      setRealtimeRefreshNonce((n) => n + 1);
-      if (detail?.reason === "item-links.changed") {
-        enqueueRemoteGraphMerge(true);
-      }
-    },
-  });
+  const { connectedRef: realtimeConnectedRef } =
+    useHeartgardenRealtimeSpaceSync({
+      enabled: collabNeonActive,
+      activeSpaceId,
+      onInvalidate: (detail) => {
+        setRealtimeRefreshNonce((n) => n + 1);
+        if (detail?.reason === "item-links.changed") {
+          enqueueRemoteGraphMerge(true);
+        }
+      },
+    });
 
   useEffect(() => {
-    if (!collabNeonActive || !isUuidLike(activeSpaceId)) return;
+    if (!(collabNeonActive && isUuidLike(activeSpaceId))) {
+      return;
+    }
     let inFlight = false;
     let pollAbort: AbortController | null = null;
     const id = window.setInterval(() => {
-      if (realtimeConnectedRef.current) return;
-      if (inFlight) return;
+      if (realtimeConnectedRef.current) {
+        return;
+      }
+      if (inFlight) {
+        return;
+      }
       inFlight = true;
       pollAbort = new AbortController();
       void (async () => {
         try {
           const res = await fetch(
             `/api/spaces/${encodeURIComponent(activeSpaceId)}/link-revision`,
-            { signal: pollAbort.signal },
+            { signal: pollAbort.signal }
           );
           const raw: unknown = await res.json();
           if (
@@ -6261,12 +7648,19 @@ export function ArchitecturalCanvasApp({
           ) {
             return;
           }
-          const rev = (raw as { itemLinksRevision?: unknown }).itemLinksRevision;
-          if (typeof rev !== "string") return;
-          if (rev === lastItemLinksRevisionRef.current) return;
+          const rev = (raw as { itemLinksRevision?: unknown })
+            .itemLinksRevision;
+          if (typeof rev !== "string") {
+            return;
+          }
+          if (rev === lastItemLinksRevisionRef.current) {
+            return;
+          }
           enqueueRemoteGraphMerge(true);
         } catch (error) {
-          if (isAbortError(error)) return;
+          if (isAbortError(error)) {
+            return;
+          }
           /* ignore */
         } finally {
           inFlight = false;
@@ -6278,7 +7672,12 @@ export function ArchitecturalCanvasApp({
       window.clearInterval(id);
       pollAbort?.abort();
     };
-  }, [activeSpaceId, collabNeonActive, enqueueRemoteGraphMerge, realtimeConnectedRef]);
+  }, [
+    activeSpaceId,
+    collabNeonActive,
+    enqueueRemoteGraphMerge,
+    realtimeConnectedRef,
+  ]);
 
   const presencePayloadForHeartbeat = useCallback(() => {
     const v = viewRef.current;
@@ -6316,14 +7715,20 @@ export function ArchitecturalCanvasApp({
   });
 
   useEffect(() => {
-    if (!collabNeonActive) return;
+    if (!collabNeonActive) {
+      return;
+    }
     const el = viewportRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     let raf = 0;
     const flush = () => {
       raf = 0;
       const clientId = getOrCreatePresenceClientId();
-      if (!clientId) return;
+      if (!clientId) {
+        return;
+      }
       const v = viewRef.current;
       const identity = presenceIdentityForHeartbeat();
       void postPresencePayload(activeSpaceId, clientId, {
@@ -6335,15 +7740,22 @@ export function ArchitecturalCanvasApp({
     };
     const scheduleFlush = () => {
       const now = Date.now();
-      if (now - lastPointerPresencePostRef.current < HEARTGARDEN_PRESENCE_POINTER_FLUSH_MIN_MS) {
+      if (
+        now - lastPointerPresencePostRef.current <
+        HEARTGARDEN_PRESENCE_POINTER_FLUSH_MIN_MS
+      ) {
         return;
       }
       lastPointerPresencePostRef.current = now;
-      if (raf) cancelAnimationFrame(raf);
+      if (raf) {
+        cancelAnimationFrame(raf);
+      }
       raf = requestAnimationFrame(flush);
     };
     const onMove = (e: PointerEvent) => {
-      if (document.visibilityState === "hidden") return;
+      if (document.visibilityState === "hidden") {
+        return;
+      }
       const v = viewRef.current;
       const worldX = (e.clientX - v.tx) / v.scale;
       const worldY = (e.clientY - v.ty) / v.scale;
@@ -6359,7 +7771,9 @@ export function ArchitecturalCanvasApp({
     return () => {
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerleave", onLeave);
-      if (raf) cancelAnimationFrame(raf);
+      if (raf) {
+        cancelAnimationFrame(raf);
+      }
     };
   }, [collabNeonActive, activeSpaceId, presenceIdentityForHeartbeat]);
 
@@ -6367,7 +7781,8 @@ export function ArchitecturalCanvasApp({
     () =>
       !!galleryOpen &&
       !!galleryNodeId &&
-      (normalizedFocusTitle(galleryDraftTitle) !== normalizedFocusTitle(galleryBaselineTitle) ||
+      (normalizedFocusTitle(galleryDraftTitle) !==
+        normalizedFocusTitle(galleryBaselineTitle) ||
         galleryDraftNotesDocKey !== galleryBaselineNotesDocKey),
     [
       galleryBaselineNotesDocKey,
@@ -6376,19 +7791,25 @@ export function ArchitecturalCanvasApp({
       galleryDraftTitle,
       galleryNodeId,
       galleryOpen,
-    ],
+    ]
   );
 
   const onFocusOverlayPointerDownCapture = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      if (!focusOpen) return;
+      if (!focusOpen) {
+        return;
+      }
       const t = event.target as HTMLElement;
-      if (t.closest(`.${styles.focusSheet}`)) return;
-      if (t.closest(`.${styles.focusBottomDock}`)) return;
+      if (t.closest(`.${styles.focusSheet}`)) {
+        return;
+      }
+      if (t.closest(`.${styles.focusBottomDock}`)) {
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
     },
-    [focusOpen],
+    [focusOpen]
   );
 
   const updateTransformFromMouse = useCallback(
@@ -6402,23 +7823,25 @@ export function ArchitecturalCanvasApp({
       setTranslateX(nextTranslateX);
       setTranslateY(nextTranslateY);
     },
-    [],
+    []
   );
 
   const zoomBy = useCallback(
     (delta: number) => {
       const viewport = viewportRef.current;
-      if (!viewport) return;
+      if (!viewport) {
+        return;
+      }
       const rect = viewport.getBoundingClientRect();
       const centerX = rect.width / 2;
       const centerY = rect.height / 2;
       const nextScale = Math.min(
         Math.max(MIN_ZOOM, viewRef.current.scale + delta),
-        MAX_ZOOM,
+        MAX_ZOOM
       );
       updateTransformFromMouse(nextScale, centerX, centerY);
     },
-    [updateTransformFromMouse],
+    [updateTransformFromMouse]
   );
 
   /** Resets so world (0,0) is viewport-centered (`defaultCamera`) and syncs storage — see `AGENTS.md` (Canvas camera). */
@@ -6426,7 +7849,7 @@ export function ArchitecturalCanvasApp({
     const { width, height } = viewportCssSizeForDefaultCamera(
       viewportRef.current,
       viewportSizeRef.current.width,
-      viewportSizeRef.current.height,
+      viewportSizeRef.current.height
     );
     const cam = defaultCamera(width, height);
     setTranslateX(cam.x);
@@ -6439,8 +7862,12 @@ export function ArchitecturalCanvasApp({
 
   const makeWikiLinkAssist = useCallback(
     (excludeEntityId?: string): WikiLinkAssistConfig | null => {
-      if (isRestrictedLayer) return null;
-      if (!isUuidLike(activeSpaceId)) return null;
+      if (isRestrictedLayer) {
+        return null;
+      }
+      if (!isUuidLike(activeSpaceId)) {
+        return null;
+      }
       return {
         enabled: true,
         excludeEntityId,
@@ -6451,7 +7878,9 @@ export function ArchitecturalCanvasApp({
           const out: { id: string; title: string }[] = [];
           for (const id of ids) {
             const e = g.entities[id];
-            if (!e) continue;
+            if (!e) {
+              continue;
+            }
             out.push({ id, title: e.title || "Untitled" });
           }
           return out;
@@ -6459,34 +7888,44 @@ export function ArchitecturalCanvasApp({
         fetchRemoteSuggest: cloudLinksBar
           ? async (q, signal) => {
               const sid = activeSpaceIdRef.current;
-              if (!isUuidLike(sid)) return [];
+              if (!isUuidLike(sid)) {
+                return [];
+              }
               const params = new URLSearchParams({ q, mode: "hybrid" });
               params.set("spaceId", sid);
-              const res = await fetch(`/api/search/suggest?${params}`, { signal });
+              const res = await fetch(`/api/search/suggest?${params}`, {
+                signal,
+              });
               const data = (await res.json()) as {
                 ok?: boolean;
                 suggestions?: { id: string; title: string }[];
               };
-              if (!data.ok || !Array.isArray(data.suggestions)) return [];
-              return data.suggestions.map((s) => ({ id: s.id, title: s.title }));
+              if (!(data.ok && Array.isArray(data.suggestions))) {
+                return [];
+              }
+              return data.suggestions.map((s) => ({
+                id: s.id,
+                title: s.title,
+              }));
             }
           : undefined,
       };
     },
-    [activeSpaceId, cloudLinksBar, isRestrictedLayer],
+    [activeSpaceId, cloudLinksBar, isRestrictedLayer]
   );
 
   const applyFitAllToViewport = useCallback(() => {
     const rect = viewportRef.current?.getBoundingClientRect();
     const w = rect?.width ?? viewportSizeRef.current.width ?? window.innerWidth;
-    const h = rect?.height ?? viewportSizeRef.current.height ?? window.innerHeight;
+    const h =
+      rect?.height ?? viewportSizeRef.current.height ?? window.innerHeight;
     const next = fitCameraToActiveSpaceContent(
       graphRef.current,
       activeSpaceIdRef.current,
       w,
       h,
       MIN_ZOOM,
-      MAX_ZOOM,
+      MAX_ZOOM
     );
     if (!next) {
       recenterToOrigin();
@@ -6507,7 +7946,8 @@ export function ArchitecturalCanvasApp({
   const onMinimapCenterOnWorld = useCallback((wx: number, wy: number) => {
     const rect = viewportRef.current?.getBoundingClientRect();
     const w = rect?.width ?? viewportSizeRef.current.width ?? window.innerWidth;
-    const h = rect?.height ?? viewportSizeRef.current.height ?? window.innerHeight;
+    const h =
+      rect?.height ?? viewportSizeRef.current.height ?? window.innerHeight;
     const s = viewRef.current.scale;
     setTranslateX(w / 2 - wx * s);
     setTranslateY(h / 2 - wy * s);
@@ -6536,35 +7976,57 @@ export function ArchitecturalCanvasApp({
   viewportWheelZoomRef.current = updateTransformFromMouse;
 
   useEffect(() => {
-    if (!isUuidLike(activeSpaceId)) return;
-    if (cameraPersistTimerRef.current) clearTimeout(cameraPersistTimerRef.current);
+    if (!isUuidLike(activeSpaceId)) {
+      return;
+    }
+    if (cameraPersistTimerRef.current) {
+      clearTimeout(cameraPersistTimerRef.current);
+    }
     cameraPersistTimerRef.current = setTimeout(() => {
       cameraPersistTimerRef.current = null;
       const snap = cameraPersistSnapshotRef.current;
-      if (!isUuidLike(snap.spaceId)) return;
-      writeSpaceCamera(snap.spaceId, { x: snap.tx, y: snap.ty, zoom: snap.zoom });
+      if (!isUuidLike(snap.spaceId)) {
+        return;
+      }
+      writeSpaceCamera(snap.spaceId, {
+        x: snap.tx,
+        y: snap.ty,
+        zoom: snap.zoom,
+      });
     }, 700);
     return () => {
-      if (cameraPersistTimerRef.current) clearTimeout(cameraPersistTimerRef.current);
+      if (cameraPersistTimerRef.current) {
+        clearTimeout(cameraPersistTimerRef.current);
+      }
     };
   }, [activeSpaceId, scale, translateX, translateY]);
 
   useEffect(() => {
-    if (scenario !== "default" || !canvasBootstrapResolved) return;
-    if (!persistNeonRef.current) return;
-    if (!isUuidLike(activeSpaceId)) return;
+    if (scenario !== "default" || !canvasBootstrapResolved) {
+      return;
+    }
+    if (!persistNeonRef.current) {
+      return;
+    }
+    if (!isUuidLike(activeSpaceId)) {
+      return;
+    }
     let cancelled = false;
     pollGraphEdgesSigRef.current = null;
     lastItemLinksRevisionRef.current = null;
     void (async () => {
       try {
-        const res = await fetch(`/api/spaces/${encodeURIComponent(activeSpaceId)}/graph`);
+        const res = await fetch(
+          `/api/spaces/${encodeURIComponent(activeSpaceId)}/graph`
+        );
         const data = (await res.json()) as {
           ok?: boolean;
           edges?: GraphEdge[];
           itemLinksRevision?: string;
         };
-        if (cancelled || !data?.ok || !data.edges) return;
+        if (cancelled || !data?.ok || !data.edges) {
+          return;
+        }
         pollGraphEdgesSigRef.current = [...data.edges]
           .map((e) => e.id)
           .sort()
@@ -6577,11 +8039,11 @@ export function ArchitecturalCanvasApp({
             defaultFolderPin: CONNECTION_PIN_DEFAULT_FOLDER,
             defaultContentPin: CONNECTION_PIN_DEFAULT_CONTENT,
             fallbackColor: CONNECTION_DEFAULT_COLOR,
-          }),
+          })
         );
       } catch (e) {
         neonSyncSpaceChangeSyncBreadcrumb(
-          `poll graph edges: ${e instanceof Error ? e.message : "error"}`,
+          `poll graph edges: ${e instanceof Error ? e.message : "error"}`
         );
       }
     })();
@@ -6592,50 +8054,68 @@ export function ArchitecturalCanvasApp({
 
   const connectionPinView = useMemo<ConnectionPinViewContext>(
     () => ({ tx: translateX, ty: translateY, scale }),
-    [translateX, translateY, scale],
+    [translateX, translateY, scale]
   );
 
   /** Hydrates graph from bootstrap and sets camera to `defaultCamera` (world origin centered — see `AGENTS.md`). */
-  const applyBootstrapData = useCallback((data: BootstrapResponse, maxZi: number) => {
-    if (!data.spaceId) return;
-    const braneId = (data as BootstrapResponse & { braneId?: string | null }).braneId ?? null;
-    setActiveBraneId(braneId);
-    const nextGraph = buildCanvasGraphFromBootstrap(data);
-    setGraph(nextGraph);
-    setActiveSpaceId(data.spaceId);
-    setNavigationPath(buildPathToSpace(data.spaceId, nextGraph.spaces, nextGraph.rootSpaceId));
-    const m = itemServerUpdatedAtRef.current;
-    m.clear();
-    let maxMs = 0;
-    for (const it of data.items) {
-      if (it.updatedAt) {
-        m.set(it.id, it.updatedAt);
-        const t = Date.parse(it.updatedAt);
-        if (Number.isFinite(t) && t > maxMs) maxMs = t;
+  const applyBootstrapData = useCallback(
+    (data: BootstrapResponse, maxZi: number) => {
+      if (!data.spaceId) {
+        return;
       }
-    }
-    syncCursorRef.current = maxMs > 0 ? new Date(maxMs).toISOString() : new Date(0).toISOString();
-    const { width, height } = viewportCssSizeForDefaultCamera(
-      viewportRef.current,
-      viewportSizeRef.current.width,
-      viewportSizeRef.current.height,
-    );
-    const cam = defaultCamera(width, height);
-    setTranslateX(cam.x);
-    setTranslateY(cam.y);
-    setScale(cam.zoom);
-    writeSpaceCamera(data.spaceId, cam);
-    setMaxZIndex(maxZi);
-  }, []);
+      const braneId =
+        (data as BootstrapResponse & { braneId?: string | null }).braneId ??
+        null;
+      setActiveBraneId(braneId);
+      const nextGraph = buildCanvasGraphFromBootstrap(data);
+      setGraph(nextGraph);
+      setActiveSpaceId(data.spaceId);
+      setNavigationPath(
+        buildPathToSpace(data.spaceId, nextGraph.spaces, nextGraph.rootSpaceId)
+      );
+      const m = itemServerUpdatedAtRef.current;
+      m.clear();
+      let maxMs = 0;
+      for (const it of data.items) {
+        if (it.updatedAt) {
+          m.set(it.id, it.updatedAt);
+          const t = Date.parse(it.updatedAt);
+          if (Number.isFinite(t) && t > maxMs) {
+            maxMs = t;
+          }
+        }
+      }
+      syncCursorRef.current =
+        maxMs > 0 ? new Date(maxMs).toISOString() : new Date(0).toISOString();
+      const { width, height } = viewportCssSizeForDefaultCamera(
+        viewportRef.current,
+        viewportSizeRef.current.width,
+        viewportSizeRef.current.height
+      );
+      const cam = defaultCamera(width, height);
+      setTranslateX(cam.x);
+      setTranslateY(cam.y);
+      setScale(cam.zoom);
+      writeSpaceCamera(data.spaceId, cam);
+      setMaxZIndex(maxZi);
+    },
+    []
+  );
   const applyBootstrapDataRef = useRef(applyBootstrapData);
   applyBootstrapDataRef.current = applyBootstrapData;
 
   const ingestLiveBootstrap = useCallback(
     (data: BootstrapResponse) => {
-      if (!data.spaceId || data.demo !== false) return;
+      if (!data.spaceId || data.demo !== false) {
+        return;
+      }
       const maxZi =
-        data.items.length > 0 ? Math.max(...data.items.map((i) => i.zIndex), 100) : 100;
-      const cacheTier = workspaceCacheTierForNeonSession(heartgardenBootApiRef.current);
+        data.items.length > 0
+          ? Math.max(...data.items.map((i) => i.zIndex), 100)
+          : 100;
+      const cacheTier = workspaceCacheTierForNeonSession(
+        heartgardenBootApiRef.current
+      );
       writeWorkspaceViewCache(data, maxZi, cacheTier);
       setNeonWorkspaceOk(true);
       setWorkspaceViewFromCache(false);
@@ -6643,7 +8123,7 @@ export function ArchitecturalCanvasApp({
       neonSyncSetCloudEnabled(true);
       applyBootstrapData(data, maxZi);
     },
-    [applyBootstrapData],
+    [applyBootstrapData]
   );
 
   const applyDemoLocalCanvas = useCallback(() => {
@@ -6659,7 +8139,7 @@ export function ArchitecturalCanvasApp({
     const { width, height } = viewportCssSizeForDefaultCamera(
       viewportRef.current,
       viewportSizeRef.current.width,
-      viewportSizeRef.current.height,
+      viewportSizeRef.current.height
     );
     const demoCam = defaultCamera(width, height);
     setTranslateX(demoCam.x);
@@ -6762,7 +8242,9 @@ export function ArchitecturalCanvasApp({
       let failure: Extract<BootstrapFetchDetail, { ok: false }> | null = null;
       try {
         const result = await fetchBootstrapDetailed();
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         if (result.ok) {
           setBootstrapErrorSummary(null);
           ingestLiveBootstrap(result.data);
@@ -6771,7 +8253,12 @@ export function ArchitecturalCanvasApp({
         }
       } catch (e) {
         /* `ingestLiveBootstrap` crashed or `fetchBootstrapDetailed` rethrew (AbortError). */
-        if (cancelled || (e instanceof DOMException && e.name === "AbortError")) return;
+        if (
+          cancelled ||
+          (e instanceof DOMException && e.name === "AbortError")
+        ) {
+          return;
+        }
         failure = {
           ok: false,
           cause: "network",
@@ -6789,9 +8276,7 @@ export function ArchitecturalCanvasApp({
           (b.gateEnabled && b.sessionTier === "demo");
         if (skipCache) {
           /* Open gate + no Neon: README local-only demo — avoids an empty board + blocking overlay. */
-          if (!b.gateEnabled) {
-            applyDemoLocalCanvas();
-          } else {
+          if (b.gateEnabled) {
             setNeonWorkspaceOk(false);
             setWorkspaceViewFromCache(false);
             persistNeonRef.current = false;
@@ -6805,6 +8290,8 @@ export function ArchitecturalCanvasApp({
               setTranslateY(cam.y);
               setScale(cam.zoom);
             }
+          } else {
+            applyDemoLocalCanvas();
           }
         } else {
           const tier = workspaceCacheTierForNeonSession(b);
@@ -6815,10 +8302,7 @@ export function ArchitecturalCanvasApp({
             persistNeonRef.current = false;
             neonSyncSetCloudEnabled(false);
             applyBootstrapDataRef.current(cached.bootstrap, cached.maxZIndex);
-          } else if (!b.gateEnabled && !strictGmWorkspace) {
-            /* README: without Neon, open gate runs local-only demo — same as demo PIN tier. */
-            applyDemoLocalCanvas();
-          } else {
+          } else if (b.gateEnabled || strictGmWorkspace) {
             setNeonWorkspaceOk(false);
             setWorkspaceViewFromCache(false);
             persistNeonRef.current = false;
@@ -6832,10 +8316,15 @@ export function ArchitecturalCanvasApp({
               setTranslateY(cam.y);
               setScale(cam.zoom);
             }
+          } else {
+            /* README: without Neon, open gate runs local-only demo — same as demo PIN tier. */
+            applyDemoLocalCanvas();
           }
         }
       }
-      if (cancelled) return;
+      if (cancelled) {
+        return;
+      }
       setCanvasBootstrapResolved(true);
       setSelectedNodeIds([]);
       setConnectionSourceId(null);
@@ -6861,16 +8350,24 @@ export function ArchitecturalCanvasApp({
   ]);
 
   useEffect(() => {
-    if (scenario !== "default" || !workspaceViewFromCache) return;
+    if (scenario !== "default" || !workspaceViewFromCache) {
+      return;
+    }
     const b = heartgardenBootApiRef.current;
-    if (!b.loaded) return;
-    if (b.gateEnabled && (!b.sessionValid || b.sessionTier === "demo")) return;
+    if (!b.loaded) {
+      return;
+    }
+    if (b.gateEnabled && (!b.sessionValid || b.sessionTier === "demo")) {
+      return;
+    }
 
     let cancelled = false;
     const tryReconnect = async () => {
       try {
         const data = await fetchBootstrap();
-        if (cancelled || !data || data.demo !== false || !data.spaceId) return;
+        if (cancelled || !data || data.demo !== false || !data.spaceId) {
+          return;
+        }
         setBootstrapErrorSummary(null);
         ingestLiveBootstrap(data);
       } catch {
@@ -6919,12 +8416,18 @@ export function ArchitecturalCanvasApp({
   }, [scenario]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
 
     let cancelled = false;
     const reveal = () => {
-      if (!cancelled) setCanvasSurfaceReady(true);
+      if (!cancelled) {
+        setCanvasSurfaceReady(true);
+      }
     };
     const hardCapMs = 1400;
     const capTimer = window.setTimeout(reveal, hardCapMs);
@@ -6935,7 +8438,9 @@ export function ArchitecturalCanvasApp({
       } catch {
         /* ignore */
       }
-      if (cancelled) return;
+      if (cancelled) {
+        return;
+      }
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           window.clearTimeout(capTimer);
@@ -6951,7 +8456,9 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   useLayoutEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      return;
+    }
     try {
       if (localStorage.getItem(VIGIL_CANVAS_EFFECTS_STORAGE_KEY) === "0") {
         setCanvasEffectsEnabled(false);
@@ -6962,9 +8469,14 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      return;
+    }
     try {
-      localStorage.setItem(VIGIL_CANVAS_EFFECTS_STORAGE_KEY, canvasEffectsEnabled ? "1" : "0");
+      localStorage.setItem(
+        VIGIL_CANVAS_EFFECTS_STORAGE_KEY,
+        canvasEffectsEnabled ? "1" : "0"
+      );
     } catch {
       /* ignore */
     }
@@ -6978,7 +8490,9 @@ export function ArchitecturalCanvasApp({
   }, [canvasEffectsEnabled, navTransitionActive]);
 
   useLayoutEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      return;
+    }
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     const sync = () => setPrefersReducedMotion(mq.matches);
     sync();
@@ -6987,7 +8501,9 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   useLayoutEffect(() => {
-    if (prefersReducedMotion || scenario === "default") return;
+    if (prefersReducedMotion || scenario === "default") {
+      return;
+    }
     setChromeEnterEpoch((e) => (e >= 1 ? e : 1));
   }, [scenario, prefersReducedMotion]);
 
@@ -6995,15 +8511,21 @@ export function ArchitecturalCanvasApp({
     let cancelled = false;
     fetch("/api/heartgarden/boot", { credentials: "include" })
       .then(async (r) => {
-        if (!r.ok) throw new Error("boot status");
+        if (!r.ok) {
+          throw new Error("boot status");
+        }
         return r.json() as Promise<HeartgardenBootStatusJson>;
       })
       .then((d) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setHeartgardenBootApi(parseHeartgardenBootStatus(d));
       })
       .catch(() => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setHeartgardenBootApi({
           loaded: true,
           gateEnabled: false,
@@ -7018,7 +8540,9 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   useEffect(() => {
-    if (!isRestrictedLayer) return;
+    if (!isRestrictedLayer) {
+      return;
+    }
     setLorePanelOpen(false);
     setGraphOverlayOpen(false);
     setLoreSmartReview(null);
@@ -7026,10 +8550,16 @@ export function ArchitecturalCanvasApp({
   }, [isRestrictedLayer]);
 
   useLayoutEffect(() => {
-    if (scenario !== "default") return;
-    if (!heartgardenBootApi.loaded) return;
+    if (scenario !== "default") {
+      return;
+    }
+    if (!heartgardenBootApi.loaded) {
+      return;
+    }
     /* Do not dismiss boot while showing the post–log out splash (same deps can re-run after logout). */
-    if (bootAfterLogout) return;
+    if (bootAfterLogout) {
+      return;
+    }
     if (heartgardenBootApi.gateEnabled) {
       if (heartgardenBootApi.sessionValid) {
         if (!bootCelebrationPlayedRef.current) {
@@ -7044,7 +8574,9 @@ export function ArchitecturalCanvasApp({
       }
       return;
     }
-    if (!prefersReducedMotion) return;
+    if (!prefersReducedMotion) {
+      return;
+    }
     setCanvasSessionActivated(true);
     setBootLayerDismissed(true);
   }, [
@@ -7057,7 +8589,9 @@ export function ArchitecturalCanvasApp({
   ]);
 
   const handleLogOutToAuth = useCallback(() => {
-    if (scenario !== "default") return;
+    if (scenario !== "default") {
+      return;
+    }
     /* Synchronous commit so boot ambient layoutEffects run while the log-out click still counts as user gesture (autoplay). */
     flushSync(() => {
       clearWorkspaceViewCache();
@@ -7081,12 +8615,17 @@ export function ArchitecturalCanvasApp({
     bootAmbientPrimePlaybackRef.current?.();
     void (async () => {
       try {
-        const res = await fetch("/api/heartgarden/boot", { method: "DELETE", credentials: "include" });
-        if (!res.ok) return;
+        const res = await fetch("/api/heartgarden/boot", {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (!res.ok) {
+          return;
+        }
         setHeartgardenBootApi((prev) =>
           prev.loaded
             ? { ...prev, sessionValid: false, sessionTier: null }
-            : prev,
+            : prev
         );
       } catch {
         /* ignore */
@@ -7098,7 +8637,7 @@ export function ArchitecturalCanvasApp({
     const { width: w, height: h } = viewportCssSizeForDefaultCamera(
       viewportRef.current,
       viewportSizeRef.current.width,
-      viewportSizeRef.current.height,
+      viewportSizeRef.current.height
     );
     return {
       x: (w / 2 - translateX) / scale,
@@ -7109,7 +8648,9 @@ export function ArchitecturalCanvasApp({
   const commitSmartLoreImport = useCallback(async () => {
     const rev = loreSmartReview;
     const planForApply = loreSmartPlanWithTargetOverrides;
-    if (!rev || !planForApply) return;
+    if (!(rev && planForApply)) {
+      return;
+    }
     const attemptId =
       typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
@@ -7121,22 +8662,28 @@ export function ArchitecturalCanvasApp({
         detail.operation,
         detail.httpStatus ?? "no_http_status",
         detail.message,
-        { attemptId: detail.attemptId, jobId: detail.jobId, phase: detail.phase },
+        {
+          attemptId: detail.attemptId,
+          jobId: detail.jobId,
+          phase: detail.phase,
+        }
       );
       playVigilUiSound("caution");
       setLoreImportFailure(detail);
     };
-    if (!persistNeonRef.current || !isUuidLike(activeSpaceId)) {
+    if (!(persistNeonRef.current && isUuidLike(activeSpaceId))) {
       reportFailure(
         createLoreImportFailureDetail({
           attemptId,
           stage: "apply",
           operation: "POST /api/lore/import/apply",
-          message: "Importing to the canvas requires a connected Neon space (not local demo mode).",
+          message:
+            "Importing to the canvas requires a connected Neon space (not local demo mode).",
           fileName: rev.fileName,
           spaceId: activeSpaceId,
-          recommendedAction: "Switch to a connected Neon workspace before applying import changes.",
-        }),
+          recommendedAction:
+            "Switch to a connected Neon workspace before applying import changes.",
+        })
       );
       return;
     }
@@ -7166,7 +8713,10 @@ export function ArchitecturalCanvasApp({
           sourceDocument:
             loreSmartIncludeSource && rev.sourceText.trim().length > 0
               ? {
-                  title: rev.sourceTitle?.trim() || rev.fileName || rev.plan.fileName,
+                  title:
+                    rev.sourceTitle?.trim() ||
+                    rev.fileName ||
+                    rev.plan.fileName,
                   text: rev.sourceText,
                 }
               : undefined,
@@ -7183,13 +8733,16 @@ export function ArchitecturalCanvasApp({
         followUp?: LoreImportOtherFollowUp;
         resolvedClarificationAnswers?: ClarificationAnswer[];
       };
-      if (!res.ok || !data.ok) {
+      if (!(res.ok && data.ok)) {
         reportFailure(
           createLoreImportFailureDetail({
             attemptId,
             stage: "apply",
             operation: "POST /api/lore/import/apply",
-            message: typeof data.error === "string" ? data.error : `Apply failed (HTTP ${res.status})`,
+            message:
+              typeof data.error === "string"
+                ? data.error
+                : `Apply failed (HTTP ${res.status})`,
             responseSnippet: rawText,
             httpStatus: res.status,
             jobId: planForApply.importBatchId,
@@ -7197,7 +8750,7 @@ export function ArchitecturalCanvasApp({
             spaceId: activeSpaceId,
             recommendedAction:
               "Review required clarifications/merges and retry. If this persists, copy diagnostics and share it.",
-          }),
+          })
         );
         return;
       }
@@ -7214,7 +8767,7 @@ export function ArchitecturalCanvasApp({
       setLoreSmartManualQuestionId(null);
       if (data.linkWarnings?.length) {
         window.alert(
-          `Imported. Link notes:\n${data.linkWarnings.slice(0, 8).join("\n")}${data.linkWarnings.length > 8 ? "\n…" : ""}`,
+          `Imported. Link notes:\n${data.linkWarnings.slice(0, 8).join("\n")}${data.linkWarnings.length > 8 ? "\n…" : ""}`
         );
       }
       const boot = await fetchBootstrap(activeSpaceId);
@@ -7239,13 +8792,14 @@ export function ArchitecturalCanvasApp({
           attemptId,
           stage: "apply",
           operation: "POST /api/lore/import/apply",
-          message: error instanceof Error ? error.message : "Apply request failed",
+          message:
+            error instanceof Error ? error.message : "Apply request failed",
           jobId: rev.plan.importBatchId,
           fileName: rev.fileName,
           spaceId: activeSpaceId,
           recommendedAction:
             "Retry apply once. If it fails again, copy support snapshot and include the import batch id.",
-        }),
+        })
       );
     } finally {
       setLoreImportCommitting(false);
@@ -7260,63 +8814,86 @@ export function ArchitecturalCanvasApp({
     loreSmartReview,
   ]);
 
-  const normalizeStack = useCallback((stackId: string, snapshot: CanvasGraph): CanvasGraph => {
-    if (!snapshot?.entities) return snapshot;
-    const entities = Object.values(snapshot.entities)
-      .filter((entity) => entity.stackId === stackId)
-      .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0));
-    if (entities.length === 0) return snapshot;
-    const next = shallowCloneGraph(snapshot);
-    entities.forEach((entity, index) => {
-      next.entities[entity.id] = {
-        ...next.entities[entity.id],
-        stackOrder: index,
-      };
-    });
-    return next;
-  }, []);
-
-  const stackSelectedContent = useCallback((selectionOverride?: readonly string[]) => {
-    if (stackModalRef.current) return;
-    const g = graphRef.current;
-    const spaceId = activeSpaceIdRef.current;
-    const rawSelection = selectionOverride ?? selectedNodeIdsRef.current;
-    const { orderedContentIds: ids } = getStackSelectionState(g, spaceId, rawSelection);
-    if (ids.length < 2) return;
-    recordUndoBeforeMutation();
-    const stackId = createId();
-    setGraph((prev) => {
-      const next = shallowCloneGraph(prev);
-      const finiteSlots = ids
-        .map((id) => next.entities[id]?.slots[spaceId])
-        .filter((s): s is { x: number; y: number } =>
-          !!s && Number.isFinite(s.x) && Number.isFinite(s.y),
-        );
-      /* Match card placement fallback: missing slots still stack at a shared anchor. */
-      const anchorX = finiteSlots.length > 0 ? Math.min(...finiteSlots.map((s) => s.x)) : 0;
-      const anchorY = finiteSlots.length > 0 ? Math.min(...finiteSlots.map((s) => s.y)) : 0;
-      /* Higher stackOrder renders last (top of pile). First in merge/selection list = top card. */
-      const topOrder = ids.length - 1;
-      ids.forEach((id, index) => {
-        const entity = next.entities[id];
-        if (!entity || entity.kind !== "content") return;
-        next.entities[id] = {
-          ...entity,
-          stackId,
-          stackOrder: topOrder - index,
-          slots: {
-            ...entity.slots,
-            [spaceId]: { x: anchorX, y: anchorY },
-          },
+  const normalizeStack = useCallback(
+    (stackId: string, snapshot: CanvasGraph): CanvasGraph => {
+      if (!snapshot?.entities) {
+        return snapshot;
+      }
+      const entities = Object.values(snapshot.entities)
+        .filter((entity) => entity.stackId === stackId)
+        .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0));
+      if (entities.length === 0) {
+        return snapshot;
+      }
+      const next = shallowCloneGraph(snapshot);
+      entities.forEach((entity, index) => {
+        next.entities[entity.id] = {
+          ...next.entities[entity.id],
+          stackOrder: index,
         };
       });
       return next;
-    });
-    setSelectedNodeIds(ids);
-    if (persistNeonRef.current) {
-      queueMicrotask(() => persistNeonItemsLayout(ids));
-    }
-  }, [createId, persistNeonItemsLayout, recordUndoBeforeMutation]);
+    },
+    []
+  );
+
+  const stackSelectedContent = useCallback(
+    (selectionOverride?: readonly string[]) => {
+      if (stackModalRef.current) {
+        return;
+      }
+      const g = graphRef.current;
+      const spaceId = activeSpaceIdRef.current;
+      const rawSelection = selectionOverride ?? selectedNodeIdsRef.current;
+      const { orderedContentIds: ids } = getStackSelectionState(
+        g,
+        spaceId,
+        rawSelection
+      );
+      if (ids.length < 2) {
+        return;
+      }
+      recordUndoBeforeMutation();
+      const stackId = createId();
+      setGraph((prev) => {
+        const next = shallowCloneGraph(prev);
+        const finiteSlots = ids
+          .map((id) => next.entities[id]?.slots[spaceId])
+          .filter(
+            (s): s is { x: number; y: number } =>
+              !!s && Number.isFinite(s.x) && Number.isFinite(s.y)
+          );
+        /* Match card placement fallback: missing slots still stack at a shared anchor. */
+        const anchorX =
+          finiteSlots.length > 0 ? Math.min(...finiteSlots.map((s) => s.x)) : 0;
+        const anchorY =
+          finiteSlots.length > 0 ? Math.min(...finiteSlots.map((s) => s.y)) : 0;
+        /* Higher stackOrder renders last (top of pile). First in merge/selection list = top card. */
+        const topOrder = ids.length - 1;
+        ids.forEach((id, index) => {
+          const entity = next.entities[id];
+          if (!entity || entity.kind !== "content") {
+            return;
+          }
+          next.entities[id] = {
+            ...entity,
+            stackId,
+            stackOrder: topOrder - index,
+            slots: {
+              ...entity.slots,
+              [spaceId]: { x: anchorX, y: anchorY },
+            },
+          };
+        });
+        return next;
+      });
+      setSelectedNodeIds(ids);
+      if (persistNeonRef.current) {
+        queueMicrotask(() => persistNeonItemsLayout(ids));
+      }
+    },
+    [createId, persistNeonItemsLayout, recordUndoBeforeMutation]
+  );
 
   const unstackGroup = useCallback(
     (stackId: string) => {
@@ -7324,21 +8901,25 @@ export function ArchitecturalCanvasApp({
       const members = Object.values(graphRef.current.entities)
         .filter(
           (e): e is Extract<CanvasEntity, { kind: "content" }> =>
-            e.kind === "content" && e.stackId === stackId,
+            e.kind === "content" && e.stackId === stackId
         )
         .map((e) => e.id);
-      setGraph((prev) => applyUnstackStackInSpace(prev, stackId, activeSpaceId));
+      setGraph((prev) =>
+        applyUnstackStackInSpace(prev, stackId, activeSpaceId)
+      );
       if (persistNeonRef.current && members.length > 0) {
         queueMicrotask(() => persistNeonItemsLayout(members));
       }
     },
-    [activeSpaceId, persistNeonItemsLayout, recordUndoBeforeMutation],
+    [activeSpaceId, persistNeonItemsLayout, recordUndoBeforeMutation]
   );
 
   const ensureFolderChildSpace = useCallback(
     async (folderId: string): Promise<string | null> => {
       const folderEarly = graphRef.current.entities[folderId];
-      if (!folderEarly || folderEarly.kind !== "folder") return null;
+      if (!folderEarly || folderEarly.kind !== "folder") {
+        return null;
+      }
       if (graphRef.current.spaces[folderEarly.childSpaceId]) {
         return folderEarly.childSpaceId;
       }
@@ -7346,10 +8927,17 @@ export function ArchitecturalCanvasApp({
       if (persistNeonRef.current && isUuidLike(folderId)) {
         recordUndoBeforeMutation();
         const folder = graphRef.current.entities[folderId];
-        if (!folder || folder.kind !== "folder") return null;
+        if (!folder || folder.kind !== "folder") {
+          return null;
+        }
         const parentSpaceId = activeSpaceIdRef.current;
-        const created = await apiCreateSpace(folder.title || "Untitled Folder", parentSpaceId);
-        if (!created.ok || !created.space?.id) return null;
+        const created = await apiCreateSpace(
+          folder.title || "Untitled Folder",
+          parentSpaceId
+        );
+        if (!(created.ok && created.space?.id)) {
+          return null;
+        }
         const newSpaceId = created.space.id;
         const contentJson = buildContentJsonForFolderEntity({
           ...folder,
@@ -7358,7 +8946,9 @@ export function ArchitecturalCanvasApp({
         await patchItemWithVersion(folderId, { contentJson });
         setGraph((prev) => {
           const f = prev.entities[folderId];
-          if (!f || f.kind !== "folder") return prev;
+          if (!f || f.kind !== "folder") {
+            return prev;
+          }
           const next = shallowCloneGraph(prev);
           next.spaces[newSpaceId] = {
             id: newSpaceId,
@@ -7375,45 +8965,69 @@ export function ArchitecturalCanvasApp({
       recordUndoBeforeMutation();
       const snapshot = graphRef.current;
       const folder = snapshot.entities[folderId];
-      if (!folder || folder.kind !== "folder") return null;
-      const existingChildId = snapshot.spaces[folder.childSpaceId] ? folder.childSpaceId : null;
+      if (!folder || folder.kind !== "folder") {
+        return null;
+      }
+      const existingChildId = snapshot.spaces[folder.childSpaceId]
+        ? folder.childSpaceId
+        : null;
       const resolved = existingChildId ?? createId();
       if (!existingChildId) {
         setGraph((prev) => {
           const folderCurrent = prev.entities[folderId];
-          if (!folderCurrent || folderCurrent.kind !== "folder") return prev;
-          if (prev.spaces[folderCurrent.childSpaceId]) return prev;
+          if (!folderCurrent || folderCurrent.kind !== "folder") {
+            return prev;
+          }
+          if (prev.spaces[folderCurrent.childSpaceId]) {
+            return prev;
+          }
           const next = shallowCloneGraph(prev);
-          const parentSpaceId = next.spaces[activeSpaceId]?.id ?? next.rootSpaceId;
+          const parentSpaceId =
+            next.spaces[activeSpaceId]?.id ?? next.rootSpaceId;
           next.spaces[resolved] = {
             id: resolved,
             name: folderCurrent.title || "Untitled Folder",
             parentSpaceId,
             entityIds: [],
           };
-          next.entities[folderId] = { ...folderCurrent, childSpaceId: resolved };
+          next.entities[folderId] = {
+            ...folderCurrent,
+            childSpaceId: resolved,
+          };
           return next;
         });
       }
       return resolved;
     },
-    [activeSpaceId, createId, patchItemWithVersion, recordUndoBeforeMutation],
+    [activeSpaceId, createId, patchItemWithVersion, recordUndoBeforeMutation]
   );
 
   const canMoveEntityToSpace = useCallback(
-    (entityId: string, destinationSpaceId: string, snapshot: CanvasGraph = graph) => {
+    (
+      entityId: string,
+      destinationSpaceId: string,
+      snapshot: CanvasGraph = graph
+    ) => {
       const entity = snapshot.entities[entityId];
       const destinationSpace = snapshot.spaces[destinationSpaceId];
-      if (!entity || !destinationSpace) return false;
+      if (!(entity && destinationSpace)) {
+        return false;
+      }
       if (entity.kind === "folder") {
         // A folder cannot be moved into itself or any of its descendants.
-        if (isDescendantSpace(destinationSpaceId, entity.childSpaceId, snapshot.spaces)) {
+        if (
+          isDescendantSpace(
+            destinationSpaceId,
+            entity.childSpaceId,
+            snapshot.spaces
+          )
+        ) {
           return false;
         }
       }
       return true;
     },
-    [graph],
+    [graph]
   );
 
   const moveEntitiesToSpace = useCallback(
@@ -7428,22 +9042,26 @@ export function ArchitecturalCanvasApp({
         neonFlush?: boolean;
         /** Space the items are leaving (for grouping same-slot piles when DB has no stackId yet). */
         fromSpaceId?: string;
-      },
+      }
     ) => {
       if (!options?.skipUndo) {
         recordUndoBeforeMutation();
       }
       const apply = (prev: CanvasGraph) => {
         const targetSpace = prev.spaces[destinationSpaceId];
-        if (!targetSpace) return prev;
+        if (!targetSpace) {
+          return prev;
+        }
 
         const idsToMove = entityIds.filter(
           (id, index) =>
             entityIds.indexOf(id) === index &&
             !!prev.entities[id] &&
-            canMoveEntityToSpace(id, destinationSpaceId, prev),
+            canMoveEntityToSpace(id, destinationSpaceId, prev)
         );
-        if (idsToMove.length === 0) return prev;
+        if (idsToMove.length === 0) {
+          return prev;
+        }
 
         const next = shallowCloneGraph(prev);
         const movedSet = new Set(idsToMove);
@@ -7457,7 +9075,8 @@ export function ArchitecturalCanvasApp({
           }
         });
 
-        const remainingDestinationIds = next.spaces[destinationSpaceId].entityIds;
+        const remainingDestinationIds =
+          next.spaces[destinationSpaceId].entityIds;
         next.spaces[destinationSpaceId] = {
           ...next.spaces[destinationSpaceId],
           entityIds: [...remainingDestinationIds, ...idsToMove],
@@ -7470,7 +9089,9 @@ export function ArchitecturalCanvasApp({
         remainingDestinationIds.forEach((id) => {
           const entity = next.entities[id];
           const slot = entity?.slots[destinationSpaceId];
-          if (!slot) return;
+          if (!slot) {
+            return;
+          }
           const col = Math.round((slot.x - anchor.x) / LAYOUT_COL_GAP);
           const row = Math.round((slot.y - anchor.y) / LAYOUT_ROW_GAP);
           occupied.add(`${col}:${row}`);
@@ -7500,7 +9121,9 @@ export function ArchitecturalCanvasApp({
         /** Stacked content nodes share one canvas slot; lay out one position per stack, not per card. */
         const stackGroupKey = (entityId: string): string => {
           const ent = next.entities[entityId];
-          if (ent?.kind === "content" && ent.stackId) return `stack:${ent.stackId}`;
+          if (ent?.kind === "content" && ent.stackId) {
+            return `stack:${ent.stackId}`;
+          }
           const from = options?.fromSpaceId;
           if (from && ent?.kind === "content") {
             const s = ent.slots[from];
@@ -7527,7 +9150,9 @@ export function ArchitecturalCanvasApp({
         for (const key of groupKeys) {
           const groupIds = idsByGroup.get(key)!;
           const lead = next.entities[groupIds[0]!];
-          if (!lead) continue;
+          if (!lead) {
+            continue;
+          }
 
           const leadExisting = lead.slots[destinationSpaceId];
           const sharedStack =
@@ -7545,9 +9170,7 @@ export function ArchitecturalCanvasApp({
             (!sharedStack ||
               groupIds.every((gid) => {
                 const s = next.entities[gid]?.slots[destinationSpaceId];
-                return (
-                  !!s && s.x === leadExisting.x && s.y === leadExisting.y
-                );
+                return !!s && s.x === leadExisting.x && s.y === leadExisting.y;
               }))
           ) {
             destinationSlot = leadExisting;
@@ -7558,7 +9181,9 @@ export function ArchitecturalCanvasApp({
 
           for (const entityId of groupIds) {
             const entity = next.entities[entityId];
-            if (!entity) continue;
+            if (!entity) {
+              continue;
+            }
             next.entities[entityId] = {
               ...entity,
               slots: {
@@ -7574,16 +9199,23 @@ export function ArchitecturalCanvasApp({
             typeof crypto !== "undefined" &&
             typeof crypto.randomUUID === "function"
           ) {
-            const allContent = groupIds.every((gid) => next.entities[gid]?.kind === "content");
+            const allContent = groupIds.every(
+              (gid) => next.entities[gid]?.kind === "content"
+            );
             const noneHaveStack = groupIds.every(
-              (gid) => !next.entities[gid] || next.entities[gid]!.kind !== "content" || !next.entities[gid]!.stackId,
+              (gid) =>
+                !next.entities[gid] ||
+                next.entities[gid]!.kind !== "content" ||
+                !next.entities[gid]!.stackId
             );
             if (allContent && noneHaveStack) {
               const sid = crypto.randomUUID();
               const n = groupIds.length;
               groupIds.forEach((entityId, index) => {
                 const entity = next.entities[entityId];
-                if (!entity || entity.kind !== "content") return;
+                if (!entity || entity.kind !== "content") {
+                  return;
+                }
                 next.entities[entityId] = {
                   ...entity,
                   stackId: sid,
@@ -7596,7 +9228,9 @@ export function ArchitecturalCanvasApp({
 
         for (const id of idsToMove) {
           const ent = next.entities[id];
-          if (!ent || ent.kind !== "folder") continue;
+          if (!ent || ent.kind !== "folder") {
+            continue;
+          }
           const inner = next.spaces[ent.childSpaceId];
           if (inner) {
             next.spaces[ent.childSpaceId] = {
@@ -7616,25 +9250,37 @@ export function ArchitecturalCanvasApp({
         setGraph(apply);
       }
     },
-    [canMoveEntityToSpace, recordUndoBeforeMutation],
+    [canMoveEntityToSpace, recordUndoBeforeMutation]
   );
 
   const enterSpace = useCallback(
     (spaceId: string, opts?: { cameraOverride?: CameraState }) => {
       const snap = graphRef.current;
-      if (!snap.spaces[spaceId] || spaceId === activeSpaceIdRef.current) return;
+      if (!snap.spaces[spaceId] || spaceId === activeSpaceIdRef.current) {
+        return;
+      }
 
       const navGen = ++spaceNavGenerationRef.current;
       const targetSpaceId = spaceId;
       const cameraOverride = opts?.cameraOverride;
 
       const fromDepth = navigationPathRef.current.length;
-      const nextPathPreview = buildPathToSpace(spaceId, snap.spaces, snap.rootSpaceId);
+      const nextPathPreview = buildPathToSpace(
+        spaceId,
+        snap.spaces,
+        snap.rootSpaceId
+      );
       const toDepth = nextPathPreview.length;
-      if (toDepth > fromDepth) playVigilUiSound("transition_down");
-      else if (toDepth < fromDepth) playVigilUiSound("transition_up");
+      if (toDepth > fromDepth) {
+        playVigilUiSound("transition_down");
+      } else if (toDepth < fromDepth) {
+        playVigilUiSound("transition_up");
+      }
 
-      const applySpaceNavigation = (merged: CanvasGraph | null, bootstrapMaxZ: number | null) => {
+      const applySpaceNavigation = (
+        merged: CanvasGraph | null,
+        bootstrapMaxZ: number | null
+      ) => {
         const g = merged ?? graphRef.current;
         if (merged) {
           setGraph(merged);
@@ -7648,10 +9294,12 @@ export function ArchitecturalCanvasApp({
           const { width, height } = viewportCssSizeForDefaultCamera(
             viewportRef.current,
             viewportSizeRef.current.width,
-            viewportSizeRef.current.height,
+            viewportSizeRef.current.height
           );
           const cam: CameraState =
-            cameraOverride != null ? clampFollowCamera(cameraOverride) : defaultCamera(width, height);
+            cameraOverride == null
+              ? defaultCamera(width, height)
+              : clampFollowCamera(cameraOverride);
           setTranslateX(cam.x);
           setTranslateY(cam.y);
           setScale(cam.zoom);
@@ -7661,7 +9309,7 @@ export function ArchitecturalCanvasApp({
           const { width, height } = viewportCssSizeForDefaultCamera(
             viewportRef.current,
             viewportSizeRef.current.width,
-            viewportSizeRef.current.height,
+            viewportSizeRef.current.height
           );
           const cam = defaultCamera(width, height);
           setTranslateX(cam.x);
@@ -7669,7 +9317,9 @@ export function ArchitecturalCanvasApp({
           setScale(cam.zoom);
         }
         setActiveSpaceId(targetSpaceId);
-        setNavigationPath(buildPathToSpace(targetSpaceId, g.spaces, g.rootSpaceId));
+        setNavigationPath(
+          buildPathToSpace(targetSpaceId, g.spaces, g.rootSpaceId)
+        );
         setSelectedNodeIds([]);
       };
 
@@ -7692,15 +9342,22 @@ export function ArchitecturalCanvasApp({
               if (data && data.demo === false && data.spaceId) {
                 merged = mergeBootstrapView(graphRef.current, data);
                 if (data.items.length > 0) {
-                  bootstrapMaxZ = Math.max(...data.items.map((i) => i.zIndex), 100);
+                  bootstrapMaxZ = Math.max(
+                    ...data.items.map((i) => i.zIndex),
+                    100
+                  );
                 }
                 let maxMs = Date.parse(syncCursorRef.current);
-                if (!Number.isFinite(maxMs)) maxMs = 0;
+                if (!Number.isFinite(maxMs)) {
+                  maxMs = 0;
+                }
                 for (const it of data.items) {
                   if (it.updatedAt) {
                     pendingUpdatedAtBumps.push([it.id, it.updatedAt] as const);
                     const t = Date.parse(it.updatedAt);
-                    if (Number.isFinite(t) && t > maxMs) maxMs = t;
+                    if (Number.isFinite(t) && t > maxMs) {
+                      maxMs = t;
+                    }
                   }
                 }
                 pendingCursorIso = new Date(maxMs).toISOString();
@@ -7709,7 +9366,9 @@ export function ArchitecturalCanvasApp({
           } catch {
             /* ignore */
           }
-          if (!stillCurrent()) return;
+          if (!stillCurrent()) {
+            return;
+          }
           for (const [id, ua] of pendingUpdatedAtBumps) {
             itemServerUpdatedAtRef.current.set(id, ua);
           }
@@ -7723,9 +9382,11 @@ export function ArchitecturalCanvasApp({
 
       setNavTransitionActive(true);
       void (async () => {
-        const now = () => (typeof performance !== "undefined" ? performance.now() : 0);
+        const now = () =>
+          typeof performance === "undefined" ? 0 : performance.now();
         const tNav = now();
-        const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+        const sleep = (ms: number) =>
+          new Promise<void>((r) => setTimeout(r, ms));
 
         let merged: CanvasGraph | null = null;
         let bootstrapMaxZ: number | null = null;
@@ -7740,15 +9401,22 @@ export function ArchitecturalCanvasApp({
             if (data && data.demo === false && data.spaceId) {
               merged = mergeBootstrapView(graphRef.current, data);
               if (data.items.length > 0) {
-                bootstrapMaxZ = Math.max(...data.items.map((i) => i.zIndex), 100);
+                bootstrapMaxZ = Math.max(
+                  ...data.items.map((i) => i.zIndex),
+                  100
+                );
               }
               let maxMs = Date.parse(syncCursorRef.current);
-              if (!Number.isFinite(maxMs)) maxMs = 0;
+              if (!Number.isFinite(maxMs)) {
+                maxMs = 0;
+              }
               for (const it of data.items) {
                 if (it.updatedAt) {
                   pendingUpdatedAtBumps.push([it.id, it.updatedAt] as const);
                   const t = Date.parse(it.updatedAt);
-                  if (Number.isFinite(t) && t > maxMs) maxMs = t;
+                  if (Number.isFinite(t) && t > maxMs) {
+                    maxMs = t;
+                  }
                 }
               }
               pendingCursorIso = new Date(maxMs).toISOString();
@@ -7756,10 +9424,17 @@ export function ArchitecturalCanvasApp({
           }
         } finally {
           const elapsedAfterFetch = now() - tNav;
-          const waitFadeOutEnd = Math.max(0, VIEWPORT_SCENE_FADE_MS - elapsedAfterFetch);
-          if (waitFadeOutEnd > 0) await sleep(waitFadeOutEnd);
+          const waitFadeOutEnd = Math.max(
+            0,
+            VIEWPORT_SCENE_FADE_MS - elapsedAfterFetch
+          );
+          if (waitFadeOutEnd > 0) {
+            await sleep(waitFadeOutEnd);
+          }
 
-          if (!stillCurrent()) return;
+          if (!stillCurrent()) {
+            return;
+          }
           for (const [id, ua] of pendingUpdatedAtBumps) {
             itemServerUpdatedAtRef.current.set(id, ua);
           }
@@ -7769,8 +9444,13 @@ export function ArchitecturalCanvasApp({
           applySpaceNavigation(merged, bootstrapMaxZ);
 
           const elapsedBeforeRelease = now() - tNav;
-          const waitUntilCenter = Math.max(0, VIEWPORT_TRANSITION_CENTER_MS - elapsedBeforeRelease);
-          if (waitUntilCenter > 0) await sleep(waitUntilCenter);
+          const waitUntilCenter = Math.max(
+            0,
+            VIEWPORT_TRANSITION_CENTER_MS - elapsedBeforeRelease
+          );
+          if (waitUntilCenter > 0) {
+            await sleep(waitUntilCenter);
+          }
 
           if (stillCurrent()) {
             setNavTransitionActive(false);
@@ -7778,25 +9458,27 @@ export function ArchitecturalCanvasApp({
         }
       })();
     },
-    [],
+    []
   );
 
   const handleFollowPresencePeer = useCallback(
     (peer: SpacePresencePeer) => {
       const peerName = presenceNameForClient(
         peer.clientId,
-        presenceIdentityEnabled ? sanitizePresenceDisplayName(peer.displayName) : null,
+        presenceIdentityEnabled
+          ? sanitizePresenceDisplayName(peer.displayName)
+          : null
       );
       const snap = graphRef.current;
-      if (!snap.spaces[peer.activeSpaceId]) return;
+      if (!snap.spaces[peer.activeSpaceId]) {
+        return;
+      }
 
       if (focusOpen || galleryOpen || stackModal != null) {
         const confirmCopy = presenceIdentityEnabled
           ? `Close the open card, gallery, or stack and jump to ${peerName}'s view?`
           : "Close the open card, gallery, or stack and jump to this collaborator’s view?";
-        if (
-          !window.confirm(confirmCopy)
-        ) {
+        if (!window.confirm(confirmCopy)) {
           return;
         }
         setFocusOpen(false);
@@ -7816,17 +9498,23 @@ export function ArchitecturalCanvasApp({
 
       enterSpace(peer.activeSpaceId, { cameraOverride: cam });
     },
-    [focusOpen, galleryOpen, stackModal, enterSpace, presenceIdentityEnabled],
+    [focusOpen, galleryOpen, stackModal, enterSpace, presenceIdentityEnabled]
   );
 
   const collabPeerChips = useMemo((): CollabPeerPresenceChip[] => {
     const formatLastSeen = (updatedAtIso: string): string => {
       const t = Date.parse(updatedAtIso);
-      if (!Number.isFinite(t)) return "unknown";
+      if (!Number.isFinite(t)) {
+        return "unknown";
+      }
       const sec = Math.max(0, Math.round((Date.now() - t) / 1000));
-      if (sec < 60) return `${sec}s ago`;
+      if (sec < 60) {
+        return `${sec}s ago`;
+      }
       const min = Math.round(sec / 60);
-      if (min < 60) return `${min}m ago`;
+      if (min < 60) {
+        return `${min}m ago`;
+      }
       const hr = Math.round(min / 60);
       return `${hr}h ago`;
     };
@@ -7839,16 +9527,22 @@ export function ArchitecturalCanvasApp({
       const stale = !Number.isFinite(t) || now - t > 60_000;
       const name = presenceNameForClient(
         p.clientId,
-        presenceIdentityEnabled ? sanitizePresenceDisplayName(p.displayName) : null,
+        presenceIdentityEnabled
+          ? sanitizePresenceDisplayName(p.displayName)
+          : null
       );
       const initials = presenceInitialsFromName(name);
       const sigil = presenceSigilLabel(p.sigil);
       return {
         clientId: p.clientId,
         kind: "peer",
-        emoji: presenceIdentityEnabled ? undefined : presenceEmojiForClientId(p.clientId),
+        emoji: presenceIdentityEnabled
+          ? undefined
+          : presenceEmojiForClientId(p.clientId),
         initials: initials.length > 0 ? initials : "??",
-        displayName: presenceIdentityEnabled ? name : presenceFallbackAliasForClientId(p.clientId),
+        displayName: presenceIdentityEnabled
+          ? name
+          : presenceFallbackAliasForClientId(p.clientId),
         sigilLabel: presenceIdentityEnabled ? sigil : undefined,
         title: presenceIdentityEnabled
           ? `${spaceName} · ${name} · last seen ${formatLastSeen(p.updatedAt)}${stale ? " · may be stale" : ""}`
@@ -7860,10 +9554,14 @@ export function ArchitecturalCanvasApp({
         onFollow: () => handleFollowPresencePeer(p),
       };
     });
-    if (!presenceIdentityEnabled || chips.length <= 3) return chips;
+    if (!presenceIdentityEnabled || chips.length <= 3) {
+      return chips;
+    }
     const visible = chips.slice(0, 3);
     const hidden = chips.length - visible.length;
-    if (hidden <= 0) return visible;
+    if (hidden <= 0) {
+      return visible;
+    }
     visible.push({
       clientId: "__overflow__",
       kind: "overflow",
@@ -7878,15 +9576,24 @@ export function ArchitecturalCanvasApp({
       },
     });
     return visible;
-  }, [presencePeers, graph.spaces, handleFollowPresencePeer, presenceIdentityEnabled]);
+  }, [
+    presencePeers,
+    graph.spaces,
+    handleFollowPresencePeer,
+    presenceIdentityEnabled,
+  ]);
 
   const openFolder = useCallback(
     (folderId: string) => {
       void (async () => {
         const snap = graphRef.current;
         const folder = snap.entities[folderId];
-        if (!folder || folder.kind !== "folder") return;
-        const slotSpaceIds = Object.keys(folder.slots).filter((sid) => snap.spaces[sid]);
+        if (!folder || folder.kind !== "folder") {
+          return;
+        }
+        const slotSpaceIds = Object.keys(folder.slots).filter(
+          (sid) => snap.spaces[sid]
+        );
         const parentSpaceId =
           slotSpaceIds.find((sid) => sid === activeSpaceIdRef.current) ??
           slotSpaceIds[0] ??
@@ -7895,7 +9602,9 @@ export function ArchitecturalCanvasApp({
         const childSpaceId = snap.spaces[folder.childSpaceId]
           ? folder.childSpaceId
           : await ensureFolderChildSpace(folderId);
-        if (!childSpaceId) return;
+        if (!childSpaceId) {
+          return;
+        }
         pushRecentFolder({
           id: folderId,
           title: folder.title || "Untitled Folder",
@@ -7905,11 +9614,13 @@ export function ArchitecturalCanvasApp({
         enterSpace(childSpaceId);
       })();
     },
-    [enterSpace, ensureFolderChildSpace, pushRecentFolder],
+    [enterSpace, ensureFolderChildSpace, pushRecentFolder]
   );
 
   const goBack = useCallback(() => {
-    if (!parentSpaceId) return;
+    if (!parentSpaceId) {
+      return;
+    }
     enterSpace(parentSpaceId);
   }, [enterSpace, parentSpaceId]);
 
@@ -7917,13 +9628,17 @@ export function ArchitecturalCanvasApp({
     (entityId: string, openInFocus = false) => {
       const graphSnap = graphRef.current;
       const entity = graphSnap.entities[entityId];
-      if (!entity) return;
+      if (!entity) {
+        return;
+      }
       const candidateSpaceIds = Object.keys(entity.slots);
       let targetSpaceId = activeSpaceIdRef.current;
       if (!entity.slots[targetSpaceId]) {
         targetSpaceId = candidateSpaceIds[0] ?? targetSpaceId;
       }
-      if (!graphSnap.spaces[targetSpaceId]) return;
+      if (!graphSnap.spaces[targetSpaceId]) {
+        return;
+      }
 
       if (openInFocus && entity.kind === "content") {
         openFocusMode(entityId);
@@ -7954,11 +9669,13 @@ export function ArchitecturalCanvasApp({
       panToEntity();
       playVigilUiSound("select");
     },
-    [enterSpace, openFocusMode],
+    [enterSpace, openFocusMode]
   );
 
   const resolveVaultReviewDraft = useCallback((): VaultReviewDraft | null => {
-    if (!cloudLinksBar || !isUuidLike(activeSpaceId)) return null;
+    if (!(cloudLinksBar && isUuidLike(activeSpaceId))) {
+      return null;
+    }
     if (focusOpen && activeNodeId) {
       const ent = graph.entities[activeNodeId];
       if (
@@ -7973,7 +9690,9 @@ export function ArchitecturalCanvasApp({
       }
       const focusPlain =
         ent.kind === "content" && contentEntityUsesHgDoc(ent)
-          ? hgDocToPlainText(getHgDocEditor("focus-body")?.getJSON() ?? focusBodyDoc)
+          ? hgDocToPlainText(
+              getHgDocEditor("focus-body")?.getJSON() ?? focusBodyDoc
+            )
           : stripLegacyHtmlToPlainText(focusBody);
       return {
         title: focusTitle.trim(),
@@ -8022,7 +9741,7 @@ export function ArchitecturalCanvasApp({
 
   const vaultReviewDraftActive = useMemo(
     () => (loreReviewPanelOpen ? resolveVaultReviewDraft() : null),
-    [loreReviewPanelOpen, resolveVaultReviewDraft],
+    [loreReviewPanelOpen, resolveVaultReviewDraft]
   );
 
   const runVaultReviewAnalysis = useCallback(async () => {
@@ -8059,16 +9778,18 @@ export function ArchitecturalCanvasApp({
         suggestedNoteTags?: string[];
         semanticSummary?: string | null;
       };
-      if (!res.ok || !data.ok) {
-        setLoreReviewError(typeof data.error === "string" ? data.error : "Analysis failed");
+      if (!(res.ok && data.ok)) {
+        setLoreReviewError(
+          typeof data.error === "string" ? data.error : "Analysis failed"
+        );
         return;
       }
       setLoreReviewIssues(Array.isArray(data.issues) ? data.issues : []);
       setLoreReviewSuggestedTags(
-        Array.isArray(data.suggestedNoteTags) ? data.suggestedNoteTags : [],
+        Array.isArray(data.suggestedNoteTags) ? data.suggestedNoteTags : []
       );
       setLoreReviewSemanticSummary(
-        typeof data.semanticSummary === "string" ? data.semanticSummary : null,
+        typeof data.semanticSummary === "string" ? data.semanticSummary : null
       );
     } catch {
       setLoreReviewError("Request failed");
@@ -8080,12 +9801,14 @@ export function ArchitecturalCanvasApp({
   const appendVaultReviewTags = useCallback(
     async (tags: string[]): Promise<boolean> => {
       const draft = resolveVaultReviewDraft();
-      if (!draft?.excludeItemId) return false;
+      if (!draft?.excludeItemId) {
+        return false;
+      }
       return patchItemWithVersion(draft.excludeItemId, {
         entityMetaMerge: { loreReviewTags: tags },
       });
     },
-    [patchItemWithVersion, resolveVaultReviewDraft],
+    [patchItemWithVersion, resolveVaultReviewDraft]
   );
 
   /** Splash / auth boot (`VigilAppBootScreen`) — hide workspace-only chrome until dismissed. */
@@ -8105,7 +9828,8 @@ export function ArchitecturalCanvasApp({
     !(scenario === "default" && !bootLayerDismissed && !canvasSessionActivated);
 
   useEffect(() => {
-    const preActivate = scenario === "default" && !bootLayerDismissed && !canvasSessionActivated;
+    const preActivate =
+      scenario === "default" && !bootLayerDismissed && !canvasSessionActivated;
     if (preActivate) {
       setLoreReviewPanelOpen(false);
     }
@@ -8113,10 +9837,30 @@ export function ArchitecturalCanvasApp({
 
   const paletteActions = useMemo<PaletteAction[]>(() => {
     const all: PaletteAction[] = [
-      { id: "create-note", label: "Create note", hint: "Add a new note at center", icon: <FileText size={14} weight="bold" /> },
-      { id: "create-checklist", label: "Create checklist", hint: "Add a checklist card", icon: <NotePencil size={14} weight="bold" /> },
-      { id: "create-media", label: "Create image card", hint: "Add a media card", icon: <ImageSquare size={14} weight="bold" /> },
-      { id: "create-folder", label: "Create folder", hint: "Add folder and child space", icon: <Folder size={14} weight="bold" /> },
+      {
+        id: "create-note",
+        label: "Create note",
+        hint: "Add a new note at center",
+        icon: <FileText size={14} weight="bold" />,
+      },
+      {
+        id: "create-checklist",
+        label: "Create checklist",
+        hint: "Add a checklist card",
+        icon: <NotePencil size={14} weight="bold" />,
+      },
+      {
+        id: "create-media",
+        label: "Create image card",
+        hint: "Add a media card",
+        icon: <ImageSquare size={14} weight="bold" />,
+      },
+      {
+        id: "create-folder",
+        label: "Create folder",
+        hint: "Add folder and child space",
+        icon: <Folder size={14} weight="bold" />,
+      },
       {
         id: "create-character",
         label: "Create character",
@@ -8148,7 +9892,12 @@ export function ArchitecturalCanvasApp({
         keywords: ["lore", "location", "place", "coverage", "map", "region"],
         icon: <MapPin size={14} weight="bold" />,
       },
-      { id: "export-json", label: "Export graph JSON", hint: "Download the current graph", icon: <DownloadSimple size={14} weight="bold" /> },
+      {
+        id: "export-json",
+        label: "Export graph JSON",
+        hint: "Download the current graph",
+        icon: <DownloadSimple size={14} weight="bold" />,
+      },
       {
         id: "toggle-canvas-effects",
         label: "Toggle canvas effects",
@@ -8156,7 +9905,12 @@ export function ArchitecturalCanvasApp({
         keywords: ["motion", "transition", "performance", "effects", "lean"],
         icon: <Lightning size={14} weight="bold" />,
       },
-      { id: "zoom-fit", label: "Zoom to fit", hint: "Fit visible cards into the viewport", icon: <BoundingBox size={14} weight="bold" /> },
+      {
+        id: "zoom-fit",
+        label: "Zoom to fit",
+        hint: "Fit visible cards into the viewport",
+        icon: <BoundingBox size={14} weight="bold" />,
+      },
       {
         id: "zoom-selection",
         label: "Zoom to selection",
@@ -8164,7 +9918,12 @@ export function ArchitecturalCanvasApp({
         keywords: ["selection", "frame", "focus"],
         icon: <Scan size={14} weight="bold" />,
       },
-      { id: "recenter", label: "Recenter canvas", hint: modKeyHints.recenter, icon: <Stack size={14} weight="bold" /> },
+      {
+        id: "recenter",
+        label: "Recenter canvas",
+        hint: modKeyHints.recenter,
+        icon: <Stack size={14} weight="bold" />,
+      },
       {
         id: "ask-lore",
         label: "Ask lore (AI)",
@@ -8192,13 +9951,23 @@ export function ArchitecturalCanvasApp({
               id: "check-lore-consistency",
               label: "Vault review (consistency & tags)",
               hint: "Top-right panel — AI pass + label without moving cards",
-              keywords: ["consistency", "conflict", "contradiction", "lore", "check", "tags", "vault"],
+              keywords: [
+                "consistency",
+                "conflict",
+                "contradiction",
+                "lore",
+                "check",
+                "tags",
+                "vault",
+              ],
               icon: <SealCheck size={14} weight="bold" />,
             } satisfies PaletteAction,
           ]
         : []),
     ];
-    if (!isRestrictedLayer) return all;
+    if (!isRestrictedLayer) {
+      return all;
+    }
     const deny = new Set([
       "export-json",
       "ask-lore",
@@ -8212,45 +9981,71 @@ export function ArchitecturalCanvasApp({
 
   const getParentFolderExitSlot = useCallback(
     (offsetIndex = 0) => {
-      if (!parentSpaceId) return null;
+      if (!parentSpaceId) {
+        return null;
+      }
       const parentSpace = graph.spaces[parentSpaceId];
-      if (!parentSpace) return null;
+      if (!parentSpace) {
+        return null;
+      }
       const ownerFolderId = parentSpace.entityIds.find((entityId) => {
         const entity = graph.entities[entityId];
-        return entity?.kind === "folder" && entity.childSpaceId === activeSpaceId;
+        return (
+          entity?.kind === "folder" && entity.childSpaceId === activeSpaceId
+        );
       });
-      if (!ownerFolderId) return null;
+      if (!ownerFolderId) {
+        return null;
+      }
       const ownerFolder = graph.entities[ownerFolderId];
-      if (!ownerFolder || ownerFolder.kind !== "folder") return null;
+      if (!ownerFolder || ownerFolder.kind !== "folder") {
+        return null;
+      }
       const ownerSlot = ownerFolder.slots[parentSpaceId];
-      if (!ownerSlot) return null;
+      if (!ownerSlot) {
+        return null;
+      }
       return {
         x: ownerSlot.x + offsetIndex * 28,
         y: ownerSlot.y + 260 + offsetIndex * 18,
       };
     },
-    [activeSpaceId, graph.entities, graph.spaces, parentSpaceId],
+    [activeSpaceId, graph.entities, graph.spaces, parentSpaceId]
   );
 
   const moveSelectionToParent = useCallback(() => {
-    if (Date.now() < suppressParentExitActivateUntilRef.current) return;
-    if (!parentSpaceId) return;
+    if (Date.now() < suppressParentExitActivateUntilRef.current) {
+      return;
+    }
+    if (!parentSpaceId) {
+      return;
+    }
     const snap = graphRef.current;
     const vis = new Set(snap.spaces[activeSpaceId]?.entityIds ?? []);
     const selected = selectedNodeIds.filter((id) => vis.has(id));
     const idsToMoveSet = new Set<string>(selected);
     for (const id of selected) {
       const e = snap.entities[id];
-      if (e?.kind !== "content" || !e.stackId) continue;
+      if (e?.kind !== "content" || !e.stackId) {
+        continue;
+      }
       for (const ent of Object.values(snap.entities)) {
-        if (ent.kind === "content" && ent.stackId === e.stackId && vis.has(ent.id)) {
+        if (
+          ent.kind === "content" &&
+          ent.stackId === e.stackId &&
+          vis.has(ent.id)
+        ) {
           idsToMoveSet.add(ent.id);
         }
       }
     }
     const idsToMove = [...idsToMoveSet];
-    if (idsToMove.length === 0) return;
-    if (!idsToMove.every((id) => canMoveEntityToSpace(id, parentSpaceId))) return;
+    if (idsToMove.length === 0) {
+      return;
+    }
+    if (!idsToMove.every((id) => canMoveEntityToSpace(id, parentSpaceId))) {
+      return;
+    }
     const center = centerCoords();
     const fallback = { x: center.x - 180, y: center.y - 120 };
     const anchorBelowFolder = getParentFolderExitSlot(0) ?? fallback;
@@ -8281,16 +10076,24 @@ export function ArchitecturalCanvasApp({
         () => {
           const prev = graphRef.current;
           const entity = prev.entities[entityId];
-          if (!entity || entity.kind !== "folder") return;
+          if (!entity || entity.kind !== "folder") {
+            return;
+          }
           const nextTitle = title.trim() || "Untitled Folder";
-          if (entity.title === nextTitle) return;
+          if (entity.title === nextTitle) {
+            return;
+          }
           recordUndoBeforeMutation();
           setGraph((p) => {
             const ent = p.entities[entityId];
-            if (!ent || ent.kind !== "folder") return p;
+            if (!ent || ent.kind !== "folder") {
+              return p;
+            }
             const next = shallowCloneGraph(p);
             const t = title.trim() || "Untitled Folder";
-            if (ent.title === t) return p;
+            if (ent.title === t) {
+              return p;
+            }
             next.entities[entityId] = {
               ...ent,
               title: t,
@@ -8304,18 +10107,24 @@ export function ArchitecturalCanvasApp({
             return next;
           });
           queueMicrotask(() => {
-            if (!persistNeonRef.current || !isUuidLike(entityId)) return;
+            if (!(persistNeonRef.current && isUuidLike(entityId))) {
+              return;
+            }
             const ent = graphRef.current.entities[entityId];
-            if (ent?.kind !== "folder") return;
+            if (ent?.kind !== "folder") {
+              return;
+            }
             const t = title.trim() || "Untitled Folder";
             void patchItemWithVersion(entityId, { title: t });
-            if (isUuidLike(ent.childSpaceId)) void apiPatchSpaceName(ent.childSpaceId, t);
+            if (isUuidLike(ent.childSpaceId)) {
+              void apiPatchSpaceName(ent.childSpaceId, t);
+            }
           });
         },
-        120,
+        120
       );
     },
-    [patchItemWithVersion, queueGraphCommit, recordUndoBeforeMutation],
+    [patchItemWithVersion, queueGraphCommit, recordUndoBeforeMutation]
   );
 
   const setFolderColorScheme = useCallback(
@@ -8325,12 +10134,16 @@ export function ArchitecturalCanvasApp({
         () => {
           const prev = graphRef.current;
           const entity = prev.entities[entityId];
-          if (!entity || entity.kind !== "folder") return;
+          if (!entity || entity.kind !== "folder") {
+            return;
+          }
           markOptimisticProtectedId(entityId);
           recordUndoBeforeMutation();
           setGraph((p) => {
             const ent = p.entities[entityId];
-            if (!ent || ent.kind !== "folder") return p;
+            if (!ent || ent.kind !== "folder") {
+              return p;
+            }
             const next = shallowCloneGraph(p);
             if (scheme == null) {
               const updated = { ...ent };
@@ -8343,9 +10156,13 @@ export function ArchitecturalCanvasApp({
           });
           queueMicrotask(() => {
             void (async () => {
-              if (!persistNeonRef.current || !isUuidLike(entityId)) return;
+              if (!(persistNeonRef.current && isUuidLike(entityId))) {
+                return;
+              }
               let ent = graphRef.current.entities[entityId];
-              if (ent?.kind !== "folder") return;
+              if (ent?.kind !== "folder") {
+                return;
+              }
               const withTargetScheme = (folder: CanvasFolderEntity) => {
                 if (scheme == null) {
                   const updated = { ...folder };
@@ -8355,14 +10172,20 @@ export function ArchitecturalCanvasApp({
                 return { ...folder, folderColorScheme: scheme };
               };
               let ok = await patchItemWithVersion(entityId, {
-                contentJson: buildContentJsonForFolderEntity(withTargetScheme(ent)),
+                contentJson: buildContentJsonForFolderEntity(
+                  withTargetScheme(ent)
+                ),
               });
               if (!ok) {
-                await new Promise<void>((resolve) => window.setTimeout(resolve, 220));
+                await new Promise<void>((resolve) =>
+                  window.setTimeout(resolve, 220)
+                );
                 ent = graphRef.current.entities[entityId];
                 if (ent?.kind === "folder") {
                   ok = await patchItemWithVersion(entityId, {
-                    contentJson: buildContentJsonForFolderEntity(withTargetScheme(ent)),
+                    contentJson: buildContentJsonForFolderEntity(
+                      withTargetScheme(ent)
+                    ),
                   });
                 }
               }
@@ -8374,7 +10197,7 @@ export function ArchitecturalCanvasApp({
             })();
           });
         },
-        120,
+        120
       );
     },
     [
@@ -8383,156 +10206,371 @@ export function ArchitecturalCanvasApp({
       patchItemWithVersion,
       queueGraphCommit,
       recordUndoBeforeMutation,
-    ],
+    ]
   );
 
   const folderColorPickerForDock = useMemo(() => {
-    if (focusOpen || galleryOpen) return null;
-    if (selectedNodeIds.length !== 1) return null;
+    if (focusOpen || galleryOpen) {
+      return null;
+    }
+    if (selectedNodeIds.length !== 1) {
+      return null;
+    }
     const id = selectedNodeIds[0]!;
     const e = graph.entities[id];
-    if (!e || e.kind !== "folder") return null;
+    if (!e || e.kind !== "folder") {
+      return null;
+    }
     return {
       value: e.folderColorScheme ?? null,
-      onChange: (next: FolderColorSchemeId | null) => setFolderColorScheme(id, next),
+      onChange: (next: FolderColorSchemeId | null) =>
+        setFolderColorScheme(id, next),
     };
-  }, [focusOpen, galleryOpen, graph.entities, selectedNodeIds, setFolderColorScheme]);
+  }, [
+    focusOpen,
+    galleryOpen,
+    graph.entities,
+    selectedNodeIds,
+    setFolderColorScheme,
+  ]);
 
-  const createNewNode = useCallback((type: NodeTheme, loreVariant?: LoreCardVariant) => {
-    if (isRestrictedLayer && type === "media") return;
-    // Strict GM is for mirroring production when Neon persistence is on; local-only / demo / E2E
-    // (`persistNeonRef` false) must still be able to mutate the canvas.
-    if (
-      strictGmWorkspaceSession &&
-      persistNeonRef.current &&
-      !isUuidLike(activeSpaceId)
-    ) {
-      window.alert(
-        "This GM workspace is in strict sync mode. New items are disabled until a live Neon workspace is connected.",
-      );
-      return;
-    }
-    if (
-      persistNeonRef.current &&
-      isUuidLike(activeSpaceId) &&
-      getNeonSyncSnapshot().lastError?.trim()
-    ) {
-      return;
-    }
-    recordUndoBeforeMutation();
-    const center = centerCoords();
-    const x = center.x - 170 + (Math.random() * 60 - 30);
-    const y = center.y - 100 + (Math.random() * 60 - 30);
-    const rotation = (Math.random() - 0.5) * 4;
-    const tapeRotation =
-      type === "faction" ? -1.2 : (Math.random() - 0.5) * 6;
-    const nextZ = maxZIndexRef.current + 1;
-    setMaxZIndex(nextZ);
+  const createNewNode = useCallback(
+    (type: NodeTheme, loreVariant?: LoreCardVariant) => {
+      if (isRestrictedLayer && type === "media") {
+        return;
+      }
+      // Strict GM is for mirroring production when Neon persistence is on; local-only / demo / E2E
+      // (`persistNeonRef` false) must still be able to mutate the canvas.
+      if (
+        strictGmWorkspaceSession &&
+        persistNeonRef.current &&
+        !isUuidLike(activeSpaceId)
+      ) {
+        window.alert(
+          "This GM workspace is in strict sync mode. New items are disabled until a live Neon workspace is connected."
+        );
+        return;
+      }
+      if (
+        persistNeonRef.current &&
+        isUuidLike(activeSpaceId) &&
+        getNeonSyncSnapshot().lastError?.trim()
+      ) {
+        return;
+      }
+      recordUndoBeforeMutation();
+      const center = centerCoords();
+      const x = center.x - 170 + (Math.random() * 60 - 30);
+      const y = center.y - 100 + (Math.random() * 60 - 30);
+      const rotation = (Math.random() - 0.5) * 4;
+      const tapeRotation =
+        type === "faction" ? -1.2 : (Math.random() - 0.5) * 6;
+      const nextZ = maxZIndexRef.current + 1;
+      setMaxZIndex(nextZ);
 
-    if (persistNeonRef.current && isUuidLike(activeSpaceId)) {
-      const spaceId = activeSpaceId;
-      if (type === "folder") {
-        const fx = center.x - FOLDER_CARD_WIDTH / 2 + (Math.random() * 60 - 30);
-        const fy = center.y - FOLDER_CARD_HEIGHT / 2 + (Math.random() * 60 - 30);
+      if (persistNeonRef.current && isUuidLike(activeSpaceId)) {
+        const spaceId = activeSpaceId;
+        if (type === "folder") {
+          const fx =
+            center.x - FOLDER_CARD_WIDTH / 2 + (Math.random() * 60 - 30);
+          const fy =
+            center.y - FOLDER_CARD_HEIGHT / 2 + (Math.random() * 60 - 30);
+          const entityId = createId();
+          const childSpaceId = createId();
+          const optimisticFolder: CanvasFolderEntity = {
+            id: entityId,
+            title: "New Folder",
+            kind: "folder",
+            theme: "folder",
+            childSpaceId,
+            rotation,
+            width: FOLDER_CARD_WIDTH,
+            height: FOLDER_CARD_HEIGHT,
+            tapeRotation: 0,
+            stackId: null,
+            stackOrder: null,
+            slots: { [spaceId]: { x: fx, y: fy } },
+          };
+          setGraph((prev) => {
+            const next = shallowCloneGraph(prev);
+            next.spaces[childSpaceId] = {
+              id: childSpaceId,
+              name: "New Folder",
+              parentSpaceId: spaceId,
+              entityIds: [],
+            };
+            next.entities[entityId] = optimisticFolder;
+            const sp = next.spaces[spaceId];
+            if (sp) {
+              next.spaces[spaceId] = {
+                ...sp,
+                entityIds: [...sp.entityIds, entityId],
+              };
+            }
+            return next;
+          });
+          setSelectedNodeIds([entityId]);
+          setPendingFolderTitleSelectId(entityId);
+          const createPromise = (async () => {
+            try {
+              const spaceRes = await apiCreateSpace("New Folder", spaceId, {
+                id: childSpaceId,
+              });
+              if (!(spaceRes.ok && spaceRes.space?.id)) {
+                itemServerUpdatedAtRef.current.delete(entityId);
+                setGraph((prev) => {
+                  const next = removeEntitiesFromGraphAfterRemoteDelete(prev, [
+                    entityId,
+                  ]);
+                  delete next.spaces[childSpaceId];
+                  return next;
+                });
+                setSelectedNodeIds((prev) =>
+                  prev.filter((id) => id !== entityId)
+                );
+                if (activeNodeIdRef.current === entityId) {
+                  setFocusOpen(false);
+                  setActiveNodeId(null);
+                }
+                window.alert(
+                  spaceRes.error?.trim() ||
+                    "Could not create folder space. Check sync status or try again."
+                );
+                return;
+              }
+              const itemRes = await apiCreateItem(spaceId, {
+                id: entityId,
+                itemType: "folder",
+                x: fx,
+                y: fy,
+                width: FOLDER_CARD_WIDTH,
+                height: FOLDER_CARD_HEIGHT,
+                title: "New Folder",
+                contentJson: buildContentJsonForFolderEntity(optimisticFolder),
+                zIndex: nextZ,
+              });
+              if (!(itemRes.ok && itemRes.item)) {
+                itemServerUpdatedAtRef.current.delete(entityId);
+                setGraph((prev) => {
+                  const next = removeEntitiesFromGraphAfterRemoteDelete(prev, [
+                    entityId,
+                  ]);
+                  delete next.spaces[childSpaceId];
+                  return next;
+                });
+                setSelectedNodeIds((prev) =>
+                  prev.filter((id) => id !== entityId)
+                );
+                if (activeNodeIdRef.current === entityId) {
+                  setFocusOpen(false);
+                  setActiveNodeId(null);
+                }
+                window.alert(
+                  itemRes.error?.trim() ||
+                    "Could not create folder on the canvas. Check sync status or try again."
+                );
+                return;
+              }
+              if (itemRes.item.updatedAt) {
+                itemServerUpdatedAtRef.current.set(
+                  entityId,
+                  itemRes.item.updatedAt
+                );
+              }
+            } catch (e) {
+              itemServerUpdatedAtRef.current.delete(entityId);
+              setGraph((prev) => {
+                const next = removeEntitiesFromGraphAfterRemoteDelete(prev, [
+                  entityId,
+                ]);
+                delete next.spaces[childSpaceId];
+                return next;
+              });
+              setSelectedNodeIds((prev) =>
+                prev.filter((id) => id !== entityId)
+              );
+              if (activeNodeIdRef.current === entityId) {
+                setFocusOpen(false);
+                setActiveNodeId(null);
+              }
+              const msg =
+                e instanceof Error ? e.message : "Create failed unexpectedly.";
+              if (getNeonSyncSnapshot().cloudEnabled) {
+                neonSyncReportAuxiliaryFailure({
+                  operation: "createNewNode",
+                  message: msg,
+                  cause: "network",
+                });
+              }
+              window.alert(msg);
+            }
+          })();
+          pendingCreatePromisesRef.current.set(entityId, createPromise);
+          void createPromise.finally(() => {
+            if (
+              pendingCreatePromisesRef.current.get(entityId) === createPromise
+            ) {
+              pendingCreatePromisesRef.current.delete(entityId);
+            }
+          });
+          return;
+        }
+
+        let title = "New Note";
+        const width = UNIFIED_NODE_WIDTH;
+        let contentTheme: ContentTheme = "default";
+        if (type === "code") {
+          contentTheme = "code";
+        } else if (type === "media") {
+          contentTheme = "media";
+        } else if (type === "task") {
+          contentTheme = "task";
+        }
+
         const entityId = createId();
-        const childSpaceId = createId();
-        const optimisticFolder: CanvasFolderEntity = {
+        let bodyHtml = "";
+        let bodyDoc: JSONContent | undefined;
+        let loreCard: LoreCard | undefined;
+
+        if (isLoreCreateNodeType(type)) {
+          title = defaultTitleForLoreKind(type);
+          const resolvedVariant = resolveLoreVariantForCreate(
+            type,
+            loreVariant
+          );
+          loreCard = { kind: type, variant: resolvedVariant };
+          const locationStripSeed =
+            type === "location" && resolvedVariant === "v3"
+              ? (globalThis.crypto?.randomUUID?.() ?? `loc-${Date.now()}`)
+              : undefined;
+          bodyHtml = getLoreNodeSeedBodyHtml(
+            type,
+            resolvedVariant,
+            locationStripSeed == null ? undefined : { locationStripSeed }
+          );
+        } else if (type === "code") {
+          title = "Snippet";
+          bodyDoc = legacyCodeBodyHtmlToHgDocSeed(
+            "// [IN] Compose shard at cursor…"
+          );
+          bodyHtml = hgDocToHtml(bodyDoc);
+        } else if (type === "media") {
+          title = "Untitled photo";
+          bodyHtml = buildEmptyArchitecturalMediaBodyHtml({
+            mediaFrameClass: styles.mediaFrame,
+            imageSlotImgClass: styles.imageSlotImg,
+            placeholderImgClasses:
+              heartgardenMediaPlaceholderClassList("neutral"),
+            mediaImageActionsClass: styles.mediaImageActions,
+            mediaUploadBtnClass: styles.mediaUploadBtn,
+            uploadLabel: mediaUploadActionLabel(false),
+          });
+        } else if (type === "task") {
+          title = "Checklist";
+          bodyDoc = newTaskHgDocSeed();
+          bodyHtml = hgDocToHtml(bodyDoc);
+        } else {
+          bodyDoc = newDefaultHgDocSeed();
+          bodyHtml = hgDocToHtml(bodyDoc);
+        }
+
+        const optimisticNode: CanvasContentEntity = {
           id: entityId,
-          title: "New Folder",
-          kind: "folder",
-          theme: "folder",
-          childSpaceId,
+          title,
+          kind: "content",
           rotation,
-          width: FOLDER_CARD_WIDTH,
-          height: FOLDER_CARD_HEIGHT,
-          tapeRotation: 0,
+          width,
+          height: 280,
+          theme: contentTheme,
+          tapeVariant:
+            loreCard == null
+              ? tapeVariantForTheme(contentTheme)
+              : tapeVariantForLoreCard(loreCard.kind, loreCard.variant),
+          tapeRotation,
+          bodyHtml,
+          ...(bodyDoc == null ? {} : { bodyDoc }),
+          loreCard,
+          ...(loreCard?.kind === "faction"
+            ? { factionRoster: createDefaultFactionRosterSeed() }
+            : {}),
           stackId: null,
           stackOrder: null,
-          slots: { [spaceId]: { x: fx, y: fy } },
+          slots: { [spaceId]: { x, y } },
         };
         setGraph((prev) => {
           const next = shallowCloneGraph(prev);
-          next.spaces[childSpaceId] = {
-            id: childSpaceId,
-            name: "New Folder",
-            parentSpaceId: spaceId,
-            entityIds: [],
-          };
-          next.entities[entityId] = optimisticFolder;
+          next.entities[entityId] = optimisticNode;
           const sp = next.spaces[spaceId];
           if (sp) {
-            next.spaces[spaceId] = { ...sp, entityIds: [...sp.entityIds, entityId] };
+            next.spaces[spaceId] = {
+              ...sp,
+              entityIds: [...sp.entityIds, entityId],
+            };
           }
           return next;
         });
-        setSelectedNodeIds([entityId]);
-        setPendingFolderTitleSelectId(entityId);
+
+        const createItemBody: Record<string, unknown> = {
+          id: entityId,
+          itemType: architecturalItemType(optimisticNode),
+          x,
+          y,
+          width,
+          height: 280,
+          title,
+          contentText: contentPlainTextForEntity(optimisticNode),
+          contentJson: buildContentJsonForContentEntity(optimisticNode),
+          zIndex: nextZ,
+        };
+        if (loreCard) {
+          createItemBody.entityType = loreCard.kind;
+        }
+
         const createPromise = (async () => {
           try {
-            const spaceRes = await apiCreateSpace("New Folder", spaceId, { id: childSpaceId });
-            if (!spaceRes.ok || !spaceRes.space?.id) {
+            const itemRes = await apiCreateItem(spaceId, createItemBody);
+            if (!(itemRes.ok && itemRes.item)) {
               itemServerUpdatedAtRef.current.delete(entityId);
-              setGraph((prev) => {
-                const next = removeEntitiesFromGraphAfterRemoteDelete(prev, [entityId]);
-                delete next.spaces[childSpaceId];
-                return next;
-              });
-              setSelectedNodeIds((prev) => prev.filter((id) => id !== entityId));
-              if (activeNodeIdRef.current === entityId) {
-                setFocusOpen(false);
-                setActiveNodeId(null);
-              }
-              window.alert(
-                spaceRes.error?.trim() ||
-                  "Could not create folder space. Check sync status or try again.",
+              setGraph((prev) =>
+                removeEntitiesFromGraphAfterRemoteDelete(prev, [entityId])
               );
-              return;
-            }
-            const itemRes = await apiCreateItem(spaceId, {
-              id: entityId,
-              itemType: "folder",
-              x: fx,
-              y: fy,
-              width: FOLDER_CARD_WIDTH,
-              height: FOLDER_CARD_HEIGHT,
-              title: "New Folder",
-              contentJson: buildContentJsonForFolderEntity(optimisticFolder),
-              zIndex: nextZ,
-            });
-            if (!itemRes.ok || !itemRes.item) {
-              itemServerUpdatedAtRef.current.delete(entityId);
-              setGraph((prev) => {
-                const next = removeEntitiesFromGraphAfterRemoteDelete(prev, [entityId]);
-                delete next.spaces[childSpaceId];
-                return next;
-              });
-              setSelectedNodeIds((prev) => prev.filter((id) => id !== entityId));
-              if (activeNodeIdRef.current === entityId) {
-                setFocusOpen(false);
-                setActiveNodeId(null);
-              }
               window.alert(
                 itemRes.error?.trim() ||
-                  "Could not create folder on the canvas. Check sync status or try again.",
+                  "Could not create item on the canvas. Check sync status or try again."
               );
               return;
             }
             if (itemRes.item.updatedAt) {
-              itemServerUpdatedAtRef.current.set(entityId, itemRes.item.updatedAt);
+              itemServerUpdatedAtRef.current.set(
+                entityId,
+                itemRes.item.updatedAt
+              );
             }
-          } catch (e) {
-            itemServerUpdatedAtRef.current.delete(entityId);
+            const entity = canvasItemToEntity(itemRes.item, spaceId);
+            if (!entity) {
+              const msg =
+                "Could not display the new item after create (unexpected response).";
+              if (getNeonSyncSnapshot().cloudEnabled) {
+                neonSyncReportAuxiliaryFailure({
+                  operation: "createNewNode (content map)",
+                  message: msg,
+                  cause: "client",
+                });
+              }
+              return;
+            }
             setGraph((prev) => {
-              const next = removeEntitiesFromGraphAfterRemoteDelete(prev, [entityId]);
-              delete next.spaces[childSpaceId];
+              const next = shallowCloneGraph(prev);
+              next.entities[entityId] = { ...entity, id: entityId };
               return next;
             });
-            setSelectedNodeIds((prev) => prev.filter((id) => id !== entityId));
-            if (activeNodeIdRef.current === entityId) {
-              setFocusOpen(false);
-              setActiveNodeId(null);
-            }
-            const msg = e instanceof Error ? e.message : "Create failed unexpectedly.";
+          } catch (e) {
+            itemServerUpdatedAtRef.current.delete(entityId);
+            setGraph((prev) =>
+              removeEntitiesFromGraphAfterRemoteDelete(prev, [entityId])
+            );
+            const msg =
+              e instanceof Error ? e.message : "Create failed unexpectedly.";
             if (getNeonSyncSnapshot().cloudEnabled) {
               neonSyncReportAuxiliaryFailure({
                 operation: "createNewNode",
@@ -8545,21 +10583,71 @@ export function ArchitecturalCanvasApp({
         })();
         pendingCreatePromisesRef.current.set(entityId, createPromise);
         void createPromise.finally(() => {
-          if (pendingCreatePromisesRef.current.get(entityId) === createPromise) {
+          if (
+            pendingCreatePromisesRef.current.get(entityId) === createPromise
+          ) {
             pendingCreatePromisesRef.current.delete(entityId);
           }
         });
         return;
       }
 
+      if (type === "folder") {
+        const entityId = createId();
+        const childSpaceId = createId();
+        const fx = center.x - FOLDER_CARD_WIDTH / 2 + (Math.random() * 60 - 30);
+        const fy =
+          center.y - FOLDER_CARD_HEIGHT / 2 + (Math.random() * 60 - 30);
+        setGraph((prev) => {
+          const next = shallowCloneGraph(prev);
+          next.spaces[childSpaceId] = {
+            id: childSpaceId,
+            name: "New Folder",
+            parentSpaceId: activeSpaceId,
+            entityIds: [],
+          };
+          next.entities[entityId] = {
+            id: entityId,
+            title: "New Folder",
+            kind: "folder",
+            theme: "folder",
+            childSpaceId,
+            rotation,
+            width: FOLDER_CARD_WIDTH,
+            height: FOLDER_CARD_HEIGHT,
+            tapeRotation: 0,
+            stackId: null,
+            stackOrder: null,
+            slots: {
+              [activeSpaceId]: { x: fx, y: fy },
+            },
+          };
+          const activeSpace = next.spaces[activeSpaceId];
+          if (activeSpace) {
+            next.spaces[activeSpaceId] = {
+              ...activeSpace,
+              entityIds: [...activeSpace.entityIds, entityId],
+            };
+          }
+          return next;
+        });
+        setSelectedNodeIds([entityId]);
+        setPendingFolderTitleSelectId(entityId);
+        return;
+      }
+
+      const id = createId();
       let title = "New Note";
       const width = UNIFIED_NODE_WIDTH;
       let contentTheme: ContentTheme = "default";
-      if (type === "code") contentTheme = "code";
-      else if (type === "media") contentTheme = "media";
-      else if (type === "task") contentTheme = "task";
+      if (type === "code") {
+        contentTheme = "code";
+      } else if (type === "media") {
+        contentTheme = "media";
+      } else if (type === "task") {
+        contentTheme = "task";
+      }
 
-      const entityId = createId();
       let bodyHtml = "";
       let bodyDoc: JSONContent | undefined;
       let loreCard: LoreCard | undefined;
@@ -8569,24 +10657,25 @@ export function ArchitecturalCanvasApp({
         const resolvedVariant = resolveLoreVariantForCreate(type, loreVariant);
         loreCard = { kind: type, variant: resolvedVariant };
         const locationStripSeed =
-          type === "location" && resolvedVariant === "v3"
-            ? globalThis.crypto?.randomUUID?.() ?? `loc-${Date.now()}`
-            : undefined;
+          type === "location" && resolvedVariant === "v3" ? id : undefined;
         bodyHtml = getLoreNodeSeedBodyHtml(
           type,
           resolvedVariant,
-          locationStripSeed != null ? { locationStripSeed } : undefined,
+          locationStripSeed == null ? undefined : { locationStripSeed }
         );
       } else if (type === "code") {
         title = "Snippet";
-        bodyDoc = legacyCodeBodyHtmlToHgDocSeed("// [IN] Compose shard at cursor…");
+        bodyDoc = legacyCodeBodyHtmlToHgDocSeed(
+          "// [IN] Compose shard at cursor…"
+        );
         bodyHtml = hgDocToHtml(bodyDoc);
       } else if (type === "media") {
         title = "Untitled photo";
         bodyHtml = buildEmptyArchitecturalMediaBodyHtml({
           mediaFrameClass: styles.mediaFrame,
           imageSlotImgClass: styles.imageSlotImg,
-          placeholderImgClasses: heartgardenMediaPlaceholderClassList("neutral"),
+          placeholderImgClasses:
+            heartgardenMediaPlaceholderClassList("neutral"),
           mediaImageActionsClass: styles.mediaImageActions,
           mediaUploadBtnClass: styles.mediaUploadBtn,
           uploadLabel: mediaUploadActionLabel(false),
@@ -8600,244 +10689,61 @@ export function ArchitecturalCanvasApp({
         bodyHtml = hgDocToHtml(bodyDoc);
       }
 
-      const optimisticNode: CanvasContentEntity = {
-        id: entityId,
+      const nextNode = {
+        id,
         title,
-        kind: "content",
+        kind: "content" as const,
         rotation,
         width,
         height: 280,
         theme: contentTheme,
         tapeVariant:
-          loreCard != null
-            ? tapeVariantForLoreCard(loreCard.kind, loreCard.variant)
-            : tapeVariantForTheme(contentTheme),
+          loreCard == null
+            ? tapeVariantForTheme(contentTheme)
+            : tapeVariantForLoreCard(loreCard.kind, loreCard.variant),
         tapeRotation,
         bodyHtml,
-        ...(bodyDoc != null ? { bodyDoc } : {}),
+        ...(bodyDoc == null ? {} : { bodyDoc }),
         loreCard,
-        ...(loreCard?.kind === "faction" ? { factionRoster: createDefaultFactionRosterSeed() } : {}),
+        ...(loreCard?.kind === "faction"
+          ? { factionRoster: createDefaultFactionRosterSeed() }
+          : {}),
         stackId: null,
         stackOrder: null,
-        slots: { [spaceId]: { x, y } },
+        slots: {
+          [activeSpaceId]: { x, y },
+        },
       };
       setGraph((prev) => {
         const next = shallowCloneGraph(prev);
-        next.entities[entityId] = optimisticNode;
-        const sp = next.spaces[spaceId];
-        if (sp) {
-          next.spaces[spaceId] = { ...sp, entityIds: [...sp.entityIds, entityId] };
-        }
-        return next;
-      });
-
-      const createItemBody: Record<string, unknown> = {
-        id: entityId,
-        itemType: architecturalItemType(optimisticNode),
-        x,
-        y,
-        width,
-        height: 280,
-        title,
-        contentText: contentPlainTextForEntity(optimisticNode),
-        contentJson: buildContentJsonForContentEntity(optimisticNode),
-        zIndex: nextZ,
-      };
-      if (loreCard) createItemBody.entityType = loreCard.kind;
-
-      const createPromise = (async () => {
-        try {
-          const itemRes = await apiCreateItem(spaceId, createItemBody);
-          if (!itemRes.ok || !itemRes.item) {
-            itemServerUpdatedAtRef.current.delete(entityId);
-            setGraph((prev) => removeEntitiesFromGraphAfterRemoteDelete(prev, [entityId]));
-            window.alert(
-              itemRes.error?.trim() ||
-                "Could not create item on the canvas. Check sync status or try again.",
-            );
-            return;
-          }
-          if (itemRes.item.updatedAt) {
-            itemServerUpdatedAtRef.current.set(entityId, itemRes.item.updatedAt);
-          }
-          const entity = canvasItemToEntity(itemRes.item, spaceId);
-          if (!entity) {
-            const msg =
-              "Could not display the new item after create (unexpected response).";
-            if (getNeonSyncSnapshot().cloudEnabled) {
-              neonSyncReportAuxiliaryFailure({
-                operation: "createNewNode (content map)",
-                message: msg,
-                cause: "client",
-              });
-            }
-            return;
-          }
-          setGraph((prev) => {
-            const next = shallowCloneGraph(prev);
-            next.entities[entityId] = { ...entity, id: entityId };
-            return next;
-          });
-        } catch (e) {
-          itemServerUpdatedAtRef.current.delete(entityId);
-          setGraph((prev) => removeEntitiesFromGraphAfterRemoteDelete(prev, [entityId]));
-          const msg = e instanceof Error ? e.message : "Create failed unexpectedly.";
-          if (getNeonSyncSnapshot().cloudEnabled) {
-            neonSyncReportAuxiliaryFailure({
-              operation: "createNewNode",
-              message: msg,
-              cause: "network",
-            });
-          }
-          window.alert(msg);
-        }
-      })();
-      pendingCreatePromisesRef.current.set(entityId, createPromise);
-      void createPromise.finally(() => {
-        if (pendingCreatePromisesRef.current.get(entityId) === createPromise) {
-          pendingCreatePromisesRef.current.delete(entityId);
-        }
-      });
-      return;
-    }
-
-    if (type === "folder") {
-      const entityId = createId();
-      const childSpaceId = createId();
-      const fx = center.x - FOLDER_CARD_WIDTH / 2 + (Math.random() * 60 - 30);
-      const fy = center.y - FOLDER_CARD_HEIGHT / 2 + (Math.random() * 60 - 30);
-      setGraph((prev) => {
-        const next = shallowCloneGraph(prev);
-        next.spaces[childSpaceId] = {
-          id: childSpaceId,
-          name: "New Folder",
-          parentSpaceId: activeSpaceId,
-          entityIds: [],
-        };
-        next.entities[entityId] = {
-          id: entityId,
-          title: "New Folder",
-          kind: "folder",
-          theme: "folder",
-          childSpaceId,
-          rotation,
-          width: FOLDER_CARD_WIDTH,
-          height: FOLDER_CARD_HEIGHT,
-          tapeRotation: 0,
-          stackId: null,
-          stackOrder: null,
-          slots: {
-            [activeSpaceId]: { x: fx, y: fy },
-          },
-        };
-        const activeSpace = next.spaces[activeSpaceId];
-        if (activeSpace) {
+        next.entities[id] = nextNode;
+        const space = next.spaces[activeSpaceId];
+        if (space) {
           next.spaces[activeSpaceId] = {
-            ...activeSpace,
-            entityIds: [...activeSpace.entityIds, entityId],
+            ...space,
+            entityIds: [...space.entityIds, id],
           };
         }
         return next;
       });
-      setSelectedNodeIds([entityId]);
-      setPendingFolderTitleSelectId(entityId);
-      return;
-    }
-
-    const id = createId();
-    let title = "New Note";
-    const width = UNIFIED_NODE_WIDTH;
-    let contentTheme: ContentTheme = "default";
-    if (type === "code") contentTheme = "code";
-    else if (type === "media") contentTheme = "media";
-    else if (type === "task") contentTheme = "task";
-
-    let bodyHtml = "";
-    let bodyDoc: JSONContent | undefined;
-    let loreCard: LoreCard | undefined;
-
-    if (isLoreCreateNodeType(type)) {
-      title = defaultTitleForLoreKind(type);
-      const resolvedVariant = resolveLoreVariantForCreate(type, loreVariant);
-      loreCard = { kind: type, variant: resolvedVariant };
-      const locationStripSeed = type === "location" && resolvedVariant === "v3" ? id : undefined;
-      bodyHtml = getLoreNodeSeedBodyHtml(
-        type,
-        resolvedVariant,
-        locationStripSeed != null ? { locationStripSeed } : undefined,
-      );
-    } else if (type === "code") {
-      title = "Snippet";
-      bodyDoc = legacyCodeBodyHtmlToHgDocSeed("// [IN] Compose shard at cursor…");
-      bodyHtml = hgDocToHtml(bodyDoc);
-    } else if (type === "media") {
-      title = "Untitled photo";
-      bodyHtml = buildEmptyArchitecturalMediaBodyHtml({
-        mediaFrameClass: styles.mediaFrame,
-        imageSlotImgClass: styles.imageSlotImg,
-        placeholderImgClasses: heartgardenMediaPlaceholderClassList("neutral"),
-        mediaImageActionsClass: styles.mediaImageActions,
-        mediaUploadBtnClass: styles.mediaUploadBtn,
-        uploadLabel: mediaUploadActionLabel(false),
-      });
-    } else if (type === "task") {
-      title = "Checklist";
-      bodyDoc = newTaskHgDocSeed();
-      bodyHtml = hgDocToHtml(bodyDoc);
-    } else {
-      bodyDoc = newDefaultHgDocSeed();
-      bodyHtml = hgDocToHtml(bodyDoc);
-    }
-
-    const nextNode = {
-      id,
-      title,
-      kind: "content" as const,
-      rotation,
-      width,
-      height: 280,
-      theme: contentTheme,
-      tapeVariant:
-        loreCard != null
-          ? tapeVariantForLoreCard(loreCard.kind, loreCard.variant)
-          : tapeVariantForTheme(contentTheme),
-      tapeRotation,
-      bodyHtml,
-      ...(bodyDoc != null ? { bodyDoc } : {}),
-      loreCard,
-      ...(loreCard?.kind === "faction" ? { factionRoster: createDefaultFactionRosterSeed() } : {}),
-      stackId: null,
-      stackOrder: null,
-      slots: {
-        [activeSpaceId]: { x, y },
-      },
-    };
-    setGraph((prev) => {
-      const next = shallowCloneGraph(prev);
-      next.entities[id] = nextNode;
-      const space = next.spaces[activeSpaceId];
-      if (space) {
-        next.spaces[activeSpaceId] = {
-          ...space,
-          entityIds: [...space.entityIds, id],
-        };
-      }
-      return next;
-    });
-  }, [
-    activeSpaceId,
-    centerCoords,
-    createId,
-    isRestrictedLayer,
-    recordUndoBeforeMutation,
-    strictGmWorkspaceSession,
-  ]);
+    },
+    [
+      activeSpaceId,
+      centerCoords,
+      createId,
+      isRestrictedLayer,
+      recordUndoBeforeMutation,
+      strictGmWorkspaceSession,
+    ]
+  );
 
   const createSingleImportedNote = useCallback(
     async (args: { title: string; text: string }) => {
       const title = args.title.trim().slice(0, 255) || "Imported document";
       const text = args.text.trim().slice(0, 120_000);
-      if (!text) return false;
+      if (!text) {
+        return false;
+      }
       const center = centerCoords();
       const x = center.x - 170 + (Math.random() * 40 - 20);
       const y = center.y - 110 + (Math.random() * 40 - 20);
@@ -8880,18 +10786,28 @@ export function ArchitecturalCanvasApp({
           zIndex: nextZ,
           entityType: "lore",
         });
-        if (!itemRes.ok || !itemRes.item) return false;
+        if (!(itemRes.ok && itemRes.item)) {
+          return false;
+        }
         if (itemRes.item.updatedAt) {
-          itemServerUpdatedAtRef.current.set(itemRes.item.id, itemRes.item.updatedAt);
+          itemServerUpdatedAtRef.current.set(
+            itemRes.item.id,
+            itemRes.item.updatedAt
+          );
         }
         const entity = canvasItemToEntity(itemRes.item, spaceId);
-        if (!entity) return false;
+        if (!entity) {
+          return false;
+        }
         setGraph((prev) => {
           const next = shallowCloneGraph(prev);
           next.entities[entity.id] = entity;
           const sp = next.spaces[spaceId];
           if (sp) {
-            next.spaces[spaceId] = { ...sp, entityIds: [...sp.entityIds, entity.id] };
+            next.spaces[spaceId] = {
+              ...sp,
+              entityIds: [...sp.entityIds, entity.id],
+            };
           }
           return next;
         });
@@ -8930,7 +10846,7 @@ export function ArchitecturalCanvasApp({
       setSelectedNodeIds([id]);
       return true;
     },
-    [activeSpaceId, centerCoords, createId],
+    [activeSpaceId, centerCoords, createId]
   );
 
   const executeLoreImportWithParsed = useCallback(
@@ -8968,7 +10884,9 @@ export function ArchitecturalCanvasApp({
           title: parsed.suggestedTitle || parsed.fileName || file.name,
           text: parsedText,
         });
-        if (!ok) {
+        if (ok) {
+          playVigilUiSound("celebration");
+        } else {
           reportFailure(
             createLoreImportFailureDetail({
               attemptId,
@@ -8980,14 +10898,15 @@ export function ArchitecturalCanvasApp({
               spaceId,
               recommendedAction:
                 "Retry import once. If this keeps failing, open sync status and include the attempt id.",
-            }),
+            })
           );
-        } else {
-          playVigilUiSound("celebration");
         }
         return;
       }
-      const useSmart = persistNeonRef.current && isUuidLike(spaceId) && parsedText.trim().length > 0;
+      const useSmart =
+        persistNeonRef.current &&
+        isUuidLike(spaceId) &&
+        parsedText.trim().length > 0;
 
       if (useSmart) {
         loreSmartPlanningAttemptRef.current = attemptId;
@@ -9038,11 +10957,15 @@ export function ArchitecturalCanvasApp({
           setLoreSmartPlanningProgress({
             phase: "failed",
             message: detail.message,
-            meta: detail.errorCode ? { errorCode: detail.errorCode } : undefined,
+            meta: detail.errorCode
+              ? { errorCode: detail.errorCode }
+              : undefined,
           });
           reportFailure(detail);
         };
-        const tryDirectPlanFallback = async (queueFailureHint?: string): Promise<boolean> => {
+        const tryDirectPlanFallback = async (
+          queueFailureHint?: string
+        ): Promise<boolean> => {
           setLoreSmartPlanningProgress({
             phase: "fallback_plan",
             message: "Smart queue unavailable; planning directly",
@@ -9069,7 +10992,7 @@ export function ArchitecturalCanvasApp({
             error?: string;
             plan?: LoreImportPlan;
           };
-          if (!planRes.ok || !planBody.ok || !planBody.plan) {
+          if (!(planRes.ok && planBody.ok && planBody.plan)) {
             return false;
           }
           applySmartPlanToUi(planBody.plan);
@@ -9104,58 +11027,7 @@ export function ArchitecturalCanvasApp({
             retryable?: boolean;
             jobId?: string;
           };
-          if (!jobRes.ok || !jobBody.ok || !jobBody.jobId) {
-            const queueFailureHint = summarizeQueueCreateFailure({
-              status: jobRes.status,
-              error: typeof jobBody.error === "string" ? jobBody.error : undefined,
-              detail: typeof jobBody.detail === "string" ? jobBody.detail : undefined,
-              hint: typeof jobBody.hint === "string" ? jobBody.hint : undefined,
-              errorCode: typeof jobBody.errorCode === "string" ? jobBody.errorCode : undefined,
-              dbCode: typeof jobBody.dbCode === "string" ? jobBody.dbCode : undefined,
-            });
-            console.warn("[lore-import] smart queue unavailable; using direct fallback", {
-              attemptId,
-              status: jobRes.status,
-              queueFailureHint,
-              errorCode: jobBody.errorCode,
-              dbCode: jobBody.dbCode,
-            });
-            const usedFallback = await tryDirectPlanFallback(queueFailureHint).catch(() => false);
-            if (usedFallback) return;
-            reportPlanningFailure(
-              createLoreImportFailureDetail({
-                attemptId,
-                stage: "job_create",
-                operation: "POST /api/lore/import/jobs",
-                message:
-                  typeof jobBody.error === "string"
-                    ? jobBody.error
-                    : typeof jobBody.detail === "string"
-                      ? jobBody.detail
-                      : `Could not start import job (HTTP ${jobRes.status})`,
-                responseSnippet: jobRaw,
-                httpStatus: jobRes.status,
-                errorCode:
-                  typeof jobBody.errorCode === "string"
-                    ? jobBody.errorCode
-                    : typeof jobBody.dbCode === "string"
-                      ? jobBody.dbCode
-                      : undefined,
-                serverDetail: typeof jobBody.detail === "string" ? jobBody.detail : undefined,
-                serverHint: typeof jobBody.hint === "string" ? jobBody.hint : undefined,
-                dbCode: typeof jobBody.dbCode === "string" ? jobBody.dbCode : undefined,
-                dbTable: typeof jobBody.dbTable === "string" ? jobBody.dbTable : undefined,
-                dbColumn: typeof jobBody.dbColumn === "string" ? jobBody.dbColumn : undefined,
-                dbConstraint:
-                  typeof jobBody.dbConstraint === "string" ? jobBody.dbConstraint : undefined,
-                retryable: typeof jobBody.retryable === "boolean" ? jobBody.retryable : undefined,
-                fileName: parsed.fileName ?? file.name,
-                spaceId,
-                recommendedAction:
-                  "Confirm Neon/database is reachable and try again. If this repeats, share the snapshot.",
-              }),
-            );
-          } else {
+          if (jobRes.ok && jobBody.ok && jobBody.jobId) {
             const jobId = jobBody.jobId;
             setLoreSmartPlanningJobId(jobId);
             /** ~12 min — smart planning can run many LLM + vault passes on large sources. */
@@ -9166,13 +11038,15 @@ export function ArchitecturalCanvasApp({
             let stablePhaseCount = 0;
             let lastPhase = "";
             for (let attempt = 0; attempt < maxAttempts; attempt++) {
-              if (planningAbort.signal.aborted) return;
+              if (planningAbort.signal.aborted) {
+                return;
+              }
               const poll = await fetch(
                 `/api/lore/import/jobs/${jobId}?spaceId=${encodeURIComponent(spaceId)}`,
                 {
                   headers: { "X-Heartgarden-Import-Attempt": attemptId },
                   signal: planningAbort.signal,
-                },
+                }
               );
               const pollRaw = await poll.text();
               const st = parseLoreImportJsonBody(pollRaw) as {
@@ -9186,7 +11060,7 @@ export function ArchitecturalCanvasApp({
                 progress?: LoreImportJobProgress;
                 events?: unknown[];
               };
-              if (!poll.ok || !st.ok) {
+              if (!(poll.ok && st.ok)) {
                 reportPlanningFailure(
                   createLoreImportFailureDetail({
                     attemptId,
@@ -9205,12 +11079,15 @@ export function ArchitecturalCanvasApp({
                         : typeof st.progress?.phase === "string"
                           ? st.progress.phase
                           : undefined,
-                    errorCode: typeof st.errorCode === "string" ? st.errorCode : undefined,
+                    errorCode:
+                      typeof st.errorCode === "string"
+                        ? st.errorCode
+                        : undefined,
                     fileName: parsed.fileName ?? file.name,
                     spaceId,
                     recommendedAction:
                       "Wait a few seconds and retry import. If this repeats, copy the snapshot and include the job id.",
-                  }),
+                  })
                 );
                 pollFailed = true;
                 break;
@@ -9218,14 +11095,17 @@ export function ArchitecturalCanvasApp({
               if (st.progress) {
                 setLoreSmartPlanningProgress(st.progress);
                 const phase = String(st.progress.phase ?? "");
-                if (phase && phase === lastPhase) stablePhaseCount += 1;
-                else {
+                if (phase && phase === lastPhase) {
+                  stablePhaseCount += 1;
+                } else {
                   stablePhaseCount = 0;
                   lastPhase = phase;
                 }
               }
               if (Array.isArray(st.events)) {
-                setLoreSmartPlanningEvents(normalizeLoreImportJobEvents(st.events));
+                setLoreSmartPlanningEvents(
+                  normalizeLoreImportJobEvents(st.events)
+                );
               }
               if (st.status === "ready" && st.plan) {
                 planReady = true;
@@ -9251,20 +11131,28 @@ export function ArchitecturalCanvasApp({
                         : typeof st.progress?.phase === "string"
                           ? st.progress.phase
                           : undefined,
-                    errorCode: typeof st.errorCode === "string" ? st.errorCode : undefined,
+                    errorCode:
+                      typeof st.errorCode === "string"
+                        ? st.errorCode
+                        : undefined,
                     fileName: parsed.fileName ?? file.name,
                     spaceId,
                     recommendedAction:
                       "Try splitting the source file into smaller chunks, then retry. Share snapshot if failure persists.",
-                  }),
+                  })
                 );
                 planFailed = true;
                 break;
               }
-              const delayMs = stablePhaseCount >= 12 ? 3000 : stablePhaseCount >= 6 ? 2000 : 1000;
+              const delayMs =
+                stablePhaseCount >= 12
+                  ? 3000
+                  : stablePhaseCount >= 6
+                    ? 2000
+                    : 1000;
               await abortableDelay(delayMs, planningAbort.signal);
             }
-            if (!planReady && !pollFailed && !planFailed) {
+            if (!(planReady || pollFailed || planFailed)) {
               reportPlanningFailure(
                 createLoreImportFailureDetail({
                   attemptId,
@@ -9278,33 +11166,130 @@ export function ArchitecturalCanvasApp({
                   spaceId,
                   recommendedAction:
                     "Wait 30-60 seconds and retry. If this keeps timing out on the same phase, split the source and rerun.",
-                }),
+                })
               );
             }
+          } else {
+            const queueFailureHint = summarizeQueueCreateFailure({
+              status: jobRes.status,
+              error:
+                typeof jobBody.error === "string" ? jobBody.error : undefined,
+              detail:
+                typeof jobBody.detail === "string" ? jobBody.detail : undefined,
+              hint: typeof jobBody.hint === "string" ? jobBody.hint : undefined,
+              errorCode:
+                typeof jobBody.errorCode === "string"
+                  ? jobBody.errorCode
+                  : undefined,
+              dbCode:
+                typeof jobBody.dbCode === "string" ? jobBody.dbCode : undefined,
+            });
+            console.warn(
+              "[lore-import] smart queue unavailable; using direct fallback",
+              {
+                attemptId,
+                status: jobRes.status,
+                queueFailureHint,
+                errorCode: jobBody.errorCode,
+                dbCode: jobBody.dbCode,
+              }
+            );
+            const usedFallback = await tryDirectPlanFallback(
+              queueFailureHint
+            ).catch(() => false);
+            if (usedFallback) {
+              return;
+            }
+            reportPlanningFailure(
+              createLoreImportFailureDetail({
+                attemptId,
+                stage: "job_create",
+                operation: "POST /api/lore/import/jobs",
+                message:
+                  typeof jobBody.error === "string"
+                    ? jobBody.error
+                    : typeof jobBody.detail === "string"
+                      ? jobBody.detail
+                      : `Could not start import job (HTTP ${jobRes.status})`,
+                responseSnippet: jobRaw,
+                httpStatus: jobRes.status,
+                errorCode:
+                  typeof jobBody.errorCode === "string"
+                    ? jobBody.errorCode
+                    : typeof jobBody.dbCode === "string"
+                      ? jobBody.dbCode
+                      : undefined,
+                serverDetail:
+                  typeof jobBody.detail === "string"
+                    ? jobBody.detail
+                    : undefined,
+                serverHint:
+                  typeof jobBody.hint === "string" ? jobBody.hint : undefined,
+                dbCode:
+                  typeof jobBody.dbCode === "string"
+                    ? jobBody.dbCode
+                    : undefined,
+                dbTable:
+                  typeof jobBody.dbTable === "string"
+                    ? jobBody.dbTable
+                    : undefined,
+                dbColumn:
+                  typeof jobBody.dbColumn === "string"
+                    ? jobBody.dbColumn
+                    : undefined,
+                dbConstraint:
+                  typeof jobBody.dbConstraint === "string"
+                    ? jobBody.dbConstraint
+                    : undefined,
+                retryable:
+                  typeof jobBody.retryable === "boolean"
+                    ? jobBody.retryable
+                    : undefined,
+                fileName: parsed.fileName ?? file.name,
+                spaceId,
+                recommendedAction:
+                  "Confirm Neon/database is reachable and try again. If this repeats, share the snapshot.",
+              })
+            );
           }
         } catch (error) {
           if (isAbortError(error) || planningAbort.signal.aborted) {
-            console.info("[lore-import] planning cancelled by user", { attemptId });
+            console.info("[lore-import] planning cancelled by user", {
+              attemptId,
+            });
             return;
           }
-          const queueFailureHint = unknownMessage(error, "Smart import job request failed.");
-          console.warn("[lore-import] smart queue request threw; using direct fallback", {
-            attemptId,
-            queueFailureHint,
-          });
-          const usedFallback = await tryDirectPlanFallback(queueFailureHint).catch(() => false);
-          if (usedFallback) return;
+          const queueFailureHint = unknownMessage(
+            error,
+            "Smart import job request failed."
+          );
+          console.warn(
+            "[lore-import] smart queue request threw; using direct fallback",
+            {
+              attemptId,
+              queueFailureHint,
+            }
+          );
+          const usedFallback = await tryDirectPlanFallback(
+            queueFailureHint
+          ).catch(() => false);
+          if (usedFallback) {
+            return;
+          }
           reportPlanningFailure(
             createLoreImportFailureDetail({
               attemptId,
               stage: "job_create",
               operation: "POST /api/lore/import/jobs",
-              message: unknownMessage(error, "Smart import job request failed."),
+              message: unknownMessage(
+                error,
+                "Smart import job request failed."
+              ),
               fileName: parsed.fileName ?? file.name,
               spaceId,
               recommendedAction:
                 "Check network/boot session and retry import. Copy diagnostics if this keeps failing.",
-            }),
+            })
           );
         } finally {
           if (
@@ -9330,21 +11315,25 @@ export function ArchitecturalCanvasApp({
           attemptId,
           stage: "parse",
           operation: "smart_import_prerequisite",
-          message: "Smart import requires a connected Neon space. Connect your workspace and retry.",
+          message:
+            "Smart import requires a connected Neon space. Connect your workspace and retry.",
           fileName: parsed.fileName ?? file.name,
           spaceId,
-          recommendedAction: "Switch to a connected Neon workspace, then retry this import.",
-        }),
+          recommendedAction:
+            "Switch to a connected Neon workspace, then retry this import.",
+        })
       );
     },
-    [createSingleImportedNote],
+    [createSingleImportedNote]
   );
 
   const onLoreImportFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       event.target.value = "";
-      if (!file) return;
+      if (!file) {
+        return;
+      }
       const isPdfFile = file.name.toLowerCase().endsWith(".pdf");
       const selection = loreImportSelection;
       const userContext = mapSelectionToUserContext(selection, file.name);
@@ -9364,7 +11353,11 @@ export function ArchitecturalCanvasApp({
           detail.operation,
           detail.httpStatus ?? "no_http_status",
           detail.message,
-          { attemptId: detail.attemptId, jobId: detail.jobId, phase: detail.phase },
+          {
+            attemptId: detail.attemptId,
+            jobId: detail.jobId,
+            phase: detail.phase,
+          }
         );
         playVigilUiSound("caution");
         setLoreImportFailure(detail);
@@ -9375,7 +11368,7 @@ export function ArchitecturalCanvasApp({
       fd.append("file", file);
       fd.append("context", JSON.stringify(userContext));
       const localPdfParsePayload = async (
-        reason: "preflight_oversize" | "http_413_fallback",
+        reason: "preflight_oversize" | "http_413_fallback"
       ): Promise<{
         ok: true;
         text: string;
@@ -9401,7 +11394,9 @@ export function ArchitecturalCanvasApp({
             suggestedTitle: loreImportSuggestedTitle(file.name),
           };
         } catch (error) {
-          if (isAbortError(error)) throw error;
+          if (isAbortError(error)) {
+            throw error;
+          }
           const detail = error instanceof Error ? error.message : String(error);
           reportFailure(
             createLoreImportFailureDetail({
@@ -9413,7 +11408,7 @@ export function ArchitecturalCanvasApp({
               spaceId: activeSpaceIdRef.current,
               recommendedAction:
                 "Try a smaller PDF or export to text/markdown, then retry. If this repeats, copy the snapshot and share it.",
-            }),
+            })
           );
           return null;
         }
@@ -9431,7 +11426,9 @@ export function ArchitecturalCanvasApp({
         };
         if (isPdfFile && shouldUseLocalPdfParse(file)) {
           parsed = await localPdfParsePayload("preflight_oversize");
-          if (!parsed) return;
+          if (!parsed) {
+            return;
+          }
         } else {
           parseRes = await fetch("/api/lore/import/parse", {
             method: "POST",
@@ -9449,32 +11446,40 @@ export function ArchitecturalCanvasApp({
             suggestedTitle?: string;
           };
         }
-        if (!parsed || !parsed.ok || typeof parsed.text !== "string") {
-          if (parseRes?.status === 413 && isPdfFile) {
-            const fallbackParsed = await localPdfParsePayload("http_413_fallback");
-            if (fallbackParsed) {
-              parsed = fallbackParsed;
-            } else {
-              return;
-            }
+        if (
+          (!(parsed && parsed.ok) || typeof parsed.text !== "string") &&
+          parseRes?.status === 413 &&
+          isPdfFile
+        ) {
+          const fallbackParsed =
+            await localPdfParsePayload("http_413_fallback");
+          if (fallbackParsed) {
+            parsed = fallbackParsed;
+          } else {
+            return;
           }
         }
-        if (!parsed || !parsed.ok || typeof parsed.text !== "string") {
-          const parsedError = typeof parsed?.error === "string" ? parsed.error : undefined;
-          const parsedDetail = typeof parsed?.detail === "string" ? parsed.detail : undefined;
+        if (!(parsed && parsed.ok) || typeof parsed.text !== "string") {
+          const parsedError =
+            typeof parsed?.error === "string" ? parsed.error : undefined;
+          const parsedDetail =
+            typeof parsed?.detail === "string" ? parsed.detail : undefined;
           reportFailure(
             createLoreImportFailureDetail({
               attemptId,
               stage: "parse",
               operation: "POST /api/lore/import/parse",
-              message: parsedError || parsedDetail || `Parse failed (HTTP ${parseRes?.status ?? "unknown"})`,
+              message:
+                parsedError ||
+                parsedDetail ||
+                `Parse failed (HTTP ${parseRes?.status ?? "unknown"})`,
               responseSnippet: parseRaw,
               httpStatus: parseRes?.status,
               fileName: file.name,
               spaceId: activeSpaceIdRef.current,
               recommendedAction:
                 "Check file type/content and retry. If this repeats, copy the snapshot and share it.",
-            }),
+            })
           );
           return;
         }
@@ -9482,35 +11487,37 @@ export function ArchitecturalCanvasApp({
         setLoreImportPreparedSource({
           text: parsed.text,
           fileName: parsed.fileName || file.name,
-          suggestedTitle: parsed.suggestedTitle || loreImportSuggestedTitle(file.name),
+          suggestedTitle:
+            parsed.suggestedTitle || loreImportSuggestedTitle(file.name),
         });
         setLoreImportPopoverOpen(true);
         playVigilUiSound("select");
       } catch (error) {
         if (isAbortError(error) || planningAbort.signal.aborted) {
-          console.info("[lore-import] import parse cancelled by user", { attemptId });
+          console.info("[lore-import] import parse cancelled by user", {
+            attemptId,
+          });
           return;
         }
         reportFailure(
           createLoreImportFailureDetail({
             attemptId,
             stage: "unknown",
-              operation: "onLoreImportFileChange",
+            operation: "onLoreImportFileChange",
             message: unknownMessage(error, "Import request failed"),
             fileName: file.name,
             spaceId: activeSpaceIdRef.current,
             recommendedAction:
               "Retry import. If this repeats, copy support snapshot and include the stage/attempt id.",
-          }),
+          })
         );
-      }
-      finally {
+      } finally {
         if (loreSmartPlanningAbortRef.current === planningAbort) {
           loreSmartPlanningAbortRef.current = null;
         }
       }
     },
-    [loreImportSelection],
+    [loreImportSelection]
   );
 
   const continuePreparedLoreImport = useCallback(async () => {
@@ -9520,7 +11527,10 @@ export function ArchitecturalCanvasApp({
       return;
     }
     setLoreImportPopoverOpen(false);
-    const userContext = mapSelectionToUserContext(loreImportSelection, prepared.fileName);
+    const userContext = mapSelectionToUserContext(
+      loreImportSelection,
+      prepared.fileName
+    );
     const attemptId =
       typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
@@ -9537,7 +11547,11 @@ export function ArchitecturalCanvasApp({
         detail.operation,
         detail.httpStatus ?? "no_http_status",
         detail.message,
-        { attemptId: detail.attemptId, jobId: detail.jobId, phase: detail.phase },
+        {
+          attemptId: detail.attemptId,
+          jobId: detail.jobId,
+          phase: detail.phase,
+        }
       );
       playVigilUiSound("caution");
       setLoreImportFailure(detail);
@@ -9561,7 +11575,11 @@ export function ArchitecturalCanvasApp({
         loreSmartPlanningAbortRef.current = null;
       }
     }
-  }, [executeLoreImportWithParsed, loreImportPreparedSource, loreImportSelection]);
+  }, [
+    executeLoreImportWithParsed,
+    loreImportPreparedSource,
+    loreImportSelection,
+  ]);
 
   const exportGraphJson = useCallback(() => {
     const data = JSON.stringify(graphRef.current, null, 2);
@@ -9574,156 +11592,173 @@ export function ArchitecturalCanvasApp({
     URL.revokeObjectURL(url);
   }, []);
 
-  const runPaletteAction = useCallback((actionId: string) => {
-    if (
-      isRestrictedLayer &&
-      [
-        "export-json",
-        "ask-lore",
-        "link-graph",
-        "import-lore",
-        "check-lore-consistency",
-        "create-media",
-      ].includes(actionId)
-    ) {
-      return;
-    }
-    if (actionId === "create-note") {
-      createNewNode("default");
-      playVigilUiSound("select");
-      return;
-    }
-    if (actionId === "create-checklist") {
-      createNewNode("task");
-      playVigilUiSound("select");
-      return;
-    }
-    if (actionId === "create-media") {
-      createNewNode("media");
-      playVigilUiSound("select");
-      return;
-    }
-    if (actionId === "create-folder") {
-      createNewNode("folder");
-      playVigilUiSound("select");
-      return;
-    }
-    if (actionId === "create-character") {
-      createNewNode("character");
-      playVigilUiSound("select");
-      return;
-    }
-    if (actionId === "create-organization") {
-      createNewNode("faction");
-      playVigilUiSound("select");
-      return;
-    }
-    if (actionId === "create-location") {
-      createNewNode("location");
-      playVigilUiSound("select");
-      return;
-    }
-    if (actionId === "export-json") {
-      playVigilUiSound("button");
-      exportGraphJson();
-      return;
-    }
-    if (actionId === "toggle-canvas-effects") {
-      setCanvasEffectsEnabled((v) => !v);
-      playVigilUiSound("select");
-      return;
-    }
-    if (actionId === "zoom-fit") {
-      applyFitAllToViewport();
-      return;
-    }
-    if (actionId === "zoom-selection") {
-      const ids = selectedNodeIdsRef.current.filter((id) =>
-        (graphRef.current.spaces[activeSpaceIdRef.current]?.entityIds ?? []).includes(id),
-      );
-      if (ids.length === 0) {
-        playVigilUiSound("caution");
+  const runPaletteAction = useCallback(
+    (actionId: string) => {
+      if (
+        isRestrictedLayer &&
+        [
+          "export-json",
+          "ask-lore",
+          "link-graph",
+          "import-lore",
+          "check-lore-consistency",
+          "create-media",
+        ].includes(actionId)
+      ) {
         return;
       }
-      const viewport = viewportRef.current?.getBoundingClientRect();
-      const width = viewport?.width ?? window.innerWidth;
-      const height = viewport?.height ?? window.innerHeight;
-      const next = fitCameraToSelection(
-        graphRef.current,
-        activeSpaceIdRef.current,
-        ids,
-        width,
-        height,
-        MIN_ZOOM,
-        MAX_ZOOM,
-      );
-      if (next) {
-        setScale(next.scale);
-        setTranslateX(next.translateX);
-        setTranslateY(next.translateY);
-      }
-      playVigilUiSound("select");
-      return;
-    }
-    if (actionId === "recenter") {
-      recenterToOrigin();
-      playVigilUiSound("select");
-      return;
-    }
-    if (actionId === "ask-lore") {
-      setLorePanelOpen((v) => !v);
-      playVigilUiSound("select");
-      return;
-    }
-    if (actionId === "link-graph") {
-      setGraphOverlayOpen((v) => !v);
-      playVigilUiSound("select");
-      return;
-    }
-    if (actionId === "import-lore") {
-      playVigilUiSound("select");
-      beginLoreImportFilePick();
-      return;
-    }
-    if (actionId === "check-lore-consistency") {
-      if (bootLayerVisible) {
-        playVigilUiSound("caution");
+      if (actionId === "create-note") {
+        createNewNode("default");
+        playVigilUiSound("select");
         return;
       }
-      setLoreReviewError(null);
-      setLoreReviewPanelOpen(true);
-      playVigilUiSound("select");
-      return;
-    }
-  }, [
-    applyFitAllToViewport,
-    bootLayerVisible,
-    createNewNode,
-    exportGraphJson,
-    isRestrictedLayer,
-    beginLoreImportFilePick,
-    recenterToOrigin,
-    setCanvasEffectsEnabled,
-    setGraphOverlayOpen,
-    setLorePanelOpen,
-    setLoreReviewError,
-    setLoreReviewPanelOpen,
-  ]);
+      if (actionId === "create-checklist") {
+        createNewNode("task");
+        playVigilUiSound("select");
+        return;
+      }
+      if (actionId === "create-media") {
+        createNewNode("media");
+        playVigilUiSound("select");
+        return;
+      }
+      if (actionId === "create-folder") {
+        createNewNode("folder");
+        playVigilUiSound("select");
+        return;
+      }
+      if (actionId === "create-character") {
+        createNewNode("character");
+        playVigilUiSound("select");
+        return;
+      }
+      if (actionId === "create-organization") {
+        createNewNode("faction");
+        playVigilUiSound("select");
+        return;
+      }
+      if (actionId === "create-location") {
+        createNewNode("location");
+        playVigilUiSound("select");
+        return;
+      }
+      if (actionId === "export-json") {
+        playVigilUiSound("button");
+        exportGraphJson();
+        return;
+      }
+      if (actionId === "toggle-canvas-effects") {
+        setCanvasEffectsEnabled((v) => !v);
+        playVigilUiSound("select");
+        return;
+      }
+      if (actionId === "zoom-fit") {
+        applyFitAllToViewport();
+        return;
+      }
+      if (actionId === "zoom-selection") {
+        const ids = selectedNodeIdsRef.current.filter((id) =>
+          (
+            graphRef.current.spaces[activeSpaceIdRef.current]?.entityIds ?? []
+          ).includes(id)
+        );
+        if (ids.length === 0) {
+          playVigilUiSound("caution");
+          return;
+        }
+        const viewport = viewportRef.current?.getBoundingClientRect();
+        const width = viewport?.width ?? window.innerWidth;
+        const height = viewport?.height ?? window.innerHeight;
+        const next = fitCameraToSelection(
+          graphRef.current,
+          activeSpaceIdRef.current,
+          ids,
+          width,
+          height,
+          MIN_ZOOM,
+          MAX_ZOOM
+        );
+        if (next) {
+          setScale(next.scale);
+          setTranslateX(next.translateX);
+          setTranslateY(next.translateY);
+        }
+        playVigilUiSound("select");
+        return;
+      }
+      if (actionId === "recenter") {
+        recenterToOrigin();
+        playVigilUiSound("select");
+        return;
+      }
+      if (actionId === "ask-lore") {
+        setLorePanelOpen((v) => !v);
+        playVigilUiSound("select");
+        return;
+      }
+      if (actionId === "link-graph") {
+        setGraphOverlayOpen((v) => !v);
+        playVigilUiSound("select");
+        return;
+      }
+      if (actionId === "import-lore") {
+        playVigilUiSound("select");
+        beginLoreImportFilePick();
+        return;
+      }
+      if (actionId === "check-lore-consistency") {
+        if (bootLayerVisible) {
+          playVigilUiSound("caution");
+          return;
+        }
+        setLoreReviewError(null);
+        setLoreReviewPanelOpen(true);
+        playVigilUiSound("select");
+        return;
+      }
+    },
+    [
+      applyFitAllToViewport,
+      bootLayerVisible,
+      createNewNode,
+      exportGraphJson,
+      isRestrictedLayer,
+      beginLoreImportFilePick,
+      recenterToOrigin,
+      setCanvasEffectsEnabled,
+      setGraphOverlayOpen,
+      setLorePanelOpen,
+      setLoreReviewError,
+      setLoreReviewPanelOpen,
+    ]
+  );
 
   const updateDropTargets = useCallback(
-    (draggedEntityId: string, pointerClientX?: number, pointerClientY?: number) => {
+    (
+      draggedEntityId: string,
+      pointerClientX?: number,
+      pointerClientY?: number
+    ) => {
       const domRoot: ParentNode = shellRef.current ?? document;
       const draggedGroup =
-        draggedNodeIdsRef.current.length > 0 ? draggedNodeIdsRef.current : [draggedEntityId];
+        draggedNodeIdsRef.current.length > 0
+          ? draggedNodeIdsRef.current
+          : [draggedEntityId];
       const draggedEntity = graph.entities[draggedEntityId];
       const sharedStackId =
         draggedEntity?.stackId &&
-        draggedGroup.every((id) => graph.entities[id]?.stackId === draggedEntity.stackId)
+        draggedGroup.every(
+          (id) => graph.entities[id]?.stackId === draggedEntity.stackId
+        )
           ? draggedEntity.stackId
           : null;
       const draggedEl = sharedStackId
-        ? domRoot.querySelector<HTMLElement>(`[data-stack-container='true'][data-stack-id='${sharedStackId}']`)
-        : domRoot.querySelector<HTMLElement>(`[data-node-id="${draggedEntityId}"]`);
+        ? domRoot.querySelector<HTMLElement>(
+            `[data-stack-container='true'][data-stack-id='${sharedStackId}']`
+          )
+        : domRoot.querySelector<HTMLElement>(
+            `[data-node-id="${draggedEntityId}"]`
+          );
       let dragRect: DOMRect | null = null;
       if (sharedStackId && draggedEl) {
         dragRect = unionBoundingRectFromStackLayers(draggedEl);
@@ -9733,7 +11768,11 @@ export function ArchitecturalCanvasApp({
       }
       if (!dragRect) {
         const rects = draggedGroup
-          .map((id) => domRoot.querySelector<HTMLElement>(`[data-node-id="${id}"]`)?.getBoundingClientRect())
+          .map((id) =>
+            domRoot
+              .querySelector<HTMLElement>(`[data-node-id="${id}"]`)
+              ?.getBoundingClientRect()
+          )
           .filter((rect): rect is DOMRect => !!rect);
         if (rects.length > 0) {
           const left = Math.min(...rects.map((r) => r.left));
@@ -9753,98 +11792,122 @@ export function ArchitecturalCanvasApp({
           } as DOMRect;
         }
       }
-      if (!dragRect) return;
+      if (!dragRect) {
+        return;
+      }
       const centerX = dragRect.left + dragRect.width / 2;
       const centerY = dragRect.top + dragRect.height / 2;
 
       let nextFolderId: string | null = null;
-      Array.from(domRoot.querySelectorAll<HTMLElement>("[data-folder-drop='true']")).forEach(
-        (folderEl) => {
-          const folderId = folderEl.dataset.folderId;
-          if (!folderId || folderId === draggedEntityId) return;
-          const folderEntity = graph.entities[folderId];
-          if (!folderEntity || folderEntity.kind !== "folder") return;
-          const rect = folderEl.getBoundingClientRect();
+      Array.from(
+        domRoot.querySelectorAll<HTMLElement>("[data-folder-drop='true']")
+      ).forEach((folderEl) => {
+        const folderId = folderEl.dataset.folderId;
+        if (!folderId || folderId === draggedEntityId) {
+          return;
+        }
+        const folderEntity = graph.entities[folderId];
+        if (!folderEntity || folderEntity.kind !== "folder") {
+          return;
+        }
+        const rect = folderEl.getBoundingClientRect();
+        const inside =
+          centerX > rect.left &&
+          centerX < rect.right &&
+          centerY > rect.top &&
+          centerY < rect.bottom;
+        if (!inside) {
+          return;
+        }
+        const destinationId = graph.spaces[folderEntity.childSpaceId]
+          ? folderEntity.childSpaceId
+          : folderEntity.childSpaceId;
+        if (
+          !draggedGroup.every((id) => canMoveEntityToSpace(id, destinationId))
+        ) {
+          return;
+        }
+        nextFolderId = folderId;
+      });
+      setHoveredFolderId(nextFolderId);
+
+      let nextStackTargetId: string | null = null;
+      const canDragGroupStack = draggedGroup.every(
+        (id) => graph.entities[id]?.kind === "content"
+      );
+      if (!(stackModalRef.current || nextFolderId) && canDragGroupStack) {
+        Array.from(
+          domRoot.querySelectorAll<HTMLElement>("[data-stack-target]")
+        ).forEach((targetEl) => {
+          const targetId =
+            targetEl.dataset.nodeId ?? targetEl.dataset.stackTopId;
+          if (!targetId || draggedGroup.includes(targetId)) {
+            return;
+          }
+          const targetEntity = graph.entities[targetId];
+          if (!targetEntity || targetEntity.kind !== "content") {
+            return;
+          }
+          let rect = targetEl.getBoundingClientRect();
+          if (targetEl.dataset.stackTopId) {
+            // Use the visual stack layer hull instead of container box to keep
+            // stack-hit testing aligned with what users see.
+            const layers = Array.from(
+              targetEl.querySelectorAll<HTMLElement>(
+                "[data-stack-layer='true']"
+              )
+            );
+            if (layers.length > 0) {
+              let minX = Number.POSITIVE_INFINITY;
+              let minY = Number.POSITIVE_INFINITY;
+              let maxX = Number.NEGATIVE_INFINITY;
+              let maxY = Number.NEGATIVE_INFINITY;
+              layers.forEach((layer) => {
+                const layerRect = layer.getBoundingClientRect();
+                minX = Math.min(minX, layerRect.left);
+                minY = Math.min(minY, layerRect.top);
+                maxX = Math.max(maxX, layerRect.right);
+                maxY = Math.max(maxY, layerRect.bottom);
+              });
+              if (
+                Number.isFinite(minX) &&
+                Number.isFinite(minY) &&
+                Number.isFinite(maxX) &&
+                Number.isFinite(maxY)
+              ) {
+                const pad = 10;
+                rect = {
+                  left: minX - pad,
+                  top: minY - pad,
+                  right: maxX + pad,
+                  bottom: maxY + pad,
+                  width: maxX - minX + pad * 2,
+                  height: maxY - minY + pad * 2,
+                  x: minX - pad,
+                  y: minY - pad,
+                  toJSON: () => ({}),
+                } as DOMRect;
+              }
+            }
+          }
           const inside =
             centerX > rect.left &&
             centerX < rect.right &&
             centerY > rect.top &&
             centerY < rect.bottom;
-          if (!inside) return;
-          const destinationId = graph.spaces[folderEntity.childSpaceId]
-            ? folderEntity.childSpaceId
-            : folderEntity.childSpaceId;
-          if (!draggedGroup.every((id) => canMoveEntityToSpace(id, destinationId))) return;
-          nextFolderId = folderId;
-        },
-      );
-      setHoveredFolderId(nextFolderId);
-
-      let nextStackTargetId: string | null = null;
-      const canDragGroupStack = draggedGroup.every((id) => graph.entities[id]?.kind === "content");
-      if (!stackModalRef.current && !nextFolderId && canDragGroupStack) {
-        Array.from(domRoot.querySelectorAll<HTMLElement>("[data-stack-target]")).forEach(
-          (targetEl) => {
-            const targetId = targetEl.dataset.nodeId ?? targetEl.dataset.stackTopId;
-            if (!targetId || draggedGroup.includes(targetId)) return;
-            const targetEntity = graph.entities[targetId];
-            if (!targetEntity || targetEntity.kind !== "content") return;
-            let rect = targetEl.getBoundingClientRect();
-            if (targetEl.dataset.stackTopId) {
-              // Use the visual stack layer hull instead of container box to keep
-              // stack-hit testing aligned with what users see.
-              const layers = Array.from(
-                targetEl.querySelectorAll<HTMLElement>("[data-stack-layer='true']"),
-              );
-              if (layers.length > 0) {
-                let minX = Number.POSITIVE_INFINITY;
-                let minY = Number.POSITIVE_INFINITY;
-                let maxX = Number.NEGATIVE_INFINITY;
-                let maxY = Number.NEGATIVE_INFINITY;
-                layers.forEach((layer) => {
-                  const layerRect = layer.getBoundingClientRect();
-                  minX = Math.min(minX, layerRect.left);
-                  minY = Math.min(minY, layerRect.top);
-                  maxX = Math.max(maxX, layerRect.right);
-                  maxY = Math.max(maxY, layerRect.bottom);
-                });
-                if (
-                  Number.isFinite(minX) &&
-                  Number.isFinite(minY) &&
-                  Number.isFinite(maxX) &&
-                  Number.isFinite(maxY)
-                ) {
-                  const pad = 10;
-                  rect = {
-                    left: minX - pad,
-                    top: minY - pad,
-                    right: maxX + pad,
-                    bottom: maxY + pad,
-                    width: maxX - minX + pad * 2,
-                    height: maxY - minY + pad * 2,
-                    x: minX - pad,
-                    y: minY - pad,
-                    toJSON: () => ({}),
-                  } as DOMRect;
-                }
-              }
-            }
-            const inside =
-              centerX > rect.left &&
-              centerX < rect.right &&
-              centerY > rect.top &&
-              centerY < rect.bottom;
-            if (!inside) return;
-            nextStackTargetId = targetId;
-          },
-        );
+          if (!inside) {
+            return;
+          }
+          nextStackTargetId = targetId;
+        });
       }
       setHoveredStackTargetId(nextStackTargetId);
 
       const parentTarget = parentDropRef.current;
       const canDropToParent =
-        !!parentSpaceId && draggedGroup.every((id) => canMoveEntityToSpace(id, parentSpaceId));
-      if (!parentTarget || !canDropToParent) {
+        !!parentSpaceId &&
+        draggedGroup.every((id) => canMoveEntityToSpace(id, parentSpaceId));
+      if (!(parentTarget && canDropToParent)) {
         setParentDropHover(false);
         return;
       }
@@ -9872,21 +11935,37 @@ export function ArchitecturalCanvasApp({
       }
       setParentDropHover(inParent);
     },
-    [canMoveEntityToSpace, graph.entities, graph.spaces, parentSpaceId, setParentDropHover],
+    [
+      canMoveEntityToSpace,
+      graph.entities,
+      graph.spaces,
+      parentSpaceId,
+      setParentDropHover,
+    ]
   );
 
   const stackEntitiesOntoTarget = useCallback(
     (draggedEntityIds: string[], targetEntityId: string) => {
-      if (stackModalRef.current) return false;
+      if (stackModalRef.current) {
+        return false;
+      }
       const target = graph.entities[targetEntityId];
-      if (!target || target.kind !== "content") return false;
+      if (!target || target.kind !== "content") {
+        return false;
+      }
       const idsToStack = draggedEntityIds.filter((id, index) => {
-        if (draggedEntityIds.indexOf(id) !== index) return false;
-        if (id === targetEntityId) return false;
+        if (draggedEntityIds.indexOf(id) !== index) {
+          return false;
+        }
+        if (id === targetEntityId) {
+          return false;
+        }
         const entity = graph.entities[id];
         return !!entity && entity.kind === "content";
       });
-      if (idsToStack.length === 0) return false;
+      if (idsToStack.length === 0) {
+        return false;
+      }
 
       recordUndoBeforeMutation();
       const stackId = target.stackId ?? createId();
@@ -9894,9 +11973,13 @@ export function ArchitecturalCanvasApp({
         let next = shallowCloneGraph(prev);
         const normalizedOldStackIds = new Set<string>();
 
-        if (!next.entities[targetEntityId]) return prev;
+        if (!next.entities[targetEntityId]) {
+          return prev;
+        }
         const targetEntity = next.entities[targetEntityId];
-        if (!targetEntity || targetEntity.kind !== "content") return prev;
+        if (!targetEntity || targetEntity.kind !== "content") {
+          return prev;
+        }
         const targetSlot = targetEntity.slots[activeSpaceId];
         if (!targetEntity.stackId) {
           next.entities[targetEntityId] = {
@@ -9914,7 +11997,9 @@ export function ArchitecturalCanvasApp({
 
         idsToStack.forEach((id, addIndex) => {
           const entity = next.entities[id];
-          if (!entity || entity.kind !== "content") return;
+          if (!entity || entity.kind !== "content") {
+            return;
+          }
           if (entity.stackId && entity.stackId !== stackId) {
             normalizedOldStackIds.add(entity.stackId);
           }
@@ -9947,7 +12032,9 @@ export function ArchitecturalCanvasApp({
           const persistSet = new Set<string>([targetEntityId, ...idsToStack]);
           if (sid) {
             for (const e of Object.values(g.entities)) {
-              if (e.kind === "content" && e.stackId === sid) persistSet.add(e.id);
+              if (e.kind === "content" && e.stackId === sid) {
+                persistSet.add(e.id);
+              }
             }
           }
           persistNeonItemsLayout([...persistSet]);
@@ -9962,12 +12049,14 @@ export function ArchitecturalCanvasApp({
       normalizeStack,
       persistNeonItemsLayout,
       recordUndoBeforeMutation,
-    ],
+    ]
   );
 
   const handleDrop = useCallback(
     async (draggedEntityIds: string[]) => {
-      if (draggedEntityIds.length === 0) return;
+      if (draggedEntityIds.length === 0) {
+        return;
+      }
       const center = centerCoords();
       const fallback = { x: center.x - 180, y: center.y - 120 };
 
@@ -9987,7 +12076,9 @@ export function ArchitecturalCanvasApp({
       if (hoveredFolderId) {
         const folderEntity = graphRef.current.entities[hoveredFolderId];
         if (folderEntity && folderEntity.kind === "folder") {
-          const childSpaceId = graphRef.current.spaces[folderEntity.childSpaceId]
+          const childSpaceId = graphRef.current.spaces[
+            folderEntity.childSpaceId
+          ]
             ? folderEntity.childSpaceId
             : await ensureFolderChildSpace(hoveredFolderId);
           if (childSpaceId) {
@@ -10016,7 +12107,7 @@ export function ArchitecturalCanvasApp({
       moveEntitiesToSpace,
       parentSpaceId,
       stackEntitiesOntoTarget,
-    ],
+    ]
   );
 
   const handleDropRef = useRef(handleDrop);
@@ -10035,19 +12126,26 @@ export function ArchitecturalCanvasApp({
   const dropTargetPendingDraggedIdRef = useRef<string | null>(null);
   const scheduleUpdateDropTargets = (draggedId: string) => {
     dropTargetPendingDraggedIdRef.current = draggedId;
-    if (dropTargetRafHandleRef.current !== null) return;
+    if (dropTargetRafHandleRef.current !== null) {
+      return;
+    }
     const run = () => {
       dropTargetRafHandleRef.current = null;
       const pendingId = dropTargetPendingDraggedIdRef.current;
       dropTargetPendingDraggedIdRef.current = null;
-      if (!pendingId) return;
+      if (!pendingId) {
+        return;
+      }
       const { x, y } = dragPointerScreenRef.current;
       updateDropTargetsRef.current(pendingId, x, y);
     };
     if (typeof requestAnimationFrame === "function") {
       dropTargetRafHandleRef.current = requestAnimationFrame(run);
     } else {
-      dropTargetRafHandleRef.current = window.setTimeout(run, 16) as unknown as number;
+      dropTargetRafHandleRef.current = window.setTimeout(
+        run,
+        16
+      ) as unknown as number;
     }
   };
   // Coalesce pan translate updates to one per animation frame. High-resolution
@@ -10056,9 +12154,13 @@ export function ArchitecturalCanvasApp({
   // when other camera-derived effects re-run between frames. rAF caps state
   // updates to display refresh rate while keeping the latest pointer position.
   const panRafHandleRef = useRef<number | null>(null);
-  const panPendingTranslateRef = useRef<{ tx: number; ty: number } | null>(null);
+  const panPendingTranslateRef = useRef<{ tx: number; ty: number } | null>(
+    null
+  );
   const cancelPanRaf = () => {
-    if (panRafHandleRef.current === null) return;
+    if (panRafHandleRef.current === null) {
+      return;
+    }
     if (typeof cancelAnimationFrame === "function") {
       cancelAnimationFrame(panRafHandleRef.current);
     } else {
@@ -10069,13 +12171,17 @@ export function ArchitecturalCanvasApp({
   const flushPanPending = () => {
     const next = panPendingTranslateRef.current;
     panPendingTranslateRef.current = null;
-    if (!next) return;
+    if (!next) {
+      return;
+    }
     setTranslateX((prev) => (prev === next.tx ? prev : next.tx));
     setTranslateY((prev) => (prev === next.ty ? prev : next.ty));
   };
   const schedulePanTranslate = (nextTx: number, nextTy: number) => {
     panPendingTranslateRef.current = { tx: nextTx, ty: nextTy };
-    if (panRafHandleRef.current !== null) return;
+    if (panRafHandleRef.current !== null) {
+      return;
+    }
     const run = () => {
       panRafHandleRef.current = null;
       flushPanPending();
@@ -10092,7 +12198,9 @@ export function ArchitecturalCanvasApp({
     const onPointerMove = (event: PointerEvent) => {
       if (lassoStartRef.current) {
         const pid = lassoPointerIdRef.current;
-        if (pid != null && event.pointerId !== pid) return;
+        if (pid != null && event.pointerId !== pid) {
+          return;
+        }
         const start = lassoStartRef.current;
         const next: LassoRectScreen = {
           x1: start.x,
@@ -10112,13 +12220,17 @@ export function ArchitecturalCanvasApp({
       }
 
       const draggedIds = draggedNodeIdsRef.current;
-      if (draggedIds.length === 0) return;
+      if (draggedIds.length === 0) {
+        return;
+      }
       dragPointerScreenRef.current = { x: event.clientX, y: event.clientY };
       const stackPointerDrag = stackPointerDragRef.current;
       if (stackPointerDrag && !stackPointerDrag.moved) {
         const moved =
-          Math.hypot(event.clientX - stackPointerDrag.startX, event.clientY - stackPointerDrag.startY) >
-          STACK_CLICK_SUPPRESS_DRAG_PX;
+          Math.hypot(
+            event.clientX - stackPointerDrag.startX,
+            event.clientY - stackPointerDrag.startY
+          ) > STACK_CLICK_SUPPRESS_DRAG_PX;
         if (moved) {
           stackPointerDragRef.current = { ...stackPointerDrag, moved: true };
         }
@@ -10133,12 +12245,19 @@ export function ArchitecturalCanvasApp({
         draggedIds.forEach((id) => {
           const entity = prev.entities[id];
           const offset = dragOffsetsRef.current[id];
-          if (!entity || !offset) return;
+          if (!(entity && offset)) {
+            return;
+          }
           const currentSlot = entity.slots[spaceId];
-          if (!currentSlot) return;
+          if (!currentSlot) {
+            return;
+          }
           const nextX = mouseCanvasX - offset.x;
           const nextY = mouseCanvasY - offset.y;
-          if (Math.abs(currentSlot.x - nextX) < 0.001 && Math.abs(currentSlot.y - nextY) < 0.001) {
+          if (
+            Math.abs(currentSlot.x - nextX) < 0.001 &&
+            Math.abs(currentSlot.y - nextY) < 0.001
+          ) {
             return;
           }
           changed = true;
@@ -10153,7 +12272,9 @@ export function ArchitecturalCanvasApp({
             },
           };
         });
-        if (!changed) return prev;
+        if (!changed) {
+          return prev;
+        }
         return {
           ...prev,
           entities: nextEntities,
@@ -10163,15 +12284,16 @@ export function ArchitecturalCanvasApp({
     };
 
     const completeActiveLasso = () => {
-      if (!lassoStartRef.current) return;
+      if (!lassoStartRef.current) {
+        return;
+      }
       const start = lassoStartRef.current;
-      const rect: LassoRectScreen =
-        lassoRectScreenRef.current ?? {
-          x1: start.x,
-          y1: start.y,
-          x2: start.x,
-          y2: start.y,
-        };
+      const rect: LassoRectScreen = lassoRectScreenRef.current ?? {
+        x1: start.x,
+        y1: start.y,
+        x2: start.x,
+        y2: start.y,
+      };
       lassoStartRef.current = null;
       lassoPointerIdRef.current = null;
       lassoRectScreenRef.current = null;
@@ -10188,21 +12310,29 @@ export function ArchitecturalCanvasApp({
       } else {
         const spaceId = activeSpaceIdRef.current;
         const allowedIds = new Set(
-          graphRef.current.spaces[spaceId]?.entityIds ?? [],
+          graphRef.current.spaces[spaceId]?.entityIds ?? []
         );
         const canvasRoot = canvasEntityLayerRef.current ?? viewportRef.current;
         const nodeEls = canvasRoot
-          ? Array.from(canvasRoot.querySelectorAll<HTMLElement>("[data-node-id]"))
+          ? Array.from(
+              canvasRoot.querySelectorAll<HTMLElement>("[data-node-id]")
+            )
           : [];
         /* Center-point containment matches “what the box clearly covers” better than
          * AABB overlap (avoids grabbing neighbors / extra stack layers on a thin edge). */
         const hits: string[] = [];
         for (const el of nodeEls) {
           const id = el.dataset.nodeId;
-          if (!id || !allowedIds.has(id)) continue;
-          if (el.dataset.spaceId && el.dataset.spaceId !== spaceId) continue;
+          if (!(id && allowedIds.has(id))) {
+            continue;
+          }
+          if (el.dataset.spaceId && el.dataset.spaceId !== spaceId) {
+            continue;
+          }
           const r = el.getBoundingClientRect();
-          if (r.width <= 0 && r.height <= 0) continue;
+          if (r.width <= 0 && r.height <= 0) {
+            continue;
+          }
           const cx = (r.left + r.right) / 2;
           const cy = (r.top + r.bottom) / 2;
           if (cx >= minX && cx <= maxX && cy >= minY && cy <= maxY) {
@@ -10211,26 +12341,36 @@ export function ArchitecturalCanvasApp({
         }
         const seen = new Set<string>();
         const unique = hits.filter((id) => {
-          if (seen.has(id)) return false;
+          if (seen.has(id)) {
+            return false;
+          }
           seen.add(id);
           return true;
         });
         const canvasOrder = graphRef.current.spaces[spaceId]?.entityIds ?? [];
         const orderIdx = new Map(canvasOrder.map((eid, i) => [eid, i]));
-        unique.sort((a, b) => (orderIdx.get(a) ?? 1e9) - (orderIdx.get(b) ?? 1e9));
+        unique.sort(
+          (a, b) => (orderIdx.get(a) ?? 1e9) - (orderIdx.get(b) ?? 1e9)
+        );
         setSelectedNodeIds(unique);
       }
     };
 
     const finishLassoFromPointer = (event: PointerEvent) => {
-      if (!lassoStartRef.current) return;
+      if (!lassoStartRef.current) {
+        return;
+      }
       const pid = lassoPointerIdRef.current;
-      if (pid != null && event.pointerId !== pid) return;
+      if (pid != null && event.pointerId !== pid) {
+        return;
+      }
       completeActiveLasso();
     };
 
     const onMouseMoveForLasso = (event: MouseEvent) => {
-      if (!lassoStartRef.current) return;
+      if (!lassoStartRef.current) {
+        return;
+      }
       const start = lassoStartRef.current;
       const next: LassoRectScreen = {
         x1: start.x,
@@ -10270,9 +12410,15 @@ export function ArchitecturalCanvasApp({
           dropTargetRafHandleRef.current = null;
           dropTargetPendingDraggedIdRef.current = null;
         }
-        updateDropTargetsRef.current(ids[0], dragPointerScreenRef.current.x, dragPointerScreenRef.current.y);
+        updateDropTargetsRef.current(
+          ids[0],
+          dragPointerScreenRef.current.x,
+          dragPointerScreenRef.current.y
+        );
         void handleDropRef.current(ids).then(() => {
-          if (!persistNeonRef.current) return;
+          if (!persistNeonRef.current) {
+            return;
+          }
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               persistNeonItemsLayoutRef.current(ids);
@@ -10318,29 +12464,40 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   useEffect(() => {
-    if (!stackModal) return;
+    if (!stackModal) {
+      return;
+    }
 
     const getVisibleOrdered = (orderedIds: string[]) =>
       orderedIds.slice(0, STACK_MODAL_MAX_ITEMS);
 
     const getHullBounds = (orderedIds: string[]) => {
       const cardHeights = stackModalCardHeightsRef.current;
-      const layout = buildStackModalLayout(orderedIds, viewportSize, cardHeights);
+      const layout = buildStackModalLayout(
+        orderedIds,
+        viewportSize,
+        cardHeights
+      );
       let minX = Number.POSITIVE_INFINITY;
       let minY = Number.POSITIVE_INFINITY;
       let maxX = Number.NEGATIVE_INFINITY;
       let maxY = Number.NEGATIVE_INFINITY;
       orderedIds.forEach((id) => {
         const slot = layout[id];
-        if (!slot) return;
+        if (!slot) {
+          return;
+        }
         const cardW = STACK_MODAL_CARD_W * slot.scale;
-        const cardH = (cardHeights[id] ?? STACK_MODAL_CARD_H_ESTIMATE) * slot.scale;
+        const cardH =
+          (cardHeights[id] ?? STACK_MODAL_CARD_H_ESTIMATE) * slot.scale;
         minX = Math.min(minX, slot.x);
         minY = Math.min(minY, slot.y);
         maxX = Math.max(maxX, slot.x + cardW);
         maxY = Math.max(maxY, slot.y + cardH);
       });
-      if (!Number.isFinite(minX) || !Number.isFinite(minY)) return null;
+      if (!(Number.isFinite(minX) && Number.isFinite(minY))) {
+        return null;
+      }
       return { left: minX, top: minY, right: maxX, bottom: maxY };
     };
 
@@ -10352,10 +12509,14 @@ export function ArchitecturalCanvasApp({
         pointerOffsetX: number;
         pointerOffsetY: number;
       },
-      orderedIds: string[],
+      orderedIds: string[]
     ) => {
       const cardHeights = stackModalCardHeightsRef.current;
-      const layout = buildStackModalLayout(orderedIds, viewportSize, cardHeights);
+      const layout = buildStackModalLayout(
+        orderedIds,
+        viewportSize,
+        cardHeights
+      );
       const slot = layout[drag.entityId];
       const slotScale = slot?.scale ?? 1;
       const width = STACK_MODAL_CARD_W * slotScale;
@@ -10374,10 +12535,12 @@ export function ArchitecturalCanvasApp({
         pointerOffsetX: number;
         pointerOffsetY: number;
       },
-      orderedIds: string[],
+      orderedIds: string[]
     ) => {
       const hull = getHullBounds(orderedIds);
-      if (!hull) return false;
+      if (!hull) {
+        return false;
+      }
       const rect = getDraggedRect(drag, orderedIds);
       const centerX = (rect.left + rect.right) / 2;
       const centerY = (rect.top + rect.bottom) / 2;
@@ -10391,7 +12554,9 @@ export function ArchitecturalCanvasApp({
 
     const onMouseMove = (event: MouseEvent) => {
       const prev = stackDragRef.current;
-      if (!prev) return;
+      if (!prev) {
+        return;
+      }
 
       const dx = event.clientX - prev.startX;
       const dy = event.clientY - prev.startY;
@@ -10410,7 +12575,7 @@ export function ArchitecturalCanvasApp({
           pointerOffsetX: prev.pointerOffsetX,
           pointerOffsetY: prev.pointerOffsetY,
         },
-        hullOrdered,
+        hullOrdered
       );
 
       if (intent === "reorder" && outsideWithMargin) {
@@ -10432,18 +12597,31 @@ export function ArchitecturalCanvasApp({
         !stackBlockLiveReorderRef.current
       ) {
         setStackModal((prevModal) => {
-          if (!prevModal) return prevModal;
+          if (!prevModal) {
+            return prevModal;
+          }
           const visibleOrdered = [...getVisibleOrdered(prevModal.orderedIds)];
           const from = visibleOrdered.indexOf(prev.entityId);
-          if (from < 0) return prevModal;
+          if (from < 0) {
+            return prevModal;
+          }
           const cardHeights = stackModalCardHeightsRef.current;
-          const layout = buildStackModalLayout(visibleOrdered, viewportSize, cardHeights);
+          const layout = buildStackModalLayout(
+            visibleOrdered,
+            viewportSize,
+            cardHeights
+          );
           const swapWith = visibleOrdered.findIndex((id) => {
-            if (id === prev.entityId) return false;
+            if (id === prev.entityId) {
+              return false;
+            }
             const slot = layout[id];
-            if (!slot) return false;
+            if (!slot) {
+              return false;
+            }
             const width = STACK_MODAL_CARD_W * slot.scale;
-            const height = (cardHeights[id] ?? STACK_MODAL_CARD_H_ESTIMATE) * slot.scale;
+            const height =
+              (cardHeights[id] ?? STACK_MODAL_CARD_H_ESTIMATE) * slot.scale;
             return (
               event.clientX >= slot.x &&
               event.clientX <= slot.x + width &&
@@ -10451,12 +12629,16 @@ export function ArchitecturalCanvasApp({
               event.clientY <= slot.y + height
             );
           });
-          if (swapWith < 0 || swapWith === from) return prevModal;
+          if (swapWith < 0 || swapWith === from) {
+            return prevModal;
+          }
           const nextVisible = [...visibleOrdered];
           const swapItem = nextVisible[from];
           nextVisible[from] = nextVisible[swapWith];
           nextVisible[swapWith] = swapItem;
-          const hiddenOrdered = prevModal.orderedIds.slice(STACK_MODAL_MAX_ITEMS);
+          const hiddenOrdered = prevModal.orderedIds.slice(
+            STACK_MODAL_MAX_ITEMS
+          );
           const nextOrdered = [...nextVisible, ...hiddenOrdered];
           stackModalOrderedIdsDuringDragRef.current = nextOrdered;
           return {
@@ -10493,7 +12675,9 @@ export function ArchitecturalCanvasApp({
       stackBlockLiveReorderRef.current = false;
 
       const modal = stackModalRef.current;
-      if (!drag || !modal) return;
+      if (!(drag && modal)) {
+        return;
+      }
 
       const releaseX = event.clientX;
       const releaseY = event.clientY;
@@ -10507,7 +12691,7 @@ export function ArchitecturalCanvasApp({
           pointerOffsetX: drag.pointerOffsetX,
           pointerOffsetY: drag.pointerOffsetY,
         },
-        hullForEject,
+        hullForEject
       );
 
       const orderedIdsForCommit = orderedSnap ?? modal.orderedIds;
@@ -10519,16 +12703,21 @@ export function ArchitecturalCanvasApp({
         const extracted = graphSnap.entities[drag.entityId];
         const spaceId = activeSpaceIdRef.current;
         if (extracted) {
-          const remainingOrdered = orderedIdsForCommit.filter((id) => id !== drag.entityId);
+          const remainingOrdered = orderedIdsForCommit.filter(
+            (id) => id !== drag.entityId
+          );
           const remaining = remainingOrdered
             .map((id) => graphSnap.entities[id])
             .filter(
               (entity): entity is CanvasEntity =>
-                !!entity && entity.kind === "content" && entity.stackId === modal.stackId,
+                !!entity &&
+                entity.kind === "content" &&
+                entity.stackId === modal.stackId
             );
 
           const { tx, ty, scale: viewScale } = viewRef.current;
-          const canvasRect = canvasTransformRef.current?.getBoundingClientRect();
+          const canvasRect =
+            canvasTransformRef.current?.getBoundingClientRect();
           const cardLeftClient = releaseX - drag.pointerOffsetX;
           const cardTopClient = releaseY - drag.pointerOffsetY;
           const aw = modal.anchorWorld;
@@ -10543,8 +12732,12 @@ export function ArchitecturalCanvasApp({
             Number.isFinite(viewScale) &&
             viewScale !== 0
           ) {
-            worldDropX = Math.round(aw.x + (cardLeftClient - stackSL) / viewScale);
-            worldDropY = Math.round(aw.y + (cardTopClient - stackST) / viewScale);
+            worldDropX = Math.round(
+              aw.x + (cardLeftClient - stackSL) / viewScale
+            );
+            worldDropY = Math.round(
+              aw.y + (cardTopClient - stackST) / viewScale
+            );
           } else {
             const dropWorld = clientPointToCanvasWorld(
               cardLeftClient,
@@ -10552,16 +12745,17 @@ export function ArchitecturalCanvasApp({
               canvasRect,
               tx,
               ty,
-              viewScale,
+              viewScale
             );
             worldDropX = Math.round(dropWorld.x);
             worldDropY = Math.round(dropWorld.y);
           }
 
           const sortedRemaining = [...remaining].sort(
-            (a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0),
+            (a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0)
           );
-          const anchorSource = sortedRemaining[sortedRemaining.length - 1] ?? sortedRemaining[0];
+          const anchorSource =
+            sortedRemaining[sortedRemaining.length - 1] ?? sortedRemaining[0];
           const anchorFallback = anchorSource
             ? graphSnap.entities[anchorSource.id]?.slots[spaceId]
             : undefined;
@@ -10572,15 +12766,20 @@ export function ArchitecturalCanvasApp({
             if (sortedRemaining.length >= 2) {
               sortedRemaining.forEach((entity, index) => {
                 const current = next.entities[entity.id];
-                if (!current) return;
+                if (!current) {
+                  return;
+                }
                 next.entities[entity.id] = {
                   ...current,
                   stackId: modal.stackId,
                   stackOrder: index,
                   slots:
-                    anchorSlot != null
-                      ? { ...current.slots, [spaceId]: { x: anchorSlot.x, y: anchorSlot.y } }
-                      : current.slots,
+                    anchorSlot == null
+                      ? current.slots
+                      : {
+                          ...current.slots,
+                          [spaceId]: { x: anchorSlot.x, y: anchorSlot.y },
+                        },
                 };
               });
             } else if (sortedRemaining.length === 1) {
@@ -10592,9 +12791,12 @@ export function ArchitecturalCanvasApp({
                   stackId: null,
                   stackOrder: null,
                   slots:
-                    anchorSlot != null
-                      ? { ...current.slots, [spaceId]: { x: anchorSlot.x, y: anchorSlot.y } }
-                      : current.slots,
+                    anchorSlot == null
+                      ? current.slots
+                      : {
+                          ...current.slots,
+                          [spaceId]: { x: anchorSlot.x, y: anchorSlot.y },
+                        },
                 };
               }
             }
@@ -10617,7 +12819,10 @@ export function ArchitecturalCanvasApp({
           playVigilUiSound("swipe");
           closeStackModal();
           if (persistNeonRef.current) {
-            const persistIds = [drag.entityId, ...sortedRemaining.map((e) => e.id)];
+            const persistIds = [
+              drag.entityId,
+              ...sortedRemaining.map((e) => e.id),
+            ];
             requestAnimationFrame(() => {
               persistNeonItemsLayoutRef.current(persistIds);
             });
@@ -10631,13 +12836,17 @@ export function ArchitecturalCanvasApp({
           stackOrderAtDragStart != null &&
           (stackOrderAtDragStart.length !== ordered.length ||
             stackOrderAtDragStart.some((id, i) => id !== ordered[i]));
-        if (orderChanged) playVigilUiSound("swipe");
+        if (orderChanged) {
+          playVigilUiSound("swipe");
+        }
         setGraph((prev) => {
           const next = shallowCloneGraph(prev);
           const topOrder = ordered.length - 1;
           ordered.forEach((id, index) => {
             const entity = next.entities[id];
-            if (!entity) return;
+            if (!entity) {
+              return;
+            }
             next.entities[id] = {
               ...entity,
               stackOrder: topOrder - index,
@@ -10646,7 +12855,9 @@ export function ArchitecturalCanvasApp({
           return next;
         });
         if (orderChanged && persistNeonRef.current) {
-          requestAnimationFrame(() => persistNeonItemsLayoutRef.current(ordered));
+          requestAnimationFrame(() =>
+            persistNeonItemsLayoutRef.current(ordered)
+          );
         }
       }
     };
@@ -10678,7 +12889,9 @@ export function ArchitecturalCanvasApp({
   useEffect(() => {
     const onMouseDown = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (target.closest("[data-hg-sync-popover='true']")) return;
+      if (target.closest("[data-hg-sync-popover='true']")) {
+        return;
+      }
       /* Draw/cut must complete even when the click lands on TipTap (`data-hg-doc-editor`); only skip in move mode. */
       if (connectionMode === "move" && target.closest("[data-hg-doc-editor]")) {
         return;
@@ -10690,7 +12903,9 @@ export function ArchitecturalCanvasApp({
         const taskItem = taskCheckbox.closest(`.${styles.taskItem}`);
         if (taskItem) {
           taskItem.classList.toggle(styles.done);
-          const focusBodyEl = taskCheckbox.closest<HTMLElement>("[data-focus-body-editor='true']");
+          const focusBodyEl = taskCheckbox.closest<HTMLElement>(
+            "[data-focus-body-editor='true']"
+          );
           if (focusBodyEl && focusOpenRef.current && activeNodeIdRef.current) {
             const nextHtml = normalizeChecklistMarkup(focusBodyEl.innerHTML, {
               taskItem: styles.taskItem,
@@ -10704,9 +12919,11 @@ export function ArchitecturalCanvasApp({
             setFocusBody(nextHtml);
             return;
           }
-          const owner = taskCheckbox.closest<HTMLElement>(`[data-node-id]`);
+          const owner = taskCheckbox.closest<HTMLElement>("[data-node-id]");
           if (owner?.dataset.nodeId) {
-            const bodyEl = owner.querySelector<HTMLElement>(`.${styles.nodeBody}`);
+            const bodyEl = owner.querySelector<HTMLElement>(
+              `.${styles.nodeBody}`
+            );
             if (bodyEl) {
               const nextHtml = normalizeChecklistMarkup(bodyEl.innerHTML, {
                 taskItem: styles.taskItem,
@@ -10717,23 +12934,30 @@ export function ArchitecturalCanvasApp({
               if (bodyEl.innerHTML !== nextHtml) {
                 bodyEl.innerHTML = nextHtml;
               }
-              updateNodeBody(owner.dataset.nodeId, nextHtml, { immediate: true });
+              updateNodeBody(owner.dataset.nodeId, nextHtml, {
+                immediate: true,
+              });
             }
           }
         }
         return;
       }
 
-      const entity = target.closest<HTMLElement>(`[data-node-id]`);
+      const entity = target.closest<HTMLElement>("[data-node-id]");
       if (connectionMode !== "move") {
         if (connectionMode === "draw" && entity?.dataset.nodeId) {
           const nodeId = entity.dataset.nodeId;
-          if (!nodeId) return;
+          if (!nodeId) {
+            return;
+          }
           event.preventDefault();
           event.stopPropagation();
           if (!connectionSourceId) {
-            const row = target.closest<HTMLElement>("[data-faction-roster-entry-id]");
-            const rowHost = row?.closest<HTMLElement>("[data-node-id]")?.dataset.nodeId;
+            const row = target.closest<HTMLElement>(
+              "[data-faction-roster-entry-id]"
+            );
+            const rowHost =
+              row?.closest<HTMLElement>("[data-node-id]")?.dataset.nodeId;
             if (row?.dataset.factionRosterEntryId && rowHost === nodeId) {
               connectionRosterAnchorRef.current = {
                 factionNodeId: nodeId,
@@ -10751,11 +12975,14 @@ export function ArchitecturalCanvasApp({
             let rosterEntryId = resolveFactionRosterEntryIdFromDrawTarget(
               target,
               endpointA,
-              endpointB,
+              endpointB
             );
             if (!rosterEntryId && connectionRosterAnchorRef.current) {
               const anchor = connectionRosterAnchorRef.current;
-              if (anchor.factionNodeId === endpointA || anchor.factionNodeId === endpointB) {
+              if (
+                anchor.factionNodeId === endpointA ||
+                anchor.factionNodeId === endpointB
+              ) {
                 rosterEntryId = anchor.rosterEntryId;
               }
             }
@@ -10766,7 +12993,7 @@ export function ArchitecturalCanvasApp({
               graphRef.current.entities,
               endpointA,
               endpointB,
-              rosterEntryId,
+              rosterEntryId
             );
 
             if (semanticEval.kind === "block") {
@@ -10781,19 +13008,27 @@ export function ArchitecturalCanvasApp({
               const patchedForNeon: CanvasContentEntity[] = [];
               setGraph((prev) => {
                 const entities = { ...prev.entities };
-                for (const [eid, updater] of Object.entries(patch.entityUpdates)) {
+                for (const [eid, updater] of Object.entries(
+                  patch.entityUpdates
+                )) {
                   const cur = entities[eid];
-                  if (cur?.kind !== "content") continue;
+                  if (cur?.kind !== "content") {
+                    continue;
+                  }
                   const next = updater(cur);
                   entities[eid] = next;
-                  if (isUuidLike(eid)) patchedForNeon.push(next);
+                  if (isUuidLike(eid)) {
+                    patchedForNeon.push(next);
+                  }
                 }
                 return { ...prev, entities };
               });
               if (persistNeonRef.current) {
                 const seenPersist = new Set<string>();
                 for (const merged of patchedForNeon) {
-                  if (seenPersist.has(merged.id)) continue;
+                  if (seenPersist.has(merged.id)) {
+                    continue;
+                  }
                   seenPersist.add(merged.id);
                   void patchItemWithVersion(merged.id, {
                     contentText: contentPlainTextForEntity(merged),
@@ -10816,21 +13051,31 @@ export function ArchitecturalCanvasApp({
         }
       }
 
-      if (focusOpenRef.current || galleryOpenRef.current) return;
-      if (activeTool === "pan" || spacePanRef.current) return;
-      if (event.button !== 0) return;
-      if (target.closest("[data-stack-container='true']")) return;
+      if (focusOpenRef.current || galleryOpenRef.current) {
+        return;
+      }
+      if (activeTool === "pan" || spacePanRef.current) {
+        return;
+      }
+      if (event.button !== 0) {
+        return;
+      }
+      if (target.closest("[data-stack-container='true']")) {
+        return;
+      }
       /* Folder face (.folderFront) must arm drag/select like other cards; only the title
        * editor, chrome buttons, and note bodies opt out. Double-click to open uses React
        * onDoubleClick on ArchitecturalFolderCard (with stopPropagation). */
       const inBody = !!target.closest(`.${styles.nodeBody}`);
-      const loroOrdoDragChrome = targetIsLoreLocationOrdoCanvasDragChrome(target);
-      const facArcDragChrome = targetIsLoreFactionArchiveCanvasDragChrome(target);
+      const loroOrdoDragChrome =
+        targetIsLoreLocationOrdoCanvasDragChrome(target);
+      const facArcDragChrome =
+        targetIsLoreFactionArchiveCanvasDragChrome(target);
       const inLoreLocationOrdoV7Canvas = !!target.closest(
-        '[data-hg-canvas-role="lore-location"][data-lore-variant="v7"]',
+        '[data-hg-canvas-role="lore-location"][data-lore-variant="v7"]'
       );
       const inLoreFactionArchiveCanvas = !!target.closest(
-        '[data-hg-canvas-role="lore-faction"][data-lore-variant="v4"]',
+        '[data-hg-canvas-role="lore-faction"][data-lore-variant="v4"]'
       );
       const inContent =
         (inBody &&
@@ -10851,52 +13096,61 @@ export function ArchitecturalCanvasApp({
             event.shiftKey || event.ctrlKey || event.metaKey;
           if (extendSelection) {
             setSelectedNodeIds((prev) =>
-              prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId],
+              prev.includes(nodeId)
+                ? prev.filter((id) => id !== nodeId)
+                : [...prev, nodeId]
             );
             return;
-          } else {
-            const sel = selectedNodeIdsRef.current;
-            const spaceEntityIds =
-              graphRef.current.spaces[activeSpaceIdRef.current]?.entityIds ?? [];
-            const inSpace = new Set(spaceEntityIds);
-            const dragGroup =
-              sel.includes(nodeId) && sel.length > 1
-                ? [nodeId, ...sel.filter((id) => id !== nodeId && inSpace.has(id))]
-                : [nodeId];
-            recordUndoBeforeMutation();
-            setSelectedNodeIds(dragGroup);
-            draggedNodeIdsRef.current = dragGroup;
-            setDraggedNodeIds(dragGroup);
-            dragPointerScreenRef.current = { x: event.clientX, y: event.clientY };
-
-            const { tx, ty, scale: viewScale } = viewRef.current;
-            const mouseCanvasX = (event.clientX - tx) / viewScale;
-            const mouseCanvasY = (event.clientY - ty) / viewScale;
-            const offsets: Record<string, { x: number; y: number }> = {};
-            const spaceId = activeSpaceIdRef.current;
-            dragGroup.forEach((id) => {
-              const dragEntity = graphRef.current.entities[id];
-              const slot = dragEntity?.slots[spaceId];
-              if (!slot) return;
-              offsets[id] = {
-                x: mouseCanvasX - slot.x,
-                y: mouseCanvasY - slot.y,
-              };
-            });
-            dragOffsetsRef.current = offsets;
-            setMaxZIndex((prev) => prev + 1);
           }
+          const sel = selectedNodeIdsRef.current;
+          const spaceEntityIds =
+            graphRef.current.spaces[activeSpaceIdRef.current]?.entityIds ?? [];
+          const inSpace = new Set(spaceEntityIds);
+          const dragGroup =
+            sel.includes(nodeId) && sel.length > 1
+              ? [
+                  nodeId,
+                  ...sel.filter((id) => id !== nodeId && inSpace.has(id)),
+                ]
+              : [nodeId];
+          recordUndoBeforeMutation();
+          setSelectedNodeIds(dragGroup);
+          draggedNodeIdsRef.current = dragGroup;
+          setDraggedNodeIds(dragGroup);
+          dragPointerScreenRef.current = { x: event.clientX, y: event.clientY };
+
+          const { tx, ty, scale: viewScale } = viewRef.current;
+          const mouseCanvasX = (event.clientX - tx) / viewScale;
+          const mouseCanvasY = (event.clientY - ty) / viewScale;
+          const offsets: Record<string, { x: number; y: number }> = {};
+          const spaceId = activeSpaceIdRef.current;
+          dragGroup.forEach((id) => {
+            const dragEntity = graphRef.current.entities[id];
+            const slot = dragEntity?.slots[spaceId];
+            if (!slot) {
+              return;
+            }
+            offsets[id] = {
+              x: mouseCanvasX - slot.x,
+              y: mouseCanvasY - slot.y,
+            };
+          });
+          dragOffsetsRef.current = offsets;
+          setMaxZIndex((prev) => prev + 1);
         }
       }
-
     };
 
     const onClick = (event: MouseEvent) => {
-      if (connectionMode !== "move") return;
+      if (connectionMode !== "move") {
+        return;
+      }
       const target = event.target as HTMLElement;
       const expandBtn = target.closest<HTMLElement>(`[data-expand-btn="true"]`);
-      if (!expandBtn || expandBtn.closest(`.${styles.nodeHeader}`)) return;
-      const entity = expandBtn.closest<HTMLElement>(`[data-node-id]`);
+      if (!expandBtn || expandBtn.closest(`.${styles.nodeHeader}`)) {
+        return;
+      }
+      const entity = expandBtn.closest<HTMLElement>("[data-node-id]");
       const id = entity?.dataset.nodeId;
       if (id) {
         handleNodeExpand(id);
@@ -10913,17 +13167,25 @@ export function ArchitecturalCanvasApp({
 
     const onDoubleClick = (event: MouseEvent) => {
       const target = pointerEventTargetElement(event.target);
-      if (!target) return;
+      if (!target) {
+        return;
+      }
 
       if (connectionMode === "draw" || connectionMode === "cut") {
-        if (focusOpenRef.current || galleryOpenRef.current || stackModalRef.current) return;
+        if (
+          focusOpenRef.current ||
+          galleryOpenRef.current ||
+          stackModalRef.current
+        ) {
+          return;
+        }
         if (
           isCanvasPointerMarqueeOrPanSurface(
             target,
             viewportRef.current,
             styles.canvas,
             activeTool,
-            false,
+            false
           )
         ) {
           event.preventDefault();
@@ -10932,14 +13194,18 @@ export function ArchitecturalCanvasApp({
           setConnectionCursorWorld(null);
           const restore = selectionBeforeConnectionModeRef.current;
           if (restore) {
-            setSelectedNodeIds(restore.filter((id) => !!graphRef.current.entities[id]));
+            setSelectedNodeIds(
+              restore.filter((id) => !!graphRef.current.entities[id])
+            );
           }
           selectionBeforeConnectionModeRef.current = null;
         }
         return;
       }
 
-      if (connectionMode !== "move") return;
+      if (connectionMode !== "move") {
+        return;
+      }
       const folderEl = target.closest<HTMLElement>("[data-folder-id]");
       if (folderEl && !target.closest(`.${styles.folderTitleInput}`)) {
         const folderId = folderEl.dataset.folderId;
@@ -10948,9 +13214,11 @@ export function ArchitecturalCanvasApp({
           return;
         }
       }
-      const entity = target.closest<HTMLElement>(`[data-node-id]`);
+      const entity = target.closest<HTMLElement>("[data-node-id]");
       const id = entity?.dataset.nodeId;
-      if (!id) return;
+      if (!id) {
+        return;
+      }
 
       const node = graphRef.current.entities[id];
       if (
@@ -10980,7 +13248,9 @@ export function ArchitecturalCanvasApp({
 
       const inLoreLocationOrdoCanvas =
         node?.kind === "content" &&
-        !!target.closest('[data-hg-canvas-role="lore-location"][data-lore-variant="v7"]');
+        !!target.closest(
+          '[data-hg-canvas-role="lore-location"][data-lore-variant="v7"]'
+        );
       if (inLoreLocationOrdoCanvas) {
         if (target.closest("[data-expand-btn='true']")) {
           return;
@@ -10991,7 +13261,9 @@ export function ArchitecturalCanvasApp({
 
       const inLoreFactionArchive091Canvas =
         node?.kind === "content" &&
-        !!target.closest('[data-hg-canvas-role="lore-faction"][data-lore-variant="v4"]');
+        !!target.closest(
+          '[data-hg-canvas-role="lore-faction"][data-lore-variant="v4"]'
+        );
       if (inLoreFactionArchive091Canvas) {
         if (target.closest("[data-expand-btn='true']")) {
           return;
@@ -11002,7 +13274,9 @@ export function ArchitecturalCanvasApp({
 
       const editableWithinNode =
         isEditableTarget(event.target) ||
-        !!target.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']");
+        !!target.closest(
+          "input, textarea, select, [contenteditable='true'], [contenteditable='']"
+        );
       if (editableWithinNode) {
         if (node?.kind === "content" && node.theme !== "media") {
           openFocusMode(id);
@@ -11011,8 +13285,12 @@ export function ArchitecturalCanvasApp({
       }
 
       const header = target.closest(`.${styles.nodeHeader}`);
-      if (!header) return;
-      if (id) openFocusMode(id);
+      if (!header) {
+        return;
+      }
+      if (id) {
+        openFocusMode(id);
+      }
     };
 
     document.addEventListener("mousedown", onMouseDown);
@@ -11040,16 +13318,24 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (paletteOpenRef.current || lorePanelOpenRef.current) return;
-      if (event.code !== "Space") return;
-      if (isEditableTarget(event.target)) return;
+      if (paletteOpenRef.current || lorePanelOpenRef.current) {
+        return;
+      }
+      if (event.code !== "Space") {
+        return;
+      }
+      if (isEditableTarget(event.target)) {
+        return;
+      }
       event.preventDefault();
       spacePanRef.current = true;
       setSpacePanning(true);
     };
 
     const onKeyUp = (event: KeyboardEvent) => {
-      if (event.code !== "Space") return;
+      if (event.code !== "Space") {
+        return;
+      }
       spacePanRef.current = false;
       setSpacePanning(false);
     };
@@ -11064,14 +13350,21 @@ export function ArchitecturalCanvasApp({
 
   const deleteEntitySelection = useCallback(
     (entityIds: string[]) => {
-      if (entityIds.length === 0) return;
+      if (entityIds.length === 0) {
+        return;
+      }
       let idsToRemove: string[] = [];
       let spaceRoots: string[] = [];
-      let moveOps: ReturnType<typeof collectFolderPopOutPlan>["entityMoves"] = [];
-      let reparentOps: ReturnType<typeof collectFolderPopOutPlan>["spaceReparents"] = [];
+      let moveOps: ReturnType<typeof collectFolderPopOutPlan>["entityMoves"] =
+        [];
+      let reparentOps: ReturnType<
+        typeof collectFolderPopOutPlan
+      >["spaceReparents"] = [];
       recordUndoBeforeMutation();
       setGraph((prev) => {
-        const folderIds = entityIds.filter((id) => prev.entities[id]?.kind === "folder");
+        const folderIds = entityIds.filter(
+          (id) => prev.entities[id]?.kind === "folder"
+        );
         const popOutPlan = collectFolderPopOutPlan(prev, folderIds);
         const graphAfterPopOut = applyFolderPopOutPlan(prev, popOutPlan);
         const closure = collectDeletionClosure(graphAfterPopOut, entityIds);
@@ -11080,16 +13373,20 @@ export function ArchitecturalCanvasApp({
         spaceRoots = filterSpaceDeletionRoots(spaceIds, graphAfterPopOut);
         const idsToRemoveSet = new Set(idsToRemove);
         const spaceIdsToRemoveSet = new Set(spaceIds);
-        moveOps = popOutPlan.entityMoves.filter((move) => !idsToRemoveSet.has(move.entityId));
+        moveOps = popOutPlan.entityMoves.filter(
+          (move) => !idsToRemoveSet.has(move.entityId)
+        );
         reparentOps = popOutPlan.spaceReparents.filter(
-          (reparent) => !spaceIdsToRemoveSet.has(reparent.spaceId),
+          (reparent) => !spaceIdsToRemoveSet.has(reparent.spaceId)
         );
         const next = applyFolderPopOutPlan(prev, popOutPlan);
         const entityIdsToDelete = new Set(idsToRemove);
         Object.values(next.spaces).forEach((space) => {
           next.spaces[space.id] = {
             ...space,
-            entityIds: space.entityIds.filter((id) => !entityIdsToDelete.has(id)),
+            entityIds: space.entityIds.filter(
+              (id) => !entityIdsToDelete.has(id)
+            ),
           };
         });
 
@@ -11119,22 +13416,32 @@ export function ArchitecturalCanvasApp({
         void (async () => {
           const moveResults = await Promise.all(
             moveOps.map(async (move) => {
-              if (!isUuidLike(move.entityId)) return true;
+              if (!isUuidLike(move.entityId)) {
+                return true;
+              }
               const result = await apiPatchItem(move.entityId, {
                 spaceId: move.toSpaceId,
                 x: move.newSlot.x,
                 y: move.newSlot.y,
               });
               return result.ok === true;
-            }),
+            })
           );
           const reparentResults = await Promise.all(
             reparentOps.map(async (reparent) => {
-              if (!isUuidLike(reparent.spaceId)) return true;
-              return apiPatchSpaceParent(reparent.spaceId, reparent.newParentId);
-            }),
+              if (!isUuidLike(reparent.spaceId)) {
+                return true;
+              }
+              return apiPatchSpaceParent(
+                reparent.spaceId,
+                reparent.newParentId
+              );
+            })
           );
-          if (moveResults.some((ok) => !ok) || reparentResults.some((ok) => !ok)) {
+          if (
+            moveResults.some((ok) => !ok) ||
+            reparentResults.some((ok) => !ok)
+          ) {
             neonSyncReportAuxiliaryFailure({
               operation: "folder delete pop-out persistence",
               message:
@@ -11145,15 +13452,19 @@ export function ArchitecturalCanvasApp({
           }
           await Promise.all(
             idsToRemove.map(async (id) => {
-              if (!isUuidLike(id)) return;
+              if (!isUuidLike(id)) {
+                return;
+              }
               await apiDeleteItem(id);
-            }),
+            })
           );
           await Promise.all(
             spaceRoots.map(async (sid) => {
-              if (!isUuidLike(sid)) return;
+              if (!isUuidLike(sid)) {
+                return;
+              }
               await apiDeleteSpaceSubtree(sid);
-            }),
+            })
           );
         })();
       }
@@ -11162,7 +13473,9 @@ export function ArchitecturalCanvasApp({
       pruneRecentItems(pruned);
       pruneRecentFolders(pruned);
 
-      setSelectedNodeIds((prev) => prev.filter((id) => !entityIds.includes(id)));
+      setSelectedNodeIds((prev) =>
+        prev.filter((id) => !entityIds.includes(id))
+      );
       if (activeNodeId && entityIds.includes(activeNodeId)) {
         setFocusOpen(false);
         setActiveNodeId(null);
@@ -11178,20 +13491,26 @@ export function ArchitecturalCanvasApp({
       pruneRecentFolders,
       pruneRecentItems,
       recordUndoBeforeMutation,
-    ],
+    ]
   );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (paletteOpenRef.current || lorePanelOpenRef.current) return;
-      if (event.key !== "Escape") return;
+      if (paletteOpenRef.current || lorePanelOpenRef.current) {
+        return;
+      }
+      if (event.key !== "Escape") {
+        return;
+      }
       const editId = loreCanvasBodyEditEntityId;
       if (editId && selectedNodeIdsRef.current.includes(editId)) {
         event.preventDefault();
         setLoreCanvasBodyEditEntityId(null);
         return;
       }
-      if (isEditableTarget(event.target)) return;
+      if (isEditableTarget(event.target)) {
+        return;
+      }
 
       if (galleryOpen) {
         event.preventDefault();
@@ -11247,15 +13566,27 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (paletteOpenRef.current || lorePanelOpenRef.current) return;
+      if (paletteOpenRef.current || lorePanelOpenRef.current) {
+        return;
+      }
       const isDeleteKey = event.key === "Delete" || event.key === "Backspace";
-      if (!isDeleteKey) return;
-      if (focusOpen || galleryOpen) return;
+      if (!isDeleteKey) {
+        return;
+      }
+      if (focusOpen || galleryOpen) {
+        return;
+      }
       const ids = selectedNodeIdsRef.current;
-      if (ids.length === 0) return;
+      if (ids.length === 0) {
+        return;
+      }
       const target = event.target;
       if (isEditableTarget(target)) {
-        if (!shouldAllowCanvasDeleteWhileEditableBodyFocused(target, ids, event)) return;
+        if (
+          !shouldAllowCanvasDeleteWhileEditableBodyFocused(target, ids, event)
+        ) {
+          return;
+        }
         event.preventDefault();
         event.stopPropagation();
       } else {
@@ -11271,8 +13602,16 @@ export function ArchitecturalCanvasApp({
 
   const onViewportPointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      if (!event.isPrimary) return;
-      if (focusOpenRef.current || galleryOpenRef.current || stackModalRef.current) return;
+      if (!event.isPrimary) {
+        return;
+      }
+      if (
+        focusOpenRef.current ||
+        galleryOpenRef.current ||
+        stackModalRef.current
+      ) {
+        return;
+      }
 
       // Middle mouse drag always pans (tool-agnostic), similar to design tools.
       if (event.button === 1) {
@@ -11288,8 +13627,12 @@ export function ArchitecturalCanvasApp({
       }
 
       // Left button drives select/lasso and normal pan-tool behavior.
-      if (event.button !== 0) return;
-      if (connectionMode !== "move") return;
+      if (event.button !== 0) {
+        return;
+      }
+      if (connectionMode !== "move") {
+        return;
+      }
 
       const target = event.target as HTMLElement;
       if (
@@ -11298,7 +13641,7 @@ export function ArchitecturalCanvasApp({
           viewportRef.current,
           styles.canvas,
           activeTool,
-          spacePanRef.current,
+          spacePanRef.current
         )
       ) {
         return;
@@ -11325,7 +13668,7 @@ export function ArchitecturalCanvasApp({
         y: event.clientY - ty,
       };
     },
-    [activeTool, connectionMode],
+    [activeTool, connectionMode]
   );
 
   /**
@@ -11335,7 +13678,9 @@ export function ArchitecturalCanvasApp({
    */
   useLayoutEffect(() => {
     const root = viewportRef.current;
-    if (!root) return;
+    if (!root) {
+      return;
+    }
 
     const onWheelNative = (event: WheelEvent) => {
       if (
@@ -11348,24 +13693,35 @@ export function ArchitecturalCanvasApp({
         return;
       }
       const target = wheelEventOriginHTMLElement(event);
-      if (!target) return;
+      if (!target) {
+        return;
+      }
 
       const scrollPort = nearestVerticalScrollportInViewport(target, root);
       const activeEl = document.activeElement as HTMLElement | null;
-      const editableRoot = target.closest<HTMLElement>("input, textarea, select, [contenteditable='true']");
+      const editableRoot = target.closest<HTMLElement>(
+        "input, textarea, select, [contenteditable='true']"
+      );
       const editableIsActivelyFocused =
         !!editableRoot &&
         !!activeEl &&
         (editableRoot === activeEl || editableRoot.contains(activeEl));
-      const bodyCanConsumeWheel = canScrollableBodyConsumeWheel(scrollPort, event);
+      const bodyCanConsumeWheel = canScrollableBodyConsumeWheel(
+        scrollPort,
+        event
+      );
 
       const pinchZoom = event.ctrlKey || event.metaKey;
-      if (!pinchZoom && editableIsActivelyFocused) return;
+      if (!pinchZoom && editableIsActivelyFocused) {
+        return;
+      }
       /*
        * Mouse + trackpad: defer to the browser when a nested scrollport can still move vertically.
        * Otherwise fall through to preventDefault + canvas pan/zoom (incl. scroll chaining at edges).
        */
-      if (!pinchZoom && bodyCanConsumeWheel) return;
+      if (!pinchZoom && bodyCanConsumeWheel) {
+        return;
+      }
 
       event.preventDefault();
       if (pinchZoom) {
@@ -11373,13 +13729,13 @@ export function ArchitecturalCanvasApp({
         const factor = Math.exp(-deltaPx * WHEEL_ZOOM_SENSITIVITY);
         const nextScale = Math.min(
           Math.max(MIN_ZOOM, viewRef.current.scale * factor),
-          MAX_ZOOM,
+          MAX_ZOOM
         );
         const rect = root.getBoundingClientRect();
         viewportWheelZoomRef.current(
           nextScale,
           event.clientX - rect.left,
-          event.clientY - rect.top,
+          event.clientY - rect.top
         );
         return;
       }
@@ -11400,26 +13756,45 @@ export function ArchitecturalCanvasApp({
    */
   useLayoutEffect(() => {
     const blockDocumentPinchWheel = (event: WheelEvent) => {
-      if (!event.ctrlKey && !event.metaKey) return;
+      if (!(event.ctrlKey || event.metaKey)) {
+        return;
+      }
       const t = event.target;
-      if (!(t instanceof Element)) return;
-      if (t.closest("input, textarea, select, [contenteditable='true'], [data-hg-allow-browser-zoom]")) {
+      if (!(t instanceof Element)) {
+        return;
+      }
+      if (
+        t.closest(
+          "input, textarea, select, [contenteditable='true'], [data-hg-allow-browser-zoom]"
+        )
+      ) {
         return;
       }
       event.preventDefault();
     };
 
-    window.addEventListener("wheel", blockDocumentPinchWheel, { capture: true, passive: false });
+    window.addEventListener("wheel", blockDocumentPinchWheel, {
+      capture: true,
+      passive: false,
+    });
 
     const blockSafariGestureZoom = (event: Event) => {
       event.preventDefault();
     };
-    document.addEventListener("gesturestart", blockSafariGestureZoom, { passive: false });
-    document.addEventListener("gesturechange", blockSafariGestureZoom, { passive: false });
-    document.addEventListener("gestureend", blockSafariGestureZoom, { passive: false });
+    document.addEventListener("gesturestart", blockSafariGestureZoom, {
+      passive: false,
+    });
+    document.addEventListener("gesturechange", blockSafariGestureZoom, {
+      passive: false,
+    });
+    document.addEventListener("gestureend", blockSafariGestureZoom, {
+      passive: false,
+    });
 
     return () => {
-      window.removeEventListener("wheel", blockDocumentPinchWheel, { capture: true });
+      window.removeEventListener("wheel", blockDocumentPinchWheel, {
+        capture: true,
+      });
       document.removeEventListener("gesturestart", blockSafariGestureZoom);
       document.removeEventListener("gesturechange", blockSafariGestureZoom);
       document.removeEventListener("gestureend", blockSafariGestureZoom);
@@ -11428,13 +13803,23 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (paletteOpenRef.current || lorePanelOpenRef.current) return;
-      const target = event.target as HTMLElement;
-      if (target?.isContentEditable) return;
-      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
+      if (paletteOpenRef.current || lorePanelOpenRef.current) {
         return;
       }
-      if (focusOpen || galleryOpen || stackModal) return;
+      const target = event.target as HTMLElement;
+      if (target?.isContentEditable) {
+        return;
+      }
+      if (
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT"
+      ) {
+        return;
+      }
+      if (focusOpen || galleryOpen || stackModal) {
+        return;
+      }
 
       const key = event.key;
       if (key === "=" || key === "+" || key === "NumpadAdd") {
@@ -11459,22 +13844,40 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (paletteOpenRef.current || lorePanelOpenRef.current) return;
-      const target = event.target as HTMLElement;
-      if (target?.isContentEditable) return;
-      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
+      if (paletteOpenRef.current || lorePanelOpenRef.current) {
         return;
       }
-      if (focusOpen || galleryOpen) return;
+      const target = event.target as HTMLElement;
+      if (target?.isContentEditable) {
+        return;
+      }
+      if (
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT"
+      ) {
+        return;
+      }
+      if (focusOpen || galleryOpen) {
+        return;
+      }
       const mod = event.metaKey || event.ctrlKey;
-      if (!mod) return;
-      if (event.key.toLowerCase() !== "z") return;
+      if (!mod) {
+        return;
+      }
+      if (event.key.toLowerCase() !== "z") {
+        return;
+      }
       event.preventDefault();
       if (event.shiftKey) {
-        if (undoFutureRef.current.length === 0) return;
+        if (undoFutureRef.current.length === 0) {
+          return;
+        }
         redo();
       } else {
-        if (undoPastRef.current.length === 0) return;
+        if (undoPastRef.current.length === 0) {
+          return;
+        }
         undo();
       }
       playVigilUiSound("tap");
@@ -11485,11 +13888,19 @@ export function ArchitecturalCanvasApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (paletteOpenRef.current || lorePanelOpenRef.current) return;
+      if (paletteOpenRef.current || lorePanelOpenRef.current) {
+        return;
+      }
       const target = event.target as HTMLElement | null;
-      if (isEditableTarget(target)) return;
-      if (focusOpen || galleryOpen || stackModal) return;
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (isEditableTarget(target)) {
+        return;
+      }
+      if (focusOpen || galleryOpen || stackModal) {
+        return;
+      }
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
 
       const key = event.key.toLowerCase();
 
@@ -11519,13 +13930,19 @@ export function ArchitecturalCanvasApp({
         setActiveTool("select");
         if (resolved === "move") {
           const restore = selectionBeforeConnectionModeRef.current;
-          if (restore) setSelectedNodeIds(restore.filter((id) => !!graphRef.current.entities[id]));
+          if (restore) {
+            setSelectedNodeIds(
+              restore.filter((id) => !!graphRef.current.entities[id])
+            );
+          }
           selectionBeforeConnectionModeRef.current = null;
           setConnectionSourceId(null);
           setConnectionCursorWorld(null);
         } else {
           if (!selectionBeforeConnectionModeRef.current) {
-            selectionBeforeConnectionModeRef.current = [...selectedNodeIdsRef.current];
+            selectionBeforeConnectionModeRef.current = [
+              ...selectedNodeIdsRef.current,
+            ];
           }
           setSelectedNodeIds([]);
         }
@@ -11538,13 +13955,19 @@ export function ArchitecturalCanvasApp({
         setActiveTool("select");
         if (resolved === "move") {
           const restore = selectionBeforeConnectionModeRef.current;
-          if (restore) setSelectedNodeIds(restore.filter((id) => !!graphRef.current.entities[id]));
+          if (restore) {
+            setSelectedNodeIds(
+              restore.filter((id) => !!graphRef.current.entities[id])
+            );
+          }
           selectionBeforeConnectionModeRef.current = null;
           setConnectionSourceId(null);
           setConnectionCursorWorld(null);
         } else {
           if (!selectionBeforeConnectionModeRef.current) {
-            selectionBeforeConnectionModeRef.current = [...selectedNodeIdsRef.current];
+            selectionBeforeConnectionModeRef.current = [
+              ...selectedNodeIdsRef.current,
+            ];
           }
           setSelectedNodeIds([]);
         }
@@ -11563,7 +13986,9 @@ export function ArchitecturalCanvasApp({
         return;
       }
       if (key === "3") {
-        if (isRestrictedLayer) return;
+        if (isRestrictedLayer) {
+          return;
+        }
         event.preventDefault();
         createNewNode("media");
         return;
@@ -11596,32 +14021,56 @@ export function ArchitecturalCanvasApp({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [connectionMode, createNewNode, focusOpen, galleryOpen, isRestrictedLayer, stackModal]);
+  }, [
+    connectionMode,
+    createNewNode,
+    focusOpen,
+    galleryOpen,
+    isRestrictedLayer,
+    stackModal,
+  ]);
 
   const resolveRichTextFormatTarget = useCallback((): HTMLElement | null => {
     const shell = shellRef.current;
-    if (!shell) return null;
+    if (!shell) {
+      return null;
+    }
 
     const activeEl = document.activeElement as Element | null;
     const fromCaret = resolveProseCommandTarget(shell, activeEl);
-    if (fromCaret) return fromCaret;
+    if (fromCaret) {
+      return fromCaret;
+    }
 
     if (galleryOpenRef.current && activeNodeIdRef.current) {
-      const gallery = shell.querySelector<HTMLElement>('[data-architectural-media-gallery-notes="true"]');
+      const gallery = shell.querySelector<HTMLElement>(
+        '[data-architectural-media-gallery-notes="true"]'
+      );
       return gallery ? resolveProseCommandTarget(shell, gallery) : null;
     }
     if (focusOpenRef.current && activeNodeIdRef.current) {
-      const focusBody = shell.querySelector<HTMLElement>('[data-focus-body-editor="true"]');
+      const focusBody = shell.querySelector<HTMLElement>(
+        '[data-focus-body-editor="true"]'
+      );
       return focusBody ? resolveProseCommandTarget(shell, focusBody) : null;
     }
     const ids = selectedNodeIdsRef.current;
-    if (ids.length !== 1) return null;
-    const entity = graphRef.current.entities[ids[0]!];
-    if (!entity || entity.kind !== "content") return null;
-    if (entity.theme !== "default" && entity.theme !== "task" && entity.theme !== "code")
+    if (ids.length !== 1) {
       return null;
+    }
+    const entity = graphRef.current.entities[ids[0]!];
+    if (!entity || entity.kind !== "content") {
+      return null;
+    }
+    if (
+      entity.theme !== "default" &&
+      entity.theme !== "task" &&
+      entity.theme !== "code"
+    ) {
+      return null;
+    }
     const nodeBody = shell.querySelector<HTMLElement>(
-      `[data-node-id="${ids[0]!}"] [data-node-body-editor="true"]`,
+      `[data-node-id="${ids[0]!}"] [data-node-body-editor="true"]`
     );
     return nodeBody ? resolveProseCommandTarget(shell, nodeBody) : null;
   }, []);
@@ -11636,19 +14085,23 @@ export function ArchitecturalCanvasApp({
       return !!entity && entity.kind === "content" && entity.theme !== "media";
     }
     const ids = selectedNodeIdsRef.current;
-    if (ids.length !== 1) return false;
+    if (ids.length !== 1) {
+      return false;
+    }
     const entity = graphRef.current.entities[ids[0]!];
     return (
       !!entity &&
       entity.kind === "content" &&
-      (entity.theme === "default" || entity.theme === "task" || entity.theme === "code")
+      (entity.theme === "default" ||
+        entity.theme === "task" ||
+        entity.theme === "code")
     );
   }, []);
 
   const refreshTextFormatChrome = useCallback(() => {
     const shell = shellRef.current;
     const ae = document.activeElement;
-    if (!shell || !ae || !(ae instanceof Node) || !shell.contains(ae)) {
+    if (!(shell && ae && ae instanceof Node && shell.contains(ae))) {
       setTextFormatChromeActive(false);
       setRichDocInsertChromeActive(false);
       setFormatCommandState({
@@ -11664,7 +14117,11 @@ export function ArchitecturalCanvasApp({
     }
     const hgKey = findHgDocSurfaceKeyFromSelection();
     const hgApi = hgKey ? getHgDocEditor(hgKey) : null;
-    if (hgApi && ae instanceof HTMLElement && ae.closest("[data-hg-doc-editor]")) {
+    if (
+      hgApi &&
+      ae instanceof HTMLElement &&
+      ae.closest("[data-hg-doc-editor]")
+    ) {
       setTextFormatChromeActive(true);
       setRichDocInsertChromeActive(true);
       setFormatCommandState(hgApi.getFormatState());
@@ -11692,7 +14149,9 @@ export function ArchitecturalCanvasApp({
       strikeThrough: document.queryCommandState("strikeThrough"),
       unorderedList: document.queryCommandState("insertUnorderedList"),
       orderedList: document.queryCommandState("insertOrderedList"),
-      blockTag: normalizeFormatBlockTag(document.queryCommandValue("formatBlock")),
+      blockTag: normalizeFormatBlockTag(
+        document.queryCommandValue("formatBlock")
+      ),
     });
   }, []);
 
@@ -11713,7 +14172,7 @@ export function ArchitecturalCanvasApp({
     const onSelectionChange = () => {
       const shell = shellRef.current;
       const selection = window.getSelection();
-      if (!shell || !selection || selection.rangeCount < 1) {
+      if (!(shell && selection) || selection.rangeCount < 1) {
         lastFormatRangeRef.current = null;
         refreshTextFormatChrome();
         return;
@@ -11722,7 +14181,13 @@ export function ArchitecturalCanvasApp({
       const anchor = range.commonAncestorContainer;
       const anchorEl =
         anchor instanceof HTMLElement ? anchor : anchor.parentElement;
-      if (!anchorEl || !shell.contains(anchorEl) || !isTextFormattingToolbarTarget(anchorEl)) {
+      if (
+        !(
+          anchorEl &&
+          shell.contains(anchorEl) &&
+          isTextFormattingToolbarTarget(anchorEl)
+        )
+      ) {
         lastFormatRangeRef.current = null;
         refreshTextFormatChrome();
         return;
@@ -11731,15 +14196,23 @@ export function ArchitecturalCanvasApp({
       refreshTextFormatChrome();
     };
     document.addEventListener("selectionchange", onSelectionChange);
-    return () => document.removeEventListener("selectionchange", onSelectionChange);
+    return () =>
+      document.removeEventListener("selectionchange", onSelectionChange);
   }, [refreshTextFormatChrome]);
 
   const runHgDocFormat = useCallback(
-    (command: string, value: string | undefined, target: HTMLElement | null): boolean => {
-      if (command === "arch:insertImage") return false;
+    (
+      command: string,
+      value: string | undefined,
+      target: HTMLElement | null
+    ): boolean => {
+      if (command === "arch:insertImage") {
+        return false;
+      }
       const hgKeyFromTarget =
-        target?.closest<HTMLElement>("[data-hg-doc-surface]")?.getAttribute("data-hg-doc-surface") ??
-        null;
+        target
+          ?.closest<HTMLElement>("[data-hg-doc-surface]")
+          ?.getAttribute("data-hg-doc-surface") ?? null;
       const hgKey = findHgDocSurfaceKeyFromSelection() ?? hgKeyFromTarget;
       const hgApi = hgKey ? getHgDocEditor(hgKey) : null;
       if (hgApi?.runFormat(command, value)) {
@@ -11747,10 +14220,12 @@ export function ArchitecturalCanvasApp({
         return true;
       }
       // Structural routing rule: never fall back to legacy execCommand in hgDoc surfaces.
-      if (target?.closest("[data-hg-doc-editor]")) return true;
+      if (target?.closest("[data-hg-doc-editor]")) {
+        return true;
+      }
       return false;
     },
-    [refreshTextFormatChrome],
+    [refreshTextFormatChrome]
   );
 
   const runLegacyFormat = useCallback(
@@ -11761,8 +14236,12 @@ export function ArchitecturalCanvasApp({
       const restoreSelection = (el: HTMLElement | null) => {
         const selection = window.getSelection();
         const saved = lastFormatRangeRef.current;
-        if (!selection || !saved || !el) return false;
-        if (!isNodeWithin(el, saved.commonAncestorContainer)) return false;
+        if (!(selection && saved && el)) {
+          return false;
+        }
+        if (!isNodeWithin(el, saved.commonAncestorContainer)) {
+          return false;
+        }
         selection.removeAllRanges();
         selection.addRange(saved);
         return true;
@@ -11774,37 +14253,50 @@ export function ArchitecturalCanvasApp({
       }
 
       // hgDoc owns structured block semantics; legacy surfaces keep only minimal inline formatting.
-      if (command === "arch:checklist") return;
+      if (command === "arch:checklist") {
+        return;
+      }
 
       document.execCommand(command, false, value);
       dispatchInput(execTarget);
       refreshTextFormatChrome();
     },
-    [refreshTextFormatChrome],
+    [refreshTextFormatChrome]
   );
 
   const runFormat = useCallback(
     (command: string, value?: string) => {
       const shell = shellRef.current;
-      if (!shell) return;
+      if (!shell) {
+        return;
+      }
 
       const target = resolveRichTextFormatTarget();
 
       if (command === "arch:insertImage") {
-        if (!canInsertImageAtCurrentTarget()) return;
+        if (!canInsertImageAtCurrentTarget()) {
+          return;
+        }
         if (focusOpenRef.current && activeNodeIdRef.current) {
           queueMediaUploadPick({ mode: "focus", id: activeNodeIdRef.current });
         } else {
           const ids = selectedNodeIdsRef.current;
-          const entity = ids.length === 1 ? graphRef.current.entities[ids[0]!] : null;
-          if (!entity || entity.kind !== "content") return;
+          const entity =
+            ids.length === 1 ? graphRef.current.entities[ids[0]!] : null;
+          if (!entity || entity.kind !== "content") {
+            return;
+          }
           queueMediaUploadPick({ mode: "canvas", id: entity.id });
         }
         return;
       }
 
-      if (runHgDocFormat(command, value, target)) return;
-      if (!target) return;
+      if (runHgDocFormat(command, value, target)) {
+        return;
+      }
+      if (!target) {
+        return;
+      }
       runLegacyFormat(command, value, target);
     },
     [
@@ -11813,19 +14305,34 @@ export function ArchitecturalCanvasApp({
       queueMediaUploadPick,
       runHgDocFormat,
       runLegacyFormat,
-    ],
+    ]
   );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (galleryOpenRef.current) return;
+      if (galleryOpenRef.current) {
+        return;
+      }
       const mod = event.metaKey || event.ctrlKey;
-      if (!mod || event.altKey) return;
+      if (!mod || event.altKey) {
+        return;
+      }
       const key = event.key.toLowerCase();
-      const command = key === "b" ? "bold" : key === "i" ? "italic" : key === "u" ? "underline" : null;
-      if (!command) return;
+      const command =
+        key === "b"
+          ? "bold"
+          : key === "i"
+            ? "italic"
+            : key === "u"
+              ? "underline"
+              : null;
+      if (!command) {
+        return;
+      }
       const target = event.target as HTMLElement | null;
-      if (!target || !isTextFormattingToolbarTarget(target)) return;
+      if (!(target && isTextFormattingToolbarTarget(target))) {
+        return;
+      }
       event.preventDefault();
       runFormat(command);
     };
@@ -11847,15 +14354,25 @@ export function ArchitecturalCanvasApp({
 
   const handleViewportContextMenuCapture = useCallback(
     (event: React.MouseEvent) => {
-      if (focusOpen || galleryOpen || stackModal) return;
+      if (focusOpen || galleryOpen || stackModal) {
+        return;
+      }
       const target = event.target as HTMLElement;
-      if (target.closest("[data-connection-id]")) return;
-      if (isEditableTarget(target)) return;
-      if (target.closest("[contenteditable='true']")) return;
+      if (target.closest("[data-connection-id]")) {
+        return;
+      }
+      if (isEditableTarget(target)) {
+        return;
+      }
+      if (target.closest("[contenteditable='true']")) {
+        return;
+      }
 
       const nodeHost = target.closest<HTMLElement>("[data-node-id]");
       const nodeId = nodeHost?.dataset.nodeId;
-      const stackHost = target.closest<HTMLElement>("[data-stack-container='true']");
+      const stackHost = target.closest<HTMLElement>(
+        "[data-stack-container='true']"
+      );
       const stackId = stackHost?.dataset.stackId;
 
       let hitIds: string[] | null = null;
@@ -11866,21 +14383,30 @@ export function ArchitecturalCanvasApp({
           .filter((e) => e.stackId === stackId)
           .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0))
           .map((e) => e.id);
-        if (members.length > 0) hitIds = members;
+        if (members.length > 0) {
+          hitIds = members;
+        }
       }
 
       if (!hitIds || hitIds.length < 1) {
-        if (target.closest("[data-node-id]") || target.closest("[data-stack-container='true']")) return;
+        if (
+          target.closest("[data-node-id]") ||
+          target.closest("[data-stack-container='true']")
+        ) {
+          return;
+        }
         const inCanvas = target.closest("[data-vigil-canvas='true']");
-        if (!inCanvas) return;
+        if (!inCanvas) {
+          return;
+        }
         event.preventDefault();
         event.stopPropagation();
         setSelectionContextMenu(null);
         setCanvasEmptyContextMenu(
           clampContextMenuPosition(
             { x: event.clientX, y: event.clientY },
-            { maxWidth: 280, maxHeight: 400, edgePadding: 8 },
-          ),
+            { maxWidth: 280, maxHeight: 400, edgePadding: 8 }
+          )
         );
         setSelectedNodeIds([]);
         return;
@@ -11893,20 +14419,32 @@ export function ArchitecturalCanvasApp({
       setSelectionContextMenu(
         clampContextMenuPosition(
           { x: event.clientX, y: event.clientY },
-          { maxWidth: 236, maxHeight: 280, edgePadding: 8 },
-        ),
+          { maxWidth: 236, maxHeight: 280, edgePadding: 8 }
+        )
       );
     },
-    [focusOpen, galleryOpen, stackModal, activeSpaceEntities, activeSpaceEntityIds],
+    [
+      focusOpen,
+      galleryOpen,
+      stackModal,
+      activeSpaceEntities,
+      activeSpaceEntityIds,
+    ]
   );
 
   const duplicateSelectedEntities = useCallback(() => {
-    const ids = selectedNodeIdsRef.current.filter((id) => activeSpaceEntityIds.includes(id));
-    if (ids.length === 0) return;
+    const ids = selectedNodeIdsRef.current.filter((id) =>
+      activeSpaceEntityIds.includes(id)
+    );
+    if (ids.length === 0) {
+      return;
+    }
     const spaceId = activeSpaceIdRef.current;
     const prev = graphRef.current;
     const space = prev.spaces[spaceId];
-    if (!space) return;
+    if (!space) {
+      return;
+    }
 
     type PlanEntry =
       | { kind: "content"; nid: string; fromId: string }
@@ -11915,9 +14453,13 @@ export function ArchitecturalCanvasApp({
     const plan: PlanEntry[] = [];
     for (const id of ids) {
       const e = prev.entities[id];
-      if (!e) continue;
+      if (!e) {
+        continue;
+      }
       const slot = e.slots[spaceId];
-      if (!slot) continue;
+      if (!slot) {
+        continue;
+      }
       if (e.kind === "content") {
         plan.push({ kind: "content", nid: createId(), fromId: id });
       } else {
@@ -11929,20 +14471,28 @@ export function ArchitecturalCanvasApp({
         });
       }
     }
-    if (plan.length === 0) return;
+    if (plan.length === 0) {
+      return;
+    }
 
     recordUndoBeforeMutation();
     setGraph((p) => {
       const next = shallowCloneGraph(p);
       const sp = next.spaces[spaceId];
-      if (!sp) return p;
+      if (!sp) {
+        return p;
+      }
       const newIds: string[] = [];
       const delta = 36;
       for (const entry of plan) {
         const e = p.entities[entry.fromId];
-        if (!e) continue;
+        if (!e) {
+          continue;
+        }
         const slot = e.slots[spaceId];
-        if (!slot) continue;
+        if (!slot) {
+          continue;
+        }
         newIds.push(entry.nid);
         if (entry.kind === "content" && e.kind === "content") {
           next.entities[entry.nid] = {
@@ -11985,8 +14535,12 @@ export function ArchitecturalCanvasApp({
   }, [createId, recordUndoBeforeMutation, activeSpaceEntityIds]);
 
   const alignSelectedInGrid = useCallback(() => {
-    const ids = selectedNodeIdsRef.current.filter((id) => activeSpaceEntityIds.includes(id));
-    if (ids.length < 2) return;
+    const ids = selectedNodeIdsRef.current.filter((id) =>
+      activeSpaceEntityIds.includes(id)
+    );
+    if (ids.length < 2) {
+      return;
+    }
     const spaceId = activeSpaceIdRef.current;
     recordUndoBeforeMutation();
     const cellW = 380;
@@ -11998,23 +14552,33 @@ export function ArchitecturalCanvasApp({
       const sorted = [...ids].sort((a, b) => {
         const sa = next.entities[a]?.slots[spaceId];
         const sb = next.entities[b]?.slots[spaceId];
-        if (!sa || !sb) return 0;
-        if (Math.abs(sa.y - sb.y) > 8) return sa.y - sb.y;
+        if (!(sa && sb)) {
+          return 0;
+        }
+        if (Math.abs(sa.y - sb.y) > 8) {
+          return sa.y - sb.y;
+        }
         return sa.x - sb.x;
       });
       let ox = Number.POSITIVE_INFINITY;
       let oy = Number.POSITIVE_INFINITY;
       sorted.forEach((id) => {
         const s = next.entities[id]?.slots[spaceId];
-        if (!s) return;
+        if (!s) {
+          return;
+        }
         ox = Math.min(ox, s.x);
         oy = Math.min(oy, s.y);
       });
-      if (!Number.isFinite(ox) || !Number.isFinite(oy)) return prev;
+      if (!(Number.isFinite(ox) && Number.isFinite(oy))) {
+        return prev;
+      }
       const cols = Math.max(1, Math.ceil(Math.sqrt(sorted.length)));
       sorted.forEach((id, i) => {
         const e = next.entities[id];
-        if (!e) return;
+        if (!e) {
+          return;
+        }
         const col = i % cols;
         const row = Math.floor(i / cols);
         next.entities[id] = {
@@ -12035,49 +14599,72 @@ export function ArchitecturalCanvasApp({
 
   const stackSelectionUi = useMemo(
     () => getStackSelectionState(graph, activeSpaceId, selectedNodeIds),
-    [graph, activeSpaceId, selectedNodeIds],
+    [graph, activeSpaceId, selectedNodeIds]
   );
 
-  const unstackWhollySelectedStacks = useCallback((selectionOverride?: readonly string[]) => {
-    const g = graphRef.current;
-    const spaceId = activeSpaceIdRef.current;
-    const rawSelection = selectionOverride ?? selectedNodeIdsRef.current;
-    const { whollySelectedStackIds } = getStackSelectionState(g, spaceId, rawSelection);
-    if (whollySelectedStackIds.length === 0) return;
-    const memberIds: string[] = [];
-    for (const sid of whollySelectedStackIds) {
-      const members = Object.values(g.entities)
-        .filter(
-          (e): e is Extract<CanvasEntity, { kind: "content" }> =>
-            e.kind === "content" && e.stackId === sid,
-        )
-        .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0));
-      memberIds.push(...members.map((m) => m.id));
-    }
-    recordUndoBeforeMutation();
-    setGraph((prev) => {
-      let next = prev;
-      for (const stackId of whollySelectedStackIds) {
-        next = applyUnstackStackInSpace(next, stackId, spaceId);
+  const unstackWhollySelectedStacks = useCallback(
+    (selectionOverride?: readonly string[]) => {
+      const g = graphRef.current;
+      const spaceId = activeSpaceIdRef.current;
+      const rawSelection = selectionOverride ?? selectedNodeIdsRef.current;
+      const { whollySelectedStackIds } = getStackSelectionState(
+        g,
+        spaceId,
+        rawSelection
+      );
+      if (whollySelectedStackIds.length === 0) {
+        return;
       }
-      return next;
-    });
-    setSelectedNodeIds(memberIds);
-  }, [recordUndoBeforeMutation]);
+      const memberIds: string[] = [];
+      for (const sid of whollySelectedStackIds) {
+        const members = Object.values(g.entities)
+          .filter(
+            (e): e is Extract<CanvasEntity, { kind: "content" }> =>
+              e.kind === "content" && e.stackId === sid
+          )
+          .sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0));
+        memberIds.push(...members.map((m) => m.id));
+      }
+      recordUndoBeforeMutation();
+      setGraph((prev) => {
+        let next = prev;
+        for (const stackId of whollySelectedStackIds) {
+          next = applyUnstackStackInSpace(next, stackId, spaceId);
+        }
+        return next;
+      });
+      setSelectedNodeIds(memberIds);
+    },
+    [recordUndoBeforeMutation]
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (paletteOpenRef.current || lorePanelOpenRef.current) return;
-      const target = event.target as HTMLElement;
-      if (target?.isContentEditable) return;
-      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
+      if (paletteOpenRef.current || lorePanelOpenRef.current) {
         return;
       }
-      if (focusOpen || galleryOpen) return;
+      const target = event.target as HTMLElement;
+      if (target?.isContentEditable) {
+        return;
+      }
+      if (
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT"
+      ) {
+        return;
+      }
+      if (focusOpen || galleryOpen) {
+        return;
+      }
       const mod = event.metaKey || event.ctrlKey;
-      if (!mod) return;
+      if (!mod) {
+        return;
+      }
       const key = event.key.toLowerCase();
-      if (key === "z") return;
+      if (key === "z") {
+        return;
+      }
       if (key === "s") {
         event.preventDefault();
         if (selectedNodeIds.length === 1) {
@@ -12093,7 +14680,7 @@ export function ArchitecturalCanvasApp({
         const ui = getStackSelectionState(
           graphRef.current,
           activeSpaceIdRef.current,
-          selectedNodeIds,
+          selectedNodeIds
         );
         if (ui.canMergeStacks) {
           stackSelectedContent(selectedNodeIds);
@@ -12104,7 +14691,9 @@ export function ArchitecturalCanvasApp({
       }
       if (key === "u" && selectedNodeIds.length === 1) {
         const entity = graph.entities[selectedNodeIds[0]!];
-        if (!entity?.stackId) return;
+        if (!entity?.stackId) {
+          return;
+        }
         event.preventDefault();
         recordUndoBeforeMutation();
         setGraph((prev) => {
@@ -12135,7 +14724,9 @@ export function ArchitecturalCanvasApp({
 
   const copySelectedNodeId = useCallback(() => {
     const selectedId = selectedNodeIdsRef.current[0];
-    if (!selectedId) return;
+    if (!selectedId) {
+      return;
+    }
     void navigator.clipboard.writeText(selectedId).catch(() => {
       try {
         const ta = document.createElement("textarea");
@@ -12157,36 +14748,38 @@ export function ArchitecturalCanvasApp({
     () => [
       {
         label:
-          stackSelectionUi.whollySelectedStackIds.length >= 2 ? "Merge stacks" : "Create stack",
-        icon: <Stack size={18} weight="bold" aria-hidden />,
+          stackSelectionUi.whollySelectedStackIds.length >= 2
+            ? "Merge stacks"
+            : "Create stack",
+        icon: <Stack aria-hidden size={18} weight="bold" />,
         disabled: !stackSelectionUi.canMergeStacks,
         onSelect: () => stackSelectedContent(selectedNodeIds),
       },
       {
         label: "Unstack",
-        icon: <ArrowsOut size={18} weight="bold" aria-hidden />,
+        icon: <ArrowsOut aria-hidden size={18} weight="bold" />,
         disabled: !stackSelectionUi.canUnstackWhollySelected,
         onSelect: () => unstackWhollySelectedStacks(selectedNodeIds),
       },
       {
         label: "Align in grid",
-        icon: <SquaresFour size={18} weight="bold" aria-hidden />,
+        icon: <SquaresFour aria-hidden size={18} weight="bold" />,
         disabled: selectedNodeIds.length < 2,
         onSelect: () => alignSelectedInGrid(),
       },
       {
         label: "Delete",
-        icon: <Trash size={18} weight="bold" aria-hidden />,
+        icon: <Trash aria-hidden size={18} weight="bold" />,
         onSelect: () => deleteEntitySelection([...selectedNodeIdsRef.current]),
       },
       {
         label: "Copy",
-        icon: <CopySimple size={18} weight="bold" aria-hidden />,
+        icon: <CopySimple aria-hidden size={18} weight="bold" />,
         onSelect: () => duplicateSelectedEntities(),
       },
       {
         label: "Copy ID",
-        icon: <CopySimple size={18} weight="bold" aria-hidden />,
+        icon: <CopySimple aria-hidden size={18} weight="bold" />,
         disabled: selectedNodeIds.length !== 1,
         onSelect: copySelectedNodeId,
       },
@@ -12202,39 +14795,47 @@ export function ArchitecturalCanvasApp({
       stackSelectionUi.canUnstackWhollySelected,
       stackSelectionUi.whollySelectedStackIds.length,
       unstackWhollySelectedStacks,
-    ],
+    ]
   );
 
   const canvasEmptyContextMenuItems = useMemo<ContextMenuItem[]>(
     () => [
       {
         label: "Create character",
-        icon: <User size={18} weight="bold" aria-hidden />,
+        icon: <User aria-hidden size={18} weight="bold" />,
         onSelect: () => createNewNode("character"),
       },
       {
         label: "Create organization",
-        icon: <UsersThree size={18} weight="bold" aria-hidden />,
+        icon: <UsersThree aria-hidden size={18} weight="bold" />,
         onSelect: () => createNewNode("faction"),
       },
       {
         label: "Create location",
-        icon: <MapPin size={18} weight="bold" aria-hidden />,
+        icon: <MapPin aria-hidden size={18} weight="bold" />,
         onSelect: () => createNewNode("location"),
       },
     ],
-    [createNewNode],
+    [createNewNode]
   );
 
   const connectionContextMenuItems = useMemo<ContextMenuItem[]>(() => {
-    if (!selectedConnectionId) return [];
+    if (!selectedConnectionId) {
+      return [];
+    }
     const selected = graph.connections[selectedConnectionId];
-    if (!selected) return [];
-    const currentSlack = selected.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER;
+    if (!selected) {
+      return [];
+    }
+    const currentSlack =
+      selected.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER;
     const currentLt = selected.linkType ?? "pin";
     const sourceEntity = graph.entities[selected.sourceEntityId];
     const targetEntity = graph.entities[selected.targetEntityId];
-    const grouped = groupedOrderedLinkOptionsForEndpoints(sourceEntity, targetEntity);
+    const grouped = groupedOrderedLinkOptionsForEndpoints(
+      sourceEntity,
+      targetEntity
+    );
 
     const out: ContextMenuItem[] = [
       { type: "heading", label: "Thread" },
@@ -12259,7 +14860,7 @@ export function ArchitecturalCanvasApp({
         // Picker kinds render with their canonical color swatch so the right-click
         // menu visibly matches the thread-kind picker.
         const kindForOpt = CONNECTION_KINDS_IN_ORDER.find(
-          (k) => linkTypeForConnectionKind(k) === opt.value,
+          (k) => linkTypeForConnectionKind(k) === opt.value
         );
         const swatchIcon = kindForOpt ? (
           <span
@@ -12278,7 +14879,8 @@ export function ArchitecturalCanvasApp({
         out.push({
           label: `${currentLt === opt.value ? "✓ " : ""}${opt.menuLabel}`,
           icon: swatchIcon,
-          onSelect: () => setConnectionLinkType(selectedConnectionId, opt.value),
+          onSelect: () =>
+            setConnectionLinkType(selectedConnectionId, opt.value),
         });
       }
     }
@@ -12297,12 +14899,16 @@ export function ArchitecturalCanvasApp({
       const entity = graph.entities[activeNodeId];
       return !!entity && entity.kind === "content" && entity.theme !== "media";
     }
-    if (selectedNodeIds.length !== 1) return false;
+    if (selectedNodeIds.length !== 1) {
+      return false;
+    }
     const entity = graph.entities[selectedNodeIds[0]!];
     return (
       !!entity &&
       entity.kind === "content" &&
-      (entity.theme === "default" || entity.theme === "task" || entity.theme === "code")
+      (entity.theme === "default" ||
+        entity.theme === "task" ||
+        entity.theme === "code")
     );
   }, [activeNodeId, focusOpen, graph.entities, selectedNodeIds]);
 
@@ -12313,7 +14919,10 @@ export function ArchitecturalCanvasApp({
           return { ...action, disabled: !canInsertImage || isRestrictedLayer };
         }
         if (action.command === "formatBlock" && action.value === "blockquote") {
-          return { ...action, active: formatCommandState.blockTag === "blockquote" };
+          return {
+            ...action,
+            active: formatCommandState.blockTag === "blockquote",
+          };
         }
         if (action.command === "insertUnorderedList") {
           return { ...action, active: formatCommandState.unorderedList };
@@ -12329,7 +14938,7 @@ export function ArchitecturalCanvasApp({
       formatCommandState.orderedList,
       formatCommandState.unorderedList,
       isRestrictedLayer,
-    ],
+    ]
   );
 
   const dockCreateActions = useMemo(
@@ -12337,15 +14946,21 @@ export function ArchitecturalCanvasApp({
       isRestrictedLayer
         ? DEFAULT_CREATE_ACTIONS.filter((a) => a.nodeType !== "media")
         : DEFAULT_CREATE_ACTIONS,
-    [isRestrictedLayer],
+    [isRestrictedLayer]
   );
 
   const dockFormatActions = useMemo<DockFormatAction[]>(
     () =>
       DEFAULT_FORMAT_ACTIONS.map((action) => {
-        if (action.command === "bold") return { ...action, active: formatCommandState.bold };
-        if (action.command === "italic") return { ...action, active: formatCommandState.italic };
-        if (action.command === "underline") return { ...action, active: formatCommandState.underline };
+        if (action.command === "bold") {
+          return { ...action, active: formatCommandState.bold };
+        }
+        if (action.command === "italic") {
+          return { ...action, active: formatCommandState.italic };
+        }
+        if (action.command === "underline") {
+          return { ...action, active: formatCommandState.underline };
+        }
         if (action.command === "strikeThrough") {
           return { ...action, active: formatCommandState.strikeThrough };
         }
@@ -12363,11 +14978,13 @@ export function ArchitecturalCanvasApp({
         }
         return action;
       }),
-    [formatCommandState],
+    [formatCommandState]
   );
 
   useEffect(() => {
-    if (selectedNodeIds.length >= 1) return;
+    if (selectedNodeIds.length >= 1) {
+      return;
+    }
     setSelectionContextMenu((prev) => (prev === null ? prev : null));
   }, [selectedNodeIds.length]);
 
@@ -12380,10 +14997,18 @@ export function ArchitecturalCanvasApp({
   useEffect(() => {
     const onDocMouseDown = (event: MouseEvent) => {
       const t = event.target as HTMLElement | null;
-      if (!t) return;
-      if (t.closest("[data-hg-sync-popover='true']")) return;
-      if (t.closest("[data-connection-id]")) return;
-      if (connectionContextMenu) return;
+      if (!t) {
+        return;
+      }
+      if (t.closest("[data-hg-sync-popover='true']")) {
+        return;
+      }
+      if (t.closest("[data-connection-id]")) {
+        return;
+      }
+      if (connectionContextMenu) {
+        return;
+      }
       setSelectedConnectionId(null);
     };
     document.addEventListener("mousedown", onDocMouseDown);
@@ -12391,7 +15016,9 @@ export function ArchitecturalCanvasApp({
   }, [connectionContextMenu]);
 
   useEffect(() => {
-    if (selectedConnectionId) return;
+    if (selectedConnectionId) {
+      return;
+    }
     setConnectionContextMenu((prev) => (prev === null ? prev : null));
   }, [selectedConnectionId]);
 
@@ -12403,7 +15030,9 @@ export function ArchitecturalCanvasApp({
   }, [activeSpaceEntityIds]);
 
   useEffect(() => {
-    if (!activeNodeId) return;
+    if (!activeNodeId) {
+      return;
+    }
     if (!activeSpaceEntityIds.includes(activeNodeId)) {
       setFocusOpen(false);
       setActiveNodeId(null);
@@ -12413,7 +15042,7 @@ export function ArchitecturalCanvasApp({
   const { width: camVw, height: camVh } = viewportCssSizeForDefaultCamera(
     viewportRef.current,
     viewportSize.width,
-    viewportSize.height,
+    viewportSize.height
   );
   /** Viewport center in world space — same box as `defaultCamera` / recenter → 0,0. */
   const centerWorldX = Math.round((camVw / 2 - translateX) / scale);
@@ -12423,27 +15052,36 @@ export function ArchitecturalCanvasApp({
         .map((id) => graph.entities[id])
         .filter((entity): entity is CanvasEntity => !!entity)
     : [];
-  const stackModalVisibleEntities = stackModalEntities.slice(0, STACK_MODAL_MAX_ITEMS);
-  const stackModalHiddenCount = Math.max(0, stackModalEntities.length - stackModalVisibleEntities.length);
+  const stackModalVisibleEntities = stackModalEntities.slice(
+    0,
+    STACK_MODAL_MAX_ITEMS
+  );
+  const stackModalHiddenCount = Math.max(
+    0,
+    stackModalEntities.length - stackModalVisibleEntities.length
+  );
   const stackModalLayout = useMemo(
     () =>
       buildStackModalLayout(
         stackModalVisibleEntities.map((entity) => entity.id),
         viewportSize,
-        stackModalCardHeights,
+        stackModalCardHeights
       ),
-    [stackModalCardHeights, stackModalVisibleEntities, viewportSize],
+    [stackModalCardHeights, stackModalVisibleEntities, viewportSize]
   );
   const fanOriginX = stackModal ? stackModal.originX - 170 : 0;
   const fanOriginY = stackModal ? stackModal.originY - 95 : 0;
   const selectedVisibleIds = useMemo(
     () => selectedNodeIds.filter((id) => activeSpaceEntityIds.includes(id)),
-    [selectedNodeIds, activeSpaceEntityIds],
+    [selectedNodeIds, activeSpaceEntityIds]
   );
   const parentExitStripVisible =
-    !!parentSpaceId && (draggedNodeIds.length > 0 || selectedVisibleIds.length > 0);
+    !!parentSpaceId &&
+    (draggedNodeIds.length > 0 || selectedVisibleIds.length > 0);
   const parentExitInteractive = useMemo(() => {
-    if (!parentSpaceId) return false;
+    if (!parentSpaceId) {
+      return false;
+    }
     return (
       selectedVisibleIds.length > 0 &&
       selectedVisibleIds.every((id) => canMoveEntityToSpace(id, parentSpaceId))
@@ -12451,22 +15089,30 @@ export function ArchitecturalCanvasApp({
   }, [canMoveEntityToSpace, parentSpaceId, selectedVisibleIds]);
 
   const stackModalHull = useMemo(() => {
-    if (stackModalVisibleEntities.length === 0) return null;
+    if (stackModalVisibleEntities.length === 0) {
+      return null;
+    }
     let minX = Number.POSITIVE_INFINITY;
     let minY = Number.POSITIVE_INFINITY;
     let maxX = Number.NEGATIVE_INFINITY;
     let maxY = Number.NEGATIVE_INFINITY;
     stackModalVisibleEntities.forEach((entity) => {
       const slot = stackModalLayout[entity.id];
-      if (!slot) return;
+      if (!slot) {
+        return;
+      }
       const cardW = STACK_MODAL_CARD_W * slot.scale;
-      const cardH = (stackModalCardHeights[entity.id] ?? STACK_MODAL_CARD_H_ESTIMATE) * slot.scale;
+      const cardH =
+        (stackModalCardHeights[entity.id] ?? STACK_MODAL_CARD_H_ESTIMATE) *
+        slot.scale;
       minX = Math.min(minX, slot.x);
       minY = Math.min(minY, slot.y);
       maxX = Math.max(maxX, slot.x + cardW);
       maxY = Math.max(maxY, slot.y + cardH);
     });
-    if (!Number.isFinite(minX) || !Number.isFinite(minY)) return null;
+    if (!(Number.isFinite(minX) && Number.isFinite(minY))) {
+      return null;
+    }
     return {
       left: minX,
       top: minY,
@@ -12480,7 +15126,11 @@ export function ArchitecturalCanvasApp({
   const galleryEntity =
     galleryOpen && galleryNodeId ? graph.entities[galleryNodeId] : undefined;
   const galleryRaster = useMemo(() => {
-    if (!galleryEntity || galleryEntity.kind !== "content" || galleryEntity.theme !== "media") {
+    if (
+      !galleryEntity ||
+      galleryEntity.kind !== "content" ||
+      galleryEntity.theme !== "media"
+    ) {
       return { src: null as string | null, alt: "" };
     }
     return parseArchitecturalMediaFromBody(galleryEntity.bodyHtml);
@@ -12507,10 +15157,17 @@ export function ArchitecturalCanvasApp({
       return bootstrapOk;
     }
     return canvasSurfaceReady && bootstrapOk;
-  }, [canvasEffectsEnabled, canvasSurfaceReady, canvasBootstrapResolved, scenario]);
+  }, [
+    canvasEffectsEnabled,
+    canvasSurfaceReady,
+    canvasBootstrapResolved,
+    scenario,
+  ]);
 
   const viewportRevealReady = useMemo(() => {
-    if (scenario !== "default") return technicalViewportReady;
+    if (scenario !== "default") {
+      return technicalViewportReady;
+    }
     return technicalViewportReady && canvasSessionActivated;
   }, [scenario, technicalViewportReady, canvasSessionActivated]);
 
@@ -12528,12 +15185,16 @@ export function ArchitecturalCanvasApp({
 
     let rafId = 0;
     const runMeasure = () => {
-      if (typeof document === "undefined") return;
+      if (typeof document === "undefined") {
+        return;
+      }
       const g = graphRef.current;
       const spaceId = activeSpaceIdRef.current;
       const entityIds = g.spaces[spaceId]?.entityIds ?? [];
       if (entityIds.length === 0) {
-        setMinimapPlacementSizes((prev) => (prev.size === 0 ? prev : new Map()));
+        setMinimapPlacementSizes((prev) =>
+          prev.size === 0 ? prev : new Map()
+        );
         return;
       }
       const collapsed = buildCollapsedStacksList(g, spaceId);
@@ -12541,23 +15202,35 @@ export function ArchitecturalCanvasApp({
       const map = new Map<string, { width: number; height: number }>();
       for (const id of entityIds) {
         const e = g.entities[id];
-        if (!e) continue;
-        if (e.stackId && stackMulti.has(e.stackId)) continue;
+        if (!e) {
+          continue;
+        }
+        if (e.stackId && stackMulti.has(e.stackId)) {
+          continue;
+        }
         const m = measureArchitecturalNodePlacement(id, spaceId);
-        if (m) map.set(id, m);
+        if (m) {
+          map.set(id, m);
+        }
       }
       for (const cs of collapsed) {
         const m = measureArchitecturalNodePlacement(cs.top.id, spaceId);
-        if (m) map.set(cs.top.id, m);
+        if (m) {
+          map.set(cs.top.id, m);
+        }
       }
       setMinimapPlacementSizes((prev) => {
-        if (minimapPlacementMapsEqual(prev, map)) return prev;
+        if (minimapPlacementMapsEqual(prev, map)) {
+          return prev;
+        }
         return map;
       });
     };
 
     const scheduleMeasure = () => {
-      if (rafId !== 0) return;
+      if (rafId !== 0) {
+        return;
+      }
       rafId = requestAnimationFrame(() => {
         rafId = 0;
         runMeasure();
@@ -12567,13 +15240,17 @@ export function ArchitecturalCanvasApp({
     runMeasure();
 
     const root = canvasEntityLayerRef.current ?? viewportRef.current;
-    if (!root) return undefined;
+    if (!root) {
+      return;
+    }
 
     const esc =
       typeof CSS !== "undefined" && typeof CSS.escape === "function"
         ? CSS.escape(activeSpaceId)
         : activeSpaceId.replace(/"/g, '\\"');
-    const nodes = root.querySelectorAll<HTMLElement>(`[data-space-id="${esc}"][data-node-id]`);
+    const nodes = root.querySelectorAll<HTMLElement>(
+      `[data-space-id="${esc}"][data-node-id]`
+    );
 
     const ro = new ResizeObserver(() => {
       scheduleMeasure();
@@ -12623,11 +15300,9 @@ export function ArchitecturalCanvasApp({
   /** Same moment as top-left chrome after Enter — do not wait for boot tear-down / ambient fade. */
   const showLogOutToAuth = scenario === "default" && canvasSessionActivated;
 
-  const environmentSessionLabel = !heartgardenBootApi.loaded
-    ? "Session: detecting"
-    : !heartgardenBootApi.gateEnabled
-      ? "Session: GM (open gate)"
-      : heartgardenBootApi.sessionTier === "access"
+  const environmentSessionLabel = heartgardenBootApi.loaded
+    ? heartgardenBootApi.gateEnabled
+      ? heartgardenBootApi.sessionTier === "access"
         ? "Session: GM (access)"
         : heartgardenBootApi.sessionTier === "player"
           ? "Session: players"
@@ -12635,24 +15310,29 @@ export function ArchitecturalCanvasApp({
             ? "Session: demo"
             : heartgardenBootApi.sessionValid
               ? "Session: authenticated"
-              : "Session: unauthenticated";
+              : "Session: unauthenticated"
+      : "Session: GM (open gate)"
+    : "Session: detecting";
 
   const environmentSourceLabel =
-    scenario !== "default"
-      ? `Source: scenario (${scenario})`
-      : !canvasBootstrapResolved
-        ? "Source: bootstrapping"
-        : workspaceViewFromCache
+    scenario === "default"
+      ? canvasBootstrapResolved
+        ? workspaceViewFromCache
           ? "Source: local cache"
           : neonWorkspaceOk === true
             ? "Source: Neon live"
-            : heartgardenBootApi.gateEnabled && heartgardenBootApi.sessionTier === "demo"
+            : heartgardenBootApi.gateEnabled &&
+                heartgardenBootApi.sessionTier === "demo"
               ? "Source: demo local"
               : neonWorkspaceOk === false
                 ? "Source: unavailable"
-                : "Source: pending";
+                : "Source: pending"
+        : "Source: bootstrapping"
+      : `Source: scenario (${scenario})`;
 
-  const environmentSpaceLabel = activeSpaceId?.trim() ? activeSpaceId : ROOT_SPACE_ID;
+  const environmentSpaceLabel = activeSpaceId?.trim()
+    ? activeSpaceId
+    : ROOT_SPACE_ID;
 
   return (
     <>
@@ -12664,25 +15344,34 @@ export function ArchitecturalCanvasApp({
               ? ` (${itemConflictQueue.length - 1} more in queue)`
               : ""}
           </span>
-          <ArchitecturalButton type="button" size="menu" tone="glass" onClick={applyItemConflictFromServer}>
+          <ArchitecturalButton
+            onClick={applyItemConflictFromServer}
+            size="menu"
+            tone="glass"
+            type="button"
+          >
             Use server version
           </ArchitecturalButton>
-          <ArchitecturalButton type="button" size="menu" tone="glass" onClick={dismissConflictHead}>
+          <ArchitecturalButton
+            onClick={dismissConflictHead}
+            size="menu"
+            tone="glass"
+            type="button"
+          >
             Dismiss
           </ArchitecturalButton>
         </div>
       ) : null}
       {bootLayerVisible ? (
         <VigilAppBootScreen
-          technicalReady={technicalViewportReady}
-          flowerPortalContainer={bootFlowerPortalHost}
-          canvasEffectsEnabled={canvasEffectsEnabled}
-          onCanvasEffectsEnabledChange={handleCanvasEffectsEnabledChange}
           bootAmbientEpoch={bootAmbientEpoch}
           bootAmbientPrimePlaybackRef={bootAmbientPrimePlaybackRef}
-          bootGateEnabled={heartgardenBootApi.loaded && heartgardenBootApi.gateEnabled}
+          bootGateEnabled={
+            heartgardenBootApi.loaded && heartgardenBootApi.gateEnabled
+          }
           bootGateStatusReady={heartgardenBootApi.loaded}
-          serverConfigurationError={bootServerConfigurationError}
+          canvasEffectsEnabled={canvasEffectsEnabled}
+          flowerPortalContainer={bootFlowerPortalHost}
           onActivate={() => {
             if (!bootCelebrationPlayedRef.current) {
               bootCelebrationPlayedRef.current = true;
@@ -12700,8 +15389,12 @@ export function ArchitecturalCanvasApp({
             if (boot.loaded && boot.gateEnabled) {
               void (async () => {
                 try {
-                  const r = await fetch("/api/heartgarden/boot", { credentials: "include" });
-                  if (!r.ok) return;
+                  const r = await fetch("/api/heartgarden/boot", {
+                    credentials: "include",
+                  });
+                  if (!r.ok) {
+                    return;
+                  }
                   const d = (await r.json()) as HeartgardenBootStatusJson;
                   setHeartgardenBootApi(parseHeartgardenBootStatus(d));
                 } catch {
@@ -12710,2324 +15403,2971 @@ export function ArchitecturalCanvasApp({
               })();
             }
           }}
+          onCanvasEffectsEnabledChange={handleCanvasEffectsEnabledChange}
           onExitComplete={() => {
             setBootLayerDismissed(true);
             setBootAfterLogout(false);
           }}
+          serverConfigurationError={bootServerConfigurationError}
+          technicalReady={technicalViewportReady}
         />
       ) : null}
       <div
-        ref={shellRef}
         className={`${styles.shell} ${focusOpen || galleryOpen ? styles.shellBackdropBlurActive : ""} ${
           focusOpen ? styles.shellFocusDockBleed : ""
         }`}
+        ref={shellRef}
       >
-      <div
-        ref={setViewportNode}
-        className={`${styles.viewport} ${
-          viewportRevealReady ? styles.viewportSurfaceReady : styles.viewportSurfacePending
-        } ${activeSpaceId !== graph.rootSpaceId ? styles.deepSpace : ""}${
-          !canvasEffectsEnabled ? ` ${styles.viewportAmbientOff}` : ""
-        }${stackModal ? ` ${styles.viewportStackModalOpen}` : ""} ${
-          connectionMode !== "move" ? styles.viewportConnectionMode : ""
-        }${bootPreActivateGate ? ` ${styles.viewportBootNoGrid}` : ""}${
-          showWorkspaceBlockingOverlay ? ` ${styles.viewportDisconnectedNoData}` : ""
-        }`}
-        aria-busy={!viewportRevealReady}
-        data-vigil-canvas="true"
-        data-canvas-ready={viewportRevealReady ? "true" : "false"}
-        onPointerDownCapture={onViewportPointerDown}
-        onContextMenuCapture={handleViewportContextMenuCapture}
-        style={{
-          backgroundPosition: `${translateX}px ${translateY}px`,
-          ["--viewport-grid-scale" as string]: String(scale),
-          ["--connection-cursor" as string]:
-            connectionMode === "cut"
-              ? CONNECTION_CUT_CURSOR
-              : connectionMode === "draw" && connectionSourceId
-                ? "copy"
-                : CONNECTION_DRAW_CURSOR,
-          cursor: isPanning
-            ? "grabbing"
-            : connectionMode === "draw"
-              ? connectionSourceId
-                ? "copy"
-                : CONNECTION_DRAW_CURSOR
-              : connectionMode === "cut"
+        <div
+          aria-busy={!viewportRevealReady}
+          className={`${styles.viewport} ${
+            viewportRevealReady
+              ? styles.viewportSurfaceReady
+              : styles.viewportSurfacePending
+          } ${activeSpaceId === graph.rootSpaceId ? "" : styles.deepSpace}${
+            canvasEffectsEnabled ? "" : ` ${styles.viewportAmbientOff}`
+          }${stackModal ? ` ${styles.viewportStackModalOpen}` : ""} ${
+            connectionMode === "move" ? "" : styles.viewportConnectionMode
+          }${bootPreActivateGate ? ` ${styles.viewportBootNoGrid}` : ""}${
+            showWorkspaceBlockingOverlay
+              ? ` ${styles.viewportDisconnectedNoData}`
+              : ""
+          }`}
+          data-canvas-ready={viewportRevealReady ? "true" : "false"}
+          data-vigil-canvas="true"
+          onContextMenuCapture={handleViewportContextMenuCapture}
+          onPointerDownCapture={onViewportPointerDown}
+          ref={setViewportNode}
+          style={{
+            backgroundPosition: `${translateX}px ${translateY}px`,
+            ["--viewport-grid-scale" as string]: String(scale),
+            ["--connection-cursor" as string]:
+              connectionMode === "cut"
                 ? CONNECTION_CUT_CURSOR
-            : activeTool === "pan" || spacePanning
-              ? "grab"
-              : "default",
-        }}
-      >
-        <div
-          data-vigil-scene-layer="true"
-          className={`${styles.viewportSceneLayer} ${
-            !canvasEffectsEnabled ? styles.viewportSceneLayerInstant : ""
-          } ${
-            viewportRevealReady && !navTransitionActive
-              ? styles.viewportSceneLayerVisible
-              : styles.viewportSceneLayerDimmed
-          }`}
-          aria-hidden={!viewportRevealReady || navTransitionActive}
-        >
-        <div
-          ref={canvasTransformRef}
-          className={`${styles.canvas}${
-            draggedNodeIds.length > 0 ? ` ${styles.canvasDraggingConnections}` : ""
-          }`}
-          style={{ transform: `translate(${translateX}px, ${translateY}px) scale(${scale})` }}
+                : connectionMode === "draw" && connectionSourceId
+                  ? "copy"
+                  : CONNECTION_DRAW_CURSOR,
+            cursor: isPanning
+              ? "grabbing"
+              : connectionMode === "draw"
+                ? connectionSourceId
+                  ? "copy"
+                  : CONNECTION_DRAW_CURSOR
+                : connectionMode === "cut"
+                  ? CONNECTION_CUT_CURSOR
+                  : activeTool === "pan" || spacePanning
+                    ? "grab"
+                    : "default",
+          }}
         >
           <div
-            ref={canvasEntityLayerRef}
-            className={`${styles.canvasEntityLayer}${
-              connectionMode === "cut" ? ` ${styles.canvasEntityLayerCutDim}` : ""
+            aria-hidden={!viewportRevealReady || navTransitionActive}
+            className={`${styles.viewportSceneLayer} ${
+              canvasEffectsEnabled ? "" : styles.viewportSceneLayerInstant
+            } ${
+              viewportRevealReady && !navTransitionActive
+                ? styles.viewportSceneLayerVisible
+                : styles.viewportSceneLayerDimmed
             }`}
+            data-vigil-scene-layer="true"
           >
-          {visibleStandaloneEntities.map((entity) => {
-            const slot = entity.slots[activeSpaceId] ?? { x: 0, y: 0 };
-            const draggedIndex = draggedNodeIds.indexOf(entity.id);
-            const dragged = draggedIndex >= 0;
-            const dropPreview = dragged && !!hoveredFolderId;
-            const selected = selectedNodeIds.includes(entity.id);
-            const isConnectionSource = connectionSourceId === entity.id;
-            const folderCount =
-              entity.kind === "folder"
-                ? graph.spaces[entity.childSpaceId]?.entityIds.length ?? 0
-                : 0;
-            const previewTitles = entity.kind === "folder" ? folderPreviewTitles(entity, graph) : [];
-            return (
+            <div
+              className={`${styles.canvas}${
+                draggedNodeIds.length > 0
+                  ? ` ${styles.canvasDraggingConnections}`
+                  : ""
+              }`}
+              ref={canvasTransformRef}
+              style={{
+                transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
+              }}
+            >
               <div
-                key={entity.id}
-                data-node-id={entity.id}
-                data-space-id={activeSpaceId}
-                data-stack-target={entity.kind === "content" ? "true" : undefined}
-                className={`${styles.nodePlacement} ${hoveredStackTargetId === entity.id ? styles.stackDropTarget : ""} ${
-                  isConnectionSource ? styles.nodeConnectionSource : ""
+                className={`${styles.canvasEntityLayer}${
+                  connectionMode === "cut"
+                    ? ` ${styles.canvasEntityLayerCutDim}`
+                    : ""
                 }`}
-                style={{
-                  left: `${slot.x}px`,
-                  top: `${slot.y}px`,
-                  transform: `rotate(${entity.rotation}deg) scale(${dropPreview ? 0.92 : 1})`,
-                  zIndex: dragged ? maxZIndex + draggedIndex : nodeZ.get(entity.id),
-                }}
+                ref={canvasEntityLayerRef}
               >
-                {hoveredStackTargetId === entity.id ? <div className={styles.nodeStackHoverFrame} /> : null}
-                {entity.kind === "content" ? (
-                  shouldRenderLoreCharacterCredentialCanvasNode(entity) ? (
-                    <ArchitecturalLoreCharacterCanvasNode
-                      id={entity.id}
-                      width={entity.width}
-                      tapeVariant={tapeVariantForLoreCard("character", entity.loreCard?.variant ?? "v11")}
-                      tapeRotation={entity.tapeRotation}
-                      bodyHtml={canonicalizeCharacterBodyHtml(entity, entity.bodyHtml)}
-                      activeTool={activeTool}
-                      dragged={dragged}
-                      selected={selected}
-                      bodyEditable={activeTool === "select" && loreCanvasBodyEditEntityId === entity.id}
-                      onRequestCanvasBodyEdit={() => setLoreCanvasBodyEditEntityId(entity.id)}
-                      onBodyCommit={updateNodeBody}
-                      onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
-                      wikiLinkAssist={makeWikiLinkAssist(entity.id)}
-                      onRichDocCommand={
-                        entity.theme === "default" || entity.theme === "task"
-                          ? (command, value) => runFormat(command, value)
-                          : undefined
-                      }
-                      emptyPlaceholder={
-                        entity.theme === "default" || entity.theme === "task"
-                          ? "Write here, or type / for blocks…"
-                          : undefined
-                      }
-                    />
-                  ) : shouldRenderLoreLocationCanvasNode(entity) ? (
-                    <ArchitecturalLoreLocationCanvasNode
-                      id={entity.id}
-                      width={entity.width}
-                      tapeRotation={entity.tapeRotation}
-                      bodyHtml={entity.bodyHtml}
-                      activeTool={activeTool}
-                      dragged={dragged}
-                      selected={selected}
-                      showStaple={!entity.stackId}
-                      onBodyCommit={updateNodeBody}
-                      onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
-                      wikiLinkAssist={makeWikiLinkAssist(entity.id)}
-                      onRichDocCommand={
-                        entity.theme === "default" || entity.theme === "task"
-                          ? (command, value) => runFormat(command, value)
-                          : undefined
-                      }
-                      emptyPlaceholder={
-                        entity.theme === "default" || entity.theme === "task"
-                          ? "Write here, or type / for blocks…"
-                          : undefined
-                      }
-                    />
-                  ) : shouldRenderLoreFactionArchive091CanvasNode(entity) ? (
-                    <ArchitecturalLoreFactionArchiveCanvasNode
-                      id={entity.id}
-                      width={entity.width}
-                      tapeVariant={tapeVariantForLoreCard("faction", entity.loreCard?.variant ?? "v4")}
-                      tapeRotation={entity.tapeRotation}
-                      bodyHtml={canonicalizeFactionBodyHtml(entity, entity.bodyHtml)}
-                      factionRoster={entity.factionRoster ?? []}
-                      activeTool={activeTool}
-                      dragged={dragged}
-                      selected={selected}
-                      showTape={!entity.stackId}
-                      onBodyCommit={updateNodeBody}
-                      onFactionRosterChange={updateFactionRoster}
-                      onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
-                      wikiLinkAssist={makeWikiLinkAssist(entity.id)}
-                      onRichDocCommand={
-                        entity.theme === "default" || entity.theme === "task"
-                          ? (command, value) => runFormat(command, value)
-                          : undefined
-                      }
-                      emptyPlaceholder={
-                        entity.theme === "default" || entity.theme === "task"
-                          ? "Write here, or type / for blocks…"
-                          : undefined
-                      }
-                    />
-                  ) : (
-                    <ArchitecturalNodeCard
-                      id={entity.id}
-                      title={entity.title}
-                      width={entity.width}
-                      theme={entity.theme}
-                      tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
-                      tapeRotation={entity.tapeRotation}
-                      bodyHtml={entity.bodyHtml}
-                      bodyDoc={entity.bodyDoc ?? null}
-                      activeTool={activeTool}
-                      dragged={dragged}
-                      selected={selected}
-                      showTape={!entity.stackId}
-                      onBodyCommit={handleNodeBodyCommit}
-                      onExpand={handleNodeExpand}
-                      onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
-                      canvasPanZoomScale={scale}
-                      useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
-                      wikiLinkAssist={makeWikiLinkAssist(entity.id)}
-                      onRichDocCommand={
-                        entity.theme === "default" || entity.theme === "task"
-                          ? (command, value) => runFormat(command, value)
-                          : undefined
-                      }
-                      emptyPlaceholder={
-                        entity.theme === "default" || entity.theme === "task"
-                          ? "Write here, or type / for blocks…"
-                          : undefined
-                      }
-                      loreCard={entity.loreCard}
-                      factionRoster={entity.loreCard?.kind === "faction" ? entity.factionRoster : undefined}
-                    />
-                  )
-                ) : (
-                  <ArchitecturalFolderCard
-                    id={entity.id}
-                    title={entity.title}
-                    itemCount={folderCount}
-                    previewTitles={previewTitles}
-                    dragOver={hoveredFolderId === entity.id}
-                    selected={selected}
-                    folderColorScheme={entity.folderColorScheme}
-                    onTitleCommit={(title) => renameFolder(entity.id, title)}
-                    onOpen={() => openFolder(entity.id)}
-                  />
-                )}
-              </div>
-            );
-          })}
-          {visibleCollapsedStacks.map(({ stackId, entities, top }) => {
-            if (stackModal?.stackId === stackId) return null;
-            const slot = top.slots[activeSpaceId] ?? { x: 0, y: 0 };
-            const selected = entities.some((entity) => selectedNodeIds.includes(entity.id));
-            const draggingStack = entities.some((entity) => draggedNodeIds.includes(entity.id));
-            const z = draggingStack
-              ? maxZIndex + 1
-              : Math.max(...entities.map((entity) => nodeZ.get(entity.id) ?? 1)) + 1;
-            const focusBounds = selected ? stackFocusBoundsById[stackId] ?? null : null;
-            const hoverBounds = hoveredStackTargetId === top.id ? stackHoverBoundsById[stackId] ?? null : null;
-            return (
-              <div
-                key={stackId}
-                data-stack-container="true"
-                data-stack-id={stackId}
-                data-stack-target="true"
-                data-stack-top-id={top.id}
-                className={`${styles.stackContainer} ${hoveredStackTargetId === top.id ? styles.stackDropTarget : ""}`}
-                style={{
-                  left: `${slot.x}px`,
-                  top: `${slot.y}px`,
-                  zIndex: z,
-                }}
-              >
-                {focusBounds ? (
-                  <div
-                    className={styles.stackFocusBounds}
-                    style={{
-                      left: focusBounds.left,
-                      top: focusBounds.top,
-                      width: focusBounds.width,
-                      height: focusBounds.height,
-                    }}
-                  />
-                ) : null}
-                {hoverBounds ? (
-                  <div
-                    className={styles.stackHoverBounds}
-                    style={{
-                      left: hoverBounds.left,
-                      top: hoverBounds.top,
-                      width: hoverBounds.width,
-                      height: hoverBounds.height,
-                    }}
-                  />
-                ) : null}
-                {entities.map((entity, index) => {
-                  const isTopStackLayer = index === entities.length - 1;
+                {visibleStandaloneEntities.map((entity) => {
+                  const slot = entity.slots[activeSpaceId] ?? { x: 0, y: 0 };
+                  const draggedIndex = draggedNodeIds.indexOf(entity.id);
+                  const dragged = draggedIndex >= 0;
+                  const dropPreview = dragged && !!hoveredFolderId;
+                  const selected = selectedNodeIds.includes(entity.id);
+                  const isConnectionSource = connectionSourceId === entity.id;
+                  const folderCount =
+                    entity.kind === "folder"
+                      ? (graph.spaces[entity.childSpaceId]?.entityIds.length ??
+                        0)
+                      : 0;
+                  const previewTitles =
+                    entity.kind === "folder"
+                      ? folderPreviewTitles(entity, graph)
+                      : [];
                   return (
-                  <div
-                    key={entity.id}
-                    data-node-id={entity.id}
-                    data-space-id={activeSpaceId}
-                    data-stack-layer="true"
-                    className={`${styles.stackLayer} ${isTopStackLayer ? styles.stackLayerTopInteractive : ""}`}
-                    style={{
-                      "--stack-x": `${index * 6}px`,
-                      "--stack-y": `${index * 6}px`,
-                      "--stack-r": `${(index - (entities.length - 1) / 2) * 1.6}deg`,
-                    } as React.CSSProperties}
-                    onMouseDown={
-                      isTopStackLayer
-                        ? (event) => {
-                            if (
-                              event.button !== 0 ||
-                              activeTool !== "select" ||
-                              connectionMode !== "move"
-                            )
-                              return;
-                            const t = event.target as HTMLElement;
-                            if (t.closest("[data-expand-btn='true']")) return;
-                            event.stopPropagation();
-                            recordUndoBeforeMutation();
-                            const mouseCanvasX = (event.clientX - translateX) / scale;
-                            const mouseCanvasY = (event.clientY - translateY) / scale;
-                            const offsets: Record<string, { x: number; y: number }> = {};
-                            entities.forEach((e) => {
-                              const entitySlot = e.slots[activeSpaceId];
-                              if (!entitySlot) return;
-                              offsets[e.id] = {
-                                x: mouseCanvasX - entitySlot.x,
-                                y: mouseCanvasY - entitySlot.y,
-                              };
-                            });
-                            dragOffsetsRef.current = offsets;
-                            draggedNodeIdsRef.current = entities.map((e) => e.id);
-                            setDraggedNodeIds(entities.map((e) => e.id));
-                            setSelectedNodeIds(entities.map((e) => e.id));
-                            dragPointerScreenRef.current = { x: event.clientX, y: event.clientY };
-                            setMaxZIndex((prev) => prev + 1);
-                            stackPointerDragRef.current = {
-                              stackId,
-                              startX: event.clientX,
-                              startY: event.clientY,
-                              moved: false,
-                            };
-                          }
-                        : undefined
-                    }
-                    onClick={
-                      isTopStackLayer
-                        ? (event) => {
-                            if (connectionMode !== "move") return;
-                            event.stopPropagation();
-                            const t = event.target as HTMLElement;
-                            if (t.closest("[data-expand-btn='true']")) return;
-                            const suppressed = suppressStackOpenRef.current;
-                            if (suppressed) {
-                              if (Date.now() > suppressed.expiresAt) {
-                                suppressStackOpenRef.current = null;
-                              } else if (suppressed.stackId === stackId) {
-                                suppressStackOpenRef.current = null;
-                                return;
-                              }
-                            }
-                            if (draggedNodeIdsRef.current.length > 0) return;
-                            const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
-                            setStackModalEjectCount(0);
-                            setHoveredStackTargetId(null);
-                            setStackModal({
-                              stackId,
-                              orderedIds: [...entities].reverse().map((e) => e.id),
-                              originX: rect.left + rect.width / 2,
-                              originY: rect.top + rect.height / 2,
-                              anchorWorld: { x: slot.x, y: slot.y },
-                              stackScreenLeft: rect.left,
-                              stackScreenTop: rect.top,
-                            });
-                          }
-                        : undefined
-                    }
-                  >
-                    {entity.kind === "content" ? (
-                      shouldRenderLoreCharacterCredentialCanvasNode(entity) ? (
-                        <ArchitecturalLoreCharacterCanvasNode
-                          id={entity.id}
-                          width={entity.width}
-                          tapeVariant={tapeVariantForLoreCard("character", entity.loreCard?.variant ?? "v11")}
-                          tapeRotation={entity.tapeRotation}
-                          bodyHtml={canonicalizeCharacterBodyHtml(entity, entity.bodyHtml)}
-                          activeTool={activeTool}
-                          dragged={draggingStack}
-                          selected={false}
-                          bodyEditable={false}
-                          onBodyCommit={updateNodeBody}
-                          onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
-                          wikiLinkAssist={makeWikiLinkAssist(entity.id)}
-                          onRichDocCommand={
-                            entity.theme === "default" || entity.theme === "task"
-                              ? (command, value) => runFormat(command, value)
-                              : undefined
-                          }
-                          emptyPlaceholder={
-                            entity.theme === "default" || entity.theme === "task"
-                              ? "Write here, or type / for blocks…"
-                              : undefined
-                          }
-                        />
-                      ) : shouldRenderLoreLocationCanvasNode(entity) ? (
-                        <ArchitecturalLoreLocationCanvasNode
-                          id={entity.id}
-                          width={entity.width}
-                          tapeRotation={entity.tapeRotation}
-                          bodyHtml={entity.bodyHtml}
-                          activeTool={activeTool}
-                          dragged={draggingStack}
-                          selected={false}
-                          showStaple={!entity.stackId}
-                          bodyEditable={false}
-                          onBodyCommit={updateNodeBody}
-                          onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
-                          wikiLinkAssist={makeWikiLinkAssist(entity.id)}
-                          onRichDocCommand={
-                            entity.theme === "default" || entity.theme === "task"
-                              ? (command, value) => runFormat(command, value)
-                              : undefined
-                          }
-                          emptyPlaceholder={
-                            entity.theme === "default" || entity.theme === "task"
-                              ? "Write here, or type / for blocks…"
-                              : undefined
-                          }
-                        />
-                      ) : shouldRenderLoreFactionArchive091CanvasNode(entity) ? (
-                        <ArchitecturalLoreFactionArchiveCanvasNode
-                          id={entity.id}
-                          width={entity.width}
-                          tapeVariant={tapeVariantForLoreCard("faction", entity.loreCard?.variant ?? "v4")}
-                          tapeRotation={entity.tapeRotation}
-                          bodyHtml={canonicalizeFactionBodyHtml(entity, entity.bodyHtml)}
-                          factionRoster={entity.factionRoster ?? []}
-                          activeTool={activeTool}
-                          dragged={draggingStack}
-                          selected={false}
-                          showTape={!entity.stackId}
-                          bodyEditable={false}
-                          onBodyCommit={updateNodeBody}
-                          onFactionRosterChange={updateFactionRoster}
-                          onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
-                          wikiLinkAssist={makeWikiLinkAssist(entity.id)}
-                          onRichDocCommand={
-                            entity.theme === "default" || entity.theme === "task"
-                              ? (command, value) => runFormat(command, value)
-                              : undefined
-                          }
-                          emptyPlaceholder={
-                            entity.theme === "default" || entity.theme === "task"
-                              ? "Write here, or type / for blocks…"
-                              : undefined
-                          }
-                        />
-                      ) : (
-                        <ArchitecturalNodeCard
-                          id={entity.id}
-                          title={entity.title}
-                          width={entity.width}
-                          theme={entity.theme}
-                          tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
-                          tapeRotation={entity.tapeRotation}
-                          bodyHtml={entity.bodyHtml}
-                          bodyDoc={entity.bodyDoc ?? null}
-                          activeTool={activeTool}
-                          dragged={draggingStack}
-                          selected={false}
-                          showTape={!entity.stackId}
-                          onBodyCommit={handleNodeBodyCommit}
-                          onExpand={handleNodeExpand}
-                          bodyEditable={false}
-                          canvasPanZoomScale={scale}
-                          useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
-                          loreCard={entity.loreCard}
-                          factionRoster={entity.loreCard?.kind === "faction" ? entity.factionRoster : undefined}
-                        />
-                      )
-                    ) : (
-                      <ArchitecturalFolderCard
-                        id={entity.id}
-                        title={entity.title}
-                        itemCount={graph.spaces[entity.childSpaceId]?.entityIds.length ?? 0}
-                        previewTitles={folderPreviewTitles(entity, graph)}
-                        dragOver={false}
-                        selected={false}
-                        folderColorScheme={entity.folderColorScheme}
-                        onTitleCommit={(title) => renameFolder(entity.id, title)}
-                        onOpen={() => openFolder(entity.id)}
-                      />
-                    )}
-                  </div>
-                );
-                })}
-                <div className={styles.stackCountBadge}>{entities.length}</div>
-              </div>
-            );
-          })}
-          </div>
-          <svg
-            ref={connectionLayerSvgRef}
-            className={styles.connectionLayer}
-            viewBox="0 0 10000 10000"
-            aria-hidden
-          >
-            {connectionMode === "draw" && connectionSourceId && connectionCursorWorld
-              ? (() => {
-                  const sourceEntity = graph.entities[connectionSourceId];
-                  if (!sourceEntity) return null;
-                  const sourcePin = resolveConnectionPin(
-                    connectionSourceId,
-                    sourceEntity.kind === "folder"
-                      ? CONNECTION_PIN_DEFAULT_FOLDER
-                      : CONNECTION_PIN_DEFAULT_CONTENT,
-                    activeSpaceId,
-                    graph,
-                    connectionPinView,
-                  );
-                  if (!sourcePin) return null;
-                  const cx = (sourcePin.x + connectionCursorWorld.x) / 2;
-                  const cy = (sourcePin.y + connectionCursorWorld.y) / 2;
-                  return (
-                    <g>
-                      <path
-                        d={`M ${sourcePin.x} ${sourcePin.y} Q ${cx} ${cy}, ${connectionCursorWorld.x} ${connectionCursorWorld.y}`}
-                        className={`${styles.connectionStroke} ${styles.connectionStrokePreview}`}
-                        style={{ stroke: connectionColor }}
-                      />
-                      <circle
-                        cx={sourcePin.x}
-                        cy={sourcePin.y}
-                        r={4.5}
-                        className={styles.connectionPin}
-                        style={{ fill: connectionColor }}
-                      />
-                    </g>
-                  );
-                })()
-              : null}
-            {visibleActiveSpaceConnections.map((connection) => {
-              const sourcePin = resolveConnectionPin(
-                connection.sourceEntityId,
-                connection.sourcePin,
-                activeSpaceId,
-                graph,
-                connectionPinView,
-              );
-              const targetPin = resolveConnectionPin(
-                connection.targetEntityId,
-                connection.targetPin,
-                activeSpaceId,
-                graph,
-                connectionPinView,
-              );
-              if (!sourcePin || !targetPin) return null;
-              /** Placeholder only; rope sim writes `d` imperatively (see rAF `step`). */
-              const pathD = "M 0 0";
-              const isCut = connectionMode === "cut";
-              return (
-                <g key={connection.id} data-connection-id={connection.id}>
-                  {!isCut ? (
-                    <path
-                      d={pathD}
-                      className={styles.connectionHitStroke}
-                      data-connection-id={connection.id}
-                      onMouseDown={(event) => {
-                        if (event.button !== 0) return;
-                        event.stopPropagation();
-                      }}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        setSelectedConnectionId(connection.id);
-                      }}
-                      onContextMenu={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        setSelectedConnectionId(connection.id);
-                        setConnectionContextMenu(
-                          clampContextMenuPosition(
-                            { x: event.clientX, y: event.clientY },
-                            { maxWidth: 280, maxHeight: 680, edgePadding: 8 },
-                          ),
-                        );
-                      }}
-                    />
-                  ) : null}
-                  <path
-                    d={pathD}
-                    className={`${styles.connectionStroke} ${
-                      isCut ? styles.connectionStrokeCuttable : ""
-                    } ${selectedConnectionId === connection.id ? styles.connectionStrokeSelected : ""}`}
-                    style={{ stroke: connection.color }}
-                    data-connection-id={connection.id}
-                    onMouseDown={(event) => {
-                      if (!isCut) return;
-                      event.preventDefault();
-                      event.stopPropagation();
-                      cutConnection(connection.id);
-                    }}
-                    onClick={(event) => {
-                      if (isCut) return;
-                      event.preventDefault();
-                      event.stopPropagation();
-                      setSelectedConnectionId(connection.id);
-                    }}
-                    onContextMenu={(event) => {
-                      if (!isCut) return;
-                      event.preventDefault();
-                      event.stopPropagation();
-                      setSelectedConnectionId(connection.id);
-                      setConnectionContextMenu(
-                        clampContextMenuPosition(
-                          { x: event.clientX, y: event.clientY },
-                          { maxWidth: 280, maxHeight: 680, edgePadding: 8 },
-                        ),
-                      );
-                    }}
-                  />
-                  <circle
-                    cx={sourcePin.x}
-                    cy={sourcePin.y}
-                    r={4.5}
-                    className={styles.connectionPin}
-                    style={{ fill: connection.color }}
-                  />
-                  <circle
-                    cx={targetPin.x}
-                    cy={targetPin.y}
-                    r={4.5}
-                    className={styles.connectionPin}
-                    style={{ fill: connection.color }}
-                  />
-                </g>
-              );
-            })}
-          </svg>
-          {collabNeonActive ? (
-            <ArchitecturalRemotePresenceCursors
-              peers={presencePeers.filter((p) => p.activeSpaceId === activeSpaceId)}
-              prefersReducedMotion={prefersReducedMotion}
-              nameplateEnabled={presenceIdentityEnabled}
-            />
-          ) : null}
-        </div>
-        </div>
-        {/*
-         * Boot flowers portaled here only — sibling **before** VigilFlowRevealOverlay so the WebGL
-         * ambient stack (z ~92) composites above pixel blooms (this host z ~36), not under them.
-         */}
-        <div ref={setBootFlowerPortalNode} className={styles.bootFlowerPortalHost} aria-hidden />
-        {canvasEffectsEnabled ? (
-          <VigilFlowRevealOverlay
-            scenario={scenario}
-            sessionActivated={scenario !== "default" || canvasSessionActivated}
-            navActive={navTransitionActive}
-            bootstrapPending={scenario === "default" && !canvasBootstrapResolved}
-          />
-        ) : null}
-        {showWorkspaceBlockingOverlay ? (
-          <WorkspaceBootstrapErrorPanel errorSummary={bootstrapErrorSummary} />
-        ) : null}
-        <div
-          className={`${styles.chromeLayer}${bootPreActivateGate ? ` ${styles.chromeLayerBootSuppressed}` : ""}`}
-          style={{ right: graphOverlayOpen ? graphPanelWidth : 0 }}
-        >
-        {parentSpaceId ? (
-          <ArchitecturalParentExitThreshold
-            ref={parentDropRef}
-            toolbarBottomPx={0}
-            visible={parentExitStripVisible}
-            hovered={parentDropHovered}
-            interactive={parentExitInteractive}
-            onActivate={moveSelectionToParent}
-          />
-        ) : null}
-
-        {!bootPreActivateGate ? (
-          <div
-            key={`hg-ce-fx-${chromeEnterEpoch}`}
-            className={`${styles.focusEffectsEnterHost}${
-              chromeEntranceOn ? ` ${styles.chromeEnterBottomLeft}` : ""
-            }`}
-          >
-            <ArchitecturalCanvasEffectsToggle
-              effectsEnabled={canvasEffectsEnabled}
-              onEffectsEnabledChange={handleCanvasEffectsEnabledChange}
-              trailingSlot={
-                !bootLayerVisible ? (
-                  <>
-                    <div className={styles.focusEffectsDockSep} aria-hidden />
-                    <VigilAppChromeAudioMuteButton />
-                  </>
-                ) : null
-              }
-            />
-          </div>
-        ) : null}
-        <div
-          key={`hg-ce-metrics-${chromeEnterEpoch}`}
-          className={`${styles.viewportMetricsEnterHost}${
-            chromeEntranceOn ? ` ${styles.chromeEnterBottomRight}` : ""
-          }`}
-        >
-          <div className={styles.viewportMetricsCluster}>
-            {minimapOpen &&
-            !focusOpen &&
-            !galleryOpen &&
-            !stackModal &&
-            viewportRevealReady ? (
-              <div className={styles.viewportMetricsMinimapAbove}>
-                <CanvasMinimap
-                  graph={graph}
-                  layoutSignature={minimapLayoutKey}
-                  activeSpaceId={activeSpaceId}
-                  collapsedStacks={collapsedStacks as CollapsedStackInfo[]}
-                  translateX={translateX}
-                  translateY={translateY}
-                  scale={scale}
-                  viewportWidth={camVw}
-                  viewportHeight={camVh}
-                  selectedNodeIds={selectedNodeIds}
-                  minZoom={MIN_ZOOM}
-                  maxZoom={MAX_ZOOM}
-                  onPanWorldDelta={onMinimapPanWorldDelta}
-                  onCenterOnWorld={onMinimapCenterOnWorld}
-                  onFitAll={applyFitAllToViewport}
-                  placementSizes={minimapPlacementSizes}
-                  metricsDockWidth
-                />
-              </div>
-            ) : null}
-            <ArchitecturalViewportMetrics
-              centerWorldX={centerWorldX}
-              centerWorldY={centerWorldY}
-              scale={scale}
-              minimapOpen={minimapOpen}
-              onToggleMinimap={toggleMinimapOpen}
-            />
-          </div>
-        </div>
-        {!focusOpen && !galleryOpen ? (
-          <div
-            key={`hg-ce-dock-${chromeEnterEpoch}`}
-            className={`${styles.bottomDockEnterHost}${
-              chromeEntranceOn ? ` ${styles.chromeEnterBottomCenter}` : ""
-            }`}
-          >
-            <ArchitecturalBottomDock
-              showFormatToolbar={textFormatChromeActive}
-              showDocInsertCluster={richDocInsertChromeActive}
-              insertDocActions={dockInsertActions}
-              formatActions={dockFormatActions}
-              createActions={dockCreateActions}
-              createDisabled={dockCreateDisabledBySyncError}
-              createDisabledReason={dockCreateSyncDisabledHint}
-              activeBlockTag={formatCommandState.blockTag}
-              onFormat={runFormat}
-              onCreateNode={createNewNode}
-              onUndo={undoFromDock}
-              onRedo={redoFromDock}
-              canUndo={canUndo}
-              canRedo={canRedo}
-              undoLabel={`Undo (${modKeyHints.undo})`}
-              redoLabel={`Redo (${modKeyHints.redo})`}
-              folderColorPicker={folderColorPickerForDock}
-              selectionDelete={{
-                selectedCount: selectedNodeIds.length,
-                onDelete: () => deleteEntitySelection([...selectedNodeIdsRef.current]),
-              }}
-              selectionStack={{
-                canMerge: stackSelectionUi.canMergeStacks,
-                onMerge: () => stackSelectedContent(selectedNodeIds),
-                mergeTitle:
-                  stackSelectionUi.whollySelectedStackIds.length >= 2
-                    ? `Merge stacks (${modKeyHints.stack})`
-                    : `Create stack (${modKeyHints.stack})`,
-                canUnstack: stackSelectionUi.canUnstackWhollySelected,
-                onUnstack: () => unstackWhollySelectedStacks(selectedNodeIds),
-                unstackTitle: "Unstack",
-              }}
-            />
-          </div>
-        ) : null}
-
-        <div
-          key={`hg-ce-rail-${chromeEnterEpoch}`}
-          className={`${styles.toolRailEnterShell}${
-            chromeEntranceOn ? ` ${styles.chromeEnterRightRail}` : ""
-          }`}
-        >
-          <ArchitecturalToolRail
-            activeTool={activeTool}
-            onSetTool={(tool) => {
-              setActiveTool(tool);
-              setConnectionMode("move");
-              setConnectionSourceId(null);
-              setConnectionCursorWorld(null);
-              selectionBeforeConnectionModeRef.current = null;
-            }}
-            connectionMode={connectionMode}
-            onSetConnectionMode={(next) => {
-              const resolved = connectionMode === next ? "move" : next;
-              setConnectionMode(resolved);
-              setActiveTool("select");
-              setDraggedNodeIds([]);
-              draggedNodeIdsRef.current = [];
-              lassoStartRef.current = null;
-              lassoPointerIdRef.current = null;
-              lassoRectScreenRef.current = null;
-              setLassoRectScreen(null);
-              if (resolved === "move") {
-                const restore = selectionBeforeConnectionModeRef.current;
-                if (restore) {
-                  setSelectedNodeIds(restore.filter((id) => !!graphRef.current.entities[id]));
-                }
-                selectionBeforeConnectionModeRef.current = null;
-              } else {
-                if (!selectionBeforeConnectionModeRef.current) {
-                  selectionBeforeConnectionModeRef.current = [...selectedNodeIdsRef.current];
-                }
-                setSelectedNodeIds([]);
-              }
-              if (resolved !== "draw") {
-                setConnectionSourceId(null);
-                setConnectionCursorWorld(null);
-              }
-            }}
-            connectionColorControl={
-              <ArchitecturalConnectionKindPicker
-                value={connectionKind}
-                onChange={applyConnectionKind}
-                appearance="spool"
-                ariaLabel="Connection thread kind"
-                engaged={connectionMode === "draw"}
-              />
-            }
-            onZoomIn={() => zoomBy(ZOOM_BUTTON_STEP)}
-            onZoomOut={() => zoomBy(-ZOOM_BUTTON_STEP)}
-            onRecenter={recenterToOrigin}
-          />
-        </div>
-        <CommandPalette
-          open={paletteOpen}
-          onClose={() => setPaletteOpen(false)}
-          currentSpaceId={activeSpaceId}
-          items={paletteItems}
-          spaces={paletteSpaces}
-          actions={paletteActions}
-          recentItems={recentItems}
-          recentFolders={recentFolders}
-          onRecordRecentItem={pushRecentItem}
-          onSelectItem={(id, openInFocus) => focusEntityFromPalette(id, openInFocus)}
-          onSelectSpace={(spaceId) => enterSpace(spaceId)}
-          onOpenRecentFolder={openFolder}
-          onRunAction={runPaletteAction}
-        />
-        {!isRestrictedLayer ? (
-          <LoreAskPanel
-            open={lorePanelOpen}
-            onClose={() => setLorePanelOpen(false)}
-            spaceId={activeSpaceId}
-            spaceScopedAllowed={isUuidLike(activeSpaceId)}
-            onOpenSource={(id) => focusEntityFromPalette(id)}
-          />
-        ) : null}
-        {!isRestrictedLayer ? (
-          <input
-            ref={loreImportFileInputRef}
-            type="file"
-            accept=".pdf,.docx,.md,.txt,.markdown,text/plain,text/markdown,application/pdf"
-            className="sr-only"
-            aria-hidden
-            tabIndex={-1}
-            onChange={onLoreImportFileChange}
-          />
-        ) : null}
-        {!isRestrictedLayer ? (
-          <ArchitecturalLoreImportUploadPopover
-            open={loreImportPopoverOpen && !!loreImportPreparedSource}
-            fileName={loreImportPreparedSource?.fileName ?? ""}
-            mode={loreImportSelection.mode}
-            scope={loreImportSelection.scope}
-            contextText={loreImportSelection.contextText}
-            onModeChange={(mode) => setLoreImportSelection((prev) => ({ ...prev, mode }))}
-            onScopeChange={(scope) => setLoreImportSelection((prev) => ({ ...prev, scope }))}
-            onContextTextChange={(value) =>
-              setLoreImportSelection((prev) => ({ ...prev, contextText: value }))
-            }
-            onChangeFile={beginLoreImportFilePick}
-            onContinue={continuePreparedLoreImport}
-            onClose={closeLoreImportPopover}
-          />
-        ) : null}
-        {loreSmartPlanning ? (
-          <div
-            className={styles.smartImportPlanningBackdrop}
-            role={loreSmartPlanningUi.failed ? "alertdialog" : "status"}
-            aria-live={loreSmartPlanningUi.failed ? "assertive" : "polite"}
-            aria-label={
-              loreSmartPlanningUi.failed
-                ? "Smart import failed"
-                : "Smart import planning status"
-            }
-          >
-            <div className={styles.smartImportPlanningCard}>
-              {loreSmartPlanningUi.failed ? (
-                <>
-                  <div className={styles.smartImportPlanningFailIcon} aria-hidden>
-                    <WarningCircle size={28} weight="fill" />
-                  </div>
-                  <p className={styles.smartImportPlanningPhase}>
-                    {loreImportFailure?.stage === "timeout"
-                      ? "Import is taking too long"
-                      : "Smart import failed"}
-                  </p>
-                  <p className={styles.smartImportPlanningError}>
-                    {loreImportFailure?.message ??
-                      loreSmartPlanningUi.detail ??
-                      "Smart import couldn't finish planning. Try again or copy the details below."}
-                    {loreImportFailure?.recommendedAction
-                      ? ` ${loreImportFailure.recommendedAction}`
-                      : ""}
-                  </p>
-                  {loreImportFailure ? (
-                    <details className={styles.smartImportPlanningDetails}>
-                      <summary>Technical details</summary>
-                      <pre>{formatLoreImportFailureReport(loreImportFailure)}</pre>
-                    </details>
-                  ) : null}
-                  {loreSmartPlanningEventGroups.length > 0 ? (
-                    <details
-                      className={styles.smartImportPlanningDetails}
-                      open={loreSmartPlanningDetailsOpen}
-                      onToggle={(event) => {
-                        setLoreSmartPlanningDetailsOpen(
-                          (event.currentTarget as HTMLDetailsElement).open,
-                        );
-                      }}
-                    >
-                      <summary>Timeline details</summary>
-                      <div className={styles.smartImportPlanningTimeline}>
-                        {loreSmartPlanningEventGroups.map((group) => (
-                          <div key={`planning-failed-group-${group.phase}`} className={styles.smartImportPlanningPhaseGroup}>
-                            <p className={styles.smartImportPlanningPhaseGroupTitle}>{group.label}</p>
-                            <ul className={styles.smartImportPlanningTimelineList}>
-                              {group.events.map((event, idx) => (
-                                <li key={`${group.phase}-failed-${idx}`} className={styles.smartImportPlanningTimelineItem}>
-                                  <p className={styles.smartImportPlanningTimelineRow}>
-                                    <span>{event.text || event.kind.replace(/_/g, " ")}</span>
-                                    {formatDurationMs(event.durationMs) ? (
-                                      <span>{formatDurationMs(event.durationMs)}</span>
-                                    ) : null}
-                                  </p>
-                                  {event.kind === "llm_call" ? (
-                                    <p className={styles.smartImportPlanningTimelineMeta}>
-                                      {event.model ? `${event.model} · ` : ""}
-                                      {typeof event.tokensIn === "number"
-                                        ? `${event.tokensIn} in`
-                                        : "tokens n/a"}
-                                      {typeof event.tokensOut === "number"
-                                        ? ` · ${event.tokensOut} out`
-                                        : ""}
-                                      {event.stopReason ? ` · ${event.stopReason}` : ""}
-                                    </p>
-                                  ) : null}
-                                  {event.kind === "llm_call" && event.responseSnippet ? (
-                                    <details className={styles.smartImportPlanningTimelineSnippet}>
-                                      <summary>Model output snippet</summary>
-                                      <pre>{event.responseSnippet}</pre>
-                                    </details>
-                                  ) : null}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
-                      </div>
-                    </details>
-                  ) : null}
-                  <div className={styles.smartImportPlanningActionsSplit}>
-                    <Button
-                      size="sm"
-                      variant="default"
-                      tone="card-dark"
-                      type="button"
-                      onClick={copyLoreSmartPlanningFailure}
-                      leadingIcon={<CopySimple size={14} weight="regular" />}
-                    >
-                      {loreSmartPlanningCopyState === "copied"
-                        ? "Copied"
-                        : loreSmartPlanningCopyState === "failed"
-                          ? "Copy failed"
-                          : "Copy details"}
-                    </Button>
-                    <div>
-                      <Button
-                        size="sm"
-                        variant="default"
-                        tone="card-dark"
-                        type="button"
-                        onClick={closeLoreSmartPlanningFailure}
-                      >
-                        Close
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        tone="solid"
-                        type="button"
-                        onClick={retryLoreSmartPlanning}
-                      >
-                        Retry
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className={styles.smartImportPlanningSpinner} aria-hidden>
-                    <span className={styles.smartImportPlanningSpinnerRing} />
-                  </div>
-                  <p className={styles.smartImportPlanningPhase}>{loreSmartPlanningUi.phaseLabel}</p>
-                  {typeof loreSmartPlanningUi.pipelinePercent === "number" ? (
                     <div
-                      className={styles.smartImportPlanningProgressBar}
-                      role="progressbar"
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={Math.max(
-                        0,
-                        Math.min(100, Math.trunc(loreSmartPlanningUi.pipelinePercent)),
-                      )}
-                      aria-label="Import planning progress"
-                    >
-                      <span
-                        style={{
-                          width: `${Math.max(
-                            0,
-                            Math.min(100, Math.trunc(loreSmartPlanningUi.pipelinePercent)),
-                          )}%`,
-                        }}
-                      />
-                    </div>
-                  ) : null}
-                  {loreSmartPlanningUi.stepLabel ? (
-                    <p className={styles.smartImportPlanningStep}>{loreSmartPlanningUi.stepLabel}</p>
-                  ) : null}
-                  {loreSmartPlanningUi.subphase ? (
-                    <p className={styles.smartImportPlanningSubphase}>{loreSmartPlanningUi.subphase}</p>
-                  ) : null}
-                  {loreSmartPlanningUi.detail ? (
-                    <p className={styles.smartImportPlanningDetail}>{loreSmartPlanningUi.detail}</p>
-                  ) : null}
-                  {loreSmartPlanningUi.findingsSummary ? (
-                    <p className={styles.smartImportPlanningFindings}>
-                      {loreSmartPlanningUi.findingsSummary}
-                    </p>
-                  ) : null}
-                  {loreSmartPlanningUi.etaLabel ? (
-                    <p className={styles.smartImportPlanningEta}>{loreSmartPlanningUi.etaLabel}</p>
-                  ) : null}
-                  {loreSmartPlanningUi.queueFailureHint ? (
-                    <p className={styles.smartImportPlanningWarning}>
-                      {loreSmartPlanningUi.queueFailureHint}
-                    </p>
-                  ) : null}
-                  {loreSmartPlanningEventGroups.length > 0 ? (
-                    <details
-                      className={styles.smartImportPlanningDetails}
-                      open={loreSmartPlanningDetailsOpen}
-                      onToggle={(event) => {
-                        setLoreSmartPlanningDetailsOpen(
-                          (event.currentTarget as HTMLDetailsElement).open,
-                        );
+                      className={`${styles.nodePlacement} ${hoveredStackTargetId === entity.id ? styles.stackDropTarget : ""} ${
+                        isConnectionSource ? styles.nodeConnectionSource : ""
+                      }`}
+                      data-node-id={entity.id}
+                      data-space-id={activeSpaceId}
+                      data-stack-target={
+                        entity.kind === "content" ? "true" : undefined
+                      }
+                      key={entity.id}
+                      style={{
+                        left: `${slot.x}px`,
+                        top: `${slot.y}px`,
+                        transform: `rotate(${entity.rotation}deg) scale(${dropPreview ? 0.92 : 1})`,
+                        zIndex: dragged
+                          ? maxZIndex + draggedIndex
+                          : nodeZ.get(entity.id),
                       }}
                     >
-                      <summary>Show details</summary>
-                      <div className={styles.smartImportPlanningTimeline}>
-                        {loreSmartPlanningEventGroups.map((group) => (
-                          <div key={`planning-group-${group.phase}`} className={styles.smartImportPlanningPhaseGroup}>
-                            <p className={styles.smartImportPlanningPhaseGroupTitle}>{group.label}</p>
-                            <ul className={styles.smartImportPlanningTimelineList}>
-                              {group.events.map((event, idx) => (
-                                <li key={`${group.phase}-${idx}`} className={styles.smartImportPlanningTimelineItem}>
-                                  <p className={styles.smartImportPlanningTimelineRow}>
-                                    <span>{event.text || event.kind.replace(/_/g, " ")}</span>
-                                    {formatDurationMs(event.durationMs) ? (
-                                      <span>{formatDurationMs(event.durationMs)}</span>
-                                    ) : null}
-                                  </p>
-                                  {event.kind === "llm_call" ? (
-                                    <p className={styles.smartImportPlanningTimelineMeta}>
-                                      {event.model ? `${event.model} · ` : ""}
-                                      {typeof event.tokensIn === "number"
-                                        ? `${event.tokensIn} in`
-                                        : "tokens n/a"}
-                                      {typeof event.tokensOut === "number"
-                                        ? ` · ${event.tokensOut} out`
-                                        : ""}
-                                      {event.stopReason ? ` · ${event.stopReason}` : ""}
-                                    </p>
-                                  ) : null}
-                                  {event.kind === "llm_call" && event.responseSnippet ? (
-                                    <details className={styles.smartImportPlanningTimelineSnippet}>
-                                      <summary>Model output snippet</summary>
-                                      <pre>{event.responseSnippet}</pre>
-                                    </details>
-                                  ) : null}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
-                      </div>
-                    </details>
-                  ) : null}
-                  <p className={styles.smartImportPlanningHint}>
-                    Keep this tab open — most imports finish in a minute or two.
-                  </p>
-                  <div className={styles.smartImportPlanningActions}>
-                    <Button
-                      size="sm"
-                      variant="default"
-                      tone="card-dark"
-                      type="button"
-                      onClick={cancelLoreSmartPlanning}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        ) : null}
-        {!isRestrictedLayer ? (
-          <ArchitecturalLoreReviewPanel
-            open={loreReviewPanelOpen}
-            onClose={() => setLoreReviewPanelOpen(false)}
-            draft={vaultReviewDraftActive}
-            onRunAnalysis={() => void runVaultReviewAnalysis()}
-            onAppendTags={appendVaultReviewTags}
-            loading={loreReviewLoading}
-            error={loreReviewError}
-            issues={loreReviewIssues}
-            suggestedNoteTags={loreReviewSuggestedTags}
-            semanticSummary={loreReviewSemanticSummary}
-          />
-        ) : null}
-        {!isRestrictedLayer ? (
-          <ArchitecturalLoreImportErrorDialog
-            failure={loreSmartPlanning ? null : loreImportFailure}
-            onClose={() => setLoreImportFailure(null)}
-            onRetry={beginLoreImportFilePick}
-          />
-        ) : null}
-        {loreSmartReview && !isRestrictedLayer ? (
-          <div
-            className={styles.smartImportReviewBackdrop}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Smart document import"
-            onMouseDown={(e) => {
-              if (e.target === e.currentTarget && !loreImportCommitting) {
-                closeLoreSmartReview();
-              }
-            }}
-          >
-            <div className={styles.smartImportReviewPanel}>
-              <header className={styles.smartImportReviewHeader}>
-                <div className={styles.smartImportReviewHeaderMain}>
-                  <h2 className={styles.smartImportReviewTitle}>Smart import</h2>
-                  {loreSmartReview.fileName ? (
-                    <p className={styles.smartImportReviewFile}>{loreSmartReview.fileName}</p>
-                  ) : null}
-                  <p className={styles.smartImportReviewStatsLine}>
-                    <strong>{loreSmartReview.plan.folders.length}</strong> folders ·{" "}
-                    <strong>{loreSmartReview.plan.notes.length}</strong> notes ·{" "}
-                    <strong>{loreSmartReview.plan.clarifications.length}</strong> question
-                    {loreSmartReview.plan.clarifications.length === 1 ? "" : "s"}
-                  </p>
-                </div>
-                <div className={styles.smartImportReviewHeaderActions}>
-                  <Button
-                    size="sm"
-                    variant="default"
-                    tone="card-dark"
-                    disabled={loreImportCommitting}
-                    onClick={closeLoreSmartReview}
-                  >
-                    Close
-                  </Button>
-                </div>
-              </header>
-              <div className={styles.smartImportReviewBody}>
-                <div className={styles.smartImportReviewMergeToolbar}>
-                  <Button
-                    size="sm"
-                    variant="default"
-                    tone="card-dark"
-                    type="button"
-                    disabled={loreImportCommitting}
-                    onClick={collapseSmartImportToOneNote}
-                  >
-                    Collapse to one note
-                  </Button>
-                  {loreSmartReview.plan.folders.length > 0 ? (
-                    <Button
-                      size="sm"
-                      variant="default"
-                      tone="card-dark"
-                      type="button"
-                      disabled={loreImportCommitting}
-                      onClick={flattenSmartImportToNearby}
-                    >
-                      Flatten to Nearby
-                    </Button>
-                  ) : null}
-                </div>
-                {loreSmartMergeProposals.length > 0 ? (
-                  <section>
-                    <p className={styles.smartImportReviewMergeMeta}>
-                      Merge proposals: {loreSmartAcceptedMergeCount}/{loreSmartMergeProposals.length} accepted
-                    </p>
-                    <div className={styles.smartImportReviewMergeToolbar}>
-                      <Button
-                        size="sm"
-                        variant="default"
-                        tone="card-dark"
-                        type="button"
-                        disabled={loreImportCommitting}
-                        onClick={() => setAllLoreSmartMergeAcceptances(true)}
-                      >
-                        Accept all merges
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="default"
-                        tone="card-dark"
-                        type="button"
-                        disabled={loreImportCommitting}
-                        onClick={() => setAllLoreSmartMergeAcceptances(false)}
-                      >
-                        Reject all merges
-                      </Button>
-                    </div>
-                    <ul className={styles.smartImportReviewMergeList}>
-                      {loreSmartMergeProposals.map((merge) => {
-                        const accepted = Boolean(loreSmartAcceptedMergeIds[merge.id]);
-                        const fromTitle =
-                          loreSmartNoteTitleByClientId.get(merge.noteClientId) ?? merge.noteClientId;
-                        const preview = merge.proposedText.slice(0, 600);
-                        return (
-                          <li key={merge.id} className={styles.smartImportReviewMergeCard}>
-                            <label className={styles.smartImportReviewMergeLabel}>
-                              <input
-                                type="checkbox"
-                                checked={accepted}
-                                disabled={loreImportCommitting}
-                                onChange={(event) =>
-                                  setLoreSmartMergeAccepted(merge.id, event.target.checked)
-                                }
-                              />
-                              <span>
-                                <strong>{merge.targetTitle}</strong>
-                                <small className={styles.smartImportReviewMergeSpace}>
-                                  {merge.targetSpaceName
-                                    ? `${merge.targetSpaceName} · `
-                                    : ""}
-                                  from &quot;{fromTitle}&quot;
-                                </small>
-                                {merge.rationale ? (
-                                  <small className={styles.smartImportReviewMergeMeta}>
-                                    {merge.rationale}
-                                  </small>
-                                ) : null}
-                              </span>
-                            </label>
-                            <pre className={styles.smartImportReviewMergePre}>
-                              {preview}
-                              {merge.proposedText.length > preview.length ? "\n… (truncated)" : ""}
-                            </pre>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </section>
-                ) : null}
-                <section className={styles.smartImportReviewStructure}>
-                  <div className={styles.smartImportReviewTargetScope}>
-                    <p className={styles.smartImportReviewScopeHint}>
-                      Scope:{" "}
-                      {loreSmartImportScope === "gm_workspace"
-                        ? "Entire GM workspace"
-                        : "This space & its folders"}
-                    </p>
-                    <input
-                      className={styles.smartImportReviewTargetSearch}
-                      type="search"
-                      placeholder="Search spaces for overrides..."
-                      value={loreSmartSpaceSearchQuery}
-                      onChange={(event) => setLoreSmartSpaceSearchQuery(event.target.value)}
-                    />
-                  </div>
-                  <ul className={styles.smartImportReviewNoteList}>
-                    {loreSmartReview.plan.notes.map((note) => {
-                      const selected = loreSmartTargetSpaceByNoteId[note.clientId] ?? null;
-                      const scopedSuggestions = [
-                        ...(loreSmartReview.plan.spaceSuggestions ?? []).map((s) => ({
-                          spaceId: s.spaceId,
-                          title: s.spaceTitle,
-                          path: s.path ?? s.spaceTitle,
-                        })),
-                        ...loreSmartSpaceSearchResults,
-                      ];
-                      const seen = new Set<string>();
-                      const uniqueOptions = scopedSuggestions.filter((option) => {
-                        if (seen.has(option.spaceId)) return false;
-                        seen.add(option.spaceId);
-                        return true;
-                      });
-                      const related = note.relatedItems ?? [];
-                      const relatedOpen = Boolean(loreSmartRelatedOpenByNoteId[note.clientId]);
-                      return (
-                        <li key={note.clientId} className={styles.smartImportReviewNoteCard}>
-                          <div className={styles.smartImportReviewNoteTitleRow}>
-                            <p className={styles.smartImportReviewNoteTitle}>{note.title}</p>
-                            <span className={styles.smartImportReviewNoteKind}>
-                              {note.canonicalEntityKind}
-                            </span>
-                          </div>
-                          {note.summary ? (
-                            <p className={styles.smartImportReviewNoteSummary}>{note.summary}</p>
-                          ) : null}
-                          {note.folderClientId ? (
-                            <p className={styles.smartImportReviewMergeMeta}>
-                              In folder mode, placement follows new import folders.
-                            </p>
-                          ) : (
-                            <label className={styles.smartImportReviewTargetField}>
-                              <span>Target space</span>
-                              <select
-                                value={selected ?? ""}
-                                onChange={(event) =>
-                                  setLoreSmartTargetSpaceByNoteId((prev) => ({
-                                    ...prev,
-                                    [note.clientId]: event.target.value || null,
-                                  }))
-                                }
-                              >
-                                <option value="">Current space</option>
-                                {uniqueOptions.map((option) => (
-                                  <option key={`${note.clientId}-${option.spaceId}`} value={option.spaceId}>
-                                    {option.path}
-                                  </option>
-                                ))}
-                              </select>
-                              {note.targetSpaceReason ? (
-                                <small>{note.targetSpaceReason}</small>
-                              ) : null}
-                            </label>
-                          )}
-                          {related.length > 0 ? (
-                            <div className={styles.smartImportReviewRelatedBlock}>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                tone="card-dark"
-                                className={styles.smartImportReviewRelatedToggle}
-                                onClick={() =>
-                                  setLoreSmartRelatedOpenByNoteId((prev) => ({
-                                    ...prev,
-                                    [note.clientId]: !relatedOpen,
-                                  }))
-                                }
-                              >
-                                Related elsewhere ({related.length})
-                              </Button>
-                              {relatedOpen ? (
-                                <ul className={styles.smartImportReviewRelatedList}>
-                                  {related.map((row) => (
-                                    <li key={`${note.clientId}-${row.itemId}`}>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        tone="card-dark"
-                                        className={styles.smartImportReviewRelatedLink}
-                                        onClick={() => focusEntityFromPalette(row.itemId)}
-                                      >
-                                        {row.title || row.itemId}
-                                      </Button>
-                                      {row.snippet ? <small>{row.snippet}</small> : null}
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : null}
-                            </div>
-                          ) : null}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-                <div className={styles.smartImportWizard}>
-                    {loreSmartReview.plan.clarifications.length === 0 ? (
-                      <div className={styles.smartImportWizardComplete}>
-                        <p className={styles.smartImportWizardCompleteTitle}>Ready to import</p>
-                        <p className={styles.smartImportWizardCompleteBody}>
-                          No clarification questions are required for this file.
-                        </p>
-                        <Button
-                          size="md"
-                          variant="primary"
-                          tone="solid"
-                          type="button"
-                          disabled={loreImportCommitting}
-                          onClick={() => void commitSmartLoreImport()}
-                        >
-                          {loreImportCommitting ? "Applying…" : "Apply import to canvas"}
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <div className={styles.smartImportWizardProgress}>
-                          <p className={styles.smartImportWizardProgressLabel}>
-                            {loreSmartOtherFollowUp
-                              ? "Follow-up"
-                              : loreSmartQuestionUi.questionsComplete
-                                ? "All done"
-                                : loreSmartQuestionUi.focusQuestion
-                                  ? `Question ${loreSmartQuestionUi.stableQuestionOrder.indexOf(loreSmartQuestionUi.focusQuestion) + 1} of ${loreSmartQuestionUi.totalQuestions}`
-                                  : "Questions"}
-                          </p>
-                          <div
-                            className={
-                              loreSmartQuestionUi.totalQuestions > 1
-                                ? `${styles.smartImportQuestionsProgressTrack} ${styles.smartImportQuestionsProgressTrackSegmented}`
-                                : styles.smartImportQuestionsProgressTrack
+                      {hoveredStackTargetId === entity.id ? (
+                        <div className={styles.nodeStackHoverFrame} />
+                      ) : null}
+                      {entity.kind === "content" ? (
+                        shouldRenderLoreCharacterCredentialCanvasNode(
+                          entity
+                        ) ? (
+                          <ArchitecturalLoreCharacterCanvasNode
+                            activeTool={activeTool}
+                            bodyEditable={
+                              activeTool === "select" &&
+                              loreCanvasBodyEditEntityId === entity.id
                             }
-                            role="progressbar"
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-valuenow={loreSmartQuestionUi.wizardBarPercent}
-                            aria-label="Questions completed"
+                            bodyHtml={canonicalizeCharacterBodyHtml(
+                              entity,
+                              entity.bodyHtml
+                            )}
+                            dragged={dragged}
+                            emptyPlaceholder={
+                              entity.theme === "default" ||
+                              entity.theme === "task"
+                                ? "Write here, or type / for blocks…"
+                                : undefined
+                            }
+                            id={entity.id}
+                            onBodyCommit={updateNodeBody}
+                            onBodyDraftDirty={(dirty) =>
+                              setInlineBodyDraftDirty(entity.id, dirty)
+                            }
+                            onRequestCanvasBodyEdit={() =>
+                              setLoreCanvasBodyEditEntityId(entity.id)
+                            }
+                            onRichDocCommand={
+                              entity.theme === "default" ||
+                              entity.theme === "task"
+                                ? (command, value) => runFormat(command, value)
+                                : undefined
+                            }
+                            selected={selected}
+                            tapeRotation={entity.tapeRotation}
+                            tapeVariant={tapeVariantForLoreCard(
+                              "character",
+                              entity.loreCard?.variant ?? "v11"
+                            )}
+                            width={entity.width}
+                            wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                          />
+                        ) : shouldRenderLoreLocationCanvasNode(entity) ? (
+                          <ArchitecturalLoreLocationCanvasNode
+                            activeTool={activeTool}
+                            bodyHtml={entity.bodyHtml}
+                            dragged={dragged}
+                            emptyPlaceholder={
+                              entity.theme === "default" ||
+                              entity.theme === "task"
+                                ? "Write here, or type / for blocks…"
+                                : undefined
+                            }
+                            id={entity.id}
+                            onBodyCommit={updateNodeBody}
+                            onBodyDraftDirty={(dirty) =>
+                              setInlineBodyDraftDirty(entity.id, dirty)
+                            }
+                            onRichDocCommand={
+                              entity.theme === "default" ||
+                              entity.theme === "task"
+                                ? (command, value) => runFormat(command, value)
+                                : undefined
+                            }
+                            selected={selected}
+                            showStaple={!entity.stackId}
+                            tapeRotation={entity.tapeRotation}
+                            width={entity.width}
+                            wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                          />
+                        ) : shouldRenderLoreFactionArchive091CanvasNode(
+                            entity
+                          ) ? (
+                          <ArchitecturalLoreFactionArchiveCanvasNode
+                            activeTool={activeTool}
+                            bodyHtml={canonicalizeFactionBodyHtml(
+                              entity,
+                              entity.bodyHtml
+                            )}
+                            dragged={dragged}
+                            emptyPlaceholder={
+                              entity.theme === "default" ||
+                              entity.theme === "task"
+                                ? "Write here, or type / for blocks…"
+                                : undefined
+                            }
+                            factionRoster={entity.factionRoster ?? []}
+                            id={entity.id}
+                            onBodyCommit={updateNodeBody}
+                            onBodyDraftDirty={(dirty) =>
+                              setInlineBodyDraftDirty(entity.id, dirty)
+                            }
+                            onFactionRosterChange={updateFactionRoster}
+                            onRichDocCommand={
+                              entity.theme === "default" ||
+                              entity.theme === "task"
+                                ? (command, value) => runFormat(command, value)
+                                : undefined
+                            }
+                            selected={selected}
+                            showTape={!entity.stackId}
+                            tapeRotation={entity.tapeRotation}
+                            tapeVariant={tapeVariantForLoreCard(
+                              "faction",
+                              entity.loreCard?.variant ?? "v4"
+                            )}
+                            width={entity.width}
+                            wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                          />
+                        ) : (
+                          <ArchitecturalNodeCard
+                            activeTool={activeTool}
+                            bodyDoc={entity.bodyDoc ?? null}
+                            bodyHtml={entity.bodyHtml}
+                            canvasPanZoomScale={scale}
+                            dragged={dragged}
+                            emptyPlaceholder={
+                              entity.theme === "default" ||
+                              entity.theme === "task"
+                                ? "Write here, or type / for blocks…"
+                                : undefined
+                            }
+                            factionRoster={
+                              entity.loreCard?.kind === "faction"
+                                ? entity.factionRoster
+                                : undefined
+                            }
+                            id={entity.id}
+                            loreCard={entity.loreCard}
+                            onBodyCommit={handleNodeBodyCommit}
+                            onBodyDraftDirty={(dirty) =>
+                              setInlineBodyDraftDirty(entity.id, dirty)
+                            }
+                            onExpand={handleNodeExpand}
+                            onRichDocCommand={
+                              entity.theme === "default" ||
+                              entity.theme === "task"
+                                ? (command, value) => runFormat(command, value)
+                                : undefined
+                            }
+                            selected={selected}
+                            showTape={!entity.stackId}
+                            tapeRotation={entity.tapeRotation}
+                            tapeVariant={
+                              entity.tapeVariant ??
+                              tapeVariantForTheme(entity.theme)
+                            }
+                            theme={entity.theme}
+                            title={entity.title}
+                            useFullImageResolution={
+                              galleryOpen && galleryNodeId === entity.id
+                            }
+                            width={entity.width}
+                            wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                          />
+                        )
+                      ) : (
+                        <ArchitecturalFolderCard
+                          dragOver={hoveredFolderId === entity.id}
+                          folderColorScheme={entity.folderColorScheme}
+                          id={entity.id}
+                          itemCount={folderCount}
+                          onOpen={() => openFolder(entity.id)}
+                          onTitleCommit={(title) =>
+                            renameFolder(entity.id, title)
+                          }
+                          previewTitles={previewTitles}
+                          selected={selected}
+                          title={entity.title}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+                {visibleCollapsedStacks.map(({ stackId, entities, top }) => {
+                  if (stackModal?.stackId === stackId) {
+                    return null;
+                  }
+                  const slot = top.slots[activeSpaceId] ?? { x: 0, y: 0 };
+                  const selected = entities.some((entity) =>
+                    selectedNodeIds.includes(entity.id)
+                  );
+                  const draggingStack = entities.some((entity) =>
+                    draggedNodeIds.includes(entity.id)
+                  );
+                  const z = draggingStack
+                    ? maxZIndex + 1
+                    : Math.max(
+                        ...entities.map((entity) => nodeZ.get(entity.id) ?? 1)
+                      ) + 1;
+                  const focusBounds = selected
+                    ? (stackFocusBoundsById[stackId] ?? null)
+                    : null;
+                  const hoverBounds =
+                    hoveredStackTargetId === top.id
+                      ? (stackHoverBoundsById[stackId] ?? null)
+                      : null;
+                  return (
+                    <div
+                      className={`${styles.stackContainer} ${hoveredStackTargetId === top.id ? styles.stackDropTarget : ""}`}
+                      data-stack-container="true"
+                      data-stack-id={stackId}
+                      data-stack-target="true"
+                      data-stack-top-id={top.id}
+                      key={stackId}
+                      style={{
+                        left: `${slot.x}px`,
+                        top: `${slot.y}px`,
+                        zIndex: z,
+                      }}
+                    >
+                      {focusBounds ? (
+                        <div
+                          className={styles.stackFocusBounds}
+                          style={{
+                            left: focusBounds.left,
+                            top: focusBounds.top,
+                            width: focusBounds.width,
+                            height: focusBounds.height,
+                          }}
+                        />
+                      ) : null}
+                      {hoverBounds ? (
+                        <div
+                          className={styles.stackHoverBounds}
+                          style={{
+                            left: hoverBounds.left,
+                            top: hoverBounds.top,
+                            width: hoverBounds.width,
+                            height: hoverBounds.height,
+                          }}
+                        />
+                      ) : null}
+                      {entities.map((entity, index) => {
+                        const isTopStackLayer = index === entities.length - 1;
+                        return (
+                          <div
+                            className={`${styles.stackLayer} ${isTopStackLayer ? styles.stackLayerTopInteractive : ""}`}
+                            data-node-id={entity.id}
+                            data-space-id={activeSpaceId}
+                            data-stack-layer="true"
+                            key={entity.id}
+                            onClick={
+                              isTopStackLayer
+                                ? (event) => {
+                                    if (connectionMode !== "move") {
+                                      return;
+                                    }
+                                    event.stopPropagation();
+                                    const t = event.target as HTMLElement;
+                                    if (t.closest("[data-expand-btn='true']")) {
+                                      return;
+                                    }
+                                    const suppressed =
+                                      suppressStackOpenRef.current;
+                                    if (suppressed) {
+                                      if (Date.now() > suppressed.expiresAt) {
+                                        suppressStackOpenRef.current = null;
+                                      } else if (
+                                        suppressed.stackId === stackId
+                                      ) {
+                                        suppressStackOpenRef.current = null;
+                                        return;
+                                      }
+                                    }
+                                    if (draggedNodeIdsRef.current.length > 0) {
+                                      return;
+                                    }
+                                    const rect = (
+                                      event.currentTarget as HTMLDivElement
+                                    ).getBoundingClientRect();
+                                    setStackModalEjectCount(0);
+                                    setHoveredStackTargetId(null);
+                                    setStackModal({
+                                      stackId,
+                                      orderedIds: [...entities]
+                                        .reverse()
+                                        .map((e) => e.id),
+                                      originX: rect.left + rect.width / 2,
+                                      originY: rect.top + rect.height / 2,
+                                      anchorWorld: { x: slot.x, y: slot.y },
+                                      stackScreenLeft: rect.left,
+                                      stackScreenTop: rect.top,
+                                    });
+                                  }
+                                : undefined
+                            }
+                            onMouseDown={
+                              isTopStackLayer
+                                ? (event) => {
+                                    if (
+                                      event.button !== 0 ||
+                                      activeTool !== "select" ||
+                                      connectionMode !== "move"
+                                    ) {
+                                      return;
+                                    }
+                                    const t = event.target as HTMLElement;
+                                    if (t.closest("[data-expand-btn='true']")) {
+                                      return;
+                                    }
+                                    event.stopPropagation();
+                                    recordUndoBeforeMutation();
+                                    const mouseCanvasX =
+                                      (event.clientX - translateX) / scale;
+                                    const mouseCanvasY =
+                                      (event.clientY - translateY) / scale;
+                                    const offsets: Record<
+                                      string,
+                                      { x: number; y: number }
+                                    > = {};
+                                    entities.forEach((e) => {
+                                      const entitySlot = e.slots[activeSpaceId];
+                                      if (!entitySlot) {
+                                        return;
+                                      }
+                                      offsets[e.id] = {
+                                        x: mouseCanvasX - entitySlot.x,
+                                        y: mouseCanvasY - entitySlot.y,
+                                      };
+                                    });
+                                    dragOffsetsRef.current = offsets;
+                                    draggedNodeIdsRef.current = entities.map(
+                                      (e) => e.id
+                                    );
+                                    setDraggedNodeIds(
+                                      entities.map((e) => e.id)
+                                    );
+                                    setSelectedNodeIds(
+                                      entities.map((e) => e.id)
+                                    );
+                                    dragPointerScreenRef.current = {
+                                      x: event.clientX,
+                                      y: event.clientY,
+                                    };
+                                    setMaxZIndex((prev) => prev + 1);
+                                    stackPointerDragRef.current = {
+                                      stackId,
+                                      startX: event.clientX,
+                                      startY: event.clientY,
+                                      moved: false,
+                                    };
+                                  }
+                                : undefined
+                            }
+                            style={
+                              {
+                                "--stack-x": `${index * 6}px`,
+                                "--stack-y": `${index * 6}px`,
+                                "--stack-r": `${(index - (entities.length - 1) / 2) * 1.6}deg`,
+                              } as React.CSSProperties
+                            }
                           >
-                            {loreSmartQuestionUi.totalQuestions > 1 ? (
-                              loreSmartQuestionUi.stableQuestionOrder.map((q) => {
-                                const answered = loreSmartClarificationAnswers.find(
-                                  (a) => a.clarificationId === q.id,
-                                );
-                                const isDone = isClarificationAnswered(answered);
-                                const isActive =
-                                  !!loreSmartQuestionUi.focusQuestion &&
-                                  loreSmartQuestionUi.focusQuestion.id === q.id;
-                                return (
-                                  <span
-                                    key={q.id}
-                                    className={`${styles.smartImportQuestionsProgressSegment}${isDone ? ` ${styles.smartImportQuestionsProgressSegmentDone}` : ""}${isActive ? ` ${styles.smartImportQuestionsProgressSegmentActive}` : ""}`}
-                                  />
-                                );
-                              })
+                            {entity.kind === "content" ? (
+                              shouldRenderLoreCharacterCredentialCanvasNode(
+                                entity
+                              ) ? (
+                                <ArchitecturalLoreCharacterCanvasNode
+                                  activeTool={activeTool}
+                                  bodyEditable={false}
+                                  bodyHtml={canonicalizeCharacterBodyHtml(
+                                    entity,
+                                    entity.bodyHtml
+                                  )}
+                                  dragged={draggingStack}
+                                  emptyPlaceholder={
+                                    entity.theme === "default" ||
+                                    entity.theme === "task"
+                                      ? "Write here, or type / for blocks…"
+                                      : undefined
+                                  }
+                                  id={entity.id}
+                                  onBodyCommit={updateNodeBody}
+                                  onBodyDraftDirty={(dirty) =>
+                                    setInlineBodyDraftDirty(entity.id, dirty)
+                                  }
+                                  onRichDocCommand={
+                                    entity.theme === "default" ||
+                                    entity.theme === "task"
+                                      ? (command, value) =>
+                                          runFormat(command, value)
+                                      : undefined
+                                  }
+                                  selected={false}
+                                  tapeRotation={entity.tapeRotation}
+                                  tapeVariant={tapeVariantForLoreCard(
+                                    "character",
+                                    entity.loreCard?.variant ?? "v11"
+                                  )}
+                                  width={entity.width}
+                                  wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                                />
+                              ) : shouldRenderLoreLocationCanvasNode(entity) ? (
+                                <ArchitecturalLoreLocationCanvasNode
+                                  activeTool={activeTool}
+                                  bodyEditable={false}
+                                  bodyHtml={entity.bodyHtml}
+                                  dragged={draggingStack}
+                                  emptyPlaceholder={
+                                    entity.theme === "default" ||
+                                    entity.theme === "task"
+                                      ? "Write here, or type / for blocks…"
+                                      : undefined
+                                  }
+                                  id={entity.id}
+                                  onBodyCommit={updateNodeBody}
+                                  onBodyDraftDirty={(dirty) =>
+                                    setInlineBodyDraftDirty(entity.id, dirty)
+                                  }
+                                  onRichDocCommand={
+                                    entity.theme === "default" ||
+                                    entity.theme === "task"
+                                      ? (command, value) =>
+                                          runFormat(command, value)
+                                      : undefined
+                                  }
+                                  selected={false}
+                                  showStaple={!entity.stackId}
+                                  tapeRotation={entity.tapeRotation}
+                                  width={entity.width}
+                                  wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                                />
+                              ) : shouldRenderLoreFactionArchive091CanvasNode(
+                                  entity
+                                ) ? (
+                                <ArchitecturalLoreFactionArchiveCanvasNode
+                                  activeTool={activeTool}
+                                  bodyEditable={false}
+                                  bodyHtml={canonicalizeFactionBodyHtml(
+                                    entity,
+                                    entity.bodyHtml
+                                  )}
+                                  dragged={draggingStack}
+                                  emptyPlaceholder={
+                                    entity.theme === "default" ||
+                                    entity.theme === "task"
+                                      ? "Write here, or type / for blocks…"
+                                      : undefined
+                                  }
+                                  factionRoster={entity.factionRoster ?? []}
+                                  id={entity.id}
+                                  onBodyCommit={updateNodeBody}
+                                  onBodyDraftDirty={(dirty) =>
+                                    setInlineBodyDraftDirty(entity.id, dirty)
+                                  }
+                                  onFactionRosterChange={updateFactionRoster}
+                                  onRichDocCommand={
+                                    entity.theme === "default" ||
+                                    entity.theme === "task"
+                                      ? (command, value) =>
+                                          runFormat(command, value)
+                                      : undefined
+                                  }
+                                  selected={false}
+                                  showTape={!entity.stackId}
+                                  tapeRotation={entity.tapeRotation}
+                                  tapeVariant={tapeVariantForLoreCard(
+                                    "faction",
+                                    entity.loreCard?.variant ?? "v4"
+                                  )}
+                                  width={entity.width}
+                                  wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                                />
+                              ) : (
+                                <ArchitecturalNodeCard
+                                  activeTool={activeTool}
+                                  bodyDoc={entity.bodyDoc ?? null}
+                                  bodyEditable={false}
+                                  bodyHtml={entity.bodyHtml}
+                                  canvasPanZoomScale={scale}
+                                  dragged={draggingStack}
+                                  factionRoster={
+                                    entity.loreCard?.kind === "faction"
+                                      ? entity.factionRoster
+                                      : undefined
+                                  }
+                                  id={entity.id}
+                                  loreCard={entity.loreCard}
+                                  onBodyCommit={handleNodeBodyCommit}
+                                  onExpand={handleNodeExpand}
+                                  selected={false}
+                                  showTape={!entity.stackId}
+                                  tapeRotation={entity.tapeRotation}
+                                  tapeVariant={
+                                    entity.tapeVariant ??
+                                    tapeVariantForTheme(entity.theme)
+                                  }
+                                  theme={entity.theme}
+                                  title={entity.title}
+                                  useFullImageResolution={
+                                    galleryOpen && galleryNodeId === entity.id
+                                  }
+                                  width={entity.width}
+                                />
+                              )
                             ) : (
-                              <div
-                                className={styles.smartImportQuestionsProgressFill}
-                                style={{ width: `${loreSmartQuestionUi.wizardBarPercent}%` }}
+                              <ArchitecturalFolderCard
+                                dragOver={false}
+                                folderColorScheme={entity.folderColorScheme}
+                                id={entity.id}
+                                itemCount={
+                                  graph.spaces[entity.childSpaceId]?.entityIds
+                                    .length ?? 0
+                                }
+                                onOpen={() => openFolder(entity.id)}
+                                onTitleCommit={(title) =>
+                                  renameFolder(entity.id, title)
+                                }
+                                previewTitles={folderPreviewTitles(
+                                  entity,
+                                  graph
+                                )}
+                                selected={false}
+                                title={entity.title}
                               />
                             )}
                           </div>
-                        </div>
-                        {loreSmartOtherFollowUp ? (
-                          <div className={styles.smartImportWizardCard} role="region" aria-live="polite">
-                            <p className={styles.smartImportWizardEyebrow}>Follow-up</p>
-                            <h3 className={styles.smartImportWizardTitle}>{loreSmartOtherFollowUp.title}</h3>
-                            <p className={styles.smartImportWizardContext}>{loreSmartOtherFollowUp.question}</p>
-                            <p className={styles.smartImportWizardQuote}>
-                              You wrote: &quot;{loreSmartOtherFollowUp.otherText}&quot;
-                            </p>
-                            <div className={styles.smartImportWizardFollowUpOptions}>
-                              {loreSmartOtherFollowUp.options.map((opt) => (
-                                <label
-                                  key={opt.id}
-                                  className={styles.smartImportWizardOption}
-                                >
-                                  <input
-                                    type="radio"
-                                    name={`clarify-followup-${loreSmartOtherFollowUp.clarificationId}`}
-                                    onChange={() => {
-                                      setLoreSmartClarificationAnswers((prev) =>
-                                        upsertClarificationAnswer(prev, {
-                                          clarificationId: loreSmartOtherFollowUp.clarificationId,
-                                          resolution: "answered",
-                                          selectedOptionIds: [opt.id],
-                                        }),
-                                      );
-                                      setLoreSmartManualQuestionId(null);
-                                      setLoreSmartOtherFollowUp(null);
-                                    }}
-                                  />
-                                  <span>{opt.label}</span>
-                                </label>
-                              ))}
-                            </div>
-                            <div className={styles.smartImportWizardFooter}>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                tone="glass"
-                                type="button"
-                                onClick={() => {
-                                  setLoreSmartClarificationAnswers((prev) =>
-                                    upsertClarificationAnswer(prev, {
-                                      clarificationId: loreSmartOtherFollowUp.clarificationId,
-                                      resolution: "skipped_best_judgement",
-                                    }),
-                                  );
-                                  setLoreSmartManualQuestionId(null);
-                                  setLoreSmartOtherFollowUp(null);
-                                }}
-                              >
-                                Skip, use best judgement
-                              </Button>
-                            </div>
-                          </div>
-                        ) : loreSmartQuestionUi.focusQuestion ? (
-                          (() => {
-                            const c = loreSmartQuestionUi.focusQuestion;
-                            const answerById = new Map(
-                              loreSmartClarificationAnswers.map((a) => [a.clarificationId, a]),
-                            );
-                            const ans = answerById.get(c.id);
-                            const isMulti = c.questionKind === "multi_select";
-                            const selectedSet = new Set(
-                              ans?.resolution === "answered"
-                                ? (ans.selectedOptionIds ?? [])
-                                : ans?.resolution === "skipped_default" && ans.skipDefaultOptionId
-                                  ? [ans.skipDefaultOptionId]
-                                  : [],
-                            );
-                            const otherSelected = ans?.resolution === "other_text";
-                            const step = loreSmartQuestionUi.stableQuestionOrder.indexOf(c) + 1;
-                            const canGoBack = step > 1;
-                            const prevQuestion =
-                              canGoBack
-                                ? loreSmartQuestionUi.stableQuestionOrder[step - 2] ?? null
-                                : null;
-                            return (
-                              <article className={styles.smartImportWizardCard}>
-                                <p className={styles.smartImportWizardEyebrow}>
-                                  {c.severity === "required" ? "Required" : "Optional"} · {step} of{" "}
-                                  {loreSmartQuestionUi.totalQuestions}
-                                </p>
-                                <h3 className={styles.smartImportWizardTitle}>{c.title}</h3>
-                                {c.context ? (
-                                  <p className={styles.smartImportWizardContext}>{c.context}</p>
-                                ) : null}
-                                <div className={styles.smartImportWizardOptions}>
-                                  {c.options.map((opt) =>
-                                    isMulti ? (
-                                      <label key={opt.id} className={styles.smartImportWizardOption}>
-                                        <input
-                                          type="checkbox"
-                                          checked={selectedSet.has(opt.id)}
-                                          onChange={(e) => {
-                                            let base: string[] =
-                                              ans?.resolution === "answered"
-                                                ? [...(ans.selectedOptionIds ?? [])]
-                                                : [];
-                                            if (e.target.checked) {
-                                              if (!base.includes(opt.id)) base.push(opt.id);
-                                            } else {
-                                              base = base.filter((x) => x !== opt.id);
-                                            }
-                                            setLoreSmartClarificationAnswers((prev) =>
-                                              upsertClarificationAnswer(prev, {
-                                                clarificationId: c.id,
-                                                resolution: "answered",
-                                                selectedOptionIds: base,
-                                              }),
-                                            );
-                                            setLoreSmartManualQuestionId(null);
-                                            setLoreSmartOtherFollowUp((cur) =>
-                                              cur?.clarificationId === c.id ? null : cur,
-                                            );
-                                          }}
-                                        />
-                                        <span>{opt.label}</span>
-                                      </label>
-                                    ) : (
-                                      <label key={opt.id} className={styles.smartImportWizardOption}>
-                                        <input
-                                          type="radio"
-                                          name={`clarify-${c.id}`}
-                                          checked={
-                                            !!(
-                                              ans?.resolution === "answered" &&
-                                              ans.selectedOptionIds?.[0] === opt.id
-                                            ) ||
-                                            !!(
-                                              ans?.resolution === "skipped_default" &&
-                                              ans.skipDefaultOptionId === opt.id
-                                            )
-                                          }
-                                          onChange={() => {
-                                            setLoreSmartClarificationAnswers((prev) =>
-                                              upsertClarificationAnswer(prev, {
-                                                clarificationId: c.id,
-                                                resolution: "answered",
-                                                selectedOptionIds: [opt.id],
-                                              }),
-                                            );
-                                            setLoreSmartManualQuestionId(null);
-                                            setLoreSmartOtherFollowUp((cur) =>
-                                              cur?.clarificationId === c.id ? null : cur,
-                                            );
-                                          }}
-                                        />
-                                        <span>{opt.label}</span>
-                                      </label>
-                                    ),
-                                  )}
-                                  <label className={styles.smartImportWizardOption}>
-                                    <input
-                                      type="radio"
-                                      name={`clarify-other-${c.id}`}
-                                      checked={otherSelected}
-                                      onChange={() => {
-                                        setLoreSmartManualQuestionId(c.id);
-                                        setLoreSmartClarificationAnswers((prev) =>
-                                          upsertClarificationAnswer(prev, {
-                                            clarificationId: c.id,
-                                            resolution: "other_text",
-                                            otherText: ans?.otherText ?? "",
-                                          }),
-                                        )
-                                      }}
-                                    />
-                                    <span>Other…</span>
-                                  </label>
-                                  {otherSelected ? (
-                                    <textarea
-                                      className={styles.smartImportWizardTextarea}
-                                      placeholder="Type your answer (at least a few characters)…"
-                                      value={ans?.otherText ?? ""}
-                                      onFocus={() => setLoreSmartManualQuestionId(c.id)}
-                                      onBlur={() => {
-                                        const nextLen = ans?.otherText?.trim().length ?? 0;
-                                        if (nextLen >= 4) {
-                                          setLoreSmartManualQuestionId(null);
-                                        }
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          e.stopPropagation();
-                                        }
-                                      }}
-                                      onChange={(e) =>
-                                        {
-                                          setLoreSmartManualQuestionId(c.id);
-                                          setLoreSmartClarificationAnswers((prev) =>
-                                            upsertClarificationAnswer(prev, {
-                                              clarificationId: c.id,
-                                              resolution: "other_text",
-                                              otherText: e.target.value,
-                                            }),
-                                          );
-                                        }
-                                      }
-                                    />
-                                  ) : null}
-                                </div>
-                                <div className={styles.smartImportWizardFooter}>
-                                  {prevQuestion ? (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      tone="card-dark"
-                                      type="button"
-                                      onClick={() => setLoreSmartManualQuestionId(prevQuestion.id)}
-                                    >
-                                      Back
-                                    </Button>
-                                  ) : null}
-                                  {recommendedClarificationOptionId(c) ? (
-                                    <Button
-                                      size="sm"
-                                      variant="default"
-                                      tone="card-dark"
-                                      type="button"
-                                      onClick={() => {
-                                        const def = recommendedClarificationOptionId(c);
-                                        if (!def) return;
-                                        setLoreSmartClarificationAnswers((prev) =>
-                                          upsertClarificationAnswer(prev, {
-                                            clarificationId: c.id,
-                                            resolution: "skipped_default",
-                                            skipDefaultOptionId: def,
-                                          }),
-                                        );
-                                        setLoreSmartManualQuestionId(null);
-                                        setLoreSmartOtherFollowUp((cur) =>
-                                          cur?.clarificationId === c.id ? null : cur,
-                                        );
-                                      }}
-                                    >
-                                      Use recommended
-                                    </Button>
-                                  ) : null}
-                                  {otherSelected ? (
-                                    <Button
-                                      size="sm"
-                                      variant="primary"
-                                      tone="solid"
-                                      type="button"
-                                      disabled={(ans?.otherText?.trim().length ?? 0) < 4}
-                                      onClick={() => setLoreSmartManualQuestionId(null)}
-                                    >
-                                      Continue
-                                    </Button>
-                                  ) : null}
-                                </div>
-                              </article>
-                            );
-                          })()
-                        ) : loreSmartQuestionUi.questionsComplete ? (
-                          <div className={styles.smartImportWizardComplete}>
-                            <p className={styles.smartImportWizardCompleteTitle}>You&apos;re all set</p>
-                            <p className={styles.smartImportWizardCompleteBody}>
-                              Your answers are ready. Apply the import to add this content to your
-                              space.
-                            </p>
-                            <Button
-                              size="md"
-                              variant="primary"
-                              tone="solid"
-                              type="button"
-                              disabled={loreImportCommitting}
-                              onClick={() => void commitSmartLoreImport()}
-                            >
-                              {loreImportCommitting ? "Applying…" : "Apply import to canvas"}
-                            </Button>
-                          </div>
-                        ) : null}
-                      </>
-                    )}
-                  </div>
+                        );
+                      })}
+                      <div className={styles.stackCountBadge}>
+                        {entities.length}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+              <svg
+                aria-hidden
+                className={styles.connectionLayer}
+                ref={connectionLayerSvgRef}
+                viewBox="0 0 10000 10000"
+              >
+                {connectionMode === "draw" &&
+                connectionSourceId &&
+                connectionCursorWorld
+                  ? (() => {
+                      const sourceEntity = graph.entities[connectionSourceId];
+                      if (!sourceEntity) {
+                        return null;
+                      }
+                      const sourcePin = resolveConnectionPin(
+                        connectionSourceId,
+                        sourceEntity.kind === "folder"
+                          ? CONNECTION_PIN_DEFAULT_FOLDER
+                          : CONNECTION_PIN_DEFAULT_CONTENT,
+                        activeSpaceId,
+                        graph,
+                        connectionPinView
+                      );
+                      if (!sourcePin) {
+                        return null;
+                      }
+                      const cx = (sourcePin.x + connectionCursorWorld.x) / 2;
+                      const cy = (sourcePin.y + connectionCursorWorld.y) / 2;
+                      return (
+                        <g>
+                          <path
+                            className={`${styles.connectionStroke} ${styles.connectionStrokePreview}`}
+                            d={`M ${sourcePin.x} ${sourcePin.y} Q ${cx} ${cy}, ${connectionCursorWorld.x} ${connectionCursorWorld.y}`}
+                            style={{ stroke: connectionColor }}
+                          />
+                          <circle
+                            className={styles.connectionPin}
+                            cx={sourcePin.x}
+                            cy={sourcePin.y}
+                            r={4.5}
+                            style={{ fill: connectionColor }}
+                          />
+                        </g>
+                      );
+                    })()
+                  : null}
+                {visibleActiveSpaceConnections.map((connection) => {
+                  const sourcePin = resolveConnectionPin(
+                    connection.sourceEntityId,
+                    connection.sourcePin,
+                    activeSpaceId,
+                    graph,
+                    connectionPinView
+                  );
+                  const targetPin = resolveConnectionPin(
+                    connection.targetEntityId,
+                    connection.targetPin,
+                    activeSpaceId,
+                    graph,
+                    connectionPinView
+                  );
+                  if (!(sourcePin && targetPin)) {
+                    return null;
+                  }
+                  /** Placeholder only; rope sim writes `d` imperatively (see rAF `step`). */
+                  const pathD = "M 0 0";
+                  const isCut = connectionMode === "cut";
+                  return (
+                    <g data-connection-id={connection.id} key={connection.id}>
+                      {isCut ? null : (
+                        <path
+                          className={styles.connectionHitStroke}
+                          d={pathD}
+                          data-connection-id={connection.id}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setSelectedConnectionId(connection.id);
+                          }}
+                          onContextMenu={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setSelectedConnectionId(connection.id);
+                            setConnectionContextMenu(
+                              clampContextMenuPosition(
+                                { x: event.clientX, y: event.clientY },
+                                {
+                                  maxWidth: 280,
+                                  maxHeight: 680,
+                                  edgePadding: 8,
+                                }
+                              )
+                            );
+                          }}
+                          onMouseDown={(event) => {
+                            if (event.button !== 0) {
+                              return;
+                            }
+                            event.stopPropagation();
+                          }}
+                        />
+                      )}
+                      <path
+                        className={`${styles.connectionStroke} ${
+                          isCut ? styles.connectionStrokeCuttable : ""
+                        } ${selectedConnectionId === connection.id ? styles.connectionStrokeSelected : ""}`}
+                        d={pathD}
+                        data-connection-id={connection.id}
+                        onClick={(event) => {
+                          if (isCut) {
+                            return;
+                          }
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setSelectedConnectionId(connection.id);
+                        }}
+                        onContextMenu={(event) => {
+                          if (!isCut) {
+                            return;
+                          }
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setSelectedConnectionId(connection.id);
+                          setConnectionContextMenu(
+                            clampContextMenuPosition(
+                              { x: event.clientX, y: event.clientY },
+                              { maxWidth: 280, maxHeight: 680, edgePadding: 8 }
+                            )
+                          );
+                        }}
+                        onMouseDown={(event) => {
+                          if (!isCut) {
+                            return;
+                          }
+                          event.preventDefault();
+                          event.stopPropagation();
+                          cutConnection(connection.id);
+                        }}
+                        style={{ stroke: connection.color }}
+                      />
+                      <circle
+                        className={styles.connectionPin}
+                        cx={sourcePin.x}
+                        cy={sourcePin.y}
+                        r={4.5}
+                        style={{ fill: connection.color }}
+                      />
+                      <circle
+                        className={styles.connectionPin}
+                        cx={targetPin.x}
+                        cy={targetPin.y}
+                        r={4.5}
+                        style={{ fill: connection.color }}
+                      />
+                    </g>
+                  );
+                })}
+              </svg>
+              {collabNeonActive ? (
+                <ArchitecturalRemotePresenceCursors
+                  nameplateEnabled={presenceIdentityEnabled}
+                  peers={presencePeers.filter(
+                    (p) => p.activeSpaceId === activeSpaceId
+                  )}
+                  prefersReducedMotion={prefersReducedMotion}
+                />
+              ) : null}
             </div>
           </div>
-        ) : null}
-        <ArchitecturalLinksPanel
-          graph={graph}
-          activeSpaceId={activeSpaceId}
-          selectedEntityIds={selectedNodeIds}
-          cloudEnabled={cloudLinksBar}
-          itemLinksRevision={lastItemLinksRevisionRef.current}
-          onFocusEntity={(id) => focusEntityFromPalette(id)}
-        />
-        {!isRestrictedLayer ? (
-          <>
-            <GraphPanel
-              open={graphOverlayOpen}
-              braneId={activeBraneId}
-              width={graphPanelWidth}
-              onResizeWidth={setGraphPanelWidth}
-              onClose={() => setGraphOverlayOpen(false)}
-              onSelectItem={(id) => focusEntityFromPalette(id)}
+          {/*
+           * Boot flowers portaled here only — sibling **before** VigilFlowRevealOverlay so the WebGL
+           * ambient stack (z ~92) composites above pixel blooms (this host z ~36), not under them.
+           */}
+          <div
+            aria-hidden
+            className={styles.bootFlowerPortalHost}
+            ref={setBootFlowerPortalNode}
+          />
+          {canvasEffectsEnabled ? (
+            <VigilFlowRevealOverlay
+              bootstrapPending={
+                scenario === "default" && !canvasBootstrapResolved
+              }
+              navActive={navTransitionActive}
+              scenario={scenario}
+              sessionActivated={
+                scenario !== "default" || canvasSessionActivated
+              }
             />
-            <LinkGraphOverlay
-              open={false}
-              spaceId={cloudLinksBar && isUuidLike(activeSpaceId) ? activeSpaceId : null}
-              onClose={() => setGraphOverlayOpen(false)}
-              onSelectItem={(id) => focusEntityFromPalette(id)}
+          ) : null}
+          {showWorkspaceBlockingOverlay ? (
+            <WorkspaceBootstrapErrorPanel
+              errorSummary={bootstrapErrorSummary}
             />
-            {altHeld ? (
-              <div
-                ref={altWordHighlightDivRef}
-                className="pointer-events-none fixed left-0 top-0 z-[2090] rounded border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)]/35"
-                style={{ display: "none", willChange: "transform" }}
+          ) : null}
+          <div
+            className={`${styles.chromeLayer}${bootPreActivateGate ? ` ${styles.chromeLayerBootSuppressed}` : ""}`}
+            style={{ right: graphOverlayOpen ? graphPanelWidth : 0 }}
+          >
+            {parentSpaceId ? (
+              <ArchitecturalParentExitThreshold
+                hovered={parentDropHovered}
+                interactive={parentExitInteractive}
+                onActivate={moveSelectionToParent}
+                ref={parentDropRef}
+                toolbarBottomPx={0}
+                visible={parentExitStripVisible}
               />
             ) : null}
-            <AltGraphCard
-              ref={altGraphCardDivRef}
-              open={Boolean(altGraphCard)}
-              term={altGraphCard?.term ?? ""}
-              x={altGraphCardPosRef.current.x}
-              y={altGraphCardPosRef.current.y}
-              mentions={altGraphCard?.mentions ?? []}
-              searchItems={altGraphCard?.searchItems ?? []}
-              loadingMentions={Boolean(altGraphCard?.loadingMentions)}
-              loadingSearch={Boolean(altGraphCard?.loadingSearch)}
-              onClose={() => {
-                setAltGraphCard(null);
-                setAltHighlightRect(null);
-              }}
-              onShowItem={(id) => {
-                if (!graphOverlayOpen) setGraphOverlayOpen(true);
-                focusEntityFromPalette(id);
-              }}
-            />
-          </>
-        ) : null}
-      </div>
-      </div>
 
-      <ContextMenu
-        position={selectionContextMenu}
-        onClose={closeSelectionContextMenu}
-        items={selectionContextMenuItems}
-      />
-      <ContextMenu
-        position={canvasEmptyContextMenu}
-        onClose={closeCanvasEmptyContextMenu}
-        items={canvasEmptyContextMenuItems}
-      />
-      <ContextMenu
-        position={connectionContextMenu}
-        onClose={closeConnectionContextMenu}
-        items={connectionContextMenuItems}
-      />
-
-      {lassoRectScreen ? (
-        <div
-          className={styles.lassoRect}
-          style={{
-            left: Math.min(lassoRectScreen.x1, lassoRectScreen.x2),
-            top: Math.min(lassoRectScreen.y1, lassoRectScreen.y2),
-            width: Math.abs(lassoRectScreen.x2 - lassoRectScreen.x1),
-            height: Math.abs(lassoRectScreen.y2 - lassoRectScreen.y1),
-          }}
-        />
-      ) : null}
-
-      {stackModal ? <div className={styles.stackScrim} onClick={closeStackModal} /> : null}
-      {stackModal ? (
-        <div
-          className={`${styles.stackFanStage}${stackDrag ? ` ${styles.stackFanStageDragging}` : ""}`}
-          data-stack-fan-stage="true"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              closeStackModal();
-            }
-          }}
-        >
-          {stackModalHull && stackDrag ? (
-            <div
-              className={`${styles.stackHullDropCue} ${stackModalEjectPreview ? styles.stackHullDropCueActive : ""}`}
-              style={{
-                left: stackModalHull.left - STACK_MODAL_EJECT_MARGIN,
-                top: stackModalHull.top - STACK_MODAL_EJECT_MARGIN,
-                width: stackModalHull.width + STACK_MODAL_EJECT_MARGIN * 2,
-                height: stackModalHull.height + STACK_MODAL_EJECT_MARGIN * 2,
-              }}
-            />
-          ) : null}
-          {stackModalVisibleEntities.map((entity, index) => {
-            const slot = stackModalLayout[entity.id] ?? {
-              x: viewportSize.width / 2 - 170,
-              y: viewportSize.height / 2 - 95,
-              scale: 1,
-            };
-            const drag = stackDrag?.entityId === entity.id ? stackDrag : null;
-            const visLast = stackModalVisibleEntities.length - 1;
-            /* orderedIds is front-first; rank 0 = back of fan, visLast = foremost card. */
-            const rank = visLast - index;
-            const collapsedX = fanOriginX + rank * 6;
-            const collapsedY = fanOriginY + rank * 6;
-            const baseX = stackModalExpanded ? slot.x : collapsedX;
-            const baseY = stackModalExpanded ? slot.y : collapsedY;
-            const dragX = drag ? drag.currentX - drag.pointerOffsetX : baseX;
-            const dragY = drag ? drag.currentY - drag.pointerOffsetY : baseY;
-            const rotation = stackModalExpanded
-              ? ((rank % 2 === 0 ? -1 : 1) * 0.8)
-              : (rank - (stackModalEntities.length - 1) / 2) * 1.6;
-            return (
+            {bootPreActivateGate ? null : (
               <div
-                key={entity.id}
-                data-node-id={entity.id}
-                data-space-id={activeSpaceId}
-                className={`${styles.stackFanCard} ${drag ? styles.stackFanDragging : ""} ${drag && stackModalEjectPreview ? styles.stackFanEjectArmed : ""}`}
-                style={{
-                  zIndex: 900 + rank,
-                  transform: `translate(${dragX}px, ${dragY}px) rotate(${rotation}deg) scale(${slot.scale})`,
-                }}
-                ref={(el) => {
-                  if (!el) return;
-                  const cardEl = el.firstElementChild as HTMLElement | null;
-                  const h = cardEl?.offsetHeight ?? STACK_MODAL_CARD_H_ESTIMATE;
-                  setStackModalCardHeights((prev) => {
-                    const current = prev[entity.id];
-                    if (current && Math.abs(current - h) < 1) return prev;
-                    return { ...prev, [entity.id]: h };
-                  });
-                }}
-                onMouseDown={(event) => {
-                  event.stopPropagation();
-                  recordUndoBeforeMutation();
-                  const visibleHull = stackModal.orderedIds.slice(0, STACK_MODAL_MAX_ITEMS);
-                  stackDragHullOrderedIdsRef.current = visibleHull;
-                  stackModalOrderedIdsDuringDragRef.current = stackModal.orderedIds.slice();
-                  stackModalDragStartOrderedIdsRef.current = stackModal.orderedIds.slice();
-                  stackEjectTouchedOutsideRef.current = false;
-                  stackBlockLiveReorderRef.current = false;
-                  lastStackEjectPreviewRef.current = false;
-                  const nextStackDrag = {
-                    entityId: entity.id,
-                    stackId: stackModal.stackId,
-                    startX: event.clientX,
-                    startY: event.clientY,
-                    currentX: event.clientX,
-                    currentY: event.clientY,
-                    pointerOffsetX: event.clientX - baseX,
-                    pointerOffsetY: event.clientY - baseY,
-                    intent: "pending" as const,
-                  };
-                  stackDragRef.current = nextStackDrag;
-                  setStackDrag(nextStackDrag);
-                }}
+                className={`${styles.focusEffectsEnterHost}${
+                  chromeEntranceOn ? ` ${styles.chromeEnterBottomLeft}` : ""
+                }`}
+                key={`hg-ce-fx-${chromeEnterEpoch}`}
               >
-                {entity.kind === "content" ? (
-                  shouldRenderLoreCharacterCredentialCanvasNode(entity) ? (
-                    <ArchitecturalLoreCharacterCanvasNode
-                      id={entity.id}
-                      width={entity.width}
-                      tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
-                      tapeRotation={entity.tapeRotation}
-                      bodyHtml={canonicalizeCharacterBodyHtml(entity, entity.bodyHtml)}
-                      activeTool={activeTool}
-                      dragged={!!drag}
-                      selected={false}
-                      onBodyCommit={updateNodeBody}
-                      onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
-                      wikiLinkAssist={makeWikiLinkAssist(entity.id)}
-                      onRichDocCommand={
-                        entity.theme === "default" || entity.theme === "task"
-                          ? (command, value) => runFormat(command, value)
-                          : undefined
-                      }
-                      emptyPlaceholder={
-                        entity.theme === "default" || entity.theme === "task"
-                          ? "Write here, or type / for blocks…"
-                          : undefined
-                      }
-                    />
-                  ) : shouldRenderLoreLocationCanvasNode(entity) ? (
-                    <ArchitecturalLoreLocationCanvasNode
-                      id={entity.id}
-                      width={entity.width}
-                      tapeRotation={entity.tapeRotation}
-                      bodyHtml={entity.bodyHtml}
-                      activeTool={activeTool}
-                      dragged={!!drag}
-                      selected={false}
-                      showStaple={!entity.stackId}
-                      onBodyCommit={updateNodeBody}
-                      onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
-                      wikiLinkAssist={makeWikiLinkAssist(entity.id)}
-                      onRichDocCommand={
-                        entity.theme === "default" || entity.theme === "task"
-                          ? (command, value) => runFormat(command, value)
-                          : undefined
-                      }
-                      emptyPlaceholder={
-                        entity.theme === "default" || entity.theme === "task"
-                          ? "Write here, or type / for blocks…"
-                          : undefined
-                      }
-                    />
-                  ) : shouldRenderLoreFactionArchive091CanvasNode(entity) ? (
-                    <ArchitecturalLoreFactionArchiveCanvasNode
-                      id={entity.id}
-                      width={entity.width}
-                      tapeVariant={tapeVariantForLoreCard("faction", entity.loreCard?.variant ?? "v4")}
-                      tapeRotation={entity.tapeRotation}
-                      bodyHtml={canonicalizeFactionBodyHtml(entity, entity.bodyHtml)}
-                      factionRoster={entity.factionRoster ?? []}
-                      activeTool={activeTool}
-                      dragged={!!drag}
-                      selected={false}
-                      showTape={!entity.stackId}
-                      onBodyCommit={updateNodeBody}
-                      onFactionRosterChange={updateFactionRoster}
-                      onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
-                      wikiLinkAssist={makeWikiLinkAssist(entity.id)}
-                      onRichDocCommand={
-                        entity.theme === "default" || entity.theme === "task"
-                          ? (command, value) => runFormat(command, value)
-                          : undefined
-                      }
-                      emptyPlaceholder={
-                        entity.theme === "default" || entity.theme === "task"
-                          ? "Write here, or type / for blocks…"
-                          : undefined
-                      }
-                    />
-                  ) : (
-                    <ArchitecturalNodeCard
-                      id={entity.id}
-                      title={entity.title}
-                      width={entity.width}
-                      theme={entity.theme}
-                      tapeVariant={entity.tapeVariant ?? tapeVariantForTheme(entity.theme)}
-                      tapeRotation={entity.tapeRotation}
-                      bodyHtml={entity.bodyHtml}
-                      bodyDoc={entity.bodyDoc ?? null}
-                      activeTool={activeTool}
-                      dragged={!!drag}
-                      selected={false}
-                      showTape={!entity.stackId}
-                      onBodyCommit={handleNodeBodyCommit}
-                      onExpand={handleNodeExpand}
-                      onBodyDraftDirty={(dirty) => setInlineBodyDraftDirty(entity.id, dirty)}
-                      canvasPanZoomScale={1}
-                      useFullImageResolution={galleryOpen && galleryNodeId === entity.id}
-                      wikiLinkAssist={makeWikiLinkAssist(entity.id)}
-                      onRichDocCommand={
-                        entity.theme === "default" || entity.theme === "task"
-                          ? (command, value) => runFormat(command, value)
-                          : undefined
-                      }
-                      emptyPlaceholder={
-                        entity.theme === "default" || entity.theme === "task"
-                          ? "Write here, or type / for blocks…"
-                          : undefined
-                      }
-                      loreCard={entity.loreCard}
-                      factionRoster={entity.loreCard?.kind === "faction" ? entity.factionRoster : undefined}
-                    />
-                  )
-                ) : (
-                  <ArchitecturalFolderCard
-                    id={entity.id}
-                    title={entity.title}
-                    itemCount={graph.spaces[entity.childSpaceId]?.entityIds.length ?? 0}
-                    previewTitles={folderPreviewTitles(entity, graph)}
-                    dragOver={false}
-                    selected={false}
-                    folderColorScheme={entity.folderColorScheme}
-                    onTitleCommit={(title) => renameFolder(entity.id, title)}
-                    onOpen={() => openFolder(entity.id)}
-                  />
-                )}
+                <ArchitecturalCanvasEffectsToggle
+                  effectsEnabled={canvasEffectsEnabled}
+                  onEffectsEnabledChange={handleCanvasEffectsEnabledChange}
+                  trailingSlot={
+                    bootLayerVisible ? null : (
+                      <>
+                        <div
+                          aria-hidden
+                          className={styles.focusEffectsDockSep}
+                        />
+                        <VigilAppChromeAudioMuteButton />
+                      </>
+                    )
+                  }
+                />
               </div>
-            );
-          })}
-          {stackModalHiddenCount > 0 ? (
-            <div className={styles.stackModalOverflowBadge}>
-              +{stackModalHiddenCount} more in stack
-            </div>
-          ) : null}
-          {stackModalEjectCount > 0 ? (
-            <div className={styles.stackModalEjectBadge}>Removed {stackModalEjectCount}</div>
-          ) : null}
-          {stackDrag && stackModalEjectPreview ? (
-            <div className={styles.stackModalUnstackHint}>Release to unstack</div>
-          ) : null}
-        </div>
-      ) : null}
-      {stackModal ? (
-        <div className={styles.stackModal}>
-          <div className={styles.stackModalCloseButtonWrap}>
-            <ArchitecturalFocusCloseButton
-              dirty={false}
-              onDone={closeStackModal}
-              onSave={closeStackModal}
-              onDiscard={closeStackModal}
-            />
-          </div>
-        </div>
-      ) : null}
-
-      {galleryOpen &&
-      galleryNodeId &&
-      galleryEntity?.kind === "content" &&
-      galleryEntity.theme === "media" ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="arch-media-gallery-title"
-          className={`${styles.focusOverlay} ${styles.focusActive} ${styles.focusEditorDark}`}
-        >
-          <div className={styles.focusSheet}>
-            <div className={styles.focusHeader} style={{ opacity: 1, transform: "none" }}>
-              <div className={styles.focusMeta}>
-                VIEWING // {galleryNodeId.toUpperCase()}
-                {galleryRaster.src ? (
-                  <span className={styles.mediaGalleryDimsInline}>
-                    &ensp;{galleryDimsLabel}
-                  </span>
+            )}
+            <div
+              className={`${styles.viewportMetricsEnterHost}${
+                chromeEntranceOn ? ` ${styles.chromeEnterBottomRight}` : ""
+              }`}
+              key={`hg-ce-metrics-${chromeEnterEpoch}`}
+            >
+              <div className={styles.viewportMetricsCluster}>
+                {minimapOpen &&
+                !focusOpen &&
+                !galleryOpen &&
+                !stackModal &&
+                viewportRevealReady ? (
+                  <div className={styles.viewportMetricsMinimapAbove}>
+                    <CanvasMinimap
+                      activeSpaceId={activeSpaceId}
+                      collapsedStacks={collapsedStacks as CollapsedStackInfo[]}
+                      graph={graph}
+                      layoutSignature={minimapLayoutKey}
+                      maxZoom={MAX_ZOOM}
+                      metricsDockWidth
+                      minZoom={MIN_ZOOM}
+                      onCenterOnWorld={onMinimapCenterOnWorld}
+                      onFitAll={applyFitAllToViewport}
+                      onPanWorldDelta={onMinimapPanWorldDelta}
+                      placementSizes={minimapPlacementSizes}
+                      scale={scale}
+                      selectedNodeIds={selectedNodeIds}
+                      translateX={translateX}
+                      translateY={translateY}
+                      viewportHeight={camVh}
+                      viewportWidth={camVw}
+                    />
+                  </div>
                 ) : null}
-              </div>
-              <div className={styles.focusHeaderActions}>
-                <ArchitecturalFocusCloseButton
-                  dirty={galleryDirty}
-                  onDone={closeMediaGallery}
-                  onSave={saveGalleryAndClose}
-                  onDiscard={closeMediaGallery}
+                <ArchitecturalViewportMetrics
+                  centerWorldX={centerWorldX}
+                  centerWorldY={centerWorldY}
+                  minimapOpen={minimapOpen}
+                  onToggleMinimap={toggleMinimapOpen}
+                  scale={scale}
                 />
               </div>
             </div>
-            <div className={styles.focusContent} style={{ opacity: 1, transform: "none" }}>
-              <BufferedTextInput
-                id="arch-media-gallery-title"
-                type="text"
-                className={styles.focusTitle}
-                value={galleryDraftTitle}
-                debounceMs={200}
-                onCommit={(next) => setGalleryDraftTitle(next)}
-                aria-label="Image title"
-                placeholder="Untitled image"
-                style={{ opacity: 1, transform: "none" }}
+            {focusOpen || galleryOpen ? null : (
+              <div
+                className={`${styles.bottomDockEnterHost}${
+                  chromeEntranceOn ? ` ${styles.chromeEnterBottomCenter}` : ""
+                }`}
+                key={`hg-ce-dock-${chromeEnterEpoch}`}
+              >
+                <ArchitecturalBottomDock
+                  activeBlockTag={formatCommandState.blockTag}
+                  canRedo={canRedo}
+                  canUndo={canUndo}
+                  createActions={dockCreateActions}
+                  createDisabled={dockCreateDisabledBySyncError}
+                  createDisabledReason={dockCreateSyncDisabledHint}
+                  folderColorPicker={folderColorPickerForDock}
+                  formatActions={dockFormatActions}
+                  insertDocActions={dockInsertActions}
+                  onCreateNode={createNewNode}
+                  onFormat={runFormat}
+                  onRedo={redoFromDock}
+                  onUndo={undoFromDock}
+                  redoLabel={`Redo (${modKeyHints.redo})`}
+                  selectionDelete={{
+                    selectedCount: selectedNodeIds.length,
+                    onDelete: () =>
+                      deleteEntitySelection([...selectedNodeIdsRef.current]),
+                  }}
+                  selectionStack={{
+                    canMerge: stackSelectionUi.canMergeStacks,
+                    onMerge: () => stackSelectedContent(selectedNodeIds),
+                    mergeTitle:
+                      stackSelectionUi.whollySelectedStackIds.length >= 2
+                        ? `Merge stacks (${modKeyHints.stack})`
+                        : `Create stack (${modKeyHints.stack})`,
+                    canUnstack: stackSelectionUi.canUnstackWhollySelected,
+                    onUnstack: () =>
+                      unstackWhollySelectedStacks(selectedNodeIds),
+                    unstackTitle: "Unstack",
+                  }}
+                  showDocInsertCluster={richDocInsertChromeActive}
+                  showFormatToolbar={textFormatChromeActive}
+                  undoLabel={`Undo (${modKeyHints.undo})`}
+                />
+              </div>
+            )}
+
+            <div
+              className={`${styles.toolRailEnterShell}${
+                chromeEntranceOn ? ` ${styles.chromeEnterRightRail}` : ""
+              }`}
+              key={`hg-ce-rail-${chromeEnterEpoch}`}
+            >
+              <ArchitecturalToolRail
+                activeTool={activeTool}
+                connectionColorControl={
+                  <ArchitecturalConnectionKindPicker
+                    appearance="spool"
+                    ariaLabel="Connection thread kind"
+                    engaged={connectionMode === "draw"}
+                    onChange={applyConnectionKind}
+                    value={connectionKind}
+                  />
+                }
+                connectionMode={connectionMode}
+                onRecenter={recenterToOrigin}
+                onSetConnectionMode={(next) => {
+                  const resolved = connectionMode === next ? "move" : next;
+                  setConnectionMode(resolved);
+                  setActiveTool("select");
+                  setDraggedNodeIds([]);
+                  draggedNodeIdsRef.current = [];
+                  lassoStartRef.current = null;
+                  lassoPointerIdRef.current = null;
+                  lassoRectScreenRef.current = null;
+                  setLassoRectScreen(null);
+                  if (resolved === "move") {
+                    const restore = selectionBeforeConnectionModeRef.current;
+                    if (restore) {
+                      setSelectedNodeIds(
+                        restore.filter((id) => !!graphRef.current.entities[id])
+                      );
+                    }
+                    selectionBeforeConnectionModeRef.current = null;
+                  } else {
+                    if (!selectionBeforeConnectionModeRef.current) {
+                      selectionBeforeConnectionModeRef.current = [
+                        ...selectedNodeIdsRef.current,
+                      ];
+                    }
+                    setSelectedNodeIds([]);
+                  }
+                  if (resolved !== "draw") {
+                    setConnectionSourceId(null);
+                    setConnectionCursorWorld(null);
+                  }
+                }}
+                onSetTool={(tool) => {
+                  setActiveTool(tool);
+                  setConnectionMode("move");
+                  setConnectionSourceId(null);
+                  setConnectionCursorWorld(null);
+                  selectionBeforeConnectionModeRef.current = null;
+                }}
+                onZoomIn={() => zoomBy(ZOOM_BUTTON_STEP)}
+                onZoomOut={() => zoomBy(-ZOOM_BUTTON_STEP)}
               />
-              <div className={styles.mediaGalleryAssetStage}>
-                {galleryRaster.src ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- dynamic user/R2 URLs; not suitable for next/image without broad remotePatterns
-                  <img
-                    key={galleryRaster.src}
-                    src={galleryRaster.src}
-                    alt={galleryRaster.alt || galleryEntity.title}
-                    className={styles.mediaGalleryAsset}
-                    draggable={false}
-                    onLoad={(e) => {
-                      const { naturalWidth, naturalHeight } = e.currentTarget;
-                      if (naturalWidth && naturalHeight) {
-                        setGalleryDimsLabel(`${naturalWidth} × ${naturalHeight}`);
-                      }
-                    }}
-                  />
-                ) : (
-                  <HeartgardenMediaPlaceholderImg
-                    variant="neutral"
-                    className={styles.mediaGalleryAsset}
-                    alt=""
-                    aria-hidden
-                  />
-                )}
-                <div className={styles.mediaImageActions} contentEditable={false}>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    tone="glass"
-                    size="sm"
-                    className={styles.mediaUploadBtn}
-                    data-architectural-media-upload="true"
-                    data-media-owner-id={galleryNodeId}
-                  >
-                    {mediaUploadActionLabel(Boolean(galleryRaster.src))}
-                  </Button>
+            </div>
+            <CommandPalette
+              actions={paletteActions}
+              currentSpaceId={activeSpaceId}
+              items={paletteItems}
+              onClose={() => setPaletteOpen(false)}
+              onOpenRecentFolder={openFolder}
+              onRecordRecentItem={pushRecentItem}
+              onRunAction={runPaletteAction}
+              onSelectItem={(id, openInFocus) =>
+                focusEntityFromPalette(id, openInFocus)
+              }
+              onSelectSpace={(spaceId) => enterSpace(spaceId)}
+              open={paletteOpen}
+              recentFolders={recentFolders}
+              recentItems={recentItems}
+              spaces={paletteSpaces}
+            />
+            {isRestrictedLayer ? null : (
+              <LoreAskPanel
+                onClose={() => setLorePanelOpen(false)}
+                onOpenSource={(id) => focusEntityFromPalette(id)}
+                open={lorePanelOpen}
+                spaceId={activeSpaceId}
+                spaceScopedAllowed={isUuidLike(activeSpaceId)}
+              />
+            )}
+            {isRestrictedLayer ? null : (
+              <input
+                accept=".pdf,.docx,.md,.txt,.markdown,text/plain,text/markdown,application/pdf"
+                aria-hidden
+                className="sr-only"
+                onChange={onLoreImportFileChange}
+                ref={loreImportFileInputRef}
+                tabIndex={-1}
+                type="file"
+              />
+            )}
+            {isRestrictedLayer ? null : (
+              <ArchitecturalLoreImportUploadPopover
+                contextText={loreImportSelection.contextText}
+                fileName={loreImportPreparedSource?.fileName ?? ""}
+                mode={loreImportSelection.mode}
+                onChangeFile={beginLoreImportFilePick}
+                onClose={closeLoreImportPopover}
+                onContextTextChange={(value) =>
+                  setLoreImportSelection((prev) => ({
+                    ...prev,
+                    contextText: value,
+                  }))
+                }
+                onContinue={continuePreparedLoreImport}
+                onModeChange={(mode) =>
+                  setLoreImportSelection((prev) => ({ ...prev, mode }))
+                }
+                onScopeChange={(scope) =>
+                  setLoreImportSelection((prev) => ({ ...prev, scope }))
+                }
+                open={loreImportPopoverOpen && !!loreImportPreparedSource}
+                scope={loreImportSelection.scope}
+              />
+            )}
+            {loreSmartPlanning ? (
+              <div
+                aria-label={
+                  loreSmartPlanningUi.failed
+                    ? "Smart import failed"
+                    : "Smart import planning status"
+                }
+                aria-live={loreSmartPlanningUi.failed ? "assertive" : "polite"}
+                className={styles.smartImportPlanningBackdrop}
+                role={loreSmartPlanningUi.failed ? "alertdialog" : "status"}
+              >
+                <div className={styles.smartImportPlanningCard}>
+                  {loreSmartPlanningUi.failed ? (
+                    <>
+                      <div
+                        aria-hidden
+                        className={styles.smartImportPlanningFailIcon}
+                      >
+                        <WarningCircle size={28} weight="fill" />
+                      </div>
+                      <p className={styles.smartImportPlanningPhase}>
+                        {loreImportFailure?.stage === "timeout"
+                          ? "Import is taking too long"
+                          : "Smart import failed"}
+                      </p>
+                      <p className={styles.smartImportPlanningError}>
+                        {loreImportFailure?.message ??
+                          loreSmartPlanningUi.detail ??
+                          "Smart import couldn't finish planning. Try again or copy the details below."}
+                        {loreImportFailure?.recommendedAction
+                          ? ` ${loreImportFailure.recommendedAction}`
+                          : ""}
+                      </p>
+                      {loreImportFailure ? (
+                        <details className={styles.smartImportPlanningDetails}>
+                          <summary>Technical details</summary>
+                          <pre>
+                            {formatLoreImportFailureReport(loreImportFailure)}
+                          </pre>
+                        </details>
+                      ) : null}
+                      {loreSmartPlanningEventGroups.length > 0 ? (
+                        <details
+                          className={styles.smartImportPlanningDetails}
+                          onToggle={(event) => {
+                            setLoreSmartPlanningDetailsOpen(
+                              (event.currentTarget as HTMLDetailsElement).open
+                            );
+                          }}
+                          open={loreSmartPlanningDetailsOpen}
+                        >
+                          <summary>Timeline details</summary>
+                          <div className={styles.smartImportPlanningTimeline}>
+                            {loreSmartPlanningEventGroups.map((group) => (
+                              <div
+                                className={styles.smartImportPlanningPhaseGroup}
+                                key={`planning-failed-group-${group.phase}`}
+                              >
+                                <p
+                                  className={
+                                    styles.smartImportPlanningPhaseGroupTitle
+                                  }
+                                >
+                                  {group.label}
+                                </p>
+                                <ul
+                                  className={
+                                    styles.smartImportPlanningTimelineList
+                                  }
+                                >
+                                  {group.events.map((event, idx) => (
+                                    <li
+                                      className={
+                                        styles.smartImportPlanningTimelineItem
+                                      }
+                                      key={`${group.phase}-failed-${idx}`}
+                                    >
+                                      <p
+                                        className={
+                                          styles.smartImportPlanningTimelineRow
+                                        }
+                                      >
+                                        <span>
+                                          {event.text ||
+                                            event.kind.replace(/_/g, " ")}
+                                        </span>
+                                        {formatDurationMs(event.durationMs) ? (
+                                          <span>
+                                            {formatDurationMs(event.durationMs)}
+                                          </span>
+                                        ) : null}
+                                      </p>
+                                      {event.kind === "llm_call" ? (
+                                        <p
+                                          className={
+                                            styles.smartImportPlanningTimelineMeta
+                                          }
+                                        >
+                                          {event.model
+                                            ? `${event.model} · `
+                                            : ""}
+                                          {typeof event.tokensIn === "number"
+                                            ? `${event.tokensIn} in`
+                                            : "tokens n/a"}
+                                          {typeof event.tokensOut === "number"
+                                            ? ` · ${event.tokensOut} out`
+                                            : ""}
+                                          {event.stopReason
+                                            ? ` · ${event.stopReason}`
+                                            : ""}
+                                        </p>
+                                      ) : null}
+                                      {event.kind === "llm_call" &&
+                                      event.responseSnippet ? (
+                                        <details
+                                          className={
+                                            styles.smartImportPlanningTimelineSnippet
+                                          }
+                                        >
+                                          <summary>
+                                            Model output snippet
+                                          </summary>
+                                          <pre>{event.responseSnippet}</pre>
+                                        </details>
+                                      ) : null}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      ) : null}
+                      <div className={styles.smartImportPlanningActionsSplit}>
+                        <Button
+                          leadingIcon={
+                            <CopySimple size={14} weight="regular" />
+                          }
+                          onClick={copyLoreSmartPlanningFailure}
+                          size="sm"
+                          tone="card-dark"
+                          type="button"
+                          variant="default"
+                        >
+                          {loreSmartPlanningCopyState === "copied"
+                            ? "Copied"
+                            : loreSmartPlanningCopyState === "failed"
+                              ? "Copy failed"
+                              : "Copy details"}
+                        </Button>
+                        <div>
+                          <Button
+                            onClick={closeLoreSmartPlanningFailure}
+                            size="sm"
+                            tone="card-dark"
+                            type="button"
+                            variant="default"
+                          >
+                            Close
+                          </Button>
+                          <Button
+                            onClick={retryLoreSmartPlanning}
+                            size="sm"
+                            tone="solid"
+                            type="button"
+                            variant="primary"
+                          >
+                            Retry
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div
+                        aria-hidden
+                        className={styles.smartImportPlanningSpinner}
+                      >
+                        <span
+                          className={styles.smartImportPlanningSpinnerRing}
+                        />
+                      </div>
+                      <p className={styles.smartImportPlanningPhase}>
+                        {loreSmartPlanningUi.phaseLabel}
+                      </p>
+                      {typeof loreSmartPlanningUi.pipelinePercent ===
+                      "number" ? (
+                        <div
+                          aria-label="Import planning progress"
+                          aria-valuemax={100}
+                          aria-valuemin={0}
+                          aria-valuenow={Math.max(
+                            0,
+                            Math.min(
+                              100,
+                              Math.trunc(loreSmartPlanningUi.pipelinePercent)
+                            )
+                          )}
+                          className={styles.smartImportPlanningProgressBar}
+                          role="progressbar"
+                        >
+                          <span
+                            style={{
+                              width: `${Math.max(
+                                0,
+                                Math.min(
+                                  100,
+                                  Math.trunc(
+                                    loreSmartPlanningUi.pipelinePercent
+                                  )
+                                )
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                      ) : null}
+                      {loreSmartPlanningUi.stepLabel ? (
+                        <p className={styles.smartImportPlanningStep}>
+                          {loreSmartPlanningUi.stepLabel}
+                        </p>
+                      ) : null}
+                      {loreSmartPlanningUi.subphase ? (
+                        <p className={styles.smartImportPlanningSubphase}>
+                          {loreSmartPlanningUi.subphase}
+                        </p>
+                      ) : null}
+                      {loreSmartPlanningUi.detail ? (
+                        <p className={styles.smartImportPlanningDetail}>
+                          {loreSmartPlanningUi.detail}
+                        </p>
+                      ) : null}
+                      {loreSmartPlanningUi.findingsSummary ? (
+                        <p className={styles.smartImportPlanningFindings}>
+                          {loreSmartPlanningUi.findingsSummary}
+                        </p>
+                      ) : null}
+                      {loreSmartPlanningUi.etaLabel ? (
+                        <p className={styles.smartImportPlanningEta}>
+                          {loreSmartPlanningUi.etaLabel}
+                        </p>
+                      ) : null}
+                      {loreSmartPlanningUi.queueFailureHint ? (
+                        <p className={styles.smartImportPlanningWarning}>
+                          {loreSmartPlanningUi.queueFailureHint}
+                        </p>
+                      ) : null}
+                      {loreSmartPlanningEventGroups.length > 0 ? (
+                        <details
+                          className={styles.smartImportPlanningDetails}
+                          onToggle={(event) => {
+                            setLoreSmartPlanningDetailsOpen(
+                              (event.currentTarget as HTMLDetailsElement).open
+                            );
+                          }}
+                          open={loreSmartPlanningDetailsOpen}
+                        >
+                          <summary>Show details</summary>
+                          <div className={styles.smartImportPlanningTimeline}>
+                            {loreSmartPlanningEventGroups.map((group) => (
+                              <div
+                                className={styles.smartImportPlanningPhaseGroup}
+                                key={`planning-group-${group.phase}`}
+                              >
+                                <p
+                                  className={
+                                    styles.smartImportPlanningPhaseGroupTitle
+                                  }
+                                >
+                                  {group.label}
+                                </p>
+                                <ul
+                                  className={
+                                    styles.smartImportPlanningTimelineList
+                                  }
+                                >
+                                  {group.events.map((event, idx) => (
+                                    <li
+                                      className={
+                                        styles.smartImportPlanningTimelineItem
+                                      }
+                                      key={`${group.phase}-${idx}`}
+                                    >
+                                      <p
+                                        className={
+                                          styles.smartImportPlanningTimelineRow
+                                        }
+                                      >
+                                        <span>
+                                          {event.text ||
+                                            event.kind.replace(/_/g, " ")}
+                                        </span>
+                                        {formatDurationMs(event.durationMs) ? (
+                                          <span>
+                                            {formatDurationMs(event.durationMs)}
+                                          </span>
+                                        ) : null}
+                                      </p>
+                                      {event.kind === "llm_call" ? (
+                                        <p
+                                          className={
+                                            styles.smartImportPlanningTimelineMeta
+                                          }
+                                        >
+                                          {event.model
+                                            ? `${event.model} · `
+                                            : ""}
+                                          {typeof event.tokensIn === "number"
+                                            ? `${event.tokensIn} in`
+                                            : "tokens n/a"}
+                                          {typeof event.tokensOut === "number"
+                                            ? ` · ${event.tokensOut} out`
+                                            : ""}
+                                          {event.stopReason
+                                            ? ` · ${event.stopReason}`
+                                            : ""}
+                                        </p>
+                                      ) : null}
+                                      {event.kind === "llm_call" &&
+                                      event.responseSnippet ? (
+                                        <details
+                                          className={
+                                            styles.smartImportPlanningTimelineSnippet
+                                          }
+                                        >
+                                          <summary>
+                                            Model output snippet
+                                          </summary>
+                                          <pre>{event.responseSnippet}</pre>
+                                        </details>
+                                      ) : null}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      ) : null}
+                      <p className={styles.smartImportPlanningHint}>
+                        Keep this tab open — most imports finish in a minute or
+                        two.
+                      </p>
+                      <div className={styles.smartImportPlanningActions}>
+                        <Button
+                          onClick={cancelLoreSmartPlanning}
+                          size="sm"
+                          tone="card-dark"
+                          type="button"
+                          variant="default"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
-              <div data-architectural-media-gallery-notes="true">
-                <HeartgardenDocEditor
-                  surfaceKey="gallery-notes"
-                  chromeRole="focus"
-                  className={styles.focusBody}
-                  value={galleryDraftNotesDoc}
-                  onChange={(doc) => setGalleryDraftNotesDoc(doc)}
-                  editable
-                  placeholder="Write a caption, or type / for blocks…"
-                  enableDragHandle
+            ) : null}
+            {isRestrictedLayer ? null : (
+              <ArchitecturalLoreReviewPanel
+                draft={vaultReviewDraftActive}
+                error={loreReviewError}
+                issues={loreReviewIssues}
+                loading={loreReviewLoading}
+                onAppendTags={appendVaultReviewTags}
+                onClose={() => setLoreReviewPanelOpen(false)}
+                onRunAnalysis={() => void runVaultReviewAnalysis()}
+                open={loreReviewPanelOpen}
+                semanticSummary={loreReviewSemanticSummary}
+                suggestedNoteTags={loreReviewSuggestedTags}
+              />
+            )}
+            {isRestrictedLayer ? null : (
+              <ArchitecturalLoreImportErrorDialog
+                failure={loreSmartPlanning ? null : loreImportFailure}
+                onClose={() => setLoreImportFailure(null)}
+                onRetry={beginLoreImportFilePick}
+              />
+            )}
+            {loreSmartReview && !isRestrictedLayer ? (
+              <div
+                aria-label="Smart document import"
+                aria-modal="true"
+                className={styles.smartImportReviewBackdrop}
+                onMouseDown={(e) => {
+                  if (e.target === e.currentTarget && !loreImportCommitting) {
+                    closeLoreSmartReview();
+                  }
+                }}
+                role="dialog"
+              >
+                <div className={styles.smartImportReviewPanel}>
+                  <header className={styles.smartImportReviewHeader}>
+                    <div className={styles.smartImportReviewHeaderMain}>
+                      <h2 className={styles.smartImportReviewTitle}>
+                        Smart import
+                      </h2>
+                      {loreSmartReview.fileName ? (
+                        <p className={styles.smartImportReviewFile}>
+                          {loreSmartReview.fileName}
+                        </p>
+                      ) : null}
+                      <p className={styles.smartImportReviewStatsLine}>
+                        <strong>{loreSmartReview.plan.folders.length}</strong>{" "}
+                        folders ·{" "}
+                        <strong>{loreSmartReview.plan.notes.length}</strong>{" "}
+                        notes ·{" "}
+                        <strong>
+                          {loreSmartReview.plan.clarifications.length}
+                        </strong>{" "}
+                        question
+                        {loreSmartReview.plan.clarifications.length === 1
+                          ? ""
+                          : "s"}
+                      </p>
+                    </div>
+                    <div className={styles.smartImportReviewHeaderActions}>
+                      <Button
+                        disabled={loreImportCommitting}
+                        onClick={closeLoreSmartReview}
+                        size="sm"
+                        tone="card-dark"
+                        variant="default"
+                      >
+                        Close
+                      </Button>
+                    </div>
+                  </header>
+                  <div className={styles.smartImportReviewBody}>
+                    <div className={styles.smartImportReviewMergeToolbar}>
+                      <Button
+                        disabled={loreImportCommitting}
+                        onClick={collapseSmartImportToOneNote}
+                        size="sm"
+                        tone="card-dark"
+                        type="button"
+                        variant="default"
+                      >
+                        Collapse to one note
+                      </Button>
+                      {loreSmartReview.plan.folders.length > 0 ? (
+                        <Button
+                          disabled={loreImportCommitting}
+                          onClick={flattenSmartImportToNearby}
+                          size="sm"
+                          tone="card-dark"
+                          type="button"
+                          variant="default"
+                        >
+                          Flatten to Nearby
+                        </Button>
+                      ) : null}
+                    </div>
+                    {loreSmartMergeProposals.length > 0 ? (
+                      <section>
+                        <p className={styles.smartImportReviewMergeMeta}>
+                          Merge proposals: {loreSmartAcceptedMergeCount}/
+                          {loreSmartMergeProposals.length} accepted
+                        </p>
+                        <div className={styles.smartImportReviewMergeToolbar}>
+                          <Button
+                            disabled={loreImportCommitting}
+                            onClick={() =>
+                              setAllLoreSmartMergeAcceptances(true)
+                            }
+                            size="sm"
+                            tone="card-dark"
+                            type="button"
+                            variant="default"
+                          >
+                            Accept all merges
+                          </Button>
+                          <Button
+                            disabled={loreImportCommitting}
+                            onClick={() =>
+                              setAllLoreSmartMergeAcceptances(false)
+                            }
+                            size="sm"
+                            tone="card-dark"
+                            type="button"
+                            variant="default"
+                          >
+                            Reject all merges
+                          </Button>
+                        </div>
+                        <ul className={styles.smartImportReviewMergeList}>
+                          {loreSmartMergeProposals.map((merge) => {
+                            const accepted = Boolean(
+                              loreSmartAcceptedMergeIds[merge.id]
+                            );
+                            const fromTitle =
+                              loreSmartNoteTitleByClientId.get(
+                                merge.noteClientId
+                              ) ?? merge.noteClientId;
+                            const preview = merge.proposedText.slice(0, 600);
+                            return (
+                              <li
+                                className={styles.smartImportReviewMergeCard}
+                                key={merge.id}
+                              >
+                                <label
+                                  className={styles.smartImportReviewMergeLabel}
+                                >
+                                  <input
+                                    checked={accepted}
+                                    disabled={loreImportCommitting}
+                                    onChange={(event) =>
+                                      setLoreSmartMergeAccepted(
+                                        merge.id,
+                                        event.target.checked
+                                      )
+                                    }
+                                    type="checkbox"
+                                  />
+                                  <span>
+                                    <strong>{merge.targetTitle}</strong>
+                                    <small
+                                      className={
+                                        styles.smartImportReviewMergeSpace
+                                      }
+                                    >
+                                      {merge.targetSpaceName
+                                        ? `${merge.targetSpaceName} · `
+                                        : ""}
+                                      from &quot;{fromTitle}&quot;
+                                    </small>
+                                    {merge.rationale ? (
+                                      <small
+                                        className={
+                                          styles.smartImportReviewMergeMeta
+                                        }
+                                      >
+                                        {merge.rationale}
+                                      </small>
+                                    ) : null}
+                                  </span>
+                                </label>
+                                <pre
+                                  className={styles.smartImportReviewMergePre}
+                                >
+                                  {preview}
+                                  {merge.proposedText.length > preview.length
+                                    ? "\n… (truncated)"
+                                    : ""}
+                                </pre>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </section>
+                    ) : null}
+                    <section className={styles.smartImportReviewStructure}>
+                      <div className={styles.smartImportReviewTargetScope}>
+                        <p className={styles.smartImportReviewScopeHint}>
+                          Scope:{" "}
+                          {loreSmartImportScope === "gm_workspace"
+                            ? "Entire GM workspace"
+                            : "This space & its folders"}
+                        </p>
+                        <input
+                          className={styles.smartImportReviewTargetSearch}
+                          onChange={(event) =>
+                            setLoreSmartSpaceSearchQuery(event.target.value)
+                          }
+                          placeholder="Search spaces for overrides..."
+                          type="search"
+                          value={loreSmartSpaceSearchQuery}
+                        />
+                      </div>
+                      <ul className={styles.smartImportReviewNoteList}>
+                        {loreSmartReview.plan.notes.map((note) => {
+                          const selected =
+                            loreSmartTargetSpaceByNoteId[note.clientId] ?? null;
+                          const scopedSuggestions = [
+                            ...(
+                              loreSmartReview.plan.spaceSuggestions ?? []
+                            ).map((s) => ({
+                              spaceId: s.spaceId,
+                              title: s.spaceTitle,
+                              path: s.path ?? s.spaceTitle,
+                            })),
+                            ...loreSmartSpaceSearchResults,
+                          ];
+                          const seen = new Set<string>();
+                          const uniqueOptions = scopedSuggestions.filter(
+                            (option) => {
+                              if (seen.has(option.spaceId)) {
+                                return false;
+                              }
+                              seen.add(option.spaceId);
+                              return true;
+                            }
+                          );
+                          const related = note.relatedItems ?? [];
+                          const relatedOpen = Boolean(
+                            loreSmartRelatedOpenByNoteId[note.clientId]
+                          );
+                          return (
+                            <li
+                              className={styles.smartImportReviewNoteCard}
+                              key={note.clientId}
+                            >
+                              <div
+                                className={styles.smartImportReviewNoteTitleRow}
+                              >
+                                <p
+                                  className={styles.smartImportReviewNoteTitle}
+                                >
+                                  {note.title}
+                                </p>
+                                <span
+                                  className={styles.smartImportReviewNoteKind}
+                                >
+                                  {note.canonicalEntityKind}
+                                </span>
+                              </div>
+                              {note.summary ? (
+                                <p
+                                  className={
+                                    styles.smartImportReviewNoteSummary
+                                  }
+                                >
+                                  {note.summary}
+                                </p>
+                              ) : null}
+                              {note.folderClientId ? (
+                                <p
+                                  className={styles.smartImportReviewMergeMeta}
+                                >
+                                  In folder mode, placement follows new import
+                                  folders.
+                                </p>
+                              ) : (
+                                <label
+                                  className={
+                                    styles.smartImportReviewTargetField
+                                  }
+                                >
+                                  <span>Target space</span>
+                                  <select
+                                    onChange={(event) =>
+                                      setLoreSmartTargetSpaceByNoteId(
+                                        (prev) => ({
+                                          ...prev,
+                                          [note.clientId]:
+                                            event.target.value || null,
+                                        })
+                                      )
+                                    }
+                                    value={selected ?? ""}
+                                  >
+                                    <option value="">Current space</option>
+                                    {uniqueOptions.map((option) => (
+                                      <option
+                                        key={`${note.clientId}-${option.spaceId}`}
+                                        value={option.spaceId}
+                                      >
+                                        {option.path}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  {note.targetSpaceReason ? (
+                                    <small>{note.targetSpaceReason}</small>
+                                  ) : null}
+                                </label>
+                              )}
+                              {related.length > 0 ? (
+                                <div
+                                  className={
+                                    styles.smartImportReviewRelatedBlock
+                                  }
+                                >
+                                  <Button
+                                    className={
+                                      styles.smartImportReviewRelatedToggle
+                                    }
+                                    onClick={() =>
+                                      setLoreSmartRelatedOpenByNoteId(
+                                        (prev) => ({
+                                          ...prev,
+                                          [note.clientId]: !relatedOpen,
+                                        })
+                                      )
+                                    }
+                                    size="sm"
+                                    tone="card-dark"
+                                    variant="ghost"
+                                  >
+                                    Related elsewhere ({related.length})
+                                  </Button>
+                                  {relatedOpen ? (
+                                    <ul
+                                      className={
+                                        styles.smartImportReviewRelatedList
+                                      }
+                                    >
+                                      {related.map((row) => (
+                                        <li
+                                          key={`${note.clientId}-${row.itemId}`}
+                                        >
+                                          <Button
+                                            className={
+                                              styles.smartImportReviewRelatedLink
+                                            }
+                                            onClick={() =>
+                                              focusEntityFromPalette(row.itemId)
+                                            }
+                                            size="sm"
+                                            tone="card-dark"
+                                            variant="ghost"
+                                          >
+                                            {row.title || row.itemId}
+                                          </Button>
+                                          {row.snippet ? (
+                                            <small>{row.snippet}</small>
+                                          ) : null}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </section>
+                    <div className={styles.smartImportWizard}>
+                      {loreSmartReview.plan.clarifications.length === 0 ? (
+                        <div className={styles.smartImportWizardComplete}>
+                          <p className={styles.smartImportWizardCompleteTitle}>
+                            Ready to import
+                          </p>
+                          <p className={styles.smartImportWizardCompleteBody}>
+                            No clarification questions are required for this
+                            file.
+                          </p>
+                          <Button
+                            disabled={loreImportCommitting}
+                            onClick={() => void commitSmartLoreImport()}
+                            size="md"
+                            tone="solid"
+                            type="button"
+                            variant="primary"
+                          >
+                            {loreImportCommitting
+                              ? "Applying…"
+                              : "Apply import to canvas"}
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className={styles.smartImportWizardProgress}>
+                            <p
+                              className={styles.smartImportWizardProgressLabel}
+                            >
+                              {loreSmartOtherFollowUp
+                                ? "Follow-up"
+                                : loreSmartQuestionUi.questionsComplete
+                                  ? "All done"
+                                  : loreSmartQuestionUi.focusQuestion
+                                    ? `Question ${loreSmartQuestionUi.stableQuestionOrder.indexOf(loreSmartQuestionUi.focusQuestion) + 1} of ${loreSmartQuestionUi.totalQuestions}`
+                                    : "Questions"}
+                            </p>
+                            <div
+                              aria-label="Questions completed"
+                              aria-valuemax={100}
+                              aria-valuemin={0}
+                              aria-valuenow={
+                                loreSmartQuestionUi.wizardBarPercent
+                              }
+                              className={
+                                loreSmartQuestionUi.totalQuestions > 1
+                                  ? `${styles.smartImportQuestionsProgressTrack} ${styles.smartImportQuestionsProgressTrackSegmented}`
+                                  : styles.smartImportQuestionsProgressTrack
+                              }
+                              role="progressbar"
+                            >
+                              {loreSmartQuestionUi.totalQuestions > 1 ? (
+                                loreSmartQuestionUi.stableQuestionOrder.map(
+                                  (q) => {
+                                    const answered =
+                                      loreSmartClarificationAnswers.find(
+                                        (a) => a.clarificationId === q.id
+                                      );
+                                    const isDone =
+                                      isClarificationAnswered(answered);
+                                    const isActive =
+                                      !!loreSmartQuestionUi.focusQuestion &&
+                                      loreSmartQuestionUi.focusQuestion.id ===
+                                        q.id;
+                                    return (
+                                      <span
+                                        className={`${styles.smartImportQuestionsProgressSegment}${isDone ? ` ${styles.smartImportQuestionsProgressSegmentDone}` : ""}${isActive ? ` ${styles.smartImportQuestionsProgressSegmentActive}` : ""}`}
+                                        key={q.id}
+                                      />
+                                    );
+                                  }
+                                )
+                              ) : (
+                                <div
+                                  className={
+                                    styles.smartImportQuestionsProgressFill
+                                  }
+                                  style={{
+                                    width: `${loreSmartQuestionUi.wizardBarPercent}%`,
+                                  }}
+                                />
+                              )}
+                            </div>
+                          </div>
+                          {loreSmartOtherFollowUp ? (
+                            <div
+                              aria-live="polite"
+                              className={styles.smartImportWizardCard}
+                              role="region"
+                            >
+                              <p className={styles.smartImportWizardEyebrow}>
+                                Follow-up
+                              </p>
+                              <h3 className={styles.smartImportWizardTitle}>
+                                {loreSmartOtherFollowUp.title}
+                              </h3>
+                              <p className={styles.smartImportWizardContext}>
+                                {loreSmartOtherFollowUp.question}
+                              </p>
+                              <p className={styles.smartImportWizardQuote}>
+                                You wrote: &quot;
+                                {loreSmartOtherFollowUp.otherText}&quot;
+                              </p>
+                              <div
+                                className={
+                                  styles.smartImportWizardFollowUpOptions
+                                }
+                              >
+                                {loreSmartOtherFollowUp.options.map((opt) => (
+                                  <label
+                                    className={styles.smartImportWizardOption}
+                                    key={opt.id}
+                                  >
+                                    <input
+                                      name={`clarify-followup-${loreSmartOtherFollowUp.clarificationId}`}
+                                      onChange={() => {
+                                        setLoreSmartClarificationAnswers(
+                                          (prev) =>
+                                            upsertClarificationAnswer(prev, {
+                                              clarificationId:
+                                                loreSmartOtherFollowUp.clarificationId,
+                                              resolution: "answered",
+                                              selectedOptionIds: [opt.id],
+                                            })
+                                        );
+                                        setLoreSmartManualQuestionId(null);
+                                        setLoreSmartOtherFollowUp(null);
+                                      }}
+                                      type="radio"
+                                    />
+                                    <span>{opt.label}</span>
+                                  </label>
+                                ))}
+                              </div>
+                              <div className={styles.smartImportWizardFooter}>
+                                <Button
+                                  onClick={() => {
+                                    setLoreSmartClarificationAnswers((prev) =>
+                                      upsertClarificationAnswer(prev, {
+                                        clarificationId:
+                                          loreSmartOtherFollowUp.clarificationId,
+                                        resolution: "skipped_best_judgement",
+                                      })
+                                    );
+                                    setLoreSmartManualQuestionId(null);
+                                    setLoreSmartOtherFollowUp(null);
+                                  }}
+                                  size="sm"
+                                  tone="glass"
+                                  type="button"
+                                  variant="ghost"
+                                >
+                                  Skip, use best judgement
+                                </Button>
+                              </div>
+                            </div>
+                          ) : loreSmartQuestionUi.focusQuestion ? (
+                            (() => {
+                              const c = loreSmartQuestionUi.focusQuestion;
+                              const answerById = new Map(
+                                loreSmartClarificationAnswers.map((a) => [
+                                  a.clarificationId,
+                                  a,
+                                ])
+                              );
+                              const ans = answerById.get(c.id);
+                              const isMulti = c.questionKind === "multi_select";
+                              const selectedSet = new Set(
+                                ans?.resolution === "answered"
+                                  ? (ans.selectedOptionIds ?? [])
+                                  : ans?.resolution === "skipped_default" &&
+                                      ans.skipDefaultOptionId
+                                    ? [ans.skipDefaultOptionId]
+                                    : []
+                              );
+                              const otherSelected =
+                                ans?.resolution === "other_text";
+                              const step =
+                                loreSmartQuestionUi.stableQuestionOrder.indexOf(
+                                  c
+                                ) + 1;
+                              const canGoBack = step > 1;
+                              const prevQuestion = canGoBack
+                                ? (loreSmartQuestionUi.stableQuestionOrder[
+                                    step - 2
+                                  ] ?? null)
+                                : null;
+                              return (
+                                <article
+                                  className={styles.smartImportWizardCard}
+                                >
+                                  <p
+                                    className={styles.smartImportWizardEyebrow}
+                                  >
+                                    {c.severity === "required"
+                                      ? "Required"
+                                      : "Optional"}{" "}
+                                    · {step} of{" "}
+                                    {loreSmartQuestionUi.totalQuestions}
+                                  </p>
+                                  <h3 className={styles.smartImportWizardTitle}>
+                                    {c.title}
+                                  </h3>
+                                  {c.context ? (
+                                    <p
+                                      className={
+                                        styles.smartImportWizardContext
+                                      }
+                                    >
+                                      {c.context}
+                                    </p>
+                                  ) : null}
+                                  <div
+                                    className={styles.smartImportWizardOptions}
+                                  >
+                                    {c.options.map((opt) =>
+                                      isMulti ? (
+                                        <label
+                                          className={
+                                            styles.smartImportWizardOption
+                                          }
+                                          key={opt.id}
+                                        >
+                                          <input
+                                            checked={selectedSet.has(opt.id)}
+                                            onChange={(e) => {
+                                              let base: string[] =
+                                                ans?.resolution === "answered"
+                                                  ? [
+                                                      ...(ans.selectedOptionIds ??
+                                                        []),
+                                                    ]
+                                                  : [];
+                                              if (e.target.checked) {
+                                                if (!base.includes(opt.id)) {
+                                                  base.push(opt.id);
+                                                }
+                                              } else {
+                                                base = base.filter(
+                                                  (x) => x !== opt.id
+                                                );
+                                              }
+                                              setLoreSmartClarificationAnswers(
+                                                (prev) =>
+                                                  upsertClarificationAnswer(
+                                                    prev,
+                                                    {
+                                                      clarificationId: c.id,
+                                                      resolution: "answered",
+                                                      selectedOptionIds: base,
+                                                    }
+                                                  )
+                                              );
+                                              setLoreSmartManualQuestionId(
+                                                null
+                                              );
+                                              setLoreSmartOtherFollowUp(
+                                                (cur) =>
+                                                  cur?.clarificationId === c.id
+                                                    ? null
+                                                    : cur
+                                              );
+                                            }}
+                                            type="checkbox"
+                                          />
+                                          <span>{opt.label}</span>
+                                        </label>
+                                      ) : (
+                                        <label
+                                          className={
+                                            styles.smartImportWizardOption
+                                          }
+                                          key={opt.id}
+                                        >
+                                          <input
+                                            checked={
+                                              !!(
+                                                ans?.resolution ===
+                                                  "answered" &&
+                                                ans.selectedOptionIds?.[0] ===
+                                                  opt.id
+                                              ) ||
+                                              !!(
+                                                ans?.resolution ===
+                                                  "skipped_default" &&
+                                                ans.skipDefaultOptionId ===
+                                                  opt.id
+                                              )
+                                            }
+                                            name={`clarify-${c.id}`}
+                                            onChange={() => {
+                                              setLoreSmartClarificationAnswers(
+                                                (prev) =>
+                                                  upsertClarificationAnswer(
+                                                    prev,
+                                                    {
+                                                      clarificationId: c.id,
+                                                      resolution: "answered",
+                                                      selectedOptionIds: [
+                                                        opt.id,
+                                                      ],
+                                                    }
+                                                  )
+                                              );
+                                              setLoreSmartManualQuestionId(
+                                                null
+                                              );
+                                              setLoreSmartOtherFollowUp(
+                                                (cur) =>
+                                                  cur?.clarificationId === c.id
+                                                    ? null
+                                                    : cur
+                                              );
+                                            }}
+                                            type="radio"
+                                          />
+                                          <span>{opt.label}</span>
+                                        </label>
+                                      )
+                                    )}
+                                    <label
+                                      className={styles.smartImportWizardOption}
+                                    >
+                                      <input
+                                        checked={otherSelected}
+                                        name={`clarify-other-${c.id}`}
+                                        onChange={() => {
+                                          setLoreSmartManualQuestionId(c.id);
+                                          setLoreSmartClarificationAnswers(
+                                            (prev) =>
+                                              upsertClarificationAnswer(prev, {
+                                                clarificationId: c.id,
+                                                resolution: "other_text",
+                                                otherText: ans?.otherText ?? "",
+                                              })
+                                          );
+                                        }}
+                                        type="radio"
+                                      />
+                                      <span>Other…</span>
+                                    </label>
+                                    {otherSelected ? (
+                                      <textarea
+                                        className={
+                                          styles.smartImportWizardTextarea
+                                        }
+                                        onBlur={() => {
+                                          const nextLen =
+                                            ans?.otherText?.trim().length ?? 0;
+                                          if (nextLen >= 4) {
+                                            setLoreSmartManualQuestionId(null);
+                                          }
+                                        }}
+                                        onChange={(e) => {
+                                          setLoreSmartManualQuestionId(c.id);
+                                          setLoreSmartClarificationAnswers(
+                                            (prev) =>
+                                              upsertClarificationAnswer(prev, {
+                                                clarificationId: c.id,
+                                                resolution: "other_text",
+                                                otherText: e.target.value,
+                                              })
+                                          );
+                                        }}
+                                        onFocus={() =>
+                                          setLoreSmartManualQuestionId(c.id)
+                                        }
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            e.stopPropagation();
+                                          }
+                                        }}
+                                        placeholder="Type your answer (at least a few characters)…"
+                                        value={ans?.otherText ?? ""}
+                                      />
+                                    ) : null}
+                                  </div>
+                                  <div
+                                    className={styles.smartImportWizardFooter}
+                                  >
+                                    {prevQuestion ? (
+                                      <Button
+                                        onClick={() =>
+                                          setLoreSmartManualQuestionId(
+                                            prevQuestion.id
+                                          )
+                                        }
+                                        size="sm"
+                                        tone="card-dark"
+                                        type="button"
+                                        variant="ghost"
+                                      >
+                                        Back
+                                      </Button>
+                                    ) : null}
+                                    {recommendedClarificationOptionId(c) ? (
+                                      <Button
+                                        onClick={() => {
+                                          const def =
+                                            recommendedClarificationOptionId(c);
+                                          if (!def) {
+                                            return;
+                                          }
+                                          setLoreSmartClarificationAnswers(
+                                            (prev) =>
+                                              upsertClarificationAnswer(prev, {
+                                                clarificationId: c.id,
+                                                resolution: "skipped_default",
+                                                skipDefaultOptionId: def,
+                                              })
+                                          );
+                                          setLoreSmartManualQuestionId(null);
+                                          setLoreSmartOtherFollowUp((cur) =>
+                                            cur?.clarificationId === c.id
+                                              ? null
+                                              : cur
+                                          );
+                                        }}
+                                        size="sm"
+                                        tone="card-dark"
+                                        type="button"
+                                        variant="default"
+                                      >
+                                        Use recommended
+                                      </Button>
+                                    ) : null}
+                                    {otherSelected ? (
+                                      <Button
+                                        disabled={
+                                          (ans?.otherText?.trim().length ?? 0) <
+                                          4
+                                        }
+                                        onClick={() =>
+                                          setLoreSmartManualQuestionId(null)
+                                        }
+                                        size="sm"
+                                        tone="solid"
+                                        type="button"
+                                        variant="primary"
+                                      >
+                                        Continue
+                                      </Button>
+                                    ) : null}
+                                  </div>
+                                </article>
+                              );
+                            })()
+                          ) : loreSmartQuestionUi.questionsComplete ? (
+                            <div className={styles.smartImportWizardComplete}>
+                              <p
+                                className={
+                                  styles.smartImportWizardCompleteTitle
+                                }
+                              >
+                                You&apos;re all set
+                              </p>
+                              <p
+                                className={styles.smartImportWizardCompleteBody}
+                              >
+                                Your answers are ready. Apply the import to add
+                                this content to your space.
+                              </p>
+                              <Button
+                                disabled={loreImportCommitting}
+                                onClick={() => void commitSmartLoreImport()}
+                                size="md"
+                                tone="solid"
+                                type="button"
+                                variant="primary"
+                              >
+                                {loreImportCommitting
+                                  ? "Applying…"
+                                  : "Apply import to canvas"}
+                              </Button>
+                            </div>
+                          ) : null}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            <ArchitecturalLinksPanel
+              activeSpaceId={activeSpaceId}
+              cloudEnabled={cloudLinksBar}
+              graph={graph}
+              itemLinksRevision={lastItemLinksRevisionRef.current}
+              onFocusEntity={(id) => focusEntityFromPalette(id)}
+              selectedEntityIds={selectedNodeIds}
+            />
+            {isRestrictedLayer ? null : (
+              <>
+                <GraphPanel
+                  braneId={activeBraneId}
+                  onClose={() => setGraphOverlayOpen(false)}
+                  onResizeWidth={setGraphPanelWidth}
+                  onSelectItem={(id) => focusEntityFromPalette(id)}
+                  open={graphOverlayOpen}
+                  width={graphPanelWidth}
                 />
+                <LinkGraphOverlay
+                  onClose={() => setGraphOverlayOpen(false)}
+                  onSelectItem={(id) => focusEntityFromPalette(id)}
+                  open={false}
+                  spaceId={
+                    cloudLinksBar && isUuidLike(activeSpaceId)
+                      ? activeSpaceId
+                      : null
+                  }
+                />
+                {altHeld ? (
+                  <div
+                    className="pointer-events-none fixed top-0 left-0 z-[2090] rounded border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)]/35"
+                    ref={altWordHighlightDivRef}
+                    style={{ display: "none", willChange: "transform" }}
+                  />
+                ) : null}
+                <AltGraphCard
+                  loadingMentions={Boolean(altGraphCard?.loadingMentions)}
+                  loadingSearch={Boolean(altGraphCard?.loadingSearch)}
+                  mentions={altGraphCard?.mentions ?? []}
+                  onClose={() => {
+                    setAltGraphCard(null);
+                    setAltHighlightRect(null);
+                  }}
+                  onShowItem={(id) => {
+                    if (!graphOverlayOpen) {
+                      setGraphOverlayOpen(true);
+                    }
+                    focusEntityFromPalette(id);
+                  }}
+                  open={Boolean(altGraphCard)}
+                  ref={altGraphCardDivRef}
+                  searchItems={altGraphCard?.searchItems ?? []}
+                  term={altGraphCard?.term ?? ""}
+                  x={altGraphCardPosRef.current.x}
+                  y={altGraphCardPosRef.current.y}
+                />
+              </>
+            )}
+          </div>
+        </div>
+
+        <ContextMenu
+          items={selectionContextMenuItems}
+          onClose={closeSelectionContextMenu}
+          position={selectionContextMenu}
+        />
+        <ContextMenu
+          items={canvasEmptyContextMenuItems}
+          onClose={closeCanvasEmptyContextMenu}
+          position={canvasEmptyContextMenu}
+        />
+        <ContextMenu
+          items={connectionContextMenuItems}
+          onClose={closeConnectionContextMenu}
+          position={connectionContextMenu}
+        />
+
+        {lassoRectScreen ? (
+          <div
+            className={styles.lassoRect}
+            style={{
+              left: Math.min(lassoRectScreen.x1, lassoRectScreen.x2),
+              top: Math.min(lassoRectScreen.y1, lassoRectScreen.y2),
+              width: Math.abs(lassoRectScreen.x2 - lassoRectScreen.x1),
+              height: Math.abs(lassoRectScreen.y2 - lassoRectScreen.y1),
+            }}
+          />
+        ) : null}
+
+        {stackModal ? (
+          <div className={styles.stackScrim} onClick={closeStackModal} />
+        ) : null}
+        {stackModal ? (
+          <div
+            className={`${styles.stackFanStage}${stackDrag ? ` ${styles.stackFanStageDragging}` : ""}`}
+            data-stack-fan-stage="true"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                closeStackModal();
+              }
+            }}
+          >
+            {stackModalHull && stackDrag ? (
+              <div
+                className={`${styles.stackHullDropCue} ${stackModalEjectPreview ? styles.stackHullDropCueActive : ""}`}
+                style={{
+                  left: stackModalHull.left - STACK_MODAL_EJECT_MARGIN,
+                  top: stackModalHull.top - STACK_MODAL_EJECT_MARGIN,
+                  width: stackModalHull.width + STACK_MODAL_EJECT_MARGIN * 2,
+                  height: stackModalHull.height + STACK_MODAL_EJECT_MARGIN * 2,
+                }}
+              />
+            ) : null}
+            {stackModalVisibleEntities.map((entity, index) => {
+              const slot = stackModalLayout[entity.id] ?? {
+                x: viewportSize.width / 2 - 170,
+                y: viewportSize.height / 2 - 95,
+                scale: 1,
+              };
+              const drag = stackDrag?.entityId === entity.id ? stackDrag : null;
+              const visLast = stackModalVisibleEntities.length - 1;
+              /* orderedIds is front-first; rank 0 = back of fan, visLast = foremost card. */
+              const rank = visLast - index;
+              const collapsedX = fanOriginX + rank * 6;
+              const collapsedY = fanOriginY + rank * 6;
+              const baseX = stackModalExpanded ? slot.x : collapsedX;
+              const baseY = stackModalExpanded ? slot.y : collapsedY;
+              const dragX = drag ? drag.currentX - drag.pointerOffsetX : baseX;
+              const dragY = drag ? drag.currentY - drag.pointerOffsetY : baseY;
+              const rotation = stackModalExpanded
+                ? (rank % 2 === 0 ? -1 : 1) * 0.8
+                : (rank - (stackModalEntities.length - 1) / 2) * 1.6;
+              return (
+                <div
+                  className={`${styles.stackFanCard} ${drag ? styles.stackFanDragging : ""} ${drag && stackModalEjectPreview ? styles.stackFanEjectArmed : ""}`}
+                  data-node-id={entity.id}
+                  data-space-id={activeSpaceId}
+                  key={entity.id}
+                  onMouseDown={(event) => {
+                    event.stopPropagation();
+                    recordUndoBeforeMutation();
+                    const visibleHull = stackModal.orderedIds.slice(
+                      0,
+                      STACK_MODAL_MAX_ITEMS
+                    );
+                    stackDragHullOrderedIdsRef.current = visibleHull;
+                    stackModalOrderedIdsDuringDragRef.current =
+                      stackModal.orderedIds.slice();
+                    stackModalDragStartOrderedIdsRef.current =
+                      stackModal.orderedIds.slice();
+                    stackEjectTouchedOutsideRef.current = false;
+                    stackBlockLiveReorderRef.current = false;
+                    lastStackEjectPreviewRef.current = false;
+                    const nextStackDrag = {
+                      entityId: entity.id,
+                      stackId: stackModal.stackId,
+                      startX: event.clientX,
+                      startY: event.clientY,
+                      currentX: event.clientX,
+                      currentY: event.clientY,
+                      pointerOffsetX: event.clientX - baseX,
+                      pointerOffsetY: event.clientY - baseY,
+                      intent: "pending" as const,
+                    };
+                    stackDragRef.current = nextStackDrag;
+                    setStackDrag(nextStackDrag);
+                  }}
+                  ref={(el) => {
+                    if (!el) {
+                      return;
+                    }
+                    const cardEl = el.firstElementChild as HTMLElement | null;
+                    const h =
+                      cardEl?.offsetHeight ?? STACK_MODAL_CARD_H_ESTIMATE;
+                    setStackModalCardHeights((prev) => {
+                      const current = prev[entity.id];
+                      if (current && Math.abs(current - h) < 1) {
+                        return prev;
+                      }
+                      return { ...prev, [entity.id]: h };
+                    });
+                  }}
+                  style={{
+                    zIndex: 900 + rank,
+                    transform: `translate(${dragX}px, ${dragY}px) rotate(${rotation}deg) scale(${slot.scale})`,
+                  }}
+                >
+                  {entity.kind === "content" ? (
+                    shouldRenderLoreCharacterCredentialCanvasNode(entity) ? (
+                      <ArchitecturalLoreCharacterCanvasNode
+                        activeTool={activeTool}
+                        bodyHtml={canonicalizeCharacterBodyHtml(
+                          entity,
+                          entity.bodyHtml
+                        )}
+                        dragged={!!drag}
+                        emptyPlaceholder={
+                          entity.theme === "default" || entity.theme === "task"
+                            ? "Write here, or type / for blocks…"
+                            : undefined
+                        }
+                        id={entity.id}
+                        onBodyCommit={updateNodeBody}
+                        onBodyDraftDirty={(dirty) =>
+                          setInlineBodyDraftDirty(entity.id, dirty)
+                        }
+                        onRichDocCommand={
+                          entity.theme === "default" || entity.theme === "task"
+                            ? (command, value) => runFormat(command, value)
+                            : undefined
+                        }
+                        selected={false}
+                        tapeRotation={entity.tapeRotation}
+                        tapeVariant={
+                          entity.tapeVariant ??
+                          tapeVariantForTheme(entity.theme)
+                        }
+                        width={entity.width}
+                        wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                      />
+                    ) : shouldRenderLoreLocationCanvasNode(entity) ? (
+                      <ArchitecturalLoreLocationCanvasNode
+                        activeTool={activeTool}
+                        bodyHtml={entity.bodyHtml}
+                        dragged={!!drag}
+                        emptyPlaceholder={
+                          entity.theme === "default" || entity.theme === "task"
+                            ? "Write here, or type / for blocks…"
+                            : undefined
+                        }
+                        id={entity.id}
+                        onBodyCommit={updateNodeBody}
+                        onBodyDraftDirty={(dirty) =>
+                          setInlineBodyDraftDirty(entity.id, dirty)
+                        }
+                        onRichDocCommand={
+                          entity.theme === "default" || entity.theme === "task"
+                            ? (command, value) => runFormat(command, value)
+                            : undefined
+                        }
+                        selected={false}
+                        showStaple={!entity.stackId}
+                        tapeRotation={entity.tapeRotation}
+                        width={entity.width}
+                        wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                      />
+                    ) : shouldRenderLoreFactionArchive091CanvasNode(entity) ? (
+                      <ArchitecturalLoreFactionArchiveCanvasNode
+                        activeTool={activeTool}
+                        bodyHtml={canonicalizeFactionBodyHtml(
+                          entity,
+                          entity.bodyHtml
+                        )}
+                        dragged={!!drag}
+                        emptyPlaceholder={
+                          entity.theme === "default" || entity.theme === "task"
+                            ? "Write here, or type / for blocks…"
+                            : undefined
+                        }
+                        factionRoster={entity.factionRoster ?? []}
+                        id={entity.id}
+                        onBodyCommit={updateNodeBody}
+                        onBodyDraftDirty={(dirty) =>
+                          setInlineBodyDraftDirty(entity.id, dirty)
+                        }
+                        onFactionRosterChange={updateFactionRoster}
+                        onRichDocCommand={
+                          entity.theme === "default" || entity.theme === "task"
+                            ? (command, value) => runFormat(command, value)
+                            : undefined
+                        }
+                        selected={false}
+                        showTape={!entity.stackId}
+                        tapeRotation={entity.tapeRotation}
+                        tapeVariant={tapeVariantForLoreCard(
+                          "faction",
+                          entity.loreCard?.variant ?? "v4"
+                        )}
+                        width={entity.width}
+                        wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                      />
+                    ) : (
+                      <ArchitecturalNodeCard
+                        activeTool={activeTool}
+                        bodyDoc={entity.bodyDoc ?? null}
+                        bodyHtml={entity.bodyHtml}
+                        canvasPanZoomScale={1}
+                        dragged={!!drag}
+                        emptyPlaceholder={
+                          entity.theme === "default" || entity.theme === "task"
+                            ? "Write here, or type / for blocks…"
+                            : undefined
+                        }
+                        factionRoster={
+                          entity.loreCard?.kind === "faction"
+                            ? entity.factionRoster
+                            : undefined
+                        }
+                        id={entity.id}
+                        loreCard={entity.loreCard}
+                        onBodyCommit={handleNodeBodyCommit}
+                        onBodyDraftDirty={(dirty) =>
+                          setInlineBodyDraftDirty(entity.id, dirty)
+                        }
+                        onExpand={handleNodeExpand}
+                        onRichDocCommand={
+                          entity.theme === "default" || entity.theme === "task"
+                            ? (command, value) => runFormat(command, value)
+                            : undefined
+                        }
+                        selected={false}
+                        showTape={!entity.stackId}
+                        tapeRotation={entity.tapeRotation}
+                        tapeVariant={
+                          entity.tapeVariant ??
+                          tapeVariantForTheme(entity.theme)
+                        }
+                        theme={entity.theme}
+                        title={entity.title}
+                        useFullImageResolution={
+                          galleryOpen && galleryNodeId === entity.id
+                        }
+                        width={entity.width}
+                        wikiLinkAssist={makeWikiLinkAssist(entity.id)}
+                      />
+                    )
+                  ) : (
+                    <ArchitecturalFolderCard
+                      dragOver={false}
+                      folderColorScheme={entity.folderColorScheme}
+                      id={entity.id}
+                      itemCount={
+                        graph.spaces[entity.childSpaceId]?.entityIds.length ?? 0
+                      }
+                      onOpen={() => openFolder(entity.id)}
+                      onTitleCommit={(title) => renameFolder(entity.id, title)}
+                      previewTitles={folderPreviewTitles(entity, graph)}
+                      selected={false}
+                      title={entity.title}
+                    />
+                  )}
+                </div>
+              );
+            })}
+            {stackModalHiddenCount > 0 ? (
+              <div className={styles.stackModalOverflowBadge}>
+                +{stackModalHiddenCount} more in stack
+              </div>
+            ) : null}
+            {stackModalEjectCount > 0 ? (
+              <div className={styles.stackModalEjectBadge}>
+                Removed {stackModalEjectCount}
+              </div>
+            ) : null}
+            {stackDrag && stackModalEjectPreview ? (
+              <div className={styles.stackModalUnstackHint}>
+                Release to unstack
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {stackModal ? (
+          <div className={styles.stackModal}>
+            <div className={styles.stackModalCloseButtonWrap}>
+              <ArchitecturalFocusCloseButton
+                dirty={false}
+                onDiscard={closeStackModal}
+                onDone={closeStackModal}
+                onSave={closeStackModal}
+              />
+            </div>
+          </div>
+        ) : null}
+
+        {galleryOpen &&
+        galleryNodeId &&
+        galleryEntity?.kind === "content" &&
+        galleryEntity.theme === "media" ? (
+          <div
+            aria-labelledby="arch-media-gallery-title"
+            aria-modal="true"
+            className={`${styles.focusOverlay} ${styles.focusActive} ${styles.focusEditorDark}`}
+            role="dialog"
+          >
+            <div className={styles.focusSheet}>
+              <div
+                className={styles.focusHeader}
+                style={{ opacity: 1, transform: "none" }}
+              >
+                <div className={styles.focusMeta}>
+                  VIEWING // {galleryNodeId.toUpperCase()}
+                  {galleryRaster.src ? (
+                    <span className={styles.mediaGalleryDimsInline}>
+                      &ensp;{galleryDimsLabel}
+                    </span>
+                  ) : null}
+                </div>
+                <div className={styles.focusHeaderActions}>
+                  <ArchitecturalFocusCloseButton
+                    dirty={galleryDirty}
+                    onDiscard={closeMediaGallery}
+                    onDone={closeMediaGallery}
+                    onSave={saveGalleryAndClose}
+                  />
+                </div>
+              </div>
+              <div
+                className={styles.focusContent}
+                style={{ opacity: 1, transform: "none" }}
+              >
+                <BufferedTextInput
+                  aria-label="Image title"
+                  className={styles.focusTitle}
+                  debounceMs={200}
+                  id="arch-media-gallery-title"
+                  onCommit={(next) => setGalleryDraftTitle(next)}
+                  placeholder="Untitled image"
+                  style={{ opacity: 1, transform: "none" }}
+                  type="text"
+                  value={galleryDraftTitle}
+                />
+                <div className={styles.mediaGalleryAssetStage}>
+                  {galleryRaster.src ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- dynamic user/R2 URLs; not suitable for next/image without broad remotePatterns
+                    <img
+                      alt={galleryRaster.alt || galleryEntity.title}
+                      className={styles.mediaGalleryAsset}
+                      draggable={false}
+                      key={galleryRaster.src}
+                      onLoad={(e) => {
+                        const { naturalWidth, naturalHeight } = e.currentTarget;
+                        if (naturalWidth && naturalHeight) {
+                          setGalleryDimsLabel(
+                            `${naturalWidth} × ${naturalHeight}`
+                          );
+                        }
+                      }}
+                      src={galleryRaster.src}
+                    />
+                  ) : (
+                    <HeartgardenMediaPlaceholderImg
+                      alt=""
+                      aria-hidden
+                      className={styles.mediaGalleryAsset}
+                      variant="neutral"
+                    />
+                  )}
+                  <div
+                    className={styles.mediaImageActions}
+                    contentEditable={false}
+                  >
+                    <Button
+                      className={styles.mediaUploadBtn}
+                      data-architectural-media-upload="true"
+                      data-media-owner-id={galleryNodeId}
+                      size="sm"
+                      tone="glass"
+                      type="button"
+                      variant="ghost"
+                    >
+                      {mediaUploadActionLabel(Boolean(galleryRaster.src))}
+                    </Button>
+                  </div>
+                </div>
+                <div data-architectural-media-gallery-notes="true">
+                  <HeartgardenDocEditor
+                    chromeRole="focus"
+                    className={styles.focusBody}
+                    editable
+                    enableDragHandle
+                    onChange={(doc) => setGalleryDraftNotesDoc(doc)}
+                    placeholder="Write a caption, or type / for blocks…"
+                    surfaceKey="gallery-notes"
+                    value={galleryDraftNotesDoc}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      <div
-        className={`${styles.focusOverlay} ${focusOpen ? styles.focusActive : ""} ${
-          focusSurface === "code" ||
-          focusSurface === "character-hybrid" ||
-          focusSurface === "location-hybrid" ||
-          focusSurface === "faction-hybrid"
-            ? styles.focusEditorDark
-            : ""
-        }`}
-        onPointerDownCapture={onFocusOverlayPointerDownCapture}
-      >
-        <div className={styles.focusSheet}>
-          <div className={styles.focusHeader}>
-            <div className={styles.focusHeaderLead}>
-              <div
-                className={`${styles.focusMeta} ${
-                  focusSurface === "character-hybrid" ||
-                  focusSurface === "location-hybrid" ||
-                  focusSurface === "faction-hybrid"
-                    ? styles.focusMetaReadable
-                    : ""
-                }`}
-              >
-                {`EDITING // ${activeNodeId ? activeNodeId.slice(0, 8).toUpperCase() : "NODE"}`}
-              </div>
-              {focusOpen && activeNodeId
-                ? (() => {
-                    const activeEntity = graph.entities[activeNodeId];
-                    if (!activeEntity || activeEntity.kind !== "content") return null;
-                    const showReviewBar = hasActionableAiReview(
-                      activeEntity.entityMeta,
-                      contentEntityHasHgAiPending(activeEntity),
-                    );
-                    if (!showReviewBar) return null;
-                    return (
-                      <div className={styles.focusAiReviewBar} role="status" aria-live="polite">
-                        <ArchitecturalTooltip
-                          content="Bind all pending AI/import text and mark this note reviewed"
-                          side="bottom"
-                          delayMs={280}
+        <div
+          className={`${styles.focusOverlay} ${focusOpen ? styles.focusActive : ""} ${
+            focusSurface === "code" ||
+            focusSurface === "character-hybrid" ||
+            focusSurface === "location-hybrid" ||
+            focusSurface === "faction-hybrid"
+              ? styles.focusEditorDark
+              : ""
+          }`}
+          onPointerDownCapture={onFocusOverlayPointerDownCapture}
+        >
+          <div className={styles.focusSheet}>
+            <div className={styles.focusHeader}>
+              <div className={styles.focusHeaderLead}>
+                <div
+                  className={`${styles.focusMeta} ${
+                    focusSurface === "character-hybrid" ||
+                    focusSurface === "location-hybrid" ||
+                    focusSurface === "faction-hybrid"
+                      ? styles.focusMetaReadable
+                      : ""
+                  }`}
+                >
+                  {`EDITING // ${activeNodeId ? activeNodeId.slice(0, 8).toUpperCase() : "NODE"}`}
+                </div>
+                {focusOpen && activeNodeId
+                  ? (() => {
+                      const activeEntity = graph.entities[activeNodeId];
+                      if (!activeEntity || activeEntity.kind !== "content") {
+                        return null;
+                      }
+                      const showReviewBar = hasActionableAiReview(
+                        activeEntity.entityMeta,
+                        contentEntityHasHgAiPending(activeEntity)
+                      );
+                      if (!showReviewBar) {
+                        return null;
+                      }
+                      return (
+                        <div
+                          aria-live="polite"
+                          className={styles.focusAiReviewBar}
+                          role="status"
                         >
-                          <Button
-                            type="button"
-                            size="xs"
-                            variant="subtle"
-                            className={styles.nodeBtn}
-                            data-hg-ai-bind="true"
-                            aria-label="Bind all pending AI and import text"
-                            onClick={() => acceptAiReviewForEntity(activeNodeId)}
+                          <ArchitecturalTooltip
+                            content="Bind all pending AI/import text and mark this note reviewed"
+                            delayMs={280}
+                            side="bottom"
                           >
-                            Bind all
-                          </Button>
-                        </ArchitecturalTooltip>
-                      </div>
-                    );
-                  })()
-                : null}
+                            <Button
+                              aria-label="Bind all pending AI and import text"
+                              className={styles.nodeBtn}
+                              data-hg-ai-bind="true"
+                              onClick={() =>
+                                acceptAiReviewForEntity(activeNodeId)
+                              }
+                              size="xs"
+                              type="button"
+                              variant="subtle"
+                            >
+                              Bind all
+                            </Button>
+                          </ArchitecturalTooltip>
+                        </div>
+                      );
+                    })()
+                  : null}
+              </div>
+              <ArchitecturalFocusCloseButton
+                dirty={focusDirty}
+                onDiscard={discardFocusAndClose}
+                onDone={discardFocusAndClose}
+                onSave={saveFocusAndClose}
+              />
             </div>
-            <ArchitecturalFocusCloseButton
-              dirty={focusDirty}
-              onDone={discardFocusAndClose}
-              onSave={saveFocusAndClose}
-              onDiscard={discardFocusAndClose}
+            <div className={styles.focusContent}>
+              {focusSurface === "character-hybrid" ||
+              focusSurface === "location-hybrid" ||
+              focusSurface === "faction-hybrid" ? null : (
+                <BufferedTextInput
+                  className={styles.focusTitle}
+                  data-focus-title-editor="true"
+                  debounceMs={150}
+                  onCommit={(next) => setFocusTitle(next)}
+                  placeholder="Untitled brief"
+                  type="text"
+                  value={focusTitle}
+                />
+              )}
+              {focusSurface === "character-hybrid" ||
+              focusSurface === "location-hybrid" ||
+              focusSurface === "faction-hybrid" ? (
+                <LoreHybridFocusEditor
+                  className={`${styles.focusBody} ${
+                    focusSurface === "character-hybrid"
+                      ? styles.focusCharacterDocument
+                      : focusSurface === "faction-hybrid"
+                        ? styles.focusFactionDocument
+                        : styles.focusLocationDocument
+                  }`}
+                  factionRoster={
+                    focusSurface === "faction-hybrid" && activeNodeId
+                      ? graph.entities[activeNodeId]?.kind === "content"
+                        ? (graph.entities[activeNodeId].factionRoster ?? [])
+                        : []
+                      : undefined
+                  }
+                  focusDocumentKey={activeNodeId ?? ""}
+                  focusHtml={focusBody}
+                  key={`lore-hybrid-${activeNodeId ?? "none"}-${focusSurface}`}
+                  onChangeFocusHtml={setFocusBody}
+                  onFactionRosterChange={
+                    focusSurface === "faction-hybrid" && activeNodeId
+                      ? (nextRoster) =>
+                          updateFactionRoster(activeNodeId, nextRoster)
+                      : undefined
+                  }
+                  variant={
+                    focusSurface === "character-hybrid"
+                      ? "character"
+                      : focusSurface === "faction-hybrid"
+                        ? "faction"
+                        : "location"
+                  }
+                />
+              ) : (
+                <HeartgardenDocEditor
+                  chromeRole="focus"
+                  className={`${styles.focusBody} ${
+                    focusSurface === "code" ? styles.focusCode : ""
+                  }`.trim()}
+                  codeSyntaxDark={focusSurface === "code"}
+                  editable
+                  enableDragHandle={focusOpen && focusSurface !== "code"}
+                  onChange={(doc) => setFocusBodyDoc(doc)}
+                  placeholder="Write here, or type / for blocks…"
+                  surfaceKey="focus-body"
+                  value={focusBodyDoc}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+        {focusOpen ? (
+          <div className={styles.focusBottomDock}>
+            <ArchitecturalBottomDock
+              activeBlockTag={formatCommandState.blockTag}
+              canRedo={canRedo}
+              canUndo={canUndo}
+              createDisabled
+              formatActions={dockFormatActions}
+              insertDocActions={dockInsertActions}
+              onCreateNode={createNewNode}
+              onFormat={runFormat}
+              onRedo={redoFromDock}
+              onUndo={undoFromDock}
+              redoLabel={`Redo (${modKeyHints.redo})`}
+              showCreateMenu={false}
+              showDocInsertCluster
+              showFormatToolbar
+              undoLabel={`Undo (${modKeyHints.undo})`}
+              variant="editor"
             />
           </div>
-          <div className={styles.focusContent}>
-            {focusSurface === "character-hybrid" ||
-            focusSurface === "location-hybrid" ||
-            focusSurface === "faction-hybrid" ? null : (
-              <BufferedTextInput
-                type="text"
-                className={styles.focusTitle}
-                value={focusTitle}
-                debounceMs={150}
-                onCommit={(next) => setFocusTitle(next)}
-                placeholder="Untitled brief"
-                data-focus-title-editor="true"
-              />
-            )}
-            {focusSurface === "character-hybrid" ||
-            focusSurface === "location-hybrid" ||
-            focusSurface === "faction-hybrid" ? (
-              <LoreHybridFocusEditor
-                key={`lore-hybrid-${activeNodeId ?? "none"}-${focusSurface}`}
-                variant={
-                  focusSurface === "character-hybrid"
-                    ? "character"
-                    : focusSurface === "faction-hybrid"
-                      ? "faction"
-                      : "location"
-                }
-                focusHtml={focusBody}
-                onChangeFocusHtml={setFocusBody}
-                factionRoster={
-                  focusSurface === "faction-hybrid" && activeNodeId
-                    ? graph.entities[activeNodeId]?.kind === "content"
-                      ? (graph.entities[activeNodeId].factionRoster ?? [])
-                      : []
-                    : undefined
-                }
-                onFactionRosterChange={
-                  focusSurface === "faction-hybrid" && activeNodeId
-                    ? (nextRoster) => updateFactionRoster(activeNodeId, nextRoster)
-                    : undefined
-                }
-                focusDocumentKey={activeNodeId ?? ""}
-                className={`${styles.focusBody} ${
-                  focusSurface === "character-hybrid"
-                    ? styles.focusCharacterDocument
-                    : focusSurface === "faction-hybrid"
-                      ? styles.focusFactionDocument
-                      : styles.focusLocationDocument
-                }`}
-              />
-            ) : (
-              <HeartgardenDocEditor
-                surfaceKey="focus-body"
-                chromeRole="focus"
-                className={`${styles.focusBody} ${
-                  focusSurface === "code" ? styles.focusCode : ""
-                }`.trim()}
-                value={focusBodyDoc}
-                onChange={(doc) => setFocusBodyDoc(doc)}
-                editable
-                placeholder="Write here, or type / for blocks…"
-                enableDragHandle={focusOpen && focusSurface !== "code"}
-                codeSyntaxDark={focusSurface === "code"}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-      {focusOpen ? (
-        <div className={styles.focusBottomDock}>
-          <ArchitecturalBottomDock
-            variant="editor"
-            showFormatToolbar
-            showDocInsertCluster
-            showCreateMenu={false}
-            insertDocActions={dockInsertActions}
-            formatActions={dockFormatActions}
-            createDisabled
-            activeBlockTag={formatCommandState.blockTag}
-            onFormat={runFormat}
-            onCreateNode={createNewNode}
-            onUndo={undoFromDock}
-            onRedo={redoFromDock}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            undoLabel={`Undo (${modKeyHints.undo})`}
-            redoLabel={`Redo (${modKeyHints.redo})`}
-          />
-        </div>
-      ) : null}
+        ) : null}
 
-      <input
-        ref={mediaFileInputRef}
-        type="file"
-        className={styles.hiddenFileInput}
-        accept="image/*"
-        tabIndex={-1}
-        aria-hidden
-        onChange={onArchitecturalMediaFile}
-      />
+        <input
+          accept="image/*"
+          aria-hidden
+          className={styles.hiddenFileInput}
+          onChange={onArchitecturalMediaFile}
+          ref={mediaFileInputRef}
+          tabIndex={-1}
+          type="file"
+        />
       </div>
       <div
         className={`${styles.chromeLayer}${
@@ -15035,76 +18375,100 @@ export function ArchitecturalCanvasApp({
         }`}
         style={{ right: graphOverlayOpen ? graphPanelWidth : 0 }}
       >
-        <div ref={shellTopLeftStackRef} className={styles.shellTopLeftStack}>
+        <div className={styles.shellTopLeftStack} ref={shellTopLeftStackRef}>
           <div
-            key={`hg-ce-tl-${chromeEnterEpoch}`}
             className={`${styles.shellTopCluster}${
               chromeEntranceOn ? ` ${styles.chromeEnterTopLeft}` : ""
             }`}
+            key={`hg-ce-tl-${chromeEnterEpoch}`}
           >
-            <div className={styles.shellTopClusterRow} data-hg-chrome="top-left-cluster">
+            <div
+              className={styles.shellTopClusterRow}
+              data-hg-chrome="top-left-cluster"
+            >
               <ArchitecturalStatusBar
+                collabNameplateEnabled={presenceIdentityEnabled}
+                collabPeers={collabPeerChips}
+                exportGraphPaletteHint={`${modKeyHints.search} → Export graph JSON`}
+                onExportGraphJson={exportGraphJson}
                 syncAwaitingBootAuth={
                   scenario === "default" &&
                   heartgardenBootApi.loaded &&
                   heartgardenBootApi.gateEnabled &&
                   !heartgardenBootApi.sessionValid
                 }
-                syncBootstrapPending={scenario === "default" && !canvasBootstrapResolved}
+                syncBootstrapPending={
+                  scenario === "default" && !canvasBootstrapResolved
+                }
+                syncOfflineNoSnapshot={
+                  scenario === "default" && showWorkspaceBlockingOverlay
+                }
+                syncSessionLabel={environmentSessionLabel.replace(
+                  /^Session:\s*/i,
+                  ""
+                )}
                 syncShowingCachedWorkspace={
                   scenario === "default" &&
                   workspaceViewFromCache &&
                   canvasBootstrapResolved &&
                   !bootLayerVisible
                 }
-                syncOfflineNoSnapshot={
-                  scenario === "default" && showWorkspaceBlockingOverlay
-                }
-                syncSessionLabel={environmentSessionLabel.replace(/^Session:\s*/i, "")}
-                syncSourceLabel={environmentSourceLabel.replace(/^Source:\s*/i, "")}
+                syncSourceLabel={environmentSourceLabel.replace(
+                  /^Source:\s*/i,
+                  ""
+                )}
                 syncSpaceLabel={environmentSpaceLabel}
                 syncStrictGm={strictGmWorkspaceSession}
-                collabNameplateEnabled={presenceIdentityEnabled}
-                collabPeers={collabPeerChips}
-                onExportGraphJson={exportGraphJson}
-                exportGraphPaletteHint={`${modKeyHints.search} → Export graph JSON`}
               />
               {showLogOutToAuth ? (
-                <div className={styles.shellTopLogOutWrap} data-hg-chrome="log-out">
+                <div
+                  className={styles.shellTopLogOutWrap}
+                  data-hg-chrome="log-out"
+                >
                   <div
                     className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.shellTopLogOutPanel}`}
                   >
                     <ArchitecturalTooltip
-                      content="Log out — return to auth splash"
-                      side="bottom"
-                      delayMs={320}
                       avoidSides={ARCH_TOOLTIP_AVOID_TOP}
+                      content="Log out — return to auth splash"
+                      delayMs={320}
+                      side="bottom"
                     >
                       <ArchitecturalButton
-                        type="button"
+                        aria-label="Log out and return to auth splash"
+                        className={styles.shellTopLogOutTrigger}
+                        iconOnly
+                        leadingIcon={
+                          <SignOut aria-hidden size={18} weight="bold" />
+                        }
+                        leadingIcon={
+                          <SignOut aria-hidden size={18} weight="bold" />
+                        }
                         size="icon"
                         tone="glass"
-                        iconOnly
-                        leadingIcon={<SignOut size={18} weight="bold" aria-hidden />}
-                        className={styles.shellTopLogOutTrigger}
-                        aria-label="Log out and return to auth splash"
-                        onClick={handleLogOutToAuth}
+                        type="button"
                       />
                     </ArchitecturalTooltip>
                   </div>
                 </div>
               ) : null}
               <div className={styles.navChrome} data-hg-chrome="nav-breadcrumb">
-                <div className={`${styles.glassPanel} ${styles.navPanel} ${styles.shellTopChromePanel}`}>
+                <div
+                  className={`${styles.glassPanel} ${styles.navPanel} ${styles.shellTopChromePanel}`}
+                >
                   <div className={styles.navRow}>
                     {parentSpaceId ? (
                       <ArchitecturalButton
-                        type="button"
-                        size="menu"
-                        tone="focus-light"
                         className={styles.navBackBtn}
-                        leadingIcon={<ArrowLeft size={14} weight="bold" aria-hidden />}
+                        leadingIcon={
+                          <ArrowLeft aria-hidden size={14} weight="bold" />
+                        }
+                        leadingIcon={
+                          <ArrowLeft aria-hidden size={14} weight="bold" />
+                        }
                         onClick={goBack}
+                        size="menu"
+                        type="button"
                       >
                         Back
                       </ArchitecturalButton>
@@ -15115,27 +18479,29 @@ export function ArchitecturalCanvasApp({
                         const label =
                           spaceId === graph.rootSpaceId
                             ? ROOT_SPACE_DISPLAY_NAME
-                            : graph.spaces[spaceId]?.name ?? "Unknown";
+                            : (graph.spaces[spaceId]?.name ?? "Unknown");
                         const crumbTip = isActive
                           ? `${label} — current space`
                           : `Open “${label}” in the canvas`;
                         return (
-                          <span key={spaceId} className={styles.crumbItem}>
-                            {index > 0 ? <span className={styles.crumbSep}>/</span> : null}
+                          <span className={styles.crumbItem} key={spaceId}>
+                            {index > 0 ? (
+                              <span className={styles.crumbSep}>/</span>
+                            ) : null}
                             <ArchitecturalTooltip
-                              content={crumbTip}
-                              side="bottom"
-                              delayMs={320}
                               avoidSides={ARCH_TOOLTIP_AVOID_TOP}
+                              content={crumbTip}
+                              delayMs={320}
+                              side="bottom"
                             >
                               <Button
+                                className={`${styles.crumbBtn} ${isActive ? styles.crumbActive : ""}`}
+                                disabled={isActive}
+                                onClick={() => enterSpace(spaceId)}
+                                size="sm"
+                                tone="glass"
                                 type="button"
                                 variant="ghost"
-                                tone="glass"
-                                size="sm"
-                                className={`${styles.crumbBtn} ${isActive ? styles.crumbActive : ""}`}
-                                onClick={() => enterSpace(spaceId)}
-                                disabled={isActive}
                               >
                                 {label}
                               </Button>
@@ -15150,12 +18516,15 @@ export function ArchitecturalCanvasApp({
             </div>
           </div>
         </div>
-        <div className={styles.topRightChromeCluster} data-hg-chrome="top-right-tools">
+        <div
+          className={styles.topRightChromeCluster}
+          data-hg-chrome="top-right-tools"
+        >
           <div
-            key={`hg-ce-tr-cluster-${chromeEnterEpoch}`}
             className={`${styles.topRightChromeClusterInner}${
               chromeEntranceOn ? ` ${styles.chromeEnterTopRight}` : ""
             }`}
+            key={`hg-ce-tr-cluster-${chromeEnterEpoch}`}
           >
             {vaultReviewChromeVisible ? (
               <div
@@ -15163,97 +18532,110 @@ export function ArchitecturalCanvasApp({
                 data-hg-chrome="vault-review"
               >
                 <ArchitecturalTooltip
-                  content="Vault review — consistency check & semantic tags (no layout changes)"
-                  side="bottom"
-                  delayMs={320}
                   avoidSides={ARCH_TOOLTIP_AVOID_TOP}
+                  content="Vault review — consistency check & semantic tags (no layout changes)"
+                  delayMs={320}
+                  side="bottom"
                 >
                   <ArchitecturalButton
-                    type="button"
-                    size="icon"
-                    tone="glass"
-                    iconOnly
-                    leadingIcon={<SealCheck size={18} weight="bold" aria-hidden />}
-                    className={styles.shellTopLogOutTrigger}
                     aria-label="Open vault review"
+                    className={styles.shellTopLogOutTrigger}
+                    iconOnly
+                    leadingIcon={
+                      <SealCheck aria-hidden size={18} weight="bold" />
+                    }
                     onClick={() => {
                       setLoreReviewError(null);
                       setLoreReviewPanelOpen(true);
                       playVigilUiSound("select");
                     }}
+                    size="icon"
+                    tone="glass"
+                    type="button"
                   />
                 </ArchitecturalTooltip>
               </div>
             ) : null}
-            {!bootPreActivateGate ? (
+            {bootPreActivateGate ? null : (
               <div className={styles.topRightConnectionTools}>
-                {!isRestrictedLayer ? (
+                {isRestrictedLayer ? null : (
                   <div
-                    key={`hg-ce-import-${chromeEnterEpoch}`}
                     className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.shellTopLogOutPanel}`}
                     data-hg-chrome="import-document"
+                    key={`hg-ce-import-${chromeEnterEpoch}`}
                   >
                     <ArchitecturalTooltip
-                      content="Import PDF, DOCX, or Markdown"
-                      side="bottom"
-                      delayMs={320}
                       avoidSides={ARCH_TOOLTIP_AVOID_TOP}
+                      content="Import PDF, DOCX, or Markdown"
+                      delayMs={320}
+                      side="bottom"
                     >
                       <ArchitecturalButton
-                        type="button"
-                        size="icon"
-                        tone="glass"
-                        iconOnly
-                        className={styles.shellTopLogOutTrigger}
                         aria-label="Import document"
+                        className={styles.shellTopLogOutTrigger}
+                        iconOnly
                         onClick={() => {
                           playVigilUiSound("select");
                           beginLoreImportFilePick();
                         }}
+                        size="icon"
+                        tone="glass"
+                        type="button"
                       >
-                        <UploadSimple size={18} weight="bold" aria-hidden />
+                        <UploadSimple aria-hidden size={18} weight="bold" />
                       </ArchitecturalButton>
                     </ArchitecturalTooltip>
                   </div>
-                ) : null}
+                )}
                 <div
-                  key={`hg-ce-search-${chromeEnterEpoch}`}
                   className={`${styles.glassPanel} ${styles.shellTopChromePanel} ${styles.shellTopLogOutPanel}`}
                   data-hg-chrome="search"
+                  key={`hg-ce-search-${chromeEnterEpoch}`}
                 >
                   <ArchitecturalTooltip
-                    content={`Search (${modKeyHints.search})`}
-                    side="bottom"
-                    delayMs={320}
                     avoidSides={ARCH_TOOLTIP_AVOID_TOP}
+                    content={`Search (${modKeyHints.search})`}
+                    delayMs={320}
+                    side="bottom"
                   >
                     <ArchitecturalButton
-                      type="button"
+                      aria-label="Search"
+                      className={styles.shellTopLogOutTrigger}
+                      iconOnly
+                      onClick={() => setPaletteOpen(true)}
                       size="icon"
                       tone="glass"
-                      iconOnly
-                      className={styles.shellTopLogOutTrigger}
-                      aria-label="Search"
-                      onClick={() => setPaletteOpen(true)}
+                      type="button"
                     >
-                      <MagnifyingGlass size={18} weight="bold" aria-hidden />
+                      <MagnifyingGlass aria-hidden size={18} weight="bold" />
                     </ArchitecturalButton>
                   </ArchitecturalTooltip>
                 </div>
               </div>
-            ) : null}
+            )}
           </div>
         </div>
         {viewportToastOpen ? (
-          <CanvasViewportToast onShow={onViewportToastShow} onDismiss={onViewportToastDismiss} />
+          <CanvasViewportToast
+            onDismiss={onViewportToastDismiss}
+            onShow={onViewportToastShow}
+          />
         ) : null}
         {threadRosterNotice ? (
-          <div className={styles.threadRosterNotice} role="status" aria-live="polite">
+          <div
+            aria-live="polite"
+            className={styles.threadRosterNotice}
+            role="status"
+          >
             {threadRosterNotice}
           </div>
         ) : null}
         {collabConnectionsNotice ? (
-          <div className={styles.threadRosterNotice} role="status" aria-live="polite">
+          <div
+            aria-live="polite"
+            className={styles.threadRosterNotice}
+            role="status"
+          >
             {collabConnectionsNotice}
           </div>
         ) : null}

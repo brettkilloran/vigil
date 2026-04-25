@@ -15,8 +15,8 @@ import {
   heartgardenApiRejectIfPlayerBlocked,
   heartgardenApiRequireDb,
 } from "@/src/lib/heartgarden-api-route-helpers";
-import { invalidateItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
 import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
+import { invalidateItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
 import { validateLinkTargetsInBrane } from "@/src/lib/item-links-validation";
 
 const bodySchema = z.object({
@@ -30,29 +30,42 @@ const bodySchema = z.object({
  */
 export async function POST(req: Request) {
   const dbGate = heartgardenApiRequireDb(tryGetDb());
-  if (!dbGate.ok) return dbGate.response;
+  if (!dbGate.ok) {
+    return dbGate.response;
+  }
   const db = dbGate.db;
   const bootCtx = await getHeartgardenApiBootContext();
   const blocked = heartgardenApiRejectIfPlayerBlocked(bootCtx);
-  if (blocked) return blocked;
+  if (blocked) {
+    return blocked;
+  }
 
   const bodyRead = await heartgardenApiReadJsonBody(req);
-  if (!bodyRead.ok) return bodyRead.response;
+  if (!bodyRead.ok) {
+    return bodyRead.response;
+  }
 
   const parsed = bodySchema.safeParse(bodyRead.json);
   if (!parsed.success) {
     return Response.json(
       { ok: false, error: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
   const { sourceItemId, targetIds } = parsed.data;
-  const [srcItem] = await db.select({ spaceId: items.spaceId }).from(items).where(eq(items.id, sourceItemId)).limit(1);
+  const [srcItem] = await db
+    .select({ spaceId: items.spaceId })
+    .from(items)
+    .where(eq(items.id, sourceItemId))
+    .limit(1);
   if (!srcItem) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Source item not found" }, { status: 404 }),
+      Response.json(
+        { ok: false, error: "Source item not found" },
+        { status: 404 }
+      )
     );
   }
   if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, srcItem.spaceId))) {
@@ -61,9 +74,16 @@ export async function POST(req: Request) {
   if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, srcItem.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
   }
-  const validated = await validateLinkTargetsInBrane(db, sourceItemId, targetIds);
+  const validated = await validateLinkTargetsInBrane(
+    db,
+    sourceItemId,
+    targetIds
+  );
   if (!validated.ok) {
-    return Response.json({ ok: false, error: validated.error }, { status: validated.status });
+    return Response.json(
+      { ok: false, error: validated.error },
+      { status: validated.status }
+    );
   }
   for (const targetSpaceId of validated.targetSpaceIds) {
     if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, targetSpaceId))) {
@@ -81,13 +101,17 @@ export async function POST(req: Request) {
     .from(itemLinks)
     .innerJoin(items, eq(items.id, itemLinks.targetItemId))
     .where(eq(itemLinks.sourceItemId, sourceItemId));
-  for (const row of existingTargets) touchedSpaceIds.add(row.spaceId);
+  for (const row of existingTargets) {
+    touchedSpaceIds.add(row.spaceId);
+  }
   if (uniqueTargets.length > 0) {
     const nextRows = await db
       .select({ spaceId: items.spaceId })
       .from(items)
       .where(inArray(items.id, uniqueTargets));
-    for (const row of nextRows) touchedSpaceIds.add(row.spaceId);
+    for (const row of nextRows) {
+      touchedSpaceIds.add(row.spaceId);
+    }
   }
 
   await db.transaction(async (tx) => {
@@ -103,8 +127,8 @@ export async function POST(req: Request) {
       .where(
         and(
           eq(itemLinks.sourceItemId, sourceItemId),
-          notInArray(itemLinks.targetItemId, uniqueTargets),
-        ),
+          notInArray(itemLinks.targetItemId, uniqueTargets)
+        )
       );
 
     await tx
@@ -116,10 +140,15 @@ export async function POST(req: Request) {
           linkType: "pin",
           sourcePin: null,
           targetPin: null,
-        })),
+        }))
       )
       .onConflictDoNothing({
-        target: [itemLinks.sourceItemId, itemLinks.targetItemId, itemLinks.sourcePin, itemLinks.targetPin],
+        target: [
+          itemLinks.sourceItemId,
+          itemLinks.targetItemId,
+          itemLinks.sourcePin,
+          itemLinks.targetPin,
+        ],
       });
   });
   for (const spaceId of touchedSpaceIds) {

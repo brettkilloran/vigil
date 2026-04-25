@@ -53,10 +53,12 @@ describe("GET /api/lore/import/jobs/[jobId]", () => {
 
     const { GET } = await import("./route");
     const req = new Request(
-      "http://localhost/api/lore/import/jobs/11111111-1111-4111-8111-111111111111?spaceId=22222222-2222-4222-8222-222222222222",
+      "http://localhost/api/lore/import/jobs/11111111-1111-4111-8111-111111111111?spaceId=22222222-2222-4222-8222-222222222222"
     );
     const res = await GET(req, {
-      params: Promise.resolve({ jobId: "11111111-1111-4111-8111-111111111111" }),
+      params: Promise.resolve({
+        jobId: "11111111-1111-4111-8111-111111111111",
+      }),
     });
 
     expect(res.status).toBe(200);
@@ -113,10 +115,12 @@ describe("DELETE /api/lore/import/jobs/[jobId]", () => {
     const { DELETE } = await import("./route");
     const req = new Request(
       "http://localhost/api/lore/import/jobs/11111111-1111-4111-8111-111111111111?spaceId=22222222-2222-4222-8222-222222222222",
-      { method: "DELETE" },
+      { method: "DELETE" }
     );
     const res = await DELETE(req, {
-      params: Promise.resolve({ jobId: "11111111-1111-4111-8111-111111111111" }),
+      params: Promise.resolve({
+        jobId: "11111111-1111-4111-8111-111111111111",
+      }),
     });
     const payload = (await res.json()) as {
       ok: boolean;
@@ -159,10 +163,12 @@ describe("DELETE /api/lore/import/jobs/[jobId]", () => {
     const { DELETE } = await import("./route");
     const req = new Request(
       "http://localhost/api/lore/import/jobs/11111111-1111-4111-8111-111111111111?spaceId=22222222-2222-4222-8222-222222222222",
-      { method: "DELETE" },
+      { method: "DELETE" }
     );
     const res = await DELETE(req, {
-      params: Promise.resolve({ jobId: "11111111-1111-4111-8111-111111111111" }),
+      params: Promise.resolve({
+        jobId: "11111111-1111-4111-8111-111111111111",
+      }),
     });
     const payload = (await res.json()) as {
       ok: boolean;
@@ -178,4 +184,3 @@ describe("DELETE /api/lore/import/jobs/[jobId]", () => {
     expect(updateWhereMock).not.toHaveBeenCalled();
   });
 });
-

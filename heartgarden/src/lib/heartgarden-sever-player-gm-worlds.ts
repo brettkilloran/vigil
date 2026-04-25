@@ -3,8 +3,8 @@ import { eq, sql } from "drizzle-orm";
 import type { tryGetDb } from "@/src/db/index";
 import { spaces } from "@/src/db/schema";
 import { HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME } from "@/src/lib/heartgarden-implicit-player-space";
-import { collectDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
 import { resolveHeartgardenPlayerSpaceIdFromEnv } from "@/src/lib/heartgarden-player-layer-env";
+import { collectDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
 
 export type SeverPlayerGmWorldsReport = {
   playerRootIdsPreserved: string[];
@@ -18,7 +18,9 @@ export type SeverPlayerGmWorldsReport = {
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 
 function firstCount(result: unknown): number {
-  if (!result || typeof result !== "object") return 0;
+  if (!result || typeof result !== "object") {
+    return 0;
+  }
   const r = result as { rows?: unknown[] };
   const row = r.rows?.[0] as { c?: unknown } | undefined;
   const c = row?.c;
@@ -27,7 +29,7 @@ function firstCount(result: unknown): number {
 
 function postOrderDeletableSpaces(
   allRows: readonly { id: string; parentSpaceId: string | null }[],
-  deletable: Set<string>,
+  deletable: Set<string>
 ): string[] {
   const byId = new Map(allRows.map((r) => [r.id, r]));
   const byParent = new Map<string | null, string[]>();
@@ -39,14 +41,20 @@ function postOrderDeletableSpaces(
   }
   const out: string[] = [];
   const walk = (id: string) => {
-    if (!deletable.has(id)) return;
-    for (const k of byParent.get(id) ?? []) walk(k);
+    if (!deletable.has(id)) {
+      return;
+    }
+    for (const k of byParent.get(id) ?? []) {
+      walk(k);
+    }
     out.push(id);
   };
   for (const id of deletable) {
     const row = byId.get(id);
     const p = row?.parentSpaceId ?? null;
-    if (p === null || !deletable.has(p)) walk(id);
+    if (p === null || !deletable.has(p)) {
+      walk(id);
+    }
   }
   return out;
 }
@@ -62,7 +70,7 @@ function postOrderDeletableSpaces(
  */
 export async function severHeartgardenPlayerGmWorlds(
   db: VigilDb,
-  options?: { dryRun?: boolean },
+  options?: { dryRun?: boolean }
 ): Promise<SeverPlayerGmWorldsReport> {
   const dryRun = options?.dryRun === true;
 
@@ -76,7 +84,9 @@ export async function severHeartgardenPlayerGmWorlds(
     .where(eq(spaces.name, HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME));
 
   const roots = new Set<string>();
-  for (const r of implicitRows) roots.add(r.id);
+  for (const r of implicitRows) {
+    roots.add(r.id);
+  }
 
   const envRoot = resolveHeartgardenPlayerSpaceIdFromEnv();
   if (envRoot && allSlim.some((s) => s.id === envRoot)) {
@@ -85,7 +95,9 @@ export async function severHeartgardenPlayerGmWorlds(
 
   const playerSpaceIds = new Set<string>();
   for (const rootId of roots) {
-    for (const id of collectDescendantSpaceIds(rootId, allSlim)) playerSpaceIds.add(id);
+    for (const id of collectDescendantSpaceIds(rootId, allSlim)) {
+      playerSpaceIds.add(id);
+    }
   }
 
   const playerSpaceList = [...playerSpaceIds];
@@ -106,7 +118,7 @@ export async function severHeartgardenPlayerGmWorlds(
 
   const uuidArray = sql`ARRAY[${sql.join(
     playerSpaceList.map((id) => sql`${id}`),
-    sql`, `,
+    sql`, `
   )}]::uuid[]`;
 
   const crossSql = sql`
@@ -123,7 +135,9 @@ AND (
   const itemsSql = sql`DELETE FROM items WHERE space_id = ANY(${uuidArray})`;
 
   const deletableSpaceIds = new Set(playerSpaceIds);
-  for (const r of roots) deletableSpaceIds.delete(r);
+  for (const r of roots) {
+    deletableSpaceIds.delete(r);
+  }
   const deleteSpaceOrder = postOrderDeletableSpaces(allSlim, deletableSpaceIds);
 
   if (dryRun) {

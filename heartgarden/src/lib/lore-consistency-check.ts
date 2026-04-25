@@ -1,8 +1,8 @@
 import { buildCachedSystem, callAnthropic } from "@/src/lib/anthropic-client";
 import { extractHgArchBoundItemIds } from "@/src/lib/hg-arch-binding-projection";
 import type { VigilDb } from "@/src/lib/spaces";
-import { LORE_CONSISTENCY_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 import { hybridRetrieveItems } from "@/src/lib/vault-retrieval";
+import { LORE_CONSISTENCY_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 
 const SYSTEM = `You review a draft note for a TTRPG / worldbuilding canvas.
 
@@ -55,10 +55,15 @@ export async function runLoreConsistencyCheck(args: {
     return { issues: [], suggestedNoteTags: [], semanticSummary: null };
   }
 
-  const hybrid = await hybridRetrieveItems(args.db, q, { spaceId: args.spaceId }, {
-    ...LORE_CONSISTENCY_HYBRID_OPTIONS,
-    includeVector: true,
-  });
+  const hybrid = await hybridRetrieveItems(
+    args.db,
+    q,
+    { spaceId: args.spaceId },
+    {
+      ...LORE_CONSISTENCY_HYBRID_OPTIONS,
+      includeVector: true,
+    }
+  );
 
   const candidates = hybrid.rows
     .filter((r) => r.item.id !== args.excludeItemId)
@@ -66,9 +71,10 @@ export async function runLoreConsistencyCheck(args: {
     .map((r) => {
       const snippet =
         hybrid.itemIdToFtsSnippet.get(r.item.id) ??
-        (hybrid.itemIdToChunks.get(r.item.id)?.[0] ?? "");
+        hybrid.itemIdToChunks.get(r.item.id)?.[0] ??
+        "";
       const structuredBindingTargets = extractHgArchBoundItemIds(
-        r.item.contentJson as Record<string, unknown> | null | undefined,
+        r.item.contentJson as Record<string, unknown> | null | undefined
       );
       return {
         itemId: r.item.id,
@@ -94,7 +100,7 @@ export async function runLoreConsistencyCheck(args: {
       system: buildCachedSystem(SYSTEM),
       messages: [{ role: "user", content: user }],
     },
-    { label: "lore.consistency", expectJson: true },
+    { label: "lore.consistency", expectJson: true }
   );
   const jsonStr = res.jsonText;
   if (!jsonStr) {
@@ -109,25 +115,36 @@ export async function runLoreConsistencyCheck(args: {
     const issues: LoreConsistencyIssue[] = [];
     const allowedIds = new Set(candidates.map((c) => c.itemId));
     for (const it of parsed.issues ?? []) {
-      if (!it || typeof it !== "object") continue;
+      if (!it || typeof it !== "object") {
+        continue;
+      }
       const o = it as Record<string, unknown>;
-      const summary = String(o.summary ?? "").trim().slice(0, 500);
-      if (!summary) continue;
+      const summary = String(o.summary ?? "")
+        .trim()
+        .slice(0, 500);
+      if (!summary) {
+        continue;
+      }
       const sevRaw = String(o.severity ?? "warning");
       const severity =
         sevRaw === "info" || sevRaw === "contradiction" ? sevRaw : "warning";
       const candidateItemId =
-        typeof o.candidateItemId === "string" && allowedIds.has(o.candidateItemId)
+        typeof o.candidateItemId === "string" &&
+        allowedIds.has(o.candidateItemId)
           ? o.candidateItemId
           : undefined;
       const hintRaw =
-        o.handlingHint != null ? String(o.handlingHint).trim().slice(0, 64) : "";
+        o.handlingHint == null
+          ? ""
+          : String(o.handlingHint).trim().slice(0, 64);
       const handlingHint = hintRaw || undefined;
       issues.push({
         summary,
         severity,
         details:
-          o.details != null ? String(o.details).trim().slice(0, 2000) : undefined,
+          o.details == null
+            ? undefined
+            : String(o.details).trim().slice(0, 2000),
         candidateItemId,
         handlingHint,
       });
@@ -142,14 +159,16 @@ export async function runLoreConsistencyCheck(args: {
           .replace(/[^a-z0-9_]/g, "_")
           .replace(/^_+|_+$/g, "")
           .slice(0, 48);
-        if (s && /^[a-z][a-z0-9_]*$/.test(s)) suggestedNoteTags.push(s);
+        if (s && /^[a-z][a-z0-9_]*$/.test(s)) {
+          suggestedNoteTags.push(s);
+        }
       }
     }
 
     const semanticSummary =
-      parsed.semanticSummary != null
-        ? String(parsed.semanticSummary).trim().slice(0, 500) || null
-        : null;
+      parsed.semanticSummary == null
+        ? null
+        : String(parsed.semanticSummary).trim().slice(0, 500) || null;
 
     return { issues, suggestedNoteTags, semanticSummary };
   } catch {

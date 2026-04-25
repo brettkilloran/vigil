@@ -13,16 +13,25 @@ export const HEARTGARDEN_BOOT_COOKIE_NAME = "hg_boot";
 export type HeartgardenBootTierEdge = "access" | "player" | "demo";
 
 function base64UrlToUint8Array(s: string): Uint8Array | null {
-  if (!/^[A-Za-z0-9_-]*$/u.test(s)) return null;
+  if (!/^[A-Za-z0-9_-]*$/u.test(s)) {
+    return null;
+  }
   let b64 = s.replace(/-/g, "+").replace(/_/g, "/");
   const mod = b64.length % 4;
-  if (mod === 1) return null;
-  if (mod === 2) b64 += "==";
-  else if (mod === 3) b64 += "=";
+  if (mod === 1) {
+    return null;
+  }
+  if (mod === 2) {
+    b64 += "==";
+  } else if (mod === 3) {
+    b64 += "=";
+  }
   try {
     const bin = atob(b64);
     const out = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    for (let i = 0; i < bin.length; i++) {
+      out[i] = bin.charCodeAt(i);
+    }
     return out;
   } catch {
     return null;
@@ -30,13 +39,20 @@ function base64UrlToUint8Array(s: string): Uint8Array | null {
 }
 
 function timingSafeEqualBytes(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
+  if (a.length !== b.length) {
+    return false;
+  }
   let x = 0;
-  for (let i = 0; i < a.length; i++) x |= a[i]! ^ b[i]!;
+  for (let i = 0; i < a.length; i++) {
+    x |= a[i]! ^ b[i]!;
+  }
   return x === 0;
 }
 
-async function hmacSha256(secretUtf8: string, messageUtf8: string): Promise<Uint8Array> {
+async function hmacSha256(
+  secretUtf8: string,
+  messageUtf8: string
+): Promise<Uint8Array> {
   const enc = new TextEncoder();
   const keyMaterial = enc.encode(secretUtf8);
   const cryptoKey = await crypto.subtle.importKey(
@@ -44,15 +60,25 @@ async function hmacSha256(secretUtf8: string, messageUtf8: string): Promise<Uint
     keyMaterial,
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"],
+    ["sign"]
   );
-  const sig = await crypto.subtle.sign("HMAC", cryptoKey, enc.encode(messageUtf8));
+  const sig = await crypto.subtle.sign(
+    "HMAC",
+    cryptoKey,
+    enc.encode(messageUtf8)
+  );
   return new Uint8Array(sig);
 }
 
-function normalizeBootTierFromCookieEdge(raw: unknown): HeartgardenBootTierEdge | null {
-  if (raw === "access" || raw === "demo" || raw === "player") return raw;
-  if (raw === "visitor") return "player";
+function normalizeBootTierFromCookieEdge(
+  raw: unknown
+): HeartgardenBootTierEdge | null {
+  if (raw === "access" || raw === "demo" || raw === "player") {
+    return raw;
+  }
+  if (raw === "visitor") {
+    return "player";
+  }
   return null;
 }
 
@@ -66,11 +92,14 @@ export function readBootGateEnvEdge(): {
   const bishopPin = (process.env.HEARTGARDEN_BOOT_PIN_BISHOP ?? "").trim();
   const playersPin = readHeartgardenPlayersBootPin();
   const demoPin = (process.env.HEARTGARDEN_BOOT_PIN_DEMO ?? "").trim();
-  const sessionSecret = (process.env.HEARTGARDEN_BOOT_SESSION_SECRET ?? "").trim();
+  const sessionSecret = (
+    process.env.HEARTGARDEN_BOOT_SESSION_SECRET ?? ""
+  ).trim();
   const bishopOk = bishopPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
   const playersOk = playersPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
   const demoOk = demoPin.length === HEARTGARDEN_BOOT_PIN_LENGTH;
-  const gateEnabled = sessionSecret.length >= 16 && (bishopOk || playersOk || demoOk);
+  const gateEnabled =
+    sessionSecret.length >= 16 && (bishopOk || playersOk || demoOk);
   return { gateEnabled, sessionSecret };
 }
 
@@ -79,31 +108,49 @@ export function readBootGateEnvEdge(): {
  */
 export async function verifyBootSessionCookieEdge(
   secret: string,
-  cookieValue: string,
+  cookieValue: string
 ): Promise<{ tier: HeartgardenBootTierEdge; exp: number } | null> {
-  if (cookieValue.length > HEARTGARDEN_BOOT_COOKIE_MAX_CHARS) return null;
+  if (cookieValue.length > HEARTGARDEN_BOOT_COOKIE_MAX_CHARS) {
+    return null;
+  }
   const parts = cookieValue.split(".");
-  if (parts.length !== 2) return null;
+  if (parts.length !== 2) {
+    return null;
+  }
   const [payloadB64, sigB64] = parts;
-  if (!payloadB64 || !sigB64) return null;
+  if (!(payloadB64 && sigB64)) {
+    return null;
+  }
   const expectedSig = await hmacSha256(secret, payloadB64);
   const gotSig = base64UrlToUint8Array(sigB64);
-  if (!gotSig || !timingSafeEqualBytes(expectedSig, gotSig)) return null;
+  if (!(gotSig && timingSafeEqualBytes(expectedSig, gotSig))) {
+    return null;
+  }
   const jsonBuf = base64UrlToUint8Array(payloadB64);
-  if (!jsonBuf) return null;
+  if (!jsonBuf) {
+    return null;
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(new TextDecoder().decode(jsonBuf));
   } catch {
     return null;
   }
-  if (!parsed || typeof parsed !== "object") return null;
+  if (!parsed || typeof parsed !== "object") {
+    return null;
+  }
   const o = parsed as Record<string, unknown>;
   const tier = normalizeBootTierFromCookieEdge(o.tier);
-  if (!tier) return null;
-  if (typeof o.exp !== "number" || !Number.isFinite(o.exp)) return null;
+  if (!tier) {
+    return null;
+  }
+  if (typeof o.exp !== "number" || !Number.isFinite(o.exp)) {
+    return null;
+  }
   const now = Math.floor(Date.now() / 1000);
-  if (o.exp <= now) return null;
+  if (o.exp <= now) {
+    return null;
+  }
   return { tier, exp: o.exp };
 }
 

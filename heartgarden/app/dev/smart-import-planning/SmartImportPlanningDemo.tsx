@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import { CopySimple, WarningCircle } from "@phosphor-icons/react";
+import { useEffect, useMemo, useState } from "react";
 
 import canvasStyles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { Button } from "@/src/components/ui/Button";
@@ -39,9 +39,13 @@ const FAILURE_STAGES: { key: string; label: string }[] = [
 
 function toHumanPhaseLabel(phase: string): string {
   const hit = PHASES.find((p) => p.key === phase);
-  if (hit) return hit.label;
+  if (hit) {
+    return hit.label;
+  }
   const key = phase.trim();
-  if (!key) return "Starting…";
+  if (!key) {
+    return "Starting…";
+  }
   return key.replace(/[_-]+/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
@@ -58,15 +62,15 @@ function mockFailureReport(args: {
     "---",
     "Heartgarden lore import diagnostic (paste to support)",
     `time: ${new Date().toISOString()}`,
-    `page: ${typeof window !== "undefined" ? window.location.origin : "(ssr)"}`,
+    `page: ${typeof window === "undefined" ? "(ssr)" : window.location.origin}`,
     `attemptId: ${attemptId}`,
     `stage: ${stage}`,
-    `operation: GET /api/lore/import/jobs/[jobId]`,
+    "operation: GET /api/lore/import/jobs/[jobId]",
     `jobId: ${jobId}`,
     `phase: ${stage === "timeout" ? "outline" : "merge"}`,
     `httpStatus: ${stage === "job_poll" ? 502 : 500}`,
-    `errorCode: LLM_TIMEOUT`,
-    `fileName: fellowship-lore.md`,
+    "errorCode: LLM_TIMEOUT",
+    "fileName: fellowship-lore.md",
     `recommendedAction: ${recommendedAction}`,
     `message: ${message}`,
   ].join("\n");
@@ -79,15 +83,19 @@ export function SmartImportPlanningDemo() {
 
   const [failureStage, setFailureStage] = useState<string>("plan_failed");
   const [failureMessage, setFailureMessage] = useState<string>(
-    "Planner timed out while merging entities. The server may still be working in the background, but your request was not completed.",
+    "Planner timed out while merging entities. The server may still be working in the background, but your request was not completed."
   );
   const [recommendedAction, setRecommendedAction] = useState<string>(
-    "Try splitting the source file into smaller chunks, then retry. Share the snapshot if the failure persists.",
+    "Try splitting the source file into smaller chunks, then retry. Share the snapshot if the failure persists."
   );
 
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
+    "idle"
+  );
   useEffect(() => {
-    if (copyState === "idle") return;
+    if (copyState === "idle") {
+      return;
+    }
     const t = setTimeout(() => setCopyState("idle"), 1800);
     return () => clearTimeout(t);
   }, [copyState]);
@@ -111,15 +119,17 @@ export function SmartImportPlanningDemo() {
         jobId: "3f8a7c21-…-preview",
         attemptId: "demo-attempt-preview",
       }),
-    [failureStage, failureMessage, recommendedAction],
+    [failureStage, failureMessage, recommendedAction]
   );
   const failurePhaseLabel =
-    failureStage === "timeout" ? "Import is taking too long" : "Smart import failed";
+    failureStage === "timeout"
+      ? "Import is taking too long"
+      : "Smart import failed";
 
   const handleCopy = () => {
     void navigator.clipboard.writeText(report).then(
       () => setCopyState("copied"),
-      () => setCopyState("failed"),
+      () => setCopyState("failed")
     );
   };
 
@@ -127,32 +137,37 @@ export function SmartImportPlanningDemo() {
     <div className={styles.shell}>
       <h1 className={styles.title}>Smart import — planning modal</h1>
       <p className={styles.subtitle}>
-        Simplified planning overlay with an animated ring spinner. The phase label
-        updates as the server emits progress events; there is no numeric progress bar
-        because the server rarely reports a reliable percentage for the planning step.
-        Switch the phase to <code>failed</code> to preview the inline retry / copy-details layout.
+        Simplified planning overlay with an animated ring spinner. The phase
+        label updates as the server emits progress events; there is no numeric
+        progress bar because the server rarely reports a reliable percentage for
+        the planning step. Switch the phase to <code>failed</code> to preview
+        the inline retry / copy-details layout.
       </p>
       <p className={styles.url}>
         URL: <code>/dev/smart-import-planning</code>
       </p>
 
       <div className={styles.grid}>
-        <aside className={styles.controls} aria-label="Preview controls">
+        <aside aria-label="Preview controls" className={styles.controls}>
           <div className={styles.controlGroup}>
             <p className={styles.controlLabel}>Phase</p>
-            <div className={styles.phaseList} role="radiogroup" aria-label="Planner phase">
+            <div
+              aria-label="Planner phase"
+              className={styles.phaseList}
+              role="radiogroup"
+            >
               {PHASES.map((p) => (
                 <button
-                  key={p.key}
-                  type="button"
-                  role="radio"
                   aria-checked={phase === p.key}
                   className={
                     phase === p.key
                       ? `${styles.phaseChip} ${styles.phaseChipActive}`
                       : styles.phaseChip
                   }
+                  key={p.key}
                   onClick={() => setPhase(p.key)}
+                  role="radio"
+                  type="button"
                 >
                   {p.key}
                 </button>
@@ -163,53 +178,27 @@ export function SmartImportPlanningDemo() {
             </p>
           </div>
 
-          {!failed ? (
-            <>
-              <div className={styles.controlGroup}>
-                <label className={styles.controlLabel} htmlFor="plan-detail-input">
-                  Server detail message
-                </label>
-                <input
-                  id="plan-detail-input"
-                  className={styles.textInput}
-                  placeholder="Empty = show default phase label only"
-                  value={detail}
-                  onChange={(e) => setDetail(e.target.value)}
-                />
-                <p className={styles.stageHint}>
-                  Redundant &quot;queued…&quot; copy is intentionally suppressed.
-                </p>
-              </div>
-
-              <div className={styles.controlGroup}>
-                <p className={styles.controlLabel}>Flags</p>
-                <label className={styles.toggleRow}>
-                  <input
-                    type="checkbox"
-                    checked={showQueueFailure}
-                    onChange={(e) => setShowQueueFailure(e.target.checked)}
-                  />
-                  <span>Show queue failure hint</span>
-                </label>
-              </div>
-            </>
-          ) : (
+          {failed ? (
             <>
               <div className={styles.controlGroup}>
                 <p className={styles.controlLabel}>Failure stage</p>
-                <div className={styles.phaseList} role="radiogroup" aria-label="Failure stage">
+                <div
+                  aria-label="Failure stage"
+                  className={styles.phaseList}
+                  role="radiogroup"
+                >
                   {FAILURE_STAGES.map((s) => (
                     <button
-                      key={s.key}
-                      type="button"
-                      role="radio"
                       aria-checked={failureStage === s.key}
                       className={
                         failureStage === s.key
                           ? `${styles.phaseChip} ${styles.phaseChipActive}`
                           : styles.phaseChip
                       }
+                      key={s.key}
                       onClick={() => setFailureStage(s.key)}
+                      role="radio"
+                      type="button"
                     >
                       {s.key}
                     </button>
@@ -218,49 +207,96 @@ export function SmartImportPlanningDemo() {
               </div>
 
               <div className={styles.controlGroup}>
-                <label className={styles.controlLabel} htmlFor="fail-message-input">
+                <label
+                  className={styles.controlLabel}
+                  htmlFor="fail-message-input"
+                >
                   Error message
                 </label>
                 <textarea
-                  id="fail-message-input"
                   className={styles.textArea}
-                  value={failureMessage}
-                  rows={3}
+                  id="fail-message-input"
                   onChange={(e) => setFailureMessage(e.target.value)}
+                  rows={3}
+                  value={failureMessage}
                 />
               </div>
 
               <div className={styles.controlGroup}>
-                <label className={styles.controlLabel} htmlFor="fail-action-input">
+                <label
+                  className={styles.controlLabel}
+                  htmlFor="fail-action-input"
+                >
                   Recommended action
                 </label>
                 <textarea
-                  id="fail-action-input"
                   className={styles.textArea}
-                  value={recommendedAction}
-                  rows={2}
+                  id="fail-action-input"
                   onChange={(e) => setRecommendedAction(e.target.value)}
+                  rows={2}
+                  value={recommendedAction}
                 />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className={styles.controlGroup}>
+                <label
+                  className={styles.controlLabel}
+                  htmlFor="plan-detail-input"
+                >
+                  Server detail message
+                </label>
+                <input
+                  className={styles.textInput}
+                  id="plan-detail-input"
+                  onChange={(e) => setDetail(e.target.value)}
+                  placeholder="Empty = show default phase label only"
+                  value={detail}
+                />
+                <p className={styles.stageHint}>
+                  Redundant &quot;queued…&quot; copy is intentionally
+                  suppressed.
+                </p>
+              </div>
+
+              <div className={styles.controlGroup}>
+                <p className={styles.controlLabel}>Flags</p>
+                <label className={styles.toggleRow}>
+                  <input
+                    checked={showQueueFailure}
+                    onChange={(e) => setShowQueueFailure(e.target.checked)}
+                    type="checkbox"
+                  />
+                  <span>Show queue failure hint</span>
+                </label>
               </div>
             </>
           )}
         </aside>
 
-        <div className={styles.stage} aria-label="Modal preview stage">
+        <div aria-label="Modal preview stage" className={styles.stage}>
           <span className={styles.stageLabel}>Preview</span>
           <div
+            aria-label={
+              failed ? "Smart import failed" : "Smart import planning status"
+            }
+            aria-live={failed ? "assertive" : "polite"}
             className={`${canvasStyles.smartImportPlanningBackdrop} ${styles.stageBackdrop}`}
             role={failed ? "alertdialog" : "status"}
-            aria-live={failed ? "assertive" : "polite"}
-            aria-label={failed ? "Smart import failed" : "Smart import planning status"}
           >
             <div className={canvasStyles.smartImportPlanningCard}>
               {failed ? (
                 <>
-                  <div className={canvasStyles.smartImportPlanningFailIcon} aria-hidden>
+                  <div
+                    aria-hidden
+                    className={canvasStyles.smartImportPlanningFailIcon}
+                  >
                     <WarningCircle size={28} weight="fill" />
                   </div>
-                  <p className={canvasStyles.smartImportPlanningPhase}>{failurePhaseLabel}</p>
+                  <p className={canvasStyles.smartImportPlanningPhase}>
+                    {failurePhaseLabel}
+                  </p>
                   <p className={canvasStyles.smartImportPlanningError}>
                     {failureMessage || "Smart import couldn't finish planning."}
                     {recommendedAction.trim().length > 0
@@ -273,12 +309,12 @@ export function SmartImportPlanningDemo() {
                   </details>
                   <div className={canvasStyles.smartImportPlanningActionsSplit}>
                     <Button
+                      leadingIcon={<CopySimple size={14} weight="regular" />}
+                      onClick={handleCopy}
                       size="sm"
-                      variant="default"
                       tone="card-dark"
                       type="button"
-                      onClick={handleCopy}
-                      leadingIcon={<CopySimple size={14} weight="regular" />}
+                      variant="default"
                     >
                       {copyState === "copied"
                         ? "Copied"
@@ -288,25 +324,25 @@ export function SmartImportPlanningDemo() {
                     </Button>
                     <div>
                       <Button
-                        size="sm"
-                        variant="default"
-                        tone="card-dark"
-                        type="button"
                         onClick={() => {
                           /* demo — no-op */
                         }}
+                        size="sm"
+                        tone="card-dark"
+                        type="button"
+                        variant="default"
                       >
                         Close
                       </Button>
                       <Button
-                        size="sm"
-                        variant="primary"
-                        tone="solid"
-                        type="button"
                         onClick={() => {
                           /* demo — flips back to the running state */
                           setPhase("queued");
                         }}
+                        size="sm"
+                        tone="solid"
+                        type="button"
+                        variant="primary"
                       >
                         Retry
                       </Button>
@@ -315,28 +351,39 @@ export function SmartImportPlanningDemo() {
                 </>
               ) : (
                 <>
-                  <div className={canvasStyles.smartImportPlanningSpinner} aria-hidden>
-                    <span className={canvasStyles.smartImportPlanningSpinnerRing} />
+                  <div
+                    aria-hidden
+                    className={canvasStyles.smartImportPlanningSpinner}
+                  >
+                    <span
+                      className={canvasStyles.smartImportPlanningSpinnerRing}
+                    />
                   </div>
-                  <p className={canvasStyles.smartImportPlanningPhase}>{phaseLabel}</p>
+                  <p className={canvasStyles.smartImportPlanningPhase}>
+                    {phaseLabel}
+                  </p>
                   {resolvedDetail ? (
-                    <p className={canvasStyles.smartImportPlanningDetail}>{resolvedDetail}</p>
+                    <p className={canvasStyles.smartImportPlanningDetail}>
+                      {resolvedDetail}
+                    </p>
                   ) : null}
                   {queueFailureHint ? (
-                    <p className={canvasStyles.smartImportPlanningWarning}>{queueFailureHint}</p>
+                    <p className={canvasStyles.smartImportPlanningWarning}>
+                      {queueFailureHint}
+                    </p>
                   ) : null}
                   <p className={canvasStyles.smartImportPlanningHint}>
                     Keep this tab open — most imports finish in a minute or two.
                   </p>
                   <div className={canvasStyles.smartImportPlanningActions}>
                     <Button
-                      size="sm"
-                      variant="default"
-                      tone="card-dark"
-                      type="button"
                       onClick={() => {
                         /* demo — no-op */
                       }}
+                      size="sm"
+                      tone="card-dark"
+                      type="button"
+                      variant="default"
                     >
                       Cancel
                     </Button>

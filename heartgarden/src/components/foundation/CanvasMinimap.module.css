@@ -1,28 +1,28 @@
 /* Match `.glassPanel.shellTopChromePanel` (status strip) — same tokens; min-height unconstrained for map aspect. */
 
 .root {
-  pointer-events: auto;
   position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
   width: 168px;
   max-width: min(168px, calc(100vw - 48px));
-  flex-shrink: 0;
-  box-sizing: border-box;
-  border: 1px solid var(--ui-glass-border);
-  border-radius: var(--chrome-panel-radius);
-  box-shadow: var(--chrome-glass-shadow);
-  background: var(--ui-glass-bg);
-  backdrop-filter: var(--chrome-glass-filter);
-  -webkit-backdrop-filter: var(--chrome-glass-filter);
-  transform: translateZ(0);
-  will-change: backdrop-filter;
+  min-height: 0;
   /* Same padding rhythm as `.glassPanel` / `.shellTopChromePanel` */
   padding-block: var(--chrome-panel-pad-y);
   padding-inline: var(--chrome-panel-pad-x);
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
+  pointer-events: auto;
+  background: var(--ui-glass-bg);
+  border: 1px solid var(--ui-glass-border);
+  border-radius: var(--chrome-panel-radius);
+  box-shadow: var(--chrome-glass-shadow);
+  -webkit-backdrop-filter: var(--chrome-glass-filter);
+  backdrop-filter: var(--chrome-glass-filter);
+  transform: translateZ(0);
+  will-change: backdrop-filter;
 }
 
 /* Bottom-right chrome: fixed width (see `.viewportMetricsMinimapAbove`); never stretch with metrics strip. */
@@ -36,9 +36,13 @@
   width: 100%;
   height: auto;
   aspect-ratio: 4 / 3;
-  border-radius: calc(var(--chrome-panel-radius, 12px) - 4px);
-  background: color-mix(in oklch, var(--vigil-canvas) 22%, var(--vigil-surface));
   outline: none;
+  background: color-mix(
+    in oklch,
+    var(--vigil-canvas) 22%,
+    var(--vigil-surface)
+  );
+  border-radius: calc(var(--chrome-panel-radius, 12px) - 4px);
 }
 
 .atom {
@@ -54,11 +58,11 @@
 }
 
 .viewportRect {
+  pointer-events: stroke;
+  cursor: grab;
   fill: color-mix(in oklch, var(--vigil-label) 4%, transparent);
   stroke: color-mix(in oklch, var(--vigil-label) 26%, transparent);
   stroke-width: 1;
-  pointer-events: stroke;
-  cursor: grab;
 }
 
 .viewportRectDragging {
@@ -73,22 +77,26 @@
 
 /* Inline next to viewport dock icon: match row height, lighter chrome than standalone minimap. */
 .rootToolbarEmbed {
+  gap: 2px;
   width: 118px;
   max-width: min(118px, 26vw);
   padding: 2px;
-  gap: 2px;
+  background: color-mix(
+    in oklch,
+    var(--vigil-canvas) 38%,
+    var(--vigil-surface)
+  );
   border-radius: calc(var(--chrome-panel-radius, 12px) - 8px);
   box-shadow: none;
-  background: color-mix(in oklch, var(--vigil-canvas) 38%, var(--vigil-surface));
-  backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .svgToolbarEmbed {
+  flex: 0 0 auto;
   width: 100%;
   height: 32px;
   max-height: 32px;
   aspect-ratio: unset;
-  flex: 0 0 auto;
   border-radius: calc(var(--chrome-panel-radius, 12px) - 10px);
 }

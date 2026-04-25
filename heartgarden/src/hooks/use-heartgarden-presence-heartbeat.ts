@@ -8,11 +8,11 @@ import {
   postPresencePayload,
   type SpacePresencePeer,
 } from "@/src/components/foundation/architectural-neon-api";
+import type { PresenceSigilVariant } from "@/src/lib/collab-presence-identity";
 import {
   HEARTGARDEN_PRESENCE_HEARTBEAT_MS,
   HEARTGARDEN_PRESENCE_PEER_POLL_MS,
 } from "@/src/lib/heartgarden-collab-constants";
-import type { PresenceSigilVariant } from "@/src/lib/collab-presence-identity";
 import { getOrCreatePresenceClientId } from "@/src/lib/heartgarden-presence-client";
 import type { CameraState } from "@/src/model/canvas-types";
 
@@ -35,11 +35,18 @@ export type { SpacePresencePeer };
 export function useHeartgardenPresenceHeartbeat(options: {
   enabled: boolean;
   activeSpaceId: string;
-  getPayload: () => { camera: CameraState; pointer: { x: number; y: number } | null };
-  getIdentity?: () => { displayName: string | null; sigil: PresenceSigilVariant | null };
+  getPayload: () => {
+    camera: CameraState;
+    pointer: { x: number; y: number } | null;
+  };
+  getIdentity?: () => {
+    displayName: string | null;
+    sigil: PresenceSigilVariant | null;
+  };
   onPeersUpdate: (peers: SpacePresencePeer[]) => void;
 }): void {
-  const { enabled, activeSpaceId, getPayload, getIdentity, onPeersUpdate } = options;
+  const { enabled, activeSpaceId, getPayload, getIdentity, onPeersUpdate } =
+    options;
   const getPayloadRef = useRef(getPayload);
   const getIdentityRef = useRef(getIdentity);
   const onPeersRef = useRef(onPeersUpdate);
@@ -58,9 +65,13 @@ export function useHeartgardenPresenceHeartbeat(options: {
   // tab-close must be allowed to DELETE again. Server DELETE is idempotent and the rate-limit
   // cost of an occasional double-fire is negligible (one token per tab close).
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      return;
+    }
     const clientId = getOrCreatePresenceClientId();
-    if (!clientId) return;
+    if (!clientId) {
+      return;
+    }
 
     const fireLeave = () => {
       leavePresenceBeacon(spaceIdRef.current, clientId);
@@ -85,14 +96,18 @@ export function useHeartgardenPresenceHeartbeat(options: {
     onPeersRef.current([]);
 
     const clientId = getOrCreatePresenceClientId();
-    if (!clientId) return;
+    if (!clientId) {
+      return;
+    }
 
     let cancelled = false;
     let hbTimer: number | null = null;
     let pollTimer: number | null = null;
 
     const beat = () => {
-      if (cancelled || document.visibilityState === "hidden") return;
+      if (cancelled || document.visibilityState === "hidden") {
+        return;
+      }
       const p = getPayloadRef.current();
       const identity = getIdentityRef.current?.() ?? undefined;
       void postPresencePayload(activeSpaceId, clientId, {
@@ -103,9 +118,16 @@ export function useHeartgardenPresenceHeartbeat(options: {
     };
 
     const poll = async () => {
-      if (cancelled || document.visibilityState === "hidden") return;
-      const peers = await fetchSpacePresencePeersDetail(activeSpaceId, clientId);
-      if (!cancelled) onPeersRef.current(peers);
+      if (cancelled || document.visibilityState === "hidden") {
+        return;
+      }
+      const peers = await fetchSpacePresencePeersDetail(
+        activeSpaceId,
+        clientId
+      );
+      if (!cancelled) {
+        onPeersRef.current(peers);
+      }
     };
 
     const stopTimers = () => {
@@ -120,7 +142,9 @@ export function useHeartgardenPresenceHeartbeat(options: {
     };
 
     const startTimers = () => {
-      if (cancelled || document.visibilityState === "hidden") return;
+      if (cancelled || document.visibilityState === "hidden") {
+        return;
+      }
       if (hbTimer == null) {
         hbTimer = window.setInterval(beat, HEARTGARDEN_PRESENCE_HEARTBEAT_MS);
       }
@@ -130,7 +154,9 @@ export function useHeartgardenPresenceHeartbeat(options: {
     };
 
     const onVisibility = () => {
-      if (cancelled) return;
+      if (cancelled) {
+        return;
+      }
       if (document.visibilityState === "hidden") {
         stopTimers();
         return;

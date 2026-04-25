@@ -2,16 +2,16 @@
 
 import { ArrowRight } from "@phosphor-icons/react";
 import {
+  type ChangeEvent,
+  type ClipboardEvent,
+  type CSSProperties,
+  type KeyboardEvent,
   useCallback,
   useEffect,
   useId,
   useLayoutEffect,
   useRef,
   useState,
-  type ChangeEvent,
-  type ClipboardEvent,
-  type CSSProperties,
-  type KeyboardEvent,
 } from "react";
 
 import { Button } from "@/src/components/ui/Button";
@@ -71,9 +71,12 @@ export function HeartgardenPinField({
   const pulseTimeoutsRef = useRef<number[]>([]);
   const [pulseSlots, setPulseSlots] = useState(() => new Set<number>());
 
-  const setRef = useCallback((i: number) => (el: HTMLInputElement | null) => {
-    refs.current[i] = el;
-  }, []);
+  const setRef = useCallback(
+    (i: number) => (el: HTMLInputElement | null) => {
+      refs.current[i] = el;
+    },
+    []
+  );
 
   const focusAt = useCallback((i: number) => {
     const el = refs.current[Math.max(0, Math.min(SLOTS - 1, i))];
@@ -87,12 +90,14 @@ export function HeartgardenPinField({
     (nextRaw: string) => {
       onValueChange(clampPin(nextRaw));
     },
-    [onValueChange],
+    [onValueChange]
   );
 
   const handleChange = useCallback(
     (index: number, e: ChangeEvent<HTMLInputElement>) => {
-      if (disabled || submitting) return;
+      if (disabled || submitting) {
+        return;
+      }
       let chunk = e.target.value;
       if (chunk.length > 1) {
         chunk = chunk.slice(-1);
@@ -105,12 +110,14 @@ export function HeartgardenPinField({
         queueMicrotask(() => focusAt(index + 1));
       }
     },
-    [disabled, submitting, value, onValueChange, focusAt],
+    [disabled, submitting, value, onValueChange, focusAt]
   );
 
   const handleKeyDown = useCallback(
     (index: number, e: KeyboardEvent<HTMLInputElement>) => {
-      if (disabled || submitting) return;
+      if (disabled || submitting) {
+        return;
+      }
       if (e.key === "ArrowLeft") {
         e.preventDefault();
         focusAt(index - 1);
@@ -128,21 +135,23 @@ export function HeartgardenPinField({
         focusAt(index - 1);
         return;
       }
-      if (e.key === "Enter") {
-        if (value.length === SLOTS) {
-          e.preventDefault();
-          onSubmit();
-        }
+      if (e.key === "Enter" && value.length === SLOTS) {
+        e.preventDefault();
+        onSubmit();
       }
     },
-    [disabled, submitting, value, onValueChange, onSubmit, focusAt],
+    [disabled, submitting, value, onValueChange, onSubmit, focusAt]
   );
 
   const handlePaste = useCallback(
     (index: number, e: ClipboardEvent<HTMLInputElement>) => {
-      if (disabled || submitting) return;
+      if (disabled || submitting) {
+        return;
+      }
       const text = e.clipboardData.getData("text");
-      if (!text) return;
+      if (!text) {
+        return;
+      }
       e.preventDefault();
       const head = value.slice(0, index);
       const tail = value.slice(index);
@@ -151,14 +160,16 @@ export function HeartgardenPinField({
       const nextIdx = merged.length >= SLOTS ? SLOTS - 1 : merged.length;
       queueMicrotask(() => focusAt(nextIdx));
     },
-    [disabled, submitting, value, applyFullPin, focusAt],
+    [disabled, submitting, value, applyFullPin, focusAt]
   );
 
   const complete = value.length === SLOTS;
   const block = disabled || submitting;
   const showError = Boolean(errorMessage);
   const describedBy =
-    [visibleCaption ? captionId : null, showError ? errorId : null].filter(Boolean).join(" ") || undefined;
+    [visibleCaption ? captionId : null, showError ? errorId : null]
+      .filter(Boolean)
+      .join(" ") || undefined;
 
   useLayoutEffect(() => {
     valueRef.current = value;
@@ -166,24 +177,35 @@ export function HeartgardenPinField({
 
   useEffect(() => {
     const el = wrapRef.current;
-    if (!el || !onEmptyBlur) return;
+    if (!(el && onEmptyBlur)) {
+      return;
+    }
     const onFocusOut = (e: FocusEvent) => {
-      if (disabled || submitting) return;
+      if (disabled || submitting) {
+        return;
+      }
       const next = e.relatedTarget as Node | null;
-      if (next && el.contains(next)) return;
-      if (valueRef.current.length > 0) return;
+      if (next && el.contains(next)) {
+        return;
+      }
+      if (valueRef.current.length > 0) {
+        return;
+      }
       onEmptyBlur();
     };
     el.addEventListener("focusout", onFocusOut, true);
     return () => el.removeEventListener("focusout", onFocusOut, true);
   }, [onEmptyBlur, disabled, submitting]);
 
-  useEffect(() => {
-    return () => {
-      for (const id of pulseTimeoutsRef.current) window.clearTimeout(id);
+  useEffect(
+    () => () => {
+      for (const id of pulseTimeoutsRef.current) {
+        window.clearTimeout(id);
+      }
       pulseTimeoutsRef.current = [];
-    };
-  }, []);
+    },
+    []
+  );
 
   useEffect(() => {
     const prev = prevValueLenRef.current;
@@ -213,16 +235,16 @@ export function HeartgardenPinField({
   }, [value]);
 
   return (
-    <div ref={wrapRef} className={cx(styles.wrap, className)}>
+    <div className={cx(styles.wrap, className)} ref={wrapRef}>
       <fieldset
-        className={styles.fieldset}
-        disabled={block}
         aria-describedby={describedBy}
         aria-invalid={showError ? true : undefined}
+        className={styles.fieldset}
+        disabled={block}
       >
         <legend className={styles.legend}>{legend}</legend>
         {visibleCaption ? (
-          <p id={captionId} className={styles.visibleCaption}>
+          <p className={styles.visibleCaption} id={captionId}>
             {visibleCaption}
           </p>
         ) : null}
@@ -234,53 +256,60 @@ export function HeartgardenPinField({
             } as CSSProperties
           }
         >
-          <div className={cx(styles.slots, styles.slotsEnter)} role="group" aria-label={legend}>
+          <div
+            aria-label={legend}
+            className={cx(styles.slots, styles.slotsEnter)}
+            role="group"
+          >
             {Array.from({ length: SLOTS }, (_, i) => {
               const char = value[i] ?? "";
               const inputId = `${baseId}-${i + 1}`;
               return (
                 <input
-                  key={i}
-                  ref={setRef(i)}
-                  id={inputId}
-                  style={{ "--pin-i": i } as CSSProperties}
+                  aria-label={`Character ${i + 1} of ${SLOTS}`}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoFocus={autoFocus && i === 0}
                   className={cx(
                     styles.cell,
                     showError && styles.cellInvalid,
-                    pulseSlots.has(i) && styles.cellPulse,
+                    pulseSlots.has(i) && styles.cellPulse
                   )}
-                  type="password"
-                  name={`${baseId}-char-${i + 1}`}
+                  id={inputId}
                   inputMode="text"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck={false}
+                  key={i}
                   maxLength={1}
-                  value={char}
-                  aria-label={`Character ${i + 1} of ${SLOTS}`}
-                  autoFocus={autoFocus && i === 0}
+                  name={`${baseId}-char-${i + 1}`}
                   onChange={(ev) => handleChange(i, ev)}
                   onKeyDown={(ev) => handleKeyDown(i, ev)}
                   onPaste={(ev) => handlePaste(i, ev)}
+                  ref={setRef(i)}
+                  spellCheck={false}
+                  style={{ "--pin-i": i } as CSSProperties}
+                  type="password"
+                  value={char}
                 />
               );
             })}
           </div>
           <Button
-            type="button"
-            variant="primary"
-            tone="solid"
-            size="icon"
-            iconOnly
-            className={cx(styles.submit, complete && !block && styles.submitReady)}
-            disabled={!complete || block}
             aria-label="Submit access code"
+            className={cx(
+              styles.submit,
+              complete && !block && styles.submitReady
+            )}
+            disabled={!complete || block}
+            iconOnly
+            leadingIcon={<ArrowRight aria-hidden size={18} weight="bold" />}
+            leadingIcon={<ArrowRight aria-hidden size={18} weight="bold" />}
             onClick={() => onSubmit()}
-            leadingIcon={<ArrowRight size={18} weight="bold" aria-hidden />}
+            size="icon"
+            tone="solid"
+            type="button"
           />
         </div>
       </fieldset>
-      <p id={errorId} className={styles.error} aria-live="polite" role="status">
+      <p aria-live="polite" className={styles.error} id={errorId} role="status">
         {errorMessage ?? ""}
       </p>
     </div>

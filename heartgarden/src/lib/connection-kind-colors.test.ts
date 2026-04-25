@@ -41,13 +41,13 @@ describe("connection-kind-colors aliases and migration", () => {
       isCanonicalConnectionPair({
         color: conflictPair.color,
         linkType: "enemy",
-      }),
+      })
     ).toBe(false);
     expect(
       isCanonicalConnectionPair({
         color: conflictPair.color,
         linkType: conflictPair.linkType,
-      }),
+      })
     ).toBe(true);
   });
 

@@ -6,18 +6,26 @@ const CHUNK_LOAD_RELOAD_SESSION_KEY = "hg:chunk-load-reload-at";
 const CHUNK_LOAD_RELOAD_COOLDOWN_MS = 15_000;
 
 function chunkFailureMessage(reason: unknown): string {
-  if (reason instanceof Error) return reason.message;
-  if (typeof reason === "string") return reason;
+  if (reason instanceof Error) {
+    return reason.message;
+  }
+  if (typeof reason === "string") {
+    return reason;
+  }
   if (reason && typeof reason === "object" && "message" in reason) {
     const message = (reason as { message?: unknown }).message;
-    if (typeof message === "string") return message;
+    if (typeof message === "string") {
+      return message;
+    }
   }
   return String(reason ?? "");
 }
 
 function isChunkLoadFailure(reason: unknown): boolean {
   const message = chunkFailureMessage(reason).toLowerCase();
-  if (!message) return false;
+  if (!message) {
+    return false;
+  }
   return (
     message.includes("chunkloaderror") ||
     (message.includes("loading chunk") && message.includes("failed")) ||
@@ -41,12 +49,18 @@ function markChunkReloadAt(now: number): void {
  */
 export function useChunkLoadRecovery(): void {
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      return;
+    }
 
     const attemptRecovery = (reason: unknown) => {
-      if (!isChunkLoadFailure(reason)) return;
+      if (!isChunkLoadFailure(reason)) {
+        return;
+      }
       const now = Date.now();
-      if (now - readChunkReloadAt() < CHUNK_LOAD_RELOAD_COOLDOWN_MS) return;
+      if (now - readChunkReloadAt() < CHUNK_LOAD_RELOAD_COOLDOWN_MS) {
+        return;
+      }
       markChunkReloadAt(now);
       window.location.reload();
     };

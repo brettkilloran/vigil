@@ -16,19 +16,28 @@ export function jitterHgRotationDeg(): number {
 /**
  * Next z-index for a new item when the client omits `zIndex` (matches lore import: start 101 if empty).
  */
-export async function nextZIndexForSpace(db: VigilDb, spaceId: string): Promise<number> {
+export async function nextZIndexForSpace(
+  db: VigilDb,
+  spaceId: string
+): Promise<number> {
   const [mz] = await db
     .select({ z: max(items.zIndex) })
     .from(items)
     .where(eq(items.spaceId, spaceId));
-  return mz?.z != null && Number.isFinite(Number(mz.z)) ? Number(mz.z) + 1 : 101;
+  return mz?.z != null && Number.isFinite(Number(mz.z))
+    ? Number(mz.z) + 1
+    : 101;
 }
 
 export function defaultItemDimensions(
   itemType: string,
-  entityType: string | null | undefined,
+  entityType: string | null | undefined
 ): { width: number; height: number } {
-  if (entityType === "character" || entityType === "faction" || entityType === "location") {
+  if (
+    entityType === "character" ||
+    entityType === "faction" ||
+    entityType === "location"
+  ) {
     return { width: 340, height: 280 };
   }
   switch (itemType) {
@@ -70,12 +79,15 @@ export function synthesizeContentJsonForCreateItem(args: {
 
   if (args.itemType === "note" || args.itemType === "sticky") {
     const base = buildLoreNoteContentJson(args.contentText);
-    const hg = (base.hgArch && typeof base.hgArch === "object" ? base.hgArch : {}) as Record<
-      string,
-      unknown
-    >;
+    const hg = (
+      base.hgArch && typeof base.hgArch === "object" ? base.hgArch : {}
+    ) as Record<string, unknown>;
     const theme =
-      args.theme === "code" ? "code" : args.theme === "task" ? "task" : "default";
+      args.theme === "code"
+        ? "code"
+        : args.theme === "task"
+          ? "task"
+          : "default";
     return {
       ...base,
       hgArch: {

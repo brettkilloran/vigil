@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-
+import type {
+  CanvasEntity,
+  CanvasGraph,
+} from "@/src/components/foundation/architectural-types";
 import {
   approximateConnectionPinWorld,
   buildCullExceptionEntityIds,
@@ -9,14 +12,13 @@ import {
   rectsIntersect,
   worldRectFromViewport,
 } from "@/src/lib/canvas-viewport-cull";
-import type { CanvasEntity, CanvasGraph } from "@/src/components/foundation/architectural-types";
 
 function noteEntity(
   id: string,
   spaceId: string,
   x: number,
   y: number,
-  width = 280,
+  width = 280
 ): Extract<CanvasEntity, { kind: "content" }> {
   return {
     id,
@@ -73,7 +75,9 @@ describe("entityIntersectsWorldRect", () => {
 
   it("forces visible for exception ids", () => {
     const e = noteEntity("a", space, 2000, 2000);
-    expect(entityIntersectsWorldRect(e, space, rect, new Set(["a"]))).toBe(true);
+    expect(entityIntersectsWorldRect(e, space, rect, new Set(["a"]))).toBe(
+      true
+    );
   });
 });
 
@@ -83,7 +87,12 @@ describe("connectionIntersectsWorldRect", () => {
   const graph: CanvasGraph = {
     rootSpaceId: space,
     spaces: {
-      [space]: { id: space, name: "R", parentSpaceId: null, entityIds: ["a", "b"] },
+      [space]: {
+        id: space,
+        name: "R",
+        parentSpaceId: null,
+        entityIds: ["a", "b"],
+      },
     },
     entities: {
       a: noteEntity("a", space, 0, 0),
@@ -105,14 +114,14 @@ describe("connectionIntersectsWorldRect", () => {
   it("keeps long segment that crosses the viewport", () => {
     const worldRect = { left: 150, top: -100, right: 250, bottom: 500 };
     expect(
-      connectionIntersectsWorldRect(conn, graph, space, worldRect, new Set()),
+      connectionIntersectsWorldRect(conn, graph, space, worldRect, new Set())
     ).toBe(true);
   });
 
   it("drops segment fully outside", () => {
     const worldRect = { left: 5000, top: 5000, right: 5100, bottom: 5100 };
     expect(
-      connectionIntersectsWorldRect(conn, graph, space, worldRect, new Set()),
+      connectionIntersectsWorldRect(conn, graph, space, worldRect, new Set())
     ).toBe(false);
   });
 });
@@ -122,7 +131,14 @@ describe("approximateConnectionPinWorld", () => {
     const space = "s1";
     const graph: CanvasGraph = {
       rootSpaceId: space,
-      spaces: { [space]: { id: space, name: "R", parentSpaceId: null, entityIds: ["a"] } },
+      spaces: {
+        [space]: {
+          id: space,
+          name: "R",
+          parentSpaceId: null,
+          entityIds: ["a"],
+        },
+      },
       entities: { a: noteEntity("a", space, 10, 20) },
       connections: {},
     };
@@ -130,7 +146,7 @@ describe("approximateConnectionPinWorld", () => {
       "a",
       { anchor: "topLeftInset", insetX: 0, insetY: 0 },
       space,
-      graph,
+      graph
     );
     expect(p).toEqual({ x: 10 + 14, y: 20 + 18 });
   });
@@ -152,8 +168,13 @@ describe("collapsedStackIntersectsWorldRect", () => {
   const rect = { left: 0, top: 0, right: 100, bottom: 100 };
 
   it("true if union overlaps", () => {
-    const entities = [noteEntity("a", space, 0, 0), noteEntity("b", space, 50, 50)];
-    expect(collapsedStackIntersectsWorldRect(entities, space, rect, new Set())).toBe(true);
+    const entities = [
+      noteEntity("a", space, 0, 0),
+      noteEntity("b", space, 50, 50),
+    ];
+    expect(
+      collapsedStackIntersectsWorldRect(entities, space, rect, new Set())
+    ).toBe(true);
   });
 });
 
@@ -162,8 +183,8 @@ describe("rectsIntersect", () => {
     expect(
       rectsIntersect(
         { left: 0, top: 0, right: 1, bottom: 1 },
-        { left: 2, top: 2, right: 3, bottom: 3 },
-      ),
+        { left: 2, top: 2, right: 3, bottom: 3 }
+      )
     ).toBe(false);
   });
 });

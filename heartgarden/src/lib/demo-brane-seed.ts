@@ -43,7 +43,9 @@ type DemoSeed = {
 let demoSeedCache: DemoSeed | null = null;
 
 async function readDemoSeedFixture(): Promise<DemoSeed> {
-  if (demoSeedCache) return demoSeedCache;
+  if (demoSeedCache) {
+    return demoSeedCache;
+  }
   const fixturePath = path.join(process.cwd(), "seed", "demo-brane.json");
   const raw = await readFile(fixturePath, "utf8");
   const parsed = JSON.parse(raw) as DemoSeed;
@@ -58,7 +60,9 @@ export async function ensureDemoBraneSeed(db: VigilDb): Promise<void> {
     .from(spaces)
     .where(eq(spaces.braneId, demoBrane.id))
     .limit(1);
-  if (existing) return;
+  if (existing) {
+    return;
+  }
 
   const seed = await readDemoSeedFixture();
   await db.transaction(async (tx) => {
@@ -113,7 +117,9 @@ export async function ensureDemoBraneSeed(db: VigilDb): Promise<void> {
           .where(eq(items.id, link.targetItemId))
           .limit(1),
       ]);
-      if (!sourceRow[0] || !targetRow[0]) continue;
+      if (!(sourceRow[0] && targetRow[0])) {
+        continue;
+      }
       await tx
         .insert(itemLinks)
         .values({
@@ -125,7 +131,12 @@ export async function ensureDemoBraneSeed(db: VigilDb): Promise<void> {
           targetPin: null,
         })
         .onConflictDoNothing({
-          target: [itemLinks.sourceItemId, itemLinks.targetItemId, itemLinks.sourcePin, itemLinks.targetPin],
+          target: [
+            itemLinks.sourceItemId,
+            itemLinks.targetItemId,
+            itemLinks.sourcePin,
+            itemLinks.targetPin,
+          ],
         });
     }
   });
@@ -142,7 +153,9 @@ export async function ensureDemoBraneSeed(db: VigilDb): Promise<void> {
   }
 }
 
-export async function getDemoBraneRootSpaceId(db: VigilDb): Promise<string | undefined> {
+export async function getDemoBraneRootSpaceId(
+  db: VigilDb
+): Promise<string | undefined> {
   const demoBrane = await resolveOrCreateBraneByType(db, "demo");
   const [row] = await db
     .select({ id: spaces.id })

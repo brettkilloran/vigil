@@ -12,7 +12,10 @@ vi.mock("@/src/lib/item-links-validation", () => ({
 }));
 
 vi.mock("@/src/lib/heartgarden-api-boot-context", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("@/src/lib/heartgarden-api-boot-context")>();
+  const mod =
+    await importOriginal<
+      typeof import("@/src/lib/heartgarden-api-boot-context")
+    >();
   return {
     ...mod,
     getHeartgardenApiBootContext: vi.fn(() => Promise.resolve({ role: "gm" })),
@@ -29,11 +32,15 @@ describe("POST /api/item-links", () => {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
           where: vi.fn(() => ({
-            limit: vi.fn(async () => [{ spaceId: "00000000-0000-4000-8000-000000000099" }]),
+            limit: vi.fn(async () => [
+              { spaceId: "00000000-0000-4000-8000-000000000099" },
+            ]),
           })),
           leftJoin: vi.fn(() => ({
             where: vi.fn(() => ({
-              limit: vi.fn(async () => [{ name: "Test Space", braneType: "gm" }]),
+              limit: vi.fn(async () => [
+                { name: "Test Space", braneType: "gm" },
+              ]),
             })),
           })),
         })),
@@ -55,7 +62,7 @@ describe("POST /api/item-links", () => {
           sourceItemId: "00000000-0000-4000-8000-000000000001",
           targetItemId: "00000000-0000-4000-8000-000000000002",
         }),
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -65,7 +72,7 @@ describe("POST /api/item-links", () => {
     expect(validateLinkTargetsInBraneMock).toHaveBeenCalledWith(
       db,
       "00000000-0000-4000-8000-000000000001",
-      ["00000000-0000-4000-8000-000000000002"],
+      ["00000000-0000-4000-8000-000000000002"]
     );
   }, 15_000);
 });

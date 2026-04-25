@@ -1,18 +1,23 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyServerCanvasItemToGraph,
+  type BootstrapResponse,
+  buildCanvasGraphFromBootstrap,
   mergeBootstrapView,
   mergeRemoteItemPatches,
   mergeRemoteSpaceRowsIntoGraph,
   removeEntitiesFromGraphAfterRemoteDelete,
-  applyServerCanvasItemToGraph,
-  type BootstrapResponse,
-  buildCanvasGraphFromBootstrap,
 } from "@/src/components/foundation/architectural-db-bridge";
 import type { CanvasPinConnection } from "@/src/components/foundation/architectural-types";
 import type { CanvasItem } from "@/src/model/canvas-types";
 
-function noteItem(id: string, spaceId: string, title: string, updatedAt: string): CanvasItem {
+function noteItem(
+  id: string,
+  spaceId: string,
+  title: string,
+  updatedAt: string
+): CanvasItem {
   return {
     id,
     spaceId,
@@ -24,7 +29,10 @@ function noteItem(id: string, spaceId: string, title: string, updatedAt: string)
     zIndex: 1,
     title,
     contentText: "",
-    contentJson: { format: "html", html: "<div contenteditable=\"true\">x</div>" },
+    contentJson: {
+      format: "html",
+      html: '<div contenteditable="true">x</div>',
+    },
     updatedAt,
   };
 }
@@ -35,7 +43,7 @@ function folderItem(
   childSpaceId: string,
   title: string,
   updatedAt: string,
-  folderColorScheme?: string,
+  folderColorScheme?: string
 ): CanvasItem {
   return {
     id,
@@ -63,12 +71,24 @@ describe("mergeRemoteItemPatches", () => {
       ok: true,
       demo: false,
       spaceId: "space-1",
-      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
-      items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"), noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z")],
+      spaces: [
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+      ],
+      items: [
+        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
       camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
-    const changed = [noteItem("a", "space-1", "A2", "2020-01-02T00:00:00.000Z")];
+    const changed = [
+      noteItem("a", "space-1", "A2", "2020-01-02T00:00:00.000Z"),
+    ];
     const serverIds = new Set<string>(["a"]);
     const next = mergeRemoteItemPatches(prev, changed, serverIds, ["space-1"]);
     expect(next.entities.a?.title).toBe("A2");
@@ -81,8 +101,18 @@ describe("mergeRemoteItemPatches", () => {
       ok: true,
       demo: false,
       spaceId: "space-1",
-      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
-      items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"), noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z")],
+      spaces: [
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+      ],
+      items: [
+        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
       camera: { x: 0, y: 0, zoom: 1 },
     };
     const prevBase = buildCanvasGraphFromBootstrap(boot);
@@ -105,7 +135,9 @@ describe("mergeRemoteItemPatches", () => {
       ...prevBase,
       connections: { ...prevBase.connections, [thread.id]: thread },
     };
-    const changed = [noteItem("a", "space-1", "A2", "2020-01-02T00:00:00.000Z")];
+    const changed = [
+      noteItem("a", "space-1", "A2", "2020-01-02T00:00:00.000Z"),
+    ];
     const serverIds = new Set<string>(["a"]);
     const next = mergeRemoteItemPatches(prev, changed, serverIds, ["space-1"]);
     expect(next.entities.b).toBeUndefined();
@@ -117,16 +149,38 @@ describe("mergeRemoteItemPatches", () => {
       ok: true,
       demo: false,
       spaceId: "space-1",
-      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
-      items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"), noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z")],
+      spaces: [
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+      ],
+      items: [
+        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
       camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
-    const changed = [noteItem("a", "space-1", "A2", "2020-01-02T00:00:00.000Z")];
+    const changed = [
+      noteItem("a", "space-1", "A2", "2020-01-02T00:00:00.000Z"),
+    ];
     const serverIds = new Set<string>(["a"]);
-    const next = mergeRemoteItemPatches(prev, changed, serverIds, ["space-1"], new Set(), new Set(["b"]));
+    const next = mergeRemoteItemPatches(
+      prev,
+      changed,
+      serverIds,
+      ["space-1"],
+      new Set(),
+      new Set(["b"])
+    );
     expect(next.entities.b?.title).toBe("B");
-    expect([...(next.spaces["space-1"]?.entityIds ?? [])].sort()).toEqual(["a", "b"]);
+    expect([...(next.spaces["space-1"]?.entityIds ?? [])].sort()).toEqual([
+      "a",
+      "b",
+    ]);
   });
 
   it("keeps local title and body when id is protected but applies geometry from server", () => {
@@ -134,13 +188,24 @@ describe("mergeRemoteItemPatches", () => {
       ok: true,
       demo: false,
       spaceId: "space-1",
-      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
-      items: [noteItem("a", "space-1", "ServerTitle", "2020-01-01T00:00:00.000Z")],
+      spaces: [
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+      ],
+      items: [
+        noteItem("a", "space-1", "ServerTitle", "2020-01-01T00:00:00.000Z"),
+      ],
       camera: { x: 0, y: 0, zoom: 1 },
     };
     const prevBase = buildCanvasGraphFromBootstrap(boot);
     const ent = prevBase.entities.a;
-    if (!ent || ent.kind !== "content") throw new Error("expected content entity");
+    if (!ent || ent.kind !== "content") {
+      throw new Error("expected content entity");
+    }
     const prev = {
       ...prevBase,
       entities: {
@@ -152,15 +217,28 @@ describe("mergeRemoteItemPatches", () => {
         },
       },
     };
-    const remote = noteItem("a", "space-1", "RemoteTitle", "2020-01-02T00:00:00.000Z");
+    const remote = noteItem(
+      "a",
+      "space-1",
+      "RemoteTitle",
+      "2020-01-02T00:00:00.000Z"
+    );
     remote.x = 120;
     remote.y = 240;
     remote.contentJson = { format: "html", html: "<div>server html</div>" };
     const serverIds = new Set<string>(["a"]);
-    const next = mergeRemoteItemPatches(prev, [remote], serverIds, ["space-1"], new Set(["a"]));
+    const next = mergeRemoteItemPatches(
+      prev,
+      [remote],
+      serverIds,
+      ["space-1"],
+      new Set(["a"])
+    );
     const out = next.entities.a;
     expect(out?.kind).toBe("content");
-    if (out?.kind !== "content") return;
+    if (out?.kind !== "content") {
+      return;
+    }
     expect(out.title).toBe("LocalTitle");
     expect(out.bodyHtml).toBe("<div>local draft</div>");
     expect(out.slots["space-1"]).toEqual({ x: 120, y: 240 });
@@ -173,20 +251,52 @@ describe("mergeRemoteItemPatches", () => {
       demo: false,
       spaceId: "space-1",
       spaces: [
-        { id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
-        { id: childSpace, name: "Inside", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+        {
+          id: childSpace,
+          name: "Inside",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
       ],
-      items: [folderItem("fol1", "space-1", childSpace, "LocalFolder", "2020-01-01T00:00:00.000Z")],
+      items: [
+        folderItem(
+          "fol1",
+          "space-1",
+          childSpace,
+          "LocalFolder",
+          "2020-01-01T00:00:00.000Z"
+        ),
+      ],
       camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
-    const remote = folderItem("fol1", "space-1", childSpace, "RemoteFolder", "2020-01-02T00:00:00.000Z");
+    const remote = folderItem(
+      "fol1",
+      "space-1",
+      childSpace,
+      "RemoteFolder",
+      "2020-01-02T00:00:00.000Z"
+    );
     remote.x = 50;
     remote.y = 60;
-    const next = mergeRemoteItemPatches(prev, [remote], new Set(["fol1"]), ["space-1"], new Set(["fol1"]));
+    const next = mergeRemoteItemPatches(
+      prev,
+      [remote],
+      new Set(["fol1"]),
+      ["space-1"],
+      new Set(["fol1"])
+    );
     const f = next.entities.fol1;
     expect(f?.kind).toBe("folder");
-    if (f?.kind !== "folder") return;
+    if (f?.kind !== "folder") {
+      return;
+    }
     expect(f.title).toBe("LocalFolder");
     expect(f.slots["space-1"]).toEqual({ x: 50, y: 60 });
   });
@@ -198,16 +308,37 @@ describe("mergeRemoteItemPatches", () => {
       demo: false,
       spaceId: "space-1",
       spaces: [
-        { id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
-        { id: childSpace, name: "Inside", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+        {
+          id: childSpace,
+          name: "Inside",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
       ],
-      items: [folderItem("fol2", "space-1", childSpace, "Tinted", "2020-01-01T00:00:00.000Z", "ocean")],
+      items: [
+        folderItem(
+          "fol2",
+          "space-1",
+          childSpace,
+          "Tinted",
+          "2020-01-01T00:00:00.000Z",
+          "ocean"
+        ),
+      ],
       camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
     const local = prev.entities.fol2;
     expect(local?.kind).toBe("folder");
-    if (local?.kind !== "folder") return;
+    if (local?.kind !== "folder") {
+      return;
+    }
     local.folderColorScheme = "violet";
     const remote = folderItem(
       "fol2",
@@ -215,12 +346,20 @@ describe("mergeRemoteItemPatches", () => {
       childSpace,
       "Tinted",
       "2020-01-02T00:00:00.000Z",
-      "ocean",
+      "ocean"
     );
-    const next = mergeRemoteItemPatches(prev, [remote], new Set(["fol2"]), ["space-1"], new Set(["fol2"]));
+    const next = mergeRemoteItemPatches(
+      prev,
+      [remote],
+      new Set(["fol2"]),
+      ["space-1"],
+      new Set(["fol2"])
+    );
     const folder = next.entities.fol2;
     expect(folder?.kind).toBe("folder");
-    if (folder?.kind !== "folder") return;
+    if (folder?.kind !== "folder") {
+      return;
+    }
     expect(folder.folderColorScheme).toBe("violet");
   });
 
@@ -230,8 +369,18 @@ describe("mergeRemoteItemPatches", () => {
       demo: false,
       spaceId: "space-1",
       spaces: [
-        { id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
-        { id: "space-2", name: "Child", parentSpaceId: "space-1", updatedAt: "2020-01-01T00:00:00.000Z" },
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+        {
+          id: "space-2",
+          name: "Child",
+          parentSpaceId: "space-1",
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
       ],
       items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
       camera: { x: 0, y: 0, zoom: 1 },
@@ -250,16 +399,31 @@ describe("mergeRemoteItemPatches", () => {
       ok: true,
       demo: false,
       spaceId: "space-1",
-      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
-      items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"), noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z")],
+      spaces: [
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+      ],
+      items: [
+        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
       camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
-    const changed = [noteItem("a", "space-1", "A2", "2020-01-02T00:00:00.000Z")];
+    const changed = [
+      noteItem("a", "space-1", "A2", "2020-01-02T00:00:00.000Z"),
+    ];
     const next = mergeRemoteItemPatches(prev, changed, null, ["space-1"]);
     expect(next.entities.a?.title).toBe("A2");
     expect(next.entities.b?.title).toBe("B");
-    expect([...(next.spaces["space-1"]?.entityIds ?? [])].sort()).toEqual(["a", "b"]);
+    expect([...(next.spaces["space-1"]?.entityIds ?? [])].sort()).toEqual([
+      "a",
+      "b",
+    ]);
   });
 });
 
@@ -270,8 +434,18 @@ describe("mergeBootstrapView", () => {
       demo: false,
       spaceId: "space-1",
       spaces: [
-        { id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
-        { id: "space-2", name: "Child", parentSpaceId: "space-1", updatedAt: "2020-01-01T00:00:00.000Z" },
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+        {
+          id: "space-2",
+          name: "Child",
+          parentSpaceId: "space-1",
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
       ],
       items: [
         noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
@@ -290,13 +464,20 @@ describe("mergeBootstrapView", () => {
     const next = mergeBootstrapView(prev, bootNext);
     expect(next.entities.a?.title).toBe("A");
     expect(next.entities.b?.title).toBe("B");
-    expect([...(next.spaces["space-1"]?.entityIds ?? [])].sort()).toEqual(["b"]);
+    expect([...(next.spaces["space-1"]?.entityIds ?? [])].sort()).toEqual([
+      "b",
+    ]);
     expect(next.spaces["space-2"]?.entityIds).toEqual(["a"]);
   });
 
   it("batch-removes many stale ids without per-id full graph scans", () => {
     const spaces = [
-      { id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
+      {
+        id: "space-1",
+        name: "Root",
+        parentSpaceId: null,
+        updatedAt: "2020-01-01T00:00:00.000Z",
+      },
       ...Array.from({ length: 24 }, (_, i) => ({
         id: `space-x-${i}`,
         name: `X${i}`,
@@ -307,7 +488,7 @@ describe("mergeBootstrapView", () => {
     const items = [
       noteItem("keep", "space-1", "Keep", "2020-01-01T00:00:00.000Z"),
       ...Array.from({ length: 24 }, (_, i) =>
-        noteItem(`stale-${i}`, "space-1", `S${i}`, "2020-01-01T00:00:00.000Z"),
+        noteItem(`stale-${i}`, "space-1", `S${i}`, "2020-01-01T00:00:00.000Z")
       ),
     ];
     const bootFull: BootstrapResponse = {
@@ -333,7 +514,14 @@ describe("mergeBootstrapView", () => {
       ok: true,
       demo: false,
       spaceId: "space-1",
-      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
+      spaces: [
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+      ],
       items: [
         noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
         noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
@@ -372,7 +560,14 @@ describe("mergeBootstrapView", () => {
       ok: true,
       demo: false,
       spaceId: "space-1",
-      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
+      spaces: [
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+      ],
       items: [
         noteItem("keep", "space-1", "Keep", "2020-01-01T00:00:00.000Z"),
         noteItem("gone", "space-1", "Gone", "2020-01-01T00:00:00.000Z"),
@@ -408,8 +603,18 @@ describe("mergeBootstrapView", () => {
 describe("applyServerCanvasItemToGraph", () => {
   it("moves item between spaces without scanning empty entity lists for mutation", () => {
     const spaces = [
-      { id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
-      { id: "space-2", name: "Child", parentSpaceId: "space-1", updatedAt: "2020-01-01T00:00:00.000Z" },
+      {
+        id: "space-1",
+        name: "Root",
+        parentSpaceId: null,
+        updatedAt: "2020-01-01T00:00:00.000Z",
+      },
+      {
+        id: "space-2",
+        name: "Child",
+        parentSpaceId: "space-1",
+        updatedAt: "2020-01-01T00:00:00.000Z",
+      },
       ...Array.from({ length: 20 }, (_, i) => ({
         id: `space-e-${i}`,
         name: `E${i}`,
@@ -439,8 +644,18 @@ describe("applyServerCanvasItemToGraph", () => {
       demo: false,
       spaceId: "space-1",
       spaces: [
-        { id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
-        { id: "space-2", name: "Child", parentSpaceId: "space-1", updatedAt: "2020-01-01T00:00:00.000Z" },
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+        {
+          id: "space-2",
+          name: "Child",
+          parentSpaceId: "space-1",
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
       ],
       items: [
         noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
@@ -464,7 +679,10 @@ describe("applyServerCanvasItemToGraph", () => {
       dbLinkId: "00000000-0000-4000-8000-0000000000cc",
       syncError: null,
     };
-    const prev = { ...prevBase, connections: { ...prevBase.connections, [thread.id]: thread } };
+    const prev = {
+      ...prevBase,
+      connections: { ...prevBase.connections, [thread.id]: thread },
+    };
     const moved = noteItem("a", "space-2", "A2", "2020-01-02T00:00:00.000Z");
     const next = applyServerCanvasItemToGraph(prev, moved);
     expect(next.connections[thread.id]).toEqual(thread);
@@ -477,7 +695,14 @@ describe("mergeRemoteSpaceRowsIntoGraph", () => {
       ok: true,
       demo: false,
       spaceId: "space-1",
-      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
+      spaces: [
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+      ],
       items: [],
       camera: { x: 0, y: 0, zoom: 1 },
     };
@@ -499,8 +724,18 @@ describe("mergeRemoteSpaceRowsIntoGraph", () => {
       demo: false,
       spaceId: "space-1",
       spaces: [
-        { id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
-        { id: "space-2", name: "Inner", parentSpaceId: "space-1", updatedAt: "2020-01-01T00:00:00.000Z" },
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+        {
+          id: "space-2",
+          name: "Inner",
+          parentSpaceId: "space-1",
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
       ],
       items: [],
       camera: { x: 0, y: 0, zoom: 1 },
@@ -522,7 +757,14 @@ describe("removeEntitiesFromGraphAfterRemoteDelete", () => {
       ok: true,
       demo: false,
       spaceId: "space-1",
-      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
+      spaces: [
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+      ],
       items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
       camera: { x: 0, y: 0, zoom: 1 },
     };

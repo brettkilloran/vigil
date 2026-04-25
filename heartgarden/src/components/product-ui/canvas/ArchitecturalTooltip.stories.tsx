@@ -51,7 +51,7 @@ export const Playground: Story = {
   render: (args) => (
     <div style={surface}>
       <ArchitecturalTooltip {...args}>
-        <ArchitecturalButton size="icon" tone="glass" aria-label="Demo tool">
+        <ArchitecturalButton aria-label="Demo tool" size="icon" tone="glass">
           <CursorClick size={18} />
         </ArchitecturalButton>
       </ArchitecturalTooltip>
@@ -63,16 +63,16 @@ export const LongHelpText: Story = {
   render: () => (
     <div style={surface}>
       <ArchitecturalTooltip
-        side="bottom"
-        delayMs={300}
         associateDescription
         content="Last successful write to Neon includes debounced note edits. Undo applies to the canvas in memory only — it does not revert the database. Click the control for export and version notes."
+        delayMs={300}
+        side="bottom"
       >
         <ArchitecturalButton
+          aria-label="Save and database status"
+          leadingIcon={<Info aria-hidden size={16} weight="bold" />}
           size="menu"
           tone="glass"
-          leadingIcon={<Info size={16} weight="bold" aria-hidden />}
-          aria-label="Save and database status"
         >
           Sync status
         </ArchitecturalButton>
@@ -95,9 +95,20 @@ export const PlacementGrid: Story = {
       }}
     >
       {(["top", "right", "bottom", "left"] as const).map((side) => (
-        <ArchitecturalTooltip key={side} content={`Preferred side: ${side}`} side={side} delayMs={200}>
-          <ArchitecturalButton size="icon" tone="glass" aria-label={`Open ${side} tooltip demo`}>
-            <span style={{ fontSize: 11, fontWeight: 600 }}>{side[0]!.toUpperCase()}</span>
+        <ArchitecturalTooltip
+          content={`Preferred side: ${side}`}
+          delayMs={200}
+          key={side}
+          side={side}
+        >
+          <ArchitecturalButton
+            aria-label={`Open ${side} tooltip demo`}
+            size="icon"
+            tone="glass"
+          >
+            <span style={{ fontSize: 11, fontWeight: 600 }}>
+              {side[0]!.toUpperCase()}
+            </span>
           </ArchitecturalButton>
         </ArchitecturalTooltip>
       ))}

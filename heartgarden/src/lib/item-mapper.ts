@@ -17,7 +17,9 @@ const ITEM_TYPES: ItemType[] = [
 const unknownItemTypeWarnings = new Set<string>();
 
 function asItemType(v: string): ItemType {
-  if (ITEM_TYPES.includes(v as ItemType)) return v as ItemType;
+  if (ITEM_TYPES.includes(v as ItemType)) {
+    return v as ItemType;
+  }
   if (!unknownItemTypeWarnings.has(v)) {
     unknownItemTypeWarnings.add(v);
     console.warn("[item-mapper] unknown itemType fallback", v);

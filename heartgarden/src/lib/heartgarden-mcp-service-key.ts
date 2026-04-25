@@ -9,7 +9,9 @@ export function heartgardenMcpServiceKeyFromEnv(): string {
 }
 
 function mcpAllowQueryTokenAuth(): boolean {
-  const raw = (process.env.HEARTGARDEN_MCP_ALLOW_QUERY_TOKEN ?? "").trim().toLowerCase();
+  const raw = (process.env.HEARTGARDEN_MCP_ALLOW_QUERY_TOKEN ?? "")
+    .trim()
+    .toLowerCase();
   return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
 }
 
@@ -18,21 +20,31 @@ export function timingSafeEqualUtf8(a: string, b: string): boolean {
   const enc = new TextEncoder();
   const ab = enc.encode(a);
   const bb = enc.encode(b);
-  if (ab.length !== bb.length) return false;
+  if (ab.length !== bb.length) {
+    return false;
+  }
   let x = 0;
-  for (let i = 0; i < ab.length; i++) x |= ab[i]! ^ bb[i]!;
+  for (let i = 0; i < ab.length; i++) {
+    x |= ab[i]! ^ bb[i]!;
+  }
   return x === 0;
 }
 
 /**
  * True if Authorization is "Bearer <token>" and token matches HEARTGARDEN_MCP_SERVICE_KEY.
  */
-export function authorizationBearerMatchesMcpServiceKey(authorization: string | null | undefined): boolean {
+export function authorizationBearerMatchesMcpServiceKey(
+  authorization: string | null | undefined
+): boolean {
   const key = heartgardenMcpServiceKeyFromEnv();
-  if (!key.length) return false;
+  if (!key.length) {
+    return false;
+  }
   const raw = (authorization ?? "").trim();
   const m = /^Bearer\s+(\S+)$/i.exec(raw);
-  if (!m) return false;
+  if (!m) {
+    return false;
+  }
   return timingSafeEqualUtf8(m[1]!, key);
 }
 
@@ -56,9 +68,13 @@ export function mcpTokenFromRequestUrlString(urlString: string): string | null {
 }
 
 function tokenFromNextRequestIfPresent(request: Request): string | null {
-  const r = request as Request & { nextUrl?: { searchParams: URLSearchParams } };
+  const r = request as Request & {
+    nextUrl?: { searchParams: URLSearchParams };
+  };
   if (r.nextUrl?.searchParams) {
-    return r.nextUrl.searchParams.get("token") ?? r.nextUrl.searchParams.get("key");
+    return (
+      r.nextUrl.searchParams.get("token") ?? r.nextUrl.searchParams.get("key")
+    );
   }
   return null;
 }
@@ -69,27 +85,38 @@ function tokenFromNextRequestIfPresent(request: Request): string | null {
  * - header `X-Heartgarden-Mcp-Token` always
  * Prefer Bearer when possible — query strings can appear in access logs/history.
  */
-export function mcpUrlQueryOrHeaderMatchesServiceKey(request: Request): boolean {
+export function mcpUrlQueryOrHeaderMatchesServiceKey(
+  request: Request
+): boolean {
   const key = heartgardenMcpServiceKeyFromEnv();
-  if (!key.length) return false;
+  if (!key.length) {
+    return false;
+  }
 
   if (mcpAllowQueryTokenAuth()) {
     const fromNext = tokenFromNextRequestIfPresent(request);
-    if (fromNext && timingSafeEqualUtf8(fromNext.trim(), key)) return true;
+    if (fromNext && timingSafeEqualUtf8(fromNext.trim(), key)) {
+      return true;
+    }
 
     const fromUrl = mcpTokenFromRequestUrlString(request.url);
-    if (fromUrl && timingSafeEqualUtf8(fromUrl.trim(), key)) return true;
+    if (fromUrl && timingSafeEqualUtf8(fromUrl.trim(), key)) {
+      return true;
+    }
   }
 
   const h = request.headers.get("x-heartgarden-mcp-token");
-  if (h && timingSafeEqualUtf8(h.trim(), key)) return true;
+  if (h && timingSafeEqualUtf8(h.trim(), key)) {
+    return true;
+  }
   return false;
 }
 
 /** Bearer, or X-Heartgarden-Mcp-Token, or optional query token/key when enabled. */
 export function mcpRequestAuthorizedByServiceKey(request: Request): boolean {
   return (
-    authorizationBearerMatchesMcpServiceKey(request.headers.get("authorization")) ||
-    mcpUrlQueryOrHeaderMatchesServiceKey(request)
+    authorizationBearerMatchesMcpServiceKey(
+      request.headers.get("authorization")
+    ) || mcpUrlQueryOrHeaderMatchesServiceKey(request)
   );
 }

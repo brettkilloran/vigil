@@ -48,7 +48,7 @@ export type CanonicalImportLinkType =
 function linkTypeAcceptsEndpoints(
   linkType: CanonicalImportLinkType,
   a: LinkEndpointKind | null | undefined,
-  b: LinkEndpointKind | null | undefined,
+  b: LinkEndpointKind | null | undefined
 ): boolean {
   switch (linkType) {
     case "bond":
@@ -96,7 +96,7 @@ export type CoerceImportLinkTypeResult = {
 export function coerceImportLinkType(
   fromKind: LinkEndpointKind | null | undefined,
   toKind: LinkEndpointKind | null | undefined,
-  requested: string | null | undefined,
+  requested: string | null | undefined
 ): CoerceImportLinkTypeResult {
   const normalized = normalizeLinkTypeAlias(requested ?? "");
 

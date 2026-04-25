@@ -22,28 +22,52 @@ function isRecord(x: unknown): x is Record<string, unknown> {
 }
 
 function parseBootstrap(boot: unknown): BootstrapResponse | null {
-  if (!isRecord(boot)) return null;
-  if (boot.ok !== true) return null;
-  if (boot.demo !== false) return null;
-  if (typeof boot.spaceId !== "string" || !boot.spaceId) return null;
-  if (!Array.isArray(boot.spaces) || !Array.isArray(boot.items)) return null;
+  if (!isRecord(boot)) {
+    return null;
+  }
+  if (boot.ok !== true) {
+    return null;
+  }
+  if (boot.demo !== false) {
+    return null;
+  }
+  if (typeof boot.spaceId !== "string" || !boot.spaceId) {
+    return null;
+  }
+  if (!(Array.isArray(boot.spaces) && Array.isArray(boot.items))) {
+    return null;
+  }
   return boot as BootstrapResponse;
 }
 
 /**
  * @param expectedBootTier — when set, reject cache written under a different tier (GM vs Players).
  */
-export function readWorkspaceViewCache(expectedBootTier?: WorkspaceBootTierTag | null): WorkspaceViewCachePayload | null {
-  if (typeof window === "undefined") return null;
+export function readWorkspaceViewCache(
+  expectedBootTier?: WorkspaceBootTierTag | null
+): WorkspaceViewCachePayload | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
   try {
     window.localStorage.removeItem(LEGACY_STORAGE_KEY);
     const raw = window.localStorage.getItem(WORKSPACE_VIEW_CACHE_STORAGE_KEY);
-    if (!raw) return null;
+    if (!raw) {
+      return null;
+    }
     const parsed: unknown = JSON.parse(raw);
-    if (!isRecord(parsed)) return null;
-    if (parsed.v !== 2) return null;
-    if (typeof parsed.savedAt !== "number") return null;
-    if (typeof parsed.maxZIndex !== "number" || parsed.maxZIndex < 1) return null;
+    if (!isRecord(parsed)) {
+      return null;
+    }
+    if (parsed.v !== 2) {
+      return null;
+    }
+    if (typeof parsed.savedAt !== "number") {
+      return null;
+    }
+    if (typeof parsed.maxZIndex !== "number" || parsed.maxZIndex < 1) {
+      return null;
+    }
     if (
       parsed.bootTier !== "access" &&
       parsed.bootTier !== "player" &&
@@ -53,12 +77,16 @@ export function readWorkspaceViewCache(expectedBootTier?: WorkspaceBootTierTag |
       return null;
     }
     const bootTier: WorkspaceBootTierTag =
-      parsed.bootTier === "visitor" ? "player" : (parsed.bootTier as WorkspaceBootTierTag);
+      parsed.bootTier === "visitor"
+        ? "player"
+        : (parsed.bootTier as WorkspaceBootTierTag);
     if (expectedBootTier != null && expectedBootTier !== bootTier) {
       return null;
     }
     const boot = parseBootstrap(parsed.bootstrap);
-    if (!boot) return null;
+    if (!boot) {
+      return null;
+    }
     return {
       v: 2,
       savedAt: parsed.savedAt,
@@ -74,10 +102,14 @@ export function readWorkspaceViewCache(expectedBootTier?: WorkspaceBootTierTag |
 export function writeWorkspaceViewCache(
   bootstrap: BootstrapResponse,
   maxZIndex: number,
-  bootTier: WorkspaceBootTierTag,
+  bootTier: WorkspaceBootTierTag
 ): void {
-  if (typeof window === "undefined") return;
-  if (!bootstrap.spaceId || bootstrap.demo !== false) return;
+  if (typeof window === "undefined") {
+    return;
+  }
+  if (!bootstrap.spaceId || bootstrap.demo !== false) {
+    return;
+  }
   try {
     window.localStorage.removeItem(LEGACY_STORAGE_KEY);
     const payload: WorkspaceViewCachePayload = {
@@ -87,14 +119,19 @@ export function writeWorkspaceViewCache(
       bootTier,
       bootstrap,
     };
-    window.localStorage.setItem(WORKSPACE_VIEW_CACHE_STORAGE_KEY, JSON.stringify(payload));
+    window.localStorage.setItem(
+      WORKSPACE_VIEW_CACHE_STORAGE_KEY,
+      JSON.stringify(payload)
+    );
   } catch {
     /* quota / private mode */
   }
 }
 
 export function clearWorkspaceViewCache(): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined") {
+    return;
+  }
   try {
     window.localStorage.removeItem(WORKSPACE_VIEW_CACHE_STORAGE_KEY);
     window.localStorage.removeItem(LEGACY_STORAGE_KEY);

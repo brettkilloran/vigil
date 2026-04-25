@@ -12,21 +12,19 @@ import {
   PlusCircle,
 } from "@phosphor-icons/react";
 import {
+  type ReactNode,
   useCallback,
   useEffect,
   useId,
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-
-import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
-
-import type { RecentPaletteItem } from "@/src/hooks/use-recent-items";
-import type { RecentPaletteFolder } from "@/src/hooks/use-recent-folders";
 import { Button } from "@/src/components/ui/Button";
+import type { RecentPaletteFolder } from "@/src/hooks/use-recent-folders";
+import type { RecentPaletteItem } from "@/src/hooks/use-recent-items";
+import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
 
 export type PaletteItem = {
   id: string;
@@ -123,14 +121,18 @@ export function CommandPalette({
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const id = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(id);
   }, [open]);
 
   /** Stop page/canvas from scrolling while the palette is open. */
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const html = document.documentElement;
     const body = document.body;
     const prevHtmlOverflow = html.style.overflow;
@@ -148,13 +150,17 @@ export function CommandPalette({
    * must not reach the canvas behind the portal.
    */
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
 
     const onWheel = (e: WheelEvent) => {
       const root = rootRef.current;
       const list = listRef.current;
       const t = e.target;
-      if (!root || !(t instanceof Node)) return;
+      if (!(root && t instanceof Node)) {
+        return;
+      }
 
       if (!root.contains(t)) {
         e.preventDefault();
@@ -180,7 +186,7 @@ export function CommandPalette({
       const root = rootRef.current;
       const list = listRef.current;
       const t = e.target;
-      if (!root || !(t instanceof Node)) {
+      if (!(root && t instanceof Node)) {
         e.preventDefault();
         return;
       }
@@ -188,11 +194,16 @@ export function CommandPalette({
         e.preventDefault();
         return;
       }
-      if (list?.contains(t)) return;
+      if (list?.contains(t)) {
+        return;
+      }
       e.preventDefault();
     };
 
-    window.addEventListener("wheel", onWheel, { passive: false, capture: true });
+    window.addEventListener("wheel", onWheel, {
+      passive: false,
+      capture: true,
+    });
     window.addEventListener("touchmove", onTouchMove, {
       passive: false,
       capture: true,
@@ -204,7 +215,9 @@ export function CommandPalette({
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const query = q.trim();
     if (query.length < 2) {
       setRemote([]);
@@ -218,18 +231,24 @@ export function CommandPalette({
     const timer = setTimeout(async () => {
       try {
         const params = new URLSearchParams({ q: query, mode: "hybrid" });
-        if (currentSpaceId) params.set("spaceId", currentSpaceId);
+        if (currentSpaceId) {
+          params.set("spaceId", currentSpaceId);
+        }
         const res = await fetch(`/api/search/suggest?${params}`);
         const data = (await res.json()) as {
           ok?: boolean;
           suggestions?: PaletteItem[];
         };
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         if (data.ok && Array.isArray(data.suggestions)) {
           setRemote(data.suggestions);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }, 200);
 
@@ -242,7 +261,9 @@ export function CommandPalette({
   const qq = q.trim().toLowerCase();
 
   const filteredItems = useMemo(() => {
-    if (!qq) return [];
+    if (!qq) {
+      return [];
+    }
     return items
       .filter((it) => {
         const hay =
@@ -271,41 +292,50 @@ export function CommandPalette({
   }, [filteredItems, remote]);
 
   const recentFiltered = useMemo(() => {
-    if (qq) return [];
+    if (qq) {
+      return [];
+    }
     return recentItems.slice(0, 8);
   }, [recentItems, qq]);
 
   const recentFoldersFiltered = useMemo(() => {
     const cap = 8;
-    if (!qq) return recentFolders.slice(0, cap);
+    if (!qq) {
+      return recentFolders.slice(0, cap);
+    }
     return recentFolders
       .filter((f) =>
-        `${f.title} ${f.parentSpaceName}`.toLowerCase().includes(qq),
+        `${f.title} ${f.parentSpaceName}`.toLowerCase().includes(qq)
       )
       .slice(0, cap);
   }, [recentFolders, qq]);
 
-  const filteredSpaces = useMemo(() => {
-    return spaces
-      .filter((s) => {
-        if (!qq) return true;
-        return `${s.name} ${s.pathLabel ?? ""}`
-          .toLowerCase()
-          .includes(qq);
-      })
-      .slice(0, qq ? 8 : 5);
-  }, [spaces, qq]);
+  const filteredSpaces = useMemo(
+    () =>
+      spaces
+        .filter((s) => {
+          if (!qq) {
+            return true;
+          }
+          return `${s.name} ${s.pathLabel ?? ""}`.toLowerCase().includes(qq);
+        })
+        .slice(0, qq ? 8 : 5),
+    [spaces, qq]
+  );
 
-  const filteredActions = useMemo(() => {
-    return actions
-      .filter((a) => {
-        if (!qq) return true;
-        const hay =
-          `${a.label} ${a.keywords?.join(" ") ?? ""}`.toLowerCase();
-        return hay.includes(qq);
-      })
-      .slice(0, qq ? 12 : 14);
-  }, [actions, qq]);
+  const filteredActions = useMemo(
+    () =>
+      actions
+        .filter((a) => {
+          if (!qq) {
+            return true;
+          }
+          const hay = `${a.label} ${a.keywords?.join(" ") ?? ""}`.toLowerCase();
+          return hay.includes(qq);
+        })
+        .slice(0, qq ? 12 : 14),
+    [actions, qq]
+  );
 
   const selectItem = useCallback(
     (item: PaletteItem) => {
@@ -319,7 +349,7 @@ export function CommandPalette({
       onSelectItem(item.id, true);
       onClose();
     },
-    [onClose, onRecordRecentItem, onSelectItem],
+    [onClose, onRecordRecentItem, onSelectItem]
   );
 
   const selectSpace = useCallback(
@@ -327,7 +357,7 @@ export function CommandPalette({
       onSelectSpace(spaceId);
       onClose();
     },
-    [onClose, onSelectSpace],
+    [onClose, onSelectSpace]
   );
 
   const openRecentFolder = useCallback(
@@ -335,7 +365,7 @@ export function CommandPalette({
       onOpenRecentFolder(folderId);
       onClose();
     },
-    [onClose, onOpenRecentFolder],
+    [onClose, onOpenRecentFolder]
   );
 
   const runAction = useCallback(
@@ -343,7 +373,7 @@ export function CommandPalette({
       onRunAction(actionId);
       onClose();
     },
-    [onClose, onRunAction],
+    [onClose, onRunAction]
   );
 
   type PaletteRow =
@@ -390,31 +420,51 @@ export function CommandPalette({
   }, [qq, totalRows, open]);
 
   useEffect(() => {
-    if (!open || totalRows === 0) return;
+    if (!open || totalRows === 0) {
+      return;
+    }
     const el = listRef.current?.querySelector<HTMLElement>(
-      `[data-palette-row-index="${selectedIndex}"]`,
+      `[data-palette-row-index="${selectedIndex}"]`
     );
     el?.scrollIntoView({ block: "nearest" });
   }, [open, selectedIndex, totalRows]);
 
   const runSelected = useCallback(() => {
     const row = flatRows[selectedIndex];
-    if (!row) return;
-    if (row.kind === "item") selectItem(row.item);
-    else if (row.kind === "recentFolder")
+    if (!row) {
+      return;
+    }
+    if (row.kind === "item") {
+      selectItem(row.item);
+    } else if (row.kind === "recentFolder") {
       openRecentFolder(row.folder.id);
-    else if (row.kind === "space") selectSpace(row.space.id);
-    else runAction(row.action.id);
-  }, [flatRows, openRecentFolder, runAction, selectItem, selectSpace, selectedIndex]);
+    } else if (row.kind === "space") {
+      selectSpace(row.space.id);
+    } else {
+      runAction(row.action.id);
+    }
+  }, [
+    flatRows,
+    openRecentFolder,
+    runAction,
+    selectItem,
+    selectSpace,
+    selectedIndex,
+  ]);
 
   const onKeyDownRoot = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+      if (e.nativeEvent.isComposing || e.keyCode === 229) {
+        return;
+      }
       if (totalRows === 0) {
         if (e.key === "Escape") {
           e.preventDefault();
-          if (q.trim()) setQ("");
-          else onClose();
+          if (q.trim()) {
+            setQ("");
+          } else {
+            onClose();
+          }
         }
         return;
       }
@@ -446,18 +496,23 @@ export function CommandPalette({
         }
         case "Escape": {
           e.preventDefault();
-          if (q.trim()) setQ("");
-          else onClose();
+          if (q.trim()) {
+            setQ("");
+          } else {
+            onClose();
+          }
           break;
         }
         default:
           break;
       }
     },
-    [onClose, q, runSelected, totalRows],
+    [onClose, q, runSelected, totalRows]
   );
 
-  if (!open || typeof document === "undefined") return null;
+  if (!open || typeof document === "undefined") {
+    return null;
+  }
 
   /* Single portal root: Fragment siblings under createPortal can trigger React removeChild(null)
    * during fast unmount (Next.js / concurrent). */
@@ -472,93 +527,98 @@ export function CommandPalette({
       }}
     >
       <div
-        data-hg-cmdk="overlay"
         aria-hidden="true"
-        style={{ pointerEvents: "auto" }}
+        data-hg-cmdk="overlay"
         onMouseDown={(e) => {
-          if (e.target === e.currentTarget) onClose();
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
         }}
+        style={{ pointerEvents: "auto" }}
       />
       <div
+        aria-label="Command palette"
+        aria-modal="true"
         data-hg-cmdk="dialog"
         role="dialog"
-        aria-modal="true"
-        aria-label="Command palette"
       >
-        <div ref={rootRef} data-hg-cmdk="root" onKeyDown={onKeyDownRoot}>
+        <div data-hg-cmdk="root" onKeyDown={onKeyDownRoot} ref={rootRef}>
           <div data-hg-cmdk="input-wrap">
             <MagnifyingGlass
+              aria-hidden
               className="size-4 shrink-0 opacity-50"
               weight="bold"
-              aria-hidden
             />
             <input
-              ref={inputRef}
-              id={inputId}
-              data-hg-cmdk="input"
-              type="search"
-              role="combobox"
-              aria-expanded
-              aria-controls={listboxId}
-              aria-autocomplete="list"
               aria-activedescendant={
                 totalRows > 0 ? `palette-opt-${selectedIndex}` : undefined
               }
-              placeholder="Search items, spaces, folders, actions..."
-              value={q}
+              aria-autocomplete="list"
+              aria-controls={listboxId}
+              aria-expanded
+              data-hg-cmdk="input"
+              id={inputId}
               onChange={(e) => setQ(e.target.value)}
+              placeholder="Search items, spaces, folders, actions..."
+              ref={inputRef}
+              role="combobox"
+              type="search"
+              value={q}
             />
             <kbd className="cmdk-kbd">ESC</kbd>
           </div>
 
           <div
-            ref={listRef}
-            id={listboxId}
-            data-hg-cmdk="list"
-            role="listbox"
             aria-label="Suggestions"
+            data-hg-cmdk="list"
+            id={listboxId}
+            ref={listRef}
+            role="listbox"
           >
-            {loading ? (
-              <div data-hg-cmdk="loading">Searching…</div>
-            ) : null}
+            {loading ? <div data-hg-cmdk="loading">Searching…</div> : null}
 
-            {!hasResults && !loading ? (
+            {hasResults || loading ? null : (
               <div data-hg-cmdk="empty" role="presentation">
                 No results found.
               </div>
-            ) : null}
+            )}
 
             {recentFiltered.length > 0 ? (
               <div data-hg-cmdk="group" role="presentation">
                 <div data-hg-cmdk="group-heading" id={`${listboxId}-recent`}>
                   Recent
                 </div>
-                <div role="group" aria-labelledby={`${listboxId}-recent`}>
+                <div aria-labelledby={`${listboxId}-recent`} role="group">
                   {flatRows.map((row, gi) => {
-                    if (row.kind !== "item" || !row.key.startsWith("recent-"))
+                    if (row.kind !== "item" || !row.key.startsWith("recent-")) {
                       return null;
+                    }
                     const { item } = row;
                     return (
                       <Button
-                        key={row.key}
-                        type="button"
-                        variant="ghost"
-                        tone="glass"
-                        id={`palette-opt-${gi}`}
+                        aria-selected={gi === selectedIndex}
                         data-hg-cmdk="item"
                         data-palette-row-index={gi}
-                        role="option"
-                        aria-selected={gi === selectedIndex}
-                        data-selected={gi === selectedIndex ? "true" : undefined}
-                        onMouseEnter={() => setSelectedIndex(gi)}
+                        data-selected={
+                          gi === selectedIndex ? "true" : undefined
+                        }
+                        id={`palette-opt-${gi}`}
+                        key={row.key}
                         onClick={() => selectItem(item)}
+                        onMouseEnter={() => setSelectedIndex(gi)}
+                        role="option"
+                        tone="glass"
+                        type="button"
+                        variant="ghost"
                       >
                         {iconForItemType(item.itemType)}
                         <div className="cmdk-item-content">
                           <span>{item.title}</span>
-                          <span className="cmdk-item-meta">{item.spaceName}</span>
+                          <span className="cmdk-item-meta">
+                            {item.spaceName}
+                          </span>
                         </div>
-                        <ClockCounterClockwise className="size-3.5 opacity-40 ml-auto shrink-0" />
+                        <ClockCounterClockwise className="ml-auto size-3.5 shrink-0 opacity-40" />
                       </Button>
                     );
                   })}
@@ -575,26 +635,30 @@ export function CommandPalette({
                   Recent folders
                 </div>
                 <div
-                  role="group"
                   aria-labelledby={`${listboxId}-recent-folders`}
+                  role="group"
                 >
                   {flatRows.map((row, gi) => {
-                    if (row.kind !== "recentFolder") return null;
+                    if (row.kind !== "recentFolder") {
+                      return null;
+                    }
                     const { folder } = row;
                     return (
                       <Button
-                        key={row.key}
-                        type="button"
-                        variant="ghost"
-                        tone="glass"
-                        id={`palette-opt-${gi}`}
+                        aria-selected={gi === selectedIndex}
                         data-hg-cmdk="item"
                         data-palette-row-index={gi}
-                        role="option"
-                        aria-selected={gi === selectedIndex}
-                        data-selected={gi === selectedIndex ? "true" : undefined}
-                        onMouseEnter={() => setSelectedIndex(gi)}
+                        data-selected={
+                          gi === selectedIndex ? "true" : undefined
+                        }
+                        id={`palette-opt-${gi}`}
+                        key={row.key}
                         onClick={() => openRecentFolder(folder.id)}
+                        onMouseEnter={() => setSelectedIndex(gi)}
+                        role="option"
+                        tone="glass"
+                        type="button"
+                        variant="ghost"
                       >
                         <Folder className={iconCls} weight="bold" />
                         <div className="cmdk-item-content">
@@ -603,7 +667,7 @@ export function CommandPalette({
                             {folder.parentSpaceName || "Canvas"}
                           </span>
                         </div>
-                        <ClockCounterClockwise className="size-3.5 opacity-40 ml-auto shrink-0" />
+                        <ClockCounterClockwise className="ml-auto size-3.5 shrink-0 opacity-40" />
                       </Button>
                     );
                   })}
@@ -616,25 +680,28 @@ export function CommandPalette({
                 <div data-hg-cmdk="group-heading" id={`${listboxId}-results`}>
                   Results
                 </div>
-                <div role="group" aria-labelledby={`${listboxId}-results`}>
+                <div aria-labelledby={`${listboxId}-results`} role="group">
                   {flatRows.map((row, gi) => {
-                    if (row.kind !== "item" || !row.key.startsWith("item-"))
+                    if (row.kind !== "item" || !row.key.startsWith("item-")) {
                       return null;
+                    }
                     const { item } = row;
                     return (
                       <Button
-                        key={row.key}
-                        type="button"
-                        variant="ghost"
-                        tone="glass"
-                        id={`palette-opt-${gi}`}
+                        aria-selected={gi === selectedIndex}
                         data-hg-cmdk="item"
                         data-palette-row-index={gi}
-                        role="option"
-                        aria-selected={gi === selectedIndex}
-                        data-selected={gi === selectedIndex ? "true" : undefined}
-                        onMouseEnter={() => setSelectedIndex(gi)}
+                        data-selected={
+                          gi === selectedIndex ? "true" : undefined
+                        }
+                        id={`palette-opt-${gi}`}
+                        key={row.key}
                         onClick={() => selectItem(item)}
+                        onMouseEnter={() => setSelectedIndex(gi)}
+                        role="option"
+                        tone="glass"
+                        type="button"
+                        variant="ghost"
                       >
                         {iconForItemType(item.itemType)}
                         <div className="cmdk-item-content">
@@ -643,7 +710,9 @@ export function CommandPalette({
                             {item.itemType} · {item.spaceName}
                           </span>
                           {item.snippet ? (
-                            <span className="cmdk-item-snippet">{item.snippet}</span>
+                            <span className="cmdk-item-snippet">
+                              {item.snippet}
+                            </span>
                           ) : null}
                         </div>
                       </Button>
@@ -658,30 +727,36 @@ export function CommandPalette({
                 <div data-hg-cmdk="group-heading" id={`${listboxId}-spaces`}>
                   Spaces
                 </div>
-                <div role="group" aria-labelledby={`${listboxId}-spaces`}>
+                <div aria-labelledby={`${listboxId}-spaces`} role="group">
                   {flatRows.map((row, gi) => {
-                    if (row.kind !== "space") return null;
+                    if (row.kind !== "space") {
+                      return null;
+                    }
                     const { space } = row;
                     return (
                       <Button
-                        key={row.key}
-                        type="button"
-                        variant="ghost"
-                        tone="glass"
-                        id={`palette-opt-${gi}`}
+                        aria-selected={gi === selectedIndex}
                         data-hg-cmdk="item"
                         data-palette-row-index={gi}
-                        role="option"
-                        aria-selected={gi === selectedIndex}
-                        data-selected={gi === selectedIndex ? "true" : undefined}
-                        onMouseEnter={() => setSelectedIndex(gi)}
+                        data-selected={
+                          gi === selectedIndex ? "true" : undefined
+                        }
+                        id={`palette-opt-${gi}`}
+                        key={row.key}
                         onClick={() => selectSpace(space.id)}
+                        onMouseEnter={() => setSelectedIndex(gi)}
+                        role="option"
+                        tone="glass"
+                        type="button"
+                        variant="ghost"
                       >
                         <Folder className={iconCls} weight="bold" />
                         <div className="cmdk-item-content">
                           <span>{space.name}</span>
                           {space.pathLabel ? (
-                            <span className="cmdk-item-meta">{space.pathLabel}</span>
+                            <span className="cmdk-item-meta">
+                              {space.pathLabel}
+                            </span>
                           ) : null}
                         </div>
                       </Button>
@@ -696,24 +771,28 @@ export function CommandPalette({
                 <div data-hg-cmdk="group-heading" id={`${listboxId}-actions`}>
                   Actions
                 </div>
-                <div role="group" aria-labelledby={`${listboxId}-actions`}>
+                <div aria-labelledby={`${listboxId}-actions`} role="group">
                   {flatRows.map((row, gi) => {
-                    if (row.kind !== "action") return null;
+                    if (row.kind !== "action") {
+                      return null;
+                    }
                     const { action } = row;
                     return (
                       <Button
-                        key={row.key}
-                        type="button"
-                        variant="ghost"
-                        tone="glass"
-                        id={`palette-opt-${gi}`}
+                        aria-selected={gi === selectedIndex}
                         data-hg-cmdk="item"
                         data-palette-row-index={gi}
-                        role="option"
-                        aria-selected={gi === selectedIndex}
-                        data-selected={gi === selectedIndex ? "true" : undefined}
-                        onMouseEnter={() => setSelectedIndex(gi)}
+                        data-selected={
+                          gi === selectedIndex ? "true" : undefined
+                        }
+                        id={`palette-opt-${gi}`}
+                        key={row.key}
                         onClick={() => runAction(action.id)}
+                        onMouseEnter={() => setSelectedIndex(gi)}
+                        role="option"
+                        tone="glass"
+                        type="button"
+                        variant="ghost"
                       >
                         {action.icon ?? (
                           <PlusCircle className={iconCls} weight="bold" />
@@ -721,7 +800,9 @@ export function CommandPalette({
                         <div className="cmdk-item-content">
                           <span>{action.label}</span>
                           {action.hint ? (
-                            <span className="cmdk-item-meta">{action.hint}</span>
+                            <span className="cmdk-item-meta">
+                              {action.hint}
+                            </span>
                           ) : null}
                         </div>
                       </Button>

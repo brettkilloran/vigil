@@ -17,9 +17,13 @@ describe("buildBindingPatchForImport", () => {
       targetTitle: "Lyra",
     });
     expect(patch?.kind).toBe("faction.factionRoster");
-    if (patch?.kind !== "faction.factionRoster") throw new Error("bad kind");
+    if (patch?.kind !== "faction.factionRoster") {
+      throw new Error("bad kind");
+    }
     expect(patch.entry.kind).toBe("character");
-    if (patch.entry.kind !== "character") throw new Error("bad entry kind");
+    if (patch.entry.kind !== "character") {
+      throw new Error("bad entry kind");
+    }
     expect(patch.entry.characterItemId).toBe(TARGET_ID);
     expect(patch.entry.displayNameOverride).toBe("Lyra");
   });
@@ -57,14 +61,14 @@ describe("buildBindingPatchForImport", () => {
         sourceKind: "lore",
         targetKind: "lore",
         targetItemId: TARGET_ID,
-      }),
+      })
     ).toBeNull();
     expect(
       buildBindingPatchForImport({
         sourceKind: "quest",
         targetKind: "character",
         targetItemId: TARGET_ID,
-      }),
+      })
     ).toBeNull();
   });
 });
@@ -131,7 +135,7 @@ describe("mergeHgArchBindingPatches", () => {
       expect.arrayContaining([
         "character.primaryFactions",
         "character.primaryLocations",
-      ]),
+      ])
     );
   });
 
@@ -143,7 +147,7 @@ describe("mergeHgArchBindingPatches", () => {
       [
         { kind: "location.linkedCharacters", characterItemId: TARGET_ID },
         { kind: "location.linkedCharacters", characterItemId: OTHER_ID },
-      ],
+      ]
     );
     const anchors = hgArch.loreThreadAnchors as Record<string, unknown>;
     expect(anchors.linkedCharacterItemIds).toEqual([OTHER_ID, TARGET_ID]);

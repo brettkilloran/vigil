@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { fuseRrfFromOrderedLists, RRF_K, rrfScore } from "@/src/lib/vault-retrieval-rrf";
+import {
+  fuseRrfFromOrderedLists,
+  RRF_K,
+  rrfScore,
+} from "@/src/lib/vault-retrieval-rrf";
 
 describe("rrfScore", () => {
   it("is zero when rank is undefined", () => {

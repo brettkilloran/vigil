@@ -16,7 +16,9 @@ export class BoundedMap<K, V> {
 
   constructor(private readonly maxSize: number) {
     if (!Number.isFinite(maxSize) || maxSize <= 0) {
-      throw new Error(`BoundedMap maxSize must be a positive integer, got ${maxSize}`);
+      throw new Error(
+        `BoundedMap maxSize must be a positive integer, got ${maxSize}`
+      );
     }
   }
 
@@ -29,7 +31,9 @@ export class BoundedMap<K, V> {
   }
 
   get(key: K): V | undefined {
-    if (!this.map.has(key)) return undefined;
+    if (!this.map.has(key)) {
+      return;
+    }
     const value = this.map.get(key) as V;
     this.map.delete(key);
     this.map.set(key, value);
@@ -37,11 +41,15 @@ export class BoundedMap<K, V> {
   }
 
   set(key: K, value: V): void {
-    if (this.map.has(key)) this.map.delete(key);
+    if (this.map.has(key)) {
+      this.map.delete(key);
+    }
     this.map.set(key, value);
     while (this.map.size > this.maxSize) {
       const oldestKey = this.map.keys().next();
-      if (oldestKey.done) break;
+      if (oldestKey.done) {
+        break;
+      }
       this.map.delete(oldestKey.value);
     }
   }

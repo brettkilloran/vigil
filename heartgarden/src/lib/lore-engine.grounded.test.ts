@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   groundedLoreAnswerContractIssue,
-  normalizeGroundedLoreAnswer,
   type LoreSource,
+  normalizeGroundedLoreAnswer,
 } from "./lore-engine";
 
 describe("normalizeGroundedLoreAnswer", () => {
@@ -35,7 +35,7 @@ describe("normalizeGroundedLoreAnswer", () => {
         ],
         insufficient_evidence: false,
       },
-      sources,
+      sources
     );
     expect(out.answerText).toBe("hello");
     expect(out.citedItemIds).toEqual(["11111111-1111-1111-1111-111111111111"]);
@@ -56,7 +56,7 @@ describe("normalizeGroundedLoreAnswer", () => {
         cited_item_ids: ["11111111-1111-1111-1111-111111111111"],
         insufficient_evidence: false,
       },
-      sources,
+      sources
     );
     expect(groundedLoreAnswerContractIssue(out)).toBe("empty_answer_text");
   });
@@ -68,7 +68,7 @@ describe("normalizeGroundedLoreAnswer", () => {
         cited_item_ids: ["99999999-9999-9999-9999-999999999999"],
         insufficient_evidence: false,
       },
-      sources,
+      sources
     );
     expect(groundedLoreAnswerContractIssue(out)).toBe("missing_citations");
   });
@@ -80,7 +80,7 @@ describe("normalizeGroundedLoreAnswer", () => {
         cited_item_ids: [],
         insufficient_evidence: true,
       },
-      sources,
+      sources
     );
     expect(groundedLoreAnswerContractIssue(out)).toBeNull();
   });

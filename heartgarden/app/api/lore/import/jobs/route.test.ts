@@ -40,7 +40,9 @@ describe("POST /api/lore/import/jobs", () => {
         values: vi.fn().mockResolvedValue(undefined),
       }),
     });
-    assertSpaceExistsMock.mockResolvedValue({ id: "11111111-1111-4111-8111-111111111111" });
+    assertSpaceExistsMock.mockResolvedValue({
+      id: "11111111-1111-4111-8111-111111111111",
+    });
     gmMayAccessSpaceIdAsyncMock.mockResolvedValue(true);
   });
 
@@ -182,4 +184,3 @@ describe("POST /api/lore/import/jobs", () => {
     expect(scheduleLoreImportJobProcessingMock).toHaveBeenCalledTimes(1);
   });
 });
-

@@ -31,7 +31,7 @@ describe("lore import round-trip guards", () => {
         ],
       } as never,
       huge,
-      "Import source",
+      "Import source"
     );
     expect(drafts.length).toBeGreaterThan(1);
     expect(drafts[0]?.title).toContain("Part 1");
@@ -68,10 +68,21 @@ describe("lore import round-trip guards", () => {
           summary: "",
           folderClientId: null,
           sourceChunkIds: [chunks[0]!.id],
-          sourcePassages: [{ chunkId: chunks[0]!.id, quote: "The Obsidian Shard emitted a pulse visible to all divers." }],
+          sourcePassages: [
+            {
+              chunkId: chunks[0]!.id,
+              quote:
+                "The Obsidian Shard emitted a pulse visible to all divers.",
+            },
+          ],
           body: {
             kind: "generic" as const,
-            blocks: [{ kind: "paragraph", text: "The Obsidian Shard emitted a pulse visible to all divers." }],
+            blocks: [
+              {
+                kind: "paragraph",
+                text: "The Obsidian Shard emitted a pulse visible to all divers.",
+              },
+            ],
           },
         },
         {
@@ -81,16 +92,33 @@ describe("lore import round-trip guards", () => {
           summary: "",
           folderClientId: null,
           sourceChunkIds: [chunks[0]!.id],
-          sourcePassages: [{ chunkId: chunks[0]!.id, quote: "The Obsidian Shard emitted a pulse visible to all divers." }],
+          sourcePassages: [
+            {
+              chunkId: chunks[0]!.id,
+              quote:
+                "The Obsidian Shard emitted a pulse visible to all divers.",
+            },
+          ],
           body: {
             kind: "generic" as const,
-            blocks: [{ kind: "paragraph", text: "Witnesses saw the same pulse event." }],
+            blocks: [
+              {
+                kind: "paragraph",
+                text: "Witnesses saw the same pulse event.",
+              },
+            ],
           },
         },
       ],
     };
-    const diagnostics = attachBodiesToOutline(outline as never, chunks as never);
+    const diagnostics = attachBodiesToOutline(
+      outline as never,
+      chunks as never
+    );
     expect(diagnostics.duplicateQuotePassages.length).toBeGreaterThan(0);
-    expect(diagnostics.duplicateQuotePassages[0]?.noteClientIds).toEqual(["n1", "n2"]);
+    expect(diagnostics.duplicateQuotePassages[0]?.noteClientIds).toEqual([
+      "n1",
+      "n2",
+    ]);
   });
 });

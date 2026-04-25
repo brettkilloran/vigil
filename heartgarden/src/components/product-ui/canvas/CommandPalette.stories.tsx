@@ -73,8 +73,18 @@ export const Open: Story = {
   },
   render: () => (
     <CommandPalette
-      open
-      onClose={fn()}
+      actions={[
+        {
+          id: "new-note",
+          label: "New note",
+          keywords: ["create", "note"],
+        },
+        {
+          id: "new-folder",
+          label: "New folder",
+          keywords: ["create", "folder"],
+        },
+      ]}
       currentSpaceId="root"
       items={[
         {
@@ -93,29 +103,23 @@ export const Open: Story = {
           spaceName: "Root",
         },
       ]}
-      spaces={[
-        { id: "root", name: "Root", pathLabel: "/" },
-        { id: "space-project-thesis", name: "Research", pathLabel: "/Research" },
-      ]}
-      actions={[
-        {
-          id: "new-note",
-          label: "New note",
-          keywords: ["create", "note"],
-        },
-        {
-          id: "new-folder",
-          label: "New folder",
-          keywords: ["create", "folder"],
-        },
-      ]}
-      recentItems={mockRecentItems}
-      recentFolders={mockRecentFolders}
+      onClose={fn()}
+      onOpenRecentFolder={fn()}
+      onRecordRecentItem={fn()}
+      onRunAction={fn()}
       onSelectItem={fn()}
       onSelectSpace={fn()}
-      onRecordRecentItem={fn()}
-      onOpenRecentFolder={fn()}
-      onRunAction={fn()}
+      open
+      recentFolders={mockRecentFolders}
+      recentItems={mockRecentItems}
+      spaces={[
+        { id: "root", name: "Root", pathLabel: "/" },
+        {
+          id: "space-project-thesis",
+          name: "Research",
+          pathLabel: "/Research",
+        },
+      ]}
     />
   ),
 };

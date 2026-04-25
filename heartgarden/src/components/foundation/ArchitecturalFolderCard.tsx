@@ -1,16 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
 import { CornersOut, DownloadSimple } from "@phosphor-icons/react";
-
-import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
-import {
-  folderNodeStyleForScheme,
-  type FolderColorSchemeId,
-} from "@/src/components/foundation/architectural-folder-schemes";
+import { useMemo } from "react";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
-import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
+import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
+import {
+  type FolderColorSchemeId,
+  folderNodeStyleForScheme,
+} from "@/src/components/foundation/architectural-folder-schemes";
+import { pointerEventTargetElement } from "@/src/components/foundation/pointer-event-target";
 import { Button } from "@/src/components/ui/Button";
 
 /** Folder face lines; keep in sync with `.folderContentPreviewList` in ArchitecturalCanvasApp.module.css */
@@ -18,10 +17,10 @@ export const FOLDER_CONTENT_PREVIEW_MAX_LINES = 6;
 
 /** Stable 0..2^32-1 from string — same folder id always gets same “random” angles. */
 function stableHash(input: string): number {
-  let h = 2166136261;
+  let h = 2_166_136_261;
   for (let i = 0; i < input.length; i++) {
     h ^= input.charCodeAt(i);
-    h = Math.imul(h, 16777619);
+    h = Math.imul(h, 16_777_619);
   }
   return h >>> 0;
 }
@@ -54,7 +53,10 @@ export function ArchitecturalFolderCard({
   onTitleCommit?: (title: string) => void;
 }) {
   const showPeek = itemCount > 0;
-  const visiblePreviewTitles = previewTitles.slice(0, FOLDER_CONTENT_PREVIEW_MAX_LINES);
+  const visiblePreviewTitles = previewTitles.slice(
+    0,
+    FOLDER_CONTENT_PREVIEW_MAX_LINES
+  );
 
   const peekRotDeg = useMemo(
     () => ({
@@ -62,32 +64,38 @@ export function ArchitecturalFolderCard({
       b: peekSheetRotationDeg(id, 1),
       c: peekSheetRotationDeg(id, 2),
     }),
-    [id],
+    [id]
   );
 
   const schemeStyle = folderNodeStyleForScheme(folderColorScheme);
 
   return (
     <div
-      data-folder-drop="true"
-      data-folder-id={id}
       className={`${styles.folderNode} ${dragOver ? styles.folderDragOver : ""} ${
         selected ? styles.folderSelected : ""
       }`}
-      style={schemeStyle}
+      data-folder-drop="true"
+      data-folder-id={id}
       onDoubleClick={(event) => {
         const el = pointerEventTargetElement(event.target);
-        if (!el) return;
-        if (el.closest(`.${styles.folderTitleInput}`)) return;
-        if (el.closest("[data-folder-open-btn='true']")) return;
+        if (!el) {
+          return;
+        }
+        if (el.closest(`.${styles.folderTitleInput}`)) {
+          return;
+        }
+        if (el.closest("[data-folder-open-btn='true']")) {
+          return;
+        }
         event.preventDefault();
         event.stopPropagation();
         onOpen?.();
       }}
+      style={schemeStyle}
     >
       <div className={styles.folderBack} />
       {showPeek ? (
-        <div className={styles.folderPeekStack} aria-hidden>
+        <div aria-hidden className={styles.folderPeekStack}>
           <div
             className={`${styles.folderPeekCard} ${styles.folderPeekA}`}
             style={{ transform: `rotate(${peekRotDeg.a}deg)` }}
@@ -113,39 +121,43 @@ export function ArchitecturalFolderCard({
       <div className={styles.folderFront}>
         <div className={styles.folderTopRow}>
           <span
+            aria-hidden
             className={styles.folderConnectionPinAnchor}
             data-folder-connection-pin-anchor="true"
-            aria-hidden
           />
           <div className={styles.folderMetaBlock}>
             <BufferedContentEditable
-              value={title}
               className={styles.folderTitleInput}
-              editable
-              plainText
-              spellCheck={false}
+              dataAttribute="data-folder-title-editor"
               debounceMs={250}
+              editable
               normalizeOnCommit={(next) => next.trim() || "Untitled Folder"}
               onCommit={(next) => onTitleCommit?.(next)}
-              dataAttribute="data-folder-title-editor"
+              plainText
+              spellCheck={false}
+              value={title}
             />
             <div className={styles.folderBadge}>
               {itemCount} item{itemCount === 1 ? "" : "s"}
             </div>
           </div>
-          <ArchitecturalTooltip content="Open folder" side="bottom" delayMs={320}>
+          <ArchitecturalTooltip
+            content="Open folder"
+            delayMs={320}
+            side="bottom"
+          >
             <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              tone="card-dark"
+              aria-label="Open folder"
               className={styles.nodeBtn}
               data-folder-open-btn="true"
-              aria-label="Open folder"
               onClick={(event) => {
                 event.stopPropagation();
                 onOpen?.();
               }}
+              size="icon"
+              tone="card-dark"
+              type="button"
+              variant="ghost"
             >
               <CornersOut size={14} />
             </Button>
@@ -153,15 +165,23 @@ export function ArchitecturalFolderCard({
         </div>
         <div className={styles.folderContentPreview}>
           {visiblePreviewTitles.length > 0 ? (
-            <ul className={styles.folderContentPreviewList} aria-label="Folder contents preview">
+            <ul
+              aria-label="Folder contents preview"
+              className={styles.folderContentPreviewList}
+            >
               {visiblePreviewTitles.map((previewTitle, index) => (
-                <li key={`${id}-preview-${index}`} className={styles.folderContentPreviewItem}>
+                <li
+                  className={styles.folderContentPreviewItem}
+                  key={`${id}-preview-${index}`}
+                >
                   {previewTitle}
                 </li>
               ))}
             </ul>
           ) : (
-            <div className={styles.folderContentPreviewEmpty}>No content yet</div>
+            <div className={styles.folderContentPreviewEmpty}>
+              No content yet
+            </div>
           )}
         </div>
       </div>

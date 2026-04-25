@@ -3,12 +3,16 @@
 import { useMemo, useSyncExternalStore } from "react";
 
 function isAppleOS(): boolean {
-  if (typeof navigator === "undefined") return false;
+  if (typeof navigator === "undefined") {
+    return false;
+  }
   const nav = navigator as Navigator & {
     userAgentData?: { platform?: string };
   };
   const p = nav.userAgentData?.platform ?? "";
-  if (/Mac|iPhone|iPod|iPad/i.test(p)) return true;
+  if (/Mac|iPhone|iPod|iPad/i.test(p)) {
+    return true;
+  }
   const ua = navigator.userAgent;
   return /Mac OS X|Macintosh|iPhone|iPad|iPod/.test(ua);
 }
@@ -49,6 +53,6 @@ export function useModKeyHints() {
             underline: "Ctrl+U",
             recenter: "Ctrl+0",
           },
-    [apple],
+    [apple]
   );
 }

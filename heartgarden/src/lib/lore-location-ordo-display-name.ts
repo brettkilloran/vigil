@@ -2,11 +2,18 @@
 export const ORDO_V7_EMPTY_NAME_SENTINEL = "UNTITLED";
 
 /** Split place name for ORDO slab title (two-line ALL CAPS when multi-word). */
-export function splitOrdoV7DisplayName(name: string): { line1: string; line2: string | null } {
+export function splitOrdoV7DisplayName(name: string): {
+  line1: string;
+  line2: string | null;
+} {
   const t = name.trim();
-  if (!t) return { line1: ORDO_V7_EMPTY_NAME_SENTINEL, line2: null };
+  if (!t) {
+    return { line1: ORDO_V7_EMPTY_NAME_SENTINEL, line2: null };
+  }
   const words = t.split(/\s+/);
-  if (words.length === 1) return { line1: words[0].toUpperCase(), line2: null };
+  if (words.length === 1) {
+    return { line1: words[0].toUpperCase(), line2: null };
+  }
   /* Prefer slightly more on line 2 for odd word counts (e.g. “Old Harbor” / “Kiln No. 4” vs “No. 4” alone). */
   const mid = Math.max(1, Math.floor(words.length / 2));
   return {

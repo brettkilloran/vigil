@@ -19,7 +19,7 @@ describe("resolveImageDisplayUrl", () => {
       resolveImageDisplayUrl("https://x.example/img.png", {
         maxCssPixels: 200,
         devicePixelRatio: 2,
-      }),
+      })
     ).toBe("https://x.example/img.png");
   });
 
@@ -31,7 +31,7 @@ describe("resolveImageDisplayUrl", () => {
       devicePixelRatio: 2,
     });
     expect(out).toBe(
-      `https://cdn.example/cdn-cgi/image/width=200/${encodeURIComponent("https://r2.example/bucket/a b.png")}`,
+      `https://cdn.example/cdn-cgi/image/width=200/${encodeURIComponent("https://r2.example/bucket/a b.png")}`
     );
   });
 
@@ -43,14 +43,15 @@ describe("resolveImageDisplayUrl", () => {
         maxCssPixels: 50,
         devicePixelRatio: 2,
         useFullResolution: true,
-      }),
+      })
     ).toBe("https://x.example/img.png");
   });
 
   it("clamps width bounds", () => {
-    process.env.NEXT_PUBLIC_HEARTGARDEN_IMAGE_URL_TEMPLATE = "https://x/w={w}/u={url}";
+    process.env.NEXT_PUBLIC_HEARTGARDEN_IMAGE_URL_TEMPLATE =
+      "https://x/w={w}/u={url}";
     const huge = resolveImageDisplayUrl("https://a/b", {
-      maxCssPixels: 99999,
+      maxCssPixels: 99_999,
       devicePixelRatio: 99,
     });
     expect(huge).toContain("w=4096");

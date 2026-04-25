@@ -2,9 +2,9 @@
   box-sizing: border-box;
   min-height: 100vh;
   padding: 1.25rem 1.5rem 3rem;
-  background: var(--sys-color-canvas-bg, #0c0e12);
-  color: var(--sys-color-text-primary, #e8eaef);
   font-family: system-ui, sans-serif;
+  color: var(--sys-color-text-primary, #e8eaef);
+  background: var(--sys-color-canvas-bg, #0c0e12);
 }
 
 .title {
@@ -16,20 +16,20 @@
 .intro {
   max-width: 52rem;
   margin: 0 0 1.25rem;
+  font-size: 0.9rem;
   line-height: 1.5;
   color: var(--sys-color-text-secondary, #a8b0c0);
-  font-size: 0.9rem;
 }
 
 .specLegend {
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem;
-  margin-bottom: 1.75rem;
   padding: 0.85rem 1rem;
-  border-radius: 10px;
-  border: 1px solid var(--sem-border-subtle, rgba(255, 255, 255, 0.08));
+  margin-bottom: 1.75rem;
   background: var(--sys-color-surface-raised, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--sem-border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
 }
 
 .specCard {
@@ -43,14 +43,14 @@
 .specLabel {
   font-size: 0.78rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
   line-height: 1.25;
   color: var(--sys-color-text-primary, #e8eaef);
+  letter-spacing: 0.01em;
 }
 
 .specIndex {
-  font-weight: 500;
   font-size: 0.65rem;
+  font-weight: 500;
   color: var(--sys-color-text-tertiary, #7a8494);
 }
 
@@ -63,22 +63,22 @@
 .swatch {
   width: 22px;
   height: 22px;
-  border-radius: 5px;
   border: 1px solid var(--sem-border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: 5px;
 }
 
 .columnHead {
-  margin-bottom: 1rem;
   padding-left: 0.25rem;
+  margin-bottom: 1rem;
 }
 
 .columnHeadCell {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 2px;
-  text-align: center;
+  align-items: center;
   min-width: 0;
+  text-align: center;
 }
 
 .columnHeadName {
@@ -87,8 +87,8 @@
   line-height: 1.2;
   color: var(--sys-color-text-primary, #e8eaef);
   hyphens: auto;
-  overflow-wrap: break-word;
   word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .columnHeadIdx {
@@ -103,9 +103,9 @@
 
 .shapeTitle {
   margin: 0 0 0.5rem;
+  font-family: ui-monospace, monospace;
   font-size: 0.85rem;
   font-weight: 600;
-  font-family: ui-monospace, monospace;
   color: var(--sys-color-accent-500, #f5a623);
 }
 
@@ -116,24 +116,24 @@
 .tile {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 4px;
+  align-items: center;
 }
 
 .tileLabel {
+  max-width: 100%;
   font-size: 0.58rem;
   font-weight: 500;
   line-height: 1.15;
-  max-width: 100%;
-  text-align: center;
   color: var(--sys-color-text-secondary, #9aa3b2);
-  overflow-wrap: break-word;
+  text-align: center;
   hyphens: auto;
+  overflow-wrap: break-word;
 }
 
 .canvas {
   display: block;
-  border-radius: 6px;
-  border: 1px solid var(--sem-border-subtle, rgba(255, 255, 255, 0.1));
   background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--sem-border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: 6px;
 }

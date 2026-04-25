@@ -2,7 +2,10 @@ import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { buildLoreMetaAnthropicBody, computeLoreMetaSourceHash } from "@/src/lib/item-vault-index";
+import {
+  buildLoreMetaAnthropicBody,
+  computeLoreMetaSourceHash,
+} from "@/src/lib/item-vault-index";
 import { LORE_META_MAX_INPUT_CHARS } from "@/src/lib/lore-item-meta";
 
 const FIXED_MODEL = "claude-sonnet-4-20250514";
@@ -20,7 +23,7 @@ describe("lore meta anthropic body + hash", () => {
       buildLoreMetaAnthropicBody({
         title: "  A  ",
         contentText: "hello",
-      }),
+      })
     ).toBe("Title: A\n\nhello");
   });
 
@@ -29,14 +32,14 @@ describe("lore meta anthropic body + hash", () => {
       buildLoreMetaAnthropicBody({
         title: "T",
         contentText: "",
-      }),
+      })
     ).toBe("Title: T");
   });
 
   it("computeLoreMetaSourceHash is stable for same inputs", () => {
     const row = { title: "x", contentText: "y" };
     expect(computeLoreMetaSourceHash(row, FIXED_MODEL)).toBe(
-      computeLoreMetaSourceHash(row, FIXED_MODEL),
+      computeLoreMetaSourceHash(row, FIXED_MODEL)
     );
   });
 
@@ -46,14 +49,14 @@ describe("lore meta anthropic body + hash", () => {
     // every stored `lore_meta_source_hash` and the next reindex refreshes meta.
     const row = { title: "x", contentText: "y" };
     expect(computeLoreMetaSourceHash(row, FIXED_MODEL)).toBe(
-      expectedVersionedHash("Title: x\n\ny"),
+      expectedVersionedHash("Title: x\n\ny")
     );
   });
 
   it("computeLoreMetaSourceHash differs across model names (model is part of envelope)", () => {
     const row = { title: "x", contentText: "y" };
     expect(computeLoreMetaSourceHash(row, FIXED_MODEL)).not.toBe(
-      computeLoreMetaSourceHash(row, "claude-other-model"),
+      computeLoreMetaSourceHash(row, "claude-other-model")
     );
   });
 

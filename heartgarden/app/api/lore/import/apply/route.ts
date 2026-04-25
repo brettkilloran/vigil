@@ -5,26 +5,29 @@ import {
   gmMayAccessSpaceIdAsync,
   heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { invalidateItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
 import {
   applyLoreImportPlan,
   loreImportApplyBodySchema,
 } from "@/src/lib/lore-import-apply";
-import { invalidateItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  const attemptId = req.headers.get("x-heartgarden-import-attempt")?.trim() || "unknown";
+  const attemptId =
+    req.headers.get("x-heartgarden-import-attempt")?.trim() || "unknown";
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
 
   const db = tryGetDb();
   if (!db) {
     return Response.json(
       { ok: false, error: "Database not configured" },
-      { status: 503 },
+      { status: 503 }
     );
   }
 
@@ -41,10 +44,11 @@ export async function POST(req: Request) {
 
   const parsed = loreImportApplyBodySchema.safeParse(json);
   if (!parsed.success) {
-    const firstIssue = parsed.error.issues[0]?.message ?? "Invalid request body";
+    const firstIssue =
+      parsed.error.issues[0]?.message ?? "Invalid request body";
     return Response.json(
       { ok: false, error: parsed.error.flatten(), hint: firstIssue },
-      { status: 400 },
+      { status: 400 }
     );
   }
   console.info("[lore-import] apply request", {
@@ -57,7 +61,10 @@ export async function POST(req: Request) {
 
   const space = await assertSpaceExists(db, parsed.data.spaceId);
   if (!space) {
-    return Response.json({ ok: false, error: "Space not found" }, { status: 404 });
+    return Response.json(
+      { ok: false, error: "Space not found" },
+      { status: 404 }
+    );
   }
   if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, parsed.data.spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
@@ -81,7 +88,9 @@ export async function POST(req: Request) {
       ok: true,
       attemptId,
       ...result,
-      linkWarnings: result.linkWarnings.length ? result.linkWarnings : undefined,
+      linkWarnings: result.linkWarnings.length
+        ? result.linkWarnings
+        : undefined,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Apply failed";

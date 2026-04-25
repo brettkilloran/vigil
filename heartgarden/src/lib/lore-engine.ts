@@ -2,16 +2,15 @@
  * Lore Q&A pipeline: hybrid vault retrieval (`hybridRetrieveItems` + link expansion)
  * → excerpt shaping → Anthropic completion. Used by `POST /api/lore/query`.
  */
+
+import type { tryGetDb } from "@/src/db/index";
 import {
   buildCachedSystem,
   callAnthropic,
   callAnthropicTextStream,
 } from "@/src/lib/anthropic-client";
-
-import type { tryGetDb } from "@/src/db/index";
-import type { SearchFilters, SearchRow } from "@/src/lib/spaces";
-import { LORE_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 import { sanitizeRetrievedTextForLorePrompt } from "@/src/lib/lore-prompt-sanitize";
+import type { SearchFilters, SearchRow } from "@/src/lib/spaces";
 import {
   budgetPerSource,
   excerptForLore,
@@ -19,6 +18,7 @@ import {
   expandLinkedItems,
   hybridRetrieveItems,
 } from "@/src/lib/vault-retrieval";
+import { LORE_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 
@@ -46,11 +46,17 @@ export type LoreGroundedAnswer = {
 
 function readCanonicalEntityKind(row: SearchRow): string | null {
   const meta = row.item.entityMeta;
-  if (!meta || typeof meta !== "object") return null;
+  if (!meta || typeof meta !== "object") {
+    return null;
+  }
   const raw = (meta as Record<string, unknown>).canonicalEntityKind;
-  if (typeof raw !== "string") return null;
+  if (typeof raw !== "string") {
+    return null;
+  }
   const slug = raw.trim().toLowerCase();
-  if (!slug || slug.length > 32 || !/^[a-z][a-z0-9_-]*$/.test(slug)) return null;
+  if (!slug || slug.length > 32 || !/^[a-z][a-z0-9_-]*$/.test(slug)) {
+    return null;
+  }
   return slug;
 }
 
@@ -64,9 +70,16 @@ Rules:
 - Do not invent proper nouns, dates, or relationships not grounded in the excerpts.`;
 
 function fallbackExcerpt(row: SearchRow, maxChars: number): string {
-  const blob = [row.item.title, row.item.contentText].filter(Boolean).join("\n\n").trim();
-  if (!blob) return "(empty note)";
-  if (blob.length <= maxChars) return blob;
+  const blob = [row.item.title, row.item.contentText]
+    .filter(Boolean)
+    .join("\n\n")
+    .trim();
+  if (!blob) {
+    return "(empty note)";
+  }
+  if (blob.length <= maxChars) {
+    return blob;
+  }
   return `${blob.slice(0, maxChars)}…`;
 }
 
@@ -76,39 +89,39 @@ function fallbackExcerpt(row: SearchRow, maxChars: number): string {
 export async function retrieveLoreSources(
   db: VigilDb,
   question: string,
-  filters: SearchFilters = {},
+  filters: SearchFilters = {}
 ): Promise<LoreSource[]> {
   const q = question.trim().slice(0, 500);
-  if (!q) return [];
+  if (!q) {
+    return [];
+  }
 
   const cap = Math.min(Math.max(filters.limit ?? 14, 1), 20);
   const base: SearchFilters = { ...filters, limit: cap };
 
-  const { rows, itemIdToChunks, itemIdToChunkMatches, itemIdToFtsSnippet } = await hybridRetrieveItems(
-    db,
-    q,
-    base,
-    {
-    ...LORE_HYBRID_OPTIONS,
-    maxItems: cap,
-    includeVector: true,
-    },
-  );
+  const { rows, itemIdToChunks, itemIdToChunkMatches, itemIdToFtsSnippet } =
+    await hybridRetrieveItems(db, q, base, {
+      ...LORE_HYBRID_OPTIONS,
+      maxItems: cap,
+      includeVector: true,
+    });
 
   const graphRows = await expandLinkedItems(
     db,
     rows.map((r) => r.item.id),
     base,
-    Math.min(10, Math.max(0, 20 - rows.length)),
+    Math.min(10, Math.max(0, 20 - rows.length))
   );
   const maxOut = 20;
 
   const bindingCap = Math.min(
     6,
-    Math.max(0, maxOut - rows.length - graphRows.length),
+    Math.max(0, maxOut - rows.length - graphRows.length)
   );
   const bindingRows =
-    bindingCap > 0 ? await expandHgArchBindingNeighbors(db, rows, base, bindingCap) : [];
+    bindingCap > 0
+      ? await expandHgArchBindingNeighbors(db, rows, base, bindingCap)
+      : [];
 
   const total = rows.length + graphRows.length + bindingRows.length;
   const primaryBudget = budgetPerSource(total, 14_000);
@@ -118,7 +131,12 @@ export async function retrieveLoreSources(
 
   for (const row of rows) {
     const chunks = itemIdToChunkMatches.get(row.item.id);
-    const excerpt = excerptForLore(row, itemIdToChunks, itemIdToFtsSnippet, primaryBudget);
+    const excerpt = excerptForLore(
+      row,
+      itemIdToChunks,
+      itemIdToFtsSnippet,
+      primaryBudget
+    );
     out.push({
       itemId: row.item.id,
       title: row.item.title?.trim() || "Untitled",
@@ -133,8 +151,12 @@ export async function retrieveLoreSources(
   const primaryIds = new Set(rows.map((r) => r.item.id));
   const graphIds = new Set(graphRows.map((r) => r.item.id));
   for (const row of graphRows) {
-    if (out.length >= maxOut) break;
-    if (primaryIds.has(row.item.id)) continue;
+    if (out.length >= maxOut) {
+      break;
+    }
+    if (primaryIds.has(row.item.id)) {
+      continue;
+    }
     out.push({
       itemId: row.item.id,
       title: row.item.title?.trim() || "Untitled",
@@ -147,7 +169,9 @@ export async function retrieveLoreSources(
   }
 
   for (const row of bindingRows) {
-    if (out.length >= maxOut) break;
+    if (out.length >= maxOut) {
+      break;
+    }
     if (primaryIds.has(row.item.id) || graphIds.has(row.item.id)) {
       continue;
     }
@@ -173,7 +197,10 @@ export async function retrieveLoreSources(
  * grounded-JSON synthesis paths cannot drift in subtle prompt-construction
  * details. Only the system prompt and downstream parsing differ between paths.
  */
-export function buildLoreAnswerUserPrompt(question: string, sources: LoreSource[]): string {
+export function buildLoreAnswerUserPrompt(
+  question: string,
+  sources: LoreSource[]
+): string {
   const blocks = sources.map((s, i) => {
     const body = sanitizeRetrievedTextForLorePrompt(s.excerpt);
     const ctx = s.viaGraph
@@ -181,11 +208,12 @@ export function buildLoreAnswerUserPrompt(question: string, sources: LoreSource[
       : s.viaBinding
         ? "\n- context: structured card field (hgArch binding target)"
         : "";
-    const kindLine = s.canonicalEntityKind ? `\n- kind: ${s.canonicalEntityKind}` : "";
-    const sectionLine =
-      s.matchedChunks?.[0]?.headingPath?.length
-        ? `\n- section: ${s.matchedChunks[0].headingPath.join(" > ")}`
-        : "";
+    const kindLine = s.canonicalEntityKind
+      ? `\n- kind: ${s.canonicalEntityKind}`
+      : "";
+    const sectionLine = s.matchedChunks?.[0]?.headingPath?.length
+      ? `\n- section: ${s.matchedChunks[0].headingPath.join(" > ")}`
+      : "";
     return `### Source ${i + 1}\n- itemId: ${s.itemId}\n- title: ${s.title}\n- space: ${s.spaceName}${kindLine}${ctx}${sectionLine}\n\n${body}`;
   });
   return `Question:\n${question.trim()}\n\n---\n\nCanvas excerpts (your only ground truth):\n\n${blocks.join("\n\n---\n\n")}`;
@@ -195,7 +223,7 @@ export async function synthesizeLoreAnswer(
   apiKey: string,
   model: string,
   question: string,
-  sources: LoreSource[],
+  sources: LoreSource[]
 ): Promise<string> {
   const user = buildLoreAnswerUserPrompt(question, sources);
 
@@ -206,7 +234,7 @@ export async function synthesizeLoreAnswer(
       system: buildCachedSystem(LORE_SYSTEM),
       messages: [{ role: "user", content: user }],
     },
-    { label: "lore.query.answer" },
+    { label: "lore.query.answer" }
   );
 
   return res.text;
@@ -216,7 +244,7 @@ export async function* synthesizeLoreAnswerStream(
   apiKey: string,
   model: string,
   question: string,
-  sources: LoreSource[],
+  sources: LoreSource[]
 ): AsyncGenerator<string> {
   const user = buildLoreAnswerUserPrompt(question, sources);
   yield* callAnthropicTextStream(
@@ -226,7 +254,7 @@ export async function* synthesizeLoreAnswerStream(
       system: buildCachedSystem(LORE_SYSTEM),
       messages: [{ role: "user", content: user }],
     },
-    { label: "lore.query.answer" },
+    { label: "lore.query.answer" }
   );
 }
 
@@ -246,15 +274,20 @@ Rules:
 
 export function normalizeGroundedLoreAnswer(
   value: unknown,
-  sources: LoreSource[],
+  sources: LoreSource[]
 ): LoreGroundedAnswer {
   const sourceIds = new Set(sources.map((s) => s.itemId));
-  const raw = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const raw =
+    value && typeof value === "object"
+      ? (value as Record<string, unknown>)
+      : {};
   const answerText = String(raw.answer_text ?? "").trim();
   const citedRaw = Array.isArray(raw.cited_item_ids) ? raw.cited_item_ids : [];
   const citedItemIds = citedRaw
     .map((x) => String(x ?? "").trim())
-    .filter((id, idx, arr) => id && sourceIds.has(id) && arr.indexOf(id) === idx);
+    .filter(
+      (id, idx, arr) => id && sourceIds.has(id) && arr.indexOf(id) === idx
+    );
   const insufficientEvidence = raw.insufficient_evidence === true;
   return {
     answerText,
@@ -263,7 +296,9 @@ export function normalizeGroundedLoreAnswer(
   };
 }
 
-export function groundedLoreAnswerContractIssue(answer: LoreGroundedAnswer): string | null {
+export function groundedLoreAnswerContractIssue(
+  answer: LoreGroundedAnswer
+): string | null {
   if (!answer.answerText.trim()) {
     return "empty_answer_text";
   }
@@ -277,7 +312,7 @@ export async function synthesizeLoreAnswerGrounded(
   apiKey: string,
   model: string,
   question: string,
-  sources: LoreSource[],
+  sources: LoreSource[]
 ): Promise<LoreGroundedAnswer> {
   const user = buildLoreAnswerUserPrompt(question, sources);
   const res = await callAnthropic(
@@ -287,7 +322,7 @@ export async function synthesizeLoreAnswerGrounded(
       system: buildCachedSystem(LORE_GROUNDED_SYSTEM),
       messages: [{ role: "user", content: user }],
     },
-    { label: "lore.query.answer", expectJson: true },
+    { label: "lore.query.answer", expectJson: true }
   );
   const grounded = normalizeGroundedLoreAnswer(res.parsedJson, sources);
   const issue = groundedLoreAnswerContractIssue(grounded);

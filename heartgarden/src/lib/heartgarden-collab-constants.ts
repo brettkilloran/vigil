@@ -12,13 +12,13 @@ export const HEARTGARDEN_PRESENCE_TTL_MS = 120_000;
  * Delta poll interval (`GET …/changes`) when you are alone in the space — fewer Neon round-trips.
  * (Former default was 8s; solo users still see remote edits faster than before.)
  */
-export const HEARTGARDEN_SPACE_CHANGE_POLL_MS_SOLO = 5_500;
+export const HEARTGARDEN_SPACE_CHANGE_POLL_MS_SOLO = 5500;
 
 /**
  * Delta poll when at least one **other** client has presence in this space — closer to design-tool
  * latency; still polling (no WebSocket) so expect ~2–3s worst-case after a save lands in Neon.
  */
-export const HEARTGARDEN_SPACE_CHANGE_POLL_MS_COLLAB = 2_200;
+export const HEARTGARDEN_SPACE_CHANGE_POLL_MS_COLLAB = 2200;
 
 /** Presence heartbeat POST interval. */
 export const HEARTGARDEN_PRESENCE_HEARTBEAT_MS = 25_000;

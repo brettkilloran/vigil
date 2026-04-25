@@ -14,7 +14,7 @@ import {
 } from "@/src/lib/lore-import-plan-types";
 
 export const canonicalEntityKindSchema = z.enum(
-  CANONICAL_ENTITY_KINDS as unknown as [string, ...string[]],
+  CANONICAL_ENTITY_KINDS as unknown as [string, ...string[]]
 );
 
 export const importProvenanceSchema = z
@@ -67,21 +67,29 @@ export type CrossFolderRef = z.infer<typeof crossFolderRefSchema>;
 export type ImportProvenance = z.infer<typeof importProvenanceSchema>;
 export type AiReviewState = z.infer<typeof aiReviewStateSchema>;
 
-export function readAiReviewState(entityMeta: Record<string, unknown> | null | undefined): AiReviewState | null {
+export function readAiReviewState(
+  entityMeta: Record<string, unknown> | null | undefined
+): AiReviewState | null {
   const raw = entityMeta?.aiReview;
-  if (raw === AI_REVIEW_PENDING || raw === AI_REVIEW_ACCEPTED || raw === AI_REVIEW_CLEARED) {
+  if (
+    raw === AI_REVIEW_PENDING ||
+    raw === AI_REVIEW_ACCEPTED ||
+    raw === AI_REVIEW_CLEARED
+  ) {
     return raw;
   }
   return null;
 }
 
-export function isAiReviewPending(entityMeta: Record<string, unknown> | null | undefined): boolean {
+export function isAiReviewPending(
+  entityMeta: Record<string, unknown> | null | undefined
+): boolean {
   return readAiReviewState(entityMeta) === AI_REVIEW_PENDING;
 }
 
 export function hasActionableAiReview(
   entityMeta: Record<string, unknown> | null | undefined,
-  hasPendingBodyMarkup: boolean,
+  hasPendingBodyMarkup: boolean
 ): boolean {
   return hasPendingBodyMarkup || isAiReviewPending(entityMeta);
 }
@@ -92,11 +100,15 @@ export function hasActionableAiReview(
  * forgiving because older rows may have `entity_meta` written before the schema existed.
  */
 export function parseImportedEntityMeta(
-  raw: unknown,
+  raw: unknown
 ): ImportedEntityMeta | null {
-  if (raw == null || typeof raw !== "object") return null;
+  if (raw == null || typeof raw !== "object") {
+    return null;
+  }
   const parsed = importedEntityMetaSchema.safeParse(raw);
-  if (!parsed.success) return null;
+  if (!parsed.success) {
+    return null;
+  }
   return parsed.data;
 }
 
@@ -122,7 +134,7 @@ export type BuildImportedEntityMetaInput = {
  * overlays on top, then explicit named fields win last.
  */
 export function buildImportedEntityMeta(
-  input: BuildImportedEntityMetaInput,
+  input: BuildImportedEntityMetaInput
 ): ImportedEntityMeta {
   const existing =
     input.existing && typeof input.existing === "object"
@@ -157,7 +169,7 @@ export function buildImportedEntityMeta(
   const parsed = importedEntityMetaSchema.safeParse(merged);
   if (!parsed.success) {
     throw new Error(
-      `buildImportedEntityMeta produced invalid entity_meta: ${parsed.error.message}`,
+      `buildImportedEntityMeta produced invalid entity_meta: ${parsed.error.message}`
     );
   }
   return parsed.data;
@@ -170,7 +182,7 @@ export function buildImportedEntityMeta(
  */
 export function withCrossFolderRef(
   entityMeta: Record<string, unknown> | ImportedEntityMeta | null | undefined,
-  ref: CrossFolderRef,
+  ref: CrossFolderRef
 ): ImportedEntityMeta {
   const base =
     entityMeta && typeof entityMeta === "object"

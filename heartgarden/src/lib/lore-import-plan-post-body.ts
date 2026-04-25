@@ -13,4 +13,6 @@ export const loreImportPlanPostBodySchema = z
   })
   .strict();
 
-export type LoreImportPlanPostBody = z.infer<typeof loreImportPlanPostBodySchema>;
+export type LoreImportPlanPostBody = z.infer<
+  typeof loreImportPlanPostBodySchema
+>;

@@ -1,10 +1,10 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, type ReactNode, useContext } from "react";
 
 import {
-  type VigilColorScheme,
   useVigilTheme,
+  type VigilColorScheme,
 } from "@/src/hooks/use-vigil-theme";
 
 type VigilThemeValue = ReturnType<typeof useVigilTheme>;
@@ -23,7 +23,9 @@ export function VigilThemeProvider({ children }: { children: ReactNode }) {
 export function useVigilThemeContext(): VigilThemeValue {
   const ctx = useContext(VigilThemeContext);
   if (!ctx) {
-    throw new Error("useVigilThemeContext must be used within VigilThemeProvider");
+    throw new Error(
+      "useVigilThemeContext must be used within VigilThemeProvider"
+    );
   }
   return ctx;
 }

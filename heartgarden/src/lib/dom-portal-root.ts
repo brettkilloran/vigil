@@ -10,7 +10,9 @@ export function getVigilPortalRoot(): HTMLElement {
     throw new Error("getVigilPortalRoot() is browser-only");
   }
   const fromLayout = document.getElementById("hg-portal-root");
-  if (fromLayout) return fromLayout;
+  if (fromLayout) {
+    return fromLayout;
+  }
 
   const el = document.createElement("div");
   el.id = "hg-portal-root";

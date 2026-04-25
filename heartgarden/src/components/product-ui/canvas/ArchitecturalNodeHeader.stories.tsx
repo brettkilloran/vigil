@@ -26,7 +26,13 @@ const meta: Meta<typeof ArchitecturalNodeHeader> = {
   },
   decorators: [
     (Story) => (
-      <div style={{ width: 360, background: "var(--theme-default-bg)", color: "var(--theme-default-text)" }}>
+      <div
+        style={{
+          width: 360,
+          background: "var(--theme-default-bg)",
+          color: "var(--theme-default-text)",
+        }}
+      >
         <Story />
       </div>
     ),
@@ -51,10 +57,15 @@ export const DarkCardActionTone: Story = {
   },
   decorators: [
     (Story) => (
-      <div style={{ width: 360, background: "var(--sys-color-neutral-900)", color: "var(--sem-text-secondary)" }}>
+      <div
+        style={{
+          width: 360,
+          background: "var(--sys-color-neutral-900)",
+          color: "var(--sem-text-secondary)",
+        }}
+      >
         <Story />
       </div>
     ),
   ],
 };
-

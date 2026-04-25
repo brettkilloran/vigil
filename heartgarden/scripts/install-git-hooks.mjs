@@ -8,7 +8,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 if (process.env.SKIP_INSTALL_GIT_HOOKS === "1") {
-  process.stdout.write("[install-git-hooks] SKIP_INSTALL_GIT_HOOKS=1, skipping.\n");
+  process.stdout.write(
+    "[install-git-hooks] SKIP_INSTALL_GIT_HOOKS=1, skipping.\n"
+  );
   process.exit(0);
 }
 
@@ -22,7 +24,9 @@ try {
     stdio: ["ignore", "pipe", "ignore"],
   }).trim();
 } catch {
-  process.stdout.write("[install-git-hooks] Not a git checkout; skipping hook install.\n");
+  process.stdout.write(
+    "[install-git-hooks] Not a git checkout; skipping hook install.\n"
+  );
   process.exit(0);
 }
 

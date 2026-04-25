@@ -28,4 +28,3 @@ export default meta;
 type Story = StoryObj<typeof ArchitecturalStatusBadge>;
 
 export const Default: Story = {};
-

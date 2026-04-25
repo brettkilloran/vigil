@@ -2,17 +2,16 @@
 
 import type { CSSProperties } from "react";
 import { useLayoutEffect, useRef } from "react";
-
-import type {
-  CanvasTool,
-  TapeVariant,
-} from "@/src/components/foundation/architectural-types";
 import type { WikiLinkAssistConfig } from "@/src/components/editing/BufferedContentEditable";
+import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import {
   ArchitecturalNodeBody,
   ArchitecturalNodeTape,
 } from "@/src/components/foundation/ArchitecturalNodeCard";
-import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
+import type {
+  CanvasTool,
+  TapeVariant,
+} from "@/src/components/foundation/architectural-types";
 
 /**
  * Character v11 ID plate on the infinite canvas: one surface, no generic “note / A4” chrome.
@@ -55,7 +54,10 @@ export function ArchitecturalLoreCharacterCanvasNode({
   onRequestCanvasBodyEdit?: () => void;
 }) {
   const MAX_ENTITY_CARD_WIDTH = 340;
-  const nodeWidth = Math.min(width ?? MAX_ENTITY_CARD_WIDTH, MAX_ENTITY_CARD_WIDTH);
+  const nodeWidth = Math.min(
+    width ?? MAX_ENTITY_CARD_WIDTH,
+    MAX_ENTITY_CARD_WIDTH
+  );
   const cardStyle = {
     width: `${nodeWidth}px`,
     "--entity-width": `${nodeWidth}px`,
@@ -68,7 +70,7 @@ export function ArchitecturalLoreCharacterCanvasNode({
     if (!editable) {
       prevEditableRef.current = false;
       const host = document.querySelector(
-        `[data-node-id="${CSS.escape(id)}"] [data-node-body-editor="true"]`,
+        `[data-node-id="${CSS.escape(id)}"] [data-node-body-editor="true"]`
       ) as HTMLElement | null;
       const ae = document.activeElement;
       if (host && ae && host.contains(ae)) {
@@ -76,10 +78,12 @@ export function ArchitecturalLoreCharacterCanvasNode({
       }
       return;
     }
-    if (prevEditableRef.current) return;
+    if (prevEditableRef.current) {
+      return;
+    }
     prevEditableRef.current = true;
     const host = document.querySelector(
-      `[data-node-id="${CSS.escape(id)}"] [data-node-body-editor="true"]`,
+      `[data-node-id="${CSS.escape(id)}"] [data-node-body-editor="true"]`
     ) as HTMLElement | null;
     host?.focus();
   }, [editable, id]);
@@ -89,35 +93,46 @@ export function ArchitecturalLoreCharacterCanvasNode({
       className={`${styles.entityNode} ${styles.loreCharacterCanvasRoot} ${
         dragged ? styles.dragging : ""
       } ${selected ? styles.selectedNode : ""}`}
-      style={cardStyle}
       data-hg-canvas-role="lore-character-v11"
       data-lore-kind="character"
       data-lore-variant="v11"
       onDoubleClick={(event) => {
-        if (activeTool !== "select") return;
-        if (editable) return;
-        if (!onRequestCanvasBodyEdit) return;
+        if (activeTool !== "select") {
+          return;
+        }
+        if (editable) {
+          return;
+        }
+        if (!onRequestCanvasBodyEdit) {
+          return;
+        }
         event.stopPropagation();
         onRequestCanvasBodyEdit();
       }}
+      style={cardStyle}
     >
       {showTape ? (
-        <ArchitecturalNodeTape variant={tapeVariant} rotationDeg={tapeRotation} />
+        <ArchitecturalNodeTape
+          rotationDeg={tapeRotation}
+          variant={tapeVariant}
+        />
       ) : null}
       <ArchitecturalNodeBody
-        nodeId={id}
-        documentVariant="html"
-        html={bodyHtml}
         className={styles.loreCharacterBody}
+        documentVariant="html"
         editable={editable}
-        spellCheck={false}
+        emptyPlaceholder={emptyPlaceholder}
+        html={bodyHtml}
+        nodeId={id}
         onCommitPayload={(p) => {
-          if (p.kind === "html") onBodyCommit(id, p.html);
+          if (p.kind === "html") {
+            onBodyCommit(id, p.html);
+          }
         }}
         onDraftDirtyChange={onBodyDraftDirty}
-        wikiLinkAssist={wikiLinkAssist ?? null}
         onRichDocCommand={onRichDocCommand}
-        emptyPlaceholder={emptyPlaceholder}
+        spellCheck={false}
+        wikiLinkAssist={wikiLinkAssist ?? null}
       />
     </div>
   );

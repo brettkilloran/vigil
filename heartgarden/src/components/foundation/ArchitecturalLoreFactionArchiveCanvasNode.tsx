@@ -1,17 +1,19 @@
 "use client";
 
 import type { CSSProperties } from "react";
-
-import type { CanvasTool, TapeVariant } from "@/src/components/foundation/architectural-types";
 import type { WikiLinkAssistConfig } from "@/src/components/editing/BufferedContentEditable";
-import { ArchitecturalNodeTape } from "@/src/components/foundation/ArchitecturalNodeCard";
-import { LoreFactionArchive091Slab } from "@/src/components/foundation/LoreFactionArchive091Slab";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
-import { bodyHtmlImpliesFactionArchive091 } from "@/src/lib/lore-faction-archive-html";
-import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
 import {
   ArchitecturalNodeBody,
+  ArchitecturalNodeTape,
 } from "@/src/components/foundation/ArchitecturalNodeCard";
+import type {
+  CanvasTool,
+  TapeVariant,
+} from "@/src/components/foundation/architectural-types";
+import { LoreFactionArchive091Slab } from "@/src/components/foundation/LoreFactionArchive091Slab";
+import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
+import { bodyHtmlImpliesFactionArchive091 } from "@/src/lib/lore-faction-archive-html";
 
 /**
  * Faction Archive-091 slab on the infinite canvas — body-only plate (no generic A4 header).
@@ -54,7 +56,10 @@ export function ArchitecturalLoreFactionArchiveCanvasNode({
   emptyPlaceholder?: string | null;
 }) {
   const MAX_ENTITY_CARD_WIDTH = 340;
-  const nodeWidth = Math.min(width ?? MAX_ENTITY_CARD_WIDTH, MAX_ENTITY_CARD_WIDTH);
+  const nodeWidth = Math.min(
+    width ?? MAX_ENTITY_CARD_WIDTH,
+    MAX_ENTITY_CARD_WIDTH
+  );
   const cardStyle = {
     width: `${nodeWidth}px`,
     "--entity-width": `${nodeWidth}px`,
@@ -67,42 +72,49 @@ export function ArchitecturalLoreFactionArchiveCanvasNode({
       className={`${styles.entityNode} ${styles.loreFactionArchiveCanvasRoot} ${
         dragged ? styles.dragging : ""
       } ${selected ? styles.selectedNode : ""}`}
-      style={cardStyle}
       data-hg-canvas-role="lore-faction"
       data-lore-kind="faction"
       data-lore-variant="v4"
+      style={cardStyle}
     >
       {showTape ? (
-        <ArchitecturalNodeTape variant={tapeVariant} rotationDeg={tapeRotation} />
+        <ArchitecturalNodeTape
+          rotationDeg={tapeRotation}
+          variant={tapeVariant}
+        />
       ) : null}
       {bodyHtmlImpliesFactionArchive091(bodyHtml) ? (
         <LoreFactionArchive091Slab
-          nodeId={id}
           bodyHtml={bodyHtml}
-          factionRoster={factionRoster}
           editable={editable}
-          onFactionRosterChange={
-            onFactionRosterChange ? (nextRoster) => onFactionRosterChange(id, nextRoster) : undefined
-          }
+          emptyPlaceholder={emptyPlaceholder}
+          factionRoster={factionRoster}
+          nodeId={id}
           onCommit={(html) => onBodyCommit(id, html)}
           onDraftDirty={onBodyDraftDirty}
-          emptyPlaceholder={emptyPlaceholder}
+          onFactionRosterChange={
+            onFactionRosterChange
+              ? (nextRoster) => onFactionRosterChange(id, nextRoster)
+              : undefined
+          }
         />
       ) : (
         <ArchitecturalNodeBody
-          nodeId={id}
-          documentVariant="html"
-          html={bodyHtml}
           className={styles.a4DocumentBody}
+          documentVariant="html"
           editable={editable}
-          spellCheck={false}
+          emptyPlaceholder={emptyPlaceholder}
+          html={bodyHtml}
+          nodeId={id}
           onCommitPayload={(p) => {
-            if (p.kind === "html") onBodyCommit(id, p.html);
+            if (p.kind === "html") {
+              onBodyCommit(id, p.html);
+            }
           }}
           onDraftDirtyChange={onBodyDraftDirty}
-          wikiLinkAssist={wikiLinkAssist ?? null}
           onRichDocCommand={onRichDocCommand}
-          emptyPlaceholder={emptyPlaceholder}
+          spellCheck={false}
+          wikiLinkAssist={wikiLinkAssist ?? null}
         />
       )}
     </div>

@@ -12,7 +12,9 @@ import { assertSpaceExists } from "@/src/lib/spaces";
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 
-export type HeartgardenSpaceRouteSpaceRow = NonNullable<Awaited<ReturnType<typeof assertSpaceExists>>>;
+export type HeartgardenSpaceRouteSpaceRow = NonNullable<
+  Awaited<ReturnType<typeof assertSpaceExists>>
+>;
 
 /**
  * Authorize Heartgarden boot context for a space-scoped API route (GM / Players / demo rules).
@@ -23,8 +25,11 @@ export type HeartgardenSpaceRouteSpaceRow = NonNullable<Awaited<ReturnType<typeo
 export async function requireHeartgardenSpaceApiAccess(
   db: VigilDb,
   bootCtx: HeartgardenApiBootContext,
-  spaceId: string,
-): Promise<{ ok: true; space: HeartgardenSpaceRouteSpaceRow } | { ok: false; response: Response }> {
+  spaceId: string
+): Promise<
+  | { ok: true; space: HeartgardenSpaceRouteSpaceRow }
+  | { ok: false; response: Response }
+> {
   if (isHeartgardenPlayerBlocked(bootCtx)) {
     return { ok: false, response: heartgardenApiForbiddenJsonResponse() };
   }
@@ -35,7 +40,7 @@ export async function requireHeartgardenSpaceApiAccess(
       ok: false,
       response: heartgardenMaskNotFoundForPlayer(
         bootCtx,
-        Response.json({ ok: false, error: "Space not found" }, { status: 404 }),
+        Response.json({ ok: false, error: "Space not found" }, { status: 404 })
       ),
     };
   }
@@ -46,7 +51,10 @@ export async function requireHeartgardenSpaceApiAccess(
       return { ok: false, response: heartgardenApiForbiddenJsonResponse() };
     }
   }
-  if (bootCtx.role === "gm" && isHeartgardenImplicitPlayerRootSpaceName(space.name)) {
+  if (
+    bootCtx.role === "gm" &&
+    isHeartgardenImplicitPlayerRootSpaceName(space.name)
+  ) {
     return { ok: false, response: heartgardenApiForbiddenJsonResponse() };
   }
   if (bootCtx.role === "gm" && !gmMayAccessSpaceId(bootCtx, spaceId)) {
@@ -57,4 +65,5 @@ export async function requireHeartgardenSpaceApiAccess(
 }
 
 /** Alias for search / older plans; identical to {@link requireHeartgardenSpaceApiAccess}. */
-export const assertHeartgardenSpaceRouteAccess = requireHeartgardenSpaceApiAccess;
+export const assertHeartgardenSpaceRouteAccess =
+  requireHeartgardenSpaceApiAccess;

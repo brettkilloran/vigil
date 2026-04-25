@@ -35,29 +35,31 @@ export const AboutThisStorybook: Story = {
         {HEARTGARDEN_BRAND_MARK_EMOJI} heartgarden · Storybook
       </h1>
       <p style={{ color: "var(--sem-text-muted)", marginBottom: 16 }}>
-        This Storybook documents UI used by the heartgarden canvas app: design tokens, shell
-        primitives, and shared components. It is not a second product — it mirrors what ships in the
-        Next app.
+        This Storybook documents UI used by the heartgarden canvas app: design
+        tokens, shell primitives, and shared components. It is not a second
+        product — it mirrors what ships in the Next app.
       </p>
       <p style={{ marginBottom: 8 }}>
         <strong>Design System:</strong>{" "}
         <span style={{ color: "var(--sem-text-secondary)" }}>
-          Heartgarden → Design System — overview, tokens (including LLM / ingestion{" "}
-          <code style={{ fontSize: "0.88em" }}>--sem-*-llm-*</code>), and shared primitives
-          (Button, Tag, inputs, and foundational controls).
+          Heartgarden → Design System — overview, tokens (including LLM /
+          ingestion <code style={{ fontSize: "0.88em" }}>--sem-*-llm-*</code>),
+          and shared primitives (Button, Tag, inputs, and foundational
+          controls).
         </span>
       </p>
       <p style={{ marginBottom: 8 }}>
         <strong>Product UI:</strong>{" "}
         <span style={{ color: "var(--sem-text-secondary)" }}>
-          Heartgarden → Product UI — canvas shell/chrome surfaces, lore-focused plates and review
-          panels, and flower-specific boot interactions.
+          Heartgarden → Product UI — canvas shell/chrome surfaces, lore-focused
+          plates and review panels, and flower-specific boot interactions.
         </span>
       </p>
       <p style={{ marginBottom: 0 }}>
         <strong>Experiments:</strong>{" "}
         <span style={{ color: "var(--sem-text-secondary)" }}>
-          Heartgarden → Experiments — prototypes (e.g. transition WebGL) not yet wired into the main shell.
+          Heartgarden → Experiments — prototypes (e.g. transition WebGL) not yet
+          wired into the main shell.
         </span>
       </p>
       <p
@@ -68,10 +70,12 @@ export const AboutThisStorybook: Story = {
           fontSize: "0.92rem",
         }}
       >
-        A few surfaces are API-heavy and are not duplicated here: for example the link-graph modal loads{" "}
-        <code style={{ fontSize: "0.85em" }}>/api/spaces/…/graph</code>, and the command palette’s remote
-        suggestions call <code style={{ fontSize: "0.85em" }}>/api/search/suggest</code> after two
-        characters. Use a running Next app to exercise those paths.
+        A few surfaces are API-heavy and are not duplicated here: for example
+        the link-graph modal loads{" "}
+        <code style={{ fontSize: "0.85em" }}>/api/spaces/…/graph</code>, and the
+        command palette’s remote suggestions call{" "}
+        <code style={{ fontSize: "0.85em" }}>/api/search/suggest</code> after
+        two characters. Use a running Next app to exercise those paths.
       </p>
     </div>
   ),

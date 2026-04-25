@@ -4,126 +4,129 @@
  */
 .anchor {
   position: absolute;
-  left: max(24px, env(safe-area-inset-left, 0px));
-  right: auto;
   /* Vertically center in the canvas chrome so the debug rail is easy to reach without covering the
      bottom metrics strip. Expanded panel uses `align-items: flex-start` so it opens to the right. */
   top: 50%;
+  right: auto;
   bottom: auto;
-  transform: translateY(-50%);
+  left: max(24px, env(safe-area-inset-left, 0px));
   z-index: 800;
-  pointer-events: auto;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 10px;
+  align-items: flex-start;
+  pointer-events: auto;
+  transform: translateY(-50%);
 }
 
 .collapsedPanel {
-  background: var(--ui-glass-bg);
-  backdrop-filter: var(--chrome-glass-filter);
-  -webkit-backdrop-filter: var(--chrome-glass-filter);
-  border: 1px solid var(--ui-glass-border);
-  border-radius: var(--chrome-panel-radius);
-  box-shadow: var(--chrome-glass-shadow);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   width: var(--chrome-tool-rail-strip-width);
   min-width: var(--chrome-tool-rail-strip-width);
   padding: 4px 2px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.expandedPanel {
   background: var(--ui-glass-bg);
-  backdrop-filter: var(--chrome-glass-filter);
-  -webkit-backdrop-filter: var(--chrome-glass-filter);
   border: 1px solid var(--ui-glass-border);
   border-radius: var(--chrome-panel-radius);
   box-shadow: var(--chrome-glass-shadow);
-  width: min(92vw, 328px);
-  max-height: min(58vh, 600px);
+  -webkit-backdrop-filter: var(--chrome-glass-filter);
+  backdrop-filter: var(--chrome-glass-filter);
+}
+
+.expandedPanel {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  overflow: hidden;
+  width: min(92vw, 328px);
   min-width: 0;
+  max-height: min(58vh, 600px);
+  overflow: hidden;
+  background: var(--ui-glass-bg);
+  border: 1px solid var(--ui-glass-border);
+  border-radius: var(--chrome-panel-radius);
+  box-shadow: var(--chrome-glass-shadow);
+  -webkit-backdrop-filter: var(--chrome-glass-filter);
+  backdrop-filter: var(--chrome-glass-filter);
 }
 
 .panelHeader {
-  flex-shrink: 0;
   display: flex;
+  flex-shrink: 0;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 14px 20px 14px 24px;
-  border-bottom: 1px solid color-mix(in oklch, var(--vigil-border) 75%, transparent);
   min-width: 0;
+  padding: 14px 20px 14px 24px;
+  border-bottom: 1px solid
+    color-mix(in oklch, var(--vigil-border) 75%, transparent);
 }
 
 .panelTitle {
-  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    "Liberation Mono", "Courier New", monospace;
+  min-width: 0;
+  font-family:
+    var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--vigil-muted);
   line-height: 1.35;
-  min-width: 0;
+  color: var(--vigil-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .panelBody {
-  flex: 1;
-  min-height: 0;
-  min-width: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding: 20px 24px 24px;
+  box-sizing: border-box;
   display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: stretch;
+  min-width: 0;
+  min-height: 0;
+  padding: 20px 24px 24px;
+  overflow-x: hidden;
+  overflow-y: auto;
   font-size: 13px;
   line-height: 1.55;
   color: color-mix(in oklch, var(--vigil-muted) 88%, var(--vigil-label) 12%);
-  box-sizing: border-box;
 }
 
 /* Shared with SaveAndVersionPopover-style debug / inspector content (e.g. ArchitecturalLinksPanel). */
 .debugInspectorIntro {
+  min-width: 0;
   margin: 0 0 14px;
   font-size: 13px;
   line-height: 1.55;
   color: color-mix(in oklch, var(--vigil-muted) 88%, var(--vigil-label) 12%);
-  min-width: 0;
 }
 
 .debugInspectorSectionLabel {
   display: block;
+  margin: 0 0 8px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--vigil-muted);
   line-height: 1.35;
-  margin: 0 0 8px;
+  color: var(--vigil-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .debugInspectorDivider {
-  margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px solid color-mix(in oklch, var(--vigil-border) 75%, transparent);
+  margin-top: 20px;
+  border-top: 1px solid
+    color-mix(in oklch, var(--vigil-border) 75%, transparent);
 }
 
 .debugInspectorCode {
+  padding: 0.12em 0.4em;
   font-family: var(--font-geist-mono), monospace;
   font-size: 11px;
   font-weight: 500;
-  padding: 0.12em 0.4em;
-  border-radius: 4px;
-  background: color-mix(in oklch, var(--vigil-label) 7%, transparent);
   color: color-mix(in oklch, var(--vigil-muted) 65%, var(--vigil-label) 35%);
+  background: color-mix(in oklch, var(--vigil-label) 7%, transparent);
+  border-radius: 4px;
 }
 
 .debugInspectorStack {
@@ -149,15 +152,15 @@
 
 .debugInspectorRelatedHeading {
   display: flex;
-  align-items: center;
   gap: 8px;
+  align-items: center;
   margin-bottom: 8px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--vigil-muted);
   line-height: 1.35;
+  color: var(--vigil-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .debugInspectorRelatedHeading svg {
@@ -166,10 +169,10 @@
 }
 
 .debugInspectorList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
 }

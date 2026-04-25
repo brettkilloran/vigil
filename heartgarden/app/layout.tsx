@@ -1,9 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Inter, Lora, Noto_Sans_JP, Playfair_Display } from "next/font/google";
+import {
+  Geist,
+  Geist_Mono,
+  Inter,
+  Lora,
+  Noto_Sans_JP,
+  Playfair_Display,
+} from "next/font/google";
 
 import { RegisterSw } from "@/src/components/RegisterSw";
-import { HEARTGARDEN_BRAND_ICON_PATH } from "@/src/lib/brand-mark";
 import { HEARTGARDEN_APP_VERSION_LABEL } from "@/src/lib/app-version";
+import { HEARTGARDEN_BRAND_ICON_PATH } from "@/src/lib/brand-mark";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -82,8 +89,8 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${lora.variable} ${notoSansJP.variable} ${hgIdInter.variable} ${hgIdPlayfair.variable}`}
+      lang="en"
     >
       <body>
         {children}

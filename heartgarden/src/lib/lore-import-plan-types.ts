@@ -1,9 +1,8 @@
 import { z } from "zod";
-
-import { CANONICAL_ENTITY_KINDS } from "@/src/lib/lore-import-canonical-kinds";
 import { hgStructuredBlockSchema } from "@/src/lib/hg-doc/structured-body";
-import { HEARTGARDEN_NATIONS } from "@/src/lib/lore-nations";
+import { CANONICAL_ENTITY_KINDS } from "@/src/lib/lore-import-canonical-kinds";
 import { LOCATION_TOP_FIELD_CHAR_CAPS } from "@/src/lib/lore-location-focus-document-html";
+import { HEARTGARDEN_NATIONS } from "@/src/lib/lore-nations";
 
 export const ingestionSignalsSchema = z
   .object({
@@ -28,7 +27,9 @@ export type IngestionSignals = z.infer<typeof ingestionSignalsSchema>;
 const linkTypeSchema = z.string().max(64).optional();
 
 /** Import-time hint: soft graph edge vs structured field the user may fill on the card later. */
-export const loreImportLinkIntentSchema = z.enum(["association", "binding_hint"]).optional();
+export const loreImportLinkIntentSchema = z
+  .enum(["association", "binding_hint"])
+  .optional();
 
 export const loreImportPlanFolderSchema = z.object({
   clientId: z.string().min(1).max(64),
@@ -97,13 +98,15 @@ export const loreImportStructuredBodySchema = z.discriminatedUnion("kind", [
   loreImportGenericBodySchema,
 ]);
 
-export type LoreImportStructuredBody = z.infer<typeof loreImportStructuredBodySchema>;
+export type LoreImportStructuredBody = z.infer<
+  typeof loreImportStructuredBodySchema
+>;
 
 export const loreImportPlanNoteSchema = z.object({
   clientId: z.string().min(1).max(64),
   title: z.string().min(1).max(255),
   canonicalEntityKind: z.enum(
-    CANONICAL_ENTITY_KINDS as unknown as [string, ...string[]],
+    CANONICAL_ENTITY_KINDS as unknown as [string, ...string[]]
   ),
   summary: z.string().max(4000),
   bodyText: z.string().max(120_000),
@@ -129,8 +132,8 @@ export const loreImportPlanNoteSchema = z.object({
         spaceId: z.string().uuid(),
         title: z.string().max(255),
         score: z.number().min(0).max(1).optional(),
-        snippet: z.string().max(1_200).optional(),
-      }),
+        snippet: z.string().max(1200).optional(),
+      })
     )
     .max(40)
     .optional(),
@@ -139,7 +142,7 @@ export const loreImportPlanNoteSchema = z.object({
 export const loreImportSpaceSuggestionSchema = z.object({
   spaceId: z.string().uuid(),
   spaceTitle: z.string().max(255),
-  path: z.string().max(1_000).optional(),
+  path: z.string().max(1000).optional(),
   score: z.number().min(0).max(1).optional(),
   reason: z.string().max(400).optional(),
 });
@@ -270,7 +273,12 @@ export type LoreImportClarificationItem = z.infer<
 
 export const clarificationAnswerSchema = z.object({
   clarificationId: z.string().uuid(),
-  resolution: z.enum(["answered", "skipped_default", "other_text", "skipped_best_judgement"]),
+  resolution: z.enum([
+    "answered",
+    "skipped_default",
+    "other_text",
+    "skipped_best_judgement",
+  ]),
   selectedOptionIds: z.array(z.string().min(1).max(64)).max(12).optional(),
   skipDefaultOptionId: z.string().min(1).max(64).optional(),
   otherText: z.string().max(2000).optional(),
@@ -281,8 +289,11 @@ export type ClarificationAnswer = z.infer<typeof clarificationAnswerSchema>;
 export const loreImportUserContextSchema = z.object({
   granularity: z.enum(["one_note", "many"]),
   orgMode: z.enum(["folders", "nearby"]),
-  importScope: z.enum(["current_subtree", "gm_workspace"]).optional().default("current_subtree"),
-  freeformContext: z.string().max(4_000).optional(),
+  importScope: z
+    .enum(["current_subtree", "gm_workspace"])
+    .optional()
+    .default("current_subtree"),
+  freeformContext: z.string().max(4000).optional(),
   docSourceKind: z.enum(["pdf", "docx", "markdown", "text"]).optional(),
 });
 
@@ -306,7 +317,7 @@ export const loreImportPlanSchema = z.object({
         charEnd: z.number().int(),
         /** Full chunk body (kept on the plan so patches can rebuild note bodies at apply). */
         body: z.string().max(32_000).optional(),
-      }),
+      })
     )
     .optional(),
   folders: z.array(loreImportPlanFolderSchema),
@@ -314,9 +325,15 @@ export const loreImportPlanSchema = z.object({
   links: z.array(loreImportPlanLinkSchema),
   mergeProposals: z.array(mergeProposalSchema),
   contradictions: z.array(contradictionSchema),
-  spaceSuggestions: z.array(loreImportSpaceSuggestionSchema).max(128).optional(),
+  spaceSuggestions: z
+    .array(loreImportSpaceSuggestionSchema)
+    .max(128)
+    .optional(),
   /** LLM + validation: open questions; required items block apply until answered. */
-  clarifications: z.array(loreImportClarificationItemSchema).optional().default([]),
+  clarifications: z
+    .array(loreImportClarificationItemSchema)
+    .optional()
+    .default([]),
   /** Server-generated: cross-space link drops, etc. (round-tripped through apply). */
   importPlanWarnings: z.array(z.string().max(600)).max(48).optional(),
   userContext: loreImportUserContextSchema.optional(),
@@ -327,7 +344,9 @@ export type LoreImportPlan = z.infer<typeof loreImportPlanSchema>;
 export type LoreImportPlanNote = z.infer<typeof loreImportPlanNoteSchema>;
 export type MergeProposal = z.infer<typeof mergeProposalSchema>;
 
-export function buildDefaultEntityMeta(note: LoreImportPlanNote): Record<string, unknown> {
+export function buildDefaultEntityMeta(
+  note: LoreImportPlanNote
+): Record<string, unknown> {
   return {
     schemaVersion: 1,
     import: true,

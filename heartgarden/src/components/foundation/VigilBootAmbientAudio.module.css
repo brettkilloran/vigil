@@ -2,9 +2,9 @@
  * Boot ambient: glass panel (standalone) or icon-only slot inside the lower-left boot dock.
  */
 .wrap {
-  flex-shrink: 0;
   position: relative;
   z-index: 3;
+  flex-shrink: 0;
 }
 
 .audioMount {
@@ -14,32 +14,36 @@
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
   white-space: nowrap;
-  border: 0;
   pointer-events: none;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
 }
 
 .wrapEmbed {
   display: inline-flex;
-  align-items: center;
   flex-shrink: 0;
+  align-items: center;
 }
 
 .panel {
-  pointer-events: auto;
-  background: color-mix(in oklch, var(--sys-color-neutral-950) 76%, transparent);
-  border: 1px solid color-mix(in oklch, var(--sys-color-white) 14%, transparent);
-  backdrop-filter: var(--chrome-glass-filter);
-  -webkit-backdrop-filter: var(--chrome-glass-filter);
-  border-radius: var(--chrome-panel-radius);
-  box-shadow: var(--chrome-glass-shadow);
-  padding: 4px 6px;
   box-sizing: border-box;
-  width: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 46px;
+  padding: 4px 6px;
+  pointer-events: auto;
+  background: color-mix(
+    in oklch,
+    var(--sys-color-neutral-950) 76%,
+    transparent
+  );
+  border: 1px solid color-mix(in oklch, var(--sys-color-white) 14%, transparent);
+  border-radius: var(--chrome-panel-radius);
+  box-shadow: var(--chrome-glass-shadow);
+  -webkit-backdrop-filter: var(--chrome-glass-filter);
+  backdrop-filter: var(--chrome-glass-filter);
 }
 
 .toolbar {

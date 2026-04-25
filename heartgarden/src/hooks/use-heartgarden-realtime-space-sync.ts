@@ -52,19 +52,25 @@ export function useHeartgardenRealtimeSpaceSync(options: {
     };
 
     const scheduleReconnect = () => {
-      if (closed || reconnectTimer != null) return;
-      const base = Math.min(30_000, 2000 * Math.pow(2, reconnectAttempt));
+      if (closed || reconnectTimer != null) {
+        return;
+      }
+      const base = Math.min(30_000, 2000 * 2 ** reconnectAttempt);
       reconnectAttempt += 1;
       const jitterMs = base * (0.7 + Math.random() * 0.6);
       reconnectTimer = window.setTimeout(() => {
         reconnectTimer = null;
-        if (closed) return;
+        if (closed) {
+          return;
+        }
         void connect();
       }, jitterMs);
     };
 
     const connect = async () => {
-      if (closed) return;
+      if (closed) {
+        return;
+      }
       try {
         const tokenRes = await fetch("/api/realtime/room-token", {
           method: "POST",
@@ -72,17 +78,29 @@ export function useHeartgardenRealtimeSpaceSync(options: {
           body: JSON.stringify({ spaceId: activeSpaceId }),
           signal: tokenAbort.signal,
         });
-        if (closed) return;
+        if (closed) {
+          return;
+        }
         const tokenJson = (await tokenRes.json()) as {
           ok?: boolean;
           realtimeUrl?: string;
           token?: string;
           error?: string;
         };
-        if (closed) return;
-        if (!tokenRes.ok || tokenJson.ok !== true || !tokenJson.realtimeUrl || !tokenJson.token) {
+        if (closed) {
+          return;
+        }
+        if (
+          !tokenRes.ok ||
+          tokenJson.ok !== true ||
+          !tokenJson.realtimeUrl ||
+          !tokenJson.token
+        ) {
           connectedRef.current = false;
-          if (tokenRes.status === 503 || tokenJson.error === "Realtime not configured") {
+          if (
+            tokenRes.status === 503 ||
+            tokenJson.error === "Realtime not configured"
+          ) {
             return;
           }
           scheduleReconnect();
@@ -90,7 +108,7 @@ export function useHeartgardenRealtimeSpaceSync(options: {
         }
         const nextWs = new WebSocket(
           tokenJson.realtimeUrl,
-          heartgardenRealtimeSocketProtocols(tokenJson.token),
+          heartgardenRealtimeSocketProtocols(tokenJson.token)
         );
         if (closed) {
           // Late cleanup after token fetch resolved: close before assigning so the
@@ -109,16 +127,22 @@ export function useHeartgardenRealtimeSpaceSync(options: {
           recordRealtimeWsConnect();
         };
         ws.onmessage = (ev) => {
-          if (closed) return;
+          if (closed) {
+            return;
+          }
           recordRealtimeMessageReceived();
           let reason: string | undefined;
           try {
             const p = JSON.parse(String(ev.data)) as { reason?: string };
-            if (typeof p.reason === "string") reason = p.reason;
+            if (typeof p.reason === "string") {
+              reason = p.reason;
+            }
           } catch {
             /* ignore */
           }
-          onInvalidateRef.current(reason !== undefined ? { reason } : undefined);
+          onInvalidateRef.current(
+            reason === undefined ? undefined : { reason }
+          );
         };
         ws.onerror = () => {
           connectedRef.current = false;
@@ -126,12 +150,18 @@ export function useHeartgardenRealtimeSpaceSync(options: {
         ws.onclose = () => {
           connectedRef.current = false;
           recordRealtimeWsDisconnect();
-          if (!closed) scheduleReconnect();
+          if (!closed) {
+            scheduleReconnect();
+          }
         };
       } catch (err) {
-        if (closed) return;
+        if (closed) {
+          return;
+        }
         // AbortError from cleanup-triggered abort: treat as normal shutdown.
-        if (err instanceof DOMException && err.name === "AbortError") return;
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return;
+        }
         connectedRef.current = false;
         scheduleReconnect();
       }

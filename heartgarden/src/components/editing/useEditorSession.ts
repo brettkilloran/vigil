@@ -60,14 +60,18 @@ export function useEditorSession({
   }, [value, isEditing]);
 
   const clearPendingCommit = useCallback(() => {
-    if (!timerRef.current) return;
+    if (!timerRef.current) {
+      return;
+    }
     clearTimeout(timerRef.current);
     timerRef.current = null;
   }, []);
 
-  const normalizeDraft = useCallback((next: string) => {
-    return latestNormalizeRef.current ? latestNormalizeRef.current(next) : next;
-  }, []);
+  const normalizeDraft = useCallback(
+    (next: string) =>
+      latestNormalizeRef.current ? latestNormalizeRef.current(next) : next,
+    []
+  );
 
   const commitDraft = useCallback(
     (nextDraft: string, reason: EditorCommitReason) => {
@@ -83,7 +87,7 @@ export function useEditorSession({
       }
       return normalized;
     },
-    [normalizeDraft, isEditing],
+    [normalizeDraft, isEditing]
   );
 
   const commitNow = useCallback(
@@ -93,7 +97,7 @@ export function useEditorSession({
       setIsEditing(false);
       return out;
     },
-    [clearPendingCommit, commitDraft],
+    [clearPendingCommit, commitDraft]
   );
 
   const onDraftChange = useCallback(
@@ -110,7 +114,7 @@ export function useEditorSession({
         commitDraft(latestDraftRef.current, "debounce");
       }, debounceMs);
     },
-    [clearPendingCommit, commitDraft, debounceMs],
+    [clearPendingCommit, commitDraft, debounceMs]
   );
 
   const beginEditing = useCallback(() => {
@@ -128,15 +132,18 @@ export function useEditorSession({
     return resetValue;
   }, [clearPendingCommit]);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       clearPendingCommit();
-    };
-  }, [clearPendingCommit]);
+    },
+    [clearPendingCommit]
+  );
 
   useEffect(() => {
     const cb = draftDirtyCbRef.current;
-    if (!cb) return;
+    if (!cb) {
+      return;
+    }
     if (!isEditing) {
       cb(false);
       return;

@@ -9,12 +9,12 @@
 
 .fieldLabel {
   display: block;
+  margin-bottom: 3px;
   font-size: 9px;
   font-weight: 700;
+  color: color-mix(in oklch, var(--theme-default-text) 45%, transparent);
   text-transform: uppercase;
   letter-spacing: 0.11em;
-  color: color-mix(in oklch, var(--theme-default-text) 45%, transparent);
-  margin-bottom: 3px;
 }
 
 .fieldValue {
@@ -24,9 +24,10 @@
 }
 
 .notesBlock {
-  margin-top: 14px;
   padding-top: 12px;
-  border-top: 1px solid color-mix(in oklch, var(--theme-default-text) 10%, transparent);
+  margin-top: 14px;
+  border-top: 1px solid
+    color-mix(in oklch, var(--theme-default-text) 10%, transparent);
 }
 
 .notesBlock .fieldLabel {
@@ -55,13 +56,14 @@
 .badgePhoto {
   width: 100%;
   aspect-ratio: 3 / 4;
-  border-radius: 4px;
   object-fit: cover;
-  border: 1px solid color-mix(in oklch, var(--theme-default-text) 14%, transparent);
+  background: color-mix(in oklch, var(--theme-default-text) 6%, transparent);
+  border: 1px solid
+    color-mix(in oklch, var(--theme-default-text) 14%, transparent);
+  border-radius: 4px;
   box-shadow:
     0 1px 0 color-mix(in oklch, var(--sys-color-white) 40%, transparent),
     inset 0 0 0 1px color-mix(in oklch, var(--sys-color-white) 25%, transparent);
-  background: color-mix(in oklch, var(--theme-default-text) 6%, transparent);
 }
 
 .charFields {
@@ -72,8 +74,8 @@
 
 .nameRow {
   display: flex;
-  gap: 10px;
   flex-wrap: wrap;
+  gap: 10px;
 }
 
 .nameRow > div {
@@ -83,35 +85,37 @@
 
 .charHero {
   position: relative;
-  margin: -4px -6px 12px;
   padding: 16px 14px 20px;
-  border-radius: 6px;
+  margin: -4px -6px 12px;
+  text-align: center;
   background: linear-gradient(
     145deg,
     color-mix(in oklch, var(--accent) 14%, var(--theme-default-bg)) 0%,
     var(--theme-default-bg) 55%
   );
-  border: 1px solid color-mix(in oklch, var(--accent) 22%, var(--theme-default-border));
-  text-align: center;
+  border: 1px solid
+    color-mix(in oklch, var(--accent) 22%, var(--theme-default-border));
+  border-radius: 6px;
 }
 
 .charHeroPhoto {
   width: 72px;
   height: 72px;
-  border-radius: 50%;
-  object-fit: cover;
   margin: 0 auto 10px;
+  object-fit: cover;
   border: 3px solid color-mix(in oklch, var(--sys-color-white) 55%, transparent);
-  box-shadow: 0 4px 14px color-mix(in oklch, var(--theme-default-text) 12%, transparent);
+  border-radius: 50%;
+  box-shadow: 0 4px 14px
+    color-mix(in oklch, var(--theme-default-text) 12%, transparent);
 }
 
 .charHeroName {
   font-family: var(--font-lora), var(--font-geist-sans), serif;
   font-size: 1.15rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
   line-height: 1.2;
   color: var(--theme-default-text);
+  letter-spacing: 0.01em;
 }
 
 .charHeroSub {
@@ -129,8 +133,8 @@
 .passportStrip {
   display: flex;
   gap: 12px;
-  margin: -6px -8px 14px;
   padding: 10px 12px;
+  margin: -6px -8px 14px;
   background: repeating-linear-gradient(
     -12deg,
     color-mix(in oklch, var(--theme-default-text) 4%, transparent) 0 2px,
@@ -143,16 +147,17 @@
   width: 64px;
   height: 80px;
   object-fit: cover;
-  border: 1px solid color-mix(in oklch, var(--theme-default-text) 20%, transparent);
+  border: 1px solid
+    color-mix(in oklch, var(--theme-default-text) 20%, transparent);
   border-radius: 2px;
 }
 
 .passportMeta {
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-direction: column;
-  justify-content: center;
   gap: 6px;
+  justify-content: center;
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
   text-transform: uppercase;
@@ -163,53 +168,55 @@
   display: block;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: none;
   color: var(--theme-default-text);
+  text-transform: none;
+  letter-spacing: 0.04em;
 }
 
 /* —— Character v4 · Essentialist ID (dark inverse of white protocol snippet — layout-matched) —— */
 .charEipShell {
-  margin: 0;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  display: block;
   position: relative;
   box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
 }
 
 .charEipBadge {
-  container-type: inline-size;
   position: relative;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   width: 100%;
   max-width: 100%;
-  box-sizing: border-box;
   min-height: 0;
+  /* Snippet .scene aspect-ratio: 0.64 (width / height) → tall portrait */
+  aspect-ratio: 0.64;
+  padding: 0;
+  container-type: inline-size;
+  overflow: hidden;
+  color: #fff;
   /* Snippet .badge: white plate → inverse */
   background-color: #000;
-  color: #fff;
   border-radius: 0 0 2px 2px;
-  padding: 0;
   /* Snippet: box-shadow 0 0 0 1px white + depth — inverted */
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.14),
     0 20px 50px rgba(0, 0, 0, 0.55),
     0 0 80px rgba(255, 255, 255, 0.02);
-  /* Snippet .scene aspect-ratio: 0.64 (width / height) → tall portrait */
-  aspect-ratio: 0.64;
-  overflow: hidden;
   transform-style: preserve-3d;
   transition: transform 0.1s ease-out;
   will-change: transform;
 }
 
 .charEipBadge::after {
-  content: "";
   position: absolute;
   inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  content: "";
   background: linear-gradient(
     125deg,
     rgba(255, 255, 255, 0) 0%,
@@ -218,11 +225,9 @@
     rgba(255, 255, 255, 0) 50%,
     rgba(255, 255, 255, 0) 100%
   );
+  mix-blend-mode: overlay;
   opacity: 0;
   transition: opacity 0.3s ease;
-  pointer-events: none;
-  z-index: 100;
-  mix-blend-mode: overlay;
 }
 
 .charEipBadge:hover {
@@ -241,28 +246,28 @@
 .charEipVoidGrid {
   position: absolute;
   inset: 0;
+  z-index: 0;
+  pointer-events: none;
   background-image:
     linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 100px 100px;
   background-position: center center;
-  pointer-events: none;
-  z-index: 0;
+  background-size: 100px 100px;
 }
 
 /* Snippet .reg-mark — black on white → light on black */
 .charEipRegMark {
   position: absolute;
+  z-index: 20;
   width: 15px;
   height: 15px;
   pointer-events: none;
-  z-index: 20;
 }
 
 .charEipRegMark::before,
 .charEipRegMark::after {
-  content: "";
   position: absolute;
+  content: "";
   background-color: #fff;
 }
 
@@ -296,18 +301,18 @@
 }
 
 .charEipRegMarkBr {
-  bottom: 15px;
   right: 15px;
+  bottom: 15px;
 }
 
 /* Snippet .cut-corner — 30px black on white → light chip on black */
 .charEipCutMark {
   position: absolute;
+  z-index: 30;
   width: 30px;
   height: 30px;
-  background-color: #fff;
-  z-index: 30;
   pointer-events: none;
+  background-color: #fff;
 }
 
 .charEipCutMarkTl {
@@ -317,8 +322,8 @@
 }
 
 .charEipCutMarkBr {
-  bottom: -15px;
   right: -15px;
+  bottom: -15px;
   transform: rotate(45deg);
 }
 
@@ -326,16 +331,16 @@
 .charEipHeaderBand {
   position: relative;
   z-index: 2;
-  flex: 0 0 45%;
-  min-height: 0;
-  background-color: #0a0a0c;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
   display: flex;
+  flex: 0 0 45%;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  min-height: 0;
   padding: 0;
   overflow: hidden;
+  background-color: #0a0a0c;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
 }
 
 /* Snippet .header-meta */
@@ -343,67 +348,67 @@
   position: absolute;
   top: 15px;
   left: 30px;
-  width: calc(100% - 60px);
+  z-index: 1;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: calc(100% - 60px);
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
+  color: rgba(255, 255, 255, 0.55);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.55);
-  z-index: 1;
 }
 
 /* Snippet .biometric-void — 180px black circle (inverse field stays the “void”) */
 .charEipBiometric {
-  width: min(180px, 52cqi);
-  height: min(180px, 52cqi);
-  border-radius: 50%;
-  background-color: #000;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
   position: relative;
   z-index: 2;
-  overflow: hidden;
   flex-shrink: 0;
+  width: min(180px, 52cqi);
+  height: min(180px, 52cqi);
+  overflow: hidden;
+  background-color: #000;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .charEipBiometric img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: grayscale(1) contrast(1.08);
   opacity: 0.92;
+  filter: grayscale(1) contrast(1.08);
 }
 
 .charEipBodySection {
   position: relative;
   z-index: 2;
-  flex: 1 1 auto;
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   min-height: 0;
 }
 
 /* Snippet .row-identity */
 .charEipRowIdentity {
-  padding: 20px 25px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
   display: grid;
   grid-template-columns: 1fr auto;
-  align-items: end;
   gap: 20px;
+  align-items: end;
+  padding: 20px 25px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
 }
 
 .charEipLabelMicro {
+  display: block;
+  margin-bottom: 4px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
+  color: rgba(255, 255, 255, 0.5);
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  margin-bottom: 4px;
-  display: block;
-  color: rgba(255, 255, 255, 0.5);
 }
 
 /* Snippet .name-primary — 42px / 900 */
@@ -412,41 +417,41 @@
   font-size: clamp(26px, 12cqi, 42px);
   font-weight: 900;
   line-height: 0.85;
-  letter-spacing: -0.04em;
-  text-transform: uppercase;
   color: #fff;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
 }
 
 /* Snippet .clearance-badge — black bg white text on white card → white bg black text here */
 .charEipClearance {
   flex-shrink: 0;
-  background-color: #fff;
-  color: #000;
   padding: 4px 8px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 14px;
   font-weight: 700;
+  color: #000;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  background-color: #fff;
 }
 
 /* Snippet .row-data */
 .charEipRowData {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
   flex: 1 1 0;
+  grid-template-columns: 1fr 1fr;
   min-height: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
 }
 
 .charEipCell {
-  padding: 15px 25px;
-  border-right: 1px solid rgba(255, 255, 255, 0.22);
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   gap: 6px;
+  justify-content: flex-end;
   min-width: 0;
+  padding: 15px 25px;
+  border-right: 1px solid rgba(255, 255, 255, 0.22);
 }
 
 .charEipCell:last-child {
@@ -458,37 +463,37 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 13px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: -0.02em;
   line-height: 1.25;
   color: #fff;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
   word-break: break-word;
 }
 
 /* Snippet footer */
 .charEipFooter {
-  flex-shrink: 0;
-  margin-top: 32px;
-  padding: 0 25px 25px;
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   gap: 12px;
+  padding: 0 25px 25px;
+  margin-top: 32px;
 }
 
 .charEipBarcode {
   display: flex;
-  height: 24px;
-  width: 100%;
+  flex-shrink: 0;
   gap: 2px;
   align-items: flex-end;
-  flex-shrink: 0;
+  width: 100%;
+  height: 24px;
 }
 
 /* Snippet .bar — black on white → white on black */
 .charEipBar {
-  background-color: #fff;
-  height: 100%;
   flex-shrink: 0;
+  height: 100%;
+  background-color: #fff;
 }
 
 .charEipBarW1 {
@@ -516,8 +521,8 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
   line-height: 1.2;
-  letter-spacing: 0.25em;
   color: rgba(255, 255, 255, 0.72);
+  letter-spacing: 0.25em;
   word-break: break-all;
   opacity: 0.95;
 }
@@ -527,24 +532,25 @@
 }
 
 .charEipNotes {
-  margin: 0;
-  width: 100%;
-  max-width: none;
-  box-sizing: border-box;
-  padding: 16px 25px 20px;
-  background: rgba(0, 0, 0, 0.5);
-  border-top: 1px solid rgba(255, 255, 255, 0.18);
   position: relative;
   z-index: 2;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  padding: 16px 25px 20px;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .charEipNotes::before {
-  content: "";
   position: absolute;
   top: 0;
-  left: 25px;
   right: 25px;
+  left: 25px;
   height: 3px;
+  pointer-events: none;
+  content: "";
   background: repeating-linear-gradient(
     90deg,
     transparent,
@@ -553,48 +559,50 @@
     rgba(255, 255, 255, 0.1) 6px
   );
   opacity: 0.45;
-  pointer-events: none;
 }
 
 .charEipNotesLabel {
+  display: block;
+  margin-bottom: 8px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
+  color: rgba(255, 255, 255, 0.45);
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: rgba(255, 255, 255, 0.45);
-  margin-bottom: 8px;
-  display: block;
 }
 
 .charEipNotesBody {
+  min-height: 2.5em;
   font-size: 12px;
   line-height: 1.55;
+  color: #e8a856;
   background-image: repeating-linear-gradient(
     transparent,
     transparent 1.45em,
     rgba(232, 168, 86, 0.12) 1.45em,
     rgba(232, 168, 86, 0.12) calc(1.45em + 1px)
   );
-  min-height: 2.5em;
-  color: #e8a856;
 }
 
 /* —— Character v7 · Crimson minimalist credential (no scanner wipe) —— */
 .charMinShell {
-  margin: 0;
-  width: 100%;
   box-sizing: border-box;
+  width: 100%;
+  margin: 0;
 }
 
 .charMinWrap {
-  container-type: inline-size;
-  container-name: charmin;
   position: relative;
+  box-sizing: border-box;
   width: 100%;
-  aspect-ratio: 860 / 480;
   /* Fallback when aspect-ratio height is not applied (flex min-height:0 chains, older engines). */
   min-height: 172px;
-  box-sizing: border-box;
+  aspect-ratio: 860 / 480;
+  container-name: charmin;
+  container-type: inline-size;
+  color: #ffffff;
+  cursor: crosshair;
+  background-color: #bc002d;
   clip-path: polygon(
     0% 8%,
     15% 8%,
@@ -617,9 +625,6 @@
     4% 35%,
     0% 35%
   );
-  background-color: #bc002d;
-  color: #ffffff;
-  cursor: crosshair;
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -634,45 +639,45 @@
 .charMinContent {
   position: absolute;
   inset: 0;
-  padding: clamp(22px, 5.5cqi, 48px) clamp(18px, 4.5cqi, 40px) clamp(16px, 4cqi, 40px)
-    clamp(22px, 5.5cqi, 48px);
+  z-index: 1;
+  box-sizing: border-box;
   display: grid;
   grid-template-rows: auto 1fr auto auto;
   gap: clamp(12px, 3cqi, 24px);
-  box-sizing: border-box;
-  z-index: 1;
+  padding: clamp(22px, 5.5cqi, 48px) clamp(18px, 4.5cqi, 40px)
+    clamp(16px, 4cqi, 40px) clamp(22px, 5.5cqi, 48px);
 }
 
 .charMinHeader {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   gap: 12px;
-  border-bottom: 2px solid #ffffff;
+  align-items: flex-start;
+  justify-content: space-between;
   padding-bottom: clamp(8px, 2cqi, 16px);
   margin-top: clamp(10px, 2.5cqi, 24px);
+  border-bottom: 2px solid #ffffff;
 }
 
 .charMinSysLabel {
   font-family: var(--font-geist-mono), monospace;
   font-size: clamp(8px, 2cqi, 10px);
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
   font-weight: 700;
   line-height: 1.25;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
 }
 
 .charMinClassification {
   display: flex;
-  align-items: center;
-  gap: 12px;
   flex-shrink: 0;
+  gap: 12px;
+  align-items: center;
 }
 
 .charMinStatusDot {
+  flex-shrink: 0;
   width: 8px;
   height: 8px;
-  flex-shrink: 0;
   background-color: #ffffff;
   border-radius: 50%;
   animation: loreCharMinPulse 2s ease-in-out infinite;
@@ -700,28 +705,28 @@
 .charMinIdentity {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   gap: 8px;
+  justify-content: flex-end;
   min-width: 0;
 }
 
 .charMinRoleTitle {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: clamp(11px, 2.8cqi, 14px);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
   font-weight: 600;
   line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .charMinNameDisplay {
+  min-width: 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: clamp(26px, 12cqi, 72px);
   font-weight: 800;
   line-height: 0.85;
-  letter-spacing: -0.04em;
   text-transform: uppercase;
-  min-width: 0;
+  letter-spacing: -0.04em;
 }
 
 .charMinNameDisplay span {
@@ -750,11 +755,11 @@
 .charMinDataLabel {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: clamp(7px, 2cqi, 9px);
+  font-weight: 700;
+  line-height: 1.2;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  font-weight: 700;
   opacity: 0.6;
-  line-height: 1.2;
 }
 
 .charMinDataValue {
@@ -776,8 +781,8 @@
   display: inline-block;
   align-self: flex-start;
   padding: 2px 4px;
-  background-color: #ffffff;
   color: #ffffff;
+  background-color: #ffffff;
   transition:
     background-color 0.2s ease,
     color 0.2s ease;
@@ -785,17 +790,17 @@
 
 .charMinWrap:hover .charMinRedacted,
 .charMinRedacted:focus {
-  background-color: transparent;
   color: #ffffff;
+  background-color: transparent;
 }
 
 .charMinRedacted::after {
-  content: "";
   position: absolute;
   bottom: 0;
   left: 0;
   width: 100%;
   height: 1px;
+  content: "";
   background-color: #ffffff;
   opacity: 0;
   transition: opacity 0.2s ease;
@@ -808,19 +813,19 @@
 
 .charMinFooter {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
   gap: 12px;
+  align-items: flex-end;
+  justify-content: space-between;
   padding-top: clamp(10px, 2.5cqi, 16px);
   border-top: 1px solid #ffffff;
 }
 
 .charMinBarcode {
   display: flex;
-  height: clamp(24px, 6cqi, 32px);
+  flex-shrink: 0;
   gap: 2px;
   align-items: flex-end;
-  flex-shrink: 0;
+  height: clamp(24px, 6cqi, 32px);
 }
 
 .charMinBar {
@@ -856,27 +861,27 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: clamp(8px, 2cqi, 10px);
   font-weight: 400;
-  letter-spacing: 0.05em;
   line-height: 1.3;
   text-align: right;
+  letter-spacing: 0.05em;
   opacity: 0.92;
 }
 
 .charMinNotes {
+  min-height: 0;
   padding-top: clamp(8px, 2cqi, 12px);
   border-top: 1px solid rgba(255, 255, 255, 0.28);
-  min-height: 0;
 }
 
 .charMinNotesLabel {
+  display: block;
+  margin-bottom: 6px;
   font-family: var(--font-geist-mono), monospace;
   font-size: clamp(7px, 1.8cqi, 9px);
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  font-weight: 700;
   opacity: 0.55;
-  margin-bottom: 6px;
-  display: block;
 }
 
 .charMinNotesBody {
@@ -888,31 +893,31 @@
 
 .charMinRegMark {
   position: absolute;
+  z-index: 2;
   width: 12px;
   height: 12px;
   pointer-events: none;
-  z-index: 2;
 }
 
 .charMinRegMark::before,
 .charMinRegMark::after {
-  content: "";
   position: absolute;
+  content: "";
   background-color: #ffffff;
 }
 
 .charMinRegMark::before {
-  width: 100%;
-  height: 1px;
   top: 5px;
   left: 0;
+  width: 100%;
+  height: 1px;
 }
 
 .charMinRegMark::after {
+  top: 0;
+  left: 5px;
   width: 1px;
   height: 100%;
-  left: 5px;
-  top: 0;
 }
 
 .charMinRmBl {
@@ -921,8 +926,8 @@
 }
 
 .charMinRmBr {
-  bottom: clamp(12px, 3cqi, 16px);
   right: clamp(12px, 3cqi, 16px);
+  bottom: clamp(12px, 3cqi, 16px);
 }
 
 @container charmin (max-width: 240px) {
@@ -945,55 +950,60 @@
  * notes row inside the plate). Inter + Playfair, barcode gradient, photo stripes, glare. No perspective tilt.
  */
 .char3dShell {
-  margin: 0;
-  width: 100%;
-  box-sizing: border-box;
   --hg-id-border: #262626;
   --hg-id-muted: #a3a3a3;
-  --hg-id-sans: var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
+  --hg-id-sans:
+    var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
   --hg-id-serif: var(--font-hg-id-playfair), var(--font-lora), Georgia, serif;
   /* Full portrait well before an image is committed (same footprint as the eventual photo). */
   --hg-id-portrait-placeholder-surface: #3d424c;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
 }
 
 .char3dViewport {
-  width: 100%;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
   padding: 4px 0 2px;
-  box-sizing: border-box;
 }
 
 .char3dCard {
+  position: relative;
   width: 100%;
   max-width: var(--entity-width, 340px);
   margin: 0 auto;
-  position: relative;
-  cursor: pointer;
-  container-type: inline-size;
   container-name: char3d;
+  container-type: inline-size;
+  cursor: pointer;
 }
 
 .char3dCardMaterial {
   position: relative;
   width: 100%;
+  overflow: hidden;
   background: #000000;
   border: 1px solid var(--hg-id-border);
   border-radius: 12px;
   box-shadow: 0 40px 80px rgba(0, 0, 0, 0.9);
-  overflow: hidden;
 }
 
 .char3dGlare {
   position: absolute;
   inset: -50%;
-  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.08) 0%, transparent 60%);
+  z-index: 20;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 255, 255, 0.08) 0%,
+    transparent 60%
+  );
+  mix-blend-mode: screen;
   opacity: 0;
   transition: opacity 0.3s ease;
-  pointer-events: none;
-  z-index: 20;
-  mix-blend-mode: screen;
 }
 
 .char3dCardMaterial:hover .char3dGlare {
@@ -1003,29 +1013,29 @@
 .char3dGrid {
   display: grid;
   grid-template-rows: 48px minmax(180px, 300px) 160px 60px auto;
-  border-radius: 12px;
-  min-height: 0;
   width: 100%;
+  min-height: 0;
+  border-radius: 12px;
 }
 
 .char3dHeaderCell {
   position: relative;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--hg-id-border);
   box-sizing: border-box;
   min-height: 48px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--hg-id-border);
 }
 
 /* True horizontal center of the card (grid 1fr/auto/1fr drifted when columns sized unevenly in CE hosts). */
 .char3dHeaderRow {
   position: relative;
   z-index: 2;
+  box-sizing: border-box;
   display: flex;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
   min-height: 48px;
-  box-sizing: border-box;
 }
 
 .char3dHeaderLeft {
@@ -1036,40 +1046,40 @@
 /* Badge lanyard slot (same role as v6 `.charPaperLanyard`, inverted for black ID plastic). */
 .char3dLanyard {
   position: absolute;
-  left: 50%;
   top: 8px;
-  transform: translateX(-50%);
+  left: 50%;
+  z-index: 1;
   width: 40px;
   height: 8px;
+  pointer-events: none;
   background: #121212;
   border-radius: 8px;
   box-shadow:
     inset 0 2px 3px rgba(0, 0, 0, 0.55),
     inset 0 -1px 0 rgba(255, 255, 255, 0.05),
     0 1px 0 rgba(255, 255, 255, 0.04);
-  pointer-events: none;
-  z-index: 1;
+  transform: translateX(-50%);
 }
 
 /* `span` + role=button: survives rich-text / contenteditable hosts better than `<button>`. */
 .char3dExpandBtn {
+  box-sizing: border-box;
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
   padding: 0;
   margin: 0;
-  flex-shrink: 0;
   line-height: 0;
+  color: #d4d4d4;
   cursor: pointer;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
+  background: color-mix(in oklch, #ffffff 10%, transparent);
   border: 1px solid color-mix(in oklch, #ffffff 18%, transparent);
   border-radius: 6px;
-  background: color-mix(in oklch, #ffffff 10%, transparent);
-  color: #d4d4d4;
-  box-sizing: border-box;
 }
 
 .char3dExpandBtn svg {
@@ -1093,15 +1103,15 @@
   font-size: 0.65rem;
   font-weight: 500;
   color: var(--hg-id-muted);
-  letter-spacing: 0;
   text-transform: none;
+  letter-spacing: 0;
 }
 
 .char3dPhotoCell {
   position: relative;
-  border-bottom: 1px solid var(--hg-id-border);
   min-height: 0;
   overflow: hidden;
+  border-bottom: 1px solid var(--hg-id-border);
 }
 
 .char3dPhotoCell:has([data-architectural-media-fallback="true"]) {
@@ -1111,15 +1121,19 @@
 .char3dPhotoWrap {
   position: absolute;
   inset: 20px;
+  overflow: hidden;
+  background: #000;
   border: 1px solid var(--hg-id-border);
   border-radius: 6px;
-  background: #000;
-  overflow: hidden;
 }
 
 .char3dPhotoWrap:has([data-architectural-media-fallback="true"]) {
   background: var(--hg-id-portrait-placeholder-surface);
-  border-color: color-mix(in oklch, var(--hg-id-portrait-placeholder-surface) 82%, #ffffff 10%);
+  border-color: color-mix(
+    in oklch,
+    var(--hg-id-portrait-placeholder-surface) 82%,
+    #ffffff 10%
+  );
 }
 
 .char3dPhotoWrap:has([data-architectural-media-fallback="true"])::before,
@@ -1128,27 +1142,39 @@
 }
 
 .char3dPhotoWrap::before {
-  content: "";
   position: absolute;
   top: 0;
-  left: 0;
   right: 0;
-  height: 50%;
-  background: repeating-linear-gradient(90deg, #ff003c 0, #ff003c 5px, #ff00ea 5px, #ff00ea 10px);
-  pointer-events: none;
+  left: 0;
   z-index: 1;
+  height: 50%;
+  pointer-events: none;
+  content: "";
+  background: repeating-linear-gradient(
+    90deg,
+    #ff003c 0,
+    #ff003c 5px,
+    #ff00ea 5px,
+    #ff00ea 10px
+  );
 }
 
 .char3dPhotoWrap::after {
-  content: "";
   position: absolute;
+  right: 0;
   bottom: 0;
   left: 0;
-  right: 0;
-  height: 50%;
-  background: repeating-linear-gradient(90deg, #ff00ea 0, #ff00ea 5px, #ff003c 5px, #ff003c 10px);
-  pointer-events: none;
   z-index: 1;
+  height: 50%;
+  pointer-events: none;
+  content: "";
+  background: repeating-linear-gradient(
+    90deg,
+    #ff00ea 0,
+    #ff00ea 5px,
+    #ff003c 5px,
+    #ff003c 10px
+  );
 }
 
 /* Portrait slot: same pipeline as media nodes (`data-architectural-media-root` + upload button). */
@@ -1162,21 +1188,22 @@
 .char3dMediaPlaceholder {
   position: absolute;
   inset: 0;
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
   padding: 12px;
   font-family: var(--hg-id-sans);
   font-size: 0.7rem;
   font-weight: 500;
   color: var(--hg-id-muted);
+  text-align: center;
   letter-spacing: 0.02em;
-  z-index: 5;
   pointer-events: none;
 }
 
-.char3dMediaRoot:has([data-architectural-media-fallback="true"]) .char3dMediaPlaceholder {
+.char3dMediaRoot:has([data-architectural-media-fallback="true"])
+  .char3dMediaPlaceholder {
   color: color-mix(in oklch, var(--hg-id-muted) 88%, #0a0a0a);
 }
 
@@ -1184,12 +1211,12 @@
   position: absolute;
   right: 8px;
   bottom: 8px;
+  z-index: 25;
   display: flex;
   gap: 6px;
   pointer-events: auto;
   opacity: 0;
   transition: opacity 0.15s ease;
-  z-index: 25;
 }
 
 .char3dMediaRoot:hover [data-hg-portrait-actions="true"],
@@ -1207,39 +1234,39 @@
 .char3dPortraitImg {
   position: relative;
   z-index: 10;
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center 20%;
-  filter: grayscale(100%) contrast(1.4) brightness(1.2);
   mix-blend-mode: multiply;
-  display: block;
+  filter: grayscale(100%) contrast(1.4) brightness(1.2);
 }
 
 .char3dIdentityCell {
+  box-sizing: border-box;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 120px;
   grid-template-rows: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 120px;
   align-items: stretch;
-  border-bottom: 1px solid var(--hg-id-border);
+  min-width: 0;
   height: 160px;
   min-height: 160px;
   max-height: 160px;
   overflow: hidden;
-  min-width: 0;
-  box-sizing: border-box;
+  border-bottom: 1px solid var(--hg-id-border);
 }
 
 .char3dNameBlock {
-  padding: 12px 20px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border-right: 1px solid var(--hg-id-border);
   min-width: 0;
   min-height: 0;
+  padding: 12px 20px;
   overflow: hidden;
-  box-sizing: border-box;
+  border-right: 1px solid var(--hg-id-border);
 }
 
 .char3dNameHeading {
@@ -1253,13 +1280,13 @@
 }
 
 .char3dName {
+  margin-bottom: 0;
   font-family: var(--hg-id-serif);
   font-size: clamp(1.55rem, 0.5rem + 5.5cqi, 2rem);
   font-weight: 500;
   line-height: 1.05;
-  letter-spacing: -0.03em;
-  margin-bottom: 0;
   color: #ffffff;
+  letter-spacing: -0.03em;
 }
 
 .char3dName span {
@@ -1267,24 +1294,24 @@
 }
 
 .char3dNameTail {
-  flex: 1 1 auto;
-  min-height: 0;
+  box-sizing: border-box;
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 6px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  min-height: 0;
   padding-right: 2px;
-  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .char3dRole {
   font-family: var(--hg-id-sans);
   font-size: 0.8rem;
   font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
   color: #ffffff;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .char3dAux {
@@ -1300,42 +1327,42 @@
 }
 
 .char3dAuxValue {
-  font-family: var(--hg-id-sans);
-  font-weight: 500;
-  font-size: 0.65rem;
-  color: #ffffff;
   margin-top: 2px;
+  font-family: var(--hg-id-sans);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: #ffffff;
   letter-spacing: 0;
 }
 
 .char3dDirectiveMono {
-  font-family: var(--font-geist-mono), monospace;
-  font-weight: 500;
-  font-size: 0.62rem;
-  color: #e5e5e5;
   margin-top: 2px;
-  letter-spacing: 0.02em;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.62rem;
+  font-weight: 500;
   line-height: 1.35;
+  color: #e5e5e5;
+  letter-spacing: 0.02em;
   word-break: break-word;
 }
 
 .char3dMetaBlock {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  box-sizing: border-box;
 }
 
 .char3dMetaRow {
-  flex: 1 1 0;
-  padding: 12px 20px;
+  box-sizing: border-box;
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
   justify-content: center;
   min-height: 0;
-  box-sizing: border-box;
+  padding: 12px 20px;
 }
 
 .char3dMetaRow:not(:last-child) {
@@ -1343,13 +1370,13 @@
 }
 
 .char3dMetaValue {
-  font-family: var(--hg-id-sans);
-  font-weight: 500;
-  font-size: 0.8rem;
-  color: #ffffff;
   margin-top: 4px;
-  letter-spacing: 0;
+  font-family: var(--hg-id-sans);
+  font-size: 0.8rem;
+  font-weight: 500;
   line-height: 1.25;
+  color: #ffffff;
+  letter-spacing: 0;
   word-break: break-word;
 }
 
@@ -1357,8 +1384,8 @@
   display: inline-block;
   align-self: flex-start;
   padding: 2px 5px;
-  background: #262626;
   color: #262626;
+  background: #262626;
   transition:
     background-color 0.2s ease,
     color 0.2s ease;
@@ -1366,23 +1393,23 @@
 
 .char3dCardMaterial:hover .char3dRedacted,
 .char3dRedacted:focus {
-  background: transparent;
   color: #fafafa;
+  background: transparent;
 }
 
 .char3dFooterCell {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  box-sizing: border-box;
   min-height: 60px;
+  padding: 0 20px;
 }
 
 .char3dBarcode {
-  height: 24px;
-  width: 140px;
   flex-shrink: 0;
+  width: 140px;
+  height: 24px;
   background: linear-gradient(
     to right,
     #fff 0,
@@ -1509,17 +1536,17 @@
   font-family: var(--hg-id-sans);
   font-size: 0.65rem;
   font-weight: 500;
-  color: var(--hg-id-muted);
-  letter-spacing: 0;
-  text-align: right;
   line-height: 1.3;
+  color: var(--hg-id-muted);
+  text-align: right;
+  letter-spacing: 0;
 }
 
 .char3dNotesCell {
-  padding: 14px 20px 18px;
-  border-top: 1px solid var(--hg-id-border);
   box-sizing: border-box;
   min-width: 0;
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--hg-id-border);
 }
 
 .char3dNotesCell > .char3dLabel {
@@ -1564,8 +1591,8 @@
 
 .char3dShell [contenteditable="true"] ::selection,
 .charSkShell [contenteditable="true"] ::selection {
-  background: color-mix(in oklch, var(--sem-focus-ring) 44%, black);
   color: #fafafa;
+  background: color-mix(in oklch, var(--sem-focus-ring) 44%, black);
 }
 
 /* Notes well: inset field affordance while editing; keyboard gets full ring. */
@@ -1580,23 +1607,27 @@
 .charSkNotesBody:focus-visible {
   box-shadow:
     inset 0 0 0 1px color-mix(in oklch, var(--sem-focus-ring) 55%, transparent),
-    0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sem-focus-ring) 38%, transparent);
+    0 0 0 var(--sem-focus-ring-width)
+    color-mix(in oklch, var(--sem-focus-ring) 38%, transparent);
 }
 
 /* v11 empty notes: no notes-well inset / focus ring while still placeholder — same quiet preview as blur. */
-.charSkShellV11 .charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"]:focus-within {
+.charSkShellV11
+.charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"]:focus-within {
   background: transparent;
   box-shadow: none;
 }
 
-.charSkShellV11 .charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"]:focus-visible {
+.charSkShellV11
+  .charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"]:focus-visible {
   box-shadow: none;
 }
 
 /* v8 inline editables (name lines, meta, role, aux…): accent ring. */
 .char3dShell [contenteditable="true"]:not(.char3dNotesBody):focus-visible {
   border-radius: 3px;
-  box-shadow: 0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sem-focus-ring) 42%, transparent);
+  box-shadow: 0 0 0 var(--sem-focus-ring-width)
+    color-mix(in oklch, var(--sem-focus-ring) 42%, transparent);
 }
 
 /*
@@ -1612,21 +1643,23 @@
  * Fullscreen focus (dark scrim): restore clear rings on v11 fields — canvas keeps rings off for the
  * quiet plate; in focus, fields must read as first-class controls.
  */
-[data-focus-body-editor="true"] .charSkShellV11 [data-hg-lore-field]:focus-visible {
+[data-focus-body-editor="true"]
+  .charSkShellV11
+  [data-hg-lore-field]:focus-visible {
   outline: none;
+  border-radius: 4px;
   box-shadow:
     0 0 0 2px color-mix(in oklch, var(--sem-focus-ring) 72%, transparent),
     0 0 0 5px color-mix(in oklch, var(--sem-focus-ring) 18%, transparent);
-  border-radius: 4px;
 }
 
 [data-focus-body-editor="true"]
   .charSkShellV11
   .charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"]:focus-visible {
+  border-radius: 6px;
   box-shadow:
     0 0 0 2px color-mix(in oklch, var(--sem-focus-ring) 62%, transparent),
     0 0 0 5px color-mix(in oklch, var(--sem-focus-ring) 16%, transparent);
-  border-radius: 6px;
 }
 
 @media (max-width: 360px) {
@@ -1638,9 +1671,9 @@
   }
 
   .char3dNameBlock {
+    min-height: 120px;
     border-right: none;
     border-bottom: 1px solid var(--hg-id-border);
-    min-height: 120px;
   }
 
   .char3dNameTail {
@@ -1664,47 +1697,60 @@
 
 /* Character v9 · Dark ID plate; inline edits share v8 focus/selection rules via .charSkShell. */
 .charSkShell {
-  margin: 0;
-  width: 100%;
-  box-sizing: border-box;
-  min-width: 0;
-  /* Palette: sys neutrals + sem text only (avoids mixed ad-hoc warm/cool hex grays). */
   --sk-id-surface: var(--sys-color-neutral-950);
   /* Softer rim + dividers: blend toward surface so lines read as low-contrast hairlines */
-  --sk-id-edge: color-mix(in oklch, var(--sk-id-surface) 74%, var(--sys-color-neutral-800));
-  --sk-id-line: color-mix(in oklch, var(--sys-color-white) 3.2%, var(--sk-id-surface));
+  --sk-id-edge: color-mix(
+    in oklch,
+    var(--sk-id-surface) 74%,
+    var(--sys-color-neutral-800)
+  );
+  --sk-id-line: color-mix(
+    in oklch,
+    var(--sys-color-white) 3.2%,
+    var(--sk-id-surface)
+  );
   --sk-id-mute: var(--sem-text-muted);
   --sk-id-text: var(--sem-text-primary);
-  --sk-id-notes-prose: color-mix(in oklch, var(--sem-text-primary) 90%, var(--sk-id-surface));
+  --sk-id-notes-prose: color-mix(
+    in oklch,
+    var(--sem-text-primary) 90%,
+    var(--sk-id-surface)
+  );
   /* Match v8 black-ID credential typography (`char3dLabel` / `char3dAuthCode`). */
-  --sk-id-header-sans: var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
+  --sk-id-header-sans:
+    var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
   /* Identity + notes horizontal rhythm (siblings under `.charSkGrid`). */
   --char-sk-id-pad-x: 14px;
   --char-sk-id-pad-y: 12px;
   /* SVG fractal noise (same family as image nodes / paper badge); tiled under plate paint. */
   --sk-id-card-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='skIdGrain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23skIdGrain)' opacity='0.035'/%3E%3C/svg%3E");
+  box-sizing: border-box;
   display: flex;
   justify-content: center;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
 }
 
 .charSkCard {
+  position: relative;
   width: 100%;
   max-width: var(--entity-width, 340px);
   margin: 0 auto;
-  position: relative;
-  cursor: pointer;
-  container-type: inline-size;
   container-name: charsk;
+  container-type: inline-size;
+  cursor: pointer;
 }
 
 .charSkCardMaterial {
   position: relative;
   width: 100%;
+  overflow: hidden;
   background: var(--sk-id-surface);
   border: 1px solid var(--sk-id-edge);
   border-radius: 12px;
-  box-shadow: 0 14px 36px color-mix(in oklch, var(--sys-color-black) 48%, transparent);
-  overflow: hidden;
+  box-shadow: 0 14px 36px
+    color-mix(in oklch, var(--sys-color-black) 48%, transparent);
 }
 
 .charSkShell:not(.charSkShellV10):not(.charSkShellV11) .charSkCardMaterial {
@@ -1715,9 +1761,21 @@
 
 /* Character v10 — matte plastic ID: beveled rim, top sheen, deeper portrait well (v9 + skeuo). */
 .charSkShellV10 {
-  --sk-id-surface: color-mix(in oklch, var(--sys-color-black) 14%, var(--sys-color-neutral-950));
-  --sk-id-edge: color-mix(in oklch, var(--sk-id-surface) 62%, var(--sys-color-neutral-700));
-  --sk-id-line: color-mix(in oklch, var(--sys-color-white) 4.5%, var(--sk-id-surface));
+  --sk-id-surface: color-mix(
+    in oklch,
+    var(--sys-color-black) 14%,
+    var(--sys-color-neutral-950)
+  );
+  --sk-id-edge: color-mix(
+    in oklch,
+    var(--sk-id-surface) 62%,
+    var(--sys-color-neutral-700)
+  );
+  --sk-id-line: color-mix(
+    in oklch,
+    var(--sys-color-white) 4.5%,
+    var(--sk-id-surface)
+  );
 }
 
 .charSkShellV10 .charSkCardMaterial {
@@ -1740,31 +1798,33 @@
 }
 
 .charSkShellV10 .charSkCardMaterial::before {
-  content: "";
   position: absolute;
   inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
   z-index: 0;
+  pointer-events: none;
+  content: "";
   background:
     radial-gradient(
       ellipse 120% 70% at 50% -8%,
       color-mix(in oklch, var(--sys-color-white) 14%, transparent) 0%,
       transparent 48%
     ),
-    linear-gradient(180deg, color-mix(in oklch, var(--sys-color-white) 5%, transparent) 0%, transparent 28%);
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--sys-color-white) 5%, transparent) 0%,
+      transparent 28%
+    );
+  border-radius: inherit;
   mix-blend-mode: soft-light;
   opacity: 0.85;
 }
 
 .charSkShellV10 .charSkCardMaterial::after {
-  content: "";
   position: absolute;
   inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
   z-index: 0;
-  opacity: 0.22;
+  pointer-events: none;
+  content: "";
   background-image: repeating-linear-gradient(
     -12deg,
     transparent,
@@ -1772,7 +1832,9 @@
     color-mix(in oklch, var(--sys-color-white) 2%, transparent) 2px,
     color-mix(in oklch, var(--sys-color-white) 2%, transparent) 3px
   );
+  border-radius: inherit;
   mix-blend-mode: overlay;
+  opacity: 0.22;
 }
 
 .charSkShellV10 .charSkCardMaterial:hover {
@@ -1802,7 +1864,11 @@
 }
 
 .charSkShellV10 .charSkLanyard {
-  background: color-mix(in oklch, var(--sys-color-black) 22%, var(--sys-color-neutral-950));
+  background: color-mix(
+    in oklch,
+    var(--sys-color-black) 22%,
+    var(--sys-color-neutral-950)
+  );
   box-shadow:
     inset 0 4px 6px color-mix(in oklch, var(--sys-color-black) 92%, transparent),
     inset 0 -1px 0 color-mix(in oklch, var(--sys-color-white) 6%, transparent),
@@ -1812,9 +1878,14 @@
 }
 
 .charSkShellV10 .charSkPhotoWrap {
+  background: color-mix(
+    in oklch,
+    var(--sys-color-black) 28%,
+    var(--sk-id-surface)
+  );
   border: none;
-  box-shadow: inset 0 2px 5px color-mix(in oklch, var(--sys-color-black) 42%, transparent);
-  background: color-mix(in oklch, var(--sys-color-black) 28%, var(--sk-id-surface));
+  box-shadow: inset 0 2px 5px
+    color-mix(in oklch, var(--sys-color-black) 42%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1822,7 +1893,8 @@
     box-shadow:
       0 0 0 1px color-mix(in oklch, var(--sys-color-black) 65%, transparent),
       0 1px 0 color-mix(in oklch, var(--sys-color-white) 7%, transparent) inset,
-      0 -1px 0 color-mix(in oklch, var(--sys-color-black) 35%, transparent) inset,
+      0 -1px 0 color-mix(in oklch, var(--sys-color-black) 35%, transparent)
+      inset,
       0 20px 48px color-mix(in oklch, var(--sys-color-black) 58%, transparent),
       0 6px 16px color-mix(in oklch, var(--sys-color-black) 38%, transparent);
   }
@@ -1837,13 +1909,30 @@
   /* ~5% lighter plate than v10 so near-black marker strips read clearly (still sys neutrals + white). */
   --sk-id-surface: color-mix(
     in oklch,
-    color-mix(in oklch, var(--sys-color-black) 14%, var(--sys-color-neutral-950)) 95%,
+    color-mix(
+        in oklch,
+        var(--sys-color-black) 14%,
+        var(--sys-color-neutral-950)
+      )
+      95%,
     var(--sys-color-white) 5%
   );
-  --sk-id-edge: color-mix(in oklch, var(--sk-id-surface) 62%, var(--sys-color-neutral-700));
-  --sk-id-line: color-mix(in oklch, var(--sys-color-white) 4.5%, var(--sk-id-surface));
+  --sk-id-edge: color-mix(
+    in oklch,
+    var(--sk-id-surface) 62%,
+    var(--sys-color-neutral-700)
+  );
+  --sk-id-line: color-mix(
+    in oklch,
+    var(--sys-color-white) 4.5%,
+    var(--sk-id-surface)
+  );
   /* Snippet `--marker: #0a0a0a` (guest-check “Classified Guest Check - Redacted”). */
-  --sk-v11-marker: color-mix(in oklch, var(--sys-color-black) 74%, var(--sys-color-neutral-900));
+  --sk-v11-marker: color-mix(
+    in oklch,
+    var(--sys-color-black) 74%,
+    var(--sys-color-neutral-900)
+  );
   /* Snippet uses 5px both sides; we bias ~2px left so rotation + mask read centered on the value. */
   --sk-v11-marker-inset-left: 2px;
   --sk-v11-marker-inset-right: 5px;
@@ -1863,7 +1952,11 @@
   --sk-v11-marker-gloss: 0.95%;
   --sk-v11-marker-tail: 95%;
   /* Slot color matches the scene behind the card so the notch reads as a real passthrough. */
-  --sk-v11-slot-ink: color-mix(in oklch, var(--sys-color-black) 84%, var(--sys-color-neutral-950));
+  --sk-v11-slot-ink: color-mix(
+    in oklch,
+    var(--sys-color-black) 84%,
+    var(--sys-color-neutral-950)
+  );
   /*
    * Identity band: preferred px width for the name column (tune here only).
    * v11 keeps the 2-column layout, but will clamp/shrink this track when the
@@ -1892,31 +1985,33 @@
 }
 
 .charSkShellV11 .charSkCardMaterial::before {
-  content: "";
   position: absolute;
   inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
   z-index: 0;
+  pointer-events: none;
+  content: "";
   background:
     radial-gradient(
       ellipse 120% 70% at 50% -8%,
       color-mix(in oklch, var(--sys-color-white) 14%, transparent) 0%,
       transparent 48%
     ),
-    linear-gradient(180deg, color-mix(in oklch, var(--sys-color-white) 5%, transparent) 0%, transparent 28%);
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--sys-color-white) 5%, transparent) 0%,
+      transparent 28%
+    );
+  border-radius: inherit;
   mix-blend-mode: soft-light;
   opacity: 0.85;
 }
 
 .charSkShellV11 .charSkCardMaterial::after {
-  content: "";
   position: absolute;
   inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
   z-index: 0;
-  opacity: 0.22;
+  pointer-events: none;
+  content: "";
   background-image: repeating-linear-gradient(
     -12deg,
     transparent,
@@ -1924,7 +2019,9 @@
     color-mix(in oklch, var(--sys-color-white) 2%, transparent) 2px,
     color-mix(in oklch, var(--sys-color-white) 2%, transparent) 3px
   );
+  border-radius: inherit;
   mix-blend-mode: overlay;
+  opacity: 0.22;
 }
 
 .charSkShellV11 .charSkCardMaterial:hover {
@@ -1950,12 +2047,15 @@
 
 /* Identity band: keep 2-column layout and shrink name track first on tight widths. */
 .charSkShellV11 .charSkIdentityCell {
-  grid-template-columns: minmax(0, min(var(--char-sk-v11-name-col-w), calc(100% - 142px))) 142px;
-  min-height: 153px;
-  height: auto;
-  max-height: none;
-  align-items: stretch;
   grid-template-rows: minmax(0, auto);
+  grid-template-columns: minmax(
+      0,
+      min(var(--char-sk-v11-name-col-w), calc(100% - 142px))
+    ) 142px;
+  align-items: stretch;
+  height: auto;
+  min-height: 153px;
+  max-height: none;
 }
 
 .charSkShellV11 .charSkIdentityCell > .charSkNameBlock {
@@ -1965,10 +2065,10 @@
 }
 
 .charSkShellV11 .charSkIdentityCell > .charSkMetaBlock {
+  justify-self: stretch;
   width: 142px;
   min-width: 142px;
   max-width: 142px;
-  justify-self: stretch;
 }
 
 .charSkShellV11 .charSkHeaderCell {
@@ -1981,21 +2081,21 @@
 
 /* Faux punch-through slot (replaces unstable full-card masking while preserving v11 silhouette). */
 .charSkShellV11 .charSkHeaderCell::before {
-  content: "";
   position: absolute;
-  left: 50%;
   top: 50%;
+  left: 50%;
+  z-index: 3;
   width: 40px;
   height: 8px;
-  transform: translate(-50%, -50%);
-  border-radius: 999px;
+  pointer-events: none;
+  content: "";
   background: var(--sk-v11-slot-ink);
+  border-radius: 999px;
   box-shadow:
     inset 0 1px 1px color-mix(in oklch, var(--sys-color-black) 82%, transparent),
     inset 0 -1px 0 color-mix(in oklch, var(--sys-color-white) 6%, transparent),
     0 0 0 1px color-mix(in oklch, var(--sys-color-black) 60%, transparent);
-  pointer-events: none;
-  z-index: 3;
+  transform: translate(-50%, -50%);
 }
 
 @supports (width: 1cqi) {
@@ -2006,21 +2106,26 @@
 
 .charSkShellV11 .charSkLanyard {
   background: transparent;
-  box-shadow: none;
   border: none;
+  box-shadow: none;
 }
 
 .charSkShellV11 .charSkPhotoCell {
-  aspect-ratio: 4 / 3;
   width: 100%;
   /* Floor when aspect-ratio fails to resolve inside nested grid/flex (common on WebKit). */
   min-height: 200px;
+  aspect-ratio: 4 / 3;
 }
 
 .charSkShellV11 .charSkPhotoWrap {
+  background: color-mix(
+    in oklch,
+    var(--sys-color-black) 28%,
+    var(--sk-id-surface)
+  );
   border: none;
-  box-shadow: inset 0 2px 5px color-mix(in oklch, var(--sys-color-black) 42%, transparent);
-  background: color-mix(in oklch, var(--sys-color-black) 28%, var(--sk-id-surface));
+  box-shadow: inset 0 2px 5px
+    color-mix(in oklch, var(--sys-color-black) 42%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2028,7 +2133,8 @@
     box-shadow:
       0 0 0 1px color-mix(in oklch, var(--sys-color-black) 65%, transparent),
       0 1px 0 color-mix(in oklch, var(--sys-color-white) 7%, transparent) inset,
-      0 -1px 0 color-mix(in oklch, var(--sys-color-black) 35%, transparent) inset,
+      0 -1px 0 color-mix(in oklch, var(--sys-color-black) 35%, transparent)
+      inset,
       0 20px 48px color-mix(in oklch, var(--sys-color-black) 58%, transparent),
       0 6px 16px color-mix(in oklch, var(--sys-color-black) 38%, transparent);
   }
@@ -2041,36 +2147,36 @@
 .charSkGrid {
   display: grid;
   grid-template-rows: 44px minmax(188px, 300px) 168px auto;
-  border-radius: 12px;
-  min-height: 0;
   width: 100%;
+  min-height: 0;
+  border-radius: 12px;
 }
 
 .charSkHeaderCell {
   position: relative;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--sk-id-line);
   box-sizing: border-box;
   min-height: 44px;
+  padding: 0 16px;
   background: var(--sk-id-surface);
+  border-bottom: 1px solid var(--sk-id-line);
 }
 
 .charSkLanyard {
   position: absolute;
-  left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%);
+  left: 50%;
+  z-index: 1;
   width: 40px;
   height: 8px;
-  border-radius: 8px;
+  pointer-events: none;
   background: #050505;
+  border-radius: 8px;
   box-shadow:
     inset 0 3px 5px rgba(0, 0, 0, 0.95),
     inset 0 -1px 0 rgba(255, 255, 255, 0.05),
     0 0 0 1px rgba(0, 0, 0, 0.65),
     0 1px 0 rgba(255, 255, 255, 0.05);
-  pointer-events: none;
-  z-index: 1;
+  transform: translate(-50%, -50%);
 }
 
 .charSkHeaderRow {
@@ -2079,8 +2185,8 @@
   display: grid;
   /* Plain-px fallback: unsupported `cqi` invalidates the whole `grid-template-columns` in WebKit. */
   grid-template-columns: minmax(0, 1fr) 46px auto;
-  align-items: center;
   column-gap: 8px;
+  align-items: center;
   min-height: 44px;
 }
 
@@ -2091,15 +2197,15 @@
 }
 
 .charSkHeaderLeft {
-  grid-column: 1;
-  min-width: 0;
-  width: 100%;
-  max-width: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
+  grid-column: 1;
   gap: 2px;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .charSkHeaderLeft .charSkFieldLabel {
@@ -2109,50 +2215,50 @@
 .charSkHeaderMeta {
   display: block;
   width: 100%;
-  font-family: var(--sk-id-header-sans);
-  font-size: 0.65rem;
-  font-weight: 500;
-  color: var(--sem-text-muted);
-  letter-spacing: 0;
-  line-height: 1.3;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: var(--sk-id-header-sans);
+  font-size: 0.65rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--sem-text-muted);
+  letter-spacing: 0;
   white-space: nowrap;
 }
 
 .charSkFieldLabel {
   display: block;
+  margin-bottom: 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 9px;
   font-weight: 600;
+  color: color-mix(in oklch, var(--sem-text-primary) 42%, transparent);
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: color-mix(in oklch, var(--sem-text-primary) 42%, transparent);
-  margin-bottom: 0;
 }
 
 .charSkExpandBtn {
-  grid-column: 3;
-  justify-self: end;
+  box-sizing: border-box;
   display: inline-flex;
+  flex-shrink: 0;
+  grid-column: 3;
   align-items: center;
   justify-content: center;
+  justify-self: end;
   width: var(--sys-control-height-xs);
-  height: var(--sys-control-height-xs);
   min-width: var(--sys-control-height-xs);
+  height: var(--sys-control-height-xs);
   padding: 0;
   margin: 0;
-  flex-shrink: 0;
   line-height: 0;
+  color: var(--cmp-button-card-dark-fg-default);
   cursor: pointer;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
+  background: var(--cmp-button-card-dark-bg-default);
   border: 1px solid transparent;
   border-radius: 6px;
-  background: var(--cmp-button-card-dark-bg-default);
-  color: var(--cmp-button-card-dark-fg-default);
-  box-sizing: border-box;
   transition:
     background var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
     color var(--sys-motion-duration-fast) var(--sys-motion-ease-standard),
@@ -2180,24 +2286,25 @@
 
 .charSkExpandBtn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 var(--sem-focus-ring-width) color-mix(in oklch, var(--sem-focus-ring) 35%, transparent);
+  box-shadow: 0 0 0 var(--sem-focus-ring-width)
+    color-mix(in oklch, var(--sem-focus-ring) 35%, transparent);
 }
 
 .charSkPhotoCell {
   position: relative;
-  border-bottom: 1px solid var(--sk-id-line);
   min-height: 0;
   overflow: hidden;
   background: var(--sk-id-surface);
+  border-bottom: 1px solid var(--sk-id-line);
 }
 
 .charSkPhotoWrap {
   position: absolute;
   inset: 14px;
-  border-radius: 8px;
-  border: none;
-  background: var(--sk-id-surface);
   overflow: hidden;
+  background: var(--sk-id-surface);
+  border: none;
+  border-radius: 8px;
 }
 
 .charSkMediaRoot {
@@ -2210,18 +2317,18 @@
 .charSkMediaPlaceholder {
   position: absolute;
   inset: 0;
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
   padding: 12px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 11px;
   font-weight: 400;
   color: var(--sk-id-mute);
-  letter-spacing: 0.05em;
+  text-align: center;
   text-transform: uppercase;
-  z-index: 5;
+  letter-spacing: 0.05em;
   pointer-events: none;
 }
 
@@ -2229,12 +2336,12 @@
   position: absolute;
   right: 6px;
   bottom: 6px;
+  z-index: 25;
   display: flex;
   gap: 6px;
   pointer-events: auto;
   opacity: 0;
   transition: opacity 0.15s ease;
-  z-index: 25;
 }
 
 .charSkMediaRoot:hover [data-hg-portrait-actions="true"],
@@ -2252,94 +2359,98 @@
 .charSkPortraitImg {
   position: relative;
   z-index: 10;
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center 20%;
-  filter: grayscale(100%) contrast(1.25) brightness(1.15);
   mix-blend-mode: multiply;
-  display: block;
+  filter: grayscale(100%) contrast(1.25) brightness(1.15);
 }
 
 /* Fallback when stored HTML predates `HeartgardenMediaPlaceholderImg` module classes. */
 .charSkPortraitImg[data-hg-portrait-placeholder="true"],
 .charSkPortraitImg[data-hg-heartgarden-media-placeholder="true"] {
-  filter: none;
-  mix-blend-mode: normal;
+  box-sizing: border-box;
   object-fit: contain;
   object-position: center center;
-  box-sizing: border-box;
   /* Unified neutral placeholder surface (same as HeartgardenMediaPlaceholderImg.neutral). */
-  background-color: color-mix(in oklch, var(--sys-color-white) 5%, var(--sys-color-neutral-925));
+  background-color: color-mix(
+    in oklch,
+    var(--sys-color-white) 5%,
+    var(--sys-color-neutral-925)
+  );
+  mix-blend-mode: normal;
+  filter: none;
 }
 
 .charSkIdentityCell {
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 142px;
   align-items: stretch;
-  border-bottom: 1px solid var(--sk-id-line);
-  min-height: 168px;
+  min-width: 0;
   height: 168px;
+  min-height: 168px;
   max-height: 168px;
   overflow: hidden;
-  min-width: 0;
-  box-sizing: border-box;
   background: var(--sk-id-surface);
+  border-bottom: 1px solid var(--sk-id-line);
 }
 
 /* Shared caps label metrics so left/right columns line up on one grid. */
 .charSkIdentityCell .charSkFieldLabel {
-  line-height: 1.2;
   min-height: 1.2em;
+  line-height: 1.2;
 }
 
 /* One composite column: label + name + role (no 50/50 split) so long names use full width. */
 .charSkNameBlock {
+  box-sizing: border-box;
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
   /* Same as label → value in `.charSkMetaRow` (4px under caps labels). */
   gap: 4px;
-  padding: var(--char-sk-id-pad-y) var(--char-sk-id-pad-x);
-  border-right: 1px solid var(--sk-id-line);
+  align-items: stretch;
+  justify-content: flex-start;
   min-width: 0;
   min-height: 0;
-  flex: 1 1 auto;
+  padding: var(--char-sk-id-pad-y) var(--char-sk-id-pad-x);
   overflow-x: hidden;
   overflow-y: auto;
-  box-sizing: border-box;
   background: var(--sk-id-surface);
+  border-right: 1px solid var(--sk-id-line);
 }
 
 .charSkNameHeading {
-  min-width: 0;
-  flex: 0 1 auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: stretch;
-  padding: 0;
   box-sizing: border-box;
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  min-width: 0;
+  padding: 0;
 }
 
 .charSkNameHeading .charSkFieldLabel {
-  margin-bottom: 4px;
   flex-shrink: 0;
+  margin-bottom: 4px;
 }
 
 .charSkDisplayName {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 1.35rem;
-  font-weight: 650;
-  letter-spacing: -0.025em;
-  line-height: 1.14;
-  color: var(--sk-id-text);
   min-width: 0;
   min-height: 0;
   margin: 0;
-  outline: none;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 1.35rem;
+  font-weight: 650;
+  line-height: 1.14;
+  color: var(--sk-id-text);
+  letter-spacing: -0.025em;
   overflow-wrap: anywhere;
+  outline: none;
 }
 
 @supports (width: 1cqi) {
@@ -2349,24 +2460,24 @@
 }
 
 .charSkNameTail {
+  box-sizing: border-box;
+  display: block;
   flex: 0 0 auto;
   min-width: 0;
-  display: block;
   padding: 0;
   margin: 0;
   border: none;
-  box-sizing: border-box;
 }
 
 .charSkRole {
+  display: block;
+  min-width: 0;
+  margin: 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 13px;
   font-weight: 350;
   line-height: 1.4;
   color: color-mix(in oklch, var(--sem-text-primary) 78%, transparent);
-  min-width: 0;
-  margin: 0;
-  display: block;
 }
 
 .charSkMetaBlock {
@@ -2389,39 +2500,41 @@
 
 /* Keep row floors aligned, but let long/pending content expand instead of being clipped. */
 .charSkShellV11 .charSkMetaBlock > .charSkMetaRow {
-  min-height: 76px;
-  height: auto;
-  max-height: none;
   box-sizing: border-box;
+  height: auto;
+  min-height: 76px;
+  max-height: none;
 }
 
 /*
  * Row border box is 76px incl. padding; grow the value + stretch the v11 strip to fill each slot.
  */
-.charSkShellV11 .charSkMetaBlock > .charSkMetaRow .charSkMetaValue[data-hg-lore-field] {
+.charSkShellV11 .charSkMetaBlock
+  > .charSkMetaRow
+  .charSkMetaValue[data-hg-lore-field] {
   flex: 1 1 auto;
   align-self: stretch;
-  min-height: max(1.35em, var(--sk-v11-marker-h));
   height: auto;
+  min-height: max(1.35em, var(--sk-v11-marker-h));
 }
 
 .charSkShellV11
   .charSkMetaBlock
   > .charSkMetaRow
   .charSkMetaValue[data-hg-lore-placeholder="true"]::after {
-  height: auto;
   bottom: 0;
+  height: auto;
 }
 
 /* v11: name column fills identity row height; width is literal px on `.charSkIdentityCell`. */
 .charSkShellV11 .charSkNameBlock {
+  gap: 7px;
   align-self: stretch;
   width: 100%;
   min-width: 0;
-  min-height: 0;
   height: auto;
+  min-height: 0;
   max-height: none;
-  gap: 7px;
 }
 
 /* v11: meta value is a span — block box so marker / placeholder align to the real typing line. */
@@ -2430,13 +2543,13 @@
 }
 
 .charSkMetaRow {
-  min-height: 0;
-  padding: var(--char-sk-id-pad-y) var(--char-sk-id-pad-x);
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
   align-items: stretch;
-  box-sizing: border-box;
+  justify-content: flex-start;
+  min-height: 0;
+  padding: var(--char-sk-id-pad-y) var(--char-sk-id-pad-x);
   background: var(--sk-id-surface);
 }
 
@@ -2446,8 +2559,8 @@
 }
 
 .charSkMetaRow .charSkFieldLabel {
-  margin-bottom: 4px;
   flex-shrink: 0;
+  margin-bottom: 4px;
 }
 
 .charSkMetaRow:not(:last-child) {
@@ -2455,21 +2568,21 @@
 }
 
 .charSkMetaValue {
+  min-width: 0;
+  min-height: 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-weight: 400;
   font-size: 13px;
+  font-weight: 400;
   line-height: 1.4;
   color: var(--sk-id-text);
   word-break: break-word;
-  min-width: 0;
-  min-height: 0;
   overflow-wrap: anywhere;
 }
 
 .charSkNotesCell {
-  padding: var(--char-sk-id-pad-y) var(--char-sk-id-pad-x);
   box-sizing: border-box;
   min-width: 0;
+  padding: var(--char-sk-id-pad-y) var(--char-sk-id-pad-x);
   background: var(--sk-id-surface);
 }
 
@@ -2481,8 +2594,8 @@
   margin: 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 13px;
-  line-height: 1.65;
   font-weight: 400;
+  line-height: 1.65;
   color: color-mix(in oklch, var(--sem-text-primary) 87%, transparent);
   letter-spacing: 0;
   transition: background-color 0.15s ease;
@@ -2503,7 +2616,8 @@
 }
 
 .charSkShell [data-hg-lore-field][data-hg-lore-placeholder="true"]:focus,
-.charSkShell [data-hg-lore-field][data-hg-lore-placeholder="true"]:focus-within {
+.charSkShell
+  [data-hg-lore-field][data-hg-lore-placeholder="true"]:focus-within {
   color: var(--sk-id-text);
 }
 
@@ -2522,21 +2636,25 @@
 
 @keyframes charSkV11MarkerStripWipe {
   from {
-    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+      skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
   }
 
   to {
-    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+      skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   }
 }
 
 @keyframes charSkV11MarkerBlockWipe {
   from {
-    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
+    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+      skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
   }
 
   to {
-    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
+    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+      skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   }
 }
 
@@ -2570,8 +2688,8 @@
 .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"],
 .charSkShellV11 .charSkMetaValue[data-hg-lore-placeholder="true"],
 .charSkShellV11 .charSkRole[data-hg-lore-placeholder="true"] {
-  overflow: hidden;
   contain: paint;
+  overflow: hidden;
   border-radius: 2px;
 }
 
@@ -2583,290 +2701,413 @@
 /* Single-line strips: stable box aligned to marker line height (no shrink when placeholder clears). */
 .charSkShellV11 .charSkRole[data-hg-lore-placeholder="true"],
 .charSkShellV11 .charSkMetaValue[data-hg-lore-placeholder="true"] {
-  min-height: max(1.35em, var(--sk-v11-marker-h));
-  height: max(1.35em, var(--sk-v11-marker-h));
   box-sizing: border-box;
+  height: max(1.35em, var(--sk-v11-marker-h));
+  min-height: max(1.35em, var(--sk-v11-marker-h));
 }
 
-.charSkShellV11 .charSkRole[data-hg-lore-field]:not([data-hg-lore-placeholder="true"]),
-.charSkShellV11 .charSkMetaValue[data-hg-lore-field]:not([data-hg-lore-placeholder="true"]) {
-  min-height: max(1.35em, var(--sk-v11-marker-h));
+.charSkShellV11
+  .charSkRole[data-hg-lore-field]:not([data-hg-lore-placeholder="true"]),
+.charSkShellV11
+  .charSkMetaValue[data-hg-lore-field]:not([data-hg-lore-placeholder="true"]) {
   box-sizing: border-box;
+  min-height: max(1.35em, var(--sk-v11-marker-h));
 }
 
 /*
  * v11 `data-hg-lore-ph`: position from JS (`--hg-lore-ph-*`); logical start of field (stable vs mount).
  * Strip marker band uses the same vars so stroke and caption share the caret line box.
  */
-.charSkShellV11 .charSkRole[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before,
-.charSkShellV11 .charSkMetaValue[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
-  content: attr(data-hg-lore-ph);
+.charSkShellV11
+.charSkRole[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before,
+.charSkShellV11
+  .charSkMetaValue[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
   position: absolute;
-  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px));
-  right: var(--sk-v11-marker-inset-right);
   top: var(--hg-lore-ph-y, 0px);
-  height: var(--hg-lore-ph-lh, var(--sk-v11-marker-h));
-  transform: none;
+  right: var(--sk-v11-marker-inset-right);
+  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px));
+  z-index: 1;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  z-index: 1;
   max-width: 100%;
-  box-sizing: border-box;
+  height: var(--hg-lore-ph-lh, var(--sk-v11-marker-h));
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  pointer-events: none;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 0.68rem;
   font-weight: 450;
   line-height: 1.2;
+  color: color-mix(
+    in oklch,
+    var(--sem-text-muted) 68%,
+    var(--sk-id-surface)
+  ) !important;
+  -webkit-text-fill-color: color-mix(
+    in oklch,
+    var(--sem-text-muted) 68%,
+    var(--sk-id-surface)
+  );
   letter-spacing: 0.04em;
-  color: color-mix(in oklch, var(--sem-text-muted) 68%, var(--sk-id-surface)) !important;
-  -webkit-text-fill-color: color-mix(in oklch, var(--sem-text-muted) 68%, var(--sk-id-surface));
+  white-space: nowrap;
+  pointer-events: none;
+  content: attr(data-hg-lore-ph);
   opacity: 1;
+  transform: none;
   transition: opacity 0.12s ease;
 }
 
 /* Display name: caption only on ::before (under z-6 strip); dual-line redaction on ::after (guest-check wipe). */
-.charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
-  content: attr(data-hg-lore-ph);
+.charSkShellV11
+.charSkDisplayName[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
   position: absolute;
-  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px));
-  right: var(--sk-v11-marker-inset-right);
   top: var(--hg-lore-ph-y, 0px);
-  height: var(--hg-lore-ph-lh, 1.14em);
-  transform: none;
+  right: var(--sk-v11-marker-inset-right);
+  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px));
+  z-index: 1;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  z-index: 1;
   max-width: 100%;
-  box-sizing: border-box;
+  height: var(--hg-lore-ph-lh, 1.14em);
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  pointer-events: none;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 0.68rem;
   font-weight: 500;
   line-height: 1.14;
+  color: color-mix(
+    in oklch,
+    var(--sem-text-muted) 66%,
+    var(--sk-id-surface)
+  ) !important;
+  -webkit-text-fill-color: color-mix(
+    in oklch,
+    var(--sem-text-muted) 66%,
+    var(--sk-id-surface)
+  );
   letter-spacing: 0.03em;
-  color: color-mix(in oklch, var(--sem-text-muted) 66%, var(--sk-id-surface)) !important;
-  -webkit-text-fill-color: color-mix(in oklch, var(--sem-text-muted) 66%, var(--sk-id-surface));
+  white-space: nowrap;
+  pointer-events: none;
+  content: attr(data-hg-lore-ph);
   opacity: 1;
+  transform: none;
   transition: opacity 0.12s ease;
 }
 
-.charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"][data-hg-lore-ph] {
+.charSkShellV11
+  .charSkDisplayName[data-hg-lore-placeholder="true"][data-hg-lore-ph] {
   min-height: 2.65em;
 }
 
-.charSkShellV11 .charSkNotesBody[data-hg-lore-placeholder="true"][data-hg-lore-ph] {
+.charSkShellV11
+  .charSkNotesBody[data-hg-lore-placeholder="true"][data-hg-lore-ph] {
   position: relative;
 }
 
-.charSkShellV11 .charSkNotesBody[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
-  content: attr(data-hg-lore-ph);
+.charSkShellV11
+  .charSkNotesBody[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
   position: absolute;
-  left: var(--hg-lore-ph-x, 0px);
-  right: 0;
   top: var(--hg-lore-ph-y, 0px);
-  height: var(--hg-lore-ph-lh, 1.65em);
-  transform: none;
+  right: 0;
+  left: var(--hg-lore-ph-x, 0px);
+  z-index: 1;
   display: flex;
   align-items: center;
-  z-index: 1;
-  pointer-events: none;
+  height: var(--hg-lore-ph-lh, 1.65em);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 0.65rem;
   font-weight: 400;
   line-height: 1.65;
+  color: color-mix(
+    in oklch,
+    var(--sem-text-muted) 72%,
+    var(--sk-id-surface)
+  ) !important;
+  -webkit-text-fill-color: color-mix(
+    in oklch,
+    var(--sem-text-muted) 72%,
+    var(--sk-id-surface)
+  );
   letter-spacing: 0.03em;
-  color: color-mix(in oklch, var(--sem-text-muted) 72%, var(--sk-id-surface)) !important;
-  -webkit-text-fill-color: color-mix(in oklch, var(--sem-text-muted) 72%, var(--sk-id-surface));
+  pointer-events: none;
+  content: attr(data-hg-lore-ph);
   opacity: 1;
+  transform: none;
   transition: opacity 0.12s ease;
 }
 
-.charSkShellV11 .charSkHeaderMeta[data-hg-lore-field][data-hg-lore-placeholder="true"] {
-  color: var(--sem-text-muted) !important;
-  -webkit-text-fill-color: unset;
+.charSkShellV11
+  .charSkHeaderMeta[data-hg-lore-field][data-hg-lore-placeholder="true"] {
   font-family: var(--sk-id-header-sans);
   font-size: 0.65rem;
   font-weight: 500;
-  letter-spacing: 0;
   line-height: 1.3;
+  color: var(--sem-text-muted) !important;
+  -webkit-text-fill-color: unset;
+  letter-spacing: 0;
 }
 
-.charSkShellV11 .charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"] {
+.charSkShellV11
+  .charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"] {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-weight: 400;
-  color: color-mix(in oklch, var(--sem-text-muted) 68%, var(--sk-id-surface)) !important;
+  color: color-mix(
+    in oklch,
+    var(--sem-text-muted) 68%,
+    var(--sk-id-surface)
+  ) !important;
   -webkit-text-fill-color: unset;
 }
 
 /* Keep each field’s normal font (display name / meta / role) — only the ::after marker reads as redaction;
  * mono here made the first real character jump type when placeholder cleared. */
 .charSkShellV11
-  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta) {
+[data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(
+  .charSkHeaderMeta
+) {
   position: relative;
   z-index: 0;
   color: transparent !important;
   -webkit-text-fill-color: transparent;
-  caret-color: color-mix(in oklch, var(--sem-text-primary) 78%, var(--sk-id-surface));
+  caret-color: color-mix(
+    in oklch,
+    var(--sem-text-primary) 78%,
+    var(--sk-id-surface)
+  );
 }
 
 .charSkShellV11
-  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):not(
-    .charSkDisplayName
-  )::after {
-  content: "";
+  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(
+    .charSkNotesBody
+  ):not(.charSkHeaderMeta):not(.charSkDisplayName)::after {
   position: absolute;
-  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px) + var(--sk-v11-marker-offset-x, 0px));
-  width: calc(
-    100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right) - var(--hg-lore-ph-x, 0px) -
-      var(--sk-v11-marker-trim-right, 0px)
-  );
-  right: auto;
   top: var(--hg-lore-ph-y, 0px);
-  height: var(--hg-lore-ph-lh, var(--sk-v11-marker-h));
-  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
-  transform-origin: left top;
-  border-radius: 2px;
-  pointer-events: none;
+  right: auto;
+  left: calc(
+    var(--sk-v11-marker-inset-left) +
+    var(--hg-lore-ph-x, 0px) +
+    var(--sk-v11-marker-offset-x, 0px)
+  );
   z-index: 6;
-  animation: charSkV11MarkerStripWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
+  width: calc(
+    100% -
+    var(--sk-v11-marker-inset-left) -
+    var(--sk-v11-marker-inset-right) -
+    var(--hg-lore-ph-x, 0px) -
+    var(--sk-v11-marker-trim-right, 0px)
+  );
+  height: var(--hg-lore-ph-lh, var(--sk-v11-marker-h));
+  pointer-events: none;
+  content: "";
   background:
     radial-gradient(
       circle at 50% 50%,
-      color-mix(in oklch, var(--sys-color-white) var(--sk-v11-marker-gloss, 2.5%), transparent) 0%,
+      color-mix(
+          in oklch,
+          var(--sys-color-white) var(--sk-v11-marker-gloss, 2.5%),
+          transparent
+        )
+        0%,
       transparent 80%
     ),
     var(--sk-v11-marker);
-  background-blend-mode: soft-light, normal;
+  border-radius: 2px;
   box-shadow: 0 0 2px var(--sk-v11-marker);
-  mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
-  -webkit-mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
-  mask-size: 100% 100%;
+  background-blend-mode: soft-light, normal;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    black var(--sk-v11-marker-tail, 95%),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    black var(--sk-v11-marker-tail, 95%),
+    transparent
+  );
   -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+    skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
+  transform-origin: left top;
+  animation: charSkV11MarkerStripWipe var(--sk-v11-marker-wipe-ms)
+    var(--sk-v11-marker-wipe-ease) forwards;
 }
 
 .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]::after {
-  content: "";
   position: absolute;
   top: var(--hg-lore-ph-y, 0px);
   bottom: auto;
-  left: calc(var(--sk-v11-marker-inset-left) + var(--sk-v11-marker-offset-x, 0px));
+  left: calc(
+    var(--sk-v11-marker-inset-left) +
+    var(--sk-v11-marker-offset-x, 0px)
+  );
+  z-index: 6;
   width: calc(
-    100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right) - var(--sk-v11-marker-trim-right, 0px)
+    100% -
+    var(--sk-v11-marker-inset-left) -
+    var(--sk-v11-marker-inset-right) -
+    var(--sk-v11-marker-trim-right, 0px)
   );
   height: calc((var(--hg-lore-ph-lh, var(--sk-v11-marker-h)) * 2) + 4px);
   margin: 0;
-  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
-  transform-origin: left top;
-  border-radius: 2px;
   pointer-events: none;
-  z-index: 6;
-  animation: charSkV11MarkerDualLineWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
+  content: "";
   background:
     linear-gradient(
       to bottom,
-      color-mix(in oklch, var(--sys-color-white) var(--sk-v11-marker-gloss, 0.95%), var(--sk-v11-marker)) 0%,
+      color-mix(
+          in oklch,
+          var(--sys-color-white) var(--sk-v11-marker-gloss, 0.95%),
+          var(--sk-v11-marker)
+        )
+        0%,
       var(--sk-v11-marker) 100%
     )
-      left top / calc(100% - var(--sk-v11-marker-trim-right-top, 0px)) calc(50% - 2px) no-repeat,
+    left top / calc(100% - var(--sk-v11-marker-trim-right-top, 0px))
+    calc(50% - 2px) no-repeat,
     linear-gradient(var(--sk-v11-marker), var(--sk-v11-marker)) left bottom /
-      calc(100% - var(--sk-v11-marker-trim-right-bottom, 0px)) calc(50% - 2px) no-repeat;
-  background-blend-mode: normal, normal;
+    calc(100% - var(--sk-v11-marker-trim-right-bottom, 0px)) calc(50% - 2px)
+    no-repeat;
+  border-radius: 2px;
   box-shadow: none;
-  filter: drop-shadow(0 0 1px color-mix(in oklch, var(--sk-v11-marker) 90%, transparent));
-  mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
-  -webkit-mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
-  mask-size: 100% 100%;
+  background-blend-mode: normal, normal;
+  filter: drop-shadow(
+    0 0 1px color-mix(in oklch, var(--sk-v11-marker) 90%, transparent)
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    black var(--sk-v11-marker-tail, 95%),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    black var(--sk-v11-marker-tail, 95%),
+    transparent
+  );
   -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+    skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
+  transform-origin: left top;
+  animation: charSkV11MarkerDualLineWipe var(--sk-v11-marker-wipe-ms)
+    var(--sk-v11-marker-wipe-ease) forwards;
 }
 
 .charSkShellV11
-  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):focus,
+  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(
+    .charSkNotesBody
+  ):not(.charSkHeaderMeta):focus,
 .charSkShellV11
-  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):focus-within {
+  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(
+    .charSkNotesBody
+  ):not(.charSkHeaderMeta):focus-within {
   color: var(--sk-id-text) !important;
   -webkit-text-fill-color: var(--sk-id-text);
 }
 
 .charSkShellV11
-  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):not(
-    .charSkDisplayName
-  ):focus::after,
+  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(
+    .charSkNotesBody
+  ):not(.charSkHeaderMeta):not(.charSkDisplayName):focus::after,
 .charSkShellV11
-  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):not(
-    .charSkDisplayName
-  ):focus-within::after {
+  [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(
+    .charSkNotesBody
+  ):not(.charSkHeaderMeta):not(.charSkDisplayName):focus-within::after {
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+    skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
+  transition: transform var(--sk-v11-marker-hide-ms)
+    var(--sk-v11-marker-hide-ease);
   animation: none;
-  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
-  transition: transform var(--sk-v11-marker-hide-ms) var(--sk-v11-marker-hide-ease);
 }
 
-.charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus::after,
-.charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus-within::after {
-  animation: none;
-  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
+.charSkShellV11
+  .charSkDisplayName[data-hg-lore-placeholder="true"]:focus::after,
+.charSkShellV11
+  .charSkDisplayName[data-hg-lore-placeholder="true"]:focus-within::after {
+  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+    skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
   transition: none;
+  animation: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .charSkShellV11
-    [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):not(
-      .charSkDisplayName
-    )::after,
-    .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]::after {
+    [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(
+      .charSkNotesBody
+    ):not(.charSkHeaderMeta):not(.charSkDisplayName)::after,
+  .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]::after {
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+      skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
     animation: none;
-    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   }
 
   /* Dual-line name: match `translateX` + `charSkV11MarkerDualLineWipe` end-state. */
   .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]::after {
-    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
     background-size:
       calc(100% - var(--sk-v11-marker-trim-right-top, 0px)) calc(50% - 2px),
       calc(100% - var(--sk-v11-marker-trim-right-bottom, 0px)) calc(50% - 2px);
+    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+      skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   }
 
   .charSkShellV11
-    [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):not(
-      .charSkDisplayName
-    ):focus::after,
+    [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(
+      .charSkNotesBody
+    ):not(.charSkHeaderMeta):not(.charSkDisplayName):focus::after,
   .charSkShellV11
-    [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(.charSkNotesBody):not(.charSkHeaderMeta):not(
-      .charSkDisplayName
-    ):focus-within::after,
-  .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus::after,
-  .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus-within::after {
-    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
+    [data-hg-lore-field][data-hg-lore-placeholder="true"]:not(
+      .charSkNotesBody
+    ):not(.charSkHeaderMeta):not(.charSkDisplayName):focus-within::after,
+  .charSkShellV11
+    .charSkDisplayName[data-hg-lore-placeholder="true"]:focus::after,
+  .charSkShellV11
+    .charSkDisplayName[data-hg-lore-placeholder="true"]:focus-within::after {
     opacity: 0;
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+      skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
     transition: opacity 0.12s ease;
   }
 
-  .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus::after,
-  .charSkShellV11 .charSkDisplayName[data-hg-lore-placeholder="true"]:focus-within::after {
-    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
+  .charSkShellV11
+    .charSkDisplayName[data-hg-lore-placeholder="true"]:focus::after,
+  .charSkShellV11
+    .charSkDisplayName[data-hg-lore-placeholder="true"]:focus-within::after {
+    transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+      skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   }
 }
 
 .charSkShellV11 .charSkHeaderMeta[data-hg-lore-placeholder="true"]:focus,
-.charSkShellV11 .charSkHeaderMeta[data-hg-lore-placeholder="true"]:focus-within {
+.charSkShellV11
+  .charSkHeaderMeta[data-hg-lore-placeholder="true"]:focus-within {
   color: var(--sem-text-primary) !important;
   -webkit-text-fill-color: var(--sem-text-primary);
 }
 
 .charSkShellV11 .charSkRole[data-hg-lore-placeholder="true"]:focus,
 .charSkShellV11 .charSkRole[data-hg-lore-placeholder="true"]:focus-within {
-  color: color-mix(in oklch, var(--sem-text-primary) 78%, transparent) !important;
-  -webkit-text-fill-color: color-mix(in oklch, var(--sem-text-primary) 78%, transparent);
+  color: color-mix(
+    in oklch,
+    var(--sem-text-primary) 78%,
+    transparent
+  ) !important;
+  -webkit-text-fill-color: color-mix(
+    in oklch,
+    var(--sem-text-primary) 78%,
+    transparent
+  );
 }
 
-.charSkShellV11 .charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"]:focus,
-.charSkShellV11 .charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"]:focus-within {
-  color: color-mix(in oklch, var(--sem-text-muted) 68%, var(--sk-id-surface)) !important;
+.charSkShellV11
+  .charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"]:focus,
+.charSkShellV11
+  .charSkNotesBody[data-hg-lore-field][data-hg-lore-placeholder="true"]:focus-within {
+  color: color-mix(
+    in oklch,
+    var(--sem-text-muted) 68%,
+    var(--sk-id-surface)
+  ) !important;
   -webkit-text-fill-color: unset;
 }
 
@@ -2883,9 +3124,9 @@
   }
 
   .charSkNameBlock {
+    min-height: 100px;
     border-right: none;
     border-bottom: 1px solid var(--sk-id-line);
-    min-height: 100px;
   }
 
   .charSkMetaBlock {
@@ -2907,10 +3148,10 @@
 
 /* —— Character v5 · Secure facility credential —— */
 .charSecShell {
-  margin: 0;
-  width: 100%;
   box-sizing: border-box;
+  width: 100%;
   padding: 6px;
+  margin: 0;
   background: linear-gradient(145deg, #0d0d0d 0%, #050505 100%);
   border-radius: 4px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
@@ -2918,8 +3159,9 @@
 
 .charSecCard {
   position: relative;
-  background: #fafafa;
+  overflow: hidden;
   color: #0a0a0a;
+  background: #fafafa;
   clip-path: polygon(
     0 0,
     100% 0,
@@ -2932,7 +3174,6 @@
     5% 28%,
     0 28%
   );
-  overflow: hidden;
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -2944,13 +3185,18 @@
   position: absolute;
   top: 0;
   left: 0;
+  z-index: 4;
   width: 100%;
   height: 48px;
-  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.07), rgba(0, 0, 0, 0.18));
-  mix-blend-mode: multiply;
   pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(0, 0, 0, 0.07),
+    rgba(0, 0, 0, 0.18)
+  );
+  mix-blend-mode: multiply;
   opacity: 0;
-  z-index: 4;
 }
 
 .charSecCard:hover .charSecScanner {
@@ -2970,44 +3216,44 @@
 
 .charSecInner {
   position: relative;
-  padding: 36px 16px 16px 18px;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  z-index: 2;
+  padding: 36px 16px 16px 18px;
 }
 
 .charSecHeader {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   gap: 10px;
-  border-bottom: 2px solid #0a0a0a;
+  align-items: flex-start;
+  justify-content: space-between;
   padding-bottom: 10px;
+  border-bottom: 2px solid #0a0a0a;
 }
 
 .charSecSysLabel {
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
   font-weight: 700;
   line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
 }
 
 .charSecClassRow {
   display: flex;
-  align-items: center;
-  gap: 8px;
   flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
 }
 
 .charSecStatusDot {
+  flex-shrink: 0;
   width: 6px;
   height: 6px;
   background: #0a0a0a;
   border-radius: 50%;
-  flex-shrink: 0;
   animation: loreCharSecPulse 2s ease-in-out infinite;
 }
 
@@ -3032,17 +3278,17 @@
 .charSecIdentity {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   gap: 4px;
+  justify-content: flex-end;
 }
 
 .charSecRole {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
   font-weight: 600;
   line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .charSecNameDisplay {
@@ -3056,8 +3302,8 @@
   font-size: 1.35rem;
   font-weight: 800;
   line-height: 0.9;
-  letter-spacing: -0.03em;
   text-transform: uppercase;
+  letter-spacing: -0.03em;
 }
 
 .charSecDataGrid {
@@ -3074,9 +3320,9 @@
 
 .charSecDataLabel {
   font-size: 7px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  font-weight: 700;
   opacity: 0.55;
 }
 
@@ -3089,39 +3335,39 @@
 }
 
 .charSecRedacted {
-  background: #0a0a0a;
-  color: #0a0a0a;
-  padding: 1px 4px;
   display: inline-block;
+  padding: 1px 4px;
+  color: #0a0a0a;
+  background: #0a0a0a;
   transition:
     background 0.2s ease,
     color 0.2s ease;
 }
 
 .charSecCard:hover .charSecRedacted {
-  background: transparent;
   color: #0a0a0a;
+  background: transparent;
 }
 
 .charSecFooter {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
   gap: 10px;
+  align-items: flex-end;
+  justify-content: space-between;
   padding-top: 10px;
   border-top: 1px solid #0a0a0a;
 }
 
 .charSecBarcode {
   display: flex;
-  height: 22px;
   gap: 2px;
   align-items: flex-end;
+  height: 22px;
 }
 
 .charSecBar {
-  background: #0a0a0a;
   flex-shrink: 0;
+  background: #0a0a0a;
 }
 
 .charSecB1 {
@@ -3149,41 +3395,41 @@
 }
 
 .charSecHash {
+  max-width: 42%;
   font-family: var(--font-geist-mono), monospace;
   font-size: 7px;
   font-weight: 400;
-  letter-spacing: 0.06em;
   text-align: right;
-  max-width: 42%;
+  letter-spacing: 0.06em;
 }
 
 .charSecReg {
   position: absolute;
+  z-index: 5;
   width: 10px;
   height: 10px;
-  z-index: 5;
   pointer-events: none;
 }
 
 .charSecReg::before,
 .charSecReg::after {
-  content: "";
   position: absolute;
+  content: "";
   background: #0a0a0a;
 }
 
 .charSecReg::before {
-  width: 100%;
-  height: 1px;
   top: 4px;
   left: 0;
+  width: 100%;
+  height: 1px;
 }
 
 .charSecReg::after {
+  top: 0;
+  left: 4px;
   width: 1px;
   height: 100%;
-  left: 4px;
-  top: 0;
 }
 
 .charSecRmBl {
@@ -3192,93 +3438,93 @@
 }
 
 .charSecRmBr {
-  bottom: 14px;
   right: 14px;
+  bottom: 14px;
 }
 
 /* —— Character v6 · Warm paper employee badge —— */
 .charPaperBadge {
   position: relative;
-  margin: 0;
-  width: 100%;
   box-sizing: border-box;
-  border-radius: 10px;
-  background-color: #f3f1ea;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
   color: #2c2a28;
+  background-color: #f3f1ea;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  border-radius: 10px;
   box-shadow:
     0 16px 36px rgba(44, 42, 40, 0.1),
     0 3px 10px rgba(44, 42, 40, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.75),
     inset 0 -1px 2px rgba(0, 0, 0, 0.04);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
 }
 
 .charPaperLanyard {
   position: absolute;
   top: 10px;
   left: 50%;
-  transform: translateX(-50%);
+  z-index: 5;
   width: 40px;
   height: 8px;
+  pointer-events: none;
   background: #dcd8cf;
   border-radius: 8px;
   box-shadow:
     inset 0 2px 3px rgba(0, 0, 0, 0.1),
     0 1px 0 rgba(255, 255, 255, 0.7);
-  z-index: 5;
-  pointer-events: none;
+  transform: translateX(-50%);
 }
 
 .charPaperHead {
-  padding: 32px 18px 0 18px;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  z-index: 2;
+  padding: 32px 18px 0 18px;
 }
 
 .charPaperNameDisplay {
+  margin: 0;
   font-family: var(--font-lora), Georgia, serif;
   font-size: 1.35rem;
   font-weight: 800;
+  line-height: 1.05;
   color: #b8322d;
   letter-spacing: -0.02em;
-  line-height: 1.05;
-  margin: 0;
 }
 
 .charPaperNameJp {
+  margin: 0;
   font-family: var(--font-noto-sans-jp), var(--font-geist-sans), sans-serif;
   font-size: 0.95rem;
   font-weight: 700;
-  color: #b8322d;
-  margin: 0;
-  letter-spacing: 0.04em;
   line-height: 1.2;
+  color: #b8322d;
+  letter-spacing: 0.04em;
   opacity: 0.92;
 }
 
 .charPaperRole {
+  margin: 6px 0 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 9px;
   font-weight: 500;
-  color: #7a726a;
-  margin: 6px 0 0;
-  letter-spacing: 0.05em;
-  text-transform: lowercase;
   line-height: 1.45;
+  color: #7a726a;
+  text-transform: lowercase;
+  letter-spacing: 0.05em;
 }
 
 .charPaperGraphic {
-  flex: 1;
-  min-height: 120px;
   position: relative;
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
+  min-height: 120px;
   padding: 8px 0 4px;
 }
 
@@ -3286,11 +3532,11 @@
   position: relative;
   width: 118px;
   height: 118px;
-  border-radius: 50%;
-  background-color: #b8322d;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.18);
   overflow: hidden;
   cursor: pointer;
+  background-color: #b8322d;
+  border-radius: 50%;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.18);
 }
 
 .charPaperCircle img {
@@ -3299,10 +3545,10 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: grayscale(1) contrast(1.25) brightness(0.92);
-  opacity: 0;
-  transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1);
   mix-blend-mode: multiply;
+  opacity: 0;
+  filter: grayscale(1) contrast(1.25) brightness(0.92);
+  transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .charPaperCircle:hover img {
@@ -3311,30 +3557,30 @@
 
 .charPaperSatellite {
   position: absolute;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background-color: #b8322d;
   top: 18px;
   right: 22px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+  width: 14px;
+  height: 14px;
   pointer-events: none;
+  background-color: #b8322d;
+  border-radius: 50%;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
 .charPaperFooter {
-  padding: 0 18px 16px 18px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 12px;
   z-index: 2;
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 18px 16px 18px;
 }
 
 .charPaperMeta {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 6px;
-  flex: 1;
   min-width: 0;
 }
 
@@ -3351,24 +3597,24 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
   font-weight: 700;
+  line-height: 1.25;
   color: #2c2a28;
   letter-spacing: -0.02em;
-  line-height: 1.25;
   word-break: break-word;
 }
 
 .charPaperBarcode {
   display: flex;
-  height: 20px;
+  flex-shrink: 0;
   gap: 2px;
   align-items: flex-end;
-  flex-shrink: 0;
+  height: 20px;
 }
 
 .charPaperBar {
-  background: #2c2a28;
-  height: 100%;
   flex-shrink: 0;
+  height: 100%;
+  background: #2c2a28;
 }
 
 .charPaperBarW1 {
@@ -3389,39 +3635,44 @@
 
 /* Skeuomorphic notes (character v5–v6 and shared patterns) */
 .charNotesSec {
-  margin-top: 14px;
+  position: relative;
   padding: 12px 14px 14px;
-  background: #ece8df;
+  margin-top: 14px;
   color: #2a2826;
-  border-radius: 2px;
+  background: #ece8df;
   border: 1px solid #c9c2b6;
+  border-radius: 2px;
   box-shadow:
     inset 0 2px 4px rgba(255, 255, 255, 0.5),
     0 4px 12px rgba(0, 0, 0, 0.06);
-  position: relative;
 }
 
 .charNotesSec::after {
-  content: "";
   position: absolute;
   top: -4px;
-  left: 0;
   right: 0;
+  left: 0;
   height: 6px;
-  background: linear-gradient(135deg, transparent 45%, rgba(0, 0, 0, 0.04) 50%, transparent 55%);
+  pointer-events: none;
+  content: "";
+  background: linear-gradient(
+    135deg,
+    transparent 45%,
+    rgba(0, 0, 0, 0.04) 50%,
+    transparent 55%
+  );
   background-size: 8px 8px;
   opacity: 0.6;
-  pointer-events: none;
 }
 
 .charNotesSecLabel {
+  display: block;
+  margin-bottom: 6px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 7px;
+  color: #6b6560;
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: #6b6560;
-  margin-bottom: 6px;
-  display: block;
 }
 
 .charNotesSecBody {
@@ -3432,41 +3683,42 @@
 }
 
 .charNotesPaper {
-  margin-top: 12px;
+  position: relative;
   padding: 12px 14px 14px;
-  background: #fffef8;
+  margin-top: 12px;
   color: #3d3a36;
-  border-radius: 4px;
+  background: #fffef8;
   border: 1px solid #e0dcd4;
+  border-radius: 4px;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.9) inset,
     0 8px 20px rgba(44, 42, 40, 0.07);
-  position: relative;
 }
 
 .charNotesPaper::before {
-  content: "";
   position: absolute;
   top: 0;
-  left: 0;
   right: 0;
+  left: 0;
   height: 5px;
+  content: "";
   background: linear-gradient(90deg, #f5e6dc, #f0ddd0, #f5e6dc);
   border-radius: 4px 4px 0 0;
   opacity: 0.85;
 }
 
 .charNotesPaperLabel {
+  display: block;
+  margin: 6px 0 8px;
   font-family: var(--font-lora), Georgia, serif;
   font-size: 10px;
-  font-weight: 700;
   font-style: italic;
+  font-weight: 700;
   color: #b8322d;
-  margin: 6px 0 8px;
-  display: block;
 }
 
 .charNotesPaperBody {
+  min-height: 3em;
   font-size: 12px;
   line-height: 1.6;
   background-image: repeating-linear-gradient(
@@ -3475,7 +3727,6 @@
     rgba(184, 50, 45, 0.07) 1.5em,
     rgba(184, 50, 45, 0.07) calc(1.5em + 1px)
   );
-  min-height: 3em;
 }
 
 /* Faction letterhead */
@@ -3483,43 +3734,49 @@
   width: 36px;
   height: 36px;
   margin: 0 auto 12px;
-  border-radius: 8px;
   background: linear-gradient(
     135deg,
     color-mix(in oklch, var(--accent) 35%, var(--theme-default-bg)),
     color-mix(in oklch, var(--theme-default-text) 8%, var(--theme-default-bg))
   );
-  border: 1px solid color-mix(in oklch, var(--theme-default-text) 12%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 35%, transparent);
+  border: 1px solid
+    color-mix(in oklch, var(--theme-default-text) 12%, transparent);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0
+    color-mix(in oklch, var(--sys-color-white) 35%, transparent);
 }
 
 .letterheadCenter {
-  text-align: center;
   padding: 8px 4px 4px;
+  text-align: center;
 }
 
 .orgName {
   font-size: 1.05rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
   line-height: 1.25;
   color: var(--theme-default-text);
+  letter-spacing: -0.02em;
 }
 
 .orgRule {
   width: 48px;
   height: 2px;
   margin: 10px auto;
-  background: color-mix(in oklch, var(--accent) 65%, var(--theme-default-border));
+  background: color-mix(
+    in oklch,
+    var(--accent) 65%,
+    var(--theme-default-border)
+  );
   border-radius: 1px;
 }
 
 .nationLine {
   font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
   color: color-mix(in oklch, var(--theme-default-text) 48%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
 }
 
 .letterheadAsym {
@@ -3531,30 +3788,33 @@
 }
 
 .monogram {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 48px;
+  height: 48px;
   font-family: var(--font-lora), serif;
   font-size: 1.1rem;
   font-weight: 700;
   color: color-mix(in oklch, var(--theme-default-text) 75%, transparent);
-  border: 2px solid color-mix(in oklch, var(--theme-default-text) 15%, transparent);
   background: color-mix(in oklch, var(--theme-default-text) 4%, transparent);
+  border: 2px solid
+    color-mix(in oklch, var(--theme-default-text) 15%, transparent);
+  border-radius: 50%;
 }
 
 .letterheadFrame {
   padding: 14px 16px 6px;
-  border: 1px solid color-mix(in oklch, var(--theme-default-text) 12%, transparent);
-  border-radius: 3px;
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--sys-color-white) 40%, transparent);
   background: linear-gradient(
     180deg,
     color-mix(in oklch, var(--theme-default-text) 3%, transparent) 0%,
     transparent 28%
   );
+  border: 1px solid
+    color-mix(in oklch, var(--theme-default-text) 12%, transparent);
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklch, var(--sys-color-white) 40%, transparent);
 }
 
 /* Location */
@@ -3563,19 +3823,19 @@
 }
 
 .locName {
+  margin-bottom: 8px;
   font-family: var(--font-lora), var(--font-geist-sans), serif;
   font-size: 1.2rem;
   font-weight: 600;
   line-height: 1.2;
   color: var(--theme-default-text);
-  margin-bottom: 8px;
 }
 
 .locMetaLine {
+  margin-bottom: 4px;
   font-size: 12px;
   line-height: 1.45;
   color: color-mix(in oklch, var(--theme-default-text) 72%, transparent);
-  margin-bottom: 4px;
 }
 
 .locMetaLine:last-of-type {
@@ -3583,64 +3843,68 @@
 }
 
 .locMetaKey {
+  margin-right: 6px;
   font-size: 9px;
   font-weight: 700;
+  color: color-mix(in oklch, var(--theme-default-text) 40%, transparent);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: color-mix(in oklch, var(--theme-default-text) 40%, transparent);
-  margin-right: 6px;
 }
 
 /* Full-bleed top band: same body inset contract as `.locPlaqueStrip` (canvas + lab `a4DocumentBody`). */
 .postcardBand {
+  position: relative;
   display: block;
+  flex-shrink: 0;
   width: calc(100% + 2 * var(--arch-body-pad-x, 18px));
-  margin: calc(-1 * var(--arch-body-pad-y, 16px)) calc(-1 * var(--arch-body-pad-x, 18px)) 14px;
   height: 56px;
-  border-radius: 2px 2px 0 0;
+  margin: calc(-1 * var(--arch-body-pad-y, 16px))
+    calc(-1 * var(--arch-body-pad-x, 18px)) 14px;
+  overflow: hidden;
   background: linear-gradient(
     105deg,
     color-mix(in oklch, var(--accent) 28%, var(--sys-color-neutral-500)) 0%,
-    color-mix(in oklch, var(--theme-default-text) 25%, var(--theme-default-bg)) 45%,
+    color-mix(in oklch, var(--theme-default-text) 25%, var(--theme-default-bg))
+      45%,
     color-mix(in oklch, var(--accent) 15%, var(--theme-default-bg)) 100%
   );
+  border-radius: 2px 2px 0 0;
+  box-shadow: 0 1px 0
+    color-mix(in oklch, var(--theme-default-text) 8%, transparent);
   opacity: 0.94;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 1px 0 color-mix(in oklch, var(--theme-default-text) 8%, transparent);
-  flex-shrink: 0;
 }
 
 .postcardBand::after {
-  content: "";
   position: absolute;
   inset: 0;
-  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
   pointer-events: none;
+  content: "";
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
 }
 
 /* Location v3 · thin accent strip (variant via `data-loc-strip`, seed from entity id / uuid at create). */
 .locPlaqueStrip {
-  display: block;
   position: relative;
-  height: 3px;
+  display: block;
+  flex-shrink: 0;
   width: calc(100% + 2 * var(--arch-body-pad-x, 18px));
-  margin: calc(-1 * var(--arch-body-pad-y, 16px)) calc(-1 * var(--arch-body-pad-x, 18px)) 11px;
-  border-radius: 2px;
+  height: 3px;
+  margin: calc(-1 * var(--arch-body-pad-y, 16px))
+    calc(-1 * var(--arch-body-pad-x, 18px)) 11px;
   overflow: hidden;
+  border-radius: 2px;
   box-shadow:
     0 1px 0 color-mix(in oklch, var(--theme-default-text) 9%, transparent),
     inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 14%, transparent);
-  flex-shrink: 0;
 }
 
 .locPlaqueStrip::after {
-  content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.12;
-  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
   pointer-events: none;
+  content: "";
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+  opacity: 0.12;
 }
 
 .locPlaqueStrip[data-loc-strip="0"] {
@@ -3716,47 +3980,55 @@
 }
 
 .plaqueCorner {
+  display: inline-block;
+  padding: 5px 9px;
+  margin-bottom: 10px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 9px;
-  letter-spacing: 0.04em;
   color: color-mix(in oklch, var(--theme-default-text) 42%, transparent);
-  margin-bottom: 10px;
-  padding: 5px 9px;
-  display: inline-block;
-  border: 1px dashed color-mix(in oklch, var(--theme-default-text) 20%, transparent);
-  border-radius: 2px;
+  letter-spacing: 0.04em;
   background: color-mix(in oklch, var(--theme-default-text) 4%, transparent);
+  border: 1px dashed
+    color-mix(in oklch, var(--theme-default-text) 20%, transparent);
+  border-radius: 2px;
 }
 
 /* Legacy v1 (no longer created): keep styling for older saved `bodyHtml` until migrated. */
-[data-hg-canvas-role="lore-location"][data-hg-lore-location-variant="v1"] .locHeader {
+[data-hg-canvas-role="lore-location"][data-hg-lore-location-variant="v1"]
+  .locHeader {
   padding: 12px 14px 14px;
   margin: 0 0 2px;
-  border: 1px solid color-mix(in oklch, var(--theme-default-text) 14%, transparent);
-  border-radius: 4px;
   background: linear-gradient(
     185deg,
-    color-mix(in oklch, var(--theme-default-text) 5%, var(--theme-default-bg)) 0%,
+    color-mix(in oklch, var(--theme-default-text) 5%, var(--theme-default-bg))
+      0%,
     transparent 62%
   );
+  border: 1px solid
+    color-mix(in oklch, var(--theme-default-text) 14%, transparent);
+  border-radius: 4px;
   box-shadow:
     inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 28%, transparent),
     0 1px 0 color-mix(in oklch, var(--theme-default-text) 6%, transparent);
 }
 
-[data-hg-canvas-role="lore-location"][data-hg-lore-location-variant="v1"] .locName {
-  margin-bottom: 10px;
+[data-hg-canvas-role="lore-location"][data-hg-lore-location-variant="v1"]
+  .locName {
   padding-bottom: 10px;
-  border-bottom: 1px solid color-mix(in oklch, var(--accent) 35%, var(--theme-default-border));
+  margin-bottom: 10px;
+  border-bottom: 1px solid
+    color-mix(in oklch, var(--accent) 35%, var(--theme-default-border));
 }
 
 /* Location v2 · postcard: tuck header under band edge slightly. */
-[data-hg-canvas-role="lore-location"][data-hg-lore-location-variant="v2"] .locHeader {
+[data-hg-canvas-role="lore-location"][data-hg-lore-location-variant="v2"]
+  .locHeader {
   margin-top: -2px;
 }
 
 /* Location v3 · survey tag: ref stamp reads as inventory label. */
-[data-hg-canvas-role="lore-location"][data-hg-lore-location-variant="v3"] .plaqueCorner {
+[data-hg-canvas-role="lore-location"][data-hg-lore-location-variant="v3"]
+  .plaqueCorner {
   margin-top: 2px;
 }
 
@@ -3768,7 +4040,11 @@
   --loc-ordo-line-strong: oklch(0.145 0 0);
   --loc-ordo-glow-mid: oklch(0 0 0 / 0.22);
   /* Empty context line: same guest-check marker tokens as `.charSkShellV11` (strip wipe + caption). */
-  --sk-v11-marker: color-mix(in oklch, var(--sys-color-black) 74%, var(--sys-color-neutral-900));
+  --sk-v11-marker: color-mix(
+    in oklch,
+    var(--sys-color-black) 74%,
+    var(--sys-color-neutral-900)
+  );
   --sk-v11-marker-inset-left: 2px;
   --sk-v11-marker-inset-right: 5px;
   --sk-v11-marker-h: 26px;
@@ -3784,11 +4060,11 @@
   --sk-v11-marker-tail: 95%;
   position: relative;
   overflow: hidden;
-  cursor: default;
   color: var(--loc-ordo-accent);
+  cursor: default;
+  background: var(--loc-ordo-bg);
   border: 1px solid oklch(0 0 0 / 0.2);
   border-radius: 1px;
-  background: var(--loc-ordo-bg);
   box-shadow:
     0 1px 0 oklch(1 0 0 / 0.14),
     0 10px 24px oklch(0 0 0 / 0.12);
@@ -3797,35 +4073,42 @@
 .locOrdoV7Geo {
   position: absolute;
   inset: 0;
-  pointer-events: none;
   z-index: 0;
-  background:
-    repeating-radial-gradient(
-      circle at 30% 42%,
-      transparent 0,
-      transparent 39px,
-      var(--loc-ordo-line) 39px,
-      var(--loc-ordo-line) 40px
-    );
+  pointer-events: none;
+  background: repeating-radial-gradient(
+    circle at 30% 42%,
+    transparent 0,
+    transparent 39px,
+    var(--loc-ordo-line) 39px,
+    var(--loc-ordo-line) 40px
+  );
   opacity: 0.42;
+  -webkit-mask-image: radial-gradient(
+    circle at 30% 42%,
+    black 55%,
+    transparent 72%
+  );
   mask-image: radial-gradient(circle at 30% 42%, black 55%, transparent 72%);
-  -webkit-mask-image: radial-gradient(circle at 30% 42%, black 55%, transparent 72%);
 }
 
 .locOrdoV7Glow {
   position: absolute;
+  top: 42%;
+  left: 50%;
+  z-index: 1;
   width: 130px;
   height: 130px;
-  left: 50%;
-  top: 42%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
   pointer-events: none;
-  z-index: 1;
-  opacity: 0.38;
+  background: radial-gradient(
+    circle,
+    var(--loc-ordo-glow-mid) 0%,
+    transparent 68%
+  );
+  border-radius: 50%;
   mix-blend-mode: normal;
-  background: radial-gradient(circle, var(--loc-ordo-glow-mid) 0%, transparent 68%);
+  opacity: 0.38;
   filter: blur(16px);
+  transform: translate(-50%, -50%);
 }
 
 .locOrdoV7Staple {
@@ -3833,16 +4116,16 @@
   --loc-ordo-v7-staple-ox: 0px;
   --loc-ordo-v7-staple-oy: 0px;
   position: absolute;
-  left: calc(50% + var(--loc-ordo-v7-staple-ox, 0px));
   top: calc(14px + var(--loc-ordo-v7-staple-oy, 0px));
+  left: calc(50% + var(--loc-ordo-v7-staple-ox, 0px));
   z-index: 4;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 52px;
   height: 11px;
-  margin: 0;
   padding: 0;
+  margin: 0;
   line-height: 0;
   pointer-events: none;
   transform: translate(-50%, -50%) rotate(var(--loc-ordo-v7-staple-deg, 0deg));
@@ -3855,8 +4138,6 @@
   display: block;
   width: 42px;
   height: 7px;
-  isolation: isolate;
-  border-radius: 1px;
   background:
     linear-gradient(
       180deg,
@@ -3873,6 +4154,7 @@
       rgba(0, 0, 0, 0.48) 100%
     ),
     linear-gradient(180deg, #8f8f8f 0%, #5f5f5f 38%, #434343 68%, #2c2c2c 100%);
+  border-radius: 1px;
   box-shadow:
     0 1.5px 2.5px oklch(0 0 0 / 0.42),
     0 4px 14px oklch(0 0 0 / 0.24),
@@ -3880,28 +4162,35 @@
     inset 0 -1.5px 0 rgba(0, 0, 0, 0.45),
     inset 1.2px 0 0 rgba(0, 0, 0, 0.18),
     inset -1.2px 0 0 rgba(0, 0, 0, 0.18);
+  isolation: isolate;
 }
 
 .locOrdoV7StapleMetal::before {
-  content: "";
   position: absolute;
-  left: 12%;
-  right: 12%;
   top: 0;
-  height: 46%;
-  border-radius: 40% 40% 55% 55% / 90% 90% 120% 120%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.12) 55%, transparent 100%);
-  opacity: 0.65;
-  mix-blend-mode: soft-light;
-  pointer-events: none;
+  right: 12%;
+  left: 12%;
   z-index: 1;
+  height: 46%;
+  pointer-events: none;
+  content: "";
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.12) 55%,
+    transparent 100%
+  );
+  border-radius: 40% 40% 55% 55% / 90% 90% 120% 120%;
+  mix-blend-mode: soft-light;
+  opacity: 0.65;
 }
 
 .locOrdoV7StapleMetal::after {
-  content: "";
   position: absolute;
   inset: 0;
-  border-radius: inherit;
+  z-index: 2;
+  pointer-events: none;
+  content: "";
   background: linear-gradient(
     180deg,
     transparent 0%,
@@ -3909,8 +4198,7 @@
     rgba(0, 0, 0, 0.12) 72%,
     rgba(0, 0, 0, 0.28) 100%
   );
-  pointer-events: none;
-  z-index: 2;
+  border-radius: inherit;
 }
 
 /*
@@ -3921,16 +4209,16 @@
   --loc-ordo-v7-staple-ox: 0px;
   --loc-ordo-v7-staple-oy: 0px;
   position: absolute;
-  left: calc(50% + var(--loc-ordo-v7-staple-ox, 0px));
   top: calc(14px + var(--loc-ordo-v7-staple-oy, 0px));
+  left: calc(50% + var(--loc-ordo-v7-staple-ox, 0px));
   z-index: 4;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 52px;
   height: 11px;
-  margin: 0;
   padding: 0;
+  margin: 0;
   line-height: 0;
   pointer-events: none;
   transform: translate(-50%, -50%) rotate(var(--loc-ordo-v7-staple-deg, 0deg));
@@ -3941,100 +4229,105 @@
 .locOrdoV7NailMetal {
   position: relative;
   display: block;
+  flex-shrink: 0;
   width: 15px;
   height: 20px;
-  flex-shrink: 0;
-  isolation: isolate;
   pointer-events: none;
+  isolation: isolate;
 }
 
 .locOrdoV7NailMetal::before {
-  content: "";
   position: absolute;
-  left: 50%;
   top: 0;
-  transform: translateX(-50%);
+  left: 50%;
   width: 13px;
   height: 13px;
-  border-radius: 50%;
+  content: "";
   background:
-    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.52) 0%, transparent 45%),
+    radial-gradient(
+      circle at 32% 28%,
+      rgba(255, 255, 255, 0.52) 0%,
+      transparent 45%
+    ),
     linear-gradient(165deg, #c6c6c6 0%, #6a6a6a 48%, #242424 100%);
+  border-radius: 50%;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.34),
     inset 0 -2px 3px rgba(0, 0, 0, 0.48),
     0 2px 4px oklch(0 0 0 / 0.34);
+  transform: translateX(-50%);
 }
 
 .locOrdoV7NailMetal::after {
-  content: "";
   position: absolute;
-  left: 50%;
   top: 10px;
-  transform: translateX(-50%);
+  left: 50%;
   width: 2.5px;
   height: 10px;
-  border-radius: 1px;
+  content: "";
   background: linear-gradient(90deg, #141414, #4a4a4a, #141414);
+  border-radius: 1px;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  transform: translateX(-50%);
 }
 
 .locOrdoV7Inner {
   position: relative;
   z-index: 2;
-  padding: 10px 10px 11px;
-  line-height: 1.1;
-  text-transform: uppercase;
-  font-family: var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 11px;
-  font-weight: 500;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   /* Match standard A4 node cap so location slabs can grow naturally but stop at the same ceiling. */
   max-height: calc(var(--entity-width, 340px) * 1.41421356237);
-  min-height: 0;
+  padding: 10px 10px 11px;
   overflow: hidden;
-  box-sizing: border-box;
+  font-family:
+    var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.1;
+  text-transform: uppercase;
 }
 
 .locOrdoV7Header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  flex-shrink: 0;
   gap: 8px;
+  align-items: flex-start;
+  justify-content: space-between;
   padding-bottom: 8px;
   margin-bottom: 9px;
   border-bottom: 0.5px solid var(--loc-ordo-line-strong);
-  flex-shrink: 0;
 }
 
 .locOrdoV7LogoBlock {
+  box-sizing: border-box;
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   gap: 5px;
-  flex-shrink: 0;
   padding: 2px;
-  box-sizing: border-box;
 }
 
 /* Match lab `facOrdoPixelIcon` (FactionLabPlate · ORDO mono). */
 .locOrdoV7PixelIcon {
+  box-sizing: content-box;
   display: grid;
-  grid-template-columns: repeat(8, 2.25px);
+  flex-shrink: 0;
   grid-template-rows: repeat(8, 2.25px);
+  grid-template-columns: repeat(8, 2.25px);
   gap: 1.25px;
   width: calc(8 * 2.25px + 7 * 1.25px);
   height: calc(8 * 2.25px + 7 * 1.25px);
-  box-sizing: content-box;
-  flex-shrink: 0;
   isolation: isolate;
 }
 
 .locOrdoV7Px {
   width: 2.25px;
   height: 2.25px;
-  border-radius: 0.5px;
   background: var(--loc-ordo-accent);
+  border-radius: 0.5px;
 }
 
 .locOrdoV7PxOff {
@@ -4045,9 +4338,13 @@
 .locOrdoV7LogoMark {
   width: 22px;
   height: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    oklch(0 0 0 / 0.2) 0 1px,
+    transparent 1px 3px
+  );
   border: 1px solid oklch(0 0 0 / 0.35);
   border-radius: 1px;
-  background: repeating-linear-gradient(90deg, oklch(0 0 0 / 0.2) 0 1px, transparent 1px 3px);
 }
 
 .locOrdoV7Brand {
@@ -4055,10 +4352,10 @@
   /* Match lab `factionLabPlate_protocolOrdoCompactMono .facOrdoBrand` — not inner’s 500 + tight tracking. */
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.14em;
-  line-height: 1.25;
   font-synthesis: none;
+  line-height: 1.25;
   text-transform: uppercase;
+  letter-spacing: 0.14em;
 }
 
 .locOrdoV7ExpandBtn {
@@ -4079,11 +4376,11 @@
 
 .locOrdoV7DocGrid {
   display: flex;
+  /* Hug content by default; do not stretch to fill unused slab height. */
+  flex: 0 1 auto;
   flex-direction: column;
   /* Tight stack: title row → context → main (extra margin here read as “padding below” the placename). */
   gap: 3px;
-  /* Hug content by default; do not stretch to fill unused slab height. */
-  flex: 0 1 auto;
   min-height: 0;
   overflow: hidden;
 }
@@ -4101,20 +4398,28 @@
 
 /* React slab + canvas: flex chain for fixed detail row + scrolling notes (parity with lab FactionLabPlate v7). */
 .locOrdoV7DocInline {
+  --loc-ordo-v7-detail-slot-h: calc(
+    0.92 *
+    12px *
+    1.55 +
+    0.55 *
+    0.92 *
+    12px +
+    1px
+  );
   display: flex;
-  flex-direction: column;
   flex: 0 1 auto;
+  flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  --loc-ordo-v7-detail-slot-h: calc(0.92 * 12px * 1.55 + 0.55 * 0.92 * 12px + 1px);
 }
 
 .locOrdoV7Root .locOrdoV7DocInline > .locOrdoV7DetailLine {
+  box-sizing: border-box;
   flex-shrink: 0;
   height: var(--loc-ordo-v7-detail-slot-h);
   min-height: var(--loc-ordo-v7-detail-slot-h);
   max-height: var(--loc-ordo-v7-detail-slot-h);
-  box-sizing: border-box;
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -4125,37 +4430,37 @@
   min-height: 0;
   /* Once notes exceed the card budget, scroll notes instead of stretching the whole card. */
   max-height: calc((var(--entity-width, 340px) * 1.41421356237) - 190px);
-  overflow-y: auto;
   overflow-x: hidden;
-  overscroll-behavior: contain;
+  overflow-y: auto;
   scrollbar-gutter: auto;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
 }
 
 .locOrdoV7NotesField {
-  min-height: 0;
-  min-width: 0;
   width: 100%;
+  min-width: 0;
+  min-height: 0;
 }
 
 .locOrdoV7HgHost {
   width: 100%;
   min-width: 0;
   min-height: 0;
-  text-transform: none;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 12px;
   font-weight: 400;
   line-height: 1.68;
   color: var(--loc-ordo-accent);
+  text-transform: none;
 }
 
 .locOrdoV7HgHost :global(.ProseMirror) {
-  outline: none;
+  font-family: inherit;
   font-size: inherit;
   line-height: inherit;
-  font-family: inherit;
   color: inherit;
+  outline: none;
 }
 
 .locOrdoV7HgHost :global(.ProseMirror p) {
@@ -4167,13 +4472,13 @@
 }
 
 .locOrdoV7HgHost :global(.ProseMirror h1) {
-  font-size: 1.25em;
   margin: 0.35em 0 0.45em;
+  font-size: 1.25em;
 }
 
 .locOrdoV7HgHost :global(.ProseMirror h2) {
-  font-size: 1.1em;
   margin: 0.4em 0 0.4em;
+  font-size: 1.1em;
 }
 
 .locOrdoV7DetailAdd {
@@ -4191,7 +4496,8 @@
   margin: 0 0 0.65em;
   padding: 0 0 calc(0.55 * 0.92 * 12px);
   border: none;
-  border-bottom: 1px solid color-mix(in oklch, var(--loc-ordo-accent) 14%, transparent);
+  border-bottom: 1px solid
+    color-mix(in oklch, var(--loc-ordo-accent) 14%, transparent);
   background: transparent;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 8px;
@@ -4262,12 +4568,18 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.locOrdoV7Root [data-hg-lore-location-field="name"][contenteditable="true"]:focus,
-.locOrdoV7Root [data-hg-lore-location-field="name"][contenteditable="true"]:focus-visible,
-.locOrdoV7Root [data-hg-lore-location-field="context"][contenteditable="true"]:focus,
-.locOrdoV7Root [data-hg-lore-location-field="context"][contenteditable="true"]:focus-visible,
-.locOrdoV7Root [data-hg-lore-location-field="detail"][contenteditable="true"]:focus,
-.locOrdoV7Root [data-hg-lore-location-field="detail"][contenteditable="true"]:focus-visible {
+.locOrdoV7Root
+  [data-hg-lore-location-field="name"][contenteditable="true"]:focus,
+.locOrdoV7Root
+  [data-hg-lore-location-field="name"][contenteditable="true"]:focus-visible,
+.locOrdoV7Root
+  [data-hg-lore-location-field="context"][contenteditable="true"]:focus,
+.locOrdoV7Root
+  [data-hg-lore-location-field="context"][contenteditable="true"]:focus-visible,
+.locOrdoV7Root
+  [data-hg-lore-location-field="detail"][contenteditable="true"]:focus,
+.locOrdoV7Root
+  [data-hg-lore-location-field="detail"][contenteditable="true"]:focus-visible {
   outline: none;
   box-shadow: none;
 }
@@ -4290,10 +4602,11 @@
   box-shadow: none;
 }
 
-.locOrdoV7Root [data-hg-lore-location-field="detail"][contenteditable="true"]:empty::before {
-  content: attr(data-placeholder);
+.locOrdoV7Root
+  [data-hg-lore-location-field="detail"][contenteditable="true"]:empty::before {
   color: color-mix(in oklch, var(--loc-ordo-accent) 40%, transparent);
   pointer-events: none;
+  content: attr(data-placeholder);
 }
 
 .locOrdoV7TitleRow {
@@ -4309,11 +4622,11 @@
 .locOrdoV7Root .locOrdoV7TitleRow {
   position: relative;
   z-index: 2;
-  isolation: isolate;
-  background: transparent;
+  box-sizing: border-box;
   /* Slack for rotated guest-check ::after so the doc grid doesn’t clip the marker bars. */
   padding-inline-end: 6px;
-  box-sizing: border-box;
+  background: transparent;
+  isolation: isolate;
 }
 
 /* Editable title paints above any stray compositing from the row / siblings. */
@@ -4326,10 +4639,10 @@
   position: relative;
   z-index: 0;
   flex-shrink: 0;
-  min-width: 0;
   width: 100%;
-  margin: 0;
+  min-width: 0;
   padding: 0;
+  margin: 0;
   overflow: hidden;
   isolation: isolate;
 }
@@ -4349,11 +4662,11 @@
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 1.68rem;
   font-weight: 900;
-  line-height: 0.86;
-  letter-spacing: -0.05em;
-  text-transform: none;
   font-synthesis: none;
+  line-height: 0.86;
   color: var(--loc-ordo-accent);
+  text-transform: none;
+  letter-spacing: -0.05em;
 }
 
 /*
@@ -4361,31 +4674,39 @@
  * Ease tracking slightly and add word-spacing so gaps stay legible (detail lines use +tracking instead).
  */
 .locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-location-field="name"] {
-  text-transform: uppercase;
   font-variant-ligatures: none;
   line-height: 0.92;
-  letter-spacing: -0.03em;
+  text-transform: uppercase;
   word-spacing: 0.12em;
+  letter-spacing: -0.03em;
 }
 
 .locOrdoV7Root
-  .locOrdoV7DisplayTitle[data-hg-lore-location-field="name"]:not([data-hg-lore-placeholder="true"]):not(:focus):not(:focus-within) {
+  .locOrdoV7DisplayTitle[data-hg-lore-location-field="name"]:not(
+    [data-hg-lore-placeholder="true"]
+  ):not(:focus):not(:focus-within) {
   display: -webkit-box;
+  -webkit-box-orient: vertical;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
 
 /* Empty placename: character v11 display-name parity — caption ::before + dual-line guest-check ::after. */
-.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"][data-hg-lore-ph] {
+.locOrdoV7Root
+.locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"][data-hg-lore-ph] {
   position: relative;
   z-index: 0;
   /* Match ::after strip stack (top + dual bands + 4px) so we don’t reserve extra dead space under the bars. */
   min-height: max(
     2.2em,
-    calc(var(--hg-lore-ph-y, 0px) + (var(--hg-lore-ph-lh, 1.14em) * 2) + 4px + 3px)
+    calc(
+      var(--hg-lore-ph-y, 0px) +
+      (var(--hg-lore-ph-lh, 1.14em) * 2) +
+      4px +
+      3px
+    )
   );
   /* Visible so slight rotate/skew from `syncLoreV11MarkerTilts` (ordo profile) isn’t clipped; title row padding contains bleed. */
   overflow: visible;
@@ -4394,84 +4715,124 @@
   caret-color: color-mix(in oklch, var(--loc-ordo-accent) 78%, transparent);
 }
 
-.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
-  content: attr(data-hg-lore-ph);
+.locOrdoV7Root
+  .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
   position: absolute;
-  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px));
-  right: var(--sk-v11-marker-inset-right);
   top: var(--hg-lore-ph-y, 0px);
-  height: var(--hg-lore-ph-lh, 1.14em);
-  transform: none;
+  right: var(--sk-v11-marker-inset-right);
+  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px));
+  z-index: 1;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  z-index: 1;
   max-width: 100%;
-  box-sizing: border-box;
+  height: var(--hg-lore-ph-lh, 1.14em);
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  pointer-events: none;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 0.68rem;
   font-weight: 500;
   line-height: 1.14;
+  color: color-mix(
+    in oklch,
+    var(--loc-ordo-accent) 62%,
+    transparent
+  ) !important;
+  -webkit-text-fill-color: color-mix(
+    in oklch,
+    var(--loc-ordo-accent) 62%,
+    transparent
+  );
   letter-spacing: 0.03em;
-  color: color-mix(in oklch, var(--loc-ordo-accent) 62%, transparent) !important;
-  -webkit-text-fill-color: color-mix(in oklch, var(--loc-ordo-accent) 62%, transparent);
+  white-space: nowrap;
+  pointer-events: none;
+  content: attr(data-hg-lore-ph);
   opacity: 1;
+  transform: none;
   transition: opacity 0.12s ease;
 }
 
 .locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]::after {
-  content: "";
   position: absolute;
   top: var(--hg-lore-ph-y, 0px);
   bottom: auto;
-  left: calc(var(--sk-v11-marker-inset-left) + var(--sk-v11-marker-offset-x, 0px));
+  left: calc(
+    var(--sk-v11-marker-inset-left) +
+    var(--sk-v11-marker-offset-x, 0px)
+  );
+  z-index: 6;
   width: calc(
-    100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right) - var(--sk-v11-marker-trim-right, 0px)
+    100% -
+    var(--sk-v11-marker-inset-left) -
+    var(--sk-v11-marker-inset-right) -
+    var(--sk-v11-marker-trim-right, 0px)
   );
   height: calc((var(--hg-lore-ph-lh, var(--sk-v11-marker-h)) * 2) + 4px);
   margin: 0;
-  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
-  transform-origin: left top;
-  border-radius: 2px;
   pointer-events: none;
-  z-index: 6;
-  animation: charSkV11MarkerDualLineWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
+  content: "";
   background:
     linear-gradient(
       to bottom,
-      color-mix(in oklch, var(--sys-color-white) var(--sk-v11-marker-gloss, 0.95%), var(--sk-v11-marker)) 0%,
+      color-mix(
+          in oklch,
+          var(--sys-color-white) var(--sk-v11-marker-gloss, 0.95%),
+          var(--sk-v11-marker)
+        )
+        0%,
       var(--sk-v11-marker) 100%
     )
-      left top / calc(100% - var(--sk-v11-marker-trim-right-top, 0px)) calc(50% - 2px) no-repeat,
+    left top / calc(100% - var(--sk-v11-marker-trim-right-top, 0px))
+    calc(50% - 2px) no-repeat,
     linear-gradient(var(--sk-v11-marker), var(--sk-v11-marker)) left bottom /
-      calc(100% - var(--sk-v11-marker-trim-right-bottom, 0px)) calc(50% - 2px) no-repeat;
-  background-blend-mode: normal, normal;
+    calc(100% - var(--sk-v11-marker-trim-right-bottom, 0px)) calc(50% - 2px)
+    no-repeat;
+  border-radius: 2px;
   box-shadow: none;
-  filter: drop-shadow(0 0 1px color-mix(in oklch, var(--sk-v11-marker) 90%, transparent));
-  mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
-  -webkit-mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
-  mask-size: 100% 100%;
+  background-blend-mode: normal, normal;
+  filter: drop-shadow(
+    0 0 1px color-mix(in oklch, var(--sk-v11-marker) 90%, transparent)
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    black var(--sk-v11-marker-tail, 95%),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    black var(--sk-v11-marker-tail, 95%),
+    transparent
+  );
   -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+    skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
+  transform-origin: left top;
+  animation: charSkV11MarkerDualLineWipe var(--sk-v11-marker-wipe-ms)
+    var(--sk-v11-marker-wipe-ease) forwards;
 }
 
 .locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus,
-.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus-within {
+.locOrdoV7Root
+  .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus-within {
   color: var(--loc-ordo-accent) !important;
   -webkit-text-fill-color: var(--loc-ordo-accent);
 }
 
-.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus::after,
-.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus-within::after {
-  animation: none;
-  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
+.locOrdoV7Root
+  .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus::after,
+.locOrdoV7Root
+  .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus-within::after {
+  transform: translateX(-1px) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+    skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
   transition: none;
+  animation: none;
 }
 
-.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus::before,
-.locOrdoV7Root .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus-within::before {
+.locOrdoV7Root
+  .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus::before,
+.locOrdoV7Root
+  .locOrdoV7DisplayTitle[data-hg-lore-placeholder="true"]:focus-within::before {
   opacity: 0;
 }
 
@@ -4480,15 +4841,17 @@
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 12px;
   font-weight: 650;
-  line-height: 1.45;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   font-variant-ligatures: none;
+  line-height: 1.45;
   color: var(--loc-ordo-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .locOrdoV7Root
-  .locOrdoV7ContextLine:not([data-hg-lore-placeholder="true"]):not(:focus):not(:focus-within) {
+  .locOrdoV7ContextLine:not([data-hg-lore-placeholder="true"]):not(:focus):not(
+    :focus-within
+  ) {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4499,90 +4862,134 @@
 .locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"] {
   position: relative;
   display: block;
-  overflow: hidden;
-  contain: paint;
-  border-radius: 2px;
   /* Room for a taller censor strip than the raw caret line box (~10px). */
   min-height: max(1.35em, 24px);
+  contain: paint;
+  overflow: hidden;
   color: transparent;
   -webkit-text-fill-color: transparent;
+  border-radius: 2px;
 }
 
-.locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
-  content: attr(data-hg-lore-ph);
+.locOrdoV7Root
+  .locOrdoV7ContextLine[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
   position: absolute;
-  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px));
-  right: var(--sk-v11-marker-inset-right);
   top: var(--hg-lore-ph-y, 0px);
-  height: var(--hg-lore-ph-lh, var(--sk-v11-marker-h));
-  transform: none;
+  right: var(--sk-v11-marker-inset-right);
+  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px));
+  z-index: 1;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  z-index: 1;
   max-width: 100%;
-  box-sizing: border-box;
+  height: var(--hg-lore-ph-lh, var(--sk-v11-marker-h));
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  pointer-events: none;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 12px;
   font-weight: 650;
   line-height: 1.45;
-  letter-spacing: 0.06em;
+  color: color-mix(
+    in oklch,
+    var(--loc-ordo-accent) 72%,
+    transparent
+  ) !important;
+  -webkit-text-fill-color: color-mix(
+    in oklch,
+    var(--loc-ordo-accent) 72%,
+    transparent
+  );
   text-transform: uppercase;
-  color: color-mix(in oklch, var(--loc-ordo-accent) 72%, transparent) !important;
-  -webkit-text-fill-color: color-mix(in oklch, var(--loc-ordo-accent) 72%, transparent);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  pointer-events: none;
+  content: attr(data-hg-lore-ph);
   opacity: 1;
+  transform: none;
   transition: opacity 0.12s ease;
 }
 
-.locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"][data-hg-lore-ph]::after {
-  content: "";
+.locOrdoV7Root
+  .locOrdoV7ContextLine[data-hg-lore-placeholder="true"][data-hg-lore-ph]::after {
   position: absolute;
-  left: calc(var(--sk-v11-marker-inset-left) + var(--hg-lore-ph-x, 0px) + var(--sk-v11-marker-offset-x, 0px));
+  top: calc(var(--hg-lore-ph-y, 0px) + 2px);
+  right: auto;
+  left: calc(
+    var(--sk-v11-marker-inset-left) +
+    var(--hg-lore-ph-x, 0px) +
+    var(--sk-v11-marker-offset-x, 0px)
+  );
+  z-index: 6;
   /* Shorter than character full-bleed meta strip: reads as a stamp, not a second title rule. */
   width: min(58%, 200px);
-  right: auto;
-  top: calc(var(--hg-lore-ph-y, 0px) + 2px);
   /* Taller than measured caret line (`--hg-lore-ph-lh` ~11px) so the bar feels like a real censor band. */
   height: clamp(14px, calc(var(--hg-lore-ph-lh, 11px) * 1.55), 22px);
-  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
-  transform-origin: left top;
-  border-radius: 2px;
   pointer-events: none;
-  z-index: 6;
-  animation: charSkV11MarkerStripWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
+  content: "";
   background:
     radial-gradient(
       circle at 50% 50%,
-      color-mix(in oklch, var(--sys-color-white) var(--sk-v11-marker-gloss, 2.5%), transparent) 0%,
+      color-mix(
+          in oklch,
+          var(--sys-color-white) var(--sk-v11-marker-gloss, 2.5%),
+          transparent
+        )
+        0%,
       transparent 80%
     ),
     var(--sk-v11-marker);
-  background-blend-mode: soft-light, normal;
+  border-radius: 2px;
   box-shadow: 0 0 2px var(--sk-v11-marker);
-  mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
-  -webkit-mask-image: linear-gradient(to right, black var(--sk-v11-marker-tail, 95%), transparent);
-  mask-size: 100% 100%;
+  background-blend-mode: soft-light, normal;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    black var(--sk-v11-marker-tail, 95%),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    black var(--sk-v11-marker-tail, 95%),
+    transparent
+  );
   -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+    skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
+  transform-origin: left top;
+  animation: charSkV11MarkerStripWipe var(--sk-v11-marker-wipe-ms)
+    var(--sk-v11-marker-wipe-ease) forwards;
 }
 
 .locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus,
-.locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus-within {
-  color: color-mix(in oklch, var(--loc-ordo-accent) 88%, transparent) !important;
-  -webkit-text-fill-color: color-mix(in oklch, var(--loc-ordo-accent) 88%, transparent);
+.locOrdoV7Root
+  .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus-within {
+  color: color-mix(
+    in oklch,
+    var(--loc-ordo-accent) 88%,
+    transparent
+  ) !important;
+  -webkit-text-fill-color: color-mix(
+    in oklch,
+    var(--loc-ordo-accent) 88%,
+    transparent
+  );
 }
 
-.locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus::after,
-.locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus-within::after {
+.locOrdoV7Root
+  .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus::after,
+.locOrdoV7Root
+  .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus-within::after {
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+    skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
+  transition: transform var(--sk-v11-marker-hide-ms)
+    var(--sk-v11-marker-hide-ease);
   animation: none;
-  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
-  transition: transform var(--sk-v11-marker-hide-ms) var(--sk-v11-marker-hide-ease);
 }
 
-.locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus::before,
-.locOrdoV7Root .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus-within::before {
+.locOrdoV7Root
+  .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus::before,
+.locOrdoV7Root
+  .locOrdoV7ContextLine[data-hg-lore-placeholder="true"]:focus-within::before {
   opacity: 0;
 }
 
@@ -4598,16 +5005,17 @@
 }
 
 .locOrdoV7DetailLine {
+  padding: 0 0 0.55em;
   margin: -2px 0 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 0.92em;
   font-weight: 400;
-  letter-spacing: -0.01em;
   line-height: 1.55;
-  text-transform: none;
   color: var(--loc-ordo-accent);
-  padding: 0 0 0.55em;
-  border-bottom: 1px solid color-mix(in oklch, var(--loc-ordo-accent) 14%, transparent);
+  text-transform: none;
+  letter-spacing: -0.01em;
+  border-bottom: 1px solid
+    color-mix(in oklch, var(--loc-ordo-accent) 14%, transparent);
 }
 
 .locOrdoV7Root .locOrdoV7DetailLine:not(:focus):not(:focus-within) {
@@ -4618,10 +5026,10 @@
 }
 
 .locOrdoV7NotesCell {
-  margin: 0;
-  padding: 0;
-  border: none;
   min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
 }
 
 .locOrdoV7NotesInner {
@@ -4629,32 +5037,32 @@
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 10.5px;
   line-height: 1.68;
-  text-transform: none;
   color: inherit;
+  text-transform: none;
 }
 
 /* --- Faction Archive-091 readable (production canvas + focus) --- */
 .facArxxRoot {
-  position: relative;
-  overflow: visible;
-  cursor: default;
   --fac-arxx-bg: #0a0a0c;
   --fac-arxx-fg: #f5f5f5;
   --fac-arxx-accent: #c4c8d4;
+  position: relative;
+  overflow: visible;
   color: var(--sem-text-primary);
+  cursor: default;
   /* Match `FactionLabPlate` XX specimen — plate chrome lives on `.facArxxRoot` (canvas `entityNode` shadow is cleared). */
-  border: 1px solid color-mix(in oklch, var(--fac-arxx-fg) 22%, var(--sys-color-neutral-900));
+  border: 1px solid
+    color-mix(in oklch, var(--fac-arxx-fg) 22%, var(--sys-color-neutral-900));
   border-radius: 0;
-  box-shadow: 0 14px 32px color-mix(in oklch, var(--sys-color-black) 45%, transparent);
+  box-shadow: 0 14px 32px
+    color-mix(in oklch, var(--sys-color-black) 45%, transparent);
 }
 
 .facArxxGrain {
-  pointer-events: none;
   position: absolute;
   inset: 0;
   z-index: 2;
-  opacity: 0.08;
-  mix-blend-mode: overlay;
+  pointer-events: none;
   background-image:
     repeating-linear-gradient(
       0deg,
@@ -4670,6 +5078,8 @@
       rgba(255, 255, 255, 0.035) 1px,
       rgba(255, 255, 255, 0.035) 2px
     );
+  mix-blend-mode: overlay;
+  opacity: 0.08;
 }
 
 .facArxxPage {
@@ -4678,9 +5088,9 @@
   display: grid;
   grid-template-columns: 23px minmax(0, 1fr);
   gap: 8px;
-  padding: 0 5px 0;
-  min-height: 0;
   align-items: stretch;
+  min-height: 0;
+  padding: 0 5px 0;
   background-color: var(--fac-arxx-bg);
   background-image:
     radial-gradient(
@@ -4713,13 +5123,20 @@
       color-mix(in oklch, var(--fac-arxx-fg) 1.1%, transparent) 4px
     ),
     url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: auto, auto, auto, auto, auto, 148px 148px;
   background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat, repeat;
-  background-blend-mode: normal, soft-light, multiply, soft-light, soft-light, soft-light;
+  background-size:
+    auto,
+    auto,
+    auto,
+    auto,
+    auto,
+    148px 148px;
   box-shadow:
     inset 0 1px 0 color-mix(in oklch, var(--fac-arxx-fg) 9%, transparent),
     inset 0 -1px 0 color-mix(in oklch, var(--sys-color-black) 28%, transparent),
     inset 0 0 72px color-mix(in oklch, var(--sys-color-black) 38%, transparent);
+  background-blend-mode:
+    normal, soft-light, multiply, soft-light, soft-light, soft-light;
 }
 
 .facArxxPage > aside:first-of-type {
@@ -4728,29 +5145,29 @@
 }
 
 .facArxxRail {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  box-sizing: border-box;
   min-height: 0;
   padding: 12px 4px 10px 0;
   color: var(--sem-text-primary);
 }
 
 .facArxxVertical {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
+  box-sizing: border-box;
+  padding: 3px 1px;
+  margin: 3px 0;
   font-family: var(--font-geist-mono), monospace;
   font-size: 6.5px;
   font-weight: 500;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--sem-text-muted);
   line-height: 1.25;
-  margin: 3px 0;
-  padding: 3px 1px;
-  box-sizing: border-box;
+  color: var(--sem-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
 }
 
 .facArxxStar {
@@ -4761,9 +5178,13 @@
 }
 
 .facArxxBarcode {
+  --fac-arxx-barcode-stripe: color-mix(
+    in oklch,
+    var(--sem-text-muted) 52%,
+    var(--sys-color-black)
+  );
   width: 13px;
   height: 6px;
-  --fac-arxx-barcode-stripe: color-mix(in oklch, var(--sem-text-muted) 52%, var(--sys-color-black));
   background: repeating-linear-gradient(
     90deg,
     var(--fac-arxx-barcode-stripe) 0,
@@ -4775,25 +5196,25 @@
 }
 
 .facArxxMain {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--fac-arxx-stack-gap);
-  padding: 12px 6px 10px;
-  box-sizing: border-box;
   --fac-arxx-stack-gap: 12px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fac-arxx-stack-gap);
+  align-items: stretch;
+  min-width: 0;
+  padding: 12px 6px 10px;
 }
 
 .facArxxRule {
+  box-sizing: border-box;
   flex-shrink: 0;
   width: 100%;
   height: 0.5px;
-  margin: 0;
   padding: 0;
-  border: none;
+  margin: 0;
   background: var(--sem-border-strong);
-  box-sizing: border-box;
+  border: none;
 }
 
 .facArxxFocusTop {
@@ -4803,26 +5224,26 @@
 
 .facArxxPlateHeader {
   display: flex;
-  width: 100%;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  width: 100%;
   padding: 0;
   border-bottom: none;
 }
 
 .facArxxPlateHeaderTitle {
   display: flex;
-  min-width: 0;
   flex: 1 1 auto;
   align-items: center;
+  min-width: 0;
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
+  color: var(--sem-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--sem-text-muted);
 }
 
 .facArxxPlateHeaderActions {
@@ -4848,20 +5269,14 @@
 
 .facArxxLetterhead {
   width: 100%;
-  margin: 0;
   padding: 0;
-  border: none;
-  text-align: center;
+  margin: 0;
   overflow: visible;
+  text-align: center;
+  border: none;
 }
 
 .facArxxLetterheadPh {
-  width: 100%;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  overflow: visible;
   --sk-id-surface: var(--fac-arxx-bg);
   --sk-id-text: var(--fac-arxx-fg);
   --sk-v11-marker: #000;
@@ -4869,23 +5284,31 @@
   --sk-v11-marker-tail: 100%;
   --sem-text-primary: var(--fac-arxx-fg);
   --sem-text-muted: var(--fac-arxx-accent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
 }
 
 /*
  * Character v11 placeholders use overflow:hidden + contain:paint so marker UI stays tidy on credentials.
  * Faction letterhead reuses those classes but rotated/skewed ::after strips must paint outside the content box.
  */
-.charSkShellV11.facArxxLetterheadPh .charSkDisplayName[data-hg-lore-placeholder="true"],
-.charSkShellV11.facArxxLetterheadPh .charSkRole[data-hg-lore-placeholder="true"] {
-  overflow: visible;
+.charSkShellV11.facArxxLetterheadPh
+.charSkDisplayName[data-hg-lore-placeholder="true"],
+.charSkShellV11.facArxxLetterheadPh
+  .charSkRole[data-hg-lore-placeholder="true"] {
   contain: none;
+  overflow: visible;
 }
 
 .facArxxLetterheadPh .facArxxLetterheadPrimary,
 .facArxxLetterheadPh .facArxxLetterheadSecondary {
+  box-sizing: border-box;
   align-self: stretch;
   width: 100%;
-  box-sizing: border-box;
 }
 
 .facArxxLetterheadPrimary {
@@ -4896,44 +5319,49 @@
 
 .facArxxLetterheadSecondary {
   text-align: center;
-  outline: none;
   overflow-wrap: anywhere;
+  outline: none;
 }
 
 @keyframes facArxxLetterheadPrimaryStripWipe {
   from {
-    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg))
-      scaleX(0);
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+      skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
   }
 
   to {
-    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg))
-      scaleX(1);
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+      skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   }
 }
 
-.facArxxLetterheadPh .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"] {
+.facArxxLetterheadPh
+  .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"] {
   font-family: var(--font-hg-id-playfair), var(--font-lora), serif;
   font-size: 1.5rem;
   font-weight: 900;
-  letter-spacing: -0.035em;
   line-height: 0.95;
-  text-transform: uppercase;
   color: var(--fac-arxx-fg);
   -webkit-text-fill-color: var(--fac-arxx-fg);
+  text-transform: uppercase;
+  letter-spacing: -0.035em;
 }
 
 @supports (width: 1cqi) {
-  .facArxxLetterheadPh .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"] {
+  .facArxxLetterheadPh
+    .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"] {
     font-size: 1.5rem;
   }
 }
 
-.facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"] {
+.facArxxLetterheadPh
+  .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"] {
+  box-sizing: border-box;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
+  min-height: max(1.35em, var(--sk-v11-marker-h));
   font-family: var(--font-hg-id-playfair), var(--font-lora), serif;
   font-size: 0.8125rem;
   font-style: italic;
@@ -4941,8 +5369,6 @@
   line-height: 1.3;
   color: var(--fac-arxx-accent);
   -webkit-text-fill-color: var(--fac-arxx-accent);
-  min-height: max(1.35em, var(--sk-v11-marker-h));
-  box-sizing: border-box;
 }
 
 .facArxxLetterheadPh
@@ -4952,15 +5378,18 @@
   height: max(1.35em, var(--sk-v11-marker-h));
 }
 
-.facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"]:focus,
-.facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"]:focus-within {
+.facArxxLetterheadPh
+  .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"]:focus,
+.facArxxLetterheadPh
+  .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"]:focus-within {
   color: var(--fac-arxx-accent) !important;
   -webkit-text-fill-color: var(--fac-arxx-accent) !important;
 }
 
 .facArxxLetterheadPh
   .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"][data-hg-lore-ph]::before,
-.facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
+.facArxxLetterheadPh
+  .facArxxLetterheadSecondary[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
   content: none !important;
 }
 
@@ -4968,9 +5397,9 @@
   .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"],
 .facArxxLetterheadPh
   .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"][data-hg-lore-ph] {
-  min-height: max(1.62em, calc(var(--sk-v11-marker-h) + 8px));
-  height: max(1.62em, calc(var(--sk-v11-marker-h) + 8px));
   box-sizing: border-box;
+  height: max(1.62em, calc(var(--sk-v11-marker-h) + 8px));
+  min-height: max(1.62em, calc(var(--sk-v11-marker-h) + 8px));
 }
 
 .facArxxLetterheadPh
@@ -4978,64 +5407,83 @@
   top: var(--hg-lore-ph-y, 0px);
   bottom: auto;
   left: var(--sk-v11-marker-inset-left) !important;
-  width: calc(100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right)) !important;
+  width: calc(
+    100% -
+    var(--sk-v11-marker-inset-left) -
+    var(--sk-v11-marker-inset-right)
+  ) !important;
   height: calc(var(--hg-lore-ph-lh, var(--sk-v11-marker-h)) + 6px);
-  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg))
-    scaleX(1);
-  transform-origin: left top;
-  animation: facArxxLetterheadPrimaryStripWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
   background:
     radial-gradient(
       circle at 50% 50%,
-      color-mix(in oklch, var(--sys-color-white) var(--sk-v11-marker-gloss, 2.5%), transparent) 0%,
+      color-mix(
+          in oklch,
+          var(--sys-color-white) var(--sk-v11-marker-gloss, 2.5%),
+          transparent
+        )
+        0%,
       transparent 80%
     ),
     var(--sk-v11-marker);
-  background-blend-mode: soft-light, normal;
   box-shadow: 0 0 2px var(--sk-v11-marker);
+  background-blend-mode: soft-light, normal;
   filter: none;
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+    skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
+  transform-origin: left top;
+  animation: facArxxLetterheadPrimaryStripWipe var(--sk-v11-marker-wipe-ms)
+    var(--sk-v11-marker-wipe-ease) forwards;
 }
 
 .facArxxLetterheadPh
   .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]:focus::after,
 .facArxxLetterheadPh
   .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]:focus-within::after {
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+    skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
+  transition: transform var(--sk-v11-marker-hide-ms)
+    var(--sk-v11-marker-hide-ease);
   animation: none;
-  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg))
-    scaleX(0);
-  transition: transform var(--sk-v11-marker-hide-ms) var(--sk-v11-marker-hide-ease);
 }
 
 .facArxxLetterheadPh
   .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"][data-hg-lore-placeholder="true"]::after {
   top: auto !important;
   bottom: 3px !important;
-  transform-origin: left center !important;
   left: var(--sk-v11-marker-inset-left) !important;
-  width: calc(100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right)) !important;
+  width: calc(
+    100% -
+    var(--sk-v11-marker-inset-left) -
+    var(--sk-v11-marker-inset-right)
+  ) !important;
+  transform-origin: left center !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .facArxxLetterheadPh
     .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]::after {
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+      skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
     animation: none;
-    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg))
-      scaleX(1);
   }
 
   .facArxxLetterheadPh
     .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]:focus::after,
   .facArxxLetterheadPh
     .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]:focus-within::after {
-    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg))
-      scaleX(1);
     opacity: 0;
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+      skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
     transition: opacity 0.12s ease;
   }
 }
 
-.facArxxRoot .facArxxLetterheadPh [data-hg-lore-faction-field="orgNamePrimary"][contenteditable="true"],
-.facArxxRoot .facArxxLetterheadPh [data-hg-lore-faction-field="orgNameAccent"][contenteditable="true"] {
+.facArxxRoot
+  .facArxxLetterheadPh
+  [data-hg-lore-faction-field="orgNamePrimary"][contenteditable="true"],
+.facArxxRoot
+  .facArxxLetterheadPh
+  [data-hg-lore-faction-field="orgNameAccent"][contenteditable="true"] {
   cursor: text;
   outline: none;
   box-shadow: none;
@@ -5053,32 +5501,32 @@
   font-size: 10px;
   font-weight: 600;
   line-height: 1.25;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--sem-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .facArxxH2Row {
   display: flex;
-  width: 100%;
+  gap: 8px;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  width: 100%;
   margin: 0 0 10px;
 }
 
 .facArxxH2Actions {
   display: inline-flex;
-  align-items: center;
   gap: 8px;
+  align-items: center;
 }
 
 .facArxxH2Row .facArxxH2 {
-  margin: 0;
-  padding: 0;
-  border-bottom: none;
   flex: 1 1 auto;
   min-width: 0;
+  padding: 0;
+  margin: 0;
+  border-bottom: none;
 }
 
 .facArxxH2Meta {
@@ -5098,23 +5546,23 @@
 }
 
 .facArxxRecordCell {
-  margin: 0;
-  padding: 0;
-  border: none;
   min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
 }
 
 .facArxxRecordInner {
-  margin: 0;
   min-height: 48px;
+  margin: 0;
 }
 
 .facArxxHgHost {
   --fac-arxx-doc-edge-fade: 16px;
 
   max-height: 132px;
-  margin-bottom: 10px;
   padding: 2px 12px 0 0;
+  margin-bottom: 10px;
   overflow-x: hidden;
   overflow-y: auto;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
@@ -5129,21 +5577,21 @@
 }
 
 .facArxxHgHost[data-hg-fac-arxx-doc-mask] {
-  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-size: 100% 100%;
-  -webkit-mask-repeat: no-repeat;
+  mask-size: 100% 100%;
 }
 
 .facArxxHgHost[data-hg-fac-arxx-doc-mask="both"] {
-  mask-image: linear-gradient(
+  -webkit-mask-image: linear-gradient(
     to bottom,
     transparent,
     #000 var(--fac-arxx-doc-edge-fade),
     #000 calc(100% - var(--fac-arxx-doc-edge-fade)),
     transparent
   );
-  -webkit-mask-image: linear-gradient(
+  mask-image: linear-gradient(
     to bottom,
     transparent,
     #000 var(--fac-arxx-doc-edge-fade),
@@ -5153,13 +5601,13 @@
 }
 
 .facArxxHgHost[data-hg-fac-arxx-doc-mask="end"] {
-  mask-image: linear-gradient(
+  -webkit-mask-image: linear-gradient(
     to bottom,
     #000 0,
     #000 calc(100% - var(--fac-arxx-doc-edge-fade)),
     transparent
   );
-  -webkit-mask-image: linear-gradient(
+  mask-image: linear-gradient(
     to bottom,
     #000 0,
     #000 calc(100% - var(--fac-arxx-doc-edge-fade)),
@@ -5168,13 +5616,13 @@
 }
 
 .facArxxHgHost[data-hg-fac-arxx-doc-mask="start"] {
-  mask-image: linear-gradient(
+  -webkit-mask-image: linear-gradient(
     to bottom,
     transparent,
     #000 var(--fac-arxx-doc-edge-fade),
     #000 100%
   );
-  -webkit-mask-image: linear-gradient(
+  mask-image: linear-gradient(
     to bottom,
     transparent,
     #000 var(--fac-arxx-doc-edge-fade),
@@ -5199,13 +5647,24 @@
 .facArxxHgHost :global(.ProseMirror span.hgAiPending) {
   color: var(--sem-text-llm-accent-bright);
   text-decoration: none;
-  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, transparent);
+  background: color-mix(
+    in oklch,
+    var(--sem-surface-llm-pending) 100%,
+    transparent
+  );
 }
 
-.facArxxHgHost :global(.ProseMirror [data-hg-ai-pending="true"].hgAiPending--gutter-hover),
-.facArxxHgHost :global(.ProseMirror span.hgAiPending.hgAiPending--gutter-hover) {
-  background: color-mix(in oklch, var(--sem-surface-llm-pending-hover) 100%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--sem-text-llm-accent-bright) 42%, transparent);
+.facArxxHgHost
+  :global(.ProseMirror [data-hg-ai-pending="true"].hgAiPending--gutter-hover),
+.facArxxHgHost
+  :global(.ProseMirror span.hgAiPending.hgAiPending--gutter-hover) {
+  background: color-mix(
+    in oklch,
+    var(--sem-surface-llm-pending-hover) 100%,
+    transparent
+  );
+  box-shadow: 0 0 0 1px
+    color-mix(in oklch, var(--sem-text-llm-accent-bright) 42%, transparent);
 }
 
 .facArxxHgHost :global(.ProseMirror em) {
@@ -5224,11 +5683,11 @@
 }
 
 .facArxxRosterCanvasEmpty {
+  box-sizing: border-box;
   padding: 14px 12px;
+  text-align: center;
   border: 1px dashed var(--sem-border-subtle);
   border-radius: 2px;
-  text-align: center;
-  box-sizing: border-box;
 }
 
 .facArxxRosterCanvasEmptyTitle {
@@ -5237,9 +5696,9 @@
   font-size: 10px;
   font-weight: 600;
   line-height: 1.25;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--sem-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .facArxxRosterCanvasEmptyHint {
@@ -5259,15 +5718,15 @@
 .facArxxRosterCanvasEmptyKey {
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
-  letter-spacing: 0.03em;
   color: var(--sem-text-muted);
+  letter-spacing: 0.03em;
 }
 
 .facArxxRosterCanvasRow {
   display: flex;
+  gap: 10px;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
   padding: 10px 11px 11px;
   border: 1px dashed var(--sem-border-subtle);
   border-radius: 2px;

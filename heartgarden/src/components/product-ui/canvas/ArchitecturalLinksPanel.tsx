@@ -4,10 +4,10 @@ import { TreeStructure } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { CanvasGraph } from "@/src/components/foundation/architectural-types";
-import { menuLabelForLinkType } from "@/src/lib/lore-link-types";
 import { Button } from "@/src/components/ui/Button";
 import { CanvasDebugInspectorShell } from "@/src/components/ui/CanvasDebugInspectorShell";
 import debugInspectorStyles from "@/src/components/ui/CanvasDebugInspectorShell.module.css";
+import { menuLabelForLinkType } from "@/src/lib/lore-link-types";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -15,7 +15,11 @@ const UUID_RE =
 type Endpoint = { id: string; title: string; itemType: string };
 
 type CloudLoaded =
-  | { outgoing: { linkId: string; linkType: string; to: Endpoint }[]; incoming: { linkId: string; linkType: string; from: Endpoint }[]; err: null }
+  | {
+      outgoing: { linkId: string; linkType: string; to: Endpoint }[];
+      incoming: { linkId: string; linkType: string; from: Endpoint }[];
+      err: null;
+    }
   | { outgoing: []; incoming: []; err: string };
 
 /** Inspector surfaces: canvas threads, persisted edges, and FTS related discovery. */
@@ -34,7 +38,8 @@ export function ArchitecturalLinksPanel({
   itemLinksRevision?: string | null;
   onFocusEntity: (entityId: string) => void;
 }) {
-  const entityId = selectedEntityIds.length === 1 ? selectedEntityIds[0]! : null;
+  const entityId =
+    selectedEntityIds.length === 1 ? selectedEntityIds[0]! : null;
   const entity = entityId ? graph.entities[entityId] : undefined;
 
   const itemIdForCloud =
@@ -46,11 +51,13 @@ export function ArchitecturalLinksPanel({
 
   const [cloud, setCloud] = useState<CloudLoaded | null>(null);
   const [cloudLoading, setCloudLoading] = useState(false);
-  const [related, setRelated] = useState<{ id: string; title: string; itemType: string }[]>([]);
+  const [related, setRelated] = useState<
+    { id: string; title: string; itemType: string }[]
+  >([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
 
   useEffect(() => {
-    if (!itemIdForCloud || !cloudEnabled) {
+    if (!(itemIdForCloud && cloudEnabled)) {
       setCloud(null);
       setCloudLoading(false);
       return;
@@ -66,20 +73,30 @@ export function ArchitecturalLinksPanel({
           incoming?: { linkId: string; linkType: string; from: Endpoint }[];
           error?: string;
         };
-        if (cancelled) return;
-        if (!data.ok) {
-          setCloud({ outgoing: [], incoming: [], err: data.error ?? "Could not load links" });
-        } else {
+        if (cancelled) {
+          return;
+        }
+        if (data.ok) {
           setCloud({
             outgoing: data.outgoing ?? [],
             incoming: data.incoming ?? [],
             err: null,
           });
+        } else {
+          setCloud({
+            outgoing: [],
+            incoming: [],
+            err: data.error ?? "Could not load links",
+          });
         }
       } catch {
-        if (!cancelled) setCloud({ outgoing: [], incoming: [], err: "Could not load links" });
+        if (!cancelled) {
+          setCloud({ outgoing: [], incoming: [], err: "Could not load links" });
+        }
       } finally {
-        if (!cancelled) setCloudLoading(false);
+        if (!cancelled) {
+          setCloudLoading(false);
+        }
       }
     })();
     return () => {
@@ -88,7 +105,7 @@ export function ArchitecturalLinksPanel({
   }, [cloudEnabled, itemIdForCloud, itemLinksRevision]);
 
   useEffect(() => {
-    if (!itemIdForCloud || !cloudEnabled) {
+    if (!(itemIdForCloud && cloudEnabled)) {
       setRelated([]);
       return;
     }
@@ -97,18 +114,24 @@ export function ArchitecturalLinksPanel({
     void (async () => {
       try {
         const res = await fetch(
-          `/api/items/${itemIdForCloud}/related?spaceId=${encodeURIComponent(activeSpaceId)}&limit=8`,
+          `/api/items/${itemIdForCloud}/related?spaceId=${encodeURIComponent(activeSpaceId)}&limit=8`
         );
         const data = (await res.json()) as {
           ok?: boolean;
           items?: { id: string; title: string; itemType: string }[];
         };
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setRelated(data.ok && data.items ? data.items : []);
       } catch {
-        if (!cancelled) setRelated([]);
+        if (!cancelled) {
+          setRelated([]);
+        }
       } finally {
-        if (!cancelled) setRelatedLoading(false);
+        if (!cancelled) {
+          setRelatedLoading(false);
+        }
       }
     })();
     return () => {
@@ -117,7 +140,12 @@ export function ArchitecturalLinksPanel({
   }, [activeSpaceId, cloudEnabled, itemIdForCloud]);
 
   const canvasThreads = useMemo(() => {
-    if (!entityId) return { count: 0, rows: [] as { peerId: string; title: string; tag: string }[] };
+    if (!entityId) {
+      return {
+        count: 0,
+        rows: [] as { peerId: string; title: string; tag: string }[],
+      };
+    }
     const rows: { peerId: string; title: string; tag: string }[] = [];
     for (const c of Object.values(graph.connections)) {
       if (c.sourceEntityId === entityId) {
@@ -148,19 +176,21 @@ export function ArchitecturalLinksPanel({
     (id: string) => {
       onFocusEntity(id);
     },
-    [onFocusEntity],
+    [onFocusEntity]
   );
 
-  if (!entityId) return null;
+  if (!entityId) {
+    return null;
+  }
 
   const serverTotal =
     cloud && !cloud.err ? cloud.outgoing.length + cloud.incoming.length : null;
 
   return (
     <CanvasDebugInspectorShell
+      defaultOpen={false}
       storageKey="hg-canvas-debug-links"
       title="Connections · inspector"
-      defaultOpen={false}
     >
       <p className={`${debugInspectorStyles.debugInspectorIntro} mb-2`}>
         <span className="text-[var(--vigil-label)]">
@@ -168,38 +198,45 @@ export function ArchitecturalLinksPanel({
           {cloudEnabled && serverTotal !== null ? serverTotal : "—"}
         </span>
       </p>
-      {!cloudEnabled ? (
+      {cloudEnabled ? (
         <p className={debugInspectorStyles.debugInspectorIntro}>
-          Local canvas threads are ephemeral until sync. Sync to Neon for persisted{" "}
+          Persisted rows mirror drawn threads after sync. FTS
+          &quot;related&quot; is discovery, not an authored link.
+        </p>
+      ) : (
+        <p className={debugInspectorStyles.debugInspectorIntro}>
+          Local canvas threads are ephemeral until sync. Sync to Neon for
+          persisted{" "}
           <code className={debugInspectorStyles.debugInspectorCode}>
             item_links
           </code>{" "}
           rows.
         </p>
-      ) : (
-        <p className={debugInspectorStyles.debugInspectorIntro}>
-          Persisted rows mirror drawn threads after sync. FTS &quot;related&quot; is discovery,
-          not an authored link.
-        </p>
       )}
 
       <div className={debugInspectorStyles.debugInspectorDivider}>
-        <div className={debugInspectorStyles.debugInspectorSectionLabel}>Canvas threads (this space)</div>
+        <div className={debugInspectorStyles.debugInspectorSectionLabel}>
+          Canvas threads (this space)
+        </div>
         {canvasThreads.rows.length === 0 ? (
-          <p className={debugInspectorStyles.debugInspectorMuted}>No threads touch this card.</p>
+          <p className={debugInspectorStyles.debugInspectorMuted}>
+            No threads touch this card.
+          </p>
         ) : (
           <ul className={debugInspectorStyles.debugInspectorList}>
             {canvasThreads.rows.map((r, i) => (
               <li key={`${r.peerId}-${i}`}>
                 <Button
-                  size="sm"
-                  variant="subtle"
-                  tone="menu"
                   className="w-full justify-start truncate"
                   onClick={() => focus(r.peerId)}
+                  size="sm"
+                  tone="menu"
+                  variant="subtle"
                 >
                   {r.title}
-                  <span className="ml-1 text-[var(--vigil-muted)]">· {r.tag}</span>
+                  <span className="ml-1 text-[var(--vigil-muted)]">
+                    · {r.tag}
+                  </span>
                 </Button>
               </li>
             ))}
@@ -209,9 +246,13 @@ export function ArchitecturalLinksPanel({
 
       {cloudEnabled && itemIdForCloud ? (
         cloudLoading && !cloud ? (
-          <p className={debugInspectorStyles.debugInspectorMuted}>Loading persisted edges…</p>
+          <p className={debugInspectorStyles.debugInspectorMuted}>
+            Loading persisted edges…
+          </p>
         ) : cloud?.err ? (
-          <p className={debugInspectorStyles.debugInspectorError}>{cloud.err}</p>
+          <p className={debugInspectorStyles.debugInspectorError}>
+            {cloud.err}
+          </p>
         ) : cloud ? (
           <div className={debugInspectorStyles.debugInspectorStack}>
             <div className={debugInspectorStyles.debugInspectorSectionLabel}>
@@ -219,16 +260,20 @@ export function ArchitecturalLinksPanel({
             </div>
             {cloud.outgoing.length > 0 ? (
               <div>
-                <div className={debugInspectorStyles.debugInspectorSectionLabel}>Outgoing</div>
+                <div
+                  className={debugInspectorStyles.debugInspectorSectionLabel}
+                >
+                  Outgoing
+                </div>
                 <ul className={debugInspectorStyles.debugInspectorList}>
                   {cloud.outgoing.map((r) => (
                     <li key={r.linkId}>
                       <Button
-                        size="sm"
-                        variant="subtle"
-                        tone="menu"
                         className="w-full justify-start truncate"
                         onClick={() => focus(r.to.id)}
+                        size="sm"
+                        tone="menu"
+                        variant="subtle"
                       >
                         {r.to.title}
                         <span className="ml-1 text-[var(--vigil-muted)]">
@@ -242,20 +287,25 @@ export function ArchitecturalLinksPanel({
             ) : null}
             {cloud.incoming.length > 0 ? (
               <div>
-                <div className={debugInspectorStyles.debugInspectorSectionLabel}>Incoming</div>
+                <div
+                  className={debugInspectorStyles.debugInspectorSectionLabel}
+                >
+                  Incoming
+                </div>
                 <ul className={debugInspectorStyles.debugInspectorList}>
                   {cloud.incoming.map((r) => (
                     <li key={r.linkId}>
                       <Button
-                        size="sm"
-                        variant="subtle"
-                        tone="menu"
                         className="w-full justify-start truncate"
                         onClick={() => focus(r.from.id)}
+                        size="sm"
+                        tone="menu"
+                        variant="subtle"
                       >
                         {r.from.title}
                         <span className="ml-1 text-[var(--vigil-muted)]">
-                          ({menuLabelForLinkType(r.linkType)}) · {r.from.itemType}
+                          ({menuLabelForLinkType(r.linkType)}) ·{" "}
+                          {r.from.itemType}
                         </span>
                       </Button>
                     </li>
@@ -275,7 +325,7 @@ export function ArchitecturalLinksPanel({
       {cloudEnabled && itemIdForCloud ? (
         <div className={debugInspectorStyles.debugInspectorDivider}>
           <div className={debugInspectorStyles.debugInspectorRelatedHeading}>
-            <TreeStructure size={14} weight="bold" aria-hidden />
+            <TreeStructure aria-hidden size={14} weight="bold" />
             <span>Related (discovery · FTS)</span>
           </div>
           {relatedLoading ? (
@@ -289,14 +339,16 @@ export function ArchitecturalLinksPanel({
               {related.map((r) => (
                 <li key={r.id}>
                   <Button
-                    size="sm"
-                    variant="subtle"
-                    tone="menu"
                     className="w-full justify-start truncate"
                     onClick={() => focus(r.id)}
+                    size="sm"
+                    tone="menu"
+                    variant="subtle"
                   >
                     {r.title}
-                    <span className="ml-1 text-[var(--vigil-muted)]">({r.itemType})</span>
+                    <span className="ml-1 text-[var(--vigil-muted)]">
+                      ({r.itemType})
+                    </span>
                   </Button>
                 </li>
               ))}

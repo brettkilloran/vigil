@@ -5,18 +5,18 @@
 .page {
   min-height: 100vh;
   padding: 32px 28px 80px;
-  background: var(--sem-surface-base);
   color: var(--sem-text-primary);
+  background: var(--sem-surface-base);
 }
 
 .topBar {
-  max-width: 1200px;
-  margin: 0 auto 28px;
   display: flex;
   flex-wrap: wrap;
+  gap: 16px;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto 28px;
 }
 
 .titleBlock h1 {
@@ -27,8 +27,8 @@
 }
 
 .titleBlock p {
-  margin: 0;
   max-width: 52ch;
+  margin: 0;
   font-size: 0.875rem;
   line-height: 1.55;
   color: var(--sem-text-muted);
@@ -36,17 +36,17 @@
 
 .themeRow {
   display: flex;
-  align-items: center;
-  gap: 8px;
   flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
 }
 
 .themeLabel {
   font-size: 10px;
   font-weight: 600;
+  color: var(--sem-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--sem-text-muted);
 }
 
 /* Toolbar buttons use shared `Button`; class tweaks spacing only. */
@@ -55,28 +55,32 @@
 }
 
 .sections {
-  max-width: 1200px;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 48px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .sectionTitle {
   margin: 0 0 6px;
   font-size: 11px;
   font-weight: 700;
+  color: var(--sem-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--sem-text-muted);
 }
 
 .sectionHint {
+  max-width: 70ch;
   margin: 0 0 20px;
   font-size: 13px;
   line-height: 1.5;
-  color: color-mix(in oklch, var(--sem-text-muted) 92%, var(--sem-text-primary));
-  max-width: 70ch;
+  color: color-mix(
+    in oklch,
+    var(--sem-text-muted) 92%,
+    var(--sem-text-primary)
+  );
 }
 
 .sectionHint code {
@@ -87,9 +91,9 @@
   margin: 36px 0 6px;
   font-size: 10px;
   font-weight: 700;
+  color: var(--sem-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--sem-text-muted);
 }
 
 /* Min track width matches entity card width (340px) so skeuo previews are not squeezed/clipped. */
@@ -114,14 +118,14 @@
 .variantLabel {
   font-size: 10px;
   font-weight: 600;
+  color: var(--sem-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--sem-text-muted);
 }
 
 .spec {
-  margin: 0;
   padding-left: 1.1em;
+  margin: 0;
   font-size: 12px;
   line-height: 1.55;
   color: var(--sem-text-muted);
@@ -133,7 +137,8 @@
 
 /* Card body shared */
 .labBody {
-  composes: a4DocumentBody from "../foundation/ArchitecturalCanvasApp.module.css";
+  composes: a4DocumentBody from
+    "../foundation/ArchitecturalCanvasApp.module.css";
   --arch-body-pad-x: 18px;
   --arch-body-pad-y: 16px;
   padding: 16px 18px 20px;
@@ -151,9 +156,9 @@
 
 /* Protocol v4–v8 lab cards: same body classes as canvas so full-bleed lore rules apply */
 .labSkeuoBleed {
+  box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  box-sizing: border-box;
   min-height: 200px;
   max-height: none;
   cursor: default;
@@ -167,9 +172,9 @@
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+  clip: rect(0, 0, 0, 0);
 }
 
 /* V3 survey tag — optional hero image + scrim when a file is picked. */
@@ -181,20 +186,20 @@
 .locSurveyV3HeroPhoto,
 .locSurveyV3HeroScrim {
   position: absolute;
-  left: calc(-1 * var(--arch-body-pad-x, 18px));
-  right: calc(-1 * var(--arch-body-pad-x, 18px));
-  width: auto;
   top: calc(-1 * var(--arch-body-pad-y, 16px));
+  right: calc(-1 * var(--arch-body-pad-x, 18px));
+  left: calc(-1 * var(--arch-body-pad-x, 18px));
+  z-index: 0;
+  width: auto;
   height: min(188px, 60%);
   pointer-events: none;
-  z-index: 0;
   border-radius: 0 0 4px 4px;
 }
 
 .locSurveyV3HeroPhoto {
-  background-size: cover;
-  background-position: center 32%;
   background-repeat: no-repeat;
+  background-position: center 32%;
+  background-size: cover;
   filter: saturate(1.04) contrast(1.02);
 }
 
@@ -216,18 +221,19 @@
 .locSurveyV3HeaderOnHero {
   padding: 8px 10px 10px;
   margin: 2px 0 0;
-  border-radius: 4px;
   background: color-mix(in oklch, var(--theme-default-bg) 76%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 12%, transparent);
-  backdrop-filter: blur(5px);
+  border-radius: 4px;
+  box-shadow: inset 0 1px 0
+    color-mix(in oklch, var(--sys-color-white) 12%, transparent);
   -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
 }
 
 .locSurveyV3Chrome {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   gap: 8px;
+  align-items: center;
   margin-top: 2px;
 }
 
@@ -245,11 +251,15 @@
 
 /* Priming specimen — roster data model demo; not production `lore-node-seed-html` faction seeds. */
 .factionLabPlate_rosterPriming {
-  border: 1px solid color-mix(in oklch, var(--sem-text-muted) 28%, transparent);
-  background: color-mix(in oklch, var(--sem-surface-raised) 88%, var(--theme-default-bg));
-  color: var(--sem-text-primary);
-  padding: 0;
   min-height: 0;
+  padding: 0;
+  color: var(--sem-text-primary);
+  background: color-mix(
+    in oklch,
+    var(--sem-surface-raised) 88%,
+    var(--theme-default-bg)
+  );
+  border: 1px solid color-mix(in oklch, var(--sem-text-muted) 28%, transparent);
   border-radius: 10px;
   box-shadow:
     0 1px 0 color-mix(in oklch, var(--sys-color-white) 10%, transparent),
@@ -257,25 +267,25 @@
 }
 
 .facRosterPrimingRoot {
-  padding: 14px 16px 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding: 14px 16px 16px;
 }
 
 .facRosterPrimingEyebrow {
   font-size: 10px;
   font-weight: 600;
+  color: var(--sem-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--sem-text-muted);
 }
 
 .facRosterPrimingOrg {
   font-size: 1.05rem;
   font-weight: 650;
-  letter-spacing: -0.02em;
   line-height: 1.25;
+  letter-spacing: -0.02em;
 }
 
 .facRosterPrimingNation {
@@ -284,27 +294,28 @@
 }
 
 .facRosterPrimingRosterBlock {
-  margin-top: 4px;
   padding-top: 10px;
-  border-top: 1px solid color-mix(in oklch, var(--sem-text-muted) 22%, transparent);
+  margin-top: 4px;
+  border-top: 1px solid
+    color-mix(in oklch, var(--sem-text-muted) 22%, transparent);
 }
 
 .facRosterPrimingRosterLabel {
+  margin-bottom: 8px;
   font-size: 10px;
   font-weight: 600;
+  color: var(--sem-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--sem-text-muted);
-  margin-bottom: 8px;
 }
 
 .facRosterPrimingList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
 }
 
 .facRosterPrimingRow {
@@ -312,9 +323,9 @@
   flex-direction: column;
   gap: 2px;
   padding: 8px 10px;
-  border-radius: 6px;
   background: color-mix(in oklch, var(--sem-surface-base) 70%, transparent);
   border: 1px solid color-mix(in oklch, var(--sem-text-muted) 22%, transparent);
+  border-radius: 6px;
 }
 
 .facRosterPrimingName {
@@ -324,7 +335,11 @@
 
 .facRosterPrimingRole {
   font-size: 11px;
-  color: color-mix(in oklch, var(--sem-text-muted) 92%, var(--sem-text-primary));
+  color: color-mix(
+    in oklch,
+    var(--sem-text-muted) 92%,
+    var(--sem-text-primary)
+  );
 }
 
 .facRosterPrimingFoot {
@@ -338,16 +353,23 @@
   grid-template-columns: 26px minmax(0, 1fr);
   min-height: 320px;
   overflow: hidden;
-  border: 1px solid color-mix(in oklch, var(--sys-color-white) 12%, var(--sys-color-neutral-920));
-  background: var(--sys-color-neutral-920);
   color: color-mix(in oklch, var(--sys-color-white) 92%, transparent);
+  background: var(--sys-color-neutral-920);
+  border: 1px solid
+    color-mix(
+      in oklch,
+      var(--sys-color-white) 12%,
+      var(--sys-color-neutral-920)
+    );
 }
 
 .factionLabPlate_stub {
-  border: 1px solid color-mix(in oklch, var(--accent) 32%, var(--theme-default-border));
-  background: color-mix(in oklch, var(--accent) 16%, var(--theme-default-bg));
   color: var(--theme-default-text);
-  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 16%, transparent);
+  background: color-mix(in oklch, var(--accent) 16%, var(--theme-default-bg));
+  border: 1px solid
+    color-mix(in oklch, var(--accent) 32%, var(--theme-default-border));
+  box-shadow: inset 0 1px 0
+    color-mix(in oklch, var(--sys-color-white) 16%, transparent);
 }
 
 .facSlipEdge {
@@ -358,13 +380,14 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 700;
-  letter-spacing: 0.24em;
+  color: color-mix(in oklch, var(--sys-color-white) 38%, transparent);
   text-transform: uppercase;
+  letter-spacing: 0.24em;
+  background: color-mix(in oklch, var(--sys-color-black) 35%, transparent);
+  border-right: 1px solid
+    color-mix(in oklch, var(--sys-color-white) 10%, transparent);
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-  color: color-mix(in oklch, var(--sys-color-white) 38%, transparent);
-  border-right: 1px solid color-mix(in oklch, var(--sys-color-white) 10%, transparent);
-  background: color-mix(in oklch, var(--sys-color-black) 35%, transparent);
 }
 
 .facSlipMain {
@@ -380,8 +403,8 @@
 .facSlipHoles span {
   width: 9px;
   height: 9px;
-  border-radius: 50%;
   background: color-mix(in oklch, var(--sys-color-black) 55%, transparent);
+  border-radius: 50%;
   box-shadow:
     inset 0 1px 2px color-mix(in oklch, var(--sys-color-white) 18%, transparent),
     0 0 0 1px color-mix(in oklch, var(--sys-color-white) 8%, transparent);
@@ -390,15 +413,15 @@
 .facSlipMeta {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
   gap: 6px 10px;
+  justify-content: space-between;
   margin-bottom: 12px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 9px;
   font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: color-mix(in oklch, var(--sys-color-white) 48%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 .facSlipHot {
@@ -406,33 +429,34 @@
 }
 
 .facSlipOrg {
+  margin-bottom: 8px;
   font-family: var(--font-lora), var(--font-geist-sans), serif;
   font-size: 1.18rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
   line-height: 1.15;
-  margin-bottom: 8px;
+  letter-spacing: -0.03em;
 }
 
 .facSlipNation {
+  margin-bottom: 16px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
   color: color-mix(in oklch, var(--sys-color-white) 42%, transparent);
-  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
 }
 
 .facSlipTeletype {
-  margin: 0;
   padding: 12px 0 0;
-  border-top: 1px solid color-mix(in oklch, var(--sys-color-white) 12%, transparent);
-  list-style: none;
+  margin: 0;
   font-family: var(--font-geist-mono), monospace;
   font-size: 11px;
   line-height: 1.55;
   color: color-mix(in oklch, var(--sys-color-white) 78%, transparent);
+  list-style: none;
+  border-top: 1px solid
+    color-mix(in oklch, var(--sys-color-white) 12%, transparent);
 }
 
 .facSlipTeletype li {
@@ -442,11 +466,11 @@
 }
 
 .facSlipTeletype li::before {
-  content: ">";
   position: absolute;
   left: 0;
-  color: color-mix(in oklch, var(--accent) 65%, var(--sys-color-white));
   font-weight: 700;
+  color: color-mix(in oklch, var(--accent) 65%, var(--sys-color-white));
+  content: ">";
 }
 
 .facStubRoot {
@@ -454,21 +478,21 @@
 }
 
 .facStubEyebrow {
+  margin-bottom: 10px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
   color: color-mix(in oklch, var(--theme-default-text) 48%, transparent);
-  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
 }
 
 .facStubOrg {
   font-family: var(--font-lora), var(--font-geist-sans), serif;
   font-size: 1.14rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
   line-height: 1.14;
+  letter-spacing: -0.03em;
 }
 
 .facStubNation {
@@ -476,14 +500,15 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
   color: color-mix(in oklch, var(--theme-default-text) 44%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
 }
 
 .facStubPerf {
   margin: 16px 0 12px;
-  border-top: 2px dashed color-mix(in oklch, var(--accent) 45%, var(--theme-default-border));
+  border-top: 2px dashed
+    color-mix(in oklch, var(--accent) 45%, var(--theme-default-border));
 }
 
 .facStubAgenda {
@@ -491,17 +516,17 @@
 }
 
 .facStubAgendaTitle {
+  margin-bottom: 8px;
   font-size: 9px;
   font-weight: 700;
+  color: color-mix(in oklch, var(--accent) 55%, var(--theme-default-text));
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: color-mix(in oklch, var(--accent) 55%, var(--theme-default-text));
-  margin-bottom: 8px;
 }
 
 .facStubAgenda ul {
-  margin: 0;
   padding-left: 1.1em;
+  margin: 0;
   font-size: 12px;
   line-height: 1.5;
   color: color-mix(in oklch, var(--theme-default-text) 88%, transparent);
@@ -513,19 +538,20 @@
 
 .facStubTear {
   display: flex;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
   padding: 10px 18px 12px;
   margin: 0 -18px;
-  border-top: 1px solid color-mix(in oklch, var(--accent) 28%, var(--theme-default-border));
-  background: color-mix(in oklch, var(--accent) 22%, var(--theme-default-bg));
-  border-radius: 0 0 7px 7px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.12em;
   text-transform: uppercase;
+  letter-spacing: 0.12em;
+  background: color-mix(in oklch, var(--accent) 22%, var(--theme-default-bg));
+  border-top: 1px solid
+    color-mix(in oklch, var(--accent) 28%, var(--theme-default-border));
+  border-radius: 0 0 7px 7px;
 }
 
 .facStubTearCode {
@@ -535,19 +561,29 @@
 .facStubTearHint {
   font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: none;
   color: color-mix(in oklch, var(--theme-default-text) 42%, transparent);
+  text-transform: none;
+  letter-spacing: 0.08em;
 }
 
 .factionLabPlate_iomemo {
   padding: 0;
   overflow: hidden;
-  border: 1px solid color-mix(in oklch, var(--theme-default-text) 10%, var(--theme-default-border));
-  background: color-mix(in oklch, var(--sys-color-neutral-100) 55%, var(--theme-default-bg));
   color: var(--theme-default-text);
+  background: color-mix(
+    in oklch,
+    var(--sys-color-neutral-100) 55%,
+    var(--theme-default-bg)
+  );
+  border: 1px solid
+    color-mix(
+      in oklch,
+      var(--theme-default-text) 10%,
+      var(--theme-default-border)
+    );
   box-shadow:
-    inset 4px 0 0 color-mix(in oklch, var(--accent) 55%, var(--sys-color-neutral-500)),
+    inset 4px 0 0
+    color-mix(in oklch, var(--accent) 55%, var(--sys-color-neutral-500)),
     inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 40%, transparent);
 }
 
@@ -558,23 +594,28 @@
 
 .facMemoMark {
   margin-bottom: 14px;
-  text-align: center;
   font-family: var(--font-geist-mono), monospace;
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
   color: color-mix(in oklch, var(--theme-default-text) 48%, transparent);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
 }
 
 .facMemoField {
   display: flex;
-  align-items: baseline;
   gap: 8px;
-  margin-bottom: 10px;
+  align-items: baseline;
   min-height: 1.35em;
-  border-bottom: 1px dotted color-mix(in oklch, var(--theme-default-text) 22%, var(--theme-default-border));
   padding-bottom: 4px;
+  margin-bottom: 10px;
+  border-bottom: 1px dotted
+    color-mix(
+      in oklch,
+      var(--theme-default-text) 22%,
+      var(--theme-default-border)
+    );
 }
 
 .facMemoLabel {
@@ -582,9 +623,9 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: color-mix(in oklch, var(--accent) 35%, var(--theme-default-text));
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 .facMemoVal {
@@ -593,14 +634,19 @@
   font-family: var(--font-lora), var(--font-geist-sans), serif;
   font-size: 0.92rem;
   font-weight: 600;
-  letter-spacing: -0.02em;
   line-height: 1.25;
+  letter-spacing: -0.02em;
 }
 
 .facMemoRule {
   height: 0;
   margin: 14px 0 12px;
-  border-top: 1px solid color-mix(in oklch, var(--theme-default-text) 14%, var(--theme-default-border));
+  border-top: 1px solid
+    color-mix(
+      in oklch,
+      var(--theme-default-text) 14%,
+      var(--theme-default-border)
+    );
 }
 
 .facMemoNote {
@@ -608,8 +654,8 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 9px;
   line-height: 1.5;
-  letter-spacing: 0.02em;
   color: color-mix(in oklch, var(--theme-default-text) 62%, transparent);
+  letter-spacing: 0.02em;
 }
 
 /* Shelf — rosy accent gradient; summit-stub family (see `.factionLabPlate_stub`). */
@@ -620,14 +666,16 @@
   padding: 0;
   overflow: hidden;
   color: var(--theme-default-text);
-  border-radius: 0;
-  border: 1px solid color-mix(in oklch, var(--accent) 40%, var(--theme-default-border));
   background: linear-gradient(
     165deg,
     color-mix(in oklch, var(--accent) 18%, var(--theme-default-bg)) 0%,
     color-mix(in oklch, var(--accent) 28%, var(--theme-default-bg)) 100%
   );
-  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--sys-color-white) 18%, transparent);
+  border: 1px solid
+    color-mix(in oklch, var(--accent) 40%, var(--theme-default-border));
+  border-radius: 0;
+  box-shadow: inset 0 1px 0
+    color-mix(in oklch, var(--sys-color-white) 18%, transparent);
 }
 
 /*
@@ -638,36 +686,50 @@
  * Vertical padding + mask-origin/mask-clip: content-box insets the repeat so holes don’t sit flush on outer top/bottom.
  */
 .factionLabPlate_shelfcardSleeve {
+  box-sizing: border-box;
   padding-top: 12px;
   padding-bottom: 12px;
-  box-sizing: border-box;
-  border-left: 2px dashed color-mix(in oklch, var(--theme-default-text) 10%, var(--theme-default-border));
-  mask-image: radial-gradient(circle at left center, transparent 6px, black 7px);
-  -webkit-mask-image: radial-gradient(circle at left center, transparent 6px, black 7px);
-  mask-size: 100% 24px;
-  -webkit-mask-size: 100% 24px;
-  mask-repeat: repeat-y;
+  border-left: 2px dashed
+    color-mix(
+      in oklch,
+      var(--theme-default-text) 10%,
+      var(--theme-default-border)
+    );
+  -webkit-mask-image: radial-gradient(
+    circle at left center,
+    transparent 6px,
+    black 7px
+  );
+  mask-image: radial-gradient(
+    circle at left center,
+    transparent 6px,
+    black 7px
+  );
   -webkit-mask-repeat: repeat-y;
-  mask-origin: content-box;
-  -webkit-mask-origin: content-box;
-  mask-clip: content-box;
+  mask-repeat: repeat-y;
   -webkit-mask-clip: content-box;
+  mask-clip: content-box;
+  -webkit-mask-origin: content-box;
+  mask-origin: content-box;
+  -webkit-mask-size: 100% 24px;
+  mask-size: 100% 24px;
 }
 
 .facShelfSleeveStack {
   display: flex;
-  flex-direction: column;
   flex: 1 1 auto;
-  min-height: 0;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
 }
 
 .factionLabPlate_shelfcard > :first-child,
 .factionLabPlate_shelfcardSleeve > .facShelfSleeveStack > :first-child {
   flex-shrink: 0;
-  border-bottom: 1px solid color-mix(in oklch, var(--accent) 28%, var(--theme-default-border));
-  background: transparent;
   cursor: default;
+  background: transparent;
+  border-bottom: 1px solid
+    color-mix(in oklch, var(--accent) 28%, var(--theme-default-border));
 }
 
 .facShelfRoot {
@@ -682,14 +744,14 @@
   font-family: var(--font-lora), var(--font-geist-sans), serif;
   font-size: 1.08rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
   line-height: 1.15;
+  letter-spacing: -0.03em;
 }
 
 .facShelfLine {
   display: flex;
-  align-items: baseline;
   gap: 6px;
+  align-items: baseline;
   margin-bottom: 10px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
@@ -698,36 +760,46 @@
 .facShelfKey {
   flex: 0 0 auto;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: color-mix(in oklch, var(--theme-default-text) 55%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .facShelfDots {
   flex: 1 1 auto;
   min-width: 12px;
-  border-bottom: 1px dotted color-mix(in oklch, var(--theme-default-text) 28%, var(--theme-default-border));
+  border-bottom: 1px dotted
+    color-mix(
+      in oklch,
+      var(--theme-default-text) 28%,
+      var(--theme-default-border)
+    );
   transform: translateY(-2px);
 }
 
 .facShelfVal {
   flex: 0 1 auto;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  text-align: right;
   color: color-mix(in oklch, var(--theme-default-text) 88%, transparent);
+  text-align: right;
+  letter-spacing: 0.02em;
 }
 
 .facShelfStamp {
-  margin-top: 18px;
   padding-top: 10px;
-  border-top: 1px dashed color-mix(in oklch, var(--theme-default-text) 22%, var(--theme-default-border));
+  margin-top: 18px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 800;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
   color: color-mix(in oklch, var(--theme-default-text) 38%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  border-top: 1px dashed
+    color-mix(
+      in oklch,
+      var(--theme-default-text) 22%,
+      var(--theme-default-border)
+    );
 }
 
 /* VII · ORDO LUNARIS protocol — full specimen (VI uses `factionLabPlate_protocolOrdoCompact` + shared `.facOrdo*`). */
@@ -739,9 +811,14 @@
 
   padding: 0;
   overflow: hidden;
-  border-radius: 0;
-  border: 1px solid color-mix(in oklch, var(--fac-ordo-accent) 55%, var(--sys-color-neutral-700));
   background: var(--fac-ordo-bg);
+  border: 1px solid
+    color-mix(
+      in oklch,
+      var(--fac-ordo-accent) 55%,
+      var(--sys-color-neutral-700)
+    );
+  border-radius: 0;
   box-shadow:
     0 1px 0 color-mix(in oklch, var(--sys-color-white) 22%, transparent),
     0 12px 28px color-mix(in oklch, var(--sys-color-black) 18%, transparent);
@@ -756,9 +833,14 @@
 
   padding: 0;
   overflow: hidden;
-  border-radius: 0;
-  border: 1px solid color-mix(in oklch, var(--fac-ordo-accent) 55%, var(--sys-color-neutral-700));
   background: var(--fac-ordo-bg);
+  border: 1px solid
+    color-mix(
+      in oklch,
+      var(--fac-ordo-accent) 55%,
+      var(--sys-color-neutral-700)
+    );
+  border-radius: 0;
   box-shadow:
     0 1px 0 color-mix(in oklch, var(--sys-color-white) 22%, transparent),
     0 12px 28px color-mix(in oklch, var(--sys-color-black) 18%, transparent);
@@ -769,12 +851,12 @@
 }
 
 .factionLabPlate_protocolOrdoCompact .facOrdoGlow {
+  top: 42%;
+  left: 50%;
   width: 130px;
   height: 130px;
-  left: 50%;
-  top: 42%;
-  filter: blur(16px);
   opacity: 0.68;
+  filter: blur(16px);
 }
 
 .factionLabPlate_protocolOrdoCompact .facOrdoInner {
@@ -784,9 +866,9 @@
 }
 
 .factionLabPlate_protocolOrdoCompact .facOrdoHeader {
+  gap: 8px;
   padding-bottom: 8px;
   margin-bottom: 9px;
-  gap: 8px;
 }
 
 .factionLabPlate_protocolOrdoCompact .facOrdoLogoBlock {
@@ -795,14 +877,14 @@
 }
 
 .factionLabPlate_protocolOrdoCompact .facOrdoPixelIcon {
+  box-sizing: content-box;
   flex-shrink: 0;
-  isolation: isolate;
-  grid-template-columns: repeat(8, 2.25px);
   grid-template-rows: repeat(8, 2.25px);
+  grid-template-columns: repeat(8, 2.25px);
   gap: 1.25px;
   width: calc(8 * 2.25px + 7 * 1.25px);
   height: calc(8 * 2.25px + 7 * 1.25px);
-  box-sizing: content-box;
+  isolation: isolate;
 }
 
 .factionLabPlate_protocolOrdoCompact .facOrdoPx {
@@ -817,8 +899,8 @@
 
 .factionLabPlate_protocolOrdoCompact .facOrdoSystemData {
   font-size: 8px;
-  letter-spacing: 0.05em;
   line-height: 1.42;
+  letter-spacing: 0.05em;
 }
 
 .factionLabPlate_protocolOrdoCompact .facOrdoDocGrid {
@@ -829,21 +911,21 @@
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 1.68rem;
   font-weight: 900;
-  line-height: 0.86;
-  letter-spacing: -0.05em;
-  text-transform: none;
   font-synthesis: none;
+  line-height: 0.86;
+  text-transform: none;
+  letter-spacing: -0.05em;
 }
 
 .factionLabPlate_protocolOrdoCompact .facOrdoSecondaryTitle {
-  font-size: 0.72rem;
   padding-top: 5px;
+  font-size: 0.72rem;
 }
 
 .factionLabPlate_protocolOrdoCompact .facOrdoMetaStamp {
+  max-width: none;
   font-size: 8px;
   line-height: 1.45;
-  max-width: none;
 }
 
 .factionLabPlate_protocolOrdoCompact .facOrdoMain {
@@ -855,9 +937,9 @@
 }
 
 .factionLabPlate_protocolOrdoCompact .facOrdoSectionLabel {
+  margin: 0 0 5px;
   font-size: 8px;
   letter-spacing: 0.14em;
-  margin: 0 0 5px;
 }
 
 .factionLabPlate_protocolOrdoCompact .facOrdoP {
@@ -867,14 +949,14 @@
 }
 
 .factionLabPlate_protocolOrdoCompact .facOrdoBtn {
-  margin-top: 5px;
   padding: 5px 10px;
+  margin-top: 5px;
   font-size: 8px;
 }
 
 .factionLabPlate_protocolOrdoCompact .facOrdoFooterStrip {
-  margin-top: 7px;
   padding-top: 6px;
+  margin-top: 7px;
   font-size: 7px;
   letter-spacing: 0.035em;
 }
@@ -889,26 +971,37 @@
 
   padding: 0;
   overflow: hidden;
-  border-radius: 0;
-  border: 1px solid color-mix(in oklch, var(--fac-ordo-accent) 28%, var(--sys-color-neutral-600));
   background: var(--fac-ordo-bg);
+  border: 1px solid
+    color-mix(
+      in oklch,
+      var(--fac-ordo-accent) 28%,
+      var(--sys-color-neutral-600)
+    );
+  border-radius: 0;
   box-shadow:
     0 1px 0 color-mix(in oklch, var(--sys-color-white) 28%, transparent),
     0 12px 28px color-mix(in oklch, var(--sys-color-black) 16%, transparent);
 }
 
 /* V5 / V6 / V7 — strictly achromatic grays (OKLCH C=0); glow uses normal blend so parent hues don’t tint */
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v5"]),
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v6"]),
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) {
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v5"]
+  ),
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v6"]
+  ),
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  ) {
   --fac-ordo-bg: oklch(0.855 0 0);
   --fac-ordo-accent: oklch(0.145 0 0);
   --fac-ordo-line: oklch(0 0 0 / 0.12);
   --fac-ordo-line-strong: oklch(0.145 0 0);
   --fac-ordo-glow-mid: oklch(0 0 0 / 0.22);
+  background: var(--fac-ordo-bg);
 
   border-color: oklch(0 0 0 / 0.2);
-  background: var(--fac-ordo-bg);
   box-shadow:
     0 1px 0 oklch(1 0 0 / 0.28),
     0 12px 28px oklch(0 0 0 / 0.14);
@@ -917,7 +1010,10 @@
 /*
  * LoreLocationOrdoV7Slab in lab: map FactionLabPlate ORDO tokens onto the shared slab (`lore-entity-card` `.locOrdoV7*`).
  */
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) :global([class*="locOrdoV7Root"]) {
+.factionLabPlate_protocolOrdoCompactMono:has(
+  [data-hg-lore-location-variant="v7"]
+)
+:global([class*="locOrdoV7Root"]) {
   --loc-ordo-bg: var(--fac-ordo-bg);
   --loc-ordo-accent: var(--fac-ordo-accent);
   --loc-ordo-line: var(--fac-ordo-line);
@@ -925,26 +1021,41 @@
   --loc-ordo-glow-mid: var(--fac-ordo-glow-mid);
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v5"]) .facOrdoGlow,
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v6"]) .facOrdoGlow,
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoGlow,
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) :global([class*="locOrdoV7Glow"]) {
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v5"]
+  )
+  .facOrdoGlow,
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v6"]
+  )
+  .facOrdoGlow,
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoGlow,
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  :global([class*="locOrdoV7Glow"]) {
   mix-blend-mode: normal;
   opacity: 0.52;
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoGeo,
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) :global([class*="locOrdoV7Geo"]) {
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  :global([class*="locOrdoV7Geo"]) {
   opacity: 0.42;
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoGlow {
+  top: 42%;
+  left: 50%;
   width: 130px;
   height: 130px;
-  left: 50%;
-  top: 42%;
-  filter: blur(16px);
   opacity: 0.55;
+  filter: blur(16px);
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoInner {
@@ -954,9 +1065,9 @@
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoHeader {
+  gap: 8px;
   padding-bottom: 8px;
   margin-bottom: 9px;
-  gap: 8px;
 }
 
 /* Keep masthead mark from flex-shrinking when the right rail is narrow (lean v6); root has overflow:hidden. */
@@ -966,14 +1077,14 @@
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoPixelIcon {
+  box-sizing: content-box;
   flex-shrink: 0;
-  isolation: isolate;
-  grid-template-columns: repeat(8, 2.25px);
   grid-template-rows: repeat(8, 2.25px);
+  grid-template-columns: repeat(8, 2.25px);
   gap: 1.25px;
   width: calc(8 * 2.25px + 7 * 1.25px);
   height: calc(8 * 2.25px + 7 * 1.25px);
-  box-sizing: content-box;
+  isolation: isolate;
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoPx {
@@ -988,8 +1099,8 @@
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoSystemData {
   font-size: 8px;
-  letter-spacing: 0.05em;
   line-height: 1.42;
+  letter-spacing: 0.05em;
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoDocGrid {
@@ -1001,16 +1112,22 @@
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 12px;
   font-weight: 650;
-  line-height: 1.45;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   font-variant-ligatures: none;
+  line-height: 1.45;
   color: var(--fac-ordo-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 /* Lean v6/v7 — extra air between display title and context (mono slab `facOrdoDocGrid` gap is tight). */
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v6"]) .facOrdoLocV6ContextLine,
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV6ContextLine {
+.factionLabPlate_protocolOrdoCompactMono:has(
+  [data-hg-lore-location-variant="v6"]
+)
+.facOrdoLocV6ContextLine,
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoLocV6ContextLine {
   margin-top: 3px;
 }
 
@@ -1018,34 +1135,36 @@
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 1.68rem;
   font-weight: 900;
-  line-height: 0.86;
-  letter-spacing: -0.05em;
-  text-transform: none;
   font-synthesis: none;
+  line-height: 0.86;
+  text-transform: none;
+  letter-spacing: -0.05em;
 }
 
 /* `data-hg-lore-location-field="name"` — always display caps (editable HTML may be mixed case). */
 .factionLabPlate_protocolOrdoCompactMono
-  .facOrdoDisplayTitle[data-hg-lore-location-field="name"] {
-  text-transform: uppercase;
+.facOrdoDisplayTitle[data-hg-lore-location-field="name"] {
   font-variant-ligatures: none;
+  text-transform: uppercase;
 }
 
 /* V7 — hair more leading between wrapped name lines (mono title still uses 0.86 elsewhere). */
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
-  .facOrdoDisplayTitle[data-hg-lore-location-field="name"] {
+.factionLabPlate_protocolOrdoCompactMono:has(
+  [data-hg-lore-location-variant="v7"]
+)
+.facOrdoDisplayTitle[data-hg-lore-location-field="name"] {
   line-height: 0.92;
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoSecondaryTitle {
-  font-size: 0.72rem;
   padding-top: 5px;
+  font-size: 0.72rem;
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoMetaStamp {
+  max-width: none;
   font-size: 8px;
   line-height: 1.45;
-  max-width: none;
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5MetaStamp {
@@ -1057,8 +1176,8 @@
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5MetaStampSecond {
   font-weight: 600;
-  letter-spacing: 0.03em;
   line-height: 1.35;
+  letter-spacing: 0.03em;
   opacity: 0.9;
 }
 
@@ -1071,9 +1190,9 @@
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoSectionLabel {
+  margin: 0 0 5px;
   font-size: 8px;
   letter-spacing: 0.14em;
-  margin: 0 0 5px;
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoP {
@@ -1083,25 +1202,25 @@
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoBtn {
-  margin-top: 5px;
   padding: 5px 10px;
+  margin-top: 5px;
   font-size: 8px;
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoFooterStrip {
-  margin-top: 7px;
   padding-top: 6px;
+  margin-top: 7px;
   font-size: 7px;
   letter-spacing: 0.035em;
 }
 
 /* V5 · same mono plate — LOCATION masthead (mono); detail + notes wired to `lore-location` fields */
 .factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5BrandRef {
+  max-width: 10.5em;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 0.65rem;
-  letter-spacing: 0.02em;
   line-height: 1.25;
-  max-width: 10.5em;
+  letter-spacing: 0.02em;
   word-break: break-word;
 }
 
@@ -1109,21 +1228,21 @@
   margin: 0 0 6px;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 8px;
-  letter-spacing: 0.04em;
   line-height: 1.35;
   color: color-mix(in oklch, var(--fac-ordo-accent) 88%, transparent);
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5NotesCell {
-  margin: 0;
   padding: 0;
+  margin: 0;
   border: none;
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5NotesInner {
-  margin: 0;
   padding: 0;
+  margin: 0;
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5NotesInner .facOrdoP {
@@ -1131,141 +1250,193 @@
 }
 
 /* V5 · inline doc body — same Geist / line-height as canvas nodeBody, no inset panel */
-.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5DocInline.facOrdoContentBlock {
+.factionLabPlate_protocolOrdoCompactMono
+.facOrdoLocV5DocInline.facOrdoContentBlock {
   padding-left: 0;
-  border-left: none;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 12px;
   font-weight: 400;
   line-height: 1.68;
-  text-transform: none;
   color: var(--fac-ordo-accent);
+  text-transform: none;
+  border-left: none;
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5DocEyebrow {
   margin: 0 0 0.45em;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 1.05em;
-  font-weight: 600;
   font-style: normal;
-  letter-spacing: -0.02em;
+  font-weight: 600;
   line-height: 1.3;
-  text-transform: none;
   color: inherit;
+  text-transform: none;
+  letter-spacing: -0.02em;
 }
 
-.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5DocInline .facOrdoLocV5DetailLine {
+.factionLabPlate_protocolOrdoCompactMono
+  .facOrdoLocV5DocInline
+  .facOrdoLocV5DetailLine {
+  padding: 0 0 0.55em;
+  margin: 0 0 0.65em;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 0.92em;
   font-style: normal;
   font-weight: 400;
-  letter-spacing: -0.01em;
-  text-transform: none;
   line-height: 1.55;
   color: color-mix(in oklch, var(--fac-ordo-accent) 72%, transparent);
-  margin: 0 0 0.65em;
-  padding: 0 0 0.55em;
-  border-bottom: 1px solid color-mix(in oklch, var(--fac-ordo-accent) 14%, transparent);
+  text-transform: none;
+  letter-spacing: -0.01em;
+  border-bottom: 1px solid
+    color-mix(in oklch, var(--fac-ordo-accent) 14%, transparent);
 }
 
 /* V6 / V7 lean slab — detail reads as body, full ink (V5 keeps muted stamp tone). */
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v6"])
-  .facOrdoLocV5DocInline
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v6"]
+  ) .facOrdoLocV5DocInline
   .facOrdoLocV5DetailLine {
   margin-top: -2px;
-  color: var(--fac-ordo-accent);
   font-weight: 400;
+  color: var(--fac-ordo-accent);
 }
 
 /* V7: no negative margin — parent column uses overflow:hidden; -2px clips the first row (add button / detail). */
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
-  .facOrdoLocV5DocInline
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  ) .facOrdoLocV5DocInline
   .facOrdoLocV5DetailLine {
   margin-top: 0;
-  color: var(--fac-ordo-accent);
   font-weight: 400;
+  color: var(--fac-ordo-accent);
 }
 
 /*
  * V7 — same max-height affordance as `labBody` / canvas document bodies (340px); header + readout + footer stay
  * fixed; only the notes column scrolls (flex chain + min-height: 0).
  */
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoInner {
+.factionLabPlate_protocolOrdoCompactMono:has(
+  [data-hg-lore-location-variant="v7"]
+)
+.facOrdoInner {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   max-height: 340px;
-  min-height: 0;
   overflow: hidden;
-  box-sizing: border-box;
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoHeader {
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoHeader {
   flex-shrink: 0;
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoDocGrid {
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoDocGrid {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoDocGrid > .facOrdoTitleRow,
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoDocGrid > .facOrdoLocV6ContextLine {
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoDocGrid
+  > .facOrdoTitleRow,
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoDocGrid
+  > .facOrdoLocV6ContextLine {
   flex-shrink: 0;
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoDocGrid > .facOrdoMain {
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoDocGrid
+  > .facOrdoMain {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
   .facOrdoMain
   > .facOrdoLocV5DocInline.facOrdoContentBlock {
-  flex: 1 1 auto;
-  min-height: 0;
+  --fac-ordo-v7-detail-slot-h: calc(
+    0.92 *
+    12px *
+    1.55 +
+    0.55 *
+    0.92 *
+    12px +
+    1px
+  );
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
+  min-height: 0;
   overflow: hidden;
-  /* Match one 0.92×12px detail line + bottom padding + border; use px so em context can’t shrink the slot. */
-  --fac-ordo-v7-detail-slot-h: calc(0.92 * 12px * 1.55 + 0.55 * 0.92 * 12px + 1px);
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV5DocInline > .facOrdoLocV5DetailLine {
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoLocV5DocInline
+  > .facOrdoLocV5DetailLine {
+  box-sizing: border-box;
   flex-shrink: 0;
   height: var(--fac-ordo-v7-detail-slot-h);
   min-height: var(--fac-ordo-v7-detail-slot-h);
   max-height: var(--fac-ordo-v7-detail-slot-h);
-  box-sizing: border-box;
   overflow-x: hidden;
   /* Long site-detail copy: scroll inside the fixed row instead of growing the slab. */
   overflow-y: auto;
   scrollbar-width: thin;
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV5NotesCell {
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoLocV5NotesCell {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
   overflow-x: hidden;
-  overscroll-behavior: contain;
+  overflow-y: auto;
   scrollbar-gutter: auto;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7NotesField {
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoLocV7NotesField {
   min-height: 0;
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7HgHost {
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoLocV7HgHost {
   min-height: 0;
 }
 
 /*
  * V7 — optional detail: micro mono all-caps trigger; row height stays fixed via `--fac-ordo-v7-detail-slot-h` (filled detail line unchanged).
  */
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7DetailAdd {
+.factionLabPlate_protocolOrdoCompactMono:has(
+  [data-hg-lore-location-variant="v7"]
+)
+.facOrdoLocV7DetailAdd {
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -1281,7 +1452,8 @@
   /* Bottom padding matches `.facOrdoLocV5DetailLine` (0.55em of 0.92×12px body), not the button’s own font-size. */
   padding: 0 0 calc(0.55 * 0.92 * 12px);
   border: none;
-  border-bottom: 1px solid color-mix(in oklch, var(--fac-ordo-accent) 14%, transparent);
+  border-bottom: 1px solid
+    color-mix(in oklch, var(--fac-ordo-accent) 14%, transparent);
   background: transparent;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 8px;
@@ -1295,99 +1467,138 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7DetailAdd:hover {
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoLocV7DetailAdd:hover {
   color: color-mix(in oklch, var(--fac-ordo-accent) 72%, transparent);
 }
 
 /* Empty detail line — muted placeholder (same slab tone as footer strip) */
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"])
-  [data-hg-lore-location-field="detail"][contenteditable="true"]:empty::before {
-  content: attr(data-placeholder);
+.factionLabPlate_protocolOrdoCompactMono:has(
+  [data-hg-lore-location-variant="v7"]
+)
+[data-hg-lore-location-field="detail"][contenteditable="true"]:empty::before {
   color: color-mix(in oklch, var(--fac-ordo-accent) 40%, transparent);
   pointer-events: none;
+  content: attr(data-placeholder);
 }
 
 /* V6 — legacy rich host (BufferedContentEditable): same stack as canvas HTML node bodies; cancel parent uppercase. */
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v6"]) .facOrdoV6RichHost {
-  text-transform: none;
+.factionLabPlate_protocolOrdoCompactMono:has(
+  [data-hg-lore-location-variant="v6"]
+)
+.facOrdoV6RichHost {
+  min-height: 140px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 12px;
   font-weight: 400;
   line-height: 1.68;
   color: var(--fac-ordo-accent);
-  min-height: 140px;
+  text-transform: none;
 }
 
 .factionLabPlate_protocolOrdoCompactMono .facOrdoLocV7NotesField {
-  min-width: 0;
   width: 100%;
+  min-width: 0;
 }
 
 /* V7 — HeartgardenDocEditor (TipTap hgDoc) for notes; slab typography aligned with V6 body */
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7HgHost {
+.factionLabPlate_protocolOrdoCompactMono:has(
+  [data-hg-lore-location-variant="v7"]
+)
+.facOrdoLocV7HgHost {
   width: 100%;
   min-width: 0;
-  text-transform: none;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 12px;
   font-weight: 400;
   line-height: 1.68;
   color: var(--fac-ordo-accent);
+  text-transform: none;
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7HgHost :global(.ProseMirror) {
-  outline: none;
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoLocV7HgHost
+  :global(.ProseMirror) {
+  font-family: inherit;
   font-size: inherit;
   line-height: inherit;
-  font-family: inherit;
   color: inherit;
+  outline: none;
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7HgHost :global(.ProseMirror p) {
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoLocV7HgHost
+  :global(.ProseMirror p) {
   margin: 0 0 0.55em;
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7HgHost :global(.ProseMirror p:last-child) {
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoLocV7HgHost
+  :global(.ProseMirror p:last-child) {
   margin-bottom: 0;
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7HgHost :global(.ProseMirror h1) {
-  font-size: 1.25em;
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoLocV7HgHost
+  :global(.ProseMirror h1) {
   margin: 0.35em 0 0.45em;
+  font-size: 1.25em;
 }
 
-.factionLabPlate_protocolOrdoCompactMono:has([data-hg-lore-location-variant="v7"]) .facOrdoLocV7HgHost :global(.ProseMirror h2) {
-  font-size: 1.1em;
+.factionLabPlate_protocolOrdoCompactMono:has(
+    [data-hg-lore-location-variant="v7"]
+  )
+  .facOrdoLocV7HgHost
+  :global(.ProseMirror h2) {
   margin: 0.4em 0 0.4em;
+  font-size: 1.1em;
 }
 
-.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5DocInline .facOrdoLocV5NotesInner {
-  margin: 0;
-  padding: 0;
+.factionLabPlate_protocolOrdoCompactMono
+  .facOrdoLocV5DocInline
+  .facOrdoLocV5NotesInner {
   min-height: 0;
+  padding: 0;
+  margin: 0;
 }
 
-.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5DocInline .facOrdoLocV5NotesInner .facOrdoP {
+.factionLabPlate_protocolOrdoCompactMono
+  .facOrdoLocV5DocInline
+  .facOrdoLocV5NotesInner
+  .facOrdoP {
+  margin: 0 0 0.55em;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 1em;
-  line-height: 1.68;
   font-style: normal;
   font-weight: 400;
+  line-height: 1.68;
+  color: inherit;
   text-transform: none;
   letter-spacing: -0.01em;
-  color: inherit;
-  margin: 0 0 0.55em;
 }
 
-.factionLabPlate_protocolOrdoCompactMono .facOrdoLocV5DocInline .facOrdoLocV5NotesInner .facOrdoP:last-child {
+.factionLabPlate_protocolOrdoCompactMono
+  .facOrdoLocV5DocInline
+  .facOrdoLocV5NotesInner
+  .facOrdoP:last-child {
   margin-bottom: 0;
 }
 
 .facOrdoRoot {
   position: relative;
   overflow: hidden;
-  cursor: default;
   color: var(--fac-ordo-accent);
+  cursor: default;
   scrollbar-width: none;
 }
 
@@ -1397,18 +1608,18 @@
 .facOrdoLocV7Staple {
   --fac-ordo-v7-staple-deg: 0deg;
   position: absolute;
-  left: 50%;
   top: 14px;
+  left: 50%;
   z-index: 4;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 52px;
   height: 11px;
-  margin: 0;
   padding: 0;
+  margin: 0;
   line-height: 0;
-  box-sizing: border-box;
   pointer-events: none;
   transform: translate(-50%, -50%) rotate(var(--fac-ordo-v7-staple-deg, 0deg));
   transform-origin: 50% 50%;
@@ -1418,9 +1629,15 @@
   display: block;
   width: 42px;
   height: 7px;
+  background: linear-gradient(
+    180deg,
+    #e2e2e2 0%,
+    #a0a0a0 38%,
+    #6a6a6a 72%,
+    #4a4a4a 100%
+  );
   /* Squarer end caps so the vertical edges read straighter */
   border-radius: 0.5px;
-  background: linear-gradient(180deg, #e2e2e2 0%, #a0a0a0 38%, #6a6a6a 72%, #4a4a4a 100%);
   box-shadow:
     0 1.5px 2.5px oklch(0 0 0 / 0.2),
     inset 0 1.5px 0 oklch(1 0 0 / 0.32),
@@ -1435,41 +1652,44 @@
 .facOrdoGeo {
   position: absolute;
   inset: 0;
-  pointer-events: none;
   z-index: 0;
-  background:
-    repeating-radial-gradient(
-      circle at 30% 42%,
-      transparent 0,
-      transparent 39px,
-      var(--fac-ordo-line) 39px,
-      var(--fac-ordo-line) 40px
-    );
+  pointer-events: none;
+  background: repeating-radial-gradient(
+    circle at 30% 42%,
+    transparent 0,
+    transparent 39px,
+    var(--fac-ordo-line) 39px,
+    var(--fac-ordo-line) 40px
+  );
   opacity: 0.55;
+  -webkit-mask-image: radial-gradient(
+    circle at 30% 42%,
+    black 55%,
+    transparent 72%
+  );
   mask-image: radial-gradient(circle at 30% 42%, black 55%, transparent 72%);
-  -webkit-mask-image: radial-gradient(circle at 30% 42%, black 55%, transparent 72%);
 }
 
 .facOrdoGlow {
   position: absolute;
+  top: 44%;
+  left: 52%;
+  z-index: 1;
   width: 160px;
   height: 160px;
-  left: 52%;
-  top: 44%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
   pointer-events: none;
-  z-index: 1;
-  opacity: 0.75;
-  mix-blend-mode: multiply;
   background: radial-gradient(
     circle,
     var(--fac-ordo-glow-mid, var(--fac-ordo-accent)) 0%,
     transparent 68%
   );
+  border-radius: 50%;
+  mix-blend-mode: multiply;
+  opacity: 0.75;
   filter: blur(22px);
-  will-change: opacity;
+  transform: translate(-50%, -50%);
   animation: facOrdoPulse 4s ease-in-out infinite;
+  will-change: opacity;
 }
 
 @keyframes facOrdoPulse {
@@ -1486,18 +1706,19 @@
   position: relative;
   z-index: 2;
   padding: 12px 10px 12px;
-  line-height: 1.1;
-  text-transform: uppercase;
-  font-family: var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
+  font-family:
+    var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
   font-size: 10px;
   font-weight: 500;
+  line-height: 1.1;
+  text-transform: uppercase;
 }
 
 .facOrdoHeader {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   gap: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
   padding-bottom: 10px;
   margin-bottom: 12px;
   border-bottom: 0.5px solid var(--fac-ordo-line-strong);
@@ -1505,10 +1726,10 @@
 
 .facOrdoHeaderRight {
   display: flex;
+  flex-shrink: 0;
   flex-direction: row;
   align-items: flex-start;
   justify-content: flex-end;
-  flex-shrink: 0;
 }
 
 .facOrdoHeaderExpandBtn {
@@ -1541,8 +1762,8 @@
 }
 
 .facOrdoBrand {
-  font-weight: 700;
   font-size: 9px;
+  font-weight: 700;
   letter-spacing: 0.18em;
 }
 
@@ -1550,9 +1771,9 @@
   flex: 0 0 auto;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 7px;
-  letter-spacing: 0.08em;
-  text-align: right;
   line-height: 1.45;
+  text-align: right;
+  letter-spacing: 0.08em;
   opacity: 0.95;
 }
 
@@ -1564,9 +1785,9 @@
 
 .facOrdoTitleRow {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   gap: 8px;
+  align-items: flex-start;
+  justify-content: space-between;
 }
 
 .facOrdoDisplayTitle {
@@ -1575,25 +1796,25 @@
   font-size: 1.45rem;
   font-weight: 600;
   line-height: 0.88;
-  letter-spacing: -0.04em;
   text-transform: none;
+  letter-spacing: -0.04em;
 }
 
 .facOrdoSecondaryTitle {
   flex: 0 0 auto;
   max-width: 42%;
+  padding-top: 6px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.65rem;
   line-height: 0.95;
   text-align: right;
   border-top: 0.5px solid var(--fac-ordo-line-strong);
-  padding-top: 6px;
 }
 
 .facOrdoMetaStamp {
+  max-width: 16em;
   font-size: 7px;
   font-weight: 700;
-  max-width: 16em;
   line-height: 1.5;
   opacity: 0.92;
 }
@@ -1605,40 +1826,40 @@
 }
 
 .facOrdoContentBlock {
-  border-left: 0.5px solid var(--fac-ordo-line-strong);
   padding-left: 10px;
+  border-left: 0.5px solid var(--fac-ordo-line-strong);
 }
 
 .facOrdoSectionLabel {
   margin: 0 0 5px;
   font-size: 7px;
-  letter-spacing: 0.2em;
   font-weight: 800;
+  letter-spacing: 0.2em;
 }
 
 .facOrdoP {
   margin: 0 0 5px;
   font-size: 9px;
-  line-height: 1.32;
   font-weight: 300;
+  line-height: 1.32;
   text-transform: none;
   letter-spacing: -0.01em;
 }
 
 .facOrdoRedacted {
-  background-color: var(--fac-ordo-accent);
-  color: var(--fac-ordo-accent);
   padding: 0 3px;
+  color: var(--fac-ordo-accent);
+  background-color: var(--fac-ordo-accent);
 }
 
 .facOrdoBtn {
   display: inline-block;
-  margin-top: 4px;
-  border: 0.5px solid var(--fac-ordo-line-strong);
   padding: 4px 8px;
+  margin-top: 4px;
   font-size: 7px;
   font-weight: 700;
   color: var(--fac-ordo-accent);
+  border: 0.5px solid var(--fac-ordo-line-strong);
 }
 
 .facOrdoSidebar {
@@ -1649,10 +1870,10 @@
 }
 
 .facOrdoBox {
-  border: 0.5px solid var(--fac-ordo-line-strong);
   padding: 6px;
   font-size: 6px;
   line-height: 1.4;
+  border: 0.5px solid var(--fac-ordo-line-strong);
 }
 
 .facOrdoBoxDashed {
@@ -1662,9 +1883,9 @@
 .facOrdoArrowSvg {
   width: 22px;
   height: 22px;
+  fill: none;
   stroke: var(--fac-ordo-accent);
   stroke-width: 1px;
-  fill: none;
 }
 
 .facOrdoBoxText {
@@ -1672,15 +1893,15 @@
 }
 
 .facOrdoFooterStrip {
-  margin-top: 6px;
   padding-top: 6px;
-  border-top: 0.5px solid var(--fac-ordo-line);
+  margin-top: 6px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 6px;
-  letter-spacing: 0.04em;
   line-height: 1.3;
-  opacity: 0.72;
+  letter-spacing: 0.04em;
   word-break: break-word;
+  border-top: 0.5px solid var(--fac-ordo-line);
+  opacity: 0.72;
 }
 
 /* IV / V shelf: disable canvas node expand control hover nudge inside the lab grid only. */
@@ -1703,11 +1924,17 @@
 
   padding: 0;
   overflow: hidden;
-  border-radius: 0;
-  border: 1px solid color-mix(in oklch, var(--fac-synod-border) 70%, var(--sys-color-neutral-700));
-  background: var(--fac-synod-bg);
   color: var(--fac-synod-ink);
-  box-shadow: 0 12px 28px color-mix(in oklch, var(--sys-color-black) 14%, transparent);
+  background: var(--fac-synod-bg);
+  border: 1px solid
+    color-mix(
+      in oklch,
+      var(--fac-synod-border) 70%,
+      var(--sys-color-neutral-700)
+    );
+  border-radius: 0;
+  box-shadow: 0 12px 28px
+    color-mix(in oklch, var(--sys-color-black) 14%, transparent);
 }
 
 .facSynodRoot {
@@ -1724,17 +1951,17 @@
 .facSynodBriefHead {
   display: flex;
   flex-wrap: wrap;
+  gap: 8px 10px;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px 10px;
-  margin-bottom: 10px;
   padding-bottom: 8px;
+  margin-bottom: 10px;
   border-bottom: 0.75px solid var(--fac-synod-border);
 }
 
 .facSynodBriefTitleBlock {
-  min-width: 0;
   flex: 1 1 140px;
+  min-width: 0;
 }
 
 .facSynodBriefEyebrow {
@@ -1742,20 +1969,21 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.06em;
   line-height: 1.25;
-  text-transform: uppercase;
   color: color-mix(in oklch, var(--fac-synod-ink) 58%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .facSynodBriefH1 {
   margin: 0;
-  font-family: var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
+  font-family:
+    var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
   font-size: 17px;
   font-weight: 900;
-  letter-spacing: -0.03em;
   line-height: 1.05;
   text-transform: uppercase;
+  letter-spacing: -0.03em;
 }
 
 .facSynodBriefCode {
@@ -1763,17 +1991,17 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.12em;
   line-height: 1.2;
   color: var(--fac-synod-accent);
+  letter-spacing: 0.12em;
 }
 
 .facSynodBriefAside {
   display: flex;
   flex: 0 1 auto;
   flex-direction: column;
-  align-items: flex-end;
   gap: 3px;
+  align-items: flex-end;
   text-align: right;
 }
 
@@ -1781,23 +2009,23 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 500;
-  letter-spacing: 0.04em;
   line-height: 1.25;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .facSynodBriefStatus {
   display: inline-block;
-  margin-top: 2px;
   padding: 2px 6px;
-  border-radius: 2px;
-  background: color-mix(in oklch, var(--fac-synod-accent) 12%, transparent);
+  margin-top: 2px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--fac-synod-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: color-mix(in oklch, var(--fac-synod-accent) 12%, transparent);
+  border-radius: 2px;
 }
 
 .facSynodBriefLead {
@@ -1805,8 +2033,8 @@
   font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
   font-size: 11px;
   font-weight: 400;
-  letter-spacing: -0.01em;
   line-height: 1.45;
+  letter-spacing: -0.01em;
 }
 
 .facSynodBriefLead strong {
@@ -1815,17 +2043,17 @@
 
 .facSynodBriefRedact {
   padding: 0 3px;
-  background: var(--fac-synod-ink);
   color: var(--fac-synod-ink);
   user-select: none;
+  background: var(--fac-synod-ink);
 }
 
 .facSynodBriefFacts {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px 10px;
-  margin: 0 0 10px;
   padding: 8px 0 0;
+  margin: 0 0 10px;
   border-top: 0.75px solid var(--fac-synod-border);
 }
 
@@ -1838,10 +2066,10 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.06em;
   line-height: 1.2;
-  text-transform: uppercase;
   color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .facSynodBriefFact dd {
@@ -1853,8 +2081,8 @@
 }
 
 .facSynodBriefSection {
-  margin: 0;
   padding: 8px 0 0;
+  margin: 0;
   border-top: 0.75px solid var(--fac-synod-border);
 }
 
@@ -1863,10 +2091,10 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.1em;
   line-height: 1.2;
-  text-transform: uppercase;
   color: color-mix(in oklch, var(--fac-synod-ink) 70%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .facSynodBriefP {
@@ -1881,11 +2109,11 @@
 .facSynodBriefFoot {
   display: flex;
   flex-wrap: wrap;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-top: 10px;
   padding-top: 8px;
+  margin-top: 10px;
   border-top: 0.75px solid var(--fac-synod-ink);
 }
 
@@ -1893,22 +2121,22 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 500;
-  letter-spacing: 0.05em;
   line-height: 1.35;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
   opacity: 0.88;
 }
 
 .facSynodBriefStamp {
   flex: 0 0 auto;
   padding: 5px 10px;
-  border: 2px solid var(--fac-synod-accent);
   font-family: var(--font-geist-mono), monospace;
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   color: var(--fac-synod-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border: 2px solid var(--fac-synod-accent);
   transform: rotate(-3deg);
 }
 
@@ -1921,11 +2149,13 @@
 
   padding: 0;
   overflow: hidden;
-  border-radius: 0;
-  border: 1px solid color-mix(in oklch, var(--fac-arc-fg) 22%, var(--sys-color-neutral-900));
-  background: var(--fac-arc-bg);
   color: var(--fac-arc-fg);
-  box-shadow: 0 14px 32px color-mix(in oklch, var(--sys-color-black) 45%, transparent);
+  background: var(--fac-arc-bg);
+  border: 1px solid
+    color-mix(in oklch, var(--fac-arc-fg) 22%, var(--sys-color-neutral-900));
+  border-radius: 0;
+  box-shadow: 0 14px 32px
+    color-mix(in oklch, var(--sys-color-black) 45%, transparent);
 }
 
 .facArcRoot {
@@ -1935,12 +2165,10 @@
 }
 
 .facArcGrain {
-  pointer-events: none;
   position: absolute;
   inset: 0;
   z-index: 2;
-  opacity: 0.07;
-  mix-blend-mode: overlay;
+  pointer-events: none;
   background-image:
     repeating-linear-gradient(
       0deg,
@@ -1956,6 +2184,8 @@
       rgba(255, 255, 255, 0.03) 1px,
       rgba(255, 255, 255, 0.03) 2px
     );
+  mix-blend-mode: overlay;
+  opacity: 0.07;
 }
 
 .facArcPage {
@@ -1964,8 +2194,8 @@
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr) 16px;
   gap: 4px;
-  padding: 6px 4px 8px;
   min-height: 0;
+  padding: 6px 4px 8px;
 }
 
 .facArcPage > aside:first-of-type {
@@ -1981,21 +2211,21 @@
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 0;
   min-height: 120px;
+  padding: 6px 0;
   color: var(--fac-arc-fg);
 }
 
 .facArcVertical {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
   font-family: var(--font-geist-mono), monospace;
   font-size: 4px;
   font-weight: 500;
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-  color: var(--fac-arc-accent);
   line-height: 1.2;
+  color: var(--fac-arc-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
 }
 
 .facArcStar {
@@ -2020,23 +2250,23 @@
 
 .facArcMain {
   display: flex;
-  min-width: 0;
   flex-direction: column;
   align-items: center;
+  min-width: 0;
 }
 
 .facArcMetaStrip {
   display: flex;
-  width: 100%;
   flex-wrap: wrap;
-  justify-content: space-between;
   gap: 4px 6px;
+  justify-content: space-between;
+  width: 100%;
   padding: 4px 0 6px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 5px;
   font-weight: 500;
-  letter-spacing: 0.12em;
   text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 .facArcBlink {
@@ -2059,8 +2289,8 @@
   width: 100%;
   padding-bottom: 8px;
   margin-bottom: 6px;
-  border-bottom: 0.5px solid var(--fac-arc-border);
   text-align: center;
+  border-bottom: 0.5px solid var(--fac-arc-border);
 }
 
 .facArcH1 {
@@ -2068,9 +2298,9 @@
   font-family: var(--font-hg-id-playfair), var(--font-lora), serif;
   font-size: 1.55rem;
   font-weight: 900;
-  letter-spacing: -0.04em;
   line-height: 0.82;
   text-transform: uppercase;
+  letter-spacing: -0.04em;
 }
 
 .facArcSubTitle {
@@ -2086,16 +2316,16 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 5px;
   font-weight: 500;
-  letter-spacing: 0.28em;
   text-transform: uppercase;
+  letter-spacing: 0.28em;
   opacity: 0.85;
 }
 
 .facArcContentBody {
   display: flex;
-  width: 100%;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
   margin-top: 6px;
 }
 
@@ -2105,14 +2335,14 @@
 }
 
 .facArcH2 {
-  margin: 0 0 4px;
   padding-bottom: 2px;
-  border-bottom: 0.5px solid var(--fac-arc-fg);
+  margin: 0 0 4px;
   font-family: var(--font-hg-id-playfair), var(--font-lora), serif;
   font-size: 0.58rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
   text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border-bottom: 0.5px solid var(--fac-arc-fg);
 }
 
 .facArcP {
@@ -2132,39 +2362,39 @@
 .facArcPill {
   display: inline-block;
   padding: 2px 6px;
-  border: 0.5px solid var(--fac-arc-fg);
-  border-radius: 100px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 5px;
   font-weight: 500;
-  letter-spacing: 0.06em;
   text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 0.5px solid var(--fac-arc-fg);
+  border-radius: 100px;
 }
 
 .facArcPillVert {
   display: inline-block;
   padding: 4px 2px;
-  border: 0.5px solid var(--fac-arc-fg);
-  border-radius: 100px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 5px;
   font-weight: 500;
   letter-spacing: 0.08em;
+  border: 0.5px solid var(--fac-arc-fg);
+  border-radius: 100px;
   transform: rotate(-90deg);
 }
 
 .facArcTable {
   width: 100%;
-  border-collapse: collapse;
   font-family: var(--font-geist-mono), monospace;
   font-size: 6px;
   font-weight: 500;
+  border-collapse: collapse;
 }
 
 .facArcTable td {
   padding: 4px 0;
-  border-bottom: 0.5px solid var(--fac-arc-border);
   vertical-align: top;
+  border-bottom: 0.5px solid var(--fac-arc-border);
 }
 
 .facArcTdLabel {
@@ -2176,29 +2406,29 @@
 
 .facArcBtn {
   display: block;
-  margin: 8px auto 0;
   padding: 6px 12px;
-  border: 1px solid var(--fac-arc-fg);
+  margin: 8px auto 0;
   font-family: var(--font-geist-mono), monospace;
   font-size: 5px;
   font-weight: 500;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
   color: var(--fac-arc-fg);
-  cursor: default;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
   pointer-events: none;
+  cursor: default;
   user-select: none;
+  border: 1px solid var(--fac-arc-fg);
 }
 
 .facArcFooter {
   display: flex;
-  width: 100%;
   flex-wrap: wrap;
+  gap: 6px;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
-  margin-top: 8px;
+  width: 100%;
   padding-top: 6px;
+  margin-top: 8px;
   border-top: 0.5px solid var(--fac-arc-border);
 }
 
@@ -2208,10 +2438,10 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 4px;
   font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--fac-arc-accent);
   line-height: 1.35;
+  color: var(--fac-arc-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 /* XX · ARCHIVE-091 readable — IX IA, larger type, neutral plate chrome (match IX), editable PRD + hgArch roster (no fiction metrics table). */
@@ -2224,11 +2454,13 @@
   padding: 0;
   /* Tape sits above the sheet (`top: -12px`); allow it to paint outside the plate. */
   overflow: visible;
-  border-radius: 0;
-  border: 1px solid color-mix(in oklch, var(--fac-arxx-fg) 22%, var(--sys-color-neutral-900));
-  background: var(--fac-arxx-bg);
   color: var(--sem-text-primary);
-  box-shadow: 0 14px 32px color-mix(in oklch, var(--sys-color-black) 45%, transparent);
+  background: var(--fac-arxx-bg);
+  border: 1px solid
+    color-mix(in oklch, var(--fac-arxx-fg) 22%, var(--sys-color-neutral-900));
+  border-radius: 0;
+  box-shadow: 0 14px 32px
+    color-mix(in oklch, var(--sys-color-black) 45%, transparent);
 }
 
 .facArxxRoot {
@@ -2238,12 +2470,10 @@
 }
 
 .facArxxGrain {
-  pointer-events: none;
   position: absolute;
   inset: 0;
   z-index: 2;
-  opacity: 0.08;
-  mix-blend-mode: overlay;
+  pointer-events: none;
   background-image:
     repeating-linear-gradient(
       0deg,
@@ -2259,6 +2489,8 @@
       rgba(255, 255, 255, 0.035) 1px,
       rgba(255, 255, 255, 0.035) 2px
     );
+  mix-blend-mode: overlay;
+  opacity: 0.08;
 }
 
 .facArxxPage {
@@ -2267,10 +2499,10 @@
   display: grid;
   grid-template-columns: 23px minmax(0, 1fr);
   gap: 8px;
+  align-items: stretch;
+  min-height: 0;
   /* No vertical padding here — rail + its right rule must span full height; inset lives on `.facArxxMain` / `.facArxxRail`. */
   padding: 0 5px 0;
-  min-height: 0;
-  align-items: stretch;
   /* Skeuomorphic sheet: cold top light, corner washes, whisper tooth + faint cross-grain + single soft film grain. */
   background-color: var(--fac-arxx-bg);
   background-image:
@@ -2304,13 +2536,20 @@
       color-mix(in oklch, var(--fac-arxx-fg) 1.1%, transparent) 4px
     ),
     url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: auto, auto, auto, auto, auto, 148px 148px;
   background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat, repeat;
-  background-blend-mode: normal, soft-light, multiply, soft-light, soft-light, soft-light;
+  background-size:
+    auto,
+    auto,
+    auto,
+    auto,
+    auto,
+    148px 148px;
   box-shadow:
     inset 0 1px 0 color-mix(in oklch, var(--fac-arxx-fg) 9%, transparent),
     inset 0 -1px 0 color-mix(in oklch, var(--sys-color-black) 28%, transparent),
     inset 0 0 72px color-mix(in oklch, var(--sys-color-black) 38%, transparent);
+  background-blend-mode:
+    normal, soft-light, multiply, soft-light, soft-light, soft-light;
 }
 
 .facArxxPage > aside:first-of-type {
@@ -2319,11 +2558,11 @@
 }
 
 .facArxxRail {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  box-sizing: border-box;
   min-height: 0;
   /* Match `.facArxxMain` vertical inset (top 12px, bottom 10px). */
   padding: 12px 4px 10px 0;
@@ -2331,18 +2570,18 @@
 }
 
 .facArxxVertical {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
+  box-sizing: border-box;
+  padding: 3px 1px;
+  margin: 3px 0;
   font-family: var(--font-geist-mono), monospace;
   font-size: 6.5px;
   font-weight: 500;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--sem-text-muted);
   line-height: 1.25;
-  margin: 3px 0;
-  padding: 3px 1px;
-  box-sizing: border-box;
+  color: var(--sem-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
 }
 
 .facArxxStar {
@@ -2353,9 +2592,13 @@
 }
 
 .facArxxBarcode {
+  --fac-arxx-barcode-stripe: color-mix(
+    in oklch,
+    var(--sem-text-muted) 52%,
+    var(--sys-color-black)
+  );
   width: 13px;
   height: 6px;
-  --fac-arxx-barcode-stripe: color-mix(in oklch, var(--sem-text-muted) 52%, var(--sys-color-black));
   background: repeating-linear-gradient(
     90deg,
     var(--fac-arxx-barcode-stripe) 0,
@@ -2367,25 +2610,25 @@
 }
 
 .facArxxMain {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--fac-arxx-stack-gap);
-  padding: 12px 6px 10px;
-  box-sizing: border-box;
   --fac-arxx-stack-gap: 12px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fac-arxx-stack-gap);
+  align-items: stretch;
+  min-width: 0;
+  padding: 12px 6px 10px;
 }
 
 .facArxxRule {
+  box-sizing: border-box;
   flex-shrink: 0;
   width: 100%;
   height: 0.5px;
-  margin: 0;
   padding: 0;
-  border: none;
+  margin: 0;
   background: var(--sem-border-strong);
-  box-sizing: border-box;
+  border: none;
 }
 
 .facArxxFocusTop {
@@ -2396,26 +2639,26 @@
 /* Lab strip: typographic match to canvas `ArchitecturalNodeHeader` `.nodeTitle` (no pin, no grab). */
 .facArxxPlateHeader {
   display: flex;
-  width: 100%;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  width: 100%;
   padding: 0;
   border-bottom: none;
 }
 
 .facArxxPlateHeaderTitle {
   display: flex;
-  min-width: 0;
   flex: 1 1 auto;
   align-items: center;
+  min-width: 0;
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
+  color: var(--sem-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--sem-text-muted);
 }
 
 .facArxxPlateHeaderActions {
@@ -2438,30 +2681,26 @@
 /* Faction archive letterhead title: one-line name — use single strip wipe (not guest-check dual-line). */
 @keyframes facArxxLetterheadPrimaryStripWipe {
   from {
-    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+      skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
   }
 
   to {
-    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+      skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   }
 }
 
 .facArxxLetterhead {
   width: 100%;
-  margin: 0;
   padding: 0;
-  border: none;
-  text-align: center;
+  margin: 0;
   overflow: visible;
+  text-align: center;
+  border: none;
 }
 
 .facArxxLetterheadPh {
-  width: 100%;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  overflow: visible;
   --sk-id-surface: var(--fac-arxx-bg);
   --sk-id-text: var(--fac-arxx-fg);
   --sk-v11-marker: #000;
@@ -2469,12 +2708,20 @@
   --sk-v11-marker-tail: 100%;
   --sem-text-primary: var(--fac-arxx-fg);
   --sem-text-muted: var(--fac-arxx-accent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
 }
 
-.charSkShellV11.facArxxLetterheadPh .charSkDisplayName[data-hg-lore-placeholder="true"],
-.charSkShellV11.facArxxLetterheadPh .charSkRole[data-hg-lore-placeholder="true"] {
-  overflow: visible;
+.charSkShellV11.facArxxLetterheadPh
+  .charSkDisplayName[data-hg-lore-placeholder="true"],
+.charSkShellV11.facArxxLetterheadPh
+  .charSkRole[data-hg-lore-placeholder="true"] {
   contain: none;
+  overflow: visible;
 }
 
 /*
@@ -2483,9 +2730,9 @@
  */
 .facArxxLetterheadPh .facArxxLetterheadPrimary,
 .facArxxLetterheadPh .facArxxLetterheadSecondary {
+  box-sizing: border-box;
   align-self: stretch;
   width: 100%;
-  box-sizing: border-box;
 }
 
 .facArxxLetterheadPrimary {
@@ -2496,36 +2743,42 @@
 
 .facArxxLetterheadSecondary {
   text-align: center;
-  outline: none;
   overflow-wrap: anywhere;
+  outline: none;
 }
 
 /*
  * Letterhead uses `charSkDisplayName` / `charSkRole` for v11 markers; those classes set Geist and tie specificity with
  * `.charSkShellV11 .charSkDisplayName`. Pin Playfair + archive accent via `data-hg-lore-faction-field` (pre–v11 facArxxH1 / subtitle look).
  */
-.facArxxLetterheadPh .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"] {
+.facArxxLetterheadPh
+.facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"] {
   font-family: var(--font-hg-id-playfair), var(--font-lora), serif;
   font-size: 1.5rem;
   font-weight: 900;
-  letter-spacing: -0.035em;
   line-height: 0.95;
-  text-transform: uppercase;
   color: var(--fac-arxx-fg);
   -webkit-text-fill-color: var(--fac-arxx-fg);
+  text-transform: uppercase;
+  letter-spacing: -0.035em;
 }
 
 @supports (width: 1cqi) {
-  .facArxxLetterheadPh .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"] {
+  .facArxxLetterheadPh
+    .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"] {
     font-size: 1.5rem;
   }
 }
 
-.facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"] {
+.facArxxLetterheadPh
+  .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"] {
+  box-sizing: border-box;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
+  /* Match v11 role strip floor so text centers in the band (not hugging the top). */
+  min-height: max(1.35em, var(--sk-v11-marker-h));
   font-family: var(--font-hg-id-playfair), var(--font-lora), serif;
   font-size: 0.8125rem;
   font-style: italic;
@@ -2533,23 +2786,22 @@
   line-height: 1.3;
   color: var(--fac-arxx-accent);
   -webkit-text-fill-color: var(--fac-arxx-accent);
-  /* Match v11 role strip floor so text centers in the band (not hugging the top). */
-  min-height: max(1.35em, var(--sk-v11-marker-h));
-  box-sizing: border-box;
 }
 
 /*
  * Placeholder strip: base v11 uses `--hg-lore-ph-y`; this flex-centered band pins ::after to the floor (see orgNameAccent rule).
  */
 .facArxxLetterheadPh
-  .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"][data-hg-lore-placeholder="true"],
+.facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"][data-hg-lore-placeholder="true"],
 .facArxxLetterheadPh
   .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"][data-hg-lore-placeholder="true"][data-hg-lore-ph] {
   height: max(1.35em, var(--sk-v11-marker-h));
 }
 
-.facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"]:focus,
-.facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"]:focus-within {
+.facArxxLetterheadPh
+  .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"]:focus,
+.facArxxLetterheadPh
+  .facArxxLetterheadSecondary[data-hg-lore-faction-field="orgNameAccent"]:focus-within {
   color: var(--fac-arxx-accent) !important;
   -webkit-text-fill-color: var(--fac-arxx-accent) !important;
 }
@@ -2559,8 +2811,9 @@
  * ties — pin overrides with `data-hg-lore-faction-field` (faction archive primary title only).
  */
 .facArxxLetterheadPh
-  .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"][data-hg-lore-ph]::before,
-.facArxxLetterheadPh .facArxxLetterheadSecondary[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
+.facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"][data-hg-lore-ph]::before,
+.facArxxLetterheadPh
+  .facArxxLetterheadSecondary[data-hg-lore-placeholder="true"][data-hg-lore-ph]::before {
   content: none !important;
 }
 
@@ -2569,9 +2822,10 @@
 .facArxxLetterheadPh
   .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"][data-hg-lore-ph] {
   /* Slightly taller redaction band than single-line v11 floor (readable archive title plate). */
-  min-height: max(1.62em, calc(var(--sk-v11-marker-h) + 8px));
-  height: max(1.62em, calc(var(--sk-v11-marker-h) + 8px));
   box-sizing: border-box;
+  height: max(1.62em, calc(var(--sk-v11-marker-h) + 8px));
+  /* Slightly taller redaction band than single-line v11 floor (readable archive title plate). */
+  min-height: max(1.62em, calc(var(--sk-v11-marker-h) + 8px));
 }
 
 .facArxxLetterheadPh
@@ -2580,30 +2834,43 @@
   bottom: auto;
   /* Full band between insets — do not subtract ph-x / trim (centered title would over-shrink the strip). */
   left: var(--sk-v11-marker-inset-left) !important;
-  width: calc(100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right)) !important;
+  width: calc(
+    100% -
+    var(--sk-v11-marker-inset-left) -
+    var(--sk-v11-marker-inset-right)
+  ) !important;
   height: calc(var(--hg-lore-ph-lh, var(--sk-v11-marker-h)) + 6px);
-  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
-  transform-origin: left top;
-  animation: facArxxLetterheadPrimaryStripWipe var(--sk-v11-marker-wipe-ms) var(--sk-v11-marker-wipe-ease) forwards;
   background:
     radial-gradient(
       circle at 50% 50%,
-      color-mix(in oklch, var(--sys-color-white) var(--sk-v11-marker-gloss, 2.5%), transparent) 0%,
+      color-mix(
+          in oklch,
+          var(--sys-color-white) var(--sk-v11-marker-gloss, 2.5%),
+          transparent
+        )
+        0%,
       transparent 80%
     ),
     var(--sk-v11-marker);
-  background-blend-mode: soft-light, normal;
   box-shadow: 0 0 2px var(--sk-v11-marker);
+  background-blend-mode: soft-light, normal;
   filter: none;
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+    skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
+  transform-origin: left top;
+  animation: facArxxLetterheadPrimaryStripWipe var(--sk-v11-marker-wipe-ms)
+    var(--sk-v11-marker-wipe-ease) forwards;
 }
 
 .facArxxLetterheadPh
   .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]:focus::after,
 .facArxxLetterheadPh
   .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]:focus-within::after {
+  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+    skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
+  transition: transform var(--sk-v11-marker-hide-ms)
+    var(--sk-v11-marker-hide-ease);
   animation: none;
-  transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(0);
-  transition: transform var(--sk-v11-marker-hide-ms) var(--sk-v11-marker-hide-ease);
 }
 
 .facArxxLetterheadPh
@@ -2614,24 +2881,30 @@
    */
   top: auto !important;
   bottom: 3px !important;
-  transform-origin: left center !important;
   left: var(--sk-v11-marker-inset-left) !important;
-  width: calc(100% - var(--sk-v11-marker-inset-left) - var(--sk-v11-marker-inset-right)) !important;
+  width: calc(
+    100% -
+    var(--sk-v11-marker-inset-left) -
+    var(--sk-v11-marker-inset-right)
+  ) !important;
+  transform-origin: left center !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .facArxxLetterheadPh
     .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]::after {
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+      skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
     animation: none;
-    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
   }
 
   .facArxxLetterheadPh
     .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]:focus::after,
   .facArxxLetterheadPh
     .facArxxLetterheadPrimary[data-hg-lore-faction-field="orgNamePrimary"][data-hg-lore-placeholder="true"]:focus-within::after {
-    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg)) skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
     opacity: 0;
+    transform: translate(-1px, 0) rotate(var(--sk-v11-marker-rotate, -0.5deg))
+      skewY(var(--sk-v11-marker-skew-y, 0deg)) scaleX(1);
     transition: opacity 0.12s ease;
   }
 }
@@ -2647,26 +2920,26 @@
   font-size: 10px;
   font-weight: 600;
   line-height: 1.25;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--sem-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .facArxxH2Row {
   display: flex;
-  width: 100%;
+  gap: 8px;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  width: 100%;
   margin: 0 0 10px;
 }
 
 .facArxxH2Row .facArxxH2 {
-  margin: 0;
-  padding: 0;
-  border-bottom: none;
   flex: 1 1 auto;
   min-width: 0;
+  padding: 0;
+  margin: 0;
+  border-bottom: none;
 }
 
 .facArxxH2Meta {
@@ -2682,8 +2955,8 @@
   --fac-arxx-doc-edge-fade: 16px;
 
   max-height: 132px;
-  margin-bottom: 10px;
   padding: 2px 12px 0 0;
+  margin-bottom: 10px;
   overflow-x: hidden;
   overflow-y: auto;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
@@ -2699,21 +2972,21 @@
 
 /* Scrollport edge fade (mask fixed to viewport; `data-hg-fac-arxx-doc-mask` set from lab when content overflows). */
 .facArxxDocument[data-hg-fac-arxx-doc-mask] {
-  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-size: 100% 100%;
-  -webkit-mask-repeat: no-repeat;
+  mask-size: 100% 100%;
 }
 
 .facArxxDocument[data-hg-fac-arxx-doc-mask="both"] {
-  mask-image: linear-gradient(
+  -webkit-mask-image: linear-gradient(
     to bottom,
     transparent,
     #000 var(--fac-arxx-doc-edge-fade),
     #000 calc(100% - var(--fac-arxx-doc-edge-fade)),
     transparent
   );
-  -webkit-mask-image: linear-gradient(
+  mask-image: linear-gradient(
     to bottom,
     transparent,
     #000 var(--fac-arxx-doc-edge-fade),
@@ -2723,13 +2996,13 @@
 }
 
 .facArxxDocument[data-hg-fac-arxx-doc-mask="end"] {
-  mask-image: linear-gradient(
+  -webkit-mask-image: linear-gradient(
     to bottom,
     #000 0,
     #000 calc(100% - var(--fac-arxx-doc-edge-fade)),
     transparent
   );
-  -webkit-mask-image: linear-gradient(
+  mask-image: linear-gradient(
     to bottom,
     #000 0,
     #000 calc(100% - var(--fac-arxx-doc-edge-fade)),
@@ -2738,13 +3011,13 @@
 }
 
 .facArxxDocument[data-hg-fac-arxx-doc-mask="start"] {
-  mask-image: linear-gradient(
+  -webkit-mask-image: linear-gradient(
     to bottom,
     transparent,
     #000 var(--fac-arxx-doc-edge-fade),
     #000 100%
   );
-  -webkit-mask-image: linear-gradient(
+  mask-image: linear-gradient(
     to bottom,
     transparent,
     #000 var(--fac-arxx-doc-edge-fade),
@@ -2765,8 +3038,8 @@
 }
 
 .facArxxRoster {
-  margin-top: 0;
   padding-top: 0;
+  margin-top: 0;
 }
 
 .facArxxRosterList {
@@ -2776,11 +3049,11 @@
 }
 
 .facArxxRosterEmpty {
+  box-sizing: border-box;
   padding: 14px 12px;
+  text-align: center;
   border: 1px dashed var(--sem-border-subtle);
   border-radius: 2px;
-  text-align: center;
-  box-sizing: border-box;
 }
 
 .facArxxRosterEmptyTitle {
@@ -2789,9 +3062,9 @@
   font-size: 10px;
   font-weight: 600;
   line-height: 1.25;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--sem-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .facArxxRosterEmptyHint {
@@ -2811,45 +3084,45 @@
 .facArxxRosterEmptyKey {
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
-  letter-spacing: 0.03em;
   color: var(--sem-text-muted);
+  letter-spacing: 0.03em;
 }
 
 .facArxxRosterCard {
   display: flex;
-  align-items: center;
   gap: 8px;
+  align-items: center;
   padding: 10px 11px 11px;
   border: 1px dashed var(--sem-border-subtle);
   border-radius: 2px;
 }
 
 .facArxxRosterCardBody {
-  flex: 1 1 auto;
-  min-width: 0;
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 7px;
+  min-width: 0;
 }
 
 .facArxxRosterField {
   width: 100%;
-  margin: 0;
   padding: 0;
-  border: none;
-  background: transparent;
+  margin: 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.35;
-  letter-spacing: -0.01em;
   color: var(--sem-text-primary);
+  letter-spacing: -0.01em;
   outline: none;
+  background: transparent;
+  border: none;
 }
 
 .facArxxRosterField::placeholder {
-  color: color-mix(in oklch, var(--sem-text-muted) 78%, transparent);
   font-weight: 500;
+  color: color-mix(in oklch, var(--sem-text-muted) 78%, transparent);
 }
 
 .facArxxRosterFieldRole {
@@ -2888,10 +3161,11 @@
 
   padding: 0;
   overflow: hidden;
-  border-radius: 0;
-  border: 1px solid color-mix(in oklch, var(--fac-lat-border) 85%, var(--sys-color-neutral-700));
-  background: var(--fac-lat-bg);
   color: var(--fac-lat-fg);
+  background: var(--fac-lat-bg);
+  border: 1px solid
+    color-mix(in oklch, var(--fac-lat-border) 85%, var(--sys-color-neutral-700));
+  border-radius: 0;
   box-shadow:
     0 1px 0 color-mix(in oklch, var(--sys-color-white) 55%, transparent),
     0 14px 36px color-mix(in oklch, var(--sys-color-black) 16%, transparent);
@@ -2900,61 +3174,68 @@
 .facLatRoot {
   position: relative;
   display: flex;
-  min-height: 0;
   flex: 1 1 auto;
   flex-direction: column;
-  cursor: default;
+  min-height: 0;
   -webkit-font-smoothing: antialiased;
+  cursor: default;
 }
 
 .facLatScanlines {
-  pointer-events: none;
   position: absolute;
   inset: 0;
   z-index: 4;
-  opacity: 0.28;
+  pointer-events: none;
   background:
     linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.02) 50%),
-    linear-gradient(90deg, rgba(255, 0, 0, 0.012), rgba(0, 255, 0, 0.006), rgba(0, 0, 255, 0.012));
-  background-size: 100% 2px, 3px 100%;
+    linear-gradient(
+      90deg,
+      rgba(255, 0, 0, 0.012),
+      rgba(0, 255, 0, 0.006),
+      rgba(0, 0, 255, 0.012)
+    );
+  background-size:
+    100% 2px,
+    3px 100%;
+  opacity: 0.28;
 }
 
 .facLatDoc {
   position: relative;
   z-index: 1;
   display: flex;
-  min-height: 0;
   flex: 1 1 auto;
   flex-direction: column;
+  min-height: 0;
   padding: 10px 10px 0;
 }
 
 .facLatMast {
   display: flex;
-  align-items: flex-start;
   gap: 8px;
-  margin-bottom: 8px;
+  align-items: flex-start;
   padding-bottom: 8px;
+  margin-bottom: 8px;
   border-bottom: 0.75px solid var(--fac-lat-border);
 }
 
 .facLatLogoMark {
   position: relative;
   display: flex;
-  width: 12px;
-  height: 12px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
+  width: 12px;
+  height: 12px;
   border: 1px solid var(--fac-lat-fg);
 }
 
 .facLatLogoMark::after {
-  content: "";
   width: 4px;
   height: 4px;
-  border-radius: 50%;
+  content: "";
   background: var(--fac-lat-accent);
+  border-radius: 50%;
   animation: facLatPulse 2s infinite ease-in-out;
 }
 
@@ -2976,16 +3257,17 @@
 }
 
 .facLatMastText {
-  min-width: 0;
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .facLatMastTitle {
-  font-family: var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
+  font-family:
+    var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
   font-size: 16px;
   font-weight: 800;
-  letter-spacing: -0.03em;
   line-height: 1.05;
+  letter-spacing: -0.03em;
 }
 
 .facLatMastSub {
@@ -2993,10 +3275,10 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.05em;
   line-height: 1.35;
-  text-transform: uppercase;
   color: var(--fac-lat-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .facLatLead {
@@ -3004,29 +3286,29 @@
   font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
   font-size: 11px;
   font-weight: 400;
-  letter-spacing: -0.015em;
   line-height: 1.45;
+  letter-spacing: -0.015em;
 }
 
 .facLatRedacted {
   padding: 0 3px;
-  background: var(--fac-lat-fg);
   color: var(--fac-lat-fg);
   user-select: none;
+  background: var(--fac-lat-fg);
 }
 
 .facLatStatList {
-  margin: 0 0 9px;
   padding: 7px 0 0;
-  border-top: 0.75px solid var(--fac-lat-border);
+  margin: 0 0 9px;
   list-style: none;
+  border-top: 0.75px solid var(--fac-lat-border);
 }
 
 .facLatStatRow {
   display: flex;
+  gap: 10px;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
   padding: 5px 0;
   border-bottom: 0.75px solid var(--fac-lat-border);
 }
@@ -3039,31 +3321,31 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.06em;
   line-height: 1.25;
-  text-transform: uppercase;
   color: var(--fac-lat-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .facLatStatVal {
   font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: -0.02em;
   line-height: 1.15;
   text-align: right;
+  letter-spacing: -0.02em;
 }
 
 .facLatOblig {
-  margin: 0 0 10px;
   padding: 8px 0 0;
-  border-top: 0.75px solid var(--fac-lat-border);
+  margin: 0 0 10px;
   font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
   font-size: 10px;
   font-weight: 400;
   line-height: 1.45;
-  letter-spacing: -0.01em;
   color: #333333;
+  letter-spacing: -0.01em;
+  border-top: 0.75px solid var(--fac-lat-border);
 }
 
 .facLatFooter {
@@ -3076,45 +3358,45 @@
 
 .facLatDecline {
   display: flex;
-  width: 108px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
+  width: 108px;
   padding: 0 9px;
-  background: #111111;
-  color: #ffffff;
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.1em;
   line-height: 1.2;
+  color: #ffffff;
   text-transform: uppercase;
+  letter-spacing: 0.1em;
   user-select: none;
+  background: #111111;
 }
 
 .facLatAccept {
   position: relative;
   display: flex;
-  min-width: 0;
   flex: 1 1 auto;
   align-items: stretch;
+  min-width: 0;
   overflow: hidden;
-  background: var(--fac-lat-accent);
   color: #ffffff;
+  background: var(--fac-lat-accent);
 }
 
 .facLatAcceptInner {
   display: flex;
-  width: 100%;
+  gap: 6px;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  width: 100%;
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.1em;
   line-height: 1.2;
   text-transform: uppercase;
+  letter-spacing: 0.1em;
   user-select: none;
 }
 
@@ -3133,10 +3415,11 @@
 
   padding: 0;
   overflow: hidden;
-  border-radius: 0;
-  border: 1px solid color-mix(in oklch, var(--fac-aeon-fg) 12%, var(--sys-color-neutral-600));
-  background: var(--fac-aeon-bg);
   color: var(--fac-aeon-fg);
+  background: var(--fac-aeon-bg);
+  border: 1px solid
+    color-mix(in oklch, var(--fac-aeon-fg) 12%, var(--sys-color-neutral-600));
+  border-radius: 0;
   box-shadow:
     0 1px 0 color-mix(in oklch, var(--sys-color-white) 70%, transparent),
     0 12px 28px color-mix(in oklch, var(--sys-color-black) 12%, transparent);
@@ -3145,52 +3428,52 @@
 .facAeonRoot {
   position: relative;
   display: flex;
-  min-height: 0;
   flex-direction: column;
+  min-height: 0;
   padding: 9px 9px 8px;
-  cursor: default;
   -webkit-font-smoothing: antialiased;
+  cursor: default;
 }
 
 .facAeonTopBar {
   display: flex;
   flex-wrap: wrap;
+  gap: 4px 8px;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 4px 8px;
-  margin-bottom: 8px;
   padding-bottom: 6px;
-  border-bottom: 0.75px solid var(--fac-aeon-fg);
+  margin-bottom: 8px;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 6.5px;
   font-weight: 500;
-  letter-spacing: 0.08em;
   line-height: 1.35;
   text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 0.75px solid var(--fac-aeon-fg);
 }
 
 .facAeonTopLeft {
   display: inline-flex;
-  max-width: 100%;
   flex-wrap: wrap;
-  align-items: center;
   gap: 4px;
+  align-items: center;
   min-width: 0;
+  max-width: 100%;
 }
 
 .facAeonStatusDot {
   display: inline-block;
+  flex: 0 0 auto;
   width: 4px;
   height: 4px;
-  flex: 0 0 auto;
-  border-radius: 50%;
   background: var(--fac-aeon-accent);
+  border-radius: 50%;
 }
 
 .facAeonTopRight {
   flex: 0 0 auto;
-  opacity: 0.88;
   white-space: nowrap;
+  opacity: 0.88;
 }
 
 .facAeonLetterhead {
@@ -3199,51 +3482,52 @@
 
 .facAeonDisplay {
   margin: 0 0 5px;
-  font-family: var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
+  font-family:
+    var(--font-hg-id-inter), var(--font-geist-sans), system-ui, sans-serif;
   font-size: 15px;
   font-weight: 900;
-  letter-spacing: -0.035em;
   line-height: 0.86;
   text-transform: uppercase;
+  letter-spacing: -0.035em;
 }
 
 .facAeonSubhead {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
   gap: 4px 10px;
+  justify-content: space-between;
   font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
   font-size: 7px;
   font-weight: 500;
-  letter-spacing: 0.02em;
   line-height: 1.35;
   text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .facAeonGrid {
   display: grid;
-  min-height: 0;
   flex: 1 1 auto;
   grid-template-columns: minmax(0, 0.38fr) minmax(0, 1fr);
   gap: 6px 8px;
   align-items: start;
+  min-height: 0;
 }
 
 .facAeonMeta {
-  border-top: 0.75px solid var(--fac-aeon-border);
   padding-top: 5px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 6.25px;
   font-weight: 500;
-  letter-spacing: 0.04em;
   line-height: 1.3;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-top: 0.75px solid var(--fac-aeon-border);
 }
 
 .facAeonMetaRow {
   display: flex;
-  justify-content: space-between;
   gap: 6px;
+  justify-content: space-between;
   margin-bottom: 4px;
 }
 
@@ -3253,15 +3537,15 @@
 }
 
 .facAeonMetaRow span:last-child {
-  min-width: 0;
   flex: 0 1 auto;
-  text-align: right;
+  min-width: 0;
   color: var(--fac-aeon-fg);
+  text-align: right;
 }
 
 .facAeonMetaBlock {
-  margin-top: 6px;
   padding-top: 6px;
+  margin-top: 6px;
   border-top: 0.75px solid var(--fac-aeon-border);
 }
 
@@ -3276,9 +3560,9 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 6.5px;
   font-weight: 600;
-  letter-spacing: 0.06em;
   line-height: 1.2;
   color: var(--fac-aeon-accent);
+  letter-spacing: 0.06em;
 }
 
 .facAeonP {
@@ -3286,16 +3570,16 @@
   font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
   font-size: 9px;
   font-weight: 400;
-  letter-spacing: -0.01em;
   line-height: 1.42;
   text-transform: none;
+  letter-spacing: -0.01em;
 }
 
 .facAeonRedacted {
   padding: 0 2px;
-  background: var(--fac-aeon-fg);
   color: var(--fac-aeon-fg);
   user-select: none;
+  background: var(--fac-aeon-fg);
 }
 
 .facAeonStrong {
@@ -3317,10 +3601,10 @@
   top: 50%;
   left: 50%;
   box-sizing: border-box;
+  pointer-events: none;
   border: 0.75px solid rgba(255, 255, 255, 0.22);
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  pointer-events: none;
 }
 
 .facAeonOrb {
@@ -3348,26 +3632,26 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 4.75px;
   font-weight: 500;
-  letter-spacing: 0.06em;
   line-height: 1.25;
-  text-transform: uppercase;
   color: rgba(255, 255, 255, 0.48);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .facAeonSignature {
   display: flex;
   flex-wrap: wrap;
+  gap: 8px;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 8px;
-  margin-top: 8px;
   padding-top: 7px;
+  margin-top: 8px;
   border-top: 0.75px solid var(--fac-aeon-fg);
 }
 
 .facAeonSignCol {
-  min-width: 0;
   flex: 1 1 120px;
+  min-width: 0;
 }
 
 .facAeonCertLabel {
@@ -3375,9 +3659,9 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 5.25px;
   font-weight: 500;
-  letter-spacing: 0.06em;
   line-height: 1.2;
   text-transform: uppercase;
+  letter-spacing: 0.06em;
   opacity: 0.5;
 }
 
@@ -3385,9 +3669,9 @@
   font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.04em;
   line-height: 1.15;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .facAeonSignRole {
@@ -3395,40 +3679,40 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 5.75px;
   font-weight: 600;
-  letter-spacing: 0.05em;
   line-height: 1.3;
-  text-transform: uppercase;
   color: var(--fac-aeon-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .facAeonSeal {
   display: flex;
-  width: 26px;
-  height: 26px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid var(--fac-aeon-accent);
+  width: 26px;
+  height: 26px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 5.5px;
   font-weight: 800;
   line-height: 1;
   color: var(--fac-aeon-accent);
+  border: 1.5px solid var(--fac-aeon-accent);
   transform: rotate(-12deg);
 }
 
 .facAeonFooterRail {
-  margin-top: 6px;
   padding-top: 5px;
-  border-top: 0.75px solid var(--fac-aeon-border);
+  margin-top: 6px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 4.75px;
   font-weight: 500;
-  letter-spacing: 0.07em;
   line-height: 1.35;
+  color: #999999;
   text-align: center;
   text-transform: uppercase;
-  color: #999999;
+  letter-spacing: 0.07em;
+  border-top: 0.75px solid var(--fac-aeon-border);
 }
 
 /* XII · AEON Protocol classified (concrete + red/mint aura, grain; 340px legible sheet; static only). */
@@ -3440,10 +3724,15 @@
 
   padding: 0;
   overflow: hidden;
-  border-radius: 0;
-  border: 1px solid color-mix(in oklch, var(--fac-ap-fg) 14%, var(--sys-color-neutral-600));
-  background: color-mix(in oklch, var(--fac-ap-bg) 92%, var(--sys-color-neutral-500));
   color: var(--fac-ap-fg);
+  background: color-mix(
+    in oklch,
+    var(--fac-ap-bg) 92%,
+    var(--sys-color-neutral-500)
+  );
+  border: 1px solid
+    color-mix(in oklch, var(--fac-ap-fg) 14%, var(--sys-color-neutral-600));
+  border-radius: 0;
   box-shadow:
     0 1px 0 color-mix(in oklch, var(--sys-color-white) 35%, transparent),
     0 12px 28px color-mix(in oklch, var(--sys-color-black) 14%, transparent);
@@ -3453,40 +3742,40 @@
   position: relative;
   min-height: 0;
   overflow: hidden;
-  cursor: default;
   -webkit-font-smoothing: antialiased;
+  cursor: default;
 }
 
 .facAeonProtoAura {
-  pointer-events: none;
   position: absolute;
   inset: -20%;
   z-index: 0;
-  opacity: 0.5;
-  filter: blur(32px);
-  mix-blend-mode: color-burn;
+  pointer-events: none;
   background:
     radial-gradient(circle at 88% 12%, var(--fac-ap-red) 0%, transparent 58%),
     radial-gradient(circle at 72% 82%, var(--fac-ap-mint) 0%, transparent 52%),
     radial-gradient(circle at 100% 100%, #ffffff 0%, transparent 45%);
+  mix-blend-mode: color-burn;
+  opacity: 0.5;
+  filter: blur(32px);
 }
 
 .facAeonProtoGrain {
-  pointer-events: none;
   position: absolute;
   inset: 0;
   z-index: 1;
-  opacity: 0.11;
+  pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.11;
 }
 
 .facAeonProtoDoc {
   position: relative;
   z-index: 2;
-  margin: 7px;
   padding: 10px 10px 9px;
-  border: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 12%, transparent);
+  margin: 7px;
   background: color-mix(in oklch, var(--fac-ap-bg) 78%, transparent);
+  border: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 12%, transparent);
   backdrop-filter: blur(3px);
 }
 
@@ -3494,10 +3783,10 @@
 .facAeonProtoChTR,
 .facAeonProtoChBL,
 .facAeonProtoChBR {
-  pointer-events: none;
   position: absolute;
   width: 11px;
   height: 11px;
+  pointer-events: none;
 }
 
 .facAeonProtoChTL {
@@ -3531,25 +3820,25 @@
 .facAeonProtoTop {
   display: flex;
   flex-wrap: wrap;
+  gap: 8px 10px;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px 10px;
   margin-bottom: 8px;
 }
 
 .facAeonProtoStampLeft {
   display: flex;
-  min-width: 0;
   flex: 1 1 100px;
   flex-direction: column;
-  align-items: flex-start;
   gap: 3px;
+  align-items: flex-start;
+  min-width: 0;
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.04em;
   line-height: 1.3;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .facAeonProtoSlashed {
@@ -3561,8 +3850,8 @@
   font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
   font-size: 26px;
   font-weight: 200;
-  letter-spacing: -0.06em;
   line-height: 0.85;
+  letter-spacing: -0.06em;
   opacity: 0.92;
 }
 
@@ -3570,37 +3859,37 @@
   display: flex;
   flex: 1 1 120px;
   flex-direction: column;
-  align-items: flex-end;
   gap: 2px;
+  align-items: flex-end;
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 500;
-  letter-spacing: 0.03em;
   line-height: 1.2;
   text-align: right;
   text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .facAeonProtoSubject {
   display: flex;
-  align-items: center;
   gap: 6px;
+  align-items: center;
   margin: 0 0 8px;
   font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
   font-size: 9px;
   font-weight: 600;
-  letter-spacing: 0.08em;
   line-height: 1.25;
   text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .facAeonProtoSubjectDot {
   display: inline-block;
+  flex: 0 0 auto;
   width: 5px;
   height: 5px;
-  flex: 0 0 auto;
-  border-radius: 50%;
   background: var(--fac-ap-red);
+  border-radius: 50%;
 }
 
 .facAeonProtoBody {
@@ -3612,8 +3901,8 @@
   font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
   font-size: 11px;
   font-weight: 400;
-  letter-spacing: -0.018em;
   line-height: 1.48;
+  letter-spacing: -0.018em;
 }
 
 .facAeonProtoBody p:last-child {
@@ -3622,9 +3911,9 @@
 
 .facAeonProtoRedact {
   padding: 0 2px;
-  background: var(--fac-ap-fg);
   color: var(--fac-ap-fg);
   user-select: none;
+  background: var(--fac-ap-fg);
 }
 
 .facAeonProtoGrid {
@@ -3645,9 +3934,9 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.06em;
   line-height: 1.2;
   text-transform: uppercase;
+  letter-spacing: 0.06em;
   opacity: 0.62;
 }
 
@@ -3655,8 +3944,8 @@
   font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: -0.015em;
   line-height: 1.25;
+  letter-spacing: -0.015em;
 }
 
 .facAeonProtoValItalic {
@@ -3670,52 +3959,52 @@
 .facAeonProtoBottom {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
   gap: 6px;
-  margin-top: 8px;
+  align-items: flex-end;
   padding-top: 8px;
+  margin-top: 8px;
   border-top: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 35%, transparent);
 }
 
 .facAeonProtoStampBox {
   display: inline-block;
   padding: 5px 9px;
-  border: 1px solid var(--fac-ap-red);
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 700;
-  letter-spacing: 0.06em;
   line-height: 1.25;
-  text-transform: uppercase;
   color: var(--fac-ap-red);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--fac-ap-red);
   transform: rotate(-4deg);
 }
 
 .facAeonProtoRegistry {
-  margin: 0;
   max-width: 100%;
+  margin: 0;
   font-family: var(--font-geist-mono), monospace;
   font-size: 7px;
   font-weight: 500;
-  letter-spacing: 0.05em;
   line-height: 1.45;
   text-align: right;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
   opacity: 0.88;
 }
 
 .facAeonProtoCta {
-  margin-top: 8px;
   padding: 7px 10px;
-  border: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 55%, transparent);
+  margin-top: 8px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.08em;
   line-height: 1.25;
   text-align: center;
   text-transform: uppercase;
+  letter-spacing: 0.08em;
   user-select: none;
+  border: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 55%, transparent);
 }
 
 /* XVIII · Clandestine bureau brief — same light concrete tokens as XII; XI bar + XV grid/stripes; editable PRD fields. */
@@ -3727,10 +4016,15 @@
 
   padding: 0;
   overflow: hidden;
-  border-radius: 0;
-  border: 1px solid color-mix(in oklch, var(--fac-ap-fg) 14%, var(--sys-color-neutral-600));
-  background: color-mix(in oklch, var(--fac-ap-bg) 92%, var(--sys-color-neutral-500));
   color: var(--fac-ap-fg);
+  background: color-mix(
+    in oklch,
+    var(--fac-ap-bg) 92%,
+    var(--sys-color-neutral-500)
+  );
+  border: 1px solid
+    color-mix(in oklch, var(--fac-ap-fg) 14%, var(--sys-color-neutral-600));
+  border-radius: 0;
   box-shadow:
     0 1px 0 color-mix(in oklch, var(--sys-color-white) 35%, transparent),
     0 12px 28px color-mix(in oklch, var(--sys-color-black) 14%, transparent);
@@ -3740,20 +4034,28 @@
   position: relative;
   min-height: 0;
   overflow: hidden;
-  cursor: default;
   -webkit-font-smoothing: antialiased;
+  cursor: default;
 }
 
 .facClandGridBg {
-  pointer-events: none;
   position: absolute;
   inset: 0;
   z-index: 0;
-  opacity: 0.5;
+  pointer-events: none;
   background-image:
-    linear-gradient(to right, color-mix(in oklch, var(--fac-ap-fg) 11%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in oklch, var(--fac-ap-fg) 11%, transparent) 1px, transparent 1px);
+    linear-gradient(
+      to right,
+      color-mix(in oklch, var(--fac-ap-fg) 11%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--fac-ap-fg) 11%, transparent) 1px,
+      transparent 1px
+    );
   background-size: calc(100% / 7) 20px;
+  opacity: 0.5;
 }
 
 .facClandInner {
@@ -3764,50 +4066,50 @@
 
 .facClandClassifiedBar {
   display: flex;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin: 0 0 7px;
   padding: 5px 8px;
-  border: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 16%, transparent);
-  background: color-mix(in oklch, var(--fac-ap-bg) 68%, var(--sys-color-white));
+  margin: 0 0 7px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.04em;
   line-height: 1.25;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: color-mix(in oklch, var(--fac-ap-bg) 68%, var(--sys-color-white));
+  border: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 16%, transparent);
 }
 
 .facClandClassifiedLeft {
   display: flex;
-  min-width: 0;
-  align-items: center;
   gap: 6px;
+  align-items: center;
+  min-width: 0;
   color: var(--fac-ap-fg);
 }
 
 .facClandStatusDot {
+  flex-shrink: 0;
   width: 6px;
   height: 6px;
-  flex-shrink: 0;
-  border-radius: 50%;
   background: var(--fac-ap-red);
+  border-radius: 50%;
   box-shadow: 0 0 0 1px color-mix(in oklch, var(--fac-ap-fg) 22%, transparent);
 }
 
 .facClandClassifiedRight {
   flex-shrink: 0;
-  color: color-mix(in oklch, var(--fac-ap-fg) 52%, transparent);
   font-variant-numeric: slashed-zero;
+  color: color-mix(in oklch, var(--fac-ap-fg) 52%, transparent);
 }
 
 .facClandDocShell {
   position: relative;
   z-index: 1;
   padding: 10px 10px 9px;
-  border: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 12%, transparent);
   background: color-mix(in oklch, var(--fac-ap-bg) 78%, transparent);
+  border: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 12%, transparent);
   backdrop-filter: blur(3px);
 }
 
@@ -3820,16 +4122,17 @@
   font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
   font-weight: 800;
   line-height: 0.94;
-  letter-spacing: -0.045em;
-  text-transform: uppercase;
   color: var(--fac-ap-fg);
-  outline: none;
+  text-transform: uppercase;
+  letter-spacing: -0.045em;
   overflow-wrap: anywhere;
+  outline: none;
 }
 
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
   .facClandStripedLg,
   .facClandStripedSm {
+    color: transparent;
     background: linear-gradient(
       to bottom,
       var(--fac-ap-fg) 0%,
@@ -3837,10 +4140,9 @@
       color-mix(in oklch, var(--fac-ap-fg) 40%, var(--fac-ap-bg) 60%) 46%,
       color-mix(in oklch, var(--fac-ap-fg) 40%, var(--fac-ap-bg) 60%) 100%
     );
-    background-size: 100% 3px;
     -webkit-background-clip: text;
     background-clip: text;
-    color: transparent;
+    background-size: 100% 3px;
   }
 }
 
@@ -3855,25 +4157,26 @@
 }
 
 .facClandSubjectText {
-  min-width: 0;
   flex: 1 1 auto;
+  min-width: 0;
   outline: none;
 }
 
 .facClandJurisdictionRow {
   display: flex;
   flex-wrap: wrap;
+  gap: 8px;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 8px;
-  margin: 0 0 8px;
   padding-bottom: 6px;
-  border-bottom: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 14%, transparent);
+  margin: 0 0 8px;
+  border-bottom: 0.5px solid
+    color-mix(in oklch, var(--fac-ap-fg) 14%, transparent);
 }
 
 .facClandJurisdictionInner {
-  min-width: 0;
   flex: 1 1 120px;
+  min-width: 0;
 }
 
 .facClandJurisdictionK {
@@ -3881,10 +4184,10 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.06em;
   line-height: 1.2;
-  text-transform: lowercase;
   color: color-mix(in oklch, var(--fac-ap-fg) 52%, transparent);
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
   user-select: none;
 }
 
@@ -3892,37 +4195,37 @@
   font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
   font-size: 10.5px;
   font-weight: 600;
-  letter-spacing: -0.016em;
   line-height: 1.35;
-  outline: none;
+  letter-spacing: -0.016em;
   overflow-wrap: anywhere;
+  outline: none;
 }
 
 .facClandAuthStamp {
   flex-shrink: 0;
   padding: 3px 7px;
-  border: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 45%, transparent);
   font-family: var(--font-geist-mono), monospace;
   font-size: 7px;
   font-weight: 700;
-  letter-spacing: 0.1em;
   line-height: 1.25;
-  text-transform: uppercase;
   color: var(--fac-ap-fg);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   user-select: none;
+  border: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 45%, transparent);
 }
 
 .facClandDocument {
-  margin: 0 0 8px;
   max-height: 104px;
   padding-right: 3px;
+  margin: 0 0 8px;
   overflow-x: hidden;
   overflow-y: auto;
   font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
   font-size: 11px;
   font-weight: 400;
-  letter-spacing: -0.018em;
   line-height: 1.48;
+  letter-spacing: -0.018em;
   outline: none;
   scrollbar-color: color-mix(in oklch, var(--fac-ap-fg) 35%, transparent)
     color-mix(in oklch, var(--fac-ap-bg) 82%, transparent);
@@ -3938,24 +4241,24 @@
 }
 
 .facClandRoster {
-  margin: 8px 0 0;
   padding-top: 8px;
+  margin: 8px 0 0;
   border-top: 1px dashed color-mix(in oklch, var(--fac-ap-fg) 22%, transparent);
 }
 
 .facClandRosterBar {
   display: flex;
   flex-wrap: wrap;
+  gap: 6px;
   align-items: baseline;
   justify-content: space-between;
-  gap: 6px;
   margin-bottom: 6px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.05em;
   line-height: 1.25;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .facClandRosterBarLeft {
@@ -3966,11 +4269,11 @@
   max-width: 58%;
   font-size: 7.5px;
   font-weight: 500;
-  letter-spacing: 0.04em;
   line-height: 1.35;
+  color: color-mix(in oklch, var(--fac-ap-fg) 48%, transparent);
   text-align: right;
   text-transform: uppercase;
-  color: color-mix(in oklch, var(--fac-ap-fg) 48%, transparent);
+  letter-spacing: 0.04em;
 }
 
 .facClandRosterList {
@@ -3981,8 +4284,8 @@
 
 .facClandRosterCard {
   padding: 6px 8px 7px;
-  border: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 18%, transparent);
   background: color-mix(in oklch, var(--fac-ap-bg) 65%, transparent);
+  border: 0.5px solid color-mix(in oklch, var(--fac-ap-fg) 18%, transparent);
 }
 
 .facClandRosterCardName {
@@ -3990,8 +4293,8 @@
   font-family: var(--font-hg-id-inter), var(--font-geist-sans), sans-serif;
   font-size: 10.5px;
   font-weight: 600;
-  letter-spacing: -0.014em;
   line-height: 1.35;
+  letter-spacing: -0.014em;
   overflow-wrap: anywhere;
 }
 
@@ -4000,9 +4303,9 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 8.5px;
   font-weight: 500;
-  letter-spacing: 0.02em;
   line-height: 1.35;
   color: color-mix(in oklch, var(--fac-ap-fg) 58%, transparent);
+  letter-spacing: 0.02em;
   overflow-wrap: anywhere;
 }
 
@@ -4016,10 +4319,11 @@
 
   padding: 0;
   overflow: hidden;
-  border-radius: 2px;
-  border: 1px solid color-mix(in oklch, var(--fac-ib-cobalt) 35%, var(--fac-ib-midnight));
-  background: var(--fac-ib-midnight);
   color: var(--fac-ib-bone);
+  background: var(--fac-ib-midnight);
+  border: 1px solid
+    color-mix(in oklch, var(--fac-ib-cobalt) 35%, var(--fac-ib-midnight));
+  border-radius: 2px;
   box-shadow:
     0 0 0 1px color-mix(in oklch, var(--fac-ib-cobalt) 15%, transparent),
     0 14px 32px color-mix(in oklch, #000 55%, transparent);
@@ -4027,45 +4331,57 @@
 
 .facIndigoRoot {
   position: relative;
-  isolation: isolate;
   min-height: 0;
-  cursor: default;
   -webkit-font-smoothing: antialiased;
+  cursor: default;
+  isolation: isolate;
 }
 
 .facIndigoBg {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background:
-    radial-gradient(ellipse 120% 80% at 50% 20%, color-mix(in oklch, var(--fac-ib-indigo) 85%, #000) 0%, var(--fac-ib-midnight) 55%),
-    radial-gradient(circle at 80% 100%, color-mix(in oklch, var(--fac-ib-cobalt) 25%, transparent), transparent 45%),
-    var(--fac-ib-midnight);
   pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 120% 80% at 50% 20%,
+      color-mix(in oklch, var(--fac-ib-indigo) 85%, #000) 0%,
+      var(--fac-ib-midnight) 55%
+    ),
+    radial-gradient(
+      circle at 80% 100%,
+      color-mix(in oklch, var(--fac-ib-cobalt) 25%, transparent),
+      transparent 45%
+    ),
+    var(--fac-ib-midnight);
 }
 
 .facIndigoBg::after {
-  content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.12;
+  pointer-events: none;
+  content: "";
   background-image: url("https://www.transparenttextures.com/patterns/stardust.png");
   mix-blend-mode: screen;
-  pointer-events: none;
+  opacity: 0.12;
 }
 
 .facIndigoBloom {
   position: absolute;
-  bottom: -18%;
   right: -12%;
+  bottom: -18%;
+  z-index: 0;
   width: 58%;
   height: 42%;
-  z-index: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in oklch, var(--fac-ib-cobalt) 35%, transparent) 0%, transparent 70%);
-  filter: blur(28px);
-  opacity: 0.35;
   pointer-events: none;
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--fac-ib-cobalt) 35%, transparent) 0%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  opacity: 0.35;
+  filter: blur(28px);
 }
 
 .facIndigoDoc {
@@ -4084,18 +4400,19 @@
 .facIndigoRail {
   grid-row: 1 / span 10;
   padding-top: 2px;
-  border-right: 1px solid color-mix(in oklch, var(--fac-ib-cobalt) 35%, transparent);
   padding-right: 5px;
   font-family: "Space Mono", ui-monospace, monospace;
   font-size: 5.5px;
   font-weight: 500;
   line-height: 1.35;
-  letter-spacing: 0.12em;
+  color: color-mix(in oklch, var(--fac-ib-cobalt) 92%, #fff);
   text-transform: uppercase;
+  letter-spacing: 0.12em;
+  user-select: none;
+  border-right: 1px solid
+    color-mix(in oklch, var(--fac-ib-cobalt) 35%, transparent);
   writing-mode: vertical-rl;
   text-orientation: mixed;
-  color: color-mix(in oklch, var(--fac-ib-cobalt) 92%, #fff);
-  user-select: none;
 }
 
 .facIndigoMain {
@@ -4105,9 +4422,9 @@
 
 .facIndigoHeaderRow {
   display: flex;
+  gap: 8px;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
   margin-bottom: 6px;
 }
 
@@ -4138,8 +4455,8 @@
   font-size: 26px;
   font-weight: 400;
   line-height: 0.95;
-  letter-spacing: -0.03em;
   color: var(--fac-ib-bone);
+  letter-spacing: -0.03em;
   outline: none;
 }
 
@@ -4151,8 +4468,8 @@
   font-style: italic;
   font-weight: 400;
   line-height: 0.95;
-  letter-spacing: -0.02em;
   color: var(--fac-ib-cobalt);
+  letter-spacing: -0.02em;
   outline: none;
 }
 
@@ -4162,9 +4479,9 @@
   font-size: 8.5px;
   font-weight: 500;
   line-height: 1.35;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
   color: var(--fac-ib-orange);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
   outline: none;
 }
 
@@ -4180,8 +4497,8 @@
 
 .facIndigoSectionMarker {
   display: flex;
-  align-items: center;
   gap: 8px;
+  align-items: center;
   margin: 0 0 8px;
 }
 
@@ -4189,7 +4506,8 @@
   flex: 1 1 auto;
   margin: 0;
   border: none;
-  border-top: 1px solid color-mix(in oklch, var(--fac-ib-cobalt) 55%, transparent);
+  border-top: 1px solid
+    color-mix(in oklch, var(--fac-ib-cobalt) 55%, transparent);
 }
 
 .facIndigoSectionLabel {
@@ -4197,8 +4515,8 @@
   font-family: "Space Mono", ui-monospace, monospace;
   font-size: 6.5px;
   font-weight: 500;
-  letter-spacing: 0.06em;
   color: var(--fac-ib-cobalt);
+  letter-spacing: 0.06em;
   user-select: none;
 }
 
@@ -4206,8 +4524,8 @@
   font-family: "EB Garamond", Georgia, serif;
   font-size: 12.5px;
   line-height: 1.42;
-  text-align: justify;
   color: color-mix(in oklch, var(--fac-ib-bone) 96%, #000);
+  text-align: justify;
   outline: none;
 }
 
@@ -4215,8 +4533,8 @@
   float: left;
   margin: 4px 8px 0 0;
   font-size: 42px;
-  line-height: 0.78;
   font-weight: 400;
+  line-height: 0.78;
   color: var(--fac-ib-cobalt);
 }
 
@@ -4235,43 +4553,44 @@
 
 .facIndigoAck {
   display: inline-block;
-  margin-top: 10px;
   padding: 6px 10px;
-  border: 1px solid color-mix(in oklch, var(--fac-ib-cobalt) 55%, transparent);
+  margin-top: 10px;
   font-family: "Space Mono", ui-monospace, monospace;
   font-size: 7px;
   font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
   color: var(--fac-ib-bone);
-  user-select: none;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
   pointer-events: none;
+  user-select: none;
+  border: 1px solid color-mix(in oklch, var(--fac-ib-cobalt) 55%, transparent);
 }
 
 .facIndigoAck::after {
-  content: "→";
   margin-left: 6px;
+  content: "→";
 }
 
 .facIndigoFooter {
   display: flex;
   flex-wrap: wrap;
+  gap: 6px;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 6px;
-  margin-top: 12px;
   padding-top: 8px;
-  border-top: 1px solid color-mix(in oklch, var(--fac-ib-cobalt) 45%, transparent);
-  user-select: none;
+  margin-top: 12px;
   pointer-events: none;
+  user-select: none;
+  border-top: 1px solid
+    color-mix(in oklch, var(--fac-ib-cobalt) 45%, transparent);
 }
 
 .facIndigoFooterWordmark {
   font-family: "EB Garamond", Georgia, serif;
   font-size: 15px;
   font-weight: 700;
-  letter-spacing: -0.04em;
   color: var(--fac-ib-bone);
+  letter-spacing: -0.04em;
 }
 
 .facIndigoFooterMeta {
@@ -4280,10 +4599,10 @@
   font-size: 5.5px;
   font-weight: 500;
   line-height: 1.45;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  text-align: right;
   color: color-mix(in oklch, var(--fac-ib-cobalt) 90%, #fff);
+  text-align: right;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 /* XIV · Terminal fleet — black mono “sys” shell; legible type (≥10px); editable charter region 12px. */
@@ -4296,94 +4615,95 @@
 
   padding: 0;
   overflow: visible;
-  border-radius: 2px;
-  border: 1px solid var(--fac-tx-dark);
-  background: var(--fac-tx-bg);
   color: var(--fac-tx-fg);
+  background: var(--fac-tx-bg);
+  border: 1px solid var(--fac-tx-dark);
+  border-radius: 2px;
   box-shadow: 0 10px 26px color-mix(in oklch, #000 45%, transparent);
 }
 
 .facTermXivRoot {
   display: flex;
-  min-height: 0;
   flex-direction: column;
+  min-height: 0;
   padding: 9px 9px 8px;
-  cursor: default;
-  font-family: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-family:
+    var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-size: 11px;
   font-weight: 500;
-  line-height: 1.35;
   -webkit-font-smoothing: antialiased;
+  line-height: 1.35;
+  cursor: default;
 }
 
 .facTermXivHeader {
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   gap: 5px;
   padding-bottom: 8px;
   margin-bottom: 0;
   border-bottom: 1px dashed var(--fac-tx-dark);
-  flex-shrink: 0;
 }
 
 .facTermXivHeaderRow {
   display: flex;
   flex-wrap: wrap;
+  gap: 6px 10px;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 6px 10px;
 }
 
 .facTermXivKv {
   display: flex;
-  min-width: 0;
   flex: 1 1 calc(50% - 6px);
-  align-items: baseline;
   gap: 6px;
+  align-items: baseline;
+  min-width: 0;
 }
 
 .facTermXivKvWide {
   display: flex;
-  width: 100%;
   flex-direction: column;
-  align-items: stretch;
   gap: 4px;
+  align-items: stretch;
+  width: 100%;
 }
 
 .facTermXivK {
   flex: 0 0 auto;
   font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.02em;
   color: var(--fac-tx-dim);
   text-transform: lowercase;
+  letter-spacing: 0.02em;
   user-select: none;
 }
 
 .facTermXivV {
-  min-width: 0;
   flex: 1 1 auto;
+  min-width: 0;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
-  letter-spacing: -0.02em;
   color: var(--fac-tx-bright);
-  outline: none;
-  overflow-wrap: anywhere;
+  letter-spacing: -0.02em;
   word-break: break-word;
+  overflow-wrap: anywhere;
+  outline: none;
 }
 
 .facTermXivDocument {
-  margin-top: 8px;
   max-height: 168px;
   padding: 2px 4px 0 0;
+  margin-top: 8px;
   overflow-x: hidden;
   overflow-y: auto;
   font-size: 12px;
   font-weight: 450;
   line-height: 1.5;
-  letter-spacing: 0.01em;
   color: var(--fac-tx-fg);
+  letter-spacing: 0.01em;
   outline: none;
   scrollbar-color: var(--fac-tx-dim) var(--fac-tx-bg);
   scrollbar-width: thin;
@@ -4424,8 +4744,8 @@
 
 .facIndigoRosterSectionMarker {
   display: flex;
-  align-items: center;
   gap: 8px;
+  align-items: center;
   margin-bottom: 8px;
 }
 
@@ -4435,40 +4755,42 @@
   font-size: 10px;
   font-weight: 600;
   line-height: 1.25;
-  letter-spacing: 0.04em;
   color: color-mix(in oklch, var(--fac-ib-cobalt) 95%, #fff);
+  letter-spacing: 0.04em;
 }
 
 .facIndigoRosterHr {
   flex: 1 1 auto;
   margin: 0;
   border: none;
-  border-top: 1px solid color-mix(in oklch, var(--fac-ib-cobalt) 40%, transparent);
+  border-top: 1px solid
+    color-mix(in oklch, var(--fac-ib-cobalt) 40%, transparent);
 }
 
 .facIndigoRosterList {
-  margin: 0;
   padding: 0;
+  margin: 0;
   list-style: none;
 }
 
 .facIndigoRosterRow {
-  margin: 0 0 10px;
   padding-bottom: 8px;
-  border-bottom: 1px solid color-mix(in oklch, var(--fac-ib-cobalt) 22%, transparent);
+  margin: 0 0 10px;
+  border-bottom: 1px solid
+    color-mix(in oklch, var(--fac-ib-cobalt) 22%, transparent);
 }
 
 .facIndigoRosterRow:last-child {
-  margin-bottom: 0;
   padding-bottom: 0;
+  margin-bottom: 0;
   border-bottom: none;
 }
 
 .facIndigoRosterTop {
   display: flex;
+  gap: 8px;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
 }
 
 .facIndigoRosterName {
@@ -4489,24 +4811,24 @@
 }
 
 .facTermXivRoster {
-  margin: 8px 0 0;
   padding-top: 8px;
+  margin: 8px 0 0;
   border-top: 1px dashed var(--fac-tx-dark);
 }
 
 .facTermXivRosterBar {
   display: flex;
   flex-wrap: wrap;
+  gap: 6px;
   align-items: baseline;
   justify-content: space-between;
-  gap: 6px;
   margin-bottom: 6px;
   font-size: 11px;
   font-weight: 600;
   line-height: 1.25;
-  letter-spacing: 0.02em;
-  text-transform: lowercase;
   color: var(--fac-tx-bright);
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
 }
 
 .facTermXivRosterBarRight {
@@ -4514,8 +4836,8 @@
   font-size: 10px;
   font-weight: 500;
   line-height: 1.3;
-  text-align: right;
   color: var(--fac-tx-dim);
+  text-align: right;
 }
 
 .facTermXivRosterList {
@@ -4526,9 +4848,10 @@
 
 .facTermXivRosterCard {
   padding: 8px 8px 9px;
-  border: 1px solid color-mix(in oklch, var(--fac-tx-dark) 92%, var(--fac-tx-bright));
-  border-radius: 3px;
   background: color-mix(in oklch, var(--fac-tx-bg) 96%, var(--fac-tx-dim));
+  border: 1px solid
+    color-mix(in oklch, var(--fac-tx-dark) 92%, var(--fac-tx-bright));
+  border-radius: 3px;
 }
 
 .facTermXivRosterCardName {
@@ -4536,8 +4859,8 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
-  letter-spacing: -0.01em;
   color: var(--fac-tx-bright);
+  letter-spacing: -0.01em;
   overflow-wrap: anywhere;
 }
 
@@ -4560,10 +4883,10 @@
 
   padding: 0;
   overflow: visible;
-  border-radius: 2px;
-  border: 1px solid var(--fac-oc-grid);
-  background: var(--fac-oc-bg);
   color: var(--fac-oc-fg);
+  background: var(--fac-oc-bg);
+  border: 1px solid var(--fac-oc-grid);
+  border-radius: 2px;
   box-shadow: 0 12px 30px color-mix(in oklch, #000 50%, transparent);
 }
 
@@ -4573,65 +4896,73 @@
   font-family: "Space Mono", var(--font-geist-mono), ui-monospace, monospace;
   font-size: 11px;
   font-weight: 500;
-  line-height: 1.4;
   -webkit-font-smoothing: antialiased;
+  line-height: 1.4;
 }
 
 .facOcularGridBg {
   position: absolute;
   inset: 0;
   z-index: 0;
+  pointer-events: none;
   background-image:
-    linear-gradient(to right, color-mix(in oklch, var(--fac-oc-grid) 70%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in oklch, var(--fac-oc-grid) 70%, transparent) 1px, transparent 1px);
+    linear-gradient(
+      to right,
+      color-mix(in oklch, var(--fac-oc-grid) 70%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--fac-oc-grid) 70%, transparent) 1px,
+      transparent 1px
+    );
   background-size: calc(100% / 6) 24px;
   opacity: 0.45;
-  pointer-events: none;
 }
 
 .facOcularFrame {
   position: relative;
   z-index: 1;
   display: flex;
-  min-height: 0;
   align-items: stretch;
+  min-height: 0;
 }
 
 .facOcularRail {
   flex: 0 0 22px;
   padding: 10px 5px;
-  border-right: 0.5px solid var(--fac-oc-grid);
   font-size: 10px;
   font-weight: 500;
   line-height: 1.25;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
   color: color-mix(in oklch, var(--fac-oc-muted) 90%, #000);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  user-select: none;
+  border-right: 0.5px solid var(--fac-oc-grid);
   writing-mode: vertical-rl;
   text-orientation: mixed;
-  user-select: none;
 }
 
 .facOcularMain {
-  min-width: 0;
   flex: 1 1 auto;
+  min-width: 0;
   padding: 9px 9px 10px 10px;
 }
 
 .facOcularHeader {
   display: flex;
   flex-wrap: wrap;
+  gap: 8px;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
   padding-bottom: 6px;
   margin-bottom: 6px;
   border-bottom: 0.5px solid var(--fac-oc-grid);
 }
 
 .facOcularHeaderLeft {
-  min-width: 0;
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .facOcularHeaderRight {
@@ -4642,9 +4973,9 @@
   margin-bottom: 2px;
   font-size: 10px;
   font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: lowercase;
   color: color-mix(in oklch, var(--fac-oc-muted) 95%, #000);
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
   user-select: none;
 }
 
@@ -4653,19 +4984,19 @@
   font-weight: 500;
   line-height: 1.35;
   color: color-mix(in oklch, var(--fac-oc-body) 95%, #fff);
-  outline: none;
   overflow-wrap: anywhere;
+  outline: none;
 }
 
 .facOcularStamp {
   display: inline-block;
   padding: 2px 7px;
-  border: 0.5px solid var(--fac-oc-fg);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.08em;
   text-transform: uppercase;
+  letter-spacing: 0.08em;
   user-select: none;
+  border: 0.5px solid var(--fac-oc-fg);
 }
 
 .facOcularTitleBlock {
@@ -4677,16 +5008,17 @@
   font-family: "Inter", system-ui, sans-serif;
   font-weight: 900;
   line-height: 0.92;
-  letter-spacing: -0.05em;
-  text-transform: uppercase;
   color: var(--fac-oc-fg);
-  outline: none;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
   overflow-wrap: anywhere;
+  outline: none;
 }
 
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
   .facOcularStripedLg,
   .facOcularStripedSm {
+    color: transparent;
     background: linear-gradient(
       to bottom,
       var(--fac-oc-fg) 0%,
@@ -4694,10 +5026,9 @@
       transparent 50%,
       transparent 100%
     );
-    background-size: 100% 4px;
     -webkit-background-clip: text;
     background-clip: text;
-    color: transparent;
+    background-size: 100% 4px;
   }
 }
 
@@ -4714,8 +5045,8 @@
 .facOcularSubjectRow {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
   gap: 3px;
+  align-items: stretch;
   padding-bottom: 6px;
   margin-bottom: 6px;
   border-bottom: 0.5px solid var(--fac-oc-grid);
@@ -4726,10 +5057,10 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1.35;
-  letter-spacing: -0.02em;
   color: var(--fac-oc-fg);
-  outline: none;
+  letter-spacing: -0.02em;
   overflow-wrap: anywhere;
+  outline: none;
 }
 
 .facOcularDocument {
@@ -4757,11 +5088,11 @@
 
 .facOcularEvidence {
   display: flex;
-  min-height: 52px;
   align-items: center;
   justify-content: center;
+  min-height: 52px;
   margin: 8px 0 4px;
-  border: 0.5px solid var(--fac-oc-grid);
+  user-select: none;
   background:
     linear-gradient(0deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
     repeating-linear-gradient(
@@ -4771,17 +5102,17 @@
       transparent 1px,
       transparent 2px
     );
-  user-select: none;
+  border: 0.5px solid var(--fac-oc-grid);
 }
 
 .facOcularEvidenceInner {
   padding: 0 8px;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  color: color-mix(in oklch, var(--fac-oc-muted) 85%, #000);
   text-align: center;
   text-transform: uppercase;
-  color: color-mix(in oklch, var(--fac-oc-muted) 85%, #000);
+  letter-spacing: 0.14em;
 }
 
 .facOcularFooterSlug {
@@ -4790,30 +5121,30 @@
   font-size: 11px;
   font-weight: 800;
   line-height: 1.25;
-  letter-spacing: 0.04em;
   text-transform: uppercase;
-  opacity: 0.88;
+  letter-spacing: 0.04em;
   user-select: none;
+  opacity: 0.88;
 }
 
 .facOcularRoster {
-  margin-top: 6px;
   padding-top: 8px;
+  margin-top: 6px;
   border-top: 0.5px dashed var(--fac-oc-grid);
 }
 
 .facOcularRosterBar {
   display: flex;
   flex-wrap: wrap;
+  gap: 6px;
   align-items: baseline;
   justify-content: space-between;
-  gap: 6px;
   margin-bottom: 6px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: lowercase;
   color: var(--fac-oc-fg);
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
 }
 
 .facOcularRosterBarRight {
@@ -4830,9 +5161,10 @@
 
 .facOcularRosterCard {
   padding: 7px 8px 8px;
-  border: 0.5px solid color-mix(in oklch, var(--fac-oc-grid) 90%, var(--fac-oc-fg));
-  border-radius: 2px;
   background: color-mix(in oklch, var(--fac-oc-bg) 94%, #fff);
+  border: 0.5px solid
+    color-mix(in oklch, var(--fac-oc-grid) 90%, var(--fac-oc-fg));
+  border-radius: 2px;
 }
 
 .facOcularRosterCardName {
@@ -4840,8 +5172,8 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
-  letter-spacing: -0.01em;
   color: var(--fac-oc-fg);
+  letter-spacing: -0.01em;
   overflow-wrap: anywhere;
 }
 
@@ -4864,10 +5196,11 @@
 
   padding: 0;
   overflow: hidden;
-  border-radius: 2px;
-  border: 1px solid color-mix(in oklch, var(--fac-oclm-grid) 88%, var(--fac-oclm-fg));
-  background: var(--fac-oclm-bg);
   color: var(--fac-oclm-fg);
+  background: var(--fac-oclm-bg);
+  border: 1px solid
+    color-mix(in oklch, var(--fac-oclm-grid) 88%, var(--fac-oclm-fg));
+  border-radius: 2px;
   box-shadow:
     0 1px 0 color-mix(in oklch, #fff 65%, transparent),
     0 10px 26px color-mix(in oklch, #000 12%, transparent);
@@ -4879,20 +5212,28 @@
   font-family: "Space Mono", var(--font-geist-mono), ui-monospace, monospace;
   font-size: 11px;
   font-weight: 500;
-  line-height: 1.4;
   -webkit-font-smoothing: antialiased;
+  line-height: 1.4;
 }
 
 .facOclmGridBg {
-  pointer-events: none;
   position: absolute;
   inset: 0;
   z-index: 0;
-  opacity: 0.55;
+  pointer-events: none;
   background-image:
-    linear-gradient(to right, color-mix(in oklch, var(--fac-oclm-grid) 75%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in oklch, var(--fac-oclm-grid) 75%, transparent) 1px, transparent 1px);
+    linear-gradient(
+      to right,
+      color-mix(in oklch, var(--fac-oclm-grid) 75%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--fac-oclm-grid) 75%, transparent) 1px,
+      transparent 1px
+    );
   background-size: calc(100% / 6) 24px;
+  opacity: 0.55;
 }
 
 .facOclmMain {
@@ -4905,17 +5246,17 @@
 .facOclmHeader {
   display: flex;
   flex-wrap: wrap;
+  gap: 8px;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
   padding-bottom: 6px;
   margin-bottom: 6px;
   border-bottom: 0.5px solid var(--fac-oclm-grid);
 }
 
 .facOclmHeaderLeft {
-  min-width: 0;
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .facOclmHeaderRight {
@@ -4926,9 +5267,9 @@
   margin-bottom: 2px;
   font-size: 10px;
   font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: lowercase;
   color: color-mix(in oklch, var(--fac-oclm-muted) 92%, var(--fac-oclm-fg));
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
   user-select: none;
 }
 
@@ -4937,39 +5278,42 @@
   font-weight: 500;
   line-height: 1.35;
   color: var(--fac-oclm-body);
-  outline: none;
   overflow-wrap: anywhere;
+  outline: none;
 }
 
 .facOclmStamp {
   display: inline-block;
   padding: 2px 7px;
-  border: 0.5px solid color-mix(in oklch, var(--fac-oclm-fg) 55%, var(--fac-oclm-grid));
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.08em;
   text-transform: uppercase;
+  letter-spacing: 0.08em;
   user-select: none;
+  border: 0.5px solid
+    color-mix(in oklch, var(--fac-oclm-fg) 55%, var(--fac-oclm-grid));
 }
 
 .facOclmTitle {
   margin: 4px 0 8px;
-  font-family: var(--font-hg-id-inter), var(--font-geist-sans), "Inter", system-ui, sans-serif;
+  font-family:
+    var(--font-hg-id-inter), var(--font-geist-sans), "Inter", system-ui,
+    sans-serif;
   font-size: 19px;
   font-weight: 700;
   line-height: 1.18;
-  letter-spacing: -0.028em;
-  text-transform: uppercase;
   color: var(--fac-oclm-fg);
-  outline: none;
+  text-transform: uppercase;
+  letter-spacing: -0.028em;
   overflow-wrap: anywhere;
+  outline: none;
 }
 
 .facOclmSubjectRow {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
   gap: 3px;
+  align-items: stretch;
   padding-bottom: 6px;
   margin-bottom: 6px;
   border-bottom: 0.5px solid var(--fac-oclm-grid);
@@ -4980,10 +5324,10 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1.35;
-  letter-spacing: -0.02em;
   color: var(--fac-oclm-fg);
-  outline: none;
+  letter-spacing: -0.02em;
   overflow-wrap: anywhere;
+  outline: none;
 }
 
 .facOclmDocument {
@@ -5011,55 +5355,58 @@
 
 .facOclmEvidence {
   display: flex;
-  min-height: 52px;
   align-items: center;
   justify-content: center;
+  min-height: 52px;
   margin: 8px 0 4px;
-  border: 0.5px dashed color-mix(in oklch, var(--fac-oclm-grid) 90%, var(--fac-oclm-fg));
-  background: color-mix(in oklch, var(--fac-oclm-bg) 82%, var(--fac-oclm-grid));
   user-select: none;
+  background: color-mix(in oklch, var(--fac-oclm-bg) 82%, var(--fac-oclm-grid));
+  border: 0.5px dashed
+    color-mix(in oklch, var(--fac-oclm-grid) 90%, var(--fac-oclm-fg));
 }
 
 .facOclmEvidenceInner {
   padding: 0 8px;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  color: color-mix(in oklch, var(--fac-oclm-muted) 88%, var(--fac-oclm-fg));
   text-align: center;
   text-transform: uppercase;
-  color: color-mix(in oklch, var(--fac-oclm-muted) 88%, var(--fac-oclm-fg));
+  letter-spacing: 0.14em;
 }
 
 .facOclmFooterSlug {
   margin-top: 6px;
-  font-family: var(--font-hg-id-inter), var(--font-geist-sans), "Inter", system-ui, sans-serif;
+  font-family:
+    var(--font-hg-id-inter), var(--font-geist-sans), "Inter", system-ui,
+    sans-serif;
   font-size: 11px;
   font-weight: 800;
   line-height: 1.25;
-  letter-spacing: 0.04em;
   text-transform: uppercase;
-  opacity: 0.82;
+  letter-spacing: 0.04em;
   user-select: none;
+  opacity: 0.82;
 }
 
 .facOclmRoster {
-  margin-top: 6px;
   padding-top: 8px;
+  margin-top: 6px;
   border-top: 0.5px dashed var(--fac-oclm-grid);
 }
 
 .facOclmRosterBar {
   display: flex;
   flex-wrap: wrap;
+  gap: 6px;
   align-items: baseline;
   justify-content: space-between;
-  gap: 6px;
   margin-bottom: 6px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: lowercase;
   color: var(--fac-oclm-fg);
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
 }
 
 .facOclmRosterBarLeft {
@@ -5080,9 +5427,10 @@
 
 .facOclmRosterCard {
   padding: 7px 8px 8px;
-  border: 0.5px solid color-mix(in oklch, var(--fac-oclm-grid) 75%, var(--fac-oclm-fg));
-  border-radius: 2px;
   background: color-mix(in oklch, var(--fac-oclm-bg) 92%, #fff);
+  border: 0.5px solid
+    color-mix(in oklch, var(--fac-oclm-grid) 75%, var(--fac-oclm-fg));
+  border-radius: 2px;
 }
 
 .facOclmRosterCardName {
@@ -5090,8 +5438,8 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
-  letter-spacing: -0.01em;
   color: var(--fac-oclm-fg);
+  letter-spacing: -0.01em;
   overflow-wrap: anywhere;
 }
 
@@ -5111,16 +5459,18 @@
   --fac-synth-ink: #1a1a1a;
   --fac-synth-glass: rgba(235, 235, 235, 0.6);
   --fac-synth-stroke: rgba(0, 51, 255, 0.15);
+  padding: 0;
 
   container-name: fac-synth;
   container-type: inline-size;
-  padding: 0;
   overflow: hidden;
-  border-radius: 3px;
-  border: 1px solid color-mix(in oklch, var(--fac-synth-blue) 28%, var(--fac-synth-bg));
-  background: var(--fac-synth-bg);
   color: var(--fac-synth-blue);
-  box-shadow: 0 10px 28px color-mix(in oklch, var(--fac-synth-blue) 12%, transparent);
+  background: var(--fac-synth-bg);
+  border: 1px solid
+    color-mix(in oklch, var(--fac-synth-blue) 28%, var(--fac-synth-bg));
+  border-radius: 3px;
+  box-shadow: 0 10px 28px
+    color-mix(in oklch, var(--fac-synth-blue) 12%, transparent);
 }
 
 .facSynthRoot {
@@ -5129,8 +5479,8 @@
   font-family: "Inter", system-ui, sans-serif;
   font-size: 11px;
   font-weight: 500;
-  line-height: 1.2;
   -webkit-font-smoothing: antialiased;
+  line-height: 1.2;
 }
 
 .facSynthNoise {
@@ -5138,8 +5488,8 @@
   inset: 0;
   z-index: 4;
   pointer-events: none;
-  opacity: 0.03;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.03;
 }
 
 .facSynthNav {
@@ -5153,22 +5503,22 @@
 .facSynthPill {
   position: absolute;
   display: flex;
-  align-items: center;
   gap: 10px;
+  align-items: center;
+  max-width: calc(50% - 12px);
   padding: 6px 12px;
-  border: 1px solid var(--fac-synth-blue);
-  border-radius: 100px;
-  background: var(--fac-synth-glass);
   font-size: 9px;
   font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
   color: var(--fac-synth-blue);
-  cursor: pointer;
-  backdrop-filter: blur(12px) saturate(180%);
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
-  max-width: calc(50% - 12px);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   pointer-events: auto;
+  cursor: pointer;
+  background: var(--fac-synth-glass);
+  border: 1px solid var(--fac-synth-blue);
+  border-radius: 100px;
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  backdrop-filter: blur(12px) saturate(180%);
   transition:
     background 0.3s cubic-bezier(0.23, 1, 0.32, 1),
     color 0.3s cubic-bezier(0.23, 1, 0.32, 1),
@@ -5176,14 +5526,14 @@
 }
 
 .facSynthPill:hover {
-  background: var(--fac-synth-blue);
   color: var(--fac-synth-bg);
+  background: var(--fac-synth-blue);
   transform: scale(1.05);
 }
 
 .facSynthPill:hover .facSynthPillIndex {
-  opacity: 0.85;
   color: inherit;
+  opacity: 0.85;
 }
 
 .facSynthPillTopLeft {
@@ -5203,15 +5553,16 @@
 }
 
 .facSynthPillBottomRight {
-  bottom: 5px;
   right: 5px;
+  bottom: 5px;
   flex-direction: row-reverse;
 }
 
 .facSynthPillIndex {
-  font-family: "JetBrains Mono", var(--font-geist-mono), ui-monospace, monospace;
-  opacity: 0.65;
   flex-shrink: 0;
+  font-family:
+    "JetBrains Mono", var(--font-geist-mono), ui-monospace, monospace;
+  opacity: 0.65;
 }
 
 .facSynthPillText {
@@ -5222,8 +5573,9 @@
 }
 
 .facSynthPillTime {
-  font-family: "JetBrains Mono", var(--font-geist-mono), ui-monospace, monospace;
   min-height: 1em;
+  font-family:
+    "JetBrains Mono", var(--font-geist-mono), ui-monospace, monospace;
   opacity: 0.85;
 }
 
@@ -5242,16 +5594,17 @@
   flex-direction: column;
   justify-content: center;
   min-height: 0;
-  margin-bottom: 10px;
   padding: 4px 0 2px;
+  margin-bottom: 10px;
 }
 
 .facSynthMetaHeader {
   display: flex;
-  justify-content: space-between;
   gap: 8px;
+  justify-content: space-between;
   margin-bottom: 12px;
-  font-family: "JetBrains Mono", var(--font-geist-mono), ui-monospace, monospace;
+  font-family:
+    "JetBrains Mono", var(--font-geist-mono), ui-monospace, monospace;
   font-size: 10px;
   line-height: 1.35;
   color: var(--fac-synth-blue);
@@ -5259,8 +5612,8 @@
 
 .facSynthMetaHeader > div {
   min-width: 0;
-  outline: none;
   overflow-wrap: anywhere;
+  outline: none;
 }
 
 .facSynthMetaHeader > div:last-child {
@@ -5268,21 +5621,21 @@
 }
 
 .facSynthMainTitle {
+  padding: 0;
   margin: 0 0 6px;
   margin-left: -0.05em;
-  padding: 0;
   font-family: "Playfair Display", "Times New Roman", serif;
   font-size: clamp(42px, 12.5vw, 58px);
   font-weight: 700;
   line-height: 0.85;
-  letter-spacing: -0.04em;
   color: var(--fac-synth-blue);
+  letter-spacing: -0.04em;
 }
 
 .facSynthMainTitle span {
   display: inline-block;
-  outline: none;
   overflow-wrap: anywhere;
+  outline: none;
 }
 
 .facSynthStrip {
@@ -5290,8 +5643,8 @@
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 6px 4px;
   align-items: start;
-  margin-top: 12px;
   padding: 10px 0 10px;
+  margin-top: 12px;
   border-top: 1px solid var(--fac-synth-blue);
   border-bottom: 1px solid var(--fac-synth-blue);
 }
@@ -5307,9 +5660,9 @@
 .facSynthStripCell {
   font-size: 9px;
   font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
   color: var(--fac-synth-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .facSynthStripMission {
@@ -5321,10 +5674,10 @@
 }
 
 .facSynthStripMission span {
-  outline: none;
   display: block;
-  overflow-wrap: anywhere;
   text-align: inherit;
+  overflow-wrap: anywhere;
+  outline: none;
 }
 
 .facSynthArchive {
@@ -5333,8 +5686,8 @@
 
 .facSynthDocument {
   max-height: 72px;
-  margin-bottom: 8px;
   padding-right: 2px;
+  margin-bottom: 8px;
   overflow-x: hidden;
   overflow-y: auto;
   font-size: 11px;
@@ -5342,7 +5695,8 @@
   line-height: 1.45;
   color: var(--fac-synth-ink);
   outline: none;
-  scrollbar-color: color-mix(in oklch, var(--fac-synth-blue) 35%, transparent) var(--fac-synth-bg);
+  scrollbar-color: color-mix(in oklch, var(--fac-synth-blue) 35%, transparent)
+    var(--fac-synth-bg);
   scrollbar-width: thin;
 }
 
@@ -5356,38 +5710,41 @@
 
 .facSynthDecoration {
   position: absolute;
-  right: 6%;
   top: 18%;
+  right: 6%;
   z-index: 0;
   width: min(200px, 58%);
   height: auto;
-  opacity: 0.1;
   pointer-events: none;
+  opacity: 0.1;
 }
 
 .facSynthRoster {
-  margin-top: 2px;
   padding-top: 6px;
-  border-top: 1px solid color-mix(in oklch, var(--fac-synth-blue) 22%, transparent);
+  margin-top: 2px;
+  border-top: 1px solid
+    color-mix(in oklch, var(--fac-synth-blue) 22%, transparent);
 }
 
 .facSynthRosterLabel {
   margin-bottom: 6px;
-  font-family: "JetBrains Mono", var(--font-geist-mono), ui-monospace, monospace;
+  font-family:
+    "JetBrains Mono", var(--font-geist-mono), ui-monospace, monospace;
   font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: color-mix(in oklch, var(--fac-synth-blue) 75%, var(--fac-synth-ink));
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .facSynthLedgerRow {
   display: flex;
+  gap: 8px 10px;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px 10px;
   padding: 10px 0;
-  border-bottom: 1px solid color-mix(in oklch, var(--fac-synth-blue) 28%, transparent);
+  border-bottom: 1px solid
+    color-mix(in oklch, var(--fac-synth-blue) 28%, transparent);
   transition: background 0.3s ease;
 }
 
@@ -5412,12 +5769,13 @@
 .facSynthLedgerRole {
   flex: 0 0 auto;
   max-width: 42%;
-  font-family: "JetBrains Mono", var(--font-geist-mono), ui-monospace, monospace;
+  font-family:
+    "JetBrains Mono", var(--font-geist-mono), ui-monospace, monospace;
   font-size: 10px;
   font-weight: 600;
   line-height: 1.35;
-  text-align: right;
   color: var(--fac-synth-blue);
+  text-align: right;
   overflow-wrap: anywhere;
 }
 
@@ -5438,8 +5796,8 @@
 
   .facSynthLedgerRow {
     flex-direction: column;
-    align-items: stretch;
     gap: 4px;
+    align-items: stretch;
   }
 
   .facSynthLedgerRole {
@@ -5477,10 +5835,10 @@
 
   padding: 0;
   overflow: visible;
+  color: var(--fac-eid-white);
+  background: var(--fac-eid-black);
   border: none;
   border-radius: 0;
-  background: var(--fac-eid-black);
-  color: var(--fac-eid-white);
   box-shadow: none;
 }
 
@@ -5490,8 +5848,8 @@
   font-family: "Inter", system-ui, sans-serif;
   font-size: 11px;
   font-weight: 400;
-  line-height: 1.2;
   -webkit-font-smoothing: antialiased;
+  line-height: 1.2;
 }
 
 .facEssIdEnvGrid {
@@ -5502,16 +5860,16 @@
   background-image:
     linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 48px 48px;
   background-position: center center;
+  background-size: 48px 48px;
 }
 
 .facEssIdScene {
   position: relative;
   z-index: 1;
   width: 100%;
-  aspect-ratio: 0.64;
   max-width: 340px;
+  aspect-ratio: 0.64;
   margin: 0 auto;
 }
 
@@ -5520,22 +5878,19 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  background-color: var(--fac-eid-white);
-  color: var(--fac-eid-black);
   overflow: hidden;
+  color: var(--fac-eid-black);
+  background-color: var(--fac-eid-white);
   box-shadow: 0 0 0 1px var(--fac-eid-white);
   transform-style: preserve-3d;
 }
 
 .facEssIdBadge::after {
-  content: "";
   position: absolute;
   inset: 0;
   z-index: 4;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.28s ease;
-  mix-blend-mode: overlay;
+  content: "";
   background: linear-gradient(
     125deg,
     rgba(255, 255, 255, 0) 0%,
@@ -5544,6 +5899,9 @@
     rgba(255, 255, 255, 0) 50%,
     rgba(255, 255, 255, 0) 100%
   );
+  mix-blend-mode: overlay;
+  opacity: 0;
+  transition: opacity 0.28s ease;
 }
 
 .facEssIdBadge:hover::after {
@@ -5552,16 +5910,16 @@
 
 .facEssIdRegMark {
   position: absolute;
+  z-index: 3;
   width: 11px;
   height: 11px;
-  z-index: 3;
   pointer-events: none;
 }
 
 .facEssIdRegMark::before,
 .facEssIdRegMark::after {
-  content: "";
   position: absolute;
+  content: "";
   background-color: var(--fac-eid-black);
 }
 
@@ -5595,17 +5953,17 @@
 }
 
 .facEssIdRegBr {
-  bottom: 10px;
   right: 10px;
+  bottom: 10px;
 }
 
 .facEssIdCutCorner {
   position: absolute;
+  z-index: 3;
   width: 22px;
   height: 22px;
-  background-color: var(--fac-eid-black);
-  z-index: 3;
   pointer-events: none;
+  background-color: var(--fac-eid-black);
 }
 
 .facEssIdCutTl {
@@ -5615,50 +5973,50 @@
 }
 
 .facEssIdCutBr {
-  bottom: -11px;
   right: -11px;
+  bottom: -11px;
   transform: rotate(45deg);
 }
 
 .facEssIdHeader {
   flex: 0 0 auto;
   padding: 9px 10px 10px;
-  border-bottom: 1px solid var(--fac-eid-black);
   overflow: hidden;
+  border-bottom: 1px solid var(--fac-eid-black);
 }
 
 .facEssIdHeaderMeta {
   display: flex;
-  justify-content: space-between;
   gap: 8px;
+  justify-content: space-between;
   font-family: "Space Mono", var(--font-geist-mono), ui-monospace, monospace;
   font-size: 7px;
   font-weight: 400;
-  letter-spacing: 0.1em;
   text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .facEssIdHeaderMeta span {
   min-width: 0;
-  outline: none;
   overflow-wrap: anywhere;
+  outline: none;
 }
 
 .facEssIdBodySection {
-  flex: 1 1 auto;
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   min-height: 0;
 }
 
 .facEssIdRowIdentity {
   display: grid;
+  flex-shrink: 0;
   grid-template-columns: 1fr auto;
-  align-items: end;
   gap: 10px;
+  align-items: end;
   padding: 12px 14px 10px;
   border-bottom: 1px solid var(--fac-eid-black);
-  flex-shrink: 0;
 }
 
 .facEssIdIdentityBlock {
@@ -5671,9 +6029,9 @@
   font-family: "Space Mono", var(--font-geist-mono), ui-monospace, monospace;
   font-size: 7px;
   font-weight: 400;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
   color: color-mix(in oklch, var(--fac-eid-black) 72%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
 }
 
 .facEssIdNamePrimary {
@@ -5681,40 +6039,40 @@
   font-size: clamp(22px, 6.2vw, 32px);
   font-weight: 900;
   line-height: 0.88;
-  letter-spacing: -0.04em;
   text-transform: uppercase;
-  outline: none;
+  letter-spacing: -0.04em;
   overflow-wrap: anywhere;
+  outline: none;
 }
 
 .facEssIdClearanceBadge {
   flex-shrink: 0;
   padding: 3px 6px;
-  background-color: var(--fac-eid-black);
-  color: var(--fac-eid-white);
   font-family: "Space Mono", var(--font-geist-mono), ui-monospace, monospace;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  color: var(--fac-eid-white);
   text-transform: uppercase;
-  outline: none;
+  letter-spacing: 0.08em;
   overflow-wrap: anywhere;
+  outline: none;
+  background-color: var(--fac-eid-black);
 }
 
 .facEssIdRowData {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   flex: 0 0 auto;
+  grid-template-columns: 1fr 1fr;
   border-bottom: 1px solid var(--fac-eid-black);
 }
 
 .facEssIdDataCell {
-  padding: 9px 14px 10px;
-  border-right: 1px solid var(--fac-eid-black);
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   min-width: 0;
+  padding: 9px 14px 10px;
+  border-right: 1px solid var(--fac-eid-black);
 }
 
 .facEssIdDataCell:last-child {
@@ -5725,9 +6083,9 @@
   font-family: "Space Mono", var(--font-geist-mono), ui-monospace, monospace;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  text-transform: uppercase;
   line-height: 1.25;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
 }
 
 .facEssIdRoster {
@@ -5741,9 +6099,9 @@
   font-family: "Space Mono", var(--font-geist-mono), ui-monospace, monospace;
   font-size: 7px;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   color: color-mix(in oklch, var(--fac-eid-black) 55%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .facEssIdRosterList {
@@ -5761,8 +6119,12 @@
   flex-direction: column;
   gap: 3px;
   padding: 5px 6px 6px;
+  background: color-mix(
+    in oklch,
+    var(--fac-eid-black) 2.5%,
+    var(--fac-eid-white)
+  );
   border: 1px solid color-mix(in oklch, var(--fac-eid-black) 22%, transparent);
-  background: color-mix(in oklch, var(--fac-eid-black) 2.5%, var(--fac-eid-white));
 }
 
 .facEssIdRosterName {
@@ -5770,10 +6132,10 @@
   font-family: "Inter", system-ui, sans-serif;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  text-transform: uppercase;
   line-height: 1.25;
   color: var(--fac-eid-black);
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
   overflow-wrap: anywhere;
 }
 
@@ -5790,20 +6152,21 @@
   flex: 1 1 auto;
   min-height: 0;
   max-height: 96px;
-  margin: 6px 0 0;
   padding: 6px 2px 4px 0;
+  margin: 6px 0 0;
   overflow-x: hidden;
   overflow-y: auto;
-  border-top: 1px solid color-mix(in oklch, var(--fac-eid-black) 14%, transparent);
   font-family: "Inter", system-ui, sans-serif;
   font-size: 10px;
   font-weight: 400;
   line-height: 1.45;
-  letter-spacing: 0.01em;
-  text-transform: none;
   color: color-mix(in oklch, var(--fac-eid-black) 88%, transparent);
+  text-transform: none;
+  letter-spacing: 0.01em;
   outline: none;
   scrollbar-width: thin;
+  border-top: 1px solid
+    color-mix(in oklch, var(--fac-eid-black) 14%, transparent);
 }
 
 .facEssIdCharter p {
@@ -5815,26 +6178,26 @@
 }
 
 .facEssIdFooter {
-  flex-shrink: 0;
-  padding: 10px 14px 12px;
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   gap: 8px;
+  padding: 10px 14px 12px;
 }
 
 .facEssIdBarcode {
   display: flex;
-  width: 100%;
-  height: 18px;
   gap: 2px;
   align-items: flex-end;
+  width: 100%;
+  height: 18px;
 }
 
 .facEssIdBar {
   display: block;
   flex-shrink: 0;
-  background-color: var(--fac-eid-black);
   align-self: flex-end;
+  background-color: var(--fac-eid-black);
 }
 
 .facEssIdBarHalf {
@@ -5847,8 +6210,8 @@
   line-height: 1.3;
   letter-spacing: 0.2em;
   word-break: break-all;
-  opacity: 0.78;
   user-select: none;
+  opacity: 0.78;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5856,4 +6219,3 @@
     transition: none;
   }
 }
-

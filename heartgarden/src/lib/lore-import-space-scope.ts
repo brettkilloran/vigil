@@ -12,9 +12,11 @@ const GM_SCOPE_CONTEXT: HeartgardenApiBootContext = { role: "gm" };
 
 export function applyAllowedSpaceIdsToFilters(
   filters: SearchFilters,
-  allowedSpaceIds: Set<string> | null,
+  allowedSpaceIds: Set<string> | null
 ): SearchFilters {
-  if (!allowedSpaceIds) return filters;
+  if (!allowedSpaceIds) {
+    return filters;
+  }
   const next: SearchFilters = { ...filters };
   if (next.spaceIds?.length) {
     next.spaceIds = next.spaceIds.filter((id) => allowedSpaceIds.has(id));
@@ -31,7 +33,7 @@ export function applyAllowedSpaceIdsToFilters(
 
 function filterSpaceIdsBySearchFilters(
   allSpaceIds: Iterable<string>,
-  filters: SearchFilters,
+  filters: SearchFilters
 ): Set<string> {
   let allowed = new Set(allSpaceIds);
   if (filters.spaceIds?.length) {
@@ -68,11 +70,11 @@ export async function resolveLoreImportAllowedSpaceIds(args: {
     (await finalizeHeartgardenSearchFiltersForDb(
       db,
       args.bootCtx ?? GM_SCOPE_CONTEXT,
-      {},
+      {}
     )) ?? {};
-  const allSpaceIds = (
-    await db.select({ id: spaces.id }).from(spaces)
-  ).map((row) => row.id);
+  const allSpaceIds = (await db.select({ id: spaces.id }).from(spaces)).map(
+    (row) => row.id
+  );
   return filterSpaceIdsBySearchFilters(allSpaceIds, baseFilters);
 }
 
@@ -87,13 +89,18 @@ export async function loadSpaceMapForLoreImportPathLabels(args: {
   rootSpaceId: string;
 }): Promise<Map<string, { name: string; parentSpaceId: string | null }>> {
   if (args.importScope === "current_subtree") {
-    const descendants = await fetchDescendantSpaceIds(args.db, args.rootSpaceId);
+    const descendants = await fetchDescendantSpaceIds(
+      args.db,
+      args.rootSpaceId
+    );
     const withAncestors = new Set<string>(descendants);
     let frontier = new Set<string>(descendants);
     for (let depth = 0; depth < 64 && frontier.size > 0; depth++) {
       const ids = [...frontier];
       frontier = new Set();
-      if (ids.length === 0) break;
+      if (ids.length === 0) {
+        break;
+      }
       const rows = await args.db
         .select({ id: spaces.id, parentSpaceId: spaces.parentSpaceId })
         .from(spaces)
@@ -120,7 +127,7 @@ export async function loadSpaceMapForLoreImportPathLabels(args: {
       spaceRows.map((row) => [
         row.id,
         { name: row.name, parentSpaceId: row.parentSpaceId ?? null },
-      ]),
+      ])
     );
   }
   const spaceRows = await args.db
@@ -134,13 +141,13 @@ export async function loadSpaceMapForLoreImportPathLabels(args: {
     spaceRows.map((row) => [
       row.id,
       { name: row.name, parentSpaceId: row.parentSpaceId ?? null },
-    ]),
+    ])
   );
 }
 
 export function buildSpacePath(
   spaceId: string,
-  byId: Map<string, { name: string; parentSpaceId: string | null }>,
+  byId: Map<string, { name: string; parentSpaceId: string | null }>
 ): string {
   const labels: string[] = [];
   let current: string | null = spaceId;
@@ -148,7 +155,9 @@ export function buildSpacePath(
   while (current && !seen.has(current)) {
     seen.add(current);
     const row = byId.get(current);
-    if (!row) break;
+    if (!row) {
+      break;
+    }
     labels.push(row.name);
     current = row.parentSpaceId;
   }

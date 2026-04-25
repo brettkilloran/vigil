@@ -1,10 +1,8 @@
 "use client";
 
 import type { HTMLAttributes, ReactNode } from "react";
-
-import { cx } from "@/src/lib/cx";
-
 import styles from "@/src/components/ui/Tag.module.css";
+import { cx } from "@/src/lib/cx";
 
 export type TagVariant = "llmLight" | "llmCode" | "llmFocusDark" | "neutral";
 
@@ -24,9 +22,17 @@ export type TagProps = {
  * Compact label chip. LLM / ingestion review states use `llmLight` | `llmCode` | `llmFocusDark`
  * (see `app/globals.css` `--sem-*-llm-*` tokens).
  */
-export function Tag({ variant = "llmLight", className, children, ...rest }: TagProps) {
+export function Tag({
+  variant = "llmLight",
+  className,
+  children,
+  ...rest
+}: TagProps) {
   return (
-    <span className={cx(styles.tag, variantClass[variant], className)} {...rest}>
+    <span
+      className={cx(styles.tag, variantClass[variant], className)}
+      {...rest}
+    >
       {children}
     </span>
   );

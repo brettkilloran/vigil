@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildCanvasGraphFromBootstrap,
   type BootstrapResponse,
+  buildCanvasGraphFromBootstrap,
 } from "@/src/components/foundation/architectural-db-bridge";
 import {
   applySpaceChangeGraphMerge,
@@ -22,7 +22,7 @@ describe("buildCollabMergeProtectedContentIds", () => {
         focusDirty: true,
         activeNodeId: "a",
         inlineContentDirtyIds: new Set(),
-      }).size,
+      }).size
     ).toBe(0);
   });
 
@@ -33,7 +33,7 @@ describe("buildCollabMergeProtectedContentIds", () => {
         focusDirty: false,
         activeNodeId: "a",
         inlineContentDirtyIds: new Set(),
-      }).size,
+      }).size
     ).toBe(0);
   });
 
@@ -44,7 +44,7 @@ describe("buildCollabMergeProtectedContentIds", () => {
         focusDirty: true,
         activeNodeId: null,
         inlineContentDirtyIds: new Set(),
-      }).size,
+      }).size
     ).toBe(0);
   });
 
@@ -125,14 +125,17 @@ describe("mergeLatestIsoCursor", () => {
 describe("parseSpaceChangesResponseJson", () => {
   it("rejects when itemIds required but missing", () => {
     expect(
-      parseSpaceChangesResponseJson({ ok: true, items: [] }, { requireItemIds: true }),
+      parseSpaceChangesResponseJson(
+        { ok: true, items: [] },
+        { requireItemIds: true }
+      )
     ).toBeNull();
   });
 
   it("accepts when itemIds present", () => {
     const p = parseSpaceChangesResponseJson(
       { ok: true, items: [], itemIds: ["x"] },
-      { requireItemIds: true },
+      { requireItemIds: true }
     );
     expect(p?.itemIds).toEqual(["x"]);
   });
@@ -140,7 +143,7 @@ describe("parseSpaceChangesResponseJson", () => {
   it("parses itemLinksRevision when present", () => {
     const p = parseSpaceChangesResponseJson(
       { ok: true, items: [], itemIds: ["x"], itemLinksRevision: "3:99:abc" },
-      { requireItemIds: true },
+      { requireItemIds: true }
     );
     expect(p?.itemLinksRevision).toBe("3:99:abc");
   });
@@ -164,14 +167,19 @@ describe("parseSpaceChangesResponseJson", () => {
           },
         ],
       },
-      { requireItemIds: false },
+      { requireItemIds: false }
     );
     expect(p).toBeNull();
   });
 });
 
 describe("applySpaceChangeGraphMerge", () => {
-  function note(id: string, spaceId: string, title: string, updatedAt: string): CanvasItem {
+  function note(
+    id: string,
+    spaceId: string,
+    title: string,
+    updatedAt: string
+  ): CanvasItem {
     return {
       id,
       spaceId,
@@ -193,8 +201,18 @@ describe("applySpaceChangeGraphMerge", () => {
       ok: true,
       demo: false,
       spaceId: "space-1",
-      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
-      items: [note("a", "space-1", "A", "2020-01-01T00:00:00.000Z"), note("b", "space-1", "B", "2020-01-01T00:00:00.000Z")],
+      spaces: [
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+      ],
+      items: [
+        note("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        note("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
       camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
@@ -221,7 +239,12 @@ describe("applySpaceChangeGraphMerge", () => {
       demo: false,
       spaceId: "space-1",
       spaces: [
-        { id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" },
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
       ],
       items: [
         note("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
@@ -241,7 +264,9 @@ describe("applySpaceChangeGraphMerge", () => {
     });
     expect(next.entities.a).toBeDefined();
     expect(next.entities.b).toBeDefined();
-    expect(new Set(next.spaces["space-1"]?.entityIds ?? [])).toEqual(new Set(["a", "b"]));
+    expect(new Set(next.spaces["space-1"]?.entityIds ?? [])).toEqual(
+      new Set(["a", "b"])
+    );
   });
 
   it("keeps moved item membership when destination space arrives in same payload", () => {
@@ -249,7 +274,14 @@ describe("applySpaceChangeGraphMerge", () => {
       ok: true,
       demo: false,
       spaceId: "space-1",
-      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
+      spaces: [
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+      ],
       items: [note("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
       camera: { x: 0, y: 0, zoom: 1 },
     };
@@ -258,7 +290,9 @@ describe("applySpaceChangeGraphMerge", () => {
       prev,
       activeSpaceId: "space-1",
       rawItems: [note("a", "space-2", "A moved", "2020-01-02T00:00:00.000Z")],
-      rawSpaceRows: [{ id: "space-2", name: "New space", parentSpaceId: "space-1" }],
+      rawSpaceRows: [
+        { id: "space-2", name: "New space", parentSpaceId: "space-1" },
+      ],
       serverItemIds: new Set(["a"]),
       protectedContentIds: new Set(),
       tombstoneExemptIds: new Set(),
@@ -272,7 +306,14 @@ describe("applySpaceChangeGraphMerge", () => {
       ok: true,
       demo: false,
       spaceId: "space-1",
-      spaces: [{ id: "space-1", name: "Root", parentSpaceId: null, updatedAt: "2020-01-01T00:00:00.000Z" }],
+      spaces: [
+        {
+          id: "space-1",
+          name: "Root",
+          parentSpaceId: null,
+          updatedAt: "2020-01-01T00:00:00.000Z",
+        },
+      ],
       items: [note("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
       camera: { x: 0, y: 0, zoom: 1 },
     };
@@ -282,7 +323,9 @@ describe("applySpaceChangeGraphMerge", () => {
       prev,
       activeSpaceId: "space-1",
       rawItems: [note("a", "space-2", "A moved", "2020-01-02T00:00:00.000Z")],
-      rawSpaceRows: [{ id: "space-2", name: "New space", parentSpaceId: "space-1" }],
+      rawSpaceRows: [
+        { id: "space-2", name: "New space", parentSpaceId: "space-1" },
+      ],
       serverItemIds: new Set(["a"]),
       protectedContentIds: new Set(),
       tombstoneExemptIds: new Set(),

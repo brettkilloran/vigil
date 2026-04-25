@@ -1,7 +1,7 @@
 "use client";
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
-import { useState, type ComponentProps } from "react";
+import { type ComponentProps, useState } from "react";
 
 import { HeartgardenPinField } from "@/src/components/ui/HeartgardenPinField";
 
@@ -39,17 +39,20 @@ export default meta;
 type Story = StoryObj<typeof HeartgardenPinField>;
 
 function InteractivePinField(
-  props: Omit<ComponentProps<typeof HeartgardenPinField>, "value" | "onValueChange" | "onSubmit"> & {
+  props: Omit<
+    ComponentProps<typeof HeartgardenPinField>,
+    "value" | "onValueChange" | "onSubmit"
+  > & {
     onSubmit?: () => void;
-  },
+  }
 ) {
   const [value, setValue] = useState("");
   return (
     <HeartgardenPinField
       {...props}
-      value={value}
-      onValueChange={setValue}
       onSubmit={props.onSubmit ?? (() => {})}
+      onValueChange={setValue}
+      value={value}
     />
   );
 }
@@ -62,11 +65,11 @@ function WithErrorStory() {
   const [value, setValue] = useState("abcdefgh");
   return (
     <HeartgardenPinField
-      legend="Access code"
-      value={value}
-      onValueChange={setValue}
-      onSubmit={() => {}}
       errorMessage="Access denied."
+      legend="Access code"
+      onSubmit={() => {}}
+      onValueChange={setValue}
+      value={value}
     />
   );
 }

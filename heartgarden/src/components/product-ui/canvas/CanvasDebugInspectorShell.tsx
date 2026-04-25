@@ -1,7 +1,7 @@
 "use client";
 
 import { Bug, X } from "@phosphor-icons/react";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
@@ -9,11 +9,17 @@ import { Button } from "@/src/components/ui/Button";
 import styles from "./CanvasDebugInspectorShell.module.css";
 
 function readStoredOpen(key: string): boolean | null {
-  if (typeof window === "undefined") return null;
+  if (typeof window === "undefined") {
+    return null;
+  }
   try {
     const v = sessionStorage.getItem(key);
-    if (v === "1") return true;
-    if (v === "0") return false;
+    if (v === "1") {
+      return true;
+    }
+    if (v === "0") {
+      return false;
+    }
   } catch {
     /* private mode */
   }
@@ -36,7 +42,9 @@ export function CanvasDebugInspectorShell({
   defaultOpen?: boolean;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(() => readStoredOpen(storageKey) ?? defaultOpen);
+  const [open, setOpen] = useState(
+    () => readStoredOpen(storageKey) ?? defaultOpen
+  );
 
   useEffect(() => {
     try {
@@ -50,48 +58,56 @@ export function CanvasDebugInspectorShell({
 
   return (
     <div
-      className={styles.anchor}
-      role="region"
       aria-label={title}
+      className={styles.anchor}
       data-hg-chrome="debug-inspector"
+      role="region"
     >
-      {!open ? (
-        <div className={styles.collapsedPanel}>
-          <ArchitecturalTooltip content="Open debug link inspector" side="right" delayMs={280}>
-            <Button
-              type="button"
-              size="icon"
-              variant="default"
-              tone="glass"
-              iconOnly
-              aria-label="Open debug link inspector"
-              aria-expanded={false}
-              aria-controls={`${storageKey}-panel`}
-              onClick={() => setOpen(true)}
-            >
-              <Bug size={18} weight="bold" aria-hidden />
-            </Button>
-          </ArchitecturalTooltip>
-        </div>
-      ) : (
-        <div id={`${storageKey}-panel`} className={styles.expandedPanel}>
+      {open ? (
+        <div className={styles.expandedPanel} id={`${storageKey}-panel`}>
           <div className={styles.panelHeader}>
             <span className={styles.panelTitle}>{title}</span>
-            <ArchitecturalTooltip content="Close link inspector" side="bottom" delayMs={280}>
+            <ArchitecturalTooltip
+              content="Close link inspector"
+              delayMs={280}
+              side="bottom"
+            >
               <Button
-                type="button"
-                size="icon"
-                variant="default"
-                tone="glass"
-                iconOnly
                 aria-label="Close link inspector"
+                iconOnly
                 onClick={toggle}
+                size="icon"
+                tone="glass"
+                type="button"
+                variant="default"
               >
-                <X size={18} weight="bold" aria-hidden />
+                <X aria-hidden size={18} weight="bold" />
               </Button>
             </ArchitecturalTooltip>
           </div>
           <div className={styles.panelBody}>{children}</div>
+        </div>
+      ) : (
+        <div className={styles.collapsedPanel}>
+          <ArchitecturalTooltip
+            content="Open debug link inspector"
+            delayMs={280}
+            side="right"
+          >
+            <Button
+              aria-controls={`${storageKey}-panel`}
+              aria-expanded={false}
+              aria-label="Open debug link inspector"
+              iconOnly
+              onClick={() => setOpen(true)}
+              size="icon"
+              tone="glass"
+              type="button"
+              variant="default"
+            >
+              <Bug aria-hidden size={18} weight="bold" />
+            </Button>
+          </ArchitecturalTooltip>
         </div>
       )}
     </div>

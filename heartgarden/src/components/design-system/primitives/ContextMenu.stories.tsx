@@ -2,14 +2,13 @@
 
 import { Copy, Trash } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/nextjs";
-import { fn } from "storybook/test";
 import { useState } from "react";
-
+import { fn } from "storybook/test";
+import { Button } from "@/src/components/ui/Button";
 import {
   ContextMenu,
   type ContextMenuPosition,
 } from "@/src/components/ui/ContextMenu";
-import { Button } from "@/src/components/ui/Button";
 
 const meta = {
   title: "Heartgarden/Design System/Primitives/Context menu",
@@ -35,18 +34,25 @@ export const Default: Story = {
     items: [],
   },
   render: () => {
-    const [position, setPosition] = useState<ContextMenuPosition>({ x: 48, y: 48 });
+    const [position, setPosition] = useState<ContextMenuPosition>({
+      x: 48,
+      y: 48,
+    });
     return (
       <div className="min-h-[200px] p-4">
-        <p className="mb-3 max-w-md text-sm text-[var(--sem-text-muted)]">
-          Pointer-down outside the menu or Escape dismisses it. Reopen from the button.
+        <p className="mb-3 max-w-md text-[var(--sem-text-muted)] text-sm">
+          Pointer-down outside the menu or Escape dismisses it. Reopen from the
+          button.
         </p>
-        <Button size="sm" variant="default" tone="glass" onClick={() => setPosition({ x: 48, y: 48 })}>
+        <Button
+          onClick={() => setPosition({ x: 48, y: 48 })}
+          size="sm"
+          tone="glass"
+          variant="default"
+        >
           Show menu
         </Button>
         <ContextMenu
-          position={position}
-          onClose={() => setPosition(null)}
           items={[
             {
               label: "Copy link",
@@ -60,6 +66,8 @@ export const Default: Story = {
             },
             { label: "Disabled row", onSelect: fn(), disabled: true },
           ]}
+          onClose={() => setPosition(null)}
+          position={position}
         />
       </div>
     );

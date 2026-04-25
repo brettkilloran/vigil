@@ -20,14 +20,17 @@ const bodySchema = z.object({
 
 export async function POST(req: Request) {
   if (!isHeartgardenRealtimeConfigured()) {
-    return Response.json({ ok: false, error: "Realtime not configured" }, { status: 503 });
+    return Response.json(
+      { ok: false, error: "Realtime not configured" },
+      { status: 503 }
+    );
   }
 
   const db = tryGetDb();
   if (!db) {
     return Response.json(
       { ok: false, error: "Database not configured" },
-      { status: 503 },
+      { status: 503 }
     );
   }
 
@@ -47,12 +50,18 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json(
       { ok: false, error: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
-  const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, parsed.data.spaceId);
-  if (!access.ok) return access.response;
+  const access = await requireHeartgardenSpaceApiAccess(
+    db,
+    bootCtx,
+    parsed.data.spaceId
+  );
+  if (!access.ok) {
+    return access.response;
+  }
 
   const jar = await cookies();
   const hasBootCookie = jar.get("hg_boot")?.value;

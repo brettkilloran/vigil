@@ -27,23 +27,25 @@ export type StableLayoutOptions = {
 };
 
 function hashFnv1a(input: string): number {
-  let hash = 0x811c9dc5;
+  let hash = 0x81_1c_9d_c5;
   for (let i = 0; i < input.length; i += 1) {
     hash ^= input.charCodeAt(i);
-    hash = (hash * 0x01000193) >>> 0;
+    hash = (hash * 0x01_00_01_93) >>> 0;
   }
   return hash >>> 0;
 }
 
 function fallbackEntityType(entityType: string | null): string {
-  if (!entityType) return "unknown";
+  if (!entityType) {
+    return "unknown";
+  }
   return entityType;
 }
 
 export function entityTypeCentroid(
   entityType: string | null,
   width: number,
-  height: number,
+  height: number
 ): { x: number; y: number } {
   const key = fallbackEntityType(entityType);
   const xPad = width * 0.18;
@@ -67,13 +69,13 @@ export function entityTypeCentroid(
 function deterministicSeedPoint(
   node: GraphLayoutNode,
   width: number,
-  height: number,
+  height: number
 ): { x: number; y: number } {
   const anchor = entityTypeCentroid(node.entityType, width, height);
   const hA = hashFnv1a(`${node.id}:a`);
   const hR = hashFnv1a(`${node.id}:r`);
-  const angle = (hA / 0xffffffff) * Math.PI * 2;
-  const radius = 24 + ((hR / 0xffffffff) * 120);
+  const angle = (hA / 0xff_ff_ff_ff) * Math.PI * 2;
+  const radius = 24 + (hR / 0xff_ff_ff_ff) * 120;
   return {
     x: anchor.x + Math.cos(angle) * radius,
     y: anchor.y + Math.sin(angle) * radius,
@@ -93,7 +95,7 @@ function resolveResidualOverlaps(
   simNodes: SimNode[],
   width: number,
   height: number,
-  pinned: ReadonlySet<string>,
+  pinned: ReadonlySet<string>
 ): void {
   const pad = 36;
   for (let pass = 0; pass < 8; pass += 1) {
@@ -106,14 +108,18 @@ function resolveResidualOverlaps(
         const dy = (b.y ?? 0) - (a.y ?? 0);
         const dist = Math.hypot(dx, dy) || 0.0001;
         const minDist = a.collisionRadius + b.collisionRadius;
-        if (dist >= minDist) continue;
+        if (dist >= minDist) {
+          continue;
+        }
         moved = true;
         const overlap = minDist - dist;
         const ux = dx / dist;
         const uy = dy / dist;
         const aPinned = pinned.has(a.id);
         const bPinned = pinned.has(b.id);
-        if (aPinned && bPinned) continue;
+        if (aPinned && bPinned) {
+          continue;
+        }
         if (aPinned) {
           b.x = (b.x ?? 0) + ux * overlap;
           b.y = (b.y ?? 0) + uy * overlap;
@@ -132,14 +138,16 @@ function resolveResidualOverlaps(
       node.x = Math.min(width - pad, Math.max(pad, node.x ?? width / 2));
       node.y = Math.min(height - pad, Math.max(pad, node.y ?? height / 2));
     }
-    if (!moved) break;
+    if (!moved) {
+      break;
+    }
   }
 }
 
 export function computeStableLayout(
   nodes: GraphLayoutNode[],
   edges: GraphLayoutEdge[],
-  options: StableLayoutOptions = {},
+  options: StableLayoutOptions = {}
 ): Map<string, { x: number; y: number }> {
   const width = options.width ?? 1000;
   const height = options.height ?? 1000;
@@ -147,12 +155,15 @@ export function computeStableLayout(
   const cy = height / 2;
   const out = new Map<string, { x: number; y: number }>();
 
-  if (nodes.length === 0) return out;
+  if (nodes.length === 0) {
+    return out;
+  }
   if (nodes.length === 1) {
     const node = nodes[0]!;
     const pinned = options.pinned?.get(node.id);
     const seeded = options.seed?.get(node.id);
-    const base = pinned ?? seeded ?? deterministicSeedPoint(node, width, height);
+    const base =
+      pinned ?? seeded ?? deterministicSeedPoint(node, width, height);
     out.set(node.id, {
       x: Math.min(width - 36, Math.max(36, base.x)),
       y: Math.min(height - 36, Math.max(36, base.y)),
@@ -183,7 +194,9 @@ export function computeStableLayout(
     .map((edge) => {
       const source = byId.get(edge.source);
       const target = byId.get(edge.target);
-      if (!source || !target) return null;
+      if (!(source && target)) {
+        return null;
+      }
       return { source, target } as SimLink;
     })
     .filter((value): value is SimLink => value !== null);
@@ -195,24 +208,31 @@ export function computeStableLayout(
         .distance((link) => {
           const source = link.source as SimNode;
           const target = link.target as SimNode;
-          return Math.max(96, source.collisionRadius + target.collisionRadius + 18);
+          return Math.max(
+            96,
+            source.collisionRadius + target.collisionRadius + 18
+          );
         })
-        .strength(0.24),
+        .strength(0.24)
     )
     .force("charge", forceManyBody<SimNode>().strength(-210))
     .force(
       "collide",
       forceCollide<SimNode>()
         .radius((node) => node.collisionRadius)
-        .strength(0.92),
+        .strength(0.92)
     )
     .force(
       "anchorX",
-      forceX<SimNode>((node) => entityTypeCentroid(node.entityType, width, height).x).strength(0.1),
+      forceX<SimNode>(
+        (node) => entityTypeCentroid(node.entityType, width, height).x
+      ).strength(0.1)
     )
     .force(
       "anchorY",
-      forceY<SimNode>((node) => entityTypeCentroid(node.entityType, width, height).y).strength(0.1),
+      forceY<SimNode>(
+        (node) => entityTypeCentroid(node.entityType, width, height).y
+      ).strength(0.1)
     )
     .force("globalX", forceX<SimNode>(cx).strength(0.015))
     .force("globalY", forceY<SimNode>(cy).strength(0.015))
@@ -220,7 +240,9 @@ export function computeStableLayout(
     .velocityDecay(0.45);
 
   sim.stop();
-  for (let i = 0; i < 420; i += 1) sim.tick();
+  for (let i = 0; i < 420; i += 1) {
+    sim.tick();
+  }
   resolveResidualOverlaps(simNodes, width, height, pinnedIds);
 
   const pad = 36;

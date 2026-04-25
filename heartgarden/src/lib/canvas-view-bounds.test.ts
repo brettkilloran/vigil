@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import type { CanvasEntity, CanvasGraph } from "@/src/components/foundation/architectural-types";
+import type {
+  CanvasEntity,
+  CanvasGraph,
+} from "@/src/components/foundation/architectural-types";
 import {
+  buildCollapsedStacksList,
   CANVAS_BOUNDS_CONTENT_HEIGHT,
   CANVAS_BOUNDS_FOLDER_HEIGHT,
   CANVAS_BOUNDS_FOLDER_WIDTH,
   CANVAS_BOUNDS_UNIFIED_NODE_WIDTH,
-  buildCollapsedStacksList,
   computeBoundsForEntitySubset,
   computeSpaceContentBounds,
   fitCameraToBounds,
@@ -24,7 +27,12 @@ function content(
   id: string,
   x: number,
   y: number,
-  opts?: Partial<Pick<CanvasEntity, "rotation" | "width" | "height" | "stackId" | "stackOrder">>,
+  opts?: Partial<
+    Pick<
+      CanvasEntity,
+      "rotation" | "width" | "height" | "stackId" | "stackOrder"
+    >
+  >
 ): Extract<CanvasEntity, { kind: "content" }> {
   return {
     id,
@@ -43,7 +51,12 @@ function content(
   };
 }
 
-function folder(id: string, x: number, y: number, childSpaceId = "child"): Extract<CanvasEntity, { kind: "folder" }> {
+function folder(
+  id: string,
+  x: number,
+  y: number,
+  childSpaceId = "child"
+): Extract<CanvasEntity, { kind: "folder" }> {
   return {
     id,
     kind: "folder",
@@ -102,7 +115,9 @@ describe("computeSpaceContentBounds", () => {
     const solo = computeSpaceContentBounds(g, SPACE, []);
     const withStacks = computeSpaceContentBounds(g, SPACE, stacks);
     expect(withStacks!.maxX).toBeGreaterThan(solo!.maxX);
-    expect(withStacks!.maxX).toBeCloseTo(100 + CANVAS_BOUNDS_UNIFIED_NODE_WIDTH + 6);
+    expect(withStacks!.maxX).toBeCloseTo(
+      100 + CANVAS_BOUNDS_UNIFIED_NODE_WIDTH + 6
+    );
   });
 
   it("uses measured placement height when provided (DOM taller than graph default)", () => {
@@ -110,7 +125,9 @@ describe("computeSpaceContentBounds", () => {
     const graphOnly = computeSpaceContentBounds(g, SPACE, []);
     const measured = new Map([["a", { width: 340, height: 900 }]]);
     const withDom = computeSpaceContentBounds(g, SPACE, [], measured);
-    expect(withDom!.maxY - withDom!.minY).toBeGreaterThan(graphOnly!.maxY - graphOnly!.minY);
+    expect(withDom!.maxY - withDom!.minY).toBeGreaterThan(
+      graphOnly!.maxY - graphOnly!.minY
+    );
     expect(withDom!.maxY).toBeCloseTo(20 + 900);
   });
 });
@@ -125,13 +142,17 @@ describe("minimapLayoutSignature", () => {
       content("a", 0, 0, { stackId: null, stackOrder: null }),
       content("b", 10, 10, { stackId: null, stackOrder: null }),
     ]);
-    expect(minimapLayoutSignature(stacked, SPACE)).not.toBe(minimapLayoutSignature(unstacked, SPACE));
+    expect(minimapLayoutSignature(stacked, SPACE)).not.toBe(
+      minimapLayoutSignature(unstacked, SPACE)
+    );
   });
 
   it("changes when a node moves in the active space (slot)", () => {
     const g1 = graphWith([content("a", 0, 0)]);
     const g2 = graphWith([content("a", 50, 0)]);
-    expect(minimapLayoutSignature(g1, SPACE)).not.toBe(minimapLayoutSignature(g2, SPACE));
+    expect(minimapLayoutSignature(g1, SPACE)).not.toBe(
+      minimapLayoutSignature(g2, SPACE)
+    );
   });
 });
 
@@ -175,12 +196,16 @@ describe("computeBoundsForEntitySubset", () => {
     const b = computeBoundsForEntitySubset(g, SPACE, stacks, ["bottom"]);
     expect(b).not.toBeNull();
     expect(b!.minX).toBeLessThanOrEqual(500);
-    expect(b!.maxX).toBeGreaterThanOrEqual(500 + CANVAS_BOUNDS_UNIFIED_NODE_WIDTH);
+    expect(b!.maxX).toBeGreaterThanOrEqual(
+      500 + CANVAS_BOUNDS_UNIFIED_NODE_WIDTH
+    );
     const b2 = computeBoundsForEntitySubset(g, SPACE, stacks, ["a", "bottom"]);
     expect(b2!.minX).toBeCloseTo(0);
     expect(b!.minX).toBeCloseTo(500);
     expect(b2!.maxX).toBeCloseTo(b!.maxX);
-    expect(b2!.maxX).toBeGreaterThan(b2!.minX + CANVAS_BOUNDS_UNIFIED_NODE_WIDTH);
+    expect(b2!.maxX).toBeGreaterThan(
+      b2!.minX + CANVAS_BOUNDS_UNIFIED_NODE_WIDTH
+    );
   });
 
   it("returns null for empty selection", () => {

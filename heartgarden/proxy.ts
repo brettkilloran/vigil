@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 import { HEARTGARDEN_BOOT_COOKIE_MAX_CHARS } from "@/src/lib/heartgarden-boot-cookie-limits";
 import {
@@ -31,7 +31,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (authorizationBearerMatchesMcpServiceKey(request.headers.get("authorization"))) {
+  if (
+    authorizationBearerMatchesMcpServiceKey(
+      request.headers.get("authorization")
+    )
+  ) {
     return NextResponse.next();
   }
 

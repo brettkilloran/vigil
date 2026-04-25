@@ -11,13 +11,19 @@ vi.mock("@/src/lib/heartgarden-api-boot-context", () => ({
   getHeartgardenApiBootContext: vi.fn().mockResolvedValue({ role: "gm" }),
   isHeartgardenPlayerBlocked: vi.fn().mockReturnValue(false),
   heartgardenApiForbiddenJsonResponse: vi.fn(() =>
-    Response.json({ ok: false, error: "forbidden", spaces: [] }, { status: 403 }),
+    Response.json(
+      { ok: false, error: "forbidden", spaces: [] },
+      { status: 403 }
+    )
   ),
 }));
 
 vi.mock("@/src/lib/lore-import-space-scope", () => ({
   resolveLoreImportAllowedSpaceIds: resolveLoreImportAllowedSpaceIdsMock,
-  buildSpacePath: (spaceId: string, byId: Map<string, { name: string; parentSpaceId: string | null }>) => {
+  buildSpacePath: (
+    spaceId: string,
+    byId: Map<string, { name: string; parentSpaceId: string | null }>
+  ) => {
     const row = byId.get(spaceId);
     return row?.name ?? spaceId;
   },
@@ -27,7 +33,7 @@ describe("GET /api/spaces/search", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resolveLoreImportAllowedSpaceIdsMock.mockResolvedValue(
-      new Set(["11111111-1111-4111-8111-111111111111"]),
+      new Set(["11111111-1111-4111-8111-111111111111"])
     );
     tryGetDbMock.mockReturnValue({
       select: () => ({
@@ -46,7 +52,7 @@ describe("GET /api/spaces/search", () => {
   it("defaults to current_subtree scope", async () => {
     const { GET } = await import("./route");
     const req = new Request(
-      "http://localhost/api/spaces/search?rootSpaceId=11111111-1111-4111-8111-111111111111",
+      "http://localhost/api/spaces/search?rootSpaceId=11111111-1111-4111-8111-111111111111"
     );
     const res = await GET(req);
     const payload = (await res.json()) as { ok: boolean; scope?: string };
@@ -58,7 +64,7 @@ describe("GET /api/spaces/search", () => {
   it("returns empty results for one-character query", async () => {
     const { GET } = await import("./route");
     const req = new Request(
-      "http://localhost/api/spaces/search?rootSpaceId=11111111-1111-4111-8111-111111111111&q=a",
+      "http://localhost/api/spaces/search?rootSpaceId=11111111-1111-4111-8111-111111111111&q=a"
     );
     const res = await GET(req);
     const payload = (await res.json()) as {

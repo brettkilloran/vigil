@@ -1,8 +1,8 @@
 "use client";
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
-import { fn } from "storybook/test";
 import { useRef } from "react";
+import { fn } from "storybook/test";
 
 import { ArchitecturalParentExitThreshold } from "@/src/components/foundation/ArchitecturalParentExitThreshold";
 
@@ -35,38 +35,65 @@ function ThresholdStage(props: {
       className="relative min-h-[220px] w-full max-w-xl rounded-xl border border-[var(--vigil-border)] bg-[var(--sem-bg-canvas,#0a0c12)]"
       style={{ margin: "24px auto" }}
     >
-      <div className="p-3 text-xs text-[var(--vigil-muted)]">Viewport top — dashed well below</div>
+      <div className="p-3 text-[var(--vigil-muted)] text-xs">
+        Viewport top — dashed well below
+      </div>
       <ArchitecturalParentExitThreshold
-        ref={ref}
-        toolbarBottomPx={0}
-        visible={props.visible}
         hovered={props.hovered}
         interactive={props.interactive}
         onActivate={props.interactive ? props.onActivate : undefined}
+        ref={ref}
+        toolbarBottomPx={0}
+        visible={props.visible}
       />
     </div>
   );
 }
 
 export const VisibleIdle: Story = {
-  args: { toolbarBottomPx: 0, visible: true, hovered: false, interactive: false },
-  render: () => <ThresholdStage visible hovered={false} interactive={false} />,
+  args: {
+    toolbarBottomPx: 0,
+    visible: true,
+    hovered: false,
+    interactive: false,
+  },
+  render: () => <ThresholdStage hovered={false} interactive={false} visible />,
 };
 
 export const Hovered: Story = {
-  args: { toolbarBottomPx: 0, visible: true, hovered: true, interactive: false },
-  render: () => <ThresholdStage visible hovered interactive={false} />,
+  args: {
+    toolbarBottomPx: 0,
+    visible: true,
+    hovered: true,
+    interactive: false,
+  },
+  render: () => <ThresholdStage hovered interactive={false} visible />,
 };
 
 export const Interactive: Story = {
-  args: { toolbarBottomPx: 0, visible: true, hovered: true, interactive: true, onActivate: fn() },
+  args: {
+    toolbarBottomPx: 0,
+    visible: true,
+    hovered: true,
+    interactive: true,
+    onActivate: fn(),
+  },
   render: () => {
     const onActivate = fn();
-    return <ThresholdStage visible hovered interactive onActivate={onActivate} />;
+    return (
+      <ThresholdStage hovered interactive onActivate={onActivate} visible />
+    );
   },
 };
 
 export const Hidden: Story = {
-  args: { toolbarBottomPx: 0, visible: false, hovered: false, interactive: false },
-  render: () => <ThresholdStage visible={false} hovered={false} interactive={false} />,
+  args: {
+    toolbarBottomPx: 0,
+    visible: false,
+    hovered: false,
+    interactive: false,
+  },
+  render: () => (
+    <ThresholdStage hovered={false} interactive={false} visible={false} />
+  ),
 };

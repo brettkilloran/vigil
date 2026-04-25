@@ -12,22 +12,28 @@ export function CanvasViewportToast({
   onDismiss: () => void;
 }) {
   return (
-    <div className={styles.wrap} role="status" aria-live="polite">
+    <div aria-live="polite" className={styles.wrap} role="status">
       <div className={styles.panel}>
         <p className={styles.text}>Some cards are outside the current view.</p>
         <div className={styles.actions}>
-          <Button type="button" size="sm" variant="primary" tone="solid" onClick={onShow}>
+          <Button
+            onClick={onShow}
+            size="sm"
+            tone="solid"
+            type="button"
+            variant="primary"
+          >
             Show
           </Button>
           <Button
+            aria-label="Dismiss"
+            className={styles.dismiss}
+            iconOnly
+            onClick={onDismiss}
+            size="icon"
+            tone="glass"
             type="button"
             variant="ghost"
-            tone="glass"
-            size="icon"
-            iconOnly
-            className={styles.dismiss}
-            onClick={onDismiss}
-            aria-label="Dismiss"
           >
             ×
           </Button>

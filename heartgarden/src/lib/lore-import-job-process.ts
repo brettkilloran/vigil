@@ -2,14 +2,14 @@ import { and, eq, lt, or, sql } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { loreImportJobs } from "@/src/db/schema";
-import { buildLoreImportPlan } from "@/src/lib/lore-import-plan-build";
-import type { LoreImportProgress } from "@/src/lib/lore-import-progress";
-import { computeLoreImportPipelinePercent } from "@/src/lib/lore-import-pipeline-progress";
 import { persistImportReviewQueueFromPlan } from "@/src/lib/lore-import-persist-review";
+import { computeLoreImportPipelinePercent } from "@/src/lib/lore-import-pipeline-progress";
+import { buildLoreImportPlan } from "@/src/lib/lore-import-plan-build";
 import {
   loreImportPlanSchema,
   loreImportUserContextSchema,
 } from "@/src/lib/lore-import-plan-types";
+import type { LoreImportProgress } from "@/src/lib/lore-import-progress";
 import type { VigilDb } from "@/src/lib/spaces";
 
 /** Re-queue jobs stuck in `processing` after a crash or serverless timeout. */
@@ -17,7 +17,7 @@ export const STALE_LORE_IMPORT_PROCESSING_MS = 15 * 60 * 1000;
 const LORE_IMPORT_JOB_CANCELLED_CODE = "lore_import_job_cancelled";
 const LORE_IMPORT_EVENT_CAP = 500;
 const LORE_IMPORT_EVENT_FLUSH_BATCH = 6;
-const LORE_IMPORT_RESPONSE_SNIPPET_MAX = 2_000;
+const LORE_IMPORT_RESPONSE_SNIPPET_MAX = 2000;
 
 export type LoreImportJobEvent = {
   ts?: string;
@@ -49,7 +49,9 @@ class LoreImportJobCancelledError extends Error {
 
 function isMissingProgressColumnsError(error: unknown): boolean {
   const source =
-    error && typeof error === "object" ? (error as Record<string, unknown>) : {};
+    error && typeof error === "object"
+      ? (error as Record<string, unknown>)
+      : {};
   const code = String(source.code ?? "").trim();
   const column = String(source.column ?? "").toLowerCase();
   const fallbackMessage = error instanceof Error ? error.message : "";
@@ -63,27 +65,45 @@ function isMissingProgressColumnsError(error: unknown): boolean {
     message.includes("last_progress_at") ||
     message.includes("progress_events") ||
     message.includes("user_context");
-  if (!mentionsProgressColumn) return false;
-  if (!code) return true;
-  if (code === "42703") return true;
-  if (code === "42P01" && message.includes("lore_import_jobs")) return true;
+  if (!mentionsProgressColumn) {
+    return false;
+  }
+  if (!code) {
+    return true;
+  }
+  if (code === "42703") {
+    return true;
+  }
+  if (code === "42P01" && message.includes("lore_import_jobs")) {
+    return true;
+  }
   return false;
 }
 
 function coerceOptionalNumber(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return;
+  }
   return Math.trunc(value);
 }
 
 function clipEventText(value: unknown, max: number): string | undefined {
-  if (typeof value !== "string") return undefined;
+  if (typeof value !== "string") {
+    return;
+  }
   const text = value.trim();
-  if (!text) return undefined;
-  if (text.length <= max) return text;
+  if (!text) {
+    return;
+  }
+  if (text.length <= max) {
+    return text;
+  }
   return `${text.slice(0, max)}...`;
 }
 
-function normalizeLoreImportJobEvent(event: LoreImportJobEvent): LoreImportJobEvent {
+function normalizeLoreImportJobEvent(
+  event: LoreImportJobEvent
+): LoreImportJobEvent {
   return {
     ts: clipEventText(event.ts, 64) ?? new Date().toISOString(),
     phase: clipEventText(event.phase, 64),
@@ -99,7 +119,10 @@ function normalizeLoreImportJobEvent(event: LoreImportJobEvent): LoreImportJobEv
         ? Math.max(0, Math.trunc(event.tokensOut))
         : null,
     stopReason: clipEventText(event.stopReason, 64) ?? null,
-    responseSnippet: clipEventText(event.responseSnippet, LORE_IMPORT_RESPONSE_SNIPPET_MAX),
+    responseSnippet: clipEventText(
+      event.responseSnippet,
+      LORE_IMPORT_RESPONSE_SNIPPET_MAX
+    ),
     text: clipEventText(event.text, 280),
     ref: clipEventText(event.ref, 128),
   };
@@ -108,10 +131,14 @@ function normalizeLoreImportJobEvent(event: LoreImportJobEvent): LoreImportJobEv
 export async function appendLoreImportJobEventsBatch(
   db: VigilDb,
   jobId: string,
-  events: LoreImportJobEvent[],
+  events: LoreImportJobEvent[]
 ): Promise<void> {
-  if (typeof (db as { execute?: unknown }).execute !== "function") return;
-  if (events.length === 0) return;
+  if (typeof (db as { execute?: unknown }).execute !== "function") {
+    return;
+  }
+  if (events.length === 0) {
+    return;
+  }
   const now = new Date();
   const normalized = events.map(normalizeLoreImportJobEvent);
   const batchJson = JSON.stringify(normalized);
@@ -134,14 +161,16 @@ export async function appendLoreImportJobEventsBatch(
       where "id" = ${jobId}
     `);
   } catch (error) {
-    if (!isMissingProgressColumnsError(error)) throw error;
+    if (!isMissingProgressColumnsError(error)) {
+      throw error;
+    }
   }
 }
 
 export async function appendLoreImportJobEvent(
   db: VigilDb,
   jobId: string,
-  event: LoreImportJobEvent,
+  event: LoreImportJobEvent
 ): Promise<void> {
   await appendLoreImportJobEventsBatch(db, jobId, [event]);
 }
@@ -149,7 +178,7 @@ export async function appendLoreImportJobEvent(
 async function updateLoreImportJobProgress(
   db: VigilDb,
   jobId: string,
-  progress: LoreImportProgress,
+  progress: LoreImportProgress
 ): Promise<void> {
   const now = new Date();
   try {
@@ -158,7 +187,8 @@ async function updateLoreImportJobProgress(
       .set({
         progressPhase: progress.phase || null,
         progressStep: typeof progress.step === "number" ? progress.step : null,
-        progressTotal: typeof progress.total === "number" ? progress.total : null,
+        progressTotal:
+          typeof progress.total === "number" ? progress.total : null,
         progressMessage: progress.message || null,
         progressMeta: progress.meta ?? null,
         lastProgressAt: now,
@@ -166,7 +196,9 @@ async function updateLoreImportJobProgress(
       })
       .where(eq(loreImportJobs.id, jobId));
   } catch (error) {
-    if (!isMissingProgressColumnsError(error)) throw error;
+    if (!isMissingProgressColumnsError(error)) {
+      throw error;
+    }
     await db
       .update(loreImportJobs)
       .set({
@@ -179,7 +211,7 @@ async function updateLoreImportJobProgress(
 async function updateLoreImportJobFailed(
   db: VigilDb,
   jobId: string,
-  args: { error: string; errorCode: string; lastPhase: string },
+  args: { error: string; errorCode: string; lastPhase: string }
 ): Promise<void> {
   const now = new Date();
   try {
@@ -199,7 +231,9 @@ async function updateLoreImportJobFailed(
       })
       .where(eq(loreImportJobs.id, jobId));
   } catch (error) {
-    if (!isMissingProgressColumnsError(error)) throw error;
+    if (!isMissingProgressColumnsError(error)) {
+      throw error;
+    }
     await db
       .update(loreImportJobs)
       .set({
@@ -211,7 +245,10 @@ async function updateLoreImportJobFailed(
   }
 }
 
-async function assertLoreImportJobNotCancelled(db: VigilDb, jobId: string): Promise<void> {
+async function assertLoreImportJobNotCancelled(
+  db: VigilDb,
+  jobId: string
+): Promise<void> {
   const [row] = await db
     .select({ status: loreImportJobs.status })
     .from(loreImportJobs)
@@ -246,10 +283,10 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
           eq(loreImportJobs.status, "queued"),
           and(
             eq(loreImportJobs.status, "processing"),
-            lt(loreImportJobs.updatedAt, staleBefore),
-          ),
-        ),
-      ),
+            lt(loreImportJobs.updatedAt, staleBefore)
+          )
+        )
+      )
     )
     .returning({
       id: loreImportJobs.id,
@@ -287,18 +324,21 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
           where id = ${jobId}
           limit 1
         `);
-        userContextRaw = (rows as { rows?: Array<{ user_context?: unknown }> }).rows?.[0]
-          ?.user_context;
+        userContextRaw = (rows as { rows?: Array<{ user_context?: unknown }> })
+          .rows?.[0]?.user_context;
       } catch (error) {
         if (!isMissingProgressColumnsError(error)) {
           throw error;
         }
       }
     }
-    const parsedUserContext = loreImportUserContextSchema.safeParse(userContextRaw);
+    const parsedUserContext =
+      loreImportUserContextSchema.safeParse(userContextRaw);
     const eventBuffer: LoreImportJobEvent[] = [];
     const flushEventBuffer = async () => {
-      if (eventBuffer.length === 0) return;
+      if (eventBuffer.length === 0) {
+        return;
+      }
       await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
       const chunk = eventBuffer.splice(0, eventBuffer.length);
       await appendLoreImportJobEventsBatch(db as VigilDb, jobId, chunk);
@@ -315,7 +355,9 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
         fullText: job.sourceText,
         importBatchId: job.importBatchId,
         fileName: job.fileName ?? undefined,
-        userContext: parsedUserContext.success ? parsedUserContext.data : undefined,
+        userContext: parsedUserContext.success
+          ? parsedUserContext.data
+          : undefined,
         onProgress: async (progress) => {
           await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
           lastPhase = progress.phase || lastPhase;
@@ -339,10 +381,16 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
     }
     if (buildError) {
       if (flushError) {
-        console.error("[lore-import] event flush also failed after build error", {
-          jobId,
-          flushError: flushError instanceof Error ? flushError.message : String(flushError),
-        });
+        console.error(
+          "[lore-import] event flush also failed after build error",
+          {
+            jobId,
+            flushError:
+              flushError instanceof Error
+                ? flushError.message
+                : String(flushError),
+          }
+        );
       }
       throw buildError;
     }
@@ -369,11 +417,18 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
       message: "Persisting review queue and final plan",
       meta: {
         pipelinePercent:
-          computeLoreImportPipelinePercent("persist_review", { phaseFraction: 0.4 }) ?? 97,
+          computeLoreImportPipelinePercent("persist_review", {
+            phaseFraction: 0.4,
+          }) ?? 97,
       },
     });
     await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
-    await persistImportReviewQueueFromPlan(db as VigilDb, job.spaceId, parsedPlan.data, true);
+    await persistImportReviewQueueFromPlan(
+      db as VigilDb,
+      job.spaceId,
+      parsedPlan.data,
+      true
+    );
     const [readyWrite] = await db
       .update(loreImportJobs)
       .set({
@@ -385,8 +440,8 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
       .where(
         and(
           eq(loreImportJobs.id, jobId),
-          eq(loreImportJobs.status, "processing"),
-        ),
+          eq(loreImportJobs.status, "processing")
+        )
       )
       .returning({ id: loreImportJobs.id });
     if (!readyWrite) {

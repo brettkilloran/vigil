@@ -8,16 +8,28 @@ import {
 
 describe("defaultItemDimensions", () => {
   it("uses lore shell size for character", () => {
-    expect(defaultItemDimensions("note", "character")).toEqual({ width: 340, height: 280 });
+    expect(defaultItemDimensions("note", "character")).toEqual({
+      width: 340,
+      height: 280,
+    });
   });
   it("uses note size without character entity", () => {
-    expect(defaultItemDimensions("note", null)).toEqual({ width: 340, height: 270 });
+    expect(defaultItemDimensions("note", null)).toEqual({
+      width: 340,
+      height: 270,
+    });
   });
   it("uses checklist size", () => {
-    expect(defaultItemDimensions("checklist", null)).toEqual({ width: 340, height: 188 });
+    expect(defaultItemDimensions("checklist", null)).toEqual({
+      width: 340,
+      height: 188,
+    });
   });
   it("falls back for other types", () => {
-    expect(defaultItemDimensions("folder", null)).toEqual({ width: 280, height: 200 });
+    expect(defaultItemDimensions("folder", null)).toEqual({
+      width: 280,
+      height: 200,
+    });
   });
 });
 

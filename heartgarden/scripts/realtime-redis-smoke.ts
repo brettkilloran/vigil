@@ -2,15 +2,18 @@
  * Quick check: Redis reachable with HEARTGARDEN_REALTIME_REDIS_URL from .env.local.
  * Usage: pnpm exec tsx ./scripts/realtime-redis-smoke.ts
  */
-import { config } from "dotenv";
+
 import { resolve } from "node:path";
+import { config } from "dotenv";
 import { createClient } from "redis";
 
 config({ path: resolve(process.cwd(), ".env.local") });
 
 const url = process.env.HEARTGARDEN_REALTIME_REDIS_URL?.trim();
 if (!url) {
-  console.error("Missing HEARTGARDEN_REALTIME_REDIS_URL in .env.local (or empty).");
+  console.error(
+    "Missing HEARTGARDEN_REALTIME_REDIS_URL in .env.local (or empty)."
+  );
   process.exit(1);
 }
 

@@ -1,8 +1,8 @@
 "use client";
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
-import { fn } from "storybook/test";
 import { useState } from "react";
+import { fn } from "storybook/test";
 
 import { VigilAppBootScreen } from "./VigilAppBootScreen";
 
@@ -23,23 +23,23 @@ function BootScreenStage(props: {
       data-storybook-boot-root
     >
       <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0"
+        data-storybook-flower-portal-host
         ref={(el) => {
           setPortalHost((prev) => (prev === el ? prev : el));
         }}
-        className="pointer-events-none absolute inset-0 z-0"
-        aria-hidden
-        data-storybook-flower-portal-host
       />
       {portalHost ? (
         <VigilAppBootScreen
-          technicalReady={props.technicalReady ?? true}
-          onActivate={mockActivate}
-          onExitComplete={mockExitComplete}
-          flowerPortalContainer={portalHost}
-          canvasEffectsEnabled
-          onCanvasEffectsEnabledChange={mockEffectsChange}
           bootGateEnabled={props.bootGateEnabled ?? false}
           bootGateStatusReady={props.bootGateStatusReady ?? true}
+          canvasEffectsEnabled
+          flowerPortalContainer={portalHost}
+          onActivate={mockActivate}
+          onCanvasEffectsEnabledChange={mockEffectsChange}
+          onExitComplete={mockExitComplete}
+          technicalReady={props.technicalReady ?? true}
         />
       ) : null}
     </div>

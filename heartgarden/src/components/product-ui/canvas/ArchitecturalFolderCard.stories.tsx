@@ -67,4 +67,3 @@ export const DragOver: Story = {
     dragOver: true,
   },
 };
-

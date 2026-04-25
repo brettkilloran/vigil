@@ -92,7 +92,8 @@ export const NonDefaultScenarioSkipsOverlay: Story = {
   parameters: {
     docs: {
       description: {
-        story: "Matches app behavior: overlay does not mount for corrupt (or any non-default) scenarios.",
+        story:
+          "Matches app behavior: overlay does not mount for corrupt (or any non-default) scenarios.",
       },
     },
   },

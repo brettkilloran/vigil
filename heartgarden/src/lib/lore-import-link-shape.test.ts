@@ -25,13 +25,13 @@ describe("coerceImportLinkType", () => {
 
   it("allows affiliation between character/faction either direction", () => {
     expect(coerceImportLinkType("npc", "faction", "affiliation").linkType).toBe(
-      "affiliation",
+      "affiliation"
     );
     expect(
-      coerceImportLinkType("faction", "character", "affiliation").linkType,
+      coerceImportLinkType("faction", "character", "affiliation").linkType
     ).toBe("affiliation");
     expect(
-      coerceImportLinkType("faction", "faction", "affiliation").linkType,
+      coerceImportLinkType("faction", "faction", "affiliation").linkType
     ).toBe("affiliation");
   });
 
@@ -43,32 +43,32 @@ describe("coerceImportLinkType", () => {
 
   it("allows contract between character/faction and character/character", () => {
     expect(
-      coerceImportLinkType("character", "faction", "contract").linkType,
+      coerceImportLinkType("character", "faction", "contract").linkType
     ).toBe("contract");
     expect(
-      coerceImportLinkType("character", "character", "contract").linkType,
+      coerceImportLinkType("character", "character", "contract").linkType
     ).toBe("contract");
     expect(
-      coerceImportLinkType("faction", "faction", "contract").linkType,
+      coerceImportLinkType("faction", "faction", "contract").linkType
     ).toBe("contract");
   });
 
   it("accepts conflict between any pair", () => {
     expect(coerceImportLinkType("lore", "item", "conflict").linkType).toBe(
-      "conflict",
+      "conflict"
     );
     expect(
-      coerceImportLinkType("character", "location", "conflict").linkType,
+      coerceImportLinkType("character", "location", "conflict").linkType
     ).toBe("conflict");
   });
 
   it("accepts history as catch-all for any pair", () => {
     expect(coerceImportLinkType("lore", "quest", "history").linkType).toBe(
-      "history",
+      "history"
     );
-    expect(
-      coerceImportLinkType("location", "other", "history").linkType,
-    ).toBe("history");
+    expect(coerceImportLinkType("location", "other", "history").linkType).toBe(
+      "history"
+    );
   });
 
   it("forbids pin on imports and coerces to history", () => {
@@ -80,12 +80,12 @@ describe("coerceImportLinkType", () => {
 
   it("falls back through legacy aliases before validating", () => {
     // "ally" is an alias for "bond" — stays as bond for character pairs.
-    expect(coerceImportLinkType("character", "character", "ally").linkType).toBe(
-      "bond",
-    );
+    expect(
+      coerceImportLinkType("character", "character", "ally").linkType
+    ).toBe("bond");
     // "enemy" is an alias for "conflict" — accepted anywhere.
     expect(coerceImportLinkType("faction", "lore", "enemy").linkType).toBe(
-      "conflict",
+      "conflict"
     );
   });
 

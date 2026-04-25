@@ -51,7 +51,9 @@ export function getVaultIndexStatusSnapshot() {
   };
 }
 
-export function subscribeVaultIndexStatus(listener: VaultIndexListener): () => void {
+export function subscribeVaultIndexStatus(
+  listener: VaultIndexListener
+): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }

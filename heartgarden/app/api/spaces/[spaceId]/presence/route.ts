@@ -1,10 +1,10 @@
 import { and, eq, gt, inArray, lte } from "drizzle-orm";
-
+import { z } from "zod";
 import { tryGetDb } from "@/src/db/index";
 import { canvasPresence } from "@/src/db/schema";
 import { getHeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
-import { HEARTGARDEN_PRESENCE_TTL_MS } from "@/src/lib/heartgarden-collab-constants";
 import { heartgardenBootClientIp } from "@/src/lib/heartgarden-boot-rate-limit";
+import { HEARTGARDEN_PRESENCE_TTL_MS } from "@/src/lib/heartgarden-collab-constants";
 import {
   clampPresenceCamera,
   normalizePresenceDisplayName,
@@ -15,14 +15,15 @@ import {
 } from "@/src/lib/heartgarden-presence-body";
 import { consumeHeartgardenPresencePostRateLimit } from "@/src/lib/heartgarden-presence-rate-limit";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
-import {
-  fetchDescendantSpaceIds,
-} from "@/src/lib/heartgarden-space-subtree";
-import { z } from "zod";
+import { fetchDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
 
-async function deleteStalePresenceRows(db: NonNullable<ReturnType<typeof tryGetDb>>) {
+async function deleteStalePresenceRows(
+  db: NonNullable<ReturnType<typeof tryGetDb>>
+) {
   const staleCutoff = new Date(Date.now() - HEARTGARDEN_PRESENCE_TTL_MS);
-  await db.delete(canvasPresence).where(lte(canvasPresence.updatedAt, staleCutoff));
+  await db
+    .delete(canvasPresence)
+    .where(lte(canvasPresence.updatedAt, staleCutoff));
 }
 
 /**
@@ -32,14 +33,16 @@ const PRESENCE_GC_MIN_INTERVAL_MS = 15_000;
 let lastPresenceGcAtMs = 0;
 
 function shouldRunPresenceGc(nowMs = Date.now()): boolean {
-  if (nowMs - lastPresenceGcAtMs < PRESENCE_GC_MIN_INTERVAL_MS) return false;
+  if (nowMs - lastPresenceGcAtMs < PRESENCE_GC_MIN_INTERVAL_MS) {
+    return false;
+  }
   lastPresenceGcAtMs = nowMs;
   return true;
 }
 
 export async function GET(
   req: Request,
-  context: { params: Promise<{ spaceId: string }> },
+  context: { params: Promise<{ spaceId: string }> }
 ) {
   if (process.env.PLAYWRIGHT_E2E === "1") {
     return Response.json({
@@ -58,13 +61,18 @@ export async function GET(
 
   const db = tryGetDb();
   if (!db) {
-    return Response.json({ ok: false, error: "Database not configured" }, { status: 503 });
+    return Response.json(
+      { ok: false, error: "Database not configured" },
+      { status: 503 }
+    );
   }
 
   const bootCtx = await getHeartgardenApiBootContext();
   const { spaceId } = await context.params;
   const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
-  if (!access.ok) return access.response;
+  if (!access.ok) {
+    return access.response;
+  }
 
   if (shouldRunPresenceGc()) {
     await deleteStalePresenceRows(db);
@@ -79,8 +87,11 @@ export async function GET(
     ? await fetchDescendantSpaceIds(db, spaceId)
     : new Set([spaceId]);
   const playerAllowedSpaceIds =
-    bootCtx.role === "player" ? await fetchDescendantSpaceIds(db, bootCtx.playerSpaceId) : null;
-  const selfIdIsUuid = selfId.length > 0 && z.string().uuid().safeParse(selfId).success;
+    bootCtx.role === "player"
+      ? await fetchDescendantSpaceIds(db, bootCtx.playerSpaceId)
+      : null;
+  const selfIdIsUuid =
+    selfId.length > 0 && z.string().uuid().safeParse(selfId).success;
 
   const cutoff = new Date(Date.now() - HEARTGARDEN_PRESENCE_TTL_MS);
   const rows = await db
@@ -95,7 +106,10 @@ export async function GET(
     })
     .from(canvasPresence)
     .where(
-      and(inArray(canvasPresence.activeSpaceId, [...allowedSpaceIds]), gt(canvasPresence.updatedAt, cutoff)),
+      and(
+        inArray(canvasPresence.activeSpaceId, [...allowedSpaceIds]),
+        gt(canvasPresence.updatedAt, cutoff)
+      )
     );
 
   const out: {
@@ -109,9 +123,14 @@ export async function GET(
   }[] = [];
 
   for (const r of rows) {
-    if (selfIdIsUuid && r.clientId === selfId) continue;
-    if (bootCtx.role === "player") {
-      if (!playerAllowedSpaceIds?.has(r.activeSpaceId)) continue;
+    if (selfIdIsUuid && r.clientId === selfId) {
+      continue;
+    }
+    if (
+      bootCtx.role === "player" &&
+      !playerAllowedSpaceIds?.has(r.activeSpaceId)
+    ) {
+      continue;
     }
     const cam = safePresenceCameraFromUnknown(r.camera);
     const ptr = safePresencePointerFromUnknown(r.pointer);
@@ -133,7 +152,7 @@ export async function GET(
 
 export async function POST(
   req: Request,
-  context: { params: Promise<{ spaceId: string }> },
+  context: { params: Promise<{ spaceId: string }> }
 ) {
   if (process.env.PLAYWRIGHT_E2E === "1") {
     return Response.json({ ok: true });
@@ -141,13 +160,18 @@ export async function POST(
 
   const db = tryGetDb();
   if (!db) {
-    return Response.json({ ok: false, error: "Database not configured" }, { status: 503 });
+    return Response.json(
+      { ok: false, error: "Database not configured" },
+      { status: 503 }
+    );
   }
 
   const bootCtx = await getHeartgardenApiBootContext();
   const { spaceId } = await context.params;
   const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
-  if (!access.ok) return access.response;
+  if (!access.ok) {
+    return access.response;
+  }
 
   if (!consumeHeartgardenPresencePostRateLimit(heartgardenBootClientIp(req))) {
     return Response.json({ ok: false, error: "Rate limited" }, { status: 429 });
@@ -162,12 +186,19 @@ export async function POST(
 
   const parsed = presencePostBodySchema.safeParse(json);
   if (!parsed.success) {
-    return Response.json({ ok: false, error: parsed.error.flatten() }, { status: 400 });
+    return Response.json(
+      { ok: false, error: parsed.error.flatten() },
+      { status: 400 }
+    );
   }
 
   const camera = clampPresenceCamera(parsed.data.camera);
   const pointer =
-    parsed.data.pointer === undefined ? null : parsed.data.pointer === null ? null : parsed.data.pointer;
+    parsed.data.pointer === undefined
+      ? null
+      : parsed.data.pointer === null
+        ? null
+        : parsed.data.pointer;
   const displayName = normalizePresenceDisplayName(parsed.data.displayName);
   const sigil = safePresenceSigilFromUnknown(parsed.data.sigil);
 
@@ -222,7 +253,7 @@ export async function POST(
  */
 export async function DELETE(
   req: Request,
-  context: { params: Promise<{ spaceId: string }> },
+  context: { params: Promise<{ spaceId: string }> }
 ) {
   if (process.env.PLAYWRIGHT_E2E === "1") {
     return Response.json({ ok: true });
@@ -230,13 +261,18 @@ export async function DELETE(
 
   const db = tryGetDb();
   if (!db) {
-    return Response.json({ ok: false, error: "Database not configured" }, { status: 503 });
+    return Response.json(
+      { ok: false, error: "Database not configured" },
+      { status: 503 }
+    );
   }
 
   const bootCtx = await getHeartgardenApiBootContext();
   const { spaceId } = await context.params;
   const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
-  if (!access.ok) return access.response;
+  if (!access.ok) {
+    return access.response;
+  }
 
   if (!consumeHeartgardenPresencePostRateLimit(heartgardenBootClientIp(req))) {
     return Response.json({ ok: false, error: "Rate limited" }, { status: 429 });
@@ -246,7 +282,10 @@ export async function DELETE(
   const clientIdRaw = url.searchParams.get("clientId")?.trim() ?? "";
   const parsed = z.string().uuid().safeParse(clientIdRaw);
   if (!parsed.success) {
-    return Response.json({ ok: false, error: "Invalid clientId" }, { status: 400 });
+    return Response.json(
+      { ok: false, error: "Invalid clientId" },
+      { status: 400 }
+    );
   }
 
   const clientIdMatch = eq(canvasPresence.clientId, parsed.data);
@@ -256,7 +295,7 @@ export async function DELETE(
           clientIdMatch,
           inArray(canvasPresence.activeSpaceId, [
             ...(await fetchDescendantSpaceIds(db, bootCtx.playerSpaceId)),
-          ]),
+          ])
         )
       : clientIdMatch;
 

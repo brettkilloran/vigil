@@ -39,7 +39,11 @@ export type CanvasConnectionPin = {
   insetY: number;
 };
 
-export type CanvasConnectionSyncState = "local-only" | "syncing" | "synced" | "error";
+export type CanvasConnectionSyncState =
+  | "local-only"
+  | "syncing"
+  | "synced"
+  | "error";
 
 export type CanvasEntityBase = {
   id: string;

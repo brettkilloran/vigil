@@ -38,4 +38,3 @@ export const Active: Story = {
     active: true,
   },
 };
-

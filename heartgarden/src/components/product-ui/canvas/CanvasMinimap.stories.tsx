@@ -2,10 +2,12 @@
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
 import { useState } from "react";
-
-import { CanvasMinimap } from "@/src/components/foundation/CanvasMinimap";
 import type { CanvasGraph } from "@/src/components/foundation/architectural-types";
-import { buildCollapsedStacksList, minimapLayoutSignature } from "@/src/lib/canvas-view-bounds";
+import { CanvasMinimap } from "@/src/components/foundation/CanvasMinimap";
+import {
+  buildCollapsedStacksList,
+  minimapLayoutSignature,
+} from "@/src/lib/canvas-view-bounds";
 
 const SPACE = "space-1";
 
@@ -96,22 +98,12 @@ function MinimapDemo() {
       }}
     >
       <CanvasMinimap
-        graph={mockGraph}
-        layoutSignature={mockMinimapLayoutKey}
         activeSpaceId={SPACE}
         collapsedStacks={collapsed}
-        translateX={translateX}
-        translateY={translateY}
-        scale={scale}
-        viewportWidth={960}
-        viewportHeight={640}
-        selectedNodeIds={["n2"]}
-        minZoom={0.3}
+        graph={mockGraph}
+        layoutSignature={mockMinimapLayoutKey}
         maxZoom={3}
-        onPanWorldDelta={(dw, dh) => {
-          setTranslateX((x) => x - dw * scale);
-          setTranslateY((y) => y - dh * scale);
-        }}
+        minZoom={0.3}
         onCenterOnWorld={(wx, wy) => {
           setTranslateX(960 / 2 - wx * scale);
           setTranslateY(640 / 2 - wy * scale);
@@ -121,10 +113,27 @@ function MinimapDemo() {
           setTranslateX(100);
           setTranslateY(60);
         }}
+        onPanWorldDelta={(dw, dh) => {
+          setTranslateX((x) => x - dw * scale);
+          setTranslateY((y) => y - dh * scale);
+        }}
+        scale={scale}
+        selectedNodeIds={["n2"]}
+        translateX={translateX}
+        translateY={translateY}
+        viewportHeight={640}
+        viewportWidth={960}
       />
-      <p style={{ marginTop: 16, fontSize: 12, color: "var(--vigil-muted, #8a93a3)" }}>
-        Mock camera: scale {scale.toFixed(2)}, translate ({Math.round(translateX)}, {Math.round(translateY)}).
-        Double-click background resets demo fit.
+      <p
+        style={{
+          marginTop: 16,
+          fontSize: 12,
+          color: "var(--vigil-muted, #8a93a3)",
+        }}
+      >
+        Mock camera: scale {scale.toFixed(2)}, translate (
+        {Math.round(translateX)}, {Math.round(translateY)}). Double-click
+        background resets demo fit.
       </p>
     </div>
   );

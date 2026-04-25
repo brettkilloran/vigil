@@ -4,8 +4,8 @@ import {
   clampPresenceCamera,
   normalizePresenceDisplayName,
   presencePostBodySchema,
-  safePresenceSigilFromUnknown,
   safePresenceCameraFromUnknown,
+  safePresenceSigilFromUnknown,
 } from "@/src/lib/heartgarden-presence-body";
 
 describe("heartgarden-presence-body", () => {
@@ -29,7 +29,9 @@ describe("heartgarden-presence-body", () => {
   });
 
   it("clampPresenceCamera fixes bad numbers", () => {
-    expect(clampPresenceCamera({ x: NaN, y: 3, zoom: 0.05 })).toMatchObject({
+    expect(
+      clampPresenceCamera({ x: Number.NaN, y: 3, zoom: 0.05 })
+    ).toMatchObject({
       x: 0,
       y: 3,
       zoom: 0.3,
@@ -37,11 +39,17 @@ describe("heartgarden-presence-body", () => {
   });
 
   it("safePresenceCameraFromUnknown falls back for garbage", () => {
-    expect(safePresenceCameraFromUnknown({ x: "nope" })).toEqual({ x: 0, y: 0, zoom: 1 });
+    expect(safePresenceCameraFromUnknown({ x: "nope" })).toEqual({
+      x: 0,
+      y: 0,
+      zoom: 1,
+    });
   });
 
   it("normalizes display names and rejects invalid names", () => {
-    expect(normalizePresenceDisplayName("  Avery   North ")).toBe("Avery North");
+    expect(normalizePresenceDisplayName("  Avery   North ")).toBe(
+      "Avery North"
+    );
     expect(normalizePresenceDisplayName("")).toBeNull();
     expect(normalizePresenceDisplayName("  ")).toBeNull();
     expect(normalizePresenceDisplayName("###")).toBeNull();

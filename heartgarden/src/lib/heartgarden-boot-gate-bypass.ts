@@ -15,8 +15,14 @@ function truthyEnv(raw: string | undefined): boolean {
 }
 
 export function isHeartgardenBootGateBypassed(): boolean {
-  if (process.env.PLAYWRIGHT_E2E === "1") return true;
-  if (process.env.NODE_ENV !== "development") return false;
-  if (truthyEnv(process.env.HEARTGARDEN_DEV_ENFORCE_BOOT_GATE)) return false;
+  if (process.env.PLAYWRIGHT_E2E === "1") {
+    return true;
+  }
+  if (process.env.NODE_ENV !== "development") {
+    return false;
+  }
+  if (truthyEnv(process.env.HEARTGARDEN_DEV_ENFORCE_BOOT_GATE)) {
+    return false;
+  }
   return true;
 }

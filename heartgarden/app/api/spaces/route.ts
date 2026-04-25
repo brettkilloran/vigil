@@ -1,7 +1,6 @@
-import { z } from "zod";
-
 import { eq } from "drizzle-orm";
 import { after } from "next/server";
+import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
 import { spaces } from "@/src/db/schema";
@@ -19,8 +18,15 @@ import {
 } from "@/src/lib/heartgarden-api-route-helpers";
 import { isHeartgardenImplicitPlayerRootSpaceName } from "@/src/lib/heartgarden-implicit-player-space";
 import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
-import { fetchPlayerSubtreeSpacesFull, spaceIsUnderPlayerRoot } from "@/src/lib/heartgarden-space-subtree";
-import { assertSpaceExists, listGmWorkspaceSpaces, resolveOrCreateBraneByType } from "@/src/lib/spaces";
+import {
+  fetchPlayerSubtreeSpacesFull,
+  spaceIsUnderPlayerRoot,
+} from "@/src/lib/heartgarden-space-subtree";
+import {
+  assertSpaceExists,
+  listGmWorkspaceSpaces,
+  resolveOrCreateBraneByType,
+} from "@/src/lib/spaces";
 
 const bodySchema = z.object({
   /** When set, insert this row id (undo-after-delete folder subtree restore). Must not already exist. */
@@ -32,7 +38,10 @@ const bodySchema = z.object({
 export async function GET() {
   const db = tryGetDb();
   if (!db) {
-    return Response.json({ ok: false, error: "Database not configured", spaces: [] }, { status: 503 });
+    return Response.json(
+      { ok: false, error: "Database not configured", spaces: [] },
+      { status: 503 }
+    );
   }
   const bootCtx = await getHeartgardenApiBootContext();
   if (isHeartgardenPlayerBlocked(bootCtx)) {
@@ -49,7 +58,10 @@ export async function GET() {
         id: row.id,
         name: row.name,
         parentSpaceId: row.parentSpaceId,
-        updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
+        updatedAt:
+          row.updatedAt instanceof Date
+            ? row.updatedAt.toISOString()
+            : String(row.updatedAt),
       })),
     });
   }
@@ -60,34 +72,46 @@ export async function GET() {
       id: r.id,
       name: r.name,
       parentSpaceId: r.parentSpaceId,
-      updatedAt: r.updatedAt instanceof Date ? r.updatedAt.toISOString() : String(r.updatedAt),
+      updatedAt:
+        r.updatedAt instanceof Date
+          ? r.updatedAt.toISOString()
+          : String(r.updatedAt),
     })),
   });
 }
 
 export async function POST(req: Request) {
   const dbGate = heartgardenApiRequireDb(tryGetDb());
-  if (!dbGate.ok) return dbGate.response;
+  if (!dbGate.ok) {
+    return dbGate.response;
+  }
   const db = dbGate.db;
   const bootCtx = await getHeartgardenApiBootContext();
   const blocked = heartgardenApiRejectIfPlayerBlocked(bootCtx);
-  if (blocked) return blocked;
+  if (blocked) {
+    return blocked;
+  }
 
   const bodyRead = await heartgardenApiReadJsonBody(req);
-  if (!bodyRead.ok) return bodyRead.response;
+  if (!bodyRead.ok) {
+    return bodyRead.response;
+  }
   const json = bodyRead.json;
 
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return Response.json(
       { ok: false, error: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     );
   }
   const { name, parentSpaceId } = parsed.data;
 
   if (isHeartgardenImplicitPlayerRootSpaceName(name)) {
-    return Response.json({ ok: false, error: "Invalid space name" }, { status: 400 });
+    return Response.json(
+      { ok: false, error: "Invalid space name" },
+      { status: 400 }
+    );
   }
 
   if (bootCtx.role === "player") {
@@ -95,16 +119,24 @@ export async function POST(req: Request) {
       return heartgardenApiForbiddenJsonResponse();
     }
     if (parentSpaceId === undefined || parentSpaceId === null) {
-      return Response.json({ ok: false, error: "Parent space required" }, { status: 400 });
+      return Response.json(
+        { ok: false, error: "Parent space required" },
+        { status: 400 }
+      );
     }
-    if (!(await spaceIsUnderPlayerRoot(db, bootCtx.playerSpaceId, parentSpaceId))) {
+    if (
+      !(await spaceIsUnderPlayerRoot(db, bootCtx.playerSpaceId, parentSpaceId))
+    ) {
       return heartgardenApiForbiddenJsonResponse();
     }
     const parent = await assertSpaceExists(db, parentSpaceId);
     if (!parent) {
       return heartgardenMaskNotFoundForPlayer(
         bootCtx,
-        Response.json({ ok: false, error: "Parent space not found" }, { status: 404 }),
+        Response.json(
+          { ok: false, error: "Parent space not found" },
+          { status: 404 }
+        )
       );
     }
     const [created] = await db
@@ -143,9 +175,16 @@ export async function POST(req: Request) {
   }
 
   if (parsed.data.id !== undefined) {
-    const [existing] = await db.select().from(spaces).where(eq(spaces.id, parsed.data.id)).limit(1);
+    const [existing] = await db
+      .select()
+      .from(spaces)
+      .where(eq(spaces.id, parsed.data.id))
+      .limit(1);
     if (existing) {
-      return Response.json({ ok: false, error: "Space id already exists" }, { status: 409 });
+      return Response.json(
+        { ok: false, error: "Space id already exists" },
+        { status: 409 }
+      );
     }
   }
 
@@ -158,11 +197,14 @@ export async function POST(req: Request) {
     if (!parent) {
       return Response.json(
         { ok: false, error: "Parent space not found" },
-        { status: 404 },
+        { status: 404 }
       );
     }
     if (isHeartgardenImplicitPlayerRootSpaceName(parent.name)) {
-      return Response.json({ ok: false, error: "Invalid parent" }, { status: 400 });
+      return Response.json(
+        { ok: false, error: "Invalid parent" },
+        { status: 400 }
+      );
     }
     parentBraneId = parent.braneId;
   }
@@ -173,7 +215,7 @@ export async function POST(req: Request) {
       braneId: parentBraneId ?? (await resolveOrCreateBraneByType(db, "gm")).id,
       ...(parsed.data.id ? { id: parsed.data.id } : {}),
       name,
-      ...(parentSpaceId !== undefined ? { parentSpaceId } : {}),
+      ...(parentSpaceId === undefined ? {} : { parentSpaceId }),
     })
     .returning();
 
@@ -181,7 +223,9 @@ export async function POST(req: Request) {
     await publishHeartgardenSpaceInvalidation(db, {
       originSpaceId: created!.id,
       reason: "space.created",
-      lookupSpaceIds: parentSpaceId ? [created!.id, parentSpaceId] : [created!.id],
+      lookupSpaceIds: parentSpaceId
+        ? [created!.id, parentSpaceId]
+        : [created!.id],
       directSpaceIds: parentSpaceId ? [parentSpaceId] : undefined,
     });
   });

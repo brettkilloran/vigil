@@ -3,20 +3,6 @@ import {
   PRESENCE_SIGIL_VARIANTS,
   type PresenceSigilVariant,
 } from "@/src/lib/collab-presence-identity";
-import type { CameraState, CanvasItem } from "@/src/model/canvas-types";
-import {
-  getNeonSyncSnapshot,
-  neonSyncBeginRequest,
-  neonSyncEndRequest,
-} from "@/src/lib/neon-sync-bus";
-import { parseJsonBody, syncFailureFromApiResponse } from "@/src/lib/sync-error-diagnostic";
-import {
-  vaultIndexClearInFlight,
-  vaultIndexClearPending,
-  vaultIndexMarkInFlight,
-  vaultIndexMarkPending,
-  vaultIndexSetError,
-} from "@/src/lib/vault-index-status-bus";
 import {
   recordItemPatchConflict,
   recordItemPatchOk,
@@ -25,13 +11,35 @@ import {
   parseSpaceChangesResponseJson,
   type SpaceChangePayloadRow,
 } from "@/src/lib/heartgarden-space-change-sync-utils";
-import { heartgardenSyncDebugLog, isHeartgardenSyncDebugEnabled } from "@/src/lib/heartgarden-sync-debug";
+import {
+  heartgardenSyncDebugLog,
+  isHeartgardenSyncDebugEnabled,
+} from "@/src/lib/heartgarden-sync-debug";
+import {
+  getNeonSyncSnapshot,
+  neonSyncBeginRequest,
+  neonSyncEndRequest,
+} from "@/src/lib/neon-sync-bus";
+import {
+  parseJsonBody,
+  syncFailureFromApiResponse,
+} from "@/src/lib/sync-error-diagnostic";
+import {
+  vaultIndexClearInFlight,
+  vaultIndexClearPending,
+  vaultIndexMarkInFlight,
+  vaultIndexMarkPending,
+  vaultIndexSetError,
+} from "@/src/lib/vault-index-status-bus";
+import type { CameraState, CanvasItem } from "@/src/model/canvas-types";
 
 const vaultIndexTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const VAULT_INDEX_DEBOUNCE_MS = 2800;
 
 function isServerAfterVaultIndexOwner(): boolean {
-  const owner = (process.env.NEXT_PUBLIC_HEARTGARDEN_INDEX_OWNER ?? "server_after")
+  const owner = (
+    process.env.NEXT_PUBLIC_HEARTGARDEN_INDEX_OWNER ?? "server_after"
+  )
     .trim()
     .toLowerCase();
   return owner === "server_after";
@@ -44,7 +52,9 @@ function clearAllVaultIndexTimers() {
   const ids = [...vaultIndexTimers.keys()];
   for (const id of ids) {
     const t = vaultIndexTimers.get(id);
-    if (t) clearTimeout(t);
+    if (t) {
+      clearTimeout(t);
+    }
     vaultIndexTimers.delete(id);
     vaultIndexClearPending(id);
   }
@@ -56,33 +66,50 @@ function clearAllVaultIndexTimers() {
  */
 export function neonVaultIndexSetPlayerLayerActive(active: boolean) {
   const next = active;
-  if (vaultIndexClientDisabledForPlayerLayer === next) return;
+  if (vaultIndexClientDisabledForPlayerLayer === next) {
+    return;
+  }
   vaultIndexClientDisabledForPlayerLayer = next;
-  if (next) clearAllVaultIndexTimers();
+  if (next) {
+    clearAllVaultIndexTimers();
+  }
 }
 
 function scheduleVaultIndexForItem(itemId: string) {
-  if (vaultIndexClientDisabledForPlayerLayer) return;
-  if (isServerAfterVaultIndexOwner()) return;
+  if (vaultIndexClientDisabledForPlayerLayer) {
+    return;
+  }
+  if (isServerAfterVaultIndexOwner()) {
+    return;
+  }
   const prev = vaultIndexTimers.get(itemId);
-  if (prev) clearTimeout(prev);
+  if (prev) {
+    clearTimeout(prev);
+  }
   vaultIndexMarkPending(itemId);
   const t = setTimeout(() => {
     vaultIndexTimers.delete(itemId);
     vaultIndexClearPending(itemId);
-    if (vaultIndexClientDisabledForPlayerLayer) return;
+    if (vaultIndexClientDisabledForPlayerLayer) {
+      return;
+    }
     vaultIndexMarkInFlight(itemId);
     void (async () => {
       try {
-        const res = await fetch(`/api/items/${encodeURIComponent(itemId)}/index`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: "{}",
-        });
+        const res = await fetch(
+          `/api/items/${encodeURIComponent(itemId)}/index`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "{}",
+          }
+        );
         const rawText = await res.text();
         let body: Record<string, unknown> = {};
         try {
-          body = rawText.trim() ? (JSON.parse(rawText) as Record<string, unknown>) : {};
+          body = rawText.trim()
+            ? (JSON.parse(rawText) as Record<string, unknown>)
+            : {};
         } catch {
           body = {};
         }
@@ -97,7 +124,11 @@ function scheduleVaultIndexForItem(itemId: string) {
               : `Index failed (${res.status})`;
           vaultIndexSetError(err);
         } else if (body.ok !== true) {
-          vaultIndexSetError(typeof body.error === "string" ? body.error : "Index did not complete.");
+          vaultIndexSetError(
+            typeof body.error === "string"
+              ? body.error
+              : "Index did not complete."
+          );
         }
       } catch {
         vaultIndexSetError("Search index request failed (network).");
@@ -115,14 +146,22 @@ function finishNeonTrack(
   res: Response,
   rawText: string,
   body: Record<string, unknown>,
-  logicalOk: boolean,
+  logicalOk: boolean
 ) {
-  if (!track) return;
+  if (!track) {
+    return;
+  }
   if (logicalOk) {
     neonSyncEndRequest(true);
     return;
   }
-  const detail = syncFailureFromApiResponse(operation, res, rawText, body, logicalOk);
+  const detail = syncFailureFromApiResponse(
+    operation,
+    res,
+    rawText,
+    body,
+    logicalOk
+  );
   neonSyncEndRequest(
     false,
     detail ?? {
@@ -130,21 +169,26 @@ function finishNeonTrack(
       httpStatus: res.status,
       message: `HTTP ${res.status}`,
       cause: "http",
-    },
+    }
   );
 }
 
 /** One logical PATCH at a time per item; the next call runs after the previous finishes (incl. 409 retry in the shell). */
 const itemPatchChains = new Map<string, Promise<unknown>>();
 
-function runSerializedItemPatch<T>(itemId: string, fn: () => Promise<T>): Promise<T> {
+function runSerializedItemPatch<T>(
+  itemId: string,
+  fn: () => Promise<T>
+): Promise<T> {
   const prev = itemPatchChains.get(itemId) ?? Promise.resolve();
   const chained = prev.then(
     () => fn(),
-    () => fn(),
+    () => fn()
   );
   const wrapped = chained.finally(() => {
-    if (itemPatchChains.get(itemId) === wrapped) itemPatchChains.delete(itemId);
+    if (itemPatchChains.get(itemId) === wrapped) {
+      itemPatchChains.delete(itemId);
+    }
   });
   itemPatchChains.set(itemId, wrapped);
   return chained;
@@ -183,21 +227,25 @@ export type BootstrapFetchDetail =
 function extractServerErrorMessage(body: unknown): string | undefined {
   if (body && typeof body === "object") {
     const err = (body as { error?: unknown }).error;
-    if (typeof err === "string" && err.trim()) return err.trim();
+    if (typeof err === "string" && err.trim()) {
+      return err.trim();
+    }
   }
-  return undefined;
+  return;
 }
 
 export async function fetchBootstrapDetailed(
   spaceId?: string,
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal }
 ): Promise<BootstrapFetchDetail> {
   const q = spaceId ? `?space=${encodeURIComponent(spaceId)}` : "";
   let res: Response;
   try {
     res = await fetch(`/api/bootstrap${q}`, { signal: options?.signal });
   } catch (e) {
-    if (e instanceof DOMException && e.name === "AbortError") throw e;
+    if (e instanceof DOMException && e.name === "AbortError") {
+      throw e;
+    }
     return {
       ok: false,
       cause: "network",
@@ -249,12 +297,18 @@ export async function fetchBootstrapDetailed(
  */
 export async function fetchBootstrap(
   spaceId?: string,
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal }
 ): Promise<BootstrapResponse | null> {
   const result = await fetchBootstrapDetailed(spaceId, options);
-  if (result.ok) return result.data;
-  if (result.cause === "demo") return result.data;
-  if (result.cause === "forbidden" || result.cause === "http") return null;
+  if (result.ok) {
+    return result.data;
+  }
+  if (result.cause === "demo") {
+    return result.data;
+  }
+  if (result.cause === "forbidden" || result.cause === "http") {
+    return null;
+  }
   if (result.cause === "parse") {
     throw new Error(`Bootstrap returned non-JSON (status ${result.status})`);
   }
@@ -287,29 +341,31 @@ export type SpaceChangesResponse = SpaceChangesSuccess | SpaceChangesFailure;
 function spaceChangesFailure(
   cause: SpaceChangesFailure["cause"],
   error: string,
-  httpStatus?: number,
+  httpStatus?: number
 ): SpaceChangesFailure {
   return {
     ok: false,
     error,
     cause,
-    ...(httpStatus != null ? { httpStatus } : {}),
+    ...(httpStatus == null ? {} : { httpStatus }),
   };
 }
 
 export async function fetchSpaceChanges(
   spaceId: string,
   since: string,
-  options?: { includeItemIds?: boolean; signal?: AbortSignal },
+  options?: { includeItemIds?: boolean; signal?: AbortSignal }
 ): Promise<SpaceChangesResponse> {
   const q = new URLSearchParams();
   q.set("since", since);
   q.set("limit", "500");
-  if (options?.includeItemIds) q.set("includeItemIds", "1");
+  if (options?.includeItemIds) {
+    q.set("includeItemIds", "1");
+  }
   try {
     const res = await fetch(
       `/api/spaces/${encodeURIComponent(spaceId)}/changes?${q.toString()}`,
-      { signal: options?.signal },
+      { signal: options?.signal }
     );
     let raw: unknown;
     try {
@@ -318,7 +374,7 @@ export async function fetchSpaceChanges(
       return spaceChangesFailure(
         "parse",
         "Space changes response was not valid JSON",
-        res.status,
+        res.status
       );
     }
     if (!res.ok) {
@@ -330,8 +386,16 @@ export async function fetchSpaceChanges(
           : `Space changes request failed (${res.status})`;
       return spaceChangesFailure("http", msg, res.status);
     }
-    if (typeof raw !== "object" || raw === null || (raw as { ok?: unknown }).ok !== true) {
-      return spaceChangesFailure("parse", "Space changes payload failed contract check", res.status);
+    if (
+      typeof raw !== "object" ||
+      raw === null ||
+      (raw as { ok?: unknown }).ok !== true
+    ) {
+      return spaceChangesFailure(
+        "parse",
+        "Space changes payload failed contract check",
+        res.status
+      );
     }
     const parsed = parseSpaceChangesResponseJson(raw, {
       requireItemIds: options?.includeItemIds === true,
@@ -340,22 +404,25 @@ export async function fetchSpaceChanges(
       return spaceChangesFailure(
         "parse",
         "Space changes payload missing required fields",
-        res.status,
+        res.status
       );
     }
     return {
       ok: true,
       items: parsed.items,
       ...(parsed.spaces.length > 0 ? { spaces: parsed.spaces } : {}),
-      ...(parsed.itemIds !== undefined ? { itemIds: parsed.itemIds } : {}),
-      ...(parsed.cursor !== undefined ? { cursor: parsed.cursor } : {}),
-      ...(parsed.itemLinksRevision !== undefined
-        ? { itemLinksRevision: parsed.itemLinksRevision }
-        : {}),
+      ...(parsed.itemIds === undefined ? {} : { itemIds: parsed.itemIds }),
+      ...(parsed.cursor === undefined ? {} : { cursor: parsed.cursor }),
+      ...(parsed.itemLinksRevision === undefined
+        ? {}
+        : { itemLinksRevision: parsed.itemLinksRevision }),
       ...(parsed.hasMore === true ? { hasMore: true } : {}),
     };
   } catch (e) {
-    return spaceChangesFailure("network", e instanceof Error ? e.message : "Network error");
+    return spaceChangesFailure(
+      "network",
+      e instanceof Error ? e.message : "Network error"
+    );
   }
 }
 
@@ -370,23 +437,44 @@ export type SpacePresencePeer = {
 };
 
 function parseSpacePresencePeer(raw: unknown): SpacePresencePeer | null {
-  if (typeof raw !== "object" || raw === null) return null;
+  if (typeof raw !== "object" || raw === null) {
+    return null;
+  }
   const o = raw as Record<string, unknown>;
-  if (typeof o.clientId !== "string" || typeof o.activeSpaceId !== "string") return null;
-  if (typeof o.updatedAt !== "string") return null;
+  if (typeof o.clientId !== "string" || typeof o.activeSpaceId !== "string") {
+    return null;
+  }
+  if (typeof o.updatedAt !== "string") {
+    return null;
+  }
   const cam = o.camera;
-  if (typeof cam !== "object" || cam === null) return null;
+  if (typeof cam !== "object" || cam === null) {
+    return null;
+  }
   const c = cam as Record<string, unknown>;
-  if (typeof c.x !== "number" || typeof c.y !== "number" || typeof c.zoom !== "number") return null;
+  if (
+    typeof c.x !== "number" ||
+    typeof c.y !== "number" ||
+    typeof c.zoom !== "number"
+  ) {
+    return null;
+  }
   const displayName = typeof o.displayName === "string" ? o.displayName : null;
   const sigil =
-    typeof o.sigil === "string" && PRESENCE_SIGIL_VARIANTS.includes(o.sigil as PresenceSigilVariant)
+    typeof o.sigil === "string" &&
+    PRESENCE_SIGIL_VARIANTS.includes(o.sigil as PresenceSigilVariant)
       ? (o.sigil as PresenceSigilVariant)
       : null;
   let pointer: { x: number; y: number } | null = null;
-  if (o.pointer !== null && typeof o.pointer === "object" && o.pointer !== null) {
+  if (
+    o.pointer !== null &&
+    typeof o.pointer === "object" &&
+    o.pointer !== null
+  ) {
     const p = o.pointer as Record<string, unknown>;
-    if (typeof p.x === "number" && typeof p.y === "number") pointer = { x: p.x, y: p.y };
+    if (typeof p.x === "number" && typeof p.y === "number") {
+      pointer = { x: p.x, y: p.y };
+    }
   }
   return {
     clientId: o.clientId,
@@ -408,20 +496,23 @@ export async function postPresencePayload(
     pointer: { x: number; y: number } | null;
     displayName?: string | null;
     sigil?: PresenceSigilVariant | null;
-  },
+  }
 ): Promise<boolean> {
   try {
-    const res = await fetch(`/api/spaces/${encodeURIComponent(spaceId)}/presence`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        clientId,
-        camera: payload.camera,
-        pointer: payload.pointer,
-        displayName: payload.displayName ?? undefined,
-        sigil: payload.sigil ?? undefined,
-      }),
-    });
+    const res = await fetch(
+      `/api/spaces/${encodeURIComponent(spaceId)}/presence`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId,
+          camera: payload.camera,
+          pointer: payload.pointer,
+          displayName: payload.displayName ?? undefined,
+          sigil: payload.sigil ?? undefined,
+        }),
+      }
+    );
     const body = (await res.json()) as { ok?: boolean };
     return res.ok && body.ok === true;
   } catch {
@@ -448,24 +539,30 @@ export function leavePresenceBeacon(spaceId: string, clientId: string): void {
 export async function fetchSpacePresencePeersDetail(
   spaceId: string,
   exceptClientId?: string,
-  options?: { scope?: "local" | "subtree" },
+  options?: { scope?: "local" | "subtree" }
 ): Promise<SpacePresencePeer[]> {
   try {
     const q = new URLSearchParams();
     if (exceptClientId != null && exceptClientId.length > 0) {
       q.set("except", exceptClientId);
     }
-    if (options?.scope === "local") q.set("scope", "local");
+    if (options?.scope === "local") {
+      q.set("scope", "local");
+    }
     const qs = q.toString();
     const res = await fetch(
-      `/api/spaces/${encodeURIComponent(spaceId)}/presence${qs ? `?${qs}` : ""}`,
+      `/api/spaces/${encodeURIComponent(spaceId)}/presence${qs ? `?${qs}` : ""}`
     );
     const body = (await res.json()) as { ok?: boolean; peers?: unknown[] };
-    if (!res.ok || !body.ok || !Array.isArray(body.peers)) return [];
+    if (!(res.ok && body.ok && Array.isArray(body.peers))) {
+      return [];
+    }
     const out: SpacePresencePeer[] = [];
     for (const row of body.peers) {
       const p = parseSpacePresencePeer(row);
-      if (p) out.push(p);
+      if (p) {
+        out.push(p);
+      }
     }
     return out;
   } catch {
@@ -475,7 +572,7 @@ export async function fetchSpacePresencePeersDetail(
 
 export async function fetchSpacePresencePeers(
   spaceId: string,
-  exceptClientId?: string,
+  exceptClientId?: string
 ): Promise<number> {
   const peers = await fetchSpacePresencePeersDetail(spaceId, exceptClientId);
   return peers.length;
@@ -484,14 +581,18 @@ export async function fetchSpacePresencePeers(
 export async function apiCreateSpace(
   name: string,
   parentSpaceId: string | null,
-  options?: { id?: string },
+  options?: { id?: string }
 ): Promise<{ ok: boolean; space?: { id: string }; error?: string }> {
   const track = getNeonSyncSnapshot().cloudEnabled;
-  if (track) neonSyncBeginRequest();
+  if (track) {
+    neonSyncBeginRequest();
+  }
   const op = "POST /api/spaces";
   try {
     const payload: Record<string, unknown> = { name, parentSpaceId };
-    if (options?.id) payload.id = options.id;
+    if (options?.id) {
+      payload.id = options.id;
+    }
     const res = await fetch("/api/spaces", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -520,10 +621,12 @@ export async function apiCreateSpace(
 
 export async function apiCreateItem(
   spaceId: string,
-  bodyPayload: Record<string, unknown>,
+  bodyPayload: Record<string, unknown>
 ): Promise<{ ok: boolean; item?: CanvasItem; error?: string }> {
   const track = getNeonSyncSnapshot().cloudEnabled;
-  if (track) neonSyncBeginRequest();
+  if (track) {
+    neonSyncBeginRequest();
+  }
   const op = `POST /api/spaces/${spaceId}/items`;
   try {
     const res = await fetch(`/api/spaces/${spaceId}/items`, {
@@ -557,14 +660,17 @@ export async function apiCreateItem(
 
 export async function apiPatchItem(
   itemId: string,
-  patch: Record<string, unknown>,
+  patch: Record<string, unknown>
 ): Promise<ApiPatchItemResult> {
   return runSerializedItemPatch(itemId, async () => {
     const track = getNeonSyncSnapshot().cloudEnabled;
-    if (track) neonSyncBeginRequest();
+    if (track) {
+      neonSyncBeginRequest();
+    }
     const op = `PATCH /api/items/${itemId}`;
     const debug = isHeartgardenSyncDebugEnabled();
-    const t0 = debug && typeof performance !== "undefined" ? performance.now() : 0;
+    const t0 =
+      debug && typeof performance !== "undefined" ? performance.now() : 0;
     try {
       const res = await fetch(`/api/items/${itemId}`, {
         method: "PATCH",
@@ -583,7 +689,9 @@ export async function apiPatchItem(
           ms: Math.round(performance.now() - t0),
           status: res.status,
           baseUpdatedAt:
-            typeof patch.baseUpdatedAt === "string" ? patch.baseUpdatedAt : undefined,
+            typeof patch.baseUpdatedAt === "string"
+              ? patch.baseUpdatedAt
+              : undefined,
         });
       }
 
@@ -622,7 +730,11 @@ export async function apiPatchItem(
       if (logicalOk) {
         return { ok: false, error: "Missing item in response" };
       }
-      return { ok: false, error: typeof body.error === "string" ? body.error : `HTTP ${res.status}` };
+      return {
+        ok: false,
+        error:
+          typeof body.error === "string" ? body.error : `HTTP ${res.status}`,
+      };
     } catch (e) {
       if (track) {
         neonSyncEndRequest(false, {
@@ -638,7 +750,9 @@ export async function apiPatchItem(
 
 export async function apiDeleteItem(itemId: string): Promise<boolean> {
   const track = getNeonSyncSnapshot().cloudEnabled;
-  if (track) neonSyncBeginRequest();
+  if (track) {
+    neonSyncBeginRequest();
+  }
   const op = `DELETE /api/items/${itemId}`;
   try {
     const res = await fetch(`/api/items/${itemId}`, { method: "DELETE" });
@@ -662,7 +776,9 @@ export async function apiDeleteItem(itemId: string): Promise<boolean> {
 /** Removes a folder child space and its descendants from Neon (items cascade). */
 export async function apiDeleteSpaceSubtree(spaceId: string): Promise<boolean> {
   const track = getNeonSyncSnapshot().cloudEnabled;
-  if (track) neonSyncBeginRequest();
+  if (track) {
+    neonSyncBeginRequest();
+  }
   const op = `DELETE /api/spaces/${spaceId}`;
   try {
     const res = await fetch(`/api/spaces/${spaceId}`, { method: "DELETE" });
@@ -683,9 +799,14 @@ export async function apiDeleteSpaceSubtree(spaceId: string): Promise<boolean> {
   }
 }
 
-export async function apiPatchSpaceName(spaceId: string, name: string): Promise<boolean> {
+export async function apiPatchSpaceName(
+  spaceId: string,
+  name: string
+): Promise<boolean> {
   const track = getNeonSyncSnapshot().cloudEnabled;
-  if (track) neonSyncBeginRequest();
+  if (track) {
+    neonSyncBeginRequest();
+  }
   const op = `PATCH /api/spaces/${spaceId} (name)`;
   try {
     const res = await fetch(`/api/spaces/${spaceId}`, {
@@ -712,10 +833,12 @@ export async function apiPatchSpaceName(spaceId: string, name: string): Promise<
 
 export async function apiPatchSpaceParent(
   spaceId: string,
-  parentSpaceId: string | null,
+  parentSpaceId: string | null
 ): Promise<boolean> {
   const track = getNeonSyncSnapshot().cloudEnabled;
-  if (track) neonSyncBeginRequest();
+  if (track) {
+    neonSyncBeginRequest();
+  }
   const op = `PATCH /api/spaces/${spaceId} (parentSpaceId)`;
   try {
     const res = await fetch(`/api/spaces/${spaceId}`, {

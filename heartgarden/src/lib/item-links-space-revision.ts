@@ -12,18 +12,29 @@ type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 // staleness (polls are 2–5s; TTL is 1s). Writers can bust the entry via
 // `invalidateItemLinksRevisionForSpace` so locally-triggered changes are visible
 // on the next poll from the same process.
-const ITEM_LINKS_REVISION_CACHE_TTL_MS = 1_000;
-const itemLinksRevisionCache = new Map<string, { value: string; expiresAt: number }>();
+const ITEM_LINKS_REVISION_CACHE_TTL_MS = 1000;
+const itemLinksRevisionCache = new Map<
+  string,
+  { value: string; expiresAt: number }
+>();
 const ITEM_LINKS_REVISION_CACHE_MAX_ENTRIES = 1024;
 
 function pruneItemLinksRevisionCacheIfOversized(now: number): void {
-  if (itemLinksRevisionCache.size <= ITEM_LINKS_REVISION_CACHE_MAX_ENTRIES) return;
-  for (const [key, entry] of itemLinksRevisionCache) {
-    if (entry.expiresAt <= now) itemLinksRevisionCache.delete(key);
+  if (itemLinksRevisionCache.size <= ITEM_LINKS_REVISION_CACHE_MAX_ENTRIES) {
+    return;
   }
-  if (itemLinksRevisionCache.size <= ITEM_LINKS_REVISION_CACHE_MAX_ENTRIES) return;
+  for (const [key, entry] of itemLinksRevisionCache) {
+    if (entry.expiresAt <= now) {
+      itemLinksRevisionCache.delete(key);
+    }
+  }
+  if (itemLinksRevisionCache.size <= ITEM_LINKS_REVISION_CACHE_MAX_ENTRIES) {
+    return;
+  }
   const firstKey = itemLinksRevisionCache.keys().next().value;
-  if (firstKey !== undefined) itemLinksRevisionCache.delete(firstKey);
+  if (firstKey !== undefined) {
+    itemLinksRevisionCache.delete(firstKey);
+  }
 }
 
 export function invalidateItemLinksRevisionForSpace(spaceId: string): void {
@@ -32,7 +43,7 @@ export function invalidateItemLinksRevisionForSpace(spaceId: string): void {
 
 async function computeItemLinksRevisionUncached(
   db: VigilDb,
-  spaceId: string,
+  spaceId: string
 ): Promise<string> {
   const [row] = await db
     .select({
@@ -70,7 +81,7 @@ async function computeItemLinksRevisionUncached(
             WHERE ${items.id} = ${entityMentions.targetItemId} AND ${items.spaceId} = ${spaceId}
           )
         )
-      ) s`,
+      ) s`
     );
 
   const c = row?.c ?? 0;
@@ -89,11 +100,13 @@ async function computeItemLinksRevisionUncached(
  */
 export async function computeItemLinksRevisionForSpace(
   db: VigilDb,
-  spaceId: string,
+  spaceId: string
 ): Promise<string> {
   const now = Date.now();
   const cached = itemLinksRevisionCache.get(spaceId);
-  if (cached && cached.expiresAt > now) return cached.value;
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
+  }
   const value = await computeItemLinksRevisionUncached(db, spaceId);
   itemLinksRevisionCache.set(spaceId, {
     value,

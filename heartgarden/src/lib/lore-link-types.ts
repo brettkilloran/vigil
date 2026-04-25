@@ -1,4 +1,7 @@
-import type { CanvasEntity, LoreCardKind } from "@/src/components/foundation/architectural-types";
+import type {
+  CanvasEntity,
+  LoreCardKind,
+} from "@/src/components/foundation/architectural-types";
 import { normalizeLinkTypeAlias } from "@/src/lib/connection-kind-colors";
 
 /** `item_links.link_type` grouping for UI (default pin vs canonical relationships). */
@@ -30,29 +33,60 @@ export type LoreLinkTypeOption = {
  * reason over them reliably.
  */
 export const LORE_LINK_TYPE_OPTIONS: readonly LoreLinkTypeOption[] = [
-  { value: "pin", label: "Pin thread", group: "canvas", menuLabel: "Pin thread (default rope)" },
+  {
+    value: "pin",
+    label: "Pin thread",
+    group: "canvas",
+    menuLabel: "Pin thread (default rope)",
+  },
   { value: "bond", label: "Bond", group: "relationship", menuLabel: "Bond" },
-  { value: "affiliation", label: "Affiliation", group: "relationship", menuLabel: "Affiliation" },
-  { value: "contract", label: "Contract", group: "relationship", menuLabel: "Contract" },
-  { value: "conflict", label: "Conflict", group: "relationship", menuLabel: "Conflict" },
-  { value: "history", label: "History", group: "relationship", menuLabel: "History" },
+  {
+    value: "affiliation",
+    label: "Affiliation",
+    group: "relationship",
+    menuLabel: "Affiliation",
+  },
+  {
+    value: "contract",
+    label: "Contract",
+    group: "relationship",
+    menuLabel: "Contract",
+  },
+  {
+    value: "conflict",
+    label: "Conflict",
+    group: "relationship",
+    menuLabel: "Conflict",
+  },
+  {
+    value: "history",
+    label: "History",
+    group: "relationship",
+    menuLabel: "History",
+  },
 ] as const;
 
-export type LoreLinkTypeValue = (typeof LORE_LINK_TYPE_OPTIONS)[number]["value"];
+export type LoreLinkTypeValue =
+  (typeof LORE_LINK_TYPE_OPTIONS)[number]["value"];
 
-const OPTION_BY_VALUE: Record<string, LoreLinkTypeOption | undefined> = Object.fromEntries(
-  LORE_LINK_TYPE_OPTIONS.map((o) => [o.value, o]),
-);
+const OPTION_BY_VALUE: Record<string, LoreLinkTypeOption | undefined> =
+  Object.fromEntries(LORE_LINK_TYPE_OPTIONS.map((o) => [o.value, o]));
 
 /** Label for menus; falls back to raw value for unknown / forward-compatible types. */
 export function menuLabelForLinkType(value: string | null | undefined): string {
-  if (!value) return "Pin thread";
+  if (!value) {
+    return "Pin thread";
+  }
   const o = OPTION_BY_VALUE[normalizeLinkTypeAlias(value)];
   return o?.menuLabel ?? value;
 }
 
-function loreCardKindFromEntity(entity: CanvasEntity | undefined): LoreCardKind | null {
-  if (!entity || entity.kind !== "content") return null;
+function loreCardKindFromEntity(
+  entity: CanvasEntity | undefined
+): LoreCardKind | null {
+  if (!entity || entity.kind !== "content") {
+    return null;
+  }
   return entity.loreCard?.kind ?? null;
 }
 
@@ -62,30 +96,39 @@ function loreCardKindFromEntity(entity: CanvasEntity | undefined): LoreCardKind 
 function linkTypeRankScore(
   value: string,
   source: CanvasEntity | undefined,
-  target: CanvasEntity | undefined,
+  target: CanvasEntity | undefined
 ): number {
   const ks = loreCardKindFromEntity(source);
   const kt = loreCardKindFromEntity(target);
   let s = 0;
 
-  if (value === "pin") s += 8;
-  if (value === "bond" && ks === "character" && kt === "character") s += 20;
+  if (value === "pin") {
+    s += 8;
+  }
+  if (value === "bond" && ks === "character" && kt === "character") {
+    s += 20;
+  }
   if (
     value === "affiliation" &&
-    ((ks === "character" && kt === "faction") || (kt === "character" && ks === "faction"))
+    ((ks === "character" && kt === "faction") ||
+      (kt === "character" && ks === "faction"))
   ) {
     s += 22;
   }
   if (
     value === "contract" &&
-    ((ks === "character" && kt === "faction") || (kt === "character" && ks === "faction"))
+    ((ks === "character" && kt === "faction") ||
+      (kt === "character" && ks === "faction"))
   ) {
     s += 16;
   }
-  if (value === "conflict") s += 10;
+  if (value === "conflict") {
+    s += 10;
+  }
   if (
     value === "history" &&
-    ((ks === "character" && kt === "location") || (kt === "character" && ks === "location"))
+    ((ks === "character" && kt === "location") ||
+      (kt === "character" && ks === "location"))
   ) {
     s += 14;
   }
@@ -96,7 +139,7 @@ function linkTypeRankScore(
 /** All options in group order; within each group, ranked for the given thread endpoints. */
 export function orderedLoreLinkTypeOptionsForEndpoints(
   source: CanvasEntity | undefined,
-  target: CanvasEntity | undefined,
+  target: CanvasEntity | undefined
 ): LoreLinkTypeOption[] {
   const byGroup: Record<LinkTypeGroup, LoreLinkTypeOption[]> = {
     canvas: [],
@@ -108,7 +151,8 @@ export function orderedLoreLinkTypeOptionsForEndpoints(
   for (const g of LINK_TYPE_GROUP_ORDER) {
     byGroup[g].sort(
       (a, b) =>
-        linkTypeRankScore(b.value, source, target) - linkTypeRankScore(a.value, source, target),
+        linkTypeRankScore(b.value, source, target) -
+        linkTypeRankScore(a.value, source, target)
     );
   }
   return LINK_TYPE_GROUP_ORDER.flatMap((g) => byGroup[g]);
@@ -119,7 +163,7 @@ export function orderedLoreLinkTypeOptionsForEndpoints(
  */
 export function groupedOrderedLinkOptionsForEndpoints(
   source: CanvasEntity | undefined,
-  target: CanvasEntity | undefined,
+  target: CanvasEntity | undefined
 ): { group: LinkTypeGroup; options: LoreLinkTypeOption[] }[] {
   const ordered = orderedLoreLinkTypeOptionsForEndpoints(source, target);
   return LINK_TYPE_GROUP_ORDER.map((g) => ({

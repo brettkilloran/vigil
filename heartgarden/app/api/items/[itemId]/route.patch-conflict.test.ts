@@ -7,7 +7,10 @@ vi.mock("@/src/db/index", () => ({
 }));
 
 vi.mock("@/src/lib/heartgarden-api-boot-context", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("@/src/lib/heartgarden-api-boot-context")>();
+  const mod =
+    await importOriginal<
+      typeof import("@/src/lib/heartgarden-api-boot-context")
+    >();
   return {
     ...mod,
     getHeartgardenApiBootContext: vi.fn(() => Promise.resolve({ role: "gm" })),
@@ -73,7 +76,9 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
           })),
           leftJoin: vi.fn(() => ({
             where: vi.fn(() => ({
-              limit: vi.fn(async () => [{ name: "Test Space", braneType: "gm" }]),
+              limit: vi.fn(async () => [
+                { name: "Test Space", braneType: "gm" },
+              ]),
             })),
           })),
         })),
@@ -90,7 +95,7 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
           title: "Next",
         }),
       }),
-      { params: Promise.resolve({ itemId: ITEM_ID }) },
+      { params: Promise.resolve({ itemId: ITEM_ID }) }
     );
 
     expect(res.status).toBe(400);
@@ -109,7 +114,9 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
           })),
           leftJoin: vi.fn(() => ({
             where: vi.fn(() => ({
-              limit: vi.fn(async () => [{ name: "Test Space", braneType: "gm" }]),
+              limit: vi.fn(async () => [
+                { name: "Test Space", braneType: "gm" },
+              ]),
             })),
           })),
         })),
@@ -127,7 +134,7 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
           baseUpdatedAt: "2020-01-01T00:00:00.000Z",
         }),
       }),
-      { params: Promise.resolve({ itemId: ITEM_ID }) },
+      { params: Promise.resolve({ itemId: ITEM_ID }) }
     );
 
     expect(res.status).toBe(409);
@@ -157,7 +164,9 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
           })),
           leftJoin: vi.fn(() => ({
             where: vi.fn(() => ({
-              limit: vi.fn(async () => [{ name: "Test Space", braneType: "gm" }]),
+              limit: vi.fn(async () => [
+                { name: "Test Space", braneType: "gm" },
+              ]),
             })),
           })),
         })),
@@ -182,11 +191,14 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
           baseUpdatedAt: serverTime.toISOString(),
         }),
       }),
-      { params: Promise.resolve({ itemId: ITEM_ID }) },
+      { params: Promise.resolve({ itemId: ITEM_ID }) }
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean; item?: { title: string } };
+    const body = (await res.json()) as {
+      ok: boolean;
+      item?: { title: string };
+    };
     expect(body.ok).toBe(true);
     expect(body.item?.title).toBe("Next");
   });

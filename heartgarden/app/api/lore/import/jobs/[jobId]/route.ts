@@ -9,9 +9,7 @@ import {
   heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { scheduleLoreImportJobProcessing } from "@/src/lib/lore-import-job-after";
-import {
-  STALE_LORE_IMPORT_PROCESSING_MS,
-} from "@/src/lib/lore-import-job-process";
+import { STALE_LORE_IMPORT_PROCESSING_MS } from "@/src/lib/lore-import-job-process";
 import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
 
 export const runtime = "nodejs";
@@ -30,7 +28,13 @@ type LoreImportJobProgressPayload = {
 type LoreImportJobEventPayload = {
   ts?: string;
   phase?: string;
-  kind: "phase_start" | "phase_end" | "llm_call" | "vault_search" | "warning" | "note";
+  kind:
+    | "phase_start"
+    | "phase_end"
+    | "llm_call"
+    | "vault_search"
+    | "warning"
+    | "note";
   durationMs?: number;
   model?: string;
   tokensIn?: number;
@@ -70,20 +74,26 @@ function coerceOptionalInt(value: unknown): number | null {
   return null;
 }
 
-function normalizeProgressMeta(meta: unknown): Record<string, unknown> | undefined {
-  if (!meta || typeof meta !== "object") return undefined;
+function normalizeProgressMeta(
+  meta: unknown
+): Record<string, unknown> | undefined {
+  if (!meta || typeof meta !== "object") {
+    return;
+  }
   const m = { ...(meta as Record<string, unknown>) };
   const p = coerceOptionalInt(m.pipelinePercent);
-  if (p !== null) {
-    m.pipelinePercent = Math.max(0, Math.min(100, p));
-  } else {
+  if (p === null) {
     delete m.pipelinePercent;
+  } else {
+    m.pipelinePercent = Math.max(0, Math.min(100, p));
   }
   return m;
 }
 
 function normalizeJobEvent(event: unknown): LoreImportJobEventPayload | null {
-  if (!event || typeof event !== "object") return null;
+  if (!event || typeof event !== "object") {
+    return null;
+  }
   const row = event as Record<string, unknown>;
   const kind = String(row.kind ?? "").trim();
   if (
@@ -98,44 +108,74 @@ function normalizeJobEvent(event: unknown): LoreImportJobEventPayload | null {
   }
   const out: LoreImportJobEventPayload = { kind };
   const ts = String(row.ts ?? "").trim();
-  if (ts) out.ts = ts.slice(0, 64);
+  if (ts) {
+    out.ts = ts.slice(0, 64);
+  }
   const phase = String(row.phase ?? "").trim();
-  if (phase) out.phase = phase.slice(0, 64);
+  if (phase) {
+    out.phase = phase.slice(0, 64);
+  }
   const model = String(row.model ?? "").trim();
-  if (model) out.model = model.slice(0, 128);
+  if (model) {
+    out.model = model.slice(0, 128);
+  }
   const stopReason = String(row.stopReason ?? "").trim();
-  if (stopReason) out.stopReason = stopReason.slice(0, 64);
+  if (stopReason) {
+    out.stopReason = stopReason.slice(0, 64);
+  }
   const responseSnippet = String(row.responseSnippet ?? "").trim();
-  if (responseSnippet) out.responseSnippet = responseSnippet.slice(0, 2_000);
+  if (responseSnippet) {
+    out.responseSnippet = responseSnippet.slice(0, 2000);
+  }
   const text = String(row.text ?? "").trim();
-  if (text) out.text = text.slice(0, 280);
+  if (text) {
+    out.text = text.slice(0, 280);
+  }
   const ref = String(row.ref ?? "").trim();
-  if (ref) out.ref = ref.slice(0, 128);
+  if (ref) {
+    out.ref = ref.slice(0, 128);
+  }
   const durationMs = coerceOptionalInt(row.durationMs);
-  if (durationMs !== null && durationMs >= 0) out.durationMs = durationMs;
+  if (durationMs !== null && durationMs >= 0) {
+    out.durationMs = durationMs;
+  }
   const tokensIn = coerceOptionalInt(row.tokensIn);
-  if (tokensIn !== null && tokensIn >= 0) out.tokensIn = tokensIn;
+  if (tokensIn !== null && tokensIn >= 0) {
+    out.tokensIn = tokensIn;
+  }
   const tokensOut = coerceOptionalInt(row.tokensOut);
-  if (tokensOut !== null && tokensOut >= 0) out.tokensOut = tokensOut;
+  if (tokensOut !== null && tokensOut >= 0) {
+    out.tokensOut = tokensOut;
+  }
   return out;
 }
 
 function normalizeJobEvents(
   events: unknown,
-  opts?: { running?: boolean },
+  opts?: { running?: boolean }
 ): LoreImportJobEventPayload[] {
-  if (!Array.isArray(events)) return [];
+  if (!Array.isArray(events)) {
+    return [];
+  }
   const normalized = events
     .map((entry) => normalizeJobEvent(entry))
     .filter((entry): entry is LoreImportJobEventPayload => Boolean(entry));
-  if (!opts?.running) return normalized;
-  if (normalized.length <= LORE_IMPORT_PROGRESS_EVENTS_LIMIT) return normalized;
-  return normalized.slice(normalized.length - LORE_IMPORT_PROGRESS_EVENTS_LIMIT);
+  if (!opts?.running) {
+    return normalized;
+  }
+  if (normalized.length <= LORE_IMPORT_PROGRESS_EVENTS_LIMIT) {
+    return normalized;
+  }
+  return normalized.slice(
+    normalized.length - LORE_IMPORT_PROGRESS_EVENTS_LIMIT
+  );
 }
 
 function isMissingProgressColumnsError(error: unknown): boolean {
   const source =
-    error && typeof error === "object" ? (error as Record<string, unknown>) : {};
+    error && typeof error === "object"
+      ? (error as Record<string, unknown>)
+      : {};
   const code = String(source.code ?? "").trim();
   const column = String(source.column ?? "").toLowerCase();
   const message = String(source.message ?? "").toLowerCase();
@@ -146,12 +186,14 @@ function isMissingProgressColumnsError(error: unknown): boolean {
     message.includes("progress_") ||
     message.includes("last_progress_at") ||
     message.includes("progress_events");
-  if (!mentionsProgressColumn) return false;
+  if (!mentionsProgressColumn) {
+    return false;
+  }
   return !code || code === "42703" || code === "42P01";
 }
 
 function normalizeJobProgress(
-  job: LoreImportJobView,
+  job: LoreImportJobView
 ): LoreImportJobProgressPayload | undefined {
   const step = coerceOptionalInt(job.progressStep);
   const total = coerceOptionalInt(job.progressTotal);
@@ -161,20 +203,25 @@ function normalizeJobProgress(
     total !== null ||
     Boolean(job.progressMessage) ||
     Boolean(job.progressMeta);
-  if (!hasProgress) return undefined;
+  if (!hasProgress) {
+    return;
+  }
   return {
     phase: job.progressPhase ?? undefined,
     step: step ?? undefined,
     total: total ?? undefined,
     message: job.progressMessage ?? undefined,
     meta: normalizeProgressMeta(job.progressMeta),
-    updatedAt: job.lastProgressAt ? job.lastProgressAt.toISOString() : undefined,
+    updatedAt: job.lastProgressAt
+      ? job.lastProgressAt.toISOString()
+      : undefined,
   };
 }
 
-function readFailedMeta(
-  job: LoreImportJobView,
-): { errorCode?: string; lastPhase?: string } {
+function readFailedMeta(job: LoreImportJobView): {
+  errorCode?: string;
+  lastPhase?: string;
+} {
   const meta = (job.progressMeta as Record<string, unknown> | null) ?? null;
   return {
     errorCode: typeof meta?.errorCode === "string" ? meta.errorCode : undefined,
@@ -186,14 +233,20 @@ function readFailedMeta(
 }
 
 export async function GET(req: Request, ctx: RouteCtx) {
-  const attemptId = req.headers.get("x-heartgarden-import-attempt")?.trim() || "unknown";
+  const attemptId =
+    req.headers.get("x-heartgarden-import-attempt")?.trim() || "unknown";
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
 
   const { jobId } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/i.test(jobId)) {
-    return Response.json({ ok: false, error: "Invalid job id" }, { status: 400 });
+    return Response.json(
+      { ok: false, error: "Invalid job id" },
+      { status: 400 }
+    );
   }
 
   const url = new URL(req.url);
@@ -201,7 +254,7 @@ export async function GET(req: Request, ctx: RouteCtx) {
   if (!/^[0-9a-f-]{36}$/i.test(spaceId)) {
     return Response.json(
       { ok: false, error: "Query parameter spaceId (uuid) is required" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -209,7 +262,7 @@ export async function GET(req: Request, ctx: RouteCtx) {
   if (!db) {
     return Response.json(
       { ok: false, error: "Database not configured" },
-      { status: 503 },
+      { status: 503 }
     );
   }
 
@@ -227,7 +280,8 @@ export async function GET(req: Request, ctx: RouteCtx) {
     .where(eq(loreImportJobs.id, jobId))
     .limit(1);
   let job: LoreImportJobView | null = baseJob ?? null;
-  const canExecuteSql = typeof (db as { execute?: unknown }).execute === "function";
+  const canExecuteSql =
+    typeof (db as { execute?: unknown }).execute === "function";
   if (job && canExecuteSql) {
     try {
       const progressRows = await db.execute(sql`
@@ -243,7 +297,8 @@ export async function GET(req: Request, ctx: RouteCtx) {
         where "id" = ${jobId}
         limit 1
       `);
-      const row = (progressRows as { rows?: Record<string, unknown>[] })?.rows?.[0];
+      const row = (progressRows as { rows?: Record<string, unknown>[] })
+        ?.rows?.[0];
       if (row) {
         job = {
           ...job,
@@ -252,7 +307,9 @@ export async function GET(req: Request, ctx: RouteCtx) {
           progressStep: coerceOptionalInt(row.progress_step),
           progressTotal: coerceOptionalInt(row.progress_total),
           progressMessage:
-            typeof row.progress_message === "string" ? row.progress_message : null,
+            typeof row.progress_message === "string"
+              ? row.progress_message
+              : null,
           progressMeta:
             row.progress_meta && typeof row.progress_meta === "object"
               ? (row.progress_meta as Record<string, unknown>)
@@ -261,18 +318,21 @@ export async function GET(req: Request, ctx: RouteCtx) {
             ? (row.progress_events as unknown[])
             : null,
           lastProgressAt:
-            row.last_progress_at instanceof Date
-              ? row.last_progress_at
-              : null,
+            row.last_progress_at instanceof Date ? row.last_progress_at : null,
         };
       }
     } catch (error) {
-      if (!isMissingProgressColumnsError(error)) throw error;
+      if (!isMissingProgressColumnsError(error)) {
+        throw error;
+      }
     }
   }
 
   if (!job || job.spaceId !== spaceId) {
-    return Response.json({ ok: false, error: "Job not found" }, { status: 404 });
+    return Response.json(
+      { ok: false, error: "Job not found" },
+      { status: 404 }
+    );
   }
   if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, spaceId))) {
     return heartgardenApiForbiddenJsonResponse();
@@ -297,7 +357,7 @@ export async function GET(req: Request, ctx: RouteCtx) {
           progress: normalizeJobProgress(job),
           events: normalizeJobEvents(job.progressEvents, { running: false }),
         },
-        { status: 500 },
+        { status: 500 }
       );
     }
     return Response.json({
@@ -320,7 +380,7 @@ export async function GET(req: Request, ctx: RouteCtx) {
         progress: normalizeJobProgress(job),
         events: normalizeJobEvents(job.progressEvents, { running: false }),
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 
@@ -347,7 +407,7 @@ export async function GET(req: Request, ctx: RouteCtx) {
     ...(job.status === "failed"
       ? {
           error: exposeFailureDetail
-            ? (job.error || "Import job failed")
+            ? job.error || "Import job failed"
             : "Import job failed",
           code: "lore_import_job_failed",
           errorCode: failedMeta.errorCode,
@@ -358,14 +418,20 @@ export async function GET(req: Request, ctx: RouteCtx) {
 }
 
 export async function DELETE(req: Request, ctx: RouteCtx) {
-  const attemptId = req.headers.get("x-heartgarden-import-attempt")?.trim() || "unknown";
+  const attemptId =
+    req.headers.get("x-heartgarden-import-attempt")?.trim() || "unknown";
   const bootCtx = await getHeartgardenApiBootContext();
   const denied = enforceGmOnlyBootContext(bootCtx);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
 
   const { jobId } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/i.test(jobId)) {
-    return Response.json({ ok: false, error: "Invalid job id" }, { status: 400 });
+    return Response.json(
+      { ok: false, error: "Invalid job id" },
+      { status: 400 }
+    );
   }
 
   const url = new URL(req.url);
@@ -373,7 +439,7 @@ export async function DELETE(req: Request, ctx: RouteCtx) {
   if (!/^[0-9a-f-]{36}$/i.test(spaceId)) {
     return Response.json(
       { ok: false, error: "Query parameter spaceId (uuid) is required" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -381,7 +447,7 @@ export async function DELETE(req: Request, ctx: RouteCtx) {
   if (!db) {
     return Response.json(
       { ok: false, error: "Database not configured" },
-      { status: 503 },
+      { status: 503 }
     );
   }
   if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, spaceId))) {
@@ -399,10 +465,17 @@ export async function DELETE(req: Request, ctx: RouteCtx) {
     .limit(1);
 
   if (!job || job.spaceId !== spaceId) {
-    return Response.json({ ok: false, error: "Job not found" }, { status: 404 });
+    return Response.json(
+      { ok: false, error: "Job not found" },
+      { status: 404 }
+    );
   }
 
-  if (job.status === "ready" || job.status === "failed" || job.status === "cancelled") {
+  if (
+    job.status === "ready" ||
+    job.status === "failed" ||
+    job.status === "cancelled"
+  ) {
     return Response.json({
       ok: true,
       attemptId,

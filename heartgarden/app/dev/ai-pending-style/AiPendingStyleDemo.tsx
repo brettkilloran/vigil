@@ -44,7 +44,7 @@ const FOCUS_MARGIN_PREVIEW_DOC: JSONContent = {
  */
 export function AiPendingStyleDemo() {
   const [marginPreviewDoc, setMarginPreviewDoc] = useState<JSONContent>(() =>
-    structuredClone(FOCUS_MARGIN_PREVIEW_DOC),
+    structuredClone(FOCUS_MARGIN_PREVIEW_DOC)
   );
 
   return (
@@ -64,24 +64,28 @@ export function AiPendingStyleDemo() {
         Route: <a href="/dev/ai-pending-style">/dev/ai-pending-style</a>
       </p>
       <p className={styles.intro}>
-        Pending text uses a <strong>soft violet tint</strong> (not underlined) so it does not look
-        like a link. The same spans render on the <strong>canvas card</strong>, in{" "}
-        <strong>focus mode</strong> (expanded editor), and in lore hybrid notes (TipTap{" "}
-        <code>hgAiPending</code> mark).
+        Pending text uses a <strong>soft violet tint</strong> (not underlined)
+        so it does not look like a link. The same spans render on the{" "}
+        <strong>canvas card</strong>, in <strong>focus mode</strong> (expanded
+        editor), and in lore hybrid notes (TipTap <code>hgAiPending</code>{" "}
+        mark).
       </p>
       <ul className={styles.flowList}>
         <li>
-          <strong>Canvas:</strong> “Unreviewed” chip + <strong>Accept</strong> in the card header
-          clears highlights and marks the item reviewed.
+          <strong>Canvas:</strong> “Unreviewed” chip + <strong>Accept</strong>{" "}
+          in the card header clears highlights and marks the item reviewed.
         </li>
         <li>
-          <strong>Focus mode:</strong> the same chip, header <strong>Accept</strong>, and a short
-          hint appear under “EDITING // …”. In the TipTap body, each pending range also gets its own
-          <strong>Accept</strong> in the <strong>right margin</strong> (see live preview below).
+          <strong>Focus mode:</strong> the same chip, header{" "}
+          <strong>Accept</strong>, and a short hint appear under “EDITING // …”.
+          In the TipTap body, each pending range also gets its own
+          <strong>Accept</strong> in the <strong>right margin</strong> (see live
+          preview below).
         </li>
         <li>
-          <strong>Inline:</strong> typing inside highlighted text removes the tint for that range;
-          when nothing is left highlighted, the item’s review flag clears on save.
+          <strong>Inline:</strong> typing inside highlighted text removes the
+          tint for that range; when nothing is left highlighted, the item’s
+          review flag clears on save.
         </li>
       </ul>
 
@@ -89,20 +93,24 @@ export function AiPendingStyleDemo() {
         Focus mode (mock)
       </h2>
       <p className={styles.intro} style={{ marginBottom: 16 }}>
-        Real UI lives in the focus overlay; this block copies the same header layout and body
-        tokens.
+        Real UI lives in the focus overlay; this block copies the same header
+        layout and body tokens.
       </p>
-      <div className={`${styles.focusMockSheet} ${styles.demoCard}`} style={{ marginBottom: 32 }}>
+      <div
+        className={`${styles.focusMockSheet} ${styles.demoCard}`}
+        style={{ marginBottom: 32 }}
+      >
         <div className={styles.focusMockHeader}>
           <div className={canvasStyles.focusHeaderLead}>
             <div className={canvasStyles.focusMeta}>EDITING // DEMO1234</div>
             <div className={canvasStyles.focusAiReviewBar}>
               <Tag variant="llmLight">Unreviewed</Tag>
-              <Button type="button" size="xs" variant="ghost" tone="glass">
+              <Button size="xs" tone="glass" type="button" variant="ghost">
                 Accept
               </Button>
               <span className={canvasStyles.focusAiReviewHint}>
-                Typing in highlighted text also clears it; Save applies like any edit.
+                Typing in highlighted text also clears it; Save applies like any
+                edit.
               </span>
             </div>
           </div>
@@ -113,7 +121,7 @@ export function AiPendingStyleDemo() {
         >
           <p style={{ marginTop: 0 }}>
             Normal focus body copy uses the default ink color.{" "}
-            <span data-hg-ai-pending="true" className="hgAiPending">
+            <span className="hgAiPending" data-hg-ai-pending="true">
               This sentence is still marked as import / LLM output.
             </span>{" "}
             The rest is yours.
@@ -127,21 +135,22 @@ export function AiPendingStyleDemo() {
         </h2>
         <p className={styles.intro} style={{ marginBottom: 16 }}>
           The <strong>per-section</strong> check buttons only exist in the real{" "}
-          <code>HeartgardenDocEditor</code> when the document contains <code>hgAiPending</code> marks.
-          Static HTML spans (mock section above) do not mount this rail. Edit the text or click
-          Accept to see the mark strip and the header chip clear on save in the real app.
+          <code>HeartgardenDocEditor</code> when the document contains{" "}
+          <code>hgAiPending</code> marks. Static HTML spans (mock section above)
+          do not mount this rail. Edit the text or click Accept to see the mark
+          strip and the header chip clear on save in the real app.
         </p>
         <div className={styles.tiptapMarginPreviewBody}>
           <HeartgardenDocEditor
-            surfaceKey="dev-ai-pending-focus-margin"
             chromeRole="focus"
-            value={marginPreviewDoc}
-            onChange={setMarginPreviewDoc}
-            editable
-            showAiPendingGutter
-            enableDragHandle
             className={canvasStyles.focusBody}
+            editable
+            enableDragHandle
+            onChange={setMarginPreviewDoc}
             placeholder="Write here, or type / for blocks…"
+            showAiPendingGutter
+            surfaceKey="dev-ai-pending-focus-margin"
+            value={marginPreviewDoc}
           />
         </div>
       </div>
@@ -153,26 +162,31 @@ export function AiPendingStyleDemo() {
             className={`${canvasStyles.entityNode} ${canvasStyles.themeDefault} ${canvasStyles.a4DocumentNode} ${styles.demoCard}`}
             style={{ width: 380, maxWidth: "100%" }}
           >
-            <div className={canvasStyles.nodeHeader} style={{ cursor: "default" }}>
+            <div
+              className={canvasStyles.nodeHeader}
+              style={{ cursor: "default" }}
+            >
               <div className={canvasStyles.nodeTitleRow}>
                 <Tag variant="llmLight">Unreviewed</Tag>
                 <span className={canvasStyles.nodeTitle}>Merged import</span>
               </div>
             </div>
-            <div className={`${canvasStyles.nodeBody} ${canvasStyles.a4DocumentBody}`}>
+            <div
+              className={`${canvasStyles.nodeBody} ${canvasStyles.a4DocumentBody}`}
+            >
               <p>
-                Your existing note text stays at normal body color. After a merge, the import adds a
-                block below.
+                Your existing note text stays at normal body color. After a
+                merge, the import adds a block below.
               </p>
               <p>
-                <span data-hg-ai-pending="true" className="hgAiPending">
-                  This paragraph was appended by the import pipeline and is wrapped in a pending
-                  span. Edit or Accept to clear.
+                <span className="hgAiPending" data-hg-ai-pending="true">
+                  This paragraph was appended by the import pipeline and is
+                  wrapped in a pending span. Edit or Accept to clear.
                 </span>
               </p>
               <p>
                 Approved line.{" "}
-                <span data-hg-ai-pending="true" className="hgAiPending">
+                <span className="hgAiPending" data-hg-ai-pending="true">
                   Mid-sentence pending AI clause
                 </span>{" "}
                 and the rest is approved.
@@ -187,16 +201,27 @@ export function AiPendingStyleDemo() {
             className={`${canvasStyles.entityNode} ${canvasStyles.themeCode} ${canvasStyles.a4DocumentNode} ${styles.demoCard}`}
             style={{ width: 380, maxWidth: "100%" }}
           >
-            <div className={canvasStyles.nodeHeader} style={{ cursor: "default" }}>
+            <div
+              className={canvasStyles.nodeHeader}
+              style={{ cursor: "default" }}
+            >
               <div className={canvasStyles.nodeTitleRow}>
                 <Tag variant="llmCode">Unreviewed</Tag>
                 <span className={canvasStyles.nodeTitle}>Snippet</span>
               </div>
             </div>
-            <div className={`${canvasStyles.nodeBody} ${canvasStyles.a4DocumentBody}`}>
-              <p style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 13 }}>
-                <span data-hg-ai-pending="true" className="hgAiPending">
-                  Pending AI line in a code-themed card (hgDoc uses the same mark in the editor).
+            <div
+              className={`${canvasStyles.nodeBody} ${canvasStyles.a4DocumentBody}`}
+            >
+              <p
+                style={{
+                  fontFamily: "var(--font-geist-mono), monospace",
+                  fontSize: 13,
+                }}
+              >
+                <span className="hgAiPending" data-hg-ai-pending="true">
+                  Pending AI line in a code-themed card (hgDoc uses the same
+                  mark in the editor).
                 </span>
               </p>
             </div>
@@ -204,7 +229,9 @@ export function AiPendingStyleDemo() {
         </div>
 
         <div className={styles.column}>
-          <h2 className={styles.sectionTitle}>TipTap hgDoc (read-only JSON → HTML)</h2>
+          <h2 className={styles.sectionTitle}>
+            TipTap hgDoc (read-only JSON → HTML)
+          </h2>
           <p
             style={{
               fontSize: 12,
@@ -214,8 +241,8 @@ export function AiPendingStyleDemo() {
               lineHeight: 1.5,
             }}
           >
-            In the app, hgDoc surfaces render the <code>hgAiPending</code> mark with the same global
-            span styling after export.
+            In the app, hgDoc surfaces render the <code>hgAiPending</code> mark
+            with the same global span styling after export.
           </p>
         </div>
       </div>

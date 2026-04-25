@@ -13,16 +13,13 @@ import type {
   LoreCard,
   TapeVariant,
 } from "@/src/components/foundation/architectural-types";
-import type { CanvasItem } from "@/src/model/canvas-types";
 import {
-  bodyHtmlImpliesLoreCharacterV11,
-  defaultLoreCardVariantForKind,
-  migrateLocationBodyToOrdoV7,
-  parseLoreCard,
-  tapeVariantForLoreCard,
-} from "@/src/lib/lore-node-seed-html";
-import type { CameraState } from "@/src/model/canvas-types";
+  FACTION_ROSTER_HG_ARCH_KEY,
+  type FactionRosterEntry,
+  parseFactionRoster,
+} from "@/src/lib/faction-roster-schema";
 import { EMPTY_HG_DOC, HG_DOC_FORMAT } from "@/src/lib/hg-doc/constants";
+import { contentEntityUsesHgDoc } from "@/src/lib/hg-doc/entity-uses-hg-doc";
 import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
 import {
   htmlFragmentToHgDocDoc,
@@ -34,12 +31,14 @@ import {
   isHgDocContentJson,
   readHgDocFromContentJson,
 } from "@/src/lib/hg-doc/serialize";
-import { contentEntityUsesHgDoc } from "@/src/lib/hg-doc/entity-uses-hg-doc";
 import {
-  FACTION_ROSTER_HG_ARCH_KEY,
-  parseFactionRoster,
-  type FactionRosterEntry,
-} from "@/src/lib/faction-roster-schema";
+  bodyHtmlImpliesLoreCharacterV11,
+  defaultLoreCardVariantForKind,
+  migrateLocationBodyToOrdoV7,
+  parseLoreCard,
+  tapeVariantForLoreCard,
+} from "@/src/lib/lore-node-seed-html";
+import type { CameraState, CanvasItem } from "@/src/model/canvas-types";
 
 const UNIFIED_NODE_WIDTH = 340;
 const FOLDER_CARD_WIDTH = 420;
@@ -96,33 +95,52 @@ function readRecord(obj: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function parseLoreThreadAnchors(raw: unknown): LoreCanvasThreadAnchors | undefined {
+function parseLoreThreadAnchors(
+  raw: unknown
+): LoreCanvasThreadAnchors | undefined {
   const o = readRecord(raw);
-  if (!o) return undefined;
+  if (!o) {
+    return;
+  }
   const out: LoreCanvasThreadAnchors = {};
-  if (typeof o.primaryLocationItemId === "string" && o.primaryLocationItemId.trim()) {
+  if (
+    typeof o.primaryLocationItemId === "string" &&
+    o.primaryLocationItemId.trim()
+  ) {
     out.primaryLocationItemId = o.primaryLocationItemId.trim();
   }
-  if (typeof o.primaryFactionItemId === "string" && o.primaryFactionItemId.trim()) {
+  if (
+    typeof o.primaryFactionItemId === "string" &&
+    o.primaryFactionItemId.trim()
+  ) {
     out.primaryFactionItemId = o.primaryFactionItemId.trim();
   }
-  if (typeof o.primaryFactionRosterEntryId === "string" && o.primaryFactionRosterEntryId.trim()) {
+  if (
+    typeof o.primaryFactionRosterEntryId === "string" &&
+    o.primaryFactionRosterEntryId.trim()
+  ) {
     out.primaryFactionRosterEntryId = o.primaryFactionRosterEntryId.trim();
   }
   if (Array.isArray(o.linkedCharacterItemIds)) {
     const ids = o.linkedCharacterItemIds.filter(
-      (x): x is string => typeof x === "string" && x.trim().length > 0,
+      (x): x is string => typeof x === "string" && x.trim().length > 0
     );
-    if (ids.length) out.linkedCharacterItemIds = ids;
+    if (ids.length) {
+      out.linkedCharacterItemIds = ids;
+    }
   }
   return Object.keys(out).length ? out : undefined;
 }
 
 function readHgArch(cj: Record<string, unknown> | null): HgArchPayload | null {
-  if (!cj) return null;
+  if (!cj) {
+    return null;
+  }
   const raw = cj.hgArch;
   const o = readRecord(raw);
-  if (!o) return null;
+  if (!o) {
+    return null;
+  }
   const factionRosterRaw = o[FACTION_ROSTER_HG_ARCH_KEY];
   const factionRoster = parseFactionRoster(factionRosterRaw);
   const loreThreadAnchors = parseLoreThreadAnchors(o.loreThreadAnchors);
@@ -130,7 +148,8 @@ function readHgArch(cj: Record<string, unknown> | null): HgArchPayload | null {
     theme: o.theme as ContentTheme | undefined,
     tapeVariant: o.tapeVariant as TapeVariant | undefined,
     rotation: typeof o.rotation === "number" ? o.rotation : undefined,
-    tapeRotation: typeof o.tapeRotation === "number" ? o.tapeRotation : undefined,
+    tapeRotation:
+      typeof o.tapeRotation === "number" ? o.tapeRotation : undefined,
     folderColorScheme:
       typeof o.folderColorScheme === "string" ? o.folderColorScheme : undefined,
     loreCard: parseLoreCard(o.loreCard),
@@ -140,15 +159,23 @@ function readHgArch(cj: Record<string, unknown> | null): HgArchPayload | null {
 }
 
 function readFolderMeta(cj: Record<string, unknown> | null): string | null {
-  if (!cj) return null;
+  if (!cj) {
+    return null;
+  }
   const folder = readRecord(cj.folder);
   const id = folder?.childSpaceId;
   return typeof id === "string" ? id : null;
 }
 
-function readHtmlFromContentJson(cj: Record<string, unknown> | null): string | null {
-  if (!cj) return null;
-  if (cj.format === "html" && typeof cj.html === "string") return cj.html;
+function readHtmlFromContentJson(
+  cj: Record<string, unknown> | null
+): string | null {
+  if (!cj) {
+    return null;
+  }
+  if (cj.format === "html" && typeof cj.html === "string") {
+    return cj.html;
+  }
   return null;
 }
 
@@ -162,7 +189,9 @@ function isLoreEntityItem(item: CanvasItem): boolean {
 
 /** Plain text for search / `content_text` / restore payloads. */
 export function contentPlainTextForEntity(entity: CanvasContentEntity): string {
-  if (entity.bodyDoc != null) return hgDocToPlainText(entity.bodyDoc);
+  if (entity.bodyDoc != null) {
+    return hgDocToPlainText(entity.bodyDoc);
+  }
   return htmlToPlainText(entity.bodyHtml);
 }
 
@@ -172,7 +201,9 @@ function bodyHtmlFromCanvasItem(item: CanvasItem): string {
     return hgDocToHtml(readHgDocFromContentJson(cj));
   }
   const fromJson = readHtmlFromContentJson(cj);
-  if (fromJson) return fromJson;
+  if (fromJson) {
+    return fromJson;
+  }
   if (item.itemType === "image" && item.imageUrl) {
     return `
         <div data-architectural-media-root="true">
@@ -187,30 +218,47 @@ function bodyHtmlFromCanvasItem(item: CanvasItem): string {
   return DEFAULT_NOTE_HTML;
 }
 
-function themeFromItemType(item: CanvasItem, hg: HgArchPayload | null): ContentTheme {
-  if (item.itemType === "checklist") return "task";
-  if (item.itemType === "image") return "media";
-  if (hg?.theme) return hg.theme;
+function themeFromItemType(
+  item: CanvasItem,
+  hg: HgArchPayload | null
+): ContentTheme {
+  if (item.itemType === "checklist") {
+    return "task";
+  }
+  if (item.itemType === "image") {
+    return "media";
+  }
+  if (hg?.theme) {
+    return hg.theme;
+  }
   return "default";
 }
 
 function tapeVariantForTheme(theme: ContentTheme): TapeVariant {
-  if (theme === "code") return "dark";
-  if (theme === "task") return "masking";
-  if (theme === "media") return "dark";
+  if (theme === "code") {
+    return "dark";
+  }
+  if (theme === "task") {
+    return "masking";
+  }
+  if (theme === "media") {
+    return "dark";
+  }
   return "clear";
 }
 
 export function canvasItemToEntity(
   item: CanvasItem,
-  activeSpaceId: string,
+  activeSpaceId: string
 ): CanvasEntity | null {
   const cj = readRecord(item.contentJson ?? null);
   const hg = readHgArch(cj);
 
   if (item.itemType === "folder") {
     const childSpaceId = readFolderMeta(cj);
-    if (!childSpaceId) return null;
+    if (!childSpaceId) {
+      return null;
+    }
     const folder: CanvasFolderEntity = {
       id: item.id,
       title: item.title || "Folder",
@@ -220,7 +268,9 @@ export function canvasItemToEntity(
       rotation: hg?.rotation ?? 0,
       width: item.width || FOLDER_CARD_WIDTH,
       height:
-        typeof item.height === "number" && item.height > 0 ? item.height : FOLDER_CARD_HEIGHT,
+        typeof item.height === "number" && item.height > 0
+          ? item.height
+          : FOLDER_CARD_HEIGHT,
       tapeRotation: hg?.tapeRotation ?? 0,
       entityMeta: item.entityMeta ?? null,
       stackId: item.stackId ?? null,
@@ -230,7 +280,8 @@ export function canvasItemToEntity(
       },
     };
     if (hg?.folderColorScheme) {
-      folder.folderColorScheme = hg.folderColorScheme as CanvasFolderEntity["folderColorScheme"];
+      folder.folderColorScheme =
+        hg.folderColorScheme as CanvasFolderEntity["folderColorScheme"];
     }
     return folder;
   }
@@ -239,7 +290,9 @@ export function canvasItemToEntity(
   const workHtml = bodyHtmlFromCanvasItem(item);
   const loreFromHg = hg?.loreCard;
   const loreFromEntityType =
-    item.entityType === "character" || item.entityType === "faction" || item.entityType === "location"
+    item.entityType === "character" ||
+    item.entityType === "faction" ||
+    item.entityType === "location"
       ? ({
           kind: item.entityType,
           variant: defaultLoreCardVariantForKind(item.entityType),
@@ -258,7 +311,8 @@ export function canvasItemToEntity(
     bodyDoc = readHgDocFromContentJson(cj);
     bodyHtml = hgDocToHtml(bodyDoc);
   } else {
-    const usesHtmlBody = theme === "media" || Boolean(loreCard) || isLoreEntityItem(item);
+    const usesHtmlBody =
+      theme === "media" || Boolean(loreCard) || isLoreEntityItem(item);
     if (usesHtmlBody) {
       bodyDoc = undefined;
     } else if (theme === "code" && workHtml.trim()) {
@@ -304,7 +358,10 @@ export function canvasItemToEntity(
   if (loreCard) {
     entity.loreCard = loreCard;
     if (!hg?.tapeVariant) {
-      entity.tapeVariant = tapeVariantForLoreCard(loreCard.kind, loreCard.variant);
+      entity.tapeVariant = tapeVariantForLoreCard(
+        loreCard.kind,
+        loreCard.variant
+      );
     }
   }
   if (loreCard?.kind === "faction" && hg?.factionRoster) {
@@ -324,7 +381,7 @@ export function findRootSpaceId(spaces: BootstrapSpaceRow[]): string {
 /** Keep canvas threads when rebasing bootstrap data; drop edges whose cards were removed. */
 export function pruneConnectionsToExistingEntities(
   connections: Record<string, CanvasPinConnection>,
-  entityIds: ReadonlySet<string>,
+  entityIds: ReadonlySet<string>
 ): Record<string, CanvasPinConnection> {
   const next: Record<string, CanvasPinConnection> = {};
   for (const [id, c] of Object.entries(connections)) {
@@ -335,7 +392,9 @@ export function pruneConnectionsToExistingEntities(
   return next;
 }
 
-export function buildCanvasGraphFromBootstrap(data: BootstrapResponse): CanvasGraph {
+export function buildCanvasGraphFromBootstrap(
+  data: BootstrapResponse
+): CanvasGraph {
   const rootSpaceId = findRootSpaceId(data.spaces);
 
   const spacesRecord: Record<string, CanvasSpace> = {};
@@ -356,7 +415,9 @@ export function buildCanvasGraphFromBootstrap(data: BootstrapResponse): CanvasGr
 
   for (const item of data.items) {
     const e = canvasItemToEntity(item, item.spaceId);
-    if (!e) continue;
+    if (!e) {
+      continue;
+    }
     entities[e.id] = e;
     const sp = spacesRecord[item.spaceId];
     const ids = entityIdsBySpace.get(item.spaceId);
@@ -376,12 +437,17 @@ export function buildCanvasGraphFromBootstrap(data: BootstrapResponse): CanvasGr
 
 function mergeEntityFromItem(
   prevEntity: CanvasEntity | undefined,
-  item: CanvasItem,
+  item: CanvasItem
 ): CanvasEntity | null {
   const fresh = canvasItemToEntity(item, item.spaceId);
-  if (!fresh) return null;
+  if (!fresh) {
+    return null;
+  }
   if (prevEntity && "slots" in prevEntity && "slots" in fresh) {
-    return { ...fresh, slots: { ...prevEntity.slots, ...fresh.slots } } as CanvasEntity;
+    return {
+      ...fresh,
+      slots: { ...prevEntity.slots, ...fresh.slots },
+    } as CanvasEntity;
   }
   return fresh;
 }
@@ -389,10 +455,12 @@ function mergeEntityFromItem(
 /** Apply server row but keep local title/body (or folder title) when the user has a text draft. */
 function mergeEntityFromItemProtectingText(
   prevEntity: CanvasEntity | undefined,
-  item: CanvasItem,
+  item: CanvasItem
 ): CanvasEntity | null {
   const merged = mergeEntityFromItem(prevEntity, item);
-  if (!merged || !prevEntity) return merged;
+  if (!(merged && prevEntity)) {
+    return merged;
+  }
   if (prevEntity.kind === "content" && merged.kind === "content") {
     return {
       ...merged,
@@ -418,7 +486,10 @@ function mergeEntityFromItemProtectingText(
  * Merge server rows into the in-memory graph. Bootstrap items are only guaranteed for the
  * active space subtree, so spaces with no items in the payload keep their previous `entityIds`.
  */
-export function mergeBootstrapView(prev: CanvasGraph, data: BootstrapResponse): CanvasGraph {
+export function mergeBootstrapView(
+  prev: CanvasGraph,
+  data: BootstrapResponse
+): CanvasGraph {
   const rootSpaceId = findRootSpaceId(data.spaces);
   const affectedSpaceIds = new Set(data.items.map((i) => i.spaceId));
   const payloadItemIds = new Set(data.items.map((i) => i.id));
@@ -441,7 +512,9 @@ export function mergeBootstrapView(prev: CanvasGraph, data: BootstrapResponse): 
   const entities: Record<string, CanvasEntity> = { ...prev.entities };
   for (const item of data.items) {
     const merged = mergeEntityFromItem(entities[item.id], item);
-    if (!merged) continue;
+    if (!merged) {
+      continue;
+    }
     entities[item.id] = merged;
     const sp = spacesRecord[item.spaceId];
     const ids = entityIdsBySpace.get(item.spaceId);
@@ -456,8 +529,12 @@ export function mergeBootstrapView(prev: CanvasGraph, data: BootstrapResponse): 
     const prevIds = prev.spaces[spaceId]?.entityIds ?? [];
     const newIds = spacesRecord[spaceId]?.entityIds ?? [];
     for (const id of prevIds) {
-      if (newIds.includes(id)) continue;
-      if (payloadItemIds.has(id)) continue;
+      if (newIds.includes(id)) {
+        continue;
+      }
+      if (payloadItemIds.has(id)) {
+        continue;
+      }
       idsToDelete.add(id);
     }
   }
@@ -478,7 +555,7 @@ export function mergeBootstrapView(prev: CanvasGraph, data: BootstrapResponse): 
     entities,
     connections: pruneConnectionsToExistingEntities(
       prev.connections,
-      new Set(Object.keys(entities)),
+      new Set(Object.keys(entities))
     ),
   };
 }
@@ -497,15 +574,19 @@ export function mergeRemoteItemPatches(
   serverItemIdsInSubtree: ReadonlySet<string> | null,
   subtreeSpaceIds: readonly string[],
   protectedContentIds: ReadonlySet<string> = new Set(),
-  tombstoneExemptIds: ReadonlySet<string> = new Set(),
+  tombstoneExemptIds: ReadonlySet<string> = new Set()
 ): CanvasGraph {
   const spacesRecord: Record<string, CanvasSpace> = { ...prev.spaces };
   const entities: Record<string, CanvasEntity> = { ...prev.entities };
   const mutableSpaceIds = new Set<string>();
   const ensureMutableSpace = (spaceId: string): CanvasSpace | null => {
     const current = spacesRecord[spaceId];
-    if (!current) return null;
-    if (mutableSpaceIds.has(spaceId)) return current;
+    if (!current) {
+      return null;
+    }
+    if (mutableSpaceIds.has(spaceId)) {
+      return current;
+    }
     const next = { ...current, entityIds: [...current.entityIds] };
     spacesRecord[spaceId] = next;
     mutableSpaceIds.add(spaceId);
@@ -519,7 +600,9 @@ export function mergeRemoteItemPatches(
   const entityHome = new Map<string, string>();
   for (const sid of subtreeSpaceIds) {
     const sp = spacesRecord[sid];
-    if (!sp) continue;
+    if (!sp) {
+      continue;
+    }
     for (const eid of sp.entityIds) {
       entityHome.set(eid, sid);
     }
@@ -542,16 +625,24 @@ export function mergeRemoteItemPatches(
       }
       const ids = homeSpace.entityIds;
       const idx = ids.indexOf(id);
-      if (idx !== -1) ids.splice(idx, 1);
+      if (idx !== -1) {
+        ids.splice(idx, 1);
+      }
       entityIdsBySpace.get(home)?.delete(id);
     }
     entityHome.delete(id);
   };
 
   for (const id of prevIdsInSubtree) {
-    if (serverItemIdsInSubtree === null) continue;
-    if (serverItemIdsInSubtree.has(id)) continue;
-    if (tombstoneExemptIds.has(id)) continue;
+    if (serverItemIdsInSubtree === null) {
+      continue;
+    }
+    if (serverItemIdsInSubtree.has(id)) {
+      continue;
+    }
+    if (tombstoneExemptIds.has(id)) {
+      continue;
+    }
     delete entities[id];
     stripFromHome(id);
   }
@@ -562,7 +653,9 @@ export function mergeRemoteItemPatches(
       ? mergeEntityFromItemProtectingText
       : mergeEntityFromItem;
     const merged = mergeFn(entities[item.id], item);
-    if (!merged) continue;
+    if (!merged) {
+      continue;
+    }
     entities[item.id] = merged;
     if (!spacesRecord[item.spaceId]) {
       spacesRecord[item.spaceId] = {
@@ -588,7 +681,7 @@ export function mergeRemoteItemPatches(
     entities,
     connections: pruneConnectionsToExistingEntities(
       prev.connections,
-      new Set(Object.keys(entities)),
+      new Set(Object.keys(entities))
     ),
   };
 }
@@ -605,9 +698,11 @@ export type RemoteSpaceChangeRow = {
  */
 export function mergeRemoteSpaceRowsIntoGraph(
   prev: CanvasGraph,
-  spaceRows: readonly RemoteSpaceChangeRow[],
+  spaceRows: readonly RemoteSpaceChangeRow[]
 ): CanvasGraph {
-  if (spaceRows.length === 0) return prev;
+  if (spaceRows.length === 0) {
+    return prev;
+  }
   const spacesRecord: Record<string, CanvasSpace> = { ...prev.spaces };
   for (const row of spaceRows) {
     const existing = spacesRecord[row.id];
@@ -632,10 +727,12 @@ export function mergeRemoteSpaceRowsIntoGraph(
 /** Remove item rows that no longer exist on the server (e.g. PATCH 404 after remote delete). */
 export function removeEntitiesFromGraphAfterRemoteDelete(
   prev: CanvasGraph,
-  entityIds: readonly string[],
+  entityIds: readonly string[]
 ): CanvasGraph {
   const ids = new Set(entityIds);
-  if (ids.size === 0) return prev;
+  if (ids.size === 0) {
+    return prev;
+  }
   const spacesRecord: Record<string, CanvasSpace> = { ...prev.spaces };
   for (const sid of Object.keys(spacesRecord)) {
     const sp = spacesRecord[sid]!;
@@ -664,21 +761,30 @@ export function removeEntitiesFromGraphAfterRemoteDelete(
 }
 
 /** Apply one server row (e.g. after a 409 conflict “Reload”). */
-export function applyServerCanvasItemToGraph(prev: CanvasGraph, item: CanvasItem): CanvasGraph {
+export function applyServerCanvasItemToGraph(
+  prev: CanvasGraph,
+  item: CanvasItem
+): CanvasGraph {
   const merged = mergeEntityFromItem(prev.entities[item.id], item);
-  if (!merged) return prev;
+  if (!merged) {
+    return prev;
+  }
   const spacesRecord: Record<string, CanvasSpace> = { ...prev.spaces };
   for (const sid of Object.keys(spacesRecord)) {
     const sp = spacesRecord[sid]!;
     const idx = sp.entityIds.indexOf(item.id);
-    if (idx === -1) continue;
+    if (idx === -1) {
+      continue;
+    }
     const nextIds = [...sp.entityIds];
     nextIds.splice(idx, 1);
     spacesRecord[sid] = { ...sp, entityIds: nextIds };
     break;
   }
   const sp = spacesRecord[item.spaceId];
-  if (sp && !sp.entityIds.includes(merged.id)) sp.entityIds.push(merged.id);
+  if (sp && !sp.entityIds.includes(merged.id)) {
+    sp.entityIds.push(merged.id);
+  }
   return {
     ...prev,
     spaces: spacesRecord,
@@ -688,7 +794,7 @@ export function applyServerCanvasItemToGraph(prev: CanvasGraph, item: CanvasItem
 }
 
 export function buildContentJsonForContentEntity(
-  entity: CanvasContentEntity,
+  entity: CanvasContentEntity
 ): Record<string, unknown> {
   const hgArch: HgArchPayload = {
     theme: entity.theme,
@@ -699,10 +805,16 @@ export function buildContentJsonForContentEntity(
   if (entity.loreCard) {
     hgArch.loreCard = entity.loreCard;
   }
-  if (entity.loreCard?.kind === "faction" && entity.factionRoster !== undefined) {
+  if (
+    entity.loreCard?.kind === "faction" &&
+    entity.factionRoster !== undefined
+  ) {
     hgArch.factionRoster = entity.factionRoster;
   }
-  if (entity.loreThreadAnchors && Object.keys(entity.loreThreadAnchors).length > 0) {
+  if (
+    entity.loreThreadAnchors &&
+    Object.keys(entity.loreThreadAnchors).length > 0
+  ) {
     hgArch.loreThreadAnchors = entity.loreThreadAnchors;
   }
   if (entity.bodyDoc != null && contentEntityUsesHgDoc(entity)) {
@@ -720,7 +832,7 @@ export function buildContentJsonForContentEntity(
 }
 
 export function buildContentJsonForFolderEntity(
-  entity: CanvasFolderEntity,
+  entity: CanvasFolderEntity
 ): Record<string, unknown> {
   const hgArch: HgArchPayload = {
     rotation: entity.rotation,
@@ -735,10 +847,18 @@ export function buildContentJsonForFolderEntity(
   };
 }
 
-export function architecturalItemType(entity: CanvasEntity): CanvasItem["itemType"] {
-  if (entity.kind === "folder") return "folder";
-  if (entity.theme === "task") return "checklist";
-  if (entity.theme === "media") return "image";
+export function architecturalItemType(
+  entity: CanvasEntity
+): CanvasItem["itemType"] {
+  if (entity.kind === "folder") {
+    return "folder";
+  }
+  if (entity.theme === "task") {
+    return "checklist";
+  }
+  if (entity.theme === "media") {
+    return "image";
+  }
   return "note";
 }
 
@@ -746,12 +866,12 @@ export function entityGeometryOnSpace(entity: CanvasEntity, spaceId: string) {
   const slot = entity.slots[spaceId];
   const width =
     entity.kind === "folder"
-      ? entity.width ?? FOLDER_CARD_WIDTH
-      : entity.width ?? UNIFIED_NODE_WIDTH;
+      ? (entity.width ?? FOLDER_CARD_WIDTH)
+      : (entity.width ?? UNIFIED_NODE_WIDTH);
   let height =
     entity.kind === "folder"
-      ? entity.height ?? FOLDER_CARD_HEIGHT
-      : entity.height ?? DEFAULT_CONTENT_CARD_HEIGHT;
+      ? (entity.height ?? FOLDER_CARD_HEIGHT)
+      : (entity.height ?? DEFAULT_CONTENT_CARD_HEIGHT);
   if (entity.kind === "content") {
     const lc = entity.loreCard;
     if (lc?.kind === "character") {
@@ -770,9 +890,14 @@ export function entityGeometryOnSpace(entity: CanvasEntity, spaceId: string) {
 }
 
 /** Space that currently lists `entityId` in `entityIds` (canonical home for DB `space_id`). */
-export function homeSpaceIdForEntity(graph: CanvasGraph, entityId: string): string | null {
+export function homeSpaceIdForEntity(
+  graph: CanvasGraph,
+  entityId: string
+): string | null {
   for (const sp of Object.values(graph.spaces)) {
-    if (sp.entityIds.includes(entityId)) return sp.id;
+    if (sp.entityIds.includes(entityId)) {
+      return sp.id;
+    }
   }
   return null;
 }
@@ -782,7 +907,7 @@ export function homeSpaceIdForEntity(graph: CanvasGraph, entityId: string): stri
  */
 export function topoSortAddedSpacesForRestore(
   addedIds: ReadonlySet<string>,
-  spaces: Record<string, CanvasSpace>,
+  spaces: Record<string, CanvasSpace>
 ): string[] {
   const result: string[] = [];
   const remaining = new Set(addedIds);
@@ -790,7 +915,9 @@ export function topoSortAddedSpacesForRestore(
     let progress = false;
     for (const id of [...remaining]) {
       const p = spaces[id]?.parentSpaceId ?? null;
-      if (p != null && remaining.has(p)) continue;
+      if (p != null && remaining.has(p)) {
+        continue;
+      }
       result.push(id);
       remaining.delete(id);
       progress = true;
@@ -809,11 +936,15 @@ export function topoSortAddedSpacesForRestore(
 export function buildContentItemRestorePayload(
   graph: CanvasGraph,
   entityId: string,
-  entity: CanvasEntity,
+  entity: CanvasEntity
 ): { spaceId: string; body: Record<string, unknown> } | null {
-  if (entity.kind !== "content") return null;
+  if (entity.kind !== "content") {
+    return null;
+  }
   const spaceId = homeSpaceIdForEntity(graph, entityId);
-  if (!spaceId) return null;
+  if (!spaceId) {
+    return null;
+  }
   const geom = entityGeometryOnSpace(entity, spaceId);
   const itemType = architecturalItemType(entity);
   const body: Record<string, unknown> = {
@@ -827,9 +958,15 @@ export function buildContentItemRestorePayload(
     contentText: contentPlainTextForEntity(entity),
     contentJson: buildContentJsonForContentEntity(entity),
   };
-  if (entity.loreCard) body.entityType = entity.loreCard.kind;
-  if (entity.stackId != null) body.stackId = entity.stackId;
-  if (entity.stackOrder != null) body.stackOrder = entity.stackOrder;
+  if (entity.loreCard) {
+    body.entityType = entity.loreCard.kind;
+  }
+  if (entity.stackId != null) {
+    body.stackId = entity.stackId;
+  }
+  if (entity.stackOrder != null) {
+    body.stackOrder = entity.stackOrder;
+  }
   return { spaceId, body };
 }
 
@@ -840,10 +977,12 @@ export function buildContentItemRestorePayload(
 export function buildFolderItemRestorePayload(
   graph: CanvasGraph,
   entityId: string,
-  entity: CanvasFolderEntity,
+  entity: CanvasFolderEntity
 ): { spaceId: string; body: Record<string, unknown> } | null {
   const spaceId = homeSpaceIdForEntity(graph, entityId);
-  if (!spaceId) return null;
+  if (!spaceId) {
+    return null;
+  }
   const geom = entityGeometryOnSpace(entity, spaceId);
   const body: Record<string, unknown> = {
     id: entityId,
@@ -856,7 +995,11 @@ export function buildFolderItemRestorePayload(
     contentText: "",
     contentJson: buildContentJsonForFolderEntity(entity),
   };
-  if (entity.stackId != null) body.stackId = entity.stackId;
-  if (entity.stackOrder != null) body.stackOrder = entity.stackOrder;
+  if (entity.stackId != null) {
+    body.stackId = entity.stackId;
+  }
+  if (entity.stackOrder != null) {
+    body.stackOrder = entity.stackOrder;
+  }
   return { spaceId, body };
 }

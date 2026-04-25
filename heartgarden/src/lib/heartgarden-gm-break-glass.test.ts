@@ -6,8 +6,11 @@ describe("isHeartgardenGmPlayerSpaceBreakGlassEnabled", () => {
   const prev = process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE;
 
   afterEach(() => {
-    if (prev === undefined) delete process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE;
-    else process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE = prev;
+    if (prev === undefined) {
+      delete process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE;
+    } else {
+      process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE = prev;
+    }
   });
 
   it("is false by default", () => {

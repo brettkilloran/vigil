@@ -6,13 +6,13 @@ import { useState } from "react";
 import {
   ArchitecturalBottomDock,
   ArchitecturalConnectionToolbar,
+  type ConnectionDockMode,
   DEFAULT_CREATE_ACTIONS,
   DEFAULT_DOC_INSERT_ACTIONS,
   DEFAULT_FORMAT_ACTIONS,
-  type ConnectionDockMode,
 } from "@/src/components/foundation/ArchitecturalBottomDock";
-import { type ConnectionKind } from "@/src/lib/connection-kind-colors";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
+import type { ConnectionKind } from "@/src/lib/connection-kind-colors";
 
 const meta: Meta<typeof ArchitecturalBottomDock> = {
   title: "Heartgarden/Product UI/Canvas/Bottom dock",
@@ -128,10 +128,10 @@ function ConnectionToolbarDemo() {
     <div style={{ position: "absolute", top: 24, right: 24 }}>
       <div className={styles.rootDockPanel}>
         <ArchitecturalConnectionToolbar
-          mode={mode}
-          onSetMode={setMode}
           connectionKind={connectionKind}
+          mode={mode}
           onSetConnectionKind={setConnectionKind}
+          onSetMode={setMode}
         />
       </div>
     </div>
@@ -141,4 +141,3 @@ function ConnectionToolbarDemo() {
 export const WithConnectionToolbar: Story = {
   render: () => <ConnectionToolbarDemo />,
 };
-

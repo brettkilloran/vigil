@@ -14,10 +14,15 @@ import {
   vaultSpaceReindexRateLimitExceeded,
 } from "@/src/lib/vault-index-rate-limit";
 
-export async function POST(req: Request, context: { params: Promise<{ spaceId: string }> }) {
+export async function POST(
+  req: Request,
+  context: { params: Promise<{ spaceId: string }> }
+) {
   const bootCtxEarly = await getHeartgardenApiBootContext();
   const deniedEarly = enforceGmOnlyBootContext(bootCtxEarly);
-  if (deniedEarly) return deniedEarly;
+  if (deniedEarly) {
+    return deniedEarly;
+  }
 
   if (vaultSpaceReindexRateLimitExceeded(req)) {
     const retry = vaultIndexRateLimitMeta.retry_after_seconds;
@@ -30,7 +35,7 @@ export async function POST(req: Request, context: { params: Promise<{ spaceId: s
       {
         status: 429,
         headers: { "Retry-After": String(retry) },
-      },
+      }
     );
   }
 
@@ -46,25 +51,44 @@ export async function POST(req: Request, context: { params: Promise<{ spaceId: s
       dry_run?: boolean | string | number;
     };
     writeKey = typeof j.write_key === "string" ? j.write_key.trim() : "";
-    if (j.refreshLoreMeta === false || j.refresh_lore_meta === false) refreshLoreMeta = false;
+    if (j.refreshLoreMeta === false || j.refresh_lore_meta === false) {
+      refreshLoreMeta = false;
+    }
     const dr = j.dry_run;
-    if (dr === true || dr === "true" || dr === 1 || dr === "1") dryRun = true;
+    if (dr === true || dr === "true" || dr === 1 || dr === "1") {
+      dryRun = true;
+    }
   } catch {
-    return Response.json({ ok: false, error: "Expected JSON body with write_key" }, { status: 400 });
+    return Response.json(
+      { ok: false, error: "Expected JSON body with write_key" },
+      { status: 400 }
+    );
   }
 
   if (!expected || writeKey !== expected) {
-    return Response.json({ ok: false, error: "Invalid or missing write_key" }, { status: 401 });
+    return Response.json(
+      { ok: false, error: "Invalid or missing write_key" },
+      { status: 401 }
+    );
   }
 
   const db = tryGetDb();
   if (!db) {
-    return Response.json({ ok: false, error: "Database not configured" }, { status: 503 });
+    return Response.json(
+      { ok: false, error: "Database not configured" },
+      { status: 503 }
+    );
   }
 
   const { spaceId } = await context.params;
-  const access = await requireHeartgardenSpaceApiAccess(db, bootCtxEarly, spaceId);
-  if (!access.ok) return access.response;
+  const access = await requireHeartgardenSpaceApiAccess(
+    db,
+    bootCtxEarly,
+    spaceId
+  );
+  if (!access.ok) {
+    return access.response;
+  }
 
   if (dryRun) {
     const [row] = await db
@@ -85,7 +109,9 @@ export async function POST(req: Request, context: { params: Promise<{ spaceId: s
     });
   }
 
-  const result = await reindexSpaceVault(db as VigilDb, spaceId, { refreshLoreMeta });
+  const result = await reindexSpaceVault(db as VigilDb, spaceId, {
+    refreshLoreMeta,
+  });
   return Response.json({
     ok: true,
     items: result.items,

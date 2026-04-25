@@ -24,7 +24,7 @@ export async function GET(req: Request) {
   if (!db) {
     return Response.json(
       { ok: false, error: "Database not configured", spaces: [] },
-      { status: 503 },
+      { status: 503 }
     );
   }
   const bootCtx = await getHeartgardenApiBootContext();
@@ -41,14 +41,18 @@ export async function GET(req: Request) {
   if (!parsed.success) {
     return Response.json(
       { ok: false, error: parsed.error.flatten(), spaces: [] },
-      { status: 400 },
+      { status: 400 }
     );
   }
   const scope = parsed.data.scope ?? "current_subtree";
   if (scope === "current_subtree" && !parsed.data.rootSpaceId) {
     return Response.json(
-      { ok: false, error: "rootSpaceId is required for current_subtree scope", spaces: [] },
-      { status: 400 },
+      {
+        ok: false,
+        error: "rootSpaceId is required for current_subtree scope",
+        spaces: [],
+      },
+      { status: 400 }
     );
   }
   const allowed = await resolveLoreImportAllowedSpaceIds({
@@ -68,7 +72,10 @@ export async function GET(req: Request) {
     })
     .from(spaces);
   const byId = new Map(
-    rows.map((row) => [row.id, { name: row.name, parentSpaceId: row.parentSpaceId ?? null }]),
+    rows.map((row) => [
+      row.id,
+      { name: row.name, parentSpaceId: row.parentSpaceId ?? null },
+    ])
   );
   const q = (parsed.data.q ?? "").trim().toLowerCase();
   if (q.length > 0 && q.length < 2) {
@@ -83,11 +90,15 @@ export async function GET(req: Request) {
       path: buildSpacePath(row.id, byId),
     }))
     .filter((row) => {
-      if (!q) return true;
-      return row.title.toLowerCase().includes(q) || row.path.toLowerCase().includes(q);
+      if (!q) {
+        return true;
+      }
+      return (
+        row.title.toLowerCase().includes(q) ||
+        row.path.toLowerCase().includes(q)
+      );
     })
     .sort((a, b) => a.path.localeCompare(b.path))
     .slice(0, limit);
   return Response.json({ ok: true, spaces: spaceList, scope });
 }
-

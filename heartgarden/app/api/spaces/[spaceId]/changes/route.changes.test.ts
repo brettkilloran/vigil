@@ -9,7 +9,10 @@ vi.mock("@/src/db/index", () => ({
 }));
 
 vi.mock("@/src/lib/heartgarden-api-boot-context", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("@/src/lib/heartgarden-api-boot-context")>();
+  const mod =
+    await importOriginal<
+      typeof import("@/src/lib/heartgarden-api-boot-context")
+    >();
   return {
     ...mod,
     getHeartgardenApiBootContext: vi.fn(() => Promise.resolve({ role: "gm" })),
@@ -28,7 +31,7 @@ vi.mock("@/src/lib/spaces", async (importOriginal) => {
   return {
     ...mod,
     listGmWorkspaceSpaces: vi.fn(() =>
-      Promise.resolve([{ id: "space-root", name: "Root", parentSpaceId: null }]),
+      Promise.resolve([{ id: "space-root", name: "Root", parentSpaceId: null }])
     ),
   };
 });
@@ -46,8 +49,10 @@ describe("GET /api/spaces/[spaceId]/changes", () => {
     tryGetDbMock.mockReturnValue({});
     const { GET } = await import("./route");
     const res = await GET(
-      new Request("http://localhost/api/spaces/space-root/changes?since=not-a-date"),
-      { params: Promise.resolve({ spaceId: "space-root" }) },
+      new Request(
+        "http://localhost/api/spaces/space-root/changes?since=not-a-date"
+      ),
+      { params: Promise.resolve({ spaceId: "space-root" }) }
     );
     expect(res.status).toBe(400);
     const body = (await res.json()) as { ok: boolean; error?: string };
@@ -95,9 +100,9 @@ describe("GET /api/spaces/[spaceId]/changes", () => {
     const { GET } = await import("./route");
     const res = await GET(
       new Request(
-        `http://localhost/api/spaces/space-root/changes?since=${encodeURIComponent(since)}&includeItemIds=1`,
+        `http://localhost/api/spaces/space-root/changes?since=${encodeURIComponent(since)}&includeItemIds=1`
       ),
-      { params: Promise.resolve({ spaceId: "space-root" }) },
+      { params: Promise.resolve({ spaceId: "space-root" }) }
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -196,9 +201,9 @@ describe("GET /api/spaces/[spaceId]/changes", () => {
     const { GET } = await import("./route");
     const res = await GET(
       new Request(
-        "http://localhost/api/spaces/space-root/changes?since=2024-01-01T00:00:00.000Z&includeItemIds=1",
+        "http://localhost/api/spaces/space-root/changes?since=2024-01-01T00:00:00.000Z&includeItemIds=1"
       ),
-      { params: Promise.resolve({ spaceId: "space-root" }) },
+      { params: Promise.resolve({ spaceId: "space-root" }) }
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -246,8 +251,10 @@ describe("GET /api/spaces/[spaceId]/changes", () => {
 
     const { GET } = await import("./route");
     const res = await GET(
-      new Request("http://localhost/api/spaces/space-root/changes?since=2024-01-01T00:00:00.000Z"),
-      { params: Promise.resolve({ spaceId: "space-root" }) },
+      new Request(
+        "http://localhost/api/spaces/space-root/changes?since=2024-01-01T00:00:00.000Z"
+      ),
+      { params: Promise.resolve({ spaceId: "space-root" }) }
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;

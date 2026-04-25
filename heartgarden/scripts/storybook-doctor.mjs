@@ -24,7 +24,6 @@ let bad = false;
 for (const rel of mustExist) {
   const abs = path.join(root, "node_modules", rel);
   if (!existsSync(abs)) {
-     
     console.error(`Missing: node_modules/${rel}`);
     bad = true;
   }
@@ -35,7 +34,6 @@ if (!bad) {
     try {
       require.resolve(name, { paths: [root] });
     } catch {
-       
       console.error(`Cannot resolve package: ${name}`);
       bad = true;
     }
@@ -43,10 +41,12 @@ if (!bad) {
 }
 
 if (bad) {
-   
-  console.error("\nFix: stop dev servers, then from heartgarden/ run: pnpm run reinstall\n");
+  console.error(
+    "\nFix: stop dev servers, then from heartgarden/ run: pnpm run reinstall\n"
+  );
   process.exit(1);
 }
 
- 
-console.log("Storybook doctor: node_modules looks OK for react, storybook, webpack.");
+console.log(
+  "Storybook doctor: node_modules looks OK for react, storybook, webpack."
+);

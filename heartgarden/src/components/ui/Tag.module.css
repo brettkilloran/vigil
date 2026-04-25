@@ -1,41 +1,55 @@
 /* Small uppercase chip — LLM / ingestion review uses shared globals tokens (--sem-*-llm-*). */
 
 .tag {
+  box-sizing: border-box;
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   /* Slightly taller chip keeps uppercase labels optically centered. */
   min-height: 18px;
   padding: 0 8px;
-  border-radius: var(--sys-radius-full);
+  font-size: 9px;
+  font-weight: 600;
   line-height: 1;
-  box-sizing: border-box;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: var(--sys-radius-full);
 }
 
 /* “Unreviewed” on default/task/media cards + light focus sheet */
 .llmLight {
   color: var(--sem-text-llm-accent);
-  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--theme-default-bg));
+  background: color-mix(
+    in oklch,
+    var(--sem-surface-llm-pending) 100%,
+    var(--theme-default-bg)
+  );
   border: 1px solid var(--sem-border-llm-pending);
 }
 
 /* Code-themed canvas card header (dark paper) */
 .llmCode {
   color: var(--sem-text-llm-accent-bright);
-  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, var(--theme-code-bg));
-  border: 1px solid color-mix(in oklch, var(--sem-text-llm-accent-bright) 38%, transparent);
+  background: color-mix(
+    in oklch,
+    var(--sem-surface-llm-pending) 100%,
+    var(--theme-code-bg)
+  );
+  border: 1px solid
+    color-mix(in oklch, var(--sem-text-llm-accent-bright) 38%, transparent);
 }
 
 /* Dark focus (code / lore hybrid) */
 .llmFocusDark {
   color: var(--sem-text-llm-accent-bright);
-  background: color-mix(in oklch, var(--sem-surface-llm-pending) 100%, transparent);
-  border: 1px solid color-mix(in oklch, var(--sem-text-llm-accent-bright) 36%, transparent);
+  background: color-mix(
+    in oklch,
+    var(--sem-surface-llm-pending) 100%,
+    transparent
+  );
+  border: 1px solid
+    color-mix(in oklch, var(--sem-text-llm-accent-bright) 36%, transparent);
 }
 
 /* Generic muted chip (Storybook / non-LLM labels) */

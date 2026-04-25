@@ -19,7 +19,7 @@ const OTHER_RESOLVE_CLEAR_GAP = 0.12;
 
 /** Link-type quizzes are low value during import; defaults + canvas editing suffice. */
 export function withoutLinkSemanticsClarifications(
-  items: LoreImportClarificationItem[],
+  items: LoreImportClarificationItem[]
 ): LoreImportClarificationItem[] {
   return items.filter((c) => c.category !== "link_semantics");
 }
@@ -44,12 +44,16 @@ function tokenizeLoose(input: string): string[] {
 
 function scoreOptionForOtherText(label: string, otherText: string): number {
   const labelTokens = tokenizeLoose(label);
-  if (labelTokens.length === 0) return 0;
+  if (labelTokens.length === 0) {
+    return 0;
+  }
   const text = otherText.toLowerCase();
   const textTokens = new Set(tokenizeLoose(otherText));
   let overlap = 0;
   for (const token of labelTokens) {
-    if (textTokens.has(token)) overlap += 1;
+    if (textTokens.has(token)) {
+      overlap += 1;
+    }
   }
   const overlapRatio = overlap / labelTokens.length;
   const phraseBoost = text.includes(label.toLowerCase()) ? 0.34 : 0;
@@ -74,34 +78,46 @@ function clonePlan(plan: LoreImportPlan): LoreImportPlan {
  * `sourceChunkIds`. Used by chunk-assignment patch ops so that re-assigning a chunk
  * at apply time actually updates what gets written to the card body.
  */
-function rebuildNoteBodyText(plan: LoreImportPlan, note: LoreImportPlanNote): void {
+function rebuildNoteBodyText(
+  plan: LoreImportPlan,
+  note: LoreImportPlanNote
+): void {
   const byId = new Map((plan.chunks ?? []).map((c) => [c.id, c]));
   const ids = note.sourceChunkIds ?? [];
   const bodies: string[] = [];
   for (const cid of ids) {
     const ch = byId.get(cid);
-    if (!ch || !ch.body) continue;
+    if (!(ch && ch.body)) {
+      continue;
+    }
     bodies.push(`## ${ch.heading}\n\n${ch.body}`);
   }
   note.bodyText =
-    bodies.length > 0
-      ? bodies.join("\n\n---\n\n").slice(0, 120_000)
-      : "";
+    bodies.length > 0 ? bodies.join("\n\n---\n\n").slice(0, 120_000) : "";
 }
 
-export function applyPlanPatchHint(plan: LoreImportPlan, hint: PlanPatchHint): void {
+export function applyPlanPatchHint(
+  plan: LoreImportPlan,
+  hint: PlanPatchHint
+): void {
   switch (hint.op) {
     case "no_op":
       return;
     case "set_note_folder": {
       const note = plan.notes.find((n) => n.clientId === hint.noteClientId);
       if (!note) {
-        throw new Error(`Clarification patch: unknown note "${hint.noteClientId}"`);
+        throw new Error(
+          `Clarification patch: unknown note "${hint.noteClientId}"`
+        );
       }
       if (hint.folderClientId !== null) {
-        const folder = plan.folders.find((f) => f.clientId === hint.folderClientId);
+        const folder = plan.folders.find(
+          (f) => f.clientId === hint.folderClientId
+        );
         if (!folder) {
-          throw new Error(`Clarification patch: unknown folder "${hint.folderClientId}"`);
+          throw new Error(
+            `Clarification patch: unknown folder "${hint.folderClientId}"`
+          );
         }
       }
       note.folderClientId = hint.folderClientId;
@@ -110,11 +126,12 @@ export function applyPlanPatchHint(plan: LoreImportPlan, hint: PlanPatchHint): v
     case "set_link_type": {
       const link = plan.links.find(
         (l) =>
-          l.fromClientId === hint.fromClientId && l.toClientId === hint.toClientId,
+          l.fromClientId === hint.fromClientId &&
+          l.toClientId === hint.toClientId
       );
       if (!link) {
         throw new Error(
-          `Clarification patch: no link ${hint.fromClientId} → ${hint.toClientId}`,
+          `Clarification patch: no link ${hint.fromClientId} → ${hint.toClientId}`
         );
       }
       link.linkType = hint.linkType;
@@ -124,15 +141,18 @@ export function applyPlanPatchHint(plan: LoreImportPlan, hint: PlanPatchHint): v
       plan.links = plan.links.filter(
         (l) =>
           !(
-            l.fromClientId === hint.fromClientId && l.toClientId === hint.toClientId
-          ),
+            l.fromClientId === hint.fromClientId &&
+            l.toClientId === hint.toClientId
+          )
       );
       return;
     }
     case "set_ingestion_signals": {
       const note = plan.notes.find((n) => n.clientId === hint.noteClientId);
       if (!note) {
-        throw new Error(`Clarification patch: unknown note "${hint.noteClientId}"`);
+        throw new Error(
+          `Clarification patch: unknown note "${hint.noteClientId}"`
+        );
       }
       note.ingestionSignals = { ...note.ingestionSignals, ...hint.patch };
       return;
@@ -140,7 +160,9 @@ export function applyPlanPatchHint(plan: LoreImportPlan, hint: PlanPatchHint): v
     case "set_lore_historical": {
       const note = plan.notes.find((n) => n.clientId === hint.noteClientId);
       if (!note) {
-        throw new Error(`Clarification patch: unknown note "${hint.noteClientId}"`);
+        throw new Error(
+          `Clarification patch: unknown note "${hint.noteClientId}"`
+        );
       }
       note.loreHistorical = hint.loreHistorical;
       return;
@@ -148,11 +170,11 @@ export function applyPlanPatchHint(plan: LoreImportPlan, hint: PlanPatchHint): v
     case "discard_merge_proposal": {
       const before = plan.mergeProposals.length;
       plan.mergeProposals = plan.mergeProposals.filter(
-        (m) => m.id !== hint.mergeProposalId,
+        (m) => m.id !== hint.mergeProposalId
       );
       if (plan.mergeProposals.length === before) {
         throw new Error(
-          `Clarification patch: unknown merge proposal "${hint.mergeProposalId}"`,
+          `Clarification patch: unknown merge proposal "${hint.mergeProposalId}"`
         );
       }
       return;
@@ -160,7 +182,9 @@ export function applyPlanPatchHint(plan: LoreImportPlan, hint: PlanPatchHint): v
     case "assign_chunk_to_note": {
       const note = plan.notes.find((n) => n.clientId === hint.noteClientId);
       if (!note) {
-        throw new Error(`Clarification patch: unknown note "${hint.noteClientId}"`);
+        throw new Error(
+          `Clarification patch: unknown note "${hint.noteClientId}"`
+        );
       }
       const chunk = (plan.chunks ?? []).find((c) => c.id === hint.chunkId);
       if (!chunk) {
@@ -177,12 +201,18 @@ export function applyPlanPatchHint(plan: LoreImportPlan, hint: PlanPatchHint): v
         ? plan.notes.filter((n) => n.clientId === hint.noteClientId)
         : plan.notes;
       if (hint.noteClientId && targets.length === 0) {
-        throw new Error(`Clarification patch: unknown note "${hint.noteClientId}"`);
+        throw new Error(
+          `Clarification patch: unknown note "${hint.noteClientId}"`
+        );
       }
       for (const note of targets) {
-        if (!note.sourceChunkIds) continue;
+        if (!note.sourceChunkIds) {
+          continue;
+        }
         const next = note.sourceChunkIds.filter((id) => id !== hint.chunkId);
-        if (next.length === note.sourceChunkIds.length) continue;
+        if (next.length === note.sourceChunkIds.length) {
+          continue;
+        }
         note.sourceChunkIds = next;
         rebuildNoteBodyText(plan, note);
       }
@@ -197,20 +227,28 @@ export function applyPlanPatchHint(plan: LoreImportPlan, hint: PlanPatchHint): v
 
 function validateSingleAnswer(
   c: LoreImportClarificationItem,
-  a: ClarificationAnswer,
+  a: ClarificationAnswer
 ): string | null {
   const optionIds = new Set(c.options.map((o) => o.id));
   if (a.resolution === "skipped_default") {
     const id = a.skipDefaultOptionId;
-    if (!id) return `Clarification "${c.title}": skipDefaultOptionId is required`;
-    if (!optionIds.has(id)) return `Clarification "${c.title}": invalid skipDefaultOptionId`;
+    if (!id) {
+      return `Clarification "${c.title}": skipDefaultOptionId is required`;
+    }
+    if (!optionIds.has(id)) {
+      return `Clarification "${c.title}": invalid skipDefaultOptionId`;
+    }
     if (a.selectedOptionIds?.length) {
       return `Clarification "${c.title}": cannot use selectedOptionIds with skipped_default`;
     }
     return null;
   }
   if (a.resolution === "skipped_best_judgement") {
-    if (a.selectedOptionIds?.length || a.skipDefaultOptionId || a.otherText?.trim()) {
+    if (
+      a.selectedOptionIds?.length ||
+      a.skipDefaultOptionId ||
+      a.otherText?.trim()
+    ) {
       return `Clarification "${c.title}": skipped_best_judgement cannot include explicit option/default/other text`;
     }
     return null;
@@ -237,10 +275,12 @@ function validateSingleAnswer(
       return `Clarification "${c.title}": invalid option id "${id}"`;
     }
   }
-  if (c.questionKind === "single_select" || c.questionKind === "confirm_default") {
-    if (sel.length !== 1) {
-      return `Clarification "${c.title}": pick exactly one option`;
-    }
+  if (
+    (c.questionKind === "single_select" ||
+      c.questionKind === "confirm_default") &&
+    sel.length !== 1
+  ) {
+    return `Clarification "${c.title}": pick exactly one option`;
   }
   return null;
 }
@@ -250,7 +290,7 @@ function validateSingleAnswer(
  */
 export function validateClarificationAnswersForApply(
   plan: LoreImportPlan,
-  answers: ClarificationAnswer[],
+  answers: ClarificationAnswer[]
 ): { ok: true } | { ok: false; error: string } {
   const byId = new Map(plan.clarifications.map((c) => [c.id, c]));
   const seenAnswer = new Set<string>();
@@ -264,13 +304,20 @@ export function validateClarificationAnswersForApply(
     seenAnswer.add(a.clarificationId);
     const c = byId.get(a.clarificationId);
     if (!c) {
-      return { ok: false, error: `Unknown clarification id ${a.clarificationId}` };
+      return {
+        ok: false,
+        error: `Unknown clarification id ${a.clarificationId}`,
+      };
     }
     const err = validateSingleAnswer(c, a);
-    if (err) return { ok: false, error: err };
+    if (err) {
+      return { ok: false, error: err };
+    }
   }
   for (const c of plan.clarifications) {
-    if (c.severity !== "required") continue;
+    if (c.severity !== "required") {
+      continue;
+    }
     if (!seenAnswer.has(c.id)) {
       return {
         ok: false,
@@ -283,17 +330,26 @@ export function validateClarificationAnswersForApply(
 
 export function resolveOtherClarificationAnswers(
   plan: LoreImportPlan,
-  answers: ClarificationAnswer[],
+  answers: ClarificationAnswer[]
 ):
   | { status: "resolved"; answers: ClarificationAnswer[] }
-  | { status: "needs_follow_up"; answers: ClarificationAnswer[]; followUp: ClarificationFollowUpPrompt } {
+  | {
+      status: "needs_follow_up";
+      answers: ClarificationAnswer[];
+      followUp: ClarificationFollowUpPrompt;
+    } {
   const clarById = new Map(plan.clarifications.map((c) => [c.id, c]));
   const normalized = answers.map((a) => ({ ...a }));
   const unresolved: {
     index: number;
     clarification: LoreImportClarificationItem;
     otherText: string;
-    scored: { id: string; label: string; recommended?: boolean; score: number }[];
+    scored: {
+      id: string;
+      label: string;
+      recommended?: boolean;
+      score: number;
+    }[];
     bestScore: number;
     confidence: number;
   }[] = [];
@@ -302,7 +358,9 @@ export function resolveOtherClarificationAnswers(
     const a = normalized[i]!;
     if (a.resolution === "skipped_best_judgement") {
       const c = clarById.get(a.clarificationId);
-      if (!c) continue;
+      if (!c) {
+        continue;
+      }
       normalized[i] = {
         clarificationId: a.clarificationId,
         resolution: "answered",
@@ -310,11 +368,17 @@ export function resolveOtherClarificationAnswers(
       };
       continue;
     }
-    if (a.resolution !== "other_text") continue;
+    if (a.resolution !== "other_text") {
+      continue;
+    }
     const c = clarById.get(a.clarificationId);
-    if (!c) continue;
+    if (!c) {
+      continue;
+    }
     const otherText = a.otherText?.trim() ?? "";
-    if (otherText.length < OTHER_TEXT_MIN_LENGTH) continue;
+    if (otherText.length < OTHER_TEXT_MIN_LENGTH) {
+      continue;
+    }
     const scored = c.options
       .map((opt) => ({
         id: opt.id,
@@ -328,10 +392,14 @@ export function resolveOtherClarificationAnswers(
     const bestScore = best?.score ?? 0;
     const gap = bestScore - (second?.score ?? 0);
     const plannerConfidence = c.confidenceScore ?? 0.55;
-    const confidence = Math.max(0, Math.min(1, Math.min(bestScore, plannerConfidence)));
+    const confidence = Math.max(
+      0,
+      Math.min(1, Math.min(bestScore, plannerConfidence))
+    );
     const clear =
       !!best &&
-      (bestScore >= OTHER_RESOLVE_CLEAR_SCORE && gap >= OTHER_RESOLVE_CLEAR_GAP);
+      bestScore >= OTHER_RESOLVE_CLEAR_SCORE &&
+      gap >= OTHER_RESOLVE_CLEAR_GAP;
     if (clear) {
       normalized[i] = {
         clarificationId: a.clarificationId,
@@ -381,13 +449,15 @@ export function resolveOtherClarificationAnswers(
  */
 export function applyClarificationPatches(
   plan: LoreImportPlan,
-  answers: ClarificationAnswer[],
+  answers: ClarificationAnswer[]
 ): LoreImportPlan {
   const working = clonePlan(plan);
   const answerMap = new Map(answers.map((a) => [a.clarificationId, a]));
   for (const c of plan.clarifications) {
     const a = answerMap.get(c.id);
-    if (!a) continue;
+    if (!a) {
+      continue;
+    }
     const optIds =
       a.resolution === "skipped_default"
         ? [a.skipDefaultOptionId!]
@@ -405,7 +475,9 @@ export function applyClarificationPatches(
   return working;
 }
 
-export function countRequiredClarificationsUnresolved(plan: LoreImportPlan): number {
+export function countRequiredClarificationsUnresolved(
+  plan: LoreImportPlan
+): number {
   return plan.clarifications.filter((c) => c.severity === "required").length;
 }
 
@@ -415,9 +487,11 @@ const MAX_CLARIFICATION_ITEMS = 40;
  * Avoid huge LLM outputs: keep all required, add optional only while under the cap (optional trimmed first).
  */
 export function capClarificationList(
-  list: LoreImportClarificationItem[],
+  list: LoreImportClarificationItem[]
 ): LoreImportClarificationItem[] {
-  if (list.length <= MAX_CLARIFICATION_ITEMS) return list;
+  if (list.length <= MAX_CLARIFICATION_ITEMS) {
+    return list;
+  }
   const required = list.filter((c) => c.severity === "required");
   const optional = list.filter((c) => c.severity === "optional");
   const room = Math.max(0, MAX_CLARIFICATION_ITEMS - required.length);
@@ -428,7 +502,9 @@ export function capClarificationList(
 }
 
 function parseHintLoose(o: unknown): PlanPatchHint | null {
-  if (!o || typeof o !== "object") return null;
+  if (!o || typeof o !== "object") {
+    return null;
+  }
   const p = planPatchHintSchema.safeParse(o);
   return p.success ? p.data : null;
 }
@@ -436,14 +512,22 @@ function parseHintLoose(o: unknown): PlanPatchHint | null {
 /**
  * Turn LLM clarification objects into validated items (assigns fresh ids).
  */
-export function normalizeClarificationsFromLlm(raw: unknown): LoreImportClarificationItem[] {
-  if (!Array.isArray(raw)) return [];
+export function normalizeClarificationsFromLlm(
+  raw: unknown
+): LoreImportClarificationItem[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
   const out: LoreImportClarificationItem[] = [];
   for (const item of raw) {
-    if (!item || typeof item !== "object") continue;
+    if (!item || typeof item !== "object") {
+      continue;
+    }
     const o = item as Record<string, unknown>;
     const optionsIn = o.options;
-    if (!Array.isArray(optionsIn)) continue;
+    if (!Array.isArray(optionsIn)) {
+      continue;
+    }
     const options: {
       id: string;
       label: string;
@@ -451,12 +535,20 @@ export function normalizeClarificationsFromLlm(raw: unknown): LoreImportClarific
       planPatchHint: PlanPatchHint;
     }[] = [];
     for (const opt of optionsIn) {
-      if (!opt || typeof opt !== "object") continue;
+      if (!opt || typeof opt !== "object") {
+        continue;
+      }
       const op = opt as Record<string, unknown>;
-      const id = String(op.id ?? "").trim().slice(0, 64);
-      const label = String(op.label ?? "").trim().slice(0, 500);
+      const id = String(op.id ?? "")
+        .trim()
+        .slice(0, 64);
+      const label = String(op.label ?? "")
+        .trim()
+        .slice(0, 500);
       const hint = parseHintLoose(op.planPatchHint);
-      if (!id || !label || !hint) continue;
+      if (!(id && label && hint)) {
+        continue;
+      }
       options.push({
         id,
         label,
@@ -464,7 +556,9 @@ export function normalizeClarificationsFromLlm(raw: unknown): LoreImportClarific
         planPatchHint: hint,
       });
     }
-    if (options.length < 2) continue;
+    if (options.length < 2) {
+      continue;
+    }
 
     const category = o.category;
     const severity = o.severity;
@@ -477,7 +571,9 @@ export function normalizeClarificationsFromLlm(raw: unknown): LoreImportClarific
     ) {
       continue;
     }
-    if (severity !== "required" && severity !== "optional") continue;
+    if (severity !== "required" && severity !== "optional") {
+      continue;
+    }
     if (
       questionKind !== "single_select" &&
       questionKind !== "multi_select" &&
@@ -486,27 +582,36 @@ export function normalizeClarificationsFromLlm(raw: unknown): LoreImportClarific
       continue;
     }
 
-    const title = String(o.title ?? "").trim().slice(0, 300);
-    if (!title) continue;
+    const title = String(o.title ?? "")
+      .trim()
+      .slice(0, 300);
+    if (!title) {
+      continue;
+    }
 
     const built = {
       id: randomUUID(),
       category,
       severity,
       confidenceScore:
-        typeof o.confidenceScore === "number" && Number.isFinite(o.confidenceScore)
+        typeof o.confidenceScore === "number" &&
+        Number.isFinite(o.confidenceScore)
           ? Math.max(0, Math.min(1, o.confidenceScore))
           : typeof o.confidence === "number" && Number.isFinite(o.confidence)
             ? Math.max(0, Math.min(1, o.confidence))
             : undefined,
       title,
       context:
-        o.context != null ? String(o.context).trim().slice(0, 4000) : undefined,
+        o.context == null ? undefined : String(o.context).trim().slice(0, 4000),
       questionKind,
       options,
       relatedNoteClientIds: Array.isArray(o.relatedNoteClientIds)
         ? o.relatedNoteClientIds
-            .map((x) => String(x ?? "").trim().slice(0, 64))
+            .map((x) =>
+              String(x ?? "")
+                .trim()
+                .slice(0, 64)
+            )
             .filter(Boolean)
             .slice(0, 20)
         : undefined,
@@ -518,21 +623,25 @@ export function normalizeClarificationsFromLlm(raw: unknown): LoreImportClarific
       relatedLink:
         o.relatedLink &&
         typeof o.relatedLink === "object" &&
-        typeof (o.relatedLink as Record<string, unknown>).fromClientId === "string" &&
-        typeof (o.relatedLink as Record<string, unknown>).toClientId === "string"
+        typeof (o.relatedLink as Record<string, unknown>).fromClientId ===
+          "string" &&
+        typeof (o.relatedLink as Record<string, unknown>).toClientId ===
+          "string"
           ? {
               fromClientId: String(
-                (o.relatedLink as Record<string, unknown>).fromClientId,
+                (o.relatedLink as Record<string, unknown>).fromClientId
               ).slice(0, 64),
               toClientId: String(
-                (o.relatedLink as Record<string, unknown>).toClientId,
+                (o.relatedLink as Record<string, unknown>).toClientId
               ).slice(0, 64),
             }
           : undefined,
     };
 
     const parsed = loreImportClarificationItemSchema.safeParse(built);
-    if (parsed.success) out.push(parsed.data);
+    if (parsed.success) {
+      out.push(parsed.data);
+    }
   }
   return out;
 }
@@ -562,8 +671,12 @@ export function buildChunkAssignmentClarifications(input: {
 
   for (const chunkId of input.unassignedChunkIds) {
     const chunk = chunksById.get(chunkId);
-    if (!chunk) continue;
-    if (noteOptions.length === 0) break;
+    if (!chunk) {
+      continue;
+    }
+    if (noteOptions.length === 0) {
+      break;
+    }
     const options: LoreImportClarificationItem["options"] = [
       {
         id: "drop",
@@ -588,23 +701,32 @@ export function buildChunkAssignmentClarifications(input: {
       confidenceScore: 0.7,
       title: `Unassigned chunk: "${chunk.heading.slice(0, 80)}"`,
       context:
-        `The outline did not attach this chunk to any note. It still lives on the imported source card, ` +
-        `but you can pin it to a specific note instead.`,
+        "The outline did not attach this chunk to any note. It still lives on the imported source card, " +
+        "but you can pin it to a specific note instead.",
       questionKind: "single_select" as const,
       options: options.slice(0, 12),
     };
     const parsed = loreImportClarificationItemSchema.safeParse(built);
-    if (parsed.success) out.push(parsed.data);
+    if (parsed.success) {
+      out.push(parsed.data);
+    }
   }
 
   for (const dup of input.duplicateAssignments) {
     const chunk = chunksById.get(dup.chunkId);
-    if (!chunk || dup.noteClientIds.length !== 2) continue;
+    if (!chunk || dup.noteClientIds.length !== 2) {
+      continue;
+    }
     const claimants = dup.noteClientIds
       .map((id) => notesById.get(id))
       .filter((n): n is { clientId: string; title: string } => !!n);
-    if (claimants.length !== 2) continue;
-    const [a, b] = claimants as [typeof claimants[number], typeof claimants[number]];
+    if (claimants.length !== 2) {
+      continue;
+    }
+    const [a, b] = claimants as [
+      (typeof claimants)[number],
+      (typeof claimants)[number],
+    ];
     const options: LoreImportClarificationItem["options"] = [
       {
         id: "keep_both",
@@ -636,19 +758,23 @@ export function buildChunkAssignmentClarifications(input: {
       category: "structure" as const,
       severity: "optional" as const,
       confidenceScore: 0.66,
-      title: `Chunk claimed by 2 notes`,
+      title: "Chunk claimed by 2 notes",
       context: `"${chunk.heading.slice(0, 80)}" is listed on ${a.title} and ${b.title}.`,
       questionKind: "single_select" as const,
       options,
       relatedNoteClientIds: [a.clientId, b.clientId],
     };
     const parsed = loreImportClarificationItemSchema.safeParse(built);
-    if (parsed.success) out.push(parsed.data);
+    if (parsed.success) {
+      out.push(parsed.data);
+    }
   }
 
   for (const noteClientId of input.noteClientIdsWithoutChunks) {
     const note = notesById.get(noteClientId);
-    if (!note) continue;
+    if (!note) {
+      continue;
+    }
     const options: LoreImportClarificationItem["options"] = [
       {
         id: "summary_only",
@@ -659,7 +785,9 @@ export function buildChunkAssignmentClarifications(input: {
     ];
     for (const chunkId of input.unassignedChunkIds.slice(0, 5)) {
       const chunk = chunksById.get(chunkId);
-      if (!chunk) continue;
+      if (!chunk) {
+        continue;
+      }
       options.push({
         id: `attach_${chunkId}`,
         label: `Attach "${chunk.heading.slice(0, 80)}"`,
@@ -670,7 +798,9 @@ export function buildChunkAssignmentClarifications(input: {
         },
       });
     }
-    if (options.length < 2) continue;
+    if (options.length < 2) {
+      continue;
+    }
     const built = {
       id: randomUUID(),
       category: "structure" as const,
@@ -678,14 +808,16 @@ export function buildChunkAssignmentClarifications(input: {
       confidenceScore: 0.68,
       title: `Note "${note.title}" has no chunks`,
       context:
-        `The outline mentioned this note but did not attach any source chunks. It will be written as a ` +
-        `placeholder; attach a chunk or leave as a stub for now.`,
+        "The outline mentioned this note but did not attach any source chunks. It will be written as a " +
+        "placeholder; attach a chunk or leave as a stub for now.",
       questionKind: "single_select" as const,
       options: options.slice(0, 12),
       relatedNoteClientIds: [noteClientId],
     };
     const parsed = loreImportClarificationItemSchema.safeParse(built);
-    if (parsed.success) out.push(parsed.data);
+    if (parsed.success) {
+      out.push(parsed.data);
+    }
   }
 
   return out;
@@ -698,20 +830,27 @@ export function buildChunkAssignmentClarifications(input: {
 export function ensureClarificationsForContradictions(
   contradictions: LoreImportPlan["contradictions"],
   mergeProposals: MergeProposal[],
-  existing: LoreImportClarificationItem[],
+  existing: LoreImportClarificationItem[]
 ): LoreImportClarificationItem[] {
-  if (contradictions.length === 0) return existing;
+  if (contradictions.length === 0) {
+    return existing;
+  }
   const hasRequiredConflict = existing.some(
-    (c) => c.category === "conflict" && c.severity === "required",
+    (c) => c.category === "conflict" && c.severity === "required"
   );
-  if (hasRequiredConflict) return existing;
+  if (hasRequiredConflict) {
+    return existing;
+  }
 
   const next = [...existing];
   for (const contra of contradictions) {
     const merge = contra.noteClientId
       ? mergeProposals.find((m) => m.noteClientId === contra.noteClientId)
       : undefined;
-    const ctx = [contra.summary, contra.details].filter(Boolean).join("\n\n").slice(0, 4000);
+    const ctx = [contra.summary, contra.details]
+      .filter(Boolean)
+      .join("\n\n")
+      .slice(0, 4000);
 
     if (merge) {
       const built = {
@@ -738,10 +877,14 @@ export function ensureClarificationsForContradictions(
             },
           },
         ],
-        relatedNoteClientIds: contra.noteClientId ? [contra.noteClientId] : undefined,
+        relatedNoteClientIds: contra.noteClientId
+          ? [contra.noteClientId]
+          : undefined,
       };
       const parsed = loreImportClarificationItemSchema.safeParse(built);
-      if (parsed.success) next.push(parsed.data);
+      if (parsed.success) {
+        next.push(parsed.data);
+      }
     } else {
       const built = {
         id: randomUUID(),
@@ -782,10 +925,14 @@ export function ensureClarificationsForContradictions(
                 planPatchHint: { op: "no_op" as const },
               },
             ],
-        relatedNoteClientIds: contra.noteClientId ? [contra.noteClientId] : undefined,
+        relatedNoteClientIds: contra.noteClientId
+          ? [contra.noteClientId]
+          : undefined,
       };
       const parsed = loreImportClarificationItemSchema.safeParse(built);
-      if (parsed.success) next.push(parsed.data);
+      if (parsed.success) {
+        next.push(parsed.data);
+      }
     }
   }
   return next;

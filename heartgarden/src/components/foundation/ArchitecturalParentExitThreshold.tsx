@@ -1,7 +1,7 @@
 "use client";
 
 import { TrayArrowUp } from "@phosphor-icons/react";
-import { forwardRef, useCallback, type KeyboardEvent } from "react";
+import { forwardRef, type KeyboardEvent, useCallback } from "react";
 
 import styles from "@/src/components/foundation/ArchitecturalParentExitThreshold.module.css";
 
@@ -27,19 +27,25 @@ export const ArchitecturalParentExitThreshold = forwardRef<
 >(function ArchitecturalParentExitThreshold(props, ref) {
   const { visible, hovered, interactive, onActivate } = props;
   const runActivate = useCallback(() => {
-    if (!interactive || !onActivate) return;
+    if (!(interactive && onActivate)) {
+      return;
+    }
     onActivate();
   }, [interactive, onActivate]);
 
   const onKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
-      if (!interactive) return;
-      if (event.key !== "Enter" && event.key !== " ") return;
+      if (!interactive) {
+        return;
+      }
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       runActivate();
     },
-    [interactive, runActivate],
+    [interactive, runActivate]
   );
 
   const wellClass = [
@@ -55,30 +61,39 @@ export const ArchitecturalParentExitThreshold = forwardRef<
   return (
     <div className={`${styles.rail} ${visible ? styles.railVisible : ""}`}>
       <div
-        ref={ref}
-        className={wellClass}
-        role={interactive ? "button" : "region"}
-        tabIndex={interactive ? 0 : undefined}
         aria-label={
           interactive
             ? "Remove selection from this folder into the parent space"
             : "Drop zone: remove from folder into parent space"
         }
+        className={wellClass}
         onClick={(event) => {
-          if (!interactive) return;
+          if (!interactive) {
+            return;
+          }
           event.preventDefault();
           event.stopPropagation();
           runActivate();
         }}
+        onKeyDown={onKeyDown}
         onMouseDown={(event) => {
-          if (!interactive) return;
+          if (!interactive) {
+            return;
+          }
           event.stopPropagation();
         }}
-        onKeyDown={onKeyDown}
+        ref={ref}
+        role={interactive ? "button" : "region"}
+        tabIndex={interactive ? 0 : undefined}
       >
         <span className={styles.wellRow}>
-          <TrayArrowUp size={15} weight="bold" className={styles.icon} aria-hidden />
-          <span className={styles.label} aria-hidden>
+          <TrayArrowUp
+            aria-hidden
+            className={styles.icon}
+            size={15}
+            weight="bold"
+          />
+          <span aria-hidden className={styles.label}>
             Remove from folder
           </span>
         </span>

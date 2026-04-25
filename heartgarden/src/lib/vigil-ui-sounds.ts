@@ -5,7 +5,10 @@
  */
 export const VIGIL_UI_SOUNDS_ENABLED = false;
 
-import { readAppAudioMuted, subscribeAppAudioMuted } from "@/src/lib/vigil-audio-prefs";
+import {
+  readAppAudioMuted,
+  subscribeAppAudioMuted,
+} from "@/src/lib/vigil-audio-prefs";
 
 export type VigilUiSoundKind =
   | "tap"
@@ -21,7 +24,9 @@ export type VigilUiSoundKind =
   | "swipe";
 
 function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return false;
+  if (typeof window === "undefined") {
+    return false;
+  }
   try {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   } catch {
@@ -31,14 +36,22 @@ function prefersReducedMotion(): boolean {
 
 /** UI SFX allowed (ambient uses HTML audio separately). */
 export function allowUiSounds(): boolean {
-  if (!VIGIL_UI_SOUNDS_ENABLED) return false;
-  if (typeof window === "undefined") return false;
-  if (readAppAudioMuted()) return false;
-  if (prefersReducedMotion()) return false;
+  if (!VIGIL_UI_SOUNDS_ENABLED) {
+    return false;
+  }
+  if (typeof window === "undefined") {
+    return false;
+  }
+  if (readAppAudioMuted()) {
+    return false;
+  }
+  if (prefersReducedMotion()) {
+    return false;
+  }
   return true;
 }
 
-type SndInstance = InstanceType<(typeof import("snd-lib"))["default"]>;
+type SndInstance = InstanceType<typeof import("snd-lib")["default"]>;
 
 let loadPromise: Promise<SndInstance | null> | null = null;
 let cachedSnd: SndInstance | null = null;
@@ -46,18 +59,25 @@ let prefsSubscribed = false;
 
 function ensureSndMatchesGlobalPrefs(snd: SndInstance): void {
   try {
-    if (allowUiSounds()) snd.unmute();
-    else snd.mute();
+    if (allowUiSounds()) {
+      snd.unmute();
+    } else {
+      snd.mute();
+    }
   } catch {
     /* ignore */
   }
 }
 
 function subscribePrefsOnce(): void {
-  if (typeof window === "undefined" || prefsSubscribed) return;
+  if (typeof window === "undefined" || prefsSubscribed) {
+    return;
+  }
   prefsSubscribed = true;
   const sync = () => {
-    if (cachedSnd) ensureSndMatchesGlobalPrefs(cachedSnd);
+    if (cachedSnd) {
+      ensureSndMatchesGlobalPrefs(cachedSnd);
+    }
   };
   subscribeAppAudioMuted(sync);
   try {
@@ -70,7 +90,9 @@ function subscribePrefsOnce(): void {
 
 function getSndInstance(): Promise<SndInstance | null> {
   subscribePrefsOnce();
-  if (typeof window === "undefined") return Promise.resolve(null);
+  if (typeof window === "undefined") {
+    return Promise.resolve(null);
+  }
   if (!loadPromise) {
     loadPromise = (async () => {
       try {
@@ -90,9 +112,13 @@ function getSndInstance(): Promise<SndInstance | null> {
 }
 
 export function playVigilUiSound(kind: VigilUiSoundKind): void {
-  if (!allowUiSounds()) return;
+  if (!allowUiSounds()) {
+    return;
+  }
   void getSndInstance().then((snd) => {
-    if (!snd || !allowUiSounds()) return;
+    if (!(snd && allowUiSounds())) {
+      return;
+    }
     ensureSndMatchesGlobalPrefs(snd);
     try {
       switch (kind) {

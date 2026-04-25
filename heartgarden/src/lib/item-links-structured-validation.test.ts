@@ -8,7 +8,7 @@ describe("validateStructuredMirrorItemLink", () => {
     const r = validateStructuredMirrorItemLink(
       { linkSemantics: "association" },
       { id: "a", entityType: "character" },
-      { id: "b", entityType: "faction" },
+      { id: "b", entityType: "faction" }
     );
     expect(r.ok).toBe(true);
   });
@@ -17,10 +17,12 @@ describe("validateStructuredMirrorItemLink", () => {
     const r = validateStructuredMirrorItemLink(
       { linkSemantics: LINK_SEMANTICS_STRUCTURED_MIRROR },
       { id: "a", entityType: "character" },
-      { id: "b", entityType: "faction" },
+      { id: "b", entityType: "faction" }
     );
     expect(r.ok).toBe(false);
-    if (r.ok) return;
+    if (r.ok) {
+      return;
+    }
     expect(r.status).toBe(400);
   });
 
@@ -31,7 +33,7 @@ describe("validateStructuredMirrorItemLink", () => {
         bindingSlotId: "faction.factionRoster",
       },
       { id: "f", entityType: "faction" },
-      { id: "c", entityType: "character" },
+      { id: "c", entityType: "character" }
     );
     expect(r.ok).toBe(true);
   });
@@ -43,7 +45,7 @@ describe("validateStructuredMirrorItemLink", () => {
         bindingSlotId: "faction.factionRoster",
       },
       { id: "f", entityType: "faction" },
-      { id: "x", entityType: "location" },
+      { id: "x", entityType: "location" }
     );
     expect(r.ok).toBe(false);
   });

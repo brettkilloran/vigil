@@ -4,7 +4,11 @@ import styles from "./ArchitecturalCanvasApp.module.css";
 
 export type LoreImportUploadMode = "one_note" | "many_loose" | "many_folders";
 
-const LAND_MODE_OPTIONS: { id: LoreImportUploadMode; title: string; description: string }[] = [
+const LAND_MODE_OPTIONS: {
+  id: LoreImportUploadMode;
+  title: string;
+  description: string;
+}[] = [
   {
     id: "one_note",
     title: "One note",
@@ -37,17 +41,17 @@ export function LoreImportLandModeRadios(props: {
 
   return (
     <div
+      aria-label="How this import should land on the canvas"
       className={`${styles.smartImportWizardOptions} ${styles.importUploadPopoverLandModeOptions}`}
       role="radiogroup"
-      aria-label="How this import should land on the canvas"
     >
       {LAND_MODE_OPTIONS.map((opt) => (
-        <label key={opt.id} className={styles.smartImportWizardOption}>
+        <label className={styles.smartImportWizardOption} key={opt.id}>
           <input
-            type="radio"
-            name={name}
             checked={mode === opt.id}
+            name={name}
             onChange={() => onModeChange(opt.id)}
+            type="radio"
           />
           <span>
             <strong>{opt.title}</strong>

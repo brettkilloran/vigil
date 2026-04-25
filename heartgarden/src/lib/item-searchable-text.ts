@@ -38,7 +38,9 @@ export type ItemSearchableRowPick = Pick<
   | "loreAliases"
 >;
 
-export function itemSearchableSourceFromRow(row: ItemSearchableRowPick): ItemSearchableSource {
+export function itemSearchableSourceFromRow(
+  row: ItemSearchableRowPick
+): ItemSearchableSource {
   return {
     title: row.title,
     contentText: row.contentText,
@@ -58,7 +60,9 @@ const MAX_SEGMENT_CHARS = 600_000;
 
 function pushSegment(raw: string, parts: string[]): void {
   let s = raw.replace(/\s+/g, " ").trim();
-  if (!s) return;
+  if (!s) {
+    return;
+  }
   if (s.length > MAX_SEGMENT_CHARS) {
     s = `${s.slice(0, MAX_SEGMENT_CHARS)} …`;
   }
@@ -66,11 +70,18 @@ function pushSegment(raw: string, parts: string[]): void {
 }
 
 function looksLikeHtmlFragment(s: string): boolean {
-  return s.length >= 8 && s.includes("<") && s.includes(">") && /<[a-z][\s\S]*>/i.test(s);
+  return (
+    s.length >= 8 &&
+    s.includes("<") &&
+    s.includes(">") &&
+    /<[a-z][\s\S]*>/i.test(s)
+  );
 }
 
 function normalizeMaybeHtmlString(s: string): string {
-  if (!looksLikeHtmlFragment(s)) return s;
+  if (!looksLikeHtmlFragment(s)) {
+    return s;
+  }
   return stripLegacyHtmlToPlainText(s);
 }
 
@@ -78,8 +89,15 @@ function appendString(s: string, parts: string[]): void {
   pushSegment(normalizeMaybeHtmlString(s), parts);
 }
 
-function appendFromUnknown(value: unknown, parts: string[], depth: number, seen: Set<object>): void {
-  if (value == null || depth > MAX_DEPTH) return;
+function appendFromUnknown(
+  value: unknown,
+  parts: string[],
+  depth: number,
+  seen: Set<object>
+): void {
+  if (value == null || depth > MAX_DEPTH) {
+    return;
+  }
   if (typeof value === "string") {
     appendString(value, parts);
     return;
@@ -96,13 +114,17 @@ function appendFromUnknown(value: unknown, parts: string[], depth: number, seen:
   }
   if (typeof value === "object") {
     const o = value as Record<string, unknown>;
-    if (seen.has(o)) return;
+    if (seen.has(o)) {
+      return;
+    }
     seen.add(o);
     try {
       if (isHgDocContentJson(o)) {
         pushSegment(hgDocToPlainText(readHgDocFromContentJson(o)), parts);
         for (const [k, v] of Object.entries(o)) {
-          if (k === "doc" || k === "format") continue;
+          if (k === "doc" || k === "format") {
+            continue;
+          }
           appendFromUnknown(v, parts, depth + 1, seen);
         }
         return;
@@ -110,7 +132,9 @@ function appendFromUnknown(value: unknown, parts: string[], depth: number, seen:
       if (o.format === "html" && typeof o.html === "string") {
         pushSegment(stripLegacyHtmlToPlainText(o.html), parts);
         for (const [k, v] of Object.entries(o)) {
-          if (k === "html" || k === "format") continue;
+          if (k === "html" || k === "format") {
+            continue;
+          }
           appendFromUnknown(v, parts, depth + 1, seen);
         }
         return;
@@ -129,12 +153,20 @@ function appendFromUnknown(value: unknown, parts: string[], depth: number, seen:
  * `kind:<slug>` token so FTS and vector retrieval can filter by lore kind.
  */
 function extractCanonicalEntityKindToken(meta: unknown): string | null {
-  if (!meta || typeof meta !== "object") return null;
+  if (!meta || typeof meta !== "object") {
+    return null;
+  }
   const raw = (meta as Record<string, unknown>).canonicalEntityKind;
-  if (typeof raw !== "string") return null;
+  if (typeof raw !== "string") {
+    return null;
+  }
   const slug = raw.trim().toLowerCase();
-  if (!slug || slug.length > 32) return null;
-  if (!/^[a-z][a-z0-9_-]*$/.test(slug)) return null;
+  if (!slug || slug.length > 32) {
+    return null;
+  }
+  if (!/^[a-z][a-z0-9_-]*$/.test(slug)) {
+    return null;
+  }
   return `kind:${slug}`;
 }
 
@@ -146,10 +178,16 @@ export function buildItemVaultCorpus(source: ItemSearchableSource): string {
   const seen = new Set<object>();
 
   appendString(String(source.title ?? ""), parts);
-  if (source.entityType) appendString(String(source.entityType), parts);
+  if (source.entityType) {
+    appendString(String(source.entityType), parts);
+  }
   const canonicalKindToken = extractCanonicalEntityKindToken(source.entityMeta);
-  if (canonicalKindToken) appendString(canonicalKindToken, parts);
-  if (source.loreSummary) appendString(String(source.loreSummary), parts);
+  if (canonicalKindToken) {
+    appendString(canonicalKindToken, parts);
+  }
+  if (source.loreSummary) {
+    appendString(String(source.loreSummary), parts);
+  }
   if (Array.isArray(source.loreAliases)) {
     for (const a of source.loreAliases) {
       appendFromUnknown(a, parts, 0, seen);
@@ -158,7 +196,9 @@ export function buildItemVaultCorpus(source: ItemSearchableSource): string {
   appendString(String(source.contentText ?? ""), parts);
   appendFromUnknown(source.contentJson, parts, 0, seen);
   appendFromUnknown(source.entityMeta, parts, 0, seen);
-  if (source.imageUrl) appendString(String(source.imageUrl), parts);
+  if (source.imageUrl) {
+    appendString(String(source.imageUrl), parts);
+  }
   appendFromUnknown(source.imageMeta, parts, 0, seen);
 
   return parts.join(" ").replace(/\s+/g, " ").trim();

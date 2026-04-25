@@ -31,21 +31,27 @@ export type CollapsedStackInfo = {
 /** Same grouping as `collapsedStacks` in ArchitecturalCanvasApp (multi-card stacks only). */
 export function buildCollapsedStacksList(
   graph: CanvasGraph,
-  activeSpaceId: string,
+  activeSpaceId: string
 ): CollapsedStackInfo[] {
   const entityIds = graph.spaces[activeSpaceId]?.entityIds ?? [];
   const groups = new Map<string, CanvasEntity[]>();
   for (const id of entityIds) {
     const e = graph.entities[id];
-    if (!e?.stackId) continue;
+    if (!e?.stackId) {
+      continue;
+    }
     const arr = groups.get(e.stackId) ?? [];
     arr.push(e);
     groups.set(e.stackId, arr);
   }
   const out: CollapsedStackInfo[] = [];
   groups.forEach((entities, stackId) => {
-    if (entities.length < 2) return;
-    const sorted = [...entities].sort((a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0));
+    if (entities.length < 2) {
+      return;
+    }
+    const sorted = [...entities].sort(
+      (a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0)
+    );
     out.push({ stackId, entities: sorted, top: sorted[sorted.length - 1]! });
   });
   return out;
@@ -59,7 +65,10 @@ export function buildCollapsedStacksList(
  * collab patch but layout-relevant data is unchanged. Also ensures ResizeObserver wiring re-runs
  * after unstack / restack / remote moves that don’t change unrelated entities.
  */
-export function minimapLayoutSignature(graph: CanvasGraph, activeSpaceId: string): string {
+export function minimapLayoutSignature(
+  graph: CanvasGraph,
+  activeSpaceId: string
+): string {
   const entityIds = [...(graph.spaces[activeSpaceId]?.entityIds ?? [])].sort();
   const entityParts: string[] = [];
 
@@ -82,7 +91,9 @@ export function minimapLayoutSignature(graph: CanvasGraph, activeSpaceId: string
       const w = e.width ?? "";
       const h = e.height ?? "";
       const bodyLen = e.bodyHtml?.length ?? 0;
-      entityParts.push(`C:${id}:${slotStr}:${rot}:${w}×${h}:${stack}:${bodyLen}`);
+      entityParts.push(
+        `C:${id}:${slotStr}:${rot}:${w}×${h}:${stack}:${bodyLen}`
+      );
     }
   }
 
@@ -115,7 +126,7 @@ export function rotatedRectWorldBounds(
   y: number,
   w: number,
   h: number,
-  rotationDeg: number,
+  rotationDeg: number
 ): WorldBounds {
   const rad = (rotationDeg * Math.PI) / 180;
   const c = Math.cos(rad);
@@ -128,10 +139,10 @@ export function rotatedRectWorldBounds(
     { dx: w / 2, dy: h / 2 },
     { dx: -w / 2, dy: h / 2 },
   ];
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
   for (const { dx, dy } of corners) {
     const rx = dx * c - dy * s;
     const ry = dx * s + dy * c;
@@ -164,19 +175,23 @@ export type MinimapPlacementSize = { width: number; height: number };
 /** Avoid minimap subtree re-renders when DOM remeasure yields identical dimensions. */
 export function minimapPlacementMapsEqual(
   a: ReadonlyMap<string, MinimapPlacementSize>,
-  b: ReadonlyMap<string, MinimapPlacementSize>,
+  b: ReadonlyMap<string, MinimapPlacementSize>
 ): boolean {
-  if (a.size !== b.size) return false;
+  if (a.size !== b.size) {
+    return false;
+  }
   for (const [k, v] of a) {
     const u = b.get(k);
-    if (!u || u.width !== v.width || u.height !== v.height) return false;
+    if (!u || u.width !== v.width || u.height !== v.height) {
+      return false;
+    }
   }
   return true;
 }
 
 function entitySizeForMinimap(
   entity: CanvasEntity,
-  measured?: MinimapPlacementSize | null,
+  measured?: MinimapPlacementSize | null
 ): { w: number; h: number } {
   if (
     measured &&
@@ -193,10 +208,12 @@ function entitySizeForMinimap(
 function boundsForEntityAtSlot(
   entity: CanvasEntity,
   spaceId: string,
-  measured?: MinimapPlacementSize | null,
+  measured?: MinimapPlacementSize | null
 ): WorldBounds | null {
   const slot = entity.slots[spaceId];
-  if (!slot) return null;
+  if (!slot) {
+    return null;
+  }
   const { w, h } = entitySizeForMinimap(entity, measured);
   return rotatedRectWorldBounds(slot.x, slot.y, w, h, entity.rotation ?? 0);
 }
@@ -204,11 +221,13 @@ function boundsForEntityAtSlot(
 function boundsForCollapsedStack(
   entry: CollapsedStackInfo,
   spaceId: string,
-  measuredTop?: MinimapPlacementSize | null,
+  measuredTop?: MinimapPlacementSize | null
 ): WorldBounds | null {
   const { top, entities } = entry;
   const slot = top.slots[spaceId];
-  if (!slot) return null;
+  if (!slot) {
+    return null;
+  }
   const n = entities.length;
   const extra = Math.min((n - 1) * STACK_SPREAD_PX, MAX_STACK_SPREAD_EXTRA);
   const { w: bw, h: bh } = entitySizeForMinimap(top, measuredTop);
@@ -224,10 +243,12 @@ export function computeSpaceContentBounds(
   graph: CanvasGraph,
   activeSpaceId: string,
   collapsedStacks: readonly CollapsedStackInfo[],
-  placementSizes?: ReadonlyMap<string, MinimapPlacementSize> | null,
+  placementSizes?: ReadonlyMap<string, MinimapPlacementSize> | null
 ): WorldBounds | null {
   const entityIds = graph.spaces[activeSpaceId]?.entityIds ?? [];
-  if (entityIds.length === 0) return null;
+  if (entityIds.length === 0) {
+    return null;
+  }
 
   const stackMulti = new Set(collapsedStacks.map((c) => c.stackId));
 
@@ -235,18 +256,26 @@ export function computeSpaceContentBounds(
 
   for (const id of entityIds) {
     const entity = graph.entities[id];
-    if (!entity) continue;
-    if (entity.stackId && stackMulti.has(entity.stackId)) continue;
+    if (!entity) {
+      continue;
+    }
+    if (entity.stackId && stackMulti.has(entity.stackId)) {
+      continue;
+    }
     const measured = placementSizes?.get(id) ?? null;
     const b = boundsForEntityAtSlot(entity, activeSpaceId, measured);
-    if (!b) continue;
+    if (!b) {
+      continue;
+    }
     acc = acc ? unionBounds(acc, b) : b;
   }
 
   for (const cs of collapsedStacks) {
     const measuredTop = placementSizes?.get(cs.top.id) ?? null;
     const b = boundsForCollapsedStack(cs, activeSpaceId, measuredTop);
-    if (!b) continue;
+    if (!b) {
+      continue;
+    }
     acc = acc ? unionBounds(acc, b) : b;
   }
 
@@ -260,9 +289,11 @@ export function computeBoundsForEntitySubset(
   graph: CanvasGraph,
   activeSpaceId: string,
   collapsedStacks: readonly CollapsedStackInfo[],
-  selectedIds: readonly string[],
+  selectedIds: readonly string[]
 ): WorldBounds | null {
-  if (selectedIds.length === 0) return null;
+  if (selectedIds.length === 0) {
+    return null;
+  }
 
   const stackById = new Map<string, CollapsedStackInfo>();
   for (const cs of collapsedStacks) {
@@ -272,8 +303,12 @@ export function computeBoundsForEntitySubset(
   const expanded = new Set<string>();
   for (const id of selectedIds) {
     const e = graph.entities[id];
-    if (!e) continue;
-    if (!graph.spaces[activeSpaceId]?.entityIds.includes(id)) continue;
+    if (!e) {
+      continue;
+    }
+    if (!graph.spaces[activeSpaceId]?.entityIds.includes(id)) {
+      continue;
+    }
     if (e.stackId) {
       const cs = stackById.get(e.stackId);
       if (cs && cs.entities.length > 1) {
@@ -289,19 +324,27 @@ export function computeBoundsForEntitySubset(
 
   for (const id of expanded) {
     const entity = graph.entities[id];
-    if (!entity) continue;
+    if (!entity) {
+      continue;
+    }
     if (entity.stackId) {
       const cs = stackById.get(entity.stackId);
       if (cs && cs.entities.length > 1) {
-        if (handledStacks.has(cs.stackId)) continue;
+        if (handledStacks.has(cs.stackId)) {
+          continue;
+        }
         handledStacks.add(cs.stackId);
         const b = boundsForCollapsedStack(cs, activeSpaceId);
-        if (b) acc = acc ? unionBounds(acc, b) : b;
+        if (b) {
+          acc = acc ? unionBounds(acc, b) : b;
+        }
         continue;
       }
     }
     const b = boundsForEntityAtSlot(entity, activeSpaceId);
-    if (b) acc = acc ? unionBounds(acc, b) : b;
+    if (b) {
+      acc = acc ? unionBounds(acc, b) : b;
+    }
   }
 
   return acc;
@@ -323,11 +366,13 @@ export function fitCameraToActiveSpaceContent(
   viewportHeight: number,
   minZoom: number,
   maxZoom: number,
-  paddingPx = 120,
+  paddingPx = 120
 ): { scale: number; translateX: number; translateY: number } | null {
   const stacks = buildCollapsedStacksList(graph, activeSpaceId);
   const bounds = computeSpaceContentBounds(graph, activeSpaceId, stacks);
-  if (!bounds) return null;
+  if (!bounds) {
+    return null;
+  }
   return fitCameraToBounds({
     bounds,
     viewportWidth,
@@ -346,11 +391,18 @@ export function fitCameraToSelection(
   viewportHeight: number,
   minZoom: number,
   maxZoom: number,
-  paddingPx = 120,
+  paddingPx = 120
 ): { scale: number; translateX: number; translateY: number } | null {
   const stacks = buildCollapsedStacksList(graph, activeSpaceId);
-  const bounds = computeBoundsForEntitySubset(graph, activeSpaceId, stacks, selectedIds);
-  if (!bounds) return null;
+  const bounds = computeBoundsForEntitySubset(
+    graph,
+    activeSpaceId,
+    stacks,
+    selectedIds
+  );
+  if (!bounds) {
+    return null;
+  }
   return fitCameraToBounds({
     bounds,
     viewportWidth,
@@ -366,12 +418,19 @@ export function fitCameraToBounds(p: FitCameraParams): {
   translateX: number;
   translateY: number;
 } {
-  const { bounds, viewportWidth: width, viewportHeight: height, paddingPx: pad, minZoom, maxZoom } = p;
+  const {
+    bounds,
+    viewportWidth: width,
+    viewportHeight: height,
+    paddingPx: pad,
+    minZoom,
+    maxZoom,
+  } = p;
   const spanX = Math.max(1, bounds.maxX - bounds.minX);
   const spanY = Math.max(1, bounds.maxY - bounds.minY);
   const nextScale = Math.max(
     minZoom,
-    Math.min(maxZoom, Math.min((width - pad) / spanX, (height - pad) / spanY)),
+    Math.min(maxZoom, Math.min((width - pad) / spanX, (height - pad) / spanY))
   );
   const centerX = (bounds.minX + bounds.maxX) / 2;
   const centerY = (bounds.minY + bounds.maxY) / 2;
@@ -388,7 +447,7 @@ export function viewportWorldRect(
   translateY: number,
   scale: number,
   viewportWidth: number,
-  viewportHeight: number,
+  viewportHeight: number
 ): WorldBounds {
   return {
     minX: -translateX / scale,
@@ -414,7 +473,7 @@ function contentPlaneArea(bounds: WorldBounds): number {
 export function isContentMostlyOffScreen(
   content: WorldBounds,
   viewport: WorldBounds,
-  opts?: { minVisibleRatio?: number },
+  opts?: { minVisibleRatio?: number }
 ): boolean {
   const minRatio = opts?.minVisibleRatio ?? 0.02;
   const inter = intersectionArea(content, viewport);
@@ -443,7 +502,7 @@ export function listMinimapAtomRects(
   activeSpaceId: string,
   collapsedStacks: readonly CollapsedStackInfo[],
   selectedNodeIds: ReadonlySet<string>,
-  placementSizes?: ReadonlyMap<string, MinimapPlacementSize> | null,
+  placementSizes?: ReadonlyMap<string, MinimapPlacementSize> | null
 ): MinimapAtomRect[] {
   const entityIds = graph.spaces[activeSpaceId]?.entityIds ?? [];
   const stackMulti = new Set(collapsedStacks.map((c) => c.stackId));
@@ -451,14 +510,22 @@ export function listMinimapAtomRects(
 
   for (const id of entityIds) {
     const entity = graph.entities[id];
-    if (!entity) continue;
-    if (entity.stackId && stackMulti.has(entity.stackId)) continue;
+    if (!entity) {
+      continue;
+    }
+    if (entity.stackId && stackMulti.has(entity.stackId)) {
+      continue;
+    }
     const slot = entity.slots[activeSpaceId];
-    if (!slot) continue;
+    if (!slot) {
+      continue;
+    }
     const measured = placementSizes?.get(id) ?? null;
     const { w, h } = entitySizeForMinimap(entity, measured);
     const b = boundsForEntityAtSlot(entity, activeSpaceId, measured);
-    if (!b) continue;
+    if (!b) {
+      continue;
+    }
     out.push({
       key: `e:${id}`,
       bounds: b,
@@ -474,11 +541,15 @@ export function listMinimapAtomRects(
   for (const cs of collapsedStacks) {
     const { top, entities } = cs;
     const slot = top.slots[activeSpaceId];
-    if (!slot) continue;
+    if (!slot) {
+      continue;
+    }
     const n = entities.length;
     const measuredTop = placementSizes?.get(top.id) ?? null;
     const b = boundsForCollapsedStack(cs, activeSpaceId, measuredTop);
-    if (!b) continue;
+    if (!b) {
+      continue;
+    }
     const selected = cs.entities.some((e) => selectedNodeIds.has(e.id));
     const { w: bw, h: bh } = entitySizeForMinimap(top, measuredTop);
     /* Top stack layer: translate((n−1)×6, (n−1)×6) then fan rotate — same as .stackLayer in the shell. */

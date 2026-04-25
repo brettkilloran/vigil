@@ -4,16 +4,31 @@ import { eq } from "drizzle-orm";
 
 import type { tryGetDb } from "@/src/db/index";
 import { itemEmbeddings, items } from "@/src/db/schema";
-import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
+import {
+  embedTexts,
+  isEmbeddingApiConfigured,
+} from "@/src/lib/embedding-provider";
 import { rescanItemEntityMentions } from "@/src/lib/entity-mentions";
-import { deriveSectionsFromHgDoc, fallbackSingleSection } from "@/src/lib/hg-doc/derive-sections";
-import { isHgDocContentJson, readHgDocFromContentJson } from "@/src/lib/hg-doc/serialize";
-import { extractLoreItemMeta, normalizeLoreMetaInputText } from "@/src/lib/lore-item-meta";
+import {
+  deriveSectionsFromHgDoc,
+  fallbackSingleSection,
+} from "@/src/lib/hg-doc/derive-sections";
+import {
+  isHgDocContentJson,
+  readHgDocFromContentJson,
+} from "@/src/lib/hg-doc/serialize";
 import {
   buildItemVaultCorpus,
   itemSearchableSourceFromRow,
 } from "@/src/lib/item-searchable-text";
-import { chunkVaultSections, vaultMaxChunksPerItem } from "@/src/lib/vault-chunk";
+import {
+  extractLoreItemMeta,
+  normalizeLoreMetaInputText,
+} from "@/src/lib/lore-item-meta";
+import {
+  chunkVaultSections,
+  vaultMaxChunksPerItem,
+} from "@/src/lib/vault-chunk";
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 export type ItemRow = typeof items.$inferSelect;
@@ -22,10 +37,18 @@ const DEFAULT_LORE_MODEL = "claude-sonnet-4-20250514";
 
 /** When unset, `HEARTGARDEN_INDEX_SKIP_LORE_META=1` skips Anthropic lore fields on index. */
 function resolveRefreshLoreMeta(explicit?: boolean): boolean {
-  if (explicit === false) return false;
-  if (explicit === true) return true;
-  const skip = (process.env.HEARTGARDEN_INDEX_SKIP_LORE_META ?? "").trim().toLowerCase();
-  if (skip === "1" || skip === "true" || skip === "yes") return false;
+  if (explicit === false) {
+    return false;
+  }
+  if (explicit === true) {
+    return true;
+  }
+  const skip = (process.env.HEARTGARDEN_INDEX_SKIP_LORE_META ?? "")
+    .trim()
+    .toLowerCase();
+  if (skip === "1" || skip === "true" || skip === "yes") {
+    return false;
+  }
   return true;
 }
 
@@ -37,12 +60,18 @@ function sha256Hex(s: string): string {
  * Plain-text payload sent to Anthropic for lore summary + aliases (must stay in sync with `extractLoreItemMeta`).
  * Exported for tests and diagnostics only.
  */
-export function buildLoreMetaAnthropicBody(row: Pick<ItemRow, "title" | "contentText">): string {
+export function buildLoreMetaAnthropicBody(
+  row: Pick<ItemRow, "title" | "contentText">
+): string {
   const titleTrim = row.title?.trim();
   const textTrim = row.contentText?.trim();
   const parts: string[] = [];
-  if (titleTrim) parts.push(`Title: ${titleTrim}`);
-  if (textTrim) parts.push(textTrim);
+  if (titleTrim) {
+    parts.push(`Title: ${titleTrim}`);
+  }
+  if (textTrim) {
+    parts.push(textTrim);
+  }
   return parts.join("\n\n");
 }
 
@@ -73,7 +102,7 @@ export function resolveLoreMetaModel(): string {
  */
 export function computeLoreMetaSourceHash(
   row: Pick<ItemRow, "title" | "contentText">,
-  model: string = resolveLoreMetaModel(),
+  model: string = resolveLoreMetaModel()
 ): string {
   const forApi = normalizeLoreMetaInputText(buildLoreMetaAnthropicBody(row));
   const versioned = `${loreMetaPromptVersion()}|${model}|${forApi}`;
@@ -82,16 +111,24 @@ export function computeLoreMetaSourceHash(
 
 /** When set, always call Anthropic for lore meta even if the source hash matches (e.g. after changing `ANTHROPIC_LORE_MODEL`). */
 function loreMetaIgnoreSourceHashEnv(): boolean {
-  const v = (process.env.HEARTGARDEN_LORE_META_IGNORE_SOURCE_HASH ?? "").trim().toLowerCase();
+  const v = (process.env.HEARTGARDEN_LORE_META_IGNORE_SOURCE_HASH ?? "")
+    .trim()
+    .toLowerCase();
   return v === "1" || v === "true" || v === "yes";
 }
 
 /** Remove all embedding chunks for an item (call after content edits until reindexed). */
-export async function clearItemEmbeddings(db: VigilDb, itemId: string): Promise<void> {
+export async function clearItemEmbeddings(
+  db: VigilDb,
+  itemId: string
+): Promise<void> {
   await db.delete(itemEmbeddings).where(eq(itemEmbeddings.itemId, itemId));
 }
 
-export async function refreshItemEmbedding(db: VigilDb, row: ItemRow): Promise<void> {
+export async function refreshItemEmbedding(
+  db: VigilDb,
+  row: ItemRow
+): Promise<void> {
   await clearItemEmbeddings(db, row.id);
 }
 
@@ -110,13 +147,17 @@ export type ReindexItemVaultResult = {
 
 function assertLoreMetaHashInvariant(
   loreMetaUpdated: boolean,
-  loreMetaSourceHash: string | undefined,
+  loreMetaSourceHash: string | undefined
 ): string | undefined {
-  if (!loreMetaUpdated) return undefined;
+  if (!loreMetaUpdated) {
+    return;
+  }
   if (typeof loreMetaSourceHash === "string" && loreMetaSourceHash.length > 0) {
     return loreMetaSourceHash;
   }
-  throw new Error("lore meta hash invariant violated: update requested without source hash");
+  throw new Error(
+    "lore meta hash invariant violated: update requested without source hash"
+  );
 }
 
 /**
@@ -125,16 +166,30 @@ function assertLoreMetaHashInvariant(
 export async function reindexItemVault(
   db: VigilDb,
   itemId: string,
-  options: { refreshLoreMeta?: boolean } = {},
+  options: { refreshLoreMeta?: boolean } = {}
 ): Promise<ReindexItemVaultResult> {
-  const [row] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
+  const [row] = await db
+    .select()
+    .from(items)
+    .where(eq(items.id, itemId))
+    .limit(1);
   if (!row) {
-    return { ok: false, chunks: 0, loreMetaUpdated: false, skipped: "not_found" };
+    return {
+      ok: false,
+      chunks: 0,
+      loreMetaUpdated: false,
+      skipped: "not_found",
+    };
   }
 
   if (!isEmbeddingApiConfigured()) {
     await clearItemEmbeddings(db, itemId);
-    return { ok: true, chunks: 0, loreMetaUpdated: false, skipped: "no_embedding_provider" };
+    return {
+      ok: true,
+      chunks: 0,
+      loreMetaUpdated: false,
+      skipped: "no_embedding_provider",
+    };
   }
 
   let loreMetaUpdated = false;
@@ -162,7 +217,10 @@ export async function reindexItemVault(
       loreAliasesEff = meta.aliases.length ? meta.aliases : null;
       loreMetaSourceHash = sourceHash;
       loreMetaUpdated = true;
-      requiredLoreMetaHash = assertLoreMetaHashInvariant(loreMetaUpdated, loreMetaSourceHash);
+      requiredLoreMetaHash = assertLoreMetaHashInvariant(
+        loreMetaUpdated,
+        loreMetaSourceHash
+      );
     }
   }
 
@@ -171,19 +229,26 @@ export async function reindexItemVault(
       ...row,
       loreSummary: loreSummaryEff,
       loreAliases: loreAliasesEff,
-    }),
+    })
   );
 
-  const contentJson = (row.contentJson ?? null) as Record<string, unknown> | null;
+  const contentJson = (row.contentJson ?? null) as Record<
+    string,
+    unknown
+  > | null;
   const sections = isHgDocContentJson(contentJson)
-    ? deriveSectionsFromHgDoc(readHgDocFromContentJson(contentJson), row.title || "Untitled")
+    ? deriveSectionsFromHgDoc(
+        readHgDocFromContentJson(contentJson),
+        row.title || "Untitled"
+      )
     : fallbackSingleSection(row.contentText ?? corpus, row.title || "Untitled");
   const allChunks = chunkVaultSections(sections);
   // REVIEW_2026-04-25_1835 H6: hard ceiling on per-item chunk count to keep one
   // very-long note from dominating OpenAI embedding spend on every edit. Sections
   // past the cap still appear in lexical FTS via `search_blob`.
   const chunkCap = vaultMaxChunksPerItem();
-  const chunks = allChunks.length > chunkCap ? allChunks.slice(0, chunkCap) : allChunks;
+  const chunks =
+    allChunks.length > chunkCap ? allChunks.slice(0, chunkCap) : allChunks;
   const chunksTruncated = allChunks.length > chunkCap;
   if (chunksTruncated) {
     console.warn("[vault-index] chunks truncated", {
@@ -207,7 +272,10 @@ export async function reindexItemVault(
         })
         .where(eq(items.id, itemId));
     } else {
-      await db.update(items).set({ searchBlob: corpus }).where(eq(items.id, itemId));
+      await db
+        .update(items)
+        .set({ searchBlob: corpus })
+        .where(eq(items.id, itemId));
     }
     await clearItemEmbeddings(db, itemId);
     await rescanItemEntityMentions(db, itemId).catch(() => {
@@ -244,7 +312,10 @@ export async function reindexItemVault(
         })
         .where(eq(items.id, itemId));
     } else {
-      await tx.update(items).set({ searchBlob: corpus }).where(eq(items.id, itemId));
+      await tx
+        .update(items)
+        .set({ searchBlob: corpus })
+        .where(eq(items.id, itemId));
     }
     await tx.delete(itemEmbeddings).where(eq(itemEmbeddings.itemId, itemId));
     await tx.insert(itemEmbeddings).values(values);
@@ -263,24 +334,31 @@ export async function reindexItemVault(
 // and respects upstream rate limits without a full job queue rewrite.
 const REINDEX_SPACE_CONCURRENCY = Math.max(
   1,
-  Number.parseInt(process.env.HEARTGARDEN_REINDEX_CONCURRENCY ?? "", 10) || 4,
+  Number.parseInt(process.env.HEARTGARDEN_REINDEX_CONCURRENCY ?? "", 10) || 4
 );
 
 export async function reindexSpaceVault(
   db: VigilDb,
   spaceId: string,
-  options: { refreshLoreMeta?: boolean } = {},
+  options: { refreshLoreMeta?: boolean } = {}
 ): Promise<{ items: number; errors: number }> {
-  const rows = await db.select({ id: items.id }).from(items).where(eq(items.spaceId, spaceId));
+  const rows = await db
+    .select({ id: items.id })
+    .from(items)
+    .where(eq(items.spaceId, spaceId));
   let errors = 0;
   let cursor = 0;
   const total = rows.length;
   async function runWorker(): Promise<void> {
     while (true) {
       const next = cursor++;
-      if (next >= total) return;
+      if (next >= total) {
+        return;
+      }
       const row = rows[next];
-      if (!row) return;
+      if (!row) {
+        return;
+      }
       try {
         await reindexItemVault(db, row.id, options);
       } catch {

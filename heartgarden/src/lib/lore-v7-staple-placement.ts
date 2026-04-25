@@ -16,21 +16,21 @@ export type OrdoV7StaplePlacementOptions = {
 export function ordoV7StaplePlacementFromSeed(
   seed: string,
   tapeRotationDeg?: number,
-  options?: OrdoV7StaplePlacementOptions,
+  options?: OrdoV7StaplePlacementOptions
 ): CSSProperties {
-  let h = 2166136261;
+  let h = 2_166_136_261;
   for (let i = 0; i < seed.length; i++) {
-    h = Math.imul(h ^ seed.charCodeAt(i), 16777619) >>> 0;
+    h = Math.imul(h ^ seed.charCodeAt(i), 16_777_619) >>> 0;
   }
   const mix = (salt: number) => {
-    let x = Math.imul(h ^ salt, 2246822519) >>> 0;
+    let x = Math.imul(h ^ salt, 2_246_822_519) >>> 0;
     x ^= x >>> 16;
-    x = Math.imul(x, 2246822519) >>> 0;
+    x = Math.imul(x, 2_246_822_519) >>> 0;
     return x >>> 0;
   };
-  const hDeg = mix(0x5bd1e995);
-  const hX = mix(0xcbf29ce4);
-  const hY = mix(0x9e3779b9);
+  const hDeg = mix(0x5b_d1_e9_95);
+  const hX = mix(0xcb_f2_9c_e4);
+  const hY = mix(0x9e_37_79_b9);
   const degRange = options?.extraDegRangeDeg ?? 14;
   const extraDeg = ((hDeg % 1001) / 1001 - 0.5) * degRange;
   const deg = (tapeRotationDeg ?? 0) + extraDeg;

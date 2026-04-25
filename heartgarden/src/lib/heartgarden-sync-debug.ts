@@ -3,12 +3,19 @@
  */
 
 export function isHeartgardenSyncDebugEnabled(): boolean {
-  if (typeof process === "undefined") return false;
+  if (typeof process === "undefined") {
+    return false;
+  }
   return (process.env.NEXT_PUBLIC_HEARTGARDEN_SYNC_DEBUG ?? "").trim() === "1";
 }
 
-export function heartgardenSyncDebugLog(message: string, data?: Record<string, unknown>): void {
-  if (!isHeartgardenSyncDebugEnabled()) return;
+export function heartgardenSyncDebugLog(
+  message: string,
+  data?: Record<string, unknown>
+): void {
+  if (!isHeartgardenSyncDebugEnabled()) {
+    return;
+  }
   if (data) {
     console.debug(`[heartgarden sync] ${message}`, data);
   } else {

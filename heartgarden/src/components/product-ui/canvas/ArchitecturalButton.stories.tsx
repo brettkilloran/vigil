@@ -130,23 +130,30 @@ export const FocusDark: Story = {
 
 export const StateMatrix: Story = {
   render: () => (
-    <div style={{ display: "flex", gap: 10, padding: 20, background: "var(--sem-surface-base)", flexWrap: "wrap" }}>
+    <div
+      style={{
+        display: "flex",
+        gap: 10,
+        padding: 20,
+        background: "var(--sem-surface-base)",
+        flexWrap: "wrap",
+      }}
+    >
       <ArchitecturalButton size="icon" tone="glass">
         <CursorClick size={18} />
       </ArchitecturalButton>
-      <ArchitecturalButton size="icon" tone="glass" forceState="hover">
+      <ArchitecturalButton forceState="hover" size="icon" tone="glass">
         <CursorClick size={18} />
       </ArchitecturalButton>
-      <ArchitecturalButton size="icon" tone="glass" forceState="active">
+      <ArchitecturalButton forceState="active" size="icon" tone="glass">
         <CursorClick size={18} />
       </ArchitecturalButton>
-      <ArchitecturalButton size="icon" tone="glass" active>
+      <ArchitecturalButton active size="icon" tone="glass">
         <CursorClick size={18} />
       </ArchitecturalButton>
-      <ArchitecturalButton size="icon" tone="glass" disabled>
+      <ArchitecturalButton disabled size="icon" tone="glass">
         <CursorClick size={18} />
       </ArchitecturalButton>
     </div>
   ),
 };
-

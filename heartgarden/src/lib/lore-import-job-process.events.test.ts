@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { appendLoreImportJobEvent, appendLoreImportJobEventsBatch } from "@/src/lib/lore-import-job-process";
+import {
+  appendLoreImportJobEvent,
+  appendLoreImportJobEventsBatch,
+} from "@/src/lib/lore-import-job-process";
 import type { VigilDb } from "@/src/lib/spaces";
 
 function mockDb() {
@@ -20,7 +23,10 @@ describe("appendLoreImportJobEventsBatch", () => {
 
   it("delegates single-event path to the batch implementation", async () => {
     const { db, execute } = mockDb();
-    await appendLoreImportJobEvent(db, "job-uid", { kind: "note", text: "one" });
+    await appendLoreImportJobEvent(db, "job-uid", {
+      kind: "note",
+      text: "one",
+    });
     expect(execute).toHaveBeenCalledTimes(1);
   });
 });

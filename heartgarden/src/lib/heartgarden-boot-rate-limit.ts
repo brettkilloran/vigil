@@ -6,10 +6,13 @@ const buckets = new Map<string, Bucket>();
 let pruneCounter = 0;
 
 function readBootPostRateLimitConfig(): { max: number; windowMs: number } {
-  const maxRaw = Number.parseInt((process.env.HEARTGARDEN_BOOT_POST_RATE_LIMIT_MAX ?? "").trim(), 10);
+  const maxRaw = Number.parseInt(
+    (process.env.HEARTGARDEN_BOOT_POST_RATE_LIMIT_MAX ?? "").trim(),
+    10
+  );
   const windowRaw = Number.parseInt(
     (process.env.HEARTGARDEN_BOOT_POST_RATE_LIMIT_WINDOW_MS ?? "").trim(),
-    10,
+    10
   );
   const max =
     Number.isFinite(maxRaw) && maxRaw >= 3 ? Math.min(maxRaw, 500) : 40;
@@ -24,7 +27,9 @@ function pruneStaleBuckets(windowMs: number) {
   const now = Date.now();
   const cutoff = now - windowMs * 2;
   for (const [ip, b] of buckets) {
-    if (b.windowStart < cutoff) buckets.delete(ip);
+    if (b.windowStart < cutoff) {
+      buckets.delete(ip);
+    }
   }
 }
 
@@ -35,10 +40,14 @@ export function heartgardenBootClientIp(req: Request): string {
   const xf = req.headers.get("x-forwarded-for");
   if (xf) {
     const first = xf.split(",")[0]?.trim();
-    if (first) return first;
+    if (first) {
+      return first;
+    }
   }
   const realIp = req.headers.get("x-real-ip")?.trim();
-  if (realIp) return realIp;
+  if (realIp) {
+    return realIp;
+  }
   return "unknown";
 }
 
@@ -46,7 +55,9 @@ export function heartgardenBootClientIp(req: Request): string {
  * Returns true if this POST may proceed. In-memory per-instance (serverless); still limits casual brute force.
  */
 export function consumeHeartgardenBootPostRateLimit(ip: string): boolean {
-  if (isPlaywrightE2E()) return true;
+  if (isPlaywrightE2E()) {
+    return true;
+  }
   const { max, windowMs } = readBootPostRateLimitConfig();
   const now = Date.now();
   const b = buckets.get(ip);

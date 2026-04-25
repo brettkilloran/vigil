@@ -3,9 +3,16 @@ import type { JSONContent } from "@tiptap/core";
 import type { CanvasContentEntity } from "@/src/components/foundation/architectural-types";
 
 /** True if the hgDoc JSON tree still contains `hgAiPending` marks. */
-export function hgDocJsonHasHgAiPending(doc: JSONContent | null | undefined): boolean {
-  if (!doc) return false;
-  if (Array.isArray(doc.marks) && doc.marks.some((m) => m.type === "hgAiPending")) {
+export function hgDocJsonHasHgAiPending(
+  doc: JSONContent | null | undefined
+): boolean {
+  if (!doc) {
+    return false;
+  }
+  if (
+    Array.isArray(doc.marks) &&
+    doc.marks.some((m) => m.type === "hgAiPending")
+  ) {
     return true;
   }
   if (Array.isArray(doc.content)) {
@@ -41,7 +48,9 @@ export function stripHgAiPendingFromHtml(html: string): string {
     /<span(?=[^>]*(?:\bdata-hg-ai-pending="true"|\bdata-hg-ai-pending='true'|\bclass="[^"]*\bhgAiPending\b))[^>]*>([\s\S]*?)<\/span>/gi;
   for (let i = 0; i < 64; i++) {
     const next = out.replace(re, (_, inner: string) => inner);
-    if (next === out) break;
+    if (next === out) {
+      break;
+    }
     out = next;
   }
   return out;
@@ -57,6 +66,8 @@ export function htmlStringHasHgAiPending(html: string): boolean {
 
 /** True if body still contains pending-AI marks or spans. */
 export function contentEntityHasHgAiPending(ent: CanvasContentEntity): boolean {
-  if (ent.bodyDoc != null && hgDocJsonHasHgAiPending(ent.bodyDoc)) return true;
+  if (ent.bodyDoc != null && hgDocJsonHasHgAiPending(ent.bodyDoc)) {
+    return true;
+  }
   return htmlStringHasHgAiPending(ent.bodyHtml);
 }

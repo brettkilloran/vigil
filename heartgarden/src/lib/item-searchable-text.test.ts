@@ -12,7 +12,12 @@ describe("buildItemVaultCorpus", () => {
         format: "hgDoc",
         doc: {
           type: "doc",
-          content: [{ type: "paragraph", content: [{ type: "text", text: "Doc line" }] }],
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Doc line" }],
+            },
+          ],
         },
         hgArch: { orgNamePrimary: "The Syndicate" },
       },

@@ -58,14 +58,14 @@ describe("useEditorSession", () => {
     act(() => {
       root.render(
         <Harness
-          value="Alpha"
           debounceMs={100}
           normalizeOnCommit={(value) => value.trim()}
           onCommit={(value, reason) => commits.push({ value, reason })}
           onReady={(next) => {
             session = next;
           }}
-        />,
+          value="Alpha"
+        />
       );
     });
 
@@ -91,13 +91,13 @@ describe("useEditorSession", () => {
     act(() => {
       root.render(
         <Harness
-          value="Original"
           debounceMs={100}
           onCommit={(value, reason) => commits.push({ value, reason })}
           onReady={(next) => {
             session = next;
           }}
-        />,
+          value="Original"
+        />
       );
     });
 

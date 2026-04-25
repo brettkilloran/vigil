@@ -15,8 +15,11 @@ export function readR2Env(): R2Env | null {
   const accessKeyId = process.env.R2_ACCESS_KEY_ID?.trim() ?? "";
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY?.trim() ?? "";
   const bucket = process.env.R2_BUCKET_NAME?.trim() ?? "";
-  const publicBaseUrl = process.env.R2_PUBLIC_BASE_URL?.replace(/\/$/, "").trim() ?? "";
-  if (!accountId || !accessKeyId || !secretAccessKey || !bucket || !publicBaseUrl) {
+  const publicBaseUrl =
+    process.env.R2_PUBLIC_BASE_URL?.replace(/\/$/, "").trim() ?? "";
+  if (
+    !(accountId && accessKeyId && secretAccessKey && bucket && publicBaseUrl)
+  ) {
     return null;
   }
   return {
@@ -41,7 +44,7 @@ export async function presignImagePut(
     filename?: string;
     spaceId?: string;
     expiresSec?: number;
-  },
+  }
 ): Promise<{ uploadUrl: string; publicUrl: string; key: string }> {
   const id = crypto.randomUUID();
   const seg = opts.spaceId ?? "uploads";

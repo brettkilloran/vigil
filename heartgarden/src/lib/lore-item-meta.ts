@@ -21,7 +21,7 @@ export type LoreItemMeta = { summary: string; aliases: string[] };
 export async function extractLoreItemMeta(
   apiKey: string,
   model: string,
-  text: string,
+  text: string
 ): Promise<LoreItemMeta> {
   const trimmed = normalizeLoreMetaInputText(text);
   const res = await callAnthropic(
@@ -36,7 +36,7 @@ export async function extractLoreItemMeta(
         },
       ],
     },
-    { label: "lore.item_meta", expectJson: true },
+    { label: "lore.item_meta", expectJson: true }
   );
   if (!res.jsonText) {
     return { summary: "", aliases: [] };
@@ -47,7 +47,9 @@ export async function extractLoreItemMeta(
       aliases?: string[];
     };
     const summary =
-      typeof parsed.summary === "string" ? parsed.summary.trim().slice(0, 400) : "";
+      typeof parsed.summary === "string"
+        ? parsed.summary.trim().slice(0, 400)
+        : "";
     const aliases = Array.isArray(parsed.aliases)
       ? parsed.aliases
           .filter((a): a is string => typeof a === "string")

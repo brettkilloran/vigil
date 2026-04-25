@@ -20,20 +20,20 @@ export function ArchitecturalFocusCloseButton({
     return (
       <div className={styles.focusHeaderActions}>
         <ArchitecturalButton
+          leadingIcon={<XCircle size={16} />}
+          onClick={onDiscard}
           size="pill"
           tone="focus-discard"
           type="button"
-          leadingIcon={<XCircle size={16} />}
-          onClick={onDiscard}
         >
           Discard
         </ArchitecturalButton>
         <ArchitecturalButton
+          leadingIcon={<FloppyDisk size={16} />}
+          onClick={onSave}
           size="pill"
           tone="focus-done"
           type="button"
-          leadingIcon={<FloppyDisk size={16} />}
-          onClick={onSave}
         >
           Save
         </ArchitecturalButton>
@@ -43,11 +43,11 @@ export function ArchitecturalFocusCloseButton({
 
   return (
     <ArchitecturalButton
+      leadingIcon={<CheckCircle size={16} />}
+      onClick={onDone}
       size="pill"
       tone="focus-done"
       type="button"
-      leadingIcon={<CheckCircle size={16} />}
-      onClick={onDone}
     >
       Done
     </ArchitecturalButton>

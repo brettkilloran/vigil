@@ -20,20 +20,26 @@ describe("heartgarden-player-layer-env", () => {
   afterEach(() => {
     for (const k of keys) {
       const v = prev[k];
-      if (v === undefined) delete process.env[k];
-      else process.env[k] = v;
+      if (v === undefined) {
+        delete process.env[k];
+      } else {
+        process.env[k] = v;
+      }
       delete prev[k];
     }
   });
 
   function snapshotEnv() {
-    for (const k of keys) prev[k] = process.env[k];
+    for (const k of keys) {
+      prev[k] = process.env[k];
+    }
   }
 
   it("resolveHeartgardenPlayerSpaceIdFromEnv prefers HEARTGARDEN_PLAYER_SPACE_ID", () => {
     snapshotEnv();
     process.env.HEARTGARDEN_PLAYER_SPACE_ID = VALID;
-    process.env.HEARTGARDEN_DEFAULT_SPACE_ID = "22222222-2222-4222-8222-222222222222";
+    process.env.HEARTGARDEN_DEFAULT_SPACE_ID =
+      "22222222-2222-4222-8222-222222222222";
     expect(resolveHeartgardenPlayerSpaceIdFromEnv()).toBe(VALID);
   });
 

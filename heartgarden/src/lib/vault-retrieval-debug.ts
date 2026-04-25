@@ -7,7 +7,11 @@ export function isVaultRetrievalDebugEnabled(): boolean {
   return flag === "1" || flag === "true" || flag === "yes";
 }
 
-export function logVaultHybridRetrieval(payload: Record<string, unknown>): void {
-  if (!isVaultRetrievalDebugEnabled()) return;
+export function logVaultHybridRetrieval(
+  payload: Record<string, unknown>
+): void {
+  if (!isVaultRetrievalDebugEnabled()) {
+    return;
+  }
   console.debug("[vault-hybrid]", JSON.stringify(payload));
 }

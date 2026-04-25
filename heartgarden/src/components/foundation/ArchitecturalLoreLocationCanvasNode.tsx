@@ -1,14 +1,11 @@
 "use client";
 
 import type { CSSProperties } from "react";
-
-import type { CanvasTool } from "@/src/components/foundation/architectural-types";
 import type { WikiLinkAssistConfig } from "@/src/components/editing/BufferedContentEditable";
-import {
-  ArchitecturalNodeBody,
-} from "@/src/components/foundation/ArchitecturalNodeCard";
-import { LoreLocationOrdoV7Slab } from "@/src/components/foundation/LoreLocationOrdoV7Slab";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
+import { ArchitecturalNodeBody } from "@/src/components/foundation/ArchitecturalNodeCard";
+import type { CanvasTool } from "@/src/components/foundation/architectural-types";
+import { LoreLocationOrdoV7Slab } from "@/src/components/foundation/LoreLocationOrdoV7Slab";
 import { bodyHtmlImpliesLoreLocationOrdoV7 } from "@/src/lib/lore-node-seed-html";
 
 /**
@@ -48,7 +45,10 @@ export function ArchitecturalLoreLocationCanvasNode({
   emptyPlaceholder?: string | null;
 }) {
   const MAX_ENTITY_CARD_WIDTH = 340;
-  const nodeWidth = Math.min(width ?? MAX_ENTITY_CARD_WIDTH, MAX_ENTITY_CARD_WIDTH);
+  const nodeWidth = Math.min(
+    width ?? MAX_ENTITY_CARD_WIDTH,
+    MAX_ENTITY_CARD_WIDTH
+  );
   const cardStyle = {
     width: `${nodeWidth}px`,
     "--entity-width": `${nodeWidth}px`,
@@ -61,37 +61,39 @@ export function ArchitecturalLoreLocationCanvasNode({
       className={`${styles.entityNode} ${styles.loreLocationOrdoCanvasRoot} ${
         dragged ? styles.dragging : ""
       } ${selected ? styles.selectedNode : ""}`}
-      style={cardStyle}
       data-hg-canvas-role="lore-location"
       data-lore-kind="location"
       data-lore-variant="v7"
+      style={cardStyle}
     >
       {bodyHtmlImpliesLoreLocationOrdoV7(bodyHtml) ? (
         <LoreLocationOrdoV7Slab
-          nodeId={id}
           bodyHtml={bodyHtml}
-          showStaple={showStaple}
-          tapeRotationDeg={tapeRotation}
           editable={editable}
+          emptyPlaceholder={emptyPlaceholder}
+          nodeId={id}
           onCommit={(html) => onBodyCommit(id, html)}
           onDraftDirty={onBodyDraftDirty}
-          emptyPlaceholder={emptyPlaceholder}
+          showStaple={showStaple}
+          tapeRotationDeg={tapeRotation}
         />
       ) : (
         <ArchitecturalNodeBody
-          nodeId={id}
-          documentVariant="html"
-          html={bodyHtml}
           className={styles.loreLocationOrdoBody}
+          documentVariant="html"
           editable={editable}
-          spellCheck={false}
+          emptyPlaceholder={emptyPlaceholder}
+          html={bodyHtml}
+          nodeId={id}
           onCommitPayload={(p) => {
-            if (p.kind === "html") onBodyCommit(id, p.html);
+            if (p.kind === "html") {
+              onBodyCommit(id, p.html);
+            }
           }}
           onDraftDirtyChange={onBodyDraftDirty}
-          wikiLinkAssist={wikiLinkAssist ?? null}
           onRichDocCommand={onRichDocCommand}
-          emptyPlaceholder={emptyPlaceholder}
+          spellCheck={false}
+          wikiLinkAssist={wikiLinkAssist ?? null}
         />
       )}
     </div>

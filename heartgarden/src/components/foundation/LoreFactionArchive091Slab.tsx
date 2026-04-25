@@ -2,26 +2,34 @@
 
 import { ArrowsOutSimple } from "@phosphor-icons/react";
 import type { JSONContent } from "@tiptap/core";
-import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { HeartgardenDocEditor } from "@/src/components/editing/HeartgardenDocEditor";
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
-import { Button } from "@/src/components/ui/Button";
 import cardStyles from "@/src/components/foundation/lore-entity-card.module.css";
+import { Button } from "@/src/components/ui/Button";
 import { cx } from "@/src/lib/cx";
 import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
+import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
+import { htmlFragmentToHgDocDoc } from "@/src/lib/hg-doc/html-to-doc";
 import {
   buildFactionArchive091BodyHtml,
   FACTION_ARCHIVE091_READABLE_DEFAULT_RECORD_HTML,
   factionArchiveRailTextsFromObjectId,
   parseFactionArchive091BodyHtml,
 } from "@/src/lib/lore-faction-archive-html";
-import { htmlFragmentToHgDocDoc } from "@/src/lib/hg-doc/html-to-doc";
-import { hgDocToHtml } from "@/src/lib/hg-doc/html-export";
-import { LORE_V9_REDACTED_SENTINEL } from "@/src/lib/lore-v9-placeholder";
 import {
   consumeLorePlaceholderBeforeInput,
   installLorePlaceholderSelectionGuards,
+  LORE_V9_REDACTED_SENTINEL,
   placeCaretAfterLorePlaceholderReplace,
   syncLoreV9RedactedPlaceholderState,
 } from "@/src/lib/lore-v9-placeholder";
@@ -59,17 +67,22 @@ export function LoreFactionArchive091Slab({
   onDraftDirty,
   emptyPlaceholder,
 }: LoreFactionArchive091SlabProps) {
-  const parsed = useMemo(() => parseFactionArchive091BodyHtml(bodyHtml), [bodyHtml]);
+  const parsed = useMemo(
+    () => parseFactionArchive091BodyHtml(bodyHtml),
+    [bodyHtml]
+  );
 
   const [orgPrimaryHtml, setOrgPrimaryHtml] = useState(
-    () => parsed?.orgPrimaryInnerHtml ?? LORE_V9_REDACTED_SENTINEL,
+    () => parsed?.orgPrimaryInnerHtml ?? LORE_V9_REDACTED_SENTINEL
   );
   const [orgAccentHtml, setOrgAccentHtml] = useState(
-    () => parsed?.orgAccentInnerHtml ?? LORE_V9_REDACTED_SENTINEL,
+    () => parsed?.orgAccentInnerHtml ?? LORE_V9_REDACTED_SENTINEL
   );
   const [recordDoc, setRecordDoc] = useState<JSONContent>(() => {
     const rec = parsed?.recordInnerHtml ?? "";
-    return htmlFragmentToHgDocDoc(rec.trim() ? rec : FACTION_ARCHIVE091_READABLE_DEFAULT_RECORD_HTML);
+    return htmlFragmentToHgDocDoc(
+      rec.trim() ? rec : FACTION_ARCHIVE091_READABLE_DEFAULT_RECORD_HTML
+    );
   });
 
   const recordTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -86,12 +99,14 @@ export function LoreFactionArchive091Slab({
       parsed
         ? { upper: parsed.railUpper, lower: parsed.railLower }
         : factionArchiveRailTextsFromObjectId(nodeId),
-    [parsed, nodeId],
+    [parsed, nodeId]
   );
 
   useLayoutEffect(() => {
     const shell = letterheadShellRef.current;
-    if (!shell) return;
+    if (!shell) {
+      return;
+    }
     syncLoreV9RedactedPlaceholderState(shell);
     const removeGuards = installLorePlaceholderSelectionGuards(shell);
     const removePhCaret = installLoreV11PlaceholderCaretSync(shell);
@@ -100,12 +115,20 @@ export function LoreFactionArchive091Slab({
     };
     const onBeforeInput = (e: Event) => {
       const ie = e as InputEvent;
-      const field = (ie.target as HTMLElement | null)?.closest?.("[data-hg-lore-field]");
-      if (!field || !(field instanceof HTMLElement) || !shell.contains(field)) return;
-      if (!consumeLorePlaceholderBeforeInput(field, ie)) return;
+      const field = (ie.target as HTMLElement | null)?.closest?.(
+        "[data-hg-lore-field]"
+      );
+      if (!(field && field instanceof HTMLElement && shell.contains(field))) {
+        return;
+      }
+      if (!consumeLorePlaceholderBeforeInput(field, ie)) {
+        return;
+      }
       syncLoreV9RedactedPlaceholderState(shell);
       queueMicrotask(() => {
-        if (field.isConnected) placeCaretAfterLorePlaceholderReplace(field);
+        if (field.isConnected) {
+          placeCaretAfterLorePlaceholderReplace(field);
+        }
       });
     };
     const onFocusOut = () => {
@@ -125,15 +148,21 @@ export function LoreFactionArchive091Slab({
 
   useLayoutEffect(() => {
     const el = primaryRef.current;
-    if (el) fillHeadingHtml(el, orgPrimaryHtml);
+    if (el) {
+      fillHeadingHtml(el, orgPrimaryHtml);
+    }
     const a = accentRef.current;
-    if (a) fillHeadingHtml(a, orgAccentHtml);
+    if (a) {
+      fillHeadingHtml(a, orgAccentHtml);
+    }
     syncLoreV9RedactedPlaceholderState(letterheadShellRef.current);
   }, [orgPrimaryHtml, orgAccentHtml]);
 
   useLayoutEffect(() => {
     const parent = recordInnerRef.current;
-    if (!parent) return;
+    if (!parent) {
+      return;
+    }
 
     const edgePx = 1;
     const syncDocScrollMask = (el: HTMLElement) => {
@@ -148,7 +177,8 @@ export function LoreFactionArchive091Slab({
       const distanceFromBottom = Math.max(0, sh - st - ch);
       const nearTop = st <= edgePx;
       const nearBottom =
-        distanceFromBottom <= edgePx && (st > edgePx || distanceFromBottom < 0.5);
+        distanceFromBottom <= edgePx &&
+        (st > edgePx || distanceFromBottom < 0.5);
       if (nearTop && !nearBottom) {
         el.setAttribute("data-hg-fac-arxx-doc-mask", "end");
       } else if (!nearTop && nearBottom) {
@@ -163,15 +193,21 @@ export function LoreFactionArchive091Slab({
     let mo: MutationObserver | null = null;
 
     const onScroll = () => {
-      if (host) syncDocScrollMask(host);
+      if (host) {
+        syncDocScrollMask(host);
+      }
     };
 
     const onInput = () => {
-      if (host) syncDocScrollMask(host);
+      if (host) {
+        syncDocScrollMask(host);
+      }
     };
 
     const detachHost = () => {
-      if (!host) return;
+      if (!host) {
+        return;
+      }
       host.removeAttribute("data-hg-fac-arxx-doc-mask");
       host.removeEventListener("scroll", onScroll);
       host.removeEventListener("input", onInput);
@@ -181,7 +217,9 @@ export function LoreFactionArchive091Slab({
     };
 
     const syncMountedHost = () => {
-      if (host) syncDocScrollMask(host);
+      if (host) {
+        syncDocScrollMask(host);
+      }
     };
     recordMaskSyncRef.current = syncMountedHost;
 
@@ -190,13 +228,18 @@ export function LoreFactionArchive091Slab({
       host = el;
       host.addEventListener("scroll", onScroll, { passive: true });
       host.addEventListener("input", onInput);
-      ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => syncDocScrollMask(el)) : null;
+      ro =
+        typeof ResizeObserver === "undefined"
+          ? null
+          : new ResizeObserver(() => syncDocScrollMask(el));
       ro?.observe(el);
       queueMicrotask(() => syncDocScrollMask(el));
     };
 
     const tryAttach = () => {
-      const el = parent.querySelector<HTMLElement>('[data-hg-doc-editor="true"]');
+      const el = parent.querySelector<HTMLElement>(
+        '[data-hg-doc-editor="true"]'
+      );
       if (el) {
         mo?.disconnect();
         mo = null;
@@ -225,7 +268,9 @@ export function LoreFactionArchive091Slab({
   }, [recordDoc]);
 
   useEffect(() => {
-    if (bodyHtml === lastPushed.current) return;
+    if (bodyHtml === lastPushed.current) {
+      return;
+    }
     lastPushed.current = bodyHtml;
     const p = parseFactionArchive091BodyHtml(bodyHtml);
     startTransition(() => {
@@ -234,7 +279,9 @@ export function LoreFactionArchive091Slab({
         setOrgAccentHtml(p.orgAccentInnerHtml);
         const rec = p.recordInnerHtml ?? "";
         setRecordDoc(
-          htmlFragmentToHgDocDoc(rec.trim() ? rec : FACTION_ARCHIVE091_READABLE_DEFAULT_RECORD_HTML),
+          htmlFragmentToHgDocDoc(
+            rec.trim() ? rec : FACTION_ARCHIVE091_READABLE_DEFAULT_RECORD_HTML
+          )
         );
       } else {
         const { upper, lower } = factionArchiveRailTextsFromObjectId(nodeId);
@@ -256,7 +303,11 @@ export function LoreFactionArchive091Slab({
   }, [bodyHtml, nodeId]);
 
   const pushHtml = useCallback(
-    (p: { orgPrimaryInnerHtml: string; orgAccentInnerHtml: string; recordInnerHtml: string }) => {
+    (p: {
+      orgPrimaryInnerHtml: string;
+      orgAccentInnerHtml: string;
+      recordInnerHtml: string;
+    }) => {
       const { upper, lower } = factionArchiveRailTextsFromObjectId(nodeId);
       const html = buildFactionArchive091BodyHtml({
         orgPrimaryInnerHtml: p.orgPrimaryInnerHtml,
@@ -269,7 +320,7 @@ export function LoreFactionArchive091Slab({
       onCommit(html);
       onDraftDirty?.(false);
     },
-    [nodeId, onCommit, onDraftDirty],
+    [nodeId, onCommit, onDraftDirty]
   );
 
   const flushLetterhead = useCallback(() => {
@@ -290,7 +341,9 @@ export function LoreFactionArchive091Slab({
   const scheduleRecordCommit = useCallback(
     (nextDoc: JSONContent) => {
       onDraftDirty?.(true);
-      if (recordTimer.current) clearTimeout(recordTimer.current);
+      if (recordTimer.current) {
+        clearTimeout(recordTimer.current);
+      }
       recordTimer.current = setTimeout(() => {
         recordTimer.current = null;
         pushHtml({
@@ -300,28 +353,36 @@ export function LoreFactionArchive091Slab({
         });
       }, 320);
     },
-    [orgPrimaryHtml, orgAccentHtml, onDraftDirty, pushHtml],
+    [orgPrimaryHtml, orgAccentHtml, onDraftDirty, pushHtml]
   );
 
   useEffect(
     () => () => {
-      if (recordTimer.current) clearTimeout(recordTimer.current);
+      if (recordTimer.current) {
+        clearTimeout(recordTimer.current);
+      }
     },
-    [],
+    []
   );
 
   const rosterCount = factionRoster.length;
-  const rosterEditable = editable && typeof onFactionRosterChange === "function";
+  const rosterEditable =
+    editable && typeof onFactionRosterChange === "function";
 
   const createRosterRowId = useCallback(() => {
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    if (
+      typeof crypto !== "undefined" &&
+      typeof crypto.randomUUID === "function"
+    ) {
       return crypto.randomUUID();
     }
     return `hg-roster-${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
   }, []);
 
   const addRosterRow = useCallback(() => {
-    if (!onFactionRosterChange) return;
+    if (!onFactionRosterChange) {
+      return;
+    }
     const next: FactionRosterEntry[] = [
       ...factionRoster,
       {
@@ -335,35 +396,50 @@ export function LoreFactionArchive091Slab({
 
   const removeRosterRow = useCallback(
     (rowId: string) => {
-      if (!onFactionRosterChange) return;
+      if (!onFactionRosterChange) {
+        return;
+      }
       const next = factionRoster.filter((row) => row.id !== rowId);
       onFactionRosterChange(next);
     },
-    [factionRoster, onFactionRosterChange],
+    [factionRoster, onFactionRosterChange]
   );
 
   return (
     <div
-      ref={rootRef}
       className={cardStyles.facArxxRoot}
-      data-testid={labTestId}
       data-hg-canvas-role="lore-faction"
       data-hg-lore-faction-variant="archive091"
       data-hg-lore-ordo-node-id={nodeId}
+      data-testid={labTestId}
+      ref={rootRef}
     >
-      <div className={cardStyles.facArxxGrain} aria-hidden />
+      <div aria-hidden className={cardStyles.facArxxGrain} />
       <div className={cardStyles.facArxxPage}>
-        <aside className={cardStyles.facArxxRail} aria-hidden>
-          <div className={cardStyles.facArxxVertical} data-hg-faction-archive-rail="upper">
+        <aside aria-hidden className={cardStyles.facArxxRail}>
+          <div
+            className={cardStyles.facArxxVertical}
+            data-hg-faction-archive-rail="upper"
+          >
             {railUpper}
           </div>
-          <svg className={cardStyles.facArxxStar} viewBox="0 0 24 24" aria-hidden>
-            <path d="M12 0L14 10L24 12L14 14L12 24L10 14L0 12L10 10L12 0Z" fill="currentColor" />
+          <svg
+            aria-hidden
+            className={cardStyles.facArxxStar}
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M12 0L14 10L24 12L14 14L12 24L10 14L0 12L10 10L12 0Z"
+              fill="currentColor"
+            />
           </svg>
-          <div className={cardStyles.facArxxVertical} data-hg-faction-archive-rail="lower">
+          <div
+            className={cardStyles.facArxxVertical}
+            data-hg-faction-archive-rail="lower"
+          >
             {railLower}
           </div>
-          <div className={cardStyles.facArxxBarcode} aria-hidden />
+          <div aria-hidden className={cardStyles.facArxxBarcode} />
         </aside>
 
         <div className={cardStyles.facArxxMain}>
@@ -372,18 +448,24 @@ export function LoreFactionArchive091Slab({
             data-hg-faction-archive-drag-handle="true"
           >
             <div className={cardStyles.facArxxPlateHeader}>
-              <span className={cardStyles.facArxxPlateHeaderTitle}>Faction</span>
+              <span className={cardStyles.facArxxPlateHeaderTitle}>
+                Faction
+              </span>
               <div className={cardStyles.facArxxPlateHeaderActions}>
-                <ArchitecturalTooltip content="Focus Mode" side="bottom" delayMs={320}>
+                <ArchitecturalTooltip
+                  content="Focus Mode"
+                  delayMs={320}
+                  side="bottom"
+                >
                   <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    tone="card-dark"
+                    aria-label="Focus Mode"
                     className={cardStyles.facArxxPlateHeaderBtn}
                     data-expand-btn="true"
-                    aria-label="Focus Mode"
                     onClick={() => {}}
+                    size="icon"
+                    tone="card-dark"
+                    type="button"
+                    variant="ghost"
                   >
                     <ArrowsOutSimple size={14} weight="regular" />
                   </Button>
@@ -392,41 +474,58 @@ export function LoreFactionArchive091Slab({
             </div>
           </div>
 
-          <div className={cardStyles.facArxxRule} role="presentation" aria-hidden />
+          <div
+            aria-hidden
+            className={cardStyles.facArxxRule}
+            role="presentation"
+          />
 
           <header className={cardStyles.facArxxLetterhead}>
             <div
+              className={cx(
+                cardStyles.charSkShellV11,
+                cardStyles.facArxxLetterheadPh
+              )}
               ref={letterheadShellRef}
-              className={cx(cardStyles.charSkShellV11, cardStyles.facArxxLetterheadPh)}
             >
               <h1
-                ref={primaryRef}
-                className={cx(cardStyles.charSkDisplayName, cardStyles.facArxxLetterheadPrimary)}
+                className={cx(
+                  cardStyles.charSkDisplayName,
+                  cardStyles.facArxxLetterheadPrimary
+                )}
                 contentEditable={editable}
+                data-hg-lore-faction-field="orgNamePrimary"
+                data-hg-lore-field="1"
+                data-hg-lore-ph={LORE_V9_REDACTED_SENTINEL}
+                data-hg-lore-placeholder="true"
+                onBlur={flushLetterhead}
+                ref={primaryRef}
                 spellCheck={false}
                 suppressContentEditableWarning
-                data-hg-lore-field="1"
-                data-hg-lore-placeholder="true"
-                data-hg-lore-ph={LORE_V9_REDACTED_SENTINEL}
-                data-hg-lore-faction-field="orgNamePrimary"
-                onBlur={flushLetterhead}
               />
               <div
-                ref={accentRef}
-                className={cx(cardStyles.charSkRole, cardStyles.facArxxLetterheadSecondary)}
+                className={cx(
+                  cardStyles.charSkRole,
+                  cardStyles.facArxxLetterheadSecondary
+                )}
                 contentEditable={editable}
+                data-hg-lore-faction-field="orgNameAccent"
+                data-hg-lore-field="1"
+                data-hg-lore-ph={LORE_V9_REDACTED_SENTINEL}
+                data-hg-lore-placeholder="true"
+                onBlur={flushLetterhead}
+                ref={accentRef}
                 spellCheck={false}
                 suppressContentEditableWarning
-                data-hg-lore-field="1"
-                data-hg-lore-placeholder="true"
-                data-hg-lore-ph={LORE_V9_REDACTED_SENTINEL}
-                data-hg-lore-faction-field="orgNameAccent"
-                onBlur={flushLetterhead}
               />
             </div>
           </header>
 
-          <div className={cardStyles.facArxxRule} role="presentation" aria-hidden />
+          <div
+            aria-hidden
+            className={cardStyles.facArxxRule}
+            role="presentation"
+          />
 
           <div className={cardStyles.facArxxTextSection}>
             <div className={cardStyles.facArxxH2Row}>
@@ -437,13 +536,13 @@ export function LoreFactionArchive091Slab({
                 </span>
                 {rosterEditable ? (
                   <Button
-                    type="button"
-                    size="xs"
-                    variant="ghost"
-                    tone="card-dark"
-                    className={cardStyles.facArxxRosterAddBtn}
                     aria-label="Add faction member"
+                    className={cardStyles.facArxxRosterAddBtn}
                     onClick={addRosterRow}
+                    size="xs"
+                    tone="card-dark"
+                    type="button"
+                    variant="ghost"
                   >
                     Add
                   </Button>
@@ -452,18 +551,24 @@ export function LoreFactionArchive091Slab({
             </div>
             <div
               className={cardStyles.facArxxRosterCanvasList}
-              data-hg-lore-faction-roster="1"
               contentEditable={false}
+              data-hg-lore-faction-roster="1"
             >
               {factionRoster.length === 0 ? (
-                <div className={cardStyles.facArxxRosterCanvasEmpty} role="status">
-                  <p className={cardStyles.facArxxRosterCanvasEmptyTitle}>No known members</p>
+                <div
+                  className={cardStyles.facArxxRosterCanvasEmpty}
+                  role="status"
+                >
+                  <p className={cardStyles.facArxxRosterCanvasEmptyTitle}>
+                    No known members
+                  </p>
                 </div>
               ) : (
                 factionRoster.map((row) => {
                   const primary =
                     row.kind === "character"
-                      ? row.displayNameOverride?.trim() || `Character ${row.characterItemId.slice(0, 8)}…`
+                      ? row.displayNameOverride?.trim() ||
+                        `Character ${row.characterItemId.slice(0, 8)}…`
                       : row.label.trim() || "Member";
                   const secondary =
                     row.kind === "character"
@@ -471,28 +576,34 @@ export function LoreFactionArchive091Slab({
                       : row.role?.trim() || null;
                   return (
                     <div
-                      key={row.id}
                       className={cardStyles.facArxxRosterCanvasRow}
-                      role="listitem"
                       data-faction-roster-entry-id={row.id}
                       data-faction-roster-kind={row.kind}
+                      key={row.id}
+                      role="listitem"
                     >
                       <div className={cardStyles.facArxxRosterCanvasRowMain}>
-                        <div className={cardStyles.facArxxRosterCanvasRowText}>{primary}</div>
+                        <div className={cardStyles.facArxxRosterCanvasRowText}>
+                          {primary}
+                        </div>
                         {secondary ? (
-                          <div className={cardStyles.facArxxRosterCanvasRowMeta}>{secondary}</div>
+                          <div
+                            className={cardStyles.facArxxRosterCanvasRowMeta}
+                          >
+                            {secondary}
+                          </div>
                         ) : null}
                       </div>
                       {rosterEditable ? (
                         <Button
-                          type="button"
-                          size="xs"
-                          variant="ghost"
-                          tone="card-dark"
-                          className={cardStyles.facArxxRosterDeleteBtn}
                           aria-label={`Delete ${primary}`}
+                          className={cardStyles.facArxxRosterDeleteBtn}
                           data-faction-roster-delete="true"
                           onClick={() => removeRosterRow(row.id)}
+                          size="xs"
+                          tone="card-dark"
+                          type="button"
+                          variant="ghost"
                         >
                           Delete
                         </Button>
@@ -504,34 +615,38 @@ export function LoreFactionArchive091Slab({
             </div>
           </div>
 
-          <div className={cardStyles.facArxxRule} role="presentation" aria-hidden />
+          <div
+            aria-hidden
+            className={cardStyles.facArxxRule}
+            role="presentation"
+          />
 
           <div className={cardStyles.facArxxTextSection}>
             <h2 className={cardStyles.facArxxH2}>Record</h2>
             <div
               className={cardStyles.facArxxRecordCell}
-              data-hg-lore-faction-record-cell="true"
               contentEditable={false}
+              data-hg-lore-faction-record-cell="true"
             >
               <div
-                ref={recordInnerRef}
-                data-hg-lore-faction-record="true"
-                contentEditable={false}
                 className={cardStyles.facArxxRecordInner}
+                contentEditable={false}
+                data-hg-lore-faction-record="true"
+                ref={recordInnerRef}
               >
                 <HeartgardenDocEditor
-                  surfaceKey={`faction-archive-091-record-${nodeId}`}
                   chromeRole="canvas"
-                  value={recordDoc}
+                  className={cardStyles.facArxxHgHost}
                   editable={editable}
                   onChange={(next) => {
                     setRecordDoc(next);
                     scheduleRecordCommit(next);
                     queueMicrotask(() => recordMaskSyncRef.current?.());
                   }}
-                  showAiPendingGutter={false}
                   placeholder={emptyPlaceholder ?? "Record… type / for blocks"}
-                  className={cardStyles.facArxxHgHost}
+                  showAiPendingGutter={false}
+                  surfaceKey={`faction-archive-091-record-${nodeId}`}
+                  value={recordDoc}
                 />
               </div>
             </div>
