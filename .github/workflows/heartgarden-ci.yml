@@ -52,45 +52,27 @@ jobs:
           # Avoid mutating .git/hooks in CI; prepare script respects this (see heartgarden/scripts/install-git-hooks.mjs).
           SKIP_INSTALL_GIT_HOOKS: "1"
         working-directory: heartgarden
-        run: |
-          echo "::group::Install dependencies"
-          pnpm install --frozen-lockfile
-          echo "::endgroup::"
+        run: pnpm install --frozen-lockfile
 
       - name: Verify foundation sync
         working-directory: heartgarden
-        run: |
-          echo "::group::Verify foundation sync"
-          pnpm run verify:foundation-sync
-          echo "::endgroup::"
+        run: pnpm run verify:foundation-sync
 
       - name: Lint and build
         working-directory: heartgarden
-        run: |
-          echo "::group::Lint and build"
-          pnpm run check
-          echo "::endgroup::"
+        run: pnpm run check
 
       - name: Build Storybook
         working-directory: heartgarden
-        run: |
-          echo "::group::Build Storybook (regression guard for .storybook + stories)"
-          pnpm run build-storybook
-          echo "::endgroup::"
+        run: pnpm run build-storybook
 
       - name: Install Playwright Chromium
         working-directory: heartgarden
-        run: |
-          echo "::group::Install Playwright Chromium"
-          pnpm exec playwright install --with-deps chromium
-          echo "::endgroup::"
+        run: pnpm exec playwright install --with-deps chromium
 
       # Playwright skips e2e/visual on CI (platform-specific screenshots); smoke + interaction tests only.
       - name: E2E tests
         working-directory: heartgarden
-        run: |
-          echo "::group::E2E tests"
-          pnpm run test:e2e
-          echo "::endgroup::"
+        run: pnpm run test:e2e
         env:
           CI: "1"
