@@ -13,7 +13,7 @@
     "predev:storybook": "node ./scripts/storybook-start-hint.mjs",
     "dev:storybook": "pnpm exec storybook dev --port 6006 --host 127.0.0.1 --disable-telemetry --no-open --ci",
     "dev:surfaces": "concurrently -k -n APP,SB -c cyan,magenta \"pnpm run dev:app\" \"pnpm run dev:storybook\"",
-    "build": "next build",
+    "build": "next build --webpack",
     "check:button-casing": "node ./scripts/check-vigil-button-casing.mjs",
     "check": "pnpm run check:button-casing && pnpm run lint && pnpm run build",
     "analyze": "cross-env ANALYZE=1 pnpm run build",
