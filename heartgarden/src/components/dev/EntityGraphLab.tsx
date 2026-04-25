@@ -105,6 +105,7 @@ const STRESS_1K = buildSyntheticScenario("stress-1k", "Stress 1k", 1000, 2500, 1
 const STRESS_10K = buildSyntheticScenario("stress-10k", "Stress 10k", 10000, 25000, 2);
 
 const ALL_SCENARIOS: GraphScenario[] = [...SCENARIOS, STRESS_1K, STRESS_10K];
+const RENDERER_MODES: RendererMode[] = ["html", "pixi", "sigma", "rfg"];
 
 function nextAction(
   key: number,
@@ -499,6 +500,21 @@ export function EntityGraphLab({ rendererMode = "html" }: { rendererMode?: Rende
                 {visibleLayout.size} nodes · {visibleEdgeIds.size} edges
               </span>
               <span className={styles.counts}>Renderer: {rendererLabel}</span>
+              <div className={styles.scenarioButtons} role="toolbar" aria-label="Renderer selector">
+                {RENDERER_MODES.map((mode) => (
+                  <Button
+                    key={mode}
+                    asChild
+                    size="sm"
+                    variant="subtle"
+                    tone="menu"
+                    isActive={mode === rendererMode}
+                    aria-label={`Switch to ${mode.toUpperCase()} renderer mode`}
+                  >
+                    <a href={`?renderer=${mode}`}>{mode.toUpperCase()}</a>
+                  </Button>
+                ))}
+              </div>
               <Button
                 size="sm"
                 variant="default"

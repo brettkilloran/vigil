@@ -38,6 +38,57 @@ export function EntityGraphPixiCanvas(props: GraphCanvasSharedProps) {
   const panRef = useRef<{ pointerId: number; startX: number; startY: number; x: number; y: number } | null>(
     null,
   );
+  const pointerMovedRef = useRef(false);
+
+  const edgesWithPoints = useMemo(
+    () =>
+      edges
+        .map((edge) => {
+          const src = layout.get(edge.source);
+          const dst = layout.get(edge.target);
+          if (!src || !dst) return null;
+          return { edge, src, dst };
+        })
+        .filter((value): value is { edge: (typeof edges)[number]; src: { x: number; y: number }; dst: { x: number; y: number } } => value !== null),
+    [edges, layout],
+  );
+
+  const nearestEdgeAt = (worldX: number, worldY: number) => {
+    let best:
+      | {
+          edgeId: string;
+          sourceId: string;
+          targetId: string;
+          linkType: string | null;
+          x: number;
+          y: number;
+          distance: number;
+        }
+      | null = null;
+
+    for (const entry of edgesWithPoints) {
+      const { src, dst, edge } = entry;
+      const vx = dst.x - src.x;
+      const vy = dst.y - src.y;
+      const lenSq = vx * vx + vy * vy || 1;
+      const t = Math.max(0, Math.min(1, ((worldX - src.x) * vx + (worldY - src.y) * vy) / lenSq));
+      const px = src.x + vx * t;
+      const py = src.y + vy * t;
+      const dist = Math.hypot(worldX - px, worldY - py);
+      if (!best || dist < best.distance) {
+        best = {
+          edgeId: edge.id,
+          sourceId: edge.source,
+          targetId: edge.target,
+          linkType: edge.linkType ?? null,
+          x: (src.x + dst.x) * 0.5,
+          y: (src.y + dst.y) * 0.5,
+          distance: dist,
+        };
+      }
+    }
+    return best;
+  };
 
   useEffect(() => {
     const node = hostRef.current;
@@ -194,6 +245,7 @@ export function EntityGraphPixiCanvas(props: GraphCanvasSharedProps) {
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
+    pointerMovedRef.current = false;
     panRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -205,14 +257,35 @@ export function EntityGraphPixiCanvas(props: GraphCanvasSharedProps) {
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const rect = hostRef.current?.getBoundingClientRect();
+    if (rect) {
+      const worldX = (event.clientX - rect.left - camera.x) / camera.scale;
+      const worldY = (event.clientY - rect.top - camera.y) / camera.scale;
+      const hover = nearestEdgeAt(worldX, worldY);
+      const tolerance = camera.scale < 0.8 ? 22 : 14;
+      onEdgeHover?.(hover && hover.distance <= tolerance ? hover : null);
+    }
+
     if (panRef.current?.pointerId !== event.pointerId) return;
     const dx = event.clientX - panRef.current.startX;
     const dy = event.clientY - panRef.current.startY;
+    if (Math.hypot(dx, dy) > 2) pointerMovedRef.current = true;
     setCamera((prev) => ({ ...prev, x: panRef.current!.x + dx, y: panRef.current!.y + dy }));
   };
 
   const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
     if (panRef.current?.pointerId !== event.pointerId) return;
+    const rect = hostRef.current?.getBoundingClientRect();
+    if (rect && !pointerMovedRef.current) {
+      const worldX = (event.clientX - rect.left - camera.x) / camera.scale;
+      const worldY = (event.clientY - rect.top - camera.y) / camera.scale;
+      const hover = nearestEdgeAt(worldX, worldY);
+      const tolerance = camera.scale < 0.8 ? 22 : 14;
+      if (hover && hover.distance <= tolerance) {
+        onEdgeSelect?.(hover.edgeId);
+        onEdgeHover?.(hover);
+      }
+    }
     panRef.current = null;
     try {
       event.currentTarget.releasePointerCapture(event.pointerId);

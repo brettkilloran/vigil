@@ -38,6 +38,7 @@ export function EntityGraphRfgCanvas(props: GraphCanvasSharedProps) {
     cameraActionKey,
     cameraActionType,
     onSelect,
+    onEdgeHover,
     onEdgeSelect,
   } = props;
   const graphRef = useRef<any>(undefined);
@@ -97,9 +98,34 @@ export function EntityGraphRfgCanvas(props: GraphCanvasSharedProps) {
         nodeRelSize={5}
         onNodeClick={(node) => onSelect((node as ForceNode).id)}
         onLinkClick={(link) => onEdgeSelect?.((link as ForceEdge).id)}
+        onLinkHover={(link) => {
+          if (!link) {
+            onEdgeHover?.(null);
+            return;
+          }
+          const edge = link as ForceEdge;
+          const source = typeof edge.source === "string" ? edge.source : (edge.source as ForceNode).id;
+          const target = typeof edge.target === "string" ? edge.target : (edge.target as ForceNode).id;
+          const srcPos = layout.get(source);
+          const dstPos = layout.get(target);
+          if (!srcPos || !dstPos) {
+            onEdgeHover?.(null);
+            return;
+          }
+          const fullEdge = edges.find((candidate) => candidate.id === edge.id);
+          onEdgeHover?.({
+            edgeId: edge.id,
+            sourceId: source,
+            targetId: target,
+            linkType: fullEdge?.linkType ?? null,
+            x: (srcPos.x + dstPos.x) * 0.5,
+            y: (srcPos.y + dstPos.y) * 0.5,
+          });
+        }}
         onBackgroundClick={() => {
           onSelect(null);
           onEdgeSelect?.(null);
+          onEdgeHover?.(null);
         }}
         nodeCanvasObject={(node, ctx, globalScale) => {
           const typed = node as ForceNode;

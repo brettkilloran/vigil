@@ -22,6 +22,7 @@ export function EntityGraphSigmaCanvas(props: GraphCanvasSharedProps) {
     cameraActionType,
     cameraActionKey,
     onSelect,
+    onEdgeHover,
     onEdgeSelect,
   } = props;
   const hostRef = useRef<HTMLDivElement>(null);
@@ -82,6 +83,23 @@ export function EntityGraphSigmaCanvas(props: GraphCanvasSharedProps) {
     sigmaRef.current = sigma;
     sigma.on("clickNode", ({ node }) => onSelect(node));
     sigma.on("clickEdge", ({ edge }) => onEdgeSelect?.(edge));
+    sigma.on("enterEdge", ({ edge }) => {
+      const [source, target] = graph.extremities(edge);
+      if (!source || !target) return;
+      const sourcePos = layout.get(source);
+      const targetPos = layout.get(target);
+      if (!sourcePos || !targetPos) return;
+      const fullEdge = edges.find((candidate) => candidate.id === edge);
+      onEdgeHover?.({
+        edgeId: edge,
+        sourceId: source,
+        targetId: target,
+        linkType: fullEdge?.linkType ?? null,
+        x: (sourcePos.x + targetPos.x) * 0.5,
+        y: (sourcePos.y + targetPos.y) * 0.5,
+      });
+    });
+    sigma.on("leaveEdge", () => onEdgeHover?.(null));
     sigma.on("clickStage", () => {
       onSelect(null);
       onEdgeSelect?.(null);
@@ -90,7 +108,7 @@ export function EntityGraphSigmaCanvas(props: GraphCanvasSharedProps) {
       sigma.kill();
       sigmaRef.current = null;
     };
-  }, [graph, onEdgeSelect, onSelect]);
+  }, [edges, graph, layout, onEdgeHover, onEdgeSelect, onSelect]);
 
   useEffect(() => {
     const sigma = sigmaRef.current;
